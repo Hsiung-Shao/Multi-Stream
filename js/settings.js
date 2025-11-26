@@ -107,6 +107,79 @@ function loadUserSettings() {
   }
 }
 
+// 收藏分類管理
+const favoriteCategories = {
+  // 獲取分類列表
+  getList: () => {
+    const saved = localStorage.getItem('favoriteCategories');
+    return saved ? JSON.parse(saved) : [];
+  },
+  
+  // 保存分類列表
+  saveList: (list) => {
+    localStorage.setItem('favoriteCategories', JSON.stringify(list));
+  },
+  
+  // 添加分類
+  add: (name) => {
+    const list = favoriteCategories.getList();
+    
+    // 檢查是否已存在
+    if (list.some(cat => cat.name === name)) {
+      return { success: false, message: '此分類已存在' };
+    }
+    
+    const newCategory = {
+      id: Date.now().toString(),
+      name: name,
+      createdAt: new Date().toISOString()
+    };
+    
+    list.push(newCategory);
+    favoriteCategories.saveList(list);
+    
+    return { success: true, message: '分類已添加', category: newCategory };
+  },
+  
+  // 更新分類
+  update: (id, newName) => {
+    const list = favoriteCategories.getList();
+    const category = list.find(cat => cat.id === id);
+    
+    if (!category) {
+      return { success: false, message: '分類不存在' };
+    }
+    
+    // 檢查新名稱是否與其他分類重複
+    if (list.some(cat => cat.id !== id && cat.name === newName)) {
+      return { success: false, message: '此分類名稱已存在' };
+    }
+    
+    category.name = newName;
+    favoriteCategories.saveList(list);
+    
+    return { success: true, message: '分類已更新' };
+  },
+  
+  // 移除分類
+  remove: (id) => {
+    const list = favoriteCategories.getList();
+    const filtered = list.filter(cat => cat.id !== id);
+    favoriteCategories.saveList(filtered);
+    
+    // 將該分類下的所有收藏移到"未分類"
+    const favorites = favoriteStreams.getList();
+    favorites.forEach(fav => {
+      if (fav.categoryId === id) {
+        fav.categoryId = null;
+      }
+    });
+    favoriteStreams.saveList(favorites);
+    
+    return { success: true, message: '分類已移除' };
+  }
+};
+
 // 收藏串流管理
 const favoriteStreams = {
   // 獲取收藏列表
@@ -121,7 +194,7 @@ const favoriteStreams = {
   },
   
   // 添加收藏
-  add: (url, name = '') => {
+  add: (url, name = '', categoryId = null) => {
     const list = favoriteStreams.getList();
     
     // 檢查是否已存在
@@ -166,6 +239,7 @@ const favoriteStreams = {
       platform: platform,
       channelId: channelId,
       videoId: videoId,
+      categoryId: categoryId,
       addedAt: new Date().toISOString()
     };
     
@@ -173,6 +247,24 @@ const favoriteStreams = {
     favoriteStreams.saveList(list);
     
     return { success: true, message: '已添加到收藏' };
+  },
+  
+  // 更新收藏
+  update: (id, updates) => {
+    const list = favoriteStreams.getList();
+    const item = list.find(fav => fav.id === id);
+    
+    if (!item) {
+      return { success: false, message: '收藏不存在' };
+    }
+    
+    // 更新字段
+    if (updates.name !== undefined) item.name = updates.name;
+    if (updates.categoryId !== undefined) item.categoryId = updates.categoryId;
+    
+    favoriteStreams.saveList(list);
+    
+    return { success: true, message: '收藏已更新' };
   },
   
   // 移除收藏
@@ -190,12 +282,30 @@ const favoriteStreams = {
       return { success: true };
     }
     return { success: false, message: '無效的收藏項目' };
+  },
+  
+  // 批量加載收藏
+  loadMultiple: (items) => {
+    if (!items || items.length === 0) {
+      return { success: false, message: '沒有可加載的收藏' };
+    }
+    
+    items.forEach((item, index) => {
+      setTimeout(() => {
+        favoriteStreams.load(item);
+      }, index * 300); // 每個串流間隔300毫秒加載
+    });
+    
+    return { success: true, message: `正在加載 ${items.length} 個串流` };
   }
 };
 
-// 顯示收藏管理界面
+// 顯示收藏管理界面（使用全局变量保存筛选状态）
+let currentCategoryFilter = null;
+
 function showFavoriteStreamsManager() {
   const list = favoriteStreams.getList();
+  const categories = favoriteCategories.getList();
   
   // 創建或獲取管理界面
   let manager = document.getElementById('favorite-streams-manager');
@@ -216,34 +326,102 @@ function showFavoriteStreamsManager() {
   // 構建界面內容
   let content = `
     <div class="favorite-manager-header">
-      <h3>收藏的串流</h3>
+      <h3>收藏管理</h3>
       <button onclick="closeFavoriteStreamsManager()" class="close-btn">×</button>
     </div>
     <div class="favorite-manager-content">
-      <div class="favorite-add-section">
-        <input type="text" id="favorite-url-input" placeholder="貼上串流網址" style="flex: 1; padding: 6px; margin-right: 8px;">
-        <input type="text" id="favorite-name-input" placeholder="自訂名稱（選填）" style="flex: 1; padding: 6px; margin-right: 8px;">
-        <button onclick="addToFavorites()" style="padding: 6px 12px;">加入收藏</button>
+      <div class="favorite-tabs">
+        <button class="tab-btn active" data-tab="favorites">收藏串流</button>
+        <button class="tab-btn" data-tab="categories">分類管理</button>
       </div>
-      <div class="favorite-list" id="favorite-list">
+      
+      <!-- 收藏串流標籤頁 -->
+      <div class="tab-content active" id="tab-favorites">
+        <div class="favorite-controls">
+          <div class="favorite-add-section">
+            <input type="text" id="favorite-url-input" placeholder="貼上串流網址" style="flex: 1; padding: 6px; margin-right: 8px;">
+            <input type="text" id="favorite-name-input" placeholder="自訂名稱（選填）" style="flex: 1; padding: 6px; margin-right: 8px;">
+            <select id="favorite-category-select" style="padding: 6px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px;">
+              <option value="">未分類</option>
   `;
   
-  if (list.length === 0) {
+  // 填充分類選擇器
+  categories.forEach(cat => {
+    content += `<option value="${cat.id}">${cat.name}</option>`;
+  });
+  
+  content += `
+            </select>
+            <button onclick="addToFavorites()" style="padding: 6px 12px;">加入收藏</button>
+          </div>
+          <div class="favorite-filter-section">
+            <select id="category-filter" style="padding: 6px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px;">
+              <option value="">全部</option>
+              <option value="null">未分類</option>
+  `;
+  
+  // 填充分類篩選器
+  categories.forEach(cat => {
+    content += `<option value="${cat.id}">${cat.name}</option>`;
+  });
+  
+  content += `
+            </select>
+            <button onclick="selectAllFavorites()" style="padding: 6px 12px; font-size: 11px;">全選</button>
+            <button onclick="deselectAllFavorites()" style="padding: 6px 12px; font-size: 11px;">取消全選</button>
+            <button onclick="loadSelectedFavorites()" style="padding: 6px 12px; font-size: 11px; background: #9147ff;">一鍵載入選中</button>
+          </div>
+        </div>
+        <div class="favorite-list" id="favorite-list">
+  `;
+  
+  // 過濾收藏列表
+  let filteredList = list;
+  if (currentCategoryFilter !== null) {
+    if (currentCategoryFilter === 'null') {
+      filteredList = list.filter(item => !item.categoryId);
+    } else {
+      filteredList = list.filter(item => item.categoryId === currentCategoryFilter);
+    }
+  }
+  
+  if (filteredList.length === 0) {
     content += '<div style="padding: 20px; text-align: center; color: #888;">暫無收藏</div>';
   } else {
-    list.forEach((item, index) => {
+    filteredList.forEach((item) => {
       const displayName = item.name || (item.platform === 'twitch' ? item.channelId : item.videoId);
       const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
-      // 使用 data-* 属性和事件委托，避免闭包问题
-      const itemId = item.id.replace(/'/g, "\\'"); // 转义单引号
+      const categoryName = item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || '未知分類' : '未分類';
+      const itemId = item.id.replace(/'/g, "\\'");
+      
+      // 生成分類選項
+      let categoryOptions = '<option value="">未分類</option>';
+      categories.forEach(cat => {
+        const selected = item.categoryId === cat.id ? 'selected' : '';
+        categoryOptions += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+      });
+      
       content += `
-        <div class="favorite-item" data-id="${itemId}">
+        <div class="favorite-item" data-id="${itemId}" data-category-id="${item.categoryId || ''}">
+          <div class="favorite-item-checkbox">
+            <input type="checkbox" class="favorite-checkbox" data-favorite-id="${itemId}">
+          </div>
           <div class="favorite-item-info">
             <span class="favorite-platform-icon">${platformIcon}</span>
             <span class="favorite-item-name">${displayName}</span>
+            <span class="favorite-item-category">📁 ${categoryName}</span>
             <span class="favorite-item-url">${item.url}</span>
           </div>
+          <div class="favorite-item-edit" style="display: none;">
+            <input type="text" class="favorite-edit-name" value="${displayName.replace(/"/g, '&quot;')}" style="flex: 1; padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
+            <select class="favorite-edit-category" style="padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
+              ${categoryOptions}
+            </select>
+            <button class="save-favorite-btn" data-favorite-id="${itemId}" style="padding: 4px 8px; margin-right: 4px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">保存</button>
+            <button class="cancel-edit-btn" data-favorite-id="${itemId}" style="padding: 4px 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">取消</button>
+          </div>
           <div class="favorite-item-actions">
+            <button class="edit-favorite-btn" data-favorite-id="${itemId}" title="編輯">✏️</button>
             <button class="load-favorite-btn" data-favorite-id="${itemId}" title="載入">▶</button>
             <button class="remove-favorite-btn" data-favorite-id="${itemId}" title="移除">🗑</button>
           </div>
@@ -253,6 +431,42 @@ function showFavoriteStreamsManager() {
   }
   
   content += `
+        </div>
+      </div>
+      
+      <!-- 分類管理標籤頁 -->
+      <div class="tab-content" id="tab-categories">
+        <div class="category-add-section">
+          <input type="text" id="category-name-input" placeholder="分類名稱" style="flex: 1; padding: 6px; margin-right: 8px;">
+          <button onclick="addCategory()" style="padding: 6px 12px;">新增分類</button>
+        </div>
+        <div class="category-list" id="category-list">
+  `;
+  
+  if (categories.length === 0) {
+    content += '<div style="padding: 20px; text-align: center; color: #888;">暫無分類</div>';
+  } else {
+    categories.forEach((cat) => {
+      const catId = cat.id.replace(/'/g, "\\'");
+      const count = list.filter(item => item.categoryId === cat.id).length;
+      content += `
+        <div class="category-item" data-id="${catId}">
+          <div class="category-item-info">
+            <span class="category-item-name">📁 ${cat.name}</span>
+            <span class="category-item-count">(${count} 個收藏)</span>
+          </div>
+          <div class="category-item-actions">
+            <button class="load-category-btn" data-category-id="${catId}" title="一鍵載入此分類">▶ 載入</button>
+            <button class="edit-category-btn" data-category-id="${catId}" title="編輯">✏️</button>
+            <button class="remove-category-btn" data-category-id="${catId}" title="刪除">🗑</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+  
+  content += `
+        </div>
       </div>
     </div>
   `;
@@ -260,7 +474,39 @@ function showFavoriteStreamsManager() {
   manager.innerHTML = content;
   manager.classList.add('show');
   
-  // 使用事件委托处理按钮点击
+  // 標籤頁切換
+  const tabBtns = manager.querySelectorAll('.tab-btn');
+  const tabContents = manager.querySelectorAll('.tab-content');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.getAttribute('data-tab');
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    });
+  });
+  
+  // 分類篩選
+  const categoryFilter = document.getElementById('category-filter');
+  if (categoryFilter) {
+    // 設置當前篩選值
+    if (currentCategoryFilter === null) {
+      categoryFilter.value = '';
+    } else if (currentCategoryFilter === 'null') {
+      categoryFilter.value = 'null';
+    } else {
+      categoryFilter.value = currentCategoryFilter;
+    }
+    
+    categoryFilter.addEventListener('change', (e) => {
+      const value = e.target.value;
+      currentCategoryFilter = value === '' ? null : (value === 'null' ? 'null' : value);
+      showFavoriteStreamsManager(); // 重新渲染
+    });
+  }
+  
+  // 事件委托处理按钮点击
   const favoriteList = manager.querySelector('.favorite-list');
   if (favoriteList) {
     favoriteList.addEventListener('click', (e) => {
@@ -270,10 +516,49 @@ function showFavoriteStreamsManager() {
         if (favoriteId) {
           loadFavoriteStream(favoriteId);
         }
+      } else if (target.classList.contains('edit-favorite-btn')) {
+        const favoriteId = target.getAttribute('data-favorite-id');
+        if (favoriteId) {
+          enterEditMode(favoriteId);
+        }
+      } else if (target.classList.contains('save-favorite-btn')) {
+        const favoriteId = target.getAttribute('data-favorite-id');
+        if (favoriteId) {
+          saveFavoriteEdit(favoriteId);
+        }
+      } else if (target.classList.contains('cancel-edit-btn')) {
+        const favoriteId = target.getAttribute('data-favorite-id');
+        if (favoriteId) {
+          cancelEditMode(favoriteId);
+        }
       } else if (target.classList.contains('remove-favorite-btn')) {
         const favoriteId = target.getAttribute('data-favorite-id');
         if (favoriteId) {
           removeFavoriteStream(favoriteId);
+        }
+      }
+    });
+  }
+  
+  // 分類管理事件
+  const categoryList = manager.querySelector('.category-list');
+  if (categoryList) {
+    categoryList.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target.classList.contains('load-category-btn')) {
+        const categoryId = target.getAttribute('data-category-id');
+        if (categoryId) {
+          loadCategoryFavorites(categoryId);
+        }
+      } else if (target.classList.contains('edit-category-btn')) {
+        const categoryId = target.getAttribute('data-category-id');
+        if (categoryId) {
+          editCategory(categoryId);
+        }
+      } else if (target.classList.contains('remove-category-btn')) {
+        const categoryId = target.getAttribute('data-category-id');
+        if (categoryId) {
+          removeCategory(categoryId);
         }
       }
     });
@@ -287,23 +572,42 @@ function showFavoriteStreamsManager() {
         addToFavorites();
       }
     });
-    // 自動聚焦
-    setTimeout(() => {
-      urlInput.focus();
-    }, 100);
   }
   
-  // 點擊背景關閉（事件委派）
-  const handleBackgroundClick = (e) => {
-    if (e.target === manager) {
-      closeFavoriteStreamsManager();
-    }
-  };
+  // 按Enter添加分類
+  const categoryNameInput = document.getElementById('category-name-input');
+  if (categoryNameInput) {
+    categoryNameInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addCategory();
+      }
+    });
+  }
   
-  // 移除舊的事件監聽器（如果存在）
-  manager.removeEventListener('click', handleBackgroundClick);
-  // 添加新的事件監聽器
-  manager.addEventListener('click', handleBackgroundClick);
+  // 編輯模式中按Enter保存，按Esc取消
+  const favoriteListForKeyboard = manager.querySelector('.favorite-list');
+  if (favoriteListForKeyboard) {
+    favoriteListForKeyboard.addEventListener('keydown', (e) => {
+      const target = e.target;
+      if (target.classList.contains('favorite-edit-name') || target.classList.contains('favorite-edit-category')) {
+        const favoriteItem = target.closest('.favorite-item');
+        if (favoriteItem) {
+          const favoriteId = favoriteItem.getAttribute('data-id');
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (favoriteId) {
+              saveFavoriteEdit(favoriteId);
+            }
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            if (favoriteId) {
+              cancelEditMode(favoriteId);
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 // 關閉收藏管理界面
@@ -318,6 +622,7 @@ function closeFavoriteStreamsManager() {
 function addToFavorites() {
   const urlInput = document.getElementById('favorite-url-input');
   const nameInput = document.getElementById('favorite-name-input');
+  const categorySelect = document.getElementById('favorite-category-select');
   
   if (!urlInput || !urlInput.value.trim()) {
     alert('請輸入串流網址');
@@ -326,18 +631,226 @@ function addToFavorites() {
   
   const url = urlInput.value.trim();
   const name = nameInput ? nameInput.value.trim() : '';
+  const categoryId = categorySelect && categorySelect.value ? categorySelect.value : null;
   
-  const result = favoriteStreams.add(url, name);
+  const result = favoriteStreams.add(url, name, categoryId);
   
   if (result.success) {
     alert(result.message);
     urlInput.value = '';
     if (nameInput) nameInput.value = '';
+    if (categorySelect) categorySelect.value = '';
     showFavoriteStreamsManager(); // 刷新列表
     // 自動保存設置
     autoSaveSettings();
   } else {
     alert(result.message);
+  }
+}
+
+// 添加分類
+function addCategory() {
+  const nameInput = document.getElementById('category-name-input');
+  
+  if (!nameInput || !nameInput.value.trim()) {
+    alert('請輸入分類名稱');
+    return;
+  }
+  
+  const name = nameInput.value.trim();
+  const result = favoriteCategories.add(name);
+  
+  if (result.success) {
+    alert(result.message);
+    nameInput.value = '';
+    showFavoriteStreamsManager(); // 刷新列表
+    autoSaveSettings();
+  } else {
+    alert(result.message);
+  }
+}
+
+// 編輯分類
+function editCategory(categoryId) {
+  const categories = favoriteCategories.getList();
+  const category = categories.find(c => c.id === categoryId);
+  
+  if (!category) {
+    alert('分類不存在');
+    return;
+  }
+  
+  const newName = prompt('輸入新的分類名稱：', category.name);
+  if (newName === null) return; // 用戶取消
+  
+  if (!newName.trim()) {
+    alert('分類名稱不能為空');
+    return;
+  }
+  
+  const result = favoriteCategories.update(categoryId, newName.trim());
+  
+  if (result.success) {
+    alert(result.message);
+    showFavoriteStreamsManager(); // 刷新列表
+    autoSaveSettings();
+  } else {
+    alert(result.message);
+  }
+}
+
+// 刪除分類
+function removeCategory(categoryId) {
+  if (!confirm('確定要刪除此分類嗎？該分類下的收藏將移至「未分類」')) {
+    return;
+  }
+  
+  const result = favoriteCategories.remove(categoryId);
+  
+  if (result.success) {
+    alert(result.message);
+    showFavoriteStreamsManager(); // 刷新列表
+    autoSaveSettings();
+  } else {
+    alert(result.message);
+  }
+}
+
+// 進入編輯模式
+function enterEditMode(favoriteId) {
+  const favoriteItem = document.querySelector(`.favorite-item[data-id="${favoriteId}"]`);
+  if (!favoriteItem) return;
+  
+  // 隱藏顯示模式，顯示編輯模式
+  const infoDiv = favoriteItem.querySelector('.favorite-item-info');
+  const actionsDiv = favoriteItem.querySelector('.favorite-item-actions');
+  const editDiv = favoriteItem.querySelector('.favorite-item-edit');
+  
+  if (infoDiv) infoDiv.style.display = 'none';
+  if (actionsDiv) actionsDiv.style.display = 'none';
+  if (editDiv) editDiv.style.display = 'flex';
+  
+  // 聚焦到名稱輸入框
+  const nameInput = favoriteItem.querySelector('.favorite-edit-name');
+  if (nameInput) {
+    setTimeout(() => {
+      nameInput.focus();
+      nameInput.select();
+    }, 50);
+  }
+}
+
+// 取消編輯模式
+function cancelEditMode(favoriteId) {
+  const favoriteItem = document.querySelector(`.favorite-item[data-id="${favoriteId}"]`);
+  if (!favoriteItem) return;
+  
+  // 顯示顯示模式，隱藏編輯模式
+  const infoDiv = favoriteItem.querySelector('.favorite-item-info');
+  const actionsDiv = favoriteItem.querySelector('.favorite-item-actions');
+  const editDiv = favoriteItem.querySelector('.favorite-item-edit');
+  
+  if (infoDiv) infoDiv.style.display = 'flex';
+  if (actionsDiv) actionsDiv.style.display = 'flex';
+  if (editDiv) editDiv.style.display = 'none';
+}
+
+// 保存編輯
+function saveFavoriteEdit(favoriteId) {
+  const favoriteItem = document.querySelector(`.favorite-item[data-id="${favoriteId}"]`);
+  if (!favoriteItem) return;
+  
+  const nameInput = favoriteItem.querySelector('.favorite-edit-name');
+  const categorySelect = favoriteItem.querySelector('.favorite-edit-category');
+  
+  if (!nameInput) return;
+  
+  const newName = nameInput.value.trim();
+  if (!newName) {
+    alert('收藏名稱不能為空');
+    return;
+  }
+  
+  const categoryId = categorySelect && categorySelect.value ? categorySelect.value : null;
+  
+  const updates = {
+    name: newName,
+    categoryId: categoryId
+  };
+  
+  const result = favoriteStreams.update(favoriteId, updates);
+  
+  if (result.success) {
+    // 刷新列表以顯示更新後的值
+    showFavoriteStreamsManager();
+    autoSaveSettings();
+  } else {
+    alert(result.message);
+  }
+}
+
+// 全選收藏
+function selectAllFavorites() {
+  const checkboxes = document.querySelectorAll('.favorite-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = true;
+  });
+}
+
+// 取消全選收藏
+function deselectAllFavorites() {
+  const checkboxes = document.querySelectorAll('.favorite-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = false;
+  });
+}
+
+// 載入選中的收藏
+function loadSelectedFavorites() {
+  const checkboxes = document.querySelectorAll('.favorite-checkbox:checked');
+  if (checkboxes.length === 0) {
+    alert('請至少選擇一個收藏');
+    return;
+  }
+  
+  const list = favoriteStreams.getList();
+  const selectedItems = [];
+  
+  checkboxes.forEach(cb => {
+    const favoriteId = cb.getAttribute('data-favorite-id');
+    const item = list.find(fav => fav.id === favoriteId);
+    if (item) {
+      selectedItems.push(item);
+    }
+  });
+  
+  if (selectedItems.length > 0) {
+    const result = favoriteStreams.loadMultiple(selectedItems);
+    if (result.success) {
+      alert(result.message);
+      closeFavoriteStreamsManager();
+    }
+  }
+}
+
+// 載入分類下的所有收藏
+function loadCategoryFavorites(categoryId) {
+  const list = favoriteStreams.getList();
+  const categoryItems = list.filter(item => item.categoryId === categoryId);
+  
+  if (categoryItems.length === 0) {
+    alert('此分類下沒有收藏');
+    return;
+  }
+  
+  if (!confirm(`確定要載入此分類下的 ${categoryItems.length} 個串流嗎？`)) {
+    return;
+  }
+  
+  const result = favoriteStreams.loadMultiple(categoryItems);
+  if (result.success) {
+    alert(result.message);
+    closeFavoriteStreamsManager();
   }
 }
 
@@ -387,7 +900,7 @@ function addCurrentStreamToFavorites() {
           customName = data.videoId;
         }
         
-        const result = favoriteStreams.add(data.originalUrl, customName);
+        const result = favoriteStreams.add(data.originalUrl, customName, null);
         if (result.success) {
           addedCount++;
         } else {
