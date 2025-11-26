@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>多來源直播分割器</title>
+<style>
+  body { margin:0; background:#000; color:#fff; font-family:Arial; overflow:hidden; }
+  #container { position:relative; width:100vw; height:100vh; }
+  .stream-box {
+    position: absolute; background:#111; border:2px solid #333; box-shadow:0 0 20px rgba(0,0,0,0.8);
+    overflow:hidden; border-radius:8px; user-select:none;
+  }
+  .stream-box iframe { width:100%; height:calc(100% - 40px); border:none; }
+  .controls {
+    height:40px; background:rgba(0,0,0,0.7); display:flex; align-items:center; padding:0 10px;
+    gap:10px; font-size:14px;
+  }
+  .volume { width:100px; }
+  .close { cursor:pointer; color:red; font-weight:bold; }
+  #add-panel { position:fixed; top:10px; left:10px; z-index:999; }
+  #presets { position:fixed; top:50px; left:10px; z-index:999; display:flex; gap:5px; flex-wrap:wrap; }
+  button { padding:8px 12px; background:#1a1a1a; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+  button:hover { background:#333; }
+</style>
+</head>
+<body>
+
+<div id="add-panel">
+  <input type="text" id="url-input" placeholder="貼上 Twitch / YouTube / Kick 直播網址" style="width:400px;padding:8px;">
+  <button onclick="addStream()">加入畫面</button>
+</div>
+
+<div id="presets">
+  <button onclick="setLayout(1)">1 格</button>
+  <button onclick="setLayout(2)">左右</button>
+  <button onclick="setLayout(3)">上中下</button>
+  <button onclick="setLayout(4)">四宮格</button>
+  <button onclick="setLayout(6)">2×3</button>
+  <button onclick="clearAll()">清空</button>
+  <button onclick="saveLayout()">儲存布局</button>
+  <button onclick="loadLayout()">讀取布局</button>
+</div>
+
+<div id="container"></div>
+
+<script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+<script>
+// 全局變數
+let streamCount = 0;
+const container = document.getElementById('container');
+
+// 主要加入函式
+function addStream(url = null) {
+  if (!url) url = document.getElementById('url-input').value.trim();
+  if (!url) return alert('請輸入直播網址');
+
+  const id = ++streamCount;
+  const box = document.createElement('div');
+  box.className = 'stream-box';
+  box.id = 'box'+id;
+  box.innerHTML = `
+    <div class="controls">
+      <span>#${id}</span>
+      <input type="range" class="volume" min="0" max="100" value="100">
+      <span class="vol-value">100%</span>
+      <span class="close" onclick="removeBox(${id})">×</span>
+    </div>
+    <div id="player${id}"></div>
+    <div id="chat${id}" style="height:300px;background:#111;"></div>
+  `;
+  container.appendChild(box);
+
+  // 解析來源並產生 iframe
+  let playerUrl = '';
+  let chatUrl = '';
+  let platform = '';
+
+  if (url.includes('twitch.tv')) {
+    const channel = url.split('/').pop().split('?')[0];
+    playerUrl = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&autoplay=true&muted=false`;
+    chatUrl = `https://www.twitch.tv/embed/${channel}/chat?parent=${location.hostname}&darkpopout`;
+    platform = 'twitch';
+  } 
+  else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    let videoId = '';
+    if (url.includes('youtube.com/live/') || url.includes('youtube.com/watch?v=')) {
+      videoId = new URL(url).searchParams.get('v') || url.split('live/')[1]?.split('?')[0];
+    } else if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split('?')[0];
+    }
+    playerUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`;
+    chatUrl = `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}`;
+    platform = 'youtube';
+  }
+  else if (url.includes('kick.com')) {
+    const channel = url.split('/').pop().split('?')[0];
+    playerUrl = `https://player.kick.com/${channel}`;
+    chatUrl = `https://kick.com/${channel}/chatroom`;
+    platform = 'kick';
+  } else {
+    alert('不支援的平台，目前支援 Twitch、YouTube、Kick');
+    box.remove();
+    return;
+  }
+
+  // 建立播放器 iframe
+  const playerIframe = document.createElement('iframe');
+  playerIframe.src = playerUrl;
+  playerIframe.allowFullscreen = true;
+  playerIframe.allow = "autoplay; fullscreen";
+  document.getElementById('player'+id).appendChild(playerIframe);
+
+  // 建立聊天室 iframe
+  const chatIframe = document.createElement('iframe');
+  chatIframe.src = chatUrl;
+  chatIframe.style.width = '100%';
+  chatIframe.style.height = '100%';
+  chatIframe.frameBorder = "0";
+  document.getElementById('chat'+id).appendChild(chatIframe);
+
+  // 音量控制
+  const volSlider = box.querySelector('.volume');
+  const volValue = box.querySelector('.vol-value');
+  volSlider.oninput = () => {
+    const vol = volSlider.value / 100;
+    volValue.textContent = volSlider.value + '%';
+    // 因為跨域 iframe 無法直接控制音量，用 CSS 濾鏡模擬（僅視覺）
+    playerIframe.style.filter = vol === 0 ? 'brightness(0.5)' : '';
+    playerIframe.style.opacity = 0.7 + vol * 0.3;
+  };
+
+  // 預設位置（右下角堆疊）
+  const size = platform === 'kick' ? 400 : 500;
+  box.style.width = size + 'px';
+  box.style.height = (size * 9/16 + 340) + 'px'; // 16:9 + 控制列 + 聊天室
+  box.style.right = '20px';
+  box.style.bottom = (20 + (id-1)*30) + 'px';
+
+  makeDraggableResizable(box);
+  setLayout(1); // 初始重新整理版面
+}
+
+// 拖曳與縮放
+function makeDraggableResizable(el) {
+  let pos1=0,pos2=0,pos3=0,pos4=0;
+  el.onmousedown = dragMouseDown;
+
+  function dragMouseDown(e) {
+    if (e.target.tagName === 'INPUT' || e.target.classList.contains('close')) return;
+    e.preventDefault();
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDrag;
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e.preventDefault();
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    el.style.top  = (el.offsetTop  - pos2) + "px";
+    el.style.left = (el.offsetLeft - pos1) + "px";
+    el.style.right = 'auto';
+    el.style.bottom = 'auto';
+  }
+
+  function closeDrag() {
+    document.onmouseup = null;
+    document.onmousemove = null;
+  }
+
+  // 簡單縮放（右下角拖曳）
+  const resizer = document.createElement('div');
+  resizer.style.width = '15px';
+  resizer.style.height = '15px';
+  resizer.style.background = '#444';
+  resizer.style.position = 'absolute';
+  resizer.style.right = '0';
+  resizer.style.bottom = '0';
+  resizer.style.cursor = 'se-resize';
+  el.appendChild(resizer);
+
+  resizer.addEventListener('mousedown', initResize);
+  function initResize(e) {
+    e.stopPropagation();
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResize);
+  }
+  function resize(e) {
+    el.style.width = (e.clientX - el.offsetLeft) + 'px';
+    el.style.height = (e.clientY - el.offsetTop) + 'px';
+  }
+  function stopResize() {
+    window.removeEventListener('mousemove', resize);
+    window.removeEventListener('mouseup', stopResize);
+  }
+}
+
+function removeBox(id) {
+  document.getElementById('box'+id).remove();
+}
+
+// 快捷布局
+function setLayout(type) {
+  const boxes = document.querySelectorAll('.stream-box');
+  if (boxes.length === 0) return;
+
+  boxes.forEach(b => { b.style.transition = 'all 0.5s'; });
+
+  if (type === 1 || boxes.length === 1) {
+    boxes.forEach((b,i) => {
+      b.style.left = '0'; b.style.top = '0';
+      b.style.width = '100%'; b.style.height = '100%';
+    });
+  }
+  else if (type === 2) { // 左右
+    boxes.forEach((b,i) => {
+      b.style.width = (100/boxes.length)+'%';
+      b.style.height = '100%';
+      b.style.left = (100/boxes.length * i)+'%';
+      b.style.top = '0';
+    });
+  }
+  else if (type === 3) { // 上中下
+    boxes.forEach((b,i) => {
+      b.style.height = (100/boxes.length)+'%';
+      b.style.width = '100%';
+      b.style.top = (100/boxes.length * i)+'%';
+      b.style.left = '0';
+    });
+  }
+  else if (type === 4) { // 四宮格
+    boxes.forEach((b,i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      b.style.width = '50%';
+      b.style.height = '50%';
+      b.style.left = col * 50 + '%';
+      b.style.top = row * 50 + '%';
+    });
+  }
+  else if (type === 6) { // 2x3
+    boxes.forEach((b,i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      b.style.width = '33.33%';
+      b.style.height = '50%';
+      b.style.left = col * 33.33 + '%';
+      b.style.top = row * 50 + '%';
+    });
+  }
+
+  setTimeout(()=> boxes.forEach(b=>b.style.transition=''), 600);
+}
+
+function clearAll() {
+  if (confirm('確定要清空所有畫面？')) container.innerHTML = '';
+  streamCount = 0;
+}
+
+// 本地儲存布局（未來換成登入後存資料庫）
+function saveLayout() {
+  const layout = [];
+  document.querySelectorAll('.stream-box').forEach(box => {
+    const url = box.querySelector('iframe').src;
+    layout.push({
+      url: url.split('?')[0], // 簡化
+      style: {
+        left: box.style.left,
+        top: box.style.top,
+        width: box.style.width,
+        height: box.style.height
+      },
+      volume: box.querySelector('.volume').value
+    });
+  });
+  localStorage.setItem('multiStreamLayout', JSON.stringify(layout));
+  alert('布局已儲存！');
+}
+
+function loadLayout() {
+  const saved = localStorage.getItem('multiStreamLayout');
+  if (!saved) return alert('沒有儲存的布局');
+  if (!confirm('載入會清空目前畫面，確定？')) return;
+  
+  clearAll();
+  const layout = JSON.parse(saved);
+  layout.forEach(item => {
+    addStream(item.url);
+  });
+  
+  // 等所有 iframe 載入完成再套用位置
+  setTimeout(() => {
+    document.querySelectorAll('.stream-box').forEach((box,i) => {
+      if (layout[i] && layout[i].style) {
+        Object.assign(box.style, layout[i].style);
+        box.querySelector('.volume').value = layout[i].volume || 100;
+        box.querySelector('.volume').dispatchEvent(new Event('input'));
+      }
+    });
+  }, 3000);
+}
+
+// 按 Enter 快速加入
+document.getElementById('url-input').addEventListener('keypress', e => {
+  if (e.key === 'Enter') addStream();
+});
+</script>
+</body>
+</html>
