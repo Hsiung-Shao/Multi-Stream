@@ -6,6 +6,9 @@ function onYouTubeIframeAPIReady() {
   ytApiReady = true;
 }
 
+// 拖拽狀態標誌（防止在拖拽過程中觸發布局更新）
+let isDraggingStreamBox = false;
+
 // 獲取有效的 parent 域名
 function getParentDomain() {
   const hostname = window.location.hostname;

@@ -95,6 +95,11 @@ function setLayout(type, immediate = false) {
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length === 0) return;
   
+  // 如果正在拖拽stream-box，不執行布局更新，避免干擾拖拽操作
+  if (isDraggingStreamBox) {
+    return;
+  }
+  
   // 如果已經有待處理的布局更新，取消它
   if (layoutUpdateTimeout) {
     clearTimeout(layoutUpdateTimeout);
@@ -106,7 +111,10 @@ function setLayout(type, immediate = false) {
     pendingLayoutUpdate = true;
     layoutUpdateTimeout = setTimeout(() => {
       pendingLayoutUpdate = false;
-      setLayout(type, true);
+      // 再次檢查是否正在拖拽
+      if (!isDraggingStreamBox) {
+        setLayout(type, true);
+      }
     }, 150); // 150ms 防抖延遲
     return;
   }
@@ -116,8 +124,9 @@ function setLayout(type, immediate = false) {
   // 關閉布局選擇器
   document.getElementById('layout-selector').classList.remove('show');
   
+  // 暫時禁用過渡效果，避免Twitch播放器在動畫過程中出現問題
   boxes.forEach(b => { 
-    b.style.transition = 'all 0.5s ease';
+    b.style.transition = 'none';
   });
   
   const count = boxes.length;
@@ -193,16 +202,49 @@ function setLayout(type, immediate = false) {
     boxes.forEach(b => {
       adjustChatLayoutForBox(b, type);
     });
-  }, 100);
+    
+    // 強制觸發窗口resize事件，讓Twitch播放器重新計算尺寸
+    // 這對於修復Twitch播放器在DOM順序改變後卡死的問題很重要
+    const resizeEvent = new Event('resize');
+    window.dispatchEvent(resizeEvent);
+    
+    // 對於Twitch播放器，嘗試刷新播放器
+    boxes.forEach(box => {
+      const id = parseInt(box.dataset.streamId);
+      if (players[id] && players[id].type === 'twitch' && players[id].player) {
+        try {
+          // Twitch播放器在容器尺寸改變時需要重新計算
+          // 通過觸發resize事件和強制重新計算來修復
+          const playerContainer = box.querySelector('.player-container');
+          if (playerContainer) {
+            // 強制重新計算容器尺寸
+            const width = playerContainer.offsetWidth;
+            const height = playerContainer.offsetHeight;
+            // 觸發一個微小的尺寸變化來強制播放器刷新
+            if (width > 0 && height > 0) {
+              // 使用requestAnimationFrame確保在下一幀執行
+              requestAnimationFrame(() => {
+                // 再次觸發resize事件
+                window.dispatchEvent(new Event('resize'));
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to refresh Twitch player:', e);
+        }
+      }
+    });
+  }, 50);
   
+  // 恢復過渡效果
   setTimeout(() => {
     boxes.forEach(b => {
-      b.style.transition = '';
+      b.style.transition = 'all 0.5s ease';
       const chatDiv = b.querySelector('.chat-container');
       if (chatDiv) {
         chatDiv.style.transition = 'all 0.3s ease';
       }
     });
-  }, 600);
+  }, 100);
 }
 

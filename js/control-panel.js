@@ -342,9 +342,12 @@ function updateStreamOrderList() {
             container.insertBefore(draggedBox, targetBox);
             updateStreamOrderList();
             
-            // 重新應用布局（使用防抖）
-            const layoutType = autoSelectLayout();
-            setLayout(layoutType);
+            // 重新應用布局（使用immediate=true，因為已經在事件處理中）
+            // 增加小延遲確保DOM變化完成
+            setTimeout(() => {
+              const layoutType = autoSelectLayout();
+              setLayout(layoutType, true);
+            }, 50);
           }
         }
       });
@@ -367,9 +370,11 @@ function moveStreamUp(id) {
     container.insertBefore(currentBox, prevBox);
     updateStreamOrderList();
     
-    // 立即重新應用布局
-    const layoutType = autoSelectLayout();
-    setLayout(layoutType);
+    // 重新應用布局（增加小延遲確保DOM變化完成）
+    setTimeout(() => {
+      const layoutType = autoSelectLayout();
+      setLayout(layoutType, true);
+    }, 50);
   }
 }
 
@@ -385,9 +390,11 @@ function moveStreamDown(id) {
     container.insertBefore(nextBox, currentBox);
     updateStreamOrderList();
     
-    // 立即重新應用布局
-    const layoutType = autoSelectLayout();
-    setLayout(layoutType);
+    // 重新應用布局（增加小延遲確保DOM變化完成）
+    setTimeout(() => {
+      const layoutType = autoSelectLayout();
+      setLayout(layoutType, true);
+    }, 50);
   }
 }
 
@@ -401,9 +408,11 @@ function reorderStreams(draggedId, targetId) {
     container.insertBefore(draggedBox, targetBox);
     updateStreamOrderList();
     
-    // 立即重新應用布局
-    const layoutType = autoSelectLayout();
-    setLayout(layoutType);
+    // 重新應用布局（增加小延遲確保DOM變化完成）
+    setTimeout(() => {
+      const layoutType = autoSelectLayout();
+      setLayout(layoutType, true);
+    }, 50);
   }
 }
 

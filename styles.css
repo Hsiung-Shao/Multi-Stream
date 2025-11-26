@@ -34,17 +34,6 @@ body {
   box-shadow: 0 0 40px rgba(145, 71, 255, 0.5);
 }
 
-.stream-box.swapping {
-  border-color: #00ff00;
-  box-shadow: 0 0 40px rgba(0, 255, 0, 0.6);
-  z-index: 200 !important;
-}
-
-.stream-box.swap-target {
-  border-color: #00ff00;
-  box-shadow: 0 0 30px rgba(0, 255, 0, 0.4);
-  background: rgba(0, 255, 0, 0.1);
-}
 
 .content-wrapper {
   flex: 1;
