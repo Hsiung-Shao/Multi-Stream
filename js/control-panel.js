@@ -7,6 +7,11 @@ function toggleControlPanel() {
   
   // 儲存狀態
   localStorage.setItem('controlPanelCollapsed', panel.classList.contains('collapsed'));
+  
+  // 自動保存設置
+  if (typeof autoSaveSettings === 'function') {
+    autoSaveSettings();
+  }
 }
 
 // 使控制面板可拖曳
@@ -499,5 +504,10 @@ function toggleAllChats() {
   
   // 更新按鈕文字
   updateAllChatsButton();
+  
+  // 自動保存設置
+  if (typeof autoSaveSettings === 'function') {
+    autoSaveSettings();
+  }
 }
 

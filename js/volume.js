@@ -30,6 +30,10 @@ function setupVolumeControl(box, id) {
 let masterVolume = 100;
 
 function updateMasterVolume() {
+  // 自動保存設置
+  if (typeof autoSaveSettings === 'function') {
+    autoSaveSettings();
+  }
   const masterVolSlider = document.getElementById('master-volume');
   const masterVolValue = document.getElementById('master-volume-value');
   
