@@ -136,30 +136,8 @@ document.getElementById('url-input').addEventListener('keypress', e => {
   if (e.key === 'Enter') addStream();
 });
 
-// 點擊外部關閉布局選擇器
+// 點擊外部關閉收藏管理界面
 document.addEventListener('click', (e) => {
-  const selector = document.getElementById('layout-selector');
-  
-  // 檢查是否點擊了布局選擇器內的預覽元素
-  const layoutPreview = e.target.closest('.layout-preview');
-  if (layoutPreview) {
-    // 點擊了布局預覽，不關閉選擇器
-    return;
-  }
-  
-  // 檢查是否點擊了"選擇布局"按鈕
-  const btn = e.target.closest('button');
-  if (btn && btn.textContent.includes('選擇布局')) {
-    // 點擊了"選擇布局"按鈕，不關閉選擇器
-    return;
-  }
-  
-  // 如果點擊的不是選擇器內的任何元素，則關閉選擇器
-  if (selector && !selector.contains(e.target)) {
-    selector.classList.remove('show');
-  }
-  
-  // 點擊外部關閉收藏管理界面
   const favoriteManager = document.getElementById('favorite-streams-manager');
   if (favoriteManager && favoriteManager.classList.contains('show')) {
     const managerContent = favoriteManager.querySelector('.favorite-manager-content');

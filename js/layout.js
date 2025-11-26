@@ -121,8 +121,19 @@ function setLayout(type, immediate = false) {
   
   pendingLayoutUpdate = false;
   
-  // 關閉布局選擇器
-  document.getElementById('layout-selector').classList.remove('show');
+  // 更新控制面板中的布局預覽活動狀態
+  document.querySelectorAll('.layout-preview-inline').forEach(preview => {
+    preview.classList.remove('active');
+  });
+  // 根據布局類型設置對應的預覽為活動狀態
+  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 6: 4, 9: 5 };
+  const previewIndex = layoutMap[type];
+  if (previewIndex !== undefined) {
+    const previews = document.querySelectorAll('.layout-preview-inline');
+    if (previews[previewIndex]) {
+      previews[previewIndex].classList.add('active');
+    }
+  }
   
   // 暫時禁用過渡效果，避免Twitch播放器在動畫過程中出現問題
   boxes.forEach(b => { 

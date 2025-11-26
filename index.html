@@ -24,11 +24,43 @@
     
     <div class="control-section">
       <div class="section-title">布局控制</div>
-      <div id="presets">
-        <button onclick="toggleLayoutSelector()">選擇布局</button>
-        <button onclick="clearAll()">清空</button>
-        <button onclick="saveLayout()">儲存布局</button>
-        <button onclick="loadLayout()">讀取布局</button>
+      <div class="layout-grid-inline">
+        <div class="layout-preview-inline" onclick="setLayout(1)" title="單一畫面">
+          <div style="width: 100%; height: 100%;"></div>
+        </div>
+        <div class="layout-preview-inline" onclick="setLayout(2)" title="左右分割">
+          <div style="width: 50%; height: 100%;"></div>
+          <div style="width: 50%; height: 100%;"></div>
+        </div>
+        <div class="layout-preview-inline" onclick="setLayout(3)" title="上下分割">
+          <div style="width: 100%; height: 50%;"></div>
+          <div style="width: 100%; height: 50%;"></div>
+        </div>
+        <div class="layout-preview-inline" onclick="setLayout(4)" title="四宮格">
+          <div style="width: 50%; height: 50%;"></div>
+          <div style="width: 50%; height: 50%;"></div>
+          <div style="width: 50%; height: 50%;"></div>
+          <div style="width: 50%; height: 50%;"></div>
+        </div>
+        <div class="layout-preview-inline" onclick="setLayout(6)" title="2×3 網格">
+          <div style="width: 33.33%; height: 50%;"></div>
+          <div style="width: 33.33%; height: 50%;"></div>
+          <div style="width: 33.33%; height: 50%;"></div>
+          <div style="width: 33.33%; height: 50%;"></div>
+          <div style="width: 33.33%; height: 50%;"></div>
+          <div style="width: 33.33%; height: 50%;"></div>
+        </div>
+        <div class="layout-preview-inline" onclick="setLayout(9)" title="3×3 網格">
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+          <div style="width: 33.33%; height: 33.33%;"></div>
+        </div>
       </div>
     </div>
     
@@ -66,47 +98,6 @@
   </div>
 </div>
 
-<div class="layout-selector" id="layout-selector">
-  <div style="margin-bottom: 8px; font-weight: bold;">選擇切割類型：</div>
-  <div class="layout-grid">
-    <div class="layout-preview" onclick="setLayout(1)" title="單一畫面">
-      <div style="width: 100%; height: 100%;"></div>
-    </div>
-    <div class="layout-preview" onclick="setLayout(2)" title="左右分割">
-      <div style="width: 50%; height: 100%;"></div>
-      <div style="width: 50%; height: 100%;"></div>
-    </div>
-    <div class="layout-preview" onclick="setLayout(3)" title="上下分割">
-      <div style="width: 100%; height: 50%;"></div>
-      <div style="width: 100%; height: 50%;"></div>
-    </div>
-    <div class="layout-preview" onclick="setLayout(4)" title="四宮格">
-      <div style="width: 50%; height: 50%;"></div>
-      <div style="width: 50%; height: 50%;"></div>
-      <div style="width: 50%; height: 50%;"></div>
-      <div style="width: 50%; height: 50%;"></div>
-    </div>
-    <div class="layout-preview" onclick="setLayout(6)" title="2×3 網格">
-      <div style="width: 33.33%; height: 50%;"></div>
-      <div style="width: 33.33%; height: 50%;"></div>
-      <div style="width: 33.33%; height: 50%;"></div>
-      <div style="width: 33.33%; height: 50%;"></div>
-      <div style="width: 33.33%; height: 50%;"></div>
-      <div style="width: 33.33%; height: 50%;"></div>
-    </div>
-    <div class="layout-preview" onclick="setLayout(9)" title="3×3 網格">
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-      <div style="width: 33.33%; height: 33.33%;"></div>
-    </div>
-  </div>
-</div>
 
 <div id="container"></div>
 
