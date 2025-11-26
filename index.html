@@ -2,196 +2,696 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>多來源直播分割器</title>
 <style>
-  body { margin:0; background:#000; color:#fff; font-family:Arial; overflow:hidden; }
-  #container { position:relative; width:100vw; height:100vh; }
+  * { box-sizing: border-box; }
+  body { 
+    margin: 0; 
+    background: #0a0a0a; 
+    color: #fff; 
+    font-family: 'Segoe UI', Arial, sans-serif; 
+    overflow: hidden; 
+  }
+  
+  #container { 
+    position: relative; 
+    width: 100vw; 
+    height: 100vh; 
+    background: #000;
+  }
+  
   .stream-box {
-    position: absolute; background:#111; border:2px solid #333; box-shadow:0 0 20px rgba(0,0,0,0.8);
-    overflow:hidden; border-radius:8px; user-select:none;
+    position: absolute; 
+    background: #111; 
+    border: 2px solid #333; 
+    box-shadow: 0 0 30px rgba(0,0,0,0.9);
+    overflow: hidden; 
+    border-radius: 8px; 
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    min-width: 300px;
+    min-height: 200px;
   }
-  .stream-box iframe { width:100%; height:calc(100% - 40px); border:none; }
+  
+  .stream-box.active {
+    border-color: #9147ff;
+    box-shadow: 0 0 40px rgba(145, 71, 255, 0.5);
+  }
+  
+  .player-container {
+    flex: 1;
+    position: relative;
+    min-height: 200px;
+  }
+  
+  .player-container iframe { 
+    width: 100%; 
+    height: 100%; 
+    border: none; 
+    display: block;
+  }
+  
+  .chat-container {
+    height: 250px;
+    background: #0e0e0e;
+    border-top: 1px solid #333;
+    transition: height 0.3s ease;
+    overflow: hidden;
+  }
+  
+  .chat-container.hidden {
+    height: 0;
+    border: none;
+  }
+  
+  .chat-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  
   .controls {
-    height:40px; background:rgba(0,0,0,0.7); display:flex; align-items:center; padding:0 10px;
-    gap:10px; font-size:14px;
+    height: 45px; 
+    background: rgba(0, 0, 0, 0.85); 
+    display: flex; 
+    align-items: center; 
+    padding: 0 12px;
+    gap: 12px; 
+    font-size: 13px;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
   }
-  .volume { width:100px; }
-  .close { cursor:pointer; color:red; font-weight:bold; }
-  #add-panel { position:fixed; top:10px; left:10px; z-index:999; }
-  #presets { position:fixed; top:50px; left:10px; z-index:999; display:flex; gap:5px; flex-wrap:wrap; }
-  button { padding:8px 12px; background:#1a1a1a; color:#fff; border:none; border-radius:4px; cursor:pointer; }
-  button:hover { background:#333; }
+  
+  .controls .stream-label {
+    font-weight: bold;
+    color: #9147ff;
+    min-width: 50px;
+  }
+  
+  .volume-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 200px;
+  }
+  
+  .volume {
+    flex: 1;
+    height: 6px;
+    cursor: pointer;
+  }
+  
+  .vol-value {
+    min-width: 40px;
+    text-align: right;
+    font-size: 12px;
+    color: #aaa;
+  }
+  
+  .control-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+  
+  .control-btn:hover {
+    background: #333;
+    border-color: #555;
+  }
+  
+  .close { 
+    cursor: pointer; 
+    color: #ff4444; 
+    font-weight: bold; 
+    font-size: 18px;
+    padding: 0 8px;
+    transition: transform 0.2s;
+  }
+  
+  .close:hover {
+    transform: scale(1.2);
+  }
+  
+  #add-panel { 
+    position: fixed; 
+    top: 10px; 
+    left: 10px; 
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  #url-input {
+    width: 400px;
+    padding: 10px;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  #url-input:focus {
+    outline: none;
+    border-color: #9147ff;
+  }
+  
+  #presets { 
+    position: fixed; 
+    top: 70px; 
+    left: 10px; 
+    z-index: 1000;
+    display: flex; 
+    gap: 8px; 
+    flex-wrap: wrap;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+  }
+  
+  button { 
+    padding: 8px 14px; 
+    background: #1a1a1a; 
+    color: #fff; 
+    border: 1px solid #444; 
+    border-radius: 4px; 
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  
+  button:hover { 
+    background: #333; 
+    border-color: #9147ff;
+  }
+  
+  button.active {
+    background: #9147ff;
+    border-color: #9147ff;
+  }
+  
+  .resizer {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: #444;
+    right: 0;
+    bottom: 0;
+    cursor: se-resize;
+    border-radius: 4px 0 8px 0;
+  }
+  
+  .resizer:hover {
+    background: #9147ff;
+  }
+  
+  .layout-selector {
+    position: fixed;
+    top: 150px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    display: none;
+  }
+  
+  .layout-selector.show {
+    display: block;
+  }
+  
+  .layout-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+  
+  .layout-preview {
+    width: 60px;
+    height: 40px;
+    border: 2px solid #444;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    flex-wrap: wrap;
+    transition: all 0.2s;
+  }
+  
+  .layout-preview:hover {
+    border-color: #9147ff;
+  }
+  
+  .layout-preview.active {
+    border-color: #9147ff;
+    background: rgba(145, 71, 255, 0.2);
+  }
+  
+  .layout-preview div {
+    background: #9147ff;
+    border: 1px solid #000;
+  }
 </style>
 </head>
 <body>
 
 <div id="add-panel">
-  <input type="text" id="url-input" placeholder="貼上 Twitch / YouTube / Kick 直播網址" style="width:400px;padding:8px;">
+  <input type="text" id="url-input" placeholder="貼上 Twitch / YouTube 直播網址">
   <button onclick="addStream()">加入畫面</button>
 </div>
 
 <div id="presets">
-  <button onclick="setLayout(1)">1 格</button>
-  <button onclick="setLayout(2)">左右</button>
-  <button onclick="setLayout(3)">上中下</button>
-  <button onclick="setLayout(4)">四宮格</button>
-  <button onclick="setLayout(6)">2×3</button>
+  <button onclick="toggleLayoutSelector()">選擇布局</button>
   <button onclick="clearAll()">清空</button>
   <button onclick="saveLayout()">儲存布局</button>
   <button onclick="loadLayout()">讀取布局</button>
 </div>
 
+<div class="layout-selector" id="layout-selector">
+  <div style="margin-bottom: 8px; font-weight: bold;">選擇切割類型：</div>
+  <div class="layout-grid">
+    <div class="layout-preview" onclick="setLayout(1)" title="單一畫面">
+      <div style="width: 100%; height: 100%;"></div>
+    </div>
+    <div class="layout-preview" onclick="setLayout(2)" title="左右分割">
+      <div style="width: 50%; height: 100%;"></div>
+      <div style="width: 50%; height: 100%;"></div>
+    </div>
+    <div class="layout-preview" onclick="setLayout(3)" title="上下分割">
+      <div style="width: 100%; height: 50%;"></div>
+      <div style="width: 100%; height: 50%;"></div>
+    </div>
+    <div class="layout-preview" onclick="setLayout(4)" title="四宮格">
+      <div style="width: 50%; height: 50%;"></div>
+      <div style="width: 50%; height: 50%;"></div>
+      <div style="width: 50%; height: 50%;"></div>
+      <div style="width: 50%; height: 50%;"></div>
+    </div>
+    <div class="layout-preview" onclick="setLayout(6)" title="2×3 網格">
+      <div style="width: 33.33%; height: 50%;"></div>
+      <div style="width: 33.33%; height: 50%;"></div>
+      <div style="width: 33.33%; height: 50%;"></div>
+      <div style="width: 33.33%; height: 50%;"></div>
+      <div style="width: 33.33%; height: 50%;"></div>
+      <div style="width: 33.33%; height: 50%;"></div>
+    </div>
+    <div class="layout-preview" onclick="setLayout(9)" title="3×3 網格">
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+      <div style="width: 33.33%; height: 33.33%;"></div>
+    </div>
+  </div>
+</div>
+
 <div id="container"></div>
 
-<script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<!-- Twitch Embed API -->
+<script src="https://player.twitch.tv/js/embed/v1.js"></script>
+
 <script>
 // 全局變數
 let streamCount = 0;
 const container = document.getElementById('container');
+const players = {}; // 儲存播放器實例
+const streamData = {}; // 儲存串流資訊
+
+// YouTube API 準備就緒
+let ytApiReady = false;
+function onYouTubeIframeAPIReady() {
+  ytApiReady = true;
+}
+
+// 獲取有效的 parent 域名
+function getParentDomain() {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
+  // 如果是 file:// 協議，使用 localhost
+  if (protocol === 'file:' || !hostname || hostname === '') {
+    return 'localhost';
+  }
+  
+  // 如果是 localhost 或 127.0.0.1，返回 localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+    return 'localhost';
+  }
+  
+  // 返回實際的 hostname
+  return hostname;
+}
+
+// 獲取 Twitch parent 陣列（支援多個域名）
+function getTwitchParents() {
+  const domain = getParentDomain();
+  // Twitch 允許 localhost 和 127.0.0.1
+  if (domain === 'localhost') {
+    return ['localhost', '127.0.0.1'];
+  }
+  return [domain];
+}
 
 // 主要加入函式
 function addStream(url = null) {
   if (!url) url = document.getElementById('url-input').value.trim();
   if (!url) return alert('請輸入直播網址');
+  
+  // 清空輸入框
+  document.getElementById('url-input').value = '';
 
   const id = ++streamCount;
   const box = document.createElement('div');
   box.className = 'stream-box';
-  box.id = 'box'+id;
+  box.id = 'box' + id;
+  box.dataset.streamId = id;
+  
   box.innerHTML = `
     <div class="controls">
-      <span>#${id}</span>
-      <input type="range" class="volume" min="0" max="100" value="100">
-      <span class="vol-value">100%</span>
-      <span class="close" onclick="removeBox(${id})">×</span>
+      <span class="stream-label">#${id}</span>
+      <div class="volume-control">
+        <span style="font-size: 11px;">🔊</span>
+        <input type="range" class="volume" min="0" max="100" value="100">
+        <span class="vol-value">100%</span>
+      </div>
+      <button class="control-btn" onclick="toggleChat(${id})" title="切換聊天室">💬</button>
+      <span class="close" onclick="removeBox(${id})" title="移除">×</span>
     </div>
-    <div id="player${id}"></div>
-    <div id="chat${id}" style="height:300px;background:#111;"></div>
+    <div class="player-container" id="player${id}"></div>
+    <div class="chat-container" id="chat${id}"></div>
+    <div class="resizer"></div>
   `;
+  
   container.appendChild(box);
 
-  // 解析來源並產生 iframe
-  let playerUrl = '';
-  let chatUrl = '';
+  // 解析來源
   let platform = '';
+  let channelId = '';
+  let videoId = '';
+  let originalUrl = url;
 
   if (url.includes('twitch.tv')) {
-    const channel = url.split('/').pop().split('?')[0];
-    playerUrl = `https://player.twitch.tv/?channel=${channel}&parent=${location.hostname}&autoplay=true&muted=false`;
-    chatUrl = `https://www.twitch.tv/embed/${channel}/chat?parent=${location.hostname}&darkpopout`;
+    const match = url.match(/twitch\.tv\/([^\/\?]+)/);
+    if (!match) {
+      alert('無法解析 Twitch 網址');
+      box.remove();
+      return;
+    }
+    channelId = match[1];
     platform = 'twitch';
   } 
   else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    let videoId = '';
-    if (url.includes('youtube.com/live/') || url.includes('youtube.com/watch?v=')) {
-      videoId = new URL(url).searchParams.get('v') || url.split('live/')[1]?.split('?')[0];
+    if (url.includes('youtube.com/live/')) {
+      videoId = url.split('live/')[1]?.split('?')[0];
+    } else if (url.includes('youtube.com/watch')) {
+      videoId = new URL(url).searchParams.get('v');
     } else if (url.includes('youtu.be/')) {
-      videoId = url.split('youtu.be/')[1].split('?')[0];
+      videoId = url.split('youtu.be/')[1]?.split('?')[0];
     }
-    playerUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0`;
-    chatUrl = `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}`;
+    
+    if (!videoId) {
+      alert('無法解析 YouTube 網址');
+      box.remove();
+      return;
+    }
     platform = 'youtube';
-  }
-  else if (url.includes('kick.com')) {
-    const channel = url.split('/').pop().split('?')[0];
-    playerUrl = `https://player.kick.com/${channel}`;
-    chatUrl = `https://kick.com/${channel}/chatroom`;
-    platform = 'kick';
   } else {
-    alert('不支援的平台，目前支援 Twitch、YouTube、Kick');
+    alert('不支援的平台，目前支援 Twitch、YouTube');
     box.remove();
     return;
   }
 
-  // 建立播放器 iframe
-  const playerIframe = document.createElement('iframe');
-  playerIframe.src = playerUrl;
-  playerIframe.allowFullscreen = true;
-  playerIframe.allow = "autoplay; fullscreen";
-  document.getElementById('player'+id).appendChild(playerIframe);
-
-  // 建立聊天室 iframe
-  const chatIframe = document.createElement('iframe');
-  chatIframe.src = chatUrl;
-  chatIframe.style.width = '100%';
-  chatIframe.style.height = '100%';
-  chatIframe.frameBorder = "0";
-  document.getElementById('chat'+id).appendChild(chatIframe);
-
-  // 音量控制
-  const volSlider = box.querySelector('.volume');
-  const volValue = box.querySelector('.vol-value');
-  volSlider.oninput = () => {
-    const vol = volSlider.value / 100;
-    volValue.textContent = volSlider.value + '%';
-    // 因為跨域 iframe 無法直接控制音量，用 CSS 濾鏡模擬（僅視覺）
-    playerIframe.style.filter = vol === 0 ? 'brightness(0.5)' : '';
-    playerIframe.style.opacity = 0.7 + vol * 0.3;
+  // 儲存串流資訊
+  streamData[id] = {
+    platform,
+    channelId,
+    videoId,
+    originalUrl,
+    volume: 100,
+    chatVisible: true
   };
 
-  // 預設位置（右下角堆疊）
-  const size = platform === 'kick' ? 400 : 500;
+  // 建立播放器
+  if (platform === 'twitch') {
+    createTwitchPlayer(id, channelId);
+  } else if (platform === 'youtube') {
+    createYouTubePlayer(id, videoId);
+  }
+
+  // 建立聊天室
+  createChat(id, platform, channelId, videoId);
+
+  // 音量控制
+  setupVolumeControl(box, id);
+
+  // 預設位置
+  const size = 500;
   box.style.width = size + 'px';
-  box.style.height = (size * 9/16 + 340) + 'px'; // 16:9 + 控制列 + 聊天室
+  box.style.height = (size * 9/16 + 295) + 'px';
   box.style.right = '20px';
   box.style.bottom = (20 + (id-1)*30) + 'px';
 
   makeDraggableResizable(box);
-  setLayout(1); // 初始重新整理版面
+  
+  // 點擊選中
+  box.addEventListener('click', () => {
+    document.querySelectorAll('.stream-box').forEach(b => b.classList.remove('active'));
+    box.classList.add('active');
+  });
+}
+
+// 建立 Twitch 播放器
+function createTwitchPlayer(id, channel) {
+  const parentDomains = getTwitchParents();
+  
+  const options = {
+    width: '100%',
+    height: '100%',
+    channel: channel,
+    parent: parentDomains,
+    autoplay: true,
+    muted: false
+  };
+  
+  try {
+    const playerDiv = document.getElementById('player' + id);
+    const player = new Twitch.Player('player' + id, options);
+    
+    players[id] = {
+      type: 'twitch',
+      player: player
+    };
+    
+    player.addEventListener(Twitch.Player.READY, () => {
+      player.setVolume(1.0);
+    });
+    
+    player.addEventListener(Twitch.Player.ERROR, () => {
+      console.error('Twitch player error for channel:', channel);
+      alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 使用 http://localhost 而非 file:// 開啟網頁');
+    });
+  } catch (error) {
+    console.error('Error creating Twitch player:', error);
+    alert('無法建立 Twitch 播放器。請確認使用 http://localhost 開啟網頁，而非直接開啟檔案。');
+  }
+}
+
+// 建立 YouTube 播放器
+function createYouTubePlayer(id, videoId) {
+  // 等待 API 準備就緒
+  const initPlayer = () => {
+    if (typeof YT !== 'undefined' && YT.Player) {
+      try {
+        const playerDiv = document.getElementById('player' + id);
+        const player = new YT.Player('player' + id, {
+          videoId: videoId,
+          width: '100%',
+          height: '100%',
+          playerVars: {
+            autoplay: 1,
+            mute: 0,
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            enablejsapi: 1,
+            origin: window.location.origin || 'http://localhost'
+          },
+          events: {
+            onReady: (event) => {
+              event.target.setVolume(100);
+            },
+            onError: (event) => {
+              console.error('YouTube player error:', event.data);
+              let errorMsg = '無法載入 YouTube 直播';
+              switch(event.data) {
+                case 2: errorMsg += '：無效的影片 ID'; break;
+                case 5: errorMsg += '：HTML5 播放器錯誤'; break;
+                case 100: errorMsg += '：影片不存在或已被刪除'; break;
+                case 101: 
+                case 150: errorMsg += '：此影片不允許嵌入播放'; break;
+              }
+              alert(errorMsg);
+            }
+          }
+        });
+        
+        players[id] = {
+          type: 'youtube',
+          player: player
+        };
+      } catch (error) {
+        console.error('Error creating YouTube player:', error);
+        alert('無法建立 YouTube 播放器。請確認使用 http://localhost 開啟網頁。');
+      }
+    } else {
+      setTimeout(initPlayer, 100);
+    }
+  };
+  
+  initPlayer();
+}
+
+// 建立聊天室
+function createChat(id, platform, channelId, videoId) {
+  const chatDiv = document.getElementById('chat' + id);
+  const parentDomain = getParentDomain();
+  
+  let chatUrl = '';
+  
+  if (platform === 'twitch') {
+    // Twitch 聊天室需要 parent 參數
+    chatUrl = `https://www.twitch.tv/embed/${channelId}/chat?parent=${parentDomain}&darkpopout`;
+  } else if (platform === 'youtube') {
+    // YouTube 聊天室需要 embed_domain 參數
+    chatUrl = `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${parentDomain}`;
+  }
+  
+  if (chatUrl) {
+    const chatIframe = document.createElement('iframe');
+    chatIframe.src = chatUrl;
+    chatIframe.style.width = '100%';
+    chatIframe.style.height = '100%';
+    chatIframe.frameBorder = '0';
+    chatIframe.allow = 'autoplay';
+    chatDiv.appendChild(chatIframe);
+    
+    // 錯誤處理
+    chatIframe.onerror = () => {
+      console.error('Chat iframe failed to load');
+    };
+  }
+}
+
+// 設定音量控制
+function setupVolumeControl(box, id) {
+  const volSlider = box.querySelector('.volume');
+  const volValue = box.querySelector('.vol-value');
+  
+  volSlider.addEventListener('input', () => {
+    const vol = parseInt(volSlider.value);
+    volValue.textContent = vol + '%';
+    streamData[id].volume = vol;
+    
+    // 控制實際音量
+    if (players[id]) {
+      if (players[id].type === 'twitch') {
+        players[id].player.setVolume(vol / 100);
+      } else if (players[id].type === 'youtube') {
+        players[id].player.setVolume(vol);
+      }
+    }
+  });
+}
+
+// 切換聊天室顯示
+function toggleChat(id) {
+  const chatDiv = document.getElementById('chat' + id);
+  const isVisible = !chatDiv.classList.contains('hidden');
+  
+  if (isVisible) {
+    chatDiv.classList.add('hidden');
+    streamData[id].chatVisible = false;
+  } else {
+    chatDiv.classList.remove('hidden');
+    streamData[id].chatVisible = true;
+  }
 }
 
 // 拖曳與縮放
 function makeDraggableResizable(el) {
-  let pos1=0,pos2=0,pos3=0,pos4=0;
-  el.onmousedown = dragMouseDown;
-
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  const controls = el.querySelector('.controls');
+  
+  controls.onmousedown = dragMouseDown;
+  
   function dragMouseDown(e) {
-    if (e.target.tagName === 'INPUT' || e.target.classList.contains('close')) return;
+    if (e.target.tagName === 'INPUT' || e.target.classList.contains('close') || e.target.classList.contains('control-btn')) return;
     e.preventDefault();
     pos3 = e.clientX;
     pos4 = e.clientY;
     document.onmouseup = closeDrag;
     document.onmousemove = elementDrag;
+    el.style.zIndex = '100';
   }
-
+  
   function elementDrag(e) {
     e.preventDefault();
     pos1 = pos3 - e.clientX;
     pos2 = pos4 - e.clientY;
     pos3 = e.clientX;
     pos4 = e.clientY;
-    el.style.top  = (el.offsetTop  - pos2) + "px";
-    el.style.left = (el.offsetLeft - pos1) + "px";
+    el.style.top = (el.offsetTop - pos2) + 'px';
+    el.style.left = (el.offsetLeft - pos1) + 'px';
     el.style.right = 'auto';
     el.style.bottom = 'auto';
   }
-
+  
   function closeDrag() {
     document.onmouseup = null;
     document.onmousemove = null;
+    el.style.zIndex = '';
   }
-
-  // 簡單縮放（右下角拖曳）
-  const resizer = document.createElement('div');
-  resizer.style.width = '15px';
-  resizer.style.height = '15px';
-  resizer.style.background = '#444';
-  resizer.style.position = 'absolute';
-  resizer.style.right = '0';
-  resizer.style.bottom = '0';
-  resizer.style.cursor = 'se-resize';
-  el.appendChild(resizer);
-
+  
+  // 縮放功能
+  const resizer = el.querySelector('.resizer');
   resizer.addEventListener('mousedown', initResize);
+  
   function initResize(e) {
     e.stopPropagation();
     window.addEventListener('mousemove', resize);
     window.addEventListener('mouseup', stopResize);
   }
+  
   function resize(e) {
-    el.style.width = (e.clientX - el.offsetLeft) + 'px';
-    el.style.height = (e.clientY - el.offsetTop) + 'px';
+    const newWidth = e.clientX - el.offsetLeft;
+    const newHeight = e.clientY - el.offsetTop;
+    
+    if (newWidth >= 300) el.style.width = newWidth + 'px';
+    if (newHeight >= 200) el.style.height = newHeight + 'px';
   }
+  
   function stopResize() {
     window.removeEventListener('mousemove', resize);
     window.removeEventListener('mouseup', stopResize);
@@ -199,40 +699,70 @@ function makeDraggableResizable(el) {
 }
 
 function removeBox(id) {
-  document.getElementById('box'+id).remove();
+  const box = document.getElementById('box' + id);
+  if (box) {
+    // 清理播放器
+    if (players[id]) {
+      if (players[id].type === 'youtube' && players[id].player.destroy) {
+        players[id].player.destroy();
+      }
+      delete players[id];
+    }
+    delete streamData[id];
+    box.remove();
+  }
+}
+
+// 切換布局選擇器
+function toggleLayoutSelector() {
+  const selector = document.getElementById('layout-selector');
+  selector.classList.toggle('show');
 }
 
 // 快捷布局
 function setLayout(type) {
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length === 0) return;
-
-  boxes.forEach(b => { b.style.transition = 'all 0.5s'; });
-
-  if (type === 1 || boxes.length === 1) {
-    boxes.forEach((b,i) => {
-      b.style.left = '0'; b.style.top = '0';
-      b.style.width = '100%'; b.style.height = '100%';
+  
+  // 關閉布局選擇器
+  document.getElementById('layout-selector').classList.remove('show');
+  
+  boxes.forEach(b => { 
+    b.style.transition = 'all 0.5s ease';
+  });
+  
+  const count = boxes.length;
+  
+  if (type === 1 || count === 1) {
+    // 單一畫面
+    boxes.forEach(b => {
+      b.style.left = '0';
+      b.style.top = '0';
+      b.style.width = '100%';
+      b.style.height = '100%';
     });
   }
-  else if (type === 2) { // 左右
-    boxes.forEach((b,i) => {
-      b.style.width = (100/boxes.length)+'%';
+  else if (type === 2) {
+    // 左右分割
+    boxes.forEach((b, i) => {
+      b.style.width = (100 / count) + '%';
       b.style.height = '100%';
-      b.style.left = (100/boxes.length * i)+'%';
+      b.style.left = (100 / count * i) + '%';
       b.style.top = '0';
     });
   }
-  else if (type === 3) { // 上中下
-    boxes.forEach((b,i) => {
-      b.style.height = (100/boxes.length)+'%';
+  else if (type === 3) {
+    // 上下分割
+    boxes.forEach((b, i) => {
+      b.style.height = (100 / count) + '%';
       b.style.width = '100%';
-      b.style.top = (100/boxes.length * i)+'%';
+      b.style.top = (100 / count * i) + '%';
       b.style.left = '0';
     });
   }
-  else if (type === 4) { // 四宮格
-    boxes.forEach((b,i) => {
+  else if (type === 4) {
+    // 四宮格
+    boxes.forEach((b, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
       b.style.width = '50%';
@@ -241,71 +771,199 @@ function setLayout(type) {
       b.style.top = row * 50 + '%';
     });
   }
-  else if (type === 6) { // 2x3
-    boxes.forEach((b,i) => {
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      b.style.width = '33.33%';
-      b.style.height = '50%';
-      b.style.left = col * 33.33 + '%';
-      b.style.top = row * 50 + '%';
+  else if (type === 6) {
+    // 2×3 網格
+    const cols = 3;
+    const rows = Math.ceil(count / cols);
+    boxes.forEach((b, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      b.style.width = (100 / cols) + '%';
+      b.style.height = (100 / rows) + '%';
+      b.style.left = (100 / cols * col) + '%';
+      b.style.top = (100 / rows * row) + '%';
     });
   }
-
-  setTimeout(()=> boxes.forEach(b=>b.style.transition=''), 600);
+  else if (type === 9) {
+    // 3×3 網格
+    const cols = 3;
+    const rows = Math.ceil(count / cols);
+    boxes.forEach((b, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      b.style.width = (100 / cols) + '%';
+      b.style.height = (100 / rows) + '%';
+      b.style.left = (100 / cols * col) + '%';
+      b.style.top = (100 / rows * row) + '%';
+    });
+  }
+  
+  setTimeout(() => {
+    boxes.forEach(b => b.style.transition = '');
+  }, 600);
 }
 
 function clearAll() {
-  if (confirm('確定要清空所有畫面？')) container.innerHTML = '';
-  streamCount = 0;
+  if (confirm('確定要清空所有畫面？')) {
+    // 清理所有播放器
+    Object.keys(players).forEach(id => {
+      if (players[id].type === 'youtube' && players[id].player.destroy) {
+        players[id].player.destroy();
+      }
+    });
+    players = {};
+    streamData = {};
+    container.innerHTML = '';
+    streamCount = 0;
+  }
 }
 
-// 本地儲存布局（未來換成登入後存資料庫）
+// 本地儲存布局
 function saveLayout() {
   const layout = [];
   document.querySelectorAll('.stream-box').forEach(box => {
-    const url = box.querySelector('iframe').src;
-    layout.push({
-      url: url.split('?')[0], // 簡化
-      style: {
-        left: box.style.left,
-        top: box.style.top,
-        width: box.style.width,
-        height: box.style.height
-      },
-      volume: box.querySelector('.volume').value
-    });
+    const id = parseInt(box.dataset.streamId);
+    const data = streamData[id];
+    if (data) {
+      layout.push({
+        url: data.originalUrl,
+        style: {
+          left: box.style.left,
+          top: box.style.top,
+          width: box.style.width,
+          height: box.style.height
+        },
+        volume: data.volume,
+        chatVisible: data.chatVisible
+      });
+    }
   });
+  
+  if (layout.length === 0) {
+    alert('沒有可儲存的布局');
+    return;
+  }
+  
   localStorage.setItem('multiStreamLayout', JSON.stringify(layout));
   alert('布局已儲存！');
 }
 
 function loadLayout() {
   const saved = localStorage.getItem('multiStreamLayout');
-  if (!saved) return alert('沒有儲存的布局');
+  if (!saved) {
+    alert('沒有儲存的布局');
+    return;
+  }
+  
   if (!confirm('載入會清空目前畫面，確定？')) return;
   
-  clearAll();
-  const layout = JSON.parse(saved);
-  layout.forEach(item => {
-    addStream(item.url);
+  // 清理現有播放器
+  Object.keys(players).forEach(id => {
+    if (players[id].type === 'youtube' && players[id].player.destroy) {
+      players[id].player.destroy();
+    }
   });
+  players = {};
+  streamData = {};
+  container.innerHTML = '';
+  streamCount = 0;
   
-  // 等所有 iframe 載入完成再套用位置
-  setTimeout(() => {
-    document.querySelectorAll('.stream-box').forEach((box,i) => {
-      if (layout[i] && layout[i].style) {
-        Object.assign(box.style, layout[i].style);
-        box.querySelector('.volume').value = layout[i].volume || 100;
-        box.querySelector('.volume').dispatchEvent(new Event('input'));
-      }
-    });
-  }, 3000);
+  const layout = JSON.parse(saved);
+  
+  // 依序加入串流
+  layout.forEach((item, index) => {
+    setTimeout(() => {
+      addStream(item.url);
+      
+      // 等待播放器建立後套用設定
+      setTimeout(() => {
+        const boxes = document.querySelectorAll('.stream-box');
+        const box = boxes[boxes.length - 1];
+        if (box && item.style) {
+          Object.assign(box.style, item.style);
+          
+          const id = parseInt(box.dataset.streamId);
+          if (streamData[id]) {
+            streamData[id].volume = item.volume || 100;
+            streamData[id].chatVisible = item.chatVisible !== undefined ? item.chatVisible : true;
+            
+            // 設定音量
+            const volSlider = box.querySelector('.volume');
+            if (volSlider) {
+              volSlider.value = streamData[id].volume;
+              volSlider.dispatchEvent(new Event('input'));
+            }
+            
+            // 設定聊天室顯示
+            if (!streamData[id].chatVisible) {
+              toggleChat(id);
+            }
+          }
+        }
+      }, 2000);
+    }, index * 500);
+  });
 }
+
+// 頁面載入時檢查協議
+window.addEventListener('DOMContentLoaded', () => {
+  const protocol = window.location.protocol;
+  if (protocol === 'file:') {
+    const warning = document.createElement('div');
+    warning.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 68, 68, 0.95);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      z-index: 10000;
+      text-align: center;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    `;
+    warning.innerHTML = `
+      <h3 style="margin: 0 0 15px 0;">⚠️ 連線警告</h3>
+      <p style="margin: 0 0 15px 0; line-height: 1.6;">
+        您正在使用 file:// 協議開啟網頁，這會導致 Twitch 和 YouTube 嵌入無法正常運作。
+      </p>
+      <p style="margin: 0 0 20px 0; line-height: 1.6; font-weight: bold;">
+        請使用本地伺服器開啟，例如：<br>
+        <code style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">http://localhost:8000</code>
+      </p>
+      <p style="margin: 0 0 15px 0; font-size: 12px; opacity: 0.9;">
+        可以使用 Python: <code>python -m http.server 8000</code><br>
+        或 Node.js: <code>npx http-server -p 8000</code>
+      </p>
+      <button onclick="this.parentElement.remove()" style="
+        padding: 10px 20px;
+        background: white;
+        color: #ff4444;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      ">我知道了</button>
+    `;
+    document.body.appendChild(warning);
+  }
+});
 
 // 按 Enter 快速加入
 document.getElementById('url-input').addEventListener('keypress', e => {
   if (e.key === 'Enter') addStream();
+});
+
+// 點擊外部關閉布局選擇器
+document.addEventListener('click', (e) => {
+  const selector = document.getElementById('layout-selector');
+  const btn = e.target.closest('button');
+  if (btn && btn.textContent.includes('選擇布局')) return;
+  if (!selector.contains(e.target)) {
+    selector.classList.remove('show');
+  }
 });
 </script>
 </body>
