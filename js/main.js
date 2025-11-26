@@ -59,8 +59,18 @@ window.addEventListener('DOMContentLoaded', () => {
   // 初始化串流順序列表
   updateStreamOrderList();
   
+  // 初始化所有聊天室按鈕狀態
+  if (typeof updateAllChatsButton === 'function') {
+    updateAllChatsButton();
+  }
+  
   // 定期更新串流順序列表（當有新增或刪除時）
-  setInterval(updateStreamOrderList, 1000);
+  setInterval(() => {
+    updateStreamOrderList();
+    if (typeof updateAllChatsButton === 'function') {
+      updateAllChatsButton();
+    }
+  }, 1000);
   
   // 頁面載入時自動應用布局（立即執行）
   const boxes = document.querySelectorAll('.stream-box');

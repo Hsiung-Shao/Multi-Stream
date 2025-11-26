@@ -355,6 +355,9 @@ function updateStreamOrderList() {
     
     orderList.appendChild(item);
   });
+  
+  // 更新所有聊天室按鈕狀態
+  updateAllChatsButton();
 }
 
 // 移動串流順序
@@ -414,5 +417,87 @@ function reorderStreams(draggedId, targetId) {
       setLayout(layoutType, true);
     }, 50);
   }
+}
+
+// 更新所有聊天室按鈕的狀態
+function updateAllChatsButton() {
+  const btn = document.getElementById('toggle-all-chats-btn');
+  if (!btn) return;
+  
+  const boxes = document.querySelectorAll('.stream-box');
+  if (boxes.length === 0) {
+    btn.textContent = '💬 顯示所有聊天室';
+    return;
+  }
+  
+  // 統計當前可見的聊天室數量
+  let visibleCount = 0;
+  boxes.forEach(box => {
+    const id = parseInt(box.dataset.streamId);
+    const chatDiv = document.getElementById('chat' + id);
+    if (chatDiv && !chatDiv.classList.contains('hidden')) {
+      visibleCount++;
+    }
+  });
+  
+  // 更新按鈕文字
+  if (visibleCount > boxes.length / 2) {
+    btn.textContent = '💬 隱藏所有聊天室';
+  } else {
+    btn.textContent = '💬 顯示所有聊天室';
+  }
+}
+
+// 切換所有聊天室的顯示/隱藏
+function toggleAllChats() {
+  const boxes = document.querySelectorAll('.stream-box');
+  if (boxes.length === 0) {
+    alert('目前沒有串流');
+    return;
+  }
+  
+  // 統計當前可見的聊天室數量
+  let visibleCount = 0;
+  boxes.forEach(box => {
+    const id = parseInt(box.dataset.streamId);
+    const chatDiv = document.getElementById('chat' + id);
+    if (chatDiv && !chatDiv.classList.contains('hidden')) {
+      visibleCount++;
+    }
+  });
+  
+  // 如果大部分聊天室是可見的，則隱藏所有；否則顯示所有
+  const shouldHide = visibleCount > boxes.length / 2;
+  
+  boxes.forEach(box => {
+    const id = parseInt(box.dataset.streamId);
+    const chatDiv = document.getElementById('chat' + id);
+    const resizer = document.getElementById('chat-resizer' + id);
+    
+    if (chatDiv) {
+      if (shouldHide) {
+        // 隱藏聊天室
+        chatDiv.classList.add('hidden');
+        if (resizer) {
+          resizer.style.display = 'none';
+        }
+        if (streamData[id]) {
+          streamData[id].chatVisible = false;
+        }
+      } else {
+        // 顯示聊天室
+        chatDiv.classList.remove('hidden');
+        if (resizer) {
+          resizer.style.display = '';
+        }
+        if (streamData[id]) {
+          streamData[id].chatVisible = true;
+        }
+      }
+    }
+  });
+  
+  // 更新按鈕文字
+  updateAllChatsButton();
 }
 

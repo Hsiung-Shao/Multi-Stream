@@ -75,13 +75,14 @@ function addStream(url = null) {
   }
 
   // 儲存串流資訊
+  // YouTube 聊天室預設為隱藏（因為無法跨域顯示）
   streamData[id] = {
     platform,
     channelId,
     videoId,
     originalUrl,
     volume: 100,
-    chatVisible: true
+    chatVisible: platform !== 'youtube' // YouTube 預設隱藏，其他平台預設顯示
   };
 
   // 建立播放器
@@ -96,6 +97,18 @@ function addStream(url = null) {
 
   // 設定聊天室調整大小功能
   setupChatResizer(id);
+  
+  // 如果聊天室預設為隱藏（如YouTube），立即隱藏
+  if (!streamData[id].chatVisible) {
+    const chatDiv = document.getElementById('chat' + id);
+    const resizer = document.getElementById('chat-resizer' + id);
+    if (chatDiv) {
+      chatDiv.classList.add('hidden');
+    }
+    if (resizer) {
+      resizer.style.display = 'none';
+    }
+  }
 
   // 音量控制
   setupVolumeControl(box, id);

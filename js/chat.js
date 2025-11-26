@@ -248,6 +248,11 @@ function toggleChat(id) {
     }
     streamData[id].chatVisible = true;
   }
+  
+  // 更新所有聊天室按鈕狀態
+  if (typeof updateAllChatsButton === 'function') {
+    updateAllChatsButton();
+  }
 }
 
 // 分離聊天室（創建獨立視窗）
