@@ -1,17 +1,46 @@
 // 廣告管理功能
 
-// 廣告配置
-const adConfig = {
-  // 測試模式：縮短間隔以便測試
-  testMode: true,
-  // 顯示間隔（毫秒）：測試模式30秒，正式模式30分鐘
-  showInterval: 30 * 1000, // 測試：30秒，正式：30 * 60 * 1000
-  // 顯示持續時間範圍（毫秒）：測試模式5-10秒，正式模式1-3分鐘
-  displayDuration: {
-    min: 5 * 1000,  // 測試：5秒，正式：1 * 60 * 1000
-    max: 10 * 1000  // 測試：10秒，正式：3 * 60 * 1000
+// 廣告配置管理
+const adConfigManager = {
+  // 獲取配置
+  getConfig: () => {
+    const saved = localStorage.getItem('adConfig');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('載入廣告配置失敗:', e);
+      }
+    }
+    // 默認配置
+    return {
+      enabled: false, // 默認關閉廣告
+      showControlButtons: false, // 默認隱藏控制按鈕
+      testMode: true,
+      showInterval: 30 * 1000,
+      displayDuration: {
+        min: 5 * 1000,
+        max: 10 * 1000
+      }
+    };
+  },
+  
+  // 保存配置
+  saveConfig: (config) => {
+    localStorage.setItem('adConfig', JSON.stringify(config));
+  },
+  
+  // 更新配置
+  updateConfig: (updates) => {
+    const config = adConfigManager.getConfig();
+    Object.assign(config, updates);
+    adConfigManager.saveConfig(config);
+    return config;
   }
 };
+
+// 廣告配置（從配置管理器獲取）
+let adConfig = adConfigManager.getConfig();
 
 // 廣告狀態
 let adTimer = null;
@@ -20,18 +49,56 @@ let isAdVisible = false;
 
 // 初始化廣告系統
 function initAdSystem() {
+  // 重新載入配置
+  adConfig = adConfigManager.getConfig();
+  
+  // 更新控制按鈕顯示狀態
+  updateAdControlButtonsVisibility();
+  
+  // 如果廣告未啟用，不初始化
+  if (!adConfig.enabled) {
+    console.log('廣告功能已關閉');
+    updateAdEnabledButton(false);
+    return;
+  }
+  
+  // 更新按鈕狀態
+  updateAdEnabledButton(true);
+  updateAdTestModeButton(adConfig.testMode);
+  
   // 檢查是否應該顯示廣告
   checkAndShowAd();
   
   // 設置定時檢查
   startAdTimer();
-  
-  // 更新測試模式按鈕狀態
-  updateAdTestModeButton(adConfig.testMode);
+}
+
+// 更新廣告控制按鈕的顯示/隱藏
+function updateAdControlButtonsVisibility() {
+  const adSection = document.getElementById('ad-control-section');
+  if (adSection) {
+    // 根據配置決定是否顯示（默認隱藏）
+    const shouldShow = adConfig.showControlButtons === true;
+    adSection.style.display = shouldShow ? 'block' : 'none';
+  }
+}
+
+// 切換廣告控制按鈕顯示（開發者用）
+function toggleAdControlButtons() {
+  adConfig = adConfigManager.updateConfig({
+    showControlButtons: !(adConfig.showControlButtons === true)
+  });
+  updateAdControlButtonsVisibility();
+  console.log(`廣告控制按鈕已${adConfig.showControlButtons ? '顯示' : '隱藏'}`);
 }
 
 // 檢查並顯示廣告
 function checkAndShowAd() {
+  // 如果廣告未啟用，不檢查
+  if (!adConfig.enabled) {
+    return;
+  }
+  
   const now = Date.now();
   const lastShown = localStorage.getItem('adLastShown');
   const lastShownTime = lastShown ? parseInt(lastShown) : 0;
@@ -144,6 +211,40 @@ function startAdTimer() {
   }, adConfig.showInterval);
 }
 
+// 切換廣告啟用狀態
+function toggleAdEnabled() {
+  adConfig = adConfigManager.updateConfig({
+    enabled: !adConfig.enabled
+  });
+  
+  updateAdEnabledButton(adConfig.enabled);
+  
+  if (adConfig.enabled) {
+    console.log('廣告功能已啟用');
+    // 如果當前有廣告顯示，先隱藏
+    if (isAdVisible) {
+      hideAdBanner();
+    }
+    // 重新初始化
+    initAdSystem();
+  } else {
+    console.log('廣告功能已關閉');
+    // 停止所有定時器
+    if (adTimer) {
+      clearTimeout(adTimer);
+      adTimer = null;
+    }
+    if (adDisplayTimer) {
+      clearTimeout(adDisplayTimer);
+      adDisplayTimer = null;
+    }
+    // 隱藏當前顯示的廣告
+    if (isAdVisible) {
+      hideAdBanner();
+    }
+  }
+}
+
 // 切換測試模式
 function toggleAdTestMode() {
   adConfig.testMode = !adConfig.testMode;
@@ -164,11 +265,30 @@ function toggleAdTestMode() {
     updateAdTestModeButton(false);
   }
   
+  // 保存配置
+  adConfigManager.saveConfig(adConfig);
+  
   // 重新啟動定時器
   if (adTimer) {
     clearTimeout(adTimer);
   }
-  startAdTimer();
+  if (adConfig.enabled) {
+    startAdTimer();
+  }
+}
+
+// 更新廣告啟用按鈕狀態
+function updateAdEnabledButton(isEnabled) {
+  const btn = document.getElementById('ad-enabled-btn');
+  if (btn) {
+    if (isEnabled) {
+      btn.textContent = '✅ 廣告（開）';
+      btn.style.background = '#9147ff';
+    } else {
+      btn.textContent = '❌ 廣告（關）';
+      btn.style.background = '#444';
+    }
+  }
 }
 
 // 更新測試模式按鈕文字
@@ -187,6 +307,15 @@ function updateAdTestModeButton(isTestMode) {
 
 // 手動觸發廣告顯示（用於測試）
 function triggerAdManually() {
+  // 如果廣告未啟用，先啟用
+  if (!adConfig.enabled) {
+    if (confirm('廣告功能目前關閉，是否要啟用並顯示？')) {
+      toggleAdEnabled();
+    } else {
+      return;
+    }
+  }
+  
   try {
     // 如果廣告正在顯示，先隱藏
     if (isAdVisible) {
@@ -210,6 +339,8 @@ function triggerAdManually() {
 if (typeof window !== 'undefined') {
   window.triggerAdManually = triggerAdManually;
   window.toggleAdTestMode = toggleAdTestMode;
+  window.toggleAdEnabled = toggleAdEnabled;
+  window.toggleAdControlButtons = toggleAdControlButtons; // 開發者用於顯示/隱藏控制按鈕
   window.closeAdBanner = closeAdBanner;
 }
 

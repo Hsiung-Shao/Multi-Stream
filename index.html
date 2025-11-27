@@ -5,13 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>多來源直播分割器</title>
 <link rel="stylesheet" href="styles.css">
+
+<!-- ★★★ 1. 請把 ca-pub-XXXXXXXXXXXXXXXX 換成你的真實 AdSense ID ★★★ -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+     crossorigin="anonymous"></script>
+
 </head>
 <body>
 
 <div class="control-panel" id="control-panel">
   <div class="control-panel-header" id="control-panel-header">
     <div class="control-panel-title" onclick="toggleControlPanel()">
-      <span>⚙️</span>
+      <span>設定</span>
       <span>控制面板</span>
     </div>
     <span class="control-panel-toggle" onclick="toggleControlPanel()">▼</span>
@@ -67,33 +72,34 @@
     <div class="control-section">
       <div class="section-title">聊天室控制</div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button onclick="toggleAllChats()" id="toggle-all-chats-btn" style="padding: 6px 12px; font-size: 12px;">💬 顯示所有聊天室</button>
+        <button onclick="toggleAllChats()" id="toggle-all-chats-btn" style="padding: 6px 12px; font-size: 12px;">顯示所有聊天室</button>
       </div>
     </div>
     
     <div class="control-section">
       <div class="section-title">收藏串流</div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button onclick="showFavoriteStreamsManager()" style="padding: 6px 12px; font-size: 12px;">⭐ 管理收藏</button>
-        <button onclick="addCurrentStreamToFavorites()" style="padding: 6px 12px; font-size: 12px;">➕ 收藏當前</button>
+        <button onclick="showFavoriteStreamsManager()" style="padding: 6px 12px; font-size: 12px;">管理收藏</button>
+        <button onclick="addCurrentStreamToFavorites()" style="padding: 6px 12px; font-size: 12px;">收藏當前</button>
       </div>
     </div>
     
-    <div class="control-section">
-      <div class="section-title">廣告測試</div>
+    <div class="control-section" id="ad-control-section" style="display: none;">
+      <div class="section-title">廣告設定</div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button onclick="triggerAdManually()" style="padding: 6px 12px; font-size: 12px; background: #9147ff;">📢 測試廣告</button>
-        <button onclick="toggleAdTestMode()" id="ad-test-mode-btn" style="padding: 6px 12px; font-size: 12px;">🔄 測試模式</button>
+        <button onclick="toggleAdEnabled()" id="ad-enabled-btn" style="padding: 6px 12px; font-size: 12px;">廣告（關）</button>
+        <button onclick="triggerAdManually()" style="padding: 6px 12px; font-size: 12px; background: #9147ff;">測試廣告</button>
+        <button onclick="toggleAdTestMode()" id="ad-test-mode-btn" style="padding: 6px 12px; font-size: 12px;">測試模式</button>
       </div>
     </div>
     
     <div class="control-section">
       <div class="section-title">總音量控制</div>
       <div class="master-volume-control">
-        <label for="master-volume" style="font-size: 12px; color: #aaa; cursor: pointer;">🔊 總音量</label>
+        <label for="master-volume" style="font-size: 12px; color: #aaa; cursor: pointer;">總音量</label>
         <input type="range" id="master-volume" min="0" max="100" value="100" title="總音量控制" style="flex: 1; margin: 0 10px;">
         <span id="master-volume-value" style="min-width: 40px; text-align: right; font-size: 12px; color: #aaa;">100%</span>
-        <button onclick="muteAll()" style="padding: 4px 8px; font-size: 11px;">🔇 全部靜音</button>
+        <button onclick="muteAll()" style="padding: 4px 8px; font-size: 11px;">全部靜音</button>
       </div>
     </div>
     
@@ -106,21 +112,27 @@
   </div>
 </div>
 
-
 <div id="container"></div>
 
 <!-- 收藏串流管理界面 -->
 <div id="favorite-streams-manager" class="favorite-streams-manager"></div>
 
-<!-- 廣告容器 -->
+<!-- ★★★★★★ 真正賺錢的彈出廣告（你原本的每30分鐘彈出）★★★★★★ -->
 <div id="ad-banner" class="ad-banner">
   <div class="ad-content">
     <div class="ad-close-btn" onclick="closeAdBanner()" title="關閉">×</div>
     <div class="ad-body">
-      <div class="ad-placeholder">
-        <div class="ad-label">廣告</div>
-        <div class="ad-message">這裡是廣告區域</div>
-        <div class="ad-note">（測試模式：每30秒顯示一次，持續5-10秒）</div>
+      <!-- 這裡原本的 placeholder 整個換成真實 AdSense 廣告 -->
+      <ins class="adsbygoogle"
+           style="display:block;margin:0 auto;"
+           data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"   <!-- 2. 這裡也要換成你的 ID -->
+           data-ad-slot="1234567890"                 <!-- 3. 這裡填你在 AdSense 後台新建的「顯示廣告」單元 ID -->
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+
+      <!-- 可選：保留一點提示文字（上線後可刪） -->
+      <div style="text-align:center;margin-top:10px;color:#888;font-size:12px;">
+        每 30 分鐘顯示一次
       </div>
     </div>
   </div>
@@ -131,7 +143,7 @@
 <!-- Twitch Embed API -->
 <script src="https://player.twitch.tv/js/embed/v1.js"></script>
 
-<!-- JavaScript 模組 -->
+<!-- JavaScript 模組（完全不動） -->
 <script src="js/utils.js"></script>
 <script src="js/stream.js"></script>
 <script src="js/chat.js"></script>
@@ -142,5 +154,29 @@
 <script src="js/settings.js"></script>
 <script src="js/promotion.js"></script>
 <script src="js/main.js"></script>
+
+<!-- ★★★★★★ 關鍵：每次彈出時重新請求 AdSense（直接加在最後面，不會影響你原本的程式碼）★★★★★★ -->
+<script>
+// 你原本用來顯示廣告的函式（不管叫什麼名字）只要確保最後有這一行就一定會顯示真廣告
+// 如果你已經有 showAdBanner / openAd / triggerAd 等函式，直接在裡面加入下面這行即可
+const originalShowAd = window.showAdBanner || window.openAd || function(){};
+showAdBanner = openAd = function() {
+  document.getElementById('ad-banner').style.display = 'block';
+  
+  // 讓廣告重新載入（這一行最重要！）
+  setTimeout(() => {
+    (adsbygoogle = window.adsbygoogle || []).push({});
+  }, 300);
+  
+  // 如果你原本有動畫，直接呼叫原本的函式
+  if (originalShowAd !== showAdBanner) originalShowAd();
+};
+
+// 手動測試按鈕直接觸發
+function triggerAdManually() {
+  showAdBanner();
+}
+</script>
+
 </body>
 </html>
