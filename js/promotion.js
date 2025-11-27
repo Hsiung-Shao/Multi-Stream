@@ -14,13 +14,13 @@ const adConfigManager = {
     }
     // 默認配置
     return {
-      enabled: false, // 默認關閉廣告
-      showControlButtons: false, // 默認隱藏控制按鈕
-      testMode: true,
-      showInterval: 30 * 1000,
+      enabled: true, // 啟用廣告功能
+      showControlButtons: false, // 隱藏控制按鈕
+      testMode: false, // 正式模式
+      showInterval: 30 * 60 * 1000, // 30分鐘間隔
       displayDuration: {
-        min: 5 * 1000,
-        max: 10 * 1000
+        min: 1 * 60 * 1000, // 1分鐘
+        max: 3 * 60 * 1000  // 3分鐘
       }
     };
   },
@@ -135,6 +135,19 @@ function showAdBanner() {
   
   // 顯示廣告
   adBanner.classList.add('show');
+  
+  // 觸發 AdSense 廣告載入
+  try {
+    if (typeof window.adsbygoogle !== 'undefined') {
+      // 等待廣告容器顯示後再觸發 AdSense
+      setTimeout(() => {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        console.log('AdSense 廣告已觸發載入');
+      }, 300);
+    }
+  } catch (error) {
+    console.error('觸發 AdSense 廣告時發生錯誤:', error);
+  }
   
   // 等待動畫開始後獲取實際高度並調整
   setTimeout(() => {
