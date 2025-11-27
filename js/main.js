@@ -16,21 +16,51 @@ window.streamData = streamData;
 
 // 頁面載入時檢查協議和恢復控制面板狀態
 window.addEventListener('DOMContentLoaded', () => {
-  // 恢復控制面板狀態
-  const savedState = localStorage.getItem('controlPanelCollapsed');
-  const panel = document.getElementById('control-panel');
-  const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
-  
-  if (savedState === 'true') {
-    if (panel) {
-      panel.classList.add('collapsed');
-    }
-    if (toggleCollapsed) {
-      toggleCollapsed.style.display = 'block';
-    }
+  // 恢復控制面板狀態（使用統一的檢查函數）
+  // 優先級：如果沒有任何串流，強制展開；否則使用用戶設置
+  if (typeof checkAndAdjustControlPanel === 'function') {
+    checkAndAdjustControlPanel();
   } else {
-    if (toggleCollapsed) {
-      toggleCollapsed.style.display = 'none';
+    // 如果函數尚未載入，使用基本邏輯
+    const savedState = localStorage.getItem('controlPanelCollapsed');
+    const panel = document.getElementById('control-panel');
+    const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
+    
+    // 檢查是否有串流
+    const hasStreams = document.querySelectorAll('.stream-box').length > 0;
+    
+    // 默認展開狀態：移除 collapsed 類
+    if (panel) {
+      panel.classList.remove('collapsed');
+    }
+    
+    // 如果沒有任何串流，強制展開（優先於用戶設置）
+    if (!hasStreams) {
+      if (panel) {
+        panel.classList.remove('collapsed');
+      }
+      if (toggleCollapsed) {
+        toggleCollapsed.style.display = 'none';
+      }
+    } else {
+      // 有串流時，使用用戶保存的設置
+      if (savedState === 'true') {
+        if (panel) {
+          panel.classList.add('collapsed');
+        }
+        if (toggleCollapsed) {
+          toggleCollapsed.style.display = 'block';
+        }
+      } else {
+        // 默認展開狀態：隱藏收起按鈕
+        if (toggleCollapsed) {
+          toggleCollapsed.style.display = 'none';
+        }
+        // 如果沒有保存的狀態，設置為展開（false）
+        if (savedState === null) {
+          localStorage.setItem('controlPanelCollapsed', 'false');
+        }
+      }
     }
   }
   

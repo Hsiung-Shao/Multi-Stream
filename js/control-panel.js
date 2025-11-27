@@ -1,9 +1,54 @@
 // 控制面板功能
 
+// 檢查並調整控制面板狀態（根據串流數量）
+function checkAndAdjustControlPanel() {
+  const panel = document.getElementById('control-panel');
+  const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
+  
+  if (!panel) return;
+  
+  // 檢查是否有串流
+  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
+  
+  // 如果沒有任何串流，強制展開（優先於用戶設置）
+  if (!hasStreams) {
+    panel.classList.remove('collapsed');
+    if (toggleCollapsed) {
+      toggleCollapsed.style.display = 'none';
+    }
+  } else {
+    // 有串流時，使用用戶保存的設置
+    const savedState = localStorage.getItem('controlPanelCollapsed');
+    if (savedState === 'true') {
+      panel.classList.add('collapsed');
+      if (toggleCollapsed) {
+        toggleCollapsed.style.display = 'block';
+      }
+    } else {
+      panel.classList.remove('collapsed');
+      if (toggleCollapsed) {
+        toggleCollapsed.style.display = 'none';
+      }
+    }
+  }
+}
+
 // 切換控制面板
 function toggleControlPanel() {
   const panel = document.getElementById('control-panel');
   const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
+  
+  // 檢查是否有串流，如果沒有串流則不允許收起
+  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
+  
+  if (!hasStreams) {
+    // 沒有串流時，強制展開，不允許收起
+    panel.classList.remove('collapsed');
+    if (toggleCollapsed) {
+      toggleCollapsed.style.display = 'none';
+    }
+    return;
+  }
   
   panel.classList.toggle('collapsed');
   

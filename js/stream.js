@@ -143,6 +143,11 @@ function addStream(url = null) {
     const layoutType = autoSelectLayout();
     setLayout(layoutType);
   }, 100);
+  
+  // 檢查並調整控制面板狀態（有串流時使用用戶設置）
+  if (typeof checkAndAdjustControlPanel === 'function') {
+    checkAndAdjustControlPanel();
+  }
 }
 
 // 建立 Twitch 播放器
@@ -260,6 +265,11 @@ function removeBox(id) {
     
     // 更新串流順序列表
     updateStreamOrderList();
+    
+    // 檢查並調整控制面板狀態（如果沒有串流則強制展開）
+    if (typeof checkAndAdjustControlPanel === 'function') {
+      checkAndAdjustControlPanel();
+    }
   }
 }
 
@@ -275,6 +285,11 @@ function clearAll() {
     streamData = {};
     container.innerHTML = '';
     streamCount = 0;
+    
+    // 檢查並調整控制面板狀態（沒有串流時強制展開）
+    if (typeof checkAndAdjustControlPanel === 'function') {
+      checkAndAdjustControlPanel();
+    }
   }
 }
 
