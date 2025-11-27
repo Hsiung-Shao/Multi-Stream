@@ -10,46 +10,33 @@ let pendingLayoutUpdate = false;
 const players = {}; // 儲存播放器實例
 const streamData = {}; // 儲存串流資訊
 
+// 將 players 和 streamData 暴露到全局作用域，以便其他模組訪問
+window.players = players;
+window.streamData = streamData;
+
 // 頁面載入時檢查協議和恢復控制面板狀態
 window.addEventListener('DOMContentLoaded', () => {
   // 恢復控制面板狀態
   const savedState = localStorage.getItem('controlPanelCollapsed');
-  if (savedState === 'true') {
-    const panel = document.getElementById('control-panel');
-    panel.classList.add('collapsed');
-  }
+  const panel = document.getElementById('control-panel');
+  const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
   
-  // 恢復控制面板位置
-  const savedPosition = localStorage.getItem('controlPanelPosition');
-  if (savedPosition) {
-    try {
-      const position = JSON.parse(savedPosition);
-      const panel = document.getElementById('control-panel');
-      if (panel) {
-        // 恢復位置
-        if (position.top) panel.style.top = position.top;
-        if (position.left) panel.style.left = position.left;
-        if (position.right) panel.style.right = position.right;
-        if (position.bottom) panel.style.bottom = position.bottom;
-        
-        // 恢復吸附狀態
-        if (position.snappedLeft) panel.classList.add('snapped-left');
-        if (position.snappedRight) panel.classList.add('snapped-right');
-        if (position.snappedTop) panel.classList.add('snapped-top');
-        if (position.snappedBottom) panel.classList.add('snapped-bottom');
-        
-        // 調整顯示方式
-        if (typeof adjustPanelLayout === 'function') {
-          adjustPanelLayout(panel);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to restore control panel position:', e);
+  if (savedState === 'true') {
+    if (panel) {
+      panel.classList.add('collapsed');
+    }
+    if (toggleCollapsed) {
+      toggleCollapsed.style.display = 'block';
+    }
+  } else {
+    if (toggleCollapsed) {
+      toggleCollapsed.style.display = 'none';
     }
   }
   
-  // 初始化控制面板拖曳功能
-  makeControlPanelDraggable();
+  // 控制面板已改为固定侧边栏，不再需要恢复位置
+  
+  // 控制面板已改为固定侧边栏，不再需要拖曳功能
   
   // 初始化總音量控制
   const masterVolSlider = document.getElementById('master-volume');
@@ -80,6 +67,13 @@ window.addEventListener('DOMContentLoaded', () => {
       // 嘗試自動載入備份文件（如果已設置）
       await localFileStorage.autoLoadBackup();
     }, 1000);
+  }
+  
+  // 初始化控制面板中的收藏列表顯示
+  if (typeof updateFavoriteListDisplay === 'function') {
+    setTimeout(() => {
+      updateFavoriteListDisplay();
+    }, 500);
   }
   
   // 定期更新串流順序列表（當有新增或刪除時）

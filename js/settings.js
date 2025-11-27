@@ -1082,6 +1082,10 @@ function addCategory() {
   if (result.success) {
     nameInput.value = '';
     showFavoriteStreamsManager(); // 刷新列表
+    // 更新控制面板中的收藏列表
+    if (typeof updateFavoriteListDisplay === 'function') {
+      updateFavoriteListDisplay();
+    }
     autoSaveSettings();
     // 備份到本地文件
     if (localFileStorage.isEnabled()) {
@@ -1123,6 +1127,10 @@ function editCategory(categoryId) {
             const result = favoriteCategories.update(categoryId, newName);
             if (result.success) {
               showFavoriteStreamsManager();
+              // 更新控制面板中的收藏列表
+              if (typeof updateFavoriteListDisplay === 'function') {
+                updateFavoriteListDisplay();
+              }
               autoSaveSettings();
               if (localFileStorage.isEnabled()) {
                 localFileStorage.backup();
@@ -1234,6 +1242,10 @@ function saveFavoriteEdit(favoriteId) {
   if (result.success) {
     // 刷新列表以顯示更新後的值
     showFavoriteStreamsManager();
+    // 更新控制面板中的收藏列表
+    if (typeof updateFavoriteListDisplay === 'function') {
+      updateFavoriteListDisplay();
+    }
     autoSaveSettings();
     // 備份到本地文件
     if (localFileStorage.isEnabled()) {
@@ -1325,6 +1337,10 @@ function loadFavoriteStream(id) {
 function removeFavoriteStream(id) {
   favoriteStreams.remove(id);
   showFavoriteStreamsManager(); // 刷新列表
+  // 更新控制面板中的收藏列表
+  if (typeof updateFavoriteListDisplay === 'function') {
+    updateFavoriteListDisplay();
+  }
   // 自動保存設置
   autoSaveSettings();
   // 備份到本地文件
@@ -1332,6 +1348,107 @@ function removeFavoriteStream(id) {
     localFileStorage.backup();
   }
   showSaveMessage('資料已儲存');
+}
+
+// 更新控制面板中的收藏列表顯示
+function updateFavoriteListDisplay() {
+  const list = favoriteStreams.getList();
+  const categories = favoriteCategories.getList();
+  const filterSelect = document.getElementById('favorite-display-filter');
+  const displayDiv = document.getElementById('favorite-list-display');
+  
+  if (!displayDiv) return;
+  
+  // 獲取當前選擇的過濾器
+  const filterValue = filterSelect ? filterSelect.value : 'all';
+  
+  // 更新下拉選單（添加分類選項）
+  if (filterSelect) {
+    // 保存當前選擇
+    const currentValue = filterSelect.value;
+    
+    // 清空並重新填充選項
+    filterSelect.innerHTML = '<option value="all">全部收藏</option><option value="uncategorized">未分類</option>';
+    
+    // 添加分類選項
+    categories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat.id;
+      option.textContent = `📁 ${cat.name}`;
+      filterSelect.appendChild(option);
+    });
+    
+    // 恢復選擇
+    filterSelect.value = currentValue;
+  }
+  
+  // 如果選擇了分類，顯示一鍵載入按鈕
+  if (filterValue && filterValue !== 'all' && filterValue !== 'uncategorized') {
+    const category = categories.find(c => c.id === filterValue);
+    const categoryItems = list.filter(item => item.categoryId === filterValue);
+    
+    if (categoryItems.length === 0) {
+      displayDiv.innerHTML = `<div style="padding: 20px; text-align: center; color: #888; font-size: 12px;">此分類下沒有收藏</div>`;
+      return;
+    }
+    
+    displayDiv.innerHTML = `
+      <div style="padding: 20px; text-align: center;">
+        <div style="font-size: 13px; color: #fff; margin-bottom: 12px;">📁 ${category ? category.name : '未知分類'}</div>
+        <div style="font-size: 11px; color: #aaa; margin-bottom: 16px;">共 ${categoryItems.length} 個收藏</div>
+        <button onclick="loadCategoryFavoritesFromPanel('${filterValue}')" style="padding: 8px 16px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">一鍵載入此分類</button>
+      </div>
+    `;
+    return;
+  }
+  
+  // 過濾收藏列表（全部或未分類）
+  let filteredList = list;
+  if (filterValue === 'uncategorized') {
+    filteredList = list.filter(item => !item.categoryId);
+  }
+  
+  // 生成列表HTML
+  if (filteredList.length === 0) {
+    displayDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 12px;">暫無收藏</div>';
+    return;
+  }
+  
+  let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
+  
+  filteredList.forEach((item) => {
+    const displayName = item.name || (item.platform === 'twitch' ? item.channelId : item.videoId);
+    const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
+    const categoryName = item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || '未知分類' : '未分類';
+    const itemId = item.id.replace(/'/g, "\\'");
+    
+    html += `
+      <div class="favorite-list-item" data-favorite-id="${itemId}" style="display: flex; align-items: center; gap: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; cursor: pointer; transition: background 0.2s;" 
+           onmouseover="this.style.background='rgba(145, 71, 255, 0.2)'" 
+           onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'"
+           onclick="loadFavoriteStreamFromPanel('${itemId}')">
+        <span style="font-size: 14px;">${platformIcon}</span>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayName}</div>
+          <div style="font-size: 10px; color: #aaa;">📁 ${categoryName}</div>
+        </div>
+        <span style="font-size: 12px; color: #9147ff;">▶</span>
+      </div>
+    `;
+  });
+  
+  html += '</div>';
+  displayDiv.innerHTML = html;
+}
+
+// 從控制面板一鍵載入分類下的所有收藏
+function loadCategoryFavoritesFromPanel(categoryId) {
+  loadCategoryFavorites(categoryId);
+}
+
+// 從控制面板載入收藏串流
+function loadFavoriteStreamFromPanel(id) {
+  loadFavoriteStream(id);
 }
 
 // 收藏當前所有串流
@@ -1371,6 +1488,10 @@ function addCurrentStreamToFavorites() {
           setTimeout(() => {
             if (addedCount > 0) {
               showFavoriteStreamsManager(); // 顯示管理界面
+              // 更新控制面板中的收藏列表
+              if (typeof updateFavoriteListDisplay === 'function') {
+                updateFavoriteListDisplay();
+              }
               // 自動保存設置
               autoSaveSettings();
               // 備份到本地文件

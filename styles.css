@@ -12,8 +12,13 @@ body {
   width: 100vw; 
   height: 100vh; 
   background: #000;
-  transition: height 0.5s ease-in-out, padding-bottom 0.5s ease-in-out;
+  transition: height 0.5s ease-in-out, padding-bottom 0.5s ease-in-out, padding-right 0.3s ease;
   padding-bottom: 0;
+  padding-right: 0;
+}
+
+body:has(.control-panel:not(.collapsed)) #container {
+  padding-right: 550px;
 }
 
 .stream-box {
@@ -284,59 +289,71 @@ body {
 
 .control-panel {
   position: fixed;
-  top: 10px;
-  left: 10px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: 550px;
+  height: 100vh;
   z-index: 1000;
   background: rgba(0, 0, 0, 0.95);
-  border-radius: 8px;
-  border: 1px solid #333;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.control-panel.snapped-left {
-  left: 0 !important;
-  border-radius: 0 8px 8px 0;
-}
-
-.control-panel.snapped-right {
-  right: 0 !important;
-  left: auto !important;
-  border-radius: 8px 0 0 8px;
-}
-
-.control-panel.snapped-top {
-  top: 0 !important;
-}
-
-.control-panel.snapped-bottom {
-  bottom: 0 !important;
-  top: auto !important;
+  border-left: 1px solid #333;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .control-panel.collapsed {
-  max-height: 45px;
+  transform: translateX(100%);
+}
+
+.control-panel-toggle-collapsed {
+  display: none;
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 1002;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid #333;
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  padding: 12px 8px;
+  color: #9147ff;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.5);
+}
+
+.control-panel-toggle-collapsed:hover {
+  background: rgba(145, 71, 255, 0.2);
+  padding-right: 12px;
+}
+
+body:has(.control-panel.collapsed) .control-panel-toggle-collapsed {
+  display: block;
+}
+
+.control-panel:not(.collapsed) ~ .control-panel-toggle-collapsed,
+body:has(.control-panel:not(.collapsed)) .control-panel-toggle-collapsed {
+  display: none;
 }
 
 .control-panel-header {
   padding: 12px 15px;
+  padding-top: 40px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  cursor: move;
+  justify-content: flex-start;
   -webkit-user-select: none;
   user-select: none;
   border-bottom: 1px solid #333;
   position: relative;
-}
-
-.control-panel-header:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.control-panel-header.dragging {
-  cursor: grabbing;
+  flex-shrink: 0;
 }
 
 .control-panel-title {
@@ -347,6 +364,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  justify-content: flex-start;
 }
 
 .control-panel-title:hover {
@@ -357,19 +375,26 @@ body {
   color: #aaa;
   font-size: 18px;
   transition: transform 0.3s ease;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1001;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 4px;
+  padding: 4px 8px;
+  line-height: 1;
 }
 
 .control-panel.collapsed .control-panel-toggle {
-  transform: rotate(-90deg);
+  transform: rotate(180deg);
 }
 
 .control-panel-content {
   padding: 15px;
-  transition: opacity 0.3s ease;
-}
-
-.control-panel.collapsed .control-panel-content {
-  display: none;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .control-section {
@@ -382,6 +407,12 @@ body {
   margin-top: 0;
   padding-top: 0;
   border-top: none;
+}
+
+.control-section button {
+  white-space: nowrap;
+  flex-shrink: 0;
+  word-break: keep-all;
 }
 
 .section-title {

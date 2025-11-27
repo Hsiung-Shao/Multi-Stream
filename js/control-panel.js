@@ -3,7 +3,18 @@
 // 切換控制面板
 function toggleControlPanel() {
   const panel = document.getElementById('control-panel');
+  const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
+  
   panel.classList.toggle('collapsed');
+  
+  // 更新收起按钮的显示状态
+  if (toggleCollapsed) {
+    if (panel.classList.contains('collapsed')) {
+      toggleCollapsed.style.display = 'block';
+    } else {
+      toggleCollapsed.style.display = 'none';
+    }
+  }
   
   // 儲存狀態
   localStorage.setItem('controlPanelCollapsed', panel.classList.contains('collapsed'));
