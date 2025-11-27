@@ -1060,10 +1060,15 @@ button.active {
   background: rgba(145, 71, 255, 0.2);
 }
 
+.layout-preview-inline {
+  position: relative;
+}
+
 .layout-preview-inline div {
   background: #9147ff;
   border: 1px solid rgba(0, 0, 0, 0.3);
   box-sizing: border-box;
+  pointer-events: none; /* 防止子元素阻止點擊事件 */
 }
 
 /* 廣告橫幅 */

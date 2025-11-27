@@ -1,5 +1,9 @@
 // 布局管理功能
 
+// 用戶手動選擇的布局類型（用於防止自動布局覆蓋）
+let userSelectedLayout = null;
+let userLayoutTimeout = null;
+
 // 切換布局選擇器
 function toggleLayoutSelector() {
   const selector = document.getElementById('layout-selector');
@@ -40,6 +44,32 @@ function adjustChatLayoutForBox(box, layoutType) {
       contentWrapper.classList.add('layout-vertical');
       chatDiv.style.width = '100%';
       chatDiv.style.height = '200px';
+    }
+  } else if (layoutType === 5) {
+    // 上大下三布局：上方大區域，下方三個小區域
+    const boxWidth = box.offsetWidth || parseInt(box.style.width) || 500;
+    const boxHeight = box.offsetHeight || parseInt(box.style.height) || 500;
+    const boxIndex = Array.from(document.querySelectorAll('.stream-box')).indexOf(box);
+    
+    if (boxIndex === 0) {
+      // 上方大區域：使用水平排列
+      contentWrapper.classList.remove('layout-vertical');
+      contentWrapper.classList.add('layout-horizontal');
+      chatDiv.style.width = '300px';
+      chatDiv.style.height = '100%';
+    } else {
+      // 下方小區域：根據寬度決定
+      if (boxWidth > 400) {
+        contentWrapper.classList.remove('layout-vertical');
+        contentWrapper.classList.add('layout-horizontal');
+        chatDiv.style.width = '200px';
+        chatDiv.style.height = '100%';
+      } else {
+        contentWrapper.classList.remove('layout-horizontal');
+        contentWrapper.classList.add('layout-vertical');
+        chatDiv.style.width = '100%';
+        chatDiv.style.height = '150px';
+      }
     }
   } else if (layoutType === 6 || layoutType === 9) {
     // 網格布局：視窗很小，使用垂直排列
@@ -91,12 +121,33 @@ function autoSelectLayout() {
   return layoutType;
 }
 
-function setLayout(type, immediate = false) {
+function setLayout(type, immediate = false, isUserSelection = false) {
   const boxes = document.querySelectorAll('.stream-box');
-  if (boxes.length === 0) return;
+  if (boxes.length === 0) {
+    console.log('setLayout: 沒有串流，跳過布局切換');
+    return;
+  }
+  
+  console.log('setLayout: 切換到布局類型', type, 'immediate:', immediate, 'isUserSelection:', isUserSelection, '串流數量:', boxes.length);
+  
+  // 如果是用戶手動選擇，記錄並設置保護時間
+  if (isUserSelection) {
+    userSelectedLayout = type;
+    console.log('setLayout: 記錄用戶手動選擇的布局:', type);
+    // 清除之前的超時
+    if (userLayoutTimeout) {
+      clearTimeout(userLayoutTimeout);
+    }
+    // 5秒後清除用戶選擇標記，允許自動布局
+    userLayoutTimeout = setTimeout(() => {
+      userSelectedLayout = null;
+      console.log('setLayout: 用戶選擇保護已過期，允許自動布局');
+    }, 5000);
+  }
   
   // 如果正在拖拽stream-box，不執行布局更新，避免干擾拖拽操作
   if (isDraggingStreamBox) {
+    console.log('setLayout: 正在拖拽，跳過布局切換');
     return;
   }
   
@@ -107,32 +158,45 @@ function setLayout(type, immediate = false) {
   }
   
   // 如果不是立即執行，使用防抖
-  if (!immediate && !pendingLayoutUpdate) {
-    pendingLayoutUpdate = true;
-    layoutUpdateTimeout = setTimeout(() => {
+  if (!immediate) {
+    // 如果已經有待處理的更新，直接取消並立即執行新的布局
+    if (pendingLayoutUpdate) {
       pendingLayoutUpdate = false;
-      // 再次檢查是否正在拖拽
-      if (!isDraggingStreamBox) {
-        setLayout(type, true);
-      }
-    }, 150); // 150ms 防抖延遲
-    return;
+    } else {
+      pendingLayoutUpdate = true;
+      layoutUpdateTimeout = setTimeout(() => {
+        pendingLayoutUpdate = false;
+        // 再次檢查是否正在拖拽
+        if (!isDraggingStreamBox) {
+          setLayout(type, true);
+        }
+      }, 150); // 150ms 防抖延遲
+      return;
+    }
   }
   
   pendingLayoutUpdate = false;
   
   // 更新控制面板中的布局預覽活動狀態
+  console.log('setLayout: 更新布局預覽活動狀態，布局類型:', type);
   document.querySelectorAll('.layout-preview-inline').forEach(preview => {
     preview.classList.remove('active');
   });
   // 根據布局類型設置對應的預覽為活動狀態
-  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 6: 4, 9: 5 };
+  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6 };
   const previewIndex = layoutMap[type];
+  console.log('setLayout: 布局映射索引:', previewIndex, '布局類型:', type);
   if (previewIndex !== undefined) {
     const previews = document.querySelectorAll('.layout-preview-inline');
+    console.log('setLayout: 找到', previews.length, '個布局預覽按鈕');
     if (previews[previewIndex]) {
       previews[previewIndex].classList.add('active');
+      console.log('setLayout: 已設置布局預覽按鈕為活動狀態，索引:', previewIndex);
+    } else {
+      console.warn('setLayout: 找不到對應的布局預覽按鈕，索引:', previewIndex);
     }
+  } else {
+    console.warn('setLayout: 布局類型', type, '不在映射表中');
   }
   
   // 暫時禁用過渡效果，避免Twitch播放器在動畫過程中出現問題
@@ -180,6 +244,40 @@ function setLayout(type, immediate = false) {
       b.style.top = row * 50 + '%';
     });
   }
+  else if (type === 5) {
+    // 上大下三布局：上方一個大區域（75%高度），下方三個小區域（25%高度，水平排列）
+    // 需要至少 4 個串流才能完整顯示，但即使不足也會應用布局
+    console.log('setLayout: 開始應用上大下三布局，串流數量:', boxes.length);
+    let appliedCount = 0;
+    boxes.forEach((b, i) => {
+      console.log('setLayout: 處理串流', i, 'box:', b);
+      if (i === 0) {
+        // 第一個：上方大區域
+        b.style.width = '100%';
+        b.style.height = '75%';
+        b.style.left = '0';
+        b.style.top = '0';
+      } else if (i <= 3) {
+        // 第2、3、4個：下方三個小區域
+        const bottomIndex = i - 1; // 0, 1, 2
+        b.style.width = '33.33%';
+        b.style.height = '25%';
+        b.style.left = (bottomIndex * 33.33) + '%';
+        b.style.top = '75%';
+      } else {
+        // 如果有多於 4 個串流，後續的串流也放在下方，繼續排列
+        const bottomIndex = (i - 1) % 3; // 循環使用 0, 1, 2
+        const row = Math.floor((i - 1) / 3); // 計算行數
+        b.style.width = '33.33%';
+        b.style.height = '25%';
+        b.style.left = (bottomIndex * 33.33) + '%';
+        b.style.top = (75 + row * 25) + '%';
+      }
+      appliedCount++;
+      console.log('setLayout: 已應用布局到串流', i, '位置:', b.style.left, b.style.top, '尺寸:', b.style.width, b.style.height);
+    });
+    console.log('setLayout: 上大下三布局應用完成，共處理', appliedCount, '個串流');
+  }
   else if (type === 6) {
     // 2×3 網格
     const cols = 3;
@@ -216,8 +314,10 @@ function setLayout(type, immediate = false) {
     
     // 強制觸發窗口resize事件，讓Twitch播放器重新計算尺寸
     // 這對於修復Twitch播放器在DOM順序改變後卡死的問題很重要
-    const resizeEvent = new Event('resize');
-    window.dispatchEvent(resizeEvent);
+    // 但不要觸發真正的 resize 事件，因為會觸發自動布局切換
+    // 改為直接調用播放器的刷新邏輯（見下方）
+    // const resizeEvent = new Event('resize');
+    // window.dispatchEvent(resizeEvent);
     
     // 對於Twitch播放器，嘗試刷新播放器
     boxes.forEach(box => {

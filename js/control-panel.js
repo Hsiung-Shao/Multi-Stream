@@ -186,6 +186,11 @@ function makeControlPanelDraggable() {
     // 使用防抖來避免頻繁觸發布局調整
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
+      // 檢查是否有用戶手動選擇的布局，如果有則不自動切換
+      if (typeof userSelectedLayout === 'number' && userSelectedLayout !== null) {
+        console.log('resize: 檢測到用戶手動選擇的布局', userSelectedLayout, '，跳過自動布局切換');
+        return;
+      }
       const boxes = document.querySelectorAll('.stream-box');
       if (boxes.length > 0) {
         const layoutType = autoSelectLayout();
