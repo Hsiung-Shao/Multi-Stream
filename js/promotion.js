@@ -4,17 +4,12 @@
 const adConfigManager = {
   // 獲取配置
   getConfig: () => {
-    const saved = localStorage.getItem('adConfig');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('載入廣告配置失敗:', e);
-      }
-    }
+    // 強制使用默認配置（廣告申請中，暫時關閉）
+    // 如果需要啟用，可以通過控制台執行：adConfigManager.updateConfig({enabled: true})
+    
     // 默認配置
-    return {
-      enabled: true, // 啟用廣告功能
+    const defaultConfig = {
+      enabled: false, // 關閉廣告功能（申請中）
       showControlButtons: false, // 隱藏控制按鈕
       testMode: false, // 正式模式
       showInterval: 30 * 60 * 1000, // 30分鐘間隔
@@ -23,6 +18,23 @@ const adConfigManager = {
         max: 3 * 60 * 1000  // 3分鐘
       }
     };
+    
+    // 暫時不讀取已保存的配置，強制使用默認配置
+    // 如果之後需要恢復讀取保存的配置，可以取消下面的註釋
+    /*
+    const saved = localStorage.getItem('adConfig');
+    if (saved) {
+      try {
+        const savedConfig = JSON.parse(saved);
+        // 合併保存的配置和默認配置
+        return Object.assign({}, defaultConfig, savedConfig);
+      } catch (e) {
+        console.error('載入廣告配置失敗:', e);
+      }
+    }
+    */
+    
+    return defaultConfig;
   },
   
   // 保存配置
