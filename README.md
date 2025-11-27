@@ -1,4 +1,4 @@
-# 多來源直播分割器
+# MultiStream Hub
 
 支援 Twitch / YouTube 直播畫面自由分割、拖曳調整、音量控制 + 聊天室嵌入。
 
