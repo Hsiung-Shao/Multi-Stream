@@ -74,6 +74,14 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 500);
   }
   
+  // 延遲讀取備份數據（頁面載入後）
+  if (typeof localFileStorage !== 'undefined') {
+    setTimeout(async () => {
+      // 嘗試自動載入備份文件（如果已設置）
+      await localFileStorage.autoLoadBackup();
+    }, 1000);
+  }
+  
   // 定期更新串流順序列表（當有新增或刪除時）
   setInterval(() => {
     updateStreamOrderList();

@@ -653,15 +653,21 @@ body {
   cursor: pointer;
   font-size: 13px;
   transition: all 0.2s;
+  position: relative;
+  z-index: 1;
 }
 
 .tab-btn:hover {
   color: #fff;
+  background: rgba(145, 71, 255, 0.1);
 }
 
 .tab-btn.active {
   color: #9147ff;
   border-bottom-color: #9147ff;
+  background: rgba(145, 71, 255, 0.15);
+  font-weight: 600;
+  z-index: 2;
 }
 
 .tab-content {

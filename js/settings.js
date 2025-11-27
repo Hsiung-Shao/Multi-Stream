@@ -1,5 +1,365 @@
 // 用戶設置和收藏管理功能
 
+// 本地文件系統存儲管理（使用 File System Access API 直接保存到固定文件）
+const localFileStorage = {
+  // 固定備份文件名
+  backupFileName: 'multistream-backup.json',
+  fileHandle: null, // 保存文件句柄，用於直接寫入文件
+  
+  // 檢查是否啟用備份
+  isEnabled: () => {
+    const enabled = localStorage.getItem('localBackupEnabled');
+    if (enabled === null) {
+      // 首次使用，默認關閉
+      localStorage.setItem('localBackupEnabled', 'false');
+      return false;
+    }
+    return enabled === 'true';
+  },
+  
+  // 設置是否啟用備份
+  setEnabled: (enabled) => {
+    localStorage.setItem('localBackupEnabled', enabled ? 'true' : 'false');
+    // 不自動請求文件句柄，讓用戶手動選擇
+  },
+  
+  // 獲取當前文件路徑（用於顯示）
+  getCurrentFilePath: () => {
+    return localStorage.getItem('backupFilePath') || '未設置';
+  },
+  
+  // 設置文件路徑（保存到 localStorage）
+  setFilePath: (path) => {
+    if (path) {
+      localStorage.setItem('backupFilePath', path);
+    } else {
+      localStorage.removeItem('backupFilePath');
+    }
+  },
+  
+  // 請求文件句柄（打開現有文件或創建新文件）
+  async requestFileHandle(createNew = false, autoImport = false) {
+    if (!('showOpenFilePicker' in window) && !('showSaveFilePicker' in window)) {
+      showSaveMessage('瀏覽器不支持文件系統 API');
+      return false;
+    }
+    
+    try {
+      let fileHandle;
+      
+      if (createNew || !('showOpenFilePicker' in window)) {
+        // 創建新文件
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: this.backupFileName,
+          types: [{
+            description: 'JSON 備份文件',
+            accept: { 'application/json': ['.json'] }
+          }]
+        });
+      } else {
+        // 嘗試打開現有文件
+        try {
+          [fileHandle] = await window.showOpenFilePicker({
+            types: [{
+              description: 'JSON 備份文件',
+              accept: { 'application/json': ['.json'] }
+            }],
+            multiple: false
+          });
+          
+          // 如果設置了自動導入，則導入數據
+          if (autoImport) {
+            const result = await this.importDataFromFile(fileHandle);
+            if (result.success) {
+              showSaveMessage('備份文件已載入，頁面將重新載入');
+              // 重新載入設置
+              if (typeof loadUserSettings === 'function') {
+                loadUserSettings();
+              }
+              // 重新載入頁面以確保所有設置生效
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+            } else {
+              showSaveMessage(result.message);
+            }
+          }
+        } catch (openError) {
+          // 如果打開失敗（文件不存在），則創建新文件
+          if (openError.name === 'AbortError') {
+            return false;
+          }
+          fileHandle = await window.showSaveFilePicker({
+            suggestedName: this.backupFileName,
+            types: [{
+              description: 'JSON 備份文件',
+              accept: { 'application/json': ['.json'] }
+            }]
+          });
+        }
+      }
+      
+      this.fileHandle = fileHandle;
+      // 保存文件路徑信息
+      const file = await fileHandle.getFile();
+      this.setFilePath(file.name);
+      // 保存文件句柄標記
+      await this.saveFileHandle();
+      
+      if (!autoImport) {
+        showSaveMessage('備份文件位置已設置');
+      }
+      return true;
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        // 用戶取消了
+        return false;
+      }
+      console.error('設置備份文件位置失敗:', e);
+      showSaveMessage('設置備份文件位置失敗');
+      return false;
+    }
+  },
+  
+  // 保存文件句柄到 IndexedDB
+  async saveFileHandle() {
+    if (!window.indexedDB) {
+      console.warn('IndexedDB 不可用，無法持久化文件句柄');
+      return;
+    }
+    
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('MultiStreamFileHandle', 1);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(['handles'], 'readwrite');
+        const store = transaction.objectStore('handles');
+        // 文件句柄無法直接序列化，我們只保存標記
+        store.put({ id: 'backup', enabled: true, timestamp: Date.now() });
+        resolve();
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('handles')) {
+          db.createObjectStore('handles', { keyPath: 'id' });
+        }
+      };
+    });
+  },
+  
+  // 從 IndexedDB 恢復文件句柄標記（文件句柄本身無法持久化）
+  async restoreFileHandle() {
+    // 文件句柄無法持久化，如果頁面刷新後需要重新選擇
+    // 但我們可以檢查是否有標記，提示用戶重新選擇
+    if (!window.indexedDB) return false;
+    
+    return new Promise((resolve) => {
+      const request = indexedDB.open('MultiStreamFileHandle', 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('handles')) {
+          resolve(false);
+          return;
+        }
+        const transaction = db.transaction(['handles'], 'readonly');
+        const store = transaction.objectStore('handles');
+        const getRequest = store.get('backup');
+        getRequest.onsuccess = () => {
+          resolve(getRequest.result !== undefined);
+        };
+        getRequest.onerror = () => resolve(false);
+      };
+      request.onerror = () => resolve(false);
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('handles')) {
+          db.createObjectStore('handles', { keyPath: 'id' });
+        }
+      };
+    });
+  },
+  
+  // 自動備份所有數據到本地文件（直接寫入，不通過下載）
+  async backup() {
+    if (!this.isEnabled()) {
+      return false; // 未啟用備份
+    }
+    
+    // 如果沒有文件句柄，靜默失敗（不彈出對話框）
+    if (!this.fileHandle) {
+      console.warn('備份失敗：未設置文件位置，請在設定中選擇文件位置');
+      return false; // 靜默失敗，不干擾用戶
+    }
+    
+    try {
+      const data = this.getAllData();
+      const writable = await this.fileHandle.createWritable();
+      await writable.write(JSON.stringify(data, null, 2));
+      await writable.close();
+      console.log('本地自動備份完成（直接保存）');
+      return true;
+    } catch (e) {
+      console.error('直接保存備份失敗:', e);
+      // 如果權限被撤銷，清除文件句柄
+      if (e.name === 'NotAllowedError' || e.name === 'NotFoundError') {
+        this.fileHandle = null;
+        this.setFilePath(null);
+        // 不顯示錯誤消息，避免干擾用戶
+      }
+      return false;
+    }
+  },
+  
+  // 獲取所有數據
+  getAllData() {
+    return {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      userSettings: localStorage.getItem('userSettings') ? JSON.parse(localStorage.getItem('userSettings')) : null,
+      favoriteStreams: localStorage.getItem('favoriteStreams') ? JSON.parse(localStorage.getItem('favoriteStreams')) : [],
+      favoriteCategories: localStorage.getItem('favoriteCategories') ? JSON.parse(localStorage.getItem('favoriteCategories')) : [],
+      controlPanelCollapsed: localStorage.getItem('controlPanelCollapsed'),
+      controlPanelPosition: localStorage.getItem('controlPanelPosition') ? JSON.parse(localStorage.getItem('controlPanelPosition')) : null,
+      multiStreamLayout: localStorage.getItem('multiStreamLayout') ? JSON.parse(localStorage.getItem('multiStreamLayout')) : null,
+      adConfig: localStorage.getItem('adConfig') ? JSON.parse(localStorage.getItem('adConfig')) : null
+    };
+  },
+  
+  // 從文件導入數據（內部使用）
+  async importDataFromFile(fileHandle) {
+    try {
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      
+      try {
+        const data = JSON.parse(text);
+        
+        // 驗證數據格式
+        if (!data.version) {
+          return { success: false, message: '無效的備份文件格式' };
+        }
+        
+        // 導入數據
+        if (data.userSettings) {
+          localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
+        }
+        if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
+          localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
+        }
+        if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
+          localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
+        }
+        if (data.controlPanelCollapsed !== undefined) {
+          localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
+        }
+        if (data.controlPanelPosition) {
+          localStorage.setItem('controlPanelPosition', JSON.stringify(data.controlPanelPosition));
+        }
+        if (data.multiStreamLayout) {
+          localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
+        }
+        if (data.adConfig) {
+          localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
+        }
+        
+        return { success: true, message: '數據導入成功' };
+      } catch (error) {
+        console.error('導入數據失敗:', error);
+        return { success: false, message: '導入數據失敗：文件格式錯誤' };
+      }
+    } catch (e) {
+      console.error('讀取文件失敗:', e);
+      return { success: false, message: '讀取文件失敗' };
+    }
+  },
+  
+  // 自動讀取備份文件（頁面載入時）
+  async autoLoadBackup() {
+    if (!this.isEnabled()) {
+      return false; // 未啟用備份
+    }
+    
+    const savedPath = this.getCurrentFilePath();
+    if (savedPath === '未設置') {
+      return false; // 沒有保存的文件路徑
+    }
+    
+    // 文件句柄無法持久化，需要用戶重新選擇
+    // 但我們可以提示用戶是否要自動載入
+    console.log('檢測到已設置的備份文件路徑，請在設定中選擇文件位置以自動載入');
+    return false;
+  }
+};
+
+// 顯示保存消息（在收藏管理界面下方）
+function showSaveMessage(message) {
+  const manager = document.getElementById('favorite-streams-manager');
+  if (!manager) return;
+  
+  let messageDiv = document.getElementById('favorite-save-message');
+  if (!messageDiv) {
+    messageDiv = document.createElement('div');
+    messageDiv.id = 'favorite-save-message';
+    messageDiv.style.cssText = 'margin-top: 10px; padding: 8px; font-size: 11px; color: #28a745; text-align: center; background: rgba(40, 167, 69, 0.1); border-radius: 4px;';
+    manager.querySelector('.favorite-manager-content').appendChild(messageDiv);
+  }
+  
+  messageDiv.textContent = message;
+  messageDiv.style.display = 'block';
+  
+  // 3秒後自動隱藏
+  setTimeout(() => {
+    messageDiv.style.display = 'none';
+  }, 3000);
+}
+
+// 切換備份功能開關
+function toggleBackupEnabled() {
+  const checkbox = document.getElementById('backup-enabled-checkbox');
+  if (!checkbox) return;
+  
+  const enabled = checkbox.checked;
+  localFileStorage.setEnabled(enabled);
+  
+  if (enabled) {
+    showSaveMessage('數據備份已啟用（請在下方設置文件位置）');
+  } else {
+    showSaveMessage('數據備份已關閉');
+  }
+  
+  // 更新設定頁面顯示
+  updateBackupSettingsDisplay();
+}
+
+// 設置備份文件位置（自動導入數據）
+async function setBackupFileLocation() {
+  const success = await localFileStorage.requestFileHandle(false, true); // false = 嘗試打開現有文件, true = 自動導入
+  if (success) {
+    updateBackupSettingsDisplay();
+  }
+}
+
+// 創建新的備份文件
+async function createNewBackupFile() {
+  const success = await localFileStorage.requestFileHandle(true); // true = 創建新文件
+  if (success) {
+    updateBackupSettingsDisplay();
+  }
+}
+
+// 更新備份設定顯示
+function updateBackupSettingsDisplay() {
+  const filePathDiv = document.getElementById('backup-file-path');
+  if (filePathDiv) {
+    const filePath = localFileStorage.getCurrentFilePath();
+    filePathDiv.textContent = filePath;
+    filePathDiv.style.color = filePath === '未設置' ? '#ffa500' : '#28a745';
+  }
+}
+
 // 保存用戶設置
 function saveUserSettings() {
   const settings = {
@@ -49,6 +409,23 @@ function saveUserSettings() {
   
   localStorage.setItem('userSettings', JSON.stringify(settings));
   console.log('用戶設置已保存');
+  
+  // 如果已啟用備份，自動備份
+  if (localFileStorage.isEnabled()) {
+    localFileStorage.backup().catch(err => console.error('備份失敗:', err)).then(() => {
+      // 顯示保存消息（如果收藏管理界面打開）
+      const manager = document.getElementById('favorite-streams-manager');
+      if (manager && manager.classList.contains('show')) {
+        showSaveMessage('資料已儲存');
+      }
+    });
+  } else {
+    // 即使未啟用備份，也顯示保存消息
+    const manager = document.getElementById('favorite-streams-manager');
+    if (manager && manager.classList.contains('show')) {
+      showSaveMessage('資料已儲存');
+    }
+  }
 }
 
 // 載入用戶設置
@@ -333,6 +710,7 @@ function showFavoriteStreamsManager() {
       <div class="favorite-tabs">
         <button class="tab-btn active" data-tab="favorites">收藏串流</button>
         <button class="tab-btn" data-tab="categories">分類管理</button>
+        <button class="tab-btn" data-tab="settings">設定</button>
       </div>
       
       <!-- 收藏串流標籤頁 -->
@@ -465,7 +843,41 @@ function showFavoriteStreamsManager() {
     });
   }
   
+  // 獲取備份功能狀態
+  const backupEnabled = localFileStorage.isEnabled();
+  
   content += `
+        </div>
+      </div>
+      
+      <!-- 設定標籤頁 -->
+      <div class="tab-content" id="tab-settings">
+        <div style="padding: 20px;">
+          <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+              <input type="checkbox" id="backup-enabled-checkbox" ${backupEnabled ? 'checked' : ''} onchange="toggleBackupEnabled()" style="width: 18px; height: 18px; cursor: pointer;">
+              <span style="font-size: 14px; color: #fff;">啟用數據自動備份</span>
+            </label>
+            <div style="margin-top: 8px; font-size: 12px; color: #ffa500; margin-left: 28px; padding: 8px; background: rgba(255, 165, 0, 0.1); border-radius: 4px; border-left: 3px solid #ffa500;">
+              ⚠️ 啟用後，請在下方設置備份文件位置。之後每次編輯、新增或刪除收藏時會自動保存到該固定位置，不會觸發下載。
+            </div>
+          </div>
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
+            <div style="margin-bottom: 12px;">
+              <div style="font-size: 13px; color: #fff; margin-bottom: 8px;">備份文件位置：</div>
+              <div id="backup-file-path" style="font-size: 12px; color: ${localFileStorage.getCurrentFilePath() === '未設置' ? '#ffa500' : '#28a745'}; margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px;">
+                ${localFileStorage.getCurrentFilePath()}
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button onclick="setBackupFileLocation()" style="padding: 6px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">選擇文件位置</button>
+                <button onclick="createNewBackupFile()" style="padding: 6px 12px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">創建新文件</button>
+              </div>
+              <div style="margin-top: 6px; font-size: 11px; color: #aaa;">
+                選擇文件位置：打開現有備份文件並自動載入數據<br>
+                創建新文件：創建新的備份文件（不會載入數據）
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -473,6 +885,9 @@ function showFavoriteStreamsManager() {
   
   manager.innerHTML = content;
   manager.classList.add('show');
+  
+  // 更新備份設定顯示
+  updateBackupSettingsDisplay();
   
   // 標籤頁切換
   const tabBtns = manager.querySelectorAll('.tab-btn');
@@ -625,7 +1040,7 @@ function addToFavorites() {
   const categorySelect = document.getElementById('favorite-category-select');
   
   if (!urlInput || !urlInput.value.trim()) {
-    alert('請輸入串流網址');
+    showSaveMessage('請輸入串流網址');
     return;
   }
   
@@ -636,15 +1051,19 @@ function addToFavorites() {
   const result = favoriteStreams.add(url, name, categoryId);
   
   if (result.success) {
-    alert(result.message);
     urlInput.value = '';
     if (nameInput) nameInput.value = '';
     if (categorySelect) categorySelect.value = '';
     showFavoriteStreamsManager(); // 刷新列表
     // 自動保存設置
     autoSaveSettings();
+    // 備份到本地文件
+    if (localFileStorage.isEnabled()) {
+      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+    }
+    showSaveMessage('資料已儲存');
   } else {
-    alert(result.message);
+    showSaveMessage(result.message);
   }
 }
 
@@ -653,7 +1072,7 @@ function addCategory() {
   const nameInput = document.getElementById('category-name-input');
   
   if (!nameInput || !nameInput.value.trim()) {
-    alert('請輸入分類名稱');
+    showSaveMessage('請輸入分類名稱');
     return;
   }
   
@@ -661,12 +1080,16 @@ function addCategory() {
   const result = favoriteCategories.add(name);
   
   if (result.success) {
-    alert(result.message);
     nameInput.value = '';
     showFavoriteStreamsManager(); // 刷新列表
     autoSaveSettings();
+    // 備份到本地文件
+    if (localFileStorage.isEnabled()) {
+      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+    }
+    showSaveMessage('資料已儲存');
   } else {
-    alert(result.message);
+    showSaveMessage(result.message);
   }
 }
 
@@ -676,43 +1099,71 @@ function editCategory(categoryId) {
   const category = categories.find(c => c.id === categoryId);
   
   if (!category) {
-    alert('分類不存在');
+    showSaveMessage('分類不存在');
     return;
   }
   
-  const newName = prompt('輸入新的分類名稱：', category.name);
-  if (newName === null) return; // 用戶取消
-  
-  if (!newName.trim()) {
-    alert('分類名稱不能為空');
-    return;
-  }
-  
-  const result = favoriteCategories.update(categoryId, newName.trim());
-  
-  if (result.success) {
-    alert(result.message);
-    showFavoriteStreamsManager(); // 刷新列表
-    autoSaveSettings();
-  } else {
-    alert(result.message);
+  // 進入編輯模式
+  const categoryItem = document.querySelector(`.category-item[data-id="${categoryId}"]`);
+  if (categoryItem) {
+    const infoDiv = categoryItem.querySelector('.category-item-info');
+    const actionsDiv = categoryItem.querySelector('.category-item-actions');
+    
+    if (infoDiv && actionsDiv) {
+      const nameSpan = infoDiv.querySelector('.category-item-name');
+      if (nameSpan) {
+        const currentName = nameSpan.textContent.replace('📁 ', '');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentName;
+        input.style.cssText = 'padding: 4px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 13px; width: 200px;';
+        input.onblur = () => {
+          const newName = input.value.trim();
+          if (newName && newName !== currentName) {
+            const result = favoriteCategories.update(categoryId, newName);
+            if (result.success) {
+              showFavoriteStreamsManager();
+              autoSaveSettings();
+              if (localFileStorage.isEnabled()) {
+                localFileStorage.backup();
+              }
+              showSaveMessage('資料已儲存');
+            } else {
+              showSaveMessage(result.message);
+            }
+          } else {
+            showFavoriteStreamsManager();
+          }
+        };
+        input.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            input.blur();
+          } else if (e.key === 'Escape') {
+            showFavoriteStreamsManager();
+          }
+        };
+        nameSpan.replaceWith(input);
+        input.focus();
+        input.select();
+      }
+    }
   }
 }
 
 // 刪除分類
 function removeCategory(categoryId) {
-  if (!confirm('確定要刪除此分類嗎？該分類下的收藏將移至「未分類」')) {
-    return;
-  }
-  
   const result = favoriteCategories.remove(categoryId);
   
   if (result.success) {
-    alert(result.message);
     showFavoriteStreamsManager(); // 刷新列表
     autoSaveSettings();
+    // 備份到本地文件
+    if (localFileStorage.isEnabled()) {
+      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+    }
+    showSaveMessage('資料已儲存');
   } else {
-    alert(result.message);
+    showSaveMessage(result.message);
   }
 }
 
@@ -767,7 +1218,7 @@ function saveFavoriteEdit(favoriteId) {
   
   const newName = nameInput.value.trim();
   if (!newName) {
-    alert('收藏名稱不能為空');
+    showSaveMessage('收藏名稱不能為空');
     return;
   }
   
@@ -784,8 +1235,13 @@ function saveFavoriteEdit(favoriteId) {
     // 刷新列表以顯示更新後的值
     showFavoriteStreamsManager();
     autoSaveSettings();
+    // 備份到本地文件
+    if (localFileStorage.isEnabled()) {
+      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+    }
+    showSaveMessage('資料已儲存');
   } else {
-    alert(result.message);
+    showSaveMessage(result.message);
   }
 }
 
@@ -809,7 +1265,7 @@ function deselectAllFavorites() {
 function loadSelectedFavorites() {
   const checkboxes = document.querySelectorAll('.favorite-checkbox:checked');
   if (checkboxes.length === 0) {
-    alert('請至少選擇一個收藏');
+    showSaveMessage('請至少選擇一個收藏');
     return;
   }
   
@@ -827,8 +1283,10 @@ function loadSelectedFavorites() {
   if (selectedItems.length > 0) {
     const result = favoriteStreams.loadMultiple(selectedItems);
     if (result.success) {
-      alert(result.message);
-      closeFavoriteStreamsManager();
+      showSaveMessage(result.message);
+      setTimeout(() => {
+        closeFavoriteStreamsManager();
+      }, 1000);
     }
   }
 }
@@ -839,18 +1297,16 @@ function loadCategoryFavorites(categoryId) {
   const categoryItems = list.filter(item => item.categoryId === categoryId);
   
   if (categoryItems.length === 0) {
-    alert('此分類下沒有收藏');
-    return;
-  }
-  
-  if (!confirm(`確定要載入此分類下的 ${categoryItems.length} 個串流嗎？`)) {
+    showSaveMessage('此分類下沒有收藏');
     return;
   }
   
   const result = favoriteStreams.loadMultiple(categoryItems);
   if (result.success) {
-    alert(result.message);
-    closeFavoriteStreamsManager();
+    showSaveMessage(result.message);
+    setTimeout(() => {
+      closeFavoriteStreamsManager();
+    }, 1000);
   }
 }
 
@@ -867,19 +1323,22 @@ function loadFavoriteStream(id) {
 
 // 移除收藏
 function removeFavoriteStream(id) {
-  if (confirm('確定要移除這個收藏嗎？')) {
-    favoriteStreams.remove(id);
-    showFavoriteStreamsManager(); // 刷新列表
-    // 自動保存設置
-    autoSaveSettings();
+  favoriteStreams.remove(id);
+  showFavoriteStreamsManager(); // 刷新列表
+  // 自動保存設置
+  autoSaveSettings();
+  // 備份到本地文件
+  if (localFileStorage.isEnabled()) {
+    localFileStorage.backup();
   }
+  showSaveMessage('資料已儲存');
 }
 
 // 收藏當前所有串流
 function addCurrentStreamToFavorites() {
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length === 0) {
-    alert('目前沒有串流可以收藏');
+    showSaveMessage('目前沒有串流可以收藏');
     return;
   }
   
@@ -911,12 +1370,16 @@ function addCurrentStreamToFavorites() {
         if (index === boxes.length - 1) {
           setTimeout(() => {
             if (addedCount > 0) {
-              alert(`已成功收藏 ${addedCount} 個串流${skippedCount > 0 ? `，${skippedCount} 個已存在於收藏列表` : ''}`);
               showFavoriteStreamsManager(); // 顯示管理界面
               // 自動保存設置
               autoSaveSettings();
+              // 備份到本地文件
+              if (localFileStorage.isEnabled()) {
+                localFileStorage.backup();
+              }
+              showSaveMessage(`已成功收藏 ${addedCount} 個串流${skippedCount > 0 ? `，${skippedCount} 個已存在` : ''}`);
             } else if (skippedCount > 0) {
-              alert('所有串流都已在收藏列表中');
+              showSaveMessage('所有串流都已在收藏列表中');
             }
           }, 100);
         }
