@@ -391,6 +391,28 @@ body {
   margin-bottom: 10px;
 }
 
+/* 意見回饋按鈕樣式 */
+.control-section a[href*="forms.gle"] {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: #9147ff;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  display: inline-block;
+  transition: background 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.control-section a[href*="forms.gle"]:hover {
+  background: #7c3aed;
+}
+
+.control-section a[href*="forms.gle"]:active {
+  background: #6d28d9;
+}
+
 .master-volume-control {
   display: flex;
   align-items: center;

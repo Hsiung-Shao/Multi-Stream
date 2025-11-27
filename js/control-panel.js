@@ -285,11 +285,6 @@ function updateStreamOrderList() {
         volValue.textContent = vol + '%';
         streamData[id].volume = vol;
         
-        // 計算實際音量（考慮總音量）
-        const masterVolSlider = document.getElementById('master-volume');
-        const masterVol = masterVolSlider ? parseInt(masterVolSlider.value) : 100;
-        const actualVol = Math.round((vol / 100) * masterVol);
-        
         // 更新串流視窗中的音量顯示
         const box = document.getElementById('box' + id);
         if (box) {
@@ -301,13 +296,9 @@ function updateStreamOrderList() {
           }
         }
         
-        // 控制實際音量
-        if (players[id]) {
-          if (players[id].type === 'twitch') {
-            players[id].player.setVolume(actualVol / 100);
-          } else if (players[id].type === 'youtube') {
-            players[id].player.setVolume(actualVol);
-          }
+        // 使用統一的函數應用總音量
+        if (typeof applyMasterVolumeToStream === 'function') {
+          applyMasterVolumeToStream(id);
         }
       });
     }

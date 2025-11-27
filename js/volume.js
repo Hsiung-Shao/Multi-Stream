@@ -1,9 +1,38 @@
 // 音量控制功能
 
+// 應用總音量到指定串流
+function applyMasterVolumeToStream(id) {
+  if (!streamData[id] || !players[id]) return;
+  
+  const volSlider = document.querySelector(`#box${id} .volume`);
+  if (!volSlider) return;
+  
+  const masterVolSlider = document.getElementById('master-volume');
+  const masterVol = masterVolSlider ? parseInt(masterVolSlider.value) : 100;
+  const streamVol = parseInt(volSlider.value) || streamData[id].volume || 100;
+  
+  // 計算實際音量（考慮總音量）
+  const actualVol = Math.round((streamVol / 100) * masterVol);
+  
+  // 應用音量到播放器
+  if (players[id].type === 'twitch') {
+    players[id].player.setVolume(actualVol / 100);
+  } else if (players[id].type === 'youtube') {
+    players[id].player.setVolume(actualVol);
+  }
+}
+
 // 設定音量控制
 function setupVolumeControl(box, id) {
   const volSlider = box.querySelector('.volume');
   const volValue = box.querySelector('.vol-value');
+  
+  if (!volSlider) return;
+  
+  // 立即應用總音量（如果播放器已就緒）
+  setTimeout(() => {
+    applyMasterVolumeToStream(id);
+  }, 500);
   
   volSlider.addEventListener('input', () => {
     const vol = parseInt(volSlider.value);
@@ -43,25 +72,11 @@ function updateMasterVolume() {
       masterVolValue.textContent = masterVolume + '%';
     }
     
-    // 更新所有串流的音量
+    // 更新所有串流的音量（使用統一的函數）
     document.querySelectorAll('.stream-box').forEach(box => {
       const id = parseInt(box.dataset.streamId);
-      if (streamData[id]) {
-        const volSlider = box.querySelector('.volume');
-        if (volSlider) {
-          // 計算相對音量（基於總音量）
-          const relativeVol = Math.round((parseInt(volSlider.value) / 100) * masterVolume);
-          const actualVol = Math.min(100, relativeVol);
-          
-          // 更新播放器音量
-          if (players[id]) {
-            if (players[id].type === 'twitch') {
-              players[id].player.setVolume(actualVol / 100);
-            } else if (players[id].type === 'youtube') {
-              players[id].player.setVolume(actualVol);
-            }
-          }
-        }
+      if (streamData[id] && players[id]) {
+        applyMasterVolumeToStream(id);
       }
     });
   }

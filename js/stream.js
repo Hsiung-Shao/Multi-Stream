@@ -112,6 +112,13 @@ function addStream(url = null) {
 
   // 音量控制
   setupVolumeControl(box, id);
+  
+  // 確保在播放器就緒後應用總音量（延遲檢查，因為播放器可能還沒就緒）
+  setTimeout(() => {
+    if (typeof applyMasterVolumeToStream === 'function') {
+      applyMasterVolumeToStream(id);
+    }
+  }, 1500);
 
   // 預設位置
   const size = 500;
@@ -161,7 +168,8 @@ function createTwitchPlayer(id, channel) {
     };
     
     player.addEventListener(Twitch.Player.READY, () => {
-      player.setVolume(1.0);
+      // 應用總音量控制
+      applyMasterVolumeToStream(id);
     });
     
     player.addEventListener(Twitch.Player.ERROR, () => {
@@ -196,7 +204,8 @@ function createYouTubePlayer(id, videoId) {
           },
           events: {
             onReady: (event) => {
-              event.target.setVolume(100);
+              // 應用總音量控制
+              applyMasterVolumeToStream(id);
             },
             onError: (event) => {
               console.error('YouTube player error:', event.data);
@@ -342,7 +351,14 @@ function loadLayout() {
             const volSlider = box.querySelector('.volume');
             if (volSlider) {
               volSlider.value = streamData[id].volume;
-              volSlider.dispatchEvent(new Event('input'));
+              // 應用總音量控制
+              if (typeof applyMasterVolumeToStream === 'function') {
+                setTimeout(() => {
+                  applyMasterVolumeToStream(id);
+                }, 500);
+              } else {
+                volSlider.dispatchEvent(new Event('input'));
+              }
             }
             
             // 設定聊天室顯示
