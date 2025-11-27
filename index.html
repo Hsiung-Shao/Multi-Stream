@@ -80,6 +80,14 @@
     </div>
     
     <div class="control-section">
+      <div class="section-title">廣告測試</div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button onclick="triggerAdManually()" style="padding: 6px 12px; font-size: 12px; background: #9147ff;">📢 測試廣告</button>
+        <button onclick="toggleAdTestMode()" id="ad-test-mode-btn" style="padding: 6px 12px; font-size: 12px;">🔄 測試模式</button>
+      </div>
+    </div>
+    
+    <div class="control-section">
       <div class="section-title">總音量控制</div>
       <div class="master-volume-control">
         <label for="master-volume" style="font-size: 12px; color: #aaa; cursor: pointer;">🔊 總音量</label>
@@ -104,6 +112,20 @@
 <!-- 收藏串流管理界面 -->
 <div id="favorite-streams-manager" class="favorite-streams-manager"></div>
 
+<!-- 廣告容器 -->
+<div id="ad-banner" class="ad-banner">
+  <div class="ad-content">
+    <div class="ad-close-btn" onclick="closeAdBanner()" title="關閉">×</div>
+    <div class="ad-body">
+      <div class="ad-placeholder">
+        <div class="ad-label">廣告</div>
+        <div class="ad-message">這裡是廣告區域</div>
+        <div class="ad-note">（測試模式：每30秒顯示一次，持續5-10秒）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 <!-- Twitch Embed API -->
@@ -118,6 +140,7 @@
 <script src="js/layout.js"></script>
 <script src="js/control-panel.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/promotion.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

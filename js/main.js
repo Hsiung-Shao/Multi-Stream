@@ -39,7 +39,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (position.snappedBottom) panel.classList.add('snapped-bottom');
         
         // 調整顯示方式
-        adjustPanelLayout(panel);
+        if (typeof adjustPanelLayout === 'function') {
+          adjustPanelLayout(panel);
+        }
       }
     } catch (e) {
       console.error('Failed to restore control panel position:', e);
@@ -85,6 +87,14 @@ window.addEventListener('DOMContentLoaded', () => {
   if (boxes.length > 0) {
     const layoutType = autoSelectLayout();
     setLayout(layoutType, true); // 立即執行，不使用防抖
+  }
+  
+  // 初始化廣告系統
+  if (typeof initAdSystem === 'function') {
+    // 延遲初始化，確保頁面完全載入
+    setTimeout(() => {
+      initAdSystem();
+    }, 1000);
   }
   
   const protocol = window.location.protocol;
