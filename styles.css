@@ -423,7 +423,8 @@ body:has(.control-panel:not(.collapsed)) .control-panel-toggle-collapsed {
 }
 
 /* 意見回饋按鈕樣式 */
-.control-section a[href*="forms.gle"] {
+.control-section a[href*="forms.gle"],
+.control-section a[onclick*="showVersionHistory"] {
   padding: 6px 12px;
   font-size: 12px;
   background: #9147ff;
@@ -436,7 +437,8 @@ body:has(.control-panel:not(.collapsed)) .control-panel-toggle-collapsed {
   cursor: pointer;
 }
 
-.control-section a[href*="forms.gle"]:hover {
+.control-section a[href*="forms.gle"]:hover,
+.control-section a[onclick*="showVersionHistory"]:hover {
   background: #7c3aed;
 }
 

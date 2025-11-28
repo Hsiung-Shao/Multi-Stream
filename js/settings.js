@@ -1603,3 +1603,113 @@ function autoSaveSettings() {
   }, 1000); // 1秒後保存
 }
 
+// 版本紀錄功能
+function showVersionHistory() {
+  // 檢查是否已經存在版本紀錄視窗
+  let versionModal = document.getElementById('version-history-modal');
+  if (versionModal) {
+    versionModal.style.display = 'flex';
+    return;
+  }
+  
+  // 創建版本紀錄視窗
+  versionModal = document.createElement('div');
+  versionModal.id = 'version-history-modal';
+  versionModal.className = 'favorite-streams-manager';
+  versionModal.style.display = 'flex';
+  
+  // 版本紀錄內容
+  const versionHistory = [
+    {
+      version: '1.0.0',
+      date: '2024-12',
+      changes: [
+        '初始版本發布',
+        '支援 Twitch 和 YouTube 直播串流',
+        '多種布局模式',
+        '聊天室整合',
+        '音量控制功能',
+        '收藏功能'
+      ]
+    },
+    {
+      version: '1.1.0',
+      date: '2024-12',
+      changes: [
+        '新增分類管理功能',
+        '改進控制面板 UI',
+        '優化布局自動切換',
+        '修復多個已知問題'
+      ]
+    },
+    {
+      version: '1.2.0',
+      date: '2024-12',
+      changes: [
+        '新增本地文件備份功能',
+        '改進收藏管理界面',
+        '新增設定標籤頁',
+        '優化安全性（XSS 防護）',
+        '改進 YouTube 聊天室嵌入支援'
+      ]
+    }
+  ];
+  
+  // 構建版本紀錄 HTML
+  let content = `
+    <div class="favorite-manager-header">
+      <h3>版本紀錄</h3>
+      <button onclick="closeVersionHistory()" class="close-btn">×</button>
+    </div>
+    <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto;">
+  `;
+  
+  versionHistory.forEach((version, index) => {
+    content += `
+      <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: ${index < versionHistory.length - 1 ? '1px solid #444' : 'none'};">
+        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">版本 ${escapeHtml(version.version)}</h4>
+          <span style="margin-left: 12px; color: #888; font-size: 12px;">${escapeHtml(version.date)}</span>
+        </div>
+        <ul style="margin: 0; padding-left: 20px; color: #ccc; line-height: 1.8;">
+    `;
+    
+    version.changes.forEach(change => {
+      content += `<li style="margin-bottom: 6px;">${escapeHtml(change)}</li>`;
+    });
+    
+    content += `
+        </ul>
+      </div>
+    `;
+  });
+  
+  content += `
+    </div>
+  `;
+  
+  versionModal.innerHTML = content;
+  document.body.appendChild(versionModal);
+  
+  // 點擊外部關閉
+  versionModal.addEventListener('click', (e) => {
+    if (e.target === versionModal) {
+      closeVersionHistory();
+    }
+  });
+}
+
+// 關閉版本紀錄
+function closeVersionHistory() {
+  const versionModal = document.getElementById('version-history-modal');
+  if (versionModal) {
+    versionModal.style.display = 'none';
+  }
+}
+
+// 確保函數是全局的
+if (typeof window !== 'undefined') {
+  window.showVersionHistory = showVersionHistory;
+  window.closeVersionHistory = closeVersionHistory;
+}
+
