@@ -10,6 +10,14 @@ let fixedLayoutChatSelection = {
   position4: null  // 右侧聊天室
 };
 
+// Layout 14 中用户选择的聊天室ID（四格：位置1-4）
+let layout14ChatSelection = {
+  position1: null, // 左上
+  position2: null, // 右上
+  position3: null, // 左下
+  position4: null  // 右下
+};
+
 // Layout 13 中用户选择的视频布局类型（1-6 或 9）
 let layout13VideoLayout = null;
 
@@ -88,7 +96,7 @@ function adjustChatLayoutForBox(box, layoutType) {
     const viewportHeight = window.innerHeight;
     const chatHeight = Math.max(80, Math.min(150, viewportHeight * 0.12));
     chatDiv.style.height = chatHeight + 'px';
-  } else if (layoutType === 12) {
+  } else if (layoutType === 13) {
     // 固定布局：聊天室在右侧，隐藏视频框内的聊天室
     const chatDiv = box.querySelector('.chat-container');
     if (chatDiv) {
@@ -138,7 +146,7 @@ function autoSelectLayout() {
 }
 
 // 设置固定布局的预设框架
-function setupFixedLayoutFramework(boxes) {
+function setupFixedLayoutFramework(boxes, layoutType) {
   const videoAreaWidth = 70; // 70%
   const chatAreaWidth = 30; // 30%
   const count = boxes.length;
@@ -146,25 +154,18 @@ function setupFixedLayoutFramework(boxes) {
   // 清理之前的右侧聊天室容器（如果存在）
   cleanupFixedChatSidebar();
   
-  // 布局视频在左侧（上下排列，位置1、2）
+  // 检查当前是 Layout 13 还是 Layout 14（优先使用传入的参数，否则使用 userSelectedLayout）
+  const isLayout14 = (layoutType === 14 || (!layoutType && userSelectedLayout === 14));
+  
+  // 布局视频在左侧（Layout 13 和 14 的视频布局会在 updateFixedLayoutFramework 中处理）
   boxes.forEach((b, i) => {
-    const id = parseInt(b.dataset.streamId);
-    b.style.position = 'absolute';
-    b.style.width = videoAreaWidth + '%';
-    b.style.height = count > 0 ? (100 / count) + '%' : '50%';
-    b.style.left = '0';
-    b.style.top = count > 0 ? (100 / count * i) + '%' : (i * 50) + '%';
-    b.style.right = 'auto';
-    b.style.bottom = 'auto';
-    
-    // 隐藏视频框内的聊天室
     const chatDiv = b.querySelector('.chat-container');
     if (chatDiv) {
       chatDiv.classList.add('hidden');
     }
   });
   
-  // 创建右侧聊天室容器（左右排列，位置3、4）
+  // 创建右侧聊天室容器
   const chatSidebar = document.createElement('div');
   chatSidebar.id = 'chat-sidebar-fixed';
   chatSidebar.className = 'chat-sidebar-fixed';
@@ -173,11 +174,6 @@ function setupFixedLayoutFramework(boxes) {
   chatSidebar.style.left = videoAreaWidth + '%';
   chatSidebar.style.top = '0';
   chatSidebar.style.position = 'absolute';
-  chatSidebar.style.display = 'flex';
-  chatSidebar.style.flexDirection = 'row';
-  chatSidebar.style.gap = '4px';
-  chatSidebar.style.padding = '4px';
-  chatSidebar.style.boxSizing = 'border-box';
   chatSidebar.style.background = '#0a0a0a';
   chatSidebar.style.borderLeft = '2px solid #333';
   
@@ -191,115 +187,209 @@ function setupFixedLayoutFramework(boxes) {
     }
   });
   
-  // 如果没有保存的选择，默认使用前两个串流
-  if (!fixedLayoutChatSelection.position3 && allStreams.length > 0) {
-    fixedLayoutChatSelection.position3 = allStreams[0].id;
-  }
-  if (!fixedLayoutChatSelection.position4 && allStreams.length > 1) {
-    fixedLayoutChatSelection.position4 = allStreams[1].id;
-  }
-  
-  // 创建两个聊天室面板（位置3和位置4）
-  const positions = [
-    { key: 'position3', defaultId: fixedLayoutChatSelection.position3 },
-    { key: 'position4', defaultId: fixedLayoutChatSelection.position4 }
-  ];
-  
-  positions.forEach((pos, index) => {
-    const chatPanel = document.createElement('div');
-    chatPanel.className = 'chat-sidebar-panel';
-    chatPanel.id = `chat-panel-fixed-${pos.key}`;
-    chatPanel.style.width = '50%';
-    chatPanel.style.height = '100%';
-    chatPanel.style.position = 'relative';
-    chatPanel.style.background = '#0a0a0a';
-    chatPanel.style.border = '1px solid #333';
-    chatPanel.style.borderRadius = '4px';
-    chatPanel.style.overflow = 'hidden';
-    chatPanel.style.display = 'flex';
-    chatPanel.style.flexDirection = 'column';
-    chatPanel.style.flexShrink = '0';
+  if (isLayout14) {
+    // Layout 14：四格聊天室（2x2 网格）
+    chatSidebar.style.display = 'flex';
+    chatSidebar.style.flexDirection = 'column';
+    chatSidebar.style.gap = '4px';
+    chatSidebar.style.padding = '4px';
+    chatSidebar.style.boxSizing = 'border-box';
     
-    // 创建头部（包含选择器）
-    const chatHeader = document.createElement('div');
-    chatHeader.className = 'chat-sidebar-header';
-    chatHeader.style.padding = '8px';
-    chatHeader.style.background = 'rgba(145, 71, 255, 0.2)';
-    chatHeader.style.borderBottom = '1px solid #333';
-    chatHeader.style.flexShrink = '0';
-    chatHeader.style.display = 'flex';
-    chatHeader.style.alignItems = 'center';
-    chatHeader.style.gap = '8px';
-    
-    // 创建选择器
-    const chatSelector = document.createElement('select');
-    chatSelector.className = 'chat-stream-selector-fixed';
-    chatSelector.id = `chat-selector-${pos.key}`;
-    chatSelector.style.background = '#222';
-    chatSelector.style.color = '#fff';
-    chatSelector.style.border = '1px solid #555';
-    chatSelector.style.padding = '4px 8px';
-    chatSelector.style.borderRadius = '4px';
-    chatSelector.style.cursor = 'pointer';
-    chatSelector.style.fontSize = '11px';
-    chatSelector.style.flex = '1';
-    chatSelector.style.minWidth = '0';
-    chatSelector.title = '選擇要顯示的串流聊天室';
-    
-    // 添加选项
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = '選擇串流...';
-    chatSelector.appendChild(defaultOption);
-    
-    allStreams.forEach((stream) => {
-      const option = document.createElement('option');
-      option.value = stream.id;
-      const label = stream.data.platform === 'twitch' ? 
-        (stream.data.channelId ? `#${stream.id} - ${stream.data.channelId}` : `#${stream.id}`) :
-        (stream.data.videoId ? `#${stream.id} - ${stream.data.videoId}` : `#${stream.id}`);
-      option.textContent = label;
-      chatSelector.appendChild(option);
-    });
-    
-    // 设置默认选中值
-    if (pos.defaultId && streamData[pos.defaultId]) {
-      chatSelector.value = pos.defaultId;
+    // 如果没有保存的选择，尝试从 Layout 13 的选择状态迁移，或使用前四个串流
+    if (!layout14ChatSelection.position1) {
+      // 尝试从 Layout 13 的 position3 迁移
+      if (fixedLayoutChatSelection.position3 && streamData[fixedLayoutChatSelection.position3]) {
+        layout14ChatSelection.position1 = fixedLayoutChatSelection.position3;
+      } else if (allStreams.length > 0) {
+        layout14ChatSelection.position1 = allStreams[0].id;
+      }
+    }
+    if (!layout14ChatSelection.position2) {
+      // 尝试从 Layout 13 的 position4 迁移
+      if (fixedLayoutChatSelection.position4 && streamData[fixedLayoutChatSelection.position4]) {
+        layout14ChatSelection.position2 = fixedLayoutChatSelection.position4;
+      } else if (allStreams.length > 1) {
+        layout14ChatSelection.position2 = allStreams[1].id;
+      }
+    }
+    if (!layout14ChatSelection.position3 && allStreams.length > 2) {
+      layout14ChatSelection.position3 = allStreams[2].id;
+    }
+    if (!layout14ChatSelection.position4 && allStreams.length > 3) {
+      layout14ChatSelection.position4 = allStreams[3].id;
     }
     
-    // 监听选择器变化
-    chatSelector.addEventListener('change', function() {
-      const selectedId = parseInt(this.value);
-      fixedLayoutChatSelection[pos.key] = selectedId || null;
-      updateFixedChatPanelContent(pos.key, selectedId);
-    });
-    
-    chatHeader.appendChild(chatSelector);
-    chatPanel.appendChild(chatHeader);
-    
-    // 创建内容区域
-    const chatContent = document.createElement('div');
-    chatContent.className = 'chat-sidebar-content';
-    chatContent.id = `chat-content-fixed-${pos.key}`;
-    chatContent.style.flex = '1';
-    chatContent.style.position = 'relative';
-    chatContent.style.overflow = 'hidden';
-    chatPanel.appendChild(chatContent);
-    
-    chatSidebar.appendChild(chatPanel);
-    
-    // 如果有选中的串流，延迟更新聊天室内容
-    if (pos.defaultId && streamData[pos.defaultId]) {
-      setTimeout(() => {
-        updateFixedChatPanelContent(pos.key, pos.defaultId);
-      }, 500 + (index * 200));
+    // 创建两行
+    for (let row = 0; row < 2; row++) {
+      const rowContainer = document.createElement('div');
+      rowContainer.style.display = 'flex';
+      rowContainer.style.flexDirection = 'row';
+      rowContainer.style.gap = '4px';
+      rowContainer.style.flex = '1';
+      rowContainer.style.minHeight = '0';
+      
+      // 每行两个面板
+      for (let col = 0; col < 2; col++) {
+        const posIndex = row * 2 + col;
+        const posKey = `position${posIndex + 1}`;
+        const defaultId = layout14ChatSelection[posKey];
+        
+        const chatPanel = createChatPanel(posKey, defaultId, allStreams, 'layout14');
+        chatPanel.style.width = '50%';
+        chatPanel.style.height = '100%';
+        rowContainer.appendChild(chatPanel);
+      }
+      
+      chatSidebar.appendChild(rowContainer);
     }
-  });
+  } else {
+    // Layout 13：左右两个聊天室
+    chatSidebar.style.display = 'flex';
+    chatSidebar.style.flexDirection = 'row';
+    chatSidebar.style.gap = '4px';
+    chatSidebar.style.padding = '4px';
+    chatSidebar.style.boxSizing = 'border-box';
+    
+    // 如果没有保存的选择，尝试从 Layout 14 的选择状态迁移，或使用前两个串流
+    if (!fixedLayoutChatSelection.position3) {
+      // 尝试从 Layout 14 的 position1 迁移
+      if (layout14ChatSelection.position1 && streamData[layout14ChatSelection.position1]) {
+        fixedLayoutChatSelection.position3 = layout14ChatSelection.position1;
+      } else if (allStreams.length > 0) {
+        fixedLayoutChatSelection.position3 = allStreams[0].id;
+      }
+    }
+    if (!fixedLayoutChatSelection.position4) {
+      // 尝试从 Layout 14 的 position2 迁移
+      if (layout14ChatSelection.position2 && streamData[layout14ChatSelection.position2]) {
+        fixedLayoutChatSelection.position4 = layout14ChatSelection.position2;
+      } else if (allStreams.length > 1) {
+        fixedLayoutChatSelection.position4 = allStreams[1].id;
+      }
+    }
+    
+    // 创建两个聊天室面板（位置3和位置4）
+    const positions = [
+      { key: 'position3', defaultId: fixedLayoutChatSelection.position3 },
+      { key: 'position4', defaultId: fixedLayoutChatSelection.position4 }
+    ];
+    
+    positions.forEach((pos, index) => {
+      const chatPanel = createChatPanel(pos.key, pos.defaultId, allStreams, 'layout13');
+      chatPanel.style.width = '50%';
+      chatPanel.style.height = '100%';
+      chatSidebar.appendChild(chatPanel);
+      
+      // 如果有选中的串流，延迟更新聊天室内容
+      if (pos.defaultId && streamData[pos.defaultId]) {
+        setTimeout(() => {
+          updateFixedChatPanelContent(pos.key, pos.defaultId);
+        }, 500 + (index * 200));
+      }
+    });
+  }
   
   const container = document.getElementById('container');
   if (container) {
     container.appendChild(chatSidebar);
   }
+}
+
+// 创建聊天室面板的辅助函数
+function createChatPanel(posKey, defaultId, allStreams, layoutType) {
+  const chatPanel = document.createElement('div');
+  chatPanel.className = 'chat-sidebar-panel';
+  chatPanel.id = `chat-panel-fixed-${posKey}`;
+  chatPanel.style.position = 'relative';
+  chatPanel.style.background = '#0a0a0a';
+  chatPanel.style.border = '1px solid #333';
+  chatPanel.style.borderRadius = '4px';
+  chatPanel.style.overflow = 'hidden';
+  chatPanel.style.display = 'flex';
+  chatPanel.style.flexDirection = 'column';
+  chatPanel.style.flexShrink = '0';
+  
+  // 创建头部（包含选择器）
+  const chatHeader = document.createElement('div');
+  chatHeader.className = 'chat-sidebar-header';
+  chatHeader.style.padding = '8px';
+  chatHeader.style.background = 'rgba(145, 71, 255, 0.2)';
+  chatHeader.style.borderBottom = '1px solid #333';
+  chatHeader.style.flexShrink = '0';
+  chatHeader.style.display = 'flex';
+  chatHeader.style.alignItems = 'center';
+  chatHeader.style.gap = '8px';
+  
+  // 创建选择器
+  const chatSelector = document.createElement('select');
+  chatSelector.className = 'chat-stream-selector-fixed';
+  chatSelector.id = `chat-selector-${posKey}`;
+  chatSelector.style.background = '#222';
+  chatSelector.style.color = '#fff';
+  chatSelector.style.border = '1px solid #555';
+  chatSelector.style.padding = '4px 8px';
+  chatSelector.style.borderRadius = '4px';
+  chatSelector.style.cursor = 'pointer';
+  chatSelector.style.fontSize = '11px';
+  chatSelector.style.flex = '1';
+  chatSelector.style.minWidth = '0';
+  chatSelector.title = '選擇要顯示的串流聊天室';
+  
+  // 添加选项
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = '選擇串流...';
+  chatSelector.appendChild(defaultOption);
+  
+  allStreams.forEach((stream) => {
+    const option = document.createElement('option');
+    option.value = stream.id;
+    const label = stream.data.platform === 'twitch' ? 
+      (stream.data.channelId ? `#${stream.id} - ${stream.data.channelId}` : `#${stream.id}`) :
+      (stream.data.videoId ? `#${stream.id} - ${stream.data.videoId}` : `#${stream.id}`);
+    option.textContent = label;
+    chatSelector.appendChild(option);
+  });
+  
+  // 设置默认选中值
+  if (defaultId && streamData[defaultId]) {
+    chatSelector.value = defaultId;
+  }
+  
+  // 监听选择器变化（立即响应，不使用延迟）
+  chatSelector.addEventListener('change', function() {
+    const selectedId = this.value ? parseInt(this.value) : null;
+    const isLayout14Current = (userSelectedLayout === 14);
+    // 立即保存选择状态
+    if (isLayout14Current) {
+      layout14ChatSelection[posKey] = selectedId;
+    } else {
+      fixedLayoutChatSelection[posKey] = selectedId;
+    }
+    // 立即更新内容，不使用延迟
+    updateFixedChatPanelContent(posKey, selectedId);
+  }, false); // 使用捕获阶段，确保事件立即处理
+  
+  chatHeader.appendChild(chatSelector);
+  chatPanel.appendChild(chatHeader);
+  
+  // 创建内容区域
+  const chatContent = document.createElement('div');
+  chatContent.className = 'chat-sidebar-content';
+  chatContent.id = `chat-content-fixed-${posKey}`;
+  chatContent.style.flex = '1';
+  chatContent.style.position = 'relative';
+  chatContent.style.overflow = 'hidden';
+  chatPanel.appendChild(chatContent);
+  
+  // 如果有选中的串流，延迟更新聊天室内容
+  if (defaultId && streamData[defaultId]) {
+    setTimeout(() => {
+      updateFixedChatPanelContent(posKey, defaultId);
+    }, 500);
+  }
+  
+  return chatPanel;
 }
 
 // 更新固定布局中指定位置的聊天室面板内容
@@ -334,7 +424,7 @@ function updateFixedChatPanelContent(positionKey, streamId) {
     // 如果聊天室不存在，创建它
     if (typeof createChat === 'function') {
       createChat(streamId, data.platform, data.channelId, data.videoId);
-      // 等待聊天室创建后，再次尝试复制 iframe
+      // 等待聊天室创建后，再次尝试复制 iframe（减少延迟，提高响应速度）
       setTimeout(() => {
         const newlyCreatedChatDiv = document.getElementById('chat' + streamId);
         if (newlyCreatedChatDiv) {
@@ -354,7 +444,7 @@ function updateFixedChatPanelContent(positionKey, streamId) {
             chatContent.appendChild(content);
           }
         }
-      }, 1000);
+      }, 300); // 从 1000ms 减少到 300ms，提高响应速度
     }
     return;
   }
@@ -375,7 +465,7 @@ function updateFixedChatPanelContent(positionKey, streamId) {
     content.style.cssText = 'width: 100%; height: 100%;';
     chatContent.appendChild(content);
     
-    // 如果 iframe 还没加载，等待一下再重试
+    // 如果 iframe 还没加载，等待一下再重试（减少延迟，提高响应速度）
     setTimeout(() => {
       const retryIframe = originalChatDiv.querySelector('iframe');
       if (retryIframe && retryIframe.src) {
@@ -387,7 +477,7 @@ function updateFixedChatPanelContent(positionKey, streamId) {
         newIframe.setAttribute('allowfullscreen', '');
         chatContent.appendChild(newIframe);
       }
-    }, 500);
+    }, 200); // 从 500ms 减少到 200ms，提高响应速度
   }
 }
 
@@ -425,7 +515,7 @@ function updateFixedChatSidebarContent(streamId, chatContentElement) {
             chatContentElement.appendChild(newIframe);
           }
         }
-      }, 1000);
+      }, 300); // 从 1000ms 减少到 300ms，提高响应速度
     }
     return;
   }
@@ -458,18 +548,17 @@ function updateFixedChatSidebarContent(streamId, chatContentElement) {
 // 更新固定布局的框架（当添加或删除串流时调用）
 function updateFixedLayoutFramework() {
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
-  if (!chatSidebar) return; // 如果不在布局12或13，直接返回
+  if (!chatSidebar) return; // 如果不在布局13，直接返回
   
   const boxes = document.querySelectorAll('.stream-box');
   const count = boxes.length;
   
-  // 检查当前是布局12还是布局13
-  // 布局12：视频固定上下排列
-  // 布局13：视频自动布局
+  // Layout 13 和 14：视频自动布局（可通过布局按钮手动调整）
   const isLayout13 = (userSelectedLayout === 13);
+  const isLayout14 = (userSelectedLayout === 14);
   
-  // 如果是布局13，使用用户选择的视频布局类型（如果没有选择则自动选择）
-  if (isLayout13) {
+  // 如果是布局13或14，使用用户选择的视频布局类型（如果没有选择则自动选择）
+  if (isLayout13 || isLayout14) {
     const videoAreaWidth = 70;
     let videoLayoutType = 1;
     if (count > 0) {
@@ -555,18 +644,9 @@ function updateFixedLayoutFramework() {
       }
     });
   } else {
-    // 布局12：固定上下排列
-    boxes.forEach((b, i) => {
-      const id = parseInt(b.dataset.streamId);
-      b.style.position = 'absolute';
-      b.style.width = '70%';
-      b.style.height = count > 0 ? (100 / count) + '%' : '50%';
-      b.style.left = '0';
-      b.style.top = count > 0 ? (100 / count * i) + '%' : (i * 50) + '%';
-      b.style.right = 'auto';
-      b.style.bottom = 'auto';
-      
-      // 隐藏视频框内的聊天室
+    // 如果不是 Layout 13 或 14，不应该进入这个函数
+    // 但为了安全，清空布局
+    boxes.forEach((b) => {
       const chatDiv = b.querySelector('.chat-container');
       if (chatDiv) {
         chatDiv.classList.add('hidden');
@@ -584,13 +664,14 @@ function updateFixedLayoutFramework() {
     }
   });
   
-  // 更新两个选择器的选项
-  const positions = ['position3', 'position4'];
+  // 更新选择器的选项（Layout 13 有两个，Layout 14 有四个）
+  const positions = isLayout14 ? ['position1', 'position2', 'position3', 'position4'] : ['position3', 'position4'];
   positions.forEach((posKey) => {
     const selector = document.getElementById(`chat-selector-${posKey}`);
     if (selector) {
-      // 保存当前选中的值
-      const currentValue = selector.value;
+      // 使用已保存的选择状态，而不是选择器的当前值（这样可以保留用户刚选择的新值）
+      const savedSelection = isLayout14 ? layout14ChatSelection[posKey] : fixedLayoutChatSelection[posKey];
+      const currentValue = savedSelection || selector.value || '';
       
       // 清空选项（保留第一个默认选项）
       while (selector.children.length > 1) {
@@ -608,18 +689,37 @@ function updateFixedLayoutFramework() {
         selector.appendChild(option);
       });
       
-      // 恢复选中的值（如果仍然有效）
+      // 恢复选中的值（使用已保存的选择状态）
       if (currentValue && streamData[parseInt(currentValue)]) {
-        selector.value = currentValue;
+        const selectedId = parseInt(currentValue);
+        const selectedIdStr = String(selectedId);
+        // 更新选择器的值（如果不同）
+        if (selector.value !== selectedIdStr) {
+          selector.value = selectedIdStr;
+        }
+        // 确保选择状态已保存
+        if (isLayout14) {
+          layout14ChatSelection[posKey] = selectedId;
+        } else {
+          fixedLayoutChatSelection[posKey] = selectedId;
+        }
+        // 始终更新内容，确保同步（即使值相同）
+        updateFixedChatPanelContent(posKey, selectedId);
       } else {
         // 如果当前选中的串流不存在，清空选择
-        selector.value = '';
-        fixedLayoutChatSelection[posKey] = null;
+        if (selector.value !== '') {
+          selector.value = '';
+        }
+        if (isLayout14) {
+          layout14ChatSelection[posKey] = null;
+        } else {
+          fixedLayoutChatSelection[posKey] = null;
+        }
         updateFixedChatPanelContent(posKey, null);
       }
     } else {
       // 如果选择器不存在，更新对应的聊天室内容
-      const selectedId = fixedLayoutChatSelection[posKey];
+      const selectedId = isLayout14 ? layout14ChatSelection[posKey] : fixedLayoutChatSelection[posKey];
       if (selectedId && streamData[selectedId]) {
         updateFixedChatPanelContent(posKey, selectedId);
       } else {
@@ -637,12 +737,12 @@ function cleanupFixedChatSidebar() {
   }
 }
 
-// 在 Layout 13 中设置左侧视频布局类型（只影响左侧视频区域，不影响右侧聊天室）
+// 在 Layout 13 或 14 中设置左侧视频布局类型（只影响左侧视频区域，不影响右侧聊天室）
 function setLayout13VideoLayout(videoLayoutType) {
-  // 检查当前是否为 Layout 13
+  // 检查当前是否为 Layout 13 或 14
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
-  if (!chatSidebar || userSelectedLayout !== 13) {
-    // 如果不是 Layout 13，直接返回，让正常的 setLayout 处理
+  if (!chatSidebar || (userSelectedLayout !== 13 && userSelectedLayout !== 14)) {
+    // 如果不是 Layout 13 或 14，直接返回，让正常的 setLayout 处理
     return false;
   }
   
@@ -664,20 +764,18 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   const boxes = document.querySelectorAll('.stream-box');
   const count = boxes.length;
   
-  // 布局12和13需要预设框架，即使没有串流也要创建
-  if (type === 12 || type === 13) {
-    // 布局12：固定布局，视频上下排列
-    // 布局13：固定布局，视频自动布局
-    setupFixedLayoutFramework(boxes);
-    // 记录用户选择的固定布局类型
+  // 布局13和14需要预设框架，即使没有串流也要创建
+  if (type === 13 || type === 14) {
+    // 布局13：固定布局，视频自动布局，右侧两个聊天室
+    // 布局14：固定布局，视频自动布局，右侧四个聊天室（2x2）
+    // 先设置 userSelectedLayout，这样 setupFixedLayoutFramework 可以正确判断布局类型
     if (isUserSelection) {
       userSelectedLayout = type;
       localStorage.setItem('currentLayout', type);
-      // 如果切换到 Layout 13，重置视频布局选择（让系统自动选择）
-      if (type === 13) {
-        layout13VideoLayout = null;
-      }
+      // 切换到 Layout 13 或 14 时，重置视频布局选择（让系统自动选择）
+      layout13VideoLayout = null;
     }
+    setupFixedLayoutFramework(boxes, type); // 传入布局类型
     updateFixedLayoutFramework(); // 立即更新内容
     return;
   }
@@ -743,7 +841,7 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     preview.classList.remove('active');
   });
   // 根據布局類型設置對應的預覽為活動狀態
-  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6, 12: 7, 13: 8 };
+  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6, 13: 7, 14: 8 };
   const previewIndex = layoutMap[type];
   // 布局映射索引已計算
   if (previewIndex !== undefined) {
@@ -764,8 +862,8 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     b.style.transition = 'none';
   });
   
-  // 如果切换到非布局类型 12 或 13，清理固定布局的聊天室容器
-  if (type !== 12 && type !== 13) {
+  // 如果切换到非布局类型 13，清理固定布局的聊天室容器
+  if (type !== 13) {
     cleanupFixedChatSidebar();
   }
   
@@ -931,5 +1029,6 @@ if (typeof window !== 'undefined') {
   window.updateFixedChatSidebarContent = updateFixedChatSidebarContent;
   window.updateFixedLayoutFramework = updateFixedLayoutFramework;
   window.cleanupFixedChatSidebar = cleanupFixedChatSidebar;
+  window.setLayout13VideoLayout = setLayout13VideoLayout;
 }
 
