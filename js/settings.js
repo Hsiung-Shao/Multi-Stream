@@ -1716,3 +1716,159 @@ if (typeof window !== 'undefined') {
   window.closeVersionHistory = closeVersionHistory;
 }
 
+// 使用教學功能
+function showUserGuide() {
+  // 檢查是否已經存在使用教學視窗
+  let guideModal = document.getElementById('user-guide-modal');
+  if (guideModal) {
+    guideModal.style.display = 'flex';
+    return;
+  }
+  
+  // 創建使用教學視窗
+  guideModal = document.createElement('div');
+  guideModal.id = 'user-guide-modal';
+  guideModal.className = 'favorite-streams-manager';
+  guideModal.style.display = 'flex';
+  
+  // 使用教學內容
+  const guideContent = `
+    <div class="favorite-manager-header">
+      <h3>使用教學</h3>
+      <button onclick="closeUserGuide()" class="close-btn">×</button>
+    </div>
+    <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">📺 添加串流</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">在控制面板頂部的輸入框中，貼上 Twitch 或 YouTube 直播網址</li>
+          <li style="margin-bottom: 8px;">點擊「加入畫面」按鈕</li>
+          <li style="margin-bottom: 8px;">串流會自動載入並顯示在畫面上</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          💡 <strong>提示：</strong>支援的網址格式包括：
+          <br>• Twitch: https://www.twitch.tv/頻道名稱
+          <br>• YouTube: https://www.youtube.com/watch?v=視頻ID 或 https://youtu.be/視頻ID
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🎨 調整布局</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">在控制面板的「布局控制」區域，點擊布局預覽按鈕</li>
+          <li style="margin-bottom: 8px;">可選擇：單一畫面、左右分割、上下分割、四宮格、上大下三、2×3 網格、3×3 網格</li>
+          <li style="margin-bottom: 8px;">系統會根據串流數量自動選擇最適合的布局</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">💬 聊天室功能</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">點擊串流視窗中的聊天室按鈕（💬）顯示/隱藏聊天室</li>
+          <li style="margin-bottom: 8px;">使用「顯示所有聊天室」按鈕一次性顯示所有聊天室</li>
+          <li style="margin-bottom: 8px;">聊天室會自動嵌入到串流視窗中</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ⚠️ <strong>注意：</strong>YouTube 聊天室需要在正式環境（非 localhost）才能嵌入
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🔊 音量控制</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">使用「總音量」滑桿調整所有串流的音量</li>
+          <li style="margin-bottom: 8px;">在「串流順序」列表中，調整單個串流的音量</li>
+          <li style="margin-bottom: 8px;">點擊「全部靜音」快速靜音/取消靜音所有串流</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">⭐ 收藏功能</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">點擊「管理收藏」打開收藏管理界面</li>
+          <li style="margin-bottom: 8px;">在「收藏串流」標籤頁中：
+            <ul style="margin-top: 6px; padding-left: 20px;">
+              <li>輸入串流網址和自訂名稱（選填）</li>
+              <li>選擇分類（可選）</li>
+              <li>點擊「加入收藏」</li>
+            </ul>
+          </li>
+          <li style="margin-bottom: 8px;">在「分類管理」標籤頁中創建和管理分類</li>
+          <li style="margin-bottom: 8px;">在控制面板的「收藏串流」區域：
+            <ul style="margin-top: 6px; padding-left: 20px;">
+              <li>使用下拉選單選擇「全部收藏」或「未分類」</li>
+              <li>點擊列表中的串流名稱即可載入</li>
+            </ul>
+          </li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">💾 數據備份</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">在「管理收藏」→「設定」標籤頁中啟用數據備份</li>
+          <li style="margin-bottom: 8px;">點擊「選擇文件位置」選擇備份文件（會自動導入數據）</li>
+          <li style="margin-bottom: 8px;">或點擊「創建新文件」創建新的備份文件</li>
+          <li style="margin-bottom: 8px;">啟用後，每次修改收藏或分類時會自動保存</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          💡 <strong>提示：</strong>頁面載入時會自動嘗試讀取備份文件
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🎛️ 控制面板</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">控制面板位於畫面右側，可以收起/展開</li>
+          <li style="margin-bottom: 8px;">在桌面端，滑鼠靠近右側邊緣會自動展開</li>
+          <li style="margin-bottom: 8px;">如果沒有任何串流，控制面板會自動展開</li>
+          <li style="margin-bottom: 8px;">在「串流順序」中可以拖曳調整串流順序</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">📱 移動設備</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">在手機和平板上，控制面板會全屏顯示</li>
+          <li style="margin-bottom: 8px;">所有按鈕和輸入框都已優化，適合觸摸操作</li>
+          <li style="margin-bottom: 8px;">支援橫向和縱向模式</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 20px; padding: 15px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; border-left: 3px solid #9147ff;">
+        <h4 style="color: #9147ff; font-size: 14px; margin: 0 0 8px 0;">💡 快捷提示</h4>
+        <ul style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 12px;">
+          <li>點擊「收藏當前」可以快速將當前顯示的串流加入收藏</li>
+          <li>在收藏列表中，可以點擊分類名稱旁的「▶ 載入」按鈕一鍵載入整個分類的串流</li>
+          <li>串流視窗可以拖曳調整大小和位置</li>
+          <li>點擊串流視窗可以切換為活動狀態（紫色邊框）</li>
+        </ul>
+      </div>
+    </div>
+  `;
+  
+  guideModal.innerHTML = guideContent;
+  document.body.appendChild(guideModal);
+  
+  // 點擊外部關閉
+  guideModal.addEventListener('click', (e) => {
+    if (e.target === guideModal) {
+      closeUserGuide();
+    }
+  });
+}
+
+// 關閉使用教學
+function closeUserGuide() {
+  const guideModal = document.getElementById('user-guide-modal');
+  if (guideModal) {
+    guideModal.style.display = 'none';
+  }
+}
+
+// 確保函數是全局的
+if (typeof window !== 'undefined') {
+  window.showUserGuide = showUserGuide;
+  window.closeUserGuide = closeUserGuide;
+}
+
