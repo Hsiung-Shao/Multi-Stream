@@ -393,7 +393,10 @@ function saveUserSettings() {
       // 可以根據當前布局保存偏好
       const boxes = document.querySelectorAll('.stream-box');
       if (boxes.length === 0) return null;
-      return autoSelectLayout();
+      if (typeof autoSelectLayout === 'function') {
+        return autoSelectLayout();
+      }
+      return null;
     })(),
     // 聊天室設置
     allChatsVisible: (() => {
@@ -1621,25 +1624,15 @@ function showVersionHistory() {
   // 版本紀錄內容
   const versionHistory = [
     {
-      version: '1.0.0',
-      date: '2025-11-26',
+      version: '1.3.0',
+      date: '2025-01-XX',
       changes: [
-        '初始版本發布',
-        '支援 Twitch 和 YouTube 直播串流',
-        '多種布局模式',
-        '聊天室整合',
-        '音量控制功能',
-        '收藏功能'
-      ]
-    },
-    {
-      version: '1.1.0',
-      date: '2025-11-27',
-      changes: [
-        '新增分類管理功能',
-        '改進控制面板 UI',
-        '優化布局自動切換',
-        '修復多個已知問題'
+        '新增側邊聊天布局功能（雙欄版和四格版）',
+        '雙欄聊天布局：左側視頻區域可自由調整布局，右側固定顯示兩個聊天室（左右排列）',
+        '四格聊天布局：左側視頻區域可自由調整布局，右側固定顯示四個聊天室（2×2 網格排列）',
+        '聊天室選擇器功能，無需調整串流順序即可快速切換要顯示的聊天室',
+        '優化布局切換流暢度，一次點擊即可完成切換',
+        '改進選擇器響應速度，減少延遲'
       ]
     },
     {
@@ -1654,6 +1647,28 @@ function showVersionHistory() {
         '新增版本紀錄功能',
         '新增滑鼠懸停自動展開控制面板',
         '更新著作權資訊'
+      ]
+    },
+    {
+      version: '1.1.0',
+      date: '2025-11-27',
+      changes: [
+        '新增分類管理功能',
+        '改進控制面板 UI',
+        '優化布局自動切換',
+        '修復多個已知問題'
+      ]
+    },
+    {
+      version: '1.0.0',
+      date: '2025-11-26',
+      changes: [
+        '初始版本發布',
+        '支援 Twitch 和 YouTube 直播串流',
+        '多種布局模式',
+        '聊天室整合',
+        '音量控制功能',
+        '收藏功能'
       ]
     }
   ];
@@ -1754,20 +1769,50 @@ function showUserGuide() {
       
       <div style="margin-bottom: 30px;">
         <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🎨 調整布局</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">在控制面板的「布局控制」區域，點擊布局預覽按鈕</li>
-          <li style="margin-bottom: 8px;">可選擇：單一畫面、左右分割、上下分割、四宮格、上大下三、2×3 網格、3×3 網格</li>
-          <li style="margin-bottom: 8px;">系統會根據串流數量自動選擇最適合的布局</li>
-        </ol>
+        <div style="margin-bottom: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">基本布局</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">在控制面板的「布局控制」區域，點擊布局預覽按鈕</li>
+            <li style="margin-bottom: 8px;">可選擇：單一畫面、左右分割、上下分割、四宮格、上大下三、2×3 網格、3×3 網格</li>
+            <li style="margin-bottom: 8px;">系統會根據串流數量自動選擇最適合的布局</li>
+          </ol>
+        </div>
+        <div style="margin-top: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">側邊聊天布局（雙欄版 / 四格版）</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">點擊「雙欄聊天布局」或「四格聊天布局」按鈕啟用側邊聊天布局</li>
+            <li style="margin-bottom: 8px;">左側視頻區域可以使用布局按鈕（1-6、9）調整顯示方式</li>
+            <li style="margin-bottom: 8px;">右側聊天室區域固定，不會隨視頻布局改變</li>
+            <li style="margin-bottom: 8px;">每個聊天室面板都有下拉選擇器，可以選擇要顯示的串流聊天室</li>
+            <li style="margin-bottom: 8px;">雙欄聊天布局：右側顯示兩個聊天室（左右排列）</li>
+            <li style="margin-bottom: 8px;">四格聊天布局：右側顯示四個聊天室（2×2 網格排列）</li>
+          </ol>
+          <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+            💡 <strong>提示：</strong>側邊聊天布局模式下，無需調整串流順序，直接從聊天室選擇器中選擇要顯示的串流即可
+          </div>
+        </div>
       </div>
       
       <div style="margin-bottom: 30px;">
         <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">💬 聊天室功能</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">點擊串流視窗中的聊天室按鈕（💬）顯示/隱藏聊天室</li>
-          <li style="margin-bottom: 8px;">使用「顯示所有聊天室」按鈕一次性顯示所有聊天室</li>
-          <li style="margin-bottom: 8px;">聊天室會自動嵌入到串流視窗中</li>
-        </ol>
+        <div style="margin-bottom: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">基本模式</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">點擊串流視窗中的聊天室按鈕（💬）顯示/隱藏聊天室</li>
+            <li style="margin-bottom: 8px;">使用「顯示所有聊天室」按鈕一次性顯示所有聊天室</li>
+            <li style="margin-bottom: 8px;">聊天室會自動嵌入到串流視窗中</li>
+          </ol>
+        </div>
+        <div style="margin-top: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">側邊聊天布局模式（雙欄版 / 四格版）</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">右側聊天室區域固定顯示，不會隨視頻布局改變</li>
+            <li style="margin-bottom: 8px;">每個聊天室面板頂部都有下拉選擇器</li>
+            <li style="margin-bottom: 8px;">從選擇器中選擇要顯示的串流聊天室</li>
+            <li style="margin-bottom: 8px;">支援 Twitch 和 YouTube 聊天室嵌入</li>
+            <li style="margin-bottom: 8px;">無需調整串流順序，直接選擇即可切換</li>
+          </ol>
+        </div>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
           ⚠️ <strong>注意：</strong>YouTube 聊天室需要在正式環境（非 localhost）才能嵌入
         </div>
@@ -1820,7 +1865,7 @@ function showUserGuide() {
         <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🎛️ 控制面板</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">控制面板位於畫面右側，可以收起/展開</li>
-          <li style="margin-bottom: 8px;">在桌面端，滑鼠靠近右側邊緣會自動展開</li>
+          <li style="margin-bottom: 8px;">點擊控制面板標題或右側的展開按鈕來展開/收起面板</li>
           <li style="margin-bottom: 8px;">如果沒有任何串流，控制面板會自動展開</li>
           <li style="margin-bottom: 8px;">在「串流順序」中可以拖曳調整串流順序</li>
         </ol>

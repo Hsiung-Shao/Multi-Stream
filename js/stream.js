@@ -220,11 +220,24 @@ function addStream(url = null) {
     updateStreamOrderList();
   }
   
-  // 添加新串流後自動應用最適合的布局
-  setTimeout(() => {
-    const layoutType = autoSelectLayout();
-    setLayout(layoutType);
-  }, 100);
+  // 检查当前布局类型（布局12或13的特征：有chat-sidebar-fixed）
+  const chatSidebarFixed = document.getElementById('chat-sidebar-fixed');
+  const isFixedLayout = !!chatSidebarFixed;
+  
+  // 如果是布局12或13，更新框架；否则自动应用最适合的布局
+  if (isFixedLayout && typeof updateFixedLayoutFramework === 'function') {
+    setTimeout(() => {
+      updateFixedLayoutFramework();
+    }, 300);
+  } else {
+    // 添加新串流後自動應用最適合的布局
+    setTimeout(() => {
+      if (typeof autoSelectLayout === 'function' && typeof setLayout === 'function') {
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType);
+      }
+    }, 100);
+  }
   
   // 檢查並調整控制面板狀態（有串流時使用用戶設置）
   if (typeof checkAndAdjustControlPanel === 'function') {
@@ -356,6 +369,17 @@ function removeBox(id) {
     // 更新串流順序列表（检查函数是否已定义）
     if (typeof updateStreamOrderList === 'function') {
       updateStreamOrderList();
+    }
+    
+    // 检查当前布局类型（布局12或13的特征：有chat-sidebar-fixed）
+    const chatSidebarFixedAfter = document.getElementById('chat-sidebar-fixed');
+    const isFixedLayoutAfter = !!chatSidebarFixedAfter;
+    
+    // 如果是布局12或13，更新框架
+    if (isFixedLayoutAfter && typeof updateFixedLayoutFramework === 'function') {
+      setTimeout(() => {
+        updateFixedLayoutFramework();
+      }, 100);
     }
     
     // 檢查並調整控制面板狀態（如果沒有串流則強制展開）
