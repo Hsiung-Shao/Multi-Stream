@@ -1625,7 +1625,7 @@ function showVersionHistory() {
   const versionHistory = [
     {
       version: '1.3.0',
-      date: '2025-01-XX',
+      date: '2025-11-28',
       changes: [
         '新增側邊聊天布局功能（雙欄版和四格版）',
         '雙欄聊天布局：左側視頻區域可自由調整布局，右側固定顯示兩個聊天室（左右排列）',
