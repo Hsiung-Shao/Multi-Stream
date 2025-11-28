@@ -338,6 +338,18 @@ body:has(.control-panel.collapsed) .control-panel-toggle-collapsed {
   display: block;
 }
 
+/* 控制面板滑鼠懸停檢測區域 */
+#control-panel-hover-zone {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 30px;
+  z-index: 1001;
+  pointer-events: auto;
+  background: transparent;
+}
+
 .control-panel:not(.collapsed) ~ .control-panel-toggle-collapsed,
 body:has(.control-panel:not(.collapsed)) .control-panel-toggle-collapsed {
   display: none;

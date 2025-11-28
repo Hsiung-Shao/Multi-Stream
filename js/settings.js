@@ -1622,7 +1622,7 @@ function showVersionHistory() {
   const versionHistory = [
     {
       version: '1.0.0',
-      date: '2024-12',
+      date: '2025-11-26',
       changes: [
         '初始版本發布',
         '支援 Twitch 和 YouTube 直播串流',
@@ -1634,7 +1634,7 @@ function showVersionHistory() {
     },
     {
       version: '1.1.0',
-      date: '2024-12',
+      date: '2025-11-27',
       changes: [
         '新增分類管理功能',
         '改進控制面板 UI',
@@ -1644,13 +1644,16 @@ function showVersionHistory() {
     },
     {
       version: '1.2.0',
-      date: '2024-12',
+      date: '2025-11-28',
       changes: [
         '新增本地文件備份功能',
         '改進收藏管理界面',
         '新增設定標籤頁',
         '優化安全性（XSS 防護）',
-        '改進 YouTube 聊天室嵌入支援'
+        '改進 YouTube 聊天室嵌入支援',
+        '新增版本紀錄功能',
+        '新增滑鼠懸停自動展開控制面板',
+        '更新著作權資訊'
       ]
     }
   ];
