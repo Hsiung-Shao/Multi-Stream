@@ -5,16 +5,24 @@ function createChat(id, platform, channelId, videoId) {
   const chatDiv = document.getElementById('chat' + id);
   const parentDomain = getParentDomain();
   
-  // YouTube 聊天室無法嵌入（X-Frame-Options: sameorigin）
-  // 直接顯示替代方案
-  if (platform === 'youtube') {
-    showYouTubeChatAlternative(chatDiv, videoId);
-    return;
-  }
-  
   let chatUrl = '';
   
-  if (platform === 'twitch') {
+  if (platform === 'youtube') {
+    // 验证 videoId
+    if (!validateVideoId(videoId)) {
+      showYouTubeChatAlternative(chatDiv, videoId);
+      return;
+    }
+    
+    // 检查域名是否支持嵌入（localhost 不支持）
+    if (parentDomain === 'localhost' || parentDomain === '127.0.0.1' || parentDomain === '0.0.0.0') {
+      showYouTubeChatAlternative(chatDiv, videoId);
+      return;
+    }
+    
+    // 构建 YouTube 聊天室 URL（使用 embed_domain 参数）
+    chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(parentDomain)}`;
+  } else if (platform === 'twitch') {
     // Twitch 聊天室 - 根據官方文檔，必須使用 parent 參數
     // Twitch CSP 要求：frame-ancestors http://localhost:* https://localhost:*
     // parent 參數應該只包含域名，不包含協議和端口
@@ -78,7 +86,7 @@ function createChat(id, platform, channelId, videoId) {
       } catch (e) {
         // 跨域錯誤是正常的，但我們需要檢查是否完全被阻止
         // 檢查 iframe 的 src 是否被重置或改變
-        if (chatIframe.src && chatIframe.src.includes('twitch.tv')) {
+        if (chatIframe.src && (chatIframe.src.includes('twitch.tv') || chatIframe.src.includes('youtube.com'))) {
           // iframe src 正常，可能是 CSP 阻止
           // 等待更長時間再判斷
           setTimeout(() => {
@@ -88,7 +96,12 @@ function createChat(id, platform, channelId, videoId) {
             } catch (err) {
               // 這可能是 CSP 阻止
               if (err.message && err.message.includes('Blocked a frame')) {
-                showChatError(chatDiv, platform, false, true);
+                // 對於 YouTube，回退到替代方案
+                if (platform === 'youtube') {
+                  showYouTubeChatAlternative(chatDiv, videoId);
+                } else {
+                  showChatError(chatDiv, platform, false, true);
+                }
                 blockedDetected = true;
               }
             }
@@ -108,7 +121,12 @@ function createChat(id, platform, channelId, videoId) {
       clearInterval(checkInterval);
       // Chat iframe 載入失敗，靜默處理
       if (!blockedDetected) {
-        showChatError(chatDiv, platform);
+        // 對於 YouTube，回退到替代方案
+        if (platform === 'youtube') {
+          showYouTubeChatAlternative(chatDiv, videoId);
+        } else {
+          showChatError(chatDiv, platform);
+        }
       }
     });
     
@@ -147,7 +165,12 @@ function showYouTubeChatAlternative(chatDiv, videoId) {
   
   const desc = document.createElement('div');
   desc.style.cssText = 'font-size: 12px; line-height: 1.6; color: #888; margin-bottom: 20px; max-width: 300px;';
-  desc.innerHTML = 'YouTube 不允許跨域嵌入聊天室<br>（X-Frame-Options: sameorigin）';
+  const currentDomain = getParentDomain();
+  if (currentDomain === 'localhost' || currentDomain === '127.0.0.1' || currentDomain === '0.0.0.0') {
+    desc.textContent = '在 localhost 環境下無法嵌入 YouTube 聊天室，請在新視窗中開啟';
+  } else {
+    desc.textContent = '無法嵌入 YouTube 聊天室，請在新視窗中開啟';
+  }
   
   const link = document.createElement('a');
   link.href = chatUrl;
