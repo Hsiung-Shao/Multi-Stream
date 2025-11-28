@@ -220,12 +220,12 @@ function addStream(url = null) {
     updateStreamOrderList();
   }
   
-  // 检查当前布局类型（布局12的特征：有chat-sidebar-fixed）
+  // 检查当前布局类型（布局12或13的特征：有chat-sidebar-fixed）
   const chatSidebarFixed = document.getElementById('chat-sidebar-fixed');
-  const isLayout12 = !!chatSidebarFixed;
+  const isFixedLayout = !!chatSidebarFixed;
   
-  // 如果是布局12，更新框架；否则自动应用最适合的布局
-  if (isLayout12 && typeof updateFixedLayoutFramework === 'function') {
+  // 如果是布局12或13，更新框架；否则自动应用最适合的布局
+  if (isFixedLayout && typeof updateFixedLayoutFramework === 'function') {
     setTimeout(() => {
       updateFixedLayoutFramework();
     }, 300);
@@ -371,12 +371,12 @@ function removeBox(id) {
       updateStreamOrderList();
     }
     
-    // 检查当前布局类型（布局12的特征：有chat-sidebar-fixed）
+    // 检查当前布局类型（布局12或13的特征：有chat-sidebar-fixed）
     const chatSidebarFixedAfter = document.getElementById('chat-sidebar-fixed');
-    const isLayout12After = !!chatSidebarFixedAfter;
+    const isFixedLayoutAfter = !!chatSidebarFixedAfter;
     
-    // 如果是布局12，更新框架
-    if (isLayout12After && typeof updateFixedLayoutFramework === 'function') {
+    // 如果是布局12或13，更新框架
+    if (isFixedLayoutAfter && typeof updateFixedLayoutFramework === 'function') {
       setTimeout(() => {
         updateFixedLayoutFramework();
       }, 100);

@@ -68,30 +68,30 @@
     <div class="control-section">
       <div class="section-title">布局控制</div>
       <div class="layout-grid-inline">
-        <div class="layout-preview-inline" onclick="setLayout(1, true, true)" title="單一畫面">
+        <div class="layout-preview-inline" onclick="if (window.setLayout13VideoLayout && window.setLayout13VideoLayout(1)) {} else { setLayout(1, true, true); }" title="單一畫面">
           <div style="width: 100%; height: 100%;"></div>
         </div>
-        <div class="layout-preview-inline" onclick="setLayout(2, true, true)" title="左右分割">
+        <div class="layout-preview-inline" onclick="if (window.setLayout13VideoLayout && window.setLayout13VideoLayout(2)) {} else { setLayout(2, true, true); }" title="左右分割">
           <div style="width: 50%; height: 100%;"></div>
           <div style="width: 50%; height: 100%;"></div>
         </div>
-        <div class="layout-preview-inline" onclick="setLayout(3, true, true)" title="上下分割">
+        <div class="layout-preview-inline" onclick="if (window.setLayout13VideoLayout && window.setLayout13VideoLayout(3)) {} else { setLayout(3, true, true); }" title="上下分割">
           <div style="width: 100%; height: 50%;"></div>
           <div style="width: 100%; height: 50%;"></div>
         </div>
-        <div class="layout-preview-inline" onclick="setLayout(4, true, true)" title="四宮格">
+        <div class="layout-preview-inline" onclick="if (window.setLayout13VideoLayout && window.setLayout13VideoLayout(4)) {} else { setLayout(4, true, true); }" title="四宮格">
           <div style="width: 50%; height: 50%;"></div>
           <div style="width: 50%; height: 50%;"></div>
           <div style="width: 50%; height: 50%;"></div>
           <div style="width: 50%; height: 50%;"></div>
         </div>
-        <div class="layout-preview-inline" onclick="setLayout(5, true, true)" title="上大下三">
+        <div class="layout-preview-inline" onclick="if (window.setLayout13VideoLayout && window.setLayout13VideoLayout(5)) {} else { setLayout(5, true, true); }" title="上大下三">
           <div style="width: 100%; height: 75%;"></div>
           <div style="width: 33.33%; height: 25%; position: absolute; top: 75%; left: 0;"></div>
           <div style="width: 33.33%; height: 25%; position: absolute; top: 75%; left: 33.33%;"></div>
           <div style="width: 33.33%; height: 25%; position: absolute; top: 75%; left: 66.66%;"></div>
         </div>
-        <div class="layout-preview-inline" onclick="setLayout(6, true, true)" title="2×3 網格">
+        <div class="layout-preview-inline" onclick="if (window.setLayout13VideoLayout && window.setLayout13VideoLayout(6)) {} else { setLayout(6, true, true); }" title="2×3 網格">
           <div style="width: 33.33%; height: 50%;"></div>
           <div style="width: 33.33%; height: 50%;"></div>
           <div style="width: 33.33%; height: 50%;"></div>
@@ -99,7 +99,7 @@
           <div style="width: 33.33%; height: 50%;"></div>
           <div style="width: 33.33%; height: 50%;"></div>
         </div>
-        <div class="layout-preview-inline" onclick="setLayout(9, true, true)" title="3×3 網格">
+        <div class="layout-preview-inline" onclick="if (window.setLayout13VideoLayout && window.setLayout13VideoLayout(9)) {} else { setLayout(9, true, true); }" title="3×3 網格">
           <div style="width: 33.33%; height: 33.33%;"></div>
           <div style="width: 33.33%; height: 33.33%;"></div>
           <div style="width: 33.33%; height: 33.33%;"></div>
@@ -119,6 +119,11 @@
         <div class="layout-preview-inline" onclick="setLayout(12, true, true)" title="固定布局（視頻左側上下，聊天室右側左右）">
           <div style="width: 70%; height: 50%; position: absolute; left: 0; top: 0; background: rgba(145, 71, 255, 0.3);"></div>
           <div style="width: 70%; height: 50%; position: absolute; left: 0; top: 50%; background: rgba(145, 71, 255, 0.3);"></div>
+          <div style="width: 15%; height: 100%; position: absolute; left: 70%; top: 0; background: rgba(255, 255, 255, 0.1); border-left: 2px solid #9147ff;"></div>
+          <div style="width: 15%; height: 100%; position: absolute; left: 85%; top: 0; background: rgba(255, 255, 255, 0.1); border-left: 2px solid #9147ff;"></div>
+        </div>
+        <div class="layout-preview-inline" onclick="setLayout(13, true, true)" title="固定布局（視頻自動調整，聊天室右側左右）">
+          <div style="width: 70%; height: 100%; position: absolute; left: 0; top: 0; background: rgba(145, 71, 255, 0.3); border: 1px dashed rgba(145, 71, 255, 0.5);"></div>
           <div style="width: 15%; height: 100%; position: absolute; left: 70%; top: 0; background: rgba(255, 255, 255, 0.1); border-left: 2px solid #9147ff;"></div>
           <div style="width: 15%; height: 100%; position: absolute; left: 85%; top: 0; background: rgba(255, 255, 255, 0.1); border-left: 2px solid #9147ff;"></div>
         </div>

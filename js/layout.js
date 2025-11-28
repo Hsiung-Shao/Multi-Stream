@@ -10,6 +10,9 @@ let fixedLayoutChatSelection = {
   position4: null  // 右侧聊天室
 };
 
+// Layout 13 中用户选择的视频布局类型（1-6 或 9）
+let layout13VideoLayout = null;
+
 // 切換布局選擇器
 function toggleLayoutSelector() {
   const selector = document.getElementById('layout-selector');
@@ -455,28 +458,121 @@ function updateFixedChatSidebarContent(streamId, chatContentElement) {
 // 更新固定布局的框架（当添加或删除串流时调用）
 function updateFixedLayoutFramework() {
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
-  if (!chatSidebar) return; // 如果不在布局12，直接返回
+  if (!chatSidebar) return; // 如果不在布局12或13，直接返回
   
   const boxes = document.querySelectorAll('.stream-box');
   const count = boxes.length;
   
-  // 更新左侧视频布局
-  boxes.forEach((b, i) => {
-    const id = parseInt(b.dataset.streamId);
-    b.style.position = 'absolute';
-    b.style.width = '70%';
-    b.style.height = count > 0 ? (100 / count) + '%' : '50%';
-    b.style.left = '0';
-    b.style.top = count > 0 ? (100 / count * i) + '%' : (i * 50) + '%';
-    b.style.right = 'auto';
-    b.style.bottom = 'auto';
-    
-    // 隐藏视频框内的聊天室
-    const chatDiv = b.querySelector('.chat-container');
-    if (chatDiv) {
-      chatDiv.classList.add('hidden');
+  // 检查当前是布局12还是布局13
+  // 布局12：视频固定上下排列
+  // 布局13：视频自动布局
+  const isLayout13 = (userSelectedLayout === 13);
+  
+  // 如果是布局13，使用用户选择的视频布局类型（如果没有选择则自动选择）
+  if (isLayout13) {
+    const videoAreaWidth = 70;
+    let videoLayoutType = 1;
+    if (count > 0) {
+      // 如果用户已经选择了视频布局类型，使用用户选择的；否则自动选择
+      if (layout13VideoLayout !== null && [1, 2, 3, 4, 5, 6, 9].includes(layout13VideoLayout)) {
+        videoLayoutType = layout13VideoLayout;
+      } else {
+        videoLayoutType = autoSelectLayout();
+        layout13VideoLayout = videoLayoutType; // 保存自动选择的结果
+      }
     }
-  });
+    
+    // 根据自动选择的布局类型应用视频布局
+    boxes.forEach((b, i) => {
+      b.style.position = 'absolute';
+      b.style.right = 'auto';
+      b.style.bottom = 'auto';
+      
+      if (videoLayoutType === 1 || count === 1) {
+        b.style.width = videoAreaWidth + '%';
+        b.style.height = '100%';
+        b.style.left = '0';
+        b.style.top = '0';
+      } else if (videoLayoutType === 2) {
+        b.style.width = (videoAreaWidth / count) + '%';
+        b.style.height = '100%';
+        b.style.left = (videoAreaWidth / count * i) + '%';
+        b.style.top = '0';
+      } else if (videoLayoutType === 3) {
+        b.style.width = videoAreaWidth + '%';
+        b.style.height = (100 / count) + '%';
+        b.style.left = '0';
+        b.style.top = (100 / count * i) + '%';
+      } else if (videoLayoutType === 4) {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        b.style.width = (videoAreaWidth / 2) + '%';
+        b.style.height = '50%';
+        b.style.left = (col * videoAreaWidth / 2) + '%';
+        b.style.top = (row * 50) + '%';
+      } else if (videoLayoutType === 5) {
+        if (i === 0) {
+          b.style.width = videoAreaWidth + '%';
+          b.style.height = '75%';
+          b.style.left = '0';
+          b.style.top = '0';
+        } else if (i <= 3) {
+          const bottomIndex = i - 1;
+          b.style.width = (videoAreaWidth / 3) + '%';
+          b.style.height = '25%';
+          b.style.left = (bottomIndex * videoAreaWidth / 3) + '%';
+          b.style.top = '75%';
+        } else {
+          const bottomIndex = (i - 1) % 3;
+          const row = Math.floor((i - 1) / 3);
+          b.style.width = (videoAreaWidth / 3) + '%';
+          b.style.height = '25%';
+          b.style.left = (bottomIndex * videoAreaWidth / 3) + '%';
+          b.style.top = (75 + row * 25) + '%';
+        }
+      } else if (videoLayoutType === 6) {
+        const cols = 3;
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        b.style.width = (videoAreaWidth / cols) + '%';
+        b.style.height = (100 / Math.ceil(count / cols)) + '%';
+        b.style.left = (col * videoAreaWidth / cols) + '%';
+        b.style.top = (row * 100 / Math.ceil(count / cols)) + '%';
+      } else if (videoLayoutType === 9) {
+        const cols = 3;
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        b.style.width = (videoAreaWidth / cols) + '%';
+        b.style.height = (100 / Math.ceil(count / cols)) + '%';
+        b.style.left = (col * videoAreaWidth / cols) + '%';
+        b.style.top = (row * 100 / Math.ceil(count / cols)) + '%';
+      }
+      
+      // 隐藏视频框内的聊天室
+      const chatDiv = b.querySelector('.chat-container');
+      if (chatDiv) {
+        chatDiv.classList.add('hidden');
+      }
+    });
+  } else {
+    // 布局12：固定上下排列
+    boxes.forEach((b, i) => {
+      const id = parseInt(b.dataset.streamId);
+      b.style.position = 'absolute';
+      b.style.width = '70%';
+      b.style.height = count > 0 ? (100 / count) + '%' : '50%';
+      b.style.left = '0';
+      b.style.top = count > 0 ? (100 / count * i) + '%' : (i * 50) + '%';
+      b.style.right = 'auto';
+      b.style.bottom = 'auto';
+      
+      // 隐藏视频框内的聊天室
+      const chatDiv = b.querySelector('.chat-container');
+      if (chatDiv) {
+        chatDiv.classList.add('hidden');
+      }
+    });
+  }
   
   // 获取所有串流用于更新选择器
   const allStreams = [];
@@ -541,14 +637,48 @@ function cleanupFixedChatSidebar() {
   }
 }
 
+// 在 Layout 13 中设置左侧视频布局类型（只影响左侧视频区域，不影响右侧聊天室）
+function setLayout13VideoLayout(videoLayoutType) {
+  // 检查当前是否为 Layout 13
+  const chatSidebar = document.getElementById('chat-sidebar-fixed');
+  if (!chatSidebar || userSelectedLayout !== 13) {
+    // 如果不是 Layout 13，直接返回，让正常的 setLayout 处理
+    return false;
+  }
+  
+  // 验证布局类型是否有效（1-6 或 9）
+  if (![1, 2, 3, 4, 5, 6, 9].includes(videoLayoutType)) {
+    return false;
+  }
+  
+  // 保存用户选择的视频布局类型
+  layout13VideoLayout = videoLayoutType;
+  
+  // 更新左侧视频布局
+  updateFixedLayoutFramework();
+  
+  return true;
+}
+
 function setLayout(type, immediate = false, isUserSelection = false) {
   const boxes = document.querySelectorAll('.stream-box');
   const count = boxes.length;
   
-  // 布局12需要预设框架，即使没有串流也要创建
-  if (type === 12) {
-    // 布局12：固定布局，即使没有串流也创建框架
+  // 布局12和13需要预设框架，即使没有串流也要创建
+  if (type === 12 || type === 13) {
+    // 布局12：固定布局，视频上下排列
+    // 布局13：固定布局，视频自动布局
     setupFixedLayoutFramework(boxes);
+    // 记录用户选择的固定布局类型
+    if (isUserSelection) {
+      userSelectedLayout = type;
+      localStorage.setItem('currentLayout', type);
+      // 如果切换到 Layout 13，重置视频布局选择（让系统自动选择）
+      if (type === 13) {
+        layout13VideoLayout = null;
+      }
+    }
+    updateFixedLayoutFramework(); // 立即更新内容
     return;
   }
   
@@ -613,7 +743,7 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     preview.classList.remove('active');
   });
   // 根據布局類型設置對應的預覽為活動狀態
-  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6 };
+  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6, 12: 7, 13: 8 };
   const previewIndex = layoutMap[type];
   // 布局映射索引已計算
   if (previewIndex !== undefined) {
@@ -634,8 +764,8 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     b.style.transition = 'none';
   });
   
-  // 如果切换到非布局类型 12，清理固定布局的聊天室容器
-  if (type !== 12) {
+  // 如果切换到非布局类型 12 或 13，清理固定布局的聊天室容器
+  if (type !== 12 && type !== 13) {
     cleanupFixedChatSidebar();
   }
   
