@@ -9,8 +9,8 @@ const adConfigManager = {
     
     // 默認配置
     const defaultConfig = {
-      enabled: true, // 啟用廣告功能
-      showControlButtons: true, // 顯示控制按鈕
+      enabled: false, // 關閉廣告功能
+      showControlButtons: false, // 隱藏控制按鈕
       testMode: false, // 正式模式
       showInterval: 30 * 60 * 1000, // 30分鐘間隔
       displayDuration: {
@@ -25,7 +25,10 @@ const adConfigManager = {
       try {
         const savedConfig = JSON.parse(saved);
         // 合併保存的配置和默認配置
-        return Object.assign({}, defaultConfig, savedConfig);
+        const mergedConfig = Object.assign({}, defaultConfig, savedConfig);
+        // 強制使用正式模式（確保 testMode 始終為 false）
+        mergedConfig.testMode = false;
+        return mergedConfig;
       } catch (e) {
         console.error('載入廣告配置失敗:', e);
       }
