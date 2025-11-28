@@ -9,8 +9,8 @@ const adConfigManager = {
     
     // 默認配置
     const defaultConfig = {
-      enabled: false, // 關閉廣告功能（申請中）
-      showControlButtons: false, // 隱藏控制按鈕
+      enabled: true, // 啟用廣告功能
+      showControlButtons: true, // 顯示控制按鈕
       testMode: false, // 正式模式
       showInterval: 30 * 60 * 1000, // 30分鐘間隔
       displayDuration: {
@@ -19,9 +19,7 @@ const adConfigManager = {
       }
     };
     
-    // 暫時不讀取已保存的配置，強制使用默認配置
-    // 如果之後需要恢復讀取保存的配置，可以取消下面的註釋
-    /*
+    // 讀取已保存的配置
     const saved = localStorage.getItem('adConfig');
     if (saved) {
       try {
@@ -32,7 +30,6 @@ const adConfigManager = {
         console.error('載入廣告配置失敗:', e);
       }
     }
-    */
     
     return defaultConfig;
   },
@@ -111,6 +108,15 @@ function checkAndShowAd() {
     return;
   }
   
+  // ★ 檢查是否有串流內容，如果沒有串流就不顯示廣告（符合 AdSense 政策）
+  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
+  if (!hasStreams) {
+    console.log('沒有串流內容，不顯示廣告（符合 AdSense 政策要求）');
+    // 重新設置定時器，等待有內容時再檢查
+    startAdTimer();
+    return;
+  }
+  
   const now = Date.now();
   const lastShown = localStorage.getItem('adLastShown');
   const lastShownTime = lastShown ? parseInt(lastShown) : 0;
@@ -129,6 +135,13 @@ function checkAndShowAd() {
 // 顯示廣告
 function showAdBanner() {
   if (isAdVisible) return; // 如果已經顯示，不重複顯示
+  
+  // ★ 再次檢查是否有串流內容（符合 AdSense 政策要求）
+  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
+  if (!hasStreams) {
+    console.log('顯示廣告前檢查：沒有串流內容，取消顯示（符合 AdSense 政策要求）');
+    return;
+  }
   
   const adBanner = document.getElementById('ad-banner');
   const container = document.getElementById('container');

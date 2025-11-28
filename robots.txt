@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /js/
+Disallow: /styles.css
+
+Sitemap: https://multi-stream.pages.dev/sitemap.xml
+

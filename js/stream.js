@@ -148,6 +148,14 @@ function addStream(url = null) {
   if (typeof checkAndAdjustControlPanel === 'function') {
     checkAndAdjustControlPanel();
   }
+  
+  // 如果有串流且廣告已啟用，檢查是否可以顯示廣告（符合 AdSense 政策要求）
+  if (typeof checkAndShowAd === 'function' && typeof adConfig !== 'undefined' && adConfig.enabled) {
+    // 延遲檢查，確保串流已完全載入
+    setTimeout(() => {
+      checkAndShowAd();
+    }, 2000);
+  }
 }
 
 // 建立 Twitch 播放器

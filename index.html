@@ -3,14 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MultiStream Hub</title>
+<title>MultiStream Hub - 多平台直播串流觀看工具 | Twitch & YouTube 同時觀看</title>
+<meta name="description" content="MultiStream Hub 是一個免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能。">
+<meta name="keywords" content="多平台直播,串流觀看,Twitch,YouTube,直播工具,多畫面直播,直播聊天室,串流管理">
+<meta name="author" content="MultiStream Hub">
+<meta name="robots" content="index, follow">
+<meta name="language" content="zh-TW">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://multi-stream.pages.dev/">
+<meta property="og:title" content="MultiStream Hub - 多平台直播串流觀看工具">
+<meta property="og:description" content="免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播">
+<meta property="og:image" content="https://multi-stream.pages.dev/icon.png">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://multi-stream.pages.dev/">
+<meta property="twitter:title" content="MultiStream Hub - 多平台直播串流觀看工具">
+<meta property="twitter:description" content="免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播">
+<meta property="twitter:image" content="https://multi-stream.pages.dev/icon.png">
+
+<!-- Canonical URL -->
+<link rel="canonical" href="https://multi-stream.pages.dev/">
+
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="shortcut icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="stylesheet" href="styles.css">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
 <!-- ★★★ 1. 請把 ca-pub-XXXXXXXXXXXXXXXX 換成你的真實 AdSense ID ★★★ -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=pub-8415424787944153"
      crossorigin="anonymous"></script>
 
 </head>
@@ -104,7 +127,7 @@
       </div>
     </div>
     
-    <div class="control-section" id="ad-control-section" style="display: none;">
+    <div class="control-section" id="ad-control-section">
       <div class="section-title">廣告設定</div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button onclick="toggleAdEnabled()" id="ad-enabled-btn" style="padding: 6px 12px; font-size: 12px;">廣告（關）</button>
@@ -176,6 +199,36 @@
 <script src="js/settings.js"></script>
 <script src="js/promotion.js"></script>
 <script src="js/main.js"></script>
+
+<!-- 結構化數據 (JSON-LD) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "MultiStream Hub",
+  "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播",
+  "url": "https://multi-stream.pages.dev/",
+  "applicationCategory": "EntertainmentApplication",
+  "operatingSystem": "Web Browser",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TWD"
+  },
+  "featureList": [
+    "多平台直播串流觀看",
+    "Twitch 和 YouTube 支援",
+    "多種布局模式",
+    "聊天室整合",
+    "音量控制",
+    "收藏功能"
+  ],
+  "author": {
+    "@type": "Organization",
+    "name": "MultiStream Hub"
+  }
+}
+</script>
 
 <!-- AdSense 廣告載入腳本 -->
 <script>
