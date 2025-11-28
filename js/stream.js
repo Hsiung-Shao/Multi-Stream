@@ -8,42 +8,110 @@ function addStream(url = null) {
   // 清空輸入框
   document.getElementById('url-input').value = '';
 
+  // 先验证 URL，再创建 DOM（避免无效 URL 创建 DOM 后又被移除）
+  const urlValidation = validateUrl(url);
+  if (!urlValidation.valid) {
+    alert(urlValidation.error);
+    return;
+  }
+  
   const id = ++streamCount;
   const box = document.createElement('div');
   box.className = 'stream-box';
   box.id = 'box' + id;
   box.dataset.streamId = id;
   
-  box.innerHTML = `
-    <div class="controls">
-      <span class="stream-label">#${id}</span>
-      <div class="volume-control">
-        <span style="font-size: 11px;">🔊</span>
-        <input type="range" class="volume" min="0" max="100" value="100">
-        <span class="vol-value">100%</span>
-      </div>
-      <button class="control-btn" onclick="toggleChat(${id})" title="切換聊天室">💬</button>
-      <button class="control-btn" onclick="separateChat(${id})" title="分離聊天室">🔗</button>
-      <span class="close" onclick="removeBox(${id})" title="移除">×</span>
-    </div>
-    <div class="content-wrapper layout-vertical" id="content-wrapper${id}">
-      <div class="player-container" id="player${id}"></div>
-      <div class="chat-container" id="chat${id}">
-        <div class="chat-resizer" id="chat-resizer${id}"></div>
-      </div>
-    </div>
-    <div class="resizer"></div>
-  `;
+  // 使用安全的 DOM 操作替代 innerHTML
+  const controls = document.createElement('div');
+  controls.className = 'controls';
+  
+  const streamLabel = document.createElement('span');
+  streamLabel.className = 'stream-label';
+  streamLabel.textContent = '#' + id;
+  
+  const volumeControl = document.createElement('div');
+  volumeControl.className = 'volume-control';
+  
+  const volumeIcon = document.createElement('span');
+  volumeIcon.style.fontSize = '11px';
+  volumeIcon.textContent = '🔊';
+  
+  const volumeSlider = document.createElement('input');
+  volumeSlider.type = 'range';
+  volumeSlider.className = 'volume';
+  volumeSlider.min = '0';
+  volumeSlider.max = '100';
+  volumeSlider.value = '100';
+  
+  const volValue = document.createElement('span');
+  volValue.className = 'vol-value';
+  volValue.textContent = '100%';
+  
+  volumeControl.appendChild(volumeIcon);
+  volumeControl.appendChild(volumeSlider);
+  volumeControl.appendChild(volValue);
+  
+  const chatBtn = document.createElement('button');
+  chatBtn.className = 'control-btn';
+  chatBtn.title = '切換聊天室';
+  chatBtn.textContent = '💬';
+  chatBtn.onclick = () => toggleChat(id);
+  
+  const separateBtn = document.createElement('button');
+  separateBtn.className = 'control-btn';
+  separateBtn.title = '分離聊天室';
+  separateBtn.textContent = '🔗';
+  separateBtn.onclick = () => separateChat(id);
+  
+  const closeBtn = document.createElement('span');
+  closeBtn.className = 'close';
+  closeBtn.title = '移除';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = () => removeBox(id);
+  
+  controls.appendChild(streamLabel);
+  controls.appendChild(volumeControl);
+  controls.appendChild(chatBtn);
+  controls.appendChild(separateBtn);
+  controls.appendChild(closeBtn);
+  
+  const contentWrapper = document.createElement('div');
+  contentWrapper.className = 'content-wrapper layout-vertical';
+  contentWrapper.id = 'content-wrapper' + id;
+  
+  const playerContainer = document.createElement('div');
+  playerContainer.className = 'player-container';
+  playerContainer.id = 'player' + id;
+  
+  const chatContainer = document.createElement('div');
+  chatContainer.className = 'chat-container';
+  chatContainer.id = 'chat' + id;
+  
+  const chatResizer = document.createElement('div');
+  chatResizer.className = 'chat-resizer';
+  chatResizer.id = 'chat-resizer' + id;
+  
+  chatContainer.appendChild(chatResizer);
+  contentWrapper.appendChild(playerContainer);
+  contentWrapper.appendChild(chatContainer);
+  
+  const resizer = document.createElement('div');
+  resizer.className = 'resizer';
+  
+  box.appendChild(controls);
+  box.appendChild(contentWrapper);
+  box.appendChild(resizer);
   
   container.appendChild(box);
-
-  // 解析來源
+  
   let platform = '';
   let channelId = '';
   let videoId = '';
   let originalUrl = url;
+  const urlObj = urlValidation.urlObj;
+  const hostname = urlObj.hostname.toLowerCase();
 
-  if (url.includes('twitch.tv')) {
+  if (hostname.includes('twitch.tv')) {
     const match = url.match(/twitch\.tv\/([^\/\?]+)/);
     if (!match) {
       alert('無法解析 Twitch 網址');
@@ -51,19 +119,31 @@ function addStream(url = null) {
       return;
     }
     channelId = match[1];
+    // 验证频道 ID（如果存在且不为空）
+    if (channelId && !validateChannelId(channelId)) {
+      alert('無效的 Twitch 頻道 ID');
+      box.remove();
+      return;
+    }
     platform = 'twitch';
   } 
-  else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+  else if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
     if (url.includes('youtube.com/live/')) {
       videoId = url.split('live/')[1]?.split('?')[0];
     } else if (url.includes('youtube.com/watch')) {
-      videoId = new URL(url).searchParams.get('v');
+      videoId = urlObj.searchParams.get('v');
     } else if (url.includes('youtu.be/')) {
       videoId = url.split('youtu.be/')[1]?.split('?')[0];
     }
     
     if (!videoId) {
       alert('無法解析 YouTube 網址');
+      box.remove();
+      return;
+    }
+    // 验证视频 ID（如果存在且不为空）
+    if (videoId && !validateVideoId(videoId)) {
+      alert('無效的 YouTube 視頻 ID');
       box.remove();
       return;
     }
@@ -135,8 +215,10 @@ function addStream(url = null) {
     box.classList.add('active');
   });
   
-  // 更新串流順序列表
-  updateStreamOrderList();
+  // 更新串流順序列表（检查函数是否已定义）
+  if (typeof updateStreamOrderList === 'function') {
+    updateStreamOrderList();
+  }
   
   // 添加新串流後自動應用最適合的布局
   setTimeout(() => {
@@ -186,11 +268,11 @@ function createTwitchPlayer(id, channel) {
     });
     
     player.addEventListener(Twitch.Player.ERROR, () => {
-      console.error('Twitch player error for channel:', channel);
+      // Twitch player error，靜默處理
       alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 使用 http://localhost 而非 file:// 開啟網頁');
     });
   } catch (error) {
-    console.error('Error creating Twitch player:', error);
+    // Error creating Twitch player，靜默處理
     alert('無法建立 Twitch 播放器。請確認使用 http://localhost 開啟網頁，而非直接開啟檔案。');
   }
 }
@@ -213,7 +295,7 @@ function createYouTubePlayer(id, videoId) {
             modestbranding: 1,
             playsinline: 1,
             enablejsapi: 1,
-            origin: window.location.origin || 'http://localhost'
+            origin: window.location.protocol === 'https:' ? window.location.origin : 'http://localhost'
           },
           events: {
             onReady: (event) => {
@@ -221,7 +303,7 @@ function createYouTubePlayer(id, videoId) {
               applyMasterVolumeToStream(id);
             },
             onError: (event) => {
-              console.error('YouTube player error:', event.data);
+              // YouTube player error，靜默處理
               let errorMsg = '無法載入 YouTube 直播';
               switch(event.data) {
                 case 2: errorMsg += '：無效的影片 ID'; break;
@@ -240,7 +322,7 @@ function createYouTubePlayer(id, videoId) {
           player: player
         };
       } catch (error) {
-        console.error('Error creating YouTube player:', error);
+        // Error creating YouTube player，靜默處理
         alert('無法建立 YouTube 播放器。請確認使用 http://localhost 開啟網頁。');
       }
     } else {
@@ -271,8 +353,10 @@ function removeBox(id) {
     delete streamData[id];
     box.remove();
     
-    // 更新串流順序列表
-    updateStreamOrderList();
+    // 更新串流順序列表（检查函数是否已定义）
+    if (typeof updateStreamOrderList === 'function') {
+      updateStreamOrderList();
+    }
     
     // 檢查並調整控制面板狀態（如果沒有串流則強制展開）
     if (typeof checkAndAdjustControlPanel === 'function') {
@@ -327,7 +411,12 @@ function saveLayout() {
     return;
   }
   
-  localStorage.setItem('multiStreamLayout', JSON.stringify(layout));
+  try {
+    localStorage.setItem('multiStreamLayout', JSON.stringify(layout));
+  } catch (e) {
+    // 保存布局失敗，靜默處理
+    alert('保存布局失敗，可能是存儲空間不足');
+  }
   alert('布局已儲存！');
 }
 
@@ -351,7 +440,12 @@ function loadLayout() {
   container.innerHTML = '';
   streamCount = 0;
   
-  const layout = JSON.parse(saved);
+  // 使用安全的 JSON 解析
+  const layout = safeJSONParse(saved, []);
+  if (!Array.isArray(layout)) {
+    alert('無效的布局數據格式');
+    return;
+  }
   
   // 依序加入串流
   layout.forEach((item, index) => {

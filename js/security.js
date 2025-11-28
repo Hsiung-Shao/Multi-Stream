@@ -1,0 +1,97 @@
+// 安全工具函数
+
+// HTML 转义函数（防止 XSS）
+function escapeHtml(text) {
+  if (text == null) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// 安全的 JSON 解析（带错误处理）
+function safeJSONParse(str, defaultValue = null) {
+  if (!str || typeof str !== 'string') {
+    return defaultValue;
+  }
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    // JSON parse error，靜默處理
+    return defaultValue;
+  }
+}
+
+// URL 验证函数
+function validateUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'URL 不能為空' };
+  }
+  
+  // 先检查是否包含支持的平台域名（更宽松的检查）
+  const hasTwitch = url.includes('twitch.tv');
+  const hasYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+  
+  if (!hasTwitch && !hasYouTube) {
+    return { valid: false, error: '不支援的平台，目前支援 Twitch、YouTube' };
+  }
+  
+  // 尝试解析 URL
+  let urlObj;
+  try {
+    // 如果 URL 不包含协议，尝试添加 https://
+    const urlToParse = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://' + url;
+    urlObj = new URL(urlToParse);
+  } catch (e) {
+    // 如果仍然失败，但包含支持的域名，允许通过（让后续代码处理）
+    if (hasTwitch || hasYouTube) {
+      // 创建一个临时的 URL 对象用于后续处理
+      try {
+        urlObj = new URL('https://' + url.replace(/^https?:\/\//, ''));
+      } catch (e2) {
+        return { valid: false, error: '無效的 URL 格式' };
+      }
+    } else {
+      return { valid: false, error: '無效的 URL 格式' };
+    }
+  }
+  
+  // 白名单：只允许 twitch.tv 和 youtube.com/youtu.be
+  const allowedDomains = [
+    'twitch.tv',
+    'www.twitch.tv',
+    'youtube.com',
+    'www.youtube.com',
+    'youtu.be',
+    'm.youtube.com'
+  ];
+  
+  const hostname = urlObj.hostname.toLowerCase();
+  const isAllowed = allowedDomains.some(domain => 
+    hostname === domain || hostname.endsWith('.' + domain)
+  );
+  
+  if (!isAllowed) {
+    return { valid: false, error: '不支援的域名，目前只支援 Twitch 和 YouTube' };
+  }
+  
+  return { valid: true, urlObj };
+}
+
+// 验证频道 ID/视频 ID（只允许字母、数字、下划线和连字符）
+function validateChannelId(id) {
+  if (!id || typeof id !== 'string') {
+    return false;
+  }
+  // 只允许字母、数字、下划线、连字符，长度限制
+  return /^[a-zA-Z0-9_-]{1,100}$/.test(id);
+}
+
+// 验证视频 ID（YouTube 视频 ID 格式）
+function validateVideoId(id) {
+  if (!id || typeof id !== 'string') {
+    return false;
+  }
+  // YouTube 视频 ID 通常是 11 个字符，但允许更短或更长的格式（至少 1 个字符）
+  return /^[a-zA-Z0-9_-]{1,100}$/.test(id);
+}
+

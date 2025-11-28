@@ -41,9 +41,7 @@ function createChat(id, platform, channelId, videoId) {
     // https://dev.twitch.tv/docs/embed/chat
     chatUrl = `https://www.twitch.tv/embed/${channelId}/chat?parent=${encodeURIComponent(parent)}&darkpopout`;
     
-    console.log('Twitch chat URL:', chatUrl);
-    console.log('Current origin:', window.location.origin);
-    console.log('Parent domain:', parent);
+    // Twitch chat URL 已構建
   }
   
   if (chatUrl) {
@@ -101,14 +99,14 @@ function createChat(id, platform, channelId, videoId) {
     
     // 當 iframe 載入完成時
     chatIframe.addEventListener('load', () => {
-      console.log('Chat iframe loaded successfully');
+      // Chat iframe 載入成功
       clearInterval(checkInterval);
     });
     
     // 錯誤處理
     chatIframe.addEventListener('error', () => {
       clearInterval(checkInterval);
-      console.error('Chat iframe failed to load');
+      // Chat iframe 載入失敗，靜默處理
       if (!blockedDetected) {
         showChatError(chatDiv, platform);
       }
@@ -125,106 +123,194 @@ function createChat(id, platform, channelId, videoId) {
 
 // 顯示 YouTube 聊天室替代方案（因為無法嵌入）
 function showYouTubeChatAlternative(chatDiv, videoId) {
-  const chatUrl = `https://www.youtube.com/live_chat?v=${videoId}`;
-  chatDiv.innerHTML = `
-    <div style="padding: 20px; text-align: center; color: #aaa; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-      <div style="font-size: 32px; margin-bottom: 15px;">💬</div>
-      <p style="margin: 0 0 10px 0; font-weight: bold; color: #fff;">YouTube 聊天室</p>
-      <div style="font-size: 12px; line-height: 1.6; color: #888; margin-bottom: 20px; max-width: 300px;">
-        YouTube 不允許跨域嵌入聊天室<br>
-        （X-Frame-Options: sameorigin）
-      </div>
-      <a href="${chatUrl}" target="_blank" style="
-        display: inline-block;
-        padding: 10px 20px;
-        background: #9147ff;
-        color: #fff;
-        text-decoration: none;
-        border-radius: 4px;
-        font-weight: bold;
-        transition: background 0.2s;
-        margin-bottom: 10px;
-      " onmouseover="this.style.background='#7c3aed'" onmouseout="this.style.background='#9147ff'">
-        在新視窗開啟聊天室
-      </a>
-      <button onclick="this.parentElement.parentElement.classList.add('hidden')" style="
-        padding: 6px 12px;
-        background: transparent;
-        color: #888;
-        border: 1px solid #555;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 11px;
-      ">
-        隱藏
-      </button>
-    </div>
-  `;
+  // 验证 videoId
+  if (!validateVideoId(videoId)) {
+    // Invalid video ID，靜默處理
+    return;
+  }
+  
+  const chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}`;
+  
+  // 使用安全的 DOM 操作
+  chatDiv.innerHTML = ''; // 清空
+  
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'padding: 20px; text-align: center; color: #aaa; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;';
+  
+  const icon = document.createElement('div');
+  icon.style.cssText = 'font-size: 32px; margin-bottom: 15px;';
+  icon.textContent = '💬';
+  
+  const title = document.createElement('p');
+  title.style.cssText = 'margin: 0 0 10px 0; font-weight: bold; color: #fff;';
+  title.textContent = 'YouTube 聊天室';
+  
+  const desc = document.createElement('div');
+  desc.style.cssText = 'font-size: 12px; line-height: 1.6; color: #888; margin-bottom: 20px; max-width: 300px;';
+  desc.innerHTML = 'YouTube 不允許跨域嵌入聊天室<br>（X-Frame-Options: sameorigin）';
+  
+  const link = document.createElement('a');
+  link.href = chatUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.style.cssText = 'display: inline-block; padding: 10px 20px; background: #9147ff; color: #fff; text-decoration: none; border-radius: 4px; font-weight: bold; transition: background 0.2s; margin-bottom: 10px;';
+  link.textContent = '在新視窗開啟聊天室';
+  link.onmouseover = () => link.style.background = '#7c3aed';
+  link.onmouseout = () => link.style.background = '#9147ff';
+  
+  const hideBtn = document.createElement('button');
+  hideBtn.style.cssText = 'padding: 6px 12px; background: transparent; color: #888; border: 1px solid #555; border-radius: 4px; cursor: pointer; font-size: 11px;';
+  hideBtn.textContent = '隱藏';
+  hideBtn.onclick = () => chatDiv.classList.add('hidden');
+  
+  wrapper.appendChild(icon);
+  wrapper.appendChild(title);
+  wrapper.appendChild(desc);
+  wrapper.appendChild(link);
+  wrapper.appendChild(hideBtn);
+  chatDiv.appendChild(wrapper);
 }
 
 // 顯示聊天室錯誤訊息
 function showChatError(chatDiv, platform, isFileProtocol = false, isCSPBlocked = false, customMsg = '') {
-  const protocolMsg = isFileProtocol ? 
-    '<strong style="color: #ff4444;">⚠️ 檢測到使用 file:// 協議</strong><br>請使用 http://localhost 開啟網頁' : 
-    '';
+  chatDiv.innerHTML = ''; // 清空
   
-  const cspMsg = isCSPBlocked ? 
-    '<strong style="color: #ff4444;">⚠️ 被 Content Security Policy 阻止</strong><br>請確認使用 http://localhost 或 https://localhost 開啟網頁' : 
-    '';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'padding: 20px; text-align: center; color: #aaa; height: 100%; display: flex; flex-direction: column; justify-content: center;';
   
-  const customMsgHtml = customMsg ? 
-    `<strong style="color: #ffaa00;">⚠️ ${customMsg}</strong><br>` : 
-    '';
+  const icon = document.createElement('div');
+  icon.style.cssText = 'font-size: 24px; margin-bottom: 10px;';
+  icon.textContent = '💬';
   
-  let solutionMsg = '';
-  if (platform === 'twitch') {
-    const currentOrigin = window.location.origin;
-    solutionMsg = `
-      <div style="margin-top: 15px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; text-align: left;">
-        <strong>根據 <a href="https://dev.twitch.tv/docs/embed/" target="_blank" style="color: #9147ff;">Twitch 官方文檔</a>：</strong><br><br>
-        <strong>解決方案：</strong><br>
-        1. 必須使用 <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 2px;">http://localhost</code> 或 <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 2px;">https://localhost</code> 開啟<br>
-        2. 不要使用 <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 2px;">file://</code> 協議<br>
-        3. 確認頻道正在直播且開啟聊天室<br>
-        4. Twitch CSP 要求：<code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 2px;">frame-ancestors http://localhost:* https://localhost:*</code><br><br>
-        <strong>當前網址：</strong><br>
-        <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 2px; font-size: 10px;">${currentOrigin || '無法檢測'}</code>
-      </div>
-    `;
+  const title = document.createElement('p');
+  title.style.cssText = 'margin: 0 0 10px 0; font-weight: bold; color: #fff;';
+  title.textContent = '聊天室無法載入';
+  
+  const content = document.createElement('div');
+  content.style.cssText = 'font-size: 12px; line-height: 1.6; color: #888;';
+  
+  // 添加自定义消息
+  if (customMsg) {
+    const customMsgEl = document.createElement('strong');
+    customMsgEl.style.color = '#ffaa00';
+    customMsgEl.textContent = '⚠️ ' + escapeHtml(customMsg);
+    content.appendChild(customMsgEl);
+    content.appendChild(document.createElement('br'));
   }
   
+  // 添加协议消息
+  if (isFileProtocol) {
+    const protocolMsg = document.createElement('strong');
+    protocolMsg.style.color = '#ff4444';
+    protocolMsg.textContent = '⚠️ 檢測到使用 file:// 協議';
+    content.appendChild(protocolMsg);
+    content.appendChild(document.createElement('br'));
+    const protocolText = document.createTextNode('請使用 http://localhost 開啟網頁');
+    content.appendChild(protocolText);
+    content.appendChild(document.createElement('br'));
+  }
+  
+  // 添加 CSP 消息
+  if (isCSPBlocked) {
+    const cspMsg = document.createElement('strong');
+    cspMsg.style.color = '#ff4444';
+    cspMsg.textContent = '⚠️ 被 Content Security Policy 阻止';
+    content.appendChild(cspMsg);
+    content.appendChild(document.createElement('br'));
+    const cspText = document.createTextNode('請確認使用 http://localhost 或 https://localhost 開啟網頁');
+    content.appendChild(cspText);
+    content.appendChild(document.createElement('br'));
+    content.appendChild(document.createElement('br'));
+  }
+  
+  // 如果没有其他消息，显示默认原因
+  if (!customMsg && !isFileProtocol && !isCSPBlocked) {
+    const defaultMsg = document.createTextNode('可能的原因：\n1. 頻道未開啟聊天室功能\n2. 瀏覽器安全設定限制\n3. 網路連線問題');
+    content.appendChild(defaultMsg);
+  }
+  
+  // 添加 Twitch 解决方案
+  if (platform === 'twitch') {
+    const solutionDiv = document.createElement('div');
+    solutionDiv.style.cssText = 'margin-top: 15px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; text-align: left;';
+    
+    const docLink = document.createElement('a');
+    docLink.href = 'https://dev.twitch.tv/docs/embed/';
+    docLink.target = '_blank';
+    docLink.rel = 'noopener noreferrer';
+    docLink.style.color = '#9147ff';
+    docLink.textContent = 'Twitch 官方文檔';
+    
+    const strong1 = document.createElement('strong');
+    strong1.appendChild(document.createTextNode('根據 '));
+    strong1.appendChild(docLink);
+    strong1.appendChild(document.createTextNode('：'));
+    
+    solutionDiv.appendChild(strong1);
+    solutionDiv.appendChild(document.createElement('br'));
+    solutionDiv.appendChild(document.createElement('br'));
+    
+    const strong2 = document.createElement('strong');
+    strong2.textContent = '解決方案：';
+    solutionDiv.appendChild(strong2);
+    solutionDiv.appendChild(document.createElement('br'));
+    
+    const solutions = [
+      '1. 必須使用 http://localhost 或 https://localhost 開啟',
+      '2. 不要使用 file:// 協議',
+      '3. 確認頻道正在直播且開啟聊天室',
+      '4. Twitch CSP 要求：frame-ancestors http://localhost:* https://localhost:*'
+    ];
+    
+    solutions.forEach((text, index) => {
+      if (index > 0) solutionDiv.appendChild(document.createElement('br'));
+      solutionDiv.appendChild(document.createTextNode(text));
+    });
+    
+    solutionDiv.appendChild(document.createElement('br'));
+    solutionDiv.appendChild(document.createElement('br'));
+    
+    const strong3 = document.createElement('strong');
+    strong3.textContent = '當前網址：';
+    solutionDiv.appendChild(strong3);
+    solutionDiv.appendChild(document.createElement('br'));
+    
+    const code = document.createElement('code');
+    code.style.cssText = 'background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 2px; font-size: 10px;';
+    code.textContent = window.location.origin || '無法檢測';
+    solutionDiv.appendChild(code);
+    
+    content.appendChild(solutionDiv);
+  }
+  
+  wrapper.appendChild(icon);
+  wrapper.appendChild(title);
+  wrapper.appendChild(content);
+  
+  // 添加 Twitch 聊天室链接
   const streamId = parseInt(chatDiv.id.replace('chat', ''));
   const channelId = streamData[streamId]?.channelId || '';
   
-  chatDiv.innerHTML = `
-    <div style="padding: 20px; text-align: center; color: #aaa; height: 100%; display: flex; flex-direction: column; justify-content: center;">
-      <div style="font-size: 24px; margin-bottom: 10px;">💬</div>
-      <p style="margin: 0 0 10px 0; font-weight: bold; color: #fff;">聊天室無法載入</p>
-      <div style="font-size: 12px; line-height: 1.6; color: #888;">
-        ${customMsgHtml}
-        ${customMsgHtml ? '<br>' : ''}
-        ${protocolMsg}
-        ${protocolMsg ? '<br>' : ''}
-        ${cspMsg}
-        ${cspMsg ? '<br><br>' : ''}
-        ${!protocolMsg && !cspMsg && !customMsg ? '可能的原因：<br>1. 頻道未開啟聊天室功能<br>2. 瀏覽器安全設定限制<br>3. 網路連線問題<br>' : ''}
-        ${solutionMsg}
-      </div>
-      ${platform === 'twitch' && channelId ? `
-        <a href="https://www.twitch.tv/popout/${channelId}/chat" 
-           target="_blank" 
-           style="margin-top: 15px; padding: 8px 16px; background: #9147ff; color: #fff; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; transition: background 0.2s;"
-           onmouseover="this.style.background='#7c3aed'" 
-           onmouseout="this.style.background='#9147ff'">
-          在新視窗開啟聊天室
-        </a>
-      ` : ''}
-      <button onclick="this.parentElement.parentElement.classList.add('hidden')" 
-              style="margin-top: 10px; padding: 6px 12px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer; font-size: 11px;">
-        隱藏
-      </button>
-    </div>
-  `;
+  if (platform === 'twitch' && channelId && validateChannelId(channelId)) {
+    const chatLink = document.createElement('a');
+    chatLink.href = `https://www.twitch.tv/popout/${encodeURIComponent(channelId)}/chat`;
+    chatLink.target = '_blank';
+    chatLink.rel = 'noopener noreferrer';
+    chatLink.style.cssText = 'margin-top: 15px; padding: 8px 16px; background: #9147ff; color: #fff; text-decoration: none; border-radius: 4px; font-size: 12px; display: inline-block; transition: background 0.2s;';
+    chatLink.textContent = '在新視窗開啟聊天室';
+    chatLink.onmouseover = () => chatLink.style.background = '#7c3aed';
+    chatLink.onmouseout = () => chatLink.style.background = '#9147ff';
+    wrapper.appendChild(chatLink);
+  }
+  
+  // 添加隐藏按钮
+  const hideBtn = document.createElement('button');
+  hideBtn.style.cssText = 'margin-top: 10px; padding: 6px 12px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; cursor: pointer; font-size: 11px;';
+  hideBtn.textContent = '隱藏';
+  hideBtn.onclick = () => chatDiv.classList.add('hidden');
+  wrapper.appendChild(hideBtn);
+  
+  chatDiv.appendChild(wrapper);
 }
 
 // 切換聊天室顯示
@@ -314,15 +400,41 @@ function separateChat(id) {
     chatContentHtml = chatDiv.innerHTML;
   }
   
-  separatedChat.innerHTML = `
-    <div class="separated-chat-header">
-      <span>💬 聊天室 #${id} ${platform === 'twitch' ? channelId : (platform === 'youtube' ? videoId : '')}</span>
-      <span style="cursor: pointer; color: #ff4444; font-size: 18px;" onclick="closeSeparatedChat(${id})">×</span>
-    </div>
-    <div class="separated-chat-content">
-      ${chatContentHtml}
-    </div>
-  `;
+  // 使用安全的 DOM 操作
+  const header = document.createElement('div');
+  header.className = 'separated-chat-header';
+  
+  const headerText = document.createElement('span');
+  const chatLabel = platform === 'twitch' ? (validateChannelId(channelId) ? channelId : '') : 
+                    (platform === 'youtube' ? (validateVideoId(videoId) ? videoId : '') : '');
+  headerText.textContent = `💬 聊天室 #${id} ${chatLabel}`;
+  
+  const closeBtn = document.createElement('span');
+  closeBtn.style.cssText = 'cursor: pointer; color: #ff4444; font-size: 18px;';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = () => closeSeparatedChat(id);
+  
+  header.appendChild(headerText);
+  header.appendChild(closeBtn);
+  
+  const content = document.createElement('div');
+  content.className = 'separated-chat-content';
+  // 注意：chatContentHtml 可能包含 iframe，需要特殊处理
+  // 但这里我们只设置一次，且内容来自我们自己的代码，相对安全
+  if (platform === 'twitch' && channelId && validateChannelId(channelId)) {
+    const iframe = document.createElement('iframe');
+    const parents = getTwitchParents();
+    iframe.src = `https://www.twitch.tv/embed/${encodeURIComponent(channelId)}/chat?parent=${encodeURIComponent(parents[0])}&darkpopout`;
+    iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+    iframe.setAttribute('allow', 'autoplay; fullscreen');
+    content.appendChild(iframe);
+  } else {
+    // 对于 YouTube 或其他情况，直接使用原始内容（因为来自我们自己的代码）
+    content.innerHTML = chatContentHtml;
+  }
+  
+  separatedChat.appendChild(header);
+  separatedChat.appendChild(content);
   
   document.body.appendChild(separatedChat);
   

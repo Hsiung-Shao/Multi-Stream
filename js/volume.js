@@ -2,7 +2,7 @@
 
 // 應用總音量到指定串流
 function applyMasterVolumeToStream(id) {
-  if (!streamData[id] || !players[id]) return;
+  if (!streamData[id] || !players[id] || !players[id].player) return;
   
   const volSlider = document.querySelector(`#box${id} .volume`);
   if (!volSlider) return;
@@ -14,11 +14,38 @@ function applyMasterVolumeToStream(id) {
   // 計算實際音量（考慮總音量）
   const actualVol = Math.round((streamVol / 100) * masterVol);
   
-  // 應用音量到播放器
-  if (players[id].type === 'twitch') {
-    players[id].player.setVolume(actualVol / 100);
-  } else if (players[id].type === 'youtube') {
-    players[id].player.setVolume(actualVol);
+  // 應用音量到播放器（檢查播放器是否已準備好）
+  try {
+    if (players[id].type === 'twitch') {
+      if (typeof players[id].player.setVolume === 'function') {
+        players[id].player.setVolume(actualVol / 100);
+      }
+    } else if (players[id].type === 'youtube') {
+      // YouTube 播放器需要檢查是否已就緒
+      if (players[id].player && typeof players[id].player.setVolume === 'function') {
+        // 檢查播放器狀態
+        try {
+          const playerState = players[id].player.getPlayerState();
+          // 如果播放器已就緒（狀態不是 -1），可以設置音量
+          if (playerState !== undefined) {
+            players[id].player.setVolume(actualVol);
+          }
+        } catch (e) {
+          // 播放器尚未就緒，稍後再試
+          setTimeout(() => {
+            if (players[id] && players[id].player && typeof players[id].player.setVolume === 'function') {
+              try {
+                players[id].player.setVolume(actualVol);
+              } catch (err) {
+                // 靜默處理錯誤
+              }
+            }
+          }, 500);
+        }
+      }
+    }
+  } catch (e) {
+    // 播放器尚未就緒，靜默處理
   }
 }
 
@@ -44,12 +71,37 @@ function setupVolumeControl(box, id) {
     const masterVol = masterVolSlider ? parseInt(masterVolSlider.value) : 100;
     const actualVol = Math.round((vol / 100) * masterVol);
     
-    // 控制實際音量
-    if (players[id]) {
-      if (players[id].type === 'twitch') {
-        players[id].player.setVolume(actualVol / 100);
-      } else if (players[id].type === 'youtube') {
-        players[id].player.setVolume(actualVol);
+    // 控制實際音量（檢查播放器是否已準備好）
+    if (players[id] && players[id].player) {
+      try {
+        if (players[id].type === 'twitch') {
+          if (typeof players[id].player.setVolume === 'function') {
+            players[id].player.setVolume(actualVol / 100);
+          }
+        } else if (players[id].type === 'youtube') {
+          if (typeof players[id].player.setVolume === 'function') {
+            try {
+              // 檢查播放器狀態
+              const playerState = players[id].player.getPlayerState();
+              if (playerState !== undefined) {
+                players[id].player.setVolume(actualVol);
+              }
+            } catch (e) {
+              // 播放器尚未就緒，稍後再試
+              setTimeout(() => {
+                if (players[id] && players[id].player && typeof players[id].player.setVolume === 'function') {
+                  try {
+                    players[id].player.setVolume(actualVol);
+                  } catch (err) {
+                    // 靜默處理錯誤
+                  }
+                }
+              }, 500);
+            }
+          }
+        }
+      } catch (e) {
+        // 播放器尚未就緒，靜默處理
       }
     }
   });

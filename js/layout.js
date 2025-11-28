@@ -124,16 +124,16 @@ function autoSelectLayout() {
 function setLayout(type, immediate = false, isUserSelection = false) {
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length === 0) {
-    console.log('setLayout: 沒有串流，跳過布局切換');
+    // 沒有串流，跳過布局切換
     return;
   }
   
-  console.log('setLayout: 切換到布局類型', type, 'immediate:', immediate, 'isUserSelection:', isUserSelection, '串流數量:', boxes.length);
+  // 切換到布局類型
   
   // 如果是用戶手動選擇，記錄並設置保護時間
   if (isUserSelection) {
     userSelectedLayout = type;
-    console.log('setLayout: 記錄用戶手動選擇的布局:', type);
+    // 記錄用戶手動選擇的布局
     // 清除之前的超時
     if (userLayoutTimeout) {
       clearTimeout(userLayoutTimeout);
@@ -141,13 +141,13 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     // 5秒後清除用戶選擇標記，允許自動布局
     userLayoutTimeout = setTimeout(() => {
       userSelectedLayout = null;
-      console.log('setLayout: 用戶選擇保護已過期，允許自動布局');
+      // 用戶選擇保護已過期，允許自動布局
     }, 5000);
   }
   
   // 如果正在拖拽stream-box，不執行布局更新，避免干擾拖拽操作
   if (isDraggingStreamBox) {
-    console.log('setLayout: 正在拖拽，跳過布局切換');
+    // 正在拖拽，跳過布局切換
     return;
   }
   
@@ -178,25 +178,25 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   pendingLayoutUpdate = false;
   
   // 更新控制面板中的布局預覽活動狀態
-  console.log('setLayout: 更新布局預覽活動狀態，布局類型:', type);
+  // 更新布局預覽活動狀態
   document.querySelectorAll('.layout-preview-inline').forEach(preview => {
     preview.classList.remove('active');
   });
   // 根據布局類型設置對應的預覽為活動狀態
   const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6 };
   const previewIndex = layoutMap[type];
-  console.log('setLayout: 布局映射索引:', previewIndex, '布局類型:', type);
+  // 布局映射索引已計算
   if (previewIndex !== undefined) {
     const previews = document.querySelectorAll('.layout-preview-inline');
-    console.log('setLayout: 找到', previews.length, '個布局預覽按鈕');
+    // 找到布局預覽按鈕
     if (previews[previewIndex]) {
       previews[previewIndex].classList.add('active');
-      console.log('setLayout: 已設置布局預覽按鈕為活動狀態，索引:', previewIndex);
+      // 已設置布局預覽按鈕為活動狀態
     } else {
-      console.warn('setLayout: 找不到對應的布局預覽按鈕，索引:', previewIndex);
+      // 找不到對應的布局預覽按鈕
     }
   } else {
-    console.warn('setLayout: 布局類型', type, '不在映射表中');
+    // 布局類型不在映射表中
   }
   
   // 暫時禁用過渡效果，避免Twitch播放器在動畫過程中出現問題
@@ -247,10 +247,10 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   else if (type === 5) {
     // 上大下三布局：上方一個大區域（75%高度），下方三個小區域（25%高度，水平排列）
     // 需要至少 4 個串流才能完整顯示，但即使不足也會應用布局
-    console.log('setLayout: 開始應用上大下三布局，串流數量:', boxes.length);
+    // 開始應用上大下三布局
     let appliedCount = 0;
     boxes.forEach((b, i) => {
-      console.log('setLayout: 處理串流', i, 'box:', b);
+      // 處理串流
       if (i === 0) {
         // 第一個：上方大區域
         b.style.width = '100%';
@@ -274,9 +274,9 @@ function setLayout(type, immediate = false, isUserSelection = false) {
         b.style.top = (75 + row * 25) + '%';
       }
       appliedCount++;
-      console.log('setLayout: 已應用布局到串流', i, '位置:', b.style.left, b.style.top, '尺寸:', b.style.width, b.style.height);
+      // 已應用布局到串流
     });
-    console.log('setLayout: 上大下三布局應用完成，共處理', appliedCount, '個串流');
+    // 上大下三布局應用完成
   }
   else if (type === 6) {
     // 2×3 網格
@@ -341,7 +341,7 @@ function setLayout(type, immediate = false, isUserSelection = false) {
             }
           }
         } catch (e) {
-          console.warn('Failed to refresh Twitch player:', e);
+          // Failed to refresh Twitch player，靜默處理
         }
       }
     });

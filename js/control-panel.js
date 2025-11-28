@@ -33,10 +33,15 @@ function checkAndAdjustControlPanel() {
   }
 }
 
-// 切換控制面板
+// 切換控制面板（確保是全局函數，立即定義）
 function toggleControlPanel() {
   const panel = document.getElementById('control-panel');
   const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
+  
+  if (!panel) {
+    // 控制面板元素未找到
+    return;
+  }
   
   // 檢查是否有串流，如果沒有串流則不允許收起
   const hasStreams = document.querySelectorAll('.stream-box').length > 0;
@@ -62,13 +67,17 @@ function toggleControlPanel() {
   }
   
   // 儲存狀態
-  localStorage.setItem('controlPanelCollapsed', panel.classList.contains('collapsed'));
+  const isCollapsed = panel.classList.contains('collapsed');
+  localStorage.setItem('controlPanelCollapsed', isCollapsed ? 'true' : 'false');
   
   // 自動保存設置
   if (typeof autoSaveSettings === 'function') {
     autoSaveSettings();
   }
 }
+
+// 確保函數是全局的
+window.toggleControlPanel = toggleControlPanel;
 
 // 使控制面板可拖曳
 function makeControlPanelDraggable() {
@@ -244,7 +253,7 @@ function makeControlPanelDraggable() {
     resizeTimeout = setTimeout(() => {
       // 檢查是否有用戶手動選擇的布局，如果有則不自動切換
       if (typeof userSelectedLayout === 'number' && userSelectedLayout !== null) {
-        console.log('resize: 檢測到用戶手動選擇的布局', userSelectedLayout, '，跳過自動布局切換');
+        // 檢測到用戶手動選擇的布局，跳過自動布局切換
         return;
       }
       const boxes = document.querySelectorAll('.stream-box');
@@ -256,14 +265,18 @@ function makeControlPanelDraggable() {
   });
 }
 
-// 更新串流順序列表
+// 更新串流順序列表（確保是全局函數）
 function updateStreamOrderList() {
   const orderList = document.getElementById('stream-order-list');
   if (!orderList) return;
   
   const boxes = Array.from(document.querySelectorAll('.stream-box'));
   if (boxes.length === 0) {
-    orderList.innerHTML = '<div style="padding: 10px; text-align: center; color: #888; font-size: 12px;">暫無串流</div>';
+    orderList.innerHTML = '';
+    const emptyDiv = document.createElement('div');
+    emptyDiv.style.cssText = 'padding: 10px; text-align: center; color: #888; font-size: 12px;';
+    emptyDiv.textContent = '暫無串流';
+    orderList.appendChild(emptyDiv);
     return;
   }
   
@@ -279,49 +292,92 @@ function updateStreamOrderList() {
     item.dataset.streamId = id;
     item.draggable = false; // 預設不可拖曳，只有標題行可拖曳
     
-    const label = data.platform === 'twitch' ? data.channelId : (data.platform === 'youtube' ? data.videoId : `串流 #${id}`);
+    const label = data.platform === 'twitch' ? escapeHtml(data.channelId) : (data.platform === 'youtube' ? escapeHtml(data.videoId) : `串流 #${id}`);
     const currentVolume = data.volume || 100;
     
-    item.innerHTML = `
-      <div class="stream-order-header">
-        <span class="stream-order-handle">☰</span>
-        <span class="stream-order-label">#${index + 1} - ${label}</span>
-        <div class="stream-order-buttons">
-          <button onclick="moveStreamUp(${id})" title="上移">↑</button>
-          <button onclick="moveStreamDown(${id})" title="下移">↓</button>
-        </div>
-      </div>
-      <div class="stream-order-volume">
-        <label for="stream-volume-${id}">🔊 音量</label>
-        <input type="range" id="stream-volume-${id}" min="0" max="100" value="${currentVolume}" title="調整音量">
-        <span class="stream-order-volume-value" id="stream-volume-value-${id}">${currentVolume}%</span>
-      </div>
-    `;
+    // 使用安全的 DOM 操作
+    const header = document.createElement('div');
+    header.className = 'stream-order-header';
+    
+    const handle = document.createElement('span');
+    handle.className = 'stream-order-handle';
+    handle.textContent = '☰';
+    
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'stream-order-label';
+    labelSpan.textContent = `#${index + 1} - ${label}`;
+    
+    const buttons = document.createElement('div');
+    buttons.className = 'stream-order-buttons';
+    
+    const upBtn = document.createElement('button');
+    upBtn.title = '上移';
+    upBtn.textContent = '↑';
+    upBtn.onclick = () => moveStreamUp(id);
+    
+    const downBtn = document.createElement('button');
+    downBtn.title = '下移';
+    downBtn.textContent = '↓';
+    downBtn.onclick = () => moveStreamDown(id);
+    
+    buttons.appendChild(upBtn);
+    buttons.appendChild(downBtn);
+    
+    header.appendChild(handle);
+    header.appendChild(labelSpan);
+    header.appendChild(buttons);
+    
+    const volumeDiv = document.createElement('div');
+    volumeDiv.className = 'stream-order-volume';
+    
+    const volumeLabel = document.createElement('label');
+    volumeLabel.htmlFor = `stream-volume-${id}`;
+    volumeLabel.textContent = '🔊 音量';
+    
+    const volumeSlider = document.createElement('input');
+    volumeSlider.type = 'range';
+    volumeSlider.id = `stream-volume-${id}`;
+    volumeSlider.min = '0';
+    volumeSlider.max = '100';
+    volumeSlider.value = currentVolume.toString();
+    volumeSlider.title = '調整音量';
+    
+    const volumeValue = document.createElement('span');
+    volumeValue.className = 'stream-order-volume-value';
+    volumeValue.id = `stream-volume-value-${id}`;
+    volumeValue.textContent = currentVolume + '%';
+    
+    volumeDiv.appendChild(volumeLabel);
+    volumeDiv.appendChild(volumeSlider);
+    volumeDiv.appendChild(volumeValue);
+    
+    item.appendChild(header);
+    item.appendChild(volumeDiv);
     
     // 設定拖曳功能（只在標題行）
-    const header = item.querySelector('.stream-order-header');
-    if (header) {
-      header.draggable = true;
-      header.style.cursor = 'move';
+    const headerElement = item.querySelector('.stream-order-header');
+    if (headerElement) {
+      headerElement.draggable = true;
+      headerElement.style.cursor = 'move';
       
-      header.addEventListener('dragstart', (e) => {
+      headerElement.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', id);
         item.classList.add('dragging');
         e.stopPropagation();
       });
       
-      header.addEventListener('dragend', () => {
+      headerElement.addEventListener('dragend', () => {
         item.classList.remove('dragging');
       });
     }
     
     // 阻止音量區域觸發拖曳
-    const volumeDiv = item.querySelector('.stream-order-volume');
-    if (volumeDiv) {
-      volumeDiv.addEventListener('mousedown', (e) => {
+    const volumeDivElement = item.querySelector('.stream-order-volume');
+    if (volumeDivElement) {
+      volumeDivElement.addEventListener('mousedown', (e) => {
         e.stopPropagation();
       });
-      volumeDiv.addEventListener('dragstart', (e) => {
+      volumeDivElement.addEventListener('dragstart', (e) => {
         e.preventDefault();
         e.stopPropagation();
       });
@@ -365,8 +421,8 @@ function updateStreamOrderList() {
     }
     
     // 拖曳功能（只在標題行）
-    if (header) {
-      header.addEventListener('dragover', (e) => {
+    if (headerElement) {
+      headerElement.addEventListener('dragover', (e) => {
         e.preventDefault();
         e.stopPropagation();
         const dragging = document.querySelector('.stream-order-item.dragging');
@@ -561,5 +617,10 @@ function toggleAllChats() {
   if (typeof autoSaveSettings === 'function') {
     autoSaveSettings();
   }
+}
+
+// 確保 updateStreamOrderList 是全局函數
+if (typeof window !== 'undefined') {
+  window.updateStreamOrderList = updateStreamOrderList;
 }
 

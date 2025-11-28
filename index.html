@@ -32,6 +32,8 @@
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="stylesheet" href="styles.css">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
+<!-- Content Security Policy -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google; object-src 'none'; base-uri 'self'; form-action 'self';">
 <!-- ★★★ 1. 請把 ca-pub-XXXXXXXXXXXXXXXX 換成你的真實 AdSense ID ★★★ -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=pub-8415424787944153"
      crossorigin="anonymous"></script>
@@ -39,15 +41,15 @@
 </head>
 <body>
 
-<div class="control-panel-toggle-collapsed" id="control-panel-toggle-collapsed" onclick="toggleControlPanel()" title="展開控制面板">◀</div>
+<div class="control-panel-toggle-collapsed" id="control-panel-toggle-collapsed" onclick="window.toggleControlPanel && window.toggleControlPanel()" title="展開控制面板">◀</div>
 
 <div class="control-panel" id="control-panel">
   <div class="control-panel-header" id="control-panel-header">
-    <div class="control-panel-title" onclick="toggleControlPanel()">
+    <div class="control-panel-title" onclick="window.toggleControlPanel && window.toggleControlPanel()">
       <span>控制面板</span>
       <span>設定</span>
     </div>
-    <span class="control-panel-toggle" onclick="toggleControlPanel()" title="收起控制面板">▼</span>
+    <span class="control-panel-toggle" onclick="window.toggleControlPanel && window.toggleControlPanel()" title="收起控制面板">▼</span>
   </div>
   <div class="control-panel-content">
     <div id="add-panel">
@@ -181,6 +183,7 @@
 
 <!-- JavaScript 模組（完全不動） -->
 <script src="js/utils.js"></script>
+<script src="js/security.js"></script>
 <script src="js/stream.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/volume.js"></script>
@@ -239,11 +242,11 @@
         if (typeof window.adsbygoogle !== 'undefined') {
           setTimeout(() => {
             (window.adsbygoogle = window.adsbygoogle || []).push({});
-            console.log('AdSense 廣告已觸發載入');
+            // AdSense 廣告已觸發載入
           }, 300);
         }
       } catch (error) {
-        console.error('觸發 AdSense 廣告時發生錯誤:', error);
+        // 觸發 AdSense 廣告時發生錯誤，靜默處理
       }
     };
   }

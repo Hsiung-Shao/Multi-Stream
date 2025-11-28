@@ -12,7 +12,7 @@ function pauseAllPlayers() {
         players[id].player.pauseVideo();
       }
     } catch (e) {
-      console.warn('Failed to pause player:', id, e);
+      // Failed to pause player，靜默處理
     }
   });
 }
@@ -29,7 +29,7 @@ function resumeAllPlayers() {
         players[id].player.playVideo();
       }
     } catch (e) {
-      console.warn('Failed to resume player:', id, e);
+      // Failed to resume player，靜默處理
     }
   });
 }

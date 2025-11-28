@@ -22,15 +22,15 @@ const adConfigManager = {
     // 讀取已保存的配置
     const saved = localStorage.getItem('adConfig');
     if (saved) {
-      try {
-        const savedConfig = JSON.parse(saved);
+      const savedConfig = safeJSONParse(saved, null);
+      if (savedConfig) {
         // 合併保存的配置和默認配置
         const mergedConfig = Object.assign({}, defaultConfig, savedConfig);
         // 強制使用正式模式（確保 testMode 始終為 false）
         mergedConfig.testMode = false;
         return mergedConfig;
-      } catch (e) {
-        console.error('載入廣告配置失敗:', e);
+      } else {
+        // 載入廣告配置失敗：無效的 JSON 格式
       }
     }
     
@@ -69,7 +69,7 @@ function initAdSystem() {
   
   // 如果廣告未啟用，不初始化
   if (!adConfig.enabled) {
-    console.log('廣告功能已關閉');
+    // 廣告功能已關閉
     updateAdEnabledButton(false);
     return;
   }
@@ -101,7 +101,7 @@ function toggleAdControlButtons() {
     showControlButtons: !(adConfig.showControlButtons === true)
   });
   updateAdControlButtonsVisibility();
-  console.log(`廣告控制按鈕已${adConfig.showControlButtons ? '顯示' : '隱藏'}`);
+  // 廣告控制按鈕狀態已更新
 }
 
 // 檢查並顯示廣告
@@ -114,7 +114,7 @@ function checkAndShowAd() {
   // ★ 檢查是否有串流內容，如果沒有串流就不顯示廣告（符合 AdSense 政策）
   const hasStreams = document.querySelectorAll('.stream-box').length > 0;
   if (!hasStreams) {
-    console.log('沒有串流內容，不顯示廣告（符合 AdSense 政策要求）');
+    // 沒有串流內容，不顯示廣告（符合 AdSense 政策要求）
     // 重新設置定時器，等待有內容時再檢查
     startAdTimer();
     return;
@@ -131,7 +131,7 @@ function checkAndShowAd() {
   } else {
     // 計算下次顯示時間
     const timeUntilNextShow = adConfig.showInterval - timeSinceLastShow;
-    console.log(`廣告將在 ${Math.round(timeUntilNextShow / 1000)} 秒後顯示`);
+    // 廣告將在指定時間後顯示
   }
 }
 
@@ -142,7 +142,7 @@ function showAdBanner() {
   // ★ 再次檢查是否有串流內容（符合 AdSense 政策要求）
   const hasStreams = document.querySelectorAll('.stream-box').length > 0;
   if (!hasStreams) {
-    console.log('顯示廣告前檢查：沒有串流內容，取消顯示（符合 AdSense 政策要求）');
+    // 顯示廣告前檢查：沒有串流內容，取消顯示（符合 AdSense 政策要求）
     return;
   }
   
@@ -170,11 +170,11 @@ function showAdBanner() {
       // 等待廣告容器顯示後再觸發 AdSense
       setTimeout(() => {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
-        console.log('AdSense 廣告已觸發載入');
+        // AdSense 廣告已觸發載入
       }, 300);
     }
   } catch (error) {
-    console.error('觸發 AdSense 廣告時發生錯誤:', error);
+    // 觸發 AdSense 廣告時發生錯誤，靜默處理
   }
   
   // 等待動畫開始後獲取實際高度並調整
@@ -193,7 +193,7 @@ function showAdBanner() {
   const duration = adConfig.displayDuration.min + 
     Math.random() * (adConfig.displayDuration.max - adConfig.displayDuration.min);
   
-  console.log(`廣告已顯示，將在 ${Math.round(duration / 1000)} 秒後自動隱藏`);
+  // 廣告已顯示，將在指定時間後自動隱藏
   
   // 設置自動隱藏定時器
   adDisplayTimer = setTimeout(() => {
@@ -225,7 +225,7 @@ function hideAdBanner() {
     adDisplayTimer = null;
   }
   
-  console.log('廣告已隱藏');
+  // 廣告已隱藏
   
   // 重新啟動定時器
   startAdTimer();
@@ -261,7 +261,7 @@ function toggleAdEnabled() {
   updateAdEnabledButton(adConfig.enabled);
   
   if (adConfig.enabled) {
-    console.log('廣告功能已啟用');
+    // 廣告功能已啟用
     // 如果當前有廣告顯示，先隱藏
     if (isAdVisible) {
       hideAdBanner();
@@ -269,7 +269,7 @@ function toggleAdEnabled() {
     // 重新初始化
     initAdSystem();
   } else {
-    console.log('廣告功能已關閉');
+    // 廣告功能已關閉
     // 停止所有定時器
     if (adTimer) {
       clearTimeout(adTimer);
@@ -295,14 +295,14 @@ function toggleAdTestMode() {
     adConfig.showInterval = 30 * 1000;
     adConfig.displayDuration.min = 5 * 1000;
     adConfig.displayDuration.max = 10 * 1000;
-    console.log('廣告系統：已切換到測試模式（30秒間隔，顯示5-10秒）');
+    // 廣告系統：已切換到測試模式
     updateAdTestModeButton(true);
   } else {
     // 正式模式：30分鐘間隔，顯示1-3分鐘
     adConfig.showInterval = 30 * 60 * 1000;
     adConfig.displayDuration.min = 1 * 60 * 1000;
     adConfig.displayDuration.max = 3 * 60 * 1000;
-    console.log('廣告系統：已切換到正式模式（30分鐘間隔，顯示1-3分鐘）');
+    // 廣告系統：已切換到正式模式
     updateAdTestModeButton(false);
   }
   
@@ -371,7 +371,7 @@ function triggerAdManually() {
       showAdBanner();
     }
   } catch (error) {
-    console.error('觸發廣告時發生錯誤:', error);
+    // 觸發廣告時發生錯誤，靜默處理
     alert('觸發廣告時發生錯誤，請檢查控制台');
   }
 }

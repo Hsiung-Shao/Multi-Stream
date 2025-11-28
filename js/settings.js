@@ -115,7 +115,7 @@ const localFileStorage = {
         // 用戶取消了
         return false;
       }
-      console.error('設置備份文件位置失敗:', e);
+      // 設置備份文件位置失敗，靜默處理
       showSaveMessage('設置備份文件位置失敗');
       return false;
     }
@@ -124,7 +124,7 @@ const localFileStorage = {
   // 保存文件句柄到 IndexedDB
   async saveFileHandle() {
     if (!window.indexedDB) {
-      console.warn('IndexedDB 不可用，無法持久化文件句柄');
+      // IndexedDB 不可用，無法持久化文件句柄
       return;
     }
     
@@ -190,7 +190,7 @@ const localFileStorage = {
     
     // 如果沒有文件句柄，靜默失敗（不彈出對話框）
     if (!this.fileHandle) {
-      console.warn('備份失敗：未設置文件位置，請在設定中選擇文件位置');
+      // 備份失敗：未設置文件位置，請在設定中選擇文件位置
       return false; // 靜默失敗，不干擾用戶
     }
     
@@ -199,10 +199,10 @@ const localFileStorage = {
       const writable = await this.fileHandle.createWritable();
       await writable.write(JSON.stringify(data, null, 2));
       await writable.close();
-      console.log('本地自動備份完成（直接保存）');
+      // 本地自動備份完成（直接保存）
       return true;
     } catch (e) {
-      console.error('直接保存備份失敗:', e);
+      // 直接保存備份失敗，靜默處理
       // 如果權限被撤銷，清除文件句柄
       if (e.name === 'NotAllowedError' || e.name === 'NotFoundError') {
         this.fileHandle = null;
@@ -218,13 +218,13 @@ const localFileStorage = {
     return {
       version: '1.0',
       exportDate: new Date().toISOString(),
-      userSettings: localStorage.getItem('userSettings') ? JSON.parse(localStorage.getItem('userSettings')) : null,
-      favoriteStreams: localStorage.getItem('favoriteStreams') ? JSON.parse(localStorage.getItem('favoriteStreams')) : [],
-      favoriteCategories: localStorage.getItem('favoriteCategories') ? JSON.parse(localStorage.getItem('favoriteCategories')) : [],
+      userSettings: safeJSONParse(localStorage.getItem('userSettings'), null),
+      favoriteStreams: safeJSONParse(localStorage.getItem('favoriteStreams'), []),
+      favoriteCategories: safeJSONParse(localStorage.getItem('favoriteCategories'), []),
       controlPanelCollapsed: localStorage.getItem('controlPanelCollapsed'),
-      controlPanelPosition: localStorage.getItem('controlPanelPosition') ? JSON.parse(localStorage.getItem('controlPanelPosition')) : null,
-      multiStreamLayout: localStorage.getItem('multiStreamLayout') ? JSON.parse(localStorage.getItem('multiStreamLayout')) : null,
-      adConfig: localStorage.getItem('adConfig') ? JSON.parse(localStorage.getItem('adConfig')) : null
+      controlPanelPosition: safeJSONParse(localStorage.getItem('controlPanelPosition'), null),
+      multiStreamLayout: safeJSONParse(localStorage.getItem('multiStreamLayout'), null),
+      adConfig: safeJSONParse(localStorage.getItem('adConfig'), null)
     };
   },
   
@@ -234,8 +234,13 @@ const localFileStorage = {
       const file = await fileHandle.getFile();
       const text = await file.text();
       
+      // 使用安全的 JSON 解析
+      const data = safeJSONParse(text, null);
+      if (!data) {
+        return { success: false, message: '導入數據失敗：文件格式錯誤' };
+      }
+      
       try {
-        const data = JSON.parse(text);
         
         // 驗證數據格式
         if (!data.version) {
@@ -267,11 +272,11 @@ const localFileStorage = {
         
         return { success: true, message: '數據導入成功' };
       } catch (error) {
-        console.error('導入數據失敗:', error);
+        // 導入數據失敗，靜默處理
         return { success: false, message: '導入數據失敗：文件格式錯誤' };
       }
     } catch (e) {
-      console.error('讀取文件失敗:', e);
+      // 讀取文件失敗，靜默處理
       return { success: false, message: '讀取文件失敗' };
     }
   },
@@ -289,7 +294,7 @@ const localFileStorage = {
     
     // 文件句柄無法持久化，需要用戶重新選擇
     // 但我們可以提示用戶是否要自動載入
-    console.log('檢測到已設置的備份文件路徑，請在設定中選擇文件位置以自動載入');
+    // 檢測到已設置的備份文件路徑，請在設定中選擇文件位置以自動載入
     return false;
   }
 };
@@ -299,12 +304,15 @@ function showSaveMessage(message) {
   const manager = document.getElementById('favorite-streams-manager');
   if (!manager) return;
   
+  const managerContent = manager.querySelector('.favorite-manager-content');
+  if (!managerContent) return;
+  
   let messageDiv = document.getElementById('favorite-save-message');
   if (!messageDiv) {
     messageDiv = document.createElement('div');
     messageDiv.id = 'favorite-save-message';
     messageDiv.style.cssText = 'margin-top: 10px; padding: 8px; font-size: 11px; color: #28a745; text-align: center; background: rgba(40, 167, 69, 0.1); border-radius: 4px;';
-    manager.querySelector('.favorite-manager-content').appendChild(messageDiv);
+    managerContent.appendChild(messageDiv);
   }
   
   messageDiv.textContent = message;
@@ -370,11 +378,7 @@ function saveUserSettings() {
         const panel = document.getElementById('control-panel');
         const savedPosition = localStorage.getItem('controlPanelPosition');
         if (savedPosition) {
-          try {
-            return JSON.parse(savedPosition);
-          } catch (e) {
-            return null;
-          }
+          return safeJSONParse(savedPosition, null);
         }
         return null;
       })()
@@ -408,11 +412,13 @@ function saveUserSettings() {
   };
   
   localStorage.setItem('userSettings', JSON.stringify(settings));
-  console.log('用戶設置已保存');
+  // 用戶設置已保存
   
   // 如果已啟用備份，自動備份
   if (localFileStorage.isEnabled()) {
-    localFileStorage.backup().catch(err => console.error('備份失敗:', err)).then(() => {
+    localFileStorage.backup().catch(() => {
+      // 備份失敗，靜默處理
+    }).then(() => {
       // 顯示保存消息（如果收藏管理界面打開）
       const manager = document.getElementById('favorite-streams-manager');
       if (manager && manager.classList.contains('show')) {
@@ -434,7 +440,8 @@ function loadUserSettings() {
   if (!saved) return;
   
   try {
-    const settings = JSON.parse(saved);
+    const settings = safeJSONParse(saved, {});
+    if (!settings) return;
     
     // 恢復總音量
     if (settings.masterVolume !== undefined) {
@@ -478,9 +485,9 @@ function loadUserSettings() {
       }
     }
     
-    console.log('用戶設置已載入');
+    // 用戶設置已載入
   } catch (e) {
-    console.error('載入用戶設置失敗:', e);
+    // 載入用戶設置失敗，靜默處理
   }
 }
 
@@ -489,7 +496,7 @@ const favoriteCategories = {
   // 獲取分類列表
   getList: () => {
     const saved = localStorage.getItem('favoriteCategories');
-    return saved ? JSON.parse(saved) : [];
+    return safeJSONParse(saved, []);
   },
   
   // 保存分類列表
@@ -562,7 +569,7 @@ const favoriteStreams = {
   // 獲取收藏列表
   getList: () => {
     const saved = localStorage.getItem('favoriteStreams');
-    return saved ? JSON.parse(saved) : [];
+    return safeJSONParse(saved, []);
   },
   
   // 保存收藏列表
@@ -767,41 +774,45 @@ function showFavoriteStreamsManager() {
     content += '<div style="padding: 20px; text-align: center; color: #888;">暫無收藏</div>';
   } else {
     filteredList.forEach((item) => {
-      const displayName = item.name || (item.platform === 'twitch' ? item.channelId : item.videoId);
+      // 转义所有用户输入以防止 XSS
+      const safeDisplayName = escapeHtml(item.name || (item.platform === 'twitch' ? item.channelId : item.videoId));
       const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
-      const categoryName = item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || '未知分類' : '未分類';
-      const itemId = item.id.replace(/'/g, "\\'");
+      const safeCategoryName = escapeHtml(item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || '未知分類' : '未分類');
+      const safeItemId = escapeHtml(item.id);
+      const safeItemUrl = escapeHtml(item.url);
       
-      // 生成分類選項
+      // 生成分類選項（转义）
       let categoryOptions = '<option value="">未分類</option>';
       categories.forEach(cat => {
         const selected = item.categoryId === cat.id ? 'selected' : '';
-        categoryOptions += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+        const safeCatId = escapeHtml(cat.id);
+        const safeCatName = escapeHtml(cat.name);
+        categoryOptions += `<option value="${safeCatId}" ${selected}>${safeCatName}</option>`;
       });
       
       content += `
-        <div class="favorite-item" data-id="${itemId}" data-category-id="${item.categoryId || ''}">
+        <div class="favorite-item" data-id="${safeItemId}" data-category-id="${escapeHtml(item.categoryId || '')}">
           <div class="favorite-item-checkbox">
-            <input type="checkbox" class="favorite-checkbox" data-favorite-id="${itemId}">
+            <input type="checkbox" class="favorite-checkbox" data-favorite-id="${safeItemId}">
           </div>
           <div class="favorite-item-info">
             <span class="favorite-platform-icon">${platformIcon}</span>
-            <span class="favorite-item-name">${displayName}</span>
-            <span class="favorite-item-category">📁 ${categoryName}</span>
-            <span class="favorite-item-url">${item.url}</span>
+            <span class="favorite-item-name">${safeDisplayName}</span>
+            <span class="favorite-item-category">📁 ${safeCategoryName}</span>
+            <span class="favorite-item-url">${safeItemUrl}</span>
           </div>
           <div class="favorite-item-edit" style="display: none;">
-            <input type="text" class="favorite-edit-name" value="${displayName.replace(/"/g, '&quot;')}" style="flex: 1; padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
+            <input type="text" class="favorite-edit-name" value="${safeDisplayName}" style="flex: 1; padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
             <select class="favorite-edit-category" style="padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
               ${categoryOptions}
             </select>
-            <button class="save-favorite-btn" data-favorite-id="${itemId}" style="padding: 4px 8px; margin-right: 4px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">保存</button>
-            <button class="cancel-edit-btn" data-favorite-id="${itemId}" style="padding: 4px 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">取消</button>
+            <button class="save-favorite-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; margin-right: 4px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">保存</button>
+            <button class="cancel-edit-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">取消</button>
           </div>
           <div class="favorite-item-actions">
-            <button class="edit-favorite-btn" data-favorite-id="${itemId}" title="編輯">✏️</button>
-            <button class="load-favorite-btn" data-favorite-id="${itemId}" title="載入">▶</button>
-            <button class="remove-favorite-btn" data-favorite-id="${itemId}" title="移除">🗑</button>
+            <button class="edit-favorite-btn" data-favorite-id="${safeItemId}" title="編輯">✏️</button>
+            <button class="load-favorite-btn" data-favorite-id="${safeItemId}" title="載入">▶</button>
+            <button class="remove-favorite-btn" data-favorite-id="${safeItemId}" title="移除">🗑</button>
           </div>
         </div>
       `;
@@ -825,18 +836,20 @@ function showFavoriteStreamsManager() {
     content += '<div style="padding: 20px; text-align: center; color: #888;">暫無分類</div>';
   } else {
     categories.forEach((cat) => {
-      const catId = cat.id.replace(/'/g, "\\'");
+      // 转义用户输入以防止 XSS
+      const safeCatId = escapeHtml(cat.id);
+      const safeCatName = escapeHtml(cat.name);
       const count = list.filter(item => item.categoryId === cat.id).length;
       content += `
-        <div class="category-item" data-id="${catId}">
+        <div class="category-item" data-id="${safeCatId}">
           <div class="category-item-info">
-            <span class="category-item-name">📁 ${cat.name}</span>
+            <span class="category-item-name">📁 ${safeCatName}</span>
             <span class="category-item-count">(${count} 個收藏)</span>
           </div>
           <div class="category-item-actions">
-            <button class="load-category-btn" data-category-id="${catId}" title="一鍵載入此分類">▶ 載入</button>
-            <button class="edit-category-btn" data-category-id="${catId}" title="編輯">✏️</button>
-            <button class="remove-category-btn" data-category-id="${catId}" title="刪除">🗑</button>
+            <button class="load-category-btn" data-category-id="${safeCatId}" title="一鍵載入此分類">▶ 載入</button>
+            <button class="edit-category-btn" data-category-id="${safeCatId}" title="編輯">✏️</button>
+            <button class="remove-category-btn" data-category-id="${safeCatId}" title="刪除">🗑</button>
           </div>
         </div>
       `;
@@ -1059,7 +1072,9 @@ function addToFavorites() {
     autoSaveSettings();
     // 備份到本地文件
     if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+      localFileStorage.backup().catch(() => {
+        // 備份失敗，靜默處理
+      });
     }
     showSaveMessage('資料已儲存');
   } else {
@@ -1089,7 +1104,9 @@ function addCategory() {
     autoSaveSettings();
     // 備份到本地文件
     if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+      localFileStorage.backup().catch(() => {
+        // 備份失敗，靜默處理
+      });
     }
     showSaveMessage('資料已儲存');
   } else {
@@ -1167,7 +1184,9 @@ function removeCategory(categoryId) {
     autoSaveSettings();
     // 備份到本地文件
     if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+      localFileStorage.backup().catch(() => {
+        // 備份失敗，靜默處理
+      });
     }
     showSaveMessage('資料已儲存');
   } else {
@@ -1249,7 +1268,9 @@ function saveFavoriteEdit(favoriteId) {
     autoSaveSettings();
     // 備份到本地文件
     if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(err => console.error('備份失敗:', err));
+      localFileStorage.backup().catch(() => {
+        // 備份失敗，靜默處理
+      });
     }
     showSaveMessage('資料已儲存');
   } else {
@@ -1357,7 +1378,10 @@ function updateFavoriteListDisplay() {
   const filterSelect = document.getElementById('favorite-display-filter');
   const displayDiv = document.getElementById('favorite-list-display');
   
-  if (!displayDiv) return;
+  if (!displayDiv) {
+    // 收藏列表顯示區域未找到
+    return;
+  }
   
   // 獲取當前選擇的過濾器
   const filterValue = filterSelect ? filterSelect.value : 'all';
@@ -1368,7 +1392,15 @@ function updateFavoriteListDisplay() {
     const currentValue = filterSelect.value;
     
     // 清空並重新填充選項
-    filterSelect.innerHTML = '<option value="all">全部收藏</option><option value="uncategorized">未分類</option>';
+    filterSelect.innerHTML = '';
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = '全部收藏';
+    filterSelect.appendChild(allOption);
+    const uncatOption = document.createElement('option');
+    uncatOption.value = 'uncategorized';
+    uncatOption.textContent = '未分類';
+    filterSelect.appendChild(uncatOption);
     
     // 添加分類選項
     categories.forEach(cat => {
@@ -1388,17 +1420,35 @@ function updateFavoriteListDisplay() {
     const categoryItems = list.filter(item => item.categoryId === filterValue);
     
     if (categoryItems.length === 0) {
-      displayDiv.innerHTML = `<div style="padding: 20px; text-align: center; color: #888; font-size: 12px;">此分類下沒有收藏</div>`;
+      displayDiv.innerHTML = '';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.style.cssText = 'padding: 20px; text-align: center; color: #888; font-size: 12px;';
+      emptyDiv.textContent = '此分類下沒有收藏';
+      displayDiv.appendChild(emptyDiv);
       return;
     }
     
-    displayDiv.innerHTML = `
-      <div style="padding: 20px; text-align: center;">
-        <div style="font-size: 13px; color: #fff; margin-bottom: 12px;">📁 ${category ? category.name : '未知分類'}</div>
-        <div style="font-size: 11px; color: #aaa; margin-bottom: 16px;">共 ${categoryItems.length} 個收藏</div>
-        <button onclick="loadCategoryFavoritesFromPanel('${filterValue}')" style="padding: 8px 16px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;">一鍵載入此分類</button>
-      </div>
-    `;
+    displayDiv.innerHTML = '';
+    const categoryDiv = document.createElement('div');
+    categoryDiv.style.cssText = 'padding: 20px; text-align: center;';
+    
+    const categoryName = document.createElement('div');
+    categoryName.style.cssText = 'font-size: 13px; color: #fff; margin-bottom: 12px;';
+    categoryName.textContent = '📁 ' + (category ? escapeHtml(category.name) : '未知分類');
+    
+    const countDiv = document.createElement('div');
+    countDiv.style.cssText = 'font-size: 11px; color: #aaa; margin-bottom: 16px;';
+    countDiv.textContent = `共 ${categoryItems.length} 個收藏`;
+    
+    const loadBtn = document.createElement('button');
+    loadBtn.style.cssText = 'padding: 8px 16px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
+    loadBtn.textContent = '一鍵載入此分類';
+    loadBtn.onclick = () => loadCategoryFavoritesFromPanel(filterValue);
+    
+    categoryDiv.appendChild(categoryName);
+    categoryDiv.appendChild(countDiv);
+    categoryDiv.appendChild(loadBtn);
+    displayDiv.appendChild(categoryDiv);
     return;
   }
   
@@ -1408,37 +1458,69 @@ function updateFavoriteListDisplay() {
     filteredList = list.filter(item => !item.categoryId);
   }
   
-  // 生成列表HTML
+  // 生成列表（使用安全的 DOM 操作）
+  displayDiv.innerHTML = '';
+  
   if (filteredList.length === 0) {
-    displayDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 12px;">暫無收藏</div>';
+    const emptyDiv = document.createElement('div');
+    emptyDiv.style.cssText = 'padding: 20px; text-align: center; color: #888; font-size: 12px;';
+    emptyDiv.textContent = '暫無收藏';
+    displayDiv.appendChild(emptyDiv);
     return;
   }
   
-  let html = '<div style="display: flex; flex-direction: column; gap: 4px;">';
+  const listContainer = document.createElement('div');
+  listContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
   
   filteredList.forEach((item) => {
     const displayName = item.name || (item.platform === 'twitch' ? item.channelId : item.videoId);
     const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
     const categoryName = item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || '未知分類' : '未分類';
-    const itemId = item.id.replace(/'/g, "\\'");
+    const itemId = item.id;
     
-    html += `
-      <div class="favorite-list-item" data-favorite-id="${itemId}" style="display: flex; align-items: center; gap: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; cursor: pointer; transition: background 0.2s;" 
-           onmouseover="this.style.background='rgba(145, 71, 255, 0.2)'" 
-           onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'"
-           onclick="loadFavoriteStreamFromPanel('${itemId}')">
-        <span style="font-size: 14px;">${platformIcon}</span>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayName}</div>
-          <div style="font-size: 10px; color: #aaa;">📁 ${categoryName}</div>
-        </div>
-        <span style="font-size: 12px; color: #9147ff;">▶</span>
-      </div>
-    `;
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'favorite-list-item';
+    itemDiv.dataset.favoriteId = itemId;
+    itemDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; cursor: pointer; transition: background 0.2s;';
+    itemDiv.onmouseover = () => itemDiv.style.background = 'rgba(145, 71, 255, 0.2)';
+    itemDiv.onmouseout = () => itemDiv.style.background = 'rgba(255, 255, 255, 0.05)';
+    itemDiv.onclick = () => loadFavoriteStreamFromPanel(itemId);
+    
+    const iconSpan = document.createElement('span');
+    iconSpan.style.fontSize = '14px';
+    iconSpan.textContent = platformIcon;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.style.cssText = 'flex: 1; min-width: 0;';
+    
+    const nameDiv = document.createElement('div');
+    nameDiv.style.cssText = 'font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+    nameDiv.textContent = escapeHtml(displayName);
+    
+    const categoryDiv = document.createElement('div');
+    categoryDiv.style.cssText = 'font-size: 10px; color: #aaa;';
+    categoryDiv.textContent = '📁 ' + escapeHtml(categoryName);
+    
+    contentDiv.appendChild(nameDiv);
+    contentDiv.appendChild(categoryDiv);
+    
+    const arrowSpan = document.createElement('span');
+    arrowSpan.style.cssText = 'font-size: 12px; color: #9147ff;';
+    arrowSpan.textContent = '▶';
+    
+    itemDiv.appendChild(iconSpan);
+    itemDiv.appendChild(contentDiv);
+    itemDiv.appendChild(arrowSpan);
+    
+    listContainer.appendChild(itemDiv);
   });
   
-  html += '</div>';
-  displayDiv.innerHTML = html;
+  displayDiv.appendChild(listContainer);
+}
+
+// 確保函數是全局的
+if (typeof window !== 'undefined') {
+  window.updateFavoriteListDisplay = updateFavoriteListDisplay;
 }
 
 // 從控制面板一鍵載入分類下的所有收藏
