@@ -21,6 +21,13 @@ body:has(.control-panel:not(.collapsed)) #container {
   padding-right: 550px;
 }
 
+/* 移動設備上不調整 padding */
+@media (max-width: 768px) {
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 0;
+  }
+}
+
 .stream-box {
   position: absolute; 
   background: #111; 
@@ -484,6 +491,75 @@ body:has(.control-panel:not(.collapsed)) .control-panel-toggle-collapsed {
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
   pointer-events: auto;
+}
+
+/* 移動設備上的收藏管理界面優化 */
+@media (max-width: 768px) {
+  .favorite-streams-manager {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  
+  .favorite-manager-header {
+    padding: 15px;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 18px;
+  }
+  
+  .close-btn {
+    font-size: 28px;
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+  
+  .favorite-manager-content {
+    padding: 15px;
+    font-size: 14px;
+  }
+  
+  .favorite-tabs {
+    gap: 8px;
+  }
+  
+  .tab-btn {
+    font-size: 13px;
+    padding: 10px 16px;
+    min-height: 44px;
+  }
+  
+  .favorite-add-section input,
+  .favorite-add-section select {
+    font-size: 16px;
+    padding: 12px;
+    min-height: 44px;
+  }
+  
+  .favorite-add-section button {
+    font-size: 14px;
+    padding: 12px 20px;
+    min-height: 44px;
+  }
+  
+  .favorite-item,
+  .category-item {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .favorite-item button,
+  .category-item button {
+    font-size: 12px;
+    padding: 8px 12px;
+    min-height: 36px;
+    min-width: 36px;
+  }
 }
 
 .favorite-streams-manager.show {
@@ -976,7 +1052,8 @@ body:has(.control-panel:not(.collapsed)) .control-panel-toggle-collapsed {
 }
 
 #url-input {
-  width: 400px;
+  flex: 1;
+  min-width: 200px;
   padding: 10px;
   background: #1a1a1a;
   border: 1px solid #444;
@@ -1230,10 +1307,137 @@ body:has(.ad-banner.show) #container,
   font-style: italic;
 }
 
-/* 響應式設計 */
+/* 響應式設計 - 平板和手機優化 */
+
+/* 平板設備 (768px - 1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .control-panel {
+    width: 450px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 450px;
+  }
+  
+  .stream-box {
+    min-width: 250px;
+    min-height: 180px;
+  }
+}
+
+/* 手機設備 (最大 768px) */
 @media (max-width: 768px) {
+  /* 控制面板在手機上全屏顯示 */
+  .control-panel {
+    width: 100vw;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+  
+  /* 控制面板標題調整 */
+  .control-panel-header {
+    padding: 15px;
+    padding-top: 50px;
+  }
+  
+  .control-panel-title {
+    font-size: 16px;
+  }
+  
+  .control-panel-toggle {
+    font-size: 20px;
+    padding: 8px 12px;
+    top: 15px;
+    right: 15px;
+  }
+  
+  /* 控制面板內容調整 */
+  .control-panel-content {
+    padding: 15px;
+  }
+  
+  /* 輸入框和按鈕優化（觸摸友好） */
+  #add-panel input {
+    font-size: 16px; /* 防止 iOS 自動縮放 */
+    padding: 12px;
+    min-height: 44px; /* 觸摸目標最小尺寸 */
+  }
+  
+  #add-panel button {
+    font-size: 16px;
+    padding: 12px 20px;
+    min-height: 44px;
+  }
+  
+  /* 所有按鈕優化 */
+  .control-section button {
+    font-size: 14px;
+    padding: 10px 16px;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 布局預覽按鈕調整 */
+  .layout-grid-inline {
+    gap: 8px;
+  }
+  
+  .layout-preview-inline {
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+    min-height: 50px;
+  }
+  
+  /* 串流視窗最小尺寸調整 */
+  .stream-box {
+    min-width: 200px;
+    min-height: 150px;
+  }
+  
+  /* 音量控制滑桿優化 */
+  .volume,
+  #master-volume {
+    min-height: 44px;
+    padding: 10px 0;
+  }
+  
+  /* 收藏列表和串流順序列表調整 */
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 200px;
+  }
+  
+  /* 選擇框優化 */
+  select {
+    font-size: 16px; /* 防止 iOS 自動縮放 */
+    padding: 12px;
+    min-height: 44px;
+  }
+  
+  /* 收起按鈕調整 */
+  .control-panel-toggle-collapsed {
+    width: 50px;
+    padding: 15px 10px;
+    font-size: 20px;
+    right: 0;
+  }
+  
+  /* 滑鼠懸停檢測區域在移動設備上禁用 */
+  #control-panel-hover-zone {
+    display: none;
+  }
+  
+  /* 廣告優化 */
   .ad-content {
     padding: 12px 40px 12px 15px;
+    max-width: 95vw;
   }
   
   .ad-message {
@@ -1242,6 +1446,164 @@ body:has(.ad-banner.show) #container,
   
   .ad-note {
     font-size: 10px;
+  }
+  
+  .ad-close-btn {
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+  
+  /* 串流視窗控制按鈕優化 */
+  .controls {
+    height: 50px;
+    padding: 0 10px;
+    gap: 8px;
+  }
+  
+  .control-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+  
+  .close {
+    font-size: 20px;
+    padding: 0 12px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* 標題字體調整 */
+  .section-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  
+  /* 意見回饋和版本紀錄按鈕 */
+  .control-section a[href*="forms.gle"],
+  .control-section a[onclick*="showVersionHistory"] {
+    font-size: 14px;
+    padding: 10px 16px;
+    min-height: 44px;
+  }
+}
+
+/* 小屏幕手機 (最大 480px) */
+@media (max-width: 480px) {
+  .control-panel-header {
+    padding: 12px;
+    padding-top: 45px;
+  }
+  
+  .control-panel-content {
+    padding: 12px;
+  }
+  
+  .control-section {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  
+  /* 布局預覽更小 */
+  .layout-grid-inline {
+    gap: 6px;
+  }
+  
+  .layout-preview-inline {
+    width: 45px;
+    height: 45px;
+    min-width: 45px;
+    min-height: 45px;
+  }
+  
+  /* 串流視窗進一步縮小 */
+  .stream-box {
+    min-width: 180px;
+    min-height: 120px;
+  }
+  
+  /* 收藏列表高度調整 */
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 150px;
+  }
+  
+  /* 按鈕文字可能換行 */
+  .control-section button {
+    white-space: normal;
+    word-break: break-word;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+/* 橫向模式優化 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .control-panel {
+    width: 60vw;
+    max-width: 400px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 0;
+  }
+  
+  .stream-box {
+    min-width: 220px;
+    min-height: 140px;
+  }
+  
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 120px;
+  }
+}
+
+/* 觸摸設備優化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 禁用懸停效果 */
+  .control-panel-toggle:hover,
+  .control-panel-title:hover,
+  .control-panel-toggle-collapsed:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.8);
+    padding-right: 8px;
+  }
+  
+  /* 增加觸摸目標 */
+  button, a, .control-btn, .close {
+    -webkit-tap-highlight-color: rgba(145, 71, 255, 0.3);
+    tap-highlight-color: rgba(145, 71, 255, 0.3);
+  }
+  
+  /* 滑鼠懸停檢測區域禁用 */
+  #control-panel-hover-zone {
+    display: none !important;
+  }
+  
+  /* 防止意外縮放 */
+  body {
+    touch-action: pan-x pan-y;
+  }
+  
+  /* 優化滾動 */
+  .control-panel-content,
+  #favorite-list-display,
+  #stream-order-list {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* 防止文本選擇（拖曳時） */
+  .stream-box {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 }
 
