@@ -86,6 +86,13 @@ let userManuallyExpanded = false;
 
 // 初始化滑鼠懸停展開功能
 function initHoverExpand() {
+  // 檢測是否為觸摸設備，如果是則不啟用懸停展開
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (isTouchDevice) {
+    // 觸摸設備不啟用懸停展開功能
+    return;
+  }
+  
   // 創建右側檢測區域（即使面板收起時也存在）
   let hoverZone = document.getElementById('control-panel-hover-zone');
   if (!hoverZone) {
