@@ -79,6 +79,13 @@ function adjustChatLayoutForBox(box, layoutType) {
     const viewportHeight = window.innerHeight;
     const chatHeight = Math.max(80, Math.min(150, viewportHeight * 0.12));
     chatDiv.style.height = chatHeight + 'px';
+  } else if (layoutType === 12) {
+    // 固定布局：聊天室在右侧，隐藏视频框内的聊天室
+    const chatDiv = box.querySelector('.chat-container');
+    if (chatDiv) {
+      chatDiv.classList.add('hidden');
+    }
+    return; // 提前返回，避免执行下面的代码
   }
   
   // 應用過渡效果
@@ -121,9 +128,396 @@ function autoSelectLayout() {
   return layoutType;
 }
 
+// 设置固定布局的预设框架
+function setupFixedLayoutFramework(boxes) {
+  const videoAreaWidth = 70; // 70%
+  const chatAreaWidth = 30; // 30%
+  const count = boxes.length;
+  
+  // 清理之前的右侧聊天室容器（如果存在）
+  cleanupFixedChatSidebar();
+  
+  // 布局视频在左侧（上下排列，位置1、2）
+  boxes.forEach((b, i) => {
+    const id = parseInt(b.dataset.streamId);
+    b.style.position = 'absolute';
+    b.style.width = videoAreaWidth + '%';
+    b.style.height = count > 0 ? (100 / count) + '%' : '50%';
+    b.style.left = '0';
+    b.style.top = count > 0 ? (100 / count * i) + '%' : (i * 50) + '%';
+    b.style.right = 'auto';
+    b.style.bottom = 'auto';
+    
+    // 隐藏视频框内的聊天室
+    const chatDiv = b.querySelector('.chat-container');
+    if (chatDiv) {
+      chatDiv.classList.add('hidden');
+    }
+  });
+  
+  // 创建右侧聊天室容器（左右排列，位置3、4）
+  const chatSidebar = document.createElement('div');
+  chatSidebar.id = 'chat-sidebar-fixed';
+  chatSidebar.className = 'chat-sidebar-fixed';
+  chatSidebar.style.width = chatAreaWidth + '%';
+  chatSidebar.style.height = '100%';
+  chatSidebar.style.left = videoAreaWidth + '%';
+  chatSidebar.style.top = '0';
+  chatSidebar.style.position = 'absolute';
+  chatSidebar.style.display = 'flex';
+  chatSidebar.style.flexDirection = 'row';
+  chatSidebar.style.gap = '4px';
+  chatSidebar.style.padding = '4px';
+  chatSidebar.style.boxSizing = 'border-box';
+  chatSidebar.style.background = '#0a0a0a';
+  chatSidebar.style.borderLeft = '2px solid #333';
+  
+  // 获取前两个串流的聊天室
+  const chatStreams = [];
+  boxes.forEach((b) => {
+    const id = parseInt(b.dataset.streamId);
+    const data = streamData[id];
+    if (data && chatStreams.length < 2) {
+      chatStreams.push({ id, data, box: b });
+    }
+  });
+  
+  // 创建聊天室面板（最多两个，左右排列）
+  if (chatStreams.length > 0) {
+    chatStreams.forEach((stream, index) => {
+      const chatPanel = document.createElement('div');
+      chatPanel.className = 'chat-sidebar-panel';
+      chatPanel.id = `chat-panel-fixed-${stream.id}`;
+      chatPanel.style.width = chatStreams.length === 1 ? '100%' : '50%';
+      chatPanel.style.height = '100%';
+      chatPanel.style.position = 'relative';
+      chatPanel.style.background = '#0a0a0a';
+      chatPanel.style.border = '1px solid #333';
+      chatPanel.style.borderRadius = '4px';
+      chatPanel.style.overflow = 'hidden';
+      chatPanel.style.display = 'flex';
+      chatPanel.style.flexDirection = 'column';
+      chatPanel.style.flexShrink = '0';
+      
+      // 创建头部
+      const chatHeader = document.createElement('div');
+      chatHeader.className = 'chat-sidebar-header';
+      chatHeader.style.padding = '8px';
+      chatHeader.style.background = 'rgba(145, 71, 255, 0.2)';
+      chatHeader.style.borderBottom = '1px solid #333';
+      chatHeader.style.flexShrink = '0';
+      
+      const headerText = document.createElement('span');
+      const label = stream.data.platform === 'twitch' ? 
+        (stream.data.channelId ? `#${stream.id} - ${stream.data.channelId}` : `#${stream.id}`) :
+        (stream.data.videoId ? `#${stream.id} - ${stream.data.videoId}` : `#${stream.id}`);
+      headerText.textContent = `💬 ${label}`;
+      headerText.style.color = '#9147ff';
+      headerText.style.fontWeight = 'bold';
+      headerText.style.fontSize = '12px';
+      chatHeader.appendChild(headerText);
+      chatPanel.appendChild(chatHeader);
+      
+      // 创建内容区域
+      const chatContent = document.createElement('div');
+      chatContent.className = 'chat-sidebar-content';
+      chatContent.id = `chat-content-fixed-${stream.id}`;
+      chatContent.style.flex = '1';
+      chatContent.style.position = 'relative';
+      chatContent.style.overflow = 'hidden';
+      chatPanel.appendChild(chatContent);
+      
+      chatSidebar.appendChild(chatPanel);
+      
+      // 延迟更新聊天室内容，确保聊天室已创建
+      setTimeout(() => {
+        updateFixedChatSidebarContent(stream.id, chatContent);
+      }, 500 + (index * 200));
+    });
+    
+    // 如果只有一个串流，添加一个空面板
+    if (chatStreams.length === 1) {
+      const emptyPanel = document.createElement('div');
+      emptyPanel.className = 'chat-sidebar-panel';
+      emptyPanel.style.width = '100%';
+      emptyPanel.style.height = '50%';
+      emptyPanel.style.position = 'relative';
+      emptyPanel.style.background = '#0a0a0a';
+      emptyPanel.style.border = '1px solid #333';
+      emptyPanel.style.borderRadius = '4px';
+      emptyPanel.style.overflow = 'hidden';
+      emptyPanel.style.display = 'flex';
+      emptyPanel.style.alignItems = 'center';
+      emptyPanel.style.justifyContent = 'center';
+      emptyPanel.style.flexShrink = '0';
+      
+      const emptyText = document.createElement('div');
+      emptyText.style.color = '#666';
+      emptyText.style.fontSize = '14px';
+      emptyText.textContent = '等待第二個串流...';
+      emptyPanel.appendChild(emptyText);
+      
+      chatSidebar.appendChild(emptyPanel);
+    }
+  } else {
+    // 如果没有串流，显示两个空面板
+    for (let i = 0; i < 2; i++) {
+      const chatPanel = document.createElement('div');
+      chatPanel.className = 'chat-sidebar-panel';
+      chatPanel.style.width = '50%';
+      chatPanel.style.height = '100%';
+      chatPanel.style.position = 'relative';
+      chatPanel.style.background = '#0a0a0a';
+      chatPanel.style.border = '1px solid #333';
+      chatPanel.style.borderRadius = '4px';
+      chatPanel.style.overflow = 'hidden';
+      chatPanel.style.display = 'flex';
+      chatPanel.style.alignItems = 'center';
+      chatPanel.style.justifyContent = 'center';
+      chatPanel.style.flexShrink = '0';
+      
+      const emptyText = document.createElement('div');
+      emptyText.style.color = '#666';
+      emptyText.style.fontSize = '14px';
+      emptyText.textContent = '等待串流...';
+      chatPanel.appendChild(emptyText);
+      
+      chatSidebar.appendChild(chatPanel);
+    }
+  }
+  
+  const container = document.getElementById('container');
+  if (container) {
+    container.appendChild(chatSidebar);
+  }
+}
+
+// 更新固定布局的右侧聊天室内容
+function updateFixedChatSidebarContent(streamId, chatContentElement) {
+  if (!chatContentElement) {
+    return;
+  }
+  
+  // 清空现有内容
+  chatContentElement.innerHTML = '';
+  
+  const data = streamData[streamId];
+  if (!data) {
+    return;
+  }
+  
+  // 获取原始聊天室容器
+  const originalChatDiv = document.getElementById('chat' + streamId);
+  if (!originalChatDiv) {
+    // 如果聊天室不存在，创建它
+    if (typeof createChat === 'function') {
+      createChat(streamId, data.platform, data.channelId, data.videoId);
+      // 等待聊天室创建后，再次尝试复制 iframe
+      setTimeout(() => {
+        const newlyCreatedChatDiv = document.getElementById('chat' + streamId);
+        if (newlyCreatedChatDiv) {
+          const iframe = newlyCreatedChatDiv.querySelector('iframe');
+          if (iframe && iframe.src) {
+            const newIframe = document.createElement('iframe');
+            newIframe.src = iframe.src;
+            newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+            newIframe.setAttribute('allow', iframe.getAttribute('allow') || 'autoplay; fullscreen');
+            newIframe.setAttribute('allowfullscreen', '');
+            chatContentElement.appendChild(newIframe);
+          }
+        }
+      }, 1000);
+    }
+    return;
+  }
+  
+  const iframe = originalChatDiv.querySelector('iframe');
+  if (iframe && iframe.src) {
+    // 创建新的 iframe（因为 iframe 不能直接移动）
+    const newIframe = document.createElement('iframe');
+    newIframe.src = iframe.src;
+    newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+    newIframe.setAttribute('allow', iframe.getAttribute('allow') || 'autoplay; fullscreen');
+    newIframe.setAttribute('allowfullscreen', '');
+    chatContentElement.appendChild(newIframe);
+  } else {
+    // 如果iframe还没加载，等待一下
+    setTimeout(() => {
+      const retryIframe = originalChatDiv.querySelector('iframe');
+      if (retryIframe && retryIframe.src) {
+        const newIframe = document.createElement('iframe');
+        newIframe.src = retryIframe.src;
+        newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+        newIframe.setAttribute('allow', retryIframe.getAttribute('allow') || 'autoplay; fullscreen');
+        newIframe.setAttribute('allowfullscreen', '');
+        chatContentElement.appendChild(newIframe);
+      }
+    }, 500);
+  }
+}
+
+// 更新固定布局的框架（当添加或删除串流时调用）
+function updateFixedLayoutFramework() {
+  const chatSidebar = document.getElementById('chat-sidebar-fixed');
+  if (!chatSidebar) return; // 如果不在布局12，直接返回
+  
+  const boxes = document.querySelectorAll('.stream-box');
+  const count = boxes.length;
+  
+  // 更新左侧视频布局
+  boxes.forEach((b, i) => {
+    const id = parseInt(b.dataset.streamId);
+    b.style.position = 'absolute';
+    b.style.width = '70%';
+    b.style.height = count > 0 ? (100 / count) + '%' : '50%';
+    b.style.left = '0';
+    b.style.top = count > 0 ? (100 / count * i) + '%' : (i * 50) + '%';
+    b.style.right = 'auto';
+    b.style.bottom = 'auto';
+    
+    // 隐藏视频框内的聊天室
+    const chatDiv = b.querySelector('.chat-container');
+    if (chatDiv) {
+      chatDiv.classList.add('hidden');
+    }
+  });
+  
+  // 更新右侧聊天室面板
+  const chatStreams = [];
+  boxes.forEach((b) => {
+    const id = parseInt(b.dataset.streamId);
+    const data = streamData[id];
+    if (data && chatStreams.length < 2) {
+      chatStreams.push({ id, data, box: b });
+    }
+  });
+  
+  // 清空现有面板
+  chatSidebar.innerHTML = '';
+  
+  // 重新创建面板
+  if (chatStreams.length > 0) {
+    chatStreams.forEach((stream, index) => {
+      const chatPanel = document.createElement('div');
+      chatPanel.className = 'chat-sidebar-panel';
+      chatPanel.id = `chat-panel-fixed-${stream.id}`;
+      chatPanel.style.width = chatStreams.length === 1 ? '100%' : '50%';
+      chatPanel.style.height = '100%';
+      chatPanel.style.position = 'relative';
+      chatPanel.style.background = '#0a0a0a';
+      chatPanel.style.border = '1px solid #333';
+      chatPanel.style.borderRadius = '4px';
+      chatPanel.style.overflow = 'hidden';
+      chatPanel.style.display = 'flex';
+      chatPanel.style.flexDirection = 'column';
+      chatPanel.style.flexShrink = '0';
+      
+      const chatHeader = document.createElement('div');
+      chatHeader.className = 'chat-sidebar-header';
+      chatHeader.style.padding = '8px';
+      chatHeader.style.background = 'rgba(145, 71, 255, 0.2)';
+      chatHeader.style.borderBottom = '1px solid #333';
+      chatHeader.style.flexShrink = '0';
+      
+      const headerText = document.createElement('span');
+      const label = stream.data.platform === 'twitch' ? 
+        (stream.data.channelId ? `#${stream.id} - ${stream.data.channelId}` : `#${stream.id}`) :
+        (stream.data.videoId ? `#${stream.id} - ${stream.data.videoId}` : `#${stream.id}`);
+      headerText.textContent = `💬 ${label}`;
+      headerText.style.color = '#9147ff';
+      headerText.style.fontWeight = 'bold';
+      headerText.style.fontSize = '12px';
+      chatHeader.appendChild(headerText);
+      chatPanel.appendChild(chatHeader);
+      
+      const chatContent = document.createElement('div');
+      chatContent.className = 'chat-sidebar-content';
+      chatContent.id = `chat-content-fixed-${stream.id}`;
+      chatContent.style.flex = '1';
+      chatContent.style.position = 'relative';
+      chatContent.style.overflow = 'hidden';
+      chatPanel.appendChild(chatContent);
+      
+      chatSidebar.appendChild(chatPanel);
+      
+      setTimeout(() => {
+        updateFixedChatSidebarContent(stream.id, chatContent);
+      }, 500 + (index * 200));
+    });
+    
+    // 如果只有一个串流，添加一个空面板
+    if (chatStreams.length === 1) {
+      const emptyPanel = document.createElement('div');
+      emptyPanel.className = 'chat-sidebar-panel';
+      emptyPanel.style.width = '50%';
+      emptyPanel.style.height = '100%';
+      emptyPanel.style.position = 'relative';
+      emptyPanel.style.background = '#0a0a0a';
+      emptyPanel.style.border = '1px solid #333';
+      emptyPanel.style.borderRadius = '4px';
+      emptyPanel.style.overflow = 'hidden';
+      emptyPanel.style.display = 'flex';
+      emptyPanel.style.alignItems = 'center';
+      emptyPanel.style.justifyContent = 'center';
+      emptyPanel.style.flexShrink = '0';
+      
+      const emptyText = document.createElement('div');
+      emptyText.style.color = '#666';
+      emptyText.style.fontSize = '14px';
+      emptyText.textContent = '等待第二個串流...';
+      emptyPanel.appendChild(emptyText);
+      
+      chatSidebar.appendChild(emptyPanel);
+    }
+  } else {
+    // 如果没有串流，显示两个空面板
+    for (let i = 0; i < 2; i++) {
+      const chatPanel = document.createElement('div');
+      chatPanel.className = 'chat-sidebar-panel';
+      chatPanel.style.width = '50%';
+      chatPanel.style.height = '100%';
+      chatPanel.style.position = 'relative';
+      chatPanel.style.background = '#0a0a0a';
+      chatPanel.style.border = '1px solid #333';
+      chatPanel.style.borderRadius = '4px';
+      chatPanel.style.overflow = 'hidden';
+      chatPanel.style.display = 'flex';
+      chatPanel.style.alignItems = 'center';
+      chatPanel.style.justifyContent = 'center';
+      chatPanel.style.flexShrink = '0';
+      
+      const emptyText = document.createElement('div');
+      emptyText.style.color = '#666';
+      emptyText.style.fontSize = '14px';
+      emptyText.textContent = '等待串流...';
+      chatPanel.appendChild(emptyText);
+      
+      chatSidebar.appendChild(chatPanel);
+    }
+  }
+}
+
+// 清理固定布局的聊天室容器
+function cleanupFixedChatSidebar() {
+  const chatSidebar = document.getElementById('chat-sidebar-fixed');
+  if (chatSidebar) {
+    chatSidebar.remove();
+  }
+}
+
 function setLayout(type, immediate = false, isUserSelection = false) {
   const boxes = document.querySelectorAll('.stream-box');
-  if (boxes.length === 0) {
+  const count = boxes.length;
+  
+  // 布局12需要预设框架，即使没有串流也要创建
+  if (type === 12) {
+    // 布局12：固定布局，即使没有串流也创建框架
+    setupFixedLayoutFramework(boxes);
+    return;
+  }
+  
+  // 其他布局类型需要至少一个串流
+  if (count === 0) {
     // 沒有串流，跳過布局切換
     return;
   }
@@ -204,7 +598,10 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     b.style.transition = 'none';
   });
   
-  const count = boxes.length;
+  // 如果切换到非布局类型 12，清理固定布局的聊天室容器
+  if (type !== 12) {
+    cleanupFixedChatSidebar();
+  }
   
   if (type === 1 || count === 1) {
     // 單一畫面
@@ -357,5 +754,15 @@ function setLayout(type, immediate = false, isUserSelection = false) {
       }
     });
   }, 100);
+}
+
+// 确保函数在全局作用域中可用
+if (typeof window !== 'undefined') {
+  window.setLayout = setLayout;
+  window.autoSelectLayout = autoSelectLayout;
+  window.setupFixedLayoutFramework = setupFixedLayoutFramework;
+  window.updateFixedChatSidebarContent = updateFixedChatSidebarContent;
+  window.updateFixedLayoutFramework = updateFixedLayoutFramework;
+  window.cleanupFixedChatSidebar = cleanupFixedChatSidebar;
 }
 

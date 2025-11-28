@@ -114,6 +114,18 @@
     </div>
     
     <div class="control-section">
+      <div class="section-title">固定布局</div>
+      <div class="layout-grid-inline">
+        <div class="layout-preview-inline" onclick="setLayout(12, true, true)" title="固定布局（視頻左側上下，聊天室右側左右）">
+          <div style="width: 70%; height: 50%; position: absolute; left: 0; top: 0; background: rgba(145, 71, 255, 0.3);"></div>
+          <div style="width: 70%; height: 50%; position: absolute; left: 0; top: 50%; background: rgba(145, 71, 255, 0.3);"></div>
+          <div style="width: 15%; height: 100%; position: absolute; left: 70%; top: 0; background: rgba(255, 255, 255, 0.1); border-left: 2px solid #9147ff;"></div>
+          <div style="width: 15%; height: 100%; position: absolute; left: 85%; top: 0; background: rgba(255, 255, 255, 0.1); border-left: 2px solid #9147ff;"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="control-section">
       <div class="section-title">聊天室控制</div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button onclick="toggleAllChats()" id="toggle-all-chats-btn" style="padding: 6px 12px; font-size: 12px;">顯示所有聊天室</button>

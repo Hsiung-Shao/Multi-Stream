@@ -393,7 +393,10 @@ function saveUserSettings() {
       // 可以根據當前布局保存偏好
       const boxes = document.querySelectorAll('.stream-box');
       if (boxes.length === 0) return null;
-      return autoSelectLayout();
+      if (typeof autoSelectLayout === 'function') {
+        return autoSelectLayout();
+      }
+      return null;
     })(),
     // 聊天室設置
     allChatsVisible: (() => {
