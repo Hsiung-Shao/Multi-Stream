@@ -4,6 +4,12 @@
 let userSelectedLayout = null;
 let userLayoutTimeout = null;
 
+// 固定布局中用户选择的聊天室ID（位置3和位置4）
+let fixedLayoutChatSelection = {
+  position3: null, // 左侧聊天室
+  position4: null  // 右侧聊天室
+};
+
 // 切換布局選擇器
 function toggleLayoutSelector() {
   const selector = document.getElementById('layout-selector');
@@ -172,123 +178,213 @@ function setupFixedLayoutFramework(boxes) {
   chatSidebar.style.background = '#0a0a0a';
   chatSidebar.style.borderLeft = '2px solid #333';
   
-  // 获取前两个串流的聊天室
-  const chatStreams = [];
+  // 获取所有串流用于选择器
+  const allStreams = [];
   boxes.forEach((b) => {
     const id = parseInt(b.dataset.streamId);
     const data = streamData[id];
-    if (data && chatStreams.length < 2) {
-      chatStreams.push({ id, data, box: b });
+    if (data) {
+      allStreams.push({ id, data, box: b });
     }
   });
   
-  // 创建聊天室面板（最多两个，左右排列）
-  if (chatStreams.length > 0) {
-    chatStreams.forEach((stream, index) => {
-      const chatPanel = document.createElement('div');
-      chatPanel.className = 'chat-sidebar-panel';
-      chatPanel.id = `chat-panel-fixed-${stream.id}`;
-      chatPanel.style.width = chatStreams.length === 1 ? '100%' : '50%';
-      chatPanel.style.height = '100%';
-      chatPanel.style.position = 'relative';
-      chatPanel.style.background = '#0a0a0a';
-      chatPanel.style.border = '1px solid #333';
-      chatPanel.style.borderRadius = '4px';
-      chatPanel.style.overflow = 'hidden';
-      chatPanel.style.display = 'flex';
-      chatPanel.style.flexDirection = 'column';
-      chatPanel.style.flexShrink = '0';
-      
-      // 创建头部
-      const chatHeader = document.createElement('div');
-      chatHeader.className = 'chat-sidebar-header';
-      chatHeader.style.padding = '8px';
-      chatHeader.style.background = 'rgba(145, 71, 255, 0.2)';
-      chatHeader.style.borderBottom = '1px solid #333';
-      chatHeader.style.flexShrink = '0';
-      
-      const headerText = document.createElement('span');
+  // 如果没有保存的选择，默认使用前两个串流
+  if (!fixedLayoutChatSelection.position3 && allStreams.length > 0) {
+    fixedLayoutChatSelection.position3 = allStreams[0].id;
+  }
+  if (!fixedLayoutChatSelection.position4 && allStreams.length > 1) {
+    fixedLayoutChatSelection.position4 = allStreams[1].id;
+  }
+  
+  // 创建两个聊天室面板（位置3和位置4）
+  const positions = [
+    { key: 'position3', defaultId: fixedLayoutChatSelection.position3 },
+    { key: 'position4', defaultId: fixedLayoutChatSelection.position4 }
+  ];
+  
+  positions.forEach((pos, index) => {
+    const chatPanel = document.createElement('div');
+    chatPanel.className = 'chat-sidebar-panel';
+    chatPanel.id = `chat-panel-fixed-${pos.key}`;
+    chatPanel.style.width = '50%';
+    chatPanel.style.height = '100%';
+    chatPanel.style.position = 'relative';
+    chatPanel.style.background = '#0a0a0a';
+    chatPanel.style.border = '1px solid #333';
+    chatPanel.style.borderRadius = '4px';
+    chatPanel.style.overflow = 'hidden';
+    chatPanel.style.display = 'flex';
+    chatPanel.style.flexDirection = 'column';
+    chatPanel.style.flexShrink = '0';
+    
+    // 创建头部（包含选择器）
+    const chatHeader = document.createElement('div');
+    chatHeader.className = 'chat-sidebar-header';
+    chatHeader.style.padding = '8px';
+    chatHeader.style.background = 'rgba(145, 71, 255, 0.2)';
+    chatHeader.style.borderBottom = '1px solid #333';
+    chatHeader.style.flexShrink = '0';
+    chatHeader.style.display = 'flex';
+    chatHeader.style.alignItems = 'center';
+    chatHeader.style.gap = '8px';
+    
+    // 创建选择器
+    const chatSelector = document.createElement('select');
+    chatSelector.className = 'chat-stream-selector-fixed';
+    chatSelector.id = `chat-selector-${pos.key}`;
+    chatSelector.style.background = '#222';
+    chatSelector.style.color = '#fff';
+    chatSelector.style.border = '1px solid #555';
+    chatSelector.style.padding = '4px 8px';
+    chatSelector.style.borderRadius = '4px';
+    chatSelector.style.cursor = 'pointer';
+    chatSelector.style.fontSize = '11px';
+    chatSelector.style.flex = '1';
+    chatSelector.style.minWidth = '0';
+    chatSelector.title = '選擇要顯示的串流聊天室';
+    
+    // 添加选项
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '選擇串流...';
+    chatSelector.appendChild(defaultOption);
+    
+    allStreams.forEach((stream) => {
+      const option = document.createElement('option');
+      option.value = stream.id;
       const label = stream.data.platform === 'twitch' ? 
         (stream.data.channelId ? `#${stream.id} - ${stream.data.channelId}` : `#${stream.id}`) :
         (stream.data.videoId ? `#${stream.id} - ${stream.data.videoId}` : `#${stream.id}`);
-      headerText.textContent = `💬 ${label}`;
-      headerText.style.color = '#9147ff';
-      headerText.style.fontWeight = 'bold';
-      headerText.style.fontSize = '12px';
-      chatHeader.appendChild(headerText);
-      chatPanel.appendChild(chatHeader);
-      
-      // 创建内容区域
-      const chatContent = document.createElement('div');
-      chatContent.className = 'chat-sidebar-content';
-      chatContent.id = `chat-content-fixed-${stream.id}`;
-      chatContent.style.flex = '1';
-      chatContent.style.position = 'relative';
-      chatContent.style.overflow = 'hidden';
-      chatPanel.appendChild(chatContent);
-      
-      chatSidebar.appendChild(chatPanel);
-      
-      // 延迟更新聊天室内容，确保聊天室已创建
-      setTimeout(() => {
-        updateFixedChatSidebarContent(stream.id, chatContent);
-      }, 500 + (index * 200));
+      option.textContent = label;
+      chatSelector.appendChild(option);
     });
     
-    // 如果只有一个串流，添加一个空面板
-    if (chatStreams.length === 1) {
-      const emptyPanel = document.createElement('div');
-      emptyPanel.className = 'chat-sidebar-panel';
-      emptyPanel.style.width = '100%';
-      emptyPanel.style.height = '50%';
-      emptyPanel.style.position = 'relative';
-      emptyPanel.style.background = '#0a0a0a';
-      emptyPanel.style.border = '1px solid #333';
-      emptyPanel.style.borderRadius = '4px';
-      emptyPanel.style.overflow = 'hidden';
-      emptyPanel.style.display = 'flex';
-      emptyPanel.style.alignItems = 'center';
-      emptyPanel.style.justifyContent = 'center';
-      emptyPanel.style.flexShrink = '0';
-      
-      const emptyText = document.createElement('div');
-      emptyText.style.color = '#666';
-      emptyText.style.fontSize = '14px';
-      emptyText.textContent = '等待第二個串流...';
-      emptyPanel.appendChild(emptyText);
-      
-      chatSidebar.appendChild(emptyPanel);
+    // 设置默认选中值
+    if (pos.defaultId && streamData[pos.defaultId]) {
+      chatSelector.value = pos.defaultId;
     }
-  } else {
-    // 如果没有串流，显示两个空面板
-    for (let i = 0; i < 2; i++) {
-      const chatPanel = document.createElement('div');
-      chatPanel.className = 'chat-sidebar-panel';
-      chatPanel.style.width = '50%';
-      chatPanel.style.height = '100%';
-      chatPanel.style.position = 'relative';
-      chatPanel.style.background = '#0a0a0a';
-      chatPanel.style.border = '1px solid #333';
-      chatPanel.style.borderRadius = '4px';
-      chatPanel.style.overflow = 'hidden';
-      chatPanel.style.display = 'flex';
-      chatPanel.style.alignItems = 'center';
-      chatPanel.style.justifyContent = 'center';
-      chatPanel.style.flexShrink = '0';
-      
-      const emptyText = document.createElement('div');
-      emptyText.style.color = '#666';
-      emptyText.style.fontSize = '14px';
-      emptyText.textContent = '等待串流...';
-      chatPanel.appendChild(emptyText);
-      
-      chatSidebar.appendChild(chatPanel);
+    
+    // 监听选择器变化
+    chatSelector.addEventListener('change', function() {
+      const selectedId = parseInt(this.value);
+      fixedLayoutChatSelection[pos.key] = selectedId || null;
+      updateFixedChatPanelContent(pos.key, selectedId);
+    });
+    
+    chatHeader.appendChild(chatSelector);
+    chatPanel.appendChild(chatHeader);
+    
+    // 创建内容区域
+    const chatContent = document.createElement('div');
+    chatContent.className = 'chat-sidebar-content';
+    chatContent.id = `chat-content-fixed-${pos.key}`;
+    chatContent.style.flex = '1';
+    chatContent.style.position = 'relative';
+    chatContent.style.overflow = 'hidden';
+    chatPanel.appendChild(chatContent);
+    
+    chatSidebar.appendChild(chatPanel);
+    
+    // 如果有选中的串流，延迟更新聊天室内容
+    if (pos.defaultId && streamData[pos.defaultId]) {
+      setTimeout(() => {
+        updateFixedChatPanelContent(pos.key, pos.defaultId);
+      }, 500 + (index * 200));
     }
-  }
+  });
   
   const container = document.getElementById('container');
   if (container) {
     container.appendChild(chatSidebar);
+  }
+}
+
+// 更新固定布局中指定位置的聊天室面板内容
+function updateFixedChatPanelContent(positionKey, streamId) {
+  const chatContent = document.getElementById(`chat-content-fixed-${positionKey}`);
+  if (!chatContent) {
+    return;
+  }
+  
+  // 清空现有内容
+  chatContent.innerHTML = '';
+  
+  if (!streamId || !streamData[streamId]) {
+    // 如果没有选择串流，显示提示
+    const emptyText = document.createElement('div');
+    emptyText.style.color = '#666';
+    emptyText.style.fontSize = '14px';
+    emptyText.style.display = 'flex';
+    emptyText.style.alignItems = 'center';
+    emptyText.style.justifyContent = 'center';
+    emptyText.style.height = '100%';
+    emptyText.textContent = '請選擇串流...';
+    chatContent.appendChild(emptyText);
+    return;
+  }
+  
+  const data = streamData[streamId];
+  
+  // 获取原始聊天室容器
+  const originalChatDiv = document.getElementById('chat' + streamId);
+  if (!originalChatDiv) {
+    // 如果聊天室不存在，创建它
+    if (typeof createChat === 'function') {
+      createChat(streamId, data.platform, data.channelId, data.videoId);
+      // 等待聊天室创建后，再次尝试复制 iframe
+      setTimeout(() => {
+        const newlyCreatedChatDiv = document.getElementById('chat' + streamId);
+        if (newlyCreatedChatDiv) {
+          const iframe = newlyCreatedChatDiv.querySelector('iframe');
+          if (iframe && iframe.src) {
+            const newIframe = document.createElement('iframe');
+            newIframe.src = iframe.src;
+            newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+            newIframe.setAttribute('allow', iframe.getAttribute('allow') || 'autoplay; fullscreen');
+            newIframe.setAttribute('allowfullscreen', '');
+            chatContent.appendChild(newIframe);
+          } else {
+            // 如果没有 iframe，复制整个内容（可能是 YouTube 替代方案）
+            const content = newlyCreatedChatDiv.cloneNode(true);
+            content.classList.remove('hidden');
+            content.style.cssText = 'width: 100%; height: 100%;';
+            chatContent.appendChild(content);
+          }
+        }
+      }, 1000);
+    }
+    return;
+  }
+  
+  const iframe = originalChatDiv.querySelector('iframe');
+  if (iframe && iframe.src) {
+    // 创建新的 iframe（因为 iframe 不能直接移动）
+    const newIframe = document.createElement('iframe');
+    newIframe.src = iframe.src;
+    newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+    newIframe.setAttribute('allow', iframe.getAttribute('allow') || 'autoplay; fullscreen');
+    newIframe.setAttribute('allowfullscreen', '');
+    chatContent.appendChild(newIframe);
+  } else {
+    // 如果没有 iframe（可能是 YouTube 替代方案或其他内容），复制整个内容
+    const content = originalChatDiv.cloneNode(true);
+    content.classList.remove('hidden');
+    content.style.cssText = 'width: 100%; height: 100%;';
+    chatContent.appendChild(content);
+    
+    // 如果 iframe 还没加载，等待一下再重试
+    setTimeout(() => {
+      const retryIframe = originalChatDiv.querySelector('iframe');
+      if (retryIframe && retryIframe.src) {
+        chatContent.innerHTML = '';
+        const newIframe = document.createElement('iframe');
+        newIframe.src = retryIframe.src;
+        newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+        newIframe.setAttribute('allow', retryIframe.getAttribute('allow') || 'autoplay; fullscreen');
+        newIframe.setAttribute('allowfullscreen', '');
+        chatContent.appendChild(newIframe);
+      }
+    }, 500);
   }
 }
 
@@ -382,119 +478,59 @@ function updateFixedLayoutFramework() {
     }
   });
   
-  // 更新右侧聊天室面板
-  const chatStreams = [];
+  // 获取所有串流用于更新选择器
+  const allStreams = [];
   boxes.forEach((b) => {
     const id = parseInt(b.dataset.streamId);
     const data = streamData[id];
-    if (data && chatStreams.length < 2) {
-      chatStreams.push({ id, data, box: b });
+    if (data) {
+      allStreams.push({ id, data, box: b });
     }
   });
   
-  // 清空现有面板
-  chatSidebar.innerHTML = '';
-  
-  // 重新创建面板
-  if (chatStreams.length > 0) {
-    chatStreams.forEach((stream, index) => {
-      const chatPanel = document.createElement('div');
-      chatPanel.className = 'chat-sidebar-panel';
-      chatPanel.id = `chat-panel-fixed-${stream.id}`;
-      chatPanel.style.width = chatStreams.length === 1 ? '100%' : '50%';
-      chatPanel.style.height = '100%';
-      chatPanel.style.position = 'relative';
-      chatPanel.style.background = '#0a0a0a';
-      chatPanel.style.border = '1px solid #333';
-      chatPanel.style.borderRadius = '4px';
-      chatPanel.style.overflow = 'hidden';
-      chatPanel.style.display = 'flex';
-      chatPanel.style.flexDirection = 'column';
-      chatPanel.style.flexShrink = '0';
+  // 更新两个选择器的选项
+  const positions = ['position3', 'position4'];
+  positions.forEach((posKey) => {
+    const selector = document.getElementById(`chat-selector-${posKey}`);
+    if (selector) {
+      // 保存当前选中的值
+      const currentValue = selector.value;
       
-      const chatHeader = document.createElement('div');
-      chatHeader.className = 'chat-sidebar-header';
-      chatHeader.style.padding = '8px';
-      chatHeader.style.background = 'rgba(145, 71, 255, 0.2)';
-      chatHeader.style.borderBottom = '1px solid #333';
-      chatHeader.style.flexShrink = '0';
+      // 清空选项（保留第一个默认选项）
+      while (selector.children.length > 1) {
+        selector.removeChild(selector.lastChild);
+      }
       
-      const headerText = document.createElement('span');
-      const label = stream.data.platform === 'twitch' ? 
-        (stream.data.channelId ? `#${stream.id} - ${stream.data.channelId}` : `#${stream.id}`) :
-        (stream.data.videoId ? `#${stream.id} - ${stream.data.videoId}` : `#${stream.id}`);
-      headerText.textContent = `💬 ${label}`;
-      headerText.style.color = '#9147ff';
-      headerText.style.fontWeight = 'bold';
-      headerText.style.fontSize = '12px';
-      chatHeader.appendChild(headerText);
-      chatPanel.appendChild(chatHeader);
+      // 添加所有串流选项
+      allStreams.forEach((stream) => {
+        const option = document.createElement('option');
+        option.value = stream.id;
+        const label = stream.data.platform === 'twitch' ? 
+          (stream.data.channelId ? `#${stream.id} - ${stream.data.channelId}` : `#${stream.id}`) :
+          (stream.data.videoId ? `#${stream.id} - ${stream.data.videoId}` : `#${stream.id}`);
+        option.textContent = label;
+        selector.appendChild(option);
+      });
       
-      const chatContent = document.createElement('div');
-      chatContent.className = 'chat-sidebar-content';
-      chatContent.id = `chat-content-fixed-${stream.id}`;
-      chatContent.style.flex = '1';
-      chatContent.style.position = 'relative';
-      chatContent.style.overflow = 'hidden';
-      chatPanel.appendChild(chatContent);
-      
-      chatSidebar.appendChild(chatPanel);
-      
-      setTimeout(() => {
-        updateFixedChatSidebarContent(stream.id, chatContent);
-      }, 500 + (index * 200));
-    });
-    
-    // 如果只有一个串流，添加一个空面板
-    if (chatStreams.length === 1) {
-      const emptyPanel = document.createElement('div');
-      emptyPanel.className = 'chat-sidebar-panel';
-      emptyPanel.style.width = '50%';
-      emptyPanel.style.height = '100%';
-      emptyPanel.style.position = 'relative';
-      emptyPanel.style.background = '#0a0a0a';
-      emptyPanel.style.border = '1px solid #333';
-      emptyPanel.style.borderRadius = '4px';
-      emptyPanel.style.overflow = 'hidden';
-      emptyPanel.style.display = 'flex';
-      emptyPanel.style.alignItems = 'center';
-      emptyPanel.style.justifyContent = 'center';
-      emptyPanel.style.flexShrink = '0';
-      
-      const emptyText = document.createElement('div');
-      emptyText.style.color = '#666';
-      emptyText.style.fontSize = '14px';
-      emptyText.textContent = '等待第二個串流...';
-      emptyPanel.appendChild(emptyText);
-      
-      chatSidebar.appendChild(emptyPanel);
+      // 恢复选中的值（如果仍然有效）
+      if (currentValue && streamData[parseInt(currentValue)]) {
+        selector.value = currentValue;
+      } else {
+        // 如果当前选中的串流不存在，清空选择
+        selector.value = '';
+        fixedLayoutChatSelection[posKey] = null;
+        updateFixedChatPanelContent(posKey, null);
+      }
+    } else {
+      // 如果选择器不存在，更新对应的聊天室内容
+      const selectedId = fixedLayoutChatSelection[posKey];
+      if (selectedId && streamData[selectedId]) {
+        updateFixedChatPanelContent(posKey, selectedId);
+      } else {
+        updateFixedChatPanelContent(posKey, null);
+      }
     }
-  } else {
-    // 如果没有串流，显示两个空面板
-    for (let i = 0; i < 2; i++) {
-      const chatPanel = document.createElement('div');
-      chatPanel.className = 'chat-sidebar-panel';
-      chatPanel.style.width = '50%';
-      chatPanel.style.height = '100%';
-      chatPanel.style.position = 'relative';
-      chatPanel.style.background = '#0a0a0a';
-      chatPanel.style.border = '1px solid #333';
-      chatPanel.style.borderRadius = '4px';
-      chatPanel.style.overflow = 'hidden';
-      chatPanel.style.display = 'flex';
-      chatPanel.style.alignItems = 'center';
-      chatPanel.style.justifyContent = 'center';
-      chatPanel.style.flexShrink = '0';
-      
-      const emptyText = document.createElement('div');
-      emptyText.style.color = '#666';
-      emptyText.style.fontSize = '14px';
-      emptyText.textContent = '等待串流...';
-      chatPanel.appendChild(emptyText);
-      
-      chatSidebar.appendChild(chatPanel);
-    }
-  }
+  });
 }
 
 // 清理固定布局的聊天室容器
@@ -761,6 +797,7 @@ if (typeof window !== 'undefined') {
   window.setLayout = setLayout;
   window.autoSelectLayout = autoSelectLayout;
   window.setupFixedLayoutFramework = setupFixedLayoutFramework;
+  window.updateFixedChatPanelContent = updateFixedChatPanelContent;
   window.updateFixedChatSidebarContent = updateFixedChatSidebarContent;
   window.updateFixedLayoutFramework = updateFixedLayoutFramework;
   window.cleanupFixedChatSidebar = cleanupFixedChatSidebar;
