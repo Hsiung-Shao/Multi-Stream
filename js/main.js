@@ -94,10 +94,15 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   // 延遲讀取備份數據（頁面載入後）
-  if (typeof localFileStorage !== 'undefined') {
+  if (typeof indexedDBBackup !== 'undefined') {
     setTimeout(async () => {
-      // 嘗試自動載入備份文件（如果已設置）
-      await localFileStorage.autoLoadBackup();
+      // 嘗試自動從 IndexedDB 恢復數據（如果 localStorage 沒有數據）
+      const result = await indexedDBBackup.autoLoadBackup();
+      if (result && result.success) {
+        console.log('[IndexedDB 備份] 已從 IndexedDB 恢復數據');
+        // 重新載入頁面以應用恢復的數據
+        window.location.reload();
+      }
     }, 1000);
   }
   
