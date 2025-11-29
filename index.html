@@ -27,6 +27,9 @@
 <meta property="og:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具">
 <meta property="og:site_name" content="MultiStream Hub">
 <meta property="og:locale" content="zh_TW">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
@@ -35,9 +38,18 @@
 <meta name="twitter:description" content="免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播">
 <meta name="twitter:image" content="https://multistreaming.org/icon.png">
 <meta name="twitter:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具">
+<meta name="twitter:site" content="@MultiStreamHub">
+<meta name="twitter:creator" content="@MultiStreamHub">
 
 <!-- Canonical URL -->
 <link rel="canonical" href="https://multistreaming.org/">
+
+<!-- Hreflang Tags for Multi-language Support -->
+<link rel="alternate" hreflang="zh-TW" href="https://multistreaming.org/">
+<link rel="alternate" hreflang="zh-CN" href="https://multistreaming.org/">
+<link rel="alternate" hreflang="en" href="https://multistreaming.org/">
+<link rel="alternate" hreflang="ja" href="https://multistreaming.org/">
+<link rel="alternate" hreflang="x-default" href="https://multistreaming.org/">
 
 <!-- Additional SEO Meta Tags -->
 <meta name="theme-color" content="#9147ff">
@@ -48,6 +60,9 @@
 <meta name="application-name" content="MultiStream Hub">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
 
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="shortcut icon" type="image/png" href="icon.png">
@@ -315,11 +330,106 @@
   "aggregateRating": {
     "@type": "AggregateRating",
     "ratingValue": "5",
-    "ratingCount": "1"
+    "ratingCount": "1",
+    "bestRating": "5",
+    "worstRating": "1"
   },
   "screenshot": "https://multistreaming.org/icon.png",
   "softwareVersion": "1.4.0",
-  "releaseNotes": "https://multistreaming.org/#version-history"
+  "releaseNotes": "https://multistreaming.org/#version-history",
+  "browserRequirements": "Requires JavaScript. Requires HTML5.",
+  "softwareHelp": {
+    "@type": "CreativeWork",
+    "url": "https://multistreaming.org/#user-guide"
+  },
+  "keywords": "多平台直播,串流觀看,Twitch,YouTube,直播工具,多畫面直播,直播聊天室,串流管理,免費直播工具,同時觀看直播,直播分割,多串流觀看",
+  "audience": {
+    "@type": "Audience",
+    "audienceType": "Streaming Enthusiasts, Gamers, Content Creators"
+  }
+}
+</script>
+
+<!-- BreadcrumbList Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://multistreaming.org/"
+    }
+  ]
+}
+</script>
+
+<!-- Organization Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "MultiStream Hub",
+  "url": "https://multistreaming.org/",
+  "logo": "https://multistreaming.org/icon.png",
+  "sameAs": [],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "Customer Service",
+    "availableLanguage": ["zh-TW", "zh-CN", "en", "ja"]
+  }
+}
+</script>
+
+<!-- FAQPage Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "MultiStream Hub 是什麼？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "MultiStream Hub 是一個免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "MultiStream Hub 是否免費？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "是的，MultiStream Hub 完全免費使用，無需註冊或付費。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支援哪些直播平台？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "目前支援 Twitch 和 YouTube 兩個主要直播平台。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "可以同時觀看多少個直播？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以同時觀看多個直播，支援多種布局模式，包括單一畫面、左右分割、上下分割、四宮格、2×3網格、3×3網格等，以及側邊聊天布局模式。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "是否需要註冊帳號？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不需要，MultiStream Hub 完全免費且無需註冊，可以直接使用。"
+      }
+    }
+  ]
 }
 </script>
 
