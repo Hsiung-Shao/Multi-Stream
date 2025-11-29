@@ -3227,31 +3227,44 @@ body:has(.ad-banner.show) #container,
    縮放優化 - 作業系統和瀏覽器縮放
    ============================================ */
 
-/* 高 DPI 屏幕（系統縮放 125%, 150%, 200% 等） */
+/* 高 DPI 屏幕（系統縮放 125%, 150%, 175%, 200% 等） */
+/* 注意：這些是備用值，JavaScript 會動態覆蓋這些值 */
+
 @media (-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 120dpi) {
   :root {
-    --chat-min-width: 375px; /* 300px * 1.25 */
+    --chat-min-width: 394px; /* 300px * 1.25 * 1.05 (增加緩衝) */
     --chat-min-height: 250px; /* 200px * 1.25 */
-    --fixed-chat-min-width: 375px;
-    --separated-chat-min-width: 375px;
+    --fixed-chat-min-width: 394px;
+    --separated-chat-min-width: 394px;
   }
 }
 
 @media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
   :root {
-    --chat-min-width: 450px; /* 300px * 1.5 */
+    --chat-min-width: 473px; /* 300px * 1.5 * 1.05 (增加緩衝) */
     --chat-min-height: 300px; /* 200px * 1.5 */
-    --fixed-chat-min-width: 450px;
-    --separated-chat-min-width: 450px;
+    --fixed-chat-min-width: 473px;
+    --separated-chat-min-width: 473px;
   }
 }
 
+/* 175% 縮放優化 */
+@media (-webkit-min-device-pixel-ratio: 1.75), (min-resolution: 168dpi) {
+  :root {
+    --chat-min-width: 550px; /* 300px * 1.75 * 1.05 (增加緩衝) */
+    --chat-min-height: 350px; /* 200px * 1.75 */
+    --fixed-chat-min-width: 550px;
+    --separated-chat-min-width: 550px;
+  }
+}
+
+/* 200% 縮放優化 */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   :root {
-    --chat-min-width: 600px; /* 300px * 2 */
+    --chat-min-width: 690px; /* 300px * 2 * 1.15 (增加緩衝) */
     --chat-min-height: 400px; /* 200px * 2 */
-    --fixed-chat-min-width: 600px;
-    --separated-chat-min-width: 600px;
+    --fixed-chat-min-width: 690px;
+    --separated-chat-min-width: 690px;
   }
 }
 
@@ -3308,48 +3321,64 @@ body:has(.ad-banner.show) #container,
 @media (min-resolution: 120dpi) {
   /* 125% 縮放 */
   .chat-container {
-    min-width: max(375px, var(--chat-min-width, 300px));
+    min-width: max(394px, var(--chat-min-width, 300px));
   }
   
   .chat-sidebar-panel,
   .fixed-chat-panel {
-    min-width: max(375px, var(--fixed-chat-min-width, 300px));
+    min-width: max(394px, var(--fixed-chat-min-width, 300px));
   }
   
   .separated-chat {
-    min-width: max(375px, var(--separated-chat-min-width, 300px));
+    min-width: max(394px, var(--separated-chat-min-width, 300px));
   }
 }
 
 @media (min-resolution: 144dpi) {
   /* 150% 縮放 */
   .chat-container {
-    min-width: max(450px, var(--chat-min-width, 300px));
+    min-width: max(473px, var(--chat-min-width, 300px));
   }
   
   .chat-sidebar-panel,
   .fixed-chat-panel {
-    min-width: max(450px, var(--fixed-chat-min-width, 300px));
+    min-width: max(473px, var(--fixed-chat-min-width, 300px));
   }
   
   .separated-chat {
-    min-width: max(450px, var(--separated-chat-min-width, 300px));
+    min-width: max(473px, var(--separated-chat-min-width, 300px));
   }
 }
 
-@media (min-resolution: 192dpi) {
-  /* 200% 縮放 */
+/* 175% 縮放優化（針對 1920x1080 @ 175% 的情況） */
+@media (min-resolution: 168dpi) {
   .chat-container {
-    min-width: max(600px, var(--chat-min-width, 300px));
+    min-width: max(550px, var(--chat-min-width, 300px));
   }
   
   .chat-sidebar-panel,
   .fixed-chat-panel {
-    min-width: max(600px, var(--fixed-chat-min-width, 300px));
+    min-width: max(550px, var(--fixed-chat-min-width, 300px));
   }
   
   .separated-chat {
-    min-width: max(600px, var(--separated-chat-min-width, 300px));
+    min-width: max(550px, var(--separated-chat-min-width, 300px));
+  }
+}
+
+/* 200% 縮放優化（針對 3840x2160 @ 200% 的情況） */
+@media (min-resolution: 192dpi) {
+  .chat-container {
+    min-width: max(690px, var(--chat-min-width, 300px));
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(690px, var(--fixed-chat-min-width, 300px));
+  }
+  
+  .separated-chat {
+    min-width: max(690px, var(--separated-chat-min-width, 300px));
   }
 }
 
@@ -3357,16 +3386,43 @@ body:has(.ad-banner.show) #container,
 @media (min-resolution: 240dpi) {
   /* 250% 縮放 */
   .chat-container {
-    min-width: max(750px, var(--chat-min-width, 300px));
+    min-width: max(900px, var(--chat-min-width, 300px));
   }
   
   .chat-sidebar-panel,
   .fixed-chat-panel {
-    min-width: max(750px, var(--fixed-chat-min-width, 300px));
+    min-width: max(900px, var(--fixed-chat-min-width, 300px));
   }
   
   .separated-chat {
-    min-width: max(750px, var(--separated-chat-min-width, 300px));
+    min-width: max(900px, var(--separated-chat-min-width, 300px));
+  }
+}
+
+/* 針對特定解析度和縮放組合的優化 */
+/* 3840x2160 @ 200% 縮放 */
+@media (min-width: 1920px) and (min-height: 1080px) and (-webkit-min-device-pixel-ratio: 2) {
+  .chat-container,
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(690px, var(--chat-min-width, 300px));
+  }
+  
+  .separated-chat {
+    min-width: max(690px, var(--separated-chat-min-width, 300px));
+  }
+}
+
+/* 1920x1080 @ 175% 縮放 */
+@media (min-width: 1097px) and (max-width: 1920px) and (min-height: 617px) and (max-height: 1080px) and (-webkit-min-device-pixel-ratio: 1.75) {
+  .chat-container,
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(550px, var(--chat-min-width, 300px));
+  }
+  
+  .separated-chat {
+    min-width: max(550px, var(--separated-chat-min-width, 300px));
   }
 }
 
