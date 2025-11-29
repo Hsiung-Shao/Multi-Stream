@@ -61,6 +61,7 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '關閉',
+      'version1.5.0.change1': '新增布局15：單一聊天室布局（左側視頻可調整，右側固定一個聊天室，寬度比例80%:20%）',
       'version1.4.0.change1': '全站支援多國語言（繁中、簡中、英文、日語）',
       'version1.4.0.change2': '修復多語言切換時收藏串流選單回到繁體中文的問題',
       'version1.4.0.change3': '修復控制面板標題和顯示所有聊天室按鈕的多語言顯示問題',
@@ -279,6 +280,7 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '关闭',
+      'version1.5.0.change1': '新增布局15：单一聊天室布局（左侧视频可调整，右侧固定一个聊天室，宽度比例80%:20%）',
       'version1.4.0.change1': '全站支援多國語言（繁中、簡中、英文、日語）',
       'version1.4.0.change2': '修复多语言切换时收藏串流选单回到繁体中文的问题',
       'version1.4.0.change3': '修复控制面板标题和显示所有聊天室按钮的多语言显示问题',
@@ -497,6 +499,7 @@ const i18n = {
       // Version History
       'version': 'Version',
       'close': 'Close',
+      'version1.5.0.change1': 'Added Layout 15: Single Chat Layout (Left: adjustable video, Right: 1 fixed chat room, width ratio 80%:20%)',
       'version1.4.0.change1': 'Full site multi-language support (Traditional Chinese, Simplified Chinese, English, Japanese)',
       'version1.4.0.change2': 'Fixed issue where favorites dropdown menu reverted to Traditional Chinese after language switch',
       'version1.4.0.change3': 'Fixed multi-language display issues for control panel title and "Show All Chats" button',
@@ -716,6 +719,7 @@ const i18n = {
       // バージョン履歴
       'version': 'バージョン',
       'close': '閉じる',
+      'version1.5.0.change1': 'レイアウト15を追加：シングルチャットレイアウト（左：調整可能な動画、右：1つの固定チャットルーム、幅比率80%:20%）',
       'version1.4.0.change1': '全サイト多言語サポート（繁体中国語、簡体中国語、英語、日本語）',
       'version1.4.0.change2': '言語切り替え時にドロップダウンメニューが繁体中国語に戻る問題を修正',
       'version1.4.0.change3': 'コントロールパネルのタイトルと「すべてのチャットを表示」ボタンの多言語表示の問題を修正',
