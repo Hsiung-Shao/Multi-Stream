@@ -1,10 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /js/
 
-# 只封鎖單一 CSS 檔案（推薦寫法）
-Disallow: /styles.css$
-
-# 如果你其實根本不在意 styles.css 被索引，直接刪掉這行也沒關係
-
-Sitemap: https://mutli-stream.pages.dev/sitemap.xml
+Sitemap: https://multi-stream.pages.dev/sitemap.xml
