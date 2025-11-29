@@ -1,219 +1,62 @@
 // 用戶設置和收藏管理功能
 
-// 本地文件系統存儲管理（使用 File System Access API 直接保存到固定文件）
-const localFileStorage = {
-  // 固定備份文件名
-  backupFileName: 'multistream-backup.json',
-  fileHandle: null, // 保存文件句柄，用於直接寫入文件
+// IndexedDB 備份系統（替代本地文件系統）
+const indexedDBBackup = {
+  dbName: 'MultiStreamBackup',
+  dbVersion: 1,
+  storeName: 'backup',
+  db: null,
+  
+  // 初始化數據庫
+  async init() {
+    if (!window.indexedDB) {
+      console.error('[IndexedDB 備份] 瀏覽器不支持 IndexedDB');
+      return false;
+    }
+    
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, this.dbVersion);
+      
+      request.onerror = () => {
+        console.error('[IndexedDB 備份] 打開數據庫失敗:', request.error);
+        reject(request.error);
+      };
+      
+      request.onsuccess = () => {
+        this.db = request.result;
+        console.log('[IndexedDB 備份] 數據庫連接成功');
+        resolve(true);
+      };
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          const objectStore = db.createObjectStore(this.storeName, { keyPath: 'id' });
+          objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+          console.log('[IndexedDB 備份] 創建對象存儲:', this.storeName);
+        }
+      };
+    });
+  },
   
   // 檢查是否啟用備份
   isEnabled: () => {
-    const enabled = localStorage.getItem('localBackupEnabled');
+    const enabled = localStorage.getItem('indexedDBBackupEnabled');
     if (enabled === null) {
-      // 首次使用，默認關閉
-      localStorage.setItem('localBackupEnabled', 'false');
-      return false;
+      // 首次使用，默認啟用
+      localStorage.setItem('indexedDBBackupEnabled', 'true');
+      return true;
     }
     return enabled === 'true';
   },
   
   // 設置是否啟用備份
   setEnabled: (enabled) => {
-    localStorage.setItem('localBackupEnabled', enabled ? 'true' : 'false');
-    // 不自動請求文件句柄，讓用戶手動選擇
+    localStorage.setItem('indexedDBBackupEnabled', enabled ? 'true' : 'false');
+    console.log('[IndexedDB 備份] 備份功能', enabled ? '已啟用' : '已停用');
   },
   
-  // 獲取當前文件路徑（用於顯示）
-  getCurrentFilePath: () => {
-    return localStorage.getItem('backupFilePath') || '未設置';
-  },
-  
-  // 設置文件路徑（保存到 localStorage）
-  setFilePath: (path) => {
-    if (path) {
-      localStorage.setItem('backupFilePath', path);
-    } else {
-      localStorage.removeItem('backupFilePath');
-    }
-  },
-  
-  // 請求文件句柄（打開現有文件或創建新文件）
-  async requestFileHandle(createNew = false, autoImport = false) {
-    if (!('showOpenFilePicker' in window) && !('showSaveFilePicker' in window)) {
-      showSaveMessage('瀏覽器不支持文件系統 API');
-      return false;
-    }
-    
-    try {
-      let fileHandle;
-      
-      if (createNew || !('showOpenFilePicker' in window)) {
-        // 創建新文件
-        fileHandle = await window.showSaveFilePicker({
-          suggestedName: this.backupFileName,
-          types: [{
-            description: 'JSON 備份文件',
-            accept: { 'application/json': ['.json'] }
-          }]
-        });
-      } else {
-        // 嘗試打開現有文件
-        try {
-          [fileHandle] = await window.showOpenFilePicker({
-            types: [{
-              description: 'JSON 備份文件',
-              accept: { 'application/json': ['.json'] }
-            }],
-            multiple: false
-          });
-          
-          // 如果設置了自動導入，則導入數據
-          if (autoImport) {
-            const result = await this.importDataFromFile(fileHandle);
-            if (result.success) {
-              showSaveMessage('備份文件已載入，頁面將重新載入');
-              // 重新載入設置
-              if (typeof loadUserSettings === 'function') {
-                loadUserSettings();
-              }
-              // 重新載入頁面以確保所有設置生效
-              setTimeout(() => {
-                window.location.reload();
-              }, 1500);
-            } else {
-              showSaveMessage(result.message);
-            }
-          }
-        } catch (openError) {
-          // 如果打開失敗（文件不存在），則創建新文件
-          if (openError.name === 'AbortError') {
-            return false;
-          }
-          fileHandle = await window.showSaveFilePicker({
-            suggestedName: this.backupFileName,
-            types: [{
-              description: 'JSON 備份文件',
-              accept: { 'application/json': ['.json'] }
-            }]
-          });
-        }
-      }
-      
-      this.fileHandle = fileHandle;
-      // 保存文件路徑信息
-      const file = await fileHandle.getFile();
-      this.setFilePath(file.name);
-      // 保存文件句柄標記
-      await this.saveFileHandle();
-      
-      if (!autoImport) {
-        showSaveMessage('備份文件位置已設置');
-      }
-      return true;
-    } catch (e) {
-      if (e.name === 'AbortError') {
-        // 用戶取消了
-        return false;
-      }
-      // 設置備份文件位置失敗，靜默處理
-      showSaveMessage('設置備份文件位置失敗');
-      return false;
-    }
-  },
-  
-  // 保存文件句柄到 IndexedDB
-  async saveFileHandle() {
-    if (!window.indexedDB) {
-      // IndexedDB 不可用，無法持久化文件句柄
-      return;
-    }
-    
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('MultiStreamFileHandle', 1);
-      
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const db = request.result;
-        const transaction = db.transaction(['handles'], 'readwrite');
-        const store = transaction.objectStore('handles');
-        // 文件句柄無法直接序列化，我們只保存標記
-        store.put({ id: 'backup', enabled: true, timestamp: Date.now() });
-        resolve();
-      };
-      
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains('handles')) {
-          db.createObjectStore('handles', { keyPath: 'id' });
-        }
-      };
-    });
-  },
-  
-  // 從 IndexedDB 恢復文件句柄標記（文件句柄本身無法持久化）
-  async restoreFileHandle() {
-    // 文件句柄無法持久化，如果頁面刷新後需要重新選擇
-    // 但我們可以檢查是否有標記，提示用戶重新選擇
-    if (!window.indexedDB) return false;
-    
-    return new Promise((resolve) => {
-      const request = indexedDB.open('MultiStreamFileHandle', 1);
-      request.onsuccess = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('handles')) {
-          resolve(false);
-          return;
-        }
-        const transaction = db.transaction(['handles'], 'readonly');
-        const store = transaction.objectStore('handles');
-        const getRequest = store.get('backup');
-        getRequest.onsuccess = () => {
-          resolve(getRequest.result !== undefined);
-        };
-        getRequest.onerror = () => resolve(false);
-      };
-      request.onerror = () => resolve(false);
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        if (!db.objectStoreNames.contains('handles')) {
-          db.createObjectStore('handles', { keyPath: 'id' });
-        }
-      };
-    });
-  },
-  
-  // 自動備份所有數據到本地文件（直接寫入，不通過下載）
-  async backup() {
-    if (!this.isEnabled()) {
-      return false; // 未啟用備份
-    }
-    
-    // 如果沒有文件句柄，靜默失敗（不彈出對話框）
-    if (!this.fileHandle) {
-      // 備份失敗：未設置文件位置，請在設定中選擇文件位置
-      return false; // 靜默失敗，不干擾用戶
-    }
-    
-    try {
-      const data = this.getAllData();
-      const writable = await this.fileHandle.createWritable();
-      await writable.write(JSON.stringify(data, null, 2));
-      await writable.close();
-      // 本地自動備份完成（直接保存）
-      return true;
-    } catch (e) {
-      // 直接保存備份失敗，靜默處理
-      // 如果權限被撤銷，清除文件句柄
-      if (e.name === 'NotAllowedError' || e.name === 'NotFoundError') {
-        this.fileHandle = null;
-        this.setFilePath(null);
-        // 不顯示錯誤消息，避免干擾用戶
-      }
-      return false;
-    }
-  },
-  
-  // 獲取所有數據
+  // 獲取所有數據（從 localStorage）
   getAllData() {
     return {
       version: '1.0',
@@ -228,76 +71,168 @@ const localFileStorage = {
     };
   },
   
-  // 從文件導入數據（內部使用）
-  async importDataFromFile(fileHandle) {
-    try {
-      const file = await fileHandle.getFile();
-      const text = await file.text();
-      
-      // 使用安全的 JSON 解析
-      const data = safeJSONParse(text, null);
-      if (!data) {
-        return { success: false, message: '導入數據失敗：文件格式錯誤' };
-      }
-      
+  // 檢查 localStorage 是否有數據
+  hasLocalStorageData: () => {
+    const favoriteStreams = localStorage.getItem('favoriteStreams');
+    const favoriteCategories = localStorage.getItem('favoriteCategories');
+    const userSettings = localStorage.getItem('userSettings');
+    
+    // 檢查是否有任何重要數據
+    if (favoriteStreams && favoriteStreams !== '[]' && favoriteStreams !== 'null') {
+      return true;
+    }
+    if (favoriteCategories && favoriteCategories !== '[]' && favoriteCategories !== 'null') {
+      return true;
+    }
+    if (userSettings && userSettings !== '{}' && userSettings !== 'null') {
+      return true;
+    }
+    
+    return false;
+  },
+  
+  // 備份數據到 IndexedDB
+  async backup() {
+    if (!this.isEnabled()) {
+      console.log('[IndexedDB 備份] 備份功能未啟用');
+      return false;
+    }
+    
+    // 確保數據庫已初始化
+    if (!this.db) {
       try {
-        
-        // 驗證數據格式
-        if (!data.version) {
-          return { success: false, message: '無效的備份文件格式' };
-        }
-        
-        // 導入數據
-        if (data.userSettings) {
-          localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
-        }
-        if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
-          localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
-        }
-        if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
-          localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
-        }
-        if (data.controlPanelCollapsed !== undefined) {
-          localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
-        }
-        if (data.controlPanelPosition) {
-          localStorage.setItem('controlPanelPosition', JSON.stringify(data.controlPanelPosition));
-        }
-        if (data.multiStreamLayout) {
-          localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
-        }
-        if (data.adConfig) {
-          localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
-        }
-        
-        return { success: true, message: '數據導入成功' };
+        await this.init();
       } catch (error) {
-        // 導入數據失敗，靜默處理
-        return { success: false, message: '導入數據失敗：文件格式錯誤' };
+        console.error('[IndexedDB 備份] 初始化失敗:', error);
+        return false;
       }
-    } catch (e) {
-      // 讀取文件失敗，靜默處理
-      return { success: false, message: '讀取文件失敗' };
+    }
+    
+    if (!this.db) {
+      console.error('[IndexedDB 備份] 數據庫未初始化');
+      return false;
+    }
+    
+    try {
+      const data = this.getAllData();
+      const backupData = {
+        id: 'latest',
+        timestamp: Date.now(),
+        data: data
+      };
+      
+      const transaction = this.db.transaction([this.storeName], 'readwrite');
+      const store = transaction.objectStore(this.storeName);
+      await store.put(backupData);
+      
+      console.log('[IndexedDB 備份] 備份成功，時間戳:', new Date(backupData.timestamp).toLocaleString());
+      return true;
+    } catch (error) {
+      console.error('[IndexedDB 備份] 備份失敗:', error);
+      return false;
     }
   },
   
-  // 自動讀取備份文件（頁面載入時）
+  // 從 IndexedDB 恢復數據
+  async restore() {
+    // 檢查 localStorage 是否有數據
+    if (this.hasLocalStorageData()) {
+      console.log('[IndexedDB 備份] localStorage 中有數據，以 localStorage 為主，不從 IndexedDB 恢復');
+      return { success: false, message: 'localStorage 中已有數據，以 localStorage 為主', skipped: true };
+    }
+    
+    // 確保數據庫已初始化
+    if (!this.db) {
+      try {
+        await this.init();
+      } catch (error) {
+        console.error('[IndexedDB 備份] 初始化失敗:', error);
+        return { success: false, message: '數據庫初始化失敗' };
+      }
+    }
+    
+    if (!this.db) {
+      return { success: false, message: '數據庫未初始化' };
+    }
+    
+    try {
+      const transaction = this.db.transaction([this.storeName], 'readonly');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.get('latest');
+      
+      return new Promise((resolve) => {
+        request.onsuccess = () => {
+          const result = request.result;
+          if (!result || !result.data) {
+            console.log('[IndexedDB 備份] 沒有找到備份數據');
+            resolve({ success: false, message: '沒有找到備份數據' });
+            return;
+          }
+          
+          const data = result.data;
+          
+          // 驗證數據格式
+          if (!data.version) {
+            resolve({ success: false, message: '無效的備份數據格式' });
+            return;
+          }
+          
+          console.log('[IndexedDB 備份] 開始恢復數據，備份時間:', new Date(result.timestamp).toLocaleString());
+          
+          // 恢復數據到 localStorage
+          if (data.userSettings) {
+            localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
+          }
+          if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
+            localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
+          }
+          if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
+            localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
+          }
+          if (data.controlPanelCollapsed !== undefined) {
+            localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
+          }
+          if (data.controlPanelPosition) {
+            localStorage.setItem('controlPanelPosition', JSON.stringify(data.controlPanelPosition));
+          }
+          if (data.multiStreamLayout) {
+            localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
+          }
+          if (data.adConfig) {
+            localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
+          }
+          
+          console.log('[IndexedDB 備份] 數據恢復成功');
+          resolve({ success: true, message: '數據恢復成功' });
+        };
+        
+        request.onerror = () => {
+          console.error('[IndexedDB 備份] 讀取備份失敗:', request.error);
+          resolve({ success: false, message: '讀取備份失敗' });
+        };
+      });
+    } catch (error) {
+      console.error('[IndexedDB 備份] 恢復數據失敗:', error);
+      return { success: false, message: '恢復數據失敗' };
+    }
+  },
+  
+  // 自動載入備份（頁面載入時）
   async autoLoadBackup() {
     if (!this.isEnabled()) {
-      return false; // 未啟用備份
+      return false;
     }
     
-    const savedPath = this.getCurrentFilePath();
-    if (savedPath === '未設置') {
-      return false; // 沒有保存的文件路徑
-    }
-    
-    // 文件句柄無法持久化，需要用戶重新選擇
-    // 但我們可以提示用戶是否要自動載入
-    // 檢測到已設置的備份文件路徑，請在設定中選擇文件位置以自動載入
-    return false;
+    return await this.restore();
   }
 };
+
+// 初始化 IndexedDB 備份系統（頁面載入時）
+if (window.indexedDB) {
+  indexedDBBackup.init().catch((error) => {
+    console.error('[IndexedDB 備份] 初始化失敗:', error);
+  });
+}
 
 // 顯示保存消息（在收藏管理界面下方）
 function showSaveMessage(message) {
@@ -330,10 +265,26 @@ function toggleBackupEnabled() {
   if (!checkbox) return;
   
   const enabled = checkbox.checked;
-  localFileStorage.setEnabled(enabled);
+  indexedDBBackup.setEnabled(enabled);
   
+  // 如果啟用備份，立即觸發一次備份
   if (enabled) {
-    showSaveMessage('數據備份已啟用（請在下方設置文件位置）');
+    // 清除計時器，立即備份
+    if (window.backupTimeout) {
+      clearTimeout(window.backupTimeout);
+    }
+    console.log('[IndexedDB 備份] 立即備份當前 localStorage 數據到 IndexedDB');
+    indexedDBBackup.backup().then((success) => {
+      if (success) {
+        console.log('[IndexedDB 備份] 立即備份成功');
+        showSaveMessage('備份功能已啟用，當前數據已備份到 IndexedDB');
+      } else {
+        console.log('[IndexedDB 備份] 立即備份失敗');
+        showSaveMessage('備份功能已啟用，但備份失敗');
+      }
+    }).catch((error) => {
+      console.error('[IndexedDB 備份] 立即備份錯誤:', error);
+    });
   } else {
     showSaveMessage('數據備份已關閉');
   }
@@ -342,32 +293,120 @@ function toggleBackupEnabled() {
   updateBackupSettingsDisplay();
 }
 
-// 設置備份文件位置（自動導入數據）
-async function setBackupFileLocation() {
-  const success = await localFileStorage.requestFileHandle(false, true); // false = 嘗試打開現有文件, true = 自動導入
-  if (success) {
-    updateBackupSettingsDisplay();
+// 匯出 JSON 檔案
+function exportToJSON() {
+  try {
+    const data = indexedDBBackup.getAllData();
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `multistream-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showSaveMessage('數據已匯出為 JSON 檔案');
+    console.log('[匯出] 數據已匯出為 JSON 檔案');
+  } catch (error) {
+    console.error('[匯出] 匯出失敗:', error);
+    showSaveMessage('匯出失敗，請稍後再試');
   }
 }
 
-// 創建新的備份文件
-async function createNewBackupFile() {
-  const success = await localFileStorage.requestFileHandle(true); // true = 創建新文件
-  if (success) {
-    updateBackupSettingsDisplay();
-  }
+// 匯入 JSON 檔案
+function importFromJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      const data = safeJSONParse(text, null);
+      
+      if (!data) {
+        showSaveMessage('匯入失敗：檔案格式錯誤');
+        return;
+      }
+      
+      // 驗證數據格式
+      if (!data.version) {
+        showSaveMessage('匯入失敗：無效的備份檔案格式');
+        return;
+      }
+      
+      // 檢查 localStorage 是否有數據
+      if (indexedDBBackup.hasLocalStorageData()) {
+        if (!confirm('localStorage 中已有數據，匯入將會覆蓋現有數據。確定要繼續嗎？')) {
+          return;
+        }
+      }
+      
+      console.log('[匯入] 開始匯入數據...');
+      
+      // 匯入數據到 localStorage
+      if (data.userSettings) {
+        localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
+      }
+      if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
+        localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
+      }
+      if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
+        localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
+      }
+      if (data.controlPanelCollapsed !== undefined) {
+        localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
+      }
+      if (data.controlPanelPosition) {
+        localStorage.setItem('controlPanelPosition', JSON.stringify(data.controlPanelPosition));
+      }
+      if (data.multiStreamLayout) {
+        localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
+      }
+      if (data.adConfig) {
+        localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
+      }
+      
+      // 如果已啟用備份，立即備份到 IndexedDB
+      if (indexedDBBackup.isEnabled()) {
+        if (window.backupTimeout) {
+          clearTimeout(window.backupTimeout);
+        }
+        await indexedDBBackup.backup();
+      }
+      
+      console.log('[匯入] 數據匯入成功');
+      showSaveMessage('數據已匯入成功，頁面將重新載入');
+      
+      // 重新載入設置
+      if (typeof loadUserSettings === 'function') {
+        loadUserSettings();
+      }
+      
+      // 重新載入頁面以確保所有設置生效
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error('[匯入] 匯入失敗:', error);
+      showSaveMessage('匯入失敗：' + (error.message || '未知錯誤'));
+    }
+  };
+  input.click();
 }
 
 // 更新備份設定顯示
 function updateBackupSettingsDisplay() {
-  const filePathDiv = document.getElementById('backup-file-path');
-  if (filePathDiv) {
+  const backupStatusDiv = document.getElementById('backup-status');
+  if (backupStatusDiv) {
+    const backupEnabled = indexedDBBackup.isEnabled();
     const i18n = window.i18n || { t: (key) => key };
-    const filePath = localFileStorage.getCurrentFilePath();
-    // 檢查是否為未設置狀態（支援多語言）
-    const isNotSet = filePath === '未設置' || filePath === 'Not Set' || filePath === '未设置' || filePath === '未設定';
-    filePathDiv.textContent = isNotSet ? i18n.t('notSet') : filePath;
-    filePathDiv.style.color = isNotSet ? '#ffa500' : '#28a745';
+    backupStatusDiv.textContent = backupEnabled ? i18n.t('backupEnabled') || '已啟用' : i18n.t('backupDisabled') || '已停用';
+    backupStatusDiv.style.color = backupEnabled ? '#28a745' : '#ffa500';
   }
 }
 
@@ -420,23 +459,15 @@ function saveUserSettings() {
   localStorage.setItem('userSettings', JSON.stringify(settings));
   // 用戶設置已保存
   
-  // 如果已啟用備份，自動備份
-  if (localFileStorage.isEnabled()) {
-    localFileStorage.backup().catch(() => {
-      // 備份失敗，靜默處理
-    }).then(() => {
-      // 顯示保存消息（如果收藏管理界面打開）
-      const manager = document.getElementById('favorite-streams-manager');
-      if (manager && manager.classList.contains('show')) {
-        showSaveMessage('資料已儲存');
-      }
-    });
-  } else {
-    // 即使未啟用備份，也顯示保存消息
-    const manager = document.getElementById('favorite-streams-manager');
-    if (manager && manager.classList.contains('show')) {
-      showSaveMessage('資料已儲存');
-    }
+  // 如果已啟用備份，觸發防抖備份
+  if (indexedDBBackup.isEnabled()) {
+    debouncedBackup();
+  }
+  
+  // 顯示保存消息（如果收藏管理界面打開）
+  const manager = document.getElementById('favorite-streams-manager');
+  if (manager && manager.classList.contains('show')) {
+    showSaveMessage('資料已儲存');
   }
 }
 
@@ -508,6 +539,8 @@ const favoriteCategories = {
   // 保存分類列表
   saveList: (list) => {
     localStorage.setItem('favoriteCategories', JSON.stringify(list));
+    // 觸發防抖備份（10秒後無新操作才備份）
+    debouncedBackup();
   },
   
   // 添加分類
@@ -569,6 +602,25 @@ const favoriteCategories = {
     });
     favoriteStreams.saveList(favorites);
     
+    // 刪除操作立即備份（不等待防抖）
+    if (indexedDBBackup.isEnabled()) {
+      // 清除防抖計時器
+      if (window.backupTimeout) {
+        clearTimeout(window.backupTimeout);
+      }
+      // 立即執行備份
+      console.log('[IndexedDB 備份] 刪除分類操作，立即執行備份');
+      indexedDBBackup.backup().then((success) => {
+        if (success) {
+          console.log('[IndexedDB 備份] 刪除分類後備份成功');
+        } else {
+          console.log('[IndexedDB 備份] 刪除分類後備份失敗');
+        }
+      }).catch((error) => {
+        console.error('[IndexedDB 備份] 刪除分類後備份錯誤:', error);
+      });
+    }
+    
     const i18n = window.i18n || { t: (key) => key };
     return { success: true, message: i18n.t('categoryRemoved') };
   }
@@ -585,6 +637,8 @@ const favoriteStreams = {
   // 保存收藏列表
   saveList: (list) => {
     localStorage.setItem('favoriteStreams', JSON.stringify(list));
+    // 觸發防抖備份（10秒後無新操作才備份）
+    debouncedBackup();
   },
   
   // 添加收藏
@@ -671,6 +725,26 @@ const favoriteStreams = {
     const list = favoriteStreams.getList();
     const filtered = list.filter(item => item.id !== id);
     favoriteStreams.saveList(filtered);
+    
+    // 刪除操作立即備份（不等待防抖）
+    if (indexedDBBackup.isEnabled()) {
+      // 清除防抖計時器
+      if (window.backupTimeout) {
+        clearTimeout(window.backupTimeout);
+      }
+      // 立即執行備份
+      console.log('[IndexedDB 備份] 刪除操作，立即執行備份');
+      indexedDBBackup.backup().then((success) => {
+        if (success) {
+          console.log('[IndexedDB 備份] 刪除後備份成功');
+        } else {
+          console.log('[IndexedDB 備份] 刪除後備份失敗');
+        }
+      }).catch((error) => {
+        console.error('[IndexedDB 備份] 刪除後備份錯誤:', error);
+      });
+    }
+    
     const i18n = window.i18n || { t: (key) => key };
     return { success: true, message: i18n.t('favoriteRemoved') };
   },
@@ -877,7 +951,7 @@ function showFavoriteStreamsManager() {
   }
   
   // 獲取備份功能狀態
-  const backupEnabled = localFileStorage.isEnabled();
+  const backupEnabled = indexedDBBackup.isEnabled();
   
   content += `
         </div>
@@ -891,22 +965,22 @@ function showFavoriteStreamsManager() {
               <input type="checkbox" id="backup-enabled-checkbox" ${backupEnabled ? 'checked' : ''} onchange="toggleBackupEnabled()" style="width: 18px; height: 18px; cursor: pointer;">
               <span style="font-size: 14px; color: #fff;">${escapeHtml(i18n.t('enableAutoBackup'))}</span>
             </label>
-            <div style="margin-top: 8px; font-size: 12px; color: #ffa500; margin-left: 28px; padding: 8px; background: rgba(255, 165, 0, 0.1); border-radius: 4px; border-left: 3px solid #ffa500;">
-              ${escapeHtml(i18n.t('backupWarning'))}
+            <div style="margin-top: 8px; font-size: 12px; color: #28a745; margin-left: 28px; padding: 8px; background: rgba(40, 167, 69, 0.1); border-radius: 4px; border-left: 3px solid #28a745;">
+              數據將自動備份到瀏覽器的 IndexedDB，無需選擇文件位置
             </div>
           </div>
           <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
             <div style="margin-bottom: 12px;">
-              <div style="font-size: 13px; color: #fff; margin-bottom: 8px;">${escapeHtml(i18n.t('backupFileLocation'))}</div>
-              <div id="backup-file-path" style="font-size: 12px; color: ${(localFileStorage.getCurrentFilePath() === '未設置' || localFileStorage.getCurrentFilePath() === 'Not Set' || localFileStorage.getCurrentFilePath() === '未设置' || localFileStorage.getCurrentFilePath() === '未設定') ? '#ffa500' : '#28a745'}; margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px;">
-                ${escapeHtml((localFileStorage.getCurrentFilePath() === '未設置' || localFileStorage.getCurrentFilePath() === 'Not Set' || localFileStorage.getCurrentFilePath() === '未设置' || localFileStorage.getCurrentFilePath() === '未設定') ? i18n.t('notSet') : localFileStorage.getCurrentFilePath())}
+              <div style="font-size: 13px; color: #fff; margin-bottom: 8px;">備份狀態</div>
+              <div id="backup-status" style="font-size: 12px; color: ${backupEnabled ? '#28a745' : '#ffa500'}; margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px;">
+                ${backupEnabled ? (i18n.t('backupEnabled') || '已啟用') : (i18n.t('backupDisabled') || '已停用')}
               </div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button onclick="setBackupFileLocation()" style="padding: 6px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">${escapeHtml(i18n.t('selectFileLocation'))}</button>
-                <button onclick="createNewBackupFile()" style="padding: 6px 12px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">${escapeHtml(i18n.t('createNewFile'))}</button>
+                <button onclick="exportToJSON()" style="padding: 6px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">匯出 JSON 檔案</button>
+                <button onclick="importFromJSON()" style="padding: 6px 12px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">匯入 JSON 檔案</button>
               </div>
               <div style="margin-top: 6px; font-size: 11px; color: #aaa;">
-                ${escapeHtml(i18n.t('selectFileLocationDesc'))}<br>
+                數據會自動備份到瀏覽器的 IndexedDB。您也可以手動匯出/匯入 JSON 檔案進行備份或遷移<br>
                 ${escapeHtml(i18n.t('createNewFileDesc'))}
               </div>
             </div>
@@ -1091,12 +1165,7 @@ function addToFavorites() {
     showFavoriteStreamsManager(); // 刷新列表
     // 自動保存設置
     autoSaveSettings();
-    // 備份到本地文件
-    if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(() => {
-        // 備份失敗，靜默處理
-      });
-    }
+    // 防抖備份會在 saveList() 中自動觸發
     showSaveMessage(i18n.t('dataSaved'));
   } else {
     // 嘗試翻譯錯誤訊息
@@ -1140,12 +1209,7 @@ function addCategory() {
       updateFavoriteListDisplay();
     }
     autoSaveSettings();
-    // 備份到本地文件
-    if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(() => {
-        // 備份失敗，靜默處理
-      });
-    }
+    // 防抖備份會在 saveList() 中自動觸發
     showSaveMessage(i18n.t('dataSaved'));
   } else {
     // 嘗試翻譯錯誤訊息
@@ -1204,9 +1268,7 @@ function editCategory(categoryId) {
                 updateFavoriteListDisplay();
               }
               autoSaveSettings();
-              if (localFileStorage.isEnabled()) {
-                localFileStorage.backup();
-              }
+              // 防抖備份會在 saveList() 中自動觸發
               showSaveMessage('資料已儲存');
             } else {
               showSaveMessage(result.message);
@@ -1237,12 +1299,7 @@ function removeCategory(categoryId) {
   if (result.success) {
     showFavoriteStreamsManager(); // 刷新列表
     autoSaveSettings();
-    // 備份到本地文件
-    if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(() => {
-        // 備份失敗，靜默處理
-      });
-    }
+    // 防抖備份會在 saveList() 中自動觸發
     showSaveMessage(i18n.t('dataSaved'));
   } else {
     // 嘗試翻譯錯誤訊息
@@ -1338,12 +1395,7 @@ function saveFavoriteEdit(favoriteId) {
       updateFavoriteListDisplay();
     }
     autoSaveSettings();
-    // 備份到本地文件
-    if (localFileStorage.isEnabled()) {
-      localFileStorage.backup().catch(() => {
-        // 備份失敗，靜默處理
-      });
-    }
+    // 防抖備份會在 saveList() 中自動觸發
     showSaveMessage(i18n.t('dataSaved'));
   } else {
     // 嘗試翻譯錯誤訊息
@@ -1454,10 +1506,7 @@ function removeFavoriteStream(id) {
   }
   // 自動保存設置
   autoSaveSettings();
-  // 備份到本地文件
-  if (localFileStorage.isEnabled()) {
-    localFileStorage.backup();
-  }
+  // 防抖備份會在 saveList() 中自動觸發
   showSaveMessage('資料已儲存');
 }
 
@@ -1668,10 +1717,7 @@ function addCurrentStreamToFavorites() {
               }
               // 自動保存設置
               autoSaveSettings();
-              // 備份到本地文件
-              if (localFileStorage.isEnabled()) {
-                localFileStorage.backup();
-              }
+              // 防抖備份會在 saveList() 中自動觸發
               const i18n = window.i18n || { t: (key) => key };
               showSaveMessage(`${i18n.t('successfullyFavorited')} ${addedCount} ${i18n.t('streams')}${skippedCount > 0 ? `，${skippedCount} ${i18n.t('alreadyExists')}` : ''}`);
             } else if (skippedCount > 0) {
@@ -1695,6 +1741,35 @@ function autoSaveSettings() {
   window.settingsSaveTimeout = setTimeout(() => {
     saveUserSettings();
   }, 1000); // 1秒後保存
+}
+
+// 防抖備份函數（在收藏操作後等待10秒無新操作才觸發備份）
+function debouncedBackup() {
+  // 清除之前的計時器
+  if (window.backupTimeout) {
+    clearTimeout(window.backupTimeout);
+    console.log('[IndexedDB 備份] 取消之前的備份計時器，重新開始計時');
+  }
+  
+  // 設置新的計時器，10秒後執行備份
+  window.backupTimeout = setTimeout(() => {
+    if (indexedDBBackup.isEnabled()) {
+      console.log('[IndexedDB 備份] 開始執行備份到 IndexedDB...');
+      indexedDBBackup.backup().then((success) => {
+        if (success) {
+          console.log('[IndexedDB 備份] 備份成功完成');
+        } else {
+          console.log('[IndexedDB 備份] 備份失敗');
+        }
+      }).catch((error) => {
+        console.error('[IndexedDB 備份] 備份過程中發生錯誤:', error);
+      });
+    } else {
+      console.log('[IndexedDB 備份] 備份功能未啟用，跳過備份');
+    }
+  }, 10000); // 10秒後備份
+  
+  console.log('[IndexedDB 備份] 已設置備份計時器，將在10秒後執行（如果沒有新操作）');
 }
 
 // 版本紀錄功能
@@ -1735,6 +1810,17 @@ function updateVersionHistoryContent(versionModal) {
   
   // 版本紀錄內容（使用 i18n key）
   const versionHistory = [
+    {
+      version: '1.5.0',
+      date: '2025-11-30',
+      changeKeys: [
+        'version1.5.0.change1',
+        'version1.5.0.change2',
+        'version1.5.0.change3',
+        'version1.5.0.change4',
+        'version1.5.0.change5'
+      ]
+    },
     {
       version: '1.4.1',
       date: '2025-11-29',
