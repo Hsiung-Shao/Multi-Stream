@@ -61,7 +61,8 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '關閉',
-      'version1.4.0.change1': '全站支援多國語言（繁中、簡中、英文、日語）',
+      'version1.4.1.change1': '全站支援多國語言（繁中、簡中、英文、日語）',
+      'version1.4.1.change2': '新增右側單一聊天室',
       'version1.4.0.change2': '修復多語言切換時收藏串流選單回到繁體中文的問題',
       'version1.4.0.change3': '修復控制面板標題和顯示所有聊天室按鈕的多語言顯示問題',
       'version1.4.0.change4': '修復多語言初始化導致的功能失效問題（控制面板縮放、聊天室切換、串流順序清單）',
@@ -279,7 +280,8 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '关闭',
-      'version1.4.0.change1': '全站支援多國語言（繁中、簡中、英文、日語）',
+      'version1.4.1.change1': '全站支援多國語言（繁中、簡中、英文、日語）',
+      'version1.4.1.change2': '新增右侧单一聊天室',
       'version1.4.0.change2': '修复多语言切换时收藏串流选单回到繁体中文的问题',
       'version1.4.0.change3': '修复控制面板标题和显示所有聊天室按钮的多语言显示问题',
       'version1.4.0.change4': '修复多语言初始化导致的功能失效问题（控制面板缩放、聊天室切换、串流顺序清单）',
@@ -497,7 +499,8 @@ const i18n = {
       // Version History
       'version': 'Version',
       'close': 'Close',
-      'version1.4.0.change1': 'Full site multi-language support (Traditional Chinese, Simplified Chinese, English, Japanese)',
+      'version1.4.1.change1': 'Full site multi-language support (Traditional Chinese, Simplified Chinese, English, Japanese)',
+      'version1.4.1.change2': 'Added right side single chat room',
       'version1.4.0.change2': 'Fixed issue where favorites dropdown menu reverted to Traditional Chinese after language switch',
       'version1.4.0.change3': 'Fixed multi-language display issues for control panel title and "Show All Chats" button',
       'version1.4.0.change4': 'Fixed functionality issues caused by multi-language initialization (control panel collapse, chat toggle, stream order list)',
@@ -716,7 +719,8 @@ const i18n = {
       // バージョン履歴
       'version': 'バージョン',
       'close': '閉じる',
-      'version1.4.0.change1': '全サイト多言語サポート（繁体中国語、簡体中国語、英語、日本語）',
+      'version1.4.1.change1': '全サイト多言語サポート（繁体中国語、簡体中国語、英語、日本語）',
+      'version1.4.1.change2': '右側シングルチャットルームを追加',
       'version1.4.0.change2': '言語切り替え時にドロップダウンメニューが繁体中国語に戻る問題を修正',
       'version1.4.0.change3': 'コントロールパネルのタイトルと「すべてのチャットを表示」ボタンの多言語表示の問題を修正',
       'version1.4.0.change4': '多言語初期化による機能障害を修正（コントロールパネルの折りたたみ、チャット切り替え、ストリーム順序リスト）',
