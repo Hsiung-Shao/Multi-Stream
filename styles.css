@@ -1,10 +1,21 @@
+/* CSS 變數 - 用於動態調整縮放 */
+:root {
+  --chat-min-width: 300px; /* 基礎最小寬度，會根據縮放動態調整 */
+  --chat-min-height: 200px; /* 基礎最小高度 */
+  --fixed-chat-min-width: 300px; /* 固定布局聊天室最小寬度 */
+  --separated-chat-min-width: 300px; /* 分離聊天室最小寬度 */
+  --base-font-size: 16px; /* 基礎字體大小 */
+  --zoom-factor: 1; /* 縮放因子，由 JavaScript 動態設置 */
+}
+
 * { box-sizing: border-box; }
 body { 
   margin: 0; 
   background: #0a0a0a; 
   color: #fff; 
   font-family: 'Segoe UI', Arial, sans-serif; 
-  overflow: hidden; 
+  overflow: hidden;
+  font-size: var(--base-font-size); /* 使用相對單位 */
 }
 
 #container { 
@@ -85,21 +96,21 @@ body:has(.control-panel:not(.collapsed)) #container {
   overflow: hidden;
   position: relative;
   min-height: 100px;
-  min-width: 300px; /* YouTube 聊天室需要至少 300px 寬度 */
+  min-width: var(--chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
 }
 
 .content-wrapper.layout-horizontal .chat-container {
-  width: 300px;
-  min-width: 300px; /* 確保最小寬度 */
+  width: max(300px, var(--chat-min-width, 300px)); /* 確保不小於最小寬度 */
+  min-width: var(--chat-min-width, 300px); /* 確保最小寬度 */
   height: 100%;
   border-left: 1px solid #333;
 }
 
 .content-wrapper.layout-vertical .chat-container {
   width: 100%;
-  min-width: 300px; /* 垂直布局時也確保最小寬度 */
-  height: 250px;
-  min-height: 250px; /* 確保最小高度 */
+  min-width: var(--chat-min-width, 300px); /* 垂直布局時也確保最小寬度 */
+  height: max(250px, var(--chat-min-height, 200px) * 1.25); /* 根據縮放調整高度 */
+  min-height: max(250px, var(--chat-min-height, 200px) * 1.25); /* 確保最小高度 */
   border-top: 1px solid #333;
 }
 
@@ -121,8 +132,8 @@ body:has(.control-panel:not(.collapsed)) #container {
   width: 100%;
   height: 100%;
   border: none;
-  min-width: 300px; /* YouTube 聊天室 iframe 最小寬度 */
-  min-height: 200px; /* 確保最小高度 */
+  min-width: var(--chat-min-width, 300px); /* YouTube 聊天室 iframe 最小寬度，根據縮放動態調整 */
+  min-height: var(--chat-min-height, 200px); /* 確保最小高度，根據縮放動態調整 */
 }
 
 .chat-resizer {
@@ -199,8 +210,8 @@ body:has(.control-panel:not(.collapsed)) #container {
   box-shadow: 0 0 30px rgba(145, 71, 255, 0.5);
   border-radius: 8px;
   z-index: 2000;
-  min-width: 300px;
-  min-height: 400px;
+  min-width: var(--separated-chat-min-width, 300px); /* 根據縮放動態調整 */
+  min-height: max(400px, var(--chat-min-height, 200px) * 2); /* 根據縮放調整高度 */
   display: flex;
   flex-direction: column;
 }
@@ -229,8 +240,8 @@ body:has(.control-panel:not(.collapsed)) #container {
   width: 100%;
   height: 100%;
   border: none;
-  min-width: 300px; /* YouTube 聊天室 iframe 最小寬度 */
-  min-height: 200px; /* 確保最小高度 */
+  min-width: var(--separated-chat-min-width, 300px); /* YouTube 聊天室 iframe 最小寬度，根據縮放動態調整 */
+  min-height: var(--chat-min-height, 200px); /* 確保最小高度，根據縮放動態調整 */
 }
 
 .controls {
@@ -1349,21 +1360,21 @@ body:has(.ad-banner.show) #container,
   
   /* 聊天室容器在手機上優化 */
   .chat-container {
-    min-width: 100%; /* 手機上使用全寬 */
+    min-width: max(100%, var(--chat-min-width, 300px)); /* 手機上使用全寬，但不小於最小寬度 */
   }
   
   .content-wrapper.layout-horizontal .chat-container {
     width: 100%;
-    min-width: 100%;
+    min-width: max(100%, var(--chat-min-width, 300px)); /* 確保不小於最小寬度 */
   }
   
   .content-wrapper.layout-vertical .chat-container {
     width: 100%;
-    min-width: 100%;
+    min-width: max(100%, var(--chat-min-width, 300px)); /* 確保不小於最小寬度 */
   }
   
   .chat-container iframe {
-    min-width: 100%; /* 手機上使用全寬 */
+    min-width: max(100%, var(--chat-min-width, 300px)); /* 手機上使用全寬，但不小於最小寬度 */
   }
   
   /* 控制面板標題調整 */
@@ -1788,7 +1799,7 @@ body:has(.ad-banner.show) #container,
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-width: 300px; /* YouTube 聊天室需要至少 300px 寬度 */
+  min-width: var(--fixed-chat-min-width, 300px); /* YouTube 聊天室需要至少 300px 寬度，根據縮放動態調整 */
 }
 
 .chat-sidebar-content,
@@ -1796,8 +1807,8 @@ body:has(.ad-banner.show) #container,
   flex: 1;
   position: relative;
   overflow: hidden;
-  min-width: 300px; /* 確保內容區域有足夠寬度 */
-  min-height: 200px; /* 確保最小高度 */
+  min-width: var(--fixed-chat-min-width, 300px); /* 確保內容區域有足夠寬度，根據縮放動態調整 */
+  min-height: var(--chat-min-height, 200px); /* 確保最小高度，根據縮放動態調整 */
 }
 
 .chat-sidebar-content iframe,
@@ -1805,8 +1816,8 @@ body:has(.ad-banner.show) #container,
   width: 100%;
   height: 100%;
   border: none;
-  min-width: 300px; /* YouTube 聊天室 iframe 最小寬度 */
-  min-height: 200px; /* 確保最小高度 */
+  min-width: var(--fixed-chat-min-width, 300px); /* YouTube 聊天室 iframe 最小寬度，根據縮放動態調整 */
+  min-height: var(--chat-min-height, 200px); /* 確保最小高度，根據縮放動態調整 */
 }
 
 #fixed-chat-sidebar,
@@ -1816,7 +1827,7 @@ body:has(.ad-banner.show) #container,
   border-left: 2px solid #333;
   display: flex;
   box-sizing: border-box;
-  min-width: 300px; /* 確保側邊欄有足夠寬度 */
+  min-width: var(--fixed-chat-min-width, 300px); /* 確保側邊欄有足夠寬度，根據縮放動態調整 */
 }
 
 /* 固定布局響應式優化 - Layout 13, 14, 15 */
@@ -1829,13 +1840,13 @@ body:has(.ad-banner.show) #container,
   
   .chat-sidebar-panel,
   .fixed-chat-panel {
-    min-width: 300px; /* 保持 300px 最小寬度 */
+    min-width: var(--fixed-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
   
   .chat-sidebar-content iframe,
   .chat-content-fixed iframe,
   .fixed-chat-panel iframe {
-    min-width: 300px; /* YouTube 聊天室需要至少 300px */
+    min-width: var(--fixed-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
 }
 
@@ -1845,18 +1856,18 @@ body:has(.ad-banner.show) #container,
   .chat-sidebar-fixed {
     width: 100% !important;
     max-width: 100% !important;
-    min-width: 300px; /* 保持最小寬度 */
+    min-width: var(--fixed-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
   
   .chat-sidebar-panel,
   .fixed-chat-panel {
-    min-width: 300px; /* 保持 300px 最小寬度，確保 YouTube 聊天室正常顯示 */
+    min-width: var(--fixed-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
   
   .chat-sidebar-content iframe,
   .chat-content-fixed iframe,
   .fixed-chat-panel iframe {
-    min-width: 300px;
+    min-width: var(--fixed-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
   
   /* 視頻區域在小屏幕上可能需要調整 */
@@ -1884,7 +1895,7 @@ body:has(.ad-banner.show) #container,
   
   .chat-sidebar-panel,
   .fixed-chat-panel {
-    min-width: 300px; /* 保持 300px 最小寬度，確保 YouTube 聊天室正常顯示 */
+    min-width: var(--fixed-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
     max-width: 80vw;
     height: 100% !important;
     flex-shrink: 0;
@@ -1893,7 +1904,7 @@ body:has(.ad-banner.show) #container,
   .chat-sidebar-content iframe,
   .chat-content-fixed iframe,
   .fixed-chat-panel iframe {
-    min-width: 300px;
+    min-width: var(--fixed-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
   
   /* 視頻區域在手機上佔滿寬度 */
@@ -1906,27 +1917,27 @@ body:has(.ad-banner.show) #container,
 /* 分離聊天室響應式優化 */
 @media (max-width: 1440px) {
   .separated-chat {
-    min-width: 300px; /* 確保 YouTube 聊天室有足夠寬度 */
-    min-height: 350px;
+    min-width: var(--separated-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
+    min-height: max(350px, var(--chat-min-height, 200px) * 1.75);
     max-width: 90vw;
     max-height: 85vh;
   }
   
   .separated-chat-content iframe {
-    min-width: 300px;
+    min-width: var(--separated-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
 }
 
 @media (max-width: 1024px) {
   .separated-chat {
-    min-width: 300px; /* 保持 300px 最小寬度 */
-    min-height: 300px;
+    min-width: var(--separated-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
+    min-height: max(300px, var(--chat-min-height, 200px) * 1.5);
     max-width: 95vw;
     max-height: 80vh;
   }
   
   .separated-chat-content iframe {
-    min-width: 300px;
+    min-width: var(--separated-chat-min-width, 300px); /* 使用 CSS 變數，根據縮放動態調整 */
   }
   
   .separated-chat-header {
@@ -1945,7 +1956,7 @@ body:has(.ad-banner.show) #container,
   }
   
   .separated-chat-content iframe {
-    min-width: 90vw; /* 手機上使用視窗寬度 */
+    min-width: max(90vw, var(--separated-chat-min-width, 300px)); /* 手機上使用視窗寬度，但不小於最小寬度 */
   }
   
   .separated-chat-header {
@@ -3209,6 +3220,153 @@ body:has(.ad-banner.show) #container,
   .separated-chat {
     min-height: 45vh;
     max-height: 65vh;
+  }
+}
+
+/* ============================================
+   縮放優化 - 作業系統和瀏覽器縮放
+   ============================================ */
+
+/* 高 DPI 屏幕（系統縮放 125%, 150%, 200% 等） */
+@media (-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 120dpi) {
+  :root {
+    --chat-min-width: 375px; /* 300px * 1.25 */
+    --chat-min-height: 250px; /* 200px * 1.25 */
+    --fixed-chat-min-width: 375px;
+    --separated-chat-min-width: 375px;
+  }
+}
+
+@media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
+  :root {
+    --chat-min-width: 450px; /* 300px * 1.5 */
+    --chat-min-height: 300px; /* 200px * 1.5 */
+    --fixed-chat-min-width: 450px;
+    --separated-chat-min-width: 450px;
+  }
+}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  :root {
+    --chat-min-width: 600px; /* 300px * 2 */
+    --chat-min-height: 400px; /* 200px * 2 */
+    --fixed-chat-min-width: 600px;
+    --separated-chat-min-width: 600px;
+  }
+}
+
+/* 瀏覽器縮放檢測（使用視窗寬度比例） */
+@media (min-width: 1200px) and (max-width: 1439px) {
+  /* 可能是 125% 縮放 */
+  .chat-container,
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(375px, var(--chat-min-width, 300px));
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1199px) {
+  /* 可能是 150% 縮放 */
+  .chat-container,
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(450px, var(--chat-min-width, 300px));
+  }
+}
+
+@media (min-width: 800px) and (max-width: 959px) {
+  /* 可能是 200% 縮放 */
+  .chat-container,
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(600px, var(--chat-min-width, 300px));
+  }
+}
+
+/* 確保聊天室在縮放時文字可讀 */
+.chat-container,
+.chat-sidebar-content,
+.chat-content-fixed,
+.separated-chat-content {
+  /* 使用相對單位確保文字隨縮放調整 */
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* 聊天室 iframe 縮放優化 */
+.chat-container iframe,
+.chat-sidebar-content iframe,
+.chat-content-fixed iframe,
+.separated-chat-content iframe {
+  /* 確保 iframe 內容可以正確縮放 */
+  transform-origin: top left;
+  /* 防止文字被裁剪 */
+  overflow: visible;
+}
+
+/* 針對不同縮放比例的額外優化 */
+@media (min-resolution: 120dpi) {
+  /* 125% 縮放 */
+  .chat-container {
+    min-width: max(375px, var(--chat-min-width, 300px));
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(375px, var(--fixed-chat-min-width, 300px));
+  }
+  
+  .separated-chat {
+    min-width: max(375px, var(--separated-chat-min-width, 300px));
+  }
+}
+
+@media (min-resolution: 144dpi) {
+  /* 150% 縮放 */
+  .chat-container {
+    min-width: max(450px, var(--chat-min-width, 300px));
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(450px, var(--fixed-chat-min-width, 300px));
+  }
+  
+  .separated-chat {
+    min-width: max(450px, var(--separated-chat-min-width, 300px));
+  }
+}
+
+@media (min-resolution: 192dpi) {
+  /* 200% 縮放 */
+  .chat-container {
+    min-width: max(600px, var(--chat-min-width, 300px));
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(600px, var(--fixed-chat-min-width, 300px));
+  }
+  
+  .separated-chat {
+    min-width: max(600px, var(--separated-chat-min-width, 300px));
+  }
+}
+
+/* 確保在極高縮放下聊天室仍然可用 */
+@media (min-resolution: 240dpi) {
+  /* 250% 縮放 */
+  .chat-container {
+    min-width: max(750px, var(--chat-min-width, 300px));
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: max(750px, var(--fixed-chat-min-width, 300px));
+  }
+  
+  .separated-chat {
+    min-width: max(750px, var(--separated-chat-min-width, 300px));
   }
 }
 
