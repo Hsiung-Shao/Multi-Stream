@@ -114,6 +114,23 @@ const i18n = {
       'aboutPrivacy2': '詳細的隱私權政策請參閱：',
       'home': '首頁',
       
+      // SEO 相關
+      'seoTitle': 'MultiStream Hub - 多平台直播串流觀看工具 | Twitch & YouTube 同時觀看',
+      'seoDescription': 'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式（單一畫面、分割、網格、側邊聊天）、聊天室整合、獨立音量控制、收藏系統等功能。無需註冊、無需付費，立即開始使用！',
+      'seoKeywords': '多平台直播,串流觀看,Twitch,YouTube,直播工具,多畫面直播,直播聊天室,串流管理,免費直播工具,同時觀看直播,直播分割,多串流觀看,Twitch YouTube 同時看,免費直播播放器,多視窗直播,直播聚合工具,直播同步觀看,直播多開,直播分屏,直播工具網站',
+      'seoOgTitle': 'MultiStream Hub - 多平台直播串流觀看工具',
+      'seoOgDescription': '免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播',
+      'seoAboutTitle': '關於我們 - MultiStream Hub | 多平台直播串流觀看工具介紹',
+      'seoAboutDescription': '了解 MultiStream Hub - 免費的多平台直播串流觀看工具。由 Hsiung-Shao 獨立開發，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制等功能。完全免費，無需註冊。',
+      'seoAboutKeywords': 'MultiStream Hub,關於我們,直播工具介紹,免費直播工具,Twitch YouTube 觀看工具,多平台直播,串流觀看工具,直播工具開發者',
+      'seoAboutOgTitle': '關於我們 - MultiStream Hub',
+      'seoAboutOgDescription': '了解 MultiStream Hub - 免費的多平台直播串流觀看工具，由 Hsiung-Shao 獨立開發，支援同時觀看多個 Twitch 和 YouTube 直播',
+      'seoPrivacyTitle': '隱私權政策 - MultiStream Hub | 資料保護與隱私說明',
+      'seoPrivacyDescription': 'MultiStream Hub 隱私權政策：了解我們如何保護您的隱私，我們不收集個人資料，所有資料僅儲存在您的瀏覽器中。完全免費、安全可靠的多平台直播串流觀看工具。',
+      'seoPrivacyKeywords': 'MultiStream Hub,隱私權政策,資料保護,隱私說明,個人資料保護,瀏覽器儲存,免費工具隱私',
+      'seoPrivacyOgTitle': '隱私權政策 - MultiStream Hub',
+      'seoPrivacyOgDescription': 'MultiStream Hub 隱私權政策：了解我們如何保護您的隱私，我們不收集個人資料，所有資料僅儲存在您的瀏覽器中',
+      
       // 初始發布商內容
       'welcomeTitle': '歡迎使用 MultiStream Hub',
       'welcomeDescription': '免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播',
@@ -401,6 +418,23 @@ const i18n = {
       'aboutPrivacy2': '详细的隐私权政策请参阅：',
       'home': '首页',
       
+      // SEO 相關
+      'seoTitle': 'MultiStream Hub - 多平台直播串流观看工具 | Twitch & YouTube 同时观看',
+      'seoDescription': 'MultiStream Hub 是一个完全免费的多平台直播串流观看工具，支持同时观看多个 Twitch 和 YouTube 直播。提供多种布局模式（单一画面、分割、网格、侧边聊天）、聊天室整合、独立音量控制、收藏系统等功能。无需注册、无需付费，立即开始使用！',
+      'seoKeywords': '多平台直播,串流观看,Twitch,YouTube,直播工具,多画面直播,直播聊天室,串流管理,免费直播工具,同时观看直播,直播分割,多串流观看,Twitch YouTube 同时看,免费直播播放器,多视窗直播,直播聚合工具,直播同步观看,直播多开,直播分屏,直播工具网站',
+      'seoOgTitle': 'MultiStream Hub - 多平台直播串流观看工具',
+      'seoOgDescription': '免费的多平台直播串流观看工具，支持同时观看多个 Twitch 和 YouTube 直播',
+      'seoAboutTitle': '关于我们 - MultiStream Hub | 多平台直播串流观看工具介绍',
+      'seoAboutDescription': '了解 MultiStream Hub - 免费的多平台直播串流观看工具。由 Hsiung-Shao 独立开发，支持同时观看多个 Twitch 和 YouTube 直播，提供多种布局模式、聊天室整合、音量控制等功能。完全免费，无需注册。',
+      'seoAboutKeywords': 'MultiStream Hub,关于我们,直播工具介绍,免费直播工具,Twitch YouTube 观看工具,多平台直播,串流观看工具,直播工具开发者',
+      'seoAboutOgTitle': '关于我们 - MultiStream Hub',
+      'seoAboutOgDescription': '了解 MultiStream Hub - 免费的多平台直播串流观看工具，由 Hsiung-Shao 独立开发，支持同时观看多个 Twitch 和 YouTube 直播',
+      'seoPrivacyTitle': '隐私权政策 - MultiStream Hub | 资料保护与隐私说明',
+      'seoPrivacyDescription': 'MultiStream Hub 隐私权政策：了解我们如何保护您的隐私，我们不收集个人资料，所有资料仅储存在您的浏览器中。完全免费、安全可靠的多平台直播串流观看工具。',
+      'seoPrivacyKeywords': 'MultiStream Hub,隐私权政策,资料保护,隐私说明,个人资料保护,浏览器储存,免费工具隐私',
+      'seoPrivacyOgTitle': '隐私权政策 - MultiStream Hub',
+      'seoPrivacyOgDescription': 'MultiStream Hub 隐私权政策：了解我们如何保护您的隐私，我们不收集个人资料，所有资料仅储存在您的浏览器中',
+      
       // 初始发布商内容
       'welcomeTitle': '欢迎使用 MultiStream Hub',
       'welcomeDescription': '免费的多平台直播串流观看工具，支持同时观看多个 Twitch 和 YouTube 直播',
@@ -687,6 +721,23 @@ const i18n = {
       'aboutPrivacy1': 'We value your privacy. This website does not actively collect any personal information. All settings and favorite data are stored locally in your browser.',
       'aboutPrivacy2': 'For detailed privacy policy, please refer to:',
       'home': 'Home',
+      
+      // SEO Related
+      'seoTitle': 'MultiStream Hub - Multi-Platform Live Streaming Viewer | Watch Twitch & YouTube Simultaneously',
+      'seoDescription': 'MultiStream Hub is a completely free multi-platform live streaming viewing tool that supports watching multiple Twitch and YouTube streams simultaneously. Features multiple layout modes (single view, split, grid, side chat), chat integration, independent volume control, favorites system, and more. No registration or payment required. Start using now!',
+      'seoKeywords': 'multi-platform streaming,stream viewer,Twitch,YouTube,live streaming tool,multi-view streaming,streaming chat,stream management,free streaming tool,simultaneous streaming,stream splitter,multi-stream viewer,Twitch YouTube viewer,free stream player,multi-window streaming,stream aggregator,stream sync,stream multi-open,stream split screen,streaming tool website',
+      'seoOgTitle': 'MultiStream Hub - Multi-Platform Live Streaming Viewer',
+      'seoOgDescription': 'Free multi-platform live streaming viewing tool supporting simultaneous viewing of multiple Twitch and YouTube streams',
+      'seoAboutTitle': 'About Us - MultiStream Hub | Multi-Platform Streaming Tool Introduction',
+      'seoAboutDescription': 'Learn about MultiStream Hub - a free multi-platform live streaming viewing tool. Independently developed by Hsiung-Shao, supporting simultaneous viewing of multiple Twitch and YouTube streams with multiple layout modes, chat integration, volume control, and more. Completely free, no registration required.',
+      'seoAboutKeywords': 'MultiStream Hub,About Us,streaming tool introduction,free streaming tool,Twitch YouTube viewer,multi-platform streaming,streaming viewer tool,streaming tool developer',
+      'seoAboutOgTitle': 'About Us - MultiStream Hub',
+      'seoAboutOgDescription': 'Learn about MultiStream Hub - a free multi-platform live streaming viewing tool, independently developed by Hsiung-Shao, supporting simultaneous viewing of multiple Twitch and YouTube streams',
+      'seoPrivacyTitle': 'Privacy Policy - MultiStream Hub | Data Protection & Privacy Information',
+      'seoPrivacyDescription': 'MultiStream Hub Privacy Policy: Learn how we protect your privacy. We do not collect personal data, all data is stored only in your browser. A completely free, secure and reliable multi-platform live streaming viewing tool.',
+      'seoPrivacyKeywords': 'MultiStream Hub,Privacy Policy,data protection,privacy information,personal data protection,browser storage,free tool privacy',
+      'seoPrivacyOgTitle': 'Privacy Policy - MultiStream Hub',
+      'seoPrivacyOgDescription': 'MultiStream Hub Privacy Policy: Learn how we protect your privacy. We do not collect personal data, all data is stored only in your browser',
       
       // Initial Publisher Content
       'welcomeTitle': 'Welcome to MultiStream Hub',
@@ -976,6 +1027,23 @@ const i18n = {
       'aboutPrivacy2': '詳細なプライバシーポリシーについては、以下を参照してください：',
       'home': 'ホーム',
       
+      // SEO 関連
+      'seoTitle': 'MultiStream Hub - マルチプラットフォームライブストリーミング視聴ツール | Twitch & YouTube 同時視聴',
+      'seoDescription': 'MultiStream Hub は、複数の Twitch と YouTube ライブストリームを同時に視聴できる完全無料のマルチプラットフォームライブストリーミング視聴ツールです。複数のレイアウトモード（単一ビュー、分割、グリッド、サイドチャット）、チャット統合、独立した音量制御、お気に入りシステムなどの機能を提供します。登録不要、支払い不要。今すぐ使い始めましょう！',
+      'seoKeywords': 'マルチプラットフォームストリーミング,ストリーム視聴,Twitch,YouTube,ライブストリーミングツール,マルチビューストリーミング,ストリーミングチャット,ストリーム管理,無料ストリーミングツール,同時ストリーミング視聴,ストリーム分割,マルチストリーム視聴,Twitch YouTube 視聴,無料ストリームプレーヤー,マルチウィンドウストリーミング,ストリームアグリゲーター,ストリーム同期,ストリームマルチオープン,ストリーム分割画面,ストリーミングツールウェブサイト',
+      'seoOgTitle': 'MultiStream Hub - マルチプラットフォームライブストリーミング視聴ツール',
+      'seoOgDescription': '複数の Twitch と YouTube ライブストリームを同時視聴できる無料のマルチプラットフォームライブストリーミング視聴ツール',
+      'seoAboutTitle': '私たちについて - MultiStream Hub | マルチプラットフォームストリーミングツール紹介',
+      'seoAboutDescription': 'MultiStream Hub について - 無料のマルチプラットフォームライブストリーミング視聴ツール。Hsiung-Shao によって独立して開発され、複数の Twitch と YouTube ライブストリームの同時視聴をサポートし、複数のレイアウトモード、チャット統合、音量制御などの機能を提供します。完全無料、登録不要。',
+      'seoAboutKeywords': 'MultiStream Hub,私たちについて,ストリーミングツール紹介,無料ストリーミングツール,Twitch YouTube 視聴ツール,マルチプラットフォームストリーミング,ストリーミング視聴ツール,ストリーミングツール開発者',
+      'seoAboutOgTitle': '私たちについて - MultiStream Hub',
+      'seoAboutOgDescription': 'MultiStream Hub について - 無料のマルチプラットフォームライブストリーミング視聴ツール、Hsiung-Shao によって独立して開発され、複数の Twitch と YouTube ライブストリームの同時視聴をサポート',
+      'seoPrivacyTitle': 'プライバシーポリシー - MultiStream Hub | データ保護とプライバシー情報',
+      'seoPrivacyDescription': 'MultiStream Hub プライバシーポリシー：プライバシーの保護方法について。個人データは収集せず、すべてのデータはブラウザにのみ保存されます。完全無料、安全で信頼性の高いマルチプラットフォームライブストリーミング視聴ツール。',
+      'seoPrivacyKeywords': 'MultiStream Hub,プライバシーポリシー,データ保護,プライバシー情報,個人データ保護,ブラウザストレージ,無料ツールプライバシー',
+      'seoPrivacyOgTitle': 'プライバシーポリシー - MultiStream Hub',
+      'seoPrivacyOgDescription': 'MultiStream Hub プライバシーポリシー：プライバシーの保護方法について。個人データは収集せず、すべてのデータはブラウザにのみ保存されます',
+      
       // 初期パブリッシャーコンテンツ
       'welcomeTitle': 'MultiStream Hub へようこそ',
       'welcomeDescription': '複数の Twitch と YouTube ライブストリームを同時視聴できる無料のマルチプラットフォームライブストリーミング視聴ツール',
@@ -1176,7 +1244,9 @@ const i18n = {
     if (this.translations[lang]) {
       this.currentLang = lang;
       localStorage.setItem('preferredLanguage', lang);
+      localStorage.setItem('language', lang); // 保持兼容性
       this.updatePage();
+      this.updateSEO(); // 更新 SEO 元素
       return true;
     }
     return false;
@@ -1189,8 +1259,8 @@ const i18n = {
   
   // 初始化語言
   init: function() {
-    // 從 localStorage 讀取語言設置
-    const savedLang = localStorage.getItem('preferredLanguage');
+    // 從 localStorage 讀取語言設置（兼容兩種 key）
+    const savedLang = localStorage.getItem('preferredLanguage') || localStorage.getItem('language');
     if (savedLang && this.translations[savedLang]) {
       this.currentLang = savedLang;
     } else {
@@ -1210,6 +1280,109 @@ const i18n = {
     }
     // 立即更新頁面（不延遲，確保功能正常運作）
     this.updatePage();
+    this.updateSEO(); // 更新 SEO 元素
+  },
+  
+  // 更新 SEO 相關的 meta 標籤和 HTML 屬性
+  updateSEO: function() {
+    const lang = this.currentLang;
+    const isAboutPage = window.location.pathname.includes('about.html');
+    const isPrivacyPage = window.location.pathname.includes('privacy.html');
+    
+    // 更新 HTML lang 屬性
+    if (document.documentElement) {
+      document.documentElement.lang = lang;
+    }
+    
+    // 根據頁面類型選擇不同的 SEO key
+    let titleKey, descKey, keywordsKey, ogTitleKey, ogDescKey;
+    
+    if (isAboutPage) {
+      titleKey = 'seoAboutTitle';
+      descKey = 'seoAboutDescription';
+      keywordsKey = 'seoAboutKeywords';
+      ogTitleKey = 'seoAboutOgTitle';
+      ogDescKey = 'seoAboutOgDescription';
+    } else if (isPrivacyPage) {
+      titleKey = 'seoPrivacyTitle';
+      descKey = 'seoPrivacyDescription';
+      keywordsKey = 'seoPrivacyKeywords';
+      ogTitleKey = 'seoPrivacyOgTitle';
+      ogDescKey = 'seoPrivacyOgDescription';
+    } else {
+      titleKey = 'seoTitle';
+      descKey = 'seoDescription';
+      keywordsKey = 'seoKeywords';
+      ogTitleKey = 'seoOgTitle';
+      ogDescKey = 'seoOgDescription';
+    }
+    
+    // 更新 <title>
+    const title = this.t(titleKey);
+    if (title && document.title !== title) {
+      document.title = title;
+    }
+    
+    // 更新 <meta name="description">
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', this.t(descKey));
+    
+    // 更新 <meta name="keywords">
+    let metaKeywords = document.querySelector('meta[name="keywords"]');
+    if (metaKeywords) {
+      metaKeywords.setAttribute('content', this.t(keywordsKey));
+    }
+    
+    // 更新 <meta name="language">
+    let metaLang = document.querySelector('meta[name="language"]');
+    if (metaLang) {
+      metaLang.setAttribute('content', lang);
+    }
+    
+    // 更新 Open Graph 標籤
+    let ogTitle = document.querySelector('meta[property="og:title"]');
+    if (!ogTitle) {
+      ogTitle = document.createElement('meta');
+      ogTitle.setAttribute('property', 'og:title');
+      document.head.appendChild(ogTitle);
+    }
+    ogTitle.setAttribute('content', this.t(ogTitleKey));
+    
+    let ogDesc = document.querySelector('meta[property="og:description"]');
+    if (!ogDesc) {
+      ogDesc = document.createElement('meta');
+      ogDesc.setAttribute('property', 'og:description');
+      document.head.appendChild(ogDesc);
+    }
+    ogDesc.setAttribute('content', this.t(ogDescKey));
+    
+    // 更新 og:locale
+    const ogLocaleMap = {
+      'zh-TW': 'zh_TW',
+      'zh-CN': 'zh_CN',
+      'en': 'en_US',
+      'ja': 'ja_JP'
+    };
+    let ogLocale = document.querySelector('meta[property="og:locale"]');
+    if (ogLocale) {
+      ogLocale.setAttribute('content', ogLocaleMap[lang] || 'zh_TW');
+    }
+    
+    // 更新 Twitter Card 標籤
+    let twitterTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twitterTitle) {
+      twitterTitle.setAttribute('content', this.t(ogTitleKey));
+    }
+    
+    let twitterDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twitterDesc) {
+      twitterDesc.setAttribute('content', this.t(ogDescKey));
+    }
   },
   
   // 更新頁面文字
