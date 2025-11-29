@@ -58,6 +58,18 @@ const i18n = {
       'english': 'English',
       'japanese': '日本語',
       
+      // 初始發布商內容
+      'welcomeTitle': '歡迎使用 MultiStream Hub',
+      'welcomeDescription': '免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播',
+      'featuresTitle': '主要功能',
+      'feature1': '支援 Twitch 和 YouTube 多平台直播',
+      'feature2': '多種布局模式（單一畫面、分割、網格、側邊聊天等）',
+      'feature3': '聊天室整合與音量控制',
+      'feature4': '收藏串流與分類管理',
+      'feature5': '完全免費，無需註冊',
+      'getStarted': '開始使用',
+      'initialContentNote': '在控制面板中貼上 Twitch 或 YouTube 直播網址，即可開始觀看多個直播串流',
+      
       // 版本紀錄
       'version': '版本',
       'close': '關閉',
@@ -276,6 +288,18 @@ const i18n = {
       'chineseSimplified': '简体中文',
       'english': 'English',
       'japanese': '日本語',
+      
+      // 初始发布商内容
+      'welcomeTitle': '欢迎使用 MultiStream Hub',
+      'welcomeDescription': '免费的多平台直播串流观看工具，支持同时观看多个 Twitch 和 YouTube 直播',
+      'featuresTitle': '主要功能',
+      'feature1': '支持 Twitch 和 YouTube 多平台直播',
+      'feature2': '多种布局模式（单一画面、分割、网格、侧边聊天等）',
+      'feature3': '聊天室整合与音量控制',
+      'feature4': '收藏串流与分类管理',
+      'feature5': '完全免费，无需注册',
+      'getStarted': '开始使用',
+      'initialContentNote': '在控制面板中贴上 Twitch 或 YouTube 直播网址，即可开始观看多个直播串流',
       
       // 版本紀錄
       'version': '版本',
@@ -496,6 +520,18 @@ const i18n = {
       'english': 'English',
       'japanese': '日本語',
       
+      // Initial Publisher Content
+      'welcomeTitle': 'Welcome to MultiStream Hub',
+      'welcomeDescription': 'Free multi-platform live streaming viewer supporting simultaneous viewing of multiple Twitch and YouTube streams',
+      'featuresTitle': 'Key Features',
+      'feature1': 'Support for Twitch and YouTube multi-platform streaming',
+      'feature2': 'Multiple layout modes (single view, split, grid, side chat, etc.)',
+      'feature3': 'Chat integration and volume control',
+      'feature4': 'Favorite streams and category management',
+      'feature5': 'Completely free, no registration required',
+      'getStarted': 'Get Started',
+      'initialContentNote': 'Paste a Twitch or YouTube live stream URL in the control panel to start watching multiple streams',
+      
       // Version History
       'version': 'Version',
       'close': 'Close',
@@ -715,6 +751,18 @@ const i18n = {
       'chineseSimplified': '简体中文',
       'english': 'English',
       'japanese': '日本語',
+      
+      // 初期パブリッシャーコンテンツ
+      'welcomeTitle': 'MultiStream Hub へようこそ',
+      'welcomeDescription': '複数の Twitch と YouTube ライブストリームを同時視聴できる無料のマルチプラットフォームライブストリーミング視聴ツール',
+      'featuresTitle': '主な機能',
+      'feature1': 'Twitch と YouTube のマルチプラットフォームストリーミングをサポート',
+      'feature2': '複数のレイアウトモード（単一ビュー、分割、グリッド、サイドチャットなど）',
+      'feature3': 'チャット統合と音量制御',
+      'feature4': 'お気に入りストリームとカテゴリ管理',
+      'feature5': '完全無料、登録不要',
+      'getStarted': '始める',
+      'initialContentNote': 'コントロールパネルに Twitch または YouTube ライブストリーム URL を貼り付けて、複数のストリームの視聴を開始できます',
       
       // バージョン履歴
       'version': 'バージョン',
@@ -947,6 +995,8 @@ const i18n = {
     if (langSelector) {
       langSelector.value = this.currentLang;
     }
+    // 更新初始發布商內容
+    this.updateInitialContent();
     // 更新控制面板
     this.updateControlPanel();
     // 更新版本紀錄（如果已打開）
@@ -958,6 +1008,49 @@ const i18n = {
     // 更新收藏列表顯示
     if (typeof updateFavoriteListDisplay === 'function') {
       updateFavoriteListDisplay();
+    }
+  },
+  
+  // 更新初始發布商內容
+  updateInitialContent: function() {
+    const initialContent = document.getElementById('initial-content');
+    if (!initialContent) return;
+    
+    // 更新語言選擇器
+    const initialLangSelector = document.getElementById('initial-language-selector');
+    if (initialLangSelector) {
+      initialLangSelector.value = this.currentLang;
+    }
+    
+    // 更新語言選擇器標籤
+    const langLabel = initialContent.querySelector('.initial-content-language-selector label');
+    if (langLabel && langLabel.hasAttribute('data-i18n')) {
+      langLabel.textContent = this.t('language');
+    }
+    
+    // 使用通用的 data-i18n 更新邏輯
+    const elementsWithI18n = initialContent.querySelectorAll('[data-i18n]');
+    elementsWithI18n.forEach(element => {
+      const key = element.getAttribute('data-i18n');
+      if (key) {
+        const translation = this.t(key);
+        if (translation) {
+          // 根據元素類型更新
+          if (element.tagName === 'INPUT' && element.type === 'text') {
+            element.placeholder = translation;
+          } else if (element.tagName === 'INPUT' && element.type === 'submit') {
+            element.value = translation;
+          } else {
+            element.textContent = translation;
+          }
+        }
+      }
+    });
+    
+    // 更新語言選擇器的 title 和 aria-label
+    if (initialLangSelector) {
+      initialLangSelector.title = this.t('selectLanguage');
+      initialLangSelector.setAttribute('aria-label', this.t('selectLanguage'));
     }
   },
   
