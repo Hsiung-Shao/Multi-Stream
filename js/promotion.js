@@ -204,15 +204,35 @@ function removeAdHTML() {
   }
 }
 
+// 移除 AdSense 腳本（當廣告關閉時移除，符合 AdSense 政策）
+function removeAdSenseScript() {
+  const script = document.querySelector('script[src*="adsbygoogle.js"]');
+  if (script) {
+    script.remove();
+    adSenseScriptLoaded = false;
+  }
+}
+
 // 檢查是否有有效的發布商內容
 function hasValidPublisherContent() {
-  // 檢查是否有串流內容
+  // 1. 檢查是否有初始發布商內容（符合 AdSense 政策：頁面始終有發布商內容）
+  const initialContent = document.getElementById('initial-content');
+  if (initialContent) {
+    // 檢查初始內容是否可見（沒有被隱藏）
+    const computedStyle = window.getComputedStyle(initialContent);
+    if (computedStyle.opacity !== '0' && computedStyle.visibility !== 'hidden') {
+      // 初始發布商內容存在且可見，視為有效的發布商內容
+      return true;
+    }
+  }
+  
+  // 2. 檢查是否有串流內容
   const streamBoxes = document.querySelectorAll('.stream-box');
   if (streamBoxes.length === 0) {
     return false;
   }
   
-  // 檢查串流是否真的載入成功（不僅僅是 DOM 元素存在）
+  // 3. 檢查串流是否真的載入成功（不僅僅是 DOM 元素存在）
   let hasValidStream = false;
   const players = window.players || {};
   const streamData = window.streamData || {};
@@ -422,8 +442,9 @@ function toggleAdEnabled() {
     if (isAdVisible) {
       hideAdBanner();
     }
-    // 移除廣告 HTML 結構（符合 AdSense 政策：未啟用時不應有廣告代碼）
+    // 移除廣告 HTML 結構和腳本（符合 AdSense 政策：未啟用時不應有廣告代碼）
     removeAdHTML();
+    removeAdSenseScript();
   }
 }
 
