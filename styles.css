@@ -85,18 +85,21 @@ body:has(.control-panel:not(.collapsed)) #container {
   overflow: hidden;
   position: relative;
   min-height: 100px;
-  min-width: 200px;
+  min-width: 300px; /* YouTube 聊天室需要至少 300px 寬度 */
 }
 
 .content-wrapper.layout-horizontal .chat-container {
   width: 300px;
+  min-width: 300px; /* 確保最小寬度 */
   height: 100%;
   border-left: 1px solid #333;
 }
 
 .content-wrapper.layout-vertical .chat-container {
   width: 100%;
+  min-width: 300px; /* 垂直布局時也確保最小寬度 */
   height: 250px;
+  min-height: 250px; /* 確保最小高度 */
   border-top: 1px solid #333;
 }
 
@@ -118,6 +121,8 @@ body:has(.control-panel:not(.collapsed)) #container {
   width: 100%;
   height: 100%;
   border: none;
+  min-width: 300px; /* YouTube 聊天室 iframe 最小寬度 */
+  min-height: 200px; /* 確保最小高度 */
 }
 
 .chat-resizer {
@@ -224,6 +229,8 @@ body:has(.control-panel:not(.collapsed)) #container {
   width: 100%;
   height: 100%;
   border: none;
+  min-width: 300px; /* YouTube 聊天室 iframe 最小寬度 */
+  min-height: 200px; /* 確保最小高度 */
 }
 
 .controls {
@@ -1340,6 +1347,25 @@ body:has(.ad-banner.show) #container,
     padding-bottom: 0;
   }
   
+  /* 聊天室容器在手機上優化 */
+  .chat-container {
+    min-width: 100%; /* 手機上使用全寬 */
+  }
+  
+  .content-wrapper.layout-horizontal .chat-container {
+    width: 100%;
+    min-width: 100%;
+  }
+  
+  .content-wrapper.layout-vertical .chat-container {
+    width: 100%;
+    min-width: 100%;
+  }
+  
+  .chat-container iframe {
+    min-width: 100%; /* 手機上使用全寬 */
+  }
+  
   /* 控制面板標題調整 */
   .control-panel-header {
     padding: 15px;
@@ -1604,6 +1630,1606 @@ body:has(.ad-banner.show) #container,
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
+  }
+}
+
+/* ============================================
+   全面響應式設計優化 - 所有解析度
+   ============================================ */
+
+/* 超大屏幕 (2560px 及以上) */
+@media (min-width: 2560px) {
+  .control-panel {
+    width: 650px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 650px;
+  }
+  
+  .control-panel-content {
+    padding: 20px;
+  }
+  
+  .section-title {
+    font-size: 14px;
+  }
+  
+  button {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+  
+  #url-input {
+    font-size: 16px;
+    padding: 12px;
+  }
+  
+  .stream-box {
+    min-width: 350px;
+    min-height: 250px;
+  }
+  
+  .favorite-streams-manager {
+    width: 800px;
+    max-width: 80vw;
+  }
+  
+  .layout-preview-inline {
+    height: 50px;
+    min-height: 50px;
+  }
+}
+
+/* 大屏幕 (1920px - 2559px) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .control-panel {
+    width: 600px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 600px;
+  }
+  
+  .stream-box {
+    min-width: 320px;
+    min-height: 220px;
+  }
+  
+  .favorite-streams-manager {
+    width: 700px;
+    max-width: 85vw;
+  }
+}
+
+/* 中等屏幕桌面 (1440px - 1919px) - 標準桌面 */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .control-panel {
+    width: 550px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 550px;
+  }
+  
+  .stream-box {
+    min-width: 300px;
+    min-height: 200px;
+  }
+}
+
+/* 小屏幕桌面 (1024px - 1439px) - 筆記本電腦 */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .control-panel {
+    width: 500px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 500px;
+  }
+  
+  .stream-box {
+    min-width: 280px;
+    min-height: 180px;
+  }
+  
+  .favorite-streams-manager {
+    width: 550px;
+    max-width: 90vw;
+  }
+  
+  .layout-preview-inline {
+    height: 40px;
+    min-height: 40px;
+  }
+  
+  .control-panel-content {
+    padding: 12px;
+  }
+  
+  .section-title {
+    font-size: 11px;
+  }
+  
+  button {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+}
+
+/* 平板橫向 (1024px - 1366px) */
+@media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+  .control-panel {
+    width: 450px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 450px;
+  }
+  
+  .stream-box {
+    min-width: 250px;
+    min-height: 170px;
+  }
+  
+  .layout-preview-inline {
+    height: 38px;
+    min-height: 38px;
+  }
+}
+
+/* 固定布局聊天室面板基礎樣式 */
+.chat-sidebar-panel,
+.fixed-chat-panel {
+  position: relative;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px; /* YouTube 聊天室需要至少 300px 寬度 */
+}
+
+.chat-sidebar-content,
+.chat-content-fixed {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-width: 300px; /* 確保內容區域有足夠寬度 */
+  min-height: 200px; /* 確保最小高度 */
+}
+
+.chat-sidebar-content iframe,
+.chat-content-fixed iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  min-width: 300px; /* YouTube 聊天室 iframe 最小寬度 */
+  min-height: 200px; /* 確保最小高度 */
+}
+
+#fixed-chat-sidebar,
+.chat-sidebar-fixed {
+  position: absolute;
+  background: #0a0a0a;
+  border-left: 2px solid #333;
+  display: flex;
+  box-sizing: border-box;
+  min-width: 300px; /* 確保側邊欄有足夠寬度 */
+}
+
+/* 固定布局響應式優化 - Layout 13, 14, 15 */
+@media (max-width: 1440px) {
+  /* 固定聊天側邊欄在小屏幕上調整 */
+  #fixed-chat-sidebar,
+  .chat-sidebar-fixed {
+    max-width: 100%;
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: 300px; /* 保持 300px 最小寬度 */
+  }
+  
+  .chat-sidebar-content iframe,
+  .chat-content-fixed iframe,
+  .fixed-chat-panel iframe {
+    min-width: 300px; /* YouTube 聊天室需要至少 300px */
+  }
+}
+
+@media (max-width: 1024px) {
+  /* 固定布局在平板上的優化 */
+  #fixed-chat-sidebar,
+  .chat-sidebar-fixed {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 300px; /* 保持最小寬度 */
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: 300px; /* 保持 300px 最小寬度，確保 YouTube 聊天室正常顯示 */
+  }
+  
+  .chat-sidebar-content iframe,
+  .chat-content-fixed iframe,
+  .fixed-chat-panel iframe {
+    min-width: 300px;
+  }
+  
+  /* 視頻區域在小屏幕上可能需要調整 */
+  #container:has(#fixed-chat-sidebar) {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  /* 固定布局在手機上改為垂直堆疊 */
+  #fixed-chat-sidebar,
+  .chat-sidebar-fixed {
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 40vh !important;
+    flex-direction: row !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-top: 2px solid #9147ff;
+    border-left: none;
+    border-right: none;
+    min-width: 100%; /* 手機上全寬 */
+  }
+  
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    min-width: 300px; /* 保持 300px 最小寬度，確保 YouTube 聊天室正常顯示 */
+    max-width: 80vw;
+    height: 100% !important;
+    flex-shrink: 0;
+  }
+  
+  .chat-sidebar-content iframe,
+  .chat-content-fixed iframe,
+  .fixed-chat-panel iframe {
+    min-width: 300px;
+  }
+  
+  /* 視頻區域在手機上佔滿寬度 */
+  #container:has(#fixed-chat-sidebar) {
+    flex-direction: column;
+    padding-bottom: 0;
+  }
+}
+
+/* 分離聊天室響應式優化 */
+@media (max-width: 1440px) {
+  .separated-chat {
+    min-width: 300px; /* 確保 YouTube 聊天室有足夠寬度 */
+    min-height: 350px;
+    max-width: 90vw;
+    max-height: 85vh;
+  }
+  
+  .separated-chat-content iframe {
+    min-width: 300px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .separated-chat {
+    min-width: 300px; /* 保持 300px 最小寬度 */
+    min-height: 300px;
+    max-width: 95vw;
+    max-height: 80vh;
+  }
+  
+  .separated-chat-content iframe {
+    min-width: 300px;
+  }
+  
+  .separated-chat-header {
+    height: 40px;
+    font-size: 13px;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .separated-chat {
+    min-width: 90vw;
+    min-height: 50vh;
+    max-width: 95vw;
+    max-height: 70vh;
+  }
+  
+  .separated-chat-content iframe {
+    min-width: 90vw; /* 手機上使用視窗寬度 */
+  }
+  
+  .separated-chat-header {
+    height: 44px;
+    font-size: 14px;
+    padding: 0 15px;
+  }
+  
+  .separated-chat-header .close {
+    font-size: 24px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .separated-chat {
+    min-width: 95vw;
+    min-height: 45vh;
+    max-width: 98vw;
+    max-height: 65vh;
+  }
+}
+
+/* 模態框（版本歷史、使用教學）響應式優化 */
+@media (min-width: 1920px) {
+  .favorite-streams-manager {
+    width: 750px;
+    max-width: 75vw;
+  }
+  
+  .favorite-manager-content {
+    font-size: 15px;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .favorite-streams-manager {
+    width: 650px;
+    max-width: 80vw;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .favorite-streams-manager {
+    width: 550px;
+    max-width: 85vw;
+  }
+  
+  .favorite-manager-content {
+    font-size: 13px;
+    padding: 18px;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 768px) {
+  .favorite-streams-manager {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
+  }
+  
+  .favorite-manager-content {
+    padding: 15px;
+    font-size: 14px;
+    max-height: calc(90vh - 60px);
+  }
+  
+  .favorite-manager-header {
+    padding: 12px 15px;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .favorite-streams-manager {
+    width: 98vw;
+    max-width: 98vw;
+    max-height: 95vh;
+  }
+  
+  .favorite-manager-content {
+    padding: 12px;
+    font-size: 13px;
+    max-height: calc(95vh - 55px);
+  }
+  
+  .favorite-manager-header {
+    padding: 10px 12px;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 15px;
+  }
+}
+
+/* 布局預覽按鈕響應式優化 */
+@media (min-width: 1920px) {
+  .layout-grid-inline {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  
+  .layout-preview-inline {
+    height: 55px;
+    min-height: 55px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .layout-grid-inline {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+  }
+  
+  .layout-preview-inline {
+    height: 48px;
+    min-height: 48px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .layout-grid-inline {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  
+  .layout-preview-inline {
+    height: 42px;
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-grid-inline {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  
+  .layout-preview-inline {
+    height: 50px;
+    min-height: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .layout-grid-inline {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  
+  .layout-preview-inline {
+    height: 45px;
+    min-height: 45px;
+  }
+}
+
+/* 串流順序列表響應式優化 */
+@media (min-width: 1920px) {
+  #stream-order-list {
+    max-height: 400px;
+  }
+  
+  .stream-order-item {
+    padding: 12px;
+  }
+  
+  .stream-order-label {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  #stream-order-list {
+    max-height: 350px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  #stream-order-list {
+    max-height: 280px;
+  }
+  
+  .stream-order-item {
+    padding: 9px;
+  }
+  
+  .stream-order-label {
+    font-size: 11px;
+  }
+}
+
+/* 收藏列表響應式優化 */
+@media (min-width: 1920px) {
+  #favorite-list-display {
+    max-height: 400px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  #favorite-list-display {
+    max-height: 350px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  #favorite-list-display {
+    max-height: 280px;
+  }
+}
+
+/* 廣告橫幅響應式優化 */
+@media (min-width: 1920px) {
+  .ad-banner {
+    max-height: 250px;
+  }
+  
+  body:has(.ad-banner.show) #container,
+  #container.has-ad {
+    padding-bottom: 250px;
+    height: calc(100vh - 250px);
+  }
+  
+  .ad-content {
+    max-width: 1400px;
+    padding: 20px 60px 20px 25px;
+  }
+  
+  .ad-message {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .ad-banner {
+    max-height: 220px;
+  }
+  
+  body:has(.ad-banner.show) #container,
+  #container.has-ad {
+    padding-bottom: 220px;
+    height: calc(100vh - 220px);
+  }
+  
+  .ad-content {
+    max-width: 1200px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .ad-banner {
+    max-height: 180px;
+  }
+  
+  body:has(.ad-banner.show) #container,
+  #container.has-ad {
+    padding-bottom: 180px;
+    height: calc(100vh - 180px);
+  }
+  
+  .ad-content {
+    max-width: 1000px;
+    padding: 15px 50px 15px 20px;
+  }
+  
+  .ad-message {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ad-banner {
+    max-height: 150px;
+  }
+  
+  body:has(.ad-banner.show) #container,
+  #container.has-ad {
+    padding-bottom: 150px;
+    height: calc(100vh - 150px);
+  }
+  
+  .ad-content {
+    padding: 10px 35px 10px 12px;
+  }
+  
+  .ad-message {
+    font-size: 13px;
+  }
+  
+  .ad-close-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    line-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ad-banner {
+    max-height: 120px;
+  }
+  
+  body:has(.ad-banner.show) #container,
+  #container.has-ad {
+    padding-bottom: 120px;
+    height: calc(100vh - 120px);
+  }
+  
+  .ad-message {
+    font-size: 12px;
+  }
+  
+  .ad-note {
+    font-size: 9px;
+  }
+}
+
+/* 控制面板內容區域響應式優化 */
+@media (min-width: 1920px) {
+  .control-panel-content {
+    padding: 20px;
+  }
+  
+  .control-section {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+  
+  .section-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .control-panel-content {
+    padding: 18px;
+  }
+  
+  .control-section {
+    margin-top: 18px;
+    padding-top: 18px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .control-panel-content {
+    padding: 12px;
+  }
+  
+  .control-section {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  
+  .section-title {
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+}
+
+/* 輸入框和按鈕響應式優化 */
+@media (min-width: 1920px) {
+  #url-input {
+    font-size: 16px;
+    padding: 12px;
+  }
+  
+  #add-panel button {
+    font-size: 15px;
+    padding: 12px 24px;
+  }
+  
+  .control-section button {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  #url-input {
+    font-size: 15px;
+    padding: 11px;
+  }
+  
+  #add-panel button {
+    font-size: 14px;
+    padding: 11px 22px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  #url-input {
+    font-size: 14px;
+    padding: 10px;
+  }
+  
+  #add-panel button {
+    font-size: 13px;
+    padding: 10px 18px;
+  }
+  
+  .control-section button {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+}
+
+/* 音量控制響應式優化 */
+@media (min-width: 1920px) {
+  .master-volume-control {
+    padding: 10px;
+  }
+  
+  .master-volume-control label {
+    font-size: 13px;
+  }
+  
+  #master-volume {
+    height: 8px;
+  }
+  
+  #master-volume-value {
+    font-size: 13px;
+    min-width: 45px;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .master-volume-control {
+    padding: 7px;
+  }
+  
+  .master-volume-control label {
+    font-size: 11px;
+  }
+  
+  #master-volume-value {
+    font-size: 11px;
+    min-width: 35px;
+  }
+}
+
+/* 高 DPI 屏幕優化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .stream-box {
+    border-width: 1.5px;
+  }
+  
+  .control-panel {
+    border-left-width: 1.5px;
+  }
+  
+  .separated-chat {
+    border-width: 1.5px;
+  }
+  
+  .favorite-streams-manager {
+    border-width: 1.5px;
+  }
+}
+
+/* 超寬屏優化 (21:9 等) */
+@media (min-width: 2560px) and (min-aspect-ratio: 21/9) {
+  .control-panel {
+    width: 700px;
+  }
+  
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 700px;
+  }
+  
+  .stream-box {
+    min-width: 400px;
+    min-height: 280px;
+  }
+}
+
+/* ============================================
+   超小解析度優化 (360px 及以下)
+   ============================================ */
+
+/* 小手機 (360px - 480px) */
+@media (max-width: 480px) and (min-width: 361px) {
+  .control-panel-header {
+    padding: 10px;
+    padding-top: 40px;
+  }
+  
+  .control-panel-content {
+    padding: 10px;
+  }
+  
+  .control-section {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  
+  .control-panel-title {
+    font-size: 15px;
+  }
+  
+  .control-panel-toggle {
+    font-size: 18px;
+    padding: 6px 10px;
+    top: 12px;
+    right: 12px;
+  }
+  
+  #add-panel {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  #add-panel input {
+    width: 100%;
+    font-size: 16px;
+    padding: 10px;
+    min-height: 44px;
+  }
+  
+  #add-panel button {
+    width: 100%;
+    font-size: 15px;
+    padding: 12px;
+    min-height: 44px;
+  }
+  
+  .layout-grid-inline {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  
+  .layout-preview-inline {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+  }
+  
+  .stream-box {
+    min-width: 160px;
+    min-height: 100px;
+  }
+  
+  .section-title {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  
+  .control-section button {
+    font-size: 12px;
+    padding: 8px 10px;
+    min-height: 40px;
+    min-width: 40px;
+  }
+  
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 140px;
+  }
+  
+  .master-volume-control {
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+  }
+  
+  .master-volume-control label {
+    font-size: 12px;
+  }
+  
+  #master-volume {
+    width: 100%;
+  }
+  
+  .favorite-streams-manager {
+    width: 98vw;
+    max-width: 98vw;
+    max-height: 92vh;
+  }
+  
+  .favorite-manager-content {
+    padding: 10px;
+    font-size: 13px;
+    max-height: calc(92vh - 50px);
+  }
+  
+  .favorite-manager-header {
+    padding: 10px 12px;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 15px;
+  }
+  
+  .close-btn {
+    font-size: 26px;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+  }
+  
+  .favorite-tabs {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .tab-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+    min-height: 40px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .favorite-add-section {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .favorite-add-section input,
+  .favorite-add-section select {
+    width: 100%;
+    font-size: 16px;
+    padding: 10px;
+    min-height: 44px;
+  }
+  
+  .favorite-add-section button {
+    width: 100%;
+    font-size: 14px;
+    padding: 12px;
+    min-height: 44px;
+  }
+  
+  .favorite-item,
+  .category-item {
+    padding: 10px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  
+  .favorite-item-info {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  
+  .favorite-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .favorite-item button,
+  .category-item button {
+    font-size: 11px;
+    padding: 6px 10px;
+    min-height: 36px;
+    min-width: 36px;
+  }
+  
+  .separated-chat {
+    min-width: 98vw;
+    min-height: 40vh;
+    max-width: 98vw;
+    max-height: 60vh;
+  }
+  
+  .separated-chat-header {
+    height: 40px;
+    font-size: 13px;
+    padding: 0 10px;
+  }
+  
+  .controls {
+    height: 48px;
+    padding: 0 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .control-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    min-height: 32px;
+  }
+  
+  .close {
+    font-size: 18px;
+    padding: 0 10px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  
+  .ad-content {
+    padding: 8px 30px 8px 10px;
+  }
+  
+  .ad-message {
+    font-size: 12px;
+  }
+  
+  .ad-note {
+    font-size: 9px;
+  }
+  
+  .ad-close-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+    line-height: 36px;
+    top: 8px;
+    right: 10px;
+  }
+  
+  .control-panel-toggle-collapsed {
+    width: 44px;
+    padding: 12px 8px;
+    font-size: 18px;
+  }
+  
+  .control-section a[href*="forms.gle"],
+  .control-section a[onclick*="showVersionHistory"] {
+    font-size: 13px;
+    padding: 10px 14px;
+    min-height: 40px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+}
+
+/* 超小手機 (320px - 360px) */
+@media (max-width: 360px) {
+  .control-panel-header {
+    padding: 8px;
+    padding-top: 38px;
+  }
+  
+  .control-panel-content {
+    padding: 8px;
+  }
+  
+  .control-section {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  
+  .control-panel-title {
+    font-size: 14px;
+  }
+  
+  .control-panel-toggle {
+    font-size: 16px;
+    padding: 5px 8px;
+    top: 10px;
+    right: 10px;
+  }
+  
+  #add-panel {
+    gap: 6px;
+  }
+  
+  #add-panel input {
+    font-size: 16px;
+    padding: 8px;
+    min-height: 42px;
+  }
+  
+  #add-panel button {
+    font-size: 14px;
+    padding: 10px;
+    min-height: 42px;
+  }
+  
+  .layout-grid-inline {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+  
+  .layout-preview-inline {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+  
+  .stream-box {
+    min-width: 140px;
+    min-height: 90px;
+    border-radius: 6px;
+  }
+  
+  .section-title {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .control-section button {
+    font-size: 11px;
+    padding: 6px 8px;
+    min-height: 38px;
+    min-width: 38px;
+  }
+  
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 120px;
+  }
+  
+  .master-volume-control {
+    padding: 6px;
+    gap: 5px;
+  }
+  
+  .master-volume-control label {
+    font-size: 11px;
+  }
+  
+  #master-volume {
+    height: 4px;
+  }
+  
+  #master-volume-value {
+    font-size: 11px;
+    min-width: 30px;
+  }
+  
+  .master-volume-control button {
+    font-size: 11px;
+    padding: 6px 10px;
+    min-height: 38px;
+  }
+  
+  .favorite-streams-manager {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 95vh;
+    border-radius: 0;
+  }
+  
+  .favorite-manager-content {
+    padding: 8px;
+    font-size: 12px;
+    max-height: calc(95vh - 45px);
+  }
+  
+  .favorite-manager-header {
+    padding: 8px 10px;
+    border-radius: 0;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 14px;
+  }
+  
+  .close-btn {
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+  }
+  
+  .favorite-tabs {
+    gap: 4px;
+  }
+  
+  .tab-btn {
+    font-size: 11px;
+    padding: 6px 10px;
+    min-height: 38px;
+  }
+  
+  .favorite-add-section {
+    gap: 6px;
+  }
+  
+  .favorite-add-section input,
+  .favorite-add-section select {
+    font-size: 16px;
+    padding: 8px;
+    min-height: 42px;
+  }
+  
+  .favorite-add-section button {
+    font-size: 13px;
+    padding: 10px;
+    min-height: 42px;
+  }
+  
+  .favorite-item,
+  .category-item {
+    padding: 8px;
+    font-size: 12px;
+  }
+  
+  .favorite-item-name {
+    font-size: 12px;
+    min-width: 80px;
+  }
+  
+  .favorite-item-url {
+    font-size: 10px;
+  }
+  
+  .favorite-item button,
+  .category-item button {
+    font-size: 10px;
+    padding: 5px 8px;
+    min-height: 32px;
+    min-width: 32px;
+  }
+  
+  .category-item-name {
+    font-size: 13px;
+  }
+  
+  .category-item-count {
+    font-size: 11px;
+  }
+  
+  .separated-chat {
+    min-width: 100vw;
+    min-height: 35vh;
+    max-width: 100vw;
+    max-height: 55vh;
+    border-radius: 0;
+  }
+  
+  .separated-chat-header {
+    height: 36px;
+    font-size: 12px;
+    padding: 0 8px;
+  }
+  
+  .separated-chat-header .close {
+    font-size: 20px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  .controls {
+    height: 44px;
+    padding: 0 6px;
+    gap: 4px;
+  }
+  
+  .stream-label {
+    font-size: 11px;
+    min-width: 40px;
+  }
+  
+  .control-btn {
+    padding: 5px 8px;
+    font-size: 10px;
+    min-height: 30px;
+  }
+  
+  .close {
+    font-size: 16px;
+    padding: 0 8px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  .volume-control {
+    max-width: 150px;
+  }
+  
+  .volume {
+    height: 4px;
+  }
+  
+  .vol-value {
+    font-size: 10px;
+    min-width: 30px;
+  }
+  
+  .ad-banner {
+    max-height: 100px;
+  }
+  
+  body:has(.ad-banner.show) #container,
+  #container.has-ad {
+    padding-bottom: 100px;
+    height: calc(100vh - 100px);
+  }
+  
+  .ad-content {
+    padding: 6px 25px 6px 8px;
+  }
+  
+  .ad-label {
+    font-size: 9px;
+    padding: 3px 8px;
+    margin-bottom: 6px;
+  }
+  
+  .ad-message {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  
+  .ad-note {
+    font-size: 8px;
+  }
+  
+  .ad-close-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    line-height: 32px;
+    top: 6px;
+    right: 8px;
+  }
+  
+  .control-panel-toggle-collapsed {
+    width: 40px;
+    padding: 10px 6px;
+    font-size: 16px;
+  }
+  
+  .control-section a[href*="forms.gle"],
+  .control-section a[onclick*="showVersionHistory"] {
+    font-size: 12px;
+    padding: 8px 12px;
+    min-height: 38px;
+  }
+  
+  .stream-order-item {
+    padding: 6px;
+    gap: 6px;
+  }
+  
+  .stream-order-label {
+    font-size: 10px;
+  }
+  
+  .stream-order-buttons button {
+    padding: 3px 6px;
+    font-size: 10px;
+    min-width: 28px;
+    min-height: 28px;
+  }
+  
+  .stream-order-volume label {
+    font-size: 10px;
+    min-width: 40px;
+  }
+  
+  .stream-order-volume input[type="range"] {
+    height: 3px;
+  }
+  
+  .stream-order-volume-value {
+    font-size: 10px;
+    min-width: 30px;
+  }
+}
+
+/* 極小屏幕 (最大 320px) - 非常舊的手機 */
+@media (max-width: 320px) {
+  .control-panel-header {
+    padding: 6px;
+    padding-top: 35px;
+  }
+  
+  .control-panel-content {
+    padding: 6px;
+  }
+  
+  .control-section {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+  
+  .control-panel-title {
+    font-size: 13px;
+  }
+  
+  .control-panel-toggle {
+    font-size: 14px;
+    padding: 4px 6px;
+    top: 8px;
+    right: 8px;
+  }
+  
+  #add-panel input {
+    padding: 6px;
+    min-height: 40px;
+  }
+  
+  #add-panel button {
+    padding: 8px;
+    min-height: 40px;
+  }
+  
+  .layout-preview-inline {
+    width: 35px;
+    height: 35px;
+    min-width: 35px;
+    min-height: 35px;
+  }
+  
+  .stream-box {
+    min-width: 120px;
+    min-height: 80px;
+  }
+  
+  .section-title {
+    font-size: 11px;
+  }
+  
+  .control-section button {
+    font-size: 10px;
+    padding: 5px 6px;
+    min-height: 36px;
+    min-width: 36px;
+  }
+  
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 100px;
+  }
+  
+  .favorite-manager-content {
+    padding: 6px;
+    font-size: 11px;
+  }
+  
+  .favorite-manager-header {
+    padding: 6px 8px;
+  }
+  
+  .favorite-manager-header h3 {
+    font-size: 13px;
+  }
+  
+  .close-btn {
+    font-size: 22px;
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+  }
+  
+  .tab-btn {
+    font-size: 10px;
+    padding: 5px 8px;
+    min-height: 36px;
+  }
+  
+  .favorite-item,
+  .category-item {
+    padding: 6px;
+    font-size: 11px;
+  }
+  
+  .separated-chat {
+    min-height: 30vh;
+    max-height: 50vh;
+  }
+  
+  .separated-chat-header {
+    height: 32px;
+    font-size: 11px;
+  }
+  
+  .controls {
+    height: 40px;
+    padding: 0 4px;
+  }
+  
+  .control-btn {
+    padding: 4px 6px;
+    font-size: 9px;
+    min-height: 28px;
+  }
+  
+  .ad-content {
+    padding: 4px 20px 4px 6px;
+  }
+  
+  .ad-message {
+    font-size: 10px;
+  }
+  
+  .ad-note {
+    font-size: 7px;
+  }
+  
+  .ad-close-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    line-height: 28px;
+  }
+}
+
+/* 橫向模式 - 小屏幕優化 */
+@media (max-width: 480px) and (orientation: landscape) {
+  .control-panel {
+    width: 70vw;
+    max-width: 350px;
+  }
+  
+  .control-panel-header {
+    padding-top: 35px;
+  }
+  
+  .stream-box {
+    min-width: 180px;
+    min-height: 100px;
+  }
+  
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 100px;
+  }
+  
+  .favorite-streams-manager {
+    max-height: 85vh;
+  }
+  
+  .favorite-manager-content {
+    max-height: calc(85vh - 45px);
+  }
+  
+  .separated-chat {
+    min-height: 50vh;
+    max-height: 70vh;
+  }
+}
+
+@media (max-width: 360px) and (orientation: landscape) {
+  .control-panel {
+    width: 75vw;
+    max-width: 320px;
+  }
+  
+  .stream-box {
+    min-width: 150px;
+    min-height: 80px;
+  }
+  
+  #favorite-list-display,
+  #stream-order-list {
+    max-height: 80px;
+  }
+  
+  .separated-chat {
+    min-height: 45vh;
+    max-height: 65vh;
+  }
+}
+
+/* 打印樣式優化 */
+@media print {
+  .control-panel,
+  .control-panel-toggle-collapsed,
+  .separated-chat,
+  .favorite-streams-manager,
+  .ad-banner {
+    display: none !important;
+  }
+  
+  #container {
+    padding: 0 !important;
+    height: auto !important;
+  }
+  
+  .stream-box {
+    position: relative !important;
+    page-break-inside: avoid;
   }
 }
 
