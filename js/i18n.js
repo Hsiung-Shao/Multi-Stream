@@ -48,6 +48,7 @@ const i18n = {
       'giveFeedback': '給予意見回饋',
       'versionHistory': '版本紀錄',
       'userGuide': '使用教學',
+      'aboutUs': '關於我們',
       'privacyPolicy': '隱私權政策',
       'copyright': '© 2025 Hsiung-Shao. All rights reserved.',
       'freeTool': '本工具完全免費開放給所有人使用，歡迎分享連結給朋友！',
@@ -57,6 +58,61 @@ const i18n = {
       'chineseSimplified': '簡體中文',
       'english': 'English',
       'japanese': '日本語',
+      
+      // 關於頁面
+      'backToHome': '← 返回首頁',
+      'aboutTitle': '關於 MultiStream Hub',
+      'lastUpdated': '最後更新',
+      'aboutIntroTitle': '網站介紹',
+      'aboutIntro1': 'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，專為喜愛同時觀看多個直播的用戶設計。我們支援 Twitch 和 YouTube 兩大主流直播平台，讓您可以在同一個頁面上同時觀看多個直播串流，無需在多個分頁間切換。',
+      'aboutIntro2': '本工具由個人開發者獨立開發維護，完全免費開放給所有人使用，無需註冊、無需付費，歡迎分享給您的朋友！',
+      'aboutFeaturesTitle': '主要功能特色',
+      'aboutFeature1Title': '🎥 多平台串流支援',
+      'aboutFeature1Desc': '支援 Twitch 和 YouTube 兩大直播平台，可同時觀看多個串流',
+      'aboutFeature2Title': '🎨 多種布局模式',
+      'aboutFeature2Desc': '提供單一畫面、分割、網格、側邊聊天等多種布局選擇',
+      'aboutFeature3Title': '💬 聊天室整合',
+      'aboutFeature3Desc': '整合 Twitch 和 YouTube 聊天室，可同時顯示多個聊天室',
+      'aboutFeature4Title': '🔊 音量控制',
+      'aboutFeature4Desc': '獨立音量控制每個串流，並提供總音量控制功能',
+      'aboutFeature5Title': '⭐ 收藏系統',
+      'aboutFeature5Desc': '收藏喜愛的串流，支援分類管理，快速載入收藏內容',
+      'aboutFeature6Title': '📱 響應式設計',
+      'aboutFeature6Desc': '適配各種螢幕尺寸，提供流暢的使用體驗',
+      'aboutFeature7Title': '🌐 多語言支援',
+      'aboutFeature7Desc': '支援繁體中文、簡體中文、英文、日文四種語言',
+      'aboutFeature8Title': '🔒 安全可靠',
+      'aboutFeature8Desc': '採用 XSS 防護、CSP 安全策略，保護用戶安全',
+      'aboutTechTitle': '技術特色',
+      'aboutTech1Title': '純前端技術',
+      'aboutTech1Desc': '使用純 HTML/CSS/JavaScript 開發，無需後端伺服器',
+      'aboutTech2Title': '即時串流',
+      'aboutTech2Desc': '整合 Twitch Embed API 和 YouTube IFrame API',
+      'aboutTech3Title': '本地儲存',
+      'aboutTech3Desc': '使用 localStorage 和 File System Access API 保存設定',
+      'aboutTech4Title': 'SEO 優化',
+      'aboutTech4Desc': '完整的 Meta 標籤和結構化數據',
+      'aboutTech5Title': '效能優化',
+      'aboutTech5Desc': '輕量級設計，快速載入',
+      'aboutCreatorTitle': '創建者資訊',
+      'aboutCreator1': 'MultiStream Hub 由 <strong>Hsiung-Shao</strong> 獨立開發維護。',
+      'aboutCreator2': '本專案旨在為直播愛好者提供一個免費、易用的多平台串流觀看工具，讓觀看直播變得更加便利和有趣。',
+      'aboutCreator3': '我們持續改進和優化功能，歡迎用戶提供寶貴的意見和建議。',
+      'aboutContactTitle': '聯絡我們',
+      'aboutContactIntro': '如有任何問題、建議或意見回饋，歡迎透過以下方式聯繫我們：',
+      'aboutContactFormTitle': '意見回饋表單',
+      'aboutContactFormLink': '點擊這裡填寫意見回饋',
+      'aboutContactDiscordTitle': 'Discord 社群',
+      'aboutContactDiscordLink': '加入我們的 Discord 伺服器',
+      'aboutContactDiscordDesc': '與其他用戶交流或直接聯繫開發者',
+      'aboutTermsTitle': '使用條款',
+      'aboutTerms1': 'MultiStream Hub 完全免費開放給所有人使用，無需註冊或付費。',
+      'aboutTerms2': '本工具僅作為串流觀看工具使用，所有直播內容的版權歸屬各直播平台和創作者所有。',
+      'aboutTerms3': '為維持網站運營和持續開發，本網站可能會顯示第三方廣告（如 Google AdSense）。這些廣告由第三方服務提供商管理，我們不會收集您的個人資訊用於廣告投放。',
+      'aboutPrivacyTitle': '隱私與安全',
+      'aboutPrivacy1': '我們重視您的隱私權。本網站不會主動收集任何個人資料，所有設定和收藏資料都儲存在您的瀏覽器本地。',
+      'aboutPrivacy2': '詳細的隱私權政策請參閱：',
+      'home': '首頁',
       
       // 初始發布商內容
       'welcomeTitle': '歡迎使用 MultiStream Hub',
@@ -279,6 +335,7 @@ const i18n = {
       'giveFeedback': '给予意见反馈',
       'versionHistory': '版本记录',
       'userGuide': '使用教学',
+      'aboutUs': '关于我们',
       'privacyPolicy': '隐私权政策',
       'copyright': '© 2025 Hsiung-Shao. All rights reserved.',
       'freeTool': '本工具完全免费开放给所有人使用，欢迎分享链接给朋友！',
@@ -288,6 +345,61 @@ const i18n = {
       'chineseSimplified': '简体中文',
       'english': 'English',
       'japanese': '日本語',
+      
+      // 关于页面
+      'backToHome': '← 返回首页',
+      'aboutTitle': '关于 MultiStream Hub',
+      'lastUpdated': '最后更新',
+      'aboutIntroTitle': '网站介绍',
+      'aboutIntro1': 'MultiStream Hub 是一个完全免费的多平台直播串流观看工具，专为喜爱同时观看多个直播的用户设计。我们支持 Twitch 和 YouTube 两大主流直播平台，让您可以在同一个页面上同时观看多个直播串流，无需在多个分页间切换。',
+      'aboutIntro2': '本工具由个人开发者独立开发维护，完全免费开放给所有人使用，无需注册、无需付费，欢迎分享给您的朋友！',
+      'aboutFeaturesTitle': '主要功能特色',
+      'aboutFeature1Title': '🎥 多平台串流支持',
+      'aboutFeature1Desc': '支持 Twitch 和 YouTube 两大直播平台，可同时观看多个串流',
+      'aboutFeature2Title': '🎨 多种布局模式',
+      'aboutFeature2Desc': '提供单一画面、分割、网格、侧边聊天等多种布局选择',
+      'aboutFeature3Title': '💬 聊天室整合',
+      'aboutFeature3Desc': '整合 Twitch 和 YouTube 聊天室，可同时显示多个聊天室',
+      'aboutFeature4Title': '🔊 音量控制',
+      'aboutFeature4Desc': '独立音量控制每个串流，并提供总音量控制功能',
+      'aboutFeature5Title': '⭐ 收藏系统',
+      'aboutFeature5Desc': '收藏喜爱的串流，支持分类管理，快速载入收藏内容',
+      'aboutFeature6Title': '📱 响应式设计',
+      'aboutFeature6Desc': '适配各种屏幕尺寸，提供流畅的使用体验',
+      'aboutFeature7Title': '🌐 多语言支持',
+      'aboutFeature7Desc': '支持繁体中文、简体中文、英文、日文四种语言',
+      'aboutFeature8Title': '🔒 安全可靠',
+      'aboutFeature8Desc': '采用 XSS 防护、CSP 安全策略，保护用户安全',
+      'aboutTechTitle': '技术特色',
+      'aboutTech1Title': '纯前端技术',
+      'aboutTech1Desc': '使用纯 HTML/CSS/JavaScript 开发，无需后端服务器',
+      'aboutTech2Title': '即时串流',
+      'aboutTech2Desc': '整合 Twitch Embed API 和 YouTube IFrame API',
+      'aboutTech3Title': '本地存储',
+      'aboutTech3Desc': '使用 localStorage 和 File System Access API 保存设置',
+      'aboutTech4Title': 'SEO 优化',
+      'aboutTech4Desc': '完整的 Meta 标签和结构化数据',
+      'aboutTech5Title': '效能优化',
+      'aboutTech5Desc': '轻量级设计，快速载入',
+      'aboutCreatorTitle': '创建者信息',
+      'aboutCreator1': 'MultiStream Hub 由 <strong>Hsiung-Shao</strong> 独立开发维护。',
+      'aboutCreator2': '本项目旨在为直播爱好者提供一个免费、易用的多平台串流观看工具，让观看直播变得更加便利和有趣。',
+      'aboutCreator3': '我们持续改进和优化功能，欢迎用户提供宝贵的意见和建议。',
+      'aboutContactTitle': '联系我们',
+      'aboutContactIntro': '如有任何问题、建议或意见反馈，欢迎通过以下方式联系我们：',
+      'aboutContactFormTitle': '意见反馈表单',
+      'aboutContactFormLink': '点击这里填写意见反馈',
+      'aboutContactDiscordTitle': 'Discord 社群',
+      'aboutContactDiscordLink': '加入我们的 Discord 服务器',
+      'aboutContactDiscordDesc': '与其他用户交流或直接联系开发者',
+      'aboutTermsTitle': '使用条款',
+      'aboutTerms1': 'MultiStream Hub 完全免费开放给所有人使用，无需注册或付费。',
+      'aboutTerms2': '本工具仅作为串流观看工具使用，所有直播内容的版权归属各直播平台和创作者所有。',
+      'aboutTerms3': '为维持网站运营和持续开发，本网站可能会显示第三方广告（如 Google AdSense）。这些广告由第三方服务提供商管理，我们不会收集您的个人信息用于广告投放。',
+      'aboutPrivacyTitle': '隐私与安全',
+      'aboutPrivacy1': '我们重视您的隐私权。本网站不会主动收集任何个人资料，所有设置和收藏资料都储存在您的浏览器本地。',
+      'aboutPrivacy2': '详细的隐私权政策请参阅：',
+      'home': '首页',
       
       // 初始发布商内容
       'welcomeTitle': '欢迎使用 MultiStream Hub',
@@ -510,6 +622,7 @@ const i18n = {
       'giveFeedback': 'Give Feedback',
       'versionHistory': 'Version History',
       'userGuide': 'User Guide',
+      'aboutUs': 'About Us',
       'privacyPolicy': 'Privacy Policy',
       'copyright': '© 2025 Hsiung-Shao. All rights reserved.',
       'freeTool': 'This tool is completely free and open to everyone. Feel free to share the link with your friends!',
@@ -519,6 +632,61 @@ const i18n = {
       'chineseSimplified': '简体中文',
       'english': 'English',
       'japanese': '日本語',
+      
+      // About Page
+      'backToHome': '← Back to Home',
+      'aboutTitle': 'About MultiStream Hub',
+      'lastUpdated': 'Last Updated',
+      'aboutIntroTitle': 'Website Introduction',
+      'aboutIntro1': 'MultiStream Hub is a completely free multi-platform live streaming viewing tool designed for users who love watching multiple streams simultaneously. We support Twitch and YouTube, two major streaming platforms, allowing you to watch multiple live streams on the same page without switching between multiple tabs.',
+      'aboutIntro2': 'This tool is independently developed and maintained by individual developers, completely free and open to everyone. No registration or payment required. Feel free to share it with your friends!',
+      'aboutFeaturesTitle': 'Main Features',
+      'aboutFeature1Title': '🎥 Multi-Platform Streaming Support',
+      'aboutFeature1Desc': 'Supports Twitch and YouTube, two major streaming platforms, allowing simultaneous viewing of multiple streams',
+      'aboutFeature2Title': '🎨 Multiple Layout Modes',
+      'aboutFeature2Desc': 'Provides various layout options including single view, split, grid, side chat, and more',
+      'aboutFeature3Title': '💬 Chat Integration',
+      'aboutFeature3Desc': 'Integrates Twitch and YouTube chat rooms, allowing simultaneous display of multiple chat rooms',
+      'aboutFeature4Title': '🔊 Volume Control',
+      'aboutFeature4Desc': 'Independent volume control for each stream, with master volume control functionality',
+      'aboutFeature5Title': '⭐ Favorites System',
+      'aboutFeature5Desc': 'Save favorite streams, support category management, quick loading of favorite content',
+      'aboutFeature6Title': '📱 Responsive Design',
+      'aboutFeature6Desc': 'Adapts to various screen sizes, providing a smooth user experience',
+      'aboutFeature7Title': '🌐 Multi-Language Support',
+      'aboutFeature7Desc': 'Supports Traditional Chinese, Simplified Chinese, English, and Japanese',
+      'aboutFeature8Title': '🔒 Secure and Reliable',
+      'aboutFeature8Desc': 'Uses XSS protection and CSP security policies to protect user safety',
+      'aboutTechTitle': 'Technical Features',
+      'aboutTech1Title': 'Pure Frontend Technology',
+      'aboutTech1Desc': 'Developed with pure HTML/CSS/JavaScript, no backend server required',
+      'aboutTech2Title': 'Real-time Streaming',
+      'aboutTech2Desc': 'Integrates Twitch Embed API and YouTube IFrame API',
+      'aboutTech3Title': 'Local Storage',
+      'aboutTech3Desc': 'Uses localStorage and File System Access API to save settings',
+      'aboutTech4Title': 'SEO Optimization',
+      'aboutTech4Desc': 'Complete Meta tags and structured data',
+      'aboutTech5Title': 'Performance Optimization',
+      'aboutTech5Desc': 'Lightweight design, fast loading',
+      'aboutCreatorTitle': 'Creator Information',
+      'aboutCreator1': 'MultiStream Hub is independently developed and maintained by <strong>Hsiung-Shao</strong>.',
+      'aboutCreator2': 'This project aims to provide a free and easy-to-use multi-platform streaming viewing tool for live streaming enthusiasts, making watching streams more convenient and fun.',
+      'aboutCreator3': 'We continuously improve and optimize features, and welcome users to provide valuable feedback and suggestions.',
+      'aboutContactTitle': 'Contact Us',
+      'aboutContactIntro': 'If you have any questions, suggestions, or feedback, please contact us through the following methods:',
+      'aboutContactFormTitle': 'Feedback Form',
+      'aboutContactFormLink': 'Click here to submit feedback',
+      'aboutContactDiscordTitle': 'Discord Community',
+      'aboutContactDiscordLink': 'Join our Discord server',
+      'aboutContactDiscordDesc': 'Communicate with other users or contact the developer directly',
+      'aboutTermsTitle': 'Terms of Use',
+      'aboutTerms1': 'MultiStream Hub is completely free and open to everyone. No registration or payment required.',
+      'aboutTerms2': 'This tool is only used as a streaming viewing tool. All live streaming content copyright belongs to the respective streaming platforms and creators.',
+      'aboutTerms3': 'To maintain website operations and continuous development, this website may display third-party advertisements (such as Google AdSense). These advertisements are managed by third-party service providers, and we do not collect your personal information for advertising purposes.',
+      'aboutPrivacyTitle': 'Privacy and Security',
+      'aboutPrivacy1': 'We value your privacy. This website does not actively collect any personal information. All settings and favorite data are stored locally in your browser.',
+      'aboutPrivacy2': 'For detailed privacy policy, please refer to:',
+      'home': 'Home',
       
       // Initial Publisher Content
       'welcomeTitle': 'Welcome to MultiStream Hub',
@@ -742,6 +910,7 @@ const i18n = {
       'giveFeedback': 'フィードバックを送信',
       'versionHistory': 'バージョン履歴',
       'userGuide': 'ユーザーガイド',
+      'aboutUs': '私たちについて',
       'privacyPolicy': 'プライバシーポリシー',
       'copyright': '© 2025 Hsiung-Shao. All rights reserved.',
       'freeTool': 'このツールは完全に無料で、すべての人に開放されています。リンクを友達と共有してください！',
@@ -751,6 +920,61 @@ const i18n = {
       'chineseSimplified': '简体中文',
       'english': 'English',
       'japanese': '日本語',
+      
+      // 关于ページ
+      'backToHome': '← ホームに戻る',
+      'aboutTitle': 'MultiStream Hub について',
+      'lastUpdated': '最終更新',
+      'aboutIntroTitle': 'ウェブサイト紹介',
+      'aboutIntro1': 'MultiStream Hub は、複数のライブストリームを同時に視聴することを好むユーザー向けに設計された、完全に無料のマルチプラットフォームライブストリーミング視聴ツールです。Twitch と YouTube の2つの主要なライブストリーミングプラットフォームをサポートし、複数のタブを切り替えることなく、同じページで複数のライブストリームを同時に視聴できます。',
+      'aboutIntro2': 'このツールは個人開発者によって独立して開発・維持されており、完全に無料で誰でも使用できます。登録や支払いは不要です。友達と共有してください！',
+      'aboutFeaturesTitle': '主な機能',
+      'aboutFeature1Title': '🎥 マルチプラットフォームストリーミングサポート',
+      'aboutFeature1Desc': 'Twitch と YouTube の2つの主要なライブストリーミングプラットフォームをサポートし、複数のストリームを同時に視聴可能',
+      'aboutFeature2Title': '🎨 複数のレイアウトモード',
+      'aboutFeature2Desc': '単一ビュー、分割、グリッド、サイドチャットなど、さまざまなレイアウトオプションを提供',
+      'aboutFeature3Title': '💬 チャット統合',
+      'aboutFeature3Desc': 'Twitch と YouTube のチャットルームを統合し、複数のチャットルームを同時に表示可能',
+      'aboutFeature4Title': '🔊 音量制御',
+      'aboutFeature4Desc': '各ストリームの独立した音量制御と、マスター音量制御機能を提供',
+      'aboutFeature5Title': '⭐ お気に入りシステム',
+      'aboutFeature5Desc': 'お気に入りのストリームを保存し、カテゴリ管理をサポートし、お気に入りコンテンツをすばやく読み込み',
+      'aboutFeature6Title': '📱 レスポンシブデザイン',
+      'aboutFeature6Desc': 'さまざまな画面サイズに対応し、スムーズなユーザー体験を提供',
+      'aboutFeature7Title': '🌐 多言語サポート',
+      'aboutFeature7Desc': '繁体字中国語、簡体字中国語、英語、日本語の4言語をサポート',
+      'aboutFeature8Title': '🔒 安全で信頼性が高い',
+      'aboutFeature8Desc': 'XSS 保護と CSP セキュリティポリシーを使用してユーザーの安全を保護',
+      'aboutTechTitle': '技術的特徴',
+      'aboutTech1Title': '純フロントエンド技術',
+      'aboutTech1Desc': '純 HTML/CSS/JavaScript で開発され、バックエンドサーバーは不要',
+      'aboutTech2Title': 'リアルタイムストリーミング',
+      'aboutTech2Desc': 'Twitch Embed API と YouTube IFrame API を統合',
+      'aboutTech3Title': 'ローカルストレージ',
+      'aboutTech3Desc': 'localStorage と File System Access API を使用して設定を保存',
+      'aboutTech4Title': 'SEO 最適化',
+      'aboutTech4Desc': '完全な Meta タグと構造化データ',
+      'aboutTech5Title': 'パフォーマンス最適化',
+      'aboutTech5Desc': '軽量設計、高速読み込み',
+      'aboutCreatorTitle': '作成者情報',
+      'aboutCreator1': 'MultiStream Hub は <strong>Hsiung-Shao</strong> によって独立して開発・維持されています。',
+      'aboutCreator2': 'このプロジェクトは、ライブストリーミング愛好者に無料で使いやすいマルチプラットフォームストリーミング視聴ツールを提供し、ストリームの視聴をより便利で楽しいものにすることを目的としています。',
+      'aboutCreator3': '機能の継続的な改善と最適化を行っており、ユーザーからの貴重な意見や提案を歓迎します。',
+      'aboutContactTitle': 'お問い合わせ',
+      'aboutContactIntro': 'ご質問、ご提案、またはフィードバックがございましたら、以下の方法でお問い合わせください：',
+      'aboutContactFormTitle': 'フィードバックフォーム',
+      'aboutContactFormLink': 'ここをクリックしてフィードバックを送信',
+      'aboutContactDiscordTitle': 'Discord コミュニティ',
+      'aboutContactDiscordLink': 'Discord サーバーに参加',
+      'aboutContactDiscordDesc': '他のユーザーと交流したり、開発者に直接連絡したりできます',
+      'aboutTermsTitle': '利用規約',
+      'aboutTerms1': 'MultiStream Hub は完全に無料で、誰でも使用できます。登録や支払いは不要です。',
+      'aboutTerms2': 'このツールはストリーミング視聴ツールとしてのみ使用されます。すべてのライブストリーミングコンテンツの著作権は、それぞれのストリーミングプラットフォームとクリエイターに帰属します。',
+      'aboutTerms3': 'ウェブサイトの運営と継続的な開発を維持するため、このウェブサイトはサードパーティの広告（Google AdSense など）を表示する場合があります。これらの広告はサードパーティのサービスプロバイダーによって管理され、広告配信のために個人情報を収集することはありません。',
+      'aboutPrivacyTitle': 'プライバシーとセキュリティ',
+      'aboutPrivacy1': '私たちはあなたのプライバシーを重視しています。このウェブサイトは個人情報を積極的に収集しません。すべての設定とお気に入りデータは、ブラウザのローカルに保存されます。',
+      'aboutPrivacy2': '詳細なプライバシーポリシーについては、以下を参照してください：',
+      'home': 'ホーム',
       
       // 初期パブリッシャーコンテンツ
       'welcomeTitle': 'MultiStream Hub へようこそ',
@@ -995,6 +1219,13 @@ const i18n = {
     if (langSelector) {
       langSelector.value = this.currentLang;
     }
+    // 更新關於頁面的語言選擇器
+    const aboutLangSelector = document.getElementById('about-language-selector');
+    if (aboutLangSelector) {
+      aboutLangSelector.value = this.currentLang;
+    }
+    // 更新所有頁面的 data-i18n 元素（通用更新）
+    this.updateAllI18nElements();
     // 更新初始發布商內容
     this.updateInitialContent();
     // 更新控制面板
@@ -1009,6 +1240,45 @@ const i18n = {
     if (typeof updateFavoriteListDisplay === 'function') {
       updateFavoriteListDisplay();
     }
+  },
+  
+  // 更新所有頁面的 data-i18n 元素（通用函數）
+  updateAllI18nElements: function() {
+    const elementsWithI18n = document.querySelectorAll('[data-i18n]');
+    elementsWithI18n.forEach(element => {
+      const key = element.getAttribute('data-i18n');
+      if (key) {
+        const translation = this.t(key);
+        if (translation) {
+          // 根據元素類型更新
+          if (element.tagName === 'INPUT' && element.type === 'text') {
+            element.placeholder = translation;
+          } else if (element.tagName === 'INPUT' && element.type === 'submit') {
+            element.value = translation;
+          } else if (element.tagName === 'A') {
+            // 對於連結，如果只有文字內容則更新，否則保留結構
+            if (element.children.length === 0) {
+              element.textContent = translation;
+            } else {
+              // 如果有子元素，檢查是否需要更新
+              const firstTextNode = Array.from(element.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+              if (firstTextNode) {
+                firstTextNode.textContent = translation.split(/<[^>]+>/)[0] || translation;
+              }
+            }
+          } else if (element.tagName === 'BUTTON') {
+            element.textContent = translation;
+          } else {
+            // 對於其他元素（如 p, span, h1, h2 等），檢查是否包含 HTML 標籤
+            if (translation.includes('<strong>') || translation.includes('<em>') || translation.includes('<br>')) {
+              element.innerHTML = translation;
+            } else {
+              element.textContent = translation;
+            }
+          }
+        }
+      }
+    });
   },
   
   // 更新初始發布商內容
@@ -1257,6 +1527,12 @@ const i18n = {
     const userGuideLink = document.querySelector('a[onclick*="showUserGuide"]');
     if (userGuideLink) {
       userGuideLink.textContent = this.t('userGuide');
+    }
+    
+    // 關於我們
+    const aboutLink = document.querySelector('a[href="/about.html"]');
+    if (aboutLink) {
+      aboutLink.textContent = this.t('aboutUs');
     }
     
     // 隱私權政策
