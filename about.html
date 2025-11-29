@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>關於我們 - MultiStream Hub | 多平台直播串流觀看工具介紹</title>
+  <meta name="description" content="了解 MultiStream Hub - 免費的多平台直播串流觀看工具。由 Hsiung-Shao 獨立開發，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制等功能。完全免費，無需註冊。">
+  <meta name="keywords" content="MultiStream Hub,關於我們,直播工具介紹,免費直播工具,Twitch YouTube 觀看工具,多平台直播,串流觀看工具,直播工具開發者">
+  <meta name="author" content="Hsiung-Shao">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="language" content="zh-TW">
+  <meta name="geo.region" content="TW">
+  <meta name="geo.placename" content="Taiwan">
+  <meta name="rating" content="general">
+  <meta name="distribution" content="global">
+  <meta name="copyright" content="© 2025 Hsiung-Shao. All rights reserved.">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://multistreaming.org/about.html">
+  <meta property="og:title" content="關於我們 - MultiStream Hub">
+  <meta property="og:description" content="了解 MultiStream Hub - 免費的多平台直播串流觀看工具，由 Hsiung-Shao 獨立開發，支援同時觀看多個 Twitch 和 YouTube 直播">
+  <meta property="og:image" content="https://multistreaming.org/icon.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="MultiStream Hub - 關於我們">
+  <meta property="og:site_name" content="MultiStream Hub">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://multistreaming.org/about.html">
+  <meta name="twitter:title" content="關於我們 - MultiStream Hub">
+  <meta name="twitter:description" content="了解 MultiStream Hub - 免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播">
+  <meta name="twitter:image" content="https://multistreaming.org/icon.png">
+  <meta name="twitter:image:alt" content="MultiStream Hub - 關於我們">
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://multistreaming.org/about.html">
+  
+  <!-- Hreflang Tags for Multi-language Support -->
+  <link rel="alternate" hreflang="zh-TW" href="https://multistreaming.org/about.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://multistreaming.org/about.html">
+  <link rel="alternate" hreflang="en" href="https://multistreaming.org/about.html">
+  <link rel="alternate" hreflang="ja" href="https://multistreaming.org/about.html">
+  <link rel="alternate" hreflang="x-default" href="https://multistreaming.org/about.html">
+  
+  <!-- Additional SEO Meta Tags -->
+  <meta name="theme-color" content="#9147ff">
+  <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="shortcut icon" type="image/png" href="/icon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <style>
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      background: #0a0a0a; 
+      color: #fff; 
+      padding: 40px 20px; 
+      line-height: 1.8; 
+      max-width: 900px; 
+      margin: 0 auto;
+    }
+    h1 { 
+      color: #9147ff; 
+      border-bottom: 2px solid #9147ff; 
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    h2 { 
+      color: #eee; 
+      margin-top: 30px;
+      border-left: 4px solid #9147ff;
+      padding-left: 15px;
+    }
+    h3 {
+      color: #ccc;
+      margin-top: 25px;
+    }
+    a { 
+      color: #9147ff; 
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+    a:hover { 
+      color: #b366ff; 
+      text-decoration: underline;
+    }
+    ul, ol {
+      padding-left: 25px;
+    }
+    li {
+      margin: 8px 0;
+    }
+    .section {
+      margin: 30px 0;
+      padding: 20px;
+      background: rgba(145, 71, 255, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid #9147ff;
+    }
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .feature-item {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid rgba(145, 71, 255, 0.2);
+    }
+    .feature-item strong {
+      color: #9147ff;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 8px 16px;
+      background: rgba(145, 71, 255, 0.2);
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    .back-link:hover {
+      background: rgba(145, 71, 255, 0.3);
+      text-decoration: none;
+    }
+    .contact-info {
+      background: rgba(145, 71, 255, 0.1);
+      padding: 15px;
+      border-radius: 6px;
+      margin: 15px 0;
+    }
+    .footer-links {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #333;
+      text-align: center;
+    }
+    .footer-links a {
+      margin: 0 15px;
+    }
+    .title-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .title-header h1 {
+      margin: 0;
+      flex: 1;
+      min-width: 200px;
+    }
+    .language-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .language-selector label {
+      color: #ccc;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .language-selector select {
+      padding: 8px 12px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .language-selector select:hover {
+      background: #333;
+    }
+    @media (max-width: 768px) {
+      body {
+        padding: 20px 15px;
+      }
+      .feature-list {
+        grid-template-columns: 1fr;
+      }
+      .title-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .language-selector {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a href="/" class="back-link" data-i18n="backToHome">← 返回首頁</a>
+  
+  <div class="title-header">
+    <h1 data-i18n="aboutTitle">關於 MultiStream Hub</h1>
+    <div class="language-selector">
+      <label for="about-language-selector" data-i18n="language">語言</label>
+      <select id="about-language-selector" onchange="if (window.i18n) { window.i18n.setLanguage(this.value); }" title="選擇語言" aria-label="選擇語言">
+        <option value="zh-TW">繁體中文</option>
+        <option value="zh-CN">简体中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2 data-i18n="aboutIntroTitle">網站介紹</h2>
+    <p data-i18n="aboutIntro1">MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，專為喜愛同時觀看多個直播的用戶設計。我們支援 Twitch 和 YouTube 兩大主流直播平台，讓您可以在同一個頁面上同時觀看多個直播串流，無需在多個分頁間切換。</p>
+    <p data-i18n="aboutIntro2">本工具由個人開發者獨立開發維護，完全免費開放給所有人使用，無需註冊、無需付費，歡迎分享給您的朋友！</p>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="aboutFeaturesTitle">主要功能特色</h2>
+    <div class="feature-list">
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature1Title">🎥 多平台串流支援</strong>
+        <span data-i18n="aboutFeature1Desc">支援 Twitch 和 YouTube 兩大直播平台，可同時觀看多個串流</span>
+      </div>
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature2Title">🎨 多種布局模式</strong>
+        <span data-i18n="aboutFeature2Desc">提供單一畫面、分割、網格、側邊聊天等多種布局選擇</span>
+      </div>
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature3Title">💬 聊天室整合</strong>
+        <span data-i18n="aboutFeature3Desc">整合 Twitch 和 YouTube 聊天室，可同時顯示多個聊天室</span>
+      </div>
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature4Title">🔊 音量控制</strong>
+        <span data-i18n="aboutFeature4Desc">獨立音量控制每個串流，並提供總音量控制功能</span>
+      </div>
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature5Title">⭐ 收藏系統</strong>
+        <span data-i18n="aboutFeature5Desc">收藏喜愛的串流，支援分類管理，快速載入收藏內容</span>
+      </div>
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature6Title">📱 響應式設計</strong>
+        <span data-i18n="aboutFeature6Desc">適配各種螢幕尺寸，提供流暢的使用體驗</span>
+      </div>
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature7Title">🌐 多語言支援</strong>
+        <span data-i18n="aboutFeature7Desc">支援繁體中文、簡體中文、英文、日文四種語言</span>
+      </div>
+      <div class="feature-item">
+        <strong data-i18n="aboutFeature8Title">🔒 安全可靠</strong>
+        <span data-i18n="aboutFeature8Desc">採用 XSS 防護、CSP 安全策略，保護用戶安全</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="aboutTechTitle">技術特色</h2>
+    <ul>
+      <li><strong data-i18n="aboutTech1Title">純前端技術</strong>：<span data-i18n="aboutTech1Desc">使用純 HTML/CSS/JavaScript 開發，無需後端伺服器</span></li>
+      <li><strong data-i18n="aboutTech2Title">即時串流</strong>：<span data-i18n="aboutTech2Desc">整合 Twitch Embed API 和 YouTube IFrame API</span></li>
+      <li><strong data-i18n="aboutTech3Title">本地儲存</strong>：<span data-i18n="aboutTech3Desc">使用 localStorage 和 File System Access API 保存設定</span></li>
+      <li><strong data-i18n="aboutTech4Title">SEO 優化</strong>：<span data-i18n="aboutTech4Desc">完整的 Meta 標籤和結構化數據</span></li>
+      <li><strong data-i18n="aboutTech5Title">效能優化</strong>：<span data-i18n="aboutTech5Desc">輕量級設計，快速載入</span></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="aboutCreatorTitle">創建者資訊</h2>
+    <p data-i18n="aboutCreator1">MultiStream Hub 由 <strong>Hsiung-Shao</strong> 獨立開發維護。</p>
+    <p data-i18n="aboutCreator2">本專案旨在為直播愛好者提供一個免費、易用的多平台串流觀看工具，讓觀看直播變得更加便利和有趣。</p>
+    <p data-i18n="aboutCreator3">我們持續改進和優化功能，歡迎用戶提供寶貴的意見和建議。</p>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="aboutContactTitle">聯絡我們</h2>
+    <div class="contact-info">
+      <p data-i18n="aboutContactIntro">如有任何問題、建議或意見回饋，歡迎透過以下方式聯繫我們：</p>
+      <ul>
+        <li><strong data-i18n="aboutContactFormTitle">意見回饋表單</strong>：<a href="https://forms.gle/AjG922YrXFbyAdBa6" target="_blank" rel="noopener noreferrer" data-i18n="aboutContactFormLink">點擊這裡填寫意見回饋</a></li>
+        <li><strong data-i18n="aboutContactDiscordTitle">Discord 社群</strong>：<a href="https://discord.gg/3Uu6dZbtKd" target="_blank" rel="noopener noreferrer" data-i18n="aboutContactDiscordLink">加入我們的 Discord 伺服器</a>，<span data-i18n="aboutContactDiscordDesc">與其他用戶交流或直接聯繫開發者</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="aboutTermsTitle">使用條款</h2>
+    <p data-i18n="aboutTerms1">MultiStream Hub 完全免費開放給所有人使用，無需註冊或付費。</p>
+    <p data-i18n="aboutTerms2">本工具僅作為串流觀看工具使用，所有直播內容的版權歸屬各直播平台和創作者所有。</p>
+    <p data-i18n="aboutTerms3">為維持網站運營和持續開發，本網站可能會顯示第三方廣告（如 Google AdSense）。這些廣告由第三方服務提供商管理，我們不會收集您的個人資訊用於廣告投放。</p>
+  </div>
+
+  <div class="section">
+    <h2 data-i18n="aboutPrivacyTitle">隱私與安全</h2>
+    <p data-i18n="aboutPrivacy1">我們重視您的隱私權。本網站不會主動收集任何個人資料，所有設定和收藏資料都儲存在您的瀏覽器本地。</p>
+    <p data-i18n="aboutPrivacy2">詳細的隱私權政策請參閱：<a href="/privacy.html" data-i18n="privacyPolicy">隱私權政策</a></p>
+  </div>
+
+  <div class="footer-links">
+    <a href="/" data-i18n="home">首頁</a>
+    <a href="/privacy.html" data-i18n="privacyPolicy">隱私權政策</a>
+    <a href="https://forms.gle/AjG922YrXFbyAdBa6" target="_blank" rel="noopener noreferrer" data-i18n="giveFeedback">意見回饋</a>
+  </div>
+
+  <p style="text-align: center; color: #666; margin-top: 40px; font-size: 14px;">
+    © 2025 Hsiung-Shao. All rights reserved.<br>
+    <span data-i18n="lastUpdated">最後更新</span>：2025-11-30
+  </p>
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "關於我們 - MultiStream Hub",
+    "description": "了解 MultiStream Hub - 免費的多平台直播串流觀看工具，由 Hsiung-Shao 獨立開發，支援同時觀看多個 Twitch 和 YouTube 直播",
+    "url": "https://multistreaming.org/about.html",
+    "inLanguage": ["zh-TW", "zh-CN", "en", "ja"],
+    "mainEntity": {
+      "@type": "Organization",
+      "name": "MultiStream Hub",
+      "url": "https://multistreaming.org/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://multistreaming.org/icon.png",
+        "width": 512,
+        "height": 512
+      },
+      "founder": {
+        "@type": "Person",
+        "name": "Hsiung-Shao"
+      },
+      "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Service",
+        "availableLanguage": ["zh-TW", "zh-CN", "en", "ja"],
+        "url": "https://forms.gle/AjG922YrXFbyAdBa6"
+      }
+    },
+    "about": {
+      "@type": "SoftwareApplication",
+      "name": "MultiStream Hub",
+      "applicationCategory": "EntertainmentApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "TWD"
+      },
+      "featureList": [
+        "多平台直播串流觀看",
+        "Twitch 和 YouTube 支援",
+        "多種布局模式",
+        "聊天室整合",
+        "音量控制",
+        "收藏功能",
+        "本地文件備份",
+        "分類管理",
+        "自動布局切換",
+        "多語言支援"
+      ]
+    },
+    "datePublished": "2024-11-26",
+    "dateModified": "2025-11-30"
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "首頁",
+        "item": "https://multistreaming.org/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "關於我們",
+        "item": "https://multistreaming.org/about.html"
+      }
+    ]
+  }
+  </script>
+
+  <script src="js/i18n.js"></script>
+  <script>
+    // 初始化多語言系統
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.i18n) {
+        // 從 localStorage 讀取語言設定
+        const savedLang = localStorage.getItem('language') || localStorage.getItem('preferredLanguage') || 'zh-TW';
+        
+        // 設定語言選擇器的值
+        const langSelector = document.getElementById('about-language-selector');
+        if (langSelector) {
+          langSelector.value = savedLang;
+        }
+        
+        // 設置語言並更新頁面（會自動調用 updateSEO）
+        window.i18n.setLanguage(savedLang);
+        
+        // 監聽語言選擇器變化
+        if (langSelector) {
+          langSelector.addEventListener('change', function() {
+            window.i18n.setLanguage(this.value);
+          });
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+
