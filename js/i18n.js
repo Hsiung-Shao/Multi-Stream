@@ -26,6 +26,7 @@ const i18n = {
       'sideChatLayout': '側邊聊天布局',
       'dualColumnChat': '雙欄聊天布局（左側視頻可調整，右側固定兩個聊天室）',
       'quadChat': '四格聊天布局（左側視頻可調整，右側固定四個聊天室）',
+      'singleChatLayout': '單一聊天室布局（左側視頻可調整，右側固定一個聊天室）',
       'chatControl': '聊天室控制',
       'showAllChats': '顯示所有聊天室',
       'hideAllChats': '隱藏所有聊天室',
@@ -243,6 +244,7 @@ const i18n = {
       'sideChatLayout': '侧边聊天布局',
       'dualColumnChat': '双栏聊天布局（左侧视频可调整，右侧固定两个聊天室）',
       'quadChat': '四格聊天布局（左侧视频可调整，右侧固定四个聊天室）',
+      'singleChatLayout': '单一聊天室布局（左侧视频可调整，右侧固定一个聊天室）',
       'chatControl': '聊天室控制',
       'showAllChats': '显示所有聊天室',
       'hideAllChats': '隐藏所有聊天室',
@@ -460,6 +462,7 @@ const i18n = {
       'sideChatLayout': 'Side Chat Layout',
       'dualColumnChat': 'Dual Column Chat Layout (Left: adjustable video, Right: 2 fixed chat rooms)',
       'quadChat': 'Quad Chat Layout (Left: adjustable video, Right: 4 fixed chat rooms)',
+      'singleChatLayout': 'Single Chat Layout (Left: adjustable video, Right: 1 fixed chat room)',
       'chatControl': 'Chat Control',
       'showAllChats': 'Show All Chats',
       'hideAllChats': 'Hide All Chats',
@@ -677,6 +680,8 @@ const i18n = {
       'sideChatLayout': 'サイドチャットレイアウト',
       'dualColumnChat': 'デュアルカラムチャットレイアウト（左：調整可能な動画、右：2つの固定チャットルーム）',
       'quadChat': 'クアッドチャットレイアウト（左：調整可能な動画、右：4つの固定チャットルーム）',
+      'singleChatLayout': 'シングルチャットレイアウト（左：調整可能な動画、右：1つの固定チャットルーム）',
+      'singleChatLayout': 'シングルチャットレイアウト（左：調整可能な動画、右：1つの固定チャットルーム）',
       'chatControl': 'チャット制御',
       'showAllChats': 'すべてのチャットを表示',
       'hideAllChats': 'すべてのチャットを非表示',
@@ -1081,6 +1086,15 @@ const i18n = {
     quadChatLayouts.forEach(btn => {
       if (btn.getAttribute('title') && btn.getAttribute('title').includes('四格')) {
         btn.title = this.t('quadChat');
+      }
+    });
+    
+    const singleChatLayouts = document.querySelectorAll('.layout-preview-inline[onclick*="setLayout(15"]');
+    singleChatLayouts.forEach(btn => {
+      if (btn.getAttribute('title') && btn.getAttribute('title').includes('單一')) {
+        btn.title = this.t('singleChatLayout');
+      } else if (btn.hasAttribute('data-i18n-title')) {
+        btn.title = this.t('singleChatLayout');
       }
     });
     

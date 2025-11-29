@@ -147,17 +147,20 @@ function autoSelectLayout() {
 
 // 设置固定布局的预设框架
 function setupFixedLayoutFramework(boxes, layoutType) {
-  const videoAreaWidth = 70; // 70%
-  const chatAreaWidth = 30; // 30%
   const count = boxes.length;
   
   // 清理之前的右侧聊天室容器（如果存在）
   cleanupFixedChatSidebar();
   
-  // 检查当前是 Layout 13 还是 Layout 14（优先使用传入的参数，否则使用 userSelectedLayout）
+  // 检查当前是 Layout 13、14 还是 15（优先使用传入的参数，否则使用 userSelectedLayout）
   const isLayout14 = (layoutType === 14 || (!layoutType && userSelectedLayout === 14));
+  const isLayout15 = (layoutType === 15 || (!layoutType && userSelectedLayout === 15));
   
-  // 布局视频在左侧（Layout 13 和 14 的视频布局会在 updateFixedLayoutFramework 中处理）
+  // 根据布局类型设置宽度比例
+  const videoAreaWidth = isLayout15 ? 80 : 70; // 布局15：80%，其他：70%
+  const chatAreaWidth = isLayout15 ? 20 : 30; // 布局15：20%，其他：30%
+  
+  // 布局视频在左侧（Layout 13、14 和 15 的视频布局会在 updateFixedLayoutFramework 中处理）
   boxes.forEach((b, i) => {
     const chatDiv = b.querySelector('.chat-container');
     if (chatDiv) {
@@ -241,6 +244,37 @@ function setupFixedLayoutFramework(boxes, layoutType) {
       }
       
       chatSidebar.appendChild(rowContainer);
+    }
+  } else if (isLayout15) {
+    // Layout 15：单一聊天室
+    chatSidebar.style.display = 'flex';
+    chatSidebar.style.flexDirection = 'column';
+    chatSidebar.style.gap = '0';
+    chatSidebar.style.padding = '4px';
+    chatSidebar.style.boxSizing = 'border-box';
+    
+    // 如果没有保存的选择，尝试从 Layout 13 或 14 的选择状态迁移，或使用第一个串流
+    if (!fixedLayoutChatSelection.position3) {
+      // 尝试从 Layout 14 的 position1 迁移
+      if (layout14ChatSelection.position1 && streamData[layout14ChatSelection.position1]) {
+        fixedLayoutChatSelection.position3 = layout14ChatSelection.position1;
+      } else if (allStreams.length > 0) {
+        fixedLayoutChatSelection.position3 = allStreams[0].id;
+      }
+    }
+    
+    // 创建单一聊天室面板（使用 position3）
+    const defaultId = fixedLayoutChatSelection.position3;
+    const chatPanel = createChatPanel('position3', defaultId, allStreams, 'layout15');
+    chatPanel.style.width = '100%';
+    chatPanel.style.height = '100%';
+    chatSidebar.appendChild(chatPanel);
+    
+    // 如果有选中的串流，延迟更新聊天室内容
+    if (defaultId && streamData[defaultId]) {
+      setTimeout(() => {
+        updateFixedChatPanelContent('position3', defaultId);
+      }, 500);
     }
   } else {
     // Layout 13：左右两个聊天室
@@ -548,18 +582,19 @@ function updateFixedChatSidebarContent(streamId, chatContentElement) {
 // 更新固定布局的框架（当添加或删除串流时调用）
 function updateFixedLayoutFramework() {
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
-  if (!chatSidebar) return; // 如果不在布局13，直接返回
+  if (!chatSidebar) return; // 如果不在布局13、14或15，直接返回
   
   const boxes = document.querySelectorAll('.stream-box');
   const count = boxes.length;
   
-  // Layout 13 和 14：视频自动布局（可通过布局按钮手动调整）
+  // Layout 13、14 和 15：视频自动布局（可通过布局按钮手动调整）
   const isLayout13 = (userSelectedLayout === 13);
   const isLayout14 = (userSelectedLayout === 14);
+  const isLayout15 = (userSelectedLayout === 15);
   
-  // 如果是布局13或14，使用用户选择的视频布局类型（如果没有选择则自动选择）
-  if (isLayout13 || isLayout14) {
-    const videoAreaWidth = 70;
+  // 如果是布局13、14或15，使用用户选择的视频布局类型（如果没有选择则自动选择）
+  if (isLayout13 || isLayout14 || isLayout15) {
+    const videoAreaWidth = isLayout15 ? 80 : 70; // 布局15：80%，其他：70%
     let videoLayoutType = 1;
     if (count > 0) {
       // 如果用户已经选择了视频布局类型，使用用户选择的；否则自动选择
@@ -664,8 +699,10 @@ function updateFixedLayoutFramework() {
     }
   });
   
-  // 更新选择器的选项（Layout 13 有两个，Layout 14 有四个）
-  const positions = isLayout14 ? ['position1', 'position2', 'position3', 'position4'] : ['position3', 'position4'];
+  // 更新选择器的选项（Layout 13 有两个，Layout 14 有四个，Layout 15 有一个）
+  const positions = isLayout14 ? ['position1', 'position2', 'position3', 'position4'] : 
+                    isLayout15 ? ['position3'] : 
+                    ['position3', 'position4'];
   positions.forEach((posKey) => {
     const selector = document.getElementById(`chat-selector-${posKey}`);
     if (selector) {
@@ -737,12 +774,12 @@ function cleanupFixedChatSidebar() {
   }
 }
 
-// 在 Layout 13 或 14 中设置左侧视频布局类型（只影响左侧视频区域，不影响右侧聊天室）
+// 在 Layout 13、14 或 15 中设置左侧视频布局类型（只影响左侧视频区域，不影响右侧聊天室）
 function setLayout13VideoLayout(videoLayoutType) {
-  // 检查当前是否为 Layout 13 或 14
+  // 检查当前是否为 Layout 13、14 或 15
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
-  if (!chatSidebar || (userSelectedLayout !== 13 && userSelectedLayout !== 14)) {
-    // 如果不是 Layout 13 或 14，直接返回，让正常的 setLayout 处理
+  if (!chatSidebar || (userSelectedLayout !== 13 && userSelectedLayout !== 14 && userSelectedLayout !== 15)) {
+    // 如果不是 Layout 13、14 或 15，直接返回，让正常的 setLayout 处理
     return false;
   }
   
@@ -764,15 +801,16 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   const boxes = document.querySelectorAll('.stream-box');
   const count = boxes.length;
   
-  // 布局13和14需要预设框架，即使没有串流也要创建
-  if (type === 13 || type === 14) {
+  // 布局13、14和15需要预设框架，即使没有串流也要创建
+  if (type === 13 || type === 14 || type === 15) {
     // 布局13：固定布局，视频自动布局，右侧两个聊天室
     // 布局14：固定布局，视频自动布局，右侧四个聊天室（2x2）
+    // 布局15：固定布局，视频自动布局，右侧单一聊天室
     // 先设置 userSelectedLayout，这样 setupFixedLayoutFramework 可以正确判断布局类型
     if (isUserSelection) {
       userSelectedLayout = type;
       localStorage.setItem('currentLayout', type);
-      // 切换到 Layout 13 或 14 时，重置视频布局选择（让系统自动选择）
+      // 切换到 Layout 13、14 或 15 时，重置视频布局选择（让系统自动选择）
       layout13VideoLayout = null;
     }
     setupFixedLayoutFramework(boxes, type); // 传入布局类型
@@ -841,7 +879,7 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     preview.classList.remove('active');
   });
   // 根據布局類型設置對應的預覽為活動狀態
-  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6, 13: 7, 14: 8 };
+  const layoutMap = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 9: 6, 13: 7, 14: 8, 15: 9 };
   const previewIndex = layoutMap[type];
   // 布局映射索引已計算
   if (previewIndex !== undefined) {
@@ -862,8 +900,8 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     b.style.transition = 'none';
   });
   
-  // 如果切换到非布局类型 13，清理固定布局的聊天室容器
-  if (type !== 13) {
+  // 如果切换到非布局类型 13、14 或 15，清理固定布局的聊天室容器
+  if (type !== 13 && type !== 14 && type !== 15) {
     cleanupFixedChatSidebar();
   }
   
