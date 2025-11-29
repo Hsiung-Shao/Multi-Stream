@@ -272,12 +272,15 @@ function updateStreamOrderList() {
   const orderList = document.getElementById('stream-order-list');
   if (!orderList) return;
   
+  // 在函數開始時聲明一次 i18n，避免重複聲明
+  const i18n = window.i18n || { t: (key) => key };
+  
   const boxes = Array.from(document.querySelectorAll('.stream-box'));
   if (boxes.length === 0) {
     orderList.innerHTML = '';
     const emptyDiv = document.createElement('div');
     emptyDiv.style.cssText = 'padding: 10px; text-align: center; color: #888; font-size: 12px;';
-    emptyDiv.textContent = '暫無串流';
+    emptyDiv.textContent = i18n.t('noStreams');
     orderList.appendChild(emptyDiv);
     return;
   }
@@ -313,12 +316,12 @@ function updateStreamOrderList() {
     buttons.className = 'stream-order-buttons';
     
     const upBtn = document.createElement('button');
-    upBtn.title = '上移';
+    upBtn.title = i18n.t('moveUp');
     upBtn.textContent = '↑';
     upBtn.onclick = () => moveStreamUp(id);
     
     const downBtn = document.createElement('button');
-    downBtn.title = '下移';
+    downBtn.title = i18n.t('moveDown');
     downBtn.textContent = '↓';
     downBtn.onclick = () => moveStreamDown(id);
     
@@ -331,10 +334,9 @@ function updateStreamOrderList() {
     
     const volumeDiv = document.createElement('div');
     volumeDiv.className = 'stream-order-volume';
-    
     const volumeLabel = document.createElement('label');
     volumeLabel.htmlFor = `stream-volume-${id}`;
-    volumeLabel.textContent = '🔊 音量';
+    volumeLabel.textContent = '🔊 ' + i18n.t('volume');
     
     const volumeSlider = document.createElement('input');
     volumeSlider.type = 'range';
@@ -342,7 +344,7 @@ function updateStreamOrderList() {
     volumeSlider.min = '0';
     volumeSlider.max = '100';
     volumeSlider.value = currentVolume.toString();
-    volumeSlider.title = '調整音量';
+    volumeSlider.title = i18n.t('adjustVolume');
     
     const volumeValue = document.createElement('span');
     volumeValue.className = 'stream-order-volume-value';
@@ -539,9 +541,10 @@ function updateAllChatsButton() {
   const btn = document.getElementById('toggle-all-chats-btn');
   if (!btn) return;
   
+  const i18n = window.i18n || { t: (key) => key };
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length === 0) {
-    btn.textContent = '💬 顯示所有聊天室';
+    btn.textContent = '💬 ' + i18n.t('showAllChats');
     return;
   }
   
@@ -557,9 +560,9 @@ function updateAllChatsButton() {
   
   // 更新按鈕文字
   if (visibleCount > boxes.length / 2) {
-    btn.textContent = '💬 隱藏所有聊天室';
+    btn.textContent = '💬 ' + i18n.t('hideAllChats');
   } else {
-    btn.textContent = '💬 顯示所有聊天室';
+    btn.textContent = '💬 ' + i18n.t('showAllChats');
   }
 }
 
@@ -567,7 +570,8 @@ function updateAllChatsButton() {
 function toggleAllChats() {
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length === 0) {
-    alert('目前沒有串流');
+    const i18n = window.i18n || { t: (key) => key };
+    alert(i18n.t('noStreams'));
     return;
   }
   
@@ -621,8 +625,11 @@ function toggleAllChats() {
   }
 }
 
-// 確保 updateStreamOrderList 是全局函數
+// 確保函數是全局的（立即暴露，不等待 DOM）
 if (typeof window !== 'undefined') {
   window.updateStreamOrderList = updateStreamOrderList;
+  window.toggleAllChats = toggleAllChats;
+  window.updateAllChatsButton = updateAllChatsButton;
+  window.toggleControlPanel = toggleControlPanel;
 }
 

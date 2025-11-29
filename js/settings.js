@@ -362,9 +362,12 @@ async function createNewBackupFile() {
 function updateBackupSettingsDisplay() {
   const filePathDiv = document.getElementById('backup-file-path');
   if (filePathDiv) {
+    const i18n = window.i18n || { t: (key) => key };
     const filePath = localFileStorage.getCurrentFilePath();
-    filePathDiv.textContent = filePath;
-    filePathDiv.style.color = filePath === '未設置' ? '#ffa500' : '#28a745';
+    // 檢查是否為未設置狀態（支援多語言）
+    const isNotSet = filePath === '未設置' || filePath === 'Not Set' || filePath === '未设置' || filePath === '未設定';
+    filePathDiv.textContent = isNotSet ? i18n.t('notSet') : filePath;
+    filePathDiv.style.color = isNotSet ? '#ffa500' : '#28a745';
   }
 }
 
@@ -511,9 +514,10 @@ const favoriteCategories = {
   add: (name) => {
     const list = favoriteCategories.getList();
     
+    const i18n = window.i18n || { t: (key) => key };
     // 檢查是否已存在
     if (list.some(cat => cat.name === name)) {
-      return { success: false, message: '此分類已存在' };
+      return { success: false, message: i18n.t('categoryExists') };
     }
     
     const newCategory = {
@@ -525,7 +529,7 @@ const favoriteCategories = {
     list.push(newCategory);
     favoriteCategories.saveList(list);
     
-    return { success: true, message: '分類已添加', category: newCategory };
+    return { success: true, message: i18n.t('categoryAdded'), category: newCategory };
   },
   
   // 更新分類
@@ -534,18 +538,20 @@ const favoriteCategories = {
     const category = list.find(cat => cat.id === id);
     
     if (!category) {
-      return { success: false, message: '分類不存在' };
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('categoryNotFound') };
     }
     
+    const i18n = window.i18n || { t: (key) => key };
     // 檢查新名稱是否與其他分類重複
     if (list.some(cat => cat.id !== id && cat.name === newName)) {
-      return { success: false, message: '此分類名稱已存在' };
+      return { success: false, message: i18n.t('categoryExists') };
     }
     
     category.name = newName;
     favoriteCategories.saveList(list);
     
-    return { success: true, message: '分類已更新' };
+    return { success: true, message: i18n.t('categoryUpdated') };
   },
   
   // 移除分類
@@ -563,7 +569,8 @@ const favoriteCategories = {
     });
     favoriteStreams.saveList(favorites);
     
-    return { success: true, message: '分類已移除' };
+    const i18n = window.i18n || { t: (key) => key };
+    return { success: true, message: i18n.t('categoryRemoved') };
   }
 };
 
@@ -586,7 +593,8 @@ const favoriteStreams = {
     
     // 檢查是否已存在
     if (list.some(item => item.url === url)) {
-      return { success: false, message: '此串流已在收藏列表中' };
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('streamAlreadyInFavorites') };
     }
     
     // 解析平台和ID
@@ -616,7 +624,8 @@ const favoriteStreams = {
     }
     
     if (!platform) {
-      return { success: false, message: '無法解析串流網址' };
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('cannotParseStreamUrl') };
     }
     
     const newItem = {
@@ -633,7 +642,8 @@ const favoriteStreams = {
     list.push(newItem);
     favoriteStreams.saveList(list);
     
-    return { success: true, message: '已添加到收藏' };
+    const i18n = window.i18n || { t: (key) => key };
+    return { success: true, message: i18n.t('addedToFavorites') };
   },
   
   // 更新收藏
@@ -642,7 +652,8 @@ const favoriteStreams = {
     const item = list.find(fav => fav.id === id);
     
     if (!item) {
-      return { success: false, message: '收藏不存在' };
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('favoriteNotFound') };
     }
     
     // 更新字段
@@ -651,7 +662,8 @@ const favoriteStreams = {
     
     favoriteStreams.saveList(list);
     
-    return { success: true, message: '收藏已更新' };
+    const i18n = window.i18n || { t: (key) => key };
+    return { success: true, message: i18n.t('favoriteUpdated') };
   },
   
   // 移除收藏
@@ -659,7 +671,8 @@ const favoriteStreams = {
     const list = favoriteStreams.getList();
     const filtered = list.filter(item => item.id !== id);
     favoriteStreams.saveList(filtered);
-    return { success: true, message: '已移除收藏' };
+    const i18n = window.i18n || { t: (key) => key };
+    return { success: true, message: i18n.t('favoriteRemoved') };
   },
   
   // 從收藏加載串流
@@ -668,13 +681,15 @@ const favoriteStreams = {
       addStream(item.url);
       return { success: true };
     }
-    return { success: false, message: '無效的收藏項目' };
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('invalidFavoriteItem') };
   },
   
   // 批量加載收藏
   loadMultiple: (items) => {
     if (!items || items.length === 0) {
-      return { success: false, message: '沒有可加載的收藏' };
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('noFavoritesToLoad') };
     }
     
     items.forEach((item, index) => {
@@ -683,7 +698,8 @@ const favoriteStreams = {
       }, index * 300); // 每個串流間隔300毫秒加載
     });
     
-    return { success: true, message: `正在加載 ${items.length} 個串流` };
+    const i18n = window.i18n || { t: (key) => key };
+    return { success: true, message: `${i18n.t('loadingStreams')} ${items.length} ${i18n.t('streams')}` };
   }
 };
 
@@ -693,6 +709,7 @@ let currentCategoryFilter = null;
 function showFavoriteStreamsManager() {
   const list = favoriteStreams.getList();
   const categories = favoriteCategories.getList();
+  const i18n = window.i18n || { t: (key) => key };
   
   // 創建或獲取管理界面
   let manager = document.getElementById('favorite-streams-manager');
@@ -713,24 +730,24 @@ function showFavoriteStreamsManager() {
   // 構建界面內容
   let content = `
     <div class="favorite-manager-header">
-      <h3>收藏管理</h3>
+      <h3>${escapeHtml(i18n.t('favoriteManager'))}</h3>
       <button onclick="closeFavoriteStreamsManager()" class="close-btn">×</button>
     </div>
     <div class="favorite-manager-content">
       <div class="favorite-tabs">
-        <button class="tab-btn active" data-tab="favorites">收藏串流</button>
-        <button class="tab-btn" data-tab="categories">分類管理</button>
-        <button class="tab-btn" data-tab="settings">設定</button>
+        <button class="tab-btn active" data-tab="favorites">${escapeHtml(i18n.t('favoriteStreamsTab'))}</button>
+        <button class="tab-btn" data-tab="categories">${escapeHtml(i18n.t('categoryManagementTab'))}</button>
+        <button class="tab-btn" data-tab="settings">${escapeHtml(i18n.t('settingsTab'))}</button>
       </div>
       
       <!-- 收藏串流標籤頁 -->
       <div class="tab-content active" id="tab-favorites">
         <div class="favorite-controls">
           <div class="favorite-add-section">
-            <input type="text" id="favorite-url-input" placeholder="貼上串流網址" style="flex: 1; padding: 6px; margin-right: 8px;">
-            <input type="text" id="favorite-name-input" placeholder="自訂名稱（選填）" style="flex: 1; padding: 6px; margin-right: 8px;">
+            <input type="text" id="favorite-url-input" placeholder="${escapeHtml(i18n.t('pasteStreamUrl'))}" style="flex: 1; padding: 6px; margin-right: 8px;">
+            <input type="text" id="favorite-name-input" placeholder="${escapeHtml(i18n.t('customNameOptional'))}" style="flex: 1; padding: 6px; margin-right: 8px;">
             <select id="favorite-category-select" style="padding: 6px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px;">
-              <option value="">未分類</option>
+              <option value="">${escapeHtml(i18n.t('uncategorized'))}</option>
   `;
   
   // 填充分類選擇器
@@ -740,12 +757,12 @@ function showFavoriteStreamsManager() {
   
   content += `
             </select>
-            <button onclick="addToFavorites()" style="padding: 6px 12px;">加入收藏</button>
+            <button onclick="addToFavorites()" style="padding: 6px 12px;">${escapeHtml(i18n.t('addToFavorites'))}</button>
           </div>
           <div class="favorite-filter-section">
             <select id="category-filter" style="padding: 6px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px;">
-              <option value="">全部</option>
-              <option value="null">未分類</option>
+              <option value="">${escapeHtml(i18n.t('all'))}</option>
+              <option value="null">${escapeHtml(i18n.t('uncategorized'))}</option>
   `;
   
   // 填充分類篩選器
@@ -755,9 +772,9 @@ function showFavoriteStreamsManager() {
   
   content += `
             </select>
-            <button onclick="selectAllFavorites()" style="padding: 6px 12px; font-size: 11px;">全選</button>
-            <button onclick="deselectAllFavorites()" style="padding: 6px 12px; font-size: 11px;">取消全選</button>
-            <button onclick="loadSelectedFavorites()" style="padding: 6px 12px; font-size: 11px; background: #9147ff;">一鍵載入選中</button>
+            <button onclick="selectAllFavorites()" style="padding: 6px 12px; font-size: 11px;">${escapeHtml(i18n.t('selectAll'))}</button>
+            <button onclick="deselectAllFavorites()" style="padding: 6px 12px; font-size: 11px;">${escapeHtml(i18n.t('deselectAll'))}</button>
+            <button onclick="loadSelectedFavorites()" style="padding: 6px 12px; font-size: 11px; background: #9147ff;">${escapeHtml(i18n.t('loadSelected'))}</button>
           </div>
         </div>
         <div class="favorite-list" id="favorite-list">
@@ -774,18 +791,18 @@ function showFavoriteStreamsManager() {
   }
   
   if (filteredList.length === 0) {
-    content += '<div style="padding: 20px; text-align: center; color: #888;">暫無收藏</div>';
+    content += `<div style="padding: 20px; text-align: center; color: #888;">${escapeHtml(i18n.t('noFavorites'))}</div>`;
   } else {
     filteredList.forEach((item) => {
       // 转义所有用户输入以防止 XSS
       const safeDisplayName = escapeHtml(item.name || (item.platform === 'twitch' ? item.channelId : item.videoId));
       const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
-      const safeCategoryName = escapeHtml(item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || '未知分類' : '未分類');
+      const safeCategoryName = escapeHtml(item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || i18n.t('unknownCategory') : i18n.t('uncategorized'));
       const safeItemId = escapeHtml(item.id);
       const safeItemUrl = escapeHtml(item.url);
       
       // 生成分類選項（转义）
-      let categoryOptions = '<option value="">未分類</option>';
+      let categoryOptions = `<option value="">${escapeHtml(i18n.t('uncategorized'))}</option>`;
       categories.forEach(cat => {
         const selected = item.categoryId === cat.id ? 'selected' : '';
         const safeCatId = escapeHtml(cat.id);
@@ -809,13 +826,13 @@ function showFavoriteStreamsManager() {
             <select class="favorite-edit-category" style="padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
               ${categoryOptions}
             </select>
-            <button class="save-favorite-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; margin-right: 4px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">保存</button>
-            <button class="cancel-edit-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">取消</button>
+            <button class="save-favorite-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; margin-right: 4px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">${escapeHtml(i18n.t('save'))}</button>
+            <button class="cancel-edit-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">${escapeHtml(i18n.t('cancel'))}</button>
           </div>
           <div class="favorite-item-actions">
-            <button class="edit-favorite-btn" data-favorite-id="${safeItemId}" title="編輯">✏️</button>
-            <button class="load-favorite-btn" data-favorite-id="${safeItemId}" title="載入">▶</button>
-            <button class="remove-favorite-btn" data-favorite-id="${safeItemId}" title="移除">🗑</button>
+            <button class="edit-favorite-btn" data-favorite-id="${safeItemId}" title="${escapeHtml(i18n.t('edit'))}">✏️</button>
+            <button class="load-favorite-btn" data-favorite-id="${safeItemId}" title="${escapeHtml(i18n.t('load'))}">▶</button>
+            <button class="remove-favorite-btn" data-favorite-id="${safeItemId}" title="${escapeHtml(i18n.t('remove'))}">🗑</button>
           </div>
         </div>
       `;
@@ -829,14 +846,14 @@ function showFavoriteStreamsManager() {
       <!-- 分類管理標籤頁 -->
       <div class="tab-content" id="tab-categories">
         <div class="category-add-section">
-          <input type="text" id="category-name-input" placeholder="分類名稱" style="flex: 1; padding: 6px; margin-right: 8px;">
-          <button onclick="addCategory()" style="padding: 6px 12px;">新增分類</button>
+          <input type="text" id="category-name-input" placeholder="${escapeHtml(i18n.t('categoryName'))}" style="flex: 1; padding: 6px; margin-right: 8px;">
+          <button onclick="addCategory()" style="padding: 6px 12px;">${escapeHtml(i18n.t('addCategory'))}</button>
         </div>
         <div class="category-list" id="category-list">
   `;
   
   if (categories.length === 0) {
-    content += '<div style="padding: 20px; text-align: center; color: #888;">暫無分類</div>';
+    content += `<div style="padding: 20px; text-align: center; color: #888;">${escapeHtml(i18n.t('noCategories'))}</div>`;
   } else {
     categories.forEach((cat) => {
       // 转义用户输入以防止 XSS
@@ -847,12 +864,12 @@ function showFavoriteStreamsManager() {
         <div class="category-item" data-id="${safeCatId}">
           <div class="category-item-info">
             <span class="category-item-name">📁 ${safeCatName}</span>
-            <span class="category-item-count">(${count} 個收藏)</span>
+            <span class="category-item-count">(${count} ${escapeHtml(i18n.t('favoritesCount'))})</span>
           </div>
           <div class="category-item-actions">
-            <button class="load-category-btn" data-category-id="${safeCatId}" title="一鍵載入此分類">▶ 載入</button>
-            <button class="edit-category-btn" data-category-id="${safeCatId}" title="編輯">✏️</button>
-            <button class="remove-category-btn" data-category-id="${safeCatId}" title="刪除">🗑</button>
+            <button class="load-category-btn" data-category-id="${safeCatId}" title="${escapeHtml(i18n.t('loadCategory'))}">▶ ${escapeHtml(i18n.t('load'))}</button>
+            <button class="edit-category-btn" data-category-id="${safeCatId}" title="${escapeHtml(i18n.t('edit'))}">✏️</button>
+            <button class="remove-category-btn" data-category-id="${safeCatId}" title="${escapeHtml(i18n.t('remove'))}">🗑</button>
           </div>
         </div>
       `;
@@ -872,25 +889,25 @@ function showFavoriteStreamsManager() {
           <div style="margin-bottom: 20px;">
             <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
               <input type="checkbox" id="backup-enabled-checkbox" ${backupEnabled ? 'checked' : ''} onchange="toggleBackupEnabled()" style="width: 18px; height: 18px; cursor: pointer;">
-              <span style="font-size: 14px; color: #fff;">啟用數據自動備份</span>
+              <span style="font-size: 14px; color: #fff;">${escapeHtml(i18n.t('enableAutoBackup'))}</span>
             </label>
             <div style="margin-top: 8px; font-size: 12px; color: #ffa500; margin-left: 28px; padding: 8px; background: rgba(255, 165, 0, 0.1); border-radius: 4px; border-left: 3px solid #ffa500;">
-              ⚠️ 啟用後，請在下方設置備份文件位置。之後每次編輯、新增或刪除收藏時會自動保存到該固定位置，不會觸發下載。
+              ${escapeHtml(i18n.t('backupWarning'))}
             </div>
           </div>
           <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
             <div style="margin-bottom: 12px;">
-              <div style="font-size: 13px; color: #fff; margin-bottom: 8px;">備份文件位置：</div>
-              <div id="backup-file-path" style="font-size: 12px; color: ${localFileStorage.getCurrentFilePath() === '未設置' ? '#ffa500' : '#28a745'}; margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px;">
-                ${localFileStorage.getCurrentFilePath()}
+              <div style="font-size: 13px; color: #fff; margin-bottom: 8px;">${escapeHtml(i18n.t('backupFileLocation'))}</div>
+              <div id="backup-file-path" style="font-size: 12px; color: ${(localFileStorage.getCurrentFilePath() === '未設置' || localFileStorage.getCurrentFilePath() === 'Not Set' || localFileStorage.getCurrentFilePath() === '未设置' || localFileStorage.getCurrentFilePath() === '未設定') ? '#ffa500' : '#28a745'}; margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px;">
+                ${escapeHtml((localFileStorage.getCurrentFilePath() === '未設置' || localFileStorage.getCurrentFilePath() === 'Not Set' || localFileStorage.getCurrentFilePath() === '未设置' || localFileStorage.getCurrentFilePath() === '未設定') ? i18n.t('notSet') : localFileStorage.getCurrentFilePath())}
               </div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button onclick="setBackupFileLocation()" style="padding: 6px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">選擇文件位置</button>
-                <button onclick="createNewBackupFile()" style="padding: 6px 12px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">創建新文件</button>
+                <button onclick="setBackupFileLocation()" style="padding: 6px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">${escapeHtml(i18n.t('selectFileLocation'))}</button>
+                <button onclick="createNewBackupFile()" style="padding: 6px 12px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">${escapeHtml(i18n.t('createNewFile'))}</button>
               </div>
               <div style="margin-top: 6px; font-size: 11px; color: #aaa;">
-                選擇文件位置：打開現有備份文件並自動載入數據<br>
-                創建新文件：創建新的備份文件（不會載入數據）
+                ${escapeHtml(i18n.t('selectFileLocationDesc'))}<br>
+                ${escapeHtml(i18n.t('createNewFileDesc'))}
               </div>
             </div>
           </div>
@@ -1055,8 +1072,9 @@ function addToFavorites() {
   const nameInput = document.getElementById('favorite-name-input');
   const categorySelect = document.getElementById('favorite-category-select');
   
+  const i18n = window.i18n || { t: (key) => key };
   if (!urlInput || !urlInput.value.trim()) {
-    showSaveMessage('請輸入串流網址');
+    showSaveMessage(i18n.t('pleaseEnterStreamUrl'));
     return;
   }
   
@@ -1079,9 +1097,25 @@ function addToFavorites() {
         // 備份失敗，靜默處理
       });
     }
-    showSaveMessage('資料已儲存');
+    showSaveMessage(i18n.t('dataSaved'));
   } else {
-    showSaveMessage(result.message);
+    // 嘗試翻譯錯誤訊息
+    const errorMessages = {
+      '此串流已在收藏列表中': i18n.t('streamAlreadyInFavorites'),
+      '無法解析串流網址': i18n.t('cannotParseStreamUrl'),
+      '收藏不存在': i18n.t('favoriteNotFound'),
+      '收藏已更新': i18n.t('favoriteUpdated'),
+      '已移除收藏': i18n.t('favoriteRemoved'),
+      '無效的收藏項目': i18n.t('invalidFavoriteItem'),
+      '沒有可加載的收藏': i18n.t('noFavoritesToLoad'),
+      '分類不存在': i18n.t('categoryNotFound'),
+      '此分類名稱已存在': i18n.t('categoryExists'),
+      '分類已添加': i18n.t('categoryAdded'),
+      '分類已更新': i18n.t('categoryUpdated'),
+      '分類已移除': i18n.t('categoryRemoved')
+    };
+    const translatedMessage = errorMessages[result.message] || result.message;
+    showSaveMessage(translatedMessage);
   }
 }
 
@@ -1089,8 +1123,9 @@ function addToFavorites() {
 function addCategory() {
   const nameInput = document.getElementById('category-name-input');
   
+  const i18n = window.i18n || { t: (key) => key };
   if (!nameInput || !nameInput.value.trim()) {
-    showSaveMessage('請輸入分類名稱');
+    showSaveMessage(i18n.t('pleaseEnterCategoryName'));
     return;
   }
   
@@ -1111,9 +1146,25 @@ function addCategory() {
         // 備份失敗，靜默處理
       });
     }
-    showSaveMessage('資料已儲存');
+    showSaveMessage(i18n.t('dataSaved'));
   } else {
-    showSaveMessage(result.message);
+    // 嘗試翻譯錯誤訊息
+    const errorMessages = {
+      '此串流已在收藏列表中': i18n.t('streamAlreadyInFavorites'),
+      '無法解析串流網址': i18n.t('cannotParseStreamUrl'),
+      '收藏不存在': i18n.t('favoriteNotFound'),
+      '收藏已更新': i18n.t('favoriteUpdated'),
+      '已移除收藏': i18n.t('favoriteRemoved'),
+      '無效的收藏項目': i18n.t('invalidFavoriteItem'),
+      '沒有可加載的收藏': i18n.t('noFavoritesToLoad'),
+      '分類不存在': i18n.t('categoryNotFound'),
+      '此分類名稱已存在': i18n.t('categoryExists'),
+      '分類已添加': i18n.t('categoryAdded'),
+      '分類已更新': i18n.t('categoryUpdated'),
+      '分類已移除': i18n.t('categoryRemoved')
+    };
+    const translatedMessage = errorMessages[result.message] || result.message;
+    showSaveMessage(translatedMessage);
   }
 }
 
@@ -1123,7 +1174,8 @@ function editCategory(categoryId) {
   const category = categories.find(c => c.id === categoryId);
   
   if (!category) {
-    showSaveMessage('分類不存在');
+    const i18n = window.i18n || { t: (key) => key };
+    showSaveMessage(i18n.t('categoryNotFound'));
     return;
   }
   
@@ -1191,9 +1243,25 @@ function removeCategory(categoryId) {
         // 備份失敗，靜默處理
       });
     }
-    showSaveMessage('資料已儲存');
+    showSaveMessage(i18n.t('dataSaved'));
   } else {
-    showSaveMessage(result.message);
+    // 嘗試翻譯錯誤訊息
+    const errorMessages = {
+      '此串流已在收藏列表中': i18n.t('streamAlreadyInFavorites'),
+      '無法解析串流網址': i18n.t('cannotParseStreamUrl'),
+      '收藏不存在': i18n.t('favoriteNotFound'),
+      '收藏已更新': i18n.t('favoriteUpdated'),
+      '已移除收藏': i18n.t('favoriteRemoved'),
+      '無效的收藏項目': i18n.t('invalidFavoriteItem'),
+      '沒有可加載的收藏': i18n.t('noFavoritesToLoad'),
+      '分類不存在': i18n.t('categoryNotFound'),
+      '此分類名稱已存在': i18n.t('categoryExists'),
+      '分類已添加': i18n.t('categoryAdded'),
+      '分類已更新': i18n.t('categoryUpdated'),
+      '分類已移除': i18n.t('categoryRemoved')
+    };
+    const translatedMessage = errorMessages[result.message] || result.message;
+    showSaveMessage(translatedMessage);
   }
 }
 
@@ -1248,7 +1316,8 @@ function saveFavoriteEdit(favoriteId) {
   
   const newName = nameInput.value.trim();
   if (!newName) {
-    showSaveMessage('收藏名稱不能為空');
+    const i18n = window.i18n || { t: (key) => key };
+    showSaveMessage(i18n.t('favoriteNameCannotBeEmpty'));
     return;
   }
   
@@ -1275,9 +1344,25 @@ function saveFavoriteEdit(favoriteId) {
         // 備份失敗，靜默處理
       });
     }
-    showSaveMessage('資料已儲存');
+    showSaveMessage(i18n.t('dataSaved'));
   } else {
-    showSaveMessage(result.message);
+    // 嘗試翻譯錯誤訊息
+    const errorMessages = {
+      '此串流已在收藏列表中': i18n.t('streamAlreadyInFavorites'),
+      '無法解析串流網址': i18n.t('cannotParseStreamUrl'),
+      '收藏不存在': i18n.t('favoriteNotFound'),
+      '收藏已更新': i18n.t('favoriteUpdated'),
+      '已移除收藏': i18n.t('favoriteRemoved'),
+      '無效的收藏項目': i18n.t('invalidFavoriteItem'),
+      '沒有可加載的收藏': i18n.t('noFavoritesToLoad'),
+      '分類不存在': i18n.t('categoryNotFound'),
+      '此分類名稱已存在': i18n.t('categoryExists'),
+      '分類已添加': i18n.t('categoryAdded'),
+      '分類已更新': i18n.t('categoryUpdated'),
+      '分類已移除': i18n.t('categoryRemoved')
+    };
+    const translatedMessage = errorMessages[result.message] || result.message;
+    showSaveMessage(translatedMessage);
   }
 }
 
@@ -1301,7 +1386,8 @@ function deselectAllFavorites() {
 function loadSelectedFavorites() {
   const checkboxes = document.querySelectorAll('.favorite-checkbox:checked');
   if (checkboxes.length === 0) {
-    showSaveMessage('請至少選擇一個收藏');
+    const i18n = window.i18n || { t: (key) => key };
+    showSaveMessage(i18n.t('pleaseSelectAtLeastOneFavorite'));
     return;
   }
   
@@ -1333,7 +1419,8 @@ function loadCategoryFavorites(categoryId) {
   const categoryItems = list.filter(item => item.categoryId === categoryId);
   
   if (categoryItems.length === 0) {
-    showSaveMessage('此分類下沒有收藏');
+    const i18n = window.i18n || { t: (key) => key };
+    showSaveMessage(i18n.t('noFavoritesInCategory'));
     return;
   }
   
@@ -1380,6 +1467,7 @@ function updateFavoriteListDisplay() {
   const categories = favoriteCategories.getList();
   const filterSelect = document.getElementById('favorite-display-filter');
   const displayDiv = document.getElementById('favorite-list-display');
+  const i18n = window.i18n || { t: (key) => key };
   
   if (!displayDiv) {
     // 收藏列表顯示區域未找到
@@ -1398,11 +1486,11 @@ function updateFavoriteListDisplay() {
     filterSelect.innerHTML = '';
     const allOption = document.createElement('option');
     allOption.value = 'all';
-    allOption.textContent = '全部收藏';
+    allOption.textContent = i18n.t('allFavorites');
     filterSelect.appendChild(allOption);
     const uncatOption = document.createElement('option');
     uncatOption.value = 'uncategorized';
-    uncatOption.textContent = '未分類';
+    uncatOption.textContent = i18n.t('uncategorized');
     filterSelect.appendChild(uncatOption);
     
     // 添加分類選項
@@ -1426,7 +1514,7 @@ function updateFavoriteListDisplay() {
       displayDiv.innerHTML = '';
       const emptyDiv = document.createElement('div');
       emptyDiv.style.cssText = 'padding: 20px; text-align: center; color: #888; font-size: 12px;';
-      emptyDiv.textContent = '此分類下沒有收藏';
+      emptyDiv.textContent = i18n.t('noFavoritesInCategory');
       displayDiv.appendChild(emptyDiv);
       return;
     }
@@ -1437,15 +1525,15 @@ function updateFavoriteListDisplay() {
     
     const categoryName = document.createElement('div');
     categoryName.style.cssText = 'font-size: 13px; color: #fff; margin-bottom: 12px;';
-    categoryName.textContent = '📁 ' + (category ? escapeHtml(category.name) : '未知分類');
+    categoryName.textContent = '📁 ' + (category ? escapeHtml(category.name) : i18n.t('unknownCategory'));
     
     const countDiv = document.createElement('div');
     countDiv.style.cssText = 'font-size: 11px; color: #aaa; margin-bottom: 16px;';
-    countDiv.textContent = `共 ${categoryItems.length} 個收藏`;
+    countDiv.textContent = `${i18n.t('categoryFavoritesCount')} ${categoryItems.length} ${i18n.t('favoritesInCategory')}`;
     
     const loadBtn = document.createElement('button');
     loadBtn.style.cssText = 'padding: 8px 16px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
-    loadBtn.textContent = '一鍵載入此分類';
+    loadBtn.textContent = i18n.t('loadCategoryFavorites');
     loadBtn.onclick = () => loadCategoryFavoritesFromPanel(filterValue);
     
     categoryDiv.appendChild(categoryName);
@@ -1467,7 +1555,7 @@ function updateFavoriteListDisplay() {
   if (filteredList.length === 0) {
     const emptyDiv = document.createElement('div');
     emptyDiv.style.cssText = 'padding: 20px; text-align: center; color: #888; font-size: 12px;';
-    emptyDiv.textContent = '暫無收藏';
+    emptyDiv.textContent = i18n.t('noFavorites');
     displayDiv.appendChild(emptyDiv);
     return;
   }
@@ -1478,7 +1566,7 @@ function updateFavoriteListDisplay() {
   filteredList.forEach((item) => {
     const displayName = item.name || (item.platform === 'twitch' ? item.channelId : item.videoId);
     const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
-    const categoryName = item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || '未知分類' : '未分類';
+    const categoryName = item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || i18n.t('unknownCategory') : i18n.t('uncategorized');
     const itemId = item.id;
     
     const itemDiv = document.createElement('div');
@@ -1540,7 +1628,8 @@ function loadFavoriteStreamFromPanel(id) {
 function addCurrentStreamToFavorites() {
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length === 0) {
-    showSaveMessage('目前沒有串流可以收藏');
+    const i18n = window.i18n || { t: (key) => key };
+    showSaveMessage(i18n.t('noStreamsToFavorite'));
     return;
   }
   
@@ -1583,9 +1672,11 @@ function addCurrentStreamToFavorites() {
               if (localFileStorage.isEnabled()) {
                 localFileStorage.backup();
               }
-              showSaveMessage(`已成功收藏 ${addedCount} 個串流${skippedCount > 0 ? `，${skippedCount} 個已存在` : ''}`);
+              const i18n = window.i18n || { t: (key) => key };
+              showSaveMessage(`${i18n.t('successfullyFavorited')} ${addedCount} ${i18n.t('streams')}${skippedCount > 0 ? `，${skippedCount} ${i18n.t('alreadyExists')}` : ''}`);
             } else if (skippedCount > 0) {
-              showSaveMessage('所有串流都已在收藏列表中');
+              const i18n = window.i18n || { t: (key) => key };
+              showSaveMessage(i18n.t('allStreamsAlreadyInFavorites'));
             }
           }, 100);
         }
@@ -1612,6 +1703,10 @@ function showVersionHistory() {
   let versionModal = document.getElementById('version-history-modal');
   if (versionModal) {
     versionModal.style.display = 'flex';
+    // 如果已存在，更新語言
+    if (typeof window.i18n !== 'undefined') {
+      updateVersionHistoryContent(versionModal);
+    }
     return;
   }
   
@@ -1621,54 +1716,78 @@ function showVersionHistory() {
   versionModal.className = 'favorite-streams-manager';
   versionModal.style.display = 'flex';
   
-  // 版本紀錄內容
+  // 更新內容
+  updateVersionHistoryContent(versionModal);
+  
+  document.body.appendChild(versionModal);
+  
+  // 點擊外部關閉
+  versionModal.addEventListener('click', (e) => {
+    if (e.target === versionModal) {
+      closeVersionHistory();
+    }
+  });
+}
+
+// 更新版本紀錄內容
+function updateVersionHistoryContent(versionModal) {
+  const i18n = window.i18n || { t: (key) => key };
+  
+  // 版本紀錄內容（使用 i18n key）
   const versionHistory = [
+    {
+      version: '1.4.0',
+      date: '2025-11-29',
+      changeKeys: [
+        'version1.4.0.change1'
+      ]
+    },
     {
       version: '1.3.0',
       date: '2025-11-28',
-      changes: [
-        '新增側邊聊天布局功能（雙欄版和四格版）',
-        '雙欄聊天布局：左側視頻區域可自由調整布局，右側固定顯示兩個聊天室（左右排列）',
-        '四格聊天布局：左側視頻區域可自由調整布局，右側固定顯示四個聊天室（2×2 網格排列）',
-        '聊天室選擇器功能，無需調整串流順序即可快速切換要顯示的聊天室',
-        '優化布局切換流暢度，一次點擊即可完成切換',
-        '改進選擇器響應速度，減少延遲'
+      changeKeys: [
+        'version1.3.0.change1',
+        'version1.3.0.change2',
+        'version1.3.0.change3',
+        'version1.3.0.change4',
+        'version1.3.0.change5',
+        'version1.3.0.change6'
       ]
     },
     {
       version: '1.2.0',
       date: '2025-11-28',
-      changes: [
-        '新增本地文件備份功能',
-        '改進收藏管理界面',
-        '新增設定標籤頁',
-        '優化安全性（XSS 防護）',
-        '改進 YouTube 聊天室嵌入支援',
-        '新增版本紀錄功能',
-        '新增滑鼠懸停自動展開控制面板',
-        '更新著作權資訊'
+      changeKeys: [
+        'version1.2.0.change1',
+        'version1.2.0.change2',
+        'version1.2.0.change3',
+        'version1.2.0.change4',
+        'version1.2.0.change5',
+        'version1.2.0.change6',
+        'version1.2.0.change7',
+        'version1.2.0.change8'
       ]
     },
     {
       version: '1.1.0',
       date: '2025-11-27',
-      changes: [
-        '新增分類管理功能',
-        '改進控制面板 UI',
-        '優化布局自動切換',
-        '修復多個已知問題'
+      changeKeys: [
+        'version1.1.0.change1',
+        'version1.1.0.change2',
+        'version1.1.0.change3',
+        'version1.1.0.change4'
       ]
     },
     {
       version: '1.0.0',
       date: '2025-11-26',
-      changes: [
-        '初始版本發布',
-        '支援 Twitch 和 YouTube 直播串流',
-        '多種布局模式',
-        '聊天室整合',
-        '音量控制功能',
-        '收藏功能'
+      changeKeys: [
+        'version1.0.0.change1',
+        'version1.0.0.change2',
+        'version1.0.0.change3',
+        'version1.0.0.change4',
+        'version1.0.0.change5',
+        'version1.0.0.change6'
       ]
     }
   ];
@@ -1676,7 +1795,7 @@ function showVersionHistory() {
   // 構建版本紀錄 HTML
   let content = `
     <div class="favorite-manager-header">
-      <h3>版本紀錄</h3>
+      <h3>${escapeHtml(i18n.t('versionHistory'))}</h3>
       <button onclick="closeVersionHistory()" class="close-btn">×</button>
     </div>
     <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto;">
@@ -1686,14 +1805,15 @@ function showVersionHistory() {
     content += `
       <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: ${index < versionHistory.length - 1 ? '1px solid #444' : 'none'};">
         <div style="display: flex; align-items: center; margin-bottom: 12px;">
-          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">版本 ${escapeHtml(version.version)}</h4>
+          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">${escapeHtml(i18n.t('version'))} ${escapeHtml(version.version)}</h4>
           <span style="margin-left: 12px; color: #888; font-size: 12px;">${escapeHtml(version.date)}</span>
         </div>
         <ul style="margin: 0; padding-left: 20px; color: #ccc; line-height: 1.8;">
     `;
     
-    version.changes.forEach(change => {
-      content += `<li style="margin-bottom: 6px;">${escapeHtml(change)}</li>`;
+    version.changeKeys.forEach(changeKey => {
+      const changeText = i18n.t(changeKey);
+      content += `<li style="margin-bottom: 6px;">${escapeHtml(changeText)}</li>`;
     });
     
     content += `
@@ -1707,14 +1827,6 @@ function showVersionHistory() {
   `;
   
   versionModal.innerHTML = content;
-  document.body.appendChild(versionModal);
-  
-  // 點擊外部關閉
-  versionModal.addEventListener('click', (e) => {
-    if (e.target === versionModal) {
-      closeVersionHistory();
-    }
-  });
 }
 
 // 關閉版本紀錄
@@ -1737,6 +1849,10 @@ function showUserGuide() {
   let guideModal = document.getElementById('user-guide-modal');
   if (guideModal) {
     guideModal.style.display = 'flex';
+    // 如果已存在，更新語言
+    if (typeof window.i18n !== 'undefined') {
+      updateUserGuideContent(guideModal);
+    }
     return;
   }
   
@@ -1746,153 +1862,9 @@ function showUserGuide() {
   guideModal.className = 'favorite-streams-manager';
   guideModal.style.display = 'flex';
   
-  // 使用教學內容
-  const guideContent = `
-    <div class="favorite-manager-header">
-      <h3>使用教學</h3>
-      <button onclick="closeUserGuide()" class="close-btn">×</button>
-    </div>
-    <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">📺 添加串流</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">在控制面板頂部的輸入框中，貼上 Twitch 或 YouTube 直播網址</li>
-          <li style="margin-bottom: 8px;">點擊「加入畫面」按鈕</li>
-          <li style="margin-bottom: 8px;">串流會自動載入並顯示在畫面上</li>
-        </ol>
-        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          💡 <strong>提示：</strong>支援的網址格式包括：
-          <br>• Twitch: https://www.twitch.tv/頻道名稱
-          <br>• YouTube: https://www.youtube.com/watch?v=視頻ID 或 https://youtu.be/視頻ID
-        </div>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🎨 調整布局</h4>
-        <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">基本布局</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">在控制面板的「布局控制」區域，點擊布局預覽按鈕</li>
-            <li style="margin-bottom: 8px;">可選擇：單一畫面、左右分割、上下分割、四宮格、上大下三、2×3 網格、3×3 網格</li>
-            <li style="margin-bottom: 8px;">系統會根據串流數量自動選擇最適合的布局</li>
-          </ol>
-        </div>
-        <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">側邊聊天布局（雙欄版 / 四格版）</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">點擊「雙欄聊天布局」或「四格聊天布局」按鈕啟用側邊聊天布局</li>
-            <li style="margin-bottom: 8px;">左側視頻區域可以使用布局按鈕（1-6、9）調整顯示方式</li>
-            <li style="margin-bottom: 8px;">右側聊天室區域固定，不會隨視頻布局改變</li>
-            <li style="margin-bottom: 8px;">每個聊天室面板都有下拉選擇器，可以選擇要顯示的串流聊天室</li>
-            <li style="margin-bottom: 8px;">雙欄聊天布局：右側顯示兩個聊天室（左右排列）</li>
-            <li style="margin-bottom: 8px;">四格聊天布局：右側顯示四個聊天室（2×2 網格排列）</li>
-          </ol>
-          <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-            💡 <strong>提示：</strong>側邊聊天布局模式下，無需調整串流順序，直接從聊天室選擇器中選擇要顯示的串流即可
-          </div>
-        </div>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">💬 聊天室功能</h4>
-        <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">基本模式</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">點擊串流視窗中的聊天室按鈕（💬）顯示/隱藏聊天室</li>
-            <li style="margin-bottom: 8px;">使用「顯示所有聊天室」按鈕一次性顯示所有聊天室</li>
-            <li style="margin-bottom: 8px;">聊天室會自動嵌入到串流視窗中</li>
-          </ol>
-        </div>
-        <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">側邊聊天布局模式（雙欄版 / 四格版）</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">右側聊天室區域固定顯示，不會隨視頻布局改變</li>
-            <li style="margin-bottom: 8px;">每個聊天室面板頂部都有下拉選擇器</li>
-            <li style="margin-bottom: 8px;">從選擇器中選擇要顯示的串流聊天室</li>
-            <li style="margin-bottom: 8px;">支援 Twitch 和 YouTube 聊天室嵌入</li>
-            <li style="margin-bottom: 8px;">無需調整串流順序，直接選擇即可切換</li>
-          </ol>
-        </div>
-        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          ⚠️ <strong>注意：</strong>YouTube 聊天室需要在正式環境（非 localhost）才能嵌入
-        </div>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🔊 音量控制</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">使用「總音量」滑桿調整所有串流的音量</li>
-          <li style="margin-bottom: 8px;">在「串流順序」列表中，調整單個串流的音量</li>
-          <li style="margin-bottom: 8px;">點擊「全部靜音」快速靜音/取消靜音所有串流</li>
-        </ol>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">⭐ 收藏功能</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">點擊「管理收藏」打開收藏管理界面</li>
-          <li style="margin-bottom: 8px;">在「收藏串流」標籤頁中：
-            <ul style="margin-top: 6px; padding-left: 20px;">
-              <li>輸入串流網址和自訂名稱（選填）</li>
-              <li>選擇分類（可選）</li>
-              <li>點擊「加入收藏」</li>
-            </ul>
-          </li>
-          <li style="margin-bottom: 8px;">在「分類管理」標籤頁中創建和管理分類</li>
-          <li style="margin-bottom: 8px;">在控制面板的「收藏串流」區域：
-            <ul style="margin-top: 6px; padding-left: 20px;">
-              <li>使用下拉選單選擇「全部收藏」或「未分類」</li>
-              <li>點擊列表中的串流名稱即可載入</li>
-            </ul>
-          </li>
-        </ol>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">💾 數據備份</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">在「管理收藏」→「設定」標籤頁中啟用數據備份</li>
-          <li style="margin-bottom: 8px;">點擊「選擇文件位置」選擇備份文件（會自動導入數據）</li>
-          <li style="margin-bottom: 8px;">或點擊「創建新文件」創建新的備份文件</li>
-          <li style="margin-bottom: 8px;">啟用後，每次修改收藏或分類時會自動保存</li>
-        </ol>
-        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          💡 <strong>提示：</strong>頁面載入時會自動嘗試讀取備份文件
-        </div>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">🎛️ 控制面板</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">控制面板位於畫面右側，可以收起/展開</li>
-          <li style="margin-bottom: 8px;">點擊控制面板標題或右側的展開按鈕來展開/收起面板</li>
-          <li style="margin-bottom: 8px;">如果沒有任何串流，控制面板會自動展開</li>
-          <li style="margin-bottom: 8px;">在「串流順序」中可以拖曳調整串流順序</li>
-        </ol>
-      </div>
-      
-      <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">📱 移動設備</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">在手機和平板上，控制面板會全屏顯示</li>
-          <li style="margin-bottom: 8px;">所有按鈕和輸入框都已優化，適合觸摸操作</li>
-          <li style="margin-bottom: 8px;">支援橫向和縱向模式</li>
-        </ol>
-      </div>
-      
-      <div style="margin-bottom: 20px; padding: 15px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; border-left: 3px solid #9147ff;">
-        <h4 style="color: #9147ff; font-size: 14px; margin: 0 0 8px 0;">💡 快捷提示</h4>
-        <ul style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 12px;">
-          <li>點擊「收藏當前」可以快速將當前顯示的串流加入收藏</li>
-          <li>在收藏列表中，可以點擊分類名稱旁的「▶ 載入」按鈕一鍵載入整個分類的串流</li>
-          <li>串流視窗可以拖曳調整大小和位置</li>
-          <li>點擊串流視窗可以切換為活動狀態（紫色邊框）</li>
-        </ul>
-      </div>
-    </div>
-  `;
+  // 更新內容
+  updateUserGuideContent(guideModal);
   
-  guideModal.innerHTML = guideContent;
   document.body.appendChild(guideModal);
   
   // 點擊外部關閉
@@ -1901,6 +1873,159 @@ function showUserGuide() {
       closeUserGuide();
     }
   });
+}
+
+// 更新使用教學內容
+function updateUserGuideContent(guideModal) {
+  const i18n = window.i18n || { t: (key) => key };
+  
+  // 使用教學內容
+  const guideContent = `
+    <div class="favorite-manager-header">
+      <h3>${escapeHtml(i18n.t('userGuide'))}</h3>
+      <button onclick="closeUserGuide()" class="close-btn">×</button>
+    </div>
+    <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('addStreamTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep3'))}</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ${escapeHtml(i18n.t('addStreamTip'))}
+          <br>${escapeHtml(i18n.t('addStreamTipTwitch'))}
+          <br>${escapeHtml(i18n.t('addStreamTipYouTube'))}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('layoutTitle'))}</h4>
+        <div style="margin-bottom: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasic'))}</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep3'))}</li>
+          </ol>
+        </div>
+        <div style="margin-top: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChat'))}</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep4'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep5'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep6'))}</li>
+          </ol>
+          <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+            ${escapeHtml(i18n.t('layoutSideChatTip'))}
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('chatTitle'))}</h4>
+        <div style="margin-bottom: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasic'))}</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep3'))}</li>
+          </ol>
+        </div>
+        <div style="margin-top: 16px;">
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayout'))}</h5>
+          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep4'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep5'))}</li>
+          </ol>
+        </div>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ${escapeHtml(i18n.t('chatWarning'))}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('volumeTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep3'))}</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('favoriteTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep2'))}
+            <ul style="margin-top: 6px; padding-left: 20px;">
+              <li>${escapeHtml(i18n.t('favoriteStep2Item1'))}</li>
+              <li>${escapeHtml(i18n.t('favoriteStep2Item2'))}</li>
+              <li>${escapeHtml(i18n.t('favoriteStep2Item3'))}</li>
+            </ul>
+          </li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep4'))}
+            <ul style="margin-top: 6px; padding-left: 20px;">
+              <li>${escapeHtml(i18n.t('favoriteStep4Item1'))}</li>
+              <li>${escapeHtml(i18n.t('favoriteStep4Item2'))}</li>
+            </ul>
+          </li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('backupTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep4'))}</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ${escapeHtml(i18n.t('backupTip'))}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('controlPanelTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep4'))}</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('mobileTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep3'))}</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 20px; padding: 15px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; border-left: 3px solid #9147ff;">
+        <h4 style="color: #9147ff; font-size: 14px; margin: 0 0 8px 0;">${escapeHtml(i18n.t('tipsTitle'))}</h4>
+        <ul style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 12px;">
+          <li>${escapeHtml(i18n.t('tip1'))}</li>
+          <li>${escapeHtml(i18n.t('tip2'))}</li>
+          <li>${escapeHtml(i18n.t('tip3'))}</li>
+          <li>${escapeHtml(i18n.t('tip4'))}</li>
+        </ul>
+      </div>
+    </div>
+  `;
+  
+  guideModal.innerHTML = guideContent;
 }
 
 // 關閉使用教學

@@ -76,7 +76,9 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   // 初始化串流順序列表
-  updateStreamOrderList();
+  if (typeof updateStreamOrderList === 'function') {
+    updateStreamOrderList();
+  }
   
   // 初始化所有聊天室按鈕狀態
   if (typeof updateAllChatsButton === 'function') {
