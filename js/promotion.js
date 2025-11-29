@@ -58,6 +58,8 @@ let adConfig = adConfigManager.getConfig();
 let adTimer = null;
 let adDisplayTimer = null;
 let isAdVisible = false;
+let adSenseScriptLoaded = false; // AdSense 腳本是否已載入
+let adHTMLCreated = false; // 廣告 HTML 是否已創建
 
 // 初始化廣告系統
 function initAdSystem() {
@@ -104,6 +106,136 @@ function toggleAdControlButtons() {
   // 廣告控制按鈕狀態已更新
 }
 
+// 動態載入 AdSense 腳本（僅在需要時載入，符合 AdSense 政策）
+function loadAdSenseScript() {
+  // 如果已經載入，直接返回
+  if (adSenseScriptLoaded) {
+    return Promise.resolve();
+  }
+  
+  // 檢查是否已經存在腳本
+  const existingScript = document.querySelector('script[src*="adsbygoogle.js"]');
+  if (existingScript) {
+    adSenseScriptLoaded = true;
+    return Promise.resolve();
+  }
+  
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=pub-8415424787944153';
+    script.crossOrigin = 'anonymous';
+    script.onload = () => {
+      adSenseScriptLoaded = true;
+      resolve();
+    };
+    script.onerror = () => {
+      reject(new Error('Failed to load AdSense script'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// 動態創建廣告 HTML 結構（僅在需要時創建，符合 AdSense 政策）
+function createAdHTML() {
+  // 如果已經創建，直接返回
+  if (adHTMLCreated) {
+    const existingBanner = document.getElementById('ad-banner');
+    if (existingBanner) {
+      return existingBanner;
+    }
+  }
+  
+  // 檢查是否已經存在
+  let adBanner = document.getElementById('ad-banner');
+  if (adBanner) {
+    adHTMLCreated = true;
+    return adBanner;
+  }
+  
+  // 創建廣告容器
+  adBanner = document.createElement('div');
+  adBanner.id = 'ad-banner';
+  adBanner.className = 'ad-banner';
+  
+  // 創建廣告內容容器
+  const adContent = document.createElement('div');
+  adContent.className = 'ad-content';
+  
+  // 創建關閉按鈕
+  const closeBtn = document.createElement('div');
+  closeBtn.className = 'ad-close-btn';
+  closeBtn.setAttribute('onclick', 'closeAdBanner()');
+  closeBtn.setAttribute('title', '關閉');
+  closeBtn.textContent = '×';
+  
+  // 創建廣告主體
+  const adBody = document.createElement('div');
+  adBody.className = 'ad-body';
+  
+  // 創建 AdSense 廣告單元
+  const adUnit = document.createElement('ins');
+  adUnit.className = 'adsbygoogle';
+  adUnit.style.cssText = 'display:block;margin:0 auto;';
+  adUnit.setAttribute('data-ad-client', 'pub-8415424787944153');
+  adUnit.setAttribute('data-ad-slot', '1234567890'); // 需要替換為實際的廣告單元 ID
+  adUnit.setAttribute('data-ad-format', 'auto');
+  adUnit.setAttribute('data-full-width-responsive', 'true');
+  
+  // 組裝結構
+  adBody.appendChild(adUnit);
+  adContent.appendChild(closeBtn);
+  adContent.appendChild(adBody);
+  adBanner.appendChild(adContent);
+  
+  // 添加到頁面
+  document.body.appendChild(adBanner);
+  
+  adHTMLCreated = true;
+  return adBanner;
+}
+
+// 移除廣告 HTML 結構（當廣告關閉時可選移除）
+function removeAdHTML() {
+  const adBanner = document.getElementById('ad-banner');
+  if (adBanner) {
+    adBanner.remove();
+    adHTMLCreated = false;
+  }
+}
+
+// 檢查是否有有效的發布商內容
+function hasValidPublisherContent() {
+  // 檢查是否有串流內容
+  const streamBoxes = document.querySelectorAll('.stream-box');
+  if (streamBoxes.length === 0) {
+    return false;
+  }
+  
+  // 檢查串流是否真的載入成功（不僅僅是 DOM 元素存在）
+  let hasValidStream = false;
+  const players = window.players || {};
+  const streamData = window.streamData || {};
+  
+  streamBoxes.forEach(box => {
+    const streamId = parseInt(box.dataset.streamId);
+    if (streamId && streamData[streamId]) {
+      // 檢查是否有播放器實例
+      const player = players[streamId];
+      if (player) {
+        hasValidStream = true;
+      }
+      // 或者檢查是否有 iframe（YouTube/Twitch 播放器）
+      const iframe = box.querySelector('iframe');
+      if (iframe && iframe.src) {
+        hasValidStream = true;
+      }
+    }
+  });
+  
+  return hasValidStream;
+}
+
 // 檢查並顯示廣告
 function checkAndShowAd() {
   // 如果廣告未啟用，不檢查
@@ -111,10 +243,9 @@ function checkAndShowAd() {
     return;
   }
   
-  // ★ 檢查是否有串流內容，如果沒有串流就不顯示廣告（符合 AdSense 政策）
-  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
-  if (!hasStreams) {
-    // 沒有串流內容，不顯示廣告（符合 AdSense 政策要求）
+  // ★ 嚴格檢查是否有有效的發布商內容（符合 AdSense 政策）
+  if (!hasValidPublisherContent()) {
+    // 沒有有效的發布商內容，不顯示廣告（符合 AdSense 政策要求）
     // 重新設置定時器，等待有內容時再檢查
     startAdTimer();
     return;
@@ -136,19 +267,27 @@ function checkAndShowAd() {
 }
 
 // 顯示廣告
-function showAdBanner() {
+async function showAdBanner() {
   if (isAdVisible) return; // 如果已經顯示，不重複顯示
   
-  // ★ 再次檢查是否有串流內容（符合 AdSense 政策要求）
-  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
-  if (!hasStreams) {
-    // 顯示廣告前檢查：沒有串流內容，取消顯示（符合 AdSense 政策要求）
+  // ★ 再次嚴格檢查是否有有效的發布商內容（符合 AdSense 政策要求）
+  if (!hasValidPublisherContent()) {
+    // 顯示廣告前檢查：沒有有效的發布商內容，取消顯示（符合 AdSense 政策要求）
     return;
   }
   
-  const adBanner = document.getElementById('ad-banner');
+  // 動態創建廣告 HTML（如果尚未創建）
+  const adBanner = createAdHTML();
   const container = document.getElementById('container');
   if (!adBanner) return;
+  
+  // 動態載入 AdSense 腳本（如果尚未載入）
+  try {
+    await loadAdSenseScript();
+  } catch (error) {
+    // 載入 AdSense 腳本失敗，不顯示廣告
+    return;
+  }
   
   isAdVisible = true;
   
@@ -283,6 +422,8 @@ function toggleAdEnabled() {
     if (isAdVisible) {
       hideAdBanner();
     }
+    // 移除廣告 HTML 結構（符合 AdSense 政策：未啟用時不應有廣告代碼）
+    removeAdHTML();
   }
 }
 

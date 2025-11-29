@@ -1217,6 +1217,237 @@ button.active {
   pointer-events: none; /* 防止子元素阻止點擊事件 */
 }
 
+/* 初始發布商內容樣式 */
+.initial-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 800px;
+  padding: 40px;
+  background: rgba(26, 26, 26, 0.95);
+  border: 2px solid #333;
+  border-radius: 12px;
+  text-align: center;
+  z-index: 100;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.initial-content-language-selector {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.initial-content-language-selector label {
+  font-size: 14px;
+  color: #ccc;
+  white-space: nowrap;
+}
+
+.initial-content-language-selector select {
+  padding: 6px 10px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.initial-content-language-selector select:hover {
+  border-color: #9147ff;
+  background: #333;
+}
+
+.initial-content-language-selector select:focus {
+  outline: none;
+  border-color: #9147ff;
+  box-shadow: 0 0 0 2px rgba(145, 71, 255, 0.2);
+}
+
+.initial-content.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.initial-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.initial-content-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #9147ff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.initial-content-description {
+  font-size: 18px;
+  color: #ccc;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.initial-content-features {
+  text-align: left;
+  background: rgba(145, 71, 255, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(145, 71, 255, 0.3);
+}
+
+.initial-content-subtitle {
+  font-size: 20px;
+  font-weight: bold;
+  color: #9147ff;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.initial-content-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.initial-content-list li {
+  font-size: 16px;
+  color: #ddd;
+  padding-left: 24px;
+  position: relative;
+  line-height: 1.6;
+}
+
+.initial-content-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #9147ff;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.initial-content-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.initial-content-button {
+  padding: 12px 24px;
+  background: #9147ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.initial-content-button:hover {
+  background: #7c3aed;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(145, 71, 255, 0.4);
+}
+
+.initial-content-link {
+  color: #9147ff;
+  text-decoration: none;
+  font-size: 16px;
+  padding: 8px 16px;
+  border: 1px solid #9147ff;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.initial-content-link:hover {
+  background: rgba(145, 71, 255, 0.1);
+  border-color: #7c3aed;
+}
+
+.initial-content-note {
+  font-size: 14px;
+  color: #888;
+  font-style: italic;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* 當有串流時隱藏初始內容 */
+#container:has(.stream-box) .initial-content {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 響應式優化 */
+@media (max-width: 768px) {
+  .initial-content {
+    width: 95%;
+    padding: 24px;
+  }
+  
+  .initial-content-language-selector {
+    top: 10px;
+    right: 10px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  
+  .initial-content-language-selector label {
+    font-size: 12px;
+  }
+  
+  .initial-content-language-selector select {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  
+  .initial-content-title {
+    font-size: 24px;
+    margin-top: 40px;
+  }
+  
+  .initial-content-description {
+    font-size: 16px;
+  }
+  
+  .initial-content-subtitle {
+    font-size: 18px;
+  }
+  
+  .initial-content-list li {
+    font-size: 14px;
+  }
+  
+  .initial-content-button {
+    font-size: 14px;
+    padding: 10px 20px;
+  }
+  
+  .initial-content-link {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+}
+
 /* 廣告橫幅 */
 .ad-banner {
   position: fixed;

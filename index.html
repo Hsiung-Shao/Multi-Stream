@@ -79,9 +79,7 @@
 </script>
 <!-- Content Security Policy -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com; object-src 'none'; base-uri 'self'; form-action 'self';">
-<!-- ★★★ 1. 請把 ca-pub-XXXXXXXXXXXXXXXX 換成你的真實 AdSense ID ★★★ -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=pub-8415424787944153"
-     crossorigin="anonymous"></script>
+<!-- AdSense 腳本改為動態載入（僅在需要時載入，符合 AdSense 政策） -->
 
 </head>
 <body>
@@ -246,26 +244,51 @@
   </div>
 </div>
 
-<div id="container"></div>
+<div id="container">
+  <!-- 初始發布商內容 - 確保頁面始終有發布商內容，符合 AdSense 政策 -->
+  <div id="initial-content" class="initial-content">
+    <div class="initial-content-wrapper">
+      <!-- 語言選擇器 -->
+      <div class="initial-content-language-selector">
+        <label for="initial-language-selector" data-i18n="language">語言</label>
+        <select id="initial-language-selector" onchange="if (window.i18n) { window.i18n.setLanguage(this.value); }" title="選擇語言" aria-label="選擇語言">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+        </select>
+      </div>
+      
+      <h1 class="initial-content-title" data-i18n="welcomeTitle">歡迎使用 MultiStream Hub</h1>
+      <p class="initial-content-description" data-i18n="welcomeDescription">免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播</p>
+      
+      <div class="initial-content-features">
+        <h2 class="initial-content-subtitle" data-i18n="featuresTitle">主要功能</h2>
+        <ul class="initial-content-list">
+          <li data-i18n="feature1">支援 Twitch 和 YouTube 多平台直播</li>
+          <li data-i18n="feature2">多種布局模式（單一畫面、分割、網格、側邊聊天等）</li>
+          <li data-i18n="feature3">聊天室整合與音量控制</li>
+          <li data-i18n="feature4">收藏串流與分類管理</li>
+          <li data-i18n="feature5">完全免費，無需註冊</li>
+        </ul>
+      </div>
+      
+      <div class="initial-content-actions">
+        <button class="initial-content-button" onclick="document.getElementById('control-panel')?.classList.remove('collapsed'); if (window.toggleControlPanel) window.toggleControlPanel();" data-i18n="getStarted">開始使用</button>
+        <a href="#" onclick="showUserGuide(); return false;" class="initial-content-link" data-i18n="userGuide">使用教學</a>
+        <a href="#" onclick="showVersionHistory(); return false;" class="initial-content-link" data-i18n="versionHistory">版本紀錄</a>
+      </div>
+      
+      <div class="initial-content-note" data-i18n="initialContentNote">在控制面板中貼上 Twitch 或 YouTube 直播網址，即可開始觀看多個直播串流</div>
+    </div>
+  </div>
+</div>
 
 <!-- 收藏串流管理界面 -->
 <div id="favorite-streams-manager" class="favorite-streams-manager"></div>
 
-<!-- ★★★★★★ 真正賺錢的彈出廣告（你原本的每30分鐘彈出）★★★★★★ -->
-<div id="ad-banner" class="ad-banner">
-  <div class="ad-content">
-    <div class="ad-close-btn" onclick="closeAdBanner()" title="關閉">×</div>
-    <div class="ad-body">
-      <!-- 這裡原本的 placeholder 整個換成真實 AdSense 廣告 -->
-      <ins class="adsbygoogle"
-           style="display:block;margin:0 auto;"
-           data-ad-client="pub-8415424787944153"   <!-- 2. 這裡也要換成你的 ID -->
-           data-ad-slot="1234567890"                 <!-- 3. 這裡填你在 AdSense 後台新建的「顯示廣告」單元 ID -->
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-    </div>
-  </div>
-</div>
+<!-- 廣告 HTML 結構改為動態創建（僅在需要時創建，符合 AdSense 政策） -->
+<!-- 廣告容器將由 js/promotion.js 動態創建 -->
 
 <!-- YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -434,33 +457,6 @@
 }
 </script>
 
-<!-- AdSense 廣告載入腳本 -->
-<script>
-// 包裝原有的 showAdBanner 函數，確保 AdSense 廣告正確載入
-(function() {
-  // 保存原始的 showAdBanner 函數
-  const originalShowAdBanner = window.showAdBanner;
-  
-  // 如果原始函數存在，包裝它
-  if (originalShowAdBanner) {
-    window.showAdBanner = function() {
-      // 先調用原始函數
-      originalShowAdBanner();
-      
-      // 然後觸發 AdSense 廣告載入
-      try {
-        if (typeof window.adsbygoogle !== 'undefined') {
-          setTimeout(() => {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-            // AdSense 廣告已觸發載入
-          }, 300);
-        }
-      } catch (error) {
-        // 觸發 AdSense 廣告時發生錯誤，靜默處理
-      }
-    };
-  }
-})();
-</script>
+<!-- AdSense 廣告載入改為在 js/promotion.js 中動態處理 -->
 </body>
 </html>
