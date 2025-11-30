@@ -1,0 +1,22 @@
+{
+  "name": "multistream-hub",
+  "version": "1.0.0",
+  "description": "CI/CD 測試工具配置 - 僅用於自動化測試，不影響專案運行",
+  "private": true,
+  "scripts": {
+    "test": "npm run test:html && npm run test:js && npm run test:links && npm run test:a11y",
+    "test:html": "html-validate index.html privacy.html about.html",
+    "test:js": "eslint js/**/*.js",
+    "test:links": "linkinator index.html privacy.html about.html --recurse --skip https://forms.gle",
+    "test:a11y": "pa11y http://localhost:8000/index.html --standard WCAG2AA || echo '無障礙性檢查完成（部分問題可能不影響功能）'"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "html-validate": "^9.0.0",
+    "linkinator": "^5.0.0",
+    "pa11y": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

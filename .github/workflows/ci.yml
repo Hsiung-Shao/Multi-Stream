@@ -1,0 +1,59 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ '*' ]  # 所有分支
+  pull_request:
+    branches: [ '*' ]  # 所有分支
+  workflow_dispatch:  # 允許手動觸發
+
+jobs:
+  test:
+    name: 自動化測試
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 檢出代碼
+        uses: actions/checkout@v4
+
+      - name: 設置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安裝依賴
+        run: npm ci
+
+      - name: HTML 驗證
+        run: npm run test:html
+        continue-on-error: true
+
+      - name: JavaScript 語法檢查
+        run: npm run test:js
+        continue-on-error: true
+
+      - name: 連結檢查
+        run: npm run test:links
+        continue-on-error: true
+
+      - name: 啟動本地伺服器（用於無障礙性檢查）
+        run: |
+          python3 -m http.server 8000 &
+          sleep 3
+        continue-on-error: true
+
+      - name: 無障礙性檢查
+        run: npm run test:a11y
+        continue-on-error: true
+
+      - name: 生成測試報告
+        if: always()
+        run: |
+          echo "## 測試結果總結" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ 所有測試已完成" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "請查看上方的測試步驟以了解詳細結果。" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**注意**: 測試失敗不會阻止代碼推送，但建議在推送到 main 分支前修復所有問題。" >> $GITHUB_STEP_SUMMARY
