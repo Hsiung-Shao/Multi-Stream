@@ -56,6 +56,26 @@ let fixedLayoutChatSelection = {
 // 固定布局中用户选择的视频布局类型（1-6 或 9）
 let layout13VideoLayout = null;
 
+// 用戶調整的固定布局寬度比例（每個布局類型分別存儲）
+let fixedLayoutWidthRatios = {
+  13: null, // null 表示使用默認值
+  14: null,
+  15: null
+};
+
+// 從 localStorage 加載保存的寬度比例
+try {
+  const savedRatios = localStorage.getItem('fixedLayoutWidthRatios');
+  if (savedRatios) {
+    const parsed = JSON.parse(savedRatios);
+    if (parsed && typeof parsed === 'object') {
+      fixedLayoutWidthRatios = { ...fixedLayoutWidthRatios, ...parsed };
+    }
+  }
+} catch (e) {
+  console.error('Failed to load width ratios:', e);
+}
+
 // 檢查是否為固定布局
 function isFixedLayout(layoutType) {
   return FIXED_LAYOUT_CONFIG.hasOwnProperty(layoutType);
@@ -202,9 +222,15 @@ function setupFixedLayoutFramework(boxes, layoutType) {
     return;
   }
   
-  // 根据配置设置宽度比例
-  const videoAreaWidth = config.videoAreaWidth;
-  const chatAreaWidth = config.chatAreaWidth;
+  // 根据配置或用户调整设置宽度比例
+  let videoAreaWidth = config.videoAreaWidth;
+  let chatAreaWidth = config.chatAreaWidth;
+  
+  // 如果用户有调整过，使用调整后的值
+  if (fixedLayoutWidthRatios[currentLayoutType] !== null) {
+    videoAreaWidth = fixedLayoutWidthRatios[currentLayoutType].video;
+    chatAreaWidth = fixedLayoutWidthRatios[currentLayoutType].chat;
+  }
   
   // 布局视频在左侧（固定布局的视频布局会在 updateFixedLayoutFramework 中处理）
   boxes.forEach((b, i) => {
@@ -219,12 +245,13 @@ function setupFixedLayoutFramework(boxes, layoutType) {
   chatSidebar.id = 'chat-sidebar-fixed';
   chatSidebar.className = 'chat-sidebar-fixed';
   chatSidebar.style.width = chatAreaWidth + '%';
-  chatSidebar.style.height = '100%';
+  chatSidebar.style.height = '100vh'; // 改為使用視窗高度，確保在高縮放下正確顯示
   chatSidebar.style.left = videoAreaWidth + '%';
   chatSidebar.style.top = '0';
   chatSidebar.style.position = 'absolute';
   chatSidebar.style.background = '#0a0a0a';
   chatSidebar.style.borderLeft = '2px solid #333';
+  chatSidebar.style.overflow = 'hidden'; // 防止內容溢出
   
   // 获取所有串流用于选择器
   const allStreams = [];
@@ -629,7 +656,15 @@ function updateFixedLayoutFramework() {
   
   // 如果是固定布局，使用用户选择的视频布局类型（如果没有选择则自动选择）
   {
-    const videoAreaWidth = config.videoAreaWidth;
+    // 获取宽度比例（优先使用用户调整的值）
+    let videoAreaWidth = config.videoAreaWidth;
+    let chatAreaWidth = config.chatAreaWidth;
+    
+    if (fixedLayoutWidthRatios[currentLayoutType] !== null) {
+      videoAreaWidth = fixedLayoutWidthRatios[currentLayoutType].video;
+      chatAreaWidth = fixedLayoutWidthRatios[currentLayoutType].chat;
+    }
+    
     let videoLayoutType = 1;
     if (count > 0) {
       // 如果用户已经选择了视频布局类型，使用用户选择的；否则自动选择
@@ -780,6 +815,12 @@ function updateFixedLayoutFramework() {
       }
     }
   });
+  
+  // 更新聊天室容器的位置和寬度
+  if (chatSidebar) {
+    chatSidebar.style.left = videoAreaWidth + '%';
+    chatSidebar.style.width = chatAreaWidth + '%';
+  }
 }
 
 // 清理固定布局的聊天室容器
@@ -787,6 +828,12 @@ function cleanupFixedChatSidebar() {
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
   if (chatSidebar) {
     chatSidebar.remove();
+  }
+  
+  // 清理分隔線（如果存在）
+  const divider = document.getElementById('fixed-layout-divider');
+  if (divider) {
+    divider.remove();
   }
 }
 
@@ -821,14 +868,15 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   if (isFixedLayout(type)) {
     // 固定布局：视频自动布局，右侧固定聊天室（数量和排列方式由配置决定）
     // 先设置 userSelectedLayout，这样 setupFixedLayoutFramework 可以正确判断布局类型
+    userSelectedLayout = type; // 無論如何都設置，確保控制面板能顯示
     if (isUserSelection) {
-      userSelectedLayout = type;
       localStorage.setItem('currentLayout', type);
       // 切换到 Layout 13、14 或 15 时，重置视频布局选择（让系统自动选择）
       layout13VideoLayout = null;
     }
     setupFixedLayoutFramework(boxes, type); // 传入布局类型
     updateFixedLayoutFramework(); // 立即更新内容
+    updateFixedLayoutWidthControl(); // 更新寬度控制面板
     return;
   }
   
@@ -917,6 +965,7 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   // 如果切换到非固定布局，清理固定布局的聊天室容器
   if (!isFixedLayout(type)) {
     cleanupFixedChatSidebar();
+    updateFixedLayoutWidthControl(); // 隱藏寬度控制面板
   }
   
   if (type === 1 || count === 1) {
@@ -1072,6 +1121,111 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   }, 100);
 }
 
+// 更新固定布局寬度控制面板的顯示狀態
+function updateFixedLayoutWidthControl() {
+  const widthControl = document.getElementById('fixed-layout-width-control');
+  if (!widthControl) return;
+  
+  // 檢查是否為固定布局（檢查 userSelectedLayout 或是否存在固定布局容器）
+  const chatSidebar = document.getElementById('chat-sidebar-fixed');
+  const isFixed = isFixedLayout(userSelectedLayout) || (chatSidebar !== null);
+  
+  widthControl.style.display = isFixed ? 'block' : 'none';
+  
+  if (isFixed) {
+    // 更新輸入框的值
+    const chatWidthInput = document.getElementById('chat-width-input');
+    if (chatWidthInput) {
+      // 如果 userSelectedLayout 為 null，嘗試從 localStorage 加載
+      let currentLayoutType = userSelectedLayout;
+      if (!currentLayoutType) {
+        try {
+          const savedLayout = localStorage.getItem('currentLayout');
+          if (savedLayout) {
+            const layoutType = parseInt(savedLayout);
+            if (isFixedLayout(layoutType)) {
+              currentLayoutType = layoutType;
+              userSelectedLayout = layoutType; // 更新 userSelectedLayout
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load layout from localStorage:', e);
+        }
+      }
+      
+      // 如果還是沒有，使用默認值（Layout 13）
+      if (!currentLayoutType) {
+        currentLayoutType = 13;
+      }
+      
+      let currentChatWidth = 30; // 默認值
+      
+      if (fixedLayoutWidthRatios[currentLayoutType] !== null) {
+        currentChatWidth = fixedLayoutWidthRatios[currentLayoutType].chat;
+      } else {
+        const config = FIXED_LAYOUT_CONFIG[currentLayoutType];
+        if (config) {
+          currentChatWidth = config.chatAreaWidth;
+        }
+      }
+      
+      chatWidthInput.value = Math.round(currentChatWidth);
+    }
+  }
+}
+
+// 應用用戶輸入的聊天室寬度
+function applyChatWidth() {
+  const chatWidthInput = document.getElementById('chat-width-input');
+  if (!chatWidthInput) return;
+  
+  // 檢查是否為固定布局
+  if (!isFixedLayout(userSelectedLayout)) {
+    return;
+  }
+  
+  const chatWidth = parseFloat(chatWidthInput.value);
+  
+  // 驗證輸入值
+  if (isNaN(chatWidth) || chatWidth < 10 || chatWidth > 80) {
+    alert('請輸入 10-80 之間的數值');
+    chatWidthInput.focus();
+    return;
+  }
+  
+  const currentLayoutType = userSelectedLayout;
+  const videoWidth = 100 - chatWidth;
+  
+  // 保存調整後的寬度比例
+  fixedLayoutWidthRatios[currentLayoutType] = {
+    video: videoWidth,
+    chat: chatWidth
+  };
+  
+  // 保存到 localStorage
+  try {
+    localStorage.setItem('fixedLayoutWidthRatios', JSON.stringify(fixedLayoutWidthRatios));
+  } catch (e) {
+    console.error('Failed to save width ratios:', e);
+  }
+  
+  // 更新布局（只更新寬度和位置，不重新創建容器）
+  const boxes = document.querySelectorAll('.stream-box');
+  const chatSidebar = document.getElementById('chat-sidebar-fixed');
+  
+  if (chatSidebar) {
+    // 更新聊天室容器的位置和寬度
+    chatSidebar.style.left = videoWidth + '%';
+    chatSidebar.style.width = chatWidth + '%';
+  }
+  
+  // 更新視頻框的寬度
+  updateFixedLayoutFramework();
+  
+  // 更新控制面板顯示（確保輸入框值正確）
+  updateFixedLayoutWidthControl();
+}
+
 // 确保函数在全局作用域中可用
 if (typeof window !== 'undefined') {
   window.setLayout = setLayout;
@@ -1082,5 +1236,46 @@ if (typeof window !== 'undefined') {
   window.updateFixedLayoutFramework = updateFixedLayoutFramework;
   window.cleanupFixedChatSidebar = cleanupFixedChatSidebar;
   window.setLayout13VideoLayout = setLayout13VideoLayout;
+  window.applyChatWidth = applyChatWidth;
+  window.updateFixedLayoutWidthControl = updateFixedLayoutWidthControl;
+  
+  // 頁面加載完成後初始化寬度控制面板
+  function initChatWidthControl() {
+    // 添加 Enter 鍵支持
+    const chatWidthInput = document.getElementById('chat-width-input');
+    if (chatWidthInput) {
+      chatWidthInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyChatWidth();
+        }
+      });
+    }
+    
+    // 檢查 localStorage 中是否有保存的布局
+    try {
+      const savedLayout = localStorage.getItem('currentLayout');
+      if (savedLayout) {
+        const layoutType = parseInt(savedLayout);
+        if (isFixedLayout(layoutType)) {
+          userSelectedLayout = layoutType;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load layout from localStorage:', e);
+    }
+    
+    // 初始化控制面板顯示狀態
+    updateFixedLayoutWidthControl();
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initChatWidthControl, 100);
+    });
+  } else {
+    // DOM 已經加載完成
+    setTimeout(initChatWidthControl, 100);
+  }
 }
 

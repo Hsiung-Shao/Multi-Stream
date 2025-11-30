@@ -2059,6 +2059,9 @@ body:has(.ad-banner.show) #container,
   display: flex;
   box-sizing: border-box;
   min-width: var(--fixed-chat-min-width, 300px); /* 確保側邊欄有足夠寬度，根據縮放動態調整 */
+  height: 100vh; /* 使用視窗高度，確保在高縮放下正確顯示 */
+  top: 0; /* 確保從頂部開始 */
+  overflow: hidden; /* 防止內容溢出 */
 }
 
 /* 固定布局響應式優化 - Layout 13, 14, 15 */
@@ -3641,6 +3644,27 @@ body:has(.ad-banner.show) #container,
   
   .separated-chat {
     min-width: max(690px, var(--separated-chat-min-width, 300px));
+  }
+  
+  /* 固定布局聊天室側邊欄優化 */
+  #fixed-chat-sidebar,
+  .chat-sidebar-fixed {
+    height: 100vh !important; /* 確保高度正確 */
+    top: 0 !important;
+    overflow: hidden !important;
+  }
+  
+  /* 確保聊天室面板正確分配高度 */
+  .chat-sidebar-panel,
+  .fixed-chat-panel {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+  
+  /* 確保容器高度正確 */
+  #container {
+    height: 100vh !important;
+    overflow: hidden;
   }
 }
 
