@@ -750,30 +750,11 @@ const favoriteStreams = {
     }
     
     // 對於 YouTube 頻道，先檢查是否正在直播，如果開台則使用直播 URL
+    // YouTube API 功能已暫時關閉，直接使用 URL
     if (item.platform === 'youtube' && item.channelId) {
-      try {
-        // 檢查是否正在直播
-        if (window.youtubeApi && typeof window.youtubeApi.checkChannelLiveStatus === 'function') {
-          const youtubeConfig = window.youtubeApi.getConfig();
-          if (!youtubeConfig.isBlocked) {
-            const liveStatus = await window.youtubeApi.checkChannelLiveStatus(item.channelId);
-            if (liveStatus && liveStatus.isLive === true && liveStatus.videoId) {
-              // 正在直播，使用直播 URL
-              const liveUrl = `https://www.youtube.com/watch?v=${liveStatus.videoId}`;
-              addStream(liveUrl);
-              return { success: true };
-            }
-          }
-        }
-        // 未開台或檢查失敗，使用原始 URL（頻道 URL）
-        addStream(item.url);
-        return { success: true };
-      } catch (error) {
-        // 檢查失敗，使用原始 URL
-        console.warn('檢查 YouTube 直播狀態失敗:', error);
-        addStream(item.url);
-        return { success: true };
-      }
+      // YouTube API 功能已暫時關閉，直接使用收藏的 URL
+      addStream(item.url);
+      return { success: true };
     } else {
       // Twitch 或其他平台，直接使用 URL
       if (item.url) {

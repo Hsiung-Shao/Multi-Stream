@@ -33,32 +33,10 @@ async function addStream(url = null) {
       }
     }
     
-    // 如果 Twitch 沒找到，嘗試 YouTube 搜尋（檢查是否被封鎖）
-    if (!foundChannel && window.youtubeApi && window.youtubeApi.searchChannels) {
-      const youtubeConfig = window.youtubeApi.getConfig();
-      if (!youtubeConfig.isBlocked) {
-        try {
-          const youtubeResults = await window.youtubeApi.searchChannels(url, 1);
-          if (youtubeResults && youtubeResults.length > 0) {
-            const ytChannel = youtubeResults[0];
-            // 始終使用頻道 URL（使用頻道 ID，固定不變）
-            // 而不是直播影片 URL（影片 ID 每次直播都不同）
-            // 這樣收藏系統可以正確提取頻道 ID
-            foundChannel = {
-              ...ytChannel,
-              platform: 'youtube',
-              source: 'youtube',
-              url: `https://www.youtube.com/channel/${ytChannel.id}`
-            };
-          }
-        } catch (error) {
-          // 如果是流量超限錯誤，不顯示錯誤，只記錄
-          if (!error.message || (!error.message.includes('流量') && !error.message.includes('配額'))) {
-            searchError = error.message || searchError;
-          }
-        }
-      }
-    }
+    // YouTube 搜尋功能已暫時關閉
+    // if (!foundChannel && window.youtubeApi && window.youtubeApi.searchChannels) {
+    //   // YouTube API 功能已暫時關閉
+    // }
     
     if (foundChannel) {
       // 使用第一個搜尋結果

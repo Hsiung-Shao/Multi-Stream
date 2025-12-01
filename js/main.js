@@ -344,7 +344,7 @@ async function performSearch(query) {
   
   // 獲取選擇的平台
   const platformSelect = document.getElementById('search-platform-select');
-  const selectedPlatform = platformSelect ? platformSelect.value : 'both';
+  const selectedPlatform = platformSelect ? platformSelect.value : 'twitch';
   
   // 顯示載入狀態
   suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #aaa;">搜尋中...</div>';
@@ -362,8 +362,8 @@ async function performSearch(query) {
     // 根據選擇的平台進行搜尋
     const searchPromises = [];
     
-    // Twitch 搜尋（如果選擇了 both 或 twitch）
-    if ((selectedPlatform === 'both' || selectedPlatform === 'twitch') && 
+    // Twitch 搜尋（如果選擇了 twitch）
+    if (selectedPlatform === 'twitch' && 
         window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
       searchPromises.push(
         window.twitchApi.searchChannels(query, 5)
@@ -393,43 +393,10 @@ async function performSearch(query) {
       console.warn('Twitch API 未載入或 searchChannels 函數不存在');
     }
     
-    // YouTube 搜尋（如果選擇了 both 或 youtube，且未被封鎖）
-    if ((selectedPlatform === 'both' || selectedPlatform === 'youtube') && 
-        window.youtubeApi && typeof window.youtubeApi.searchChannels === 'function') {
-      // 檢查 YouTube API 是否被封鎖
-      const youtubeConfig = window.youtubeApi.getConfig();
-      if (!youtubeConfig.isBlocked) {
-        searchPromises.push(
-          window.youtubeApi.searchChannels(query, 5)
-            .then(results => {
-              if (results && Array.isArray(results)) {
-                return results.map(r => ({ 
-                  ...r, 
-                  platform: 'youtube', 
-                  source: 'youtube', 
-                  displayName: r.title || r.displayName || r.name 
-                }));
-              }
-              return [];
-            })
-            .catch(error => {
-              // YouTube API 錯誤處理
-              // 如果是流量超限錯誤，不顯示錯誤，只返回空陣列
-              if (error.message && (error.message.includes('流量') || error.message.includes('配額'))) {
-                console.warn('YouTube API 流量限制:', error.message);
-                return [];
-              }
-              // 其他錯誤也靜默處理，返回空陣列，確保 Twitch 結果仍能顯示
-              console.warn('YouTube 搜尋失敗:', error.message);
-              return [];
-            })
-        );
-      } else {
-        // YouTube API 被封鎖，不進行搜尋
-        console.warn('YouTube API 已被封鎖，跳過搜尋');
-      }
-    } else if (selectedPlatform === 'youtube') {
-      console.warn('YouTube API 未載入或 searchChannels 函數不存在，或已被封鎖');
+    // YouTube 搜尋（暫時關閉）
+    // YouTube API 功能已暫時關閉
+    if (selectedPlatform === 'youtube') {
+      console.warn('YouTube API 功能已暫時關閉');
     }
     
     // 等待所有搜尋完成（使用 Promise.allSettled 確保即使一個失敗，另一個仍能顯示結果）
@@ -595,9 +562,13 @@ function updateSelectedSuggestion() {
 function selectSearchResult(channel) {
   const urlInput = document.getElementById('url-input');
   if (urlInput && channel.url) {
-    // 對於 YouTube，如果搜尋結果中有直播 URL，直接使用（因為搜尋結果已經包含直播 URL）
-    // 否則使用頻道 URL
-    urlInput.value = channel.url;
+    // 對於 YouTube，如果搜尋結果中有直播影片 ID，使用直播 URL
+    if (channel.platform === 'youtube' && channel.liveVideoId) {
+      urlInput.value = `https://www.youtube.com/watch?v=${channel.liveVideoId}`;
+    } else {
+      // 否則使用提供的 URL
+      urlInput.value = channel.url;
+    }
     hideSearchSuggestions();
     urlInput.focus();
   }
