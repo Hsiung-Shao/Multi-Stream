@@ -1943,70 +1943,14 @@ async function updateFavoriteLiveStatuses() {
     }
   }
   
+  // YouTube API 功能已暫時關閉，跳過檢查
   // 處理 YouTube 收藏（檢查是否被封鎖，並且距離上次檢查已超過 15 分鐘）
   const now = Date.now();
-  const shouldCheckYouTube = now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS;
+  // const shouldCheckYouTube = now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS;
   
-  if (youtubeFavorites.length > 0 && window.youtubeApi && window.youtubeApi.checkMultipleChannelsLiveStatus && shouldCheckYouTube) {
-    const youtubeConfig = window.youtubeApi.getConfig();
-    if (!youtubeConfig.isBlocked) {
-      try {
-        // 收集所有 YouTube 頻道 ID（過濾掉沒有 channelId 的項目）
-        const channelIds = youtubeFavorites
-          .filter(item => item.channelId)
-          .map(item => item.channelId);
-        
-        if (channelIds.length > 0) {
-          console.log('開始檢查 YouTube 收藏頻道開台狀態，頻道數量:', channelIds.length);
-          // 批量查詢開台狀態
-          const liveStatuses = await window.youtubeApi.checkMultipleChannelsLiveStatus(channelIds);
-          console.log('YouTube 開台狀態檢查結果:', liveStatuses);
-          
-          // 更新收藏列表中的開台狀態
-          updatedList = updatedList.map(item => {
-            if (item.platform === 'youtube' && item.channelId) {
-              const status = liveStatuses[item.channelId];
-              
-              if (status) {
-                updatedCount++;
-                console.log(`更新 YouTube 頻道 ${item.channelId} 開台狀態:`, status.isLive);
-                return {
-                  ...item,
-                  isLive: status.isLive,
-                  lastChecked: new Date().toISOString(),
-                  viewerCount: status.viewerCount || null,
-                  liveTitle: status.title || null,
-                  liveVideoId: status.videoId || item.liveVideoId || null
-                };
-              } else {
-                // 如果查詢失敗，保持原有狀態，但更新檢查時間
-                console.log(`YouTube 頻道 ${item.channelId} 查詢失敗或無狀態`);
-                return {
-                  ...item,
-                  lastChecked: new Date().toISOString()
-                };
-              }
-            }
-            return item;
-          });
-          
-          // 更新最後檢查時間
-          lastYouTubeCheckTime = now;
-          console.log('YouTube 開台狀態檢查完成，更新數量:', updatedCount);
-        }
-      } catch (error) {
-        // YouTube API 錯誤（可能是流量超限），靜默處理
-        // 如果流量超限，會在下次檢查時自動封鎖
-        console.error('YouTube 開台狀態檢查錯誤:', error);
-      }
-    } else {
-      console.log('YouTube API 已被封鎖，跳過開台狀態檢查');
-    }
-  } else if (youtubeFavorites.length > 0) {
-    // 如果距離上次檢查時間還不夠，記錄日誌
-    const timeSinceLastCheck = now - lastYouTubeCheckTime;
-    const remainingTime = YOUTUBE_CHECK_INTERVAL_MS - timeSinceLastCheck;
-    console.log(`YouTube 開台狀態檢查間隔未到，還需等待 ${Math.ceil(remainingTime / 1000 / 60)} 分鐘`);
+  // YouTube API 功能已暫時關閉
+  if (youtubeFavorites.length > 0) {
+    console.log('YouTube API 功能已暫時關閉，跳過開台狀態檢查');
   }
   
   // 保存更新後的列表（只要有更新或檢查過，就保存）
