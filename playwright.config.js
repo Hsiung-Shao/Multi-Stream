@@ -21,8 +21,9 @@ module.exports = defineConfig({
   reporter: process.env.CI ? 'html' : 'list',
   
   use: {
-    // 基礎 URL
-    baseURL: 'http://localhost:8000',
+    // 基礎 URL（XAMPP Apache 服務器或 CI 環境）
+    // CI 環境使用 http://localhost:8000，本地使用 http://localhost
+    baseURL: process.env.BASE_URL || 'http://localhost',
     
     // 截圖設置
     screenshot: 'only-on-failure',

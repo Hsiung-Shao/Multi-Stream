@@ -2,36 +2,36 @@
 // 這些是實際可用的 Twitch 頻道，用於更真實的測試
 
 const TEST_STREAMS = {
-  // 單個測試串流
-  single: 'https://www.twitch.tv/kspksp',
+  // 單個測試串流（使用實際正在串流的 URL）
+  single: 'https://www.twitch.tv/muse_tw',
   
   // 多個測試串流（用於多串流測試）
   multiple: [
-    'https://www.twitch.tv/kspksp',
-    'https://www.twitch.tv/998rrr',
-    'https://www.twitch.tv/itsuki_ianvs',
-    'https://www.twitch.tv/iruni_ianvs'
+    'https://www.twitch.tv/muse_tw',
+    'https://www.twitch.tv/muse_tw2',
+    'https://www.youtube.com/watch?v=xKXX4Fhrqqk',
+    'https://www.youtube.com/watch?v=KyT4qSK8lJo'
   ],
   
   // 用於布局測試的串流
   forLayout: [
-    'https://www.twitch.tv/kspksp',
-    'https://www.twitch.tv/998rrr',
-    'https://www.twitch.tv/itsuki_ianvs',
-    'https://www.twitch.tv/iruni_ianvs'
+    'https://www.twitch.tv/muse_tw',
+    'https://www.twitch.tv/muse_tw2',
+    'https://www.youtube.com/watch?v=xKXX4Fhrqqk',
+    'https://www.youtube.com/watch?v=KyT4qSK8lJo'
   ],
   
   // 用於聊天室測試的串流
   forChat: [
-    'https://www.twitch.tv/kspksp',
-    'https://www.twitch.tv/998rrr'
+    'https://www.twitch.tv/muse_tw',
+    'https://www.twitch.tv/muse_tw2'
   ],
   
   // 收藏測試用的串流
   forFavorite: {
-    url: 'https://www.twitch.tv/kspksp',
-    name: 'kspksp',
-    channelId: 'kspksp',
+    url: 'https://www.twitch.tv/muse_tw',
+    name: 'muse_tw',
+    channelId: 'muse_tw',
     platform: 'twitch'
   },
   
@@ -88,3 +88,4 @@ module.exports = {
   FAVORITE_STREAMS_DATA,
   FAVORITE_CATEGORIES_DATA
 };
+

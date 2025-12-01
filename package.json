@@ -8,7 +8,7 @@
     "test:html": "html-validate index.html privacy.html about.html",
     "test:js": "eslint js/**/*.js",
     "test:links": "linkinator index.html privacy.html about.html --recurse --skip https://forms.gle",
-    "test:a11y": "pa11y http://localhost:8000/index.html --standard WCAG2AA || echo '無障礙性檢查完成（部分問題可能不影響功能）'",
+    "test:a11y": "pa11y http://localhost/index.html --standard WCAG2AA || echo '無障礙性檢查完成（部分問題可能不影響功能）'",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

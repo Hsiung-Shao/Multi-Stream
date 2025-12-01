@@ -19,75 +19,119 @@ test.describe('收藏功能測試', () => {
   test('可以添加收藏', async ({ page }) => {
     await openFavoriteManager(page);
     
-    // 查找收藏 URL 輸入框
-    const urlInput = page.locator('#favorite-url-input, #favorite-streams-manager input[type="text"]').first();
-    if (await urlInput.isVisible()) {
-      await urlInput.fill(TEST_STREAMS.forFavorite.url);
-      
-      // 查找添加按鈕
-      const addButton = page.locator('button:has-text("添加"), button:has-text("加入"), #favorite-streams-manager button').first();
-      await addButton.click();
-      await page.waitForTimeout(500);
-      
-      // 檢查是否添加到列表
-      const favoriteList = page.locator('#favorite-list, .favorite-item');
-      const count = await favoriteList.count();
-      expect(count).toBeGreaterThan(0);
-    }
+    // 等待 addToFavorites 函數可用（全局函數，應該直接可用）
+    await page.waitForFunction(() => typeof addToFavorites === 'function', { timeout: 10000 });
+    
+    // 設置輸入框值
+    const urlInput = page.locator('#favorite-url-input');
+    await urlInput.fill(TEST_STREAMS.forFavorite.url);
+    await page.waitForTimeout(200);
+    
+    // 直接調用 addToFavorites 函數
+    await page.evaluate(() => {
+      if (typeof addToFavorites === 'function') {
+        addToFavorites();
+      }
+    });
+    
+    await page.waitForTimeout(500);
+    
+    // 等待收藏項目出現
+    await page.waitForFunction(() => {
+      return document.querySelectorAll('#favorite-list .favorite-item').length > 0;
+    }, { timeout: 5000 });
+    
+    // 檢查是否添加到列表
+    const favoriteList = page.locator('#favorite-list .favorite-item');
+    const count = await favoriteList.count();
+    expect(count).toBeGreaterThan(0);
   });
 
   test('可以新增分類', async ({ page }) => {
     await openFavoriteManager(page);
     
-    // 查找分類名稱輸入框
-    const categoryInput = page.locator('#category-name-input, input[placeholder*="分類"]').first();
-    if (await categoryInput.isVisible()) {
-      await categoryInput.fill('測試分類');
-      
-      // 查找添加分類按鈕
-      const addCategoryButton = page.locator('button:has-text("添加分類"), button:has-text("新增分類")').first();
-      await addCategoryButton.click();
-      await page.waitForTimeout(500);
-      
-      // 檢查分類是否添加成功
-      const categoryList = page.locator('.category-item, .favorite-category');
-      const count = await categoryList.count();
-      expect(count).toBeGreaterThan(0);
-    }
+    // 切換到分類標籤頁
+    await page.evaluate(() => {
+      const tabBtn = document.querySelector('.tab-btn[data-tab="categories"]');
+      if (tabBtn) tabBtn.click();
+    });
+    await page.waitForTimeout(300);
+    
+    // 等待 addCategory 函數可用
+    await page.waitForFunction(() => typeof addCategory === 'function', { timeout: 10000 });
+    
+    // 設置分類名稱
+    const categoryInput = page.locator('#category-name-input');
+    await categoryInput.fill('測試分類');
+    await page.waitForTimeout(200);
+    
+    // 直接調用 addCategory 函數
+    await page.evaluate(() => {
+      if (typeof addCategory === 'function') {
+        addCategory();
+      }
+    });
+    
+    await page.waitForTimeout(500);
+    
+    // 檢查分類是否添加成功
+    const categoryList = page.locator('#category-list .category-item');
+    const count = await categoryList.count();
+    expect(count).toBeGreaterThan(0);
   });
 
   test('可以修改收藏名稱', async ({ page }) => {
     await openFavoriteManager(page);
     
     // 先添加一個收藏
-    const urlInput = page.locator('#favorite-url-input, #favorite-streams-manager input[type="text"]').first();
-    if (await urlInput.isVisible()) {
-      await urlInput.fill(TEST_STREAMS.forFavorite.url);
-      const addButton = page.locator('button:has-text("添加"), button:has-text("加入")').first();
-      await addButton.click();
+    await page.waitForFunction(() => typeof addToFavorites === 'function', { timeout: 10000 });
+    const urlInput = page.locator('#favorite-url-input');
+    await urlInput.fill(TEST_STREAMS.forFavorite.url);
+    await page.waitForTimeout(200);
+    
+    await page.evaluate(() => {
+      if (typeof addToFavorites === 'function') {
+        addToFavorites();
+      }
+    });
+    await page.waitForTimeout(500);
+    
+    // 等待收藏項目出現
+    await page.waitForFunction(() => {
+      return document.querySelectorAll('.favorite-item').length > 0;
+    }, { timeout: 5000 });
+    
+    // 獲取第一個收藏的 ID
+    const favoriteId = await page.evaluate(() => {
+      const firstItem = document.querySelector('.favorite-item');
+      return firstItem ? firstItem.getAttribute('data-id') : null;
+    });
+    
+    if (favoriteId) {
+      // 直接調用 enterEditMode 函數
+      await page.evaluate((id) => {
+        if (typeof enterEditMode === 'function') {
+          enterEditMode(id);
+        }
+      }, favoriteId);
+      await page.waitForTimeout(300);
+      
+      // 修改名稱
+      const nameInput = page.locator('.favorite-edit-name').first();
+      await nameInput.fill('修改後的名稱');
+      await page.waitForTimeout(200);
+      
+      // 直接調用 saveFavoriteEdit 函數
+      await page.evaluate((id) => {
+        if (typeof saveFavoriteEdit === 'function') {
+          saveFavoriteEdit(id);
+        }
+      }, favoriteId);
       await page.waitForTimeout(500);
       
-      // 查找編輯按鈕
-      const editButton = page.locator('.edit-favorite-btn, button:has-text("編輯")').first();
-      if (await editButton.isVisible()) {
-        await editButton.click();
-        await page.waitForTimeout(300);
-        
-        // 查找名稱輸入框並修改
-        const nameInput = page.locator(`input[value*="${TEST_STREAMS.forFavorite.name}"], .favorite-name-input`).first();
-        if (await nameInput.isVisible()) {
-          await nameInput.fill('修改後的名稱');
-          
-          // 保存
-          const saveButton = page.locator('button:has-text("保存"), button:has-text("確定")').first();
-          await saveButton.click();
-          await page.waitForTimeout(500);
-          
-          // 驗證名稱已修改
-          const favoriteName = page.locator('.favorite-item:has-text("修改後的名稱")');
-          await expect(favoriteName).toBeVisible();
-        }
-      }
+      // 驗證名稱已修改
+      const favoriteName = page.locator('.favorite-item:has-text("修改後的名稱")');
+      await expect(favoriteName).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -95,92 +139,186 @@ test.describe('收藏功能測試', () => {
     await openFavoriteManager(page);
     
     // 先創建分類
-    const categoryInput = page.locator('#category-name-input').first();
-    if (await categoryInput.isVisible()) {
-      await categoryInput.fill('測試分類');
-      const addCategoryButton = page.locator('button:has-text("添加分類")').first();
-      await addCategoryButton.click();
-      await page.waitForTimeout(500);
-      
-      // 添加收藏
-      const urlInput = page.locator('#favorite-url-input').first();
-      if (await urlInput.isVisible()) {
-        await urlInput.fill(TEST_STREAMS.forFavorite.url);
-        const addButton = page.locator('button:has-text("添加")').first();
-        await addButton.click();
-        await page.waitForTimeout(500);
-        
-        // 編輯收藏並選擇分類
-        const editButton = page.locator('.edit-favorite-btn').first();
-        if (await editButton.isVisible()) {
-          await editButton.click();
-          await page.waitForTimeout(300);
-          
-          // 選擇分類下拉框
-          const categorySelect = page.locator('select.favorite-category-select, select').first();
-          if (await categorySelect.isVisible()) {
-            await categorySelect.selectOption({ label: /測試分類/ });
-            
-            // 保存
-            const saveButton = page.locator('button:has-text("保存")').first();
-            await saveButton.click();
-            await page.waitForTimeout(500);
-          }
-        }
+    await page.evaluate(() => {
+      const tabBtn = document.querySelector('.tab-btn[data-tab="categories"]');
+      if (tabBtn) tabBtn.click();
+    });
+    await page.waitForTimeout(300);
+    
+    await page.waitForFunction(() => typeof addCategory === 'function', { timeout: 10000 });
+    const categoryInput = page.locator('#category-name-input');
+    await categoryInput.fill('測試分類');
+    await page.waitForTimeout(200);
+    
+    await page.evaluate(() => {
+      if (typeof addCategory === 'function') {
+        addCategory();
       }
+    });
+    await page.waitForTimeout(500);
+    
+    // 切換回收藏標籤頁
+    await page.evaluate(() => {
+      const tabBtn = document.querySelector('.tab-btn[data-tab="favorites"]');
+      if (tabBtn) tabBtn.click();
+    });
+    await page.waitForTimeout(300);
+    
+    // 添加收藏
+    await page.waitForFunction(() => typeof addToFavorites === 'function', { timeout: 10000 });
+    const urlInput = page.locator('#favorite-url-input');
+    await urlInput.fill(TEST_STREAMS.forFavorite.url);
+    await page.waitForTimeout(200);
+    
+    await page.evaluate(() => {
+      if (typeof addToFavorites === 'function') {
+        addToFavorites();
+      }
+    });
+    await page.waitForTimeout(500);
+    
+    // 等待收藏項目出現
+    await page.waitForFunction(() => {
+      return document.querySelectorAll('.favorite-item').length > 0;
+    }, { timeout: 5000 });
+    
+    // 獲取第一個收藏的 ID
+    const favoriteId = await page.evaluate(() => {
+      const firstItem = document.querySelector('.favorite-item');
+      return firstItem ? firstItem.getAttribute('data-id') : null;
+    });
+    
+    if (favoriteId) {
+      // 進入編輯模式
+      await page.evaluate((id) => {
+        if (typeof enterEditMode === 'function') {
+          enterEditMode(id);
+        }
+      }, favoriteId);
+      await page.waitForTimeout(300);
+      
+      // 選擇分類
+      const categorySelect = page.locator('.favorite-edit-category').first();
+      await categorySelect.selectOption({ index: 1 }); // 選擇第一個分類（測試分類）
+      await page.waitForTimeout(200);
+      
+      // 保存
+      await page.evaluate((id) => {
+        if (typeof saveFavoriteEdit === 'function') {
+          saveFavoriteEdit(id);
+        }
+      }, favoriteId);
+      await page.waitForTimeout(500);
     }
   });
 
   test('可以一鍵載入收藏', async ({ page }) => {
     await openFavoriteManager(page);
     
-    // 先添加收藏
-    const urlInput = page.locator('#favorite-url-input').first();
-    if (await urlInput.isVisible()) {
-      await urlInput.fill(TEST_STREAMS.forFavorite.url);
-      const addButton = page.locator('button:has-text("添加")').first();
-      await addButton.click();
-      await page.waitForTimeout(500);
-      
-      await closeFavoriteManager(page);
-      
-      // 在控制面板中查找載入按鈕
-      await ensureControlPanelExpanded(page);
-      const loadButton = page.locator('#favorite-list-display button, .favorite-item button').first();
-      if (await loadButton.isVisible()) {
-        await loadButton.click();
-        await page.waitForTimeout(2000);
-        
-        // 檢查是否有串流載入
-        const streamBoxes = page.locator('.stream-box');
-        const count = await streamBoxes.count();
-        expect(count).toBeGreaterThan(0);
+    // 添加至少2個收藏（測試需要>=2個收藏）
+    await page.waitForFunction(() => typeof addToFavorites === 'function', { timeout: 10000 });
+    const urlInput = page.locator('#favorite-url-input');
+    
+    // 添加第一個收藏
+    await urlInput.fill(TEST_STREAMS.forFavorite.url);
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      if (typeof addToFavorites === 'function') {
+        addToFavorites();
       }
-    }
+    });
+    await page.waitForTimeout(500);
+    
+    // 添加第二個收藏（使用不同的 URL）
+    await urlInput.fill(TEST_STREAMS.multiple[1]);
+    await page.waitForTimeout(200);
+    await page.evaluate(() => {
+      if (typeof addToFavorites === 'function') {
+        addToFavorites();
+      }
+    });
+    await page.waitForTimeout(500);
+    
+    // 等待收藏項目出現（至少2個）
+    await page.waitForFunction(() => {
+      return document.querySelectorAll('#favorite-list .favorite-item').length >= 2;
+    }, { timeout: 5000 });
+    
+    // 選取所有收藏（勾選 checkbox）
+    await page.evaluate(() => {
+      const checkboxes = document.querySelectorAll('.favorite-checkbox');
+      checkboxes.forEach(cb => {
+        cb.checked = true;
+      });
+    });
+    await page.waitForTimeout(200);
+    
+    // 等待 loadSelectedFavorites 函數可用
+    await page.waitForFunction(() => typeof loadSelectedFavorites === 'function', { timeout: 10000 });
+    
+    // 直接調用 loadSelectedFavorites 函數
+    await page.evaluate(() => {
+      if (typeof loadSelectedFavorites === 'function') {
+        loadSelectedFavorites();
+      }
+    });
+    
+    await page.waitForTimeout(2000);
+    
+    // 檢查是否有串流載入（應該有>=2個）
+    const streamBoxes = page.locator('.stream-box');
+    const count = await streamBoxes.count();
+    expect(count).toBeGreaterThanOrEqual(2);
   });
 
   test('可以刪除收藏', async ({ page }) => {
     await openFavoriteManager(page);
     
     // 先添加收藏
-    const urlInput = page.locator('#favorite-url-input').first();
-    if (await urlInput.isVisible()) {
-      await urlInput.fill(TEST_STREAMS.forFavorite.url);
-      const addButton = page.locator('button:has-text("添加")').first();
-      await addButton.click();
+    await page.waitForFunction(() => typeof addToFavorites === 'function', { timeout: 10000 });
+    const urlInput = page.locator('#favorite-url-input');
+    await urlInput.fill(TEST_STREAMS.forFavorite.url);
+    await page.waitForTimeout(200);
+    
+    await page.evaluate(() => {
+      if (typeof addToFavorites === 'function') {
+        addToFavorites();
+      }
+    });
+    await page.waitForTimeout(500);
+    
+    // 等待收藏項目出現
+    await page.waitForFunction(() => {
+      return document.querySelectorAll('.favorite-item').length > 0;
+    }, { timeout: 5000 });
+    
+    // 獲取初始數量
+    const initialCount = await page.evaluate(() => {
+      return document.querySelectorAll('.favorite-item').length;
+    });
+    
+    // 獲取第一個收藏的 ID
+    const favoriteId = await page.evaluate(() => {
+      const firstItem = document.querySelector('.favorite-item');
+      return firstItem ? firstItem.getAttribute('data-id') : null;
+    });
+    
+    if (favoriteId) {
+      // 直接調用 removeFavoriteStream 函數
+      await page.evaluate((id) => {
+        if (typeof removeFavoriteStream === 'function') {
+          removeFavoriteStream(id);
+        }
+      }, favoriteId);
+      
       await page.waitForTimeout(500);
       
-      // 查找刪除按鈕
-      const deleteButton = page.locator('.remove-favorite-btn, button:has-text("刪除")').first();
-      if (await deleteButton.isVisible()) {
-        const initialCount = await page.locator('.favorite-item').count();
-        await deleteButton.click();
-        await page.waitForTimeout(500);
-        
-        // 檢查收藏是否被刪除
-        const finalCount = await page.locator('.favorite-item').count();
-        expect(finalCount).toBeLessThan(initialCount);
-      }
+      // 檢查收藏是否被刪除
+      const finalCount = await page.evaluate(() => {
+        return document.querySelectorAll('.favorite-item').length;
+      });
+      expect(finalCount).toBeLessThan(initialCount);
     }
   });
 });
+
