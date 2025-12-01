@@ -78,32 +78,49 @@ function getDiagnostics(env) {
  */
 export async function onRequestGet(request, env) {
   try {
-    // 檢查 Accept 標頭，判斷是否需要返回 HTML 頁面
-    const acceptHeader = request.headers.get('Accept') || '';
-    const wantsHtml = acceptHeader.includes('text/html') || 
-                      request.url.includes('?html') ||
-                      request.url.includes('?format=html');
+    // 驗證 request 對象
+    if (!request) {
+      throw new Error('Request 對象不存在');
+    }
     
-    if (wantsHtml) {
-      return await handleEnvCheckHTMLRequest(request, env);
-    } else {
+    // 獲取 URL（用於判斷返回格式）
+    const url = request.url || '';
+    
+    // 檢查是否明確要求 JSON 格式（通過 URL 參數）
+    const wantsJson = url.includes('?format=json') || url.includes('&format=json');
+    
+    // 默認返回 HTML（瀏覽器訪問），只有明確指定 ?format=json 才返回 JSON
+    if (wantsJson) {
       return await handleEnvCheckRequest(request, env);
+    } else {
+      // 默認返回 HTML（瀏覽器訪問）
+      return await handleEnvCheckHTMLRequest(request, env);
     }
   } catch (error) {
     // 頂層錯誤處理
     console.error('[env-check] 頂層錯誤:', error);
+    console.error('[env-check] 錯誤類型:', error.constructor.name);
+    console.error('[env-check] 錯誤訊息:', error.message);
+    if (error.stack) {
+      console.error('[env-check] 錯誤堆疊:', error.stack.split('\n').slice(0, 5).join('\n'));
+    }
+    
     return new Response(
       JSON.stringify({
         status: 'error',
         message: '處理請求時發生未預期的錯誤',
         error: error.message || '未知錯誤',
-        stack: error.stack ? error.stack.split('\n').slice(0, 5).join('\n') : '無堆疊信息'
+        errorType: error.constructor.name,
+        stack: error.stack ? error.stack.split('\n').slice(0, 5).join('\n') : '無堆疊信息',
+        suggestion: '請檢查 Cloudflare Pages Functions 日誌以獲取更多詳情。'
       }),
       {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
         }
       }
     );
