@@ -686,7 +686,7 @@ function updateFixedLayoutFramework() {
           layout13VideoLayout = videoLayoutType; // 保存新的自動選擇結果
         } else {
           // 用戶選擇的布局仍然適合，使用它
-          videoLayoutType = layout13VideoLayout;
+        videoLayoutType = layout13VideoLayout;
         }
       } else {
         // 沒有用戶選擇或選擇無效，自動選擇
@@ -1212,8 +1212,8 @@ function calculateResponsiveWidthRatios(layoutType) {
     } else if (layoutType === 15) {
       videoAreaWidth = 75;
       chatAreaWidth = 25;
-    }
-  }
+            }
+          }
   // 大視窗使用預設值
   
   // 確保最小寬度限制（百分比）
@@ -1227,8 +1227,8 @@ function calculateResponsiveWidthRatios(layoutType) {
   if (videoAreaWidth < minVideoWidth) {
     videoAreaWidth = minVideoWidth;
     chatAreaWidth = 100 - videoAreaWidth;
-  }
-  
+      }
+      
   // 檢查聊天室容器的右邊界是否會超出視窗
   // 計算聊天室容器的實際像素位置和寬度
   const chatLeftPx = (videoAreaWidth / 100) * windowWidth;
@@ -1256,9 +1256,9 @@ function calculateResponsiveWidthRatios(layoutType) {
       const finalChatWidthPercent = (finalChatWidthPx / windowWidth) * 100;
       chatAreaWidth = Math.max(minChatWidthPercent, finalChatWidthPercent);
       videoAreaWidth = 100 - chatAreaWidth;
-    }
   }
-  
+}
+
   // 最終檢查：確保聊天室寬度滿足最小像素寬度要求
   const finalChatWidthPx = (chatAreaWidth / 100) * windowWidth;
   if (finalChatWidthPx < chatMinWidthPx) {
@@ -1300,12 +1300,12 @@ function handleWindowResize() {
   
   // 防抖：延遲 300ms 後執行
   windowResizeTimeout = setTimeout(() => {
-    // 檢查是否為固定布局
+  // 檢查是否為固定布局
     const chatSidebar = document.getElementById('chat-sidebar-fixed');
     if (!chatSidebar || !isFixedLayout(userSelectedLayout)) {
       return; // 不是固定布局，不需要調整
-    }
-    
+  }
+  
     const layoutType = userSelectedLayout;
     const windowWidth = window.innerWidth;
     const responsiveRatios = calculateResponsiveWidthRatios(layoutType);
