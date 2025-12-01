@@ -66,8 +66,41 @@ function getEnvValue(envKey, configKey, localStorageKey) {
   return '';
 }
 
+// 從 Cloudflare Pages Function 取得 Client ID（異步）
+let configClientIdPromise = null;
+async function getClientIdFromPagesFunction() {
+  if (configClientIdPromise) {
+    return configClientIdPromise;
+  }
+  
+  configClientIdPromise = (async () => {
+    try {
+      const response = await fetch('/api/twitch-config', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.clientId) {
+          console.log('[Twitch API] 從 Pages Function 取得 Client ID');
+          return data.clientId;
+        }
+      }
+    } catch (error) {
+      console.log('[Twitch API] 無法從 Pages Function 取得 Client ID:', error.message);
+    }
+    return null;
+  })();
+  
+  return configClientIdPromise;
+}
+
 const TWITCH_API_CONFIG = {
   // Client ID - 優先從環境變數讀取，然後從 config.js 或 localStorage 讀取（必須）
+  // 如果都沒有，會在首次使用時嘗試從 Pages Function 取得
   clientId: getEnvValue('VITE_TWITCH_CLIENT_ID', 'TWITCH_CLIENT_ID', 'twitchClientId'),
   
   // Client Secret - 用於自動取得 App Access Token（可選）
@@ -192,14 +225,38 @@ async function checkPagesFunctionAvailability() {
       }
     });
     
-    // 如果回應不是 404，表示端點存在（即使返回錯誤，也說明端點存在）
-    pagesFunctionAvailable = response.status !== 404;
-    
-    if (pagesFunctionAvailable) {
-      console.log('[Twitch API] 檢測到 Cloudflare Pages Function 可用');
-    } else {
-      console.log('[Twitch API] Cloudflare Pages Function 不可用，將使用直接調用方式');
+    // 如果回應是 404，表示端點不存在
+    if (response.status === 404) {
+      pagesFunctionAvailable = false;
+      console.log('[Twitch API] Cloudflare Pages Function 不可用（端點不存在），將使用直接調用方式');
+      return pagesFunctionAvailable;
     }
+    
+    // 如果回應是 500 且是配置錯誤，表示端點存在但環境變數未設定，視為不可用
+    if (response.status === 500) {
+      try {
+        const errorData = await response.json();
+        if (errorData.error === '配置錯誤' || errorData.message?.includes('未設定')) {
+          pagesFunctionAvailable = false;
+          console.log('[Twitch API] Cloudflare Pages Function 端點存在但環境變數未設定，將使用直接調用方式');
+          return pagesFunctionAvailable;
+        }
+      } catch (e) {
+        // 無法解析錯誤訊息，假設是其他錯誤，端點存在但可能暫時不可用
+      }
+    }
+    
+    // 如果回應是 200，表示端點可用且配置正確
+    if (response.status === 200) {
+      pagesFunctionAvailable = true;
+      console.log('[Twitch API] 檢測到 Cloudflare Pages Function 可用');
+      return pagesFunctionAvailable;
+    }
+    
+    // 其他狀態碼（如 401, 403 等），表示端點存在但可能有其他問題
+    // 我們仍然認為端點存在，讓後續的 getTokenFromPagesFunction 處理具體錯誤
+    pagesFunctionAvailable = true;
+    console.log('[Twitch API] 檢測到 Cloudflare Pages Function 端點存在（狀態碼：' + response.status + '）');
   } catch (error) {
     // 網路錯誤或其他錯誤，假設 Pages Function 不可用
     pagesFunctionAvailable = false;
@@ -415,11 +472,30 @@ async function makeApiRequest(endpoint, params = {}) {
   // 如果使用代理，不需要設定認證標頭（代理會處理）
   if (!TWITCH_API_CONFIG.useProxy) {
     // 必須提供 Client ID
-    if (!TWITCH_API_CONFIG.clientId) {
-      throw new Error('Twitch API Client ID 未設定，請在 config.js 中提供 TWITCH_CLIENT_ID');
+    let clientId = TWITCH_API_CONFIG.clientId;
+    
+    // 如果沒有 Client ID，嘗試從 Pages Function 取得
+    if (!clientId) {
+      try {
+        const pagesClientId = await getClientIdFromPagesFunction();
+        if (pagesClientId) {
+          clientId = pagesClientId;
+          TWITCH_API_CONFIG.clientId = clientId;
+          // 儲存到 localStorage 以便後續使用
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('twitchClientId', clientId);
+          }
+        }
+      } catch (error) {
+        console.warn('[Twitch API] 無法從 Pages Function 取得 Client ID:', error);
+      }
     }
     
-    headers['Client-ID'] = TWITCH_API_CONFIG.clientId;
+    if (!clientId) {
+      throw new Error('Twitch API Client ID 未設定。請在以下方式中選擇一種：\n1. 在 Cloudflare Pages 環境變數中設定 TWITCH_CLIENT_ID（推薦）\n2. 在 config.js 中提供 TWITCH_CLIENT_ID\n3. 在 localStorage 中設定 twitchClientId');
+    }
+    
+    headers['Client-ID'] = clientId;
     
     // 取得 Access Token 並加入 Authorization 標頭
     try {
