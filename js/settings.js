@@ -1560,13 +1560,71 @@ function updateFavoriteListDisplay() {
     filterSelect.value = currentValue;
   }
   
-  // 如果選擇了分類，顯示一鍵載入按鈕
+  // 如果選擇了分類，顯示分類標題和分類中的收藏項目
   if (filterValue && filterValue !== 'all' && filterValue !== 'uncategorized') {
     const category = categories.find(c => c.id === filterValue);
-    const categoryItems = list.filter(item => item.categoryId === filterValue);
+    let categoryItems = list.filter(item => item.categoryId === filterValue);
     
+    // 根據開台狀態排序分類中的收藏項目
+    categoryItems.sort((a, b) => {
+      const aIsLive = a.isLive === true;
+      const bIsLive = b.isLive === true;
+      
+      if (aIsLive && !bIsLive) {
+        return -1;
+      }
+      if (!aIsLive && bIsLive) {
+        return 1;
+      }
+      
+      if (aIsLive && bIsLive) {
+        const aViewers = a.viewerCount || 0;
+        const bViewers = b.viewerCount || 0;
+        return bViewers - aViewers;
+      }
+      
+      const aName = (a.name || (a.platform === 'twitch' ? a.channelId : a.videoId) || '').toLowerCase();
+      const bName = (b.name || (b.platform === 'twitch' ? b.channelId : b.videoId) || '').toLowerCase();
+      return aName.localeCompare(bName);
+    });
+    
+    displayDiv.innerHTML = '';
+    
+    // 創建分類標題區域
+    const categoryHeader = document.createElement('div');
+    categoryHeader.style.cssText = 'padding: 12px; background: rgba(145, 71, 255, 0.15); border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;';
+    
+    const categoryNameDiv = document.createElement('div');
+    categoryNameDiv.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+    
+    const categoryIcon = document.createElement('span');
+    categoryIcon.textContent = '📁';
+    categoryIcon.style.fontSize = '16px';
+    
+    const categoryName = document.createElement('span');
+    categoryName.style.cssText = 'font-size: 13px; color: #fff; font-weight: bold;';
+    categoryName.textContent = category ? escapeHtml(category.name) : i18n.t('unknownCategory');
+    
+    const categoryCount = document.createElement('span');
+    categoryCount.style.cssText = 'font-size: 11px; color: #aaa;';
+    categoryCount.textContent = `(${categoryItems.length})`;
+    
+    categoryNameDiv.appendChild(categoryIcon);
+    categoryNameDiv.appendChild(categoryName);
+    categoryNameDiv.appendChild(categoryCount);
+    
+    // 一鍵載入按鈕
+    const loadBtn = document.createElement('button');
+    loadBtn.style.cssText = 'padding: 6px 12px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;';
+    loadBtn.textContent = '▶ 載入全部';
+    loadBtn.onclick = () => loadCategoryFavoritesFromPanel(filterValue);
+    
+    categoryHeader.appendChild(categoryNameDiv);
+    categoryHeader.appendChild(loadBtn);
+    displayDiv.appendChild(categoryHeader);
+    
+    // 如果分類中沒有收藏，顯示提示
     if (categoryItems.length === 0) {
-      displayDiv.innerHTML = '';
       const emptyDiv = document.createElement('div');
       emptyDiv.style.cssText = 'padding: 20px; text-align: center; color: #888; font-size: 12px;';
       emptyDiv.textContent = i18n.t('noFavoritesInCategory');
@@ -1574,27 +1632,79 @@ function updateFavoriteListDisplay() {
       return;
     }
     
-    displayDiv.innerHTML = '';
-    const categoryDiv = document.createElement('div');
-    categoryDiv.style.cssText = 'padding: 20px; text-align: center;';
+    // 顯示分類中的收藏項目
+    const listContainer = document.createElement('div');
+    listContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
     
-    const categoryName = document.createElement('div');
-    categoryName.style.cssText = 'font-size: 13px; color: #fff; margin-bottom: 12px;';
-    categoryName.textContent = '📁 ' + (category ? escapeHtml(category.name) : i18n.t('unknownCategory'));
+    categoryItems.forEach((item) => {
+      const displayName = item.name || (item.platform === 'twitch' ? item.channelId : item.videoId);
+      const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
+      const itemId = item.id;
+      
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'favorite-list-item';
+      itemDiv.dataset.favoriteId = itemId;
+      itemDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; cursor: pointer; transition: background 0.2s;';
+      itemDiv.onmouseover = () => itemDiv.style.background = 'rgba(145, 71, 255, 0.2)';
+      itemDiv.onmouseout = () => itemDiv.style.background = 'rgba(255, 255, 255, 0.05)';
+      itemDiv.onclick = () => loadFavoriteStreamFromPanel(itemId);
+      
+      const iconSpan = document.createElement('span');
+      iconSpan.style.fontSize = '14px';
+      iconSpan.textContent = platformIcon;
+      
+      // 開台狀態指示器（僅 Twitch 頻道）
+      const liveIndicator = document.createElement('span');
+      if (item.platform === 'twitch') {
+        if (item.isLive === true) {
+          liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #00ff00; flex-shrink: 0; box-shadow: 0 0 4px #00ff00;';
+          liveIndicator.title = `正在直播 • ${item.viewerCount || 0} 觀看者`;
+        } else if (item.isLive === false) {
+          liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0;';
+          liveIndicator.title = '未開台';
+        } else {
+          liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0;';
+          liveIndicator.title = '狀態未知';
+        }
+      } else {
+        liveIndicator.style.display = 'none';
+      }
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.style.cssText = 'flex: 1; min-width: 0;';
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.style.cssText = 'font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
+      
+      const nameText = document.createElement('span');
+      nameText.textContent = escapeHtml(displayName);
+      nameDiv.appendChild(nameText);
+      
+      // 如果正在直播，顯示觀看人數
+      if (item.isLive === true && item.viewerCount !== null && item.viewerCount !== undefined) {
+        const viewerCount = document.createElement('span');
+        viewerCount.style.cssText = 'font-size: 10px; color: #00ff00; font-weight: bold;';
+        viewerCount.textContent = `👁 ${item.viewerCount}`;
+        nameDiv.appendChild(viewerCount);
+      }
+      
+      contentDiv.appendChild(nameDiv);
+      
+      const arrowSpan = document.createElement('span');
+      arrowSpan.style.cssText = 'font-size: 12px; color: #9147ff;';
+      arrowSpan.textContent = '▶';
+      
+      itemDiv.appendChild(iconSpan);
+      if (item.platform === 'twitch') {
+        itemDiv.appendChild(liveIndicator);
+      }
+      itemDiv.appendChild(contentDiv);
+      itemDiv.appendChild(arrowSpan);
+      
+      listContainer.appendChild(itemDiv);
+    });
     
-    const countDiv = document.createElement('div');
-    countDiv.style.cssText = 'font-size: 11px; color: #aaa; margin-bottom: 16px;';
-    countDiv.textContent = `${i18n.t('categoryFavoritesCount')} ${categoryItems.length} ${i18n.t('favoritesInCategory')}`;
-    
-    const loadBtn = document.createElement('button');
-    loadBtn.style.cssText = 'padding: 8px 16px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
-    loadBtn.textContent = i18n.t('loadCategoryFavorites');
-    loadBtn.onclick = () => loadCategoryFavoritesFromPanel(filterValue);
-    
-    categoryDiv.appendChild(categoryName);
-    categoryDiv.appendChild(countDiv);
-    categoryDiv.appendChild(loadBtn);
-    displayDiv.appendChild(categoryDiv);
+    displayDiv.appendChild(listContainer);
     return;
   }
   
@@ -1603,6 +1713,33 @@ function updateFavoriteListDisplay() {
   if (filterValue === 'uncategorized') {
     filteredList = list.filter(item => !item.categoryId);
   }
+  
+  // 根據開台狀態排序：優先顯示開台的頻道
+  filteredList.sort((a, b) => {
+    // 首先按開台狀態排序：開台的排在前面
+    const aIsLive = a.isLive === true;
+    const bIsLive = b.isLive === true;
+    
+    if (aIsLive && !bIsLive) {
+      return -1; // a 開台，b 未開台，a 排在前面
+    }
+    if (!aIsLive && bIsLive) {
+      return 1; // a 未開台，b 開台，b 排在前面
+    }
+    
+    // 如果都是開台狀態，按觀看人數降序排列
+    if (aIsLive && bIsLive) {
+      const aViewers = a.viewerCount || 0;
+      const bViewers = b.viewerCount || 0;
+      return bViewers - aViewers; // 觀看人數多的排在前面
+    }
+    
+    // 如果都未開台，保持原有順序（或按名稱排序）
+    // 可以選擇按名稱排序或保持原順序
+    const aName = (a.name || (a.platform === 'twitch' ? a.channelId : a.videoId) || '').toLowerCase();
+    const bName = (b.name || (b.platform === 'twitch' ? b.channelId : b.videoId) || '').toLowerCase();
+    return aName.localeCompare(bName);
+  });
   
   // 生成列表（使用安全的 DOM 操作）
   displayDiv.innerHTML = '';
