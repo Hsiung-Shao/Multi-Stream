@@ -41,22 +41,15 @@ async function addStream(url = null) {
           const youtubeResults = await window.youtubeApi.searchChannels(url, 1);
           if (youtubeResults && youtubeResults.length > 0) {
             const ytChannel = youtubeResults[0];
-            // 如果正在直播，使用直播 URL
-            if (ytChannel.isLive && ytChannel.liveVideoId) {
-              foundChannel = {
-                ...ytChannel,
-                platform: 'youtube',
-                source: 'youtube',
-                url: `https://www.youtube.com/watch?v=${ytChannel.liveVideoId}`
-              };
-            } else {
-              foundChannel = {
-                ...ytChannel,
-                platform: 'youtube',
-                source: 'youtube',
-                url: `https://www.youtube.com/channel/${ytChannel.id}`
-              };
-            }
+            // 始終使用頻道 URL（使用頻道 ID，固定不變）
+            // 而不是直播影片 URL（影片 ID 每次直播都不同）
+            // 這樣收藏系統可以正確提取頻道 ID
+            foundChannel = {
+              ...ytChannel,
+              platform: 'youtube',
+              source: 'youtube',
+              url: `https://www.youtube.com/channel/${ytChannel.id}`
+            };
           }
         } catch (error) {
           // 如果是流量超限錯誤，不顯示錯誤，只記錄

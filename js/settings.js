@@ -630,7 +630,7 @@ const favoriteStreams = {
         if (!name) name = channelId;
       }
     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      // 嘗試提取 channelId
+      // 嘗試提取 channelId（優先）
       if (url.includes('youtube.com/channel/')) {
         const channelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
         if (channelMatch) {
@@ -643,7 +643,8 @@ const favoriteStreams = {
         // 用戶可以通過搜尋功能添加頻道，這樣會自動獲得 channelId
       }
       
-      // 嘗試提取 videoId
+      // 如果沒有 channelId，嘗試提取 videoId（但對於收藏，我們希望使用 channelId）
+      // 如果只有 videoId，我們需要通過 API 查詢來獲取 channelId
       if (!channelId) {
         if (url.includes('youtube.com/live/')) {
           videoId = url.split('live/')[1]?.split('?')[0];
@@ -655,6 +656,8 @@ const favoriteStreams = {
         if (videoId) {
           platform = 'youtube';
           if (!name) name = videoId;
+          // 注意：如果只有 videoId，channelId 會是空的，這在收藏系統中可能會有問題
+          // 但為了向後兼容，我們仍然允許這種情況
         }
       }
     }
@@ -664,12 +667,20 @@ const favoriteStreams = {
       return { success: false, message: i18n.t('cannotParseStreamUrl') };
     }
     
+    // 對於 YouTube，確保 URL 使用頻道 ID（如果有的話）
+    // 這樣可以確保收藏系統使用固定的頻道 ID，而不是會變化的影片 ID
+    let finalUrl = url;
+    if (platform === 'youtube' && channelId) {
+      // 如果已經有 channelId，使用頻道 URL
+      finalUrl = `https://www.youtube.com/channel/${channelId}`;
+    }
+    
     const newItem = {
       id: Date.now().toString(),
-      url: url,
+      url: finalUrl, // 對於 YouTube，使用頻道 URL（包含 channelId）
       name: name,
       platform: platform,
-      channelId: channelId,
+      channelId: channelId, // 對於 YouTube，優先使用 channelId
       videoId: videoId,
       categoryId: categoryId,
       addedAt: new Date().toISOString(),
@@ -678,7 +689,8 @@ const favoriteStreams = {
       lastChecked: null, // 最後檢查時間
       viewerCount: null, // 觀看人數（僅在開台時有效）
       liveTitle: null, // 直播標題（僅在開台時有效）
-      gameName: null // 遊戲名稱（僅在開台時有效）
+      gameName: null, // 遊戲名稱（僅在開台時有效）
+      liveVideoId: null // 當前直播的影片 ID（如果正在直播）
     };
     
     list.push(newItem);
@@ -731,25 +743,60 @@ const favoriteStreams = {
   },
   
   // 從收藏加載串流
-  load: (item) => {
-    if (item && item.url) {
-      addStream(item.url);
-      return { success: true };
-    }
+  load: async (item) => {
+    if (!item) {
       const i18n = window.i18n || { t: (key) => key };
       return { success: false, message: i18n.t('invalidFavoriteItem') };
+    }
+    
+    // 對於 YouTube 頻道，先檢查是否正在直播，如果開台則使用直播 URL
+    if (item.platform === 'youtube' && item.channelId) {
+      try {
+        // 檢查是否正在直播
+        if (window.youtubeApi && typeof window.youtubeApi.checkChannelLiveStatus === 'function') {
+          const youtubeConfig = window.youtubeApi.getConfig();
+          if (!youtubeConfig.isBlocked) {
+            const liveStatus = await window.youtubeApi.checkChannelLiveStatus(item.channelId);
+            if (liveStatus && liveStatus.isLive === true && liveStatus.videoId) {
+              // 正在直播，使用直播 URL
+              const liveUrl = `https://www.youtube.com/watch?v=${liveStatus.videoId}`;
+              addStream(liveUrl);
+              return { success: true };
+            }
+          }
+        }
+        // 未開台或檢查失敗，使用原始 URL（頻道 URL）
+        addStream(item.url);
+        return { success: true };
+      } catch (error) {
+        // 檢查失敗，使用原始 URL
+        console.warn('檢查 YouTube 直播狀態失敗:', error);
+        addStream(item.url);
+        return { success: true };
+      }
+    } else {
+      // Twitch 或其他平台，直接使用 URL
+      if (item.url) {
+        addStream(item.url);
+        return { success: true };
+      }
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('invalidFavoriteItem') };
+    }
   },
   
   // 批量加載收藏
-  loadMultiple: (items) => {
+  loadMultiple: async (items) => {
     if (!items || items.length === 0) {
       const i18n = window.i18n || { t: (key) => key };
       return { success: false, message: i18n.t('noFavoritesToLoad') };
     }
     
+    // 對於批量加載，我們需要等待每個項目的異步操作完成
+    // 但為了不阻塞，我們仍然使用 setTimeout 來間隔加載
     items.forEach((item, index) => {
-      setTimeout(() => {
-        favoriteStreams.load(item);
+      setTimeout(async () => {
+        await favoriteStreams.load(item);
       }, index * 300); // 每個串流間隔300毫秒加載
     });
     
@@ -1070,11 +1117,15 @@ function showFavoriteStreamsManager() {
   // 按Enter添加收藏
   const urlInput = document.getElementById('favorite-url-input');
   if (urlInput) {
+    // Enter 鍵添加收藏
     urlInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         addToFavorites();
       }
     });
+    
+    // 初始化收藏管理的搜尋功能
+    initFavoriteSearchSuggestions();
   }
   
   // 按Enter添加分類
@@ -1144,6 +1195,45 @@ function addToFavorites() {
     if (nameInput) nameInput.value = '';
     if (categorySelect) categorySelect.value = '';
     showFavoriteStreamsManager(); // 刷新列表
+    // 更新控制面板中的收藏列表
+    if (typeof updateFavoriteListDisplay === 'function') {
+      updateFavoriteListDisplay();
+    }
+    // 如果是 YouTube 頻道，立即觸發一次開台狀態檢查（不等待間隔）
+    const list = favoriteStreams.getList();
+    const addedItem = list.find(item => (item.url === url || item.url.includes(url.split('?')[0])) && item.platform === 'youtube');
+    if (addedItem && addedItem.platform === 'youtube' && addedItem.channelId) {
+      // 立即檢查一次開台狀態（不等待 15 分鐘間隔）
+      setTimeout(async () => {
+        if (window.youtubeApi && typeof window.youtubeApi.checkChannelLiveStatus === 'function') {
+          const youtubeConfig = window.youtubeApi.getConfig();
+          if (!youtubeConfig.isBlocked) {
+            try {
+              const liveStatus = await window.youtubeApi.checkChannelLiveStatus(addedItem.channelId);
+              const updatedList = favoriteStreams.getList().map(item => {
+                if (item.id === addedItem.id && item.platform === 'youtube') {
+                  return {
+                    ...item,
+                    isLive: liveStatus ? liveStatus.isLive : null,
+                    lastChecked: new Date().toISOString(),
+                    viewerCount: liveStatus && liveStatus.viewerCount ? liveStatus.viewerCount : null,
+                    liveTitle: liveStatus && liveStatus.title ? liveStatus.title : null,
+                    liveVideoId: liveStatus && liveStatus.videoId ? liveStatus.videoId : null
+                  };
+                }
+                return item;
+              });
+              favoriteStreams.saveList(updatedList);
+              if (typeof updateFavoriteListDisplay === 'function') {
+                updateFavoriteListDisplay();
+              }
+            } catch (error) {
+              console.error('立即檢查 YouTube 開台狀態失敗:', error);
+            }
+          }
+        }
+      }, 1000); // 延遲 1 秒後檢查，確保列表已更新
+    }
     // 自動保存設置
     autoSaveSettings();
     // 防抖備份會在 saveList() 中自動觸發
@@ -1628,20 +1718,29 @@ function updateFavoriteListDisplay() {
       iconSpan.style.fontSize = '14px';
       iconSpan.textContent = platformIcon;
       
-      // 開台狀態指示器（僅 Twitch 頻道）
+      // 開台狀態指示器（Twitch 和 YouTube 頻道）
       const liveIndicator = document.createElement('span');
-      if (item.platform === 'twitch') {
+      // 檢查是否有 channelId（對於 YouTube，必須有 channelId 才能檢查開台狀態）
+      const hasChannelId = item.channelId && item.channelId.trim() !== '';
+      if ((item.platform === 'twitch' || item.platform === 'youtube') && hasChannelId) {
         if (item.isLive === true) {
           liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #00ff00; flex-shrink: 0; box-shadow: 0 0 4px #00ff00;';
-          liveIndicator.title = `正在直播 • ${item.viewerCount || 0} 觀看者`;
+          // 對於 YouTube，不顯示觀看人數；對於 Twitch，顯示觀看人數
+          if (item.platform === 'twitch' && item.viewerCount) {
+            liveIndicator.title = `正在直播 • ${item.viewerCount.toLocaleString()} 觀看者`;
+          } else {
+            liveIndicator.title = '正在直播';
+          }
         } else if (item.isLive === false) {
           liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0;';
           liveIndicator.title = '未開台';
         } else {
+          // isLive 為 null 或 undefined，顯示灰色（狀態未知）
           liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0;';
           liveIndicator.title = '狀態未知';
         }
       } else {
+        // 沒有 channelId 或不是支持的平台，不顯示指示器
         liveIndicator.style.display = 'none';
       }
       
@@ -1655,11 +1754,11 @@ function updateFavoriteListDisplay() {
       nameText.textContent = escapeHtml(displayName);
       nameDiv.appendChild(nameText);
       
-      // 如果正在直播，顯示觀看人數
-      if (item.isLive === true && item.viewerCount !== null && item.viewerCount !== undefined) {
+      // 如果正在直播，只對 Twitch 顯示觀看人數（YouTube 不顯示）
+      if (item.isLive === true && item.platform === 'twitch' && item.viewerCount !== null && item.viewerCount !== undefined) {
         const viewerCount = document.createElement('span');
         viewerCount.style.cssText = 'font-size: 10px; color: #00ff00; font-weight: bold;';
-        viewerCount.textContent = `👁 ${item.viewerCount}`;
+        viewerCount.textContent = `👁 ${item.viewerCount.toLocaleString()}`;
         nameDiv.appendChild(viewerCount);
       }
       
@@ -1669,10 +1768,9 @@ function updateFavoriteListDisplay() {
       arrowSpan.style.cssText = 'font-size: 12px; color: #9147ff;';
       arrowSpan.textContent = '▶';
       
+      // 統一順序：iconSpan -> liveIndicator -> contentDiv -> arrowSpan
       itemDiv.appendChild(iconSpan);
-      if (item.platform === 'twitch') {
-        itemDiv.appendChild(liveIndicator);
-      }
+      itemDiv.appendChild(liveIndicator);
       itemDiv.appendChild(contentDiv);
       itemDiv.appendChild(arrowSpan);
       
@@ -1748,20 +1846,29 @@ function updateFavoriteListDisplay() {
     iconSpan.style.fontSize = '14px';
     iconSpan.textContent = platformIcon;
     
-    // 開台狀態指示器（僅 Twitch 頻道）
+    // 開台狀態指示器（Twitch 和 YouTube 頻道）
     const liveIndicator = document.createElement('span');
-    if (item.platform === 'twitch') {
+    // 檢查是否有 channelId（對於 YouTube，必須有 channelId 才能檢查開台狀態）
+    const hasChannelId = item.channelId && item.channelId.trim() !== '';
+    if ((item.platform === 'twitch' || item.platform === 'youtube') && hasChannelId) {
       if (item.isLive === true) {
         liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #00ff00; flex-shrink: 0; box-shadow: 0 0 4px #00ff00;';
-        liveIndicator.title = `正在直播 • ${item.viewerCount || 0} 觀看者`;
+        // 對於 YouTube，不顯示觀看人數；對於 Twitch，顯示觀看人數
+        if (item.platform === 'twitch' && item.viewerCount) {
+          liveIndicator.title = `正在直播 • ${item.viewerCount.toLocaleString()} 觀看者`;
+        } else {
+          liveIndicator.title = '正在直播';
+        }
       } else if (item.isLive === false) {
         liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0;';
         liveIndicator.title = '未開台';
       } else {
+        // isLive 為 null 或 undefined，顯示灰色（狀態未知）
         liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0;';
         liveIndicator.title = '狀態未知';
       }
     } else {
+      // 沒有 channelId 或不是支持的平台，不顯示指示器
       liveIndicator.style.display = 'none';
     }
     
@@ -1775,11 +1882,11 @@ function updateFavoriteListDisplay() {
     nameText.textContent = escapeHtml(displayName);
     nameDiv.appendChild(nameText);
     
-    // 如果正在直播，顯示觀看人數
-    if (item.isLive === true && item.viewerCount !== null && item.viewerCount !== undefined) {
+    // 如果正在直播，只對 Twitch 顯示觀看人數（YouTube 不顯示）
+    if (item.isLive === true && item.platform === 'twitch' && item.viewerCount !== null && item.viewerCount !== undefined) {
       const viewerCount = document.createElement('span');
       viewerCount.style.cssText = 'font-size: 10px; color: #00ff00; font-weight: bold;';
-      viewerCount.textContent = `👁 ${item.viewerCount}`;
+      viewerCount.textContent = `👁 ${item.viewerCount.toLocaleString()}`;
       nameDiv.appendChild(viewerCount);
     }
     
@@ -1794,10 +1901,9 @@ function updateFavoriteListDisplay() {
     arrowSpan.style.cssText = 'font-size: 12px; color: #9147ff;';
     arrowSpan.textContent = '▶';
     
+    // 統一順序：iconSpan -> liveIndicator -> contentDiv -> arrowSpan
     itemDiv.appendChild(iconSpan);
-    if (item.platform === 'twitch') {
-      itemDiv.appendChild(liveIndicator);
-    }
+    itemDiv.appendChild(liveIndicator);
     itemDiv.appendChild(contentDiv);
     itemDiv.appendChild(arrowSpan);
     
@@ -1870,8 +1976,10 @@ async function updateFavoriteLiveStatuses() {
           .map(item => item.channelId);
         
         if (channelIds.length > 0) {
+          console.log('開始檢查 YouTube 收藏頻道開台狀態，頻道數量:', channelIds.length);
           // 批量查詢開台狀態
           const liveStatuses = await window.youtubeApi.checkMultipleChannelsLiveStatus(channelIds);
+          console.log('YouTube 開台狀態檢查結果:', liveStatuses);
           
           // 更新收藏列表中的開台狀態
           updatedList = updatedList.map(item => {
@@ -1880,16 +1988,18 @@ async function updateFavoriteLiveStatuses() {
               
               if (status) {
                 updatedCount++;
+                console.log(`更新 YouTube 頻道 ${item.channelId} 開台狀態:`, status.isLive);
                 return {
                   ...item,
                   isLive: status.isLive,
                   lastChecked: new Date().toISOString(),
                   viewerCount: status.viewerCount || null,
                   liveTitle: status.title || null,
-                  videoId: status.videoId || item.videoId || null
+                  liveVideoId: status.videoId || item.liveVideoId || null
                 };
               } else {
                 // 如果查詢失敗，保持原有狀態，但更新檢查時間
+                console.log(`YouTube 頻道 ${item.channelId} 查詢失敗或無狀態`);
                 return {
                   ...item,
                   lastChecked: new Date().toISOString()
@@ -1901,19 +2011,28 @@ async function updateFavoriteLiveStatuses() {
           
           // 更新最後檢查時間
           lastYouTubeCheckTime = now;
+          console.log('YouTube 開台狀態檢查完成，更新數量:', updatedCount);
         }
       } catch (error) {
         // YouTube API 錯誤（可能是流量超限），靜默處理
         // 如果流量超限，會在下次檢查時自動封鎖
+        console.error('YouTube 開台狀態檢查錯誤:', error);
       }
+    } else {
+      console.log('YouTube API 已被封鎖，跳過開台狀態檢查');
     }
+  } else if (youtubeFavorites.length > 0) {
+    // 如果距離上次檢查時間還不夠，記錄日誌
+    const timeSinceLastCheck = now - lastYouTubeCheckTime;
+    const remainingTime = YOUTUBE_CHECK_INTERVAL_MS - timeSinceLastCheck;
+    console.log(`YouTube 開台狀態檢查間隔未到，還需等待 ${Math.ceil(remainingTime / 1000 / 60)} 分鐘`);
   }
   
-  // 保存更新後的列表
+  // 保存更新後的列表（只要有更新或檢查過，就保存）
   if (updatedCount > 0 || twitchFavorites.length > 0 || youtubeFavorites.length > 0) {
     favoriteStreams.saveList(updatedList);
     
-    // 更新顯示
+    // 更新顯示（無論是否有更新，都刷新顯示，確保狀態正確顯示）
     if (typeof updateFavoriteListDisplay === 'function') {
       updateFavoriteListDisplay();
     }
@@ -2431,6 +2550,313 @@ function closeUserGuide() {
   const guideModal = document.getElementById('user-guide-modal');
   if (guideModal) {
     guideModal.style.display = 'none';
+  }
+}
+
+// 收藏管理搜尋功能
+let favoriteSearchDebounceTimer = null;
+let favoriteCurrentSearchResults = [];
+let favoriteSelectedSearchIndex = -1;
+
+// 初始化收藏管理的搜尋建議
+function initFavoriteSearchSuggestions() {
+  const urlInput = document.getElementById('favorite-url-input');
+  if (!urlInput) return;
+  
+  // 創建搜尋建議容器
+  let suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (!suggestionsDiv) {
+    suggestionsDiv = document.createElement('div');
+    suggestionsDiv.id = 'favorite-search-suggestions';
+    suggestionsDiv.style.cssText = `
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      margin-top: 4px;
+      display: none;
+    `;
+    
+    // 將搜尋建議容器添加到輸入框的父容器
+    const addSection = urlInput.closest('.favorite-add-section');
+    if (addSection) {
+      addSection.style.position = 'relative';
+      addSection.appendChild(suggestionsDiv);
+    }
+  }
+  
+  // 輸入事件處理（防抖搜尋）
+  urlInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    
+    // 清除之前的定時器
+    if (favoriteSearchDebounceTimer) {
+      clearTimeout(favoriteSearchDebounceTimer);
+    }
+    
+    // 如果是 URL，不顯示搜尋建議
+    if (query.includes('http://') || query.includes('https://') || 
+        query.includes('twitch.tv/') || query.includes('youtube.com') || 
+        query.includes('youtu.be/')) {
+      hideFavoriteSearchSuggestions();
+      return;
+    }
+    
+    // 如果輸入為空，隱藏建議
+    if (query.length === 0) {
+      hideFavoriteSearchSuggestions();
+      return;
+    }
+    
+    // 防抖：延遲 300ms 後執行搜尋
+    favoriteSearchDebounceTimer = setTimeout(async () => {
+      await performFavoriteSearch(query);
+    }, 300);
+  });
+  
+  // 鍵盤導航
+  urlInput.addEventListener('keydown', (e) => {
+    if (suggestionsDiv.style.display === 'none') return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      favoriteSelectedSearchIndex = Math.min(favoriteSelectedSearchIndex + 1, favoriteCurrentSearchResults.length - 1);
+      updateFavoriteSelectedSuggestion();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      favoriteSelectedSearchIndex = Math.max(favoriteSelectedSearchIndex - 1, -1);
+      updateFavoriteSelectedSuggestion();
+    } else if (e.key === 'Enter' && favoriteSelectedSearchIndex >= 0) {
+      e.preventDefault();
+      selectFavoriteSearchResult(favoriteCurrentSearchResults[favoriteSelectedSearchIndex]);
+    } else if (e.key === 'Escape') {
+      hideFavoriteSearchSuggestions();
+    }
+  });
+  
+  // 點擊外部關閉建議
+  document.addEventListener('click', (e) => {
+    if (!urlInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+      hideFavoriteSearchSuggestions();
+    }
+  });
+}
+
+// 執行收藏管理的搜尋（只搜尋頻道，不檢查直播狀態）
+async function performFavoriteSearch(query) {
+  const suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (!suggestionsDiv) {
+    return;
+  }
+  
+  // 顯示載入狀態
+  suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #aaa;">搜尋中...</div>';
+  suggestionsDiv.style.display = 'block';
+  
+  try {
+    // 同時搜尋 Twitch 和 YouTube（只搜尋頻道，不檢查直播狀態）
+    const searchPromises = [];
+    
+    // Twitch 搜尋
+    if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
+      searchPromises.push(
+        window.twitchApi.searchChannels(query, 5)
+          .then(results => {
+            if (results && Array.isArray(results) && results.length > 0) {
+              return results.map(r => ({ 
+                ...r, 
+                platform: 'twitch', 
+                source: 'twitch',
+                displayName: r.displayName || r.display_name || r.login || r.title || '未知頻道'
+              }));
+            }
+            return [];
+          })
+          .catch(error => {
+            console.warn('Twitch 搜尋失敗:', error.message);
+            return [];
+          })
+      );
+    }
+    
+    // YouTube 搜尋（使用 searchChannelsOnly，不檢查直播狀態）
+    if (window.youtubeApi && typeof window.youtubeApi.searchChannelsOnly === 'function') {
+      const youtubeConfig = window.youtubeApi.getConfig();
+      if (!youtubeConfig.isBlocked) {
+        searchPromises.push(
+          window.youtubeApi.searchChannelsOnly(query, 5)
+            .then(results => {
+              if (results && Array.isArray(results)) {
+                return results.map(r => ({ 
+                  ...r, 
+                  platform: 'youtube', 
+                  source: 'youtube', 
+                  displayName: r.title || r.displayName || r.name 
+                }));
+              }
+              return [];
+            })
+            .catch(error => {
+              if (error.message && (error.message.includes('流量') || error.message.includes('配額'))) {
+                console.warn('YouTube API 流量限制:', error.message);
+                return [];
+              }
+              console.warn('YouTube 搜尋失敗:', error.message);
+              return [];
+            })
+        );
+      }
+    }
+    
+    // 等待所有搜尋完成
+    const allResults = await Promise.allSettled(searchPromises);
+    const results = allResults
+      .filter(result => result.status === 'fulfilled')
+      .map(result => {
+        const value = result.value;
+        return Array.isArray(value) ? value : [];
+      })
+      .flat();
+    
+    favoriteCurrentSearchResults = results;
+    favoriteSelectedSearchIndex = -1;
+    
+    if (results.length === 0) {
+      suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #666;">未找到頻道</div>';
+      return;
+    }
+    
+    // 顯示搜尋結果
+    suggestionsDiv.innerHTML = '';
+    results.forEach((channel, index) => {
+      const item = document.createElement('div');
+      item.className = 'search-suggestion-item';
+      item.style.cssText = `
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background 0.2s;
+      `;
+      item.dataset.index = index;
+      
+      // 確定平台
+      const platform = channel.platform || channel.source || 'unknown';
+      item.dataset.platform = platform;
+      
+      // 平台標籤
+      const platformTag = document.createElement('div');
+      const isYouTube = platform === 'youtube' || channel.source === 'youtube';
+      platformTag.style.cssText = `
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: ${isYouTube ? '#ff0000' : '#9147ff'};
+        color: white;
+        font-weight: bold;
+        flex-shrink: 0;
+      `;
+      platformTag.textContent = isYouTube ? 'YT' : 'TW';
+      
+      // 頻道資訊
+      const info = document.createElement('div');
+      info.style.cssText = 'flex: 1; min-width: 0;';
+      
+      const name = document.createElement('div');
+      name.style.cssText = 'font-weight: bold; color: #fff; margin-bottom: 2px;';
+      let displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '未知頻道';
+      name.textContent = displayName;
+      
+      const details = document.createElement('div');
+      details.style.cssText = 'font-size: 11px; color: #aaa;';
+      details.textContent = channel.description || channel.title || '頻道';
+      
+      info.appendChild(name);
+      info.appendChild(details);
+      
+      item.appendChild(platformTag);
+      item.appendChild(info);
+      
+      // 點擊事件
+      item.addEventListener('click', () => {
+        selectFavoriteSearchResult(channel);
+      });
+      
+      // 滑鼠懸停效果
+      item.addEventListener('mouseenter', () => {
+        item.style.background = '#2a2a2a';
+        favoriteSelectedSearchIndex = index;
+        updateFavoriteSelectedSuggestion();
+      });
+      item.addEventListener('mouseleave', () => {
+        item.style.background = '';
+      });
+      
+      suggestionsDiv.appendChild(item);
+    });
+  } catch (error) {
+    suggestionsDiv.innerHTML = `<div style="padding: 12px; text-align: center; color: #f44;">搜尋錯誤: ${error.message}</div>`;
+  }
+}
+
+// 更新收藏管理搜尋建議的選中狀態
+function updateFavoriteSelectedSuggestion() {
+  const suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (!suggestionsDiv) return;
+  
+  const items = suggestionsDiv.querySelectorAll('.search-suggestion-item');
+  items.forEach((item, index) => {
+    if (index === favoriteSelectedSearchIndex) {
+      item.style.background = '#2a2a2a';
+    } else {
+      item.style.background = '';
+    }
+  });
+}
+
+// 選擇收藏管理搜尋結果
+function selectFavoriteSearchResult(channel) {
+  const urlInput = document.getElementById('favorite-url-input');
+  const nameInput = document.getElementById('favorite-name-input');
+  
+  if (urlInput) {
+    // 對於 YouTube，始終使用頻道 URL（使用頻道 ID，固定不變）
+    if ((channel.platform === 'youtube' || channel.source === 'youtube') && channel.id) {
+      urlInput.value = `https://www.youtube.com/channel/${channel.id}`;
+    } else if (channel.platform === 'twitch' || channel.source === 'twitch') {
+      // Twitch 使用頻道 URL
+      urlInput.value = channel.url || `https://www.twitch.tv/${channel.login || channel.id}`;
+    } else {
+      urlInput.value = channel.url || '';
+    }
+    
+    // 自動填入頻道名稱
+    if (nameInput) {
+      const displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '';
+      if (displayName) {
+        nameInput.value = displayName;
+      }
+    }
+  }
+  
+  hideFavoriteSearchSuggestions();
+  if (urlInput) urlInput.focus();
+}
+
+// 隱藏收藏管理搜尋建議
+function hideFavoriteSearchSuggestions() {
+  const suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (suggestionsDiv) {
+    suggestionsDiv.style.display = 'none';
+    favoriteSelectedSearchIndex = -1;
   }
 }
 
