@@ -82,7 +82,7 @@
   gtag('config', 'G-6M97WLJG2Z');
 </script>
 <!-- Content Security Policy -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
 <!-- AdSense 腳本改為動態載入（僅在需要時載入，符合 AdSense 政策） -->
 
 </head>
@@ -100,7 +100,12 @@
   </div>
   <div class="control-panel-content">
     <div id="add-panel">
-      <input type="text" id="url-input" placeholder="貼上 Twitch / YouTube 直播網址">
+      <div style="position: relative;">
+        <input type="text" id="url-input" placeholder="貼上 Twitch / YouTube 直播網址或搜尋 Twitch 頻道" autocomplete="off">
+        <div id="search-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1a1a1a; border: 1px solid #444; border-radius: 4px; margin-top: 4px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+          <!-- 搜尋建議將在這裡動態生成 -->
+        </div>
+      </div>
       <button onclick="addStream()">加入畫面</button>
     </div>
     
@@ -332,9 +337,11 @@
 <script src="https://player.twitch.tv/js/embed/v1.js"></script>
 
 <!-- JavaScript 模組 -->
+<script src="config.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/security.js"></script>
 <script src="js/zoom-handler.js"></script>
+<script src="js/twitch-api.js"></script>
 <script src="js/stream.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/volume.js"></script>

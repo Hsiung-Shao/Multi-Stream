@@ -1,12 +1,43 @@
 // 串流管理功能
 
 // 主要加入函式
-function addStream(url = null) {
+async function addStream(url = null) {
   if (!url) url = document.getElementById('url-input').value.trim();
-  if (!url) return alert('請輸入直播網址');
+  if (!url) return alert('請輸入直播網址或頻道名稱');
   
   // 清空輸入框
   document.getElementById('url-input').value = '';
+  
+  // 隱藏搜尋建議
+  if (typeof hideSearchSuggestions === 'function') {
+    hideSearchSuggestions();
+  }
+
+  // 如果輸入的不是 URL，嘗試搜尋 Twitch 頻道
+  if (!url.includes('http://') && !url.includes('https://') && 
+      !url.includes('twitch.tv/') && !url.includes('youtube.com') && 
+      !url.includes('youtu.be/')) {
+    // 可能是頻道名稱，嘗試搜尋
+    if (window.twitchApi && window.twitchApi.searchChannels) {
+      try {
+        const results = await window.twitchApi.searchChannels(url, 1);
+        if (results && results.length > 0) {
+          // 使用第一個搜尋結果
+          url = results[0].url;
+        } else {
+          alert(`找不到頻道 "${url}"，請輸入完整的 Twitch 或 YouTube 網址`);
+          return;
+        }
+      } catch (error) {
+        console.error('搜尋頻道失敗:', error);
+        alert(`搜尋頻道失敗: ${error.message}。請直接輸入完整的 Twitch 或 YouTube 網址`);
+        return;
+      }
+    } else {
+      alert('請輸入完整的 Twitch 或 YouTube 網址');
+      return;
+    }
+  }
 
   // 先验证 URL，再创建 DOM（避免无效 URL 创建 DOM 后又被移除）
   const urlValidation = validateUrl(url);
@@ -375,11 +406,22 @@ function removeBox(id) {
     const chatSidebarFixedAfter = document.getElementById('chat-sidebar-fixed');
     const isFixedLayoutAfter = !!chatSidebarFixedAfter;
     
-    // 如果是布局12或13，更新框架
+    // 如果是固定布局，更新框架
     if (isFixedLayoutAfter && typeof updateFixedLayoutFramework === 'function') {
       setTimeout(() => {
         updateFixedLayoutFramework();
       }, 100);
+    } else {
+      // 如果不是固定布局，觸發自動排版
+      const remainingBoxes = document.querySelectorAll('.stream-box');
+      if (remainingBoxes.length > 0 && typeof autoSelectLayout === 'function' && typeof setLayout === 'function') {
+        setTimeout(() => {
+          const layoutType = autoSelectLayout();
+          if (layoutType) {
+            setLayout(layoutType, true); // 立即執行，不使用防抖
+          }
+        }, 100);
+      }
     }
     
     // 檢查並調整控制面板狀態（如果沒有串流則強制展開）

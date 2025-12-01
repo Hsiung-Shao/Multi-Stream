@@ -690,7 +690,13 @@ const favoriteStreams = {
       channelId: channelId,
       videoId: videoId,
       categoryId: categoryId,
-      addedAt: new Date().toISOString()
+      addedAt: new Date().toISOString(),
+      // 開台狀態相關欄位
+      isLive: null, // null 表示未知，true/false 表示已知狀態
+      lastChecked: null, // 最後檢查時間
+      viewerCount: null, // 觀看人數（僅在開台時有效）
+      liveTitle: null, // 直播標題（僅在開台時有效）
+      gameName: null // 遊戲名稱（僅在開台時有效）
     };
     
     list.push(newItem);
@@ -1630,12 +1636,40 @@ function updateFavoriteListDisplay() {
     iconSpan.style.fontSize = '14px';
     iconSpan.textContent = platformIcon;
     
+    // 開台狀態指示器（僅 Twitch 頻道）
+    const liveIndicator = document.createElement('span');
+    if (item.platform === 'twitch') {
+      if (item.isLive === true) {
+        liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #00ff00; flex-shrink: 0; box-shadow: 0 0 4px #00ff00;';
+        liveIndicator.title = `正在直播 • ${item.viewerCount || 0} 觀看者`;
+      } else if (item.isLive === false) {
+        liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0;';
+        liveIndicator.title = '未開台';
+      } else {
+        liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0;';
+        liveIndicator.title = '狀態未知';
+      }
+    } else {
+      liveIndicator.style.display = 'none';
+    }
+    
     const contentDiv = document.createElement('div');
     contentDiv.style.cssText = 'flex: 1; min-width: 0;';
     
     const nameDiv = document.createElement('div');
-    nameDiv.style.cssText = 'font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
-    nameDiv.textContent = escapeHtml(displayName);
+    nameDiv.style.cssText = 'font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
+    
+    const nameText = document.createElement('span');
+    nameText.textContent = escapeHtml(displayName);
+    nameDiv.appendChild(nameText);
+    
+    // 如果正在直播，顯示觀看人數
+    if (item.isLive === true && item.viewerCount !== null && item.viewerCount !== undefined) {
+      const viewerCount = document.createElement('span');
+      viewerCount.style.cssText = 'font-size: 10px; color: #00ff00; font-weight: bold;';
+      viewerCount.textContent = `👁 ${item.viewerCount}`;
+      nameDiv.appendChild(viewerCount);
+    }
     
     const categoryDiv = document.createElement('div');
     categoryDiv.style.cssText = 'font-size: 10px; color: #aaa;';
@@ -1649,6 +1683,9 @@ function updateFavoriteListDisplay() {
     arrowSpan.textContent = '▶';
     
     itemDiv.appendChild(iconSpan);
+    if (item.platform === 'twitch') {
+      itemDiv.appendChild(liveIndicator);
+    }
     itemDiv.appendChild(contentDiv);
     itemDiv.appendChild(arrowSpan);
     
@@ -1658,9 +1695,106 @@ function updateFavoriteListDisplay() {
   displayDiv.appendChild(listContainer);
 }
 
+// 批量更新收藏頻道的開台狀態
+async function updateFavoriteLiveStatuses() {
+  if (!window.twitchApi || !window.twitchApi.checkMultipleChannelsLiveStatus) {
+    return; // Twitch API 未載入
+  }
+  
+  const list = favoriteStreams.getList();
+  const twitchFavorites = list.filter(item => item.platform === 'twitch' && item.channelId);
+  
+  if (twitchFavorites.length === 0) {
+    return; // 沒有 Twitch 收藏
+  }
+  
+  // 收集所有 Twitch 頻道 ID
+  const channelLogins = twitchFavorites.map(item => item.channelId.toLowerCase());
+  
+  try {
+    // 批量查詢開台狀態
+    const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelLogins);
+    
+    // 更新收藏列表中的開台狀態
+    const updatedList = list.map(item => {
+      if (item.platform === 'twitch' && item.channelId) {
+        const login = item.channelId.toLowerCase();
+        const status = liveStatuses[login];
+        
+        if (status) {
+          return {
+            ...item,
+            isLive: status.isLive,
+            lastChecked: new Date().toISOString(),
+            viewerCount: status.viewerCount || null,
+            liveTitle: status.title || null,
+            gameName: status.gameName || null
+          };
+        } else {
+          // 如果查詢失敗，保持原有狀態，但更新檢查時間
+          return {
+            ...item,
+            lastChecked: new Date().toISOString()
+          };
+        }
+      }
+      return item;
+    });
+    
+    // 保存更新後的列表
+    favoriteStreams.saveList(updatedList);
+    
+    // 更新顯示
+    if (typeof updateFavoriteListDisplay === 'function') {
+      updateFavoriteListDisplay();
+    }
+    
+    return { success: true, updated: twitchFavorites.length };
+  } catch (error) {
+    console.error('更新開台狀態失敗:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 定期自動刷新開台狀態的定時器
+let favoriteLiveStatusInterval = null;
+
+// 啟動定期自動刷新（預設每 5 分鐘）
+function startFavoriteLiveStatusAutoRefresh(intervalMinutes = 5) {
+  // 清除現有的定時器
+  if (favoriteLiveStatusInterval) {
+    clearInterval(favoriteLiveStatusInterval);
+  }
+  
+  // 立即執行一次
+  updateFavoriteLiveStatuses();
+  
+  // 設定定期刷新
+  const intervalMs = intervalMinutes * 60 * 1000;
+  favoriteLiveStatusInterval = setInterval(() => {
+    updateFavoriteLiveStatuses();
+  }, intervalMs);
+  
+  // 保存設定到 localStorage
+  localStorage.setItem('favoriteLiveStatusAutoRefresh', 'true');
+  localStorage.setItem('favoriteLiveStatusAutoRefreshInterval', intervalMinutes.toString());
+}
+
+// 停止定期自動刷新
+function stopFavoriteLiveStatusAutoRefresh() {
+  if (favoriteLiveStatusInterval) {
+    clearInterval(favoriteLiveStatusInterval);
+    favoriteLiveStatusInterval = null;
+  }
+  localStorage.setItem('favoriteLiveStatusAutoRefresh', 'false');
+}
+
 // 確保函數是全局的
 if (typeof window !== 'undefined') {
   window.updateFavoriteListDisplay = updateFavoriteListDisplay;
+  window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
+  window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
+  window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
 }
 
 // 從控制面板一鍵載入分類下的所有收藏

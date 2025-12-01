@@ -1226,6 +1226,209 @@ function applyChatWidth() {
   updateFixedLayoutWidthControl();
 }
 
+// 響應式斷點配置
+const RESPONSIVE_BREAKPOINTS = {
+  large: 1600,  // 大視窗
+  medium: 1200, // 中視窗
+  small: 768    // 小視窗
+};
+
+// 根據視窗大小計算響應式寬度比例
+function calculateResponsiveWidthRatios(layoutType) {
+  const windowWidth = window.innerWidth;
+  const config = FIXED_LAYOUT_CONFIG[layoutType];
+  
+  if (!config) {
+    return null;
+  }
+  
+  let videoAreaWidth = config.videoAreaWidth;
+  let chatAreaWidth = config.chatAreaWidth;
+  
+  // 如果用戶有手動調整過，優先使用用戶調整的值
+  if (fixedLayoutWidthRatios[layoutType] !== null) {
+    videoAreaWidth = fixedLayoutWidthRatios[layoutType].video;
+    chatAreaWidth = fixedLayoutWidthRatios[layoutType].chat;
+  }
+  
+  // 根據視窗大小動態調整
+  if (windowWidth < RESPONSIVE_BREAKPOINTS.small) {
+    // 小視窗：調整為更適合的比例（60/40 或 65/35）
+    if (layoutType === 13) {
+      videoAreaWidth = 60;
+      chatAreaWidth = 40;
+    } else if (layoutType === 14) {
+      videoAreaWidth = 65;
+      chatAreaWidth = 35;
+    } else if (layoutType === 15) {
+      videoAreaWidth = 70;
+      chatAreaWidth = 30;
+    }
+  } else if (windowWidth < RESPONSIVE_BREAKPOINTS.medium) {
+    // 中視窗：微調比例
+    if (layoutType === 13) {
+      videoAreaWidth = 65;
+      chatAreaWidth = 35;
+    } else if (layoutType === 14) {
+      videoAreaWidth = 68;
+      chatAreaWidth = 32;
+    } else if (layoutType === 15) {
+      videoAreaWidth = 75;
+      chatAreaWidth = 25;
+    }
+  }
+  // 大視窗使用預設值或用戶調整的值
+  
+  // 確保最小寬度限制
+  const minChatWidth = 15; // 聊天室最小寬度 15%
+  const minVideoWidth = 50; // 視頻區域最小寬度 50%
+  
+  if (chatAreaWidth < minChatWidth) {
+    chatAreaWidth = minChatWidth;
+    videoAreaWidth = 100 - chatAreaWidth;
+  }
+  if (videoAreaWidth < minVideoWidth) {
+    videoAreaWidth = minVideoWidth;
+    chatAreaWidth = 100 - videoAreaWidth;
+  }
+  
+  return {
+    video: videoAreaWidth,
+    chat: chatAreaWidth
+  };
+}
+
+// 視窗大小改變時的處理函數（防抖）
+let windowResizeTimeout = null;
+function handleWindowResize() {
+  // 清除之前的定時器
+  if (windowResizeTimeout) {
+    clearTimeout(windowResizeTimeout);
+  }
+  
+  // 防抖：延遲 300ms 後執行
+  windowResizeTimeout = setTimeout(() => {
+    // 檢查是否為固定布局
+    const chatSidebar = document.getElementById('chat-sidebar-fixed');
+    if (!chatSidebar || !isFixedLayout(userSelectedLayout)) {
+      return; // 不是固定布局，不需要調整
+    }
+    
+    const layoutType = userSelectedLayout;
+    const responsiveRatios = calculateResponsiveWidthRatios(layoutType);
+    
+    if (responsiveRatios) {
+      // 更新布局框架（但不覆蓋用戶手動調整的值）
+      // 只有在用戶沒有手動調整時才應用響應式調整
+      if (fixedLayoutWidthRatios[layoutType] === null) {
+        // 用戶沒有手動調整，應用響應式調整
+        updateFixedLayoutFrameworkWithRatios(responsiveRatios);
+      } else {
+        // 用戶有手動調整，但還是要確保布局正確更新
+        updateFixedLayoutFramework();
+      }
+    }
+  }, 300);
+}
+
+// 使用指定比例更新固定布局框架
+function updateFixedLayoutFrameworkWithRatios(ratios) {
+  const chatSidebar = document.getElementById('chat-sidebar-fixed');
+  if (!chatSidebar) return;
+  
+  const layoutType = userSelectedLayout;
+  const config = FIXED_LAYOUT_CONFIG[layoutType];
+  if (!config) return;
+  
+  // 更新聊天室容器的位置和寬度
+  chatSidebar.style.left = ratios.video + '%';
+  chatSidebar.style.width = ratios.chat + '%';
+  
+  // 更新視頻框的寬度
+  const boxes = document.querySelectorAll('.stream-box');
+  const videoAreaWidth = ratios.video;
+  
+  // 重新應用視頻布局
+  boxes.forEach((b, i) => {
+    b.style.position = 'absolute';
+    b.style.right = 'auto';
+    b.style.bottom = 'auto';
+    
+    const count = boxes.length;
+    let videoLayoutType = layout13VideoLayout;
+    if (videoLayoutType === null) {
+      videoLayoutType = autoSelectLayout();
+    }
+    
+    // 根據視頻布局類型應用樣式（與 updateFixedLayoutFramework 中的邏輯相同）
+    if (videoLayoutType === 1 || count === 1) {
+      b.style.width = videoAreaWidth + '%';
+      b.style.height = '100%';
+      b.style.left = '0';
+      b.style.top = '0';
+    } else if (videoLayoutType === 2) {
+      b.style.width = (videoAreaWidth / count) + '%';
+      b.style.height = '100%';
+      b.style.left = (videoAreaWidth / count * i) + '%';
+      b.style.top = '0';
+    } else if (videoLayoutType === 3) {
+      b.style.width = videoAreaWidth + '%';
+      b.style.height = (100 / count) + '%';
+      b.style.left = '0';
+      b.style.top = (100 / count * i) + '%';
+    } else if (videoLayoutType === 4) {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      b.style.width = (videoAreaWidth / 2) + '%';
+      b.style.height = '50%';
+      b.style.left = (col * videoAreaWidth / 2) + '%';
+      b.style.top = (row * 50) + '%';
+    } else if (videoLayoutType === 5) {
+      if (i === 0) {
+        b.style.width = videoAreaWidth + '%';
+        b.style.height = '75%';
+        b.style.left = '0';
+        b.style.top = '0';
+      } else if (i <= 3) {
+        const bottomIndex = i - 1;
+        b.style.width = (videoAreaWidth / 3) + '%';
+        b.style.height = '25%';
+        b.style.left = (bottomIndex * videoAreaWidth / 3) + '%';
+        b.style.top = '75%';
+      } else {
+        const bottomIndex = (i - 1) % 3;
+        const row = Math.floor((i - 1) / 3);
+        b.style.width = (videoAreaWidth / 3) + '%';
+        b.style.height = '25%';
+        b.style.left = (bottomIndex * videoAreaWidth / 3) + '%';
+        b.style.top = (75 + row * 25) + '%';
+      }
+    } else if (videoLayoutType === 6) {
+      const cols = 3;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      b.style.width = (videoAreaWidth / cols) + '%';
+      b.style.height = (100 / Math.ceil(count / cols)) + '%';
+      b.style.left = (col * videoAreaWidth / cols) + '%';
+      b.style.top = (row * 100 / Math.ceil(count / cols)) + '%';
+    } else if (videoLayoutType === 9) {
+      const cols = 3;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      b.style.width = (videoAreaWidth / cols) + '%';
+      b.style.height = (100 / Math.ceil(count / cols)) + '%';
+      b.style.left = (col * videoAreaWidth / cols) + '%';
+      b.style.top = (row * 100 / Math.ceil(count / cols)) + '%';
+    }
+    
+    // 隱藏視頻框內的聊天室
+    const chatDiv = b.querySelector('.chat-container');
+    if (chatDiv) {
+      chatDiv.classList.add('hidden');
+    }
+  });
+}
+
 // 确保函数在全局作用域中可用
 if (typeof window !== 'undefined') {
   window.setLayout = setLayout;
@@ -1277,5 +1480,13 @@ if (typeof window !== 'undefined') {
     // DOM 已經加載完成
     setTimeout(initChatWidthControl, 100);
   }
+  
+  // 監聽視窗大小改變事件
+  window.addEventListener('resize', handleWindowResize);
+  
+  // 頁面載入時執行一次響應式調整
+  setTimeout(() => {
+    handleWindowResize();
+  }, 500);
 }
 
