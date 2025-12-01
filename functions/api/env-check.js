@@ -2,6 +2,74 @@
 // 此函數用於檢查 Cloudflare Pages 環境變數配置狀態
 // 訪問：/api/env-check
 
+// HTML 轉義函數（防止 XSS）
+function escapeHtml(text) {
+  if (!text) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// 提取診斷邏輯為獨立函數（必須在最前面定義，非異步函數）
+function getDiagnostics(env) {
+  if (!env) {
+    return {
+      allConfigured: false,
+      message: '環境變數對象不存在',
+      envExists: false,
+      twitchClientId: { exists: false, isEmpty: true, preview: null },
+      twitchClientSecret: { exists: false, isEmpty: true, preview: null },
+      totalEnvVars: 0
+    };
+  }
+
+  const twitchClientId = env.TWITCH_CLIENT_ID;
+  const twitchClientSecret = env.TWITCH_CLIENT_SECRET;
+  const allEnvKeys = Object.keys(env || {});
+
+  const diagnostics = {
+    envExists: true,
+    twitchClientId: {
+      exists: !!twitchClientId,
+      isEmpty: twitchClientId === '' || twitchClientId === null || twitchClientId === undefined,
+      length: twitchClientId ? String(twitchClientId).length : 0,
+      preview: twitchClientId ? String(twitchClientId).substring(0, 8) + '...' : null
+    },
+    twitchClientSecret: {
+      exists: !!twitchClientSecret,
+      isEmpty: twitchClientSecret === '' || twitchClientSecret === null || twitchClientSecret === undefined,
+      length: twitchClientSecret ? String(twitchClientSecret).length : 0,
+      preview: twitchClientSecret ? '***' + String(twitchClientSecret).substring(String(twitchClientSecret).length - 4) : null
+    },
+    totalEnvVars: allEnvKeys.length
+  };
+
+  diagnostics.allConfigured = diagnostics.twitchClientId.exists && 
+                              !diagnostics.twitchClientId.isEmpty &&
+                              diagnostics.twitchClientSecret.exists && 
+                              !diagnostics.twitchClientSecret.isEmpty;
+
+  if (diagnostics.allConfigured) {
+    diagnostics.message = '所有必要的環境變數都已正確配置';
+  } else {
+    const missing = [];
+    if (!diagnostics.twitchClientId.exists || diagnostics.twitchClientId.isEmpty) {
+      missing.push('TWITCH_CLIENT_ID');
+    }
+    if (!diagnostics.twitchClientSecret.exists || diagnostics.twitchClientSecret.isEmpty) {
+      missing.push('TWITCH_CLIENT_SECRET');
+    }
+    diagnostics.message = `缺少或未正確配置的環境變數：${missing.join(', ')}`;
+  }
+
+  return diagnostics;
+}
+
 /**
  * 處理環境變數診斷請求
  * @param {Request} request - 請求對象
@@ -9,23 +77,43 @@
  * @returns {Promise<Response>} - JSON 回應
  */
 export async function onRequestGet(request, env) {
-  // 檢查 Accept 標頭，判斷是否需要返回 HTML 頁面
-  const acceptHeader = request.headers.get('Accept') || '';
-  const wantsHtml = acceptHeader.includes('text/html') || 
-                    request.url.includes('?html') ||
-                    request.url.includes('?format=html');
-  
-  if (wantsHtml) {
-    return handleEnvCheckHTMLRequest(request, env);
-  } else {
-    return handleEnvCheckRequest(request, env);
+  try {
+    // 檢查 Accept 標頭，判斷是否需要返回 HTML 頁面
+    const acceptHeader = request.headers.get('Accept') || '';
+    const wantsHtml = acceptHeader.includes('text/html') || 
+                      request.url.includes('?html') ||
+                      request.url.includes('?format=html');
+    
+    if (wantsHtml) {
+      return await handleEnvCheckHTMLRequest(request, env);
+    } else {
+      return await handleEnvCheckRequest(request, env);
+    }
+  } catch (error) {
+    // 頂層錯誤處理
+    console.error('[env-check] 頂層錯誤:', error);
+    return new Response(
+      JSON.stringify({
+        status: 'error',
+        message: '處理請求時發生未預期的錯誤',
+        error: error.message || '未知錯誤',
+        stack: error.stack ? error.stack.split('\n').slice(0, 5).join('\n') : '無堆疊信息'
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      }
+    );
   }
 }
 
 async function handleEnvCheckRequest(request, env) {
   try {
     // 使用統一的診斷函數
-    const diagnostics = await getDiagnostics(env);
+    const diagnostics = getDiagnostics(env);
 
     if (diagnostics.allConfigured) {
       return new Response(
@@ -132,7 +220,7 @@ async function handleEnvCheckRequest(request, env) {
 async function handleEnvCheckHTMLRequest(request, env) {
   try {
     // 先獲取診斷數據
-    const diagnostics = await getDiagnostics(env);
+    const diagnostics = getDiagnostics(env);
     
     const statusColor = diagnostics.allConfigured ? '#4caf50' : '#f44336';
     const statusIcon = diagnostics.allConfigured ? '✅' : '❌';
@@ -183,11 +271,17 @@ async function handleEnvCheckHTMLRequest(request, env) {
       padding: 30px;
     }
     .status-card {
-      background: ${statusColor}15;
+      background: rgba(102, 126, 234, 0.1);
       border-left: 4px solid ${statusColor};
       padding: 20px;
       margin-bottom: 30px;
       border-radius: 8px;
+    }
+    .status-card.success {
+      background: rgba(76, 175, 80, 0.1);
+    }
+    .status-card.error {
+      background: rgba(244, 67, 54, 0.1);
     }
     .status-card h2 {
       color: ${statusColor};
@@ -320,9 +414,9 @@ async function handleEnvCheckHTMLRequest(request, env) {
       <p>檢查您的 Twitch API 環境變數配置狀態</p>
     </div>
     <div class="content">
-      <div class="status-card">
-        <h2>${statusIcon} 狀態：${statusText}</h2>
-        <p>${diagnostics.message}</p>
+      <div class="status-card ${diagnostics.allConfigured ? 'success' : 'error'}">
+        <h2>${statusIcon} 狀態：${escapeHtml(statusText)}</h2>
+        <p>${escapeHtml(diagnostics.message)}</p>
       </div>
 
       <div class="info-grid">
@@ -332,7 +426,7 @@ async function handleEnvCheckHTMLRequest(request, env) {
             <span class="${diagnostics.twitchClientId.exists && !diagnostics.twitchClientId.isEmpty ? 'exists' : 'missing'}">
               ${diagnostics.twitchClientId.exists && !diagnostics.twitchClientId.isEmpty ? '✅ 已設定' : '❌ 未設定'}
             </span>
-            ${diagnostics.twitchClientId.exists && !diagnostics.twitchClientId.isEmpty ? `<br><small>預覽：<code>${diagnostics.twitchClientId.preview || 'N/A'}</code></small>` : ''}
+            ${diagnostics.twitchClientId.exists && !diagnostics.twitchClientId.isEmpty ? `<br><small>預覽：<code>${escapeHtml(diagnostics.twitchClientId.preview || 'N/A')}</code></small>` : ''}
           </div>
         </div>
         <div class="info-card">
@@ -341,12 +435,12 @@ async function handleEnvCheckHTMLRequest(request, env) {
             <span class="${diagnostics.twitchClientSecret.exists && !diagnostics.twitchClientSecret.isEmpty ? 'exists' : 'missing'}">
               ${diagnostics.twitchClientSecret.exists && !diagnostics.twitchClientSecret.isEmpty ? '✅ 已設定' : '❌ 未設定'}
             </span>
-            ${diagnostics.twitchClientSecret.exists && !diagnostics.twitchClientSecret.isEmpty ? `<br><small>預覽：<code>${diagnostics.twitchClientSecret.preview || 'N/A'}</code></small>` : ''}
+            ${diagnostics.twitchClientSecret.exists && !diagnostics.twitchClientSecret.isEmpty ? `<br><small>預覽：<code>${escapeHtml(diagnostics.twitchClientSecret.preview || 'N/A')}</code></small>` : ''}
           </div>
         </div>
         <div class="info-card">
           <h3>環境變數總數</h3>
-          <div class="value">${diagnostics.totalEnvVars} 個</div>
+          <div class="value">${escapeHtml(String(diagnostics.totalEnvVars))} 個</div>
         </div>
       </div>
 
@@ -411,7 +505,7 @@ async function handleEnvCheckHTMLRequest(request, env) {
 </head>
 <body style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
   <h1>❌ 診斷過程中發生錯誤</h1>
-  <p>${error.message || '未知錯誤'}</p>
+  <p>${escapeHtml(error.message || '未知錯誤')}</p>
   <a href="/api/env-check?format=json">查看 JSON 格式</a>
 </body>
 </html>`;
@@ -422,60 +516,6 @@ async function handleEnvCheckHTMLRequest(request, env) {
   }
 }
 
-// 提取診斷邏輯為獨立函數（在函數定義之前定義，供其他函數使用）
-async function getDiagnostics(env) {
-  if (!env) {
-    return {
-      allConfigured: false,
-      message: '環境變數對象不存在',
-      envExists: false,
-      twitchClientId: { exists: false, isEmpty: true, preview: null },
-      twitchClientSecret: { exists: false, isEmpty: true, preview: null },
-      totalEnvVars: 0
-    };
-  }
-
-  const twitchClientId = env.TWITCH_CLIENT_ID;
-  const twitchClientSecret = env.TWITCH_CLIENT_SECRET;
-  const allEnvKeys = Object.keys(env || {});
-
-  const diagnostics = {
-    envExists: true,
-    twitchClientId: {
-      exists: !!twitchClientId,
-      isEmpty: twitchClientId === '' || twitchClientId === null || twitchClientId === undefined,
-      length: twitchClientId ? String(twitchClientId).length : 0,
-      preview: twitchClientId ? String(twitchClientId).substring(0, 8) + '...' : null
-    },
-    twitchClientSecret: {
-      exists: !!twitchClientSecret,
-      isEmpty: twitchClientSecret === '' || twitchClientSecret === null || twitchClientSecret === undefined,
-      length: twitchClientSecret ? String(twitchClientSecret).length : 0,
-      preview: twitchClientSecret ? '***' + String(twitchClientSecret).substring(String(twitchClientSecret).length - 4) : null
-    },
-    totalEnvVars: allEnvKeys.length
-  };
-
-  diagnostics.allConfigured = diagnostics.twitchClientId.exists && 
-                              !diagnostics.twitchClientId.isEmpty &&
-                              diagnostics.twitchClientSecret.exists && 
-                              !diagnostics.twitchClientSecret.isEmpty;
-
-  if (diagnostics.allConfigured) {
-    diagnostics.message = '所有必要的環境變數都已正確配置';
-  } else {
-    const missing = [];
-    if (!diagnostics.twitchClientId.exists || diagnostics.twitchClientId.isEmpty) {
-      missing.push('TWITCH_CLIENT_ID');
-    }
-    if (!diagnostics.twitchClientSecret.exists || diagnostics.twitchClientSecret.isEmpty) {
-      missing.push('TWITCH_CLIENT_SECRET');
-    }
-    diagnostics.message = `缺少或未正確配置的環境變數：${missing.join(', ')}`;
-  }
-
-  return diagnostics;
-}
 
 // 處理 OPTIONS 請求（CORS 預檢請求）
 export async function onRequestOptions(request, env) {
