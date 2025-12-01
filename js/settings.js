@@ -1602,7 +1602,7 @@ function updateFavoriteListDisplay() {
     categoryIcon.style.fontSize = '16px';
     
     const categoryName = document.createElement('span');
-    categoryName.style.cssText = 'font-size: 13px; color: #fff; font-weight: bold;';
+    categoryName.style.cssText = 'font-size: 14px; color: #fff; font-weight: bold;';
     categoryName.textContent = category ? escapeHtml(category.name) : i18n.t('unknownCategory');
     
     const categoryCount = document.createElement('span');
@@ -1674,7 +1674,7 @@ function updateFavoriteListDisplay() {
       contentDiv.style.cssText = 'flex: 1; min-width: 0;';
       
       const nameDiv = document.createElement('div');
-      nameDiv.style.cssText = 'font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
+      nameDiv.style.cssText = 'font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
       
       const nameText = document.createElement('span');
       nameText.textContent = escapeHtml(displayName);
@@ -1794,7 +1794,7 @@ function updateFavoriteListDisplay() {
     contentDiv.style.cssText = 'flex: 1; min-width: 0;';
     
     const nameDiv = document.createElement('div');
-    nameDiv.style.cssText = 'font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
+    nameDiv.style.cssText = 'font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
     
     const nameText = document.createElement('span');
     nameText.textContent = escapeHtml(displayName);
