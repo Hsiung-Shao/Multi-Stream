@@ -1,18 +1,78 @@
 // Twitch API 服務模組
 // 用於搜尋頻道和查詢開台狀態
 
+// 嘗試獲取環境變數對象（如果代碼是 ES module 且使用構建工具）
+// 根據 Grok 4.1 建議：使用 import.meta.env 獲取 Cloudflare Pages 環境變數
+// 這些值只在 build 時存在，部署後瀏覽器看不到原始值
+// 
+// 注意：如果代碼是作為 ES module 載入的（type="module"），可以直接訪問 import.meta.env
+// 如果使用 Vite 等構建工具，環境變數會在構建時注入到 import.meta.env 中
+// 如果代碼不是 ES module，ENV 將保持為 null，會自動回退到 config.js
+// 
+// 重要：如果您的代碼是 ES module，可以直接在代碼中使用：
+//   const TWITCH_ID = import.meta.env.VITE_TWITCH_CLIENT_ID;
+//   const TWITCH_CLIENT_SECRET = import.meta.env.TWITCH_CLIENT_SECRET;
+// 但由於當前代碼可能不是 ES module，我們使用函數來安全地訪問
+let ENV = null;
+// 注意：如果代碼是 ES module，可以直接使用 import.meta.env
+// 但由於當前代碼可能不是 ES module，我們無法直接訪問
+// 如果用戶將代碼轉換為 ES module 並使用構建工具，環境變數會被注入
+// 在這種情況下，用戶需要確保代碼是作為 ES module 載入的（type="module"）
+
 // Twitch API 配置
-// 優先從 config.js 讀取，如果沒有則從 localStorage 讀取（向後兼容）
+// 優先從環境變數（import.meta.env）讀取，然後從 config.js 讀取，最後從 localStorage 讀取（向後兼容）
+// 
+// 使用方式（在 Cloudflare Pages 中設定環境變數）：
+// - VITE_TWITCH_CLIENT_ID: Twitch Client ID（會暴露給客戶端）
+// - TWITCH_CLIENT_SECRET: Twitch Client Secret（如果使用構建工具，會在構建時注入）
+// 
+// 注意：如果代碼是作為 ES module 載入的（type="module"），可以直接使用 import.meta.env
+// 如果使用 Vite 等構建工具，環境變數會在構建時注入到 import.meta.env 中
+// 如果代碼不是 ES module，會自動回退到 config.js 或 localStorage
+function getEnvValue(envKey, configKey, localStorageKey) {
+  // 優先從環境變數讀取（Cloudflare Pages 環境變數）
+  // 這些值只在 build 時存在，部署後瀏覽器看不到原始值
+  
+  // 方法 1: 如果代碼是 ES module 且 ENV 可用，直接從 import.meta.env 讀取
+  if (ENV && ENV[envKey]) {
+    const envValue = ENV[envKey];
+    if (envValue && envValue !== 'undefined' && String(envValue).trim() !== '') {
+      return String(envValue);
+    }
+  }
+  
+  // 方法 2: 嘗試通過全局變數訪問（某些構建工具可能會這樣做）
+  try {
+    if (window.__ENV__ && window.__ENV__[envKey]) {
+      const envValue = window.__ENV__[envKey];
+      if (envValue && envValue !== 'undefined' && String(envValue).trim() !== '') {
+        return String(envValue);
+      }
+    }
+  } catch (e) {
+    // 忽略錯誤，繼續嘗試其他方法
+  }
+  
+  // 回退到 config.js
+  if (typeof CONFIG !== 'undefined' && CONFIG[configKey]) {
+    return CONFIG[configKey];
+  }
+  
+  // 最後回退到 localStorage
+  if (typeof localStorage !== 'undefined') {
+    return localStorage.getItem(localStorageKey) || '';
+  }
+  
+  return '';
+}
+
 const TWITCH_API_CONFIG = {
-  // Client ID - 從 config.js 或 localStorage 讀取（必須）
-  clientId: (typeof CONFIG !== 'undefined' && CONFIG.TWITCH_CLIENT_ID) 
-    ? CONFIG.TWITCH_CLIENT_ID 
-    : (localStorage.getItem('twitchClientId') || ''),
+  // Client ID - 優先從環境變數讀取，然後從 config.js 或 localStorage 讀取（必須）
+  clientId: getEnvValue('VITE_TWITCH_CLIENT_ID', 'TWITCH_CLIENT_ID', 'twitchClientId'),
   
   // Client Secret - 用於自動取得 App Access Token（可選）
-  clientSecret: (typeof CONFIG !== 'undefined' && CONFIG.TWITCH_CLIENT_SECRET) 
-    ? CONFIG.TWITCH_CLIENT_SECRET 
-    : (localStorage.getItem('twitchClientSecret') || ''),
+  // 優先從環境變數讀取，然後從 config.js 或 localStorage 讀取
+  clientSecret: getEnvValue('TWITCH_CLIENT_SECRET', 'TWITCH_CLIENT_SECRET', 'twitchClientSecret'),
   
   // Access Token - 如果提供則直接使用（可選）
   accessToken: (typeof CONFIG !== 'undefined' && CONFIG.TWITCH_ACCESS_TOKEN) 
