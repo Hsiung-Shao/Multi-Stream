@@ -14,8 +14,8 @@
 // 使用方式（在 Cloudflare Pages 中設定環境變數）：
 // 1. 前往 Cloudflare Dashboard > Workers & Pages > 您的專案 > Settings > Environment variables
 // 2. 添加以下環境變數：
-//    - VITE_TWITCH_CLIENT_ID: Twitch Client ID（會暴露給客戶端）
-//    - TWITCH_CLIENT_SECRET: Twitch Client Secret（如果使用構建工具，會在構建時注入）
+//    - TWITCH_CLIENT_ID: Twitch Client ID（Plaintext，可以暴露給客戶端）
+//    - TWITCH_CLIENT_SECRET: Twitch Client Secret（Secret，加密存儲，不會暴露給客戶端）
 // 
 // 注意：
 // - 如果代碼是作為 ES module 載入的（type="module"），可以直接訪問 import.meta.env
@@ -42,8 +42,11 @@ let ENV = null;
 // 1. 前往 Cloudflare Dashboard > Workers & Pages > 您的專案
 // 2. 選擇 Settings > Environment variables
 // 3. 添加以下環境變數：
-//    - VITE_TWITCH_CLIENT_ID: Twitch Client ID（會暴露給客戶端，需要 VITE_ 前綴）
-//    - TWITCH_CLIENT_SECRET: Twitch Client Secret（如果使用構建工具，會在構建時注入）
+//    - TWITCH_CLIENT_ID: Twitch Client ID（Type: Plaintext，可以暴露給客戶端）
+//    - TWITCH_CLIENT_SECRET: Twitch Client Secret（Type: Secret，加密存儲，不會暴露給客戶端）
+// 
+// 注意：對於純靜態網站（不使用構建工具），環境變數無法直接注入到代碼中
+// 系統會自動回退到 config.js，這是安全的做法
 // 
 // 注意：
 // - 如果使用 Vite 等構建工具，環境變數會在構建時注入到 import.meta.env 中
@@ -95,7 +98,8 @@ function getEnvValue(envKey, configKey, localStorageKey) {
 
 const TWITCH_API_CONFIG = {
   // Client ID - 優先從環境變數讀取，然後從 config.js 或 localStorage 讀取（必須）
-  clientId: getEnvValue('VITE_TWITCH_CLIENT_ID', 'TWITCH_CLIENT_ID', 'twitchClientId'),
+  // 注意：環境變數名稱應與 Cloudflare Pages 中設定的名稱一致
+  clientId: getEnvValue('TWITCH_CLIENT_ID', 'TWITCH_CLIENT_ID', 'twitchClientId'),
   
   // Client Secret - 用於自動取得 App Access Token（可選）
   // 優先從環境變數讀取，然後從 config.js 或 localStorage 讀取
