@@ -10,7 +10,6 @@ const indexedDBBackup = {
   // 初始化數據庫
   async init() {
     if (!window.indexedDB) {
-      console.error('[IndexedDB 備份] 瀏覽器不支持 IndexedDB');
       return false;
     }
     
@@ -18,13 +17,11 @@ const indexedDBBackup = {
       const request = indexedDB.open(this.dbName, this.dbVersion);
       
       request.onerror = () => {
-        console.error('[IndexedDB 備份] 打開數據庫失敗:', request.error);
         reject(request.error);
       };
       
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('[IndexedDB 備份] 數據庫連接成功');
         resolve(true);
       };
       
@@ -33,7 +30,6 @@ const indexedDBBackup = {
         if (!db.objectStoreNames.contains(this.storeName)) {
           const objectStore = db.createObjectStore(this.storeName, { keyPath: 'id' });
           objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-          console.log('[IndexedDB 備份] 創建對象存儲:', this.storeName);
         }
       };
     });
@@ -53,7 +49,6 @@ const indexedDBBackup = {
   // 設置是否啟用備份
   setEnabled: (enabled) => {
     localStorage.setItem('indexedDBBackupEnabled', enabled ? 'true' : 'false');
-    console.log('[IndexedDB 備份] 備份功能', enabled ? '已啟用' : '已停用');
   },
   
   // 獲取所有數據（從 localStorage）
@@ -94,7 +89,6 @@ const indexedDBBackup = {
   // 備份數據到 IndexedDB
   async backup() {
     if (!this.isEnabled()) {
-      console.log('[IndexedDB 備份] 備份功能未啟用');
       return false;
     }
     
@@ -103,13 +97,11 @@ const indexedDBBackup = {
       try {
         await this.init();
       } catch (error) {
-        console.error('[IndexedDB 備份] 初始化失敗:', error);
         return false;
       }
     }
     
     if (!this.db) {
-      console.error('[IndexedDB 備份] 數據庫未初始化');
       return false;
     }
     
@@ -125,10 +117,8 @@ const indexedDBBackup = {
       const store = transaction.objectStore(this.storeName);
       await store.put(backupData);
       
-      console.log('[IndexedDB 備份] 備份成功，時間戳:', new Date(backupData.timestamp).toLocaleString());
       return true;
     } catch (error) {
-      console.error('[IndexedDB 備份] 備份失敗:', error);
       return false;
     }
   },
@@ -137,7 +127,6 @@ const indexedDBBackup = {
   async restore() {
     // 檢查 localStorage 是否有數據
     if (this.hasLocalStorageData()) {
-      console.log('[IndexedDB 備份] localStorage 中有數據，以 localStorage 為主，不從 IndexedDB 恢復');
       return { success: false, message: 'localStorage 中已有數據，以 localStorage 為主', skipped: true };
     }
     
@@ -146,7 +135,6 @@ const indexedDBBackup = {
       try {
         await this.init();
       } catch (error) {
-        console.error('[IndexedDB 備份] 初始化失敗:', error);
         return { success: false, message: '數據庫初始化失敗' };
       }
     }
@@ -164,7 +152,6 @@ const indexedDBBackup = {
         request.onsuccess = () => {
           const result = request.result;
           if (!result || !result.data) {
-            console.log('[IndexedDB 備份] 沒有找到備份數據');
             resolve({ success: false, message: '沒有找到備份數據' });
             return;
           }
@@ -176,8 +163,6 @@ const indexedDBBackup = {
             resolve({ success: false, message: '無效的備份數據格式' });
             return;
           }
-          
-          console.log('[IndexedDB 備份] 開始恢復數據，備份時間:', new Date(result.timestamp).toLocaleString());
           
           // 恢復數據到 localStorage
           if (data.userSettings) {
@@ -202,17 +187,14 @@ const indexedDBBackup = {
             localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
           }
           
-          console.log('[IndexedDB 備份] 數據恢復成功');
           resolve({ success: true, message: '數據恢復成功' });
         };
         
         request.onerror = () => {
-          console.error('[IndexedDB 備份] 讀取備份失敗:', request.error);
           resolve({ success: false, message: '讀取備份失敗' });
         };
       });
     } catch (error) {
-      console.error('[IndexedDB 備份] 恢復數據失敗:', error);
       return { success: false, message: '恢復數據失敗' };
     }
   },
@@ -229,8 +211,8 @@ const indexedDBBackup = {
 
 // 初始化 IndexedDB 備份系統（頁面載入時）
 if (window.indexedDB) {
-  indexedDBBackup.init().catch((error) => {
-    console.error('[IndexedDB 備份] 初始化失敗:', error);
+  indexedDBBackup.init().catch(() => {
+    // 初始化失敗，靜默處理
   });
 }
 
@@ -273,17 +255,14 @@ function toggleBackupEnabled() {
     if (window.backupTimeout) {
       clearTimeout(window.backupTimeout);
     }
-    console.log('[IndexedDB 備份] 立即備份當前 localStorage 數據到 IndexedDB');
     indexedDBBackup.backup().then((success) => {
       if (success) {
-        console.log('[IndexedDB 備份] 立即備份成功');
         showSaveMessage('備份功能已啟用，當前數據已備份到 IndexedDB');
       } else {
-        console.log('[IndexedDB 備份] 立即備份失敗');
         showSaveMessage('備份功能已啟用，但備份失敗');
       }
-    }).catch((error) => {
-      console.error('[IndexedDB 備份] 立即備份錯誤:', error);
+    }).catch(() => {
+      // 備份錯誤，靜默處理
     });
   } else {
     showSaveMessage('數據備份已關閉');
@@ -308,9 +287,7 @@ function exportToJSON() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showSaveMessage('數據已匯出為 JSON 檔案');
-    console.log('[匯出] 數據已匯出為 JSON 檔案');
   } catch (error) {
-    console.error('[匯出] 匯出失敗:', error);
     showSaveMessage('匯出失敗，請稍後再試');
   }
 }
@@ -346,8 +323,6 @@ function importFromJSON() {
         }
       }
       
-      console.log('[匯入] 開始匯入數據...');
-      
       // 匯入數據到 localStorage
       if (data.userSettings) {
         localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
@@ -379,7 +354,6 @@ function importFromJSON() {
         await indexedDBBackup.backup();
       }
       
-      console.log('[匯入] 數據匯入成功');
       showSaveMessage('數據已匯入成功，頁面將重新載入');
       
       // 重新載入設置
@@ -392,7 +366,6 @@ function importFromJSON() {
         window.location.reload();
       }, 1500);
     } catch (error) {
-      console.error('[匯入] 匯入失敗:', error);
       showSaveMessage('匯入失敗：' + (error.message || '未知錯誤'));
     }
   };
@@ -609,15 +582,8 @@ const favoriteCategories = {
         clearTimeout(window.backupTimeout);
       }
       // 立即執行備份
-      console.log('[IndexedDB 備份] 刪除分類操作，立即執行備份');
-      indexedDBBackup.backup().then((success) => {
-        if (success) {
-          console.log('[IndexedDB 備份] 刪除分類後備份成功');
-        } else {
-          console.log('[IndexedDB 備份] 刪除分類後備份失敗');
-        }
-      }).catch((error) => {
-        console.error('[IndexedDB 備份] 刪除分類後備份錯誤:', error);
+      indexedDBBackup.backup().catch(() => {
+        // 備份錯誤，靜默處理
       });
     }
     
@@ -739,15 +705,8 @@ const favoriteStreams = {
         clearTimeout(window.backupTimeout);
       }
       // 立即執行備份
-      console.log('[IndexedDB 備份] 刪除操作，立即執行備份');
-      indexedDBBackup.backup().then((success) => {
-        if (success) {
-          console.log('[IndexedDB 備份] 刪除後備份成功');
-        } else {
-          console.log('[IndexedDB 備份] 刪除後備份失敗');
-        }
-      }).catch((error) => {
-        console.error('[IndexedDB 備份] 刪除後備份錯誤:', error);
+      indexedDBBackup.backup().catch(() => {
+        // 備份錯誤，靜默處理
       });
     }
     
@@ -1888,7 +1847,6 @@ async function updateFavoriteLiveStatuses() {
     
     return { success: true, updated: twitchFavorites.length };
   } catch (error) {
-    console.error('更新開台狀態失敗:', error);
     return { success: false, error: error.message };
   }
 }
@@ -2019,28 +1977,16 @@ function debouncedBackup() {
   // 清除之前的計時器
   if (window.backupTimeout) {
     clearTimeout(window.backupTimeout);
-    console.log('[IndexedDB 備份] 取消之前的備份計時器，重新開始計時');
   }
   
   // 設置新的計時器，10秒後執行備份
   window.backupTimeout = setTimeout(() => {
     if (indexedDBBackup.isEnabled()) {
-      console.log('[IndexedDB 備份] 開始執行備份到 IndexedDB...');
-      indexedDBBackup.backup().then((success) => {
-        if (success) {
-          console.log('[IndexedDB 備份] 備份成功完成');
-        } else {
-          console.log('[IndexedDB 備份] 備份失敗');
-        }
-      }).catch((error) => {
-        console.error('[IndexedDB 備份] 備份過程中發生錯誤:', error);
+      indexedDBBackup.backup().catch(() => {
+        // 備份錯誤，靜默處理
       });
-    } else {
-      console.log('[IndexedDB 備份] 備份功能未啟用，跳過備份');
     }
   }, 10000); // 10秒後備份
-  
-  console.log('[IndexedDB 備份] 已設置備份計時器，將在10秒後執行（如果沒有新操作）');
 }
 
 // 版本紀錄功能

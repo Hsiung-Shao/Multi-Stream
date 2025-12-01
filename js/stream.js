@@ -29,7 +29,6 @@ async function addStream(url = null) {
           return;
         }
       } catch (error) {
-        console.error('搜尋頻道失敗:', error);
         alert(`搜尋頻道失敗: ${error.message}。請直接輸入完整的 Twitch 或 YouTube 網址`);
         return;
       }

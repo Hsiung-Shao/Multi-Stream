@@ -200,7 +200,6 @@ function setupFixedLayoutFramework(boxes, layoutType) {
   // 获取布局配置
   const config = FIXED_LAYOUT_CONFIG[currentLayoutType];
   if (!config) {
-    console.error(`Unknown fixed layout type: ${currentLayoutType}`);
     return;
   }
   
@@ -1311,7 +1310,6 @@ function handleWindowResize() {
     const responsiveRatios = calculateResponsiveWidthRatios(layoutType);
     
     if (responsiveRatios) {
-      console.log(`[固定布局響應式] 視窗寬度: ${windowWidth}px, 布局類型: ${layoutType}, 視頻區域: ${responsiveRatios.video}%, 聊天區域: ${responsiveRatios.chat}%`);
       // 更新布局框架（完全響應式）
       updateFixedLayoutFrameworkWithRatios(responsiveRatios);
     }

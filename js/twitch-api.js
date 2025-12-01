@@ -85,12 +85,10 @@ async function getClientIdFromPagesFunction() {
       if (response.ok) {
         const data = await response.json();
         if (data.clientId) {
-          console.log('[Twitch API] 從 Pages Function 取得 Client ID');
           return data.clientId;
         }
       }
     } catch (error) {
-      console.log('[Twitch API] 無法從 Pages Function 取得 Client ID:', error.message);
     }
     return null;
   })();
@@ -228,7 +226,6 @@ async function checkPagesFunctionAvailability() {
     // 如果回應是 404，表示端點不存在
     if (response.status === 404) {
       pagesFunctionAvailable = false;
-      console.log('[Twitch API] Cloudflare Pages Function 不可用（端點不存在），將使用直接調用方式');
       return pagesFunctionAvailable;
     }
     
@@ -238,7 +235,6 @@ async function checkPagesFunctionAvailability() {
         const errorData = await response.json();
         if (errorData.error === '配置錯誤' || errorData.message?.includes('未設定')) {
           pagesFunctionAvailable = false;
-          console.log('[Twitch API] Cloudflare Pages Function 端點存在但環境變數未設定，將使用直接調用方式');
           return pagesFunctionAvailable;
         }
       } catch (e) {
@@ -249,18 +245,15 @@ async function checkPagesFunctionAvailability() {
     // 如果回應是 200，表示端點可用且配置正確
     if (response.status === 200) {
       pagesFunctionAvailable = true;
-      console.log('[Twitch API] 檢測到 Cloudflare Pages Function 可用');
       return pagesFunctionAvailable;
     }
     
     // 其他狀態碼（如 401, 403 等），表示端點存在但可能有其他問題
     // 我們仍然認為端點存在，讓後續的 getTokenFromPagesFunction 處理具體錯誤
     pagesFunctionAvailable = true;
-    console.log('[Twitch API] 檢測到 Cloudflare Pages Function 端點存在（狀態碼：' + response.status + '）');
   } catch (error) {
     // 網路錯誤或其他錯誤，假設 Pages Function 不可用
     pagesFunctionAvailable = false;
-    console.log('[Twitch API] 無法連接到 Pages Function，將使用直接調用方式');
   }
   
   return pagesFunctionAvailable;
@@ -292,7 +285,6 @@ async function getTokenFromPagesFunction() {
       expires_in: data.expires_in || 3600
     };
   } catch (error) {
-    console.error('[Twitch API] 從 Pages Function 取得 Token 失敗:', error);
     throw error;
   }
 }
@@ -366,17 +358,13 @@ async function getAppAccessToken() {
     if (isPagesFunctionAvailable) {
       try {
         data = await getTokenFromPagesFunction();
-        console.log('[Twitch API] 使用 Cloudflare Pages Function 取得 Token');
       } catch (pagesError) {
         // Pages Function 失敗，回退到直接調用
-        console.warn('[Twitch API] Pages Function 失敗，回退到直接調用:', pagesError.message);
         data = await getTokenDirectly();
-        console.log('[Twitch API] 使用直接調用方式取得 Token');
       }
     } else {
       // Pages Function 不可用，使用直接調用
       data = await getTokenDirectly();
-      console.log('[Twitch API] 使用直接調用方式取得 Token');
     }
     
     // 快取 Token（預留 5 分鐘緩衝時間，避免在邊界時過期）
@@ -392,7 +380,6 @@ async function getAppAccessToken() {
     
     return cachedAccessToken.token;
   } catch (error) {
-    console.error('取得 App Access Token 失敗:', error);
     throw error;
   }
 }
@@ -487,7 +474,6 @@ async function makeApiRequest(endpoint, params = {}) {
           }
         }
       } catch (error) {
-        console.warn('[Twitch API] 無法從 Pages Function 取得 Client ID:', error);
       }
     }
     
@@ -502,13 +488,9 @@ async function makeApiRequest(endpoint, params = {}) {
       const accessToken = await ensureAccessToken();
       if (accessToken) {
         headers['Authorization'] = `Bearer ${accessToken}`;
-        console.log('已取得 Access Token');
-      } else {
-        console.warn('未取得 Access Token，但繼續嘗試請求');
       }
     } catch (tokenError) {
       // 如果取得 Token 失敗，拋出錯誤而不是靜默失敗
-      console.error('無法取得 Access Token:', tokenError);
       throw new Error(`無法取得 Access Token：${tokenError.message}`);
     }
   }
@@ -611,7 +593,6 @@ async function searchTwitchChannels(query, limit = 10) {
       url: `https://www.twitch.tv/${channel.broadcaster_login}`
     }));
   } catch (error) {
-    console.error('搜尋 Twitch 頻道失敗:', error);
     throw error;
   }
 }
@@ -645,7 +626,6 @@ async function checkChannelLiveStatus(channelLogin) {
       thumbnailUrl: stream.thumbnail_url
     };
   } catch (error) {
-    console.error('查詢頻道開台狀態失敗:', error);
     // 發生錯誤時，返回未知狀態而不是拋出錯誤
     return {
       isLive: null, // null 表示未知
@@ -713,7 +693,6 @@ async function checkMultipleChannelsLiveStatus(channelLogins) {
     
     return results;
   } catch (error) {
-    console.error('批量查詢開台狀態失敗:', error);
     // 發生錯誤時，返回部分結果或空結果
     return results;
   }

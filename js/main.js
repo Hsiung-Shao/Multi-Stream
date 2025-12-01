@@ -3,19 +3,9 @@
 // 立即暴露測試函數到全局（在任何其他代碼之前）
 (function() {
   window.testSearchFunction = function() {
-    console.log('=== 搜尋功能測試 ===');
-    console.log('1. 檢查 url-input 元素:', document.getElementById('url-input'));
-    console.log('2. 檢查 search-suggestions 元素:', document.getElementById('search-suggestions'));
-    console.log('3. 檢查 twitchApi:', window.twitchApi);
-    console.log('4. 檢查 initSearchSuggestions 函數:', typeof initSearchSuggestions);
-    console.log('5. 檢查 initSearchFunctionality 函數:', typeof initSearchFunctionality);
-    console.log('6. 檢查 document.readyState:', document.readyState);
-    console.log('7. 嘗試初始化搜尋功能...');
     const result = typeof initSearchFunctionality === 'function' ? initSearchFunctionality() : false;
-    console.log('8. 初始化結果:', result ? '成功' : '失敗');
     return result;
   };
-  console.log('[搜尋功能] testSearchFunction 已暴露到全局（在腳本開頭）');
 })();
 
 // 全局變數
@@ -130,7 +120,6 @@ window.addEventListener('DOMContentLoaded', () => {
       // 嘗試自動從 IndexedDB 恢復數據（如果 localStorage 沒有數據）
       const result = await indexedDBBackup.autoLoadBackup();
       if (result && result.success) {
-        console.log('[IndexedDB 備份] 已從 IndexedDB 恢復數據');
         // 重新載入頁面以應用恢復的數據
         window.location.reload();
       }
@@ -282,21 +271,16 @@ function initSearchSuggestions() {
   const suggestionsDiv = document.getElementById('search-suggestions');
   
   if (!urlInput) {
-    console.error('無法找到 url-input 元素，搜尋功能無法初始化');
     return;
   }
   
   if (!suggestionsDiv) {
-    console.error('無法找到 search-suggestions 元素，搜尋功能無法初始化');
     return;
   }
-  
-  console.log('搜尋建議功能已初始化');
   
   // 輸入事件處理（防抖搜尋）
   urlInput.addEventListener('input', (e) => {
     const query = e.target.value.trim();
-    console.log('輸入事件觸發，輸入內容:', query);
     
     // 清除之前的定時器
     if (searchDebounceTimer) {
@@ -307,22 +291,18 @@ function initSearchSuggestions() {
     if (query.includes('http://') || query.includes('https://') || 
         query.includes('twitch.tv/') || query.includes('youtube.com') || 
         query.includes('youtu.be/')) {
-      console.log('檢測到 URL 格式，隱藏搜尋建議');
       hideSearchSuggestions();
       return;
     }
     
     // 如果輸入為空，隱藏建議
     if (query.length === 0) {
-      console.log('輸入為空，隱藏搜尋建議');
       hideSearchSuggestions();
       return;
     }
     
     // 防抖：延遲 300ms 後執行搜尋
-    console.log('設置防抖定時器，將在 300ms 後搜尋:', query);
     searchDebounceTimer = setTimeout(async () => {
-      console.log('開始搜尋:', query);
       await performSearch(query);
     }, 300);
   });
@@ -358,7 +338,6 @@ function initSearchSuggestions() {
 // 執行搜尋
 async function performSearch(query) {
   if (!window.twitchApi || !window.twitchApi.searchChannels) {
-    console.error('Twitch API 未載入，請檢查 twitch-api.js 是否正確載入');
     const suggestionsDiv = document.getElementById('search-suggestions');
     if (suggestionsDiv) {
       suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #ff6666;">Twitch API 未載入，請檢查設定</div>';
@@ -369,7 +348,6 @@ async function performSearch(query) {
   
   const suggestionsDiv = document.getElementById('search-suggestions');
   if (!suggestionsDiv) {
-    console.error('搜尋建議容器未找到');
     return;
   }
   
@@ -453,7 +431,6 @@ async function performSearch(query) {
       suggestionsDiv.appendChild(item);
     });
   } catch (error) {
-    console.error('搜尋失敗:', error);
     let errorMessage = '搜尋失敗';
     
     // 提供更詳細的錯誤訊息
@@ -510,16 +487,11 @@ function hideSearchSuggestions() {
 
 // 初始化搜尋功能（確保在 DOM 準備好後執行）
 function initSearchFunctionality() {
-  console.log('[搜尋功能] initSearchFunctionality() 被調用');
   const urlInput = document.getElementById('url-input');
-  console.log('[搜尋功能] url-input 元素:', urlInput);
   
   if (urlInput) {
-    console.log('[搜尋功能] 找到 url-input 元素，開始初始化搜尋功能');
-    
     // 檢查是否已經初始化過（避免重複綁定事件）
     if (urlInput.dataset.searchInitialized === 'true') {
-      console.log('[搜尋功能] 已經初始化過，跳過');
       return true;
     }
     
@@ -541,57 +513,35 @@ function initSearchFunctionality() {
     
     // 初始化搜尋建議
     initSearchSuggestions();
-    console.log('[搜尋功能] 初始化完成');
     return true;
   } else {
-    console.warn('[搜尋功能] 無法找到 url-input 元素');
     return false;
   }
 }
 
 // 在 DOMContentLoaded 時初始化搜尋功能
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('[搜尋功能] DOMContentLoaded 事件觸發，準備初始化搜尋功能');
   // 延遲一點時間確保所有元素都已渲染
   setTimeout(() => {
-    console.log('[搜尋功能] 開始初始化...');
     if (!initSearchFunctionality()) {
-      console.warn('[搜尋功能] 第一次初始化失敗，將重試');
       // 如果第一次失敗，再重試幾次
       let retries = 0;
       const maxRetries = 5;
       const retryInterval = setInterval(() => {
         retries++;
-        console.log(`[搜尋功能] 重試 ${retries}/${maxRetries}`);
         if (initSearchFunctionality() || retries >= maxRetries) {
           clearInterval(retryInterval);
-          if (retries >= maxRetries) {
-            console.error('[搜尋功能] 初始化失敗：無法找到 url-input 元素');
-          } else {
-            console.log('[搜尋功能] 初始化成功！');
-          }
         }
       }, 200);
-    } else {
-      console.log('[搜尋功能] 初始化成功！');
     }
   }, 100);
 });
 
 // 如果 DOM 已經載入完成，立即嘗試初始化
-if (document.readyState === 'loading') {
-  console.log('[搜尋功能] DOM 正在載入中，等待 DOMContentLoaded 事件');
-  // DOM 還在載入中，等待 DOMContentLoaded（已在上面處理）
-} else {
-  console.log('[搜尋功能] DOM 已載入完成，立即嘗試初始化');
+if (document.readyState !== 'loading') {
   // DOM 已經載入完成，立即初始化
   setTimeout(() => {
-    const result = initSearchFunctionality();
-    if (result) {
-      console.log('[搜尋功能] 立即初始化成功！');
-    } else {
-      console.warn('[搜尋功能] 立即初始化失敗，將在 DOMContentLoaded 時重試');
-    }
+    initSearchFunctionality();
   }, 100);
 }
 

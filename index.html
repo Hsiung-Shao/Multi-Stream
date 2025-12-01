@@ -312,7 +312,7 @@
 
 <!-- JavaScript 模組 -->
 <!-- config.js 是可選的，如果不存在（如在 Cloudflare Pages 上使用環境變數）則靜默失敗 -->
-<script src="config.js" onerror="console.log('[Config] config.js 未找到，將使用環境變數或 localStorage'); window.CONFIG = window.CONFIG || {};"></script>
+<script src="config.js" onerror="window.CONFIG = window.CONFIG || {};"></script>
 <script src="js/utils.js"></script>
 <script src="js/security.js"></script>
 <script src="js/zoom-handler.js"></script>

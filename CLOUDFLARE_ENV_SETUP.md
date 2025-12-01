@@ -69,32 +69,12 @@
 
 設定完成後，可以使用以下方式驗證：
 
-### 方法 1：使用診斷端點（推薦）
-
-訪問您的網站：
-```
-https://your-domain.pages.dev/api/env-check
-```
-
-如果配置正確，您會看到：
-```json
-{
-  "status": "success",
-  "message": "所有必要的環境變數都已正確配置",
-  ...
-}
-```
-
-如果配置有問題，會顯示詳細的錯誤信息和修正建議。
-
-### 方法 2：檢查 Token 端點
-
-訪問：
+訪問 Token 端點：
 ```
 https://your-domain.pages.dev/api/twitch-token
 ```
 
-如果配置正確，會返回 Twitch Access Token。如果配置錯誤，會顯示詳細的錯誤信息。
+如果配置正確，會返回 Twitch Access Token。如果配置錯誤，會顯示錯誤信息。
 
 ## ❗ 常見問題
 
@@ -135,8 +115,8 @@ https://your-domain.pages.dev/api/twitch-token
 
 **解決方法**：
 1. 確認已在 Cloudflare Pages 中設定環境變數
-2. 使用診斷端點檢查配置狀態：`/api/env-check`
-3. 確認重新部署了專案
+2. 確認重新部署了專案
+3. 檢查 `/api/twitch-token` 端點是否正常運作
 
 ## 📝 環境變數列表
 
@@ -156,16 +136,16 @@ https://your-domain.pages.dev/api/twitch-token
 - 🔒 **安全性**：Client Secret 是敏感資訊，務必使用「Secrets」而不是「Variables」
 - 🌍 **環境**：記得同時設定 Production 和 Preview 環境
 - 🔄 **部署**：每次修改環境變數後都需要重新部署
-- 🧪 **測試**：使用 `/api/env-check` 端點進行診斷
+- 🧪 **測試**：使用 `/api/twitch-token` 端點驗證配置
 
 ## 🆘 需要幫助？
 
 如果遇到問題：
 
-1. 訪問 `/api/env-check` 查看詳細診斷信息
-2. 訪問 `/api/twitch-token` 查看錯誤詳情
-3. 檢查 Cloudflare Pages Functions 日誌
-4. 確認 Twitch API 憑證是否有效
+1. 訪問 `/api/twitch-token` 查看錯誤詳情
+2. 檢查 Cloudflare Pages Functions 日誌
+3. 確認 Twitch API 憑證是否有效
+4. 確認環境變數已正確設定並重新部署
 
 ---
 

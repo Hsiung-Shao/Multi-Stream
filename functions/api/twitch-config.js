@@ -31,50 +31,9 @@ export async function onRequestGet(contextOrRequest, env) {
 
 async function handleConfigRequest(request, env) {
   try {
-    // 檢查 env 對象是否存在
-    if (!env) {
-      console.error('[twitch-config] env 對象不存在');
-      return new Response(
-        JSON.stringify({
-          clientId: null,
-          error: '環境變數錯誤',
-          message: 'Cloudflare Pages 環境變數對象未提供。請檢查 Functions 配置。'
-        }),
-        {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-          }
-        }
-      );
-    }
-    
-    // 從環境變數讀取 Client ID
-    const clientId = env.TWITCH_CLIENT_ID;
+    const clientId = env?.TWITCH_CLIENT_ID || null;
 
-    // 如果沒有設定 Client ID，返回空值（不拋出錯誤，讓前端使用其他方式）
-    if (!clientId) {
-      return new Response(
-        JSON.stringify({
-          clientId: null,
-          message: 'TWITCH_CLIENT_ID 未在環境變數中設定'
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type'
-          }
-        }
-      );
-    }
-
-    // 返回 Client ID（這是非敏感資訊，可以公開）
+    // 返回 Client ID（如果沒有設定則返回 null）
     return new Response(
       JSON.stringify({
         clientId: clientId
@@ -86,14 +45,11 @@ async function handleConfigRequest(request, env) {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
-          // 快取控制：配置不會頻繁變更，可以快取較長時間
-          'Cache-Control': 'public, max-age=3600' // 快取 1 小時
+          'Cache-Control': 'public, max-age=3600'
         }
       }
     );
   } catch (error) {
-    console.error('處理配置請求時發生錯誤:', error);
-    
     return new Response(
       JSON.stringify({
         error: '伺服器錯誤',
