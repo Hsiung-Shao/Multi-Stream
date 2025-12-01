@@ -7,16 +7,43 @@
 
 /**
  * 處理 Twitch OAuth Token 請求
- * @param {Request} request - 請求對象
- * @param {Object} env - Cloudflare Pages 環境變數
+ * 支持兩種 API 格式：
+ * - 新格式：onRequestGet(context) 其中 context = { request, env }
+ * - 舊格式：onRequestGet(request, env)
+ * @param {Object|Request} contextOrRequest - 上下文對象或請求對象
+ * @param {Object} env - Cloudflare Pages 環境變數（舊格式）
  * @returns {Promise<Response>} - JSON 回應
  */
-export async function onRequestGet(request, env) {
-  return handleTokenRequest(request, env);
+export async function onRequestGet(contextOrRequest, env) {
+  // 支持新舊兩種 API 格式
+  let request, envObj;
+  if (contextOrRequest && contextOrRequest.request) {
+    // 新格式：context 對象包含 request 和 env
+    request = contextOrRequest.request;
+    envObj = contextOrRequest.env;
+  } else {
+    // 舊格式：第一個參數是 request，第二個是 env
+    request = contextOrRequest;
+    envObj = env;
+  }
+  
+  return handleTokenRequest(request, envObj);
 }
 
-export async function onRequestPost(request, env) {
-  return handleTokenRequest(request, env);
+export async function onRequestPost(contextOrRequest, env) {
+  // 支持新舊兩種 API 格式
+  let request, envObj;
+  if (contextOrRequest && contextOrRequest.request) {
+    // 新格式：context 對象包含 request 和 env
+    request = contextOrRequest.request;
+    envObj = contextOrRequest.env;
+  } else {
+    // 舊格式：第一個參數是 request，第二個是 env
+    request = contextOrRequest;
+    envObj = env;
+  }
+  
+  return handleTokenRequest(request, envObj);
 }
 
 async function handleTokenRequest(request, env) {
@@ -217,7 +244,8 @@ async function handleTokenRequest(request, env) {
 }
 
 // 處理 OPTIONS 請求（CORS 預檢請求）
-export async function onRequestOptions(request, env) {
+export async function onRequestOptions(contextOrRequest, env) {
+  // 支持新舊兩種 API 格式（但 OPTIONS 通常不需要 env）
   return new Response(null, {
     status: 204,
     headers: {
