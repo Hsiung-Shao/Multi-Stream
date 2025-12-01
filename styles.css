@@ -9,30 +9,46 @@
 }
 
 * { box-sizing: border-box; }
+html {
+  overflow-x: hidden; /* 防止水平滾動 */
+  width: 100%;
+  max-width: 100vw; /* 確保不超過視窗寬度 */
+}
 body { 
   margin: 0; 
   background: #0a0a0a; 
   color: #fff; 
   font-family: 'Segoe UI', Arial, sans-serif; 
-  overflow: hidden;
+  overflow-x: hidden; /* 防止水平滾動 */
+  overflow-y: auto; /* 允許垂直滾動 */
+  width: 100%;
+  max-width: 100vw; /* 確保不超過視窗寬度 */
   font-size: var(--base-font-size); /* 使用相對單位 */
 }
 
 #container { 
   position: relative; 
-  width: 100vw; 
+  width: 100%; 
+  max-width: 100vw; /* 確保不超過視窗寬度 */
   height: 100vh; 
   background: #000;
   transition: height 0.5s ease-in-out, padding-bottom 0.5s ease-in-out, padding-right 0.3s ease;
   padding-bottom: 0;
   padding-right: 0;
+  overflow-x: hidden; /* 防止水平滾動 */
 }
 
 body:has(.control-panel:not(.collapsed)) #container {
   padding-right: 550px;
 }
 
-/* 移動設備上不調整 padding */
+/* 響應式調整：根據視窗大小動態調整 padding */
+@media (max-width: 1024px) {
+  body:has(.control-panel:not(.collapsed)) #container {
+    padding-right: 450px;
+  }
+}
+
 @media (max-width: 768px) {
   body:has(.control-panel:not(.collapsed)) #container {
     padding-right: 0;
@@ -2030,7 +2046,10 @@ body:has(.ad-banner.show) #container,
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-width: var(--fixed-chat-min-width, 300px); /* YouTube 聊天室需要至少 300px 寬度，根據縮放動態調整 */
+  min-width: 0; /* 允許 flexbox 縮小面板 */
+  max-width: 100%; /* 確保不超出父容器 */
+  box-sizing: border-box; /* 確保 border 包含在寬度內 */
+  flex-shrink: 1; /* 允許縮小 */
 }
 
 .chat-sidebar-content,
@@ -2062,6 +2081,8 @@ body:has(.ad-banner.show) #container,
   height: 100vh; /* 使用視窗高度，確保在高縮放下正確顯示 */
   top: 0; /* 確保從頂部開始 */
   overflow: hidden; /* 防止內容溢出 */
+  max-width: 100vw; /* 確保不會超出視窗寬度 */
+  /* 注意：left 和 width 由 JavaScript 動態設置，確保右邊界不超出視窗 */
 }
 
 /* 固定布局響應式優化 - Layout 13, 14, 15 */

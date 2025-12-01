@@ -184,32 +184,6 @@
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <button onclick="toggleAllChats()" id="toggle-all-chats-btn" style="padding: 6px 12px; font-size: 12px;" data-i18n="showAllChats">顯示所有聊天室</button>
       </div>
-      <!-- 固定布局寬度控制（僅在 Layout 13、14、15 時顯示） -->
-      <div id="fixed-layout-width-control" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #333;">
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <label for="chat-width-input" style="font-size: 12px; color: #aaa; white-space: nowrap;">聊天室寬度：</label>
-          <input 
-            type="number" 
-            id="chat-width-input" 
-            min="10" 
-            max="80" 
-            step="1" 
-            value="30" 
-            style="width: 80px; padding: 6px 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;"
-            title="輸入聊天室寬度百分比（10-80%）"
-          />
-          <span style="font-size: 12px; color: #aaa;">%</span>
-          <button 
-            onclick="applyChatWidth()" 
-            style="padding: 6px 12px; font-size: 12px; background: rgba(145, 71, 255, 0.3); border: 1px solid #9147ff; color: #fff; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
-            onmouseover="this.style.background='rgba(145, 71, 255, 0.5)'"
-            onmouseout="this.style.background='rgba(145, 71, 255, 0.3)'"
-            data-i18n="apply">套用</button>
-        </div>
-        <div style="margin-top: 8px; font-size: 11px; color: #666;">
-          <span data-i18n="chatWidthHint">輸入百分比來調整左右容器比例（10-80%）</span>
-        </div>
-      </div>
     </div>
     
     <div class="control-section">

@@ -56,25 +56,7 @@ let fixedLayoutChatSelection = {
 // 固定布局中用户选择的视频布局类型（1-6 或 9）
 let layout13VideoLayout = null;
 
-// 用戶調整的固定布局寬度比例（每個布局類型分別存儲）
-let fixedLayoutWidthRatios = {
-  13: null, // null 表示使用默認值
-  14: null,
-  15: null
-};
-
-// 從 localStorage 加載保存的寬度比例
-try {
-  const savedRatios = localStorage.getItem('fixedLayoutWidthRatios');
-  if (savedRatios) {
-    const parsed = JSON.parse(savedRatios);
-    if (parsed && typeof parsed === 'object') {
-      fixedLayoutWidthRatios = { ...fixedLayoutWidthRatios, ...parsed };
-    }
-  }
-} catch (e) {
-  console.error('Failed to load width ratios:', e);
-}
+// 固定布局現在完全使用響應式設計，不再需要手動調整寬度比例
 
 // 檢查是否為固定布局
 function isFixedLayout(layoutType) {
@@ -222,14 +204,20 @@ function setupFixedLayoutFramework(boxes, layoutType) {
     return;
   }
   
-  // 根据配置或用户调整设置宽度比例
-  let videoAreaWidth = config.videoAreaWidth;
-  let chatAreaWidth = config.chatAreaWidth;
+  // 使用響應式設計計算寬度比例
+  const responsiveRatios = calculateResponsiveWidthRatios(currentLayoutType);
+  let videoAreaWidth = responsiveRatios ? responsiveRatios.video : config.videoAreaWidth;
+  let chatAreaWidth = responsiveRatios ? responsiveRatios.chat : config.chatAreaWidth;
   
-  // 如果用户有调整过，使用调整后的值
-  if (fixedLayoutWidthRatios[currentLayoutType] !== null) {
-    videoAreaWidth = fixedLayoutWidthRatios[currentLayoutType].video;
-    chatAreaWidth = fixedLayoutWidthRatios[currentLayoutType].chat;
+  // 邊界檢查：確保聊天室容器的右邊界不會超出視窗
+  const windowWidth = window.innerWidth;
+  const chatLeftPx = (videoAreaWidth / 100) * windowWidth;
+  const chatWidthPx = (chatAreaWidth / 100) * windowWidth;
+  const chatRightPx = chatLeftPx + chatWidthPx;
+  
+  if (chatRightPx > windowWidth) {
+    const maxChatWidthPx = windowWidth - chatLeftPx;
+    chatAreaWidth = (maxChatWidthPx / windowWidth) * 100;
   }
   
   // 布局视频在左侧（固定布局的视频布局会在 updateFixedLayoutFramework 中处理）
@@ -252,6 +240,8 @@ function setupFixedLayoutFramework(boxes, layoutType) {
   chatSidebar.style.background = '#0a0a0a';
   chatSidebar.style.borderLeft = '2px solid #333';
   chatSidebar.style.overflow = 'hidden'; // 防止內容溢出
+  chatSidebar.style.maxWidth = `calc(100% - ${videoAreaWidth}%)`; // 確保右邊界不超出視窗
+  chatSidebar.style.right = 'auto'; // 使用 left 定位，不使用 right
   
   // 获取所有串流用于选择器
   const allStreams = [];
@@ -269,11 +259,13 @@ function setupFixedLayoutFramework(boxes, layoutType) {
   chatSidebar.style.gap = config.gap;
   chatSidebar.style.padding = config.padding;
   chatSidebar.style.boxSizing = 'border-box';
+  chatSidebar.style.overflow = 'hidden'; // 確保內容不會溢出
+  chatSidebar.style.maxWidth = '100%'; // 確保不超出父容器
   
   // 迁移聊天室选择（从其他布局迁移，或使用默认值）
   migrateChatSelections(config.positionKeys, allStreams, currentLayoutType);
   
-  // 根据网格配置创建聊天室面板
+  // 根據网格配置创建聊天室面板
   if (config.grid.rows > 1) {
     // 多行布局（如 2x2 网格）
     for (let row = 0; row < config.grid.rows; row++) {
@@ -283,6 +275,9 @@ function setupFixedLayoutFramework(boxes, layoutType) {
       rowContainer.style.gap = config.gap;
       rowContainer.style.flex = '1';
       rowContainer.style.minHeight = '0';
+      rowContainer.style.minWidth = '0'; // 允許縮小
+      rowContainer.style.overflow = 'hidden'; // 防止溢出
+      rowContainer.style.width = '100%'; // 確保不超出父容器
       
       for (let col = 0; col < config.grid.cols; col++) {
         const posIndex = row * config.grid.cols + col;
@@ -290,7 +285,10 @@ function setupFixedLayoutFramework(boxes, layoutType) {
         const defaultId = fixedLayoutChatSelection[posKey];
         
         const chatPanel = createChatPanel(posKey, defaultId, allStreams, `layout${currentLayoutType}`);
-        chatPanel.style.width = config.panelWidth + '%';
+        // 使用 flex 自動分配空間，而不是固定百分比，這樣可以自動處理 gap
+        chatPanel.style.flex = '1';
+        chatPanel.style.minWidth = '0'; // 允許縮小
+        chatPanel.style.maxWidth = '100%'; // 確保不超出
         chatPanel.style.height = config.panelHeight + '%';
         rowContainer.appendChild(chatPanel);
       }
@@ -302,7 +300,16 @@ function setupFixedLayoutFramework(boxes, layoutType) {
     config.positionKeys.forEach((posKey, index) => {
       const defaultId = fixedLayoutChatSelection[posKey];
       const chatPanel = createChatPanel(posKey, defaultId, allStreams, `layout${currentLayoutType}`);
-      chatPanel.style.width = config.panelWidth + '%';
+      
+      // 使用 flex 自動分配空間，這樣可以自動處理 gap 和 padding
+      // 對於單個面板，使用 100% 寬度；對於多個面板，使用 flex: 1 自動分配
+      if (config.positionKeys.length === 1) {
+        chatPanel.style.width = '100%';
+      } else {
+        chatPanel.style.flex = '1';
+        chatPanel.style.minWidth = '0'; // 允許縮小
+      }
+      chatPanel.style.maxWidth = '100%'; // 確保不超出
       chatPanel.style.height = config.panelHeight + '%';
       chatSidebar.appendChild(chatPanel);
       
@@ -405,7 +412,9 @@ function createChatPanel(posKey, defaultId, allStreams, layoutType) {
   chatPanel.style.overflow = 'hidden';
   chatPanel.style.display = 'flex';
   chatPanel.style.flexDirection = 'column';
-  chatPanel.style.flexShrink = '0';
+  chatPanel.style.flexShrink = '1'; // 允許縮小以適應容器
+  chatPanel.style.minWidth = '0'; // 允許縮小到 0（會被 flex 覆蓋）
+  chatPanel.style.boxSizing = 'border-box'; // 確保 border 包含在寬度內
   
   // 创建头部（包含选择器）
   const chatHeader = document.createElement('div');
@@ -656,14 +665,10 @@ function updateFixedLayoutFramework() {
   
   // 如果是固定布局，使用用户选择的视频布局类型（如果没有选择则自动选择）
   {
-    // 获取宽度比例（优先使用用户调整的值）
-    let videoAreaWidth = config.videoAreaWidth;
-    let chatAreaWidth = config.chatAreaWidth;
-    
-    if (fixedLayoutWidthRatios[currentLayoutType] !== null) {
-      videoAreaWidth = fixedLayoutWidthRatios[currentLayoutType].video;
-      chatAreaWidth = fixedLayoutWidthRatios[currentLayoutType].chat;
-    }
+    // 使用響應式設計計算寬度比例
+    const responsiveRatios = calculateResponsiveWidthRatios(currentLayoutType);
+    let videoAreaWidth = responsiveRatios ? responsiveRatios.video : config.videoAreaWidth;
+    let chatAreaWidth = responsiveRatios ? responsiveRatios.chat : config.chatAreaWidth;
     
     let videoLayoutType = 1;
     if (count > 0) {
@@ -816,10 +821,24 @@ function updateFixedLayoutFramework() {
     }
   });
   
-  // 更新聊天室容器的位置和寬度
+  // 更新聊天室容器的位置和寬度（包含邊界檢查）
   if (chatSidebar) {
+    // 邊界檢查：確保聊天室容器的右邊界不會超出視窗
+    const windowWidth = window.innerWidth;
+    const chatLeftPx = (videoAreaWidth / 100) * windowWidth;
+    const chatWidthPx = (chatAreaWidth / 100) * windowWidth;
+    const chatRightPx = chatLeftPx + chatWidthPx;
+    
+    let finalChatWidth = chatAreaWidth;
+    if (chatRightPx > windowWidth) {
+      const maxChatWidthPx = windowWidth - chatLeftPx;
+      finalChatWidth = (maxChatWidthPx / windowWidth) * 100;
+    }
+    
     chatSidebar.style.left = videoAreaWidth + '%';
-    chatSidebar.style.width = chatAreaWidth + '%';
+    chatSidebar.style.width = finalChatWidth + '%';
+    chatSidebar.style.maxWidth = `calc(100% - ${videoAreaWidth}%)`; // 確保右邊界不超出視窗
+    chatSidebar.style.right = 'auto'; // 使用 left 定位，不使用 right
   }
 }
 
@@ -876,7 +895,6 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     }
     setupFixedLayoutFramework(boxes, type); // 传入布局类型
     updateFixedLayoutFramework(); // 立即更新内容
-    updateFixedLayoutWidthControl(); // 更新寬度控制面板
     return;
   }
   
@@ -965,7 +983,6 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   // 如果切换到非固定布局，清理固定布局的聊天室容器
   if (!isFixedLayout(type)) {
     cleanupFixedChatSidebar();
-    updateFixedLayoutWidthControl(); // 隱藏寬度控制面板
   }
   
   if (type === 1 || count === 1) {
@@ -1121,110 +1138,7 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   }, 100);
 }
 
-// 更新固定布局寬度控制面板的顯示狀態
-function updateFixedLayoutWidthControl() {
-  const widthControl = document.getElementById('fixed-layout-width-control');
-  if (!widthControl) return;
-  
-  // 檢查是否為固定布局（檢查 userSelectedLayout 或是否存在固定布局容器）
-  const chatSidebar = document.getElementById('chat-sidebar-fixed');
-  const isFixed = isFixedLayout(userSelectedLayout) || (chatSidebar !== null);
-  
-  widthControl.style.display = isFixed ? 'block' : 'none';
-  
-  if (isFixed) {
-    // 更新輸入框的值
-    const chatWidthInput = document.getElementById('chat-width-input');
-    if (chatWidthInput) {
-      // 如果 userSelectedLayout 為 null，嘗試從 localStorage 加載
-      let currentLayoutType = userSelectedLayout;
-      if (!currentLayoutType) {
-        try {
-          const savedLayout = localStorage.getItem('currentLayout');
-          if (savedLayout) {
-            const layoutType = parseInt(savedLayout);
-            if (isFixedLayout(layoutType)) {
-              currentLayoutType = layoutType;
-              userSelectedLayout = layoutType; // 更新 userSelectedLayout
-            }
-          }
-        } catch (e) {
-          console.error('Failed to load layout from localStorage:', e);
-        }
-      }
-      
-      // 如果還是沒有，使用默認值（Layout 13）
-      if (!currentLayoutType) {
-        currentLayoutType = 13;
-      }
-      
-      let currentChatWidth = 30; // 默認值
-      
-      if (fixedLayoutWidthRatios[currentLayoutType] !== null) {
-        currentChatWidth = fixedLayoutWidthRatios[currentLayoutType].chat;
-      } else {
-        const config = FIXED_LAYOUT_CONFIG[currentLayoutType];
-        if (config) {
-          currentChatWidth = config.chatAreaWidth;
-        }
-      }
-      
-      chatWidthInput.value = Math.round(currentChatWidth);
-    }
-  }
-}
-
-// 應用用戶輸入的聊天室寬度
-function applyChatWidth() {
-  const chatWidthInput = document.getElementById('chat-width-input');
-  if (!chatWidthInput) return;
-  
-  // 檢查是否為固定布局
-  if (!isFixedLayout(userSelectedLayout)) {
-    return;
-  }
-  
-  const chatWidth = parseFloat(chatWidthInput.value);
-  
-  // 驗證輸入值
-  if (isNaN(chatWidth) || chatWidth < 10 || chatWidth > 80) {
-    alert('請輸入 10-80 之間的數值');
-    chatWidthInput.focus();
-    return;
-  }
-  
-  const currentLayoutType = userSelectedLayout;
-  const videoWidth = 100 - chatWidth;
-  
-  // 保存調整後的寬度比例
-  fixedLayoutWidthRatios[currentLayoutType] = {
-    video: videoWidth,
-    chat: chatWidth
-  };
-  
-  // 保存到 localStorage
-  try {
-    localStorage.setItem('fixedLayoutWidthRatios', JSON.stringify(fixedLayoutWidthRatios));
-  } catch (e) {
-    console.error('Failed to save width ratios:', e);
-  }
-  
-  // 更新布局（只更新寬度和位置，不重新創建容器）
-  const boxes = document.querySelectorAll('.stream-box');
-  const chatSidebar = document.getElementById('chat-sidebar-fixed');
-  
-  if (chatSidebar) {
-    // 更新聊天室容器的位置和寬度
-    chatSidebar.style.left = videoWidth + '%';
-    chatSidebar.style.width = chatWidth + '%';
-  }
-  
-  // 更新視頻框的寬度
-  updateFixedLayoutFramework();
-  
-  // 更新控制面板顯示（確保輸入框值正確）
-  updateFixedLayoutWidthControl();
-}
+// 聊天室寬度設定功能已移除，現在完全使用響應式設計
 
 // 響應式斷點配置
 const RESPONSIVE_BREAKPOINTS = {
@@ -1233,7 +1147,7 @@ const RESPONSIVE_BREAKPOINTS = {
   small: 768    // 小視窗
 };
 
-// 根據視窗大小計算響應式寬度比例
+// 根據視窗大小計算響應式寬度比例（完全響應式，不再支持手動調整）
 function calculateResponsiveWidthRatios(layoutType) {
   const windowWidth = window.innerWidth;
   const config = FIXED_LAYOUT_CONFIG[layoutType];
@@ -1242,14 +1156,23 @@ function calculateResponsiveWidthRatios(layoutType) {
     return null;
   }
   
+  // 獲取聊天室最小寬度（從 CSS 變數或使用默認值）
+  const getChatMinWidth = () => {
+    const root = document.documentElement;
+    const computedStyle = getComputedStyle(root);
+    const minWidth = computedStyle.getPropertyValue('--fixed-chat-min-width');
+    if (minWidth) {
+      return parseFloat(minWidth) || 300; // 默認 300px
+    }
+    return 300; // 默認 300px
+  };
+  
+  const chatMinWidthPx = getChatMinWidth();
+  const chatMinWidthPercent = (chatMinWidthPx / windowWidth) * 100;
+  
+  // 根據視窗大小動態計算響應式比例
   let videoAreaWidth = config.videoAreaWidth;
   let chatAreaWidth = config.chatAreaWidth;
-  
-  // 如果用戶有手動調整過，優先使用用戶調整的值
-  if (fixedLayoutWidthRatios[layoutType] !== null) {
-    videoAreaWidth = fixedLayoutWidthRatios[layoutType].video;
-    chatAreaWidth = fixedLayoutWidthRatios[layoutType].chat;
-  }
   
   // 根據視窗大小動態調整
   if (windowWidth < RESPONSIVE_BREAKPOINTS.small) {
@@ -1277,16 +1200,71 @@ function calculateResponsiveWidthRatios(layoutType) {
       chatAreaWidth = 25;
     }
   }
-  // 大視窗使用預設值或用戶調整的值
+  // 大視窗使用預設值
   
-  // 確保最小寬度限制
-  const minChatWidth = 15; // 聊天室最小寬度 15%
+  // 確保最小寬度限制（百分比）
+  const minChatWidthPercent = Math.max(15, chatMinWidthPercent); // 至少 15% 或滿足最小像素寬度
   const minVideoWidth = 50; // 視頻區域最小寬度 50%
   
-  if (chatAreaWidth < minChatWidth) {
-    chatAreaWidth = minChatWidth;
+  if (chatAreaWidth < minChatWidthPercent) {
+    chatAreaWidth = minChatWidthPercent;
     videoAreaWidth = 100 - chatAreaWidth;
   }
+  if (videoAreaWidth < minVideoWidth) {
+    videoAreaWidth = minVideoWidth;
+    chatAreaWidth = 100 - videoAreaWidth;
+  }
+  
+  // 檢查聊天室容器的右邊界是否會超出視窗
+  // 計算聊天室容器的實際像素位置和寬度
+  const chatLeftPx = (videoAreaWidth / 100) * windowWidth;
+  const chatWidthPx = (chatAreaWidth / 100) * windowWidth;
+  const chatRightPx = chatLeftPx + chatWidthPx;
+  
+  // 如果聊天室容器的右邊界超出視窗，調整比例
+  if (chatRightPx > windowWidth) {
+    // 計算需要調整的像素數
+    const overflowPx = chatRightPx - windowWidth;
+    
+    // 將超出的部分從聊天區域減去，並加到視頻區域
+    const overflowPercent = (overflowPx / windowWidth) * 100;
+    chatAreaWidth = Math.max(minChatWidthPercent, chatAreaWidth - overflowPercent);
+    videoAreaWidth = 100 - chatAreaWidth;
+    
+    // 重新計算確保不會超出
+    const newChatLeftPx = (videoAreaWidth / 100) * windowWidth;
+    const newChatWidthPx = (chatAreaWidth / 100) * windowWidth;
+    const newChatRightPx = newChatLeftPx + newChatWidthPx;
+    
+    // 如果仍然超出，強制調整到視窗內
+    if (newChatRightPx > windowWidth) {
+      const finalChatWidthPx = windowWidth - newChatLeftPx;
+      const finalChatWidthPercent = (finalChatWidthPx / windowWidth) * 100;
+      chatAreaWidth = Math.max(minChatWidthPercent, finalChatWidthPercent);
+      videoAreaWidth = 100 - chatAreaWidth;
+    }
+  }
+  
+  // 最終檢查：確保聊天室寬度滿足最小像素寬度要求
+  const finalChatWidthPx = (chatAreaWidth / 100) * windowWidth;
+  if (finalChatWidthPx < chatMinWidthPx) {
+    // 如果計算出的寬度小於最小寬度，調整比例
+    const requiredChatWidthPercent = (chatMinWidthPx / windowWidth) * 100;
+    chatAreaWidth = requiredChatWidthPercent;
+    videoAreaWidth = 100 - chatAreaWidth;
+    
+    // 再次檢查是否會超出視窗
+    const finalChatLeftPx = (videoAreaWidth / 100) * windowWidth;
+    const finalChatRightPx = finalChatLeftPx + chatMinWidthPx;
+    
+    if (finalChatRightPx > windowWidth) {
+      // 如果即使使用最小寬度也會超出，強制調整
+      chatAreaWidth = ((windowWidth - finalChatLeftPx) / windowWidth) * 100;
+      videoAreaWidth = 100 - chatAreaWidth;
+    }
+  }
+  
+  // 確保比例合理
   if (videoAreaWidth < minVideoWidth) {
     videoAreaWidth = minVideoWidth;
     chatAreaWidth = 100 - videoAreaWidth;
@@ -1315,18 +1293,13 @@ function handleWindowResize() {
     }
     
     const layoutType = userSelectedLayout;
+    const windowWidth = window.innerWidth;
     const responsiveRatios = calculateResponsiveWidthRatios(layoutType);
     
     if (responsiveRatios) {
-      // 更新布局框架（但不覆蓋用戶手動調整的值）
-      // 只有在用戶沒有手動調整時才應用響應式調整
-      if (fixedLayoutWidthRatios[layoutType] === null) {
-        // 用戶沒有手動調整，應用響應式調整
-        updateFixedLayoutFrameworkWithRatios(responsiveRatios);
-      } else {
-        // 用戶有手動調整，但還是要確保布局正確更新
-        updateFixedLayoutFramework();
-      }
+      console.log(`[固定布局響應式] 視窗寬度: ${windowWidth}px, 布局類型: ${layoutType}, 視頻區域: ${responsiveRatios.video}%, 聊天區域: ${responsiveRatios.chat}%`);
+      // 更新布局框架（完全響應式）
+      updateFixedLayoutFrameworkWithRatios(responsiveRatios);
     }
   }, 300);
 }
@@ -1340,9 +1313,30 @@ function updateFixedLayoutFrameworkWithRatios(ratios) {
   const config = FIXED_LAYOUT_CONFIG[layoutType];
   if (!config) return;
   
+  // 最終邊界檢查：確保聊天室容器的右邊界不會超出視窗
+  const windowWidth = window.innerWidth;
+  const chatLeftPx = (ratios.video / 100) * windowWidth;
+  const chatWidthPx = (ratios.chat / 100) * windowWidth;
+  const chatRightPx = chatLeftPx + chatWidthPx;
+  
+  // 如果會超出視窗，調整寬度
+  let finalChatWidth = ratios.chat;
+  if (chatRightPx > windowWidth) {
+    const maxChatWidthPx = windowWidth - chatLeftPx;
+    finalChatWidth = (maxChatWidthPx / windowWidth) * 100;
+    // 確保不會小於最小寬度（如果可能的話）
+    const chatMinWidthPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fixed-chat-min-width')) || 300;
+    const chatMinWidthPercent = (chatMinWidthPx / windowWidth) * 100;
+    if (finalChatWidth < chatMinWidthPercent && chatLeftPx + chatMinWidthPx <= windowWidth) {
+      finalChatWidth = chatMinWidthPercent;
+    }
+  }
+  
   // 更新聊天室容器的位置和寬度
   chatSidebar.style.left = ratios.video + '%';
-  chatSidebar.style.width = ratios.chat + '%';
+  chatSidebar.style.width = finalChatWidth + '%';
+  chatSidebar.style.maxWidth = `calc(100% - ${ratios.video}%)`; // 確保右邊界不超出視窗
+  chatSidebar.style.right = 'auto'; // 使用 left 定位，不使用 right
   
   // 更新視頻框的寬度
   const boxes = document.querySelectorAll('.stream-box');
@@ -1439,47 +1433,6 @@ if (typeof window !== 'undefined') {
   window.updateFixedLayoutFramework = updateFixedLayoutFramework;
   window.cleanupFixedChatSidebar = cleanupFixedChatSidebar;
   window.setLayout13VideoLayout = setLayout13VideoLayout;
-  window.applyChatWidth = applyChatWidth;
-  window.updateFixedLayoutWidthControl = updateFixedLayoutWidthControl;
-  
-  // 頁面加載完成後初始化寬度控制面板
-  function initChatWidthControl() {
-    // 添加 Enter 鍵支持
-    const chatWidthInput = document.getElementById('chat-width-input');
-    if (chatWidthInput) {
-      chatWidthInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          applyChatWidth();
-        }
-      });
-    }
-    
-    // 檢查 localStorage 中是否有保存的布局
-    try {
-      const savedLayout = localStorage.getItem('currentLayout');
-      if (savedLayout) {
-        const layoutType = parseInt(savedLayout);
-        if (isFixedLayout(layoutType)) {
-          userSelectedLayout = layoutType;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load layout from localStorage:', e);
-    }
-    
-    // 初始化控制面板顯示狀態
-    updateFixedLayoutWidthControl();
-  }
-  
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initChatWidthControl, 100);
-    });
-  } else {
-    // DOM 已經加載完成
-    setTimeout(initChatWidthControl, 100);
-  }
   
   // 監聽視窗大小改變事件
   window.addEventListener('resize', handleWindowResize);
