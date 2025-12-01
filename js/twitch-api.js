@@ -1,6 +1,10 @@
 // Twitch API 服務模組
 // 用於搜尋頻道和查詢開台狀態
 
+// 使用 IIFE 封裝，避免全局作用域污染
+(function() {
+  'use strict';
+
 // 嘗試獲取環境變數對象（如果代碼是 ES module 且使用構建工具）
 // 根據 Grok 4.1 建議：使用 import.meta.env 獲取 Cloudflare Pages 環境變數
 // 這些值只在 build 時存在，部署後瀏覽器看不到原始值
@@ -168,7 +172,12 @@ function checkRateLimit() {
   // 檢查是否超過限制
   if (rateLimitTracker.requests.length >= TWITCH_API_CONFIG.rateLimit.maxRequests) {
     const waitTime = rateLimitTracker.resetTime - now;
-    throw new Error(`API 速率限制：請等待 ${Math.ceil(waitTime / 1000)} 秒後再試`);
+    const waitSeconds = Math.ceil(waitTime / 1000);
+    
+    // 顯示 1 分鐘計時器通知
+    showTwitchRateLimitNotification(waitSeconds);
+    
+    throw new Error(`Twitch API 速率限制：請等待 ${waitSeconds} 秒後再試`);
   }
   
   // 記錄此次請求
@@ -430,26 +439,51 @@ async function makeApiRequest(endpoint, params = {}) {
     // 使用後端代理
     url = `${TWITCH_API_CONFIG.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
     Object.keys(params).forEach(key => {
-      url += `&${key}=${encodeURIComponent(params[key])}`;
+      const value = params[key];
+      // 處理布林值參數
+      const paramValue = typeof value === 'boolean' ? value.toString() : value;
+      url += `&${key}=${encodeURIComponent(paramValue)}`;
     });
-  } else {
-    // 直接呼叫 API
-    // 檢查 endpoint 是否已包含查詢字符串
-    if (endpoint.includes('?')) {
-      url = `${TWITCH_API_CONFIG.baseUrl}${endpoint}`;
-      // 如果 endpoint 已有查詢參數，且 params 不為空，則追加
-      if (Object.keys(params).length > 0) {
-        const queryString = new URLSearchParams(params).toString();
-        url += `&${queryString}`;
-      }
     } else {
-      url = `${TWITCH_API_CONFIG.baseUrl}${endpoint}`;
-      const queryString = new URLSearchParams(params).toString();
-      if (queryString) {
-        url += `?${queryString}`;
+      // 直接呼叫 API
+      // 檢查 endpoint 是否已包含查詢字符串
+      if (endpoint.includes('?')) {
+        url = `${TWITCH_API_CONFIG.baseUrl}${endpoint}`;
+        // 如果 endpoint 已有查詢參數，且 params 不為空，則追加
+        if (Object.keys(params).length > 0) {
+          // 處理布林值參數（Twitch API 需要 true/false 字串，不是 "true"/"false"）
+          const processedParams = {};
+          Object.keys(params).forEach(key => {
+            const value = params[key];
+            if (typeof value === 'boolean') {
+              processedParams[key] = value.toString();
+            } else {
+              processedParams[key] = value;
+            }
+          });
+          const queryString = new URLSearchParams(processedParams).toString();
+          url += `&${queryString}`;
+        }
+      } else {
+        url = `${TWITCH_API_CONFIG.baseUrl}${endpoint}`;
+        // 處理布林值參數
+        const processedParams = {};
+        Object.keys(params).forEach(key => {
+          const value = params[key];
+          if (typeof value === 'boolean') {
+            processedParams[key] = value.toString();
+          } else {
+            processedParams[key] = value;
+          }
+        });
+        const queryString = new URLSearchParams(processedParams).toString();
+        if (queryString) {
+          url += `?${queryString}`;
+        }
       }
     }
-  }
+    
+    console.log('Twitch API 請求 URL:', url);
   
   // 建立請求標頭
   const headers = {
@@ -496,12 +530,26 @@ async function makeApiRequest(endpoint, params = {}) {
   }
   
   try {
+    console.log('Twitch API 請求標頭:', headers);
     const response = await fetch(url, {
       method: 'GET',
       headers: headers
     });
     
+    console.log('Twitch API 回應狀態:', response.status, response.statusText);
+    
     if (!response.ok) {
+      // 嘗試讀取錯誤訊息
+      let errorText = '';
+      try {
+        const errorData = await response.json().catch(() => ({}));
+        errorText = JSON.stringify(errorData);
+        console.error('Twitch API 錯誤回應:', errorData);
+      } catch (e) {
+        errorText = await response.text().catch(() => '無法讀取錯誤訊息');
+        console.error('Twitch API 錯誤回應（文字）:', errorText);
+      }
+      
       // 如果是 401 錯誤，可能是 Token 過期，嘗試重新取得 Token
       if (response.status === 401 && !TWITCH_API_CONFIG.useProxy) {
         // 清除快取的 Token
@@ -545,6 +593,8 @@ async function makeApiRequest(endpoint, params = {}) {
     
     const data = await response.json();
     
+    console.log('Twitch API 回應數據:', data);
+    
     // 儲存快取
     setCachedData(cacheKey, data);
     
@@ -570,17 +620,37 @@ async function searchTwitchChannels(query, limit = 10) {
   }
   
   try {
+    console.log('Twitch 搜尋請求:', { query: query.trim(), limit });
+    
     const data = await makeApiRequest('/search/channels', {
       query: query.trim(),
       first: limit,
       live_only: false // 搜尋所有頻道，不只是開台的（布林值，不是字串）
     });
     
-    if (!data || !data.data) {
+    console.log('Twitch API 回應:', data);
+    
+    if (!data) {
+      console.warn('Twitch API 回應為空');
       return [];
     }
     
-    return data.data.map(channel => ({
+    if (!data.data) {
+      console.warn('Twitch API 回應中沒有 data 欄位:', data);
+      return [];
+    }
+    
+    if (!Array.isArray(data.data)) {
+      console.warn('Twitch API 回應中的 data 不是陣列:', data.data);
+      return [];
+    }
+    
+    if (data.data.length === 0) {
+      console.log('Twitch API 搜尋結果為空');
+      return [];
+    }
+    
+    const mappedResults = data.data.map(channel => ({
       id: channel.id,
       login: channel.broadcaster_login,
       displayName: channel.display_name,
@@ -592,7 +662,11 @@ async function searchTwitchChannels(query, limit = 10) {
       startedAt: channel.started_at,
       url: `https://www.twitch.tv/${channel.broadcaster_login}`
     }));
+    
+    console.log('Twitch 搜尋結果（映射後）:', mappedResults);
+    return mappedResults;
   } catch (error) {
+    console.error('Twitch 搜尋錯誤:', error);
     throw error;
   }
 }
@@ -744,6 +818,90 @@ function getTwitchApiConfig() {
   };
 }
 
+// 顯示 Twitch API 速率限制通知
+function showTwitchRateLimitNotification(waitSeconds) {
+  // 檢查是否已經顯示過通知（避免重複顯示）
+  const existingNotification = document.getElementById('twitch-rate-limit-notification');
+  if (existingNotification) {
+    return; // 已經有通知在顯示
+  }
+  
+  const notification = document.createElement('div');
+  notification.id = 'twitch-rate-limit-notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ffaa00;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 10000;
+    max-width: 400px;
+    font-size: 14px;
+    line-height: 1.6;
+  `;
+  
+  const title = document.createElement('div');
+  title.style.cssText = 'font-weight: bold; margin-bottom: 8px; font-size: 16px;';
+  title.textContent = '⚠️ Twitch API 速率限制';
+  
+  const message = document.createElement('div');
+  message.style.cssText = 'margin-bottom: 10px;';
+  const countdownSpan = document.createElement('span');
+  countdownSpan.id = 'twitch-rate-limit-countdown';
+  countdownSpan.style.cssText = 'font-weight: bold; font-size: 18px;';
+  countdownSpan.textContent = waitSeconds;
+  message.appendChild(document.createTextNode('Twitch API 每分鐘請求次數已達上限，請等待 '));
+  message.appendChild(countdownSpan);
+  message.appendChild(document.createTextNode(' 秒後再試。'));
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = `
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 8px;
+  `;
+  closeBtn.textContent = '我知道了';
+  closeBtn.onclick = () => {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+    notification.remove();
+  };
+  
+  notification.appendChild(title);
+  notification.appendChild(message);
+  notification.appendChild(closeBtn);
+  
+  document.body.appendChild(notification);
+  
+  // 倒數計時器
+  let remainingSeconds = waitSeconds;
+  const countdownInterval = setInterval(() => {
+    remainingSeconds--;
+    if (countdownSpan) {
+      countdownSpan.textContent = remainingSeconds;
+    }
+    
+    if (remainingSeconds <= 0) {
+      clearInterval(countdownInterval);
+      // 自動關閉通知
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 1000);
+    }
+  }, 1000);
+}
+
 // 清除快取
 function clearTwitchApiCache() {
   apiCache.clear();
@@ -760,3 +918,5 @@ if (typeof window !== 'undefined') {
     clearCache: clearTwitchApiCache
   };
 }
+
+})(); // 結束 IIFE

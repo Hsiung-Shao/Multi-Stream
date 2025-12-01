@@ -13,27 +13,69 @@ async function addStream(url = null) {
     hideSearchSuggestions();
   }
 
-  // 如果輸入的不是 URL，嘗試搜尋 Twitch 頻道
+  // 如果輸入的不是 URL，嘗試搜尋 Twitch 或 YouTube 頻道
   if (!url.includes('http://') && !url.includes('https://') && 
       !url.includes('twitch.tv/') && !url.includes('youtube.com') && 
       !url.includes('youtu.be/')) {
     // 可能是頻道名稱，嘗試搜尋
+    let foundChannel = null;
+    let searchError = null;
+    
+    // 先嘗試 Twitch 搜尋
     if (window.twitchApi && window.twitchApi.searchChannels) {
       try {
-        const results = await window.twitchApi.searchChannels(url, 1);
-        if (results && results.length > 0) {
-          // 使用第一個搜尋結果
-          url = results[0].url;
-        } else {
-          alert(`找不到頻道 "${url}"，請輸入完整的 Twitch 或 YouTube 網址`);
-          return;
+        const twitchResults = await window.twitchApi.searchChannels(url, 1);
+        if (twitchResults && twitchResults.length > 0) {
+          foundChannel = { ...twitchResults[0], platform: 'twitch', source: 'twitch' };
         }
       } catch (error) {
-        alert(`搜尋頻道失敗: ${error.message}。請直接輸入完整的 Twitch 或 YouTube 網址`);
-        return;
+        searchError = error.message;
       }
+    }
+    
+    // 如果 Twitch 沒找到，嘗試 YouTube 搜尋（檢查是否被封鎖）
+    if (!foundChannel && window.youtubeApi && window.youtubeApi.searchChannels) {
+      const youtubeConfig = window.youtubeApi.getConfig();
+      if (!youtubeConfig.isBlocked) {
+        try {
+          const youtubeResults = await window.youtubeApi.searchChannels(url, 1);
+          if (youtubeResults && youtubeResults.length > 0) {
+            const ytChannel = youtubeResults[0];
+            // 如果正在直播，使用直播 URL
+            if (ytChannel.isLive && ytChannel.liveVideoId) {
+              foundChannel = {
+                ...ytChannel,
+                platform: 'youtube',
+                source: 'youtube',
+                url: `https://www.youtube.com/watch?v=${ytChannel.liveVideoId}`
+              };
+            } else {
+              foundChannel = {
+                ...ytChannel,
+                platform: 'youtube',
+                source: 'youtube',
+                url: `https://www.youtube.com/channel/${ytChannel.id}`
+              };
+            }
+          }
+        } catch (error) {
+          // 如果是流量超限錯誤，不顯示錯誤，只記錄
+          if (!error.message || (!error.message.includes('流量') && !error.message.includes('配額'))) {
+            searchError = error.message || searchError;
+          }
+        }
+      }
+    }
+    
+    if (foundChannel) {
+      // 使用第一個搜尋結果
+      url = foundChannel.url;
     } else {
-      alert('請輸入完整的 Twitch 或 YouTube 網址');
+      if (searchError) {
+        alert(`搜尋頻道失敗: ${searchError}。請直接輸入完整的 Twitch 或 YouTube 網址`);
+      } else {
+        alert(`找不到頻道 "${url}"，請輸入完整的 Twitch 或 YouTube 網址`);
+      }
       return;
     }
   }

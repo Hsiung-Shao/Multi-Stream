@@ -337,15 +337,6 @@ function initSearchSuggestions() {
 
 // 執行搜尋
 async function performSearch(query) {
-  if (!window.twitchApi || !window.twitchApi.searchChannels) {
-    const suggestionsDiv = document.getElementById('search-suggestions');
-    if (suggestionsDiv) {
-      suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #ff6666;">Twitch API 未載入，請檢查設定</div>';
-      suggestionsDiv.style.display = 'block';
-    }
-    return; // Twitch API 未載入
-  }
-  
   const suggestionsDiv = document.getElementById('search-suggestions');
   if (!suggestionsDiv) {
     return;
@@ -356,7 +347,99 @@ async function performSearch(query) {
   suggestionsDiv.style.display = 'block';
   
   try {
-    const results = await window.twitchApi.searchChannels(query, 10);
+    // 檢查 API 是否已載入
+    console.log('檢查 API 狀態:');
+    console.log('  window.twitchApi:', window.twitchApi);
+    console.log('  window.youtubeApi:', window.youtubeApi);
+    console.log('  twitchApi.searchChannels:', window.twitchApi?.searchChannels);
+    console.log('  youtubeApi.searchChannels:', window.youtubeApi?.searchChannels);
+    
+    // 同時搜尋 Twitch 和 YouTube
+    const searchPromises = [];
+    
+    // Twitch 搜尋
+    if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
+      searchPromises.push(
+        window.twitchApi.searchChannels(query, 5)
+          .then(results => {
+            console.log('Twitch 搜尋結果:', results);
+            if (results && Array.isArray(results) && results.length > 0) {
+              const mappedResults = results.map(r => ({ 
+                ...r, 
+                platform: 'twitch', 
+                source: 'twitch',
+                // 確保 displayName 存在
+                displayName: r.displayName || r.display_name || r.login || r.title || '未知頻道'
+              }));
+              console.log('Twitch 映射後結果:', mappedResults);
+              return mappedResults;
+            }
+            console.log('Twitch 無結果或格式錯誤');
+            return [];
+          })
+          .catch(error => {
+            // Twitch API 錯誤，靜默處理，返回空陣列
+            console.warn('Twitch 搜尋失敗:', error.message);
+            return [];
+          })
+      );
+    } else {
+      console.warn('Twitch API 未載入或 searchChannels 函數不存在');
+    }
+    
+    // YouTube 搜尋（檢查是否被封鎖）
+    if (window.youtubeApi && typeof window.youtubeApi.searchChannels === 'function') {
+      // 檢查 YouTube API 是否被封鎖
+      const youtubeConfig = window.youtubeApi.getConfig();
+      if (!youtubeConfig.isBlocked) {
+        searchPromises.push(
+          window.youtubeApi.searchChannels(query, 5)
+            .then(results => {
+              if (results && Array.isArray(results)) {
+                return results.map(r => ({ 
+                  ...r, 
+                  platform: 'youtube', 
+                  source: 'youtube', 
+                  displayName: r.title || r.displayName || r.name 
+                }));
+              }
+              return [];
+            })
+            .catch(error => {
+              // YouTube API 錯誤處理
+              // 如果是流量超限錯誤，不顯示錯誤，只返回空陣列
+              if (error.message && (error.message.includes('流量') || error.message.includes('配額'))) {
+                console.warn('YouTube API 流量限制:', error.message);
+                return [];
+              }
+              // 其他錯誤也靜默處理，返回空陣列，確保 Twitch 結果仍能顯示
+              console.warn('YouTube 搜尋失敗:', error.message);
+              return [];
+            })
+        );
+      } else {
+        // YouTube API 被封鎖，不進行搜尋
+        console.warn('YouTube API 已被封鎖，跳過搜尋');
+      }
+    }
+    
+    // 等待所有搜尋完成（使用 Promise.allSettled 確保即使一個失敗，另一個仍能顯示結果）
+    const allResults = await Promise.allSettled(searchPromises);
+    console.log('所有搜尋結果 (allSettled):', allResults);
+    
+    const results = allResults
+      .filter(result => result.status === 'fulfilled')
+      .map(result => {
+        const value = result.value;
+        console.log('處理結果值:', value);
+        return Array.isArray(value) ? value : [];
+      })
+      .flat();
+    
+    console.log('合併後的結果:', results);
+    console.log('Twitch 結果數量:', results.filter(r => r.platform === 'twitch' || r.source === 'twitch').length);
+    console.log('YouTube 結果數量:', results.filter(r => r.platform === 'youtube' || r.source === 'youtube').length);
+    
     currentSearchResults = results;
     selectedSearchIndex = -1;
     
@@ -367,7 +450,9 @@ async function performSearch(query) {
     
     // 顯示搜尋結果
     suggestionsDiv.innerHTML = '';
+    console.log('開始顯示結果，總數:', results.length);
     results.forEach((channel, index) => {
+      console.log(`顯示結果 ${index}:`, channel);
       const item = document.createElement('div');
       item.className = 'search-suggestion-item';
       item.style.cssText = `
@@ -380,6 +465,24 @@ async function performSearch(query) {
         transition: background 0.2s;
       `;
       item.dataset.index = index;
+      
+      // 確定平台
+      const platform = channel.platform || channel.source || 'unknown';
+      item.dataset.platform = platform;
+      
+      // 平台標籤
+      const platformTag = document.createElement('div');
+      const isYouTube = platform === 'youtube' || channel.source === 'youtube';
+      platformTag.style.cssText = `
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: ${isYouTube ? '#ff0000' : '#9147ff'};
+        color: white;
+        font-weight: bold;
+        flex-shrink: 0;
+      `;
+      platformTag.textContent = isYouTube ? 'YT' : 'TW';
       
       // 開台狀態指示器
       const liveIndicator = document.createElement('div');
@@ -398,19 +501,24 @@ async function performSearch(query) {
       
       const name = document.createElement('div');
       name.style.cssText = 'font-weight: bold; color: #fff; margin-bottom: 2px;';
-      name.textContent = channel.displayName;
+      // 處理不同平台的顯示名稱
+      let displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '未知頻道';
+      name.textContent = displayName;
       
       const details = document.createElement('div');
       details.style.cssText = 'font-size: 11px; color: #aaa;';
       if (channel.isLive) {
         details.textContent = `正在直播 • ${channel.viewerCount || 0} 觀看者`;
       } else {
-        details.textContent = channel.title || '未開台';
+        // 對於 Twitch，顯示 title 或 gameName；對於 YouTube，顯示 description
+        const detailText = channel.title || channel.gameName || channel.description || '未開台';
+        details.textContent = detailText;
       }
       
       info.appendChild(name);
       info.appendChild(details);
       
+      item.appendChild(platformTag);
       item.appendChild(liveIndicator);
       item.appendChild(info);
       
@@ -439,7 +547,9 @@ async function performSearch(query) {
       
       // 如果是認證相關錯誤，提供更明確的提示
       if (error.message.includes('Access Token') || error.message.includes('Client ID') || error.message.includes('Client Secret')) {
-        errorMessage = `認證失敗：${error.message}<br><small style="color: #999;">請檢查 config.js 中的 TWITCH_CLIENT_ID 和 TWITCH_CLIENT_SECRET 設定</small>`;
+        errorMessage = `認證失敗：${error.message}<br><small style="color: #999;">請檢查 config.js 中的 API 設定</small>`;
+      } else if (error.message.includes('API Key')) {
+        errorMessage = `API Key 錯誤：${error.message}<br><small style="color: #999;">請檢查 config.js 中的 API Key 設定</small>`;
       } else if (error.message.includes('CORS')) {
         errorMessage = `CORS 錯誤：${error.message}<br><small style="color: #999;">請考慮使用後端代理或檢查瀏覽器設定</small>`;
       }
@@ -469,7 +579,12 @@ function updateSelectedSuggestion() {
 function selectSearchResult(channel) {
   const urlInput = document.getElementById('url-input');
   if (urlInput && channel.url) {
-    urlInput.value = channel.url;
+    // 如果是 YouTube 且正在直播，使用直播 URL
+    if ((channel.platform === 'youtube' || channel.source === 'youtube') && channel.isLive && channel.liveVideoId) {
+      urlInput.value = `https://www.youtube.com/watch?v=${channel.liveVideoId}`;
+    } else {
+      urlInput.value = channel.url;
+    }
     hideSearchSuggestions();
     urlInput.focus();
   }

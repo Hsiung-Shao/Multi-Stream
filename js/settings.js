@@ -630,16 +630,32 @@ const favoriteStreams = {
         if (!name) name = channelId;
       }
     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      if (url.includes('youtube.com/live/')) {
-        videoId = url.split('live/')[1]?.split('?')[0];
-      } else if (url.includes('youtube.com/watch')) {
-        videoId = new URL(url).searchParams.get('v');
-      } else if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+      // 嘗試提取 channelId
+      if (url.includes('youtube.com/channel/')) {
+        const channelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
+        if (channelMatch) {
+          channelId = channelMatch[1];
+          platform = 'youtube';
+          if (!name) name = channelId;
+        }
+      } else if (url.includes('youtube.com/c/') || url.includes('youtube.com/user/') || url.includes('youtube.com/@')) {
+        // 這些 URL 格式需要通過 API 查詢才能獲得 channelId，暫時不處理
+        // 用戶可以通過搜尋功能添加頻道，這樣會自動獲得 channelId
       }
-      if (videoId) {
-        platform = 'youtube';
-        if (!name) name = videoId;
+      
+      // 嘗試提取 videoId
+      if (!channelId) {
+        if (url.includes('youtube.com/live/')) {
+          videoId = url.split('live/')[1]?.split('?')[0];
+        } else if (url.includes('youtube.com/watch')) {
+          videoId = new URL(url).searchParams.get('v');
+        } else if (url.includes('youtu.be/')) {
+          videoId = url.split('youtu.be/')[1]?.split('?')[0];
+        }
+        if (videoId) {
+          platform = 'youtube';
+          if (!name) name = videoId;
+        }
       }
     }
     
@@ -1793,82 +1809,155 @@ function updateFavoriteListDisplay() {
 
 // 批量更新收藏頻道的開台狀態
 async function updateFavoriteLiveStatuses() {
-  if (!window.twitchApi || !window.twitchApi.checkMultipleChannelsLiveStatus) {
-    return; // Twitch API 未載入
-  }
-  
   const list = favoriteStreams.getList();
   const twitchFavorites = list.filter(item => item.platform === 'twitch' && item.channelId);
+  const youtubeFavorites = list.filter(item => item.platform === 'youtube' && item.channelId);
   
-  if (twitchFavorites.length === 0) {
-    return; // 沒有 Twitch 收藏
+  let updatedCount = 0;
+  let updatedList = [...list];
+  
+  // 處理 Twitch 收藏
+  if (twitchFavorites.length > 0 && window.twitchApi && window.twitchApi.checkMultipleChannelsLiveStatus) {
+    try {
+      // 收集所有 Twitch 頻道 ID
+      const channelLogins = twitchFavorites.map(item => item.channelId.toLowerCase());
+      
+      // 批量查詢開台狀態
+      const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelLogins);
+      
+      // 更新收藏列表中的開台狀態
+      updatedList = updatedList.map(item => {
+        if (item.platform === 'twitch' && item.channelId) {
+          const login = item.channelId.toLowerCase();
+          const status = liveStatuses[login];
+          
+          if (status) {
+            updatedCount++;
+            return {
+              ...item,
+              isLive: status.isLive,
+              lastChecked: new Date().toISOString(),
+              viewerCount: status.viewerCount || null,
+              liveTitle: status.title || null,
+              gameName: status.gameName || null
+            };
+          } else {
+            // 如果查詢失敗，保持原有狀態，但更新檢查時間
+            return {
+              ...item,
+              lastChecked: new Date().toISOString()
+            };
+          }
+        }
+        return item;
+      });
+    } catch (error) {
+      // Twitch API 錯誤，繼續處理 YouTube
+    }
   }
   
-  // 收集所有 Twitch 頻道 ID
-  const channelLogins = twitchFavorites.map(item => item.channelId.toLowerCase());
+  // 處理 YouTube 收藏（檢查是否被封鎖，並且距離上次檢查已超過 15 分鐘）
+  const now = Date.now();
+  const shouldCheckYouTube = now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS;
   
-  try {
-    // 批量查詢開台狀態
-    const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelLogins);
-    
-    // 更新收藏列表中的開台狀態
-    const updatedList = list.map(item => {
-      if (item.platform === 'twitch' && item.channelId) {
-        const login = item.channelId.toLowerCase();
-        const status = liveStatuses[login];
+  if (youtubeFavorites.length > 0 && window.youtubeApi && window.youtubeApi.checkMultipleChannelsLiveStatus && shouldCheckYouTube) {
+    const youtubeConfig = window.youtubeApi.getConfig();
+    if (!youtubeConfig.isBlocked) {
+      try {
+        // 收集所有 YouTube 頻道 ID（過濾掉沒有 channelId 的項目）
+        const channelIds = youtubeFavorites
+          .filter(item => item.channelId)
+          .map(item => item.channelId);
         
-        if (status) {
-          return {
-            ...item,
-            isLive: status.isLive,
-            lastChecked: new Date().toISOString(),
-            viewerCount: status.viewerCount || null,
-            liveTitle: status.title || null,
-            gameName: status.gameName || null
-          };
-        } else {
-          // 如果查詢失敗，保持原有狀態，但更新檢查時間
-          return {
-            ...item,
-            lastChecked: new Date().toISOString()
-          };
+        if (channelIds.length > 0) {
+          // 批量查詢開台狀態
+          const liveStatuses = await window.youtubeApi.checkMultipleChannelsLiveStatus(channelIds);
+          
+          // 更新收藏列表中的開台狀態
+          updatedList = updatedList.map(item => {
+            if (item.platform === 'youtube' && item.channelId) {
+              const status = liveStatuses[item.channelId];
+              
+              if (status) {
+                updatedCount++;
+                return {
+                  ...item,
+                  isLive: status.isLive,
+                  lastChecked: new Date().toISOString(),
+                  viewerCount: status.viewerCount || null,
+                  liveTitle: status.title || null,
+                  videoId: status.videoId || item.videoId || null
+                };
+              } else {
+                // 如果查詢失敗，保持原有狀態，但更新檢查時間
+                return {
+                  ...item,
+                  lastChecked: new Date().toISOString()
+                };
+              }
+            }
+            return item;
+          });
+          
+          // 更新最後檢查時間
+          lastYouTubeCheckTime = now;
         }
+      } catch (error) {
+        // YouTube API 錯誤（可能是流量超限），靜默處理
+        // 如果流量超限，會在下次檢查時自動封鎖
       }
-      return item;
-    });
-    
-    // 保存更新後的列表
+    }
+  }
+  
+  // 保存更新後的列表
+  if (updatedCount > 0 || twitchFavorites.length > 0 || youtubeFavorites.length > 0) {
     favoriteStreams.saveList(updatedList);
     
     // 更新顯示
     if (typeof updateFavoriteListDisplay === 'function') {
       updateFavoriteListDisplay();
     }
-    
-    return { success: true, updated: twitchFavorites.length };
-  } catch (error) {
-    return { success: false, error: error.message };
   }
+  
+  return { success: true, updated: updatedCount };
 }
 
 // 定期自動刷新開台狀態的定時器
 let favoriteLiveStatusInterval = null;
+let youtubeCheckInterval = null;
+let lastYouTubeCheckTime = 0;
+const YOUTUBE_CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 分鐘（較長間隔以避免流量過度使用）
 
-// 啟動定期自動刷新（預設每 5 分鐘）
+// 啟動定期自動刷新
+// Twitch: 預設每 5 分鐘
+// YouTube: 每 15 分鐘（較長間隔以避免流量過度使用）
 function startFavoriteLiveStatusAutoRefresh(intervalMinutes = 5) {
   // 清除現有的定時器
   if (favoriteLiveStatusInterval) {
     clearInterval(favoriteLiveStatusInterval);
   }
+  if (youtubeCheckInterval) {
+    clearInterval(youtubeCheckInterval);
+  }
   
   // 立即執行一次
   updateFavoriteLiveStatuses();
   
-  // 設定定期刷新
+  // 設定定期刷新（主要用於 Twitch）
   const intervalMs = intervalMinutes * 60 * 1000;
   favoriteLiveStatusInterval = setInterval(() => {
     updateFavoriteLiveStatuses();
   }, intervalMs);
+  
+  // 為 YouTube 設定較長的檢查間隔
+  youtubeCheckInterval = setInterval(() => {
+    const now = Date.now();
+    // 如果距離上次 YouTube 檢查已經超過 15 分鐘，執行檢查
+    if (now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS) {
+      lastYouTubeCheckTime = now;
+      updateFavoriteLiveStatuses();
+    }
+  }, YOUTUBE_CHECK_INTERVAL_MS);
   
   // 保存設定到 localStorage
   localStorage.setItem('favoriteLiveStatusAutoRefresh', 'true');
@@ -1881,6 +1970,11 @@ function stopFavoriteLiveStatusAutoRefresh() {
     clearInterval(favoriteLiveStatusInterval);
     favoriteLiveStatusInterval = null;
   }
+  if (youtubeCheckInterval) {
+    clearInterval(youtubeCheckInterval);
+    youtubeCheckInterval = null;
+  }
+  lastYouTubeCheckTime = 0;
   localStorage.setItem('favoriteLiveStatusAutoRefresh', 'false');
 }
 
