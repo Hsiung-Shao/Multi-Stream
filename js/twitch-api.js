@@ -174,7 +174,117 @@ function setCachedData(key, data) {
   });
 }
 
-// 取得 App Access Token（使用 Client Credentials Grant Flow）
+// 檢測是否可以使用 Cloudflare Pages Function
+let pagesFunctionAvailable = null; // null = 未檢測, true = 可用, false = 不可用
+
+async function checkPagesFunctionAvailability() {
+  // 如果已經檢測過，直接返回結果
+  if (pagesFunctionAvailable !== null) {
+    return pagesFunctionAvailable;
+  }
+  
+  try {
+    // 嘗試調用 Pages Function 端點來檢測是否可用
+    const response = await fetch('/api/twitch-token', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    // 如果回應不是 404，表示端點存在（即使返回錯誤，也說明端點存在）
+    pagesFunctionAvailable = response.status !== 404;
+    
+    if (pagesFunctionAvailable) {
+      console.log('[Twitch API] 檢測到 Cloudflare Pages Function 可用');
+    } else {
+      console.log('[Twitch API] Cloudflare Pages Function 不可用，將使用直接調用方式');
+    }
+  } catch (error) {
+    // 網路錯誤或其他錯誤，假設 Pages Function 不可用
+    pagesFunctionAvailable = false;
+    console.log('[Twitch API] 無法連接到 Pages Function，將使用直接調用方式');
+  }
+  
+  return pagesFunctionAvailable;
+}
+
+// 從 Cloudflare Pages Function 取得 Token
+async function getTokenFromPagesFunction() {
+  try {
+    const response = await fetch('/api/twitch-token', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(`Pages Function 回應錯誤：${response.status} - ${errorData.message || errorData.error || '未知錯誤'}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.access_token) {
+      throw new Error('Pages Function 回應中沒有 access_token');
+    }
+    
+    return {
+      access_token: data.access_token,
+      expires_in: data.expires_in || 3600
+    };
+  } catch (error) {
+    console.error('[Twitch API] 從 Pages Function 取得 Token 失敗:', error);
+    throw error;
+  }
+}
+
+// 直接從 Twitch OAuth 取得 Token（回退方案）
+async function getTokenDirectly() {
+  // 如果沒有 Client Secret，無法自動取得 Token
+  if (!TWITCH_API_CONFIG.clientSecret) {
+    throw new Error('無法取得 Access Token：請在 config.js 中提供 TWITCH_CLIENT_SECRET 或 TWITCH_ACCESS_TOKEN，或在 Cloudflare Pages 中設定環境變數');
+  }
+  
+  // 如果沒有 Client ID，無法取得 Token
+  if (!TWITCH_API_CONFIG.clientId) {
+    throw new Error('無法取得 Access Token：請在 config.js 中提供 TWITCH_CLIENT_ID，或在 Cloudflare Pages 中設定環境變數');
+  }
+  
+  // 使用 Client Credentials Grant Flow 取得 Token
+  const params = new URLSearchParams({
+    client_id: TWITCH_API_CONFIG.clientId,
+    client_secret: TWITCH_API_CONFIG.clientSecret,
+    grant_type: 'client_credentials'
+  });
+  
+  const response = await fetch(TWITCH_API_CONFIG.oauthTokenUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params.toString()
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`取得 Access Token 失敗：${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  const data = await response.json();
+  
+  if (!data.access_token) {
+    throw new Error('取得 Access Token 失敗：回應中沒有 access_token');
+  }
+  
+  return {
+    access_token: data.access_token,
+    expires_in: data.expires_in || 3600
+  };
+}
+
+// 取得 App Access Token（優先使用 Cloudflare Pages Function，回退到直接調用）
 async function getAppAccessToken() {
   // 如果已有快取的 Token 且未過期，直接返回
   const now = Date.now();
@@ -190,41 +300,26 @@ async function getAppAccessToken() {
     return cachedAccessToken.token;
   }
   
-  // 如果沒有 Client Secret，無法自動取得 Token
-  if (!TWITCH_API_CONFIG.clientSecret) {
-    throw new Error('無法取得 Access Token：請在 config.js 中提供 TWITCH_CLIENT_SECRET 或 TWITCH_ACCESS_TOKEN');
-  }
-  
-  // 如果沒有 Client ID，無法取得 Token
-  if (!TWITCH_API_CONFIG.clientId) {
-    throw new Error('無法取得 Access Token：請在 config.js 中提供 TWITCH_CLIENT_ID');
-  }
-  
   try {
-    // 使用 Client Credentials Grant Flow 取得 Token
-    const params = new URLSearchParams({
-      client_id: TWITCH_API_CONFIG.clientId,
-      client_secret: TWITCH_API_CONFIG.clientSecret,
-      grant_type: 'client_credentials'
-    });
+    let data;
     
-    const response = await fetch(TWITCH_API_CONFIG.oauthTokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params.toString()
-    });
+    // 優先使用 Cloudflare Pages Function（如果可用）
+    const isPagesFunctionAvailable = await checkPagesFunctionAvailability();
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`取得 Access Token 失敗：${response.status} ${response.statusText} - ${errorText}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data.access_token) {
-      throw new Error('取得 Access Token 失敗：回應中沒有 access_token');
+    if (isPagesFunctionAvailable) {
+      try {
+        data = await getTokenFromPagesFunction();
+        console.log('[Twitch API] 使用 Cloudflare Pages Function 取得 Token');
+      } catch (pagesError) {
+        // Pages Function 失敗，回退到直接調用
+        console.warn('[Twitch API] Pages Function 失敗，回退到直接調用:', pagesError.message);
+        data = await getTokenDirectly();
+        console.log('[Twitch API] 使用直接調用方式取得 Token');
+      }
+    } else {
+      // Pages Function 不可用，使用直接調用
+      data = await getTokenDirectly();
+      console.log('[Twitch API] 使用直接調用方式取得 Token');
     }
     
     // 快取 Token（預留 5 分鐘緩衝時間，避免在邊界時過期）
@@ -500,10 +595,7 @@ async function checkMultipleChannelsLiveStatus(channelLogins) {
       const batch = channelLogins.slice(i, i + batchSize);
       
       // Twitch API 支援多個 user_login 參數
-      const params = {};
-      batch.forEach((login, index) => {
-        params[`user_login`] = login; // 注意：Twitch API 需要多個同名參數
-      });
+      // 注意：此處的 params 實際上不會被使用，因為我們使用 URLSearchParams 來處理多個同名參數
       
       // 使用 URLSearchParams 來處理多個同名參數
       const queryParams = new URLSearchParams();

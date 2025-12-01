@@ -2,6 +2,23 @@
 // 請複製此檔案為 config.js 並填入您的設定
 // config.js 已加入 .gitignore，不會被提交到版本控制
 
+// ============================================
+// Cloudflare Pages 部署說明（推薦）
+// ============================================
+// 如果您使用 Cloudflare Pages 部署，建議使用環境變數（更安全）：
+// 
+// 1. 在 Cloudflare Pages 控制台 → Settings → Variables & Secrets 中設定：
+//    - TWITCH_CLIENT_ID: Twitch API Client ID（使用 Variables）
+//    - TWITCH_CLIENT_SECRET: Twitch API Client Secret（使用 Secrets，不會暴露給客戶端）
+// 
+// 2. 系統會自動使用 Cloudflare Pages Function (/api/twitch-token) 來取得 Token
+//    這樣可以避免在前端暴露 Client Secret，更加安全
+// 
+// 3. 如果未設定環境變數，系統會回退到使用此 config.js 中的配置（向後兼容）
+// 
+// 4. 本地開發時，可以繼續使用 config.js（此檔案已加入 .gitignore）
+// ============================================
+
 const CONFIG = {
   // Twitch API Client ID（必須）
   // 從 https://dev.twitch.tv/console/apps 取得
@@ -11,6 +28,8 @@ const CONFIG = {
   // 3. 點擊「Register Your Application」
   // 4. 填寫應用程式資訊（名稱、OAuth Redirect URL 等）
   // 5. 建立後即可看到 Client ID
+  // 
+  // 注意：如果使用 Cloudflare Pages，建議在環境變數中設定，而不是在此檔案中
   TWITCH_CLIENT_ID: 'your_client_id_here',
   
   // Twitch API Client Secret（用於自動取得 App Access Token，建議使用）
@@ -20,6 +39,11 @@ const CONFIG = {
   // 2. 複製生成的 Client Secret（只會顯示一次，請妥善保存）
   // 注意：Client Secret 是敏感資訊，請勿公開分享
   // 如果提供此值，系統會自動取得並刷新 Access Token
+  // 
+  // ⚠️ 安全建議：
+  // - 本地開發：可以在 config.js 中設定（此檔案已加入 .gitignore）
+  // - 生產環境：強烈建議使用 Cloudflare Pages 環境變數（TWITCH_CLIENT_SECRET）
+  //   這樣可以避免在前端代碼中暴露 Client Secret
   TWITCH_CLIENT_SECRET: 'your_client_secret_here',
   
   // Twitch API App Access Token（可選，如果提供則直接使用）
