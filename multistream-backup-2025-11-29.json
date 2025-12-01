@@ -1,0 +1,144 @@
+{
+  "version": "1.0",
+  "exportDate": "2025-11-29T23:22:08.564Z",
+  "userSettings": {
+    "controlPanel": {
+      "collapsed": false,
+      "position": {
+        "top": "0px",
+        "left": "0px",
+        "right": "auto",
+        "bottom": "auto",
+        "snappedLeft": true,
+        "snappedRight": false,
+        "snappedTop": true,
+        "snappedBottom": false
+      }
+    },
+    "masterVolume": 46,
+    "preferredLayout": null,
+    "allChatsVisible": true
+  },
+  "favoriteStreams": [
+    {
+      "id": "1764456560012",
+      "url": "https://www.twitch.tv/kspksp",
+      "name": "kspksp",
+      "platform": "twitch",
+      "channelId": "kspksp",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.012Z"
+    },
+    {
+      "id": "1764456560019",
+      "url": "https://www.twitch.tv/998rrr",
+      "name": "998rrr",
+      "platform": "twitch",
+      "channelId": "998rrr",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.019Z"
+    },
+    {
+      "id": "1764456560030",
+      "url": "https://www.twitch.tv/itsuki_ianvs",
+      "name": "itsuki_ianvs",
+      "platform": "twitch",
+      "channelId": "itsuki_ianvs",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.030Z"
+    },
+    {
+      "id": "1764456560041",
+      "url": "https://www.twitch.tv/iruni_ianvs",
+      "name": "iruni_ianvs",
+      "platform": "twitch",
+      "channelId": "iruni_ianvs",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.041Z"
+    },
+    {
+      "id": "1764456560051",
+      "url": "https://www.twitch.tv/hitomi_teraz",
+      "name": "hitomi_teraz",
+      "platform": "twitch",
+      "channelId": "hitomi_teraz",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.051Z"
+    },
+    {
+      "id": "1764456560060",
+      "url": "https://www.twitch.tv/koyuki_teraz",
+      "name": "koyuki_teraz",
+      "platform": "twitch",
+      "channelId": "koyuki_teraz",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.060Z"
+    },
+    {
+      "id": "1764456560069",
+      "url": "https://www.twitch.tv/hiyori_teraz",
+      "name": "hiyori_teraz",
+      "platform": "twitch",
+      "channelId": "hiyori_teraz",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.069Z"
+    },
+    {
+      "id": "1764456560079",
+      "url": "https://www.twitch.tv/reirei_neon",
+      "name": "reirei_neon",
+      "platform": "twitch",
+      "channelId": "reirei_neon",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.079Z"
+    },
+    {
+      "id": "1764456560091",
+      "url": "https://www.twitch.tv/kirali_neon",
+      "name": "kirali_neon",
+      "platform": "twitch",
+      "channelId": "kirali_neon",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.091Z"
+    },
+    {
+      "id": "1764456560101",
+      "url": "https://www.twitch.tv/yuzumi_neon",
+      "name": "yuzumi_neon",
+      "platform": "twitch",
+      "channelId": "yuzumi_neon",
+      "videoId": "",
+      "categoryId": "1764458306474",
+      "addedAt": "2025-11-29T22:49:20.101Z"
+    }
+  ],
+  "favoriteCategories": [
+    {
+      "id": "1764458306474",
+      "name": "子午",
+      "createdAt": "2025-11-29T23:18:26.474Z"
+    }
+  ],
+  "controlPanelCollapsed": "null",
+  "controlPanelPosition": {
+    "top": "0px",
+    "left": "0px",
+    "right": "auto",
+    "bottom": "auto",
+    "snappedLeft": true,
+    "snappedRight": false,
+    "snappedTop": true,
+    "snappedBottom": false
+  },
+  "multiStreamLayout": null,
+  "adConfig": null
+}
