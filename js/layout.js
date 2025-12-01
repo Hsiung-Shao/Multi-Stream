@@ -672,10 +672,24 @@ function updateFixedLayoutFramework() {
     
     let videoLayoutType = 1;
     if (count > 0) {
-      // 如果用户已经选择了视频布局类型，使用用户选择的；否则自动选择
+      // 檢查用戶選擇的布局類型是否仍然適合當前的串流數量
+      // 如果 layout13VideoLayout 不為 null，但當前串流數量與該布局類型不匹配，重置它
       if (layout13VideoLayout !== null && [1, 2, 3, 4, 5, 6, 9].includes(layout13VideoLayout)) {
-        videoLayoutType = layout13VideoLayout;
+        // 檢查布局類型是否適合當前串流數量
+        const autoSelectedLayout = autoSelectLayout();
+        // 如果自動選擇的布局與用戶選擇的不同，且串流數量發生了變化，重置為自動選擇
+        // 這確保了當串流數量變化時，布局會自動調整
+        if (autoSelectedLayout !== layout13VideoLayout) {
+          // 串流數量變化導致需要不同的布局，重置為自動選擇
+          layout13VideoLayout = null;
+          videoLayoutType = autoSelectedLayout;
+          layout13VideoLayout = videoLayoutType; // 保存新的自動選擇結果
+        } else {
+          // 用戶選擇的布局仍然適合，使用它
+          videoLayoutType = layout13VideoLayout;
+        }
       } else {
+        // 沒有用戶選擇或選擇無效，自動選擇
         videoLayoutType = autoSelectLayout();
         layout13VideoLayout = videoLayoutType; // 保存自动选择的结果
       }
