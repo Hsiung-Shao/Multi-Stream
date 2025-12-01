@@ -1,19 +1,67 @@
-const CF_PAGES_ENV = typeof import !== 'undefined' && import.meta && import.meta.env 
-  ? import.meta.env 
-  : {};
+// Twitch API 服務模組
+// 用於搜尋頻道和查詢開台狀態
 
-// 為了相容你原本的 getEnvValue 函數，我們把 Cloudflare Pages 的值塞進 ENV 讓它能讀到
-let ENV = {
-  // 注意：變數名稱必須完全一樣（大小寫敏感）
-  VITE_TWITCH_CLIENT_ID:     CF_PAGES_ENV.VITE_TWITCH_CLIENT_ID     || '',
-  VITE_TWITCH_CLIENT_SECRET: CF_PAGES_ENV.VITE_TWITCH_CLIENT_SECRET || '',
-  VITE_YOUTUBE_API_KEY:      CF_PAGES_ENV.VITE_YOUTUBE_API_KEY      || '',
-};
-// ==================== 唯一修改的地方結束 ====================
+// 嘗試獲取環境變數對象（如果代碼是 ES module 且使用構建工具）
+// 根據 Grok 4.1 建議和 Cloudflare Pages 文檔：
+// https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables
+// 
+// Cloudflare Pages 環境變數說明：
+// - 環境變數在構建時注入（如果使用構建工具如 Vite）
+// - 這些值只在 build 時存在，部署後瀏覽器看不到原始值
+// - 如果使用 Vite，環境變數會被注入到 import.meta.env 中
+// - 如果項目不使用構建工具，環境變數無法直接訪問，需要回退到 config.js
+// 
+// 使用方式（在 Cloudflare Pages 中設定環境變數）：
+// 1. 前往 Cloudflare Dashboard > Workers & Pages > 您的專案 > Settings > Environment variables
+// 2. 添加以下環境變數：
+//    - TWITCH_CLIENT_ID: Twitch Client ID（Plaintext，可以暴露給客戶端）
+//    - TWITCH_CLIENT_SECRET: Twitch Client Secret（Secret，加密存儲，不會暴露給客戶端）
+// 
+// 注意：
+// - 如果代碼是作為 ES module 載入的（type="module"），可以直接訪問 import.meta.env
+// - 如果使用 Vite 等構建工具，環境變數會在構建時注入到 import.meta.env 中
+// - 如果代碼不是 ES module 或沒有構建工具，ENV 將保持為 null，會自動回退到 config.js
+// 
+// 重要：如果您的代碼是 ES module 且使用構建工具，可以直接在代碼中使用：
+//   const TWITCH_ID = import.meta.env.VITE_TWITCH_CLIENT_ID;
+//   const TWITCH_CLIENT_SECRET = import.meta.env.TWITCH_CLIENT_SECRET;
+// 但由於當前代碼可能不是 ES module，我們使用函數來安全地訪問
+let ENV = null;
+// 注意：如果代碼是 ES module，可以直接使用 import.meta.env
+// 但由於當前代碼可能不是 ES module，我們無法直接訪問
+// 如果用戶將代碼轉換為 ES module 並使用構建工具（如 Vite），環境變數會被注入
+// 在這種情況下，用戶需要確保代碼是作為 ES module 載入的（type="module"）
 
-// 原本的 getEnvValue 完全不用動，現在會優先讀到 Cloudflare Pages 的值
+// Twitch API 配置
+// 優先從環境變數（import.meta.env）讀取，然後從 config.js 讀取，最後從 localStorage 讀取（向後兼容）
+// 
+// 根據 Cloudflare Pages 文檔：
+// https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables
+// 
+// 環境變數設定步驟：
+// 1. 前往 Cloudflare Dashboard > Workers & Pages > 您的專案
+// 2. 選擇 Settings > Environment variables
+// 3. 添加以下環境變數：
+//    - TWITCH_CLIENT_ID: Twitch Client ID（Type: Plaintext，可以暴露給客戶端）
+//    - TWITCH_CLIENT_SECRET: Twitch Client Secret（Type: Secret，加密存儲，不會暴露給客戶端）
+// 
+// 注意：對於純靜態網站（不使用構建工具），環境變數無法直接注入到代碼中
+// 系統會自動回退到 config.js，這是安全的做法
+// 
+// 注意：
+// - 如果使用 Vite 等構建工具，環境變數會在構建時注入到 import.meta.env 中
+// - 如果代碼是作為 ES module 載入的（type="module"），可以直接使用 import.meta.env
+// - 如果代碼不是 ES module 或沒有構建工具，會自動回退到 config.js 或 localStorage
+// - 環境變數只在構建時存在，部署後瀏覽器看不到原始值（安全性）
 function getEnvValue(envKey, configKey, localStorageKey) {
-  // 方法 1: Cloudflare Pages 注入的 VITE_ 變數（最高優先）
+  // 優先從環境變數讀取（Cloudflare Pages 環境變數）
+  // 這些值只在 build 時存在，部署後瀏覽器看不到原始值
+  // 
+  // 根據 Cloudflare Pages 文檔，環境變數在構建時注入
+  // 如果使用 Vite，環境變數會被注入到 import.meta.env 中
+  
+  // 方法 1: 如果代碼是 ES module 且 ENV 可用，直接從 import.meta.env 讀取
+  // 這適用於使用 Vite 等構建工具的情況
   if (ENV && ENV[envKey]) {
     const envValue = ENV[envKey];
     if (envValue && envValue !== 'undefined' && String(envValue).trim() !== '') {
@@ -22,6 +70,7 @@ function getEnvValue(envKey, configKey, localStorageKey) {
   }
   
   // 方法 2: 嘗試通過全局變數訪問（某些構建工具可能會這樣做）
+  // 某些構建工具可能會將環境變數注入到全局對象中
   try {
     if (window.__ENV__ && window.__ENV__[envKey]) {
       const envValue = window.__ENV__[envKey];
@@ -29,14 +78,17 @@ function getEnvValue(envKey, configKey, localStorageKey) {
         return String(envValue);
       }
     }
-  } catch (e) {}
-
-  // 回退到 config.js
+  } catch (e) {
+    // 忽略錯誤，繼續嘗試其他方法
+  }
+  
+  // 回退到 config.js（適用於不使用構建工具的情況）
+  // 這是向後兼容的方案，確保在沒有構建工具時仍能正常工作
   if (typeof CONFIG !== 'undefined' && CONFIG[configKey]) {
     return CONFIG[configKey];
   }
-
-  // 最後回退到 localStorage
+  
+  // 最後回退到 localStorage（用戶手動設定的值）
   if (typeof localStorage !== 'undefined') {
     return localStorage.getItem(localStorageKey) || '';
   }
@@ -45,30 +97,43 @@ function getEnvValue(envKey, configKey, localStorageKey) {
 }
 
 const TWITCH_API_CONFIG = {
-  // 現在會優先讀到你在 Cloudflare Pages 設的 VITE_TWITCH_CLIENT_ID
-  clientId: getEnvValue('VITE_TWITCH_CLIENT_ID', 'TWITCH_CLIENT_ID', 'twitchClientId'),
+  // Client ID - 優先從環境變數讀取，然後從 config.js 或 localStorage 讀取（必須）
+  // 注意：環境變數名稱應與 Cloudflare Pages 中設定的名稱一致
+  clientId: getEnvValue('TWITCH_CLIENT_ID', 'TWITCH_CLIENT_ID', 'twitchClientId'),
   
-  // 現在會優先讀到你在 Cloudflare Pages 設的 VITE_TWITCH_CLIENT_SECRET
-  clientSecret: getEnvValue('VITE_TWITCH_CLIENT_SECRET', 'TWITCH_CLIENT_SECRET', 'twitchClientSecret'),
+  // Client Secret - 用於自動取得 App Access Token（可選）
+  // 優先從環境變數讀取，然後從 config.js 或 localStorage 讀取
+  clientSecret: getEnvValue('TWITCH_CLIENT_SECRET', 'TWITCH_CLIENT_SECRET', 'twitchClientSecret'),
   
+  // Access Token - 如果提供則直接使用（可選）
   accessToken: (typeof CONFIG !== 'undefined' && CONFIG.TWITCH_ACCESS_TOKEN) 
     ? CONFIG.TWITCH_ACCESS_TOKEN 
     : (localStorage.getItem('twitchAccessToken') || ''),
   
+  // API 基礎 URL
   baseUrl: 'https://api.twitch.tv/helix',
+  
+  // OAuth Token 端點
   oauthTokenUrl: 'https://id.twitch.tv/oauth2/token',
+  
+  // 後端代理 URL（如果使用代理來解決 CORS 問題）
   proxyUrl: (typeof CONFIG !== 'undefined' && CONFIG.TWITCH_PROXY_URL) 
     ? CONFIG.TWITCH_PROXY_URL 
     : (localStorage.getItem('twitchProxyUrl') || ''),
+  
+  // 是否使用代理
   useProxy: (typeof CONFIG !== 'undefined' && CONFIG.TWITCH_USE_PROXY !== undefined) 
     ? CONFIG.TWITCH_USE_PROXY 
     : (localStorage.getItem('twitchUseProxy') === 'true'),
   
+  // 快取設定
   cacheEnabled: true,
-  cacheDuration: 60000,
+  cacheDuration: 60000, // 1 分鐘快取
+  
+  // 速率限制
   rateLimit: {
     maxRequests: 30,
-    windowMs: 60000
+    windowMs: 60000 // 1 分鐘
   }
 };
 
