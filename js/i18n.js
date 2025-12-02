@@ -30,6 +30,8 @@ const i18n = {
       'chatControl': '聊天室控制',
       'showAllChats': '顯示所有聊天室',
       'hideAllChats': '隱藏所有聊天室',
+      'apply': '套用',
+      'chatWidthHint': '輸入百分比來調整左右容器比例（10-80%）',
       'favoriteStreams': '收藏串流',
       'manageFavorites': '管理收藏',
       'addCurrentToFavorites': '收藏當前',
@@ -140,12 +142,19 @@ const i18n = {
       'feature3': '聊天室整合與音量控制',
       'feature4': '收藏串流與分類管理',
       'feature5': '完全免費，無需註冊',
+      'feature6': 'Twitch 頻道搜尋和開台狀態檢測',
       'getStarted': '開始使用',
       'initialContentNote': '在控制面板中貼上 Twitch 或 YouTube 直播網址，即可開始觀看多個直播串流',
       
       // 版本紀錄
       'version': '版本',
       'close': '關閉',
+      'version1.6.0.change1': 'Twitch 頻道搜尋功能',
+      'version1.6.0.change2': '收藏的Twitch 頻道開台狀態檢測',
+      'version1.6.0.change3': '調整響應式設計',
+      'version1.6.0.change4': 'Layout 自動排版功能',
+      'version1.6.0.change5': '新增串流重新整理功能',
+      'version1.6.0.change6': '收藏管理也支援Twitch 頻道搜尋功能',
       'version1.5.0.change1': '將備份系統機制修改為 IndexedDB',
       'version1.5.0.change2': '新增匯出/匯入 JSON 檔案功能，方便數據備份和遷移',
       'version1.5.0.change3': '優化備份機制：刪除操作立即備份，添加/更新操作使用防抖備份（10秒）',
@@ -219,6 +228,11 @@ const i18n = {
       'volumeStep1': '使用「總音量」滑桿調整所有串流的音量',
       'volumeStep2': '在「串流順序」列表中，調整單個串流的音量',
       'volumeStep3': '點擊「全部靜音」快速靜音/取消靜音所有串流',
+      'volumeStep4': '取消全部靜音後，會自動恢復到之前設定的音量值',
+      'volumeStep5': '每個串流畫面上方的音量條會即時顯示實際音量（考慮總音量）',
+      'reloadStreamTitle': '🔄 重整串流',
+      'reloadStreamStep1': '點擊串流畫面上方的重整按鈕（🔄）',
+      'reloadStreamStep2': '串流會重新載入，並保留當前的音量、聊天室狀態和位置設定',
       'favoriteTitle': '⭐ 收藏功能',
       'favoriteStep1': '點擊「管理收藏」打開收藏管理界面',
       'favoriteStep2': '在「收藏串流」標籤頁中：',
@@ -339,6 +353,8 @@ const i18n = {
       'chatControl': '聊天室控制',
       'showAllChats': '显示所有聊天室',
       'hideAllChats': '隐藏所有聊天室',
+      'apply': '应用',
+      'chatWidthHint': '输入百分比来调整左右容器比例（10-80%）',
       'favoriteStreams': '收藏串流',
       'manageFavorites': '管理收藏',
       'addCurrentToFavorites': '收藏当前',
@@ -449,12 +465,19 @@ const i18n = {
       'feature3': '聊天室整合与音量控制',
       'feature4': '收藏串流与分类管理',
       'feature5': '完全免费，无需注册',
+      'feature6': 'Twitch 频道搜寻和开台状态检测',
       'getStarted': '开始使用',
       'initialContentNote': '在控制面板中贴上 Twitch 或 YouTube 直播网址，即可开始观看多个直播串流',
       
       // 版本紀錄
       'version': '版本',
       'close': '关闭',
+      'version1.6.0.change1': 'Twitch 频道搜寻功能',
+      'version1.6.0.change2': '收藏的Twitch 频道开台状态检测',
+      'version1.6.0.change3': '调整响应式设计',
+      'version1.6.0.change4': 'Layout 自动排版功能',
+      'version1.6.0.change5': '新增串流重新整理功能',
+      'version1.6.0.change6': '收藏管理也支援Twitch 频道搜寻功能',
       'version1.5.0.change1': '将备份系统机制修改为 IndexedDB',
       'version1.5.0.change2': '新增导出/导入 JSON 文件功能，方便数据备份和迁移',
       'version1.5.0.change3': '优化备份机制：删除操作立即备份，添加/更新操作使用防抖备份（10秒）',
@@ -528,6 +551,11 @@ const i18n = {
       'volumeStep1': '使用「总音量」滑杆调整所有串流的音量',
       'volumeStep2': '在「串流顺序」列表中，调整单个串流的音量',
       'volumeStep3': '点击「全部静音」快速静音/取消静音所有串流',
+      'volumeStep4': '取消全部静音后，会自动恢复到之前设定的音量值',
+      'volumeStep5': '每个串流画面上方的音量条会即时显示实际音量（考虑总音量）',
+      'reloadStreamTitle': '🔄 重整串流',
+      'reloadStreamStep1': '点击串流画面上方的重整按钮（🔄）',
+      'reloadStreamStep2': '串流会重新载入，并保留当前的音量、聊天室状态和位置设定',
       'favoriteTitle': '⭐ 收藏功能',
       'favoriteStep1': '点击「管理收藏」打开收藏管理界面',
       'favoriteStep2': '在「收藏串流」标签页中：',
@@ -648,6 +676,8 @@ const i18n = {
       'chatControl': 'Chat Control',
       'showAllChats': 'Show All Chats',
       'hideAllChats': 'Hide All Chats',
+      'apply': 'Apply',
+      'chatWidthHint': 'Enter percentage to adjust left/right container ratio (10-80%)',
       'favoriteStreams': 'Favorite Streams',
       'manageFavorites': 'Manage Favorites',
       'addCurrentToFavorites': 'Add Current',
@@ -758,12 +788,19 @@ const i18n = {
       'feature3': 'Chat integration and volume control',
       'feature4': 'Favorite streams and category management',
       'feature5': 'Completely free, no registration required',
+      'feature6': 'Twitch channel search and live status detection',
       'getStarted': 'Get Started',
       'initialContentNote': 'Paste a Twitch or YouTube live stream URL in the control panel to start watching multiple streams',
       
       // Version History
       'version': 'Version',
       'close': 'Close',
+      'version1.6.0.change1': 'Twitch channel search feature',
+      'version1.6.0.change2': 'Live status detection for favorited Twitch channels',
+      'version1.6.0.change3': 'Improved responsive design',
+      'version1.6.0.change4': 'Layout auto-arrangement feature',
+      'version1.6.0.change5': 'Added stream reload feature',
+      'version1.6.0.change6': 'Favorites management also supports Twitch channel search',
       'version1.5.0.change1': 'Modified backup system mechanism to IndexedDB',
       'version1.5.0.change2': 'Added export/import JSON file feature for easy data backup and migration',
       'version1.5.0.change3': 'Optimized backup mechanism: immediate backup on delete, debounced backup (10s) on add/update',
@@ -837,6 +874,11 @@ const i18n = {
       'volumeStep1': 'Use the "Master Volume" slider to adjust volume for all streams',
       'volumeStep2': 'In the "Stream Order" list, adjust individual stream volume',
       'volumeStep3': 'Click "Mute All" to quickly mute/unmute all streams',
+      'volumeStep4': 'After unmuting all, the volume will automatically restore to the previously set value',
+      'volumeStep5': 'The volume bar above each stream window displays the actual volume in real-time (considering master volume)',
+      'reloadStreamTitle': '🔄 Reload Stream',
+      'reloadStreamStep1': 'Click the reload button (🔄) above the stream window',
+      'reloadStreamStep2': 'The stream will reload while preserving current volume, chat visibility, and position settings',
       'favoriteTitle': '⭐ Favorites',
       'favoriteStep1': 'Click "Manage Favorites" to open the favorites management interface',
       'favoriteStep2': 'In the "Favorite Streams" tab:',
@@ -958,6 +1000,8 @@ const i18n = {
       'chatControl': 'チャット制御',
       'showAllChats': 'すべてのチャットを表示',
       'hideAllChats': 'すべてのチャットを非表示',
+      'apply': '適用',
+      'chatWidthHint': 'パーセンテージを入力して左右のコンテナ比率を調整（10-80%）',
       'favoriteStreams': 'お気に入りストリーム',
       'manageFavorites': 'お気に入りを管理',
       'addCurrentToFavorites': '現在を追加',
@@ -1068,12 +1112,19 @@ const i18n = {
       'feature3': 'チャット統合と音量制御',
       'feature4': 'お気に入りストリームとカテゴリ管理',
       'feature5': '完全無料、登録不要',
+      'feature6': 'Twitch チャンネル検索とライブステータス検出',
       'getStarted': '始める',
       'initialContentNote': 'コントロールパネルに Twitch または YouTube ライブストリーム URL を貼り付けて、複数のストリームの視聴を開始できます',
       
       // バージョン履歴
       'version': 'バージョン',
       'close': '閉じる',
+      'version1.6.0.change1': 'Twitch チャンネル検索機能',
+      'version1.6.0.change2': 'お気に入り Twitch チャンネルのライブステータス検出',
+      'version1.6.0.change3': 'レスポンシブデザインの調整',
+      'version1.6.0.change4': 'Layout 自動配置機能',
+      'version1.6.0.change5': 'ストリーム再読み込み機能を追加',
+      'version1.6.0.change6': 'お気に入り管理でも Twitch チャンネル検索機能をサポート',
       'version1.5.0.change1': 'バックアップシステムメカニズムを IndexedDB に変更',
       'version1.5.0.change2': 'JSON ファイルのエクスポート/インポート機能を追加、データバックアップと移行が容易に',
       'version1.5.0.change3': 'バックアップメカニズムを最適化：削除操作は即座にバックアップ、追加/更新操作は防抖バックアップ（10秒）',
@@ -1147,6 +1198,11 @@ const i18n = {
       'volumeStep1': '「マスターボリューム」スライダーを使用して、すべてのストリームの音量を調整します',
       'volumeStep2': '「ストリーム順序」リストで、個別のストリーム音量を調整します',
       'volumeStep3': '「すべてミュート」をクリックして、すべてのストリームをすばやくミュート/ミュート解除します',
+      'volumeStep4': 'すべてのミュート解除後、以前に設定した音量値に自動的に復元されます',
+      'volumeStep5': '各ストリーム画面上部の音量バーは、実際の音量をリアルタイムで表示します（マスターボリュームを考慮）',
+      'reloadStreamTitle': '🔄 ストリーム再読み込み',
+      'reloadStreamStep1': 'ストリーム画面上部の再読み込みボタン（🔄）をクリック',
+      'reloadStreamStep2': 'ストリームが再読み込みされ、現在の音量、チャット表示状態、位置設定が保持されます',
       'favoriteTitle': '⭐ お気に入り機能',
       'favoriteStep1': '「お気に入りを管理」をクリックして、お気に入り管理インターフェースを開きます',
       'favoriteStep2': '「お気に入りストリーム」タブで：',
@@ -1441,8 +1497,24 @@ const i18n = {
     elementsWithI18n.forEach(element => {
       const key = element.getAttribute('data-i18n');
       if (key) {
+        // 獲取當前元素內容
+        const currentContent = element.tagName === 'INPUT' 
+          ? (element.type === 'text' ? element.placeholder : element.value)
+          : element.textContent;
+        
+        // 獲取翻譯
         const translation = this.t(key);
-        if (translation) {
+        
+        // 如果翻譯等於 key，表示翻譯不存在，跳過更新（避免覆蓋為 placeholder）
+        if (translation === key) {
+          // 翻譯不存在，跳過更新
+          return;
+        }
+        
+        // 如果當前內容已經是 key（placeholder），才需要更新
+        // 如果當前內容不是 key，說明已經有正確的內容（可能是 HTML 預設內容或之前的翻譯）
+        // 但為了支持語言切換，我們仍然需要更新（除非當前內容已經是正確的翻譯）
+        if (currentContent === key || currentContent === '' || currentContent !== translation) {
           // 根據元素類型更新
           if (element.tagName === 'INPUT' && element.type === 'text') {
             element.placeholder = translation;
@@ -1496,8 +1568,24 @@ const i18n = {
     elementsWithI18n.forEach(element => {
       const key = element.getAttribute('data-i18n');
       if (key) {
+        // 獲取當前元素內容
+        const currentContent = element.tagName === 'INPUT' 
+          ? (element.type === 'text' ? element.placeholder : element.value)
+          : element.textContent;
+        
+        // 獲取翻譯
         const translation = this.t(key);
-        if (translation) {
+        
+        // 如果翻譯等於 key，表示翻譯不存在，跳過更新（避免覆蓋為 placeholder）
+        if (translation === key) {
+          // 翻譯不存在，跳過更新
+          return;
+        }
+        
+        // 如果當前內容已經是 key（placeholder），才需要更新
+        // 如果當前內容不是 key，說明已經有正確的內容（可能是 HTML 預設內容或之前的翻譯）
+        // 但為了支持語言切換，我們仍然需要更新（除非當前內容已經是正確的翻譯）
+        if (currentContent === key || currentContent === '' || currentContent !== translation) {
           // 根據元素類型更新
           if (element.tagName === 'INPUT' && element.type === 'text') {
             element.placeholder = translation;

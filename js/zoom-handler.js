@@ -117,11 +117,6 @@ function adjustChatMinWidth() {
   // 為分離聊天室設置最小寬度
   document.documentElement.style.setProperty('--separated-chat-min-width', `${Math.round(adjustedMinWidth)}px`);
   
-  // 調試信息（開發時使用）
-  if (window.console && window.console.log) {
-    console.log(`[Zoom Handler] 檢測到縮放比例: ${zoom.toFixed(2)}x, 調整後聊天室最小寬度: ${Math.round(adjustedMinWidth)}px`);
-  }
-  
   return adjustedMinWidth;
 }
 

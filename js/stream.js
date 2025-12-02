@@ -1,12 +1,55 @@
 // 串流管理功能
 
 // 主要加入函式
-function addStream(url = null) {
+async function addStream(url = null) {
   if (!url) url = document.getElementById('url-input').value.trim();
-  if (!url) return alert('請輸入直播網址');
+  if (!url) return alert('請輸入直播網址或頻道名稱');
   
   // 清空輸入框
   document.getElementById('url-input').value = '';
+  
+  // 隱藏搜尋建議
+  if (typeof hideSearchSuggestions === 'function') {
+    hideSearchSuggestions();
+  }
+
+  // 如果輸入的不是 URL，嘗試搜尋 Twitch 或 YouTube 頻道
+  if (!url.includes('http://') && !url.includes('https://') && 
+      !url.includes('twitch.tv/') && !url.includes('youtube.com') && 
+      !url.includes('youtu.be/')) {
+    // 可能是頻道名稱，嘗試搜尋
+    let foundChannel = null;
+    let searchError = null;
+    
+    // 先嘗試 Twitch 搜尋
+    if (window.twitchApi && window.twitchApi.searchChannels) {
+      try {
+        const twitchResults = await window.twitchApi.searchChannels(url, 1);
+        if (twitchResults && twitchResults.length > 0) {
+          foundChannel = { ...twitchResults[0], platform: 'twitch', source: 'twitch' };
+        }
+      } catch (error) {
+        searchError = error.message;
+      }
+    }
+    
+    // YouTube 搜尋功能已暫時關閉
+    // if (!foundChannel && window.youtubeApi && window.youtubeApi.searchChannels) {
+    //   // YouTube API 功能已暫時關閉
+    // }
+    
+    if (foundChannel) {
+      // 使用第一個搜尋結果
+      url = foundChannel.url;
+    } else {
+      if (searchError) {
+        alert(`搜尋頻道失敗: ${searchError}。請直接輸入完整的 Twitch 或 YouTube 網址`);
+      } else {
+        alert(`找不到頻道 "${url}"，請輸入完整的 Twitch 或 YouTube 網址`);
+      }
+      return;
+    }
+  }
 
   // 先验证 URL，再创建 DOM（避免无效 URL 创建 DOM 后又被移除）
   const urlValidation = validateUrl(url);
@@ -31,6 +74,12 @@ function addStream(url = null) {
   
   const volumeControl = document.createElement('div');
   volumeControl.className = 'volume-control';
+  
+  const reloadBtn = document.createElement('button');
+  reloadBtn.className = 'control-btn';
+  reloadBtn.title = '重整串流';
+  reloadBtn.textContent = '🔄';
+  reloadBtn.onclick = () => reloadStream(id);
   
   const volumeIcon = document.createElement('span');
   volumeIcon.style.fontSize = '11px';
@@ -71,6 +120,7 @@ function addStream(url = null) {
   
   controls.appendChild(streamLabel);
   controls.appendChild(volumeControl);
+  controls.appendChild(reloadBtn);
   controls.appendChild(chatBtn);
   controls.appendChild(separateBtn);
   controls.appendChild(closeBtn);
@@ -346,6 +396,81 @@ function createYouTubePlayer(id, videoId) {
   initPlayer();
 }
 
+// 重整串流
+function reloadStream(id) {
+  if (!streamData[id]) return;
+  
+  const data = streamData[id];
+  const box = document.getElementById('box' + id);
+  if (!box) return;
+  
+  // 保存當前狀態
+  const savedVolume = data.volume || 100;
+  const savedChatVisible = data.chatVisible !== undefined ? data.chatVisible : true;
+  const savedStyle = {
+    left: box.style.left,
+    top: box.style.top,
+    width: box.style.width,
+    height: box.style.height
+  };
+  
+  // 清理現有播放器
+  if (players[id]) {
+    if (players[id].type === 'youtube' && players[id].player.destroy) {
+      players[id].player.destroy();
+    }
+    delete players[id];
+  }
+  
+  // 清空播放器容器
+  const playerContainer = document.getElementById('player' + id);
+  if (playerContainer) {
+    playerContainer.innerHTML = '';
+  }
+  
+  // 重新建立播放器
+  if (data.platform === 'twitch') {
+    createTwitchPlayer(id, data.channelId);
+  } else if (data.platform === 'youtube') {
+    createYouTubePlayer(id, data.videoId);
+  }
+  
+  // 恢復音量設定
+  setTimeout(() => {
+    const volSlider = box.querySelector('.volume');
+    if (volSlider) {
+      volSlider.value = savedVolume;
+      const volValue = box.querySelector('.vol-value');
+      if (volValue) {
+        volValue.textContent = savedVolume + '%';
+      }
+      streamData[id].volume = savedVolume;
+      
+      // 應用總音量控制
+      if (typeof applyMasterVolumeToStream === 'function') {
+        setTimeout(() => {
+          applyMasterVolumeToStream(id);
+        }, 500);
+      }
+    }
+  }, 500);
+  
+  // 恢復聊天室狀態
+  if (!savedChatVisible) {
+    setTimeout(() => {
+      if (data.chatVisible !== savedChatVisible) {
+        toggleChat(id);
+      }
+    }, 1000);
+  }
+  
+  // 恢復樣式
+  if (savedStyle.left) box.style.left = savedStyle.left;
+  if (savedStyle.top) box.style.top = savedStyle.top;
+  if (savedStyle.width) box.style.width = savedStyle.width;
+  if (savedStyle.height) box.style.height = savedStyle.height;
+}
+
 function removeBox(id) {
   const box = document.getElementById('box' + id);
   if (box) {
@@ -375,11 +500,22 @@ function removeBox(id) {
     const chatSidebarFixedAfter = document.getElementById('chat-sidebar-fixed');
     const isFixedLayoutAfter = !!chatSidebarFixedAfter;
     
-    // 如果是布局12或13，更新框架
+    // 如果是固定布局，更新框架
     if (isFixedLayoutAfter && typeof updateFixedLayoutFramework === 'function') {
       setTimeout(() => {
         updateFixedLayoutFramework();
       }, 100);
+    } else {
+      // 如果不是固定布局，觸發自動排版
+      const remainingBoxes = document.querySelectorAll('.stream-box');
+      if (remainingBoxes.length > 0 && typeof autoSelectLayout === 'function' && typeof setLayout === 'function') {
+        setTimeout(() => {
+          const layoutType = autoSelectLayout();
+          if (layoutType) {
+            setLayout(layoutType, true); // 立即執行，不使用防抖
+          }
+        }, 100);
+      }
     }
     
     // 檢查並調整控制面板狀態（如果沒有串流則強制展開）

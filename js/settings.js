@@ -10,7 +10,6 @@ const indexedDBBackup = {
   // 初始化數據庫
   async init() {
     if (!window.indexedDB) {
-      console.error('[IndexedDB 備份] 瀏覽器不支持 IndexedDB');
       return false;
     }
     
@@ -18,13 +17,11 @@ const indexedDBBackup = {
       const request = indexedDB.open(this.dbName, this.dbVersion);
       
       request.onerror = () => {
-        console.error('[IndexedDB 備份] 打開數據庫失敗:', request.error);
         reject(request.error);
       };
       
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('[IndexedDB 備份] 數據庫連接成功');
         resolve(true);
       };
       
@@ -33,7 +30,6 @@ const indexedDBBackup = {
         if (!db.objectStoreNames.contains(this.storeName)) {
           const objectStore = db.createObjectStore(this.storeName, { keyPath: 'id' });
           objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-          console.log('[IndexedDB 備份] 創建對象存儲:', this.storeName);
         }
       };
     });
@@ -53,7 +49,6 @@ const indexedDBBackup = {
   // 設置是否啟用備份
   setEnabled: (enabled) => {
     localStorage.setItem('indexedDBBackupEnabled', enabled ? 'true' : 'false');
-    console.log('[IndexedDB 備份] 備份功能', enabled ? '已啟用' : '已停用');
   },
   
   // 獲取所有數據（從 localStorage）
@@ -94,7 +89,6 @@ const indexedDBBackup = {
   // 備份數據到 IndexedDB
   async backup() {
     if (!this.isEnabled()) {
-      console.log('[IndexedDB 備份] 備份功能未啟用');
       return false;
     }
     
@@ -103,13 +97,11 @@ const indexedDBBackup = {
       try {
         await this.init();
       } catch (error) {
-        console.error('[IndexedDB 備份] 初始化失敗:', error);
         return false;
       }
     }
     
     if (!this.db) {
-      console.error('[IndexedDB 備份] 數據庫未初始化');
       return false;
     }
     
@@ -125,10 +117,8 @@ const indexedDBBackup = {
       const store = transaction.objectStore(this.storeName);
       await store.put(backupData);
       
-      console.log('[IndexedDB 備份] 備份成功，時間戳:', new Date(backupData.timestamp).toLocaleString());
       return true;
     } catch (error) {
-      console.error('[IndexedDB 備份] 備份失敗:', error);
       return false;
     }
   },
@@ -137,7 +127,6 @@ const indexedDBBackup = {
   async restore() {
     // 檢查 localStorage 是否有數據
     if (this.hasLocalStorageData()) {
-      console.log('[IndexedDB 備份] localStorage 中有數據，以 localStorage 為主，不從 IndexedDB 恢復');
       return { success: false, message: 'localStorage 中已有數據，以 localStorage 為主', skipped: true };
     }
     
@@ -146,7 +135,6 @@ const indexedDBBackup = {
       try {
         await this.init();
       } catch (error) {
-        console.error('[IndexedDB 備份] 初始化失敗:', error);
         return { success: false, message: '數據庫初始化失敗' };
       }
     }
@@ -164,7 +152,6 @@ const indexedDBBackup = {
         request.onsuccess = () => {
           const result = request.result;
           if (!result || !result.data) {
-            console.log('[IndexedDB 備份] 沒有找到備份數據');
             resolve({ success: false, message: '沒有找到備份數據' });
             return;
           }
@@ -176,8 +163,6 @@ const indexedDBBackup = {
             resolve({ success: false, message: '無效的備份數據格式' });
             return;
           }
-          
-          console.log('[IndexedDB 備份] 開始恢復數據，備份時間:', new Date(result.timestamp).toLocaleString());
           
           // 恢復數據到 localStorage
           if (data.userSettings) {
@@ -202,17 +187,14 @@ const indexedDBBackup = {
             localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
           }
           
-          console.log('[IndexedDB 備份] 數據恢復成功');
           resolve({ success: true, message: '數據恢復成功' });
         };
         
         request.onerror = () => {
-          console.error('[IndexedDB 備份] 讀取備份失敗:', request.error);
           resolve({ success: false, message: '讀取備份失敗' });
         };
       });
     } catch (error) {
-      console.error('[IndexedDB 備份] 恢復數據失敗:', error);
       return { success: false, message: '恢復數據失敗' };
     }
   },
@@ -229,8 +211,8 @@ const indexedDBBackup = {
 
 // 初始化 IndexedDB 備份系統（頁面載入時）
 if (window.indexedDB) {
-  indexedDBBackup.init().catch((error) => {
-    console.error('[IndexedDB 備份] 初始化失敗:', error);
+  indexedDBBackup.init().catch(() => {
+    // 初始化失敗，靜默處理
   });
 }
 
@@ -273,17 +255,14 @@ function toggleBackupEnabled() {
     if (window.backupTimeout) {
       clearTimeout(window.backupTimeout);
     }
-    console.log('[IndexedDB 備份] 立即備份當前 localStorage 數據到 IndexedDB');
     indexedDBBackup.backup().then((success) => {
       if (success) {
-        console.log('[IndexedDB 備份] 立即備份成功');
         showSaveMessage('備份功能已啟用，當前數據已備份到 IndexedDB');
       } else {
-        console.log('[IndexedDB 備份] 立即備份失敗');
         showSaveMessage('備份功能已啟用，但備份失敗');
       }
-    }).catch((error) => {
-      console.error('[IndexedDB 備份] 立即備份錯誤:', error);
+    }).catch(() => {
+      // 備份錯誤，靜默處理
     });
   } else {
     showSaveMessage('數據備份已關閉');
@@ -308,9 +287,7 @@ function exportToJSON() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showSaveMessage('數據已匯出為 JSON 檔案');
-    console.log('[匯出] 數據已匯出為 JSON 檔案');
   } catch (error) {
-    console.error('[匯出] 匯出失敗:', error);
     showSaveMessage('匯出失敗，請稍後再試');
   }
 }
@@ -346,8 +323,6 @@ function importFromJSON() {
         }
       }
       
-      console.log('[匯入] 開始匯入數據...');
-      
       // 匯入數據到 localStorage
       if (data.userSettings) {
         localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
@@ -379,7 +354,6 @@ function importFromJSON() {
         await indexedDBBackup.backup();
       }
       
-      console.log('[匯入] 數據匯入成功');
       showSaveMessage('數據已匯入成功，頁面將重新載入');
       
       // 重新載入設置
@@ -392,7 +366,6 @@ function importFromJSON() {
         window.location.reload();
       }, 1500);
     } catch (error) {
-      console.error('[匯入] 匯入失敗:', error);
       showSaveMessage('匯入失敗：' + (error.message || '未知錯誤'));
     }
   };
@@ -609,15 +582,8 @@ const favoriteCategories = {
         clearTimeout(window.backupTimeout);
       }
       // 立即執行備份
-      console.log('[IndexedDB 備份] 刪除分類操作，立即執行備份');
-      indexedDBBackup.backup().then((success) => {
-        if (success) {
-          console.log('[IndexedDB 備份] 刪除分類後備份成功');
-        } else {
-          console.log('[IndexedDB 備份] 刪除分類後備份失敗');
-        }
-      }).catch((error) => {
-        console.error('[IndexedDB 備份] 刪除分類後備份錯誤:', error);
+      indexedDBBackup.backup().catch(() => {
+        // 備份錯誤，靜默處理
       });
     }
     
@@ -664,16 +630,35 @@ const favoriteStreams = {
         if (!name) name = channelId;
       }
     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      if (url.includes('youtube.com/live/')) {
-        videoId = url.split('live/')[1]?.split('?')[0];
-      } else if (url.includes('youtube.com/watch')) {
-        videoId = new URL(url).searchParams.get('v');
-      } else if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+      // 嘗試提取 channelId（優先）
+      if (url.includes('youtube.com/channel/')) {
+        const channelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
+        if (channelMatch) {
+          channelId = channelMatch[1];
+          platform = 'youtube';
+          if (!name) name = channelId;
+        }
+      } else if (url.includes('youtube.com/c/') || url.includes('youtube.com/user/') || url.includes('youtube.com/@')) {
+        // 這些 URL 格式需要通過 API 查詢才能獲得 channelId，暫時不處理
+        // 用戶可以通過搜尋功能添加頻道，這樣會自動獲得 channelId
       }
-      if (videoId) {
-        platform = 'youtube';
-        if (!name) name = videoId;
+      
+      // 如果沒有 channelId，嘗試提取 videoId（但對於收藏，我們希望使用 channelId）
+      // 如果只有 videoId，我們需要通過 API 查詢來獲取 channelId
+      if (!channelId) {
+        if (url.includes('youtube.com/live/')) {
+          videoId = url.split('live/')[1]?.split('?')[0];
+        } else if (url.includes('youtube.com/watch')) {
+          videoId = new URL(url).searchParams.get('v');
+        } else if (url.includes('youtu.be/')) {
+          videoId = url.split('youtu.be/')[1]?.split('?')[0];
+        }
+        if (videoId) {
+          platform = 'youtube';
+          if (!name) name = videoId;
+          // 注意：如果只有 videoId，channelId 會是空的，這在收藏系統中可能會有問題
+          // 但為了向後兼容，我們仍然允許這種情況
+        }
       }
     }
     
@@ -682,15 +667,30 @@ const favoriteStreams = {
       return { success: false, message: i18n.t('cannotParseStreamUrl') };
     }
     
+    // 對於 YouTube，確保 URL 使用頻道 ID（如果有的話）
+    // 這樣可以確保收藏系統使用固定的頻道 ID，而不是會變化的影片 ID
+    let finalUrl = url;
+    if (platform === 'youtube' && channelId) {
+      // 如果已經有 channelId，使用頻道 URL
+      finalUrl = `https://www.youtube.com/channel/${channelId}`;
+    }
+    
     const newItem = {
       id: Date.now().toString(),
-      url: url,
+      url: finalUrl, // 對於 YouTube，使用頻道 URL（包含 channelId）
       name: name,
       platform: platform,
-      channelId: channelId,
+      channelId: channelId, // 對於 YouTube，優先使用 channelId
       videoId: videoId,
       categoryId: categoryId,
-      addedAt: new Date().toISOString()
+      addedAt: new Date().toISOString(),
+      // 開台狀態相關欄位
+      isLive: null, // null 表示未知，true/false 表示已知狀態
+      lastChecked: null, // 最後檢查時間
+      viewerCount: null, // 觀看人數（僅在開台時有效）
+      liveTitle: null, // 直播標題（僅在開台時有效）
+      gameName: null, // 遊戲名稱（僅在開台時有效）
+      liveVideoId: null // 當前直播的影片 ID（如果正在直播）
     };
     
     list.push(newItem);
@@ -733,15 +733,8 @@ const favoriteStreams = {
         clearTimeout(window.backupTimeout);
       }
       // 立即執行備份
-      console.log('[IndexedDB 備份] 刪除操作，立即執行備份');
-      indexedDBBackup.backup().then((success) => {
-        if (success) {
-          console.log('[IndexedDB 備份] 刪除後備份成功');
-        } else {
-          console.log('[IndexedDB 備份] 刪除後備份失敗');
-        }
-      }).catch((error) => {
-        console.error('[IndexedDB 備份] 刪除後備份錯誤:', error);
+      indexedDBBackup.backup().catch(() => {
+        // 備份錯誤，靜默處理
       });
     }
     
@@ -750,25 +743,41 @@ const favoriteStreams = {
   },
   
   // 從收藏加載串流
-  load: (item) => {
-    if (item && item.url) {
-      addStream(item.url);
-      return { success: true };
-    }
+  load: async (item) => {
+    if (!item) {
       const i18n = window.i18n || { t: (key) => key };
       return { success: false, message: i18n.t('invalidFavoriteItem') };
+    }
+    
+    // 對於 YouTube 頻道，先檢查是否正在直播，如果開台則使用直播 URL
+    // YouTube API 功能已暫時關閉，直接使用 URL
+    if (item.platform === 'youtube' && item.channelId) {
+      // YouTube API 功能已暫時關閉，直接使用收藏的 URL
+      addStream(item.url);
+      return { success: true };
+    } else {
+      // Twitch 或其他平台，直接使用 URL
+      if (item.url) {
+        addStream(item.url);
+        return { success: true };
+      }
+      const i18n = window.i18n || { t: (key) => key };
+      return { success: false, message: i18n.t('invalidFavoriteItem') };
+    }
   },
   
   // 批量加載收藏
-  loadMultiple: (items) => {
+  loadMultiple: async (items) => {
     if (!items || items.length === 0) {
       const i18n = window.i18n || { t: (key) => key };
       return { success: false, message: i18n.t('noFavoritesToLoad') };
     }
     
+    // 對於批量加載，我們需要等待每個項目的異步操作完成
+    // 但為了不阻塞，我們仍然使用 setTimeout 來間隔加載
     items.forEach((item, index) => {
-      setTimeout(() => {
-        favoriteStreams.load(item);
+      setTimeout(async () => {
+        await favoriteStreams.load(item);
       }, index * 300); // 每個串流間隔300毫秒加載
     });
     
@@ -1089,11 +1098,15 @@ function showFavoriteStreamsManager() {
   // 按Enter添加收藏
   const urlInput = document.getElementById('favorite-url-input');
   if (urlInput) {
+    // Enter 鍵添加收藏
     urlInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         addToFavorites();
       }
     });
+    
+    // 初始化收藏管理的搜尋功能
+    initFavoriteSearchSuggestions();
   }
   
   // 按Enter添加分類
@@ -1163,6 +1176,45 @@ function addToFavorites() {
     if (nameInput) nameInput.value = '';
     if (categorySelect) categorySelect.value = '';
     showFavoriteStreamsManager(); // 刷新列表
+    // 更新控制面板中的收藏列表
+    if (typeof updateFavoriteListDisplay === 'function') {
+      updateFavoriteListDisplay();
+    }
+    // 如果是 YouTube 頻道，立即觸發一次開台狀態檢查（不等待間隔）
+    const list = favoriteStreams.getList();
+    const addedItem = list.find(item => (item.url === url || item.url.includes(url.split('?')[0])) && item.platform === 'youtube');
+    if (addedItem && addedItem.platform === 'youtube' && addedItem.channelId) {
+      // 立即檢查一次開台狀態（不等待 15 分鐘間隔）
+      setTimeout(async () => {
+        if (window.youtubeApi && typeof window.youtubeApi.checkChannelLiveStatus === 'function') {
+          const youtubeConfig = window.youtubeApi.getConfig();
+          if (!youtubeConfig.isBlocked) {
+            try {
+              const liveStatus = await window.youtubeApi.checkChannelLiveStatus(addedItem.channelId);
+              const updatedList = favoriteStreams.getList().map(item => {
+                if (item.id === addedItem.id && item.platform === 'youtube') {
+                  return {
+                    ...item,
+                    isLive: liveStatus ? liveStatus.isLive : null,
+                    lastChecked: new Date().toISOString(),
+                    viewerCount: liveStatus && liveStatus.viewerCount ? liveStatus.viewerCount : null,
+                    liveTitle: liveStatus && liveStatus.title ? liveStatus.title : null,
+                    liveVideoId: liveStatus && liveStatus.videoId ? liveStatus.videoId : null
+                  };
+                }
+                return item;
+              });
+              favoriteStreams.saveList(updatedList);
+              if (typeof updateFavoriteListDisplay === 'function') {
+                updateFavoriteListDisplay();
+              }
+            } catch (error) {
+              console.error('立即檢查 YouTube 開台狀態失敗:', error);
+            }
+          }
+        }
+      }, 1000); // 延遲 1 秒後檢查，確保列表已更新
+    }
     // 自動保存設置
     autoSaveSettings();
     // 防抖備份會在 saveList() 中自動觸發
@@ -1554,13 +1606,71 @@ function updateFavoriteListDisplay() {
     filterSelect.value = currentValue;
   }
   
-  // 如果選擇了分類，顯示一鍵載入按鈕
+  // 如果選擇了分類，顯示分類標題和分類中的收藏項目
   if (filterValue && filterValue !== 'all' && filterValue !== 'uncategorized') {
     const category = categories.find(c => c.id === filterValue);
-    const categoryItems = list.filter(item => item.categoryId === filterValue);
+    let categoryItems = list.filter(item => item.categoryId === filterValue);
     
+    // 根據開台狀態排序分類中的收藏項目
+    categoryItems.sort((a, b) => {
+      const aIsLive = a.isLive === true;
+      const bIsLive = b.isLive === true;
+      
+      if (aIsLive && !bIsLive) {
+        return -1;
+      }
+      if (!aIsLive && bIsLive) {
+        return 1;
+      }
+      
+      if (aIsLive && bIsLive) {
+        const aViewers = a.viewerCount || 0;
+        const bViewers = b.viewerCount || 0;
+        return bViewers - aViewers;
+      }
+      
+      const aName = (a.name || (a.platform === 'twitch' ? a.channelId : a.videoId) || '').toLowerCase();
+      const bName = (b.name || (b.platform === 'twitch' ? b.channelId : b.videoId) || '').toLowerCase();
+      return aName.localeCompare(bName);
+    });
+    
+    displayDiv.innerHTML = '';
+    
+    // 創建分類標題區域
+    const categoryHeader = document.createElement('div');
+    categoryHeader.style.cssText = 'padding: 12px; background: rgba(145, 71, 255, 0.15); border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;';
+    
+    const categoryNameDiv = document.createElement('div');
+    categoryNameDiv.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+    
+    const categoryIcon = document.createElement('span');
+    categoryIcon.textContent = '📁';
+    categoryIcon.style.fontSize = '16px';
+    
+    const categoryName = document.createElement('span');
+    categoryName.style.cssText = 'font-size: 14px; color: #fff; font-weight: bold;';
+    categoryName.textContent = category ? escapeHtml(category.name) : i18n.t('unknownCategory');
+    
+    const categoryCount = document.createElement('span');
+    categoryCount.style.cssText = 'font-size: 11px; color: #aaa;';
+    categoryCount.textContent = `(${categoryItems.length})`;
+    
+    categoryNameDiv.appendChild(categoryIcon);
+    categoryNameDiv.appendChild(categoryName);
+    categoryNameDiv.appendChild(categoryCount);
+    
+    // 一鍵載入按鈕
+    const loadBtn = document.createElement('button');
+    loadBtn.style.cssText = 'padding: 6px 12px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;';
+    loadBtn.textContent = '▶ 載入全部';
+    loadBtn.onclick = () => loadCategoryFavoritesFromPanel(filterValue);
+    
+    categoryHeader.appendChild(categoryNameDiv);
+    categoryHeader.appendChild(loadBtn);
+    displayDiv.appendChild(categoryHeader);
+    
+    // 如果分類中沒有收藏，顯示提示
     if (categoryItems.length === 0) {
-      displayDiv.innerHTML = '';
       const emptyDiv = document.createElement('div');
       emptyDiv.style.cssText = 'padding: 20px; text-align: center; color: #888; font-size: 12px;';
       emptyDiv.textContent = i18n.t('noFavoritesInCategory');
@@ -1568,27 +1678,87 @@ function updateFavoriteListDisplay() {
       return;
     }
     
-    displayDiv.innerHTML = '';
-    const categoryDiv = document.createElement('div');
-    categoryDiv.style.cssText = 'padding: 20px; text-align: center;';
+    // 顯示分類中的收藏項目
+    const listContainer = document.createElement('div');
+    listContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
     
-    const categoryName = document.createElement('div');
-    categoryName.style.cssText = 'font-size: 13px; color: #fff; margin-bottom: 12px;';
-    categoryName.textContent = '📁 ' + (category ? escapeHtml(category.name) : i18n.t('unknownCategory'));
+    categoryItems.forEach((item) => {
+      const displayName = item.name || (item.platform === 'twitch' ? item.channelId : item.videoId);
+      const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
+      const itemId = item.id;
+      
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'favorite-list-item';
+      itemDiv.dataset.favoriteId = itemId;
+      itemDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; cursor: pointer; transition: background 0.2s;';
+      itemDiv.onmouseover = () => itemDiv.style.background = 'rgba(145, 71, 255, 0.2)';
+      itemDiv.onmouseout = () => itemDiv.style.background = 'rgba(255, 255, 255, 0.05)';
+      itemDiv.onclick = () => loadFavoriteStreamFromPanel(itemId);
+      
+      const iconSpan = document.createElement('span');
+      iconSpan.style.fontSize = '14px';
+      iconSpan.textContent = platformIcon;
+      
+      // 開台狀態指示器（Twitch 和 YouTube 頻道）
+      const liveIndicator = document.createElement('span');
+      // 檢查是否有 channelId（對於 YouTube，必須有 channelId 才能檢查開台狀態）
+      const hasChannelId = item.channelId && item.channelId.trim() !== '';
+      if ((item.platform === 'twitch' || item.platform === 'youtube') && hasChannelId) {
+        if (item.isLive === true) {
+          liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #00ff00; flex-shrink: 0; box-shadow: 0 0 4px #00ff00;';
+          // 對於 YouTube，不顯示觀看人數；對於 Twitch，顯示觀看人數
+          if (item.platform === 'twitch' && item.viewerCount) {
+            liveIndicator.title = `正在直播 • ${item.viewerCount.toLocaleString()} 觀看者`;
+          } else {
+            liveIndicator.title = '正在直播';
+          }
+        } else if (item.isLive === false) {
+          liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0;';
+          liveIndicator.title = '未開台';
+        } else {
+          // isLive 為 null 或 undefined，顯示灰色（狀態未知）
+          liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0;';
+          liveIndicator.title = '狀態未知';
+        }
+      } else {
+        // 沒有 channelId 或不是支持的平台，不顯示指示器
+        liveIndicator.style.display = 'none';
+      }
+      
+      const contentDiv = document.createElement('div');
+      contentDiv.style.cssText = 'flex: 1; min-width: 0;';
+      
+      const nameDiv = document.createElement('div');
+      nameDiv.style.cssText = 'font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
+      
+      const nameText = document.createElement('span');
+      nameText.textContent = escapeHtml(displayName);
+      nameDiv.appendChild(nameText);
+      
+      // 如果正在直播，只對 Twitch 顯示觀看人數（YouTube 不顯示）
+      if (item.isLive === true && item.platform === 'twitch' && item.viewerCount !== null && item.viewerCount !== undefined) {
+        const viewerCount = document.createElement('span');
+        viewerCount.style.cssText = 'font-size: 10px; color: #00ff00; font-weight: bold;';
+        viewerCount.textContent = `👁 ${item.viewerCount.toLocaleString()}`;
+        nameDiv.appendChild(viewerCount);
+      }
+      
+      contentDiv.appendChild(nameDiv);
+      
+      const arrowSpan = document.createElement('span');
+      arrowSpan.style.cssText = 'font-size: 12px; color: #9147ff;';
+      arrowSpan.textContent = '▶';
+      
+      // 統一順序：iconSpan -> liveIndicator -> contentDiv -> arrowSpan
+      itemDiv.appendChild(iconSpan);
+      itemDiv.appendChild(liveIndicator);
+      itemDiv.appendChild(contentDiv);
+      itemDiv.appendChild(arrowSpan);
+      
+      listContainer.appendChild(itemDiv);
+    });
     
-    const countDiv = document.createElement('div');
-    countDiv.style.cssText = 'font-size: 11px; color: #aaa; margin-bottom: 16px;';
-    countDiv.textContent = `${i18n.t('categoryFavoritesCount')} ${categoryItems.length} ${i18n.t('favoritesInCategory')}`;
-    
-    const loadBtn = document.createElement('button');
-    loadBtn.style.cssText = 'padding: 8px 16px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; width: 100%;';
-    loadBtn.textContent = i18n.t('loadCategoryFavorites');
-    loadBtn.onclick = () => loadCategoryFavoritesFromPanel(filterValue);
-    
-    categoryDiv.appendChild(categoryName);
-    categoryDiv.appendChild(countDiv);
-    categoryDiv.appendChild(loadBtn);
-    displayDiv.appendChild(categoryDiv);
+    displayDiv.appendChild(listContainer);
     return;
   }
   
@@ -1597,6 +1767,33 @@ function updateFavoriteListDisplay() {
   if (filterValue === 'uncategorized') {
     filteredList = list.filter(item => !item.categoryId);
   }
+  
+  // 根據開台狀態排序：優先顯示開台的頻道
+  filteredList.sort((a, b) => {
+    // 首先按開台狀態排序：開台的排在前面
+    const aIsLive = a.isLive === true;
+    const bIsLive = b.isLive === true;
+    
+    if (aIsLive && !bIsLive) {
+      return -1; // a 開台，b 未開台，a 排在前面
+    }
+    if (!aIsLive && bIsLive) {
+      return 1; // a 未開台，b 開台，b 排在前面
+    }
+    
+    // 如果都是開台狀態，按觀看人數降序排列
+    if (aIsLive && bIsLive) {
+      const aViewers = a.viewerCount || 0;
+      const bViewers = b.viewerCount || 0;
+      return bViewers - aViewers; // 觀看人數多的排在前面
+    }
+    
+    // 如果都未開台，保持原有順序（或按名稱排序）
+    // 可以選擇按名稱排序或保持原順序
+    const aName = (a.name || (a.platform === 'twitch' ? a.channelId : a.videoId) || '').toLowerCase();
+    const bName = (b.name || (b.platform === 'twitch' ? b.channelId : b.videoId) || '').toLowerCase();
+    return aName.localeCompare(bName);
+  });
   
   // 生成列表（使用安全的 DOM 操作）
   displayDiv.innerHTML = '';
@@ -1630,12 +1827,49 @@ function updateFavoriteListDisplay() {
     iconSpan.style.fontSize = '14px';
     iconSpan.textContent = platformIcon;
     
+    // 開台狀態指示器（Twitch 和 YouTube 頻道）
+    const liveIndicator = document.createElement('span');
+    // 檢查是否有 channelId（對於 YouTube，必須有 channelId 才能檢查開台狀態）
+    const hasChannelId = item.channelId && item.channelId.trim() !== '';
+    if ((item.platform === 'twitch' || item.platform === 'youtube') && hasChannelId) {
+      if (item.isLive === true) {
+        liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #00ff00; flex-shrink: 0; box-shadow: 0 0 4px #00ff00;';
+        // 對於 YouTube，不顯示觀看人數；對於 Twitch，顯示觀看人數
+        if (item.platform === 'twitch' && item.viewerCount) {
+          liveIndicator.title = `正在直播 • ${item.viewerCount.toLocaleString()} 觀看者`;
+        } else {
+          liveIndicator.title = '正在直播';
+        }
+      } else if (item.isLive === false) {
+        liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #666; flex-shrink: 0;';
+        liveIndicator.title = '未開台';
+      } else {
+        // isLive 為 null 或 undefined，顯示灰色（狀態未知）
+        liveIndicator.style.cssText = 'width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0;';
+        liveIndicator.title = '狀態未知';
+      }
+    } else {
+      // 沒有 channelId 或不是支持的平台，不顯示指示器
+      liveIndicator.style.display = 'none';
+    }
+    
     const contentDiv = document.createElement('div');
     contentDiv.style.cssText = 'flex: 1; min-width: 0;';
     
     const nameDiv = document.createElement('div');
-    nameDiv.style.cssText = 'font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
-    nameDiv.textContent = escapeHtml(displayName);
+    nameDiv.style.cssText = 'font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
+    
+    const nameText = document.createElement('span');
+    nameText.textContent = escapeHtml(displayName);
+    nameDiv.appendChild(nameText);
+    
+    // 如果正在直播，只對 Twitch 顯示觀看人數（YouTube 不顯示）
+    if (item.isLive === true && item.platform === 'twitch' && item.viewerCount !== null && item.viewerCount !== undefined) {
+      const viewerCount = document.createElement('span');
+      viewerCount.style.cssText = 'font-size: 10px; color: #00ff00; font-weight: bold;';
+      viewerCount.textContent = `👁 ${item.viewerCount.toLocaleString()}`;
+      nameDiv.appendChild(viewerCount);
+    }
     
     const categoryDiv = document.createElement('div');
     categoryDiv.style.cssText = 'font-size: 10px; color: #aaa;';
@@ -1648,7 +1882,9 @@ function updateFavoriteListDisplay() {
     arrowSpan.style.cssText = 'font-size: 12px; color: #9147ff;';
     arrowSpan.textContent = '▶';
     
+    // 統一順序：iconSpan -> liveIndicator -> contentDiv -> arrowSpan
     itemDiv.appendChild(iconSpan);
+    itemDiv.appendChild(liveIndicator);
     itemDiv.appendChild(contentDiv);
     itemDiv.appendChild(arrowSpan);
     
@@ -1658,9 +1894,140 @@ function updateFavoriteListDisplay() {
   displayDiv.appendChild(listContainer);
 }
 
+// 批量更新收藏頻道的開台狀態
+async function updateFavoriteLiveStatuses() {
+  const list = favoriteStreams.getList();
+  const twitchFavorites = list.filter(item => item.platform === 'twitch' && item.channelId);
+  const youtubeFavorites = list.filter(item => item.platform === 'youtube' && item.channelId);
+  
+  let updatedCount = 0;
+  let updatedList = [...list];
+  
+  // 處理 Twitch 收藏
+  if (twitchFavorites.length > 0 && window.twitchApi && window.twitchApi.checkMultipleChannelsLiveStatus) {
+    try {
+      // 收集所有 Twitch 頻道 ID
+      const channelLogins = twitchFavorites.map(item => item.channelId.toLowerCase());
+      
+      // 批量查詢開台狀態
+      const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelLogins);
+      
+      // 更新收藏列表中的開台狀態
+      updatedList = updatedList.map(item => {
+        if (item.platform === 'twitch' && item.channelId) {
+          const login = item.channelId.toLowerCase();
+          const status = liveStatuses[login];
+          
+          if (status) {
+            updatedCount++;
+            return {
+              ...item,
+              isLive: status.isLive,
+              lastChecked: new Date().toISOString(),
+              viewerCount: status.viewerCount || null,
+              liveTitle: status.title || null,
+              gameName: status.gameName || null
+            };
+          } else {
+            // 如果查詢失敗，保持原有狀態，但更新檢查時間
+            return {
+              ...item,
+              lastChecked: new Date().toISOString()
+            };
+          }
+        }
+        return item;
+      });
+    } catch (error) {
+      // Twitch API 錯誤，繼續處理 YouTube
+    }
+  }
+  
+  // YouTube API 功能已暫時關閉，跳過檢查
+  // 處理 YouTube 收藏（檢查是否被封鎖，並且距離上次檢查已超過 15 分鐘）
+  const now = Date.now();
+  // const shouldCheckYouTube = now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS;
+  
+  // YouTube API 功能已暫時關閉
+  if (youtubeFavorites.length > 0) {
+    console.log('YouTube API 功能已暫時關閉，跳過開台狀態檢查');
+  }
+  
+  // 保存更新後的列表（只要有更新或檢查過，就保存）
+  if (updatedCount > 0 || twitchFavorites.length > 0 || youtubeFavorites.length > 0) {
+    favoriteStreams.saveList(updatedList);
+    
+    // 更新顯示（無論是否有更新，都刷新顯示，確保狀態正確顯示）
+    if (typeof updateFavoriteListDisplay === 'function') {
+      updateFavoriteListDisplay();
+    }
+  }
+  
+  return { success: true, updated: updatedCount };
+}
+
+// 定期自動刷新開台狀態的定時器
+let favoriteLiveStatusInterval = null;
+let youtubeCheckInterval = null;
+let lastYouTubeCheckTime = 0;
+const YOUTUBE_CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 分鐘（較長間隔以避免流量過度使用）
+
+// 啟動定期自動刷新
+// Twitch: 預設每 5 分鐘
+// YouTube: 每 15 分鐘（較長間隔以避免流量過度使用）
+function startFavoriteLiveStatusAutoRefresh(intervalMinutes = 5) {
+  // 清除現有的定時器
+  if (favoriteLiveStatusInterval) {
+    clearInterval(favoriteLiveStatusInterval);
+  }
+  if (youtubeCheckInterval) {
+    clearInterval(youtubeCheckInterval);
+  }
+  
+  // 立即執行一次
+  updateFavoriteLiveStatuses();
+  
+  // 設定定期刷新（主要用於 Twitch）
+  const intervalMs = intervalMinutes * 60 * 1000;
+  favoriteLiveStatusInterval = setInterval(() => {
+    updateFavoriteLiveStatuses();
+  }, intervalMs);
+  
+  // 為 YouTube 設定較長的檢查間隔
+  youtubeCheckInterval = setInterval(() => {
+    const now = Date.now();
+    // 如果距離上次 YouTube 檢查已經超過 15 分鐘，執行檢查
+    if (now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS) {
+      lastYouTubeCheckTime = now;
+      updateFavoriteLiveStatuses();
+    }
+  }, YOUTUBE_CHECK_INTERVAL_MS);
+  
+  // 保存設定到 localStorage
+  localStorage.setItem('favoriteLiveStatusAutoRefresh', 'true');
+  localStorage.setItem('favoriteLiveStatusAutoRefreshInterval', intervalMinutes.toString());
+}
+
+// 停止定期自動刷新
+function stopFavoriteLiveStatusAutoRefresh() {
+  if (favoriteLiveStatusInterval) {
+    clearInterval(favoriteLiveStatusInterval);
+    favoriteLiveStatusInterval = null;
+  }
+  if (youtubeCheckInterval) {
+    clearInterval(youtubeCheckInterval);
+    youtubeCheckInterval = null;
+  }
+  lastYouTubeCheckTime = 0;
+  localStorage.setItem('favoriteLiveStatusAutoRefresh', 'false');
+}
+
 // 確保函數是全局的
 if (typeof window !== 'undefined') {
   window.updateFavoriteListDisplay = updateFavoriteListDisplay;
+  window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
+  window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
+  window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
 }
 
 // 從控制面板一鍵載入分類下的所有收藏
@@ -1748,28 +2115,16 @@ function debouncedBackup() {
   // 清除之前的計時器
   if (window.backupTimeout) {
     clearTimeout(window.backupTimeout);
-    console.log('[IndexedDB 備份] 取消之前的備份計時器，重新開始計時');
   }
   
   // 設置新的計時器，10秒後執行備份
   window.backupTimeout = setTimeout(() => {
     if (indexedDBBackup.isEnabled()) {
-      console.log('[IndexedDB 備份] 開始執行備份到 IndexedDB...');
-      indexedDBBackup.backup().then((success) => {
-        if (success) {
-          console.log('[IndexedDB 備份] 備份成功完成');
-        } else {
-          console.log('[IndexedDB 備份] 備份失敗');
-        }
-      }).catch((error) => {
-        console.error('[IndexedDB 備份] 備份過程中發生錯誤:', error);
+      indexedDBBackup.backup().catch(() => {
+        // 備份錯誤，靜默處理
       });
-    } else {
-      console.log('[IndexedDB 備份] 備份功能未啟用，跳過備份');
     }
   }, 10000); // 10秒後備份
-  
-  console.log('[IndexedDB 備份] 已設置備份計時器，將在10秒後執行（如果沒有新操作）');
 }
 
 // 版本紀錄功能
@@ -1806,10 +2161,55 @@ function showVersionHistory() {
 
 // 更新版本紀錄內容
 function updateVersionHistoryContent(versionModal) {
-  const i18n = window.i18n || { t: (key) => key };
+  // 確保正確獲取 i18n 對象
+  const i18n = window.i18n;
+  console.log('[版本紀錄] i18n 對象:', i18n);
+  console.log('[版本紀錄] i18n.currentLang:', i18n ? i18n.currentLang : 'undefined');
+  console.log('[版本紀錄] i18n.translations:', i18n ? i18n.translations : 'undefined');
+  
+  // 使用 bind 確保正確的 this 上下文
+  const t = i18n && typeof i18n.t === 'function' ? i18n.t.bind(i18n) : (key) => key;
+  console.log('[版本紀錄] t 函數:', t);
+  
+  // 測試翻譯 key
+  const testKeys = ['version1.6.0.change1', 'version1.6.0.change2', 'version1.6.0.change3', 'version1.6.0.change4'];
+  testKeys.forEach((key, i) => {
+    const translation = t(key);
+    console.log(`[版本紀錄] 測試 key "${key}":`, translation);
+    if (i18n && i18n.translations) {
+      const currentLang = i18n.currentLang || 'zh-TW';
+      console.log(`[版本紀錄] 當前語言 "${currentLang}" 的翻譯:`, i18n.translations[currentLang] ? i18n.translations[currentLang][key] : '不存在');
+      console.log(`[版本紀錄] 繁體中文的翻譯:`, i18n.translations['zh-TW'] ? i18n.translations['zh-TW'][key] : '不存在');
+      // 檢查所有 key（只檢查一次，避免重複輸出）
+      if (i === 0 && i18n.translations['zh-TW']) {
+        const allKeys = Object.keys(i18n.translations['zh-TW']);
+        console.log(`[版本紀錄] zh-TW 對象的所有 key 數量:`, allKeys.length);
+        console.log(`[版本紀錄] 是否包含 version1.6.0.change1:`, allKeys.includes('version1.6.0.change1'));
+        console.log(`[版本紀錄] 是否包含 version1.5.0.change1:`, allKeys.includes('version1.5.0.change1'));
+        // 檢查 version1.6.0 相關的 key
+        const version16Keys = allKeys.filter(k => k.startsWith('version1.6.0'));
+        console.log(`[版本紀錄] version1.6.0 相關的 key:`, version16Keys);
+        // 直接檢查翻譯對象
+        console.log(`[版本紀錄] 直接訪問 i18n.translations['zh-TW']['version1.6.0.change1']:`, i18n.translations['zh-TW']['version1.6.0.change1']);
+        console.log(`[版本紀錄] 直接訪問 i18n.translations['zh-TW']['version1.5.0.change1']:`, i18n.translations['zh-TW']['version1.5.0.change1']);
+      }
+    }
+  });
   
   // 版本紀錄內容（使用 i18n key）
   const versionHistory = [
+    {
+      version: '1.6.0',
+      date: '2025-12-2',
+      changeKeys: [
+        'version1.6.0.change1',
+        'version1.6.0.change2',
+        'version1.6.0.change3',
+        'version1.6.0.change4',
+        'version1.6.0.change5',
+        'version1.6.0.change6'
+      ]
+    },
     {
       version: '1.5.0',
       date: '2025-11-30',
@@ -1882,7 +2282,7 @@ function updateVersionHistoryContent(versionModal) {
   // 構建版本紀錄 HTML
   let content = `
     <div class="favorite-manager-header">
-      <h3>${escapeHtml(i18n.t('versionHistory'))}</h3>
+      <h3>${escapeHtml(t('versionHistory'))}</h3>
       <button onclick="closeVersionHistory()" class="close-btn">×</button>
     </div>
     <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto;">
@@ -1892,14 +2292,15 @@ function updateVersionHistoryContent(versionModal) {
     content += `
       <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: ${index < versionHistory.length - 1 ? '1px solid #444' : 'none'};">
         <div style="display: flex; align-items: center; margin-bottom: 12px;">
-          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">${escapeHtml(i18n.t('version'))} ${escapeHtml(version.version)}</h4>
+          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">${escapeHtml(t('version'))} ${escapeHtml(version.version)}</h4>
           <span style="margin-left: 12px; color: #888; font-size: 12px;">${escapeHtml(version.date)}</span>
         </div>
         <ul style="margin: 0; padding-left: 20px; color: #ccc; line-height: 1.8;">
     `;
     
     version.changeKeys.forEach(changeKey => {
-      const changeText = i18n.t(changeKey);
+      const changeText = t(changeKey);
+      console.log(`[版本紀錄] 處理 changeKey "${changeKey}":`, changeText);
       content += `<li style="margin-bottom: 6px;">${escapeHtml(changeText)}</li>`;
     });
     
@@ -1964,149 +2365,162 @@ function showUserGuide() {
 
 // 更新使用教學內容
 function updateUserGuideContent(guideModal) {
-  const i18n = window.i18n || { t: (key) => key };
+  // 確保正確獲取 i18n 對象
+  const i18n = window.i18n;
+  // 使用 bind 確保正確的 this 上下文
+  const t = i18n && typeof i18n.t === 'function' ? i18n.t.bind(i18n) : (key) => key;
   
   // 使用教學內容
   const guideContent = `
     <div class="favorite-manager-header">
-      <h3>${escapeHtml(i18n.t('userGuide'))}</h3>
+      <h3>${escapeHtml(t('userGuide'))}</h3>
       <button onclick="closeUserGuide()" class="close-btn">×</button>
     </div>
     <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('addStreamTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('addStreamTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep3'))}</li>
         </ol>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          ${escapeHtml(i18n.t('addStreamTip'))}
-          <br>${escapeHtml(i18n.t('addStreamTipTwitch'))}
-          <br>${escapeHtml(i18n.t('addStreamTipYouTube'))}
+          ${escapeHtml(t('addStreamTip'))}
+          <br>${escapeHtml(t('addStreamTipTwitch'))}
+          <br>${escapeHtml(t('addStreamTipYouTube'))}
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('layoutTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('layoutTitle'))}</h4>
         <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasic'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutBasic'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep3'))}</li>
           </ol>
         </div>
         <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChat'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutSideChat'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep3'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep4'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep5'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep6'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep4'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep5'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep6'))}</li>
           </ol>
           <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-            ${escapeHtml(i18n.t('layoutSideChatTip'))}
+            ${escapeHtml(t('layoutSideChatTip'))}
           </div>
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('chatTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('chatTitle'))}</h4>
         <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasic'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatBasic'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep3'))}</li>
           </ol>
         </div>
         <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayout'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatSideLayout'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep3'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep4'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep5'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep4'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep5'))}</li>
           </ol>
         </div>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          ${escapeHtml(i18n.t('chatWarning'))}
+          ${escapeHtml(t('chatWarning'))}
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('volumeTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('volumeTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep5'))}</li>
         </ol>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('favoriteTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('reloadStreamTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep2'))}
+          <li style="margin-bottom: 8px;">${escapeHtml(t('reloadStreamStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('reloadStreamStep2'))}</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('favoriteTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep2'))}
             <ul style="margin-top: 6px; padding-left: 20px;">
-              <li>${escapeHtml(i18n.t('favoriteStep2Item1'))}</li>
-              <li>${escapeHtml(i18n.t('favoriteStep2Item2'))}</li>
-              <li>${escapeHtml(i18n.t('favoriteStep2Item3'))}</li>
+              <li>${escapeHtml(t('favoriteStep2Item1'))}</li>
+              <li>${escapeHtml(t('favoriteStep2Item2'))}</li>
+              <li>${escapeHtml(t('favoriteStep2Item3'))}</li>
             </ul>
           </li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep3'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep4'))}
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep4'))}
             <ul style="margin-top: 6px; padding-left: 20px;">
-              <li>${escapeHtml(i18n.t('favoriteStep4Item1'))}</li>
-              <li>${escapeHtml(i18n.t('favoriteStep4Item2'))}</li>
+              <li>${escapeHtml(t('favoriteStep4Item1'))}</li>
+              <li>${escapeHtml(t('favoriteStep4Item2'))}</li>
             </ul>
           </li>
         </ol>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('backupTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('backupTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep3'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep4'))}</li>
         </ol>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          ${escapeHtml(i18n.t('backupTip'))}
+          ${escapeHtml(t('backupTip'))}
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('controlPanelTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('controlPanelTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep3'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep4'))}</li>
         </ol>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('mobileTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('mobileTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep3'))}</li>
         </ol>
       </div>
       
       <div style="margin-bottom: 20px; padding: 15px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; border-left: 3px solid #9147ff;">
-        <h4 style="color: #9147ff; font-size: 14px; margin: 0 0 8px 0;">${escapeHtml(i18n.t('tipsTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 14px; margin: 0 0 8px 0;">${escapeHtml(t('tipsTitle'))}</h4>
         <ul style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 12px;">
-          <li>${escapeHtml(i18n.t('tip1'))}</li>
-          <li>${escapeHtml(i18n.t('tip2'))}</li>
-          <li>${escapeHtml(i18n.t('tip3'))}</li>
-          <li>${escapeHtml(i18n.t('tip4'))}</li>
+          <li>${escapeHtml(t('tip1'))}</li>
+          <li>${escapeHtml(t('tip2'))}</li>
+          <li>${escapeHtml(t('tip3'))}</li>
+          <li>${escapeHtml(t('tip4'))}</li>
         </ul>
       </div>
     </div>
@@ -2120,6 +2534,313 @@ function closeUserGuide() {
   const guideModal = document.getElementById('user-guide-modal');
   if (guideModal) {
     guideModal.style.display = 'none';
+  }
+}
+
+// 收藏管理搜尋功能
+let favoriteSearchDebounceTimer = null;
+let favoriteCurrentSearchResults = [];
+let favoriteSelectedSearchIndex = -1;
+
+// 初始化收藏管理的搜尋建議
+function initFavoriteSearchSuggestions() {
+  const urlInput = document.getElementById('favorite-url-input');
+  if (!urlInput) return;
+  
+  // 創建搜尋建議容器
+  let suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (!suggestionsDiv) {
+    suggestionsDiv = document.createElement('div');
+    suggestionsDiv.id = 'favorite-search-suggestions';
+    suggestionsDiv.style.cssText = `
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      margin-top: 4px;
+      display: none;
+    `;
+    
+    // 將搜尋建議容器添加到輸入框的父容器
+    const addSection = urlInput.closest('.favorite-add-section');
+    if (addSection) {
+      addSection.style.position = 'relative';
+      addSection.appendChild(suggestionsDiv);
+    }
+  }
+  
+  // 輸入事件處理（防抖搜尋）
+  urlInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    
+    // 清除之前的定時器
+    if (favoriteSearchDebounceTimer) {
+      clearTimeout(favoriteSearchDebounceTimer);
+    }
+    
+    // 如果是 URL，不顯示搜尋建議
+    if (query.includes('http://') || query.includes('https://') || 
+        query.includes('twitch.tv/') || query.includes('youtube.com') || 
+        query.includes('youtu.be/')) {
+      hideFavoriteSearchSuggestions();
+      return;
+    }
+    
+    // 如果輸入為空，隱藏建議
+    if (query.length === 0) {
+      hideFavoriteSearchSuggestions();
+      return;
+    }
+    
+    // 防抖：延遲 300ms 後執行搜尋
+    favoriteSearchDebounceTimer = setTimeout(async () => {
+      await performFavoriteSearch(query);
+    }, 300);
+  });
+  
+  // 鍵盤導航
+  urlInput.addEventListener('keydown', (e) => {
+    if (suggestionsDiv.style.display === 'none') return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      favoriteSelectedSearchIndex = Math.min(favoriteSelectedSearchIndex + 1, favoriteCurrentSearchResults.length - 1);
+      updateFavoriteSelectedSuggestion();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      favoriteSelectedSearchIndex = Math.max(favoriteSelectedSearchIndex - 1, -1);
+      updateFavoriteSelectedSuggestion();
+    } else if (e.key === 'Enter' && favoriteSelectedSearchIndex >= 0) {
+      e.preventDefault();
+      selectFavoriteSearchResult(favoriteCurrentSearchResults[favoriteSelectedSearchIndex]);
+    } else if (e.key === 'Escape') {
+      hideFavoriteSearchSuggestions();
+    }
+  });
+  
+  // 點擊外部關閉建議
+  document.addEventListener('click', (e) => {
+    if (!urlInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+      hideFavoriteSearchSuggestions();
+    }
+  });
+}
+
+// 執行收藏管理的搜尋（只搜尋頻道，不檢查直播狀態）
+async function performFavoriteSearch(query) {
+  const suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (!suggestionsDiv) {
+    return;
+  }
+  
+  // 顯示載入狀態
+  suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #aaa;">搜尋中...</div>';
+  suggestionsDiv.style.display = 'block';
+  
+  try {
+    // 同時搜尋 Twitch 和 YouTube（只搜尋頻道，不檢查直播狀態）
+    const searchPromises = [];
+    
+    // Twitch 搜尋
+    if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
+      searchPromises.push(
+        window.twitchApi.searchChannels(query, 5)
+          .then(results => {
+            if (results && Array.isArray(results) && results.length > 0) {
+              return results.map(r => ({ 
+                ...r, 
+                platform: 'twitch', 
+                source: 'twitch',
+                displayName: r.displayName || r.display_name || r.login || r.title || '未知頻道'
+              }));
+            }
+            return [];
+          })
+          .catch(error => {
+            console.warn('Twitch 搜尋失敗:', error.message);
+            return [];
+          })
+      );
+    }
+    
+    // YouTube 搜尋（使用 searchChannelsOnly，不檢查直播狀態）
+    if (window.youtubeApi && typeof window.youtubeApi.searchChannelsOnly === 'function') {
+      const youtubeConfig = window.youtubeApi.getConfig();
+      if (!youtubeConfig.isBlocked) {
+        searchPromises.push(
+          window.youtubeApi.searchChannelsOnly(query, 5)
+            .then(results => {
+              if (results && Array.isArray(results)) {
+                return results.map(r => ({ 
+                  ...r, 
+                  platform: 'youtube', 
+                  source: 'youtube', 
+                  displayName: r.title || r.displayName || r.name 
+                }));
+              }
+              return [];
+            })
+            .catch(error => {
+              if (error.message && (error.message.includes('流量') || error.message.includes('配額'))) {
+                console.warn('YouTube API 流量限制:', error.message);
+                return [];
+              }
+              console.warn('YouTube 搜尋失敗:', error.message);
+              return [];
+            })
+        );
+      }
+    }
+    
+    // 等待所有搜尋完成
+    const allResults = await Promise.allSettled(searchPromises);
+    const results = allResults
+      .filter(result => result.status === 'fulfilled')
+      .map(result => {
+        const value = result.value;
+        return Array.isArray(value) ? value : [];
+      })
+      .flat();
+    
+    favoriteCurrentSearchResults = results;
+    favoriteSelectedSearchIndex = -1;
+    
+    if (results.length === 0) {
+      suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #666;">未找到頻道</div>';
+      return;
+    }
+    
+    // 顯示搜尋結果
+    suggestionsDiv.innerHTML = '';
+    results.forEach((channel, index) => {
+      const item = document.createElement('div');
+      item.className = 'search-suggestion-item';
+      item.style.cssText = `
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #333;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background 0.2s;
+      `;
+      item.dataset.index = index;
+      
+      // 確定平台
+      const platform = channel.platform || channel.source || 'unknown';
+      item.dataset.platform = platform;
+      
+      // 平台標籤
+      const platformTag = document.createElement('div');
+      const isYouTube = platform === 'youtube' || channel.source === 'youtube';
+      platformTag.style.cssText = `
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: ${isYouTube ? '#ff0000' : '#9147ff'};
+        color: white;
+        font-weight: bold;
+        flex-shrink: 0;
+      `;
+      platformTag.textContent = isYouTube ? 'YT' : 'TW';
+      
+      // 頻道資訊
+      const info = document.createElement('div');
+      info.style.cssText = 'flex: 1; min-width: 0;';
+      
+      const name = document.createElement('div');
+      name.style.cssText = 'font-weight: bold; color: #fff; margin-bottom: 2px;';
+      let displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '未知頻道';
+      name.textContent = displayName;
+      
+      const details = document.createElement('div');
+      details.style.cssText = 'font-size: 11px; color: #aaa;';
+      details.textContent = channel.description || channel.title || '頻道';
+      
+      info.appendChild(name);
+      info.appendChild(details);
+      
+      item.appendChild(platformTag);
+      item.appendChild(info);
+      
+      // 點擊事件
+      item.addEventListener('click', () => {
+        selectFavoriteSearchResult(channel);
+      });
+      
+      // 滑鼠懸停效果
+      item.addEventListener('mouseenter', () => {
+        item.style.background = '#2a2a2a';
+        favoriteSelectedSearchIndex = index;
+        updateFavoriteSelectedSuggestion();
+      });
+      item.addEventListener('mouseleave', () => {
+        item.style.background = '';
+      });
+      
+      suggestionsDiv.appendChild(item);
+    });
+  } catch (error) {
+    suggestionsDiv.innerHTML = `<div style="padding: 12px; text-align: center; color: #f44;">搜尋錯誤: ${error.message}</div>`;
+  }
+}
+
+// 更新收藏管理搜尋建議的選中狀態
+function updateFavoriteSelectedSuggestion() {
+  const suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (!suggestionsDiv) return;
+  
+  const items = suggestionsDiv.querySelectorAll('.search-suggestion-item');
+  items.forEach((item, index) => {
+    if (index === favoriteSelectedSearchIndex) {
+      item.style.background = '#2a2a2a';
+    } else {
+      item.style.background = '';
+    }
+  });
+}
+
+// 選擇收藏管理搜尋結果
+function selectFavoriteSearchResult(channel) {
+  const urlInput = document.getElementById('favorite-url-input');
+  const nameInput = document.getElementById('favorite-name-input');
+  
+  if (urlInput) {
+    // 對於 YouTube，始終使用頻道 URL（使用頻道 ID，固定不變）
+    if ((channel.platform === 'youtube' || channel.source === 'youtube') && channel.id) {
+      urlInput.value = `https://www.youtube.com/channel/${channel.id}`;
+    } else if (channel.platform === 'twitch' || channel.source === 'twitch') {
+      // Twitch 使用頻道 URL
+      urlInput.value = channel.url || `https://www.twitch.tv/${channel.login || channel.id}`;
+    } else {
+      urlInput.value = channel.url || '';
+    }
+    
+    // 自動填入頻道名稱
+    if (nameInput) {
+      const displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '';
+      if (displayName) {
+        nameInput.value = displayName;
+      }
+    }
+  }
+  
+  hideFavoriteSearchSuggestions();
+  if (urlInput) urlInput.focus();
+}
+
+// 隱藏收藏管理搜尋建議
+function hideFavoriteSearchSuggestions() {
+  const suggestionsDiv = document.getElementById('favorite-search-suggestions');
+  if (suggestionsDiv) {
+    suggestionsDiv.style.display = 'none';
+    favoriteSelectedSearchIndex = -1;
   }
 }
 
