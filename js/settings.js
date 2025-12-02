@@ -2357,6 +2357,19 @@ function updateUserGuideContent(guideModal) {
           ${escapeHtml(t('addStreamTip'))}
           <br>${escapeHtml(t('addStreamTipTwitch'))}
           <br>${escapeHtml(t('addStreamTipYouTube'))}
+          <br>${escapeHtml(t('addStreamTipSearch'))}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('searchTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(t('searchStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('searchStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('searchStep3'))}</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ${escapeHtml(t('searchTip'))}
         </div>
       </div>
       
@@ -2448,7 +2461,27 @@ function updateUserGuideContent(guideModal) {
               <li>${escapeHtml(t('favoriteStep4Item2'))}</li>
             </ul>
           </li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep5'))}
+            <ul style="margin-top: 6px; padding-left: 20px;">
+              <li>${escapeHtml(t('favoriteStep5Item1'))}</li>
+              <li>${escapeHtml(t('favoriteStep5Item2'))}</li>
+              <li>${escapeHtml(t('favoriteStep5Item3'))}</li>
+            </ul>
+          </li>
         </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('liveStatusTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep4'))}</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ${escapeHtml(t('liveStatusTip'))}
+        </div>
       </div>
       
       <div style="margin-bottom: 30px;">
