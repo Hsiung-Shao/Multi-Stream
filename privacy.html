@@ -61,46 +61,149 @@
     h2 { color:#ccc; margin-top: 30px; }
     .back-link { display: inline-block; margin-bottom: 20px; padding: 8px 16px; background: rgba(145, 71, 255, 0.2); border-radius: 4px; color: #9147ff; text-decoration: none; }
     .back-link:hover { background: rgba(145, 71, 255, 0.3); }
+    .title-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .title-header h1 {
+      margin: 0;
+      flex: 1;
+      min-width: 200px;
+    }
+    .language-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .language-selector label {
+      color: #ccc;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .language-selector select {
+      padding: 8px 12px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .language-selector select:hover {
+      background: #333;
+    }
+    @media (max-width: 768px) {
+      body {
+        padding: 20px 15px;
+      }
+      .title-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .language-selector {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
   </style>
 </head>
 <body>
-  <a href="/" class="back-link">← 返回首頁</a>
-  <h1>隱私權政策</h1>
-  <p>本網站（https://multistreaming.org）為個人開發的免費多平台直播串流觀看工具，不會主動收集任何個人資料。所有設定、收藏串流、分類等資料都儲存在您的瀏覽器本地（使用 localStorage 和 IndexedDB），不會上傳到任何伺服器。</p>
+  <a href="/" class="back-link" data-i18n="backToHome">← 返回首頁</a>
   
-  <h2>資料儲存</h2>
-  <p>本網站使用瀏覽器本地儲存技術來保存您的設定和資料：</p>
-  <ul>
-    <li><strong>localStorage</strong>：用於儲存您的設定、收藏串流、分類等資料</li>
-    <li><strong>IndexedDB</strong>：用於備份系統，可自動備份您的收藏和設定資料</li>
-    <li><strong>匯出/匯入功能</strong>：您可以隨時匯出資料為 JSON 檔案，或匯入之前備份的資料</li>
-  </ul>
-  <p>所有資料都儲存在您的瀏覽器本地，不會上傳到任何伺服器。您可以隨時清除瀏覽器資料來刪除這些資訊。</p>
+  <div class="title-header">
+    <h1 data-i18n="privacyTitle">隱私權政策 Privacy Policy</h1>
+    <div class="language-selector">
+      <label for="privacy-language-selector" data-i18n="language">語言</label>
+      <select id="privacy-language-selector" onchange="if (window.i18n) { window.i18n.setLanguage(this.value); }" title="選擇語言" aria-label="選擇語言">
+        <option value="zh-TW">繁體中文</option>
+        <option value="zh-CN">简体中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+      </select>
+    </div>
+  </div>
   
-  <h2>我們使用的第三方服務</h2>
-  <p>本站使用以下第三方服務，可能會在您瀏覽時收集匿名資料以提供廣告或分析：</p>
-  <ul>
-    <li><strong>Google Analytics</strong>：用於網站流量分析，收集匿名使用統計資料</li>
-    <li><strong>Google AdSense</strong>：用於顯示廣告（動態載入，僅在需要時載入）</li>
-    <li><strong>YouTube Embed API</strong>：用於嵌入 YouTube 直播和聊天室</li>
-    <li><strong>Twitch Embed API</strong>：用於嵌入 Twitch 直播和聊天室</li>
-    <li><strong>Cloudflare Insights</strong>：用於網站效能監控（如適用）</li>
-  </ul>
+  <p><strong data-i18n="privacyEffectiveDate">生效日期：</strong>2025 年 12 月 2 日</p>
+  <p><strong data-i18n="privacyLastUpdated">最新更新：</strong>2025 年 12 月 2 日</p>
   
-  <p>這些服務的隱私權政策請參考：</p>
+  <p data-i18n="privacyIntro">MultiStream Hub（以下簡稱「本網站」）由 HsiungShao 獨立開發與營運。我們非常重視您的隱私權。本網站為純前端工具，絕大多數資料僅儲存於您的瀏覽器本地，絕不傳送到任何遠端伺服器。</p>
+  
+  <h2 data-i18n="privacySection1Title">1. 我們不收集的個人資料</h2>
   <ul>
-    <li><a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google 隱私權政策</a>（包含 Google Analytics 和 Google AdSense）</li>
-    <li><a href="https://www.youtube.com/static?template=privacy_guidelines" target="_blank" rel="noopener noreferrer">YouTube 隱私權政策</a></li>
-    <li><a href="https://www.twitch.tv/p/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Twitch 隱私權政策</a></li>
-    <li><a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare 隱私權政策</a></li>
+    <li data-i18n="privacySection1Item1">本網站不要求註冊、不收集電子郵件、姓名、電話或其他可直接識別您身份的資料</li>
+    <li data-i18n="privacySection1Item2">不使用後端伺服器儲存任何使用者資料</li>
+    <li data-i18n="privacySection1Item3">不使用任何第三方分析工具（Google Analytics、Meta Pixel 等）</li>
+    <li data-i18n="privacySection1Item4">不追蹤跨網站行為、不建立使用者檔案</li>
   </ul>
   
-  <p>如有任何問題，歡迎透過 <a href="https://forms.gle/AjG922YrXFbyAdBa6" target="_blank" rel="noopener noreferrer">意見回饋表單</a> 或 <a href="https://discord.gg/3Uu6dZbtKd" target="_blank" rel="noopener noreferrer">Discord 社群</a> 聯繫開發者。</p>
-  <p>最後更新：2025 年 12 月 2 日</p>
+  <h2 data-i18n="privacySection2Title">2. 本地儲存（LocalStorage）使用的資料（唯一儲存位置）</h2>
+  <p data-i18n="privacySection2Desc">我們僅在您的瀏覽器中使用 localStorage 儲存以下資料，全部可隨時手動清除：</p>
+  <ul>
+    <li data-i18n="privacySection2Item1">我的最愛頻道清單（自訂名稱、Twitch/YouTube 網址、分類）</li>
+    <li data-i18n="privacySection2Item2">版面配置偏好（布局模式、音量設定、聊天室顯示狀態）</li>
+    <li data-i18n="privacySection2Item3">備份檔案位置（若您啟用本地備份功能）</li>
+  </ul>
+  <p data-i18n="privacySection2ActionTitle">您可隨時：</p>
+  <ul>
+    <li data-i18n="privacySection2Action1">點擊「管理收藏 → 設定 → 清除所有資料」一鍵刪除</li>
+    <li data-i18n="privacySection2Action2">或直接在瀏覽器設定中清除本站的 localStorage</li>
+  </ul>
+  
+  <h2 data-i18n="privacySection3Title">3. 第三方嵌入內容（Twitch &amp; YouTube）</h2>
+  <ul>
+    <li data-i18n="privacySection3Item1">當您加入 Twitch 或 YouTube 直播時，本站僅使用官方提供的 iframe 嵌入播放器</li>
+    <li data-i18n="privacySection3Item2">聊天室同樣使用 Twitch / YouTube 官方嵌入功能</li>
+    <li data-i18n="privacySection3Item3">這些嵌入內容會直接與 Twitch / YouTube 伺服器連線，其隱私政策分別適用：
+      <ul>
+        <li><span data-i18n="privacySection3TwitchLink">Twitch 隱私權政策：</span><a href="https://www.twitch.tv/p/legal/privacy-policy" target="_blank" rel="noopener noreferrer">https://www.twitch.tv/p/legal/privacy-policy</a></li>
+        <li><span data-i18n="privacySection3YouTubeLink">YouTube 隱私權政策：</span><a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">https://policies.google.com/privacy</a></li>
+      </ul>
+    </li>
+  </ul>
+  
+  <h2 data-i18n="privacySection4Title">4. Cookies 與類似技術</h2>
+  <ul>
+    <li data-i18n="privacySection4Item1">本網站完全不使用 Cookies</li>
+    <li data-i18n="privacySection4Item2">僅使用 HTML5 localStorage 與 sessionStorage（均屬瀏覽器本地儲存）</li>
+  </ul>
+  
+  <h2 data-i18n="privacySection5Title">5. Google AdSense 廣告（已申請 / 未來可能顯示）</h2>
+  <ul>
+    <li data-i18n="privacySection5Item1">我們已申請 Google AdSense，若審核通過，將顯示個人化或非個人化廣告</li>
+    <li data-i18n="privacySection5Item2">此時 Google 將作為獨立資料控制者，其隱私政策適用：<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">https://policies.google.com/privacy</a></li>
+    <li data-i18n="privacySection5Item3">您可隨時在廣告上點擊「AdChoices」選擇退出個人化廣告</li>
+  </ul>
+  
+  <h2 data-i18n="privacySection6Title">6. 您的權利（GDPR / CCPA / 台灣個資法）</h2>
+  <p data-i18n="privacySection6Desc">儘管我們不收集可識別個人資料，您仍享有以下權利：</p>
+  <ul>
+    <li data-i18n="privacySection6Item1">要求存取、刪除、更正您的資料 → 直接清除瀏覽器 localStorage 即可</li>
+    <li data-i18n="privacySection6Item2">反對處理、限制處理 → 停止使用本網站即可</li>
+    <li data-i18n="privacySection6Item3">資料可攜權 → 可在「管理收藏 → 設定」匯出 JSON 備份檔案</li>
+    <li data-i18n="privacySection6Item4">撤銷同意 → 清除本地資料即可</li>
+  </ul>
+  <p><span data-i18n="privacySection6Contact">聯絡方式：</span><a href="mailto:feedback@multistreaming.org">feedback@multistreaming.org</a><span data-i18n="privacySection6Response">（48 小時內回覆）</span></p>
+  
+  <h2 data-i18n="privacySection7Title">7. 兒童隱私</h2>
+  <p data-i18n="privacySection7Desc">本網站不針對 13 歲以下兒童設計。若您為 13 歲以下，請勿使用本網站。</p>
+  
+  <h2 data-i18n="privacySection8Title">8. 政策變更</h2>
+  <p data-i18n="privacySection8Desc">重大變更將於本頁面頂部更新日期並以顯眼方式通知。</p>
+  
+  <h2 data-i18n="privacySection9Title">9. 聯絡我們</h2>
+  <p><span data-i18n="privacySection9Desc">如有任何隱私疑問，請寄信至：</span><a href="mailto:feedback@multistreaming.org">feedback@multistreaming.org</a></p>
+  
+  <hr style="margin: 40px 0; border: none; border-top: 1px solid #333;">
+  
+  <p style="color: #aaa; font-size: 14px;"><span data-i18n="privacyFooter">此政策最後更新於</span> 2025 年 12 月 2 日</p>
   
   <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #333; text-align: center;">
-    <a href="/" style="margin: 0 15px; color: #9147ff;">首頁</a>
-    <a href="/about.html" style="margin: 0 15px; color: #9147ff;">關於我們</a>
+    <a href="/" style="margin: 0 15px; color: #9147ff;" data-i18n="home">首頁</a>
+    <a href="/about.html" style="margin: 0 15px; color: #9147ff;" data-i18n="aboutUs">關於我們</a>
   </div>
 
   <!-- Structured Data (JSON-LD) -->
@@ -146,6 +249,33 @@
       }
     ]
   }
+  </script>
+
+  <script src="js/i18n.js"></script>
+  <script>
+    // 初始化多語言系統
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.i18n) {
+        // 從 localStorage 讀取語言設定
+        const savedLang = localStorage.getItem('language') || localStorage.getItem('preferredLanguage') || 'zh-TW';
+        
+        // 設定語言選擇器的值
+        const langSelector = document.getElementById('privacy-language-selector');
+        if (langSelector) {
+          langSelector.value = savedLang;
+        }
+        
+        // 設置語言並更新頁面（會自動調用 updateSEO）
+        window.i18n.setLanguage(savedLang);
+        
+        // 監聽語言選擇器變化
+        if (langSelector) {
+          langSelector.addEventListener('change', function() {
+            window.i18n.setLanguage(this.value);
+          });
+        }
+      }
+    });
   </script>
 </body>
 </html>
