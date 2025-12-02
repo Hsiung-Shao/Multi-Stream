@@ -482,8 +482,6 @@ async function makeApiRequest(endpoint, params = {}) {
         }
       }
     }
-    
-    console.log('Twitch API 請求 URL:', url);
   
   // 建立請求標頭
   const headers = {
@@ -530,13 +528,10 @@ async function makeApiRequest(endpoint, params = {}) {
   }
   
   try {
-    console.log('Twitch API 請求標頭:', headers);
     const response = await fetch(url, {
       method: 'GET',
       headers: headers
     });
-    
-    console.log('Twitch API 回應狀態:', response.status, response.statusText);
     
     if (!response.ok) {
       // 嘗試讀取錯誤訊息
@@ -593,8 +588,6 @@ async function makeApiRequest(endpoint, params = {}) {
     
     const data = await response.json();
     
-    console.log('Twitch API 回應數據:', data);
-    
     // 儲存快取
     setCachedData(cacheKey, data);
     
@@ -620,15 +613,11 @@ async function searchTwitchChannels(query, limit = 10) {
   }
   
   try {
-    console.log('Twitch 搜尋請求:', { query: query.trim(), limit });
-    
     const data = await makeApiRequest('/search/channels', {
       query: query.trim(),
       first: limit,
       live_only: false // 搜尋所有頻道，不只是開台的（布林值，不是字串）
     });
-    
-    console.log('Twitch API 回應:', data);
     
     if (!data) {
       console.warn('Twitch API 回應為空');
@@ -646,7 +635,6 @@ async function searchTwitchChannels(query, limit = 10) {
     }
     
     if (data.data.length === 0) {
-      console.log('Twitch API 搜尋結果為空');
       return [];
     }
     
@@ -663,7 +651,6 @@ async function searchTwitchChannels(query, limit = 10) {
       url: `https://www.twitch.tv/${channel.broadcaster_login}`
     }));
     
-    console.log('Twitch 搜尋結果（映射後）:', mappedResults);
     return mappedResults;
   } catch (error) {
     console.error('Twitch 搜尋錯誤:', error);

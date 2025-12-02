@@ -1950,7 +1950,7 @@ async function updateFavoriteLiveStatuses() {
   
   // YouTube API 功能已暫時關閉
   if (youtubeFavorites.length > 0) {
-    console.log('YouTube API 功能已暫時關閉，跳過開台狀態檢查');
+    // YouTube API 功能已暫時關閉，跳過開台狀態檢查
   }
   
   // 保存更新後的列表（只要有更新或檢查過，就保存）
@@ -2163,38 +2163,8 @@ function showVersionHistory() {
 function updateVersionHistoryContent(versionModal) {
   // 確保正確獲取 i18n 對象
   const i18n = window.i18n;
-  console.log('[版本紀錄] i18n 對象:', i18n);
-  console.log('[版本紀錄] i18n.currentLang:', i18n ? i18n.currentLang : 'undefined');
-  console.log('[版本紀錄] i18n.translations:', i18n ? i18n.translations : 'undefined');
-  
   // 使用 bind 確保正確的 this 上下文
   const t = i18n && typeof i18n.t === 'function' ? i18n.t.bind(i18n) : (key) => key;
-  console.log('[版本紀錄] t 函數:', t);
-  
-  // 測試翻譯 key
-  const testKeys = ['version1.6.0.change1', 'version1.6.0.change2', 'version1.6.0.change3', 'version1.6.0.change4'];
-  testKeys.forEach((key, i) => {
-    const translation = t(key);
-    console.log(`[版本紀錄] 測試 key "${key}":`, translation);
-    if (i18n && i18n.translations) {
-      const currentLang = i18n.currentLang || 'zh-TW';
-      console.log(`[版本紀錄] 當前語言 "${currentLang}" 的翻譯:`, i18n.translations[currentLang] ? i18n.translations[currentLang][key] : '不存在');
-      console.log(`[版本紀錄] 繁體中文的翻譯:`, i18n.translations['zh-TW'] ? i18n.translations['zh-TW'][key] : '不存在');
-      // 檢查所有 key（只檢查一次，避免重複輸出）
-      if (i === 0 && i18n.translations['zh-TW']) {
-        const allKeys = Object.keys(i18n.translations['zh-TW']);
-        console.log(`[版本紀錄] zh-TW 對象的所有 key 數量:`, allKeys.length);
-        console.log(`[版本紀錄] 是否包含 version1.6.0.change1:`, allKeys.includes('version1.6.0.change1'));
-        console.log(`[版本紀錄] 是否包含 version1.5.0.change1:`, allKeys.includes('version1.5.0.change1'));
-        // 檢查 version1.6.0 相關的 key
-        const version16Keys = allKeys.filter(k => k.startsWith('version1.6.0'));
-        console.log(`[版本紀錄] version1.6.0 相關的 key:`, version16Keys);
-        // 直接檢查翻譯對象
-        console.log(`[版本紀錄] 直接訪問 i18n.translations['zh-TW']['version1.6.0.change1']:`, i18n.translations['zh-TW']['version1.6.0.change1']);
-        console.log(`[版本紀錄] 直接訪問 i18n.translations['zh-TW']['version1.5.0.change1']:`, i18n.translations['zh-TW']['version1.5.0.change1']);
-      }
-    }
-  });
   
   // 版本紀錄內容（使用 i18n key）
   const versionHistory = [
@@ -2300,7 +2270,6 @@ function updateVersionHistoryContent(versionModal) {
     
     version.changeKeys.forEach(changeKey => {
       const changeText = t(changeKey);
-      console.log(`[版本紀錄] 處理 changeKey "${changeKey}":`, changeText);
       content += `<li style="margin-bottom: 6px;">${escapeHtml(changeText)}</li>`;
     });
     
