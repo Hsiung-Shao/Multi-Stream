@@ -351,14 +351,6 @@ async function performSearch(query) {
   suggestionsDiv.style.display = 'block';
   
   try {
-    // 檢查 API 是否已載入
-    console.log('檢查 API 狀態:');
-    console.log('  window.twitchApi:', window.twitchApi);
-    console.log('  window.youtubeApi:', window.youtubeApi);
-    console.log('  twitchApi.searchChannels:', window.twitchApi?.searchChannels);
-    console.log('  youtubeApi.searchChannels:', window.youtubeApi?.searchChannels);
-    console.log('  選擇的平台:', selectedPlatform);
-    
     // 根據選擇的平台進行搜尋
     const searchPromises = [];
     
@@ -368,7 +360,6 @@ async function performSearch(query) {
       searchPromises.push(
         window.twitchApi.searchChannels(query, 5)
           .then(results => {
-            console.log('Twitch 搜尋結果:', results);
             if (results && Array.isArray(results) && results.length > 0) {
               const mappedResults = results.map(r => ({ 
                 ...r, 
@@ -377,10 +368,8 @@ async function performSearch(query) {
                 // 確保 displayName 存在
                 displayName: r.displayName || r.display_name || r.login || r.title || '未知頻道'
               }));
-              console.log('Twitch 映射後結果:', mappedResults);
               return mappedResults;
             }
-            console.log('Twitch 無結果或格式錯誤');
             return [];
           })
           .catch(error => {
@@ -401,20 +390,14 @@ async function performSearch(query) {
     
     // 等待所有搜尋完成（使用 Promise.allSettled 確保即使一個失敗，另一個仍能顯示結果）
     const allResults = await Promise.allSettled(searchPromises);
-    console.log('所有搜尋結果 (allSettled):', allResults);
     
     const results = allResults
       .filter(result => result.status === 'fulfilled')
       .map(result => {
         const value = result.value;
-        console.log('處理結果值:', value);
         return Array.isArray(value) ? value : [];
       })
       .flat();
-    
-    console.log('合併後的結果:', results);
-    console.log('Twitch 結果數量:', results.filter(r => r.platform === 'twitch' || r.source === 'twitch').length);
-    console.log('YouTube 結果數量:', results.filter(r => r.platform === 'youtube' || r.source === 'youtube').length);
     
     currentSearchResults = results;
     selectedSearchIndex = -1;
@@ -426,9 +409,7 @@ async function performSearch(query) {
     
     // 顯示搜尋結果
     suggestionsDiv.innerHTML = '';
-    console.log('開始顯示結果，總數:', results.length);
     results.forEach((channel, index) => {
-      console.log(`顯示結果 ${index}:`, channel);
       const item = document.createElement('div');
       item.className = 'search-suggestion-item';
       item.style.cssText = `
