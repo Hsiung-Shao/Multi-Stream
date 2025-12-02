@@ -47,6 +47,10 @@ const i18n = {
       'moveUp': '上移',
       'moveDown': '下移',
       'feedback': '意見回饋',
+      'theme': '主題',
+      'lightDarkTheme': '光暗主題',
+      'switchToLightTheme': '切換到亮色主題',
+      'switchToDarkTheme': '切換到暗色主題',
       'giveFeedback': '給予意見回饋',
       'versionHistory': '版本紀錄',
       'userGuide': '使用教學',
@@ -445,6 +449,10 @@ const i18n = {
       'moveUp': '上移',
       'moveDown': '下移',
       'feedback': '意见反馈',
+      'theme': '主题',
+      'lightDarkTheme': '光暗主题',
+      'switchToLightTheme': '切换到亮色主题',
+      'switchToDarkTheme': '切换到暗色主题',
       'giveFeedback': '给予意见反馈',
       'versionHistory': '版本记录',
       'userGuide': '使用教学',
@@ -843,6 +851,10 @@ const i18n = {
       'moveUp': 'Move Up',
       'moveDown': 'Move Down',
       'feedback': 'Feedback',
+      'theme': 'Theme',
+      'lightDarkTheme': 'Light/Dark Theme',
+      'switchToLightTheme': 'Switch to Light Theme',
+      'switchToDarkTheme': 'Switch to Dark Theme',
       'giveFeedback': 'Give Feedback',
       'versionHistory': 'Version History',
       'userGuide': 'User Guide',
@@ -1242,6 +1254,10 @@ const i18n = {
       'moveUp': '上に移動',
       'moveDown': '下に移動',
       'feedback': 'フィードバック',
+      'theme': 'テーマ',
+      'lightDarkTheme': 'ライト/ダークテーマ',
+      'switchToLightTheme': 'ライトテーマに切り替え',
+      'switchToDarkTheme': 'ダークテーマに切り替え',
       'giveFeedback': 'フィードバックを送信',
       'versionHistory': 'バージョン履歴',
       'userGuide': 'ユーザーガイド',
@@ -1640,6 +1656,10 @@ const i18n = {
       'moveUp': '위로 이동',
       'moveDown': '아래로 이동',
       'feedback': '피드백',
+      'theme': '테마',
+      'lightDarkTheme': '라이트/다크 테마',
+      'switchToLightTheme': '라이트 테마로 전환',
+      'switchToDarkTheme': '다크 테마로 전환',
       'giveFeedback': '피드백 제공',
       'versionHistory': '버전 기록',
       'userGuide': '사용 가이드',
@@ -2225,6 +2245,10 @@ const i18n = {
     if (typeof updateFavoriteListDisplay === 'function') {
       updateFavoriteListDisplay();
     }
+    // 更新主題按鈕
+    if (window.themeManager && typeof window.themeManager.updateThemeButton === 'function') {
+      window.themeManager.updateThemeButton();
+    }
   },
   
   // 更新所有頁面的 data-i18n 元素（通用函數）
@@ -2233,11 +2257,6 @@ const i18n = {
     elementsWithI18n.forEach(element => {
       const key = element.getAttribute('data-i18n');
       if (key) {
-        // 獲取當前元素內容
-        const currentContent = element.tagName === 'INPUT' 
-          ? (element.type === 'text' ? element.placeholder : element.value)
-          : element.textContent;
-        
         // 獲取翻譯
         const translation = this.t(key);
         
@@ -2247,10 +2266,13 @@ const i18n = {
           return;
         }
         
-        // 如果當前內容已經是 key（placeholder），才需要更新
-        // 如果當前內容不是 key，說明已經有正確的內容（可能是 HTML 預設內容或之前的翻譯）
-        // 但為了支持語言切換，我們仍然需要更新（除非當前內容已經是正確的翻譯）
-        if (currentContent === key || currentContent === '' || currentContent !== translation) {
+        // 獲取當前元素內容
+        const currentContent = element.tagName === 'INPUT' 
+          ? (element.type === 'text' ? element.placeholder : element.value)
+          : element.textContent.trim();
+        
+        // 如果當前內容不等於翻譯，則更新（支持語言切換）
+        if (currentContent !== translation) {
           // 根據元素類型更新
           if (element.tagName === 'INPUT' && element.type === 'text') {
             element.placeholder = translation;

@@ -55,34 +55,39 @@
   <link rel="icon" type="image/png" href="/icon.png">
   <link rel="shortcut icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="stylesheet" href="styles.css">
   <style>
     body { 
       font-family: 'Segoe UI', Arial, sans-serif; 
-      background: #0a0a0a; 
-      color: #fff; 
+      background: var(--bg-primary); 
+      color: var(--text-primary); 
       padding: 40px 20px; 
       line-height: 1.8; 
       max-width: 900px; 
       margin: 0 auto;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     h1 { 
-      color: #9147ff; 
-      border-bottom: 2px solid #9147ff; 
+      color: var(--text-accent); 
+      border-bottom: 2px solid var(--border-color-active); 
       padding-bottom: 10px;
       margin-top: 0;
+      transition: color 0.3s ease, border-color 0.3s ease;
     }
     h2 { 
-      color: #eee; 
+      color: var(--text-primary); 
       margin-top: 30px;
-      border-left: 4px solid #9147ff;
+      border-left: 4px solid var(--border-color-active);
       padding-left: 15px;
+      transition: color 0.3s ease, border-color 0.3s ease;
     }
     h3 {
-      color: #ccc;
+      color: var(--text-secondary);
       margin-top: 25px;
+      transition: color 0.3s ease;
     }
     a { 
-      color: #9147ff; 
+      color: var(--text-accent); 
       text-decoration: none;
       transition: color 0.3s;
     }
@@ -95,13 +100,16 @@
     }
     li {
       margin: 8px 0;
+      color: var(--text-primary);
+      transition: color 0.3s ease;
     }
     .section {
       margin: 30px 0;
       padding: 20px;
       background: rgba(145, 71, 255, 0.05);
       border-radius: 8px;
-      border-left: 3px solid #9147ff;
+      border-left: 3px solid var(--border-color-active);
+      transition: border-color 0.3s ease;
     }
     .feature-list {
       display: grid;
@@ -110,15 +118,17 @@
       margin: 20px 0;
     }
     .feature-item {
-      background: rgba(255, 255, 255, 0.03);
+      background: var(--bg-input);
       padding: 15px;
       border-radius: 6px;
       border: 1px solid rgba(145, 71, 255, 0.2);
+      transition: background-color 0.3s ease;
     }
     .feature-item strong {
-      color: #9147ff;
+      color: var(--text-accent);
       display: block;
       margin-bottom: 8px;
+      transition: color 0.3s ease;
     }
     .back-link {
       display: inline-block;
@@ -126,7 +136,8 @@
       padding: 8px 16px;
       background: rgba(145, 71, 255, 0.2);
       border-radius: 4px;
-      transition: background 0.3s;
+      color: var(--text-accent);
+      transition: background 0.3s, color 0.3s ease;
     }
     .back-link:hover {
       background: rgba(145, 71, 255, 0.3);
@@ -141,8 +152,9 @@
     .footer-links {
       margin-top: 40px;
       padding-top: 20px;
-      border-top: 1px solid #333;
+      border-top: 1px solid var(--border-color);
       text-align: center;
+      transition: border-color 0.3s ease;
     }
     .footer-links a {
       margin: 0 15px;
@@ -166,21 +178,23 @@
       gap: 10px;
     }
     .language-selector label {
-      color: #ccc;
+      color: var(--text-secondary);
       font-size: 14px;
       white-space: nowrap;
+      transition: color 0.3s ease;
     }
     .language-selector select {
       padding: 8px 12px;
-      background: #2a2a2a;
-      border: 1px solid #444;
-      color: #fff;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color-hover);
+      color: var(--text-primary);
       border-radius: 4px;
       font-size: 14px;
       cursor: pointer;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
     }
     .language-selector select:hover {
-      background: #333;
+      background: var(--bg-button-hover);
     }
     @media (max-width: 768px) {
       body {
@@ -205,15 +219,24 @@
   
   <div class="title-header">
     <h1 data-i18n="aboutTitle">關於 MultiStream Hub</h1>
-    <div class="language-selector">
-      <label for="about-language-selector" data-i18n="language">語言</label>
-      <select id="about-language-selector" onchange="if (window.i18n) { window.i18n.setLanguage(this.value); }" title="選擇語言" aria-label="選擇語言">
-        <option value="zh-TW">繁體中文</option>
-        <option value="zh-CN">简体中文</option>
-        <option value="en">English</option>
-        <option value="ja">日本語</option>
-        <option value="ko">한국어</option>
-      </select>
+    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+      <div class="language-selector">
+        <label for="about-language-selector" data-i18n="language">語言</label>
+        <select id="about-language-selector" onchange="if (window.i18n) { window.i18n.setLanguage(this.value); }" title="選擇語言" aria-label="選擇語言">
+          <option value="zh-TW">繁體中文</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+        </select>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--text-primary); font-size: 14px; white-space: nowrap;" data-i18n="lightDarkTheme">光暗主題</span>
+        <label class="theme-switch" title="切換主題" style="margin: 0;">
+          <input type="checkbox" id="about-theme-switch-input" onchange="if (window.themeManager) { window.themeManager.toggleTheme(); }">
+          <span class="theme-switch-slider"></span>
+        </label>
+      </div>
     </div>
   </div>
   
@@ -411,6 +434,7 @@
   </script>
 
   <script src="js/i18n.js"></script>
+  <script src="js/theme.js"></script>
   <script>
     // 初始化多語言系統
     document.addEventListener('DOMContentLoaded', function() {
@@ -432,6 +456,11 @@
             langSelector.value = window.i18n.getLanguage();
           });
         }
+      }
+      
+      // 更新主題按鈕顯示
+      if (window.themeManager && typeof window.themeManager.updateThemeButton === 'function') {
+        window.themeManager.updateThemeButton();
       }
     });
   </script>

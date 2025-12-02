@@ -236,8 +236,10 @@ function setupFixedLayoutFramework(boxes, layoutType) {
   chatSidebar.style.left = videoAreaWidth + '%';
   chatSidebar.style.top = '0';
   chatSidebar.style.position = 'absolute';
-  chatSidebar.style.background = '#0a0a0a';
-  chatSidebar.style.borderLeft = '2px solid #333';
+  chatSidebar.style.background = 'var(--bg-tertiary)';
+  chatSidebar.style.borderLeft = '2px solid var(--border-color)';
+  chatSidebar.style.display = 'flex';
+  chatSidebar.style.flexDirection = config.flexDirection;
   chatSidebar.style.overflow = 'hidden'; // 防止內容溢出
   chatSidebar.style.maxWidth = `calc(100% - ${videoAreaWidth}%)`; // 確保右邊界不超出視窗
   chatSidebar.style.right = 'auto'; // 使用 left 定位，不使用 right
