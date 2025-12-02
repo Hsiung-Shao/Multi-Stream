@@ -750,30 +750,11 @@ const favoriteStreams = {
     }
     
     // 對於 YouTube 頻道，先檢查是否正在直播，如果開台則使用直播 URL
+    // YouTube API 功能已暫時關閉，直接使用 URL
     if (item.platform === 'youtube' && item.channelId) {
-      try {
-        // 檢查是否正在直播
-        if (window.youtubeApi && typeof window.youtubeApi.checkChannelLiveStatus === 'function') {
-          const youtubeConfig = window.youtubeApi.getConfig();
-          if (!youtubeConfig.isBlocked) {
-            const liveStatus = await window.youtubeApi.checkChannelLiveStatus(item.channelId);
-            if (liveStatus && liveStatus.isLive === true && liveStatus.videoId) {
-              // 正在直播，使用直播 URL
-              const liveUrl = `https://www.youtube.com/watch?v=${liveStatus.videoId}`;
-              addStream(liveUrl);
-              return { success: true };
-            }
-          }
-        }
-        // 未開台或檢查失敗，使用原始 URL（頻道 URL）
-        addStream(item.url);
-        return { success: true };
-      } catch (error) {
-        // 檢查失敗，使用原始 URL
-        console.warn('檢查 YouTube 直播狀態失敗:', error);
-        addStream(item.url);
-        return { success: true };
-      }
+      // YouTube API 功能已暫時關閉，直接使用收藏的 URL
+      addStream(item.url);
+      return { success: true };
     } else {
       // Twitch 或其他平台，直接使用 URL
       if (item.url) {
@@ -1962,70 +1943,14 @@ async function updateFavoriteLiveStatuses() {
     }
   }
   
+  // YouTube API 功能已暫時關閉，跳過檢查
   // 處理 YouTube 收藏（檢查是否被封鎖，並且距離上次檢查已超過 15 分鐘）
   const now = Date.now();
-  const shouldCheckYouTube = now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS;
+  // const shouldCheckYouTube = now - lastYouTubeCheckTime >= YOUTUBE_CHECK_INTERVAL_MS;
   
-  if (youtubeFavorites.length > 0 && window.youtubeApi && window.youtubeApi.checkMultipleChannelsLiveStatus && shouldCheckYouTube) {
-    const youtubeConfig = window.youtubeApi.getConfig();
-    if (!youtubeConfig.isBlocked) {
-      try {
-        // 收集所有 YouTube 頻道 ID（過濾掉沒有 channelId 的項目）
-        const channelIds = youtubeFavorites
-          .filter(item => item.channelId)
-          .map(item => item.channelId);
-        
-        if (channelIds.length > 0) {
-          console.log('開始檢查 YouTube 收藏頻道開台狀態，頻道數量:', channelIds.length);
-          // 批量查詢開台狀態
-          const liveStatuses = await window.youtubeApi.checkMultipleChannelsLiveStatus(channelIds);
-          console.log('YouTube 開台狀態檢查結果:', liveStatuses);
-          
-          // 更新收藏列表中的開台狀態
-          updatedList = updatedList.map(item => {
-            if (item.platform === 'youtube' && item.channelId) {
-              const status = liveStatuses[item.channelId];
-              
-              if (status) {
-                updatedCount++;
-                console.log(`更新 YouTube 頻道 ${item.channelId} 開台狀態:`, status.isLive);
-                return {
-                  ...item,
-                  isLive: status.isLive,
-                  lastChecked: new Date().toISOString(),
-                  viewerCount: status.viewerCount || null,
-                  liveTitle: status.title || null,
-                  liveVideoId: status.videoId || item.liveVideoId || null
-                };
-              } else {
-                // 如果查詢失敗，保持原有狀態，但更新檢查時間
-                console.log(`YouTube 頻道 ${item.channelId} 查詢失敗或無狀態`);
-                return {
-                  ...item,
-                  lastChecked: new Date().toISOString()
-                };
-              }
-            }
-            return item;
-          });
-          
-          // 更新最後檢查時間
-          lastYouTubeCheckTime = now;
-          console.log('YouTube 開台狀態檢查完成，更新數量:', updatedCount);
-        }
-      } catch (error) {
-        // YouTube API 錯誤（可能是流量超限），靜默處理
-        // 如果流量超限，會在下次檢查時自動封鎖
-        console.error('YouTube 開台狀態檢查錯誤:', error);
-      }
-    } else {
-      console.log('YouTube API 已被封鎖，跳過開台狀態檢查');
-    }
-  } else if (youtubeFavorites.length > 0) {
-    // 如果距離上次檢查時間還不夠，記錄日誌
-    const timeSinceLastCheck = now - lastYouTubeCheckTime;
-    const remainingTime = YOUTUBE_CHECK_INTERVAL_MS - timeSinceLastCheck;
-    console.log(`YouTube 開台狀態檢查間隔未到，還需等待 ${Math.ceil(remainingTime / 1000 / 60)} 分鐘`);
+  // YouTube API 功能已暫時關閉
+  if (youtubeFavorites.length > 0) {
+    console.log('YouTube API 功能已暫時關閉，跳過開台狀態檢查');
   }
   
   // 保存更新後的列表（只要有更新或檢查過，就保存）
@@ -2236,10 +2161,55 @@ function showVersionHistory() {
 
 // 更新版本紀錄內容
 function updateVersionHistoryContent(versionModal) {
-  const i18n = window.i18n || { t: (key) => key };
+  // 確保正確獲取 i18n 對象
+  const i18n = window.i18n;
+  console.log('[版本紀錄] i18n 對象:', i18n);
+  console.log('[版本紀錄] i18n.currentLang:', i18n ? i18n.currentLang : 'undefined');
+  console.log('[版本紀錄] i18n.translations:', i18n ? i18n.translations : 'undefined');
+  
+  // 使用 bind 確保正確的 this 上下文
+  const t = i18n && typeof i18n.t === 'function' ? i18n.t.bind(i18n) : (key) => key;
+  console.log('[版本紀錄] t 函數:', t);
+  
+  // 測試翻譯 key
+  const testKeys = ['version1.6.0.change1', 'version1.6.0.change2', 'version1.6.0.change3', 'version1.6.0.change4'];
+  testKeys.forEach((key, i) => {
+    const translation = t(key);
+    console.log(`[版本紀錄] 測試 key "${key}":`, translation);
+    if (i18n && i18n.translations) {
+      const currentLang = i18n.currentLang || 'zh-TW';
+      console.log(`[版本紀錄] 當前語言 "${currentLang}" 的翻譯:`, i18n.translations[currentLang] ? i18n.translations[currentLang][key] : '不存在');
+      console.log(`[版本紀錄] 繁體中文的翻譯:`, i18n.translations['zh-TW'] ? i18n.translations['zh-TW'][key] : '不存在');
+      // 檢查所有 key（只檢查一次，避免重複輸出）
+      if (i === 0 && i18n.translations['zh-TW']) {
+        const allKeys = Object.keys(i18n.translations['zh-TW']);
+        console.log(`[版本紀錄] zh-TW 對象的所有 key 數量:`, allKeys.length);
+        console.log(`[版本紀錄] 是否包含 version1.6.0.change1:`, allKeys.includes('version1.6.0.change1'));
+        console.log(`[版本紀錄] 是否包含 version1.5.0.change1:`, allKeys.includes('version1.5.0.change1'));
+        // 檢查 version1.6.0 相關的 key
+        const version16Keys = allKeys.filter(k => k.startsWith('version1.6.0'));
+        console.log(`[版本紀錄] version1.6.0 相關的 key:`, version16Keys);
+        // 直接檢查翻譯對象
+        console.log(`[版本紀錄] 直接訪問 i18n.translations['zh-TW']['version1.6.0.change1']:`, i18n.translations['zh-TW']['version1.6.0.change1']);
+        console.log(`[版本紀錄] 直接訪問 i18n.translations['zh-TW']['version1.5.0.change1']:`, i18n.translations['zh-TW']['version1.5.0.change1']);
+      }
+    }
+  });
   
   // 版本紀錄內容（使用 i18n key）
   const versionHistory = [
+    {
+      version: '1.6.0',
+      date: '2025-12-2',
+      changeKeys: [
+        'version1.6.0.change1',
+        'version1.6.0.change2',
+        'version1.6.0.change3',
+        'version1.6.0.change4',
+        'version1.6.0.change5',
+        'version1.6.0.change6'
+      ]
+    },
     {
       version: '1.5.0',
       date: '2025-11-30',
@@ -2312,7 +2282,7 @@ function updateVersionHistoryContent(versionModal) {
   // 構建版本紀錄 HTML
   let content = `
     <div class="favorite-manager-header">
-      <h3>${escapeHtml(i18n.t('versionHistory'))}</h3>
+      <h3>${escapeHtml(t('versionHistory'))}</h3>
       <button onclick="closeVersionHistory()" class="close-btn">×</button>
     </div>
     <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto;">
@@ -2322,14 +2292,15 @@ function updateVersionHistoryContent(versionModal) {
     content += `
       <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: ${index < versionHistory.length - 1 ? '1px solid #444' : 'none'};">
         <div style="display: flex; align-items: center; margin-bottom: 12px;">
-          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">${escapeHtml(i18n.t('version'))} ${escapeHtml(version.version)}</h4>
+          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">${escapeHtml(t('version'))} ${escapeHtml(version.version)}</h4>
           <span style="margin-left: 12px; color: #888; font-size: 12px;">${escapeHtml(version.date)}</span>
         </div>
         <ul style="margin: 0; padding-left: 20px; color: #ccc; line-height: 1.8;">
     `;
     
     version.changeKeys.forEach(changeKey => {
-      const changeText = i18n.t(changeKey);
+      const changeText = t(changeKey);
+      console.log(`[版本紀錄] 處理 changeKey "${changeKey}":`, changeText);
       content += `<li style="margin-bottom: 6px;">${escapeHtml(changeText)}</li>`;
     });
     
@@ -2394,149 +2365,162 @@ function showUserGuide() {
 
 // 更新使用教學內容
 function updateUserGuideContent(guideModal) {
-  const i18n = window.i18n || { t: (key) => key };
+  // 確保正確獲取 i18n 對象
+  const i18n = window.i18n;
+  // 使用 bind 確保正確的 this 上下文
+  const t = i18n && typeof i18n.t === 'function' ? i18n.t.bind(i18n) : (key) => key;
   
   // 使用教學內容
   const guideContent = `
     <div class="favorite-manager-header">
-      <h3>${escapeHtml(i18n.t('userGuide'))}</h3>
+      <h3>${escapeHtml(t('userGuide'))}</h3>
       <button onclick="closeUserGuide()" class="close-btn">×</button>
     </div>
     <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('addStreamTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('addStreamTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('addStreamStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep3'))}</li>
         </ol>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          ${escapeHtml(i18n.t('addStreamTip'))}
-          <br>${escapeHtml(i18n.t('addStreamTipTwitch'))}
-          <br>${escapeHtml(i18n.t('addStreamTipYouTube'))}
+          ${escapeHtml(t('addStreamTip'))}
+          <br>${escapeHtml(t('addStreamTipTwitch'))}
+          <br>${escapeHtml(t('addStreamTipYouTube'))}
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('layoutTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('layoutTitle'))}</h4>
         <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasic'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutBasic'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutBasicStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep3'))}</li>
           </ol>
         </div>
         <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChat'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutSideChat'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep3'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep4'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep5'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('layoutSideChatStep6'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep4'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep5'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep6'))}</li>
           </ol>
           <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-            ${escapeHtml(i18n.t('layoutSideChatTip'))}
+            ${escapeHtml(t('layoutSideChatTip'))}
           </div>
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('chatTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('chatTitle'))}</h4>
         <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasic'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatBasic'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatBasicStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep3'))}</li>
           </ol>
         </div>
         <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayout'))}</h5>
+          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatSideLayout'))}</h5>
           <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep1'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep2'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep3'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep4'))}</li>
-            <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('chatSideLayoutStep5'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep1'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep2'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep3'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep4'))}</li>
+            <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep5'))}</li>
           </ol>
         </div>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          ${escapeHtml(i18n.t('chatWarning'))}
+          ${escapeHtml(t('chatWarning'))}
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('volumeTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('volumeTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('volumeStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep5'))}</li>
         </ol>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('favoriteTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('reloadStreamTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep2'))}
+          <li style="margin-bottom: 8px;">${escapeHtml(t('reloadStreamStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('reloadStreamStep2'))}</li>
+        </ol>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('favoriteTitle'))}</h4>
+        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep2'))}
             <ul style="margin-top: 6px; padding-left: 20px;">
-              <li>${escapeHtml(i18n.t('favoriteStep2Item1'))}</li>
-              <li>${escapeHtml(i18n.t('favoriteStep2Item2'))}</li>
-              <li>${escapeHtml(i18n.t('favoriteStep2Item3'))}</li>
+              <li>${escapeHtml(t('favoriteStep2Item1'))}</li>
+              <li>${escapeHtml(t('favoriteStep2Item2'))}</li>
+              <li>${escapeHtml(t('favoriteStep2Item3'))}</li>
             </ul>
           </li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep3'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('favoriteStep4'))}
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep4'))}
             <ul style="margin-top: 6px; padding-left: 20px;">
-              <li>${escapeHtml(i18n.t('favoriteStep4Item1'))}</li>
-              <li>${escapeHtml(i18n.t('favoriteStep4Item2'))}</li>
+              <li>${escapeHtml(t('favoriteStep4Item1'))}</li>
+              <li>${escapeHtml(t('favoriteStep4Item2'))}</li>
             </ul>
           </li>
         </ol>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('backupTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('backupTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep3'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('backupStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep4'))}</li>
         </ol>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
-          ${escapeHtml(i18n.t('backupTip'))}
+          ${escapeHtml(t('backupTip'))}
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('controlPanelTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('controlPanelTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep3'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('controlPanelStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep4'))}</li>
         </ol>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(i18n.t('mobileTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('mobileTitle'))}</h4>
         <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep1'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep2'))}</li>
-          <li style="margin-bottom: 8px;">${escapeHtml(i18n.t('mobileStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep3'))}</li>
         </ol>
       </div>
       
       <div style="margin-bottom: 20px; padding: 15px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; border-left: 3px solid #9147ff;">
-        <h4 style="color: #9147ff; font-size: 14px; margin: 0 0 8px 0;">${escapeHtml(i18n.t('tipsTitle'))}</h4>
+        <h4 style="color: #9147ff; font-size: 14px; margin: 0 0 8px 0;">${escapeHtml(t('tipsTitle'))}</h4>
         <ul style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0; font-size: 12px;">
-          <li>${escapeHtml(i18n.t('tip1'))}</li>
-          <li>${escapeHtml(i18n.t('tip2'))}</li>
-          <li>${escapeHtml(i18n.t('tip3'))}</li>
-          <li>${escapeHtml(i18n.t('tip4'))}</li>
+          <li>${escapeHtml(t('tip1'))}</li>
+          <li>${escapeHtml(t('tip2'))}</li>
+          <li>${escapeHtml(t('tip3'))}</li>
+          <li>${escapeHtml(t('tip4'))}</li>
         </ul>
       </div>
     </div>

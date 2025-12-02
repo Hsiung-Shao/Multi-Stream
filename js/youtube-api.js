@@ -190,9 +190,6 @@ function checkQuotaLimit() {
     YOUTUBE_API_CONFIG.quotaLimit.blockUntil = tomorrow.getTime();
     saveQuotaTracking();
     
-    // 顯示通知
-    showQuotaExceededNotification();
-    
     throw new Error('YouTube API 每日流量配額已用完，將於明天 00:00 恢復');
   }
 }
@@ -201,137 +198,8 @@ function checkQuotaLimit() {
 function recordApiUsage(quotaCost) {
   YOUTUBE_API_CONFIG.quotaLimit.currentUsage += quotaCost;
   saveQuotaTracking();
-  
-  // 檢查是否接近配額限制（80% 時警告）
-  const usagePercent = (YOUTUBE_API_CONFIG.quotaLimit.currentUsage / YOUTUBE_API_CONFIG.quotaLimit.dailyLimit) * 100;
-  if (usagePercent >= 80 && usagePercent < 100) {
-    showQuotaWarningNotification(usagePercent);
-  }
 }
 
-// 顯示流量超限通知
-function showQuotaExceededNotification() {
-  // 檢查是否已經顯示過通知（避免重複顯示）
-  if (document.getElementById('youtube-quota-exceeded-notification')) {
-    return;
-  }
-  
-  const notification = document.createElement('div');
-  notification.id = 'youtube-quota-exceeded-notification';
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #ff4444;
-    color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    z-index: 10000;
-    max-width: 400px;
-    font-size: 14px;
-    line-height: 1.6;
-  `;
-  
-  const title = document.createElement('div');
-  title.style.cssText = 'font-weight: bold; margin-bottom: 8px; font-size: 16px;';
-  title.textContent = '⚠️ YouTube API 流量已用完';
-  
-  const message = document.createElement('div');
-  message.style.cssText = 'margin-bottom: 10px;';
-  message.textContent = 'YouTube API 的每日流量配額已用完，搜尋和開台狀態查詢功能將暫停使用，直到明天 00:00 恢復。';
-  
-  const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = `
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    margin-top: 8px;
-  `;
-  closeBtn.textContent = '我知道了';
-  closeBtn.onclick = () => {
-    notification.remove();
-  };
-  
-  notification.appendChild(title);
-  notification.appendChild(message);
-  notification.appendChild(closeBtn);
-  
-  document.body.appendChild(notification);
-  
-  // 10 秒後自動關閉
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, 10000);
-}
-
-// 顯示流量警告通知
-function showQuotaWarningNotification(usagePercent) {
-  // 檢查是否已經顯示過通知（避免重複顯示）
-  if (document.getElementById('youtube-quota-warning-notification')) {
-    return;
-  }
-  
-  const notification = document.createElement('div');
-  notification.id = 'youtube-quota-warning-notification';
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #ffaa00;
-    color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    z-index: 10000;
-    max-width: 400px;
-    font-size: 14px;
-    line-height: 1.6;
-  `;
-  
-  const title = document.createElement('div');
-  title.style.cssText = 'font-weight: bold; margin-bottom: 8px; font-size: 16px;';
-  title.textContent = '⚠️ YouTube API 流量警告';
-  
-  const message = document.createElement('div');
-  message.style.cssText = 'margin-bottom: 10px;';
-  message.textContent = `YouTube API 的每日流量配額已使用 ${Math.round(usagePercent)}%，請注意節約使用。`;
-  
-  const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = `
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    margin-top: 8px;
-  `;
-  closeBtn.textContent = '我知道了';
-  closeBtn.onclick = () => {
-    notification.remove();
-  };
-  
-  notification.appendChild(title);
-  notification.appendChild(message);
-  notification.appendChild(closeBtn);
-  
-  document.body.appendChild(notification);
-  
-  // 5 秒後自動關閉
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, 5000);
-}
 
 // 取得快取鍵
 function getCacheKey(endpoint, params) {
@@ -459,7 +327,6 @@ async function makeApiRequest(endpoint, params = {}) {
               YOUTUBE_API_CONFIG.quotaLimit.blockUntil = tomorrow.getTime();
               saveQuotaTracking();
               
-              showQuotaExceededNotification();
               throw new Error('YouTube API 每日流量配額已用完，將於明天 00:00 恢復');
             }
           }
@@ -494,7 +361,6 @@ async function makeApiRequest(endpoint, params = {}) {
             YOUTUBE_API_CONFIG.quotaLimit.blockUntil = tomorrow.getTime();
             saveQuotaTracking();
             
-            showQuotaExceededNotification();
             throw new Error('YouTube API 每日流量配額已用完，將於明天 00:00 恢復');
           } else if (error.reason === 'keyInvalid') {
             throw new Error('YouTube API Key 無效，請檢查設定');
@@ -610,24 +476,27 @@ async function searchYouTubeChannels(query, limit = 10) {
       }
     }
     
-    return data.items.map(item => {
-      const channel = channelMap[item.snippet.channelId] || {};
-      const liveInfo = liveChannelIds.find(l => l.channelId === item.snippet.channelId);
-      const isLive = !!liveInfo;
-      
-      return {
-        id: item.snippet.channelId,
-        title: item.snippet.title,
-        description: item.snippet.description,
-        thumbnailUrl: item.snippet.thumbnails?.default?.url || item.snippet.thumbnails?.medium?.url,
-        subscriberCount: channel.statistics ? parseInt(channel.statistics.subscriberCount || 0) : 0,
-        videoCount: channel.statistics ? parseInt(channel.statistics.videoCount || 0) : 0,
-        isLive: isLive,
-        liveVideoId: liveInfo ? liveInfo.videoId : null,
-        viewerCount: liveInfo && liveInfo.liveStreamingDetails ? parseInt(liveInfo.liveStreamingDetails.concurrentViewers || 0) : 0,
-        url: `https://www.youtube.com/channel/${item.snippet.channelId}${isLive && liveInfo ? `/live` : ''}`
-      };
-    });
+    // 只返回正在直播的頻道
+    return data.items
+      .map(item => {
+        const channel = channelMap[item.snippet.channelId] || {};
+        const liveInfo = liveChannelIds.find(l => l.channelId === item.snippet.channelId);
+        const isLive = !!liveInfo;
+        
+        return {
+          id: item.snippet.channelId,
+          title: item.snippet.title,
+          description: item.snippet.description,
+          thumbnailUrl: item.snippet.thumbnails?.default?.url || item.snippet.thumbnails?.medium?.url,
+          subscriberCount: channel.statistics ? parseInt(channel.statistics.subscriberCount || 0) : 0,
+          videoCount: channel.statistics ? parseInt(channel.statistics.videoCount || 0) : 0,
+          isLive: isLive,
+          liveVideoId: liveInfo ? liveInfo.videoId : null,
+          viewerCount: liveInfo && liveInfo.liveStreamingDetails ? parseInt(liveInfo.liveStreamingDetails.concurrentViewers || 0) : 0,
+          url: liveInfo && liveInfo.videoId ? `https://www.youtube.com/watch?v=${liveInfo.videoId}` : `https://www.youtube.com/channel/${item.snippet.channelId}`
+        };
+      })
+      .filter(channel => channel.isLive === true); // 只返回正在直播的頻道
   } catch (error) {
     throw error;
   }
@@ -852,15 +721,19 @@ function clearYouTubeApiCache() {
 // 初始化（載入流量追蹤）
 loadQuotaTracking();
 
+// YouTube API 功能開關（暫時關閉）
+const YOUTUBE_API_ENABLED = false;
+
 // 匯出函數到全域
 if (typeof window !== 'undefined') {
   window.youtubeApi = {
-    searchChannels: searchYouTubeChannels,
-    checkChannelLiveStatus: checkChannelLiveStatus,
-    checkMultipleChannelsLiveStatus: checkMultipleChannelsLiveStatus,
+    searchChannels: YOUTUBE_API_ENABLED ? searchYouTubeChannels : (() => Promise.resolve([])),
+    checkChannelLiveStatus: YOUTUBE_API_ENABLED ? checkChannelLiveStatus : (() => Promise.resolve({ isLive: false })),
+    checkMultipleChannelsLiveStatus: YOUTUBE_API_ENABLED ? checkMultipleChannelsLiveStatus : (() => Promise.resolve({})),
     setConfig: setYouTubeApiConfig,
     getConfig: getYouTubeApiConfig,
-    clearCache: clearYouTubeApiCache
+    clearCache: clearYouTubeApiCache,
+    isEnabled: () => YOUTUBE_API_ENABLED
   };
 }
 

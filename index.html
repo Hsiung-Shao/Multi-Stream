@@ -102,12 +102,10 @@
     <div id="add-panel">
       <div style="position: relative; flex: 1; min-width: 0;">
         <div style="display: flex; gap: 8px; align-items: center;">
-          <select id="search-platform-select" style="padding: 8px 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 14px; cursor: pointer; outline: none; min-width: 80px;">
-            <option value="both">TW + YT</option>
+          <select id="search-platform-select" style="padding: 8px 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 14px; cursor: pointer; outline: none; min-width: 80px; display: none;">
             <option value="twitch">TW</option>
-            <option value="youtube">YT</option>
           </select>
-          <input type="text" id="url-input" placeholder="貼上 Twitch / YouTube 直播網址或搜尋頻道" autocomplete="off" style="flex: 1;">
+          <input type="text" id="url-input" placeholder="貼上 Twitch 直播網址或搜尋頻道" autocomplete="off" style="flex: 1;">
         </div>
         <div id="search-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1a1a1a; border: 1px solid #444; border-radius: 4px; margin-top: 4px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
           <!-- 搜尋建議將在這裡動態生成 -->
@@ -286,6 +284,7 @@
           <li data-i18n="feature2">多種布局模式（單一畫面、分割、網格、側邊聊天等）</li>
           <li data-i18n="feature3">聊天室整合與音量控制</li>
           <li data-i18n="feature4">收藏串流與分類管理</li>
+          <li data-i18n="feature6">Twitch 頻道搜尋和開台狀態檢測</li>
           <li data-i18n="feature5">完全免費，無需註冊</li>
         </ul>
       </div>
