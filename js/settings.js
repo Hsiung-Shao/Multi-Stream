@@ -2169,6 +2169,16 @@ function updateVersionHistoryContent(versionModal) {
   // 版本紀錄內容（使用 i18n key）
   const versionHistory = [
     {
+      version: '1.6.1',
+      date: '2025-12-02',
+      changeKeys: [
+        'version1.6.1.change1',
+        'version1.6.1.change2',
+        'version1.6.1.change3',
+        'version1.6.1.change4'
+      ]
+    },
+    {
       version: '1.6.0',
       date: '2025-12-2',
       changeKeys: [
