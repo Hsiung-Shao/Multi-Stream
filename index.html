@@ -71,7 +71,23 @@
 <link rel="icon" type="image/png" href="icon.png">
 <link rel="shortcut icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
+<!-- DNS 預解析和預連接：加速外部資源載入 -->
+<link rel="dns-prefetch" href="https://www.youtube.com">
+<link rel="dns-prefetch" href="https://player.twitch.tv">
+<link rel="dns-prefetch" href="https://api.twitch.tv">
+<link rel="dns-prefetch" href="https://www.googletagmanager.com">
+<link rel="preconnect" href="https://www.youtube.com" crossorigin>
+<link rel="preconnect" href="https://player.twitch.tv" crossorigin>
+<link rel="preconnect" href="https://api.twitch.tv" crossorigin>
+
+<!-- 資源提示：優先載入關鍵 CSS -->
+<link rel="preload" href="styles.css" as="style">
 <link rel="stylesheet" href="styles.css">
+<!-- 預載入關鍵 JavaScript -->
+<link rel="preload" href="js/utils.js" as="script">
+<link rel="preload" href="js/security.js" as="script">
+<link rel="preload" href="js/i18n.js" as="script">
+<link rel="preload" href="js/main.js" as="script">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-6M97WLJG2Z"></script>
@@ -311,29 +327,33 @@
 <!-- 廣告 HTML 結構改為動態創建（僅在需要時創建，符合 AdSense 政策） -->
 <!-- 廣告容器將由 js/promotion.js 動態創建 -->
 
+<!-- 外部 API - 使用 async 非阻塞載入 -->
 <!-- YouTube IFrame API -->
-<script src="https://www.youtube.com/iframe_api"></script>
+<script async src="https://www.youtube.com/iframe_api"></script>
 <!-- Twitch Embed API -->
-<script src="https://player.twitch.tv/js/embed/v1.js"></script>
+<script async src="https://player.twitch.tv/js/embed/v1.js"></script>
 
 <!-- JavaScript 模組 -->
+<!-- 關鍵文件：必須按順序載入，不使用 defer -->
 <!-- config.js 是可選的，如果不存在（如在 Cloudflare Pages 上使用環境變數）則靜默失敗 -->
 <script src="config.js" onerror="window.CONFIG = window.CONFIG || {};"></script>
 <script src="js/utils.js"></script>
 <script src="js/security.js"></script>
-<script src="js/zoom-handler.js"></script>
-<script src="js/twitch-api.js"></script>
-<script src="js/youtube-api.js"></script>
-<script src="js/stream.js"></script>
-<script src="js/chat.js"></script>
-<script src="js/volume.js"></script>
-<script src="js/drag-resize.js"></script>
-<script src="js/layout.js"></script>
-<script src="js/control-panel.js"></script>
 <script src="js/i18n.js"></script>
-<script src="js/settings.js"></script>
-<script src="js/promotion.js"></script>
 <script src="js/main.js"></script>
+
+<!-- 非關鍵文件：使用 defer 延遲載入，不阻塞頁面渲染 -->
+<script defer src="js/zoom-handler.js"></script>
+<script defer src="js/twitch-api.js"></script>
+<script defer src="js/youtube-api.js"></script>
+<script defer src="js/stream.js"></script>
+<script defer src="js/chat.js"></script>
+<script defer src="js/volume.js"></script>
+<script defer src="js/drag-resize.js"></script>
+<script defer src="js/layout.js"></script>
+<script defer src="js/control-panel.js"></script>
+<script defer src="js/settings.js"></script>
+<script defer src="js/promotion.js"></script>
 
 <!-- 結構化數據 (JSON-LD) -->
 <script type="application/ld+json">
