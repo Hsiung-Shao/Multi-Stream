@@ -14,6 +14,12 @@ function applyMasterVolumeToStream(id) {
   // 計算實際音量（考慮總音量）
   const actualVol = Math.round((streamVol / 100) * masterVol);
   
+  // 更新音量條的視覺顯示（顯示實際音量）
+  const volValue = document.querySelector(`#box${id} .vol-value`);
+  if (volValue) {
+    volValue.textContent = actualVol + '%';
+  }
+  
   // 應用音量到播放器（檢查播放器是否已準備好）
   try {
     if (players[id].type === 'twitch') {
@@ -63,13 +69,15 @@ function setupVolumeControl(box, id) {
   
   volSlider.addEventListener('input', () => {
     const vol = parseInt(volSlider.value);
-    volValue.textContent = vol + '%';
     streamData[id].volume = vol;
     
     // 計算實際音量（考慮總音量）
     const masterVolSlider = document.getElementById('master-volume');
     const masterVol = masterVolSlider ? parseInt(masterVolSlider.value) : 100;
     const actualVol = Math.round((vol / 100) * masterVol);
+    
+    // 更新顯示（顯示實際音量）
+    volValue.textContent = actualVol + '%';
     
     // 控制實際音量（檢查播放器是否已準備好）
     if (players[id] && players[id].player) {
@@ -109,6 +117,7 @@ function setupVolumeControl(box, id) {
 
 // 總音量控制
 let masterVolume = 100;
+let previousMasterVolume = 100; // 保存之前的總音量值，用於取消靜音時恢復
 
 function updateMasterVolume() {
   // 自動保存設置
@@ -119,12 +128,20 @@ function updateMasterVolume() {
   const masterVolValue = document.getElementById('master-volume-value');
   
   if (masterVolSlider) {
-    masterVolume = parseInt(masterVolSlider.value);
+    const newVolume = parseInt(masterVolSlider.value);
+    
+    // 只有在音量不是 0 時才更新 previousMasterVolume（避免靜音時覆蓋之前的值）
+    if (newVolume > 0) {
+      previousMasterVolume = newVolume;
+    }
+    
+    masterVolume = newVolume;
     if (masterVolValue) {
       masterVolValue.textContent = masterVolume + '%';
     }
     
-    // 更新所有串流的音量（使用統一的函數）
+    // 更新所有串流的音量（使用統一的函數，這會同時更新音量條的視覺顯示）
+    // 這會更新每個串流畫面上方的音量條顯示
     document.querySelectorAll('.stream-box').forEach(box => {
       const id = parseInt(box.dataset.streamId);
       if (streamData[id] && players[id]) {
@@ -138,10 +155,14 @@ function muteAll() {
   const masterVolSlider = document.getElementById('master-volume');
   if (masterVolSlider) {
     if (masterVolume > 0) {
+      // 靜音：保存當前值並設為 0
+      previousMasterVolume = masterVolume;
       masterVolSlider.value = 0;
       updateMasterVolume();
     } else {
-      masterVolSlider.value = 100;
+      // 取消靜音：恢復到之前保存的值（如果之前的值為 0 或未設定，則使用 100）
+      const restoreVolume = previousMasterVolume > 0 ? previousMasterVolume : 100;
+      masterVolSlider.value = restoreVolume;
       updateMasterVolume();
     }
   }

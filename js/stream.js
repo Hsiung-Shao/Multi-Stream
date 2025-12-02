@@ -75,6 +75,12 @@ async function addStream(url = null) {
   const volumeControl = document.createElement('div');
   volumeControl.className = 'volume-control';
   
+  const reloadBtn = document.createElement('button');
+  reloadBtn.className = 'control-btn';
+  reloadBtn.title = '重整串流';
+  reloadBtn.textContent = '🔄';
+  reloadBtn.onclick = () => reloadStream(id);
+  
   const volumeIcon = document.createElement('span');
   volumeIcon.style.fontSize = '11px';
   volumeIcon.textContent = '🔊';
@@ -114,6 +120,7 @@ async function addStream(url = null) {
   
   controls.appendChild(streamLabel);
   controls.appendChild(volumeControl);
+  controls.appendChild(reloadBtn);
   controls.appendChild(chatBtn);
   controls.appendChild(separateBtn);
   controls.appendChild(closeBtn);
@@ -387,6 +394,81 @@ function createYouTubePlayer(id, videoId) {
   };
   
   initPlayer();
+}
+
+// 重整串流
+function reloadStream(id) {
+  if (!streamData[id]) return;
+  
+  const data = streamData[id];
+  const box = document.getElementById('box' + id);
+  if (!box) return;
+  
+  // 保存當前狀態
+  const savedVolume = data.volume || 100;
+  const savedChatVisible = data.chatVisible !== undefined ? data.chatVisible : true;
+  const savedStyle = {
+    left: box.style.left,
+    top: box.style.top,
+    width: box.style.width,
+    height: box.style.height
+  };
+  
+  // 清理現有播放器
+  if (players[id]) {
+    if (players[id].type === 'youtube' && players[id].player.destroy) {
+      players[id].player.destroy();
+    }
+    delete players[id];
+  }
+  
+  // 清空播放器容器
+  const playerContainer = document.getElementById('player' + id);
+  if (playerContainer) {
+    playerContainer.innerHTML = '';
+  }
+  
+  // 重新建立播放器
+  if (data.platform === 'twitch') {
+    createTwitchPlayer(id, data.channelId);
+  } else if (data.platform === 'youtube') {
+    createYouTubePlayer(id, data.videoId);
+  }
+  
+  // 恢復音量設定
+  setTimeout(() => {
+    const volSlider = box.querySelector('.volume');
+    if (volSlider) {
+      volSlider.value = savedVolume;
+      const volValue = box.querySelector('.vol-value');
+      if (volValue) {
+        volValue.textContent = savedVolume + '%';
+      }
+      streamData[id].volume = savedVolume;
+      
+      // 應用總音量控制
+      if (typeof applyMasterVolumeToStream === 'function') {
+        setTimeout(() => {
+          applyMasterVolumeToStream(id);
+        }, 500);
+      }
+    }
+  }, 500);
+  
+  // 恢復聊天室狀態
+  if (!savedChatVisible) {
+    setTimeout(() => {
+      if (data.chatVisible !== savedChatVisible) {
+        toggleChat(id);
+      }
+    }, 1000);
+  }
+  
+  // 恢復樣式
+  if (savedStyle.left) box.style.left = savedStyle.left;
+  if (savedStyle.top) box.style.top = savedStyle.top;
+  if (savedStyle.width) box.style.width = savedStyle.width;
+  if (savedStyle.height) box.style.height = savedStyle.height;
 }
 
 function removeBox(id) {
