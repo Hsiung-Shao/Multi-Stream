@@ -827,9 +827,9 @@ function showFavoriteStreamsManager() {
       <div class="tab-content active" id="tab-favorites">
         <div class="favorite-controls">
           <div class="favorite-add-section">
-            <input type="text" id="favorite-url-input" placeholder="${escapeHtml(i18n.t('pasteStreamUrl'))}" style="flex: 1; padding: 6px; margin-right: 8px;">
-            <input type="text" id="favorite-name-input" placeholder="${escapeHtml(i18n.t('customNameOptional'))}" style="flex: 1; padding: 6px; margin-right: 8px;">
-            <select id="favorite-category-select" style="padding: 6px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px;">
+            <input type="text" id="favorite-url-input" placeholder="${escapeHtml(i18n.t('pasteStreamUrl'))}" style="flex: 1; padding: 6px; margin-right: 8px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px;">
+            <input type="text" id="favorite-name-input" placeholder="${escapeHtml(i18n.t('customNameOptional'))}" style="flex: 1; padding: 6px; margin-right: 8px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px;">
+            <select id="favorite-category-select" style="padding: 6px; margin-right: 8px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px;">
               <option value="">${escapeHtml(i18n.t('uncategorized'))}</option>
   `;
   
@@ -843,7 +843,7 @@ function showFavoriteStreamsManager() {
             <button onclick="addToFavorites()" style="padding: 6px 12px;">${escapeHtml(i18n.t('addToFavorites'))}</button>
           </div>
           <div class="favorite-filter-section">
-            <select id="category-filter" style="padding: 6px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px;">
+            <select id="category-filter" style="padding: 6px; margin-right: 8px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px;">
               <option value="">${escapeHtml(i18n.t('all'))}</option>
               <option value="null">${escapeHtml(i18n.t('uncategorized'))}</option>
   `;
@@ -874,7 +874,7 @@ function showFavoriteStreamsManager() {
   }
   
   if (filteredList.length === 0) {
-    content += `<div style="padding: 20px; text-align: center; color: #888;">${escapeHtml(i18n.t('noFavorites'))}</div>`;
+    content += `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">${escapeHtml(i18n.t('noFavorites'))}</div>`;
   } else {
     filteredList.forEach((item) => {
       // 转义所有用户输入以防止 XSS
@@ -905,8 +905,8 @@ function showFavoriteStreamsManager() {
             <span class="favorite-item-url">${safeItemUrl}</span>
           </div>
           <div class="favorite-item-edit" style="display: none;">
-            <input type="text" class="favorite-edit-name" value="${safeDisplayName}" style="flex: 1; padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
-            <select class="favorite-edit-category" style="padding: 4px; margin-right: 8px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 12px;">
+            <input type="text" class="favorite-edit-name" value="${safeDisplayName}" style="flex: 1; padding: 4px; margin-right: 8px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px; font-size: 12px;">
+            <select class="favorite-edit-category" style="padding: 4px; margin-right: 8px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px; font-size: 12px;">
               ${categoryOptions}
             </select>
             <button class="save-favorite-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; margin-right: 4px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">${escapeHtml(i18n.t('save'))}</button>
@@ -929,14 +929,14 @@ function showFavoriteStreamsManager() {
       <!-- 分類管理標籤頁 -->
       <div class="tab-content" id="tab-categories">
         <div class="category-add-section">
-          <input type="text" id="category-name-input" placeholder="${escapeHtml(i18n.t('categoryName'))}" style="flex: 1; padding: 6px; margin-right: 8px;">
+          <input type="text" id="category-name-input" placeholder="${escapeHtml(i18n.t('categoryName'))}" style="flex: 1; padding: 6px; margin-right: 8px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px;">
           <button onclick="addCategory()" style="padding: 6px 12px;">${escapeHtml(i18n.t('addCategory'))}</button>
         </div>
         <div class="category-list" id="category-list">
   `;
   
   if (categories.length === 0) {
-    content += `<div style="padding: 20px; text-align: center; color: #888;">${escapeHtml(i18n.t('noCategories'))}</div>`;
+    content += `<div style="padding: 20px; text-align: center; color: var(--text-secondary);">${escapeHtml(i18n.t('noCategories'))}</div>`;
   } else {
     categories.forEach((cat) => {
       // 转义用户输入以防止 XSS
@@ -972,23 +972,23 @@ function showFavoriteStreamsManager() {
           <div style="margin-bottom: 20px;">
             <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
               <input type="checkbox" id="backup-enabled-checkbox" ${backupEnabled ? 'checked' : ''} onchange="toggleBackupEnabled()" style="width: 18px; height: 18px; cursor: pointer;">
-              <span style="font-size: 14px; color: #fff;">${escapeHtml(i18n.t('enableAutoBackup'))}</span>
+              <span style="font-size: 14px; color: var(--text-primary);">${escapeHtml(i18n.t('enableAutoBackup'))}</span>
             </label>
             <div style="margin-top: 8px; font-size: 12px; color: #28a745; margin-left: 28px; padding: 8px; background: rgba(40, 167, 69, 0.1); border-radius: 4px; border-left: 3px solid #28a745;">
               數據將自動備份到瀏覽器的 IndexedDB，無需選擇文件位置
             </div>
           </div>
-          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333;">
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
             <div style="margin-bottom: 12px;">
-              <div style="font-size: 13px; color: #fff; margin-bottom: 8px;">備份狀態</div>
-              <div id="backup-status" style="font-size: 12px; color: ${backupEnabled ? '#28a745' : '#ffa500'}; margin-bottom: 8px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 4px;">
+              <div style="font-size: 13px; color: var(--text-primary); margin-bottom: 8px;">備份狀態</div>
+              <div id="backup-status" style="font-size: 12px; color: ${backupEnabled ? '#28a745' : '#ffa500'}; margin-bottom: 8px; padding: 6px; background: var(--bg-input); border-radius: 4px;">
                 ${backupEnabled ? (i18n.t('backupEnabled') || '已啟用') : (i18n.t('backupDisabled') || '已停用')}
               </div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button onclick="exportToJSON()" style="padding: 6px 12px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">匯出 JSON 檔案</button>
-                <button onclick="importFromJSON()" style="padding: 6px 12px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">匯入 JSON 檔案</button>
+                <button onclick="exportToJSON()" style="padding: 6px 12px; background: #28a745; color: var(--text-primary); border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">匯出 JSON 檔案</button>
+                <button onclick="importFromJSON()" style="padding: 6px 12px; background: #007bff; color: var(--text-primary); border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">匯入 JSON 檔案</button>
               </div>
-              <div style="margin-top: 6px; font-size: 11px; color: #aaa;">
+              <div style="margin-top: 6px; font-size: 11px; color: var(--text-secondary);">
                 數據會自動備份到瀏覽器的 IndexedDB。您也可以手動匯出/匯入 JSON 檔案進行備份或遷移<br>
                 ${escapeHtml(i18n.t('createNewFileDesc'))}
               </div>
@@ -1857,7 +1857,7 @@ function updateFavoriteListDisplay() {
     contentDiv.style.cssText = 'flex: 1; min-width: 0;';
     
     const nameDiv = document.createElement('div');
-    nameDiv.style.cssText = 'font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
+    nameDiv.style.cssText = 'font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;';
     
     const nameText = document.createElement('span');
     nameText.textContent = escapeHtml(displayName);
@@ -1872,14 +1872,14 @@ function updateFavoriteListDisplay() {
     }
     
     const categoryDiv = document.createElement('div');
-    categoryDiv.style.cssText = 'font-size: 10px; color: #aaa;';
+    categoryDiv.style.cssText = 'font-size: 10px; color: var(--text-secondary);';
     categoryDiv.textContent = '📁 ' + escapeHtml(categoryName);
     
     contentDiv.appendChild(nameDiv);
     contentDiv.appendChild(categoryDiv);
     
     const arrowSpan = document.createElement('span');
-    arrowSpan.style.cssText = 'font-size: 12px; color: #9147ff;';
+    arrowSpan.style.cssText = 'font-size: 12px; color: var(--text-accent);';
     arrowSpan.textContent = '▶';
     
     // 統一順序：iconSpan -> liveIndicator -> contentDiv -> arrowSpan
@@ -2270,17 +2270,17 @@ function updateVersionHistoryContent(versionModal) {
   
   versionHistory.forEach((version, index) => {
     content += `
-      <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: ${index < versionHistory.length - 1 ? '1px solid #444' : 'none'};">
+      <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: ${index < versionHistory.length - 1 ? '1px solid var(--border-color)' : 'none'};">
         <div style="display: flex; align-items: center; margin-bottom: 12px;">
-          <h4 style="margin: 0; color: #9147ff; font-size: 18px;">${escapeHtml(t('version'))} ${escapeHtml(version.version)}</h4>
-          <span style="margin-left: 12px; color: #888; font-size: 12px;">${escapeHtml(version.date)}</span>
+          <h4 style="margin: 0; color: var(--text-accent); font-size: 18px;">${escapeHtml(t('version'))} ${escapeHtml(version.version)}</h4>
+          <span style="margin-left: 12px; color: var(--text-secondary); font-size: 12px;">${escapeHtml(version.date)}</span>
         </div>
-        <ul style="margin: 0; padding-left: 20px; color: #ccc; line-height: 1.8;">
+        <ul style="margin: 0; padding-left: 20px; color: var(--text-primary); line-height: 1.8;">
     `;
     
     version.changeKeys.forEach(changeKey => {
       const changeText = t(changeKey);
-      content += `<li style="margin-bottom: 6px;">${escapeHtml(changeText)}</li>`;
+      content += `<li style="margin-bottom: 6px; color: var(--text-primary);">${escapeHtml(changeText)}</li>`;
     });
     
     content += `
@@ -2357,8 +2357,8 @@ function updateUserGuideContent(guideModal) {
     </div>
     <div class="favorite-manager-content" style="max-height: 70vh; overflow-y: auto; padding: 20px;">
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('addStreamTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('addStreamTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('addStreamStep3'))}</li>
@@ -2372,8 +2372,8 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('searchTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('searchTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('searchStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('searchStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('searchStep3'))}</li>
@@ -2384,18 +2384,18 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('layoutTitle'))}</h4>
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('layoutTitle'))}</h4>
         <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutBasic'))}</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <h5 style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutBasic'))}</h5>
+          <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep1'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep2'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutBasicStep3'))}</li>
           </ol>
         </div>
         <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutSideChat'))}</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <h5 style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('layoutSideChat'))}</h5>
+          <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep1'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep2'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep3'))}</li>
@@ -2403,25 +2403,25 @@ function updateUserGuideContent(guideModal) {
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep5'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('layoutSideChatStep6'))}</li>
           </ol>
-          <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: var(--text-secondary);">
             ${escapeHtml(t('layoutSideChatTip'))}
           </div>
         </div>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('chatTitle'))}</h4>
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('chatTitle'))}</h4>
         <div style="margin-bottom: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatBasic'))}</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <h5 style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatBasic'))}</h5>
+          <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
             <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep1'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep2'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('chatBasicStep3'))}</li>
           </ol>
         </div>
         <div style="margin-top: 16px;">
-          <h5 style="color: #aaa; font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatSideLayout'))}</h5>
-          <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+          <h5 style="color: var(--text-secondary); font-size: 14px; margin-bottom: 8px;">${escapeHtml(t('chatSideLayout'))}</h5>
+          <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
             <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep1'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep2'))}</li>
             <li style="margin-bottom: 8px;">${escapeHtml(t('chatSideLayoutStep3'))}</li>
@@ -2435,8 +2435,8 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('volumeTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('volumeTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('volumeStep3'))}</li>
@@ -2446,16 +2446,16 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('reloadStreamTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('reloadStreamTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('reloadStreamStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('reloadStreamStep2'))}</li>
         </ol>
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('favoriteTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('favoriteTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('favoriteStep2'))}
             <ul style="margin-top: 6px; padding-left: 20px;">
@@ -2482,8 +2482,8 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('liveStatusTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('liveStatusTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep3'))}</li>
@@ -2495,8 +2495,8 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('backupTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('backupTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('backupStep3'))}</li>
@@ -2508,8 +2508,8 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('controlPanelTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('controlPanelTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('controlPanelStep3'))}</li>
@@ -2518,8 +2518,8 @@ function updateUserGuideContent(guideModal) {
       </div>
       
       <div style="margin-bottom: 30px;">
-        <h4 style="color: #9147ff; font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('mobileTitle'))}</h4>
-        <ol style="color: #ccc; line-height: 1.8; padding-left: 20px; margin: 0;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('mobileTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
           <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep1'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('mobileStep3'))}</li>
@@ -2569,8 +2569,8 @@ function initFavoriteSearchSuggestions() {
       top: 100%;
       left: 0;
       right: 0;
-      background: #1a1a1a;
-      border: 1px solid #444;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color-hover);
       border-radius: 4px;
       max-height: 300px;
       overflow-y: auto;
@@ -2652,7 +2652,7 @@ async function performFavoriteSearch(query) {
   }
   
   // 顯示載入狀態
-  suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #aaa;">搜尋中...</div>';
+  suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-secondary);">搜尋中...</div>';
   suggestionsDiv.style.display = 'block';
   
   try {
@@ -2724,7 +2724,7 @@ async function performFavoriteSearch(query) {
     favoriteSelectedSearchIndex = -1;
     
     if (results.length === 0) {
-      suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #666;">未找到頻道</div>';
+      suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-secondary);">未找到頻道</div>';
       return;
     }
     
@@ -2736,11 +2736,12 @@ async function performFavoriteSearch(query) {
       item.style.cssText = `
         padding: 10px 12px;
         cursor: pointer;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 10px;
         transition: background 0.2s;
+        background: var(--bg-input);
       `;
       item.dataset.index = index;
       
@@ -2767,12 +2768,12 @@ async function performFavoriteSearch(query) {
       info.style.cssText = 'flex: 1; min-width: 0;';
       
       const name = document.createElement('div');
-      name.style.cssText = 'font-weight: bold; color: #fff; margin-bottom: 2px;';
+      name.style.cssText = 'font-weight: bold; color: var(--text-primary); margin-bottom: 2px;';
       let displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '未知頻道';
       name.textContent = displayName;
       
       const details = document.createElement('div');
-      details.style.cssText = 'font-size: 11px; color: #aaa;';
+      details.style.cssText = 'font-size: 11px; color: var(--text-secondary);';
       details.textContent = channel.description || channel.title || '頻道';
       
       info.appendChild(name);
@@ -2788,12 +2789,12 @@ async function performFavoriteSearch(query) {
       
       // 滑鼠懸停效果
       item.addEventListener('mouseenter', () => {
-        item.style.background = '#2a2a2a';
+        item.style.background = 'var(--bg-button-hover)';
         favoriteSelectedSearchIndex = index;
         updateFavoriteSelectedSuggestion();
       });
       item.addEventListener('mouseleave', () => {
-        item.style.background = '';
+        item.style.background = 'var(--bg-input)';
       });
       
       suggestionsDiv.appendChild(item);
@@ -2811,9 +2812,9 @@ function updateFavoriteSelectedSuggestion() {
   const items = suggestionsDiv.querySelectorAll('.search-suggestion-item');
   items.forEach((item, index) => {
     if (index === favoriteSelectedSearchIndex) {
-      item.style.background = '#2a2a2a';
+      item.style.background = 'var(--bg-button-hover)';
     } else {
-      item.style.background = '';
+      item.style.background = 'var(--bg-input)';
     }
   });
 }

@@ -403,7 +403,7 @@ async function performSearch(query) {
     selectedSearchIndex = -1;
     
     if (results.length === 0) {
-      suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: #666;">未找到頻道</div>';
+      suggestionsDiv.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-secondary);">未找到頻道</div>';
       return;
     }
     
@@ -415,11 +415,12 @@ async function performSearch(query) {
       item.style.cssText = `
         padding: 10px 12px;
         cursor: pointer;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 10px;
         transition: background 0.2s;
+        background: var(--bg-input);
       `;
       item.dataset.index = index;
       
@@ -457,13 +458,13 @@ async function performSearch(query) {
       info.style.cssText = 'flex: 1; min-width: 0;';
       
       const name = document.createElement('div');
-      name.style.cssText = 'font-weight: bold; color: #fff; margin-bottom: 2px;';
+      name.style.cssText = 'font-weight: bold; color: var(--text-primary); margin-bottom: 2px;';
       // 處理不同平台的顯示名稱
       let displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '未知頻道';
       name.textContent = displayName;
       
       const details = document.createElement('div');
-      details.style.cssText = 'font-size: 11px; color: #aaa;';
+      details.style.cssText = 'font-size: 11px; color: var(--text-secondary);';
       if (channel.isLive) {
         // 顯示直播標題（如果有）和觀看人數
         const liveTitle = channel.liveTitle || channel.title || '';
@@ -493,11 +494,11 @@ async function performSearch(query) {
       
       // 滑鼠懸停效果
       item.addEventListener('mouseenter', () => {
-        item.style.background = '#2a2a2a';
+        item.style.background = 'var(--bg-button-hover)';
         selectedSearchIndex = index;
       });
       item.addEventListener('mouseleave', () => {
-        item.style.background = '';
+        item.style.background = 'var(--bg-input)';
       });
       
       suggestionsDiv.appendChild(item);
@@ -531,10 +532,10 @@ function updateSelectedSuggestion() {
   const items = suggestionsDiv.querySelectorAll('.search-suggestion-item');
   items.forEach((item, index) => {
     if (index === selectedSearchIndex) {
-      item.style.background = '#2a2a2a';
+      item.style.background = 'var(--bg-button-hover)';
       item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     } else {
-      item.style.background = '';
+      item.style.background = 'var(--bg-input)';
     }
   });
 }

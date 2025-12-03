@@ -236,11 +236,14 @@ function setupFixedLayoutFramework(boxes, layoutType) {
   chatSidebar.style.left = videoAreaWidth + '%';
   chatSidebar.style.top = '0';
   chatSidebar.style.position = 'absolute';
-  chatSidebar.style.background = '#0a0a0a';
-  chatSidebar.style.borderLeft = '2px solid #333';
+  chatSidebar.style.background = 'var(--bg-tertiary)';
+  chatSidebar.style.borderLeft = '2px solid var(--border-color)';
+  chatSidebar.style.display = 'flex';
+  chatSidebar.style.flexDirection = config.flexDirection;
   chatSidebar.style.overflow = 'hidden'; // 防止內容溢出
   chatSidebar.style.maxWidth = `calc(100% - ${videoAreaWidth}%)`; // 確保右邊界不超出視窗
   chatSidebar.style.right = 'auto'; // 使用 left 定位，不使用 right
+  chatSidebar.style.zIndex = '1'; // 確保聊天室在串流上方，但不會覆蓋控制面板
   
   // 获取所有串流用于选择器
   const allStreams = [];
@@ -671,22 +674,11 @@ function updateFixedLayoutFramework() {
     
     let videoLayoutType = 1;
     if (count > 0) {
-      // 檢查用戶選擇的布局類型是否仍然適合當前的串流數量
-      // 如果 layout13VideoLayout 不為 null，但當前串流數量與該布局類型不匹配，重置它
+      // 優先使用用戶明確選擇的布局類型
+      // 如果 layout13VideoLayout 不為 null 且是有效的布局類型，直接使用它
       if (layout13VideoLayout !== null && [1, 2, 3, 4, 5, 6, 9].includes(layout13VideoLayout)) {
-        // 檢查布局類型是否適合當前串流數量
-        const autoSelectedLayout = autoSelectLayout();
-        // 如果自動選擇的布局與用戶選擇的不同，且串流數量發生了變化，重置為自動選擇
-        // 這確保了當串流數量變化時，布局會自動調整
-        if (autoSelectedLayout !== layout13VideoLayout) {
-          // 串流數量變化導致需要不同的布局，重置為自動選擇
-          layout13VideoLayout = null;
-          videoLayoutType = autoSelectedLayout;
-          layout13VideoLayout = videoLayoutType; // 保存新的自動選擇結果
-        } else {
-          // 用戶選擇的布局仍然適合，使用它
+        // 用戶已經明確選擇了布局類型，直接使用它
         videoLayoutType = layout13VideoLayout;
-        }
       } else {
         // 沒有用戶選擇或選擇無效，自動選擇
         videoLayoutType = autoSelectLayout();
@@ -697,8 +689,11 @@ function updateFixedLayoutFramework() {
     // 根据自动选择的布局类型应用视频布局
     boxes.forEach((b, i) => {
       b.style.position = 'absolute';
-      b.style.right = 'auto';
       b.style.bottom = 'auto';
+      // 確保串流容器不會超出視頻區域
+      // 設置 right 屬性，確保容器不會超出視頻區域的右邊界
+      b.style.right = (100 - videoAreaWidth) + '%';
+      b.style.maxWidth = videoAreaWidth + '%';
       
       if (videoLayoutType === 1 || count === 1) {
         b.style.width = videoAreaWidth + '%';
@@ -859,6 +854,11 @@ function updateFixedLayoutFramework() {
 function cleanupFixedChatSidebar() {
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
   if (chatSidebar) {
+    // 先移除所有子元素，確保完全清理
+    while (chatSidebar.firstChild) {
+      chatSidebar.removeChild(chatSidebar.firstChild);
+    }
+    // 然後移除容器本身
     chatSidebar.remove();
   }
   
@@ -867,14 +867,21 @@ function cleanupFixedChatSidebar() {
   if (divider) {
     divider.remove();
   }
+  
+  // 強制觸發一次重排，確保布局更新
+  if (document.body) {
+    document.body.offsetHeight; // 觸發重排
+  }
 }
 
 // 在固定布局中设置左侧视频布局类型（只影响左侧视频区域，不影响右侧聊天室）
+// 注意：此函數現在只處理固定布局中的視頻布局調整
+// 如果用戶想要切換到非固定布局，應該直接調用 setLayout
 function setLayout13VideoLayout(videoLayoutType) {
   // 检查当前是否为固定布局
   const chatSidebar = document.getElementById('chat-sidebar-fixed');
   if (!chatSidebar || !isFixedLayout(userSelectedLayout)) {
-    // 如果不是固定布局，直接返回，让正常的 setLayout 处理
+    // 如果不是固定布局，直接返回 false，让正常的 setLayout 处理
     return false;
   }
   
@@ -921,6 +928,11 @@ function setLayout(type, immediate = false, isUserSelection = false) {
   
   // 如果是用戶手動選擇，記錄並設置保護時間
   if (isUserSelection) {
+    // 如果從固定布局切換到非固定布局，先清理固定布局
+    if (isFixedLayout(userSelectedLayout) && !isFixedLayout(type)) {
+      cleanupFixedChatSidebar();
+      layout13VideoLayout = null;
+    }
     userSelectedLayout = type;
     // 記錄用戶手動選擇的布局
     // 清除之前的超時
@@ -988,15 +1000,52 @@ function setLayout(type, immediate = false, isUserSelection = false) {
     // 布局類型不在映射表中
   }
   
+  // 如果切换到非固定布局，先清理固定布局的聊天室容器和相關狀態
+  // 必須在設置串流寬度之前清理，確保串流寬度計算正確
+  // 注意：只有在用戶明確選擇非固定布局（Layout 1-12）時才清理固定布局
+  // 如果當前是固定布局，且用戶點擊的是 Layout 1-9，應該由 setLayout13VideoLayout 處理
+  if (!isFixedLayout(type)) {
+    // 如果之前是固定布局，清理固定布局的聊天室容器
+    if (isFixedLayout(userSelectedLayout)) {
+      // 先清理固定布局的聊天室容器
+      cleanupFixedChatSidebar();
+      // 重置固定布局相關的狀態
+      layout13VideoLayout = null;
+      // 確保所有串流的聊天室都顯示（從固定布局切換回來時）
+      boxes.forEach(b => {
+        const id = parseInt(b.dataset.streamId);
+        const chatDiv = document.getElementById('chat' + id);
+        if (chatDiv) {
+          chatDiv.classList.remove('hidden');
+        }
+        const resizer = document.getElementById('chat-resizer' + id);
+        if (resizer) {
+          resizer.style.display = '';
+        }
+        // 重置串流的 maxWidth 和 maxHeight 限制（固定布局可能設置了這些限制）
+        b.style.maxWidth = '';
+        b.style.maxHeight = '';
+        // 確保串流的位置和大小重置為相對於容器
+        b.style.position = 'absolute';
+        b.style.right = 'auto';
+        b.style.bottom = 'auto';
+        // 強制清除可能殘留的寬度限制
+        b.style.width = '';
+        b.style.height = '';
+        b.style.left = '';
+        b.style.top = '';
+      });
+      // 強制觸發一次重排，確保布局更新
+      if (document.body) {
+        void document.body.offsetHeight; // 觸發重排
+      }
+    }
+  }
+  
   // 暫時禁用過渡效果，避免Twitch播放器在動畫過程中出現問題
   boxes.forEach(b => { 
     b.style.transition = 'none';
   });
-  
-  // 如果切换到非固定布局，清理固定布局的聊天室容器
-  if (!isFixedLayout(type)) {
-    cleanupFixedChatSidebar();
-  }
   
   if (type === 1 || count === 1) {
     // 單一畫面
