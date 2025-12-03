@@ -62,23 +62,11 @@ const consentManager = {
     banner.innerHTML = `
       <div class="consent-banner-content">
         <div class="consent-banner-text">
-          <p class="consent-banner-title" data-i18n="consentTitle">我們使用 Cookie 和類似技術</p>
-          <p class="consent-banner-description" data-i18n="consentDescription">我們使用 Google Analytics 來分析網站流量，並可能顯示 Google AdSense 廣告。您可以選擇接受或拒絕這些服務。詳細資訊請參閱我們的<a href="/privacy.html" target="_blank" rel="noopener noreferrer" data-i18n="privacyPolicy">隱私權政策</a>。</p>
-        </div>
-        <div class="consent-banner-options">
-          <label class="consent-option">
-            <input type="checkbox" id="consent-analytics" checked>
-            <span data-i18n="consentAnalytics">分析（Google Analytics）</span>
-          </label>
-          <label class="consent-option">
-            <input type="checkbox" id="consent-ads" checked>
-            <span data-i18n="consentAds">廣告（Google AdSense）</span>
-          </label>
+          <p class="consent-banner-description" data-i18n="consentDescription">我們使用 Cookie 和類似技術來分析網站流量並可能顯示廣告。詳細資訊請參閱我們的<a href="/privacy.html" target="_blank" rel="noopener noreferrer" data-i18n="privacyPolicy">隱私權政策</a>。</p>
         </div>
         <div class="consent-banner-buttons">
-          <button id="consent-accept-all" class="consent-btn consent-btn-primary" data-i18n="consentAcceptAll">全部接受</button>
-          <button id="consent-accept-selected" class="consent-btn consent-btn-secondary" data-i18n="consentAcceptSelected">接受選擇的項目</button>
-          <button id="consent-reject-all" class="consent-btn consent-btn-tertiary" data-i18n="consentRejectAll">全部拒絕</button>
+          <button id="consent-accept" class="consent-btn consent-btn-primary" data-i18n="consentAccept">接受</button>
+          <button id="consent-reject" class="consent-btn consent-btn-tertiary" data-i18n="consentReject">拒絕</button>
         </div>
       </div>
     `;
@@ -101,30 +89,19 @@ const consentManager = {
   
   // 綁定同意橫幅事件
   bindConsentEvents: function() {
-    const acceptAllBtn = document.getElementById('consent-accept-all');
-    const acceptSelectedBtn = document.getElementById('consent-accept-selected');
-    const rejectAllBtn = document.getElementById('consent-reject-all');
+    const acceptBtn = document.getElementById('consent-accept');
+    const rejectBtn = document.getElementById('consent-reject');
     
-    if (acceptAllBtn) {
-      acceptAllBtn.addEventListener('click', () => {
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', () => {
         this.consent.analytics = true;
         this.consent.ads = true;
         this.acceptConsent();
       });
     }
     
-    if (acceptSelectedBtn) {
-      acceptSelectedBtn.addEventListener('click', () => {
-        const analyticsChecked = document.getElementById('consent-analytics')?.checked || false;
-        const adsChecked = document.getElementById('consent-ads')?.checked || false;
-        this.consent.analytics = analyticsChecked;
-        this.consent.ads = adsChecked;
-        this.acceptConsent();
-      });
-    }
-    
-    if (rejectAllBtn) {
-      rejectAllBtn.addEventListener('click', () => {
+    if (rejectBtn) {
+      rejectBtn.addEventListener('click', () => {
         this.consent.analytics = false;
         this.consent.ads = false;
         this.acceptConsent();
@@ -227,13 +204,6 @@ const consentManager = {
   // 顯示同意設置（允許用戶修改）
   showConsentSettings: function() {
     this.showConsentBanner();
-    // 如果有保存的設置，恢復選項
-    if (this.consent.analytics !== null) {
-      const analyticsCheckbox = document.getElementById('consent-analytics');
-      const adsCheckbox = document.getElementById('consent-ads');
-      if (analyticsCheckbox) analyticsCheckbox.checked = this.consent.analytics;
-      if (adsCheckbox) adsCheckbox.checked = this.consent.ads;
-    }
   },
   
   // 獲取同意狀態
