@@ -83,22 +83,28 @@
 <link rel="preconnect" href="https://api.twitch.tv" crossorigin>
 
 <!-- 資源提示：優先載入關鍵 CSS -->
-<link rel="preload" href="styles.css" as="style">
-<link rel="stylesheet" href="styles.css">
+<link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="styles.css"></noscript>
 <!-- 預載入關鍵 JavaScript -->
 <link rel="preload" href="js/utils.js" as="script">
 <link rel="preload" href="js/security.js" as="script">
 <link rel="preload" href="js/i18n.js" as="script">
 <link rel="preload" href="js/main.js" as="script">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=	G-0DX8PWTS4X"></script>
+<!-- Google tag (gtag.js) - 延遲載入以提升頁面載入速度 -->
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-0DX8PWTS4X');
+  // 延遲載入 Google Analytics，不阻塞頁面渲染
+  window.addEventListener('load', function() {
+    var script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://www.googletagmanager.com/gtag/js?id=G-6M97WLJG2Z';
+    document.head.appendChild(script);
+    
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-6M97WLJG2Z');
+  });
 </script>
 <!-- Content Security Policy -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
@@ -340,11 +346,24 @@
 <!-- 廣告 HTML 結構改為動態創建（僅在需要時創建，符合 AdSense 政策） -->
 <!-- 廣告容器將由 js/promotion.js 動態創建 -->
 
-<!-- 外部 API - 使用 async 非阻塞載入 -->
-<!-- YouTube IFrame API -->
-<script async src="https://www.youtube.com/iframe_api"></script>
-<!-- Twitch Embed API -->
-<script async src="https://player.twitch.tv/js/embed/v1.js"></script>
+<!-- 外部 API - 延遲載入，僅在需要時載入以提升頁面載入速度 -->
+<script>
+  // 延遲載入 YouTube API，不阻塞頁面渲染
+  window.addEventListener('load', function() {
+    var youtubeScript = document.createElement('script');
+    youtubeScript.async = true;
+    youtubeScript.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(youtubeScript);
+  });
+  
+  // 延遲載入 Twitch API，不阻塞頁面渲染
+  window.addEventListener('load', function() {
+    var twitchScript = document.createElement('script');
+    twitchScript.async = true;
+    twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
+    document.head.appendChild(twitchScript);
+  });
+</script>
 
 <!-- JavaScript 模組 -->
 <!-- 關鍵文件：必須按順序載入，不使用 defer -->
@@ -371,11 +390,12 @@
     document.head.appendChild(script);
   })();
 </script>
-<script src="js/utils.js"></script>
-<script src="js/security.js"></script>
-<script src="js/i18n.js"></script>
-<script src="js/theme.js"></script>
-<script src="js/main.js"></script>
+<!-- 關鍵 JavaScript - 使用 defer 以不阻塞渲染 -->
+<script defer src="js/utils.js"></script>
+<script defer src="js/security.js"></script>
+<script defer src="js/i18n.js"></script>
+<script defer src="js/theme.js"></script>
+<script defer src="js/main.js"></script>
 
 <!-- 非關鍵文件：使用 defer 延遲載入，不阻塞頁面渲染 -->
 <script defer src="js/zoom-handler.js"></script>
