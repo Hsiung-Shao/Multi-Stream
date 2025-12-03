@@ -35,6 +35,9 @@ const i18n = {
       'favoriteStreams': '收藏串流',
       'manageFavorites': '管理收藏',
       'addCurrentToFavorites': '收藏當前',
+      'refreshFavoriteStatus': '🔄 刷新狀態',
+      'refreshingFavoriteStatus': '刷新中...',
+      'refreshFavoriteStatusTitle': '手動刷新收藏清單的開台狀態',
       'allFavorites': '全部收藏',
       'uncategorized': '未分類',
       'mediaControl': '媒體控制',
@@ -439,6 +442,9 @@ const i18n = {
       'favoriteStreams': '收藏串流',
       'manageFavorites': '管理收藏',
       'addCurrentToFavorites': '收藏当前',
+      'refreshFavoriteStatus': '🔄 刷新状态',
+      'refreshingFavoriteStatus': '刷新中...',
+      'refreshFavoriteStatusTitle': '手动刷新收藏清单的开台状态',
       'allFavorites': '全部收藏',
       'uncategorized': '未分类',
       'mediaControl': '媒体控制',
@@ -843,6 +849,9 @@ const i18n = {
       'favoriteStreams': 'Favorite Streams',
       'manageFavorites': 'Manage Favorites',
       'addCurrentToFavorites': 'Add Current',
+      'refreshFavoriteStatus': '🔄 Refresh Status',
+      'refreshingFavoriteStatus': 'Refreshing...',
+      'refreshFavoriteStatusTitle': 'Manually refresh the live status of favorite streams',
       'allFavorites': 'All Favorites',
       'uncategorized': 'Uncategorized',
       'mediaControl': 'Media Control',
@@ -1248,6 +1257,9 @@ const i18n = {
       'favoriteStreams': 'お気に入りストリーム',
       'manageFavorites': 'お気に入りを管理',
       'addCurrentToFavorites': '現在を追加',
+      'refreshFavoriteStatus': '🔄 ステータス更新',
+      'refreshingFavoriteStatus': '更新中...',
+      'refreshFavoriteStatusTitle': 'お気に入りリストのライブステータスを手動で更新',
       'allFavorites': 'すべてのお気に入り',
       'uncategorized': '未分類',
       'mediaControl': 'メディア制御',
@@ -1652,6 +1664,9 @@ const i18n = {
       'favoriteStreams': '즐겨찾기 스트림',
       'manageFavorites': '즐겨찾기 관리',
       'addCurrentToFavorites': '현재 항목 즐겨찾기에 추가',
+      'refreshFavoriteStatus': '🔄 상태 새로고침',
+      'refreshingFavoriteStatus': '새로고침 중...',
+      'refreshFavoriteStatusTitle': '즐겨찾기 목록의 라이브 상태를 수동으로 새로고침',
       'allFavorites': '전체 즐겨찾기',
       'uncategorized': '미분류',
       'mediaControl': '미디어 제어',
@@ -2311,6 +2326,15 @@ const i18n = {
           }
         }
       }
+      
+      // 處理 data-i18n-title 屬性
+      const titleKey = element.getAttribute('data-i18n-title');
+      if (titleKey) {
+        const titleTranslation = this.t(titleKey);
+        if (titleTranslation !== titleKey) {
+          element.title = titleTranslation;
+        }
+      }
     });
   },
   
@@ -2531,6 +2555,19 @@ const i18n = {
     const manageFavoritesBtn = document.querySelector('button[onclick*="showFavoriteStreamsManager"]');
     if (manageFavoritesBtn) {
       manageFavoritesBtn.textContent = this.t('manageFavorites');
+    }
+    
+    // 刷新收藏狀態按鈕
+    const refreshFavoriteStatusBtn = document.getElementById('refresh-favorite-status-btn');
+    if (refreshFavoriteStatusBtn) {
+      if (!refreshFavoriteStatusBtn.disabled) {
+        refreshFavoriteStatusBtn.textContent = this.t('refreshFavoriteStatus');
+      }
+      // 更新 title 屬性
+      const titleKey = refreshFavoriteStatusBtn.getAttribute('data-i18n-title');
+      if (titleKey) {
+        refreshFavoriteStatusBtn.title = this.t(titleKey);
+      }
     }
     
     const addCurrentBtn = document.querySelector('button[onclick*="addCurrentStreamToFavorites"]');

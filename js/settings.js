@@ -2022,12 +2022,48 @@ function stopFavoriteLiveStatusAutoRefresh() {
   localStorage.setItem('favoriteLiveStatusAutoRefresh', 'false');
 }
 
+// 手動刷新收藏清單狀態
+async function refreshFavoriteStatus() {
+  const refreshBtn = document.getElementById('refresh-favorite-status-btn');
+  if (!refreshBtn) return;
+  
+  // 檢查是否正在刷新
+  if (refreshBtn.disabled) return;
+  
+  const i18n = window.i18n || { t: (key) => key };
+  const originalText = refreshBtn.textContent;
+  
+  // 設置載入狀態
+  refreshBtn.disabled = true;
+  refreshBtn.textContent = i18n.t('refreshingFavoriteStatus');
+  
+  try {
+    // 調用更新函數
+    await updateFavoriteLiveStatuses();
+    
+    // 更新收藏列表顯示
+    if (typeof updateFavoriteListDisplay === 'function') {
+      updateFavoriteListDisplay();
+    }
+    
+    // 恢復按鈕狀態
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = originalText;
+  } catch (error) {
+    // 錯誤處理
+    console.error('刷新收藏狀態失敗:', error);
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = originalText;
+  }
+}
+
 // 確保函數是全局的
 if (typeof window !== 'undefined') {
   window.updateFavoriteListDisplay = updateFavoriteListDisplay;
   window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
   window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
   window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
+  window.refreshFavoriteStatus = refreshFavoriteStatus;
 }
 
 // 從控制面板一鍵載入分類下的所有收藏

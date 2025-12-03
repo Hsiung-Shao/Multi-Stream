@@ -226,8 +226,9 @@
     <div class="control-section">
       <div class="section-title">收藏串流</div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-        <button onclick="showFavoriteStreamsManager()" style="padding: 6px 12px; font-size: 14px;">管理收藏</button>
-        <button onclick="addCurrentStreamToFavorites()" style="padding: 6px 12px; font-size: 14px;">收藏當前</button>
+        <button onclick="showFavoriteStreamsManager()" style="padding: 6px 12px; font-size: 14px;" data-i18n="manageFavorites">管理收藏</button>
+        <button onclick="addCurrentStreamToFavorites()" style="padding: 6px 12px; font-size: 14px;" data-i18n="addCurrentToFavorites">收藏當前</button>
+        <button id="refresh-favorite-status-btn" onclick="refreshFavoriteStatus()" style="padding: 6px 12px; font-size: 14px;" data-i18n="refreshFavoriteStatus" data-i18n-title="refreshFavoriteStatusTitle">🔄 刷新狀態</button>
       </div>
       <div style="margin-bottom: 8px;">
         <select id="favorite-display-filter" onchange="updateFavoriteListDisplay()" title="選擇收藏顯示方式" style="width: 100%; padding: 6px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px; font-size: 12px;">
