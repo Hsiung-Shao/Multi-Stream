@@ -453,51 +453,123 @@ body {
   // 使用 requestIdleCallback 或 setTimeout 進一步延遲載入第三方 API
   // 優先載入頁面內容，API 在瀏覽器空閒時載入
   function loadExternalAPIs() {
+    // 檢查是否已經載入
+    if (typeof YT !== 'undefined' && typeof Twitch !== 'undefined') {
+      return; // 已經載入
+    }
+    
+    // 檢查腳本是否已經存在
+    const existingYouTube = document.querySelector('script[src*="youtube.com/iframe_api"]');
+    const existingTwitch = document.querySelector('script[src*="player.twitch.tv"]');
+    
     // 延遲載入 YouTube API
-    const youtubeScript = document.createElement('script');
-    youtubeScript.async = true;
-    youtubeScript.src = 'https://www.youtube.com/iframe_api';
-    youtubeScript.crossOrigin = 'anonymous';
-    document.head.appendChild(youtubeScript);
+    if (!existingYouTube && typeof YT === 'undefined') {
+      const youtubeScript = document.createElement('script');
+      youtubeScript.async = true;
+      youtubeScript.defer = false; // 不使用 defer，確保立即載入
+      youtubeScript.src = 'https://www.youtube.com/iframe_api';
+      youtubeScript.onerror = function() {
+        console.warn('無法載入 YouTube iframe API，請檢查網路連線');
+        // 嘗試重新載入
+        setTimeout(function() {
+          if (typeof YT === 'undefined' && !document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+            const retryScript = document.createElement('script');
+            retryScript.async = true;
+            retryScript.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(retryScript);
+          }
+        }, 2000);
+      };
+      document.head.appendChild(youtubeScript);
+    }
     
     // 延遲載入 Twitch API
-    const twitchScript = document.createElement('script');
-    twitchScript.async = true;
-    twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
-    twitchScript.crossOrigin = 'anonymous';
-    document.head.appendChild(twitchScript);
+    if (!existingTwitch && typeof Twitch === 'undefined') {
+      const twitchScript = document.createElement('script');
+      twitchScript.async = true;
+      twitchScript.defer = false; // 不使用 defer，確保立即載入
+      twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
+      twitchScript.onerror = function() {
+        console.warn('無法載入 Twitch embed API，請檢查網路連線');
+        // 嘗試重新載入
+        setTimeout(function() {
+          if (typeof Twitch === 'undefined' && !document.querySelector('script[src*="player.twitch.tv"]')) {
+            const retryScript = document.createElement('script');
+            retryScript.async = true;
+            retryScript.src = 'https://player.twitch.tv/js/embed/v1.js';
+            document.head.appendChild(retryScript);
+          }
+        }, 2000);
+      };
+      document.head.appendChild(twitchScript);
+    }
   }
   
   // 在頁面載入完成後，使用 requestIdleCallback 或延遲載入
   if (window.requestIdleCallback) {
-    window.requestIdleCallback(loadExternalAPIs, { timeout: 2000 });
+    window.requestIdleCallback(loadExternalAPIs, { timeout: 1000 });
   } else {
     window.addEventListener('load', function() {
       setTimeout(loadExternalAPIs, 100);
     });
+  }
+  
+  // 也立即嘗試載入（不等待頁面完全載入）
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadExternalAPIs);
+  } else {
+    loadExternalAPIs();
   }
 </script>
 
 <!-- JavaScript 模組 -->
 <!-- config.js 是可選的，延遲載入以避免阻塞 -->
 <script>
+  // 初始化 CONFIG 對象
+  window.CONFIG = window.CONFIG || {};
+  
   // 延遲載入 config.js，避免阻塞頁面渲染
-  window.addEventListener('load', function() {
-    window.CONFIG = window.CONFIG || {};
-    const script = document.createElement('script');
-    script.src = 'config.js';
-    script.type = 'text/javascript';
-    script.async = true;
-    script.onerror = function() {
-      window.CONFIG = window.CONFIG || {};
-    };
-    script.onload = function() {
-      if (typeof window.CONFIG === 'undefined') {
-        window.CONFIG = {};
+  (function() {
+    // 使用 fetch 檢查文件是否存在，避免 MIME type 錯誤
+    fetch('config.js', { 
+      method: 'HEAD',
+      cache: 'no-cache'
+    })
+    .then(function(response) {
+      // 檢查回應狀態和 Content-Type
+      if (response.ok && response.headers.get('content-type') && 
+          response.headers.get('content-type').includes('javascript')) {
+        // 文件存在且是 JavaScript，載入它
+        const script = document.createElement('script');
+        script.src = 'config.js';
+        script.type = 'text/javascript';
+        script.async = true;
+        script.onerror = function() {
+          console.log('config.js 載入失敗，使用預設配置');
+          window.CONFIG = window.CONFIG || {};
+        };
+        script.onload = function() {
+          if (typeof window.CONFIG === 'undefined') {
+            window.CONFIG = {};
+          }
+        };
+        // 檢查腳本是否已存在，避免重複載入
+        const existingScript = document.querySelector('script[src="config.js"]');
+        if (!existingScript) {
+          document.head.appendChild(script);
+        }
+      } else {
+        // 文件不存在或不是 JavaScript，使用預設配置
+        console.log('config.js 不存在或格式不正確，使用預設配置');
+        window.CONFIG = window.CONFIG || {};
       }
-    };
-    document.head.appendChild(script);
-  });
+    })
+    .catch(function(error) {
+      // 載入失敗（可能是網路錯誤或文件不存在），使用預設配置
+      console.log('config.js 檢查失敗，使用預設配置:', error.message);
+      window.CONFIG = window.CONFIG || {};
+    });
+  })();
 </script>
 <!-- 關鍵 JavaScript - 使用 defer 以不阻塞渲染 -->
 <script defer src="js/utils.js"></script>
