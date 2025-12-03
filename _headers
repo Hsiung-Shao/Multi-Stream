@@ -1,0 +1,51 @@
+# Cloudflare Pages Headers Configuration
+# 設定正確的 MIME type 和 CORS headers
+
+# JavaScript 文件
+/*.js
+  Content-Type: application/javascript; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+# 配置文件的特殊處理
+/config.js
+  Content-Type: application/javascript; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+# HTML 文件
+/*.html
+  Content-Type: text/html; charset=utf-8
+
+# CSS 文件
+/*.css
+  Content-Type: text/css; charset=utf-8
+
+# JSON 文件
+/*.json
+  Content-Type: application/json; charset=utf-8
+
+# 圖片文件
+/*.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.jpg
+  Content-Type: image/jpeg
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.jpeg
+  Content-Type: image/jpeg
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.gif
+  Content-Type: image/gif
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.svg
+  Content-Type: image/svg+xml
+  Cache-Control: public, max-age=31536000, immutable
+
+# 圖標文件
+/icon.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000, immutable
+
