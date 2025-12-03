@@ -305,39 +305,65 @@ async function addStream(url = null) {
 
 // 建立 Twitch 播放器
 function createTwitchPlayer(id, channel) {
-  const parentDomains = getTwitchParents();
-  
-  const options = {
-    width: '100%',
-    height: '100%',
-    channel: channel,
-    parent: parentDomains,
-    autoplay: true,
-    muted: false
+  // 等待 Twitch API 準備就緒
+  const initPlayer = () => {
+    if (typeof Twitch !== 'undefined' && Twitch.Player) {
+      try {
+        const parentDomains = getTwitchParents();
+        
+        const options = {
+          width: '100%',
+          height: '100%',
+          channel: channel,
+          parent: parentDomains,
+          autoplay: true,
+          muted: false
+        };
+        
+        const playerDiv = document.getElementById('player' + id);
+        if (!playerDiv) {
+          console.warn('Twitch player container not found:', 'player' + id);
+          return;
+        }
+        
+        const player = new Twitch.Player('player' + id, options);
+        
+        players[id] = {
+          type: 'twitch',
+          player: player
+        };
+        
+        player.addEventListener(Twitch.Player.READY, () => {
+          // 應用總音量控制
+          applyMasterVolumeToStream(id);
+        });
+        
+        player.addEventListener(Twitch.Player.ERROR, () => {
+          // Twitch player error，靜默處理
+          alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 網路連線正常');
+        });
+      } catch (error) {
+        console.error('Error creating Twitch player:', error);
+        alert('無法建立 Twitch 播放器。請確認 Twitch API 已正確載入。');
+      }
+    } else {
+      // Twitch API 尚未載入，重試（最多重試 50 次，約 5 秒）
+      if (typeof createTwitchPlayer.retryCount === 'undefined') {
+        createTwitchPlayer.retryCount = 0;
+      }
+      if (createTwitchPlayer.retryCount < 50) {
+        createTwitchPlayer.retryCount++;
+        setTimeout(initPlayer, 100);
+      } else {
+        console.error('Twitch API failed to load after multiple retries');
+        alert('無法載入 Twitch API。請重新整理頁面或檢查網路連線。');
+      }
+    }
   };
   
-  try {
-    const playerDiv = document.getElementById('player' + id);
-    const player = new Twitch.Player('player' + id, options);
-    
-    players[id] = {
-      type: 'twitch',
-      player: player
-    };
-    
-    player.addEventListener(Twitch.Player.READY, () => {
-      // 應用總音量控制
-      applyMasterVolumeToStream(id);
-    });
-    
-    player.addEventListener(Twitch.Player.ERROR, () => {
-      // Twitch player error，靜默處理
-      alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 使用 http://localhost 而非 file:// 開啟網頁');
-    });
-  } catch (error) {
-    // Error creating Twitch player，靜默處理
-    alert('無法建立 Twitch 播放器。請確認使用 http://localhost 開啟網頁，而非直接開啟檔案。');
-  }
+  // 重置重試計數器（每次新播放器建立時）
+  createTwitchPlayer.retryCount = 0;
+  initPlayer();
 }
 
 // 建立 YouTube 播放器
