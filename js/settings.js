@@ -2209,7 +2209,8 @@ function updateVersionHistoryContent(versionModal) {
       date: '2025-12-03',
       changeKeys: [
         'version1.6.2.change1',
-        'version1.6.2.change2'
+        'version1.6.2.change2',
+        'version1.6.2.change3'
       ]
     },
     {
