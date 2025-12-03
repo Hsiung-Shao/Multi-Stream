@@ -70,7 +70,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="supported-color-schemes" content="dark">
 
-<link rel="icon" type="image/png" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png" fetchpriority="high">
 <link rel="shortcut icon" type="image/png" href="icon.png">
 <link rel="apple-touch-icon" href="icon.png">
 <!-- DNS 預解析和預連接：加速外部資源載入 -->
@@ -81,24 +81,130 @@
 <link rel="preconnect" href="https://www.youtube.com" crossorigin>
 <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
 <link rel="preconnect" href="https://api.twitch.tv" crossorigin>
+<link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
 
-<!-- 資源提示：優先載入關鍵 CSS -->
-<link rel="preload" href="styles.css" as="style">
-<link rel="stylesheet" href="styles.css">
-<!-- 預載入關鍵 JavaScript -->
-<link rel="preload" href="js/utils.js" as="script">
-<link rel="preload" href="js/security.js" as="script">
-<link rel="preload" href="js/i18n.js" as="script">
-<link rel="preload" href="js/main.js" as="script">
+<!-- 內聯關鍵 CSS - 減少首次渲染阻塞 -->
+<style>
+/* CSS 變數 - 關鍵樣式 */
+:root {
+  --chat-min-width: 300px;
+  --chat-min-height: 200px;
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #000;
+  --bg-tertiary: #111;
+  --bg-quaternary: #0e0e0e;
+  --bg-panel: rgba(0, 0, 0, 0.95);
+  --bg-input: #1a1a1a;
+  --bg-button: #1a1a1a;
+  --bg-button-hover: #333;
+  --bg-button-active: #9147ff;
+  --border-color: #333;
+  --border-color-hover: #444;
+  --border-color-active: #9147ff;
+  --text-primary: #fff;
+  --text-secondary: #aaa;
+  --text-accent: #9147ff;
+  --shadow-color: rgba(0, 0, 0, 0.9);
+}
+[data-theme="light"] {
+  --bg-primary: #f5f5f5;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f0f0;
+  --bg-quaternary: #fafafa;
+  --bg-panel: rgba(255, 255, 255, 0.95);
+  --bg-input: #ffffff;
+  --bg-button: #ffffff;
+  --bg-button-hover: #e0e0e0;
+  --bg-button-active: #9147ff;
+  --border-color: #ddd;
+  --border-color-hover: #ccc;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666;
+  --text-accent: #9147ff;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+* { box-sizing: border-box; }
+html { overflow-x: hidden; width: 100%; max-width: 100vw; }
+body { 
+  margin: 0; 
+  background: var(--bg-primary); 
+  color: var(--text-primary); 
+  font-family: 'Segoe UI', Arial, sans-serif; 
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 100vw;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+#container { 
+  position: relative; 
+  width: 100%; 
+  max-width: 100vw;
+  height: 100vh; 
+  background: var(--bg-secondary);
+  transition: background-color 0.3s ease;
+  overflow-x: hidden;
+}
+.initial-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 800px;
+  padding: 40px;
+  background: var(--bg-panel);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  text-align: center;
+  z-index: 100;
+  transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+.initial-content.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.initial-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.initial-content-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--text-accent);
+  margin: 0;
+  line-height: 1.2;
+  transition: color 0.3s ease;
+}
+.initial-content-description {
+  font-size: 18px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+  transition: color 0.3s ease;
+}
+@media (max-width: 768px) {
+  .initial-content { width: 95%; padding: 24px; }
+  .initial-content-title { font-size: 24px; margin-top: 40px; }
+  .initial-content-description { font-size: 16px; }
+}
+</style>
+<!-- 非關鍵 CSS - 異步載入 -->
+<link rel="preload" href="styles.css" as="style" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="styles.css"></noscript>
+<!-- 預載入關鍵 JavaScript - 添加優先級 -->
+<link rel="preload" href="js/utils.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/security.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/i18n.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/theme.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/main.js" as="script" fetchpriority="high">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=	G-0DX8PWTS4X"></script>
+<!-- Google Analytics 將由 consent.js 根據用戶同意狀態載入 -->
+<!-- 初始化 dataLayer 用於 Consent Mode v2 -->
 <script>
   window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-0DX8PWTS4X');
 </script>
 <!-- Content Security Policy -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
@@ -124,7 +230,7 @@
           <select id="search-platform-select" style="padding: 8px 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 14px; cursor: pointer; outline: none; min-width: 80px; display: none;">
             <option value="twitch">TW</option>
           </select>
-          <input type="text" id="url-input" placeholder="貼上 Twitch 直播網址或搜尋頻道" autocomplete="off" style="flex: 1;">
+          <input type="text" id="url-input" placeholder="貼上 Twitch 直播網址或搜尋頻道" autocomplete="off" aria-label="輸入 Twitch 直播網址或搜尋頻道" title="貼上 Twitch 直播網址或搜尋頻道" style="flex: 1;">
         </div>
         <div id="search-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-input); border: 1px solid var(--border-color-hover); border-radius: 4px; margin-top: 4px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px var(--shadow-color);">
           <!-- 搜尋建議將在這裡動態生成 -->
@@ -210,7 +316,7 @@
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="color: var(--text-primary); font-size: 12px; white-space: nowrap;" data-i18n="lightDarkTheme">光暗主題</span>
           <label class="theme-switch" title="切換主題" style="margin: 0;">
-            <input type="checkbox" id="theme-switch-input" onchange="if (window.themeManager) { window.themeManager.toggleTheme(); }">
+            <input type="checkbox" id="theme-switch-input" aria-label="切換光暗主題" onchange="if (window.themeManager) { window.themeManager.toggleTheme(); }">
             <span class="theme-switch-slider"></span>
           </label>
         </div>
@@ -220,8 +326,9 @@
     <div class="control-section">
       <div class="section-title">收藏串流</div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-        <button onclick="showFavoriteStreamsManager()" style="padding: 6px 12px; font-size: 14px;">管理收藏</button>
-        <button onclick="addCurrentStreamToFavorites()" style="padding: 6px 12px; font-size: 14px;">收藏當前</button>
+        <button onclick="showFavoriteStreamsManager()" style="padding: 6px 12px; font-size: 14px;" data-i18n="manageFavorites">管理收藏</button>
+        <button onclick="addCurrentStreamToFavorites()" style="padding: 6px 12px; font-size: 14px;" data-i18n="addCurrentToFavorites">收藏當前</button>
+        <button id="refresh-favorite-status-btn" onclick="refreshFavoriteStatus()" style="padding: 6px 12px; font-size: 14px;" data-i18n="refreshFavoriteStatus" data-i18n-title="refreshFavoriteStatusTitle">🔄 刷新狀態</button>
       </div>
       <div style="margin-bottom: 8px;">
         <select id="favorite-display-filter" onchange="updateFavoriteListDisplay()" title="選擇收藏顯示方式" style="width: 100%; padding: 6px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px; font-size: 12px;">
@@ -277,7 +384,8 @@
     <div class="control-section" style="border-top: 1px solid #333; padding-top: 15px; margin-top: 10px;">
       <div style="text-align: center; margin-bottom: 10px;">
         <a href="/about.html" target="_blank" rel="noopener noreferrer" style="color: #888; text-decoration: underline; font-size: 12px; margin-right: 15px;" data-i18n="aboutUs">關於我們</a>
-        <a href="/privacy.html" target="_blank" rel="noopener noreferrer" style="color: #888; text-decoration: underline; font-size: 12px;" data-i18n="privacyPolicy">隱私權政策</a>
+        <a href="/privacy.html" target="_blank" rel="noopener noreferrer" style="color: #888; text-decoration: underline; font-size: 12px; margin-right: 15px;" data-i18n="privacyPolicy">隱私權政策</a>
+        <a href="/terms.html" target="_blank" rel="noopener noreferrer" style="color: #888; text-decoration: underline; font-size: 12px;" data-i18n="termsOfService">服務條款</a>
       </div>
       <div style="text-align: center; color: #666; font-size: 11px; line-height: 1.6;">
         <div style="margin-bottom: 8px;">© 2025 Hsiung-Shao. All rights reserved.</div>
@@ -319,7 +427,6 @@
       </div>
       
       <div class="initial-content-actions">
-        <button class="initial-content-button" onclick="document.getElementById('control-panel')?.classList.remove('collapsed'); if (window.toggleControlPanel) window.toggleControlPanel();" data-i18n="getStarted">開始使用</button>
         <a href="#" onclick="showUserGuide(); return false;" class="initial-content-link" data-i18n="userGuide">使用教學</a>
         <a href="#" onclick="showVersionHistory(); return false;" class="initial-content-link" data-i18n="versionHistory">版本紀錄</a>
       </div>
@@ -329,6 +436,7 @@
       <div class="initial-content-footer-links" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); text-align: center;">
         <a href="/about.html" class="initial-content-link" data-i18n="aboutUs" style="margin: 0 15px;">關於我們</a>
         <a href="/privacy.html" class="initial-content-link" data-i18n="privacyPolicy" style="margin: 0 15px;">隱私權政策</a>
+        <a href="/terms.html" class="initial-content-link" data-i18n="termsOfService" style="margin: 0 15px;">服務條款</a>
       </div>
     </div>
   </div>
@@ -340,42 +448,64 @@
 <!-- 廣告 HTML 結構改為動態創建（僅在需要時創建，符合 AdSense 政策） -->
 <!-- 廣告容器將由 js/promotion.js 動態創建 -->
 
-<!-- 外部 API - 使用 async 非阻塞載入 -->
-<!-- YouTube IFrame API -->
-<script async src="https://www.youtube.com/iframe_api"></script>
-<!-- Twitch Embed API -->
-<script async src="https://player.twitch.tv/js/embed/v1.js"></script>
+<!-- 外部 API - 延遲載入，僅在需要時載入以提升頁面載入速度 -->
+<script>
+  // 使用 requestIdleCallback 或 setTimeout 進一步延遲載入第三方 API
+  // 優先載入頁面內容，API 在瀏覽器空閒時載入
+  function loadExternalAPIs() {
+    // 延遲載入 YouTube API
+    const youtubeScript = document.createElement('script');
+    youtubeScript.async = true;
+    youtubeScript.src = 'https://www.youtube.com/iframe_api';
+    youtubeScript.crossOrigin = 'anonymous';
+    document.head.appendChild(youtubeScript);
+    
+    // 延遲載入 Twitch API
+    const twitchScript = document.createElement('script');
+    twitchScript.async = true;
+    twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
+    twitchScript.crossOrigin = 'anonymous';
+    document.head.appendChild(twitchScript);
+  }
+  
+  // 在頁面載入完成後，使用 requestIdleCallback 或延遲載入
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(loadExternalAPIs, { timeout: 2000 });
+  } else {
+    window.addEventListener('load', function() {
+      setTimeout(loadExternalAPIs, 100);
+    });
+  }
+</script>
 
 <!-- JavaScript 模組 -->
-<!-- 關鍵文件：必須按順序載入，不使用 defer -->
-<!-- config.js 是可選的，如果不存在（如在 Cloudflare Pages 上使用環境變數）則靜默失敗 -->
+<!-- config.js 是可選的，延遲載入以避免阻塞 -->
 <script>
-  // 動態載入 config.js，避免 MIME type 錯誤
-  (function() {
+  // 延遲載入 config.js，避免阻塞頁面渲染
+  window.addEventListener('load', function() {
     window.CONFIG = window.CONFIG || {};
     const script = document.createElement('script');
     script.src = 'config.js';
     script.type = 'text/javascript';
+    script.async = true;
     script.onerror = function() {
-      // 文件不存在時靜默失敗，使用預設空物件
       window.CONFIG = window.CONFIG || {};
     };
     script.onload = function() {
-      // 文件載入成功，確保 CONFIG 已初始化
       if (typeof window.CONFIG === 'undefined') {
         window.CONFIG = {};
       }
     };
-    // 使用 async 載入，不阻塞其他腳本
-    script.async = true;
     document.head.appendChild(script);
-  })();
+  });
 </script>
-<script src="js/utils.js"></script>
-<script src="js/security.js"></script>
-<script src="js/i18n.js"></script>
-<script src="js/theme.js"></script>
-<script src="js/main.js"></script>
+<!-- 關鍵 JavaScript - 使用 defer 以不阻塞渲染 -->
+<script defer src="js/utils.js"></script>
+<script defer src="js/security.js"></script>
+<script defer src="js/i18n.js"></script>
+<script defer src="js/theme.js"></script>
+<script defer src="js/consent.js"></script>
+<script defer src="js/main.js"></script>
 
 <!-- 非關鍵文件：使用 defer 延遲載入，不阻塞頁面渲染 -->
 <script defer src="js/zoom-handler.js"></script>
@@ -390,7 +520,7 @@
 <script defer src="js/settings.js"></script>
 <script defer src="js/promotion.js"></script>
 
-<!-- 結構化數據 (JSON-LD) -->
+<!-- 關鍵結構化數據 (JSON-LD) - 保留在 head 中以便 SEO -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -405,191 +535,154 @@
     "price": "0",
     "priceCurrency": "TWD"
   },
-  "featureList": [
-    "多平台直播串流觀看",
-    "Twitch 和 YouTube 支援",
-    "多種布局模式",
-    "聊天室整合",
-    "音量控制",
-    "收藏功能",
-    "本地文件備份",
-    "分類管理",
-    "自動布局切換"
-  ],
   "author": {
-    "@type": "Person",
-    "name": "Hsiung-Shao"
-  },
-  "creator": {
-    "@type": "Person",
-    "name": "Hsiung-Shao"
-  },
-  "publisher": {
     "@type": "Person",
     "name": "Hsiung-Shao"
   },
   "inLanguage": "zh-TW",
   "isAccessibleForFree": true,
-  "license": "https://multistreaming.org/",
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "5",
-    "ratingCount": "1",
-    "bestRating": "5",
-    "worstRating": "1",
-    "reviewCount": "1"
-  },
   "datePublished": "2024-11-26",
-  "dateModified": "2025-11-30",
-  "screenshot": "https://multistreaming.org/icon.png",
-  "softwareVersion": "1.4.1",
-  "releaseNotes": "https://multistreaming.org/#version-history",
-  "browserRequirements": "Requires JavaScript. Requires HTML5.",
-  "softwareHelp": {
-    "@type": "CreativeWork",
-    "url": "https://multistreaming.org/#user-guide"
-  },
-  "keywords": "多平台直播,串流觀看,Twitch,YouTube,直播工具,多畫面直播,直播聊天室,串流管理,免費直播工具,同時觀看直播,直播分割,多串流觀看",
-  "audience": {
-    "@type": "Audience",
-    "audienceType": "Streaming Enthusiasts, Gamers, Content Creators"
-  }
+  "dateModified": "2025-11-30"
 }
 </script>
 
-<!-- BreadcrumbList Structured Data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "首頁",
-      "item": "https://multistreaming.org/"
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "關於我們",
-      "item": "https://multistreaming.org/about.html"
-    },
-    {
-      "@type": "ListItem",
-      "position": 3,
-      "name": "隱私權政策",
-      "item": "https://multistreaming.org/privacy.html"
-    }
-  ]
-}
-</script>
-
-<!-- WebPage Structured Data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebPage",
-  "name": "MultiStream Hub - 多平台直播串流觀看工具",
-  "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播",
-  "url": "https://multistreaming.org/",
-  "inLanguage": ["zh-TW", "zh-CN", "en", "ja"],
-  "isPartOf": {
-    "@type": "WebSite",
-    "name": "MultiStream Hub",
-    "url": "https://multistreaming.org/"
-  },
-  "about": {
-    "@type": "Thing",
-    "name": "多平台直播串流觀看",
-    "description": "同時觀看多個 Twitch 和 YouTube 直播的工具"
-  },
-  "primaryImageOfPage": {
-    "@type": "ImageObject",
-    "url": "https://multistreaming.org/icon.png",
-    "width": 512,
-    "height": 512
-  }
-}
-</script>
-
-<!-- Organization Structured Data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "name": "MultiStream Hub",
-  "url": "https://multistreaming.org/",
-  "logo": {
-    "@type": "ImageObject",
-    "url": "https://multistreaming.org/icon.png",
-    "width": 512,
-    "height": 512
-  },
-  "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播",
-  "foundingDate": "2024",
-  "founder": {
-    "@type": "Person",
-    "name": "Hsiung-Shao"
-  },
-  "sameAs": [],
-  "contactPoint": {
-    "@type": "ContactPoint",
-    "contactType": "Customer Service",
-    "availableLanguage": ["zh-TW", "zh-CN", "en", "ja"],
-    "url": "https://forms.gle/AjG922YrXFbyAdBa6"
-  }
-}
-</script>
-
-<!-- FAQPage Structured Data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "MultiStream Hub 是什麼？",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "MultiStream Hub 是一個免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能。"
+<!-- 非關鍵結構化數據 (JSON-LD) - 延遲載入以減少主執行緒工作 -->
+<script>
+  // 在頁面載入完成後再載入非關鍵結構化數據
+  window.addEventListener('load', function() {
+    // BreadcrumbList Structured Data
+    const breadcrumbScript = document.createElement('script');
+    breadcrumbScript.type = 'application/ld+json';
+    breadcrumbScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "首頁",
+          "item": "https://multistreaming.org/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "關於我們",
+          "item": "https://multistreaming.org/about.html"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "隱私權政策",
+          "item": "https://multistreaming.org/privacy.html"
+        }
+      ]
+    });
+    document.head.appendChild(breadcrumbScript);
+    
+    // WebPage Structured Data
+    const webpageScript = document.createElement('script');
+    webpageScript.type = 'application/ld+json';
+    webpageScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "MultiStream Hub - 多平台直播串流觀看工具",
+      "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播",
+      "url": "https://multistreaming.org/",
+      "inLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"],
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "MultiStream Hub",
+        "url": "https://multistreaming.org/"
+      },
+      "primaryImageOfPage": {
+        "@type": "ImageObject",
+        "url": "https://multistreaming.org/icon.png",
+        "width": 512,
+        "height": 512
       }
-    },
-    {
-      "@type": "Question",
-      "name": "MultiStream Hub 是否免費？",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "是的，MultiStream Hub 完全免費使用，無需註冊或付費。"
+    });
+    document.head.appendChild(webpageScript);
+    
+    // Organization Structured Data
+    const orgScript = document.createElement('script');
+    orgScript.type = 'application/ld+json';
+    orgScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "MultiStream Hub",
+      "url": "https://multistreaming.org/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://multistreaming.org/icon.png",
+        "width": 512,
+        "height": 512
+      },
+      "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播",
+      "foundingDate": "2024",
+      "founder": {
+        "@type": "Person",
+        "name": "Hsiung-Shao"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Service",
+        "availableLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"],
+        "url": "https://forms.gle/AjG922YrXFbyAdBa6"
       }
-    },
-    {
-      "@type": "Question",
-      "name": "支援哪些直播平台？",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "目前支援 Twitch 和 YouTube 兩個主要直播平台。"
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "可以同時觀看多少個直播？",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "可以同時觀看多個直播，支援多種布局模式，包括單一畫面、左右分割、上下分割、四宮格、2×3網格、3×3網格等，以及側邊聊天布局模式。"
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "是否需要註冊帳號？",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "不需要，MultiStream Hub 完全免費且無需註冊，可以直接使用。"
-      }
-    }
-  ]
-}
+    });
+    document.head.appendChild(orgScript);
+    
+    // FAQPage Structured Data
+    const faqScript = document.createElement('script');
+    faqScript.type = 'application/ld+json';
+    faqScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "MultiStream Hub 是什麼？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MultiStream Hub 是一個免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "MultiStream Hub 是否免費？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "是的，MultiStream Hub 完全免費使用，無需註冊或付費。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "支援哪些直播平台？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "目前支援 Twitch 和 YouTube 兩個主要直播平台。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "可以同時觀看多少個直播？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "可以同時觀看多個直播，支援多種布局模式，包括單一畫面、左右分割、上下分割、四宮格、2×3網格、3×3網格等，以及側邊聊天布局模式。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "是否需要註冊帳號？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "不需要，MultiStream Hub 完全免費且無需註冊，可以直接使用。"
+          }
+        }
+      ]
+    });
+    document.head.appendChild(faqScript);
+  });
 </script>
 
 <!-- AdSense 廣告載入改為在 js/promotion.js 中動態處理 -->
