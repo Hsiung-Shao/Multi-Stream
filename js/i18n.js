@@ -208,6 +208,8 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '關閉',
+      'version1.6.2.change1': '修復固定聊天布局狀態下，無法切換布局設定問題',
+      'version1.6.2.change2': '新增光暗主題',
       'version1.6.1.change1': '新增韓文語言支援',
       'version1.6.1.change2': '改進語言自動偵測功能，預設語言改為英文',
       'version1.6.1.change3': '更新 SEO 優化，添加韓文 hreflang 和 Open Graph 標籤',
@@ -610,6 +612,8 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '关闭',
+      'version1.6.2.change1': '修复固定聊天布局状态下，无法切换布局设定问题',
+      'version1.6.2.change2': '新增光暗主题',
       'version1.6.1.change1': '新增韩文语言支援',
       'version1.6.1.change2': '改进语言自动侦测功能，预设语言改为英文',
       'version1.6.1.change3': '更新 SEO 优化，添加韩文 hreflang 和 Open Graph 标签',
@@ -1012,6 +1016,8 @@ const i18n = {
       // Version History
       'version': 'Version',
       'close': 'Close',
+      'version1.6.2.change1': 'Fixed issue where layout settings could not be switched in fixed chat layout mode',
+      'version1.6.2.change2': 'Added light/dark theme',
       'version1.6.1.change1': 'Added Korean language support',
       'version1.6.1.change2': 'Improved language auto-detection, default language changed to English',
       'version1.6.1.change3': 'Updated SEO optimization, added Korean hreflang and Open Graph tags',
@@ -1415,6 +1421,8 @@ const i18n = {
       // バージョン履歴
       'version': 'バージョン',
       'close': '閉じる',
+      'version1.6.2.change1': '固定チャットレイアウト状態でレイアウト設定を切り替えられない問題を修正',
+      'version1.6.2.change2': 'ライト/ダークテーマを追加',
       'version1.6.1.change1': '韓国語サポートを追加',
       'version1.6.1.change2': '言語自動検出機能を改善、デフォルト言語を英語に変更',
       'version1.6.1.change3': 'SEO 最適化を更新、韓国語 hreflang と Open Graph タグを追加',
@@ -1821,6 +1829,8 @@ const i18n = {
     // 版本歷史
     'version': '버전',
     'close': '닫기',
+    'version1.6.2.change1': '고정 채팅 레이아웃 상태에서 레이아웃 설정을 전환할 수 없는 문제 수정',
+    'version1.6.2.change2': '라이트/다크 테마 추가',
     'version1.6.1.change1': '한국어 언어 지원 추가',
     'version1.6.1.change2': '언어 자동 감지 기능 개선, 기본 언어를 영어로 변경',
     'version1.6.1.change3': 'SEO 최적화 업데이트, 한국어 hreflang 및 Open Graph 태그 추가',
