@@ -39,15 +39,10 @@ const RSS_CONFIG = {
   
   // 代理 URL（如果使用代理）
   rssProxyUrl: '/api/youtube-rss',
+  pageFetchProxyUrl: '/api/youtube-page-fetch',
   
   // RSS URL 格式
   rssBaseUrl: 'https://www.youtube.com/feeds/videos.xml',
-  
-  // oEmbed URL 格式（用於從 videoID 獲取 channelID）
-  oEmbedUrl: 'https://www.youtube.com/oembed',
-  
-  // YouTube Data API v3 代理 URL（用於通過 @username 獲取 channel ID）
-  apiProxyUrl: '/api/youtube-proxy',
   
   // 快取設定
   cacheEnabled: true,
@@ -98,30 +93,40 @@ function setCachedData(key, data) {
 }
 
 // 獲取頻道 RSS Feed
-async function fetchChannelRSS(channelId) {
-  if (!channelId) {
-    throw new Error('channelId 不能為空');
+// 支持 channelId (UC...) 或 @handle 格式
+async function fetchChannelRSS(channelIdOrHandle) {
+  if (!channelIdOrHandle) {
+    throw new Error('channelId 或 handle 不能為空');
   }
   
   // 檢查快取
-  const cacheKey = getCacheKey('rss', channelId);
+  const cacheKey = getCacheKey('rss', channelIdOrHandle);
   const cached = getCachedData(cacheKey);
   if (cached) {
-    console.log('[YouTube RSS] 使用快取:', { channelId });
+    console.log('[YouTube RSS] 使用快取:', { channelIdOrHandle });
     return cached;
   }
   
   // 檢查是否在 Cloudflare Pages 環境
   const useProxy = await ensureProxyConfig();
-  console.log('[YouTube RSS] 開始獲取 RSS Feed:', { channelId, useProxy });
+  console.log('[YouTube RSS] 開始獲取 RSS Feed:', { channelIdOrHandle, useProxy });
   
+  // 構建 RSS URL（支持 channel_id 和 user 兩種格式）
   let rssUrl;
-  if (useProxy) {
-    // 使用後端代理（解決 CORS 問題）
-    rssUrl = `${RSS_CONFIG.rssProxyUrl}?channel_id=${encodeURIComponent(channelId)}`;
+  if (channelIdOrHandle.startsWith('@')) {
+    // @handle 格式
+    if (useProxy) {
+      rssUrl = `${RSS_CONFIG.rssProxyUrl}?channel_id=${encodeURIComponent(channelIdOrHandle)}`;
+    } else {
+      rssUrl = `${RSS_CONFIG.rssBaseUrl}?user=${encodeURIComponent(channelIdOrHandle)}`;
+    }
   } else {
-    // 本地開發：直接調用（會遇到 CORS 問題，但可以測試）
-    rssUrl = `${RSS_CONFIG.rssBaseUrl}?channel_id=${encodeURIComponent(channelId)}`;
+    // channel ID 格式
+    if (useProxy) {
+      rssUrl = `${RSS_CONFIG.rssProxyUrl}?channel_id=${encodeURIComponent(channelIdOrHandle)}`;
+    } else {
+      rssUrl = `${RSS_CONFIG.rssBaseUrl}?channel_id=${encodeURIComponent(channelIdOrHandle)}`;
+    }
   }
   
   try {
@@ -134,7 +139,7 @@ async function fetchChannelRSS(channelId) {
     
     if (!response.ok) {
       console.error('[YouTube RSS] 獲取 RSS Feed 失敗:', { 
-        channelId, 
+        channelIdOrHandle, 
         status: response.status, 
         statusText: response.statusText 
       });
@@ -146,7 +151,7 @@ async function fetchChannelRSS(channelId) {
     
     const xmlText = await response.text();
     console.log('[YouTube RSS] RSS Feed 獲取成功:', { 
-      channelId, 
+      channelIdOrHandle, 
       xmlLength: xmlText.length,
       useProxy 
     });
@@ -157,7 +162,7 @@ async function fetchChannelRSS(channelId) {
     return xmlText;
   } catch (error) {
     console.error('[YouTube RSS] 獲取 RSS Feed 錯誤:', { 
-      channelId, 
+      channelIdOrHandle, 
       error: error.message,
       useProxy 
     });
@@ -295,135 +300,149 @@ function isVideoLive(video) {
   return false;
 }
 
-// 從 videoID 獲取 channelID（使用 YouTube Data API v3）
-// 返回 { channelId: string | null, channelUrl: string | null }
-// channelId: 真正的 channel ID（可用於 RSS）
-// channelUrl: 頻道 URL
-async function getChannelIdFromVideoId(videoId) {
-  if (!videoId) {
-    throw new Error('videoId 不能為空');
+// 從任意 YouTube 網址獲取 @handle 和 RSS URL（使用網頁解析，不使用 API）
+// 輸入：任意 YouTube 網址（string）
+// 返回 { handle: string | null, rssUrl: string | null, channelId: string | null }
+async function getRssFromAnyUrl(youtubeUrl) {
+  if (!youtubeUrl) {
+    throw new Error('youtubeUrl 不能為空');
   }
   
-  console.log('[YouTube RSS] ========== 流程開始：從 videoID 獲取 channelID ==========');
-  console.log('[YouTube RSS] 步驟 1: 輸入串流網址（videoID）:', { videoId });
+  console.log('[YouTube RSS] ========== 流程開始：從任意網址獲取 RSS ==========');
+  console.log('[YouTube RSS] 步驟 1: 輸入串流網址:', { youtubeUrl });
   
-  // 檢查快取（快取格式可能是 string 或 object）
-  const cacheKey = getCacheKey('videoToChannel', videoId);
+  // 檢查快取
+  const cacheKey = getCacheKey('urlToRss', youtubeUrl);
   const cached = getCachedData(cacheKey);
   if (cached) {
-    // 如果是舊格式（string），直接返回
-    if (typeof cached === 'string') {
-      console.log('[YouTube RSS] 使用快取 (videoID -> channelID):', { videoId, channelId: cached });
-      return { channelId: cached, channelUrl: `https://www.youtube.com/channel/${cached}` };
-    }
-    // 如果是新格式（object），返回對象
-    console.log('[YouTube RSS] 使用快取 (videoID -> channelID):', { videoId, ...cached });
+    console.log('[YouTube RSS] 使用快取 (URL -> RSS):', { youtubeUrl, ...cached });
     return cached;
   }
   
   try {
-    // 使用 YouTube Data API v3 的 videos.list 端點，直接從 videoID 獲取 channel ID
-    // API 端點：GET https://www.googleapis.com/youtube/v3/videos?part=snippet&id={VIDEO_ID}&key={API_KEY}
-    
-    // 檢查本地是否有配置 API Key（優先使用本地配置）
-    const localApiKey = window.CONFIG?.YOUTUBE_API_KEY || '';
+    // Step 1 & 2：直接 fetch 網頁（使用代理避免 CORS）
     const useProxy = await ensureProxyConfig();
-    let apiUrl;
+    let fetchUrl;
     
-    console.log('[YouTube RSS] 檢查 API Key 配置:', { 
-      hasLocalApiKey: !!localApiKey, 
-      useProxy, 
-      configExists: typeof window.CONFIG !== 'undefined' 
-    });
-    
-    if (localApiKey) {
-      // 如果配置了本地 API Key，優先使用本地 API Key
-      // 注意：直接調用會遇到 CORS 問題，建議使用代理或配置 CORS
-      // 但為了測試，我們先嘗試直接調用
-      apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(localApiKey)}`;
-      console.log('[YouTube RSS] 步驟 2: ✅ 使用本地 API Key 調用 YouTube Data API v3:', { 
-        videoId, 
-        apiKeyLength: localApiKey.length,
-        note: '直接調用可能遇到 CORS 問題，如果失敗請使用代理' 
-      });
-    } else if (useProxy) {
-      // 如果沒有本地 API Key，使用後端代理（避免 CORS 和 API Key 暴露）
-      apiUrl = `${RSS_CONFIG.apiProxyUrl}?endpoint=/videos&part=snippet&id=${encodeURIComponent(videoId)}`;
-      console.log('[YouTube RSS] 步驟 2: 使用代理調用 YouTube Data API v3:', { videoId, proxyUrl: apiUrl });
+    if (useProxy) {
+      // 使用後端代理（解決 CORS 問題）
+      fetchUrl = `${RSS_CONFIG.pageFetchProxyUrl}?url=${encodeURIComponent(youtubeUrl)}`;
+      console.log('[YouTube RSS] 步驟 2: 使用代理獲取 YouTube 頁面:', { youtubeUrl, proxyUrl: fetchUrl });
     } else {
-      // 既沒有本地 API Key，也沒有代理
-      console.warn('[YouTube RSS] ⚠️ 本地開發環境缺少 YOUTUBE_API_KEY，且無法使用代理');
-      console.warn('[YouTube RSS] 提示：請在 config.js 中設定 window.CONFIG.YOUTUBE_API_KEY = "your_api_key"');
-      throw new Error('缺少 YOUTUBE_API_KEY 配置，請在 config.js 中設定 window.CONFIG.YOUTUBE_API_KEY');
+      // 本地開發：直接調用（會遇到 CORS 問題）
+      fetchUrl = youtubeUrl;
+      console.log('[YouTube RSS] 步驟 2: 直接獲取 YouTube 頁面（可能遇到 CORS）:', { youtubeUrl });
     }
     
-    const apiResponse = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+    const res = await fetch(fetchUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
     
-    if (!apiResponse.ok) {
-      const errorText = await apiResponse.text();
-      console.error('[YouTube RSS] YouTube Data API v3 請求失敗:', { 
-        videoId, 
-        status: apiResponse.status, 
-        statusText: apiResponse.statusText,
-        error: errorText 
-      });
-      throw new Error(`無法獲取影片資訊：${apiResponse.status} ${apiResponse.statusText}`);
+    if (!res.ok) {
+      throw new Error(`無法獲取頁面：${res.status} ${res.statusText}`);
     }
     
-    const apiData = await apiResponse.json();
-    console.log('[YouTube RSS] YouTube Data API v3 回應:', { videoId, response: apiData });
+    const html = await res.text();
+    console.log('[YouTube RSS] 頁面獲取成功，開始解析 @handle:', { youtubeUrl, htmlLength: html.length });
     
-    // 解析 API 回應，提取 channelId
+    // Step 3：正規抓出 @handle（超寬鬆匹配）
+    const match = html.match(/"channelHandle":"(@[^"]+)"/) 
+               || html.match(/"ownerChannelHandle":"(@[^"]+)"/)
+               || html.match(/youtube\.com\/(@[A-Za-z0-9_]+)/)
+               || html.match(/\/@([A-Za-z0-9_]+)/);
+    
+    if (!match) {
+      console.warn('[YouTube RSS] ⚠️ 找不到 @handle，嘗試查找 channelId');
+      
+      // 如果找不到 @handle，嘗試查找 channelId
+      const channelIdMatch = html.match(/"channelId":"([UC][a-zA-Z0-9_-]{23})"/)
+                          || html.match(/channelId["\s:=]+"([UC][a-zA-Z0-9_-]{23})"/)
+                          || html.match(/youtube\.com\/channel\/([UC][a-zA-Z0-9_-]{23})/);
+      
+      if (channelIdMatch && channelIdMatch[1]) {
+        const channelId = channelIdMatch[1];
+        const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+        console.log('[YouTube RSS] ✅ 找到 channelId（無法找到 @handle）:', { channelId, rssUrl });
+        
+        const result = {
+          handle: null,
+          rssUrl: rssUrl,
+          channelId: channelId
+        };
+        
+        setCachedData(cacheKey, result);
+        return result;
+      }
+      
+      throw new Error('找不到 @handle 或 channelId（極少數古老頻道）');
+    }
+    
+    const handle = match[1]; // 例如 @hitomi_teraz
+    console.log('[YouTube RSS] 步驟 3: ✅ 成功提取 @handle:', { handle });
+    
+    // Step 4：構建 RSS URL
+    // 注意：YouTube RSS 實際上不支持 ?user=@handle，只支持 ?channel_id={CHANNEL_ID}
+    // 但我們先嘗試使用 @handle，如果失敗再嘗試獲取 channelId
+    let rssUrl = `https://www.youtube.com/feeds/videos.xml?user=${handle}`;
+    
+    // 嘗試從 HTML 中獲取 channelId（用於備用）
     let channelId = null;
-    
-    if (apiData.items && apiData.items.length > 0) {
-      const videoItem = apiData.items[0];
-      if (videoItem.snippet && videoItem.snippet.channelId) {
-        channelId = videoItem.snippet.channelId;
-        console.log('[YouTube RSS] 步驟 2: ✅ 成功通過 YouTube Data API v3 獲取真實 channelID:', { videoId, channelId });
-        console.log('[YouTube RSS] ========== 流程完成：channelID 已獲取 ==========');
-      } else {
-        console.warn('[YouTube RSS] ⚠️ API 回應中沒有 channelId:', { videoId, response: apiData });
-      }
-    } else {
-      console.warn('[YouTube RSS] ⚠️ API 回應中沒有找到影片資訊:', { videoId, response: apiData });
+    const channelIdMatch = html.match(/"channelId":"([UC][a-zA-Z0-9_-]{23})"/)
+                        || html.match(/channelId["\s:=]+"([UC][a-zA-Z0-9_-]{23})"/);
+    if (channelIdMatch && channelIdMatch[1]) {
+      channelId = channelIdMatch[1];
+      // 使用 channelId 構建 RSS URL（這是標準格式）
+      rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+      console.log('[YouTube RSS] 同時找到 channelId，使用標準 RSS 格式:', { channelId, rssUrl });
     }
     
-    // 構建結果對象
-    let result = {
-      channelId: channelId,
-      channelUrl: null
+    console.log('[YouTube RSS] 步驟 4: ✅ RSS URL 已構建:', { handle, rssUrl, channelId });
+    console.log('[YouTube RSS] ========== 流程完成：RSS URL 已獲取 ==========');
+    
+    const result = {
+      handle: handle,
+      rssUrl: rssUrl,
+      channelId: channelId
     };
-    
-    if (channelId) {
-      // 如果有 channelID，使用 /channel/ 格式的 URL
-      result.channelUrl = `https://www.youtube.com/channel/${channelId}`;
-    } else {
-      console.warn('[YouTube RSS] ⚠️ 無法獲取 channelID:', { videoId });
-    }
     
     // 儲存快取
     setCachedData(cacheKey, result);
     
     return result;
   } catch (error) {
-    console.error('[YouTube RSS] 從 videoID 獲取 channelID 錯誤:', { 
-      videoId, 
+    console.error('[YouTube RSS] 從網址獲取 RSS 錯誤:', { 
+      youtubeUrl, 
       error: error.message 
     });
-    // 如果是 CORS 錯誤
     if (error.message.includes('CORS') || (error.name === 'TypeError' && error.message.includes('fetch'))) {
-      throw new Error('無法連接到 YouTube Data API v3，請檢查網路連線或部署到 Cloudflare Pages 以使用代理');
-    } else if (error.message.includes('YOUTUBE_API_KEY')) {
-      throw new Error('缺少 YOUTUBE_API_KEY 配置，請在 Cloudflare Pages 環境變數中設定');
+      throw new Error('無法連接到 YouTube，請檢查網路連線或部署到 Cloudflare Pages 以使用代理');
     }
     throw error;
   }
+}
+
+// 從 videoID 獲取 channelID（使用網頁解析，不使用 API）
+// 返回 { channelId: string | null, channelUrl: string | null, handle: string | null, rssUrl: string | null }
+async function getChannelIdFromVideoId(videoId) {
+  if (!videoId) {
+    throw new Error('videoId 不能為空');
+  }
+  
+  // 構建 YouTube 網址
+  const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  
+  // 使用 getRssFromAnyUrl 獲取資訊
+  const rssInfo = await getRssFromAnyUrl(youtubeUrl);
+  
+  // 構建返回結果
+  const result = {
+    channelId: rssInfo.channelId,
+    channelUrl: rssInfo.channelId ? `https://www.youtube.com/channel/${rssInfo.channelId}` : null,
+    handle: rssInfo.handle,
+    rssUrl: rssInfo.rssUrl
+  };
+  
+  return result;
 }
 
 // 查詢頻道開台狀態（通過頻道 ID，使用 RSS）
@@ -439,29 +458,29 @@ async function checkChannelLiveStatus(channelId) {
   console.log('[YouTube RSS] 開始檢查開台狀態:', { channelId });
   
   try {
-    // 獲取 RSS Feed
-    const xmlText = await fetchChannelRSS(channelId);
+    // 獲取 RSS Feed（支持 channelId 或 @handle）
+    const xmlText = await fetchChannelRSS(channelIdOrHandle);
     
     // 解析 RSS Feed
     const feedData = parseRSSFeed(xmlText);
     console.log('[YouTube RSS] RSS Feed 解析完成:', { 
-      channelId, 
+      channelIdOrHandle, 
       videoCount: feedData.videos.length,
       hasLatestVideo: !!feedData.latestVideo 
     });
     
     if (!feedData.latestVideo) {
-      console.log('[YouTube RSS] 沒有最新影片:', { channelId });
+      console.log('[YouTube RSS] 沒有最新影片:', { channelIdOrHandle });
       return {
         isLive: false,
-        channelId: channelId
+        channelId: channelIdOrHandle
       };
     }
     
     // 檢查最新影片是否為直播
     const isLive = isVideoLive(feedData.latestVideo);
     console.log('[YouTube RSS] 開台狀態檢查結果:', { 
-      channelId, 
+      channelIdOrHandle, 
       isLive, 
       videoId: feedData.latestVideo.videoId,
       title: feedData.latestVideo.title,
@@ -471,7 +490,7 @@ async function checkChannelLiveStatus(channelId) {
     if (isLive) {
       return {
         isLive: true,
-        channelId: channelId,
+        channelId: channelIdOrHandle,
         videoId: feedData.latestVideo.videoId,
         title: feedData.latestVideo.title,
         viewerCount: null, // RSS 不提供觀看數
@@ -481,18 +500,18 @@ async function checkChannelLiveStatus(channelId) {
     } else {
       return {
         isLive: false,
-        channelId: channelId
+        channelId: channelIdOrHandle
       };
     }
   } catch (error) {
     // 發生錯誤時，返回未知狀態而不是拋出錯誤
     console.error('[YouTube RSS] 檢查開台狀態錯誤:', { 
-      channelId, 
+      channelIdOrHandle, 
       error: error.message 
     });
     return {
       isLive: null, // null 表示未知
-      channelId: channelId,
+      channelId: channelIdOrHandle,
       error: error.message
     };
   }
@@ -601,17 +620,96 @@ function setYouTubeApiConfig(config) {
 // YouTube RSS 功能已啟用
 const YOUTUBE_RSS_ENABLED = true;
 
+// 測試函數：從任意串流網址獲取頻道資訊（包括 username）
+// 用於測試和調試
+async function testGetChannelInfoFromUrl(url) {
+  console.log('[YouTube RSS 測試] ========== 開始測試：從串流網址獲取頻道資訊 ==========');
+  console.log('[YouTube RSS 測試] 輸入網址:', url);
+  
+  try {
+    // 提取 videoID
+    let videoId = null;
+    const urlPatterns = [
+      /[?&]v=([a-zA-Z0-9_-]{11})/, // youtube.com/watch?v=...
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/, // youtu.be/...
+      /embed\/([a-zA-Z0-9_-]{11})/ // youtube.com/embed/...
+    ];
+    
+    for (const pattern of urlPatterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        videoId = match[1];
+        break;
+      }
+    }
+    
+    if (!videoId) {
+      throw new Error('無法從網址中提取 videoID');
+    }
+    
+    console.log('[YouTube RSS 測試] 提取的 videoID:', videoId);
+    
+    // 獲取頻道資訊
+    const channelInfo = await getChannelIdFromVideoId(videoId);
+    
+    console.log('[YouTube RSS 測試] ========== 測試結果 ==========');
+    console.log('[YouTube RSS 測試] 頻道資訊:', {
+      videoId: videoId,
+      channelId: channelInfo.channelId,
+      channelTitle: channelInfo.channelTitle || '無',
+      channelCustomUrl: channelInfo.channelCustomUrl || '無',
+      channelUrl: channelInfo.channelUrl,
+      note: channelInfo.channelCustomUrl ? 
+        `頻道有 @username: ${channelInfo.channelCustomUrl}` : 
+        '頻道可能沒有設定 @username（但可以使用 channelId 透過 RSS 監測）'
+    });
+    
+    // 如果獲取到 channelId，嘗試獲取 RSS Feed 來驗證
+    if (channelInfo.channelId) {
+      console.log('[YouTube RSS 測試] 嘗試獲取 RSS Feed 來驗證頻道...');
+      try {
+        const xmlText = await fetchChannelRSS(channelInfo.channelId);
+        const feedData = parseRSSFeed(xmlText);
+        console.log('[YouTube RSS 測試] RSS Feed 驗證成功:', {
+          channelId: channelInfo.channelId,
+          videoCount: feedData.videos.length,
+          latestVideo: feedData.latestVideo ? {
+            videoId: feedData.latestVideo.videoId,
+            title: feedData.latestVideo.title,
+            published: feedData.latestVideo.published
+          } : null
+        });
+      } catch (rssError) {
+        console.warn('[YouTube RSS 測試] RSS Feed 驗證失敗（可能是 CORS 問題）:', rssError.message);
+      }
+    }
+    
+    console.log('[YouTube RSS 測試] ========== 測試完成 ==========');
+    
+    return channelInfo;
+  } catch (error) {
+    console.error('[YouTube RSS 測試] 測試失敗:', error);
+    throw error;
+  }
+}
+
 // 匯出函數到全域
 if (typeof window !== 'undefined') {
   window.youtubeApi = {
-    // 從 videoID 獲取 channelID
+    // 從任意 YouTube 網址獲取 @handle 和 RSS URL（不使用 API）
+    getRssFromAnyUrl: YOUTUBE_RSS_ENABLED ? getRssFromAnyUrl : (() => Promise.resolve(null)),
+    
+    // 從 videoID 獲取 channelID（使用網頁解析，不使用 API）
     getChannelIdFromVideoId: YOUTUBE_RSS_ENABLED ? getChannelIdFromVideoId : (() => Promise.resolve(null)),
     
-    // 檢查頻道開台狀態
+    // 檢查頻道開台狀態（支持 channelId 或 @handle）
     checkChannelLiveStatus: YOUTUBE_RSS_ENABLED ? checkChannelLiveStatus : (() => Promise.resolve({ isLive: false })),
     
     // 批量檢查頻道開台狀態
     checkMultipleChannelsLiveStatus: YOUTUBE_RSS_ENABLED ? checkMultipleChannelsLiveStatus : (() => Promise.resolve({})),
+    
+    // 測試函數：從任意串流網址獲取頻道資訊
+    testGetChannelInfoFromUrl: YOUTUBE_RSS_ENABLED ? testGetChannelInfoFromUrl : (() => Promise.resolve(null)),
     
     // 配置相關
     setConfig: setYouTubeApiConfig,
