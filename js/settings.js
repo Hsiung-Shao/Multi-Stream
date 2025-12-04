@@ -775,12 +775,6 @@ const favoriteStreams = {
       if (item.isLive === true && item.liveVideoId) {
         // 使用保存的直播網址（優先使用 liveUrl，如果沒有則構建）
         const liveUrl = item.liveUrl || `https://www.youtube.com/watch?v=${item.liveVideoId}`;
-        console.log('[YouTube RSS] 使用保存的直播網址加入串流:', { 
-          channelId: item.channelId, 
-          videoId: item.liveVideoId,
-          liveUrl,
-          title: item.liveTitle 
-        });
         addStream(liveUrl);
         return { success: true };
       } else if (item.channelId) {
@@ -1232,50 +1226,6 @@ function addToFavorites() {
     if (typeof updateFavoriteListDisplay === 'function') {
       updateFavoriteListDisplay();
     }
-    // 如果是 YouTube 頻道，立即觸發一次開台狀態檢查（不等待間隔）
-    const list = favoriteStreams.getList();
-    const addedItem = list.find(item => (item.url === url || item.url.includes(url.split('?')[0])) && item.platform === 'youtube');
-    if (addedItem && addedItem.platform === 'youtube' && addedItem.channelId) {
-      // 立即檢查一次開台狀態（不等待 15 分鐘間隔）
-      setTimeout(async () => {
-        if (window.youtubeApi && typeof window.youtubeApi.checkChannelLiveStatus === 'function') {
-          try {
-            console.log('[YouTube RSS] 立即檢查新添加的收藏頻道開台狀態:', { 
-              channelId: addedItem.channelId, 
-              name: addedItem.name 
-            });
-            const liveStatus = await window.youtubeApi.checkChannelLiveStatus(addedItem.channelId);
-            console.log('[YouTube RSS] 立即檢查結果:', { 
-              channelId: addedItem.channelId, 
-              isLive: liveStatus ? liveStatus.isLive : null,
-              videoId: liveStatus ? liveStatus.videoId : null
-            });
-            const updatedList = favoriteStreams.getList().map(item => {
-              if (item.id === addedItem.id && item.platform === 'youtube') {
-                return {
-                  ...item,
-                  isLive: liveStatus ? liveStatus.isLive : null,
-                  lastChecked: new Date().toISOString(),
-                  viewerCount: liveStatus && liveStatus.viewerCount ? liveStatus.viewerCount : null,
-                  liveTitle: liveStatus && liveStatus.title ? liveStatus.title : null,
-                  liveVideoId: liveStatus && liveStatus.videoId ? liveStatus.videoId : null
-                };
-              }
-              return item;
-            });
-            favoriteStreams.saveList(updatedList);
-            if (typeof updateFavoriteListDisplay === 'function') {
-              updateFavoriteListDisplay();
-            }
-          } catch (error) {
-            console.error('[YouTube RSS] 立即檢查 YouTube 開台狀態失敗:', { 
-              channelId: addedItem.channelId, 
-              error: error.message 
-            });
-          }
-        }
-      }, 1000); // 延遲 1 秒後檢查，確保列表已更新
-    }
     // 自動保存設置
     autoSaveSettings();
     // 防抖備份會在 saveList() 中自動觸發
@@ -1513,7 +1463,6 @@ function saveFavoriteEdit(favoriteId) {
         updates.channelId = newChannelId;
         // 更新 URL 為頻道 URL
         updates.url = `https://www.youtube.com/channel/${newChannelId}`;
-        console.log('[YouTube RSS] 手動更新 channelID:', { favoriteId, newChannelId });
       } else {
         const i18n = window.i18n || { t: (key) => key };
         showSaveMessage('頻道 ID 格式錯誤，應為 UC 開頭的 24 位字符（例如：UCxxxxxxxxxxxxxxxxxxxxxx）');
@@ -2031,98 +1980,6 @@ async function updateFavoriteLiveStatuses() {
     }
   }
   
-  // 處理 YouTube 收藏（使用 RSS 檢查開台狀態）
-  // 移除時間限制，每次調用都會檢查
-  if (youtubeFavorites.length > 0 && window.youtubeApi && window.youtubeApi.checkMultipleChannelsLiveStatus) {
-    try {
-      // 收集所有 YouTube 頻道 ID
-      const channelIds = youtubeFavorites.map(item => item.channelId).filter(id => id);
-      
-      console.log('[YouTube RSS] ========== 檢測流程：監測頻道開台狀態 ==========');
-      console.log('[YouTube RSS] 步驟 1: 使用儲存的真實 channelID 監測開台狀態:', { 
-        count: youtubeFavorites.length, 
-        channelIdsCount: channelIds.length,
-        channelIds: channelIds
-      });
-      
-      if (channelIds.length > 0) {
-        // 批量查詢開台狀態（使用 RSS）
-        const liveStatuses = await window.youtubeApi.checkMultipleChannelsLiveStatus(channelIds);
-        
-        // 更新收藏列表中的開台狀態
-        updatedList = updatedList.map(item => {
-          if (item.platform === 'youtube' && item.channelId) {
-            const status = liveStatuses[item.channelId];
-            
-            if (status) {
-              const wasLive = item.isLive;
-              const isNowLive = status.isLive;
-              
-              // 如果正在直播，保存直播網址（videoId 和完整 URL）
-              let updatedItem = {
-                ...item,
-                isLive: status.isLive,
-                lastChecked: new Date().toISOString(),
-                viewerCount: status.viewerCount || null,
-                liveTitle: status.title || null
-              };
-              
-              // 如果正在直播，保存直播影片 ID 和完整 URL
-              if (status.isLive === true && status.videoId) {
-                updatedItem.liveVideoId = status.videoId;
-                updatedItem.liveUrl = status.url || `https://www.youtube.com/watch?v=${status.videoId}`;
-                console.log('[YouTube RSS] ✅ 頻道開台，保存直播網址:', { 
-                  channelId: item.channelId, 
-                  videoId: status.videoId,
-                  liveUrl: updatedItem.liveUrl,
-                  title: status.title 
-                });
-              } else if (status.isLive === false) {
-                // 如果沒有直播，清除直播相關資訊
-                updatedItem.liveVideoId = null;
-                updatedItem.liveUrl = null;
-              }
-              
-              // 只有狀態改變時才增加更新計數
-              if (wasLive !== isNowLive || !item.lastChecked) {
-                updatedCount++;
-              }
-              
-              console.log('[YouTube RSS] 更新收藏狀態:', { 
-                channelId: item.channelId, 
-                name: item.name,
-                wasLive, 
-                isNowLive,
-                videoId: updatedItem.liveVideoId,
-                liveUrl: updatedItem.liveUrl,
-                title: status.title 
-              });
-              
-              return updatedItem;
-            } else {
-              // 如果查詢失敗，保持原有狀態，但更新檢查時間
-              console.warn('[YouTube RSS] 無法獲取頻道狀態:', { channelId: item.channelId, name: item.name });
-              return {
-                ...item,
-                lastChecked: new Date().toISOString()
-              };
-            }
-          }
-          return item;
-        });
-        
-        console.log('[YouTube RSS] ✅ 檢測完成！開台狀態已更新:', { 
-          updatedCount, 
-          totalYouTubeFavorites: youtubeFavorites.length,
-          note: '如果頻道開台，已保存直播網址供加入串流按鈕和收藏清單使用'
-        });
-        console.log('[YouTube RSS] ========== 檢測流程完成 ==========');
-      }
-    } catch (error) {
-      // YouTube RSS 錯誤，繼續處理其他功能
-      console.error('[YouTube RSS] 批量更新收藏狀態錯誤:', { error: error.message, stack: error.stack });
-    }
-  }
   
   // 保存更新後的列表（只要有更新或檢查過，就保存）
   if (updatedCount > 0 || twitchFavorites.length > 0 || youtubeFavorites.length > 0) {
@@ -2265,81 +2122,9 @@ async function addCurrentStreamToFavorites() {
       
       if (data.platform === 'twitch' && data.channelId) {
         customName = data.channelId;
-      } else       if (data.platform === 'youtube') {
-        // 對於 YouTube，如果只有 videoID 沒有 channelID，嘗試從 videoID 獲取 channelID
-        if (data.videoId && !data.channelId) {
-          try {
-            console.log('[YouTube RSS] 一鍵收藏：嘗試從 videoID 獲取 channelID:', { videoId: data.videoId });
-            if (window.youtubeApi && typeof window.youtubeApi.getChannelIdFromVideoId === 'function') {
-              const channelInfo = await window.youtubeApi.getChannelIdFromVideoId(data.videoId);
-              
-              // 處理返回格式（新格式：{ channelId, channelUrl, handle, rssUrl }）
-              let channelId = null;
-              let channelUrl = null;
-              let handle = null;
-              
-              if (channelInfo && typeof channelInfo === 'object') {
-                channelId = channelInfo.channelId;
-                channelUrl = channelInfo.channelUrl;
-                handle = channelInfo.handle;
-              } else if (typeof channelInfo === 'string') {
-                // 舊格式兼容：直接返回 channelId string
-                channelId = channelInfo;
-                channelUrl = `https://www.youtube.com/channel/${channelId}`;
-              }
-              
-              if (channelId || handle) {
-                console.log('[YouTube RSS] ========== 流程：存入收藏系統 ==========');
-                console.log('[YouTube RSS] 步驟 4: ✅ 成功獲取頻道資訊，準備存入收藏系統:', { 
-                  videoId: data.videoId, 
-                  channelId: channelId || '無',
-                  handle: handle || '無',
-                  channelUrl: channelUrl || (handle ? `https://www.youtube.com/${handle}` : null),
-                  note: '此頻道將可以使用 RSS 輪詢功能'
-                });
-                // 更新 streamData 中的 channelId（優先使用 channelId，如果沒有則使用 handle）
-                data.channelId = channelId || handle;
-                // 使用頻道 URL 而不是影片 URL
-                if (channelId) {
-                  urlToAdd = `https://www.youtube.com/channel/${channelId}`;
-                  customName = channelId;
-                } else if (handle) {
-                  urlToAdd = `https://www.youtube.com/${handle}`;
-                  customName = handle;
-                }
-              } else if (channelUrl) {
-                console.warn('[YouTube RSS] 一鍵收藏：無法獲取 channelID，但獲取了 channelUrl:', { videoId: data.videoId, channelUrl });
-                // 無法獲取 channelID，但可以使用 channelUrl（可能是 @username 格式）
-                // 注意：這種格式無法用於 RSS 輪詢
-                urlToAdd = channelUrl;
-                // 從 URL 中提取名稱
-                const urlMatch = channelUrl.match(/\/(?:channel|@|c|user)\/([^\/\?]+)/);
-                customName = urlMatch ? urlMatch[1] : data.videoId;
-                
-                // 顯示提示：無法使用 RSS 輪詢
-                const i18n = window.i18n || { t: (key) => key };
-                setTimeout(() => {
-                  showSaveMessage('⚠️ 此頻道無法使用 RSS 輪詢功能（無法獲取頻道 ID）。您可以在收藏管理中手動輸入頻道 ID。', 5000);
-                }, 500);
-              } else {
-                console.warn('[YouTube RSS] 一鍵收藏：無法獲取 channelID 和 channelUrl:', { videoId: data.videoId });
-                // 無法獲取 channelID，使用 videoID 作為名稱，但保持原始 URL
-                customName = data.videoId;
-                
-                // 顯示提示：無法使用 RSS 輪詢
-                const i18n = window.i18n || { t: (key) => key };
-                setTimeout(() => {
-                  showSaveMessage('⚠️ 此頻道無法使用 RSS 輪詢功能（無法獲取頻道 ID）。您可以在收藏管理中手動輸入頻道 ID。', 5000);
-                }, 500);
-              }
-            } else {
-              customName = data.videoId;
-            }
-          } catch (error) {
-            console.error('[YouTube RSS] 一鍵收藏：從 videoID 獲取 channelID 錯誤:', { videoId: data.videoId, error: error.message });
-            customName = data.videoId;
-          }
-        } else if (data.channelId) {
+      } else if (data.platform === 'youtube') {
+        // 對於 YouTube，使用現有的 channelId 或 videoId
+        if (data.channelId) {
           customName = data.channelId;
           // 確保使用頻道 URL
           urlToAdd = `https://www.youtube.com/channel/${data.channelId}`;
@@ -2349,24 +2134,11 @@ async function addCurrentStreamToFavorites() {
       }
       
       // 添加收藏（傳入 channelId 如果有的話）
-      console.log('[YouTube RSS] 一鍵收藏：準備存入收藏系統:', { 
-        url: urlToAdd, 
-        name: customName, 
-        channelId: data.channelId,
-        platform: data.platform 
-      });
       const result = favoriteStreams.add(urlToAdd, customName, null, data.channelId);
       if (result.success) {
         addedCount++;
-        console.log('[YouTube RSS] ✅ 收藏完成！已存入收藏系統:', { 
-          url: urlToAdd, 
-          channelId: data.channelId,
-          note: data.channelId ? '此頻道將可以使用 RSS 輪詢監測開台狀態' : '此頻道無法使用 RSS 輪詢（缺少 channel ID）'
-        });
-        console.log('[YouTube RSS] ========== 收藏流程完成 ==========');
       } else {
         skippedCount++;
-        console.warn('[YouTube RSS] ⚠️ 一鍵收藏：跳過（可能已存在）:', { url: urlToAdd, reason: result.message });
       }
     }
   }
