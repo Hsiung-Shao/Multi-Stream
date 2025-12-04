@@ -2273,33 +2273,40 @@ async function addCurrentStreamToFavorites() {
             if (window.youtubeApi && typeof window.youtubeApi.getChannelIdFromVideoId === 'function') {
               const channelInfo = await window.youtubeApi.getChannelIdFromVideoId(data.videoId);
               
-              // 處理返回格式（可能是 string 或 object）
+              // 處理返回格式（新格式：{ channelId, channelUrl, handle, rssUrl }）
               let channelId = null;
               let channelUrl = null;
+              let handle = null;
               
-              if (typeof channelInfo === 'string') {
-                // 舊格式：直接返回 channelId string
-                channelId = channelInfo;
-                channelUrl = `https://www.youtube.com/channel/${channelId}`;
-              } else if (channelInfo && typeof channelInfo === 'object') {
-                // 新格式：返回 { channelId, channelUrl }
+              if (channelInfo && typeof channelInfo === 'object') {
                 channelId = channelInfo.channelId;
                 channelUrl = channelInfo.channelUrl;
+                handle = channelInfo.handle;
+              } else if (typeof channelInfo === 'string') {
+                // 舊格式兼容：直接返回 channelId string
+                channelId = channelInfo;
+                channelUrl = `https://www.youtube.com/channel/${channelId}`;
               }
               
-              if (channelId) {
+              if (channelId || handle) {
                 console.log('[YouTube RSS] ========== 流程：存入收藏系統 ==========');
-        console.log('[YouTube RSS] 步驟 4: ✅ 成功獲取 channelID，準備存入收藏系統:', { 
+                console.log('[YouTube RSS] 步驟 4: ✅ 成功獲取頻道資訊，準備存入收藏系統:', { 
                   videoId: data.videoId, 
-                  channelId,
-                  channelUrl: `https://www.youtube.com/channel/${channelId}`,
+                  channelId: channelId || '無',
+                  handle: handle || '無',
+                  channelUrl: channelUrl || (handle ? `https://www.youtube.com/${handle}` : null),
                   note: '此頻道將可以使用 RSS 輪詢功能'
                 });
-                // 更新 streamData 中的 channelId（用於後續處理）
-                data.channelId = channelId;
+                // 更新 streamData 中的 channelId（優先使用 channelId，如果沒有則使用 handle）
+                data.channelId = channelId || handle;
                 // 使用頻道 URL 而不是影片 URL
-                urlToAdd = `https://www.youtube.com/channel/${channelId}`;
-                customName = channelId;
+                if (channelId) {
+                  urlToAdd = `https://www.youtube.com/channel/${channelId}`;
+                  customName = channelId;
+                } else if (handle) {
+                  urlToAdd = `https://www.youtube.com/${handle}`;
+                  customName = handle;
+                }
               } else if (channelUrl) {
                 console.warn('[YouTube RSS] 一鍵收藏：無法獲取 channelID，但獲取了 channelUrl:', { videoId: data.videoId, channelUrl });
                 // 無法獲取 channelID，但可以使用 channelUrl（可能是 @username 格式）
