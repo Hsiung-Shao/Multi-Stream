@@ -1811,7 +1811,41 @@ function loadFavoriteStream(id) {
 
 // 移除收藏
 function removeFavoriteStream(id) {
-  favoriteStreams.remove(id);
+  // 驗證 ID 是否存在於收藏列表中
+  const list = favoriteStreams.getList();
+  const itemToRemove = list.find(item => item.id === id);
+  
+  if (!itemToRemove) {
+    console.warn('[刪除收藏] 找不到要刪除的收藏項目:', id);
+    const i18n = window.i18n || { t: (key) => key };
+    showSaveMessage(i18n.t('favoriteNotFound') || '收藏不存在');
+    return;
+  }
+  
+  console.log('[刪除收藏] 準備刪除單個收藏項目:', {
+    id: id,
+    name: itemToRemove.name,
+    url: itemToRemove.url,
+    platform: itemToRemove.platform
+  });
+  
+  // 刪除前再次確認列表中的項目數量
+  const beforeCount = list.length;
+  console.log('[刪除收藏] 刪除前的收藏數量:', beforeCount);
+  
+  // 執行刪除
+  const result = favoriteStreams.remove(id);
+  
+  // 驗證刪除結果
+  const afterList = favoriteStreams.getList();
+  const afterCount = afterList.length;
+  console.log('[刪除收藏] 刪除後的收藏數量:', afterCount);
+  console.log('[刪除收藏] 應該只刪除 1 個項目，實際刪除:', beforeCount - afterCount, '個');
+  
+  if (beforeCount - afterCount !== 1) {
+    console.error('[刪除收藏] 警告：刪除的項目數量不正確！');
+  }
+  
   showFavoriteStreamsManager(); // 刷新列表
   // 更新控制面板中的收藏列表
   if (typeof updateFavoriteListDisplay === 'function') {
