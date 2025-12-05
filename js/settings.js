@@ -3429,5 +3429,7 @@ function hideFavoriteSearchSuggestions() {
 if (typeof window !== 'undefined') {
   window.showUserGuide = showUserGuide;
   window.closeUserGuide = closeUserGuide;
+  window.showFavoriteStreamsManager = showFavoriteStreamsManager;
+  window.addCurrentStreamToFavorites = addCurrentStreamToFavorites;
 }
 
