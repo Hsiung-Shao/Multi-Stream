@@ -207,7 +207,7 @@ body {
   window.dataLayer = window.dataLayer || [];
 </script>
 <!-- Content Security Policy -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
 <!-- AdSense 腳本改為動態載入（僅在需要時載入，符合 AdSense 政策） -->
 
 </head>
@@ -422,6 +422,7 @@ body {
           <li data-i18n="feature3">聊天室整合與音量控制</li>
           <li data-i18n="feature4">收藏串流與分類管理</li>
           <li data-i18n="feature6">Twitch 頻道搜尋和開台狀態檢測</li>
+          <li data-i18n="feature7">Youtube 頻道開台狀態檢測</li>
           <li data-i18n="feature5">完全免費，無需註冊</li>
         </ul>
       </div>
@@ -582,7 +583,6 @@ body {
 <!-- 非關鍵文件：使用 defer 延遲載入，不阻塞頁面渲染 -->
 <script defer src="js/zoom-handler.js"></script>
 <script defer src="js/twitch-api.js"></script>
-<script defer src="js/youtube-api.js"></script>
 <script defer src="js/stream.js"></script>
 <script defer src="js/chat.js"></script>
 <script defer src="js/volume.js"></script>

@@ -41,6 +41,11 @@ async function addStream(url = null) {
     if (foundChannel) {
       // 使用第一個搜尋結果
       url = foundChannel.url;
+      // 保存 displayName 以便後續使用
+      if (foundChannel.displayName) {
+        // 將 displayName 保存到臨時變量，稍後存入 streamData
+        window._pendingDisplayName = foundChannel.displayName;
+      }
     } else {
       if (searchError) {
         alert(`搜尋頻道失敗: ${searchError}。請直接輸入完整的 Twitch 或 YouTube 網址`);
@@ -184,16 +189,25 @@ async function addStream(url = null) {
       videoId = urlObj.searchParams.get('v');
     } else if (url.includes('youtu.be/')) {
       videoId = url.split('youtu.be/')[1]?.split('?')[0];
-    }
-    
-    if (!videoId) {
-      alert('無法解析 YouTube 網址');
+    } else if (url.includes('youtube.com/channel/') && url.includes('/live')) {
+      // 處理 /channel/{CHANNEL_ID}/live 格式
+      // 這種格式需要先通過 API 檢查是否有直播，暫時提示用戶
+      alert('請使用 YouTube 直播影片的完整網址（例如：https://www.youtube.com/watch?v=VIDEO_ID）\n\n頻道 /live 網址需要先檢查直播狀態，請從收藏功能中使用。');
       box.remove();
       return;
     }
+    
+    if (!videoId) {
+      alert('無法解析 YouTube 網址，請確認網址格式正確\n\n支援的格式：\n- https://www.youtube.com/watch?v=VIDEO_ID\n- https://youtu.be/VIDEO_ID\n- https://www.youtube.com/live/VIDEO_ID');
+      box.remove();
+      return;
+    }
+    
     // 验证视频 ID（如果存在且不为空）
-    if (videoId && !validateVideoId(videoId)) {
-      alert('無效的 YouTube 視頻 ID');
+    const isValidVideoId = validateVideoId(videoId);
+    
+    if (videoId && !isValidVideoId) {
+      alert('無效的 YouTube 視頻 ID: ' + videoId);
       box.remove();
       return;
     }
@@ -212,8 +226,14 @@ async function addStream(url = null) {
     videoId,
     originalUrl,
     volume: 100,
-    chatVisible: platform !== 'youtube' // YouTube 預設隱藏，其他平台預設顯示
+    chatVisible: platform !== 'youtube', // YouTube 預設隱藏，其他平台預設顯示
+    // 如果有待保存的 displayName，使用它作為名稱
+    name: window._pendingDisplayName || null,
+    displayName: window._pendingDisplayName || null
   };
+  
+  // 清除臨時變量
+  delete window._pendingDisplayName;
 
   // 建立播放器
   if (platform === 'twitch') {
@@ -322,7 +342,6 @@ function createTwitchPlayer(id, channel) {
         
         const playerDiv = document.getElementById('player' + id);
         if (!playerDiv) {
-          console.warn('Twitch player container not found:', 'player' + id);
           return;
         }
         
@@ -343,7 +362,6 @@ function createTwitchPlayer(id, channel) {
           alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 網路連線正常');
         });
       } catch (error) {
-        console.error('Error creating Twitch player:', error);
         alert('無法建立 Twitch 播放器。請確認 Twitch API 已正確載入。');
       }
     } else {
@@ -355,7 +373,6 @@ function createTwitchPlayer(id, channel) {
         createTwitchPlayer.retryCount++;
         setTimeout(initPlayer, 100);
       } else {
-        console.error('Twitch API failed to load after multiple retries');
         alert('無法載入 Twitch API。請重新整理頁面或檢查網路連線。');
       }
     }

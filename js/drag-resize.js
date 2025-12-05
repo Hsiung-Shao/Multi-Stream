@@ -40,6 +40,9 @@ function makeDraggableResizable(el) {
   let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
   const controls = el.querySelector('.controls');
   let animationFrameId = null;
+  let isDragging = false;
+  let hasMoved = false;
+  const DRAG_THRESHOLD = 5; // 移動距離超過 5 像素才視為拖曳
   
   controls.onmousedown = dragMouseDown;
   
@@ -49,11 +52,12 @@ function makeDraggableResizable(el) {
     pos3 = e.clientX;
     pos4 = e.clientY;
     
-    // 設置拖拽標誌，防止布局更新干擾拖拽
-    isDraggingStreamBox = true;
+    // 重置拖曳狀態
+    isDragging = false;
+    hasMoved = false;
     
-    // 暫停所有播放器
-    pauseAllPlayers();
+    // 設置拖拽標誌，防止布局更新干擾拖拽（但不立即暫停）
+    isDraggingStreamBox = true;
     
     document.onmouseup = closeDrag;
     document.onmousemove = elementDrag;
@@ -64,25 +68,41 @@ function makeDraggableResizable(el) {
   function elementDrag(e) {
     e.preventDefault();
     
-    // 使用 requestAnimationFrame 獲得流暢的拖曳體驗
-    if (animationFrameId) {
-      cancelAnimationFrame(animationFrameId);
+    // 計算移動距離
+    const deltaX = Math.abs(e.clientX - pos3);
+    const deltaY = Math.abs(e.clientY - pos4);
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    // 如果移動距離超過閾值，才視為拖曳並暫停播放器
+    if (!hasMoved && distance > DRAG_THRESHOLD) {
+      hasMoved = true;
+      isDragging = true;
+      // 只有在實際拖曳時才暫停所有播放器
+      pauseAllPlayers();
     }
     
-    animationFrameId = requestAnimationFrame(() => {
-      pos1 = pos3 - e.clientX;
-      pos2 = pos4 - e.clientY;
-      pos3 = e.clientX;
-      pos4 = e.clientY;
+    // 只有在實際拖曳時才移動元素
+    if (hasMoved) {
+      // 使用 requestAnimationFrame 獲得流暢的拖曳體驗
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
       
-      const newTop = el.offsetTop - pos2;
-      const newLeft = el.offsetLeft - pos1;
-      
-      el.style.top = newTop + 'px';
-      el.style.left = newLeft + 'px';
-      el.style.right = 'auto';
-      el.style.bottom = 'auto';
-    });
+      animationFrameId = requestAnimationFrame(() => {
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        
+        const newTop = el.offsetTop - pos2;
+        const newLeft = el.offsetLeft - pos1;
+        
+        el.style.top = newTop + 'px';
+        el.style.left = newLeft + 'px';
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+      });
+    }
   }
   
   function closeDrag() {
@@ -96,14 +116,19 @@ function makeDraggableResizable(el) {
     document.onmousemove = null;
     el.style.zIndex = '';
     
-    // 恢復所有播放器
-    setTimeout(() => {
-      resumeAllPlayers();
-    }, 100);
+    // 只有在實際拖曳過才恢復播放器
+    if (isDragging && hasMoved) {
+      // 恢復所有播放器
+      setTimeout(() => {
+        resumeAllPlayers();
+      }, 100);
+    }
     
     // 清除拖拽標誌
     setTimeout(() => {
       isDraggingStreamBox = false;
+      isDragging = false;
+      hasMoved = false;
       el.style.transition = ''; // 恢復過渡效果
     }, 100);
   }
