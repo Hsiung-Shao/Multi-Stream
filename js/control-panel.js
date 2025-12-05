@@ -297,7 +297,39 @@ function updateStreamOrderList() {
     item.dataset.streamId = id;
     item.draggable = false; // 預設不可拖曳，只有標題行可拖曳
     
-    const label = data.platform === 'twitch' ? escapeHtml(data.channelId) : (data.platform === 'youtube' ? escapeHtml(data.videoId) : `串流 #${id}`);
+    // 嘗試從收藏列表中獲取名稱
+    let label = '';
+    if (typeof favoriteStreams !== 'undefined' && typeof favoriteStreams.getList === 'function') {
+      const favorites = favoriteStreams.getList();
+      // 根據 platform、channelId 或 videoId 匹配收藏
+      const favorite = favorites.find(fav => {
+        if (fav.platform === data.platform) {
+          if (data.platform === 'twitch' && fav.channelId === data.channelId) {
+            return true;
+          } else if (data.platform === 'youtube') {
+            // YouTube 可以通過 channelId 或 videoId 匹配
+            if (fav.channelId && data.channelId && fav.channelId === data.channelId) {
+              return true;
+            } else if (fav.videoId && data.videoId && fav.videoId === data.videoId) {
+              return true;
+            } else if (fav.url && data.originalUrl && fav.url === data.originalUrl) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+      
+      if (favorite && favorite.name) {
+        label = escapeHtml(favorite.name);
+      }
+    }
+    
+    // 如果沒有找到收藏名稱，使用原來的邏輯
+    if (!label) {
+      label = data.platform === 'twitch' ? escapeHtml(data.channelId) : (data.platform === 'youtube' ? escapeHtml(data.videoId) : `串流 #${id}`);
+    }
+    
     const currentVolume = data.volume || 100;
     
     // 使用安全的 DOM 操作
