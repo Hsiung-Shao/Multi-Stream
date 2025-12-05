@@ -462,8 +462,48 @@ function updateStreamOrderList() {
             // 重新應用布局（使用immediate=true，因為已經在事件處理中）
             // 增加小延遲確保DOM變化完成
             setTimeout(() => {
-              const layoutType = autoSelectLayout();
-              setLayout(layoutType, true);
+              // 檢查當前是否是固定布局，如果是則保持固定布局
+              if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+                // 保持當前固定布局
+                setLayout(userSelectedLayout, true);
+              } else {
+                // 否則使用自動布局
+                const layoutType = autoSelectLayout();
+                setLayout(layoutType, true);
+              }
+              
+              // 修復 Twitch 播放器在調整順序後卡住的問題
+              // 使用更強力的刷新機制，多次觸發 resize 事件
+              setTimeout(() => {
+                const boxes = Array.from(document.querySelectorAll('.stream-box'));
+                boxes.forEach(box => {
+                  const id = parseInt(box.dataset.streamId);
+                  if (players[id] && players[id].type === 'twitch' && players[id].player) {
+                    try {
+                      // 強制刷新 Twitch 播放器
+                      const playerContainer = box.querySelector('.player-container');
+                      if (playerContainer) {
+                        // 多次觸發 resize 事件，確保播放器響應
+                        const refreshPlayer = () => {
+                          window.dispatchEvent(new Event('resize'));
+                          // 強制重新計算容器尺寸
+                          void playerContainer.offsetWidth;
+                          void playerContainer.offsetHeight;
+                        };
+                        
+                        // 立即觸發一次
+                        refreshPlayer();
+                        // 延遲觸發多次，確保播放器有時間響應
+                        setTimeout(refreshPlayer, 50);
+                        setTimeout(refreshPlayer, 150);
+                        setTimeout(refreshPlayer, 300);
+                      }
+                    } catch (e) {
+                      // 靜默處理錯誤
+                    }
+                  }
+                });
+              }, 100);
             }, 50);
           }
         }
@@ -492,8 +532,39 @@ function moveStreamUp(id) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
+      
+      // 修復 Twitch 播放器在調整順序後卡住的問題
+      setTimeout(() => {
+        const boxes = Array.from(document.querySelectorAll('.stream-box'));
+        boxes.forEach(box => {
+          const id = parseInt(box.dataset.streamId);
+          if (players[id] && players[id].type === 'twitch' && players[id].player) {
+            try {
+              // 強制刷新 Twitch 播放器
+              const playerContainer = box.querySelector('.player-container');
+              if (playerContainer) {
+                // 觸發 resize 事件讓播放器重新計算尺寸
+                window.dispatchEvent(new Event('resize'));
+                // 額外延遲確保播放器有時間響應
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 100);
+              }
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+        });
+      }, 100);
     }, 50);
   }
 }
@@ -512,8 +583,39 @@ function moveStreamDown(id) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
+      
+      // 修復 Twitch 播放器在調整順序後卡住的問題
+      setTimeout(() => {
+        const boxes = Array.from(document.querySelectorAll('.stream-box'));
+        boxes.forEach(box => {
+          const id = parseInt(box.dataset.streamId);
+          if (players[id] && players[id].type === 'twitch' && players[id].player) {
+            try {
+              // 強制刷新 Twitch 播放器
+              const playerContainer = box.querySelector('.player-container');
+              if (playerContainer) {
+                // 觸發 resize 事件讓播放器重新計算尺寸
+                window.dispatchEvent(new Event('resize'));
+                // 額外延遲確保播放器有時間響應
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 100);
+              }
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+        });
+      }, 100);
     }, 50);
   }
 }
@@ -530,8 +632,39 @@ function reorderStreams(draggedId, targetId) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
+      
+      // 修復 Twitch 播放器在調整順序後卡住的問題
+      setTimeout(() => {
+        const boxes = Array.from(document.querySelectorAll('.stream-box'));
+        boxes.forEach(box => {
+          const id = parseInt(box.dataset.streamId);
+          if (players[id] && players[id].type === 'twitch' && players[id].player) {
+            try {
+              // 強制刷新 Twitch 播放器
+              const playerContainer = box.querySelector('.player-container');
+              if (playerContainer) {
+                // 觸發 resize 事件讓播放器重新計算尺寸
+                window.dispatchEvent(new Event('resize'));
+                // 額外延遲確保播放器有時間響應
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 100);
+              }
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+        });
+      }, 100);
     }, 50);
   }
 }
