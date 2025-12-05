@@ -621,15 +621,15 @@ const favoriteStreams = {
       
       // 對於 YouTube，需要更智能的匹配
       if (item.platform === 'youtube') {
-        // 如果提供了 channelId，檢查 channelId 是否已存在
-        if (providedChannelId && item.channelId === providedChannelId) {
+        // 如果提供了 channelId，檢查 channelId 是否已存在（優先檢查，最可靠）
+        if (providedChannelId && item.channelId && providedChannelId.trim() === item.channelId.trim()) {
           return true;
         }
         
         // 檢查 URL 是否指向同一個頻道（考慮 /live 後綴的差異）
         // 例如：/channel/UCxxx 和 /channel/UCxxx/live 應該被視為相同
         const urlChannelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
-        const itemChannelMatch = item.url.match(/youtube\.com\/channel\/([^\/\?]+)/);
+        const itemChannelMatch = item.url ? item.url.match(/youtube\.com\/channel\/([^\/\?]+)/) : null;
         if (urlChannelMatch && itemChannelMatch && urlChannelMatch[1] === itemChannelMatch[1]) {
           return true;
         }
@@ -1110,13 +1110,6 @@ function showFavoriteStreamsManager() {
                 ${categoryOptions}
               </select>
             </div>
-            ${item.platform === 'youtube' ? `
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <label style="font-size: 11px; color: var(--text-secondary); white-space: nowrap;">頻道 ID (RSS):</label>
-              <input type="text" class="favorite-edit-channel-id" value="${escapeHtml(item.channelId || '')}" placeholder="UC..." style="flex: 1; padding: 4px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px; font-size: 12px; font-family: monospace;">
-              ${!item.channelId ? '<span style="font-size: 10px; color: #ff6b6b;">⚠️ 無法使用 RSS 輪詢</span>' : ''}
-            </div>
-            ` : ''}
             <div style="display: flex; gap: 4px; justify-content: flex-end;">
               <button class="save-favorite-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">${escapeHtml(i18n.t('save'))}</button>
               <button class="cancel-edit-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">${escapeHtml(i18n.t('cancel'))}</button>
@@ -1623,7 +1616,6 @@ function saveFavoriteEdit(favoriteId) {
   
   const nameInput = favoriteItem.querySelector('.favorite-edit-name');
   const categorySelect = favoriteItem.querySelector('.favorite-edit-category');
-  const channelIdInput = favoriteItem.querySelector('.favorite-edit-channel-id');
   
   if (!nameInput) return;
   
@@ -1644,27 +1636,6 @@ function saveFavoriteEdit(favoriteId) {
     name: newName,
     categoryId: categoryId
   };
-  
-  // 如果是 YouTube 頻道，處理 channelId 的更新
-  if (currentItem && currentItem.platform === 'youtube' && channelIdInput) {
-    const newChannelId = channelIdInput.value.trim();
-    
-    // 驗證 channelId 格式（應該是 UC 開頭的 24 位字符串）
-    if (newChannelId) {
-      if (/^UC[a-zA-Z0-9_-]{22}$/.test(newChannelId)) {
-        updates.channelId = newChannelId;
-        // 更新 URL 為頻道 URL
-        updates.url = `https://www.youtube.com/channel/${newChannelId}`;
-      } else {
-        const i18n = window.i18n || { t: (key) => key };
-        showSaveMessage('頻道 ID 格式錯誤，應為 UC 開頭的 24 位字符（例如：UCxxxxxxxxxxxxxxxxxxxxxx）');
-        return;
-      }
-    } else if (currentItem.channelId) {
-      // 如果清空了 channelId，保留原有的
-      updates.channelId = currentItem.channelId;
-    }
-  }
   
   const result = favoriteStreams.update(favoriteId, updates);
   
