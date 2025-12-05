@@ -3091,9 +3091,24 @@ function updateUserGuideContent(guideModal) {
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep3'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep5'))}</li>
         </ol>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
           ${escapeHtml(t('liveStatusTip'))}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('youtubeLiveStatusTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep5'))}</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ${escapeHtml(t('youtubeLiveStatusTip'))}
         </div>
       </div>
       
