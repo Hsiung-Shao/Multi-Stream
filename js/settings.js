@@ -678,6 +678,20 @@ const favoriteStreams = {
               if (realChannelId) {
                 channelId = realChannelId;
                 console.log(`[收藏添加] 從 videoID ${videoId} 獲取到 channelID: ${channelId}`);
+                
+                // 如果 API key 可用，獲取頻道標題作為名稱
+                if (!name || name === videoId) {
+                  try {
+                    const channelTitle = await youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
+                    if (channelTitle) {
+                      name = channelTitle;
+                      console.log(`[收藏添加] 從 channelID ${realChannelId} 獲取到頻道標題: ${channelTitle}`);
+                    }
+                  } catch (error) {
+                    console.warn('[收藏添加] 無法從 channelID 獲取頻道標題:', error);
+                    // 獲取標題失敗不影響添加收藏，繼續使用 videoId 作為名稱
+                  }
+                }
               }
             } catch (error) {
               console.warn('[收藏添加] 無法從 videoID 獲取 channelID:', error);
@@ -1014,6 +1028,9 @@ function showFavoriteStreamsManager() {
           </div>
           <div class="favorite-item-info">
             <span class="favorite-platform-icon">${platformIcon}</span>
+            ${(item.platform === 'twitch' || item.platform === 'youtube') && item.channelId ? `
+              <span class="favorite-live-indicator" style="width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; ${item.isLive === true ? 'background: #00ff00; box-shadow: 0 0 4px #00ff00;' : item.isLive === false ? 'background: #666;' : 'background: #444;'}" title="${item.isLive === true ? '正在直播' : item.isLive === false ? '未開台' : '狀態未知'}"></span>
+            ` : ''}
             <span class="favorite-item-name">${safeDisplayName}</span>
             <span class="favorite-item-category">📁 ${safeCategoryName}</span>
             <span class="favorite-item-url">${safeItemUrl}</span>
@@ -2051,20 +2068,62 @@ function updateFavoriteListDisplay() {
 }
 
 // YouTube API 工具函數
+// 從 Cloudflare Pages Function 取得 API Key 的 Promise（異步）
+let youtubeConfigApiKeyPromise = null;
+
 const youtubeApiUtils = {
-  // 獲取 YouTube API Key
-  getApiKey: () => {
-    // 優先使用環境變數（Cloudflare Pages）
+  // 從 Cloudflare Pages Function 取得 API Key（異步）
+  async getApiKeyFromPagesFunction() {
+    if (youtubeConfigApiKeyPromise) {
+      return youtubeConfigApiKeyPromise;
+    }
+    
+    youtubeConfigApiKeyPromise = (async () => {
+      try {
+        const response = await fetch('/api/youtube-config', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.apiKey) {
+            console.log('[YouTube API] 從 Cloudflare Pages Function 獲取 API Key');
+            return data.apiKey;
+          }
+        }
+      } catch (error) {
+        console.warn('[YouTube API] 無法從 Cloudflare Pages Function 獲取 API Key:', error);
+      }
+      return null;
+    })();
+    
+    return youtubeConfigApiKeyPromise;
+  },
+  
+  // 獲取 YouTube API Key（優先從 Cloudflare Pages Function，然後從 config.js）
+  async getApiKey() {
+    // 優先從 Cloudflare Pages Function 獲取
+    const apiKeyFromFunction = await this.getApiKeyFromPagesFunction();
+    if (apiKeyFromFunction) {
+      return apiKeyFromFunction;
+    }
+    
+    // 回退到 config.js
     if (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.YOUTUBE_API_KEY) {
+      console.log('[YouTube API] 從 config.js 獲取 API Key');
       return window.CONFIG.YOUTUBE_API_KEY;
     }
-    // 嘗試從環境變數獲取（如果可用）
+    
+    console.warn('[YouTube API] API Key 未配置');
     return null;
   },
   
   // 從 videoID 透過 YouTube Data API 獲取頻道真實 ID
   async getChannelIdFromVideoId(videoId) {
-    const apiKey = this.getApiKey();
+    const apiKey = await this.getApiKey();
     if (!apiKey) {
       throw new Error('YouTube API Key 未配置');
     }
@@ -2095,6 +2154,43 @@ const youtubeApiUtils = {
       return channelId;
     } catch (error) {
       console.error('[YouTube API] 獲取頻道 ID 失敗:', error);
+      throw error;
+    }
+  },
+  
+  // 從 channelID 透過 YouTube Data API 獲取頻道標題
+  async getChannelTitleFromChannelId(channelId) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
+      throw new Error('YouTube API Key 未配置');
+    }
+    
+    if (!channelId || typeof channelId !== 'string') {
+      throw new Error('無效的頻道 ID');
+    }
+    
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/channels?id=${encodeURIComponent(channelId)}&part=snippet&key=${encodeURIComponent(apiKey)}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`YouTube API 請求失敗: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.items || data.items.length === 0) {
+        throw new Error('找不到該頻道');
+      }
+      
+      const channelTitle = data.items[0].snippet?.title;
+      if (!channelTitle) {
+        throw new Error('無法從頻道中獲取標題');
+      }
+      
+      return channelTitle;
+    } catch (error) {
+      console.error('[YouTube API] 獲取頻道標題失敗:', error);
       throw error;
     }
   },
