@@ -23,8 +23,21 @@ function applyMasterVolumeToStream(id) {
   // 應用音量到播放器（檢查播放器是否已準備好）
   try {
     if (players[id].type === 'twitch') {
-      if (typeof players[id].player.setVolume === 'function') {
-        players[id].player.setVolume(actualVol / 100);
+      // 如果音量為 0，使用 setMuted() 方法確保靜音
+      if (actualVol === 0) {
+        if (typeof players[id].player.setMuted === 'function') {
+          players[id].player.setMuted(true);
+        } else if (typeof players[id].player.setVolume === 'function') {
+          players[id].player.setVolume(0);
+        }
+      } else {
+        // 如果音量不為 0，先取消靜音，再設置音量
+        if (typeof players[id].player.setMuted === 'function') {
+          players[id].player.setMuted(false);
+        }
+        if (typeof players[id].player.setVolume === 'function') {
+          players[id].player.setVolume(actualVol / 100);
+        }
       }
     } else if (players[id].type === 'youtube') {
       // YouTube 播放器需要檢查是否已就緒
@@ -111,8 +124,21 @@ function setupVolumeControl(box, id) {
     if (players[id] && players[id].player) {
       try {
         if (players[id].type === 'twitch') {
-          if (typeof players[id].player.setVolume === 'function') {
-            players[id].player.setVolume(actualVol / 100);
+          // 如果音量為 0，使用 setMuted() 方法確保靜音
+          if (actualVol === 0) {
+            if (typeof players[id].player.setMuted === 'function') {
+              players[id].player.setMuted(true);
+            } else if (typeof players[id].player.setVolume === 'function') {
+              players[id].player.setVolume(0);
+            }
+          } else {
+            // 如果音量不為 0，先取消靜音，再設置音量
+            if (typeof players[id].player.setMuted === 'function') {
+              players[id].player.setMuted(false);
+            }
+            if (typeof players[id].player.setVolume === 'function') {
+              players[id].player.setVolume(actualVol / 100);
+            }
           }
         } else if (players[id].type === 'youtube') {
           if (typeof players[id].player.setVolume === 'function') {
@@ -194,8 +220,11 @@ function muteAll() {
         if (streamData[id] && players[id] && players[id].player) {
           try {
             if (players[id].type === 'twitch') {
-              // Twitch 播放器：設置音量為 0
-              if (typeof players[id].player.setVolume === 'function') {
+              // Twitch 播放器：使用 setMuted() 方法靜音
+              if (typeof players[id].player.setMuted === 'function') {
+                players[id].player.setMuted(true);
+              } else if (typeof players[id].player.setVolume === 'function') {
+                // 如果沒有 setMuted 方法，fallback 到設置音量為 0
                 players[id].player.setVolume(0);
               }
             } else if (players[id].type === 'youtube') {
@@ -246,7 +275,10 @@ function muteAll() {
         if (streamData[id] && players[id] && players[id].player) {
           try {
             if (players[id].type === 'twitch') {
-              // Twitch 播放器：通過設置音量來取消靜音
+              // Twitch 播放器：使用 setMuted() 方法取消靜音
+              if (typeof players[id].player.setMuted === 'function') {
+                players[id].player.setMuted(false);
+              }
               // 音量會通過 updateMasterVolume 中的 applyMasterVolumeToStream 來設置
             } else if (players[id].type === 'youtube') {
               // YouTube 播放器：使用 unMute() 方法
