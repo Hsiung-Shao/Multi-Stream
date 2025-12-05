@@ -616,11 +616,36 @@ const favoriteStreams = {
     
     // 檢查是否已存在（根據 URL 或 channelId 檢查）
     const exists = list.some(item => {
+      // 直接 URL 匹配
       if (item.url === url) return true;
-      // 對於 YouTube，也檢查 channelId 是否已存在
-      if (providedChannelId && item.platform === 'youtube' && item.channelId === providedChannelId) {
-        return true;
+      
+      // 對於 YouTube，需要更智能的匹配
+      if (item.platform === 'youtube') {
+        // 如果提供了 channelId，檢查 channelId 是否已存在
+        if (providedChannelId && item.channelId === providedChannelId) {
+          return true;
+        }
+        
+        // 檢查 URL 是否指向同一個頻道（考慮 /live 後綴的差異）
+        // 例如：/channel/UCxxx 和 /channel/UCxxx/live 應該被視為相同
+        const urlChannelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
+        const itemChannelMatch = item.url.match(/youtube\.com\/channel\/([^\/\?]+)/);
+        if (urlChannelMatch && itemChannelMatch && urlChannelMatch[1] === itemChannelMatch[1]) {
+          return true;
+        }
       }
+      
+      // 對於 Twitch，檢查 channelId
+      if (item.platform === 'twitch' && providedChannelId) {
+        const urlMatch = url.match(/twitch\.tv\/([^\/\?]+)/);
+        if (urlMatch && item.channelId === urlMatch[1] && item.channelId === providedChannelId) {
+          return true;
+        }
+        if (item.channelId === providedChannelId) {
+          return true;
+        }
+      }
+      
       return false;
     });
     
@@ -1256,9 +1281,8 @@ function showFavoriteStreamsManager() {
             const itemId = favoriteItem.getAttribute('data-id');
             if (itemId === favoriteId) {
               // 確認刪除
-              const itemName = favoriteItem.querySelector('.favorite-item-name')?.textContent || '此收藏';
               const i18n = window.i18n || { t: (key) => key };
-              if (confirm(i18n.t('confirmDeleteFavorite') || `確定要刪除「${itemName}」嗎？`)) {
+              if (confirm(i18n.t('confirmDeleteFavorite') || '確認從收藏中刪除?')) {
                 removeFavoriteStream(favoriteId);
               }
             }
