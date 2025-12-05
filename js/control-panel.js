@@ -462,8 +462,15 @@ function updateStreamOrderList() {
             // 重新應用布局（使用immediate=true，因為已經在事件處理中）
             // 增加小延遲確保DOM變化完成
             setTimeout(() => {
-              const layoutType = autoSelectLayout();
-              setLayout(layoutType, true);
+              // 檢查當前是否是固定布局，如果是則保持固定布局
+              if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+                // 保持當前固定布局
+                setLayout(userSelectedLayout, true);
+              } else {
+                // 否則使用自動布局
+                const layoutType = autoSelectLayout();
+                setLayout(layoutType, true);
+              }
             }, 50);
           }
         }
@@ -492,8 +499,15 @@ function moveStreamUp(id) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
     }, 50);
   }
 }
@@ -512,8 +526,15 @@ function moveStreamDown(id) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
     }, 50);
   }
 }
@@ -530,8 +551,15 @@ function reorderStreams(draggedId, targetId) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
     }, 50);
   }
 }

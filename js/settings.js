@@ -1284,7 +1284,19 @@ function showFavoriteStreamsManager() {
       } else if (target.classList.contains('remove-favorite-btn')) {
         const favoriteId = target.getAttribute('data-favorite-id');
         if (favoriteId) {
-          removeFavoriteStream(favoriteId);
+          // 確保只刪除單個項目：使用 closest 找到最近的 favorite-item
+          const favoriteItem = target.closest('.favorite-item');
+          if (favoriteItem) {
+            const itemId = favoriteItem.getAttribute('data-id');
+            if (itemId === favoriteId) {
+              // 確認刪除
+              const itemName = favoriteItem.querySelector('.favorite-item-name')?.textContent || '此收藏';
+              const i18n = window.i18n || { t: (key) => key };
+              if (confirm(i18n.t('confirmDeleteFavorite') || `確定要刪除「${itemName}」嗎？`)) {
+                removeFavoriteStream(favoriteId);
+              }
+            }
+          }
         }
       }
     });
