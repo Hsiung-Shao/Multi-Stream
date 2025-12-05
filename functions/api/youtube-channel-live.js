@@ -56,26 +56,79 @@ async function handleChannelLiveRequest(request, env) {
     
     try {
       // 設定 User-Agent 很重要，模擬瀏覽器，降低被當機器人的機率
-      // 使用 redirect: 'follow' (預設就是 follow)，讓它自動跳轉
       const headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       };
       
-      // 從 YouTube 獲取 /live 端點（跟隨重定向，類似 Python 的 allow_redirects=True）
-      const response = await fetch(liveUrl, {
-        method: 'GET',
-        redirect: 'follow', // 自動跟隨重定向（預設值）
-        headers: headers
-      });
+      // 手動跟隨重定向以獲取最終 URL
+      // Cloudflare Workers 的 fetch 即使使用 redirect: 'follow'，response.url 可能仍返回原始 URL
+      // 所以我們需要手動跟隨重定向
+      let currentUrl = liveUrl;
+      let finalUrl = liveUrl;
+      let status = 200;
+      let redirectCount = 0;
+      let finalResponse = null;
+      const maxRedirects = 10; // 最大重定向次數，防止無限循環
       
-      const status = response.status;
-      const finalUrl = response.url; // 最終重定向後的 URL（類似 Python 的 response.url）
+      while (redirectCount < maxRedirects) {
+        const response = await fetch(currentUrl, {
+          method: 'GET',
+          redirect: 'manual', // 手動處理重定向
+          headers: headers
+        });
+        
+        status = response.status;
+        
+        // 檢查是否是重定向狀態碼（301, 302, 303, 307, 308）
+        if (status >= 300 && status < 400) {
+          const location = response.headers.get('Location');
+          if (location) {
+            // 如果是相對路徑，轉換為絕對路徑
+            if (location.startsWith('/')) {
+              const urlObj = new URL(currentUrl);
+              finalUrl = `${urlObj.origin}${location}`;
+            } else if (location.startsWith('http://') || location.startsWith('https://')) {
+              finalUrl = location;
+            } else {
+              // 相對路徑，需要與當前 URL 合併
+              const urlObj = new URL(currentUrl);
+              finalUrl = new URL(location, urlObj.origin).href;
+            }
+            
+            console.log(`[YouTube Channel Live Proxy] 重定向 ${redirectCount + 1}: ${currentUrl} -> ${finalUrl}`);
+            
+            currentUrl = finalUrl;
+            redirectCount++;
+            continue;
+          } else {
+            // 重定向但沒有 Location header，停止
+            finalResponse = response;
+            break;
+          }
+        } else {
+          // 不是重定向狀態碼，這就是最終響應
+          finalResponse = response;
+          // 嘗試從 response.url 獲取最終 URL（如果有的話）
+          if (response.url && response.url !== currentUrl) {
+            finalUrl = response.url;
+          } else {
+            finalUrl = currentUrl;
+          }
+          break;
+        }
+      }
+      
+      // 如果達到最大重定向次數，使用最後一個 URL
+      if (redirectCount >= maxRedirects) {
+        console.warn('[YouTube Channel Live Proxy] 達到最大重定向次數，使用最後一個 URL');
+      }
       
       console.log('[YouTube Channel Live Proxy] 響應:', { 
         channelId, 
         status, 
         finalUrl,
-        statusText: response.statusText
+        redirectCount: redirectCount,
+        statusText: finalResponse ? finalResponse.statusText : 'N/A'
       });
       
       // 根據邏輯表返回結果
