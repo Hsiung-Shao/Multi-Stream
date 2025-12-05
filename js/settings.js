@@ -640,7 +640,14 @@ const favoriteStreams = {
       if (match) {
         platform = 'twitch';
         channelId = match[1];
-        if (!name) name = channelId;
+        // 如果沒有提供名稱，嘗試從 URL 參數或其他來源獲取 displayName
+        // 如果還是沒有，使用 channelId 作為 fallback
+        if (!name) {
+          // 嘗試從 URL 參數中獲取 displayName（如果有的話）
+          const urlParams = new URLSearchParams(url.split('?')[1] || '');
+          const displayName = urlParams.get('displayName');
+          name = displayName || channelId;
+        }
       }
     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
       // 如果已經提供了 channelId，直接使用
@@ -3381,8 +3388,17 @@ function selectFavoriteSearchResult(channel) {
     if ((channel.platform === 'youtube' || channel.source === 'youtube') && channel.id) {
       urlInput.value = `https://www.youtube.com/channel/${channel.id}`;
     } else if (channel.platform === 'twitch' || channel.source === 'twitch') {
-      // Twitch 使用頻道 URL
-      urlInput.value = channel.url || `https://www.twitch.tv/${channel.login || channel.id}`;
+      // Twitch 使用頻道 URL，並在 URL 中添加 displayName 參數以便在 addToFavorites 時使用
+      const twitchUrl = channel.url || `https://www.twitch.tv/${channel.login || channel.id}`;
+      const displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '';
+      if (displayName) {
+        // 將 displayName 作為 URL 參數傳遞，以便在 favoriteStreams.add 中使用
+        const urlObj = new URL(twitchUrl);
+        urlObj.searchParams.set('displayName', displayName);
+        urlInput.value = urlObj.toString();
+      } else {
+        urlInput.value = twitchUrl;
+      }
     } else {
       urlInput.value = channel.url || '';
     }

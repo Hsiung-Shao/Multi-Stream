@@ -535,6 +535,14 @@ function updateSelectedSuggestion() {
 function selectSearchResult(channel) {
   const urlInput = document.getElementById('url-input');
   if (urlInput && channel.url) {
+    // 對於 Twitch 頻道，直接加入串流
+    if (channel.platform === 'twitch' || channel.source === 'twitch') {
+      hideSearchSuggestions();
+      // 直接調用 addStream 加入串流
+      addStream(channel.url);
+      return;
+    }
+    
     // 對於 YouTube，如果搜尋結果中有直播影片 ID，使用直播 URL
     if (channel.platform === 'youtube' && channel.liveVideoId) {
       urlInput.value = `https://www.youtube.com/watch?v=${channel.liveVideoId}`;
