@@ -607,8 +607,8 @@ const favoriteStreams = {
     debouncedBackup();
   },
   
-  // 添加收藏
-  add: (url, name = '', categoryId = null, providedChannelId = null) => {
+  // 添加收藏（異步版本，支援從 videoID 獲取 channelID）
+  add: async (url, name = '', categoryId = null, providedChannelId = null) => {
     const list = favoriteStreams.getList();
     
     // 檢查是否已存在（根據 URL 或 channelId 檢查）
@@ -623,7 +623,9 @@ const favoriteStreams = {
     
     if (exists) {
       const i18n = window.i18n || { t: (key) => key };
-      return { success: false, message: i18n.t('streamAlreadyInFavorites') };
+      const result = { success: false, message: i18n.t('streamAlreadyInFavorites') };
+      console.log('[收藏添加] 完整回傳內容（已存在）:', JSON.stringify(result, null, 2));
+      return result;
     }
     
     // 解析平台和ID
@@ -669,8 +671,19 @@ const favoriteStreams = {
           if (videoId) {
             platform = 'youtube';
             if (!name) name = videoId;
-            // 注意：如果只有 videoId 沒有 channelId，收藏系統可能無法正確輪詢開台狀態
-            // 但為了向後兼容，我們仍然允許這種情況
+            
+            // 新功能：透過 YouTube Data API 從 videoID 逆推獲取頻道真實 ID
+            try {
+              const realChannelId = await youtubeApiUtils.getChannelIdFromVideoId(videoId);
+              if (realChannelId) {
+                channelId = realChannelId;
+                console.log(`[收藏添加] 從 videoID ${videoId} 獲取到 channelID: ${channelId}`);
+              }
+            } catch (error) {
+              console.warn('[收藏添加] 無法從 videoID 獲取 channelID:', error);
+              // 如果獲取失敗，仍然允許添加（向後兼容）
+              // 注意：沒有 channelID 的收藏可能無法正確檢查開台狀態
+            }
           }
         }
       }
@@ -678,20 +691,26 @@ const favoriteStreams = {
     
     if (!platform) {
       const i18n = window.i18n || { t: (key) => key };
-      return { success: false, message: i18n.t('cannotParseStreamUrl') };
+      const result = { success: false, message: i18n.t('cannotParseStreamUrl') };
+      console.log('[收藏添加] 完整回傳內容（無法解析）:', JSON.stringify(result, null, 2));
+      return result;
     }
     
-    // 對於 YouTube，確保 URL 使用頻道 ID（如果有的話）
-    // 這樣可以確保收藏系統使用固定的頻道 ID，而不是會變化的影片 ID
+    // 對於 YouTube，確保 URL 使用頻道 /live 端點（如果有的話）
+    // 根據新的混合方式，儲存為 https://www.youtube.com/channel/{真實ID}/live
     let finalUrl = url;
     if (platform === 'youtube' && channelId) {
-      // 如果已經有 channelId，使用頻道 URL
-      finalUrl = `https://www.youtube.com/channel/${channelId}`;
+      // 使用 /live 端點格式
+      finalUrl = `https://www.youtube.com/channel/${channelId}/live`;
+    } else if (platform === 'youtube' && !channelId && videoId) {
+      // 如果沒有 channelId 但有 videoId，保持原始 URL（向後兼容）
+      // 這樣即使無法獲取 channelID，用戶仍然可以添加收藏
+      finalUrl = url;
     }
     
     const newItem = {
       id: Date.now().toString(),
-      url: finalUrl, // 對於 YouTube，使用頻道 URL（包含 channelId）
+      url: finalUrl, // 對於 YouTube，使用頻道 /live URL
       name: name,
       platform: platform,
       channelId: channelId, // 對於 YouTube，優先使用 channelId
@@ -711,7 +730,28 @@ const favoriteStreams = {
     favoriteStreams.saveList(list);
     
     const i18n = window.i18n || { t: (key) => key };
-    return { success: true, message: i18n.t('addedToFavorites') };
+    const result = { 
+      success: true, 
+      message: i18n.t('addedToFavorites'),
+      item: newItem // 包含完整的收藏項目資訊
+    };
+    
+    // 輸出完整的回傳內容
+    console.log('[收藏添加] 完整回傳內容:', JSON.stringify(result, null, 2));
+    console.log('[收藏添加] 收藏項目詳情:', {
+      id: newItem.id,
+      url: newItem.url,
+      name: newItem.name,
+      platform: newItem.platform,
+      channelId: newItem.channelId,
+      videoId: newItem.videoId,
+      categoryId: newItem.categoryId,
+      addedAt: newItem.addedAt,
+      isLive: newItem.isLive,
+      lastChecked: newItem.lastChecked
+    });
+    
+    return result;
   },
   
   // 更新收藏
@@ -724,9 +764,9 @@ const favoriteStreams = {
       return { success: false, message: i18n.t('favoriteNotFound') };
     }
     
-    // 如果更新了 channelId，確保 URL 也更新為頻道 URL
+    // 如果更新了 channelId，確保 URL 也更新為頻道 /live URL
     if (updates.channelId && item.platform === 'youtube') {
-      updates.url = `https://www.youtube.com/channel/${updates.channelId}`;
+      updates.url = `https://www.youtube.com/channel/${updates.channelId}/live`;
     }
     
     // 更新字段
@@ -778,11 +818,51 @@ const favoriteStreams = {
         addStream(liveUrl);
         return { success: true };
       } else if (item.channelId) {
-        // 如果沒有直播，使用頻道 URL（但這可能無法播放，因為頻道 URL 不是影片 URL）
-        // 嘗試使用收藏的 URL，如果沒有則使用頻道 URL
-        const urlToUse = item.url || `https://www.youtube.com/channel/${item.channelId}`;
-        addStream(urlToUse);
-        return { success: true };
+        // 如果沒有直播，但 URL 是 /live 格式，先檢查是否有新的直播
+        // 如果 URL 是 /live 格式，嘗試檢查當前直播狀態
+        if (item.url && item.url.includes('/live')) {
+          try {
+            const status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
+            if (status.isLive === true && status.liveVideoId) {
+              // 發現新的直播，使用直播 URL
+              const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
+              addStream(liveUrl);
+              
+              // 更新收藏項目的直播狀態
+              const list = favoriteStreams.getList();
+              const updatedList = list.map(fav => {
+                if (fav.id === item.id) {
+                  return {
+                    ...fav,
+                    isLive: true,
+                    liveVideoId: status.liveVideoId,
+                    lastChecked: new Date().toISOString()
+                  };
+                }
+                return fav;
+              });
+              favoriteStreams.saveList(updatedList);
+              
+              return { success: true };
+            }
+          } catch (error) {
+            console.warn('[收藏載入] 檢查直播狀態失敗:', error);
+          }
+        }
+        
+        // 如果沒有直播或檢查失敗，提示用戶該頻道未開台
+        // 但為了向後兼容，仍然嘗試加載（可能會失敗）
+        const i18n = window.i18n || { t: (key) => key };
+        if (item.isLive === false) {
+          alert(i18n.t('channelNotLive') || '該頻道目前未開台');
+          return { success: false, message: i18n.t('channelNotLive') || '該頻道目前未開台' };
+        }
+        
+        // 如果狀態未知，嘗試使用原始 URL（可能是 /live URL，無法播放）
+        if (item.url) {
+          addStream(item.url);
+          return { success: true };
+        }
       } else if (item.url) {
         // 如果沒有 channelId，使用原始 URL
         addStream(item.url);
@@ -1199,8 +1279,8 @@ function closeFavoriteStreamsManager() {
   }
 }
 
-// 添加到收藏
-function addToFavorites() {
+// 添加到收藏（異步版本）
+async function addToFavorites() {
   const urlInput = document.getElementById('favorite-url-input');
   const nameInput = document.getElementById('favorite-name-input');
   const categorySelect = document.getElementById('favorite-category-select');
@@ -1215,7 +1295,46 @@ function addToFavorites() {
   const name = nameInput ? nameInput.value.trim() : '';
   const categoryId = categorySelect && categorySelect.value ? categorySelect.value : null;
   
-  const result = favoriteStreams.add(url, name, categoryId);
+  // 顯示載入訊息
+  showSaveMessage(i18n.t('processing') || '處理中...');
+  
+  // 輸出輸入參數
+  console.log('[添加收藏] 輸入參數:', {
+    url: url,
+    name: name,
+    categoryId: categoryId
+  });
+  
+  let result;
+  try {
+    result = await favoriteStreams.add(url, name, categoryId);
+    
+    // 輸出完整的回傳內容
+    console.log('[添加收藏] favoriteStreams.add() 完整回傳內容:', JSON.stringify(result, null, 2));
+    console.log('[添加收藏] 回傳內容詳情:', {
+      success: result.success,
+      message: result.message,
+      item: result.item || '無項目資訊'
+    });
+  } catch (error) {
+    console.error('[添加收藏] 發生錯誤:', error);
+    console.error('[添加收藏] 錯誤詳情:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // 處理網路錯誤（例如：本地開發環境中 API 不可用）
+    if (error.message && (error.message.includes('拒絕連線') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      showSaveMessage('注意：無法連接到 API 服務（可能是本地開發環境）。收藏已添加，但可能無法自動獲取頻道資訊。');
+      // 即使 API 失敗，也嘗試添加收藏（使用原始 URL）
+      result = await favoriteStreams.add(url, name, categoryId);
+      console.log('[添加收藏] 重試後的完整回傳內容:', JSON.stringify(result, null, 2));
+    } else {
+      showSaveMessage(`添加失敗: ${error.message || '未知錯誤'}`);
+      return;
+    }
+  }
   
   if (result.success) {
     urlInput.value = '';
@@ -1931,6 +2050,179 @@ function updateFavoriteListDisplay() {
   displayDiv.appendChild(listContainer);
 }
 
+// YouTube API 工具函數
+const youtubeApiUtils = {
+  // 獲取 YouTube API Key
+  getApiKey: () => {
+    // 優先使用環境變數（Cloudflare Pages）
+    if (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.YOUTUBE_API_KEY) {
+      return window.CONFIG.YOUTUBE_API_KEY;
+    }
+    // 嘗試從環境變數獲取（如果可用）
+    return null;
+  },
+  
+  // 從 videoID 透過 YouTube Data API 獲取頻道真實 ID
+  async getChannelIdFromVideoId(videoId) {
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      throw new Error('YouTube API Key 未配置');
+    }
+    
+    if (!videoId || typeof videoId !== 'string') {
+      throw new Error('無效的 videoID');
+    }
+    
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(videoId)}&part=snippet&key=${encodeURIComponent(apiKey)}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`YouTube API 請求失敗: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.items || data.items.length === 0) {
+        throw new Error('找不到該影片');
+      }
+      
+      const channelId = data.items[0].snippet?.channelId;
+      if (!channelId) {
+        throw new Error('無法從影片中獲取頻道 ID');
+      }
+      
+      return channelId;
+    } catch (error) {
+      console.error('[YouTube API] 獲取頻道 ID 失敗:', error);
+      throw error;
+    }
+  },
+  
+  // 檢查 YouTube 頻道 /live 端點的重定向狀態
+  // 根據邏輯表判斷開台狀態
+  async checkChannelLiveStatus(channelId) {
+    if (!channelId || typeof channelId !== 'string') {
+      throw new Error('無效的頻道 ID');
+    }
+    
+    try {
+      // 通過 Cloudflare Pages Function 代理請求
+      // 這樣可以檢查重定向後的最終 URL
+      const proxyUrl = `/api/youtube-channel-live?channelId=${encodeURIComponent(channelId)}`;
+      
+      let proxyResponse;
+      try {
+        proxyResponse = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+      } catch (fetchError) {
+        // 處理網路錯誤（例如：連接被拒絕、CORS 錯誤等）
+        // 這通常發生在本地開發環境中，Cloudflare Pages Functions 不可用
+        console.warn('[YouTube Live Check] 代理請求失敗（可能是本地開發環境）:', fetchError);
+        return {
+          isLive: null,
+          status: 'proxy_unavailable',
+          message: '代理服務不可用（本地開發環境）',
+          liveVideoId: null
+        };
+      }
+      
+      if (!proxyResponse.ok) {
+        // 如果代理返回 404，可能是頻道不存在或代理端點不存在
+        if (proxyResponse.status === 404) {
+          // 檢查是否是代理端點不存在（本地開發環境）
+          const contentType = proxyResponse.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            // 不是 JSON 響應，可能是 HTML 404 頁面（代理端點不存在）
+            console.warn('[YouTube Live Check] 代理端點不存在（可能是本地開發環境）');
+            return {
+              isLive: null,
+              status: 'proxy_unavailable',
+              message: '代理服務不可用（本地開發環境）',
+              liveVideoId: null
+            };
+          }
+          
+          // 是 JSON 響應，可能是頻道不存在
+          const errorData = await proxyResponse.json().catch(() => ({}));
+          if (errorData.status === 404) {
+            return {
+              isLive: false,
+              status: 'channel_not_found',
+              message: '頻道不存在或已刪除',
+              liveVideoId: null
+            };
+          }
+        }
+        
+        // 其他錯誤狀態
+        const errorText = await proxyResponse.text().catch(() => '');
+        throw new Error(`請求失敗: ${proxyResponse.status} ${errorText}`);
+      }
+      
+      const result = await proxyResponse.json();
+      
+      // 根據邏輯表判斷狀態
+      if (result.status === 404) {
+        // HTTP 404 -> 頻道不存在
+        return {
+          isLive: false,
+          status: 'channel_not_found',
+          message: '頻道錯誤/已刪除',
+          liveVideoId: null
+        };
+      }
+      
+      if (result.status === 200) {
+        const finalUrl = result.finalUrl || '';
+        
+        if (finalUrl.includes('watch?v=')) {
+          // HTTP 200 + URL 包含 watch?v= -> 開台中或預定直播
+          const videoIdMatch = finalUrl.match(/[?&]v=([^&]+)/);
+          const liveVideoId = videoIdMatch ? videoIdMatch[1] : null;
+          
+          // 注意：無法在後端判斷是否為「即將開始」畫面，所以統一判定為開台
+          // 如果需要區分，需要進一步解析 HTML 內容
+          return {
+            isLive: true,
+            status: 'live_or_scheduled',
+            message: '開台中（或預定直播）',
+            liveVideoId: liveVideoId
+          };
+        } else {
+          // HTTP 200 + URL 不包含 watch?v= -> 未開台
+          return {
+            isLive: false,
+            status: 'not_live',
+            message: '未開台',
+            liveVideoId: null
+          };
+        }
+      }
+      
+      // 其他狀態
+      return {
+        isLive: null,
+        status: 'unknown',
+        message: '狀態未知',
+        liveVideoId: null
+      };
+    } catch (error) {
+      console.error('[YouTube Live Check] 檢查開台狀態失敗:', error);
+      return {
+        isLive: null,
+        status: 'error',
+        message: error.message || '檢查失敗',
+        liveVideoId: null
+      };
+    }
+  }
+};
+
 // 批量更新收藏頻道的開台狀態
 async function updateFavoriteLiveStatuses() {
   const list = favoriteStreams.getList();
@@ -1980,6 +2272,81 @@ async function updateFavoriteLiveStatuses() {
     }
   }
   
+  // 處理 YouTube 收藏（使用新的 /live 端點檢查方法）
+  if (youtubeFavorites.length > 0) {
+    try {
+      // 批量檢查 YouTube 頻道開台狀態
+      const checkPromises = youtubeFavorites.map(async (item) => {
+        if (!item.channelId) {
+          return { item, status: null };
+        }
+        
+        try {
+          const status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
+          return { item, status };
+        } catch (error) {
+          console.error(`[YouTube Live Check] 檢查頻道 ${item.channelId} 失敗:`, error);
+          return { item, status: null };
+        }
+      });
+      
+      const results = await Promise.allSettled(checkPromises);
+      
+      // 檢查是否所有請求都失敗（可能是代理不可用）
+      const allFailed = results.every(r => {
+        if (r.status === 'rejected') return true;
+        const status = r.value?.status;
+        return !status || status.status === 'proxy_unavailable' || status.status === 'error';
+      });
+      
+      // 如果所有請求都失敗，可能是本地開發環境，靜默處理
+      if (allFailed && results.length > 0) {
+        const firstStatus = results[0].status === 'fulfilled' ? results[0].value?.status : null;
+        if (firstStatus && firstStatus.status === 'proxy_unavailable') {
+          console.info('[YouTube Live Check] 代理服務不可用（本地開發環境），跳過開台狀態檢查');
+          // 在本地開發環境中，不更新狀態，也不計入更新數
+          return { success: true, updated: updatedCount };
+        }
+      }
+      
+      // 更新收藏列表中的開台狀態
+      updatedList = updatedList.map(item => {
+        if (item.platform === 'youtube' && item.channelId) {
+          const result = results.find(r => 
+            r.status === 'fulfilled' && r.value.item.id === item.id
+          );
+          
+          if (result && result.status === 'fulfilled' && result.value.status) {
+            const status = result.value.status;
+            
+            // 如果狀態是代理不可用，不更新（保持原有狀態）
+            if (status.status === 'proxy_unavailable') {
+              return item;
+            }
+            
+            updatedCount++;
+            return {
+              ...item,
+              isLive: status.isLive,
+              lastChecked: new Date().toISOString(),
+              liveVideoId: status.liveVideoId || null,
+              // 注意：YouTube 的 /live 檢查方法無法獲取觀看人數和標題
+              // 如果需要這些資訊，需要額外調用 YouTube Data API
+            };
+          } else {
+            // 如果查詢失敗，保持原有狀態，但更新檢查時間（僅在非代理不可用的情況下）
+            return {
+              ...item,
+              lastChecked: new Date().toISOString()
+            };
+          }
+        }
+        return item;
+      });
+    } catch (error) {
+      console.error('[YouTube Live Check] 批量檢查失敗:', error);
+    }
+  }
   
   // 保存更新後的列表（只要有更新或檢查過，就保存）
   if (updatedCount > 0 || twitchFavorites.length > 0 || youtubeFavorites.length > 0) {
@@ -2134,7 +2501,7 @@ async function addCurrentStreamToFavorites() {
       }
       
       // 添加收藏（傳入 channelId 如果有的話）
-      const result = favoriteStreams.add(urlToAdd, customName, null, data.channelId);
+      const result = await favoriteStreams.add(urlToAdd, customName, null, data.channelId);
       if (result.success) {
         addedCount++;
       } else {
