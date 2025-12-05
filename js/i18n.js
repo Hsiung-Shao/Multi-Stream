@@ -2680,8 +2680,6 @@ const i18n = {
       this.updateSEO(); // 更新 SEO 元素
       return true;
     } else {
-      // 調試：如果語言不存在，輸出錯誤信息
-      console.warn('Language not found:', lang, 'Available languages:', Object.keys(this.translations));
       return false;
     }
   },

@@ -322,7 +322,6 @@ function createTwitchPlayer(id, channel) {
         
         const playerDiv = document.getElementById('player' + id);
         if (!playerDiv) {
-          console.warn('Twitch player container not found:', 'player' + id);
           return;
         }
         
@@ -343,7 +342,6 @@ function createTwitchPlayer(id, channel) {
           alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 網路連線正常');
         });
       } catch (error) {
-        console.error('Error creating Twitch player:', error);
         alert('無法建立 Twitch 播放器。請確認 Twitch API 已正確載入。');
       }
     } else {
@@ -355,7 +353,6 @@ function createTwitchPlayer(id, channel) {
         createTwitchPlayer.retryCount++;
         setTimeout(initPlayer, 100);
       } else {
-        console.error('Twitch API failed to load after multiple retries');
         alert('無法載入 Twitch API。請重新整理頁面或檢查網路連線。');
       }
     }

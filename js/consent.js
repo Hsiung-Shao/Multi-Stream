@@ -103,7 +103,7 @@ const consentManager = {
       localStorage.setItem('consent_preferences', JSON.stringify(this.consent));
       localStorage.setItem('consent_timestamp', new Date().toISOString());
     } catch (e) {
-      console.error('保存同意狀態失敗:', e);
+      // 靜默處理錯誤
     }
   },
   

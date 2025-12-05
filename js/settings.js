@@ -859,36 +859,27 @@ const favoriteStreams = {
               return { success: true };
             }
           } catch (error) {
-            console.warn('[收藏載入] 檢查直播狀態失敗:', error);
+            // 靜默處理錯誤
           }
         }
         
-        // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
-        console.log(`[收藏載入] 首次檢查後，頻道 ${item.name || item.id} 的狀態:`, {
-          isLive: status.isLive,
-          liveVideoId: status.liveVideoId,
-          status: status.status
-        });
+          } catch (error) {
+            // 靜默處理錯誤
+          }
         
+        // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
         // 如果沒有直播或檢查失敗，再次嘗試檢查（可能是狀態更新延遲）
         const i18n = window.i18n || { t: (key) => key };
         if (!status.isLive || !status.liveVideoId) {
-          console.log(`[收藏載入] 頻道 ${item.name || item.id} 首次檢查未發現直播，等待 2 秒後再次檢查...`);
           // 等待 2 秒後再次檢查（可能狀態正在更新）
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           try {
             const retryStatus = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
-            console.log(`[收藏載入] 頻道 ${item.name || item.id} 的二次檢查結果:`, {
-              isLive: retryStatus.isLive,
-              liveVideoId: retryStatus.liveVideoId,
-              status: retryStatus.status
-            });
             
             if (retryStatus.isLive === true && retryStatus.liveVideoId) {
               // 發現新的直播，使用直播 URL
               const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
-              console.log(`[收藏載入] 二次檢查發現直播，載入 URL: ${liveUrl}`);
               addStream(liveUrl);
               
               // 更新收藏項目的直播狀態
@@ -909,12 +900,11 @@ const favoriteStreams = {
               return { success: true };
             }
           } catch (retryError) {
-            console.warn('[收藏載入] 二次檢查失敗:', retryError);
+            // 靜默處理錯誤
           }
           
           // 如果二次檢查仍然沒有直播，但狀態顯示為 false，提示用戶
           if (item.isLive === false) {
-            console.log(`[收藏載入] 頻道 ${item.name || item.id} 確實未開台，無法載入`);
             alert(i18n.t('channelNotLive') || '該頻道目前未開台');
             return { success: false, message: i18n.t('channelNotLive') || '該頻道目前未開台' };
           }
@@ -922,7 +912,6 @@ const favoriteStreams = {
         
         // 如果狀態未知或檢查失敗，嘗試使用原始 URL（可能是 /live URL，無法播放）
         if (item.url) {
-          console.log(`[收藏載入] 使用原始 URL 載入: ${item.url}`);
           addStream(item.url);
           return { success: true };
         }
@@ -1377,37 +1366,15 @@ async function addToFavorites() {
   showSaveMessage(i18n.t('processing') || '處理中...');
   
   // 輸出輸入參數
-  console.log('[添加收藏] 輸入參數:', {
-    url: url,
-    name: name,
-    categoryId: categoryId
-  });
-  
   let result;
   try {
     result = await favoriteStreams.add(url, name, categoryId);
-    
-    // 輸出完整的回傳內容
-    console.log('[添加收藏] favoriteStreams.add() 完整回傳內容:', JSON.stringify(result, null, 2));
-    console.log('[添加收藏] 回傳內容詳情:', {
-      success: result.success,
-      message: result.message,
-      item: result.item || '無項目資訊'
-    });
   } catch (error) {
-    console.error('[添加收藏] 發生錯誤:', error);
-    console.error('[添加收藏] 錯誤詳情:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
     // 處理網路錯誤（例如：本地開發環境中 API 不可用）
     if (error.message && (error.message.includes('拒絕連線') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
       showSaveMessage('注意：無法連接到 API 服務（可能是本地開發環境）。收藏已添加，但可能無法自動獲取頻道資訊。');
       // 即使 API 失敗，也嘗試添加收藏（使用原始 URL）
       result = await favoriteStreams.add(url, name, categoryId);
-      console.log('[添加收藏] 重試後的完整回傳內容:', JSON.stringify(result, null, 2));
     } else {
       showSaveMessage(`添加失敗: ${error.message || '未知錯誤'}`);
       return;
@@ -1789,35 +1756,13 @@ function removeFavoriteStream(id) {
   const itemToRemove = list.find(item => item.id === id);
   
   if (!itemToRemove) {
-    console.warn('[刪除收藏] 找不到要刪除的收藏項目:', id);
     const i18n = window.i18n || { t: (key) => key };
     showSaveMessage(i18n.t('favoriteNotFound') || '收藏不存在');
     return;
   }
   
-  console.log('[刪除收藏] 準備刪除單個收藏項目:', {
-    id: id,
-    name: itemToRemove.name,
-    url: itemToRemove.url,
-    platform: itemToRemove.platform
-  });
-  
-  // 刪除前再次確認列表中的項目數量
-  const beforeCount = list.length;
-  console.log('[刪除收藏] 刪除前的收藏數量:', beforeCount);
-  
   // 執行刪除
   const result = favoriteStreams.remove(id);
-  
-  // 驗證刪除結果
-  const afterList = favoriteStreams.getList();
-  const afterCount = afterList.length;
-  console.log('[刪除收藏] 刪除後的收藏數量:', afterCount);
-  console.log('[刪除收藏] 應該只刪除 1 個項目，實際刪除:', beforeCount - afterCount, '個');
-  
-  if (beforeCount - afterCount !== 1) {
-    console.error('[刪除收藏] 警告：刪除的項目數量不正確！');
-  }
   
   showFavoriteStreamsManager(); // 刷新列表
   // 更新控制面板中的收藏列表
@@ -2189,7 +2134,7 @@ const youtubeApiUtils = {
           }
         }
       } catch (error) {
-        console.warn('[YouTube API] 無法從 Cloudflare Pages Function 獲取 API Key:', error);
+        // 靜默處理錯誤
       }
       return null;
     })();
@@ -2210,7 +2155,6 @@ const youtubeApiUtils = {
       return window.CONFIG.YOUTUBE_API_KEY;
     }
     
-    console.warn('[YouTube API] API Key 未配置');
     return null;
   },
   
@@ -2246,7 +2190,6 @@ const youtubeApiUtils = {
       
       return channelId;
     } catch (error) {
-      console.error('[YouTube API] 獲取頻道 ID 失敗:', error);
       throw error;
     }
   },
@@ -2283,7 +2226,6 @@ const youtubeApiUtils = {
       
       return channelTitle;
     } catch (error) {
-      console.error('[YouTube API] 獲取頻道標題失敗:', error);
       throw error;
     }
   },
@@ -2311,7 +2253,6 @@ const youtubeApiUtils = {
       } catch (fetchError) {
         // 處理網路錯誤（例如：連接被拒絕、CORS 錯誤等）
         // 這通常發生在本地開發環境中，Cloudflare Pages Functions 不可用
-        console.warn('[YouTube Live Check] 代理請求失敗（可能是本地開發環境）:', fetchError);
         return {
           isLive: null,
           status: 'proxy_unavailable',
@@ -2327,7 +2268,6 @@ const youtubeApiUtils = {
           const contentType = proxyResponse.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
             // 不是 JSON 響應，可能是 HTML 404 頁面（代理端點不存在）
-            console.warn('[YouTube Live Check] 代理端點不存在（可能是本地開發環境）');
             return {
               isLive: null,
               status: 'proxy_unavailable',
@@ -2355,13 +2295,9 @@ const youtubeApiUtils = {
       
       const result = await proxyResponse.json();
       
-      // 輸出完整的代理響應
-      console.log(`[YouTube Live Check] 頻道 ${channelId} 的代理響應:`, JSON.stringify(result, null, 2));
-      
       // 根據邏輯表判斷狀態
       if (result.status === 404) {
         // HTTP 404 -> 頻道不存在
-        console.log(`[YouTube Live Check] 頻道 ${channelId} 不存在（404）`);
         return {
           isLive: false,
           status: 'channel_not_found',
@@ -2372,14 +2308,10 @@ const youtubeApiUtils = {
       
       if (result.status === 200) {
         const finalUrl = result.finalUrl || '';
-        console.log(`[YouTube Live Check] 頻道 ${channelId} 的最終 URL:`, finalUrl);
-        
         if (finalUrl.includes('watch?v=')) {
           // HTTP 200 + URL 包含 watch?v= -> 開台中或預定直播
           const videoIdMatch = finalUrl.match(/[?&]v=([^&]+)/);
           const liveVideoId = videoIdMatch ? videoIdMatch[1] : null;
-          
-          console.log(`[YouTube Live Check] 頻道 ${channelId} 正在開台，liveVideoId: ${liveVideoId}`);
           
           // 注意：無法在後端判斷是否為「即將開始」畫面，所以統一判定為開台
           // 如果需要區分，需要進一步解析 HTML 內容
@@ -2391,7 +2323,6 @@ const youtubeApiUtils = {
           };
         } else {
           // HTTP 200 + URL 不包含 watch?v= -> 未開台
-          console.log(`[YouTube Live Check] 頻道 ${channelId} 未開台（最終 URL 不包含 watch?v=）`);
           return {
             isLive: false,
             status: 'not_live',
@@ -2409,7 +2340,6 @@ const youtubeApiUtils = {
         liveVideoId: null
       };
     } catch (error) {
-      console.error('[YouTube Live Check] 檢查開台狀態失敗:', error);
       return {
         isLive: null,
         status: 'error',
@@ -2473,31 +2403,15 @@ async function updateFavoriteLiveStatuses() {
   if (youtubeFavorites.length > 0) {
     try {
       // 批量檢查 YouTube 頻道開台狀態
-      console.log(`[刷新狀態] 開始檢查 ${youtubeFavorites.length} 個 YouTube 頻道的開台狀態`);
-      
       const checkPromises = youtubeFavorites.map(async (item) => {
         if (!item.channelId) {
-          console.warn(`[刷新狀態] 頻道 ${item.name || item.id} 缺少 channelId，跳過檢查`);
           return { item, status: null };
         }
         
-        console.log(`[刷新狀態] 正在檢查頻道: ${item.name || item.id} (channelId: ${item.channelId})`);
-        
         try {
           const status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
-          
-          // 輸出完整的檢查結果
-          console.log(`[刷新狀態] 頻道 ${item.name || item.id} 的檢查結果:`, {
-            channelId: item.channelId,
-            isLive: status.isLive,
-            status: status.status,
-            message: status.message,
-            liveVideoId: status.liveVideoId
-          });
-          
           return { item, status };
         } catch (error) {
-          console.error(`[刷新狀態] 檢查頻道 ${item.channelId} 失敗:`, error);
           return { item, status: null };
         }
       });
@@ -2515,7 +2429,6 @@ async function updateFavoriteLiveStatuses() {
       if (allFailed && results.length > 0) {
         const firstStatus = results[0].status === 'fulfilled' ? results[0].value?.status : null;
         if (firstStatus && firstStatus.status === 'proxy_unavailable') {
-          console.info('[YouTube Live Check] 代理服務不可用（本地開發環境），跳過開台狀態檢查');
           // 在本地開發環境中，不更新狀態，也不計入更新數
           return { success: true, updated: updatedCount };
         }
@@ -2533,19 +2446,8 @@ async function updateFavoriteLiveStatuses() {
             
             // 如果狀態是代理不可用，不更新（保持原有狀態）
             if (status.status === 'proxy_unavailable') {
-              console.log(`[刷新狀態] 頻道 ${item.name || item.id} 代理不可用，保持原有狀態: isLive=${item.isLive}`);
               return item;
             }
-            
-            // 輸出狀態更新前後對比
-            const beforeIsLive = item.isLive;
-            const afterIsLive = status.isLive;
-            
-            console.log(`[刷新狀態] 更新頻道 ${item.name || item.id} 的開台狀態:`, {
-              channelId: item.channelId,
-              更新前: { isLive: beforeIsLive, liveVideoId: item.liveVideoId },
-              更新後: { isLive: afterIsLive, liveVideoId: status.liveVideoId, status: status.status }
-            });
             
             updatedCount++;
             return {
@@ -2558,7 +2460,6 @@ async function updateFavoriteLiveStatuses() {
             };
           } else {
             // 如果查詢失敗，保持原有狀態，但更新檢查時間（僅在非代理不可用的情況下）
-            console.warn(`[刷新狀態] 頻道 ${item.name || item.id} 查詢失敗或無狀態，保持原有狀態: isLive=${item.isLive}`);
             return {
               ...item,
               lastChecked: new Date().toISOString()
@@ -2568,7 +2469,7 @@ async function updateFavoriteLiveStatuses() {
         return item;
       });
     } catch (error) {
-      console.error('[YouTube Live Check] 批量檢查失敗:', error);
+      // 靜默處理錯誤
     }
   }
   
@@ -2649,17 +2550,9 @@ async function refreshFavoriteStatus() {
   refreshBtn.disabled = true;
   refreshBtn.textContent = i18n.t('refreshingFavoriteStatus') || '刷新中...';
   
-  console.log('[刷新狀態] ========== 開始手動刷新收藏狀態 ==========');
-  
   try {
     // 調用更新函數
     const result = await updateFavoriteLiveStatuses();
-    
-    console.log('[刷新狀態] 更新結果:', {
-      success: result.success,
-      updated: result.updated
-    });
-    console.log('[刷新狀態] ========== 刷新完成 ==========');
     
     // 更新收藏列表顯示
     if (typeof updateFavoriteListDisplay === 'function') {
@@ -2686,12 +2579,6 @@ async function refreshFavoriteStatus() {
     }
   } catch (error) {
     // 錯誤處理
-    console.error('[刷新狀態] 刷新收藏狀態失敗:', error);
-    console.error('[刷新狀態] 錯誤詳情:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
     refreshBtn.disabled = false;
     refreshBtn.textContent = originalText;
     showSaveMessage('刷新狀態失敗，請查看控制台');
@@ -3367,7 +3254,6 @@ async function performFavoriteSearch(query) {
             return [];
           })
           .catch(error => {
-            console.warn('Twitch 搜尋失敗:', error.message);
             return [];
           })
       );

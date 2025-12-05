@@ -374,18 +374,9 @@ async function performSearch(query) {
           })
           .catch(error => {
             // Twitch API 錯誤，靜默處理，返回空陣列
-            console.warn('Twitch 搜尋失敗:', error.message);
             return [];
           })
       );
-    } else if (selectedPlatform === 'twitch') {
-      console.warn('Twitch API 未載入或 searchChannels 函數不存在');
-    }
-    
-    // YouTube 搜尋（暫時關閉）
-    // YouTube API 功能已暫時關閉
-    if (selectedPlatform === 'youtube') {
-      console.warn('YouTube API 功能已暫時關閉');
     }
     
     // 等待所有搜尋完成（使用 Promise.allSettled 確保即使一個失敗，另一個仍能顯示結果）

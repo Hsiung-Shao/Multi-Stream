@@ -539,10 +539,8 @@ async function makeApiRequest(endpoint, params = {}) {
       try {
         const errorData = await response.json().catch(() => ({}));
         errorText = JSON.stringify(errorData);
-        console.error('Twitch API 錯誤回應:', errorData);
       } catch (e) {
         errorText = await response.text().catch(() => '無法讀取錯誤訊息');
-        console.error('Twitch API 錯誤回應（文字）:', errorText);
       }
       
       // 如果是 401 錯誤，可能是 Token 過期，嘗試重新取得 Token
@@ -620,17 +618,14 @@ async function searchTwitchChannels(query, limit = 10) {
     });
     
     if (!data) {
-      console.warn('Twitch API 回應為空');
       return [];
     }
     
     if (!data.data) {
-      console.warn('Twitch API 回應中沒有 data 欄位:', data);
       return [];
     }
     
     if (!Array.isArray(data.data)) {
-      console.warn('Twitch API 回應中的 data 不是陣列:', data.data);
       return [];
     }
     
@@ -653,7 +648,6 @@ async function searchTwitchChannels(query, limit = 10) {
     
     return mappedResults;
   } catch (error) {
-    console.error('Twitch 搜尋錯誤:', error);
     throw error;
   }
 }
