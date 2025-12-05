@@ -473,6 +473,7 @@ function updateStreamOrderList() {
               }
               
               // 修復 Twitch 播放器在調整順序後卡住的問題
+              // 使用更強力的刷新機制，多次觸發 resize 事件
               setTimeout(() => {
                 const boxes = Array.from(document.querySelectorAll('.stream-box'));
                 boxes.forEach(box => {
@@ -482,12 +483,20 @@ function updateStreamOrderList() {
                       // 強制刷新 Twitch 播放器
                       const playerContainer = box.querySelector('.player-container');
                       if (playerContainer) {
-                        // 觸發 resize 事件讓播放器重新計算尺寸
-                        window.dispatchEvent(new Event('resize'));
-                        // 額外延遲確保播放器有時間響應
-                        setTimeout(() => {
+                        // 多次觸發 resize 事件，確保播放器響應
+                        const refreshPlayer = () => {
                           window.dispatchEvent(new Event('resize'));
-                        }, 100);
+                          // 強制重新計算容器尺寸
+                          void playerContainer.offsetWidth;
+                          void playerContainer.offsetHeight;
+                        };
+                        
+                        // 立即觸發一次
+                        refreshPlayer();
+                        // 延遲觸發多次，確保播放器有時間響應
+                        setTimeout(refreshPlayer, 50);
+                        setTimeout(refreshPlayer, 150);
+                        setTimeout(refreshPlayer, 300);
                       }
                     } catch (e) {
                       // 靜默處理錯誤

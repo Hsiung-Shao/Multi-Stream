@@ -526,8 +526,11 @@ const favoriteCategories = {
       return { success: false, message: i18n.t('categoryExists') };
     }
     
+    // 生成唯一 ID：使用時間戳 + 隨機數，確保即使在同一毫秒內創建也不會重複
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const newCategory = {
-      id: Date.now().toString(),
+      id: uniqueId,
       name: name,
       createdAt: new Date().toISOString()
     };
@@ -747,8 +750,11 @@ const favoriteStreams = {
       }
     }
     
+    // 生成唯一 ID：使用時間戳 + 隨機數，確保即使在同一毫秒內創建也不會重複
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const newItem = {
-      id: Date.now().toString(),
+      id: uniqueId,
       url: finalUrl, // 對於 YouTube，使用頻道 /live URL
       name: name,
       platform: platform,
