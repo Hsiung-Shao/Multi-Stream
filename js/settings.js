@@ -688,7 +688,48 @@ const favoriteStreams = {
             platform = 'youtube';
             if (!name) name = channelId;
           }
-        } else if (url.includes('youtube.com/c/') || url.includes('youtube.com/user/') || url.includes('youtube.com/@')) {
+        } else if (url.includes('youtube.com/@') || url.includes('@') && url.includes('youtube')) {
+          // 處理 @username 格式的 URL（例如：www.youtube.com/@浠Mizuki 或 youtube.com/@浠Mizuki）
+          // 匹配各種可能的格式：youtube.com/@xxx, www.youtube.com/@xxx, https://youtube.com/@xxx 等
+          const handleMatch = url.match(/(?:youtube\.com|youtu\.be)\/@([^\/\?\s]+)/i) || 
+                             url.match(/@([a-zA-Z0-9_\u4e00-\u9fa5]+)/);
+          if (handleMatch) {
+            const handle = handleMatch[1];
+            platform = 'youtube';
+            
+            // 使用 YouTube Data API 獲取真實的 channel ID
+            try {
+              const realChannelId = await youtubeApiUtils.getChannelIdFromHandle(handle);
+              if (realChannelId) {
+                channelId = realChannelId;
+                
+                // 如果沒有提供名稱，嘗試獲取頻道標題
+                if (!name) {
+                  try {
+                    const channelTitle = await youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
+                    if (channelTitle) {
+                      name = channelTitle;
+                    } else {
+                      name = `@${handle}`;
+                    }
+                  } catch (error) {
+                    // 獲取標題失敗，使用 handle 作為名稱
+                    name = `@${handle}`;
+                  }
+                }
+              } else {
+                throw new Error('無法獲取頻道 ID');
+              }
+            } catch (error) {
+              // API 調用失敗，返回錯誤
+              const i18n = window.i18n || { t: (key) => key };
+              return { 
+                success: false, 
+                message: `無法獲取頻道資訊: ${error.message || '未知錯誤'}` 
+              };
+            }
+          }
+        } else if (url.includes('youtube.com/c/') || url.includes('youtube.com/user/')) {
           // 這些 URL 格式需要通過 API 查詢才能獲得 channelId，暫時不處理
           // 用戶可以通過搜尋功能添加頻道，這樣會自動獲得 channelId
         }
@@ -2224,6 +2265,95 @@ const youtubeApiUtils = {
       }
       
       return channelTitle;
+    } catch (error) {
+      throw error;
+    }
+  },
+  
+  // 從 @username 或頻道 handle 透過 YouTube Data API 獲取頻道真實 ID
+  async getChannelIdFromHandle(handle) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
+      throw new Error('YouTube API Key 未配置');
+    }
+    
+    if (!handle || typeof handle !== 'string') {
+      throw new Error('無效的頻道 handle');
+    }
+    
+    // 移除 @ 符號（如果有的話）
+    const cleanHandle = handle.replace(/^@/, '').trim();
+    if (!cleanHandle) {
+      throw new Error('頻道 handle 不能為空');
+    }
+    
+    try {
+      // 使用 search.list API 搜索頻道
+      // 使用 @handle 格式作為搜索關鍵字，限制結果為頻道類型，增加精確度
+      const searchQuery = `@${cleanHandle}`;
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(searchQuery)}&maxResults=5&key=${encodeURIComponent(apiKey)}`;
+      const searchResponse = await fetch(searchUrl);
+      
+      if (!searchResponse.ok) {
+        throw new Error(`YouTube API 請求失敗: ${searchResponse.status} ${searchResponse.statusText}`);
+      }
+      
+      const searchData = await searchResponse.json();
+      
+      if (!searchData.items || searchData.items.length === 0) {
+        throw new Error('找不到該頻道');
+      }
+      
+      // 從搜索結果中獲取所有可能的頻道 ID
+      const candidateChannels = searchData.items
+        .map(item => ({
+          channelId: item.id?.channelId,
+          title: item.snippet?.title,
+          customUrl: item.snippet?.customUrl
+        }))
+        .filter(item => item.channelId);
+      
+      if (candidateChannels.length === 0) {
+        throw new Error('無法從搜索結果中獲取頻道 ID');
+      }
+      
+      // 嘗試找到完全匹配的頻道（通過 customUrl）
+      const exactMatch = candidateChannels.find(channel => {
+        if (channel.customUrl) {
+          const customUrlHandle = channel.customUrl.replace(/^@/, '').toLowerCase();
+          return customUrlHandle === cleanHandle.toLowerCase();
+        }
+        return false;
+      });
+      
+      if (exactMatch) {
+        return exactMatch.channelId;
+      }
+      
+      // 如果沒有完全匹配，使用 channels.list API 獲取第一個候選頻道的詳細資訊來驗證
+      const firstCandidate = candidateChannels[0];
+      const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${encodeURIComponent(firstCandidate.channelId)}&key=${encodeURIComponent(apiKey)}`;
+      const channelResponse = await fetch(channelUrl);
+      
+      if (channelResponse.ok) {
+        const channelData = await channelResponse.json();
+        if (channelData.items && channelData.items.length > 0) {
+          const channel = channelData.items[0];
+          const customUrl = channel.snippet?.customUrl || '';
+          
+          // 檢查 customUrl 是否匹配
+          if (customUrl) {
+            const customUrlHandle = customUrl.replace(/^@/, '').toLowerCase();
+            if (customUrlHandle === cleanHandle.toLowerCase()) {
+              return firstCandidate.channelId;
+            }
+          }
+        }
+      }
+      
+      // 如果沒有找到完全匹配，返回第一個候選頻道（最相關的結果）
+      // 這通常是最接近的匹配
+      return firstCandidate.channelId;
     } catch (error) {
       throw error;
     }
