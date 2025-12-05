@@ -55,14 +55,9 @@
   <link rel="icon" type="image/png" href="/icon.png">
   <link rel="shortcut icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=	G-0DX8PWTS4X"></script>
+  <!-- Google Analytics 將由 consent.js 根據用戶同意狀態載入 -->
   <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-0DX8PWTS4X');
   </script>
   <link rel="stylesheet" href="styles.css">
   <style>
@@ -342,6 +337,7 @@
 
   <script src="js/i18n.js"></script>
   <script src="js/theme.js"></script>
+  <script defer src="js/consent.js"></script>
   <script>
     // 初始化多語言系統
     document.addEventListener('DOMContentLoaded', function() {

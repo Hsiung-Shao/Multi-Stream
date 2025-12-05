@@ -233,7 +233,7 @@ const consentManager = {
     // 載入 gtag.js
     const script = document.createElement('script');
     script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtag/js?id=G-6M97WLJG2Z';
+    script.src = 'https://www.googletagmanager.com/gtag/js?id=G-0DX8PWTS4X';
     document.head.appendChild(script);
     
     // 初始化 gtag
@@ -246,7 +246,7 @@ const consentManager = {
     this.setConsentMode();
     
     // 配置 Google Analytics
-    gtag('config', 'G-6M97WLJG2Z', {
+    gtag('config', 'G-0DX8PWTS4X', {
       'anonymize_ip': true,  // IP 匿名化
       'allow_google_signals': this.consent.ads || false,  // 僅在同意廣告時啟用
       'allow_ad_personalization_signals': this.consent.ads || false
