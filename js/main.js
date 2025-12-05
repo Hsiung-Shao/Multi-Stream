@@ -544,6 +544,10 @@ function selectSearchResult(channel) {
     // 對於 Twitch 頻道，直接加入串流
     if (channel.platform === 'twitch' || channel.source === 'twitch') {
       hideSearchSuggestions();
+      // 保存 displayName 以便 addStream 使用
+      if (channel.displayName) {
+        window._pendingDisplayName = channel.displayName;
+      }
       // 直接調用 addStream 加入串流
       addStream(channel.url);
       return;

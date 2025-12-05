@@ -41,6 +41,11 @@ async function addStream(url = null) {
     if (foundChannel) {
       // 使用第一個搜尋結果
       url = foundChannel.url;
+      // 保存 displayName 以便後續使用
+      if (foundChannel.displayName) {
+        // 將 displayName 保存到臨時變量，稍後存入 streamData
+        window._pendingDisplayName = foundChannel.displayName;
+      }
     } else {
       if (searchError) {
         alert(`搜尋頻道失敗: ${searchError}。請直接輸入完整的 Twitch 或 YouTube 網址`);
@@ -239,8 +244,14 @@ async function addStream(url = null) {
     videoId,
     originalUrl,
     volume: 100,
-    chatVisible: platform !== 'youtube' // YouTube 預設隱藏，其他平台預設顯示
+    chatVisible: platform !== 'youtube', // YouTube 預設隱藏，其他平台預設顯示
+    // 如果有待保存的 displayName，使用它作為名稱
+    name: window._pendingDisplayName || null,
+    displayName: window._pendingDisplayName || null
   };
+  
+  // 清除臨時變量
+  delete window._pendingDisplayName;
 
   // 建立播放器
   if (platform === 'twitch') {

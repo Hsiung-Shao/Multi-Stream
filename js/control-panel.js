@@ -297,9 +297,16 @@ function updateStreamOrderList() {
     item.dataset.streamId = id;
     item.draggable = false; // 預設不可拖曳，只有標題行可拖曳
     
-    // 嘗試從收藏列表中獲取名稱
+    // 優先使用 streamData 中的 displayName 或 name
     let label = '';
-    if (typeof favoriteStreams !== 'undefined' && typeof favoriteStreams.getList === 'function') {
+    if (data.displayName) {
+      label = escapeHtml(data.displayName);
+    } else if (data.name) {
+      label = escapeHtml(data.name);
+    }
+    
+    // 如果沒有 displayName，嘗試從收藏列表中獲取名稱
+    if (!label && typeof favoriteStreams !== 'undefined' && typeof favoriteStreams.getList === 'function') {
       const favorites = favoriteStreams.getList();
       // 根據 platform、channelId 或 videoId 匹配收藏
       const favorite = favorites.find(fav => {
@@ -325,7 +332,7 @@ function updateStreamOrderList() {
       }
     }
     
-    // 如果沒有找到收藏名稱，使用原來的邏輯
+    // 如果還是沒有找到名稱，使用原來的邏輯
     if (!label) {
       label = data.platform === 'twitch' ? escapeHtml(data.channelId) : (data.platform === 'youtube' ? escapeHtml(data.videoId) : `串流 #${id}`);
     }

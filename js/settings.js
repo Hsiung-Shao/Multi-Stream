@@ -2620,20 +2620,41 @@ async function addCurrentStreamToFavorites() {
     const data = streamData[id];
     
     if (data && data.originalUrl) {
-      // 為每個串流生成自訂名稱（如果可能）
+      // 優先使用 displayName 或 name，如果沒有才使用 channelId/videoId
       let customName = '';
       let urlToAdd = data.originalUrl;
       
+      // 優先使用 displayName 或 name
+      if (data.displayName) {
+        customName = data.displayName;
+      } else if (data.name) {
+        customName = data.name;
+      }
+      
       if (data.platform === 'twitch' && data.channelId) {
-        customName = data.channelId;
+        // 如果沒有 displayName，使用 channelId 作為 fallback
+        if (!customName) {
+          customName = data.channelId;
+        }
+        // 如果 URL 中沒有 displayName 參數，添加它以便 favoriteStreams.add 使用
+        if (customName && customName !== data.channelId && !urlToAdd.includes('displayName=')) {
+          const separator = urlToAdd.includes('?') ? '&' : '?';
+          urlToAdd = `${urlToAdd}${separator}displayName=${encodeURIComponent(customName)}`;
+        }
       } else if (data.platform === 'youtube') {
         // 對於 YouTube，使用現有的 channelId 或 videoId
         if (data.channelId) {
-          customName = data.channelId;
+          // 如果沒有 displayName，使用 channelId 作為 fallback
+          if (!customName) {
+            customName = data.channelId;
+          }
           // 確保使用頻道 URL
           urlToAdd = `https://www.youtube.com/channel/${data.channelId}`;
         } else if (data.videoId) {
-          customName = data.videoId;
+          // 如果沒有 displayName，使用 videoId 作為 fallback
+          if (!customName) {
+            customName = data.videoId;
+          }
         }
       }
       
