@@ -50,79 +50,150 @@ async function handleChannelLiveRequest(request, env) {
       );
     }
     
-    // 構建 YouTube 頻道 /live URL
+    // 構建 YouTube 頻道 /live URL（使用真實 ID，UC 開頭）
     const liveUrl = `https://www.youtube.com/channel/${channelId}/live`;
     console.log('[YouTube Channel Live Proxy] 請求頻道 /live 端點:', liveUrl);
     
-    // 從 YouTube 獲取 /live 端點（跟隨重定向）
-    const response = await fetch(liveUrl, {
-      method: 'GET',
-      redirect: 'follow', // 跟隨重定向
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9'
-      }
-    });
-    
-    const status = response.status;
-    const finalUrl = response.url; // 最終重定向後的 URL
-    
-    console.log('[YouTube Channel Live Proxy] 響應:', { 
-      channelId, 
-      status, 
-      finalUrl,
-      statusText: response.statusText,
-      containsWatchV: finalUrl.includes('watch?v=')
-    });
-    
-    // 輸出詳細的 URL 分析
-    console.log('[YouTube Channel Live Proxy] URL 分析:', {
-      originalUrl: liveUrl,
-      finalUrl: finalUrl,
-      isRedirected: liveUrl !== finalUrl,
-      isWatchUrl: finalUrl.includes('watch?v='),
-      videoId: finalUrl.includes('watch?v=') ? finalUrl.match(/[?&]v=([^&]+)/)?.[1] : null
-    });
-    
-    // 根據邏輯表返回結果
-    // HTTP 404 -> 頻道不存在
-    if (status === 404) {
-      return new Response(
-        JSON.stringify({
-          status: 404,
-          finalUrl: null,
-          isLive: false,
-          message: '頻道不存在或已刪除'
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+    try {
+      // 設定 User-Agent 很重要，模擬瀏覽器，降低被當機器人的機率
+      // 使用 redirect: 'follow' (預設就是 follow)，讓它自動跳轉
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      };
+      
+      // 從 YouTube 獲取 /live 端點（跟隨重定向，類似 Python 的 allow_redirects=True）
+      const response = await fetch(liveUrl, {
+        method: 'GET',
+        redirect: 'follow', // 自動跟隨重定向（預設值）
+        headers: headers
+      });
+      
+      const status = response.status;
+      const finalUrl = response.url; // 最終重定向後的 URL（類似 Python 的 response.url）
+      
+      console.log('[YouTube Channel Live Proxy] 響應:', { 
+        channelId, 
+        status, 
+        finalUrl,
+        statusText: response.statusText
+      });
+      
+      // 根據邏輯表返回結果
+      // HTTP 404 -> 頻道不存在
+      if (status === 404) {
+        console.log('[YouTube Channel Live Proxy] 頻道不存在（404）');
+        return new Response(
+          JSON.stringify({
+            status: 404,
+            finalUrl: null,
+            isLive: false,
+            message: '頻道不存在或已刪除'
+          }),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
           }
-        }
-      );
-    }
-    
-    // HTTP 200 -> 檢查最終 URL
-    if (status === 200) {
-      const containsWatchV = finalUrl.includes('watch?v=');
-      
-      // 提取 video ID（如果存在）
-      let liveVideoId = null;
-      if (containsWatchV) {
-        const videoIdMatch = finalUrl.match(/[?&]v=([^&]+)/);
-        liveVideoId = videoIdMatch ? videoIdMatch[1] : null;
+        );
       }
       
-      return new Response(
-        JSON.stringify({
-          status: 200,
+      // HTTP 200 -> 檢查最終 URL
+      if (status === 200) {
+        // 檢查最終網址是否包含 watch?v=
+        const containsWatchV = finalUrl.includes('watch?v=');
+        
+        console.log('[YouTube Channel Live Proxy] URL 分析:', {
+          originalUrl: liveUrl,
           finalUrl: finalUrl,
-          isLive: containsWatchV, // 包含 watch?v= 表示開台或預定直播
-          liveVideoId: liveVideoId,
-          message: containsWatchV ? '開台中（或預定直播）' : '未開台'
+          isRedirected: liveUrl !== finalUrl,
+          containsWatchV: containsWatchV
+        });
+        
+        if (containsWatchV) {
+          // 成功抓到直播（或預定直播）
+          // 使用簡單的字符串切割方式提取 video ID（完全按照 Python 版本）
+          // Python: final_url.split("v=")[1].split("&")[0]
+          const parts = finalUrl.split('v=');
+          const videoId = parts.length > 1 ? parts[1].split('&')[0] : null;
+          
+          console.log('[YouTube Channel Live Proxy] 頻道正在開台:', {
+            channelId: channelId,
+            videoId: videoId,
+            finalUrl: finalUrl
+          });
+          
+          return new Response(
+            JSON.stringify({
+              status: 200,
+              finalUrl: finalUrl,
+              isLive: true,
+              liveVideoId: videoId,
+              message: '開台中（或預定直播）'
+            }),
+            {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              }
+            }
+          );
+        } else {
+          // 被導回頻道首頁，表示沒直播
+          console.log('[YouTube Channel Live Proxy] 頻道未開台（被導回頻道首頁）');
+          return new Response(
+            JSON.stringify({
+              status: 200,
+              finalUrl: finalUrl,
+              isLive: false,
+              liveVideoId: null,
+              message: '未開台'
+            }),
+            {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              }
+            }
+          );
+        }
+      }
+      
+      // 其他狀態碼
+      console.warn('[YouTube Channel Live Proxy] 未知狀態碼:', status);
+      return new Response(
+        JSON.stringify({
+          status: status,
+          finalUrl: finalUrl,
+          isLive: null,
+          message: `未知狀態: ${status}`
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    } catch (error) {
+      // 處理請求錯誤（例如：網路錯誤、超時等）
+      console.error('[YouTube Channel Live Proxy] 請求錯誤:', {
+        channelId: channelId,
+        error: error.message,
+        stack: error.stack
+      });
+      
+      return new Response(
+        JSON.stringify({
+          status: 'ERROR',
+          error: '請求失敗',
+          message: error.message || '處理請求時發生錯誤',
+          isLive: null,
+          liveVideoId: null
         }),
         {
           status: 200,
@@ -133,23 +204,6 @@ async function handleChannelLiveRequest(request, env) {
         }
       );
     }
-    
-    // 其他狀態碼
-    return new Response(
-      JSON.stringify({
-        status: status,
-        finalUrl: finalUrl,
-        isLive: null,
-        message: `未知狀態: ${status}`
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      }
-    );
   } catch (error) {
     console.error('[YouTube Channel Live Proxy] 伺服器錯誤:', { 
       error: error.message, 
