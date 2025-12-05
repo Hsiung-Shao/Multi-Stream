@@ -841,8 +841,9 @@ const favoriteStreams = {
         // 如果沒有直播，但 URL 是 /live 格式，先檢查是否有新的直播
         // 如果 URL 是 /live 格式，嘗試檢查當前直播狀態
         if (item.url && item.url.includes('/live')) {
+          let status = null;
           try {
-            const status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
+            status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
             if (status.isLive === true && status.liveVideoId) {
               // 發現新的直播，使用直播 URL
               const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
@@ -868,52 +869,48 @@ const favoriteStreams = {
           } catch (error) {
             // 靜默處理錯誤
           }
-        }
-        
-          } catch (error) {
-            // 靜默處理錯誤
-          }
-        
-        // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
-        // 如果沒有直播或檢查失敗，再次嘗試檢查（可能是狀態更新延遲）
-        const i18n = window.i18n || { t: (key) => key };
-        if (!status.isLive || !status.liveVideoId) {
-          // 等待 2 秒後再次檢查（可能狀態正在更新）
-          await new Promise(resolve => setTimeout(resolve, 2000));
           
-          try {
-            const retryStatus = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
+          // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
+          // 如果沒有直播或檢查失敗，再次嘗試檢查（可能是狀態更新延遲）
+          if (!status || !status.isLive || !status.liveVideoId) {
+            const i18n = window.i18n || { t: (key) => key };
+            // 等待 2 秒後再次檢查（可能狀態正在更新）
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
-            if (retryStatus.isLive === true && retryStatus.liveVideoId) {
-              // 發現新的直播，使用直播 URL
-              const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
-              addStream(liveUrl);
+            try {
+              const retryStatus = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
               
-              // 更新收藏項目的直播狀態
-              const list = favoriteStreams.getList();
-              const updatedList = list.map(fav => {
-                if (fav.id === item.id) {
-                  return {
-                    ...fav,
-                    isLive: true,
-                    liveVideoId: retryStatus.liveVideoId,
-                    lastChecked: new Date().toISOString()
-                  };
-                }
-                return fav;
-              });
-              favoriteStreams.saveList(updatedList);
-              
-              return { success: true };
+              if (retryStatus.isLive === true && retryStatus.liveVideoId) {
+                // 發現新的直播，使用直播 URL
+                const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
+                addStream(liveUrl);
+                
+                // 更新收藏項目的直播狀態
+                const list = favoriteStreams.getList();
+                const updatedList = list.map(fav => {
+                  if (fav.id === item.id) {
+                    return {
+                      ...fav,
+                      isLive: true,
+                      liveVideoId: retryStatus.liveVideoId,
+                      lastChecked: new Date().toISOString()
+                    };
+                  }
+                  return fav;
+                });
+                favoriteStreams.saveList(updatedList);
+                
+                return { success: true };
+              }
+            } catch (retryError) {
+              // 靜默處理錯誤
             }
-          } catch (retryError) {
-            // 靜默處理錯誤
-          }
-          
-          // 如果二次檢查仍然沒有直播，但狀態顯示為 false，提示用戶
-          if (item.isLive === false) {
-            alert(i18n.t('channelNotLive') || '該頻道目前未開台');
-            return { success: false, message: i18n.t('channelNotLive') || '該頻道目前未開台' };
+            
+            // 如果二次檢查仍然沒有直播，但狀態顯示為 false，提示用戶
+            if (item.isLive === false) {
+              alert(i18n.t('channelNotLive') || '該頻道目前未開台');
+              return { success: false, message: i18n.t('channelNotLive') || '該頻道目前未開台' };
+            }
           }
         }
         
@@ -2592,14 +2589,7 @@ async function refreshFavoriteStatus() {
   }
 }
 
-// 確保函數是全局的
-if (typeof window !== 'undefined') {
-  window.updateFavoriteListDisplay = updateFavoriteListDisplay;
-  window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
-  window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
-  window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
-  window.refreshFavoriteStatus = refreshFavoriteStatus;
-}
+// 函數導出已移至文件末尾統一處理
 
 // 從控制面板一鍵載入分類下的所有收藏
 function loadCategoryFavoritesFromPanel(categoryId) {
@@ -2890,11 +2880,7 @@ function closeVersionHistory() {
   }
 }
 
-// 確保函數是全局的
-if (typeof window !== 'undefined') {
-  window.showVersionHistory = showVersionHistory;
-  window.closeVersionHistory = closeVersionHistory;
-}
+// 函數導出已移至文件末尾統一處理
 
 // 使用教學功能
 function showUserGuide() {
@@ -3425,11 +3411,21 @@ function hideFavoriteSearchSuggestions() {
   }
 }
 
-// 確保函數是全局的
+// 確保所有函數是全局的（統一在文件末尾導出，確保所有函數都已定義）
 if (typeof window !== 'undefined') {
-  window.showUserGuide = showUserGuide;
-  window.closeUserGuide = closeUserGuide;
+  // 收藏相關函數
   window.showFavoriteStreamsManager = showFavoriteStreamsManager;
   window.addCurrentStreamToFavorites = addCurrentStreamToFavorites;
+  window.refreshFavoriteStatus = refreshFavoriteStatus;
+  window.updateFavoriteListDisplay = updateFavoriteListDisplay;
+  window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
+  window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
+  window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
+  
+  // 版本紀錄和使用教學
+  window.showVersionHistory = showVersionHistory;
+  window.closeVersionHistory = closeVersionHistory;
+  window.showUserGuide = showUserGuide;
+  window.closeUserGuide = closeUserGuide;
 }
 
