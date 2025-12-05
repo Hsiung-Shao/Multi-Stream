@@ -72,7 +72,17 @@ async function handleChannelLiveRequest(request, env) {
       channelId, 
       status, 
       finalUrl,
-      statusText: response.statusText 
+      statusText: response.statusText,
+      containsWatchV: finalUrl.includes('watch?v=')
+    });
+    
+    // 輸出詳細的 URL 分析
+    console.log('[YouTube Channel Live Proxy] URL 分析:', {
+      originalUrl: liveUrl,
+      finalUrl: finalUrl,
+      isRedirected: liveUrl !== finalUrl,
+      isWatchUrl: finalUrl.includes('watch?v='),
+      videoId: finalUrl.includes('watch?v=') ? finalUrl.match(/[?&]v=([^&]+)/)?.[1] : null
     });
     
     // 根據邏輯表返回結果
