@@ -52,8 +52,11 @@ async function addStream(url = null) {
   }
 
   // 先验证 URL，再创建 DOM（避免无效 URL 创建 DOM 后又被移除）
+  console.log('[加入串流] 輸入的 URL:', url);
   const urlValidation = validateUrl(url);
+  console.log('[加入串流] URL 驗證結果:', urlValidation);
   if (!urlValidation.valid) {
+    console.error('[加入串流] URL 驗證失敗:', urlValidation.error);
     alert(urlValidation.error);
     return;
   }
@@ -178,26 +181,50 @@ async function addStream(url = null) {
     platform = 'twitch';
   } 
   else if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+    console.log('[加入串流] 檢測到 YouTube URL，開始解析...');
+    console.log('[加入串流] hostname:', hostname);
+    console.log('[加入串流] 原始 URL:', url);
+    
     if (url.includes('youtube.com/live/')) {
       videoId = url.split('live/')[1]?.split('?')[0];
+      console.log('[加入串流] 從 /live/ 路徑解析 videoId:', videoId);
     } else if (url.includes('youtube.com/watch')) {
       videoId = urlObj.searchParams.get('v');
+      console.log('[加入串流] 從 /watch 參數解析 videoId:', videoId);
     } else if (url.includes('youtu.be/')) {
       videoId = url.split('youtu.be/')[1]?.split('?')[0];
-    }
-    
-    if (!videoId) {
-      alert('無法解析 YouTube 網址');
+      console.log('[加入串流] 從 youtu.be 短網址解析 videoId:', videoId);
+    } else if (url.includes('youtube.com/channel/') && url.includes('/live')) {
+      // 處理 /channel/{CHANNEL_ID}/live 格式
+      console.log('[加入串流] 檢測到 /channel/.../live 格式，這需要先檢查直播狀態');
+      // 這種格式需要先通過 API 檢查是否有直播，暫時提示用戶
+      alert('請使用 YouTube 直播影片的完整網址（例如：https://www.youtube.com/watch?v=VIDEO_ID）\n\n頻道 /live 網址需要先檢查直播狀態，請從收藏功能中使用。');
       box.remove();
       return;
     }
+    
+    console.log('[加入串流] 解析後的 videoId:', videoId);
+    
+    if (!videoId) {
+      console.error('[加入串流] 無法解析 YouTube 網址，URL 格式:', url);
+      alert('無法解析 YouTube 網址，請確認網址格式正確\n\n支援的格式：\n- https://www.youtube.com/watch?v=VIDEO_ID\n- https://youtu.be/VIDEO_ID\n- https://www.youtube.com/live/VIDEO_ID');
+      box.remove();
+      return;
+    }
+    
     // 验证视频 ID（如果存在且不为空）
-    if (videoId && !validateVideoId(videoId)) {
-      alert('無效的 YouTube 視頻 ID');
+    console.log('[加入串流] 驗證 videoId:', videoId);
+    const isValidVideoId = validateVideoId(videoId);
+    console.log('[加入串流] videoId 驗證結果:', isValidVideoId);
+    
+    if (videoId && !isValidVideoId) {
+      console.error('[加入串流] 無效的 YouTube 視頻 ID:', videoId);
+      alert('無效的 YouTube 視頻 ID: ' + videoId);
       box.remove();
       return;
     }
     platform = 'youtube';
+    console.log('[加入串流] YouTube 平台設定完成，videoId:', videoId);
   } else {
     alert('不支援的平台，目前支援 Twitch、YouTube');
     box.remove();

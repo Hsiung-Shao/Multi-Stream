@@ -360,6 +360,10 @@ async function performSearch(query) {
       searchPromises.push(
         window.twitchApi.searchChannels(query, 5)
           .then(results => {
+            // 輸出 Twitch 搜尋結果
+            console.log('[Twitch 搜尋] 搜尋關鍵字:', query);
+            console.log('[Twitch 搜尋] 完整回傳內容:', JSON.stringify(results, null, 2));
+            
             if (results && Array.isArray(results) && results.length > 0) {
               const mappedResults = results.map(r => ({ 
                 ...r, 
@@ -368,8 +372,10 @@ async function performSearch(query) {
                 // 確保 displayName 存在
                 displayName: r.displayName || r.display_name || r.login || r.title || '未知頻道'
               }));
+              console.log('[Twitch 搜尋] 處理後的結果:', JSON.stringify(mappedResults, null, 2));
               return mappedResults;
             }
+            console.log('[Twitch 搜尋] 未找到結果');
             return [];
           })
           .catch(error => {
