@@ -203,7 +203,7 @@ const defaultConfig = {
 
 ### Google Analytics
 
-Google Analytics 追蹤 ID 已配置在 `index.html` 中（`G-6M97WLJG2Z`）。
+Google Analytics 追蹤 ID 已配置在 `js/consent.js` 中（`G-0DX8PWTS4X`），支援 Consent Mode，會根據用戶同意狀態載入。
 
 ## 📄 授權
 
