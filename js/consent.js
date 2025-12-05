@@ -44,8 +44,7 @@ const consentManager = {
           resolve(countryCode);
         })
         .catch(error => {
-          console.warn('無法檢測地理位置，默認顯示同意視窗:', error);
-          // 如果檢測失敗，為了安全起見，默認顯示同意視窗
+          // 如果檢測失敗，返回 null（將被視為非 GDPR 國家，默認同意）
           resolve(null);
         });
     });
@@ -54,9 +53,9 @@ const consentManager = {
   // 檢查是否需要顯示同意視窗
   shouldShowConsentBanner: async function() {
     const countryCode = await this.detectUserCountry();
-    // 如果無法檢測到國家，為了安全起見，顯示同意視窗
+    // 如果無法檢測到國家，默認同意（不顯示視窗）
     if (!countryCode) {
-      return true;
+      return false;
     }
     // 只有在 GDPR_COUNTRIES 列表中的國家才需要顯示同意視窗
     return GDPR_COUNTRIES.includes(countryCode);

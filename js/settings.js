@@ -627,7 +627,6 @@ const favoriteStreams = {
     if (exists) {
       const i18n = window.i18n || { t: (key) => key };
       const result = { success: false, message: i18n.t('streamAlreadyInFavorites') };
-      console.log('[收藏添加] 完整回傳內容（已存在）:', JSON.stringify(result, null, 2));
       return result;
     }
     
@@ -680,7 +679,6 @@ const favoriteStreams = {
               const realChannelId = await youtubeApiUtils.getChannelIdFromVideoId(videoId);
               if (realChannelId) {
                 channelId = realChannelId;
-                console.log(`[收藏添加] 從 videoID ${videoId} 獲取到 channelID: ${channelId}`);
                 
                 // 如果 API key 可用，獲取頻道標題作為名稱
                 if (!name || name === videoId) {
@@ -688,16 +686,13 @@ const favoriteStreams = {
                     const channelTitle = await youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
                     if (channelTitle) {
                       name = channelTitle;
-                      console.log(`[收藏添加] 從 channelID ${realChannelId} 獲取到頻道標題: ${channelTitle}`);
                     }
                   } catch (error) {
-                    console.warn('[收藏添加] 無法從 channelID 獲取頻道標題:', error);
                     // 獲取標題失敗不影響添加收藏，繼續使用 videoId 作為名稱
                   }
                 }
               }
             } catch (error) {
-              console.warn('[收藏添加] 無法從 videoID 獲取 channelID:', error);
               // 如果獲取失敗，仍然允許添加（向後兼容）
               // 注意：沒有 channelID 的收藏可能無法正確檢查開台狀態
             }
@@ -709,7 +704,6 @@ const favoriteStreams = {
     if (!platform) {
       const i18n = window.i18n || { t: (key) => key };
       const result = { success: false, message: i18n.t('cannotParseStreamUrl') };
-      console.log('[收藏添加] 完整回傳內容（無法解析）:', JSON.stringify(result, null, 2));
       return result;
     }
     
@@ -731,21 +725,10 @@ const favoriteStreams = {
     
     if (platform === 'youtube' && channelId) {
       try {
-        console.log(`[收藏添加] 立即檢查頻道 ${channelId} 的開台狀態...`);
         const liveStatus = await youtubeApiUtils.checkChannelLiveStatus(channelId);
-        
-        console.log(`[收藏添加] 開台狀態檢查結果:`, {
-          channelId: channelId,
-          isLive: liveStatus.isLive,
-          status: liveStatus.status,
-          liveVideoId: liveStatus.liveVideoId,
-          message: liveStatus.message
-        });
-        
         initialLiveStatus = liveStatus.isLive;
         initialLiveVideoId = liveStatus.liveVideoId || null;
       } catch (error) {
-        console.warn('[收藏添加] 無法立即檢查開台狀態:', error);
         // 檢查失敗不影響添加收藏
       }
     }
@@ -780,22 +763,6 @@ const favoriteStreams = {
       message: i18n.t('addedToFavorites'),
       item: newItem // 包含完整的收藏項目資訊
     };
-    
-    // 輸出完整的回傳內容
-    console.log('[收藏添加] 完整回傳內容:', JSON.stringify(result, null, 2));
-    console.log('[收藏添加] 收藏項目詳情:', {
-      id: newItem.id,
-      url: newItem.url,
-      name: newItem.name,
-      platform: newItem.platform,
-      channelId: newItem.channelId,
-      videoId: newItem.videoId,
-      categoryId: newItem.categoryId,
-      addedAt: newItem.addedAt,
-      isLive: newItem.isLive,
-      liveVideoId: newItem.liveVideoId,
-      lastChecked: newItem.lastChecked
-    });
     
     return result;
   },
@@ -2218,7 +2185,6 @@ const youtubeApiUtils = {
         if (response.ok) {
           const data = await response.json();
           if (data.apiKey) {
-            console.log('[YouTube API] 從 Cloudflare Pages Function 獲取 API Key');
             return data.apiKey;
           }
         }
@@ -2241,7 +2207,6 @@ const youtubeApiUtils = {
     
     // 回退到 config.js
     if (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.YOUTUBE_API_KEY) {
-      console.log('[YouTube API] 從 config.js 獲取 API Key');
       return window.CONFIG.YOUTUBE_API_KEY;
     }
     
