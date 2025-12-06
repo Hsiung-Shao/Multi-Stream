@@ -143,11 +143,29 @@ const consentManager = {
         // 如果需要顯示，顯示同意橫幅
         this.showConsentBanner();
       } else {
-        // 如果不需要顯示（非 GDPR 國家），默認同意
+        // 如果不需要顯示（非 GDPR 國家），默認同意並立即更新 Consent Mode
         this.consent.analytics = true;
         this.consent.ads = true;
         this.saveConsent();
-        this.applyConsent();
+        
+        // 立即更新 Consent Mode，確保 GA 可以開始追蹤
+        // 使用 requestAnimationFrame 確保在下一幀執行，給 gtag 時間載入
+        requestAnimationFrame(() => {
+          this.setConsentMode();
+          
+          // 如果 gtag 尚未載入，等待載入後再次更新
+          if (typeof gtag === 'undefined') {
+            const checkGtag = setInterval(() => {
+              if (typeof gtag !== 'undefined') {
+                clearInterval(checkGtag);
+                this.setConsentMode();
+              }
+            }, 50);
+            
+            // 3秒後停止檢查（通常 gtag 會在 1 秒內載入）
+            setTimeout(() => clearInterval(checkGtag), 3000);
+          }
+        });
       }
     }
   },
