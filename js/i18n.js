@@ -318,6 +318,8 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '關閉',
+      'version1.7.1.change1': '修復Youtube 連結導向排定直播問題',
+      'version1.7.1.change2': '修復Youtube 重新導向後會有年齡限制問題',
       'version1.7.0.change1': '新增Youtube 開台監測',
       'version1.7.0.change2': '新增Youtube 使用教學',
       'version1.7.0.change3': '調整Twitch 頻道搜尋後可以直接加入',
@@ -852,6 +854,8 @@ const i18n = {
       // 版本紀錄
       'version': '版本',
       'close': '关闭',
+      'version1.7.1.change1': '修复Youtube 连结导向排定直播问题',
+      'version1.7.1.change2': '修复Youtube 重新导向后会有年龄限制问题',
       'version1.7.0.change1': '新增Youtube 开台监测',
       'version1.7.0.change2': '新增Youtube 使用教学',
       'version1.7.0.change3': '调整Twitch 频道搜寻后可以直接加入',
@@ -1383,6 +1387,8 @@ const i18n = {
       // Version History
       'version': 'Version',
       'close': 'Close',
+      'version1.7.1.change1': 'Fixed YouTube redirecting to scheduled live streams issue',
+      'version1.7.1.change2': 'Fixed YouTube age restriction issue after redirect',
       'version1.7.0.change1': 'Added YouTube live status monitoring',
       'version1.7.0.change2': 'Added YouTube usage tutorial',
       'version1.7.0.change3': 'Adjusted Twitch channel search to allow direct addition after search',
@@ -1916,6 +1922,8 @@ const i18n = {
       // バージョン履歴
       'version': 'バージョン',
       'close': '閉じる',
+      'version1.7.1.change1': 'YouTube が予定されたライブストリームにリダイレクトする問題を修正',
+      'version1.7.1.change2': 'YouTube リダイレクト後の年齢制限問題を修正',
       'version1.7.0.change1': 'YouTube ライブステータス監視を追加',
       'version1.7.0.change2': 'YouTube 使用チュートリアルを追加',
       'version1.7.0.change3': 'Twitch チャンネル検索後に直接追加できるように調整',
@@ -2519,6 +2527,8 @@ const i18n = {
     // 版本歷史
     'version': '버전',
     'close': '닫기',
+    'version1.7.1.change1': 'YouTube가 예정된 라이브 스트림으로 리디렉션되는 문제 수정',
+    'version1.7.1.change2': 'YouTube 리디렉션 후 연령 제한 문제 수정',
     'version1.7.0.change1': 'YouTube 라이브 상태 모니터링 추가',
     'version1.7.0.change2': 'YouTube 사용 튜토리얼 추가',
     'version1.7.0.change3': 'Twitch 채널 검색 후 직접 추가할 수 있도록 조정',
