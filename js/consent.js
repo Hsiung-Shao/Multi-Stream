@@ -368,10 +368,27 @@ const consentManager = {
       return;
     }
     
+    const GA_ID = 'G-6M97WLJG2Z';
+    
     // 載入 gtag.js
     const script = document.createElement('script');
     script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtag/js?id=G-0DX8PWTS4X';
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+    
+    // 添加錯誤處理
+    script.onerror = function() {
+      console.error('[Consent] Google Analytics 腳本載入失敗 (404)');
+      console.error('[Consent] 可能原因:');
+      console.error('  1. Google Analytics ID 無效或不存在');
+      console.error('  2. 網路連接問題');
+      console.error(`  3. 請確認 ID "${GA_ID}" 是否正確`);
+      console.error('[Consent] 提示: 可以在 Google Analytics 後台確認追蹤 ID');
+    };
+    
+    script.onload = function() {
+      console.log('[Consent] Google Analytics 腳本載入成功');
+    };
+    
     document.head.appendChild(script);
     
     // 初始化 gtag
@@ -384,11 +401,16 @@ const consentManager = {
     this.setConsentMode();
     
     // 配置 Google Analytics
-    gtag('config', 'G-0DX8PWTS4X', {
-      'anonymize_ip': true,  // IP 匿名化
-      'allow_google_signals': this.consent.ads || false,  // 僅在同意廣告時啟用
-      'allow_ad_personalization_signals': this.consent.ads || false
-    });
+    try {
+      gtag('config', GA_ID, {
+        'anonymize_ip': true,  // IP 匿名化
+        'allow_google_signals': this.consent.ads || false,  // 僅在同意廣告時啟用
+        'allow_ad_personalization_signals': this.consent.ads || false
+      });
+      console.log('[Consent] Google Analytics 配置完成');
+    } catch (error) {
+      console.error('[Consent] Google Analytics 配置失敗:', error);
+    }
   },
   
   // 隱藏同意橫幅
