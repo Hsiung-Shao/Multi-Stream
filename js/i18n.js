@@ -314,6 +314,9 @@ const i18n = {
       'feature7': 'Youtube 頻道開台狀態檢測',
       'getStarted': '開始使用',
       'initialContentNote': '在控制面板中貼上 Twitch 或 YouTube 直播網址，即可開始觀看多個直播串流',
+      'supportTitle': '支持開發',
+      'supportDescription': '如果這個工具對你有幫助，歡迎請我喝杯咖啡！',
+      'buyMeACoffee': 'Buy Me A Coffee',
       
       // 版本紀錄
       'version': '版本',
@@ -850,6 +853,9 @@ const i18n = {
       'feature7': 'Youtube 频道开台状态检测',
       'getStarted': '开始使用',
       'initialContentNote': '在控制面板中贴上 Twitch 或 YouTube 直播网址，即可开始观看多个直播串流',
+      'supportTitle': '支持开发',
+      'supportDescription': '如果这个工具对你有帮助，欢迎请我喝杯咖啡！',
+      'buyMeACoffee': 'Buy Me A Coffee',
       
       // 版本紀錄
       'version': '版本',
@@ -1383,6 +1389,9 @@ const i18n = {
       'feature7': 'YouTube channel live status detection',
       'getStarted': 'Get Started',
       'initialContentNote': 'Paste a Twitch or YouTube live stream URL in the control panel to start watching multiple streams',
+      'supportTitle': 'Support Development',
+      'supportDescription': 'If this tool helps you, feel free to buy me a coffee!',
+      'buyMeACoffee': 'Buy Me A Coffee',
       
       // Version History
       'version': 'Version',
@@ -1918,6 +1927,9 @@ const i18n = {
       'feature7': 'Youtube チャンネルライブステータス検出',
       'getStarted': '始める',
       'initialContentNote': 'コントロールパネルに Twitch または YouTube ライブストリーム URL を貼り付けて、複数のストリームの視聴を開始できます',
+      'supportTitle': '開発をサポート',
+      'supportDescription': 'このツールが役に立ったら、コーヒーをおごってください！',
+      'buyMeACoffee': 'Buy Me A Coffee',
       
       // バージョン履歴
       'version': 'バージョン',
@@ -2523,6 +2535,9 @@ const i18n = {
     'feature7': 'Youtube 채널 라이브 상태 감지',
     'getStarted': '시작하기',
     'initialContentNote': '제어판에 Twitch 또는 YouTube 라이브 스트림 URL을 붙여넣어 여러 스트림 시청을 시작할 수 있습니다',
+    'supportTitle': '개발 지원',
+    'supportDescription': '이 도구가 도움이 되었다면, 커피 한 잔 사주세요!',
+    'buyMeACoffee': 'Buy Me A Coffee',
     
     // 版本歷史
     'version': '버전',
