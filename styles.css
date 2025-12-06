@@ -1568,6 +1568,61 @@ button.active {
   transition: color 0.3s ease;
 }
 
+.initial-content-support {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(145, 71, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(145, 71, 255, 0.2);
+  text-align: center;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+[data-theme="light"] .initial-content-support {
+  background: rgba(145, 71, 255, 0.08);
+  border-color: rgba(145, 71, 255, 0.3);
+}
+
+.initial-content-support-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--text-accent);
+  margin: 0 0 8px 0;
+  transition: color 0.3s ease;
+}
+
+.initial-content-support-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+  transition: color 0.3s ease;
+}
+
+.initial-content-support-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #FFDD00 0%, #FF6B6B 100%);
+  color: #000;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(255, 221, 0, 0.3);
+}
+
+.initial-content-support-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 221, 0, 0.4);
+}
+
+.initial-content-support-button span:first-child {
+  font-size: 20px;
+}
+
 /* 當有串流時隱藏初始內容 */
 #container:has(.stream-box) .initial-content {
   opacity: 0;
@@ -1624,6 +1679,27 @@ button.active {
   .initial-content-link {
     font-size: 14px;
     padding: 6px 12px;
+  }
+  
+  .initial-content-support {
+    padding: 16px;
+  }
+  
+  .initial-content-support-title {
+    font-size: 16px;
+  }
+  
+  .initial-content-support-description {
+    font-size: 13px;
+  }
+  
+  .initial-content-support-button {
+    font-size: 14px;
+    padding: 10px 20px;
+  }
+  
+  .initial-content-support-button span:first-child {
+    font-size: 18px;
   }
 }
 
