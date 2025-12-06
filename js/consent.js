@@ -17,7 +17,7 @@ const consentManager = {
     ads: null
   },
   
-  // 檢測用戶地理位置
+  // 檢測用戶地理位置（改進版）
   detectUserCountry: function() {
     return new Promise((resolve) => {
       // 嘗試從 localStorage 讀取緩存的地理位置
@@ -32,33 +32,97 @@ const consentManager = {
       }
       
       // 使用免費的 IP 地理位置 API
-      fetch('https://ipapi.co/json/')
-        .then(response => response.json())
-        .then(data => {
-          const countryCode = data.country_code || null;
-          // 緩存結果
-          if (countryCode) {
-            localStorage.setItem('user_country', countryCode);
-            localStorage.setItem('user_country_timestamp', Date.now().toString());
+      // 添加超時處理（5秒超時）
+      let timeoutId;
+      let isResolved = false;
+      
+      const handleError = (error) => {
+        if (isResolved) return;
+        clearTimeout(timeoutId);
+        // 如果檢測失敗，嘗試使用過期的緩存
+        const expiredCache = localStorage.getItem('user_country');
+        if (expiredCache) {
+          isResolved = true;
+          resolve(expiredCache);
+        } else {
+          // 沒有緩存，使用瀏覽器語言作為提示
+          const browserLang = navigator.language || navigator.userLanguage || '';
+          const langCountry = browserLang.split('-')[1]?.toUpperCase();
+          // 如果瀏覽器語言對應的國家在 GDPR 列表中，返回該國家代碼
+          if (langCountry && GDPR_COUNTRIES.includes(langCountry)) {
+            isResolved = true;
+            resolve(langCountry);
+          } else {
+            // 保守處理：返回 null（視為可能需要同意，顯示同意橫幅）
+            isResolved = true;
+            resolve(null);
           }
-          resolve(countryCode);
+        }
+      };
+      
+      // 設置超時
+      timeoutId = setTimeout(() => {
+        if (!isResolved) {
+          handleError(new Error('地區偵測超時'));
+        }
+      }, 5000);
+      
+      // 發起請求
+      fetch('https://ipapi.co/json/', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (isResolved) return;
+          clearTimeout(timeoutId);
+          // 更嚴格的驗證
+          if (data && typeof data === 'object' && data.country_code) {
+            const countryCode = data.country_code.toUpperCase();
+            // 驗證國家代碼格式（2個大寫字母）
+            if (/^[A-Z]{2}$/.test(countryCode)) {
+              // 緩存結果
+              localStorage.setItem('user_country', countryCode);
+              localStorage.setItem('user_country_timestamp', Date.now().toString());
+              isResolved = true;
+              resolve(countryCode);
+            } else {
+              throw new Error('Invalid country code format');
+            }
+          } else {
+            throw new Error('Invalid API response format');
+          }
         })
         .catch(error => {
-          // 如果檢測失敗，返回 null（將被視為非 GDPR 國家，默認同意）
-          resolve(null);
+          if (!isResolved) {
+            handleError(error);
+          }
         });
     });
   },
   
-  // 檢查是否需要顯示同意視窗
+  // 檢查是否需要顯示同意視窗（改進版）
   shouldShowConsentBanner: async function() {
-    const countryCode = await this.detectUserCountry();
-    // 如果無法檢測到國家，默認同意（不顯示視窗）
-    if (!countryCode) {
-      return false;
+    try {
+      const countryCode = await this.detectUserCountry();
+      // 如果無法檢測到國家，保守處理：顯示同意橫幅
+      if (!countryCode) {
+        // 改為返回 true，確保用戶有機會選擇
+        return true; // 保守處理：無法確定時顯示橫幅
+      }
+      // 只有在 GDPR_COUNTRIES 列表中的國家才需要顯示同意視窗
+      return GDPR_COUNTRIES.includes(countryCode);
+    } catch (error) {
+      // 錯誤時保守處理：顯示同意橫幅
+      return true;
     }
-    // 只有在 GDPR_COUNTRIES 列表中的國家才需要顯示同意視窗
-    return GDPR_COUNTRIES.includes(countryCode);
   },
   
   // 初始化
@@ -66,6 +130,7 @@ const consentManager = {
     // 從 localStorage 讀取之前的同意狀態
     const savedConsent = this.getSavedConsent();
     if (savedConsent) {
+      // 如果已有保存的同意狀態，直接應用（不顯示橫幅）
       this.consent = savedConsent;
       this.applyConsent();
     } else {
@@ -195,9 +260,9 @@ const consentManager = {
     }
   },
   
-  // 設置 Consent Mode v2
+  // 設置 Consent Mode v2（改進版）
   setConsentMode: function() {
-    // 初始化 dataLayer
+    // 確保 dataLayer 已初始化
     window.dataLayer = window.dataLayer || [];
     
     // 設置 Consent Mode v2 參數
@@ -211,15 +276,19 @@ const consentManager = {
       'security_storage': 'granted'  // 安全性始終允許
     };
     
-    // 如果 gtag 已載入，直接設置
+    // 先推送默認值到 dataLayer（確保在 gtag 載入前設置）
+    window.dataLayer.push({
+      'event': 'consent',
+      'consent': consentParams
+    });
+    
+    // 如果 gtag 已載入，也調用 gtag consent update
     if (typeof gtag !== 'undefined') {
-      gtag('consent', 'update', consentParams);
-    } else {
-      // 如果 gtag 尚未載入，先設置默認值
-      window.dataLayer.push({
-        'event': 'consent',
-        'consent': consentParams
-      });
+      try {
+        gtag('consent', 'update', consentParams);
+      } catch (error) {
+        // 靜默處理錯誤
+      }
     }
   },
   
@@ -230,10 +299,18 @@ const consentManager = {
       return;
     }
     
+    const GA_ID = 'G-6M97WLJG2Z';
+    
     // 載入 gtag.js
     const script = document.createElement('script');
     script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtag/js?id=G-0DX8PWTS4X';
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+    
+    // 添加錯誤處理（靜默處理）
+    script.onerror = function() {
+      // 靜默處理錯誤
+    };
+    
     document.head.appendChild(script);
     
     // 初始化 gtag
@@ -246,11 +323,15 @@ const consentManager = {
     this.setConsentMode();
     
     // 配置 Google Analytics
-    gtag('config', 'G-0DX8PWTS4X', {
-      'anonymize_ip': true,  // IP 匿名化
-      'allow_google_signals': this.consent.ads || false,  // 僅在同意廣告時啟用
-      'allow_ad_personalization_signals': this.consent.ads || false
-    });
+    try {
+      gtag('config', GA_ID, {
+        'anonymize_ip': true,  // IP 匿名化
+        'allow_google_signals': this.consent.ads || false,  // 僅在同意廣告時啟用
+        'allow_ad_personalization_signals': this.consent.ads || false
+      });
+    } catch (error) {
+      // 靜默處理錯誤
+    }
   },
   
   // 隱藏同意橫幅
@@ -282,7 +363,8 @@ const consentManager = {
       return this.consent.ads === true;
     }
     return false;
-  }
+  },
+  
 };
 
 // 初始化
