@@ -20,6 +20,17 @@ const consentManager = {
   // 檢測用戶地理位置（改進版）
   detectUserCountry: function() {
     return new Promise((resolve) => {
+      // 檢查是否為測試模式（測試模式下直接使用設置的國家代碼，不檢查過期）
+      const testMode = localStorage.getItem('test_country_mode');
+      if (testMode === 'true') {
+        const testCountry = localStorage.getItem('user_country');
+        if (testCountry) {
+          console.log(`[測試模式] 使用測試國家: ${testCountry}`);
+          resolve(testCountry);
+          return;
+        }
+      }
+      
       // 嘗試從 localStorage 讀取緩存的地理位置
       const cachedCountry = localStorage.getItem('user_country');
       const cacheTimestamp = localStorage.getItem('user_country_timestamp');
@@ -352,6 +363,55 @@ const consentManager = {
       return this.consent.ads === true;
     }
     return false;
+  },
+  
+  // 測試模式：手動設置國家代碼（僅用於開發測試）
+  // 使用方法：在控制台執行 consentManager.setTestCountry('DE') 或 consentManager.setTestCountry('US')
+  setTestCountry: function(countryCode) {
+    if (!countryCode || typeof countryCode !== 'string') {
+      console.error('請提供有效的國家代碼（例如：DE, US, TW, JP）');
+      return;
+    }
+    const upperCode = countryCode.toUpperCase();
+    if (!/^[A-Z]{2}$/.test(upperCode)) {
+      console.error('國家代碼格式錯誤，應為 2 個大寫字母（例如：DE, US）');
+      return;
+    }
+    // 設置測試國家代碼
+    localStorage.setItem('user_country', upperCode);
+    localStorage.setItem('user_country_timestamp', Date.now().toString());
+    localStorage.setItem('test_country_mode', 'true'); // 標記為測試模式
+    console.log(`✓ 已設置測試國家: ${upperCode}`);
+    console.log(`  GDPR 國家: ${GDPR_COUNTRIES.includes(upperCode) ? '是' : '否'}`);
+    console.log(`  需要顯示同意橫幅: ${GDPR_COUNTRIES.includes(upperCode) ? '是' : '否'}`);
+    console.log('  提示：重新載入頁面以查看效果');
+  },
+  
+  // 清除測試模式
+  clearTestCountry: function() {
+    localStorage.removeItem('user_country');
+    localStorage.removeItem('user_country_timestamp');
+    localStorage.removeItem('test_country_mode');
+    console.log('✓ 已清除測試國家設置');
+    console.log('  提示：重新載入頁面以使用真實 IP 偵測');
+  },
+  
+  // 獲取當前測試狀態
+  getTestStatus: function() {
+    const testMode = localStorage.getItem('test_country_mode');
+    const country = localStorage.getItem('user_country');
+    const timestamp = localStorage.getItem('user_country_timestamp');
+    if (testMode && country) {
+      const age = timestamp ? Math.floor((Date.now() - parseInt(timestamp)) / 1000 / 60) : '未知';
+      return {
+        isTestMode: true,
+        country: country,
+        age: `${age} 分鐘前`,
+        isGDPR: GDPR_COUNTRIES.includes(country),
+        shouldShowBanner: GDPR_COUNTRIES.includes(country)
+      };
+    }
+    return { isTestMode: false };
   }
 };
 
