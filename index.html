@@ -201,10 +201,25 @@ body {
 <link rel="preload" href="js/theme.js" as="script" fetchpriority="high">
 <link rel="preload" href="js/main.js" as="script" fetchpriority="high">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
-<!-- Google Analytics 將由 consent.js 根據用戶同意狀態載入 -->
-<!-- 初始化 dataLayer 用於 Consent Mode v2 -->
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  
+  // 設置默認 Consent Mode（將由 consent.js 根據用戶選擇更新）
+  gtag('consent', 'default', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied',
+    'functionality_storage': 'granted',
+    'personalization_storage': 'granted',
+    'security_storage': 'granted'
+  });
+  
+  gtag('config', 'G-Q2LXVMDD46');
 </script>
 <!-- Content Security Policy -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">

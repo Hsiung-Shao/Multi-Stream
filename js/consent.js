@@ -1,6 +1,9 @@
 // Cookie 同意管理系統
 // 支援 Consent Mode v2 和 GDPR/CCPA 合規
 
+// Consent 系統版本號 - 當此版本號改變時，所有用戶的同意狀態將被清除，需要重新選擇
+const CONSENT_VERSION = '2.0.0';
+
 // 只需要對這幾個國家/地區跳明確同意彈窗（2025年底實務標準）
 const GDPR_COUNTRIES = [
   'AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT',
@@ -149,8 +152,27 @@ const consentManager = {
     }
   },
   
+  // 檢查版本並清除舊的同意狀態
+  checkVersionAndClear: function() {
+    const savedVersion = localStorage.getItem('consent_version');
+    if (savedVersion !== CONSENT_VERSION) {
+      // 版本不匹配，清除所有舊的同意狀態
+      localStorage.removeItem('consent_preferences');
+      localStorage.removeItem('consent_timestamp');
+      localStorage.setItem('consent_version', CONSENT_VERSION);
+      return true; // 返回 true 表示已清除
+    }
+    return false; // 返回 false 表示版本匹配
+  },
+  
   // 獲取保存的同意狀態
   getSavedConsent: function() {
+    // 先檢查版本，如果版本不匹配則清除舊狀態
+    const wasCleared = this.checkVersionAndClear();
+    if (wasCleared) {
+      return null; // 版本不匹配，返回 null 強制重新選擇
+    }
+    
     try {
       const saved = localStorage.getItem('consent_preferences');
       if (saved) {
@@ -167,6 +189,7 @@ const consentManager = {
     try {
       localStorage.setItem('consent_preferences', JSON.stringify(this.consent));
       localStorage.setItem('consent_timestamp', new Date().toISOString());
+      localStorage.setItem('consent_version', CONSENT_VERSION); // 保存當前版本號
     } catch (e) {
       // 靜默處理錯誤
     }
@@ -249,10 +272,8 @@ const consentManager = {
     // 設置 Consent Mode v2
     this.setConsentMode();
     
-    // 根據同意狀態載入服務
-    if (this.consent.analytics) {
-      this.loadGoogleAnalytics();
-    }
+    // Google Analytics 現在直接在 HTML 中載入
+    // 只需要更新 Consent Mode 即可
     
     if (this.consent.ads) {
       // AdSense 將由 promotion.js 處理
@@ -292,47 +313,6 @@ const consentManager = {
     }
   },
   
-  // 載入 Google Analytics
-  loadGoogleAnalytics: function() {
-    // 檢查是否已經載入
-    if (document.querySelector('script[src*="googletagmanager.com/gtag/js"]')) {
-      return;
-    }
-    
-    const GA_ID = 'G-6M97WLJG2Z';
-    
-    // 載入 gtag.js
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-    
-    // 添加錯誤處理（靜默處理）
-    script.onerror = function() {
-      // 靜默處理錯誤
-    };
-    
-    document.head.appendChild(script);
-    
-    // 初始化 gtag
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    window.gtag = gtag;
-    gtag('js', new Date());
-    
-    // 設置 Consent Mode
-    this.setConsentMode();
-    
-    // 配置 Google Analytics
-    try {
-      gtag('config', GA_ID, {
-        'anonymize_ip': true,  // IP 匿名化
-        'allow_google_signals': this.consent.ads || false,  // 僅在同意廣告時啟用
-        'allow_ad_personalization_signals': this.consent.ads || false
-      });
-    } catch (error) {
-      // 靜默處理錯誤
-    }
-  },
   
   // 隱藏同意橫幅
   hideConsentBanner: function() {
