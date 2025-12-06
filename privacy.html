@@ -55,8 +55,7 @@
   <link rel="icon" type="image/png" href="/icon.png">
   <link rel="shortcut icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46"></script>
+  <!-- Google tag (gtag.js) - 優先使用 Cloudflare Tag Gateway -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
@@ -74,6 +73,27 @@
     });
     
     gtag('config', 'G-Q2LXVMDD46');
+    
+    // 如果 Cloudflare Tag Gateway 未自動注入腳本，則回退到第三方載入
+    // 檢查是否已有 gtag 腳本（Cloudflare 注入的）
+    setTimeout(function() {
+      // 檢查是否有從第一方域名載入的 gtag 腳本（Cloudflare Tag Gateway）
+      const firstPartyGtag = document.querySelector('script[src*="/gtag/"]');
+      // 檢查是否有從第三方域名載入的 gtag 腳本
+      const thirdPartyGtag = document.querySelector('script[src*="googletagmanager.com/gtag"]');
+      
+      // 如果沒有第一方或第三方 gtag 腳本，且 gtag 函數已定義，則使用回退方案
+      if (!firstPartyGtag && !thirdPartyGtag && typeof gtag === 'function') {
+        // Cloudflare 未注入，使用第三方載入（回退方案）
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46';
+        script.onerror = function() {
+          console.warn('Google Analytics 載入失敗');
+        };
+        document.head.appendChild(script);
+      }
+    }, 1000);
   </script>
   <link rel="stylesheet" href="styles.css">
   <style>
