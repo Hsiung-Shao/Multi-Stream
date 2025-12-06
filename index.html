@@ -70,16 +70,13 @@
 <meta name="color-scheme" content="dark">
 <meta name="supported-color-schemes" content="dark">
 
-<!-- 圖標資源 - 優先載入 -->
-<link rel="icon" type="image/png" href="icon.png" fetchpriority="high" width="32" height="32">
-<link rel="shortcut icon" type="image/png" href="icon.png" width="32" height="32">
-<link rel="apple-touch-icon" href="icon.png" width="180" height="180">
+<link rel="icon" type="image/png" href="icon.png" fetchpriority="high">
+<link rel="shortcut icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
 <!-- DNS 預解析和預連接：加速外部資源載入 -->
 <link rel="dns-prefetch" href="https://www.youtube.com">
 <link rel="dns-prefetch" href="https://player.twitch.tv">
 <link rel="dns-prefetch" href="https://api.twitch.tv">
-<link rel="dns-prefetch" href="https://www.googletagmanager.com">
-<link rel="dns-prefetch" href="https://www.google-analytics.com">
 <link rel="preconnect" href="https://www.youtube.com" crossorigin>
 <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
 <link rel="preconnect" href="https://api.twitch.tv" crossorigin>
@@ -192,124 +189,93 @@ body {
   .initial-content-description { font-size: 16px; }
 }
 </style>
-<!-- 非關鍵 CSS - 異步載入，避免阻塞渲染 -->
-<link rel="preload" href="styles.css" as="style" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet';this.media='all'" onerror="this.onerror=null;this.rel='stylesheet';this.media='all'">
+<!-- 非關鍵 CSS - 異步載入 -->
+<link rel="preload" href="styles.css" as="style" fetchpriority="low" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="styles.css"></noscript>
-<script>
-  // 備用樣式載入器：確保 CSS 在 preload 失敗時仍能載入
-  (function() {
-    setTimeout(function() {
-      if (!document.querySelector('link[href="styles.css"][rel="stylesheet"]')) {
-        var link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'styles.css';
-        link.media = 'all';
-        document.head.appendChild(link);
-      }
-    }, 100);
-  })();
-</script>
-<!-- 預載入關鍵 JavaScript - 按依賴順序和優先級 -->
-<link rel="preload" href="js/utils.js" as="script" fetchpriority="high" crossorigin="anonymous">
-<link rel="preload" href="js/security.js" as="script" fetchpriority="high" crossorigin="anonymous">
-<link rel="preload" href="js/i18n.js" as="script" fetchpriority="high" crossorigin="anonymous">
-<link rel="preload" href="js/theme.js" as="script" fetchpriority="high" crossorigin="anonymous">
-<link rel="preload" href="js/main.js" as="script" fetchpriority="high" crossorigin="anonymous">
+<!-- 預載入關鍵 JavaScript - 添加優先級 -->
+<link rel="preload" href="js/utils.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/security.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/i18n.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/theme.js" as="script" fetchpriority="high">
+<link rel="preload" href="js/main.js" as="script" fetchpriority="high">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
-<!-- Google tag (gtag.js) - 優先使用 Cloudflare Tag Gateway，延遲載入以提升性能 -->
+<!-- Google tag (gtag.js) - 優先使用 Cloudflare Tag Gateway -->
 <script>
-  // 使用 requestIdleCallback 或延遲載入，避免阻塞頁面渲染
-  function initGoogleAnalytics() {
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    
-    // 設置默認 Consent Mode（將由 consent.js 根據用戶選擇更新）
-    gtag('consent', 'default', {
-      'ad_storage': 'denied',
-      'ad_user_data': 'denied',
-      'ad_personalization': 'denied',
-      'analytics_storage': 'denied',
-      'functionality_storage': 'granted',
-      'personalization_storage': 'granted',
-      'security_storage': 'granted'
-    });
-    
-    gtag('config', 'G-Q2LXVMDD46');
-    
-    // 如果 Cloudflare Tag Gateway 未自動注入腳本，則回退到第三方載入
-    // 改進的檢查邏輯：延長等待時間並改進檢測方式
-    let cloudflareGatewayDetected = false;
-    
-    // 多次檢查 Cloudflare Tag Gateway（因為它可能需要一些時間才能注入）
-    const checkCloudflareGateway = function(attempt) {
-      const maxAttempts = 5; // 最多檢查5次（總共約5秒）
-      
-      // 檢查是否有從第一方域名載入的 gtag 腳本（Cloudflare Tag Gateway）
-      const currentDomain = window.location.hostname;
-      const firstPartyGtag = document.querySelector('script[src*="' + currentDomain + '/gtag"]') ||
-                             document.querySelector('script[src*="/gtag/js"]') ||
-                             document.querySelector('script[src*="/gtag/"]');
-      
-      // 檢查是否有 Cloudflare Zaraz 注入的腳本
-      const zarazScript = document.querySelector('script[src*="zaraz"]');
-      
-      // 檢查 window.zaraz 是否存在（Cloudflare Zaraz 的標誌）
-      const hasZaraz = typeof window.zaraz !== 'undefined';
-      
-      // 檢查是否有從第三方域名載入的 gtag 腳本（已回退）
-      const thirdPartyGtag = document.querySelector('script[src*="googletagmanager.com/gtag"]');
-      
-      if (firstPartyGtag || hasZaraz || zarazScript) {
-        // 檢測到 Cloudflare Tag Gateway
-        cloudflareGatewayDetected = true;
-        return;
-      }
-      
-      if (thirdPartyGtag) {
-        // 已經有第三方腳本，不需要回退
-        return;
-      }
-      
-      // 如果檢查次數未達到上限，繼續檢查
-      if (attempt < maxAttempts) {
-        setTimeout(function() {
-          checkCloudflareGateway(attempt + 1);
-        }, 1000);
-      } else {
-        // 所有檢查都完成，如果仍未檢測到 Cloudflare，則使用回退方案
-        if (!cloudflareGatewayDetected && !thirdPartyGtag && typeof gtag === 'function') {
-          // Cloudflare 未注入，使用第三方載入（回退方案）
-          const script = document.createElement('script');
-          script.async = true;
-          script.src = 'https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46';
-          script.onerror = function() {
-            console.warn('Google Analytics 載入失敗');
-          };
-          document.head.appendChild(script);
-        }
-      }
-    };
-    
-    // 開始檢查（延遲500ms開始，給 Cloudflare 一些時間注入）
-    setTimeout(function() {
-      checkCloudflareGateway(1);
-    }, 500);
-  }
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
   
-  // 使用 requestIdleCallback 或延遲載入，優先保證頁面內容渲染
-  if (window.requestIdleCallback) {
-    window.requestIdleCallback(initGoogleAnalytics, { timeout: 2000 });
-  } else {
-    // 回退方案：在頁面載入完成後延遲載入
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(initGoogleAnalytics, 100);
-      });
-    } else {
-      setTimeout(initGoogleAnalytics, 100);
+  // 設置默認 Consent Mode（將由 consent.js 根據用戶選擇更新）
+  gtag('consent', 'default', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied',
+    'functionality_storage': 'granted',
+    'personalization_storage': 'granted',
+    'security_storage': 'granted'
+  });
+  
+  gtag('config', 'G-Q2LXVMDD46');
+  
+  // 如果 Cloudflare Tag Gateway 未自動注入腳本，則回退到第三方載入
+  // 改進的檢查邏輯：延長等待時間並改進檢測方式
+  let cloudflareGatewayDetected = false;
+  
+  // 多次檢查 Cloudflare Tag Gateway（因為它可能需要一些時間才能注入）
+  const checkCloudflareGateway = function(attempt) {
+    const maxAttempts = 5; // 最多檢查5次（總共約5秒）
+    
+    // 檢查是否有從第一方域名載入的 gtag 腳本（Cloudflare Tag Gateway）
+    const currentDomain = window.location.hostname;
+    const firstPartyGtag = document.querySelector('script[src*="' + currentDomain + '/gtag"]') ||
+                           document.querySelector('script[src*="/gtag/js"]') ||
+                           document.querySelector('script[src*="/gtag/"]');
+    
+    // 檢查是否有 Cloudflare Zaraz 注入的腳本
+    const zarazScript = document.querySelector('script[src*="zaraz"]');
+    
+    // 檢查 window.zaraz 是否存在（Cloudflare Zaraz 的標誌）
+    const hasZaraz = typeof window.zaraz !== 'undefined';
+    
+    // 檢查是否有從第三方域名載入的 gtag 腳本（已回退）
+    const thirdPartyGtag = document.querySelector('script[src*="googletagmanager.com/gtag"]');
+    
+    if (firstPartyGtag || hasZaraz || zarazScript) {
+      // 檢測到 Cloudflare Tag Gateway
+      cloudflareGatewayDetected = true;
+      return;
     }
-  }
+    
+    if (thirdPartyGtag) {
+      // 已經有第三方腳本，不需要回退
+      return;
+    }
+    
+    // 如果檢查次數未達到上限，繼續檢查
+    if (attempt < maxAttempts) {
+      setTimeout(function() {
+        checkCloudflareGateway(attempt + 1);
+      }, 1000);
+    } else {
+      // 所有檢查都完成，如果仍未檢測到 Cloudflare，則使用回退方案
+      if (!cloudflareGatewayDetected && !thirdPartyGtag && typeof gtag === 'function') {
+        // Cloudflare 未注入，使用第三方載入（回退方案）
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46';
+        script.onerror = function() {
+          console.warn('Google Analytics 載入失敗');
+        };
+        document.head.appendChild(script);
+      }
+    }
+  };
+  
+  // 開始檢查（延遲500ms開始，給 Cloudflare 一些時間注入）
+  setTimeout(function() {
+    checkCloudflareGateway(1);
+  }, 500);
 </script>
 <!-- Content Security Policy -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.doubleclick.net https://stats.g.doubleclick.net https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
@@ -574,7 +540,6 @@ body {
       youtubeScript.async = true;
       youtubeScript.defer = false; // 不使用 defer，確保立即載入
       youtubeScript.src = 'https://www.youtube.com/iframe_api';
-      youtubeScript.crossOrigin = 'anonymous';
       youtubeScript.onerror = function() {
         console.warn('無法載入 YouTube iframe API，請檢查網路連線');
         // 嘗試重新載入
@@ -583,7 +548,6 @@ body {
             const retryScript = document.createElement('script');
             retryScript.async = true;
             retryScript.src = 'https://www.youtube.com/iframe_api';
-            retryScript.crossOrigin = 'anonymous';
             document.head.appendChild(retryScript);
           }
         }, 2000);
@@ -597,7 +561,6 @@ body {
       twitchScript.async = true;
       twitchScript.defer = false; // 不使用 defer，確保立即載入
       twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
-      twitchScript.crossOrigin = 'anonymous';
       twitchScript.onerror = function() {
         console.warn('無法載入 Twitch embed API，請檢查網路連線');
         // 嘗試重新載入
@@ -606,7 +569,6 @@ body {
             const retryScript = document.createElement('script');
             retryScript.async = true;
             retryScript.src = 'https://player.twitch.tv/js/embed/v1.js';
-            retryScript.crossOrigin = 'anonymous';
             document.head.appendChild(retryScript);
           }
         }, 2000);
@@ -619,14 +581,16 @@ body {
   if (window.requestIdleCallback) {
     window.requestIdleCallback(loadExternalAPIs, { timeout: 1000 });
   } else {
-    // 使用 DOMContentLoaded 而不是 load，更快觸發
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(loadExternalAPIs, 100);
-      });
-    } else {
+    window.addEventListener('load', function() {
       setTimeout(loadExternalAPIs, 100);
-    }
+    });
+  }
+  
+  // 也立即嘗試載入（不等待頁面完全載入）
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadExternalAPIs);
+  } else {
+    loadExternalAPIs();
   }
 </script>
 
@@ -710,24 +674,24 @@ body {
   })();
 </script>
 <!-- 關鍵 JavaScript - 使用 defer 以不阻塞渲染 -->
-<script defer src="js/utils.js" crossorigin="anonymous"></script>
-<script defer src="js/security.js" crossorigin="anonymous"></script>
-<script defer src="js/i18n.js" crossorigin="anonymous"></script>
-<script defer src="js/theme.js" crossorigin="anonymous"></script>
-<script defer src="js/consent.js" crossorigin="anonymous"></script>
-<script defer src="js/main.js" crossorigin="anonymous"></script>
+<script defer src="js/utils.js"></script>
+<script defer src="js/security.js"></script>
+<script defer src="js/i18n.js"></script>
+<script defer src="js/theme.js"></script>
+<script defer src="js/consent.js"></script>
+<script defer src="js/main.js"></script>
 
 <!-- 非關鍵文件：使用 defer 延遲載入，不阻塞頁面渲染 -->
-<script defer src="js/zoom-handler.js" crossorigin="anonymous"></script>
-<script defer src="js/twitch-api.js" crossorigin="anonymous"></script>
-<script defer src="js/stream.js" crossorigin="anonymous"></script>
-<script defer src="js/chat.js" crossorigin="anonymous"></script>
-<script defer src="js/volume.js" crossorigin="anonymous"></script>
-<script defer src="js/drag-resize.js" crossorigin="anonymous"></script>
-<script defer src="js/layout.js" crossorigin="anonymous"></script>
-<script defer src="js/control-panel.js" crossorigin="anonymous"></script>
-<script defer src="js/settings.js" crossorigin="anonymous"></script>
-<script defer src="js/promotion.js" crossorigin="anonymous"></script>
+<script defer src="js/zoom-handler.js"></script>
+<script defer src="js/twitch-api.js"></script>
+<script defer src="js/stream.js"></script>
+<script defer src="js/chat.js"></script>
+<script defer src="js/volume.js"></script>
+<script defer src="js/drag-resize.js"></script>
+<script defer src="js/layout.js"></script>
+<script defer src="js/control-panel.js"></script>
+<script defer src="js/settings.js"></script>
+<script defer src="js/promotion.js"></script>
 
 <!-- 關鍵結構化數據 (JSON-LD) - 保留在 head 中以便 SEO -->
 <script type="application/ld+json">
@@ -757,8 +721,8 @@ body {
 
 <!-- 非關鍵結構化數據 (JSON-LD) - 延遲載入以減少主執行緒工作 -->
 <script>
-  // 使用 requestIdleCallback 延遲載入非關鍵結構化數據
-  function loadStructuredData() {
+  // 在頁面載入完成後再載入非關鍵結構化數據
+  window.addEventListener('load', function() {
     // BreadcrumbList Structured Data
     const breadcrumbScript = document.createElement('script');
     breadcrumbScript.type = 'application/ld+json';
@@ -891,21 +855,7 @@ body {
       ]
     });
     document.head.appendChild(faqScript);
-  }
-  
-  // 使用 requestIdleCallback 或延遲載入
-  if (window.requestIdleCallback) {
-    window.requestIdleCallback(loadStructuredData, { timeout: 3000 });
-  } else {
-    // 回退方案：在頁面載入完成後延遲載入
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(loadStructuredData, 500);
-      });
-    } else {
-      setTimeout(loadStructuredData, 500);
-    }
-  }
+  });
 </script>
 
 <!-- AdSense 廣告載入改為在 js/promotion.js 中動態處理 -->
