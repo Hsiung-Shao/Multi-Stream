@@ -47,7 +47,6 @@ const themeManager = {
   // 設置主題
   setTheme(theme) {
     if (theme !== 'dark' && theme !== 'light') {
-      console.warn('Invalid theme:', theme);
       return;
     }
     this.currentTheme = theme;

@@ -25,8 +25,6 @@ const MAX_REDIRECTS = 5; // 設定最大重定向次數，防止無限循環
  * @returns {Promise<{status: string, videoId: (string|null), finalUrl: string, message?: string}>}
  */
 async function checkYouTubeChannelLiveFromHTML(channelId, html) {
-  console.log('[YouTube Channel Live Proxy] 📄 開始解析 HTML 內容查找直播狀態...');
-  
   // 情況1：正在直播（包含一般直播、會員限定、不公開直播、Premiere 進行中）
   // 使用用戶提供的方法：檢查多種直播狀態標記
   const isLive = html.includes('"isLive":true') || 
@@ -39,10 +37,6 @@ async function checkYouTubeChannelLiveFromHTML(channelId, html) {
     const vidMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
     const liveVideoId = vidMatch ? vidMatch[1] : null;
     
-    console.log('[YouTube Channel Live Proxy] ✅ 頻道正在開台（HTML 解析）');
-    console.log(`[YouTube Channel Live Proxy]    頻道 ID: ${channelId}`);
-    console.log(`[YouTube Channel Live Proxy]    視頻 ID: ${liveVideoId || '(未找到)'}`);
-    
     return {
       status: 'LIVE',
       videoId: liveVideoId,
@@ -54,7 +48,6 @@ async function checkYouTubeChannelLiveFromHTML(channelId, html) {
   
   // 情況2：即將首播但還沒開始（可選是否視為開台）
   if (html.includes('"isUpcoming":true')) {
-    console.log('[YouTube Channel Live Proxy] ⏳ 即將首播但還沒開始');
     return {
       status: 'UPCOMING',
       videoId: null,
@@ -65,7 +58,6 @@ async function checkYouTubeChannelLiveFromHTML(channelId, html) {
   }
   
   // 情況3：完全沒直播
-  console.log('[YouTube Channel Live Proxy] ❌ 頻道未開台（HTML 解析）');
   return {
     status: 'OFFLINE',
     videoId: null,
@@ -87,8 +79,6 @@ async function checkYouTubeChannelLiveFromHTML(channelId, html) {
  */
 async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain = []) {
   if (redirects >= MAX_REDIRECTS) {
-    console.warn(`[YouTube Channel Live Proxy] ⚠️  達到最大重定向次數 (${MAX_REDIRECTS})`);
-    console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
     return { 
       status: 'ERROR', 
       videoId: null, 
@@ -133,12 +123,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
     
     redirectChain.push(stepInfo);
 
-    console.log(`[YouTube Channel Live Proxy] ===== 遞迴請求 步驟 ${redirects + 1} =====`);
-    console.log(`[YouTube Channel Live Proxy] 請求 URL: ${url}`);
-    console.log(`[YouTube Channel Live Proxy] 響應狀態: ${status}`);
-    console.log(`[YouTube Channel Live Proxy] Response URL: ${finalUrl}`);
-    console.log(`[YouTube Channel Live Proxy] Location Header: ${locationHeader || '(無)'}`);
-    console.log(`[YouTube Channel Live Proxy] =========================================`);
 
     if (status >= 300 && status < 400) {
       // 狀態碼是 3XX (重定向)
@@ -151,23 +135,12 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
         // 更新重定向鏈中的目標 URL
         stepInfo.redirectTo = newUrl;
         
-        console.log(`[YouTube Channel Live Proxy] ⬇️  重定向 ${redirects + 1}:`);
-        console.log(`[YouTube Channel Live Proxy]    從: ${url}`);
-        console.log(`[YouTube Channel Live Proxy]    到: ${newUrl}`);
-        
         // 🚨 核心判斷邏輯：如果新的 URL 包含 'watch?v='，我們已經找到目標，立即返回
         if (newUrl.includes("watch?v=")) {
           // 使用簡單的字符串切割方式提取 video ID
           const parts = newUrl.split('v=');
           const videoId = parts.length > 1 ? parts[1].split('&')[0] : null;
 
-          console.log('[YouTube Channel Live Proxy] ✅ 在重定向中發現直播 URL!');
-          console.log(`[YouTube Channel Live Proxy]    頻道 ID: ${channelId}`);
-          console.log(`[YouTube Channel Live Proxy]    視頻 ID: ${videoId}`);
-          console.log(`[YouTube Channel Live Proxy]    最終 URL: ${newUrl}`);
-          console.log(`[YouTube Channel Live Proxy] ========== 重定向過程完成 ==========`);
-          console.log(`[YouTube Channel Live Proxy] 總共重定向 ${redirects + 1} 次`);
-          console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
 
           return {
             status: 'LIVE',
@@ -181,8 +154,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
         return checkLiveStatusRecursive(channelId, newUrl, redirects + 1, redirectChain);
       } else {
         // 重定向但沒有 Location header
-        console.warn('[YouTube Channel Live Proxy] 重定向但沒有 Location header');
-        console.warn('[YouTube Channel Live Proxy] ⚠️  重定向但沒有 Location header');
         return {
           status: 'ERROR',
           videoId: null,
@@ -200,12 +171,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
         const parts = finalUrl.split('v=');
         const videoId = parts.length > 1 ? parts[1].split('&')[0] : null;
         
-        console.log('[YouTube Channel Live Proxy] ✅ 在最終響應中發現直播 URL');
-        console.log(`[YouTube Channel Live Proxy]    頻道 ID: ${channelId}`);
-        console.log(`[YouTube Channel Live Proxy]    視頻 ID: ${videoId}`);
-        console.log(`[YouTube Channel Live Proxy]    最終 URL: ${finalUrl}`);
-        console.log(`[YouTube Channel Live Proxy] ========== 重定向過程完成 ==========`);
-        console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
         
         return { 
           status: 'LIVE', 
@@ -216,7 +181,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
       }
 
       // 收到 200 響應，優先使用 HTML 解析方法查找直播狀態（最可靠）
-      console.log('[YouTube Channel Live Proxy] 收到 200 響應，使用 HTML 解析方法檢查直播狀態...');
       
       try {
         // 使用指定的設定重新獲取 HTML（確保使用正確的 headers）
@@ -235,8 +199,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
         
         const html = await htmlResponse.text();
         
-        console.log(`[YouTube Channel Live Proxy] HTML 內容長度: ${html.length} 字符`);
-        console.log(`[YouTube Channel Live Proxy] HTML 前 500 字符預覽:`, html.substring(0, 500));
         
         // 使用 HTML 解析方法檢查直播狀態（最可靠的方法）
         const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
@@ -247,8 +209,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
           // 找到直播狀態
           stepInfo.redirectTo = htmlCheckResult.finalUrl;
           
-          console.log('[YouTube Channel Live Proxy] ========== HTML 解析完成 ==========');
-          console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
           
           return {
             status: 'LIVE',
@@ -259,8 +219,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
           };
         } else if (htmlCheckResult.status === 'OFFLINE') {
           // 確認未開台
-          console.log('[YouTube Channel Live Proxy] ========== HTML 解析完成 ==========');
-          console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
           
           return {
             status: 'OFFLINE',
@@ -273,15 +231,9 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
         // 如果是 UPCOMING，繼續到 fallback 邏輯
         
       } catch (htmlParseError) {
-        console.warn('[YouTube Channel Live Proxy] HTML 解析失敗，fallback 到重定向方式:', htmlParseError.message);
-        console.warn('[YouTube Channel Live Proxy] 錯誤詳情:', {
-          message: htmlParseError.message,
-          stack: htmlParseError.stack
-        });
       }
       
       // Fallback: 嘗試使用 redirect: 'follow' 來獲取最終 URL
-      console.log('[YouTube Channel Live Proxy] 嘗試使用 redirect: follow 自動跟隨重定向（Fallback）...');
       try {
         const followResponse = await fetch(url, {
           method: 'GET',
@@ -290,13 +242,11 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
         });
         
         const followUrl = followResponse.url || url;
-        console.log(`[YouTube Channel Live Proxy] redirect: follow 的結果 URL: ${followUrl}`);
         
         if (followUrl !== url && followUrl.includes('watch?v=')) {
           const parts = followUrl.split('v=');
           const videoId = parts.length > 1 ? parts[1].split('&')[0] : null;
           
-          console.log('[YouTube Channel Live Proxy] ✅ 使用 redirect: follow 發現直播 URL（Fallback）');
           
           stepInfo.redirectTo = followUrl;
           stepInfo.redirectSource = 'FOLLOW_REDIRECT';
@@ -313,14 +263,9 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
           return checkLiveStatusRecursive(channelId, followUrl, redirects + 1, redirectChain);
         }
       } catch (followError) {
-        console.warn('[YouTube Channel Live Proxy] redirect: follow 失敗:', followError.message);
       }
 
       // 狀態：已停止跳轉，停留在非直播頁面 (如頻道首頁)
-      console.log('[YouTube Channel Live Proxy] ❌ 頻道未開台（停留在非直播頁面）');
-      console.log(`[YouTube Channel Live Proxy] ========== 重定向過程完成 ==========`);
-      console.log(`[YouTube Channel Live Proxy] 總共重定向 ${redirects} 次`);
-      console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
       return {
         status: 'OFFLINE',
         videoId: null,
@@ -331,9 +276,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
     
     if (status === 404) {
       // 頻道不存在
-      console.log('[YouTube Channel Live Proxy] ❌ 頻道不存在（404）');
-      console.log(`[YouTube Channel Live Proxy] ========== 重定向過程完成 ==========`);
-      console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
       return {
         status: 'ERROR',
         videoId: null,
@@ -344,8 +286,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
     }
     
     // 處理其他非重定向狀態
-    console.warn('[YouTube Channel Live Proxy] ⚠️  收到非預期狀態碼:', status);
-    console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
     return {
       status: 'ERROR', 
       videoId: null, 
@@ -355,13 +295,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
     };
 
   } catch (error) {
-    console.error('[YouTube Channel Live Proxy] 請求錯誤:', {
-      url: url,
-      error: error.message,
-      stack: error.stack
-    });
-    
-    console.log(`[YouTube Channel Live Proxy] 完整重定向鏈:`, JSON.stringify(redirectChain, null, 2));
     return { 
       status: 'ERROR', 
       videoId: null, 
@@ -377,10 +310,7 @@ async function handleChannelLiveRequest(request, env) {
     const url = new URL(request.url);
     const channelId = url.searchParams.get('channelId');
     
-    console.log('[YouTube Channel Live Proxy] 收到請求:', { channelId, url: request.url });
-    
     if (!channelId) {
-      console.warn('[YouTube Channel Live Proxy] 缺少 channelId 參數');
       return new Response(
         JSON.stringify({ error: '缺少 channelId 參數' }),
         {
@@ -395,7 +325,6 @@ async function handleChannelLiveRequest(request, env) {
     
     // 驗證 channelId 格式
     if (!/^UC[a-zA-Z0-9_-]{22}$/.test(channelId)) {
-      console.warn('[YouTube Channel Live Proxy] 無效的 channelId 格式:', channelId);
       return new Response(
         JSON.stringify({ error: '無效的 channelId 格式' }),
         {
@@ -410,13 +339,8 @@ async function handleChannelLiveRequest(request, env) {
     
     // 構建 YouTube 頻道 /live URL（使用真實 ID，UC 開頭）
     const liveUrl = `https://www.youtube.com/channel/${channelId}/live`;
-    console.log('[YouTube Channel Live Proxy] 請求頻道 /live 端點:', liveUrl);
-    
     try {
       // 優先使用 HTML 解析方法（最可靠）
-      console.log('[YouTube Channel Live Proxy] ========== 開始檢查直播狀態 ==========');
-      console.log('[YouTube Channel Live Proxy] 優先使用 HTML 解析方法...');
-      
       try {
         // 使用指定的設定獲取 HTML（確保使用正確的 headers）
         const htmlFetchHeaders = {
@@ -438,15 +362,8 @@ async function handleChannelLiveRequest(request, env) {
         
         const html = await htmlResponse.text();
         
-        console.log(`[YouTube Channel Live Proxy] HTML 內容長度: ${html.length} 字符`);
-        // 輸出前 500 字符以便調試
-        const preview = html.substring(0, Math.min(500, html.length));
-        console.log(`[YouTube Channel Live Proxy] HTML 預覽（前 ${preview.length} 字符）:`, preview);
-        
         // 使用 HTML 解析方法檢查直播狀態
         const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
-        
-        console.log('[YouTube Channel Live Proxy] HTML 解析結果:', htmlCheckResult);
         
         // 構建響應數據
         const responseData = {
@@ -465,9 +382,6 @@ async function handleChannelLiveRequest(request, env) {
           }]
         };
         
-        console.log('[YouTube Channel Live Proxy] ========== HTML 解析完成 ==========');
-        console.log('[YouTube Channel Live Proxy] 返回結果:', responseData);
-        
         return new Response(
           JSON.stringify(responseData),
           {
@@ -480,16 +394,8 @@ async function handleChannelLiveRequest(request, env) {
         );
         
       } catch (htmlError) {
-        console.warn('[YouTube Channel Live Proxy] HTML 解析方法失敗，fallback 到重定向方式:', htmlError.message);
-        console.warn('[YouTube Channel Live Proxy] 錯誤詳情:', {
-          message: htmlError.message,
-          stack: htmlError.stack
-        });
-        
         // Fallback: 使用遞迴方式跟隨重定向
-        console.log('[YouTube Channel Live Proxy] ========== 開始檢查重定向過程（Fallback）==========');
         const result = await checkLiveStatusRecursive(channelId, liveUrl, 0);
-        console.log('[YouTube Channel Live Proxy] ========== 檢查完成 ==========');
         
         // 轉換結果格式以匹配現有 API
         const redirectChain = result.redirectChain || [];
@@ -513,20 +419,6 @@ async function handleChannelLiveRequest(request, env) {
           method: 'REDIRECT'
         };
         
-        console.log('[YouTube Channel Live Proxy] ========== 重定向過程摘要 ==========');
-        console.log(`[YouTube Channel Live Proxy] 總共重定向次數: ${redirectCount}`);
-        if (redirectChain.length > 0) {
-          redirectChain.forEach((step, index) => {
-            console.log(`[YouTube Channel Live Proxy] 步驟 ${step.step}:`);
-            console.log(`[YouTube Channel Live Proxy]   請求: ${step.requestedUrl}`);
-            console.log(`[YouTube Channel Live Proxy]   狀態: ${step.status}`);
-            if (step.redirectTo) {
-              console.log(`[YouTube Channel Live Proxy]   重定向到: ${step.redirectTo}`);
-            }
-          });
-        }
-        console.log('[YouTube Channel Live Proxy] ======================================');
-        
         // 處理 404 錯誤
         if (result.status === 'ERROR' && result.message && result.message.includes('404')) {
           responseData.status = 404;
@@ -547,12 +439,6 @@ async function handleChannelLiveRequest(request, env) {
       }
     } catch (error) {
       // 處理請求錯誤（例如：網路錯誤、超時等）
-      console.error('[YouTube Channel Live Proxy] 請求錯誤:', {
-        channelId: channelId,
-        error: error.message,
-        stack: error.stack
-      });
-      
       return new Response(
         JSON.stringify({
           status: 'ERROR',
@@ -571,10 +457,6 @@ async function handleChannelLiveRequest(request, env) {
       );
     }
   } catch (error) {
-    console.error('[YouTube Channel Live Proxy] 伺服器錯誤:', { 
-      error: error.message, 
-      stack: error.stack 
-    });
     return new Response(
       JSON.stringify({ 
         error: '伺服器錯誤', 

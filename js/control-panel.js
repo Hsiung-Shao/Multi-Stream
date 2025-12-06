@@ -7,28 +7,17 @@ function checkAndAdjustControlPanel() {
   
   if (!panel) return;
   
-  // 檢查是否有串流
-  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
-  
-  // 如果沒有任何串流，強制展開（優先於用戶設置）
-  if (!hasStreams) {
+  // 無論是否有串流，都使用用戶保存的設置
+  const savedState = localStorage.getItem('controlPanelCollapsed');
+  if (savedState === 'true') {
+    panel.classList.add('collapsed');
+    if (toggleCollapsed) {
+      toggleCollapsed.style.display = 'block';
+    }
+  } else {
     panel.classList.remove('collapsed');
     if (toggleCollapsed) {
       toggleCollapsed.style.display = 'none';
-    }
-  } else {
-    // 有串流時，使用用戶保存的設置
-    const savedState = localStorage.getItem('controlPanelCollapsed');
-    if (savedState === 'true') {
-      panel.classList.add('collapsed');
-      if (toggleCollapsed) {
-        toggleCollapsed.style.display = 'block';
-      }
-    } else {
-      panel.classList.remove('collapsed');
-      if (toggleCollapsed) {
-        toggleCollapsed.style.display = 'none';
-      }
     }
   }
 }
@@ -43,18 +32,7 @@ function toggleControlPanel() {
     return;
   }
   
-  // 檢查是否有串流，如果沒有串流則不允許收起
-  const hasStreams = document.querySelectorAll('.stream-box').length > 0;
-  
-  if (!hasStreams) {
-    // 沒有串流時，強制展開，不允許收起
-    panel.classList.remove('collapsed');
-    if (toggleCollapsed) {
-      toggleCollapsed.style.display = 'none';
-    }
-    return;
-  }
-  
+  // 允許在任何情況下切換（包括沒有串流時）
   panel.classList.toggle('collapsed');
   
   // 更新收起按钮的显示状态
@@ -297,7 +275,46 @@ function updateStreamOrderList() {
     item.dataset.streamId = id;
     item.draggable = false; // 預設不可拖曳，只有標題行可拖曳
     
-    const label = data.platform === 'twitch' ? escapeHtml(data.channelId) : (data.platform === 'youtube' ? escapeHtml(data.videoId) : `串流 #${id}`);
+    // 優先使用 streamData 中的 displayName 或 name
+    let label = '';
+    if (data.displayName) {
+      label = escapeHtml(data.displayName);
+    } else if (data.name) {
+      label = escapeHtml(data.name);
+    }
+    
+    // 如果沒有 displayName，嘗試從收藏列表中獲取名稱
+    if (!label && typeof favoriteStreams !== 'undefined' && typeof favoriteStreams.getList === 'function') {
+      const favorites = favoriteStreams.getList();
+      // 根據 platform、channelId 或 videoId 匹配收藏
+      const favorite = favorites.find(fav => {
+        if (fav.platform === data.platform) {
+          if (data.platform === 'twitch' && fav.channelId === data.channelId) {
+            return true;
+          } else if (data.platform === 'youtube') {
+            // YouTube 可以通過 channelId 或 videoId 匹配
+            if (fav.channelId && data.channelId && fav.channelId === data.channelId) {
+              return true;
+            } else if (fav.videoId && data.videoId && fav.videoId === data.videoId) {
+              return true;
+            } else if (fav.url && data.originalUrl && fav.url === data.originalUrl) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+      
+      if (favorite && favorite.name) {
+        label = escapeHtml(favorite.name);
+      }
+    }
+    
+    // 如果還是沒有找到名稱，使用原來的邏輯
+    if (!label) {
+      label = data.platform === 'twitch' ? escapeHtml(data.channelId) : (data.platform === 'youtube' ? escapeHtml(data.videoId) : `串流 #${id}`);
+    }
+    
     const currentVolume = data.volume || 100;
     
     // 使用安全的 DOM 操作
@@ -462,8 +479,48 @@ function updateStreamOrderList() {
             // 重新應用布局（使用immediate=true，因為已經在事件處理中）
             // 增加小延遲確保DOM變化完成
             setTimeout(() => {
-              const layoutType = autoSelectLayout();
-              setLayout(layoutType, true);
+              // 檢查當前是否是固定布局，如果是則保持固定布局
+              if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+                // 保持當前固定布局
+                setLayout(userSelectedLayout, true);
+              } else {
+                // 否則使用自動布局
+                const layoutType = autoSelectLayout();
+                setLayout(layoutType, true);
+              }
+              
+              // 修復 Twitch 播放器在調整順序後卡住的問題
+              // 使用更強力的刷新機制，多次觸發 resize 事件
+              setTimeout(() => {
+                const boxes = Array.from(document.querySelectorAll('.stream-box'));
+                boxes.forEach(box => {
+                  const id = parseInt(box.dataset.streamId);
+                  if (players[id] && players[id].type === 'twitch' && players[id].player) {
+                    try {
+                      // 強制刷新 Twitch 播放器
+                      const playerContainer = box.querySelector('.player-container');
+                      if (playerContainer) {
+                        // 多次觸發 resize 事件，確保播放器響應
+                        const refreshPlayer = () => {
+                          window.dispatchEvent(new Event('resize'));
+                          // 強制重新計算容器尺寸
+                          void playerContainer.offsetWidth;
+                          void playerContainer.offsetHeight;
+                        };
+                        
+                        // 立即觸發一次
+                        refreshPlayer();
+                        // 延遲觸發多次，確保播放器有時間響應
+                        setTimeout(refreshPlayer, 50);
+                        setTimeout(refreshPlayer, 150);
+                        setTimeout(refreshPlayer, 300);
+                      }
+                    } catch (e) {
+                      // 靜默處理錯誤
+                    }
+                  }
+                });
+              }, 100);
             }, 50);
           }
         }
@@ -492,8 +549,39 @@ function moveStreamUp(id) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
+      
+      // 修復 Twitch 播放器在調整順序後卡住的問題
+      setTimeout(() => {
+        const boxes = Array.from(document.querySelectorAll('.stream-box'));
+        boxes.forEach(box => {
+          const id = parseInt(box.dataset.streamId);
+          if (players[id] && players[id].type === 'twitch' && players[id].player) {
+            try {
+              // 強制刷新 Twitch 播放器
+              const playerContainer = box.querySelector('.player-container');
+              if (playerContainer) {
+                // 觸發 resize 事件讓播放器重新計算尺寸
+                window.dispatchEvent(new Event('resize'));
+                // 額外延遲確保播放器有時間響應
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 100);
+              }
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+        });
+      }, 100);
     }, 50);
   }
 }
@@ -512,8 +600,39 @@ function moveStreamDown(id) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
+      
+      // 修復 Twitch 播放器在調整順序後卡住的問題
+      setTimeout(() => {
+        const boxes = Array.from(document.querySelectorAll('.stream-box'));
+        boxes.forEach(box => {
+          const id = parseInt(box.dataset.streamId);
+          if (players[id] && players[id].type === 'twitch' && players[id].player) {
+            try {
+              // 強制刷新 Twitch 播放器
+              const playerContainer = box.querySelector('.player-container');
+              if (playerContainer) {
+                // 觸發 resize 事件讓播放器重新計算尺寸
+                window.dispatchEvent(new Event('resize'));
+                // 額外延遲確保播放器有時間響應
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 100);
+              }
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+        });
+      }, 100);
     }, 50);
   }
 }
@@ -530,8 +649,39 @@ function reorderStreams(draggedId, targetId) {
     
     // 重新應用布局（增加小延遲確保DOM變化完成）
     setTimeout(() => {
-      const layoutType = autoSelectLayout();
-      setLayout(layoutType, true);
+      // 檢查當前是否是固定布局，如果是則保持固定布局
+      if (typeof userSelectedLayout === 'number' && typeof isFixedLayout === 'function' && isFixedLayout(userSelectedLayout)) {
+        // 保持當前固定布局
+        setLayout(userSelectedLayout, true);
+      } else {
+        // 否則使用自動布局
+        const layoutType = autoSelectLayout();
+        setLayout(layoutType, true);
+      }
+      
+      // 修復 Twitch 播放器在調整順序後卡住的問題
+      setTimeout(() => {
+        const boxes = Array.from(document.querySelectorAll('.stream-box'));
+        boxes.forEach(box => {
+          const id = parseInt(box.dataset.streamId);
+          if (players[id] && players[id].type === 'twitch' && players[id].player) {
+            try {
+              // 強制刷新 Twitch 播放器
+              const playerContainer = box.querySelector('.player-container');
+              if (playerContainer) {
+                // 觸發 resize 事件讓播放器重新計算尺寸
+                window.dispatchEvent(new Event('resize'));
+                // 額外延遲確保播放器有時間響應
+                setTimeout(() => {
+                  window.dispatchEvent(new Event('resize'));
+                }, 100);
+              }
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+        });
+      }, 100);
     }, 50);
   }
 }

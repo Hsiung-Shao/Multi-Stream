@@ -666,11 +666,12 @@ function updateFixedLayoutFramework() {
   }
   
   // 如果是固定布局，使用用户选择的视频布局类型（如果没有选择则自动选择）
+  // 使用響應式設計計算寬度比例
+  const responsiveRatios = calculateResponsiveWidthRatios(currentLayoutType);
+  let videoAreaWidth = responsiveRatios ? responsiveRatios.video : config.videoAreaWidth;
+  let chatAreaWidth = responsiveRatios ? responsiveRatios.chat : config.chatAreaWidth;
+  
   {
-    // 使用響應式設計計算寬度比例
-    const responsiveRatios = calculateResponsiveWidthRatios(currentLayoutType);
-    let videoAreaWidth = responsiveRatios ? responsiveRatios.video : config.videoAreaWidth;
-    let chatAreaWidth = responsiveRatios ? responsiveRatios.chat : config.chatAreaWidth;
     
     let videoLayoutType = 1;
     if (count > 0) {

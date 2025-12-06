@@ -374,18 +374,9 @@ async function performSearch(query) {
           })
           .catch(error => {
             // Twitch API 錯誤，靜默處理，返回空陣列
-            console.warn('Twitch 搜尋失敗:', error.message);
             return [];
           })
       );
-    } else if (selectedPlatform === 'twitch') {
-      console.warn('Twitch API 未載入或 searchChannels 函數不存在');
-    }
-    
-    // YouTube 搜尋（暫時關閉）
-    // YouTube API 功能已暫時關閉
-    if (selectedPlatform === 'youtube') {
-      console.warn('YouTube API 功能已暫時關閉');
     }
     
     // 等待所有搜尋完成（使用 Promise.allSettled 確保即使一個失敗，另一個仍能顯示結果）
@@ -544,6 +535,18 @@ function updateSelectedSuggestion() {
 function selectSearchResult(channel) {
   const urlInput = document.getElementById('url-input');
   if (urlInput && channel.url) {
+    // 對於 Twitch 頻道，直接加入串流
+    if (channel.platform === 'twitch' || channel.source === 'twitch') {
+      hideSearchSuggestions();
+      // 保存 displayName 以便 addStream 使用
+      if (channel.displayName) {
+        window._pendingDisplayName = channel.displayName;
+      }
+      // 直接調用 addStream 加入串流
+      addStream(channel.url);
+      return;
+    }
+    
     // 對於 YouTube，如果搜尋結果中有直播影片 ID，使用直播 URL
     if (channel.platform === 'youtube' && channel.liveVideoId) {
       urlInput.value = `https://www.youtube.com/watch?v=${channel.liveVideoId}`;

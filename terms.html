@@ -55,14 +55,83 @@
   <link rel="icon" type="image/png" href="/icon.png">
   <link rel="shortcut icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-0DX8PWTS4X"></script>
+  <!-- Google tag (gtag.js) - 優先使用 Cloudflare Tag Gateway -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
-    gtag('config', 'G-0DX8PWTS4X');
+    
+    // 設置默認 Consent Mode（將由 consent.js 根據用戶選擇更新）
+    gtag('consent', 'default', {
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied',
+      'analytics_storage': 'denied',
+      'functionality_storage': 'granted',
+      'personalization_storage': 'granted',
+      'security_storage': 'granted'
+    });
+    
+    gtag('config', 'G-Q2LXVMDD46');
+    
+    // 如果 Cloudflare Tag Gateway 未自動注入腳本，則回退到第三方載入
+    // 改進的檢查邏輯：延長等待時間並改進檢測方式
+    let cloudflareGatewayDetected = false;
+    
+    // 多次檢查 Cloudflare Tag Gateway（因為它可能需要一些時間才能注入）
+    const checkCloudflareGateway = function(attempt) {
+      const maxAttempts = 5; // 最多檢查5次（總共約5秒）
+      
+      // 檢查是否有從第一方域名載入的 gtag 腳本（Cloudflare Tag Gateway）
+      const currentDomain = window.location.hostname;
+      const firstPartyGtag = document.querySelector('script[src*="' + currentDomain + '/gtag"]') ||
+                             document.querySelector('script[src*="/gtag/js"]') ||
+                             document.querySelector('script[src*="/gtag/"]');
+      
+      // 檢查是否有 Cloudflare Zaraz 注入的腳本
+      const zarazScript = document.querySelector('script[src*="zaraz"]');
+      
+      // 檢查 window.zaraz 是否存在（Cloudflare Zaraz 的標誌）
+      const hasZaraz = typeof window.zaraz !== 'undefined';
+      
+      // 檢查是否有從第三方域名載入的 gtag 腳本（已回退）
+      const thirdPartyGtag = document.querySelector('script[src*="googletagmanager.com/gtag"]');
+      
+      if (firstPartyGtag || hasZaraz || zarazScript) {
+        // 檢測到 Cloudflare Tag Gateway
+        cloudflareGatewayDetected = true;
+        return;
+      }
+      
+      if (thirdPartyGtag) {
+        // 已經有第三方腳本，不需要回退
+        return;
+      }
+      
+      // 如果檢查次數未達到上限，繼續檢查
+      if (attempt < maxAttempts) {
+        setTimeout(function() {
+          checkCloudflareGateway(attempt + 1);
+        }, 1000);
+      } else {
+        // 所有檢查都完成，如果仍未檢測到 Cloudflare，則使用回退方案
+        if (!cloudflareGatewayDetected && !thirdPartyGtag && typeof gtag === 'function') {
+          // Cloudflare 未注入，使用第三方載入（回退方案）
+          const script = document.createElement('script');
+          script.async = true;
+          script.src = 'https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46';
+          script.onerror = function() {
+            console.warn('Google Analytics 載入失敗');
+          };
+          document.head.appendChild(script);
+        }
+      }
+    };
+    
+    // 開始檢查（延遲500ms開始，給 Cloudflare 一些時間注入）
+    setTimeout(function() {
+      checkCloudflareGateway(1);
+    }, 500);
   </script>
   <link rel="stylesheet" href="styles.css">
   <style>
@@ -345,6 +414,7 @@
 
   <script src="js/i18n.js"></script>
   <script src="js/theme.js"></script>
+  <script defer src="js/consent.js"></script>
   <script>
     // 初始化多語言系統
     document.addEventListener('DOMContentLoaded', function() {

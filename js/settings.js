@@ -526,8 +526,11 @@ const favoriteCategories = {
       return { success: false, message: i18n.t('categoryExists') };
     }
     
+    // 生成唯一 ID：使用時間戳 + 隨機數，確保即使在同一毫秒內創建也不會重複
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const newCategory = {
-      id: Date.now().toString(),
+      id: uniqueId,
       name: name,
       createdAt: new Date().toISOString()
     };
@@ -613,18 +616,42 @@ const favoriteStreams = {
     
     // 檢查是否已存在（根據 URL 或 channelId 檢查）
     const exists = list.some(item => {
+      // 直接 URL 匹配
       if (item.url === url) return true;
-      // 對於 YouTube，也檢查 channelId 是否已存在
-      if (providedChannelId && item.platform === 'youtube' && item.channelId === providedChannelId) {
-        return true;
+      
+      // 對於 YouTube，需要更智能的匹配
+      if (item.platform === 'youtube') {
+        // 如果提供了 channelId，檢查 channelId 是否已存在（優先檢查，最可靠）
+        if (providedChannelId && item.channelId && providedChannelId.trim() === item.channelId.trim()) {
+          return true;
+        }
+        
+        // 檢查 URL 是否指向同一個頻道（考慮 /live 後綴的差異）
+        // 例如：/channel/UCxxx 和 /channel/UCxxx/live 應該被視為相同
+        const urlChannelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
+        const itemChannelMatch = item.url ? item.url.match(/youtube\.com\/channel\/([^\/\?]+)/) : null;
+        if (urlChannelMatch && itemChannelMatch && urlChannelMatch[1] === itemChannelMatch[1]) {
+          return true;
+        }
       }
+      
+      // 對於 Twitch，檢查 channelId
+      if (item.platform === 'twitch' && providedChannelId) {
+        const urlMatch = url.match(/twitch\.tv\/([^\/\?]+)/);
+        if (urlMatch && item.channelId === urlMatch[1] && item.channelId === providedChannelId) {
+          return true;
+        }
+        if (item.channelId === providedChannelId) {
+          return true;
+        }
+      }
+      
       return false;
     });
     
     if (exists) {
       const i18n = window.i18n || { t: (key) => key };
       const result = { success: false, message: i18n.t('streamAlreadyInFavorites') };
-      console.log('[收藏添加] 完整回傳內容（已存在）:', JSON.stringify(result, null, 2));
       return result;
     }
     
@@ -638,7 +665,14 @@ const favoriteStreams = {
       if (match) {
         platform = 'twitch';
         channelId = match[1];
-        if (!name) name = channelId;
+        // 如果沒有提供名稱，嘗試從 URL 參數或其他來源獲取 displayName
+        // 如果還是沒有，使用 channelId 作為 fallback
+        if (!name) {
+          // 嘗試從 URL 參數中獲取 displayName（如果有的話）
+          const urlParams = new URLSearchParams(url.split('?')[1] || '');
+          const displayName = urlParams.get('displayName');
+          name = displayName || channelId;
+        }
       }
     } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
       // 如果已經提供了 channelId，直接使用
@@ -654,7 +688,48 @@ const favoriteStreams = {
             platform = 'youtube';
             if (!name) name = channelId;
           }
-        } else if (url.includes('youtube.com/c/') || url.includes('youtube.com/user/') || url.includes('youtube.com/@')) {
+        } else if (url.includes('youtube.com/@') || url.includes('@') && url.includes('youtube')) {
+          // 處理 @username 格式的 URL（例如：www.youtube.com/@浠Mizuki 或 youtube.com/@浠Mizuki）
+          // 匹配各種可能的格式：youtube.com/@xxx, www.youtube.com/@xxx, https://youtube.com/@xxx 等
+          const handleMatch = url.match(/(?:youtube\.com|youtu\.be)\/@([^\/\?\s]+)/i) || 
+                             url.match(/@([a-zA-Z0-9_\u4e00-\u9fa5]+)/);
+          if (handleMatch) {
+            const handle = handleMatch[1];
+            platform = 'youtube';
+            
+            // 使用 YouTube Data API 獲取真實的 channel ID
+            try {
+              const realChannelId = await youtubeApiUtils.getChannelIdFromHandle(handle);
+              if (realChannelId) {
+                channelId = realChannelId;
+                
+                // 如果沒有提供名稱，嘗試獲取頻道標題
+                if (!name) {
+                  try {
+                    const channelTitle = await youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
+                    if (channelTitle) {
+                      name = channelTitle;
+                    } else {
+                      name = `@${handle}`;
+                    }
+                  } catch (error) {
+                    // 獲取標題失敗，使用 handle 作為名稱
+                    name = `@${handle}`;
+                  }
+                }
+              } else {
+                throw new Error('無法獲取頻道 ID');
+              }
+            } catch (error) {
+              // API 調用失敗，返回錯誤
+              const i18n = window.i18n || { t: (key) => key };
+              return { 
+                success: false, 
+                message: `無法獲取頻道資訊: ${error.message || '未知錯誤'}` 
+              };
+            }
+          }
+        } else if (url.includes('youtube.com/c/') || url.includes('youtube.com/user/')) {
           // 這些 URL 格式需要通過 API 查詢才能獲得 channelId，暫時不處理
           // 用戶可以通過搜尋功能添加頻道，這樣會自動獲得 channelId
         }
@@ -677,7 +752,6 @@ const favoriteStreams = {
               const realChannelId = await youtubeApiUtils.getChannelIdFromVideoId(videoId);
               if (realChannelId) {
                 channelId = realChannelId;
-                console.log(`[收藏添加] 從 videoID ${videoId} 獲取到 channelID: ${channelId}`);
                 
                 // 如果 API key 可用，獲取頻道標題作為名稱
                 if (!name || name === videoId) {
@@ -685,16 +759,13 @@ const favoriteStreams = {
                     const channelTitle = await youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
                     if (channelTitle) {
                       name = channelTitle;
-                      console.log(`[收藏添加] 從 channelID ${realChannelId} 獲取到頻道標題: ${channelTitle}`);
                     }
                   } catch (error) {
-                    console.warn('[收藏添加] 無法從 channelID 獲取頻道標題:', error);
                     // 獲取標題失敗不影響添加收藏，繼續使用 videoId 作為名稱
                   }
                 }
               }
             } catch (error) {
-              console.warn('[收藏添加] 無法從 videoID 獲取 channelID:', error);
               // 如果獲取失敗，仍然允許添加（向後兼容）
               // 注意：沒有 channelID 的收藏可能無法正確檢查開台狀態
             }
@@ -706,7 +777,6 @@ const favoriteStreams = {
     if (!platform) {
       const i18n = window.i18n || { t: (key) => key };
       const result = { success: false, message: i18n.t('cannotParseStreamUrl') };
-      console.log('[收藏添加] 完整回傳內容（無法解析）:', JSON.stringify(result, null, 2));
       return result;
     }
     
@@ -728,27 +798,19 @@ const favoriteStreams = {
     
     if (platform === 'youtube' && channelId) {
       try {
-        console.log(`[收藏添加] 立即檢查頻道 ${channelId} 的開台狀態...`);
         const liveStatus = await youtubeApiUtils.checkChannelLiveStatus(channelId);
-        
-        console.log(`[收藏添加] 開台狀態檢查結果:`, {
-          channelId: channelId,
-          isLive: liveStatus.isLive,
-          status: liveStatus.status,
-          liveVideoId: liveStatus.liveVideoId,
-          message: liveStatus.message
-        });
-        
         initialLiveStatus = liveStatus.isLive;
         initialLiveVideoId = liveStatus.liveVideoId || null;
       } catch (error) {
-        console.warn('[收藏添加] 無法立即檢查開台狀態:', error);
         // 檢查失敗不影響添加收藏
       }
     }
     
+    // 生成唯一 ID：使用時間戳 + 隨機數，確保即使在同一毫秒內創建也不會重複
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     const newItem = {
-      id: Date.now().toString(),
+      id: uniqueId,
       url: finalUrl, // 對於 YouTube，使用頻道 /live URL
       name: name,
       platform: platform,
@@ -774,22 +836,6 @@ const favoriteStreams = {
       message: i18n.t('addedToFavorites'),
       item: newItem // 包含完整的收藏項目資訊
     };
-    
-    // 輸出完整的回傳內容
-    console.log('[收藏添加] 完整回傳內容:', JSON.stringify(result, null, 2));
-    console.log('[收藏添加] 收藏項目詳情:', {
-      id: newItem.id,
-      url: newItem.url,
-      name: newItem.name,
-      platform: newItem.platform,
-      channelId: newItem.channelId,
-      videoId: newItem.videoId,
-      categoryId: newItem.categoryId,
-      addedAt: newItem.addedAt,
-      isLive: newItem.isLive,
-      liveVideoId: newItem.liveVideoId,
-      lastChecked: newItem.lastChecked
-    });
     
     return result;
   },
@@ -861,8 +907,9 @@ const favoriteStreams = {
         // 如果沒有直播，但 URL 是 /live 格式，先檢查是否有新的直播
         // 如果 URL 是 /live 格式，嘗試檢查當前直播狀態
         if (item.url && item.url.includes('/live')) {
+          let status = null;
           try {
-            const status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
+            status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
             if (status.isLive === true && status.liveVideoId) {
               // 發現新的直播，使用直播 URL
               const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
@@ -886,70 +933,55 @@ const favoriteStreams = {
               return { success: true };
             }
           } catch (error) {
-            console.warn('[收藏載入] 檢查直播狀態失敗:', error);
+            // 靜默處理錯誤
           }
-        }
-        
-        // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
-        console.log(`[收藏載入] 首次檢查後，頻道 ${item.name || item.id} 的狀態:`, {
-          isLive: status.isLive,
-          liveVideoId: status.liveVideoId,
-          status: status.status
-        });
-        
-        // 如果沒有直播或檢查失敗，再次嘗試檢查（可能是狀態更新延遲）
-        const i18n = window.i18n || { t: (key) => key };
-        if (!status.isLive || !status.liveVideoId) {
-          console.log(`[收藏載入] 頻道 ${item.name || item.id} 首次檢查未發現直播，等待 2 秒後再次檢查...`);
-          // 等待 2 秒後再次檢查（可能狀態正在更新）
-          await new Promise(resolve => setTimeout(resolve, 2000));
           
-          try {
-            const retryStatus = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
-            console.log(`[收藏載入] 頻道 ${item.name || item.id} 的二次檢查結果:`, {
-              isLive: retryStatus.isLive,
-              liveVideoId: retryStatus.liveVideoId,
-              status: retryStatus.status
-            });
+          // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
+          // 如果沒有直播或檢查失敗，再次嘗試檢查（可能是狀態更新延遲）
+          if (!status || !status.isLive || !status.liveVideoId) {
+            const i18n = window.i18n || { t: (key) => key };
+            // 等待 2 秒後再次檢查（可能狀態正在更新）
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
-            if (retryStatus.isLive === true && retryStatus.liveVideoId) {
-              // 發現新的直播，使用直播 URL
-              const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
-              console.log(`[收藏載入] 二次檢查發現直播，載入 URL: ${liveUrl}`);
-              addStream(liveUrl);
+            try {
+              const retryStatus = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
               
-              // 更新收藏項目的直播狀態
-              const list = favoriteStreams.getList();
-              const updatedList = list.map(fav => {
-                if (fav.id === item.id) {
-                  return {
-                    ...fav,
-                    isLive: true,
-                    liveVideoId: retryStatus.liveVideoId,
-                    lastChecked: new Date().toISOString()
-                  };
-                }
-                return fav;
-              });
-              favoriteStreams.saveList(updatedList);
-              
-              return { success: true };
+              if (retryStatus.isLive === true && retryStatus.liveVideoId) {
+                // 發現新的直播，使用直播 URL
+                const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
+                addStream(liveUrl);
+                
+                // 更新收藏項目的直播狀態
+                const list = favoriteStreams.getList();
+                const updatedList = list.map(fav => {
+                  if (fav.id === item.id) {
+                    return {
+                      ...fav,
+                      isLive: true,
+                      liveVideoId: retryStatus.liveVideoId,
+                      lastChecked: new Date().toISOString()
+                    };
+                  }
+                  return fav;
+                });
+                favoriteStreams.saveList(updatedList);
+                
+                return { success: true };
+              }
+            } catch (retryError) {
+              // 靜默處理錯誤
             }
-          } catch (retryError) {
-            console.warn('[收藏載入] 二次檢查失敗:', retryError);
-          }
-          
-          // 如果二次檢查仍然沒有直播，但狀態顯示為 false，提示用戶
-          if (item.isLive === false) {
-            console.log(`[收藏載入] 頻道 ${item.name || item.id} 確實未開台，無法載入`);
-            alert(i18n.t('channelNotLive') || '該頻道目前未開台');
-            return { success: false, message: i18n.t('channelNotLive') || '該頻道目前未開台' };
+            
+            // 如果二次檢查仍然沒有直播，但狀態顯示為 false，提示用戶
+            if (item.isLive === false) {
+              alert(i18n.t('channelNotLive') || '該頻道目前未開台');
+              return { success: false, message: i18n.t('channelNotLive') || '該頻道目前未開台' };
+            }
           }
         }
         
         // 如果狀態未知或檢查失敗，嘗試使用原始 URL（可能是 /live URL，無法播放）
         if (item.url) {
-          console.log(`[收藏載入] 使用原始 URL 載入: ${item.url}`);
           addStream(item.url);
           return { success: true };
         }
@@ -1119,13 +1151,6 @@ function showFavoriteStreamsManager() {
                 ${categoryOptions}
               </select>
             </div>
-            ${item.platform === 'youtube' ? `
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <label style="font-size: 11px; color: var(--text-secondary); white-space: nowrap;">頻道 ID (RSS):</label>
-              <input type="text" class="favorite-edit-channel-id" value="${escapeHtml(item.channelId || '')}" placeholder="UC..." style="flex: 1; padding: 4px; background: var(--bg-input); border: 1px solid var(--border-color-hover); color: var(--text-primary); border-radius: 4px; font-size: 12px; font-family: monospace;">
-              ${!item.channelId ? '<span style="font-size: 10px; color: #ff6b6b;">⚠️ 無法使用 RSS 輪詢</span>' : ''}
-            </div>
-            ` : ''}
             <div style="display: flex; gap: 4px; justify-content: flex-end;">
               <button class="save-favorite-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; background: #9147ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">${escapeHtml(i18n.t('save'))}</button>
               <button class="cancel-edit-btn" data-favorite-id="${safeItemId}" style="padding: 4px 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">${escapeHtml(i18n.t('cancel'))}</button>
@@ -1284,7 +1309,18 @@ function showFavoriteStreamsManager() {
       } else if (target.classList.contains('remove-favorite-btn')) {
         const favoriteId = target.getAttribute('data-favorite-id');
         if (favoriteId) {
-          removeFavoriteStream(favoriteId);
+          // 確保只刪除單個項目：使用 closest 找到最近的 favorite-item
+          const favoriteItem = target.closest('.favorite-item');
+          if (favoriteItem) {
+            const itemId = favoriteItem.getAttribute('data-id');
+            if (itemId === favoriteId) {
+              // 確認刪除
+              const i18n = window.i18n || { t: (key) => key };
+              if (confirm(i18n.t('confirmDeleteFavorite') || '確認從收藏中刪除?')) {
+                removeFavoriteStream(favoriteId);
+              }
+            }
+          }
         }
       }
     });
@@ -1392,37 +1428,15 @@ async function addToFavorites() {
   showSaveMessage(i18n.t('processing') || '處理中...');
   
   // 輸出輸入參數
-  console.log('[添加收藏] 輸入參數:', {
-    url: url,
-    name: name,
-    categoryId: categoryId
-  });
-  
   let result;
   try {
     result = await favoriteStreams.add(url, name, categoryId);
-    
-    // 輸出完整的回傳內容
-    console.log('[添加收藏] favoriteStreams.add() 完整回傳內容:', JSON.stringify(result, null, 2));
-    console.log('[添加收藏] 回傳內容詳情:', {
-      success: result.success,
-      message: result.message,
-      item: result.item || '無項目資訊'
-    });
   } catch (error) {
-    console.error('[添加收藏] 發生錯誤:', error);
-    console.error('[添加收藏] 錯誤詳情:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
     // 處理網路錯誤（例如：本地開發環境中 API 不可用）
     if (error.message && (error.message.includes('拒絕連線') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
       showSaveMessage('注意：無法連接到 API 服務（可能是本地開發環境）。收藏已添加，但可能無法自動獲取頻道資訊。');
       // 即使 API 失敗，也嘗試添加收藏（使用原始 URL）
       result = await favoriteStreams.add(url, name, categoryId);
-      console.log('[添加收藏] 重試後的完整回傳內容:', JSON.stringify(result, null, 2));
     } else {
       showSaveMessage(`添加失敗: ${error.message || '未知錯誤'}`);
       return;
@@ -1643,7 +1657,6 @@ function saveFavoriteEdit(favoriteId) {
   
   const nameInput = favoriteItem.querySelector('.favorite-edit-name');
   const categorySelect = favoriteItem.querySelector('.favorite-edit-category');
-  const channelIdInput = favoriteItem.querySelector('.favorite-edit-channel-id');
   
   if (!nameInput) return;
   
@@ -1664,27 +1677,6 @@ function saveFavoriteEdit(favoriteId) {
     name: newName,
     categoryId: categoryId
   };
-  
-  // 如果是 YouTube 頻道，處理 channelId 的更新
-  if (currentItem && currentItem.platform === 'youtube' && channelIdInput) {
-    const newChannelId = channelIdInput.value.trim();
-    
-    // 驗證 channelId 格式（應該是 UC 開頭的 24 位字符串）
-    if (newChannelId) {
-      if (/^UC[a-zA-Z0-9_-]{22}$/.test(newChannelId)) {
-        updates.channelId = newChannelId;
-        // 更新 URL 為頻道 URL
-        updates.url = `https://www.youtube.com/channel/${newChannelId}`;
-      } else {
-        const i18n = window.i18n || { t: (key) => key };
-        showSaveMessage('頻道 ID 格式錯誤，應為 UC 開頭的 24 位字符（例如：UCxxxxxxxxxxxxxxxxxxxxxx）');
-        return;
-      }
-    } else if (currentItem.channelId) {
-      // 如果清空了 channelId，保留原有的
-      updates.channelId = currentItem.channelId;
-    }
-  }
   
   const result = favoriteStreams.update(favoriteId, updates);
   
@@ -1799,7 +1791,19 @@ function loadFavoriteStream(id) {
 
 // 移除收藏
 function removeFavoriteStream(id) {
-  favoriteStreams.remove(id);
+  // 驗證 ID 是否存在於收藏列表中
+  const list = favoriteStreams.getList();
+  const itemToRemove = list.find(item => item.id === id);
+  
+  if (!itemToRemove) {
+    const i18n = window.i18n || { t: (key) => key };
+    showSaveMessage(i18n.t('favoriteNotFound') || '收藏不存在');
+    return;
+  }
+  
+  // 執行刪除
+  const result = favoriteStreams.remove(id);
+  
   showFavoriteStreamsManager(); // 刷新列表
   // 更新控制面板中的收藏列表
   if (typeof updateFavoriteListDisplay === 'function') {
@@ -2166,12 +2170,11 @@ const youtubeApiUtils = {
         if (response.ok) {
           const data = await response.json();
           if (data.apiKey) {
-            console.log('[YouTube API] 從 Cloudflare Pages Function 獲取 API Key');
             return data.apiKey;
           }
         }
       } catch (error) {
-        console.warn('[YouTube API] 無法從 Cloudflare Pages Function 獲取 API Key:', error);
+        // 靜默處理錯誤
       }
       return null;
     })();
@@ -2189,11 +2192,9 @@ const youtubeApiUtils = {
     
     // 回退到 config.js
     if (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.YOUTUBE_API_KEY) {
-      console.log('[YouTube API] 從 config.js 獲取 API Key');
       return window.CONFIG.YOUTUBE_API_KEY;
     }
     
-    console.warn('[YouTube API] API Key 未配置');
     return null;
   },
   
@@ -2229,7 +2230,6 @@ const youtubeApiUtils = {
       
       return channelId;
     } catch (error) {
-      console.error('[YouTube API] 獲取頻道 ID 失敗:', error);
       throw error;
     }
   },
@@ -2266,7 +2266,95 @@ const youtubeApiUtils = {
       
       return channelTitle;
     } catch (error) {
-      console.error('[YouTube API] 獲取頻道標題失敗:', error);
+      throw error;
+    }
+  },
+  
+  // 從 @username 或頻道 handle 透過 YouTube Data API 獲取頻道真實 ID
+  async getChannelIdFromHandle(handle) {
+    const apiKey = await this.getApiKey();
+    if (!apiKey) {
+      throw new Error('YouTube API Key 未配置');
+    }
+    
+    if (!handle || typeof handle !== 'string') {
+      throw new Error('無效的頻道 handle');
+    }
+    
+    // 移除 @ 符號（如果有的話）
+    const cleanHandle = handle.replace(/^@/, '').trim();
+    if (!cleanHandle) {
+      throw new Error('頻道 handle 不能為空');
+    }
+    
+    try {
+      // 使用 search.list API 搜索頻道
+      // 使用 @handle 格式作為搜索關鍵字，限制結果為頻道類型，增加精確度
+      const searchQuery = `@${cleanHandle}`;
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(searchQuery)}&maxResults=5&key=${encodeURIComponent(apiKey)}`;
+      const searchResponse = await fetch(searchUrl);
+      
+      if (!searchResponse.ok) {
+        throw new Error(`YouTube API 請求失敗: ${searchResponse.status} ${searchResponse.statusText}`);
+      }
+      
+      const searchData = await searchResponse.json();
+      
+      if (!searchData.items || searchData.items.length === 0) {
+        throw new Error('找不到該頻道');
+      }
+      
+      // 從搜索結果中獲取所有可能的頻道 ID
+      const candidateChannels = searchData.items
+        .map(item => ({
+          channelId: item.id?.channelId,
+          title: item.snippet?.title,
+          customUrl: item.snippet?.customUrl
+        }))
+        .filter(item => item.channelId);
+      
+      if (candidateChannels.length === 0) {
+        throw new Error('無法從搜索結果中獲取頻道 ID');
+      }
+      
+      // 嘗試找到完全匹配的頻道（通過 customUrl）
+      const exactMatch = candidateChannels.find(channel => {
+        if (channel.customUrl) {
+          const customUrlHandle = channel.customUrl.replace(/^@/, '').toLowerCase();
+          return customUrlHandle === cleanHandle.toLowerCase();
+        }
+        return false;
+      });
+      
+      if (exactMatch) {
+        return exactMatch.channelId;
+      }
+      
+      // 如果沒有完全匹配，使用 channels.list API 獲取第一個候選頻道的詳細資訊來驗證
+      const firstCandidate = candidateChannels[0];
+      const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${encodeURIComponent(firstCandidate.channelId)}&key=${encodeURIComponent(apiKey)}`;
+      const channelResponse = await fetch(channelUrl);
+      
+      if (channelResponse.ok) {
+        const channelData = await channelResponse.json();
+        if (channelData.items && channelData.items.length > 0) {
+          const channel = channelData.items[0];
+          const customUrl = channel.snippet?.customUrl || '';
+          
+          // 檢查 customUrl 是否匹配
+          if (customUrl) {
+            const customUrlHandle = customUrl.replace(/^@/, '').toLowerCase();
+            if (customUrlHandle === cleanHandle.toLowerCase()) {
+              return firstCandidate.channelId;
+            }
+          }
+        }
+      }
+      
+      // 如果沒有找到完全匹配，返回第一個候選頻道（最相關的結果）
+      // 這通常是最接近的匹配
+      return firstCandidate.channelId;
+    } catch (error) {
       throw error;
     }
   },
@@ -2294,7 +2382,6 @@ const youtubeApiUtils = {
       } catch (fetchError) {
         // 處理網路錯誤（例如：連接被拒絕、CORS 錯誤等）
         // 這通常發生在本地開發環境中，Cloudflare Pages Functions 不可用
-        console.warn('[YouTube Live Check] 代理請求失敗（可能是本地開發環境）:', fetchError);
         return {
           isLive: null,
           status: 'proxy_unavailable',
@@ -2310,7 +2397,6 @@ const youtubeApiUtils = {
           const contentType = proxyResponse.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
             // 不是 JSON 響應，可能是 HTML 404 頁面（代理端點不存在）
-            console.warn('[YouTube Live Check] 代理端點不存在（可能是本地開發環境）');
             return {
               isLive: null,
               status: 'proxy_unavailable',
@@ -2338,13 +2424,9 @@ const youtubeApiUtils = {
       
       const result = await proxyResponse.json();
       
-      // 輸出完整的代理響應
-      console.log(`[YouTube Live Check] 頻道 ${channelId} 的代理響應:`, JSON.stringify(result, null, 2));
-      
       // 根據邏輯表判斷狀態
       if (result.status === 404) {
         // HTTP 404 -> 頻道不存在
-        console.log(`[YouTube Live Check] 頻道 ${channelId} 不存在（404）`);
         return {
           isLive: false,
           status: 'channel_not_found',
@@ -2355,14 +2437,10 @@ const youtubeApiUtils = {
       
       if (result.status === 200) {
         const finalUrl = result.finalUrl || '';
-        console.log(`[YouTube Live Check] 頻道 ${channelId} 的最終 URL:`, finalUrl);
-        
         if (finalUrl.includes('watch?v=')) {
           // HTTP 200 + URL 包含 watch?v= -> 開台中或預定直播
           const videoIdMatch = finalUrl.match(/[?&]v=([^&]+)/);
           const liveVideoId = videoIdMatch ? videoIdMatch[1] : null;
-          
-          console.log(`[YouTube Live Check] 頻道 ${channelId} 正在開台，liveVideoId: ${liveVideoId}`);
           
           // 注意：無法在後端判斷是否為「即將開始」畫面，所以統一判定為開台
           // 如果需要區分，需要進一步解析 HTML 內容
@@ -2374,7 +2452,6 @@ const youtubeApiUtils = {
           };
         } else {
           // HTTP 200 + URL 不包含 watch?v= -> 未開台
-          console.log(`[YouTube Live Check] 頻道 ${channelId} 未開台（最終 URL 不包含 watch?v=）`);
           return {
             isLive: false,
             status: 'not_live',
@@ -2392,7 +2469,6 @@ const youtubeApiUtils = {
         liveVideoId: null
       };
     } catch (error) {
-      console.error('[YouTube Live Check] 檢查開台狀態失敗:', error);
       return {
         isLive: null,
         status: 'error',
@@ -2456,31 +2532,15 @@ async function updateFavoriteLiveStatuses() {
   if (youtubeFavorites.length > 0) {
     try {
       // 批量檢查 YouTube 頻道開台狀態
-      console.log(`[刷新狀態] 開始檢查 ${youtubeFavorites.length} 個 YouTube 頻道的開台狀態`);
-      
       const checkPromises = youtubeFavorites.map(async (item) => {
         if (!item.channelId) {
-          console.warn(`[刷新狀態] 頻道 ${item.name || item.id} 缺少 channelId，跳過檢查`);
           return { item, status: null };
         }
         
-        console.log(`[刷新狀態] 正在檢查頻道: ${item.name || item.id} (channelId: ${item.channelId})`);
-        
         try {
           const status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
-          
-          // 輸出完整的檢查結果
-          console.log(`[刷新狀態] 頻道 ${item.name || item.id} 的檢查結果:`, {
-            channelId: item.channelId,
-            isLive: status.isLive,
-            status: status.status,
-            message: status.message,
-            liveVideoId: status.liveVideoId
-          });
-          
           return { item, status };
         } catch (error) {
-          console.error(`[刷新狀態] 檢查頻道 ${item.channelId} 失敗:`, error);
           return { item, status: null };
         }
       });
@@ -2498,7 +2558,6 @@ async function updateFavoriteLiveStatuses() {
       if (allFailed && results.length > 0) {
         const firstStatus = results[0].status === 'fulfilled' ? results[0].value?.status : null;
         if (firstStatus && firstStatus.status === 'proxy_unavailable') {
-          console.info('[YouTube Live Check] 代理服務不可用（本地開發環境），跳過開台狀態檢查');
           // 在本地開發環境中，不更新狀態，也不計入更新數
           return { success: true, updated: updatedCount };
         }
@@ -2516,19 +2575,8 @@ async function updateFavoriteLiveStatuses() {
             
             // 如果狀態是代理不可用，不更新（保持原有狀態）
             if (status.status === 'proxy_unavailable') {
-              console.log(`[刷新狀態] 頻道 ${item.name || item.id} 代理不可用，保持原有狀態: isLive=${item.isLive}`);
               return item;
             }
-            
-            // 輸出狀態更新前後對比
-            const beforeIsLive = item.isLive;
-            const afterIsLive = status.isLive;
-            
-            console.log(`[刷新狀態] 更新頻道 ${item.name || item.id} 的開台狀態:`, {
-              channelId: item.channelId,
-              更新前: { isLive: beforeIsLive, liveVideoId: item.liveVideoId },
-              更新後: { isLive: afterIsLive, liveVideoId: status.liveVideoId, status: status.status }
-            });
             
             updatedCount++;
             return {
@@ -2541,7 +2589,6 @@ async function updateFavoriteLiveStatuses() {
             };
           } else {
             // 如果查詢失敗，保持原有狀態，但更新檢查時間（僅在非代理不可用的情況下）
-            console.warn(`[刷新狀態] 頻道 ${item.name || item.id} 查詢失敗或無狀態，保持原有狀態: isLive=${item.isLive}`);
             return {
               ...item,
               lastChecked: new Date().toISOString()
@@ -2551,7 +2598,7 @@ async function updateFavoriteLiveStatuses() {
         return item;
       });
     } catch (error) {
-      console.error('[YouTube Live Check] 批量檢查失敗:', error);
+      // 靜默處理錯誤
     }
   }
   
@@ -2632,17 +2679,9 @@ async function refreshFavoriteStatus() {
   refreshBtn.disabled = true;
   refreshBtn.textContent = i18n.t('refreshingFavoriteStatus') || '刷新中...';
   
-  console.log('[刷新狀態] ========== 開始手動刷新收藏狀態 ==========');
-  
   try {
     // 調用更新函數
     const result = await updateFavoriteLiveStatuses();
-    
-    console.log('[刷新狀態] 更新結果:', {
-      success: result.success,
-      updated: result.updated
-    });
-    console.log('[刷新狀態] ========== 刷新完成 ==========');
     
     // 更新收藏列表顯示
     if (typeof updateFavoriteListDisplay === 'function') {
@@ -2669,26 +2708,13 @@ async function refreshFavoriteStatus() {
     }
   } catch (error) {
     // 錯誤處理
-    console.error('[刷新狀態] 刷新收藏狀態失敗:', error);
-    console.error('[刷新狀態] 錯誤詳情:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
     refreshBtn.disabled = false;
     refreshBtn.textContent = originalText;
     showSaveMessage('刷新狀態失敗，請查看控制台');
   }
 }
 
-// 確保函數是全局的
-if (typeof window !== 'undefined') {
-  window.updateFavoriteListDisplay = updateFavoriteListDisplay;
-  window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
-  window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
-  window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
-  window.refreshFavoriteStatus = refreshFavoriteStatus;
-}
+// 函數導出已移至文件末尾統一處理
 
 // 從控制面板一鍵載入分類下的所有收藏
 function loadCategoryFavoritesFromPanel(categoryId) {
@@ -2719,20 +2745,41 @@ async function addCurrentStreamToFavorites() {
     const data = streamData[id];
     
     if (data && data.originalUrl) {
-      // 為每個串流生成自訂名稱（如果可能）
+      // 優先使用 displayName 或 name，如果沒有才使用 channelId/videoId
       let customName = '';
       let urlToAdd = data.originalUrl;
       
+      // 優先使用 displayName 或 name
+      if (data.displayName) {
+        customName = data.displayName;
+      } else if (data.name) {
+        customName = data.name;
+      }
+      
       if (data.platform === 'twitch' && data.channelId) {
-        customName = data.channelId;
+        // 如果沒有 displayName，使用 channelId 作為 fallback
+        if (!customName) {
+          customName = data.channelId;
+        }
+        // 如果 URL 中沒有 displayName 參數，添加它以便 favoriteStreams.add 使用
+        if (customName && customName !== data.channelId && !urlToAdd.includes('displayName=')) {
+          const separator = urlToAdd.includes('?') ? '&' : '?';
+          urlToAdd = `${urlToAdd}${separator}displayName=${encodeURIComponent(customName)}`;
+        }
       } else if (data.platform === 'youtube') {
         // 對於 YouTube，使用現有的 channelId 或 videoId
         if (data.channelId) {
-          customName = data.channelId;
+          // 如果沒有 displayName，使用 channelId 作為 fallback
+          if (!customName) {
+            customName = data.channelId;
+          }
           // 確保使用頻道 URL
           urlToAdd = `https://www.youtube.com/channel/${data.channelId}`;
         } else if (data.videoId) {
-          customName = data.videoId;
+          // 如果沒有 displayName，使用 videoId 作為 fallback
+          if (!customName) {
+            customName = data.videoId;
+          }
         }
       }
       
@@ -2834,6 +2881,21 @@ function updateVersionHistoryContent(versionModal) {
   
   // 版本紀錄內容（使用 i18n key）
   const versionHistory = [
+    {
+      version: '1.7.0',
+      date: '2025-12-05',
+      changeKeys: [
+        'version1.7.0.change1',
+        'version1.7.0.change2',
+        'version1.7.0.change3',
+        'version1.7.0.change4',
+        'version1.7.0.change5',
+        'version1.7.0.change6',
+        'version1.7.0.change7',
+        'version1.7.0.change8',
+        'version1.7.0.change9'
+      ]
+    },
     {
       version: '1.6.2',
       date: '2025-12-03',
@@ -2979,11 +3041,7 @@ function closeVersionHistory() {
   }
 }
 
-// 確保函數是全局的
-if (typeof window !== 'undefined') {
-  window.showVersionHistory = showVersionHistory;
-  window.closeVersionHistory = closeVersionHistory;
-}
+// 函數導出已移至文件末尾統一處理
 
 // 使用教學功能
 function showUserGuide() {
@@ -3163,9 +3221,24 @@ function updateUserGuideContent(guideModal) {
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep2'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep3'))}</li>
           <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('liveStatusStep5'))}</li>
         </ol>
         <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
           ${escapeHtml(t('liveStatusTip'))}
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 30px;">
+        <h4 style="color: var(--text-accent); font-size: 16px; margin-bottom: 12px;">${escapeHtml(t('youtubeLiveStatusTitle'))}</h4>
+        <ol style="color: var(--text-primary); line-height: 1.8; padding-left: 20px; margin: 0;">
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep1'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep2'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep3'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep4'))}</li>
+          <li style="margin-bottom: 8px;">${escapeHtml(t('youtubeLiveStatusStep5'))}</li>
+        </ol>
+        <div style="margin-top: 10px; padding: 10px; background: rgba(145, 71, 255, 0.1); border-radius: 4px; font-size: 11px; color: #aaa;">
+          ${escapeHtml(t('youtubeLiveStatusTip'))}
         </div>
       </div>
       
@@ -3350,7 +3423,6 @@ async function performFavoriteSearch(query) {
             return [];
           })
           .catch(error => {
-            console.warn('Twitch 搜尋失敗:', error.message);
             return [];
           })
       );
@@ -3478,8 +3550,17 @@ function selectFavoriteSearchResult(channel) {
     if ((channel.platform === 'youtube' || channel.source === 'youtube') && channel.id) {
       urlInput.value = `https://www.youtube.com/channel/${channel.id}`;
     } else if (channel.platform === 'twitch' || channel.source === 'twitch') {
-      // Twitch 使用頻道 URL
-      urlInput.value = channel.url || `https://www.twitch.tv/${channel.login || channel.id}`;
+      // Twitch 使用頻道 URL，並在 URL 中添加 displayName 參數以便在 addToFavorites 時使用
+      const twitchUrl = channel.url || `https://www.twitch.tv/${channel.login || channel.id}`;
+      const displayName = channel.displayName || channel.display_name || channel.title || channel.name || channel.login || '';
+      if (displayName) {
+        // 將 displayName 作為 URL 參數傳遞，以便在 favoriteStreams.add 中使用
+        const urlObj = new URL(twitchUrl);
+        urlObj.searchParams.set('displayName', displayName);
+        urlInput.value = urlObj.toString();
+      } else {
+        urlInput.value = twitchUrl;
+      }
     } else {
       urlInput.value = channel.url || '';
     }
@@ -3506,8 +3587,20 @@ function hideFavoriteSearchSuggestions() {
   }
 }
 
-// 確保函數是全局的
+// 確保所有函數是全局的（統一在文件末尾導出，確保所有函數都已定義）
 if (typeof window !== 'undefined') {
+  // 收藏相關函數
+  window.showFavoriteStreamsManager = showFavoriteStreamsManager;
+  window.addCurrentStreamToFavorites = addCurrentStreamToFavorites;
+  window.refreshFavoriteStatus = refreshFavoriteStatus;
+  window.updateFavoriteListDisplay = updateFavoriteListDisplay;
+  window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
+  window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
+  window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
+  
+  // 版本紀錄和使用教學
+  window.showVersionHistory = showVersionHistory;
+  window.closeVersionHistory = closeVersionHistory;
   window.showUserGuide = showUserGuide;
   window.closeUserGuide = closeUserGuide;
 }

@@ -19,10 +19,7 @@ async function handleChannelPageRequest(request, env) {
     const url = new URL(request.url);
     const username = url.searchParams.get('username');
     
-    console.log('[YouTube Channel Page Proxy] 收到請求:', { username, url: request.url });
-    
     if (!username) {
-      console.warn('[YouTube Channel Page Proxy] 缺少 username 參數');
       return new Response(
         JSON.stringify({ error: '缺少 username 參數' }),
         {
@@ -37,7 +34,6 @@ async function handleChannelPageRequest(request, env) {
     
     // 驗證 username 格式
     if (!/^[a-zA-Z0-9_-]{1,100}$/.test(username)) {
-      console.warn('[YouTube Channel Page Proxy] 無效的 username 格式:', username);
       return new Response(
         JSON.stringify({ error: '無效的 username 格式' }),
         {
@@ -52,7 +48,6 @@ async function handleChannelPageRequest(request, env) {
     
     // 構建 YouTube 頻道 about 頁面 URL
     const channelAboutUrl = `https://www.youtube.com/@${username}/about`;
-    console.log('[YouTube Channel Page Proxy] 請求頻道頁面:', channelAboutUrl);
     
     // 從 YouTube 獲取頻道頁面 HTML
     const response = await fetch(channelAboutUrl, {
@@ -65,11 +60,6 @@ async function handleChannelPageRequest(request, env) {
     });
     
     if (!response.ok) {
-      console.error('[YouTube Channel Page Proxy] 無法獲取頻道頁面:', { 
-        username, 
-        status: response.status, 
-        statusText: response.statusText 
-      });
       return new Response(
         JSON.stringify({ 
           error: '無法獲取頻道頁面',
@@ -87,11 +77,6 @@ async function handleChannelPageRequest(request, env) {
     }
     
     const htmlText = await response.text();
-    console.log('[YouTube Channel Page Proxy] 成功獲取頻道頁面:', { 
-      username, 
-      htmlLength: htmlText.length,
-      status: response.status 
-    });
     
     // 返回 HTML，設置正確的 CORS headers
     return new Response(htmlText, {
@@ -105,10 +90,6 @@ async function handleChannelPageRequest(request, env) {
       }
     });
   } catch (error) {
-    console.error('[YouTube Channel Page Proxy] 伺服器錯誤:', { 
-      error: error.message, 
-      stack: error.stack 
-    });
     return new Response(
       JSON.stringify({ 
         error: '伺服器錯誤', 
