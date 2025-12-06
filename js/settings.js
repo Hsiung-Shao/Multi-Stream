@@ -2436,14 +2436,37 @@ const youtubeApiUtils = {
       }
       
       if (result.status === 200) {
+        // 檢查是否有 isUpcoming 標記（新版本 API 會返回）
+        if (result.isUpcoming === true) {
+          // 這是排定直播，不是正在直播
+          return {
+            isLive: false,
+            status: 'scheduled',
+            message: '待機中（首播尚未開始）',
+            liveVideoId: null,
+            scheduledVideoId: result.scheduledVideoId || null
+          };
+        }
+        
+        // 檢查 isLive 標記（優先使用）
+        if (result.isLive === true) {
+          // 這是正在直播
+          return {
+            isLive: true,
+            status: 'live',
+            message: '開台中',
+            liveVideoId: result.liveVideoId || null
+          };
+        }
+        
+        // 兼容舊版本：檢查 finalUrl 是否包含 watch?v=
         const finalUrl = result.finalUrl || '';
         if (finalUrl.includes('watch?v=')) {
-          // HTTP 200 + URL 包含 watch?v= -> 開台中或預定直播
+          // HTTP 200 + URL 包含 watch?v= -> 可能是開台中或預定直播
+          // 但由於無法確定，優先假設是開台（向後兼容）
           const videoIdMatch = finalUrl.match(/[?&]v=([^&]+)/);
           const liveVideoId = videoIdMatch ? videoIdMatch[1] : null;
           
-          // 注意：無法在後端判斷是否為「即將開始」畫面，所以統一判定為開台
-          // 如果需要區分，需要進一步解析 HTML 內容
           return {
             isLive: true,
             status: 'live_or_scheduled',
