@@ -20,17 +20,6 @@ const consentManager = {
   // 檢測用戶地理位置（改進版）
   detectUserCountry: function() {
     return new Promise((resolve) => {
-      // 檢查是否為測試模式（測試模式下直接使用設置的國家代碼，不檢查過期）
-      const testMode = localStorage.getItem('test_country_mode');
-      if (testMode === 'true') {
-        const testCountry = localStorage.getItem('user_country');
-        if (testCountry) {
-          console.log(`[測試模式] 使用測試國家: ${testCountry}`);
-          resolve(testCountry);
-          return;
-        }
-      }
-      
       // 嘗試從 localStorage 讀取緩存的地理位置
       const cachedCountry = localStorage.getItem('user_country');
       const cacheTimestamp = localStorage.getItem('user_country_timestamp');
@@ -50,7 +39,6 @@ const consentManager = {
       const handleError = (error) => {
         if (isResolved) return;
         clearTimeout(timeoutId);
-        console.warn('地區偵測失敗:', error);
         // 如果檢測失敗，嘗試使用過期的緩存
         const expiredCache = localStorage.getItem('user_country');
         if (expiredCache) {
@@ -132,7 +120,6 @@ const consentManager = {
       // 只有在 GDPR_COUNTRIES 列表中的國家才需要顯示同意視窗
       return GDPR_COUNTRIES.includes(countryCode);
     } catch (error) {
-      console.error('檢查同意橫幅時發生錯誤:', error);
       // 錯誤時保守處理：顯示同意橫幅
       return true;
     }
@@ -146,11 +133,9 @@ const consentManager = {
       // 如果已有保存的同意狀態，直接應用（不顯示橫幅）
       this.consent = savedConsent;
       this.applyConsent();
-      console.log('[Consent] 使用已保存的同意狀態:', savedConsent);
     } else {
       // 檢查是否需要顯示同意視窗
       const shouldShow = await this.shouldShowConsentBanner();
-      console.log('[Consent] 需要顯示同意橫幅:', shouldShow);
       if (shouldShow) {
         // 如果需要顯示，顯示同意橫幅
         this.showConsentBanner();
@@ -160,62 +145,8 @@ const consentManager = {
         this.consent.ads = true;
         this.saveConsent();
         this.applyConsent();
-        console.log('[Consent] 非 GDPR 國家，自動同意');
       }
     }
-  },
-  
-  // 調試函數：診斷為什麼沒有顯示橫幅
-  debug: async function() {
-    console.log('=== Consent 系統調試 ===\n');
-    
-    // 1. 檢查已保存的同意狀態
-    const savedConsent = this.getSavedConsent();
-    if (savedConsent) {
-      console.log('⚠ 發現已保存的同意狀態:', savedConsent);
-      console.log('   這是為什麼沒有顯示橫幅的原因！');
-      console.log('   解決方法: 執行 consentManager.clearSavedConsent() 清除同意狀態\n');
-    } else {
-      console.log('✓ 沒有已保存的同意狀態\n');
-    }
-    
-    // 2. 檢查地區偵測
-    try {
-      const country = await this.detectUserCountry();
-      console.log('地區偵測結果:', country || '無法偵測');
-      
-      const isGDPR = country && GDPR_COUNTRIES.includes(country);
-      console.log('是否為 GDPR 國家:', isGDPR ? '是' : '否');
-      
-      const shouldShow = await this.shouldShowConsentBanner();
-      console.log('需要顯示同意橫幅:', shouldShow ? '是' : '否');
-      console.log('');
-    } catch (error) {
-      console.error('地區偵測錯誤:', error);
-    }
-    
-    // 3. 檢查當前同意狀態
-    console.log('當前同意狀態:', this.consent);
-    
-    // 4. 檢查測試模式
-    const testMode = localStorage.getItem('test_country_mode');
-    if (testMode === 'true') {
-      console.log('⚠ 測試模式已啟用');
-    }
-    
-    console.log('\n=== 調試完成 ===');
-  },
-  
-  // 清除已保存的同意狀態（用於測試）
-  clearSavedConsent: function() {
-    localStorage.removeItem('consent_preferences');
-    localStorage.removeItem('consent_timestamp');
-    this.consent = {
-      analytics: null,
-      ads: null
-    };
-    console.log('✓ 已清除已保存的同意狀態');
-    console.log('  請重新載入頁面以查看效果');
   },
   
   // 獲取保存的同意狀態
@@ -356,7 +287,7 @@ const consentManager = {
       try {
         gtag('consent', 'update', consentParams);
       } catch (error) {
-        console.warn('gtag consent update 失敗:', error);
+        // 靜默處理錯誤
       }
     }
   },
@@ -375,18 +306,9 @@ const consentManager = {
     script.async = true;
     script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
     
-    // 添加錯誤處理
+    // 添加錯誤處理（靜默處理）
     script.onerror = function() {
-      console.error('[Consent] Google Analytics 腳本載入失敗 (404)');
-      console.error('[Consent] 可能原因:');
-      console.error('  1. Google Analytics ID 無效或不存在');
-      console.error('  2. 網路連接問題');
-      console.error(`  3. 請確認 ID "${GA_ID}" 是否正確`);
-      console.error('[Consent] 提示: 可以在 Google Analytics 後台確認追蹤 ID');
-    };
-    
-    script.onload = function() {
-      console.log('[Consent] Google Analytics 腳本載入成功');
+      // 靜默處理錯誤
     };
     
     document.head.appendChild(script);
@@ -407,9 +329,8 @@ const consentManager = {
         'allow_google_signals': this.consent.ads || false,  // 僅在同意廣告時啟用
         'allow_ad_personalization_signals': this.consent.ads || false
       });
-      console.log('[Consent] Google Analytics 配置完成');
     } catch (error) {
-      console.error('[Consent] Google Analytics 配置失敗:', error);
+      // 靜默處理錯誤
     }
   },
   
@@ -444,54 +365,6 @@ const consentManager = {
     return false;
   },
   
-  // 測試模式：手動設置國家代碼（僅用於開發測試）
-  // 使用方法：在控制台執行 consentManager.setTestCountry('DE') 或 consentManager.setTestCountry('US')
-  setTestCountry: function(countryCode) {
-    if (!countryCode || typeof countryCode !== 'string') {
-      console.error('請提供有效的國家代碼（例如：DE, US, TW, JP）');
-      return;
-    }
-    const upperCode = countryCode.toUpperCase();
-    if (!/^[A-Z]{2}$/.test(upperCode)) {
-      console.error('國家代碼格式錯誤，應為 2 個大寫字母（例如：DE, US）');
-      return;
-    }
-    // 設置測試國家代碼
-    localStorage.setItem('user_country', upperCode);
-    localStorage.setItem('user_country_timestamp', Date.now().toString());
-    localStorage.setItem('test_country_mode', 'true'); // 標記為測試模式
-    console.log(`✓ 已設置測試國家: ${upperCode}`);
-    console.log(`  GDPR 國家: ${GDPR_COUNTRIES.includes(upperCode) ? '是' : '否'}`);
-    console.log(`  需要顯示同意橫幅: ${GDPR_COUNTRIES.includes(upperCode) ? '是' : '否'}`);
-    console.log('  提示：重新載入頁面以查看效果');
-  },
-  
-  // 清除測試模式
-  clearTestCountry: function() {
-    localStorage.removeItem('user_country');
-    localStorage.removeItem('user_country_timestamp');
-    localStorage.removeItem('test_country_mode');
-    console.log('✓ 已清除測試國家設置');
-    console.log('  提示：重新載入頁面以使用真實 IP 偵測');
-  },
-  
-  // 獲取當前測試狀態
-  getTestStatus: function() {
-    const testMode = localStorage.getItem('test_country_mode');
-    const country = localStorage.getItem('user_country');
-    const timestamp = localStorage.getItem('user_country_timestamp');
-    if (testMode && country) {
-      const age = timestamp ? Math.floor((Date.now() - parseInt(timestamp)) / 1000 / 60) : '未知';
-      return {
-        isTestMode: true,
-        country: country,
-        age: `${age} 分鐘前`,
-        isGDPR: GDPR_COUNTRIES.includes(country),
-        shouldShowBanner: GDPR_COUNTRIES.includes(country)
-      };
-    }
-    return { isTestMode: false };
-  }
 };
 
 // 初始化
