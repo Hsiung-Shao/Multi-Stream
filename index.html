@@ -77,11 +77,9 @@
 <link rel="dns-prefetch" href="https://www.youtube.com">
 <link rel="dns-prefetch" href="https://player.twitch.tv">
 <link rel="dns-prefetch" href="https://api.twitch.tv">
-<link rel="dns-prefetch" href="https://www.googletagmanager.com">
 <link rel="preconnect" href="https://www.youtube.com" crossorigin>
 <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
 <link rel="preconnect" href="https://api.twitch.tv" crossorigin>
-<link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
 
 <!-- 內聯關鍵 CSS - 減少首次渲染阻塞 -->
 <style>
@@ -201,8 +199,7 @@ body {
 <link rel="preload" href="js/theme.js" as="script" fetchpriority="high">
 <link rel="preload" href="js/main.js" as="script" fetchpriority="high">
 <meta name="google-site-verification" content="zwGSq1eCO7MvtEssR2zNWXuPulU33fJlUb6u4H2Zuc0" />
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46"></script>
+<!-- Google tag (gtag.js) - 優先使用 Cloudflare Tag Gateway -->
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -220,6 +217,65 @@ body {
   });
   
   gtag('config', 'G-Q2LXVMDD46');
+  
+  // 如果 Cloudflare Tag Gateway 未自動注入腳本，則回退到第三方載入
+  // 改進的檢查邏輯：延長等待時間並改進檢測方式
+  let cloudflareGatewayDetected = false;
+  
+  // 多次檢查 Cloudflare Tag Gateway（因為它可能需要一些時間才能注入）
+  const checkCloudflareGateway = function(attempt) {
+    const maxAttempts = 5; // 最多檢查5次（總共約5秒）
+    
+    // 檢查是否有從第一方域名載入的 gtag 腳本（Cloudflare Tag Gateway）
+    const currentDomain = window.location.hostname;
+    const firstPartyGtag = document.querySelector('script[src*="' + currentDomain + '/gtag"]') ||
+                           document.querySelector('script[src*="/gtag/js"]') ||
+                           document.querySelector('script[src*="/gtag/"]');
+    
+    // 檢查是否有 Cloudflare Zaraz 注入的腳本
+    const zarazScript = document.querySelector('script[src*="zaraz"]');
+    
+    // 檢查 window.zaraz 是否存在（Cloudflare Zaraz 的標誌）
+    const hasZaraz = typeof window.zaraz !== 'undefined';
+    
+    // 檢查是否有從第三方域名載入的 gtag 腳本（已回退）
+    const thirdPartyGtag = document.querySelector('script[src*="googletagmanager.com/gtag"]');
+    
+    if (firstPartyGtag || hasZaraz || zarazScript) {
+      // 檢測到 Cloudflare Tag Gateway
+      cloudflareGatewayDetected = true;
+      return;
+    }
+    
+    if (thirdPartyGtag) {
+      // 已經有第三方腳本，不需要回退
+      return;
+    }
+    
+    // 如果檢查次數未達到上限，繼續檢查
+    if (attempt < maxAttempts) {
+      setTimeout(function() {
+        checkCloudflareGateway(attempt + 1);
+      }, 1000);
+    } else {
+      // 所有檢查都完成，如果仍未檢測到 Cloudflare，則使用回退方案
+      if (!cloudflareGatewayDetected && !thirdPartyGtag && typeof gtag === 'function') {
+        // Cloudflare 未注入，使用第三方載入（回退方案）
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-Q2LXVMDD46';
+        script.onerror = function() {
+          console.warn('Google Analytics 載入失敗');
+        };
+        document.head.appendChild(script);
+      }
+    }
+  };
+  
+  // 開始檢查（延遲500ms開始，給 Cloudflare 一些時間注入）
+  setTimeout(function() {
+    checkCloudflareGateway(1);
+  }, 500);
 </script>
 <!-- Content Security Policy -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://player.twitch.tv https://pagead2.googlesyndication.com https://www.googletagmanager.com https://ep2.adtrafficquality.google https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.twitch.tv https://player.twitch.tv https://googleads.g.doubleclick.net https://ep2.adtrafficquality.google https://www.google.com; connect-src 'self' https://api.twitch.tv https://id.twitch.tv https://www.youtube.com https://player.twitch.tv https://*.googlevideo.com https://pagead2.googlesyndication.com https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.doubleclick.net https://stats.g.doubleclick.net https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://www.google-analytics.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co wss://*.twitch.tv wss://*.youtube.com; media-src 'self' https://*.twitch.tv https://*.googlevideo.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
@@ -544,8 +600,22 @@ body {
   // 初始化 CONFIG 對象
   window.CONFIG = window.CONFIG || {};
   
-  // 延遲載入 config.js，避免阻塞頁面渲染
+  // 延遲載入 config.js，避免阻塞頁面渲染（改進錯誤處理）
   (function() {
+    // 設置全局錯誤處理器來捕獲 config.js 的語法錯誤
+    const configErrorHandler = function(msg, url, line, col, error) {
+      if (url && (url.includes('config.js') || url.includes('/config.js'))) {
+        // 靜默處理 config.js 的錯誤，不顯示在控制台
+        window.CONFIG = window.CONFIG || {};
+        return true; // 表示已處理錯誤
+      }
+      return false; // 其他錯誤繼續正常處理
+    };
+    
+    // 暫時保存原錯誤處理器
+    const originalErrorHandler = window.onerror;
+    window.onerror = configErrorHandler;
+    
     // 使用 fetch 檢查文件是否存在，避免 MIME type 錯誤
     fetch('config.js', { 
       method: 'HEAD',
@@ -560,29 +630,45 @@ body {
         script.src = 'config.js';
         script.type = 'text/javascript';
         script.async = true;
+        
         script.onerror = function() {
-          console.log('config.js 載入失敗，使用預設配置');
+          // 載入失敗，恢復原錯誤處理器並使用預設配置
+          window.onerror = originalErrorHandler;
           window.CONFIG = window.CONFIG || {};
         };
+        
         script.onload = function() {
+          // 載入成功，恢復原錯誤處理器
+          window.onerror = originalErrorHandler;
           if (typeof window.CONFIG === 'undefined') {
             window.CONFIG = {};
           }
         };
+        
         // 檢查腳本是否已存在，避免重複載入
         const existingScript = document.querySelector('script[src="config.js"]');
         if (!existingScript) {
           document.head.appendChild(script);
+          
+          // 設置超時，如果載入時間過長則恢復錯誤處理器
+          setTimeout(function() {
+            if (window.onerror === configErrorHandler) {
+              window.onerror = originalErrorHandler;
+            }
+          }, 3000);
+        } else {
+          // 腳本已存在，恢復錯誤處理器
+          window.onerror = originalErrorHandler;
         }
       } else {
-        // 文件不存在或不是 JavaScript，使用預設配置
-        console.log('config.js 不存在或格式不正確，使用預設配置');
+        // 文件不存在或不是 JavaScript，恢復錯誤處理器並使用預設配置
+        window.onerror = originalErrorHandler;
         window.CONFIG = window.CONFIG || {};
       }
     })
     .catch(function(error) {
-      // 載入失敗（可能是網路錯誤或文件不存在），使用預設配置
-      console.log('config.js 檢查失敗，使用預設配置:', error.message);
+      // 載入失敗（可能是網路錯誤或文件不存在），恢復錯誤處理器並使用預設配置
+      window.onerror = originalErrorHandler;
       window.CONFIG = window.CONFIG || {};
     });
   })();
