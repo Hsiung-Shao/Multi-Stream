@@ -143,11 +143,14 @@ const consentManager = {
     // 從 localStorage 讀取之前的同意狀態
     const savedConsent = this.getSavedConsent();
     if (savedConsent) {
+      // 如果已有保存的同意狀態，直接應用（不顯示橫幅）
       this.consent = savedConsent;
       this.applyConsent();
+      console.log('[Consent] 使用已保存的同意狀態:', savedConsent);
     } else {
       // 檢查是否需要顯示同意視窗
       const shouldShow = await this.shouldShowConsentBanner();
+      console.log('[Consent] 需要顯示同意橫幅:', shouldShow);
       if (shouldShow) {
         // 如果需要顯示，顯示同意橫幅
         this.showConsentBanner();
@@ -157,8 +160,62 @@ const consentManager = {
         this.consent.ads = true;
         this.saveConsent();
         this.applyConsent();
+        console.log('[Consent] 非 GDPR 國家，自動同意');
       }
     }
+  },
+  
+  // 調試函數：診斷為什麼沒有顯示橫幅
+  debug: async function() {
+    console.log('=== Consent 系統調試 ===\n');
+    
+    // 1. 檢查已保存的同意狀態
+    const savedConsent = this.getSavedConsent();
+    if (savedConsent) {
+      console.log('⚠ 發現已保存的同意狀態:', savedConsent);
+      console.log('   這是為什麼沒有顯示橫幅的原因！');
+      console.log('   解決方法: 執行 consentManager.clearSavedConsent() 清除同意狀態\n');
+    } else {
+      console.log('✓ 沒有已保存的同意狀態\n');
+    }
+    
+    // 2. 檢查地區偵測
+    try {
+      const country = await this.detectUserCountry();
+      console.log('地區偵測結果:', country || '無法偵測');
+      
+      const isGDPR = country && GDPR_COUNTRIES.includes(country);
+      console.log('是否為 GDPR 國家:', isGDPR ? '是' : '否');
+      
+      const shouldShow = await this.shouldShowConsentBanner();
+      console.log('需要顯示同意橫幅:', shouldShow ? '是' : '否');
+      console.log('');
+    } catch (error) {
+      console.error('地區偵測錯誤:', error);
+    }
+    
+    // 3. 檢查當前同意狀態
+    console.log('當前同意狀態:', this.consent);
+    
+    // 4. 檢查測試模式
+    const testMode = localStorage.getItem('test_country_mode');
+    if (testMode === 'true') {
+      console.log('⚠ 測試模式已啟用');
+    }
+    
+    console.log('\n=== 調試完成 ===');
+  },
+  
+  // 清除已保存的同意狀態（用於測試）
+  clearSavedConsent: function() {
+    localStorage.removeItem('consent_preferences');
+    localStorage.removeItem('consent_timestamp');
+    this.consent = {
+      analytics: null,
+      ads: null
+    };
+    console.log('✓ 已清除已保存的同意狀態');
+    console.log('  請重新載入頁面以查看效果');
   },
   
   // 獲取保存的同意狀態
