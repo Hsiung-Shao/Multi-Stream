@@ -11,9 +11,17 @@
       <div id="root"></div>
       <!-- 載入 config.js 在 React 應用之前 -->
       <script src="/config.js"></script>
+      <!-- 載入工具函數和驗證函數（必須在 chat.js 之前） -->
+      <script defer src="/js/utils.js"></script>
+      <script defer src="/js/security.js"></script>
       <!-- 載入必要的 API 腳本 -->
       <script defer src="/js/twitch-api.js"></script>
       <script defer src="/js/settings.js"></script>
+      <!-- 載入聊天室和音量控制腳本（依賴 utils.js 和 security.js） -->
+      <script defer src="/js/chat.js"></script>
+      <script defer src="/js/volume.js"></script>
+      <!-- 初始化全局函數 -->
+      <script defer src="/init-globals.js"></script>
       <script type="module" src="/src/main.tsx"></script>
     </body>
   </html>

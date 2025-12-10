@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { StreamData } from '../utils/streamUtils';
 import { loadTwitchPlayerApi, loadYouTubeIframeApi } from '../utils/loadPlayerApis';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
-import { RefreshCw, MessageSquare, X, Volume2 } from 'lucide-react';
+import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
 
 interface StreamBoxProps {
   streamData: StreamData;
@@ -40,43 +40,95 @@ export function StreamBox({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatResizerRef = useRef<HTMLDivElement>(null);
   const [volume, setVolume] = useState(streamData.volume);
+  const [isMuted, setIsMuted] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  // 同步聊天室顯示狀態和布局
+  // 同步聊天室顯示狀態和布局 - 參考 js/chat.js 和 js/stream.js
   useEffect(() => {
+    console.log(`[StreamBox ${streamData.id}] 同步聊天室狀態`, {
+      chatVisible: streamData.chatVisible,
+      platform: streamData.platform,
+      channelId: streamData.channelId
+    });
+
     const contentWrapper = document.getElementById(`content-wrapper${streamData.id}`);
     const playerContainer = playerContainerRef.current;
     const chatContainer = chatContainerRef.current;
     const chatResizer = chatResizerRef.current;
     
+    console.log(`[StreamBox ${streamData.id}] DOM 元素檢查`, {
+      contentWrapper: !!contentWrapper,
+      playerContainer: !!playerContainer,
+      chatContainer: !!chatContainer,
+      chatResizer: !!chatResizer,
+      chatContainerId: chatContainer?.id
+    });
+    
     if (contentWrapper) {
       if (streamData.chatVisible) {
         contentWrapper.classList.remove('layout-vertical');
         contentWrapper.classList.add('layout-horizontal');
+        console.log(`[StreamBox ${streamData.id}] 設置為水平布局`);
       } else {
         contentWrapper.classList.remove('layout-horizontal');
         contentWrapper.classList.add('layout-vertical');
+        console.log(`[StreamBox ${streamData.id}] 設置為垂直布局`);
       }
     }
     
     if (playerContainer) {
-      playerContainer.style.width = streamData.chatVisible ? '70%' : '100%';
+      const playerWidth = streamData.chatVisible ? '80%' : '100%';
+      playerContainer.style.width = playerWidth;
       playerContainer.style.height = '100%';
       playerContainer.style.transition = 'width 0.3s ease';
+      console.log(`[StreamBox ${streamData.id}] 播放器寬度: ${playerWidth}`);
     }
     
     if (chatContainer) {
+      // 確保聊天室容器有正確的 ID
+      if (!chatContainer.id || chatContainer.id !== `chat${streamData.id}`) {
+        console.log(`[StreamBox ${streamData.id}] 設置聊天室容器 ID: chat${streamData.id}`);
+        chatContainer.id = `chat${streamData.id}`;
+      }
+
       if (streamData.chatVisible) {
-        chatContainer.style.width = '30%';
+        chatContainer.style.width = '20%';
         chatContainer.style.height = '100%';
         chatContainer.style.display = 'block';
         chatContainer.classList.remove('hidden');
+        console.log(`[StreamBox ${streamData.id}] 顯示聊天室 (20%)`);
+        
+        // 檢查聊天室 iframe 是否存在
+        const iframe = chatContainer.querySelector('iframe');
+        if (!iframe) {
+          console.warn(`[StreamBox ${streamData.id}] 聊天室 iframe 不存在，嘗試創建`);
+          // 如果 iframe 不存在，調用 createChat
+          if (typeof (window as any).createChat === 'function') {
+            setTimeout(() => {
+              (window as any).createChat(
+                streamData.id,
+                streamData.platform,
+                streamData.channelId,
+                streamData.videoId
+            );
+            }, 100);
+          }
+        } else {
+          console.log(`[StreamBox ${streamData.id}] 聊天室 iframe 已存在`, {
+            src: iframe.src,
+            width: iframe.style.width,
+            height: iframe.style.height
+          });
+        }
       } else {
         chatContainer.style.width = '0%';
         chatContainer.style.height = '100%';
         chatContainer.style.display = 'none';
         chatContainer.classList.add('hidden');
+        console.log(`[StreamBox ${streamData.id}] 隱藏聊天室`);
       }
+    } else {
+      console.error(`[StreamBox ${streamData.id}] 聊天室容器不存在`);
     }
     
     if (chatResizer) {
@@ -87,13 +139,10 @@ export function StreamBox({
       }
     }
     
-    // 調用原有的 toggleChat 函數以確保聊天室正確初始化
-    if (typeof (window as any).toggleChat === 'function') {
-      // 只在狀態改變時調用，避免無限循環
-      const currentChatVisible = !chatContainer?.classList.contains('hidden');
-      if (currentChatVisible !== streamData.chatVisible) {
-        (window as any).toggleChat(streamData.id);
-      }
+    // 更新全局 streamData 的 chatVisible 狀態 - 參考 js/chat.js 的 toggleChat
+    if (window.streamData && window.streamData[streamData.id]) {
+      window.streamData[streamData.id].chatVisible = streamData.chatVisible;
+      console.log(`[StreamBox ${streamData.id}] 更新全局 streamData.chatVisible: ${streamData.chatVisible}`);
     }
   }, [streamData.chatVisible, streamData.id]);
 
@@ -139,9 +188,14 @@ export function StreamBox({
         };
         
         player.addEventListener(window.Twitch.Player.READY, () => {
-          // 應用總音量控制
-          if (typeof (window as any).applyMasterVolumeToStream === 'function') {
-            (window as any).applyMasterVolumeToStream(streamData.id);
+          // 讀取初始音量狀態
+          try {
+            if (typeof player.isMuted === 'function') {
+              const muted = player.isMuted();
+              setIsMuted(muted);
+            }
+          } catch (error) {
+            console.error('讀取 Twitch 播放器音量狀態失敗:', error);
           }
         });
         
@@ -182,6 +236,24 @@ export function StreamBox({
               if (typeof (window as any).applyMasterVolumeToStream === 'function') {
                 (window as any).applyMasterVolumeToStream(streamData.id);
               }
+              
+              // 讀取初始音量狀態
+              try {
+                const player = event.target;
+                if (typeof player.isMuted === 'function') {
+                  const muted = player.isMuted();
+                  setIsMuted(muted);
+                  if (!muted && typeof player.getVolume === 'function') {
+                    const playerVolume = player.getVolume();
+                    if (playerVolume !== undefined && playerVolume !== null) {
+                      setVolume(playerVolume);
+                      onVolumeChange(streamData.id, playerVolume);
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('讀取 YouTube 播放器音量狀態失敗:', error);
+              }
             },
             onError: (event: any) => {
               let errorMsg = '無法載入 YouTube 直播';
@@ -219,53 +291,118 @@ export function StreamBox({
       });
     }
 
-    // 建立聊天室
+    // 建立聊天室 - 參考 js/chat.js 和 js/stream.js
     setTimeout(() => {
-      if (typeof (window as any).createChat === 'function') {
-        (window as any).createChat(
-          streamData.id,
-          streamData.platform,
-          streamData.channelId,
-          streamData.videoId
-        );
+      console.log(`[StreamBox ${streamData.id}] 開始創建聊天室`, {
+        platform: streamData.platform,
+        channelId: streamData.channelId,
+        videoId: streamData.videoId,
+        chatVisible: streamData.chatVisible,
+        chatContainerExists: !!chatContainerRef.current,
+        chatContainerId: chatContainerRef.current?.id
+      });
+
+      // 確保聊天室容器存在（chatContainerRef 指向的 div 應該有 id="chat{id}"）
+      if (!chatContainerRef.current) {
+        console.error(`[StreamBox ${streamData.id}] 聊天室容器 chat${streamData.id} 不存在`);
+        return;
       }
 
-      // 設置聊天室調整大小功能
+      // 確保聊天室容器有正確的 ID
+      if (!chatContainerRef.current.id || chatContainerRef.current.id !== `chat${streamData.id}`) {
+        console.log(`[StreamBox ${streamData.id}] 設置聊天室容器 ID: chat${streamData.id}`);
+        chatContainerRef.current.id = `chat${streamData.id}`;
+      }
+
+      // 檢查聊天室是否已經創建（通過全局 createChat 函數）
+      const existingChat = document.getElementById(`chat${streamData.id}`);
+      const existingIframe = existingChat?.querySelector('iframe');
+      
+      console.log(`[StreamBox ${streamData.id}] 檢查聊天室狀態`, {
+        existingChat: !!existingChat,
+        existingIframe: !!existingIframe,
+        createChatFunctionExists: typeof (window as any).createChat === 'function'
+      });
+
+      if (!existingChat || !existingIframe) {
+        // 如果聊天室不存在或沒有 iframe，使用全局 createChat 函數創建它
+        // 這個函數會自動處理 Twitch 和 YouTube 的聊天室創建邏輯
+        if (typeof (window as any).createChat === 'function') {
+          console.log(`[StreamBox ${streamData.id}] 調用 createChat 函數`);
+          (window as any).createChat(
+            streamData.id,
+            streamData.platform,
+            streamData.channelId,
+            streamData.videoId
+          );
+          
+          // 等待 iframe 創建後再次檢查
+          setTimeout(() => {
+            const chatAfterCreate = document.getElementById(`chat${streamData.id}`);
+            const iframeAfterCreate = chatAfterCreate?.querySelector('iframe');
+            console.log(`[StreamBox ${streamData.id}] 創建後檢查`, {
+              chatExists: !!chatAfterCreate,
+              iframeExists: !!iframeAfterCreate,
+              iframeSrc: iframeAfterCreate?.src
+            });
+          }, 500);
+        } else {
+          console.error(`[StreamBox ${streamData.id}] createChat 函數不存在`);
+        }
+      } else {
+        console.log(`[StreamBox ${streamData.id}] 聊天室已存在`, {
+          iframeSrc: existingIframe.src
+        });
+      }
+
+      // 設置聊天室調整大小功能 - 參考 js/chat.js 的 setupChatResizer
       if (typeof (window as any).setupChatResizer === 'function') {
+        console.log(`[StreamBox ${streamData.id}] 設置聊天室調整大小功能`);
         (window as any).setupChatResizer(streamData.id);
+      } else {
+        console.warn(`[StreamBox ${streamData.id}] setupChatResizer 函數不存在`);
       }
 
-      // 如果聊天室預設為隱藏（如YouTube），立即隱藏
+      // 根據 chatVisible 狀態設置聊天室顯示/隱藏
+      // 參考 js/stream.js：YouTube 預設隱藏，其他平台預設顯示
+      console.log(`[StreamBox ${streamData.id}] 設置聊天室顯示狀態: ${streamData.chatVisible}`);
       if (!streamData.chatVisible) {
         if (chatContainerRef.current) {
           chatContainerRef.current.classList.add('hidden');
+          chatContainerRef.current.style.display = 'none';
         }
         if (chatResizerRef.current) {
           chatResizerRef.current.style.display = 'none';
         }
+      } else {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.classList.remove('hidden');
+          chatContainerRef.current.style.display = 'block';
+        }
+        if (chatResizerRef.current) {
+          chatResizerRef.current.style.display = 'block';
+        }
       }
     }, 100);
 
-    // 設置音量控制
+    // 設置音量控制 - 參考 js/volume.js
+    // 注意：React 組件中我們已經實現了音量控制，但為了與舊代碼兼容，
+    // 我們仍然調用 setupVolumeControl（雖然它可能不會找到 .volume 元素）
     setTimeout(() => {
       if (boxRef.current && typeof (window as any).setupVolumeControl === 'function') {
         (window as any).setupVolumeControl(boxRef.current, streamData.id);
       }
     }, 200);
 
-    // 確保在播放器就緒後應用總音量
+    // 確保在播放器就緒後應用總音量 - 參考 js/volume.js 的 applyMasterVolumeToStream
     setTimeout(() => {
       if (typeof (window as any).applyMasterVolumeToStream === 'function') {
         (window as any).applyMasterVolumeToStream(streamData.id);
       }
     }, 1500);
 
-    // 設置拖拽和調整大小
-    setTimeout(() => {
-      if (boxRef.current && typeof (window as any).makeDraggableResizable === 'function') {
-        (window as any).makeDraggableResizable(boxRef.current);
-      }
-    }, 100);
+    // 移除拖拽功能 - StreamBox 不應該可拖曳
+    // 不再設置 makeDraggableResizable
 
     // 清理函數
     return () => {
@@ -276,14 +413,9 @@ export function StreamBox({
         delete window.players[streamData.id];
       }
     };
-  }, [streamData.id, streamData.platform, streamData.channelId, streamData.videoId]);
+  }, [streamData.id, streamData.platform, streamData.channelId, streamData.videoId, onVolumeChange]);
 
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseInt(e.target.value);
-    setVolume(newVolume);
-    onVolumeChange(streamData.id, newVolume);
-  };
 
   const handleToggleChat = () => {
     onToggleChat(streamData.id);
@@ -365,14 +497,6 @@ export function StreamBox({
       {/* Toolbar - 工具列表 */}
       <div 
         className={`controls flex items-center gap-3 px-4 py-2.5 ${theme === 'dark' ? 'bg-gray-800/95 border-b border-gray-700' : 'bg-gray-50/95 border-b border-gray-200'} backdrop-blur-sm`}
-        style={{ cursor: 'move' }}
-        onMouseDown={(e) => {
-          // 如果點擊的是按鈕或滑塊，不觸發拖拽
-          const target = e.target as HTMLElement;
-          if (target.closest('button') || target.closest('[data-slot="slider"]') || target.closest('input')) {
-            return;
-          }
-        }}
       >
         {/* 左側工具組 */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -384,24 +508,55 @@ export function StreamBox({
           </div>
 
           {/* 音量條 */}
-          <div className="flex items-center gap-2 min-w-[200px] flex-shrink-0">
-            <Volume2 className={`size-4 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
-            <Slider
-              value={[volume]}
-              onValueChange={(value) => {
-                const newVolume = value[0];
-                setVolume(newVolume);
-                onVolumeChange(streamData.id, newVolume);
+          <div className="flex items-center gap-3 min-w-[300px] flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 flex-shrink-0 p-0 ${theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-700 hover:text-black hover:bg-gray-200'}`}
+              title={isMuted ? '取消靜音' : '靜音'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMuted(!isMuted);
               }}
-              min={0}
-              max={100}
-              step={1}
-              className="flex-1"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <span className={`text-xs min-w-[38px] text-right flex-shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              {volume}%
-            </span>
+            >
+              {isMuted ? (
+                <VolumeX className="size-4" />
+              ) : (
+                <Volume2 className="size-4" />
+              )}
+            </Button>
+            <div className="flex-1 flex items-center gap-3 min-w-0">
+              <Slider
+                value={[isMuted ? 0 : volume]}
+                trackStyle={{ minWidth: '80px' }}
+                onValueChange={(value) => {
+                  const newVolume = value[0];
+                  
+                  // 如果調整音量且之前是靜音狀態，取消靜音
+                  if (newVolume > 0 && isMuted) {
+                    setIsMuted(false);
+                  }
+                  
+                  // 只更新本地狀態和全局 streamData
+                  setVolume(newVolume);
+                  onVolumeChange(streamData.id, newVolume);
+                  
+                  if (window.streamData && window.streamData[streamData.id]) {
+                    window.streamData[streamData.id].volume = newVolume;
+                  }
+                }}
+                min={0}
+                max={100}
+                step={1}
+                className="flex-1"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              />
+              <span className={`text-sm min-w-[48px] text-right flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                {isMuted ? '0%' : `${volume}%`}
+              </span>
+            </div>
           </div>
 
           {/* 刷新按鈕 */}
@@ -422,7 +577,7 @@ export function StreamBox({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'} ${streamData.chatVisible ? 'bg-purple-500/20 text-purple-400 hover:text-purple-300' : ''}`}
+            className={`h-8 w-8 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'} ${streamData.chatVisible ? 'bg-purple-500/30 text-purple-400 hover:bg-purple-500/40 hover:text-purple-300 border border-purple-500/50' : ''}`}
             title={streamData.chatVisible ? '隱藏聊天室' : '顯示聊天室'}
             onClick={(e) => {
               e.stopPropagation();
@@ -463,7 +618,7 @@ export function StreamBox({
           className="player-container"
           id={`player${streamData.id}`}
           style={{
-            width: streamData.chatVisible ? '70%' : '100%',
+            width: streamData.chatVisible ? '80%' : '100%',
             height: '100%',
             flexShrink: 0,
             position: 'relative'
@@ -474,7 +629,7 @@ export function StreamBox({
           className={`chat-container ${streamData.chatVisible ? '' : 'hidden'}`}
           id={`chat${streamData.id}`}
           style={{
-            width: streamData.chatVisible ? '30%' : '0%',
+            width: streamData.chatVisible ? '20%' : '0%',
             height: '100%',
             flexShrink: 0,
             position: 'relative',
@@ -482,14 +637,27 @@ export function StreamBox({
             transition: 'width 0.3s ease'
           }}
         >
+          {/* chat-resizer 應該在聊天室容器內部，使用 absolute 定位在左側邊緣 */}
+          {/* 注意：chat-resizer 必須在 iframe 之前，這樣 iframe 才會在下方（z-index 較低） */}
           <div
             ref={chatResizerRef}
             className="chat-resizer"
             id={`chat-resizer${streamData.id}`}
             style={{
-              display: streamData.chatVisible ? 'block' : 'none'
+              position: 'absolute',
+              top: '0',
+              left: '0',
+              width: '4px',
+              height: '100%',
+              cursor: 'ew-resize',
+              zIndex: 10,
+              display: streamData.chatVisible ? 'block' : 'none',
+              backgroundColor: 'transparent',
+              pointerEvents: 'auto' // 確保可以拖曳
             }}
           />
+          {/* 聊天室內容（iframe）會由 createChat 函數動態添加到這裡 */}
+          {/* iframe 會自動在 chat-resizer 下方，因為 z-index 較低 */}
         </div>
       </div>
 
