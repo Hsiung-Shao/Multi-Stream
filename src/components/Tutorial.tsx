@@ -31,8 +31,8 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1">
-          <Tabs defaultValue="basic" className="p-6">
+        <div className="flex-1 p-6">
+          <Tabs defaultValue="basic">
             <TabsList className={`grid w-full grid-cols-3 mb-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <TabsTrigger value="basic">基本功能</TabsTrigger>
               <TabsTrigger value="advanced">進階功能</TabsTrigger>
@@ -40,11 +40,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
             </TabsList>
 
             <TabsContent value="basic" className="space-y-6">
-              <Section
-                theme={theme}
-                icon={<Tv className="size-5" />}
-                title="📺 添加串流"
-                content={
+              <ScrollArea className="max-h-[800px] overflow-y-auto">
+                <div className="space-y-6 pr-4">
+                  <Section
+                    theme={theme}
+                    icon={<Tv className="size-5" />}
+                    title="📺 添加串流"
+                    content={
                   <>
                     <ol className="list-decimal list-inside space-y-2 mb-3">
                       <li>在控制面板頂部的輸入框中，貼上 Twitch 或 YouTube 直播網址</li>
@@ -59,13 +61,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     <Tip theme={theme} text="您也可以直接輸入 Twitch 頻道名稱進行搜尋，系統會自動搜尋並顯示相關頻道" />
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Search className="size-5" />}
-                title="🔍 Twitch 頻道搜尋"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Search className="size-5" />}
+                    title="🔍 Twitch 頻道搜尋"
+                    content={
                   <>
                     <ol className="list-decimal list-inside space-y-2 mb-3">
                       <li>在控制面板的輸入框中，輸入 Twitch 頻道名稱（不需要完整網址）</li>
@@ -75,13 +77,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     <Tip theme={theme} text="搜尋功能也支援在收藏管理界面中使用，方便快速添加收藏" />
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Layout className="size-5" />}
-                title="🎨 調整布局"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Layout className="size-5" />}
+                    title="🎨 調整布局"
+                    content={
                   <>
                     <div className="space-y-4">
                       <div>
@@ -109,13 +111,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     </div>
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<MessageCircle className="size-5" />}
-                title="💬 聊天室功能"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<MessageCircle className="size-5" />}
+                    title="💬 聊天室功能"
+                    content={
                   <>
                     <div className="space-y-4">
                       <div>
@@ -144,13 +146,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     <Warning theme={theme} text="YouTube 聊天室需要在正式環境（非 localhost）才能嵌入" />
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Volume2 className="size-5" />}
-                title="🔊 音量控制"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Volume2 className="size-5" />}
+                    title="🔊 音量控制"
+                    content={
                   <>
                     <ul className="list-disc list-inside space-y-2">
                       <li>使用「總音量」滑桿調整所有串流的音量</li>
@@ -161,13 +163,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     </ul>
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<RefreshCw className="size-5" />}
-                title="🔄 重整串流"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<RefreshCw className="size-5" />}
+                    title="🔄 重整串流"
+                    content={
                   <>
                     <ol className="list-decimal list-inside space-y-2">
                       <li>點擊串流畫面上方的重整按鈕（🔄）</li>
@@ -175,15 +177,19 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     </ol>
                   </>
                 }
-              />
+                  />
+                </div>
+              </ScrollArea>
             </TabsContent>
 
             <TabsContent value="advanced" className="space-y-6">
-              <Section
-                theme={theme}
-                icon={<Star className="size-5" />}
-                title="⭐ 收藏功能"
-                content={
+              <ScrollArea className="max-h-[800px] overflow-y-auto">
+                <div className="space-y-6 pr-4">
+                  <Section
+                    theme={theme}
+                    icon={<Star className="size-5" />}
+                    title="⭐ 收藏功能"
+                    content={
                   <>
                     <ol className="list-decimal list-inside space-y-2 mb-3">
                       <li>點擊「管理收藏」打開收藏管理界面</li>
@@ -214,13 +220,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     </div>
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Radio className="size-5" />}
-                title="📡 開台狀態檢測"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Radio className="size-5" />}
+                    title="📡 開台狀態檢測"
+                    content={
                   <>
                     <ul className="list-disc list-inside space-y-2">
                       <li>收藏的 Twitch 和 YouTube 頻道會自動顯示開台狀態</li>
@@ -232,13 +238,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     <Tip theme={theme} text="正在直播的頻道會自動排在列表前面，方便快速找到正在直播的頻道。YouTube 頻道開台監測功能會自動檢測頻道是否正在直播，並在收藏列表中顯示狀態" />
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Tv className="size-5" />}
-                title="📺 YouTube 頻道開台監測"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Tv className="size-5" />}
+                    title="📺 YouTube 頻道開台監測"
+                    content={
                   <>
                     <ol className="list-decimal list-inside space-y-2 mb-3">
                       <li>在收藏管理中添加 YouTube 直播網址（支援正在直播網址或是頻道網址）</li>
@@ -250,13 +256,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     <Tip theme={theme} text="YouTube 收藏功能支援輸入直播網址或頻道網址（包括 @username 格式），新增後會自動監測頻道開台狀態。當頻道正在直播時，可直接從收藏清單中選擇加入串流" />
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Database className="size-5" />}
-                title="💾 數據備份"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Database className="size-5" />}
+                    title="💾 數據備份"
+                    content={
                   <>
                     <ol className="list-decimal list-inside space-y-2">
                       <li>在「管理收藏」→「設定」標籤頁中啟用數據備份</li>
@@ -267,13 +273,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     <Tip theme={theme} text="頁面載入時會自動嘗試讀取備份文件" />
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Settings className="size-5" />}
-                title="🎛️ 控制面板"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Settings className="size-5" />}
+                    title="🎛️ 控制面板"
+                    content={
                   <>
                     <ul className="list-disc list-inside space-y-2">
                       <li>控制面板位於畫面右側，可以收起/展開</li>
@@ -283,13 +289,13 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     </ul>
                   </>
                 }
-              />
+                  />
 
-              <Section
-                theme={theme}
-                icon={<Smartphone className="size-5" />}
-                title="📱 移動設備"
-                content={
+                  <Section
+                    theme={theme}
+                    icon={<Smartphone className="size-5" />}
+                    title="📱 移動設備"
+                    content={
                   <>
                     <ul className="list-disc list-inside space-y-2">
                       <li>在手機和平板上，控制面板會全屏顯示</li>
@@ -298,15 +304,19 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     </ul>
                   </>
                 }
-              />
+                  />
+                </div>
+              </ScrollArea>
             </TabsContent>
 
             <TabsContent value="tips" className="space-y-6">
-              <Section
-                theme={theme}
-                icon={<Zap className="size-5" />}
-                title="💡 快捷提示"
-                content={
+              <ScrollArea className="max-h-[800px] overflow-y-auto">
+                <div className="space-y-6 pr-4">
+                  <Section
+                    theme={theme}
+                    icon={<Zap className="size-5" />}
+                    title="💡 快捷提示"
+                    content={
                   <>
                     <div className="grid gap-4">
                       <TipCard
@@ -342,10 +352,12 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     </div>
                   </>
                 }
-              />
+                  />
+                </div>
+              </ScrollArea>
             </TabsContent>
           </Tabs>
-        </ScrollArea>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { Plus, Settings, RefreshCw, MessageSquare, Volume2, VolumeX, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { RefreshCw, Volume2, VolumeX, ChevronDown, X } from 'lucide-react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -25,13 +24,31 @@ export function ControlPanel({
   onShowTutorial,
   onShowAbout
 }: ControlPanelProps) {
-  const [streamUrl, setStreamUrl] = useState('');
   const [volume, setVolume] = useState([100]);
   const [isMuted, setIsMuted] = useState(false);
   const [showAllChat, setShowAllChat] = useState(false);
-  const [chatTheme, setchatTheme] = useState<'light' | 'dark'>('dark');
   const [selectedLayout, setSelectedLayout] = useState<number | null>(null);
   const [selectedChatLayout, setSelectedChatLayout] = useState<number | null>(null);
+  const [navbarHeight, setNavbarHeight] = useState(64); // 默認 64px (4rem)
+
+  useEffect(() => {
+    const updateNavbarHeight = () => {
+      const navbar = document.querySelector('nav');
+      if (navbar) {
+        const height = navbar.getBoundingClientRect().height;
+        setNavbarHeight(height);
+        // 更新 CSS 變量
+        document.documentElement.style.setProperty('--navbar-height', `${height}px`);
+      }
+    };
+
+    updateNavbarHeight();
+    window.addEventListener('resize', updateNavbarHeight);
+    
+    return () => {
+      window.removeEventListener('resize', updateNavbarHeight);
+    };
+  }, []);
 
   const layouts = [
     { id: 1, icon: '📺', label: '單一', cols: 1, rows: 1 },
@@ -51,7 +68,10 @@ export function ControlPanel({
 
   if (isCollapsed) {
     return (
-      <div className={`fixed right-0 top-20 ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l border-y rounded-l-lg p-2`}>
+      <div 
+        className={`fixed right-0 bottom-0 ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l border-y rounded-l-lg p-2`}
+        style={{ top: `${navbarHeight}px` }}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -65,7 +85,13 @@ export function ControlPanel({
   }
 
   return (
-    <div className={`fixed right-0 top-20 bottom-0 w-[500px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l shadow-2xl overflow-y-auto`}>
+    <div 
+      className={`fixed right-0 w-[500px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l shadow-2xl overflow-y-auto`}
+      style={{ 
+        top: `${navbarHeight}px`,
+        height: `calc(100vh - ${navbarHeight}px)`
+      }}
+    >
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -80,26 +106,6 @@ export function ControlPanel({
           </Button>
         </div>
 
-        {/* Stream URL Input */}
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="貼上 Twitch / YouTube 直播網址"
-              value={streamUrl}
-              onChange={(e) => setStreamUrl(e.target.value)}
-              className={`flex-1 ${
-                theme === 'dark' 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder:text-gray-500' 
-                  : 'bg-white border-gray-300 text-black placeholder:text-gray-400'
-              }`}
-            />
-            <Button className="bg-purple-600 hover:bg-purple-700">
-              加入畫面
-            </Button>
-          </div>
-        </div>
-
         {/* Layout Control */}
         <Section theme={theme} title="布局控制">
           <div className="grid grid-cols-4 gap-2">
@@ -107,6 +113,8 @@ export function ControlPanel({
               <button
                 key={layout.id}
                 onClick={() => setSelectedLayout(layout.id)}
+                title={layout.label}
+                aria-label={layout.label}
                 className={`aspect-square rounded-lg border-2 transition-all ${
                   selectedLayout === layout.id
                     ? 'border-purple-500 bg-purple-500/20'
@@ -122,12 +130,14 @@ export function ControlPanel({
         </Section>
 
         {/* Chat Layout */}
-        <Section theme={theme} title="聊天室天布局">
+        <Section theme={theme} title="聊天室布局">
           <div className="grid grid-cols-3 gap-2">
             {chatLayouts.map((layout) => (
               <button
                 key={layout.id}
                 onClick={() => setSelectedChatLayout(layout.id)}
+                title={layout.label}
+                aria-label={layout.label}
                 className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center ${
                   selectedChatLayout === layout.id
                     ? 'border-purple-500 bg-purple-500/20'
@@ -150,12 +160,6 @@ export function ControlPanel({
                 顯示所有聊天室
               </label>
               <Switch checked={showAllChat} onCheckedChange={setShowAllChat} />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                光暗主題
-              </label>
-              <Switch checked={chatTheme === 'dark'} onCheckedChange={(checked) => setChatTheme(checked ? 'dark' : 'light')} />
             </div>
           </div>
         </Section>
@@ -235,51 +239,6 @@ export function ControlPanel({
           </div>
         </Section>
 
-        {/* Language */}
-        <Section theme={theme} title="語言">
-          <Select defaultValue="zh-TW">
-            <SelectTrigger className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="zh-TW">繁體中文</SelectItem>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="ja">日本語</SelectItem>
-            </SelectContent>
-          </Select>
-        </Section>
-
-        {/* Feedback */}
-        <Section theme={theme} title="易見回饋">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              給予意見回饋
-            </Button>
-            <Button
-              variant="outline"
-              className={theme === 'dark' ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
-              onClick={onShowVersionHistory}
-            >
-              版本紀錄
-            </Button>
-            <Button
-              variant="outline"
-              className={theme === 'dark' ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
-              onClick={onShowTutorial}
-            >
-              使用教學
-            </Button>
-            <Button
-              variant="outline"
-              className={theme === 'dark' ? 'border-blue-500/50 text-blue-400 hover:bg-blue-500/10' : 'border-blue-300 text-blue-700 hover:bg-blue-50'}
-              onClick={onShowAbout}
-            >
-              關於我們
-            </Button>
-          </div>
-        </Section>
       </div>
     </div>
   );
@@ -317,10 +276,11 @@ function LayoutPreview({ cols, rows, theme }: { cols: number; rows: number; them
 
 function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' }) {
   if (id === 1) {
-    // 關閉
+    // 關閉 - 70%紫色，30%灰色
     return (
-      <div className="w-full h-full p-2">
-        <div className={`w-full h-full rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
+      <div className="w-full h-full p-2 flex gap-1">
+        <div className={`flex-[7] rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
+        <div className={`flex-[3] rounded ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-400'}`} />
       </div>
     );
   }

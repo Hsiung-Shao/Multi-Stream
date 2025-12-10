@@ -49,7 +49,19 @@ export default function App() {
   // Show Home Page
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
-      <Navbar theme={theme} onThemeToggle={toggleTheme} onShowAbout={() => setCurrentPage('about')} />
+      <Navbar 
+        theme={theme} 
+        onThemeToggle={toggleTheme} 
+        onShowAbout={() => setCurrentPage('about')}
+        onShowTutorial={() => setShowTutorial(true)}
+        onShowVersionHistory={() => setShowVersionHistory(true)}
+        onShowFavorites={() => setShowFavorites(true)}
+        onTogglePanel={() => setIsPanelCollapsed(!isPanelCollapsed)}
+        onAddStream={(url) => {
+          // TODO: 實現加入串流的功能
+          console.log('加入串流:', url);
+        }}
+      />
       
       <div className={`container mx-auto px-4 py-12 ${isPanelCollapsed ? '' : 'pr-[516px]'} transition-all duration-300`}>
         <WelcomeCard 

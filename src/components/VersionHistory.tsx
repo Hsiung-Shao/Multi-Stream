@@ -108,7 +108,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1 p-6">
+        <ScrollArea className="flex-1 p-6 max-h-[800px]">
           <div className="space-y-6">
             {versions.map((version, index) => (
               <div

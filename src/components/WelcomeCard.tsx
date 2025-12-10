@@ -1,12 +1,5 @@
 import { Coffee, FileText, HelpCircle, Info } from 'lucide-react';
 import { Button } from './ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
 
 interface WelcomeCardProps {
   theme: 'light' | 'dark';
@@ -19,25 +12,13 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
   return (
     <div className={`max-w-3xl mx-auto ${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/20 to-blue-900/20' : 'bg-gradient-to-br from-purple-50 to-blue-50'} rounded-lg border ${theme === 'dark' ? 'border-purple-500/30' : 'border-purple-200'} p-8 shadow-xl`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className={`text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 mb-2`}>
-            歡迎使用 MultiStream Hub
-          </h1>
-          <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            免費的多平台串流直播整合工具，支援 Twitch 和 YouTube 直播
-          </p>
-        </div>
-        <Select defaultValue="zh-TW">
-          <SelectTrigger className={`w-32 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="zh-TW">繁體中文</SelectItem>
-            <SelectItem value="en">English</SelectItem>
-            <SelectItem value="ja">日本語</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="mb-6">
+        <h1 className={`text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 mb-2`}>
+          歡迎使用 MultiStream Hub
+        </h1>
+        <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          免費的多平台串流直播整合工具，支援 Twitch 和 YouTube 直播
+        </p>
       </div>
 
       {/* Features List */}
@@ -110,6 +91,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
           <Button
             className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black hover:from-yellow-500 hover:to-orange-500"
             size="lg"
+            onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
           >
             <Coffee className="size-5 mr-2" />
             Buy Me A Coffee
@@ -119,9 +101,6 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
 
       {/* Footer Buttons */}
       <div className={`flex flex-wrap items-center justify-center gap-3 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-        <p className={`${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'} text-center w-full mb-2`}>
-          此專案為開源專案，基於 Twitch 和 YouTube 的嵌入功能，所有數據都保存在本地瀏覽器
-        </p>
         <Button
           variant="outline"
           className={theme === 'dark' ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
