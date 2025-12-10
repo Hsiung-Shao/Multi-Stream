@@ -276,11 +276,11 @@ function LayoutPreview({ cols, rows, theme }: { cols: number; rows: number; them
 
 function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' }) {
   if (id === 1) {
-    // 關閉 - 70%紫色，30%灰色
+    // 關閉 - 左側紫色，右側單一灰色區塊
     return (
       <div className="w-full h-full p-2 flex gap-1">
-        <div className={`flex-[7] rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
-        <div className={`flex-[3] rounded ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-400'}`} />
+        <div className={`flex-[2] rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
+        <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-400'}`} />
       </div>
     );
   }
