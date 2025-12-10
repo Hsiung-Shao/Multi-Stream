@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Volume2, VolumeX, ChevronDown, X } from 'lucide-react';
+import { RefreshCw, Volume2, VolumeX } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
@@ -67,21 +67,7 @@ export function ControlPanel({
   ];
 
   if (isCollapsed) {
-    return (
-      <div 
-        className={`fixed right-0 bottom-0 ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l border-y rounded-l-lg p-2`}
-        style={{ top: `${navbarHeight}px` }}
-      >
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleCollapse}
-          className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
-        >
-          <ChevronDown className="size-5 rotate-90" />
-        </Button>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -96,14 +82,6 @@ export function ControlPanel({
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>控制面板</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggleCollapse}
-            className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
-          >
-            <X className="size-5" />
-          </Button>
         </div>
 
         {/* Layout Control */}
