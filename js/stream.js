@@ -183,6 +183,12 @@ async function addStream(url = null) {
     platform = 'twitch';
   } 
   else if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) {
+    // 嘗試從 URL 中提取 channelId（如果存在）
+    const channelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
+    if (channelMatch) {
+      channelId = channelMatch[1];
+    }
+    
     if (url.includes('youtube.com/live/')) {
       videoId = url.split('live/')[1]?.split('?')[0];
     } else if (url.includes('youtube.com/watch')) {
@@ -218,6 +224,35 @@ async function addStream(url = null) {
     return;
   }
 
+  // 對於 YouTube，如果有 channelId，驗證 videoId 是否屬於該頻道
+  if (platform === 'youtube' && channelId && videoId) {
+    try {
+      // 檢查 youtubeApiUtils 是否可用
+      if (typeof youtubeApiUtils !== 'undefined' && youtubeApiUtils.getChannelIdFromVideoId) {
+        // 從 videoId 獲取實際的 channelId
+        const actualChannelId = await youtubeApiUtils.getChannelIdFromVideoId(videoId);
+        
+        // 驗證 channelId 是否匹配
+        if (actualChannelId && actualChannelId !== channelId) {
+          alert(`頻道 ID 驗證失敗：\n\n該影片不屬於指定的頻道。\n\n預期頻道 ID: ${channelId}\n實際頻道 ID: ${actualChannelId}\n\n請確認您輸入的網址是否正確。`);
+          box.remove();
+          return;
+        }
+        
+        // 如果匹配，使用實際的 channelId（確保一致性）
+        if (actualChannelId) {
+          channelId = actualChannelId;
+        }
+      }
+    } catch (error) {
+      // 如果驗證失敗（例如 API 錯誤），記錄錯誤但不阻止播放
+      // 這樣可以確保即使 API 暫時不可用，用戶仍然可以觀看影片
+      console.warn('YouTube 頻道 ID 驗證失敗:', error.message);
+      // 可以選擇是否在驗證失敗時仍然繼續，或者阻止播放
+      // 這裡選擇繼續播放，因為 API 可能暫時不可用
+    }
+  }
+  
   // 儲存串流資訊
   // YouTube 聊天室預設為隱藏（因為無法跨域顯示）
   streamData[id] = {
