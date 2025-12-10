@@ -1,6 +1,5 @@
 import { X, Calendar, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
-import { ScrollArea } from './ui/scroll-area';
 
 interface VersionHistoryProps {
   theme: 'light' | 'dark';
@@ -108,7 +107,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1 p-6 max-h-[800px]">
+        <div className="flex-1 p-6 overflow-y-auto max-h-[800px]">
           <div className="space-y-6">
             {versions.map((version, index) => (
               <div
@@ -165,7 +164,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       </div>
     </div>
   );

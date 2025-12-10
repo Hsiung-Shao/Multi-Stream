@@ -1,6 +1,5 @@
 import { X, Tv, Search, Layout, MessageCircle, Volume2, RefreshCw, Star, Radio, Database, Settings, Smartphone, Zap } from 'lucide-react';
 import { Button } from './ui/button';
-import { ScrollArea } from './ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface TutorialProps {
@@ -39,9 +38,7 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
               <TabsTrigger value="tips">快捷提示</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="space-y-6">
-              <ScrollArea className="max-h-[800px] overflow-y-auto">
-                <div className="space-y-6 pr-4">
+            <TabsContent value="basic" className="overflow-y-auto space-y-6 pr-4" style={{ maxHeight: '800px' }}>
                   <Section
                     theme={theme}
                     icon={<Tv className="size-5" />}
@@ -178,13 +175,9 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
-                </div>
-              </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="advanced" className="space-y-6">
-              <ScrollArea className="max-h-[800px] overflow-y-auto">
-                <div className="space-y-6 pr-4">
+            <TabsContent value="advanced" className="overflow-y-auto space-y-6 pr-4" style={{ maxHeight: '800px' }}>
                   <Section
                     theme={theme}
                     icon={<Star className="size-5" />}
@@ -305,13 +298,9 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
-                </div>
-              </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="tips" className="space-y-6">
-              <ScrollArea className="max-h-[800px] overflow-y-auto">
-                <div className="space-y-6 pr-4">
+            <TabsContent value="tips" className="overflow-y-auto space-y-6 pr-4" style={{ maxHeight: '800px' }}>
                   <Section
                     theme={theme}
                     icon={<Zap className="size-5" />}
@@ -353,8 +342,6 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
-                </div>
-              </ScrollArea>
             </TabsContent>
           </Tabs>
         </div>
