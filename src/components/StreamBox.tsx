@@ -13,6 +13,12 @@ interface StreamBoxProps {
   onToggleChat: (id: number) => void;
   onSeparateChat: (id: number) => void;
   onVolumeChange: (id: number, volume: number) => void;
+  /** 外部控制的音量（已考慮總音量） */
+  externalVolume?: number;
+  /** 外部控制的靜音狀態 */
+  externalMuted?: boolean;
+  /** 總音量（用於計算顯示音量） */
+  masterVolume?: number;
 }
 
 // 全局變數聲明（這些應該在 window 對象上）
@@ -34,14 +40,145 @@ export function StreamBox({
   onReload,
   onToggleChat,
   onSeparateChat,
-  onVolumeChange
+  onVolumeChange,
+  externalVolume,
+  externalMuted,
+  masterVolume = 100
 }: StreamBoxProps) {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatResizerRef = useRef<HTMLDivElement>(null);
   const [volume, setVolume] = useState(streamData.volume);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(streamData.isMuted || false);
   const boxRef = useRef<HTMLDivElement>(null);
+  
+  // 使用外部控制的音量和靜音狀態 - 參考 TwitchStreamContainer.tsx
+  // 計算最終音量：如果外部控制，使用外部音量；否則使用內部音量
+  // 外部音量已經包含了全域音量的計算
+  const effectiveVolume = externalVolume !== undefined ? externalVolume : volume;
+  const effectiveMuted = externalMuted !== undefined ? externalMuted : isMuted;
+  
+  // 計算顯示音量（用於滑塊顯示）- 參考 TwitchStreamContainer.tsx
+  // 如果外部控制，顯示相對音量（相對於全域音量）；否則顯示內部音量
+  // externalVolume = streamVolume * masterVolume / 100
+  // 所以 streamVolume = externalVolume * 100 / masterVolume
+  const displayVolume = externalVolume !== undefined && masterVolume !== undefined && masterVolume > 0
+    ? Math.round((externalVolume * 100) / masterVolume)
+    : (isMuted ? 0 : volume);
+  
+  // 同步外部控制的音量到播放器 - 參考 TwitchStreamContainer.tsx 和 YouTubeStreamContainer.tsx
+  useEffect(() => {
+    if (!window.players || !window.players[streamData.id] || !window.players[streamData.id].player) {
+      return;
+    }
+    
+    const player = window.players[streamData.id].player;
+    
+    // 確保播放器已準備好
+    const applyVolume = () => {
+      try {
+        if (streamData.platform === 'twitch') {
+          // Twitch: 使用 0-1 範圍
+          const volValue = effectiveMuted ? 0 : Math.max(0, Math.min(1, effectiveVolume / 100));
+          
+          // 如果音量為 0 或靜音，使用 setMuted() 方法確保靜音
+          if (effectiveMuted || volValue === 0) {
+            if (typeof player.setMuted === 'function') {
+              player.setMuted(true);
+            } else if (typeof player.setVolume === 'function') {
+              player.setVolume(0);
+            }
+          } else {
+            // 如果音量不為 0，先取消靜音，再設置音量
+            if (typeof player.setMuted === 'function') {
+              player.setMuted(false);
+            }
+            if (typeof player.setVolume === 'function') {
+              player.setVolume(volValue);
+            }
+          }
+        } else if (streamData.platform === 'youtube') {
+          // YouTube: 使用 0-100 範圍
+          const volValue = effectiveMuted ? 0 : Math.max(0, Math.min(100, effectiveVolume));
+          
+          // 檢查播放器狀態
+          try {
+            const playerState = player.getPlayerState();
+            if (playerState !== undefined) {
+              // 如果音量為 0 或靜音，使用 mute() 方法確保靜音
+              if (effectiveMuted || volValue === 0) {
+                if (typeof player.mute === 'function') {
+                  player.mute();
+                } else if (typeof player.setVolume === 'function') {
+                  player.setVolume(0);
+                }
+              } else {
+                // 如果音量不為 0，先取消靜音，再設置音量
+                if (typeof player.unMute === 'function') {
+                  player.unMute();
+                }
+                if (typeof player.setVolume === 'function') {
+                  player.setVolume(volValue);
+                }
+              }
+            }
+          } catch (e) {
+            // 播放器尚未就緒，稍後再試
+            setTimeout(() => {
+              if (window.players && window.players[streamData.id] && window.players[streamData.id].player) {
+                const retryPlayer = window.players[streamData.id].player;
+                try {
+                  if (effectiveMuted || volValue === 0) {
+                    if (typeof retryPlayer.mute === 'function') {
+                      retryPlayer.mute();
+                    } else if (typeof retryPlayer.setVolume === 'function') {
+                      retryPlayer.setVolume(0);
+                    }
+                  } else {
+                    if (typeof retryPlayer.unMute === 'function') {
+                      retryPlayer.unMute();
+                    }
+                    if (typeof retryPlayer.setVolume === 'function') {
+                      retryPlayer.setVolume(volValue);
+                    }
+                  }
+                } catch (err) {
+                  // 靜默處理錯誤
+                }
+              }
+            }, 500);
+          }
+        }
+      } catch (error) {
+        // 靜默處理錯誤
+      }
+    };
+    
+    // 立即嘗試設置音量
+    applyVolume();
+    
+    // 如果播放器還沒準備好，稍後再試
+    const timeoutId = setTimeout(() => {
+      applyVolume();
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [effectiveVolume, effectiveMuted, streamData.id, streamData.platform]);
+  
+  // 監聽總音量變化事件 - 參考 useUserSettings.ts
+  useEffect(() => {
+    const handleMasterVolumeChangeEvent = (event: CustomEvent) => {
+      // 當總音量改變時，effectiveVolume 會自動更新（因為它依賴於 masterVolume）
+      // 上面的 useEffect 會自動重新應用音量
+      // 這裡只需要觸發重新渲染（如果需要）
+    };
+    
+    window.addEventListener('masterVolumeChanged', handleMasterVolumeChangeEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('masterVolumeChanged', handleMasterVolumeChangeEvent as EventListener);
+    };
+  }, [effectiveVolume, effectiveMuted, streamData.id, streamData.platform]);
 
   // 同步聊天室顯示狀態和布局 - 參考 js/chat.js 和 js/stream.js
   useEffect(() => {
@@ -193,10 +330,38 @@ export function StreamBox({
             if (typeof player.isMuted === 'function') {
               const muted = player.isMuted();
               setIsMuted(muted);
+              // 更新全局 streamData
+              if (window.streamData && window.streamData[streamData.id]) {
+                window.streamData[streamData.id].isMuted = muted;
+              }
             }
           } catch (error) {
             console.error('讀取 Twitch 播放器音量狀態失敗:', error);
           }
+          
+          // 應用初始音量（考慮總音量）- 參考 TwitchStreamContainer.tsx
+          setTimeout(() => {
+            const effectiveVol = getEffectiveVolume();
+            try {
+              const volValue = Math.max(0, Math.min(1, effectiveVol / 100));
+              if (isMuted || effectiveVol === 0) {
+                if (typeof player.setMuted === 'function') {
+                  player.setMuted(true);
+                } else if (typeof player.setVolume === 'function') {
+                  player.setVolume(0);
+                }
+              } else {
+                if (typeof player.setMuted === 'function') {
+                  player.setMuted(false);
+                }
+                if (typeof player.setVolume === 'function') {
+                  player.setVolume(volValue);
+                }
+              }
+            } catch (error) {
+              // 靜默處理錯誤
+            }
+          }, 100);
         });
         
         player.addEventListener(window.Twitch.Player.ERROR, () => {
@@ -513,10 +678,18 @@ export function StreamBox({
               variant="ghost"
               size="icon"
               className={`h-8 w-8 flex-shrink-0 p-0 ${theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-700 hover:text-black hover:bg-gray-200'}`}
-              title={isMuted ? '取消靜音' : '靜音'}
+              title={effectiveMuted ? '取消靜音' : '靜音'}
               onClick={(e) => {
                 e.stopPropagation();
-                setIsMuted(!isMuted);
+                const newMutedState = !effectiveMuted;
+                setIsMuted(newMutedState);
+                
+                // 更新全局 streamData - 參考 TwitchStreamContainer.tsx
+                if (window.streamData && window.streamData[streamData.id]) {
+                  window.streamData[streamData.id].isMuted = newMutedState;
+                }
+                
+                // 應用靜音到播放器 - 上面的 useEffect 會自動處理
               }}
             >
               {isMuted ? (
@@ -527,22 +700,41 @@ export function StreamBox({
             </Button>
             <div className="flex-1 flex items-center gap-3 min-w-0">
               <Slider
-                value={[isMuted ? 0 : volume]}
+                value={[displayVolume]}
                 trackStyle={{ minWidth: '80px' }}
                 onValueChange={(value) => {
                   const newVolume = value[0];
                   
-                  // 如果調整音量且之前是靜音狀態，取消靜音
-                  if (newVolume > 0 && isMuted) {
+                  // 如果調整音量且之前是靜音狀態，取消靜音 - 參考 TwitchStreamContainer.tsx
+                  if (newVolume > 0 && effectiveMuted) {
                     setIsMuted(false);
+                    // 更新全局 streamData
+                    if (window.streamData && window.streamData[streamData.id]) {
+                      window.streamData[streamData.id].isMuted = false;
+                    }
                   }
                   
-                  // 只更新本地狀態和全局 streamData
-                  setVolume(newVolume);
-                  onVolumeChange(streamData.id, newVolume);
-                  
-                  if (window.streamData && window.streamData[streamData.id]) {
-                    window.streamData[streamData.id].volume = newVolume;
+                  // 如果有外部控制（全域音量），需要計算相對音量 - 參考 YouTubeStreamContainer.tsx
+                  if (externalVolume !== undefined && masterVolume !== undefined && masterVolume > 0) {
+                    // newVolume 是顯示音量（相對於全域音量的百分比）
+                    // 要得到串流的相對音量，需要：newVolume = streamVolume * masterVolume / 100
+                    // 所以：streamVolume = newVolume * 100 / masterVolume
+                    // 但這可能超過 100，所以我們直接使用 newVolume 作為相對音量
+                    // 實際上，displayVolume 的計算方式是：externalVolume / masterVolume * 100
+                    // 而 externalVolume = streamVolume * masterVolume / 100
+                    // 所以 displayVolume = streamVolume
+                    // 因此 newVolume 就是相對音量
+                    if (onVolumeChange) {
+                      onVolumeChange(streamData.id, Math.min(100, Math.max(0, newVolume)));
+                    }
+                  } else {
+                    // 沒有外部控制，直接使用顯示音量
+                    setVolume(newVolume);
+                    onVolumeChange(streamData.id, newVolume);
+                    
+                    if (window.streamData && window.streamData[streamData.id]) {
+                      window.streamData[streamData.id].volume = newVolume;
+                    }
                   }
                 }}
                 min={0}
@@ -554,7 +746,7 @@ export function StreamBox({
                 onMouseDown={(e) => e.stopPropagation()}
               />
               <span className={`text-sm min-w-[48px] text-right flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                {isMuted ? '0%' : `${volume}%`}
+                {effectiveMuted ? '0%' : `${effectiveVolume}%`}
               </span>
             </div>
           </div>

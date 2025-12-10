@@ -8,6 +8,7 @@ export interface StreamData {
   originalUrl: string;
   volume: number;
   chatVisible: boolean;
+  isMuted?: boolean;
   name?: string | null;
   displayName?: string | null;
 }

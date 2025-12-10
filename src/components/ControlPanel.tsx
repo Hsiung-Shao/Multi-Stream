@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { RefreshCw, Volume2, VolumeX, ChevronUp, ChevronDown, GripVertical, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import type { StreamData } from '../utils/streamUtils';
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -13,6 +14,12 @@ interface ControlPanelProps {
   onShowVersionHistory: () => void;
   onShowTutorial: () => void;
   onShowAbout: () => void;
+  streams: StreamData[];
+  onVolumeChange?: (id: number, volume: number) => void;
+  onMoveStreamUp?: (id: number) => void;
+  onMoveStreamDown?: (id: number) => void;
+  onRemoveStream?: (id: number) => void;
+  onToggleMute?: (id: number) => void;
 }
 
 export function ControlPanel({ 
@@ -22,11 +29,24 @@ export function ControlPanel({
   onShowFavorites,
   onShowVersionHistory,
   onShowTutorial,
-  onShowAbout
+  onShowAbout,
+  streams,
+  onVolumeChange,
+  onMoveStreamUp,
+  onMoveStreamDown,
+  onRemoveStream,
+  onToggleMute
 }: ControlPanelProps) {
   const [volume, setVolume] = useState([100]);
   const [isMuted, setIsMuted] = useState(false);
   const [showAllChat, setShowAllChat] = useState(false);
+  
+  // 同步總音量到全局變量 - 參考 js/volume.js
+  useEffect(() => {
+    (window as any).masterVolume = volume[0];
+    // 觸發自定義事件，通知 StreamBox 總音量已改變
+    window.dispatchEvent(new CustomEvent('masterVolumeChange', { detail: { volume: volume[0] } }));
+  }, [volume]);
   const [selectedLayout, setSelectedLayout] = useState<number | null>(null);
   const [selectedChatLayout, setSelectedChatLayout] = useState<number | null>(null);
   const [navbarHeight, setNavbarHeight] = useState(64); // 默認 64px (4rem)
@@ -188,19 +208,32 @@ export function ControlPanel({
             <div className="flex items-center gap-3">
               <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>總音量</span>
               <Slider
+                id="master-volume"
                 value={volume}
-                onValueChange={setVolume}
+                onValueChange={(value) => {
+                  setVolume(value);
+                  // 觸發 updateMasterVolume 函數（如果存在）- 參考 js/volume.js
+                  if (typeof (window as any).updateMasterVolume === 'function') {
+                    (window as any).updateMasterVolume();
+                  }
+                }}
                 max={100}
                 step={1}
                 className="flex-1"
               />
-              <span className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+              <span id="master-volume-value" className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
                 {volume[0]}%
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={() => {
+                  setIsMuted(!isMuted);
+                  // 觸發 muteAll 函數（如果存在）- 參考 js/volume.js
+                  if (typeof (window as any).muteAll === 'function') {
+                    (window as any).muteAll();
+                  }
+                }}
                 className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
               >
                 {isMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
@@ -212,9 +245,125 @@ export function ControlPanel({
 
         {/* Stream Order */}
         <Section theme={theme} title="串流順序">
-          <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-            暫無串流
-          </div>
+          {streams.length === 0 ? (
+            <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+              暫無串流
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {streams.map((stream, index) => {
+                // 獲取串流標題
+                const getStreamTitle = () => {
+                  if (stream.displayName) return stream.displayName;
+                  if (stream.name) return stream.name;
+                  if (stream.platform === 'twitch') {
+                    return stream.channelId || `串流 #${stream.id}`;
+                  } else {
+                    return stream.videoId || `串流 #${stream.id}`;
+                  }
+                };
+
+                const streamTitle = getStreamTitle();
+                const streamVolume = stream.volume || 100;
+
+                return (
+                  <div
+                    key={stream.id}
+                    className={`rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                  >
+                    {/* Header */}
+                    <div className={`flex items-center gap-2 px-3 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <GripVertical className={`size-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
+                      <span className={`text-sm font-medium flex-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                        #{index + 1} - {streamTitle}
+                      </span>
+                      <div className="flex gap-1">
+                        {onToggleMute && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
+                            title={stream.isMuted ? '取消靜音' : '靜音'}
+                            onClick={() => onToggleMute(stream.id)}
+                          >
+                            {stream.isMuted ? (
+                              <VolumeX className="size-3" />
+                            ) : (
+                              <Volume2 className="size-3" />
+                            )}
+                          </Button>
+                        )}
+                        {onMoveStreamUp && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
+                            title="上移"
+                            onClick={() => onMoveStreamUp(stream.id)}
+                            disabled={index === 0}
+                          >
+                            <ChevronUp className="size-3" />
+                          </Button>
+                        )}
+                        {onMoveStreamDown && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
+                            title="下移"
+                            onClick={() => onMoveStreamDown(stream.id)}
+                            disabled={index === streams.length - 1}
+                          >
+                            <ChevronDown className="size-3" />
+                          </Button>
+                        )}
+                        {onRemoveStream && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/20' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'}`}
+                            title="關閉串流"
+                            onClick={() => onRemoveStream(stream.id)}
+                          >
+                            <X className="size-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Volume Control */}
+                    {onVolumeChange && (
+                      <div className="px-3 py-2 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                            🔊 音量
+                          </span>
+                          <Slider
+                            value={[stream.isMuted ? 0 : streamVolume]}
+                            onValueChange={(value) => {
+                              const newVolume = value[0];
+                              // 如果調整音量且之前是靜音狀態，取消靜音
+                              if (newVolume > 0 && stream.isMuted && onToggleMute) {
+                                onToggleMute(stream.id);
+                              }
+                              onVolumeChange(stream.id, newVolume);
+                            }}
+                            min={0}
+                            max={100}
+                            step={1}
+                            className="flex-1"
+                          />
+                          <span className={`text-xs min-w-[40px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                            {stream.isMuted ? '0%' : `${streamVolume}%`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Section>
 
       </div>

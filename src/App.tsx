@@ -147,6 +147,7 @@ export default function App() {
       originalUrl: url,
       volume: 100,
       chatVisible: parsed.platform !== 'youtube', // YouTube 預設隱藏，其他平台預設顯示
+      isMuted: false,
       name: null,
       displayName: null
     };
@@ -238,6 +239,45 @@ export default function App() {
     ));
   };
 
+  // 切換靜音
+  const handleToggleMute = (id: number) => {
+    setStreams(prev => prev.map(s => 
+      s.id === id ? { ...s, isMuted: !(s.isMuted || false) } : s
+    ));
+    
+    // 更新全局 streamData
+    if (window.streamData && window.streamData[id]) {
+      window.streamData[id].isMuted = !(window.streamData[id].isMuted || false);
+    }
+    
+    // 應用靜音到播放器
+    if (window.players && window.players[id] && window.players[id].player) {
+      const player = window.players[id].player;
+      const stream = streams.find(s => s.id === id);
+      const newMutedState = !(stream?.isMuted || false);
+      
+      try {
+        if (stream?.platform === 'twitch') {
+          if (typeof player.setMuted === 'function') {
+            player.setMuted(newMutedState);
+          }
+        } else if (stream?.platform === 'youtube') {
+          if (newMutedState) {
+            if (typeof player.mute === 'function') {
+              player.mute();
+            }
+          } else {
+            if (typeof player.unMute === 'function') {
+              player.unMute();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('靜音操作失敗:', error);
+      }
+    }
+  };
+
   // Show Privacy Page
   if (currentPage === 'privacy') {
     return (
@@ -309,6 +349,28 @@ export default function App() {
         onShowVersionHistory={() => setShowVersionHistory(true)}
         onShowTutorial={() => setShowTutorial(true)}
         onShowAbout={() => setCurrentPage('about')}
+        streams={streams}
+        onVolumeChange={handleVolumeChange}
+        onToggleMute={handleToggleMute}
+        onRemoveStream={handleRemoveStream}
+        onMoveStreamUp={(id) => {
+          setStreams(prev => {
+            const index = prev.findIndex(s => s.id === id);
+            if (index <= 0) return prev;
+            const newStreams = [...prev];
+            [newStreams[index - 1], newStreams[index]] = [newStreams[index], newStreams[index - 1]];
+            return newStreams;
+          });
+        }}
+        onMoveStreamDown={(id) => {
+          setStreams(prev => {
+            const index = prev.findIndex(s => s.id === id);
+            if (index < 0 || index >= prev.length - 1) return prev;
+            const newStreams = [...prev];
+            [newStreams[index], newStreams[index + 1]] = [newStreams[index + 1], newStreams[index]];
+            return newStreams;
+          });
+        }}
       />
 
       {showVersionHistory && (
