@@ -3634,5 +3634,8 @@ if (typeof window !== 'undefined') {
   window.closeVersionHistory = closeVersionHistory;
   window.showUserGuide = showUserGuide;
   window.closeUserGuide = closeUserGuide;
+  
+  // YouTube API 工具
+  window.youtubeApiUtils = youtubeApiUtils;
 }
 
