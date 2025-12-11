@@ -126,15 +126,50 @@ export default function App() {
       let searchError: string | null = null;
       
       // 先嘗試 Twitch 搜尋
+      console.log('[App] 開始搜尋 Twitch 頻道:', trimmedUrl);
+      // 確保 twitchApi 已初始化（可能需要等待）
+      if (!window.twitchApi || !window.twitchApi.searchChannels) {
+        console.warn('[App] Twitch API 尚未初始化，等待中...', {
+          twitchApi: !!window.twitchApi,
+          searchChannels: window.twitchApi ? typeof window.twitchApi.searchChannels : 'N/A'
+        });
+        // 等待 twitchApi 初始化（最多等待 2 秒）
+        let waitCount = 0;
+        while (!window.twitchApi && waitCount < 20) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          waitCount++;
+          if (waitCount % 5 === 0) {
+            console.log(`[App] 等待 Twitch API 初始化... (${waitCount}/20)`);
+          }
+        }
+      }
+      
       if (window.twitchApi && window.twitchApi.searchChannels) {
+        console.log('[App] Twitch API 已就緒，開始搜尋');
         try {
           const twitchResults = await window.twitchApi.searchChannels(trimmedUrl, 1);
+          console.log('[App] Twitch 搜尋結果:', {
+            query: trimmedUrl,
+            resultsCount: twitchResults ? twitchResults.length : 0,
+            results: twitchResults
+          });
           if (twitchResults && twitchResults.length > 0) {
             foundChannel = { ...twitchResults[0], platform: 'twitch', source: 'twitch' };
+            console.log('[App] 找到頻道:', foundChannel);
+          } else {
+            console.log('[App] 未找到匹配的 Twitch 頻道');
           }
         } catch (error: any) {
-          searchError = error.message;
+          console.error('[App] Twitch 搜尋錯誤:', error);
+          searchError = error.message || '搜尋失敗';
         }
+      } else {
+        console.error('[App] Twitch API 未初始化', {
+          twitchApi: !!window.twitchApi,
+          searchChannels: window.twitchApi ? typeof window.twitchApi.searchChannels : 'N/A',
+          windowKeys: Object.keys(window).filter(k => k.includes('twitch'))
+        });
+        searchError = 'Twitch API 未初始化';
       }
       
       if (foundChannel) {

@@ -23,6 +23,13 @@ const streamData = {}; // 儲存串流資訊
 window.players = players;
 window.streamData = streamData;
 
+console.log('[main.js] 全局變數已初始化', {
+  streamCount: window.streamCount,
+  players: typeof window.players,
+  streamData: typeof window.streamData,
+  location: window.location.href
+});
+
 // 頁面載入時檢查協議和恢復控制面板狀態
 window.addEventListener('DOMContentLoaded', () => {
   // 恢復控制面板狀態（使用統一的檢查函數）

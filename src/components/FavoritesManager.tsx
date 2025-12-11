@@ -37,21 +37,23 @@ declare global {
     favoriteStreams?: {
       getList: () => FavoriteItem[];
       add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: FavoriteItem }>;
-      update: (id: string, updates: { name?: string; categoryId?: string | null }) => { success: boolean; message: string };
-      remove: (id: string) => { success: boolean; message: string };
+      update?: (id: string, updates: { name?: string; categoryId?: string | null }) => { success: boolean; message: string };
+      remove?: (id: string) => { success: boolean; message: string };
       load: (item: FavoriteItem | string) => Promise<{ success: boolean; message: string }>;
       loadMultiple: (items: FavoriteItem[]) => Promise<{ success: boolean; message: string }>;
+      saveList?: (list: FavoriteItem[]) => void;
     };
     favoriteCategories?: {
       getList: () => Category[];
-      add: (name: string) => { success: boolean; message: string; id?: string };
-      update: (id: string, newName: string) => { success: boolean; message: string };
-      remove: (id: string) => void;
+      add?: (name: string) => { success: boolean; message: string; id?: string };
+      update?: (id: string, newName: string) => { success: boolean; message: string };
+      remove?: (id: string) => void;
     };
     youtubeApiUtils?: {
-      getChannelIdFromHandle: (handle: string) => Promise<string>;
-      getChannelIdFromVideoId: (videoId: string) => Promise<string>;
-      getChannelTitleFromChannelId: (channelId: string) => Promise<string>;
+      getChannelIdFromHandle?: (handle: string) => Promise<string>;
+      getChannelIdFromVideoId?: (videoId: string) => Promise<string>;
+      getChannelTitleFromChannelId?: (channelId: string) => Promise<string>;
+      checkChannelLiveStatus?: (channelId: string) => Promise<{ isLive: boolean }>;
     };
     indexedDBBackup?: {
       isEnabled: () => boolean;
@@ -108,11 +110,11 @@ async function parseUrlAndGetChannelInfo(url: string): Promise<{ url: string; na
     if (window.youtubeApiUtils && videoId) {
       try {
         // 從 videoId 獲取 channelId（唯一支援的方式）
-        const realChannelId = await window.youtubeApiUtils.getChannelIdFromVideoId(videoId);
+        const realChannelId = await window.youtubeApiUtils.getChannelIdFromVideoId!(videoId);
         if (realChannelId) {
           // 獲取頻道名稱
           try {
-            const channelTitle = await window.youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
+            const channelTitle = await window.youtubeApiUtils.getChannelTitleFromChannelId!(realChannelId);
             return {
               url: `https://www.youtube.com/channel/${realChannelId}/live`,
               name: channelTitle,
@@ -161,11 +163,64 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   // 載入收藏和分類列表
   const loadData = useCallback(() => {
-    if (window.favoriteStreams) {
-      setFavorites(window.favoriteStreams.getList());
-    }
-    if (window.favoriteCategories) {
-      setCategories(window.favoriteCategories.getList());
+    console.log('[FavoritesManager] 開始載入收藏數據...', {
+      favoriteStreams: !!window.favoriteStreams,
+      favoriteCategories: !!window.favoriteCategories,
+      favoriteStreamsType: typeof window.favoriteStreams,
+      favoriteCategoriesType: typeof window.favoriteCategories
+    });
+    
+    // 確保收藏系統已初始化（可能需要等待）
+    if (!window.favoriteStreams || !window.favoriteCategories) {
+      console.warn('[FavoritesManager] 收藏系統尚未初始化，等待中...');
+      // 等待收藏系統初始化（最多等待 2 秒）
+      let waitCount = 0;
+      const checkAndLoad = () => {
+        console.log(`[FavoritesManager] 檢查收藏系統初始化狀態 (${waitCount}/20)`, {
+          favoriteStreams: !!window.favoriteStreams,
+          favoriteCategories: !!window.favoriteCategories
+        });
+        
+        if (window.favoriteStreams && window.favoriteCategories) {
+          console.log('[FavoritesManager] 收藏系統已就緒，載入數據');
+          try {
+            const favoritesList = window.favoriteStreams.getList();
+            const categoriesList = window.favoriteCategories.getList();
+            console.log('[FavoritesManager] 載入成功', {
+              favoritesCount: favoritesList.length,
+              categoriesCount: categoriesList.length
+            });
+            setFavorites(favoritesList);
+            setCategories(categoriesList);
+          } catch (error) {
+            console.error('[FavoritesManager] 載入數據時發生錯誤:', error);
+          }
+        } else if (waitCount < 20) {
+          waitCount++;
+          setTimeout(checkAndLoad, 100);
+        } else {
+          console.error('[FavoritesManager] 收藏系統初始化失敗，請重新整理頁面', {
+            favoriteStreams: !!window.favoriteStreams,
+            favoriteCategories: !!window.favoriteCategories,
+            windowKeys: Object.keys(window).filter(k => k.includes('favorite'))
+          });
+        }
+      };
+      checkAndLoad();
+    } else {
+      console.log('[FavoritesManager] 收藏系統已就緒，直接載入數據');
+      try {
+        const favoritesList = window.favoriteStreams.getList();
+        const categoriesList = window.favoriteCategories.getList();
+        console.log('[FavoritesManager] 載入成功', {
+          favoritesCount: favoritesList.length,
+          categoriesCount: categoriesList.length
+        });
+        setFavorites(favoritesList);
+        setCategories(categoriesList);
+      } catch (error) {
+        console.error('[FavoritesManager] 載入數據時發生錯誤:', error);
+      }
     }
   }, []);
 
@@ -306,7 +361,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
     let deletedCount = 0;
     selectedFavorites.forEach(id => {
-      const result = window.favoriteStreams!.remove(id);
+      const result = window.favoriteStreams!.remove!(id);
       if (result.success) {
         deletedCount++;
       }
@@ -426,7 +481,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     const categoryId = editCategory === '' || editCategory === 'uncategorized' ? null : editCategory;
-    const result = window.favoriteStreams.update(editingId, {
+    const result = window.favoriteStreams.update!(editingId, {
       name: editName,
       categoryId: categoryId
     });
@@ -452,7 +507,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       return;
     }
 
-    const result = window.favoriteStreams.remove(id);
+    const result = window.favoriteStreams.remove!(id);
     if (result.success) {
       showMessage('success', result.message || t('favorites.delete'));
       loadData();
@@ -505,7 +560,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       return;
     }
 
-    const result = window.favoriteCategories.add(categoryName);
+    const result = window.favoriteCategories.add!(categoryName);
     if (result.success) {
       showMessage('success', result.message || '已新增分類');
       setCategoryName('');
@@ -571,7 +626,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                 // 如果分類不存在，嘗試添加（但無法直接添加指定ID的分類，需要通過add方法）
                 // 這裡只檢查名稱是否重複
                 if (!existing.find(c => c.name === cat.name)) {
-                  window.favoriteCategories.add(cat.name);
+                  window.favoriteCategories.add!(cat.name);
                 }
               }
             }
@@ -927,7 +982,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                           onLoad={() => handleLoadCategory(cat.id)}
                           onUpdate={(id, newName) => {
                             if (window.favoriteCategories) {
-                              const result = window.favoriteCategories.update(id, newName);
+                              const result = window.favoriteCategories.update!(id, newName);
                               if (result.success) {
                                 showMessage('success', result.message || '已更新分類');
                                 loadData();
@@ -938,7 +993,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                             }
                           }}
                           onDelete={(id) => {
-                            if (window.favoriteCategories) {
+                            if (window.favoriteCategories && window.favoriteCategories.remove) {
                               window.favoriteCategories.remove(id);
                               showMessage('success', '已刪除分類');
                               loadData();

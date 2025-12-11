@@ -279,6 +279,19 @@ export function Navbar({
               src="/icon.png" 
               alt="MultiStream Hub" 
               className="w-8 h-8"
+              onError={(e) => {
+                console.error('[Navbar] Icon 圖片載入失敗', {
+                  src: (e.target as HTMLImageElement).src,
+                  currentSrc: (e.target as HTMLImageElement).currentSrc,
+                  location: window.location.href
+                });
+              }}
+              onLoad={() => {
+                console.log('[Navbar] Icon 圖片載入成功', {
+                  src: '/icon.png',
+                  location: window.location.href
+                });
+              }}
             />
             <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
               MultiStream Hub

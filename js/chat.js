@@ -2,11 +2,31 @@
 
 // 建立聊天室
 function createChat(id, platform, channelId, videoId) {
+  console.log(`[createChat] 開始創建聊天室`, {
+    id,
+    platform,
+    channelId,
+    videoId,
+    location: window.location.href,
+    hostname: window.location.hostname,
+    protocol: window.location.protocol
+  });
+  
   const chatDiv = document.getElementById('chat' + id);
   if (!chatDiv) {
-    console.warn(`[createChat] 聊天室容器 chat${id} 不存在`);
+    console.error(`[createChat] 聊天室容器 chat${id} 不存在`, {
+      id,
+      searchedId: 'chat' + id,
+      allChatElements: Array.from(document.querySelectorAll('[id^="chat"]')).map(el => el.id)
+    });
     return;
   }
+  
+  console.log(`[createChat] 找到聊天室容器`, {
+    id: chatDiv.id,
+    hasContent: chatDiv.children.length > 0,
+    innerHTML: chatDiv.innerHTML.substring(0, 100)
+  });
   
   const parentDomain = getParentDomain();
   
@@ -64,6 +84,13 @@ function createChat(id, platform, channelId, videoId) {
   }
   
   if (chatUrl) {
+    console.log(`[createChat] 準備創建 iframe`, {
+      platform,
+      chatUrl,
+      chatDivId: chatDiv.id,
+      chatDivExists: !!chatDiv
+    });
+    
     const chatIframe = document.createElement('iframe');
     chatIframe.src = chatUrl;
     chatIframe.style.width = '100%';
@@ -71,7 +98,18 @@ function createChat(id, platform, channelId, videoId) {
     chatIframe.frameBorder = '0';
     chatIframe.allow = 'autoplay; fullscreen';
     chatIframe.setAttribute('allowfullscreen', '');
+    
+    console.log(`[createChat] iframe 已創建，準備添加到 DOM`, {
+      iframeSrc: chatIframe.src,
+      iframeId: chatIframe.id || 'no-id'
+    });
+    
     chatDiv.appendChild(chatIframe);
+    
+    console.log(`[createChat] iframe 已添加到 DOM`, {
+      chatDivChildren: chatDiv.children.length,
+      iframeInDOM: chatDiv.querySelector('iframe') !== null
+    });
     
     // 檢測是否被 CSP 阻止（參考舊代碼的檢測邏輯）
     let blockedDetected = false;
@@ -689,5 +727,22 @@ function setupChatResizer(id) {
   
   // 初始化位置
   updateResizerPosition();
+}
+
+// 暴露函數到全局，以便 React 組件可以訪問
+if (typeof window !== 'undefined') {
+  console.log('[chat.js] 初始化聊天室功能...');
+  window.createChat = createChat;
+  window.toggleChat = toggleChat;
+  window.separateChat = separateChat;
+  window.closeSeparatedChat = closeSeparatedChat;
+  window.setupChatResizer = setupChatResizer;
+  console.log('[chat.js] 聊天室功能已初始化', {
+    createChat: typeof window.createChat,
+    toggleChat: typeof window.toggleChat,
+    separateChat: typeof window.separateChat,
+    closeSeparatedChat: typeof window.closeSeparatedChat,
+    setupChatResizer: typeof window.setupChatResizer
+  });
 }
 

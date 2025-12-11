@@ -890,6 +890,7 @@ function clearTwitchApiCache() {
 
 // 匯出函數到全域
 if (typeof window !== 'undefined') {
+  console.log('[twitch-api.js] 初始化 Twitch API...');
   window.twitchApi = {
     searchChannels: searchTwitchChannels,
     checkChannelLiveStatus: checkChannelLiveStatus,
@@ -898,6 +899,11 @@ if (typeof window !== 'undefined') {
     getConfig: getTwitchApiConfig,
     clearCache: clearTwitchApiCache
   };
+  console.log('[twitch-api.js] Twitch API 已初始化', {
+    twitchApi: !!window.twitchApi,
+    methods: Object.keys(window.twitchApi),
+    config: getTwitchApiConfig()
+  });
 }
 
 })(); // 結束 IIFE

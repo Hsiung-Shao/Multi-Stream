@@ -163,18 +163,84 @@ export function StreamBox({
         
         // 檢查聊天室 iframe 是否存在
         const iframe = chatContainer.querySelector('iframe');
+        console.log(`[StreamBox ${streamData.id}] 檢查聊天室 iframe`, {
+          iframeExists: !!iframe,
+          chatVisible: streamData.chatVisible,
+          platform: streamData.platform,
+          channelId: streamData.channelId,
+          videoId: streamData.videoId,
+          chatContainerId: chatContainer.id,
+          chatContainerChildren: chatContainer.children.length,
+          createChatFunction: typeof (window as any).createChat
+        });
+        
         if (!iframe) {
-          console.warn(`[StreamBox ${streamData.id}] 聊天室 iframe 不存在，嘗試創建`);
+          console.warn(`[StreamBox ${streamData.id}] 聊天室 iframe 不存在，嘗試創建`, {
+            platform: streamData.platform,
+            channelId: streamData.channelId,
+            videoId: streamData.videoId,
+            chatContainerExists: !!chatContainer,
+            createChatAvailable: typeof (window as any).createChat === 'function'
+          });
+          
           // 如果 iframe 不存在，調用 createChat
           if (typeof (window as any).createChat === 'function') {
-            setTimeout(() => {
-              (window as any).createChat(
-                streamData.id,
-                streamData.platform,
-                streamData.channelId,
-                streamData.videoId
-            );
-            }, 100);
+            console.log(`[StreamBox ${streamData.id}] 調用 createChat 函數`);
+            // 使用多次重試，確保在 Cloudflare preview 環境中也能正確創建
+            let retryCount = 0;
+            const maxRetries = 5;
+            const tryCreateChat = () => {
+              try {
+                console.log(`[StreamBox ${streamData.id}] 嘗試創建聊天室 (嘗試 ${retryCount + 1}/${maxRetries})`, {
+                  id: streamData.id,
+                  platform: streamData.platform,
+                  channelId: streamData.channelId,
+                  videoId: streamData.videoId
+                });
+                
+                (window as any).createChat(
+                  streamData.id,
+                  streamData.platform,
+                  streamData.channelId,
+                  streamData.videoId
+                );
+                
+                // 檢查是否成功創建
+                setTimeout(() => {
+                  const createdIframe = chatContainer.querySelector('iframe');
+                  const chatContent = chatContainer.innerHTML;
+                  console.log(`[StreamBox ${streamData.id}] 創建後檢查`, {
+                    iframeExists: !!createdIframe,
+                    iframeSrc: createdIframe?.src,
+                    chatContentLength: chatContent.length,
+                    chatContainerChildren: chatContainer.children.length
+                  });
+                  
+                  if (!createdIframe && retryCount < maxRetries) {
+                    retryCount++;
+                    console.warn(`[StreamBox ${streamData.id}] 聊天室創建失敗，重試 ${retryCount}/${maxRetries}`);
+                    setTimeout(tryCreateChat, 200 * retryCount); // 遞增延遲
+                  } else if (createdIframe) {
+                    console.log(`[StreamBox ${streamData.id}] 聊天室創建成功`);
+                  }
+                }, 300);
+              } catch (error) {
+                console.error(`[StreamBox ${streamData.id}] 創建聊天室時發生錯誤:`, error);
+                if (retryCount < maxRetries) {
+                  retryCount++;
+                  console.log(`[StreamBox ${streamData.id}] 準備重試 (${retryCount}/${maxRetries})`);
+                  setTimeout(tryCreateChat, 200 * retryCount);
+                } else {
+                  console.error(`[StreamBox ${streamData.id}] 聊天室創建失敗，已達最大重試次數`);
+                }
+              }
+            };
+            setTimeout(tryCreateChat, 100);
+          } else {
+            console.error(`[StreamBox ${streamData.id}] createChat 函數不存在，請確保 js/chat.js 已載入`, {
+              windowKeys: Object.keys(window).filter(k => k.includes('chat') || k.includes('Chat')),
+              chatJsLoaded: typeof (window as any).createChat
+            });
           }
         } else {
           console.log(`[StreamBox ${streamData.id}] 聊天室 iframe 已存在`, {
@@ -729,34 +795,81 @@ export function StreamBox({
         createChatFunctionExists: typeof (window as any).createChat === 'function'
       });
 
+      console.log(`[StreamBox ${streamData.id}] 初始化時檢查聊天室狀態`, {
+        existingChat: !!existingChat,
+        existingIframe: !!existingIframe,
+        existingContent: existingContent,
+        platform: streamData.platform,
+        channelId: streamData.channelId,
+        videoId: streamData.videoId,
+        createChatFunction: typeof (window as any).createChat
+      });
+      
       if (!existingChat || (!existingIframe && !existingContent)) {
+        console.log(`[StreamBox ${streamData.id}] 聊天室不存在或沒有內容，準備創建`);
         // 如果聊天室不存在或沒有內容（iframe 或替代方案），使用全局 createChat 函數創建它
         // 這個函數會自動處理 Twitch 和 YouTube 的聊天室創建邏輯
         // 對於 YouTube 在 localhost 環境下，會顯示替代方案而不是 iframe
         if (typeof (window as any).createChat === 'function') {
-          console.log(`[StreamBox ${streamData.id}] 調用 createChat 函數`);
-          (window as any).createChat(
-            streamData.id,
-            streamData.platform,
-            streamData.channelId,
-            streamData.videoId
-          );
-          
-          // 等待內容創建後再次檢查
-          setTimeout(() => {
-            const chatAfterCreate = document.getElementById(`chat${streamData.id}`);
-            const iframeAfterCreate = chatAfterCreate?.querySelector('iframe');
-            const contentAfterCreate = (chatAfterCreate?.children.length ?? 0) > 0;
-            console.log(`[StreamBox ${streamData.id}] 創建後檢查`, {
-              chatExists: !!chatAfterCreate,
-              iframeExists: !!iframeAfterCreate,
-              contentExists: contentAfterCreate,
-              iframeSrc: iframeAfterCreate?.src,
-              childrenCount: chatAfterCreate?.children.length || 0
-            });
-          }, 500);
+          console.log(`[StreamBox ${streamData.id}] 調用 createChat 函數`, {
+            id: streamData.id,
+            platform: streamData.platform,
+            channelId: streamData.channelId,
+            videoId: streamData.videoId
+          });
+          // 使用多次重試，確保在 Cloudflare preview 環境中也能正確創建
+          let retryCount = 0;
+          const maxRetries = 5;
+          const tryCreateChat = () => {
+            try {
+              console.log(`[StreamBox ${streamData.id}] 嘗試創建聊天室 (嘗試 ${retryCount + 1}/${maxRetries})`);
+              (window as any).createChat(
+                streamData.id,
+                streamData.platform,
+                streamData.channelId,
+                streamData.videoId
+              );
+              
+              // 等待內容創建後再次檢查
+              setTimeout(() => {
+                const chatAfterCreate = document.getElementById(`chat${streamData.id}`);
+                const iframeAfterCreate = chatAfterCreate?.querySelector('iframe');
+                const contentAfterCreate = (chatAfterCreate?.children.length ?? 0) > 0;
+                console.log(`[StreamBox ${streamData.id}] 創建後檢查`, {
+                  chatExists: !!chatAfterCreate,
+                  iframeExists: !!iframeAfterCreate,
+                  contentExists: contentAfterCreate,
+                  iframeSrc: iframeAfterCreate?.src,
+                  childrenCount: chatAfterCreate?.children.length || 0,
+                  chatInnerHTML: chatAfterCreate?.innerHTML.substring(0, 100) // 只顯示前100字符
+                });
+                
+                // 如果仍然沒有內容，重試
+                if (!iframeAfterCreate && !contentAfterCreate && retryCount < maxRetries) {
+                  retryCount++;
+                  console.warn(`[StreamBox ${streamData.id}] 聊天室創建失敗，重試 ${retryCount}/${maxRetries}`);
+                  setTimeout(tryCreateChat, 200 * retryCount);
+                } else if (iframeAfterCreate || contentAfterCreate) {
+                  console.log(`[StreamBox ${streamData.id}] 聊天室創建成功`);
+                }
+              }, 500);
+            } catch (error) {
+              console.error(`[StreamBox ${streamData.id}] 創建聊天室時發生錯誤:`, error);
+              if (retryCount < maxRetries) {
+                retryCount++;
+                console.log(`[StreamBox ${streamData.id}] 準備重試 (${retryCount}/${maxRetries})`);
+                setTimeout(tryCreateChat, 200 * retryCount);
+              } else {
+                console.error(`[StreamBox ${streamData.id}] 聊天室創建失敗，已達最大重試次數`);
+              }
+            }
+          };
+          tryCreateChat();
         } else {
-          console.error(`[StreamBox ${streamData.id}] createChat 函數不存在`);
+          console.error(`[StreamBox ${streamData.id}] createChat 函數不存在，請確保 js/chat.js 已載入`, {
+            windowKeys: Object.keys(window).filter(k => k.includes('chat') || k.includes('Chat')),
+            chatJsLoaded: typeof (window as any).createChat
+          });
         }
       } else {
         console.log(`[StreamBox ${streamData.id}] 聊天室已存在`, {

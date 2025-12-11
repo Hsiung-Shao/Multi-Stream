@@ -3725,8 +3725,16 @@ if (typeof window !== 'undefined') {
   window.youtubeApiUtils = youtubeApiUtils;
   
   // 暴露收藏系統到全局
+  console.log('[settings.js] 初始化收藏系統...');
   window.favoriteStreams = favoriteStreams;
   window.favoriteCategories = favoriteCategories;
   window.indexedDBBackup = indexedDBBackup;
+  console.log('[settings.js] 收藏系統已初始化', {
+    favoriteStreams: !!window.favoriteStreams,
+    favoriteCategories: !!window.favoriteCategories,
+    indexedDBBackup: !!window.indexedDBBackup,
+    favoriteStreamsMethods: window.favoriteStreams ? Object.keys(window.favoriteStreams) : [],
+    favoriteCategoriesMethods: window.favoriteCategories ? Object.keys(window.favoriteCategories) : []
+  });
 }
 

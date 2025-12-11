@@ -162,11 +162,61 @@ export function ControlPanel({
 
   // 載入收藏和分類列表
   const loadFavorites = useCallback(() => {
-    if (window.favoriteStreams) {
-      setFavorites(window.favoriteStreams.getList());
-    }
-    if (window.favoriteCategories) {
-      setCategories(window.favoriteCategories.getList());
+    console.log('[ControlPanel] 開始載入收藏數據...', {
+      favoriteStreams: !!window.favoriteStreams,
+      favoriteCategories: !!window.favoriteCategories
+    });
+    
+    // 確保收藏系統已初始化（可能需要等待）
+    if (!window.favoriteStreams || !window.favoriteCategories) {
+      console.warn('[ControlPanel] 收藏系統尚未初始化，等待中...');
+      // 等待收藏系統初始化（最多等待 2 秒）
+      let waitCount = 0;
+      const checkAndLoad = () => {
+        console.log(`[ControlPanel] 檢查收藏系統初始化狀態 (${waitCount}/20)`, {
+          favoriteStreams: !!window.favoriteStreams,
+          favoriteCategories: !!window.favoriteCategories
+        });
+        
+        if (window.favoriteStreams && window.favoriteCategories) {
+          console.log('[ControlPanel] 收藏系統已就緒，載入數據');
+          try {
+            const favoritesList = window.favoriteStreams.getList();
+            const categoriesList = window.favoriteCategories.getList();
+            console.log('[ControlPanel] 載入成功', {
+              favoritesCount: favoritesList.length,
+              categoriesCount: categoriesList.length
+            });
+            setFavorites(favoritesList);
+            setCategories(categoriesList);
+          } catch (error) {
+            console.error('[ControlPanel] 載入數據時發生錯誤:', error);
+          }
+        } else if (waitCount < 20) {
+          waitCount++;
+          setTimeout(checkAndLoad, 100);
+        } else {
+          console.error('[ControlPanel] 收藏系統初始化失敗，請重新整理頁面', {
+            favoriteStreams: !!window.favoriteStreams,
+            favoriteCategories: !!window.favoriteCategories
+          });
+        }
+      };
+      checkAndLoad();
+    } else {
+      console.log('[ControlPanel] 收藏系統已就緒，直接載入數據');
+      try {
+        const favoritesList = window.favoriteStreams.getList();
+        const categoriesList = window.favoriteCategories.getList();
+        console.log('[ControlPanel] 載入成功', {
+          favoritesCount: favoritesList.length,
+          categoriesCount: categoriesList.length
+        });
+        setFavorites(favoritesList);
+        setCategories(categoriesList);
+      } catch (error) {
+        console.error('[ControlPanel] 載入數據時發生錯誤:', error);
+      }
     }
   }, []);
 
