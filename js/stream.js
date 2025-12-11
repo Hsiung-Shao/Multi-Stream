@@ -271,10 +271,23 @@ async function addStream(url = null) {
   delete window._pendingDisplayName;
 
   // 建立播放器
+  // 注意：如果使用新的 React 組件方式（StreamBox），播放器會由組件自動創建
+  // 這裡的舊方式僅作為向後兼容保留，但優先使用新方式
   if (platform === 'twitch') {
     createTwitchPlayer(id, channelId);
   } else if (platform === 'youtube') {
-    createYouTubePlayer(id, videoId);
+    // 檢查是否使用新方式（React 組件）
+    // 如果容器不存在或已經有播放器實例，可能是新方式已處理，跳過舊方式
+    const playerContainer = document.getElementById('player' + id);
+    const hasNewPlayer = window.players && window.players[id];
+    
+    if (!playerContainer || hasNewPlayer) {
+      console.log(`[舊方式] 串流 ${id} 可能已由新方式處理，跳過舊的 YouTube 播放器創建`);
+      // 不調用舊的 createYouTubePlayer，讓新方式處理
+    } else {
+      // 使用舊方式創建（向後兼容）
+      createYouTubePlayer(id, videoId);
+    }
   }
 
   // 建立聊天室
@@ -418,8 +431,17 @@ function createTwitchPlayer(id, channel) {
   initPlayer();
 }
 
-// 建立 YouTube 播放器
+// 建立 YouTube 播放器（舊方式 - 已棄用）
+// 注意：此函數已棄用，新的播放器建立方式在 src/components/StreamBox.tsx 中
+// 保留此函數僅作為向後兼容，但優先使用新的 React 組件方式
+// @deprecated 使用 src/components/StreamBox.tsx 中的 createYouTubePlayer 代替
 function createYouTubePlayer(id, videoId) {
+  // 檢查是否已經有新方式的播放器
+  if (window.players && window.players[id]) {
+    console.log(`[舊方式] 串流 ${id} 已有播放器實例（可能由新方式創建），跳過舊方式`);
+    return;
+  }
+  
   // 等待 API 準備就緒
   const initPlayer = () => {
     if (typeof YT !== 'undefined' && YT.Player) {
@@ -507,10 +529,23 @@ function reloadStream(id) {
   }
   
   // 重新建立播放器
+  // 注意：如果使用新的 React 組件方式（StreamBox），播放器會由組件自動重新創建
+  // 這裡的舊方式僅作為向後兼容保留，但優先使用新方式
   if (data.platform === 'twitch') {
     createTwitchPlayer(id, data.channelId);
   } else if (data.platform === 'youtube') {
-    createYouTubePlayer(id, data.videoId);
+    // 檢查是否使用新方式（React 組件）
+    // 如果容器不存在或已經有播放器實例，可能是新方式已處理，跳過舊方式
+    const playerContainer = document.getElementById('player' + id);
+    const hasNewPlayer = window.players && window.players[id];
+    
+    if (!playerContainer || hasNewPlayer) {
+      console.log(`[舊方式] 串流 ${id} 重新載入時可能已由新方式處理，跳過舊的 YouTube 播放器創建`);
+      // 不調用舊的 createYouTubePlayer，讓新方式處理
+    } else {
+      // 使用舊方式創建（向後兼容）
+      createYouTubePlayer(id, data.videoId);
+    }
   }
   
   // 恢復音量設定

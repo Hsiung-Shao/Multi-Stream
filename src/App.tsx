@@ -154,7 +154,7 @@ export default function App() {
       videoId: parsed.videoId,
       originalUrl: url,
       volume: 100,
-      chatVisible: parsed.platform !== 'youtube', // YouTube 預設隱藏，其他平台預設顯示
+      chatVisible: false, // 所有平台預設隱藏聊天室
       isMuted: false,
       name: null,
       displayName: null
@@ -194,7 +194,7 @@ export default function App() {
 
     // 保存當前狀態
     const savedVolume = stream.volume || 100;
-    const savedChatVisible = stream.chatVisible !== undefined ? stream.chatVisible : true;
+    const savedChatVisible = stream.chatVisible !== undefined ? stream.chatVisible : false;
     
     // 清理現有播放器
     if (window.players && window.players[id]) {

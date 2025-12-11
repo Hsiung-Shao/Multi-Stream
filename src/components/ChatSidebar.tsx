@@ -156,6 +156,7 @@ export function ChatSidebar({
         {/* 選擇器頭部 */}
         <div className={`flex-shrink-0 px-3 py-2 border-b ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
           <Select
+            key={`select-${positionKey}-${streams.length}-${streams.map(s => s.id).join('-')}`}
             value={selectedId ? String(selectedId) : undefined}
             onValueChange={(value) => {
               const streamId = value && value !== 'none' ? parseInt(value) : null;
