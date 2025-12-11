@@ -80,8 +80,8 @@ export function ControlPanel({
     { id: 2, icon: '⬅️➡️', label: '左右', cols: 2, rows: 1 },
     { id: 3, icon: '⬆️⬇️', label: '上下', cols: 1, rows: 2 },
     { id: 4, icon: '⊞', label: '四格', cols: 2, rows: 2 },
-    { id: 5, icon: '⬆️⬇️⬇️', label: '上大下三', cols: 2, rows: 2 },
-    { id: 6, icon: '⊞⊞', label: '2×3', cols: 2, rows: 3 },
+    { id: 5, icon: '⬆️⬇️⬇️', label: '上大下三', cols: 3, rows: 2, special: 'top-large-bottom-three' },
+    { id: 6, icon: '⊞⊞', label: '3×2', cols: 3, rows: 2 },
     { id: 9, icon: '⊞⊞⊞', label: '3×3', cols: 3, rows: 3 },
   ];
 
@@ -130,7 +130,13 @@ export function ControlPanel({
                     : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
                 }`}
               >
-                <LayoutPreview cols={layout.cols} rows={layout.rows} theme={theme} />
+                <LayoutPreview 
+                  layoutId={layout.id} 
+                  cols={layout.cols} 
+                  rows={layout.rows} 
+                  special={layout.special}
+                  theme={theme} 
+                />
               </button>
             ))}
           </div>
@@ -389,7 +395,37 @@ function Section({ theme, title, children }: { theme: 'light' | 'dark'; title: s
   );
 }
 
-function LayoutPreview({ cols, rows, theme }: { cols: number; rows: number; theme: 'light' | 'dark' }) {
+function LayoutPreview({ 
+  layoutId, 
+  cols, 
+  rows, 
+  special, 
+  theme 
+}: { 
+  layoutId: number; 
+  cols: number; 
+  rows: number; 
+  special?: string;
+  theme: 'light' | 'dark' 
+}) {
+  // 特殊布局：上大下三
+  if (special === 'top-large-bottom-three') {
+    return (
+      <div className="w-full h-full p-2 flex flex-col gap-1">
+        {/* 上方大區域 75% */}
+        <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} 
+             style={{ flex: '0 0 75%' }} />
+        {/* 下方三個小區域 25% */}
+        <div className="flex gap-1" style={{ flex: '0 0 25%' }}>
+          <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
+          <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
+          <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
+        </div>
+      </div>
+    );
+  }
+
+  // 一般網格布局
   return (
     <div className="w-full h-full p-2">
       <div
