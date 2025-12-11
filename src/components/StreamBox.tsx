@@ -239,8 +239,54 @@ export function StreamBox({
           } else {
             console.error(`[StreamBox ${streamData.id}] createChat 函數不存在，請確保 js/chat.js 已載入`, {
               windowKeys: Object.keys(window).filter(k => k.includes('chat') || k.includes('Chat')),
-              chatJsLoaded: typeof (window as any).createChat
+              chatJsLoaded: typeof (window as any).createChat,
+              documentReadyState: document.readyState,
+              scriptsLoaded: Array.from(document.querySelectorAll('script[src]')).map(s => (s as HTMLScriptElement).src),
+              allWindowFunctions: Object.keys(window).filter(k => typeof (window as any)[k] === 'function' && (k.includes('chat') || k.includes('Chat')))
             });
+            
+            // 嘗試等待 chat.js 載入
+            const waitForChatJs = () => {
+              if (typeof (window as any).createChat === 'function') {
+                console.log(`[StreamBox ${streamData.id}] createChat 函數已可用，重新嘗試創建聊天室`);
+                if (streamData.chatVisible) {
+                  (window as any).createChat(
+                    streamData.id,
+                    streamData.platform,
+                    streamData.channelId,
+                    streamData.videoId
+                  );
+                }
+              } else {
+                // 監聽 chatFunctionsReady 事件
+                const handler = () => {
+                  console.log(`[StreamBox ${streamData.id}] 收到 chatFunctionsReady 事件，重新嘗試創建聊天室`);
+                  if (streamData.chatVisible && typeof (window as any).createChat === 'function') {
+                    (window as any).createChat(
+                      streamData.id,
+                      streamData.platform,
+                      streamData.channelId,
+                      streamData.videoId
+                    );
+                  }
+                  window.removeEventListener('chatFunctionsReady', handler);
+                };
+                window.addEventListener('chatFunctionsReady', handler);
+                
+                // 設置超時，避免無限等待
+                setTimeout(() => {
+                  window.removeEventListener('chatFunctionsReady', handler);
+                  console.warn(`[StreamBox ${streamData.id}] 等待 createChat 函數超時`);
+                }, 5000);
+              }
+            };
+            
+            // 如果 DOM 已就緒，立即檢查；否則等待
+            if (document.readyState === 'complete') {
+              setTimeout(waitForChatJs, 100);
+            } else {
+              window.addEventListener('load', waitForChatJs);
+            }
           }
         } else {
           console.log(`[StreamBox ${streamData.id}] 聊天室 iframe 已存在`, {
@@ -868,8 +914,42 @@ export function StreamBox({
         } else {
           console.error(`[StreamBox ${streamData.id}] createChat 函數不存在，請確保 js/chat.js 已載入`, {
             windowKeys: Object.keys(window).filter(k => k.includes('chat') || k.includes('Chat')),
-            chatJsLoaded: typeof (window as any).createChat
+            chatJsLoaded: typeof (window as any).createChat,
+            documentReadyState: document.readyState,
+            scriptsLoaded: Array.from(document.querySelectorAll('script[src]')).map(s => (s as HTMLScriptElement).src),
+            allWindowFunctions: Object.keys(window).filter(k => typeof (window as any)[k] === 'function' && (k.includes('chat') || k.includes('Chat')))
           });
+          
+          // 嘗試等待 chat.js 載入
+          const waitForChatJs = () => {
+            if (typeof (window as any).createChat === 'function') {
+              console.log(`[StreamBox ${streamData.id}] createChat 函數已可用，重新嘗試創建聊天室`);
+              tryCreateChat();
+            } else {
+              // 監聽 chatFunctionsReady 事件
+              const handler = () => {
+                console.log(`[StreamBox ${streamData.id}] 收到 chatFunctionsReady 事件，重新嘗試創建聊天室`);
+                if (typeof (window as any).createChat === 'function') {
+                  tryCreateChat();
+                }
+                window.removeEventListener('chatFunctionsReady', handler);
+              };
+              window.addEventListener('chatFunctionsReady', handler);
+              
+              // 設置超時，避免無限等待
+              setTimeout(() => {
+                window.removeEventListener('chatFunctionsReady', handler);
+                console.warn(`[StreamBox ${streamData.id}] 等待 createChat 函數超時`);
+              }, 5000);
+            }
+          };
+          
+          // 如果 DOM 已就緒，立即檢查；否則等待
+          if (document.readyState === 'complete') {
+            setTimeout(waitForChatJs, 100);
+          } else {
+            window.addEventListener('load', waitForChatJs);
+          }
         }
       } else {
         console.log(`[StreamBox ${streamData.id}] 聊天室已存在`, {

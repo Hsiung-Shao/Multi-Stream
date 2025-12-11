@@ -12,21 +12,41 @@
       <!-- 載入 config.js 在 React 應用之前 -->
       <script src="/config.js"></script>
       <!-- 載入工具函數和驗證函數（必須在 chat.js 之前） -->
-      <script defer src="/js/utils.js"></script>
-      <script defer src="/js/security.js"></script>
+      <script defer src="/js/utils.js" onload="console.log('[index.html] utils.js 已載入')" onerror="console.error('[index.html] utils.js 載入失敗')"></script>
+      <script defer src="/js/security.js" onload="console.log('[index.html] security.js 已載入')" onerror="console.error('[index.html] security.js 載入失敗')"></script>
       <!-- 載入主入口腳本（定義全局變數如 streamCount, players, streamData） -->
-      <script defer src="/js/main.js"></script>
+      <script defer src="/js/main.js" onload="console.log('[index.html] main.js 已載入')" onerror="console.error('[index.html] main.js 載入失敗')"></script>
       <!-- 載入必要的 API 腳本 -->
-      <script defer src="/js/twitch-api.js"></script>
+      <script defer src="/js/twitch-api.js" onload="console.log('[index.html] twitch-api.js 已載入')" onerror="console.error('[index.html] twitch-api.js 載入失敗')"></script>
       <!-- 載入串流管理腳本（必須在 settings.js 之前，因為 settings.js 中的收藏功能需要 addStream，且依賴 main.js 的全局變數） -->
-      <script defer src="/js/stream.js"></script>
-      <script defer src="/js/settings.js"></script>
+      <script defer src="/js/stream.js" onload="console.log('[index.html] stream.js 已載入')" onerror="console.error('[index.html] stream.js 載入失敗')"></script>
+      <script defer src="/js/settings.js" onload="console.log('[index.html] settings.js 已載入')" onerror="console.error('[index.html] settings.js 載入失敗')"></script>
       <!-- 載入聊天室和音量控制腳本（依賴 utils.js 和 security.js） -->
-      <script defer src="/js/chat.js"></script>
-      <script defer src="/js/volume.js"></script>
+      <script defer src="/js/chat.js" onload="console.log('[index.html] chat.js 已載入，檢查 createChat:', typeof window.createChat)" onerror="console.error('[index.html] chat.js 載入失敗')"></script>
+      <script defer src="/js/volume.js" onload="console.log('[index.html] volume.js 已載入')" onerror="console.error('[index.html] volume.js 載入失敗')"></script>
       <!-- 載入控制面板腳本（包含 updateStreamOrderList 函數） -->
-      <script defer src="/js/control-panel.js"></script>
+      <script defer src="/js/control-panel.js" onload="console.log('[index.html] control-panel.js 已載入')" onerror="console.error('[index.html] control-panel.js 載入失敗')"></script>
       <script type="module" src="/src/main.tsx"></script>
+      <!-- 腳本載入完成後檢查全局函數 -->
+      <script>
+        window.addEventListener('DOMContentLoaded', () => {
+          console.log('[index.html] DOMContentLoaded，檢查全局函數狀態', {
+            createChat: typeof window.createChat,
+            toggleChat: typeof window.toggleChat,
+            setupChatResizer: typeof window.setupChatResizer,
+            favoriteStreams: typeof window.favoriteStreams,
+            favoriteCategories: typeof window.favoriteCategories,
+            twitchApi: typeof window.twitchApi,
+            youtubeApiUtils: typeof window.youtubeApiUtils,
+            allWindowKeys: Object.keys(window).filter(k => 
+              k.includes('chat') || k.includes('Chat') || 
+              k.includes('favorite') || k.includes('Favorite') ||
+              k.includes('twitch') || k.includes('Twitch') ||
+              k.includes('youtube') || k.includes('YouTube')
+            )
+          });
+        });
+      </script>
     </body>
   </html>
   

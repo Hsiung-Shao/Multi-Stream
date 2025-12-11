@@ -731,18 +731,43 @@ function setupChatResizer(id) {
 
 // 暴露函數到全局，以便 React 組件可以訪問
 if (typeof window !== 'undefined') {
-  console.log('[chat.js] 初始化聊天室功能...');
-  window.createChat = createChat;
-  window.toggleChat = toggleChat;
-  window.separateChat = separateChat;
-  window.closeSeparatedChat = closeSeparatedChat;
-  window.setupChatResizer = setupChatResizer;
-  console.log('[chat.js] 聊天室功能已初始化', {
-    createChat: typeof window.createChat,
-    toggleChat: typeof window.toggleChat,
-    separateChat: typeof window.separateChat,
-    closeSeparatedChat: typeof window.closeSeparatedChat,
-    setupChatResizer: typeof window.setupChatResizer
+  console.log('[chat.js] 開始初始化聊天室功能...', {
+    scriptLoaded: true,
+    location: window.location.href,
+    documentReadyState: document.readyState
   });
+  
+  try {
+    window.createChat = createChat;
+    window.toggleChat = toggleChat;
+    window.separateChat = separateChat;
+    window.closeSeparatedChat = closeSeparatedChat;
+    window.setupChatResizer = setupChatResizer;
+    
+    console.log('[chat.js] 聊天室功能已初始化', {
+      createChat: typeof window.createChat,
+      toggleChat: typeof window.toggleChat,
+      separateChat: typeof window.separateChat,
+      closeSeparatedChat: typeof window.closeSeparatedChat,
+      setupChatResizer: typeof window.setupChatResizer,
+      allFunctionsExposed: !!(window.createChat && window.toggleChat && window.setupChatResizer)
+    });
+    
+    // 觸發自定義事件，通知其他模組聊天室功能已就緒
+    if (typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('chatFunctionsReady', {
+        detail: {
+          createChat: typeof window.createChat,
+          toggleChat: typeof window.toggleChat,
+          setupChatResizer: typeof window.setupChatResizer
+        }
+      }));
+      console.log('[chat.js] 已觸發 chatFunctionsReady 事件');
+    }
+  } catch (error) {
+    console.error('[chat.js] 初始化聊天室功能時發生錯誤:', error);
+  }
+} else {
+  console.error('[chat.js] window 對象不存在，無法初始化聊天室功能');
 }
 

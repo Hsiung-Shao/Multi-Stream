@@ -30,8 +30,23 @@ export async function onRequestGet(contextOrRequest, env) {
 }
 
 async function handleConfigRequest(request, env) {
+  const requestUrl = request.url;
+  const requestMethod = request.method;
+  
+  console.log('[youtube-config.js] 收到請求', {
+    method: requestMethod,
+    url: requestUrl,
+    hasEnv: !!env,
+    hasYoutubeApiKey: !!(env?.YOUTUBE_API_KEY)
+  });
+  
   try {
     const apiKey = env?.YOUTUBE_API_KEY || null;
+
+    console.log('[youtube-config.js] 處理請求完成', {
+      apiKeyProvided: !!apiKey,
+      apiKeyLength: apiKey ? apiKey.length : 0
+    });
 
     // 返回 API Key（如果沒有設定則返回 null）
     return new Response(
@@ -50,6 +65,12 @@ async function handleConfigRequest(request, env) {
       }
     );
   } catch (error) {
+    console.error('[youtube-config.js] 處理請求時發生錯誤', {
+      error: error.message,
+      stack: error.stack,
+      url: requestUrl
+    });
+    
     return new Response(
       JSON.stringify({
         error: '伺服器錯誤',

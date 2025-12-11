@@ -59,6 +59,7 @@
       },
       "scripts": {
             "dev": "vite",
-            "build": "vite build"
+            "build": "vite build",
+            "postbuild": "node scripts/copy-static-assets.js"
       }
 }

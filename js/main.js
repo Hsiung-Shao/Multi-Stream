@@ -123,15 +123,42 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   // 延遲讀取備份數據（頁面載入後）
+  console.log('[main.js] 檢查 indexedDBBackup 可用性', {
+    indexedDBBackupAvailable: typeof indexedDBBackup !== 'undefined',
+    windowIndexedDBBackup: typeof window.indexedDBBackup !== 'undefined'
+  });
+  
   if (typeof indexedDBBackup !== 'undefined') {
+    console.log('[main.js] 準備自動載入備份數據');
     setTimeout(async () => {
-      // 嘗試自動從 IndexedDB 恢復數據（如果 localStorage 沒有數據）
-      const result = await indexedDBBackup.autoLoadBackup();
-      if (result && result.success) {
-        // 重新載入頁面以應用恢復的數據
-        window.location.reload();
+      console.log('[main.js] 開始自動載入備份數據');
+      try {
+        // 嘗試自動從 IndexedDB 恢復數據（如果 localStorage 沒有數據）
+        const result = await indexedDBBackup.autoLoadBackup();
+        console.log('[main.js] 自動載入備份結果', {
+          success: result?.success,
+          message: result?.message,
+          skipped: result?.skipped
+        });
+        
+        if (result && result.success) {
+          console.log('[main.js] 備份數據恢復成功，重新載入頁面');
+          // 重新載入頁面以應用恢復的數據
+          window.location.reload();
+        } else {
+          console.log('[main.js] 備份數據恢復跳過或失敗', {
+            reason: result?.message || '未知原因'
+          });
+        }
+      } catch (error) {
+        console.error('[main.js] 自動載入備份時發生錯誤', {
+          error: error.message,
+          errorName: error.name
+        });
       }
     }, 1000);
+  } else {
+    console.warn('[main.js] indexedDBBackup 未定義，無法自動載入備份');
   }
   
   // 初始化控制面板中的收藏列表顯示（確保 DOM 元素已準備好）

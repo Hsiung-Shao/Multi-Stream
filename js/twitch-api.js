@@ -74,25 +74,53 @@ function getEnvValue(envKey, configKey, localStorageKey) {
 let configClientIdPromise = null;
 async function getClientIdFromPagesFunction() {
   if (configClientIdPromise) {
+    console.log('[twitch-api.js] 使用已存在的 Client ID Promise');
     return configClientIdPromise;
   }
   
+  console.log('[twitch-api.js] 開始從 Cloudflare Pages Function 獲取 Client ID');
   configClientIdPromise = (async () => {
     try {
-      const response = await fetch('/api/twitch-config', {
+      const apiUrl = '/api/twitch-config';
+      console.log('[twitch-api.js] 發送請求到:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         }
       });
       
+      console.log('[twitch-api.js] 收到回應', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('[twitch-api.js] 解析回應數據', {
+          hasClientId: !!data.clientId,
+          clientIdLength: data.clientId ? data.clientId.length : 0
+        });
+        
         if (data.clientId) {
+          console.log('[twitch-api.js] 成功獲取 Client ID');
           return data.clientId;
+        } else {
+          console.warn('[twitch-api.js] 回應中沒有 clientId');
         }
+      } else {
+        console.error('[twitch-api.js] API 請求失敗', {
+          status: response.status,
+          statusText: response.statusText
+        });
       }
     } catch (error) {
+      console.error('[twitch-api.js] 獲取 Client ID 時發生錯誤', {
+        error: error.message,
+        stack: error.stack
+      });
     }
     return null;
   })();
