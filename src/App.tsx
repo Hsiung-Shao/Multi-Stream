@@ -233,6 +233,22 @@ export default function App() {
     }
   };
 
+  // 切換所有聊天室顯示/隱藏
+  const handleToggleAllChat = (show: boolean) => {
+    setStreams(prev => {
+      const updatedStreams = prev.map(s => ({ ...s, chatVisible: show }));
+      
+      // 更新全局 streamData 狀態（與舊代碼兼容）
+      updatedStreams.forEach(stream => {
+        if (window.streamData && window.streamData[stream.id]) {
+          window.streamData[stream.id].chatVisible = show;
+        }
+      });
+      
+      return updatedStreams;
+    });
+  };
+
   // 分離聊天室
   const handleSeparateChat = (id: number) => {
     if (typeof (window as any).separateChat === 'function') {
@@ -367,6 +383,7 @@ export default function App() {
         onVolumeChange={handleVolumeChange}
         onToggleMute={handleToggleMute}
         onRemoveStream={handleRemoveStream}
+        onToggleAllChat={handleToggleAllChat}
         onMoveStreamUp={(id) => {
           setStreams(prev => {
             const index = prev.findIndex(s => s.id === id);

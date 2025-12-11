@@ -26,6 +26,7 @@ interface ControlPanelProps {
   onMoveStreamDown?: (id: number) => void;
   onRemoveStream?: (id: number) => void;
   onToggleMute?: (id: number) => void;
+  onToggleAllChat?: (show: boolean) => void;
 }
 
 export function ControlPanel({ 
@@ -45,11 +46,25 @@ export function ControlPanel({
   onMoveStreamUp,
   onMoveStreamDown,
   onRemoveStream,
-  onToggleMute
+  onToggleMute,
+  onToggleAllChat
 }: ControlPanelProps) {
   const [volume, setVolume] = useState([100]);
   const [isMuted, setIsMuted] = useState(false);
   const [showAllChat, setShowAllChat] = useState(false);
+  
+  // 同步 showAllChat 狀態：當所有串流的聊天室都顯示時，開關應該是開啟的
+  useEffect(() => {
+    if (streams.length === 0) {
+      setShowAllChat(false);
+      return;
+    }
+    
+    // 檢查是否所有串流的聊天室都顯示
+    // 只有當所有串流的聊天室都顯示時，開關才是 true
+    const allChatsVisible = streams.every(s => s.chatVisible === true);
+    setShowAllChat(allChatsVisible);
+  }, [streams]);
   
   // 同步總音量到全局變量 - 參考 js/volume.js
   useEffect(() => {
@@ -193,7 +208,16 @@ export function ControlPanel({
               <label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                 顯示所有聊天室
               </label>
-              <Switch checked={showAllChat} onCheckedChange={setShowAllChat} />
+              <Switch 
+                checked={showAllChat} 
+                onCheckedChange={(checked) => {
+                  // 調用回調函數來更新所有串流的聊天室狀態
+                  // showAllChat 狀態會通過 useEffect 自動同步
+                  if (onToggleAllChat) {
+                    onToggleAllChat(checked);
+                  }
+                }} 
+              />
             </div>
           </div>
         </Section>

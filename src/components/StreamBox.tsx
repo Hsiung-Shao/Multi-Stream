@@ -426,16 +426,19 @@ export function StreamBox({
       // 檢查聊天室是否已經創建（通過全局 createChat 函數）
       const existingChat = document.getElementById(`chat${streamData.id}`);
       const existingIframe = existingChat?.querySelector('iframe');
+      const existingContent = existingChat?.children.length > 0;
       
       console.log(`[StreamBox ${streamData.id}] 檢查聊天室狀態`, {
         existingChat: !!existingChat,
         existingIframe: !!existingIframe,
+        existingContent: existingContent,
         createChatFunctionExists: typeof (window as any).createChat === 'function'
       });
 
-      if (!existingChat || !existingIframe) {
-        // 如果聊天室不存在或沒有 iframe，使用全局 createChat 函數創建它
+      if (!existingChat || (!existingIframe && !existingContent)) {
+        // 如果聊天室不存在或沒有內容（iframe 或替代方案），使用全局 createChat 函數創建它
         // 這個函數會自動處理 Twitch 和 YouTube 的聊天室創建邏輯
+        // 對於 YouTube 在 localhost 環境下，會顯示替代方案而不是 iframe
         if (typeof (window as any).createChat === 'function') {
           console.log(`[StreamBox ${streamData.id}] 調用 createChat 函數`);
           (window as any).createChat(
@@ -445,14 +448,17 @@ export function StreamBox({
             streamData.videoId
           );
           
-          // 等待 iframe 創建後再次檢查
+          // 等待內容創建後再次檢查
           setTimeout(() => {
             const chatAfterCreate = document.getElementById(`chat${streamData.id}`);
             const iframeAfterCreate = chatAfterCreate?.querySelector('iframe');
+            const contentAfterCreate = chatAfterCreate?.children.length > 0;
             console.log(`[StreamBox ${streamData.id}] 創建後檢查`, {
               chatExists: !!chatAfterCreate,
               iframeExists: !!iframeAfterCreate,
-              iframeSrc: iframeAfterCreate?.src
+              contentExists: contentAfterCreate,
+              iframeSrc: iframeAfterCreate?.src,
+              childrenCount: chatAfterCreate?.children.length || 0
             });
           }, 500);
         } else {
@@ -460,7 +466,8 @@ export function StreamBox({
         }
       } else {
         console.log(`[StreamBox ${streamData.id}] 聊天室已存在`, {
-          iframeSrc: existingIframe.src
+          iframeSrc: existingIframe?.src,
+          hasContent: existingContent
         });
       }
 

@@ -3,6 +3,11 @@
 // 建立聊天室
 function createChat(id, platform, channelId, videoId) {
   const chatDiv = document.getElementById('chat' + id);
+  if (!chatDiv) {
+    console.warn(`[createChat] 聊天室容器 chat${id} 不存在`);
+    return;
+  }
+  
   const parentDomain = getParentDomain();
   
   let chatUrl = '';
@@ -10,18 +15,25 @@ function createChat(id, platform, channelId, videoId) {
   if (platform === 'youtube') {
     // 验证 videoId
     if (!validateVideoId(videoId)) {
+      console.log(`[createChat] YouTube videoId 無效，顯示替代方案`);
       showYouTubeChatAlternative(chatDiv, videoId);
       return;
     }
     
-    // 检查域名是否支持嵌入（localhost 不支持）
-    if (parentDomain === 'localhost' || parentDomain === '127.0.0.1' || parentDomain === '0.0.0.0') {
-      showYouTubeChatAlternative(chatDiv, videoId);
-      return;
-    }
+    // 构建 YouTube 聊天室 URL
+    // 注意：YouTube 的 live_chat iframe 在 localhost 環境下可能無法正常工作
+    // 但我們仍然嘗試創建，讓 YouTube 自己處理限制
+    // 使用 embed_domain 參數來指定嵌入域名
+    const embedDomain = parentDomain === 'localhost' || parentDomain === '127.0.0.1' || parentDomain === '0.0.0.0'
+      ? window.location.hostname + (window.location.port ? ':' + window.location.port : '')
+      : parentDomain;
     
-    // 构建 YouTube 聊天室 URL（使用 embed_domain 参数）
-    chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(parentDomain)}`;
+    // 嘗試使用兩種 URL 格式：
+    // 1. live_chat URL（標準格式）
+    // 2. embed/live_chat URL（備用格式）
+    chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(embedDomain)}`;
+    
+    console.log(`[createChat] 創建 YouTube 聊天室 iframe，videoId: ${videoId}, embedDomain: ${embedDomain}`);
   } else if (platform === 'twitch') {
     // Twitch 聊天室 - 根據官方文檔，必須使用 parent 參數
     // Twitch CSP 要求：frame-ancestors http://localhost:* https://localhost:*
@@ -57,10 +69,25 @@ function createChat(id, platform, channelId, videoId) {
     chatIframe.src = chatUrl;
     chatIframe.style.width = '100%';
     chatIframe.style.height = '100%';
+    chatIframe.style.border = 'none';
     chatIframe.frameBorder = '0';
     chatIframe.allow = 'autoplay; fullscreen';
     chatIframe.setAttribute('allowfullscreen', '');
+    chatIframe.setAttribute('scrolling', 'yes');
+    chatIframe.setAttribute('allowtransparency', 'true');
+    
+    // 添加載入錯誤處理
+    chatIframe.onerror = () => {
+      console.warn(`[createChat] ${platform} 聊天室 iframe 載入失敗`);
+      if (platform === 'youtube') {
+        showYouTubeChatAlternative(chatDiv, videoId);
+      } else if (platform === 'twitch') {
+        showChatError(chatDiv, platform);
+      }
+    };
+    
     chatDiv.appendChild(chatIframe);
+    console.log(`[createChat] ${platform} 聊天室 iframe 已添加到 DOM，src: ${chatUrl}`);
     
     // 檢測是否被 CSP 阻止
     let blockedDetected = false;
@@ -141,13 +168,21 @@ function createChat(id, platform, channelId, videoId) {
 
 // 顯示 YouTube 聊天室替代方案（因為無法嵌入）
 function showYouTubeChatAlternative(chatDiv, videoId) {
+  if (!chatDiv) {
+    console.warn('[showYouTubeChatAlternative] 聊天室容器不存在');
+    return;
+  }
+  
   // 验证 videoId
   if (!validateVideoId(videoId)) {
+    console.warn('[showYouTubeChatAlternative] videoId 無效:', videoId);
     // Invalid video ID，靜默處理
     return;
   }
   
   const chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}`;
+  
+  console.log(`[showYouTubeChatAlternative] 為 videoId ${videoId} 顯示替代方案`);
   
   // 使用安全的 DOM 操作
   chatDiv.innerHTML = ''; // 清空
