@@ -127,6 +127,40 @@ export function calculateLayoutStyles(
 }
 
 /**
+ * 獲取布局的最大容量（能顯示多少個串流）
+ */
+export function getLayoutCapacity(layoutType: LayoutType): number {
+  switch (layoutType) {
+    case 1:
+      return 1; // 單一畫面只能顯示1個
+    case 2:
+    case 3:
+      return Infinity; // 左右/上下分割可以無限擴展
+    case 4:
+      return 4; // 四宮格最多4個
+    case 5:
+      return Infinity; // 上大下三可以無限擴展（下方會繼續排列）
+    case 6:
+      return Infinity; // 2×3 網格可以無限擴展
+    case 9:
+      return Infinity; // 3×3 網格可以無限擴展
+    default:
+      return 1;
+  }
+}
+
+/**
+ * 檢查串流數量是否超過布局容量
+ */
+export function isLayoutOverCapacity(layoutType: LayoutType, streamCount: number): boolean {
+  const capacity = getLayoutCapacity(layoutType);
+  if (capacity === Infinity) {
+    return false; // 無限容量，永遠不會超過
+  }
+  return streamCount > capacity;
+}
+
+/**
  * 根據串流數量和視窗大小自動選擇最適合的布局
  */
 export function autoSelectLayout(count: number): LayoutType {
