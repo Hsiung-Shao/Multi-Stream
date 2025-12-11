@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { StreamData } from '../utils/streamUtils';
 import { loadTwitchPlayerApi, loadYouTubeIframeApi } from '../utils/loadPlayerApis';
-import { Button } from './ui/button';
-import { RefreshCw, MessageSquare, X } from 'lucide-react';
+import { Button as MuiButton, Slider } from '@mui/material';
+import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
 import type { LayoutStyle } from '../utils/layoutUtils';
 
 interface StreamBoxProps {
@@ -13,6 +13,8 @@ interface StreamBoxProps {
   onReload: (id: number) => void;
   onToggleChat: (id: number) => void;
   onSeparateChat: (id: number) => void;
+  onVolumeChange?: (id: number, volume: number) => void;
+  streamIndex?: number; // 串流順序索引
 }
 
 // 全局變數聲明（這些應該在 window 對象上）
@@ -22,8 +24,12 @@ declare global {
     streamData: Record<number, StreamData>;
     Twitch?: any;
     YT?: any;
-    twitchApi?: any;
-    youtubeApiUtils?: any;
+    twitchApi?: {
+      checkMultipleChannelsLiveStatus: (channelIds: string[]) => Promise<Record<string, { isLive: boolean; viewerCount?: number; gameName?: string }>>;
+    };
+    youtubeApiUtils?: {
+      checkChannelLiveStatus: (channelId: string) => Promise<{ isLive: boolean }>;
+    };
   }
 }
 
@@ -34,7 +40,9 @@ export function StreamBox({
   onRemove,
   onReload,
   onToggleChat,
-  onSeparateChat
+  onSeparateChat,
+  onVolumeChange,
+  streamIndex
 }: StreamBoxProps) {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -47,6 +55,13 @@ export function StreamBox({
   // 計算聊天室寬度狀態（用於 JSX 中的樣式）
   const [chatWidth, setChatWidth] = useState<number>(0);
   const [playerWidth, setPlayerWidth] = useState<string>('100%');
+  
+  // 音量狀態
+  const [localVolume, setLocalVolume] = useState<number>(streamData.volume || 100);
+  const [isMuted, setIsMuted] = useState<boolean>(streamData.isMuted || false);
+  
+  // 收藏名稱狀態
+  const [favoriteName, setFavoriteName] = useState<string | null>(null);
 
   // 同步聊天室顯示狀態和布局 - 參考 js/chat.js 和 js/stream.js
   useEffect(() => {
@@ -230,6 +245,141 @@ export function StreamBox({
     };
   }, [streamData.chatVisible, streamData.platform, streamData.id]);
 
+  // 應用音量設定到播放器（在播放器準備好後調用）
+  const applyVolumeToPlayer = (id: number) => {
+    // 檢查播放器和串流數據是否存在
+    if (!window.players || !window.players[id] || !window.players[id].player) {
+      console.warn(`[StreamBox ${id}] 播放器不存在，無法應用音量設定`);
+      return;
+    }
+    
+    if (!window.streamData || !window.streamData[id]) {
+      console.warn(`[StreamBox ${id}] 串流數據不存在，無法應用音量設定`);
+      return;
+    }
+    
+    const player = window.players[id].player;
+    const streamData = window.streamData[id];
+    
+    // 檢查全部靜音狀態（從全局變量或 DOM 元素）
+    let masterMuted = false;
+    let masterVolume = 100;
+    
+    // 嘗試從全局變量讀取
+    if ((window as any).masterMuted !== undefined) {
+      masterMuted = (window as any).masterMuted;
+    }
+    
+    // 嘗試從 DOM 元素讀取 master-volume
+    const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
+    if (masterVolSlider) {
+      const masterVol = parseInt(masterVolSlider.value) || 100;
+      masterVolume = masterVol;
+      // 如果音量為 0，視為全部靜音
+      if (masterVol === 0) {
+        masterMuted = true;
+      }
+    }
+    
+    // 如果全部靜音，直接靜音播放器
+    if (masterMuted) {
+      try {
+        if (streamData.platform === 'twitch') {
+          if (typeof player.setMuted === 'function') {
+            player.setMuted(true);
+            console.log(`[StreamBox ${id}] 應用全部靜音到 Twitch 播放器`);
+          }
+        } else if (streamData.platform === 'youtube') {
+          if (typeof player.mute === 'function') {
+            player.mute();
+            console.log(`[StreamBox ${id}] 應用全部靜音到 YouTube 播放器`);
+          }
+        }
+      } catch (e) {
+        console.warn(`[StreamBox ${id}] 應用靜音時發生錯誤:`, e);
+      }
+      return;
+    }
+    
+    // 如果沒有全部靜音，應用正常的音量設定
+    // 使用全局的 applyMasterVolumeToStream 函數（如果存在）
+    if (typeof (window as any).applyMasterVolumeToStream === 'function') {
+      try {
+        (window as any).applyMasterVolumeToStream(id);
+        console.log(`[StreamBox ${id}] 應用音量設定到播放器`);
+      } catch (e) {
+        console.warn(`[StreamBox ${id}] 應用音量設定時發生錯誤:`, e);
+      }
+    } else {
+      // 如果函數不存在，手動應用音量
+      const streamVol = streamData.volume || 100;
+      const actualVol = Math.round((streamVol / 100) * masterVolume);
+      
+      try {
+        if (streamData.platform === 'twitch') {
+          if (actualVol === 0) {
+            if (typeof player.setMuted === 'function') {
+              player.setMuted(true);
+            } else if (typeof player.setVolume === 'function') {
+              player.setVolume(0);
+            }
+          } else {
+            if (typeof player.setMuted === 'function') {
+              player.setMuted(false);
+            }
+            if (typeof player.setVolume === 'function') {
+              player.setVolume(actualVol / 100);
+            }
+          }
+        } else if (streamData.platform === 'youtube') {
+          try {
+            const playerState = player.getPlayerState();
+            if (playerState !== undefined) {
+              if (actualVol === 0) {
+                if (typeof player.mute === 'function') {
+                  player.mute();
+                } else if (typeof player.setVolume === 'function') {
+                  player.setVolume(0);
+                }
+              } else {
+                if (typeof player.unMute === 'function') {
+                  player.unMute();
+                }
+                if (typeof player.setVolume === 'function') {
+                  player.setVolume(actualVol);
+                }
+              }
+            }
+          } catch (e) {
+            // 播放器尚未就緒，稍後再試
+            setTimeout(() => {
+              if (window.players && window.players[id] && window.players[id].player) {
+                try {
+                  if (actualVol === 0) {
+                    if (typeof window.players[id].player.mute === 'function') {
+                      window.players[id].player.mute();
+                    }
+                  } else {
+                    if (typeof window.players[id].player.unMute === 'function') {
+                      window.players[id].player.unMute();
+                    }
+                    if (typeof window.players[id].player.setVolume === 'function') {
+                      window.players[id].player.setVolume(actualVol);
+                    }
+                  }
+                } catch (err) {
+                  // 靜默處理錯誤
+                }
+              }
+            }, 500);
+          }
+        }
+      } catch (e) {
+        console.warn(`[StreamBox ${id}] 應用音量時發生錯誤:`, e);
+      }
+    }
+  };
+
   // 初始化播放器
   useEffect(() => {
     if (!playerContainerRef.current) return;
@@ -370,7 +520,8 @@ export function StreamBox({
         
         player.addEventListener(window.Twitch.Player.READY, () => {
           console.log(`[StreamBox ${streamData.id}] Twitch 播放器已就緒`);
-          // 播放器已就緒
+          // 播放器已就緒，應用音量設定
+          applyVolumeToPlayer(streamData.id);
         });
         
         player.addEventListener(window.Twitch.Player.ERROR, () => {
@@ -490,7 +641,8 @@ export function StreamBox({
               // 清除創建標誌
               playerCreatingRef.current = false;
               
-              // 播放器已就緒
+              // 播放器已就緒，應用音量設定
+              applyVolumeToPlayer(streamData.id);
             },
             onError: (event: any) => {
               // 清除創建標誌
@@ -568,7 +720,7 @@ export function StreamBox({
       // 檢查聊天室是否已經創建（通過全局 createChat 函數）
       const existingChat = document.getElementById(`chat${streamData.id}`);
       const existingIframe = existingChat?.querySelector('iframe');
-      const existingContent = existingChat?.children.length > 0;
+      const existingContent = (existingChat?.children.length ?? 0) > 0;
       
       console.log(`[StreamBox ${streamData.id}] 檢查聊天室狀態`, {
         existingChat: !!existingChat,
@@ -594,7 +746,7 @@ export function StreamBox({
           setTimeout(() => {
             const chatAfterCreate = document.getElementById(`chat${streamData.id}`);
             const iframeAfterCreate = chatAfterCreate?.querySelector('iframe');
-            const contentAfterCreate = chatAfterCreate?.children.length > 0;
+            const contentAfterCreate = (chatAfterCreate?.children.length ?? 0) > 0;
             console.log(`[StreamBox ${streamData.id}] 創建後檢查`, {
               chatExists: !!chatAfterCreate,
               iframeExists: !!iframeAfterCreate,
@@ -710,8 +862,37 @@ export function StreamBox({
     }
   };
 
+  // 從收藏中獲取名稱
+  useEffect(() => {
+    if (window.favoriteStreams) {
+      const favorites = window.favoriteStreams.getList();
+      const favorite = favorites.find(fav => {
+        if (streamData.platform === 'twitch') {
+          return fav.platform === 'twitch' && fav.channelId === streamData.channelId;
+        } else {
+          // YouTube: 僅在收藏中時顯示收藏名稱
+          return fav.platform === 'youtube' && (
+            fav.channelId === streamData.channelId || 
+            fav.videoId === streamData.videoId
+          );
+        }
+      });
+      
+      if (favorite && favorite.name) {
+        setFavoriteName(favorite.name);
+      } else {
+        setFavoriteName(null);
+      }
+    }
+  }, [streamData.platform, streamData.channelId, streamData.videoId]);
+
   // 獲取串流標題
   const getStreamTitle = () => {
+    // 如果串流在收藏中，優先使用收藏名稱
+    if (favoriteName) {
+      return favoriteName;
+    }
+    
     if (streamData.displayName) {
       return streamData.displayName;
     }
@@ -721,9 +902,112 @@ export function StreamBox({
     if (streamData.platform === 'twitch') {
       return streamData.channelId || `串流 #${streamData.id}`;
     } else {
+      // YouTube: 如果不在收藏中，顯示 videoId 或默認標題
       return streamData.videoId || `串流 #${streamData.id}`;
     }
   };
+  
+  // 處理音量變化
+  const handleVolumeChange = (event: Event, newValue: number | number[]) => {
+    const volume = typeof newValue === 'number' ? newValue : newValue[0];
+    setLocalVolume(volume);
+    
+    // 更新全局 streamData
+    if (window.streamData && window.streamData[streamData.id]) {
+      window.streamData[streamData.id].volume = volume;
+      window.streamData[streamData.id].isMuted = volume === 0;
+    }
+    
+    // 調用回調函數
+    if (onVolumeChange) {
+      onVolumeChange(streamData.id, volume);
+    }
+    
+    // 應用音量到播放器
+    if (typeof (window as any).applyMasterVolumeToStream === 'function') {
+      (window as any).applyMasterVolumeToStream(streamData.id);
+    }
+    
+    // 如果音量為 0，設置為靜音
+    if (volume === 0) {
+      setIsMuted(true);
+    } else if (isMuted) {
+      setIsMuted(false);
+    }
+  };
+  
+  // 處理靜音切換
+  const handleToggleMute = () => {
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+    
+    // 更新全局 streamData
+    if (window.streamData && window.streamData[streamData.id]) {
+      window.streamData[streamData.id].isMuted = newMutedState;
+    }
+    
+    // 應用靜音狀態到播放器
+    if (window.players && window.players[streamData.id] && window.players[streamData.id].player) {
+      const player = window.players[streamData.id].player;
+      try {
+        if (streamData.platform === 'twitch') {
+          if (typeof player.setMuted === 'function') {
+            player.setMuted(newMutedState);
+          }
+        } else if (streamData.platform === 'youtube') {
+          if (newMutedState) {
+            if (typeof player.mute === 'function') {
+              player.mute();
+            }
+          } else {
+            if (typeof player.unMute === 'function') {
+              player.unMute();
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`[StreamBox ${streamData.id}] 切換靜音時發生錯誤:`, e);
+      }
+    }
+  };
+  
+  // 同步音量狀態
+  useEffect(() => {
+    if (streamData.volume !== undefined) {
+      setLocalVolume(streamData.volume);
+    }
+    if (streamData.isMuted !== undefined) {
+      setIsMuted(streamData.isMuted);
+    }
+  }, [streamData.volume, streamData.isMuted]);
+  
+  // 監聽總音量變化，更新顯示（但不改變本地音量值）
+  useEffect(() => {
+    const updateDisplayVolume = () => {
+      const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
+      const masterVol = masterVolSlider ? parseInt(masterVolSlider.value) : 100;
+      const actualVol = Math.round((localVolume / 100) * masterVol);
+      
+      // 更新顯示的百分比（但保持本地音量值不變）
+      // 這裡我們需要一個顯示用的狀態
+      const volValueElement = boxRef.current?.querySelector('.vol-value-display');
+      if (volValueElement) {
+        volValueElement.textContent = `${actualVol}%`;
+      }
+    };
+    
+    // 監聽總音量變化事件
+    const handleMasterVolumeChange = () => {
+      updateDisplayVolume();
+    };
+    
+    window.addEventListener('masterVolumeChanged', handleMasterVolumeChange);
+    updateDisplayVolume(); // 初始更新
+    
+    return () => {
+      window.removeEventListener('masterVolumeChanged', handleMasterVolumeChange);
+    };
+  }, [localVolume]);
 
   return (
     <div
@@ -739,18 +1023,100 @@ export function StreamBox({
       >
         {/* 左側工具組 */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* 串流順序 */}
+          {streamIndex !== undefined && (
+            <div className="flex items-center flex-shrink-0">
+              <span className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                #{streamIndex + 1}
+              </span>
+            </div>
+          )}
+          
           {/* 串流標題 */}
           <div className="flex items-center min-w-0 flex-shrink-0">
             <span className={`text-sm font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
               {getStreamTitle()}
             </span>
           </div>
+          
+          {/* 音量條 */}
+          <div className="flex items-center gap-2 flex-shrink-0" style={{ width: '120px' }}>
+            <MuiButton
+              variant="text"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleMute();
+              }}
+              sx={{
+                minWidth: '24px',
+                width: '24px',
+                height: '24px',
+                padding: 0,
+                color: isMuted 
+                  ? (theme === 'dark' ? '#ef4444' : '#dc2626')
+                  : (theme === 'dark' ? '#9ca3af' : '#4b5563'),
+                '&:hover': {
+                  color: isMuted 
+                    ? (theme === 'dark' ? '#f87171' : '#ef4444')
+                    : (theme === 'dark' ? '#ffffff' : '#000000'),
+                  bgcolor: theme === 'dark' ? '#374151' : '#e5e7eb',
+                },
+              }}
+              title={isMuted ? '取消靜音' : '靜音'}
+            >
+              {isMuted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
+            </MuiButton>
+            <Slider
+              value={localVolume}
+              onChange={handleVolumeChange}
+              min={0}
+              max={100}
+              size="small"
+              sx={{
+                width: '80px',
+                color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+                '& .MuiSlider-thumb': {
+                  width: 12,
+                  height: 12,
+                },
+                '& .MuiSlider-track': {
+                  height: 2,
+                },
+                '& .MuiSlider-rail': {
+                  height: 2,
+                },
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+            <span 
+              className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} vol-value-display`} 
+              style={{ minWidth: '32px' }}
+            >
+              {(() => {
+                const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
+                const masterVol = masterVolSlider ? parseInt(masterVolSlider.value) : 100;
+                const actualVol = Math.round((localVolume / 100) * masterVol);
+                return `${actualVol}%`;
+              })()}
+            </span>
+          </div>
 
           {/* 刷新按鈕 */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
+          <MuiButton
+            variant="text"
+            size="small"
+            sx={{
+              minWidth: '32px',
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+              '&:hover': {
+                color: theme === 'dark' ? '#ffffff' : '#000000',
+                bgcolor: theme === 'dark' ? '#374151' : '#e5e7eb',
+              },
+            }}
             title="重新整理串流"
             onClick={(e) => {
               e.stopPropagation();
@@ -758,13 +1124,34 @@ export function StreamBox({
             }}
           >
             <RefreshCw className="size-4" />
-          </Button>
+          </MuiButton>
 
           {/* 內嵌聊天室顯示/隱藏按鈕 */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'} ${streamData.chatVisible ? 'bg-purple-500/30 text-purple-400 hover:bg-purple-500/40 hover:text-purple-300 border border-purple-500/50' : ''}`}
+          <MuiButton
+            variant="text"
+            size="small"
+            color="secondary"
+            sx={{
+              minWidth: '32px',
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              color: streamData.chatVisible 
+                ? theme === 'dark' ? '#a855f7' : '#9333ea'
+                : theme === 'dark' ? '#9ca3af' : '#4b5563',
+              bgcolor: streamData.chatVisible 
+                ? theme === 'dark' ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.1)'
+                : 'transparent',
+              border: streamData.chatVisible ? '1px solid rgba(147, 51, 234, 0.5)' : 'none',
+              '&:hover': {
+                color: streamData.chatVisible 
+                  ? theme === 'dark' ? '#c084fc' : '#7e22ce'
+                  : theme === 'dark' ? '#ffffff' : '#000000',
+                bgcolor: streamData.chatVisible 
+                  ? theme === 'dark' ? 'rgba(147, 51, 234, 0.4)' : 'rgba(147, 51, 234, 0.15)'
+                  : theme === 'dark' ? '#374151' : '#e5e7eb',
+              },
+            }}
             title={streamData.chatVisible ? '隱藏聊天室' : '顯示聊天室'}
             onClick={(e) => {
               e.stopPropagation();
@@ -772,13 +1159,24 @@ export function StreamBox({
             }}
           >
             <MessageSquare className="size-4" />
-          </Button>
+          </MuiButton>
 
           {/* 關閉串流按鈕 */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/20' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'}`}
+          <MuiButton
+            variant="text"
+            size="small"
+            color="error"
+            sx={{
+              minWidth: '32px',
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+              '&:hover': {
+                color: theme === 'dark' ? '#f87171' : '#dc2626',
+                bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
+              },
+            }}
             title="關閉串流"
             onClick={(e) => {
               e.stopPropagation();
@@ -786,7 +1184,7 @@ export function StreamBox({
             }}
           >
             <X className="size-4" />
-          </Button>
+          </MuiButton>
         </div>
       </div>
 

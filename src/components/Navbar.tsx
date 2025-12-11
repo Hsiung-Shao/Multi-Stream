@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import { Search, Heart, Globe, Sun, Moon, LayoutDashboard, Coffee, Plus, Circle } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button as MuiButton } from '@mui/material';
 import { Input } from './ui/input';
+import { Box } from '@mui/material';
 import {
   Select,
   SelectContent,
@@ -16,6 +17,15 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { useI18n } from '../i18n/index';
+
+// 聲明全局類型
+declare global {
+  interface Window {
+    favoriteStreams?: {
+      add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: any }>;
+    };
+  }
+}
 
 interface NavbarProps {
   theme: 'light' | 'dark';
@@ -172,6 +182,47 @@ export function Navbar({
     }
   };
 
+  // 新增收藏處理函數
+  const handleAddToFavorites = async () => {
+    const valueToAdd = searchValue.trim();
+    if (!valueToAdd) {
+      alert(t('favorites.pasteUrl'));
+      return;
+    }
+
+    // 如果是搜尋結果，使用結果的 URL
+    let urlToAdd = valueToAdd;
+    if (showResults && selectedIndex >= 0 && searchResults[selectedIndex]) {
+      urlToAdd = searchResults[selectedIndex].url;
+    } else if (isUrl(valueToAdd)) {
+      urlToAdd = valueToAdd;
+    } else {
+      // 如果不是 URL 也不是搜尋結果，提示用戶
+      alert(t('favorites.pasteUrl'));
+      return;
+    }
+
+    if (!window.favoriteStreams) {
+      alert('收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    try {
+      const result = await window.favoriteStreams.add(urlToAdd);
+      if (result.success) {
+        alert(result.message || t('favorites.add'));
+        setSearchValue('');
+        setSearchResults([]);
+        setShowResults(false);
+        setSelectedIndex(-1);
+      } else {
+        alert(result.message || t('common.error'));
+      }
+    } catch (error) {
+      alert(`${t('common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+
   const handleSelectResult = (result: SearchResult) => {
     handleAddStream(result.url);
   };
@@ -239,14 +290,21 @@ export function Navbar({
             {onShowAbout && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <MuiButton
+                    variant="text"
+                    size="small"
                     onClick={onShowAbout}
-                    className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                    color="secondary"
+                    sx={{
+                      color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                      '&:hover': {
+                        color: theme === 'dark' ? '#ffffff' : '#000000',
+                        bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                      },
+                    }}
                   >
                     {t('navbar.about')}
-                  </Button>
+                  </MuiButton>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('navbar.about')}</p>
@@ -256,14 +314,21 @@ export function Navbar({
             {onShowTutorial && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <MuiButton
+                    variant="text"
+                    size="small"
                     onClick={onShowTutorial}
-                    className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                    color="secondary"
+                    sx={{
+                      color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                      '&:hover': {
+                        color: theme === 'dark' ? '#ffffff' : '#000000',
+                        bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                      },
+                    }}
                   >
                     {t('navbar.tutorial')}
-                  </Button>
+                  </MuiButton>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('navbar.tutorial')}</p>
@@ -273,14 +338,21 @@ export function Navbar({
             {onShowVersionHistory && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <MuiButton
+                    variant="text"
+                    size="small"
                     onClick={onShowVersionHistory}
-                    className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                    color="secondary"
+                    sx={{
+                      color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                      '&:hover': {
+                        color: theme === 'dark' ? '#ffffff' : '#000000',
+                        bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                      },
+                    }}
                   >
                     {t('navbar.versionHistory')}
-                  </Button>
+                  </MuiButton>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('navbar.versionHistory')}</p>
@@ -301,38 +373,86 @@ export function Navbar({
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
             onFocus={handleInputFocus}
-            className={`w-full pl-10 pr-20 ${
+            className={`w-full pl-10 pr-52 ${
               theme === 'dark' 
                 ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-blue-500' 
                 : 'bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-blue-500'
             }`}
           />
           {isSearching && (
-            <div className={`absolute right-20 top-1/2 -translate-y-1/2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div className={`absolute right-44 top-1/2 -translate-y-1/2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleAddStream()}
-            className={`absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs ${
-              theme === 'dark' 
-                ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' 
-                : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
-            }`}
-          >
-            <Plus className="size-3 mr-1" />
-            {t('navbar.addStream')}
-          </Button>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <MuiButton
+              variant="text"
+              size="small"
+              onClick={() => handleAddStream()}
+              color="secondary"
+              sx={{
+                height: '28px',
+                paddingX: '8px',
+                fontSize: '12px',
+                color: theme === 'dark' ? '#a855f7' : '#9333ea',
+                '&:hover': {
+                  color: theme === 'dark' ? '#c084fc' : '#7e22ce',
+                  bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
+                },
+              }}
+            >
+              <Plus className="size-3 mr-1" />
+              {t('navbar.addStream')}
+            </MuiButton>
+            <MuiButton
+              variant="text"
+              size="small"
+              onClick={handleAddToFavorites}
+              color="secondary"
+              sx={{
+                height: '28px',
+                paddingX: '8px',
+                fontSize: '12px',
+                color: theme === 'dark' ? '#a855f7' : '#9333ea',
+                '&:hover': {
+                  color: theme === 'dark' ? '#c084fc' : '#7e22ce',
+                  bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
+                },
+              }}
+            >
+              <Plus className="size-3 mr-1" />
+              {t('favorites.add')}
+            </MuiButton>
+          </div>
 
           {/* 搜尋結果下拉列表 */}
           {showResults && searchResults.length > 0 && (
-            <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 max-h-96 overflow-y-auto ${
-              theme === 'dark' 
-                ? 'bg-gray-900 border-gray-700' 
-                : 'bg-white border-gray-200'
-            }`}>
+            <Box
+              className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 ${
+                theme === 'dark' 
+                  ? 'bg-gray-900 border-gray-700' 
+                  : 'bg-white border-gray-200'
+              }`}
+              sx={{
+                maxHeight: '384px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: theme === 'dark' ? '#374151' : '#f3f4f6',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: theme === 'dark' ? '#6b7280' : '#9ca3af',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                  },
+                },
+              }}
+            >
               <div className="py-1">
                 {searchResults.map((result, index) => (
                   <div
@@ -396,7 +516,7 @@ export function Navbar({
                   </div>
                 ))}
               </div>
-            </div>
+            </Box>
           )}
 
           {/* 無搜尋結果提示 */}
@@ -417,14 +537,21 @@ export function Navbar({
           {onShowFavorites && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <MuiButton
+                  variant="text"
+                  size="small"
                   onClick={onShowFavorites}
-                  className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                  color="secondary"
+                  sx={{
+                    color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                    '&:hover': {
+                      color: theme === 'dark' ? '#ffffff' : '#000000',
+                      bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                    },
+                  }}
                 >
                   <Heart className="size-5" />
-                </Button>
+                </MuiButton>
               </TooltipTrigger>
               <TooltipContent>
                 <p>{t('navbar.favorites')}</p>
@@ -435,14 +562,21 @@ export function Navbar({
           {/* 主題切換 */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
+              <MuiButton
+                variant="text"
+                size="small"
                 onClick={onThemeToggle}
-                className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                color="secondary"
+                sx={{
+                  color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                  '&:hover': {
+                    color: theme === 'dark' ? '#ffffff' : '#000000',
+                    bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                  },
+                }}
               >
                 {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-              </Button>
+              </MuiButton>
             </TooltipTrigger>
             <TooltipContent>
               <p>{t('navbar.themeToggle')}</p>
@@ -492,28 +626,41 @@ export function Navbar({
 
           {/* 控制面板 */}
           {onTogglePanel && (
-            <Button
-              variant="outline"
+            <MuiButton
+              variant="outlined"
               onClick={onTogglePanel}
-              className={
-                theme === 'dark'
-                  ? 'bg-transparent border-gray-600 text-white hover:bg-gray-800'
-                  : 'bg-transparent border-gray-300 text-black hover:bg-gray-100'
-              }
+              color="secondary"
+              sx={{
+                bgcolor: 'transparent',
+                borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
+                color: theme === 'dark' ? '#ffffff' : '#000000',
+                '&:hover': {
+                  bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                  borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
+                },
+              }}
             >
               <LayoutDashboard className="size-4 mr-2" />
               {t('navbar.controlPanel')}
-            </Button>
+            </MuiButton>
           )}
 
           {/* 贊助我 */}
-          <Button
-            className="bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:from-pink-600 hover:to-purple-600"
+          <MuiButton
+            variant="contained"
+            color="secondary"
             onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
+            sx={{
+              background: 'linear-gradient(to right, #ec4899, #9333ea)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(to right, #db2777, #7e22ce)',
+              },
+            }}
           >
             <Coffee className="size-4 mr-2" />
             {t('navbar.sponsor')}
-          </Button>
+          </MuiButton>
         </div>
       </div>
     </nav>

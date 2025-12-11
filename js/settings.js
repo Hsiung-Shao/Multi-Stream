@@ -864,29 +864,72 @@ const favoriteStreams = {
           try {
             status = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
             if (status.isLive === true && status.liveVideoId) {
-              // 發現新的直播，使用直播 URL
-              const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
-              addStream(liveUrl);
-              
-              // 更新收藏項目的直播狀態
-              const list = favoriteStreams.getList();
-              const updatedList = list.map(fav => {
-                if (fav.id === item.id) {
-                  return {
-                    ...fav,
-                    isLive: true,
-                    liveVideoId: status.liveVideoId,
-                    lastChecked: new Date().toISOString()
+              // 發現新的直播，驗證該直播 URL 對應的頻道 ID 是否與收藏的 channelId 一致
+              try {
+                const actualChannelId = await youtubeApiUtils.getChannelIdFromVideoId(status.liveVideoId);
+                
+                // 驗證頻道 ID 是否一致
+                if (actualChannelId && actualChannelId.trim() === item.channelId.trim()) {
+                  // 頻道 ID 一致，使用直播 URL
+                  const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
+                  addStream(liveUrl);
+                  
+                  // 更新收藏項目的直播狀態和 URL
+                  const list = favoriteStreams.getList();
+                  const updatedList = list.map(fav => {
+                    if (fav.id === item.id) {
+                      return {
+                        ...fav,
+                        isLive: true,
+                        liveVideoId: status.liveVideoId,
+                        url: liveUrl, // 更新 URL 為直播網址
+                        liveUrl: liveUrl, // 保存直播網址
+                        lastChecked: new Date().toISOString()
+                      };
+                    }
+                    return fav;
+                  });
+                  favoriteStreams.saveList(updatedList);
+                  
+                  return { success: true };
+                } else {
+                  // 頻道 ID 不一致，可能是重定向到其他頻道，不載入
+                  const i18n = window.i18n || { t: (key) => key };
+                  console.warn(`頻道 ID 驗證失敗：收藏頻道 ${item.channelId} 與直播頻道 ${actualChannelId} 不一致`);
+                  return { 
+                    success: false, 
+                    message: i18n.t('channelIdMismatch') || '檢測到直播，但頻道 ID 不一致，可能重定向到其他頻道' 
                   };
                 }
-                return fav;
-              });
-              favoriteStreams.saveList(updatedList);
-              
-              return { success: true };
+              } catch (verifyError) {
+                // 驗證失敗，但繼續使用直播 URL（可能是 API 錯誤）
+                console.warn('頻道 ID 驗證失敗，繼續載入直播:', verifyError);
+                const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
+                addStream(liveUrl);
+                
+                // 更新收藏項目的直播狀態和 URL
+                const list = favoriteStreams.getList();
+                const updatedList = list.map(fav => {
+                  if (fav.id === item.id) {
+                    return {
+                      ...fav,
+                      isLive: true,
+                      liveVideoId: status.liveVideoId,
+                      url: liveUrl,
+                      liveUrl: liveUrl,
+                      lastChecked: new Date().toISOString()
+                    };
+                  }
+                  return fav;
+                });
+                favoriteStreams.saveList(updatedList);
+                
+                return { success: true };
+              }
             }
           } catch (error) {
             // 靜默處理錯誤
+            console.error('檢查直播狀態失敗:', error);
           }
           
           // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
@@ -900,29 +943,69 @@ const favoriteStreams = {
               const retryStatus = await youtubeApiUtils.checkChannelLiveStatus(item.channelId);
               
               if (retryStatus.isLive === true && retryStatus.liveVideoId) {
-                // 發現新的直播，使用直播 URL
-                const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
-                addStream(liveUrl);
-                
-                // 更新收藏項目的直播狀態
-                const list = favoriteStreams.getList();
-                const updatedList = list.map(fav => {
-                  if (fav.id === item.id) {
-                    return {
-                      ...fav,
-                      isLive: true,
-                      liveVideoId: retryStatus.liveVideoId,
-                      lastChecked: new Date().toISOString()
+                // 驗證頻道 ID
+                try {
+                  const actualChannelId = await youtubeApiUtils.getChannelIdFromVideoId(retryStatus.liveVideoId);
+                  
+                  if (actualChannelId && actualChannelId.trim() === item.channelId.trim()) {
+                    // 頻道 ID 一致，使用直播 URL
+                    const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
+                    addStream(liveUrl);
+                    
+                    // 更新收藏項目的直播狀態和 URL
+                    const list = favoriteStreams.getList();
+                    const updatedList = list.map(fav => {
+                      if (fav.id === item.id) {
+                        return {
+                          ...fav,
+                          isLive: true,
+                          liveVideoId: retryStatus.liveVideoId,
+                          url: liveUrl,
+                          liveUrl: liveUrl,
+                          lastChecked: new Date().toISOString()
+                        };
+                      }
+                      return fav;
+                    });
+                    favoriteStreams.saveList(updatedList);
+                    
+                    return { success: true };
+                  } else {
+                    // 頻道 ID 不一致
+                    console.warn(`頻道 ID 驗證失敗：收藏頻道 ${item.channelId} 與直播頻道 ${actualChannelId} 不一致`);
+                    return { 
+                      success: false, 
+                      message: i18n.t('channelIdMismatch') || '檢測到直播，但頻道 ID 不一致，可能重定向到其他頻道' 
                     };
                   }
-                  return fav;
-                });
-                favoriteStreams.saveList(updatedList);
-                
-                return { success: true };
+                } catch (verifyError) {
+                  // 驗證失敗，但繼續使用直播 URL
+                  console.warn('頻道 ID 驗證失敗，繼續載入直播:', verifyError);
+                  const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
+                  addStream(liveUrl);
+                  
+                  const list = favoriteStreams.getList();
+                  const updatedList = list.map(fav => {
+                    if (fav.id === item.id) {
+                      return {
+                        ...fav,
+                        isLive: true,
+                        liveVideoId: retryStatus.liveVideoId,
+                        url: liveUrl,
+                        liveUrl: liveUrl,
+                        lastChecked: new Date().toISOString()
+                      };
+                    }
+                    return fav;
+                  });
+                  favoriteStreams.saveList(updatedList);
+                  
+                  return { success: true };
+                }
               }
             } catch (retryError) {
               // 靜默處理錯誤
+              console.error('重試檢查直播狀態失敗:', retryError);
             }
             
             // 如果二次檢查仍然沒有直播，但狀態顯示為 false，提示用戶
@@ -2540,7 +2623,8 @@ async function updateFavoriteLiveStatuses() {
       }
       
       // 更新收藏列表中的開台狀態
-      updatedList = updatedList.map(item => {
+      // 對於檢測到開台的項目，需要驗證頻道 ID 並更新 URL
+      const updatePromises = updatedList.map(async (item) => {
         if (item.platform === 'youtube' && item.channelId) {
           const result = results.find(r => 
             r.status === 'fulfilled' && r.value.item.id === item.id
@@ -2554,15 +2638,61 @@ async function updateFavoriteLiveStatuses() {
               return item;
             }
             
-            updatedCount++;
-            return {
-              ...item,
-              isLive: status.isLive,
-              lastChecked: new Date().toISOString(),
-              liveVideoId: status.liveVideoId || null,
-              // 注意：YouTube 的 /live 檢查方法無法獲取觀看人數和標題
-              // 如果需要這些資訊，需要額外調用 YouTube Data API
-            };
+            // 如果檢測到開台，驗證頻道 ID 並更新 URL
+            if (status.isLive === true && status.liveVideoId && item.channelId) {
+              try {
+                // 驗證該直播 URL 對應的頻道 ID 是否與收藏的 channelId 一致
+                const actualChannelId = await youtubeApiUtils.getChannelIdFromVideoId(status.liveVideoId);
+                
+                if (actualChannelId && actualChannelId.trim() === item.channelId.trim()) {
+                  // 頻道 ID 一致，更新 URL 為直播網址
+                  const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
+                  updatedCount++;
+                  return {
+                    ...item,
+                    isLive: true,
+                    lastChecked: new Date().toISOString(),
+                    liveVideoId: status.liveVideoId,
+                    url: liveUrl, // 更新 URL 為直播網址
+                    liveUrl: liveUrl, // 保存直播網址
+                  };
+                } else {
+                  // 頻道 ID 不一致，不更新 URL，只更新狀態為未開台（可能是其他頻道的直播）
+                  console.warn(`批量更新時頻道 ID 驗證失敗：收藏頻道 ${item.channelId} 與直播頻道 ${actualChannelId} 不一致`);
+                  updatedCount++;
+                  return {
+                    ...item,
+                    isLive: false, // 設為未開台，因為不是該頻道的直播
+                    lastChecked: new Date().toISOString(),
+                    liveVideoId: null,
+                  };
+                }
+              } catch (verifyError) {
+                // 驗證失敗（可能是 API 錯誤），但繼續更新狀態和 URL
+                console.warn('批量更新時頻道 ID 驗證失敗，繼續更新:', verifyError);
+                const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
+                updatedCount++;
+                return {
+                  ...item,
+                  isLive: true,
+                  lastChecked: new Date().toISOString(),
+                  liveVideoId: status.liveVideoId,
+                  url: liveUrl,
+                  liveUrl: liveUrl,
+                };
+              }
+            } else {
+              // 未開台，只更新狀態
+              updatedCount++;
+              return {
+                ...item,
+                isLive: status.isLive || false,
+                lastChecked: new Date().toISOString(),
+                liveVideoId: status.liveVideoId || null,
+                // 注意：YouTube 的 /live 檢查方法無法獲取觀看人數和標題
+                // 如果需要這些資訊，需要額外調用 YouTube Data API
+              };
+            }
           } else {
             // 如果查詢失敗，保持原有狀態，但更新檢查時間（僅在非代理不可用的情況下）
             return {
@@ -2573,6 +2703,9 @@ async function updateFavoriteLiveStatuses() {
         }
         return item;
       });
+      
+      // 等待所有更新完成（包括頻道 ID 驗證）
+      updatedList = await Promise.all(updatePromises);
     } catch (error) {
       // 靜默處理錯誤
     }

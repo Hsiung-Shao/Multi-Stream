@@ -5,7 +5,7 @@
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>MultiStream Hub</title>
-      <script type="module" crossorigin src="/assets/index-CIscs15B.js"></script>
+      <script type="module" crossorigin src="/assets/index-DRNJdhhA.js"></script>
       <link rel="stylesheet" crossorigin href="/assets/index-DjP2JozP.css">
     </head>
 
@@ -16,14 +16,18 @@
       <!-- 載入工具函數和驗證函數（必須在 chat.js 之前） -->
       <script defer src="/js/utils.js"></script>
       <script defer src="/js/security.js"></script>
+      <!-- 載入主入口腳本（定義全局變數如 streamCount, players, streamData） -->
+      <script defer src="/js/main.js"></script>
       <!-- 載入必要的 API 腳本 -->
       <script defer src="/js/twitch-api.js"></script>
+      <!-- 載入串流管理腳本（必須在 settings.js 之前，因為 settings.js 中的收藏功能需要 addStream，且依賴 main.js 的全局變數） -->
+      <script defer src="/js/stream.js"></script>
       <script defer src="/js/settings.js"></script>
       <!-- 載入聊天室和音量控制腳本（依賴 utils.js 和 security.js） -->
       <script defer src="/js/chat.js"></script>
       <script defer src="/js/volume.js"></script>
-      <!-- 初始化全局函數 -->
-      <script defer src="/init-globals.js"></script>
+      <!-- 載入控制面板腳本（包含 updateStreamOrderList 函數） -->
+      <script defer src="/js/control-panel.js"></script>
     </body>
   </html>
   

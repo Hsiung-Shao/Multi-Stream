@@ -56,5 +56,13 @@
     server: {
       port: 3000,
       open: true,
+      proxy: {
+        // 將 /api/* 請求代理到 Wrangler Pages Functions（運行在 8788 端口）
+        '/api': {
+          target: 'http://localhost:8788',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
   });

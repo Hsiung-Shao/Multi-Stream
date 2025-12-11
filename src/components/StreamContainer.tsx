@@ -150,6 +150,7 @@ export function StreamContainer({
               onToggleChat={onToggleChat}
               onSeparateChat={onSeparateChat}
               onVolumeChange={onVolumeChange}
+              streamIndex={index}
             />
           );
         })}

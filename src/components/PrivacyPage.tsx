@@ -1,5 +1,5 @@
 import { ArrowLeft, Globe, Sun, Moon, Shield, Database, Lock, Eye, FileText, Users, AlertCircle } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button as MuiButton } from '@mui/material';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useI18n } from '../i18n/index';
 
@@ -27,14 +27,21 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
       {/* Header Navigation */}
       <div className={`border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-6 py-4`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Button
-            variant="ghost"
+          <MuiButton
+            variant="text"
             onClick={onBack}
-            className={theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-black'}
+            color="secondary"
+            sx={{
+              color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+              '&:hover': {
+                color: theme === 'dark' ? '#ffffff' : '#000000',
+                backgroundColor: 'transparent',
+              },
+            }}
           >
             <ArrowLeft className="size-4 mr-2" />
             {t('about.backToHome')}
-          </Button>
+          </MuiButton>
           
           <div className="flex items-center gap-4">
             <Select value={locale} onValueChange={(value) => setLocale(value as any)}>
@@ -51,14 +58,21 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
               </SelectContent>
             </Select>
             
-            <Button
-              variant="ghost"
-              size="icon"
+            <MuiButton
+              variant="text"
+              size="small"
               onClick={onThemeToggle}
-              className={theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-black'}
+              color="secondary"
+              sx={{
+                color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                '&:hover': {
+                  color: theme === 'dark' ? '#ffffff' : '#000000',
+                  backgroundColor: 'transparent',
+                },
+              }}
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </Button>
+            </MuiButton>
           </div>
         </div>
       </div>

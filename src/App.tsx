@@ -88,6 +88,11 @@ export default function App() {
     return initialVolume === 0;
   });
   
+  // 同步 masterMuted 到全局變量
+  useEffect(() => {
+    (window as any).masterMuted = masterMuted;
+  }, [masterMuted]);
+  
   // 布局管理
   const { currentLayout, setLayout } = useLayout(streams.length);
   
@@ -474,6 +479,8 @@ export default function App() {
         console.error('保存音量設定失敗:', e);
       }
       setMasterMuted(true);
+      // 同步到全局變量
+      (window as any).masterMuted = true;
     } else {
       // 取消靜音：從 localStorage 讀取之前保存的音量值
       let restoreVolume = 100; // 默認值
@@ -499,6 +506,7 @@ export default function App() {
       
       // 同步到全局變量
       (window as any).masterVolume = restoreVolume;
+      (window as any).masterMuted = false;
       
       // 同步到 DOM 元素（為了兼容舊的 JavaScript 代碼）
       const masterVolSlider = document.getElementById('master-volume');

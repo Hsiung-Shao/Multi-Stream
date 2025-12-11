@@ -1,5 +1,5 @@
 import { Coffee, FileText, HelpCircle, Info } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button as MuiButton } from '@mui/material';
 import { useI18n } from '../i18n/index';
 
 interface WelcomeCardProps {
@@ -90,43 +90,75 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
           {t('welcome.supportDesc')}
         </p>
         <div className="flex justify-center">
-          <Button
-            className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black hover:from-yellow-500 hover:to-orange-500"
-            size="lg"
+          <MuiButton
+            variant="contained"
+            color="secondary"
+            size="large"
             onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
+            sx={{
+              background: 'linear-gradient(to right, #facc15, #fb923c)',
+              color: '#000000',
+              '&:hover': {
+                background: 'linear-gradient(to right, #eab308, #f97316)',
+              },
+            }}
           >
             <Coffee className="size-5 mr-2" />
             {t('welcome.buyMeACoffee')}
-          </Button>
+          </MuiButton>
         </div>
       </div>
 
       {/* Footer Buttons */}
       <div className={`flex flex-wrap items-center justify-center gap-3 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-        <Button
-          variant="outline"
-          className={theme === 'dark' ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
+        <MuiButton
+          variant="outlined"
+          color="secondary"
           onClick={onShowVersionHistory}
+          sx={{
+            borderColor: theme === 'dark' ? 'rgba(147, 51, 234, 0.5)' : '#c084fc',
+            color: theme === 'dark' ? '#a855f7' : '#9333ea',
+            '&:hover': {
+              borderColor: theme === 'dark' ? 'rgba(147, 51, 234, 0.5)' : '#c084fc',
+              bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
+            },
+          }}
         >
           <FileText className="size-4 mr-2" />
           {t('welcome.versionInfo')}
-        </Button>
-        <Button
-          variant="outline"
-          className={theme === 'dark' ? 'border-blue-500/50 text-blue-400 hover:bg-blue-500/10' : 'border-blue-300 text-blue-700 hover:bg-blue-50'}
+        </MuiButton>
+        <MuiButton
+          variant="outlined"
+          color="primary"
           onClick={onShowTutorial}
+          sx={{
+            borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.5)' : '#93c5fd',
+            color: theme === 'dark' ? '#60a5fa' : '#2563eb',
+            '&:hover': {
+              borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.5)' : '#93c5fd',
+              bgcolor: theme === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
+            },
+          }}
         >
           <HelpCircle className="size-4 mr-2" />
           {t('welcome.tutorial')}
-        </Button>
-        <Button
-          variant="outline"
-          className={theme === 'dark' ? 'border-green-500/50 text-green-400 hover:bg-green-500/10' : 'border-green-300 text-green-700 hover:bg-green-50'}
+        </MuiButton>
+        <MuiButton
+          variant="outlined"
+          color="success"
           onClick={onShowAbout}
+          sx={{
+            borderColor: theme === 'dark' ? 'rgba(34, 197, 94, 0.5)' : '#86efac',
+            color: theme === 'dark' ? '#4ade80' : '#16a34a',
+            '&:hover': {
+              borderColor: theme === 'dark' ? 'rgba(34, 197, 94, 0.5)' : '#86efac',
+              bgcolor: theme === 'dark' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.05)',
+            },
+          }}
         >
           <Info className="size-4 mr-2" />
           {t('welcome.about')}
-        </Button>
+        </MuiButton>
       </div>
     </div>
   );

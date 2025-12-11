@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RefreshCw, Volume2, VolumeX, ChevronUp, ChevronDown, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star, Play, ChevronRight } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button as MuiButton } from '@mui/material';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import { Switch } from './ui/switch';
@@ -507,12 +507,28 @@ export function ControlPanel({
   }
 
   return (
-    <div 
-      className={`fixed right-0 w-[500px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l shadow-2xl overflow-y-auto`}
-      style={{ 
+    <Box
+      className={`fixed right-0 w-[500px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l shadow-2xl`}
+      sx={{
         top: `${navbarHeight}px`,
         height: `calc(100vh - ${navbarHeight}px)`,
-        zIndex: 40
+        zIndex: 40,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        '&::-webkit-scrollbar': {
+          width: '8px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: theme === 'dark' ? '#374151' : '#f3f4f6',
+          borderRadius: '4px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: theme === 'dark' ? '#6b7280' : '#9ca3af',
+          borderRadius: '4px',
+          '&:hover': {
+            background: theme === 'dark' ? '#9ca3af' : '#6b7280',
+          },
+        },
       }}
     >
       <div className="p-6 space-y-6">
@@ -617,35 +633,82 @@ export function ControlPanel({
         <Section theme={theme} title={t('controlPanel.favoriteStreams')}>
           <div className="space-y-3">
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+              <MuiButton
+                variant="outlined"
+                className="flex-1"
                 onClick={onShowFavorites}
+                color="secondary"
+                sx={{
+                  borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
+                  color: theme === 'dark' ? '#d1d5db' : '#374151',
+                  '&:hover': {
+                    borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                  },
+                }}
               >
                 {t('controlPanel.manageFavorites')}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className={`${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+              </MuiButton>
+              <MuiButton
+                variant="outlined"
+                size="small"
+                className=""
                 onClick={handleRefreshStatus}
                 disabled={isRefreshing}
+                color="secondary"
+                sx={{
+                  borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
+                  color: theme === 'dark' ? '#d1d5db' : '#374151',
+                  '&:hover': {
+                    borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
+                    backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                  },
+                }}
               >
                 <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className={`${theme === 'dark' ? 'border-purple-600 text-purple-400 hover:bg-purple-600/20' : 'border-purple-500 text-purple-600 hover:bg-purple-50'}`}
+              </MuiButton>
+              <MuiButton
+                variant="outlined"
+                size="small"
                 onClick={handleAddCurrentToFavorites}
                 title={t('controlPanel.addCurrentToFavorites') || '收藏當前串流'}
+                color="secondary"
+                sx={{
+                  borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
+                  color: theme === 'dark' ? '#a855f7' : '#9333ea',
+                  '&:hover': {
+                    borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
+                    backgroundColor: theme === 'dark' ? 'rgba(147, 51, 234, 0.2)' : 'rgba(147, 51, 234, 0.1)',
+                  },
+                }}
               >
                 <Star className="size-4" />
-              </Button>
+              </MuiButton>
             </div>
             
             {/* 收藏串流列表 - 限高並添加滾動 */}
-            <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2">
+            <Box
+              className="space-y-3 pr-2"
+              sx={{
+                maxHeight: '400px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: theme === 'dark' ? '#374151' : '#f3f4f6',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: theme === 'dark' ? '#6b7280' : '#9ca3af',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                  },
+                },
+              }}
+            >
               {/* 分類的收藏 - 資料夾優先，分類內按開台狀態排序 */}
               {categories.map(category => {
                 const categoryFavorites = favorites.filter(f => f.categoryId === category.id);
@@ -749,7 +812,7 @@ export function ControlPanel({
                   {t('favorites.noFavorites')}
                 </div>
               )}
-            </div>
+            </Box>
           </div>
         </Section>
 
@@ -799,23 +862,36 @@ export function ControlPanel({
               <span id="master-volume-value" className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
                 {masterMuted ? '0%' : `${masterVolume}%`}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
+              <MuiButton
+                variant="outlined"
+                size="small"
                 onClick={handleMasterMuteAll}
-                className={
+                color={masterMuted ? "error" : "secondary"}
+                sx={
                   masterMuted
-                    ? theme === 'dark'
-                      ? 'border-red-600 bg-red-600/20 text-red-400 hover:bg-red-600/30 hover:border-red-500'
-                      : 'border-red-500 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-600'
-                    : theme === 'dark'
-                      ? 'border-purple-600 bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:border-purple-500'
-                      : 'border-purple-500 bg-purple-50 text-purple-600 hover:bg-purple-100 hover:border-purple-600'
+                    ? {
+                        borderColor: theme === 'dark' ? '#dc2626' : '#dc2626',
+                        bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
+                        color: theme === 'dark' ? '#f87171' : '#dc2626',
+                        '&:hover': {
+                          borderColor: theme === 'dark' ? '#b91c1c' : '#b91c1c',
+                          bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.3)' : 'rgba(220, 38, 38, 0.15)',
+                        },
+                      }
+                    : {
+                        borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
+                        bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.2)' : 'rgba(147, 51, 234, 0.1)',
+                        color: theme === 'dark' ? '#a855f7' : '#9333ea',
+                        '&:hover': {
+                          borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
+                          bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.15)',
+                        },
+                      }
                 }
               >
                 {masterMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
                 {t('controlPanel.muteAll')}
-              </Button>
+              </MuiButton>
             </div>
           </div>
         </Section>
@@ -860,18 +936,38 @@ export function ControlPanel({
                       </span>
                       <div className="flex gap-1">
                         {onToggleMute && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={
-                              isStreamMuted
+                          <MuiButton
+                            variant="text"
+                            size="small"
+                            sx={{
+                              minWidth: '24px',
+                              width: '24px',
+                              height: '24px',
+                              padding: 0,
+                              color: isStreamMuted
                                 ? theme === 'dark'
-                                  ? 'h-6 w-6 text-red-400 hover:text-red-300 hover:bg-red-600/20'
-                                  : 'h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-50'
+                                  ? '#f87171'
+                                  : '#dc2626'
                                 : theme === 'dark'
-                                  ? 'h-6 w-6 text-gray-400 hover:text-white hover:bg-gray-700'
-                                  : 'h-6 w-6 text-gray-600 hover:text-black hover:bg-gray-200'
-                            }
+                                  ? '#9ca3af'
+                                  : '#4b5563',
+                              '&:hover': {
+                                bgcolor: isStreamMuted
+                                  ? theme === 'dark'
+                                    ? 'rgba(220, 38, 38, 0.2)'
+                                    : 'rgba(220, 38, 38, 0.1)'
+                                  : theme === 'dark'
+                                    ? 'rgba(55, 65, 81, 0.5)'
+                                    : 'rgba(229, 231, 235, 0.8)',
+                                color: isStreamMuted
+                                  ? theme === 'dark'
+                                    ? '#fca5a5'
+                                    : '#b91c1c'
+                                  : theme === 'dark'
+                                    ? '#ffffff'
+                                    : '#000000',
+                              },
+                            }}
                             title={
                               masterMuted 
                                 ? '全部靜音中，無法單獨取消靜音' 
@@ -892,42 +988,75 @@ export function ControlPanel({
                             ) : (
                               <Volume2 className="size-3" />
                             )}
-                          </Button>
+                          </MuiButton>
                         )}
                         {onMoveStreamUp && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
+                          <MuiButton
+                            variant="text"
+                            size="small"
+                            color="secondary"
+                            sx={{
+                              minWidth: '24px',
+                              width: '24px',
+                              height: '24px',
+                              padding: 0,
+                              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+                              '&:hover': {
+                                bgcolor: theme === 'dark' ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.8)',
+                                color: theme === 'dark' ? '#ffffff' : '#000000',
+                              },
+                            }}
                             title={t('controlPanel.moveUp')}
                             onClick={() => onMoveStreamUp(stream.id)}
                             disabled={index === 0}
                           >
                             <ChevronUp className="size-3" />
-                          </Button>
+                          </MuiButton>
                         )}
                         {onMoveStreamDown && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
+                          <MuiButton
+                            variant="text"
+                            size="small"
+                            color="secondary"
+                            sx={{
+                              minWidth: '24px',
+                              width: '24px',
+                              height: '24px',
+                              padding: 0,
+                              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+                              '&:hover': {
+                                bgcolor: theme === 'dark' ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.8)',
+                                color: theme === 'dark' ? '#ffffff' : '#000000',
+                              },
+                            }}
                             title={t('controlPanel.moveDown')}
                             onClick={() => onMoveStreamDown(stream.id)}
                             disabled={index === streams.length - 1}
                           >
                             <ChevronDown className="size-3" />
-                          </Button>
+                          </MuiButton>
                         )}
                         {onRemoveStream && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/20' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'}`}
+                          <MuiButton
+                            variant="text"
+                            size="small"
+                            color="error"
+                            sx={{
+                              minWidth: '24px',
+                              width: '24px',
+                              height: '24px',
+                              padding: 0,
+                              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+                              '&:hover': {
+                                bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
+                                color: theme === 'dark' ? '#f87171' : '#dc2626',
+                              },
+                            }}
                             title={t('controlPanel.remove')}
                             onClick={() => onRemoveStream(stream.id)}
                           >
                             <X className="size-3" />
-                          </Button>
+                          </MuiButton>
                         )}
                       </div>
                     </div>
@@ -989,7 +1118,7 @@ export function ControlPanel({
         </Section>
 
       </div>
-    </div>
+    </Box>
   );
 }
 

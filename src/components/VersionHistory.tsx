@@ -1,5 +1,6 @@
 import { X, Calendar, Sparkles } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button as MuiButton } from '@mui/material';
+import { Box } from '@mui/material';
 
 interface VersionHistoryProps {
   theme: 'light' | 'dark';
@@ -96,18 +97,46 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
+          <MuiButton
+            variant="text"
+            size="small"
             onClick={onClose}
-            className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
+            color="secondary"
+            sx={{
+              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+              '&:hover': {
+                color: theme === 'dark' ? '#ffffff' : '#000000',
+                backgroundColor: 'transparent',
+              },
+            }}
           >
             <X className="size-5" />
-          </Button>
+          </MuiButton>
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 overflow-y-auto max-h-[800px]">
+        <Box
+          className="flex-1 p-6"
+          sx={{
+            maxHeight: '800px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: theme === 'dark' ? '#374151' : '#f3f4f6',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: theme === 'dark' ? '#6b7280' : '#9ca3af',
+              borderRadius: '4px',
+              '&:hover': {
+                background: theme === 'dark' ? '#9ca3af' : '#6b7280',
+              },
+            },
+          }}
+        >
           <div className="space-y-6">
             {versions.map((version, index) => (
               <div
@@ -164,7 +193,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
               </div>
             ))}
           </div>
-        </div>
+        </Box>
       </div>
     </div>
   );

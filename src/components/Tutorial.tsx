@@ -1,6 +1,7 @@
 import { X, Tv, Search, Layout, MessageCircle, Volume2, RefreshCw, Star, Radio, Database, Settings, Smartphone, Zap } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button as MuiButton } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Box } from '@mui/material';
 
 interface TutorialProps {
   theme: 'light' | 'dark';
@@ -19,14 +20,21 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
               快速上手 MultiStream Hub 的所有功能
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
+          <MuiButton
+            variant="text"
+            size="small"
             onClick={onClose}
-            className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
+            color="secondary"
+            sx={{
+              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+              '&:hover': {
+                color: theme === 'dark' ? '#ffffff' : '#000000',
+                backgroundColor: 'transparent',
+              },
+            }}
           >
             <X className="size-5" />
-          </Button>
+          </MuiButton>
         </div>
 
         {/* Content */}
@@ -38,7 +46,28 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
               <TabsTrigger value="tips">快捷提示</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="overflow-y-auto space-y-6 pr-4" style={{ maxHeight: '800px' }}>
+            <TabsContent value="basic" className="space-y-6 pr-4">
+              <Box
+                sx={{
+                  maxHeight: '800px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: theme === 'dark' ? '#374151' : '#f3f4f6',
+                    borderRadius: '4px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: theme === 'dark' ? '#6b7280' : '#9ca3af',
+                    borderRadius: '4px',
+                    '&:hover': {
+                      background: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                    },
+                  },
+                }}
+              >
                   <Section
                     theme={theme}
                     icon={<Tv className="size-5" />}
@@ -175,9 +204,31 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
+              </Box>
             </TabsContent>
 
-            <TabsContent value="advanced" className="overflow-y-auto space-y-6 pr-4" style={{ maxHeight: '800px' }}>
+            <TabsContent value="advanced" className="space-y-6 pr-4">
+              <Box
+                sx={{
+                  maxHeight: '800px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: theme === 'dark' ? '#374151' : '#f3f4f6',
+                    borderRadius: '4px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: theme === 'dark' ? '#6b7280' : '#9ca3af',
+                    borderRadius: '4px',
+                    '&:hover': {
+                      background: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                    },
+                  },
+                }}
+              >
                   <Section
                     theme={theme}
                     icon={<Star className="size-5" />}
@@ -298,9 +349,31 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
+              </Box>
             </TabsContent>
 
-            <TabsContent value="tips" className="overflow-y-auto space-y-6 pr-4" style={{ maxHeight: '800px' }}>
+            <TabsContent value="tips" className="space-y-6 pr-4">
+              <Box
+                sx={{
+                  maxHeight: '800px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: theme === 'dark' ? '#374151' : '#f3f4f6',
+                    borderRadius: '4px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: theme === 'dark' ? '#6b7280' : '#9ca3af',
+                    borderRadius: '4px',
+                    '&:hover': {
+                      background: theme === 'dark' ? '#9ca3af' : '#6b7280',
+                    },
+                  },
+                }}
+              >
                   <Section
                     theme={theme}
                     icon={<Zap className="size-5" />}
@@ -342,6 +415,7 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
+              </Box>
             </TabsContent>
           </Tabs>
         </div>
