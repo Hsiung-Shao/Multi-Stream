@@ -149,6 +149,13 @@ export default {
   'favorites.delete': '삭제',
   'favorites.exportJSON': 'JSON 내보내기',
   'favorites.importJSON': 'JSON 가져오기',
+  'favorites.systemNotInitialized': '즐겨찾기 시스템이 초기화되지 않았습니다',
+  'favorites.noValidUrls': '유효한 URL을 찾을 수 없습니다',
+  'favorites.addFailed': '추가 실패',
+  'favorites.batchImportSuccess': '{success}개의 즐겨찾기를 성공적으로 가져왔습니다',
+  'favorites.batchImportSuccessWithFail': '{success}개의 즐겨찾기를 성공적으로 가져왔지만 {fail}개가 실패했습니다',
+  'favorites.batchImportFailed': '가져오기 실패',
+  'favorites.batchImportError': '가져오기 오류',
 
   // Version History
   'version.title': '버전 정보',

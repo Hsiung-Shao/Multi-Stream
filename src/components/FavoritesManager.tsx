@@ -242,7 +242,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 
@@ -258,7 +258,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         loadData();
         debouncedBackup();
       } else {
-        showMessage('error', result.message || '加入失敗'); // TODO: 翻譯
+        showMessage('error', result.message || t('favorites.addFailed') || '加入失敗');
       }
     } catch (error) {
       showMessage('error', `錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`);
@@ -273,7 +273,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 
@@ -288,7 +288,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         .filter(url => url.length > 0);
 
       if (urlList.length === 0) {
-        showMessage('error', '未找到有效的網址'); // TODO: 翻譯
+        showMessage('error', t('favorites.noValidUrls') || '未找到有效的網址');
         setIsImporting(false);
         return;
       }
@@ -331,15 +331,18 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       if (successCount > 0) {
         loadData();
         debouncedBackup();
-        showMessage('success', `成功匯入 ${successCount} 個收藏${failCount > 0 ? `，失敗 ${failCount} 個` : ''}`);
+        const successMsg = failCount > 0 
+          ? t('favorites.batchImportSuccessWithFail')?.replace('{success}', successCount.toString()).replace('{fail}', failCount.toString()) || `成功匯入 ${successCount} 個收藏，失敗 ${failCount} 個`
+          : t('favorites.batchImportSuccess')?.replace('{success}', successCount.toString()) || `成功匯入 ${successCount} 個收藏`;
+        showMessage('success', successMsg);
         // 匯入成功後切換到"我的收藏"標籤頁
         setActiveTab('favorites');
       } else {
-        showMessage('error', `匯入失敗: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`);
+        showMessage('error', t('favorites.batchImportFailed') || `匯入失敗: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`);
       }
     } catch (error) {
       setIsImporting(false);
-      showMessage('error', `匯入錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`);
+      showMessage('error', t('favorites.batchImportError') || `匯入錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
   };
 
@@ -351,7 +354,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 
@@ -399,7 +402,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 
@@ -419,7 +422,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   // 載入分類中的所有收藏
   const handleLoadCategory = async (categoryId: string) => {
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 
@@ -476,7 +479,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     if (!editingId) return;
 
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 
@@ -499,7 +502,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   // 刪除單個收藏
   const handleDeleteFavorite = (id: string) => {
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 
@@ -527,7 +530,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   // 載入單個收藏
   const handleLoadFavorite = async (id: string) => {
     if (!window.favoriteStreams) {
-      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
       return;
     }
 

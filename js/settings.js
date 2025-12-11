@@ -635,6 +635,16 @@ function importFromJSON() {
         await indexedDBBackup.backup();
       }
       
+      // 更新收藏列表顯示
+      if (typeof updateFavoriteListDisplay === 'function') {
+        updateFavoriteListDisplay();
+      }
+      
+      // 更新串流順序列表（如果存在）
+      if (typeof updateStreamOrderList === 'function') {
+        updateStreamOrderList();
+      }
+      
       showSaveMessage('數據已匯入成功，頁面將重新載入');
       
       // 重新載入設置

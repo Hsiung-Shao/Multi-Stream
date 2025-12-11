@@ -315,11 +315,24 @@ function setupFixedLayoutFramework(boxes, layoutType) {
       chatPanel.style.height = config.panelHeight + '%';
       chatSidebar.appendChild(chatPanel);
       
-      // 如果有选中的串流，延迟更新聊天室内容
+      // 如果有选中的串流，立即更新聊天室内容（不延遲）
       if (defaultId && streamData[defaultId]) {
+        // 立即更新，不等待
+        updateFixedChatPanelContent(posKey, defaultId);
+        
+        // 同時設置重試機制，確保聊天室最終會顯示（如果立即更新失敗）
         setTimeout(() => {
-          updateFixedChatPanelContent(posKey, defaultId);
-        }, 500 + (index * 200));
+          const chatContent = document.getElementById(`chat-content-fixed-${posKey}`);
+          if (chatContent && chatContent.children.length === 0) {
+            // 如果內容區域仍然為空，重試更新
+            console.log(`[setupFixedLayoutFramework] 聊天室內容為空，重試更新 ${posKey}`, {
+              streamId: defaultId,
+              posKey,
+              index
+            });
+            updateFixedChatPanelContent(posKey, defaultId);
+          }
+        }, 300);
       }
     });
   }
@@ -486,11 +499,23 @@ function createChatPanel(posKey, defaultId, allStreams, layoutType) {
   chatContent.style.overflow = 'hidden';
   chatPanel.appendChild(chatContent);
   
-  // 如果有选中的串流，延迟更新聊天室内容
+  // 如果有选中的串流，立即更新聊天室内容（不延遲）
   if (defaultId && streamData[defaultId]) {
+    // 立即更新，不等待
+    updateFixedChatPanelContent(posKey, defaultId);
+    
+    // 同時設置重試機制，確保聊天室最終會顯示（如果立即更新失敗）
     setTimeout(() => {
-      updateFixedChatPanelContent(posKey, defaultId);
-    }, 500);
+      const chatContent = document.getElementById(`chat-content-fixed-${posKey}`);
+      if (chatContent && chatContent.children.length === 0) {
+        // 如果內容區域仍然為空，重試更新
+        console.log(`[createChatPanel] 聊天室內容為空，重試更新 ${posKey}`, {
+          streamId: defaultId,
+          posKey
+        });
+        updateFixedChatPanelContent(posKey, defaultId);
+      }
+    }, 300);
   }
   
   return chatPanel;
@@ -523,34 +548,84 @@ function updateFixedChatPanelContent(positionKey, streamId) {
   const data = streamData[streamId];
   
   // 获取原始聊天室容器
-  const originalChatDiv = document.getElementById('chat' + streamId);
+  let originalChatDiv = document.getElementById('chat' + streamId);
   if (!originalChatDiv) {
     // 如果聊天室不存在，创建它
     if (typeof createChat === 'function') {
-      createChat(streamId, data.platform, data.channelId, data.videoId);
-      // 等待聊天室创建后，再次尝试复制 iframe（减少延迟，提高响应速度）
-      setTimeout(() => {
-        const newlyCreatedChatDiv = document.getElementById('chat' + streamId);
-        if (newlyCreatedChatDiv) {
-          const iframe = newlyCreatedChatDiv.querySelector('iframe');
-          if (iframe && iframe.src) {
-            const newIframe = document.createElement('iframe');
-            newIframe.src = iframe.src;
-            newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
-            newIframe.setAttribute('allow', iframe.getAttribute('allow') || 'autoplay; fullscreen');
-            newIframe.setAttribute('allowfullscreen', '');
-            chatContent.appendChild(newIframe);
-          } else {
-            // 如果没有 iframe，复制整个内容（可能是 YouTube 替代方案）
-            const content = newlyCreatedChatDiv.cloneNode(true);
-            content.classList.remove('hidden');
-            content.style.cssText = 'width: 100%; height: 100%;';
-            chatContent.appendChild(content);
-          }
+      console.log(`[updateFixedChatPanelContent] 聊天室 ${streamId} 不存在，立即創建`, {
+        streamId,
+        platform: data.platform,
+        channelId: data.channelId,
+        videoId: data.videoId
+      });
+      
+      // 確保聊天室容器存在（對於 React 組件，容器應該已經存在）
+      const streamBox = document.querySelector(`[data-stream-id="${streamId}"]`);
+      if (streamBox) {
+        // 嘗試找到聊天室容器
+        const chatContainer = streamBox.querySelector(`#chat${streamId}`);
+        if (chatContainer) {
+          originalChatDiv = chatContainer;
         }
-      }, 300); // 从 1000ms 减少到 300ms，提高响应速度
+      }
+      
+      // 如果仍然不存在，創建它
+      if (!originalChatDiv) {
+        createChat(streamId, data.platform, data.channelId, data.videoId);
+        
+        // 立即檢查（不等待）
+        setTimeout(() => {
+          const newlyCreatedChatDiv = document.getElementById('chat' + streamId);
+          if (newlyCreatedChatDiv) {
+            const iframe = newlyCreatedChatDiv.querySelector('iframe');
+            if (iframe && iframe.src) {
+              const newIframe = document.createElement('iframe');
+              newIframe.src = iframe.src;
+              newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+              newIframe.setAttribute('allow', iframe.getAttribute('allow') || 'autoplay; fullscreen');
+              newIframe.setAttribute('allowfullscreen', '');
+              chatContent.appendChild(newIframe);
+            } else {
+              // 如果没有 iframe，复制整个内容（可能是 YouTube 替代方案）
+              const content = newlyCreatedChatDiv.cloneNode(true);
+              content.classList.remove('hidden');
+              content.style.cssText = 'width: 100%; height: 100%;';
+              chatContent.appendChild(content);
+            }
+          }
+        }, 100); // 減少延遲到 100ms，提高響應速度
+        
+        // 同時設置重試機制，確保聊天室最終會顯示
+        let retryCount = 0;
+        const maxRetries = 10;
+        const retryInterval = setInterval(() => {
+          retryCount++;
+          const newlyCreatedChatDiv = document.getElementById('chat' + streamId);
+          if (newlyCreatedChatDiv) {
+            const iframe = newlyCreatedChatDiv.querySelector('iframe');
+            if (iframe && iframe.src && chatContent.children.length === 0) {
+              const newIframe = document.createElement('iframe');
+              newIframe.src = iframe.src;
+              newIframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+              newIframe.setAttribute('allow', iframe.getAttribute('allow') || 'autoplay; fullscreen');
+              newIframe.setAttribute('allowfullscreen', '');
+              chatContent.appendChild(newIframe);
+              clearInterval(retryInterval);
+              console.log(`[updateFixedChatPanelContent] 聊天室 ${streamId} 已成功顯示（重試 ${retryCount} 次）`);
+            }
+          }
+          if (retryCount >= maxRetries) {
+            clearInterval(retryInterval);
+            console.warn(`[updateFixedChatPanelContent] 聊天室 ${streamId} 創建超時`);
+          }
+        }, 200);
+      }
     }
-    return;
+    
+    // 如果仍然沒有找到，返回（等待重試機制）
+    if (!originalChatDiv) {
+      return;
+    }
   }
   
   const iframe = originalChatDiv.querySelector('iframe');
@@ -810,7 +885,23 @@ function updateFixedLayoutFramework() {
         // 确保选择状态已保存
         fixedLayoutChatSelection[posKey] = selectedId;
         // 始终更新内容，确保同步（即使值相同）
+        // 立即更新，不等待
         updateFixedChatPanelContent(posKey, selectedId);
+        
+        // 確保聊天室在原始容器中也是可見的（如果存在）
+        const originalChatDiv = document.getElementById('chat' + selectedId);
+        if (originalChatDiv) {
+          // 確保聊天室容器可見（對於 React 組件）
+          originalChatDiv.classList.remove('hidden');
+          if (originalChatDiv.style.display === 'none') {
+            originalChatDiv.style.display = 'block';
+          }
+          
+          // 確保 streamData 中的 chatVisible 標記為 true
+          if (streamData[selectedId]) {
+            streamData[selectedId].chatVisible = true;
+          }
+        }
       } else {
         // 如果当前选中的串流不存在，清空选择
         if (selector.value !== '') {

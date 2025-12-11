@@ -149,6 +149,13 @@ export default {
   'favorites.delete': '削除',
   'favorites.exportJSON': 'JSONをエクスポート',
   'favorites.importJSON': 'JSONをインポート',
+  'favorites.systemNotInitialized': 'お気に入りシステムが初期化されていません',
+  'favorites.noValidUrls': '有効なURLが見つかりません',
+  'favorites.addFailed': '追加に失敗しました',
+  'favorites.batchImportSuccess': '{success} 件のお気に入りを正常にインポートしました',
+  'favorites.batchImportSuccessWithFail': '{success} 件のお気に入りを正常にインポートしましたが、{fail} 件が失敗しました',
+  'favorites.batchImportFailed': 'インポートに失敗しました',
+  'favorites.batchImportError': 'インポートエラー',
 
   // Version History
   'version.title': 'バージョン情報',

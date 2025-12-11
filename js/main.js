@@ -125,14 +125,37 @@ window.addEventListener('DOMContentLoaded', () => {
   // 延遲讀取備份數據（頁面載入後）
   console.log('[main.js] 檢查 indexedDBBackup 可用性', {
     indexedDBBackupAvailable: typeof indexedDBBackup !== 'undefined',
-    windowIndexedDBBackup: typeof window.indexedDBBackup !== 'undefined'
+    windowIndexedDBBackup: typeof window.indexedDBBackup !== 'undefined',
+    indexedDBAvailable: typeof window.indexedDB !== 'undefined'
   });
   
   if (typeof indexedDBBackup !== 'undefined') {
     console.log('[main.js] 準備自動載入備份數據');
+    
+    // 增加延遲，確保 indexedDBBackup 已完全初始化
     setTimeout(async () => {
-      console.log('[main.js] 開始自動載入備份數據');
+      console.log('[main.js] 開始自動載入備份數據', {
+        backupEnabled: indexedDBBackup.isEnabled(),
+        dbInitialized: !!indexedDBBackup.db
+      });
+      
       try {
+        // 確保數據庫已初始化
+        if (!indexedDBBackup.db) {
+          console.log('[main.js] 數據庫未初始化，嘗試初始化...');
+          try {
+            await indexedDBBackup.init();
+            console.log('[main.js] 數據庫初始化完成', {
+              dbInitialized: !!indexedDBBackup.db
+            });
+          } catch (initError) {
+            console.error('[main.js] 數據庫初始化失敗', {
+              error: initError.message,
+              errorName: initError.name
+            });
+          }
+        }
+        
         // 嘗試自動從 IndexedDB 恢復數據（如果 localStorage 沒有數據）
         const result = await indexedDBBackup.autoLoadBackup();
         console.log('[main.js] 自動載入備份結果', {
@@ -147,16 +170,18 @@ window.addEventListener('DOMContentLoaded', () => {
           window.location.reload();
         } else {
           console.log('[main.js] 備份數據恢復跳過或失敗', {
-            reason: result?.message || '未知原因'
+            reason: result?.message || '未知原因',
+            skipped: result?.skipped
           });
         }
       } catch (error) {
         console.error('[main.js] 自動載入備份時發生錯誤', {
           error: error.message,
-          errorName: error.name
+          errorName: error.name,
+          stack: error.stack
         });
       }
-    }, 1000);
+    }, 2000); // 增加延遲到 2 秒，確保所有模組都已載入
   } else {
     console.warn('[main.js] indexedDBBackup 未定義，無法自動載入備份');
   }

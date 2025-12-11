@@ -775,7 +775,17 @@ function loadLayout() {
 }
 
 // 暴露 addStream 到全局作用域
+// 確保函數是全局的（但優先使用 React 版本的 addStream）
 if (typeof window !== 'undefined') {
-  window.addStream = addStream;
+  // 只有在 React 版本的 addStream 不存在時才暴露舊版本
+  // 這樣可以確保新的 React 組件優先使用
+  if (!window.addStream || typeof window.addStream !== 'function') {
+    window.addStream = addStream;
+    console.log('[stream.js] 舊版 addStream 已暴露到全局（React 版本不存在）');
+  } else {
+    console.log('[stream.js] React 版本的 addStream 已存在，跳過暴露舊版本');
+    // 保存舊版本作為備份（僅在緊急情況下使用）
+    window._legacyAddStream = addStream;
+  }
 }
 

@@ -219,6 +219,45 @@ export default function App() {
       }
     }
 
+    // 嘗試從收藏列表中獲取名稱
+    let displayName: string | null = null;
+    let name: string | null = null;
+    
+    if (window.favoriteStreams && typeof window.favoriteStreams.getList === 'function') {
+      try {
+        const favorites = window.favoriteStreams.getList();
+        const favorite = favorites.find(fav => {
+          if (fav.platform === parsed.platform) {
+            if (parsed.platform === 'twitch' && fav.channelId === parsed.channelId) {
+              return true;
+            } else if (parsed.platform === 'youtube') {
+              // YouTube 可以通過 channelId 或 videoId 匹配
+              if (fav.channelId && parsed.channelId && fav.channelId === parsed.channelId) {
+                return true;
+              } else if (fav.videoId && parsed.videoId && fav.videoId === parsed.videoId) {
+                return true;
+              } else if (fav.url && url && fav.url === url) {
+                return true;
+              }
+            }
+          }
+          return false;
+        });
+        
+        if (favorite && favorite.name) {
+          displayName = favorite.name;
+          name = favorite.name;
+          console.log('[App] 從收藏列表中找到名稱', {
+            streamId: streamCountRef.current + 1,
+            name: favorite.name,
+            platform: parsed.platform
+          });
+        }
+      } catch (error) {
+        console.warn('[App] 從收藏列表獲取名稱時發生錯誤:', error);
+      }
+    }
+
     // 創建新的串流數據
     streamCountRef.current++;
     const newStream: StreamData = {
@@ -230,8 +269,8 @@ export default function App() {
       volume: 100,
       chatVisible: false, // 所有平台預設隱藏聊天室
       isMuted: false,
-      name: null,
-      displayName: null
+      name: name,
+      displayName: displayName
     };
 
     // 更新全局 streamCount

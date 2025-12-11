@@ -1,6 +1,7 @@
 import { X, Calendar, Sparkles } from 'lucide-react';
 import { Button as MuiButton } from '@mui/material';
 import { Box } from '@mui/material';
+import { useI18n } from '../i18n/index';
 
 interface VersionHistoryProps {
   theme: 'light' | 'dark';
@@ -8,75 +9,77 @@ interface VersionHistoryProps {
 }
 
 export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
+  const { t } = useI18n();
+  
   const versions = [
     {
       version: 'v2.5.0',
-      date: '2024-12-08',
+      date: t('versionHistory.v2.5.0.date'),
       changes: [
-        '新增 YouTube 頻道開台監測功能',
-        '支援輸入 YouTube 頻道網址和 @username 格式',
-        '自動檢測 YouTube 頻道直播狀態',
-        '優化收藏列表的開台狀態顯示',
+        t('versionHistory.v2.5.0.change1'),
+        t('versionHistory.v2.5.0.change2'),
+        t('versionHistory.v2.5.0.change3'),
+        t('versionHistory.v2.5.0.change4'),
       ],
     },
     {
       version: 'v2.4.0',
-      date: '2024-11-15',
+      date: t('versionHistory.v2.4.0.date'),
       changes: [
-        '新增 Twitch 頻道開台狀態檢測',
-        '顯示觀看人數資訊',
-        '自動排序正在直播的頻道',
-        '新增手動刷新狀態按鈕',
+        t('versionHistory.v2.4.0.change1'),
+        t('versionHistory.v2.4.0.change2'),
+        t('versionHistory.v2.4.0.change3'),
+        t('versionHistory.v2.4.0.change4'),
       ],
     },
     {
       version: 'v2.3.0',
-      date: '2024-10-20',
+      date: t('versionHistory.v2.3.0.date'),
       changes: [
-        '新增 Twitch 頻道搜尋功能',
-        '搜尋建議列表支援快速添加',
-        '優化收藏管理界面',
-        '修復聊天室嵌入問題',
+        t('versionHistory.v2.3.0.change1'),
+        t('versionHistory.v2.3.0.change2'),
+        t('versionHistory.v2.3.0.change3'),
+        t('versionHistory.v2.3.0.change4'),
       ],
     },
     {
       version: 'v2.2.0',
-      date: '2024-09-10',
+      date: t('versionHistory.v2.2.0.date'),
       changes: [
-        '新增側邊聊天布局模式（雙欄版/四格版）',
-        '聊天室選擇器支援動態切換',
-        '優化布局控制功能',
-        '改善移動設備體驗',
+        t('versionHistory.v2.2.0.change1'),
+        t('versionHistory.v2.2.0.change2'),
+        t('versionHistory.v2.2.0.change3'),
+        t('versionHistory.v2.2.0.change4'),
       ],
     },
     {
       version: 'v2.1.0',
-      date: '2024-08-05',
+      date: t('versionHistory.v2.1.0.date'),
       changes: [
-        '新增分類管理功能',
-        '支援一鍵載入整個分類',
-        '新增數據備份功能',
-        '優化收藏列表顯示',
+        t('versionHistory.v2.1.0.change1'),
+        t('versionHistory.v2.1.0.change2'),
+        t('versionHistory.v2.1.0.change3'),
+        t('versionHistory.v2.1.0.change4'),
       ],
     },
     {
       version: 'v2.0.0',
-      date: '2024-07-01',
+      date: t('versionHistory.v2.0.0.date'),
       changes: [
-        '全新的 UI 設計',
-        '新增收藏功能',
-        '支援多種布局模式',
-        '新增音量控制功能',
-        '支援聊天室顯示',
+        t('versionHistory.v2.0.0.change1'),
+        t('versionHistory.v2.0.0.change2'),
+        t('versionHistory.v2.0.0.change3'),
+        t('versionHistory.v2.0.0.change4'),
+        t('versionHistory.v2.0.0.change5'),
       ],
     },
     {
       version: 'v1.0.0',
-      date: '2024-06-01',
+      date: t('versionHistory.v1.0.0.date'),
       changes: [
-        '初始版本發布',
-        '支援 Twitch 和 YouTube 串流',
-        '基本的多串流顯示功能',
+        t('versionHistory.v1.0.0.change1'),
+        t('versionHistory.v1.0.0.change2'),
+        t('versionHistory.v1.0.0.change3'),
       ],
     },
   ];
@@ -91,9 +94,9 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
               <Sparkles className="size-6 text-white" />
             </div>
             <div>
-              <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>版本紀錄</h2>
+              <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('versionHistory.title')}</h2>
               <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                MultiStream Hub 更新歷史
+                {t('versionHistory.subtitle')}
               </p>
             </div>
           </div>
@@ -173,7 +176,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
                   </div>
                   {index === 0 && (
                     <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                      最新
+                      {t('versionHistory.latest')}
                     </span>
                   )}
                 </div>

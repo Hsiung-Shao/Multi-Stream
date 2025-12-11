@@ -149,6 +149,13 @@ export default {
   'favorites.delete': '删除',
   'favorites.exportJSON': '导出JSON',
   'favorites.importJSON': '导入JSON',
+  'favorites.systemNotInitialized': '收藏系统未初始化',
+  'favorites.noValidUrls': '未找到有效的网址',
+  'favorites.addFailed': '加入失败',
+  'favorites.batchImportSuccess': '成功导入 {success} 个收藏',
+  'favorites.batchImportSuccessWithFail': '成功导入 {success} 个收藏，失败 {fail} 个',
+  'favorites.batchImportFailed': '导入失败',
+  'favorites.batchImportError': '导入错误',
 
   // Version History
   'version.title': '版本记录',

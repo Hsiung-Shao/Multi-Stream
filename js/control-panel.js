@@ -781,5 +781,13 @@ if (typeof window !== 'undefined') {
   window.toggleAllChats = toggleAllChats;
   window.updateAllChatsButton = updateAllChatsButton;
   window.toggleControlPanel = toggleControlPanel;
+  
+  // 監聽收藏更新事件，自動更新串流順序列表
+  window.addEventListener('favoritesUpdated', () => {
+    console.log('[control-panel.js] 收到 favoritesUpdated 事件，更新串流順序列表');
+    if (typeof updateStreamOrderList === 'function') {
+      updateStreamOrderList();
+    }
+  });
 }
 
