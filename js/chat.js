@@ -20,20 +20,19 @@ function createChat(id, platform, channelId, videoId) {
       return;
     }
     
-    // 构建 YouTube 聊天室 URL
-    // 注意：YouTube 的 live_chat iframe 在 localhost 環境下可能無法正常工作
-    // 但我們仍然嘗試創建，讓 YouTube 自己處理限制
-    // 使用 embed_domain 參數來指定嵌入域名
-    const embedDomain = parentDomain === 'localhost' || parentDomain === '127.0.0.1' || parentDomain === '0.0.0.0'
-      ? window.location.hostname + (window.location.port ? ':' + window.location.port : '')
-      : parentDomain;
+    // 检查域名是否支持嵌入（localhost 不支持）
+    // 參考舊代碼：在 localhost 環境下直接顯示替代方案
+    if (parentDomain === 'localhost' || parentDomain === '127.0.0.1' || parentDomain === '0.0.0.0') {
+      console.log(`[createChat] YouTube 在 localhost 環境下無法嵌入，顯示替代方案`);
+      showYouTubeChatAlternative(chatDiv, videoId);
+      return;
+    }
     
-    // 嘗試使用兩種 URL 格式：
-    // 1. live_chat URL（標準格式）
-    // 2. embed/live_chat URL（備用格式）
-    chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(embedDomain)}`;
+    // 构建 YouTube 聊天室 URL（使用 embed_domain 参数）
+    // 參考舊代碼：使用標準的 live_chat URL 格式
+    chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(parentDomain)}`;
     
-    console.log(`[createChat] 創建 YouTube 聊天室 iframe，videoId: ${videoId}, embedDomain: ${embedDomain}`);
+    console.log(`[createChat] 創建 YouTube 聊天室 iframe，videoId: ${videoId}, embedDomain: ${parentDomain}`);
   } else if (platform === 'twitch') {
     // Twitch 聊天室 - 根據官方文檔，必須使用 parent 參數
     // Twitch CSP 要求：frame-ancestors http://localhost:* https://localhost:*
@@ -69,27 +68,12 @@ function createChat(id, platform, channelId, videoId) {
     chatIframe.src = chatUrl;
     chatIframe.style.width = '100%';
     chatIframe.style.height = '100%';
-    chatIframe.style.border = 'none';
     chatIframe.frameBorder = '0';
     chatIframe.allow = 'autoplay; fullscreen';
     chatIframe.setAttribute('allowfullscreen', '');
-    chatIframe.setAttribute('scrolling', 'yes');
-    chatIframe.setAttribute('allowtransparency', 'true');
-    
-    // 添加載入錯誤處理
-    chatIframe.onerror = () => {
-      console.warn(`[createChat] ${platform} 聊天室 iframe 載入失敗`);
-      if (platform === 'youtube') {
-        showYouTubeChatAlternative(chatDiv, videoId);
-      } else if (platform === 'twitch') {
-        showChatError(chatDiv, platform);
-      }
-    };
-    
     chatDiv.appendChild(chatIframe);
-    console.log(`[createChat] ${platform} 聊天室 iframe 已添加到 DOM，src: ${chatUrl}`);
     
-    // 檢測是否被 CSP 阻止
+    // 檢測是否被 CSP 阻止（參考舊代碼的檢測邏輯）
     let blockedDetected = false;
     let checkInterval = setInterval(() => {
       try {
@@ -103,7 +87,7 @@ function createChat(id, platform, channelId, videoId) {
       }
     }, 1000);
     
-    // 設置超時檢查 - 3 秒後檢查是否被阻止
+    // 設置超時檢查 - 3 秒後檢查是否被阻止（參考舊代碼）
     setTimeout(() => {
       clearInterval(checkInterval);
       try {
@@ -123,7 +107,7 @@ function createChat(id, platform, channelId, videoId) {
             } catch (err) {
               // 這可能是 CSP 阻止
               if (err.message && err.message.includes('Blocked a frame')) {
-                // 對於 YouTube，回退到替代方案
+                // 對於 YouTube，回退到替代方案（參考舊代碼）
                 if (platform === 'youtube') {
                   showYouTubeChatAlternative(chatDiv, videoId);
                 } else {
@@ -133,6 +117,13 @@ function createChat(id, platform, channelId, videoId) {
               }
             }
           }, 2000);
+        } else {
+          // iframe src 被重置，可能是載入失敗
+          // 對於 YouTube，顯示替代方案
+          if (platform === 'youtube') {
+            showYouTubeChatAlternative(chatDiv, videoId);
+            blockedDetected = true;
+          }
         }
       }
     }, 3000);
@@ -141,9 +132,10 @@ function createChat(id, platform, channelId, videoId) {
     chatIframe.addEventListener('load', () => {
       // Chat iframe 載入成功
       clearInterval(checkInterval);
+      console.log(`[createChat] ${platform} 聊天室 iframe 載入成功`);
     });
     
-    // 錯誤處理
+    // 錯誤處理（參考舊代碼）
     chatIframe.addEventListener('error', () => {
       clearInterval(checkInterval);
       // Chat iframe 載入失敗，靜默處理

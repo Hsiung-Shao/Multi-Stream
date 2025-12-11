@@ -43,6 +43,10 @@ export function StreamBox({
   const playerCreatingRef = useRef<boolean>(false);
   const playerRetryCountRef = useRef<number>(0);
   const playerInitializedRef = useRef<boolean>(false);
+  
+  // 計算聊天室寬度狀態（用於 JSX 中的樣式）
+  const [chatWidth, setChatWidth] = useState<number>(0);
+  const [playerWidth, setPlayerWidth] = useState<string>('100%');
 
   // 同步聊天室顯示狀態和布局 - 參考 js/chat.js 和 js/stream.js
   useEffect(() => {
@@ -77,7 +81,55 @@ export function StreamBox({
       }
     }
     
-    if (playerContainer) {
+    if (playerContainer && chatContainer) {
+      // 計算聊天室寬度，確保符合最小寬度要求
+      // Twitch 聊天室最小寬度：300px，YouTube 聊天室最小寬度：200px
+      const minChatWidth = streamData.platform === 'twitch' ? 300 : 200;
+      
+      if (streamData.chatVisible) {
+        // 獲取容器總寬度
+        const containerWidth = chatContainer.parentElement?.clientWidth || 0;
+        const chatWidthPercent = 20; // 20% 寬度
+        const chatWidthPx = (containerWidth * chatWidthPercent) / 100;
+        
+        // 如果計算出的寬度小於最小寬度，使用最小寬度
+        const finalChatWidth = Math.max(chatWidthPx, minChatWidth);
+        const finalChatWidthPercent = (finalChatWidth / containerWidth) * 100;
+        const finalPlayerWidthPercent = 100 - finalChatWidthPercent;
+        
+        // 設置聊天室寬度（使用像素值確保最小寬度）
+        chatContainer.style.width = `${finalChatWidth}px`;
+        chatContainer.style.minWidth = `${minChatWidth}px`;
+        chatContainer.style.height = '100%';
+        chatContainer.style.display = 'block';
+        chatContainer.classList.remove('hidden');
+        
+        // 設置播放器寬度（使用 calc 來適應聊天室寬度）
+        playerContainer.style.width = `calc(100% - ${finalChatWidth}px)`;
+        playerContainer.style.height = '100%';
+        playerContainer.style.transition = 'width 0.3s ease';
+        
+        console.log(`[StreamBox ${streamData.id}] 顯示聊天室 (寬度: ${finalChatWidth}px, 最小: ${minChatWidth}px)`);
+      } else {
+        // 隱藏聊天室時，播放器佔滿 100%
+        chatContainer.style.width = '0px';
+        chatContainer.style.minWidth = '0px';
+        chatContainer.style.height = '100%';
+        chatContainer.style.display = 'none';
+        chatContainer.classList.add('hidden');
+        
+        playerContainer.style.width = '100%';
+        playerContainer.style.height = '100%';
+        playerContainer.style.transition = 'width 0.3s ease';
+        
+        // 更新狀態用於 JSX 渲染
+        setChatWidth(0);
+        setPlayerWidth('100%');
+        
+        console.log(`[StreamBox ${streamData.id}] 隱藏聊天室`);
+      }
+    } else if (playerContainer) {
+      // 如果沒有聊天室容器，播放器佔滿 100%
       const playerWidth = streamData.chatVisible ? '80%' : '100%';
       playerContainer.style.width = playerWidth;
       playerContainer.style.height = '100%';
@@ -93,11 +145,6 @@ export function StreamBox({
       }
 
       if (streamData.chatVisible) {
-        chatContainer.style.width = '20%';
-        chatContainer.style.height = '100%';
-        chatContainer.style.display = 'block';
-        chatContainer.classList.remove('hidden');
-        console.log(`[StreamBox ${streamData.id}] 顯示聊天室 (20%)`);
         
         // 檢查聊天室 iframe 是否存在
         const iframe = chatContainer.querySelector('iframe');
@@ -145,15 +192,86 @@ export function StreamBox({
       window.streamData[streamData.id].chatVisible = streamData.chatVisible;
       console.log(`[StreamBox ${streamData.id}] 更新全局 streamData.chatVisible: ${streamData.chatVisible}`);
     }
-  }, [streamData.chatVisible, streamData.id]);
+  }, [streamData.chatVisible, streamData.id, streamData.platform]);
+
+  // 監聽窗口大小變化，重新計算聊天室寬度
+  useEffect(() => {
+    if (!streamData.chatVisible) return;
+
+    const handleResize = () => {
+      const playerContainer = playerContainerRef.current;
+      const chatContainer = chatContainerRef.current;
+      if (!playerContainer || !chatContainer) return;
+
+      const minChatWidth = streamData.platform === 'twitch' ? 300 : 200;
+      const containerElement = chatContainer.parentElement || boxRef.current;
+      const containerWidth = containerElement?.clientWidth || 0;
+
+      if (containerWidth > 0) {
+        const chatWidthPercent = 20;
+        const chatWidthPx = (containerWidth * chatWidthPercent) / 100;
+        const finalChatWidth = Math.max(chatWidthPx, minChatWidth);
+
+        chatContainer.style.width = `${finalChatWidth}px`;
+        chatContainer.style.minWidth = `${minChatWidth}px`;
+        playerContainer.style.width = `calc(100% - ${finalChatWidth}px)`;
+
+        setChatWidth(finalChatWidth);
+        setPlayerWidth(`calc(100% - ${finalChatWidth}px)`);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    // 初始計算
+    handleResize();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [streamData.chatVisible, streamData.platform, streamData.id]);
 
   // 初始化播放器
   useEffect(() => {
     if (!playerContainerRef.current) return;
     
-    // 如果播放器已經初始化且關鍵屬性沒有變化，跳過重新創建
+    // 檢查是否有重載觸發器（用於強制重新創建播放器）
+    // 參考 js/stream.js 的 reloadStream 函數邏輯
+    const hasReloadTrigger = !!(window.streamData && window.streamData[streamData.id] && (window.streamData[streamData.id] as any)._reloadTrigger);
+    let shouldForceReload = false;
+    
+    if (hasReloadTrigger) {
+      console.log(`[StreamBox ${streamData.id}] 檢測到重載觸發器，準備重新創建播放器`);
+      
+      // 清除重載觸發器並重置初始化標記
+      delete (window.streamData[streamData.id] as any)._reloadTrigger;
+      playerInitializedRef.current = false;
+      playerCreatingRef.current = false;
+      shouldForceReload = true;
+      
+      // 清理舊的播放器引用（參考 js/stream.js 第 517-523 行）
+      if (window.players && window.players[streamData.id]) {
+        const oldPlayer = window.players[streamData.id];
+        if (oldPlayer.type === 'youtube' && oldPlayer.player && typeof oldPlayer.player.destroy === 'function') {
+          try {
+            oldPlayer.player.destroy();
+            console.log(`[StreamBox ${streamData.id}] 已銷毀舊的 YouTube 播放器`);
+          } catch (e) {
+            console.warn(`[StreamBox ${streamData.id}] 清理舊播放器時發生錯誤:`, e);
+          }
+        }
+        delete window.players[streamData.id];
+      }
+      
+      // 確保播放器容器已清空（參考 js/stream.js 第 525-529 行）
+      if (playerContainerRef.current) {
+        playerContainerRef.current.innerHTML = '';
+        console.log(`[StreamBox ${streamData.id}] 已清空播放器容器`);
+      }
+    }
+    
+    // 如果播放器已經初始化且關鍵屬性沒有變化，且沒有強制重載標記，跳過重新創建
     // 這可以防止因為 useEffect 依賴項變化而導致的重複創建
-    if (playerInitializedRef.current) {
+    if (playerInitializedRef.current && !shouldForceReload) {
       const existingPlayer = window.players && window.players[streamData.id];
       if (existingPlayer && existingPlayer.type === streamData.platform && existingPlayer.player) {
         // 檢查關鍵屬性是否變化
@@ -206,6 +324,18 @@ export function StreamBox({
 
     const createTwitchPlayer = async () => {
       try {
+        // 如果容器不存在，無法創建播放器
+        if (!playerContainerRef.current) {
+          console.warn(`[StreamBox ${streamData.id}] Twitch 播放器容器不存在`);
+          return;
+        }
+        
+        // 確保容器已清空（重載時）
+        if (shouldForceReload && playerContainerRef.current.innerHTML) {
+          playerContainerRef.current.innerHTML = '';
+          console.log(`[StreamBox ${streamData.id}] 已清空 Twitch 播放器容器`);
+        }
+        
         // 確保 Twitch API 已載入
         if (typeof window.Twitch === 'undefined' || !window.Twitch.Player) {
           await loadTwitchPlayerApi();
@@ -234,23 +364,29 @@ export function StreamBox({
         
         // 標記播放器已初始化
         playerInitializedRef.current = true;
+        playerCreatingRef.current = false;
+        
+        console.log(`[StreamBox ${streamData.id}] Twitch 播放器創建成功`);
         
         player.addEventListener(window.Twitch.Player.READY, () => {
+          console.log(`[StreamBox ${streamData.id}] Twitch 播放器已就緒`);
           // 播放器已就緒
         });
         
         player.addEventListener(window.Twitch.Player.ERROR, () => {
+          console.error(`[StreamBox ${streamData.id}] Twitch 播放器錯誤`);
           alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 網路連線正常');
         });
       } catch (error) {
-        console.error('無法建立 Twitch 播放器:', error);
+        playerCreatingRef.current = false;
+        console.error(`[StreamBox ${streamData.id}] 無法建立 Twitch 播放器:`, error);
         alert('無法載入 Twitch API。請重新整理頁面或檢查網路連線。');
       }
     };
 
     const createYouTubePlayer = async () => {
-      // 防止重複創建
-      if (playerCreatingRef.current) {
+      // 防止重複創建（除非是強制重載）
+      if (playerCreatingRef.current && !shouldForceReload) {
         console.log(`[StreamBox ${streamData.id}] 播放器正在創建中，跳過重複創建`);
         return;
       }
@@ -381,20 +517,26 @@ export function StreamBox({
         
         // 標記播放器已初始化
         playerInitializedRef.current = true;
+        playerCreatingRef.current = false;
+        
+        console.log(`[StreamBox ${streamData.id}] YouTube 播放器創建成功`);
       } catch (error) {
         // 清除創建標誌
         playerCreatingRef.current = false;
-        console.error('無法建立 YouTube 播放器:', error);
+        console.error(`[StreamBox ${streamData.id}] 無法建立 YouTube 播放器:`, error);
         alert('無法載入 YouTube API。請重新整理頁面或檢查網路連線。');
       }
     };
 
-    // 建立播放器
+    // 建立播放器（參考 js/stream.js 第 531-549 行）
+    // 如果檢測到重載觸發器，強制重新創建播放器
     if (streamData.platform === 'twitch') {
+      console.log(`[StreamBox ${streamData.id}] 開始創建 Twitch 播放器${shouldForceReload ? ' (重載模式)' : ''}`);
       createTwitchPlayer().catch(error => {
         console.error('創建 Twitch 播放器失敗:', error);
       });
     } else if (streamData.platform === 'youtube') {
+      console.log(`[StreamBox ${streamData.id}] 開始創建 YouTube 播放器${shouldForceReload ? ' (重載模式)' : ''}`);
       createYouTubePlayer().catch(error => {
         console.error('創建 YouTube 播放器失敗:', error);
       });
@@ -528,7 +670,7 @@ export function StreamBox({
         playerContainerRef.current.innerHTML = '';
       }
     };
-  }, [streamData.id, streamData.platform, streamData.channelId, streamData.videoId]);
+  }, [streamData.id, streamData.platform, streamData.channelId, streamData.videoId, (streamData as any)._reloadKey]);
 
 
 
@@ -663,10 +805,11 @@ export function StreamBox({
           className="player-container"
           id={`player${streamData.id}`}
           style={{
-            width: streamData.chatVisible ? '80%' : '100%',
+            width: playerWidth,
             height: '100%',
             flexShrink: 0,
-            position: 'relative'
+            position: 'relative',
+            transition: 'width 0.3s ease'
           }}
         />
         <div
@@ -674,12 +817,13 @@ export function StreamBox({
           className={`chat-container ${streamData.chatVisible ? '' : 'hidden'}`}
           id={`chat${streamData.id}`}
           style={{
-            width: streamData.chatVisible ? '20%' : '0%',
+            width: streamData.chatVisible ? `${chatWidth}px` : '0px',
+            minWidth: streamData.chatVisible ? (streamData.platform === 'twitch' ? '300px' : '200px') : '0px',
             height: '100%',
             flexShrink: 0,
             position: 'relative',
             overflow: 'hidden',
-            transition: 'width 0.3s ease'
+            transition: 'width 0.3s ease, min-width 0.3s ease'
           }}
         >
           {/* chat-resizer 應該在聊天室容器內部，使用 absolute 定位在左側邊緣 */}

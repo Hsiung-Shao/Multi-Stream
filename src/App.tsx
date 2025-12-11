@@ -54,6 +54,40 @@ export default function App() {
   const [streams, setStreams] = useState<StreamData[]>([]);
   const streamCountRef = useRef(0);
   
+  // 總音量狀態（從 localStorage 載入）
+  const loadMasterVolume = () => {
+    try {
+      const saved = localStorage.getItem('userSettings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.masterVolume !== undefined && settings.masterVolume > 0) {
+          return settings.masterVolume;
+        }
+      }
+    } catch (e) {
+      // 載入失敗，使用默認值
+    }
+    // 如果載入的值是 0，可能是因為之前靜音了，檢查是否有保存的 previousMasterVolume
+    try {
+      const saved = localStorage.getItem('userSettings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.previousMasterVolume !== undefined && settings.previousMasterVolume > 0) {
+          return settings.previousMasterVolume;
+        }
+      }
+    } catch (e) {
+      // 忽略錯誤
+    }
+    return 100;
+  };
+  
+  const [masterVolume, setMasterVolume] = useState(loadMasterVolume);
+  const [masterMuted, setMasterMuted] = useState(() => {
+    const initialVolume = loadMasterVolume();
+    return initialVolume === 0;
+  });
+  
   // 布局管理
   const { currentLayout, setLayout } = useLayout(streams.length);
   
@@ -187,36 +221,69 @@ export default function App() {
     setStreams(prev => prev.filter(s => s.id !== id));
   };
 
-  // 重新載入串流
+  // 重新載入串流（參考 js/stream.js 的 reloadStream 函數）
   const handleReloadStream = (id: number) => {
     const stream = streams.find(s => s.id === id);
     if (!stream) return;
 
-    // 保存當前狀態
+    // 保存當前狀態（參考 js/stream.js 第 507-509 行）
     const savedVolume = stream.volume || 100;
     const savedChatVisible = stream.chatVisible !== undefined ? stream.chatVisible : false;
     
-    // 清理現有播放器
+    // 清理現有播放器（參考 js/stream.js 第 517-523 行）
     if (window.players && window.players[id]) {
-      if (window.players[id].type === 'youtube' && window.players[id].player.destroy) {
-        window.players[id].player.destroy();
+      const player = window.players[id];
+      if (player.type === 'youtube' && player.player && typeof player.player.destroy === 'function') {
+        try {
+          player.player.destroy();
+        } catch (e) {
+          console.warn(`清理 YouTube 播放器時發生錯誤:`, e);
+        }
       }
+      // Twitch 播放器不需要 destroy，直接刪除引用
       delete window.players[id];
     }
     
-    // 清空播放器容器
+    // 清空播放器容器（參考 js/stream.js 第 525-529 行）
     const playerContainer = document.getElementById('player' + id);
     if (playerContainer) {
       playerContainer.innerHTML = '';
     }
     
-    // 重新建立播放器（這會在 StreamBox 的 useEffect 中自動處理）
-    // 但我們需要觸發重新渲染
+    // 清空聊天室容器（如果存在）
+    const chatContainer = document.getElementById(`chat${id}`);
+    if (chatContainer) {
+      chatContainer.innerHTML = '';
+    }
+    
+    // 重置全局 streamData 中的播放器標記，並添加重載觸發器
+    // 這會強制 StreamBox 重新初始化播放器（參考 js/stream.js 的重新建立播放器邏輯）
+    if (window.streamData && window.streamData[id]) {
+      window.streamData[id] = {
+        ...window.streamData[id],
+        volume: savedVolume,
+        chatVisible: savedChatVisible,
+        _reloadTrigger: Date.now() // 添加重載觸發器，強制重新創建播放器
+      };
+    }
+    
+    // 更新 streams 狀態以觸發 StreamBox 重新渲染
+    // 這會導致 StreamBox 的 useEffect 重新執行，檢測到 _reloadTrigger 後重新創建播放器
+    // 添加一個臨時的 key 來強制重新渲染（參考 js/stream.js 的重新建立播放器邏輯）
     setStreams(prev => prev.map(s => 
       s.id === id 
-        ? { ...s, volume: savedVolume, chatVisible: savedChatVisible }
+        ? { ...s, volume: savedVolume, chatVisible: savedChatVisible, _reloadKey: Date.now() }
         : s
     ));
+    
+    // 恢復音量設定（參考 js/stream.js 第 551-569 行）
+    // 音量會在 StreamBox 的 useEffect 中自動應用，因為我們已經更新了 stream.volume
+    // 但為了確保，我們在播放器就緒後再次應用總音量
+    setTimeout(() => {
+      if (typeof (window as any).applyMasterVolumeToStream === 'function') {
+        (window as any).applyMasterVolumeToStream(id);
+      }
+    }, 1000);
   };
 
   // 切換聊天室
@@ -256,50 +323,426 @@ export default function App() {
     }
   };
 
-  // 音量變化
-  const handleVolumeChange = (id: number, volume: number) => {
-    setStreams(prev => prev.map(s => 
-      s.id === id ? { ...s, volume } : s
-    ));
-  };
-
-  // 切換靜音
-  const handleToggleMute = (id: number) => {
-    setStreams(prev => prev.map(s => 
-      s.id === id ? { ...s, isMuted: !(s.isMuted || false) } : s
-    ));
-    
-    // 更新全局 streamData
-    if (window.streamData && window.streamData[id]) {
-      window.streamData[id].isMuted = !(window.streamData[id].isMuted || false);
+  // 處理總音量變化
+  const handleMasterVolumeChange = (volume: number) => {
+    // 如果當前是靜音狀態，且用戶拖動滑塊到非零值，先取消靜音
+    if (volume > 0 && masterMuted) {
+      setMasterMuted(false);
     }
     
-    // 應用靜音到播放器
-    if (window.players && window.players[id] && window.players[id].player) {
-      const player = window.players[id].player;
-      const stream = streams.find(s => s.id === id);
-      const newMutedState = !(stream?.isMuted || false);
-      
-      try {
-        if (stream?.platform === 'twitch') {
-          if (typeof player.setMuted === 'function') {
-            player.setMuted(newMutedState);
-          }
-        } else if (stream?.platform === 'youtube') {
-          if (newMutedState) {
-            if (typeof player.mute === 'function') {
-              player.mute();
+    setMasterVolume(volume);
+    
+    // 如果音量設為 0，自動設為靜音
+    if (volume === 0) {
+      setMasterMuted(true);
+    }
+    
+    // 同步到全局變量
+    (window as any).masterVolume = volume;
+    
+    // 同步到 DOM 元素（為了兼容舊的 updateMasterVolume 函數）
+    const masterVolSlider = document.getElementById('master-volume');
+    if (masterVolSlider && (masterVolSlider as HTMLInputElement).value !== undefined) {
+      (masterVolSlider as HTMLInputElement).value = volume.toString();
+    }
+    
+    // 保存音量到 localStorage（但不覆蓋 previousMasterVolume，除非用戶手動調整）
+    try {
+      const saved = localStorage.getItem('userSettings');
+      const settings = saved ? JSON.parse(saved) : {};
+      settings.masterVolume = volume;
+      localStorage.setItem('userSettings', JSON.stringify(settings));
+    } catch (e) {
+      // 保存失敗，靜默處理
+      console.error('保存音量設定失敗:', e);
+    }
+    
+    // 直接應用總音量到所有播放器
+    // 優先級規則：單獨靜音的串流在調整總體音量時應該維持靜音
+    const players = (window as any).players;
+    const streamData = (window as any).streamData;
+    
+    if (players && streamData) {
+      Object.keys(players).forEach(idStr => {
+        const id = parseInt(idStr);
+        if (players[id] && players[id].player && streamData[id]) {
+          try {
+            // 檢查該串流是否單獨靜音
+            const streamIsMuted = streamData[id].isMuted || false;
+            
+            // 如果串流單獨靜音，維持靜音狀態（不調整音量）
+            if (streamIsMuted) {
+              if (streamData[id].platform === 'twitch') {
+                if (typeof players[id].player.setMuted === 'function') {
+                  players[id].player.setMuted(true);
+                }
+              } else if (streamData[id].platform === 'youtube') {
+                if (typeof players[id].player.mute === 'function') {
+                  players[id].player.mute();
+                }
+              }
+              // 單獨靜音的串流不調整音量，直接返回
+              return;
             }
-          } else {
-            if (typeof player.unMute === 'function') {
-              player.unMute();
+            
+            // 如果串流沒有單獨靜音，則根據總體音量調整
+            const streamVol = streamData[id].volume || 100;
+            const actualVol = Math.round((streamVol / 100) * volume);
+            
+            if (streamData[id].platform === 'twitch') {
+              if (actualVol === 0) {
+                if (typeof players[id].player.setMuted === 'function') {
+                  players[id].player.setMuted(true);
+                } else if (typeof players[id].player.setVolume === 'function') {
+                  players[id].player.setVolume(0);
+                }
+              } else {
+                if (typeof players[id].player.setMuted === 'function') {
+                  players[id].player.setMuted(false);
+                }
+                if (typeof players[id].player.setVolume === 'function') {
+                  players[id].player.setVolume(actualVol / 100);
+                }
+              }
+            } else if (streamData[id].platform === 'youtube') {
+              if (actualVol === 0) {
+                if (typeof players[id].player.mute === 'function') {
+                  players[id].player.mute();
+                } else if (typeof players[id].player.setVolume === 'function') {
+                  players[id].player.setVolume(0);
+                }
+              } else {
+                if (typeof players[id].player.unMute === 'function') {
+                  players[id].player.unMute();
+                }
+                if (typeof players[id].player.setVolume === 'function') {
+                  players[id].player.setVolume(actualVol);
+                }
+              }
             }
+          } catch (e) {
+            // 靜默處理錯誤
           }
         }
-      } catch (error) {
-        console.error('靜音操作失敗:', error);
+      });
+    }
+    
+    // 觸發自定義事件，通知其他組件總音量已改變
+    window.dispatchEvent(new CustomEvent('masterVolumeChange', { detail: { volume } }));
+  };
+
+  // 處理全部靜音/取消靜音（保存和恢復音量值）
+  const handleMasterMuteChange = (muted: boolean) => {
+    if (muted) {
+      // 靜音：保存當前音量值到 localStorage 的 previousMasterVolume
+      // 無論當前音量是多少，都應該保存（以便取消靜音時恢復）
+      try {
+        const saved = localStorage.getItem('userSettings');
+        const settings = saved ? JSON.parse(saved) : {};
+        // 保存當前的總體音量（如果當前音量為 0，也保存，因為可能是用戶手動設為 0）
+        // 但如果之前有保存的 previousMasterVolume 且當前音量為 0，則不覆蓋
+        if (masterVolume > 0 || !settings.previousMasterVolume) {
+          settings.previousMasterVolume = masterVolume;
+        }
+        // 同時保存當前的 masterVolume 到 localStorage
+        settings.masterVolume = masterVolume;
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+      } catch (e) {
+        // 保存失敗，靜默處理
+        console.error('保存音量設定失敗:', e);
+      }
+      setMasterMuted(true);
+    } else {
+      // 取消靜音：從 localStorage 讀取之前保存的音量值
+      let restoreVolume = 100; // 默認值
+      try {
+        const saved = localStorage.getItem('userSettings');
+        if (saved) {
+          const settings = JSON.parse(saved);
+          // 優先使用 previousMasterVolume，如果不存在則使用 masterVolume，最後使用默認值 100
+          if (settings.previousMasterVolume !== undefined && settings.previousMasterVolume > 0) {
+            restoreVolume = settings.previousMasterVolume;
+          } else if (settings.masterVolume !== undefined && settings.masterVolume > 0) {
+            restoreVolume = settings.masterVolume;
+          }
+        }
+      } catch (e) {
+        // 讀取失敗，使用默認值 100
+        console.error('讀取音量設定失敗:', e);
+      }
+      
+      // 更新音量狀態
+      setMasterVolume(restoreVolume);
+      setMasterMuted(false);
+      
+      // 同步到全局變量
+      (window as any).masterVolume = restoreVolume;
+      
+      // 同步到 DOM 元素（為了兼容舊的 JavaScript 代碼）
+      const masterVolSlider = document.getElementById('master-volume');
+      if (masterVolSlider && (masterVolSlider as HTMLInputElement).value !== undefined) {
+        (masterVolSlider as HTMLInputElement).value = restoreVolume.toString();
+      }
+      
+      // 更新 localStorage 中的 masterVolume（恢復後應該更新）
+      try {
+        const saved = localStorage.getItem('userSettings');
+        const settings = saved ? JSON.parse(saved) : {};
+        settings.masterVolume = restoreVolume;
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+      } catch (e) {
+        // 保存失敗，靜默處理
+        console.error('更新音量設定失敗:', e);
       }
     }
+    
+    // 直接對所有播放器應用靜音/取消靜音
+    // 優先級規則：
+    // - 靜音狀態：全部 > 單獨（如果全部靜音，所有串流都靜音）
+    // - 取消靜音狀態：全部 < 單獨（如果單獨靜音，取消全部靜音時該串流保持靜音）
+    const players = (window as any).players;
+    const streamData = (window as any).streamData;
+    
+    if (players && streamData) {
+      Object.keys(players).forEach(idStr => {
+        const id = parseInt(idStr);
+        if (players[id] && players[id].player && streamData[id]) {
+          try {
+            // 檢查該串流是否單獨靜音
+            const streamIsMuted = streamData[id].isMuted || false;
+            
+            if (muted) {
+              // 靜音：全部靜音優先，所有串流都靜音（無論單獨靜音狀態）
+              if (streamData[id].platform === 'twitch') {
+                if (typeof players[id].player.setMuted === 'function') {
+                  players[id].player.setMuted(true);
+                }
+              } else if (streamData[id].platform === 'youtube') {
+                if (typeof players[id].player.mute === 'function') {
+                  players[id].player.mute();
+                }
+              }
+            } else {
+              // 取消靜音：單獨靜音優先，如果串流單獨靜音，則保持靜音
+              if (streamIsMuted) {
+                // 串流單獨靜音，保持靜音狀態（不取消）
+                if (streamData[id].platform === 'twitch') {
+                  if (typeof players[id].player.setMuted === 'function') {
+                    players[id].player.setMuted(true);
+                  }
+                } else if (streamData[id].platform === 'youtube') {
+                  if (typeof players[id].player.mute === 'function') {
+                    players[id].player.mute();
+                  }
+                }
+              } else {
+                // 串流沒有單獨靜音，取消全部靜音時也取消該串流的靜音
+                if (streamData[id].platform === 'twitch') {
+                  if (typeof players[id].player.setMuted === 'function') {
+                    players[id].player.setMuted(false);
+                  }
+                } else if (streamData[id].platform === 'youtube') {
+                  if (typeof players[id].player.unMute === 'function') {
+                    players[id].player.unMute();
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // 靜默處理錯誤
+          }
+        }
+      });
+    }
+    
+    // 觸發 updateMasterVolume 來更新所有播放器的音量（取消靜音時）
+    if (!muted && typeof (window as any).updateMasterVolume === 'function') {
+      (window as any).updateMasterVolume();
+    }
+  };
+
+  // 音量變化
+  const handleVolumeChange = (id: number, volume: number) => {
+    setStreams(prev => {
+      const updatedStreams = prev.map(s => {
+        if (s.id === id) {
+          // 更新全局 streamData
+          if ((window as any).streamData && (window as any).streamData[id]) {
+            (window as any).streamData[id].volume = volume;
+          }
+          
+          // 如果調整音量且之前是靜音狀態，取消靜音
+          const wasMuted = s.isMuted || false;
+          const newMutedState = volume === 0 ? true : false;
+          
+          // 應用音量到播放器
+          if ((window as any).players && (window as any).players[id] && (window as any).players[id].player) {
+            const player = (window as any).players[id].player;
+            const masterVol = (window as any).masterVolume || 100;
+            const actualVol = Math.round((volume / 100) * masterVol);
+            
+            try {
+              if (s.platform === 'twitch') {
+                if (actualVol === 0) {
+                  // 音量為 0，靜音
+                  if (typeof player.setMuted === 'function') {
+                    player.setMuted(true);
+                  } else if (typeof player.setVolume === 'function') {
+                    player.setVolume(0);
+                  }
+                } else {
+                  // 音量不為 0，先取消靜音，再設置音量
+                  if (typeof player.setMuted === 'function') {
+                    player.setMuted(false);
+                  }
+                  if (typeof player.setVolume === 'function') {
+                    player.setVolume(actualVol / 100);
+                  }
+                }
+              } else if (s.platform === 'youtube') {
+                try {
+                  const playerState = player.getPlayerState();
+                  if (playerState !== undefined) {
+                    if (actualVol === 0) {
+                      // 音量為 0，靜音
+                      if (typeof player.mute === 'function') {
+                        player.mute();
+                      } else if (typeof player.setVolume === 'function') {
+                        player.setVolume(0);
+                      }
+                    } else {
+                      // 音量不為 0，先取消靜音，再設置音量
+                      if (typeof player.unMute === 'function') {
+                        player.unMute();
+                      }
+                      if (typeof player.setVolume === 'function') {
+                        player.setVolume(actualVol);
+                      }
+                    }
+                  }
+                } catch (e) {
+                  // 播放器尚未就緒，稍後再試
+                  setTimeout(() => {
+                    if ((window as any).players && (window as any).players[id] && (window as any).players[id].player) {
+                      try {
+                        if (actualVol === 0) {
+                          if (typeof (window as any).players[id].player.mute === 'function') {
+                            (window as any).players[id].player.mute();
+                          }
+                        } else {
+                          if (typeof (window as any).players[id].player.unMute === 'function') {
+                            (window as any).players[id].player.unMute();
+                          }
+                          if (typeof (window as any).players[id].player.setVolume === 'function') {
+                            (window as any).players[id].player.setVolume(actualVol);
+                          }
+                        }
+                      } catch (err) {
+                        // 靜默處理錯誤
+                      }
+                    }
+                  }, 500);
+                }
+              }
+            } catch (error) {
+              console.error('音量設置失敗:', error);
+            }
+          }
+          
+          return { ...s, volume, isMuted: newMutedState };
+        }
+        return s;
+      });
+      
+      return updatedStreams;
+    });
+  };
+
+  // 切換靜音（簡化版本，與 muteAll 一樣簡單）
+  const handleToggleMute = (id: number) => {
+    setStreams(prev => {
+      const updatedStreams = prev.map(s => {
+        if (s.id === id) {
+          const newMutedState = !(s.isMuted || false);
+          
+          // 更新全局 streamData
+          if ((window as any).streamData && (window as any).streamData[id]) {
+            (window as any).streamData[id].isMuted = newMutedState;
+          }
+          
+          // 直接對播放器應用靜音/取消靜音（與 muteAll 完全一樣的邏輯）
+          // 使用全局的 players 和 streamData（與 js/volume.js 中的 muteAll 一致）
+          const players = (window as any).players;
+          const streamData = (window as any).streamData;
+          
+          if (players && players[id] && players[id].player && streamData && streamData[id]) {
+            try {
+              if (streamData[id].platform === 'twitch') {
+                if (newMutedState) {
+                  // Twitch 播放器：使用 setMuted() 方法靜音
+                  if (typeof players[id].player.setMuted === 'function') {
+                    players[id].player.setMuted(true);
+                  } else if (typeof players[id].player.setVolume === 'function') {
+                    // 如果沒有 setMuted 方法，fallback 到設置音量為 0
+                    players[id].player.setVolume(0);
+                  }
+                } else {
+                  // Twitch 播放器：使用 setMuted() 方法取消靜音
+                  if (typeof players[id].player.setMuted === 'function') {
+                    players[id].player.setMuted(false);
+                  }
+                  // 音量會通過 applyMasterVolumeToStream 來設置
+                  if (typeof (window as any).applyMasterVolumeToStream === 'function') {
+                    (window as any).applyMasterVolumeToStream(id);
+                  }
+                }
+              } else if (streamData[id].platform === 'youtube') {
+                if (newMutedState) {
+                  // YouTube 播放器：使用 mute() 方法或設置音量為 0
+                  if (typeof players[id].player.mute === 'function') {
+                    players[id].player.mute();
+                  } else if (typeof players[id].player.setVolume === 'function') {
+                    try {
+                      const playerState = players[id].player.getPlayerState();
+                      if (playerState !== undefined) {
+                        players[id].player.setVolume(0);
+                      }
+                    } catch (e) {
+                      // 播放器尚未就緒，稍後再試
+                      setTimeout(() => {
+                        if (players[id] && players[id].player) {
+                          if (typeof players[id].player.mute === 'function') {
+                            players[id].player.mute();
+                          } else if (typeof players[id].player.setVolume === 'function') {
+                            try {
+                              players[id].player.setVolume(0);
+                            } catch (err) {
+                              // 靜默處理錯誤
+                            }
+                          }
+                        }
+                      }, 500);
+                    }
+                  }
+                } else {
+                  // YouTube 播放器：使用 unMute() 方法
+                  if (typeof players[id].player.unMute === 'function') {
+                    players[id].player.unMute();
+                  }
+                }
+              }
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+          
+          return { ...s, isMuted: newMutedState };
+        }
+        return s;
+      });
+      
+      return updatedStreams;
+    });
   };
 
   // Show Privacy Page
@@ -384,6 +827,10 @@ export default function App() {
         onToggleMute={handleToggleMute}
         onRemoveStream={handleRemoveStream}
         onToggleAllChat={handleToggleAllChat}
+        masterVolume={masterVolume}
+        masterMuted={masterMuted}
+        onMasterVolumeChange={handleMasterVolumeChange}
+        onMasterMuteChange={handleMasterMuteChange}
         onMoveStreamUp={(id) => {
           setStreams(prev => {
             const index = prev.findIndex(s => s.id === id);

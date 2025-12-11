@@ -388,7 +388,10 @@ function saveUserSettings() {
   const settings = {
     // 控制面板設置
     controlPanel: {
-      collapsed: document.getElementById('control-panel').classList.contains('collapsed'),
+      collapsed: (() => {
+        const panel = document.getElementById('control-panel');
+        return panel ? panel.classList.contains('collapsed') : false;
+      })(),
       position: (() => {
         const panel = document.getElementById('control-panel');
         const savedPosition = localStorage.getItem('controlPanelPosition');
