@@ -9,6 +9,7 @@ import { AboutPage } from './components/AboutPage';
 import { PrivacyPage } from './components/PrivacyPage';
 import { StreamContainer } from './components/StreamContainer';
 import { parseStreamUrl, validateUrl, type StreamData } from './utils/streamUtils';
+import { useLayout } from './hooks/useLayout';
 
 type Page = 'home' | 'about' | 'privacy';
 
@@ -51,6 +52,9 @@ export default function App() {
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [streams, setStreams] = useState<StreamData[]>([]);
   const streamCountRef = useRef(0);
+  
+  // 布局管理
+  const { currentLayout, setLayout } = useLayout(streams.length);
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -320,6 +324,7 @@ export default function App() {
       <StreamContainer
         streams={streams}
         theme={theme}
+        layoutType={currentLayout}
         onRemove={handleRemoveStream}
         onReload={handleReloadStream}
         onToggleChat={handleToggleChat}
@@ -350,6 +355,8 @@ export default function App() {
         onShowTutorial={() => setShowTutorial(true)}
         onShowAbout={() => setCurrentPage('about')}
         streams={streams}
+        currentLayout={currentLayout}
+        onLayoutChange={setLayout}
         onVolumeChange={handleVolumeChange}
         onToggleMute={handleToggleMute}
         onRemoveStream={handleRemoveStream}

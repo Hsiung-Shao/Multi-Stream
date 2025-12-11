@@ -5,6 +5,7 @@ import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { StreamData } from '../utils/streamUtils';
+import type { LayoutType } from '../utils/layoutUtils';
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -15,6 +16,8 @@ interface ControlPanelProps {
   onShowTutorial: () => void;
   onShowAbout: () => void;
   streams: StreamData[];
+  currentLayout?: LayoutType;
+  onLayoutChange?: (layout: LayoutType) => void;
   onVolumeChange?: (id: number, volume: number) => void;
   onMoveStreamUp?: (id: number) => void;
   onMoveStreamDown?: (id: number) => void;
@@ -31,6 +34,8 @@ export function ControlPanel({
   onShowTutorial,
   onShowAbout,
   streams,
+  currentLayout = 1,
+  onLayoutChange,
   onVolumeChange,
   onMoveStreamUp,
   onMoveStreamDown,
@@ -47,7 +52,7 @@ export function ControlPanel({
     // 觸發自定義事件，通知 StreamBox 總音量已改變
     window.dispatchEvent(new CustomEvent('masterVolumeChange', { detail: { volume: volume[0] } }));
   }, [volume]);
-  const [selectedLayout, setSelectedLayout] = useState<number | null>(null);
+  
   const [selectedChatLayout, setSelectedChatLayout] = useState<number | null>(null);
   const [navbarHeight, setNavbarHeight] = useState(64); // 默認 64px (4rem)
 
@@ -110,11 +115,15 @@ export function ControlPanel({
             {layouts.map((layout) => (
               <button
                 key={layout.id}
-                onClick={() => setSelectedLayout(layout.id)}
+                onClick={() => {
+                  if (onLayoutChange) {
+                    onLayoutChange(layout.id as LayoutType);
+                  }
+                }}
                 title={layout.label}
                 aria-label={layout.label}
                 className={`aspect-square rounded-lg border-2 transition-all ${
-                  selectedLayout === layout.id
+                  currentLayout === layout.id
                     ? 'border-purple-500 bg-purple-500/20'
                     : theme === 'dark'
                     ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'

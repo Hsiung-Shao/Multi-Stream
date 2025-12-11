@@ -4,10 +4,12 @@ import { loadTwitchPlayerApi, loadYouTubeIframeApi } from '../utils/loadPlayerAp
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
+import type { LayoutStyle } from '../utils/layoutUtils';
 
 interface StreamBoxProps {
   streamData: StreamData;
   theme: 'light' | 'dark';
+  layoutStyle?: LayoutStyle;
   onRemove: (id: number) => void;
   onReload: (id: number) => void;
   onToggleChat: (id: number) => void;
@@ -36,6 +38,7 @@ declare global {
 export function StreamBox({
   streamData,
   theme,
+  layoutStyle,
   onRemove,
   onReload,
   onToggleChat,
@@ -586,47 +589,29 @@ export function StreamBox({
     onToggleChat(streamData.id);
   };
 
-  // 預設位置 - 佔滿主內容區域（僅減去 Navbar）
+  // 應用布局樣式
   useEffect(() => {
-    if (boxRef.current) {
-      // 獲取 Navbar 高度（動態計算）
-      const navbar = document.querySelector('nav');
-      const navbarHeight = navbar ? navbar.getBoundingClientRect().height : 64; // 默認 64px (4rem)
-      
-      // 計算可用空間（僅減去 Navbar）
-      const availableWidth = window.innerWidth;
-      const availableHeight = window.innerHeight - navbarHeight;
-      
-      boxRef.current.style.width = availableWidth + 'px';
-      boxRef.current.style.height = availableHeight + 'px';
-      boxRef.current.style.left = '0';
-      boxRef.current.style.top = navbarHeight + 'px';
+    if (boxRef.current && layoutStyle) {
+      // 應用布局樣式（容器已經處理了 Navbar 偏移）
+      boxRef.current.style.position = layoutStyle.position || 'absolute';
+      boxRef.current.style.left = layoutStyle.left;
+      boxRef.current.style.top = layoutStyle.top;
+      boxRef.current.style.width = layoutStyle.width;
+      boxRef.current.style.height = layoutStyle.height;
       boxRef.current.style.right = 'auto';
       boxRef.current.style.bottom = 'auto';
-      boxRef.current.style.position = 'fixed';
+      boxRef.current.style.transition = 'all 0.5s ease';
+    } else if (boxRef.current && !layoutStyle) {
+      // 如果沒有布局樣式，使用預設位置 - 佔滿容器
+      boxRef.current.style.width = '100%';
+      boxRef.current.style.height = '100%';
+      boxRef.current.style.left = '0';
+      boxRef.current.style.top = '0';
+      boxRef.current.style.right = 'auto';
+      boxRef.current.style.bottom = 'auto';
+      boxRef.current.style.position = 'absolute';
     }
-    
-    // 監聽窗口大小變化
-    const handleResize = () => {
-      if (boxRef.current) {
-        const navbar = document.querySelector('nav');
-        const navbarHeight = navbar ? navbar.getBoundingClientRect().height : 64;
-        
-        const availableWidth = window.innerWidth;
-        const availableHeight = window.innerHeight - navbarHeight;
-        
-        boxRef.current.style.width = availableWidth + 'px';
-        boxRef.current.style.height = availableHeight + 'px';
-        boxRef.current.style.top = navbarHeight + 'px';
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [streamData.id]);
+  }, [streamData.id, layoutStyle]);
 
   // 點擊選中
   const handleBoxClick = () => {
