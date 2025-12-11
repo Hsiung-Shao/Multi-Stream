@@ -611,6 +611,8 @@ const favoriteStreams = {
     localStorage.setItem('favoriteStreams', JSON.stringify(list));
     // 觸發防抖備份（10秒後無新操作才備份）
     debouncedBackup();
+    // 觸發收藏更新事件，通知控制面板更新
+    window.dispatchEvent(new CustomEvent('favoritesUpdated'));
   },
   
   // 添加收藏（異步版本，支援從 videoID 獲取 channelID）
@@ -677,80 +679,21 @@ const favoriteStreams = {
           name = displayName || channelId;
         }
       }
-    } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    } else if (url.includes('youtube.com/watch')) {
+      // 僅支援 https://www.youtube.com/watch?v=xxx 格式
       // 如果已經提供了 channelId，直接使用
       if (channelId) {
         platform = 'youtube';
         if (!name) name = channelId;
       } else {
-        // 嘗試提取 channelId（優先）
-        if (url.includes('youtube.com/channel/')) {
-          const channelMatch = url.match(/youtube\.com\/channel\/([^\/\?]+)/);
-          if (channelMatch) {
-            channelId = channelMatch[1];
-            platform = 'youtube';
-            if (!name) name = channelId;
-          }
-        } else if (url.includes('youtube.com/@') || url.includes('@') && url.includes('youtube')) {
-          // 處理 @username 格式的 URL（例如：www.youtube.com/@浠Mizuki 或 youtube.com/@浠Mizuki）
-          // 匹配各種可能的格式：youtube.com/@xxx, www.youtube.com/@xxx, https://youtube.com/@xxx 等
-          const handleMatch = url.match(/(?:youtube\.com|youtu\.be)\/@([^\/\?\s]+)/i) || 
-                             url.match(/@([a-zA-Z0-9_\u4e00-\u9fa5]+)/);
-          if (handleMatch) {
-            const handle = handleMatch[1];
-            platform = 'youtube';
-            
-            // 使用 YouTube Data API 獲取真實的 channel ID
-            try {
-              const realChannelId = await youtubeApiUtils.getChannelIdFromHandle(handle);
-              if (realChannelId) {
-                channelId = realChannelId;
-                
-                // 如果沒有提供名稱，嘗試獲取頻道標題
-                if (!name) {
-                  try {
-                    const channelTitle = await youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
-                    if (channelTitle) {
-                      name = channelTitle;
-                    } else {
-                      name = `@${handle}`;
-                    }
-                  } catch (error) {
-                    // 獲取標題失敗，使用 handle 作為名稱
-                    name = `@${handle}`;
-                  }
-                }
-              } else {
-                throw new Error('無法獲取頻道 ID');
-              }
-            } catch (error) {
-              // API 調用失敗，返回錯誤
-              const i18n = window.i18n || { t: (key) => key };
-              return { 
-                success: false, 
-                message: `無法獲取頻道資訊: ${error.message || '未知錯誤'}` 
-              };
-            }
-          }
-        } else if (url.includes('youtube.com/c/') || url.includes('youtube.com/user/')) {
-          // 這些 URL 格式需要通過 API 查詢才能獲得 channelId，暫時不處理
-          // 用戶可以通過搜尋功能添加頻道，這樣會自動獲得 channelId
-        }
-        
-        // 如果沒有 channelId，嘗試提取 videoId
-        if (!channelId) {
-          if (url.includes('youtube.com/live/')) {
-            videoId = url.split('live/')[1]?.split('?')[0];
-          } else if (url.includes('youtube.com/watch')) {
-            videoId = new URL(url).searchParams.get('v');
-          } else if (url.includes('youtu.be/')) {
-            videoId = url.split('youtu.be/')[1]?.split('?')[0];
-          }
+        // 僅支援從 youtube.com/watch?v=xxx 提取 videoId
+        if (url.includes('youtube.com/watch')) {
+          videoId = new URL(url).searchParams.get('v');
           if (videoId) {
             platform = 'youtube';
             if (!name) name = videoId;
             
-            // 新功能：透過 YouTube Data API 從 videoID 逆推獲取頻道真實 ID
+            // 透過 YouTube Data API 從 videoID 逆推獲取頻道真實 ID
             try {
               const realChannelId = await youtubeApiUtils.getChannelIdFromVideoId(videoId);
               if (realChannelId) {
@@ -775,6 +718,13 @@ const favoriteStreams = {
           }
         }
       }
+    } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      // 其他 YouTube URL 格式不再支援
+      const i18n = window.i18n || { t: (key) => key };
+      return { 
+        success: false, 
+        message: '僅支援 https://www.youtube.com/watch?v=xxx 格式的 URL' 
+      };
     }
     
     if (!platform) {
@@ -3640,5 +3590,10 @@ if (typeof window !== 'undefined') {
   
   // YouTube API 工具
   window.youtubeApiUtils = youtubeApiUtils;
+  
+  // 暴露收藏系統到全局
+  window.favoriteStreams = favoriteStreams;
+  window.favoriteCategories = favoriteCategories;
+  window.indexedDBBackup = indexedDBBackup;
 }
 

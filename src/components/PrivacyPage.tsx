@@ -1,6 +1,7 @@
 import { ArrowLeft, Globe, Sun, Moon, Shield, Database, Lock, Eye, FileText, Users, AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useI18n } from '../i18n/index';
 
 interface PrivacyPageProps {
   theme: 'light' | 'dark';
@@ -11,6 +12,16 @@ interface PrivacyPageProps {
 }
 
 export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, onNavigateToTerms }: PrivacyPageProps) {
+  const { locale, setLocale, t } = useI18n();
+  
+  const languages = [
+    { value: 'zh-TW' as const, label: t('chineseTraditional') },
+    { value: 'zh-CN' as const, label: t('chineseSimplified') },
+    { value: 'en' as const, label: t('english') },
+    { value: 'ja' as const, label: t('japanese') },
+    { value: 'ko' as const, label: t('korean') },
+  ];
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
       {/* Header Navigation */}
@@ -22,21 +33,21 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
             className={theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-black'}
           >
             <ArrowLeft className="size-4 mr-2" />
-            返回首頁
+            {t('about.backToHome')}
           </Button>
           
           <div className="flex items-center gap-4">
-            <Select defaultValue="zh-TW">
-              <SelectTrigger className={`w-32 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
+            <Select value={locale} onValueChange={(value) => setLocale(value as any)}>
+              <SelectTrigger className={`min-w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="zh-TW">繁體中文</SelectItem>
-                <SelectItem value="zh-CN">简体中文</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="ja">日本語</SelectItem>
-                <SelectItem value="ko">한국어</SelectItem>
+                {languages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
@@ -61,20 +72,20 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           </div>
           
           <h1 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            隱私權政策 Privacy Policy
+            {t('privacy.title')}
           </h1>
           
           <div className={`flex items-center justify-center gap-8 mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             <p>
-              <strong>生效日期：</strong>2025 年 12 月 2 日
+              <strong>{t('privacy.effectiveDate')}</strong>{t('privacy.effectiveDateValue')}
             </p>
             <p>
-              <strong>最新更新：</strong>2025 年 12 月 2 日
+              <strong>{t('privacy.lastUpdated')}</strong>{t('privacy.lastUpdatedValue')}
             </p>
           </div>
           
           <p className={`max-w-3xl mx-auto text-lg leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            MultiStream Hub（以下簡稱「本網站」）由 Hsiung-Shao 獨立開發與營運。我們非常重視您的隱私權。本網站為純前端工具，絕大多數資料僅儲存於您的瀏覽器本地，絕不傳送到任何遠端伺服器。
+            {t('privacy.intro')}
           </p>
         </div>
 
@@ -84,13 +95,13 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Eye className="size-6" />}
-            title="1. 我們不收集的個人資料"
+            title={t('privacy.section1.title')}
             iconColor="blue"
           >
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>本網站不要求註冊、不收集電子郵件、姓名、電話或其他可直接識別您身份的資料</li>
-              <li>不使用後端伺服器儲存任何使用者資料</li>
-              <li>不追蹤跨網站行為、不建立使用者檔案</li>
+              <li>{t('privacy.section1.item1')}</li>
+              <li>{t('privacy.section1.item2')}</li>
+              <li>{t('privacy.section1.item3')}</li>
             </ul>
           </PolicySection>
 
@@ -98,19 +109,19 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Database className="size-6" />}
-            title="1.5. Google Analytics 分析服務"
+            title={t('privacy.section1_5.title')}
             iconColor="green"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              本網站使用 Google Analytics 來分析網站流量和使用情況，以改善用戶體驗。Google Analytics 使用 Cookie 和類似技術來收集匿名統計資料。
+              {t('privacy.section1_5.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>我們使用 Google Analytics 來了解網站使用情況（如頁面瀏覽量、停留時間等）</li>
-              <li>Google Analytics 會收集匿名化的資料，不會識別您的個人身份</li>
-              <li>我們已啟用 IP 匿名化功能，您的 IP 位址會被匿名化處理</li>
-              <li>您可以透過瀏覽器設定拒絕 Cookie，或使用我們的同意橫幅選擇拒絕分析服務</li>
+              <li>{t('privacy.section1_5.item1')}</li>
+              <li>{t('privacy.section1_5.item2')}</li>
+              <li>{t('privacy.section1_5.item3')}</li>
+              <li>{t('privacy.section1_5.item4')}</li>
               <li>
-                Google Analytics 的隱私政策：
+                {t('privacy.section1_5.item5')}
                 <a 
                   href="https://policies.google.com/privacy" 
                   target="_blank" 
@@ -127,23 +138,23 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Database className="size-6" />}
-            title="2. 本地儲存（LocalStorage）使用的資料（唯一儲存位置）"
+            title={t('privacy.section2.title')}
             iconColor="purple"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              我們僅在您的瀏覽器中使用 localStorage 儲存以下資料，全部可隨時手動清除：
+              {t('privacy.section2.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>我的最愛頻道清單（自訂名稱、Twitch/YouTube 網址、分類）</li>
-              <li>版面配置偏好（布局模式、音量設定、聊天室顯示狀態）</li>
-              <li>備份檔案位置（若您啟用本地備份功能）</li>
+              <li>{t('privacy.section2.item1')}</li>
+              <li>{t('privacy.section2.item2')}</li>
+              <li>{t('privacy.section2.item3')}</li>
             </ul>
             <p className={`mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <strong>您可隨時：</strong>
+              <strong>{t('privacy.section2.youCan')}</strong>
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>點擊「管理收藏 → 設定 → 清除所有資料」一鍵刪除</li>
-              <li>或直接在瀏覽器設定中清除本站的 localStorage</li>
+              <li>{t('privacy.section2.item4')}</li>
+              <li>{t('privacy.section2.item5')}</li>
             </ul>
           </PolicySection>
 
@@ -151,17 +162,17 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<FileText className="size-6" />}
-            title="3. 第三方嵌入內容（Twitch & YouTube）"
+            title={t('privacy.section3.title')}
             iconColor="red"
           >
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>當您加入 Twitch 或 YouTube 直播時，本站僅使用官方提供的 iframe 嵌入播放器</li>
-              <li>聊天室同樣使用 Twitch / YouTube 官方嵌入功能</li>
+              <li>{t('privacy.section3.item1')}</li>
+              <li>{t('privacy.section3.item2')}</li>
               <li>
-                這些嵌入內容會直接與 Twitch / YouTube 伺服器連線，其隱私政策分別適用：
+                {t('privacy.section3.item3')}
                 <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
                   <li>
-                    Twitch 隱私權政策：
+                    {t('privacy.section3.item4')}
                     <a 
                       href="https://www.twitch.tv/p/legal/privacy-policy" 
                       target="_blank" 
@@ -172,7 +183,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                     </a>
                   </li>
                   <li>
-                    YouTube 隱私權政策：
+                    {t('privacy.section3.item5')}
                     <a 
                       href="https://policies.google.com/privacy" 
                       target="_blank" 
@@ -191,19 +202,19 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Lock className="size-6" />}
-            title="4. Cookies 與類似技術"
+            title={t('privacy.section4.title')}
             iconColor="yellow"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              本網站本身不使用 Cookies，但我們使用的第三方服務（Google Analytics 和 Google AdSense）可能會使用 Cookies。
+              {t('privacy.section4.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>本網站本身不使用 Cookies 儲存資料</li>
-              <li>我們僅使用 HTML5 localStorage 與 sessionStorage（均屬瀏覽器本地儲存）來儲存您的設定和收藏</li>
-              <li>Google Analytics 使用 Cookie 來收集匿名統計資料（僅在您同意的情況下）</li>
-              <li>Google AdSense 使用 Cookie 來提供個人化廣告（僅在您同意的情況下）</li>
-              <li>您可以透過瀏覽器設定管理或刪除這些 Cookie，或使用我們的同意橫幅選擇拒絕</li>
-              <li>拒絕 Cookie 不會影響網站的基本功能，但可能無法使用某些分析或廣告功能</li>
+              <li>{t('privacy.section4.item1')}</li>
+              <li>{t('privacy.section4.item2')}</li>
+              <li>{t('privacy.section4.item3')}</li>
+              <li>{t('privacy.section4.item4')}</li>
+              <li>{t('privacy.section4.item5')}</li>
+              <li>{t('privacy.section4.item6')}</li>
             </ul>
           </PolicySection>
 
@@ -211,17 +222,17 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<AlertCircle className="size-6" />}
-            title="5. Google AdSense 廣告（已申請 / 未來可能顯示）"
+            title={t('privacy.section5.title')}
             iconColor="orange"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              我們已申請 Google AdSense，若審核通過，將顯示個人化或非個人化廣告。廣告的顯示需要您的同意。
+              {t('privacy.section5.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>我們已申請 Google AdSense，若審核通過，將顯示個人化或非個人化廣告</li>
-              <li>Google AdSense 使用 Cookie 來提供個人化廣告和追蹤廣告效果（僅在您同意的情況下）</li>
+              <li>{t('privacy.section5.item1')}</li>
+              <li>{t('privacy.section5.item2')}</li>
               <li>
-                此時 Google 將作為獨立資料控制者，其隱私政策適用：
+                {t('privacy.section5.item3')}
                 <a 
                   href="https://policies.google.com/privacy" 
                   target="_blank" 
@@ -231,8 +242,8 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                   https://policies.google.com/privacy
                 </a>
               </li>
-              <li>您可隨時在廣告上點擊「AdChoices」選擇退出個人化廣告</li>
-              <li>您也可以透過我們的同意橫幅或瀏覽器設定拒絕廣告 Cookie</li>
+              <li>{t('privacy.section5.item4')}</li>
+              <li>{t('privacy.section5.item5')}</li>
             </ul>
           </PolicySection>
 
@@ -240,18 +251,18 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Shield className="size-6" />}
-            title="5.5. Cookie 同意管理"
+            title={t('privacy.section5_5.title')}
             iconColor="indigo"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              我們使用 Cookie 同意橫幅（Consent Banner）來管理您對 Cookie 的同意。您可以隨時修改您的選擇。
+              {t('privacy.section5_5.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>首次訪問網站時，您會看到 Cookie 同意橫幅</li>
-              <li>您可以選擇接受所有 Cookie、僅接受部分 Cookie，或拒絕所有 Cookie</li>
-              <li>您的選擇會被保存在瀏覽器中，下次訪問時會記住您的偏好</li>
-              <li>您可以隨時透過瀏覽器設定或清除 localStorage 來修改或撤銷同意</li>
-              <li>我們使用 Google Consent Mode v2 來確保符合 GDPR、CCPA 等法規要求</li>
+              <li>{t('privacy.section5_5.item1')}</li>
+              <li>{t('privacy.section5_5.item2')}</li>
+              <li>{t('privacy.section5_5.item3')}</li>
+              <li>{t('privacy.section5_5.item4')}</li>
+              <li>{t('privacy.section5_5.item5')}</li>
             </ul>
           </PolicySection>
 
@@ -259,27 +270,27 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Users className="size-6" />}
-            title="6. 您的權利（GDPR / CCPA / 台灣個資法）"
+            title={t('privacy.section6.title')}
             iconColor="cyan"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              儘管我們不收集可識別個人資料，您仍享有以下權利：
+              {t('privacy.section6.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>要求存取、刪除、更正您的資料 → 直接清除瀏覽器 localStorage 即可</li>
-              <li>反對處理、限制處理 → 停止使用本網站即可</li>
-              <li>資料可攜權 → 可在「管理收藏 → 設定」匯出 JSON 備份檔案</li>
-              <li>撤銷同意 → 清除本地資料即可</li>
+              <li>{t('privacy.section6.item1')}</li>
+              <li>{t('privacy.section6.item2')}</li>
+              <li>{t('privacy.section6.item3')}</li>
+              <li>{t('privacy.section6.item4')}</li>
             </ul>
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              聯絡方式：
+              {t('privacy.section6.contact')}
               <a 
                 href="mailto:feedback@multistreaming.org"
                 className="text-blue-500 hover:underline ml-1"
               >
                 feedback@multistreaming.org
               </a>
-              （48 小時內回覆）
+              {t('privacy.section6.responseTime')}
             </p>
           </PolicySection>
 
@@ -287,11 +298,11 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Shield className="size-6" />}
-            title="7. 兒童隱私"
+            title={t('privacy.section7.title')}
             iconColor="pink"
           >
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              本網站不針對 13 歲以下兒童設計。若您為 13 歲以下，請勿使用本網站。
+              {t('privacy.section7.content')}
             </p>
           </PolicySection>
 
@@ -299,11 +310,11 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<FileText className="size-6" />}
-            title="8. 政策變更"
+            title={t('privacy.section8.title')}
             iconColor="teal"
           >
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              重大變更將於本頁面頂部更新日期並以顯眼方式通知。
+              {t('privacy.section8.content')}
             </p>
           </PolicySection>
 
@@ -311,11 +322,11 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<AlertCircle className="size-6" />}
-            title="9. 聯絡我們"
+            title={t('privacy.section9.title')}
             iconColor="purple"
           >
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              如有任何隱私疑問，請寄信至：
+              {t('privacy.section9.content')}
               <a 
                 href="mailto:feedback@multistreaming.org"
                 className="text-blue-500 hover:underline ml-1"
@@ -329,7 +340,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
         {/* Footer Note */}
         <div className={`mt-16 pt-8 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
           <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-            此政策最後更新於 2025 年 12 月 2 日
+            {t('privacy.footerNote')}
           </p>
         </div>
 
@@ -340,14 +351,14 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
               onClick={onBack}
               className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
-              首頁
+              {t('privacy.home')}
             </button>
             {onNavigateToAbout && (
               <button
                 onClick={onNavigateToAbout}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
-                關於我們
+                {t('privacy.about')}
               </button>
             )}
             {onNavigateToTerms && (
@@ -355,13 +366,13 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                 onClick={onNavigateToTerms}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
-                服務條款
+                {t('privacy.terms')}
               </button>
             )}
           </div>
           
           <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-            © 2025 Hsiung-Shao. All rights reserved.
+            {t('about.copyright')}
           </p>
         </footer>
       </div>

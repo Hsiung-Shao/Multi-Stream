@@ -1,26 +1,626 @@
-import { useState } from 'react';
-import { X, Plus, Trash2, Edit2, Star, Folder } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { ScrollArea } from './ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from '@mui/material';
+import { useI18n } from '../i18n/index';
 
 interface FavoritesManagerProps {
   theme: 'light' | 'dark';
   onClose: () => void;
 }
 
+interface FavoriteItem {
+  id: string;
+  url: string;
+  name: string;
+  platform: 'twitch' | 'youtube';
+  channelId?: string;
+  videoId?: string;
+  categoryId?: string | null;
+  addedAt: string;
+  isLive?: boolean | null;
+  lastChecked?: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+// 聲明全局類型
+declare global {
+  interface Window {
+    favoriteStreams?: {
+      getList: () => FavoriteItem[];
+      add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: FavoriteItem }>;
+      update: (id: string, updates: { name?: string; categoryId?: string | null }) => { success: boolean; message: string };
+      remove: (id: string) => { success: boolean; message: string };
+      load: (item: FavoriteItem | string) => Promise<{ success: boolean; message: string }>;
+      loadMultiple: (items: FavoriteItem[]) => Promise<{ success: boolean; message: string }>;
+    };
+    favoriteCategories?: {
+      getList: () => Category[];
+      add: (name: string) => { success: boolean; message: string; id?: string };
+      update: (id: string, newName: string) => { success: boolean; message: string };
+      remove: (id: string) => void;
+    };
+    youtubeApiUtils?: {
+      getChannelIdFromHandle: (handle: string) => Promise<string>;
+      getChannelIdFromVideoId: (videoId: string) => Promise<string>;
+      getChannelTitleFromChannelId: (channelId: string) => Promise<string>;
+    };
+    indexedDBBackup?: {
+      isEnabled: () => boolean;
+      backup: () => Promise<boolean>;
+    };
+    addStream?: (url: string) => Promise<void>;
+  }
+}
+
+// 防抖備份函數（2秒）
+let backupTimeout: NodeJS.Timeout | null = null;
+function debouncedBackup() {
+  if (backupTimeout) {
+    clearTimeout(backupTimeout);
+  }
+  backupTimeout = setTimeout(() => {
+    if (window.indexedDBBackup?.isEnabled()) {
+      window.indexedDBBackup.backup().catch(() => {
+        // 備份錯誤，靜默處理
+      });
+    }
+  }, 2000); // 2秒後備份
+}
+
+// 解析URL並獲取頻道資訊
+async function parseUrlAndGetChannelInfo(url: string): Promise<{ url: string; name: string; channelId?: string } | null> {
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return null;
+
+  // Twitch URL: https://www.twitch.tv/username
+  if (trimmedUrl.includes('twitch.tv')) {
+    const match = trimmedUrl.match(/twitch\.tv\/([^\/\?]+)/);
+    if (match) {
+      const username = match[1];
+      // Twitch 使用 username 作為 channelId
+      return {
+        url: `https://www.twitch.tv/${username}`,
+        name: username,
+        channelId: username
+      };
+    }
+  }
+
+  // YouTube URL - 僅支援 https://www.youtube.com/watch?v=xxx 格式
+  if (trimmedUrl.includes('youtube.com/watch')) {
+    let videoId: string | undefined;
+
+    // 僅支援從 youtube.com/watch?v=xxx 提取 videoId
+    if (trimmedUrl.includes('youtube.com/watch')) {
+      videoId = new URL(trimmedUrl).searchParams.get('v') || undefined;
+    }
+
+    // 使用 YouTube API 通過 videoId 逆推 channelId
+    if (window.youtubeApiUtils && videoId) {
+      try {
+        // 從 videoId 獲取 channelId（唯一支援的方式）
+        const realChannelId = await window.youtubeApiUtils.getChannelIdFromVideoId(videoId);
+        if (realChannelId) {
+          // 獲取頻道名稱
+          try {
+            const channelTitle = await window.youtubeApiUtils.getChannelTitleFromChannelId(realChannelId);
+            return {
+              url: `https://www.youtube.com/channel/${realChannelId}/live`,
+              name: channelTitle,
+              channelId: realChannelId
+            };
+          } catch {
+            return {
+              url: `https://www.youtube.com/channel/${realChannelId}/live`,
+              name: videoId,
+              channelId: realChannelId
+            };
+          }
+        }
+      } catch (error) {
+        console.error('YouTube API 錯誤:', error);
+      }
+    }
+
+    // 如果無法獲取 channelId，返回 null
+    return null;
+  }
+
+  return null;
+}
+
 export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
+  const { t } = useI18n();
   const [streamUrl, setStreamUrl] = useState('');
   const [streamName, setStreamName] = useState('');
   const [categoryName, setCategoryName] = useState('');
   const [batchUrls, setBatchUrls] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [batchCategory, setBatchCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [batchCategory, setBatchCategory] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedFavorites, setSelectedFavorites] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState<string>('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState('favorites');
+
+  // 載入收藏和分類列表
+  const loadData = useCallback(() => {
+    if (window.favoriteStreams) {
+      setFavorites(window.favoriteStreams.getList());
+    }
+    if (window.favoriteCategories) {
+      setCategories(window.favoriteCategories.getList());
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // 顯示訊息
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  // 添加單個收藏
+  const handleAddFavorite = async () => {
+    if (!streamUrl.trim()) {
+      showMessage('error', t('favorites.pasteUrl'));
+      return;
+    }
+
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    try {
+      const categoryId = selectedCategory === '' || selectedCategory === 'uncategorized' ? null : selectedCategory;
+      const result = await window.favoriteStreams.add(streamUrl, streamName || undefined, categoryId);
+      
+      if (result.success) {
+        showMessage('success', result.message || t('favorites.add'));
+        setStreamUrl('');
+        setStreamName('');
+        setSelectedCategory('');
+        loadData();
+        debouncedBackup();
+      } else {
+        showMessage('error', result.message || '加入失敗'); // TODO: 翻譯
+      }
+    } catch (error) {
+      showMessage('error', `錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+
+  // 批量匯入
+  const handleBatchImport = async () => {
+    if (!batchUrls.trim()) {
+      showMessage('error', t('favorites.pasteUrl'));
+      return;
+    }
+
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    setIsImporting(true);
+    setImportProgress({ current: 0, total: 0 });
+
+    try {
+      // 解析URL列表（支援逗號、換行、空格分隔）
+      const urlList = batchUrls
+        .split(/[,\n\r]+/)
+        .map(url => url.trim())
+        .filter(url => url.length > 0);
+
+      if (urlList.length === 0) {
+        showMessage('error', '未找到有效的網址'); // TODO: 翻譯
+        setIsImporting(false);
+        return;
+      }
+
+      setImportProgress({ current: 0, total: urlList.length });
+
+      const categoryId = batchCategory === '' || batchCategory === 'uncategorized' ? null : batchCategory;
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      // 逐個處理URL
+      for (let i = 0; i < urlList.length; i++) {
+        const url = urlList[i];
+        setImportProgress({ current: i + 1, total: urlList.length });
+
+        try {
+          // 直接使用 favoriteStreams.add，它會使用與單個新增相同的解析邏輯（settings.js）
+          const result = await window.favoriteStreams.add(
+            url,
+            undefined, // 讓系統自動獲取頻道名稱
+            categoryId
+          );
+
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+            errors.push(`${url}: ${result.message}`);
+          }
+        } catch (error) {
+          failCount++;
+          errors.push(`${url}: ${error instanceof Error ? error.message : '未知錯誤'}`);
+        }
+      }
+
+      setIsImporting(false);
+      setBatchUrls('');
+
+      if (successCount > 0) {
+        loadData();
+        debouncedBackup();
+        showMessage('success', `成功匯入 ${successCount} 個收藏${failCount > 0 ? `，失敗 ${failCount} 個` : ''}`);
+        // 匯入成功後切換到"我的收藏"標籤頁
+        setActiveTab('favorites');
+      } else {
+        showMessage('error', `匯入失敗: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`);
+      }
+    } catch (error) {
+      setIsImporting(false);
+      showMessage('error', `匯入錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+
+  // 批量刪除
+  const handleBatchDelete = () => {
+    if (selectedFavorites.size === 0) {
+      showMessage('error', '請選擇要刪除的收藏');
+      return;
+    }
+
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    if (!confirm(`確定要刪除選中的 ${selectedFavorites.size} 個收藏嗎？`)) {
+      return;
+    }
+
+    let deletedCount = 0;
+    selectedFavorites.forEach(id => {
+      const result = window.favoriteStreams!.remove(id);
+      if (result.success) {
+        deletedCount++;
+      }
+    });
+
+    setSelectedFavorites(new Set());
+    loadData();
+    
+    // 刪除操作立即備份
+    if (window.indexedDBBackup?.isEnabled()) {
+      if (backupTimeout) {
+        clearTimeout(backupTimeout);
+      }
+      window.indexedDBBackup.backup().catch(() => {});
+    }
+
+    showMessage('success', `${t('favorites.delete')} ${deletedCount} ${t('favorites.myFavorites')}`);
+  };
+
+  // 全選/取消全選
+  const handleSelectAll = () => {
+    const filtered = getFilteredFavorites();
+    setSelectedFavorites(new Set(filtered.map(f => f.id)));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedFavorites(new Set());
+  };
+
+  // 載入選中的收藏
+  const handleLoadSelected = async () => {
+    if (selectedFavorites.size === 0) {
+      showMessage('error', t('favorites.loadSelected')); // TODO: 更好的錯誤訊息
+      return;
+    }
+
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    try {
+      const selectedItems = favorites.filter(f => selectedFavorites.has(f.id));
+      const result = await window.favoriteStreams.loadMultiple(selectedItems);
+      if (result.success) {
+        showMessage('success', result.message || t('favorites.loadSelected'));
+      } else {
+        showMessage('error', result.message || '載入失敗'); // TODO: 翻譯
+      }
+    } catch (error) {
+      showMessage('error', `${t('common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+
+  // 載入分類中的所有收藏
+  const handleLoadCategory = async (categoryId: string) => {
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    try {
+      // 獲取該分類下的所有收藏
+      const categoryFavorites = favorites.filter(f => f.categoryId === categoryId);
+      
+      if (categoryFavorites.length === 0) {
+        showMessage('error', t('favorites.noFavorites')); // TODO: 更好的錯誤訊息
+        return;
+      }
+
+      const result = await window.favoriteStreams.loadMultiple(categoryFavorites);
+      if (result.success) {
+        const category = categories.find(c => c.id === categoryId);
+        showMessage('success', result.message || `${t('favorites.loadCategory')}: ${category?.name || categoryId}`);
+      } else {
+        showMessage('error', result.message || '載入失敗'); // TODO: 翻譯
+      }
+    } catch (error) {
+      showMessage('error', `${t('common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+
+  // 獲取過濾後的收藏列表
+  const getFilteredFavorites = (): FavoriteItem[] => {
+    let filtered = favorites;
+    if (filterCategory !== 'all') {
+      if (filterCategory === 'uncategorized') {
+        filtered = favorites.filter(f => !f.categoryId);
+      } else {
+        filtered = favorites.filter(f => f.categoryId === filterCategory);
+      }
+    }
+    return filtered;
+  };
+
+  // 進入編輯模式
+  const handleStartEdit = (favorite: FavoriteItem) => {
+    setEditingId(favorite.id);
+    setEditName(favorite.name);
+    setEditCategory(favorite.categoryId || '');
+  };
+
+  // 取消編輯
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditCategory('');
+  };
+
+  // 保存編輯
+  const handleSaveEdit = () => {
+    if (!editingId) return;
+
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    const categoryId = editCategory === '' || editCategory === 'uncategorized' ? null : editCategory;
+    const result = window.favoriteStreams.update(editingId, {
+      name: editName,
+      categoryId: categoryId
+    });
+
+    if (result.success) {
+      showMessage('success', result.message || '已更新收藏');
+      handleCancelEdit();
+      loadData();
+      debouncedBackup();
+    } else {
+      showMessage('error', result.message || '更新失敗');
+    }
+  };
+
+  // 刪除單個收藏
+  const handleDeleteFavorite = (id: string) => {
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    if (!confirm(`${t('favorites.delete')}?`)) {
+      return;
+    }
+
+    const result = window.favoriteStreams.remove(id);
+    if (result.success) {
+      showMessage('success', result.message || t('favorites.delete'));
+      loadData();
+      
+      // 刪除操作立即備份
+      if (window.indexedDBBackup?.isEnabled()) {
+        if (backupTimeout) {
+          clearTimeout(backupTimeout);
+        }
+        window.indexedDBBackup.backup().catch(() => {});
+      }
+    } else {
+      showMessage('error', result.message || t('favorites.delete')); // TODO: 更好的錯誤訊息
+    }
+  };
+
+  // 載入單個收藏
+  const handleLoadFavorite = async (id: string) => {
+    if (!window.favoriteStreams) {
+      showMessage('error', '收藏系統未初始化'); // TODO: 翻譯
+      return;
+    }
+
+    try {
+      const favorite = favorites.find(f => f.id === id);
+      if (!favorite) {
+        showMessage('error', t('favorites.noFavorites')); // TODO: 更好的錯誤訊息
+        return;
+      }
+      const result = await window.favoriteStreams.load(favorite);
+      if (result.success) {
+        showMessage('success', result.message || t('favorites.load'));
+      } else {
+        showMessage('error', result.message || '載入失敗'); // TODO: 翻譯
+      }
+    } catch (error) {
+      showMessage('error', `${t('common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+
+  // 添加分類
+  const handleAddCategory = () => {
+    if (!categoryName.trim()) {
+      showMessage('error', t('favorites.categoryName'));
+      return;
+    }
+
+    if (!window.favoriteCategories) {
+      showMessage('error', '分類系統未初始化');
+      return;
+    }
+
+    const result = window.favoriteCategories.add(categoryName);
+    if (result.success) {
+      showMessage('success', result.message || '已新增分類');
+      setCategoryName('');
+      loadData();
+      debouncedBackup();
+    } else {
+      showMessage('error', result.message || '新增失敗');
+    }
+  };
+
+  // 匯出JSON
+  const handleExportJSON = () => {
+    try {
+      const data = {
+        favoriteStreams: favorites,
+        favoriteCategories: categories,
+        exportDate: new Date().toISOString()
+      };
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `favorites-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showMessage('success', '已匯出JSON檔案');
+    } catch (error) {
+      showMessage('error', `匯出失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+
+  // 匯入JSON
+  const handleImportJSON = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if (!window.favoriteStreams || !window.favoriteCategories) {
+          showMessage('error', '收藏系統未初始化');
+          return;
+        }
+
+        // 獲取現有收藏列表
+        const existingFavorites = window.favoriteStreams.getList();
+        const existingUrls = new Set(existingFavorites.map(f => f.url));
+
+        // 匯入分類
+        if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
+          for (const cat of data.favoriteCategories) {
+            if (cat.id && cat.name) {
+              const existing = window.favoriteCategories.getList();
+              if (!existing.find(c => c.id === cat.id)) {
+                // 如果分類不存在，嘗試添加（但無法直接添加指定ID的分類，需要通過add方法）
+                // 這裡只檢查名稱是否重複
+                if (!existing.find(c => c.name === cat.name)) {
+                  window.favoriteCategories.add(cat.name);
+                }
+              }
+            }
+          }
+        }
+
+        // 匯入收藏（檢測重複）
+        let importedCount = 0;
+        let skippedCount = 0;
+
+        if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
+          for (const fav of data.favoriteStreams) {
+            if (fav.url && !existingUrls.has(fav.url)) {
+              try {
+                const result = await window.favoriteStreams.add(
+                  fav.url,
+                  fav.name,
+                  fav.categoryId || null,
+                  fav.channelId
+                );
+                if (result.success) {
+                  importedCount++;
+                  existingUrls.add(fav.url);
+                } else {
+                  skippedCount++;
+                }
+              } catch (error) {
+                skippedCount++;
+              }
+            } else {
+              skippedCount++;
+            }
+          }
+        }
+
+        loadData();
+        debouncedBackup();
+
+        showMessage('success', `已匯入 ${importedCount} 個收藏${skippedCount > 0 ? `，跳過 ${skippedCount} 個重複項目` : ''}`);
+      } catch (error) {
+        showMessage('error', `匯入失敗: ${error instanceof Error ? error.message : 'JSON格式錯誤'}`);
+      }
+    };
+    input.click();
+  };
+
+  const filteredFavorites = getFilteredFavorites();
+  const favoriteCount = filteredFavorites.length;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -32,9 +632,9 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               <Star className="size-6 text-white" />
             </div>
             <div>
-              <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>收藏管理</h2>
+              <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.title')}</h2>
               <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                管理您的收藏串流和分類
+                {t('favorites.subtitle')}
               </p>
             </div>
           </div>
@@ -49,116 +649,132 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1">
-          <Tabs defaultValue="favorites" className="p-6">
-            <TabsList className={`grid w-full grid-cols-3 mb-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <TabsTrigger value="favorites">收藏串流</TabsTrigger>
-              <TabsTrigger value="categories">分類管理</TabsTrigger>
-              <TabsTrigger value="settings">設定</TabsTrigger>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6 h-full flex flex-col">
+            <TabsList className={`grid w-full grid-cols-3 mb-6 flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <TabsTrigger value="favorites">{t('favorites.myFavorites')}</TabsTrigger>
+              <TabsTrigger value="categories">{t('favorites.categoryManagement')}</TabsTrigger>
+              <TabsTrigger value="settings">{t('favorites.settings')}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="favorites" className="space-y-4">
+            <TabsContent value="favorites" className="flex flex-col flex-1 min-h-0 space-y-4">
               {/* Add Favorite */}
-              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>新增收藏</h3>
+              <div className={`p-4 rounded-lg border flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.addFavorite')}</h3>
                 <div className="flex gap-2">
                   <Input
                     type="text"
-                    placeholder="貼上串流網址"
+                    placeholder={t('favorites.pasteUrl')}
                     value={streamUrl}
                     onChange={(e) => setStreamUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddFavorite()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
                   />
                   <Input
                     type="text"
-                    placeholder="自訂名稱 (選填)"
+                    placeholder={t('favorites.customName')}
                     value={streamName}
                     onChange={(e) => setStreamName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddFavorite()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
                   />
                   <Select value={selectedCategory || "uncategorized"} onValueChange={(value) => setSelectedCategory(value === "uncategorized" ? "" : value)}>
                     <SelectTrigger className={`w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
-                      <SelectValue placeholder="未分類" />
+                      <SelectValue placeholder={t('favorites.uncategorized')} />
                     </SelectTrigger>
                     <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                      <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>未分類</SelectItem>
-                      <SelectItem value="gaming" className={theme === 'dark' ? 'text-white' : 'text-black'}>遊戲</SelectItem>
-                      <SelectItem value="music" className={theme === 'dark' ? 'text-white' : 'text-black'}>音樂</SelectItem>
+                      <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <Button className="bg-purple-600 hover:bg-purple-700">
+                  <Button onClick={handleAddFavorite} className="bg-purple-600 hover:bg-purple-700">
                     <Plus className="size-4 mr-2" />
-                    加入收藏
+                    {t('favorites.add')}
                   </Button>
                 </div>
               </div>
 
               {/* Batch Import */}
-              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>批量匯入</h3>
+              <div className={`p-4 rounded-lg border flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.batchImport')}</h3>
                 <div className="space-y-3">
                   <Textarea
-                    placeholder={`貼上多個網址，以逗號(,)分隔\n例如：\nhttps://www.twitch.tv/streamer1, https://www.youtube.com/watch?v=xxx, https://youtu.be/xxx`}
+                    placeholder={`貼上多個網址，以逗號或換行分隔\n例如：\nhttps://www.twitch.tv/streamer1\nhttps://www.youtube.com/watch?v=xxx`}
                     value={batchUrls}
                     onChange={(e) => setBatchUrls(e.target.value)}
                     style={{ height: '150px' }}
                     className={theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}
+                    disabled={isImporting}
                   />
+                  {isImporting && (
+                    <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {t('common.loading')} {importProgress.current} / {importProgress.total}
+                    </div>
+                  )}
                   <div className="flex gap-2">
-                    <Select value={batchCategory || "uncategorized"} onValueChange={(value) => setBatchCategory(value === "uncategorized" ? "" : value)}>
+                    <Select value={batchCategory || "uncategorized"} onValueChange={(value) => setBatchCategory(value === "uncategorized" ? "" : value)} disabled={isImporting}>
                       <SelectTrigger className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
-                        <SelectValue placeholder="未分類" />
+                        <SelectValue placeholder={t('favorites.uncategorized')} />
                       </SelectTrigger>
                       <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                        <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>未分類</SelectItem>
-                        <SelectItem value="gaming" className={theme === 'dark' ? 'text-white' : 'text-black'}>遊戲</SelectItem>
-                        <SelectItem value="music" className={theme === 'dark' ? 'text-white' : 'text-black'}>音樂</SelectItem>
+                        <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
+                        {categories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <Button className="bg-purple-600 hover:bg-purple-700">
-                      批量匯入
+                    <Button onClick={handleBatchImport} disabled={isImporting} className="bg-purple-600 hover:bg-purple-700">
+                      {isImporting ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+                      {t('favorites.batchImport')}
                     </Button>
                   </div>
                 </div>
               </div>
 
               {/* Favorites List */}
-              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>我的收藏(0)</h3>
-                <div className="flex gap-2 mb-4 flex-wrap">
+              <div className={`p-4 rounded-lg border flex flex-col ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <h3 className={`mb-4 flex-shrink-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.myFavorites')}({favoriteCount})</h3>
+                <div className="flex gap-2 mb-4 flex-wrap flex-shrink-0">
                   <Select value={filterCategory} onValueChange={setFilterCategory}>
                     <SelectTrigger className={`w-[120px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                      <SelectItem value="all" className={theme === 'dark' ? 'text-white' : 'text-black'}>全部</SelectItem>
-                      <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>未分類</SelectItem>
-                      <SelectItem value="gaming" className={theme === 'dark' ? 'text-white' : 'text-black'}>遊戲</SelectItem>
-                      <SelectItem value="music" className={theme === 'dark' ? 'text-white' : 'text-black'}>音樂</SelectItem>
+                      <SelectItem value="all" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.all')}</SelectItem>
+                      <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={handleSelectAll}
                     className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
                   >
-                    全選
+                    {t('favorites.selectAll')}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={handleDeselectAll}
                     className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
                   >
-                    取消全選
+                    {t('favorites.deselectAll')}
                   </Button>
                   <Button
                     size="sm"
+                    onClick={handleLoadSelected}
                     className="bg-purple-600 hover:bg-purple-700"
                   >
-                    一鍵載入選中
+                    {t('favorites.loadSelected')}
                   </Button>
                   <Button
                     size="sm"
+                    onClick={handleBatchDelete}
                     style={{ 
                       backgroundColor: isDeleteHovered ? '#b91c1c' : '#dc2626', 
                       color: 'white' 
@@ -166,94 +782,400 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     onMouseEnter={() => setIsDeleteHovered(true)}
                     onMouseLeave={() => setIsDeleteHovered(false)}
                   >
-                    刪除
+                    {t('favorites.delete')}
                   </Button>
                 </div>
-                <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                  暫無收藏
+                {/* 收藏列表 - 設置最大高度限制並增加滾動 */}
+                <div style={{ maxHeight: '250px', overflowY: 'scroll' }}>
+                  <ScrollArea className="h-full">
+                    {filteredFavorites.length === 0 ? (
+                      <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {t('favorites.noFavorites')}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 pr-4">
+                        {filteredFavorites.map(favorite => (
+                          <FavoriteItem
+                            key={favorite.id}
+                            favorite={favorite}
+                            categories={categories}
+                            theme={theme}
+                            isSelected={selectedFavorites.has(favorite.id)}
+                            isEditing={editingId === favorite.id}
+                            editName={editName}
+                            editCategory={editCategory}
+                            onSelect={(id, checked) => {
+                              const newSelected = new Set(selectedFavorites);
+                              if (checked) {
+                                newSelected.add(id);
+                              } else {
+                                newSelected.delete(id);
+                              }
+                              setSelectedFavorites(newSelected);
+                            }}
+                            onStartEdit={handleStartEdit}
+                            onCancelEdit={handleCancelEdit}
+                            onSaveEdit={handleSaveEdit}
+                            onEditNameChange={setEditName}
+                            onEditCategoryChange={setEditCategory}
+                            onDelete={handleDeleteFavorite}
+                            onLoad={handleLoadFavorite}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
                 </div>
               </div>
+
+              {/* 資料儲存提示 - 在"我的收藏"區塊下方，綠色半透明玻璃效果 */}
+              {message && message.type === 'success' && (
+                <div className={`p-3 rounded-lg text-sm backdrop-blur-md flex-shrink-0 text-white ${
+                  theme === 'dark' 
+                    ? 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10' 
+                    : 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10'
+                }`}>
+                  {message.text}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="categories" className="space-y-4">
               {/* Add Category */}
               <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>新增分類</h3>
+                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.addCategory')}</h3>
                 <div className="flex gap-2">
                   <Input
                     type="text"
-                    placeholder="分類名稱"
+                    placeholder={t('favorites.categoryName')}
                     value={categoryName}
                     onChange={(e) => setCategoryName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
                   />
-                  <Button className="bg-purple-600 hover:bg-purple-700">
+                  <Button onClick={handleAddCategory} className="bg-purple-600 hover:bg-purple-700">
                     <Plus className="size-4 mr-2" />
-                    新增
+                    {t('common.add')}
                   </Button>
                 </div>
               </div>
 
               {/* Categories List */}
               <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>分類列表</h3>
-                <div className="space-y-2">
-                  <CategoryItem theme={theme} name="遊戲" count={0} />
-                  <CategoryItem theme={theme} name="音樂" count={0} />
-                </div>
+                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.categoryManagement')}</h3>
+                {categories.length === 0 ? (
+                  <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {t('favorites.noCategories')}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {categories.map(cat => {
+                      const count = favorites.filter(f => f.categoryId === cat.id).length;
+                      return (
+                        <CategoryItem
+                          key={cat.id}
+                          category={cat}
+                          count={count}
+                          theme={theme}
+                          onLoad={() => handleLoadCategory(cat.id)}
+                          onUpdate={(id, newName) => {
+                            if (window.favoriteCategories) {
+                              const result = window.favoriteCategories.update(id, newName);
+                              if (result.success) {
+                                showMessage('success', result.message || '已更新分類');
+                                loadData();
+                                debouncedBackup();
+                              } else {
+                                showMessage('error', result.message || '更新失敗');
+                              }
+                            }
+                          }}
+                          onDelete={(id) => {
+                            if (window.favoriteCategories) {
+                              window.favoriteCategories.remove(id);
+                              showMessage('success', '已刪除分類');
+                              loadData();
+                              debouncedBackup();
+                            }
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-4">
               <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
-                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>數據備份</h3>
+                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.backup')}</h3>
                 <div className="space-y-3">
                   <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    數據會自動保存到瀏覽器的 localStorage。您也可以手動匯出/匯入 JSON 檔案進行備份或遷移。
+                    {t('favorites.backupDescription')}
                   </p>
                   <div className="flex gap-2">
                     <Button
+                      onClick={handleExportJSON}
                       className={theme === 'dark' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}
                     >
-                      匯出JSON
+                      {t('favorites.exportJSON')}
                     </Button>
                     <Button
+                      onClick={handleImportJSON}
                       className={theme === 'dark' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}
                     >
-                      匯入JSON
+                      {t('favorites.importJSON')}
                     </Button>
                   </div>
                 </div>
               </div>
             </TabsContent>
           </Tabs>
-        </ScrollArea>
+        </div>
       </div>
     </div>
   );
 }
 
-function CategoryItem({ theme, name, count }: { theme: 'light' | 'dark'; name: string; count: number }) {
+// 收藏項目組件
+function FavoriteItem({
+  favorite,
+  categories,
+  theme,
+  isSelected,
+  isEditing,
+  editName,
+  editCategory,
+  onSelect,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onEditNameChange,
+  onEditCategoryChange,
+  onDelete,
+  onLoad
+}: {
+  favorite: FavoriteItem;
+  categories: Category[];
+  theme: 'light' | 'dark';
+  isSelected: boolean;
+  isEditing: boolean;
+  editName: string;
+  editCategory: string;
+  onSelect: (id: string, checked: boolean) => void;
+  onStartEdit: (favorite: FavoriteItem) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: () => void;
+  onEditNameChange: (name: string) => void;
+  onEditCategoryChange: (categoryId: string) => void;
+  onDelete: (id: string) => void;
+  onLoad: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const category = categories.find(c => c.id === favorite.categoryId);
+  const platformIcon = favorite.platform === 'twitch' ? '🎮' : '📺';
+
+  if (isEditing) {
+    return (
+      <div className={`p-3 rounded-lg border ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}>
+        <div className="flex gap-2 mb-2">
+          <Input
+            type="text"
+            value={editName}
+            onChange={(e) => onEditNameChange(e.target.value)}
+            className={`flex-1 ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-black'}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSaveEdit();
+              if (e.key === 'Escape') onCancelEdit();
+            }}
+          />
+          <Select value={editCategory || "uncategorized"} onValueChange={(value) => onEditCategoryChange(value === "uncategorized" ? "" : value)}>
+            <SelectTrigger className={`w-[140px] ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-black'}`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
+              <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button size="sm" onClick={onSaveEdit} className="bg-purple-600 hover:bg-purple-700">
+            <Check className="size-3 mr-1" />
+            {t('favorites.save')}
+          </Button>
+          <Button size="sm" onClick={onCancelEdit} variant="outline" className={theme === 'dark' ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'}>
+            <X className="size-3 mr-1" />
+            {t('favorites.cancel')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`p-3 rounded-lg border ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} flex items-center gap-3`}>
+      <Checkbox
+        checked={isSelected}
+        onChange={(e) => onSelect(favorite.id, e.target.checked)}
+        sx={{
+          color: theme === 'dark' ? '#9ca3af' : '#4b5563',
+          '&.Mui-checked': {
+            color: theme === 'dark' ? '#a855f7' : '#9333ea',
+          },
+        }}
+      />
+      <span className="text-lg">{platformIcon}</span>
+      {favorite.isLive !== null && (
+        <div
+          className={`w-2 h-2 rounded-full ${
+            favorite.isLive === true ? 'bg-green-500' : 'bg-gray-500'
+          }`}
+          title={favorite.isLive === true ? t('favorites.live') : t('favorites.offline')}
+        />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+          {favorite.name}
+        </div>
+        <div className="flex items-center gap-2 text-xs mt-1">
+          <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
+            📁 {category?.name || t('favorites.uncategorized')}
+          </span>
+          <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-500'} title={favorite.url}>
+            {favorite.url.length > 50 ? favorite.url.substring(0, 50) + '...' : favorite.url}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onStartEdit(favorite)}
+          className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
+          title={t('favorites.edit')}
+        >
+          <Edit2 className="size-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onLoad(favorite.id)}
+          className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
+          title={t('favorites.addStream')}
+        >
+          <Play className="size-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onDelete(favorite.id)}
+          className={theme === 'dark' ? 'text-gray-400 hover:text-red-400' : 'text-gray-600 hover:text-red-600'}
+          title={t('favorites.delete')}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// 分類項目組件
+function CategoryItem({
+  category,
+  count,
+  theme,
+  onLoad,
+  onUpdate,
+  onDelete
+}: {
+  category: Category;
+  count: number;
+  theme: 'light' | 'dark';
+  onLoad: () => void;
+  onUpdate: (id: string, newName: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(category.name);
+
+  const handleSave = () => {
+    if (editName.trim()) {
+      onUpdate(category.id, editName.trim());
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditName(category.name);
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className={`p-3 rounded-lg border ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} flex items-center gap-2`}>
+        <Input
+          type="text"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave();
+            if (e.key === 'Escape') handleCancel();
+          }}
+          className={`flex-1 ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-black'}`}
+          autoFocus
+        />
+        <Button size="sm" onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
+          <Check className="size-3" />
+        </Button>
+        <Button size="sm" onClick={handleCancel} variant="outline" className={theme === 'dark' ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'}>
+          <X className="size-3" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex items-center justify-between p-3 rounded-lg ${theme === 'dark' ? 'bg-gray-900 hover:bg-gray-800' : 'bg-white hover:bg-gray-50'} transition-colors`}>
       <div className="flex items-center gap-3">
         <Folder className={`size-5 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
         <div>
-          <p className={theme === 'dark' ? 'text-white' : 'text-black'}>{name}</p>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{count} 個串流</p>
+          <p className={theme === 'dark' ? 'text-white' : 'text-black'}>{category.name}</p>
+          <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>{count} {t('favorites.streams')}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
+          onClick={onLoad}
+          className={theme === 'dark' ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}
+          title={t('favorites.loadCategory')}
+          disabled={count === 0}
+        >
+          <Play className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsEditing(true)}
           className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
+          title={t('favorites.edit')}
         >
           <Edit2 className="size-4" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
+          onClick={() => {
+            if (confirm(t('favorites.delete') + ` "${category.name}"?`)) {
+              onDelete(category.id);
+            }
+          }}
+          title={t('favorites.delete')}
           className={theme === 'dark' ? 'text-gray-400 hover:text-red-400' : 'text-gray-600 hover:text-red-600'}
         >
           <Trash2 className="size-4" />

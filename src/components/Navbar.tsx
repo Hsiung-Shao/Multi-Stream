@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from './ui/tooltip';
+import { useI18n } from '../i18n/index';
 
 interface NavbarProps {
   theme: 'light' | 'dark';
@@ -49,8 +50,8 @@ export function Navbar({
   onTogglePanel,
   onAddStream
 }: NavbarProps) {
+  const { locale, setLocale, t } = useI18n();
   const [searchValue, setSearchValue] = useState('');
-  const [language, setLanguage] = useState('zh-TW');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -60,11 +61,11 @@ export function Navbar({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const languages = [
-    { value: 'zh-TW', label: '繁體中文' },
-    { value: 'zh-CN', label: '簡體中文' },
-    { value: 'en', label: 'English' },
-    { value: 'ja', label: '日本語' },
-    { value: 'ko', label: '한국어' },
+    { value: 'zh-TW' as const, label: '繁體中文' },
+    { value: 'zh-CN' as const, label: '簡體中文' },
+    { value: 'en' as const, label: 'English' },
+    { value: 'ja' as const, label: '日本語' },
+    { value: 'ko' as const, label: '한국어' },
   ];
 
   // 檢查是否為 URL
@@ -244,11 +245,11 @@ export function Navbar({
                     onClick={onShowAbout}
                     className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                   >
-                    關於我們
+                    {t('navbar.about')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>關於我們</p>
+                  <p>{t('navbar.about')}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -261,11 +262,11 @@ export function Navbar({
                     onClick={onShowTutorial}
                     className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                   >
-                    使用教學
+                    {t('navbar.tutorial')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>使用教學</p>
+                  <p>{t('navbar.tutorial')}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -278,11 +279,11 @@ export function Navbar({
                     onClick={onShowVersionHistory}
                     className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                   >
-                    版本資訊
+                    {t('navbar.versionHistory')}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>版本資訊</p>
+                  <p>{t('navbar.versionHistory')}</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -295,7 +296,7 @@ export function Navbar({
           <Input
             ref={inputRef}
             type="text"
-            placeholder="搜尋頻道或是開始直播連結"
+            placeholder={t('navbar.searchPlaceholder')}
             value={searchValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
@@ -322,7 +323,7 @@ export function Navbar({
             }`}
           >
             <Plus className="size-3 mr-1" />
-            加入畫面
+            {t('navbar.addStream')}
           </Button>
 
           {/* 搜尋結果下拉列表 */}
@@ -373,11 +374,11 @@ export function Navbar({
                       </div>
                       <div className={`text-sm flex items-center justify-between ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                         <div className="flex items-center">
-                          Twitch
+                          {t('navbar.twitch')}
                           {result.isLive && (
                             <span className="ml-2">
                               <span className="text-green-500" style={{ color: '#10b981' }}>●</span>
-                              <span> 直播中</span>
+                              <span> {t('navbar.live')}</span>
                             </span>
                           )}
                         </div>
@@ -388,7 +389,7 @@ export function Navbar({
                       {/* 觀看人數 - 頻道資訊區域的右上角 */}
                       {result.isLive && result.viewerCount !== undefined && (
                         <div className={`absolute top-0 right-0 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {result.viewerCount.toLocaleString()} 觀看
+                          {result.viewerCount.toLocaleString()} {t('navbar.viewers')}
                         </div>
                       )}
                     </div>
@@ -405,7 +406,7 @@ export function Navbar({
                 ? 'bg-gray-900 border-gray-700 text-gray-400' 
                 : 'bg-white border-gray-200 text-gray-500'
             }`}>
-              <p className="text-sm text-center">沒有找到結果</p>
+              <p className="text-sm text-center">{t('navbar.noResults')}</p>
             </div>
           )}
         </div>
@@ -426,7 +427,7 @@ export function Navbar({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>收藏管理</p>
+                <p>{t('navbar.favorites')}</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -444,7 +445,7 @@ export function Navbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>主題切換</p>
+              <p>{t('navbar.themeToggle')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -452,7 +453,7 @@ export function Navbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
-                <Select value={language} onValueChange={setLanguage}>
+                <Select value={locale} onValueChange={(value) => setLocale(value as typeof locale)}>
                   <SelectTrigger 
                     className={`w-[140px] h-9 ${
                       theme === 'dark' 
@@ -482,7 +483,7 @@ export function Navbar({
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>語言切換</p>
+              <p>{t('navbar.languageSwitch')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -501,7 +502,7 @@ export function Navbar({
               }
             >
               <LayoutDashboard className="size-4 mr-2" />
-              控制面板
+              {t('navbar.controlPanel')}
             </Button>
           )}
 
@@ -511,7 +512,7 @@ export function Navbar({
             onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
           >
             <Coffee className="size-4 mr-2" />
-            贊助我
+            {t('navbar.sponsor')}
           </Button>
         </div>
       </div>

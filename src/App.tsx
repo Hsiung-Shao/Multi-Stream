@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { WelcomeCard } from './components/WelcomeCard';
 import { VersionHistory } from './components/VersionHistory';
@@ -104,7 +104,7 @@ export default function App() {
   }
 
   // 添加串流
-  const handleAddStream = async (url: string) => {
+  const handleAddStream = useCallback(async (url: string) => {
     if (!url || !url.trim()) {
       alert('請輸入直播網址或頻道名稱');
       return;
@@ -200,7 +200,29 @@ export default function App() {
     }
 
     setStreams(prev => [...prev, newStream]);
-  };
+    
+    // 同步到全局 streamData（為了兼容舊代碼）
+    if (window.streamData) {
+      window.streamData[newStream.id] = {
+        platform: newStream.platform,
+        channelId: newStream.channelId,
+        videoId: newStream.videoId,
+        originalUrl: newStream.originalUrl,
+        volume: newStream.volume,
+        chatVisible: newStream.chatVisible,
+        name: newStream.name,
+        displayName: newStream.displayName
+      };
+    }
+  }, []);
+
+  // 暴露 handleAddStream 到全局，以便收藏系統調用
+  useEffect(() => {
+    (window as any).addStream = handleAddStream;
+    return () => {
+      delete (window as any).addStream;
+    };
+  }, [handleAddStream]);
 
   // 移除串流
   const handleRemoveStream = (id: number) => {

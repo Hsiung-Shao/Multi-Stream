@@ -2,11 +2,19 @@
 
 // 主要加入函式
 async function addStream(url = null) {
-  if (!url) url = document.getElementById('url-input').value.trim();
+  if (!url) {
+    const urlInput = document.getElementById('url-input');
+    if (urlInput) {
+      url = urlInput.value.trim();
+    }
+  }
   if (!url) return alert('請輸入直播網址或頻道名稱');
   
-  // 清空輸入框
-  document.getElementById('url-input').value = '';
+  // 清空輸入框（如果存在）
+  const urlInput = document.getElementById('url-input');
+  if (urlInput) {
+    urlInput.value = '';
+  }
   
   // 隱藏搜尋建議
   if (typeof hideSearchSuggestions === 'function') {
@@ -63,7 +71,11 @@ async function addStream(url = null) {
     return;
   }
   
-  const id = ++streamCount;
+  // 確保 streamCount 已初始化
+  if (typeof window.streamCount === 'undefined') {
+    window.streamCount = 0;
+  }
+  const id = ++window.streamCount;
   const box = document.createElement('div');
   box.className = 'stream-box';
   box.id = 'box' + id;
@@ -649,7 +661,7 @@ function clearAll() {
     players = {};
     streamData = {};
     container.innerHTML = '';
-    streamCount = 0;
+    window.streamCount = 0;
     
     // 檢查並調整控制面板狀態（沒有串流時強制展開）
     if (typeof checkAndAdjustControlPanel === 'function') {
@@ -760,5 +772,10 @@ function loadLayout() {
       }, 2000);
     }, index * 500);
   });
+}
+
+// 暴露 addStream 到全局作用域
+if (typeof window !== 'undefined') {
+  window.addStream = addStream;
 }
 

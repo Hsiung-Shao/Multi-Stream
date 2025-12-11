@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, Volume2, VolumeX, ChevronUp, ChevronDown, GripVertical, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { RefreshCw, Volume2, VolumeX, ChevronUp, ChevronDown, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star, Play, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
-import { Slider } from './ui/slider';
+import Box from '@mui/material/Box';
+import Slider from '@mui/material/Slider';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { StreamData } from '../utils/streamUtils';
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
+import { useI18n } from '../i18n/index';
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -31,6 +33,61 @@ interface ControlPanelProps {
   masterMuted?: boolean;
   onMasterVolumeChange?: (volume: number) => void;
   onMasterMuteChange?: (muted: boolean) => void;
+  onAddStream?: (url: string) => void;
+}
+
+interface FavoriteItem {
+  id: string;
+  url: string;
+  name: string;
+  platform: 'twitch' | 'youtube';
+  channelId?: string;
+  videoId?: string;
+  categoryId?: string | null;
+  addedAt: string;
+  isLive?: boolean | null;
+  lastChecked?: string | null;
+  viewerCount?: number;
+  gameName?: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+// 排序函數：開台狀態 > 未開台
+const sortFavorites = (favs: FavoriteItem[]) => {
+  return [...favs].sort((a, b) => {
+    const aIsLive = a.isLive === true;
+    const bIsLive = b.isLive === true;
+    // 開台狀態優先
+    if (aIsLive && !bIsLive) return -1;
+    if (!aIsLive && bIsLive) return 1;
+    return 0;
+  });
+};
+
+// 聲明全局類型
+declare global {
+  interface Window {
+    favoriteStreams?: {
+      getList: () => FavoriteItem[];
+      add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: FavoriteItem }>;
+      load: (item: FavoriteItem | string) => Promise<{ success: boolean; message: string }>;
+      loadMultiple: (items: FavoriteItem[]) => Promise<{ success: boolean; message: string }>;
+      saveList: (list: FavoriteItem[]) => void;
+    };
+    favoriteCategories?: {
+      getList: () => Category[];
+    };
+    twitchApi?: {
+      checkMultipleChannelsLiveStatus: (channelIds: string[]) => Promise<Record<string, { isLive: boolean; viewerCount?: number; gameName?: string }>>;
+    };
+    youtubeApiUtils?: {
+      checkChannelLiveStatus: (channelId: string) => Promise<{ isLive: boolean }>;
+    };
+  }
 }
 
 export function ControlPanel({ 
@@ -55,24 +112,29 @@ export function ControlPanel({
   masterVolume = 100,
   masterMuted = false,
   onMasterVolumeChange,
-  onMasterMuteChange
+  onMasterMuteChange,
+  onAddStream
 }: ControlPanelProps) {
+  const { t } = useI18n();
   const [showAllChat, setShowAllChat] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // 處理全域音量變化
-  const handleMasterVolumeChange = (newVolume: number[]) => {
-    const volValue = newVolume[0];
+  const handleMasterVolumeChange = (newVolume: number) => {
     // 如果從靜音狀態拖動到非零值，自動取消靜音
-    if (volValue > 0 && masterMuted && onMasterMuteChange) {
+    if (newVolume > 0 && masterMuted && onMasterMuteChange) {
       onMasterMuteChange(false);
     }
     if (onMasterVolumeChange) {
-      onMasterVolumeChange(volValue);
+      onMasterVolumeChange(newVolume);
     }
     // 同步到隱藏的 input 元素（用於與舊的 JavaScript 代碼兼容）
     const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
     if (masterVolSlider) {
-      masterVolSlider.value = volValue.toString();
+      masterVolSlider.value = newVolume.toString();
       // 觸發 input 事件，讓舊的 JavaScript 代碼能夠響應
       masterVolSlider.dispatchEvent(new Event('input', { bubbles: true }));
     }
@@ -97,6 +159,182 @@ export function ControlPanel({
     const allChatsVisible = streams.every(s => s.chatVisible === true);
     setShowAllChat(allChatsVisible);
   }, [streams]);
+
+  // 載入收藏和分類列表
+  const loadFavorites = useCallback(() => {
+    if (window.favoriteStreams) {
+      setFavorites(window.favoriteStreams.getList());
+    }
+    if (window.favoriteCategories) {
+      setCategories(window.favoriteCategories.getList());
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFavorites();
+    // 監聽收藏更新事件
+    const handleFavoritesUpdate = () => {
+      loadFavorites();
+    };
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    return () => {
+      window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+    };
+  }, [loadFavorites]);
+
+  // 刷新開台狀態
+  const handleRefreshStatus = async () => {
+    if (!window.favoriteStreams || !window.twitchApi) return;
+    
+    setIsRefreshing(true);
+    try {
+      const favoritesList = window.favoriteStreams.getList();
+      const twitchFavorites = favoritesList.filter(f => f.platform === 'twitch' && f.channelId);
+      const youtubeFavorites = favoritesList.filter(f => f.platform === 'youtube' && f.channelId);
+      
+      let updatedFavorites = [...favoritesList];
+      
+      // 更新 Twitch 開台狀態
+      if (twitchFavorites.length > 0 && window.twitchApi.checkMultipleChannelsLiveStatus) {
+        const channelIds = twitchFavorites.map(f => f.channelId!);
+        const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelIds);
+        
+        // 更新收藏列表中的開台狀態
+        updatedFavorites = updatedFavorites.map(fav => {
+          if (fav.platform === 'twitch' && fav.channelId && liveStatuses[fav.channelId]) {
+            return {
+              ...fav,
+              isLive: liveStatuses[fav.channelId].isLive || false,
+              lastChecked: new Date().toISOString(),
+              // 保存額外信息到 favorite 對象中（用於顯示）
+              viewerCount: liveStatuses[fav.channelId].viewerCount,
+              gameName: liveStatuses[fav.channelId].gameName
+            } as FavoriteItem & { viewerCount?: number; gameName?: string };
+          }
+          return fav;
+        });
+      }
+      
+      // 更新 YouTube 開台狀態
+      if (youtubeFavorites.length > 0 && window.youtubeApiUtils?.checkChannelLiveStatus) {
+        for (const fav of youtubeFavorites) {
+          if (fav.channelId) {
+            try {
+              const status = await window.youtubeApiUtils.checkChannelLiveStatus(fav.channelId);
+              updatedFavorites = updatedFavorites.map(f => {
+                if (f.id === fav.id) {
+                  return {
+                    ...f,
+                    isLive: status.isLive || false,
+                    lastChecked: new Date().toISOString()
+                  };
+                }
+                return f;
+              });
+            } catch (e) {
+              // 靜默處理錯誤
+            }
+          }
+        }
+      }
+      
+      // 保存更新後的收藏列表
+      if (window.favoriteStreams.saveList) {
+        window.favoriteStreams.saveList(updatedFavorites);
+      }
+      setFavorites(updatedFavorites);
+    } catch (e) {
+      console.error('刷新開台狀態失敗:', e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // 切換分類展開/收起
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  // 載入收藏串流
+  const handleLoadFavorite = (favorite: FavoriteItem) => {
+    if (window.favoriteStreams && window.favoriteStreams.load) {
+      window.favoriteStreams.load(favorite).then(result => {
+        if (result.success && onAddStream) {
+          onAddStream(favorite.url);
+        }
+      });
+    } else if (onAddStream) {
+      onAddStream(favorite.url);
+    }
+  };
+
+  // 收藏當前串流
+  const handleAddCurrentToFavorites = async () => {
+    if (streams.length === 0) return;
+    
+    if (!window.favoriteStreams) {
+      alert('收藏系統未初始化');
+      return;
+    }
+
+    // 收集所有當前串流
+    const currentStreams = streams.map(stream => {
+      let url = '';
+      let channelId: string | undefined;
+      
+      if (stream.platform === 'twitch' && stream.channelId) {
+        url = `https://www.twitch.tv/${stream.channelId}`;
+        channelId = stream.channelId;
+      } else if (stream.platform === 'youtube' && stream.channelId) {
+        url = `https://www.youtube.com/channel/${stream.channelId}/live`;
+        channelId = stream.channelId;
+      } else if (stream.platform === 'youtube' && stream.videoId) {
+        url = `https://www.youtube.com/watch?v=${stream.videoId}`;
+      }
+      
+      return {
+        url,
+        name: stream.displayName || stream.name || stream.channelId || stream.videoId || '',
+        channelId
+      };
+    }).filter(s => s.url);
+
+    if (currentStreams.length === 0) {
+      alert('沒有可收藏的串流');
+      return;
+    }
+
+    // 逐個添加收藏
+    let successCount = 0;
+    for (const stream of currentStreams) {
+      try {
+        const result = await window.favoriteStreams.add(
+          stream.url,
+          stream.name,
+          null, // 默認未分類
+          stream.channelId || undefined
+        );
+        if (result.success) {
+          successCount++;
+        }
+      } catch (e) {
+        console.error('添加收藏失敗:', e);
+      }
+    }
+
+    loadFavorites();
+    if (successCount > 0) {
+      alert(`成功收藏 ${successCount} 個串流`);
+    }
+  };
   
   // 應用總音量到所有串流
   const applyMasterVolumeToAllStreams = (masterVol: number) => {
@@ -248,20 +486,20 @@ export function ControlPanel({
   }, []);
 
   const layouts = [
-    { id: 1, icon: '📺', label: '單一', cols: 1, rows: 1 },
-    { id: 2, icon: '⬅️➡️', label: '左右', cols: 2, rows: 1 },
-    { id: 3, icon: '⬆️⬇️', label: '上下', cols: 1, rows: 2 },
-    { id: 4, icon: '⊞', label: '四格', cols: 2, rows: 2 },
-    { id: 5, icon: '⬆️⬇️⬇️', label: '上大下三', cols: 3, rows: 2, special: 'top-large-bottom-three' },
-    { id: 6, icon: '⊞⊞', label: '3×2', cols: 3, rows: 2 },
-    { id: 9, icon: '⊞⊞⊞', label: '3×3', cols: 3, rows: 3 },
+    { id: 1, icon: '📺', label: t('controlPanel.singleView'), cols: 1, rows: 1 },
+    { id: 2, icon: '⬅️➡️', label: t('controlPanel.splitHorizontal'), cols: 2, rows: 1 },
+    { id: 3, icon: '⬆️⬇️', label: t('controlPanel.splitVertical'), cols: 1, rows: 2 },
+    { id: 4, icon: '⊞', label: t('controlPanel.grid4'), cols: 2, rows: 2 },
+    { id: 5, icon: '⬆️⬇️⬇️', label: t('controlPanel.largeTop3'), cols: 3, rows: 2, special: 'top-large-bottom-three' },
+    { id: 6, icon: '⊞⊞', label: t('controlPanel.grid2x3'), cols: 3, rows: 2 },
+    { id: 9, icon: '⊞⊞⊞', label: t('controlPanel.grid3x3'), cols: 3, rows: 3 },
   ];
 
   const chatLayouts = [
-    { id: 1, label: '關閉', icon: '□' },
-    { id: 2, label: '單一', icon: '▢' },
-    { id: 3, label: '雙欄', icon: '▢▢' },
-    { id: 4, label: '四格', icon: '▦' },
+    { id: 1, label: t('common.close'), icon: '□' },
+    { id: 2, label: t('controlPanel.singleChatLayout'), icon: '▢' },
+    { id: 3, label: t('controlPanel.dualColumnChat'), icon: '▢▢' },
+    { id: 4, label: t('controlPanel.quadChat'), icon: '▦' },
   ];
 
   if (isCollapsed) {
@@ -274,17 +512,17 @@ export function ControlPanel({
       style={{ 
         top: `${navbarHeight}px`,
         height: `calc(100vh - ${navbarHeight}px)`,
-        zIndex: 1000
+        zIndex: 40
       }}
     >
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>控制面板</h2>
+          <h2 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('controlPanel.title')}</h2>
         </div>
 
         {/* Layout Control */}
-        <Section theme={theme} title="布局控制">
+        <Section theme={theme} title={t('controlPanel.layoutControl')}>
           <div className="grid grid-cols-4 gap-2">
             {layouts.map((layout) => (
               <button
@@ -317,7 +555,7 @@ export function ControlPanel({
         </Section>
 
         {/* Chat Layout */}
-        <Section theme={theme} title="聊天室布局">
+        <Section theme={theme} title={t('controlPanel.sideChatLayout')}>
           <div className="grid grid-cols-4 gap-2">
             {chatLayouts.map((layout) => {
               const chatLayoutTypeMap: Record<number, ChatLayoutType> = {
@@ -355,11 +593,11 @@ export function ControlPanel({
         </Section>
 
         {/* Chat Control */}
-        <Section theme={theme} title="聊天室控制">
+        <Section theme={theme} title={t('controlPanel.chatControl')}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                顯示所有聊天室
+                {t('controlPanel.showAllChats')}
               </label>
               <Switch 
                 checked={showAllChat} 
@@ -376,7 +614,7 @@ export function ControlPanel({
         </Section>
 
         {/* Favorites */}
-        <Section theme={theme} title="收藏串流">
+        <Section theme={theme} title={t('controlPanel.favoriteStreams')}>
           <div className="space-y-3">
             <div className="flex gap-2">
               <Button
@@ -384,42 +622,142 @@ export function ControlPanel({
                 className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
                 onClick={onShowFavorites}
               >
-                管理收藏
-              </Button>
-              <Button
-                variant="outline"
-                className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-              >
-                收藏查詢
+                {t('controlPanel.manageFavorites')}
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 className={`${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                onClick={handleRefreshStatus}
+                disabled={isRefreshing}
               >
-                <RefreshCw className="size-4" />
+                <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className={`${theme === 'dark' ? 'border-purple-600 text-purple-400 hover:bg-purple-600/20' : 'border-purple-500 text-purple-600 hover:bg-purple-50'}`}
+                onClick={handleAddCurrentToFavorites}
+                title={t('controlPanel.addCurrentToFavorites') || '收藏當前串流'}
+              >
+                <Star className="size-4" />
               </Button>
             </div>
-            <Select defaultValue="all">
-              <SelectTrigger className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部收藏</SelectItem>
-                <SelectItem value="uncategorized">未分類</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-              暫無收藏
+            
+            {/* 收藏串流列表 - 限高並添加滾動 */}
+            <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2">
+              {/* 分類的收藏 - 資料夾優先，分類內按開台狀態排序 */}
+              {categories.map(category => {
+                const categoryFavorites = favorites.filter(f => f.categoryId === category.id);
+                if (categoryFavorites.length === 0) return null;
+                
+                // 分類內排序：開台狀態 > 未開台
+                const sortedCategoryFavorites = sortFavorites(categoryFavorites);
+                
+                const isExpanded = expandedCategories.has(category.id);
+                
+                return (
+                  <div key={category.id} className="space-y-1">
+                    {/* 分類標題 */}
+                    <button
+                      onClick={() => toggleCategory(category.id)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                        theme === 'dark' 
+                          ? 'hover:bg-gray-800 text-gray-300' 
+                          : 'hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {isExpanded ? (
+                        <FolderOpen className="size-4 text-purple-500" />
+                      ) : (
+                        <Folder className="size-4 text-purple-500" />
+                      )}
+                      <span className="flex-1 text-left font-medium">{category.name}</span>
+                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {categoryFavorites.length}
+                      </span>
+                      {isExpanded ? (
+                        <ChevronUp className="size-4" />
+                      ) : (
+                        <ChevronDown className="size-4" />
+                      )}
+                    </button>
+                    
+                    {/* 分類內容 */}
+                    {isExpanded && (
+                      <div className="ml-6 space-y-1">
+                        {/* 分類本身也可以載入（載入該分類下的所有串流） */}
+                        <button
+                          onClick={async () => {
+                            if (window.favoriteStreams && window.favoriteStreams.loadMultiple) {
+                              const result = await window.favoriteStreams.loadMultiple(categoryFavorites);
+                              if (result.success) {
+                                // 載入所有串流
+                                categoryFavorites.forEach(fav => {
+                                  if (onAddStream) {
+                                    onAddStream(fav.url);
+                                  }
+                                });
+                              }
+                            }
+                          }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                            theme === 'dark' 
+                              ? 'hover:bg-gray-800 text-gray-400' 
+                              : 'hover:bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          <Play className="size-4" />
+                          <span className="text-sm">載入分類內所有串流</span>
+                        </button>
+                        
+                        {/* 分類下的收藏 - 已排序 */}
+                        {sortedCategoryFavorites.map((favorite) => (
+                          <FavoriteItemComponent
+                            key={favorite.id}
+                            favorite={favorite}
+                            theme={theme}
+                            onLoad={handleLoadFavorite}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* 未分類的收藏 - 按開台狀態排序 */}
+              {(() => {
+                const uncategorizedFavorites = sortFavorites(favorites.filter(f => !f.categoryId));
+                return uncategorizedFavorites.length > 0 ? (
+                  <div className="space-y-1">
+                    {uncategorizedFavorites.map((favorite) => (
+                      <FavoriteItemComponent
+                        key={favorite.id}
+                        favorite={favorite}
+                        theme={theme}
+                        onLoad={handleLoadFavorite}
+                      />
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+
+              {/* 無收藏提示 */}
+              {favorites.length === 0 && (
+                <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {t('favorites.noFavorites')}
+                </div>
+              )}
             </div>
           </div>
         </Section>
 
         {/* Volume Control */}
-        <Section theme={theme} title="媒體控制">
+        <Section theme={theme} title={t('controlPanel.mediaControl')}>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>總音量</span>
+              <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel.masterVolume')}</span>
               {/* 隱藏的 input 元素，用於與舊的 JavaScript 代碼同步 */}
               <input
                 id="master-volume"
@@ -429,16 +767,35 @@ export function ControlPanel({
                 value={masterVolume}
                 style={{ display: 'none' }}
                 readOnly
-                aria-label="總音量"
+                aria-label={t('controlPanel.masterVolume')}
               />
-              <Slider
-                value={[masterVolume]}
-                onValueChange={handleMasterVolumeChange}
-                min={0}
-                max={100}
-                step={1}
-                className="flex-1"
-              />
+              <Box sx={{ width: '100%', flex: 1 }}>
+                <Slider
+                  value={masterVolume}
+                  onChange={(_, value) => {
+                    const newValue = Array.isArray(value) ? value[0] : value;
+                    handleMasterVolumeChange(newValue);
+                  }}
+                  min={0}
+                  max={100}
+                  step={1}
+                  color="secondary"
+                  sx={{
+                    '& .MuiSlider-thumb': {
+                      backgroundColor: '#9333ea',
+                      '&:hover': {
+                        boxShadow: '0 0 0 8px rgba(147, 51, 234, 0.16)',
+                      },
+                    },
+                    '& .MuiSlider-track': {
+                      backgroundColor: '#9333ea',
+                    },
+                    '& .MuiSlider-rail': {
+                      backgroundColor: '#ffffff',
+                    },
+                  }}
+                />
+              </Box>
               <span id="master-volume-value" className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
                 {masterMuted ? '0%' : `${masterVolume}%`}
               </span>
@@ -457,17 +814,17 @@ export function ControlPanel({
                 }
               >
                 {masterMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
-                全部靜音
+                {t('controlPanel.muteAll')}
               </Button>
             </div>
           </div>
         </Section>
 
         {/* Stream Order */}
-        <Section theme={theme} title="串流順序">
+        <Section theme={theme} title={t('controlPanel.streamOrder')}>
           {streams.length === 0 ? (
             <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-              暫無串流
+              {t('controlPanel.noStreams')}
             </div>
           ) : (
             <div className="space-y-2">
@@ -542,7 +899,7 @@ export function ControlPanel({
                             variant="ghost"
                             size="icon"
                             className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
-                            title="上移"
+                            title={t('controlPanel.moveUp')}
                             onClick={() => onMoveStreamUp(stream.id)}
                             disabled={index === 0}
                           >
@@ -554,7 +911,7 @@ export function ControlPanel({
                             variant="ghost"
                             size="icon"
                             className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-black hover:bg-gray-200'}`}
-                            title="下移"
+                            title={t('controlPanel.moveDown')}
                             onClick={() => onMoveStreamDown(stream.id)}
                             disabled={index === streams.length - 1}
                           >
@@ -566,7 +923,7 @@ export function ControlPanel({
                             variant="ghost"
                             size="icon"
                             className={`h-6 w-6 ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/20' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'}`}
-                            title="關閉串流"
+                            title={t('controlPanel.remove')}
                             onClick={() => onRemoveStream(stream.id)}
                           >
                             <X className="size-3" />
@@ -580,28 +937,44 @@ export function ControlPanel({
                       <div className="px-3 py-2 space-y-2">
                         <div className="flex items-center gap-2">
                           <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                            🔊 音量
+                            🔊 {t('controlPanel.volume')}
                           </span>
-                          <Slider
-                            value={[isStreamMuted ? 0 : streamVolume]}
-                            onValueChange={(value) => {
-                              const newVolume = value[0];
-                              // 如果調整音量且之前是靜音狀態，取消靜音
-                              // 注意：如果全域靜音，需要先取消全域靜音
-                              if (newVolume > 0 && masterMuted && onMasterMuteChange) {
-                                onMasterMuteChange(false);
-                              }
-                              // 只有在不是全域靜音時，才處理單獨靜音
-                              if (newVolume > 0 && !masterMuted && stream.isMuted && onToggleMute) {
-                                onToggleMute(stream.id);
-                              }
-                              onVolumeChange(stream.id, newVolume);
-                            }}
-                            min={0}
-                            max={100}
-                            step={1}
-                            className="flex-1"
-                          />
+                          <Box sx={{ width: '100%', flex: 1 }}>
+                            <Slider
+                              value={isStreamMuted ? 0 : streamVolume}
+                              onChange={(_, value) => {
+                                const newVolume = Array.isArray(value) ? value[0] : value;
+                                // 如果調整音量且之前是靜音狀態，取消靜音
+                                // 注意：如果全域靜音，需要先取消全域靜音
+                                if (newVolume > 0 && masterMuted && onMasterMuteChange) {
+                                  onMasterMuteChange(false);
+                                }
+                                // 只有在不是全域靜音時，才處理單獨靜音
+                                if (newVolume > 0 && !masterMuted && stream.isMuted && onToggleMute) {
+                                  onToggleMute(stream.id);
+                                }
+                                onVolumeChange(stream.id, newVolume);
+                              }}
+                              min={0}
+                              max={100}
+                              step={1}
+                              color="secondary"
+                              sx={{
+                                '& .MuiSlider-thumb': {
+                                  backgroundColor: '#9333ea',
+                                  '&:hover': {
+                                    boxShadow: '0 0 0 8px rgba(147, 51, 234, 0.16)',
+                                  },
+                                },
+                                '& .MuiSlider-track': {
+                                  backgroundColor: '#9333ea',
+                                },
+                                '& .MuiSlider-rail': {
+                                  backgroundColor: '#ffffff',
+                                },
+                              }}
+                            />
+                          </Box>
                           <span className={`text-xs min-w-[40px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
                             {isStreamMuted ? '0%' : `${streamVolume}%`}
                           </span>
@@ -725,3 +1098,69 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
     </div>
   );
 }
+
+// 收藏項目組件
+const FavoriteItemComponent: React.FC<{ 
+  favorite: FavoriteItem; 
+  theme: 'light' | 'dark'; 
+  onLoad: (favorite: FavoriteItem) => void;
+}> = ({ favorite, theme, onLoad }) => {
+  const isLive = favorite.isLive === true;
+  const isOffline = favorite.isLive === false;
+  const isUnknown = favorite.isLive === null || favorite.isLive === undefined;
+
+  return (
+    <button
+      onClick={() => onLoad(favorite)}
+      className={`w-full px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors text-left rounded-lg border ${
+        theme === 'dark'
+          ? 'hover:bg-gray-800 border-gray-700'
+          : 'hover:bg-gray-50 border-gray-200'
+      }`}
+    >
+      {/* 手把圖標 - 替代頻道圖片 */}
+      {favorite.platform === 'twitch' ? (
+        <Gamepad2 className="size-4 flex-shrink-0" style={{ color: '#9146ff' }} />
+      ) : (
+        <Youtube className="size-4 flex-shrink-0" style={{ color: '#FF0000' }} />
+      )}
+      
+      {/* 頻道資訊區域 */}
+      <div className="flex-1 min-w-0">
+        {/* 第一行：頻道名稱 + 觀看人數 */}
+        <div className="flex items-center justify-between">
+          <div className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+            {favorite.name}
+          </div>
+          {favorite.platform === 'twitch' && isLive && favorite.viewerCount !== undefined && (
+            <div className={`text-sm ml-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              {favorite.viewerCount.toLocaleString()} 人
+            </div>
+          )}
+        </div>
+        
+        {/* 第二行：平台標籤、開台指示器、遊戲名稱 */}
+        <div className={`text-sm flex items-center mt-1 gap-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div className="flex items-center flex-shrink-0">
+            {favorite.platform === 'twitch' ? 'Twitch' : 'YouTube'}
+            {isLive && (
+              <span className="ml-2">
+                <span className="text-green-500" style={{ color: '#10b981' }}>●</span>
+                <span> 直播中</span>
+              </span>
+            )}
+          </div>
+          {favorite.platform === 'twitch' && favorite.gameName && (
+            <span 
+              className="text-purple-500 flex-shrink min-w-0 truncate" 
+              style={{ color: '#a855f7' }}
+              title={favorite.gameName}
+            >
+              {favorite.gameName}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+};

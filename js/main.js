@@ -9,7 +9,8 @@
 })();
 
 // 全局變數
-let streamCount = 0;
+// 將 streamCount 直接定義在 window 上，以便其他模組訪問
+window.streamCount = 0;
 const container = document.getElementById('container');
 
 // 布局更新防抖定時器
@@ -18,7 +19,7 @@ let pendingLayoutUpdate = false;
 const players = {}; // 儲存播放器實例
 const streamData = {}; // 儲存串流資訊
 
-// 將 players 和 streamData 暴露到全局作用域，以便其他模組訪問
+// 將全局變數暴露到全局作用域，以便其他模組訪問
 window.players = players;
 window.streamData = streamData;
 

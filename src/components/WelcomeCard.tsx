@@ -1,5 +1,6 @@
 import { Coffee, FileText, HelpCircle, Info } from 'lucide-react';
 import { Button } from './ui/button';
+import { useI18n } from '../i18n/index';
 
 interface WelcomeCardProps {
   theme: 'light' | 'dark';
@@ -9,72 +10,73 @@ interface WelcomeCardProps {
 }
 
 export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onShowAbout }: WelcomeCardProps) {
+  const { t } = useI18n();
   return (
     <div className={`max-w-3xl mx-auto ${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/20 to-blue-900/20' : 'bg-gradient-to-br from-purple-50 to-blue-50'} rounded-lg border ${theme === 'dark' ? 'border-purple-500/30' : 'border-purple-200'} p-8 shadow-xl`}>
       {/* Header */}
       <div className="mb-6">
         <h1 className={`text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 mb-2`}>
-          歡迎使用 MultiStream Hub
+          {t('welcome.title')}
         </h1>
         <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-          免費的多平台串流直播整合工具，支援 Twitch 和 YouTube 直播
+          {t('welcome.description')}
         </p>
       </div>
 
       {/* Features List */}
       <div className="space-y-3 mb-8">
         <h2 className={`${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
-          主要功能
+          {t('welcome.features')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <FeatureItem theme={theme} text="支援 Twitch 和 YouTube 多串流同時觀看" />
-          <FeatureItem theme={theme} text="多種顯示模式（單一畫面、分割、網格、聊天室布局）" />
-          <FeatureItem theme={theme} text="獨立音量控制和聊天室管理" />
-          <FeatureItem theme={theme} text="收藏功能及分類管理" />
-          <FeatureItem theme={theme} text="Twitch 頻道搜尋和開台狀態檢測" />
-          <FeatureItem theme={theme} text="YouTube 頻道開台監測功能" />
-          <FeatureItem theme={theme} text="完全免費、無廣告" />
+          <FeatureItem theme={theme} text={t('welcome.feature1')} />
+          <FeatureItem theme={theme} text={t('welcome.feature2')} />
+          <FeatureItem theme={theme} text={t('welcome.feature3')} />
+          <FeatureItem theme={theme} text={t('welcome.feature4')} />
+          <FeatureItem theme={theme} text={t('welcome.feature5')} />
+          <FeatureItem theme={theme} text={t('welcome.feature6')} />
+          <FeatureItem theme={theme} text={t('welcome.feature7')} />
         </div>
       </div>
 
       {/* Quick Start Guide */}
       <div className="space-y-4 mb-8">
         <h2 className={`${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
-          快速開始
+          {t('welcome.quickStart')}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <QuickGuideCard
             theme={theme}
             number="1"
-            title="添加串流"
-            description="在右側控制面板的輸入框中貼上 Twitch 或 YouTube 直播網址，點擊「加入畫面」即可觀看"
+            title={t('welcome.step1Title')}
+            description={t('welcome.step1Desc')}
             icon="📺"
           />
           <QuickGuideCard
             theme={theme}
             number="2"
-            title="調整布局"
-            description="在控制面板的「布局控制」區域選擇您喜歡的顯示方式，支援單一、分割、網格等多種布局"
+            title={t('welcome.step2Title')}
+            description={t('welcome.step2Desc')}
             icon="🎨"
           />
           <QuickGuideCard
             theme={theme}
             number="3"
-            title="收藏管理"
-            description="點擊「管理收藏」將常看的頻道加入收藏，支援分類管理和一鍵載入整個分類"
+            title={t('welcome.step3Title')}
+            description={t('welcome.step3Desc')}
             icon="⭐"
           />
           <QuickGuideCard
             theme={theme}
             number="4"
-            title="音量控制"
-            description="使用總音量滑桿調整所有串流，也可以在串流列表中單獨調整每個串流的音量"
+            title={t('welcome.step4Title')}
+            description={t('welcome.step4Desc')}
             icon="🔊"
           />
         </div>
         <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
           <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-            💡 提示：您可以直接輸入 Twitch 頻道名稱進行搜尋，系統會自動顯示相關頻道建議
+            {t('welcome.tip')}
           </p>
         </div>
       </div>
@@ -82,10 +84,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
       {/* Support Section */}
       <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white/50'} rounded-lg p-6 mb-6`}>
         <h3 className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'} mb-2 text-center`}>
-          喜歡這個專案嗎？
+          {t('welcome.supportTitle')}
         </h3>
         <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-center mb-4`}>
-          如果這個工具對你有幫助，歡迎請開發者喝杯咖啡！你的支持將幫助專案持續發展
+          {t('welcome.supportDesc')}
         </p>
         <div className="flex justify-center">
           <Button
@@ -94,7 +96,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
           >
             <Coffee className="size-5 mr-2" />
-            Buy Me A Coffee
+            {t('welcome.buyMeACoffee')}
           </Button>
         </div>
       </div>
@@ -107,7 +109,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
           onClick={onShowVersionHistory}
         >
           <FileText className="size-4 mr-2" />
-          版本資訊
+          {t('welcome.versionInfo')}
         </Button>
         <Button
           variant="outline"
@@ -115,7 +117,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
           onClick={onShowTutorial}
         >
           <HelpCircle className="size-4 mr-2" />
-          使用教學
+          {t('welcome.tutorial')}
         </Button>
         <Button
           variant="outline"
@@ -123,7 +125,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
           onClick={onShowAbout}
         >
           <Info className="size-4 mr-2" />
-          關於我們
+          {t('welcome.about')}
         </Button>
       </div>
     </div>

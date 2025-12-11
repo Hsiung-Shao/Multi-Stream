@@ -1,6 +1,7 @@
 import { ArrowLeft, Globe, Sun, Moon, Tv, Grid, MessageCircle, Volume2, Star, Smartphone, Languages, Shield, Search, Radio, Youtube, Zap, RefreshCw, Code, Radio as Broadcast, Database, Gauge, Users, Mail, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useI18n } from '../i18n/index';
 
 interface AboutPageProps {
   theme: 'light' | 'dark';
@@ -10,6 +11,16 @@ interface AboutPageProps {
 }
 
 export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }: AboutPageProps) {
+  const { locale, setLocale, t } = useI18n();
+  
+  const languages = [
+    { value: 'zh-TW' as const, label: t('chineseTraditional') },
+    { value: 'zh-CN' as const, label: t('chineseSimplified') },
+    { value: 'en' as const, label: t('english') },
+    { value: 'ja' as const, label: t('japanese') },
+    { value: 'ko' as const, label: t('korean') },
+  ];
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
       {/* Header Navigation */}
@@ -21,21 +32,21 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             className={theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-black'}
           >
             <ArrowLeft className="size-4 mr-2" />
-            返回首頁
+            {t('about.backToHome')}
           </Button>
           
-          <div className="flex items-center gap-4">
-            <Select defaultValue="zh-TW">
-              <SelectTrigger className={`w-32 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
+          <div className="flex items-center gap-2">
+            <Select value={locale} onValueChange={(value) => setLocale(value as any)}>
+              <SelectTrigger className={`min-w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="zh-TW">繁體中文</SelectItem>
-                <SelectItem value="zh-CN">简体中文</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="ja">日本語</SelectItem>
-                <SelectItem value="ko">한국어</SelectItem>
+                {languages.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
@@ -65,7 +76,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
           </div>
           
           <p className={`max-w-3xl mx-auto text-lg leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，專為喜愛同時觀看多個直播的用戶設計。我們支援 Twitch 和 YouTube 兩大主流直播平台，讓您可以在同一個頁面上同時觀看多個直播串流，無需在多個分頁間切換。
+            {t('about.intro')}
           </p>
         </div>
 
@@ -75,15 +86,15 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
               <MessageSquare className={`size-6 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
             </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>網站介紹</h2>
+            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about.websiteIntro')}</h2>
           </div>
           
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，專為喜愛同時觀看多個直播的用戶設計。我們支援 Twitch 和 YouTube 兩大主流直播平台，讓您可以在同一個頁面上同時觀看多個直播串流，無需在多個分頁間切換。
+              {t('about.intro')}
             </p>
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              本工具由個人開發者獨立開發維護，完全免費開放給所有人使用，無需註冊、無需付費，歡迎分享給您的朋友！
+              {t('about.intro2')}
             </p>
           </div>
         </section>
@@ -91,15 +102,15 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Main Features */}
         <section className="mb-16">
           <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            主要功能特色
+            {t('about.featuresTitle')}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FeatureCard
               theme={theme}
               icon={<Tv className="size-6" />}
-              title="多平台串流支援"
-              description="支援 Twitch 和 YouTube 兩大直播平台，可同時觀看多個串流"
+              title={t('about.feature1.title')}
+              description={t('about.feature1.description')}
               gradient="from-pink-500 to-purple-500"
               large
             />
@@ -107,91 +118,91 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             <FeatureCard
               theme={theme}
               icon={<Grid className="size-6" />}
-              title="多種布局模式"
-              description="提供單一畫面、分割、網格、側邊聊天（雙欄、四格、單一聊天室）等多種布局選擇"
+              title={t('about.feature2.title')}
+              description={t('about.feature2.description')}
             />
             
             <FeatureCard
               theme={theme}
               icon={<MessageCircle className="size-6" />}
-              title="聊天室整合"
-              description="整合 Twitch 和 YouTube 聊天室，可同時顯示多個聊天室"
+              title={t('about.feature3.title')}
+              description={t('about.feature3.description')}
             />
             
             <FeatureCard
               theme={theme}
               icon={<Volume2 className="size-6" />}
-              title="音量控制"
-              description="獨立音量控制每個串流，並提供總音量控制功能"
+              title={t('about.feature4.title')}
+              description={t('about.feature4.description')}
             />
             
             <FeatureCard
               theme={theme}
               icon={<Star className="size-6" />}
-              title="收藏系統"
-              description="收藏喜的串流，支援分類管理、Twitch 頻道搜尋、開台狀態檢測、匯出/匯入 JSON 檔案"
+              title={t('about.feature5.title')}
+              description={t('about.feature5.description')}
             />
             
             <FeatureCard
               theme={theme}
               icon={<Smartphone className="size-6" />}
-              title="響應式設計"
-              description="適配各種螢幕尺寸，提供流暢的使用體驗"
+              title={t('about.feature6.title')}
+              description={t('about.feature6.description')}
               gradient="from-purple-500 to-indigo-500"
             />
             
             <FeatureCard
               theme={theme}
               icon={<Languages className="size-6" />}
-              title="多語言支援"
-              description="支援繁體中文、簡體中文、英文、日文、韓文"
+              title={t('about.feature7.title')}
+              description={t('about.feature7.description')}
               gradient="from-blue-500 to-cyan-500"
             />
             
             <FeatureCard
               theme={theme}
               icon={<Shield className="size-6" />}
-              title="安全可靠"
-              description="採用 XSS 防護、CSP 安全策略，保護用戶安全"
+              title={t('about.feature8.title')}
+              description={t('about.feature8.description')}
               gradient="from-pink-600 to-red-600"
             />
             
             <FeatureCard
               theme={theme}
               icon={<Search className="size-6" />}
-              title="Twitch 頻道搜尋"
-              description="支援 Twitch 頻道搜尋功能，快速找到喜愛的頻道"
+              title={t('about.feature9.title')}
+              description={t('about.feature9.description')}
               gradient="from-purple-600 to-purple-800"
             />
             
             <FeatureCard
               theme={theme}
               icon={<Radio className="size-6" />}
-              title="開台狀態檢測"
-              description="自動檢測收藏的 Twitch 和 YouTube 頻道開台狀態"
+              title={t('about.feature10.title')}
+              description={t('about.feature10.description')}
               gradient="from-blue-600 to-indigo-700"
             />
             
             <FeatureCard
               theme={theme}
               icon={<Youtube className="size-6" />}
-              title="YouTube 頻道開台監測"
-              description="支援 YouTube 頻道開台狀態自動檢測，收藏列表中顯示直播狀態，點擊即可快速載入直播影片"
+              title={t('about.feature11.title')}
+              description={t('about.feature11.description')}
             />
             
             <FeatureCard
               theme={theme}
               icon={<Zap className="size-6" />}
-              title="自動排版"
-              description="Layout 自動排版功能，根據串流數量自動選擇最適合的布局"
+              title={t('about.feature12.title')}
+              description={t('about.feature12.description')}
               gradient="from-purple-500 to-pink-500"
             />
             
             <FeatureCard
               theme={theme}
               icon={<RefreshCw className="size-6" />}
-              title="串流重新整理"
-              description="支援串流重新整理功能，快速重新載入串流"
+              title={t('about.feature13.title')}
+              description={t('about.feature13.description')}
             />
           </div>
         </section>
@@ -199,43 +210,43 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Technical Features */}
         <section className="mb-16">
           <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            技術特色
+            {t('about.techTitle')}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TechFeatureCard
               theme={theme}
               icon={<Code className="size-6 text-blue-400" />}
-              title="純前端技術"
-              description="使用純 HTML/CSS/JavaScript 開發，無需後端伺服器"
+              title={t('about.tech1.title')}
+              description={t('about.tech1.description')}
             />
             
             <TechFeatureCard
               theme={theme}
               icon={<Broadcast className="size-6 text-purple-400" />}
-              title="即時串流"
-              description="整合 Twitch Embed API 和 YouTube IFrame API"
+              title={t('about.tech2.title')}
+              description={t('about.tech2.description')}
             />
             
             <TechFeatureCard
               theme={theme}
               icon={<Database className="size-6 text-green-400" />}
-              title="本地儲存"
-              description="使用 localStorage 和 IndexedDB 保存設定和備份數據，支援匯出/匯入 JSON 檔案"
+              title={t('about.tech3.title')}
+              description={t('about.tech3.description')}
             />
             
             <TechFeatureCard
               theme={theme}
               icon={<Globe className="size-6 text-cyan-400" />}
-              title="SEO 優化"
-              description="完整的 Meta 標籤和結構化數據"
+              title={t('about.tech4.title')}
+              description={t('about.tech4.description')}
             />
             
             <TechFeatureCard
               theme={theme}
               icon={<Gauge className="size-6 text-orange-400" />}
-              title="效能優化"
-              description="輕量級設計，快速載入"
+              title={t('about.tech5.title')}
+              description={t('about.tech5.description')}
             />
           </div>
         </section>
@@ -246,18 +257,18 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
               <Users className={`size-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
             </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>創建者資訊</h2>
+            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about.creatorTitle')}</h2>
           </div>
           
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              MultiStream Hub 由 <strong className="text-blue-500">Hsiung-Shao</strong> 獨立開發維護。
+              {t('about.creatorInfo1')}
             </p>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              本專案旨在為直播愛好者提供一個免費、易用的多平台串流觀看工具，讓觀看直播變得更加便利和有趣。
+              {t('about.creatorInfo2')}
             </p>
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              我們持續改進和優化功能，歡迎用戶提供寶貴的意見和建議。
+              {t('about.creatorInfo3')}
             </p>
           </div>
         </section>
@@ -268,12 +279,12 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
               <MessageSquare className={`size-6 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
             </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>聯絡我們</h2>
+            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about.contactTitle')}</h2>
           </div>
           
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              如有任何問題、建議或意見回饋，歡迎透過以下方式聯繫我們：
+              {t('about.contactIntro')}
             </p>
             
             <div className="space-y-4">
@@ -290,10 +301,10 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 <Mail className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
                 <div>
                   <h3 className={`mb-1 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    意見回饋表單
+                    {t('about.feedbackForm')}
                   </h3>
                   <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    點擊這裡填寫意見回饋
+                    {t('about.feedbackFormDesc')}
                   </p>
                 </div>
               </a>
@@ -311,10 +322,10 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 <MessageSquare className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
                 <div>
                   <h3 className={`mb-1 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    Discord 社群
+                    {t('about.discordCommunity')}
                   </h3>
                   <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    加入我們的 Discord 伺服器，與其他用戶交流或直接聯繫開發者
+                    {t('about.discordCommunityDesc')}
                   </p>
                 </div>
               </a>
@@ -325,18 +336,18 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Terms of Use */}
         <section className="mb-16">
           <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            使用條款
+            {t('about.termsTitle')}
           </h2>
           
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              MultiStream Hub 完全免費開放給所有人使用，無需註冊或付費。
+              {t('about.terms1')}
             </p>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              本工具僅作為串流觀看工具使用，所有直播內容的版權歸屬各直播平台和創作者所有。
+              {t('about.terms2')}
             </p>
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              為維持網站運營和持續開發，本網站可能會顯示第三方廣告（如 Google AdSense）。這些廣告由第三方服務提供商管理，我們不會收集您的個人資訊用於廣告投放。
+              {t('about.terms3')}
             </p>
           </div>
         </section>
@@ -344,15 +355,15 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Privacy & Security */}
         <section className="mb-16">
           <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            隱私與安全
+            {t('about.privacyTitle')}
           </h2>
           
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              我們重視您的隱私權。本網站不會主動收集任何個人資料，所有設定和收藏資料都儲存在您的瀏覽器本地。
+              {t('about.privacy1')}
             </p>
             <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              詳細的隱私權政策請參閱：隱私權政策
+              {t('about.privacy2')}: {t('about.privacyPolicy')}
             </p>
           </div>
         </section>
@@ -364,14 +375,14 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               onClick={onBack}
               className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
-              首頁
+              {t('about.home')}
             </button>
             {onNavigateToPrivacy && (
               <button
                 onClick={onNavigateToPrivacy}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
-                隱私權政策
+                {t('about.privacyPolicy')}
               </button>
             )}
             <a
@@ -380,15 +391,15 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               rel="noopener noreferrer"
               className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
-              給予意見回饋
+              {t('about.giveFeedback')}
             </a>
           </div>
           
           <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-            © 2025 Hsiung-Shao. All rights reserved.
+            {t('about.copyright')}
           </p>
           <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-500'}`}>
-            最後更新：2025-12-09
+            {t('about.lastUpdated')}
           </p>
         </footer>
       </div>
