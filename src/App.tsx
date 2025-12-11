@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { WelcomeCard } from './components/WelcomeCard';
 import { VersionHistory } from './components/VersionHistory';
@@ -10,6 +10,7 @@ import { PrivacyPage } from './components/PrivacyPage';
 import { StreamContainer } from './components/StreamContainer';
 import { parseStreamUrl, validateUrl, type StreamData } from './utils/streamUtils';
 import { useLayout } from './hooks/useLayout';
+import type { ChatLayoutType } from './utils/chatLayoutUtils';
 
 type Page = 'home' | 'about' | 'privacy';
 
@@ -55,6 +56,9 @@ export default function App() {
   
   // 布局管理
   const { currentLayout, setLayout } = useLayout(streams.length);
+  
+  // 聊天室布局管理
+  const [chatLayoutType, setChatLayoutType] = useState<ChatLayoutType>('none');
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -325,6 +329,7 @@ export default function App() {
         streams={streams}
         theme={theme}
         layoutType={currentLayout}
+        chatLayoutType={chatLayoutType}
         onRemove={handleRemoveStream}
         onReload={handleReloadStream}
         onToggleChat={handleToggleChat}
@@ -357,6 +362,8 @@ export default function App() {
         streams={streams}
         currentLayout={currentLayout}
         onLayoutChange={setLayout}
+        chatLayoutType={chatLayoutType}
+        onChatLayoutChange={setChatLayoutType}
         onVolumeChange={handleVolumeChange}
         onToggleMute={handleToggleMute}
         onRemoveStream={handleRemoveStream}

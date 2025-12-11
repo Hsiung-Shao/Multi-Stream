@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StreamBox } from './StreamBox';
+import { ChatSidebar } from './ChatSidebar';
 import type { StreamData } from '../utils/streamUtils';
 import { calculateLayoutStyles, type LayoutType } from '../utils/layoutUtils';
+import type { ChatLayoutType } from '../utils/chatLayoutUtils';
+import { getChatLayoutConfig } from '../utils/chatLayoutUtils';
 
 interface StreamContainerProps {
   streams: StreamData[];
   theme: 'light' | 'dark';
   layoutType: LayoutType;
+  chatLayoutType: ChatLayoutType;
   onRemove: (id: number) => void;
   onReload: (id: number) => void;
   onToggleChat: (id: number) => void;
@@ -19,6 +23,7 @@ export function StreamContainer({
   streams,
   theme,
   layoutType,
+  chatLayoutType,
   onRemove,
   onReload,
   onToggleChat,
@@ -26,6 +31,8 @@ export function StreamContainer({
   onVolumeChange,
   onStreamDataChange
 }: StreamContainerProps) {
+  const chatConfig = getChatLayoutConfig(chatLayoutType);
+  const videoAreaWidth = chatLayoutType !== 'none' ? chatConfig.videoAreaWidth : 100;
   // 同步 streamData 到全局 window.streamData
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -94,36 +101,70 @@ export function StreamContainer({
     };
   }, []);
 
+  // 當聊天室布局啟用時，隱藏串流框內的聊天室
+  useEffect(() => {
+    if (chatLayoutType !== 'none') {
+      streams.forEach(stream => {
+        const chatDiv = document.getElementById(`chat${stream.id}`);
+        if (chatDiv) {
+          chatDiv.classList.add('hidden');
+        }
+      });
+    } else {
+      // 恢復顯示
+      streams.forEach(stream => {
+        const chatDiv = document.getElementById(`chat${stream.id}`);
+        if (chatDiv && stream.chatVisible) {
+          chatDiv.classList.remove('hidden');
+        }
+      });
+    }
+  }, [chatLayoutType, streams]);
+
   return (
-    <div 
-      id="container" 
-      className="stream-container" 
-      style={{ 
-        position: 'absolute', 
-        width: '100%', 
-        height: `calc(100vh - ${navbarHeight}px)`,
-        top: `${navbarHeight}px`,
-        left: '0'
-      }}
-    >
-      {streams.map((stream, index) => {
-        const layoutStyle = calculateLayoutStyles(layoutType, index, streams.length);
-        
-        return (
-          <StreamBox
-            key={stream.id}
-            streamData={stream}
-            theme={theme}
-            layoutStyle={layoutStyle}
-            onRemove={onRemove}
-            onReload={onReload}
-            onToggleChat={onToggleChat}
-            onSeparateChat={onSeparateChat}
-            onVolumeChange={onVolumeChange}
-          />
-        );
-      })}
-    </div>
+    <>
+      <div 
+        id="container" 
+        className="stream-container" 
+        style={{ 
+          position: 'absolute', 
+          width: `${videoAreaWidth}%`, 
+          height: `calc(100vh - ${navbarHeight}px)`,
+          top: `${navbarHeight}px`,
+          left: '0',
+          maxWidth: `${videoAreaWidth}%`,
+          zIndex: 1
+        }}
+      >
+        {streams.map((stream, index) => {
+          const layoutStyle = calculateLayoutStyles(layoutType, index, streams.length);
+          
+          return (
+            <StreamBox
+              key={stream.id}
+              streamData={stream}
+              theme={theme}
+              layoutStyle={layoutStyle}
+              onRemove={onRemove}
+              onReload={onReload}
+              onToggleChat={onToggleChat}
+              onSeparateChat={onSeparateChat}
+              onVolumeChange={onVolumeChange}
+            />
+          );
+        })}
+      </div>
+      
+      {/* 聊天室側邊欄 */}
+      {chatLayoutType !== 'none' && (
+        <ChatSidebar
+          theme={theme}
+          chatLayoutType={chatLayoutType}
+          streams={streams}
+          navbarHeight={navbarHeight}
+        />
+      )}
+    </>
   );
 }
 

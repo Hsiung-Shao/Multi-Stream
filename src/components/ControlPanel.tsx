@@ -6,6 +6,7 @@ import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { StreamData } from '../utils/streamUtils';
 import type { LayoutType } from '../utils/layoutUtils';
+import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -18,6 +19,8 @@ interface ControlPanelProps {
   streams: StreamData[];
   currentLayout?: LayoutType;
   onLayoutChange?: (layout: LayoutType) => void;
+  chatLayoutType?: ChatLayoutType;
+  onChatLayoutChange?: (layout: ChatLayoutType) => void;
   onVolumeChange?: (id: number, volume: number) => void;
   onMoveStreamUp?: (id: number) => void;
   onMoveStreamDown?: (id: number) => void;
@@ -36,6 +39,8 @@ export function ControlPanel({
   streams,
   currentLayout = 1,
   onLayoutChange,
+  chatLayoutType = 'none',
+  onChatLayoutChange,
   onVolumeChange,
   onMoveStreamUp,
   onMoveStreamDown,
@@ -53,7 +58,6 @@ export function ControlPanel({
     window.dispatchEvent(new CustomEvent('masterVolumeChange', { detail: { volume: volume[0] } }));
   }, [volume]);
   
-  const [selectedChatLayout, setSelectedChatLayout] = useState<number | null>(null);
   const [navbarHeight, setNavbarHeight] = useState(64); // 默認 64px (4rem)
 
   useEffect(() => {
@@ -87,8 +91,9 @@ export function ControlPanel({
 
   const chatLayouts = [
     { id: 1, label: '關閉', icon: '□' },
-    { id: 2, label: '雙欄', icon: '▢▢' },
-    { id: 3, label: '四格', icon: '▦' },
+    { id: 2, label: '單一', icon: '▢' },
+    { id: 3, label: '雙欄', icon: '▢▢' },
+    { id: 4, label: '四格', icon: '▦' },
   ];
 
   if (isCollapsed) {
@@ -100,7 +105,8 @@ export function ControlPanel({
       className={`fixed right-0 w-[500px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l shadow-2xl overflow-y-auto`}
       style={{ 
         top: `${navbarHeight}px`,
-        height: `calc(100vh - ${navbarHeight}px)`
+        height: `calc(100vh - ${navbarHeight}px)`,
+        zIndex: 1000
       }}
     >
       <div className="p-6 space-y-6">
@@ -144,24 +150,39 @@ export function ControlPanel({
 
         {/* Chat Layout */}
         <Section theme={theme} title="聊天室布局">
-          <div className="grid grid-cols-3 gap-2">
-            {chatLayouts.map((layout) => (
-              <button
-                key={layout.id}
-                onClick={() => setSelectedChatLayout(layout.id)}
-                title={layout.label}
-                aria-label={layout.label}
-                className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center ${
-                  selectedChatLayout === layout.id
-                    ? 'border-purple-500 bg-purple-500/20'
-                    : theme === 'dark'
-                    ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
-                    : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
-                }`}
-              >
-                <ChatLayoutPreview id={layout.id} theme={theme} />
-              </button>
-            ))}
+          <div className="grid grid-cols-4 gap-2">
+            {chatLayouts.map((layout) => {
+              const chatLayoutTypeMap: Record<number, ChatLayoutType> = {
+                1: 'none',
+                2: 'single',
+                3: 'dual',
+                4: 'quad'
+              };
+              const mappedType = chatLayoutTypeMap[layout.id] || 'none';
+              const isSelected = chatLayoutType === mappedType;
+              
+              return (
+                <button
+                  key={layout.id}
+                  onClick={() => {
+                    if (onChatLayoutChange) {
+                      onChatLayoutChange(mappedType);
+                    }
+                  }}
+                  title={layout.label}
+                  aria-label={layout.label}
+                  className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center ${
+                    isSelected
+                      ? 'border-purple-500 bg-purple-500/20'
+                      : theme === 'dark'
+                      ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
+                      : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
+                  }`}
+                >
+                  <ChatLayoutPreview id={layout.id} theme={theme} />
+                </button>
+              );
+            })}
           </div>
         </Section>
 
@@ -386,7 +407,7 @@ export function ControlPanel({
   );
 }
 
-function Section({ theme, title, children }: { theme: 'light' | 'dark'; title: string; children: React.ReactNode }) {
+function Section({ theme, title, children }: { theme: 'light' | 'dark'; title: string; children?: React.ReactNode }) {
   return (
     <div className={`space-y-3 pb-4 border-b ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
       <h3 className={`${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>{title}</h3>
@@ -448,17 +469,26 @@ function LayoutPreview({
 
 function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' }) {
   if (id === 1) {
-    // 關閉 - 左側紫色，右側單一灰色區塊
+    // 關閉 - 全紫色（只有視頻區域）
     return (
-      <div className="w-full h-full p-2 flex gap-1">
-        <div className={`flex-[2] rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
-        <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-400'}`} />
+      <div className="w-full h-full p-2">
+        <div className={`w-full h-full rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
       </div>
     );
   }
   
   if (id === 2) {
-    // 雙欄
+    // 單一 - 左側紫色（視頻 80%），右側灰色區塊（聊天室 20%）
+    return (
+      <div className="w-full h-full p-2 flex gap-1">
+        <div className={`rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} style={{ width: '80%' }} />
+        <div className={`rounded ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-400'}`} style={{ width: '20%' }} />
+      </div>
+    );
+  }
+  
+  if (id === 3) {
+    // 雙欄 - 左側紫色（視頻），右側兩個灰色區塊（聊天室）
     return (
       <div className="w-full h-full p-2 flex gap-1">
         <div className={`flex-[2] rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
@@ -470,7 +500,7 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
     );
   }
   
-  // 四格
+  // 四格 - 左側紫色（視頻），右側2x2網格（聊天室）
   return (
     <div className="w-full h-full p-2 flex gap-1">
       <div className={`flex-[2] rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
