@@ -51,6 +51,7 @@ class ApiLoader {
         // 優化：使用 50ms 檢查間隔（更快檢測）
         const checkTwitch = setInterval(() => {
           if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
+            clearInterval(checkTwitch);
             this.state.twitchPlayer = 'loaded';
             resolve();
             return;
@@ -59,26 +60,11 @@ class ApiLoader {
 
         setTimeout(() => {
           clearInterval(checkTwitch);
-          if (typeof window.Twitch === 'undefined') {
+          if (this.state.twitchPlayer !== 'loaded' && typeof window.Twitch === 'undefined') {
             this.state.twitchPlayer = 'error';
             reject(new Error('Twitch Player API 載入超時'));
-            return;
           }
-          
-          // 指數退避：前 10 次快速檢查（50ms），之後逐漸增加間隔
-          if (checkCount < 10) {
-            checkInterval = 50;
-          } else if (checkCount < 30) {
-            checkInterval = 100;
-          } else {
-            checkInterval = 200;
-          }
-          
-          setTimeout(checkTwitch, checkInterval);
-        };
-        
-        // 立即執行第一次檢查
-        checkTwitch();
+        }, 10000);
         return;
       }
 
@@ -88,47 +74,6 @@ class ApiLoader {
       twitchScript.crossOrigin = 'anonymous';
       twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
       
-      // 優化：添加重試機制
-      let retryCount = 0;
-      const maxRetries = 2;
-      
-      const attemptLoad = () => {
-        twitchScript.onload = () => {
-          // 優化：使用指數退避策略檢查
-          let checkCount = 0;
-          let checkInterval = 50;
-          const maxChecks = 100;
-          
-          const checkTwitch = () => {
-            checkCount++;
-            if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
-              this.state.twitchPlayer = 'loaded';
-              resolve();
-              return;
-            }
-            
-            if (checkCount >= maxChecks) {
-              this.state.twitchPlayer = 'error';
-              reject(new Error('Twitch Player API 載入超時'));
-              return;
-            }
-            
-            // 指數退避
-            if (checkCount < 10) {
-              checkInterval = 50;
-            } else if (checkCount < 30) {
-              checkInterval = 100;
-            } else {
-              checkInterval = 200;
-            }
-            
-            setTimeout(checkTwitch, checkInterval);
-          };
-          
-          // 立即執行第一次檢查
-          checkTwitch();
-        };
-
       twitchScript.onload = () => {
         // 優化：使用 50ms 檢查間隔（更快檢測）
         const checkTwitch = setInterval(() => {
@@ -141,14 +86,18 @@ class ApiLoader {
 
         setTimeout(() => {
           clearInterval(checkTwitch);
-          if (typeof window.Twitch === 'undefined') {
+          if (this.state.twitchPlayer !== 'loaded' && typeof window.Twitch === 'undefined') {
             this.state.twitchPlayer = 'error';
             reject(new Error('無法載入 Twitch Player API'));
           }
-        };
+        }, 10000);
+      };
+
+      twitchScript.onerror = () => {
+        this.state.twitchPlayer = 'error';
+        reject(new Error('無法載入 Twitch Player API'));
       };
       
-      attemptLoad();
       document.head.appendChild(twitchScript);
     });
 
