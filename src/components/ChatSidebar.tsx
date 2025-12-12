@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { StreamData } from '../utils/streamUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
@@ -11,35 +11,37 @@ interface ChatSidebarProps {
   navbarHeight: number;
 }
 
-// 聊天室選擇狀態（存儲每個位置選擇的串流ID）
-const chatSelections: Record<string, number | null> = {
+// 聊天室選擇狀態（存儲每個位置選擇的串流ID）- 使用模組級變數作為持久化存儲
+const chatSelectionsStorage: Record<string, number | null> = {
   position1: null,
   position2: null,
   position3: null,
   position4: null
 };
 
-// 智能遷移聊天室選擇（參考正式環境的 migrateChatSelections）
-function migrateChatSelections(
-  positionKeys: string[],
-  allStreams: StreamData[],
-  currentLayoutType: ChatLayoutType
-) {
-  console.log(`[migrateChatSelections] 開始智能遷移`, {
-    positionKeys,
-    currentLayoutType,
-    allStreamsCount: allStreams.length,
-    allStreamIds: allStreams.map(s => s.id),
-    currentSelections: { ...chatSelections }
-  });
+  // 智能遷移聊天室選擇（參考正式環境的 migrateChatSelections）
+  // 注意：這個函數現在接收 setChatSelections 作為參數，以便更新 React state
+  const migrateChatSelections = (
+    positionKeys: string[],
+    allStreams: StreamData[],
+    currentLayoutType: ChatLayoutType,
+    setSelections: React.Dispatch<React.SetStateAction<Record<string, number | null>>>
+  ) => {
+    console.log(`[migrateChatSelections] 開始智能遷移`, {
+      positionKeys,
+      currentLayoutType,
+      allStreamsCount: allStreams.length,
+      allStreamIds: allStreams.map(s => s.id),
+      currentSelections: { ...chatSelectionsStorage }
+    });
 
   // 收集所有已使用的串流 ID（避免重複分配）
   const usedStreamIds = new Set<number>();
   
   // 首先，收集當前布局中已經有值的串流 ID
   positionKeys.forEach(posKey => {
-    if (chatSelections[posKey] !== null && chatSelections[posKey] !== undefined) {
-      const streamId = chatSelections[posKey]!;
+    if (chatSelectionsStorage[posKey] !== null && chatSelectionsStorage[posKey] !== undefined) {
+      const streamId = chatSelectionsStorage[posKey]!;
       // 檢查該串流是否仍然存在
       if (allStreams.find(s => s.id === streamId)) {
         usedStreamIds.add(streamId);
@@ -63,8 +65,10 @@ function migrateChatSelections(
   });
   
   // 為每個位置鍵嘗試遷移或設置默認值
+  const updatedSelections: Record<string, number | null> = { ...chatSelectionsStorage };
+  
   positionKeys.forEach((posKey, index) => {
-    const currentSelection = chatSelections[posKey];
+    const currentSelection = chatSelectionsStorage[posKey];
     
     console.log(`[migrateChatSelections] 處理位置鍵`, {
       posKey,
@@ -79,7 +83,7 @@ function migrateChatSelections(
       
       // 策略 1: 首先嘗試從相同位置鍵的其他布局遷移
       // 檢查當前位置鍵是否在其他布局配置中也存在，如果有值且有效，保留它
-      const existingId = chatSelections[posKey];
+      const existingId = chatSelectionsStorage[posKey];
       if (existingId !== null && existingId !== undefined) {
         const streamExists = allStreams.find(s => s.id === existingId);
         if (streamExists && !usedStreamIds.has(existingId)) {
@@ -117,7 +121,7 @@ function migrateChatSelections(
             for (const otherPosKey of layoutConfig.positionKeys) {
               // 只從其他位置鍵遷移，不從相同位置鍵遷移（已在策略1處理）
               if (otherPosKey !== posKey) {
-                const otherId = chatSelections[otherPosKey];
+                const otherId = chatSelectionsStorage[otherPosKey];
                 if (otherId !== null && otherId !== undefined) {
                   const streamExists = allStreams.find(s => s.id === otherId);
                   if (streamExists && !usedStreamIds.has(otherId)) {
@@ -131,7 +135,7 @@ function migrateChatSelections(
         
         // 如果有可用的串流，使用第一個未使用的
         if (availableStreamIds.length > 0) {
-          chatSelections[posKey] = availableStreamIds[0];
+          updatedSelections[posKey] = availableStreamIds[0];
           usedStreamIds.add(availableStreamIds[0]);
           migrated = true;
           console.log(`[migrateChatSelections] 策略2成功：從其他位置鍵遷移`, {
@@ -153,7 +157,7 @@ function migrateChatSelections(
         for (let i = 0; i < allStreams.length; i++) {
           const streamId = allStreams[i].id;
           if (!usedStreamIds.has(streamId)) {
-            chatSelections[posKey] = streamId;
+            updatedSelections[posKey] = streamId;
             usedStreamIds.add(streamId);
             migrated = true;
             console.log(`[migrateChatSelections] 策略3成功：使用默認值`, {
@@ -183,11 +187,15 @@ function migrateChatSelections(
     }
   });
   
+  // 更新存儲和 state
+  Object.assign(chatSelectionsStorage, updatedSelections);
+  setSelections({ ...updatedSelections });
+  
   console.log(`[migrateChatSelections] 智能遷移完成`, {
-    finalSelections: { ...chatSelections },
+    finalSelections: { ...updatedSelections },
     usedStreamIds: Array.from(usedStreamIds)
   });
-}
+};
 
 // 使用 React.memo 包裝，避免控制面板狀態變化導致不必要的重新渲染
 export const ChatSidebar = React.memo(function ChatSidebar({
@@ -199,6 +207,9 @@ export const ChatSidebar = React.memo(function ChatSidebar({
   const config = getChatLayoutConfig(chatLayoutType);
   const sidebarRef = useRef(null);
   
+  // 使用 useRef 來追蹤每個面板的延遲更新定時器，避免重複觸發和影響其他容器
+  const panelUpdateTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+  
   // 使用 useMemo 來穩定 streams 的引用，避免控制面板狀態變化導致重新渲染
   // 只在串流的 ID、平台、頻道 ID、視頻 ID 真正改變時才更新
   const streamsKey = useMemo(() => 
@@ -206,6 +217,18 @@ export const ChatSidebar = React.memo(function ChatSidebar({
     [streams]
   );
   const stableStreams = useMemo(() => streams, [streamsKey]);
+
+  // 使用 React state 來管理選擇狀態，確保選擇器正確顯示
+  const [chatSelections, setChatSelections] = useState<Record<string, number | null>>(() => {
+    // 初始化時從存儲中讀取
+    return { ...chatSelectionsStorage };
+  });
+
+  // 同步函數：更新選擇狀態（同時更新 state 和存儲）
+  const updateChatSelection = (positionKey: string, streamId: number | null) => {
+    chatSelectionsStorage[positionKey] = streamId;
+    setChatSelections(prev => ({ ...prev, [positionKey]: streamId }));
+  };
 
   // 如果聊天室布局為 none，不顯示
   if (chatLayoutType === 'none') {
@@ -572,7 +595,7 @@ export const ChatSidebar = React.memo(function ChatSidebar({
         chatSelections: { ...chatSelections }
       });
       
-      migrateChatSelections(config.positionKeys, stableStreams, chatLayoutType);
+      migrateChatSelections(config.positionKeys, stableStreams, chatLayoutType, setChatSelections);
       
       console.log(`[ChatSidebar] 執行智能遷移後`, {
         chatSelections: { ...chatSelections }
@@ -585,7 +608,7 @@ export const ChatSidebar = React.memo(function ChatSidebar({
         console.log(`[ChatSidebar] 單行布局：在 useEffect 中處理延遲更新`);
         // 單行布局：在 useEffect 中處理延遲更新
         config.positionKeys.forEach((posKey, index) => {
-          const selectedId = chatSelections[posKey];
+          const selectedId = chatSelectionsStorage[posKey];
           
           console.log(`[ChatSidebar] 處理單行布局面板`, {
             positionKey: posKey,
@@ -621,7 +644,7 @@ export const ChatSidebar = React.memo(function ChatSidebar({
                 positionKey: posKey,
                 selectedId
               });
-              chatSelections[posKey] = null;
+              updateChatSelection(posKey, null);
               updateChatContent(posKey, null);
             }
           } else {
@@ -634,11 +657,37 @@ export const ChatSidebar = React.memo(function ChatSidebar({
         });
       } else {
         console.log(`[ChatSidebar] 多行布局：延遲更新在 createChatPanel 中處理`);
+        // 多行布局：也需要在 useEffect 中觸發初始更新，確保聊天室能顯示
+        // 參考正式環境：即使是在 createChatPanel 中處理，也要確保內容能正確顯示
+        config.positionKeys.forEach((posKey, index) => {
+          const selectedId = chatSelectionsStorage[posKey];
+          if (selectedId !== null && selectedId !== undefined) {
+            const streamExists = stableStreams.find(s => s.id === selectedId);
+            if (streamExists) {
+              // 對於多行布局，使用較短的延遲（300ms），因為 createChatPanel 中已經有 500ms 延遲
+              // 這裡作為備份觸發，確保內容能顯示
+              setTimeout(() => {
+                const chatContent = document.getElementById(`chat-content-${posKey}`);
+                if (chatContent && chatContent.children.length === 0) {
+                  console.log(`[ChatSidebar] 多行布局備份觸發：內容為空，重新更新`, {
+                    positionKey: posKey,
+                    streamId: selectedId
+                  });
+                  updateChatContent(posKey, selectedId);
+                }
+              }, 800); // 800ms = 500ms (createChatPanel) + 300ms (額外緩衝)
+            }
+          }
+        });
       }
-      // 多行布局的延遲更新在 createChatPanel 中處理
     });
 
-    return () => cancelAnimationFrame(rafId);
+    return () => {
+      cancelAnimationFrame(rafId);
+      // 清理所有延遲更新定時器
+      Object.values(panelUpdateTimersRef.current).forEach(timer => clearTimeout(timer));
+      panelUpdateTimersRef.current = {};
+    };
   }, [chatLayoutType, stableStreams, config.positionKeys]);
 
   // 監聽聊天室創建完成事件，當聊天室創建完成後立即更新內容
@@ -649,7 +698,7 @@ export const ChatSidebar = React.memo(function ChatSidebar({
       if (!streamId) return;
 
       // 檢查該串流是否被分配到某個面板
-      const assignedPosition = Object.entries(chatSelections).find(
+      const assignedPosition = Object.entries(chatSelectionsStorage).find(
         ([_, id]) => id === streamId
       );
 
@@ -687,7 +736,14 @@ export const ChatSidebar = React.memo(function ChatSidebar({
     // 參考正式環境：如果有選中的串流，延遲更新聊天室內容
     // 多行布局：在面板創建時使用 500ms 延遲
     // 單行布局：在 useEffect 中處理（500ms + index * 200ms）
+    // 注意：只在初始創建時觸發，選擇器切換時不觸發（選擇器切換會直接調用 updateChatContent）
     if (selectedId !== null && selectedId !== undefined && config.grid.rows > 1) {
+      // 清除之前的定時器（如果存在）
+      if (panelUpdateTimersRef.current[positionKey]) {
+        clearTimeout(panelUpdateTimersRef.current[positionKey]);
+        delete panelUpdateTimersRef.current[positionKey];
+      }
+      
       console.log(`[ChatSidebar] createChatPanel - 多行布局，設置延遲更新`, {
         positionKey,
         selectedId,
@@ -697,13 +753,20 @@ export const ChatSidebar = React.memo(function ChatSidebar({
       const streamExists = stableStreams.find(s => s.id === selectedId);
       if (streamExists) {
         // 參考正式環境：多行布局在面板創建時延遲更新（500ms）
-        setTimeout(() => {
-          console.log(`[ChatSidebar] createChatPanel - 多行布局延遲更新觸發`, {
-            positionKey,
-            selectedId
-          });
-          updateChatContent(positionKey, selectedId);
+        // 只在內容為空時才觸發，避免覆蓋選擇器切換的更新
+        const timerId = setTimeout(() => {
+          const chatContent = document.getElementById(`chat-content-${positionKey}`);
+          // 只在內容為空時才更新，避免覆蓋選擇器切換的更新
+          if (chatContent && chatContent.children.length === 0) {
+            console.log(`[ChatSidebar] createChatPanel - 多行布局延遲更新觸發`, {
+              positionKey,
+              selectedId
+            });
+            updateChatContent(positionKey, selectedId);
+          }
+          delete panelUpdateTimersRef.current[positionKey];
         }, 500);
+        panelUpdateTimersRef.current[positionKey] = timerId;
       } else {
         console.warn(`[ChatSidebar] createChatPanel - 串流不存在`, {
           positionKey,
@@ -725,9 +788,18 @@ export const ChatSidebar = React.memo(function ChatSidebar({
             value={selectedId !== null && selectedId !== undefined ? String(selectedId) : ''}
             onValueChange={(value) => {
               const streamId = value && value !== 'none' && value !== '' ? parseInt(value) : null;
+              
+              // 清除該面板的延遲更新定時器（如果存在），避免與選擇器切換衝突
+              if (panelUpdateTimersRef.current[positionKey]) {
+                clearTimeout(panelUpdateTimersRef.current[positionKey]);
+                delete panelUpdateTimersRef.current[positionKey];
+                console.log(`[ChatSidebar] 選擇器切換，清除延遲更新定時器`, { positionKey });
+              }
+              
               // 參考正式環境：立即保存選擇狀態
-              chatSelections[positionKey] = streamId;
+              updateChatSelection(positionKey, streamId);
               // 參考正式環境：立即更新內容，不使用延遲
+              // 只更新當前選擇器對應的容器，不影響其他容器
               updateChatContent(positionKey, streamId);
             }}
           >
