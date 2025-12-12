@@ -1257,7 +1257,7 @@ const favoriteStreams = {
                   const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
                   addStream(liveUrl);
                   
-                  // 更新收藏項目的直播狀態和 URL
+                  // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                   const list = favoriteStreams.getList();
                   const updatedList = list.map(fav => {
                     if (fav.id === item.id) {
@@ -1265,9 +1265,9 @@ const favoriteStreams = {
                         ...fav,
                         isLive: true,
                         liveVideoId: status.liveVideoId,
-                        url: liveUrl, // 更新 URL 為直播網址
-                        liveUrl: liveUrl, // 保存直播網址
+                        liveUrl: liveUrl, // 保存直播網址（用於播放），但不更新收藏的 URL
                         lastChecked: new Date().toISOString()
+                        // 注意：不更新 url，保持收藏中的 www.youtube.com/channel/UCxxxxx/live 格式
                       };
                     }
                     return fav;
@@ -1290,7 +1290,7 @@ const favoriteStreams = {
                 const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
                 addStream(liveUrl);
                 
-                // 更新收藏項目的直播狀態和 URL
+                // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                 const list = favoriteStreams.getList();
                 const updatedList = list.map(fav => {
                   if (fav.id === item.id) {
@@ -1298,9 +1298,9 @@ const favoriteStreams = {
                       ...fav,
                       isLive: true,
                       liveVideoId: status.liveVideoId,
-                      url: liveUrl,
-                      liveUrl: liveUrl,
+                      liveUrl: liveUrl, // 保存直播網址（用於播放），但不更新收藏的 URL
                       lastChecked: new Date().toISOString()
+                      // 注意：不更新 url，保持收藏中的 www.youtube.com/channel/UCxxxxx/live 格式
                     };
                   }
                   return fav;
@@ -1335,7 +1335,7 @@ const favoriteStreams = {
                     const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
                     addStream(liveUrl);
                     
-                    // 更新收藏項目的直播狀態和 URL
+                    // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                     const list = favoriteStreams.getList();
                     const updatedList = list.map(fav => {
                       if (fav.id === item.id) {
@@ -1343,9 +1343,9 @@ const favoriteStreams = {
                           ...fav,
                           isLive: true,
                           liveVideoId: retryStatus.liveVideoId,
-                          url: liveUrl,
-                          liveUrl: liveUrl,
+                          liveUrl: liveUrl, // 保存直播網址（用於播放），但不更新收藏的 URL
                           lastChecked: new Date().toISOString()
+                          // 注意：不更新 url，保持收藏中的 www.youtube.com/channel/UCxxxxx/live 格式
                         };
                       }
                       return fav;
@@ -1367,6 +1367,7 @@ const favoriteStreams = {
                   const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
                   addStream(liveUrl);
                   
+                  // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                   const list = favoriteStreams.getList();
                   const updatedList = list.map(fav => {
                     if (fav.id === item.id) {
@@ -1374,9 +1375,9 @@ const favoriteStreams = {
                         ...fav,
                         isLive: true,
                         liveVideoId: retryStatus.liveVideoId,
-                        url: liveUrl,
-                        liveUrl: liveUrl,
+                        liveUrl: liveUrl, // 保存直播網址（用於播放），但不更新收藏的 URL
                         lastChecked: new Date().toISOString()
+                        // 注意：不更新 url，保持收藏中的 www.youtube.com/channel/UCxxxxx/live 格式
                       };
                     }
                     return fav;
@@ -3064,7 +3065,7 @@ async function updateFavoriteLiveStatuses() {
                 const actualChannelId = await youtubeApiUtils.getChannelIdFromVideoId(status.liveVideoId);
                 
                 if (actualChannelId && actualChannelId.trim() === item.channelId.trim()) {
-                  // 頻道 ID 一致，更新 URL 為直播網址
+                  // 頻道 ID 一致，更新直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                   const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
                   updatedCount++;
                   return {
@@ -3072,8 +3073,8 @@ async function updateFavoriteLiveStatuses() {
                     isLive: true,
                     lastChecked: new Date().toISOString(),
                     liveVideoId: status.liveVideoId,
-                    url: liveUrl, // 更新 URL 為直播網址
-                    liveUrl: liveUrl, // 保存直播網址
+                    liveUrl: liveUrl, // 保存直播網址（用於播放），但不更新收藏的 URL
+                    // 注意：不更新 url，保持收藏中的 www.youtube.com/channel/UCxxxxx/live 格式
                   };
                 } else {
                   // 頻道 ID 不一致，不更新 URL，只更新狀態為未開台（可能是其他頻道的直播）
@@ -3087,7 +3088,7 @@ async function updateFavoriteLiveStatuses() {
                   };
                 }
               } catch (verifyError) {
-                // 驗證失敗（可能是 API 錯誤），但繼續更新狀態和 URL
+                // 驗證失敗（可能是 API 錯誤），但繼續更新狀態（但不更新收藏的 URL）
                 console.warn('批量更新時頻道 ID 驗證失敗，繼續更新:', verifyError);
                 const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
                 updatedCount++;
@@ -3096,8 +3097,8 @@ async function updateFavoriteLiveStatuses() {
                   isLive: true,
                   lastChecked: new Date().toISOString(),
                   liveVideoId: status.liveVideoId,
-                  url: liveUrl,
-                  liveUrl: liveUrl,
+                  liveUrl: liveUrl, // 保存直播網址（用於播放），但不更新收藏的 URL
+                  // 注意：不更新 url，保持收藏中的 www.youtube.com/channel/UCxxxxx/live 格式
                 };
               }
             } else {
