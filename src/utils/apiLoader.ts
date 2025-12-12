@@ -71,9 +71,11 @@ class ApiLoader {
       // 載入 Twitch Player API
       const twitchScript = document.createElement('script');
       twitchScript.async = true;
-      twitchScript.crossOrigin = 'anonymous';
+      // 移除 crossOrigin 屬性，避免 CORS 檢查過於嚴格（腳本標籤通常不需要）
+      // twitchScript.crossOrigin = 'anonymous';
       twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
       
+      // 改進的 onload 處理：即使有 CORS 警告，只要 window.Twitch 可用就視為成功
       twitchScript.onload = () => {
         // 優化：使用 50ms 檢查間隔（更快檢測）
         const checkTwitch = setInterval(() => {
@@ -86,16 +88,36 @@ class ApiLoader {
 
         setTimeout(() => {
           clearInterval(checkTwitch);
-          if (this.state.twitchPlayer !== 'loaded' && typeof window.Twitch === 'undefined') {
-            this.state.twitchPlayer = 'error';
-            reject(new Error('無法載入 Twitch Player API'));
+          // 即使 onload 觸發，也要檢查 window.Twitch 是否真的可用
+          if (this.state.twitchPlayer !== 'loaded') {
+            if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
+              // 實際上已經載入成功了
+              this.state.twitchPlayer = 'loaded';
+              resolve();
+            } else {
+              this.state.twitchPlayer = 'error';
+              reject(new Error('無法載入 Twitch Player API'));
+            }
           }
         }, 10000);
       };
 
+      // 改進的 onerror 處理：即使 onerror 觸發，也檢查 window.Twitch 是否可用
+      // 因為某些 CORS 警告可能是誤報，腳本可能實際上已經載入成功
       twitchScript.onerror = () => {
-        this.state.twitchPlayer = 'error';
-        reject(new Error('無法載入 Twitch Player API'));
+        // 即使 onerror 觸發，也要檢查腳本是否實際上已經載入
+        // 因為某些 CORS 警告可能是誤報
+        setTimeout(() => {
+          if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
+            // 實際上已經載入成功了（可能是誤報的 CORS 錯誤）
+            console.warn('[apiLoader] Twitch Player API 載入時出現錯誤事件，但 API 實際可用');
+            this.state.twitchPlayer = 'loaded';
+            resolve();
+          } else {
+            this.state.twitchPlayer = 'error';
+            reject(new Error('無法載入 Twitch Player API'));
+          }
+        }, 500); // 給一點時間讓腳本執行
       };
       
       document.head.appendChild(twitchScript);
