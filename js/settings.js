@@ -144,24 +144,71 @@ const indexedDBBackup = {
     return data;
   },
   
-  // 檢查 localStorage 是否有數據
+  // React 環境：僅檢查收藏列表
   hasLocalStorageData: () => {
     const favoriteStreams = localStorage.getItem('favoriteStreams');
-    const favoriteCategories = localStorage.getItem('favoriteCategories');
-    const userSettings = localStorage.getItem('userSettings');
     
-    // 檢查是否有任何重要數據
+    // React 環境：僅檢查 favoriteStreams
     if (favoriteStreams && favoriteStreams !== '[]' && favoriteStreams !== 'null') {
-      return true;
-    }
-    if (favoriteCategories && favoriteCategories !== '[]' && favoriteCategories !== 'null') {
-      return true;
-    }
-    if (userSettings && userSettings !== '{}' && userSettings !== 'null') {
       return true;
     }
     
     return false;
+  },
+  
+  // React 環境：僅檢查收藏列表
+  async hasIndexedDBData() {
+    if (!this.isEnabled()) {
+      return false;
+    }
+    
+    // 確保數據庫已初始化
+    if (!this.db) {
+      try {
+        const initResult = await this.init();
+        if (!initResult || !this.db) {
+          return false;
+        }
+      } catch (error) {
+        console.error('[indexedDBBackup] 初始化時發生錯誤', error);
+        return false;
+      }
+    }
+    
+    if (!this.db) {
+      return false;
+    }
+    
+    try {
+      const transaction = this.db.transaction([this.storeName], 'readonly');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.get('latest');
+      
+      return new Promise((resolve) => {
+        request.onsuccess = () => {
+          const result = request.result;
+          if (!result || !result.data) {
+            resolve(false);
+            return;
+          }
+          
+          const data = result.data;
+          // React 環境：僅檢查 favoriteStreams，並驗證是否為非空陣列
+          if (data.favoriteStreams && Array.isArray(data.favoriteStreams) && data.favoriteStreams.length > 0) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        };
+        
+        request.onerror = () => {
+          resolve(false);
+        };
+      });
+    } catch (error) {
+      console.error('[indexedDBBackup] 檢查 IndexedDB 數據時發生錯誤', error);
+      return false;
+    }
   },
   
   // 備份數據到 IndexedDB（從 localStorage 讀取並備份）
@@ -436,11 +483,12 @@ const indexedDBBackup = {
   },
   
   // 自動載入備份（頁面載入時）
-  // 注意：只有在 localStorage（主要快取）為空時才從 IndexedDB 恢復
+  // React 環境：僅檢查 favoriteStreams 數據
+  // 注意：只有在 localStorage 的 favoriteStreams 為空時才從 IndexedDB 恢復
   async autoLoadBackup() {
-    console.log('[indexedDBBackup] 自動載入備份', {
+    console.log('[indexedDBBackup] 自動載入備份（React 環境：僅檢查 favoriteStreams）', {
       enabled: this.isEnabled(),
-      note: '只有在 localStorage（主要快取）為空時才從 IndexedDB 恢復'
+      note: 'React 環境：僅檢查 favoriteStreams 數據，只有在 localStorage 的 favoriteStreams 為空時才從 IndexedDB 恢復'
     });
     
     if (!this.isEnabled()) {
@@ -448,14 +496,23 @@ const indexedDBBackup = {
       return { success: false, message: '備份功能未啟用', skipped: true };
     }
     
-    // 檢查 localStorage（主要快取）是否有數據
+    // React 環境：僅檢查 localStorage 的 favoriteStreams 數據
     const hasLocalData = this.hasLocalStorageData();
     if (hasLocalData) {
-      console.log('[indexedDBBackup] localStorage（主要快取）已有數據，不需要從 IndexedDB 恢復');
-      return { success: false, message: 'localStorage 已有數據，以 localStorage 為主', skipped: true };
+      console.log('[indexedDBBackup] localStorage 的 favoriteStreams 已有數據，不需要從 IndexedDB 恢復');
+      return { success: false, message: 'localStorage 的 favoriteStreams 已有數據，以 localStorage 為主', skipped: true };
     }
     
-    console.log('[indexedDBBackup] localStorage（主要快取）為空，嘗試從 IndexedDB 恢復');
+    console.log('[indexedDBBackup] localStorage 的 favoriteStreams 為空，檢查 IndexedDB 是否有 favoriteStreams 備份');
+    
+    // 檢查 IndexedDB 是否有 favoriteStreams 數據
+    const hasIndexedDBData = await this.hasIndexedDBData();
+    if (!hasIndexedDBData) {
+      console.log('[indexedDBBackup] IndexedDB 中沒有 favoriteStreams 備份數據，無需恢復');
+      return { success: false, message: 'IndexedDB 中沒有 favoriteStreams 備份數據', skipped: true };
+    }
+    
+    console.log('[indexedDBBackup] IndexedDB 中有 favoriteStreams 備份數據，開始恢復');
     return await this.restore();
   }
 };
@@ -497,6 +554,8 @@ if (window.indexedDB) {
   });
 }
 
+// [已遷移到 React UI] showSaveMessage 已遷移到 React 組件
+/*
 // 顯示保存消息（在收藏管理界面下方）
 function showSaveMessage(message) {
   const manager = document.getElementById('favorite-streams-manager');
@@ -521,7 +580,9 @@ function showSaveMessage(message) {
     messageDiv.style.display = 'none';
   }, 3000);
 }
+*/
 
+// [已遷移到 React UI] 以下函數仍在全局使用，但內部 DOM 操作可能需要更新
 // 切換備份功能開關
 function toggleBackupEnabled() {
   const checkbox = document.getElementById('backup-enabled-checkbox');
@@ -1396,6 +1457,9 @@ const favoriteStreams = {
   }
 };
 
+// [已遷移到 React UI] 收藏管理器 UI 已遷移到 React 組件 (src/components/FavoritesManager.tsx)
+// 以下 DOM 創建和操作代碼已註釋
+/*
 // 顯示收藏管理界面（使用全局变量保存筛选状态）
 let currentCategoryFilter = null;
 
@@ -1781,6 +1845,7 @@ function closeFavoriteStreamsManager() {
     manager.classList.remove('show');
   }
 }
+*/
 
 // 添加到收藏（異步版本）
 async function addToFavorites() {

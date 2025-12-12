@@ -1,5 +1,4 @@
 import { Coffee, FileText, HelpCircle, Info } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
 import { useI18n } from '../i18n/index';
 
 interface WelcomeCardProps {
@@ -90,75 +89,82 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
           {t('welcome.supportDesc')}
         </p>
         <div className="flex justify-center">
-          <MuiButton
-            variant="contained"
-            color="secondary"
-            size="large"
-            onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
-            sx={{
-              background: 'linear-gradient(to right, #facc15, #fb923c)',
-              color: '#000000',
-              '&:hover': {
-                background: 'linear-gradient(to right, #eab308, #f97316)',
-              },
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[WelcomeCard] 贊助按鈕被點擊');
+              window.open('https://buymeacoffee.com/hsiung', '_blank', 'noopener,noreferrer');
             }}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg text-base font-medium text-black bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 transition-all shadow-lg hover:shadow-xl"
           >
-            <Coffee className="size-5 mr-2" />
+            <Coffee className="size-5" />
             {t('welcome.buyMeACoffee')}
-          </MuiButton>
+          </button>
         </div>
       </div>
 
       {/* Footer Buttons */}
       <div className={`flex flex-wrap items-center justify-center gap-3 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-        <MuiButton
-          variant="outlined"
-          color="secondary"
-          onClick={onShowVersionHistory}
-          sx={{
-            borderColor: theme === 'dark' ? 'rgba(147, 51, 234, 0.5)' : '#c084fc',
-            color: theme === 'dark' ? '#a855f7' : '#9333ea',
-            '&:hover': {
-              borderColor: theme === 'dark' ? 'rgba(147, 51, 234, 0.5)' : '#c084fc',
-              bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
-            },
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[WelcomeCard] 版本資訊按鈕被點擊');
+            onShowVersionHistory();
           }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+            theme === 'dark' 
+              ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500/70' 
+              : 'border-purple-400 text-purple-600 hover:bg-purple-50 hover:border-purple-500'
+          }`}
         >
-          <FileText className="size-4 mr-2" />
+          <FileText className="size-4" />
           {t('welcome.versionInfo')}
-        </MuiButton>
-        <MuiButton
-          variant="outlined"
-          color="primary"
-          onClick={onShowTutorial}
-          sx={{
-            borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.5)' : '#93c5fd',
-            color: theme === 'dark' ? '#60a5fa' : '#2563eb',
-            '&:hover': {
-              borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.5)' : '#93c5fd',
-              bgcolor: theme === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.05)',
-            },
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[WelcomeCard] 教學按鈕被點擊');
+            onShowTutorial();
           }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+            theme === 'dark' 
+              ? 'border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/70' 
+              : 'border-blue-400 text-blue-600 hover:bg-blue-50 hover:border-blue-500'
+          }`}
         >
-          <HelpCircle className="size-4 mr-2" />
+          <HelpCircle className="size-4" />
           {t('welcome.tutorial')}
-        </MuiButton>
-        <MuiButton
-          variant="outlined"
-          color="success"
-          onClick={onShowAbout}
-          sx={{
-            borderColor: theme === 'dark' ? 'rgba(34, 197, 94, 0.5)' : '#86efac',
-            color: theme === 'dark' ? '#4ade80' : '#16a34a',
-            '&:hover': {
-              borderColor: theme === 'dark' ? 'rgba(34, 197, 94, 0.5)' : '#86efac',
-              bgcolor: theme === 'dark' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.05)',
-            },
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[WelcomeCard] 關於按鈕被點擊', { onShowAbout: !!onShowAbout });
+            if (onShowAbout) {
+              onShowAbout();
+            }
           }}
+          disabled={!onShowAbout}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+            !onShowAbout
+              ? theme === 'dark'
+                ? 'border-green-500/20 text-green-500/50 cursor-not-allowed'
+                : 'border-green-400/50 text-green-600/50 cursor-not-allowed'
+              : theme === 'dark' 
+                ? 'border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-500/70' 
+                : 'border-green-400 text-green-600 hover:bg-green-50 hover:border-green-500'
+          }`}
         >
-          <Info className="size-4 mr-2" />
+          <Info className="size-4" />
           {t('welcome.about')}
-        </MuiButton>
+        </button>
       </div>
     </div>
   );

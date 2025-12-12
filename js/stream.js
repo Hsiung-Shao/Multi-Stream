@@ -2,14 +2,19 @@
 
 // 主要加入函式
 async function addStream(url = null) {
+  // [已遷移到 React UI] URL 輸入框操作已遷移到 React 組件，以下代碼已註釋
+  /*
   if (!url) {
     const urlInput = document.getElementById('url-input');
     if (urlInput) {
       url = urlInput.value.trim();
     }
   }
+  */
   if (!url) return alert('請輸入直播網址或頻道名稱');
   
+  // [已遷移到 React UI] 清空輸入框和隱藏搜索建議已遷移到 React
+  /*
   // 清空輸入框（如果存在）
   const urlInput = document.getElementById('url-input');
   if (urlInput) {
@@ -20,6 +25,7 @@ async function addStream(url = null) {
   if (typeof hideSearchSuggestions === 'function') {
     hideSearchSuggestions();
   }
+  */
 
   // 如果輸入的不是 URL，嘗試搜尋 Twitch 或 YouTube 頻道
   if (!url.includes('http://') && !url.includes('https://') && 

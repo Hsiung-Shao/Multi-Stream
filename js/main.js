@@ -1,5 +1,7 @@
 // 主入口和初始化
 
+// [已遷移到 React UI] 測試函數已註釋（搜索功能已遷移）
+/*
 // 立即暴露測試函數到全局（在任何其他代碼之前）
 (function() {
   window.testSearchFunction = function() {
@@ -7,6 +9,7 @@
     return result;
   };
 })();
+*/
 
 // 全局變數
 // 將 streamCount 直接定義在 window 上，以便其他模組訪問
@@ -32,6 +35,9 @@ console.log('[main.js] 全局變數已初始化', {
 
 // 頁面載入時檢查協議和恢復控制面板狀態
 window.addEventListener('DOMContentLoaded', () => {
+  // [已遷移到 React UI] 控制面板狀態恢復和總音量控制已遷移到 React 組件
+  // 以下代碼已註釋，因為 UI 現在由 src/components/ControlPanel.tsx 管理
+  /*
   // 恢復控制面板狀態（使用統一的檢查函數）
   // 優先級：如果沒有任何串流，強制展開；否則使用用戶設置
   if (typeof checkAndAdjustControlPanel === 'function') {
@@ -90,6 +96,7 @@ window.addEventListener('DOMContentLoaded', () => {
     masterVolSlider.addEventListener('input', updateMasterVolume);
     updateMasterVolume();
   }
+  */
   
   // 初始化串流順序列表
   if (typeof updateStreamOrderList === 'function') {
@@ -186,6 +193,8 @@ window.addEventListener('DOMContentLoaded', () => {
     console.warn('[main.js] indexedDBBackup 未定義，無法自動載入備份');
   }
   
+  // [已遷移到 React UI] 收藏列表顯示已遷移到 React 組件，以下代碼已註釋
+  /*
   // 初始化控制面板中的收藏列表顯示（確保 DOM 元素已準備好）
   function initFavoriteListDisplay() {
     const displayDiv = document.getElementById('favorite-list-display');
@@ -235,6 +244,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(tryInitFavoriteList, 200);
   setTimeout(tryInitFavoriteList, 500);
   setTimeout(tryInitFavoriteList, 1000);
+  */
   
   // 定期更新串流順序列表（當有新增或刪除時）
   setInterval(() => {
@@ -320,6 +330,9 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// [已遷移到 React UI] 搜索功能已遷移到 React 組件 (src/components/Navbar.tsx)
+// 以下所有搜索相關的代碼已註釋
+/*
 // 搜尋建議相關變數
 let searchDebounceTimer = null;
 let currentSearchResults = [];
@@ -688,9 +701,10 @@ if (document.readyState !== 'loading') {
     initSearchFunctionality();
   }, 100);
 }
+*/
 
-// 測試函數已在文件開頭定義
-
+// [已遷移到 React UI] 點擊外部關閉收藏管理界面已遷移到 React 組件
+/*
 // 點擊外部關閉收藏管理界面
 document.addEventListener('click', (e) => {
   const favoriteManager = document.getElementById('favorite-streams-manager');
@@ -708,4 +722,5 @@ document.addEventListener('click', (e) => {
     }
   }
 });
+*/
 
