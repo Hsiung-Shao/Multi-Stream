@@ -561,9 +561,18 @@ export default function App() {
         // 保存失敗，靜默處理
         console.error('保存音量設定失敗:', e);
       }
+      // 設置音量為 0，讓 slider 滑到 0%
+      setMasterVolume(0);
       setMasterMuted(true);
       // 同步到全局變量
+      (window as any).masterVolume = 0;
       (window as any).masterMuted = true;
+      
+      // 同步到 DOM 元素（為了兼容舊的 JavaScript 代碼）
+      const masterVolSlider = document.getElementById('master-volume');
+      if (masterVolSlider && (masterVolSlider as HTMLInputElement).value !== undefined) {
+        (masterVolSlider as HTMLInputElement).value = '0';
+      }
     } else {
       // 取消靜音：從 localStorage 讀取之前保存的音量值
       let restoreVolume = 100; // 默認值
