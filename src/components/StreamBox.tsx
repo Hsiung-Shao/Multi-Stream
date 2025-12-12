@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { StreamData } from '../utils/streamUtils';
-import { loadTwitchPlayerApi, loadYouTubeIframeApi } from '../utils/loadPlayerApis';
+import { apiLoader } from '../utils/apiLoader';
 import { Button as MuiButton, Slider } from '@mui/material';
 import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
 import type { LayoutStyle } from '../utils/layoutUtils';
@@ -600,9 +600,9 @@ export function StreamBox({
           console.log(`[StreamBox ${streamData.id}] 已清空 Twitch 播放器容器`);
         }
         
-        // 確保 Twitch API 已載入
+        // 確保 Twitch Player API 已載入（按需載入）
         if (typeof window.Twitch === 'undefined' || !window.Twitch.Player) {
-          await loadTwitchPlayerApi();
+          await apiLoader.loadTwitchPlayerApi();
         }
 
         if (!playerContainerRef.current) return;
@@ -708,7 +708,7 @@ export function StreamBox({
 
         // 確保 YouTube API 已載入
         if (typeof window.YT === 'undefined' || !window.YT.Player) {
-          await loadYouTubeIframeApi();
+          await apiLoader.loadYouTubePlayerApi();
         }
 
         if (!playerContainerRef.current) {

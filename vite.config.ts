@@ -52,6 +52,37 @@
     build: {
       target: 'esnext',
       outDir: 'build',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // UI 組件庫分組
+            'vendor-radix': [
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-select',
+              '@radix-ui/react-tabs',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-popover',
+              '@radix-ui/react-switch',
+              '@radix-ui/react-slider',
+              '@radix-ui/react-accordion',
+              '@radix-ui/react-alert-dialog',
+              '@radix-ui/react-scroll-area',
+            ],
+            'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
+            'vendor-icons': ['lucide-react'],
+            // 大型組件單獨分組（懶加載）
+            'lazy-components': [
+              './src/components/VersionHistory',
+              './src/components/Tutorial',
+              './src/components/FavoritesManager',
+              './src/components/AboutPage',
+              './src/components/PrivacyPage',
+            ],
+          },
+        },
+      },
+      // 啟用代碼分割優化
+      chunkSizeWarningLimit: 1000,
     },
     server: {
       port: 3000,

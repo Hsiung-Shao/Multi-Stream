@@ -1,6 +1,14 @@
 // 串流管理功能
+// ============================================
+// 遷移狀態說明：
+// - addStream() 主要功能已遷移到 React (src/App.tsx 的 handleAddStream)
+// - createTwitchPlayer() 和 createYouTubePlayer() 已遷移到 React (src/components/StreamBox.tsx)
+// - 此文件保留用於向後兼容，但新代碼應使用 React 組件
+// ============================================
 
 // 主要加入函式
+// [已遷移到 React] 主要功能在 src/App.tsx 的 handleAddStream 中實現
+// 保留此函數以向後兼容，但優先使用 React 版本
 async function addStream(url = null) {
   // [已遷移到 React UI] URL 輸入框操作已遷移到 React 組件，以下代碼已註釋
   /*
@@ -450,6 +458,7 @@ function createTwitchPlayer(id, channel) {
 }
 
 // 建立 YouTube 播放器（舊方式 - 已棄用）
+// [已遷移到 React] 新實現位於 src/components/StreamBox.tsx 的 createYouTubePlayer
 // 注意：此函數已棄用，新的播放器建立方式在 src/components/StreamBox.tsx 中
 // 保留此函數僅作為向後兼容，但優先使用新的 React 組件方式
 // @deprecated 使用 src/components/StreamBox.tsx 中的 createYouTubePlayer 代替

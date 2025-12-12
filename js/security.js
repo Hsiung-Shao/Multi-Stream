@@ -1,6 +1,13 @@
 // 安全工具函数
+// ============================================
+// 遷移狀態說明：
+// - escapeHtml: 仍在使用（settings.js 中大量使用，生成 HTML）
+// - safeJSONParse: 仍在使用（settings.js 中大量使用，解析 localStorage）
+// - validateUrl: 已遷移到 React (streamUtils.ts)，但保留以兼容
+// ============================================
 
 // HTML 转义函数（防止 XSS）
+// [仍在使用] 在 settings.js 中大量使用（生成 HTML 內容）
 function escapeHtml(text) {
   if (text == null) return '';
   const div = document.createElement('div');
@@ -9,6 +16,7 @@ function escapeHtml(text) {
 }
 
 // 安全的 JSON 解析（带错误处理）
+// [仍在使用] 在 settings.js 中大量使用（解析 localStorage）
 function safeJSONParse(str, defaultValue = null) {
   if (!str || typeof str !== 'string') {
     return defaultValue;
@@ -22,6 +30,8 @@ function safeJSONParse(str, defaultValue = null) {
 }
 
 // URL 验证函数
+// [已遷移到 React] 新實現位於 src/utils/streamUtils.ts
+// 保留此函數以向後兼容
 function validateUrl(url) {
   if (!url || typeof url !== 'string') {
     return { valid: false, error: 'URL 不能為空' };

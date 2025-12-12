@@ -1,9 +1,14 @@
 // 載入播放器 API 的工具函數
+// 注意：此文件保留用於向後兼容，實際載入邏輯已遷移到 apiLoader.ts
+
+import { apiLoader } from './apiLoader';
 
 /**
  * 載入 Twitch Player API
+ * @deprecated 請使用 apiLoader.loadTwitchPlayerApi()，此函數僅用於向後兼容
  */
 export function loadTwitchPlayerApi(): Promise<void> {
+  return apiLoader.loadTwitchPlayerApi();
   return new Promise((resolve, reject) => {
     // 檢查是否已經載入
     if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
@@ -93,80 +98,17 @@ export function loadTwitchPlayerApi(): Promise<void> {
 
 /**
  * 載入 YouTube iframe API
+ * @deprecated 請使用 apiLoader.loadYouTubePlayerApi()，此函數僅用於向後兼容
  */
 export function loadYouTubeIframeApi(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // 檢查是否已經載入
-    if (typeof window.YT !== 'undefined' && window.YT.Player) {
-      resolve();
-      return;
-    }
-
-    // 檢查腳本是否已經存在
-    const existingYouTube = document.querySelector('script[src*="youtube.com/iframe_api"]');
-    if (existingYouTube) {
-      // 腳本已存在，等待載入
-      const checkYouTube = setInterval(() => {
-        if (typeof window.YT !== 'undefined' && window.YT.Player) {
-          clearInterval(checkYouTube);
-          resolve();
-        }
-      }, 100);
-
-      // 設置超時（10秒）
-      setTimeout(() => {
-        clearInterval(checkYouTube);
-        if (typeof window.YT === 'undefined') {
-          reject(new Error('YouTube API 載入超時'));
-        }
-      }, 10000);
-      return;
-    }
-
-    // 設置全局回調函數
-    (window as any).onYouTubeIframeAPIReady = () => {
-      resolve();
-    };
-
-    // 載入 YouTube iframe API
-    const youtubeScript = document.createElement('script');
-    youtubeScript.async = true;
-    youtubeScript.src = 'https://www.youtube.com/iframe_api';
-    
-    youtubeScript.onerror = () => {
-      console.warn('無法載入 YouTube iframe API，請檢查網路連線');
-      // 嘗試重新載入
-      setTimeout(() => {
-        if (typeof window.YT === 'undefined' && !document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-          const retryScript = document.createElement('script');
-          retryScript.async = true;
-          retryScript.src = 'https://www.youtube.com/iframe_api';
-          retryScript.onerror = () => {
-            reject(new Error('無法載入 YouTube iframe API'));
-          };
-          document.head.appendChild(retryScript);
-        } else {
-          reject(new Error('無法載入 YouTube iframe API'));
-        }
-      }, 2000);
-    };
-
-    document.head.appendChild(youtubeScript);
-  });
+  return apiLoader.loadYouTubePlayerApi();
 }
 
 /**
  * 載入所有播放器 API
+ * @deprecated 請使用 apiLoader.loadAllPlayerApis()，此函數僅用於向後兼容
  */
 export async function loadAllPlayerApis(): Promise<void> {
-  try {
-    await Promise.all([
-      loadTwitchPlayerApi(),
-      loadYouTubeIframeApi()
-    ]);
-  } catch (error) {
-    console.error('載入播放器 API 時發生錯誤:', error);
-    // 不阻止應用繼續運行，只是記錄錯誤
-  }
+  return apiLoader.loadAllPlayerApis();
 }
 

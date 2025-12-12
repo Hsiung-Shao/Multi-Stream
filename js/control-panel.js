@@ -1,9 +1,17 @@
 // 控制面板功能
+// ============================================
+// 遷移狀態說明：
+// - toggleControlPanel() 已遷移到 React (src/components/ControlPanel.tsx)
+// - updateStreamOrderList() 仍在使用（src/components/StreamContainer.tsx）
+// - 其他 DOM 操作已遷移到 React 組件
+// ============================================
 
 // [已遷移到 React UI] 以下控制面板 DOM 操作已遷移到 React 組件 (src/components/ControlPanel.tsx)
 // 但保留 updateStreamOrderList 和 toggleControlPanel 等可能被其他地方使用的函數
 
-// 切換控制面板（確保是全局函數，立即定義）- 仍在使用，保留
+// 切換控制面板（確保是全局函數，立即定義）
+// [已遷移到 React] 新實現位於 src/components/ControlPanel.tsx
+// 保留此函數以向後兼容
 function toggleControlPanel() {
   const panel = document.getElementById('control-panel');
   const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
@@ -252,6 +260,9 @@ function makeControlPanelDraggable() {
 */
 
 // 更新串流順序列表（確保是全局函數）- 此函數仍在使用，保留
+// [仍在使用] 更新串流順序列表
+// 使用位置：src/components/StreamContainer.tsx
+// 注意：此函數仍在使用，尚未遷移到 React
 function updateStreamOrderList() {
   const orderList = document.getElementById('stream-order-list');
   if (!orderList) return;

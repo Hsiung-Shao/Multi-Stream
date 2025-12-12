@@ -12,23 +12,101 @@
 
     <body>
       <div id="root"></div>
-      <!-- 載入 config.js 在 React 應用之前 -->
+      
+      <!-- ============================================
+           外部腳本載入順序說明
+           ============================================
+           載入順序很重要，因為腳本之間有依賴關係。
+           已遷移到 React 的功能會標註，但保留腳本以兼容舊代碼。
+      -->
+      
+      <!-- [必要] 配置文件 - 載入 API 配置（Twitch Client ID、YouTube API Key 等） -->
       <script src="/config.js"></script>
-      <!-- 載入工具函數和驗證函數（必須在 chat.js 之前） -->
+      
+      <!-- [必要] 工具函數 - 提供 getParentDomain、getTwitchParents、onYouTubeIframeAPIReady 等
+           使用情況：
+           - getParentDomain/getTwitchParents: 在 chat.js、stream.js 中使用
+           - onYouTubeIframeAPIReady: 在 apiLoader.ts 中使用
+           - isDraggingStreamBox: 在 layout.js、drag-resize.js 中使用
+           注意：部分功能（如 validateUrl）已遷移到 React (streamUtils.ts)，但保留此腳本以兼容舊代碼
+      -->
       <script defer src="/js/utils.js" onload="console.log('[index.html] utils.js 已載入')" onerror="console.error('[index.html] utils.js 載入失敗')"></script>
+      
+      <!-- [必要] 安全工具 - 提供 escapeHtml、safeJSONParse、validateUrl 等
+           使用情況：
+           - escapeHtml: 在 settings.js 中大量使用（生成 HTML）
+           - safeJSONParse: 在 settings.js 中大量使用（解析 localStorage）
+           注意：部分功能已遷移到 React，但 settings.js 仍依賴此腳本
+      -->
       <script defer src="/js/security.js" onload="console.log('[index.html] security.js 已載入')" onerror="console.error('[index.html] security.js 載入失敗')"></script>
-      <!-- 載入主入口腳本（定義全局變數如 streamCount, players, streamData） -->
+      
+      <!-- [必要] 主入口腳本 - 初始化全局變數
+           功能：
+           - 定義 window.streamCount、window.players、window.streamData
+           - IndexedDB 備份自動載入
+           - 收藏開台狀態自動刷新
+           使用情況：React 組件依賴這些全局變數
+      -->
       <script defer src="/js/main.js" onload="console.log('[index.html] main.js 已載入')" onerror="console.error('[index.html] main.js 載入失敗')"></script>
-      <!-- 載入必要的 API 腳本 -->
+      
+      <!-- [必要-按需] Twitch 數據 API - 提供搜尋頻道、查詢開台狀態功能
+           功能：
+           - window.twitchApi.searchChannels()
+           - window.twitchApi.checkChannelLiveStatus()
+           - window.twitchApi.checkMultipleChannelsLiveStatus()
+           使用情況：在 App.tsx、FavoritesManager.tsx 中使用（按需載入）
+           注意：通過 apiLoader.loadTwitchDataApi() 按需載入
+      -->
       <script defer src="/js/twitch-api.js" onload="console.log('[index.html] twitch-api.js 已載入')" onerror="console.error('[index.html] twitch-api.js 載入失敗')"></script>
-      <!-- 載入串流管理腳本（必須在 settings.js 之前，因為 settings.js 中的收藏功能需要 addStream，且依賴 main.js 的全局變數） -->
-      <script defer src="/js/stream.js" onload="console.log('[index.html] stream.js 已載入')" onerror="console.error('[index.html] stream.js 載入失敗')"></script>
+      
+      <!-- [部分必要-向後兼容] 串流管理腳本
+           功能：
+           - addStream() - 已遷移到 React (App.tsx)，但保留 window.addStream 以兼容
+           - createTwitchPlayer/createYouTubePlayer - 已棄用，新代碼使用 StreamBox.tsx
+           使用情況：
+           - 主要功能已遷移到 React
+           - 保留以向後兼容，但新代碼不應依賴此腳本
+           注意：必須在 settings.js 之前載入（settings.js 依賴 addStream）
+      -->
+      <script defer src="/js/stream.js" onload="console.log('[index.html] stream.js 已載入（部分功能已遷移到 React）')" onerror="console.error('[index.html] stream.js 載入失敗')"></script>
+      
+      <!-- [必要] 設定和收藏管理 - 提供收藏系統和 YouTube 數據 API
+           功能：
+           - window.favoriteStreams - 收藏系統 API
+           - window.favoriteCategories - 分類管理 API
+           - window.youtubeApiUtils - YouTube 數據 API 工具
+           - indexedDBBackup - IndexedDB 備份系統
+           使用情況：在 FavoritesManager.tsx、App.tsx 中使用
+      -->
       <script defer src="/js/settings.js" onload="console.log('[index.html] settings.js 已載入')" onerror="console.error('[index.html] settings.js 載入失敗')"></script>
-      <!-- 載入聊天室和音量控制腳本（依賴 utils.js 和 security.js） -->
+      
+      <!-- [必要] 聊天室功能 - 提供 createChat、toggleChat、setupChatResizer
+           功能：
+           - window.createChat() - 創建聊天室 iframe
+           - window.toggleChat() - 切換聊天室顯示/隱藏
+           - window.setupChatResizer() - 設置聊天室調整大小
+           使用情況：在 StreamBox.tsx、ChatSidebar.tsx、StreamContainer.tsx 中大量使用
+           依賴：utils.js (getParentDomain, getTwitchParents)
+      -->
       <script defer src="/js/chat.js" onload="console.log('[index.html] chat.js 已載入，檢查 createChat:', typeof window.createChat)" onerror="console.error('[index.html] chat.js 載入失敗')"></script>
+      
+      <!-- [必要] 音量控制 - 提供 applyMasterVolumeToStream、updateMasterVolume
+           功能：
+           - window.applyMasterVolumeToStream() - 應用總音量到指定串流
+           - window.updateMasterVolume() - 更新所有播放器的音量
+           使用情況：在 App.tsx、StreamBox.tsx、ControlPanel.tsx 中使用
+      -->
       <script defer src="/js/volume.js" onload="console.log('[index.html] volume.js 已載入')" onerror="console.error('[index.html] volume.js 載入失敗')"></script>
-      <!-- 載入控制面板腳本（包含 updateStreamOrderList 函數） -->
-      <script defer src="/js/control-panel.js" onload="console.log('[index.html] control-panel.js 已載入')" onerror="console.error('[index.html] control-panel.js 載入失敗')"></script>
+      
+      <!-- [部分必要] 控制面板腳本
+           功能：
+           - window.updateStreamOrderList() - 更新串流順序列表（仍在使用）
+           - window.toggleControlPanel() - 已遷移到 React (ControlPanel.tsx)
+           使用情況：
+           - updateStreamOrderList: 在 StreamContainer.tsx 中使用
+           - toggleControlPanel: 已遷移到 React，但保留以兼容
+      -->
+      <script defer src="/js/control-panel.js" onload="console.log('[index.html] control-panel.js 已載入（部分功能已遷移到 React）')" onerror="console.error('[index.html] control-panel.js 載入失敗')"></script>
       <script type="module" src="/src/main.tsx"></script>
       <!-- 腳本載入完成後檢查全局函數 -->
       <script>

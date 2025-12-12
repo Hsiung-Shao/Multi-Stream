@@ -1,16 +1,19 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Navbar } from './components/Navbar';
 import { WelcomeCard } from './components/WelcomeCard';
-import { VersionHistory } from './components/VersionHistory';
-import { Tutorial } from './components/Tutorial';
-import { ControlPanel } from './components/ControlPanel';
-import { FavoritesManager } from './components/FavoritesManager';
-import { AboutPage } from './components/AboutPage';
-import { PrivacyPage } from './components/PrivacyPage';
 import { StreamContainer } from './components/StreamContainer';
+import { ControlPanel } from './components/ControlPanel';
+
+// 懶加載非關鍵組件（按需載入）
+const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
+const Tutorial = lazy(() => import('./components/Tutorial').then(module => ({ 'default': module.Tutorial })));
+const FavoritesManager = lazy(() => import('./components/FavoritesManager').then(module => ({ 'default': module.FavoritesManager })));
+const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
+const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
 import { parseStreamUrl, validateUrl, type StreamData } from './utils/streamUtils';
 import { useLayout } from './hooks/useLayout';
 import type { ChatLayoutType } from './utils/chatLayoutUtils';
+import { apiLoader } from './utils/apiLoader';
 
 type Page = 'home' | 'about' | 'privacy';
 
@@ -127,21 +130,19 @@ export default function App() {
       
       // 先嘗試 Twitch 搜尋
       console.log('[App] 開始搜尋 Twitch 頻道:', trimmedUrl);
-      // 確保 twitchApi 已初始化（可能需要等待）
+      // 按需載入 Twitch 數據 API（用於搜尋功能）
+      try {
+        await apiLoader.loadTwitchDataApi();
+      } catch (error) {
+        console.warn('[App] Twitch 數據 API 載入失敗，搜尋功能可能不可用:', error);
+      }
+      
+      // 確保 twitchApi 已初始化
       if (!window.twitchApi || !window.twitchApi.searchChannels) {
-        console.warn('[App] Twitch API 尚未初始化，等待中...', {
+        console.warn('[App] Twitch API 尚未初始化', {
           twitchApi: !!window.twitchApi,
           searchChannels: window.twitchApi ? typeof window.twitchApi.searchChannels : 'N/A'
         });
-        // 等待 twitchApi 初始化（最多等待 2 秒）
-        let waitCount = 0;
-        while (!window.twitchApi && waitCount < 20) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          waitCount++;
-          if (waitCount % 5 === 0) {
-            console.log(`[App] 等待 Twitch API 初始化... (${waitCount}/20)`);
-          }
-        }
       }
       
       if (window.twitchApi && window.twitchApi.searchChannels) {
@@ -202,6 +203,9 @@ export default function App() {
     // 對於 YouTube，如果有 channelId，驗證 videoId 是否屬於該頻道
     if (parsed.platform === 'youtube' && parsed.channelId && parsed.videoId) {
       try {
+        // 按需載入 YouTube 數據 API（用於頻道驗證）
+        await apiLoader.loadYouTubeDataApi();
+        
         if (window.youtubeApiUtils && window.youtubeApiUtils.getChannelIdFromVideoId) {
           const actualChannelId = await window.youtubeApiUtils.getChannelIdFromVideoId(parsed.videoId);
           
@@ -857,24 +861,28 @@ export default function App() {
   // Show Privacy Page
   if (currentPage === 'privacy') {
     return (
-      <PrivacyPage 
-        theme={theme} 
-        onThemeToggle={toggleTheme}
-        onBack={() => setCurrentPage('home')}
-        onNavigateToAbout={() => setCurrentPage('about')}
-      />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+        <PrivacyPage 
+          theme={theme} 
+          onThemeToggle={toggleTheme}
+          onBack={() => setCurrentPage('home')}
+          onNavigateToAbout={() => setCurrentPage('about')}
+        />
+      </Suspense>
     );
   }
 
   // Show About Page
   if (currentPage === 'about') {
     return (
-      <AboutPage 
-        theme={theme} 
-        onThemeToggle={toggleTheme}
-        onBack={() => setCurrentPage('home')}
-        onNavigateToPrivacy={() => setCurrentPage('privacy')}
-      />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+        <AboutPage 
+          theme={theme} 
+          onThemeToggle={toggleTheme}
+          onBack={() => setCurrentPage('home')}
+          onNavigateToPrivacy={() => setCurrentPage('privacy')}
+        />
+      </Suspense>
     );
   }
 
@@ -961,24 +969,30 @@ export default function App() {
       />
 
       {showVersionHistory && (
-        <VersionHistory 
-          theme={theme} 
-          onClose={() => setShowVersionHistory(false)} 
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+          <VersionHistory 
+            theme={theme} 
+            onClose={() => setShowVersionHistory(false)} 
+          />
+        </Suspense>
       )}
 
       {showTutorial && (
-        <Tutorial 
-          theme={theme} 
-          onClose={() => setShowTutorial(false)} 
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+          <Tutorial 
+            theme={theme} 
+            onClose={() => setShowTutorial(false)} 
+          />
+        </Suspense>
       )}
 
       {showFavorites && (
-        <FavoritesManager 
-          theme={theme} 
-          onClose={() => setShowFavorites(false)} 
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+          <FavoritesManager 
+            theme={theme} 
+            onClose={() => setShowFavorites(false)} 
+          />
+        </Suspense>
       )}
     </div>
   );

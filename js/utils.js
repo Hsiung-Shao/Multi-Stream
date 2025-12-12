@@ -1,15 +1,25 @@
 // 工具函數
+// ============================================
+// 遷移狀態說明：
+// - getParentDomain/getTwitchParents: 仍在使用（chat.js、stream.js）
+// - onYouTubeIframeAPIReady: 仍在使用（apiLoader.ts）
+// - isDraggingStreamBox: 仍在使用（layout.js、drag-resize.js）
+// - validateUrl: 已遷移到 React (streamUtils.ts)，但保留以兼容
+// ============================================
 
 // YouTube API 準備就緒
+// [仍在使用] 在 apiLoader.ts 中使用
 let ytApiReady = false;
 function onYouTubeIframeAPIReady() {
   ytApiReady = true;
 }
 
 // 拖拽狀態標誌（防止在拖拽過程中觸發布局更新）
+// [仍在使用] 在 layout.js、drag-resize.js 中使用
 let isDraggingStreamBox = false;
 
 // 獲取有效的 parent 域名
+// [仍在使用] 在 chat.js、stream.js 中使用
 function getParentDomain() {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
@@ -31,6 +41,7 @@ function getParentDomain() {
 }
 
 // 獲取 Twitch parent 陣列（支援多個域名）
+// [仍在使用] 在 chat.js、stream.js 中使用
 function getTwitchParents() {
   const domain = getParentDomain();
   // Twitch CSP 允許 http://localhost:* 和 https://localhost:*
