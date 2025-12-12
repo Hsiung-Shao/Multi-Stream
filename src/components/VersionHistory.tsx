@@ -13,56 +13,6 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
   
   const versions = [
     {
-      version: 'v2.5.0',
-      date: t('versionHistory.v2.5.0.date'),
-      changes: [
-        t('versionHistory.v2.5.0.change1'),
-        t('versionHistory.v2.5.0.change2'),
-        t('versionHistory.v2.5.0.change3'),
-        t('versionHistory.v2.5.0.change4'),
-      ],
-    },
-    {
-      version: 'v2.4.0',
-      date: t('versionHistory.v2.4.0.date'),
-      changes: [
-        t('versionHistory.v2.4.0.change1'),
-        t('versionHistory.v2.4.0.change2'),
-        t('versionHistory.v2.4.0.change3'),
-        t('versionHistory.v2.4.0.change4'),
-      ],
-    },
-    {
-      version: 'v2.3.0',
-      date: t('versionHistory.v2.3.0.date'),
-      changes: [
-        t('versionHistory.v2.3.0.change1'),
-        t('versionHistory.v2.3.0.change2'),
-        t('versionHistory.v2.3.0.change3'),
-        t('versionHistory.v2.3.0.change4'),
-      ],
-    },
-    {
-      version: 'v2.2.0',
-      date: t('versionHistory.v2.2.0.date'),
-      changes: [
-        t('versionHistory.v2.2.0.change1'),
-        t('versionHistory.v2.2.0.change2'),
-        t('versionHistory.v2.2.0.change3'),
-        t('versionHistory.v2.2.0.change4'),
-      ],
-    },
-    {
-      version: 'v2.1.0',
-      date: t('versionHistory.v2.1.0.date'),
-      changes: [
-        t('versionHistory.v2.1.0.change1'),
-        t('versionHistory.v2.1.0.change2'),
-        t('versionHistory.v2.1.0.change3'),
-        t('versionHistory.v2.1.0.change4'),
-      ],
-    },
-    {
       version: 'v2.0.0',
       date: t('versionHistory.v2.0.0.date'),
       changes: [
@@ -70,7 +20,113 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
         t('versionHistory.v2.0.0.change2'),
         t('versionHistory.v2.0.0.change3'),
         t('versionHistory.v2.0.0.change4'),
-        t('versionHistory.v2.0.0.change5'),
+      ],
+    },
+    {
+      version: 'v1.7.1',
+      date: t('versionHistory.v1.7.1.date'),
+      changes: [
+        t('versionHistory.v1.7.1.change1'),
+        t('versionHistory.v1.7.1.change2'),
+      ],
+    },
+    {
+      version: 'v1.7.0',
+      date: t('versionHistory.v1.7.0.date'),
+      changes: [
+        t('versionHistory.v1.7.0.change1'),
+        t('versionHistory.v1.7.0.change2'),
+        t('versionHistory.v1.7.0.change3'),
+        t('versionHistory.v1.7.0.change4'),
+        t('versionHistory.v1.7.0.change5'),
+        t('versionHistory.v1.7.0.change6'),
+        t('versionHistory.v1.7.0.change7'),
+        t('versionHistory.v1.7.0.change8'),
+        t('versionHistory.v1.7.0.change9'),
+      ],
+    },
+    {
+      version: 'v1.6.2',
+      date: t('versionHistory.v1.6.2.date'),
+      changes: [
+        t('versionHistory.v1.6.2.change1'),
+        t('versionHistory.v1.6.2.change2'),
+        t('versionHistory.v1.6.2.change3'),
+      ],
+    },
+    {
+      version: 'v1.6.1',
+      date: t('versionHistory.v1.6.1.date'),
+      changes: [
+        t('versionHistory.v1.6.1.change1'),
+        t('versionHistory.v1.6.1.change2'),
+        t('versionHistory.v1.6.1.change3'),
+        t('versionHistory.v1.6.1.change4'),
+      ],
+    },
+    {
+      version: 'v1.6.0',
+      date: t('versionHistory.v1.6.0.date'),
+      changes: [
+        t('versionHistory.v1.6.0.change1'),
+        t('versionHistory.v1.6.0.change2'),
+        t('versionHistory.v1.6.0.change3'),
+        t('versionHistory.v1.6.0.change4'),
+        t('versionHistory.v1.6.0.change5'),
+      ],
+    },
+    {
+      version: 'v1.5.0',
+      date: t('versionHistory.v1.5.0.date'),
+      changes: [
+        t('versionHistory.v1.5.0.change1'),
+        t('versionHistory.v1.5.0.change2'),
+        t('versionHistory.v1.5.0.change3'),
+        t('versionHistory.v1.5.0.change4'),
+        t('versionHistory.v1.5.0.change5'),
+      ],
+    },
+    {
+      version: 'v1.4.1',
+      date: t('versionHistory.v1.4.1.date'),
+      changes: [
+        t('versionHistory.v1.4.1.change1'),
+        t('versionHistory.v1.4.1.change2'),
+      ],
+    },
+    {
+      version: 'v1.3.0',
+      date: t('versionHistory.v1.3.0.date'),
+      changes: [
+        t('versionHistory.v1.3.0.change1'),
+        t('versionHistory.v1.3.0.change2'),
+        t('versionHistory.v1.3.0.change3'),
+        t('versionHistory.v1.3.0.change4'),
+        t('versionHistory.v1.3.0.change5'),
+      ],
+    },
+    {
+      version: 'v1.2.0',
+      date: t('versionHistory.v1.2.0.date'),
+      changes: [
+        t('versionHistory.v1.2.0.change1'),
+        t('versionHistory.v1.2.0.change2'),
+        t('versionHistory.v1.2.0.change3'),
+        t('versionHistory.v1.2.0.change4'),
+        t('versionHistory.v1.2.0.change5'),
+        t('versionHistory.v1.2.0.change6'),
+        t('versionHistory.v1.2.0.change7'),
+        t('versionHistory.v1.2.0.change8'),
+      ],
+    },
+    {
+      version: 'v1.1.0',
+      date: t('versionHistory.v1.1.0.date'),
+      changes: [
+        t('versionHistory.v1.1.0.change1'),
+        t('versionHistory.v1.1.0.change2'),
+        t('versionHistory.v1.1.0.change3'),
+        t('versionHistory.v1.1.0.change4'),
       ],
     },
     {
@@ -80,6 +136,9 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
         t('versionHistory.v1.0.0.change1'),
         t('versionHistory.v1.0.0.change2'),
         t('versionHistory.v1.0.0.change3'),
+        t('versionHistory.v1.0.0.change4'),
+        t('versionHistory.v1.0.0.change5'),
+        t('versionHistory.v1.0.0.change6'),
       ],
     },
   ];
