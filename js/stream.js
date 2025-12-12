@@ -297,8 +297,9 @@ async function addStream(url = null) {
   delete window._pendingDisplayName;
 
   // 建立播放器
-  // 注意：如果使用新的 React 組件方式（StreamBox），播放器會由組件自動創建
-  // 這裡的舊方式僅作為向後兼容保留，但優先使用新方式
+  // [已停用] 舊的播放器創建方式已註釋，現在完全由 React 組件 (StreamBox) 自動創建
+  // 如果新系統出現問題，可以取消註釋以下代碼來恢復舊方式
+  /*
   if (platform === 'twitch') {
     createTwitchPlayer(id, channelId);
   } else if (platform === 'youtube') {
@@ -315,6 +316,8 @@ async function addStream(url = null) {
       createYouTubePlayer(id, videoId);
     }
   }
+  */
+  console.log(`[新系統] 串流 ${id} 的播放器將由 React 組件 (StreamBox) 自動創建`);
 
   // 建立聊天室
   createChat(id, platform, channelId, videoId);
@@ -398,7 +401,13 @@ async function addStream(url = null) {
 }
 
 // 建立 Twitch 播放器
+// [已停用] 此函數已註釋，播放器現在由 React 組件 (StreamBox) 創建
+// 如果新系統出現問題，可以取消註釋以下代碼來恢復舊方式
 function createTwitchPlayer(id, channel) {
+  console.warn('[已停用] createTwitchPlayer() 已被停用，播放器應由 React 組件創建');
+  return; // 直接返回，不執行任何操作
+  
+  /*
   // 等待 Twitch API 準備就緒
   const initPlayer = () => {
     if (typeof Twitch !== 'undefined' && Twitch.Player) {
@@ -455,14 +464,19 @@ function createTwitchPlayer(id, channel) {
   // 重置重試計數器（每次新播放器建立時）
   createTwitchPlayer.retryCount = 0;
   initPlayer();
+  */
 }
 
 // 建立 YouTube 播放器（舊方式 - 已棄用）
+// [已停用] 此函數已註釋，播放器現在由 React 組件 (StreamBox) 創建
 // [已遷移到 React] 新實現位於 src/components/StreamBox.tsx 的 createYouTubePlayer
-// 注意：此函數已棄用，新的播放器建立方式在 src/components/StreamBox.tsx 中
-// 保留此函數僅作為向後兼容，但優先使用新的 React 組件方式
+// 如果新系統出現問題，可以取消註釋以下代碼來恢復舊方式
 // @deprecated 使用 src/components/StreamBox.tsx 中的 createYouTubePlayer 代替
 function createYouTubePlayer(id, videoId) {
+  console.warn('[已停用] createYouTubePlayer() 已被停用，播放器應由 React 組件創建');
+  return; // 直接返回，不執行任何操作
+  
+  /*
   // 檢查是否已經有新方式的播放器
   if (window.players && window.players[id]) {
     console.log(`[舊方式] 串流 ${id} 已有播放器實例（可能由新方式創建），跳過舊方式`);
@@ -570,6 +584,7 @@ function createYouTubePlayer(id, videoId) {
   };
   
   initPlayer();
+  */
 }
 
 // 重整串流
@@ -605,8 +620,9 @@ function reloadStream(id) {
   }
   
   // 重新建立播放器
-  // 注意：如果使用新的 React 組件方式（StreamBox），播放器會由組件自動重新創建
-  // 這裡的舊方式僅作為向後兼容保留，但優先使用新方式
+  // [已停用] 舊的播放器重新創建方式已註釋，現在完全由 React 組件 (StreamBox) 自動重新創建
+  // 如果新系統出現問題，可以取消註釋以下代碼來恢復舊方式
+  /*
   if (data.platform === 'twitch') {
     createTwitchPlayer(id, data.channelId);
   } else if (data.platform === 'youtube') {
@@ -623,6 +639,8 @@ function reloadStream(id) {
       createYouTubePlayer(id, data.videoId);
     }
   }
+  */
+  console.log(`[新系統] 串流 ${id} 重新載入時，播放器將由 React 組件 (StreamBox) 自動重新創建`);
   
   // 恢復音量設定
   setTimeout(() => {
