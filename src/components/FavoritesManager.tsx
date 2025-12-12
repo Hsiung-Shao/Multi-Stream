@@ -29,6 +29,7 @@ interface FavoriteItem {
 interface Category {
   id: string;
   name: string;
+  createdAt?: string;
 }
 
 // 聲明全局類型
@@ -48,6 +49,7 @@ declare global {
       add?: (name: string) => { success: boolean; message: string; id?: string };
       update?: (id: string, newName: string) => { success: boolean; message: string };
       remove?: (id: string) => void;
+      saveList?: (list: Category[]) => void;
     };
     youtubeApiUtils?: {
       getChannelIdFromHandle?: (handle: string) => Promise<string>;
@@ -58,6 +60,17 @@ declare global {
     indexedDBBackup?: {
       isEnabled: () => boolean;
       backup: () => Promise<boolean>;
+      getAllData: () => {
+        version: string;
+        exportDate: string;
+        userSettings: any;
+        favoriteStreams: any[];
+        favoriteCategories: any[];
+        controlPanelCollapsed: string | null;
+        multiStreamLayout: any;
+        adConfig: any;
+      };
+      hasLocalStorageData?: () => boolean;
     };
     addStream?: (url: string) => Promise<void>;
   }
@@ -574,20 +587,43 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
   };
 
-  // 匯出JSON
+  // 匯出JSON - 使用與正式版完全相同的格式
   const handleExportJSON = () => {
     try {
-      const data = {
-        favoriteStreams: favorites,
-        favoriteCategories: categories,
-        exportDate: new Date().toISOString()
-      };
+      // 優先使用 indexedDBBackup.getAllData() 確保格式完全一致
+      let data;
+      if ((window as any).indexedDBBackup && typeof (window as any).indexedDBBackup.getAllData === 'function') {
+        data = (window as any).indexedDBBackup.getAllData();
+      } else {
+        // 如果沒有 indexedDBBackup，手動構建與 getAllData() 完全相同的格式
+        const safeJSONParse = (str: string | null, defaultValue: any) => {
+          if (!str || str === 'null') return defaultValue;
+          try {
+            return JSON.parse(str);
+          } catch {
+            return defaultValue;
+          }
+        };
+
+        data = {
+          version: '1.0',
+          exportDate: new Date().toISOString(),
+          userSettings: safeJSONParse(localStorage.getItem('userSettings'), null),
+          favoriteStreams: favorites,
+          favoriteCategories: categories,
+          controlPanelCollapsed: localStorage.getItem('controlPanelCollapsed'),
+          multiStreamLayout: safeJSONParse(localStorage.getItem('multiStreamLayout'), null),
+          adConfig: safeJSONParse(localStorage.getItem('adConfig'), null)
+        };
+      }
+      
       const jsonStr = JSON.stringify(data, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `favorites-backup-${new Date().toISOString().split('T')[0]}.json`;
+      // 檔案名稱改為與正式版一致
+      a.download = `multistream-backup-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -598,7 +634,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
   };
 
-  // 匯入JSON
+  // 匯入JSON - 支持完整格式（與正式版 importFromJSON() 邏輯一致）
   const handleImportJSON = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -611,62 +647,124 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         const text = await file.text();
         const data = JSON.parse(text);
 
+        // 驗證格式：檢查是否有 version（完整格式）或 favoriteStreams（簡化格式，向後兼容）
+        if (!data.version && (!data.favoriteStreams || !Array.isArray(data.favoriteStreams))) {
+          showMessage('error', '匯入失敗：無效的檔案格式');
+          return;
+        }
+
+        // 如果是完整格式（有 version），檢查是否需要覆蓋現有數據
+        if (data.version && (window as any).indexedDBBackup?.hasLocalStorageData?.()) {
+          // 可以添加確認對話框，這裡暫時直接匯入
+          // 如果需要確認，可以使用 React Dialog 組件
+        }
+
         if (!window.favoriteStreams || !window.favoriteCategories) {
           showMessage('error', '收藏系統未初始化');
           return;
         }
 
-        // 獲取現有收藏列表
-        const existingFavorites = window.favoriteStreams.getList();
-        const existingUrls = new Set(existingFavorites.map(f => f.url));
-
-        // 匯入分類
-        if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
-          for (const cat of data.favoriteCategories) {
-            if (cat.id && cat.name) {
-              const existing = window.favoriteCategories.getList();
-              if (!existing.find(c => c.id === cat.id)) {
-                // 如果分類不存在，嘗試添加（但無法直接添加指定ID的分類，需要通過add方法）
-                // 這裡只檢查名稱是否重複
-                if (!existing.find(c => c.name === cat.name)) {
-                  window.favoriteCategories.add!(cat.name);
-                }
-              }
-            }
-          }
-        }
-
-        // 匯入收藏（檢測重複）
         let importedCount = 0;
         let skippedCount = 0;
 
-        if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
-          for (const fav of data.favoriteStreams) {
-            if (fav.url && !existingUrls.has(fav.url)) {
-              try {
-                const result = await window.favoriteStreams.add(
-                  fav.url,
-                  fav.name,
-                  fav.categoryId || null,
-                  fav.channelId
-                );
-                if (result.success) {
-                  importedCount++;
-                  existingUrls.add(fav.url);
-                } else {
+        // 如果是完整格式（有 version），直接覆蓋 localStorage（與 restore() 和 importFromJSON() 完全一致）
+        // 這樣可以確保 categoryId 被正確保留
+        if (data.version) {
+          // 這些與 js/settings.js 的 restore() 和 importFromJSON() 中的邏輯完全一致
+          if (data.userSettings) {
+            localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
+          }
+          if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
+            localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
+            importedCount = data.favoriteStreams.length;
+          }
+          if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
+            localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
+          }
+          if (data.controlPanelCollapsed !== undefined) {
+            localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
+          }
+          if (data.multiStreamLayout) {
+            localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
+          }
+          if (data.adConfig) {
+            localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
+          }
+        } else {
+          // 簡化格式（向後兼容）：使用 add 方法逐個添加，但確保分類 ID 正確
+          // 獲取現有收藏列表（用於檢測重複）
+          const existingFavorites = window.favoriteStreams.getList();
+          const existingUrls = new Set(existingFavorites.map(f => f.url));
+
+          // 匯入分類（保留原始 ID）
+          if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
+            const existingCategories = window.favoriteCategories.getList();
+            const categoryMap = new Map(existingCategories.map(c => [c.id, c]));
+            
+            for (const cat of data.favoriteCategories) {
+              if (cat.id && cat.name) {
+                // 如果分類不存在，直接添加到列表中（保留原始 ID）
+                if (!categoryMap.has(cat.id)) {
+                  categoryMap.set(cat.id, {
+                    id: cat.id,
+                    name: cat.name,
+                    createdAt: cat.createdAt || new Date().toISOString()
+                  });
+                }
+              }
+            }
+            
+            // 保存更新後的分類列表
+            window.favoriteCategories.saveList!(Array.from(categoryMap.values()));
+          }
+
+          // 匯入收藏（檢測重複）
+          if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
+            for (const fav of data.favoriteStreams) {
+              if (fav.url && !existingUrls.has(fav.url)) {
+                try {
+                  const result = await window.favoriteStreams.add(
+                    fav.url,
+                    fav.name,
+                    fav.categoryId || null,
+                    fav.channelId
+                  );
+                  if (result.success) {
+                    importedCount++;
+                    existingUrls.add(fav.url);
+                  } else {
+                    skippedCount++;
+                  }
+                } catch (error) {
                   skippedCount++;
                 }
-              } catch (error) {
+              } else {
                 skippedCount++;
               }
-            } else {
-              skippedCount++;
             }
           }
         }
 
+        // 重新載入數據
         loadData();
-        debouncedBackup();
+        
+        // 觸發 favoritesUpdated 事件，通知 ControlPanel 更新收藏列表
+        window.dispatchEvent(new CustomEvent('favoritesUpdated', {
+          detail: {
+            action: 'import',
+            importedCount: importedCount,
+            skippedCount: skippedCount
+          }
+        }));
+        
+        // 如果已啟用備份，立即備份到 IndexedDB（與 importFromJSON() 一致）
+        if ((window as any).indexedDBBackup?.isEnabled()) {
+          try {
+            await (window as any).indexedDBBackup.backup();
+          } catch (error) {
+            // 備份失敗，靜默處理
+          }
+        }
 
         showMessage('success', `已匯入 ${importedCount} 個收藏${skippedCount > 0 ? `，跳過 ${skippedCount} 個重複項目` : ''}`);
       } catch (error) {

@@ -130,7 +130,6 @@ const indexedDBBackup = {
       favoriteStreams: safeJSONParse(localStorage.getItem('favoriteStreams'), []),
       favoriteCategories: safeJSONParse(localStorage.getItem('favoriteCategories'), []),
       controlPanelCollapsed: localStorage.getItem('controlPanelCollapsed'),
-      controlPanelPosition: safeJSONParse(localStorage.getItem('controlPanelPosition'), null),
       multiStreamLayout: safeJSONParse(localStorage.getItem('multiStreamLayout'), null),
       adConfig: safeJSONParse(localStorage.getItem('adConfig'), null)
     };
@@ -438,10 +437,6 @@ const indexedDBBackup = {
             localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
             console.log('[indexedDBBackup] 已恢復 controlPanelCollapsed');
           }
-          if (data.controlPanelPosition) {
-            localStorage.setItem('controlPanelPosition', JSON.stringify(data.controlPanelPosition));
-            console.log('[indexedDBBackup] 已恢復 controlPanelPosition');
-          }
           if (data.multiStreamLayout) {
             localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
             console.log('[indexedDBBackup] 已恢復 multiStreamLayout');
@@ -678,9 +673,6 @@ function importFromJSON() {
       if (data.controlPanelCollapsed !== undefined) {
         localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
       }
-      if (data.controlPanelPosition) {
-        localStorage.setItem('controlPanelPosition', JSON.stringify(data.controlPanelPosition));
-      }
       if (data.multiStreamLayout) {
         localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
       }
@@ -743,14 +735,6 @@ function saveUserSettings() {
       collapsed: (() => {
         const panel = document.getElementById('control-panel');
         return panel ? panel.classList.contains('collapsed') : false;
-      })(),
-      position: (() => {
-        const panel = document.getElementById('control-panel');
-        const savedPosition = localStorage.getItem('controlPanelPosition');
-        if (savedPosition) {
-          return safeJSONParse(savedPosition, null);
-        }
-        return null;
       })()
     },
     // 總音量設置
