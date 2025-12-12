@@ -10,6 +10,13 @@ apiLoader.loadTwitchPlayerApi().catch((error) => {
   console.warn('[main.tsx] Twitch Player API 預載入失敗（將在需要時重試）:', error);
 });
 
+// YouTube API 可以並行載入或按需載入
+apiLoader.loadYouTubePlayerApi().then(() => {
+  console.log('[main.tsx] YouTube Player API 載入完成');
+}).catch((error) => {
+  console.error('[main.tsx] YouTube Player API 載入失敗:', error);
+});
+
 // 數據 API 將在需要時按需載入（例如搜尋功能、開台狀態查詢等）
 
 createRoot(document.getElementById("root")!).render(

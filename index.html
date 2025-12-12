@@ -112,6 +112,14 @@
       -->
       <script defer src="/js/control-panel.js" onload="console.log('[index.html] control-panel.js 已載入（部分功能已遷移到 React）')" onerror="console.error('[index.html] control-panel.js 載入失敗')"></script>
       <script type="module" src="/src/main.tsx"></script>
+      
+      <!-- 暴露 apiLoader 到全局，供舊代碼使用 -->
+      <script type="module">
+        import { apiLoader } from '/src/utils/apiLoader.ts';
+        window.apiLoader = apiLoader;
+        console.log('[index.html] apiLoader 已暴露到全局');
+      </script>
+      
       <!-- 腳本載入完成後檢查全局函數 -->
       <script>
         window.addEventListener('DOMContentLoaded', () => {

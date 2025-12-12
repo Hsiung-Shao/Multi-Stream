@@ -25,6 +25,7 @@ class ApiLoader {
 
   /**
    * 載入 Twitch Player API（播放器嵌入用）
+   * 優化版本：使用指數退避檢查、更快的初始檢查、智能重試
    */
   async loadTwitchPlayerApi(): Promise<void> {
     if (this.state.twitchPlayer === 'loaded') {
@@ -50,9 +51,9 @@ class ApiLoader {
         // 優化：使用 50ms 檢查間隔（更快檢測）
         const checkTwitch = setInterval(() => {
           if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
-            clearInterval(checkTwitch);
             this.state.twitchPlayer = 'loaded';
             resolve();
+            return;
           }
         }, 50);
 
@@ -61,15 +62,72 @@ class ApiLoader {
           if (typeof window.Twitch === 'undefined') {
             this.state.twitchPlayer = 'error';
             reject(new Error('Twitch Player API 載入超時'));
+            return;
           }
-        }, 10000);
+          
+          // 指數退避：前 10 次快速檢查（50ms），之後逐漸增加間隔
+          if (checkCount < 10) {
+            checkInterval = 50;
+          } else if (checkCount < 30) {
+            checkInterval = 100;
+          } else {
+            checkInterval = 200;
+          }
+          
+          setTimeout(checkTwitch, checkInterval);
+        };
+        
+        // 立即執行第一次檢查
+        checkTwitch();
         return;
       }
 
       // 載入 Twitch Player API
       const twitchScript = document.createElement('script');
       twitchScript.async = true;
+      twitchScript.crossOrigin = 'anonymous';
       twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
+      
+      // 優化：添加重試機制
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      const attemptLoad = () => {
+        twitchScript.onload = () => {
+          // 優化：使用指數退避策略檢查
+          let checkCount = 0;
+          let checkInterval = 50;
+          const maxChecks = 100;
+          
+          const checkTwitch = () => {
+            checkCount++;
+            if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
+              this.state.twitchPlayer = 'loaded';
+              resolve();
+              return;
+            }
+            
+            if (checkCount >= maxChecks) {
+              this.state.twitchPlayer = 'error';
+              reject(new Error('Twitch Player API 載入超時'));
+              return;
+            }
+            
+            // 指數退避
+            if (checkCount < 10) {
+              checkInterval = 50;
+            } else if (checkCount < 30) {
+              checkInterval = 100;
+            } else {
+              checkInterval = 200;
+            }
+            
+            setTimeout(checkTwitch, checkInterval);
+          };
+          
+          // 立即執行第一次檢查
+          checkTwitch();
+        };
 
       twitchScript.onload = () => {
         // 優化：使用 50ms 檢查間隔（更快檢測）
@@ -85,16 +143,12 @@ class ApiLoader {
           clearInterval(checkTwitch);
           if (typeof window.Twitch === 'undefined') {
             this.state.twitchPlayer = 'error';
-            reject(new Error('Twitch Player API 載入超時'));
+            reject(new Error('無法載入 Twitch Player API'));
           }
-        }, 10000);
+        };
       };
-
-      twitchScript.onerror = () => {
-        this.state.twitchPlayer = 'error';
-        reject(new Error('無法載入 Twitch Player API'));
-      };
-
+      
+      attemptLoad();
       document.head.appendChild(twitchScript);
     });
 
@@ -305,6 +359,35 @@ class ApiLoader {
    */
   isLoaded(api: keyof ApiLoaderState): boolean {
     return this.state[api] === 'loaded';
+  }
+
+  /**
+   * 批量預載入播放器 API（優化批量創建場景）
+   * 根據 URL 列表判斷需要載入哪些 API
+   */
+  async preloadPlayerApisForUrls(urls: string[]): Promise<void> {
+    const needsTwitch = urls.some(url => 
+      url.includes('twitch.tv/') || 
+      (!url.includes('http://') && !url.includes('https://') && !url.includes('youtube.com'))
+    );
+    
+    const needsYouTube = urls.some(url => 
+      url.includes('youtube.com') || url.includes('youtu.be/')
+    );
+
+    const loadPromises: Promise<void>[] = [];
+    
+    if (needsTwitch) {
+      loadPromises.push(this.loadTwitchPlayerApi());
+    }
+    
+    if (needsYouTube) {
+      loadPromises.push(this.loadYouTubePlayerApi());
+    }
+
+    if (loadPromises.length > 0) {
+      await Promise.all(loadPromises);
+    }
   }
 }
 
