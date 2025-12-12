@@ -310,18 +310,60 @@ export default function App() {
     }
   }, []);
 
+  // 批量添加串流（優化版本）
+  const handleBatchAddStreams = useCallback(async (urls: string[]) => {
+    if (!urls || urls.length === 0) {
+      return;
+    }
+
+    // 優化：提前載入 Twitch Player API（如果批量中包含 Twitch）
+    const hasTwitch = urls.some(url => 
+      url.includes('twitch.tv/') || 
+      (!url.includes('http://') && !url.includes('https://') && !url.includes('youtube.com'))
+    );
+
+    if (hasTwitch) {
+      try {
+        console.log('[App] 批量添加：提前載入 Twitch Player API');
+        await apiLoader.loadTwitchPlayerApi();
+        console.log('[App] Twitch Player API 已就緒，開始批量創建');
+      } catch (error) {
+        console.warn('[App] Twitch Player API 載入失敗:', error);
+      }
+    }
+
+    // 優化：使用隊列機制，避免同時創建太多播放器
+    const BATCH_SIZE = 3; // 每次同時創建 3 個播放器
+    const DELAY_BETWEEN_BATCHES = 300; // 批次之間延遲 300ms
+
+    for (let i = 0; i < urls.length; i += BATCH_SIZE) {
+      const batch = urls.slice(i, i + BATCH_SIZE);
+      
+      // 並行處理當前批次
+      const batchPromises = batch.map(url => handleAddStream(url));
+      await Promise.allSettled(batchPromises);
+      
+      // 如果不是最後一批，等待一段時間再處理下一批
+      if (i + BATCH_SIZE < urls.length) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+      }
+    }
+  }, [handleAddStream]);
+
   // 暴露 handleAddStream 到全局，以便收藏系統調用
   useEffect(() => {
     (window as any).addStream = handleAddStream;
+    (window as any).batchAddStreams = handleBatchAddStreams;
     return () => {
       // 使用 undefined 而不是 delete，避免刪除不可刪除的屬性
       try {
         (window as any).addStream = undefined;
+        (window as any).batchAddStreams = undefined;
       } catch (e) {
         // 如果無法設置為 undefined，則忽略錯誤
       }
     };
-  }, [handleAddStream]);
+  }, [handleAddStream, handleBatchAddStreams]);
 
   // 移除串流
   const handleRemoveStream = (id: number) => {

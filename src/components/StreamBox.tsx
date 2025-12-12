@@ -600,9 +600,13 @@ export function StreamBox({
           console.log(`[StreamBox ${streamData.id}] 已清空 Twitch 播放器容器`);
         }
         
-        // 確保 Twitch Player API 已載入（按需載入）
+        // 優化：批量創建時，API 應該已經預載入，這裡只做快速檢查
         if (typeof window.Twitch === 'undefined' || !window.Twitch.Player) {
+          console.log(`[StreamBox ${streamData.id}] Twitch Player API 未就緒，開始載入`);
           await apiLoader.loadTwitchPlayerApi();
+          console.log(`[StreamBox ${streamData.id}] Twitch Player API 載入完成`);
+        } else {
+          console.log(`[StreamBox ${streamData.id}] Twitch Player API 已就緒（可能已預載入）`);
         }
 
         if (!playerContainerRef.current) return;
@@ -618,6 +622,11 @@ export function StreamBox({
           muted: false
         };
         
+        // 優化：添加創建前檢查
+        if (!window.Twitch || !window.Twitch.Player) {
+          throw new Error('Twitch Player API 未就緒');
+        }
+        
         const player = new window.Twitch.Player(`player${streamData.id}`, options);
         
         if (!window.players) window.players = {};
@@ -632,11 +641,29 @@ export function StreamBox({
         
         console.log(`[StreamBox ${streamData.id}] Twitch 播放器創建成功`);
         
-        player.addEventListener(window.Twitch.Player.READY, () => {
-          console.log(`[StreamBox ${streamData.id}] Twitch 播放器已就緒`);
-          // 播放器已就緒，應用音量設定
-          applyVolumeToPlayer(streamData.id);
+        // 優化：使用 Promise 包裝事件監聽，避免長時間等待
+        const readyPromise = new Promise<void>((resolve) => {
+          const readyHandler = () => {
+            console.log(`[StreamBox ${streamData.id}] Twitch 播放器已就緒`);
+            player.removeEventListener(window.Twitch.Player.READY, readyHandler);
+            // 播放器已就緒，應用音量設定
+            applyVolumeToPlayer(streamData.id);
+            resolve();
+          };
+          
+          player.addEventListener(window.Twitch.Player.READY, readyHandler);
+          
+          // 設置超時，避免無限等待
+          setTimeout(() => {
+            if (playerInitializedRef.current) {
+              console.warn(`[StreamBox ${streamData.id}] Twitch 播放器就緒事件超時，但仍嘗試應用音量`);
+              applyVolumeToPlayer(streamData.id);
+              resolve();
+            }
+          }, 5000);
         });
+        
+        await readyPromise;
         
         player.addEventListener(window.Twitch.Player.ERROR, () => {
           console.error(`[StreamBox ${streamData.id}] Twitch 播放器錯誤`);

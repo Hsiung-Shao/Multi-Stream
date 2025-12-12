@@ -1,14 +1,19 @@
 
   <!DOCTYPE html>
   <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>MultiStream Hub</title>
-      <link rel="icon" type="image/png" href="/icon.png" fetchpriority="high">
-      <link rel="shortcut icon" type="image/png" href="/icon.png">
-      <link rel="apple-touch-icon" href="/icon.png">
-    </head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiStream Hub</title>
+    <link rel="icon" type="image/png" href="/icon.png" fetchpriority="high">
+    <link rel="shortcut icon" type="image/png" href="/icon.png">
+    <link rel="apple-touch-icon" href="/icon.png">
+    
+    <!-- Twitch Player API 預連接和預載入優化 -->
+    <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
+    <link rel="dns-prefetch" href="https://player.twitch.tv">
+    <link rel="preload" href="https://player.twitch.tv/js/embed/v1.js" as="script" crossorigin>
+  </head>
 
     <body>
       <div id="root"></div>
@@ -108,6 +113,14 @@
       -->
       <script defer src="/js/control-panel.js" onload="console.log('[index.html] control-panel.js 已載入（部分功能已遷移到 React）')" onerror="console.error('[index.html] control-panel.js 載入失敗')"></script>
       <script type="module" src="/src/main.tsx"></script>
+      
+      <!-- 暴露 apiLoader 到全局，供舊代碼使用 -->
+      <script type="module">
+        import { apiLoader } from '/src/utils/apiLoader.ts';
+        window.apiLoader = apiLoader;
+        console.log('[index.html] apiLoader 已暴露到全局');
+      </script>
+      
       <!-- 腳本載入完成後檢查全局函數 -->
       <script>
         window.addEventListener('DOMContentLoaded', () => {

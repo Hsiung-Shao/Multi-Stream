@@ -1422,23 +1422,86 @@ const favoriteStreams = {
     return { success: false, message: i18n.t('invalidFavoriteItem') };
   },
   
-  // 批量加載收藏
+  // 批量加載收藏（優化版本）
   loadMultiple: async (items) => {
     if (!items || items.length === 0) {
       const i18n = window.i18n || { t: (key) => key };
       return { success: false, message: i18n.t('noFavoritesToLoad') };
     }
-    
-    // 對於批量加載，我們需要等待每個項目的異步操作完成
-    // 但為了不阻塞，我們仍然使用 setTimeout 來間隔加載
-    items.forEach((item, index) => {
-      setTimeout(async () => {
-        await favoriteStreams.load(item);
-      }, index * 300); // 每個串流間隔300毫秒加載
-    });
-    
+
     const i18n = window.i18n || { t: (key) => key };
-    return { success: true, message: `${i18n.t('loadingStreams')} ${items.length} ${i18n.t('streams')}` };
+    
+    // 優化：提前載入 Twitch Player API（如果批量中包含 Twitch）
+    const twitchItems = items.filter(item => 
+      item.platform === 'twitch' || 
+      (item.url && item.url.includes('twitch.tv/'))
+    );
+    
+    if (twitchItems.length > 0 && window.apiLoader) {
+      try {
+        console.log('[settings.js] 批量加載：提前載入 Twitch Player API');
+        await window.apiLoader.loadTwitchPlayerApi();
+        console.log('[settings.js] Twitch Player API 已就緒');
+      } catch (error) {
+        console.warn('[settings.js] Twitch Player API 載入失敗:', error);
+      }
+    }
+
+    // 優化：使用隊列機制，避免同時創建太多播放器
+    const BATCH_SIZE = 3; // 每次同時創建 3 個播放器
+    const DELAY_BETWEEN_BATCHES = 300; // 批次之間延遲 300ms
+    
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+
+    // 分批處理
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      const batch = items.slice(i, i + BATCH_SIZE);
+      
+      // 並行處理當前批次
+      const batchPromises = batch.map(async (item) => {
+        try {
+          const result = await favoriteStreams.load(item);
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+            if (result.message) {
+              errors.push(result.message);
+            }
+          }
+        } catch (error) {
+          failCount++;
+          errors.push(error.message || '未知錯誤');
+        }
+      });
+      
+      await Promise.allSettled(batchPromises);
+      
+      // 如果不是最後一批，等待一段時間再處理下一批
+      if (i + BATCH_SIZE < items.length) {
+        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+      }
+    }
+
+    // 構建返回消息
+    let message = '';
+    if (failCount === 0) {
+      message = i18n.t('loadMultipleSuccess')?.replace('{count}', successCount.toString()) || 
+                `成功載入 ${successCount} 個收藏`;
+    } else {
+      message = i18n.t('loadMultipleSuccessWithFail')?.replace('{success}', successCount.toString()).replace('{fail}', failCount.toString()) || 
+                `成功載入 ${successCount} 個收藏，失敗 ${failCount} 個`;
+    }
+
+    return { 
+      success: successCount > 0, 
+      message,
+      successCount,
+      failCount,
+      errors: errors.slice(0, 5) // 只返回前 5 個錯誤
+    };
   }
 };
 
