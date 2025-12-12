@@ -1,14 +1,13 @@
-import { Coffee, FileText, HelpCircle, Info } from 'lucide-react';
 import { useI18n } from '../i18n/index';
 
 interface WelcomeCardProps {
   theme: 'light' | 'dark';
-  onShowVersionHistory: () => void;
-  onShowTutorial: () => void;
+  onShowVersionHistory?: () => void;
+  onShowTutorial?: () => void;
   onShowAbout?: () => void;
 }
 
-export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onShowAbout }: WelcomeCardProps) {
+export function WelcomeCard({ theme }: WelcomeCardProps) {
   const { t } = useI18n();
   return (
     <div className={`max-w-3xl mx-auto ${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/20 to-blue-900/20' : 'bg-gradient-to-br from-purple-50 to-blue-50'} rounded-lg border ${theme === 'dark' ? 'border-purple-500/30' : 'border-purple-200'} p-8 shadow-xl`}>
@@ -78,93 +77,6 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             {t('welcome.tip')}
           </p>
         </div>
-      </div>
-
-      {/* Support Section */}
-      <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white/50'} rounded-lg p-6 mb-6`}>
-        <h3 className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'} mb-2 text-center`}>
-          {t('welcome.supportTitle')}
-        </h3>
-        <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} text-center mb-4`}>
-          {t('welcome.supportDesc')}
-        </p>
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('[WelcomeCard] 贊助按鈕被點擊');
-              window.open('https://buymeacoffee.com/hsiung', '_blank', 'noopener,noreferrer');
-            }}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg text-base font-medium text-black bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 transition-all shadow-lg hover:shadow-xl"
-          >
-            <Coffee className="size-5" />
-            {t('welcome.buyMeACoffee')}
-          </button>
-        </div>
-      </div>
-
-      {/* Footer Buttons */}
-      <div className={`flex flex-wrap items-center justify-center gap-3 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('[WelcomeCard] 版本資訊按鈕被點擊');
-            onShowVersionHistory();
-          }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-            theme === 'dark' 
-              ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500/70' 
-              : 'border-purple-400 text-purple-600 hover:bg-purple-50 hover:border-purple-500'
-          }`}
-        >
-          <FileText className="size-4" />
-          {t('welcome.versionInfo')}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('[WelcomeCard] 教學按鈕被點擊');
-            onShowTutorial();
-          }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-            theme === 'dark' 
-              ? 'border-blue-500/50 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/70' 
-              : 'border-blue-400 text-blue-600 hover:bg-blue-50 hover:border-blue-500'
-          }`}
-        >
-          <HelpCircle className="size-4" />
-          {t('welcome.tutorial')}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('[WelcomeCard] 關於按鈕被點擊', { onShowAbout: !!onShowAbout });
-            if (onShowAbout) {
-              onShowAbout();
-            }
-          }}
-          disabled={!onShowAbout}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-            !onShowAbout
-              ? theme === 'dark'
-                ? 'border-green-500/20 text-green-500/50 cursor-not-allowed'
-                : 'border-green-400/50 text-green-600/50 cursor-not-allowed'
-              : theme === 'dark' 
-                ? 'border-green-500/50 text-green-400 hover:bg-green-500/10 hover:border-green-500/70' 
-                : 'border-green-400 text-green-600 hover:bg-green-50 hover:border-green-500'
-          }`}
-        >
-          <Info className="size-4" />
-          {t('welcome.about')}
-        </button>
       </div>
     </div>
   );

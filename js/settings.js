@@ -4163,28 +4163,44 @@ function hideFavoriteSearchSuggestions() {
 // 確保所有函數是全局的（統一在文件末尾導出，確保所有函數都已定義）
 if (typeof window !== 'undefined') {
   // 收藏相關函數
-  window.showFavoriteStreamsManager = showFavoriteStreamsManager;
-  window.addCurrentStreamToFavorites = addCurrentStreamToFavorites;
-  window.refreshFavoriteStatus = refreshFavoriteStatus;
-  window.updateFavoriteListDisplay = updateFavoriteListDisplay;
-  window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
-  window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
-  window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
+  // window.showFavoriteStreamsManager = showFavoriteStreamsManager; // [已遷移到 React UI] 已註釋，不再導出
+  try {
+    window.addCurrentStreamToFavorites = addCurrentStreamToFavorites;
+    window.refreshFavoriteStatus = refreshFavoriteStatus;
+    window.updateFavoriteListDisplay = updateFavoriteListDisplay;
+    window.updateFavoriteLiveStatuses = updateFavoriteLiveStatuses;
+    window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
+    window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
+  } catch (e) {
+    console.warn('[settings.js] 部分收藏相關函數未定義，跳過導出', e);
+  }
   
   // 版本紀錄和使用教學
-  window.showVersionHistory = showVersionHistory;
-  window.closeVersionHistory = closeVersionHistory;
-  window.showUserGuide = showUserGuide;
-  window.closeUserGuide = closeUserGuide;
+  try {
+    window.showVersionHistory = showVersionHistory;
+    window.closeVersionHistory = closeVersionHistory;
+    window.showUserGuide = showUserGuide;
+    window.closeUserGuide = closeUserGuide;
+  } catch (e) {
+    console.warn('[settings.js] 部分版本/教學相關函數未定義，跳過導出', e);
+  }
   
   // YouTube API 工具
-  window.youtubeApiUtils = youtubeApiUtils;
+  try {
+    window.youtubeApiUtils = youtubeApiUtils;
+  } catch (e) {
+    console.warn('[settings.js] youtubeApiUtils 未定義，跳過導出', e);
+  }
   
   // 暴露收藏系統到全局
   console.log('[settings.js] 初始化收藏系統...');
-  window.favoriteStreams = favoriteStreams;
-  window.favoriteCategories = favoriteCategories;
-  window.indexedDBBackup = indexedDBBackup;
+  try {
+    window.favoriteStreams = favoriteStreams;
+    window.favoriteCategories = favoriteCategories;
+    window.indexedDBBackup = indexedDBBackup;
+  } catch (e) {
+    console.error('[settings.js] 收藏系統初始化失敗', e);
+  }
   console.log('[settings.js] 收藏系統已初始化', {
     favoriteStreams: !!window.favoriteStreams,
     favoriteCategories: !!window.favoriteCategories,

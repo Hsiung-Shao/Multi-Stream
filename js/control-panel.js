@@ -1,31 +1,9 @@
 // 控制面板功能
 
 // [已遷移到 React UI] 以下控制面板 DOM 操作已遷移到 React 組件 (src/components/ControlPanel.tsx)
-// 但保留 updateStreamOrderList 等可能被其他地方使用的函數
-/*
-// 檢查並調整控制面板狀態（根據串流數量）
-function checkAndAdjustControlPanel() {
-  const panel = document.getElementById('control-panel');
-  const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
-  
-  if (!panel) return;
-  
-  // 無論是否有串流，都使用用戶保存的設置
-  const savedState = localStorage.getItem('controlPanelCollapsed');
-  if (savedState === 'true') {
-    panel.classList.add('collapsed');
-    if (toggleCollapsed) {
-      toggleCollapsed.style.display = 'block';
-    }
-  } else {
-    panel.classList.remove('collapsed');
-    if (toggleCollapsed) {
-      toggleCollapsed.style.display = 'none';
-    }
-  }
-}
+// 但保留 updateStreamOrderList 和 toggleControlPanel 等可能被其他地方使用的函數
 
-// 切換控制面板（確保是全局函數，立即定義）
+// 切換控制面板（確保是全局函數，立即定義）- 仍在使用，保留
 function toggleControlPanel() {
   const panel = document.getElementById('control-panel');
   const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
@@ -59,6 +37,30 @@ function toggleControlPanel() {
 
 // 確保函數是全局的
 window.toggleControlPanel = toggleControlPanel;
+
+// [已遷移到 React UI] 以下控制面板 DOM 操作已遷移到 React 組件
+/*
+// 檢查並調整控制面板狀態（根據串流數量）
+function checkAndAdjustControlPanel() {
+  const panel = document.getElementById('control-panel');
+  const toggleCollapsed = document.getElementById('control-panel-toggle-collapsed');
+  
+  if (!panel) return;
+  
+  // 無論是否有串流，都使用用戶保存的設置
+  const savedState = localStorage.getItem('controlPanelCollapsed');
+  if (savedState === 'true') {
+    panel.classList.add('collapsed');
+    if (toggleCollapsed) {
+      toggleCollapsed.style.display = 'block';
+    }
+  } else {
+    panel.classList.remove('collapsed');
+    if (toggleCollapsed) {
+      toggleCollapsed.style.display = 'none';
+    }
+  }
+}
 
 // 控制面板自動展開功能已移除（滑鼠靠近時自動展開功能）
 
@@ -788,7 +790,7 @@ if (typeof window !== 'undefined') {
   window.updateStreamOrderList = updateStreamOrderList;
   window.toggleAllChats = toggleAllChats;
   window.updateAllChatsButton = updateAllChatsButton;
-  window.toggleControlPanel = toggleControlPanel;
+  // window.toggleControlPanel = toggleControlPanel; // 已在文件開頭導出（第 39 行），無需重複
   
   // 監聽收藏更新事件，自動更新串流順序列表
   window.addEventListener('favoritesUpdated', (event) => {
