@@ -47,13 +47,14 @@ class ApiLoader {
       // 檢查腳本是否已經存在
       const existingTwitch = document.querySelector('script[src*="player.twitch.tv"]');
       if (existingTwitch) {
+        // 優化：使用 50ms 檢查間隔（更快檢測）
         const checkTwitch = setInterval(() => {
           if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
             clearInterval(checkTwitch);
             this.state.twitchPlayer = 'loaded';
             resolve();
           }
-        }, 100);
+        }, 50);
 
         setTimeout(() => {
           clearInterval(checkTwitch);
@@ -71,13 +72,14 @@ class ApiLoader {
       twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
 
       twitchScript.onload = () => {
+        // 優化：使用 50ms 檢查間隔（更快檢測）
         const checkTwitch = setInterval(() => {
           if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
             clearInterval(checkTwitch);
             this.state.twitchPlayer = 'loaded';
             resolve();
           }
-        }, 100);
+        }, 50);
 
         setTimeout(() => {
           clearInterval(checkTwitch);
