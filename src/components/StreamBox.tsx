@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { StreamData } from '../utils/streamUtils';
 import { loadTwitchPlayerApi, loadYouTubeIframeApi } from '../utils/loadPlayerApis';
 import { Button as MuiButton, Slider } from '@mui/material';
@@ -1055,8 +1055,8 @@ export function StreamBox({
     }
   };
 
-  // 從收藏中獲取名稱
-  useEffect(() => {
+  // 從收藏中獲取名稱的函數
+  const updateFavoriteName = useCallback(() => {
     if (window.favoriteStreams) {
       const favorites = window.favoriteStreams.getList();
       const favorite = favorites.find(fav => {
@@ -1078,6 +1078,49 @@ export function StreamBox({
       }
     }
   }, [streamData.platform, streamData.channelId, streamData.videoId]);
+
+  // 從收藏中獲取名稱（初始化）
+  useEffect(() => {
+    updateFavoriteName();
+  }, [updateFavoriteName]);
+
+  // 監聽收藏系統變更事件
+  useEffect(() => {
+    const handleFavoritesUpdated = (event: CustomEvent) => {
+      const { action, favorite } = event.detail;
+      
+      // 檢查變更的收藏是否與當前串流匹配
+      if (favorite) {
+        let isMatch = false;
+        if (streamData.platform === 'twitch') {
+          isMatch = favorite.platform === 'twitch' && favorite.channelId === streamData.channelId;
+        } else if (streamData.platform === 'youtube') {
+          isMatch = favorite.platform === 'youtube' && (
+            favorite.channelId === streamData.channelId || 
+            favorite.videoId === streamData.videoId
+          );
+        }
+        
+        // 如果匹配，更新名稱
+        if (isMatch) {
+          if (action === 'remove') {
+            setFavoriteName(null);
+          } else {
+            updateFavoriteName();
+          }
+        }
+      } else {
+        // 如果沒有提供 favorite 詳情，重新檢查所有收藏
+        updateFavoriteName();
+      }
+    };
+
+    window.addEventListener('favoritesUpdated', handleFavoritesUpdated as EventListener);
+    
+    return () => {
+      window.removeEventListener('favoritesUpdated', handleFavoritesUpdated as EventListener);
+    };
+  }, [streamData.platform, streamData.channelId, streamData.videoId, updateFavoriteName]);
 
   // 獲取串流標題
   const getStreamTitle = () => {

@@ -913,8 +913,8 @@ const favoriteStreams = {
     // 步驟 2：觸發防抖備份到 IndexedDB（10秒後無新操作才備份）
     debouncedBackup();
     
-    // 觸發收藏更新事件，通知控制面板更新
-    window.dispatchEvent(new CustomEvent('favoritesUpdated'));
+    // 注意：不在 saveList 中觸發事件，因為 add、update、remove 方法已經觸發了帶有 detail 的事件
+    // 這樣可以避免重複觸發，並且確保事件包含正確的收藏信息
   },
   
   // 添加收藏（異步版本，支援從 videoID 獲取 channelID）
@@ -1085,6 +1085,17 @@ const favoriteStreams = {
     list.push(newItem);
     favoriteStreams.saveList(list);
     
+    // 觸發收藏更新事件，通知 StreamBox 和串流順序列表更新名稱
+    const event = new CustomEvent('favoritesUpdated', {
+      detail: {
+        action: 'add',
+        favoriteId: uniqueId,
+        favorite: newItem
+      }
+    });
+    console.log('[favoriteStreams.add] 觸發 favoritesUpdated 事件', event.detail);
+    window.dispatchEvent(event);
+    
     const i18n = window.i18n || { t: (key) => key };
     const result = { 
       success: true, 
@@ -1118,6 +1129,17 @@ const favoriteStreams = {
     
     favoriteStreams.saveList(list);
     
+    // 觸發收藏更新事件，通知 StreamBox 和串流順序列表更新名稱
+    const event = new CustomEvent('favoritesUpdated', {
+      detail: {
+        action: 'update',
+        favoriteId: id,
+        favorite: item
+      }
+    });
+    console.log('[favoriteStreams.update] 觸發 favoritesUpdated 事件', event.detail);
+    window.dispatchEvent(event);
+    
     const i18n = window.i18n || { t: (key) => key };
     return { success: true, message: i18n.t('favoriteUpdated') };
   },
@@ -1125,6 +1147,7 @@ const favoriteStreams = {
   // 移除收藏
   remove: (id) => {
     const list = favoriteStreams.getList();
+    const item = list.find(fav => fav.id === id); // 先保存要刪除的項目
     const filtered = list.filter(item => item.id !== id);
     favoriteStreams.saveList(filtered);
     
@@ -1138,6 +1161,19 @@ const favoriteStreams = {
       indexedDBBackup.backup().catch(() => {
         // 備份錯誤，靜默處理
       });
+    }
+    
+    // 觸發收藏更新事件，通知 StreamBox 和串流順序列表更新名稱
+    if (item) {
+      const event = new CustomEvent('favoritesUpdated', {
+        detail: {
+          action: 'remove',
+          favoriteId: id,
+          favorite: item
+        }
+      });
+      console.log('[favoriteStreams.remove] 觸發 favoritesUpdated 事件', event.detail);
+      window.dispatchEvent(event);
     }
     
     const i18n = window.i18n || { t: (key) => key };

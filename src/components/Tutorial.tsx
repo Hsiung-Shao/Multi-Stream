@@ -380,39 +380,39 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   <Section
                     theme={theme}
                     icon={<Zap className="size-5" />}
-                    title="💡 快捷提示"
+                    title={t('tutorial.tips.title')}
                     content={
                   <>
                     <div className="grid gap-4">
                       <TipCard
                         theme={theme}
-                        title="快速收藏"
-                        description="點擊「收藏當前」可以快速將當前顯示的串流加入收藏"
+                        title={t('tutorial.tips.card1.title')}
+                        description={t('tutorial.tips.card1.description')}
                       />
                       <TipCard
                         theme={theme}
-                        title="批次載入"
-                        description="在收藏列表中，可以點擊分類名稱旁的「▶ 載入」按鈕一鍵載入整個分類的串流"
+                        title={t('tutorial.tips.card2.title')}
+                        description={t('tutorial.tips.card2.description')}
                       />
                       <TipCard
                         theme={theme}
-                        title="調整視窗"
-                        description="串流視窗可以拖曳調整大小和位置"
+                        title={t('tutorial.tips.card3.title')}
+                        description={t('tutorial.tips.card3.description')}
                       />
                       <TipCard
                         theme={theme}
-                        title="活動狀態"
-                        description="點擊串流視窗可以切換為活動狀態（紫色邊框）"
+                        title={t('tutorial.tips.card4.title')}
+                        description={t('tutorial.tips.card4.description')}
                       />
                       <TipCard
                         theme={theme}
-                        title="自動搜尋"
-                        description="在輸入框中輸入 Twitch 頻道名稱，系統會自動顯示搜尋建議"
+                        title={t('tutorial.tips.card5.title')}
+                        description={t('tutorial.tips.card5.description')}
                       />
                       <TipCard
                         theme={theme}
-                        title="開台提醒"
-                        description="收藏的頻道會自動顯示開台狀態，正在直播的頻道會自動排在前面"
+                        title={t('tutorial.tips.card6.title')}
+                        description={t('tutorial.tips.card6.description')}
                       />
                     </div>
                   </>

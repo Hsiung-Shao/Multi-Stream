@@ -765,7 +765,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                 <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.batchImport')}</h3>
                 <div className="space-y-3">
                   <Textarea
-                    placeholder={`貼上多個網址，以逗號或換行分隔\n例如：\nhttps://www.twitch.tv/streamer1\nhttps://www.youtube.com/watch?v=xxx`}
+                    placeholder={t('favorites.batchImportPlaceholder')}
                     value={batchUrls}
                     onChange={(e) => setBatchUrls(e.target.value)}
                     style={{ height: '150px' }}

@@ -275,17 +275,12 @@ function updateStreamOrderList() {
     item.dataset.streamId = id;
     item.draggable = false; // 預設不可拖曳，只有標題行可拖曳
     
-    // 優先使用 streamData 中的 displayName 或 name
+    // 優先從收藏列表中獲取名稱（如果串流在收藏中）
     let label = '';
-    if (data.displayName) {
-      label = escapeHtml(data.displayName);
-    } else if (data.name) {
-      label = escapeHtml(data.name);
-    }
-    
-    // 如果沒有 displayName，嘗試從收藏列表中獲取名稱
-    if (!label && typeof favoriteStreams !== 'undefined' && typeof favoriteStreams.getList === 'function') {
-      const favorites = favoriteStreams.getList();
+    // 使用 window.favoriteStreams 確保正確訪問全局對象
+    const favoriteStreamsObj = window.favoriteStreams;
+    if (favoriteStreamsObj && typeof favoriteStreamsObj.getList === 'function') {
+      const favorites = favoriteStreamsObj.getList();
       // 根據 platform、channelId 或 videoId 匹配收藏
       const favorite = favorites.find(fav => {
         if (fav.platform === data.platform) {
@@ -307,6 +302,15 @@ function updateStreamOrderList() {
       
       if (favorite && favorite.name) {
         label = escapeHtml(favorite.name);
+      }
+    }
+    
+    // 如果沒有收藏名稱，使用 streamData 中的 displayName 或 name
+    if (!label) {
+      if (data.displayName) {
+        label = escapeHtml(data.displayName);
+      } else if (data.name) {
+        label = escapeHtml(data.name);
       }
     }
     
@@ -783,10 +787,22 @@ if (typeof window !== 'undefined') {
   window.toggleControlPanel = toggleControlPanel;
   
   // 監聽收藏更新事件，自動更新串流順序列表
-  window.addEventListener('favoritesUpdated', () => {
-    console.log('[control-panel.js] 收到 favoritesUpdated 事件，更新串流順序列表');
+  window.addEventListener('favoritesUpdated', (event) => {
+    console.log('[control-panel.js] 收到 favoritesUpdated 事件，更新串流順序列表', {
+      detail: event.detail,
+      updateStreamOrderListExists: typeof updateStreamOrderList === 'function',
+      favoriteStreamsExists: typeof window.favoriteStreams !== 'undefined'
+    });
     if (typeof updateStreamOrderList === 'function') {
-      updateStreamOrderList();
+      // 使用 setTimeout 確保 DOM 和 localStorage 更新完成後再更新列表
+      // 增加延遲時間，確保收藏系統的 saveList 已完成
+      setTimeout(() => {
+        console.log('[control-panel.js] 開始更新串流順序列表');
+        updateStreamOrderList();
+        console.log('[control-panel.js] 串流順序列表已更新');
+      }, 50);
+    } else {
+      console.warn('[control-panel.js] updateStreamOrderList 函數不存在');
     }
   });
 }
