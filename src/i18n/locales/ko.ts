@@ -3,6 +3,7 @@ export default {
   'navbar.about': '소개',
   'navbar.tutorial': '사용법',
   'navbar.versionHistory': '버전 정보',
+  'navbar.feedback': '피드백',
   'navbar.favorites': '즐겨찾기 관리',
   'navbar.themeToggle': '테마 전환',
   'navbar.languageSwitch': '언어',

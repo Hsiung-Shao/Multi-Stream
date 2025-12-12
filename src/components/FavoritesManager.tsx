@@ -142,7 +142,7 @@ async function parseUrlAndGetChannelInfo(url: string): Promise<{ url: string; na
           }
         }
       } catch (error) {
-        console.error('YouTube API 錯誤:', error);
+        // YouTube API 錯誤，繼續處理
       }
     }
 
@@ -176,63 +176,34 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   // 載入收藏和分類列表
   const loadData = useCallback(() => {
-    console.log('[FavoritesManager] 開始載入收藏數據...', {
-      favoriteStreams: !!window.favoriteStreams,
-      favoriteCategories: !!window.favoriteCategories,
-      favoriteStreamsType: typeof window.favoriteStreams,
-      favoriteCategoriesType: typeof window.favoriteCategories
-    });
-    
     // 確保收藏系統已初始化（可能需要等待）
     if (!window.favoriteStreams || !window.favoriteCategories) {
-      console.warn('[FavoritesManager] 收藏系統尚未初始化，等待中...');
       // 等待收藏系統初始化（最多等待 2 秒）
       let waitCount = 0;
       const checkAndLoad = () => {
-        console.log(`[FavoritesManager] 檢查收藏系統初始化狀態 (${waitCount}/20)`, {
-          favoriteStreams: !!window.favoriteStreams,
-          favoriteCategories: !!window.favoriteCategories
-        });
-        
         if (window.favoriteStreams && window.favoriteCategories) {
-          console.log('[FavoritesManager] 收藏系統已就緒，載入數據');
           try {
             const favoritesList = window.favoriteStreams.getList();
             const categoriesList = window.favoriteCategories.getList();
-            console.log('[FavoritesManager] 載入成功', {
-              favoritesCount: favoritesList.length,
-              categoriesCount: categoriesList.length
-            });
             setFavorites(favoritesList);
             setCategories(categoriesList);
           } catch (error) {
-            console.error('[FavoritesManager] 載入數據時發生錯誤:', error);
+            // 載入數據時發生錯誤，繼續處理
           }
         } else if (waitCount < 20) {
           waitCount++;
           setTimeout(checkAndLoad, 100);
-        } else {
-          console.error('[FavoritesManager] 收藏系統初始化失敗，請重新整理頁面', {
-            favoriteStreams: !!window.favoriteStreams,
-            favoriteCategories: !!window.favoriteCategories,
-            windowKeys: Object.keys(window).filter(k => k.includes('favorite'))
-          });
         }
       };
       checkAndLoad();
     } else {
-      console.log('[FavoritesManager] 收藏系統已就緒，直接載入數據');
       try {
         const favoritesList = window.favoriteStreams.getList();
         const categoriesList = window.favoriteCategories.getList();
-        console.log('[FavoritesManager] 載入成功', {
-          favoritesCount: favoritesList.length,
-          categoriesCount: categoriesList.length
-        });
         setFavorites(favoritesList);
         setCategories(categoriesList);
       } catch (error) {
-        console.error('[FavoritesManager] 載入數據時發生錯誤:', error);
+        // 載入數據時發生錯誤，繼續處理
       }
     }
   }, []);

@@ -10,30 +10,21 @@
 // [已遷移到 React] 主要功能在 src/App.tsx 的 handleAddStream 中實現
 // 保留此函數以向後兼容，但優先使用 React 版本
 async function addStream(url = null) {
-  // [已遷移到 React UI] URL 輸入框操作已遷移到 React 組件，以下代碼已註釋
-  /*
-  if (!url) {
-    const urlInput = document.getElementById('url-input');
-    if (urlInput) {
-      url = urlInput.value.trim();
-    }
+  // [重要] 如果 React 版本的 addStream 存在且不是當前函數，直接調用它，不再使用舊的 DOM 創建方式
+  // 這樣可以確保所有調用都使用 React 版本，避免創建舊版的 DOM 元素
+  if (window.addStream && typeof window.addStream === 'function' && window.addStream !== addStream) {
+    return await window.addStream(url);
   }
-  */
+  
+  // [已停用] 舊版 DOM 創建方式已完全禁用
+  // 如果 React 版本不存在，顯示錯誤提示
+  alert('錯誤：React 應用尚未載入，無法創建串流容器。請重新整理頁面。');
+  return;
+
+  /* [已停用 - 以下為舊版 DOM 創建代碼，已完全禁用]
+  ============================================
+  
   if (!url) return alert('請輸入直播網址或頻道名稱');
-  
-  // [已遷移到 React UI] 清空輸入框和隱藏搜索建議已遷移到 React
-  /*
-  // 清空輸入框（如果存在）
-  const urlInput = document.getElementById('url-input');
-  if (urlInput) {
-    urlInput.value = '';
-  }
-  
-  // 隱藏搜尋建議
-  if (typeof hideSearchSuggestions === 'function') {
-    hideSearchSuggestions();
-  }
-  */
 
   // 如果輸入的不是 URL，嘗試搜尋 Twitch 或 YouTube 頻道
   if (!url.includes('http://') && !url.includes('https://') && 
@@ -273,7 +264,6 @@ async function addStream(url = null) {
     } catch (error) {
       // 如果驗證失敗（例如 API 錯誤），記錄錯誤但不阻止播放
       // 這樣可以確保即使 API 暫時不可用，用戶仍然可以觀看影片
-      console.warn('YouTube 頻道 ID 驗證失敗:', error.message);
       // 可以選擇是否在驗證失敗時仍然繼續，或者阻止播放
       // 這裡選擇繼續播放，因為 API 可能暫時不可用
     }
@@ -299,25 +289,19 @@ async function addStream(url = null) {
   // 建立播放器
   // [已停用] 舊的播放器創建方式已註釋，現在完全由 React 組件 (StreamBox) 自動創建
   // 如果新系統出現問題，可以取消註釋以下代碼來恢復舊方式
-  /*
-  if (platform === 'twitch') {
-    createTwitchPlayer(id, channelId);
-  } else if (platform === 'youtube') {
-    // 檢查是否使用新方式（React 組件）
-    // 如果容器不存在或已經有播放器實例，可能是新方式已處理，跳過舊方式
-    const playerContainer = document.getElementById('player' + id);
-    const hasNewPlayer = window.players && window.players[id];
-    
-    if (!playerContainer || hasNewPlayer) {
-      console.log(`[舊方式] 串流 ${id} 可能已由新方式處理，跳過舊的 YouTube 播放器創建`);
-      // 不調用舊的 createYouTubePlayer，讓新方式處理
-    } else {
-      // 使用舊方式創建（向後兼容）
-      createYouTubePlayer(id, videoId);
-    }
-  }
-  */
-  console.log(`[新系統] 串流 ${id} 的播放器將由 React 組件 (StreamBox) 自動創建`);
+  // [嵌套註釋已移除以避免破壞大註釋塊]
+  // if (platform === 'twitch') {
+  //   createTwitchPlayer(id, channelId);
+  // } else if (platform === 'youtube') {
+  //   const playerContainer = document.getElementById('player' + id);
+  //   const hasNewPlayer = window.players && window.players[id];
+  //   if (!playerContainer || hasNewPlayer) {
+  //     // 串流可能已由新方式處理，跳過舊的 YouTube 播放器創建
+  //   } else {
+  //     createYouTubePlayer(id, videoId);
+  //   }
+  // }
+  // 串流的播放器將由 React 組件 (StreamBox) 自動創建
 
   // 建立聊天室
   createChat(id, platform, channelId, videoId);
@@ -398,13 +382,16 @@ async function addStream(url = null) {
       checkAndShowAd();
     }, 2000);
   }
+  
+  ============================================
+  所有舊版 DOM 創建代碼已完全禁用
+  */
 }
 
 // 建立 Twitch 播放器
 // [已停用] 此函數已註釋，播放器現在由 React 組件 (StreamBox) 創建
 // 如果新系統出現問題，可以取消註釋以下代碼來恢復舊方式
 function createTwitchPlayer(id, channel) {
-  console.warn('[已停用] createTwitchPlayer() 已被停用，播放器應由 React 組件創建');
   return; // 直接返回，不執行任何操作
   
   /*
@@ -473,13 +460,11 @@ function createTwitchPlayer(id, channel) {
 // 如果新系統出現問題，可以取消註釋以下代碼來恢復舊方式
 // @deprecated 使用 src/components/StreamBox.tsx 中的 createYouTubePlayer 代替
 function createYouTubePlayer(id, videoId) {
-  console.warn('[已停用] createYouTubePlayer() 已被停用，播放器應由 React 組件創建');
   return; // 直接返回，不執行任何操作
   
   /*
   // 檢查是否已經有新方式的播放器
   if (window.players && window.players[id]) {
-    console.log(`[舊方式] 串流 ${id} 已有播放器實例（可能由新方式創建），跳過舊方式`);
     return;
   }
   
@@ -518,14 +503,13 @@ function createYouTubePlayer(id, videoId) {
                     if (isLive) {
                       // 跳轉到最新位置
                       player.seekTo(Number.MAX_SAFE_INTEGER, true);
-                      console.log(`[舊方式] 串流 ${id} 檢測到直播，已跳轉到最新位置`);
                     }
                   } catch (error) {
-                    console.warn(`[舊方式] 串流 ${id} 檢測直播狀態時發生錯誤:`, error);
+                    // 檢測直播狀態時發生錯誤，繼續處理
                   }
                 }, 1000);
               } catch (error) {
-                console.warn(`[舊方式] 串流 ${id} 初始化直播檢測時發生錯誤:`, error);
+                // 初始化直播檢測時發生錯誤，繼續處理
               }
               
               // 應用總音量控制
@@ -544,7 +528,6 @@ function createYouTubePlayer(id, videoId) {
                       const currentTime = player.getCurrentTime();
                       if (currentTime > 0 && duration - currentTime > 30) {
                         player.seekTo(Number.MAX_SAFE_INTEGER, true);
-                        console.log(`[舊方式] 串流 ${id} 直播播放中，已跳轉到最新位置`);
                       }
                     } catch (error) {
                       // 靜默處理錯誤
@@ -632,7 +615,6 @@ function reloadStream(id) {
     const hasNewPlayer = window.players && window.players[id];
     
     if (!playerContainer || hasNewPlayer) {
-      console.log(`[舊方式] 串流 ${id} 重新載入時可能已由新方式處理，跳過舊的 YouTube 播放器創建`);
       // 不調用舊的 createYouTubePlayer，讓新方式處理
     } else {
       // 使用舊方式創建（向後兼容）
@@ -640,7 +622,6 @@ function reloadStream(id) {
     }
   }
   */
-  console.log(`[新系統] 串流 ${id} 重新載入時，播放器將由 React 組件 (StreamBox) 自動重新創建`);
   
   // 恢復音量設定
   setTimeout(() => {
@@ -858,16 +839,14 @@ function loadLayout() {
 
 // 暴露 addStream 到全局作用域
 // 確保函數是全局的（但優先使用 React 版本的 addStream）
+// 注意：在運行時（函數執行時）會檢查是否有 React 版本，如果有就轉發調用
 if (typeof window !== 'undefined') {
   // 只有在 React 版本的 addStream 不存在時才暴露舊版本
-  // 這樣可以確保新的 React 組件優先使用
-  if (!window.addStream || typeof window.addStream !== 'function') {
-    window.addStream = addStream;
-    console.log('[stream.js] 舊版 addStream 已暴露到全局（React 版本不存在）');
-  } else {
-    console.log('[stream.js] React 版本的 addStream 已存在，跳過暴露舊版本');
-    // 保存舊版本作為備份（僅在緊急情況下使用）
+  // 如果 React 版本已經存在，保存舊版本作為備份
+  if (window.addStream && typeof window.addStream === 'function' && window.addStream !== addStream) {
     window._legacyAddStream = addStream;
+  } else {
+    window.addStream = addStream;
   }
 }
 

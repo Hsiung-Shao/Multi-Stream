@@ -119,7 +119,6 @@ export function StreamContainer({
               const chatContainer = streamBox.querySelector(`#chat${stream.id}`) as HTMLElement;
               if (chatContainer && typeof (window as any).createChat === 'function') {
                 // 容器存在但可能沒有內容，立即創建聊天室
-                console.log(`[StreamContainer] 聊天室布局啟用，強制創建聊天室 ${stream.id}`);
                 (window as any).createChat(
                   stream.id,
                   stream.platform,
@@ -128,7 +127,6 @@ export function StreamContainer({
                 );
               } else if (!chatContainer) {
                 // 容器不存在，等待容器創建後再創建聊天室
-                console.log(`[StreamContainer] 聊天室容器 ${stream.id} 不存在，等待容器創建`);
                 setTimeout(() => {
                   const retryChatDiv = document.getElementById(`chat${stream.id}`);
                   if (retryChatDiv && typeof (window as any).createChat === 'function') {
@@ -147,7 +145,6 @@ export function StreamContainer({
             const hasContent = chatDiv.querySelector('iframe') || chatDiv.children.length > 0;
             if (!hasContent && typeof (window as any).createChat === 'function') {
               // 容器存在但沒有內容，立即創建
-              console.log(`[StreamContainer] 聊天室 ${stream.id} 容器存在但無內容，立即創建`);
               (window as any).createChat(
                 stream.id,
                 stream.platform,

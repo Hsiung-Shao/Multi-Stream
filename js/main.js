@@ -26,13 +26,6 @@ const streamData = {}; // 儲存串流資訊
 window.players = players;
 window.streamData = streamData;
 
-console.log('[main.js] 全局變數已初始化', {
-  streamCount: window.streamCount,
-  players: typeof window.players,
-  streamData: typeof window.streamData,
-  location: window.location.href
-});
-
 // 頁面載入時檢查協議和恢復控制面板狀態
 window.addEventListener('DOMContentLoaded', () => {
   // [已遷移到 React UI] 控制面板狀態恢復和總音量控制已遷移到 React 組件
@@ -130,67 +123,30 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   // 延遲讀取備份數據（頁面載入後）
-  console.log('[main.js] 檢查 indexedDBBackup 可用性', {
-    indexedDBBackupAvailable: typeof indexedDBBackup !== 'undefined',
-    windowIndexedDBBackup: typeof window.indexedDBBackup !== 'undefined',
-    indexedDBAvailable: typeof window.indexedDB !== 'undefined'
-  });
-  
   if (typeof indexedDBBackup !== 'undefined') {
-    console.log('[main.js] 準備自動載入備份數據');
-    
     // 增加延遲，確保 indexedDBBackup 已完全初始化
     setTimeout(async () => {
-      console.log('[main.js] 開始自動載入備份數據', {
-        backupEnabled: indexedDBBackup.isEnabled(),
-        dbInitialized: !!indexedDBBackup.db
-      });
-      
       try {
         // 確保數據庫已初始化
         if (!indexedDBBackup.db) {
-          console.log('[main.js] 數據庫未初始化，嘗試初始化...');
           try {
             await indexedDBBackup.init();
-            console.log('[main.js] 數據庫初始化完成', {
-              dbInitialized: !!indexedDBBackup.db
-            });
           } catch (initError) {
-            console.error('[main.js] 數據庫初始化失敗', {
-              error: initError.message,
-              errorName: initError.name
-            });
+            // 數據庫初始化失敗，繼續處理
           }
         }
         
         // 嘗試自動從 IndexedDB 恢復數據（如果 localStorage 沒有數據）
         const result = await indexedDBBackup.autoLoadBackup();
-        console.log('[main.js] 自動載入備份結果', {
-          success: result?.success,
-          message: result?.message,
-          skipped: result?.skipped
-        });
         
         if (result && result.success) {
-          console.log('[main.js] 備份數據恢復成功，重新載入頁面');
           // 重新載入頁面以應用恢復的數據
           window.location.reload();
-        } else {
-          console.log('[main.js] 備份數據恢復跳過或失敗', {
-            reason: result?.message || '未知原因',
-            skipped: result?.skipped
-          });
         }
       } catch (error) {
-        console.error('[main.js] 自動載入備份時發生錯誤', {
-          error: error.message,
-          errorName: error.name,
-          stack: error.stack
-        });
+        // 自動載入備份時發生錯誤，繼續處理
       }
     }, 2000); // 增加延遲到 2 秒，確保所有模組都已載入
-  } else {
-    console.warn('[main.js] indexedDBBackup 未定義，無法自動載入備份');
   }
   
   // [已遷移到 React UI] 收藏列表顯示已遷移到 React 組件，以下代碼已註釋

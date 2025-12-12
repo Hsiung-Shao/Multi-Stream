@@ -325,11 +325,6 @@ function setupFixedLayoutFramework(boxes, layoutType) {
           const chatContent = document.getElementById(`chat-content-fixed-${posKey}`);
           if (chatContent && chatContent.children.length === 0) {
             // 如果內容區域仍然為空，重試更新
-            console.log(`[setupFixedLayoutFramework] 聊天室內容為空，重試更新 ${posKey}`, {
-              streamId: defaultId,
-              posKey,
-              index
-            });
             updateFixedChatPanelContent(posKey, defaultId);
           }
         }, 300);
@@ -509,10 +504,6 @@ function createChatPanel(posKey, defaultId, allStreams, layoutType) {
       const chatContent = document.getElementById(`chat-content-fixed-${posKey}`);
       if (chatContent && chatContent.children.length === 0) {
         // 如果內容區域仍然為空，重試更新
-        console.log(`[createChatPanel] 聊天室內容為空，重試更新 ${posKey}`, {
-          streamId: defaultId,
-          posKey
-        });
         updateFixedChatPanelContent(posKey, defaultId);
       }
     }, 300);
@@ -552,13 +543,6 @@ function updateFixedChatPanelContent(positionKey, streamId) {
   if (!originalChatDiv) {
     // 如果聊天室不存在，创建它
     if (typeof createChat === 'function') {
-      console.log(`[updateFixedChatPanelContent] 聊天室 ${streamId} 不存在，立即創建`, {
-        streamId,
-        platform: data.platform,
-        channelId: data.channelId,
-        videoId: data.videoId
-      });
-      
       // 確保聊天室容器存在（對於 React 組件，容器應該已經存在）
       const streamBox = document.querySelector(`[data-stream-id="${streamId}"]`);
       if (streamBox) {
@@ -611,12 +595,10 @@ function updateFixedChatPanelContent(positionKey, streamId) {
               newIframe.setAttribute('allowfullscreen', '');
               chatContent.appendChild(newIframe);
               clearInterval(retryInterval);
-              console.log(`[updateFixedChatPanelContent] 聊天室 ${streamId} 已成功顯示（重試 ${retryCount} 次）`);
             }
           }
           if (retryCount >= maxRetries) {
             clearInterval(retryInterval);
-            console.warn(`[updateFixedChatPanelContent] 聊天室 ${streamId} 創建超時`);
           }
         }, 200);
       }

@@ -3,6 +3,7 @@ export default {
   'navbar.about': '關於我們',
   'navbar.tutorial': '使用教學',
   'navbar.versionHistory': '版本資訊',
+  'navbar.feedback': '意見回饋',
   'navbar.favorites': '收藏管理',
   'navbar.themeToggle': '主題切換',
   'navbar.languageSwitch': '語言切換',

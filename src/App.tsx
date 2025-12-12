@@ -140,47 +140,28 @@ export default function App() {
       let searchError: string | null = null;
       
       // 先嘗試 Twitch 搜尋
-      console.log('[App] 開始搜尋 Twitch 頻道:', trimmedUrl);
       // 按需載入 Twitch 數據 API（用於搜尋功能）
       try {
         await apiLoader.loadTwitchDataApi();
       } catch (error) {
-        console.warn('[App] Twitch 數據 API 載入失敗，搜尋功能可能不可用:', error);
+        // 載入失敗，繼續處理
       }
       
       // 確保 twitchApi 已初始化
       if (!window.twitchApi || !window.twitchApi.searchChannels) {
-        console.warn('[App] Twitch API 尚未初始化', {
-          twitchApi: !!window.twitchApi,
-          searchChannels: window.twitchApi ? typeof window.twitchApi.searchChannels : 'N/A'
-        });
+        // API 尚未初始化
       }
       
       if (window.twitchApi && window.twitchApi.searchChannels) {
-        console.log('[App] Twitch API 已就緒，開始搜尋');
         try {
           const twitchResults = await window.twitchApi.searchChannels(trimmedUrl, 1);
-          console.log('[App] Twitch 搜尋結果:', {
-            query: trimmedUrl,
-            resultsCount: twitchResults ? twitchResults.length : 0,
-            results: twitchResults
-          });
           if (twitchResults && twitchResults.length > 0) {
             foundChannel = { ...twitchResults[0], platform: 'twitch', source: 'twitch' };
-            console.log('[App] 找到頻道:', foundChannel);
-          } else {
-            console.log('[App] 未找到匹配的 Twitch 頻道');
           }
         } catch (error: any) {
-          console.error('[App] Twitch 搜尋錯誤:', error);
           searchError = error.message || '搜尋失敗';
         }
       } else {
-        console.error('[App] Twitch API 未初始化', {
-          twitchApi: !!window.twitchApi,
-          searchChannels: window.twitchApi ? typeof window.twitchApi.searchChannels : 'N/A',
-          windowKeys: Object.keys(window).filter(k => k.includes('twitch'))
-        });
         searchError = 'Twitch API 未初始化';
       }
       
@@ -229,9 +210,9 @@ export default function App() {
             parsed.channelId = actualChannelId;
           }
         }
-      } catch (error: any) {
-        console.warn('YouTube 頻道 ID 驗證失敗:', error.message);
-      }
+        } catch (error: any) {
+          // 驗證失敗，繼續處理
+        }
     }
 
     // 嘗試從收藏列表中獲取名稱
@@ -262,14 +243,9 @@ export default function App() {
         if (favorite && favorite.name) {
           displayName = favorite.name;
           name = favorite.name;
-          console.log('[App] 從收藏列表中找到名稱', {
-            streamId: streamCountRef.current + 1,
-            name: favorite.name,
-            platform: parsed.platform
-          });
         }
       } catch (error) {
-        console.warn('[App] 從收藏列表獲取名稱時發生錯誤:', error);
+        // 獲取名稱失敗，繼續處理
       }
     }
 
@@ -324,11 +300,9 @@ export default function App() {
 
     if (hasTwitch) {
       try {
-        console.log('[App] 批量添加：提前載入 Twitch Player API');
         await apiLoader.loadTwitchPlayerApi();
-        console.log('[App] Twitch Player API 已就緒，開始批量創建');
       } catch (error) {
-        console.warn('[App] Twitch Player API 載入失敗:', error);
+        // 載入失敗，繼續處理
       }
     }
 
@@ -400,7 +374,7 @@ export default function App() {
         try {
           player.player.destroy();
         } catch (e) {
-          console.warn(`清理 YouTube 播放器時發生錯誤:`, e);
+          // 清理失敗，繼續處理
         }
       }
       // Twitch 播放器不需要 destroy，直接刪除引用
@@ -517,7 +491,6 @@ export default function App() {
       localStorage.setItem('userSettings', JSON.stringify(settings));
     } catch (e) {
       // 保存失敗，靜默處理
-      console.error('保存音量設定失敗:', e);
     }
     
     // 直接應用總音量到所有播放器
@@ -612,7 +585,6 @@ export default function App() {
         localStorage.setItem('userSettings', JSON.stringify(settings));
       } catch (e) {
         // 保存失敗，靜默處理
-        console.error('保存音量設定失敗:', e);
       }
       // 設置音量為 0，讓 slider 滑到 0%
       setMasterVolume(0);
@@ -642,7 +614,6 @@ export default function App() {
         }
       } catch (e) {
         // 讀取失敗，使用默認值 100
-        console.error('讀取音量設定失敗:', e);
       }
       
       // 更新音量狀態
@@ -667,7 +638,6 @@ export default function App() {
         localStorage.setItem('userSettings', JSON.stringify(settings));
       } catch (e) {
         // 保存失敗，靜默處理
-        console.error('更新音量設定失敗:', e);
       }
     }
     
@@ -820,7 +790,7 @@ export default function App() {
                 }
               }
             } catch (error) {
-              console.error('音量設置失敗:', error);
+              // 音量設置失敗，繼續處理
             }
           }
           
