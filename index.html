@@ -34,7 +34,7 @@
            - isDraggingStreamBox: 在 layout.js、drag-resize.js 中使用
            注意：部分功能（如 validateUrl）已遷移到 React (streamUtils.ts)，但保留此腳本以兼容舊代碼
       -->
-      <script defer src="/js/utils.js" onload="console.log('[index.html] utils.js 已載入')" onerror="console.error('[index.html] utils.js 載入失敗')"></script>
+      <script defer src="/js/utils.js"></script>
       
       <!-- [必要] 安全工具 - 提供 escapeHtml、safeJSONParse、validateUrl 等
            使用情況：
@@ -42,7 +42,7 @@
            - safeJSONParse: 在 settings.js 中大量使用（解析 localStorage）
            注意：部分功能已遷移到 React，但 settings.js 仍依賴此腳本
       -->
-      <script defer src="/js/security.js" onload="console.log('[index.html] security.js 已載入')" onerror="console.error('[index.html] security.js 載入失敗')"></script>
+      <script defer src="/js/security.js"></script>
       
       <!-- [必要] 主入口腳本 - 初始化全局變數
            功能：
@@ -51,7 +51,7 @@
            - 收藏開台狀態自動刷新
            使用情況：React 組件依賴這些全局變數
       -->
-      <script defer src="/js/main.js" onload="console.log('[index.html] main.js 已載入')" onerror="console.error('[index.html] main.js 載入失敗')"></script>
+      <script defer src="/js/main.js"></script>
       
       <!-- [必要-按需] Twitch 數據 API - 提供搜尋頻道、查詢開台狀態功能
            功能：
@@ -61,7 +61,7 @@
            使用情況：在 App.tsx、FavoritesManager.tsx 中使用（按需載入）
            注意：通過 apiLoader.loadTwitchDataApi() 按需載入
       -->
-      <script defer src="/js/twitch-api.js" onload="console.log('[index.html] twitch-api.js 已載入')" onerror="console.error('[index.html] twitch-api.js 載入失敗')"></script>
+      <script defer src="/js/twitch-api.js"></script>
       
       <!-- [部分必要-向後兼容] 串流管理腳本
            功能：
@@ -72,7 +72,7 @@
            - 保留以向後兼容，但新代碼不應依賴此腳本
            注意：必須在 settings.js 之前載入（settings.js 依賴 addStream）
       -->
-      <script defer src="/js/stream.js" onload="console.log('[index.html] stream.js 已載入（部分功能已遷移到 React）')" onerror="console.error('[index.html] stream.js 載入失敗')"></script>
+      <script defer src="/js/stream.js"></script>
       
       <!-- [必要] 設定和收藏管理 - 提供收藏系統和 YouTube 數據 API
            功能：
@@ -82,7 +82,7 @@
            - indexedDBBackup - IndexedDB 備份系統
            使用情況：在 FavoritesManager.tsx、App.tsx 中使用
       -->
-      <script defer src="/js/settings.js" onload="console.log('[index.html] settings.js 已載入')" onerror="console.error('[index.html] settings.js 載入失敗')"></script>
+      <script defer src="/js/settings.js"></script>
       
       <!-- [必要] 聊天室功能 - 提供 createChat、toggleChat、setupChatResizer
            功能：
@@ -92,7 +92,7 @@
            使用情況：在 StreamBox.tsx、ChatSidebar.tsx、StreamContainer.tsx 中大量使用
            依賴：utils.js (getParentDomain, getTwitchParents)
       -->
-      <script defer src="/js/chat.js" onload="console.log('[index.html] chat.js 已載入，檢查 createChat:', typeof window.createChat)" onerror="console.error('[index.html] chat.js 載入失敗')"></script>
+      <script defer src="/js/chat.js"></script>
       
       <!-- [必要] 音量控制 - 提供 applyMasterVolumeToStream、updateMasterVolume
            功能：
@@ -100,7 +100,7 @@
            - window.updateMasterVolume() - 更新所有播放器的音量
            使用情況：在 App.tsx、StreamBox.tsx、ControlPanel.tsx 中使用
       -->
-      <script defer src="/js/volume.js" onload="console.log('[index.html] volume.js 已載入')" onerror="console.error('[index.html] volume.js 載入失敗')"></script>
+      <script defer src="/js/volume.js"></script>
       
       <!-- [部分必要] 控制面板腳本
            功能：
@@ -110,34 +110,19 @@
            - updateStreamOrderList: 在 StreamContainer.tsx 中使用
            - toggleControlPanel: 已遷移到 React，但保留以兼容
       -->
-      <script defer src="/js/control-panel.js" onload="console.log('[index.html] control-panel.js 已載入（部分功能已遷移到 React）')" onerror="console.error('[index.html] control-panel.js 載入失敗')"></script>
+      <script defer src="/js/control-panel.js"></script>
       <script type="module" src="/src/main.tsx"></script>
       
       <!-- 暴露 apiLoader 到全局，供舊代碼使用 -->
       <script type="module">
         import { apiLoader } from '/src/utils/apiLoader.ts';
         window.apiLoader = apiLoader;
-        console.log('[index.html] apiLoader 已暴露到全局');
       </script>
       
       <!-- 腳本載入完成後檢查全局函數 -->
       <script>
         window.addEventListener('DOMContentLoaded', () => {
-          console.log('[index.html] DOMContentLoaded，檢查全局函數狀態', {
-            createChat: typeof window.createChat,
-            toggleChat: typeof window.toggleChat,
-            setupChatResizer: typeof window.setupChatResizer,
-            favoriteStreams: typeof window.favoriteStreams,
-            favoriteCategories: typeof window.favoriteCategories,
-            twitchApi: typeof window.twitchApi,
-            youtubeApiUtils: typeof window.youtubeApiUtils,
-            allWindowKeys: Object.keys(window).filter(k => 
-              k.includes('chat') || k.includes('Chat') || 
-              k.includes('favorite') || k.includes('Favorite') ||
-              k.includes('twitch') || k.includes('Twitch') ||
-              k.includes('youtube') || k.includes('YouTube')
-            )
-          });
+          // DOM 內容已載入
         });
       </script>
     </body>

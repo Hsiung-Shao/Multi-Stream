@@ -3,6 +3,7 @@ export default {
   'navbar.about': 'About Us',
   'navbar.tutorial': 'Tutorial',
   'navbar.versionHistory': 'Version History',
+  'navbar.feedback': 'Feedback',
   'navbar.favorites': 'Favorites',
   'navbar.themeToggle': 'Toggle Theme',
   'navbar.languageSwitch': 'Language',

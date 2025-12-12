@@ -115,7 +115,6 @@ export function Navbar({
         setShowResults(false);
       }
     } catch (error) {
-      console.error('搜尋 Twitch 頻道失敗:', error);
       setSearchResults([]);
       setShowResults(false);
     } finally {
@@ -280,17 +279,10 @@ export function Navbar({
               alt="MultiStream Hub" 
               className="w-8 h-8"
               onError={(e) => {
-                console.error('[Navbar] Icon 圖片載入失敗', {
-                  src: (e.target as HTMLImageElement).src,
-                  currentSrc: (e.target as HTMLImageElement).currentSrc,
-                  location: window.location.href
-                });
+                // Icon 圖片載入失敗，繼續處理
               }}
               onLoad={() => {
-                console.log('[Navbar] Icon 圖片載入成功', {
-                  src: '/icon.png',
-                  location: window.location.href
-                });
+                // Icon 圖片載入成功
               }}
             />
             <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
@@ -372,6 +364,28 @@ export function Navbar({
                 </TooltipContent>
               </Tooltip>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <MuiButton
+                  variant="text"
+                  size="small"
+                  onClick={() => window.open('https://docs.google.com/forms/d/e/1FAIpQLSfCBlVZgTwiz-_PEVgkJkPUYHfJyz0Dowln2njQoWcMzit6Ow/viewform', '_blank')}
+                  color="secondary"
+                  sx={{
+                    color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                    '&:hover': {
+                      color: theme === 'dark' ? '#ffffff' : '#000000',
+                      bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                    },
+                  }}
+                >
+                  {t('navbar.feedback')}
+                </MuiButton>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('navbar.feedback')}</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 

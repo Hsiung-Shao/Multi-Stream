@@ -33,20 +33,8 @@ async function handleConfigRequest(request, env) {
   const requestUrl = request.url;
   const requestMethod = request.method;
   
-  console.log('[twitch-config.js] 收到請求', {
-    method: requestMethod,
-    url: requestUrl,
-    hasEnv: !!env,
-    hasTwitchClientId: !!(env?.TWITCH_CLIENT_ID)
-  });
-  
   try {
     const clientId = env?.TWITCH_CLIENT_ID || null;
-
-    console.log('[twitch-config.js] 處理請求完成', {
-      clientIdProvided: !!clientId,
-      clientIdLength: clientId ? clientId.length : 0
-    });
 
     // 返回 Client ID（如果沒有設定則返回 null）
     return new Response(
@@ -65,12 +53,6 @@ async function handleConfigRequest(request, env) {
       }
     );
   } catch (error) {
-    console.error('[twitch-config.js] 處理請求時發生錯誤', {
-      error: error.message,
-      stack: error.stack,
-      url: requestUrl
-    });
-    
     return new Response(
       JSON.stringify({
         error: '伺服器錯誤',

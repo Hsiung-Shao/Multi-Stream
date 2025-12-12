@@ -110,7 +110,6 @@ class ApiLoader {
         setTimeout(() => {
           if (typeof window.Twitch !== 'undefined' && window.Twitch.Player) {
             // 實際上已經載入成功了（可能是誤報的 CORS 錯誤）
-            console.warn('[apiLoader] Twitch Player API 載入時出現錯誤事件，但 API 實際可用');
             this.state.twitchPlayer = 'loaded';
             resolve();
           } else {
@@ -233,7 +232,6 @@ class ApiLoader {
           clearInterval(checkInterval);
           // 即使未載入也不阻止應用運行
           this.state.twitchData = 'error';
-          console.warn('Twitch 數據 API 載入超時，部分功能可能不可用');
           resolve();
         }
       }, 100);
@@ -278,7 +276,6 @@ class ApiLoader {
           clearInterval(checkInterval);
           // 即使未載入也不阻止應用運行
           this.state.youtubeData = 'error';
-          console.warn('YouTube 數據 API 載入超時，部分功能可能不可用');
           resolve();
         }
       }, 100);
@@ -298,7 +295,6 @@ class ApiLoader {
         this.loadYouTubePlayerApi()
       ]);
     } catch (error) {
-      console.error('載入播放器 API 時發生錯誤:', error);
       // 不阻止應用繼續運行
     }
   }
@@ -313,7 +309,6 @@ class ApiLoader {
         this.loadYouTubeDataApi()
       ]);
     } catch (error) {
-      console.error('載入數據 API 時發生錯誤:', error);
       // 不阻止應用繼續運行
     }
   }

@@ -67,34 +67,18 @@ export function StreamBox({
 
   // 同步聊天室顯示狀態和布局 - 參考 js/chat.js 和 js/stream.js
   useEffect(() => {
-    console.log(`[StreamBox ${streamData.id}] 同步聊天室狀態`, {
-      chatVisible: streamData.chatVisible,
-      platform: streamData.platform,
-      channelId: streamData.channelId
-    });
-
     const contentWrapper = document.getElementById(`content-wrapper${streamData.id}`);
     const playerContainer = playerContainerRef.current;
     const chatContainer = chatContainerRef.current;
     const chatResizer = chatResizerRef.current;
     
-    console.log(`[StreamBox ${streamData.id}] DOM 元素檢查`, {
-      contentWrapper: !!contentWrapper,
-      playerContainer: !!playerContainer,
-      chatContainer: !!chatContainer,
-      chatResizer: !!chatResizer,
-      chatContainerId: chatContainer?.id
-    });
-    
     if (contentWrapper) {
       if (streamData.chatVisible) {
         contentWrapper.classList.remove('layout-vertical');
         contentWrapper.classList.add('layout-horizontal');
-        console.log(`[StreamBox ${streamData.id}] 設置為水平布局`);
       } else {
         contentWrapper.classList.remove('layout-horizontal');
         contentWrapper.classList.add('layout-vertical');
-        console.log(`[StreamBox ${streamData.id}] 設置為垂直布局`);
       }
     }
     
@@ -125,8 +109,6 @@ export function StreamBox({
         playerContainer.style.width = `calc(100% - ${finalChatWidth}px)`;
         playerContainer.style.height = '100%';
         playerContainer.style.transition = 'width 0.3s ease';
-        
-        console.log(`[StreamBox ${streamData.id}] 顯示聊天室 (寬度: ${finalChatWidth}px, 最小: ${minChatWidth}px)`);
       } else {
         // 隱藏聊天室時，播放器佔滿 100%
         chatContainer.style.width = '0px';
@@ -142,8 +124,6 @@ export function StreamBox({
         // 更新狀態用於 JSX 渲染
         setChatWidth(0);
         setPlayerWidth('100%');
-        
-        console.log(`[StreamBox ${streamData.id}] 隱藏聊天室`);
       }
     } else if (playerContainer) {
       // 如果沒有聊天室容器，播放器佔滿 100%
@@ -151,13 +131,11 @@ export function StreamBox({
       playerContainer.style.width = playerWidth;
       playerContainer.style.height = '100%';
       playerContainer.style.transition = 'width 0.3s ease';
-      console.log(`[StreamBox ${streamData.id}] 播放器寬度: ${playerWidth}`);
     }
     
     if (chatContainer) {
       // 確保聊天室容器有正確的 ID
       if (!chatContainer.id || chatContainer.id !== `chat${streamData.id}`) {
-        console.log(`[StreamBox ${streamData.id}] 設置聊天室容器 ID: chat${streamData.id}`);
         chatContainer.id = `chat${streamData.id}`;
       }
 
@@ -165,41 +143,15 @@ export function StreamBox({
         
         // 檢查聊天室 iframe 是否存在
         const iframe = chatContainer.querySelector('iframe');
-        console.log(`[StreamBox ${streamData.id}] 檢查聊天室 iframe`, {
-          iframeExists: !!iframe,
-          chatVisible: streamData.chatVisible,
-          platform: streamData.platform,
-          channelId: streamData.channelId,
-          videoId: streamData.videoId,
-          chatContainerId: chatContainer.id,
-          chatContainerChildren: chatContainer.children.length,
-          createChatFunction: typeof (window as any).createChat
-        });
         
         if (!iframe) {
-          console.warn(`[StreamBox ${streamData.id}] 聊天室 iframe 不存在，嘗試創建`, {
-            platform: streamData.platform,
-            channelId: streamData.channelId,
-            videoId: streamData.videoId,
-            chatContainerExists: !!chatContainer,
-            createChatAvailable: typeof (window as any).createChat === 'function'
-          });
-          
           // 如果 iframe 不存在，調用 createChat
           if (typeof (window as any).createChat === 'function') {
-            console.log(`[StreamBox ${streamData.id}] 調用 createChat 函數`);
             // 使用多次重試，確保在 Cloudflare preview 環境中也能正確創建
             let retryCount = 0;
             const maxRetries = 5;
             const tryCreateChat = () => {
               try {
-                console.log(`[StreamBox ${streamData.id}] 嘗試創建聊天室 (嘗試 ${retryCount + 1}/${maxRetries})`, {
-                  id: streamData.id,
-                  platform: streamData.platform,
-                  channelId: streamData.channelId,
-                  videoId: streamData.videoId
-                });
-                
                 (window as any).createChat(
                   streamData.id,
                   streamData.platform,
@@ -210,47 +162,24 @@ export function StreamBox({
                 // 檢查是否成功創建
                 setTimeout(() => {
                   const createdIframe = chatContainer.querySelector('iframe');
-                  const chatContent = chatContainer.innerHTML;
-                  console.log(`[StreamBox ${streamData.id}] 創建後檢查`, {
-                    iframeExists: !!createdIframe,
-                    iframeSrc: createdIframe?.src,
-                    chatContentLength: chatContent.length,
-                    chatContainerChildren: chatContainer.children.length
-                  });
                   
                   if (!createdIframe && retryCount < maxRetries) {
                     retryCount++;
-                    console.warn(`[StreamBox ${streamData.id}] 聊天室創建失敗，重試 ${retryCount}/${maxRetries}`);
                     setTimeout(tryCreateChat, 200 * retryCount); // 遞增延遲
-                  } else if (createdIframe) {
-                    console.log(`[StreamBox ${streamData.id}] 聊天室創建成功`);
                   }
                 }, 300);
               } catch (error) {
-                console.error(`[StreamBox ${streamData.id}] 創建聊天室時發生錯誤:`, error);
                 if (retryCount < maxRetries) {
                   retryCount++;
-                  console.log(`[StreamBox ${streamData.id}] 準備重試 (${retryCount}/${maxRetries})`);
                   setTimeout(tryCreateChat, 200 * retryCount);
-                } else {
-                  console.error(`[StreamBox ${streamData.id}] 聊天室創建失敗，已達最大重試次數`);
                 }
               }
             };
             setTimeout(tryCreateChat, 100);
           } else {
-            console.error(`[StreamBox ${streamData.id}] createChat 函數不存在，請確保 js/chat.js 已載入`, {
-              windowKeys: Object.keys(window).filter(k => k.includes('chat') || k.includes('Chat')),
-              chatJsLoaded: typeof (window as any).createChat,
-              documentReadyState: document.readyState,
-              scriptsLoaded: Array.from(document.querySelectorAll('script[src]')).map(s => (s as HTMLScriptElement).src),
-              allWindowFunctions: Object.keys(window).filter(k => typeof (window as any)[k] === 'function' && (k.includes('chat') || k.includes('Chat')))
-            });
-            
             // 嘗試等待 chat.js 載入
             const waitForChatJs = () => {
               if (typeof (window as any).createChat === 'function') {
-                console.log(`[StreamBox ${streamData.id}] createChat 函數已可用，重新嘗試創建聊天室`);
                 if (streamData.chatVisible) {
                   (window as any).createChat(
                     streamData.id,
@@ -262,7 +191,6 @@ export function StreamBox({
               } else {
                 // 監聽 chatFunctionsReady 事件
                 const handler = () => {
-                  console.log(`[StreamBox ${streamData.id}] 收到 chatFunctionsReady 事件，重新嘗試創建聊天室`);
                   if (streamData.chatVisible && typeof (window as any).createChat === 'function') {
                     (window as any).createChat(
                       streamData.id,
@@ -278,7 +206,6 @@ export function StreamBox({
                 // 設置超時，避免無限等待
                 setTimeout(() => {
                   window.removeEventListener('chatFunctionsReady', handler);
-                  console.warn(`[StreamBox ${streamData.id}] 等待 createChat 函數超時`);
                 }, 5000);
               }
             };
@@ -290,22 +217,13 @@ export function StreamBox({
               window.addEventListener('load', waitForChatJs);
             }
           }
-        } else {
-          console.log(`[StreamBox ${streamData.id}] 聊天室 iframe 已存在`, {
-            src: iframe.src,
-            width: iframe.style.width,
-            height: iframe.style.height
-          });
         }
       } else {
         chatContainer.style.width = '0%';
         chatContainer.style.height = '100%';
         chatContainer.style.display = 'none';
         chatContainer.classList.add('hidden');
-        console.log(`[StreamBox ${streamData.id}] 隱藏聊天室`);
       }
-    } else {
-      console.error(`[StreamBox ${streamData.id}] 聊天室容器不存在`);
     }
     
     if (chatResizer) {
@@ -319,7 +237,6 @@ export function StreamBox({
     // 更新全局 streamData 的 chatVisible 狀態 - 參考 js/chat.js 的 toggleChat
     if (window.streamData && window.streamData[streamData.id]) {
       window.streamData[streamData.id].chatVisible = streamData.chatVisible;
-      console.log(`[StreamBox ${streamData.id}] 更新全局 streamData.chatVisible: ${streamData.chatVisible}`);
     }
   }, [streamData.chatVisible, streamData.id, streamData.platform]);
 
@@ -363,12 +280,10 @@ export function StreamBox({
   const applyVolumeToPlayer = (id: number) => {
     // 檢查播放器和串流數據是否存在
     if (!window.players || !window.players[id] || !window.players[id].player) {
-      console.warn(`[StreamBox ${id}] 播放器不存在，無法應用音量設定`);
       return;
     }
     
     if (!window.streamData || !window.streamData[id]) {
-      console.warn(`[StreamBox ${id}] 串流數據不存在，無法應用音量設定`);
       return;
     }
     
@@ -401,16 +316,14 @@ export function StreamBox({
         if (streamData.platform === 'twitch') {
           if (typeof player.setMuted === 'function') {
             player.setMuted(true);
-            console.log(`[StreamBox ${id}] 應用全部靜音到 Twitch 播放器`);
           }
         } else if (streamData.platform === 'youtube') {
           if (typeof player.mute === 'function') {
             player.mute();
-            console.log(`[StreamBox ${id}] 應用全部靜音到 YouTube 播放器`);
           }
         }
       } catch (e) {
-        console.warn(`[StreamBox ${id}] 應用靜音時發生錯誤:`, e);
+        // 應用靜音時發生錯誤，繼續處理
       }
       return;
     }
@@ -420,9 +333,8 @@ export function StreamBox({
     if (typeof (window as any).applyMasterVolumeToStream === 'function') {
       try {
         (window as any).applyMasterVolumeToStream(id);
-        console.log(`[StreamBox ${id}] 應用音量設定到播放器`);
       } catch (e) {
-        console.warn(`[StreamBox ${id}] 應用音量設定時發生錯誤:`, e);
+        // 應用音量設定時發生錯誤，繼續處理
       }
     } else {
       // 如果函數不存在，手動應用音量
@@ -489,7 +401,7 @@ export function StreamBox({
           }
         }
       } catch (e) {
-        console.warn(`[StreamBox ${id}] 應用音量時發生錯誤:`, e);
+        // 應用音量時發生錯誤，繼續處理
       }
     }
   };
@@ -504,8 +416,6 @@ export function StreamBox({
     let shouldForceReload = false;
     
     if (hasReloadTrigger) {
-      console.log(`[StreamBox ${streamData.id}] 檢測到重載觸發器，準備重新創建播放器`);
-      
       // 清除重載觸發器並重置初始化標記
       delete (window.streamData[streamData.id] as any)._reloadTrigger;
       playerInitializedRef.current = false;
@@ -518,9 +428,8 @@ export function StreamBox({
         if (oldPlayer.type === 'youtube' && oldPlayer.player && typeof oldPlayer.player.destroy === 'function') {
           try {
             oldPlayer.player.destroy();
-            console.log(`[StreamBox ${streamData.id}] 已銷毀舊的 YouTube 播放器`);
           } catch (e) {
-            console.warn(`[StreamBox ${streamData.id}] 清理舊播放器時發生錯誤:`, e);
+            // 清理舊播放器時發生錯誤，繼續處理
           }
         }
         delete window.players[streamData.id];
@@ -529,7 +438,6 @@ export function StreamBox({
       // 確保播放器容器已清空（參考 js/stream.js 第 525-529 行）
       if (playerContainerRef.current) {
         playerContainerRef.current.innerHTML = '';
-        console.log(`[StreamBox ${streamData.id}] 已清空播放器容器`);
       }
     }
     
@@ -551,13 +459,11 @@ export function StreamBox({
               // 播放器仍然有效，檢查 videoId 是否變化
               const playerVideoId = existingPlayer.player.getVideoData?.()?.video_id;
               if (playerVideoId === currentVideoId) {
-                console.log(`[StreamBox ${streamData.id}] YouTube 播放器已存在且屬性未變化，跳過重新創建`);
                 return;
               }
             }
           } catch (e) {
             // 如果無法獲取播放器狀態，可能需要重新創建
-            console.log(`[StreamBox ${streamData.id}] 無法檢查播放器狀態，繼續創建新播放器`);
           }
         } else if (existingPlayer.type === 'twitch' && currentChannelId) {
           // Twitch 播放器通常不需要重新創建，除非明確需要
@@ -566,7 +472,6 @@ export function StreamBox({
             if (existingPlayer.player && typeof existingPlayer.player.getChannel === 'function') {
               const playerChannel = existingPlayer.player.getChannel();
               if (playerChannel === currentChannelId) {
-                console.log(`[StreamBox ${streamData.id}] Twitch 播放器已存在且屬性未變化，跳過重新創建`);
                 return;
               }
             }
@@ -590,23 +495,17 @@ export function StreamBox({
       try {
         // 如果容器不存在，無法創建播放器
         if (!playerContainerRef.current) {
-          console.warn(`[StreamBox ${streamData.id}] Twitch 播放器容器不存在`);
           return;
         }
         
         // 確保容器已清空（重載時）
         if (shouldForceReload && playerContainerRef.current.innerHTML) {
           playerContainerRef.current.innerHTML = '';
-          console.log(`[StreamBox ${streamData.id}] 已清空 Twitch 播放器容器`);
         }
         
         // 優化：批量創建時，API 應該已經預載入，這裡只做快速檢查
         if (typeof window.Twitch === 'undefined' || !window.Twitch.Player) {
-          console.log(`[StreamBox ${streamData.id}] Twitch Player API 未就緒，開始載入`);
           await apiLoader.loadTwitchPlayerApi();
-          console.log(`[StreamBox ${streamData.id}] Twitch Player API 載入完成`);
-        } else {
-          console.log(`[StreamBox ${streamData.id}] Twitch Player API 已就緒（可能已預載入）`);
         }
 
         if (!playerContainerRef.current) return;
@@ -639,12 +538,9 @@ export function StreamBox({
         playerInitializedRef.current = true;
         playerCreatingRef.current = false;
         
-        console.log(`[StreamBox ${streamData.id}] Twitch 播放器創建成功`);
-        
         // 優化：使用 Promise 包裝事件監聽，避免長時間等待
         const readyPromise = new Promise<void>((resolve) => {
           const readyHandler = () => {
-            console.log(`[StreamBox ${streamData.id}] Twitch 播放器已就緒`);
             player.removeEventListener(window.Twitch.Player.READY, readyHandler);
             // 播放器已就緒，應用音量設定
             applyVolumeToPlayer(streamData.id);
@@ -656,7 +552,6 @@ export function StreamBox({
           // 設置超時，避免無限等待
           setTimeout(() => {
             if (playerInitializedRef.current) {
-              console.warn(`[StreamBox ${streamData.id}] Twitch 播放器就緒事件超時，但仍嘗試應用音量`);
               applyVolumeToPlayer(streamData.id);
               resolve();
             }
@@ -666,12 +561,10 @@ export function StreamBox({
         await readyPromise;
         
         player.addEventListener(window.Twitch.Player.ERROR, () => {
-          console.error(`[StreamBox ${streamData.id}] Twitch 播放器錯誤`);
           alert('無法載入 Twitch 直播，請確認：\n1. 頻道名稱正確\n2. 頻道正在直播\n3. 網路連線正常');
         });
       } catch (error) {
         playerCreatingRef.current = false;
-        console.error(`[StreamBox ${streamData.id}] 無法建立 Twitch 播放器:`, error);
         alert('無法載入 Twitch API。請重新整理頁面或檢查網路連線。');
       }
     };
@@ -679,7 +572,6 @@ export function StreamBox({
     const createYouTubePlayer = async () => {
       // 防止重複創建（除非是強制重載）
       if (playerCreatingRef.current && !shouldForceReload) {
-        console.log(`[StreamBox ${streamData.id}] 播放器正在創建中，跳過重複創建`);
         return;
       }
 
@@ -691,7 +583,7 @@ export function StreamBox({
             try {
               oldPlayer.player.destroy();
             } catch (e) {
-              console.warn(`[StreamBox ${streamData.id}] 清理舊播放器時發生錯誤:`, e);
+              // 清理舊播放器時發生錯誤，繼續處理
             }
           }
           delete window.players[streamData.id];
@@ -704,7 +596,6 @@ export function StreamBox({
 
         // 確保容器已經準備好（有尺寸）
         if (!playerContainerRef.current) {
-          console.warn(`[StreamBox ${streamData.id}] 播放器容器不存在`);
           return;
         }
 
@@ -716,13 +607,11 @@ export function StreamBox({
           // 如果容器還沒有尺寸，等待一下再創建（最多重試 10 次）
           if (playerRetryCountRef.current < 10) {
             playerRetryCountRef.current++;
-            console.log(`[StreamBox ${streamData.id}] 容器還沒有尺寸，等待後再創建播放器 (重試 ${playerRetryCountRef.current}/10)`);
             setTimeout(() => {
               createYouTubePlayer();
             }, 100);
             return;
           } else {
-            console.warn(`[StreamBox ${streamData.id}] 容器在多次重試後仍無尺寸，強制創建播放器`);
             // 即使沒有尺寸也繼續創建，讓 YouTube API 自己處理
           }
         }
@@ -749,14 +638,12 @@ export function StreamBox({
           // 如果仍然沒有尺寸，再等待一次（最多重試 5 次）
           if (playerRetryCountRef.current < 5) {
             playerRetryCountRef.current++;
-            console.log(`[StreamBox ${streamData.id}] API 載入後容器仍無尺寸，等待後再創建播放器 (重試 ${playerRetryCountRef.current}/5)`);
             playerCreatingRef.current = false;
             setTimeout(() => {
               createYouTubePlayer();
             }, 100);
             return;
           } else {
-            console.warn(`[StreamBox ${streamData.id}] API 載入後容器在多次重試後仍無尺寸，強制創建播放器`);
             // 即使沒有尺寸也繼續創建
           }
         }
@@ -800,18 +687,13 @@ export function StreamBox({
                       // 跳轉到最新位置（使用一個非常大的數字）
                       // allowSeekAhead: true 允許跳轉到未緩衝的位置（對於直播很重要）
                       player.seekTo(Number.MAX_SAFE_INTEGER, true);
-                      console.log(`[StreamBox ${streamData.id}] 檢測到直播，已跳轉到最新位置`, {
-                        duration,
-                        isLive: videoData?.isLive,
-                        videoId: streamData.videoId
-                      });
                     }
                   } catch (error) {
-                    console.warn(`[StreamBox ${streamData.id}] 檢測直播狀態時發生錯誤:`, error);
+                    // 檢測直播狀態時發生錯誤，繼續處理
                   }
                 }, 1000); // 延遲 1 秒確保播放器完全就緒
               } catch (error) {
-                console.warn(`[StreamBox ${streamData.id}] 初始化直播檢測時發生錯誤:`, error);
+                // 初始化直播檢測時發生錯誤，繼續處理
               }
               
               // 播放器已就緒，應用音量設定
@@ -836,11 +718,6 @@ export function StreamBox({
                         // 對於直播，currentTime 可能會比實際直播進度落後
                         if (currentTime > 0 && duration - currentTime > 30) {
                           player.seekTo(Number.MAX_SAFE_INTEGER, true);
-                          console.log(`[StreamBox ${streamData.id}] 直播播放中，檢測到進度落後，已跳轉到最新位置`, {
-                            currentTime,
-                            duration,
-                            difference: duration - currentTime
-                          });
                         }
                       } catch (error) {
                         // 靜默處理錯誤
@@ -878,12 +755,9 @@ export function StreamBox({
         // 標記播放器已初始化
         playerInitializedRef.current = true;
         playerCreatingRef.current = false;
-        
-        console.log(`[StreamBox ${streamData.id}] YouTube 播放器創建成功`);
       } catch (error) {
         // 清除創建標誌
         playerCreatingRef.current = false;
-        console.error(`[StreamBox ${streamData.id}] 無法建立 YouTube 播放器:`, error);
         alert('無法載入 YouTube API。請重新整理頁面或檢查網路連線。');
       }
     };
@@ -891,88 +765,51 @@ export function StreamBox({
     // 建立播放器（參考 js/stream.js 第 531-549 行）
     // 如果檢測到重載觸發器，強制重新創建播放器
     if (streamData.platform === 'twitch') {
-      console.log(`[StreamBox ${streamData.id}] 開始創建 Twitch 播放器${shouldForceReload ? ' (重載模式)' : ''}`);
       createTwitchPlayer().catch(error => {
-        console.error('創建 Twitch 播放器失敗:', error);
+        // 創建 Twitch 播放器失敗，繼續處理
       });
     } else if (streamData.platform === 'youtube') {
-      console.log(`[StreamBox ${streamData.id}] 開始創建 YouTube 播放器${shouldForceReload ? ' (重載模式)' : ''}`);
       createYouTubePlayer().catch(error => {
-        console.error('創建 YouTube 播放器失敗:', error);
+        // 創建 YouTube 播放器失敗，繼續處理
       });
     }
 
     // 建立聊天室 - 參考正式環境：立即生成，不延遲
     // 使用 requestAnimationFrame 確保 DOM 已準備好，但比 setTimeout 更快
     requestAnimationFrame(() => {
-      console.log(`[StreamBox ${streamData.id}] 開始創建聊天室`, {
-        platform: streamData.platform,
-        channelId: streamData.channelId,
-        videoId: streamData.videoId,
-        chatVisible: streamData.chatVisible,
-        chatContainerExists: !!chatContainerRef.current,
-        chatContainerId: chatContainerRef.current?.id
-      });
-
       // 確保聊天室容器存在（chatContainerRef 指向的 div 應該有 id="chat{id}"）
       if (!chatContainerRef.current) {
-        console.error(`[StreamBox ${streamData.id}] 聊天室容器 chat${streamData.id} 不存在`);
         return;
       }
 
       // 確保聊天室容器有正確的 ID
       if (!chatContainerRef.current.id || chatContainerRef.current.id !== `chat${streamData.id}`) {
-        console.log(`[StreamBox ${streamData.id}] 設置聊天室容器 ID: chat${streamData.id}`);
         chatContainerRef.current.id = `chat${streamData.id}`;
       }
 
       // 參考正式環境：立即生成聊天室，即使 chatVisible 為 false
       // 這樣在切換到固定布局時，可以直接複製已存在的 iframe
       if (typeof (window as any).createChat === 'function') {
-        console.log(`[StreamBox ${streamData.id}] 立即調用 createChat 函數`, {
-          id: streamData.id,
-          platform: streamData.platform,
-          channelId: streamData.channelId,
-          videoId: streamData.videoId
-        });
-        
         // 檢查聊天室是否已經創建
         // 參考正式環境：只檢查是否有 iframe，不檢查是否有其他內容（因為 chat-resizer 也會被計入）
         const existingChat = document.getElementById(`chat${streamData.id}`);
         const existingIframe = existingChat?.querySelector('iframe');
         const hasValidIframe = existingIframe && existingIframe.src;
         
-        console.log(`[StreamBox ${streamData.id}] 檢查聊天室狀態`, {
-          existingChat: !!existingChat,
-          existingIframe: !!existingIframe,
-          hasValidIframe,
-          iframeSrc: existingIframe?.src,
-          childrenCount: existingChat?.children.length ?? 0,
-          childrenTypes: existingChat ? Array.from(existingChat.children).map(c => c.tagName) : []
-        });
-        
         // 如果沒有有效的 iframe，立即創建
         // 參考正式環境：即使容器有其他內容（如 chat-resizer），只要沒有 iframe 就創建
         if (!hasValidIframe) {
-          console.log(`[StreamBox ${streamData.id}] 沒有有效 iframe，立即創建聊天室`);
           (window as any).createChat(
             streamData.id,
             streamData.platform,
             streamData.channelId,
             streamData.videoId
           );
-        } else {
-          console.log(`[StreamBox ${streamData.id}] 聊天室已存在（有有效 iframe），跳過創建`, {
-            iframeSrc: existingIframe.src
-          });
         }
       } else {
         // 如果 createChat 函數不存在，等待它載入
-        console.warn(`[StreamBox ${streamData.id}] createChat 函數不存在，等待載入`);
-        
         const waitForChatJs = () => {
           if (typeof (window as any).createChat === 'function') {
-            console.log(`[StreamBox ${streamData.id}] createChat 函數已可用，立即創建聊天室`);
             const existingChat = document.getElementById(`chat${streamData.id}`);
             const existingIframe = existingChat?.querySelector('iframe');
             const existingContent = (existingChat?.children.length ?? 0) > 0;
@@ -988,7 +825,6 @@ export function StreamBox({
           } else {
             // 監聽 chatFunctionsReady 事件
             const handler = () => {
-              console.log(`[StreamBox ${streamData.id}] 收到 chatFunctionsReady 事件，立即創建聊天室`);
               if (typeof (window as any).createChat === 'function') {
                 const existingChat = document.getElementById(`chat${streamData.id}`);
                 const existingIframe = existingChat?.querySelector('iframe');
@@ -1010,7 +846,6 @@ export function StreamBox({
             // 設置超時，避免無限等待
             setTimeout(() => {
               window.removeEventListener('chatFunctionsReady', handler);
-              console.warn(`[StreamBox ${streamData.id}] 等待 createChat 函數超時`);
             }, 5000);
           }
         };
@@ -1025,15 +860,11 @@ export function StreamBox({
 
       // 設置聊天室調整大小功能 - 參考 js/chat.js 的 setupChatResizer
       if (typeof (window as any).setupChatResizer === 'function') {
-        console.log(`[StreamBox ${streamData.id}] 設置聊天室調整大小功能`);
         (window as any).setupChatResizer(streamData.id);
-      } else {
-        console.warn(`[StreamBox ${streamData.id}] setupChatResizer 函數不存在`);
       }
 
       // 根據 chatVisible 狀態設置聊天室顯示/隱藏
       // 參考正式環境：聊天室已生成，只是通過 CSS 控制顯示/隱藏
-      console.log(`[StreamBox ${streamData.id}] 設置聊天室顯示狀態: ${streamData.chatVisible}`);
       if (!streamData.chatVisible) {
         if (chatContainerRef.current) {
           chatContainerRef.current.classList.add('hidden');
@@ -1069,7 +900,7 @@ export function StreamBox({
           try {
             window.players[streamData.id].player.destroy();
           } catch (e) {
-            console.warn(`[StreamBox ${streamData.id}] 清理播放器時發生錯誤:`, e);
+            // 清理播放器時發生錯誤，繼續處理
           }
         }
         delete window.players[streamData.id];
@@ -1093,24 +924,12 @@ export function StreamBox({
         
         // 如果聊天室不存在或沒有內容，立即創建（作為備用機制）
         if (!hasContent && typeof (window as any).createChat === 'function') {
-          console.log(`[StreamBox ${streamData.id}] 聊天室布局啟用，但聊天室不存在，立即創建`, {
-            chatLayoutType,
-            chatVisible: streamData.chatVisible,
-            hasChatDiv: !!chatDiv
-          });
-          
           (window as any).createChat(
             streamData.id,
             streamData.platform,
             streamData.channelId,
             streamData.videoId
           );
-        } else if (hasContent) {
-          console.log(`[StreamBox ${streamData.id}] 聊天室布局啟用，聊天室已存在`, {
-            chatLayoutType,
-            hasIframe: !!chatDiv?.querySelector('iframe'),
-            hasContent: hasContent
-          });
         }
       });
     }
@@ -1301,7 +1120,7 @@ export function StreamBox({
           }
         }
       } catch (e) {
-        console.warn(`[StreamBox ${streamData.id}] 切換靜音時發生錯誤:`, e);
+        // 切換靜音時發生錯誤，繼續處理
       }
     }
   };

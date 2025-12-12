@@ -805,21 +805,12 @@ if (typeof window !== 'undefined') {
   
   // 監聽收藏更新事件，自動更新串流順序列表
   window.addEventListener('favoritesUpdated', (event) => {
-    console.log('[control-panel.js] 收到 favoritesUpdated 事件，更新串流順序列表', {
-      detail: event.detail,
-      updateStreamOrderListExists: typeof updateStreamOrderList === 'function',
-      favoriteStreamsExists: typeof window.favoriteStreams !== 'undefined'
-    });
     if (typeof updateStreamOrderList === 'function') {
       // 使用 setTimeout 確保 DOM 和 localStorage 更新完成後再更新列表
       // 增加延遲時間，確保收藏系統的 saveList 已完成
       setTimeout(() => {
-        console.log('[control-panel.js] 開始更新串流順序列表');
         updateStreamOrderList();
-        console.log('[control-panel.js] 串流順序列表已更新');
       }, 50);
-    } else {
-      console.warn('[control-panel.js] updateStreamOrderList 函數不存在');
     }
   });
 }

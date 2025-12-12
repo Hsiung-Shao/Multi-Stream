@@ -2,31 +2,10 @@
 
 // 建立聊天室
 function createChat(id, platform, channelId, videoId) {
-  console.log(`[createChat] 開始創建聊天室`, {
-    id,
-    platform,
-    channelId,
-    videoId,
-    location: window.location.href,
-    hostname: window.location.hostname,
-    protocol: window.location.protocol
-  });
-  
   const chatDiv = document.getElementById('chat' + id);
   if (!chatDiv) {
-    console.error(`[createChat] 聊天室容器 chat${id} 不存在`, {
-      id,
-      searchedId: 'chat' + id,
-      allChatElements: Array.from(document.querySelectorAll('[id^="chat"]')).map(el => el.id)
-    });
     return;
   }
-  
-  console.log(`[createChat] 找到聊天室容器`, {
-    id: chatDiv.id,
-    hasContent: chatDiv.children.length > 0,
-    innerHTML: chatDiv.innerHTML.substring(0, 100)
-  });
   
   const parentDomain = getParentDomain();
   
@@ -35,7 +14,6 @@ function createChat(id, platform, channelId, videoId) {
   if (platform === 'youtube') {
     // 验证 videoId
     if (!validateVideoId(videoId)) {
-      console.log(`[createChat] YouTube videoId 無效，顯示替代方案`);
       showYouTubeChatAlternative(chatDiv, videoId);
       return;
     }
@@ -43,7 +21,6 @@ function createChat(id, platform, channelId, videoId) {
     // 检查域名是否支持嵌入（localhost 不支持）
     // 參考舊代碼：在 localhost 環境下直接顯示替代方案
     if (parentDomain === 'localhost' || parentDomain === '127.0.0.1' || parentDomain === '0.0.0.0') {
-      console.log(`[createChat] YouTube 在 localhost 環境下無法嵌入，顯示替代方案`);
       showYouTubeChatAlternative(chatDiv, videoId);
       return;
     }
@@ -51,8 +28,6 @@ function createChat(id, platform, channelId, videoId) {
     // 构建 YouTube 聊天室 URL（使用 embed_domain 参数）
     // 參考舊代碼：使用標準的 live_chat URL 格式
     chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(parentDomain)}`;
-    
-    console.log(`[createChat] 創建 YouTube 聊天室 iframe，videoId: ${videoId}, embedDomain: ${parentDomain}`);
   } else if (platform === 'twitch') {
     // Twitch 聊天室 - 根據官方文檔，必須使用 parent 參數
     // Twitch CSP 要求：frame-ancestors http://localhost:* https://localhost:*
@@ -84,17 +59,8 @@ function createChat(id, platform, channelId, videoId) {
   }
   
   if (chatUrl) {
-    console.log(`[createChat] 準備創建 iframe`, {
-      platform,
-      chatUrl,
-      chatDivId: chatDiv.id,
-      chatDivExists: !!chatDiv,
-      hasExistingContent: chatDiv.children.length > 0
-    });
-    
     // 參考正式環境：如果容器已有內容（可能是錯誤訊息或舊內容），先清空
     if (chatDiv.children.length > 0) {
-      console.log(`[createChat] 清空現有內容，準備創建新的 iframe`);
       chatDiv.innerHTML = '';
     }
     
@@ -106,17 +72,7 @@ function createChat(id, platform, channelId, videoId) {
     chatIframe.allow = 'autoplay; fullscreen';
     chatIframe.setAttribute('allowfullscreen', '');
     
-    console.log(`[createChat] iframe 已創建，準備添加到 DOM`, {
-      iframeSrc: chatIframe.src,
-      iframeId: chatIframe.id || 'no-id'
-    });
-    
     chatDiv.appendChild(chatIframe);
-    
-    console.log(`[createChat] iframe 已添加到 DOM`, {
-      chatDivChildren: chatDiv.children.length,
-      iframeInDOM: chatDiv.querySelector('iframe') !== null
-    });
     
     // 檢測是否被 CSP 阻止（參考舊代碼的檢測邏輯）
     let blockedDetected = false;
@@ -177,7 +133,6 @@ function createChat(id, platform, channelId, videoId) {
     chatIframe.addEventListener('load', () => {
       // Chat iframe 載入成功
       clearInterval(checkInterval);
-      console.log(`[createChat] ${platform} 聊天室 iframe 載入成功`);
     });
     
     // 錯誤處理（參考舊代碼）
@@ -206,20 +161,16 @@ function createChat(id, platform, channelId, videoId) {
 // 顯示 YouTube 聊天室替代方案（因為無法嵌入）
 function showYouTubeChatAlternative(chatDiv, videoId) {
   if (!chatDiv) {
-    console.warn('[showYouTubeChatAlternative] 聊天室容器不存在');
     return;
   }
   
   // 验证 videoId
   if (!validateVideoId(videoId)) {
-    console.warn('[showYouTubeChatAlternative] videoId 無效:', videoId);
     // Invalid video ID，靜默處理
     return;
   }
   
   const chatUrl = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}`;
-  
-  console.log(`[showYouTubeChatAlternative] 為 videoId ${videoId} 顯示替代方案`);
   
   // 使用安全的 DOM 操作
   chatDiv.innerHTML = ''; // 清空
@@ -738,27 +689,12 @@ function setupChatResizer(id) {
 
 // 暴露函數到全局，以便 React 組件可以訪問
 if (typeof window !== 'undefined') {
-  console.log('[chat.js] 開始初始化聊天室功能...', {
-    scriptLoaded: true,
-    location: window.location.href,
-    documentReadyState: document.readyState
-  });
-  
   try {
     window.createChat = createChat;
     window.toggleChat = toggleChat;
     window.separateChat = separateChat;
     window.closeSeparatedChat = closeSeparatedChat;
     window.setupChatResizer = setupChatResizer;
-    
-    console.log('[chat.js] 聊天室功能已初始化', {
-      createChat: typeof window.createChat,
-      toggleChat: typeof window.toggleChat,
-      separateChat: typeof window.separateChat,
-      closeSeparatedChat: typeof window.closeSeparatedChat,
-      setupChatResizer: typeof window.setupChatResizer,
-      allFunctionsExposed: !!(window.createChat && window.toggleChat && window.setupChatResizer)
-    });
     
     // 觸發自定義事件，通知其他模組聊天室功能已就緒
     if (typeof window.dispatchEvent === 'function') {
@@ -769,12 +705,9 @@ if (typeof window !== 'undefined') {
           setupChatResizer: typeof window.setupChatResizer
         }
       }));
-      console.log('[chat.js] 已觸發 chatFunctionsReady 事件');
     }
   } catch (error) {
-    console.error('[chat.js] 初始化聊天室功能時發生錯誤:', error);
+    // 初始化聊天室功能時發生錯誤，繼續處理
   }
-} else {
-  console.error('[chat.js] window 對象不存在，無法初始化聊天室功能');
 }
 

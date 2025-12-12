@@ -10,89 +10,37 @@ const indexedDBBackup = {
   
   // 初始化數據庫
   async init() {
-    console.log('[indexedDBBackup] 開始初始化 IndexedDB', {
-      indexedDBAvailable: !!window.indexedDB,
-      dbName: this.dbName,
-      dbVersion: this.dbVersion,
-      storeName: this.storeName,
-      location: window.location.href
-    });
-    
     if (!window.indexedDB) {
-      console.error('[indexedDBBackup] IndexedDB 不可用，瀏覽器可能不支持或處於隱私模式');
       return false;
     }
     
     return new Promise((resolve, reject) => {
-      console.log('[indexedDBBackup] 打開數據庫', {
-        dbName: this.dbName,
-        version: this.dbVersion
-      });
-      
       const request = indexedDB.open(this.dbName, this.dbVersion);
       
       request.onerror = (event) => {
-        console.error('[indexedDBBackup] 打開數據庫失敗', {
-          error: request.error,
-          errorName: request.error?.name,
-          errorMessage: request.error?.message,
-          errorCode: request.error?.code
-        });
         reject(request.error);
       };
       
       request.onsuccess = (event) => {
         this.db = request.result;
-        console.log('[indexedDBBackup] 數據庫打開成功', {
-          dbName: this.db.name,
-          version: this.db.version,
-          objectStoreNames: Array.from(this.db.objectStoreNames),
-          dbInstance: !!this.db
-        });
         resolve(true);
       };
       
       request.onupgradeneeded = (event) => {
-        console.log('[indexedDBBackup] 數據庫需要升級/創建', {
-          oldVersion: event.oldVersion,
-          newVersion: event.newVersion || this.dbVersion
-        });
-        
         const db = event.target.result;
-        console.log('[indexedDBBackup] 升級中的數據庫', {
-          dbName: db.name,
-          version: db.version,
-          existingStores: Array.from(db.objectStoreNames)
-        });
         
         if (!db.objectStoreNames.contains(this.storeName)) {
-          console.log('[indexedDBBackup] 創建對象存儲', {
-            storeName: this.storeName,
-            keyPath: 'id'
-          });
-          
           try {
             const objectStore = db.createObjectStore(this.storeName, { keyPath: 'id' });
             objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-            console.log('[indexedDBBackup] 對象存儲創建成功', {
-              storeName: this.storeName,
-              indexes: Array.from(objectStore.indexNames)
-            });
           } catch (error) {
-            console.error('[indexedDBBackup] 創建對象存儲失敗', {
-              error: error.message,
-              errorName: error.name
-            });
+            // 創建對象存儲失敗，繼續處理
           }
-        } else {
-          console.log('[indexedDBBackup] 對象存儲已存在', {
-            storeName: this.storeName
-          });
         }
       };
       
       request.onblocked = (event) => {
-        console.warn('[indexedDBBackup] 數據庫升級被阻塞，可能有其他標籤頁正在使用數據庫');
+        // 數據庫升級被阻塞，繼續處理
       };
     });
   },
@@ -102,15 +50,10 @@ const indexedDBBackup = {
     const enabled = localStorage.getItem('indexedDBBackupEnabled');
     if (enabled === null) {
       // 首次使用，默認啟用
-      console.log('[indexedDBBackup] 首次使用，默認啟用備份功能');
       localStorage.setItem('indexedDBBackupEnabled', 'true');
       return true;
     }
     const isEnabled = enabled === 'true';
-    console.log('[indexedDBBackup] 檢查備份功能狀態', {
-      enabled: isEnabled,
-      localStorageValue: enabled
-    });
     return isEnabled;
   },
   
@@ -122,7 +65,6 @@ const indexedDBBackup = {
   // 獲取所有數據（從 localStorage - 主要快取）
   // 注意：此函數從 localStorage 讀取數據，localStorage 是主要快取
   getAllData() {
-    console.log('[indexedDBBackup] 從 localStorage（主要快取）讀取數據');
     const data = {
       version: '1.0',
       exportDate: new Date().toISOString(),
@@ -133,13 +75,6 @@ const indexedDBBackup = {
       multiStreamLayout: safeJSONParse(localStorage.getItem('multiStreamLayout'), null),
       adConfig: safeJSONParse(localStorage.getItem('adConfig'), null)
     };
-    console.log('[indexedDBBackup] 從 localStorage 讀取的數據', {
-      source: 'localStorage (主要快取)',
-      hasFavoriteStreams: !!data.favoriteStreams,
-      favoriteStreamsCount: data.favoriteStreams?.length || 0,
-      hasFavoriteCategories: !!data.favoriteCategories,
-      favoriteCategoriesCount: data.favoriteCategories?.length || 0
-    });
     return data;
   },
   
@@ -169,7 +104,6 @@ const indexedDBBackup = {
           return false;
         }
       } catch (error) {
-        console.error('[indexedDBBackup] 初始化時發生錯誤', error);
         return false;
       }
     }
@@ -205,7 +139,7 @@ const indexedDBBackup = {
         };
       });
     } catch (error) {
-      console.error('[indexedDBBackup] 檢查 IndexedDB 數據時發生錯誤', error);
+      // 檢查 IndexedDB 數據時發生錯誤，繼續處理
       return false;
     }
   },
@@ -213,69 +147,37 @@ const indexedDBBackup = {
   // 備份數據到 IndexedDB（從 localStorage 讀取並備份）
   // 注意：此函數從 localStorage（主要快取）讀取數據，然後備份到 IndexedDB
   async backup() {
-    console.log('[indexedDBBackup] 開始備份數據到 IndexedDB', {
-      enabled: this.isEnabled(),
-      dbInitialized: !!this.db,
-      note: '從 localStorage（主要快取）讀取數據，備份到 IndexedDB'
-    });
-    
     if (!this.isEnabled()) {
-      console.log('[indexedDBBackup] 備份功能未啟用，跳過備份');
+      // 備份功能未啟用，跳過備份
       return false;
     }
     
     // 確保數據庫已初始化
     if (!this.db) {
-      console.log('[indexedDBBackup] 數據庫未初始化，嘗試初始化...');
       try {
         const initResult = await this.init();
-        console.log('[indexedDBBackup] 初始化結果', {
-          success: initResult,
-          dbInitialized: !!this.db
-        });
         
         if (!initResult) {
-          console.error('[indexedDBBackup] 數據庫初始化失敗');
           return false;
         }
       } catch (error) {
-        console.error('[indexedDBBackup] 初始化時發生錯誤', {
-          error: error.message,
-          errorName: error.name
-        });
         return false;
       }
     }
     
     if (!this.db) {
-      console.error('[indexedDBBackup] 數據庫實例不存在，無法備份');
       return false;
     }
     
     try {
       // 從 localStorage（主要快取）讀取數據
       const data = this.getAllData();
-      console.log('[indexedDBBackup] 從 localStorage（主要快取）讀取數據準備備份', {
-        dataKeys: Object.keys(data),
-        hasFavoriteStreams: !!data.favoriteStreams,
-        favoriteStreamsCount: data.favoriteStreams?.length || 0,
-        hasFavoriteCategories: !!data.favoriteCategories,
-        favoriteCategoriesCount: data.favoriteCategories?.length || 0,
-        source: 'localStorage (主要快取)',
-        target: 'IndexedDB (備份)'
-      });
       
       const backupData = {
         id: 'latest',
         timestamp: Date.now(),
         data: data
       };
-      
-      console.log('[indexedDBBackup] 開始寫入數據庫', {
-        storeName: this.storeName,
-        backupId: backupData.id,
-        timestamp: backupData.timestamp
-      });
       
       const transaction = this.db.transaction([this.storeName], 'readwrite');
       const store = transaction.objectStore(this.storeName);
@@ -285,194 +187,106 @@ const indexedDBBackup = {
       
       return new Promise((resolve) => {
         putRequest.onsuccess = () => {
-          console.log('[indexedDBBackup] 備份成功', {
-            backupId: backupData.id,
-            timestamp: backupData.timestamp
-          });
           resolve(true);
         };
         
         putRequest.onerror = (event) => {
-          console.error('[indexedDBBackup] 備份失敗', {
-            error: putRequest.error,
-            errorName: putRequest.error?.name,
-            errorMessage: putRequest.error?.message
-          });
           resolve(false);
         };
         
         transaction.onerror = (event) => {
-          console.error('[indexedDBBackup] 事務錯誤', {
-            error: transaction.error,
-            errorName: transaction.error?.name,
-            errorMessage: transaction.error?.message
-          });
           resolve(false);
         };
         
         transaction.oncomplete = () => {
-          console.log('[indexedDBBackup] 事務完成');
+          // 事務完成
         };
       });
     } catch (error) {
-      console.error('[indexedDBBackup] 備份過程中發生錯誤', {
-        error: error.message,
-        errorName: error.name,
-        stack: error.stack
-      });
       return false;
     }
   },
   
   // 從 IndexedDB 恢復數據（僅在 localStorage 為空時使用）
   async restore() {
-    console.log('[indexedDBBackup] 開始恢復數據');
-    
     // 檢查 localStorage 是否有數據
     // 重要：localStorage 是主要快取，如果已有數據則不從 IndexedDB 恢復
     const hasLocalData = this.hasLocalStorageData();
-    console.log('[indexedDBBackup] 檢查 localStorage（主要快取）', {
-      hasLocalData,
-      favoriteStreams: localStorage.getItem('favoriteStreams'),
-      favoriteCategories: localStorage.getItem('favoriteCategories'),
-      userSettings: localStorage.getItem('userSettings'),
-      note: 'localStorage 是主要快取，如果已有數據則不從 IndexedDB 恢復'
-    });
     
     if (hasLocalData) {
-      console.log('[indexedDBBackup] localStorage 中已有數據（主要快取），跳過從 IndexedDB 恢復');
-      console.log('[indexedDBBackup] 說明：localStorage 作為主要快取，IndexedDB 僅作為備份');
       return { success: false, message: 'localStorage 中已有數據，以 localStorage（主要快取）為主', skipped: true };
     }
     
     // 確保數據庫已初始化
     if (!this.db) {
-      console.log('[indexedDBBackup] 數據庫未初始化，嘗試初始化...');
       try {
         const initResult = await this.init();
-        console.log('[indexedDBBackup] 初始化結果', {
-          success: initResult,
-          dbInitialized: !!this.db
-        });
         
         if (!initResult || !this.db) {
-          console.error('[indexedDBBackup] 數據庫初始化失敗');
           return { success: false, message: '數據庫初始化失敗' };
         }
       } catch (error) {
-        console.error('[indexedDBBackup] 初始化時發生錯誤', {
-          error: error.message,
-          errorName: error.name
-        });
         return { success: false, message: '數據庫初始化失敗: ' + error.message };
       }
     }
     
     if (!this.db) {
-      console.error('[indexedDBBackup] 數據庫實例不存在');
       return { success: false, message: '數據庫未初始化' };
     }
     
     try {
-      console.log('[indexedDBBackup] 開始讀取備份數據', {
-        storeName: this.storeName,
-        dbName: this.db.name,
-        objectStoreNames: Array.from(this.db.objectStoreNames)
-      });
-      
       const transaction = this.db.transaction([this.storeName], 'readonly');
       const store = transaction.objectStore(this.storeName);
       const request = store.get('latest');
       
       return new Promise((resolve) => {
         request.onsuccess = () => {
-          console.log('[indexedDBBackup] 讀取請求成功', {
-            hasResult: !!request.result,
-            resultKeys: request.result ? Object.keys(request.result) : []
-          });
-          
           const result = request.result;
           if (!result || !result.data) {
-            console.log('[indexedDBBackup] 沒有找到備份數據');
             resolve({ success: false, message: '沒有找到備份數據' });
             return;
           }
           
           const data = result.data;
-          console.log('[indexedDBBackup] 找到備份數據', {
-            version: data.version,
-            exportDate: data.exportDate,
-            dataKeys: Object.keys(data),
-            favoriteStreamsCount: data.favoriteStreams?.length || 0,
-            favoriteCategoriesCount: data.favoriteCategories?.length || 0
-          });
           
           // 驗證數據格式
           if (!data.version) {
-            console.error('[indexedDBBackup] 無效的備份數據格式，缺少 version 字段');
             resolve({ success: false, message: '無效的備份數據格式' });
             return;
           }
           
-          console.log('[indexedDBBackup] 開始恢復數據到 localStorage');
-          
           // 恢復數據到 localStorage
           if (data.userSettings) {
             localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
-            console.log('[indexedDBBackup] 已恢復 userSettings');
           }
           if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
             localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
-            console.log('[indexedDBBackup] 已恢復 favoriteStreams', {
-              count: data.favoriteStreams.length
-            });
           }
           if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
             localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
-            console.log('[indexedDBBackup] 已恢復 favoriteCategories', {
-              count: data.favoriteCategories.length
-            });
           }
           if (data.controlPanelCollapsed !== undefined) {
             localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
-            console.log('[indexedDBBackup] 已恢復 controlPanelCollapsed');
           }
           if (data.multiStreamLayout) {
             localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
-            console.log('[indexedDBBackup] 已恢復 multiStreamLayout');
           }
           if (data.adConfig) {
             localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
-            console.log('[indexedDBBackup] 已恢復 adConfig');
           }
           
-          console.log('[indexedDBBackup] 數據恢復成功');
           resolve({ success: true, message: '數據恢復成功' });
         };
         
         request.onerror = (event) => {
-          console.error('[indexedDBBackup] 讀取備份失敗', {
-            error: request.error,
-            errorName: request.error?.name,
-            errorMessage: request.error?.message
-          });
           resolve({ success: false, message: '讀取備份失敗: ' + (request.error?.message || '未知錯誤') });
         };
         
         transaction.onerror = (event) => {
-          console.error('[indexedDBBackup] 事務錯誤', {
-            error: transaction.error,
-            errorName: transaction.error?.name,
-            errorMessage: transaction.error?.message
-          });
+          // 事務錯誤，繼續處理
         };
       });
     } catch (error) {
-      console.error('[indexedDBBackup] 恢復數據時發生錯誤', {
-        error: error.message,
-        errorName: error.name,
-        stack: error.stack
-      });
       return { success: false, message: '恢復數據失敗: ' + error.message };
     }
   },
@@ -481,72 +295,37 @@ const indexedDBBackup = {
   // React 環境：僅檢查 favoriteStreams 數據
   // 注意：只有在 localStorage 的 favoriteStreams 為空時才從 IndexedDB 恢復
   async autoLoadBackup() {
-    console.log('[indexedDBBackup] 自動載入備份（React 環境：僅檢查 favoriteStreams）', {
-      enabled: this.isEnabled(),
-      note: 'React 環境：僅檢查 favoriteStreams 數據，只有在 localStorage 的 favoriteStreams 為空時才從 IndexedDB 恢復'
-    });
-    
     if (!this.isEnabled()) {
-      console.log('[indexedDBBackup] 備份功能未啟用，跳過自動載入');
       return { success: false, message: '備份功能未啟用', skipped: true };
     }
     
     // React 環境：僅檢查 localStorage 的 favoriteStreams 數據
     const hasLocalData = this.hasLocalStorageData();
     if (hasLocalData) {
-      console.log('[indexedDBBackup] localStorage 的 favoriteStreams 已有數據，不需要從 IndexedDB 恢復');
       return { success: false, message: 'localStorage 的 favoriteStreams 已有數據，以 localStorage 為主', skipped: true };
     }
-    
-    console.log('[indexedDBBackup] localStorage 的 favoriteStreams 為空，檢查 IndexedDB 是否有 favoriteStreams 備份');
     
     // 檢查 IndexedDB 是否有 favoriteStreams 數據
     const hasIndexedDBData = await this.hasIndexedDBData();
     if (!hasIndexedDBData) {
-      console.log('[indexedDBBackup] IndexedDB 中沒有 favoriteStreams 備份數據，無需恢復');
       return { success: false, message: 'IndexedDB 中沒有 favoriteStreams 備份數據', skipped: true };
     }
     
-    console.log('[indexedDBBackup] IndexedDB 中有 favoriteStreams 備份數據，開始恢復');
     return await this.restore();
   }
 };
 
 // 初始化 IndexedDB 備份系統（頁面載入時）
-console.log('[settings.js] 檢查 IndexedDB 可用性', {
-  indexedDBAvailable: !!window.indexedDB,
-  location: window.location.href,
-  protocol: window.location.protocol
-});
-
 if (window.indexedDB) {
-  console.log('[settings.js] IndexedDB 可用，開始初始化備份系統');
   indexedDBBackup.init()
     .then((success) => {
-      console.log('[settings.js] IndexedDB 初始化完成', {
-        success,
-        dbInitialized: !!indexedDBBackup.db,
-        enabled: indexedDBBackup.isEnabled()
-      });
+      // IndexedDB 初始化完成
     })
     .catch((error) => {
-      console.error('[settings.js] IndexedDB 初始化失敗', {
-        error: error.message,
-        errorName: error.name,
-        errorCode: error.code
-      });
+      // IndexedDB 初始化失敗，繼續處理
     });
 } else {
-  console.warn('[settings.js] IndexedDB 不可用', {
-    userAgent: navigator.userAgent,
-    location: window.location.href,
-    protocol: window.location.protocol,
-    possibleReasons: [
-      '瀏覽器不支持 IndexedDB',
-      '處於隱私/無痕模式',
-      'IndexedDB 被禁用'
-    ]
-  });
+  // IndexedDB 不可用，繼續處理
 }
 
 // [已遷移到 React UI] showSaveMessage 已遷移到 React 組件
@@ -945,15 +724,8 @@ const favoriteStreams = {
   // 保存收藏列表
   // 儲存流程：1. 先寫入 localStorage（主要快取） 2. 異步備份到 IndexedDB
   saveList: (list) => {
-    console.log('[favoriteStreams] 保存收藏列表', {
-      count: list.length,
-      step1: '寫入 localStorage（主要快取）',
-      step2: '異步備份到 IndexedDB（備份）'
-    });
-    
     // 步驟 1：先寫入 localStorage（主要快取）
     localStorage.setItem('favoriteStreams', JSON.stringify(list));
-    console.log('[favoriteStreams] ✓ 已寫入 localStorage（主要快取）');
     
     // 步驟 2：觸發防抖備份到 IndexedDB（10秒後無新操作才備份）
     debouncedBackup();
@@ -1138,7 +910,6 @@ const favoriteStreams = {
         favorite: newItem
       }
     });
-    console.log('[favoriteStreams.add] 觸發 favoritesUpdated 事件', event.detail);
     window.dispatchEvent(event);
     
     const i18n = window.i18n || { t: (key) => key };
@@ -1182,7 +953,6 @@ const favoriteStreams = {
         favorite: item
       }
     });
-    console.log('[favoriteStreams.update] 觸發 favoritesUpdated 事件', event.detail);
     window.dispatchEvent(event);
     
     const i18n = window.i18n || { t: (key) => key };
@@ -1217,7 +987,6 @@ const favoriteStreams = {
           favorite: item
         }
       });
-      console.log('[favoriteStreams.remove] 觸發 favoritesUpdated 事件', event.detail);
       window.dispatchEvent(event);
     }
     
@@ -1278,7 +1047,6 @@ const favoriteStreams = {
                 } else {
                   // 頻道 ID 不一致，可能是重定向到其他頻道，不載入
                   const i18n = window.i18n || { t: (key) => key };
-                  console.warn(`頻道 ID 驗證失敗：收藏頻道 ${item.channelId} 與直播頻道 ${actualChannelId} 不一致`);
                   return { 
                     success: false, 
                     message: i18n.t('channelIdMismatch') || '檢測到直播，但頻道 ID 不一致，可能重定向到其他頻道' 
@@ -1286,7 +1054,6 @@ const favoriteStreams = {
                 }
               } catch (verifyError) {
                 // 驗證失敗，但繼續使用直播 URL（可能是 API 錯誤）
-                console.warn('頻道 ID 驗證失敗，繼續載入直播:', verifyError);
                 const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
                 addStream(liveUrl);
                 
@@ -1312,7 +1079,6 @@ const favoriteStreams = {
             }
           } catch (error) {
             // 靜默處理錯誤
-            console.error('檢查直播狀態失敗:', error);
           }
           
           // 如果檢查後仍然沒有直播，再次檢查一次以確保狀態準確
@@ -1355,7 +1121,6 @@ const favoriteStreams = {
                     return { success: true };
                   } else {
                     // 頻道 ID 不一致
-                    console.warn(`頻道 ID 驗證失敗：收藏頻道 ${item.channelId} 與直播頻道 ${actualChannelId} 不一致`);
                     return { 
                       success: false, 
                       message: i18n.t('channelIdMismatch') || '檢測到直播，但頻道 ID 不一致，可能重定向到其他頻道' 
@@ -1363,7 +1128,6 @@ const favoriteStreams = {
                   }
                 } catch (verifyError) {
                   // 驗證失敗，但繼續使用直播 URL
-                  console.warn('頻道 ID 驗證失敗，繼續載入直播:', verifyError);
                   const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
                   addStream(liveUrl);
                   
@@ -1389,7 +1153,6 @@ const favoriteStreams = {
               }
             } catch (retryError) {
               // 靜默處理錯誤
-              console.error('重試檢查直播狀態失敗:', retryError);
             }
             
             // 如果二次檢查仍然沒有直播，但狀態顯示為 false，提示用戶
@@ -1439,11 +1202,9 @@ const favoriteStreams = {
     
     if (twitchItems.length > 0 && window.apiLoader) {
       try {
-        console.log('[settings.js] 批量加載：提前載入 Twitch Player API');
         await window.apiLoader.loadTwitchPlayerApi();
-        console.log('[settings.js] Twitch Player API 已就緒');
       } catch (error) {
-        console.warn('[settings.js] Twitch Player API 載入失敗:', error);
+        // Twitch Player API 載入失敗
       }
     }
 
@@ -2641,16 +2402,13 @@ let youtubeConfigApiKeyPromise = null;
 const youtubeApiUtils = {
   // 從 Cloudflare Pages Function 取得 API Key（異步）
   async getApiKeyFromPagesFunction() {
-    console.log('[youtubeApiUtils] 開始從 Cloudflare Pages Function 獲取 API Key');
     if (youtubeConfigApiKeyPromise) {
-      console.log('[youtubeApiUtils] 使用已存在的 API Key Promise');
       return youtubeConfigApiKeyPromise;
     }
     
     youtubeConfigApiKeyPromise = (async () => {
       try {
         const apiUrl = '/api/youtube-config';
-        console.log('[youtubeApiUtils] 發送請求到:', apiUrl);
         
         const response = await fetch(apiUrl, {
           method: 'GET',
@@ -2659,36 +2417,15 @@ const youtubeApiUtils = {
           }
         });
         
-        console.log('[youtubeApiUtils] 收到回應', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok
-        });
-        
         if (response.ok) {
           const data = await response.json();
-          console.log('[youtubeApiUtils] 解析回應數據', {
-            hasApiKey: !!data.apiKey,
-            apiKeyLength: data.apiKey ? data.apiKey.length : 0
-          });
           
           if (data.apiKey) {
-            console.log('[youtubeApiUtils] 成功獲取 API Key');
             return data.apiKey;
-          } else {
-            console.warn('[youtubeApiUtils] 回應中沒有 apiKey');
           }
-        } else {
-          console.error('[youtubeApiUtils] API 請求失敗', {
-            status: response.status,
-            statusText: response.statusText
-          });
         }
       } catch (error) {
-        console.error('[youtubeApiUtils] 獲取 API Key 時發生錯誤', {
-          error: error.message,
-          stack: error.stack
-        });
+        // 獲取 API Key 時發生錯誤
       }
       return null;
     })();
@@ -2698,22 +2435,17 @@ const youtubeApiUtils = {
   
   // 獲取 YouTube API Key（優先從 Cloudflare Pages Function，然後從 config.js）
   async getApiKey() {
-    console.log('[youtubeApiUtils] 開始獲取 API Key');
     // 優先從 Cloudflare Pages Function 獲取
     const apiKeyFromFunction = await this.getApiKeyFromPagesFunction();
     if (apiKeyFromFunction) {
-      console.log('[youtubeApiUtils] 從 Cloudflare Pages Function 獲取 API Key 成功');
       return apiKeyFromFunction;
     }
     
-    console.log('[youtubeApiUtils] Cloudflare Pages Function 未返回 API Key，嘗試從 config.js 獲取');
     // 回退到 config.js
     if (typeof window !== 'undefined' && window.CONFIG && window.CONFIG.YOUTUBE_API_KEY) {
-      console.log('[youtubeApiUtils] 從 config.js 獲取 API Key 成功');
       return window.CONFIG.YOUTUBE_API_KEY;
     }
     
-    console.warn('[youtubeApiUtils] 無法獲取 API Key，所有來源都失敗');
     return null;
   },
   
@@ -2936,7 +2668,17 @@ const youtubeApiUtils = {
           }
         }
         
-        // 其他錯誤狀態
+        // 其他錯誤狀態（包括 500）
+        // 在本地開發環境中，Cloudflare Pages Functions 可能不可用
+        if (proxyResponse.status === 500) {
+          return {
+            isLive: null,
+            status: 'proxy_error',
+            message: '代理服務錯誤（可能是本地開發環境）',
+            liveVideoId: null
+          };
+        }
+        
         const errorText = await proxyResponse.text().catch(() => '');
         throw new Error(`請求失敗: ${proxyResponse.status} ${errorText}`);
       }
@@ -3141,7 +2883,6 @@ async function updateFavoriteLiveStatuses() {
                   };
                 } else {
                   // 頻道 ID 不一致，不更新 URL，只更新狀態為未開台（可能是其他頻道的直播）
-                  console.warn(`批量更新時頻道 ID 驗證失敗：收藏頻道 ${item.channelId} 與直播頻道 ${actualChannelId} 不一致`);
                   updatedCount++;
                   return {
                     ...item,
@@ -3152,7 +2893,6 @@ async function updateFavoriteLiveStatuses() {
                 }
               } catch (verifyError) {
                 // 驗證失敗（可能是 API 錯誤），但繼續更新狀態（但不更新收藏的 URL）
-                console.warn('批量更新時頻道 ID 驗證失敗，繼續更新:', verifyError);
                 const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
                 updatedCount++;
                 return {
@@ -3418,37 +3158,21 @@ function autoSaveSettings() {
 // 防抖備份函數（在收藏操作後等待10秒無新操作才觸發備份）
 // 儲存流程：數據已寫入 localStorage（主要快取），此函數負責異步備份到 IndexedDB
 function debouncedBackup() {
-  console.log('[debouncedBackup] 觸發防抖備份', {
-    note: '數據已寫入 localStorage（主要快取），將在 10 秒後備份到 IndexedDB',
-    backupEnabled: indexedDBBackup.isEnabled()
-  });
-  
   // 清除之前的計時器
   if (window.backupTimeout) {
     clearTimeout(window.backupTimeout);
-    console.log('[debouncedBackup] 清除之前的備份計時器');
   }
   
   // 設置新的計時器，10秒後執行備份
   window.backupTimeout = setTimeout(() => {
-    console.log('[debouncedBackup] 防抖計時器觸發，開始備份到 IndexedDB');
     if (indexedDBBackup.isEnabled()) {
       indexedDBBackup.backup()
         .then((success) => {
-          if (success) {
-            console.log('[debouncedBackup] ✓ 備份到 IndexedDB 成功');
-          } else {
-            console.warn('[debouncedBackup] ✗ 備份到 IndexedDB 失敗');
-          }
+          // 備份完成
         })
         .catch((error) => {
-          console.error('[debouncedBackup] 備份到 IndexedDB 時發生錯誤', {
-            error: error.message,
-            errorName: error.name
-          });
+          // 備份到 IndexedDB 時發生錯誤
         });
-    } else {
-      console.log('[debouncedBackup] 備份功能未啟用，跳過備份');
     }
   }, 10000); // 10秒後備份
 }
@@ -4220,7 +3944,7 @@ if (typeof window !== 'undefined') {
     window.startFavoriteLiveStatusAutoRefresh = startFavoriteLiveStatusAutoRefresh;
     window.stopFavoriteLiveStatusAutoRefresh = stopFavoriteLiveStatusAutoRefresh;
   } catch (e) {
-    console.warn('[settings.js] 部分收藏相關函數未定義，跳過導出', e);
+    // 部分收藏相關函數未定義，跳過導出
   }
   
   // 版本紀錄和使用教學
@@ -4230,31 +3954,23 @@ if (typeof window !== 'undefined') {
     window.showUserGuide = showUserGuide;
     window.closeUserGuide = closeUserGuide;
   } catch (e) {
-    console.warn('[settings.js] 部分版本/教學相關函數未定義，跳過導出', e);
+    // 部分版本/教學相關函數未定義，跳過導出
   }
   
   // YouTube API 工具
   try {
     window.youtubeApiUtils = youtubeApiUtils;
   } catch (e) {
-    console.warn('[settings.js] youtubeApiUtils 未定義，跳過導出', e);
+    // youtubeApiUtils 未定義，跳過導出
   }
   
   // 暴露收藏系統到全局
-  console.log('[settings.js] 初始化收藏系統...');
   try {
     window.favoriteStreams = favoriteStreams;
     window.favoriteCategories = favoriteCategories;
     window.indexedDBBackup = indexedDBBackup;
   } catch (e) {
-    console.error('[settings.js] 收藏系統初始化失敗', e);
+    // 收藏系統初始化失敗
   }
-  console.log('[settings.js] 收藏系統已初始化', {
-    favoriteStreams: !!window.favoriteStreams,
-    favoriteCategories: !!window.favoriteCategories,
-    indexedDBBackup: !!window.indexedDBBackup,
-    favoriteStreamsMethods: window.favoriteStreams ? Object.keys(window.favoriteStreams) : [],
-    favoriteCategoriesMethods: window.favoriteCategories ? Object.keys(window.favoriteCategories) : []
-  });
 }
 

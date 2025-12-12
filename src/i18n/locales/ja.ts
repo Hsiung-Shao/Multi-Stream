@@ -3,6 +3,7 @@ export default {
   'navbar.about': '私たちについて',
   'navbar.tutorial': '使い方',
   'navbar.versionHistory': 'バージョン情報',
+  'navbar.feedback': 'フィードバック',
   'navbar.favorites': 'お気に入り管理',
   'navbar.themeToggle': 'テーマ切り替え',
   'navbar.languageSwitch': '言語切り替え',

@@ -61,7 +61,6 @@ export function loadTwitchPlayerApi(): Promise<void> {
     };
 
     twitchScript.onerror = () => {
-      console.warn('無法載入 Twitch embed API，請檢查網路連線');
       // 嘗試重新載入
       setTimeout(() => {
         if (typeof window.Twitch === 'undefined' && !document.querySelector('script[src*="player.twitch.tv"]')) {
