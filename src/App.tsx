@@ -299,7 +299,12 @@ export default function App() {
   useEffect(() => {
     (window as any).addStream = handleAddStream;
     return () => {
-      delete (window as any).addStream;
+      // 使用 undefined 而不是 delete，避免刪除不可刪除的屬性
+      try {
+        (window as any).addStream = undefined;
+      } catch (e) {
+        // 如果無法設置為 undefined，則忽略錯誤
+      }
     };
   }, [handleAddStream]);
 

@@ -562,7 +562,7 @@ export function ControlPanel({
       sx={{
         top: `${navbarHeight}px`,
         height: `calc(100vh - ${navbarHeight}px)`,
-        zIndex: 40,
+        zIndex: 10,  // 僅浮在串流容器（z-index: 1）和聊天室容器（z-index: 1）之上
         overflowY: 'auto',
         overflowX: 'hidden',
         '&::-webkit-scrollbar': {

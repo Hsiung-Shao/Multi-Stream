@@ -101,14 +101,64 @@ export function StreamContainer({
     };
   }, []);
 
-  // 當聊天室布局啟用時，隱藏串流框內的聊天室
+  // 當聊天室布局啟用時，隱藏串流框內的聊天室，並確保聊天室已創建
+  // 參考正式環境：當布局切換時，立即創建所有聊天室，即使被隱藏
   useEffect(() => {
     if (chatLayoutType !== 'none') {
-      streams.forEach(stream => {
-        const chatDiv = document.getElementById(`chat${stream.id}`);
-        if (chatDiv) {
-          chatDiv.classList.add('hidden');
-        }
+      // 使用 requestAnimationFrame 確保 DOM 已更新
+      requestAnimationFrame(() => {
+        streams.forEach(stream => {
+          const chatDiv = document.getElementById(`chat${stream.id}`);
+          
+          // 如果聊天室不存在，立即創建它（即使 chatVisible 為 false）
+          // 參考正式環境：確保聊天室容器存在，即使被隱藏也能找到
+          if (!chatDiv) {
+            // 嘗試從 StreamBox 中查找容器
+            const streamBox = document.querySelector(`[data-stream-id="${stream.id}"]`);
+            if (streamBox) {
+              const chatContainer = streamBox.querySelector(`#chat${stream.id}`) as HTMLElement;
+              if (chatContainer && typeof (window as any).createChat === 'function') {
+                // 容器存在但可能沒有內容，立即創建聊天室
+                console.log(`[StreamContainer] 聊天室布局啟用，強制創建聊天室 ${stream.id}`);
+                (window as any).createChat(
+                  stream.id,
+                  stream.platform,
+                  stream.channelId,
+                  stream.videoId
+                );
+              } else if (!chatContainer) {
+                // 容器不存在，等待容器創建後再創建聊天室
+                console.log(`[StreamContainer] 聊天室容器 ${stream.id} 不存在，等待容器創建`);
+                setTimeout(() => {
+                  const retryChatDiv = document.getElementById(`chat${stream.id}`);
+                  if (retryChatDiv && typeof (window as any).createChat === 'function') {
+                    (window as any).createChat(
+                      stream.id,
+                      stream.platform,
+                      stream.channelId,
+                      stream.videoId
+                    );
+                  }
+                }, 200);
+              }
+            }
+          } else {
+            // 聊天室存在，檢查是否有內容
+            const hasContent = chatDiv.querySelector('iframe') || chatDiv.children.length > 0;
+            if (!hasContent && typeof (window as any).createChat === 'function') {
+              // 容器存在但沒有內容，立即創建
+              console.log(`[StreamContainer] 聊天室 ${stream.id} 容器存在但無內容，立即創建`);
+              (window as any).createChat(
+                stream.id,
+                stream.platform,
+                stream.channelId,
+                stream.videoId
+              );
+            }
+            // 隱藏聊天室
+            chatDiv.classList.add('hidden');
+          }
+        });
       });
     } else {
       // 恢復顯示
@@ -151,6 +201,7 @@ export function StreamContainer({
               onSeparateChat={onSeparateChat}
               onVolumeChange={onVolumeChange}
               streamIndex={index}
+              chatLayoutType={chatLayoutType}
             />
           );
         })}

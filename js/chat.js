@@ -88,8 +88,15 @@ function createChat(id, platform, channelId, videoId) {
       platform,
       chatUrl,
       chatDivId: chatDiv.id,
-      chatDivExists: !!chatDiv
+      chatDivExists: !!chatDiv,
+      hasExistingContent: chatDiv.children.length > 0
     });
+    
+    // 參考正式環境：如果容器已有內容（可能是錯誤訊息或舊內容），先清空
+    if (chatDiv.children.length > 0) {
+      console.log(`[createChat] 清空現有內容，準備創建新的 iframe`);
+      chatDiv.innerHTML = '';
+    }
     
     const chatIframe = document.createElement('iframe');
     chatIframe.src = chatUrl;
