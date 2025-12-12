@@ -261,3 +261,17 @@ export function adjustChatLayoutForLayoutType(
   };
 }
 
+/**
+ * 計算布局類型5（上大下三）所需的最小容器高度百分比
+ * @param streamCount 串流數量
+ * @returns 所需的最小高度百分比（相對於容器）
+ */
+export function calculateLayout5MinHeightPercent(streamCount: number): number {
+  if (streamCount <= 1) {
+    return 75; // 只有第一個串流，佔75%
+  }
+  // 第一個串流75% + 下方行數 × 25%
+  const bottomRows = Math.ceil((streamCount - 1) / 3);
+  return 75 + (bottomRows * 25);
+}
+

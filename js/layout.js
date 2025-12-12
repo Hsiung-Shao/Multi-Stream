@@ -1209,6 +1209,40 @@ function setLayout(type, immediate = false, isUserSelection = false) {
       appliedCount++;
       // 已應用布局到串流
     });
+    
+    // 如果有多於 4 個串流，需要動態調整容器高度
+    if (count > 4) {
+      const container = document.getElementById('container');
+      if (container) {
+        // 計算需要的行數：第一個串流佔75%，後續每3個一行，每行25%
+        const bottomRows = Math.ceil((count - 1) / 3);
+        const minHeightPercent = 75 + (bottomRows * 25);
+        
+        // 獲取 navbar 高度（如果存在）
+        const navbar = document.querySelector('nav');
+        const navbarHeight = navbar ? navbar.getBoundingClientRect().height : 0;
+        const viewportHeight = window.innerHeight - navbarHeight;
+        
+        if (viewportHeight > 0) {
+          const calculatedHeight = (viewportHeight * minHeightPercent) / 100;
+          container.style.height = calculatedHeight + 'px';
+          container.style.minHeight = calculatedHeight + 'px';
+        }
+        
+        // 移除背景色設置，讓容器透明，避免覆蓋串流內容
+        // 背景色應該由 body 或父元素提供，這樣串流內容才能正常顯示
+        container.style.backgroundColor = '';
+      }
+    } else {
+      // 如果串流數量不超過4個，恢復默認高度
+      const container = document.getElementById('container');
+      if (container) {
+        const navbar = document.querySelector('nav');
+        const navbarHeight = navbar ? navbar.getBoundingClientRect().height : 0;
+        container.style.height = `calc(100vh - ${navbarHeight}px)`;
+        container.style.minHeight = '';
+      }
+    }
     // 上大下三布局應用完成
   }
   else if (type === 6) {

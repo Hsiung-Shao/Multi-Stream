@@ -489,8 +489,57 @@ function createYouTubePlayer(id, videoId) {
           },
           events: {
             onReady: (event) => {
+              const player = event.target;
+              
+              // 檢測是否是直播並跳轉到最新位置
+              try {
+                setTimeout(() => {
+                  try {
+                    const duration = player.getDuration();
+                    const videoData = player.getVideoData();
+                    
+                    // 如果 duration 是 Infinity 或非常大的數字（超過 24 小時），表示這是直播
+                    const isLive = duration === Infinity || duration > 86400 || (videoData && videoData.isLive);
+                    
+                    if (isLive) {
+                      // 跳轉到最新位置
+                      player.seekTo(Number.MAX_SAFE_INTEGER, true);
+                      console.log(`[舊方式] 串流 ${id} 檢測到直播，已跳轉到最新位置`);
+                    }
+                  } catch (error) {
+                    console.warn(`[舊方式] 串流 ${id} 檢測直播狀態時發生錯誤:`, error);
+                  }
+                }, 1000);
+              } catch (error) {
+                console.warn(`[舊方式] 串流 ${id} 初始化直播檢測時發生錯誤:`, error);
+              }
+              
               // 應用總音量控制
               applyMasterVolumeToStream(id);
+            },
+            onStateChange: (event) => {
+              // 監聽播放狀態變化，如果是直播且恢復播放，重新跳轉到最新位置
+              const player = event.target;
+              try {
+                const duration = player.getDuration();
+                const isLive = duration === Infinity || duration > 86400;
+                
+                if (isLive && event.data === YT.PlayerState.PLAYING) {
+                  setTimeout(() => {
+                    try {
+                      const currentTime = player.getCurrentTime();
+                      if (currentTime > 0 && duration - currentTime > 30) {
+                        player.seekTo(Number.MAX_SAFE_INTEGER, true);
+                        console.log(`[舊方式] 串流 ${id} 直播播放中，已跳轉到最新位置`);
+                      }
+                    } catch (error) {
+                      // 靜默處理錯誤
+                    }
+                  }, 500);
+                }
+              } catch (error) {
+                // 靜默處理錯誤
+              }
             },
             onError: (event) => {
               // YouTube player error，靜默處理

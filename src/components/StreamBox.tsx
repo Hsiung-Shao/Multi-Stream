@@ -755,8 +755,75 @@ export function StreamBox({
               // 清除創建標誌
               playerCreatingRef.current = false;
               
+              const player = event.target;
+              
+              // 檢測是否是直播並跳轉到最新位置
+              try {
+                // 延遲一小段時間，確保播放器完全載入
+                setTimeout(() => {
+                  try {
+                    const duration = player.getDuration();
+                    const videoData = player.getVideoData();
+                    
+                    // 如果 duration 是 Infinity 或非常大的數字（超過 24 小時），表示這是直播
+                    // 或者檢查 videoData 中的 isLive 屬性
+                    const isLive = duration === Infinity || duration > 86400 || videoData?.isLive;
+                    
+                    if (isLive) {
+                      // 跳轉到最新位置（使用一個非常大的數字）
+                      // allowSeekAhead: true 允許跳轉到未緩衝的位置（對於直播很重要）
+                      player.seekTo(Number.MAX_SAFE_INTEGER, true);
+                      console.log(`[StreamBox ${streamData.id}] 檢測到直播，已跳轉到最新位置`, {
+                        duration,
+                        isLive: videoData?.isLive,
+                        videoId: streamData.videoId
+                      });
+                    }
+                  } catch (error) {
+                    console.warn(`[StreamBox ${streamData.id}] 檢測直播狀態時發生錯誤:`, error);
+                  }
+                }, 1000); // 延遲 1 秒確保播放器完全就緒
+              } catch (error) {
+                console.warn(`[StreamBox ${streamData.id}] 初始化直播檢測時發生錯誤:`, error);
+              }
+              
               // 播放器已就緒，應用音量設定
               applyVolumeToPlayer(streamData.id);
+            },
+            onStateChange: (event: any) => {
+              // 監聽播放狀態變化，如果是直播且恢復播放，重新跳轉到最新位置
+              const player = event.target;
+              try {
+                const duration = player.getDuration();
+                const isLive = duration === Infinity || duration > 86400;
+                
+                if (isLive) {
+                  // PLAYING = 1, BUFFERING = 3
+                  // 當從暫停/緩衝狀態恢復到播放狀態時，確保跳轉到最新位置
+                  if (event.data === window.YT.PlayerState.PLAYING) {
+                    setTimeout(() => {
+                      try {
+                        const currentTime = player.getCurrentTime();
+                        
+                        // 如果當前時間有效且與總時長差距較大（超過 30 秒），跳轉到最新位置
+                        // 對於直播，currentTime 可能會比實際直播進度落後
+                        if (currentTime > 0 && duration - currentTime > 30) {
+                          player.seekTo(Number.MAX_SAFE_INTEGER, true);
+                          console.log(`[StreamBox ${streamData.id}] 直播播放中，檢測到進度落後，已跳轉到最新位置`, {
+                            currentTime,
+                            duration,
+                            difference: duration - currentTime
+                          });
+                        }
+                      } catch (error) {
+                        // 靜默處理錯誤
+                      }
+                    }, 500);
+                  }
+                }
+              } catch (error) {
+                // 靜默處理錯誤
+              }
             },
             onError: (event: any) => {
               // 清除創建標誌

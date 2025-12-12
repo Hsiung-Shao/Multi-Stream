@@ -968,10 +968,10 @@ export function ControlPanel({
 
                 const streamTitle = getStreamTitle();
                 const streamVolume = stream.volume || 100;
-                // 靜音優先級：全部 > 單獨
-                // 如果全部靜音，則串流視為靜音（無論單獨靜音狀態）
-                // 如果全部未靜音，則使用單獨靜音狀態
-                const isStreamMuted = masterMuted ? true : (stream.isMuted || false);
+                // 單獨靜音狀態（不受全部靜音影響，用於 UI 顯示）
+                const isStreamMuted = stream.isMuted || false;
+                // 實際靜音狀態（考慮全部靜音，用於播放器控制）
+                const isActuallyMuted = masterMuted ? true : isStreamMuted;
 
                 return (
                   <div
@@ -1020,18 +1020,30 @@ export function ControlPanel({
                             }}
                             title={
                               masterMuted 
-                                ? '全部靜音中，無法單獨取消靜音' 
+                                ? streamVolume > 0
+                                  ? `全部靜音中（單獨靜音：${isStreamMuted ? '開啟' : '關閉'}，音量：${streamVolume}%）`
+                                  : '全部靜音中，無法操作（音量為 0）'
                                 : isStreamMuted 
                                   ? '取消靜音' 
                                   : '靜音'
                             }
                             onClick={() => {
-                              // 如果全部靜音，單獨靜音按鈕無效（全部靜音優先）
-                              if (!masterMuted && onToggleMute) {
-                                onToggleMute(stream.id);
+                              // 全部靜音時：如果音量 > 0，允許操作單獨靜音
+                              // 全部靜音時：如果音量 = 0，不允許操作（全部靜音優先）
+                              // 非全部靜音時：允許操作
+                              if (masterMuted) {
+                                // 全部靜音時，只有當音量 > 0 時才允許操作
+                                if (streamVolume > 0 && onToggleMute) {
+                                  onToggleMute(stream.id);
+                                }
+                              } else {
+                                // 非全部靜音時，允許操作
+                                if (onToggleMute) {
+                                  onToggleMute(stream.id);
+                                }
                               }
                             }}
-                            disabled={masterMuted}
+                            disabled={masterMuted && streamVolume === 0}
                           >
                             {isStreamMuted ? (
                               <VolumeX className="size-3" />
@@ -1120,14 +1132,14 @@ export function ControlPanel({
                           </span>
                           <Box sx={{ width: '100%', flex: 1 }}>
                             <Slider
-                              value={isStreamMuted ? 0 : streamVolume}
+                              value={streamVolume}
                               onChange={(_, value) => {
                                 const newVolume = Array.isArray(value) ? value[0] : value;
-                                // 如果調整音量且之前是靜音狀態，取消靜音
-                                // 注意：如果全域靜音，需要先取消全域靜音
-                                if (newVolume > 0 && masterMuted && onMasterMuteChange) {
-                                  onMasterMuteChange(false);
-                                }
+                                // 在全部靜音狀態下調整音量時，不解除全部靜音
+                                // 如果音量 > 0，恢復音量，但不取消全部靜音
+                                // 單獨的靜音按鈕會根據音量值恢復可用（disabled={masterMuted && streamVolume === 0}）
+                                
+                                // 如果調整音量且之前是單獨靜音狀態，取消單獨靜音
                                 // 只有在不是全域靜音時，才處理單獨靜音
                                 if (newVolume > 0 && !masterMuted && stream.isMuted && onToggleMute) {
                                   onToggleMute(stream.id);
@@ -1155,7 +1167,7 @@ export function ControlPanel({
                             />
                           </Box>
                           <span className={`text-xs min-w-[40px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                            {isStreamMuted ? '0%' : `${streamVolume}%`}
+                            {masterMuted ? `0% (${streamVolume}%)` : `${streamVolume}%`}
                           </span>
                         </div>
                       </div>

@@ -95,7 +95,18 @@ export default function App() {
   useEffect(() => {
     (window as any).masterMuted = masterMuted;
   }, [masterMuted]);
-  
+
+  // 根據主題應用 dark 類到 document.documentElement
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [theme]);
+
   // 布局管理
   const { currentLayout, setLayout } = useLayout(streams.length);
   
@@ -782,6 +793,8 @@ export default function App() {
 
   // 切換靜音（簡化版本，與 muteAll 一樣簡單）
   const handleToggleMute = (id: number) => {
+    const masterMuted = (window as any).masterMuted || false;
+    
     setStreams(prev => {
       const updatedStreams = prev.map(s => {
         if (s.id === id) {
@@ -792,7 +805,7 @@ export default function App() {
             (window as any).streamData[id].isMuted = newMutedState;
           }
           
-          // 直接對播放器應用靜音/取消靜音（與 muteAll 完全一樣的邏輯）
+          // 對播放器應用靜音/取消靜音操作
           // 使用全局的 players 和 streamData（與 js/volume.js 中的 muteAll 一致）
           const players = (window as any).players;
           const streamData = (window as any).streamData;
@@ -802,6 +815,7 @@ export default function App() {
               if (streamData[id].platform === 'twitch') {
                 if (newMutedState) {
                   // Twitch 播放器：使用 setMuted() 方法靜音
+                  // 即使在全部靜音狀態下，也要對播放器進行靜音操作
                   if (typeof players[id].player.setMuted === 'function') {
                     players[id].player.setMuted(true);
                   } else if (typeof players[id].player.setVolume === 'function') {
@@ -810,17 +824,22 @@ export default function App() {
                   }
                 } else {
                   // Twitch 播放器：使用 setMuted() 方法取消靜音
-                  if (typeof players[id].player.setMuted === 'function') {
-                    players[id].player.setMuted(false);
+                  // 但如果全部靜音，播放器應該保持靜音（全部靜音優先）
+                  if (!masterMuted) {
+                    if (typeof players[id].player.setMuted === 'function') {
+                      players[id].player.setMuted(false);
+                    }
+                    // 音量會通過 applyMasterVolumeToStream 來設置
+                    if (typeof (window as any).applyMasterVolumeToStream === 'function') {
+                      (window as any).applyMasterVolumeToStream(id);
+                    }
                   }
-                  // 音量會通過 applyMasterVolumeToStream 來設置
-                  if (typeof (window as any).applyMasterVolumeToStream === 'function') {
-                    (window as any).applyMasterVolumeToStream(id);
-                  }
+                  // 如果全部靜音，不取消播放器靜音（全部靜音優先）
                 }
               } else if (streamData[id].platform === 'youtube') {
                 if (newMutedState) {
                   // YouTube 播放器：使用 mute() 方法或設置音量為 0
+                  // 即使在全部靜音狀態下，也要對播放器進行靜音操作
                   if (typeof players[id].player.mute === 'function') {
                     players[id].player.mute();
                   } else if (typeof players[id].player.setVolume === 'function') {
@@ -848,9 +867,13 @@ export default function App() {
                   }
                 } else {
                   // YouTube 播放器：使用 unMute() 方法
-                  if (typeof players[id].player.unMute === 'function') {
-                    players[id].player.unMute();
+                  // 但如果全部靜音，播放器應該保持靜音（全部靜音優先）
+                  if (!masterMuted) {
+                    if (typeof players[id].player.unMute === 'function') {
+                      players[id].player.unMute();
+                    }
                   }
+                  // 如果全部靜音，不取消播放器靜音（全部靜音優先）
                 }
               }
             } catch (e) {

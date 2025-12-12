@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StreamBox } from './StreamBox';
 import { ChatSidebar } from './ChatSidebar';
 import type { StreamData } from '../utils/streamUtils';
-import { calculateLayoutStyles, type LayoutType } from '../utils/layoutUtils';
+import { calculateLayoutStyles, calculateLayout5MinHeightPercent, type LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { getChatLayoutConfig } from '../utils/chatLayoutUtils';
 
@@ -171,6 +171,27 @@ export function StreamContainer({
     }
   }, [chatLayoutType, streams]);
 
+  // 計算容器高度（處理布局類型5超過4個串流的情況）
+  const calculateContainerHeight = (): string => {
+    const baseHeight = `calc(100vh - ${navbarHeight}px)`;
+    
+    // 如果是布局類型5（上大下三）且串流數量超過4個
+    if (layoutType === 5 && streams.length > 4) {
+      // 計算需要的行數：第一個串流佔75%，後續每3個一行，每行25%
+      const minHeightPercent = calculateLayout5MinHeightPercent(streams.length);
+      // 將百分比轉換為實際高度
+      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight - navbarHeight : 0;
+      if (viewportHeight > 0) {
+        const calculatedHeight = (viewportHeight * minHeightPercent) / 100;
+        return `${calculatedHeight}px`;
+      }
+    }
+    
+    return baseHeight;
+  };
+
+  const containerHeight = calculateContainerHeight();
+
   return (
     <>
       <div 
@@ -179,7 +200,8 @@ export function StreamContainer({
         style={{ 
           position: 'absolute', 
           width: `${videoAreaWidth}%`, 
-          height: `calc(100vh - ${navbarHeight}px)`,
+          height: containerHeight,
+          minHeight: containerHeight,
           top: `${navbarHeight}px`,
           left: '0',
           maxWidth: `${videoAreaWidth}%`,
