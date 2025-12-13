@@ -202,7 +202,7 @@ export function Navbar({
     }
 
     if (!window.favoriteStreams) {
-      alert('收藏系統未初始化'); // TODO: 翻譯
+      alert(t('favorites.systemNotInitialized'));
       return;
     }
 

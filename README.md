@@ -2,7 +2,7 @@
 
 一個免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能。
 
-🌐 **線上版本**: [https://mutli-stream.pages.dev/](https://mutli-stream.pages.dev/)
+🌐 **線上版本**: [https://multi-stream.pages.dev/](https://multi-stream.pages.dev/)
 
 ## ✨ 主要功能
 
@@ -261,7 +261,7 @@ Google Analytics 追蹤 ID 已配置在所有 HTML 頁面中（`G-Q2LXVMDD46`）
 
 ## 🔗 相關連結
 
-- [線上版本](https://mutli-stream.pages.dev/)
+- [線上版本](https://multi-stream.pages.dev/)
 - [GitHub 倉庫](https://github.com/Hsiung-Shao/multi-stream)
 - [隱私權政策](/privacy.html)
 

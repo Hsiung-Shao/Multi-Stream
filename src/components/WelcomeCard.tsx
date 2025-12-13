@@ -1,4 +1,4 @@
-import { Shield, FileText, Mail, MessageSquare, ExternalLink, Info, BookOpen, History } from 'lucide-react';
+import { Shield, FileText, Mail, MessageSquare, ExternalLink, Info, BookOpen, History, Heart, Sparkles, Gamepad2, Twitter } from 'lucide-react';
 import { useI18n } from '../i18n/index';
 
 interface WelcomeCardProps {
@@ -12,9 +12,9 @@ interface WelcomeCardProps {
 export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onShowAbout, onNavigateToPrivacy }: WelcomeCardProps) {
   const { t } = useI18n();
   return (
-    <div className="w-full max-w-[1400px] mx-auto">
+    <div className="w-full max-w-[1400px] mx-auto" style={{ position: 'relative', zIndex: 10 }}>
       {/* Main Layout - Left/Right Split */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+      <div className="grid gap-6 mb-6" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         {/* Left Column - Main Welcome Card */}
         <div className="xl:col-span-2">
           <div className={`${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/20 to-blue-900/20' : 'bg-gradient-to-br from-purple-50 to-blue-50'} rounded-lg border ${theme === 'dark' ? 'border-purple-500/30' : 'border-purple-200'} p-8 shadow-xl`}>
@@ -113,13 +113,15 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onShowAbout && (
                 <button
                   onClick={onShowAbout}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                  type="button"
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
                     theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700'
-                      : 'bg-gray-50 hover:bg-gray-100'
+                      ? 'bg-gray-800 hover:bg-gray-700 hover:border-blue-500/50 border border-transparent'
+                      : 'bg-gray-50 hover:bg-gray-100 hover:border-blue-300 border border-transparent'
                   }`}
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <Info className={`size-4 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+                  <Info className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-blue-400 group-hover:scale-110' : 'text-blue-600'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('welcome.about')}
                   </span>
@@ -128,13 +130,15 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onShowTutorial && (
                 <button
                   onClick={onShowTutorial}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                  type="button"
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
                     theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700'
-                      : 'bg-gray-50 hover:bg-gray-100'
+                      ? 'bg-gray-800 hover:bg-gray-700 hover:border-green-500/50 border border-transparent'
+                      : 'bg-gray-50 hover:bg-gray-100 hover:border-green-300 border border-transparent'
                   }`}
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <BookOpen className={`size-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+                  <BookOpen className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('welcome.tutorial')}
                   </span>
@@ -143,13 +147,15 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onShowVersionHistory && (
                 <button
                   onClick={onShowVersionHistory}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                  type="button"
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
                     theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700'
-                      : 'bg-gray-50 hover:bg-gray-100'
+                      ? 'bg-gray-800 hover:bg-gray-700 hover:border-yellow-500/50 border border-transparent'
+                      : 'bg-gray-50 hover:bg-gray-100 hover:border-yellow-300 border border-transparent'
                   }`}
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <History className={`size-4 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                  <History className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('welcome.versionInfo')}
                   </span>
@@ -158,13 +164,15 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onNavigateToPrivacy && (
                 <button
                   onClick={onNavigateToPrivacy}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                  type="button"
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
                     theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700'
-                      : 'bg-gray-50 hover:bg-gray-100'
+                      ? 'bg-gray-800 hover:bg-gray-700 hover:border-red-500/50 border border-transparent'
+                      : 'bg-gray-50 hover:bg-gray-100 hover:border-red-300 border border-transparent'
                   }`}
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <Shield className={`size-4 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`} />
+                  <Shield className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('about.privacyPolicy')}
                   </span>
@@ -173,7 +181,33 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             </div>
           </div>
 
-          {/* Legal & Privacy Section - Second */}
+          {/* Author's Message Section - Second */}
+          <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'} rounded-lg border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} p-6 shadow-lg`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-pink-500/20' : 'bg-pink-100'}`}>
+                <Heart className={`size-5 ${theme === 'dark' ? 'text-pink-400' : 'text-pink-600'}`} />
+              </div>
+              <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                作者的話
+              </h2>
+            </div>
+            <div className={`space-y-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              <p className="text-sm leading-relaxed">
+                不知道大家會不會和我有一樣的困擾 —— 每天要看很多頻道，卻得開一堆瀏覽器分頁，想同時看多個畫面更是難上加難。
+              </p>
+              <p className="text-sm leading-relaxed">
+                為了解決這個麻煩，我專門做了這個工具。而且後續還會嘗試整合 Twitch 功能，到時候大家就能直接匯入自己在 Twitch 上追隨的頻道，用起來會更方便～
+              </p>
+              <p className="text-sm leading-relaxed">
+                不過有個小情況要跟大家說明：目前在 YouTube 方面，可能還是會跳轉到不同頻道的影片，暫時沒辦法直接精準定位直播內容。這部分我已經盡力優化了，現階段只能麻煩大家手動添加直播頻道，還請多多包涵～
+              </p>
+              <p className="text-sm leading-relaxed">
+                如果大家用著覺得順手、實用，別忘了多多分享給身邊的朋友，讓更多人也能用上這個能提升效率的小幫手～
+              </p>
+            </div>
+          </div>
+
+          {/* Legal & Privacy Section - Third */}
           <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'} rounded-lg border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} p-6 shadow-lg`}>
             <div className="flex items-center gap-3 mb-4">
               <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'}`}>
@@ -190,33 +224,22 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onNavigateToPrivacy && (
                 <button
                   onClick={onNavigateToPrivacy}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  type="button"
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
                     theme === 'dark'
-                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                      : 'bg-red-600 hover:bg-red-700 text-white'
+                      ? 'bg-red-600 hover:bg-red-700 text-white hover:ring-2 hover:ring-red-400/50'
+                      : 'bg-red-600 hover:bg-red-700 text-white hover:ring-2 hover:ring-red-300/50'
                   }`}
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <Shield className="size-4" />
+                  <Shield className="size-4 transition-transform duration-200 hover:scale-110" />
                   {t('about.privacyPolicy')}
-                </button>
-              )}
-              {onShowAbout && (
-                <button
-                  onClick={onShowAbout}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-                  }`}
-                >
-                  <FileText className="size-4" />
-                  {t('welcome.termsOfUse')}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Contact Us Section - Third */}
+          {/* Contact Us Section - Fourth */}
           <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'} rounded-lg border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} p-6 shadow-lg`}>
             <div className="flex items-center gap-3 mb-4">
               <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
@@ -229,58 +252,74 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             <p className={`mb-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               {t('about.contactIntro')}
             </p>
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
               <a
-                href="https://forms.gle/AjG922YrXFbyAdBa6"
+                href="https://docs.google.com/forms/d/e/1FAIpQLSfCBlVZgTwiz-_PEVgkJkPUYHfJyz0Dowln2njQoWcMzit6Ow/viewform"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
                   theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:border-blue-500/50 border border-transparent'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:border-blue-300 border border-transparent'
                 }`}
+                style={{ pointerEvents: 'auto' }}
               >
-                <Mail className={`size-4 flex-shrink-0 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
-                <div className="flex-1 min-w-0">
-                  <h3 className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('about.feedbackForm')}
-                  </h3>
-                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {t('about.feedbackFormDesc')}
-                  </p>
-                </div>
-                <ExternalLink className={`size-3 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+                <Mail className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  {t('about.feedbackForm')}
+                </span>
               </a>
               <a
                 href="https://discord.gg/3Uu6dZbtKd"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
                   theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:border-purple-500/50 border border-transparent'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:border-purple-300 border border-transparent'
                 }`}
+                style={{ pointerEvents: 'auto' }}
               >
-                <MessageSquare className={`size-4 flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
-                <div className="flex-1 min-w-0">
-                  <h3 className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('about.discordCommunity')}
-                  </h3>
-                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {t('about.discordCommunityDesc')}
-                  </p>
-                </div>
-                <ExternalLink className={`size-3 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+                <MessageSquare className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  {t('about.discordCommunity')}
+                </span>
+              </a>
+              <a
+                href="https://forum.gamer.com.tw/C.php?bsn=60030&snA=677879"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:border-orange-500/50 border border-transparent'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:border-orange-300 border border-transparent'
+                }`}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <Gamepad2 className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'}`} />
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  巴哈文章
+                </span>
+              </a>
+              <a
+                href="https://x.com/Hsiungshao"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:border-sky-500/50 border border-transparent'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:border-sky-300 border border-transparent'
+                }`}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <Twitter className={`size-4 transition-transform duration-200 ${theme === 'dark' ? 'text-sky-400' : 'text-sky-600'}`} />
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  X (Twitter)
+                </span>
               </a>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Footer - Copyright */}
-      <div className={`text-center py-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-        <p className="text-sm mb-1">{t('about.copyright')}</p>
-        <p className="text-xs">{t('about.lastUpdated')}</p>
       </div>
     </div>
   );

@@ -944,23 +944,25 @@ export default function App() {
         onAddStream={handleAddStream}
       />
       
-      {/* Stream Container */}
-      <StreamContainer
-        streams={streams}
-        theme={theme}
-        layoutType={currentLayout}
-        chatLayoutType={chatLayoutType}
-        onRemove={handleRemoveStream}
-        onReload={handleReloadStream}
-        onToggleChat={handleToggleChat}
-        onSeparateChat={handleSeparateChat}
-        onVolumeChange={handleVolumeChange}
-        onStreamDataChange={(id, data) => {
-          setStreams(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
-        }}
-      />
+      {/* Stream Container - Only render when there are streams */}
+      {streams.length > 0 && (
+        <StreamContainer
+          streams={streams}
+          theme={theme}
+          layoutType={currentLayout}
+          chatLayoutType={chatLayoutType}
+          onRemove={handleRemoveStream}
+          onReload={handleReloadStream}
+          onToggleChat={handleToggleChat}
+          onSeparateChat={handleSeparateChat}
+          onVolumeChange={handleVolumeChange}
+          onStreamDataChange={(id, data) => {
+            setStreams(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+          }}
+        />
+      )}
       
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-12" style={{ position: 'relative', zIndex: 10 }}>
         {streams.length === 0 && (
           <WelcomeCard 
             theme={theme}
