@@ -59,6 +59,7 @@ export default {
   // Welcome Card
   'welcome.title': '欢迎使用 MultiStream Hub',
   'welcome.description': '免费的多平台串流直播整合工具，支持 Twitch 和 YouTube 直播',
+  'welcome.intro': 'MultiStream Hub 是一个完全免费的多平台直播串流观看工具，专为喜爱同时观看多个直播的用户设计。我们支持 Twitch 和 YouTube 两大主流直播平台，让您可以在同一个页面上同时观看多个直播串流，无需在多个分页间切换。本工具由个人开发者独立开发维护，完全免费开放给所有人使用，无需注册、无需付费。',
   'welcome.features': '主要功能',
   'welcome.feature1': '支持 Twitch 和 YouTube 多串流同时观看',
   'welcome.feature2': '多种显示模式（单一画面、分割、网格、聊天室布局）',
@@ -67,6 +68,12 @@ export default {
   'welcome.feature5': 'Twitch 频道搜索和开台状态检测',
   'welcome.feature6': 'YouTube 频道开台监测功能',
   'welcome.feature7': '完全免费、无广告',
+  'welcome.feature8': '响应式设计，适配各种屏幕尺寸',
+  'welcome.feature9': '多语言支持（繁中、简中、英文、日文、韩文）',
+  'welcome.feature10': '安全可靠，采用 XSS 防护和 CSP 安全策略',
+  'welcome.feature11': '自动排版功能，根据串流数量自动选择最适合的布局',
+  'welcome.feature12': '串流重新整理功能，快速重新载入串流',
+  'welcome.feature13': '本地存储，所有设定和收藏资料都储存在您的浏览器本地',
   'welcome.quickStart': '快速开始',
   'welcome.step1Title': '添加串流',
   'welcome.step1Desc': '在右侧控制面板的输入框中贴上 Twitch 或 YouTube 直播网址，点击「加入画面」即可观看',
@@ -83,6 +90,10 @@ export default {
   'welcome.versionInfo': '版本记录',
   'welcome.tutorial': '使用教学',
   'welcome.about': '关于我们',
+  'welcome.legalPrivacy': '法律与隐私',
+  'welcome.legalPrivacyDesc': '我们重视您的隐私权和资料安全。本网站不会主动收集任何个人资料，所有设定和收藏资料都储存在您的浏览器本地。为维持网站运营和持续开发，本网站可能会显示第三方广告（如 Google AdSense）。',
+  'welcome.termsOfUse': '使用条款',
+  'welcome.quickNav': '快速导航',
 
   // About Page
   'about.backToHome': '← 返回首页',

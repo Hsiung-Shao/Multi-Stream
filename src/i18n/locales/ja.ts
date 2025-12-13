@@ -59,6 +59,7 @@ export default {
   // Welcome Card
   'welcome.title': 'MultiStream Hubへようこそ',
   'welcome.description': 'TwitchとYouTubeをサポートする無料のマルチプラットフォームストリーミングツール',
+  'welcome.intro': 'MultiStream Hubは、複数のストリームを同時に視聴するのが好きなユーザー向けに設計された、完全無料のマルチプラットフォームライブストリーミング視聴ツールです。TwitchとYouTubeの2つの主要ストリーミングプラットフォームをサポートし、複数のタブを切り替えることなく、同じページで複数のライブストリームを同時に視聴できます。このツールは個人開発者によって独立して開発・維持されており、完全に無料で誰でも使用でき、登録や支払いは不要です。',
   'welcome.features': '主な機能',
   'welcome.feature1': 'TwitchとYouTubeのマルチストリーム視聴をサポート',
   'welcome.feature2': '複数の表示モード（単一ビュー、分割、グリッド、チャットレイアウト）',
@@ -67,6 +68,12 @@ export default {
   'welcome.feature5': 'Twitchチャンネル検索とライブステータス検出',
   'welcome.feature6': 'YouTubeチャンネルライブ監視',
   'welcome.feature7': '完全無料、広告なし',
+  'welcome.feature8': 'レスポンシブデザイン、様々な画面サイズに対応',
+  'welcome.feature9': '多言語サポート（繁体中国語、簡体中国語、英語、日本語、韓国語）',
+  'welcome.feature10': '安全で信頼性が高く、XSS保護とCSPセキュリティポリシーを採用',
+  'welcome.feature11': '自動レイアウト機能、ストリーム数に応じて最適なレイアウトを自動選択',
+  'welcome.feature12': 'ストリーム再読み込み機能、ストリームを素早く再読み込み',
+  'welcome.feature13': 'ローカルストレージ、すべての設定とお気に入りはブラウザのローカルに保存',
   'welcome.quickStart': 'クイックスタート',
   'welcome.step1Title': 'ストリームを追加',
   'welcome.step1Desc': 'コントロールパネルの入力ボックスにTwitchまたはYouTubeストリームURLを貼り付け、「ストリームを追加」をクリックして視聴',
@@ -83,6 +90,10 @@ export default {
   'welcome.versionInfo': 'バージョン情報',
   'welcome.tutorial': '使い方',
   'welcome.about': '私たちについて',
+  'welcome.legalPrivacy': '法的およびプライバシー',
+  'welcome.legalPrivacyDesc': '私たちはあなたのプライバシーとデータセキュリティを重視しています。このウェブサイトは個人情報を積極的に収集せず、すべての設定とお気に入りはブラウザのローカルに保存されます。ウェブサイトの運営と継続的な開発を維持するため、このウェブサイトはサードパーティの広告（Google AdSenseなど）を表示する場合があります。',
+  'welcome.termsOfUse': '利用規約',
+  'welcome.quickNav': 'クイックナビゲーション',
 
   // About Page
   'about.backToHome': '← ホームに戻る',

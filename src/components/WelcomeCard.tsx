@@ -1,3 +1,4 @@
+import { Shield, FileText, Mail, MessageSquare, ExternalLink, Info, BookOpen, History } from 'lucide-react';
 import { useI18n } from '../i18n/index';
 
 interface WelcomeCardProps {
@@ -5,78 +6,281 @@ interface WelcomeCardProps {
   onShowVersionHistory?: () => void;
   onShowTutorial?: () => void;
   onShowAbout?: () => void;
+  onNavigateToPrivacy?: () => void;
 }
 
-export function WelcomeCard({ theme }: WelcomeCardProps) {
+export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onShowAbout, onNavigateToPrivacy }: WelcomeCardProps) {
   const { t } = useI18n();
   return (
-    <div className={`max-w-3xl mx-auto ${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/20 to-blue-900/20' : 'bg-gradient-to-br from-purple-50 to-blue-50'} rounded-lg border ${theme === 'dark' ? 'border-purple-500/30' : 'border-purple-200'} p-8 shadow-xl`}>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className={`text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 mb-2`}>
-          {t('welcome.title')}
-        </h1>
-        <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-          {t('welcome.description')}
-        </p>
+    <div className="w-full max-w-[1400px] mx-auto">
+      {/* Main Layout - Left/Right Split */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+        {/* Left Column - Main Welcome Card */}
+        <div className="xl:col-span-2">
+          <div className={`${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/20 to-blue-900/20' : 'bg-gradient-to-br from-purple-50 to-blue-50'} rounded-lg border ${theme === 'dark' ? 'border-purple-500/30' : 'border-purple-200'} p-8 shadow-xl`}>
+            {/* Header */}
+            <div className="mb-6">
+              <h1 className={`text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 mb-3`}>
+                {t('welcome.title')}
+              </h1>
+              <p className={`text-lg mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                {t('welcome.description')}
+              </p>
+              <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                {t('welcome.intro')}
+              </p>
+            </div>
+
+            {/* Features List - Expanded */}
+            <div className="space-y-3 mb-8">
+              <h2 className={`text-xl font-semibold ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
+                {t('welcome.features')}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <FeatureItem theme={theme} text={t('welcome.feature1')} />
+                <FeatureItem theme={theme} text={t('welcome.feature2')} />
+                <FeatureItem theme={theme} text={t('welcome.feature3')} />
+                <FeatureItem theme={theme} text={t('welcome.feature4')} />
+                <FeatureItem theme={theme} text={t('welcome.feature5')} />
+                <FeatureItem theme={theme} text={t('welcome.feature6')} />
+                <FeatureItem theme={theme} text={t('welcome.feature7')} />
+                <FeatureItem theme={theme} text={t('welcome.feature8')} />
+                <FeatureItem theme={theme} text={t('welcome.feature9')} />
+                <FeatureItem theme={theme} text={t('welcome.feature10')} />
+                <FeatureItem theme={theme} text={t('welcome.feature11')} />
+                <FeatureItem theme={theme} text={t('welcome.feature12')} />
+                <FeatureItem theme={theme} text={t('welcome.feature13')} />
+              </div>
+            </div>
+
+            {/* Quick Start Guide */}
+            <div className="space-y-4">
+              <h2 className={`text-xl font-semibold ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
+                {t('welcome.quickStart')}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <QuickGuideCard
+                  theme={theme}
+                  number="1"
+                  title={t('welcome.step1Title')}
+                  description={t('welcome.step1Desc')}
+                  icon="📺"
+                />
+                <QuickGuideCard
+                  theme={theme}
+                  number="2"
+                  title={t('welcome.step2Title')}
+                  description={t('welcome.step2Desc')}
+                  icon="🎨"
+                />
+                <QuickGuideCard
+                  theme={theme}
+                  number="3"
+                  title={t('welcome.step3Title')}
+                  description={t('welcome.step3Desc')}
+                  icon="⭐"
+                />
+                <QuickGuideCard
+                  theme={theme}
+                  number="4"
+                  title={t('welcome.step4Title')}
+                  description={t('welcome.step4Desc')}
+                  icon="🔊"
+                />
+              </div>
+              <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
+                <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
+                  {t('welcome.tip')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Sidebar Sections */}
+        <div className="xl:col-span-1 space-y-6">
+          {/* Quick Navigation - First */}
+          <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'} rounded-lg border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} p-6 shadow-lg`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
+                <Info className={`size-5 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
+              </div>
+              <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                {t('welcome.quickNav')}
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {onShowAbout && (
+                <button
+                  onClick={onShowAbout}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 hover:bg-gray-700'
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <Info className={`size-4 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+                  <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                    {t('welcome.about')}
+                  </span>
+                </button>
+              )}
+              {onShowTutorial && (
+                <button
+                  onClick={onShowTutorial}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 hover:bg-gray-700'
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <BookOpen className={`size-4 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+                  <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                    {t('welcome.tutorial')}
+                  </span>
+                </button>
+              )}
+              {onShowVersionHistory && (
+                <button
+                  onClick={onShowVersionHistory}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 hover:bg-gray-700'
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <History className={`size-4 ${theme === 'dark' ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                  <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                    {t('welcome.versionInfo')}
+                  </span>
+                </button>
+              )}
+              {onNavigateToPrivacy && (
+                <button
+                  onClick={onNavigateToPrivacy}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-gray-800 hover:bg-gray-700'
+                      : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
+                >
+                  <Shield className={`size-4 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`} />
+                  <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                    {t('about.privacyPolicy')}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Legal & Privacy Section - Second */}
+          <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'} rounded-lg border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} p-6 shadow-lg`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-red-500/20' : 'bg-red-100'}`}>
+                <Shield className={`size-5 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`} />
+              </div>
+              <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                {t('welcome.legalPrivacy')}
+              </h2>
+            </div>
+            <p className={`mb-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              {t('welcome.legalPrivacyDesc')}
+            </p>
+            <div className="flex flex-col gap-2">
+              {onNavigateToPrivacy && (
+                <button
+                  onClick={onNavigateToPrivacy}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  <Shield className="size-4" />
+                  {t('about.privacyPolicy')}
+                </button>
+              )}
+              {onShowAbout && (
+                <button
+                  onClick={onShowAbout}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                  }`}
+                >
+                  <FileText className="size-4" />
+                  {t('welcome.termsOfUse')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Contact Us Section - Third */}
+          <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'} rounded-lg border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} p-6 shadow-lg`}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                <Mail className={`size-5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+              </div>
+              <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                {t('about.contactTitle')}
+              </h2>
+            </div>
+            <p className={`mb-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              {t('about.contactIntro')}
+            </p>
+            <div className="space-y-3">
+              <a
+                href="https://forms.gle/AjG922YrXFbyAdBa6"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700'
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+              >
+                <Mail className={`size-4 flex-shrink-0 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+                <div className="flex-1 min-w-0">
+                  <h3 className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                    {t('about.feedbackForm')}
+                  </h3>
+                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {t('about.feedbackFormDesc')}
+                  </p>
+                </div>
+                <ExternalLink className={`size-3 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+              </a>
+              <a
+                href="https://discord.gg/3Uu6dZbtKd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700'
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+              >
+                <MessageSquare className={`size-4 flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
+                <div className="flex-1 min-w-0">
+                  <h3 className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                    {t('about.discordCommunity')}
+                  </h3>
+                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {t('about.discordCommunityDesc')}
+                  </p>
+                </div>
+                <ExternalLink className={`size-3 flex-shrink-0 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`} />
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Features List */}
-      <div className="space-y-3 mb-8">
-        <h2 className={`${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
-          {t('welcome.features')}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <FeatureItem theme={theme} text={t('welcome.feature1')} />
-          <FeatureItem theme={theme} text={t('welcome.feature2')} />
-          <FeatureItem theme={theme} text={t('welcome.feature3')} />
-          <FeatureItem theme={theme} text={t('welcome.feature4')} />
-          <FeatureItem theme={theme} text={t('welcome.feature5')} />
-          <FeatureItem theme={theme} text={t('welcome.feature6')} />
-          <FeatureItem theme={theme} text={t('welcome.feature7')} />
-        </div>
-      </div>
-
-      {/* Quick Start Guide */}
-      <div className="space-y-4 mb-8">
-        <h2 className={`${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
-          {t('welcome.quickStart')}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <QuickGuideCard
-            theme={theme}
-            number="1"
-            title={t('welcome.step1Title')}
-            description={t('welcome.step1Desc')}
-            icon="📺"
-          />
-          <QuickGuideCard
-            theme={theme}
-            number="2"
-            title={t('welcome.step2Title')}
-            description={t('welcome.step2Desc')}
-            icon="🎨"
-          />
-          <QuickGuideCard
-            theme={theme}
-            number="3"
-            title={t('welcome.step3Title')}
-            description={t('welcome.step3Desc')}
-            icon="⭐"
-          />
-          <QuickGuideCard
-            theme={theme}
-            number="4"
-            title={t('welcome.step4Title')}
-            description={t('welcome.step4Desc')}
-            icon="🔊"
-          />
-        </div>
-        <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
-          <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-            {t('welcome.tip')}
-          </p>
-        </div>
+      {/* Footer - Copyright */}
+      <div className={`text-center py-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
+        <p className="text-sm mb-1">{t('about.copyright')}</p>
+        <p className="text-xs">{t('about.lastUpdated')}</p>
       </div>
     </div>
   );

@@ -59,6 +59,7 @@ export default {
   // Welcome Card
   'welcome.title': 'Welcome to MultiStream Hub',
   'welcome.description': 'Free multi-platform streaming tool supporting Twitch and YouTube',
+  'welcome.intro': 'MultiStream Hub is a completely free multi-platform live streaming viewing tool designed for users who love watching multiple streams simultaneously. We support Twitch and YouTube, the two major streaming platforms, allowing you to watch multiple live streams on the same page without switching between multiple tabs. This tool is independently developed and maintained by an individual developer, completely free and open to everyone, no registration or payment required.',
   'welcome.features': 'Key Features',
   'welcome.feature1': 'Support for Twitch and YouTube multi-stream viewing',
   'welcome.feature2': 'Multiple display modes (single view, split, grid, chat layout)',
@@ -67,6 +68,12 @@ export default {
   'welcome.feature5': 'Twitch channel search and live status detection',
   'welcome.feature6': 'YouTube channel live monitoring',
   'welcome.feature7': 'Completely free, no ads',
+  'welcome.feature8': 'Responsive design, adapts to various screen sizes',
+  'welcome.feature9': 'Multi-language support (Traditional Chinese, Simplified Chinese, English, Japanese, Korean)',
+  'welcome.feature10': 'Secure and reliable, with XSS protection and CSP security policies',
+  'welcome.feature11': 'Auto layout feature, automatically selects the most suitable layout based on stream count',
+  'welcome.feature12': 'Stream reload feature, quickly reload streams',
+  'welcome.feature13': 'Local storage, all settings and favorites are stored locally in your browser',
   'welcome.quickStart': 'Quick Start',
   'welcome.step1Title': 'Add Stream',
   'welcome.step1Desc': 'Paste a Twitch or YouTube stream URL in the control panel input box, then click "Add Stream" to watch',
@@ -83,6 +90,10 @@ export default {
   'welcome.versionInfo': 'Version History',
   'welcome.tutorial': 'Tutorial',
   'welcome.about': 'About Us',
+  'welcome.legalPrivacy': 'Legal & Privacy',
+  'welcome.legalPrivacyDesc': 'We value your privacy and data security. This website does not actively collect any personal information, and all settings and favorites are stored locally in your browser. To maintain website operations and continued development, this website may display third-party advertisements (such as Google AdSense).',
+  'welcome.termsOfUse': 'Terms of Use',
+  'welcome.quickNav': 'Quick Navigation',
 
   // About Page
   'about.backToHome': '← Back to Home',

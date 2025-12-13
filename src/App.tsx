@@ -960,13 +960,14 @@ export default function App() {
         }}
       />
       
-      <div className={`container mx-auto px-4 py-12 ${isPanelCollapsed ? '' : 'pr-[516px]'} transition-all duration-300`}>
+      <div className="container mx-auto px-4 py-12">
         {streams.length === 0 && (
           <WelcomeCard 
             theme={theme}
             onShowVersionHistory={() => setShowVersionHistory(true)}
             onShowTutorial={() => setShowTutorial(true)}
             onShowAbout={() => setCurrentPage('about')}
+            onNavigateToPrivacy={() => setCurrentPage('privacy')}
           />
         )}
       </div>

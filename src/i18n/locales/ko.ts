@@ -59,6 +59,7 @@ export default {
   // Welcome Card
   'welcome.title': 'MultiStream Hub에 오신 것을 환영합니다',
   'welcome.description': 'Twitch와 YouTube를 지원하는 무료 멀티 플랫폼 스트리밍 도구',
+  'welcome.intro': 'MultiStream Hub는 여러 스트림을 동시에 시청하는 것을 좋아하는 사용자를 위해 설계된 완전 무료의 멀티 플랫폼 라이브 스트리밍 시청 도구입니다. Twitch와 YouTube 두 가지 주요 스트리밍 플랫폼을 지원하여 여러 탭을 전환할 필요 없이 같은 페이지에서 여러 라이브 스트림을 동시에 시청할 수 있습니다. 이 도구는 개인 개발자에 의해 독립적으로 개발 및 유지 관리되며, 완전히 무료로 모든 사람이 사용할 수 있으며, 등록이나 결제가 필요하지 않습니다.',
   'welcome.features': '주요 기능',
   'welcome.feature1': 'Twitch와 YouTube 멀티 스트림 시청 지원',
   'welcome.feature2': '다양한 표시 모드 (단일 보기, 분할, 그리드, 채팅 레이아웃)',
@@ -67,6 +68,12 @@ export default {
   'welcome.feature5': 'Twitch 채널 검색 및 라이브 상태 감지',
   'welcome.feature6': 'YouTube 채널 라이브 모니터링',
   'welcome.feature7': '완전 무료, 광고 없음',
+  'welcome.feature8': '반응형 디자인, 다양한 화면 크기에 적응',
+  'welcome.feature9': '다국어 지원 (번체 중국어, 간체 중국어, 영어, 일본어, 한국어)',
+  'welcome.feature10': '안전하고 신뢰할 수 있으며, XSS 보호 및 CSP 보안 정책 채택',
+  'welcome.feature11': '자동 레이아웃 기능, 스트림 수에 따라 가장 적합한 레이아웃 자동 선택',
+  'welcome.feature12': '스트림 다시 로드 기능, 스트림을 빠르게 다시 로드',
+  'welcome.feature13': '로컬 저장소, 모든 설정과 즐겨찾기는 브라우저의 로컬에 저장',
   'welcome.quickStart': '빠른 시작',
   'welcome.step1Title': '스트림 추가',
   'welcome.step1Desc': '제어판 입력 상자에 Twitch 또는 YouTube 스트림 URL을 붙여넣고 "스트림 추가"를 클릭하여 시청',
@@ -83,6 +90,10 @@ export default {
   'welcome.versionInfo': '버전 정보',
   'welcome.tutorial': '사용법',
   'welcome.about': '소개',
+  'welcome.legalPrivacy': '법적 및 개인정보 보호',
+  'welcome.legalPrivacyDesc': '우리는 귀하의 개인정보 보호와 데이터 보안을 중시합니다. 이 웹사이트는 개인 정보를 적극적으로 수집하지 않으며, 모든 설정과 즐겨찾기는 브라우저의 로컬에 저장됩니다. 웹사이트 운영과 지속적인 개발을 유지하기 위해 이 웹사이트는 서드파티 광고(Google AdSense 등)를 표시할 수 있습니다.',
+  'welcome.termsOfUse': '이용 약관',
+  'welcome.quickNav': '빠른 탐색',
 
   // About Page
   'about.backToHome': '← 홈으로 돌아가기',
