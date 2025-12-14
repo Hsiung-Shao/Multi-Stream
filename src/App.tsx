@@ -109,6 +109,53 @@ export default function App() {
     }
   }, [theme]);
 
+  // 初始載入完成後刷新收藏列表的開台狀態
+  useEffect(() => {
+    // 等待收藏系統和必要的 API 初始化完成
+    const initAndRefreshFavorites = async () => {
+      // 等待收藏系統初始化（最多等待 3 秒）
+      let waitCount = 0;
+      const maxWait = 30; // 30 * 100ms = 3 秒
+      
+      while (waitCount < maxWait) {
+        if (window.favoriteStreams && window.favoriteCategories) {
+          // 收藏系統已初始化，等待 Twitch API 和 YouTube API 準備好
+          // 嘗試載入必要的 API
+          try {
+            // 載入 Twitch Data API（用於檢查開台狀態）
+            if (!window.twitchApi || !window.twitchApi.checkMultipleChannelsLiveStatus) {
+              await apiLoader.loadTwitchDataApi();
+            }
+            
+            // 載入 YouTube Data API（用於檢查開台狀態）
+            if (!window.youtubeApiUtils || !window.youtubeApiUtils.checkChannelLiveStatus) {
+              await apiLoader.loadYouTubeDataApi();
+            }
+            
+            // 等待一小段時間確保 API 完全初始化
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 觸發收藏列表刷新事件
+            window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
+            break;
+          } catch (error) {
+            // API 載入失敗，但繼續嘗試刷新（可能部分功能可用）
+            window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
+            break;
+          }
+        }
+        
+        waitCount++;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    };
+    
+    // 延遲執行，確保所有腳本都已載入
+    setTimeout(() => {
+      initAndRefreshFavorites();
+    }, 1000);
+  }, []);
+
   // 布局管理
   const { currentLayout, setLayout } = useLayout(streams.length);
   

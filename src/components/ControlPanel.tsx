@@ -207,14 +207,35 @@ export function ControlPanel({
       loadFavorites();
     };
     window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
+    
+    // 監聽初始載入完成後的刷新事件
+    const handleRefreshFavoritesStatus = () => {
+      // 確保收藏系統已初始化後再刷新
+      if (window.favoriteStreams && window.favoriteCategories) {
+        handleRefreshStatus();
+      }
+    };
+    window.addEventListener('refreshFavoritesStatus', handleRefreshFavoritesStatus);
+    
     return () => {
       window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
+      window.removeEventListener('refreshFavoritesStatus', handleRefreshFavoritesStatus);
     };
   }, [loadFavorites]);
 
   // 刷新開台狀態
   const handleRefreshStatus = async () => {
-    if (!window.favoriteStreams || !window.twitchApi) return;
+    // 如果收藏系統未初始化，嘗試等待
+    if (!window.favoriteStreams || !window.favoriteCategories) {
+      // 等待收藏系統初始化（最多等待 1 秒）
+      let waitCount = 0;
+      while (waitCount < 10 && (!window.favoriteStreams || !window.favoriteCategories)) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        waitCount++;
+      }
+    }
+    
+    if (!window.favoriteStreams) return;
     
     setIsRefreshing(true);
     try {
@@ -225,7 +246,7 @@ export function ControlPanel({
       let updatedFavorites = [...favoritesList];
       
       // 更新 Twitch 開台狀態
-      if (twitchFavorites.length > 0 && window.twitchApi.checkMultipleChannelsLiveStatus) {
+      if (twitchFavorites.length > 0 && window.twitchApi && window.twitchApi.checkMultipleChannelsLiveStatus) {
         const channelIds = twitchFavorites.map(f => f.channelId!);
         const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelIds);
         
