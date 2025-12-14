@@ -6,9 +6,9 @@
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       
       <!-- Content Security Policy (CSP) -->
-      <!-- 增強版本：更嚴格的CSP策略，增強XSS防護 -->
-      <!-- 注意：frame-ancestors 指令只能在 HTTP 響應頭中設置，不能在 <meta> 標籤中使用 -->
-      <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv https://www.youtube.com https://*.youtube.com https://*.googleapis.com https://*.gstatic.com https://*.google-analytics.com https://*.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; connect-src 'self' https://api.twitch.tv https://*.twitch.tv https://www.googleapis.com https://*.googleapis.com https://*.youtube.com https://*.google-analytics.com https://*.googletagmanager.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com; media-src 'self' https://player.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;">
+      <!-- CSP 已移至 _headers 文件中的 HTTP headers，讓 Cloudflare Zaraz 可以自動修改 -->
+      <!-- Cloudflare Zaraz 會自動在 HTTP headers 的 CSP 中添加 nonce，無需手動配置 -->
+      <!-- 注意：HTTP headers 中的 CSP 會覆蓋 meta 標籤中的 CSP，因此將 CSP 放在 headers 中可以讓 Zaraz 正常工作 -->
       
       <!-- Primary Meta Tags -->
       <title>MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube</title>

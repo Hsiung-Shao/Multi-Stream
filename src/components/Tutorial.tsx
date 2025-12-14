@@ -41,17 +41,21 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6">
-          <Tabs defaultValue="basic">
-            <TabsList className={`grid w-full grid-cols-3 mb-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <TabsTrigger value="basic">{t('tutorial.basic')}</TabsTrigger>
-              <TabsTrigger value="advanced">{t('tutorial.advanced')}</TabsTrigger>
-              <TabsTrigger value="tips">{t('tutorial.tips')}</TabsTrigger>
-            </TabsList>
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <Tabs defaultValue="basic" className="flex flex-col h-full">
+            <div className="px-6 pt-6 flex-shrink-0">
+              <TabsList className={`grid w-full grid-cols-3 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                <TabsTrigger value="basic">{t('tutorial.basic')}</TabsTrigger>
+                <TabsTrigger value="advanced">{t('tutorial.advanced')}</TabsTrigger>
+                <TabsTrigger value="tips">{t('tutorial.tips')}</TabsTrigger>
+              </TabsList>
+            </div>
 
-            <TabsContent value="basic" className="space-y-6 pr-4">
+            <TabsContent value="basic" className="flex-1 min-h-0 mt-0">
               <Box
+                className="p-6"
                 sx={{
+                  height: '100%',
                   maxHeight: '800px',
                   overflowY: 'auto',
                   overflowX: 'hidden',
@@ -71,6 +75,7 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   },
                 }}
               >
+                <div className="space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Tv className="size-5" />}
@@ -207,12 +212,15 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
+                </div>
               </Box>
             </TabsContent>
 
-            <TabsContent value="advanced" className="space-y-6 pr-4">
+            <TabsContent value="advanced" className="flex-1 min-h-0 mt-0">
               <Box
+                className="p-6"
                 sx={{
+                  height: '100%',
                   maxHeight: '800px',
                   overflowY: 'auto',
                   overflowX: 'hidden',
@@ -232,6 +240,7 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   },
                 }}
               >
+                <div className="space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Star className="size-5" />}
@@ -369,12 +378,15 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
+                </div>
               </Box>
             </TabsContent>
 
-            <TabsContent value="tips" className="space-y-6 pr-4">
+            <TabsContent value="tips" className="flex-1 min-h-0 mt-0">
               <Box
+                className="p-6"
                 sx={{
+                  height: '100%',
                   maxHeight: '800px',
                   overflowY: 'auto',
                   overflowX: 'hidden',
@@ -394,6 +406,7 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   },
                 }}
               >
+                <div className="space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Zap className="size-5" />}
@@ -435,6 +448,7 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                   </>
                 }
                   />
+                </div>
               </Box>
             </TabsContent>
           </Tabs>

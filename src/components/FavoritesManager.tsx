@@ -790,7 +790,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               <TabsTrigger value="settings">{t('favorites.settings')}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="favorites" className="flex flex-col flex-1 min-h-0 space-y-4">
+            <TabsContent value="favorites" className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto">
               {/* Add Favorite */}
               <div className={`p-4 rounded-lg border flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                 <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.addFavorite')}</h3>
@@ -1014,7 +1014,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               )}
             </TabsContent>
 
-            <TabsContent value="categories" className="space-y-4">
+            <TabsContent value="categories" className="space-y-4 overflow-y-auto flex-1 min-h-0">
               {/* Add Category */}
               <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                 <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.addCategory')}</h3>
@@ -1080,7 +1080,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               </div>
             </TabsContent>
 
-            <TabsContent value="settings" className="space-y-4">
+            <TabsContent value="settings" className="space-y-4 overflow-y-auto flex-1 min-h-0">
               <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                 <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.backup')}</h3>
                 <div className="space-y-3">

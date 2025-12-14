@@ -3,6 +3,7 @@ import { RefreshCw, Volume2, VolumeX, ChevronUp, ChevronDown, GripVertical, X, G
 import { Button as MuiButton } from '@mui/material';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
+import { useMediaQuery, useTheme } from '@mui/material';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { StreamData } from '../utils/streamUtils';
@@ -14,6 +15,7 @@ interface ControlPanelProps {
   theme: 'light' | 'dark';
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isSearchFocused?: boolean;
   onShowFavorites: () => void;
   onShowVersionHistory: () => void;
   onShowTutorial: () => void;
@@ -94,6 +96,7 @@ export function ControlPanel({
   theme, 
   isCollapsed, 
   onToggleCollapse,
+  isSearchFocused = false,
   onShowFavorites,
   onShowVersionHistory,
   onShowTutorial,
@@ -116,6 +119,9 @@ export function ControlPanel({
   onAddStream
 }: ControlPanelProps) {
   const { t } = useI18n();
+  const muiTheme = useTheme();
+  // 使用 'lg' breakpoint 以確保手機水平版面也使用手機版設計
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('lg'));
   const [showAllChat, setShowAllChat] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -526,16 +532,19 @@ export function ControlPanel({
     { id: 4, label: t('controlPanel.quadChat'), icon: '▦' },
   ];
 
-  if (isCollapsed) {
+  // 如果控制面板被收起或搜尋框使用中（聚焦或有內容），則不顯示（手機版）
+  if (isCollapsed || (isMobile && isSearchFocused)) {
     return null;
   }
 
   return (
     <Box
-      className={`fixed right-0 w-[500px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} border-l shadow-2xl`}
+      className={`fixed ${isMobile ? 'inset-x-0 bottom-0' : 'right-0'} ${isMobile ? 'w-full' : 'w-[500px]'} ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} ${isMobile ? 'border-t' : 'border-l'} shadow-2xl`}
       sx={{
-        top: `${navbarHeight}px`,
-        height: `calc(100vh - ${navbarHeight}px)`,
+        top: isMobile ? 'auto' : `${navbarHeight}px`,
+        bottom: isMobile ? 0 : 'auto',
+        height: isMobile ? '80vh' : `calc(100vh - ${navbarHeight}px)`,
+        maxHeight: isMobile ? '80vh' : 'none',
         zIndex: 10,  // 僅浮在串流容器（z-index: 1）和聊天室容器（z-index: 1）之上
         overflowY: 'auto',
         overflowX: 'hidden',
