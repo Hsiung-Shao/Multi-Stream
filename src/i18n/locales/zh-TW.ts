@@ -1,4 +1,4 @@
-export default {
+const zhTWTranslations = {
   // Navbar
   'navbar.about': '關於我們',
   'navbar.tutorial': '使用教學',
@@ -241,6 +241,11 @@ export default {
   'versionHistory.title': '版本紀錄',
   'versionHistory.subtitle': 'MultiStream Hub 更新歷史',
   'versionHistory.latest': '最新',
+  'versionHistory.v2.0.1.date': '2025-01-XX',
+  'versionHistory.v2.0.1.change1': '新增初始區域內容',
+  'versionHistory.v2.0.1.change2': 'SEO 優化',
+  'versionHistory.v2.0.1.change3': '增強XSS、CSP 策略',
+  'versionHistory.v2.0.1.change4': '修復收藏列表加入串流失敗問題',
   'versionHistory.v2.0.0.date': '2025-12-13',
   'versionHistory.v2.0.0.change1': '全新UI介面',
   'versionHistory.v2.0.0.change2': '新增批量匯入',
@@ -517,4 +522,6 @@ export default {
   'privacy.about': '關於我們',
   'privacy.terms': '服務條款',
 } as const;
+
+export default zhTWTranslations;
 

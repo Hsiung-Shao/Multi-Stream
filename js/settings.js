@@ -1028,17 +1028,32 @@ const favoriteStreams = {
       return { success: false, message: errorMsg };
     }
     
-    // 安全的 addStream 包裝函數
-    const safeAddStream = async (url) => {
+    // 安全的 addStream 包裝函數（改進版本，支持重試機制）
+    const safeAddStream = async (url, retries = 3) => {
       // 再次確認 React 應用已載入（檢查 _reactAddStreamReady 標記）
       if (window.addStream && typeof window.addStream === 'function' && window._reactAddStreamReady === true) {
-        // 確保調用的是 React 版本
-        return await window.addStream(url);
+        try {
+          // 確保調用的是 React 版本
+          return await window.addStream(url);
+        } catch (error) {
+          // 如果調用失敗且還有重試次數，等待後重試
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return await safeAddStream(url, retries - 1);
+          }
+          throw error;
+        }
       } else {
-        const i18n = window.i18n || { t: (key) => key };
-        const errorMsg = i18n.t('reactAppNotLoaded') || '錯誤：React 應用尚未載入，無法創建串流容器。請稍候片刻後再試，或重新整理頁面。';
-        alert(errorMsg);
-        throw new Error(errorMsg);
+        // React 應用尚未準備好，嘗試等待並重試
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return await safeAddStream(url, retries - 1);
+        } else {
+          const i18n = window.i18n || { t: (key) => key };
+          const errorMsg = i18n.t('reactAppNotLoaded') || '錯誤：React 應用尚未載入，無法創建串流容器。請稍候片刻後再試，或重新整理頁面。';
+          console.error('safeAddStream failed:', errorMsg);
+          throw new Error(errorMsg);
+        }
       }
     };
     

@@ -1,4 +1,4 @@
-export default {
+const enTranslations = {
   // Navbar
   'navbar.about': 'About Us',
   'navbar.tutorial': 'Tutorial',
@@ -241,6 +241,11 @@ export default {
   'versionHistory.title': 'Version History',
   'versionHistory.subtitle': 'MultiStream Hub Update History',
   'versionHistory.latest': 'Latest',
+  'versionHistory.v2.0.1.date': '2025-01-XX',
+  'versionHistory.v2.0.1.change1': 'Added initial region content',
+  'versionHistory.v2.0.1.change2': 'SEO optimization',
+  'versionHistory.v2.0.1.change3': 'Enhanced XSS and CSP policies',
+  'versionHistory.v2.0.1.change4': 'Fixed favorite list stream addition failure',
   'versionHistory.v2.0.0.date': '2025-12-13',
   'versionHistory.v2.0.0.change1': 'Brand new UI interface',
   'versionHistory.v2.0.0.change2': 'Added batch import feature',
@@ -517,4 +522,6 @@ export default {
   'privacy.about': 'About Us',
   'privacy.terms': 'Terms of Service',
 } as const;
+
+export default enTranslations;
 

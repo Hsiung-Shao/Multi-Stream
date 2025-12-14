@@ -1,4 +1,4 @@
-export default {
+const zhCNTranslations = {
   // Navbar
   'navbar.about': '关于我们',
   'navbar.tutorial': '使用教学',
@@ -241,6 +241,11 @@ export default {
   'versionHistory.title': '版本记录',
   'versionHistory.subtitle': 'MultiStream Hub 更新历史',
   'versionHistory.latest': '最新',
+  'versionHistory.v2.0.1.date': '2025-01-XX',
+  'versionHistory.v2.0.1.change1': '新增初始区域内容',
+  'versionHistory.v2.0.1.change2': 'SEO 优化',
+  'versionHistory.v2.0.1.change3': '增强XSS、CSP 策略',
+  'versionHistory.v2.0.1.change4': '修复收藏列表加入串流失败问题',
   'versionHistory.v2.0.0.date': '2025-12-13',
   'versionHistory.v2.0.0.change1': '全新UI界面',
   'versionHistory.v2.0.0.change2': '新增批量导入',
@@ -517,4 +522,6 @@ export default {
   'privacy.about': '关于我们',
   'privacy.terms': '服务条款',
 } as const;
+
+export default zhCNTranslations;
 
