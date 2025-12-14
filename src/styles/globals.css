@@ -193,3 +193,84 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Google AdSense 廣告樣式 */
+.ad-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 10px;
+  transform: translateY(100%);
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none; /* 隱藏時禁用交互 */
+}
+
+.ad-banner.show {
+  transform: translateY(0) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto; /* 顯示時啟用交互 */
+}
+
+.ad-content {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.ad-body {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.ad-body .adsbygoogle {
+  display: block !important;
+  width: 100% !important;
+  min-height: 90px !important; /* 確保有最小高度，避免 availableWidth=0 錯誤 */
+}
+
+.ad-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+  z-index: 1001;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
+.ad-close-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: scale(1.1);
+}
+
+.ad-close-btn:active {
+  transform: scale(0.95);
+}
+
+.ad-close-btn:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+

@@ -4,18 +4,17 @@
 const adConfigManager = {
   // 獲取配置
   getConfig: () => {
-    // 強制使用默認配置（廣告申請中，暫時關閉）
-    // 如果需要啟用，可以通過控制台執行：adConfigManager.updateConfig({enabled: true})
+    // 廣告已啟用，設置較長間隔以減少對用戶體驗的影響
     
     // 默認配置
     const defaultConfig = {
-      enabled: false, // 關閉廣告功能
+      enabled: true, // 啟用廣告功能（用於 AdSense 審核）
       showControlButtons: false, // 隱藏控制按鈕
       testMode: false, // 正式模式
-      showInterval: 30 * 60 * 1000, // 30分鐘間隔
+      showInterval: 2 * 60 * 60 * 1000, // 2小時間隔（減少對用戶體驗的影響）
       displayDuration: {
         min: 1 * 60 * 1000, // 1分鐘
-        max: 3 * 60 * 1000  // 3分鐘
+        max: 2 * 60 * 1000  // 2分鐘
       }
     };
     
@@ -58,13 +57,19 @@ let adConfig = adConfigManager.getConfig();
 let adTimer = null;
 let adDisplayTimer = null;
 let isAdVisible = false;
-let adSenseScriptLoaded = false; // AdSense 腳本是否已載入
+// 檢查 HTML 中是否已有靜態 AdSense 腳本（在 DOM 可用時檢查）
+let adSenseScriptLoaded = (typeof document !== 'undefined' && document.querySelector('script[src*="adsbygoogle.js"]') !== null);
 let adHTMLCreated = false; // 廣告 HTML 是否已創建
 
 // 初始化廣告系統
 function initAdSystem() {
   // 重新載入配置
   adConfig = adConfigManager.getConfig();
+  
+  // 檢查靜態腳本是否已載入（HTML 中的靜態腳本）
+  if (!adSenseScriptLoaded) {
+    adSenseScriptLoaded = document.querySelector('script[src*="adsbygoogle.js"]') !== null;
+  }
   
   // 更新控制按鈕顯示狀態
   updateAdControlButtonsVisibility();
@@ -123,7 +128,7 @@ function loadAdSenseScript() {
   return new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.async = true;
-    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=pub-8415424787944153';
+    script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8415424787944153';
     script.crossOrigin = 'anonymous';
     script.onload = () => {
       adSenseScriptLoaded = true;
@@ -163,11 +168,23 @@ function createAdHTML() {
   adContent.className = 'ad-content';
   
   // 創建關閉按鈕
-  const closeBtn = document.createElement('div');
+  const closeBtn = document.createElement('button');
   closeBtn.className = 'ad-close-btn';
-  closeBtn.setAttribute('onclick', 'closeAdBanner()');
-  closeBtn.setAttribute('title', '關閉');
+  closeBtn.type = 'button';
+  closeBtn.setAttribute('title', '關閉廣告');
   closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', '關閉廣告');
+  // 使用事件監聽器而不是 onclick（更可靠）
+  closeBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('關閉按鈕被點擊');
+    if (typeof closeAdBanner === 'function') {
+      closeAdBanner();
+    } else {
+      console.error('closeAdBanner 函數不存在');
+    }
+  }, false);
   
   // 創建廣告主體
   const adBody = document.createElement('div');
@@ -176,9 +193,10 @@ function createAdHTML() {
   // 創建 AdSense 廣告單元
   const adUnit = document.createElement('ins');
   adUnit.className = 'adsbygoogle';
-  adUnit.style.cssText = 'display:block;margin:0 auto;';
-  adUnit.setAttribute('data-ad-client', 'pub-8415424787944153');
-  adUnit.setAttribute('data-ad-slot', '1234567890'); // 需要替換為實際的廣告單元 ID
+  // 設置基本樣式，確保有初始寬度和高度
+  adUnit.style.cssText = 'display:block;margin:0 auto;width:100%;min-height:90px;';
+  adUnit.setAttribute('data-ad-client', 'ca-pub-8415424787944153');
+  adUnit.setAttribute('data-ad-slot', '2327980476');
   adUnit.setAttribute('data-ad-format', 'auto');
   adUnit.setAttribute('data-full-width-responsive', 'true');
   
@@ -321,20 +339,59 @@ async function showAdBanner() {
   }
   
   // 顯示廣告
+  // 先設置 visibility 和 opacity，再添加 show class
+  adBanner.style.visibility = 'visible';
+  adBanner.style.opacity = '1';
+  adBanner.style.pointerEvents = 'auto';
   adBanner.classList.add('show');
   
-  // 觸發 AdSense 廣告載入
-  try {
-    if (typeof window.adsbygoogle !== 'undefined') {
-      // 等待廣告容器顯示後再觸發 AdSense
-      setTimeout(() => {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-        // AdSense 廣告已觸發載入
-      }, 300);
+  // 延遲觸發 AdSense 廣告載入，確保區域完全生成後才發送
+  // 等待 transition 動畫完成（300ms）+ 額外緩衝確保 DOM 完全渲染
+  setTimeout(() => {
+    try {
+      if (typeof window.adsbygoogle !== 'undefined') {
+        // 確保容器已完全可見且有實際尺寸
+        const rect = adBanner.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          // 獲取廣告單元並觸發
+          // 只獲取尚未處理的廣告單元（避免重複觸發）
+          const adUnits = adBanner.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status])');
+          
+          if (adUnits.length > 0) {
+            adUnits.forEach(unit => {
+              // 再次檢查單元是否有實際尺寸，並且是可見的
+              const unitRect = unit.getBoundingClientRect();
+              const computedStyle = window.getComputedStyle(unit);
+              const parentRect = unit.parentElement ? unit.parentElement.getBoundingClientRect() : { width: 0 };
+              
+              const isVisible = computedStyle.display !== 'none' && 
+                                computedStyle.visibility !== 'hidden' &&
+                                computedStyle.opacity !== '0' &&
+                                parentRect.width > 0;
+              
+              // 嚴格檢查：必須有實際尺寸才觸發
+              if (unitRect.width > 200 && unitRect.height > 50 && isVisible) {
+                try {
+                  (window.adsbygoogle = window.adsbygoogle || []).push({});
+                  console.log(`AdSense 廣告已觸發載入 (尺寸: ${Math.round(unitRect.width)}x${Math.round(unitRect.height)})`);
+                } catch (e) {
+                  console.error('觸發 AdSense 時發生錯誤:', e);
+                }
+              } else {
+                console.log(`廣告單元尺寸不足: width=${Math.round(unitRect.width)}, height=${Math.round(unitRect.height)}`);
+              }
+            });
+          } else {
+            console.log('沒有找到未處理的廣告單元');
+          }
+        } else {
+          console.log(`廣告容器尺寸不足: width=${rect.width}, height=${rect.height}`);
+        }
+      }
+    } catch (error) {
+      console.error('觸發 AdSense 廣告時發生錯誤:', error);
     }
-  } catch (error) {
-    // 觸發 AdSense 廣告時發生錯誤，靜默處理
-  }
+  }, 400); // 等待 transition 完成（300ms）+ 額外 100ms 確保 DOM 完全渲染
   
   // 等待動畫開始後獲取實際高度並調整
   setTimeout(() => {
@@ -362,21 +419,39 @@ async function showAdBanner() {
 
 // 隱藏廣告
 function hideAdBanner() {
-  if (!isAdVisible) return;
-  
   const adBanner = document.getElementById('ad-banner');
   const container = document.getElementById('container');
-  if (!adBanner) return;
   
+  if (!adBanner) {
+    console.log('hideAdBanner: 廣告容器不存在');
+    return;
+  }
+  
+  // 即使 isAdVisible 為 false，也嘗試隱藏（確保 UI 狀態正確）
   isAdVisible = false;
+  
+  // 移除 show class 觸發隱藏動畫
   adBanner.classList.remove('show');
   
-  // 恢復容器高度
-  if (container) {
-    container.classList.remove('has-ad');
-    container.style.paddingBottom = '';
-    container.style.height = '';
-  }
+  // 強制確保隱藏狀態（防止樣式覆蓋）
+  adBanner.style.transform = 'translateY(100%)';
+  adBanner.style.pointerEvents = 'none';
+  
+  // 等待動畫完成後完全刪除區塊
+  setTimeout(() => {
+    // 恢復容器高度
+    if (container) {
+      container.classList.remove('has-ad');
+      container.style.paddingBottom = '';
+      container.style.height = '';
+    }
+    
+    // 完全刪除廣告區塊
+    adBanner.remove();
+    adHTMLCreated = false;
+    
+    console.log('廣告區塊已刪除');
+  }, 300); // 等待 transition 完成（300ms）
   
   // 清除顯示定時器
   if (adDisplayTimer) {
@@ -384,14 +459,17 @@ function hideAdBanner() {
     adDisplayTimer = null;
   }
   
-  // 廣告已隱藏
+  console.log('廣告已隱藏');
   
-  // 重新啟動定時器
-  startAdTimer();
+  // 重新啟動定時器（僅當廣告啟用時）
+  if (adConfig && adConfig.enabled) {
+    startAdTimer();
+  }
 }
 
 // 手動關閉廣告
 function closeAdBanner() {
+  console.log('closeAdBanner 被調用');
   hideAdBanner();
   
   // 記錄關閉時間（用於統計，可選）
@@ -538,6 +616,87 @@ function triggerAdManually() {
   }
 }
 
+// 測試廣告顯示（跳過內容檢查，僅用於測試）
+function testAdDisplay() {
+  // 確保廣告已啟用
+  if (!adConfig.enabled) {
+    adConfig = adConfigManager.updateConfig({ enabled: true });
+  }
+  
+  // 直接創建廣告 HTML（如果尚未創建）
+  const adBanner = createAdHTML();
+  if (!adBanner) {
+    console.error('無法創建廣告容器');
+    return;
+  }
+  
+  // 動態載入 AdSense 腳本（如果尚未載入）
+  loadAdSenseScript().then(() => {
+    // 顯示廣告
+    isAdVisible = true;
+    // 先設置 visibility 和 opacity，再添加 show class
+    adBanner.style.visibility = 'visible';
+    adBanner.style.opacity = '1';
+    adBanner.style.pointerEvents = 'auto';
+    adBanner.classList.add('show');
+    
+    // 延遲觸發 AdSense 廣告載入，確保區域完全生成後才發送
+    // 等待 transition 動畫完成（300ms）+ 額外緩衝確保 DOM 完全渲染
+    setTimeout(() => {
+      try {
+        if (typeof window.adsbygoogle !== 'undefined') {
+          // 確保容器已完全可見且有實際尺寸
+          const rect = adBanner.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            // 獲取廣告單元並觸發
+            // 只獲取尚未處理的廣告單元（避免重複觸發）
+            const adUnits = adBanner.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status])');
+            
+            if (adUnits.length > 0) {
+              adUnits.forEach(unit => {
+                // 再次檢查單元是否有實際尺寸，並且是可見的
+                const unitRect = unit.getBoundingClientRect();
+                const computedStyle = window.getComputedStyle(unit);
+                const parentRect = unit.parentElement ? unit.parentElement.getBoundingClientRect() : { width: 0 };
+                
+                const isVisible = computedStyle.display !== 'none' && 
+                                  computedStyle.visibility !== 'hidden' &&
+                                  computedStyle.opacity !== '0' &&
+                                  parentRect.width > 0;
+                
+                // 嚴格檢查：必須有實際尺寸才觸發
+                if (unitRect.width > 200 && unitRect.height > 50 && isVisible) {
+                  try {
+                    (window.adsbygoogle = window.adsbygoogle || []).push({});
+                    console.log(`AdSense 廣告已觸發載入 (尺寸: ${Math.round(unitRect.width)}x${Math.round(unitRect.height)})`);
+                  } catch (e) {
+                    console.error('觸發 AdSense 時發生錯誤:', e);
+                  }
+                } else {
+                  console.log(`廣告單元尺寸不足: width=${Math.round(unitRect.width)}, height=${Math.round(unitRect.height)}`);
+                }
+              });
+              console.log('廣告已顯示（測試模式）');
+            } else {
+              console.log('沒有找到未處理的廣告單元');
+            }
+          } else {
+            console.log(`廣告容器尺寸不足: width=${rect.width}, height=${rect.height}`);
+          }
+        }
+      } catch (error) {
+        console.error('觸發 AdSense 廣告時發生錯誤:', error);
+      }
+    }, 400); // 等待 transition 完成（300ms）+ 額外 100ms 確保 DOM 完全渲染
+  }).catch((error) => {
+    console.error('載入 AdSense 腳本失敗:', error);
+    // 即使腳本載入失敗，也顯示容器結構
+    isAdVisible = true;
+    adBanner.classList.add('show');
+    console.log('廣告容器已顯示（AdSense 腳本載入失敗）');
+  });
+}
+
 // 確保函數在全局作用域中可用
 if (typeof window !== 'undefined') {
   window.triggerAdManually = triggerAdManually;
@@ -545,5 +704,9 @@ if (typeof window !== 'undefined') {
   window.toggleAdEnabled = toggleAdEnabled;
   window.toggleAdControlButtons = toggleAdControlButtons; // 開發者用於顯示/隱藏控制按鈕
   window.closeAdBanner = closeAdBanner;
+  window.testAdDisplay = testAdDisplay; // 測試函數（跳過內容檢查）
+  
+  // 確保在腳本載入時函數就已可用（即使 DOM 未準備好）
+  console.log('廣告管理函數已載入，可使用 testAdDisplay() 測試');
 }
 
