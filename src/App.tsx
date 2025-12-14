@@ -59,6 +59,11 @@ export default function App() {
   const [streams, setStreams] = useState<StreamData[]>([]);
   const streamCountRef = useRef(0);
   
+  // 初始化全局 streamCount（如果尚未初始化）
+  if (typeof window !== 'undefined' && !window.streamCount) {
+    window.streamCount = 0;
+  }
+  
   // 總音量狀態（從 localStorage 載入）
   const loadMasterVolume = () => {
     try {
@@ -166,10 +171,6 @@ export default function App() {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  // 初始化全局 streamCount
-  if (typeof window !== 'undefined' && !window.streamCount) {
-    window.streamCount = 0;
-  }
 
   // 添加串流
   const handleAddStream = useCallback(async (url: string) => {
@@ -374,11 +375,24 @@ export default function App() {
   }, [handleAddStream]);
 
   // 暴露 handleAddStream 到全局，以便收藏系統調用
-  useEffect(() => {
+  // 使用 useLayoutEffect 確保在 DOM 更新之前就設置，讓功能在頁面剛進入後就能立即使用
+  React.useLayoutEffect(() => {
+    // 立即設置，不等待依賴項變化
     (window as any).addStream = handleAddStream;
     (window as any).batchAddStreams = handleBatchAddStreams;
     // 設置標記，表明 React 版本的 addStream 已經準備好
     (window as any)._reactAddStreamReady = true;
+  }, [handleAddStream, handleBatchAddStreams]);
+  
+  // 使用 useEffect 作為備份，確保在 DOM 更新後也設置（雙重保障）
+  useEffect(() => {
+    // 再次確認設置（防止 useLayoutEffect 執行失敗）
+    if (!(window as any)._reactAddStreamReady) {
+      (window as any).addStream = handleAddStream;
+      (window as any).batchAddStreams = handleBatchAddStreams;
+      (window as any)._reactAddStreamReady = true;
+    }
+    
     return () => {
       // 使用 undefined 而不是 delete，避免刪除不可刪除的屬性
       try {
