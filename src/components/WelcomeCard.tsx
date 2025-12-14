@@ -180,21 +180,21 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 <Heart className={`size-5 ${theme === 'dark' ? 'text-pink-400' : 'text-pink-600'}`} />
               </div>
               <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                作者的話
+                {t('welcome.authorMessage')}
               </h2>
             </div>
             <div className={`space-y-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               <p className="text-sm leading-relaxed">
-                不知道大家會不會和我有一樣的困擾 —— 每天要看很多頻道，卻得開一堆瀏覽器分頁，想同時看多個畫面更是難上加難。
+                {t('welcome.authorMessageP1')}
               </p>
               <p className="text-sm leading-relaxed">
-                為了解決這個麻煩，我專門做了這個工具。而且後續還會嘗試整合 Twitch 功能，到時候大家就能直接匯入自己在 Twitch 上追隨的頻道，用起來會更方便～
+                {t('welcome.authorMessageP2')}
               </p>
               <p className="text-sm leading-relaxed">
-                不過有個小情況要跟大家說明：目前在 YouTube 方面，可能還是會跳轉到不同頻道的影片，暫時沒辦法直接精準定位直播內容。這部分我已經盡力優化了，現階段只能麻煩大家手動添加直播頻道，還請多多包涵～
+                {t('welcome.authorMessageP3')}
               </p>
               <p className="text-sm leading-relaxed">
-                如果大家用著覺得順手、實用，別忘了多多分享給身邊的朋友，讓更多人也能用上這個能提升效率的小幫手～
+                {t('welcome.authorMessageP4')}
               </p>
             </div>
           </div>
@@ -285,7 +285,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               >
                 <Users className={`size-4 transition-colors ${theme === 'dark' ? 'text-orange-400 group-hover:text-orange-300' : 'text-orange-600 group-hover:text-orange-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  巴哈姆特
+                  {t('about.bahamut')}
                 </span>
               </a>
               <a
@@ -300,7 +300,20 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               >
                 <MessageSquare className={`size-4 transition-colors ${theme === 'dark' ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  X (Twitter)
+                  {t('about.twitter')}
+                </span>
+              </a>
+              <a
+                href="mailto:feedback@multistreaming.org"
+                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-green-500/20'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                } hover:scale-105`}
+              >
+                <Mail className={`size-4 transition-colors ${theme === 'dark' ? 'text-green-400 group-hover:text-green-300' : 'text-green-600 group-hover:text-green-500'}`} />
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  {t('about.email')}
                 </span>
               </a>
             </div>

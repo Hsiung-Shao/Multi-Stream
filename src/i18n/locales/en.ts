@@ -94,6 +94,11 @@ export default {
   'welcome.legalPrivacyDesc': 'We value your privacy and data security. This website does not actively collect any personal information, and all settings and favorites are stored locally in your browser. To maintain website operations and continued development, this website may display third-party advertisements (such as Google AdSense).',
   'welcome.termsOfUse': 'Terms of Use',
   'welcome.quickNav': 'Quick Navigation',
+  'welcome.authorMessage': "Author's Message",
+  'welcome.authorMessageP1': 'I wonder if you have the same trouble as me —— having to open many browser tabs every day to watch multiple channels, and it\'s even more difficult to watch multiple streams simultaneously.',
+  'welcome.authorMessageP2': 'To solve this problem, I created this tool specifically. Moreover, I will try to integrate Twitch features in the future, so everyone can directly import the channels they follow on Twitch, which will be much more convenient～',
+  'welcome.authorMessageP3': 'However, I need to explain a small issue: Currently on YouTube, it may still redirect to videos from different channels, and we cannot directly and precisely locate live content. I have done my best to optimize this part, but for now, I can only ask everyone to manually add live channels. I hope you understand～',
+  'welcome.authorMessageP4': 'If you find this tool handy and useful, don\'t forget to share it with your friends so more people can use this efficiency-boosting helper～',
 
   // About Page
   'about.backToHome': '← Back to Home',
@@ -430,6 +435,9 @@ export default {
   'about.feedbackFormDesc': 'Click here to fill out the feedback form',
   'about.discordCommunity': 'Discord Community',
   'about.discordCommunityDesc': 'Join our Discord server to communicate with other users or directly contact the developer',
+  'about.bahamut': 'Bahamut',
+  'about.twitter': 'X (Twitter)',
+  'about.email': 'Email',
   'about.terms1': 'MultiStream Hub is completely free and open to everyone, no registration or payment required.',
   'about.terms2': 'This tool is only used as a stream viewing tool. All live content copyrights belong to their respective streaming platforms and creators.',
   'about.terms3': 'To maintain website operations and continuous development, this website may display third-party advertisements (such as Google AdSense). These ads are managed by third-party service providers, and we do not collect your personal information for advertising purposes.',

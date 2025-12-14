@@ -1,4 +1,4 @@
-export default {
+const jaTranslations = {
   // Navbar
   'navbar.about': '私たちについて',
   'navbar.tutorial': '使い方',
@@ -94,6 +94,11 @@ export default {
   'welcome.legalPrivacyDesc': '私たちはあなたのプライバシーとデータセキュリティを重視しています。このウェブサイトは個人情報を積極的に収集せず、すべての設定とお気に入りはブラウザのローカルに保存されます。ウェブサイトの運営と継続的な開発を維持するため、このウェブサイトはサードパーティの広告（Google AdSenseなど）を表示する場合があります。',
   'welcome.termsOfUse': '利用規約',
   'welcome.quickNav': 'クイックナビゲーション',
+  'welcome.authorMessage': '開発者からのメッセージ',
+  'welcome.authorMessageP1': 'みなさんも同じ悩みを抱えていませんか？—— 毎日たくさんのチャンネルを見たいのに、ブラウザのタブをたくさん開かなければならず、複数の画面を同時に見るのはさらに難しいです。',
+  'welcome.authorMessageP2': 'この問題を解決するために、このツールを開発しました。また、今後は Twitch 機能の統合も試みる予定で、その際は Twitch でフォローしているチャンネルを直接インポートできるようになり、さらに便利になります～',
+  'welcome.authorMessageP3': 'ただし、小さな問題について説明させてください：現在 YouTube については、異なるチャンネルの動画にリダイレクトされる可能性があり、ライブコンテンツを直接正確に特定することはできません。この部分は最善を尽くして最適化しましたが、現時点では、ライブチャンネルを手動で追加していただく必要があります。ご理解いただければ幸いです～',
+  'welcome.authorMessageP4': 'このツールが便利で実用的だと思われた方は、ぜひ周りの友人にもシェアして、より多くの人がこの効率を向上させる小さなヘルパーを使えるようにしてください～',
 
   // About Page
   'about.backToHome': '← ホームに戻る',
@@ -430,6 +435,9 @@ export default {
   'about.feedbackFormDesc': 'ここをクリックしてフィードバックを記入',
   'about.discordCommunity': 'Discordコミュニティ',
   'about.discordCommunityDesc': 'Discordサーバーに参加して、他のユーザーと交流したり、開発者に直接連絡したりできます',
+  'about.bahamut': '巴哈姆特',
+  'about.twitter': 'X (Twitter)',
+  'about.email': 'メール',
   'about.terms1': 'MultiStream Hubは完全無料で、すべての人に開放されており、登録や支払いは不要です。',
   'about.terms2': 'このツールはストリーム視聴ツールとしてのみ使用され、すべてのライブコンテンツの著作権は各ストリーミングプラットフォームとクリエイターに帰属します。',
   'about.terms3': 'ウェブサイトの運営と継続的な開発を維持するため、このウェブサイトはサードパーティの広告（Google AdSenseなど）を表示する場合があります。これらの広告はサードパーティのサービスプロバイダーによって管理され、広告配信のために個人情報を収集することはありません。',
@@ -509,4 +517,6 @@ export default {
   'privacy.about': '私たちについて',
   'privacy.terms': '利用規約',
 } as const;
+
+export default jaTranslations;
 

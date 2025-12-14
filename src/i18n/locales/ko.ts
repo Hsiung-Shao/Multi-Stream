@@ -1,4 +1,4 @@
-export default {
+const koTranslations = {
   // Navbar
   'navbar.about': '소개',
   'navbar.tutorial': '사용법',
@@ -94,6 +94,11 @@ export default {
   'welcome.legalPrivacyDesc': '우리는 귀하의 개인정보 보호와 데이터 보안을 중시합니다. 이 웹사이트는 개인 정보를 적극적으로 수집하지 않으며, 모든 설정과 즐겨찾기는 브라우저의 로컬에 저장됩니다. 웹사이트 운영과 지속적인 개발을 유지하기 위해 이 웹사이트는 서드파티 광고(Google AdSense 등)를 표시할 수 있습니다.',
   'welcome.termsOfUse': '이용 약관',
   'welcome.quickNav': '빠른 탐색',
+  'welcome.authorMessage': '개발자 메시지',
+  'welcome.authorMessageP1': '여러분도 같은 고민이 있으신가요? —— 매일 많은 채널을 봐야 하는데 브라우저 탭을 많이 열어야 하고, 여러 화면을 동시에 보는 것은 더욱 어렵습니다.',
+  'welcome.authorMessageP2': '이 문제를 해결하기 위해 이 도구를 특별히 만들었습니다. 또한 향후 Twitch 기능 통합도 시도할 예정이며, 그때는 Twitch에서 팔로우하는 채널을 직접 가져올 수 있어 더욱 편리해질 것입니다～',
+  'welcome.authorMessageP3': '다만 작은 문제에 대해 설명드리겠습니다：현재 YouTube의 경우 다른 채널의 동영상으로 리디렉션될 수 있으며 라이브 콘텐츠를 직접 정확하게 찾을 수 없습니다. 이 부분은 최선을 다해 최적화했지만, 현재로서는 라이브 채널을 수동으로 추가해 주셔야 합니다. 양해 부탁드립니다～',
+  'welcome.authorMessageP4': '이 도구가 편리하고 실용적이라고 생각하시면 주변 친구들과 공유하여 더 많은 사람들이 이 효율 향상 도우미를 사용할 수 있도록 해주세요～',
 
   // About Page
   'about.backToHome': '← 홈으로 돌아가기',
@@ -430,6 +435,9 @@ export default {
   'about.feedbackFormDesc': '여기를 클릭하여 피드백을 작성하세요',
   'about.discordCommunity': 'Discord 커뮤니티',
   'about.discordCommunityDesc': 'Discord 서버에 가입하여 다른 사용자와 소통하거나 개발자에게 직접 연락할 수 있습니다',
+  'about.bahamut': '바하무트',
+  'about.twitter': 'X (Twitter)',
+  'about.email': '이메일',
   'about.terms1': 'MultiStream Hub는 완전히 무료이며 모든 사람에게 공개되며, 등록이나 결제가 필요하지 않습니다.',
   'about.terms2': '이 도구는 스트림 시청 도구로만 사용되며, 모든 라이브 콘텐츠의 저작권은 각 스트리밍 플랫폼과 크리에이터에게 있습니다.',
   'about.terms3': '웹사이트 운영 및 지속적인 개발을 유지하기 위해 이 웹사이트는 서드파티 광고(Google AdSense 등)를 표시할 수 있습니다. 이러한 광고는 서드파티 서비스 제공업체에서 관리하며, 광고 배치를 위해 개인 정보를 수집하지 않습니다.',
@@ -509,4 +517,6 @@ export default {
   'privacy.about': '소개',
   'privacy.terms': '서비스 약관',
 } as const;
+
+export default koTranslations;
 

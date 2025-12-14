@@ -94,6 +94,11 @@ export default {
   'welcome.legalPrivacyDesc': '我们重视您的隐私权和资料安全。本网站不会主动收集任何个人资料，所有设定和收藏资料都储存在您的浏览器本地。为维持网站运营和持续开发，本网站可能会显示第三方广告（如 Google AdSense）。',
   'welcome.termsOfUse': '使用条款',
   'welcome.quickNav': '快速导航',
+  'welcome.authorMessage': '作者的话',
+  'welcome.authorMessageP1': '不知道大家会不会和我有一样的困扰 —— 每天要看很多频道，却得开一堆浏览器分页，想同时看多个画面更是难上加难。',
+  'welcome.authorMessageP2': '为了解决这个麻烦，我专门做了这个工具。而且后续还会尝试整合 Twitch 功能，到时候大家就能直接导入自己在 Twitch 上追随的频道，用起来会更方便～',
+  'welcome.authorMessageP3': '不过有个小情况要跟大家说明：目前在 YouTube 方面，可能还是会跳转到不同频道的影片，暂时没办法直接精确定位直播内容。这部分我已经尽力优化了，现阶段只能麻烦大家手动添加直播频道，还请多多包涵～',
+  'welcome.authorMessageP4': '如果大家用着觉得顺手、实用，别忘了多多分享给身边的朋友，让更多人也能用上这个能提升效率的小帮手～',
 
   // About Page
   'about.backToHome': '← 返回首页',
@@ -430,6 +435,9 @@ export default {
   'about.feedbackFormDesc': '点击这里填写意见反馈',
   'about.discordCommunity': 'Discord 社区',
   'about.discordCommunityDesc': '加入我们的 Discord 服务器，与其他用户交流或直接联系开发者',
+  'about.bahamut': '巴哈姆特',
+  'about.twitter': 'X (Twitter)',
+  'about.email': '电子邮件',
   'about.terms1': 'MultiStream Hub 完全免费开放给所有人使用，无需注册或付费。',
   'about.terms2': '本工具仅作为串流观看工具使用，所有直播内容的版权归属各直播平台和创作者所有。',
   'about.terms3': '为维持网站运营和持续开发，本网站可能会显示第三方广告（如 Google AdSense）。这些广告由第三方服务提供商管理，我们不会收集您的个人信息用于广告投放。',
