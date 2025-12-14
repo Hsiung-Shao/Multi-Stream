@@ -1,0 +1,660 @@
+// Cloudflare Pages Function: YouTube 頻道 /live 端點代理
+// 用於檢查 YouTube 頻道的直播狀態，通過檢查 /live 端點的重定向來判斷是否開台
+
+export async function onRequestGet(contextOrRequest, env) {
+  let request, envObj;
+  if (contextOrRequest && contextOrRequest.request) {
+    request = contextOrRequest.request;
+    envObj = contextOrRequest.env;
+  } else {
+    request = contextOrRequest;
+    envObj = env;
+  }
+  
+  return handleChannelLiveRequest(request, envObj);
+}
+
+const MAX_REDIRECTS = 5; // 設定最大重定向次數，防止無限循環
+
+/**
+ * 通過解析 HTML 內容來檢查 YouTube 頻道是否處於直播狀態
+ * 這是最可靠的方法，直接從 HTML 中查找直播狀態標記
+ * 跳過年齡限制檢查，優先返回正在直播的 videoId
+ * 
+ * @param {string} channelId - 頻道的真實 ID (UC... 開頭)
+ * @param {string} html - HTML 內容
+ * @returns {Promise<{status: string, videoId: (string|null), finalUrl: string, message?: string}>}
+ */
+async function checkYouTubeChannelLiveFromHTML(channelId, html) {
+  // 優先提取 videoId（即使有年齡限制也提取）
+  const vidMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+  const videoId = vidMatch ? vidMatch[1] : null;
+  
+  // 情況1：正在直播（優先檢查：isUpcoming:false 且 isLive:true）
+  // 這是唯一真正正在直播的情況
+  const isActuallyLive = /"isUpcoming":false[^}]*"isLive":true/.test(html) ||
+                         /"isLive":true[^}]*"isUpcoming":false/.test(html);
+  
+  if (isActuallyLive && videoId) {
+    return {
+      status: 'LIVE',
+      videoId: videoId,
+      finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      message: '開台中',
+      method: 'HTML_PARSE'
+    };
+  }
+  
+  // 情況2：排定直播（isUpcoming:true）
+  // 即使有 videoId，也不視為正在直播
+  const isUpcoming = html.includes('"isUpcoming":true') || 
+                      /"isUpcoming":true/.test(html);
+  
+  if (isUpcoming) {
+    // 如果有 videoId，返回它但不標記為 LIVE
+    // 這樣可以讓用戶知道有排定直播，但不會誤判為正在直播
+    return {
+      status: 'UPCOMING',
+      videoId: videoId, // 仍然返回 videoId，但狀態是 UPCOMING
+      finalUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : null,
+      message: '待機中（首播尚未開始）',
+      method: 'HTML_PARSE'
+    };
+  }
+  
+  // 情況3：其他可能的直播標記（但沒有明確的 isUpcoming:false）
+  // 這些可能是舊格式或特殊情況，但我們優先相信 isUpcoming 標記
+  const hasLiveMarkers = html.includes('"isLive":true') || 
+                         html.includes('isLiveBroadcast') || 
+                         /"playabilityStatus":{"status":"LIVE_STREAM"/.test(html);
+  
+  if (hasLiveMarkers && videoId) {
+    // 如果有直播標記但沒有明確的 isUpcoming 狀態，假設是正在直播
+    // 但這可能不準確，所以標記為可能的直播
+    return {
+      status: 'LIVE',
+      videoId: videoId,
+      finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      message: '開台中（可能）',
+      method: 'HTML_PARSE'
+    };
+  }
+  
+  // 情況4：完全沒直播
+  return {
+    status: 'OFFLINE',
+    videoId: null,
+    finalUrl: null,
+    message: '未開台',
+    method: 'HTML_PARSE'
+  };
+}
+
+/**
+ * 遞迴檢查 YouTube 頻道是否處於直播狀態（重定向方式）
+ * 關鍵：在重定向過程中，一旦看到 watch?v=，立即返回 LIVE 狀態
+ * 
+ * @param {string} channelId - 頻道的真實 ID (UC... 開頭)
+ * @param {string} url - 當前檢查的 URL (初始為 /live)
+ * @param {number} redirects - 已追蹤的次數
+ * @param {Array} redirectChain - 重定向鏈（用於追蹤完整過程）
+ * @returns {Promise<{status: string, videoId: (string|null), finalUrl: string, message?: string, redirectChain?: Array}>}
+ */
+async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain = []) {
+  if (redirects >= MAX_REDIRECTS) {
+    return { 
+      status: 'ERROR', 
+      videoId: null, 
+      finalUrl: url,
+      message: 'Reached maximum redirect count.',
+      redirectChain: redirectChain
+    };
+  }
+
+  try {
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1'
+    };
+
+    // 先嘗試使用 redirect: 'manual' 來手動跟隨重定向
+    const response = await fetch(url, {
+      method: 'GET',
+      // 🚨 關鍵設定：設定為 'manual'，這樣 fetch 不會自動追蹤 302，而是返回 302 狀態
+      redirect: 'manual', 
+      headers: headers
+    });
+
+    const status = response.status;
+    const finalUrl = response.url || url; // Fetch API 的 response.url 顯示的是發送請求的 URL
+    const locationHeader = response.headers.get('Location');
+
+    // 記錄當前請求到重定向鏈
+    const stepInfo = {
+      step: redirects + 1,
+      requestedUrl: url,
+      status: status,
+      responseUrl: finalUrl,
+      locationHeader: locationHeader || null,
+      timestamp: new Date().toISOString()
+    };
+    
+    redirectChain.push(stepInfo);
+
+
+    if (status >= 300 && status < 400) {
+      // 狀態碼是 3XX (重定向)
+      const location = response.headers.get('Location');
+      
+      if (location) {
+        // 處理相對路徑，確保得到完整的 URL
+        const newUrl = new URL(location, url).href;
+        
+        // 更新重定向鏈中的目標 URL
+        stepInfo.redirectTo = newUrl;
+        
+        // 🚨 核心判斷邏輯：如果新的 URL 包含 'watch?v='，需要解析 HTML 確認是正在直播還是排定直播
+        if (newUrl.includes("watch?v=")) {
+          // 提取 video ID
+          const parts = newUrl.split('v=');
+          const videoId = parts.length > 1 ? parts[1].split('&')[0] : null;
+          
+          // 獲取該頁面的 HTML 來確認實際狀態
+          try {
+            const htmlFetchHeaders = {
+              'Accept': 'text/html',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            };
+            
+            const htmlResponse = await fetch(newUrl, {
+              method: 'GET',
+              credentials: 'omit',
+              cache: 'no-store',
+              headers: htmlFetchHeaders
+            });
+            
+            if (htmlResponse.ok) {
+              const html = await htmlResponse.text();
+              const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
+              
+              // 只有確認是正在直播才返回 LIVE 狀態
+              if (htmlCheckResult.status === 'LIVE') {
+                stepInfo.redirectTo = htmlCheckResult.finalUrl || newUrl;
+                stepInfo.redirectSource = 'HTML_PARSE_AFTER_REDIRECT';
+                return {
+                  status: 'LIVE',
+                  videoId: htmlCheckResult.videoId || videoId,
+                  finalUrl: htmlCheckResult.finalUrl || newUrl,
+                  message: htmlCheckResult.message,
+                  redirectChain: redirectChain
+                };
+              } else if (htmlCheckResult.status === 'UPCOMING') {
+                // 如果是排定直播，繼續尋找是否有正在直播的
+                // 先記錄這個排定直播的 videoId，但繼續尋找
+                stepInfo.scheduledVideoId = htmlCheckResult.videoId || videoId;
+                stepInfo.redirectSource = 'UPCOMING_DETECTED';
+                // 繼續追蹤，看看是否有其他正在直播的
+                const continueResult = await checkLiveStatusRecursive(channelId, newUrl, redirects + 1, redirectChain);
+                // 如果找到正在直播的，返回它；否則返回排定直播
+                if (continueResult.status === 'LIVE') {
+                  return continueResult;
+                } else {
+                  // 沒有找到正在直播的，返回排定直播
+                  return {
+                    status: 'UPCOMING',
+                    videoId: htmlCheckResult.videoId || videoId,
+                    finalUrl: htmlCheckResult.finalUrl || newUrl,
+                    message: htmlCheckResult.message,
+                    redirectChain: redirectChain
+                  };
+                }
+              }
+            }
+          } catch (htmlError) {
+            // HTML 解析失敗，但至少有 videoId，假設是直播
+            // 這是 fallback，不應該經常發生
+          }
+          
+          // 如果 HTML 解析失敗或無法確認，假設是直播（fallback）
+          return {
+            status: 'LIVE',
+            videoId: videoId,
+            finalUrl: newUrl,
+            redirectChain: redirectChain
+          };
+        }
+        
+        // 繼續追蹤下一個重定向
+        return checkLiveStatusRecursive(channelId, newUrl, redirects + 1, redirectChain);
+      } else {
+        // 重定向但沒有 Location header
+        return {
+          status: 'ERROR',
+          videoId: null,
+          finalUrl: url,
+          message: 'Redirect without Location header',
+          redirectChain: redirectChain
+        };
+      }
+    } 
+    
+    if (status === 200) {
+      // 狀態碼是 200 OK
+      // 檢查是否已經重定向到 watch 頁面
+      if (finalUrl.includes('watch?v=')) {
+        // 即使 URL 包含 watch?v=，也要解析 HTML 確認實際狀態
+        try {
+          const htmlFetchHeaders = {
+            'Accept': 'text/html',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          };
+          
+          const htmlResponse = await fetch(finalUrl, {
+            method: 'GET',
+            credentials: 'omit',
+            cache: 'no-store',
+            headers: htmlFetchHeaders
+          });
+          
+          if (htmlResponse.ok) {
+            const html = await htmlResponse.text();
+            const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
+            
+            // 根據解析結果返回正確的狀態
+            if (htmlCheckResult.status === 'LIVE') {
+              stepInfo.redirectSource = 'HTML_PARSE_AFTER_200';
+              return {
+                status: 'LIVE',
+                videoId: htmlCheckResult.videoId,
+                finalUrl: htmlCheckResult.finalUrl || finalUrl,
+                message: htmlCheckResult.message,
+                redirectChain: redirectChain
+              };
+            } else if (htmlCheckResult.status === 'UPCOMING') {
+              stepInfo.redirectSource = 'HTML_PARSE_UPCOMING';
+              return {
+                status: 'UPCOMING',
+                videoId: htmlCheckResult.videoId,
+                finalUrl: htmlCheckResult.finalUrl || finalUrl,
+                message: htmlCheckResult.message,
+                redirectChain: redirectChain
+              };
+            }
+          }
+        } catch (htmlError) {
+          // HTML 解析失敗，fallback 到簡單的 videoId 提取
+        }
+        
+        // Fallback：如果 HTML 解析失敗，提取 videoId 並假設是直播
+        const parts = finalUrl.split('v=');
+        const videoId = parts.length > 1 ? parts[1].split('&')[0] : null;
+        
+        return { 
+          status: 'LIVE', 
+          videoId: videoId, 
+          finalUrl: finalUrl,
+          redirectChain: redirectChain
+        };
+      }
+
+      // 收到 200 響應，優先使用 HTML 解析方法查找直播狀態（最可靠）
+      
+      try {
+        // 使用指定的設定重新獲取 HTML（確保使用正確的 headers）
+        const htmlFetchHeaders = {
+          'Accept': 'text/html',
+          'Accept-Language': 'en-US,en;q=0.9', // 強制拿英文版，字串最短最好解析
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        };
+        
+        const htmlResponse = await fetch(url, {
+          method: 'GET',
+          credentials: 'omit',
+          cache: 'no-store',
+          headers: htmlFetchHeaders
+        });
+        
+        const html = await htmlResponse.text();
+        
+        
+        // 使用 HTML 解析方法檢查直播狀態（最可靠的方法）
+        const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
+        
+        stepInfo.redirectSource = htmlCheckResult.method || 'HTML_PARSE';
+        
+        if (htmlCheckResult.status === 'LIVE') {
+          // 找到直播狀態
+          stepInfo.redirectTo = htmlCheckResult.finalUrl;
+          
+          
+          return {
+            status: 'LIVE',
+            videoId: htmlCheckResult.videoId,
+            finalUrl: htmlCheckResult.finalUrl || url,
+            message: htmlCheckResult.message,
+            redirectChain: redirectChain
+          };
+        } else if (htmlCheckResult.status === 'OFFLINE') {
+          // 確認未開台
+          
+          return {
+            status: 'OFFLINE',
+            videoId: null,
+            finalUrl: url,
+            message: htmlCheckResult.message,
+            redirectChain: redirectChain
+          };
+        }
+        // 如果是 UPCOMING，繼續到 fallback 邏輯
+        
+      } catch (htmlParseError) {
+      }
+      
+      // Fallback: 嘗試使用 redirect: 'follow' 來獲取最終 URL
+      try {
+        const followResponse = await fetch(url, {
+          method: 'GET',
+          redirect: 'follow',
+          headers: headers
+        });
+        
+        const followUrl = followResponse.url || url;
+        
+        if (followUrl !== url && followUrl.includes('watch?v=')) {
+          // 解析 HTML 確認實際狀態
+          try {
+            const htmlFetchHeaders = {
+              'Accept': 'text/html',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            };
+            
+            const htmlResponse = await fetch(followUrl, {
+              method: 'GET',
+              credentials: 'omit',
+              cache: 'no-store',
+              headers: htmlFetchHeaders
+            });
+            
+            if (htmlResponse.ok) {
+              const html = await htmlResponse.text();
+              const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
+              
+              stepInfo.redirectTo = followUrl;
+              stepInfo.redirectSource = 'FOLLOW_REDIRECT_HTML_PARSE';
+              
+              if (htmlCheckResult.status === 'LIVE') {
+                return {
+                  status: 'LIVE',
+                  videoId: htmlCheckResult.videoId,
+                  finalUrl: htmlCheckResult.finalUrl || followUrl,
+                  message: htmlCheckResult.message,
+                  redirectChain: redirectChain
+                };
+              } else if (htmlCheckResult.status === 'UPCOMING') {
+                return {
+                  status: 'UPCOMING',
+                  videoId: htmlCheckResult.videoId,
+                  finalUrl: htmlCheckResult.finalUrl || followUrl,
+                  message: htmlCheckResult.message,
+                  redirectChain: redirectChain
+                };
+              }
+            }
+          } catch (htmlError) {
+            // HTML 解析失敗，fallback
+          }
+          
+          // Fallback：如果 HTML 解析失敗，提取 videoId 並假設是直播
+          const parts = followUrl.split('v=');
+          const videoId = parts.length > 1 ? parts[1].split('&')[0] : null;
+          
+          stepInfo.redirectTo = followUrl;
+          stepInfo.redirectSource = 'FOLLOW_REDIRECT';
+          
+          return {
+            status: 'LIVE',
+            videoId: videoId,
+            finalUrl: followUrl,
+            redirectChain: redirectChain
+          };
+        } else if (followUrl !== url) {
+          stepInfo.redirectTo = followUrl;
+          stepInfo.redirectSource = 'FOLLOW_REDIRECT';
+          return checkLiveStatusRecursive(channelId, followUrl, redirects + 1, redirectChain);
+        }
+      } catch (followError) {
+      }
+
+      // 狀態：已停止跳轉，停留在非直播頁面 (如頻道首頁)
+      return {
+        status: 'OFFLINE',
+        videoId: null,
+        finalUrl: url,
+        redirectChain: redirectChain
+      };
+    } 
+    
+    if (status === 404) {
+      // 頻道不存在
+      return {
+        status: 'ERROR',
+        videoId: null,
+        finalUrl: url,
+        message: '頻道不存在或已刪除 (404)',
+        redirectChain: redirectChain
+      };
+    }
+    
+    // 處理其他非重定向狀態
+    return {
+      status: 'ERROR', 
+      videoId: null, 
+      finalUrl: url,
+      message: `Received unexpected status code: ${status}`,
+      redirectChain: redirectChain
+    };
+
+  } catch (error) {
+    return { 
+      status: 'ERROR', 
+      videoId: null, 
+      finalUrl: url,
+      message: `Fetch error: ${error.message}`,
+      redirectChain: redirectChain
+    };
+  }
+}
+
+async function handleChannelLiveRequest(request, env) {
+  try {
+    const url = new URL(request.url);
+    const channelId = url.searchParams.get('channelId');
+    
+    if (!channelId) {
+      return new Response(
+        JSON.stringify({ error: '缺少 channelId 參數' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
+    
+    // 驗證 channelId 格式
+    if (!/^UC[a-zA-Z0-9_-]{22}$/.test(channelId)) {
+      return new Response(
+        JSON.stringify({ error: '無效的 channelId 格式' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
+    
+    // 構建 YouTube 頻道 /live URL（使用真實 ID，UC 開頭）
+    const liveUrl = `https://www.youtube.com/channel/${channelId}/live`;
+    try {
+      // 優先使用 HTML 解析方法（最可靠）
+      try {
+        // 使用指定的設定獲取 HTML（確保使用正確的 headers）
+        const htmlFetchHeaders = {
+          'Accept': 'text/html',
+          'Accept-Language': 'en-US,en;q=0.9', // 強制拿英文版，字串最短最好解析
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        };
+        
+        const htmlResponse = await fetch(liveUrl, {
+          method: 'GET',
+          credentials: 'omit',
+          cache: 'no-store',
+          headers: htmlFetchHeaders
+        });
+        
+        if (!htmlResponse.ok) {
+          throw new Error(`HTTP ${htmlResponse.status}: ${htmlResponse.statusText}`);
+        }
+        
+        const html = await htmlResponse.text();
+        
+        // 使用 HTML 解析方法檢查直播狀態
+        const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
+        
+        // 構建響應數據
+        const responseData = {
+          status: htmlCheckResult.status === 'LIVE' ? 200 : (htmlCheckResult.status === 'OFFLINE' ? 200 : 200),
+          finalUrl: htmlCheckResult.finalUrl || liveUrl,
+          isLive: htmlCheckResult.status === 'LIVE', // UPCOMING 時為 false
+          liveVideoId: htmlCheckResult.status === 'LIVE' ? (htmlCheckResult.videoId || null) : null, // 只有 LIVE 時才返回 videoId
+          scheduledVideoId: htmlCheckResult.status === 'UPCOMING' ? (htmlCheckResult.videoId || null) : null, // UPCOMING 時返回排定直播的 videoId
+          isUpcoming: htmlCheckResult.status === 'UPCOMING',
+          message: htmlCheckResult.message,
+          method: htmlCheckResult.method || 'HTML_PARSE',
+          redirectChain: [{
+            step: 1,
+            requestedUrl: liveUrl,
+            status: htmlResponse.status,
+            method: htmlCheckResult.method || 'HTML_PARSE',
+            timestamp: new Date().toISOString()
+          }]
+        };
+        
+        return new Response(
+          JSON.stringify(responseData),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          }
+        );
+        
+      } catch (htmlError) {
+        // Fallback: 使用遞迴方式跟隨重定向
+        const result = await checkLiveStatusRecursive(channelId, liveUrl, 0);
+        
+        // 轉換結果格式以匹配現有 API
+        const redirectChain = result.redirectChain || [];
+        const redirectCount = redirectChain.length;
+        
+        const responseData = {
+          status: result.status === 'LIVE' ? 200 : (result.status === 'OFFLINE' ? 200 : (result.status === 'ERROR' ? 500 : 200)),
+          finalUrl: result.finalUrl,
+          isLive: result.status === 'LIVE',
+          liveVideoId: result.status === 'LIVE' ? (result.videoId || null) : null, // 只有 LIVE 時才返回 videoId
+          scheduledVideoId: result.status === 'UPCOMING' ? (result.videoId || null) : null, // UPCOMING 時返回排定直播的 videoId
+          isUpcoming: result.status === 'UPCOMING',
+          message: result.status === 'LIVE' ? '開台中' : (result.status === 'UPCOMING' ? '待機中（首播尚未開始）' : (result.status === 'OFFLINE' ? '未開台' : (result.message || '未知狀態'))),
+          redirectChain: redirectChain,
+          redirectCount: redirectCount,
+          redirectSummary: redirectChain.map((step, index) => ({
+            step: step.step,
+            from: step.requestedUrl,
+            to: step.redirectTo || step.requestedUrl,
+            status: step.status,
+            hasLocation: !!step.locationHeader
+          })),
+          method: 'REDIRECT'
+        };
+        
+        // 處理 404 錯誤
+        if (result.status === 'ERROR' && result.message && result.message.includes('404')) {
+          responseData.status = 404;
+          responseData.isLive = false;
+          responseData.message = '頻道不存在或已刪除';
+        }
+        
+        return new Response(
+          JSON.stringify(responseData),
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          }
+        );
+      }
+    } catch (error) {
+      // 處理請求錯誤（例如：網路錯誤、超時等）
+      return new Response(
+        JSON.stringify({
+          status: 'ERROR',
+          error: '請求失敗',
+          message: error.message || '處理請求時發生錯誤',
+          isLive: null,
+          liveVideoId: null
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        }
+      );
+    }
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ 
+        error: '伺服器錯誤', 
+        message: error.message || '處理請求時發生未知錯誤'
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      }
+    );
+  }
+}
+
+// 處理 OPTIONS 請求（CORS 預檢請求）
+export async function onRequestOptions(contextOrRequest, env) {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400' // 24 小時
+    }
+  });
+}
+

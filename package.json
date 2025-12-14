@@ -45,6 +45,7 @@
             "react-hook-form": "^7.55.0",
             "react-resizable-panels": "^2.1.7",
             "recharts": "^2.15.2",
+            "sitemap": "^9.0.0",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
             "vaul": "^1.1.2"
@@ -60,6 +61,8 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build",
-            "postbuild": "node scripts/copy-static-assets.js"
+            "postbuild": "node scripts/copy-static-assets.js",
+            "generate-sitemap": "node scripts/generate-sitemap.js",
+            "prebuild": "npm run generate-sitemap"
       }
 }
