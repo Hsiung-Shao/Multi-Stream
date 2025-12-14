@@ -241,7 +241,7 @@ const zhTWTranslations = {
   'versionHistory.title': '版本紀錄',
   'versionHistory.subtitle': 'MultiStream Hub 更新歷史',
   'versionHistory.latest': '最新',
-  'versionHistory.v2.0.1.date': '2025-01-XX',
+  'versionHistory.v2.0.1.date': '2025-12-14',
   'versionHistory.v2.0.1.change1': '新增初始區域內容',
   'versionHistory.v2.0.1.change2': 'SEO 優化',
   'versionHistory.v2.0.1.change3': '增強XSS、CSP 策略',

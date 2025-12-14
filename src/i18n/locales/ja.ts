@@ -241,7 +241,7 @@ const jaTranslations = {
   'versionHistory.title': 'バージョン履歴',
   'versionHistory.subtitle': 'MultiStream Hub更新履歴',
   'versionHistory.latest': '最新',
-  'versionHistory.v2.0.1.date': '2025-01-XX',
+  'versionHistory.v2.0.1.date': '2025-12-14',
   'versionHistory.v2.0.1.change1': '初期リージョンコンテンツを追加',
   'versionHistory.v2.0.1.change2': 'SEO最適化',
   'versionHistory.v2.0.1.change3': 'XSS、CSPポリシーを強化',

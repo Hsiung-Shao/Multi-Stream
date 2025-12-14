@@ -241,7 +241,7 @@ const koTranslations = {
   'versionHistory.title': '버전 기록',
   'versionHistory.subtitle': 'MultiStream Hub 업데이트 기록',
   'versionHistory.latest': '최신',
-  'versionHistory.v2.0.1.date': '2025-01-XX',
+  'versionHistory.v2.0.1.date': '2025-12-14',
   'versionHistory.v2.0.1.change1': '초기 영역 콘텐츠 추가',
   'versionHistory.v2.0.1.change2': 'SEO 최적화',
   'versionHistory.v2.0.1.change3': 'XSS, CSP 정책 강화',
