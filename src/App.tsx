@@ -962,7 +962,7 @@ export default function App() {
         />
       )}
       
-      <div className="container mx-auto px-4 py-12" style={{ position: 'relative', zIndex: 10 }}>
+      <div className="container mx-auto px-4 py-4" style={{ position: 'relative', zIndex: 10 }}>
         {streams.length === 0 && (
           <WelcomeCard 
             theme={theme}
