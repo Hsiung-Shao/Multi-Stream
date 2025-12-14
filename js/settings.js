@@ -1001,12 +1001,68 @@ const favoriteStreams = {
       return { success: false, message: i18n.t('invalidFavoriteItem') };
     }
     
+    // 等待 React 應用載入（最多等待 10 秒）
+    const waitForReactApp = async () => {
+      const maxWaitTime = 10000; // 最多等待 10 秒
+      const checkInterval = 100; // 每 100ms 檢查一次
+      const startTime = Date.now();
+      
+      while (Date.now() - startTime < maxWaitTime) {
+        // 檢查 React 版本的 addStream 是否已經準備好
+        // 關鍵：檢查 window.addStream 是否存在，並且檢查 _reactAddStreamReady 標記
+        // 這個標記在 React 應用設置 window.addStream 時會同時設置
+        if (window.addStream && typeof window.addStream === 'function' && window._reactAddStreamReady === true) {
+          return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+      }
+      return false;
+    };
+    
+    // 等待 React 應用載入
+    const reactAppReady = await waitForReactApp();
+    if (!reactAppReady) {
+      const i18n = window.i18n || { t: (key) => key };
+      const errorMsg = i18n.t('reactAppNotLoaded') || '錯誤：React 應用尚未載入，無法創建串流容器。請稍候片刻後再試，或重新整理頁面。';
+      alert(errorMsg);
+      return { success: false, message: errorMsg };
+    }
+    
+    // 安全的 addStream 包裝函數（改進版本，支持重試機制）
+    const safeAddStream = async (url, retries = 3) => {
+      // 再次確認 React 應用已載入（檢查 _reactAddStreamReady 標記）
+      if (window.addStream && typeof window.addStream === 'function' && window._reactAddStreamReady === true) {
+        try {
+          // 確保調用的是 React 版本
+          return await window.addStream(url);
+        } catch (error) {
+          // 如果調用失敗且還有重試次數，等待後重試
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return await safeAddStream(url, retries - 1);
+          }
+          throw error;
+        }
+      } else {
+        // React 應用尚未準備好，嘗試等待並重試
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return await safeAddStream(url, retries - 1);
+        } else {
+          const i18n = window.i18n || { t: (key) => key };
+          const errorMsg = i18n.t('reactAppNotLoaded') || '錯誤：React 應用尚未載入，無法創建串流容器。請稍候片刻後再試，或重新整理頁面。';
+          console.error('safeAddStream failed:', errorMsg);
+          throw new Error(errorMsg);
+        }
+      }
+    };
+    
     // 對於 YouTube 頻道，如果正在直播且有 liveVideoId，使用直播 URL
     if (item.platform === 'youtube') {
       if (item.isLive === true && item.liveVideoId) {
         // 使用保存的直播網址（優先使用 liveUrl，如果沒有則構建）
         const liveUrl = item.liveUrl || `https://www.youtube.com/watch?v=${item.liveVideoId}`;
-        addStream(liveUrl);
+        await safeAddStream(liveUrl);
         return { success: true };
       } else if (item.channelId) {
         // 如果沒有直播，但 URL 是 /live 格式，先檢查是否有新的直播
@@ -1024,7 +1080,7 @@ const favoriteStreams = {
                 if (actualChannelId && actualChannelId.trim() === item.channelId.trim()) {
                   // 頻道 ID 一致，使用直播 URL
                   const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
-                  addStream(liveUrl);
+                  await safeAddStream(liveUrl);
                   
                   // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                   const list = favoriteStreams.getList();
@@ -1055,7 +1111,7 @@ const favoriteStreams = {
               } catch (verifyError) {
                 // 驗證失敗，但繼續使用直播 URL（可能是 API 錯誤）
                 const liveUrl = `https://www.youtube.com/watch?v=${status.liveVideoId}`;
-                addStream(liveUrl);
+                await safeAddStream(liveUrl);
                 
                 // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                 const list = favoriteStreams.getList();
@@ -1099,7 +1155,7 @@ const favoriteStreams = {
                   if (actualChannelId && actualChannelId.trim() === item.channelId.trim()) {
                     // 頻道 ID 一致，使用直播 URL
                     const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
-                    addStream(liveUrl);
+                    await safeAddStream(liveUrl);
                     
                     // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                     const list = favoriteStreams.getList();
@@ -1129,7 +1185,7 @@ const favoriteStreams = {
                 } catch (verifyError) {
                   // 驗證失敗，但繼續使用直播 URL
                   const liveUrl = `https://www.youtube.com/watch?v=${retryStatus.liveVideoId}`;
-                  addStream(liveUrl);
+                  await safeAddStream(liveUrl);
                   
                   // 更新收藏項目的直播狀態（但不更新收藏的 URL，保持 www.youtube.com/channel/UCxxxxx/live 格式）
                   const list = favoriteStreams.getList();
@@ -1165,18 +1221,18 @@ const favoriteStreams = {
         
         // 如果狀態未知或檢查失敗，嘗試使用原始 URL（可能是 /live URL，無法播放）
         if (item.url) {
-          addStream(item.url);
+          await safeAddStream(item.url);
           return { success: true };
         }
       } else if (item.url) {
         // 如果沒有 channelId，使用原始 URL
-        addStream(item.url);
+        await safeAddStream(item.url);
         return { success: true };
       }
     } else {
       // Twitch 或其他平台，直接使用 URL
       if (item.url) {
-        addStream(item.url);
+        await safeAddStream(item.url);
         return { success: true };
       }
     }

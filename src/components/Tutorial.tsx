@@ -255,6 +255,17 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                         </ul>
                       </li>
                     </ol>
+                    <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'} mb-3`}>
+                      <p className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
+                        {t('tutorial.favorite.batchImport.title')}
+                      </p>
+                      <ol className={`list-decimal list-inside ml-4 space-y-1 text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
+                        <li>{t('tutorial.favorite.batchImport.step1')}</li>
+                        <li>{t('tutorial.favorite.batchImport.step2')}</li>
+                        <li>{t('tutorial.favorite.batchImport.step3')}</li>
+                        <li>{t('tutorial.favorite.batchImport.step4')}</li>
+                      </ol>
+                    </div>
                     <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
                       <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
                         {t('tutorial.favorite.step5')}
@@ -311,12 +322,19 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     title={t('tutorial.backup.title')}
                     content={
                   <>
-                    <ol className="list-decimal list-inside space-y-2">
+                    <ul className="list-disc list-inside space-y-2 mb-3">
                       <li>{t('tutorial.backup.step1')}</li>
                       <li>{t('tutorial.backup.step2')}</li>
-                      <li>{t('tutorial.backup.step3')}</li>
+                    </ul>
+                    <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-green-900/20 border border-green-500/30' : 'bg-green-50 border border-green-200'} mb-3`}>
+                      <p className={`text-sm ${theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>
+                        {t('tutorial.backup.step3')}
+                      </p>
+                    </div>
+                    <ul className="list-disc list-inside space-y-2">
                       <li>{t('tutorial.backup.step4')}</li>
-                    </ol>
+                      <li>{t('tutorial.backup.step5')}</li>
+                    </ul>
                     <Tip theme={theme} text={t('tutorial.backup.tip')} />
                   </>
                 }
@@ -332,7 +350,6 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                       <li>{t('tutorial.controlPanel.step1')}</li>
                       <li>{t('tutorial.controlPanel.step2')}</li>
                       <li>{t('tutorial.controlPanel.step3')}</li>
-                      <li>{t('tutorial.controlPanel.step4')}</li>
                     </ul>
                   </>
                 }

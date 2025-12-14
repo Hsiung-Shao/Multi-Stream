@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import { WelcomeCard } from './components/WelcomeCard';
 import { StreamContainer } from './components/StreamContainer';
 import { ControlPanel } from './components/ControlPanel';
+import { SEO } from './components/SEO';
 
 // 懶加載非關鍵組件（按需載入）
 const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
@@ -328,11 +329,14 @@ export default function App() {
   useEffect(() => {
     (window as any).addStream = handleAddStream;
     (window as any).batchAddStreams = handleBatchAddStreams;
+    // 設置標記，表明 React 版本的 addStream 已經準備好
+    (window as any)._reactAddStreamReady = true;
     return () => {
       // 使用 undefined 而不是 delete，避免刪除不可刪除的屬性
       try {
         (window as any).addStream = undefined;
         (window as any).batchAddStreams = undefined;
+        (window as any)._reactAddStreamReady = false;
       } catch (e) {
         // 如果無法設置為 undefined，則忽略錯誤
       }
@@ -905,34 +909,52 @@ export default function App() {
   // Show Privacy Page
   if (currentPage === 'privacy') {
     return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
-        <PrivacyPage 
-          theme={theme} 
-          onThemeToggle={toggleTheme}
-          onBack={() => setCurrentPage('home')}
-          onNavigateToAbout={() => setCurrentPage('about')}
+      <>
+        <SEO
+          title="隱私權政策 - MultiStream Hub"
+          description="MultiStream Hub 隱私權政策。了解我們如何保護您的隱私，以及我們收集和使用資料的方式。本網站為純前端工具，絕大多數資料僅儲存於您的瀏覽器本地。"
+          keywords="隱私權政策, 隱私保護, 資料安全, MultiStream Hub, 個人資料保護"
+          url="https://multistreaming.org/privacy.html"
         />
-      </Suspense>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+          <PrivacyPage 
+            theme={theme} 
+            onThemeToggle={toggleTheme}
+            onBack={() => setCurrentPage('home')}
+            onNavigateToAbout={() => setCurrentPage('about')}
+          />
+        </Suspense>
+      </>
     );
   }
 
   // Show About Page
   if (currentPage === 'about') {
     return (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
-        <AboutPage 
-          theme={theme} 
-          onThemeToggle={toggleTheme}
-          onBack={() => setCurrentPage('home')}
-          onNavigateToPrivacy={() => setCurrentPage('privacy')}
+      <>
+        <SEO
+          title="關於我們 - MultiStream Hub"
+          description="了解 MultiStream Hub 的功能特色、技術架構和開發者資訊。一個完全免費的多平台直播串流觀看工具，支援 Twitch 和 YouTube。"
+          keywords="關於 MultiStream Hub, 功能特色, 技術架構, 開發者資訊, 多平台直播工具"
+          url="https://multistreaming.org/about.html"
         />
-      </Suspense>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+          <AboutPage 
+            theme={theme} 
+            onThemeToggle={toggleTheme}
+            onBack={() => setCurrentPage('home')}
+            onNavigateToPrivacy={() => setCurrentPage('privacy')}
+          />
+        </Suspense>
+      </>
     );
   }
 
   // Show Home Page
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <>
+      <SEO />
+      <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <Navbar 
         theme={theme} 
         onThemeToggle={toggleTheme} 
@@ -944,29 +966,32 @@ export default function App() {
         onAddStream={handleAddStream}
       />
       
-      {/* Stream Container */}
-      <StreamContainer
-        streams={streams}
-        theme={theme}
-        layoutType={currentLayout}
-        chatLayoutType={chatLayoutType}
-        onRemove={handleRemoveStream}
-        onReload={handleReloadStream}
-        onToggleChat={handleToggleChat}
-        onSeparateChat={handleSeparateChat}
-        onVolumeChange={handleVolumeChange}
-        onStreamDataChange={(id, data) => {
-          setStreams(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
-        }}
-      />
+      {/* Stream Container - Only render when there are streams */}
+      {streams.length > 0 && (
+        <StreamContainer
+          streams={streams}
+          theme={theme}
+          layoutType={currentLayout}
+          chatLayoutType={chatLayoutType}
+          onRemove={handleRemoveStream}
+          onReload={handleReloadStream}
+          onToggleChat={handleToggleChat}
+          onSeparateChat={handleSeparateChat}
+          onVolumeChange={handleVolumeChange}
+          onStreamDataChange={(id, data) => {
+            setStreams(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+          }}
+        />
+      )}
       
-      <div className={`container mx-auto px-4 py-12 ${isPanelCollapsed ? '' : 'pr-[516px]'} transition-all duration-300`}>
+      <div className="container mx-auto px-4 py-4" style={{ position: 'relative', zIndex: 10 }}>
         {streams.length === 0 && (
           <WelcomeCard 
             theme={theme}
             onShowVersionHistory={() => setShowVersionHistory(true)}
             onShowTutorial={() => setShowTutorial(true)}
             onShowAbout={() => setCurrentPage('about')}
+            onNavigateToPrivacy={() => setCurrentPage('privacy')}
           />
         )}
       </div>
@@ -1038,6 +1063,7 @@ export default function App() {
           />
         </Suspense>
       )}
-    </div>
+      </div>
+    </>
   );
 }

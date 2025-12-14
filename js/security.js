@@ -8,10 +8,13 @@
 
 // HTML 转义函数（防止 XSS）
 // [仍在使用] 在 settings.js 中大量使用（生成 HTML 內容）
+// 增強版本：確保所有特殊字符都被正確轉義
 function escapeHtml(text) {
-  if (text == null) return '';
+  if (text == null || text === undefined) return '';
+  // 確保是字符串類型
+  const str = String(text);
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = str;
   return div.innerHTML;
 }
 
@@ -88,20 +91,34 @@ function validateUrl(url) {
 }
 
 // 验证频道 ID/视频 ID（只允许字母、数字、下划线和连字符）
+// 增強版本：更嚴格的驗證以防止注入攻擊
 function validateChannelId(id) {
   if (!id || typeof id !== 'string') {
     return false;
   }
-  // 只允许字母、数字、下划线、连字符，长度限制
-  return /^[a-zA-Z0-9_-]{1,100}$/.test(id);
+  // 移除前後空白
+  const trimmed = id.trim();
+  if (trimmed.length === 0 || trimmed.length > 100) {
+    return false;
+  }
+  // 只允许字母、数字、下划线、连字符，長度限制
+  // 禁止任何可能的注入字符（如 < > " ' / \ 等）
+  return /^[a-zA-Z0-9_-]+$/.test(trimmed);
 }
 
 // 验证视频 ID（YouTube 视频 ID 格式）
+// 增強版本：更嚴格的驗證以防止注入攻擊
 function validateVideoId(id) {
   if (!id || typeof id !== 'string') {
     return false;
   }
+  // 移除前後空白
+  const trimmed = id.trim();
+  if (trimmed.length === 0 || trimmed.length > 100) {
+    return false;
+  }
   // YouTube 视频 ID 通常是 11 个字符，但允许更短或更长的格式（至少 1 个字符）
-  return /^[a-zA-Z0-9_-]{1,100}$/.test(id);
+  // 禁止任何可能的注入字符（如 < > " ' / \ 等）
+  return /^[a-zA-Z0-9_-]+$/.test(trimmed);
 }
 
