@@ -707,6 +707,5 @@ if (typeof window !== 'undefined') {
   window.testAdDisplay = testAdDisplay; // 測試函數（跳過內容檢查）
   
   // 確保在腳本載入時函數就已可用（即使 DOM 未準備好）
-  console.log('廣告管理函數已載入，可使用 testAdDisplay() 測試');
 }
 
