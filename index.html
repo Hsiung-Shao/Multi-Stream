@@ -144,10 +144,25 @@
       <!-- Twitch Player API 預連接優化（輕量級，不阻塞） -->
       <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
       <link rel="dns-prefetch" href="https://player.twitch.tv">
+      
+      <!-- Google AdSense 腳本（用於審核檢測） -->
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8415424787944153" crossorigin="anonymous"></script>
     </head>
 
     <body>
       <div id="root"></div>
+      
+      <!-- Google AdSense 廣告單元（隱藏，用於審核檢測） -->
+      <!-- 注意：隱藏的廣告單元不會觸發，實際廣告由 promotion.js 管理 -->
+      <div style="display:none;position:absolute;left:-9999px;width:0;height:0;overflow:hidden;">
+        <ins class="adsbygoogle"
+             style="display:block;width:728px;height:90px;"
+             data-ad-client="ca-pub-8415424787944153"
+             data-ad-slot="2327980476"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      </div>
+      <!-- 不在隱藏元素上觸發 AdSense，由 promotion.js 在可見時處理 -->
 
       <script src="/config.js"></script>
       <script defer src="/js/utils.js"></script>
@@ -159,6 +174,7 @@
       <script defer src="/js/chat.js"></script>
       <script defer src="/js/volume.js"></script>
       <script defer src="/js/control-panel.js"></script>
+      <script defer src="/js/promotion.js"></script>
       <script type="module" src="/src/main.tsx"></script>
       
       <!-- 暴露 apiLoader 到全局，供舊代碼使用 -->

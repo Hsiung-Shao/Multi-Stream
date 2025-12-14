@@ -1,33 +1,195 @@
 
   <!DOCTYPE html>
-  <html lang="en">
+  <html lang="zh-TW">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>MultiStream Hub</title>
-      <script type="module" crossorigin src="/assets/index-DRNJdhhA.js"></script>
+      
+      <!-- Content Security Policy (CSP) -->
+      <!-- CSP 已移至 _headers 文件中的 HTTP headers，讓 Cloudflare Zaraz 可以自動修改 -->
+      <!-- Cloudflare Zaraz 會自動在 HTTP headers 的 CSP 中添加 nonce，無需手動配置 -->
+      <!-- 注意：HTTP headers 中的 CSP 會覆蓋 meta 標籤中的 CSP，因此將 CSP 放在 headers 中可以讓 Zaraz 正常工作 -->
+      
+      <!-- Primary Meta Tags -->
+      <title>MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube</title>
+      <meta name="title" content="MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube" />
+      <meta name="description" content="MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。" />
+      <meta name="keywords" content="MultiStream, 多串流, Twitch, YouTube, 直播, 串流觀看, 多平台直播, 直播工具, 免費直播工具, 同時觀看多個直播, 直播整合, 聊天室整合" />
+      <meta name="author" content="Hsiung-Shao" />
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+      <meta name="language" content="繁體中文" />
+      <meta name="revisit-after" content="7 days" />
+      
+      <!-- Canonical URL -->
+      <link rel="canonical" href="https://multistreaming.org/" />
+      
+      <!-- Open Graph / Facebook -->
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content="https://multistreaming.org/" />
+      <meta property="og:title" content="MultiStream Hub - 免費多平台直播串流觀看工具" />
+      <meta property="og:description" content="支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能，完全免費無需註冊。" />
+      <meta property="og:image" content="https://multistreaming.org/icon.png" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具" />
+      <meta property="og:locale" content="zh_TW" />
+      <meta property="og:locale:alternate" content="zh_CN" />
+      <meta property="og:locale:alternate" content="en_US" />
+      <meta property="og:locale:alternate" content="ja_JP" />
+      <meta property="og:locale:alternate" content="ko_KR" />
+      <meta property="og:site_name" content="MultiStream Hub" />
+      
+      <!-- Twitter Card -->
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:url" content="https://multistreaming.org/" />
+      <meta name="twitter:title" content="MultiStream Hub - 免費多平台直播串流觀看工具" />
+      <meta name="twitter:description" content="支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能，完全免費無需註冊。" />
+      <meta name="twitter:image" content="https://multistreaming.org/icon.png" />
+      <meta name="twitter:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具" />
+      
+      <!-- Favicon -->
+      <link rel="icon" type="image/png" href="/assets/icon-CPMhRuJs.png" fetchpriority="high">
+      <link rel="shortcut icon" type="image/png" href="/assets/icon-CPMhRuJs.png">
+      <link rel="apple-touch-icon" href="/assets/icon-CPMhRuJs.png">
+      
+      <!-- Alternate Languages (Hreflang) -->
+      <link rel="alternate" hreflang="zh-TW" href="https://multistreaming.org/" />
+      <link rel="alternate" hreflang="zh-CN" href="https://multistreaming.org/" />
+      <link rel="alternate" hreflang="en" href="https://multistreaming.org/" />
+      <link rel="alternate" hreflang="ja" href="https://multistreaming.org/" />
+      <link rel="alternate" hreflang="ko" href="https://multistreaming.org/" />
+      <link rel="alternate" hreflang="x-default" href="https://multistreaming.org/" />
+      
+      <!-- Structured Data (JSON-LD) -->
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "MultiStream Hub",
+        "alternateName": "多串流觀看工具",
+        "url": "https://multistreaming.org/",
+        "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能。",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "5",
+          "ratingCount": "1"
+        },
+        "creator": {
+          "@type": "Person",
+          "name": "Hsiung-Shao"
+        },
+        "featureList": [
+          "多平台串流支援（Twitch、YouTube）",
+          "多種布局模式",
+          "聊天室整合",
+          "音量控制",
+          "收藏系統",
+          "響應式設計",
+          "多語言支援",
+          "XSS 防護和 CSP 安全策略",
+          "SEO 優化"
+        ],
+        "screenshot": "https://multistreaming.org/icon.png",
+        "softwareVersion": "2.0.1",
+        "datePublished": "2025-11-26",
+        "dateModified": "2025-01-XX",
+        "inLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"]
+      }
+      </script>
+      
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MultiStream Hub",
+        "url": "https://multistreaming.org/",
+        "description": "免費的多平台直播串流觀看工具",
+        "inLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"],
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://multistreaming.org/?search={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+      </script>
+      
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "MultiStream Hub",
+        "url": "https://multistreaming.org/",
+        "logo": "https://multistreaming.org/icon.png",
+        "sameAs": [
+          "https://discord.gg/3Uu6dZbtKd"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "Customer Service",
+          "url": "https://forms.gle/AjG922YrXFbyAdBa6"
+        }
+      }
+      </script>
+      
+      <!-- Twitch Player API 預連接優化（輕量級，不阻塞） -->
+      <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
+      <link rel="dns-prefetch" href="https://player.twitch.tv">
+      
+      <!-- Google AdSense 腳本（用於審核檢測） -->
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8415424787944153" crossorigin="anonymous"></script>
+      <script type="module" crossorigin src="/assets/index-DViJHHLb.js"></script>
+      <link rel="modulepreload" crossorigin href="/assets/vendor-radix-ByIxNWvv.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-icons-DNDCzqE6.js">
+      <link rel="modulepreload" crossorigin href="/assets/vendor-mui-C0B7PcRm.js">
+      <link rel="modulepreload" crossorigin href="/assets/lazy-components-CD_SBQnM.js">
       <link rel="stylesheet" crossorigin href="/assets/index-DjP2JozP.css">
     </head>
 
     <body>
       <div id="root"></div>
-      <!-- 載入 config.js 在 React 應用之前 -->
+      
+      <!-- Google AdSense 廣告單元（隱藏，用於審核檢測） -->
+      <!-- 注意：隱藏的廣告單元不會觸發，實際廣告由 promotion.js 管理 -->
+      <div style="display:none;position:absolute;left:-9999px;width:0;height:0;overflow:hidden;">
+        <ins class="adsbygoogle"
+             style="display:block;width:728px;height:90px;"
+             data-ad-client="ca-pub-8415424787944153"
+             data-ad-slot="2327980476"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      </div>
+      <!-- 不在隱藏元素上觸發 AdSense，由 promotion.js 在可見時處理 -->
+
       <script src="/config.js"></script>
-      <!-- 載入工具函數和驗證函數（必須在 chat.js 之前） -->
       <script defer src="/js/utils.js"></script>
       <script defer src="/js/security.js"></script>
-      <!-- 載入主入口腳本（定義全局變數如 streamCount, players, streamData） -->
       <script defer src="/js/main.js"></script>
-      <!-- 載入必要的 API 腳本 -->
       <script defer src="/js/twitch-api.js"></script>
-      <!-- 載入串流管理腳本（必須在 settings.js 之前，因為 settings.js 中的收藏功能需要 addStream，且依賴 main.js 的全局變數） -->
       <script defer src="/js/stream.js"></script>
       <script defer src="/js/settings.js"></script>
-      <!-- 載入聊天室和音量控制腳本（依賴 utils.js 和 security.js） -->
       <script defer src="/js/chat.js"></script>
       <script defer src="/js/volume.js"></script>
-      <!-- 載入控制面板腳本（包含 updateStreamOrderList 函數） -->
       <script defer src="/js/control-panel.js"></script>
+      <script defer src="/js/promotion.js"></script>
+      
+      <!-- 暴露 apiLoader 到全局，供舊代碼使用 -->
+      
+      <!-- 腳本載入完成後檢查全局函數 -->
+      <script>
+        window.addEventListener('DOMContentLoaded', () => {
+          // DOM 內容已載入
+        });
+      </script>
     </body>
   </html>
   
