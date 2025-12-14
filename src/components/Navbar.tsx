@@ -441,15 +441,96 @@ export function Navbar({
               </Drawer>
             </>
           ) : (
-            /* Desktop: Links */
-            <div className="flex items-center gap-4">
-              {onShowAbout && (
+            /* Desktop: Icon, Title, and Links */
+            <>
+              {/* Icon and Title - 桌面版最左側 */}
+              <div className="flex items-center gap-2">
+                <img src="/icon.png" alt="MultiStream Hub" className="w-6 h-6" />
+                <span className={`font-medium text-lg ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  MultiStream Hub
+                </span>
+              </div>
+              
+              {/* Links */}
+              <div className="flex items-center gap-4">
+                {onShowAbout && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <MuiButton
+                        variant="text"
+                        size="small"
+                        onClick={onShowAbout}
+                        color="secondary"
+                        sx={{
+                          color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                          '&:hover': {
+                            color: theme === 'dark' ? '#ffffff' : '#000000',
+                            bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                          },
+                        }}
+                      >
+                        {t('navbar.about')}
+                      </MuiButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t('navbar.about')}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {onShowTutorial && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <MuiButton
+                        variant="text"
+                        size="small"
+                        onClick={onShowTutorial}
+                        color="secondary"
+                        sx={{
+                          color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                          '&:hover': {
+                            color: theme === 'dark' ? '#ffffff' : '#000000',
+                            bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                          },
+                        }}
+                      >
+                        {t('navbar.tutorial')}
+                      </MuiButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t('navbar.tutorial')}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {onShowVersionHistory && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <MuiButton
+                        variant="text"
+                        size="small"
+                        onClick={onShowVersionHistory}
+                        color="secondary"
+                        sx={{
+                          color: theme === 'dark' ? '#d1d5db' : '#4b5563',
+                          '&:hover': {
+                            color: theme === 'dark' ? '#ffffff' : '#000000',
+                            bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
+                          },
+                        }}
+                      >
+                        {t('navbar.versionHistory')}
+                      </MuiButton>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{t('navbar.versionHistory')}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <MuiButton
                       variant="text"
                       size="small"
-                      onClick={onShowAbout}
+                      onClick={() => window.open('https://docs.google.com/forms/d/e/1FAIpQLSfCBlVZgTwiz-_PEVgkJkPUYHfJyz0Dowln2njQoWcMzit6Ow/viewform', '_blank')}
                       color="secondary"
                       sx={{
                         color: theme === 'dark' ? '#d1d5db' : '#4b5563',
@@ -459,92 +540,15 @@ export function Navbar({
                         },
                       }}
                     >
-                      {t('navbar.about')}
+                      {t('navbar.feedback')}
                     </MuiButton>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{t('navbar.about')}</p>
+                    <p>{t('navbar.feedback')}</p>
                   </TooltipContent>
                 </Tooltip>
-              )}
-              {onShowTutorial && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <MuiButton
-                      variant="text"
-                      size="small"
-                      onClick={onShowTutorial}
-                      color="secondary"
-                      sx={{
-                        color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                        '&:hover': {
-                          color: theme === 'dark' ? '#ffffff' : '#000000',
-                          bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                        },
-                      }}
-                    >
-                      {t('navbar.tutorial')}
-                    </MuiButton>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t('navbar.tutorial')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              {onShowVersionHistory && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <MuiButton
-                      variant="text"
-                      size="small"
-                      onClick={onShowVersionHistory}
-                      color="secondary"
-                      sx={{
-                        color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                        '&:hover': {
-                          color: theme === 'dark' ? '#ffffff' : '#000000',
-                          bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                        },
-                      }}
-                    >
-                      {t('navbar.versionHistory')}
-                    </MuiButton>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t('navbar.versionHistory')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <MuiButton
-                    variant="text"
-                    size="small"
-                    onClick={() => window.open('https://docs.google.com/forms/d/e/1FAIpQLSfCBlVZgTwiz-_PEVgkJkPUYHfJyz0Dowln2njQoWcMzit6Ow/viewform', '_blank')}
-                    color="secondary"
-                    sx={{
-                      color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                      '&:hover': {
-                        color: theme === 'dark' ? '#ffffff' : '#000000',
-                        bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                      },
-                    }}
-                  >
-                    {t('navbar.feedback')}
-                  </MuiButton>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('navbar.feedback')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          )}
-          
-          {/* Title - 手機版隱藏，桌面版顯示 */}
-          {!isMobile && (
-            <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-              MultiStream Hub
-            </span>
+              </div>
+            </>
           )}
         </div>
 
