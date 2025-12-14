@@ -329,11 +329,14 @@ export default function App() {
   useEffect(() => {
     (window as any).addStream = handleAddStream;
     (window as any).batchAddStreams = handleBatchAddStreams;
+    // 設置標記，表明 React 版本的 addStream 已經準備好
+    (window as any)._reactAddStreamReady = true;
     return () => {
       // 使用 undefined 而不是 delete，避免刪除不可刪除的屬性
       try {
         (window as any).addStream = undefined;
         (window as any).batchAddStreams = undefined;
+        (window as any)._reactAddStreamReady = false;
       } catch (e) {
         // 如果無法設置為 undefined，則忽略錯誤
       }

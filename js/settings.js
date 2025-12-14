@@ -1001,16 +1001,17 @@ const favoriteStreams = {
       return { success: false, message: i18n.t('invalidFavoriteItem') };
     }
     
-    // 等待 React 應用載入（最多等待 5 秒）
+    // 等待 React 應用載入（最多等待 10 秒）
     const waitForReactApp = async () => {
-      const maxWaitTime = 5000; // 最多等待 5 秒
+      const maxWaitTime = 10000; // 最多等待 10 秒
       const checkInterval = 100; // 每 100ms 檢查一次
       const startTime = Date.now();
       
       while (Date.now() - startTime < maxWaitTime) {
-        // 檢查 React 版本的 addStream 是否存在且不是舊版本的 addStream
-        if (window.addStream && typeof window.addStream === 'function') {
-          // 如果 window.addStream 存在且是函數，說明 React 應用已載入
+        // 檢查 React 版本的 addStream 是否已經準備好
+        // 關鍵：檢查 window.addStream 是否存在，並且檢查 _reactAddStreamReady 標記
+        // 這個標記在 React 應用設置 window.addStream 時會同時設置
+        if (window.addStream && typeof window.addStream === 'function' && window._reactAddStreamReady === true) {
           return true;
         }
         await new Promise(resolve => setTimeout(resolve, checkInterval));
@@ -1029,8 +1030,9 @@ const favoriteStreams = {
     
     // 安全的 addStream 包裝函數
     const safeAddStream = async (url) => {
-      // 再次確認 React 應用已載入
-      if (window.addStream && typeof window.addStream === 'function') {
+      // 再次確認 React 應用已載入（檢查 _reactAddStreamReady 標記）
+      if (window.addStream && typeof window.addStream === 'function' && window._reactAddStreamReady === true) {
+        // 確保調用的是 React 版本
         return await window.addStream(url);
       } else {
         const i18n = window.i18n || { t: (key) => key };
