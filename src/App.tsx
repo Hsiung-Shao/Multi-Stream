@@ -54,7 +54,8 @@ export default function App() {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
-  const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [streams, setStreams] = useState<StreamData[]>([]);
   const streamCountRef = useRef(0);
   
@@ -964,6 +965,7 @@ export default function App() {
         onShowFavorites={() => setShowFavorites(true)}
         onTogglePanel={() => setIsPanelCollapsed(!isPanelCollapsed)}
         onAddStream={handleAddStream}
+        onSearchFocusChange={setIsSearchFocused}
       />
       
       {/* Stream Container - Only render when there are streams */}
@@ -1000,6 +1002,7 @@ export default function App() {
         theme={theme}
         isCollapsed={isPanelCollapsed}
         onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}
+        isSearchFocused={isSearchFocused}
         onShowFavorites={() => setShowFavorites(true)}
         onShowVersionHistory={() => setShowVersionHistory(true)}
         onShowTutorial={() => setShowTutorial(true)}

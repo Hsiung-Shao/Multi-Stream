@@ -1,5 +1,6 @@
 import { Shield, Mail, MessageSquare, ExternalLink, Info, BookOpen, History, Heart, Users } from 'lucide-react';
 import { useI18n } from '../i18n/index';
+import { useMediaQuery, useTheme } from '@mui/material';
 
 interface WelcomeCardProps {
   theme: 'light' | 'dark';
@@ -11,12 +12,17 @@ interface WelcomeCardProps {
 
 export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onShowAbout, onNavigateToPrivacy }: WelcomeCardProps) {
   const { t } = useI18n();
+  const muiTheme = useTheme();
+  // 使用 'md' breakpoint 來判斷手機版垂直布局（用於 order 調整）
+  // 但布局本身使用 Tailwind 的響應式類，確保桌面版正確顯示 2 列
+  const isMobileVertical = useMediaQuery(muiTheme.breakpoints.down('md'));
+  
   return (
     <div className="w-full max-w-[1400px] mx-auto">
-      {/* Main Layout - Left/Right Split */}
-      <div className="grid gap-6 mb-6" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-        {/* Left Column - Main Welcome Card */}
-        <div className="xl:col-span-2">
+      {/* Main Layout - Mobile: 1 column (flex-col), Desktop: 2 columns (grid-cols-2) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Left Column - Main Welcome Card - Always First */}
+        <div className={isMobileVertical ? 'order-1' : ''}>
           <div className={`${theme === 'dark' ? 'bg-gradient-to-br from-purple-900/20 to-blue-900/20' : 'bg-gradient-to-br from-purple-50 to-blue-50'} rounded-lg border ${theme === 'dark' ? 'border-purple-500/30' : 'border-purple-200'} p-8 shadow-xl`}>
             {/* Header */}
             <div className="mb-6">
@@ -97,8 +103,8 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
           </div>
         </div>
 
-        {/* Right Column - Sidebar Sections */}
-        <div className="xl:col-span-1 space-y-6">
+        {/* Right Column - Sidebar Sections - Mobile: Second, Desktop: Right */}
+        <div className={`space-y-6 ${isMobileVertical ? 'order-2' : ''}`}>
           {/* Quick Navigation - First */}
           <div className={`${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'} rounded-lg border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'} p-6 shadow-lg`}>
             <div className="flex items-center gap-3 mb-4">
