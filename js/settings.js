@@ -3008,9 +3008,9 @@ let favoriteLiveStatusInterval = null;
 let youtubeCheckInterval = null;
 
 // 啟動定期自動刷新
-// Twitch 和 YouTube: 使用相同的刷新間隔（預設每 5 分鐘）
+// Twitch 和 YouTube: 使用相同的刷新間隔（預設每 25 分鐘）
 // 已移除時間限制，每次調用都會檢查所有頻道狀態
-function startFavoriteLiveStatusAutoRefresh(intervalMinutes = 5) {
+function startFavoriteLiveStatusAutoRefresh(intervalMinutes = 25) {
   // 清除現有的定時器
   if (favoriteLiveStatusInterval) {
     clearInterval(favoriteLiveStatusInterval);

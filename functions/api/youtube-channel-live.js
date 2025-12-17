@@ -1,9 +1,9 @@
-// Cloudflare Pages Function: YouTube 頻道 /live 端點代理（強化版：不使用 YouTube Data API）
-// 目的：
-// 1) 透過 /channel/{id}/live 找候選 watch?v=
+// Cloudflare Pages Function: YouTube 頻道直播偵測（強化版：不使用 YouTube Data API）
+// 目標：
+// 1) 多入口拿候選 watch?v=（/live + 頻道首頁）
 // 2) 一旦拿到 watch?v=，立刻抓 watch HTML 解析「影片所屬 channelId + isLive/isUpcoming」
-// 3) 僅在 channelId match 且 isLiveNow 才回 LIVE（Fail-Closed）
-// 4) 避免 redirect/consent/地區限制造成誤判或播到別人的台
+// 3) 只有 channelId match 且 isLiveNow 才回 LIVE（Fail-Closed）
+// 4) 排程直播（UPCOMING）會被標記，但不當作 LIVE（避免誤加串流）
 
 export async function onRequestGet(contextOrRequest, env) {
   let request, envObj;
@@ -31,6 +31,7 @@ export async function onRequestOptions() {
 }
 
 const MAX_REDIRECTS = 6;
+const MAX_CANDIDATES_TO_VERIFY = 3;
 
 // --- 通用 headers：讓 YouTube 回比較容易解析的 HTML ---
 function baseHtmlHeaders(extra = {}) {
@@ -40,6 +41,8 @@ function baseHtmlHeaders(extra = {}) {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
     'Cache-Control': 'no-store',
+    // 有些情境會被導去 consent/interstitial；這個 cookie 有時可降低干擾（非保證）
+    'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+917;',
     ...extra
   };
 }
@@ -53,7 +56,6 @@ function jsonHeaders() {
 
 function withCommonQuery(urlStr) {
   // 盡量降低 consent/語系差異造成解析困難（非保證，但實務提升穩定度）
-  // ucbcb=1 常見用法：降低 consent redirect 干擾
   const u = new URL(urlStr);
   if (!u.searchParams.has('ucbcb')) u.searchParams.set('ucbcb', '1');
   if (!u.searchParams.has('hl')) u.searchParams.set('hl', 'en');
@@ -73,12 +75,10 @@ async function fetchHtml(url, { redirect = 'follow', headers = {} } = {}) {
   return { resp, text };
 }
 
-// --- 解析 ytInitialPlayerResponse (watch 頁最可靠) ---
+// ------------------------------
+// Watch 頁解析（ytInitialPlayerResponse）
+// ------------------------------
 function tryExtractJsonAssignment(html, varName) {
-  // 支援多種常見型態：
-  // 1) var ytInitialPlayerResponse = {...};
-  // 2) ytInitialPlayerResponse = {...};
-  // 3) "ytInitialPlayerResponse": {...}  (較少，但存在於某些內嵌 JSON)
   const needles = [
     `var ${varName} =`,
     `${varName} =`,
@@ -95,7 +95,7 @@ function tryExtractJsonAssignment(html, varName) {
     try {
       return JSON.parse(jsonStr);
     } catch {
-      // 解析失敗就試下一種 needle
+      // keep trying
     }
   }
 
@@ -103,7 +103,6 @@ function tryExtractJsonAssignment(html, varName) {
 }
 
 function extractJsonObjectByBraceMatching(text, startIndex) {
-  // 從 startIndex 開始，找到第一個 '{'，然後做大括號配對
   const firstBrace = text.indexOf('{', startIndex);
   if (firstBrace === -1) return null;
 
@@ -142,28 +141,41 @@ function extractJsonObjectByBraceMatching(text, startIndex) {
 }
 
 function parseWatchHtml(html) {
-  // 核心：watch 頁的 ytInitialPlayerResponse 裡通常有 videoDetails.channelId
   const ipr = tryExtractJsonAssignment(html, 'ytInitialPlayerResponse');
   const vd = ipr?.videoDetails || null;
 
-  const videoId = vd?.videoId || null;
-  const channelId = vd?.channelId || null;
+  let videoId = vd?.videoId || null;
+  let channelId = vd?.channelId || null;
 
-  // live / upcoming
+  // fallback：有些頁面 videoDetails 不完整，但 html 仍可能有 channelId
+  if (!channelId) {
+    const m1 = html.match(/"channelId":"(UC[a-zA-Z0-9_-]{22})"/);
+    if (m1) channelId = m1[1];
+    if (!channelId) {
+      const m2 = html.match(/itemprop="channelId"\s+content="(UC[a-zA-Z0-9_-]{22})"/);
+      if (m2) channelId = m2[1];
+    }
+  }
+  if (!videoId) {
+    const mv = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+    if (mv) videoId = mv[1];
+  }
+
   const mf = ipr?.microformat?.playerMicroformatRenderer;
   const liveDetails = mf?.liveBroadcastDetails;
 
   const isLiveNow =
     liveDetails?.isLiveNow === true ||
-    ipr?.playabilityStatus?.status === 'LIVE_STREAM';
+    ipr?.playabilityStatus?.status === 'LIVE_STREAM' ||
+    /"playabilityStatus":\{"status":"LIVE_STREAM"/.test(html);
 
   const isUpcoming =
-    liveDetails?.isUpcoming === true;
+    liveDetails?.isUpcoming === true ||
+    /"isUpcoming":true/.test(html);
 
-  // 額外：同意頁/年齡限制頁通常沒有 videoDetails
   const looksLikeConsent =
     html.includes('consent.youtube.com') ||
-    html.includes('consent') && html.includes('Continue') && !channelId;
+    (html.includes('consent') && html.includes('Continue') && !channelId);
 
   return {
     videoId,
@@ -174,69 +186,12 @@ function parseWatchHtml(html) {
   };
 }
 
-// --- 你原本的 /live HTML 解析（保留：拿候選 videoId 用） ---
-async function checkYouTubeChannelLiveFromHTML(channelId, html) {
-  const vidMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
-  const videoId = vidMatch ? vidMatch[1] : null;
-
-  const isActuallyLive =
-    /"isUpcoming":false[^}]*"isLive":true/.test(html) ||
-    /"isLive":true[^}]*"isUpcoming":false/.test(html);
-
-  if (isActuallyLive && videoId) {
-    return {
-      status: 'LIVE',
-      videoId,
-      finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
-      message: '開台中',
-      method: 'HTML_PARSE_LIVE'
-    };
-  }
-
-  const isUpcoming = html.includes('"isUpcoming":true') || /"isUpcoming":true/.test(html);
-  if (isUpcoming) {
-    return {
-      status: 'UPCOMING',
-      videoId,
-      finalUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : null,
-      message: '待機中（首播尚未開始）',
-      method: 'HTML_PARSE_UPCOMING'
-    };
-  }
-
-  const hasLiveMarkers =
-    html.includes('"isLive":true') ||
-    html.includes('isLiveBroadcast') ||
-    /"playabilityStatus":{"status":"LIVE_STREAM"/.test(html);
-
-  if (hasLiveMarkers && videoId) {
-    // 這裡先不直接宣告 LIVE（因為 /live 頁不一定可信）
-    // 只提供候選 videoId 給後續 watch 驗證使用
-    return {
-      status: 'CANDIDATE',
-      videoId,
-      finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
-      message: '偵測到可能直播（待 watch 驗證）',
-      method: 'HTML_PARSE_CANDIDATE'
-    };
-  }
-
-  return {
-    status: 'OFFLINE',
-    videoId: null,
-    finalUrl: null,
-    message: '未開台',
-    method: 'HTML_PARSE_OFFLINE'
-  };
-}
-
 function extractVideoIdFromWatchUrl(watchUrl) {
   try {
     const u = new URL(watchUrl);
     const v = u.searchParams.get('v');
     if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
   } catch {}
-  // fallback
   const parts = watchUrl.split('v=');
   const vid = parts.length > 1 ? parts[1].split('&')[0] : null;
   return vid && /^[a-zA-Z0-9_-]{11}$/.test(vid) ? vid : null;
@@ -247,7 +202,6 @@ async function verifyWatchUrlAgainstChannel(originalChannelId, watchUrl, stepInf
   const verifiedUrl = withCommonQuery(watchUrl);
 
   const { resp, text } = await fetchHtml(verifiedUrl, { redirect: 'follow' });
-
   stepInfo.watchFetchStatus = resp.status;
 
   if (!resp.ok || !text) {
@@ -292,6 +246,7 @@ async function verifyWatchUrlAgainstChannel(originalChannelId, watchUrl, stepInf
     };
   }
 
+  // ✅ 排程直播：可回傳 upcoming，但外層不把它當 LIVE
   if (w.isLiveNow) {
     return {
       ok: true,
@@ -321,7 +276,193 @@ async function verifyWatchUrlAgainstChannel(originalChannelId, watchUrl, stepInf
   };
 }
 
-// --- 遞迴重導向追蹤（強化：watch 一律走 verify，不再 fallback 假設 LIVE） ---
+// ------------------------------
+// /live 頁解析：只用來拿候選 videoId（不直接宣告 LIVE）
+// ------------------------------
+async function checkYouTubeChannelLiveFromHTML(channelId, html) {
+  const vidMatch = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+  const videoId = vidMatch ? vidMatch[1] : null;
+
+  const isActuallyLive =
+    /"isUpcoming":false[^}]*"isLive":true/.test(html) ||
+    /"isLive":true[^}]*"isUpcoming":false/.test(html);
+
+  if (isActuallyLive && videoId) {
+    return {
+      status: 'CANDIDATE',
+      videoId,
+      finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      message: '偵測到可能直播（/live 標記）',
+      method: 'HTML_PARSE_LIVE_AS_CANDIDATE'
+    };
+  }
+
+  const isUpcoming = /"isUpcoming":true/.test(html);
+  if (isUpcoming && videoId) {
+    return {
+      status: 'UPCOMING',
+      videoId,
+      finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      message: '偵測到排程（/live 標記）',
+      method: 'HTML_PARSE_UPCOMING'
+    };
+  }
+
+  const hasLiveMarkers =
+    html.includes('"isLive":true') ||
+    html.includes('isLiveBroadcast') ||
+    /"playabilityStatus":{"status":"LIVE_STREAM"/.test(html);
+
+  if (hasLiveMarkers && videoId) {
+    return {
+      status: 'CANDIDATE',
+      videoId,
+      finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      message: '偵測到可能直播（待 watch 驗證）',
+      method: 'HTML_PARSE_CANDIDATE'
+    };
+  }
+
+  return {
+    status: 'OFFLINE',
+    videoId: null,
+    finalUrl: null,
+    message: '未開台（/live 解析）',
+    method: 'HTML_PARSE_OFFLINE'
+  };
+}
+
+// ------------------------------
+// 頻道首頁解析：你提出的「從頻道頁 HTML 搜直播連結」入口
+// ------------------------------
+function uniq(arr) {
+  return Array.from(new Set(arr.filter(Boolean)));
+}
+
+function extractCandidatesFromChannelPageHtml(html) {
+  // 1) 優先：抓 LIVE badge 附近的 videoId（最像你截圖那種「直播中」區塊）
+  // 常見結構會出現 thumbnailOverlayTimeStatusRenderer + style LIVE
+  const liveIds = [];
+  const liveBadgeRegex = /thumbnailOverlayTimeStatusRenderer"\s*:\s*\{[^}]*"style"\s*:\s*"LIVE"[^}]*\}[\s\S]{0,800}?"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/g;
+  let m;
+  while ((m = liveBadgeRegex.exec(html)) !== null) {
+    liveIds.push(m[1]);
+    if (liveIds.length >= 8) break;
+  }
+
+  // 2) fallback：如果抓不到 badge，用 isLive/isUpcoming 附近關聯的 videoId
+  const liveJsonRegex = /"isLive"\s*:\s*true[\s\S]{0,500}?"isUpcoming"\s*:\s*false[\s\S]{0,800}?"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/g;
+  while ((m = liveJsonRegex.exec(html)) !== null) {
+    liveIds.push(m[1]);
+    if (liveIds.length >= 12) break;
+  }
+
+  // 3) 排程候選（我們會回報 isUpcoming，但不當 LIVE）
+  const upcomingIds = [];
+  const upcomingRegex = /"isUpcoming"\s*:\s*true[\s\S]{0,800}?"videoId"\s*:\s*"([a-zA-Z0-9_-]{11})"/g;
+  while ((m = upcomingRegex.exec(html)) !== null) {
+    upcomingIds.push(m[1]);
+    if (upcomingIds.length >= 12) break;
+  }
+
+  return {
+    liveVideoIds: uniq(liveIds),
+    upcomingVideoIds: uniq(upcomingIds)
+  };
+}
+
+async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) {
+  const channelHomeUrl = withCommonQuery(`https://www.youtube.com/channel/${channelId}`);
+  const stepInfo = {
+    step: stepBase,
+    requestedUrl: channelHomeUrl,
+    status: null,
+    method: 'CHANNEL_HOME_HTML_PARSE',
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    const { resp, text } = await fetchHtml(channelHomeUrl, { redirect: 'follow' });
+    stepInfo.status = resp.status;
+    if (!resp.ok || !text) {
+      redirectChain.push({ ...stepInfo, message: `channel home fetch failed: ${resp.status}` });
+      return null;
+    }
+
+    const c = extractCandidatesFromChannelPageHtml(text);
+
+    // 先驗證 LIVE 候選
+    for (const vid of c.liveVideoIds.slice(0, MAX_CANDIDATES_TO_VERIFY)) {
+      const watchUrl = withCommonQuery(`https://www.youtube.com/watch?v=${vid}`);
+      const perCandidate = {
+        ...stepInfo,
+        candidateWatch: watchUrl,
+        candidateType: 'LIVE_CANDIDATE'
+      };
+
+      const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, perCandidate);
+
+      redirectChain.push({
+        ...perCandidate,
+        verificationStatus: v.status,
+        verifiedVideoChannelId: v.verifiedVideoChannelId,
+        verifyReason: v.reason,
+        watchFetchStatus: perCandidate.watchFetchStatus
+      });
+
+      if (v.liveStatus === 'LIVE') {
+        return {
+          kind: 'LIVE',
+          videoId: vid,
+          finalUrl: watchUrl,
+          verificationStatus: v.status,
+          verifiedVideoChannelId: v.verifiedVideoChannelId,
+          message: v.reason
+        };
+      }
+    }
+
+    // 再處理 UPCOMING（回報，但不上線）
+    for (const vid of c.upcomingVideoIds.slice(0, MAX_CANDIDATES_TO_VERIFY)) {
+      const watchUrl = withCommonQuery(`https://www.youtube.com/watch?v=${vid}`);
+      const perCandidate = {
+        ...stepInfo,
+        candidateWatch: watchUrl,
+        candidateType: 'UPCOMING_CANDIDATE'
+      };
+
+      const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, perCandidate);
+
+      redirectChain.push({
+        ...perCandidate,
+        verificationStatus: v.status,
+        verifiedVideoChannelId: v.verifiedVideoChannelId,
+        verifyReason: v.reason,
+        watchFetchStatus: perCandidate.watchFetchStatus
+      });
+
+      if (v.liveStatus === 'UPCOMING') {
+        return {
+          kind: 'UPCOMING',
+          videoId: vid,
+          finalUrl: watchUrl,
+          verificationStatus: v.status,
+          verifiedVideoChannelId: v.verifiedVideoChannelId,
+          message: '排程直播（已驗證）'
+        };
+      }
+    }
+
+    return null;
+  } catch (e) {
+    redirectChain.push({ ...stepInfo, message: `channel home fetch error: ${e?.message || 'unknown'}` });
+    return null;
+  }
+}
+
+// ------------------------------
+// redirect 遞迴（保留你原本行為，但不再「看到 watch 就當 LIVE」）
+// ------------------------------
 async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain = []) {
   if (redirects >= MAX_REDIRECTS) {
     return {
@@ -383,8 +524,6 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
 
       if (newUrl.includes('watch?v=')) {
         const videoId = extractVideoIdFromWatchUrl(newUrl);
-
-        // ★核心：watch 一律驗證
         const v = await verifyWatchUrlAgainstChannel(channelId, newUrl, stepInfo);
 
         if (v.liveStatus === 'LIVE') {
@@ -404,14 +543,13 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
             status: 'UPCOMING',
             videoId,
             finalUrl: newUrl,
-            message: v.reason,
+            message: '排程直播（已驗證）',
             verificationStatus: v.status,
             verifiedVideoChannelId: v.verifiedVideoChannelId,
             redirectChain
           };
         }
 
-        // mismatch / verify failed / not live → 一律不回 LIVE
         return {
           status: 'OFFLINE',
           videoId: null,
@@ -450,7 +588,7 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
             status: 'UPCOMING',
             videoId,
             finalUrl,
-            message: v.reason,
+            message: '排程直播（已驗證）',
             verificationStatus: v.status,
             verifiedVideoChannelId: v.verifiedVideoChannelId,
             redirectChain
@@ -468,58 +606,56 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
         };
       }
 
-      // 先用 /live HTML 解析拿候選 videoId（但不直接判 LIVE）
+      // 先用 HTML 解析拿候選 videoId（不直接判 LIVE）
       try {
         const { resp: htmlResp, text: html } = await fetchHtml(requestUrl, { redirect: 'follow' });
         if (htmlResp.ok && html) {
           const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
           stepInfo.redirectSource = htmlCheckResult.method || 'HTML_PARSE';
 
-          if (htmlCheckResult.status === 'LIVE' || htmlCheckResult.status === 'CANDIDATE') {
-            const watchUrl = htmlCheckResult.finalUrl;
-            if (watchUrl && watchUrl.includes('watch?v=')) {
-              const videoId = extractVideoIdFromWatchUrl(watchUrl);
+          if (htmlCheckResult.finalUrl && htmlCheckResult.finalUrl.includes('watch?v=')) {
+            const watchUrl = withCommonQuery(htmlCheckResult.finalUrl);
+            const videoId = extractVideoIdFromWatchUrl(watchUrl);
 
-              const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, stepInfo);
+            const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, stepInfo);
 
-              if (v.liveStatus === 'LIVE') {
-                stepInfo.redirectTo = watchUrl;
-                stepInfo.redirectSource = 'LIVE_FROM_WATCH_VERIFY';
-                return {
-                  status: 'LIVE',
-                  videoId,
-                  finalUrl: watchUrl,
-                  message: v.reason,
-                  verificationStatus: v.status,
-                  verifiedVideoChannelId: v.verifiedVideoChannelId,
-                  redirectChain
-                };
-              }
-
-              if (v.liveStatus === 'UPCOMING') {
-                stepInfo.redirectTo = watchUrl;
-                stepInfo.redirectSource = 'UPCOMING_FROM_WATCH_VERIFY';
-                return {
-                  status: 'UPCOMING',
-                  videoId,
-                  finalUrl: watchUrl,
-                  message: v.reason,
-                  verificationStatus: v.status,
-                  verifiedVideoChannelId: v.verifiedVideoChannelId,
-                  redirectChain
-                };
-              }
-
+            if (v.liveStatus === 'LIVE') {
+              stepInfo.redirectTo = watchUrl;
+              stepInfo.redirectSource = 'LIVE_FROM_WATCH_VERIFY';
               return {
-                status: 'OFFLINE',
-                videoId: null,
-                finalUrl: url,
+                status: 'LIVE',
+                videoId,
+                finalUrl: watchUrl,
                 message: v.reason,
                 verificationStatus: v.status,
                 verifiedVideoChannelId: v.verifiedVideoChannelId,
                 redirectChain
               };
             }
+
+            if (v.liveStatus === 'UPCOMING') {
+              stepInfo.redirectTo = watchUrl;
+              stepInfo.redirectSource = 'UPCOMING_FROM_WATCH_VERIFY';
+              return {
+                status: 'UPCOMING',
+                videoId,
+                finalUrl: watchUrl,
+                message: '排程直播（已驗證）',
+                verificationStatus: v.status,
+                verifiedVideoChannelId: v.verifiedVideoChannelId,
+                redirectChain
+              };
+            }
+
+            return {
+              status: 'OFFLINE',
+              videoId: null,
+              finalUrl: url,
+              message: v.reason,
+              verificationStatus: v.status,
+              verifiedVideoChannelId: v.verifiedVideoChannelId,
+              redirectChain
+            };
           }
 
           if (htmlCheckResult.status === 'OFFLINE') {
@@ -533,13 +669,11 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
               redirectChain
             };
           }
-          // UPCOMING：也讓它走 watch 驗證（上面 candidate 分支已覆蓋）
         }
       } catch {
         // ignore
       }
 
-      // 最後：停在非 watch 頁（通常表示沒開台）
       return {
         status: 'OFFLINE',
         videoId: null,
@@ -604,22 +738,17 @@ async function handleChannelLiveRequest(request) {
       });
     }
 
-    // /live endpoint（加 query 降低干擾）
     const liveUrl = withCommonQuery(`https://www.youtube.com/channel/${channelId}/live`);
+    const redirectChain = [];
 
-    // 優先：抓 /live HTML 取候選 videoId → 再走 watch 驗證
+    // 入口 A：/live HTML → watch 驗證
     try {
       const { resp: htmlResp, text: html } = await fetchHtml(liveUrl, { redirect: 'follow' });
       if (!htmlResp.ok) throw new Error(`HTTP ${htmlResp.status}: ${htmlResp.statusText}`);
 
       const htmlCheckResult = await checkYouTubeChannelLiveFromHTML(channelId, html);
 
-      // 若 /live 看起來有候選 videoId，立刻做 watch 驗證
-      if (
-        (htmlCheckResult.status === 'LIVE' || htmlCheckResult.status === 'UPCOMING' || htmlCheckResult.status === 'CANDIDATE') &&
-        htmlCheckResult.finalUrl &&
-        htmlCheckResult.finalUrl.includes('watch?v=')
-      ) {
+      if (htmlCheckResult.finalUrl && htmlCheckResult.finalUrl.includes('watch?v=')) {
         const candidateWatch = withCommonQuery(htmlCheckResult.finalUrl);
         const videoId = extractVideoIdFromWatchUrl(candidateWatch);
 
@@ -634,57 +763,97 @@ async function handleChannelLiveRequest(request) {
 
         const v = await verifyWatchUrlAgainstChannel(channelId, candidateWatch, stepInfo);
 
-        const responseData = {
-          status: 200,
-          finalUrl: v.liveStatus === 'LIVE' || v.liveStatus === 'UPCOMING' ? candidateWatch : liveUrl,
-          isLive: v.liveStatus === 'LIVE',
-          liveVideoId: v.liveStatus === 'LIVE' ? (videoId || null) : null,
-          scheduledVideoId: v.liveStatus === 'UPCOMING' ? (videoId || null) : null,
-          isUpcoming: v.liveStatus === 'UPCOMING',
-          message: v.reason,
-          method: 'HTML_PARSE + WATCH_VERIFY',
-          verificationStatus: v.status,
-          verifiedVideoChannelId: v.verifiedVideoChannelId,
-          redirectChain: [stepInfo]
-        };
+        // ✅ LIVE
+        if (v.liveStatus === 'LIVE') {
+          return new Response(JSON.stringify({
+            status: 200,
+            finalUrl: candidateWatch,
+            isLive: true,
+            liveVideoId: videoId || null,
+            scheduledVideoId: null,
+            isUpcoming: false,
+            message: v.reason,
+            method: 'HTML_PARSE(/live) + WATCH_VERIFY',
+            verificationStatus: v.status,
+            verifiedVideoChannelId: v.verifiedVideoChannelId,
+            redirectChain: [stepInfo]
+          }), { status: 200, headers: jsonHeaders() });
+        }
 
-        return new Response(JSON.stringify(responseData), { status: 200, headers: jsonHeaders() });
-      }
+        // ✅ UPCOMING：回報但不上線
+        if (v.liveStatus === 'UPCOMING') {
+          return new Response(JSON.stringify({
+            status: 200,
+            finalUrl: liveUrl,
+            isLive: false,
+            liveVideoId: null,
+            scheduledVideoId: videoId || null,
+            isUpcoming: true,
+            message: '排程直播（已驗證，已排除不上線）',
+            method: 'HTML_PARSE(/live) + WATCH_VERIFY',
+            verificationStatus: v.status,
+            verifiedVideoChannelId: v.verifiedVideoChannelId,
+            redirectChain: [stepInfo]
+          }), { status: 200, headers: jsonHeaders() });
+        }
 
-      // /live HTML 明確 OFFLINE
-      if (htmlCheckResult.status === 'OFFLINE') {
-        const responseData = {
-          status: 200,
-          finalUrl: liveUrl,
-          isLive: false,
-          liveVideoId: null,
-          scheduledVideoId: null,
-          isUpcoming: false,
-          message: htmlCheckResult.message,
+        // 若這裡驗證失敗/缺 channelId/consent，繼續走入口 B
+        redirectChain.push(stepInfo);
+      } else if (htmlCheckResult.status === 'OFFLINE') {
+        redirectChain.push({
+          step: 1,
+          requestedUrl: liveUrl,
+          status: htmlResp.status,
           method: htmlCheckResult.method || 'HTML_PARSE',
-          verificationStatus: 'NOT_NEEDED',
-          verifiedVideoChannelId: null,
-          redirectChain: [{
-            step: 1,
-            requestedUrl: liveUrl,
-            status: htmlResp.status,
-            method: htmlCheckResult.method || 'HTML_PARSE',
-            timestamp: new Date().toISOString()
-          }]
-        };
-        return new Response(JSON.stringify(responseData), { status: 200, headers: jsonHeaders() });
+          timestamp: new Date().toISOString(),
+          message: htmlCheckResult.message
+        });
       }
-
-      // 其他情況：走 redirect 遞迴（內含 watch 驗證）
     } catch {
-      // ignore → redirect 遞迴
+      // ignore → 繼續入口 B / redirect
     }
 
-    const result = await checkLiveStatusRecursive(channelId, liveUrl, 0);
+    // 入口 B：頻道首頁 HTML → 候選 → watch 驗證
+    const homeFallback = await tryChannelHomeFallback(channelId, redirectChain, 100);
+    if (homeFallback?.kind === 'LIVE') {
+      return new Response(JSON.stringify({
+        status: 200,
+        finalUrl: homeFallback.finalUrl,
+        isLive: true,
+        liveVideoId: homeFallback.videoId,
+        scheduledVideoId: null,
+        isUpcoming: false,
+        message: homeFallback.message || '開台中（頻道頁入口）',
+        method: 'CHANNEL_HOME_HTML + WATCH_VERIFY',
+        verificationStatus: homeFallback.verificationStatus || 'VERIFIED',
+        verifiedVideoChannelId: homeFallback.verifiedVideoChannelId || channelId,
+        redirectChain
+      }), { status: 200, headers: jsonHeaders() });
+    }
 
+    if (homeFallback?.kind === 'UPCOMING') {
+      return new Response(JSON.stringify({
+        status: 200,
+        finalUrl: liveUrl,
+        isLive: false,
+        liveVideoId: null,
+        scheduledVideoId: homeFallback.videoId,
+        isUpcoming: true,
+        message: '排程直播（頻道頁入口已驗證，已排除不上線）',
+        method: 'CHANNEL_HOME_HTML + WATCH_VERIFY',
+        verificationStatus: homeFallback.verificationStatus || 'VERIFIED',
+        verifiedVideoChannelId: homeFallback.verifiedVideoChannelId || channelId,
+        redirectChain
+      }), { status: 200, headers: jsonHeaders() });
+    }
+
+    // 最後：redirect 遞迴（內含 watch 驗證）
+    const result = await checkLiveStatusRecursive(channelId, liveUrl, 0, redirectChain);
+
+    // ✅ 最終輸出：UPCOMING 一律不當 LIVE（但提供 scheduledVideoId）
     const responseData = {
       status: result.status === 'ERROR' ? 500 : 200,
-      finalUrl: result.finalUrl,
+      finalUrl: result.status === 'LIVE' ? result.finalUrl : liveUrl,
       isLive: result.status === 'LIVE',
       liveVideoId: result.status === 'LIVE' ? (result.videoId || null) : null,
       scheduledVideoId: result.status === 'UPCOMING' ? (result.videoId || null) : null,
@@ -693,17 +862,16 @@ async function handleChannelLiveRequest(request) {
         result.status === 'LIVE'
           ? '開台中'
           : result.status === 'UPCOMING'
-            ? '待機中（首播尚未開始）'
+            ? '排程直播（已排除不上線）'
             : result.status === 'OFFLINE'
               ? '未開台'
               : (result.message || '未知狀態'),
-      method: 'REDIRECT + WATCH_VERIFY',
+      method: 'REDIRECT + WATCH_VERIFY (+ CHANNEL_HOME_FALLBACK)',
       verificationStatus: result.verificationStatus || 'VERIFY_FAILED',
       verifiedVideoChannelId: result.verifiedVideoChannelId || null,
-      redirectChain: result.redirectChain || []
+      redirectChain: result.redirectChain || redirectChain || []
     };
 
-    // 頻道不存在
     if (result.status === 'ERROR' && result.message && result.message.includes('404')) {
       responseData.status = 404;
       responseData.isLive = false;
