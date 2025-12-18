@@ -8,7 +8,7 @@ const enTranslations = {
   'navbar.themeToggle': 'Toggle Theme',
   'navbar.languageSwitch': 'Language',
   'navbar.controlPanel': 'Control Panel',
-  'navbar.sponsor': 'Sponsor Me',
+  'navbar.sponsor': 'Buy Me A Coffee',
   'navbar.searchPlaceholder': 'Search channel or paste stream URL',
   'navbar.addStream': 'Add Stream',
   'navbar.noResults': 'No results found',

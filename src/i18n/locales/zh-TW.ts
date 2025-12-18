@@ -8,7 +8,7 @@ const zhTWTranslations = {
   'navbar.themeToggle': '主題切換',
   'navbar.languageSwitch': '語言切換',
   'navbar.controlPanel': '控制面板',
-  'navbar.sponsor': '贊助我',
+  'navbar.sponsor': 'Buy Me A Coffee',
   'navbar.searchPlaceholder': '搜尋頻道或是開始直播連結',
   'navbar.addStream': '加入畫面',
   'navbar.noResults': '沒有找到結果',
