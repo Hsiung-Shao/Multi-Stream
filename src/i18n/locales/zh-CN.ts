@@ -8,7 +8,7 @@ const zhCNTranslations = {
   'navbar.themeToggle': '主题切换',
   'navbar.languageSwitch': '语言切换',
   'navbar.controlPanel': '控制面板',
-  'navbar.sponsor': '赞助我',
+  'navbar.sponsor': 'Buy Me A Coffee',
   'navbar.searchPlaceholder': '搜索频道或是开始直播链接',
   'navbar.addStream': '加入画面',
   'navbar.noResults': '没有找到结果',

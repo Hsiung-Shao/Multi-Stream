@@ -8,7 +8,7 @@ const jaTranslations = {
   'navbar.themeToggle': 'テーマ切り替え',
   'navbar.languageSwitch': '言語切り替え',
   'navbar.controlPanel': 'コントロールパネル',
-  'navbar.sponsor': 'スポンサー',
+  'navbar.sponsor': 'Buy Me A Coffee',
   'navbar.searchPlaceholder': 'チャンネルを検索またはストリームURLを貼り付け',
   'navbar.addStream': 'ストリームを追加',
   'navbar.noResults': '結果が見つかりません',

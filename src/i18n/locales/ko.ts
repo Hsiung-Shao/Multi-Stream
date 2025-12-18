@@ -8,7 +8,7 @@ const koTranslations = {
   'navbar.themeToggle': '테마 전환',
   'navbar.languageSwitch': '언어',
   'navbar.controlPanel': '제어판',
-  'navbar.sponsor': '후원하기',
+  'navbar.sponsor': 'Buy Me A Coffee',
   'navbar.searchPlaceholder': '채널 검색 또는 스트림 URL 붙여넣기',
   'navbar.addStream': '스트림 추가',
   'navbar.noResults': '결과를 찾을 수 없습니다',
