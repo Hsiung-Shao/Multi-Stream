@@ -3,6 +3,10 @@ import App from "./App.tsx";
 import "./index.css";
 import { apiLoader } from "./utils/apiLoader.ts";
 import { I18nProvider } from "./i18n/index";
+import { initLegacyGlobals } from "./bootstrap/initLegacyGlobals.ts";
+
+// Initialize legacy features (Analytics, Promotion, etc.)
+initLegacyGlobals();
 
 // 優化：只預載入 Twitch Player API（不等待完成，不阻塞應用啟動）
 // YouTube API 將在需要時按需載入
@@ -26,7 +30,7 @@ if (typeof window !== 'undefined' && !(window as any).addStream) {
     const maxWaitTime = 10000;
     const checkInterval = 100;
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < maxWaitTime) {
       // 檢查 React 版本的 addStream 是否已經準備好
       // 注意：不能直接檢查 window.addStream，因為它可能還是占位符函數
@@ -37,13 +41,13 @@ if (typeof window !== 'undefined' && !(window as any).addStream) {
       }
       await new Promise(resolve => setTimeout(resolve, checkInterval));
     }
-    
+
     // 如果等待超時，顯示錯誤提示
     alert('錯誤：React 應用尚未載入，無法創建串流容器。請稍候片刻後再試，或重新整理頁面。');
   };
-  
+
   (window as any).addStream = placeholderAddStream;
-  
+
   // 設置標記，表明這是占位符函數（React 版本會將此標記設為 true）
   (window as any)._reactAddStreamReady = false;
 }
@@ -53,4 +57,3 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </I18nProvider>
 );
-  

@@ -14,6 +14,16 @@
  *
  * Safe: does NOT modify your existing IndexedDB schema.
  */
+/**
+ * [MIGRATED] 
+ * This file has been migrated to TypeScript.
+ * Source: src/features/analytics/IdentityManager.ts
+ * Entry: src/bootstrap/initLegacyGlobals.ts
+ *
+ * Content is preserved for reference but disabled.
+ */
+
+/*
 (() => {
     'use strict';
   
@@ -27,14 +37,14 @@
       DL_APP_KEY: 'ms_app',
       APP_VALUE: 'multistream_hub',
   
-      /**
+      / **
        * Hooks to your existing backup/restore implementation.
        * If you already restore elsewhere (e.g. on app boot), set both to null.
        *
        * Option A (recommended): provide functions on window, e.g.
        *   window.__MS_LOAD_BACKUP__ = async () => {... return backupObjOrNull }
        *   window.__MS_RESTORE_BACKUP__ = (backupObj) => {... writes to localStorage }
-       */
+       * /
       LOAD_BACKUP_FN: '__MS_LOAD_BACKUP__',
       RESTORE_FN: '__MS_RESTORE_BACKUP__',
   
@@ -133,4 +143,4 @@
       boot();
     }
   })();
-  
+*/

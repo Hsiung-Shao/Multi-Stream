@@ -1,3 +1,12 @@
+/**
+ * [MIGRATED]
+ * This file has been migrated to TypeScript.
+ * Source: src/features/promotion/AdManager.ts
+ * Wiring: src/bootstrap/initLegacyGlobals.ts
+ *
+ * Content disabled for cleanup.
+ */
+/*
 // 廣告管理功能
 
 // 廣告配置管理
@@ -676,12 +685,11 @@ function testAdDisplay() {
                   console.log(`廣告單元尺寸不足: width=${Math.round(unitRect.width)}, height=${Math.round(unitRect.height)}`);
                 }
               });
-              console.log('廣告已顯示（測試模式）');
             } else {
               console.log('沒有找到未處理的廣告單元');
             }
           } else {
-            console.log(`廣告容器尺寸不足: width=${rect.width}, height=${rect.height}`);
+            console.log('廣告容器尺寸不足: width=${rect.width}, height=${rect.height}`);
           }
         }
       } catch (error) {
@@ -708,4 +716,4 @@ if (typeof window !== 'undefined') {
   
   // 確保在腳本載入時函數就已可用（即使 DOM 未準備好）
 }
-
+*/
