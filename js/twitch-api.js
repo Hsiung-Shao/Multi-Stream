@@ -1,3 +1,20 @@
+/**
+ * [MIGRATED] Twitch API Service
+ * 
+ * This file has been migrated to TypeScript modules in src/features/twitch/*.
+ * Public API is now exposed via src/bootstrap/initLegacyGlobals.ts
+ * 
+ * Legacy implementation must not be called anymore.
+ * 
+ * Migration Status:
+ * - Config: src/features/twitch/TwitchConfig.ts
+ * - Auth: src/features/twitch/TokenProvider.ts
+ * - Client: src/features/twitch/TwitchClient.ts
+ * - Service: src/features/twitch/TwitchService.ts
+ * - Notifier: src/features/twitch/RateLimitNotifier.ts
+ */
+
+/*
 // Twitch API 服務模組
 // 用於搜尋頻道和查詢開台狀態
 
@@ -905,3 +922,4 @@ if (typeof window !== 'undefined') {
 }
 
 })(); // 結束 IIFE
+*/

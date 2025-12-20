@@ -359,7 +359,14 @@ export class AdManager implements AdManagerContract {
         if (this.config.enabled) this.startCheckTimer();
     }
 
+    // --- Legacy Aliases for Bridge ---
+    public triggerAdManually() { return this.triggerManually(); }
+    public toggleAdEnabled() { return this.toggleEnabled(); }
+    public toggleAdTestMode() { return this.toggleTestMode(); }
+    public closeAdBanner() { return this.closeAd(); }
+
     public isEnabled() { return this.config.enabled; }
+
     public isTestMode() { return this.config.testMode; }
 
     // --- Private ---
