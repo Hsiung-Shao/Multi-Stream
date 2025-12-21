@@ -27,6 +27,10 @@ export class TwitchService implements TwitchApiContract {
     // In-memory cache
     private apiCache = new Map<string, { data: any, timestamp: number }>();
 
+    // Config fetch state
+    private configPromise: Promise<void> | null = null;
+    private configLoaded = false;
+
     // Dependencies are injected for testability, defaulted for production
     constructor(
         configResolver?: ConfigResolverContract,
@@ -43,10 +47,71 @@ export class TwitchService implements TwitchApiContract {
         this.client = client || new TwitchClient(getConfig, this.tokenProvider, this.notifier);
     }
 
+    // --- Private: Lazy Config Loading ---
+
+    private async ensureConfig(): Promise<void> {
+        // Optimization: If loaded or has static client ID, skip
+        if (this.configLoaded) return;
+        const current = this.configResolver.resolve();
+        // If we have a clientId from Env/Storage, we consider it "loaded" enough, 
+        // unless you want to *force* remote config override. 
+        // User requirements: "clientId 缺失時，不要直接 fail... 先嘗試呼叫"
+        if (current.clientId) {
+            this.configLoaded = true;
+            return;
+        }
+
+        // If defined but pending, wait
+        if (this.configPromise) {
+            return this.configPromise;
+        }
+
+        // Start fetch
+        this.configPromise = this.fetchRemoteConfig().finally(() => {
+            this.configPromise = null;
+        });
+
+        await this.configPromise;
+        this.configLoaded = true;
+    }
+
+    private async fetchRemoteConfig(): Promise<void> {
+        const win = (typeof window !== 'undefined' ? window : {}) as any;
+        const debug = !!win.__MS_DEBUG_TWITCH__;
+
+        try {
+            if (debug) console.debug('[TwitchService] Fetching remote config from /api/twitch-config');
+            const res = await fetch('/api/twitch-config');
+            if (!res.ok) {
+                if (debug) console.warn('[TwitchService] Remote config fetch failed:', res.status);
+                return;
+            }
+
+            const data = await res.json();
+            if (debug) console.debug('[TwitchService] Remote config received:', {
+                hasClientId: !!data.clientId,
+                useProxy: data.useProxy
+            });
+
+            if (data.clientId) {
+                this.configResolver.update({
+                    clientId: data.clientId,
+                    // If backend suggests proxy settings
+                    useProxy: data.useProxy ?? true,
+                    proxyUrl: data.proxyBase ?? '/api' // Map proxyBase to proxyUrl logic
+                });
+            }
+        } catch (e) {
+            if (debug) console.warn('[TwitchService] Remote config fetch error:', e);
+            // Don't throw, let legacy logic fail if it must
+        }
+    }
+
     // --- Public API Implementation ---
 
     public async searchChannels(query: string, limit = 10): Promise<ChannelSearchResult[]> {
         if (!query?.trim()) return [];
+        await this.ensureConfig();
 
         const cacheKey = `search_${query}_${limit}`;
         const cached = this.getFromCache<any>(cacheKey);
@@ -69,6 +134,7 @@ export class TwitchService implements TwitchApiContract {
 
     public async checkChannelLiveStatus(channelLogin: string): Promise<LiveStatusResult> {
         if (!channelLogin) return { isLive: null, channelLogin: '' };
+        await this.ensureConfig();
 
         try {
             const data = await this.client.get<any>('/streams', { user_login: channelLogin });
@@ -95,6 +161,7 @@ export class TwitchService implements TwitchApiContract {
 
     public async checkMultipleChannelsLiveStatus(channelLogins: string[]): Promise<Record<string, LiveStatusResult>> {
         if (!channelLogins?.length) return {};
+        await this.ensureConfig();
 
         const BATCH_SIZE = 100;
         const results: Record<string, LiveStatusResult> = {};
@@ -108,49 +175,7 @@ export class TwitchService implements TwitchApiContract {
         for (let i = 0; i < channelLogins.length; i += BATCH_SIZE) {
             const batch = channelLogins.slice(i, i + BATCH_SIZE);
             try {
-                // Note: URLSearchParams handles duplicates via append automatically in Client serializer
-                // Client serializer needs to support array or we pass raw params?
-                // The client.get serializeParams logic assumes basic KV. 
-                // We need to iterate carefully.
-                // However, our Client.serializeParams handles generic objects. 
-                // We need to verify if standard URLSearchParams keeps array values.
-                // It usually does NOT unless you append manually.
-                // Let's pass a special object or adjust client? 
-                // Actually, duplicate keys in fetch params are tricky with plain objects.
-                // Let's modify the calls. For batching, we need to manually construct param string or pass array.
-                // The legacy code manually appends parameters. Not using generic params object.
-                // Let's implement a workaround: pass an object where value is array?
-                // Our client serializer converts everything to string.
-                // Let's do manual query string construction in get? No, that breaks interface.
-                // We will rely on "param duplication" logic.
-
-                // Let's perform requests manually to client but client exposes get(endpoint, params).
-                // If we pass user_login: ['a','b'] to URLSearchParams, it becomes user_login=a,b (comma)
-                // Twitch requires user_login=a&user_login=b.
-
-                // REVISION: The legacy code does manual appending loop. 
-                // New Client should likely handle arrays correctly or we must pass pre-serialized query?
-                // Since interface is `Record<string, any>`, let's make the client smart about arrays.
-
-                // *Self-correction*: I should update TwitchClient to handle arrays if not already done.
-                // But I already wrote TwitchClient. Let's fix Service to handle it or update Client.
-                // I'll update Client behavior in my mind (Client puts k=v). 
-                // If I can't change Client file easily now, I might have a bug.
-                // Wait, I can just use `user_login` repeats? No keys must be unique in Record.
-                // SOLUTION: I will perform multiple requests recursively or hack the params?
-                // Better: I will fix TwitchClient.ts in next step if verification fails, OR assume Client handles arrays.
-                // Legacy code: `queryParams.append('user_login', login)`
-
-                // Let's update `TwitchClient.ts` to handle arrays!
-                // Since I cannot update TwitchClient.ts in this specific tool call (already written),
-                // I will assume I wrote it correctly? No I wrote `out.append(k, String(v))`.
-                // That will result in `user_login=a,b` which FAILs on Twitch API.
-
-                // Workaround for this PR without modifying Client again immediately:
-                // Construct the query string manually in the `endpoint` argument.
-                // `endpoint` = `/streams?user_login=a&user_login=b...`
-                // `params` = {}
-
+                // Manual query construction for repeated keys
                 const qs = new URLSearchParams();
                 batch.forEach(login => qs.append('user_login', login));
                 const endpointWithQuery = `/streams?${qs.toString()}`;

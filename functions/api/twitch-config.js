@@ -25,21 +25,24 @@ export async function onRequestGet(contextOrRequest, env) {
     request = contextOrRequest;
     envObj = env;
   }
-  
+
   return handleConfigRequest(request, envObj);
 }
 
 async function handleConfigRequest(request, env) {
   const requestUrl = request.url;
   const requestMethod = request.method;
-  
+
   try {
     const clientId = env?.TWITCH_CLIENT_ID || null;
 
-    // 返回 Client ID（如果沒有設定則返回 null）
+    // 返回 Client ID 與 Proxy 設定
     return new Response(
       JSON.stringify({
-        clientId: clientId
+        clientId: clientId,
+        // 建議前端在測試環境中預設使用 Proxy
+        useProxy: true,
+        proxyBase: '/api'
       }),
       {
         status: 200,
