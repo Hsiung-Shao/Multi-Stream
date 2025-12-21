@@ -16,35 +16,37 @@ export class TwitchClient implements TwitchClientContract {
 
         this.checkRateLimit(config);
 
-        // Build URL
-        const url = this.buildUrl(endpoint, params, config);
+        // --- DIRECT MODE ENFORCEMENT ---
+        // We do NOT use the generic proxy (/api?endpoint=...) anymore.
+        // We ALWAYS use Direct Twitch Helix URL.
+        const baseUrl = 'https://api.twitch.tv/helix';
+        const url = this.buildUrl(baseUrl, endpoint, params);
 
+        // Headers for Direct API
         const headers: Record<string, string> = {
             'Content-Type': 'application/json'
         };
 
-        // If not using proxy, we need Client-ID and Authorization
-        if (!config.useProxy) {
-            if (!config.clientId) {
-                const msg = 'Missing Client ID (Not using Proxy). Check VITE_TWITCH_CLIENT_ID.';
-                if (debug) console.error(`[TwitchClient] ${msg}`);
-                throw new Error(msg);
-            }
-            headers['Client-ID'] = config.clientId;
+        // 1. Client ID Logic
+        if (!config.clientId) {
+            const msg = 'Missing Client ID. Check /api/twitch-config or VITE_TWITCH_CLIENT_ID.';
+            if (debug) console.error(`[TwitchClient] ${msg}`);
+            throw new Error(msg);
+        }
+        headers['Client-ID'] = config.clientId;
 
-            try {
-                const token = await this.tokenProvider.getAccessToken();
-                headers['Authorization'] = `Bearer ${token}`;
-            } catch (e: any) {
-                if (debug) console.error('[TwitchClient] Token error:', e);
-                throw new Error(`無法取得 Access Token：${e.message || e}`);
-            }
+        // 2. Token Logic
+        try {
+            const token = await this.tokenProvider.getAccessToken();
+            headers['Authorization'] = `Bearer ${token}`;
+        } catch (e: any) {
+            if (debug) console.error('[TwitchClient] Token error:', e);
+            throw new Error(`無法取得 Access Token：${e.message || e}`);
         }
 
         // Debug Request
         if (debug) {
             console.log(`[TwitchClient] GET ${url}`, {
-                useProxy: config.useProxy,
                 headers: { ...headers, Authorization: headers.Authorization ? 'Bearer ******' : undefined }
             });
         }
@@ -57,29 +59,40 @@ export class TwitchClient implements TwitchClientContract {
                 console.log(`[TwitchClient] Response ${res.status} ${res.statusText}`);
             }
 
-            if (!res.ok) {
-                const errBody = await res.text(); // Clone or text? fetch body can execute once.
-                // We passed response to handleError, so wait, reading text here might lock body?
-                // handleError implementation tries to read json or text?
-                // Actually, let's peek body if debug, but cloning res is safer.
-                if (debug) console.log(`[TwitchClient] Error Body (Peek):`, errBody.slice(0, 500));
+            // HTML / SPA Fallback Detection (Hard Check)
+            const contentType = res.headers.get('content-type');
+            if (!res.ok || (contentType && contentType.includes('text/html'))) {
+                const errBody = await res.text();
 
-                // Construct a new response object with same body to pass to handler, or just pass original if we didn't consume it?
-                // Using new Response(errBody, ...) is safest if we consumed it.
-                const safeRes = new Response(errBody, { status: res.status, statusText: res.statusText, headers: res.headers });
-                Object.defineProperty(safeRes, 'url', { value: res.url }); // url is read-only
+                // If body looks like HTML, it's likely a 404 falling back to index.html or Cloudflare error page
+                if (errBody.trim().startsWith('<') || (contentType && contentType.includes('text/html'))) {
+                    const msg = `[TwitchClient] API Error: Received HTML instead of JSON. (Status: ${res.status}). Likely Network Error or SPA Fallback.`;
+                    console.error(msg);
+                    if (debug) console.log('Body Peek:', errBody.slice(0, 80));
+                    throw new Error(msg);
+                }
 
-                return await this.handleError(safeRes, endpoint, params, headers, config);
+                if (!res.ok) {
+                    if (debug) console.log(`[TwitchClient] Error Body (Peek):`, errBody.slice(0, 500));
+                    const safeRes = new Response(errBody, { status: res.status, statusText: res.statusText, headers: res.headers });
+                    Object.defineProperty(safeRes, 'url', { value: res.url });
+                    return await this.handleError(safeRes, endpoint, params, headers, config);
+                }
             }
 
             return await res.json();
-        } catch (e: any) {
-            if (debug) console.error('[TwitchClient] Fetch failed:', e);
-            if (e.message && e.message.includes('API')) throw e; // Rethrow custom errors
-            if (e.name === 'TypeError' && e.message.includes('fetch')) {
-                throw new Error('無法連接到 Twitch API，請檢查網路連線或後端代理設定');
+        } catch (error) {
+            if (debug) console.error('[TwitchClient] Fetch failed:', error);
+            if (error instanceof SyntaxError) {
+                console.error('[TwitchClient] JSON Parse Failed. Response might be HTML/Invalid.', error);
             }
-            throw e;
+            if ((error as Error).message && (error as Error).message.includes('API')) throw error;
+            if ((error as Error).message && (error as Error).message.includes('HTML')) throw error;
+
+            if ((error as Error).name === 'TypeError' && (error as Error).message.includes('fetch')) {
+                throw new Error('無法連接到 Twitch API，請檢查網路連線');
+            }
+            throw error;
         }
     }
 
@@ -92,7 +105,6 @@ export class TwitchClient implements TwitchClientContract {
 
         // Check count
         if (this.requestHistory.length >= limit.maxRequests) {
-            // Find when window resets (oldest request + window)
             const oldest = this.requestHistory[0] || now;
             const resetTime = oldest + limit.windowMs;
             const waitSeconds = Math.ceil((resetTime - now) / 1000);
@@ -112,7 +124,7 @@ export class TwitchClient implements TwitchClientContract {
         config: TwitchApiConfig
     ): Promise<any> {
         // 401 Re-auth
-        if (res.status === 401 && !config.useProxy) {
+        if (res.status === 401) {
             // Force refresh
             try {
                 const newToken = await this.tokenProvider.refreshToken();
@@ -122,15 +134,15 @@ export class TwitchClient implements TwitchClientContract {
                 const win = (typeof window !== 'undefined' ? window : {}) as any;
                 if (win.__MS_DEBUG_TWITCH__) console.log('[TwitchClient] Retrying after 401...');
 
-                const retryUrl = this.buildUrl(endpoint, params, config);
+                const baseUrl = 'https://api.twitch.tv/helix';
+                const retryUrl = this.buildUrl(baseUrl, endpoint, params);
                 const retryRes = await fetch(retryUrl, { method: 'GET', headers: originalHeaders });
+
                 if (retryRes.ok) return await retryRes.json();
             } catch (retryErr) {
                 // Determine error message based on failure
             }
             throw new Error('Twitch API 認證失敗，請檢查 Client ID 和 Client Secret 設定');
-        } else if (res.status === 401) {
-            throw new Error('Twitch API 認證失敗，請檢查後端代理設定');
         }
 
         if (res.status === 429) throw new Error('API 請求過於頻繁，請稍後再試');
@@ -139,19 +151,11 @@ export class TwitchClient implements TwitchClientContract {
         throw new Error(`API 請求失敗：${res.status} ${res.statusText}`);
     }
 
-    private buildUrl(endpoint: string, params: Record<string, any>, config: TwitchApiConfig): string {
+    private buildUrl(baseUrl: string, endpoint: string, params: Record<string, any>): string {
         const query = this.serializeParams(params);
-
-        if (config.useProxy && config.proxyUrl) {
-            // Proxy mode
-            const base = `${config.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
-            return query ? `${base}&${query}` : base;
-        } else {
-            // Direct mode
-            const base = `${config.baseUrl}${endpoint}`;
-            const separator = endpoint.includes('?') ? '&' : '?';
-            return query ? `${base}${separator}${query}` : base;
-        }
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+        return query ? `${baseUrl}${cleanEndpoint}${separator}${query}` : `${baseUrl}${cleanEndpoint}`;
     }
 
     private serializeParams(params: Record<string, any>): string {

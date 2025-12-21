@@ -96,9 +96,9 @@ export class TwitchService implements TwitchApiContract {
             if (data.clientId) {
                 this.configResolver.update({
                     clientId: data.clientId,
-                    // If backend suggests proxy settings
-                    useProxy: data.useProxy ?? true,
-                    proxyUrl: data.proxyBase ?? '/api' // Map proxyBase to proxyUrl logic
+                    // Direct Mode: Force disable proxy even if backend says otherwise (legacy)
+                    useProxy: false,
+                    proxyUrl: ''
                 });
             }
         } catch (e) {
