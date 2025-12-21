@@ -15,7 +15,7 @@ async function addStream(url = null) {
   if (window.addStream && typeof window.addStream === 'function' && window.addStream !== addStream) {
     return await window.addStream(url);
   }
-  
+
   // [已停用] 舊版 DOM 創建方式已完全禁用
   // 如果 React 版本不存在，顯示錯誤提示
   alert('錯誤：React 應用尚未載入，無法創建串流容器。請重新整理頁面。');
@@ -392,11 +392,11 @@ async function addStream(url = null) {
 // 重整串流
 function reloadStream(id) {
   if (!streamData[id]) return;
-  
+
   const data = streamData[id];
   const box = document.getElementById('box' + id);
   if (!box) return;
-  
+
   // 保存當前狀態
   const savedVolume = data.volume || 100;
   const savedChatVisible = data.chatVisible !== undefined ? data.chatVisible : true;
@@ -406,7 +406,7 @@ function reloadStream(id) {
     width: box.style.width,
     height: box.style.height
   };
-  
+
   // 清理現有播放器
   if (players[id]) {
     if (players[id].type === 'youtube' && players[id].player.destroy) {
@@ -414,13 +414,13 @@ function reloadStream(id) {
     }
     delete players[id];
   }
-  
+
   // 清空播放器容器
   const playerContainer = document.getElementById('player' + id);
   if (playerContainer) {
     playerContainer.innerHTML = '';
   }
-  
+
   // 恢復音量設定
   setTimeout(() => {
     const volSlider = box.querySelector('.volume');
@@ -431,7 +431,7 @@ function reloadStream(id) {
         volValue.textContent = savedVolume + '%';
       }
       streamData[id].volume = savedVolume;
-      
+
       // 應用總音量控制
       if (typeof applyMasterVolumeToStream === 'function') {
         setTimeout(() => {
@@ -440,7 +440,7 @@ function reloadStream(id) {
       }
     }
   }, 500);
-  
+
   // 恢復聊天室狀態
   if (!savedChatVisible) {
     setTimeout(() => {
@@ -449,7 +449,7 @@ function reloadStream(id) {
       }
     }, 1000);
   }
-  
+
   // 恢復樣式
   if (savedStyle.left) box.style.left = savedStyle.left;
   if (savedStyle.top) box.style.top = savedStyle.top;
@@ -467,25 +467,30 @@ function removeBox(id) {
       }
       delete players[id];
     }
-    
+
     // 移除分離的聊天室（如果存在）
     const separatedChat = document.getElementById('separated-chat-' + id);
     if (separatedChat) {
       separatedChat.remove();
     }
-    
+
+    // [MIGRATED] 清理 Chat System 資源 (停止 Watchdog)
+    if (window.destroyChat) {
+      window.destroyChat(id);
+    }
+
     delete streamData[id];
     box.remove();
-    
+
     // 更新串流順序列表（检查函数是否已定义）
     if (typeof updateStreamOrderList === 'function') {
       updateStreamOrderList();
     }
-    
+
     // 检查当前布局类型（布局12或13的特征：有chat-sidebar-fixed）
     const chatSidebarFixedAfter = document.getElementById('chat-sidebar-fixed');
     const isFixedLayoutAfter = !!chatSidebarFixedAfter;
-    
+
     // 如果是固定布局，更新框架
     if (isFixedLayoutAfter && typeof updateFixedLayoutFramework === 'function') {
       setTimeout(() => {
@@ -503,7 +508,7 @@ function removeBox(id) {
         }, 100);
       }
     }
-    
+
     // 檢查並調整控制面板狀態（如果沒有串流則強制展開）
     if (typeof checkAndAdjustControlPanel === 'function') {
       checkAndAdjustControlPanel();
@@ -519,11 +524,19 @@ function clearAll() {
         players[id].player.destroy();
       }
     });
+
+    // [MIGRATED] 清理所有 Chat System 資源
+    if (window.destroyChat && streamData) {
+      Object.keys(streamData).forEach(id => {
+        window.destroyChat(parseInt(id));
+      });
+    }
+
     players = {};
     streamData = {};
     container.innerHTML = '';
     window.streamCount = 0;
-    
+
     // 檢查並調整控制面板狀態（沒有串流時強制展開）
     if (typeof checkAndAdjustControlPanel === 'function') {
       checkAndAdjustControlPanel();
@@ -551,12 +564,12 @@ function saveLayout() {
       });
     }
   });
-  
+
   if (layout.length === 0) {
     alert('沒有可儲存的布局');
     return;
   }
-  
+
   try {
     localStorage.setItem('multiStreamLayout', JSON.stringify(layout));
   } catch (e) {
@@ -572,9 +585,9 @@ function loadLayout() {
     alert('沒有儲存的布局');
     return;
   }
-  
+
   if (!confirm('載入會清空目前畫面，確定？')) return;
-  
+
   // 清理現有播放器
   Object.keys(players).forEach(id => {
     if (players[id].type === 'youtube' && players[id].player.destroy) {
@@ -585,31 +598,31 @@ function loadLayout() {
   streamData = {};
   container.innerHTML = '';
   streamCount = 0;
-  
+
   // 使用安全的 JSON 解析
   const layout = safeJSONParse(saved, []);
   if (!Array.isArray(layout)) {
     alert('無效的布局數據格式');
     return;
   }
-  
+
   // 依序加入串流
   layout.forEach((item, index) => {
     setTimeout(() => {
       addStream(item.url);
-      
+
       // 等待播放器建立後套用設定
       setTimeout(() => {
         const boxes = document.querySelectorAll('.stream-box');
         const box = boxes[boxes.length - 1];
         if (box && item.style) {
           Object.assign(box.style, item.style);
-          
+
           const id = parseInt(box.dataset.streamId);
           if (streamData[id]) {
             streamData[id].volume = item.volume || 100;
             streamData[id].chatVisible = item.chatVisible !== undefined ? item.chatVisible : true;
-            
+
             // 設定音量
             const volSlider = box.querySelector('.volume');
             if (volSlider) {
@@ -623,7 +636,7 @@ function loadLayout() {
                 volSlider.dispatchEvent(new Event('input'));
               }
             }
-            
+
             // 設定聊天室顯示
             if (!streamData[id].chatVisible) {
               toggleChat(id);

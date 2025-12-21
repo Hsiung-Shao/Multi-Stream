@@ -63,6 +63,7 @@ export const initLegacyGlobals = () => {
         // Expose ChatManager APIs
         // Legacy: createChat, toggleChat, separateChat, closeSeparatedChat, setupChatResizer
         win.createChat = chatManager.createChat.bind(chatManager);
+        win.destroyChat = chatManager.destroyChat.bind(chatManager); // Added for cleanup
         win.toggleChat = chatManager.toggleChat.bind(chatManager);
         win.separateChat = chatManager.separateChat.bind(chatManager);
         win.closeSeparatedChat = chatManager.closeSeparatedChat.bind(chatManager);
