@@ -89,16 +89,31 @@ export class TwitchConfigResolver implements ConfigResolverContract {
         }
 
         // --- Debug Logging ---
-        if (win.__MS_DEBUG_TWITCH__) {
+        const debug = Boolean(win.__MS_DEBUG_TWITCH__);
+        if (debug) {
             console.debug('[TwitchConfig] Resolved:', {
                 clientId: config.clientId ? '(Present)' : '(Missing)',
                 hasSecret: !!config.clientSecret,
                 useProxy: config.useProxy,
                 proxyUrl: config.proxyUrl,
-                baseUrl: config.baseUrl
+                baseUrl: config.baseUrl,
+                envMode: import.meta.env.MODE,
+                sources: {
+                    viteEnv: !!getEnv('VITE_TWITCH_CLIENT_ID'),
+                    globalConfig: !!getGlobal('TWITCH_CLIENT_ID'),
+                    localStorage: !!getStorage('twitchClientId')
+                }
             });
-            if (!config.clientId) {
-                console.warn('[TwitchConfig] NO CLIENT ID FOUND! API calls will fail.');
+        }
+
+        if (!config.clientId) {
+            const msg = '[TwitchConfig] CRITICAL: Twitch Client ID is missing!';
+            console.error(msg);
+            console.error('Please set VITE_TWITCH_CLIENT_ID in your environment variables (e.g., .env file or Cloudflare Pages Settings).');
+            if (debug) {
+                console.warn('Diagnostics:');
+                console.warn('1. Check if VITE_TWITCH_CLIENT_ID is set in Cloudflare Pages "Environment variables".');
+                console.warn('2. If using config.js, ensure window.CONFIG.TWITCH_CLIENT_ID is populated.');
             }
         }
 
