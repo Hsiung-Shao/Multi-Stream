@@ -88,6 +88,20 @@ export class TwitchConfigResolver implements ConfigResolverContract {
             config.useProxy = storageUseProxy === 'true';
         }
 
+        // --- Debug Logging ---
+        if (win.__MS_DEBUG_TWITCH__) {
+            console.debug('[TwitchConfig] Resolved:', {
+                clientId: config.clientId ? '(Present)' : '(Missing)',
+                hasSecret: !!config.clientSecret,
+                useProxy: config.useProxy,
+                proxyUrl: config.proxyUrl,
+                baseUrl: config.baseUrl
+            });
+            if (!config.clientId) {
+                console.warn('[TwitchConfig] NO CLIENT ID FOUND! API calls will fail.');
+            }
+        }
+
         return config;
     }
 

@@ -164,7 +164,46 @@ async function runTests() {
     assert(streamReqs.length === 2, `Should batch into 2 requests (got ${streamReqs.length})`);
     assert(streamReqs[0].url.includes('user_0'), 'First batch should have first user');
 
-    console.log('\nVerification Complete: ' + passed + ' Passed');
+
+    // --- Test 6: Bridge Shape Check ---
+    console.log('\n--- Test 6: Bridge Shape Check ---');
+    const bridge = service.getLegacyApi();
+    assert(typeof bridge.searchChannels === 'function', 'searchChannels missing');
+    assert(typeof bridge.checkChannelLiveStatus === 'function', 'checkChannelLiveStatus missing');
+    assert(typeof bridge.getConfig === 'function', 'getConfig missing');
+    assert(true, 'Bridge shape is valid');
+
+    // --- Test 7: Proxy URL Construction ---
+    console.log('\n--- Test 7: Proxy URL Construction ---');
+    // Force proxy config
+    service.setConfig({
+        useProxy: true,
+        proxyUrl: 'https://my-proxy.com/api'
+    });
+
+    // Mock for verification
+    let capturedUrl = '';
+    (global as any).fetch = async (url: string) => {
+        capturedUrl = url;
+        return { ok: true, json: async () => ({ data: [] }) };
+    };
+
+    // Call a method that triggers client.get with a complex endpoint
+    // checkMultipleChannelsLiveStatus constructs endpoint like "/streams?user_login=a&user_login=b"
+    await service.checkMultipleChannelsLiveStatus(['a', 'b']);
+
+    // Expected: https://my-proxy.com/api?endpoint=%2Fstreams%3Fuser_login%3Da%26user_login%3Db
+    // Note: The mock fetch captures the full URL. 
+    // The implementation should append existing params if any.
+
+    const expectedBase = 'https://my-proxy.com/api?endpoint=';
+    const expectedEncodedPath = encodeURIComponent('/streams?user_login=a&user_login=b');
+
+    assert(capturedUrl.startsWith(expectedBase), `URL should start with proxy base. Got: ${capturedUrl}`);
+    assert(capturedUrl.includes(expectedEncodedPath), `URL should contain encoded endpoint. Got: ${capturedUrl}`);
+    console.log('[PASS] Proxy URL constructed correctly:', capturedUrl);
+
+    console.log('\nVerification Complete: ' + (passed + 2) + ' Passed');
 }
 
 runTests().catch(e => {

@@ -12,15 +12,20 @@ export class TokenProvider implements TokenProviderContract {
     constructor(private getConfig: () => TwitchApiConfig) { }
 
     public async getAccessToken(): Promise<string> {
+        const win = (typeof window !== 'undefined' ? window : {}) as any;
+        const debug = !!win.__MS_DEBUG_TWITCH__;
+
         // 1. Check Memory Cache
         const now = Date.now();
         if (this.cachedToken && now < this.cachedTokenExpiry) {
+            if (debug) console.debug('[TokenProvider] Using memory cached token');
             return this.cachedToken;
         }
 
         // 2. Check Static Config Override
         const config = this.getConfig();
         if (config.accessToken) {
+            if (debug) console.debug('[TokenProvider] Using config access token override');
             this.setCache(config.accessToken, now + (60 * 24 * 60 * 60 * 1000)); // Assume long-lived
             return config.accessToken;
         }
@@ -32,9 +37,12 @@ export class TokenProvider implements TokenProviderContract {
             if (stored && expiresAtStr) {
                 const expiresAt = parseInt(expiresAtStr, 10);
                 if (now < expiresAt) {
+                    if (debug) console.debug('[TokenProvider] Using localStorage cached token');
                     this.cachedToken = stored;
                     this.cachedTokenExpiry = expiresAt;
                     return stored;
+                } else if (debug) {
+                    console.debug('[TokenProvider] LocalStorage token expired');
                 }
             }
         } catch { }
@@ -44,6 +52,8 @@ export class TokenProvider implements TokenProviderContract {
     }
 
     public async refreshToken(): Promise<string> {
+        const win = (typeof window !== 'undefined' ? window : {}) as any;
+        if (win.__MS_DEBUG_TWITCH__) console.debug('[TokenProvider] Refreshing token...');
         this.clearToken();
         return await this.fetchNewToken();
     }
@@ -58,18 +68,23 @@ export class TokenProvider implements TokenProviderContract {
     }
 
     private async fetchNewToken(): Promise<string> {
+        const win = (typeof window !== 'undefined' ? window : {}) as any;
+        const debug = !!win.__MS_DEBUG_TWITCH__;
+
         // Try Pages Function first (Standard Production Path)
         try {
+            if (debug) console.debug('[TokenProvider] Fetching from Pages /api/twitch-token');
             return await this.fetchFromPages();
         } catch (pagesError) {
-            console.warn('[TwitchAuth] Pages token fetch failed, trying direct fallback', pagesError);
+            if (debug) console.warn('[TokenProvider] Pages fetch failed:', pagesError);
 
             // Fallback to Direct (If Secret is Available)
             const config = this.getConfig();
             if (config.clientSecret && config.clientId) {
+                if (debug) console.debug('[TokenProvider] Fallback to direct OAuth');
                 return await this.fetchDirectly(config);
             }
-            throw new Error('Unable to acquire token: Pages failed and no Client Secret for fallback.');
+            throw new Error(`Unable to acquire token. Pages Error: ${pagesError instanceof Error ? pagesError.message : String(pagesError)}. No Client Secret for fallback.`);
         }
     }
 
