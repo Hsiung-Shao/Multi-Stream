@@ -23,12 +23,12 @@ window.addEventListener('DOMContentLoaded', () => {
   if (typeof updateStreamOrderList === 'function') {
     updateStreamOrderList();
   }
-  
+
   // 初始化所有聊天室按鈕狀態
   if (typeof updateAllChatsButton === 'function') {
     updateAllChatsButton();
   }
-  
+
   // 載入用戶設置
   if (typeof loadUserSettings === 'function') {
     // 延遲載入，確保所有元素都已初始化
@@ -36,7 +36,7 @@ window.addEventListener('DOMContentLoaded', () => {
       loadUserSettings();
     }, 500);
   }
-  
+
   // 初始化收藏開台狀態自動刷新
   if (typeof startFavoriteLiveStatusAutoRefresh === 'function') {
     // 檢查是否啟用自動刷新
@@ -49,7 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }, 2000);
     }
   }
-  
+
   // 延遲讀取備份數據（頁面載入後）
   if (typeof indexedDBBackup !== 'undefined') {
     // 增加延遲，確保 indexedDBBackup 已完全初始化
@@ -63,10 +63,14 @@ window.addEventListener('DOMContentLoaded', () => {
             // 數據庫初始化失敗，繼續處理
           }
         }
-        
+
         // 嘗試自動從 IndexedDB 恢復數據（如果 localStorage 沒有數據）
+        /* MIGRATED: autoLoadBackup relies on window.addStream which is now bridged.
+           We keep this enabled because it uses the public API window.addStream.
+           No change needed unless it manipulates streamData directly.
+        */
         const result = await indexedDBBackup.autoLoadBackup();
-        
+
         if (result && result.success) {
           // 重新載入頁面以應用恢復的數據
           window.location.reload();
@@ -76,7 +80,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }, 2000); // 增加延遲到 2 秒，確保所有模組都已載入
   }
-  
+
   // 定期更新串流順序列表（當有新增或刪除時）
   setInterval(() => {
     updateStreamOrderList();
@@ -84,14 +88,14 @@ window.addEventListener('DOMContentLoaded', () => {
       updateAllChatsButton();
     }
   }, 1000);
-  
+
   // 頁面載入時自動應用布局（立即執行）
   const boxes = document.querySelectorAll('.stream-box');
   if (boxes.length > 0) {
     const layoutType = autoSelectLayout();
     setLayout(layoutType, true); // 立即執行，不使用防抖
   }
-  
+
   // 初始化廣告系統
   if (typeof initAdSystem === 'function') {
     // 延遲初始化，確保頁面完全載入
@@ -99,7 +103,7 @@ window.addEventListener('DOMContentLoaded', () => {
       initAdSystem();
     }, 1000);
   }
-  
+
   const protocol = window.location.protocol;
   if (protocol === 'file:') {
     const warning = document.createElement('div');
@@ -121,11 +125,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const h3 = document.createElement('h3');
     h3.style.cssText = 'margin: 0 0 15px 0;';
     h3.textContent = '⚠️ 連線警告';
-    
+
     const p1 = document.createElement('p');
     p1.style.cssText = 'margin: 0 0 15px 0; line-height: 1.6;';
     p1.textContent = '您正在使用 file:// 協議開啟網頁，這會導致 Twitch 和 YouTube 嵌入無法正常運作。';
-    
+
     const p2 = document.createElement('p');
     p2.style.cssText = 'margin: 0 0 20px 0; line-height: 1.6; font-weight: bold;';
     p2.appendChild(document.createTextNode('請使用本地伺服器開啟，例如：'));
@@ -133,8 +137,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const code1 = document.createElement('code');
     code1.style.cssText = 'background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;';
     code1.textContent = 'http://localhost:8000';
+    code1.appendChild(document.createTextNode('http://localhost:8000')); // correction
     p2.appendChild(code1);
-    
+
     const p3 = document.createElement('p');
     p3.style.cssText = 'margin: 0 0 15px 0; font-size: 12px; opacity: 0.9;';
     p3.appendChild(document.createTextNode('可以使用 Python: '));
@@ -146,12 +151,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const code3 = document.createElement('code');
     code3.textContent = 'npx http-server -p 8000';
     p3.appendChild(code3);
-    
+
     const btn = document.createElement('button');
     btn.style.cssText = 'padding: 10px 20px; background: white; color: #ff4444; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;';
     btn.textContent = '我知道了';
     btn.onclick = () => warning.remove();
-    
+
     warning.appendChild(h3);
     warning.appendChild(p1);
     warning.appendChild(p2);
