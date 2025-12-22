@@ -236,7 +236,7 @@ const koTranslations = {
   'tutorial.mobile.step1': '스마트폰과 태블릿에서 제어판이 전체 화면으로 표시됩니다',
   'tutorial.mobile.step2': '모든 버튼과 입력 상자는 터치 작업에 최적화되어 있습니다',
   'tutorial.mobile.step3': '가로 및 세로 모드를 모두 지원',
-  
+
   // Version History
   'versionHistory.title': '버전 기록',
   'versionHistory.subtitle': 'MultiStream Hub 업데이트 기록',
@@ -387,14 +387,14 @@ const koTranslations = {
   'common.all': '전체',
   'common.yes': '예',
   'common.no': '아니오',
-  
+
   // Language names
   'chineseTraditional': '繁體中文',
   'chineseSimplified': '简体中文',
   'english': 'English',
   'japanese': '日本語',
   'korean': '한국어',
-  
+
   // About Page - Extended
   'about.feature1.title': '다중 플랫폼 스트림 지원',
   'about.feature1.description': 'Twitch와 YouTube의 두 가지 주요 스트리밍 플랫폼을 지원하여 여러 스트림을 동시에 시청할 수 있습니다',
@@ -448,7 +448,7 @@ const koTranslations = {
   'about.terms3': '웹사이트 운영 및 지속적인 개발을 유지하기 위해 이 웹사이트는 서드파티 광고(Google AdSense 등)를 표시할 수 있습니다. 이러한 광고는 서드파티 서비스 제공업체에서 관리하며, 광고 배치를 위해 개인 정보를 수집하지 않습니다.',
   'about.privacy1': '우리는 귀하의 개인정보 보호를 소중히 여깁니다. 이 웹사이트는 개인 데이터를 적극적으로 수집하지 않으며, 모든 설정과 즐겨찾기는 브라우저의 로컬에 저장됩니다.',
   'about.privacy2': '자세한 개인정보 보호 정책은 다음을 참조하세요',
-  
+
   // Privacy Page
   'privacy.title': '개인정보 보호 정책 Privacy Policy',
   'privacy.effectiveDate': '발효일:',
@@ -521,6 +521,16 @@ const koTranslations = {
   'privacy.home': '홈',
   'privacy.about': '소개',
   'privacy.terms': '서비스 약관',
+  // YouTube Risk Warning
+  'youtubeRisk.title': 'YouTube 스트림 수 경고',
+  'youtubeRisk.body': '현재 {n}개의 YouTube 스트림이 감지되었습니다. 위험을 피하기 위해 동시 재생을 1-2개로 유지하는 것이 좋습니다。',
+  'youtubeRisk.disclaimer.title': '면책 조항',
+  'youtubeRisk.disclaimer.item1': 'YouTube는 구체적인 제한 수를 공개하지 않았습니다。',
+  'youtubeRisk.disclaimer.item2': '과도하거나 장시간/반복적인 시청 패턴은 비정상적인 행위나 무효 트래픽으로 간주되어 제한을 받을 수 있습니다。',
+  'youtubeRisk.disclaimer.item3': '사용자는 YouTube 정책을 준수할 책임이 있으며, 본 사이트는 도구와 경고만 제공할 뿐 제3자 플랫폼의 판단에 대해 책임을 지지 않습니다。',
+  'youtubeRisk.confirm': '확인했습니다',
+  'youtubeRisk.pauseOthers': '다른 YouTube 일시 중지',
+  'youtubeRisk.sessionIgnore': '이번 세션에서 다시 보지 않기',
 } as const;
 
 export default koTranslations;

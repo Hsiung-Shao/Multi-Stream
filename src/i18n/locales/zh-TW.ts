@@ -236,7 +236,7 @@ const zhTWTranslations = {
   'tutorial.tips.card5.description': '在輸入框中輸入 Twitch 頻道名稱，系統會自動顯示搜尋建議',
   'tutorial.tips.card6.title': '開台提醒',
   'tutorial.tips.card6.description': '收藏的頻道會自動顯示開台狀態，正在直播的頻道會自動排在前面',
-  
+
   // Version History
   'versionHistory.title': '版本紀錄',
   'versionHistory.subtitle': 'MultiStream Hub 更新歷史',
@@ -387,14 +387,14 @@ const zhTWTranslations = {
   'common.all': '全部',
   'common.yes': '是',
   'common.no': '否',
-  
+
   // Language names
   'chineseTraditional': '繁體中文',
   'chineseSimplified': '简体中文',
   'english': 'English',
   'japanese': '日本語',
   'korean': '한국어',
-  
+
   // About Page - Extended
   'about.feature1.title': '多平台串流支援',
   'about.feature1.description': '支援 Twitch 和 YouTube 兩大直播平台，可同時觀看多個串流',
@@ -448,7 +448,7 @@ const zhTWTranslations = {
   'about.terms3': '為維持網站運營和持續開發，本網站可能會顯示第三方廣告（如 Google AdSense）。這些廣告由第三方服務提供商管理，我們不會收集您的個人資訊用於廣告投放。',
   'about.privacy1': '我們重視您的隱私權。本網站不會主動收集任何個人資料，所有設定和收藏資料都儲存在您的瀏覽器本地。',
   'about.privacy2': '詳細的隱私權政策請參閱',
-  
+
   // Privacy Page
   'privacy.title': '隱私權政策 Privacy Policy',
   'privacy.effectiveDate': '生效日期：',
@@ -521,6 +521,16 @@ const zhTWTranslations = {
   'privacy.home': '首頁',
   'privacy.about': '關於我們',
   'privacy.terms': '服務條款',
+  // YouTube Risk Warning
+  'youtubeRisk.title': 'YouTube 播放數提醒',
+  'youtubeRisk.body': '目前偵測到 {n} 個 YouTube 串流正在播放。建議將同時播放數控制在 1-2 個以避免風險。',
+  'youtubeRisk.disclaimer.title': '免責聲明',
+  'youtubeRisk.disclaimer.item1': 'YouTube 未公開明確數字門檻',
+  'youtubeRisk.disclaimer.item2': '大量/長時間/重複模式可能被判定為非自然行為/無效流量，造成限制或處置風險',
+  'youtubeRisk.disclaimer.item3': '使用者需自行遵守 YouTube 政策，本網站僅提供工具與提醒不負責第三方平台判定',
+  'youtubeRisk.confirm': '我知道了',
+  'youtubeRisk.pauseOthers': '暫停其他 YouTube 串流',
+  'youtubeRisk.sessionIgnore': '本次不再提醒',
 } as const;
 
 export default zhTWTranslations;

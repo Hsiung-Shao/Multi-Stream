@@ -236,7 +236,7 @@ const jaTranslations = {
   'tutorial.mobile.step1': 'スマートフォンやタブレットでは、コントロールパネルが全画面表示されます',
   'tutorial.mobile.step2': 'すべてのボタンと入力ボックスはタッチ操作に最適化されています',
   'tutorial.mobile.step3': '横向きと縦向きの両方のモードをサポート',
-  
+
   // Version History
   'versionHistory.title': 'バージョン履歴',
   'versionHistory.subtitle': 'MultiStream Hub更新履歴',
@@ -387,14 +387,14 @@ const jaTranslations = {
   'common.all': 'すべて',
   'common.yes': 'はい',
   'common.no': 'いいえ',
-  
+
   // Language names
   'chineseTraditional': '繁體中文',
   'chineseSimplified': '简体中文',
   'english': 'English',
   'japanese': '日本語',
   'korean': '한국어',
-  
+
   // About Page - Extended
   'about.feature1.title': 'マルチプラットフォームストリームサポート',
   'about.feature1.description': 'TwitchとYouTubeの2つの主要なストリーミングプラットフォームをサポートし、複数のストリームを同時に視聴可能',
@@ -448,7 +448,7 @@ const jaTranslations = {
   'about.terms3': 'ウェブサイトの運営と継続的な開発を維持するため、このウェブサイトはサードパーティの広告（Google AdSenseなど）を表示する場合があります。これらの広告はサードパーティのサービスプロバイダーによって管理され、広告配信のために個人情報を収集することはありません。',
   'about.privacy1': '私たちはあなたのプライバシーを大切にしています。このウェブサイトは個人データを積極的に収集せず、すべての設定とお気に入りはブラウザのローカルに保存されます。',
   'about.privacy2': '詳細なプライバシーポリシーについては、',
-  
+
   // Privacy Page
   'privacy.title': 'プライバシーポリシー Privacy Policy',
   'privacy.effectiveDate': '発効日：',
@@ -521,6 +521,16 @@ const jaTranslations = {
   'privacy.home': 'ホーム',
   'privacy.about': '私たちについて',
   'privacy.terms': '利用規約',
+  // YouTube Risk Warning
+  'youtubeRisk.title': 'YouTube同時再生数警告',
+  'youtubeRisk.body': '現在{n}つのYouTubeストリームが検出されました。リスクを避けるため、同時再生数を1〜2に抑えることをお勧めします。',
+  'youtubeRisk.disclaimer.title': '免責事項',
+  'youtubeRisk.disclaimer.item1': 'YouTubeは具体的な制限数を公開していません。',
+  'youtubeRisk.disclaimer.item2': '大量・長時間・繰り返しの視聴パターンは、不自然な動作や無効なトラフィックと見なされ、制限を受けるリスクがあります。',
+  'youtubeRisk.disclaimer.item3': 'ユーザーはYouTubeのポリシーを遵守する責任があります。当サイトはツールと警告を提供するのみであり、第三者プラットフォームの判断について責任を負いません。',
+  'youtubeRisk.confirm': '理解しました',
+  'youtubeRisk.pauseOthers': '他のYouTubeを一時停止',
+  'youtubeRisk.sessionIgnore': '今回は表示しない',
 } as const;
 
 export default jaTranslations;

@@ -15,6 +15,7 @@ import { parseStreamUrl, validateUrl, type StreamData } from './utils/streamUtil
 import { useLayout } from './hooks/useLayout';
 import type { ChatLayoutType } from './utils/chatLayoutUtils';
 import { apiLoader } from './utils/apiLoader';
+import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 
 type Page = 'home' | 'about' | 'privacy';
 
@@ -58,12 +59,127 @@ export default function App() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [streams, setStreams] = useState<StreamData[]>([]);
   const streamCountRef = useRef(0);
-  
+
+  // YouTube Warning Logic State
+  const [showYTRiskDialog, setShowYTRiskDialog] = useState(false);
+  const [currentYTRiskCount, setCurrentYTRiskCount] = useState(0);
+  const ytRiskLevelsShownRaw = useRef({ soft: false, strong: false });
+  const ytRiskSessionDismissedRaw = useRef(false);
+
+  // Initialize YT Risk Session
+  useEffect(() => {
+    if (typeof sessionStorage !== 'undefined') {
+      const dismissed = sessionStorage.getItem('ytRiskDismissed');
+      if (dismissed === 'true') {
+        ytRiskSessionDismissedRaw.current = true;
+      }
+    }
+  }, []);
+
+  // Monitor Active YouTube Streams
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      // If user dismissed for session, do nothing
+      if (ytRiskSessionDismissedRaw.current) return;
+
+      const youtubeStreams = streams.filter(s => s.platform === 'youtube');
+      if (youtubeStreams.length === 0) return;
+
+      let playingCount = 0;
+      let checkedCount = 0;
+
+      youtubeStreams.forEach(s => {
+        const p = window.players && window.players[s.id];
+        if (p && p.type === 'youtube' && p.player) {
+          // Check if player API is ready
+          try {
+            if (typeof p.player.getPlayerState === 'function') {
+              const state = p.player.getPlayerState();
+              // 1 = PLAYING, 3 = BUFFERING
+              if (state === 1 || state === 3) {
+                playingCount++;
+              }
+              checkedCount++;
+            }
+          } catch (e) {
+            // Player might not be ready
+          }
+        }
+      });
+
+      // Verification Logic
+      // If we checked some players but playingCount is 0, we trust it.
+      // If we checked 0 players (checkedCount == 0) but have streams, fallback to added count?
+      // Requirement: "falling back to the count of added streams if active status is unreliable"
+      // If checkedCount < youtubeStreams.length, it means some players are initializing.
+      // We should probably wait for them. But if they stay 'unreliable', usage of added count is preferred.
+
+      let effectiveCount = playingCount;
+      if (checkedCount === 0 && youtubeStreams.length >= 2) {
+        // If no player is ready yet/detectable, use added count
+        effectiveCount = youtubeStreams.length;
+      }
+
+      // Check Thresholds
+      let newLevel: 'soft' | 'strong' | null = null;
+      if (effectiveCount >= 4) newLevel = 'strong';
+      else if (effectiveCount >= 2) newLevel = 'soft';
+
+      if (newLevel) {
+        if (newLevel === 'soft' && !ytRiskLevelsShownRaw.current.soft) {
+          setCurrentYTRiskCount(effectiveCount);
+          setShowYTRiskDialog(true);
+          ytRiskLevelsShownRaw.current.soft = true;
+        } else if (newLevel === 'strong' && !ytRiskLevelsShownRaw.current.strong) {
+          setCurrentYTRiskCount(effectiveCount);
+          setShowYTRiskDialog(true);
+          ytRiskLevelsShownRaw.current.strong = true;
+        }
+      }
+
+    }, 3000); // Check every 3 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [streams]);
+
+  const handlePauseOtherYouTubeStreams = useCallback(() => {
+    const youtubeStreams = streams.filter(s => s.platform === 'youtube');
+    if (youtubeStreams.length <= 1) {
+      setShowYTRiskDialog(false);
+      return;
+    }
+
+    // Keep the first one, pause others
+    const keeper = youtubeStreams[0];
+
+    youtubeStreams.forEach(s => {
+      if (s.id === keeper.id) return; // Skip the first one
+
+      const p = window.players && window.players[s.id];
+      if (p && p.type === 'youtube' && p.player) {
+        try {
+          if (typeof p.player.pauseVideo === 'function') {
+            p.player.pauseVideo();
+          }
+        } catch (e) { /* ignore */ }
+      }
+    });
+    setShowYTRiskDialog(false);
+  }, [streams]);
+
+  const handleRiskDontRemind = useCallback(() => {
+    setShowYTRiskDialog(false);
+    ytRiskSessionDismissedRaw.current = true;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('ytRiskDismissed', 'true');
+    }
+  }, []);
+
   // 初始化全局 streamCount（如果尚未初始化）
   if (typeof window !== 'undefined' && !window.streamCount) {
     window.streamCount = 0;
   }
-  
+
   // 總音量狀態（從 localStorage 載入）
   const loadMasterVolume = () => {
     try {
@@ -91,13 +207,13 @@ export default function App() {
     }
     return 100;
   };
-  
+
   const [masterVolume, setMasterVolume] = useState(loadMasterVolume);
   const [masterMuted, setMasterMuted] = useState(() => {
     const initialVolume = loadMasterVolume();
     return initialVolume === 0;
   });
-  
+
   // 同步 masterMuted 到全局變量
   useEffect(() => {
     (window as any).masterMuted = masterMuted;
@@ -121,7 +237,7 @@ export default function App() {
       // 等待收藏系統初始化（最多等待 3 秒）
       let waitCount = 0;
       const maxWait = 30; // 30 * 100ms = 3 秒
-      
+
       while (waitCount < maxWait) {
         if (window.favoriteStreams && window.favoriteCategories) {
           // 收藏系統已初始化，等待 Twitch API 和 YouTube API 準備好
@@ -131,15 +247,15 @@ export default function App() {
             if (!window.twitchApi || !window.twitchApi.checkMultipleChannelsLiveStatus) {
               await apiLoader.loadTwitchDataApi();
             }
-            
+
             // 載入 YouTube Data API（用於檢查開台狀態）
             if (!window.youtubeApiUtils || !window.youtubeApiUtils.checkChannelLiveStatus) {
               await apiLoader.loadYouTubeDataApi();
             }
-            
+
             // 等待一小段時間確保 API 完全初始化
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // 觸發收藏列表刷新事件
             window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
             break;
@@ -149,12 +265,12 @@ export default function App() {
             break;
           }
         }
-        
+
         waitCount++;
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     };
-    
+
     // 延遲執行，確保所有腳本都已載入
     setTimeout(() => {
       initAndRefreshFavorites();
@@ -163,7 +279,7 @@ export default function App() {
 
   // 布局管理
   const { currentLayout, setLayout } = useLayout(streams.length);
-  
+
   // 聊天室布局管理
   const [chatLayoutType, setChatLayoutType] = useState<ChatLayoutType>('none');
 
@@ -182,13 +298,13 @@ export default function App() {
     const trimmedUrl = url.trim();
 
     // 如果輸入的不是 URL，嘗試搜尋 Twitch 或 YouTube 頻道
-    if (!trimmedUrl.includes('http://') && !trimmedUrl.includes('https://') && 
-        !trimmedUrl.includes('twitch.tv/') && !trimmedUrl.includes('youtube.com') && 
-        !trimmedUrl.includes('youtu.be/')) {
+    if (!trimmedUrl.includes('http://') && !trimmedUrl.includes('https://') &&
+      !trimmedUrl.includes('twitch.tv/') && !trimmedUrl.includes('youtube.com') &&
+      !trimmedUrl.includes('youtu.be/')) {
       // 可能是頻道名稱，嘗試搜尋
       let foundChannel: any = null;
       let searchError: string | null = null;
-      
+
       // 先嘗試 Twitch 搜尋
       // 按需載入 Twitch 數據 API（用於搜尋功能）
       try {
@@ -196,12 +312,12 @@ export default function App() {
       } catch (error) {
         // 載入失敗，繼續處理
       }
-      
+
       // 確保 twitchApi 已初始化
       if (!window.twitchApi || !window.twitchApi.searchChannels) {
         // API 尚未初始化
       }
-      
+
       if (window.twitchApi && window.twitchApi.searchChannels) {
         try {
           const twitchResults = await window.twitchApi.searchChannels(trimmedUrl, 1);
@@ -214,7 +330,7 @@ export default function App() {
       } else {
         searchError = 'Twitch API 未初始化';
       }
-      
+
       if (foundChannel) {
         // 使用第一個搜尋結果
         url = foundChannel.url;
@@ -247,28 +363,28 @@ export default function App() {
       try {
         // 按需載入 YouTube 數據 API（用於頻道驗證）
         await apiLoader.loadYouTubeDataApi();
-        
+
         if (window.youtubeApiUtils && window.youtubeApiUtils.getChannelIdFromVideoId) {
           const actualChannelId = await window.youtubeApiUtils.getChannelIdFromVideoId(parsed.videoId);
-          
+
           if (actualChannelId && actualChannelId !== parsed.channelId) {
             alert(`頻道 ID 驗證失敗：\n\n該影片不屬於指定的頻道。\n\n預期頻道 ID: ${parsed.channelId}\n實際頻道 ID: ${actualChannelId}\n\n請確認您輸入的網址是否正確。`);
             return;
           }
-          
+
           if (actualChannelId) {
             parsed.channelId = actualChannelId;
           }
         }
-        } catch (error: any) {
-          // 驗證失敗，繼續處理
-        }
+      } catch (error: any) {
+        // 驗證失敗，繼續處理
+      }
     }
 
     // 嘗試從收藏列表中獲取名稱
     let displayName: string | null = null;
     let name: string | null = null;
-    
+
     if (window.favoriteStreams && typeof window.favoriteStreams.getList === 'function') {
       try {
         const favorites = window.favoriteStreams.getList();
@@ -289,7 +405,7 @@ export default function App() {
           }
           return false;
         });
-        
+
         if (favorite && favorite.name) {
           displayName = favorite.name;
           name = favorite.name;
@@ -320,7 +436,7 @@ export default function App() {
     }
 
     setStreams(prev => [...prev, newStream]);
-    
+
     // 同步到全局 streamData（為了兼容舊代碼）
     if (window.streamData) {
       window.streamData[newStream.id] = {
@@ -343,8 +459,8 @@ export default function App() {
     }
 
     // 優化：提前載入 Twitch Player API（如果批量中包含 Twitch）
-    const hasTwitch = urls.some(url => 
-      url.includes('twitch.tv/') || 
+    const hasTwitch = urls.some(url =>
+      url.includes('twitch.tv/') ||
       (!url.includes('http://') && !url.includes('https://') && !url.includes('youtube.com'))
     );
 
@@ -362,11 +478,11 @@ export default function App() {
 
     for (let i = 0; i < urls.length; i += BATCH_SIZE) {
       const batch = urls.slice(i, i + BATCH_SIZE);
-      
+
       // 並行處理當前批次
       const batchPromises = batch.map(url => handleAddStream(url));
       await Promise.allSettled(batchPromises);
-      
+
       // 如果不是最後一批，等待一段時間再處理下一批
       if (i + BATCH_SIZE < urls.length) {
         await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
@@ -383,7 +499,7 @@ export default function App() {
     // 設置標記，表明 React 版本的 addStream 已經準備好
     (window as any)._reactAddStreamReady = true;
   }, [handleAddStream, handleBatchAddStreams]);
-  
+
   // 使用 useEffect 作為備份，確保在 DOM 更新後也設置（雙重保障）
   useEffect(() => {
     // 再次確認設置（防止 useLayoutEffect 執行失敗）
@@ -392,7 +508,7 @@ export default function App() {
       (window as any).batchAddStreams = handleBatchAddStreams;
       (window as any)._reactAddStreamReady = true;
     }
-    
+
     return () => {
       // 使用 undefined 而不是 delete，避免刪除不可刪除的屬性
       try {
@@ -414,13 +530,13 @@ export default function App() {
       }
       delete window.players[id];
     }
-    
+
     // 移除分離的聊天室（如果存在）
     const separatedChat = document.getElementById('separated-chat-' + id);
     if (separatedChat) {
       separatedChat.remove();
     }
-    
+
     setStreams(prev => prev.filter(s => s.id !== id));
   };
 
@@ -432,7 +548,7 @@ export default function App() {
     // 保存當前狀態（參考 js/stream.js 第 507-509 行）
     const savedVolume = stream.volume || 100;
     const savedChatVisible = stream.chatVisible !== undefined ? stream.chatVisible : false;
-    
+
     // 清理現有播放器（參考 js/stream.js 第 517-523 行）
     if (window.players && window.players[id]) {
       const player = window.players[id];
@@ -446,19 +562,19 @@ export default function App() {
       // Twitch 播放器不需要 destroy，直接刪除引用
       delete window.players[id];
     }
-    
+
     // 清空播放器容器（參考 js/stream.js 第 525-529 行）
     const playerContainer = document.getElementById('player' + id);
     if (playerContainer) {
       playerContainer.innerHTML = '';
     }
-    
+
     // 清空聊天室容器（如果存在）
     const chatContainer = document.getElementById(`chat${id}`);
     if (chatContainer) {
       chatContainer.innerHTML = '';
     }
-    
+
     // 重置全局 streamData 中的播放器標記，並添加重載觸發器
     // 這會強制 StreamBox 重新初始化播放器（參考 js/stream.js 的重新建立播放器邏輯）
     if (window.streamData && window.streamData[id]) {
@@ -469,16 +585,16 @@ export default function App() {
         _reloadTrigger: Date.now() // 添加重載觸發器，強制重新創建播放器
       };
     }
-    
+
     // 更新 streams 狀態以觸發 StreamBox 重新渲染
     // 這會導致 StreamBox 的 useEffect 重新執行，檢測到 _reloadTrigger 後重新創建播放器
     // 添加一個臨時的 key 來強制重新渲染（參考 js/stream.js 的重新建立播放器邏輯）
-    setStreams(prev => prev.map(s => 
-      s.id === id 
+    setStreams(prev => prev.map(s =>
+      s.id === id
         ? { ...s, volume: savedVolume, chatVisible: savedChatVisible, _reloadKey: Date.now() }
         : s
     ));
-    
+
     // 恢復音量設定（參考 js/stream.js 第 551-569 行）
     // 音量會在 StreamBox 的 useEffect 中自動應用，因為我們已經更新了 stream.volume
     // 但為了確保，我們在播放器就緒後再次應用總音量
@@ -491,12 +607,12 @@ export default function App() {
 
   // 切換聊天室
   const handleToggleChat = (id: number) => {
-    setStreams(prev => prev.map(s => 
-      s.id === id 
+    setStreams(prev => prev.map(s =>
+      s.id === id
         ? { ...s, chatVisible: !s.chatVisible }
         : s
     ));
-    
+
     // 調用原有的 toggleChat 函數（如果存在）
     if (typeof (window as any).toggleChat === 'function') {
       (window as any).toggleChat(id);
@@ -507,14 +623,14 @@ export default function App() {
   const handleToggleAllChat = (show: boolean) => {
     setStreams(prev => {
       const updatedStreams = prev.map(s => ({ ...s, chatVisible: show }));
-      
+
       // 更新全局 streamData 狀態（與舊代碼兼容）
       updatedStreams.forEach(stream => {
         if (window.streamData && window.streamData[stream.id]) {
           window.streamData[stream.id].chatVisible = show;
         }
       });
-      
+
       return updatedStreams;
     });
   };
@@ -532,23 +648,23 @@ export default function App() {
     if (volume > 0 && masterMuted) {
       setMasterMuted(false);
     }
-    
+
     setMasterVolume(volume);
-    
+
     // 如果音量設為 0，自動設為靜音
     if (volume === 0) {
       setMasterMuted(true);
     }
-    
+
     // 同步到全局變量
     (window as any).masterVolume = volume;
-    
+
     // 同步到 DOM 元素（為了兼容舊的 updateMasterVolume 函數）
     const masterVolSlider = document.getElementById('master-volume');
     if (masterVolSlider && (masterVolSlider as HTMLInputElement).value !== undefined) {
       (masterVolSlider as HTMLInputElement).value = volume.toString();
     }
-    
+
     // 保存音量到 localStorage（但不覆蓋 previousMasterVolume，除非用戶手動調整）
     try {
       const saved = localStorage.getItem('userSettings');
@@ -558,12 +674,12 @@ export default function App() {
     } catch (e) {
       // 保存失敗，靜默處理
     }
-    
+
     // 直接應用總音量到所有播放器
     // 優先級規則：單獨靜音的串流在調整總體音量時應該維持靜音
     const players = (window as any).players;
     const streamData = (window as any).streamData;
-    
+
     if (players && streamData) {
       Object.keys(players).forEach(idStr => {
         const id = parseInt(idStr);
@@ -571,7 +687,7 @@ export default function App() {
           try {
             // 檢查該串流是否單獨靜音
             const streamIsMuted = streamData[id].isMuted || false;
-            
+
             // 如果串流單獨靜音，維持靜音狀態（不調整音量）
             if (streamIsMuted) {
               if (streamData[id].platform === 'twitch') {
@@ -586,11 +702,11 @@ export default function App() {
               // 單獨靜音的串流不調整音量，直接返回
               return;
             }
-            
+
             // 如果串流沒有單獨靜音，則根據總體音量調整
             const streamVol = streamData[id].volume || 100;
             const actualVol = Math.round((streamVol / 100) * volume);
-            
+
             if (streamData[id].platform === 'twitch') {
               if (actualVol === 0) {
                 if (typeof players[id].player.setMuted === 'function') {
@@ -628,7 +744,7 @@ export default function App() {
         }
       });
     }
-    
+
     // 觸發自定義事件，通知其他組件總音量已改變
     window.dispatchEvent(new CustomEvent('masterVolumeChange', { detail: { volume } }));
   };
@@ -658,7 +774,7 @@ export default function App() {
       // 同步到全局變量
       (window as any).masterVolume = 0;
       (window as any).masterMuted = true;
-      
+
       // 同步到 DOM 元素（為了兼容舊的 JavaScript 代碼）
       const masterVolSlider = document.getElementById('master-volume');
       if (masterVolSlider && (masterVolSlider as HTMLInputElement).value !== undefined) {
@@ -681,21 +797,21 @@ export default function App() {
       } catch (e) {
         // 讀取失敗，使用默認值 100
       }
-      
+
       // 更新音量狀態
       setMasterVolume(restoreVolume);
       setMasterMuted(false);
-      
+
       // 同步到全局變量
       (window as any).masterVolume = restoreVolume;
       (window as any).masterMuted = false;
-      
+
       // 同步到 DOM 元素（為了兼容舊的 JavaScript 代碼）
       const masterVolSlider = document.getElementById('master-volume');
       if (masterVolSlider && (masterVolSlider as HTMLInputElement).value !== undefined) {
         (masterVolSlider as HTMLInputElement).value = restoreVolume.toString();
       }
-      
+
       // 更新 localStorage 中的 masterVolume（恢復後應該更新）
       try {
         const saved = localStorage.getItem('userSettings');
@@ -706,14 +822,14 @@ export default function App() {
         // 保存失敗，靜默處理
       }
     }
-    
+
     // 直接對所有播放器應用靜音/取消靜音
     // 優先級規則：
     // - 靜音狀態：全部 > 單獨（如果全部靜音，所有串流都靜音）
     // - 取消靜音狀態：全部 < 單獨（如果單獨靜音，取消全部靜音時該串流保持靜音）
     const players = (window as any).players;
     const streamData = (window as any).streamData;
-    
+
     if (players && streamData) {
       Object.keys(players).forEach(idStr => {
         const id = parseInt(idStr);
@@ -721,7 +837,7 @@ export default function App() {
           try {
             // 檢查該串流是否單獨靜音
             const streamIsMuted = streamData[id].isMuted || false;
-            
+
             if (muted) {
               // 靜音：全部靜音優先，所有串流都靜音（無論單獨靜音狀態）
               if (streamData[id].platform === 'twitch') {
@@ -765,7 +881,7 @@ export default function App() {
         }
       });
     }
-    
+
     // 觸發 updateMasterVolume 來更新所有播放器的音量（取消靜音時）
     if (!muted && typeof (window as any).updateMasterVolume === 'function') {
       (window as any).updateMasterVolume();
@@ -781,17 +897,17 @@ export default function App() {
           if ((window as any).streamData && (window as any).streamData[id]) {
             (window as any).streamData[id].volume = volume;
           }
-          
+
           // 如果調整音量且之前是靜音狀態，取消靜音
           const wasMuted = s.isMuted || false;
           const newMutedState = volume === 0 ? true : false;
-          
+
           // 應用音量到播放器
           if ((window as any).players && (window as any).players[id] && (window as any).players[id].player) {
             const player = (window as any).players[id].player;
             const masterVol = (window as any).masterVolume || 100;
             const actualVol = Math.round((volume / 100) * masterVol);
-            
+
             try {
               if (s.platform === 'twitch') {
                 if (actualVol === 0) {
@@ -859,12 +975,12 @@ export default function App() {
               // 音量設置失敗，繼續處理
             }
           }
-          
+
           return { ...s, volume, isMuted: newMutedState };
         }
         return s;
       });
-      
+
       return updatedStreams;
     });
   };
@@ -872,22 +988,22 @@ export default function App() {
   // 切換靜音（簡化版本，與 muteAll 一樣簡單）
   const handleToggleMute = (id: number) => {
     const masterMuted = (window as any).masterMuted || false;
-    
+
     setStreams(prev => {
       const updatedStreams = prev.map(s => {
         if (s.id === id) {
           const newMutedState = !(s.isMuted || false);
-          
+
           // 更新全局 streamData
           if ((window as any).streamData && (window as any).streamData[id]) {
             (window as any).streamData[id].isMuted = newMutedState;
           }
-          
+
           // 對播放器應用靜音/取消靜音操作
           // 使用全局的 players 和 streamData（與 js/volume.js 中的 muteAll 一致）
           const players = (window as any).players;
           const streamData = (window as any).streamData;
-          
+
           if (players && players[id] && players[id].player && streamData && streamData[id]) {
             try {
               if (streamData[id].platform === 'twitch') {
@@ -958,12 +1074,12 @@ export default function App() {
               // 靜默處理錯誤
             }
           }
-          
+
           return { ...s, isMuted: newMutedState };
         }
         return s;
       });
-      
+
       return updatedStreams;
     });
   };
@@ -979,8 +1095,8 @@ export default function App() {
           url="https://multistreaming.org/privacy.html"
         />
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
-          <PrivacyPage 
-            theme={theme} 
+          <PrivacyPage
+            theme={theme}
             onThemeToggle={toggleTheme}
             onBack={() => setCurrentPage('home')}
             onNavigateToAbout={() => setCurrentPage('about')}
@@ -1001,8 +1117,8 @@ export default function App() {
           url="https://multistreaming.org/about.html"
         />
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
-          <AboutPage 
-            theme={theme} 
+          <AboutPage
+            theme={theme}
             onThemeToggle={toggleTheme}
             onBack={() => setCurrentPage('home')}
             onNavigateToPrivacy={() => setCurrentPage('privacy')}
@@ -1017,116 +1133,124 @@ export default function App() {
     <>
       <SEO />
       <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
-      <Navbar 
-        theme={theme} 
-        onThemeToggle={toggleTheme} 
-        onShowAbout={() => setCurrentPage('about')}
-        onShowTutorial={() => setShowTutorial(true)}
-        onShowVersionHistory={() => setShowVersionHistory(true)}
-        onShowFavorites={() => setShowFavorites(true)}
-        onTogglePanel={() => setIsPanelCollapsed(!isPanelCollapsed)}
-        onAddStream={handleAddStream}
-        onSearchFocusChange={setIsSearchFocused}
-      />
-      
-      {/* Stream Container - Only render when there are streams */}
-      {streams.length > 0 && (
-        <StreamContainer
-          streams={streams}
+        <Navbar
           theme={theme}
-          layoutType={currentLayout}
-          chatLayoutType={chatLayoutType}
-          onRemove={handleRemoveStream}
-          onReload={handleReloadStream}
-          onToggleChat={handleToggleChat}
-          onSeparateChat={handleSeparateChat}
-          onVolumeChange={handleVolumeChange}
-          onStreamDataChange={(id, data) => {
-            setStreams(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
-          }}
+          onThemeToggle={toggleTheme}
+          onShowAbout={() => setCurrentPage('about')}
+          onShowTutorial={() => setShowTutorial(true)}
+          onShowVersionHistory={() => setShowVersionHistory(true)}
+          onShowFavorites={() => setShowFavorites(true)}
+          onTogglePanel={() => setIsPanelCollapsed(!isPanelCollapsed)}
+          onAddStream={handleAddStream}
+          onSearchFocusChange={setIsSearchFocused}
         />
-      )}
-      
-      <div className="container mx-auto px-4 py-4" style={{ position: 'relative', zIndex: 10 }}>
-        {streams.length === 0 && (
-          <WelcomeCard 
+
+        {/* Stream Container - Only render when there are streams */}
+        {streams.length > 0 && (
+          <StreamContainer
+            streams={streams}
             theme={theme}
-            onShowVersionHistory={() => setShowVersionHistory(true)}
-            onShowTutorial={() => setShowTutorial(true)}
-            onShowAbout={() => setCurrentPage('about')}
-            onNavigateToPrivacy={() => setCurrentPage('privacy')}
+            layoutType={currentLayout}
+            chatLayoutType={chatLayoutType}
+            onRemove={handleRemoveStream}
+            onReload={handleReloadStream}
+            onToggleChat={handleToggleChat}
+            onSeparateChat={handleSeparateChat}
+            onVolumeChange={handleVolumeChange}
+            onStreamDataChange={(id, data) => {
+              setStreams(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+            }}
           />
         )}
-      </div>
 
-      <ControlPanel
-        theme={theme}
-        isCollapsed={isPanelCollapsed}
-        onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}
-        isSearchFocused={isSearchFocused}
-        onShowFavorites={() => setShowFavorites(true)}
-        onShowVersionHistory={() => setShowVersionHistory(true)}
-        onShowTutorial={() => setShowTutorial(true)}
-        onShowAbout={() => setCurrentPage('about')}
-        streams={streams}
-        currentLayout={currentLayout}
-        onLayoutChange={setLayout}
-        chatLayoutType={chatLayoutType}
-        onChatLayoutChange={setChatLayoutType}
-        onVolumeChange={handleVolumeChange}
-        onToggleMute={handleToggleMute}
-        onRemoveStream={handleRemoveStream}
-        onToggleAllChat={handleToggleAllChat}
-        masterVolume={masterVolume}
-        masterMuted={masterMuted}
-        onMasterVolumeChange={handleMasterVolumeChange}
-        onMasterMuteChange={handleMasterMuteChange}
-        onMoveStreamUp={(id) => {
-          setStreams(prev => {
-            const index = prev.findIndex(s => s.id === id);
-            if (index <= 0) return prev;
-            const newStreams = [...prev];
-            [newStreams[index - 1], newStreams[index]] = [newStreams[index], newStreams[index - 1]];
-            return newStreams;
-          });
-        }}
-        onMoveStreamDown={(id) => {
-          setStreams(prev => {
-            const index = prev.findIndex(s => s.id === id);
-            if (index < 0 || index >= prev.length - 1) return prev;
-            const newStreams = [...prev];
-            [newStreams[index], newStreams[index + 1]] = [newStreams[index + 1], newStreams[index]];
-            return newStreams;
-          });
-        }}
-      />
+        <div className="container mx-auto px-4 py-4" style={{ position: 'relative', zIndex: 10 }}>
+          {streams.length === 0 && (
+            <WelcomeCard
+              theme={theme}
+              onShowVersionHistory={() => setShowVersionHistory(true)}
+              onShowTutorial={() => setShowTutorial(true)}
+              onShowAbout={() => setCurrentPage('about')}
+              onNavigateToPrivacy={() => setCurrentPage('privacy')}
+            />
+          )}
+        </div>
 
-      {showVersionHistory && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
-          <VersionHistory 
-            theme={theme} 
-            onClose={() => setShowVersionHistory(false)} 
-          />
-        </Suspense>
-      )}
+        <ControlPanel
+          theme={theme}
+          isCollapsed={isPanelCollapsed}
+          onToggleCollapse={() => setIsPanelCollapsed(!isPanelCollapsed)}
+          isSearchFocused={isSearchFocused}
+          onShowFavorites={() => setShowFavorites(true)}
+          onShowVersionHistory={() => setShowVersionHistory(true)}
+          onShowTutorial={() => setShowTutorial(true)}
+          onShowAbout={() => setCurrentPage('about')}
+          streams={streams}
+          currentLayout={currentLayout}
+          onLayoutChange={setLayout}
+          chatLayoutType={chatLayoutType}
+          onChatLayoutChange={setChatLayoutType}
+          onVolumeChange={handleVolumeChange}
+          onToggleMute={handleToggleMute}
+          onRemoveStream={handleRemoveStream}
+          onToggleAllChat={handleToggleAllChat}
+          masterVolume={masterVolume}
+          masterMuted={masterMuted}
+          onMasterVolumeChange={handleMasterVolumeChange}
+          onMasterMuteChange={handleMasterMuteChange}
+          onMoveStreamUp={(id) => {
+            setStreams(prev => {
+              const index = prev.findIndex(s => s.id === id);
+              if (index <= 0) return prev;
+              const newStreams = [...prev];
+              [newStreams[index - 1], newStreams[index]] = [newStreams[index], newStreams[index - 1]];
+              return newStreams;
+            });
+          }}
+          onMoveStreamDown={(id) => {
+            setStreams(prev => {
+              const index = prev.findIndex(s => s.id === id);
+              if (index < 0 || index >= prev.length - 1) return prev;
+              const newStreams = [...prev];
+              [newStreams[index], newStreams[index + 1]] = [newStreams[index + 1], newStreams[index]];
+              return newStreams;
+            });
+          }}
+        />
 
-      {showTutorial && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
-          <Tutorial 
-            theme={theme} 
-            onClose={() => setShowTutorial(false)} 
-          />
-        </Suspense>
-      )}
+        {showVersionHistory && (
+          <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+            <VersionHistory
+              theme={theme}
+              onClose={() => setShowVersionHistory(false)}
+            />
+          </Suspense>
+        )}
 
-      {showFavorites && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
-          <FavoritesManager 
-            theme={theme} 
-            onClose={() => setShowFavorites(false)} 
-          />
-        </Suspense>
-      )}
+        {showTutorial && (
+          <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+            <Tutorial
+              theme={theme}
+              onClose={() => setShowTutorial(false)}
+            />
+          </Suspense>
+        )}
+
+        {showFavorites && (
+          <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+            <FavoritesManager
+              theme={theme}
+              onClose={() => setShowFavorites(false)}
+            />
+          </Suspense>
+        )}
+
+        <YouTubeRiskDialog
+          open={showYTRiskDialog}
+          streamCount={currentYTRiskCount}
+          onClose={() => setShowYTRiskDialog(false)}
+          onPauseOthers={handlePauseOtherYouTubeStreams}
+          onDontRemind={handleRiskDontRemind}
+        />
       </div>
     </>
   );

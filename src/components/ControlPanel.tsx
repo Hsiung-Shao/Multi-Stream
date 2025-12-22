@@ -92,9 +92,9 @@ declare global {
   }
 }
 
-export function ControlPanel({ 
-  theme, 
-  isCollapsed, 
+export function ControlPanel({
+  theme,
+  isCollapsed,
   onToggleCollapse,
   isSearchFocused = false,
   onShowFavorites,
@@ -127,7 +127,7 @@ export function ControlPanel({
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // 處理全域音量變化
   const handleMasterVolumeChange = (newVolume: number) => {
     // 如果從靜音狀態拖動到非零值，自動取消靜音
@@ -152,14 +152,14 @@ export function ControlPanel({
       onMasterMuteChange(!masterMuted);
     }
   };
-  
+
   // 同步 showAllChat 狀態：當所有串流的聊天室都顯示時，開關應該是開啟的
   useEffect(() => {
     if (streams.length === 0) {
       setShowAllChat(false);
       return;
     }
-    
+
     // 檢查是否所有串流的聊天室都顯示
     // 只有當所有串流的聊天室都顯示時，開關才是 true
     const allChatsVisible = streams.every(s => s.chatVisible === true);
@@ -207,7 +207,7 @@ export function ControlPanel({
       loadFavorites();
     };
     window.addEventListener('favoritesUpdated', handleFavoritesUpdate);
-    
+
     // 監聽初始載入完成後的刷新事件
     const handleRefreshFavoritesStatus = () => {
       // 確保收藏系統已初始化後再刷新
@@ -216,7 +216,7 @@ export function ControlPanel({
       }
     };
     window.addEventListener('refreshFavoritesStatus', handleRefreshFavoritesStatus);
-    
+
     return () => {
       window.removeEventListener('favoritesUpdated', handleFavoritesUpdate);
       window.removeEventListener('refreshFavoritesStatus', handleRefreshFavoritesStatus);
@@ -234,22 +234,22 @@ export function ControlPanel({
         waitCount++;
       }
     }
-    
+
     if (!window.favoriteStreams) return;
-    
+
     setIsRefreshing(true);
     try {
       const favoritesList = window.favoriteStreams.getList();
       const twitchFavorites = favoritesList.filter(f => f.platform === 'twitch' && f.channelId);
       const youtubeFavorites = favoritesList.filter(f => f.platform === 'youtube' && f.channelId);
-      
+
       let updatedFavorites = [...favoritesList];
-      
+
       // 更新 Twitch 開台狀態
       if (twitchFavorites.length > 0 && window.twitchApi && window.twitchApi.checkMultipleChannelsLiveStatus) {
         const channelIds = twitchFavorites.map(f => f.channelId!);
         const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelIds);
-        
+
         // 更新收藏列表中的開台狀態
         updatedFavorites = updatedFavorites.map(fav => {
           if (fav.platform === 'twitch' && fav.channelId && liveStatuses[fav.channelId]) {
@@ -265,7 +265,7 @@ export function ControlPanel({
           return fav;
         });
       }
-      
+
       // 更新 YouTube 開台狀態
       if (youtubeFavorites.length > 0 && window.youtubeApiUtils?.checkChannelLiveStatus) {
         for (const fav of youtubeFavorites) {
@@ -288,7 +288,7 @@ export function ControlPanel({
           }
         }
       }
-      
+
       // 保存更新後的收藏列表
       if (window.favoriteStreams.saveList) {
         window.favoriteStreams.saveList(updatedFavorites);
@@ -330,7 +330,7 @@ export function ControlPanel({
   // 收藏當前串流
   const handleAddCurrentToFavorites = async () => {
     if (streams.length === 0) return;
-    
+
     if (!window.favoriteStreams) {
       alert('收藏系統未初始化');
       return;
@@ -340,7 +340,7 @@ export function ControlPanel({
     const currentStreams = streams.map(stream => {
       let url = '';
       let channelId: string | undefined;
-      
+
       if (stream.platform === 'twitch' && stream.channelId) {
         url = `https://www.twitch.tv/${stream.channelId}`;
         channelId = stream.channelId;
@@ -350,7 +350,7 @@ export function ControlPanel({
       } else if (stream.platform === 'youtube' && stream.videoId) {
         url = `https://www.youtube.com/watch?v=${stream.videoId}`;
       }
-      
+
       return {
         url,
         name: stream.displayName || stream.name || stream.channelId || stream.videoId || '',
@@ -386,20 +386,20 @@ export function ControlPanel({
       alert(`成功收藏 ${successCount} 個串流`);
     }
   };
-  
+
   // 應用總音量到所有串流
   const applyMasterVolumeToAllStreams = (masterVol: number) => {
     // 遍歷所有串流並應用總音量
     streams.forEach(stream => {
       if (!(window as any).streamData || !(window as any).streamData[stream.id]) return;
       if (!(window as any).players || !(window as any).players[stream.id] || !(window as any).players[stream.id].player) return;
-      
+
       const player = (window as any).players[stream.id].player;
       const streamVol = stream.volume || 100;
-      
+
       // 計算實際音量（考慮總音量）
       const actualVol = Math.round((streamVol / 100) * masterVol);
-      
+
       try {
         if ((window as any).players[stream.id].type === 'twitch') {
           // Twitch 播放器
@@ -471,7 +471,7 @@ export function ControlPanel({
   // 同步總音量到全局變量並更新 DOM - 參考 js/volume.js
   useEffect(() => {
     (window as any).masterVolume = masterVolume;
-    
+
     // 更新 DOM 中的總音量滑塊（與舊代碼兼容）
     const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
     if (masterVolSlider) {
@@ -482,30 +482,30 @@ export function ControlPanel({
       // 如果是其他元素，設置 data-value 屬性（供舊代碼讀取）
       masterVolSlider.setAttribute('data-value', masterVolume.toString());
     }
-    
+
     // 注意：不要直接操作 master-volume-value，因為 React 已經通過 {masterVolume}% 來渲染
     // 直接操作 DOM 會與 React 的渲染衝突
-    
+
     // 直接應用總音量到所有串流
     if (typeof (window as any).applyMasterVolumeToAllStreams === 'function') {
       (window as any).applyMasterVolumeToAllStreams(masterVolume);
     }
-    
+
     // 觸發自定義事件，通知 StreamBox 總音量已改變
     window.dispatchEvent(new CustomEvent('masterVolumeChange', { detail: { volume: masterVolume } }));
-    
+
     // 觸發 updateMasterVolume 函數來更新所有播放器的音量（與舊代碼兼容）
     if (typeof (window as any).updateMasterVolume === 'function') {
       (window as any).updateMasterVolume();
     }
-    
+
     // 保存到 localStorage（調用 autoSaveSettings 如果存在，以保持一致性）
     try {
       const saved = localStorage.getItem('userSettings');
       const settings = saved ? JSON.parse(saved) : {};
       settings.masterVolume = masterVolume;
       localStorage.setItem('userSettings', JSON.stringify(settings));
-      
+
       // 調用 autoSaveSettings（如果存在）以觸發其他保存邏輯
       if (typeof (window as any).autoSaveSettings === 'function') {
         (window as any).autoSaveSettings();
@@ -514,7 +514,7 @@ export function ControlPanel({
       // 保存失敗，靜默處理
     }
   }, [masterVolume]);
-  
+
   const [navbarHeight, setNavbarHeight] = useState(64); // 默認 64px (4rem)
 
   useEffect(() => {
@@ -530,7 +530,7 @@ export function ControlPanel({
 
     updateNavbarHeight();
     window.addEventListener('resize', updateNavbarHeight);
-    
+
     return () => {
       window.removeEventListener('resize', updateNavbarHeight);
     };
@@ -604,20 +604,19 @@ export function ControlPanel({
                 }}
                 title={layout.label}
                 aria-label={layout.label}
-                className={`aspect-square rounded-lg border-2 transition-all ${
-                  currentLayout === layout.id
+                className={`aspect-square rounded-lg border-2 transition-all ${currentLayout === layout.id
                     ? 'border-purple-500 bg-purple-500/20'
                     : theme === 'dark'
-                    ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
-                    : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
-                }`}
+                      ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
+                      : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
+                  }`}
               >
-                <LayoutPreview 
-                  layoutId={layout.id} 
-                  cols={layout.cols} 
-                  rows={layout.rows} 
+                <LayoutPreview
+                  layoutId={layout.id}
+                  cols={layout.cols}
+                  rows={layout.rows}
                   special={layout.special}
-                  theme={theme} 
+                  theme={theme}
                 />
               </button>
             ))}
@@ -636,7 +635,7 @@ export function ControlPanel({
               };
               const mappedType = chatLayoutTypeMap[layout.id] || 'none';
               const isSelected = chatLayoutType === mappedType;
-              
+
               return (
                 <button
                   key={layout.id}
@@ -647,13 +646,12 @@ export function ControlPanel({
                   }}
                   title={layout.label}
                   aria-label={layout.label}
-                  className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center ${
-                    isSelected
+                  className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center ${isSelected
                       ? 'border-purple-500 bg-purple-500/20'
                       : theme === 'dark'
-                      ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
-                      : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
-                  }`}
+                        ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
+                        : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
+                    }`}
                 >
                   <ChatLayoutPreview id={layout.id} theme={theme} />
                 </button>
@@ -669,15 +667,15 @@ export function ControlPanel({
               <label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                 {t('controlPanel.showAllChats')}
               </label>
-              <Switch 
-                checked={showAllChat} 
+              <Switch
+                checked={showAllChat}
                 onCheckedChange={(checked) => {
                   // 調用回調函數來更新所有串流的聊天室狀態
                   // showAllChat 狀態會通過 useEffect 自動同步
                   if (onToggleAllChat) {
                     onToggleAllChat(checked);
                   }
-                }} 
+                }}
               />
             </div>
           </div>
@@ -739,7 +737,7 @@ export function ControlPanel({
                 <Star className="size-4" />
               </MuiButton>
             </div>
-            
+
             {/* 收藏串流列表 - 限高並添加滾動 */}
             <Box
               className="space-y-3 pr-2"
@@ -767,22 +765,21 @@ export function ControlPanel({
               {categories.map(category => {
                 const categoryFavorites = favorites.filter(f => f.categoryId === category.id);
                 if (categoryFavorites.length === 0) return null;
-                
+
                 // 分類內排序：開台狀態 > 未開台
                 const sortedCategoryFavorites = sortFavorites(categoryFavorites);
-                
+
                 const isExpanded = expandedCategories.has(category.id);
-                
+
                 return (
                   <div key={category.id} className="space-y-1">
                     {/* 分類標題 */}
                     <button
                       onClick={() => toggleCategory(category.id)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                        theme === 'dark' 
-                          ? 'hover:bg-gray-800 text-gray-300' 
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
+                          ? 'hover:bg-gray-800 text-gray-300'
                           : 'hover:bg-gray-100 text-gray-700'
-                      }`}
+                        }`}
                     >
                       {isExpanded ? (
                         <FolderOpen className="size-4 text-purple-500" />
@@ -799,7 +796,7 @@ export function ControlPanel({
                         <ChevronDown className="size-4" />
                       )}
                     </button>
-                    
+
                     {/* 分類內容 */}
                     {isExpanded && (
                       <div className="ml-6 space-y-1">
@@ -818,16 +815,15 @@ export function ControlPanel({
                               }
                             }
                           }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                            theme === 'dark' 
-                              ? 'hover:bg-gray-800 text-gray-400' 
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
+                              ? 'hover:bg-gray-800 text-gray-400'
                               : 'hover:bg-gray-100 text-gray-600'
-                          }`}
+                            }`}
                         >
                           <Play className="size-4" />
                           <span className="text-sm">載入分類內所有串流</span>
                         </button>
-                        
+
                         {/* 分類下的收藏 - 已排序 */}
                         {sortedCategoryFavorites.map((favorite) => (
                           <FavoriteItemComponent
@@ -924,23 +920,23 @@ export function ControlPanel({
                 sx={
                   masterMuted
                     ? {
-                        borderColor: theme === 'dark' ? '#dc2626' : '#dc2626',
-                        bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
-                        color: theme === 'dark' ? '#f87171' : '#dc2626',
-                        '&:hover': {
-                          borderColor: theme === 'dark' ? '#b91c1c' : '#b91c1c',
-                          bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.3)' : 'rgba(220, 38, 38, 0.15)',
-                        },
-                      }
+                      borderColor: theme === 'dark' ? '#dc2626' : '#dc2626',
+                      bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
+                      color: theme === 'dark' ? '#f87171' : '#dc2626',
+                      '&:hover': {
+                        borderColor: theme === 'dark' ? '#b91c1c' : '#b91c1c',
+                        bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.3)' : 'rgba(220, 38, 38, 0.15)',
+                      },
+                    }
                     : {
+                      borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
+                      bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.2)' : 'rgba(147, 51, 234, 0.1)',
+                      color: theme === 'dark' ? '#a855f7' : '#9333ea',
+                      '&:hover': {
                         borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
-                        bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.2)' : 'rgba(147, 51, 234, 0.1)',
-                        color: theme === 'dark' ? '#a855f7' : '#9333ea',
-                        '&:hover': {
-                          borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
-                          bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.15)',
-                        },
-                      }
+                        bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.15)',
+                      },
+                    }
                 }
               >
                 {masterMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
@@ -1023,12 +1019,12 @@ export function ControlPanel({
                               },
                             }}
                             title={
-                              masterMuted 
+                              masterMuted
                                 ? streamVolume > 0
                                   ? `全部靜音中（單獨靜音：${isStreamMuted ? '開啟' : '關閉'}，音量：${streamVolume}%）`
                                   : '全部靜音中，無法操作（音量為 0）'
-                                : isStreamMuted 
-                                  ? '取消靜音' 
+                                : isStreamMuted
+                                  ? '取消靜音'
                                   : '靜音'
                             }
                             onClick={() => {
@@ -1142,7 +1138,7 @@ export function ControlPanel({
                                 // 在全部靜音狀態下調整音量時，不解除全部靜音
                                 // 如果音量 > 0，恢復音量，但不取消全部靜音
                                 // 單獨的靜音按鈕會根據音量值恢復可用（disabled={masterMuted && streamVolume === 0}）
-                                
+
                                 // 如果調整音量且之前是單獨靜音狀態，取消單獨靜音
                                 // 只有在不是全域靜音時，才處理單獨靜音
                                 if (newVolume > 0 && !masterMuted && stream.isMuted && onToggleMute) {
@@ -1197,26 +1193,26 @@ function Section({ theme, title, children }: { theme: 'light' | 'dark'; title: s
   );
 }
 
-function LayoutPreview({ 
-  layoutId, 
-  cols, 
-  rows, 
-  special, 
-  theme 
-}: { 
-  layoutId: number; 
-  cols: number; 
-  rows: number; 
+function LayoutPreview({
+  layoutId,
+  cols,
+  rows,
+  special,
+  theme
+}: {
+  layoutId: number;
+  cols: number;
+  rows: number;
   special?: string;
-  theme: 'light' | 'dark' 
+  theme: 'light' | 'dark'
 }) {
   // 特殊布局：上大下三
   if (special === 'top-large-bottom-three') {
     return (
       <div className="w-full h-full p-2 flex flex-col gap-1">
         {/* 上方大區域 75% */}
-        <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} 
-             style={{ flex: '0 0 75%' }} />
+        <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`}
+          style={{ flex: '0 0 75%' }} />
         {/* 下方三個小區域 25% */}
         <div className="flex gap-1" style={{ flex: '0 0 25%' }}>
           <div className={`flex-1 rounded ${theme === 'dark' ? 'bg-purple-500' : 'bg-purple-400'}`} />
@@ -1257,7 +1253,7 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
       </div>
     );
   }
-  
+
   if (id === 2) {
     // 單一 - 左側紫色（視頻 80%），右側灰色區塊（聊天室 20%）
     return (
@@ -1267,7 +1263,7 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
       </div>
     );
   }
-  
+
   if (id === 3) {
     // 雙欄 - 左側紫色（視頻），右側兩個灰色區塊（聊天室）
     return (
@@ -1280,7 +1276,7 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
       </div>
     );
   }
-  
+
   // 四格 - 左側紫色（視頻），右側2x2網格（聊天室）
   return (
     <div className="w-full h-full p-2 flex gap-1">
@@ -1295,9 +1291,9 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
 }
 
 // 收藏項目組件
-const FavoriteItemComponent: React.FC<{ 
-  favorite: FavoriteItem; 
-  theme: 'light' | 'dark'; 
+const FavoriteItemComponent: React.FC<{
+  favorite: FavoriteItem;
+  theme: 'light' | 'dark';
   onLoad: (favorite: FavoriteItem) => void;
 }> = ({ favorite, theme, onLoad }) => {
   const isLive = favorite.isLive === true;
@@ -1307,11 +1303,10 @@ const FavoriteItemComponent: React.FC<{
   return (
     <button
       onClick={() => onLoad(favorite)}
-      className={`w-full px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors text-left rounded-lg border ${
-        theme === 'dark'
+      className={`w-full px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors text-left rounded-lg border ${theme === 'dark'
           ? 'hover:bg-gray-800 border-gray-700'
           : 'hover:bg-gray-50 border-gray-200'
-      }`}
+        }`}
     >
       {/* 手把圖標 - 替代頻道圖片 */}
       {favorite.platform === 'twitch' ? (
@@ -1319,7 +1314,7 @@ const FavoriteItemComponent: React.FC<{
       ) : (
         <Youtube className="size-4 flex-shrink-0" style={{ color: '#FF0000' }} />
       )}
-      
+
       {/* 頻道資訊區域 */}
       <div className="flex-1 min-w-0">
         {/* 第一行：頻道名稱 + 觀看人數 */}
@@ -1333,7 +1328,7 @@ const FavoriteItemComponent: React.FC<{
             </div>
           )}
         </div>
-        
+
         {/* 第二行：平台標籤、開台指示器、遊戲名稱 */}
         <div className={`text-sm flex items-center mt-1 gap-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
           <div className="flex items-center flex-shrink-0">
@@ -1346,8 +1341,8 @@ const FavoriteItemComponent: React.FC<{
             )}
           </div>
           {favorite.platform === 'twitch' && favorite.gameName && (
-            <span 
-              className="text-purple-500 flex-shrink min-w-0 truncate" 
+            <span
+              className="text-purple-500 flex-shrink min-w-0 truncate"
               style={{ color: '#a855f7' }}
               title={favorite.gameName}
             >
