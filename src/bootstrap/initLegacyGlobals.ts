@@ -31,6 +31,7 @@ export const initLegacyGlobals = () => {
     // Strict Entry Point for Utils/Security
     if (typeof window !== 'undefined' && !(window as any).__MS_UTILS_BRIDGE_READY__) {
         const win = window as any;
+        const debug = !!(win.__MS_DEBUG__ || win.__MS_DEBUG_UTILS__);
 
         // Mount Security Utils
         win.__MS_SECURITY__ = {
@@ -58,12 +59,19 @@ export const initLegacyGlobals = () => {
             set isDraggingStreamBox(v: boolean) { commonUtils.setIsDraggingStreamBox(v); }
         };
 
+        if (debug) {
+            console.log('[MS Security] Bridge mounted', Object.keys(win.__MS_SECURITY__));
+            console.log('[MS Utils] Bridge mounted');
+        }
+
         win.__MS_UTILS_BRIDGE_READY__ = true;
-        console.log('[LegacyGlobals] Security & Utils bridged to New System');
+        if (debug) console.log('[LegacyGlobals] Security & Utils bridged to New System');
     }
 
     if (isLegacyGlobalsInitialized) {
-        console.warn('[LegacyGlobals] Already initialized, skipping.');
+        if (typeof window !== 'undefined' && ((window as any).__MS_DEBUG__ || (window as any).__MS_DEBUG_UTILS__)) {
+            console.log('[LegacyGlobals] Already initialized, skipping.');
+        }
         return;
     }
     isLegacyGlobalsInitialized = true;

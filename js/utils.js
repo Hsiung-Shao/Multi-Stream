@@ -1,3 +1,8 @@
+/*
+MIGRATED (PR D): legacy utils.js fully disabled.
+All implementations are in src/utils/common/** and are exposed via initLegacyGlobals.ts
+Do not re-enable this file.
+
 // 工具函數
 // ============================================
 // 遷移狀態說明：
@@ -52,3 +57,4 @@ function getTwitchParents() {
   return [domain];
 }
 
+*/

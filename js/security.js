@@ -1,3 +1,8 @@
+/*
+MIGRATED (PR D): legacy security.js fully disabled.
+All implementations are in src/utils/security/** and are exposed via initLegacyGlobals.ts
+Do not re-enable this file.
+
 // 安全工具函数
 // ============================================
 // 遷移狀態說明：
@@ -122,3 +127,4 @@ function validateVideoId(id) {
   return /^[a-zA-Z0-9_-]+$/.test(trimmed);
 }
 
+*/

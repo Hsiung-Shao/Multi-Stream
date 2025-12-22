@@ -65,7 +65,7 @@ const indexedDBBackup = {
   // 獲取所有數據（從 localStorage - 主要快取）
   // 注意：此函數從 localStorage 讀取數據，localStorage 是主要快取
   getAllData() {
-    const parse = (window.__MS_SECURITY__ && window.__MS_SECURITY__.safeJSONParse) || safeJSONParse;
+    const parse = (window.__MS_SECURITY__ && window.__MS_SECURITY__.safeJSONParse) || ((s, d) => d);
     const data = {
       version: '1.0',
       exportDate: new Date().toISOString(),
@@ -1418,7 +1418,7 @@ function showFavoriteStreamsManager() {
   } else {
     filteredList.forEach((item) => {
       // 转义所有用户输入以防止 XSS
-      const escape = (window.__MS_SECURITY__ && window.__MS_SECURITY__.escapeHtml) || escapeHtml;
+      const escape = (window.__MS_SECURITY__ && window.__MS_SECURITY__.escapeHtml) || (s => s || '');
       const safeDisplayName = escape(item.name || (item.platform === 'twitch' ? item.channelId : item.videoId));
       const platformIcon = item.platform === 'twitch' ? '🎮' : '📺';
       const safeCategoryName = escape(item.categoryId ? categories.find(c => c.id === item.categoryId)?.name || i18n.t('unknownCategory') : i18n.t('uncategorized'));
