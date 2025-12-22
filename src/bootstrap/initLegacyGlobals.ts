@@ -6,6 +6,8 @@ import { StreamManager } from '../features/stream/StreamManager.ts';
 import { ControlPanelManager } from '../features/controlPanel/ControlPanelManager.ts';
 import { VolumeManager } from '../features/volume/VolumeManager.ts';
 import { PlayerAdapter } from '../features/volume/PlayerAdapter.ts';
+import * as securityUtils from '../utils/security/index.ts';
+import * as commonUtils from '../utils/common/index.ts';
 
 /**
  * Guard to prevent double initialization
@@ -25,6 +27,41 @@ const streamManager = new StreamManager();
  * This should be called exactly once at the application entry point.
  */
 export const initLegacyGlobals = () => {
+    // --- Utils & Security Bridge (PR C) ---
+    // Strict Entry Point for Utils/Security
+    if (typeof window !== 'undefined' && !(window as any).__MS_UTILS_BRIDGE_READY__) {
+        const win = window as any;
+
+        // Mount Security Utils
+        win.__MS_SECURITY__ = {
+            escapeHtml: securityUtils.escapeHtml,
+            safeJSONParse: securityUtils.safeJSONParse,
+            validateChannelId: securityUtils.validateChannelId,
+            validateVideoId: securityUtils.validateVideoId,
+            validateUrl: securityUtils.validateUrl
+        };
+
+        // Mount Common Utils
+        win.__MS_UTILS__ = {
+            getParentDomain: commonUtils.getParentDomain,
+            getTwitchParents: commonUtils.getTwitchParents,
+            // State is handled via getter/setter in module, but exposed as property access if needed.
+            // However, legacy uses `let isDraggingStreamBox`. We can't replace a let variable binding easily without changing the file.
+            // But if we want to expose the NEW state to legacy, we need legacy code to read from here.
+            // For PR C (Wiring), we act as a provider. Legacy files might need modification to use this if they want to share state.
+            // For now, we expose the state helpers.
+            getIsDraggingStreamBox: commonUtils.getIsDraggingStreamBox,
+            setIsDraggingStreamBox: commonUtils.setIsDraggingStreamBox,
+
+            // Bridge state property for easy access if we change legacy to use `window.__MS_UTILS__.isDraggingStreamBox`
+            get isDraggingStreamBox() { return commonUtils.getIsDraggingStreamBox(); },
+            set isDraggingStreamBox(v: boolean) { commonUtils.setIsDraggingStreamBox(v); }
+        };
+
+        win.__MS_UTILS_BRIDGE_READY__ = true;
+        console.log('[LegacyGlobals] Security & Utils bridged to New System');
+    }
+
     if (isLegacyGlobalsInitialized) {
         console.warn('[LegacyGlobals] Already initialized, skipping.');
         return;
