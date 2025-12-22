@@ -3,10 +3,17 @@ import { twitchService } from '../features/twitch/TwitchService.ts';
 import { adManager } from '../features/promotion/AdManager.ts';
 import { chatManager } from '../features/chat/index.ts';
 import { StreamManager } from '../features/stream/StreamManager.ts';
+import { ControlPanelManager } from '../features/controlPanel/ControlPanelManager.ts';
+import { VolumeManager } from '../features/volume/VolumeManager.ts';
+import { PlayerAdapter } from '../features/volume/PlayerAdapter.ts';
 
 /**
  * Guard to prevent double initialization
  */
+if (typeof window !== 'undefined' && (window as any).__MS_CP_VOLUME_BRIDGE_READY__) {
+    // Already initialized logic handled inside function, but this prevents module side effects if any
+}
+
 let isLegacyGlobalsInitialized = false;
 
 // Create singleton instance
@@ -89,12 +96,16 @@ export const initLegacyGlobals = () => {
             await streamManager.addStream(url || '');
             // Attempt to sync legacy data for compatibility (optional, but safer for cutover)
             syncLegacyData(win);
+            // PR E: Dispatch event for UI consumers
+            win.dispatchEvent(new CustomEvent('ms:streamsChanged'));
         };
 
         // 2. removeBox
         win.removeBox = (id: number) => {
             streamManager.removeStream(id);
             syncLegacyData(win);
+            // PR E: Dispatch event
+            win.dispatchEvent(new CustomEvent('ms:streamsChanged'));
         };
 
         // 3. reloadStream
@@ -102,12 +113,16 @@ export const initLegacyGlobals = () => {
             streamManager.reloadStream(id);
             // No sync needed for pure reload typically, but to be safe if volume changed during reload logic
             syncLegacyData(win);
+            // PR E: Dispatch event (reload might not change count, but might change status)
+            win.dispatchEvent(new CustomEvent('ms:streamsChanged'));
         };
 
         // 4. clearAll
         win.clearAll = () => {
             streamManager.clearAll();
             syncLegacyData(win);
+            // PR E: Dispatch event
+            win.dispatchEvent(new CustomEvent('ms:streamsChanged'));
         };
 
         // 5. Layout (Stub/Minimal)
@@ -161,6 +176,127 @@ export const initLegacyGlobals = () => {
         syncLegacyData(win);
 
         console.log('[LegacyGlobals] Stream System bridged to StreamManager');
+    }
+
+    // --- Control Panel & Volume System (Bridge) ---
+    if (typeof window !== 'undefined' && !(window as any).__MS_CP_VOLUME_BRIDGE_READY__) {
+        const win = window as any;
+
+        // 1. Initialize Managers
+        // Dependencies for CP: getStreamData, autoSaveSettings, getContainer
+        const getStreamData = () => win.streamData || {};
+        const autoSaveSettings = () => { if (typeof win.autoSaveSettings === 'function') win.autoSaveSettings(); };
+        const getContainer = () => document.getElementById('container');
+
+        const cpManager = new ControlPanelManager(getStreamData, autoSaveSettings, getContainer);
+
+        // Dependencies for Volume: PlayerAdapter, getStreamData, autoSaveSettings
+        // PlayerAdapter needs 'players' object. legacy uses window.players.
+        // We pass a direct reference or getter wrapper? Adapter expects Record<number, PlayerWrapper>.
+        // Since window.players is mutated, passing the object ref *should* work if Adapter doesn't clone it.
+        // PR B PlayerAdapter constructor: this.players = players;
+        if (!win.players) win.players = {};
+        const playerAdapter = new PlayerAdapter(win.players);
+
+        const volManager = new VolumeManager(playerAdapter, getStreamData, autoSaveSettings);
+
+        // Link CP volume service
+        cpManager.setVolumeService(volManager);
+
+        // 2. Wiring Control Panel APIs (Strict Cutover: No fallbacks)
+
+        // window.toggleControlPanel
+        win.toggleControlPanel = () => {
+            try {
+                cpManager.toggleControlPanel();
+            } catch (e) {
+                console.error('[CP Cutover] toggleControlPanel failed', e);
+            }
+        };
+
+        // window.updateStreamOrderList
+        win.updateStreamOrderList = () => {
+            try {
+                cpManager.updateStreamOrderList();
+            } catch (e) {
+                console.error('[CP Cutover] updateStreamOrderList failed', e);
+            }
+        };
+
+        // window.updateAllChatsButton
+        win.updateAllChatsButton = () => {
+            try {
+                cpManager.updateAllChatsButton();
+            } catch (e) {
+                // UI update failure is low risk, warn only
+                console.warn('[CP Cutover] updateAllChatsButton failed', e);
+            }
+        };
+
+        // Setup Event-Driven Updates (PR E)
+        // Listen for 'ms:streamsChanged' to update UI
+        if (!win._msStreamsChangedListenerAttached) {
+            win.addEventListener('ms:streamsChanged', () => {
+                // Debounce slightly to avoid rapid updates
+                if (win._msUpdateTimeout) clearTimeout(win._msUpdateTimeout);
+                win._msUpdateTimeout = setTimeout(() => {
+                    win.updateStreamOrderList();
+                    win.updateAllChatsButton();
+                }, 10);
+            });
+            win._msStreamsChangedListenerAttached = true;
+        }
+
+        // window.toggleAllChats
+        win.toggleAllChats = () => {
+            try {
+                cpManager.toggleAllChats();
+            } catch (e) {
+                console.error('[CP Cutover] toggleAllChats failed', e);
+            }
+        };
+
+        // 3. Wiring Volume APIs (Strict Cutover: No fallbacks)
+
+        // window.applyMasterVolumeToStream
+        win.applyMasterVolumeToStream = (id: number) => {
+            try {
+                volManager.applyMasterVolumeToStream(id);
+            } catch (e) {
+                console.error('[Volume Cutover] applyMasterVolumeToStream failed', e);
+            }
+        };
+
+        // window.updateMasterVolume
+        win.updateMasterVolume = () => {
+            try {
+                volManager.updateMasterVolume();
+            } catch (e) {
+                console.error('[Volume Cutover] updateMasterVolume failed', e);
+            }
+        };
+
+        // window.muteAll
+        win.muteAll = () => {
+            try {
+                volManager.muteAll();
+            } catch (e) {
+                console.error('[Volume Cutover] muteAll failed', e);
+            }
+        };
+
+        // window.setupVolumeControl
+        win.setupVolumeControl = (box: HTMLElement, id: number) => {
+            try {
+                volManager.setupVolumeControl(box, id);
+            } catch (e) {
+                console.error('[Volume Cutover] setupVolumeControl failed', e);
+            }
+        };
+
+        // Set Guard
+        win.__MS_CP_VOLUME_BRIDGE_READY__ = true;
+        console.log('[LegacyGlobals] Control Panel & Volume bridged to New System');
     }
 };
 

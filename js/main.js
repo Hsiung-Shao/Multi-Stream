@@ -81,6 +81,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 2000); // 增加延遲到 2 秒，確保所有模組都已載入
   }
 
+  /* MIGRATED (PR E): polling removed. Control panel updates are event-driven.
   // 定期更新串流順序列表（當有新增或刪除時）
   setInterval(() => {
     updateStreamOrderList();
@@ -88,6 +89,7 @@ window.addEventListener('DOMContentLoaded', () => {
       updateAllChatsButton();
     }
   }, 1000);
+  */
 
   // 頁面載入時自動應用布局（立即執行）
   const boxes = document.querySelectorAll('.stream-box');
@@ -137,7 +139,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const code1 = document.createElement('code');
     code1.style.cssText = 'background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;';
     code1.textContent = 'http://localhost:8000';
-    code1.appendChild(document.createTextNode('http://localhost:8000')); // correction
+    // code1.appendChild(document.createTextNode('http://localhost:8000')); // correction
     p2.appendChild(code1);
 
     const p3 = document.createElement('p');
