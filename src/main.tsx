@@ -4,6 +4,10 @@ import "./index.css";
 import { apiLoader } from "./utils/apiLoader.ts";
 import { I18nProvider } from "./i18n/index";
 import { initLegacyGlobals } from "./bootstrap/initLegacyGlobals.ts";
+import { checkAppVersion } from "./utils/versionCheck.ts";
+
+// Perform version check and cleanup BEFORE anything else
+checkAppVersion();
 
 // Initialize legacy features (Analytics, Promotion, etc.)
 initLegacyGlobals();
