@@ -51,6 +51,8 @@ interface FavoriteItem {
   lastChecked?: string | null;
   viewerCount?: number;
   gameName?: string;
+  liveUrl?: string | null;
+  liveVideoId?: string | null;
 }
 
 interface Category {
@@ -87,7 +89,7 @@ declare global {
       checkMultipleChannelsLiveStatus: (channelIds: string[]) => Promise<Record<string, { isLive: boolean; viewerCount?: number; gameName?: string }>>;
     };
     youtubeApiUtils?: {
-      checkChannelLiveStatus: (channelId: string) => Promise<{ isLive: boolean }>;
+      checkChannelLiveStatus: (channelId: string) => Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string }>;
     };
   }
 }
@@ -277,7 +279,9 @@ export function ControlPanel({
                   return {
                     ...f,
                     isLive: status.isLive || false,
-                    lastChecked: new Date().toISOString()
+                    lastChecked: new Date().toISOString(),
+                    liveUrl: status.finalUrl || null,
+                    liveVideoId: status.liveVideoId || null
                   };
                 }
                 return f;
@@ -605,10 +609,10 @@ export function ControlPanel({
                 title={layout.label}
                 aria-label={layout.label}
                 className={`aspect-square rounded-lg border-2 transition-all ${currentLayout === layout.id
-                    ? 'border-purple-500 bg-purple-500/20'
-                    : theme === 'dark'
-                      ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
-                      : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
+                  ? 'border-purple-500 bg-purple-500/20'
+                  : theme === 'dark'
+                    ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
+                    : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
                   }`}
               >
                 <LayoutPreview
@@ -647,10 +651,10 @@ export function ControlPanel({
                   title={layout.label}
                   aria-label={layout.label}
                   className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center ${isSelected
-                      ? 'border-purple-500 bg-purple-500/20'
-                      : theme === 'dark'
-                        ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
-                        : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
+                    ? 'border-purple-500 bg-purple-500/20'
+                    : theme === 'dark'
+                      ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
+                      : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
                     }`}
                 >
                   <ChatLayoutPreview id={layout.id} theme={theme} />
@@ -777,8 +781,8 @@ export function ControlPanel({
                     <button
                       onClick={() => toggleCategory(category.id)}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
-                          ? 'hover:bg-gray-800 text-gray-300'
-                          : 'hover:bg-gray-100 text-gray-700'
+                        ? 'hover:bg-gray-800 text-gray-300'
+                        : 'hover:bg-gray-100 text-gray-700'
                         }`}
                     >
                       {isExpanded ? (
@@ -816,8 +820,8 @@ export function ControlPanel({
                             }
                           }}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
-                              ? 'hover:bg-gray-800 text-gray-400'
-                              : 'hover:bg-gray-100 text-gray-600'
+                            ? 'hover:bg-gray-800 text-gray-400'
+                            : 'hover:bg-gray-100 text-gray-600'
                             }`}
                         >
                           <Play className="size-4" />
@@ -1304,8 +1308,8 @@ const FavoriteItemComponent: React.FC<{
     <button
       onClick={() => onLoad(favorite)}
       className={`w-full px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors text-left rounded-lg border ${theme === 'dark'
-          ? 'hover:bg-gray-800 border-gray-700'
-          : 'hover:bg-gray-50 border-gray-200'
+        ? 'hover:bg-gray-800 border-gray-700'
+        : 'hover:bg-gray-50 border-gray-200'
         }`}
     >
       {/* 手把圖標 - 替代頻道圖片 */}

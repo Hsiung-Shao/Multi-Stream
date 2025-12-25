@@ -277,6 +277,45 @@ export default function App() {
     }, 1000);
   }, []);
 
+  // 背景自動刷新機制 (Auto Refresh)
+  useEffect(() => {
+    // 檢查是否啟用自動刷新
+    const isAutoRefreshEnabled = () => {
+      if (typeof localStorage === 'undefined') return true; // 預設啟用
+      const setting = localStorage.getItem('favoriteLiveStatusAutoRefresh');
+      return setting !== 'false';
+    };
+
+    if (!isAutoRefreshEnabled()) return;
+
+    // 獲取刷新間隔 (預設 25 分鐘)
+    const getRefreshInterval = () => {
+      if (typeof localStorage === 'undefined') return 25;
+      const intervalStr = localStorage.getItem('favoriteLiveStatusAutoRefreshInterval');
+      const interval = parseInt(intervalStr || '25', 10);
+      return isNaN(interval) || interval <= 0 ? 25 : interval;
+    };
+
+    const intervalMinutes = getRefreshInterval();
+    const intervalMs = intervalMinutes * 60 * 1000;
+
+    console.log(`[AutoRefresh] 啟動背景自動刷新，間隔: ${intervalMinutes} 分鐘`);
+
+    const intervalId = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        // 僅在頁面可見時觸發，或者是希望背景也能跑？
+        // 舊版邏輯無 visibility check。
+        // 但為了節省資源，通常可以加上。不過使用者需求是 "背景自動刷新"，
+        // 這裡的背景通常指 "非手動觸發"，而不是 "後台 tab"。
+        // 為確保一致性，直接觸發。
+        console.log('[AutoRefresh] 觸發定時刷新...');
+        window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
+      }
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   // 布局管理
   const { currentLayout, setLayout } = useLayout(streams.length);
 
