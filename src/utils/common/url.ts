@@ -1,0 +1,42 @@
+/**
+ * URL 工具函數
+ * 對應 legacy: js/utils.js - getParentDomain, getTwitchParents
+ */
+
+/**
+ * 獲取有效的 parent 域名
+ * 用於 Twitch/YouTube 嵌入
+ */
+export function getParentDomain(): string {
+    if (typeof window === 'undefined') return 'localhost';
+
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    // 如果是 file:// 協議，使用 localhost
+    if (protocol === 'file:' || !hostname || hostname === '') {
+        return 'localhost';
+    }
+
+    // 如果是 localhost 或 127.0.0.1，返回 localhost（不包含端口）
+    // Twitch 的 CSP 允許 http://localhost:* 和 https://localhost:*
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+        return 'localhost';
+    }
+
+    // 返回實際的 hostname（不包含端口，Twitch 會自動處理端口）
+    return hostname;
+}
+
+/**
+ * 獲取 Twitch parent 陣列（支援多個域名）
+ */
+export function getTwitchParents(): string[] {
+    const domain = getParentDomain();
+    // Twitch CSP 允許 http://localhost:* 和 https://localhost:*
+    // 所以我們只需要返回 'localhost'，不需要包含端口
+    if (domain === 'localhost') {
+        return ['localhost'];
+    }
+    return [domain];
+}

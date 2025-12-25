@@ -233,7 +233,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     try {
       const categoryId = selectedCategory === '' || selectedCategory === 'uncategorized' ? null : selectedCategory;
       const result = await window.favoriteStreams.add(streamUrl, streamName || undefined, categoryId);
-      
+
       if (result.success) {
         showMessage('success', result.message || t('favorites.add'));
         setStreamUrl('');
@@ -315,7 +315,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       if (successCount > 0) {
         loadData();
         debouncedBackup();
-        const successMsg = failCount > 0 
+        const successMsg = failCount > 0
           ? t('favorites.batchImportSuccessWithFail')?.replace('{success}', successCount.toString()).replace('{fail}', failCount.toString()) || `成功匯入 ${successCount} 個收藏，失敗 ${failCount} 個`
           : t('favorites.batchImportSuccess')?.replace('{success}', successCount.toString()) || `成功匯入 ${successCount} 個收藏`;
         showMessage('success', successMsg);
@@ -356,13 +356,13 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
     setSelectedFavorites(new Set());
     loadData();
-    
+
     // 刪除操作立即備份
     if (window.indexedDBBackup?.isEnabled()) {
       if (backupTimeout) {
         clearTimeout(backupTimeout);
       }
-      window.indexedDBBackup.backup().catch(() => {});
+      window.indexedDBBackup.backup().catch(() => { });
     }
 
     showMessage('success', `${t('favorites.delete')} ${deletedCount} ${t('favorites.myFavorites')}`);
@@ -413,7 +413,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     try {
       // 獲取該分類下的所有收藏
       const categoryFavorites = favorites.filter(f => f.categoryId === categoryId);
-      
+
       if (categoryFavorites.length === 0) {
         showMessage('error', t('favorites.noFavorites')); // TODO: 更好的錯誤訊息
         return;
@@ -498,13 +498,13 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     if (result.success) {
       showMessage('success', result.message || t('favorites.delete'));
       loadData();
-      
+
       // 刪除操作立即備份
       if (window.indexedDBBackup?.isEnabled()) {
         if (backupTimeout) {
           clearTimeout(backupTimeout);
         }
-        window.indexedDBBackup.backup().catch(() => {});
+        window.indexedDBBackup.backup().catch(() => { });
       }
     } else {
       showMessage('error', result.message || t('favorites.delete')); // TODO: 更好的錯誤訊息
@@ -587,7 +587,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
           adConfig: safeJSONParse(localStorage.getItem('adConfig'), null)
         };
       }
-      
+
       const jsonStr = JSON.stringify(data, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -671,7 +671,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
           if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
             const existingCategories = window.favoriteCategories.getList();
             const categoryMap = new Map(existingCategories.map(c => [c.id, c]));
-            
+
             for (const cat of data.favoriteCategories) {
               if (cat.id && cat.name) {
                 // 如果分類不存在，直接添加到列表中（保留原始 ID）
@@ -684,7 +684,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                 }
               }
             }
-            
+
             // 保存更新後的分類列表
             window.favoriteCategories.saveList!(Array.from(categoryMap.values()));
           }
@@ -718,7 +718,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
         // 重新載入數據
         loadData();
-        
+
         // 觸發 favoritesUpdated 事件，通知 ControlPanel 更新收藏列表
         window.dispatchEvent(new CustomEvent('favoritesUpdated', {
           detail: {
@@ -727,7 +727,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
             skippedCount: skippedCount
           }
         }));
-        
+
         // 如果已啟用備份，立即備份到 IndexedDB（與 importFromJSON() 一致）
         if ((window as any).indexedDBBackup?.isEnabled()) {
           try {
@@ -1004,11 +1004,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
               {/* 資料儲存提示 - 在"我的收藏"區塊下方，綠色半透明玻璃效果 */}
               {message && message.type === 'success' && (
-                <div className={`p-3 rounded-lg text-sm backdrop-blur-md flex-shrink-0 text-white ${
-                  theme === 'dark' 
-                    ? 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10' 
+                <div className={`p-3 rounded-lg text-sm backdrop-blur-md flex-shrink-0 text-white ${theme === 'dark'
+                    ? 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10'
                     : 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10'
-                }`}>
+                  }`}>
                   {message.text}
                 </div>
               )}
@@ -1214,9 +1213,8 @@ function FavoriteItem({
       <span className="text-lg">{platformIcon}</span>
       {favorite.isLive !== null && (
         <div
-          className={`w-2 h-2 rounded-full ${
-            favorite.isLive === true ? 'bg-green-500' : 'bg-gray-500'
-          }`}
+          className={`w-2 h-2 rounded-full ${favorite.isLive === true ? 'bg-green-500' : 'bg-gray-500'
+            }`}
           title={favorite.isLive === true ? t('favorites.live') : t('favorites.offline')}
         />
       )}
