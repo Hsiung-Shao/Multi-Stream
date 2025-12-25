@@ -135,13 +135,15 @@ export class BackupService {
 
     // Check if we have meaningful data in local storage
     // "Meaningful" means favoriteStreams exists and is not empty/null
+    // Check if we have meaningful data in local storage
+    // "Meaningful" means favoriteStreams exists (even empty array is considered initialized data)
     hasLocalStorageData(): boolean {
         const fs = localStorage.getItem('favoriteStreams');
-        const ver = localStorage.getItem('app_version');
 
         // Treat existing key as data, even if empty array '[]'.
-        // Also check app_version, which confirms the app has initialized at least once.
-        if (fs !== null || ver !== null) return true;
+        // We do NOT check app_version here, because versionCheck runs first and sets it,
+        // which would falsely indicate "User Data Exists" and prevent restoration.
+        if (fs !== null) return true;
 
         return false;
     }
