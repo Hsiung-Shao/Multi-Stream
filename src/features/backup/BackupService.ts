@@ -137,7 +137,12 @@ export class BackupService {
     // "Meaningful" means favoriteStreams exists and is not empty/null
     hasLocalStorageData(): boolean {
         const fs = localStorage.getItem('favoriteStreams');
-        if (fs && fs !== '[]' && fs !== 'null') return true;
+        const ver = localStorage.getItem('app_version');
+
+        // Treat existing key as data, even if empty array '[]'.
+        // Also check app_version, which confirms the app has initialized at least once.
+        if (fs !== null || ver !== null) return true;
+
         return false;
     }
 
