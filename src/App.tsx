@@ -1202,8 +1202,8 @@ export default function App() {
           />
         )}
 
-        <div className="container mx-auto px-4 py-4" style={{ position: 'relative', zIndex: 10 }}>
-          {streams.length === 0 && (
+        {streams.length === 0 && (
+          <div className="container mx-auto px-4 py-4" style={{ position: 'relative', zIndex: 10 }}>
             <WelcomeCard
               theme={theme}
               onShowVersionHistory={() => setShowVersionHistory(true)}
@@ -1211,8 +1211,8 @@ export default function App() {
               onShowAbout={() => setCurrentPage('about')}
               onNavigateToPrivacy={() => setCurrentPage('privacy')}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         <ControlPanel
           theme={theme}
