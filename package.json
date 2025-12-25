@@ -1,6 +1,6 @@
 {
       "name": "Redesign Navbar",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "private": true,
       "dependencies": {
             "@emotion/react": "^11.14.0",
@@ -60,6 +60,7 @@
             "vitest": "^4.0.16"
       },
       "scripts": {
+            "predev": "node scripts/detect-legacy-scripts.js",
             "dev": "vite",
             "build": "vite build",
             "postbuild": "node scripts/copy-static-assets.js",
