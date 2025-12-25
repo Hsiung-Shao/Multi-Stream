@@ -2,7 +2,9 @@
 
 // 全局變數
 // 將 streamCount 直接定義在 window 上，以便其他模組訪問
-window.streamCount = 0;
+/* MIGRATED TO src/features */
+// window.streamCount = 0;
+/*
 const container = document.getElementById('container');
 
 // 布局更新防抖定時器
@@ -14,20 +16,23 @@ const streamData = {}; // 儲存串流資訊
 // 將全局變數暴露到全局作用域，以便其他模組訪問
 window.players = players;
 window.streamData = streamData;
+*/
 
 // 頁面載入時檢查協議和恢復控制面板狀態
 window.addEventListener('DOMContentLoaded', () => {
 
 
-  // 初始化串流順序列表
-  if (typeof updateStreamOrderList === 'function') {
-    updateStreamOrderList();
-  }
-
-  // 初始化所有聊天室按鈕狀態
-  if (typeof updateAllChatsButton === 'function') {
-    updateAllChatsButton();
-  }
+  /* MIGRATED: Managed by ControlPanelManager in initLegacyGlobals
+    // 初始化串流順序列表
+    if (typeof updateStreamOrderList === 'function') {
+      updateStreamOrderList();
+    }
+  
+    // 初始化所有聊天室按鈕狀態
+    if (typeof updateAllChatsButton === 'function') {
+      updateAllChatsButton();
+    }
+  */
 
   // 載入用戶設置
   if (typeof loadUserSettings === 'function') {
@@ -98,13 +103,15 @@ window.addEventListener('DOMContentLoaded', () => {
     setLayout(layoutType, true); // 立即執行，不使用防抖
   }
 
-  // 初始化廣告系統
-  if (typeof initAdSystem === 'function') {
-    // 延遲初始化，確保頁面完全載入
-    setTimeout(() => {
-      initAdSystem();
-    }, 1000);
-  }
+  /* MIGRATED: AdManager handles initialization
+    // 初始化廣告系統
+    if (typeof initAdSystem === 'function') {
+      // 延遲初始化，確保頁面完全載入
+      setTimeout(() => {
+        initAdSystem();
+      }, 1000);
+    }
+  */
 
   const protocol = window.location.protocol;
   if (protocol === 'file:') {
