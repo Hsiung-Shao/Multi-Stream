@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es2019",
+        "lib": [
+            "es2019",
+            "dom"
+        ],
+        "allowJs": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "strict": true,
+        "moduleResolution": "node"
+    },
+    "include": [
+        "../src/**/*",
+        "verify_stream.ts"
+    ]
+}

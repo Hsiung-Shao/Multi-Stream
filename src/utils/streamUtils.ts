@@ -24,15 +24,15 @@ export function validateUrl(url: string): UrlValidation {
   if (!url || typeof url !== 'string') {
     return { valid: false, error: 'URL 不能為空' };
   }
-  
+
   // 先檢查是否包含支持的平台域名（更寬鬆的檢查）
   const hasTwitch = url.includes('twitch.tv');
   const hasYouTube = url.includes('youtube.com') || url.includes('youtu.be');
-  
+
   if (!hasTwitch && !hasYouTube) {
     return { valid: false, error: '不支援的平台，目前支援 Twitch、YouTube' };
   }
-  
+
   // 嘗試解析 URL
   let urlObj: URL;
   try {
@@ -52,7 +52,7 @@ export function validateUrl(url: string): UrlValidation {
       return { valid: false, error: '無效的 URL 格式' };
     }
   }
-  
+
   // 白名單：只允許 twitch.tv 和 youtube.com/youtu.be
   const allowedDomains = [
     'twitch.tv',
@@ -62,16 +62,16 @@ export function validateUrl(url: string): UrlValidation {
     'youtu.be',
     'm.youtube.com'
   ];
-  
+
   const hostname = urlObj.hostname.toLowerCase();
-  const isAllowed = allowedDomains.some(domain => 
+  const isAllowed = allowedDomains.some(domain =>
     hostname === domain || hostname.endsWith('.' + domain)
   );
-  
+
   if (!isAllowed) {
     return { valid: false, error: '不支援的域名，目前只支援 Twitch 和 YouTube' };
   }
-  
+
   return { valid: true, urlObj };
 }
 
@@ -109,13 +109,13 @@ export function parseStreamUrl(url: string): {
       error: urlValidation.error || '無效的 URL'
     };
   }
-  
+
   const urlObj = urlValidation.urlObj;
   const hostname = urlObj.hostname.toLowerCase();
   let platform: 'twitch' | 'youtube' | null = null;
   let channelId = '';
   let videoId = '';
-  
+
   if (hostname.includes('twitch.tv')) {
     const match = url.match(/twitch\.tv\/([^\/\?]+)/);
     if (!match) {
@@ -143,7 +143,7 @@ export function parseStreamUrl(url: string): {
     if (channelMatch) {
       channelId = channelMatch[1];
     }
-    
+
     if (url.includes('youtube.com/live/')) {
       videoId = url.split('live/')[1]?.split('?')[0] || '';
     } else if (url.includes('youtube.com/watch')) {
@@ -158,7 +158,7 @@ export function parseStreamUrl(url: string): {
         error: '請使用 YouTube 直播影片的完整網址（例如：https://www.youtube.com/watch?v=VIDEO_ID）\n\n頻道 /live 網址需要先檢查直播狀態，請從收藏功能中使用。'
       };
     }
-    
+
     if (!videoId) {
       return {
         platform: null,
@@ -167,7 +167,7 @@ export function parseStreamUrl(url: string): {
         error: '無法解析 YouTube 網址，請確認網址格式正確\n\n支援的格式：\n- https://www.youtube.com/watch?v=VIDEO_ID\n- https://youtu.be/VIDEO_ID\n- https://www.youtube.com/live/VIDEO_ID'
       };
     }
-    
+
     // 驗證視頻 ID
     if (videoId && !validateVideoId(videoId)) {
       return {
@@ -186,7 +186,7 @@ export function parseStreamUrl(url: string): {
       error: '不支援的平台，目前支援 Twitch、YouTube'
     };
   }
-  
+
   return {
     platform,
     channelId,

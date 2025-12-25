@@ -236,7 +236,7 @@ const enTranslations = {
   'tutorial.tips.card5.description': 'Enter a Twitch channel name in the input box, and the system will automatically display search suggestions',
   'tutorial.tips.card6.title': 'Live Reminder',
   'tutorial.tips.card6.description': 'Favorited channels will automatically display live status, and live channels will automatically be sorted to the front',
-  
+
   // Version History
   'versionHistory.title': 'Version History',
   'versionHistory.subtitle': 'MultiStream Hub Update History',
@@ -387,14 +387,14 @@ const enTranslations = {
   'common.all': 'All',
   'common.yes': 'Yes',
   'common.no': 'No',
-  
+
   // Language names
   'chineseTraditional': '繁體中文',
   'chineseSimplified': '简体中文',
   'english': 'English',
   'japanese': '日本語',
   'korean': '한국어',
-  
+
   // About Page - Extended
   'about.feature1.title': 'Multi-Platform Stream Support',
   'about.feature1.description': 'Support for Twitch and YouTube, two major streaming platforms, allowing simultaneous viewing of multiple streams',
@@ -448,7 +448,7 @@ const enTranslations = {
   'about.terms3': 'To maintain website operations and continuous development, this website may display third-party advertisements (such as Google AdSense). These ads are managed by third-party service providers, and we do not collect your personal information for advertising purposes.',
   'about.privacy1': 'We value your privacy. This website does not actively collect any personal data. All settings and favorites are stored locally in your browser.',
   'about.privacy2': 'For detailed privacy policy, please refer to',
-  
+
   // Privacy Page
   'privacy.title': 'Privacy Policy',
   'privacy.effectiveDate': 'Effective Date:',
@@ -521,6 +521,16 @@ const enTranslations = {
   'privacy.home': 'Home',
   'privacy.about': 'About Us',
   'privacy.terms': 'Terms of Service',
+  // YouTube Risk Warning
+  'youtubeRisk.title': 'YouTube Stream Count Warning',
+  'youtubeRisk.body': 'Detected {n} active YouTube streams. It is recommended to keep concurrent streams to 1-2 to avoid risks.',
+  'youtubeRisk.disclaimer.title': 'Disclaimer',
+  'youtubeRisk.disclaimer.item1': 'YouTube has not publicly disclosed specific limits for concurrent views.',
+  'youtubeRisk.disclaimer.item2': 'Excessive/prolonged/repetitive viewing patterns may be flagged as unnatural behavior or invalid traffic.',
+  'youtubeRisk.disclaimer.item3': 'Users are responsible for complying with YouTube policies. This site provides tools and warnings but is not responsible for third-party determinations.',
+  'youtubeRisk.confirm': 'I Understand',
+  'youtubeRisk.pauseOthers': 'Pause Others',
+  'youtubeRisk.sessionIgnore': 'Don\'t Remind Again',
 } as const;
 
 export default enTranslations;

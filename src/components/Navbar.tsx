@@ -51,9 +51,9 @@ interface SearchResult {
   url: string;
 }
 
-export function Navbar({ 
-  theme, 
-  onThemeToggle, 
+export function Navbar({
+  theme,
+  onThemeToggle,
   onShowAbout,
   onShowTutorial,
   onShowVersionHistory,
@@ -88,11 +88,11 @@ export function Navbar({
   // 檢查是否為 URL
   const isUrl = (text: string): boolean => {
     const trimmed = text.trim();
-    return trimmed.includes('http://') || 
-           trimmed.includes('https://') || 
-           trimmed.includes('twitch.tv/') || 
-           trimmed.includes('youtube.com') || 
-           trimmed.includes('youtu.be/');
+    return trimmed.includes('http://') ||
+      trimmed.includes('https://') ||
+      trimmed.includes('twitch.tv/') ||
+      trimmed.includes('youtube.com') ||
+      trimmed.includes('youtu.be/');
   };
 
   // 搜尋 Twitch 頻道
@@ -136,7 +136,7 @@ export function Navbar({
     }
 
     const trimmedValue = searchValue.trim();
-    
+
     // 如果輸入為空，清除結果
     if (trimmedValue.length === 0) {
       setSearchResults([]);
@@ -253,7 +253,7 @@ export function Navbar({
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       if (showResults && searchResults.length > 0) {
-        setSelectedIndex(prev => 
+        setSelectedIndex(prev =>
           prev < searchResults.length - 1 ? prev + 1 : prev
         );
       }
@@ -315,7 +315,7 @@ export function Navbar({
   ];
 
   return (
-    <nav 
+    <nav
       className={`w-full border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-4 md:px-6 py-3`}
       style={{ '--navbar-height': '4rem' } as CSSProperties}
     >
@@ -383,17 +383,17 @@ export function Navbar({
                       )
                     ))}
                   </div>
-                  
+
                   {/* 分隔線 */}
                   <div className={`w-full h-px my-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`} />
-                  
+
                   {/* 語言切換 */}
                   <div className="mb-4">
                     <label className={`text-sm mb-2 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                       {t('navbar.languageSwitch') || '語言'}
                     </label>
                     <Select value={locale} onValueChange={(value) => setLocale(value as typeof locale)}>
-                      <SelectTrigger 
+                      <SelectTrigger
                         className={`w-full ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : 'bg-white border-gray-300 text-black hover:bg-gray-50'}`}
                       >
                         <div className="flex items-center gap-2">
@@ -401,7 +401,7 @@ export function Navbar({
                           <SelectValue />
                         </div>
                       </SelectTrigger>
-                      <SelectContent 
+                      <SelectContent
                         className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}
                       >
                         {languages.map((lang) => (
@@ -416,7 +416,7 @@ export function Navbar({
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {/* 贊助我 */}
                   <MuiButton
                     variant="contained"
@@ -450,7 +450,7 @@ export function Navbar({
                   MultiStream Hub
                 </span>
               </div>
-              
+
               {/* Links */}
               <div className="flex items-center gap-4">
                 {onShowAbout && (
@@ -564,11 +564,10 @@ export function Navbar({
             onKeyDown={handleKeyPress}
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
-            className={`w-full pl-10 ${isMobile ? ((isSearchFocused || searchValue.trim().length > 0) ? 'pr-20' : 'pr-3') : 'pr-52'} ${
-              theme === 'dark' 
-                ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-blue-500' 
+            className={`w-full pl-10 ${isMobile ? ((isSearchFocused || searchValue.trim().length > 0) ? 'pr-20' : 'pr-3') : 'pr-52'} ${theme === 'dark'
+                ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-blue-500'
                 : 'bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-blue-500'
-            }`}
+              }`}
           />
           {isSearching && (
             <div className={`absolute ${isMobile ? ((isSearchFocused || searchValue.trim().length > 0) ? 'right-20' : 'right-4') : 'right-44'} top-1/2 -translate-y-1/2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -618,7 +617,7 @@ export function Navbar({
               </MuiButton>
             </div>
           )}
-          
+
           {/* Mobile: 搜尋框使用時（聚焦或有內容）顯示加入畫面按鈕（在搜尋框內） */}
           {isMobile && (isSearchFocused || searchValue.trim().length > 0) && searchValue.trim().length > 0 && (
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -646,11 +645,10 @@ export function Navbar({
           {/* 搜尋結果下拉列表 */}
           {showResults && searchResults.length > 0 && (
             <Box
-              className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 ${
-                theme === 'dark' 
-                  ? 'bg-gray-900 border-gray-700' 
+              className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 ${theme === 'dark'
+                  ? 'bg-gray-900 border-gray-700'
                   : 'bg-white border-gray-200'
-              }`}
+                }`}
               sx={{
                 maxHeight: '384px',
                 overflowY: 'auto',
@@ -676,31 +674,28 @@ export function Navbar({
                   <div
                     key={result.id}
                     onClick={() => handleSelectResult(result)}
-                    className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors relative ${
-                      index === selectedIndex
-                        ? theme === 'dark' 
-                          ? 'bg-gray-800' 
+                    className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors relative ${index === selectedIndex
+                        ? theme === 'dark'
+                          ? 'bg-gray-800'
                           : 'bg-gray-100'
                         : theme === 'dark'
                           ? 'hover:bg-gray-800'
                           : 'hover:bg-gray-50'
-                    }`}
+                      }`}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
                     {/* 圓形頭像 */}
                     {result.thumbnailUrl ? (
-                      <img 
-                        src={result.thumbnailUrl} 
+                      <img
+                        src={result.thumbnailUrl}
                         alt={result.displayName}
                         className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-                      }`}>
-                        <span className={`text-sm font-medium ${
-                          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
                         }`}>
+                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
                           {result.displayName.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -739,11 +734,10 @@ export function Navbar({
 
           {/* 無搜尋結果提示 */}
           {showResults && searchResults.length === 0 && !isSearching && searchValue.trim().length > 0 && !isUrl(searchValue) && (
-            <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 p-3 ${
-              theme === 'dark' 
-                ? 'bg-gray-900 border-gray-700 text-gray-400' 
+            <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 p-3 ${theme === 'dark'
+                ? 'bg-gray-900 border-gray-700 text-gray-400'
                 : 'bg-white border-gray-200 text-gray-500'
-            }`}>
+              }`}>
               <p className="text-sm text-center">{t('navbar.noResults')}</p>
             </div>
           )}
@@ -856,19 +850,18 @@ export function Navbar({
                 <TooltipTrigger asChild>
                   <div>
                     <Select value={locale} onValueChange={(value) => setLocale(value as typeof locale)}>
-                      <SelectTrigger 
-                        className={`w-[140px] h-9 ${
-                          theme === 'dark' 
-                            ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' 
+                      <SelectTrigger
+                        className={`w-[140px] h-9 ${theme === 'dark'
+                            ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
                             : 'bg-white border-gray-300 text-black hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-2">
                           <Globe className="size-4" />
                           <SelectValue />
                         </div>
                       </SelectTrigger>
-                      <SelectContent 
+                      <SelectContent
                         className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}
                       >
                         {languages.map((lang) => (
