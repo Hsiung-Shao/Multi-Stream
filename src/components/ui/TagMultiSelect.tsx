@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "./utils";
 import { Button } from "./button";
 import {
@@ -17,6 +17,7 @@ import {
 } from "./popover";
 import { Tag } from "../../features/favorites/types";
 import { Badge } from "./badge";
+import { useI18n } from "../../i18n/index";
 
 interface TagMultiSelectProps {
     allTags: Tag[];
@@ -30,10 +31,13 @@ export function TagMultiSelect({
     allTags,
     selectedTagIds,
     onChange,
-    placeholder = "Select tags...",
+    placeholder,
     className
 }: TagMultiSelectProps) {
     const [open, setOpen] = React.useState(false);
+    const { t } = useI18n();
+
+    const displayPlaceholder = placeholder || t('tags.selectTags');
 
     const toggleTag = (tagId: string) => {
         const newSelected = selectedTagIds.includes(tagId)
@@ -65,7 +69,7 @@ export function TagMultiSelect({
                                 </Badge>
                             ))
                         ) : (
-                            <span className="text-muted-foreground">{placeholder}</span>
+                            <span className="text-muted-foreground">{displayPlaceholder}</span>
                         )}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -73,9 +77,9 @@ export function TagMultiSelect({
             </PopoverTrigger>
             <PopoverContent className="w-[200px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder="Search tags..." />
+                    <CommandInput placeholder={t('tags.searchTags')} />
                     <CommandList>
-                        <CommandEmpty>No tags found.</CommandEmpty>
+                        <CommandEmpty>{t('tags.noTagsFound')}</CommandEmpty>
                         <CommandGroup>
                             {allTags.map((tag) => (
                                 <CommandItem

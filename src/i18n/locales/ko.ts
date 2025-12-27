@@ -74,6 +74,7 @@ const koTranslations = {
   'welcome.feature11': '자동 레이아웃 기능, 스트림 수에 따라 가장 적합한 레이아웃 자동 선택',
   'welcome.feature12': '스트림 다시 로드 기능, 스트림을 빠르게 다시 로드',
   'welcome.feature13': '로컬 저장소, 모든 설정과 즐겨찾기는 브라우저의 로컬에 저장',
+  'welcome.feature14': '멀티 태그 관리 시스템, 사용자 정의 태그 및 자동 플랫폼 태그 지정 지원',
   'welcome.quickStart': '빠른 시작',
   'welcome.step1Title': '스트림 추가',
   'welcome.step1Desc': '화면 상단의 입력 상자에 Twitch 또는 YouTube 스트림 URL을 붙여넣고 "스트림 추가"를 클릭하여 시청',
@@ -207,6 +208,11 @@ const koTranslations = {
   'tutorial.favorite.step5Item1': 'Twitch 채널 라이브 상태 보기（녹색 점은 라이브, 회색은 오프라인）',
   'tutorial.favorite.step5Item2': 'Twitch 채널 검색을 사용하여 즐겨찾기를 빠르게 추가',
   'tutorial.favorite.step5Item3': '카테고리 이름 옆의「▶ 로드」 버튼을 클릭하여 해당 카테고리의 모든 스트림을 로드합니다',
+  'tutorial.tags.title': '🏷️ 멀티 태그 관리',
+  'tutorial.tags.step1': '즐겨찾기 관리에서 각 스트림에 여러 태그를 추가할 수 있습니다',
+  'tutorial.tags.step2': '시스템은 Twitch 및 YouTube 즐겨찾기에 해당 플랫폼 태그를 자동으로 추가합니다',
+  'tutorial.tags.step3': '태그 필터를 사용하거나 태그를 클릭하여 특정 유형의 스트림을 빠르게 필터링합니다',
+  'tutorial.tags.step4': '제어판의 즐겨찾기 목록에서도 태그로 필터링할 수 있습니다',
   'tutorial.liveStatus.title': '📡 라이브 상태 감지',
   'tutorial.liveStatus.step1': '즐겨찾기한 Twitch 및 YouTube 채널은 자동으로 라이브 상태를 표시합니다',
   'tutorial.liveStatus.step2': '녹색 점（🟢）은 채널이 라이브 중임을 나타내며 시청자 수를 표시합니다（Twitch）',
@@ -241,6 +247,9 @@ const koTranslations = {
   'versionHistory.title': '버전 기록',
   'versionHistory.subtitle': 'MultiStream Hub 업데이트 기록',
   'versionHistory.latest': '최신',
+  'versionHistory.v2.1.0.date': '2025-12-27',
+  'versionHistory.v2.1.0.change1': '멀티 태그 관리 시스템 추가 (기존 데이터 호환)',
+  'versionHistory.v2.1.0.change2': 'YouTube 라이브 감지 간격 추가 (봇으로 오해받지 않도록)',
   'versionHistory.v2.0.2.date': '2025-12-25',
   'versionHistory.v2.0.2.change1': '프로젝트 최적화',
   'versionHistory.v2.0.2.change2': 'YouTube 동시 시청 경고 메시지 추가',
@@ -534,8 +543,17 @@ const koTranslations = {
   'youtubeRisk.disclaimer.item3': '사용자는 YouTube 정책을 준수할 책임이 있으며, 본 사이트는 도구와 경고만 제공할 뿐 제3자 플랫폼의 판단에 대해 책임을 지지 않습니다。',
   'youtubeRisk.confirm': '확인했습니다',
   'youtubeRisk.pauseOthers': '다른 YouTube 일시 중지',
-  'youtubeRisk.sessionIgnore': '이번 세션에서 다시 보지 않기',
+  'youtubeRisk.sessionIgnore': '이번에는 알림 안 함',
+
+  // Tags
+  'tags.selectTags': '태그 선택...',
+  'tags.searchTags': '태그 검색...',
+  'tags.noTagsFound': '태그를 찾을 수 없습니다',
+  'tags.addTag': '태그 추가',
+  'tags.selectedTags': '{count}개 태그 선택됨',
+  'tags.all': '모두',
+  'tags.clearAll': '모두 지우기',
+  'tags.filterTitle': '태그 선택',
 } as const;
 
 export default koTranslations;
-

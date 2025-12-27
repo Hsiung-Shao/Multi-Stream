@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { ChevronDown, Filter, X } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Button as MuiButton } from '@mui/material';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { TagChip } from './TagChip';
 import type { Tag } from '../../features/favorites/types';
+import { useI18n } from '../../i18n/index';
 
 interface TagFilterLayoutProps {
     tags: Tag[];
@@ -23,6 +24,7 @@ export function TagFilterLayout({
     columns = 6 // Default to 6 if not specified
 }: TagFilterLayoutProps) {
     const [open, setOpen] = useState(false);
+    const { t } = useI18n();
 
     return (
         <div className="flex items-center justify-between gap-2 w-full">
@@ -64,7 +66,7 @@ export function TagFilterLayout({
                                 },
                             }}
                         >
-                            <span className="text-xs mr-1">所有</span>
+                            <span className="text-xs mr-1">{t('tags.all')}</span>
                             <ChevronDown className="size-3" />
                         </MuiButton>
                     </PopoverTrigger>
@@ -76,7 +78,7 @@ export function TagFilterLayout({
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                                    選擇標籤
+                                    {t('tags.filterTitle')}
                                 </span>
                                 {selectedTags.length > 0 && (
                                     <span className="bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full">
@@ -127,7 +129,7 @@ export function TagFilterLayout({
                                         }
                                     }}
                                 >
-                                    清除全部
+                                    {t('tags.clearAll')}
                                 </MuiButton>
                             </div>
                         </div>

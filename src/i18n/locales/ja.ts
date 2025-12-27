@@ -74,6 +74,7 @@ const jaTranslations = {
   'welcome.feature11': '自動レイアウト機能、ストリーム数に応じて最適なレイアウトを自動選択',
   'welcome.feature12': 'ストリーム再読み込み機能、ストリームを素早く再読み込み',
   'welcome.feature13': 'ローカルストレージ、すべての設定とお気に入りはブラウザのローカルに保存',
+  'welcome.feature14': 'マルチタグ管理システム、カスタムタグと自動プラットフォームタグ付けをサポート',
   'welcome.quickStart': 'クイックスタート',
   'welcome.step1Title': 'ストリームを追加',
   'welcome.step1Desc': '画面上部の入力ボックスにTwitchまたはYouTubeストリームURLを貼り付け、「ストリームを追加」をクリックして視聴',
@@ -207,6 +208,11 @@ const jaTranslations = {
   'tutorial.favorite.step5Item1': 'Twitchチャンネルのライブステータスを表示（緑の点はライブ、灰色はオフライン）',
   'tutorial.favorite.step5Item2': 'Twitchチャンネル検索を使用してすばやくお気に入りを追加',
   'tutorial.favorite.step5Item3': 'カテゴリ名の横にある「▶ 読み込み」ボタンをクリックして、そのカテゴリのすべてのストリームを読み込みます',
+  'tutorial.tags.title': '🏷️ マルチタグ管理',
+  'tutorial.tags.step1': 'お気に入り管理では、各ストリームに複数のタグを追加できます',
+  'tutorial.tags.step2': 'システムはTwitchとYouTubeのお気に入りに対応するプラットフォームタグを自動的に追加します',
+  'tutorial.tags.step3': 'タグフィルターを使用するか、タグをクリックして、特定のタイプのストリームをすばやくフィルタリングします',
+  'tutorial.tags.step4': 'コントロールパネルのお気に入りリストでもタグでフィルタリングできます',
   'tutorial.liveStatus.title': '📡 ライブステータス検出',
   'tutorial.liveStatus.step1': 'お気に入りのTwitchとYouTubeチャンネルは自動的にライブステータスを表示します',
   'tutorial.liveStatus.step2': '緑の点（🟢）はチャンネルがライブ中であることを示し、視聴者数を表示します（Twitch）',
@@ -241,6 +247,9 @@ const jaTranslations = {
   'versionHistory.title': 'バージョン履歴',
   'versionHistory.subtitle': 'MultiStream Hub更新履歴',
   'versionHistory.latest': '最新',
+  'versionHistory.v2.1.0.date': '2025-12-27',
+  'versionHistory.v2.1.0.change1': 'マルチタグ管理システムを追加（既存データと互換性あり）',
+  'versionHistory.v2.1.0.change2': 'YouTube配信検知に間隔を追加し、BOT判定を回避',
   'versionHistory.v2.0.2.date': '2025-12-25',
   'versionHistory.v2.0.2.change1': 'プロジェクトの最適化',
   'versionHistory.v2.0.2.change2': 'YouTube同時視聴警告メッセージを追加',
@@ -534,8 +543,17 @@ const jaTranslations = {
   'youtubeRisk.disclaimer.item3': 'ユーザーはYouTubeのポリシーを遵守する責任があります。当サイトはツールと警告を提供するのみであり、第三者プラットフォームの判断について責任を負いません。',
   'youtubeRisk.confirm': '理解しました',
   'youtubeRisk.pauseOthers': '他のYouTubeを一時停止',
-  'youtubeRisk.sessionIgnore': '今回は表示しない',
+  'youtubeRisk.sessionIgnore': '今回は通知しない',
+
+  // Tags
+  'tags.selectTags': 'タグを選択...',
+  'tags.searchTags': 'タグを検索...',
+  'tags.noTagsFound': 'タグが見つかりません',
+  'tags.addTag': 'タグを追加',
+  'tags.selectedTags': '{count} 個のタグを選択済み',
+  'tags.all': 'すべて',
+  'tags.clearAll': 'すべてクリア',
+  'tags.filterTitle': 'タグを選択',
 } as const;
 
 export default jaTranslations;
-

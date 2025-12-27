@@ -13,6 +13,14 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
 
   const versions = [
     {
+      version: 'v2.1.0',
+      date: t('versionHistory.v2.1.0.date'),
+      changes: [
+        t('versionHistory.v2.1.0.change1'),
+        t('versionHistory.v2.1.0.change2'),
+      ],
+    },
+    {
       version: 'v2.0.2',
       date: t('versionHistory.v2.0.2.date'),
       changes: [
@@ -223,25 +231,25 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
               <div
                 key={version.version}
                 className={`relative pl-6 pb-6 ${index !== versions.length - 1
-                    ? `border-l-2 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`
-                    : ''
+                  ? `border-l-2 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`
+                  : ''
                   }`}
               >
                 {/* Timeline dot */}
                 <div className={`absolute left-0 top-0 -translate-x-[9px] size-4 rounded-full ${index === 0
-                    ? 'bg-gradient-to-br from-purple-500 to-blue-500'
-                    : theme === 'dark'
-                      ? 'bg-gray-700'
-                      : 'bg-gray-300'
+                  ? 'bg-gradient-to-br from-purple-500 to-blue-500'
+                  : theme === 'dark'
+                    ? 'bg-gray-700'
+                    : 'bg-gray-300'
                   } ring-4 ${theme === 'dark' ? 'ring-gray-900' : 'ring-white'}`} />
 
                 {/* Version info */}
                 <div className="flex items-center gap-3 mb-3">
                   <span className={`px-3 py-1 rounded-full ${index === 0
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
-                      : theme === 'dark'
-                        ? 'bg-gray-800 text-gray-300'
-                        : 'bg-gray-100 text-gray-700'
+                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
+                    : theme === 'dark'
+                      ? 'bg-gray-800 text-gray-300'
+                      : 'bg-gray-100 text-gray-700'
                     }`}>
                     {version.version}
                   </span>

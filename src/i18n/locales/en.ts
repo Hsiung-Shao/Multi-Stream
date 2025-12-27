@@ -74,6 +74,7 @@ const enTranslations = {
   'welcome.feature11': 'Auto layout feature, automatically selects the most suitable layout based on stream count',
   'welcome.feature12': 'Stream reload feature, quickly reload streams',
   'welcome.feature13': 'Local storage, all settings and favorites are stored locally in your browser',
+  'welcome.feature14': 'Multi-tag management system, supporting custom tags and automatic platform tagging',
   'welcome.quickStart': 'Quick Start',
   'welcome.step1Title': 'Add Stream',
   'welcome.step1Desc': 'Paste a Twitch or YouTube stream URL in the input box at the top of the screen, then click "Add Stream" to watch',
@@ -188,6 +189,11 @@ const enTranslations = {
   'tutorial.favorite.step5Item1': 'View Twitch channel live status (green dot means live, gray means offline)',
   'tutorial.favorite.step5Item2': 'Use Twitch channel search to quickly add favorites',
   'tutorial.favorite.step5Item3': 'Click the "▶ Load" button next to category name to load all streams in that category',
+  'tutorial.tags.title': '🏷️ Multi-tag Management',
+  'tutorial.tags.step1': 'In Favorites Management, you can add multiple tags to each stream',
+  'tutorial.tags.step2': 'The system automatically adds corresponding platform tags for Twitch and YouTube favorites',
+  'tutorial.tags.step3': 'Use tag filters or click on tags to quickly filter specific types of streams',
+  'tutorial.tags.step4': 'You can also filter by tags in the Favorites list on the Control Panel',
   'tutorial.liveStatus.title': '📡 Live Status Detection',
   'tutorial.liveStatus.step1': 'Favorited Twitch and YouTube channels will automatically display live status',
   'tutorial.liveStatus.step2': 'Green dot (🟢) means the channel is live, and shows viewer count (Twitch)',
@@ -241,6 +247,9 @@ const enTranslations = {
   'versionHistory.title': 'Version History',
   'versionHistory.subtitle': 'MultiStream Hub Update History',
   'versionHistory.latest': 'Latest',
+  'versionHistory.v2.1.0.date': '2025-12-27',
+  'versionHistory.v2.1.0.change1': 'Added multi-tag management system (compatible with legacy data)',
+  'versionHistory.v2.1.0.change2': 'Added interval for YouTube live detection to avoid being flagged as bot',
   'versionHistory.v2.0.2.date': '2025-12-25',
   'versionHistory.v2.0.2.change1': 'Project optimization',
   'versionHistory.v2.0.2.change2': 'Added YouTube simultaneous viewing warning',
@@ -535,6 +544,16 @@ const enTranslations = {
   'youtubeRisk.confirm': 'I Understand',
   'youtubeRisk.pauseOthers': 'Pause Others',
   'youtubeRisk.sessionIgnore': 'Don\'t Remind Again',
+
+  // Tags
+  'tags.selectTags': 'Select tags...',
+  'tags.searchTags': 'Search tags...',
+  'tags.noTagsFound': 'No tags found',
+  'tags.addTag': 'Add Tag',
+  'tags.selectedTags': 'Selected {count} tags',
+  'tags.all': 'All',
+  'tags.clearAll': 'Clear All',
+  'tags.filterTitle': 'Select Tags',
 } as const;
 
 export default enTranslations;

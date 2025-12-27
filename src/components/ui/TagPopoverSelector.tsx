@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Check, ChevronsUpDown, Plus, X } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { Button } from '@mui/material';
 import { Tag } from '../../features/favorites/types';
 import { TagChip } from './TagChip';
@@ -16,6 +16,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from './popover';
+import { useI18n } from '../../i18n/index';
 
 interface TagPopoverSelectorProps {
     allTags: Tag[];
@@ -28,6 +29,7 @@ interface TagPopoverSelectorProps {
 export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, showSelectedChips = true }: TagPopoverSelectorProps) {
     const [open, setOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
+    const { t } = useI18n();
 
     const selectedTags = useMemo(() => {
         return allTags.filter(tag => selectedTagIds.includes(tag.id));
@@ -78,7 +80,9 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
                     >
                         <div className="flex items-center gap-2">
                             <Plus className="size-4" />
-                            {selectedTags.length > 0 ? `已選 ${selectedTags.length} 個標籤` : '加入標籤'}
+                            {selectedTags.length > 0
+                                ? t('tags.selectedTags', { count: selectedTags.length })
+                                : t('tags.addTag')}
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -86,13 +90,13 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
                 <PopoverContent className={`p-0 w-[240px] ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}`} align="start">
                     <Command className={theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
                         <CommandInput
-                            placeholder="搜尋標籤..."
+                            placeholder={t('tags.searchTags')}
                             value={searchValue}
                             onValueChange={setSearchValue}
                             className={theme === 'dark' ? 'border-gray-700' : ''}
                         />
                         <CommandList>
-                            <CommandEmpty className="py-2 text-center text-sm text-gray-400">找不到標籤</CommandEmpty>
+                            <CommandEmpty className="py-2 text-center text-sm text-gray-400">{t('tags.noTagsFound')}</CommandEmpty>
                             <CommandGroup>
                                 {allTags.map((tag) => {
                                     const isSelected = selectedTagIds.includes(tag.id);
