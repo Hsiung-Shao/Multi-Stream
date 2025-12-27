@@ -74,6 +74,7 @@ const zhTWTranslations = {
   'welcome.feature11': '自動排版功能，根據串流數量自動選擇最適合的布局',
   'welcome.feature12': '串流重新整理功能，快速重新載入串流',
   'welcome.feature13': '本地儲存，所有設定和收藏資料都儲存在您的瀏覽器本地',
+  'welcome.feature14': '多標籤管理系統，支援自定義標籤與自動平台標記',
   'welcome.quickStart': '快速開始',
   'welcome.step1Title': '添加串流',
   'welcome.step1Desc': '在畫面正上方的輸入框中貼上 Twitch 或 YouTube 直播網址，點擊「加入畫面」即可觀看',
@@ -188,6 +189,11 @@ const zhTWTranslations = {
   'tutorial.favorite.step5Item1': '查看 Twitch 頻道的開台狀態（綠色圓點表示正在直播，灰色表示未開台）',
   'tutorial.favorite.step5Item2': '使用 Twitch 頻道搜尋功能快速添加收藏',
   'tutorial.favorite.step5Item3': '點擊分類名稱旁的「▶ 載入」按鈕一鍵載入整個分類的串流',
+  'tutorial.tags.title': '🏷️ 多標籤管理',
+  'tutorial.tags.step1': '在收藏管理中，您可以為每個串流添加多個標籤',
+  'tutorial.tags.step2': '系統會自動為 Twitch 和 YouTube 收藏加入對應的平台標籤',
+  'tutorial.tags.step3': '使用標籤篩選器或是點擊標籤，可以快速篩選特定類型的串流',
+  'tutorial.tags.step4': '在控制面板的收藏列表中，也可以透過標籤進行篩選',
   'tutorial.liveStatus.title': '📡 開台狀態檢測',
   'tutorial.liveStatus.step1': '收藏的 Twitch 和 YouTube 頻道會自動顯示開台狀態',
   'tutorial.liveStatus.step2': '綠色圓點（🟢）表示頻道正在直播，並顯示觀看人數（Twitch）',
@@ -241,6 +247,9 @@ const zhTWTranslations = {
   'versionHistory.title': '版本紀錄',
   'versionHistory.subtitle': 'MultiStream Hub 更新歷史',
   'versionHistory.latest': '最新',
+  'versionHistory.v2.1.0.date': '2025-12-27',
+  'versionHistory.v2.1.0.change1': '新增多標籤管理系統(相容舊有資料)',
+  'versionHistory.v2.1.0.change2': '針對Youtube 開台檢測添加間隔，以避免用戶被官方誤認為機器人',
   'versionHistory.v2.0.2.date': '2025-12-25',
   'versionHistory.v2.0.2.change1': '進行專案優化',
   'versionHistory.v2.0.2.change2': '新增Youtube 同時觀看警告訊息',
@@ -535,6 +544,16 @@ const zhTWTranslations = {
   'youtubeRisk.confirm': '我知道了',
   'youtubeRisk.pauseOthers': '暫停其他 YouTube 串流',
   'youtubeRisk.sessionIgnore': '本次不再提醒',
+
+  // Tags
+  'tags.selectTags': '選擇標籤...',
+  'tags.searchTags': '搜尋標籤...',
+  'tags.noTagsFound': '找不到標籤',
+  'tags.addTag': '加入標籤',
+  'tags.selectedTags': '已選 {count} 個標籤',
+  'tags.all': '所有',
+  'tags.clearAll': '清除全部',
+  'tags.filterTitle': '選擇標籤',
 } as const;
 
 export default zhTWTranslations;

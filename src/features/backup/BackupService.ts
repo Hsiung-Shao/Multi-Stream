@@ -6,6 +6,7 @@ export interface BackupData {
     userSettings: any;
     favoriteStreams: any[];
     favoriteCategories: any[];
+    preference_tags: any[];
     controlPanelCollapsed: string | null;
     multiStreamLayout: any;
     adConfig: any;
@@ -89,6 +90,7 @@ export class BackupService {
             userSettings: safeParse('userSettings', null),
             favoriteStreams: safeParse('favoriteStreams', []),
             favoriteCategories: safeParse('favoriteCategories', []),
+            preference_tags: safeParse('preference_tags', []),
             controlPanelCollapsed: localStorage.getItem('controlPanelCollapsed'),
             multiStreamLayout: safeParse('multiStreamLayout', null),
             adConfig: safeParse('adConfig', null)
@@ -133,8 +135,6 @@ export class BackupService {
         }, this.DEBOUNCE_MS);
     }
 
-    // Check if we have meaningful data in local storage
-    // "Meaningful" means favoriteStreams exists and is not empty/null
     // Check if we have meaningful data in local storage
     // "Meaningful" means favoriteStreams exists (even empty array is considered initialized data)
     hasLocalStorageData(): boolean {
@@ -213,6 +213,7 @@ export class BackupService {
             if (data.userSettings) localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
             if (data.favoriteStreams) localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
             if (data.favoriteCategories) localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
+            if (data.preference_tags) localStorage.setItem('preference_tags', JSON.stringify(data.preference_tags));
             if (data.controlPanelCollapsed !== undefined && data.controlPanelCollapsed !== null)
                 localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
             if (data.multiStreamLayout) localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));

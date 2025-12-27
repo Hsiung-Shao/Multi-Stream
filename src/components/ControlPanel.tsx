@@ -10,6 +10,10 @@ import type { StreamData } from '../utils/streamUtils';
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useI18n } from '../i18n/index';
+import { TagChip } from './ui/TagChip';
+import { TagFilterLayout } from './ui/TagFilterLayout';
+import { tagsService } from '../features/favorites/TagsService';
+import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -38,30 +42,8 @@ interface ControlPanelProps {
   onAddStream?: (url: string) => void;
 }
 
-interface FavoriteItem {
-  id: string;
-  url: string;
-  name: string;
-  platform: 'twitch' | 'youtube';
-  channelId?: string;
-  videoId?: string;
-  categoryId?: string | null;
-  addedAt: string;
-  isLive?: boolean | null;
-  lastChecked?: string | null;
-  viewerCount?: number;
-  gameName?: string;
-  liveUrl?: string | null;
-  liveVideoId?: string | null;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
-
 // 排序函數：開台狀態 > 未開台
-const sortFavorites = (favs: FavoriteItem[]) => {
+const sortFavorites = (favs: FavoriteStream[]) => {
   return [...favs].sort((a, b) => {
     const aIsLive = a.isLive === true;
     const bIsLive = b.isLive === true;
@@ -73,26 +55,9 @@ const sortFavorites = (favs: FavoriteItem[]) => {
 };
 
 // 聲明全局類型
-declare global {
-  interface Window {
-    favoriteStreams?: {
-      getList: () => FavoriteItem[];
-      add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: FavoriteItem }>;
-      load: (item: FavoriteItem | string) => Promise<{ success: boolean; message: string }>;
-      loadMultiple: (items: FavoriteItem[]) => Promise<{ success: boolean; message: string }>;
-      saveList: (list: FavoriteItem[]) => void;
-    };
-    favoriteCategories?: {
-      getList: () => Category[];
-    };
-    twitchApi?: {
-      checkMultipleChannelsLiveStatus: (channelIds: string[]) => Promise<Record<string, { isLive: boolean; viewerCount?: number; gameName?: string }>>;
-    };
-    youtubeApiUtils?: {
-      checkChannelLiveStatus: (channelId: string) => Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string }>;
-    };
-  }
-}
+// Removed local declaration to use shared global definition from FavoritesManager (or typed globally)
+// If FavoritesManager is not loaded, these might be missing, but in this app structure they are together.
+
 
 export function ControlPanel({
   theme,
@@ -125,8 +90,10 @@ export function ControlPanel({
   // 使用 'lg' breakpoint 以確保手機水平版面也使用手機版設計
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('lg'));
   const [showAllChat, setShowAllChat] = useState(false);
-  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteStream[]>([]);
+  const [categories, setCategories] = useState<FavoriteCategory[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [filterTags, setFilterTags] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -179,8 +146,10 @@ export function ControlPanel({
           try {
             const favoritesList = window.favoriteStreams.getList();
             const categoriesList = window.favoriteCategories.getList();
+            const tagsList = tagsService.getAllTags();
             setFavorites(favoritesList);
             setCategories(categoriesList);
+            setTags(tagsList);
           } catch (error) {
             // 載入數據時發生錯誤，繼續處理
           }
@@ -194,8 +163,10 @@ export function ControlPanel({
       try {
         const favoritesList = window.favoriteStreams.getList();
         const categoriesList = window.favoriteCategories.getList();
+        const tagsList = tagsService.getAllTags();
         setFavorites(favoritesList);
         setCategories(categoriesList);
+        setTags(tagsList);
       } catch (error) {
         // 載入數據時發生錯誤，繼續處理
       }
@@ -262,7 +233,7 @@ export function ControlPanel({
               // 保存額外信息到 favorite 對象中（用於顯示）
               viewerCount: liveStatuses[fav.channelId].viewerCount,
               gameName: liveStatuses[fav.channelId].gameName
-            } as FavoriteItem & { viewerCount?: number; gameName?: string };
+            } as FavoriteStream;
           }
           return fav;
         });
@@ -270,8 +241,26 @@ export function ControlPanel({
 
       // 更新 YouTube 開台狀態
       if (youtubeFavorites.length > 0 && window.youtubeApiUtils?.checkChannelLiveStatus) {
+        let isFirstYoutubeCheck = true;
         for (const fav of youtubeFavorites) {
           if (fav.channelId) {
+            // 優化: 如果目前是 LIVE 狀態，且 lastChecked 在 1 小時內，則跳過檢查
+            // 避免已開台的頻道仍頻繁觸發請求（風險較高）
+            if (fav.isLive && fav.lastChecked) {
+              const lastCheckedTime = new Date(fav.lastChecked).getTime();
+              const oneHourAgo = Date.now() - 60 * 60 * 1000;
+              if (lastCheckedTime > oneHourAgo) {
+                // 跳過此頻道，保留原狀態
+                continue;
+              }
+            }
+
+            // 增加請求間隔 (2000ms)，避免瞬間爆發流量
+            if (!isFirstYoutubeCheck) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            isFirstYoutubeCheck = false;
+
             try {
               const status = await window.youtubeApiUtils.checkChannelLiveStatus(fav.channelId);
               updatedFavorites = updatedFavorites.map(f => {
@@ -319,7 +308,7 @@ export function ControlPanel({
   };
 
   // 載入收藏串流
-  const handleLoadFavorite = (favorite: FavoriteItem) => {
+  const handleLoadFavorite = (favorite: FavoriteStream) => {
     if (window.favoriteStreams && window.favoriteStreams.load) {
       window.favoriteStreams.load(favorite).then(result => {
         if (result.success && onAddStream) {
@@ -673,7 +662,7 @@ export function ControlPanel({
               </label>
               <Switch
                 checked={showAllChat}
-                onCheckedChange={(checked) => {
+                onCheckedChange={(checked: boolean) => {
                   // 調用回調函數來更新所有串流的聊天室狀態
                   // showAllChat 狀態會通過 useEffect 自動同步
                   if (onToggleAllChat) {
@@ -742,6 +731,24 @@ export function ControlPanel({
               </MuiButton>
             </div>
 
+            {/* Tag Filters */}
+            {tags.length > 0 && (
+              <TagFilterLayout
+                tags={tags}
+                selectedTags={filterTags}
+                onToggleTag={(tagId) => {
+                  setFilterTags(prev =>
+                    prev.includes(tagId)
+                      ? prev.filter(id => id !== tagId)
+                      : [...prev, tagId]
+                  );
+                }}
+                onClear={() => setFilterTags([])}
+                theme={theme}
+                columns={6}
+              />
+            )}
+
             {/* 收藏串流列表 - 限高並添加滾動 */}
             <Box
               className="space-y-3 pr-2"
@@ -767,7 +774,11 @@ export function ControlPanel({
             >
               {/* 分類的收藏 - 資料夾優先，分類內按開台狀態排序 */}
               {categories.map(category => {
-                const categoryFavorites = favorites.filter(f => f.categoryId === category.id);
+                const categoryFavorites = favorites.filter(f => {
+                  const matchCategory = f.categoryId === category.id;
+                  const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                  return matchCategory && matchTags;
+                });
                 if (categoryFavorites.length === 0) return null;
 
                 // 分類內排序：開台狀態 > 未開台
@@ -830,7 +841,7 @@ export function ControlPanel({
 
                         {/* 分類下的收藏 - 已排序 */}
                         {sortedCategoryFavorites.map((favorite) => (
-                          <FavoriteItemComponent
+                          <FavoriteStreamComponent
                             key={favorite.id}
                             favorite={favorite}
                             theme={theme}
@@ -845,11 +856,15 @@ export function ControlPanel({
 
               {/* 未分類的收藏 - 按開台狀態排序 */}
               {(() => {
-                const uncategorizedFavorites = sortFavorites(favorites.filter(f => !f.categoryId));
+                const uncategorizedFavorites = sortFavorites(favorites.filter(f => {
+                  const isUncategorized = !f.categoryId;
+                  const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                  return isUncategorized && matchTags;
+                }));
                 return uncategorizedFavorites.length > 0 ? (
                   <div className="space-y-1">
                     {uncategorizedFavorites.map((favorite) => (
-                      <FavoriteItemComponent
+                      <FavoriteStreamComponent
                         key={favorite.id}
                         favorite={favorite}
                         theme={theme}
@@ -1295,10 +1310,10 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
 }
 
 // 收藏項目組件
-const FavoriteItemComponent: React.FC<{
-  favorite: FavoriteItem;
+const FavoriteStreamComponent: React.FC<{
+  favorite: FavoriteStream;
   theme: 'light' | 'dark';
-  onLoad: (favorite: FavoriteItem) => void;
+  onLoad: (favorite: FavoriteStream) => void;
 }> = ({ favorite, theme, onLoad }) => {
   const isLive = favorite.isLive === true;
   const isOffline = favorite.isLive === false;
@@ -1326,7 +1341,7 @@ const FavoriteItemComponent: React.FC<{
           <div className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
             {favorite.name}
           </div>
-          {favorite.platform === 'twitch' && isLive && favorite.viewerCount !== undefined && (
+          {favorite.platform === 'twitch' && isLive && favorite.viewerCount != null && (
             <div className={`text-sm ml-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
               {favorite.viewerCount.toLocaleString()} 人
             </div>

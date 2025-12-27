@@ -74,6 +74,7 @@ const zhCNTranslations = {
   'welcome.feature11': '自动排版功能，根据串流数量自动选择最适合的布局',
   'welcome.feature12': '串流重新整理功能，快速重新载入串流',
   'welcome.feature13': '本地存储，所有设定和收藏资料都储存在您的浏览器本地',
+  'welcome.feature14': '多标签管理系统，支持自定义标签与自动平台标记',
   'welcome.quickStart': '快速开始',
   'welcome.step1Title': '添加串流',
   'welcome.step1Desc': '在画面正上方的输入框中贴上 Twitch 或 YouTube 直播网址，点击「加入画面」即可观看',
@@ -188,6 +189,11 @@ const zhCNTranslations = {
   'tutorial.favorite.step5Item1': '查看 Twitch 频道的开台状态（绿色圆点表示正在直播，灰色表示未开台）',
   'tutorial.favorite.step5Item2': '使用 Twitch 频道搜索功能快速添加收藏',
   'tutorial.favorite.step5Item3': '点击分类名称旁的「▶ 载入」按钮一键载入整个分类的串流',
+  'tutorial.tags.title': '🏷️ 多标签管理',
+  'tutorial.tags.step1': '在收藏管理中，您可以为每个串流添加多个标签',
+  'tutorial.tags.step2': '系统会自动为 Twitch 和 YouTube 收藏加入对应的平台标签',
+  'tutorial.tags.step3': '使用标签筛选器或是点击标签，可以快速筛选特定类型的串流',
+  'tutorial.tags.step4': '在控制面板的收藏列表中，也可以通过标签进行筛选',
   'tutorial.liveStatus.title': '📡 开台状态检测',
   'tutorial.liveStatus.step1': '收藏的 Twitch 和 YouTube 频道会自动显示开台状态',
   'tutorial.liveStatus.step2': '绿色圆点（🟢）表示频道正在直播，并显示观看人数（Twitch）',
@@ -241,6 +247,9 @@ const zhCNTranslations = {
   'versionHistory.title': '版本记录',
   'versionHistory.subtitle': 'MultiStream Hub 更新历史',
   'versionHistory.latest': '最新',
+  'versionHistory.v2.1.0.date': '2025-12-27',
+  'versionHistory.v2.1.0.change1': '新增多标签管理系统(兼容旧有数据)',
+  'versionHistory.v2.1.0.change2': '针对Youtube 开播检测添加间隔，以避免用户被官方误认为是机器人',
   'versionHistory.v2.0.2.date': '2025-12-25',
   'versionHistory.v2.0.2.change1': '进行项目优化',
   'versionHistory.v2.0.2.change2': '新增Youtube 同时观看警告信息',
@@ -535,6 +544,16 @@ const zhCNTranslations = {
   'youtubeRisk.confirm': '我知道了',
   'youtubeRisk.pauseOthers': '暂停其他 YouTube 串流',
   'youtubeRisk.sessionIgnore': '本次不再提醒',
+
+  // Tags
+  'tags.selectTags': '选择标签...',
+  'tags.searchTags': '搜索标签...',
+  'tags.noTagsFound': '找不到标签',
+  'tags.addTag': '加入标签',
+  'tags.selectedTags': '已选 {count} 个标签',
+  'tags.all': '所有',
+  'tags.clearAll': '清除全部',
+  'tags.filterTitle': '选择标签',
 } as const;
 
 export default zhCNTranslations;

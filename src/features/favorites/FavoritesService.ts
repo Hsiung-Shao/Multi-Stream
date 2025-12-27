@@ -2,6 +2,8 @@ import { FavoritesRepository } from './FavoritesRepository';
 import { CategoryRepository } from './CategoryRepository';
 import { FavoriteStream, FavoriteUpdateEventDetail } from './types';
 import { backupService } from '../backup/index';
+import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from './constants';
+import { youtubeApi } from '../../utils/youtubeApi';
 
 export class FavoritesService {
     private favRepo: FavoritesRepository;
@@ -59,9 +61,6 @@ export class FavoritesService {
     /**
      * Logic to determine if a stream is duplicate
      */
-    /**
-     * Logic to determine if a stream is duplicate
-     */
     isDuplicate(url: string, channelId?: string | null): boolean {
         const list = this.favRepo.getList();
 
@@ -110,12 +109,15 @@ export class FavoritesService {
         });
     }
 
+
+
     async addFavorite(
         url: string,
         name: string = '',
         categoryId: string | null = null,
         providedChannelId: string | null = null,
-        providedVideoId: string | null = null
+        providedVideoId: string | null = null,
+        tagIds: string[] = []
     ): Promise<{ success: boolean; message: string; item?: FavoriteStream }> {
 
         // Initial duplicate check
@@ -130,6 +132,10 @@ export class FavoritesService {
 
         if (url.includes('twitch.tv')) {
             platform = 'twitch';
+            // Auto-add default tag
+            if (!tagIds.includes(DEFAULT_TAG_TWITCH_ID)) {
+                tagIds = [...tagIds, DEFAULT_TAG_TWITCH_ID];
+            }
             const match = url.match(/twitch\.tv\/([^\/\?]+)/);
             if (match) channelId = match[1];
 
@@ -145,7 +151,10 @@ export class FavoritesService {
 
         } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
             platform = 'youtube';
-
+            // Auto-add default tag
+            if (!tagIds.includes(DEFAULT_TAG_YOUTUBE_ID)) {
+                tagIds = [...tagIds, DEFAULT_TAG_YOUTUBE_ID];
+            }
             // Basic Video ID extraction
             if (!videoId) {
                 if (url.includes('youtube.com/watch')) {
@@ -161,7 +170,7 @@ export class FavoritesService {
             // If we have videoId but no channelId, try to resolve it via API
             if (videoId && !channelId) {
                 try {
-                    const { youtubeApi } = await import('../../utils/youtubeApi');
+                    // Use static import
                     const resolvedChannelId = await youtubeApi.getChannelIdFromVideoId(videoId);
                     if (resolvedChannelId) {
                         channelId = resolvedChannelId;
@@ -200,6 +209,7 @@ export class FavoritesService {
             channelId,
             videoId,
             categoryId,
+            tagIds,
             addedAt: new Date().toISOString(),
             isLive: null,
             lastChecked: null,
