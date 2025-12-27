@@ -191,7 +191,7 @@ function extractVideoIdFromWatchUrl(watchUrl) {
     const u = new URL(watchUrl);
     const v = u.searchParams.get('v');
     if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
-  } catch {}
+  } catch { }
   const parts = watchUrl.split('v=');
   const vid = parts.length > 1 ? parts[1].split('&')[0] : null;
   return vid && /^[a-zA-Z0-9_-]{11}$/.test(vid) ? vid : null;
@@ -371,6 +371,11 @@ function extractCandidatesFromChannelPageHtml(html) {
   };
 }
 
+// ------------------------------
+// 工具函數
+// ------------------------------
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) {
   const channelHomeUrl = withCommonQuery(`https://www.youtube.com/channel/${channelId}`);
   const stepInfo = {
@@ -393,6 +398,9 @@ async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) 
 
     // 先驗證 LIVE 候選
     for (const vid of c.liveVideoIds.slice(0, MAX_CANDIDATES_TO_VERIFY)) {
+      // 增加驗證間隔延遲 (1500ms)
+      if (c.liveVideoIds.indexOf(vid) > 0) await delay(1500);
+
       const watchUrl = withCommonQuery(`https://www.youtube.com/watch?v=${vid}`);
       const perCandidate = {
         ...stepInfo,
@@ -424,6 +432,10 @@ async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) 
 
     // 再處理 UPCOMING（回報，但不上線）
     for (const vid of c.upcomingVideoIds.slice(0, MAX_CANDIDATES_TO_VERIFY)) {
+      // 增加驗證間隔延遲 (1500ms)
+      // 如果前面有跑 LIVE 驗證，這裡也要 delay (簡單起見，每次迴圈前都 delay)
+      await delay(1500);
+
       const watchUrl = withCommonQuery(`https://www.youtube.com/watch?v=${vid}`);
       const perCandidate = {
         ...stepInfo,
@@ -560,6 +572,9 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
           redirectChain
         };
       }
+
+      // 增加轉導延遲 (1500ms)
+      await delay(1500);
 
       return checkLiveStatusRecursive(channelId, newUrl, redirects + 1, redirectChain);
     }

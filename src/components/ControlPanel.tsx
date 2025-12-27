@@ -241,8 +241,26 @@ export function ControlPanel({
 
       // 更新 YouTube 開台狀態
       if (youtubeFavorites.length > 0 && window.youtubeApiUtils?.checkChannelLiveStatus) {
+        let isFirstYoutubeCheck = true;
         for (const fav of youtubeFavorites) {
           if (fav.channelId) {
+            // 優化: 如果目前是 LIVE 狀態，且 lastChecked 在 1 小時內，則跳過檢查
+            // 避免已開台的頻道仍頻繁觸發請求（風險較高）
+            if (fav.isLive && fav.lastChecked) {
+              const lastCheckedTime = new Date(fav.lastChecked).getTime();
+              const oneHourAgo = Date.now() - 60 * 60 * 1000;
+              if (lastCheckedTime > oneHourAgo) {
+                // 跳過此頻道，保留原狀態
+                continue;
+              }
+            }
+
+            // 增加請求間隔 (2000ms)，避免瞬間爆發流量
+            if (!isFirstYoutubeCheck) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            isFirstYoutubeCheck = false;
+
             try {
               const status = await window.youtubeApiUtils.checkChannelLiveStatus(fav.channelId);
               updatedFavorites = updatedFavorites.map(f => {
