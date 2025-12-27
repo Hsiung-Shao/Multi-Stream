@@ -2,6 +2,22 @@
  * Favorite Stream Item Interface
  * Matches legacy data structure in settings.js
  */
+
+
+/**
+ * Tag Interface
+ */
+export interface Tag {
+    id: string;
+    name: string;
+    color: string;
+    order: number;
+}
+
+/**
+ * Favorite Stream Item Interface
+ * Matches legacy data structure in settings.js
+ */
 export interface FavoriteStream {
     id: string;
     url: string;
@@ -10,6 +26,7 @@ export interface FavoriteStream {
     channelId?: string | null;
     videoId?: string | null;
     categoryId?: string | null;
+    tagIds?: string[]; // New field for multi-tags
     addedAt: string;
 
     // Live Status Metadata

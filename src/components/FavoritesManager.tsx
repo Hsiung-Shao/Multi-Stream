@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2 } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button as MuiButton } from '@mui/material';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -7,74 +7,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox, Box } from '@mui/material';
 import { useI18n } from '../i18n/index';
+import { TagMultiSelect } from './ui/TagMultiSelect';
+import { TagList } from './ui/TagList';
+import { TagChip } from './ui/TagChip';
+import { TagPopoverSelector } from './ui/TagPopoverSelector';
+import { tagsService } from '../features/favorites/TagsService';
+import { favoritesService } from '../features/favorites/FavoritesService';
+import { FavoriteStream as FavoriteItem, FavoriteCategory as Category, Tag } from '../features/favorites/types';
 
 interface FavoritesManagerProps {
   theme: 'light' | 'dark';
   onClose: () => void;
 }
 
-interface FavoriteItem {
-  id: string;
-  url: string;
-  name: string;
-  platform: 'twitch' | 'youtube';
-  channelId?: string;
-  videoId?: string;
-  categoryId?: string | null;
-  addedAt: string;
-  isLive?: boolean | null;
-  lastChecked?: string | null;
-}
+// Interfaces imported from features/favorites/types
 
-interface Category {
-  id: string;
-  name: string;
-  createdAt?: string;
-}
-
-// 聲明全局類型
-declare global {
-  interface Window {
-    favoriteStreams?: {
-      getList: () => FavoriteItem[];
-      add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: FavoriteItem }>;
-      update?: (id: string, updates: { name?: string; categoryId?: string | null }) => { success: boolean; message: string };
-      remove?: (id: string) => { success: boolean; message: string };
-      load: (item: FavoriteItem | string) => Promise<{ success: boolean; message: string }>;
-      loadMultiple: (items: FavoriteItem[]) => Promise<{ success: boolean; message: string }>;
-      saveList?: (list: FavoriteItem[]) => void;
-    };
-    favoriteCategories?: {
-      getList: () => Category[];
-      add?: (name: string) => { success: boolean; message: string; id?: string };
-      update?: (id: string, newName: string) => { success: boolean; message: string };
-      remove?: (id: string) => void;
-      saveList?: (list: Category[]) => void;
-    };
-    youtubeApiUtils?: {
-      getChannelIdFromHandle?: (handle: string) => Promise<string>;
-      getChannelIdFromVideoId?: (videoId: string) => Promise<string>;
-      getChannelTitleFromChannelId?: (channelId: string) => Promise<string>;
-      checkChannelLiveStatus?: (channelId: string) => Promise<{ isLive: boolean }>;
-    };
-    indexedDBBackup?: {
-      isEnabled: () => boolean;
-      backup: () => Promise<boolean>;
-      getAllData: () => {
-        version: string;
-        exportDate: string;
-        userSettings: any;
-        favoriteStreams: any[];
-        favoriteCategories: any[];
-        controlPanelCollapsed: string | null;
-        multiStreamLayout: any;
-        adConfig: any;
-      };
-      hasLocalStorageData?: () => boolean;
-    };
-    addStream?: (url: string) => Promise<void>;
-  }
-}
+// 聲明全局類型 - moved to src/types/global.d.ts
 
 // 防抖備份函數（2秒）
 let backupTimeout: NodeJS.Timeout | null = null;
@@ -163,6 +111,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   const [batchCategory, setBatchCategory] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
+  const [isTagFilterExpanded, setIsTagFilterExpanded] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedFavorites, setSelectedFavorites] = useState<Set<string>>(new Set());
@@ -173,6 +122,13 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState('favorites');
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // For adding new favorite
+  const [editTags, setEditTags] = useState<string[]>([]); // For editing existing
+  const [filterTags, setFilterTags] = useState<string[]>([]); // For filtering
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#3b82f6'); // Default blue
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
 
   // 載入收藏和分類列表
   const loadData = useCallback(() => {
@@ -185,8 +141,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
           try {
             const favoritesList = window.favoriteStreams.getList();
             const categoriesList = window.favoriteCategories.getList();
+            const tagsList = tagsService.getAllTags();
             setFavorites(favoritesList);
             setCategories(categoriesList);
+            setTags(tagsList);
           } catch (error) {
             // 載入數據時發生錯誤，繼續處理
           }
@@ -200,8 +158,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       try {
         const favoritesList = window.favoriteStreams.getList();
         const categoriesList = window.favoriteCategories.getList();
+        const tagsList = tagsService.getAllTags();
         setFavorites(favoritesList);
         setCategories(categoriesList);
+        setTags(tagsList);
       } catch (error) {
         // 載入數據時發生錯誤，繼續處理
       }
@@ -231,14 +191,30 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     try {
+      // Import new typing directly if needed, but here we invoke the window wrapper which usually calls the service under the hood. 
+      // However, window wrapper might not support tags yet? 
+      // The task implementation plan said "Update FavoritesService to support tags field". I did that.
+      // But window.favoriteStreams.add signature in declare global is:
+      // add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) 
+      // It doesn't include tags!
+      // So I should call favoritesService.addFavorite directly!
+
       const categoryId = selectedCategory === '' || selectedCategory === 'uncategorized' ? null : selectedCategory;
-      const result = await window.favoriteStreams.add(streamUrl, streamName || undefined, categoryId);
+      const result = await favoritesService.addFavorite(
+        streamUrl,
+        streamName || undefined,
+        categoryId,
+        undefined, // providedChannelId
+        undefined, // providedVideoId
+        selectedTags
+      );
 
       if (result.success) {
         showMessage('success', result.message || t('favorites.add'));
         setStreamUrl('');
         setStreamName('');
         setSelectedCategory('');
+        setSelectedTags([]);
         loadData();
         debouncedBackup();
       } else {
@@ -434,21 +410,57 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   // 獲取過濾後的收藏列表
   const getFilteredFavorites = (): FavoriteItem[] => {
     let filtered = favorites;
+
+    // Category Filter
     if (filterCategory !== 'all') {
       if (filterCategory === 'uncategorized') {
-        filtered = favorites.filter(f => !f.categoryId);
+        filtered = filtered.filter(f => !f.categoryId);
       } else {
-        filtered = favorites.filter(f => f.categoryId === filterCategory);
+        filtered = filtered.filter(f => f.categoryId === filterCategory);
       }
     }
+
     return filtered;
   };
+
+  // Tag Filter (Multi-select)
+  // Logic: Show streams containing ALL selected filter tags (AND logic)? Or ANY (OR logic)?
+  // User Plan: "排序篩選優先:多標籤 > 分類" "可以選擇多個標籤來篩選收藏列表"
+  // Let's implement OR logic for broad discovery first, or AND per my impl plan. 
+  // "若是多選標籤，將顯示符合所有標籤的內容（暫定）" -> Implementation Plan said AND (Intersection).
+
+  const getFinalFilteredFavorites = (): FavoriteItem[] => {
+    let result = favorites;
+
+    // 1. Tag Filter (Priority)
+    if (filterTags.length > 0) {
+      result = result.filter(item => {
+        if (!item.tagIds) return false;
+        // Check if item has ALL selected tags
+        return filterTags.every(tId => item.tagIds?.includes(tId));
+      });
+    }
+
+    // 2. Category Filter
+    if (filterCategory !== 'all') {
+      if (filterCategory === 'uncategorized') {
+        result = result.filter(f => !f.categoryId);
+      } else {
+        result = result.filter(f => f.categoryId === filterCategory);
+      }
+    }
+
+    return result;
+  };
+
+  const filteredFavorites = getFinalFilteredFavorites();
 
   // 進入編輯模式
   const handleStartEdit = (favorite: FavoriteItem) => {
     setEditingId(favorite.id);
     setEditName(favorite.name);
     setEditCategory(favorite.categoryId || '');
+    setEditTags(favorite.tagIds || []); // Use editTags state
   };
 
   // 取消編輯
@@ -456,6 +468,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     setEditingId(null);
     setEditName('');
     setEditCategory('');
+    setEditTags([]);
   };
 
   // 保存編輯
@@ -468,9 +481,12 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     const categoryId = editCategory === '' || editCategory === 'uncategorized' ? null : editCategory;
-    const result = window.favoriteStreams.update!(editingId, {
+
+    // Call service directly to support tags
+    const result = favoritesService.updateFavorite(editingId, {
       name: editName,
-      categoryId: categoryId
+      categoryId: categoryId,
+      tagIds: editTags // Use editTags state
     });
 
     if (result.success) {
@@ -556,6 +572,36 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     } else {
       showMessage('error', result.message || '新增失敗');
     }
+  };
+
+  // --- Tag Operations ---
+  const handleAddTag = () => {
+    if (!newTagName.trim()) {
+      showMessage('error', '請輸入標籤名稱');
+      return;
+    }
+
+    const newTag = tagsService.addTag(newTagName.trim(), newTagColor);
+    showMessage('success', '已新增標籤');
+    setNewTagName('');
+    // tagsService.addTag updates repo, we need to reload or just update local state
+    // loadData() will fetch from repo
+    loadData();
+  };
+
+  const handleDeleteTag = (tagId: string) => {
+    if (confirm('確定要刪除此標籤嗎？包含該標籤的收藏將會自動移除此標籤。')) {
+      tagsService.removeTag(tagId);
+      showMessage('success', '已刪除標籤');
+      loadData();
+    }
+  };
+
+  const handleUpdateTag = (tagId: string, name: string, color: string) => {
+    tagsService.updateTag(tagId, { name, color });
+    showMessage('success', '已更新標籤');
+    setEditingTagId(null);
+    loadData();
   };
 
   // 匯出JSON - 使用與正式版完全相同的格式
@@ -745,7 +791,8 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     input.click();
   };
 
-  const filteredFavorites = getFilteredFavorites();
+  // const filteredFavorites = getFilteredFavorites(); // Removed old declaration
+  // const favoriteCount = filteredFavorites.length; // Use the one from getFinalFilteredFavorites
   const favoriteCount = filteredFavorites.length;
 
   return (
@@ -784,10 +831,11 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6 h-full flex flex-col">
-            <TabsList className={`grid w-full grid-cols-3 mb-6 flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <TabsTrigger value="favorites">{t('favorites.myFavorites')}</TabsTrigger>
-              <TabsTrigger value="categories">{t('favorites.categoryManagement')}</TabsTrigger>
-              <TabsTrigger value="settings">{t('favorites.settings')}</TabsTrigger>
+            <TabsList className={`flex w-full justify-start overflow-x-auto whitespace-nowrap scrollbar-hide mb-6 p-1 rounded-lg flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <TabsTrigger value="favorites" className="flex-1 min-w-[100px]">{t('favorites.myFavorites')}</TabsTrigger>
+              <TabsTrigger value="categories" className="flex-1 min-w-[100px]">{t('favorites.categoryManagement')}</TabsTrigger>
+              <TabsTrigger value="tags" className="flex-1 min-w-[100px]">標籤管理</TabsTrigger>
+              <TabsTrigger value="settings" className="flex-1 min-w-[100px]">{t('favorites.settings')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="favorites" className="flex flex-col flex-1 min-h-0 space-y-4 overflow-y-auto">
@@ -822,11 +870,35 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                       ))}
                     </SelectContent>
                   </Select>
+
+                  {/* Add Favorite Popover Tag Selector (Button Only) */}
+                  <TagPopoverSelector
+                    allTags={tags}
+                    selectedTagIds={selectedTags}
+                    onChange={setSelectedTags}
+                    theme={theme}
+                    showSelectedChips={false}
+                  />
+
                   <MuiButton onClick={handleAddFavorite} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
                     <Plus className="size-4 mr-2" />
                     {t('favorites.add')}
                   </MuiButton>
                 </div>
+
+                {/* Selected Tags Display (Below inputs) */}
+                {selectedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {tags.filter(tag => selectedTags.includes(tag.id)).map(tag => (
+                      <TagChip
+                        key={tag.id}
+                        tag={tag}
+                        onDelete={() => setSelectedTags(prev => prev.filter(id => id !== tag.id))}
+                        className="cursor-pointer"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Batch Import */}
@@ -869,6 +941,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               {/* Favorites List */}
               <div className={`p-4 rounded-lg border flex flex-col ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                 <h3 className={`mb-4 flex-shrink-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.myFavorites')}({favoriteCount})</h3>
+
                 <div className="flex gap-2 mb-4 flex-wrap flex-shrink-0">
                   <Select value={filterCategory} onValueChange={setFilterCategory}>
                     <SelectTrigger className={`w-[120px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
@@ -877,11 +950,14 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
                       <SelectItem value="all" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.all')}</SelectItem>
                       <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>
+                          {category.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+
                   <MuiButton
                     variant="outlined"
                     size="small"
@@ -940,6 +1016,57 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     {t('favorites.delete')}
                   </MuiButton>
                 </div>
+
+                {/* 標籤篩選 - 水平 Chip List (Moved below buttons) */}
+                {tags.length > 0 && (
+                  <div className="flex gap-2 items-start pb-2 mb-2 flex-shrink-0">
+                    <div className="flex bg-transparent py-1.5 flex-shrink-0">
+                      <span className={`text-sm whitespace-nowrap ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {t('common.filter')}:
+                      </span>
+                    </div>
+                    <div className={`flex-1 flex gap-2 flex-wrap transition-all overflow-hidden ${isTagFilterExpanded ? '' : 'max-h-8'}`}>
+                      {tags.map(tag => {
+                        const isSelected = filterTags.includes(tag.id);
+                        return (
+                          <TagChip
+                            key={tag.id}
+                            tag={tag}
+                            onClick={() => {
+                              setFilterTags(prev =>
+                                prev.includes(tag.id)
+                                  ? prev.filter(id => id !== tag.id)
+                                  : [...prev, tag.id]
+                              );
+                            }}
+                            className={`flex-shrink-0 cursor-pointer transition-all ${isSelected
+                              ? 'ring-2 ring-offset-2 ring-purple-500 opacity-100'
+                              : 'opacity-50 hover:opacity-100'
+                              }`}
+                          />
+                        );
+                      })}
+                      {filterTags.length > 0 && (
+                        <MuiButton
+                          size="small"
+                          onClick={() => setFilterTags([])}
+                          sx={{ minWidth: 'auto', padding: '2px 8px', fontSize: '10px' }}
+                        >
+                          {t('common.clear')}
+                        </MuiButton>
+                      )}
+                    </div>
+                    {tags.length > 3 && (
+                      <button
+                        onClick={() => setIsTagFilterExpanded(!isTagFilterExpanded)}
+                        className={`flex-shrink-0 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
+                        title={isTagFilterExpanded ? t('common.collapse') : t('common.expand')}
+                      >
+                        {isTagFilterExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                      </button>
+                    )}
+                  </div>
+                )}
                 {/* 收藏列表 - 設置最大高度限制並增加滾動 */}
                 <Box
                   sx={{
@@ -974,11 +1101,13 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                           key={favorite.id}
                           favorite={favorite}
                           categories={categories}
+                          tags={tags} // Passed tags
                           theme={theme}
                           isSelected={selectedFavorites.has(favorite.id)}
                           isEditing={editingId === favorite.id}
                           editName={editName}
                           editCategory={editCategory}
+                          editTags={editTags} // Pass editTags
                           onSelect={(id, checked) => {
                             const newSelected = new Set(selectedFavorites);
                             if (checked) {
@@ -993,6 +1122,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                           onSaveEdit={handleSaveEdit}
                           onEditNameChange={setEditName}
                           onEditCategoryChange={setEditCategory}
+                          onEditTagsChange={setEditTags} // Pass setEditTags
                           onDelete={handleDeleteFavorite}
                           onLoad={handleLoadFavorite}
                         />
@@ -1005,8 +1135,8 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               {/* 資料儲存提示 - 在"我的收藏"區塊下方，綠色半透明玻璃效果 */}
               {message && message.type === 'success' && (
                 <div className={`p-3 rounded-lg text-sm backdrop-blur-md flex-shrink-0 text-white ${theme === 'dark'
-                    ? 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10'
-                    : 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10'
+                  ? 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10'
+                  : 'bg-green-500/20 border border-green-500/30 shadow-lg shadow-green-500/10'
                   }`}>
                   {message.text}
                 </div>
@@ -1079,6 +1209,85 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               </div>
             </TabsContent>
 
+            <TabsContent value="tags" className="space-y-4 overflow-y-auto flex-1 min-h-0">
+              {/* Add Tag */}
+              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>新增標籤</h3>
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="text"
+                    placeholder="標籤名稱"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
+                    className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>顏色:</span>
+                    <input
+                      type="color"
+                      value={newTagColor}
+                      onChange={(e) => setNewTagColor(e.target.value)}
+                      className="h-9 w-9 p-0 border-0 rounded cursor-pointer"
+                    />
+                  </div>
+                  <MuiButton onClick={handleAddTag} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
+                    <Plus className="size-4 mr-2" />
+                    {t('common.add')}
+                  </MuiButton>
+                </div>
+              </div>
+
+              {/* Tags List */}
+              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>標籤管理</h3>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map(tag => (
+                    <div key={tag.id} className={`flex items-center gap-2 p-2 rounded border ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}>
+                      {editingTagId === tag.id ? (
+                        <>
+                          <Input
+                            value={tag.name}
+                            onChange={(e) => {
+                              const newTags = tags.map(t => t.id === tag.id ? { ...t, name: e.target.value } : t);
+                              setTags(newTags); // Optimistic update
+                            }}
+                            className="h-8 w-24 text-xs"
+                          />
+                          <input
+                            type="color"
+                            value={tag.color}
+                            onChange={(e) => {
+                              const newTags = tags.map(t => t.id === tag.id ? { ...t, color: e.target.value } : t);
+                              setTags(newTags);
+                            }}
+                            className="h-8 w-8 p-0 border-0 rounded"
+                          />
+                          <MuiButton size="small" onClick={() => handleUpdateTag(tag.id, tag.name, tag.color)} color="secondary" variant="contained">
+                            <Check className="size-3" />
+                          </MuiButton>
+                          <MuiButton size="small" onClick={() => { setEditingTagId(null); loadData(); }} variant="outlined" color="secondary">
+                            <X className="size-3" />
+                          </MuiButton>
+                        </>
+                      ) : (
+                        <>
+                          <TagChip tag={tag} />
+                          <MuiButton size="small" onClick={() => setEditingTagId(tag.id)} sx={{ minWidth: 30, padding: '4px' }}>
+                            <Edit2 className="size-3 text-gray-400 hover:text-white" />
+                          </MuiButton>
+                          <MuiButton size="small" onClick={() => handleDeleteTag(tag.id)} sx={{ minWidth: 30, padding: '4px' }}>
+                            <Trash2 className="size-3 text-red-400 hover:text-red-500" />
+                          </MuiButton>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {tags.length === 0 && <div className="text-gray-500 text-sm">暫無標籤</div>}
+                </div>
+              </div>
+            </TabsContent>
+
             <TabsContent value="settings" className="space-y-4 overflow-y-auto flex-1 min-h-0">
               <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                 <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('favorites.backup')}</h3>
@@ -1110,7 +1319,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
           </Tabs>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 
@@ -1118,33 +1327,39 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 function FavoriteItem({
   favorite,
   categories,
+  tags, // Added tags prop
   theme,
   isSelected,
   isEditing,
   editName,
   editCategory,
+  editTags,
   onSelect,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
   onEditNameChange,
   onEditCategoryChange,
+  onEditTagsChange,
   onDelete,
   onLoad
 }: {
   favorite: FavoriteItem;
   categories: Category[];
+  tags: Tag[]; // Added tags prop
   theme: 'light' | 'dark';
   isSelected: boolean;
   isEditing: boolean;
   editName: string;
   editCategory: string;
+  editTags?: string[]; // Optional since existing usage might not pass it yet, but we are updating parent
   onSelect: (id: string, checked: boolean) => void;
   onStartEdit: (favorite: FavoriteItem) => void;
   onCancelEdit: () => void;
   onSaveEdit: () => void;
   onEditNameChange: (name: string) => void;
   onEditCategoryChange: (categoryId: string) => void;
+  onEditTagsChange?: (tags: string[]) => void;
   onDelete: (id: string) => void;
   onLoad: (id: string) => void;
 }) {
@@ -1177,7 +1392,35 @@ function FavoriteItem({
               ))}
             </SelectContent>
           </Select>
+
+          {/* Edit Tags Popover Button (Inline) */}
+          <TagPopoverSelector
+            allTags={tags}
+            selectedTagIds={editTags || []}
+            onChange={onEditTagsChange || (() => { })}
+            theme={theme}
+            showSelectedChips={false}
+          />
         </div>
+
+        {/* Edit Tags Chips (Below) */}
+        {(editTags || []).length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {tags.filter(tag => (editTags || []).includes(tag.id)).map(tag => (
+              <TagChip
+                key={tag.id}
+                tag={tag}
+                onDelete={() => {
+                  if (onEditTagsChange && editTags) {
+                    onEditTagsChange(editTags.filter(id => id !== tag.id));
+                  }
+                }}
+                className="cursor-pointer"
+              />
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2 justify-end">
           <MuiButton size="small" onClick={onSaveEdit} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
             <Check className="size-3 mr-1" />
@@ -1222,13 +1465,16 @@ function FavoriteItem({
         <div className={`font-medium truncate ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
           {favorite.name}
         </div>
-        <div className="flex items-center gap-2 text-xs mt-1">
+        <div className="flex items-center gap-2 text-xs mt-1 flex-wrap">
           <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
             📁 {category?.name || t('favorites.uncategorized')}
           </span>
-          <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-500'} title={favorite.url}>
-            {favorite.url.length > 50 ? favorite.url.substring(0, 50) + '...' : favorite.url}
-          </span>
+          {/* Tags Display */}
+          {favorite.tagIds && favorite.tagIds.length > 0 && (
+            <TagList
+              tags={tags.filter(t => favorite.tagIds?.includes(t.id))}
+            />
+          )}
         </div>
       </div>
       <div className="flex items-center gap-1">

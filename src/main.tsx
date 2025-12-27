@@ -5,12 +5,16 @@ import { apiLoader } from "./utils/apiLoader.ts";
 import { I18nProvider } from "./i18n/index";
 import { initLegacyGlobals } from "./bootstrap/initLegacyGlobals.ts";
 import { checkAppVersion } from "./utils/versionCheck.ts";
+import { tagsService } from "./features/favorites/TagsService";
 
 // Perform version check and cleanup BEFORE anything else
 checkAppVersion();
 
 // Initialize legacy features (Analytics, Promotion, etc.)
 initLegacyGlobals();
+
+// Initialize Tags (Defaults + Migration)
+tagsService.initializeDefaults();
 
 // 優化：只預載入 Twitch Player API（不等待完成，不阻塞應用啟動）
 // YouTube API 將在需要時按需載入

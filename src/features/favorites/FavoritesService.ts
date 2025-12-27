@@ -59,9 +59,6 @@ export class FavoritesService {
     /**
      * Logic to determine if a stream is duplicate
      */
-    /**
-     * Logic to determine if a stream is duplicate
-     */
     isDuplicate(url: string, channelId?: string | null): boolean {
         const list = this.favRepo.getList();
 
@@ -115,7 +112,8 @@ export class FavoritesService {
         name: string = '',
         categoryId: string | null = null,
         providedChannelId: string | null = null,
-        providedVideoId: string | null = null
+        providedVideoId: string | null = null,
+        tagIds: string[] = []
     ): Promise<{ success: boolean; message: string; item?: FavoriteStream }> {
 
         // Initial duplicate check
@@ -200,6 +198,7 @@ export class FavoritesService {
             channelId,
             videoId,
             categoryId,
+            tagIds,
             addedAt: new Date().toISOString(),
             isLive: null,
             lastChecked: null,
