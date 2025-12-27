@@ -289,6 +289,8 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       setBatchUrls('');
 
       if (successCount > 0) {
+        // 確保自動修復新匯入項目的平台標籤
+        tagsService.initializeDefaults();
         loadData();
         debouncedBackup();
         const successMsg = failCount > 0
@@ -763,6 +765,8 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         }
 
         // 重新載入數據
+        // 確保自動修復新匯入項目的平台標籤
+        tagsService.initializeDefaults();
         loadData();
 
         // 觸發 favoritesUpdated 事件，通知 ControlPanel 更新收藏列表

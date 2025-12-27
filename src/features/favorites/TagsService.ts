@@ -3,9 +3,7 @@ import { Tag } from './types';
 import { backupService } from '../backup/index';
 import { favoritesService } from './FavoritesService';
 
-// Default Tags Constants
-export const DEFAULT_TAG_TWITCH_ID = 'tag_twitch_default';
-export const DEFAULT_TAG_YOUTUBE_ID = 'tag_youtube_default';
+import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from './constants';
 
 export class TagsService {
     private repo: TagsRepository;
@@ -83,9 +81,11 @@ export class TagsService {
         }
 
         if (changed) {
-            // 2. Auto-tag existing favorites
-            this.autoTagFavorites();
+            // Log or backup if needed
         }
+
+        // 2. Auto-tag existing favorites (Always run to fix missing tags)
+        this.autoTagFavorites();
     }
 
     /**
