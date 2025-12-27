@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2 } from 'lucide-react';
 import { Button as MuiButton } from '@mui/material';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -11,6 +11,7 @@ import { TagMultiSelect } from './ui/TagMultiSelect';
 import { TagList } from './ui/TagList';
 import { TagChip } from './ui/TagChip';
 import { TagPopoverSelector } from './ui/TagPopoverSelector';
+import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { FavoriteStream as FavoriteItem, FavoriteCategory as Category, Tag } from '../features/favorites/types';
@@ -111,7 +112,6 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   const [batchCategory, setBatchCategory] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
-  const [isTagFilterExpanded, setIsTagFilterExpanded] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedFavorites, setSelectedFavorites] = useState<Set<string>>(new Set());
@@ -1019,52 +1019,24 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
                 {/* 標籤篩選 - 水平 Chip List (Moved below buttons) */}
                 {tags.length > 0 && (
-                  <div className="flex gap-2 items-start pb-2 mb-2 flex-shrink-0">
-                    <div className="flex bg-transparent py-1.5 flex-shrink-0">
-                      <span className={`text-sm whitespace-nowrap ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {t('common.filter')}:
-                      </span>
+                  <div className="mb-2 w-full">
+                    <div className={`text-sm mb-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                      篩選:
                     </div>
-                    <div className={`flex-1 flex gap-2 flex-wrap transition-all overflow-hidden ${isTagFilterExpanded ? '' : 'max-h-8'}`}>
-                      {tags.map(tag => {
-                        const isSelected = filterTags.includes(tag.id);
-                        return (
-                          <TagChip
-                            key={tag.id}
-                            tag={tag}
-                            onClick={() => {
-                              setFilterTags(prev =>
-                                prev.includes(tag.id)
-                                  ? prev.filter(id => id !== tag.id)
-                                  : [...prev, tag.id]
-                              );
-                            }}
-                            className={`flex-shrink-0 cursor-pointer transition-all ${isSelected
-                              ? 'ring-2 ring-offset-2 ring-purple-500 opacity-100'
-                              : 'opacity-50 hover:opacity-100'
-                              }`}
-                          />
+                    <TagFilterLayout
+                      tags={tags}
+                      selectedTags={filterTags}
+                      onToggleTag={(tagId) => {
+                        setFilterTags(prev =>
+                          prev.includes(tagId)
+                            ? prev.filter(id => id !== tagId)
+                            : [...prev, tagId]
                         );
-                      })}
-                      {filterTags.length > 0 && (
-                        <MuiButton
-                          size="small"
-                          onClick={() => setFilterTags([])}
-                          sx={{ minWidth: 'auto', padding: '2px 8px', fontSize: '10px' }}
-                        >
-                          {t('common.clear')}
-                        </MuiButton>
-                      )}
-                    </div>
-                    {tags.length > 3 && (
-                      <button
-                        onClick={() => setIsTagFilterExpanded(!isTagFilterExpanded)}
-                        className={`flex-shrink-0 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-                        title={isTagFilterExpanded ? t('common.collapse') : t('common.expand')}
-                      >
-                        {isTagFilterExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                      </button>
-                    )}
+                      }}
+                      onClear={() => setFilterTags([])}
+                      theme={theme}
+                      columns={10}
+                    />
                   </div>
                 )}
                 {/* 收藏列表 - 設置最大高度限制並增加滾動 */}

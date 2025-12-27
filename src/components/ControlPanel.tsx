@@ -11,6 +11,7 @@ import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useI18n } from '../i18n/index';
 import { TagChip } from './ui/TagChip';
+import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
 import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
 
@@ -95,7 +96,6 @@ export function ControlPanel({
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isTagFilterExpanded, setIsTagFilterExpanded] = useState(false);
 
   // 處理全域音量變化
   const handleMasterVolumeChange = (newVolume: number) => {
@@ -715,45 +715,20 @@ export function ControlPanel({
 
             {/* Tag Filters */}
             {tags.length > 0 && (
-              <div className="flex gap-2 items-start pb-2">
-                <div className={`flex-1 flex gap-2 flex-wrap transition-all overflow-hidden ${isTagFilterExpanded ? '' : 'max-h-8'}`}>
-                  {tags.map(tag => {
-                    const isSelected = filterTags.includes(tag.id);
-                    return (
-                      <TagChip
-                        key={tag.id}
-                        tag={tag}
-                        onClick={() => {
-                          setFilterTags(prev =>
-                            prev.includes(tag.id)
-                              ? prev.filter(id => id !== tag.id)
-                              : [...prev, tag.id]
-                          );
-                        }}
-                        className={`flex-shrink-0 transition-all ${isSelected ? 'ring-2 ring-offset-2 ring-purple-500 opacity-100' : 'opacity-50 hover:opacity-100'}`}
-                      />
-                    );
-                  })}
-                  {filterTags.length > 0 && (
-                    <MuiButton
-                      size="small"
-                      onClick={() => setFilterTags([])}
-                      sx={{ minWidth: 'auto', padding: '2px 8px', fontSize: '10px' }}
-                    >
-                      清除
-                    </MuiButton>
-                  )}
-                </div>
-                {tags.length > 3 && (
-                  <button
-                    onClick={() => setIsTagFilterExpanded(!isTagFilterExpanded)}
-                    className={`flex-shrink-0 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}
-                    title={isTagFilterExpanded ? "收合" : "展開"}
-                  >
-                    {isTagFilterExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                  </button>
-                )}
-              </div>
+              <TagFilterLayout
+                tags={tags}
+                selectedTags={filterTags}
+                onToggleTag={(tagId) => {
+                  setFilterTags(prev =>
+                    prev.includes(tagId)
+                      ? prev.filter(id => id !== tagId)
+                      : [...prev, tagId]
+                  );
+                }}
+                onClear={() => setFilterTags([])}
+                theme={theme}
+                columns={6}
+              />
             )}
 
             {/* 收藏串流列表 - 限高並添加滾動 */}
