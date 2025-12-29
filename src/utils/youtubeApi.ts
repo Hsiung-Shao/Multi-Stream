@@ -131,8 +131,37 @@ export const youtubeApi = {
         }
     },
 
-    async checkChannelLiveStatus(channelId: string): Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string }> {
-        // Use Cloudflare Pages Function proxy which implements robust checking (HTML parsing + verification)
+    async checkChannelLiveStatus(channelId: string): Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string; isUpcoming?: boolean; scheduledStartTime?: string }> {
+        // Strategy: Try the new lightweight "OG Image" API first. 
+        // If it fails or implies uncertainty (which it theoretically shouldn't given the robust updates), 
+        // fall back to the legacy full-scan API.
+
+        try {
+            // 1. Try New API (Low Cost, High Speed)
+            const ogUrl = `/api/youtube-channel-live-og?channelId=${encodeURIComponent(channelId)}`;
+            const ogResp = await fetch(ogUrl, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (ogResp.ok) {
+                const data = await ogResp.json();
+
+                // If api returns explicit status (Live, Upcoming, or Offline)
+                // We trust it.
+                return {
+                    isLive: !!data.isLive,
+                    liveVideoId: data.videoId || data.liveVideoId,
+                    finalUrl: data.finalUrl,
+                    isUpcoming: !!data.isUpcoming,
+                    scheduledStartTime: data.scheduledStartTime
+                };
+            }
+        } catch (e) {
+            console.warn("[YouTubeAPI] Lightweight check failed, falling back to legacy", e);
+        }
+
+        // 2. Fallback: Legacy API (Higher Cost, Full Scan)
         try {
             const url = `/api/youtube-channel-live?channelId=${encodeURIComponent(channelId)}`;
             const response = await fetch(url, {
@@ -143,7 +172,6 @@ export const youtubeApi = {
             });
 
             if (!response.ok) {
-                // If 404, channel might not exist. If 500, server error.
                 return { isLive: false };
             }
 
@@ -157,9 +185,18 @@ export const youtubeApi = {
                 };
             }
 
+            // Check for isUpcoming in legacy response if available
+            if (data.isUpcoming) {
+                return {
+                    isLive: false,
+                    isUpcoming: true,
+                    scheduledStartTime: data.scheduledVideoId ? undefined : undefined // Legacy might not return time
+                };
+            }
+
             return { isLive: false };
         } catch (e) {
-            console.error("Check live status failed", e);
+            console.error("Check live status failed (Legacy)", e);
             return { isLive: false };
         }
     }
