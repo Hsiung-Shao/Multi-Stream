@@ -9,6 +9,7 @@ import { SEO } from './components/SEO';
 const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
 const Tutorial = lazy(() => import('./components/Tutorial').then(module => ({ 'default': module.Tutorial })));
 const FavoritesManager = lazy(() => import('./components/FavoritesManager').then(module => ({ 'default': module.FavoritesManager })));
+const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
 import { parseStreamUrl, validateUrl, type StreamData } from './utils/streamUtils';
@@ -55,6 +56,7 @@ export default function App() {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(true);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [streams, setStreams] = useState<StreamData[]>([]);
@@ -1179,6 +1181,7 @@ export default function App() {
           onShowTutorial={() => setShowTutorial(true)}
           onShowVersionHistory={() => setShowVersionHistory(true)}
           onShowFavorites={() => setShowFavorites(true)}
+          onShowFeedback={() => setShowFeedback(true)}
           onTogglePanel={() => setIsPanelCollapsed(!isPanelCollapsed)}
           onAddStream={handleAddStream}
           onSearchFocusChange={setIsSearchFocused}
@@ -1279,6 +1282,15 @@ export default function App() {
             <FavoritesManager
               theme={theme}
               onClose={() => setShowFavorites(false)}
+            />
+          </Suspense>
+        )}
+
+        {showFeedback && (
+          <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+            <FeedbackModal
+              theme={theme}
+              onClose={() => setShowFeedback(false)}
             />
           </Suspense>
         )}
