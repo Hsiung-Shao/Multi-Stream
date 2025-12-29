@@ -7,14 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox, Box } from '@mui/material';
 import { useI18n } from '../i18n/index';
-import { TagMultiSelect } from './ui/TagMultiSelect';
 import { TagList } from './ui/TagList';
 import { TagChip } from './ui/TagChip';
 import { TagPopoverSelector } from './ui/TagPopoverSelector';
 import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
-import { FavoriteStream as FavoriteItem, FavoriteCategory as Category, Tag } from '../features/favorites/types';
+import { favoritesLoader } from '../features/favorites/FavoritesLoader';
+import { backupService } from '../features/backup/index';
+import { youtubeApi } from '../utils/youtubeApi';
+import type { FavoriteStream as FavoriteItem, FavoriteCategory as Category, Tag } from '../features/favorites/types';
 
 interface FavoritesManagerProps {
   theme: 'light' | 'dark';
@@ -32,75 +34,15 @@ function debouncedBackup() {
     clearTimeout(backupTimeout);
   }
   backupTimeout = setTimeout(() => {
-    if (window.indexedDBBackup?.isEnabled()) {
-      window.indexedDBBackup.backup().catch(() => {
+    if (backupService.isEnabled()) {
+      backupService.backup().catch(() => {
         // 備份錯誤，靜默處理
       });
     }
   }, 2000); // 2秒後備份
 }
 
-// 解析URL並獲取頻道資訊
-async function parseUrlAndGetChannelInfo(url: string): Promise<{ url: string; name: string; channelId?: string } | null> {
-  const trimmedUrl = url.trim();
-  if (!trimmedUrl) return null;
 
-  // Twitch URL: https://www.twitch.tv/username
-  if (trimmedUrl.includes('twitch.tv')) {
-    const match = trimmedUrl.match(/twitch\.tv\/([^\/\?]+)/);
-    if (match) {
-      const username = match[1];
-      // Twitch 使用 username 作為 channelId
-      return {
-        url: `https://www.twitch.tv/${username}`,
-        name: username,
-        channelId: username
-      };
-    }
-  }
-
-  // YouTube URL - 僅支援 https://www.youtube.com/watch?v=xxx 格式
-  if (trimmedUrl.includes('youtube.com/watch')) {
-    let videoId: string | undefined;
-
-    // 僅支援從 youtube.com/watch?v=xxx 提取 videoId
-    if (trimmedUrl.includes('youtube.com/watch')) {
-      videoId = new URL(trimmedUrl).searchParams.get('v') || undefined;
-    }
-
-    // 使用 YouTube API 通過 videoId 逆推 channelId
-    if (window.youtubeApiUtils && videoId) {
-      try {
-        // 從 videoId 獲取 channelId（唯一支援的方式）
-        const realChannelId = await window.youtubeApiUtils.getChannelIdFromVideoId!(videoId);
-        if (realChannelId) {
-          // 獲取頻道名稱
-          try {
-            const channelTitle = await window.youtubeApiUtils.getChannelTitleFromChannelId!(realChannelId);
-            return {
-              url: `https://www.youtube.com/channel/${realChannelId}/live`,
-              name: channelTitle,
-              channelId: realChannelId
-            };
-          } catch {
-            return {
-              url: `https://www.youtube.com/channel/${realChannelId}/live`,
-              name: videoId,
-              channelId: realChannelId
-            };
-          }
-        }
-      } catch (error) {
-        // YouTube API 錯誤，繼續處理
-      }
-    }
-
-    // 如果無法獲取 channelId，返回 null
-    return null;
-  }
-
-  return null;
-}
 
 export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   const { t } = useI18n();
@@ -132,39 +74,15 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   // 載入收藏和分類列表
   const loadData = useCallback(() => {
-    // 確保收藏系統已初始化（可能需要等待）
-    if (!window.favoriteStreams || !window.favoriteCategories) {
-      // 等待收藏系統初始化（最多等待 2 秒）
-      let waitCount = 0;
-      const checkAndLoad = () => {
-        if (window.favoriteStreams && window.favoriteCategories) {
-          try {
-            const favoritesList = window.favoriteStreams.getList();
-            const categoriesList = window.favoriteCategories.getList();
-            const tagsList = tagsService.getAllTags();
-            setFavorites(favoritesList);
-            setCategories(categoriesList);
-            setTags(tagsList);
-          } catch (error) {
-            // 載入數據時發生錯誤，繼續處理
-          }
-        } else if (waitCount < 20) {
-          waitCount++;
-          setTimeout(checkAndLoad, 100);
-        }
-      };
-      checkAndLoad();
-    } else {
-      try {
-        const favoritesList = window.favoriteStreams.getList();
-        const categoriesList = window.favoriteCategories.getList();
-        const tagsList = tagsService.getAllTags();
-        setFavorites(favoritesList);
-        setCategories(categoriesList);
-        setTags(tagsList);
-      } catch (error) {
-        // 載入數據時發生錯誤，繼續處理
-      }
+    try {
+      const favoritesList = favoritesService.getFavorites();
+      const categoriesList = favoritesService.getCategories();
+      const tagsList = tagsService.getAllTags();
+      setFavorites(favoritesList);
+      setCategories(categoriesList);
+      setTags(tagsList);
+    } catch (error) {
+      // 載入數據時發生錯誤，繼續處理
     }
   }, []);
 
@@ -185,10 +103,9 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       return;
     }
 
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
-      return;
-    }
+
+
+    // if (!window.favoriteStreams) check removed because we import directly
 
     try {
       // Import new typing directly if needed, but here we invoke the window wrapper which usually calls the service under the hood. 
@@ -232,10 +149,9 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       return;
     }
 
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
-      return;
-    }
+
+
+    // if (!window.favoriteStreams) check removed because we import directly
 
     setIsImporting(true);
     setImportProgress({ current: 0, total: 0 });
@@ -266,11 +182,14 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         setImportProgress({ current: i + 1, total: urlList.length });
 
         try {
-          // 直接使用 favoriteStreams.add，它會使用與單個新增相同的解析邏輯（settings.js）
-          const result = await window.favoriteStreams.add(
+          // 直接使用 favoritesService.addFavorite
+          const result = await favoritesService.addFavorite(
             url,
-            undefined, // 讓系統自動獲取頻道名稱
-            categoryId
+            undefined, // name
+            categoryId,
+            undefined, // providedChannelId
+            undefined, // providedVideoId
+            [] // tags
           );
 
           if (result.success) {
@@ -315,10 +234,9 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       return;
     }
 
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
-      return;
-    }
+
+
+    // if (!window.favoriteStreams) check removed
 
     if (!confirm(`確定要刪除選中的 ${selectedFavorites.size} 個收藏嗎？`)) {
       return;
@@ -326,7 +244,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
     let deletedCount = 0;
     selectedFavorites.forEach(id => {
-      const result = window.favoriteStreams!.remove!(id);
+      const result = favoritesService.removeFavorite(id);
       if (result.success) {
         deletedCount++;
       }
@@ -336,11 +254,11 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     loadData();
 
     // 刪除操作立即備份
-    if (window.indexedDBBackup?.isEnabled()) {
+    if (backupService.isEnabled()) {
       if (backupTimeout) {
         clearTimeout(backupTimeout);
       }
-      window.indexedDBBackup.backup().catch(() => { });
+      backupService.backup().catch(() => { });
     }
 
     showMessage('success', `${t('favorites.delete')} ${deletedCount} ${t('favorites.myFavorites')}`);
@@ -363,14 +281,9 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       return;
     }
 
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
-      return;
-    }
-
     try {
       const selectedItems = favorites.filter(f => selectedFavorites.has(f.id));
-      const result = await window.favoriteStreams.loadMultiple(selectedItems);
+      const result = await favoritesLoader.loadMultiple(selectedItems);
       if (result.success) {
         showMessage('success', result.message || t('favorites.loadSelected'));
       } else {
@@ -383,21 +296,15 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   // 載入分類中的所有收藏
   const handleLoadCategory = async (categoryId: string) => {
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
+    const categoryFavorites = favorites.filter(f => f.categoryId === categoryId);
+
+    if (categoryFavorites.length === 0) {
+      showMessage('error', t('favorites.noFavorites')); // TODO: 更好的錯誤訊息
       return;
     }
 
     try {
-      // 獲取該分類下的所有收藏
-      const categoryFavorites = favorites.filter(f => f.categoryId === categoryId);
-
-      if (categoryFavorites.length === 0) {
-        showMessage('error', t('favorites.noFavorites')); // TODO: 更好的錯誤訊息
-        return;
-      }
-
-      const result = await window.favoriteStreams.loadMultiple(categoryFavorites);
+      const result = await favoritesLoader.loadMultiple(categoryFavorites);
       if (result.success) {
         const category = categories.find(c => c.id === categoryId);
         showMessage('success', result.message || `${t('favorites.loadCategory')}: ${category?.name || categoryId}`);
@@ -477,10 +384,9 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   const handleSaveEdit = () => {
     if (!editingId) return;
 
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
-      return;
-    }
+
+
+    // if (!window.favoriteStreams) check removed
 
     const categoryId = editCategory === '' || editCategory === 'uncategorized' ? null : editCategory;
 
@@ -503,26 +409,17 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   // 刪除單個收藏
   const handleDeleteFavorite = (id: string) => {
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
-      return;
-    }
-
-    if (!confirm(`${t('favorites.delete')}?`)) {
-      return;
-    }
-
-    const result = window.favoriteStreams.remove!(id);
+    const result = favoritesService.removeFavorite(id);
     if (result.success) {
       showMessage('success', result.message || t('favorites.delete'));
       loadData();
 
       // 刪除操作立即備份
-      if (window.indexedDBBackup?.isEnabled()) {
+      if (backupService.isEnabled()) {
         if (backupTimeout) {
           clearTimeout(backupTimeout);
         }
-        window.indexedDBBackup.backup().catch(() => { });
+        backupService.backup().catch(() => { });
       }
     } else {
       showMessage('error', result.message || t('favorites.delete')); // TODO: 更好的錯誤訊息
@@ -531,18 +428,13 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   // 載入單個收藏
   const handleLoadFavorite = async (id: string) => {
-    if (!window.favoriteStreams) {
-      showMessage('error', t('favorites.systemNotInitialized') || '收藏系統未初始化');
-      return;
-    }
-
     try {
       const favorite = favorites.find(f => f.id === id);
       if (!favorite) {
         showMessage('error', t('favorites.noFavorites')); // TODO: 更好的錯誤訊息
         return;
       }
-      const result = await window.favoriteStreams.load(favorite);
+      const result = await favoritesLoader.load(favorite);
       if (result.success) {
         showMessage('success', result.message || t('favorites.load'));
       } else {
@@ -561,11 +453,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
 
     if (!window.favoriteCategories) {
-      showMessage('error', '分類系統未初始化');
-      return;
+      // showMessage('error', '分類系統未初始化'); // Removed check
     }
 
-    const result = window.favoriteCategories.add!(categoryName);
+    const result = favoritesService.addCategory(categoryName);
     if (result.success) {
       showMessage('success', result.message || '已新增分類');
       setCategoryName('');
@@ -609,10 +500,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   // 匯出JSON - 使用與正式版完全相同的格式
   const handleExportJSON = () => {
     try {
-      // 優先使用 indexedDBBackup.getAllData() 確保格式完全一致
+      // 優先使用 backupService.getAllData() 確保格式完全一致
       let data;
-      if ((window as any).indexedDBBackup && typeof (window as any).indexedDBBackup.getAllData === 'function') {
-        data = (window as any).indexedDBBackup.getAllData();
+      if (backupService && typeof backupService.getAllData === 'function') {
+        data = backupService.getAllData();
       } else {
         // 如果沒有 indexedDBBackup，手動構建與 getAllData() 完全相同的格式
         const safeJSONParse = (str: string | null, defaultValue: any) => {
@@ -673,15 +564,16 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         }
 
         // 如果是完整格式（有 version），檢查是否需要覆蓋現有數據
-        if (data.version && (window as any).indexedDBBackup?.hasLocalStorageData?.()) {
+        if (data.version && backupService.hasLocalStorageData()) {
           // 可以添加確認對話框，這裡暫時直接匯入
           // 如果需要確認，可以使用 React Dialog 組件
         }
 
-        if (!window.favoriteStreams || !window.favoriteCategories) {
-          showMessage('error', '收藏系統未初始化');
-          return;
-        }
+        // check removed
+        // if (!window.favoriteStreams || !window.favoriteCategories) {
+        //   showMessage('error', '收藏系統未初始化');
+        //   return;
+        // }
 
         let importedCount = 0;
         let skippedCount = 0;
@@ -694,11 +586,11 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
             localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
           }
           if (data.favoriteStreams && Array.isArray(data.favoriteStreams)) {
-            localStorage.setItem('favoriteStreams', JSON.stringify(data.favoriteStreams));
+            favoritesService.saveFavorites(data.favoriteStreams);
             importedCount = data.favoriteStreams.length;
           }
           if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
-            localStorage.setItem('favoriteCategories', JSON.stringify(data.favoriteCategories));
+            favoritesService.saveCategories(data.favoriteCategories);
           }
           if (data.controlPanelCollapsed !== undefined) {
             localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
@@ -712,12 +604,12 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         } else {
           // 簡化格式（向後兼容）：使用 add 方法逐個添加，但確保分類 ID 正確
           // 獲取現有收藏列表（用於檢測重複）
-          const existingFavorites = window.favoriteStreams.getList();
+          const existingFavorites = favoritesService.getFavorites();
           const existingUrls = new Set(existingFavorites.map(f => f.url));
 
           // 匯入分類（保留原始 ID）
           if (data.favoriteCategories && Array.isArray(data.favoriteCategories)) {
-            const existingCategories = window.favoriteCategories.getList();
+            const existingCategories = favoritesService.getCategories();
             const categoryMap = new Map(existingCategories.map(c => [c.id, c]));
 
             for (const cat of data.favoriteCategories) {
@@ -734,7 +626,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
             }
 
             // 保存更新後的分類列表
-            window.favoriteCategories.saveList!(Array.from(categoryMap.values()));
+            favoritesService.saveCategories(Array.from(categoryMap.values()));
           }
 
           // 匯入收藏（檢測重複）
@@ -742,11 +634,13 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
             for (const fav of data.favoriteStreams) {
               if (fav.url && !existingUrls.has(fav.url)) {
                 try {
-                  const result = await window.favoriteStreams.add(
+                  const result = await favoritesService.addFavorite(
                     fav.url,
                     fav.name,
                     fav.categoryId || null,
-                    fav.channelId
+                    fav.channelId,
+                    undefined,
+                    []
                   );
                   if (result.success) {
                     importedCount++;
@@ -779,9 +673,9 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         }));
 
         // 如果已啟用備份，立即備份到 IndexedDB（與 importFromJSON() 一致）
-        if ((window as any).indexedDBBackup?.isEnabled()) {
+        if (backupService.isEnabled()) {
           try {
-            await (window as any).indexedDBBackup.backup();
+            await backupService.backup();
           } catch (error) {
             // 備份失敗，靜默處理
           }

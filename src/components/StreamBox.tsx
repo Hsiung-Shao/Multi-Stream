@@ -4,6 +4,7 @@ import { apiLoader } from '../utils/apiLoader';
 import { Button as MuiButton, Slider } from '@mui/material';
 import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
 import type { LayoutStyle } from '../utils/layoutUtils';
+import { favoritesService } from '../features/favorites/FavoritesService';
 
 interface StreamBoxProps {
   streamData: StreamData;
@@ -974,26 +975,29 @@ export function StreamBox({
   };
 
   // 從收藏中獲取名稱的函數
+  // 從收藏中獲取名稱的函數
+  // 直接調用 favoritesService
+  // if (window.favoriteStreams) check removed
   const updateFavoriteName = useCallback(() => {
-    if (window.favoriteStreams) {
-      const favorites = window.favoriteStreams.getList();
-      const favorite = favorites.find(fav => {
-        if (streamData.platform === 'twitch') {
-          return fav.platform === 'twitch' && fav.channelId === streamData.channelId;
-        } else {
-          // YouTube: 僅在收藏中時顯示收藏名稱
-          return fav.platform === 'youtube' && (
-            fav.channelId === streamData.channelId ||
-            fav.videoId === streamData.videoId
-          );
-        }
-      });
+    // 改用 favoritesService.getFavorites()
+    const favorites = favoritesService.getFavorites();
 
-      if (favorite && favorite.name) {
-        setFavoriteName(favorite.name);
+    const favorite = favorites.find(fav => {
+      if (streamData.platform === 'twitch') {
+        return fav.platform === 'twitch' && fav.channelId === streamData.channelId;
       } else {
-        setFavoriteName(null);
+        // YouTube: 僅在收藏中時顯示收藏名稱
+        return fav.platform === 'youtube' && (
+          fav.channelId === streamData.channelId ||
+          fav.videoId === streamData.videoId
+        );
       }
+    });
+
+    if (favorite && favorite.name) {
+      setFavoriteName(favorite.name);
+    } else {
+      setFavoriteName(null);
     }
   }, [streamData.platform, streamData.channelId, streamData.videoId]);
 

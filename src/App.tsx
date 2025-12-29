@@ -17,6 +17,9 @@ import { useLayout } from './hooks/useLayout';
 import type { ChatLayoutType } from './utils/chatLayoutUtils';
 import { apiLoader } from './utils/apiLoader';
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
+import { favoritesService } from './features/favorites/FavoritesService';
+import { favoritesLoader } from './features/favorites/FavoritesLoader';
+import { backupService } from './features/backup';
 
 type Page = 'home' | 'about' | 'privacy';
 
@@ -235,41 +238,30 @@ export default function App() {
   // 初始載入完成後刷新收藏列表的開台狀態
   useEffect(() => {
     // 等待收藏系統和必要的 API 初始化完成
+    // 等待收藏系統和必要的 API 初始化完成
     const initAndRefreshFavorites = async () => {
-      // 等待收藏系統初始化（最多等待 3 秒）
-      let waitCount = 0;
-      const maxWait = 30; // 30 * 100ms = 3 秒
+      // 移除這裡的 wait loop，因為 favoritesService 已經導入且可用
+      // 保持 API 載入邏輯
 
-      while (waitCount < maxWait) {
-        if (window.favoriteStreams && window.favoriteCategories) {
-          // 收藏系統已初始化，等待 Twitch API 和 YouTube API 準備好
-          // 嘗試載入必要的 API
-          try {
-            // 載入 Twitch Data API（用於檢查開台狀態）
-            if (!window.twitchApi || !window.twitchApi.checkMultipleChannelsLiveStatus) {
-              await apiLoader.loadTwitchDataApi();
-            }
-
-            // 載入 YouTube Data API（用於檢查開台狀態）
-            if (!window.youtubeApiUtils || !window.youtubeApiUtils.checkChannelLiveStatus) {
-              await apiLoader.loadYouTubeDataApi();
-            }
-
-            // 等待一小段時間確保 API 完全初始化
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // 觸發收藏列表刷新事件
-            window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
-            break;
-          } catch (error) {
-            // API 載入失敗，但繼續嘗試刷新（可能部分功能可用）
-            window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
-            break;
-          }
+      try {
+        // 載入 Twitch Data API（用於檢查開台狀態）
+        if (!window.twitchApi || !window.twitchApi.checkMultipleChannelsLiveStatus) {
+          await apiLoader.loadTwitchDataApi();
         }
 
-        waitCount++;
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // 載入 YouTube Data API（用於檢查開台狀態）
+        if (!window.youtubeApiUtils || !window.youtubeApiUtils.checkChannelLiveStatus) {
+          await apiLoader.loadYouTubeDataApi();
+        }
+
+        // 等待一小段時間確保 API 完全初始化
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // 觸發收藏列表刷新事件
+        window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
+      } catch (error) {
+        // API 載入失敗，但繼續嘗試刷新（可能部分功能可用）
+        window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
       }
     };
 
@@ -423,37 +415,39 @@ export default function App() {
     }
 
     // 嘗試從收藏列表中獲取名稱
+
+    // 嘗試從收藏列表中獲取名稱
     let displayName: string | null = null;
     let name: string | null = null;
 
-    if (window.favoriteStreams && typeof window.favoriteStreams.getList === 'function') {
-      try {
-        const favorites = window.favoriteStreams.getList();
-        const favorite = favorites.find(fav => {
-          if (fav.platform === parsed.platform) {
-            if (parsed.platform === 'twitch' && fav.channelId === parsed.channelId) {
+    // 直接使用 favoritesService
+    // if (window.favoriteStreams) check removed
+    try {
+      const favorites = favoritesService.getFavorites();
+      const favorite = favorites.find(fav => {
+        if (fav.platform === parsed.platform) {
+          if (parsed.platform === 'twitch' && fav.channelId === parsed.channelId) {
+            return true;
+          } else if (parsed.platform === 'youtube') {
+            // YouTube 可以通過 channelId 或 videoId 匹配
+            if (fav.channelId && parsed.channelId && fav.channelId === parsed.channelId) {
               return true;
-            } else if (parsed.platform === 'youtube') {
-              // YouTube 可以通過 channelId 或 videoId 匹配
-              if (fav.channelId && parsed.channelId && fav.channelId === parsed.channelId) {
-                return true;
-              } else if (fav.videoId && parsed.videoId && fav.videoId === parsed.videoId) {
-                return true;
-              } else if (fav.url && url && fav.url === url) {
-                return true;
-              }
+            } else if (fav.videoId && parsed.videoId && fav.videoId === parsed.videoId) {
+              return true;
+            } else if (fav.url && url && fav.url === url) {
+              return true;
             }
           }
-          return false;
-        });
-
-        if (favorite && favorite.name) {
-          displayName = favorite.name;
-          name = favorite.name;
         }
-      } catch (error) {
-        // 獲取名稱失敗，繼續處理
+        return false;
+      });
+
+      if (favorite && favorite.name) {
+        displayName = favorite.name;
+        name = favorite.name;
       }
+    } catch (error) {
+      // 獲取名稱失敗，繼續處理
     }
 
     // 創建新的串流數據
@@ -539,6 +533,9 @@ export default function App() {
     (window as any).batchAddStreams = handleBatchAddStreams;
     // 設置標記，表明 React 版本的 addStream 已經準備好
     (window as any)._reactAddStreamReady = true;
+
+    // 將處理程序注入到 favoritesLoader
+    favoritesLoader.setAddStreamHandler(handleAddStream);
   }, [handleAddStream, handleBatchAddStreams]);
 
   // 使用 useEffect 作為備份，確保在 DOM 更新後也設置（雙重保障）
@@ -548,9 +545,13 @@ export default function App() {
       (window as any).addStream = handleAddStream;
       (window as any).batchAddStreams = handleBatchAddStreams;
       (window as any)._reactAddStreamReady = true;
+      favoritesLoader.setAddStreamHandler(handleAddStream);
     }
 
     return () => {
+      // 清除 favoritesLoader 的處理程序
+      favoritesLoader.setAddStreamHandler(async () => { });
+
       // 使用 undefined 而不是 delete，避免刪除不可刪除的屬性
       try {
         (window as any).addStream = undefined;

@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { useI18n } from '../i18n/index';
+import { favoritesService } from '../features/favorites/FavoritesService';
 
 // 聲明全局類型
 declare global {
@@ -214,13 +215,20 @@ export function Navbar({
       return;
     }
 
-    if (!window.favoriteStreams) {
-      alert(t('favorites.systemNotInitialized'));
-      return;
-    }
+    // 直接調用 favoritesService
+    // if (!window.favoriteStreams) check removed
 
     try {
-      const result = await window.favoriteStreams.add(urlToAdd);
+      // 構建新的 addFavorite 調用
+      const result = await favoritesService.addFavorite(
+        urlToAdd,
+        undefined, // name
+        null, // categoryId
+        undefined, // providedChannelId
+        undefined, // providedVideoId
+        [] // tags
+      );
+
       if (result.success) {
         alert(result.message || t('favorites.add'));
         setSearchValue('');

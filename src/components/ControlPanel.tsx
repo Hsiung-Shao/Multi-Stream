@@ -1,18 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RefreshCw, Volume2, VolumeX, ChevronUp, ChevronDown, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star, Play, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Settings, Play, Pause, RotateCcw, Volume2, VolumeX, Maximize2, Minimize2, Trash, MessageSquare, Plus, ChevronUp, ChevronDown, Monitor, Layout, AlertTriangle, Layers, Grid, Square, Columns, RefreshCw, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star } from 'lucide-react';
 import { Button as MuiButton } from '@mui/material';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { Switch } from './ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { StreamData } from '../utils/streamUtils';
+import { FavoriteStreamComponent } from './FavoriteStreamComponent';
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useI18n } from '../i18n/index';
-import { TagChip } from './ui/TagChip';
+
 import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
+import { favoritesService } from '../features/favorites/FavoritesService';
+import { favoritesLoader } from '../features/favorites/FavoritesLoader';
 import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
 
 interface ControlPanelProps {
@@ -137,39 +138,16 @@ export function ControlPanel({
 
   // 載入收藏和分類列表
   const loadFavorites = useCallback(() => {
-    // 確保收藏系統已初始化（可能需要等待）
-    if (!window.favoriteStreams || !window.favoriteCategories) {
-      // 等待收藏系統初始化（最多等待 2 秒）
-      let waitCount = 0;
-      const checkAndLoad = () => {
-        if (window.favoriteStreams && window.favoriteCategories) {
-          try {
-            const favoritesList = window.favoriteStreams.getList();
-            const categoriesList = window.favoriteCategories.getList();
-            const tagsList = tagsService.getAllTags();
-            setFavorites(favoritesList);
-            setCategories(categoriesList);
-            setTags(tagsList);
-          } catch (error) {
-            // 載入數據時發生錯誤，繼續處理
-          }
-        } else if (waitCount < 20) {
-          waitCount++;
-          setTimeout(checkAndLoad, 100);
-        }
-      };
-      checkAndLoad();
-    } else {
-      try {
-        const favoritesList = window.favoriteStreams.getList();
-        const categoriesList = window.favoriteCategories.getList();
-        const tagsList = tagsService.getAllTags();
-        setFavorites(favoritesList);
-        setCategories(categoriesList);
-        setTags(tagsList);
-      } catch (error) {
-        // 載入數據時發生錯誤，繼續處理
-      }
+    // 直接從 service 獲取
+    try {
+      const favoritesList = favoritesService.getFavorites();
+      const categoriesList = favoritesService.getCategories();
+      const tagsList = tagsService.getAllTags();
+      setFavorites(favoritesList);
+      setCategories(categoriesList);
+      setTags(tagsList);
+    } catch (error) {
+      // 載入數據時發生錯誤，繼續處理
     }
   }, []);
 
@@ -198,21 +176,12 @@ export function ControlPanel({
 
   // 刷新開台狀態
   const handleRefreshStatus = async () => {
-    // 如果收藏系統未初始化，嘗試等待
-    if (!window.favoriteStreams || !window.favoriteCategories) {
-      // 等待收藏系統初始化（最多等待 1 秒）
-      let waitCount = 0;
-      while (waitCount < 10 && (!window.favoriteStreams || !window.favoriteCategories)) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        waitCount++;
-      }
-    }
-
-    if (!window.favoriteStreams) return;
+    // 移除 window 依賴檢查
+    // if (!window.favoriteStreams) return;
 
     setIsRefreshing(true);
     try {
-      const favoritesList = window.favoriteStreams.getList();
+      const favoritesList = favoritesService.getFavorites();
       const twitchFavorites = favoritesList.filter(f => f.platform === 'twitch' && f.channelId);
       const youtubeFavorites = favoritesList.filter(f => f.platform === 'youtube' && f.channelId);
 
@@ -283,9 +252,7 @@ export function ControlPanel({
       }
 
       // 保存更新後的收藏列表
-      if (window.favoriteStreams.saveList) {
-        window.favoriteStreams.saveList(updatedFavorites);
-      }
+      favoritesService.saveFavorites(updatedFavorites);
       setFavorites(updatedFavorites);
     } catch (e) {
       // 刷新開台狀態失敗，繼續處理
@@ -309,25 +276,20 @@ export function ControlPanel({
 
   // 載入收藏串流
   const handleLoadFavorite = (favorite: FavoriteStream) => {
-    if (window.favoriteStreams && window.favoriteStreams.load) {
-      window.favoriteStreams.load(favorite).then(result => {
-        if (result.success && onAddStream) {
-          onAddStream(favorite.url);
-        }
-      });
-    } else if (onAddStream) {
-      onAddStream(favorite.url);
-    }
+    // 使用 favoritesLoader
+    favoritesLoader.load(favorite).then(result => {
+      if (result.success && onAddStream) {
+        onAddStream(favorite.url);
+      }
+    });
   };
 
   // 收藏當前串流
   const handleAddCurrentToFavorites = async () => {
     if (streams.length === 0) return;
 
-    if (!window.favoriteStreams) {
-      alert('收藏系統未初始化');
-      return;
-    }
+    // 移除 window 依賴檢查
+    // if (!window.favoriteStreams) ...
 
     // 收集所有當前串流
     const currentStreams = streams.map(stream => {
@@ -360,7 +322,7 @@ export function ControlPanel({
     let successCount = 0;
     for (const stream of currentStreams) {
       try {
-        const result = await window.favoriteStreams.add(
+        const result = await favoritesService.addFavorite(
           stream.url,
           stream.name,
           null, // 默認未分類
@@ -818,17 +780,9 @@ export function ControlPanel({
                         {/* 分類本身也可以載入（載入該分類下的所有串流） */}
                         <button
                           onClick={async () => {
-                            if (window.favoriteStreams && window.favoriteStreams.loadMultiple) {
-                              const result = await window.favoriteStreams.loadMultiple(categoryFavorites);
-                              if (result.success) {
-                                // 載入所有串流
-                                categoryFavorites.forEach(fav => {
-                                  if (onAddStream) {
-                                    onAddStream(fav.url);
-                                  }
-                                });
-                              }
-                            }
+                            // 使用 favoritesLoader 批量載入
+                            await favoritesLoader.loadMultiple(categoryFavorites);
+                            // favoritesLoader 會自動調用 addStream，無需在此重複調用
                           }}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
                             ? 'hover:bg-gray-800 text-gray-400'

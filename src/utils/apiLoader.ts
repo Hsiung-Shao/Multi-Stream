@@ -74,7 +74,7 @@ class ApiLoader {
       // 移除 crossOrigin 屬性，避免 CORS 檢查過於嚴格（腳本標籤通常不需要）
       // twitchScript.crossOrigin = 'anonymous';
       twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
-      
+
       // 改進的 onload 處理：即使有 CORS 警告，只要 window.Twitch 可用就視為成功
       twitchScript.onload = () => {
         // 優化：使用 50ms 檢查間隔（更快檢測）
@@ -118,7 +118,7 @@ class ApiLoader {
           }
         }, 500); // 給一點時間讓腳本執行
       };
-      
+
       document.head.appendChild(twitchScript);
     });
 
@@ -199,7 +199,7 @@ class ApiLoader {
 
   /**
    * 載入 Twitch 數據 API（搜尋、查詢用）
-   * 此 API 通過 js/twitch-api.js 載入，這裡只檢查是否可用
+   * 確保 window.twitchApi 可用
    */
   async loadTwitchDataApi(): Promise<void> {
     if (this.state.twitchData === 'loaded') {
@@ -211,7 +211,7 @@ class ApiLoader {
     }
 
     this.state.twitchData = 'loading';
-    const promise = new Promise<void>((resolve) => {
+    const promise = new Promise<void>(async (resolve) => {
       // 檢查 window.twitchApi 是否已初始化
       if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
         this.state.twitchData = 'loaded';
@@ -219,19 +219,35 @@ class ApiLoader {
         return;
       }
 
-      // 等待 twitch-api.js 載入（最多等待 5 秒）
+      // 嘗試從 services 初始化 (React/Vite 架構適配)
+      try {
+        const { twitchService } = await import('../features/twitch/TwitchService');
+        if (!(window as any).twitchApi || !(window as any).twitchApi._isLegacy) {
+          (window as any).twitchApi = twitchService.getLegacyApi();
+          console.log('[ApiLoader] Initialized window.twitchApi from TwitchService');
+        }
+        this.state.twitchData = 'loaded';
+        resolve();
+        return;
+      } catch (e) {
+        console.warn('[ApiLoader] Failed to auto-init TwitchService', e);
+      }
+
+      // 等待 twitch-api.js 載入（向後兼容，最多等待 2 秒）
       let waitCount = 0;
       const checkInterval = setInterval(() => {
         waitCount++;
-        if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
+        const twApi = (window as any).twitchApi;
+        if (twApi && typeof twApi.searchChannels === 'function') {
           clearInterval(checkInterval);
           this.state.twitchData = 'loaded';
           resolve();
-        } else if (waitCount >= 50) {
-          // 5 秒超時
+        } else if (waitCount >= 20) {
+          // 2 秒超時
           clearInterval(checkInterval);
           // 即使未載入也不阻止應用運行
           this.state.twitchData = 'error';
+          console.warn('[ApiLoader] window.twitchApi load timeout');
           resolve();
         }
       }, 100);
@@ -243,7 +259,7 @@ class ApiLoader {
 
   /**
    * 載入 YouTube 數據 API（搜尋、查詢用）
-   * 此 API 通過 js/settings.js 載入，這裡只檢查是否可用
+   * 確保 window.youtubeApiUtils 可用
    */
   async loadYouTubeDataApi(): Promise<void> {
     if (this.state.youtubeData === 'loaded') {
@@ -255,27 +271,62 @@ class ApiLoader {
     }
 
     this.state.youtubeData = 'loading';
-    const promise = new Promise<void>((resolve) => {
+    const promise = new Promise<void>(async (resolve) => {
       // 檢查 window.youtubeApiUtils 是否已初始化
-      if (window.youtubeApiUtils && typeof window.youtubeApiUtils.getApiKey === 'function') {
+      if ((window as any).youtubeApiUtils && typeof (window as any).youtubeApiUtils.getApiKey === 'function') {
         this.state.youtubeData = 'loaded';
         resolve();
         return;
       }
 
-      // 等待 settings.js 載入（最多等待 5 秒）
+      // 嘗試從 services 初始化 (React/Vite 架構適配)
+      try {
+        // 動態導入避免循環依賴
+        const { youtubeApi } = await import('../utils/youtubeApi');
+
+
+        if (!(window as any).youtubeApiUtils) {
+          (window as any).youtubeApiUtils = {
+            checkChannelLiveStatus: youtubeApi.checkChannelLiveStatus.bind(youtubeApi),
+            getChannelIdFromVideoId: youtubeApi.getChannelIdFromVideoId.bind(youtubeApi),
+            getChannelTitleFromChannelId: youtubeApi.getChannelTitleFromChannelId.bind(youtubeApi),
+            getApiKey: youtubeApi.getApiKey.bind(youtubeApi),
+            getApiKeyFromPagesFunction: youtubeApi.getApiKeyFromPagesFunction.bind(youtubeApi)
+          };
+          console.log('[ApiLoader] Initialized window.youtubeApiUtils from youtubeApi');
+        }
+
+        resolve(); // 這裡我們初始化了 youtubeApiUtils
+
+        // 同步初始化 favoriteCategories/favoriteStreams 橋接 (如果需要)
+        // 注意：這部分邏輯原本在 initLegacyGlobals，如果是純新版 UI 調用 apiLoader，其實不需要這些 global。
+        // 但如果 App.tsx 的一些舊區塊 (如 refreshFavoritesStatus event handler) 還依賴 window.favoriteStreams.loadMultiple...
+        // 檢查發現 App.tsx 已經被重構去除了直接依賴，但 refreshFavoritesStatus 事件可能觸發舊邏輯?
+        // 不，refreshFavoritesStatus 在 ControlPanel 中被重構了。
+        // 但是，為了安全起見，如果我們偵測到舊結構缺失，我們是否應該補上？
+        // 暫時只補 youtubeApiUtils，因為它是 search functionality 的核心。
+
+        this.state.youtubeData = 'loaded';
+        return;
+
+      } catch (e) {
+        console.warn('[ApiLoader] Failed to auto-init Youtube/Favorites services', e);
+      }
+
+      // 等待 settings.js 載入（最多等待 2 秒）
       let waitCount = 0;
       const checkInterval = setInterval(() => {
         waitCount++;
-        if (window.youtubeApiUtils && typeof window.youtubeApiUtils.getApiKey === 'function') {
+        const ytUtils = (window as any).youtubeApiUtils;
+        if (ytUtils && typeof ytUtils.getApiKey === 'function') {
           clearInterval(checkInterval);
           this.state.youtubeData = 'loaded';
           resolve();
-        } else if (waitCount >= 50) {
-          // 5 秒超時
+        } else if (waitCount >= 20) {
+          // 2 秒超時
           clearInterval(checkInterval);
-          // 即使未載入也不阻止應用運行
           this.state.youtubeData = 'error';
+          console.warn('[ApiLoader] window.youtubeApiUtils load timeout');
           resolve();
         }
       }, 100);
@@ -332,21 +383,21 @@ class ApiLoader {
    * 根據 URL 列表判斷需要載入哪些 API
    */
   async preloadPlayerApisForUrls(urls: string[]): Promise<void> {
-    const needsTwitch = urls.some(url => 
-      url.includes('twitch.tv/') || 
+    const needsTwitch = urls.some(url =>
+      url.includes('twitch.tv/') ||
       (!url.includes('http://') && !url.includes('https://') && !url.includes('youtube.com'))
     );
-    
-    const needsYouTube = urls.some(url => 
+
+    const needsYouTube = urls.some(url =>
       url.includes('youtube.com') || url.includes('youtu.be/')
     );
 
     const loadPromises: Promise<void>[] = [];
-    
+
     if (needsTwitch) {
       loadPromises.push(this.loadTwitchPlayerApi());
     }
-    
+
     if (needsYouTube) {
       loadPromises.push(this.loadYouTubePlayerApi());
     }
