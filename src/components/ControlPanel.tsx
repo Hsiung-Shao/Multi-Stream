@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, Play, Pause, RotateCcw, Volume2, VolumeX, Maximize2, Minimize2, Trash, MessageSquare, Plus, ChevronUp, ChevronDown, Monitor, Layout, AlertTriangle, Layers, Grid, Square, Columns, RefreshCw, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
-import Box from '@mui/material/Box';
-import Slider from '@mui/material/Slider';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { Play, Volume2, VolumeX, ChevronUp, ChevronDown, RefreshCw, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star } from 'lucide-react';
+import { Button } from './ui/button';
+import { Slider } from './ui/slider';
+import { Label } from './ui/label';
 import { Switch } from './ui/switch';
-import { FavoriteStreamComponent } from './FavoriteStreamComponent';
+import { ScrollArea } from './ui/scroll-area';
+import type { StreamData } from '../utils/streamUtils';
+// import { FavoriteStreamComponent } from './FavoriteStreamComponent'; // Removed as it is defined in-file
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useI18n } from '../i18n/index';
@@ -55,10 +56,19 @@ const sortFavorites = (favs: FavoriteStream[]) => {
   });
 };
 
-// 聲明全局類型
-// Removed local declaration to use shared global definition from FavoritesManager (or typed globally)
-// If FavoritesManager is not loaded, these might be missing, but in this app structure they are together.
-
+function useCustomMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) {
+      setMatches(media.matches);
+    }
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
+}
 
 export function ControlPanel({
   theme,
@@ -87,9 +97,8 @@ export function ControlPanel({
   onAddStream
 }: ControlPanelProps) {
   const { t } = useI18n();
-  const muiTheme = useTheme();
-  // 使用 'lg' breakpoint 以確保手機水平版面也使用手機版設計
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down('lg'));
+  // 使用 'lg' (1200px) breakpoint 以確保手機水平版面也使用手機版設計
+  const isMobile = useCustomMediaQuery('(max-width: 1200px)');
   const [showAllChat, setShowAllChat] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteStream[]>([]);
   const [categories, setCategories] = useState<FavoriteCategory[]>([]);
@@ -231,7 +240,7 @@ export function ControlPanel({
             isFirstYoutubeCheck = false;
 
             try {
-              const status = await window.youtubeApiUtils.checkChannelLiveStatus(fav.channelId);
+              const status = await window.youtubeApiUtils.checkChannelLiveStatus(fav.channelId) as any;
               updatedFavorites = updatedFavorites.map(f => {
                 if (f.id === fav.id) {
                   return {
@@ -514,30 +523,14 @@ export function ControlPanel({
   }
 
   return (
-    <Box
-      className={`fixed ${isMobile ? 'inset-x-0 bottom-0' : 'right-0'} ${isMobile ? 'w-full' : 'w-[500px]'} ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} ${isMobile ? 'border-t' : 'border-l'} shadow-2xl`}
-      sx={{
+    <div
+      className={`fixed ${isMobile ? 'inset-x-0 bottom-0 w-full border-t' : 'right-0 w-[500px] border-l'} ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} shadow-2xl overflow-y-auto overflow-x-hidden`}
+      style={{
         top: isMobile ? 'auto' : `${navbarHeight}px`,
         bottom: isMobile ? 0 : 'auto',
         height: isMobile ? '80vh' : `calc(100vh - ${navbarHeight}px)`,
         maxHeight: isMobile ? '80vh' : 'none',
-        zIndex: 10,  // 僅浮在串流容器（z-index: 1）和聊天室容器（z-index: 1）之上
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        '&::-webkit-scrollbar': {
-          width: '8px',
-        },
-        '&::-webkit-scrollbar-track': {
-          background: theme === 'dark' ? '#374151' : '#f3f4f6',
-          borderRadius: '4px',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          background: theme === 'dark' ? '#6b7280' : '#9ca3af',
-          borderRadius: '4px',
-          '&:hover': {
-            background: theme === 'dark' ? '#9ca3af' : '#6b7280',
-          },
-        },
+        zIndex: 10,
       }}
     >
       <div className="p-6 space-y-6">
@@ -550,8 +543,9 @@ export function ControlPanel({
         <Section theme={theme} title={t('controlPanel.layoutControl')}>
           <div className="grid grid-cols-4 gap-2">
             {layouts.map((layout) => (
-              <button
+              <Button
                 key={layout.id}
+                variant="ghost"
                 onClick={() => {
                   if (onLayoutChange) {
                     onLayoutChange(layout.id as LayoutType);
@@ -559,11 +553,11 @@ export function ControlPanel({
                 }}
                 title={layout.label}
                 aria-label={layout.label}
-                className={`aspect-square rounded-lg border-2 transition-all ${currentLayout === layout.id
+                className={`aspect-square rounded-lg border-2 transition-all p-0 h-auto ${currentLayout === layout.id
                   ? 'border-purple-500 bg-purple-500/20'
                   : theme === 'dark'
-                    ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
-                    : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
+                    ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50 hover:bg-gray-800'
+                    : 'border-gray-300 bg-gray-100 hover:border-purple-500/50 hover:bg-gray-100'
                   }`}
               >
                 <LayoutPreview
@@ -573,7 +567,7 @@ export function ControlPanel({
                   special={layout.special}
                   theme={theme}
                 />
-              </button>
+              </Button>
             ))}
           </div>
         </Section>
@@ -592,8 +586,9 @@ export function ControlPanel({
               const isSelected = chatLayoutType === mappedType;
 
               return (
-                <button
+                <Button
                   key={layout.id}
+                  variant="ghost"
                   onClick={() => {
                     if (onChatLayoutChange) {
                       onChatLayoutChange(mappedType);
@@ -601,15 +596,15 @@ export function ControlPanel({
                   }}
                   title={layout.label}
                   aria-label={layout.label}
-                  className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center ${isSelected
+                  className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center p-0 h-auto ${isSelected
                     ? 'border-purple-500 bg-purple-500/20'
                     : theme === 'dark'
-                      ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50'
-                      : 'border-gray-300 bg-gray-100 hover:border-purple-500/50'
+                      ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50 hover:bg-gray-800'
+                      : 'border-gray-300 bg-gray-100 hover:border-purple-500/50 hover:bg-gray-100'
                     }`}
                 >
                   <ChatLayoutPreview id={layout.id} theme={theme} />
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -619,9 +614,9 @@ export function ControlPanel({
         <Section theme={theme} title={t('controlPanel.chatControl')}>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                 {t('controlPanel.showAllChats')}
-              </label>
+              </Label>
               <Switch
                 checked={showAllChat}
                 onCheckedChange={(checked: boolean) => {
@@ -640,57 +635,31 @@ export function ControlPanel({
         <Section theme={theme} title={t('controlPanel.favoriteStreams')}>
           <div className="space-y-3">
             <div className="flex gap-2">
-              <MuiButton
-                variant="outlined"
-                className="flex-1"
+              <Button
+                variant="outline"
+                className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
                 onClick={onShowFavorites}
-                color="secondary"
-                sx={{
-                  borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                  color: theme === 'dark' ? '#d1d5db' : '#374151',
-                  '&:hover': {
-                    borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                    backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                  },
-                }}
               >
                 {t('controlPanel.manageFavorites')}
-              </MuiButton>
-              <MuiButton
-                variant="outlined"
-                size="small"
-                className=""
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={handleRefreshStatus}
                 disabled={isRefreshing}
-                color="secondary"
-                sx={{
-                  borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                  color: theme === 'dark' ? '#d1d5db' : '#374151',
-                  '&:hover': {
-                    borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                    backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                  },
-                }}
+                className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
               >
                 <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </MuiButton>
-              <MuiButton
-                variant="outlined"
-                size="small"
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={handleAddCurrentToFavorites}
                 title={t('controlPanel.addCurrentToFavorites') || '收藏當前串流'}
-                color="secondary"
-                sx={{
-                  borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
-                  color: theme === 'dark' ? '#a855f7' : '#9333ea',
-                  '&:hover': {
-                    borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
-                    backgroundColor: theme === 'dark' ? 'rgba(147, 51, 234, 0.2)' : 'rgba(147, 51, 234, 0.1)',
-                  },
-                }}
+                className="border-purple-500 text-purple-500 hover:bg-purple-500/10"
               >
                 <Star className="size-4" />
-              </MuiButton>
+              </Button>
             </div>
 
             {/* Tag Filters */}
@@ -712,130 +681,113 @@ export function ControlPanel({
             )}
 
             {/* 收藏串流列表 - 限高並添加滾動 */}
-            <Box
-              className="space-y-3 pr-2"
-              sx={{
-                maxHeight: '400px',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: theme === 'dark' ? '#374151' : '#f3f4f6',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: theme === 'dark' ? '#6b7280' : '#9ca3af',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    background: theme === 'dark' ? '#9ca3af' : '#6b7280',
-                  },
-                },
-              }}
-            >
-              {/* 分類的收藏 - 資料夾優先，分類內按開台狀態排序 */}
-              {categories.map(category => {
-                const categoryFavorites = favorites.filter(f => {
-                  const matchCategory = f.categoryId === category.id;
-                  const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
-                  return matchCategory && matchTags;
-                });
-                if (categoryFavorites.length === 0) return null;
+            <ScrollArea className="h-[400px] pr-3 rounded-md border p-2">
+              <div className="space-y-3">
+                {/* 分類的收藏 - 資料夾優先，分類內按開台狀態排序 */}
+                {categories.map(category => {
+                  const categoryFavorites = favorites.filter(f => {
+                    const matchCategory = f.categoryId === category.id;
+                    const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                    return matchCategory && matchTags;
+                  });
+                  if (categoryFavorites.length === 0) return null;
 
-                // 分類內排序：開台狀態 > 未開台
-                const sortedCategoryFavorites = sortFavorites(categoryFavorites);
+                  // 分類內排序：開台狀態 > 未開台
+                  const sortedCategoryFavorites = sortFavorites(categoryFavorites);
 
-                const isExpanded = expandedCategories.has(category.id);
+                  const isExpanded = expandedCategories.has(category.id);
 
-                return (
-                  <div key={category.id} className="space-y-1">
-                    {/* 分類標題 */}
-                    <button
-                      onClick={() => toggleCategory(category.id)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
-                        ? 'hover:bg-gray-800 text-gray-300'
-                        : 'hover:bg-gray-100 text-gray-700'
-                        }`}
-                    >
-                      {isExpanded ? (
-                        <FolderOpen className="size-4 text-purple-500" />
-                      ) : (
-                        <Folder className="size-4 text-purple-500" />
+                  return (
+                    <div key={category.id} className="space-y-1">
+                      {/* 分類標題 */}
+                      <Button
+                        variant="ghost"
+                        onClick={() => toggleCategory(category.id)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors h-auto justify-start ${theme === 'dark'
+                          ? 'hover:bg-gray-800 text-gray-300'
+                          : 'hover:bg-gray-100 text-gray-700'
+                          }`}
+                      >
+                        {isExpanded ? (
+                          <FolderOpen className="size-4 text-purple-500" />
+                        ) : (
+                          <Folder className="size-4 text-purple-500" />
+                        )}
+                        <span className="flex-1 text-left font-medium">{category.name}</span>
+                        <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {categoryFavorites.length}
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp className="size-4" />
+                        ) : (
+                          <ChevronDown className="size-4" />
+                        )}
+                      </Button>
+
+                      {/* 分類內容 */}
+                      {isExpanded && (
+                        <div className="ml-6 space-y-1">
+                          {/* 分類本身也可以載入（載入該分類下的所有串流） */}
+                          <Button
+                            variant="ghost"
+                            onClick={async () => {
+                              // 使用 favoritesLoader 批量載入
+                              await favoritesLoader.loadMultiple(categoryFavorites);
+                              // favoritesLoader 會自動調用 addStream，無需在此重複調用
+                            }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors h-auto justify-start ${theme === 'dark'
+                              ? 'hover:bg-gray-800 text-gray-400'
+                              : 'hover:bg-gray-100 text-gray-600'
+                              }`}
+                          >
+                            <Play className="size-4" />
+                            <span className="text-sm">載入分類內所有串流</span>
+                          </Button>
+
+                          {/* 分類下的收藏 - 已排序 */}
+                          {sortedCategoryFavorites.map((favorite) => (
+                            <FavoriteStreamComponent
+                              key={favorite.id}
+                              favorite={favorite}
+                              theme={theme}
+                              onLoad={handleLoadFavorite}
+                            />
+                          ))}
+                        </div>
                       )}
-                      <span className="flex-1 text-left font-medium">{category.name}</span>
-                      <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                        {categoryFavorites.length}
-                      </span>
-                      {isExpanded ? (
-                        <ChevronUp className="size-4" />
-                      ) : (
-                        <ChevronDown className="size-4" />
-                      )}
-                    </button>
+                    </div>
+                  );
+                })}
 
-                    {/* 分類內容 */}
-                    {isExpanded && (
-                      <div className="ml-6 space-y-1">
-                        {/* 分類本身也可以載入（載入該分類下的所有串流） */}
-                        <button
-                          onClick={async () => {
-                            // 使用 favoritesLoader 批量載入
-                            await favoritesLoader.loadMultiple(categoryFavorites);
-                            // favoritesLoader 會自動調用 addStream，無需在此重複調用
-                          }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${theme === 'dark'
-                            ? 'hover:bg-gray-800 text-gray-400'
-                            : 'hover:bg-gray-100 text-gray-600'
-                            }`}
-                        >
-                          <Play className="size-4" />
-                          <span className="text-sm">載入分類內所有串流</span>
-                        </button>
+                {/* 未分類的收藏 - 按開台狀態排序 */}
+                {(() => {
+                  const uncategorizedFavorites = sortFavorites(favorites.filter(f => {
+                    const isUncategorized = !f.categoryId;
+                    const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                    return isUncategorized && matchTags;
+                  }));
+                  return uncategorizedFavorites.length > 0 ? (
+                    <div className="space-y-1">
+                      {uncategorizedFavorites.map((favorite) => (
+                        <FavoriteStreamComponent
+                          key={favorite.id}
+                          favorite={favorite}
+                          theme={theme}
+                          onLoad={handleLoadFavorite}
+                        />
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
 
-                        {/* 分類下的收藏 - 已排序 */}
-                        {sortedCategoryFavorites.map((favorite) => (
-                          <FavoriteStreamComponent
-                            key={favorite.id}
-                            favorite={favorite}
-                            theme={theme}
-                            onLoad={handleLoadFavorite}
-                          />
-                        ))}
-                      </div>
-                    )}
+                {/* 無收藏提示 */}
+                {favorites.length === 0 && (
+                  <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {t('favorites.noFavorites')}
                   </div>
-                );
-              })}
-
-              {/* 未分類的收藏 - 按開台狀態排序 */}
-              {(() => {
-                const uncategorizedFavorites = sortFavorites(favorites.filter(f => {
-                  const isUncategorized = !f.categoryId;
-                  const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
-                  return isUncategorized && matchTags;
-                }));
-                return uncategorizedFavorites.length > 0 ? (
-                  <div className="space-y-1">
-                    {uncategorizedFavorites.map((favorite) => (
-                      <FavoriteStreamComponent
-                        key={favorite.id}
-                        favorite={favorite}
-                        theme={theme}
-                        onLoad={handleLoadFavorite}
-                      />
-                    ))}
-                  </div>
-                ) : null;
-              })()}
-
-              {/* 無收藏提示 */}
-              {favorites.length === 0 && (
-                <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {t('favorites.noFavorites')}
-                </div>
-              )}
-            </Box>
+                )}
+              </div>
+            </ScrollArea>
           </div>
         </Section>
 
@@ -843,7 +795,7 @@ export function ControlPanel({
         <Section theme={theme} title={t('controlPanel.mediaControl')}>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel.masterVolume')}</span>
+              <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel.masterVolume')}</Label>
               {/* 隱藏的 input 元素，用於與舊的 JavaScript 代碼同步 */}
               <input
                 id="master-volume"
@@ -855,66 +807,30 @@ export function ControlPanel({
                 readOnly
                 aria-label={t('controlPanel.masterVolume')}
               />
-              <Box sx={{ width: '100%', flex: 1 }}>
+              <div className="w-full flex-1">
                 <Slider
-                  value={masterVolume}
-                  onChange={(_, value) => {
-                    const newValue = Array.isArray(value) ? value[0] : value;
-                    handleMasterVolumeChange(newValue);
-                  }}
+                  value={[masterVolume]}
+                  onValueChange={(vals: number[]) => handleMasterVolumeChange(vals[0])}
                   min={0}
                   max={100}
                   step={1}
-                  color="secondary"
-                  sx={{
-                    '& .MuiSlider-thumb': {
-                      backgroundColor: '#9333ea',
-                      '&:hover': {
-                        boxShadow: '0 0 0 8px rgba(147, 51, 234, 0.16)',
-                      },
-                    },
-                    '& .MuiSlider-track': {
-                      backgroundColor: '#9333ea',
-                    },
-                    '& .MuiSlider-rail': {
-                      backgroundColor: '#ffffff',
-                    },
-                  }}
                 />
-              </Box>
+              </div>
               <span id="master-volume-value" className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
                 {masterMuted ? '0%' : `${masterVolume}%`}
               </span>
-              <MuiButton
-                variant="outlined"
-                size="small"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleMasterMuteAll}
-                color={masterMuted ? "error" : "secondary"}
-                sx={
-                  masterMuted
-                    ? {
-                      borderColor: theme === 'dark' ? '#dc2626' : '#dc2626',
-                      bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
-                      color: theme === 'dark' ? '#f87171' : '#dc2626',
-                      '&:hover': {
-                        borderColor: theme === 'dark' ? '#b91c1c' : '#b91c1c',
-                        bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.3)' : 'rgba(220, 38, 38, 0.15)',
-                      },
-                    }
-                    : {
-                      borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
-                      bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.2)' : 'rgba(147, 51, 234, 0.1)',
-                      color: theme === 'dark' ? '#a855f7' : '#9333ea',
-                      '&:hover': {
-                        borderColor: theme === 'dark' ? '#9333ea' : '#9333ea',
-                        bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.15)',
-                      },
-                    }
+                className={masterMuted
+                  ? `border-red-600 bg-red-600/10 text-red-600 hover:bg-red-600/20 hover:border-red-700`
+                  : `border-purple-600 bg-purple-600/10 text-purple-600 hover:bg-purple-600/20 hover:border-purple-700`
                 }
               >
                 {masterMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
                 {t('controlPanel.muteAll')}
-              </MuiButton>
+              </Button>
             </div>
           </div>
         </Section>
@@ -959,38 +875,13 @@ export function ControlPanel({
                       </span>
                       <div className="flex gap-1">
                         {onToggleMute && (
-                          <MuiButton
-                            variant="text"
-                            size="small"
-                            sx={{
-                              minWidth: '24px',
-                              width: '24px',
-                              height: '24px',
-                              padding: 0,
-                              color: isStreamMuted
-                                ? theme === 'dark'
-                                  ? '#f87171'
-                                  : '#dc2626'
-                                : theme === 'dark'
-                                  ? '#9ca3af'
-                                  : '#4b5563',
-                              '&:hover': {
-                                bgcolor: isStreamMuted
-                                  ? theme === 'dark'
-                                    ? 'rgba(220, 38, 38, 0.2)'
-                                    : 'rgba(220, 38, 38, 0.1)'
-                                  : theme === 'dark'
-                                    ? 'rgba(55, 65, 81, 0.5)'
-                                    : 'rgba(229, 231, 235, 0.8)',
-                                color: isStreamMuted
-                                  ? theme === 'dark'
-                                    ? '#fca5a5'
-                                    : '#b91c1c'
-                                  : theme === 'dark'
-                                    ? '#ffffff'
-                                    : '#000000',
-                              },
-                            }}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-6 w-6 p-0 ${isStreamMuted
+                              ? 'text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30'
+                              : 'text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                              }`}
                             title={
                               masterMuted
                                 ? streamVolume > 0
@@ -1023,75 +914,42 @@ export function ControlPanel({
                             ) : (
                               <Volume2 className="size-3" />
                             )}
-                          </MuiButton>
+                          </Button>
                         )}
                         {onMoveStreamUp && (
-                          <MuiButton
-                            variant="text"
-                            size="small"
-                            color="secondary"
-                            sx={{
-                              minWidth: '24px',
-                              width: '24px',
-                              height: '24px',
-                              padding: 0,
-                              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-                              '&:hover': {
-                                bgcolor: theme === 'dark' ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.8)',
-                                color: theme === 'dark' ? '#ffffff' : '#000000',
-                              },
-                            }}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
                             title={t('controlPanel.moveUp')}
                             onClick={() => onMoveStreamUp(stream.id)}
                             disabled={index === 0}
                           >
                             <ChevronUp className="size-3" />
-                          </MuiButton>
+                          </Button>
                         )}
                         {onMoveStreamDown && (
-                          <MuiButton
-                            variant="text"
-                            size="small"
-                            color="secondary"
-                            sx={{
-                              minWidth: '24px',
-                              width: '24px',
-                              height: '24px',
-                              padding: 0,
-                              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-                              '&:hover': {
-                                bgcolor: theme === 'dark' ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.8)',
-                                color: theme === 'dark' ? '#ffffff' : '#000000',
-                              },
-                            }}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
                             title={t('controlPanel.moveDown')}
                             onClick={() => onMoveStreamDown(stream.id)}
                             disabled={index === streams.length - 1}
                           >
                             <ChevronDown className="size-3" />
-                          </MuiButton>
+                          </Button>
                         )}
                         {onRemoveStream && (
-                          <MuiButton
-                            variant="text"
-                            size="small"
-                            color="error"
-                            sx={{
-                              minWidth: '24px',
-                              width: '24px',
-                              height: '24px',
-                              padding: 0,
-                              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-                              '&:hover': {
-                                bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
-                                color: theme === 'dark' ? '#f87171' : '#dc2626',
-                              },
-                            }}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 text-gray-500 hover:bg-red-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
                             title={t('controlPanel.remove')}
                             onClick={() => onRemoveStream(stream.id)}
                           >
                             <X className="size-3" />
-                          </MuiButton>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -1103,11 +961,11 @@ export function ControlPanel({
                           <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                             🔊 {t('controlPanel.volume')}
                           </span>
-                          <Box sx={{ width: '100%', flex: 1 }}>
+                          <div className="w-full flex-1">
                             <Slider
-                              value={streamVolume}
-                              onChange={(_, value) => {
-                                const newVolume = Array.isArray(value) ? value[0] : value;
+                              value={[streamVolume]}
+                              onValueChange={(vals: number[]) => {
+                                const newVolume = vals[0];
                                 // 在全部靜音狀態下調整音量時，不解除全部靜音
                                 // 如果音量 > 0，恢復音量，但不取消全部靜音
                                 // 單獨的靜音按鈕會根據音量值恢復可用（disabled={masterMuted && streamVolume === 0}）
@@ -1122,23 +980,8 @@ export function ControlPanel({
                               min={0}
                               max={100}
                               step={1}
-                              color="secondary"
-                              sx={{
-                                '& .MuiSlider-thumb': {
-                                  backgroundColor: '#9333ea',
-                                  '&:hover': {
-                                    boxShadow: '0 0 0 8px rgba(147, 51, 234, 0.16)',
-                                  },
-                                },
-                                '& .MuiSlider-track': {
-                                  backgroundColor: '#9333ea',
-                                },
-                                '& .MuiSlider-rail': {
-                                  backgroundColor: '#ffffff',
-                                },
-                              }}
                             />
-                          </Box>
+                          </div>
                           <span className={`text-xs min-w-[40px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
                             {masterMuted ? `0% (${streamVolume}%)` : `${streamVolume}%`}
                           </span>
@@ -1153,7 +996,8 @@ export function ControlPanel({
         </Section>
 
       </div>
-    </Box>
+    </div>
+
   );
 }
 
@@ -1274,9 +1118,10 @@ const FavoriteStreamComponent: React.FC<{
   const isUnknown = favorite.isLive === null || favorite.isLive === undefined;
 
   return (
-    <button
+    <Button
+      variant="ghost"
       onClick={() => onLoad(favorite)}
-      className={`w-full px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors text-left rounded-lg border ${theme === 'dark'
+      className={`w-full h-auto px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors text-left rounded-lg border justify-start ${theme === 'dark'
         ? 'hover:bg-gray-800 border-gray-700'
         : 'hover:bg-gray-50 border-gray-200'
         }`}
@@ -1324,6 +1169,6 @@ const FavoriteStreamComponent: React.FC<{
           )}
         </div>
       </div>
-    </button>
+    </Button>
   );
 };

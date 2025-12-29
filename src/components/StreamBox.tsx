@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import type { StreamData } from '../utils/streamUtils';
 import { apiLoader } from '../utils/apiLoader';
-import { Button as MuiButton, Slider } from '@mui/material';
+import { Button } from './ui/button';
+import { Slider } from './ui/slider';
 import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
 import type { LayoutStyle } from '../utils/layoutUtils';
 import { favoritesService } from '../features/favorites/FavoritesService';
@@ -1066,8 +1067,8 @@ export function StreamBox({
   };
 
   // 處理音量變化
-  const handleVolumeChange = (event: Event, newValue: number | number[]) => {
-    const volume = typeof newValue === 'number' ? newValue : newValue[0];
+  const handleVolumeChange = (vals: number[]) => {
+    const volume = vals[0];
     setLocalVolume(volume);
 
     // 更新全局 streamData
@@ -1199,54 +1200,31 @@ export function StreamBox({
 
           {/* 音量條 */}
           <div className="flex items-center gap-2 flex-shrink-0" style={{ width: '120px' }}>
-            <MuiButton
-              variant="text"
-              size="small"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={(e) => {
                 e.stopPropagation();
                 handleToggleMute();
               }}
-              sx={{
-                minWidth: '24px',
-                width: '24px',
-                height: '24px',
-                padding: 0,
-                color: isMuted
-                  ? (theme === 'dark' ? '#ef4444' : '#dc2626')
-                  : (theme === 'dark' ? '#9ca3af' : '#4b5563'),
-                '&:hover': {
-                  color: isMuted
-                    ? (theme === 'dark' ? '#f87171' : '#ef4444')
-                    : (theme === 'dark' ? '#ffffff' : '#000000'),
-                  bgcolor: theme === 'dark' ? '#374151' : '#e5e7eb',
-                },
-              }}
+              className={`h-6 w-6 p-0 min-w-[24px] ${isMuted
+                  ? (theme === 'dark' ? 'text-red-500 hover:bg-gray-700 hover:text-red-400' : 'text-red-600 hover:bg-gray-200 hover:text-red-500')
+                  : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
+                }`}
               title={isMuted ? '取消靜音' : '靜音'}
             >
               {isMuted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
-            </MuiButton>
-            <Slider
-              value={localVolume}
-              onChange={handleVolumeChange}
-              min={0}
-              max={100}
-              size="small"
-              sx={{
-                width: '80px',
-                color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-                '& .MuiSlider-thumb': {
-                  width: 12,
-                  height: 12,
-                },
-                '& .MuiSlider-track': {
-                  height: 2,
-                },
-                '& .MuiSlider-rail': {
-                  height: 2,
-                },
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
+            </Button>
+            <div className="w-[80px]" onClick={(e) => e.stopPropagation()}>
+              <Slider
+                value={[localVolume]}
+                onValueChange={handleVolumeChange}
+                min={0}
+                max={100}
+                step={1}
+                className={theme === 'dark' ? 'py-1' : 'py-1'}
+              />
+            </div>
             <span
               className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} vol-value-display`}
               style={{ minWidth: '32px' }}
@@ -1261,20 +1239,10 @@ export function StreamBox({
           </div>
 
           {/* 刷新按鈕 */}
-          <MuiButton
-            variant="text"
-            size="small"
-            sx={{
-              minWidth: '32px',
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-              '&:hover': {
-                color: theme === 'dark' ? '#ffffff' : '#000000',
-                bgcolor: theme === 'dark' ? '#374151' : '#e5e7eb',
-              },
-            }}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black'}`}
             title="重新整理串流"
             onClick={(e) => {
               e.stopPropagation();
@@ -1282,34 +1250,16 @@ export function StreamBox({
             }}
           >
             <RefreshCw className="size-4" />
-          </MuiButton>
+          </Button>
 
           {/* 內嵌聊天室顯示/隱藏按鈕 */}
-          <MuiButton
-            variant="text"
-            size="small"
-            color="secondary"
-            sx={{
-              minWidth: '32px',
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              color: streamData.chatVisible
-                ? theme === 'dark' ? '#a855f7' : '#9333ea'
-                : theme === 'dark' ? '#9ca3af' : '#4b5563',
-              bgcolor: streamData.chatVisible
-                ? theme === 'dark' ? 'rgba(147, 51, 234, 0.3)' : 'rgba(147, 51, 234, 0.1)'
-                : 'transparent',
-              border: streamData.chatVisible ? '1px solid rgba(147, 51, 234, 0.5)' : 'none',
-              '&:hover': {
-                color: streamData.chatVisible
-                  ? theme === 'dark' ? '#c084fc' : '#7e22ce'
-                  : theme === 'dark' ? '#ffffff' : '#000000',
-                bgcolor: streamData.chatVisible
-                  ? theme === 'dark' ? 'rgba(147, 51, 234, 0.4)' : 'rgba(147, 51, 234, 0.15)'
-                  : theme === 'dark' ? '#374151' : '#e5e7eb',
-              },
-            }}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 p-0 ${streamData.chatVisible
+                ? (theme === 'dark' ? 'text-purple-400 bg-purple-500/30 hover:bg-purple-500/40 hover:text-purple-300' : 'text-purple-600 bg-purple-500/10 hover:bg-purple-500/15 hover:text-purple-700')
+                : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
+              } ${streamData.chatVisible ? 'border border-purple-500/50' : ''}`}
             title={streamData.chatVisible ? '隱藏聊天室' : '顯示聊天室'}
             onClick={(e) => {
               e.stopPropagation();
@@ -1317,24 +1267,13 @@ export function StreamBox({
             }}
           >
             <MessageSquare className="size-4" />
-          </MuiButton>
+          </Button>
 
           {/* 關閉串流按鈕 */}
-          <MuiButton
-            variant="text"
-            size="small"
-            color="error"
-            sx={{
-              minWidth: '32px',
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-              '&:hover': {
-                color: theme === 'dark' ? '#f87171' : '#dc2626',
-                bgcolor: theme === 'dark' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(220, 38, 38, 0.1)',
-              },
-            }}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-400' : 'text-gray-600 hover:bg-red-100 hover:text-red-600'}`}
             title="關閉串流"
             onClick={(e) => {
               e.stopPropagation();
@@ -1342,7 +1281,7 @@ export function StreamBox({
             }}
           >
             <X className="size-4" />
-          </MuiButton>
+          </Button>
         </div>
       </div>
 

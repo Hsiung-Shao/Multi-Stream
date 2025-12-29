@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { Button } from '@mui/material';
+import { Button } from './button';
 import { Tag } from '../../features/favorites/types';
 import { TagChip } from './TagChip';
 import {
@@ -63,20 +63,9 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
-                        variant="outlined"
-                        size="small"
-                        sx={{
-                            borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                            color: theme === 'dark' ? '#d1d5db' : '#374151',
-                            justifyContent: 'space-between',
-                            textTransform: 'none',
-                            minWidth: '120px',
-                            height: '40px',
-                            '&:hover': {
-                                borderColor: theme === 'dark' ? '#9ca3af' : '#9ca3af',
-                                backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                            }
-                        }}
+                        variant="outline"
+                        size="sm"
+                        className={`justify-between w-[120px] h-10 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-400' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
                     >
                         <div className="flex items-center gap-2">
                             <Plus className="size-4" />

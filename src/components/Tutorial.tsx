@@ -1,7 +1,6 @@
 import { X, Tv, Search, Layout, MessageCircle, Volume2, RefreshCw, Star, Radio, Database, Settings, Smartphone, Zap } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
+import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Box } from '@mui/material';
 import { useI18n } from '../i18n/index';
 
 interface TutorialProps {
@@ -11,7 +10,7 @@ interface TutorialProps {
 
 export function Tutorial({ theme, onClose }: TutorialProps) {
   const { t } = useI18n();
-  
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className={`max-w-5xl w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'} rounded-lg shadow-2xl max-h-[90vh] flex flex-col`}>
@@ -23,21 +22,14 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
               {t('tutorial.subtitle')}
             </p>
           </div>
-          <MuiButton
-            variant="text"
-            size="small"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            color="secondary"
-            sx={{
-              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-              '&:hover': {
-                color: theme === 'dark' ? '#ffffff' : '#000000',
-                backgroundColor: 'transparent',
-              },
-            }}
+            className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
           >
             <X className="size-5" />
-          </MuiButton>
+          </Button>
         </div>
 
         {/* Content */}
@@ -52,49 +44,27 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
             </div>
 
             <TabsContent value="basic" className="flex-1 min-h-0 mt-0">
-              <Box
-                className="p-6"
-                sx={{
-                  height: '100%',
-                  maxHeight: '800px',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    background: theme === 'dark' ? '#374151' : '#f3f4f6',
-                    borderRadius: '4px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    background: theme === 'dark' ? '#6b7280' : '#9ca3af',
-                    borderRadius: '4px',
-                    '&:hover': {
-                      background: theme === 'dark' ? '#9ca3af' : '#6b7280',
-                    },
-                  },
-                }}
-              >
+              <div className="p-6 h-[800px] overflow-y-auto overflow-x-hidden">
                 <div className="space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Tv className="size-5" />}
                     title={t('tutorial.addStream.title')}
                     content={
-                  <>
-                    <ol className="list-decimal list-inside space-y-2 mb-3">
-                      <li>{t('tutorial.addStream.step1')}</li>
-                      <li>{t('tutorial.addStream.step2')}</li>
-                      <li>{t('tutorial.addStream.step3')}</li>
-                    </ol>
-                    <Tip theme={theme} text={t('tutorial.addStream.tip1')} />
-                    <ul className={`list-disc list-inside ml-4 space-y-1 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                      <li>{t('tutorial.addStream.tip2')}</li>
-                      <li>{t('tutorial.addStream.tip3')}</li>
-                    </ul>
-                    <Tip theme={theme} text={t('tutorial.addStream.tip4')} />
-                  </>
-                }
+                      <>
+                        <ol className="list-decimal list-inside space-y-2 mb-3">
+                          <li>{t('tutorial.addStream.step1')}</li>
+                          <li>{t('tutorial.addStream.step2')}</li>
+                          <li>{t('tutorial.addStream.step3')}</li>
+                        </ol>
+                        <Tip theme={theme} text={t('tutorial.addStream.tip1')} />
+                        <ul className={`list-disc list-inside ml-4 space-y-1 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <li>{t('tutorial.addStream.tip2')}</li>
+                          <li>{t('tutorial.addStream.tip3')}</li>
+                        </ul>
+                        <Tip theme={theme} text={t('tutorial.addStream.tip4')} />
+                      </>
+                    }
                   />
 
                   <Section
@@ -102,15 +72,15 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Search className="size-5" />}
                     title={t('tutorial.search.title')}
                     content={
-                  <>
-                    <ol className="list-decimal list-inside space-y-2 mb-3">
-                      <li>{t('tutorial.search.step1')}</li>
-                      <li>{t('tutorial.search.step2')}</li>
-                      <li>{t('tutorial.search.step3')}</li>
-                    </ol>
-                    <Tip theme={theme} text={t('tutorial.search.tip')} />
-                  </>
-                }
+                      <>
+                        <ol className="list-decimal list-inside space-y-2 mb-3">
+                          <li>{t('tutorial.search.step1')}</li>
+                          <li>{t('tutorial.search.step2')}</li>
+                          <li>{t('tutorial.search.step3')}</li>
+                        </ol>
+                        <Tip theme={theme} text={t('tutorial.search.tip')} />
+                      </>
+                    }
                   />
 
                   <Section
@@ -118,33 +88,33 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Layout className="size-5" />}
                     title={t('tutorial.layout.title')}
                     content={
-                  <>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                          {t('tutorial.layout.basic.title')}
-                        </h4>
-                        <ol className="list-decimal list-inside space-y-2">
-                          <li>{t('tutorial.layout.basic.step1')}</li>
-                          <li>{t('tutorial.layout.basic.step2')}</li>
-                          <li>{t('tutorial.layout.basic.step3')}</li>
-                        </ol>
-                      </div>
-                      <div>
-                        <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                          {t('tutorial.layout.sideChat.title')}
-                        </h4>
-                        <ol className="list-decimal list-inside space-y-2">
-                          <li>{t('tutorial.layout.sideChat.step1')}</li>
-                          <li>{t('tutorial.layout.sideChat.step2')}</li>
-                          <li>{t('tutorial.layout.sideChat.step3')}</li>
-                          <li>{t('tutorial.layout.sideChat.step4')}</li>
-                        </ol>
-                        <Tip theme={theme} text={t('tutorial.layout.sideChat.tip')} />
-                      </div>
-                    </div>
-                  </>
-                }
+                      <>
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                              {t('tutorial.layout.basic.title')}
+                            </h4>
+                            <ol className="list-decimal list-inside space-y-2">
+                              <li>{t('tutorial.layout.basic.step1')}</li>
+                              <li>{t('tutorial.layout.basic.step2')}</li>
+                              <li>{t('tutorial.layout.basic.step3')}</li>
+                            </ol>
+                          </div>
+                          <div>
+                            <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                              {t('tutorial.layout.sideChat.title')}
+                            </h4>
+                            <ol className="list-decimal list-inside space-y-2">
+                              <li>{t('tutorial.layout.sideChat.step1')}</li>
+                              <li>{t('tutorial.layout.sideChat.step2')}</li>
+                              <li>{t('tutorial.layout.sideChat.step3')}</li>
+                              <li>{t('tutorial.layout.sideChat.step4')}</li>
+                            </ol>
+                            <Tip theme={theme} text={t('tutorial.layout.sideChat.tip')} />
+                          </div>
+                        </div>
+                      </>
+                    }
                   />
 
                   <Section
@@ -152,34 +122,34 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<MessageCircle className="size-5" />}
                     title={t('tutorial.chat.title')}
                     content={
-                  <>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                          {t('tutorial.chat.basic.title')}
-                        </h4>
-                        <ul className="list-disc list-inside space-y-2">
-                          <li>{t('tutorial.chat.basic.step1')}</li>
-                          <li>{t('tutorial.chat.basic.step2')}</li>
-                          <li>{t('tutorial.chat.basic.step3')}</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                          {t('tutorial.chat.sideLayout.title')}
-                        </h4>
-                        <ul className="list-disc list-inside space-y-2">
-                          <li>{t('tutorial.chat.sideLayout.step1')}</li>
-                          <li>{t('tutorial.chat.sideLayout.step2')}</li>
-                          <li>{t('tutorial.chat.sideLayout.step3')}</li>
-                          <li>{t('tutorial.chat.sideLayout.step4')}</li>
-                          <li>{t('tutorial.chat.sideLayout.step5')}</li>
-                        </ul>
-                      </div>
-                    </div>
-                    <Warning theme={theme} text={t('tutorial.chat.warning')} />
-                  </>
-                }
+                      <>
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                              {t('tutorial.chat.basic.title')}
+                            </h4>
+                            <ul className="list-disc list-inside space-y-2">
+                              <li>{t('tutorial.chat.basic.step1')}</li>
+                              <li>{t('tutorial.chat.basic.step2')}</li>
+                              <li>{t('tutorial.chat.basic.step3')}</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <h4 className={`mb-2 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                              {t('tutorial.chat.sideLayout.title')}
+                            </h4>
+                            <ul className="list-disc list-inside space-y-2">
+                              <li>{t('tutorial.chat.sideLayout.step1')}</li>
+                              <li>{t('tutorial.chat.sideLayout.step2')}</li>
+                              <li>{t('tutorial.chat.sideLayout.step3')}</li>
+                              <li>{t('tutorial.chat.sideLayout.step4')}</li>
+                              <li>{t('tutorial.chat.sideLayout.step5')}</li>
+                            </ul>
+                          </div>
+                        </div>
+                        <Warning theme={theme} text={t('tutorial.chat.warning')} />
+                      </>
+                    }
                   />
 
                   <Section
@@ -187,16 +157,16 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Volume2 className="size-5" />}
                     title={t('tutorial.volume.title')}
                     content={
-                  <>
-                    <ul className="list-disc list-inside space-y-2">
-                      <li>{t('tutorial.volume.step1')}</li>
-                      <li>{t('tutorial.volume.step2')}</li>
-                      <li>{t('tutorial.volume.step3')}</li>
-                      <li>{t('tutorial.volume.step4')}</li>
-                      <li>{t('tutorial.volume.step5')}</li>
-                    </ul>
-                  </>
-                }
+                      <>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>{t('tutorial.volume.step1')}</li>
+                          <li>{t('tutorial.volume.step2')}</li>
+                          <li>{t('tutorial.volume.step3')}</li>
+                          <li>{t('tutorial.volume.step4')}</li>
+                          <li>{t('tutorial.volume.step5')}</li>
+                        </ul>
+                      </>
+                    }
                   />
 
                   <Section
@@ -204,89 +174,67 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<RefreshCw className="size-5" />}
                     title={t('tutorial.reload.title')}
                     content={
-                  <>
-                    <ol className="list-decimal list-inside space-y-2">
-                      <li>{t('tutorial.reload.step1')}</li>
-                      <li>{t('tutorial.reload.step2')}</li>
-                    </ol>
-                  </>
-                }
+                      <>
+                        <ol className="list-decimal list-inside space-y-2">
+                          <li>{t('tutorial.reload.step1')}</li>
+                          <li>{t('tutorial.reload.step2')}</li>
+                        </ol>
+                      </>
+                    }
                   />
                 </div>
-              </Box>
+              </div>
             </TabsContent>
 
             <TabsContent value="advanced" className="flex-1 min-h-0 mt-0">
-              <Box
-                className="p-6"
-                sx={{
-                  height: '100%',
-                  maxHeight: '800px',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    background: theme === 'dark' ? '#374151' : '#f3f4f6',
-                    borderRadius: '4px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    background: theme === 'dark' ? '#6b7280' : '#9ca3af',
-                    borderRadius: '4px',
-                    '&:hover': {
-                      background: theme === 'dark' ? '#9ca3af' : '#6b7280',
-                    },
-                  },
-                }}
-              >
+              <div className="p-6 h-[800px] overflow-y-auto overflow-x-hidden">
                 <div className="space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Star className="size-5" />}
                     title={t('tutorial.favorite.title')}
                     content={
-                  <>
-                    <ol className="list-decimal list-inside space-y-2 mb-3">
-                      <li>{t('tutorial.favorite.step1')}</li>
-                      <li>{t('tutorial.favorite.step2')}
-                        <ul className="list-disc list-inside ml-6 mt-1">
-                          <li>{t('tutorial.favorite.step2Item1')}</li>
-                          <li>{t('tutorial.favorite.step2Item2')}</li>
-                          <li>{t('tutorial.favorite.step2Item3')}</li>
-                        </ul>
-                      </li>
-                      <li>{t('tutorial.favorite.step3')}</li>
-                      <li>{t('tutorial.favorite.step4')}
-                        <ul className="list-disc list-inside ml-6 mt-1">
-                          <li>{t('tutorial.favorite.step4Item1')}</li>
-                          <li>{t('tutorial.favorite.step4Item2')}</li>
-                        </ul>
-                      </li>
-                    </ol>
-                    <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'} mb-3`}>
-                      <p className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                        {t('tutorial.favorite.batchImport.title')}
-                      </p>
-                      <ol className={`list-decimal list-inside ml-4 space-y-1 text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                        <li>{t('tutorial.favorite.batchImport.step1')}</li>
-                        <li>{t('tutorial.favorite.batchImport.step2')}</li>
-                        <li>{t('tutorial.favorite.batchImport.step3')}</li>
-                        <li>{t('tutorial.favorite.batchImport.step4')}</li>
-                      </ol>
-                    </div>
-                    <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                        {t('tutorial.favorite.step5')}
-                      </p>
-                      <ul className={`list-disc list-inside ml-4 mt-2 text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                        <li>{t('tutorial.favorite.step5Item1')}</li>
-                        <li>{t('tutorial.favorite.step5Item2')}</li>
-                        <li>{t('tutorial.favorite.step5Item3')}</li>
-                      </ul>
-                    </div>
-                  </>
-                }
+                      <>
+                        <ol className="list-decimal list-inside space-y-2 mb-3">
+                          <li>{t('tutorial.favorite.step1')}</li>
+                          <li>{t('tutorial.favorite.step2')}
+                            <ul className="list-disc list-inside ml-6 mt-1">
+                              <li>{t('tutorial.favorite.step2Item1')}</li>
+                              <li>{t('tutorial.favorite.step2Item2')}</li>
+                              <li>{t('tutorial.favorite.step2Item3')}</li>
+                            </ul>
+                          </li>
+                          <li>{t('tutorial.favorite.step3')}</li>
+                          <li>{t('tutorial.favorite.step4')}
+                            <ul className="list-disc list-inside ml-6 mt-1">
+                              <li>{t('tutorial.favorite.step4Item1')}</li>
+                              <li>{t('tutorial.favorite.step4Item2')}</li>
+                            </ul>
+                          </li>
+                        </ol>
+                        <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'} mb-3`}>
+                          <p className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
+                            {t('tutorial.favorite.batchImport.title')}
+                          </p>
+                          <ol className={`list-decimal list-inside ml-4 space-y-1 text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
+                            <li>{t('tutorial.favorite.batchImport.step1')}</li>
+                            <li>{t('tutorial.favorite.batchImport.step2')}</li>
+                            <li>{t('tutorial.favorite.batchImport.step3')}</li>
+                            <li>{t('tutorial.favorite.batchImport.step4')}</li>
+                          </ol>
+                        </div>
+                        <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
+                          <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
+                            {t('tutorial.favorite.step5')}
+                          </p>
+                          <ul className={`list-disc list-inside ml-4 mt-2 text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
+                            <li>{t('tutorial.favorite.step5Item1')}</li>
+                            <li>{t('tutorial.favorite.step5Item2')}</li>
+                            <li>{t('tutorial.favorite.step5Item3')}</li>
+                          </ul>
+                        </div>
+                      </>
+                    }
                   />
 
                   <Section
@@ -294,17 +242,17 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Radio className="size-5" />}
                     title={t('tutorial.liveStatus.title')}
                     content={
-                  <>
-                    <ul className="list-disc list-inside space-y-2">
-                      <li>{t('tutorial.liveStatus.step1')}</li>
-                      <li>{t('tutorial.liveStatus.step2')}</li>
-                      <li>{t('tutorial.liveStatus.step3')}</li>
-                      <li>{t('tutorial.liveStatus.step4')}</li>
-                      <li>{t('tutorial.liveStatus.step5')}</li>
-                    </ul>
-                    <Tip theme={theme} text={t('tutorial.liveStatus.tip')} />
-                  </>
-                }
+                      <>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>{t('tutorial.liveStatus.step1')}</li>
+                          <li>{t('tutorial.liveStatus.step2')}</li>
+                          <li>{t('tutorial.liveStatus.step3')}</li>
+                          <li>{t('tutorial.liveStatus.step4')}</li>
+                          <li>{t('tutorial.liveStatus.step5')}</li>
+                        </ul>
+                        <Tip theme={theme} text={t('tutorial.liveStatus.tip')} />
+                      </>
+                    }
                   />
 
                   <Section
@@ -312,17 +260,17 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Tv className="size-5" />}
                     title={t('tutorial.youtubeLiveStatus.title')}
                     content={
-                  <>
-                    <ol className="list-decimal list-inside space-y-2 mb-3">
-                      <li>{t('tutorial.youtubeLiveStatus.step1')}</li>
-                      <li>{t('tutorial.youtubeLiveStatus.step2')}</li>
-                      <li>{t('tutorial.youtubeLiveStatus.step3')}</li>
-                      <li>{t('tutorial.youtubeLiveStatus.step4')}</li>
-                      <li>{t('tutorial.youtubeLiveStatus.step5')}</li>
-                    </ol>
-                    <Tip theme={theme} text={t('tutorial.youtubeLiveStatus.tip')} />
-                  </>
-                }
+                      <>
+                        <ol className="list-decimal list-inside space-y-2 mb-3">
+                          <li>{t('tutorial.youtubeLiveStatus.step1')}</li>
+                          <li>{t('tutorial.youtubeLiveStatus.step2')}</li>
+                          <li>{t('tutorial.youtubeLiveStatus.step3')}</li>
+                          <li>{t('tutorial.youtubeLiveStatus.step4')}</li>
+                          <li>{t('tutorial.youtubeLiveStatus.step5')}</li>
+                        </ol>
+                        <Tip theme={theme} text={t('tutorial.youtubeLiveStatus.tip')} />
+                      </>
+                    }
                   />
 
                   <Section
@@ -330,23 +278,23 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Database className="size-5" />}
                     title={t('tutorial.backup.title')}
                     content={
-                  <>
-                    <ul className="list-disc list-inside space-y-2 mb-3">
-                      <li>{t('tutorial.backup.step1')}</li>
-                      <li>{t('tutorial.backup.step2')}</li>
-                    </ul>
-                    <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-green-900/20 border border-green-500/30' : 'bg-green-50 border border-green-200'} mb-3`}>
-                      <p className={`text-sm ${theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>
-                        {t('tutorial.backup.step3')}
-                      </p>
-                    </div>
-                    <ul className="list-disc list-inside space-y-2">
-                      <li>{t('tutorial.backup.step4')}</li>
-                      <li>{t('tutorial.backup.step5')}</li>
-                    </ul>
-                    <Tip theme={theme} text={t('tutorial.backup.tip')} />
-                  </>
-                }
+                      <>
+                        <ul className="list-disc list-inside space-y-2 mb-3">
+                          <li>{t('tutorial.backup.step1')}</li>
+                          <li>{t('tutorial.backup.step2')}</li>
+                        </ul>
+                        <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-green-900/20 border border-green-500/30' : 'bg-green-50 border border-green-200'} mb-3`}>
+                          <p className={`text-sm ${theme === 'dark' ? 'text-green-300' : 'text-green-700'}`}>
+                            {t('tutorial.backup.step3')}
+                          </p>
+                        </div>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>{t('tutorial.backup.step4')}</li>
+                          <li>{t('tutorial.backup.step5')}</li>
+                        </ul>
+                        <Tip theme={theme} text={t('tutorial.backup.tip')} />
+                      </>
+                    }
                   />
 
                   <Section
@@ -354,14 +302,14 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Settings className="size-5" />}
                     title={t('tutorial.controlPanel.title')}
                     content={
-                  <>
-                    <ul className="list-disc list-inside space-y-2">
-                      <li>{t('tutorial.controlPanel.step1')}</li>
-                      <li>{t('tutorial.controlPanel.step2')}</li>
-                      <li>{t('tutorial.controlPanel.step3')}</li>
-                    </ul>
-                  </>
-                }
+                      <>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>{t('tutorial.controlPanel.step1')}</li>
+                          <li>{t('tutorial.controlPanel.step2')}</li>
+                          <li>{t('tutorial.controlPanel.step3')}</li>
+                        </ul>
+                      </>
+                    }
                   />
 
                   <Section
@@ -369,87 +317,65 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     icon={<Smartphone className="size-5" />}
                     title={t('tutorial.mobile.title')}
                     content={
-                  <>
-                    <ul className="list-disc list-inside space-y-2">
-                      <li>{t('tutorial.mobile.step1')}</li>
-                      <li>{t('tutorial.mobile.step2')}</li>
-                      <li>{t('tutorial.mobile.step3')}</li>
-                    </ul>
-                  </>
-                }
+                      <>
+                        <ul className="list-disc list-inside space-y-2">
+                          <li>{t('tutorial.mobile.step1')}</li>
+                          <li>{t('tutorial.mobile.step2')}</li>
+                          <li>{t('tutorial.mobile.step3')}</li>
+                        </ul>
+                      </>
+                    }
                   />
                 </div>
-              </Box>
+              </div>
             </TabsContent>
 
             <TabsContent value="tips" className="flex-1 min-h-0 mt-0">
-              <Box
-                className="p-6"
-                sx={{
-                  height: '100%',
-                  maxHeight: '800px',
-                  overflowY: 'auto',
-                  overflowX: 'hidden',
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    background: theme === 'dark' ? '#374151' : '#f3f4f6',
-                    borderRadius: '4px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    background: theme === 'dark' ? '#6b7280' : '#9ca3af',
-                    borderRadius: '4px',
-                    '&:hover': {
-                      background: theme === 'dark' ? '#9ca3af' : '#6b7280',
-                    },
-                  },
-                }}
-              >
+              <div className="p-6 h-[800px] overflow-y-auto overflow-x-hidden">
                 <div className="space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Zap className="size-5" />}
                     title={t('tutorial.tips.title')}
                     content={
-                  <>
-                    <div className="grid gap-4">
-                      <TipCard
-                        theme={theme}
-                        title={t('tutorial.tips.card1.title')}
-                        description={t('tutorial.tips.card1.description')}
-                      />
-                      <TipCard
-                        theme={theme}
-                        title={t('tutorial.tips.card2.title')}
-                        description={t('tutorial.tips.card2.description')}
-                      />
-                      <TipCard
-                        theme={theme}
-                        title={t('tutorial.tips.card3.title')}
-                        description={t('tutorial.tips.card3.description')}
-                      />
-                      <TipCard
-                        theme={theme}
-                        title={t('tutorial.tips.card4.title')}
-                        description={t('tutorial.tips.card4.description')}
-                      />
-                      <TipCard
-                        theme={theme}
-                        title={t('tutorial.tips.card5.title')}
-                        description={t('tutorial.tips.card5.description')}
-                      />
-                      <TipCard
-                        theme={theme}
-                        title={t('tutorial.tips.card6.title')}
-                        description={t('tutorial.tips.card6.description')}
-                      />
-                    </div>
-                  </>
-                }
+                      <>
+                        <div className="grid gap-4">
+                          <TipCard
+                            theme={theme}
+                            title={t('tutorial.tips.card1.title')}
+                            description={t('tutorial.tips.card1.description')}
+                          />
+                          <TipCard
+                            theme={theme}
+                            title={t('tutorial.tips.card2.title')}
+                            description={t('tutorial.tips.card2.description')}
+                          />
+                          <TipCard
+                            theme={theme}
+                            title={t('tutorial.tips.card3.title')}
+                            description={t('tutorial.tips.card3.description')}
+                          />
+                          <TipCard
+                            theme={theme}
+                            title={t('tutorial.tips.card4.title')}
+                            description={t('tutorial.tips.card4.description')}
+                          />
+                          <TipCard
+                            theme={theme}
+                            title={t('tutorial.tips.card5.title')}
+                            description={t('tutorial.tips.card5.description')}
+                          />
+                          <TipCard
+                            theme={theme}
+                            title={t('tutorial.tips.card6.title')}
+                            description={t('tutorial.tips.card6.description')}
+                          />
+                        </div>
+                      </>
+                    }
                   />
                 </div>
-              </Box>
+              </div>
             </TabsContent>
           </Tabs>
         </div>

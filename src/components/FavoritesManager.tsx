@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2 } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
+import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Checkbox, Box } from '@mui/material';
+import { Checkbox } from './ui/checkbox';
 import { useI18n } from '../i18n/index';
 import { TagList } from './ui/TagList';
 import { TagChip } from './ui/TagChip';
@@ -709,21 +709,14 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
               </p>
             </div>
           </div>
-          <MuiButton
-            variant="text"
-            size="small"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            color="secondary"
-            sx={{
-              color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-              '&:hover': {
-                color: theme === 'dark' ? '#ffffff' : '#000000',
-                backgroundColor: 'transparent',
-              },
-            }}
+            className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}`}
           >
             <X className="size-5" />
-          </MuiButton>
+          </Button>
         </div>
 
         {/* Content */}
@@ -778,10 +771,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     showSelectedChips={false}
                   />
 
-                  <MuiButton onClick={handleAddFavorite} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
+                  <Button onClick={handleAddFavorite} className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Plus className="size-4 mr-2" />
                     {t('favorites.add')}
-                  </MuiButton>
+                  </Button>
                 </div>
 
                 {/* Selected Tags Display (Below inputs) */}
@@ -828,10 +821,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <MuiButton onClick={handleBatchImport} disabled={isImporting} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
+                    <Button onClick={handleBatchImport} disabled={isImporting} className="bg-purple-600 hover:bg-purple-700 text-white">
                       {isImporting ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
                       {t('favorites.batchImport')}
-                    </MuiButton>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -856,63 +849,38 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     </SelectContent>
                   </Select>
 
-                  <MuiButton
-                    variant="outlined"
-                    size="small"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleSelectAll}
-                    color="secondary"
-                    sx={{
-                      borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                      color: theme === 'dark' ? '#d1d5db' : '#374151',
-                      '&:hover': {
-                        borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                        backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                      },
-                    }}
+                    className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
                   >
                     {t('favorites.selectAll')}
-                  </MuiButton>
-                  <MuiButton
-                    variant="outlined"
-                    size="small"
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleDeselectAll}
-                    color="secondary"
-                    sx={{
-                      borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                      color: theme === 'dark' ? '#d1d5db' : '#374151',
-                      '&:hover': {
-                        borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                        backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                      },
-                    }}
+                    className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
                   >
                     {t('favorites.deselectAll')}
-                  </MuiButton>
-                  <MuiButton
-                    size="small"
+                  </Button>
+                  <Button
+                    size="sm"
                     onClick={handleLoadSelected}
-                    color="secondary"
-                    variant="contained"
-                    sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white"
                   >
                     {t('favorites.loadSelected')}
-                  </MuiButton>
-                  <MuiButton
-                    size="small"
+                  </Button>
+                  <Button
+                    size="sm"
                     onClick={handleBatchDelete}
-                    color="error"
-                    variant="contained"
+                    className="bg-red-600 hover:bg-red-700 text-white"
                     onMouseEnter={() => setIsDeleteHovered(true)}
                     onMouseLeave={() => setIsDeleteHovered(false)}
-                    sx={{
-                      bgcolor: isDeleteHovered ? '#b91c1c' : '#dc2626',
-                      '&:hover': {
-                        bgcolor: '#b91c1c',
-                      },
-                    }}
                   >
                     {t('favorites.delete')}
-                  </MuiButton>
+                  </Button>
                 </div>
 
                 {/* 標籤篩選 - 水平 Chip List (Moved below buttons) */}
@@ -938,26 +906,11 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                   </div>
                 )}
                 {/* 收藏列表 - 設置最大高度限制並增加滾動 */}
-                <Box
-                  sx={{
-                    maxHeight: '350px',
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    // 自定義滾動條樣式
-                    '&::-webkit-scrollbar': {
-                      width: '8px',
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      background: theme === 'dark' ? '#374151' : '#f3f4f6',
-                      borderRadius: '4px',
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                      background: theme === 'dark' ? '#6b7280' : '#9ca3af',
-                      borderRadius: '4px',
-                      '&:hover': {
-                        background: theme === 'dark' ? '#9ca3af' : '#6b7280',
-                      },
-                    },
+                <div
+                  className="max-h-[350px] overflow-y-auto overflow-x-hidden"
+                  style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: theme === 'dark' ? '#6b7280 #374151' : '#9ca3af #f3f4f6'
                   }}
                 >
                   {filteredFavorites.length === 0 ? (
@@ -999,7 +952,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                       ))}
                     </div>
                   )}
-                </Box>
+                </div>
               </div>
 
               {/* 資料儲存提示 - 在"我的收藏"區塊下方，綠色半透明玻璃效果 */}
@@ -1026,10 +979,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
                   />
-                  <MuiButton onClick={handleAddCategory} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
+                  <Button onClick={handleAddCategory} className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Plus className="size-4 mr-2" />
                     {t('common.add')}
-                  </MuiButton>
+                  </Button>
                 </div>
               </div>
 
@@ -1101,10 +1054,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                       className="h-9 w-9 p-0 border-0 rounded cursor-pointer"
                     />
                   </div>
-                  <MuiButton onClick={handleAddTag} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
+                  <Button onClick={handleAddTag} className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Plus className="size-4 mr-2" />
                     {t('common.add')}
-                  </MuiButton>
+                  </Button>
                 </div>
               </div>
 
@@ -1133,22 +1086,22 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                             }}
                             className="h-8 w-8 p-0 border-0 rounded"
                           />
-                          <MuiButton size="small" onClick={() => handleUpdateTag(tag.id, tag.name, tag.color)} color="secondary" variant="contained">
+                          <Button size="icon" className="h-6 w-6" onClick={() => handleUpdateTag(tag.id, tag.name, tag.color)}>
                             <Check className="size-3" />
-                          </MuiButton>
-                          <MuiButton size="small" onClick={() => { setEditingTagId(null); loadData(); }} variant="outlined" color="secondary">
+                          </Button>
+                          <Button size="icon" variant="outline" className="h-6 w-6" onClick={() => { setEditingTagId(null); loadData(); }}>
                             <X className="size-3" />
-                          </MuiButton>
+                          </Button>
                         </>
                       ) : (
                         <>
                           <TagChip tag={tag} />
-                          <MuiButton size="small" onClick={() => setEditingTagId(tag.id)} sx={{ minWidth: 30, padding: '4px' }}>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 p-1" onClick={() => setEditingTagId(tag.id)}>
                             <Edit2 className="size-3 text-gray-400 hover:text-white" />
-                          </MuiButton>
-                          <MuiButton size="small" onClick={() => handleDeleteTag(tag.id)} sx={{ minWidth: 30, padding: '4px' }}>
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 p-1" onClick={() => handleDeleteTag(tag.id)}>
                             <Trash2 className="size-3 text-red-400 hover:text-red-500" />
-                          </MuiButton>
+                          </Button>
                         </>
                       )}
                     </div>
@@ -1166,22 +1119,18 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     {t('favorites.backupDescription')}
                   </p>
                   <div className="flex gap-2">
-                    <MuiButton
+                    <Button
                       onClick={handleExportJSON}
-                      color="secondary"
-                      variant="contained"
-                      sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
                     >
                       {t('favorites.exportJSON')}
-                    </MuiButton>
-                    <MuiButton
+                    </Button>
+                    <Button
                       onClick={handleImportJSON}
-                      color="secondary"
-                      variant="contained"
-                      sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
                     >
                       {t('favorites.importJSON')}
-                    </MuiButton>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -1292,20 +1241,14 @@ function FavoriteItem({
         )}
 
         <div className="flex gap-2 justify-end">
-          <MuiButton size="small" onClick={onSaveEdit} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
+          <Button size="sm" onClick={onSaveEdit} className="bg-purple-600 hover:bg-purple-700 text-white">
             <Check className="size-3 mr-1" />
             {t('favorites.save')}
-          </MuiButton>
-          <MuiButton size="small" onClick={onCancelEdit} variant="outlined" color="secondary" sx={{
-            borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-            color: theme === 'dark' ? '#d1d5db' : '#374151',
-            '&:hover': {
-              borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-            },
-          }}>
+          </Button>
+          <Button size="sm" onClick={onCancelEdit} variant="outline" className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}>
             <X className="size-3 mr-1" />
             {t('favorites.cancel')}
-          </MuiButton>
+          </Button>
         </div>
       </div>
     );
@@ -1315,13 +1258,8 @@ function FavoriteItem({
     <div className={`p-3 rounded-lg border ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} flex items-center gap-3`}>
       <Checkbox
         checked={isSelected}
-        onChange={(e) => onSelect(favorite.id, e.target.checked)}
-        sx={{
-          color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-          '&.Mui-checked': {
-            color: theme === 'dark' ? '#a855f7' : '#9333ea',
-          },
-        }}
+        onCheckedChange={(checked) => onSelect(favorite.id, !!checked)}
+        className={theme === 'dark' ? 'border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500' : 'border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600'}
       />
       <span className="text-lg">{platformIcon}</span>
       {favorite.isLive !== null && (
@@ -1348,54 +1286,33 @@ function FavoriteItem({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <MuiButton
-          size="small"
-          variant="text"
+        <Button
+          size="icon"
+          variant="ghost"
           onClick={() => onStartEdit(favorite)}
-          color="secondary"
           title={t('favorites.edit')}
-          sx={{
-            color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-            '&:hover': {
-              color: theme === 'dark' ? '#ffffff' : '#000000',
-              backgroundColor: 'transparent',
-            },
-          }}
+          className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}`}
         >
           <Edit2 className="size-4" />
-        </MuiButton>
-        <MuiButton
-          size="small"
-          variant="text"
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
           onClick={() => onLoad(favorite.id)}
-          color="secondary"
           title={t('favorites.addStream')}
-          sx={{
-            color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-            '&:hover': {
-              color: theme === 'dark' ? '#ffffff' : '#000000',
-              backgroundColor: 'transparent',
-            },
-          }}
+          className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}`}
         >
           <Play className="size-4" />
-        </MuiButton>
-        <MuiButton
-          size="small"
-          variant="text"
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
           onClick={() => onDelete(favorite.id)}
-          color="error"
           title={t('favorites.delete')}
-          sx={{
-            color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-            '&:hover': {
-              color: theme === 'dark' ? '#f87171' : '#dc2626',
-              backgroundColor: 'transparent',
-            },
-          }}
+          className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-transparent' : 'text-gray-600 hover:text-red-600 hover:bg-transparent'}`}
         >
           <Trash2 className="size-4" />
-        </MuiButton>
+        </Button>
       </div>
     </div>
   );
@@ -1447,18 +1364,12 @@ function CategoryItem({
           className={`flex-1 ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-black'}`}
           autoFocus
         />
-        <MuiButton size="small" onClick={handleSave} color="secondary" variant="contained" sx={{ bgcolor: '#9333ea', '&:hover': { bgcolor: '#7e22ce' } }}>
+        <Button size="icon" className="h-6 w-6" onClick={handleSave}>
           <Check className="size-3" />
-        </MuiButton>
-        <MuiButton size="small" onClick={handleCancel} variant="outlined" color="secondary" sx={{
-          borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-          color: theme === 'dark' ? '#d1d5db' : '#374151',
-          '&:hover': {
-            borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-          },
-        }}>
+        </Button>
+        <Button size="icon" variant="outline" className="h-6 w-6" onClick={handleCancel}>
           <X className="size-3" />
-        </MuiButton>
+        </Button>
       </div>
     );
   }
@@ -1473,59 +1384,38 @@ function CategoryItem({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <MuiButton
-          variant="text"
-          size="small"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onLoad}
-          color="secondary"
           title={t('favorites.loadCategory')}
           disabled={count === 0}
-          sx={{
-            color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-            '&:hover': {
-              color: theme === 'dark' ? '#a855f7' : '#9333ea',
-              backgroundColor: 'transparent',
-            },
-          }}
+          className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-purple-400 hover:bg-transparent' : 'text-gray-600 hover:text-purple-600 hover:bg-transparent'}`}
         >
           <Play className="size-4" />
-        </MuiButton>
-        <MuiButton
-          variant="text"
-          size="small"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setIsEditing(true)}
-          color="secondary"
           title={t('favorites.edit')}
-          sx={{
-            color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-            '&:hover': {
-              color: theme === 'dark' ? '#ffffff' : '#000000',
-              backgroundColor: 'transparent',
-            },
-          }}
+          className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}`}
         >
           <Edit2 className="size-4" />
-        </MuiButton>
-        <MuiButton
-          variant="text"
-          size="small"
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => {
             if (confirm(t('favorites.delete') + ` "${category.name}"?`)) {
               onDelete(category.id);
             }
           }}
           title={t('favorites.delete')}
-          color="error"
-          sx={{
-            color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-            '&:hover': {
-              color: theme === 'dark' ? '#f87171' : '#dc2626',
-              backgroundColor: 'transparent',
-            },
-          }}
+          className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-transparent' : 'text-gray-600 hover:text-red-600 hover:bg-transparent'}`}
         >
           <Trash2 className="size-4" />
-        </MuiButton>
+        </Button>
       </div>
     </div>
   );

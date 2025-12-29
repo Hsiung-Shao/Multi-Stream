@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
+import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { TagChip } from './TagChip';
 import type { Tag } from '../../features/favorites/types';
@@ -50,25 +50,14 @@ export function TagFilterLayout({
             {tags.length > 0 && (
                 <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
-                        <MuiButton
-                            variant="outlined"
-                            size="small"
-                            className="flex-shrink-0"
-                            color="secondary"
-                            sx={{
-                                minWidth: 'auto',
-                                padding: '4px 8px',
-                                borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                                color: theme === 'dark' ? '#d1d5db' : '#374151',
-                                '&:hover': {
-                                    borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                                    backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                                },
-                            }}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className={`flex-shrink-0 h-auto px-2 py-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300'}`}
                         >
                             <span className="text-xs mr-1">{t('tags.all')}</span>
                             <ChevronDown className="size-3" />
-                        </MuiButton>
+                        </Button>
                     </PopoverTrigger>
                     <PopoverContent
                         className={`p-4 ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
@@ -109,28 +98,14 @@ export function TagFilterLayout({
                             </div>
 
                             <div className="pt-2 border-t border-gray-700/50 flex justify-end items-center">
-                                <MuiButton
+                                <Button
                                     onClick={onClear}
-                                    size="small"
+                                    size="sm"
                                     disabled={selectedTags.length === 0}
-                                    variant="contained"
-                                    sx={{
-                                        borderRadius: '9999px',
-                                        bgcolor: '#9333ea',
-                                        color: '#ffffff',
-                                        boxShadow: 'none',
-                                        '&:hover': {
-                                            bgcolor: '#7e22ce',
-                                            boxShadow: 'none'
-                                        },
-                                        '&.Mui-disabled': {
-                                            bgcolor: theme === 'dark' ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.8)',
-                                            color: theme === 'dark' ? '#9ca3af' : '#9ca3af',
-                                        }
-                                    }}
+                                    className={`rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-none disabled:opacity-50 ${theme === 'dark' ? 'disabled:bg-gray-700 disabled:text-gray-400' : 'disabled:bg-gray-200 disabled:text-gray-400'}`}
                                 >
                                     {t('tags.clearAll')}
-                                </MuiButton>
+                                </Button>
                             </div>
                         </div>
                     </PopoverContent>

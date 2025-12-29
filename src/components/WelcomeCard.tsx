@@ -1,6 +1,7 @@
-import { Shield, Mail, MessageSquare, ExternalLink, Info, BookOpen, History, Heart, Users } from 'lucide-react';
+import { Shield, Mail, MessageSquare, Info, BookOpen, History, Heart, Users } from 'lucide-react';
+import { Button } from './ui/button';
 import { useI18n } from '../i18n/index';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { useMediaQuery } from '../hooks/use-media-query';
 
 interface WelcomeCardProps {
   theme: 'light' | 'dark';
@@ -12,11 +13,9 @@ interface WelcomeCardProps {
 
 export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onShowAbout, onNavigateToPrivacy }: WelcomeCardProps) {
   const { t } = useI18n();
-  const muiTheme = useTheme();
-  // 使用 'md' breakpoint 來判斷手機版垂直布局（用於 order 調整）
-  // 但布局本身使用 Tailwind 的響應式類，確保桌面版正確顯示 2 列
-  const isMobileVertical = useMediaQuery(muiTheme.breakpoints.down('md'));
-  
+  // 使用 'md' breakpoint (768px) 來判斷手機版垂直布局
+  const isMobileVertical = useMediaQuery('(max-width: 768px)');
+
   return (
     <div className="w-full max-w-[1400px] mx-auto">
       {/* Main Layout - Mobile: 1 column (flex-col), Desktop: 2 columns (grid-cols-2) */}
@@ -117,64 +116,64 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             </div>
             <div className="grid grid-cols-2 gap-2">
               {onShowAbout && (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={onShowAbout}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                    theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-blue-500/20'
-                      : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                  } hover:scale-105`}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-blue-500/20'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                    } hover:scale-105`}
                 >
                   <Info className={`size-4 transition-colors ${theme === 'dark' ? 'text-blue-400 group-hover:text-blue-300' : 'text-blue-600 group-hover:text-blue-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('welcome.about')}
                   </span>
-                </button>
+                </Button>
               )}
               {onShowTutorial && (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={onShowTutorial}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                    theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-green-500/20'
-                      : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                  } hover:scale-105`}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-green-500/20'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                    } hover:scale-105`}
                 >
                   <BookOpen className={`size-4 transition-colors ${theme === 'dark' ? 'text-green-400 group-hover:text-green-300' : 'text-green-600 group-hover:text-green-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('welcome.tutorial')}
                   </span>
-                </button>
+                </Button>
               )}
               {onShowVersionHistory && (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={onShowVersionHistory}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                    theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-yellow-500/20'
-                      : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                  } hover:scale-105`}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-yellow-500/20'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                    } hover:scale-105`}
                 >
                   <History className={`size-4 transition-colors ${theme === 'dark' ? 'text-yellow-400 group-hover:text-yellow-300' : 'text-yellow-600 group-hover:text-yellow-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('welcome.versionInfo')}
                   </span>
-                </button>
+                </Button>
               )}
               {onNavigateToPrivacy && (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={onNavigateToPrivacy}
-                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                    theme === 'dark'
-                      ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-red-500/20'
-                      : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                  } hover:scale-105`}
+                  className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
+                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-red-500/20'
+                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                    } hover:scale-105`}
                 >
                   <Shield className={`size-4 transition-colors ${theme === 'dark' ? 'text-red-400 group-hover:text-red-300' : 'text-red-600 group-hover:text-red-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                     {t('about.privacyPolicy')}
                   </span>
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -220,17 +219,16 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             </p>
             <div className="flex flex-col gap-2">
               {onNavigateToPrivacy && (
-                <button
+                <Button
                   onClick={onNavigateToPrivacy}
-                  className={`group flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    theme === 'dark'
-                      ? 'bg-red-600 hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/30 text-white'
-                      : 'bg-red-600 hover:bg-red-700 hover:shadow-md text-white'
-                  } hover:scale-105`}
+                  className={`group flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 h-auto ${theme === 'dark'
+                    ? 'bg-red-600 hover:bg-red-700 hover:shadow-lg hover:shadow-red-500/30 text-white'
+                    : 'bg-red-600 hover:bg-red-700 hover:shadow-md text-white'
+                    } hover:scale-105`}
                 >
                   <Shield className="size-4 transition-transform group-hover:scale-110" />
                   {t('about.privacyPolicy')}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -253,11 +251,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://forms.gle/AjG922YrXFbyAdBa6"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-blue-500/20'
-                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                } hover:scale-105`}
+                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
+                  ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-blue-500/20'
+                  : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                  } hover:scale-105`}
               >
                 <Mail className={`size-4 transition-colors ${theme === 'dark' ? 'text-blue-400 group-hover:text-blue-300' : 'text-blue-600 group-hover:text-blue-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
@@ -268,11 +265,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://discord.gg/3Uu6dZbtKd"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-purple-500/20'
-                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                } hover:scale-105`}
+                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
+                  ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-purple-500/20'
+                  : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                  } hover:scale-105`}
               >
                 <MessageSquare className={`size-4 transition-colors ${theme === 'dark' ? 'text-purple-400 group-hover:text-purple-300' : 'text-purple-600 group-hover:text-purple-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
@@ -283,11 +279,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://forum.gamer.com.tw/C.php?bsn=60030&snA=677879"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-orange-500/20'
-                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                } hover:scale-105`}
+                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
+                  ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-orange-500/20'
+                  : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                  } hover:scale-105`}
               >
                 <Users className={`size-4 transition-colors ${theme === 'dark' ? 'text-orange-400 group-hover:text-orange-300' : 'text-orange-600 group-hover:text-orange-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
@@ -298,11 +293,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://x.com/Hsiungshao"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-gray-400/20'
-                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                } hover:scale-105`}
+                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
+                  ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-gray-400/20'
+                  : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                  } hover:scale-105`}
               >
                 <MessageSquare className={`size-4 transition-colors ${theme === 'dark' ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
@@ -311,11 +305,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               </a>
               <a
                 href="mailto:feedback@multistreaming.org"
-                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${
-                  theme === 'dark'
-                    ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-green-500/20'
-                    : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
-                } hover:scale-105`}
+                className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
+                  ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-green-500/20'
+                  : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                  } hover:scale-105`}
               >
                 <Mail className={`size-4 transition-colors ${theme === 'dark' ? 'text-green-400 group-hover:text-green-300' : 'text-green-600 group-hover:text-green-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>

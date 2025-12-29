@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { X, MessageSquare, Star, Send, Loader2, CheckCircle2 } from 'lucide-react';
-import { Button as MuiButton, Slider, Checkbox } from '@mui/material';
+import { Button } from '../../components/ui/button';
+import { Slider } from '../../components/ui/slider';
+import { Checkbox } from '../../components/ui/checkbox';
 
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -106,21 +108,14 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                             </p>
                         </div>
                     </div>
-                    <MuiButton
-                        variant="text"
-                        size="small"
+                    <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={onClose}
-                        color="secondary"
-                        sx={{
-                            color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-                            '&:hover': {
-                                color: theme === 'dark' ? '#ffffff' : '#000000',
-                                backgroundColor: 'transparent',
-                            },
-                        }}
+                        className={theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}
                     >
                         <X className="size-5" />
-                    </MuiButton>
+                    </Button>
                 </div>
 
                 {/* Content - Scrollable */}
@@ -207,17 +202,11 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                                             <Checkbox
                                                                 id={`usage-time-${val}`}
                                                                 checked={(field.value || []).includes(val)}
-                                                                onChange={(e) => {
-                                                                    const newValue = e.target.checked
+                                                                onCheckedChange={(checked) => {
+                                                                    const newValue = checked
                                                                         ? [...(field.value || []), val]
                                                                         : (field.value || []).filter((v: string) => v !== val);
                                                                     field.onChange(newValue);
-                                                                }}
-                                                                sx={{
-                                                                    color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-                                                                    '&.Mui-checked': {
-                                                                        color: theme === 'dark' ? '#3b82f6' : '#2563eb', // Blue
-                                                                    },
                                                                 }}
                                                             />
                                                             <label htmlFor={`usage-time-${val}`} className={`ml-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} cursor-pointer`}>
@@ -329,25 +318,12 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                     render={({ field }) => (
                                         <div className="px-2 pt-2">
                                             <Slider
-                                                value={typeof field.value === 'number' ? field.value : 0}
-                                                onChange={(_, value) => field.onChange(value)}
+                                                value={[typeof field.value === 'number' ? field.value : 0]}
+                                                onValueChange={(vals) => field.onChange(vals[0])}
                                                 step={1}
-                                                marks={[
-                                                    { value: 0, label: '0' },
-                                                    { value: 10, label: '10' },
-                                                ]}
                                                 min={0}
                                                 max={10}
-                                                valueLabelDisplay="auto"
-                                                sx={{
-                                                    color: theme === 'dark' ? '#3b82f6' : '#2563eb', // Blue
-                                                    '& .MuiSlider-markLabel': {
-                                                        color: theme === 'dark' ? '#9ca3af' : '#4b5563',
-                                                    },
-                                                    '& .MuiSlider-valueLabel': {
-                                                        backgroundColor: theme === 'dark' ? '#3b82f6' : '#2563eb',
-                                                    }
-                                                }}
+                                                className="py-4"
                                             />
                                         </div>
                                     )}
@@ -365,30 +341,19 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
 
                 {/* Footer */}
                 <div className={`p-4 border-t flex justify-end gap-3 ${theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-gray-50'} rounded-b-lg`}>
-                    <MuiButton
+                    <Button
                         onClick={onClose}
-                        variant="outlined"
-                        color="secondary"
+                        variant="outline"
                         disabled={isSubmitting}
-                        sx={{
-                            borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                            color: theme === 'dark' ? '#d1d5db' : '#374151',
-                            '&:hover': {
-                                borderColor: theme === 'dark' ? '#4b5563' : '#9ca3af',
-                            },
-                        }}
+                        className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}
                     >
                         {t('feedback.cancel')}
-                    </MuiButton>
-                    <MuiButton
+                    </Button>
+                    <Button
                         onClick={handleSubmit(onSubmit)}
-                        variant="contained"
-                        color="secondary"
+                        variant="default"
                         disabled={isSubmitting}
-                        sx={{
-                            bgcolor: '#2563eb', // Blue
-                            '&:hover': { bgcolor: '#1d4ed8' },
-                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                         {isSubmitting ? (
                             <>
@@ -401,7 +366,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                 {t('feedback.submit')}
                             </>
                         )}
-                    </MuiButton>
+                    </Button>
                 </div>
             </div>
         </div>

@@ -1,5 +1,5 @@
 import { ArrowLeft, Globe, Sun, Moon, Tv, Grid, MessageCircle, Volume2, Star, Smartphone, Languages, Shield, Search, Radio, Youtube, Zap, RefreshCw, Code, Radio as Broadcast, Database, Gauge, Users, Mail, MessageSquare } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
+import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useI18n } from '../i18n/index';
 
@@ -12,7 +12,7 @@ interface AboutPageProps {
 
 export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }: AboutPageProps) {
   const { locale, setLocale, t } = useI18n();
-  
+
   const languages = [
     { value: 'zh-TW' as const, label: t('chineseTraditional') },
     { value: 'zh-CN' as const, label: t('chineseSimplified') },
@@ -26,24 +26,17 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
       {/* Header Navigation */}
       <div className={`border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-6 py-4`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <MuiButton
-            variant="text"
+          <Button
+            variant="ghost"
             onClick={onBack}
-            color="secondary"
-            sx={{
-              color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-              '&:hover': {
-                color: theme === 'dark' ? '#ffffff' : '#000000',
-                backgroundColor: 'transparent',
-              },
-            }}
+            className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
           >
             <ArrowLeft className="size-4 mr-2" />
             {t('about.backToHome')}
-          </MuiButton>
-          
+          </Button>
+
           <div className="flex items-center gap-2">
-            <Select value={locale} onValueChange={(value) => setLocale(value as any)}>
+            <Select value={locale} onValueChange={(value: string) => setLocale(value as any)}>
               <SelectTrigger className={`min-w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
@@ -56,22 +49,15 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 ))}
               </SelectContent>
             </Select>
-            
-            <MuiButton
-              variant="text"
-              size="small"
+
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onThemeToggle}
-              color="secondary"
-              sx={{
-                color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                '&:hover': {
-                  color: theme === 'dark' ? '#ffffff' : '#000000',
-                  backgroundColor: 'transparent',
-                },
-              }}
+              className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </MuiButton>
+            </Button>
           </div>
         </div>
       </div>
@@ -88,7 +74,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               </svg>
             </div>
           </div>
-          
+
           <p className={`max-w-3xl mx-auto text-lg leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             {t('about.intro')}
           </p>
@@ -102,7 +88,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             </div>
             <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about.websiteIntro')}</h2>
           </div>
-          
+
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               {t('about.intro')}
@@ -118,7 +104,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
           <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
             {t('about.featuresTitle')}
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FeatureCard
               theme={theme}
@@ -128,35 +114,35 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               gradient="from-pink-500 to-purple-500"
               large
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Grid className="size-6" />}
               title={t('about.feature2.title')}
               description={t('about.feature2.description')}
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<MessageCircle className="size-6" />}
               title={t('about.feature3.title')}
               description={t('about.feature3.description')}
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Volume2 className="size-6" />}
               title={t('about.feature4.title')}
               description={t('about.feature4.description')}
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Star className="size-6" />}
               title={t('about.feature5.title')}
               description={t('about.feature5.description')}
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Smartphone className="size-6" />}
@@ -164,7 +150,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               description={t('about.feature6.description')}
               gradient="from-purple-500 to-indigo-500"
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Languages className="size-6" />}
@@ -172,7 +158,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               description={t('about.feature7.description')}
               gradient="from-blue-500 to-cyan-500"
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Shield className="size-6" />}
@@ -180,7 +166,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               description={t('about.feature8.description')}
               gradient="from-pink-600 to-red-600"
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Search className="size-6" />}
@@ -188,7 +174,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               description={t('about.feature9.description')}
               gradient="from-purple-600 to-purple-800"
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Radio className="size-6" />}
@@ -196,14 +182,14 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               description={t('about.feature10.description')}
               gradient="from-blue-600 to-indigo-700"
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Youtube className="size-6" />}
               title={t('about.feature11.title')}
               description={t('about.feature11.description')}
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<Zap className="size-6" />}
@@ -211,7 +197,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               description={t('about.feature12.description')}
               gradient="from-purple-500 to-pink-500"
             />
-            
+
             <FeatureCard
               theme={theme}
               icon={<RefreshCw className="size-6" />}
@@ -226,7 +212,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
           <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
             {t('about.techTitle')}
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TechFeatureCard
               theme={theme}
@@ -234,28 +220,28 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               title={t('about.tech1.title')}
               description={t('about.tech1.description')}
             />
-            
+
             <TechFeatureCard
               theme={theme}
               icon={<Broadcast className="size-6 text-purple-400" />}
               title={t('about.tech2.title')}
               description={t('about.tech2.description')}
             />
-            
+
             <TechFeatureCard
               theme={theme}
               icon={<Database className="size-6 text-green-400" />}
               title={t('about.tech3.title')}
               description={t('about.tech3.description')}
             />
-            
+
             <TechFeatureCard
               theme={theme}
               icon={<Globe className="size-6 text-cyan-400" />}
               title={t('about.tech4.title')}
               description={t('about.tech4.description')}
             />
-            
+
             <TechFeatureCard
               theme={theme}
               icon={<Gauge className="size-6 text-orange-400" />}
@@ -273,7 +259,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             </div>
             <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about.creatorTitle')}</h2>
           </div>
-          
+
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               {t('about.creatorInfo1')}
@@ -295,22 +281,21 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             </div>
             <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about.contactTitle')}</h2>
           </div>
-          
+
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               {t('about.contactIntro')}
             </p>
-            
+
             <div className="space-y-4">
               <a
                 href="https://forms.gle/AjG922YrXFbyAdBa6"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${
-                  theme === 'dark' 
-                    ? 'bg-gray-800 hover:bg-gray-750' 
-                    : 'bg-gray-50 hover:bg-gray-100'
-                }`}
+                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
+                  ? 'bg-gray-800 hover:bg-gray-750'
+                  : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
               >
                 <Mail className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
                 <div>
@@ -322,16 +307,15 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                   </p>
                 </div>
               </a>
-              
+
               <a
                 href="https://discord.gg/3Uu6dZbtKd"
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${
-                  theme === 'dark' 
-                    ? 'bg-gray-800 hover:bg-gray-750' 
-                    : 'bg-gray-50 hover:bg-gray-100'
-                }`}
+                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
+                  ? 'bg-gray-800 hover:bg-gray-750'
+                  : 'bg-gray-50 hover:bg-gray-100'
+                  }`}
               >
                 <MessageSquare className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
                 <div>
@@ -352,7 +336,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
           <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
             {t('about.termsTitle')}
           </h2>
-          
+
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               {t('about.terms1')}
@@ -371,7 +355,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
           <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
             {t('about.privacyTitle')}
           </h2>
-          
+
           <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               {t('about.privacy1')}
@@ -385,19 +369,21 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Footer */}
         <footer className={`text-center pt-8 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
           <div className="flex justify-center gap-8 mb-6">
-            <button
+            <Button
+              variant="link"
               onClick={onBack}
               className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
               {t('about.home')}
-            </button>
+            </Button>
             {onNavigateToPrivacy && (
-              <button
+              <Button
+                variant="link"
                 onClick={onNavigateToPrivacy}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
                 {t('about.privacyPolicy')}
-              </button>
+              </Button>
             )}
             <a
               href="https://forms.gle/AjG922YrXFbyAdBa6"
@@ -408,7 +394,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               {t('about.giveFeedback')}
             </a>
           </div>
-          
+
           <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
             {t('about.copyright')}
           </p>
@@ -449,11 +435,10 @@ function FeatureCard({ theme, icon, title, description, gradient, large }: Featu
   }
 
   return (
-    <div className={`p-6 rounded-xl border transition-all hover:scale-105 ${
-      theme === 'dark' 
-        ? 'bg-gray-900/50 border-gray-800 hover:border-purple-500/50' 
-        : 'bg-white border-gray-200 hover:border-purple-400'
-    }`}>
+    <div className={`p-6 rounded-xl border transition-all hover:scale-105 ${theme === 'dark'
+      ? 'bg-gray-900/50 border-gray-800 hover:border-purple-500/50'
+      : 'bg-white border-gray-200 hover:border-purple-400'
+      }`}>
       <div className="flex items-start gap-4">
         <div className={`p-2 rounded-lg flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
           <div className={theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}>{icon}</div>

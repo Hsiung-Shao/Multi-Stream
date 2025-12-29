@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk@1.1.1";
 import { SearchIcon } from "lucide-react@0.487.0";
-import { Box } from "@mui/material";
+
 
 import { cn } from "./utils";
 import {
@@ -76,42 +76,18 @@ function CommandInput({
   );
 }
 
-function CommandList({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
-  return (
-    <Box
-      sx={{
-        maxHeight: '300px',
-        overflowX: 'hidden',
-        overflowY: 'auto',
-        '&::-webkit-scrollbar': {
-          width: '8px',
-        },
-        '&::-webkit-scrollbar-track': {
-          background: 'transparent',
-        },
-        '&::-webkit-scrollbar-thumb': {
-          backgroundColor: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '5px',
-          '&:hover': {
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          },
-        },
-      }}
-    >
-      <CommandPrimitive.List
-        data-slot="command-list"
-        className={cn(
-          "scroll-py-1",
-          className,
-        )}
-        {...props}
-      />
-    </Box>
-  );
-}
+const CommandList = React.forwardRef<
+  React.ElementRef<typeof CommandPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <CommandPrimitive.List
+    ref={ref}
+    className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
+    {...props}
+  />
+))
+
+CommandList.displayName = CommandPrimitive.List.displayName
 
 function CommandEmpty({
   ...props

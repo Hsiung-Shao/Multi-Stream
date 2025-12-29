@@ -1,5 +1,5 @@
 import { ArrowLeft, Globe, Sun, Moon, Shield, Database, Lock, Eye, FileText, Users, AlertCircle } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
+import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useI18n } from '../i18n/index';
 
@@ -13,7 +13,7 @@ interface PrivacyPageProps {
 
 export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, onNavigateToTerms }: PrivacyPageProps) {
   const { locale, setLocale, t } = useI18n();
-  
+
   const languages = [
     { value: 'zh-TW' as const, label: t('chineseTraditional') },
     { value: 'zh-CN' as const, label: t('chineseSimplified') },
@@ -27,24 +27,17 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
       {/* Header Navigation */}
       <div className={`border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-6 py-4`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <MuiButton
-            variant="text"
+          <Button
+            variant="ghost"
             onClick={onBack}
-            color="secondary"
-            sx={{
-              color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-              '&:hover': {
-                color: theme === 'dark' ? '#ffffff' : '#000000',
-                backgroundColor: 'transparent',
-              },
-            }}
+            className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
           >
             <ArrowLeft className="size-4 mr-2" />
             {t('about.backToHome')}
-          </MuiButton>
-          
+          </Button>
+
           <div className="flex items-center gap-4">
-            <Select value={locale} onValueChange={(value) => setLocale(value as any)}>
+            <Select value={locale} onValueChange={(value: string) => setLocale(value as any)}>
               <SelectTrigger className={`min-w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
@@ -57,22 +50,15 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                 ))}
               </SelectContent>
             </Select>
-            
-            <MuiButton
-              variant="text"
-              size="small"
+
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onThemeToggle}
-              color="secondary"
-              sx={{
-                color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                '&:hover': {
-                  color: theme === 'dark' ? '#ffffff' : '#000000',
-                  backgroundColor: 'transparent',
-                },
-              }}
+              className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </MuiButton>
+            </Button>
           </div>
         </div>
       </div>
@@ -84,11 +70,11 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500">
             <Shield className="size-12 text-white" />
           </div>
-          
+
           <h1 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
             {t('privacy.title')}
           </h1>
-          
+
           <div className={`flex items-center justify-center gap-8 mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             <p>
               <strong>{t('privacy.effectiveDate')}</strong>{t('privacy.effectiveDateValue')}
@@ -97,7 +83,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
               <strong>{t('privacy.lastUpdated')}</strong>{t('privacy.lastUpdatedValue')}
             </p>
           </div>
-          
+
           <p className={`max-w-3xl mx-auto text-lg leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             {t('privacy.intro')}
           </p>
@@ -136,9 +122,9 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
               <li>{t('privacy.section1_5.item4')}</li>
               <li>
                 {t('privacy.section1_5.item5')}
-                <a 
-                  href="https://policies.google.com/privacy" 
-                  target="_blank" 
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:underline ml-1"
                 >
@@ -187,9 +173,9 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                 <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
                   <li>
                     {t('privacy.section3.item4')}
-                    <a 
-                      href="https://www.twitch.tv/p/legal/privacy-policy" 
-                      target="_blank" 
+                    <a
+                      href="https://www.twitch.tv/p/legal/privacy-policy"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline ml-1"
                     >
@@ -198,9 +184,9 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                   </li>
                   <li>
                     {t('privacy.section3.item5')}
-                    <a 
-                      href="https://policies.google.com/privacy" 
-                      target="_blank" 
+                    <a
+                      href="https://policies.google.com/privacy"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline ml-1"
                     >
@@ -247,9 +233,9 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
               <li>{t('privacy.section5.item2')}</li>
               <li>
                 {t('privacy.section5.item3')}
-                <a 
-                  href="https://policies.google.com/privacy" 
-                  target="_blank" 
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:underline ml-1"
                 >
@@ -298,7 +284,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
             </ul>
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
               {t('privacy.section6.contact')}
-              <a 
+              <a
                 href="mailto:feedback@multistreaming.org"
                 className="text-blue-500 hover:underline ml-1"
               >
@@ -341,7 +327,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           >
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
               {t('privacy.section9.content')}
-              <a 
+              <a
                 href="mailto:feedback@multistreaming.org"
                 className="text-blue-500 hover:underline ml-1"
               >
@@ -361,30 +347,33 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
         {/* Footer Navigation */}
         <footer className={`text-center pt-8 mt-8 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
           <div className="flex justify-center gap-8 mb-6">
-            <button
+            <Button
+              variant="link"
               onClick={onBack}
               className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
               {t('privacy.home')}
-            </button>
+            </Button>
             {onNavigateToAbout && (
-              <button
+              <Button
+                variant="link"
                 onClick={onNavigateToAbout}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
                 {t('privacy.about')}
-              </button>
+              </Button>
             )}
             {onNavigateToTerms && (
-              <button
+              <Button
+                variant="link"
                 onClick={onNavigateToTerms}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
                 {t('privacy.terms')}
-              </button>
+              </Button>
             )}
           </div>
-          
+
           <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
             {t('about.copyright')}
           </p>
