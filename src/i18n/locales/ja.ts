@@ -554,6 +554,58 @@ const jaTranslations = {
   'tags.all': 'すべて',
   'tags.clearAll': 'すべてクリア',
   'tags.filterTitle': 'タグを選択',
+  // Feedback
+  'feedback.title': 'フィードバック',
+  'feedback.part1': 'Part 1',
+  'feedback.basicSurvey': '基本調査',
+  'feedback.sourceLabel': 'このツールを知ったきっかけは？ (単一選択)',
+  'feedback.usageTimeLabel': '主に利用する時間帯は？ (複数選択)',
+  'feedback.usageDurationLabel': '利用期間は？ (単一選択)',
+  'feedback.ratingLabel': '全体的な評価 (1-5つ星)',
+  'feedback.part2': 'Part 2',
+  'feedback.coreFeedback': '核となるフィードバック',
+  'feedback.feedbackTypeLabel': 'フィードバックの種類 (単一選択)',
+  'feedback.contentLabel': '詳細内容 (必須)',
+  'feedback.contentPlaceholder': '問題や提案の詳細を記入してください...',
+  'feedback.part3': 'Part 3',
+  'feedback.promotion': '推奨意向',
+  'feedback.npsLabel': '友人にこのツールを勧めたいですか？ (0-10点)',
+  'feedback.npsLow': '勧めない',
+  'feedback.npsHigh': '強く勧める',
+  'feedback.submit': '送信',
+  'feedback.submitting': '送信中...',
+  'feedback.cancel': 'キャンセル',
+  'feedback.successTitle': 'ご意見ありがとうございます！',
+  'feedback.successMessage': '貴重なご意見を受け取りました。改善に役立てさせていただきます。',
+  'feedback.error': '送信に失敗しました。後ほど再度お試しください。',
+  'feedback.required': '必須項目です',
+  'feedback.selectScore': 'スコアを選択してください',
+
+  // Feedback Options
+  'feedback.source.discord': 'Discordコミュニティ',
+  'feedback.source.google': 'Google検索',
+  'feedback.source.friends': '友人の紹介',
+  'feedback.source.bahamut': 'Bahamut',
+  'feedback.source.instagram': 'Instagram',
+  'feedback.source.threads': 'Threads',
+  'feedback.source.other': 'その他',
+
+  'feedback.usageTime.morning': '🌞 朝 (06-12)',
+  'feedback.usageTime.afternoon': '🌤️ 午後 (12-18)',
+  'feedback.usageTime.evening': '🌙 夜 (18-00)',
+  'feedback.usageTime.lateNight': '🦉 深夜 (00-06)',
+
+  'feedback.usageDuration.firstTime': '👋 初めて',
+  'feedback.usageDuration.oneWeek': '📅 1週間以内',
+  'feedback.usageDuration.oneMonth': '🗓️ 1ヶ月以内',
+  'feedback.usageDuration.halfYear': '🗓️ 半年以内',
+  'feedback.usageDuration.yearPlus': '🗓️ 1年以上',
+
+  'feedback.type.bug': '🐛 バグ報告',
+  'feedback.type.feature': '✨ 機能リクエスト',
+  'feedback.type.ui': '🎨 UI/UX提案',
+  'feedback.type.other': '📝 その他',
+
 } as const;
 
 export default jaTranslations;

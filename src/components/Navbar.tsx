@@ -34,6 +34,7 @@ interface NavbarProps {
   onShowTutorial?: () => void;
   onShowVersionHistory?: () => void;
   onShowFavorites?: () => void;
+  onShowFeedback?: () => void; // Added
   onTogglePanel?: () => void;
   onAddStream?: (url: string) => void;
   onSearchFocusChange?: (isFocused: boolean) => void;
@@ -58,6 +59,7 @@ export function Navbar({
   onShowTutorial,
   onShowVersionHistory,
   onShowFavorites,
+  onShowFeedback, // Added
   onTogglePanel,
   onAddStream,
   onSearchFocusChange
@@ -311,7 +313,7 @@ export function Navbar({
     { label: t('navbar.about'), onClick: onShowAbout },
     { label: t('navbar.tutorial'), onClick: onShowTutorial },
     { label: t('navbar.versionHistory'), onClick: onShowVersionHistory },
-    { label: t('navbar.feedback'), onClick: () => window.open('https://docs.google.com/forms/d/e/1FAIpQLSfCBlVZgTwiz-_PEVgkJkPUYHfJyz0Dowln2njQoWcMzit6Ow/viewform', '_blank') },
+    { label: t('navbar.feedback'), onClick: onShowFeedback }, // Updated
   ];
 
   return (
@@ -530,7 +532,7 @@ export function Navbar({
                     <MuiButton
                       variant="text"
                       size="small"
-                      onClick={() => window.open('https://docs.google.com/forms/d/e/1FAIpQLSfCBlVZgTwiz-_PEVgkJkPUYHfJyz0Dowln2njQoWcMzit6Ow/viewform', '_blank')}
+                      onClick={onShowFeedback}
                       color="secondary"
                       sx={{
                         color: theme === 'dark' ? '#d1d5db' : '#4b5563',
@@ -565,8 +567,8 @@ export function Navbar({
             onFocus={handleInputFocus}
             onBlur={handleInputBlur}
             className={`w-full pl-10 ${isMobile ? ((isSearchFocused || searchValue.trim().length > 0) ? 'pr-20' : 'pr-3') : 'pr-52'} ${theme === 'dark'
-                ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-blue-500'
-                : 'bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-blue-500'
+              ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-blue-500'
+              : 'bg-gray-50 border-gray-300 text-black placeholder:text-gray-500 focus:border-blue-500'
               }`}
           />
           {isSearching && (
@@ -646,8 +648,8 @@ export function Navbar({
           {showResults && searchResults.length > 0 && (
             <Box
               className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 ${theme === 'dark'
-                  ? 'bg-gray-900 border-gray-700'
-                  : 'bg-white border-gray-200'
+                ? 'bg-gray-900 border-gray-700'
+                : 'bg-white border-gray-200'
                 }`}
               sx={{
                 maxHeight: '384px',
@@ -675,12 +677,12 @@ export function Navbar({
                     key={result.id}
                     onClick={() => handleSelectResult(result)}
                     className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors relative ${index === selectedIndex
-                        ? theme === 'dark'
-                          ? 'bg-gray-800'
-                          : 'bg-gray-100'
-                        : theme === 'dark'
-                          ? 'hover:bg-gray-800'
-                          : 'hover:bg-gray-50'
+                      ? theme === 'dark'
+                        ? 'bg-gray-800'
+                        : 'bg-gray-100'
+                      : theme === 'dark'
+                        ? 'hover:bg-gray-800'
+                        : 'hover:bg-gray-50'
                       }`}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
@@ -735,8 +737,8 @@ export function Navbar({
           {/* 無搜尋結果提示 */}
           {showResults && searchResults.length === 0 && !isSearching && searchValue.trim().length > 0 && !isUrl(searchValue) && (
             <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 p-3 ${theme === 'dark'
-                ? 'bg-gray-900 border-gray-700 text-gray-400'
-                : 'bg-white border-gray-200 text-gray-500'
+              ? 'bg-gray-900 border-gray-700 text-gray-400'
+              : 'bg-white border-gray-200 text-gray-500'
               }`}>
               <p className="text-sm text-center">{t('navbar.noResults')}</p>
             </div>
@@ -852,8 +854,8 @@ export function Navbar({
                     <Select value={locale} onValueChange={(value) => setLocale(value as typeof locale)}>
                       <SelectTrigger
                         className={`w-[140px] h-9 ${theme === 'dark'
-                            ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
-                            : 'bg-white border-gray-300 text-black hover:bg-gray-50'
+                          ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                          : 'bg-white border-gray-300 text-black hover:bg-gray-50'
                           }`}
                       >
                         <div className="flex items-center gap-2">

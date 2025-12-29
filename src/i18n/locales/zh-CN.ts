@@ -554,6 +554,58 @@ const zhCNTranslations = {
   'tags.all': '所有',
   'tags.clearAll': '清除全部',
   'tags.filterTitle': '选择标签',
+  // Feedback
+  'feedback.title': '意见反馈',
+  'feedback.part1': 'Part 1',
+  'feedback.basicSurvey': '基础调查',
+  'feedback.sourceLabel': '您是如何知道这个工具的? (单选)',
+  'feedback.usageTimeLabel': '您通常在哪个时段使用? (复选)',
+  'feedback.usageDurationLabel': '您使用这个工具多久了? (单选)',
+  'feedback.ratingLabel': '整体使用体验评分 (1-5星)',
+  'feedback.part2': 'Part 2',
+  'feedback.coreFeedback': '核心反馈',
+  'feedback.feedbackTypeLabel': '反馈类型 (单选)',
+  'feedback.contentLabel': '详细内容 (必填)',
+  'feedback.contentPlaceholder': '请详细描述您的问题或建议...',
+  'feedback.part3': 'Part 3',
+  'feedback.promotion': '推广意愿',
+  'feedback.npsLabel': '您愿意向朋友推荐本工具吗? (0-10分)',
+  'feedback.npsLow': '绝对不会',
+  'feedback.npsHigh': '非常愿意',
+  'feedback.submit': '发送反馈',
+  'feedback.submitting': '发送中...',
+  'feedback.cancel': '取消',
+  'feedback.successTitle': '感谢您的反馈！',
+  'feedback.successMessage': '我们已收到您的宝贵意见，将会持续改进。',
+  'feedback.error': '反馈发送失败，请稍后再试。',
+  'feedback.required': '此栏位为必填',
+  'feedback.selectScore': '请选择分数',
+
+  // Feedback Options
+  'feedback.source.discord': 'Discord 社群',
+  'feedback.source.google': 'Google 搜索',
+  'feedback.source.friends': '朋友推荐',
+  'feedback.source.bahamut': '巴哈姆特',
+  'feedback.source.instagram': 'Instagram',
+  'feedback.source.threads': 'Threads',
+  'feedback.source.other': '其他',
+
+  'feedback.usageTime.morning': '🌞 早上 (06-12)',
+  'feedback.usageTime.afternoon': '🌤️ 下午 (12-18)',
+  'feedback.usageTime.evening': '🌙 晚上 (18-00)',
+  'feedback.usageTime.lateNight': '🦉 深夜 (00-06)',
+
+  'feedback.usageDuration.firstTime': '👋 第一次使用',
+  'feedback.usageDuration.oneWeek': '📅 一周内',
+  'feedback.usageDuration.oneMonth': '🗓️ 一个月内',
+  'feedback.usageDuration.halfYear': '🗓️ 半年内',
+  'feedback.usageDuration.yearPlus': '🗓️ 超过一年',
+
+  'feedback.type.bug': '🐛 Bug 回报',
+  'feedback.type.feature': '✨ 功能许愿',
+  'feedback.type.ui': '🎨 UI/UX 建议',
+  'feedback.type.other': '📝 其他',
+
 } as const;
 
 export default zhCNTranslations;
