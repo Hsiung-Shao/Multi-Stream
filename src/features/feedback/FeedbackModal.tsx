@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '@mui/material';
 
 import { FeedbackFormData } from './FeedbackTypes';
+import { FeedbackService, FeedbackPayload } from './FeedbackService';
 import packageJson from '../../../package.json';
 
 interface FeedbackModalProps {
@@ -44,24 +45,26 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
             version: packageJson.version,
         };
 
-        const finalData = {
+        const finalData: FeedbackPayload = {
             ...data,
             ...systemInfo
         };
 
-        // Simulate API call
-        console.log('Feedback Submission:', finalData);
+        try {
+            await FeedbackService.sendFeedback(finalData);
+            setIsSuccess(true);
 
-        // Mock network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        setIsSuccess(true);
-        setIsSubmitting(false);
-
-        // Auto close after 2 seconds
-        setTimeout(() => {
-            onClose();
-        }, 2000);
+            // Auto close after 2 seconds
+            setTimeout(() => {
+                onClose();
+            }, 2000);
+        } catch (error) {
+            console.error('Submission error:', error);
+            // Optional: Show error toast or alert
+            alert('回饋送出失敗，請稍後再試。');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Helper styles matching FavoritesManager
