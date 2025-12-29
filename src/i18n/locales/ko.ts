@@ -554,6 +554,58 @@ const koTranslations = {
   'tags.all': '모두',
   'tags.clearAll': '모두 지우기',
   'tags.filterTitle': '태그 선택',
+  // Feedback
+  'feedback.title': '피드백',
+  'feedback.part1': 'Part 1',
+  'feedback.basicSurvey': '기본 설문',
+  'feedback.sourceLabel': '이 도구를 어떻게 알게 되셨나요? (단일 선택)',
+  'feedback.usageTimeLabel': '주로 언제 사용하시나요? (다중 선택)',
+  'feedback.usageDurationLabel': '사용 기간은 얼마나 되셨나요? (단일 선택)',
+  'feedback.ratingLabel': '전체적인 만족도 (1-5점)',
+  'feedback.part2': 'Part 2',
+  'feedback.coreFeedback': '핵심 피드백',
+  'feedback.feedbackTypeLabel': '피드백 유형 (단일 선택)',
+  'feedback.contentLabel': '상세 내용 (필수)',
+  'feedback.contentPlaceholder': '문제나 제안 사항을 자세히 설명해 주세요...',
+  'feedback.part3': 'Part 3',
+  'feedback.promotion': '추천 의향',
+  'feedback.npsLabel': '친구에게 이 도구를 추천하시겠습니까? (0-10점)',
+  'feedback.npsLow': '절대 아님',
+  'feedback.npsHigh': '매우 그렇다',
+  'feedback.submit': '피드백 보내기',
+  'feedback.submitting': '전송 중...',
+  'feedback.cancel': '취소',
+  'feedback.successTitle': '피드백 감사합니다!',
+  'feedback.successMessage': '소중한 의견을 접수했습니다. 지속적으로 개선하겠습니다.',
+  'feedback.error': '전송 실패. 나중에 다시 시도해 주세요.',
+  'feedback.required': '필수 항목입니다',
+  'feedback.selectScore': '점수를 선택하세요',
+
+  // Feedback Options
+  'feedback.source.discord': 'Discord 커뮤니티',
+  'feedback.source.google': 'Google 검색',
+  'feedback.source.friends': '친구 추천',
+  'feedback.source.bahamut': 'Bahamut',
+  'feedback.source.instagram': 'Instagram',
+  'feedback.source.threads': 'Threads',
+  'feedback.source.other': '기타',
+
+  'feedback.usageTime.morning': '🌞 아침 (06-12)',
+  'feedback.usageTime.afternoon': '🌤️ 오후 (12-18)',
+  'feedback.usageTime.evening': '🌙 저녁 (18-00)',
+  'feedback.usageTime.lateNight': '🦉 심야 (00-06)',
+
+  'feedback.usageDuration.firstTime': '👋 처음',
+  'feedback.usageDuration.oneWeek': '📅 1주일 이내',
+  'feedback.usageDuration.oneMonth': '🗓️ 1개월 이내',
+  'feedback.usageDuration.halfYear': '🗓️ 6개월 이내',
+  'feedback.usageDuration.yearPlus': '🗓️ 1년 이상',
+
+  'feedback.type.bug': '🐛 버그 신고',
+  'feedback.type.feature': '✨ 기능 요청',
+  'feedback.type.ui': '🎨 UI/UX 제안',
+  'feedback.type.other': '📝 기타',
+
 } as const;
 
 export default koTranslations;

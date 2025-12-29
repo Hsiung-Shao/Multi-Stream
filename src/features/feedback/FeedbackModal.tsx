@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { X, MessageSquare, Star, Send, Loader2, CheckCircle2 } from 'lucide-react';
-import { Button as MuiButton, Slider } from '@mui/material';
+import { Button as MuiButton, Slider, Checkbox } from '@mui/material';
 
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Checkbox } from '@mui/material';
 
 import { FeedbackFormData } from './FeedbackTypes';
 import { FeedbackService, FeedbackPayload } from './FeedbackService';
 import packageJson from '../../../package.json';
+import { useI18n } from '../../i18n';
 
 interface FeedbackModalProps {
     theme: 'light' | 'dark';
@@ -17,7 +17,7 @@ interface FeedbackModalProps {
 }
 
 export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
-    // const { t } = useI18n(); // Translation hook available but currently unused
+    const { t } = useI18n();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
@@ -29,7 +29,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
             rating: 5,
             feedbackType: 'bug',
             content: '',
-            npsScore: undefined, // undefined to force selection? or default 10? let's make it required
+            npsScore: undefined,
         }
     });
 
@@ -60,8 +60,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
             }, 2000);
         } catch (error) {
             console.error('Submission error:', error);
-            // Optional: Show error toast or alert
-            alert('回饋送出失敗，請稍後再試。');
+            alert(t('feedback.error'));
         } finally {
             setIsSubmitting(false);
         }
@@ -81,10 +80,10 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         <CheckCircle2 className="w-10 h-10 text-green-600" />
                     </div>
                     <h2 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                        感謝您的回饋！
+                        {t('feedback.successTitle')}
                     </h2>
                     <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        我們已收到您的寶貴意見，將會持續改進。
+                        {t('feedback.successMessage')}
                     </p>
                 </div>
             </div>
@@ -101,9 +100,9 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                             <MessageSquare className="size-6 text-white" />
                         </div>
                         <div>
-                            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>意見回饋</h2>
+                            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('feedback.title')}</h2>
                             <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                                幫助我們做得更好
+                                {t('navbar.feedback')}
                             </p>
                         </div>
                     </div>
@@ -131,14 +130,16 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         {/* Part 1: Basic Survey */}
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
-                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>Part 1</span>
-                                基本調查
+                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>
+                                    {t('feedback.part1')}
+                                </span>
+                                {t('feedback.basicSurvey')}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Source */}
                                 <div>
-                                    <label className={labelStyle}>從哪得知 MultiStream Hub?</label>
+                                    <label className={labelStyle}>{t('feedback.sourceLabel')}</label>
                                     <Controller
                                         name="source"
                                         control={control}
@@ -146,22 +147,24 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder="請選擇來源" />
+                                                    <SelectValue placeholder={t('feedback.required')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                                                    {['Discord', 'Google 搜尋', '朋友介紹', '巴哈姆特', 'Instagram', 'Threads', '其他'].map(opt => (
-                                                        <SelectItem key={opt} value={opt} className={theme === 'dark' ? 'text-white' : 'text-black'}>{opt}</SelectItem>
+                                                    {['discord', 'google', 'friends', 'bahamut', 'instagram', 'threads', 'other'].map(opt => (
+                                                        <SelectItem key={opt} value={opt} className={theme === 'dark' ? 'text-white' : 'text-black'}>
+                                                            {t(`feedback.source.${opt}` as any)}
+                                                        </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         )}
                                     />
-                                    {errors.source && <span className="text-red-500 text-xs mt-1">此欄位必填</span>}
+                                    {errors.source && <span className="text-red-500 text-xs mt-1">{t('feedback.required')}</span>}
                                 </div>
 
                                 {/* Usage Duration */}
                                 <div>
-                                    <label className={labelStyle}>您使用本工具多久了?</label>
+                                    <label className={labelStyle}>{t('feedback.usageDurationLabel')}</label>
                                     <Controller
                                         name="usageDuration"
                                         control={control}
@@ -169,48 +172,45 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder="請選擇時間" />
+                                                    <SelectValue placeholder={t('feedback.required')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
                                                     {[
-                                                        { val: 'firstTime', label: '第一次使用' },
-                                                        { val: 'oneWeek', label: '一週內' },
-                                                        { val: 'oneMonth', label: '一個月內' },
-                                                        { val: 'halfYear', label: '半年內' },
-                                                        { val: 'yearPlus', label: '一年以上' }
-                                                    ].map(opt => (
-                                                        <SelectItem key={opt.val} value={opt.val} className={theme === 'dark' ? 'text-white' : 'text-black'}>{opt.label}</SelectItem>
+                                                        'firstTime',
+                                                        'oneWeek',
+                                                        'oneMonth',
+                                                        'halfYear',
+                                                        'yearPlus'
+                                                    ].map(val => (
+                                                        <SelectItem key={val} value={val} className={theme === 'dark' ? 'text-white' : 'text-black'}>
+                                                            {t(`feedback.usageDuration.${val}` as any)}
+                                                        </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         )}
                                     />
-                                    {errors.usageDuration && <span className="text-red-500 text-xs mt-1">此欄位必填</span>}
+                                    {errors.usageDuration && <span className="text-red-500 text-xs mt-1">{t('feedback.required')}</span>}
                                 </div>
 
                                 {/* Usage Time (Checkbox Multi-select) */}
                                 <div className="col-span-1 md:col-span-2">
-                                    <label className={labelStyle}>您通常在什麼時段使用本工具? (可複選)</label>
+                                    <label className={labelStyle}>{t('feedback.usageTimeLabel')}</label>
                                     <div className="flex flex-wrap gap-4">
                                         <Controller
                                             name="usageTime"
                                             control={control}
                                             render={({ field }) => (
                                                 <>
-                                                    {[
-                                                        { val: 'morning', label: '早上 (6-12)' },
-                                                        { val: 'afternoon', label: '下午 (12-18)' },
-                                                        { val: 'evening', label: '晚上 (18-24)' },
-                                                        { val: 'lateNight', label: '深夜 (0-6)' }
-                                                    ].map((option) => (
-                                                        <div key={option.val} className="flex items-center">
+                                                    {['morning', 'afternoon', 'evening', 'lateNight'].map((val) => (
+                                                        <div key={val} className="flex items-center">
                                                             <Checkbox
-                                                                id={`usage-time-${option.val}`}
-                                                                checked={(field.value || []).includes(option.val)}
+                                                                id={`usage-time-${val}`}
+                                                                checked={(field.value || []).includes(val)}
                                                                 onChange={(e) => {
                                                                     const newValue = e.target.checked
-                                                                        ? [...(field.value || []), option.val]
-                                                                        : (field.value || []).filter((v: string) => v !== option.val);
+                                                                        ? [...(field.value || []), val]
+                                                                        : (field.value || []).filter((v: string) => v !== val);
                                                                     field.onChange(newValue);
                                                                 }}
                                                                 sx={{
@@ -220,8 +220,8 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                                                     },
                                                                 }}
                                                             />
-                                                            <label htmlFor={`usage-time-${option.val}`} className={`ml-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} cursor-pointer`}>
-                                                                {option.label}
+                                                            <label htmlFor={`usage-time-${val}`} className={`ml-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} cursor-pointer`}>
+                                                                {t(`feedback.usageTime.${val}` as any)}
                                                             </label>
                                                         </div>
                                                     ))}
@@ -233,7 +233,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
 
                                 {/* Rating */}
                                 <div className="col-span-1 md:col-span-2">
-                                    <label className={labelStyle}>您對目前的流暢度與界面滿意嗎?</label>
+                                    <label className={labelStyle}>{t('feedback.ratingLabel')}</label>
                                     <Controller
                                         name="rating"
                                         control={control}
@@ -262,13 +262,15 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         {/* Part 2: Core Feedback */}
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
-                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800'}`}>Part 2</span>
-                                核心反饋
+                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800'}`}>
+                                    {t('feedback.part2')}
+                                </span>
+                                {t('feedback.coreFeedback')}
                             </div>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className={labelStyle}>回饋類型</label>
+                                    <label className={labelStyle}>{t('feedback.feedbackTypeLabel')}</label>
                                     <Controller
                                         name="feedbackType"
                                         control={control}
@@ -276,13 +278,14 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder="請選擇類型" />
+                                                    <SelectValue placeholder={t('feedback.required')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                                                    <SelectItem value="bug" className={theme === 'dark' ? 'text-white' : 'text-black'}>🐛 Bug 回報</SelectItem>
-                                                    <SelectItem value="feature" className={theme === 'dark' ? 'text-white' : 'text-black'}>✨ 功能許願</SelectItem>
-                                                    <SelectItem value="ui" className={theme === 'dark' ? 'text-white' : 'text-black'}>🎨 UI/UX 建議</SelectItem>
-                                                    <SelectItem value="other" className={theme === 'dark' ? 'text-white' : 'text-black'}>📝 其他</SelectItem>
+                                                    {['bug', 'feature', 'ui', 'other'].map(val => (
+                                                        <SelectItem key={val} value={val} className={theme === 'dark' ? 'text-white' : 'text-black'}>
+                                                            {t(`feedback.type.${val}` as any)}
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                         )}
@@ -290,15 +293,15 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                 </div>
 
                                 <div>
-                                    <label className={labelStyle}>詳細內容 (必填)</label>
+                                    <label className={labelStyle}>{t('feedback.contentLabel')}</label>
                                     <Controller
                                         name="content"
                                         control={control}
-                                        rules={{ required: '請填寫詳細內容' }}
+                                        rules={{ required: t('feedback.required') }}
                                         render={({ field }) => (
                                             <Textarea
                                                 {...field}
-                                                placeholder="請詳細描述您的問題或建議..."
+                                                placeholder={t('feedback.contentPlaceholder')}
                                                 className={`min-h-[120px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
                                             />
                                         )}
@@ -311,12 +314,14 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         {/* Part 3: Promotion */}
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
-                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'}`}>Part 3</span>
-                                推廣意願
+                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'}`}>
+                                    {t('feedback.part3')}
+                                </span>
+                                {t('feedback.promotion')}
                             </div>
 
                             <div>
-                                <label className={labelStyle}>您願意向朋友推薦本工具嗎? (0-10分)</label>
+                                <label className={labelStyle}>{t('feedback.npsLabel')}</label>
                                 <Controller
                                     name="npsScore"
                                     control={control}
@@ -348,10 +353,10 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                     )}
                                 />
                                 <div className={`flex justify-between text-xs mt-2 px-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    <span>絕對不會</span>
-                                    <span>非常願意</span>
+                                    <span>{t('feedback.npsLow')}</span>
+                                    <span>{t('feedback.npsHigh')}</span>
                                 </div>
-                                {errors.npsScore && <span className="text-red-500 text-xs mt-1">請選擇分數</span>}
+                                {errors.npsScore && <span className="text-red-500 text-xs mt-1">{t('feedback.selectScore')}</span>}
                             </div>
                         </div>
 
@@ -373,7 +378,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                             },
                         }}
                     >
-                        取消
+                        {t('feedback.cancel')}
                     </MuiButton>
                     <MuiButton
                         onClick={handleSubmit(onSubmit)}
@@ -388,12 +393,12 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                送出中...
+                                {t('feedback.submitting')}
                             </>
                         ) : (
                             <>
                                 <Send className="w-4 h-4 mr-2" />
-                                送出回饋
+                                {t('feedback.submit')}
                             </>
                         )}
                     </MuiButton>
