@@ -1178,28 +1178,23 @@ export function StreamBox({
     >
       {/* Toolbar - 工具列表 */}
       <div
-        className={`controls flex items-center gap-3 px-4 py-1 ${theme === 'dark' ? 'bg-gray-800/95 border-b border-gray-700' : 'bg-gray-50/95 border-b border-gray-200'} backdrop-blur-sm`}
+        className={`controls flex items-center gap-2 px-2 h-6 min-h-[24px] ${theme === 'dark' ? 'bg-gray-800/95 border-b border-gray-700' : 'bg-gray-50/95 border-b border-gray-200'} backdrop-blur-sm`}
       >
         {/* 左側工具組 */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* 串流順序 */}
           {streamIndex !== undefined && (
             <div className="flex items-center flex-shrink-0">
-              <span className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              <span className={`text-[10px] font-medium leading-none ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                 #{streamIndex + 1}
               </span>
             </div>
           )}
 
-          {/* 串流標題 */}
-          <div className="flex items-center min-w-0 flex-shrink-0">
-            <span className={`text-sm font-semibold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              {getStreamTitle()}
-            </span>
-          </div>
+          {/* 移除串流標題，只保留功能按鈕 */}
 
           {/* 音量條 */}
-          <div className="flex items-center gap-2 flex-shrink-0" style={{ width: '120px' }}>
+          <div className="flex items-center gap-1 flex-shrink-0" style={{ width: '120px' }}>
             <Button
               variant="ghost"
               size="icon"
@@ -1207,7 +1202,7 @@ export function StreamBox({
                 e.stopPropagation();
                 handleToggleMute();
               }}
-              className={`h-6 w-6 p-0 min-w-[24px] ${isMuted
+              className={`h-4 w-4 p-0 min-w-[16px] ${isMuted
                 ? (theme === 'dark' ? 'text-red-500 hover:bg-gray-700 hover:text-red-400' : 'text-red-600 hover:bg-gray-200 hover:text-red-500')
                 : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
                 }`}
@@ -1215,7 +1210,7 @@ export function StreamBox({
             >
               {isMuted ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
             </Button>
-            <div className="w-[80px]" onClick={(e) => e.stopPropagation()}>
+            <div className="w-[85px]" onClick={(e) => e.stopPropagation()}>
               <Slider
                 value={[localVolume]}
                 onValueChange={handleVolumeChange}
@@ -1226,8 +1221,8 @@ export function StreamBox({
               />
             </div>
             <span
-              className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} vol-value-display`}
-              style={{ minWidth: '32px' }}
+              className={`text-[9px] leading-none ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} vol-value-display`}
+              style={{ minWidth: '20px' }}
             >
               {(() => {
                 const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
@@ -1242,21 +1237,21 @@ export function StreamBox({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black'}`}
+            className={`h-4 w-4 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black'}`}
             title="重新整理串流"
             onClick={(e) => {
               e.stopPropagation();
               onReload(streamData.id);
             }}
           >
-            <RefreshCw className="size-4" />
+            <RefreshCw className="size-3" />
           </Button>
 
           {/* 內嵌聊天室顯示/隱藏按鈕 */}
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 p-0 ${streamData.chatVisible
+            className={`h-4 w-4 p-0 ${streamData.chatVisible
               ? (theme === 'dark' ? 'text-purple-400 bg-purple-500/30 hover:bg-purple-500/40 hover:text-purple-300' : 'text-purple-600 bg-purple-500/10 hover:bg-purple-500/15 hover:text-purple-700')
               : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
               } ${streamData.chatVisible ? 'border border-purple-500/50' : ''}`}
@@ -1266,21 +1261,21 @@ export function StreamBox({
               handleToggleChat();
             }}
           >
-            <MessageSquare className="size-4" />
+            <MessageSquare className="size-3" />
           </Button>
 
           {/* 關閉串流按鈕 */}
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-400' : 'text-gray-600 hover:bg-red-100 hover:text-red-600'}`}
+            className={`h-4 w-4 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-400' : 'text-gray-600 hover:bg-red-100 hover:text-red-600'}`}
             title="關閉串流"
             onClick={(e) => {
               e.stopPropagation();
               onRemove(streamData.id);
             }}
           >
-            <X className="size-4" />
+            <X className="size-3" />
           </Button>
         </div>
       </div>
@@ -1290,10 +1285,11 @@ export function StreamBox({
         className={`content-wrapper flex ${streamData.chatVisible ? 'flex-row' : 'flex-col'}`}
         id={`content-wrapper${streamData.id}`}
         style={{
-          height: 'calc(100% - 48px)', // 減去工具列高度
+          height: 'calc(100% - 24px)', // 減去工具列高度 (24px)
           width: '100%',
           position: 'relative'
         }}
+
       >
         <div
           ref={playerContainerRef}
