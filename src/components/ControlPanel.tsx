@@ -524,7 +524,7 @@ export function ControlPanel({
 
   return (
     <div
-      className={`fixed ${isMobile ? 'inset-x-0 bottom-0 w-full border-t' : 'right-0 w-[500px] border-l'} ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} shadow-2xl overflow-y-auto overflow-x-hidden`}
+      className={`fixed ${isMobile ? 'inset-x-0 bottom-0 w-full border-t' : 'right-0 w-[500px] border-l'} ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} shadow-2xl`}
       style={{
         top: isMobile ? 'auto' : `${navbarHeight}px`,
         bottom: isMobile ? 0 : 'auto',
@@ -533,469 +533,471 @@ export function ControlPanel({
         zIndex: 10,
       }}
     >
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h2 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('controlPanel.title')}</h2>
-        </div>
-
-        {/* Layout Control */}
-        <Section theme={theme} title={t('controlPanel.layoutControl')}>
-          <div className="grid grid-cols-4 gap-2">
-            {layouts.map((layout) => (
-              <Button
-                key={layout.id}
-                variant="ghost"
-                onClick={() => {
-                  if (onLayoutChange) {
-                    onLayoutChange(layout.id as LayoutType);
-                  }
-                }}
-                title={layout.label}
-                aria-label={layout.label}
-                className={`aspect-square rounded-lg border-2 transition-all p-0 h-auto ${currentLayout === layout.id
-                  ? 'border-purple-500 bg-purple-500/20'
-                  : theme === 'dark'
-                    ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50 hover:bg-gray-800'
-                    : 'border-gray-300 bg-gray-100 hover:border-purple-500/50 hover:bg-gray-100'
-                  }`}
-              >
-                <LayoutPreview
-                  layoutId={layout.id}
-                  cols={layout.cols}
-                  rows={layout.rows}
-                  special={layout.special}
-                  theme={theme}
-                />
-              </Button>
-            ))}
+      <ScrollArea className="h-full">
+        <div className="p-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('controlPanel.title')}</h2>
           </div>
-        </Section>
 
-        {/* Chat Layout */}
-        <Section theme={theme} title={t('controlPanel.sideChatLayout')}>
-          <div className="grid grid-cols-4 gap-2">
-            {chatLayouts.map((layout) => {
-              const chatLayoutTypeMap: Record<number, ChatLayoutType> = {
-                1: 'none',
-                2: 'single',
-                3: 'dual',
-                4: 'quad'
-              };
-              const mappedType = chatLayoutTypeMap[layout.id] || 'none';
-              const isSelected = chatLayoutType === mappedType;
-
-              return (
+          {/* Layout Control */}
+          <Section theme={theme} title={t('controlPanel.layoutControl')}>
+            <div className="grid grid-cols-4 gap-2">
+              {layouts.map((layout) => (
                 <Button
                   key={layout.id}
                   variant="ghost"
                   onClick={() => {
-                    if (onChatLayoutChange) {
-                      onChatLayoutChange(mappedType);
+                    if (onLayoutChange) {
+                      onLayoutChange(layout.id as LayoutType);
                     }
                   }}
                   title={layout.label}
                   aria-label={layout.label}
-                  className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center p-0 h-auto ${isSelected
+                  className={`aspect-square rounded-lg border-2 transition-all p-0 h-auto ${currentLayout === layout.id
                     ? 'border-purple-500 bg-purple-500/20'
                     : theme === 'dark'
                       ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50 hover:bg-gray-800'
                       : 'border-gray-300 bg-gray-100 hover:border-purple-500/50 hover:bg-gray-100'
                     }`}
                 >
-                  <ChatLayoutPreview id={layout.id} theme={theme} />
+                  <LayoutPreview
+                    layoutId={layout.id}
+                    cols={layout.cols}
+                    rows={layout.rows}
+                    special={layout.special}
+                    theme={theme}
+                  />
                 </Button>
-              );
-            })}
-          </div>
-        </Section>
+              ))}
+            </div>
+          </Section>
 
-        {/* Chat Control */}
-        <Section theme={theme} title={t('controlPanel.chatControl')}>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                {t('controlPanel.showAllChats')}
-              </Label>
-              <Switch
-                checked={showAllChat}
-                onCheckedChange={(checked: boolean) => {
-                  // 調用回調函數來更新所有串流的聊天室狀態
-                  // showAllChat 狀態會通過 useEffect 自動同步
-                  if (onToggleAllChat) {
-                    onToggleAllChat(checked);
+          {/* Chat Layout */}
+          <Section theme={theme} title={t('controlPanel.sideChatLayout')}>
+            <div className="grid grid-cols-4 gap-2">
+              {chatLayouts.map((layout) => {
+                const chatLayoutTypeMap: Record<number, ChatLayoutType> = {
+                  1: 'none',
+                  2: 'single',
+                  3: 'dual',
+                  4: 'quad'
+                };
+                const mappedType = chatLayoutTypeMap[layout.id] || 'none';
+                const isSelected = chatLayoutType === mappedType;
+
+                return (
+                  <Button
+                    key={layout.id}
+                    variant="ghost"
+                    onClick={() => {
+                      if (onChatLayoutChange) {
+                        onChatLayoutChange(mappedType);
+                      }
+                    }}
+                    title={layout.label}
+                    aria-label={layout.label}
+                    className={`aspect-video rounded-lg border-2 transition-all flex items-center justify-center p-0 h-auto ${isSelected
+                      ? 'border-purple-500 bg-purple-500/20'
+                      : theme === 'dark'
+                        ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50 hover:bg-gray-800'
+                        : 'border-gray-300 bg-gray-100 hover:border-purple-500/50 hover:bg-gray-100'
+                      }`}
+                  >
+                    <ChatLayoutPreview id={layout.id} theme={theme} />
+                  </Button>
+                );
+              })}
+            </div>
+          </Section>
+
+          {/* Chat Control */}
+          <Section theme={theme} title={t('controlPanel.chatControl')}>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {t('controlPanel.showAllChats')}
+                </Label>
+                <Switch
+                  checked={showAllChat}
+                  onCheckedChange={(checked: boolean) => {
+                    // 調用回調函數來更新所有串流的聊天室狀態
+                    // showAllChat 狀態會通過 useEffect 自動同步
+                    if (onToggleAllChat) {
+                      onToggleAllChat(checked);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </Section>
+
+          {/* Favorites */}
+          <Section theme={theme} title={t('controlPanel.favoriteStreams')}>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                  onClick={onShowFavorites}
+                >
+                  {t('controlPanel.manageFavorites')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefreshStatus}
+                  disabled={isRefreshing}
+                  className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
+                >
+                  <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleAddCurrentToFavorites}
+                  title={t('controlPanel.addCurrentToFavorites') || '收藏當前串流'}
+                  className="border-purple-500 text-purple-500 hover:bg-purple-500/10"
+                >
+                  <Star className="size-4" />
+                </Button>
+              </div>
+
+              {/* Tag Filters */}
+              {tags.length > 0 && (
+                <TagFilterLayout
+                  tags={tags}
+                  selectedTags={filterTags}
+                  onToggleTag={(tagId) => {
+                    setFilterTags(prev =>
+                      prev.includes(tagId)
+                        ? prev.filter(id => id !== tagId)
+                        : [...prev, tagId]
+                    );
+                  }}
+                  onClear={() => setFilterTags([])}
+                  theme={theme}
+                  columns={6}
+                />
+              )}
+
+              {/* 收藏串流列表 - 限高並添加滾動 */}
+              <ScrollArea className="h-[400px] pr-3 rounded-md border p-2">
+                <div className="space-y-3">
+                  {/* 分類的收藏 - 資料夾優先，分類內按開台狀態排序 */}
+                  {categories.map(category => {
+                    const categoryFavorites = favorites.filter(f => {
+                      const matchCategory = f.categoryId === category.id;
+                      const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                      return matchCategory && matchTags;
+                    });
+                    if (categoryFavorites.length === 0) return null;
+
+                    // 分類內排序：開台狀態 > 未開台
+                    const sortedCategoryFavorites = sortFavorites(categoryFavorites);
+
+                    const isExpanded = expandedCategories.has(category.id);
+
+                    return (
+                      <div key={category.id} className="space-y-1">
+                        {/* 分類標題 */}
+                        <Button
+                          variant="ghost"
+                          onClick={() => toggleCategory(category.id)}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors h-auto justify-start ${theme === 'dark'
+                            ? 'hover:bg-gray-800 text-gray-300'
+                            : 'hover:bg-gray-100 text-gray-700'
+                            }`}
+                        >
+                          {isExpanded ? (
+                            <FolderOpen className="size-4 text-purple-500" />
+                          ) : (
+                            <Folder className="size-4 text-purple-500" />
+                          )}
+                          <span className="flex-1 text-left font-medium">{category.name}</span>
+                          <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {categoryFavorites.length}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className="size-4" />
+                          ) : (
+                            <ChevronDown className="size-4" />
+                          )}
+                        </Button>
+
+                        {/* 分類內容 */}
+                        {isExpanded && (
+                          <div className="ml-6 space-y-1">
+                            {/* 分類本身也可以載入（載入該分類下的所有串流） */}
+                            <Button
+                              variant="ghost"
+                              onClick={async () => {
+                                // 使用 favoritesLoader 批量載入
+                                await favoritesLoader.loadMultiple(categoryFavorites);
+                                // favoritesLoader 會自動調用 addStream，無需在此重複調用
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors h-auto justify-start ${theme === 'dark'
+                                ? 'hover:bg-gray-800 text-gray-400'
+                                : 'hover:bg-gray-100 text-gray-600'
+                                }`}
+                            >
+                              <Play className="size-4" />
+                              <span className="text-sm">載入分類內所有串流</span>
+                            </Button>
+
+                            {/* 分類下的收藏 - 已排序 */}
+                            {sortedCategoryFavorites.map((favorite) => (
+                              <FavoriteStreamComponent
+                                key={favorite.id}
+                                favorite={favorite}
+                                theme={theme}
+                                onLoad={handleLoadFavorite}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* 未分類的收藏 - 按開台狀態排序 */}
+                  {(() => {
+                    const uncategorizedFavorites = sortFavorites(favorites.filter(f => {
+                      const isUncategorized = !f.categoryId;
+                      const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                      return isUncategorized && matchTags;
+                    }));
+                    return uncategorizedFavorites.length > 0 ? (
+                      <div className="space-y-1">
+                        {uncategorizedFavorites.map((favorite) => (
+                          <FavoriteStreamComponent
+                            key={favorite.id}
+                            favorite={favorite}
+                            theme={theme}
+                            onLoad={handleLoadFavorite}
+                          />
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* 無收藏提示 */}
+                  {favorites.length === 0 && (
+                    <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {t('favorites.noFavorites')}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </Section>
+
+          {/* Volume Control */}
+          <Section theme={theme} title={t('controlPanel.mediaControl')}>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel.masterVolume')}</Label>
+                {/* 隱藏的 input 元素，用於與舊的 JavaScript 代碼同步 */}
+                <input
+                  id="master-volume"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={masterVolume}
+                  style={{ display: 'none' }}
+                  readOnly
+                  aria-label={t('controlPanel.masterVolume')}
+                />
+                <div className="w-full flex-1">
+                  <Slider
+                    value={[masterVolume]}
+                    onValueChange={(vals: number[]) => handleMasterVolumeChange(vals[0])}
+                    min={0}
+                    max={100}
+                    step={1}
+                  />
+                </div>
+                <span id="master-volume-value" className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                  {masterMuted ? '0%' : `${masterVolume}%`}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMasterMuteAll}
+                  className={masterMuted
+                    ? `border-red-600 bg-red-600/10 text-red-600 hover:bg-red-600/20 hover:border-red-700`
+                    : `border-purple-600 bg-purple-600/10 text-purple-600 hover:bg-purple-600/20 hover:border-purple-700`
                   }
-                }}
-              />
+                >
+                  {masterMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
+                  {t('controlPanel.muteAll')}
+                </Button>
+              </div>
             </div>
-          </div>
-        </Section>
+          </Section>
 
-        {/* Favorites */}
-        <Section theme={theme} title={t('controlPanel.favoriteStreams')}>
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-                onClick={onShowFavorites}
-              >
-                {t('controlPanel.manageFavorites')}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleRefreshStatus}
-                disabled={isRefreshing}
-                className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}
-              >
-                <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleAddCurrentToFavorites}
-                title={t('controlPanel.addCurrentToFavorites') || '收藏當前串流'}
-                className="border-purple-500 text-purple-500 hover:bg-purple-500/10"
-              >
-                <Star className="size-4" />
-              </Button>
-            </div>
+          {/* Stream Order */}
+          <Section theme={theme} title={t('controlPanel.streamOrder')}>
+            {streams.length === 0 ? (
+              <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
+                {t('controlPanel.noStreams')}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {streams.map((stream, index) => {
+                  // 獲取串流標題
+                  const getStreamTitle = () => {
+                    if (stream.displayName) return stream.displayName;
+                    if (stream.name) return stream.name;
+                    if (stream.platform === 'twitch') {
+                      return stream.channelId || `串流 #${stream.id}`;
+                    } else {
+                      return stream.videoId || `串流 #${stream.id}`;
+                    }
+                  };
 
-            {/* Tag Filters */}
-            {tags.length > 0 && (
-              <TagFilterLayout
-                tags={tags}
-                selectedTags={filterTags}
-                onToggleTag={(tagId) => {
-                  setFilterTags(prev =>
-                    prev.includes(tagId)
-                      ? prev.filter(id => id !== tagId)
-                      : [...prev, tagId]
-                  );
-                }}
-                onClear={() => setFilterTags([])}
-                theme={theme}
-                columns={6}
-              />
-            )}
-
-            {/* 收藏串流列表 - 限高並添加滾動 */}
-            <ScrollArea className="h-[400px] pr-3 rounded-md border p-2">
-              <div className="space-y-3">
-                {/* 分類的收藏 - 資料夾優先，分類內按開台狀態排序 */}
-                {categories.map(category => {
-                  const categoryFavorites = favorites.filter(f => {
-                    const matchCategory = f.categoryId === category.id;
-                    const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
-                    return matchCategory && matchTags;
-                  });
-                  if (categoryFavorites.length === 0) return null;
-
-                  // 分類內排序：開台狀態 > 未開台
-                  const sortedCategoryFavorites = sortFavorites(categoryFavorites);
-
-                  const isExpanded = expandedCategories.has(category.id);
+                  const streamTitle = getStreamTitle();
+                  const streamVolume = stream.volume || 100;
+                  // 單獨靜音狀態（不受全部靜音影響，用於 UI 顯示）
+                  const isStreamMuted = stream.isMuted || false;
+                  // 實際靜音狀態（考慮全部靜音，用於播放器控制）
+                  const isActuallyMuted = masterMuted ? true : isStreamMuted;
 
                   return (
-                    <div key={category.id} className="space-y-1">
-                      {/* 分類標題 */}
-                      <Button
-                        variant="ghost"
-                        onClick={() => toggleCategory(category.id)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors h-auto justify-start ${theme === 'dark'
-                          ? 'hover:bg-gray-800 text-gray-300'
-                          : 'hover:bg-gray-100 text-gray-700'
-                          }`}
-                      >
-                        {isExpanded ? (
-                          <FolderOpen className="size-4 text-purple-500" />
-                        ) : (
-                          <Folder className="size-4 text-purple-500" />
-                        )}
-                        <span className="flex-1 text-left font-medium">{category.name}</span>
-                        <span className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {categoryFavorites.length}
+                    <div
+                      key={stream.id}
+                      className={`rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
+                    >
+                      {/* Header */}
+                      <div className={`flex items-center gap-2 px-3 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <GripVertical className={`size-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
+                        <span className={`text-sm font-medium flex-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                          #{index + 1} - {streamTitle}
                         </span>
-                        {isExpanded ? (
-                          <ChevronUp className="size-4" />
-                        ) : (
-                          <ChevronDown className="size-4" />
-                        )}
-                      </Button>
+                        <div className="flex gap-1">
+                          {onToggleMute && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`h-6 w-6 p-0 ${isStreamMuted
+                                ? 'text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30'
+                                : 'text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
+                                }`}
+                              title={
+                                masterMuted
+                                  ? streamVolume > 0
+                                    ? `全部靜音中（單獨靜音：${isStreamMuted ? '開啟' : '關閉'}，音量：${streamVolume}%）`
+                                    : '全部靜音中，無法操作（音量為 0）'
+                                  : isStreamMuted
+                                    ? '取消靜音'
+                                    : '靜音'
+                              }
+                              onClick={() => {
+                                // 全部靜音時：如果音量 > 0，允許操作單獨靜音
+                                // 全部靜音時：如果音量 = 0，不允許操作（全部靜音優先）
+                                // 非全部靜音時：允許操作
+                                if (masterMuted) {
+                                  // 全部靜音時，只有當音量 > 0 時才允許操作
+                                  if (streamVolume > 0 && onToggleMute) {
+                                    onToggleMute(stream.id);
+                                  }
+                                } else {
+                                  // 非全部靜音時，允許操作
+                                  if (onToggleMute) {
+                                    onToggleMute(stream.id);
+                                  }
+                                }
+                              }}
+                              disabled={masterMuted && streamVolume === 0}
+                            >
+                              {isStreamMuted ? (
+                                <VolumeX className="size-3" />
+                              ) : (
+                                <Volume2 className="size-3" />
+                              )}
+                            </Button>
+                          )}
+                          {onMoveStreamUp && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                              title={t('controlPanel.moveUp')}
+                              onClick={() => onMoveStreamUp(stream.id)}
+                              disabled={index === 0}
+                            >
+                              <ChevronUp className="size-3" />
+                            </Button>
+                          )}
+                          {onMoveStreamDown && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                              title={t('controlPanel.moveDown')}
+                              onClick={() => onMoveStreamDown(stream.id)}
+                              disabled={index === streams.length - 1}
+                            >
+                              <ChevronDown className="size-3" />
+                            </Button>
+                          )}
+                          {onRemoveStream && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 p-0 text-gray-500 hover:bg-red-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                              title={t('controlPanel.remove')}
+                              onClick={() => onRemoveStream(stream.id)}
+                            >
+                              <X className="size-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
 
-                      {/* 分類內容 */}
-                      {isExpanded && (
-                        <div className="ml-6 space-y-1">
-                          {/* 分類本身也可以載入（載入該分類下的所有串流） */}
-                          <Button
-                            variant="ghost"
-                            onClick={async () => {
-                              // 使用 favoritesLoader 批量載入
-                              await favoritesLoader.loadMultiple(categoryFavorites);
-                              // favoritesLoader 會自動調用 addStream，無需在此重複調用
-                            }}
-                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors h-auto justify-start ${theme === 'dark'
-                              ? 'hover:bg-gray-800 text-gray-400'
-                              : 'hover:bg-gray-100 text-gray-600'
-                              }`}
-                          >
-                            <Play className="size-4" />
-                            <span className="text-sm">載入分類內所有串流</span>
-                          </Button>
+                      {/* Volume Control */}
+                      {onVolumeChange && (
+                        <div className="px-3 py-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                              🔊 {t('controlPanel.volume')}
+                            </span>
+                            <div className="w-full flex-1">
+                              <Slider
+                                value={[streamVolume]}
+                                onValueChange={(vals: number[]) => {
+                                  const newVolume = vals[0];
+                                  // 在全部靜音狀態下調整音量時，不解除全部靜音
+                                  // 如果音量 > 0，恢復音量，但不取消全部靜音
+                                  // 單獨的靜音按鈕會根據音量值恢復可用（disabled={masterMuted && streamVolume === 0}）
 
-                          {/* 分類下的收藏 - 已排序 */}
-                          {sortedCategoryFavorites.map((favorite) => (
-                            <FavoriteStreamComponent
-                              key={favorite.id}
-                              favorite={favorite}
-                              theme={theme}
-                              onLoad={handleLoadFavorite}
-                            />
-                          ))}
+                                  // 如果調整音量且之前是單獨靜音狀態，取消單獨靜音
+                                  // 只有在不是全域靜音時，才處理單獨靜音
+                                  if (newVolume > 0 && !masterMuted && stream.isMuted && onToggleMute) {
+                                    onToggleMute(stream.id);
+                                  }
+                                  onVolumeChange(stream.id, newVolume);
+                                }}
+                                min={0}
+                                max={100}
+                                step={1}
+                              />
+                            </div>
+                            <span className={`text-xs min-w-[40px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                              {masterMuted ? `0% (${streamVolume}%)` : `${streamVolume}%`}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
                   );
                 })}
-
-                {/* 未分類的收藏 - 按開台狀態排序 */}
-                {(() => {
-                  const uncategorizedFavorites = sortFavorites(favorites.filter(f => {
-                    const isUncategorized = !f.categoryId;
-                    const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
-                    return isUncategorized && matchTags;
-                  }));
-                  return uncategorizedFavorites.length > 0 ? (
-                    <div className="space-y-1">
-                      {uncategorizedFavorites.map((favorite) => (
-                        <FavoriteStreamComponent
-                          key={favorite.id}
-                          favorite={favorite}
-                          theme={theme}
-                          onLoad={handleLoadFavorite}
-                        />
-                      ))}
-                    </div>
-                  ) : null;
-                })()}
-
-                {/* 無收藏提示 */}
-                {favorites.length === 0 && (
-                  <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {t('favorites.noFavorites')}
-                  </div>
-                )}
               </div>
-            </ScrollArea>
-          </div>
-        </Section>
+            )}
+          </Section>
 
-        {/* Volume Control */}
-        <Section theme={theme} title={t('controlPanel.mediaControl')}>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel.masterVolume')}</Label>
-              {/* 隱藏的 input 元素，用於與舊的 JavaScript 代碼同步 */}
-              <input
-                id="master-volume"
-                type="range"
-                min="0"
-                max="100"
-                value={masterVolume}
-                style={{ display: 'none' }}
-                readOnly
-                aria-label={t('controlPanel.masterVolume')}
-              />
-              <div className="w-full flex-1">
-                <Slider
-                  value={[masterVolume]}
-                  onValueChange={(vals: number[]) => handleMasterVolumeChange(vals[0])}
-                  min={0}
-                  max={100}
-                  step={1}
-                />
-              </div>
-              <span id="master-volume-value" className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                {masterMuted ? '0%' : `${masterVolume}%`}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleMasterMuteAll}
-                className={masterMuted
-                  ? `border-red-600 bg-red-600/10 text-red-600 hover:bg-red-600/20 hover:border-red-700`
-                  : `border-purple-600 bg-purple-600/10 text-purple-600 hover:bg-purple-600/20 hover:border-purple-700`
-                }
-              >
-                {masterMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
-                {t('controlPanel.muteAll')}
-              </Button>
-            </div>
-          </div>
-        </Section>
-
-        {/* Stream Order */}
-        <Section theme={theme} title={t('controlPanel.streamOrder')}>
-          {streams.length === 0 ? (
-            <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-              {t('controlPanel.noStreams')}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {streams.map((stream, index) => {
-                // 獲取串流標題
-                const getStreamTitle = () => {
-                  if (stream.displayName) return stream.displayName;
-                  if (stream.name) return stream.name;
-                  if (stream.platform === 'twitch') {
-                    return stream.channelId || `串流 #${stream.id}`;
-                  } else {
-                    return stream.videoId || `串流 #${stream.id}`;
-                  }
-                };
-
-                const streamTitle = getStreamTitle();
-                const streamVolume = stream.volume || 100;
-                // 單獨靜音狀態（不受全部靜音影響，用於 UI 顯示）
-                const isStreamMuted = stream.isMuted || false;
-                // 實際靜音狀態（考慮全部靜音，用於播放器控制）
-                const isActuallyMuted = masterMuted ? true : isStreamMuted;
-
-                return (
-                  <div
-                    key={stream.id}
-                    className={`rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}
-                  >
-                    {/* Header */}
-                    <div className={`flex items-center gap-2 px-3 py-2 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-                      <GripVertical className={`size-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
-                      <span className={`text-sm font-medium flex-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                        #{index + 1} - {streamTitle}
-                      </span>
-                      <div className="flex gap-1">
-                        {onToggleMute && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-6 w-6 p-0 ${isStreamMuted
-                              ? 'text-red-500 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/30'
-                              : 'text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700'
-                              }`}
-                            title={
-                              masterMuted
-                                ? streamVolume > 0
-                                  ? `全部靜音中（單獨靜音：${isStreamMuted ? '開啟' : '關閉'}，音量：${streamVolume}%）`
-                                  : '全部靜音中，無法操作（音量為 0）'
-                                : isStreamMuted
-                                  ? '取消靜音'
-                                  : '靜音'
-                            }
-                            onClick={() => {
-                              // 全部靜音時：如果音量 > 0，允許操作單獨靜音
-                              // 全部靜音時：如果音量 = 0，不允許操作（全部靜音優先）
-                              // 非全部靜音時：允許操作
-                              if (masterMuted) {
-                                // 全部靜音時，只有當音量 > 0 時才允許操作
-                                if (streamVolume > 0 && onToggleMute) {
-                                  onToggleMute(stream.id);
-                                }
-                              } else {
-                                // 非全部靜音時，允許操作
-                                if (onToggleMute) {
-                                  onToggleMute(stream.id);
-                                }
-                              }
-                            }}
-                            disabled={masterMuted && streamVolume === 0}
-                          >
-                            {isStreamMuted ? (
-                              <VolumeX className="size-3" />
-                            ) : (
-                              <Volume2 className="size-3" />
-                            )}
-                          </Button>
-                        )}
-                        {onMoveStreamUp && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
-                            title={t('controlPanel.moveUp')}
-                            onClick={() => onMoveStreamUp(stream.id)}
-                            disabled={index === 0}
-                          >
-                            <ChevronUp className="size-3" />
-                          </Button>
-                        )}
-                        {onMoveStreamDown && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
-                            title={t('controlPanel.moveDown')}
-                            onClick={() => onMoveStreamDown(stream.id)}
-                            disabled={index === streams.length - 1}
-                          >
-                            <ChevronDown className="size-3" />
-                          </Button>
-                        )}
-                        {onRemoveStream && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 p-0 text-gray-500 hover:bg-red-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                            title={t('controlPanel.remove')}
-                            onClick={() => onRemoveStream(stream.id)}
-                          >
-                            <X className="size-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Volume Control */}
-                    {onVolumeChange && (
-                      <div className="px-3 py-2 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                            🔊 {t('controlPanel.volume')}
-                          </span>
-                          <div className="w-full flex-1">
-                            <Slider
-                              value={[streamVolume]}
-                              onValueChange={(vals: number[]) => {
-                                const newVolume = vals[0];
-                                // 在全部靜音狀態下調整音量時，不解除全部靜音
-                                // 如果音量 > 0，恢復音量，但不取消全部靜音
-                                // 單獨的靜音按鈕會根據音量值恢復可用（disabled={masterMuted && streamVolume === 0}）
-
-                                // 如果調整音量且之前是單獨靜音狀態，取消單獨靜音
-                                // 只有在不是全域靜音時，才處理單獨靜音
-                                if (newVolume > 0 && !masterMuted && stream.isMuted && onToggleMute) {
-                                  onToggleMute(stream.id);
-                                }
-                                onVolumeChange(stream.id, newVolume);
-                              }}
-                              min={0}
-                              max={100}
-                              step={1}
-                            />
-                          </div>
-                          <span className={`text-xs min-w-[40px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
-                            {masterMuted ? `0% (${streamVolume}%)` : `${streamVolume}%`}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Section>
-
-      </div>
+        </div>
+      </ScrollArea>
     </div>
 
   );

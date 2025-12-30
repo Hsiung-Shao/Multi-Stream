@@ -1178,7 +1178,7 @@ export function StreamBox({
     >
       {/* Toolbar - 工具列表 */}
       <div
-        className={`controls flex items-center gap-3 px-4 py-2.5 ${theme === 'dark' ? 'bg-gray-800/95 border-b border-gray-700' : 'bg-gray-50/95 border-b border-gray-200'} backdrop-blur-sm`}
+        className={`controls flex items-center gap-3 px-4 py-1 ${theme === 'dark' ? 'bg-gray-800/95 border-b border-gray-700' : 'bg-gray-50/95 border-b border-gray-200'} backdrop-blur-sm`}
       >
         {/* 左側工具組 */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1208,8 +1208,8 @@ export function StreamBox({
                 handleToggleMute();
               }}
               className={`h-6 w-6 p-0 min-w-[24px] ${isMuted
-                  ? (theme === 'dark' ? 'text-red-500 hover:bg-gray-700 hover:text-red-400' : 'text-red-600 hover:bg-gray-200 hover:text-red-500')
-                  : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
+                ? (theme === 'dark' ? 'text-red-500 hover:bg-gray-700 hover:text-red-400' : 'text-red-600 hover:bg-gray-200 hover:text-red-500')
+                : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
                 }`}
               title={isMuted ? '取消靜音' : '靜音'}
             >
@@ -1222,7 +1222,7 @@ export function StreamBox({
                 min={0}
                 max={100}
                 step={1}
-                className={theme === 'dark' ? 'py-1' : 'py-1'}
+                className={theme === 'dark' ? '' : ''}
               />
             </div>
             <span
@@ -1257,8 +1257,8 @@ export function StreamBox({
             variant="ghost"
             size="icon"
             className={`h-8 w-8 p-0 ${streamData.chatVisible
-                ? (theme === 'dark' ? 'text-purple-400 bg-purple-500/30 hover:bg-purple-500/40 hover:text-purple-300' : 'text-purple-600 bg-purple-500/10 hover:bg-purple-500/15 hover:text-purple-700')
-                : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
+              ? (theme === 'dark' ? 'text-purple-400 bg-purple-500/30 hover:bg-purple-500/40 hover:text-purple-300' : 'text-purple-600 bg-purple-500/10 hover:bg-purple-500/15 hover:text-purple-700')
+              : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
               } ${streamData.chatVisible ? 'border border-purple-500/50' : ''}`}
             title={streamData.chatVisible ? '隱藏聊天室' : '顯示聊天室'}
             onClick={(e) => {
@@ -1287,7 +1287,7 @@ export function StreamBox({
 
       {/* Content Wrapper */}
       <div
-        className={`content-wrapper flex ${streamData.chatVisible ? 'layout-horizontal' : 'layout-vertical'}`}
+        className={`content-wrapper flex ${streamData.chatVisible ? 'flex-row' : 'flex-col'}`}
         id={`content-wrapper${streamData.id}`}
         style={{
           height: 'calc(100% - 48px)', // 減去工具列高度

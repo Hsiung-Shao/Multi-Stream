@@ -50,6 +50,12 @@ declare global {
     streamCount: number;
     players: Record<number, { type: 'twitch' | 'youtube'; player: any }>;
     streamData: Record<number, any>;
+    // Legacy Chat Functions
+    createChat: (id: number, platform: 'twitch' | 'youtube', channelId: string, videoId: string) => void;
+    toggleChat: (id: number) => void;
+    separateChat: (id: number) => void;
+    closeSeparatedChat: (id: number) => void;
+    setupChatResizer: (id: number, callback: any) => void;
   }
 }
 
@@ -238,7 +244,6 @@ export default function App() {
   // 初始載入完成後刷新收藏列表的開台狀態
   useEffect(() => {
     // 等待收藏系統和必要的 API 初始化完成
-    // 等待收藏系統和必要的 API 初始化完成
     const initAndRefreshFavorites = async () => {
       // 移除這裡的 wait loop，因為 favoritesService 已經導入且可用
       // 保持 API 載入邏輯
@@ -269,6 +274,32 @@ export default function App() {
     setTimeout(() => {
       initAndRefreshFavorites();
     }, 1000);
+  }, []);
+
+  // 聊天室管理器初始化 (ChatManager)
+  useEffect(() => {
+    console.log('[App] 初始化聊天室管理器...');
+
+    // 動態導入以避免循環依賴或過早執行
+    import('./features/chat/ChatManager').then(({ ChatManager }) => {
+      const chatManager = new ChatManager();
+      const legacyApi = chatManager.getLegacyApi();
+
+      // 掛載到全局 window
+      Object.assign(window, legacyApi);
+
+      console.log('[App] 聊天室管理器已掛載到 window');
+
+      // 發送事件通知其他組件
+      window.dispatchEvent(new Event('chatFunctionsReady'));
+    }).catch(err => {
+      console.error('[App] 聊天室管理器初始化失敗:', err);
+    });
+
+    return () => {
+      // 清理全局函數 (可選，但在 React 嚴格模式下可能有助於除錯)
+      // 在此不刪除，因為可能會影響熱重載體驗
+    };
   }, []);
 
   // 背景自動刷新機制 (Auto Refresh)

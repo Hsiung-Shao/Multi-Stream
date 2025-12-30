@@ -1,6 +1,7 @@
 import { X, Tv, Search, Layout, MessageCircle, Volume2, RefreshCw, Star, Radio, Database, Settings, Smartphone, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { ScrollArea } from './ui/scroll-area';
 import { useI18n } from '../i18n/index';
 
 interface TutorialProps {
@@ -44,8 +45,8 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
             </div>
 
             <TabsContent value="basic" className="flex-1 min-h-0 mt-0">
-              <div className="p-6 h-[800px] overflow-y-auto overflow-x-hidden">
-                <div className="space-y-6 pr-4">
+              <ScrollArea className="h-[800px]">
+                <div className="p-6 space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Tv className="size-5" />}
@@ -183,12 +184,12 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     }
                   />
                 </div>
-              </div>
+              </ScrollArea>
             </TabsContent>
 
             <TabsContent value="advanced" className="flex-1 min-h-0 mt-0">
-              <div className="p-6 h-[800px] overflow-y-auto overflow-x-hidden">
-                <div className="space-y-6 pr-4">
+              <ScrollArea className="h-[800px]">
+                <div className="p-6 space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Star className="size-5" />}
@@ -327,12 +328,12 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     }
                   />
                 </div>
-              </div>
+              </ScrollArea>
             </TabsContent>
 
             <TabsContent value="tips" className="flex-1 min-h-0 mt-0">
-              <div className="p-6 h-[800px] overflow-y-auto overflow-x-hidden">
-                <div className="space-y-6 pr-4">
+              <ScrollArea className="h-[800px]">
+                <div className="p-6 space-y-6 pr-4">
                   <Section
                     theme={theme}
                     icon={<Zap className="size-5" />}
@@ -375,7 +376,7 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                     }
                   />
                 </div>
-              </div>
+              </ScrollArea>
             </TabsContent>
           </Tabs>
         </div>

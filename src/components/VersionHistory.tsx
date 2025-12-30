@@ -1,6 +1,7 @@
 import { X, Calendar, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { useI18n } from '../i18n/index';
+import { ScrollArea } from './ui/scroll-area';
 
 interface VersionHistoryProps {
   theme: 'light' | 'dark';
@@ -181,9 +182,9 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className={`max-w-3xl w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'} rounded-lg shadow-2xl max-h-[90vh] flex flex-col`}>
+      <div className={`max-w-3xl w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'} rounded-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden`}>
         {/* Header */}
-        <div className={`flex items-center justify-between p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`flex items-center justify-between p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} flex-shrink-0`}>
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
               <Sparkles className="size-6 text-white" />
@@ -206,8 +207,8 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 max-h-[800px] overflow-y-auto overflow-x-hidden">
-          <div className="space-y-6">
+        <ScrollArea className="h-[70vh] w-full px-6">
+          <div className="py-6 space-y-6">
             {versions.map((version, index) => (
               <div
                 key={version.version}
@@ -260,7 +261,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollArea>
       </div>
     </div>
   );
