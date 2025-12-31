@@ -5,21 +5,14 @@ interface ModalState {
     tutorial: boolean;
     favorites: boolean;
     feedback: boolean;
-    about: boolean;
-    privacy: boolean;
-    history: boolean;
-    tutorial: boolean;
-    favorites: boolean;
-    feedback: boolean;
+    about: boolean; // Legacy/Unused if using page
+    privacy: boolean; // Legacy/Unused if using page
     ytRisk: boolean;
-    // Pages are handled separately, but we could treat them as modals if we wanted. 
-    // For now, let's keep page state separate as per App.tsx logic.
 }
 
 export type PageType = 'home' | 'about' | 'privacy';
 
 interface UIState {
-    theme: 'light' | 'dark';
     theme: 'light' | 'dark';
     page: PageType;
     isPanelCollapsed: boolean;
@@ -36,14 +29,12 @@ interface UIState {
     closeModal: (name: keyof ModalState) => void;
     toggleModal: (name: keyof ModalState) => void;
     setMasterVolume: (volume: number | ((prev: number) => number)) => void;
-    setMasterVolume: (volume: number | ((prev: number) => number)) => void;
     setMasterMuted: (muted: boolean | ((prev: boolean) => boolean)) => void;
     setPage: (page: PageType) => void;
     setSearchFocused: (focused: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
-    theme: 'dark',
     theme: 'dark',
     page: 'home',
     isPanelCollapsed: false,
@@ -54,8 +45,7 @@ export const useUIStore = create<UIState>((set) => ({
         favorites: false,
         feedback: false,
         about: false,
-        about: false, // Legacy/Unused if using page
-        privacy: false, // Legacy/Unused if using page
+        privacy: false,
         ytRisk: false,
     },
     masterVolume: 100,
