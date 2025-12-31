@@ -1,92 +1,8 @@
 # TODO
 
-## 筆記prompt
-
-不做任何修改
-
-如果有任何問題請先不要做任何修改，先反問再做處理
-你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
-
-不做任何修改
-
-你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
-代理server 啟動指令: wrangler pages dev functions --port 8788
-Shadcn UI
-
-## 需要優化的內容
-
-- Navbar 的 RWD 需要優化
-- 手機版面優化
-- 任意解析度版面優化
-
-## 待新增功能
-
-### [] 1. Twitch 分類搜尋
-
-### [] 2. Twitch 使用者追隨頻道匯入
-
-### [*] 3. Feedback 系統
-
-### [] 4. 快捷鍵功能
-
-### [] 5. 短期觀看串流復原
-
-### [] 6. streambox 模組升級為畫布功能
-
-### [] 7. 網站的主題個人化調整
-
-### [] 8. 將製作首頁將觀看區域做區分
-
-### [] 9. 訂閱會員付費功能
-
-### [] 10. 小人移動顯示聊天氣泡的趣味功能
-
-### [] 11. 在畫布功能下提供全螢幕功能
-
-### [] 12. 製作 PWA 功能
-
-### [] 13. 新增未直播以及正在直播兩個標籤(僅收藏串流使用)
-
-### [] 14. 聊天室布局更新，添加更多的聊天室布局 6、8、10
-
-## Bug Fixes
-
-- [ ] Fix StreamBox black screen (layout type mismatch)
-
-## 重構建議
-
-經過分析您的專案結構與 package.json，我整理出以下幾個可以透過導入套件或重構來達到「輕量化」與「提升開發體驗」的建議方向：
-
-1. [*] 移除 @mui/material 並全面擁抱 Radix UI + Tailwind CSS (輕量化/效能)
-    - 現狀：您的專案目前同時並存了兩個巨大的 UI 系統。package.json 中顯示您已經引入了大量 @radix-ui primitives 和 lucide-react (通常是 shadcn/ui 的一部分)，但在 FavoritesManager.tsx 等檔案中仍在使用 @mui/material 的 Button, Checkbox, Box。
-
-    - 問題：MUI 是一個非常重型的 UI 庫，與 Tailwind CSS 的設計理念也不同。同時加載這兩套系統會顯著增加 Bundle Size (打包大小)，影響網頁載入速度。
-
-    - 建議：
-        - 移除 MUI：將剩餘的 MUI 組件 (Button, Input, Checkbox, Tabs) 全部替換為專案現有的 ui (shadcn-like) 組件。
-        效益：這將是最顯著的輕量化優化，不僅減少最終代碼大小，也讓設計風格更加統一。
-
-2. 引入 TanStack Query (React Query) (開發體驗/代碼簡化)
-    - 現狀：目前資料獲取 (Twitch/YouTube API) 和狀態變更 (Favorites) 多依賴手刻的 Service 層 (如 twitchService, favoritesService) 以及組件內的 useEffect + useState 來處理 loading 狀態、錯誤處理和緩存。
-    - 建議：引入 TanStack Query。
-    - 用途：專門處理 Server State (API 資料)。它能自動處理 Loading/Error 狀態、自動重試、視窗聚焦時重新獲取數據 (Re-fetch on focus)、以及強大的緩存機制。
-    效益：可以刪除大量手寫的 Loading/Error 處理邏輯，讓 Service 層更專注於「如何打 API」，而將「何時打 API」與「狀態管理」交給 React Query。這對於您計畫中的 Twitch 分類搜尋 和 追隨頻道匯入 功能非常有幫助。
-3. 使用已安裝的 react-hook-form 優化表單 (代碼品質)
-
-    - 現狀：在 FavoritesManager.tsx 中，我看到使用了大量的 useState 來管理表單欄位 (streamUrl, streamName, categoryName...)。
-    - 發現：您的 package.json 其實已經安裝了 react-hook-form，但似乎尚未充分利用。
-    - 建議：將 FavoritesManager 的表單邏輯改寫為 react-hook-form。
-    - 效益：大幅減少 useState 的數量，內建驗證 (Validation) 機制更強大且易用，能有效提升該組件的可維護性。
-
-4. 引入 Zustand 進行全域狀態管理 (架構優化)
-
-    - 現狀：App.tsx 中承載了過多的全域狀態 (streams, isPanelCollapsed, theme 等) 和業務邏輯，這導致 App.tsx 變得龐大且難以維護 (Prop Drilling 問題)。
-    - 建議：引入 Zustand。
-    - 效益：它是一個非常輕量 (1kB) 且 Hook-based 的狀態管理庫。您可以將「串流列表管理」、「播放器狀態」等邏輯抽離出 App.tsx，放入獨立的 Store 中。這會讓 App.tsx 瘦身，且組件可以只訂閱它需要的狀態，減少不必要的渲染。
-
 ## 專案架構概覽與核心模組 (Project Architecture & Core Modules)
 
-本專案採用 **Modern React + Legacy Bridge (Hybrid)** 架構。前端使用 React 18, Vite, TypeScript, Zustand, Tailwind CSS，並透過 Bridge 層與舊有的 Global Scripts 進行相容。
+本專案採用 **Modern React + Legacy Bridge (Hybrid)** 架構。前端使用 React 18, Vite, TypeScript, Zustand, Tailwind CSS, Shadcn UI，並透過 Bridge 層與舊有的 Global Scripts 進行相容。
 
 ### 1. 系統分層架構 (Layered Architecture)
 
@@ -178,3 +94,139 @@ graph TD
 - `window.players`: 儲存真實的 Twitch/YouTube Player 實例。
 - `window.createChat` / `window.toggleChat`: 直接操作 DOM 的聊天室管理函數。
 - `window.addStream`: 讓外部腳本 (Bookmarklet 或 Console) 能調用 React 內部的 `addStream`。
+
+## 筆記prompt
+
+不做任何修改
+
+如果有任何問題請先不要做任何修改，先反問再做處理
+你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
+
+不做任何修改
+
+你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
+代理server 啟動指令: wrangler pages dev functions --port 8788
+Shadcn UI
+
+## 需要優化的內容
+
+- Navbar 的 RWD 需要優化
+- 手機版面優化
+- 任意解析度版面優化
+
+## 待新增功能
+
+### [] 1. Twitch 分類搜尋
+
+### [] 2. Twitch 使用者追隨頻道匯入
+
+### [*] 3. Feedback 系統
+
+### [] 4. 快捷鍵功能
+
+### [] 5. 短期觀看串流復原
+
+### [] 6. streambox 模組升級為畫布功能
+
+### [] 7. 網站的主題個人化調整
+
+### [] 8. 將製作首頁將觀看區域做區分
+
+### [] 9. 訂閱會員付費功能
+
+### [] 10. 小人移動顯示聊天氣泡的趣味功能
+
+### [] 11. 在畫布功能下提供全螢幕功能
+
+### [] 12. 製作 PWA 功能
+
+### [] 13. 新增未直播以及正在直播兩個標籤(僅收藏串流使用)
+
+### [] 14. 聊天室布局更新，添加更多的聊天室布局 6、8、10
+
+# 代碼審查報告 (Code Review Report)
+
+## 1. 執行摘要 (Executive Summary)
+
+目前的專案處於 **混合架構 (Hybrid Architecture)** 階段。雖然已經成功引入了現代化的技術棧 (React 18, Vite, TypeScript, Zustand, Tailwind CSS)，但代碼庫中仍保留了大量的「遺留代碼橋接 (Legacy Bridges)」和「全局變數依賴」。
+
+- **優點**:
+  - 專案結構清晰 (Features/Components/Store/Services 分層)。
+  - 使用了強型別 (TypeScript Strict Mode)。
+  - UI 組件化程度高 (基於 Shadcn UI)。
+  - 核心功能如收藏管理 (`FavoritesService`) 已採用較好的服務模式。
+
+- **主要風險**:
+  - `App.tsx` 過於龐大 (God Component)，包含過多業務邏輯。
+  - 狀態管理存在「雙重真相 (Double Truth)」問題 (Zustand Store 與 `window.streamData` 同步)。
+  - 對 `window` 全局對象的依賴過重，增加了維護難度和潛在的運行時錯誤風險。
+
+## 2. 詳細發現 (Detailed Findings)
+
+### 2.1 架構與代碼組織 (Architecture & Organization)
+
+- **App.tsx (God Component)**:
+  - 檔案超過 1000 行。
+  - **問題**: 混合了 UI 佈局、音量控制邏輯、API 載入、事件監聽、Legacy 兼容代碼等。
+  - **影響**: 難以測試，難以閱讀，任何修改都可能導致意外的副作用。
+  - **建議**: 應將邏輯拆分為 Custom Hooks (如 `useMasterAudio`, `useAutoRefresh`, `useLegacyBridge`)。
+
+- **遺留代碼集成 (Legacy Integration)**:
+  - 專案中大量使用了 `window.streamData`, `window.players`, `window.streamCount`。
+  - `src/main.tsx` 和 `App.tsx` 中存在 Monkey-patching (如 `window.addStream = ...`)。
+  - **影響**: 破壞了 React 的單向資料流原則，使狀態難以追蹤。
+
+### 2.2 狀態管理 (State Management)
+
+- **useStreamStore.ts**:
+  - 雖然使用了 Zustand，但在 Action (如 `addStream`, `updateStream`) 中手動同步 `window.streamData`。
+  - **ID 生成**: 依賴 `window.streamCount` (Line 119) 來生成 ID。這是一個危險的模式，應該在 Store 內部維護計數器或使用 UUID。
+  - **API 調用**: Store 內部直接調用 `window.twitchApi`，導致 Store 與 View 層/Global 層耦合。
+
+### 2.3 性能與最佳實踐 (Performance & Best Practices)
+
+- **音量控制 (`handleMasterVolumeChange`)**:
+  - 透過遍歷 `window.players` 進行 DOM 操作或 API 調用。雖然效率很高，但這種命令式編程 (Imperative Programming) 與 React 的聲明式 (Declarative) 風格不符。
+  - **建議**: 長期來看應封裝 `Player` 實例的管理，或確保這種副作用被隔離。
+
+- **apiLoader.ts**:
+  - 使用 `setInterval` 輪詢檢查外部腳本載入狀態。這是必要的惡，但其中的 Legacy Shim (自動填充 `window.twitchApi`) 顯示專案仍在過渡期。
+  - **建議**: 持續將這些全局依賴遷移至 Service 層導入。
+
+### 2.4 安全性與穩定性 (Security & Stability)
+
+- **API Key**: 雖然前端專案難以完全隱藏 API Key，但應確保敏感邏輯盡量在後端或 Serverless Functions (如 `functions` 目錄所示) 中執行。
+- **類型安全**: `App.tsx` 中的 `declare global` 是一種權宜之計。建議將其移動到專案的 `types/global.d.ts` 或 `src/types` 目錄下統一管理，避免污染組件代碼。
+
+## 3. 重構建議路線圖 (Refactoring Roadmap)
+
+### 階段一：邏輯抽離 (Logic Extraction)
+>
+> **目標**: 為 `App.tsx` 減肥，提高可讀性。
+
+1. **Extract Hooks**:
+    - `useAudioController`: 封裝所有音量/靜音相關邏輯。
+    - `useAutoRefresh`: 封裝背景刷新邏輯。
+    - `useYouTubeRiskMonitor`: 封裝 YouTube 風險提示邏輯。
+    - `useLegacyBridge`: 將所有 `window.xxx = ...` 的賦值操作移至單獨的組件或 Hook 中。
+
+2. **Service Integration**:
+    - 確保 `useStreamStore`不再直接依賴 `window` 對象，而是調用 `apiLoader` 或相關 Service。
+
+### 階段二：狀態統一 (State Unification)
+>
+> **目標**: 消除 `window` 全局變數依賴。
+
+1. **ID Generation**: 改用 React/Store 內部的 ID 生成機制 (如 `crypto.randomUUID()` 或 Store 內計數)。
+2. **Remove Legacy Sync**: 逐步移除 `useStreamStore` 中對 `window.streamData` 的寫入，並修改讀取端改為訂閱 Store。
+
+### 階段三：全面現代化 (Full Modernization)
+>
+> **目標**: 純淨的 React 架構。
+
+1. **Replace window.players**: 建立一個 React Context 或 Store 來管理播放器實例引用，而非掛載在 window 上。
+2. **Clean up types**: 移除 `declare global` 中不再需要的遺留屬性。
+
+## 4. 結論 (Conclusion)
+
+專案代碼質量總體良好，特別是在新的 Feature 模組 (Favorites) 中。主要的技術債來自於為了維持與舊版功能的兼容性而保留的 Global Variable 依賴。建議接下來的開發重點放在「逐步剝離 Global 依賴」與「拆分 App.tsx」上。
