@@ -11,6 +11,8 @@ export interface StreamData {
   isMuted?: boolean;
   name?: string | null;
   displayName?: string | null;
+  _reloadTrigger?: number; // 用於強制重新加載播放器
+  _reloadKey?: number; // 用於強制重新渲染組件
 }
 
 export interface UrlValidation {
