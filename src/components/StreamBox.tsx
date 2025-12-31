@@ -111,6 +111,10 @@ export function StreamBox({
         playerContainer.style.width = `calc(100% - ${finalChatWidth}px)`;
         playerContainer.style.height = '100%';
         playerContainer.style.transition = 'width 0.3s ease';
+
+        // 同步 React State，避免 re-render 時樣式跑掉
+        setChatWidth(finalChatWidth);
+        setPlayerWidth(`calc(100% - ${finalChatWidth}px)`);
       } else {
         // 隱藏聊天室時，播放器佔滿 100%
         chatContainer.style.width = '0px';
@@ -129,8 +133,8 @@ export function StreamBox({
       }
     } else if (playerContainer) {
       // 如果沒有聊天室容器，播放器佔滿 100%
-      const playerWidth = streamData.chatVisible ? '80%' : '100%';
-      playerContainer.style.width = playerWidth;
+      const newWidth = streamData.chatVisible ? '80%' : '100%';
+      playerContainer.style.width = newWidth;
       playerContainer.style.height = '100%';
       playerContainer.style.transition = 'width 0.3s ease';
     }
@@ -505,12 +509,24 @@ export function StreamBox({
           playerContainerRef.current.innerHTML = '';
         }
 
-        // 優化：批量創建時，API 應該已經預載入，這裡只做快速檢查
-        if (typeof window.Twitch === 'undefined' || !window.Twitch.Player) {
-          await apiLoader.loadTwitchPlayerApi();
+        // 雙重檢查 API 是否就緒
+        if (!window.Twitch || !window.Twitch.Player) {
+          try {
+            await apiLoader.loadTwitchPlayerApi();
+          } catch (e) {
+            console.error('[StreamBox] Failed to load Twitch API:', e);
+            return;
+          }
         }
 
         if (!playerContainerRef.current) return;
+
+        // 確保容器可見
+        if (playerContainerRef.current.offsetWidth === 0) {
+          console.warn('[StreamBox] Player container has 0 width, player might not render correctly.');
+          // 強制給一個寬度嘗試修復
+          playerContainerRef.current.style.width = '100%';
+        }
 
         const parentDomains = getTwitchParents();
 
@@ -528,6 +544,7 @@ export function StreamBox({
           throw new Error('Twitch Player API 未就緒');
         }
 
+        console.log(`[StreamBox] Creating Twitch player for ${streamData.channelId}`);
         const player = new window.Twitch.Player(`player${streamData.id}`, options);
 
         if (!window.players) window.players = {};
@@ -601,8 +618,28 @@ export function StreamBox({
           return;
         }
 
+        // 雙重檢查 YouTube API
+        if (typeof window.YT === 'undefined' || !window.YT.Player) {
+          try {
+            await apiLoader.loadYouTubePlayerApi();
+          } catch (e) {
+            console.error('[StreamBox] Failed to load YouTube API:', e);
+            return;
+          }
+        }
+
+        // 再次確保容器存在
+        if (!playerContainerRef.current) return;
+
         // 檢查容器是否有尺寸
         const container = playerContainerRef.current;
+
+        // 如果容器寬度為0，嘗試強制修正
+        if (container.offsetWidth === 0) {
+          console.warn('[StreamBox] YouTube container width is 0, forcing 100%');
+          container.style.width = '100%';
+        }
+
         const hasSize = container.offsetWidth > 0 && container.offsetHeight > 0;
 
         if (!hasSize) {
@@ -653,6 +690,7 @@ export function StreamBox({
         // 重置重試計數
         playerRetryCountRef.current = 0;
 
+        console.log(`[StreamBox] Creating YouTube player for ${streamData.videoId}`);
         const player = new window.YT.Player(`player${streamData.id}`, {
           videoId: streamData.videoId,
           width: '100%',
