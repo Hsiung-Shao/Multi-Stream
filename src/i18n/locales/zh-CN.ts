@@ -340,6 +340,7 @@ const zhCNTranslations = {
   'favorites.add': '加入收藏',
   'favorites.batchImport': '批量导入',
   'favorites.batchImportPlaceholder': '贴上多个网址，以逗号或换行分隔\n例如：\nhttps://www.twitch.tv/streamer1\nhttps://www.youtube.com/watch?v=xxx',
+  'favorites.batchImportButton': '批量导入',
   'favorites.myFavorites': '我的收藏',
   'favorites.all': '全部',
   'favorites.selectAll': '全选',

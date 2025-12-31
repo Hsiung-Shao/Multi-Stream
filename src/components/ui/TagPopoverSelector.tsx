@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { Button } from './button';
+import { ScrollArea } from './scroll-area';
 import { Tag } from '../../features/favorites/types';
 import { TagChip } from './TagChip';
 import {
@@ -69,9 +70,7 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
                     >
                         <div className="flex items-center gap-2">
                             <Plus className="size-4" />
-                            {selectedTags.length > 0
-                                ? t('tags.selectedTags', { count: selectedTags.length })
-                                : t('tags.addTag')}
+                            {t('tags.addTag')}
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -84,33 +83,35 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
                             onValueChange={setSearchValue}
                             className={theme === 'dark' ? 'border-gray-700' : ''}
                         />
-                        <CommandList>
-                            <CommandEmpty className="py-2 text-center text-sm text-gray-400">{t('tags.noTagsFound')}</CommandEmpty>
-                            <CommandGroup>
-                                {allTags.map((tag) => {
-                                    const isSelected = selectedTagIds.includes(tag.id);
-                                    return (
-                                        <CommandItem
-                                            key={tag.id}
-                                            onSelect={() => toggleTag(tag.id)}
-                                            className={`cursor-pointer ${theme === 'dark'
-                                                ? (isSelected ? 'bg-purple-900/50 aria-selected:bg-purple-900/70 border-l-2 border-purple-500' : 'aria-selected:bg-gray-700')
-                                                : (isSelected ? 'bg-purple-100 aria-selected:bg-purple-200 border-l-2 border-purple-500' : 'aria-selected:bg-gray-100')
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-2 w-full">
-                                                <Check
-                                                    className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100 text-purple-500" : "opacity-0"
-                                                        }`}
-                                                />
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                                                <span className={isSelected ? "font-bold" : ""}>{tag.name}</span>
-                                            </div>
-                                        </CommandItem>
-                                    )
-                                })}
-                            </CommandGroup>
-                        </CommandList>
+                        <ScrollArea className="h-[200px]">
+                            <CommandList className="max-h-full overflow-hidden">
+                                <CommandEmpty className="py-2 text-center text-sm text-gray-400">{t('tags.noTagsFound')}</CommandEmpty>
+                                <CommandGroup>
+                                    {allTags.map((tag) => {
+                                        const isSelected = selectedTagIds.includes(tag.id);
+                                        return (
+                                            <CommandItem
+                                                key={tag.id}
+                                                onSelect={() => toggleTag(tag.id)}
+                                                className={`cursor-pointer ${theme === 'dark'
+                                                    ? (isSelected ? 'bg-purple-900/50 aria-selected:bg-purple-900/70 border-l-2 border-purple-500' : 'aria-selected:bg-gray-700')
+                                                    : (isSelected ? 'bg-purple-100 aria-selected:bg-purple-200 border-l-2 border-purple-500' : 'aria-selected:bg-gray-100')
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-2 w-full">
+                                                    <Check
+                                                        className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100 text-purple-500" : "opacity-0"
+                                                            }`}
+                                                    />
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                                                    <span className={isSelected ? "font-bold" : ""}>{tag.name}</span>
+                                                </div>
+                                            </CommandItem>
+                                        )
+                                    })}
+                                </CommandGroup>
+                            </CommandList>
+                        </ScrollArea>
                     </Command>
                 </PopoverContent>
             </Popover>

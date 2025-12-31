@@ -345,6 +345,7 @@ const zhTWTranslations = {
   'favorites.add': '加入收藏',
   'favorites.batchImport': '批量匯入',
   'favorites.batchImportPlaceholder': '貼上多個網址，以逗號或換行分隔\n例如：\nhttps://www.twitch.tv/streamer1\nhttps://www.youtube.com/watch?v=xxx',
+  'favorites.batchImportButton': '批量匯入',
   'favorites.myFavorites': '我的收藏',
   'favorites.all': '全部',
   'favorites.selectAll': '全選',
