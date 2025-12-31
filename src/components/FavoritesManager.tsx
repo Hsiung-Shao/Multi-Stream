@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -15,12 +16,39 @@ import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { favoritesLoader } from '../features/favorites/FavoritesLoader';
 import { backupService } from '../features/backup/index';
-import { youtubeApi } from '../utils/youtubeApi';
+
 import type { FavoriteStream as FavoriteItem, FavoriteCategory as Category, Tag } from '../features/favorites/types';
 
 interface FavoritesManagerProps {
   theme: 'light' | 'dark';
   onClose: () => void;
+}
+
+interface AddStreamFormValues {
+  url: string;
+  name: string;
+  categoryId: string;
+  tagIds: string[];
+}
+
+interface BatchImportFormValues {
+  urls: string;
+  categoryId: string;
+}
+
+interface AddCategoryFormValues {
+  name: string;
+}
+
+interface TagFormValues {
+  name: string;
+  color: string;
+}
+
+interface EditStreamFormValues {
+  name: string;
+  categoryId: string;
+  tagIds: string[];
 }
 
 // Interfaces imported from features/favorites/types
@@ -46,30 +74,53 @@ function debouncedBackup() {
 
 export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   const { t } = useI18n();
-  const [streamUrl, setStreamUrl] = useState('');
-  const [streamName, setStreamName] = useState('');
-  const [categoryName, setCategoryName] = useState('');
-  const [batchUrls, setBatchUrls] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [batchCategory, setBatchCategory] = useState<string>('');
+
+  const { register: registerAddStream, handleSubmit: handleSubmitAddStream, control: controlAddStream, reset: resetAddStream, setValue: setAddStreamValue, watch: watchAddStream } = useForm<AddStreamFormValues>({
+    defaultValues: {
+      url: '',
+      name: '',
+      categoryId: 'uncategorized',
+      tagIds: []
+    }
+  });
+
+  // Watch values for UI display if needed
+  const selectedTags = watchAddStream('tagIds');
+
+  const { register: registerBatchImport, handleSubmit: handleSubmitBatchImport, control: controlBatchImport, reset: resetBatchImport } = useForm<BatchImportFormValues>({
+    defaultValues: {
+      urls: '',
+      categoryId: 'uncategorized'
+    }
+  });
+
+  const { register: registerAddCategory, handleSubmit: handleSubmitAddCategory, reset: resetAddCategory } = useForm<AddCategoryFormValues>({
+    defaultValues: { name: '' }
+  });
+
+  const { register: registerAddTag, handleSubmit: handleSubmitAddTag, reset: resetAddTag } = useForm<TagFormValues>({
+    defaultValues: { name: '', color: '#3b82f6' }
+  });
   const [filterCategory, setFilterCategory] = useState('all');
-  const [isDeleteHovered, setIsDeleteHovered] = useState(false);
+
+  const { register: registerEditStream, handleSubmit: handleSubmitEditStream, control: controlEditStream, reset: resetEditStream } = useForm<EditStreamFormValues>();
+
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedFavorites, setSelectedFavorites] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editCategory, setEditCategory] = useState<string>('');
+  // Removed old editName, editCategory, editTags states
+
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState('favorites');
   const [tags, setTags] = useState<Tag[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // For adding new favorite
-  const [editTags, setEditTags] = useState<string[]>([]); // For editing existing
+
+  // Tag States
+
   const [filterTags, setFilterTags] = useState<string[]>([]); // For filtering
-  const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('#3b82f6'); // Default blue
+
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
 
   // 載入收藏和分類列表
@@ -96,42 +147,33 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     setTimeout(() => setMessage(null), 3000);
   };
 
-  // 添加單個收藏
-  const handleAddFavorite = async () => {
-    if (!streamUrl.trim()) {
-      showMessage('error', t('favorites.pasteUrl'));
-      return;
-    }
-
-
-
-    // if (!window.favoriteStreams) check removed because we import directly
+  // 添加單個收藏 - Wrapped in form submission
+  const onSubmitAddStream = async (data: AddStreamFormValues) => {
+    // URL validation is handled by react-hook-form, but we can keep the trim check if desired, 
+    // though the service also checks.
 
     try {
-      // Import new typing directly if needed, but here we invoke the window wrapper which usually calls the service under the hood. 
-      // However, window wrapper might not support tags yet? 
-      // The task implementation plan said "Update FavoritesService to support tags field". I did that.
-      // But window.favoriteStreams.add signature in declare global is:
-      // add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) 
-      // It doesn't include tags!
-      // So I should call favoritesService.addFavorite directly!
+      const categoryId = data.categoryId === '' || data.categoryId === 'uncategorized' ? null : data.categoryId;
 
-      const categoryId = selectedCategory === '' || selectedCategory === 'uncategorized' ? null : selectedCategory;
+      // 嚴格保留原本的 service 調用方式，確保 YouTube 邏輯不變
       const result = await favoritesService.addFavorite(
-        streamUrl,
-        streamName || undefined,
+        data.url,
+        data.name || undefined,
         categoryId,
         undefined, // providedChannelId
         undefined, // providedVideoId
-        selectedTags
+        data.tagIds
       );
 
       if (result.success) {
         showMessage('success', result.message || t('favorites.add'));
-        setStreamUrl('');
-        setStreamName('');
-        setSelectedCategory('');
-        setSelectedTags([]);
+        // Reset form
+        resetAddStream({
+          url: '',
+          name: '',
+          categoryId: 'uncategorized',
+          tagIds: []
+        });
         loadData();
         debouncedBackup();
       } else {
@@ -142,23 +184,20 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
   };
 
-  // 批量匯入
-  const handleBatchImport = async () => {
-    if (!batchUrls.trim()) {
-      showMessage('error', t('favorites.pasteUrl'));
-      return;
-    }
+  // 批量匯入 - Wrapped in form submission
+  const onSubmitBatchImport = async (data: BatchImportFormValues) => {
+    // Basic validation handled by react-hook-form (if required added), 
+    // keeping manual empty check logic or relying on form validation.
+    // Original had !batchUrls.trim() check. 
 
-
-
-    // if (!window.favoriteStreams) check removed because we import directly
+    // We can just proceed with data.urls
 
     setIsImporting(true);
     setImportProgress({ current: 0, total: 0 });
 
     try {
       // 解析URL列表（支援逗號、換行、空格分隔）
-      const urlList = batchUrls
+      const urlList = data.urls
         .split(/[,\n\r]+/)
         .map(url => url.trim())
         .filter(url => url.length > 0);
@@ -171,7 +210,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
       setImportProgress({ current: 0, total: urlList.length });
 
-      const categoryId = batchCategory === '' || batchCategory === 'uncategorized' ? null : batchCategory;
+      const categoryId = data.categoryId === '' || data.categoryId === 'uncategorized' ? null : data.categoryId;
       let successCount = 0;
       let failCount = 0;
       const errors: string[] = [];
@@ -182,14 +221,14 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         setImportProgress({ current: i + 1, total: urlList.length });
 
         try {
-          // 直接使用 favoritesService.addFavorite
+          // 嚴格保留原本的 service 調用方式
           const result = await favoritesService.addFavorite(
             url,
             undefined, // name
             categoryId,
             undefined, // providedChannelId
             undefined, // providedVideoId
-            [] // tags
+            [] // tags - Batch import generally doesn't assign tags in this UI
           );
 
           if (result.success) {
@@ -205,7 +244,12 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       }
 
       setIsImporting(false);
-      setBatchUrls('');
+
+      // Reset form
+      resetBatchImport({
+        urls: '',
+        categoryId: 'uncategorized'
+      });
 
       if (successCount > 0) {
         // 確保自動修復新匯入項目的平台標籤
@@ -367,34 +411,35 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   // 進入編輯模式
   const handleStartEdit = (favorite: FavoriteItem) => {
     setEditingId(favorite.id);
-    setEditName(favorite.name);
-    setEditCategory(favorite.categoryId || '');
-    setEditTags(favorite.tagIds || []); // Use editTags state
+    resetEditStream({
+      name: favorite.name,
+      categoryId: favorite.categoryId || 'uncategorized',
+      tagIds: favorite.tagIds || []
+    });
   };
 
   // 取消編輯
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditName('');
-    setEditCategory('');
-    setEditTags([]);
+    resetEditStream();
   };
 
-  // 保存編輯
-  const handleSaveEdit = () => {
+  // 保存編輯 - Wrapped in form submission
+  const onSubmitEditStream = (data: EditStreamFormValues) => {
     if (!editingId) return;
 
+    if (!data.name.trim()) {
+      showMessage('error', t('favorites.customName'));
+      return;
+    }
 
-
-    // if (!window.favoriteStreams) check removed
-
-    const categoryId = editCategory === '' || editCategory === 'uncategorized' ? null : editCategory;
+    const categoryId = data.categoryId === 'uncategorized' ? null : data.categoryId;
 
     // Call service directly to support tags
     const result = favoritesService.updateFavorite(editingId, {
-      name: editName,
+      name: data.name,
       categoryId: categoryId,
-      tagIds: editTags // Use editTags state
+      tagIds: data.tagIds
     });
 
     if (result.success) {
@@ -445,21 +490,20 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     }
   };
 
-  // 添加分類
-  const handleAddCategory = () => {
-    if (!categoryName.trim()) {
+  // 添加分類 - Wrapped in form submission
+  const onSubmitAddCategory = (data: AddCategoryFormValues) => {
+    // Original check was !categoryName.trim(), handled by required or check inside here
+    if (!data.name.trim()) {
       showMessage('error', t('favorites.categoryName'));
       return;
     }
 
-    if (!window.favoriteCategories) {
-      // showMessage('error', '分類系統未初始化'); // Removed check
-    }
 
-    const result = favoritesService.addCategory(categoryName);
+
+    const result = favoritesService.addCategory(data.name);
     if (result.success) {
       showMessage('success', result.message || '已新增分類');
-      setCategoryName('');
+      resetAddCategory();
       loadData();
       debouncedBackup();
     } else {
@@ -468,17 +512,15 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   };
 
   // --- Tag Operations ---
-  const handleAddTag = () => {
-    if (!newTagName.trim()) {
+  const onSubmitAddTag = (data: TagFormValues) => {
+    if (!data.name.trim()) {
       showMessage('error', '請輸入標籤名稱');
       return;
     }
 
-    const newTag = tagsService.addTag(newTagName.trim(), newTagColor);
+    tagsService.addTag(data.name.trim(), data.color);
     showMessage('success', '已新增標籤');
-    setNewTagName('');
-    // tagsService.addTag updates repo, we need to reload or just update local state
-    // loadData() will fetch from repo
+    resetAddTag();
     loadData();
   };
 
@@ -737,41 +779,52 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                   <Input
                     type="text"
                     placeholder={t('favorites.pasteUrl')}
-                    value={streamUrl}
-                    onChange={(e) => setStreamUrl(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddFavorite()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    {...registerAddStream('url', { required: true })}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmitAddStream(onSubmitAddStream)()}
                   />
                   <Input
                     type="text"
                     placeholder={t('favorites.customName')}
-                    value={streamName}
-                    onChange={(e) => setStreamName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddFavorite()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    {...registerAddStream('name')}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmitAddStream(onSubmitAddStream)()}
                   />
-                  <Select value={selectedCategory || "uncategorized"} onValueChange={(value) => setSelectedCategory(value === "uncategorized" ? "" : value)}>
-                    <SelectTrigger className={`w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
-                      <SelectValue placeholder={t('favorites.uncategorized')} />
-                    </SelectTrigger>
-                    <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                      <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                  <Controller
+                    name="categoryId"
+                    control={controlAddStream}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className={`w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
+                          <SelectValue placeholder={t('favorites.uncategorized')} />
+                        </SelectTrigger>
+                        <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
+                          <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
+                          {categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
 
                   {/* Add Favorite Popover Tag Selector (Button Only) */}
-                  <TagPopoverSelector
-                    allTags={tags}
-                    selectedTagIds={selectedTags}
-                    onChange={setSelectedTags}
-                    theme={theme}
-                    showSelectedChips={false}
+                  <Controller
+                    name="tagIds"
+                    control={controlAddStream}
+                    render={({ field }) => (
+                      <TagPopoverSelector
+                        allTags={tags}
+                        selectedTagIds={field.value}
+                        onChange={field.onChange}
+                        theme={theme}
+                        showSelectedChips={false}
+                      />
+                    )}
                   />
 
-                  <Button onClick={handleAddFavorite} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Button onClick={handleSubmitAddStream(onSubmitAddStream)} className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Plus className="size-4 mr-2" />
                     {t('favorites.add')}
                   </Button>
@@ -784,7 +837,10 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                       <TagChip
                         key={tag.id}
                         tag={tag}
-                        onDelete={() => setSelectedTags(prev => prev.filter(id => id !== tag.id))}
+                        onDelete={() => {
+                          const current = selectedTags;
+                          setAddStreamValue('tagIds', current.filter(id => id !== tag.id));
+                        }}
                         className="cursor-pointer"
                       />
                     ))}
@@ -798,10 +854,8 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                 <div className="space-y-3">
                   <Textarea
                     placeholder={t('favorites.batchImportPlaceholder')}
-                    value={batchUrls}
-                    onChange={(e) => setBatchUrls(e.target.value)}
-                    style={{ height: '150px' }}
-                    className={theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}
+                    className={`min-h-[100px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    {...registerBatchImport('urls', { required: true })}
                     disabled={isImporting}
                   />
                   {isImporting && (
@@ -810,20 +864,40 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Select value={batchCategory || "uncategorized"} onValueChange={(value) => setBatchCategory(value === "uncategorized" ? "" : value)} disabled={isImporting}>
-                      <SelectTrigger className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
-                        <SelectValue placeholder={t('favorites.uncategorized')} />
-                      </SelectTrigger>
-                      <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                        <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button onClick={handleBatchImport} disabled={isImporting} className="bg-purple-600 hover:bg-purple-700 text-white">
-                      {isImporting ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
-                      {t('favorites.batchImport')}
+                    <Controller
+                      name="categoryId"
+                      control={controlBatchImport}
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange} disabled={isImporting}>
+                          <SelectTrigger className={`w-[180px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}>
+                            <SelectValue placeholder={t('favorites.selectCategory')} />
+                          </SelectTrigger>
+                          <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
+                            <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
+                            {categories.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+
+                    <Button
+                      onClick={handleSubmitBatchImport(onSubmitBatchImport)}
+                      disabled={isImporting}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isImporting ? (
+                        <>
+                          <Loader2 className="size-4 mr-2 animate-spin" />
+                          {t('common.importing') || '匯入中'} ({importProgress.current}/{importProgress.total})
+                        </>
+                      ) : (
+                        <>
+                          <Folder className="size-4 mr-2" />
+                          {t('favorites.batchImportButton')}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -876,8 +950,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     size="sm"
                     onClick={handleBatchDelete}
                     className="bg-red-600 hover:bg-red-700 text-white"
-                    onMouseEnter={() => setIsDeleteHovered(true)}
-                    onMouseLeave={() => setIsDeleteHovered(false)}
+
                   >
                     {t('favorites.delete')}
                   </Button>
@@ -902,7 +975,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                       onClear={() => setFilterTags([])}
                       theme={theme}
                       maxVisibleTags={10}
-                      columns={10}
+
                     />
                   </div>
                 )}
@@ -929,9 +1002,8 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                           theme={theme}
                           isSelected={selectedFavorites.has(favorite.id)}
                           isEditing={editingId === favorite.id}
-                          editName={editName}
-                          editCategory={editCategory}
-                          editTags={editTags} // Pass editTags
+                          control={controlEditStream}
+                          register={registerEditStream}
                           onSelect={(id, checked) => {
                             const newSelected = new Set(selectedFavorites);
                             if (checked) {
@@ -943,10 +1015,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                           }}
                           onStartEdit={handleStartEdit}
                           onCancelEdit={handleCancelEdit}
-                          onSaveEdit={handleSaveEdit}
-                          onEditNameChange={setEditName}
-                          onEditCategoryChange={setEditCategory}
-                          onEditTagsChange={setEditTags} // Pass setEditTags
+                          onSaveEdit={handleSubmitEditStream(onSubmitEditStream)}
                           onDelete={handleDeleteFavorite}
                           onLoad={handleLoadFavorite}
                         />
@@ -975,12 +1044,11 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                   <Input
                     type="text"
                     placeholder={t('favorites.categoryName')}
-                    value={categoryName}
-                    onChange={(e) => setCategoryName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    {...registerAddCategory('name', { required: true })}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmitAddCategory(onSubmitAddCategory)()}
                   />
-                  <Button onClick={handleAddCategory} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Button onClick={handleSubmitAddCategory(onSubmitAddCategory)} className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Plus className="size-4 mr-2" />
                     {t('common.add')}
                   </Button>
@@ -1006,23 +1074,23 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                           theme={theme}
                           onLoad={() => handleLoadCategory(cat.id)}
                           onUpdate={(id, newName) => {
-                            if (window.favoriteCategories) {
-                              const result = window.favoriteCategories.update!(id, newName);
-                              if (result.success) {
-                                showMessage('success', result.message || '已更新分類');
-                                loadData();
-                                debouncedBackup();
-                              } else {
-                                showMessage('error', result.message || '更新失敗');
-                              }
+                            const result = favoritesService.updateCategory(id, newName);
+                            if (result.success) {
+                              showMessage('success', result.message || '已更新分類');
+                              loadData();
+                              debouncedBackup();
+                            } else {
+                              showMessage('error', result.message || '更新失敗');
                             }
                           }}
                           onDelete={(id) => {
-                            if (window.favoriteCategories && window.favoriteCategories.remove) {
-                              window.favoriteCategories.remove(id);
+                            const result = favoritesService.removeCategory(id);
+                            if (result.success) {
                               showMessage('success', '已刪除分類');
                               loadData();
                               debouncedBackup();
+                            } else {
+                              showMessage('error', result.message || '刪除失敗');
                             }
                           }}
                         />
@@ -1041,21 +1109,19 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                   <Input
                     type="text"
                     placeholder="標籤名稱"
-                    value={newTagName}
-                    onChange={(e) => setNewTagName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                     className={`flex-1 ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    {...registerAddTag('name', { required: true })}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmitAddTag(onSubmitAddTag)()}
                   />
                   <div className="flex items-center gap-2">
                     <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>顏色:</span>
                     <input
                       type="color"
-                      value={newTagColor}
-                      onChange={(e) => setNewTagColor(e.target.value)}
                       className="h-9 w-9 p-0 border-0 rounded cursor-pointer"
+                      {...registerAddTag('color')}
                     />
                   </div>
-                  <Button onClick={handleAddTag} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <Button onClick={handleSubmitAddTag(onSubmitAddTag)} className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Plus className="size-4 mr-2" />
                     {t('common.add')}
                   </Button>
@@ -1147,39 +1213,31 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 function FavoriteItem({
   favorite,
   categories,
-  tags, // Added tags prop
+  tags,
   theme,
   isSelected,
   isEditing,
-  editName,
-  editCategory,
-  editTags,
+  control,
+  register,
   onSelect,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
-  onEditNameChange,
-  onEditCategoryChange,
-  onEditTagsChange,
   onDelete,
   onLoad
 }: {
   favorite: FavoriteItem;
   categories: Category[];
-  tags: Tag[]; // Added tags prop
+  tags: Tag[];
   theme: 'light' | 'dark';
   isSelected: boolean;
   isEditing: boolean;
-  editName: string;
-  editCategory: string;
-  editTags?: string[]; // Optional since existing usage might not pass it yet, but we are updating parent
+  control: any; // Using explicit types here might need importing types or complex generics
+  register: any;
   onSelect: (id: string, checked: boolean) => void;
   onStartEdit: (favorite: FavoriteItem) => void;
   onCancelEdit: () => void;
   onSaveEdit: () => void;
-  onEditNameChange: (name: string) => void;
-  onEditCategoryChange: (categoryId: string) => void;
-  onEditTagsChange?: (tags: string[]) => void;
   onDelete: (id: string) => void;
   onLoad: (id: string) => void;
 }) {
@@ -1193,53 +1251,77 @@ function FavoriteItem({
         <div className="flex gap-2 mb-2">
           <Input
             type="text"
-            value={editName}
-            onChange={(e) => onEditNameChange(e.target.value)}
             className={`flex-1 ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-black'}`}
+            {...register('name', { required: true })}
             onKeyDown={(e) => {
               if (e.key === 'Enter') onSaveEdit();
               if (e.key === 'Escape') onCancelEdit();
             }}
           />
-          <Select value={editCategory || "uncategorized"} onValueChange={(value) => onEditCategoryChange(value === "uncategorized" ? "" : value)}>
-            <SelectTrigger className={`w-[140px] ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-black'}`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-              <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+          <Controller
+            name="categoryId"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger className={`w-[140px] ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-gray-50 border-gray-300 text-black'}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
+                  <SelectItem value="uncategorized" className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('favorites.uncategorized')}</SelectItem>
+                  {categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id} className={theme === 'dark' ? 'text-white' : 'text-black'}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
 
           {/* Edit Tags Popover Button (Inline) */}
-          <TagPopoverSelector
-            allTags={tags}
-            selectedTagIds={editTags || []}
-            onChange={onEditTagsChange || (() => { })}
-            theme={theme}
-            showSelectedChips={false}
+          <Controller
+            name="tagIds"
+            control={control}
+            render={({ field }) => (
+              <TagPopoverSelector
+                allTags={tags}
+                selectedTagIds={field.value}
+                onChange={field.onChange}
+                theme={theme}
+                showSelectedChips={false}
+              />
+            )}
           />
         </div>
 
-        {/* Edit Tags Chips (Below) */}
-        {(editTags || []).length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {tags.filter(tag => (editTags || []).includes(tag.id)).map(tag => (
-              <TagChip
-                key={tag.id}
-                tag={tag}
-                onDelete={() => {
-                  if (onEditTagsChange && editTags) {
-                    onEditTagsChange(editTags.filter(id => id !== tag.id));
-                  }
-                }}
-                className="cursor-pointer"
-              />
-            ))}
-          </div>
-        )}
+        {/* Edit Tags Chips (Below) needs access to current tagIds value. 
+            Since we don't have 'watch' here easily without passing it, 
+            we can use Controller again or just let the user rely on Popover indicator?
+            Or we can use useWatch if we had access to control more directly?
+            Actually, let's use a Controller that renders just the chips.
+        */}
+        <Controller
+          name="tagIds"
+          control={control}
+          render={({ field }) => (
+            <>
+              {(field.value || []).length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {tags.filter(tag => (field.value || []).includes(tag.id)).map(tag => (
+                    <TagChip
+                      key={tag.id}
+                      tag={tag}
+                      onDelete={() => {
+                        const current = field.value || [];
+                        field.onChange(current.filter((id: string) => id !== tag.id));
+                      }}
+                      className="cursor-pointer"
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        />
 
         <div className="flex gap-2 justify-end">
           <Button size="sm" onClick={onSaveEdit} className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -1259,7 +1341,7 @@ function FavoriteItem({
     <div className={`p-3 rounded-lg border ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'} flex items-center gap-3`}>
       <Checkbox
         checked={isSelected}
-        onCheckedChange={(checked) => onSelect(favorite.id, !!checked)}
+        onCheckedChange={(checked: boolean | 'indeterminate') => onSelect(favorite.id, !!checked)}
         className={theme === 'dark' ? 'border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500' : 'border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600'}
       />
       <span className="text-lg">{platformIcon}</span>

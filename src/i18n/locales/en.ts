@@ -345,6 +345,7 @@ const enTranslations = {
   'favorites.add': 'Add to Favorites',
   'favorites.batchImport': 'Batch Import',
   'favorites.batchImportPlaceholder': 'Paste multiple URLs, separated by commas or newlines\nExample:\nhttps://www.twitch.tv/streamer1\nhttps://www.youtube.com/watch?v=xxx',
+  'favorites.batchImportButton': 'Batch Import',
   'favorites.myFavorites': 'My Favorites',
   'favorites.all': 'All',
   'favorites.selectAll': 'Select All',
