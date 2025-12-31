@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { StreamBox } from './StreamBox';
 import { ChatSidebar } from './ChatSidebar';
 import { calculateLayoutStyles, calculateLayout5MinHeightPercent } from '../utils/layoutUtils';
@@ -6,7 +6,15 @@ import { getChatLayoutConfig } from '../utils/chatLayoutUtils';
 import { useStreamStore } from '../store/useStreamStore';
 import { useUIStore } from '../store/useUIStore';
 
-export function StreamContainer() {
+interface StreamContainerProps {
+  masterVolume?: number;
+  isMasterMuted?: boolean;
+}
+
+export function StreamContainer({
+  masterVolume = 100,
+  isMasterMuted = false
+}: StreamContainerProps) {
   const streams = useStreamStore(s => s.streams);
   const layoutType = useStreamStore(s => s.layout);
   const chatLayoutType = useStreamStore(s => s.chatLayout);
@@ -26,40 +34,7 @@ export function StreamContainer() {
   const chatConfig = getChatLayoutConfig(chatLayoutType);
   const videoAreaWidth = chatLayoutType !== 'none' ? chatConfig.videoAreaWidth : 100;
 
-  // 同步 streamData 到全局 window.streamData (Legacy Support)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (!window.streamData) {
-        window.streamData = {};
-      }
 
-      streams.forEach(stream => {
-        window.streamData[stream.id] = stream;
-      });
-
-      // 清理已移除的串流
-      Object.keys(window.streamData).forEach(id => {
-        const streamId = parseInt(id);
-        if (!streams.find(s => s.id === streamId)) {
-          delete window.streamData[streamId];
-        }
-      });
-    }
-  }, [streams]);
-
-  // 更新串流順序列表 (Legacy)
-  useEffect(() => {
-    if (typeof (window as any).updateStreamOrderList === 'function') {
-      (window as any).updateStreamOrderList();
-    }
-  }, [streams]);
-
-  // 檢查並調整控制面板狀態 (Legacy)
-  useEffect(() => {
-    if (streams.length > 0 && typeof (window as any).checkAndAdjustControlPanel === 'function') {
-      (window as any).checkAndAdjustControlPanel();
-    }
-  }, [streams.length]);
 
   // 觸發窗口 resize 事件
   useEffect(() => {
@@ -85,31 +60,8 @@ export function StreamContainer() {
   }, []);
 
   // 聊天室隱藏邏輯 (Legacy Chat System Integration)
-  useEffect(() => {
-    if (chatLayoutType !== 'none') {
-      requestAnimationFrame(() => {
-        streams.forEach(stream => {
-          const chatDiv = document.getElementById(`chat${stream.id}`);
-          if (!chatDiv) {
-            // 嘗試創建，這裡先保留原本邏輯
-            if (typeof (window as any).createChat === 'function') {
-              (window as any).createChat(stream.id, stream.platform, stream.channelId, stream.videoId);
-            }
-          } else {
-            // 如果容器存在，隱藏它（因為我們用 ChatSidebar 顯示）
-            chatDiv.classList.add('hidden');
-          }
-        });
-      });
-    } else {
-      streams.forEach(stream => {
-        const chatDiv = document.getElementById(`chat${stream.id}`);
-        if (chatDiv && stream.chatVisible) {
-          chatDiv.classList.remove('hidden');
-        }
-      });
-    }
-  }, [chatLayoutType, streams]);
+  // Legacy Chat System Integration Removed - Managed by StreamBox and ChatSidebar components internally
+
 
   // 計算容器高度
   const calculateContainerHeight = (): string => {
@@ -138,9 +90,8 @@ export function StreamContainer() {
   // Handlers for StreamBox interaction
   const handleRemove = (id: number) => removeStream(id);
   const handleReload = (id: number) => {
-    // Reload logic? Usually calls window.reloadStream?
-    // Or just forces re-render?
-    if ((window as any).reloadStream) (window as any).reloadStream(id);
+    // Force reload by updating _reloadKey
+    updateStream(id, { _reloadKey: Date.now() });
   };
   const handleToggleChat = (id: number) => {
     const s = streams.find(s => s.id === id);
@@ -169,10 +120,11 @@ export function StreamContainer() {
       >
         {streams.map((stream, index) => {
           const layoutStyle = calculateLayoutStyles(layoutType, index, streams.length);
+          const boxKey = `${stream.id}-${stream._reloadKey || 0}`;
 
           return (
             <StreamBox
-              key={stream.id}
+              key={boxKey}
               streamData={stream}
               theme={theme}
               layoutStyle={layoutStyle}
@@ -183,6 +135,8 @@ export function StreamContainer() {
               onVolumeChange={handleVolumeChange}
               streamIndex={index}
               chatLayoutType={chatLayoutType}
+              masterVolume={masterVolume}
+              isMasterMuted={isMasterMuted}
             />
           );
         })}

@@ -115,10 +115,10 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
             // ignore
         }
 
-        // 6. 更新 State
-        if (!window.streamCount) window.streamCount = 0;
-        window.streamCount++;
-        const newId = window.streamCount;
+        // 6. Generate ID (Max ID + 1 Strategy)
+        const currentIds = get().streams.map(s => s.id);
+        const maxId = currentIds.length > 0 ? Math.max(...currentIds) : 0;
+        const newId = maxId + 1;
 
         const newStream: StreamData = {
             id: newId,
@@ -133,18 +133,7 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
             displayName: displayName
         };
 
-        // 更新 Legacy Global
-        if (!window.streamData) (window as any).streamData = {};
-        window.streamData[newId] = {
-            platform: newStream.platform,
-            channelId: newStream.channelId,
-            videoId: newStream.videoId,
-            originalUrl: newStream.originalUrl,
-            volume: newStream.volume,
-            chatVisible: newStream.chatVisible,
-            name: newStream.name,
-            displayName: newStream.displayName
-        };
+        // Legacy Global Sync Removed
 
         set(state => {
             const newStreams = [...state.streams, newStream];

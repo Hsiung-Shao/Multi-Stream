@@ -1,6 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { usePlayerStore } from '../store/playerStore';
 import type { StreamData } from '../utils/streamUtils';
 import { apiLoader } from '../utils/apiLoader';
+// import { TwitchPlayer } from './TwitchPlayer'; 
+import { StreamChat } from './StreamChat';
+import { useChatResizer } from '../hooks/useChatResizer';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
@@ -18,21 +22,15 @@ interface StreamBoxProps {
   onVolumeChange?: (id: number, volume: number) => void;
   streamIndex?: number; // 串流順序索引
   chatLayoutType?: 'none' | 'single' | 'dual' | 'quad'; // 聊天室布局類型
+  masterVolume?: number; // 主音量 (0-100)
+  isMasterMuted?: boolean; // 主靜音狀態
 }
 
 // 全局變數聲明（這些應該在 window 對象上）
 declare global {
   interface Window {
-    players: Record<number, { type: 'twitch' | 'youtube'; player: any }>;
-    streamData: Record<number, StreamData>;
     Twitch?: any;
     YT?: any;
-    twitchApi?: {
-      checkMultipleChannelsLiveStatus: (channelIds: string[]) => Promise<Record<string, { isLive: boolean; viewerCount?: number; gameName?: string }>>;
-    };
-    youtubeApiUtils?: {
-      checkChannelLiveStatus: (channelId: string) => Promise<{ isLive: boolean }>;
-    };
   }
 }
 
@@ -43,21 +41,28 @@ export function StreamBox({
   onRemove,
   onReload,
   onToggleChat,
-  onSeparateChat,
+  //   onSeparateChat, // Unused
   onVolumeChange,
   streamIndex,
-  chatLayoutType = 'none'
+  chatLayoutType = 'none',
+  masterVolume = 100,
+  isMasterMuted = false
 }: StreamBoxProps) {
+  const registerPlayer = usePlayerStore(s => s.registerPlayer);
+  const unregisterPlayer = usePlayerStore(s => s.unregisterPlayer);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const chatResizerRef = useRef<HTMLDivElement>(null);
+
+  // Use Chat Resizer Hook
+  useChatResizer(chatResizerRef as React.RefObject<HTMLElement>, chatContainerRef as React.RefObject<HTMLElement>, 'left', 200, 600, 350);
   const boxRef = useRef<HTMLDivElement>(null);
   const playerCreatingRef = useRef<boolean>(false);
   const playerRetryCountRef = useRef<number>(0);
   const playerInitializedRef = useRef<boolean>(false);
 
   // 計算聊天室寬度狀態（用於 JSX 中的樣式）
-  const [chatWidth, setChatWidth] = useState<number>(0);
+  // const [chatWidth, setChatWidth] = useState<number>(0); // Unused, controlled by DOM/CSS
   const [playerWidth, setPlayerWidth] = useState<string>('100%');
 
   // 音量狀態
@@ -67,15 +72,80 @@ export function StreamBox({
   // 收藏名稱狀態
   const [favoriteName, setFavoriteName] = useState<string | null>(null);
 
-  // 同步聊天室顯示狀態和布局 - 參考 js/chat.js 和 js/stream.js
+  // Ref to hold latest props for async callbacks (avoid stale closures)
+  const propsRef = useRef({ streamData, masterVolume, isMasterMuted });
+  useEffect(() => {
+    propsRef.current = { streamData, masterVolume, isMasterMuted };
+  }, [streamData, masterVolume, isMasterMuted]);
+
+  // 應用音量設定到播放器
+  const applyVolumeToPlayer = useCallback((player: any) => {
+    if (!player) return;
+
+    // Read from Ref to ensure fresh values even if called from stale closures
+    const { streamData: currentStreamData, masterVolume: currentMasterVolume, isMasterMuted: currentIsMasterMuted } = propsRef.current;
+
+    // 如果全部靜音，直接靜音播放器
+    if (currentIsMasterMuted) {
+      try {
+        if (currentStreamData.platform === 'twitch') {
+          if (typeof player.setMuted === 'function') player.setMuted(true);
+        } else if (currentStreamData.platform === 'youtube') {
+          if (typeof player.mute === 'function') player.mute();
+        }
+      } catch (e) { /* ignore */ }
+      return;
+    }
+
+    // 如果沒有全部靜音，應用正常的音量設定
+    const streamVol = currentStreamData.volume || 100;
+    const actualVol = Math.round((streamVol / 100) * currentMasterVolume);
+
+    try {
+      if (currentStreamData.platform === 'twitch') {
+        if (actualVol === 0) {
+          if (typeof player.setMuted === 'function') player.setMuted(true);
+          else if (typeof player.setVolume === 'function') player.setVolume(0);
+        } else {
+          if (typeof player.setMuted === 'function') player.setMuted(false);
+          if (typeof player.setVolume === 'function') player.setVolume(actualVol / 100);
+        }
+      } else if (currentStreamData.platform === 'youtube') {
+        if (actualVol === 0) {
+          if (typeof player.mute === 'function') player.mute();
+          else if (typeof player.setVolume === 'function') player.setVolume(0);
+        } else {
+          if (typeof player.unMute === 'function') player.unMute();
+          if (typeof player.setVolume === 'function') player.setVolume(actualVol);
+        }
+      }
+    } catch (e) {
+      console.warn('[StreamBox] Error applying volume:', e);
+    }
+  }, []);
+
+  // 監聽 master 變化，重新應用音量
+  useEffect(() => {
+    // 當主音量或主靜音狀態改變時，更新當前播放器音量
+    const playerEntry = usePlayerStore.getState().getPlayer(streamData.id);
+    if (playerEntry && playerEntry.player) {
+      applyVolumeToPlayer(playerEntry.player);
+    }
+  }, [masterVolume, isMasterMuted, streamData.id, streamData.volume, applyVolumeToPlayer]);
+
+  // 同步聊天室顯示狀態和布局
   useEffect(() => {
     const contentWrapper = document.getElementById(`content-wrapper${streamData.id}`);
     const playerContainer = playerContainerRef.current;
     const chatContainer = chatContainerRef.current;
     const chatResizer = chatResizerRef.current;
 
+    // 根據 chatLayoutType 和 streamData.chatVisible 決定是否顯示聊天室
+    // 如果全屏聊天室佈局啟用（非 none），則 StreamBox 內的聊天室應該隱藏
+    const shouldShowChat = streamData.chatVisible && chatLayoutType === 'none';
+
     if (contentWrapper) {
-      if (streamData.chatVisible) {
+      if (shouldShowChat) {
         contentWrapper.classList.remove('layout-vertical');
         contentWrapper.classList.add('layout-horizontal');
       } else {
@@ -85,38 +155,27 @@ export function StreamBox({
     }
 
     if (playerContainer && chatContainer) {
-      // 計算聊天室寬度，確保符合最小寬度要求
-      // Twitch 聊天室最小寬度：300px，YouTube 聊天室最小寬度：200px
       const minChatWidth = streamData.platform === 'twitch' ? 300 : 200;
 
-      if (streamData.chatVisible) {
-        // 獲取容器總寬度
+      if (shouldShowChat) {
         const containerWidth = chatContainer.parentElement?.clientWidth || 0;
-        const chatWidthPercent = 20; // 20% 寬度
+        const chatWidthPercent = 20;
         const chatWidthPx = (containerWidth * chatWidthPercent) / 100;
-
-        // 如果計算出的寬度小於最小寬度，使用最小寬度
         const finalChatWidth = Math.max(chatWidthPx, minChatWidth);
-        const finalChatWidthPercent = (finalChatWidth / containerWidth) * 100;
-        const finalPlayerWidthPercent = 100 - finalChatWidthPercent;
 
-        // 設置聊天室寬度（使用像素值確保最小寬度）
         chatContainer.style.width = `${finalChatWidth}px`;
         chatContainer.style.minWidth = `${minChatWidth}px`;
         chatContainer.style.height = '100%';
-        chatContainer.style.display = 'block';
+        chatContainer.style.display = 'flex'; // Use flex for chat container
         chatContainer.classList.remove('hidden');
 
-        // 設置播放器寬度（使用 calc 來適應聊天室寬度）
         playerContainer.style.width = `calc(100% - ${finalChatWidth}px)`;
         playerContainer.style.height = '100%';
         playerContainer.style.transition = 'width 0.3s ease';
 
-        // 同步 React State，避免 re-render 時樣式跑掉
-        setChatWidth(finalChatWidth);
+        // setChatWidth(finalChatWidth);
         setPlayerWidth(`calc(100% - ${finalChatWidth}px)`);
       } else {
-        // 隱藏聊天室時，播放器佔滿 100%
         chatContainer.style.width = '0px';
         chatContainer.style.minWidth = '0px';
         chatContainer.style.height = '100%';
@@ -127,102 +186,26 @@ export function StreamBox({
         playerContainer.style.height = '100%';
         playerContainer.style.transition = 'width 0.3s ease';
 
-        // 更新狀態用於 JSX 渲染
-        setChatWidth(0);
+        // setChatWidth(0);
         setPlayerWidth('100%');
       }
     } else if (playerContainer) {
-      // 如果沒有聊天室容器，播放器佔滿 100%
-      const newWidth = streamData.chatVisible ? '80%' : '100%';
+      const newWidth = shouldShowChat ? '80%' : '100%';
       playerContainer.style.width = newWidth;
       playerContainer.style.height = '100%';
       playerContainer.style.transition = 'width 0.3s ease';
     }
 
     if (chatContainer) {
-      // 確保聊天室容器有正確的 ID
       if (!chatContainer.id || chatContainer.id !== `chat${streamData.id}`) {
         chatContainer.id = `chat${streamData.id}`;
       }
 
-      if (streamData.chatVisible) {
-
-        // 檢查聊天室 iframe 是否存在
+      if (shouldShowChat) {
         const iframe = chatContainer.querySelector('iframe');
-
         if (!iframe) {
-          // 如果 iframe 不存在，調用 createChat
-          if (typeof (window as any).createChat === 'function') {
-            // 使用多次重試，確保在 Cloudflare preview 環境中也能正確創建
-            let retryCount = 0;
-            const maxRetries = 5;
-            const tryCreateChat = () => {
-              try {
-                (window as any).createChat(
-                  streamData.id,
-                  streamData.platform,
-                  streamData.channelId,
-                  streamData.videoId
-                );
-
-                // 檢查是否成功創建
-                setTimeout(() => {
-                  const createdIframe = chatContainer.querySelector('iframe');
-
-                  if (!createdIframe && retryCount < maxRetries) {
-                    retryCount++;
-                    setTimeout(tryCreateChat, 200 * retryCount); // 遞增延遲
-                  }
-                }, 300);
-              } catch (error) {
-                if (retryCount < maxRetries) {
-                  retryCount++;
-                  setTimeout(tryCreateChat, 200 * retryCount);
-                }
-              }
-            };
-            setTimeout(tryCreateChat, 100);
-          } else {
-            // 嘗試等待 chat.js 載入
-            const waitForChatJs = () => {
-              if (typeof (window as any).createChat === 'function') {
-                if (streamData.chatVisible) {
-                  (window as any).createChat(
-                    streamData.id,
-                    streamData.platform,
-                    streamData.channelId,
-                    streamData.videoId
-                  );
-                }
-              } else {
-                // 監聽 chatFunctionsReady 事件
-                const handler = () => {
-                  if (streamData.chatVisible && typeof (window as any).createChat === 'function') {
-                    (window as any).createChat(
-                      streamData.id,
-                      streamData.platform,
-                      streamData.channelId,
-                      streamData.videoId
-                    );
-                  }
-                  window.removeEventListener('chatFunctionsReady', handler);
-                };
-                window.addEventListener('chatFunctionsReady', handler);
-
-                // 設置超時，避免無限等待
-                setTimeout(() => {
-                  window.removeEventListener('chatFunctionsReady', handler);
-                }, 5000);
-              }
-            };
-
-            // 如果 DOM 已就緒，立即檢查；否則等待
-            if (document.readyState === 'complete') {
-              setTimeout(waitForChatJs, 100);
-            } else {
-              window.addEventListener('load', waitForChatJs);
-            }
-          }
+          // Legacy createChat removed
+          // StreamChat handles rendering
         }
       } else {
         chatContainer.style.width = '0%';
@@ -233,22 +216,14 @@ export function StreamBox({
     }
 
     if (chatResizer) {
-      if (streamData.chatVisible) {
-        chatResizer.style.display = 'block';
-      } else {
-        chatResizer.style.display = 'none';
-      }
+      chatResizer.style.display = shouldShowChat ? 'block' : 'none';
     }
-
-    // 更新全局 streamData 的 chatVisible 狀態 - 參考 js/chat.js 的 toggleChat
-    if (window.streamData && window.streamData[streamData.id]) {
-      window.streamData[streamData.id].chatVisible = streamData.chatVisible;
-    }
-  }, [streamData.chatVisible, streamData.id, streamData.platform]);
+  }, [streamData.chatVisible, streamData.id, streamData.platform, chatLayoutType]);
 
   // 監聽窗口大小變化，重新計算聊天室寬度
   useEffect(() => {
-    if (!streamData.chatVisible) return;
+    const shouldShowChat = streamData.chatVisible && chatLayoutType === 'none';
+    if (!shouldShowChat) return;
 
     const handleResize = () => {
       const playerContainer = playerContainerRef.current;
@@ -268,189 +243,36 @@ export function StreamBox({
         chatContainer.style.minWidth = `${minChatWidth}px`;
         playerContainer.style.width = `calc(100% - ${finalChatWidth}px)`;
 
-        setChatWidth(finalChatWidth);
+        // setChatWidth(finalChatWidth);
         setPlayerWidth(`calc(100% - ${finalChatWidth}px)`);
       }
     };
 
     window.addEventListener('resize', handleResize);
-    // 初始計算
     handleResize();
 
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [streamData.chatVisible, streamData.platform, streamData.id]);
-
-  // 應用音量設定到播放器（在播放器準備好後調用）
-  const applyVolumeToPlayer = (id: number) => {
-    // 檢查播放器和串流數據是否存在
-    if (!window.players || !window.players[id] || !window.players[id].player) {
-      return;
-    }
-
-    if (!window.streamData || !window.streamData[id]) {
-      return;
-    }
-
-    const player = window.players[id].player;
-    const streamData = window.streamData[id];
-
-    // 檢查全部靜音狀態（從全局變量或 DOM 元素）
-    let masterMuted = false;
-    let masterVolume = 100;
-
-    // 嘗試從全局變量讀取
-    if ((window as any).masterMuted !== undefined) {
-      masterMuted = (window as any).masterMuted;
-    }
-
-    // 嘗試從 DOM 元素讀取 master-volume
-    const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
-    if (masterVolSlider) {
-      const masterVol = parseInt(masterVolSlider.value) || 100;
-      masterVolume = masterVol;
-      // 如果音量為 0，視為全部靜音
-      if (masterVol === 0) {
-        masterMuted = true;
-      }
-    }
-
-    // 如果全部靜音，直接靜音播放器
-    if (masterMuted) {
-      try {
-        if (streamData.platform === 'twitch') {
-          if (typeof player.setMuted === 'function') {
-            player.setMuted(true);
-          }
-        } else if (streamData.platform === 'youtube') {
-          if (typeof player.mute === 'function') {
-            player.mute();
-          }
-        }
-      } catch (e) {
-        // 應用靜音時發生錯誤，繼續處理
-      }
-      return;
-    }
-
-    // 如果沒有全部靜音，應用正常的音量設定
-    // 使用全局的 applyMasterVolumeToStream 函數（如果存在）
-    if (typeof (window as any).applyMasterVolumeToStream === 'function') {
-      try {
-        (window as any).applyMasterVolumeToStream(id);
-      } catch (e) {
-        // 應用音量設定時發生錯誤，繼續處理
-      }
-    } else {
-      // 如果函數不存在，手動應用音量
-      const streamVol = streamData.volume || 100;
-      const actualVol = Math.round((streamVol / 100) * masterVolume);
-
-      try {
-        if (streamData.platform === 'twitch') {
-          if (actualVol === 0) {
-            if (typeof player.setMuted === 'function') {
-              player.setMuted(true);
-            } else if (typeof player.setVolume === 'function') {
-              player.setVolume(0);
-            }
-          } else {
-            if (typeof player.setMuted === 'function') {
-              player.setMuted(false);
-            }
-            if (typeof player.setVolume === 'function') {
-              player.setVolume(actualVol / 100);
-            }
-          }
-        } else if (streamData.platform === 'youtube') {
-          try {
-            const playerState = player.getPlayerState();
-            if (playerState !== undefined) {
-              if (actualVol === 0) {
-                if (typeof player.mute === 'function') {
-                  player.mute();
-                } else if (typeof player.setVolume === 'function') {
-                  player.setVolume(0);
-                }
-              } else {
-                if (typeof player.unMute === 'function') {
-                  player.unMute();
-                }
-                if (typeof player.setVolume === 'function') {
-                  player.setVolume(actualVol);
-                }
-              }
-            }
-          } catch (e) {
-            // 播放器尚未就緒，稍後再試
-            setTimeout(() => {
-              if (window.players && window.players[id] && window.players[id].player) {
-                try {
-                  if (actualVol === 0) {
-                    if (typeof window.players[id].player.mute === 'function') {
-                      window.players[id].player.mute();
-                    }
-                  } else {
-                    if (typeof window.players[id].player.unMute === 'function') {
-                      window.players[id].player.unMute();
-                    }
-                    if (typeof window.players[id].player.setVolume === 'function') {
-                      window.players[id].player.setVolume(actualVol);
-                    }
-                  }
-                } catch (err) {
-                  // 靜默處理錯誤
-                }
-              }
-            }, 500);
-          }
-        }
-      } catch (e) {
-        // 應用音量時發生錯誤，繼續處理
-      }
-    }
-  };
+  }, [streamData.chatVisible, streamData.platform, streamData.id, chatLayoutType]);
 
   // 初始化播放器
+
   useEffect(() => {
     if (!playerContainerRef.current) return;
 
-    // 檢查是否有重載觸發器（用於強制重新創建播放器）
-    // 參考 js/stream.js 的 reloadStream 函數邏輯
-    const hasReloadTrigger = !!(window.streamData && window.streamData[streamData.id] && (window.streamData[streamData.id] as any)._reloadTrigger);
+    // 檢查是否有重載觸發器 (Uses Store _reloadKey now)
+    // Note: We used to check window.streamData._reloadTrigger here.
+    // Now we rely on React key/prop changes from StreamContainer.
     let shouldForceReload = false;
 
-    if (hasReloadTrigger) {
-      // 清除重載觸發器並重置初始化標記
-      delete (window.streamData[streamData.id] as any)._reloadTrigger;
-      playerInitializedRef.current = false;
-      playerCreatingRef.current = false;
-      shouldForceReload = true;
+    // Legacy logic removed. React key prop from parent should handle re-creation.
 
-      // 清理舊的播放器引用（參考 js/stream.js 第 517-523 行）
-      if (window.players && window.players[streamData.id]) {
-        const oldPlayer = window.players[streamData.id];
-        if (oldPlayer.type === 'youtube' && oldPlayer.player && typeof oldPlayer.player.destroy === 'function') {
-          try {
-            oldPlayer.player.destroy();
-          } catch (e) {
-            // 清理舊播放器時發生錯誤，繼續處理
-          }
-        }
-        delete window.players[streamData.id];
-      }
 
-      // 確保播放器容器已清空（參考 js/stream.js 第 525-529 行）
-      if (playerContainerRef.current) {
-        playerContainerRef.current.innerHTML = '';
-      }
-    }
 
     // 如果播放器已經初始化且關鍵屬性沒有變化，且沒有強制重載標記，跳過重新創建
-    // 這可以防止因為 useEffect 依賴項變化而導致的重複創建
     if (playerInitializedRef.current && !shouldForceReload) {
-      const existingPlayer = window.players && window.players[streamData.id];
+      const existingPlayer = usePlayerStore.getState().getPlayer(streamData.id);
       if (existingPlayer && existingPlayer.type === streamData.platform && existingPlayer.player) {
         // 檢查關鍵屬性是否變化
         const currentVideoId = streamData.platform === 'youtube' ? streamData.videoId : null;
@@ -540,18 +362,28 @@ export function StreamBox({
         };
 
         // 優化：添加創建前檢查
+        // 優化：添加創建前檢查，若未就緒則嘗試載入
         if (!window.Twitch || !window.Twitch.Player) {
-          throw new Error('Twitch Player API 未就緒');
+          try {
+            console.log('[StreamBox] Twitch API not ready, loading...');
+            await apiLoader.loadTwitchPlayerApi();
+          } catch (e) {
+            throw new Error('Twitch Player API 載入失敗');
+          }
         }
 
         console.log(`[StreamBox] Creating Twitch player for ${streamData.channelId}`);
+        // Legacy window.players writes removed
         const player = new window.Twitch.Player(`player${streamData.id}`, options);
 
-        if (!window.players) window.players = {};
-        window.players[streamData.id] = {
-          type: 'twitch',
-          player: player
-        };
+        try {
+          registerPlayer(streamData.id, {
+            type: 'twitch',
+            player: player
+          });
+        } catch (e) {
+          console.warn('[StreamBox] Failed to register Twitch player to store:', e);
+        }
 
         // 標記播放器已初始化
         playerInitializedRef.current = true;
@@ -562,7 +394,7 @@ export function StreamBox({
           const readyHandler = () => {
             player.removeEventListener(window.Twitch.Player.READY, readyHandler);
             // 播放器已就緒，應用音量設定
-            applyVolumeToPlayer(streamData.id);
+            applyVolumeToPlayer(player);
             resolve();
           };
 
@@ -571,7 +403,7 @@ export function StreamBox({
           // 設置超時，避免無限等待
           setTimeout(() => {
             if (playerInitializedRef.current) {
-              applyVolumeToPlayer(streamData.id);
+              applyVolumeToPlayer(player);
               resolve();
             }
           }, 5000);
@@ -595,9 +427,9 @@ export function StreamBox({
       }
 
       try {
-        // 檢查並清理舊的播放器
-        if (window.players && window.players[streamData.id]) {
-          const oldPlayer = window.players[streamData.id];
+        // 檢查並清理舊的播放器 (Use Store)
+        const oldPlayer = usePlayerStore.getState().getPlayer(streamData.id);
+        if (oldPlayer) {
           if (oldPlayer.type === 'youtube' && oldPlayer.player && typeof oldPlayer.player.destroy === 'function') {
             try {
               oldPlayer.player.destroy();
@@ -605,7 +437,7 @@ export function StreamBox({
               // 清理舊播放器時發生錯誤，繼續處理
             }
           }
-          delete window.players[streamData.id];
+          // Note: unregister is handled by store logic or overwrite
         }
 
         // 清空容器內容
@@ -737,7 +569,8 @@ export function StreamBox({
               }
 
               // 播放器已就緒，應用音量設定
-              applyVolumeToPlayer(streamData.id);
+              // 播放器已就緒，應用音量設定
+              applyVolumeToPlayer(player);
             },
             onStateChange: (event: any) => {
               // 監聽播放狀態變化，如果是直播且恢復播放，重新跳轉到最新位置
@@ -786,11 +619,16 @@ export function StreamBox({
           }
         });
 
-        if (!window.players) window.players = {};
-        window.players[streamData.id] = {
-          type: 'youtube',
-          player: player
-        };
+        // Legacy window.players writes removed
+
+        try {
+          registerPlayer(streamData.id, {
+            type: 'youtube',
+            player: player
+          });
+        } catch (e) {
+          console.warn('[StreamBox] Failed to register YouTube player to store:', e);
+        }
 
         // 標記播放器已初始化
         playerInitializedRef.current = true;
@@ -805,124 +643,19 @@ export function StreamBox({
     // 建立播放器（參考 js/stream.js 第 531-549 行）
     // 如果檢測到重載觸發器，強制重新創建播放器
     if (streamData.platform === 'twitch') {
-      createTwitchPlayer().catch(error => {
+      createTwitchPlayer().catch(() => {
         // 創建 Twitch 播放器失敗，繼續處理
       });
     } else if (streamData.platform === 'youtube') {
-      createYouTubePlayer().catch(error => {
+      createYouTubePlayer().catch(() => {
         // 創建 YouTube 播放器失敗，繼續處理
       });
     }
 
     // 建立聊天室 - 參考正式環境：立即生成，不延遲
     // 使用 requestAnimationFrame 確保 DOM 已準備好，但比 setTimeout 更快
-    requestAnimationFrame(() => {
-      // 確保聊天室容器存在（chatContainerRef 指向的 div 應該有 id="chat{id}"）
-      if (!chatContainerRef.current) {
-        return;
-      }
-
-      // 確保聊天室容器有正確的 ID
-      if (!chatContainerRef.current.id || chatContainerRef.current.id !== `chat${streamData.id}`) {
-        chatContainerRef.current.id = `chat${streamData.id}`;
-      }
-
-      // 參考正式環境：立即生成聊天室，即使 chatVisible 為 false
-      // 這樣在切換到固定布局時，可以直接複製已存在的 iframe
-      if (typeof (window as any).createChat === 'function') {
-        // 檢查聊天室是否已經創建
-        // 參考正式環境：只檢查是否有 iframe，不檢查是否有其他內容（因為 chat-resizer 也會被計入）
-        const existingChat = document.getElementById(`chat${streamData.id}`);
-        const existingIframe = existingChat?.querySelector('iframe');
-        const hasValidIframe = existingIframe && existingIframe.src;
-
-        // 如果沒有有效的 iframe，立即創建
-        // 參考正式環境：即使容器有其他內容（如 chat-resizer），只要沒有 iframe 就創建
-        if (!hasValidIframe) {
-          (window as any).createChat(
-            streamData.id,
-            streamData.platform,
-            streamData.channelId,
-            streamData.videoId
-          );
-        }
-      } else {
-        // 如果 createChat 函數不存在，等待它載入
-        const waitForChatJs = () => {
-          if (typeof (window as any).createChat === 'function') {
-            const existingChat = document.getElementById(`chat${streamData.id}`);
-            const existingIframe = existingChat?.querySelector('iframe');
-            const existingContent = (existingChat?.children.length ?? 0) > 0;
-
-            if (!existingIframe && !existingContent) {
-              (window as any).createChat(
-                streamData.id,
-                streamData.platform,
-                streamData.channelId,
-                streamData.videoId
-              );
-            }
-          } else {
-            // 監聽 chatFunctionsReady 事件
-            const handler = () => {
-              if (typeof (window as any).createChat === 'function') {
-                const existingChat = document.getElementById(`chat${streamData.id}`);
-                const existingIframe = existingChat?.querySelector('iframe');
-                const existingContent = (existingChat?.children.length ?? 0) > 0;
-
-                if (!existingIframe && !existingContent) {
-                  (window as any).createChat(
-                    streamData.id,
-                    streamData.platform,
-                    streamData.channelId,
-                    streamData.videoId
-                  );
-                }
-              }
-              window.removeEventListener('chatFunctionsReady', handler);
-            };
-            window.addEventListener('chatFunctionsReady', handler);
-
-            // 設置超時，避免無限等待
-            setTimeout(() => {
-              window.removeEventListener('chatFunctionsReady', handler);
-            }, 5000);
-          }
-        };
-
-        // 如果 DOM 已就緒，立即檢查；否則等待
-        if (document.readyState === 'complete') {
-          waitForChatJs();
-        } else {
-          window.addEventListener('load', waitForChatJs);
-        }
-      }
-
-      // 設置聊天室調整大小功能 - 參考 js/chat.js 的 setupChatResizer
-      if (typeof (window as any).setupChatResizer === 'function') {
-        (window as any).setupChatResizer(streamData.id);
-      }
-
-      // 根據 chatVisible 狀態設置聊天室顯示/隱藏
-      // 參考正式環境：聊天室已生成，只是通過 CSS 控制顯示/隱藏
-      if (!streamData.chatVisible) {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.classList.add('hidden');
-          chatContainerRef.current.style.display = 'none';
-        }
-        if (chatResizerRef.current) {
-          chatResizerRef.current.style.display = 'none';
-        }
-      } else {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.classList.remove('hidden');
-          chatContainerRef.current.style.display = 'block';
-        }
-        if (chatResizerRef.current) {
-          chatResizerRef.current.style.display = 'block';
-        }
-      }
-    });
+    // 移除舊的 createChat 邏輯
+    // 聊天室現在由 StreamChat 組件直接渲染
 
 
     // 移除拖拽功能 - StreamBox 不應該可拖曳
@@ -935,16 +668,8 @@ export function StreamBox({
       playerRetryCountRef.current = 0;
       playerInitializedRef.current = false;
 
-      if (window.players && window.players[streamData.id]) {
-        if (window.players[streamData.id].type === 'youtube' && window.players[streamData.id].player.destroy) {
-          try {
-            window.players[streamData.id].player.destroy();
-          } catch (e) {
-            // 清理播放器時發生錯誤，繼續處理
-          }
-        }
-        delete window.players[streamData.id];
-      }
+      // 清理播放器 (Store Only)
+      unregisterPlayer(streamData.id);
 
       // 清空容器內容
       if (playerContainerRef.current) {
@@ -955,25 +680,13 @@ export function StreamBox({
 
   // 參考正式環境：當聊天室布局啟用時，確保聊天室已生成
   // 注意：聊天室在串流初始化時已經立即生成，這裡只是確保它存在
-  useEffect(() => {
+  // 參考正式環境：當聊天室布局啟用時，確保聊天室已生成
+  // 注意：不再需要 legacy createChat，StreamChat 組件已經在 DOM 中
+  /* useEffect(() => {
     if (chatLayoutType !== 'none') {
-      // 使用 requestAnimationFrame 確保 DOM 已更新
-      requestAnimationFrame(() => {
-        const chatDiv = document.getElementById(`chat${streamData.id}`);
-        const hasContent = chatDiv && (chatDiv.querySelector('iframe') || chatDiv.children.length > 0);
-
-        // 如果聊天室不存在或沒有內容，立即創建（作為備用機制）
-        if (!hasContent && typeof (window as any).createChat === 'function') {
-          (window as any).createChat(
-            streamData.id,
-            streamData.platform,
-            streamData.channelId,
-            streamData.videoId
-          );
-        }
-      });
+        // ... legacy logic removed
     }
-  }, [chatLayoutType, streamData.id, streamData.platform, streamData.channelId, streamData.videoId]);
+  }, [chatLayoutType, streamData.id]); */
 
 
 
@@ -1083,37 +796,16 @@ export function StreamBox({
     };
   }, [streamData.platform, streamData.channelId, streamData.videoId, updateFavoriteName]);
 
-  // 獲取串流標題
-  const getStreamTitle = () => {
-    // 如果串流在收藏中，優先使用收藏名稱
-    if (favoriteName) {
-      return favoriteName;
-    }
 
-    if (streamData.displayName) {
-      return streamData.displayName;
-    }
-    if (streamData.name) {
-      return streamData.name;
-    }
-    if (streamData.platform === 'twitch') {
-      return streamData.channelId || `串流 #${streamData.id}`;
-    } else {
-      // YouTube: 如果不在收藏中，顯示 videoId 或默認標題
-      return streamData.videoId || `串流 #${streamData.id}`;
-    }
-  };
 
   // 處理音量變化
   const handleVolumeChange = (vals: number[]) => {
     const volume = vals[0];
     setLocalVolume(volume);
 
-    // 更新全局 streamData
-    if (window.streamData && window.streamData[streamData.id]) {
-      window.streamData[streamData.id].volume = volume;
-      window.streamData[streamData.id].isMuted = volume === 0;
-    }
+    // 更新全局 streamData (已移除，改為 Store 更新)
+    // Store update logic is handled via props or local state if decoupled.
+    // Actually onVolumeChange prop calls updateStream in parent.
 
     // 調用回調函數
     if (onVolumeChange) {
@@ -1121,9 +813,12 @@ export function StreamBox({
     }
 
     // 應用音量到播放器
-    if (typeof (window as any).applyMasterVolumeToStream === 'function') {
-      (window as any).applyMasterVolumeToStream(streamData.id);
+    const playerEntry = usePlayerStore.getState().getPlayer(streamData.id);
+    if (playerEntry && playerEntry.player) {
+      applyVolumeToPlayer(playerEntry.player);
     }
+    // Remove legacy window call
+    // if (typeof (window as any).applyMasterVolumeToStream === 'function') ...
 
     // 如果音量為 0，設置為靜音
     if (volume === 0) {
@@ -1138,14 +833,12 @@ export function StreamBox({
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
 
-    // 更新全局 streamData
-    if (window.streamData && window.streamData[streamData.id]) {
-      window.streamData[streamData.id].isMuted = newMutedState;
-    }
+    // 更新全局 streamData (已移除)
 
-    // 應用靜音狀態到播放器
-    if (window.players && window.players[streamData.id] && window.players[streamData.id].player) {
-      const player = window.players[streamData.id].player;
+    // 應用靜音狀態到播放器 (Use Store)
+    const playerState = usePlayerStore.getState().getPlayer(streamData.id);
+    if (playerState && playerState.player) {
+      const player = playerState.player;
       try {
         if (streamData.platform === 'twitch') {
           if (typeof player.setMuted === 'function') {
@@ -1153,13 +846,9 @@ export function StreamBox({
           }
         } else if (streamData.platform === 'youtube') {
           if (newMutedState) {
-            if (typeof player.mute === 'function') {
-              player.mute();
-            }
+            if (typeof player.mute === 'function') player.mute();
           } else {
-            if (typeof player.unMute === 'function') {
-              player.unMute();
-            }
+            if (typeof player.unMute === 'function') player.unMute();
           }
         }
       } catch (e) {
@@ -1179,32 +868,8 @@ export function StreamBox({
   }, [streamData.volume, streamData.isMuted]);
 
   // 監聽總音量變化，更新顯示（但不改變本地音量值）
-  useEffect(() => {
-    const updateDisplayVolume = () => {
-      const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
-      const masterVol = masterVolSlider ? parseInt(masterVolSlider.value) : 100;
-      const actualVol = Math.round((localVolume / 100) * masterVol);
-
-      // 更新顯示的百分比（但保持本地音量值不變）
-      // 這裡我們需要一個顯示用的狀態
-      const volValueElement = boxRef.current?.querySelector('.vol-value-display');
-      if (volValueElement) {
-        volValueElement.textContent = `${actualVol}%`;
-      }
-    };
-
-    // 監聽總音量變化事件
-    const handleMasterVolumeChange = () => {
-      updateDisplayVolume();
-    };
-
-    window.addEventListener('masterVolumeChanged', handleMasterVolumeChange);
-    updateDisplayVolume(); // 初始更新
-
-    return () => {
-      window.removeEventListener('masterVolumeChanged', handleMasterVolumeChange);
-    };
-  }, [localVolume]);
+  // Legacy masterVolumeChanged listener removed - StreamBox receives volume via props
+  // useEffect(() => { ... }, [localVolume]);
 
   return (
     <div
@@ -1289,11 +954,11 @@ export function StreamBox({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-4 w-4 p-0 ${streamData.chatVisible
+            className={`h-4 w-4 p-0 ${streamData.chatVisible && chatLayoutType === 'none'
               ? (theme === 'dark' ? 'text-purple-400 bg-purple-500/30 hover:bg-purple-500/40 hover:text-purple-300' : 'text-purple-600 bg-purple-500/10 hover:bg-purple-500/15 hover:text-purple-700')
               : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
-              } ${streamData.chatVisible ? 'border border-purple-500/50' : ''}`}
-            title={streamData.chatVisible ? '隱藏聊天室' : '顯示聊天室'}
+              } ${streamData.chatVisible && chatLayoutType === 'none' ? 'border border-purple-500/50' : ''}`}
+            title={streamData.chatVisible && chatLayoutType === 'none' ? '隱藏聊天室' : '顯示聊天室'}
             onClick={(e) => {
               e.stopPropagation();
               handleToggleChat();
@@ -1320,7 +985,7 @@ export function StreamBox({
 
       {/* Content Wrapper */}
       <div
-        className={`content-wrapper flex ${streamData.chatVisible ? 'flex-row' : 'flex-col'}`}
+        className={`content-wrapper flex ${streamData.chatVisible && chatLayoutType === 'none' ? 'flex-row' : 'flex-col'}`}
         id={`content-wrapper${streamData.id}`}
         style={{
           height: 'calc(100% - 24px)', // 減去工具列高度 (24px)
@@ -1341,20 +1006,19 @@ export function StreamBox({
             transition: 'width 0.3s ease'
           }}
         />
+        {/* Chat Container */}
         <div
           ref={chatContainerRef}
-          className={`chat-container ${streamData.chatVisible ? '' : 'hidden'}`}
           id={`chat${streamData.id}`}
-          style={{
-            width: streamData.chatVisible ? `${chatWidth}px` : '0px',
-            minWidth: streamData.chatVisible ? (streamData.platform === 'twitch' ? '300px' : '200px') : '0px',
-            height: '100%',
-            flexShrink: 0,
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'width 0.3s ease, min-width 0.3s ease'
-          }}
+          className={`stream-chat absolute top-0 right-0 h-full bg-black border-l border-gray-700 z-10 flex flex-col ${streamData.chatVisible && chatLayoutType === 'none' ? '' : 'hidden'
+            }`}
+          style={{ width: '0px' }} // Initial width, managed by resize logic
         >
+          <StreamChat
+            platform={streamData.platform}
+            channelId={streamData.channelId}
+            videoId={streamData.videoId}
+          />
           {/* chat-resizer 應該在聊天室容器內部，使用 absolute 定位在左側邊緣 */}
           {/* 注意：chat-resizer 必須在 iframe 之前，這樣 iframe 才會在下方（z-index 較低） */}
           <div
