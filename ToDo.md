@@ -1,5 +1,54 @@
 # TODO
 
+## 筆記prompt
+
+不做任何修改
+
+如果有任何問題請先不要做任何修改，先反問再做處理
+你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
+
+不做任何修改
+
+你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
+代理server 啟動指令: wrangler pages dev functions --port 8788
+Shadcn UI
+
+## 需要優化的內容
+
+- Navbar 的 RWD 需要優化
+- 手機版面優化
+- 任意解析度版面優化
+
+## 待新增功能
+
+### [] 1. Twitch 分類搜尋
+
+### [] 2. Twitch 使用者追隨頻道匯入
+
+### [*] 3. Feedback 系統
+
+### [] 4. 快捷鍵功能
+
+### [] 5. 短期觀看串流復原
+
+### [] 6. streambox 模組升級為畫布功能
+
+### [] 7. 網站的主題個人化調整
+
+### [] 8. 將製作首頁將觀看區域做區分
+
+### [] 9. 訂閱會員付費功能
+
+### [] 10. 小人移動顯示聊天氣泡的趣味功能
+
+### [] 11. 在畫布功能下提供全螢幕功能
+
+### [] 12. 製作 PWA 功能
+
+### [] 13. 新增未直播以及正在直播兩個標籤(僅收藏串流使用)
+
+### [] 14. 聊天室布局更新，添加更多的聊天室布局 6、8、10
+
 ## 專案架構概覽與核心模組 (Project Architecture & Core Modules)
 
 本專案採用 **Modern React + Legacy Bridge (Hybrid)** 架構。前端使用 React 18, Vite, TypeScript, Zustand, Tailwind CSS, Shadcn UI，並透過 Bridge 層與舊有的 Global Scripts 進行相容。
@@ -94,55 +143,6 @@ graph TD
 - `window.players`: 儲存真實的 Twitch/YouTube Player 實例。
 - `window.createChat` / `window.toggleChat`: 直接操作 DOM 的聊天室管理函數。
 - `window.addStream`: 讓外部腳本 (Bookmarklet 或 Console) 能調用 React 內部的 `addStream`。
-
-## 筆記prompt
-
-不做任何修改
-
-如果有任何問題請先不要做任何修改，先反問再做處理
-你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
-
-不做任何修改
-
-你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
-代理server 啟動指令: wrangler pages dev functions --port 8788
-Shadcn UI
-
-## 需要優化的內容
-
-- Navbar 的 RWD 需要優化
-- 手機版面優化
-- 任意解析度版面優化
-
-## 待新增功能
-
-### [] 1. Twitch 分類搜尋
-
-### [] 2. Twitch 使用者追隨頻道匯入
-
-### [*] 3. Feedback 系統
-
-### [] 4. 快捷鍵功能
-
-### [] 5. 短期觀看串流復原
-
-### [] 6. streambox 模組升級為畫布功能
-
-### [] 7. 網站的主題個人化調整
-
-### [] 8. 將製作首頁將觀看區域做區分
-
-### [] 9. 訂閱會員付費功能
-
-### [] 10. 小人移動顯示聊天氣泡的趣味功能
-
-### [] 11. 在畫布功能下提供全螢幕功能
-
-### [] 12. 製作 PWA 功能
-
-### [] 13. 新增未直播以及正在直播兩個標籤(僅收藏串流使用)
-
-### [] 14. 聊天室布局更新，添加更多的聊天室布局 6、8、10
 
 # 代碼審查報告 (Code Review Report)
 
