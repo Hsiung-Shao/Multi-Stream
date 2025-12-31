@@ -901,6 +901,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                       }}
                       onClear={() => setFilterTags([])}
                       theme={theme}
+                      maxVisibleTags={10}
                       columns={10}
                     />
                   </div>

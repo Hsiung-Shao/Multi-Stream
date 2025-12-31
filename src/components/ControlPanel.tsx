@@ -677,7 +677,7 @@ export function ControlPanel({
                   }}
                   onClear={() => setFilterTags([])}
                   theme={theme}
-                  columns={6}
+                  maxVisibleTags={6}
                 />
               )}
 
