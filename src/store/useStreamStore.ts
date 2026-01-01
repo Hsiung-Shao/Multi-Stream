@@ -47,7 +47,7 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
                     const results = await window.twitchApi.searchChannels(trimmedUrl, 1);
                     if (results && results.length > 0) {
                         finalUrl = results[0].url;
-                        foundChannelName = results[0].display_name;
+                        foundChannelName = results[0].displayName;
                     } else {
                         return { success: false, message: `找不到頻道 "${trimmedUrl}"` };
                     }
@@ -171,9 +171,7 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
             const currentCount = newStreams.length;
 
             // Cleanup Legacy Global
-            if (window.streamData && window.streamData[id]) {
-                delete window.streamData[id];
-            }
+
 
             // 重新計算佈局
             // 如果當前是自動模式 (userLayout === null)，則重新自動選擇
@@ -217,10 +215,7 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
                 s.id === id ? { ...s, ...updates } : s
             )
         }));
-        // Sync Legacy
-        if (window.streamData && window.streamData[id]) {
-            Object.assign(window.streamData[id], updates);
-        }
+
     },
 
     setChatLayout: (layout) => set({ chatLayout: layout }),
