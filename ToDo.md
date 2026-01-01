@@ -15,10 +15,9 @@
 
 ## 筆記prompt
 
+繼續
 不做任何修改
 如果有任何問題請先不要做任何修改，先反問再做處理
-
-繼續
 嚴格遵守規則:你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
 代理server 啟動指令: wrangler pages dev functions --port 8788
 Shadcn UI
