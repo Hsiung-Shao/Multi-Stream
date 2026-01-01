@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { RefreshCw, MessageSquare, X, Volume2, VolumeX } from 'lucide-react';
 import type { LayoutStyle } from '../utils/layoutUtils';
-import { favoritesService } from '../features/favorites/FavoritesService';
+
 
 interface StreamBoxProps {
   streamData: StreamData;
@@ -55,7 +55,8 @@ export function StreamBox({
   const chatResizerRef = useRef<HTMLDivElement>(null);
 
   // Use Chat Resizer Hook
-  useChatResizer(chatResizerRef as React.RefObject<HTMLElement>, chatContainerRef as React.RefObject<HTMLElement>, 'left', 200, 600, 350);
+  useChatResizer(chatResizerRef as React.RefObject<HTMLElement>, chatContainerRef as React.RefObject<HTMLElement>, 'left', 300, 600, 350);
+
   const boxRef = useRef<HTMLDivElement>(null);
   const playerCreatingRef = useRef<boolean>(false);
   const playerRetryCountRef = useRef<number>(0);
@@ -69,8 +70,8 @@ export function StreamBox({
   const [localVolume, setLocalVolume] = useState<number>(streamData.volume || 100);
   const [isMuted, setIsMuted] = useState<boolean>(streamData.isMuted || false);
 
-  // 收藏名稱狀態
-  const [favoriteName, setFavoriteName] = useState<string | null>(null);
+  // const [favoriteName, setFavoriteName] = useState<string | null>(null); // Unused
+
 
   // Ref to hold latest props for async callbacks (avoid stale closures)
   const propsRef = useRef({ streamData, masterVolume, isMasterMuted });
@@ -155,7 +156,8 @@ export function StreamBox({
     }
 
     if (playerContainer && chatContainer) {
-      const minChatWidth = streamData.platform === 'twitch' ? 300 : 200;
+      const minChatWidth = 300;
+
 
       if (shouldShowChat) {
         const containerWidth = chatContainer.parentElement?.clientWidth || 0;
@@ -230,7 +232,8 @@ export function StreamBox({
       const chatContainer = chatContainerRef.current;
       if (!playerContainer || !chatContainer) return;
 
-      const minChatWidth = streamData.platform === 'twitch' ? 300 : 200;
+      const minChatWidth = 300; // Both Twitch and YouTube need space
+
       const containerElement = chatContainer.parentElement || boxRef.current;
       const containerWidth = containerElement?.clientWidth || 0;
 
@@ -730,71 +733,7 @@ export function StreamBox({
   // 從收藏中獲取名稱的函數
   // 直接調用 favoritesService
   // if (window.favoriteStreams) check removed
-  const updateFavoriteName = useCallback(() => {
-    // 改用 favoritesService.getFavorites()
-    const favorites = favoritesService.getFavorites();
 
-    const favorite = favorites.find(fav => {
-      if (streamData.platform === 'twitch') {
-        return fav.platform === 'twitch' && fav.channelId === streamData.channelId;
-      } else {
-        // YouTube: 僅在收藏中時顯示收藏名稱
-        return fav.platform === 'youtube' && (
-          fav.channelId === streamData.channelId ||
-          fav.videoId === streamData.videoId
-        );
-      }
-    });
-
-    if (favorite && favorite.name) {
-      setFavoriteName(favorite.name);
-    } else {
-      setFavoriteName(null);
-    }
-  }, [streamData.platform, streamData.channelId, streamData.videoId]);
-
-  // 從收藏中獲取名稱（初始化）
-  useEffect(() => {
-    updateFavoriteName();
-  }, [updateFavoriteName]);
-
-  // 監聽收藏系統變更事件
-  useEffect(() => {
-    const handleFavoritesUpdated = (event: CustomEvent) => {
-      const { action, favorite } = event.detail;
-
-      // 檢查變更的收藏是否與當前串流匹配
-      if (favorite) {
-        let isMatch = false;
-        if (streamData.platform === 'twitch') {
-          isMatch = favorite.platform === 'twitch' && favorite.channelId === streamData.channelId;
-        } else if (streamData.platform === 'youtube') {
-          isMatch = favorite.platform === 'youtube' && (
-            favorite.channelId === streamData.channelId ||
-            favorite.videoId === streamData.videoId
-          );
-        }
-
-        // 如果匹配，更新名稱
-        if (isMatch) {
-          if (action === 'remove') {
-            setFavoriteName(null);
-          } else {
-            updateFavoriteName();
-          }
-        }
-      } else {
-        // 如果沒有提供 favorite 詳情，重新檢查所有收藏
-        updateFavoriteName();
-      }
-    };
-
-    window.addEventListener('favoritesUpdated', handleFavoritesUpdated as EventListener);
-
-    return () => {
-      window.removeEventListener('favoritesUpdated', handleFavoritesUpdated as EventListener);
-    };
-  }, [streamData.platform, streamData.channelId, streamData.videoId, updateFavoriteName]);
 
 
 
@@ -901,7 +840,7 @@ export function StreamBox({
             <Button
               variant="ghost"
               size="icon"
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 handleToggleMute();
               }}
@@ -942,7 +881,7 @@ export function StreamBox({
             size="icon"
             className={`h-4 w-4 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black'}`}
             title="重新整理串流"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               onReload(streamData.id);
             }}
@@ -959,7 +898,7 @@ export function StreamBox({
               : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
               } ${streamData.chatVisible && chatLayoutType === 'none' ? 'border border-purple-500/50' : ''}`}
             title={streamData.chatVisible && chatLayoutType === 'none' ? '隱藏聊天室' : '顯示聊天室'}
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               handleToggleChat();
             }}
@@ -973,7 +912,7 @@ export function StreamBox({
             size="icon"
             className={`h-4 w-4 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-400' : 'text-gray-600 hover:bg-red-100 hover:text-red-600'}`}
             title="關閉串流"
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               onRemove(streamData.id);
             }}
@@ -1018,6 +957,7 @@ export function StreamBox({
             platform={streamData.platform}
             channelId={streamData.channelId}
             videoId={streamData.videoId}
+            theme={theme}
           />
           {/* chat-resizer 應該在聊天室容器內部，使用 absolute 定位在左側邊緣 */}
           {/* 注意：chat-resizer 必須在 iframe 之前，這樣 iframe 才會在下方（z-index 較低） */}

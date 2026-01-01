@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getTwitchChatUrl, getYouTubeChatUrl } from '../utils/chatUtils';
 import { Button } from './ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -8,9 +8,10 @@ interface StreamChatProps {
     channelId: string;
     videoId?: string;
     className?: string; // For layout/sizing
+    theme?: 'light' | 'dark';
 }
 
-export function StreamChat({ platform, channelId, videoId, className }: StreamChatProps) {
+export function StreamChat({ platform, channelId, videoId, className, theme }: StreamChatProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [retryCount, setRetryCount] = useState(0);
     const [isError, setIsError] = useState(false);
@@ -68,14 +69,14 @@ export function StreamChat({ platform, channelId, videoId, className }: StreamCh
             iframe.removeEventListener('error', handleError);
             clearTimeout(loadTimer);
         };
-    }, [platform, loadKey, retryCount]); // Depend on loadKey to re-attach on reload
+    }, [platform, loadKey, retryCount, theme]); // Depend on loadKey to re-attach on reload
 
     // Construct URL
     let src = '';
     if (platform === 'twitch') {
-        src = getTwitchChatUrl(channelId);
+        src = getTwitchChatUrl(channelId, theme);
     } else if (platform === 'youtube' && videoId) {
-        src = getYouTubeChatUrl(videoId);
+        src = getYouTubeChatUrl(videoId, theme);
     } else {
         // If missing IDs
         return <div className="flex items-center justify-center h-full text-gray-400 text-xs">No Chat Configured</div>;
@@ -99,7 +100,7 @@ export function StreamChat({ platform, channelId, videoId, className }: StreamCh
     return (
         <iframe
             ref={iframeRef}
-            key={loadKey} // Force recreation on reload
+            key={`${loadKey}-${theme}`} // Force recreation on reload or theme change
             src={src}
             className={`w-full h-full border-0 ${className || ''}`}
             title={`chat-${platform}-${channelId}`}

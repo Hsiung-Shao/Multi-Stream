@@ -7,13 +7,22 @@ export const getParentDomain = (): string => {
     return hostname;
 };
 
-export const getTwitchChatUrl = (channelId: string): string => {
+export const getTwitchChatUrl = (channelId: string, theme?: 'light' | 'dark'): string => {
     const domain = getParentDomain();
     const parentParam = domain === 'localhost' ? 'localhost' : domain;
-    return `https://www.twitch.tv/embed/${encodeURIComponent(channelId)}/chat?parent=${encodeURIComponent(parentParam)}&darkpopout`;
+    let url = `https://www.twitch.tv/embed/${encodeURIComponent(channelId)}/chat?parent=${encodeURIComponent(parentParam)}`;
+    if (theme === 'dark') {
+        url += '&darkpopout';
+    }
+    return url;
 };
 
-export const getYouTubeChatUrl = (videoId: string): string => {
+export const getYouTubeChatUrl = (videoId: string, theme?: 'light' | 'dark'): string => {
     const domain = getParentDomain();
-    return `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(domain)}`;
+    let url = `https://www.youtube.com/live_chat?v=${encodeURIComponent(videoId)}&embed_domain=${encodeURIComponent(domain)}`;
+    if (theme === 'dark') {
+        url += '&dark_theme=1';
+    }
+    return url;
 };
+

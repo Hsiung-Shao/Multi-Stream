@@ -135,10 +135,4 @@ export const setUserProperties = (properties: any) => {
     }
 };
 
-/**
- * 特別為使用者屬性設定 (雖 GA4 自動收集國家，但若有自定義屬性可擴充)
- */
-export const setUserProperties = (properties: any) => {
-    if (!GA_MEASUREMENT_ID) return;
-    ReactGA.set(properties);
-};
+

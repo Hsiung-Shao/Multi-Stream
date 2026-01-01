@@ -58,8 +58,9 @@ export function TagFilterLayout({
                             tag={tag}
                             onClick={() => onToggleTag(tag.id)}
                             className={`flex-shrink-0 cursor-pointer transition-all ${isSelected
-                                ? 'ring-2 ring-offset-2 ring-purple-500 opacity-100'
+                                ? 'opacity-100'
                                 : 'opacity-50 hover:opacity-100'
+
                                 }`}
                         />
                     );
@@ -106,8 +107,9 @@ export function TagFilterLayout({
                                             tag={tag}
                                             onClick={() => onToggleTag(tag.id)}
                                             className={`cursor-pointer transition-all ${isSelected
-                                                ? 'ring-2 ring-offset-2 ring-purple-500 opacity-100'
+                                                ? 'opacity-100'
                                                 : 'opacity-50 hover:opacity-100'
+
                                                 }`}
                                         />
                                     )
