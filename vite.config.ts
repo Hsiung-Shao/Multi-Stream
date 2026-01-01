@@ -59,7 +59,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // UI 組件庫分組
+          // 核心庫
+          'vendor-react': ['react', 'react-dom', 'zustand', '@tanstack/react-query'],
+
+          // UI 基礎組件
           'vendor-radix': [
             '@radix-ui/react-dialog',
             '@radix-ui/react-select',
@@ -73,15 +76,11 @@ export default defineConfig({
             '@radix-ui/react-scroll-area',
           ],
 
-          'vendor-icons': ['lucide-react'],
-          // 大型組件單獨分組（懶加載）
-          'lazy-components': [
-            './src/components/VersionHistory',
-            './src/components/Tutorial',
-            './src/components/FavoritesManager',
-            './src/components/AboutPage',
-            './src/components/PrivacyPage',
-          ],
+          // 圖表庫 - 獨立打包
+          'vendor-charts': ['recharts'],
+
+          // 工具庫
+          'vendor-utils': ['clsx', 'tailwind-merge', 'i18next', 'react-i18next', 'lucide-react'],
         },
       },
     },
