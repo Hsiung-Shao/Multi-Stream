@@ -21,6 +21,7 @@
 嚴格遵守規則:你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
 代理server 啟動指令: wrangler pages dev functions --port 8788
 Shadcn UI
+  <script defer src="/config.js"></script>
 
 ## 需要優化的內容
 
