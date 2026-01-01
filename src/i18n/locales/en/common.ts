@@ -1,0 +1,27 @@
+const common = {
+  'version.title': 'Version History',
+  'version.close': 'Close',
+  'common.close': 'Close',
+  'common.loading': 'Loading...',
+  'common.error': 'Error',
+  'common.success': 'Success',
+  'common.confirm': 'Confirm',
+  'common.cancel': 'Cancel',
+  'common.save': 'Save',
+  'common.edit': 'Edit',
+  'common.delete': 'Delete',
+  'common.remove': 'Remove',
+  'common.add': 'Add',
+  'common.search': 'Search',
+  'common.filter': 'Filter',
+  'common.all': 'All',
+  'common.yes': 'Yes',
+  'common.no': 'No',
+  'chineseTraditional': '繁體中文',
+  'chineseSimplified': '简体中文',
+  'english': 'English',
+  'japanese': '日本語',
+  'korean': '한국어',
+};
+
+export default common;

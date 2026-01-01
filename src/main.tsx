@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.tsx";
 import "./index.css";
 import { apiLoader } from "./utils/apiLoader.ts";
-import { I18nProvider } from "./i18n/index";
+import "./i18n/i18n"; // Import i18n configuration
 import { checkAppVersion } from "./utils/versionCheck.ts";
 import { tagsService } from "./features/favorites/TagsService";
 
@@ -39,8 +39,8 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
-    <I18nProvider>
-      <App />
-    </I18nProvider>
+    {/* <I18nProvider> removed, using global i18next instance */}
+    <App />
+    {/* </I18nProvider> */}
   </QueryClientProvider>
 );

@@ -8,7 +8,7 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { AlertTriangle, Info, AlertOctagon } from 'lucide-react';
-import { useI18n } from '../i18n/index';
+import { useTranslation } from 'react-i18next';
 
 interface YouTubeRiskDialogProps {
     open: boolean;
@@ -25,7 +25,7 @@ export const YouTubeRiskDialog: React.FC<YouTubeRiskDialogProps> = ({
     onPauseOthers,
     onDontRemind
 }) => {
-    const { t } = useI18n();
+    const { t } = useTranslation('youtubeRisk');
 
     const isStrongWarning = streamCount >= 4;
 
@@ -48,24 +48,24 @@ export const YouTubeRiskDialog: React.FC<YouTubeRiskDialogProps> = ({
                         ) : (
                             <AlertTriangle className="text-yellow-500" />
                         )}
-                        {t('youtubeRisk.title' as any)}
+                        {t('title' as any)}
                     </DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-4 py-2">
                     <div className="text-base">
-                        {formatText('youtubeRisk.body' as any, { n: streamCount })}
+                        {formatText('body' as any, { n: streamCount })}
                     </div>
 
                     <div className="bg-muted/50 p-4 rounded-lg text-sm border">
                         <h4 className="flex items-center gap-2 font-semibold mb-2">
                             <Info size={16} className="text-blue-500" />
-                            {t('youtubeRisk.disclaimer.title' as any)}
+                            {t('disclaimer.title' as any)}
                         </h4>
                         <ul className="space-y-2 list-none m-0 p-0 text-muted-foreground">
-                            <li>{t('youtubeRisk.disclaimer.item1' as any)}</li>
-                            <li>{t('youtubeRisk.disclaimer.item2' as any)}</li>
-                            <li>{t('youtubeRisk.disclaimer.item3' as any)}</li>
+                            <li>{t('disclaimer.item1' as any)}</li>
+                            <li>{t('disclaimer.item2' as any)}</li>
+                            <li>{t('disclaimer.item3' as any)}</li>
                         </ul>
                     </div>
                 </div>
@@ -78,11 +78,11 @@ export const YouTubeRiskDialog: React.FC<YouTubeRiskDialogProps> = ({
                                 onClick={onPauseOthers}
                                 className="border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
                             >
-                                {t('youtubeRisk.pauseOthers' as any)}
+                                {t('pauseOthers' as any)}
                             </Button>
                         )}
                         <Button onClick={onClose}>
-                            {t('youtubeRisk.confirm' as any)}
+                            {t('confirm' as any)}
                         </Button>
                     </div>
                     <Button
@@ -91,7 +91,7 @@ export const YouTubeRiskDialog: React.FC<YouTubeRiskDialogProps> = ({
                         onClick={onDontRemind}
                         className="text-xs text-muted-foreground self-center h-auto py-1"
                     >
-                        {t('youtubeRisk.sessionIgnore' as any)}
+                        {t('sessionIgnore' as any)}
                     </Button>
                 </DialogFooter>
             </DialogContent>

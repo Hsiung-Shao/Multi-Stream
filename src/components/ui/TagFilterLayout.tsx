@@ -4,7 +4,7 @@ import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { TagChip } from './TagChip';
 import type { Tag } from '../../features/favorites/types';
-import { useI18n } from '../../i18n/index';
+import { useTranslation } from 'react-i18next';
 import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from '../../features/favorites/constants';
 
 interface TagFilterLayoutProps {
@@ -25,7 +25,7 @@ export function TagFilterLayout({
     maxVisibleTags = 5
 }: TagFilterLayoutProps) {
     const [open, setOpen] = useState(false);
-    const { t } = useI18n();
+    const { t } = useTranslation('tags');
 
     // 排序與篩選標籤：平台標籤優先，最多顯示 maxVisibleTags 個
     const visibleTags = useMemo(() => {
@@ -75,7 +75,7 @@ export function TagFilterLayout({
                             size="sm"
                             className={`flex-shrink-0 h-auto px-2 py-1 ml-auto ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300'}`}
                         >
-                            <span className="text-xs mr-1">{t('tags.all')}</span>
+                            <span className="text-xs mr-1">{t('all')}</span>
                             <ChevronDown className="size-3" />
                         </Button>
                     </PopoverTrigger>
@@ -87,7 +87,7 @@ export function TagFilterLayout({
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                                    {t('tags.filterTitle')}
+                                    {t('filterTitle')}
                                 </span>
                                 {selectedTags.length > 0 && (
                                     <span className="bg-purple-600 text-white text-xs px-2 py-0.5 rounded-full">
@@ -121,7 +121,7 @@ export function TagFilterLayout({
                                     disabled={selectedTags.length === 0}
                                     className={`rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-none disabled:opacity-50 ${theme === 'dark' ? 'disabled:bg-gray-700 disabled:text-gray-400' : 'disabled:bg-gray-200 disabled:text-gray-400'}`}
                                 >
-                                    {t('tags.clearAll')}
+                                    {t('clearAll')}
                                 </Button>
                             </div>
                         </div>

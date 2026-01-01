@@ -1,0 +1,27 @@
+const common = {
+  'version.title': 'バージョン情報',
+  'version.close': '閉じる',
+  'common.close': '閉じる',
+  'common.loading': '読み込み中...',
+  'common.error': 'エラー',
+  'common.success': '成功',
+  'common.confirm': '確認',
+  'common.cancel': 'キャンセル',
+  'common.save': '保存',
+  'common.edit': '編集',
+  'common.delete': '削除',
+  'common.remove': '削除',
+  'common.add': '追加',
+  'common.search': '検索',
+  'common.filter': 'フィルター',
+  'common.all': 'すべて',
+  'common.yes': 'はい',
+  'common.no': 'いいえ',
+  'chineseTraditional': '繁體中文',
+  'chineseSimplified': '简体中文',
+  'english': 'English',
+  'japanese': '日本語',
+  'korean': '한국어',
+};
+
+export default common;

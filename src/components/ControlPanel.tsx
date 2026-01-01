@@ -9,7 +9,7 @@ import type { StreamData } from '../utils/streamUtils';
 // import { FavoriteStreamComponent } from './FavoriteStreamComponent'; // Removed as it is defined in-file
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
-import { useI18n } from '../i18n/index';
+import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/use-media-query';
 
 import { TagFilterLayout } from './ui/TagFilterLayout';
@@ -87,7 +87,8 @@ export function ControlPanel({
   onMasterMuteChange,
   onAddStream
 }: ControlPanelProps) {
-  const { t } = useI18n();
+  const { t, i18n } = useTranslation(['common', 'controlPanel', 'favorites']);
+  const locale = i18n.language;
   // 使用 'lg' (1200px) breakpoint 以確保手機水平版面也使用手機版設計
   const isMobile = useMediaQuery('(max-width: 1200px)');
   const [showAllChat, setShowAllChat] = useState(false);
@@ -341,20 +342,20 @@ export function ControlPanel({
   }, []);
 
   const layouts = [
-    { id: 1, icon: '📺', label: t('controlPanel.singleView'), cols: 1, rows: 1 },
-    { id: 2, icon: '⬅️➡️', label: t('controlPanel.splitHorizontal'), cols: 2, rows: 1 },
-    { id: 3, icon: '⬆️⬇️', label: t('controlPanel.splitVertical'), cols: 1, rows: 2 },
-    { id: 4, icon: '⊞', label: t('controlPanel.grid4'), cols: 2, rows: 2 },
-    { id: 5, icon: '⬆️⬇️⬇️', label: t('controlPanel.largeTop3'), cols: 3, rows: 2, special: 'top-large-bottom-three' },
-    { id: 6, icon: '⊞⊞', label: t('controlPanel.grid2x3'), cols: 3, rows: 2 },
-    { id: 9, icon: '⊞⊞⊞', label: t('controlPanel.grid3x3'), cols: 3, rows: 3 },
+    { id: 1, icon: '📺', label: t('controlPanel:singleView'), cols: 1, rows: 1 },
+    { id: 2, icon: '⬅️➡️', label: t('controlPanel:splitHorizontal'), cols: 2, rows: 1 },
+    { id: 3, icon: '⬆️⬇️', label: t('controlPanel:splitVertical'), cols: 1, rows: 2 },
+    { id: 4, icon: '⊞', label: t('controlPanel:grid4'), cols: 2, rows: 2 },
+    { id: 5, icon: '⬆️⬇️⬇️', label: t('controlPanel:largeTop3'), cols: 3, rows: 2, special: 'top-large-bottom-three' },
+    { id: 6, icon: '⊞⊞', label: t('controlPanel:grid2x3'), cols: 3, rows: 2 },
+    { id: 9, icon: '⊞⊞⊞', label: t('controlPanel:grid3x3'), cols: 3, rows: 3 },
   ];
 
   const chatLayouts = [
     { id: 1, label: t('common.close'), icon: '□' },
-    { id: 2, label: t('controlPanel.singleChatLayout'), icon: '▢' },
-    { id: 3, label: t('controlPanel.dualColumnChat'), icon: '▢▢' },
-    { id: 4, label: t('controlPanel.quadChat'), icon: '▦' },
+    { id: 2, label: t('controlPanel:singleChatLayout'), icon: '▢' },
+    { id: 3, label: t('controlPanel:dualColumnChat'), icon: '▢▢' },
+    { id: 4, label: t('controlPanel:quadChat'), icon: '▦' },
   ];
 
   // 如果控制面板被收起或搜尋框使用中（聚焦或有內容），則不顯示（手機版）
@@ -377,11 +378,11 @@ export function ControlPanel({
         <div className="p-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('controlPanel.title')}</h2>
+            <h2 className={`${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('controlPanel:title')}</h2>
           </div>
 
           {/* Layout Control */}
-          <Section theme={theme} title={t('controlPanel.layoutControl')}>
+          <Section theme={theme} title={t('controlPanel:layoutControl')}>
             <div className="grid grid-cols-4 gap-2">
               {layouts.map((layout) => (
                 <Button
@@ -414,7 +415,7 @@ export function ControlPanel({
           </Section>
 
           {/* Chat Layout */}
-          <Section theme={theme} title={t('controlPanel.sideChatLayout')}>
+          <Section theme={theme} title={t('controlPanel:sideChatLayout')}>
             <div className="grid grid-cols-4 gap-2">
               {chatLayouts.map((layout) => {
                 const chatLayoutTypeMap: Record<number, ChatLayoutType> = {
@@ -452,11 +453,11 @@ export function ControlPanel({
           </Section>
 
           {/* Chat Control */}
-          <Section theme={theme} title={t('controlPanel.chatControl')}>
+          <Section theme={theme} title={t('controlPanel:chatControl')}>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {t('controlPanel.showAllChats')}
+                  {t('controlPanel:showAllChats')}
                 </Label>
                 <Switch
                   checked={showAllChat}
@@ -473,7 +474,7 @@ export function ControlPanel({
           </Section>
 
           {/* Favorites */}
-          <Section theme={theme} title={t('controlPanel.favoriteStreams')}>
+          <Section theme={theme} title={t('controlPanel:favoriteStreams')}>
             <div className="space-y-3">
               <div className="flex gap-2">
                 <Button
@@ -481,7 +482,7 @@ export function ControlPanel({
                   className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
                   onClick={onShowFavorites}
                 >
-                  {t('controlPanel.manageFavorites')}
+                  {t('controlPanel:manageFavorites')}
                 </Button>
                 <Button
                   variant="outline"
@@ -496,7 +497,7 @@ export function ControlPanel({
                   variant="outline"
                   size="icon"
                   onClick={handleAddCurrentToFavorites}
-                  title={t('controlPanel.addCurrentToFavorites') || '收藏當前串流'}
+                  title={t('controlPanel:addCurrentToFavorites') || '收藏當前串流'}
                   className="border-purple-500 text-purple-500 hover:bg-purple-500/10"
                 >
                   <Star className="size-4" />
@@ -508,7 +509,7 @@ export function ControlPanel({
                 <TagFilterLayout
                   tags={tags}
                   selectedTags={filterTags}
-                  onToggleTag={(tagId) => {
+                  onToggleTag={(tagId: string) => {
                     setFilterTags(prev =>
                       prev.includes(tagId)
                         ? prev.filter(id => id !== tagId)
@@ -624,7 +625,7 @@ export function ControlPanel({
                   {/* 無收藏提示 */}
                   {favorites.length === 0 && (
                     <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {t('favorites.noFavorites')}
+                      {t('favorites:noFavorites')}
                     </div>
                   )}
                 </div>
@@ -633,10 +634,10 @@ export function ControlPanel({
           </Section>
 
           {/* Volume Control */}
-          <Section theme={theme} title={t('controlPanel.mediaControl')}>
+          <Section theme={theme} title={t('controlPanel:mediaControl')}>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel.masterVolume')}</Label>
+                <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel:masterVolume')}</Label>
                 {/* 隱藏的 input 元素，用於與舊的 JavaScript 代碼同步 */}
                 <div className="flex-1">
                   <Slider
@@ -674,17 +675,17 @@ export function ControlPanel({
                   }
                 >
                   {masterMuted ? <VolumeX className="size-4 mr-1" /> : <Volume2 className="size-4 mr-1" />}
-                  {t('controlPanel.muteAll')}
+                  {t('controlPanel:muteAll')}
                 </Button>
               </div>
             </div>
           </Section>
 
           {/* Stream Order */}
-          <Section theme={theme} title={t('controlPanel.streamOrder')}>
+          <Section theme={theme} title={t('controlPanel:streamOrder')}>
             {streams.length === 0 ? (
               <div className={`py-8 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-                {t('controlPanel.noStreams')}
+                {t('controlPanel:noStreams')}
               </div>
             ) : (
               <div className="space-y-2">
@@ -766,7 +767,7 @@ export function ControlPanel({
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
-                              title={t('controlPanel.moveUp')}
+                              title={t('controlPanel:moveUp')}
                               onClick={() => onMoveStreamUp(stream.id)}
                               disabled={index === 0}
                             >
@@ -778,7 +779,7 @@ export function ControlPanel({
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
-                              title={t('controlPanel.moveDown')}
+                              title={t('controlPanel:moveDown')}
                               onClick={() => onMoveStreamDown(stream.id)}
                               disabled={index === streams.length - 1}
                             >
@@ -790,7 +791,7 @@ export function ControlPanel({
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 p-0 text-gray-500 hover:bg-red-100 hover:text-red-500 dark:text-gray-400 dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                              title={t('controlPanel.remove')}
+                              title={t('controlPanel:remove')}
                               onClick={() => onRemoveStream(stream.id)}
                             >
                               <X className="size-3" />
@@ -804,7 +805,7 @@ export function ControlPanel({
                         <div className="px-3 py-2 space-y-2">
                           <div className="flex items-center gap-2">
                             <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                              🔊 {t('controlPanel.volume')}
+                              🔊 {t('controlPanel:volume')}
                             </span>
                             <div className="w-full flex-1">
                               <Slider
@@ -954,11 +955,12 @@ function ChatLayoutPreview({ id, theme }: { id: number; theme: 'light' | 'dark' 
 }
 
 // 收藏項目組件
-const FavoriteStreamComponent: React.FC<{
+function FavoriteStreamComponent({ favorite, theme, onLoad }: {
   favorite: FavoriteStream;
   theme: 'light' | 'dark';
   onLoad: (favorite: FavoriteStream) => void;
-}> = ({ favorite, theme, onLoad }) => {
+}) {
+  const { t } = useTranslation(['controlPanel', 'common', 'favorites']);
   const isLive = favorite.isLive === true;
   const isOffline = favorite.isLive === false;
   const isUnknown = favorite.isLive === null || favorite.isLive === undefined;
@@ -1000,7 +1002,12 @@ const FavoriteStreamComponent: React.FC<{
             {isLive && (
               <span className="ml-2">
                 <span className="text-green-500" style={{ color: '#10b981' }}>●</span>
-                <span> 直播中</span>
+                <span> {t('favorites:live')}</span>
+              </span>
+            )}
+            {isOffline && (
+              <span className="ml-2 text-gray-500">
+                {t('favorites:offline')}
               </span>
             )}
           </div>

@@ -1,0 +1,27 @@
+const common = {
+  'version.title': '版本记录',
+  'version.close': '关闭',
+  'common.close': '关闭',
+  'common.loading': '载入中...',
+  'common.error': '错误',
+  'common.success': '成功',
+  'common.confirm': '确认',
+  'common.cancel': '取消',
+  'common.save': '保存',
+  'common.edit': '编辑',
+  'common.delete': '删除',
+  'common.remove': '移除',
+  'common.add': '新增',
+  'common.search': '搜索',
+  'common.filter': '筛选',
+  'common.all': '全部',
+  'common.yes': '是',
+  'common.no': '否',
+  'chineseTraditional': '繁體中文',
+  'chineseSimplified': '简体中文',
+  'english': 'English',
+  'japanese': '日本語',
+  'korean': '한국어',
+};
+
+export default common;

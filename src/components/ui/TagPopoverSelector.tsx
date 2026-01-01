@@ -17,7 +17,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from './popover';
-import { useI18n } from '../../i18n/index';
+import { useTranslation } from 'react-i18next';
 
 interface TagPopoverSelectorProps {
     allTags: Tag[];
@@ -30,7 +30,7 @@ interface TagPopoverSelectorProps {
 export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, showSelectedChips = true }: TagPopoverSelectorProps) {
     const [open, setOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
-    const { t } = useI18n();
+    const { t } = useTranslation('tags');
 
     const selectedTags = useMemo(() => {
         return allTags.filter(tag => selectedTagIds.includes(tag.id));
@@ -70,7 +70,7 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
                     >
                         <div className="flex items-center gap-2">
                             <Plus className="size-4" />
-                            {t('tags.addTag')}
+                            {t('addTag')}
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -78,14 +78,14 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
                 <PopoverContent className={`p-0 w-[240px] ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}`} align="start">
                     <Command className={theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
                         <CommandInput
-                            placeholder={t('tags.searchTags')}
+                            placeholder={t('searchTags')}
                             value={searchValue}
                             onValueChange={setSearchValue}
                             className={theme === 'dark' ? 'border-gray-700' : ''}
                         />
                         <ScrollArea className="h-[200px]">
                             <CommandList className="max-h-full overflow-hidden">
-                                <CommandEmpty className="py-2 text-center text-sm text-gray-400">{t('tags.noTagsFound')}</CommandEmpty>
+                                <CommandEmpty className="py-2 text-center text-sm text-gray-400">{t('noTagsFound')}</CommandEmpty>
                                 <CommandGroup>
                                     {allTags.map((tag) => {
                                         const isSelected = selectedTagIds.includes(tag.id);

@@ -1,6 +1,6 @@
 import { X, Calendar, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
-import { useI18n } from '../i18n/index';
+import { useTranslation } from 'react-i18next';
 import { ScrollArea } from './ui/scroll-area';
 
 interface VersionHistoryProps {
@@ -9,173 +9,173 @@ interface VersionHistoryProps {
 }
 
 export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
-  const { t } = useI18n();
+  const { t } = useTranslation(['versionHistory', 'common']);
 
   const versions = [
     {
       version: 'v2.2.0',
-      date: t('versionHistory.v2.2.0.date'),
+      date: t('v2.2.0.date'),
       changes: [
-        t('versionHistory.v2.2.0.change1'),
-        t('versionHistory.v2.2.0.change2'),
-        t('versionHistory.v2.2.0.change3'),
-        t('versionHistory.v2.2.0.change4'),
+        t('versionHistory:v2.2.0.change1'),
+        t('versionHistory:v2.2.0.change2'),
+        t('versionHistory:v2.2.0.change3'),
+        t('versionHistory:v2.2.0.change4'),
       ],
     },
     {
       version: 'v2.1.0',
-      date: t('versionHistory.v2.1.0.date'),
+      date: t('v2.1.0.date'),
       changes: [
-        t('versionHistory.v2.1.0.change1'),
-        t('versionHistory.v2.1.0.change2'),
+        t('versionHistory:v2.1.0.change1'),
+        t('versionHistory:v2.1.0.change2'),
       ],
     },
     {
       version: 'v2.0.2',
-      date: t('versionHistory.v2.0.2.date'),
+      date: t('v2.0.2.date'),
       changes: [
-        t('versionHistory.v2.0.2.change1'),
-        t('versionHistory.v2.0.2.change2'),
-        t('versionHistory.v2.0.2.change3'),
+        t('versionHistory:v2.0.2.change1'),
+        t('versionHistory:v2.0.2.change2'),
+        t('versionHistory:v2.0.2.change3'),
       ],
     },
     {
       version: 'v2.0.1',
-      date: t('versionHistory.v2.0.1.date'),
+      date: t('v2.0.1.date'),
       changes: [
-        t('versionHistory.v2.0.1.change1'),
-        t('versionHistory.v2.0.1.change2'),
-        t('versionHistory.v2.0.1.change3'),
-        t('versionHistory.v2.0.1.change4'),
+        t('versionHistory:v2.0.1.change1'),
+        t('versionHistory:v2.0.1.change2'),
+        t('versionHistory:v2.0.1.change3'),
+        t('versionHistory:v2.0.1.change4'),
       ],
     },
     {
       version: 'v2.0.0',
-      date: t('versionHistory.v2.0.0.date'),
+      date: t('v2.0.0.date'),
       changes: [
-        t('versionHistory.v2.0.0.change1'),
-        t('versionHistory.v2.0.0.change2'),
-        t('versionHistory.v2.0.0.change3'),
-        t('versionHistory.v2.0.0.change4'),
+        t('versionHistory:v2.0.0.change1'),
+        t('versionHistory:v2.0.0.change2'),
+        t('versionHistory:v2.0.0.change3'),
+        t('versionHistory:v2.0.0.change4'),
       ],
     },
     {
       version: 'v1.7.1',
-      date: t('versionHistory.v1.7.1.date'),
+      date: t('v1.7.1.date'),
       changes: [
-        t('versionHistory.v1.7.1.change1'),
-        t('versionHistory.v1.7.1.change2'),
+        t('versionHistory:v1.7.1.change1'),
+        t('versionHistory:v1.7.1.change2'),
       ],
     },
     {
       version: 'v1.7.0',
-      date: t('versionHistory.v1.7.0.date'),
+      date: t('v1.7.0.date'),
       changes: [
-        t('versionHistory.v1.7.0.change1'),
-        t('versionHistory.v1.7.0.change2'),
-        t('versionHistory.v1.7.0.change3'),
-        t('versionHistory.v1.7.0.change4'),
-        t('versionHistory.v1.7.0.change5'),
-        t('versionHistory.v1.7.0.change6'),
-        t('versionHistory.v1.7.0.change7'),
-        t('versionHistory.v1.7.0.change8'),
-        t('versionHistory.v1.7.0.change9'),
+        t('versionHistory:v1.7.0.change1'),
+        t('versionHistory:v1.7.0.change2'),
+        t('versionHistory:v1.7.0.change3'),
+        t('versionHistory:v1.7.0.change4'),
+        t('versionHistory:v1.7.0.change5'),
+        t('versionHistory:v1.7.0.change6'),
+        t('versionHistory:v1.7.0.change7'),
+        t('versionHistory:v1.7.0.change8'),
+        t('versionHistory:v1.7.0.change9'),
       ],
     },
     {
       version: 'v1.6.2',
-      date: t('versionHistory.v1.6.2.date'),
+      date: t('v1.6.2.date'),
       changes: [
-        t('versionHistory.v1.6.2.change1'),
-        t('versionHistory.v1.6.2.change2'),
-        t('versionHistory.v1.6.2.change3'),
+        t('versionHistory:v1.6.2.change1'),
+        t('versionHistory:v1.6.2.change2'),
+        t('versionHistory:v1.6.2.change3'),
       ],
     },
     {
       version: 'v1.6.1',
-      date: t('versionHistory.v1.6.1.date'),
+      date: t('v1.6.1.date'),
       changes: [
-        t('versionHistory.v1.6.1.change1'),
-        t('versionHistory.v1.6.1.change2'),
-        t('versionHistory.v1.6.1.change3'),
-        t('versionHistory.v1.6.1.change4'),
+        t('versionHistory:v1.6.1.change1'),
+        t('versionHistory:v1.6.1.change2'),
+        t('versionHistory:v1.6.1.change3'),
+        t('versionHistory:v1.6.1.change4'),
       ],
     },
     {
       version: 'v1.6.0',
-      date: t('versionHistory.v1.6.0.date'),
+      date: t('v1.6.0.date'),
       changes: [
-        t('versionHistory.v1.6.0.change1'),
-        t('versionHistory.v1.6.0.change2'),
-        t('versionHistory.v1.6.0.change3'),
-        t('versionHistory.v1.6.0.change4'),
-        t('versionHistory.v1.6.0.change5'),
+        t('versionHistory:v1.6.0.change1'),
+        t('versionHistory:v1.6.0.change2'),
+        t('versionHistory:v1.6.0.change3'),
+        t('versionHistory:v1.6.0.change4'),
+        t('versionHistory:v1.6.0.change5'),
       ],
     },
     {
       version: 'v1.5.0',
-      date: t('versionHistory.v1.5.0.date'),
+      date: t('v1.5.0.date'),
       changes: [
-        t('versionHistory.v1.5.0.change1'),
-        t('versionHistory.v1.5.0.change2'),
-        t('versionHistory.v1.5.0.change3'),
-        t('versionHistory.v1.5.0.change4'),
-        t('versionHistory.v1.5.0.change5'),
+        t('versionHistory:v1.5.0.change1'),
+        t('versionHistory:v1.5.0.change2'),
+        t('versionHistory:v1.5.0.change3'),
+        t('versionHistory:v1.5.0.change4'),
+        t('versionHistory:v1.5.0.change5'),
       ],
     },
     {
       version: 'v1.4.1',
-      date: t('versionHistory.v1.4.1.date'),
+      date: t('v1.4.1.date'),
       changes: [
-        t('versionHistory.v1.4.1.change1'),
-        t('versionHistory.v1.4.1.change2'),
+        t('versionHistory:v1.4.1.change1'),
+        t('versionHistory:v1.4.1.change2'),
       ],
     },
     {
       version: 'v1.3.0',
-      date: t('versionHistory.v1.3.0.date'),
+      date: t('v1.3.0.date'),
       changes: [
-        t('versionHistory.v1.3.0.change1'),
-        t('versionHistory.v1.3.0.change2'),
-        t('versionHistory.v1.3.0.change3'),
-        t('versionHistory.v1.3.0.change4'),
-        t('versionHistory.v1.3.0.change5'),
+        t('versionHistory:v1.3.0.change1'),
+        t('versionHistory:v1.3.0.change2'),
+        t('versionHistory:v1.3.0.change3'),
+        t('versionHistory:v1.3.0.change4'),
+        t('versionHistory:v1.3.0.change5'),
       ],
     },
     {
       version: 'v1.2.0',
-      date: t('versionHistory.v1.2.0.date'),
+      date: t('v1.2.0.date'),
       changes: [
-        t('versionHistory.v1.2.0.change1'),
-        t('versionHistory.v1.2.0.change2'),
-        t('versionHistory.v1.2.0.change3'),
-        t('versionHistory.v1.2.0.change4'),
-        t('versionHistory.v1.2.0.change5'),
-        t('versionHistory.v1.2.0.change6'),
-        t('versionHistory.v1.2.0.change7'),
-        t('versionHistory.v1.2.0.change8'),
+        t('versionHistory:v1.2.0.change1'),
+        t('versionHistory:v1.2.0.change2'),
+        t('versionHistory:v1.2.0.change3'),
+        t('versionHistory:v1.2.0.change4'),
+        t('versionHistory:v1.2.0.change5'),
+        t('versionHistory:v1.2.0.change6'),
+        t('versionHistory:v1.2.0.change7'),
+        t('versionHistory:v1.2.0.change8'),
       ],
     },
     {
       version: 'v1.1.0',
-      date: t('versionHistory.v1.1.0.date'),
+      date: t('v1.1.0.date'),
       changes: [
-        t('versionHistory.v1.1.0.change1'),
-        t('versionHistory.v1.1.0.change2'),
-        t('versionHistory.v1.1.0.change3'),
-        t('versionHistory.v1.1.0.change4'),
+        t('versionHistory:v1.1.0.change1'),
+        t('versionHistory:v1.1.0.change2'),
+        t('versionHistory:v1.1.0.change3'),
+        t('versionHistory:v1.1.0.change4'),
       ],
     },
     {
       version: 'v1.0.0',
-      date: t('versionHistory.v1.0.0.date'),
+      date: t('v1.0.0.date'),
       changes: [
-        t('versionHistory.v1.0.0.change1'),
-        t('versionHistory.v1.0.0.change2'),
-        t('versionHistory.v1.0.0.change3'),
-        t('versionHistory.v1.0.0.change4'),
-        t('versionHistory.v1.0.0.change5'),
-        t('versionHistory.v1.0.0.change6'),
+        t('versionHistory:v1.0.0.change1'),
+        t('versionHistory:v1.0.0.change2'),
+        t('versionHistory:v1.0.0.change3'),
+        t('versionHistory:v1.0.0.change4'),
+        t('versionHistory:v1.0.0.change5'),
+        t('versionHistory:v1.0.0.change6'),
       ],
     },
   ];
@@ -190,9 +190,9 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
               <Sparkles className="size-6 text-white" />
             </div>
             <div>
-              <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('versionHistory.title')}</h2>
+              <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('versionHistory:title')}</h2>
               <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                {t('versionHistory.subtitle')}
+                {t('versionHistory:subtitle')}
               </p>
             </div>
           </div>
@@ -241,7 +241,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
                   </div>
                   {index === 0 && (
                     <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                      {t('versionHistory.latest')}
+                      {t('versionHistory:latest')}
                     </span>
                   )}
                 </div>

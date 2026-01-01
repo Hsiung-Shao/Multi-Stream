@@ -17,7 +17,7 @@ import {
 } from "./popover";
 import { Tag } from "../../features/favorites/types";
 import { Badge } from "./badge";
-import { useI18n } from "../../i18n/index";
+import { useTranslation } from "react-i18next";
 
 interface TagMultiSelectProps {
     allTags: Tag[];
@@ -35,9 +35,9 @@ export function TagMultiSelect({
     className
 }: TagMultiSelectProps) {
     const [open, setOpen] = React.useState(false);
-    const { t } = useI18n();
+    const { t } = useTranslation('tags');
 
-    const displayPlaceholder = placeholder || t('tags.selectTags');
+    const displayPlaceholder = placeholder || t('selectTags');
 
     const toggleTag = (tagId: string) => {
         const newSelected = selectedTagIds.includes(tagId)
@@ -77,9 +77,9 @@ export function TagMultiSelect({
             </PopoverTrigger>
             <PopoverContent className="w-[200px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={t('tags.searchTags')} />
+                    <CommandInput placeholder={t('searchTags')} />
                     <CommandList>
-                        <CommandEmpty>{t('tags.noTagsFound')}</CommandEmpty>
+                        <CommandEmpty>{t('noTagsFound')}</CommandEmpty>
                         <CommandGroup>
                             {allTags.map((tag) => (
                                 <CommandItem

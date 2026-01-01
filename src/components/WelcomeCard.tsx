@@ -1,6 +1,6 @@
 import { Shield, Mail, MessageSquare, Info, BookOpen, History, Heart, Users } from 'lucide-react';
 import { Button } from './ui/button';
-import { useI18n } from '../i18n/index';
+import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/use-media-query';
 
 interface WelcomeCardProps {
@@ -12,7 +12,8 @@ interface WelcomeCardProps {
 }
 
 export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onShowAbout, onNavigateToPrivacy }: WelcomeCardProps) {
-  const { t } = useI18n();
+  const { t } = useTranslation(['welcome', 'about', 'common']);
+
   // 使用 'md' breakpoint (768px) 來判斷手機版垂直布局
   const isMobileVertical = useMediaQuery('(max-width: 768px)');
 
@@ -26,76 +27,76 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             {/* Header */}
             <div className="mb-6">
               <h1 className={`text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 mb-3`}>
-                {t('welcome.title')}
+                {t('welcome:title')}
               </h1>
               <p className={`text-lg mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                {t('welcome.description')}
+                {t('welcome:description')}
               </p>
               <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                {t('welcome.intro')}
+                {t('welcome:intro')}
               </p>
             </div>
 
             {/* Features List - Expanded */}
             <div className="space-y-3 mb-8">
               <h2 className={`text-xl font-semibold ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
-                {t('welcome.features')}
+                {t('welcome:features')}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <FeatureItem theme={theme} text={t('welcome.feature1')} />
-                <FeatureItem theme={theme} text={t('welcome.feature2')} />
-                <FeatureItem theme={theme} text={t('welcome.feature3')} />
-                <FeatureItem theme={theme} text={t('welcome.feature4')} />
-                <FeatureItem theme={theme} text={t('welcome.feature5')} />
-                <FeatureItem theme={theme} text={t('welcome.feature6')} />
-                <FeatureItem theme={theme} text={t('welcome.feature7')} />
-                <FeatureItem theme={theme} text={t('welcome.feature8')} />
-                <FeatureItem theme={theme} text={t('welcome.feature9')} />
-                <FeatureItem theme={theme} text={t('welcome.feature10')} />
-                <FeatureItem theme={theme} text={t('welcome.feature11')} />
-                <FeatureItem theme={theme} text={t('welcome.feature12')} />
-                <FeatureItem theme={theme} text={t('welcome.feature13')} />
+                <FeatureItem theme={theme} text={t('welcome:feature1')} />
+                <FeatureItem theme={theme} text={t('welcome:feature2')} />
+                <FeatureItem theme={theme} text={t('welcome:feature3')} />
+                <FeatureItem theme={theme} text={t('welcome:feature4')} />
+                <FeatureItem theme={theme} text={t('welcome:feature5')} />
+                <FeatureItem theme={theme} text={t('welcome:feature6')} />
+                <FeatureItem theme={theme} text={t('welcome:feature7')} />
+                <FeatureItem theme={theme} text={t('welcome:feature8')} />
+                <FeatureItem theme={theme} text={t('welcome:feature9')} />
+                <FeatureItem theme={theme} text={t('welcome:feature10')} />
+                <FeatureItem theme={theme} text={t('welcome:feature11')} />
+                <FeatureItem theme={theme} text={t('welcome:feature12')} />
+                <FeatureItem theme={theme} text={t('welcome:feature13')} />
               </div>
             </div>
 
             {/* Quick Start Guide */}
             <div className="space-y-4">
               <h2 className={`text-xl font-semibold ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'} mb-4`}>
-                {t('welcome.quickStart')}
+                {t('welcome:quickStart')}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <QuickGuideCard
                   theme={theme}
                   number="1"
-                  title={t('welcome.step1Title')}
-                  description={t('welcome.step1Desc')}
+                  title={t('welcome:step1Title')}
+                  description={t('welcome:step1Desc')}
                   icon="📺"
                 />
                 <QuickGuideCard
                   theme={theme}
                   number="2"
-                  title={t('welcome.step2Title')}
-                  description={t('welcome.step2Desc')}
+                  title={t('welcome:step2Title')}
+                  description={t('welcome:step2Desc')}
                   icon="🎨"
                 />
                 <QuickGuideCard
                   theme={theme}
                   number="3"
-                  title={t('welcome.step3Title')}
-                  description={t('welcome.step3Desc')}
+                  title={t('welcome:step3Title')}
+                  description={t('welcome:step3Desc')}
                   icon="⭐"
                 />
                 <QuickGuideCard
                   theme={theme}
                   number="4"
-                  title={t('welcome.step4Title')}
-                  description={t('welcome.step4Desc')}
+                  title={t('welcome:step4Title')}
+                  description={t('welcome:step4Desc')}
                   icon="🔊"
                 />
               </div>
               <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-blue-900/20 border border-blue-500/30' : 'bg-blue-50 border border-blue-200'}`}>
                 <p className={`text-sm ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                  {t('welcome.tip')}
+                  {t('welcome:tip')}
                 </p>
               </div>
             </div>
@@ -111,7 +112,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 <Info className={`size-5 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
               </div>
               <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                {t('welcome.quickNav')}
+                {t('welcome:quickNav')}
               </h2>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -126,7 +127,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 >
                   <Info className={`size-4 transition-colors ${theme === 'dark' ? 'text-blue-400 group-hover:text-blue-300' : 'text-blue-600 group-hover:text-blue-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('welcome.about')}
+                    {t('welcome:about')}
                   </span>
                 </Button>
               )}
@@ -141,7 +142,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 >
                   <BookOpen className={`size-4 transition-colors ${theme === 'dark' ? 'text-green-400 group-hover:text-green-300' : 'text-green-600 group-hover:text-green-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('welcome.tutorial')}
+                    {t('welcome:tutorial')}
                   </span>
                 </Button>
               )}
@@ -156,7 +157,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 >
                   <History className={`size-4 transition-colors ${theme === 'dark' ? 'text-yellow-400 group-hover:text-yellow-300' : 'text-yellow-600 group-hover:text-yellow-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('welcome.versionInfo')}
+                    {t('welcome:versionInfo')}
                   </span>
                 </Button>
               )}
@@ -171,7 +172,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 >
                   <Shield className={`size-4 transition-colors ${theme === 'dark' ? 'text-red-400 group-hover:text-red-300' : 'text-red-600 group-hover:text-red-500'}`} />
                   <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('about.privacyPolicy')}
+                    {t('about:privacyPolicy')}
                   </span>
                 </Button>
               )}
@@ -185,21 +186,21 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 <Heart className={`size-5 ${theme === 'dark' ? 'text-pink-400' : 'text-pink-600'}`} />
               </div>
               <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                {t('welcome.authorMessage')}
+                {t('welcome:authorMessage')}
               </h2>
             </div>
             <div className={`space-y-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
               <p className="text-sm leading-relaxed">
-                {t('welcome.authorMessageP1')}
+                {t('welcome:authorMessageP1')}
               </p>
               <p className="text-sm leading-relaxed">
-                {t('welcome.authorMessageP2')}
+                {t('welcome:authorMessageP2')}
               </p>
               <p className="text-sm leading-relaxed">
-                {t('welcome.authorMessageP3')}
+                {t('welcome:authorMessageP3')}
               </p>
               <p className="text-sm leading-relaxed">
-                {t('welcome.authorMessageP4')}
+                {t('welcome:authorMessageP4')}
               </p>
             </div>
           </div>
@@ -211,11 +212,11 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 <Shield className={`size-5 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`} />
               </div>
               <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                {t('welcome.legalPrivacy')}
+                {t('welcome:legalPrivacy')}
               </h2>
             </div>
             <p className={`mb-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('welcome.legalPrivacyDesc')}
+              {t('welcome:legalPrivacyDesc')}
             </p>
             <div className="flex flex-col gap-2">
               {onNavigateToPrivacy && (
@@ -227,7 +228,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                     } hover:scale-105`}
                 >
                   <Shield className="size-4 transition-transform group-hover:scale-110" />
-                  {t('about.privacyPolicy')}
+                  {t('about:privacyPolicy')}
                 </Button>
               )}
             </div>
@@ -240,11 +241,11 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 <Mail className={`size-5 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
               </div>
               <h2 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                {t('about.contactTitle')}
+                {t('about:contactTitle')}
               </h2>
             </div>
             <p className={`mb-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about.contactIntro')}
+              {t('about:contactIntro')}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <a
@@ -258,7 +259,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               >
                 <Mail className={`size-4 transition-colors ${theme === 'dark' ? 'text-blue-400 group-hover:text-blue-300' : 'text-blue-600 group-hover:text-blue-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  {t('about.feedbackForm')}
+                  {t('about:feedbackForm')}
                 </span>
               </a>
               <a
@@ -272,7 +273,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               >
                 <MessageSquare className={`size-4 transition-colors ${theme === 'dark' ? 'text-purple-400 group-hover:text-purple-300' : 'text-purple-600 group-hover:text-purple-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  {t('about.discordCommunity')}
+                  {t('about:discordCommunity')}
                 </span>
               </a>
               <a
@@ -286,7 +287,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               >
                 <Users className={`size-4 transition-colors ${theme === 'dark' ? 'text-orange-400 group-hover:text-orange-300' : 'text-orange-600 group-hover:text-orange-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  {t('about.bahamut')}
+                  {t('about:bahamut')}
                 </span>
               </a>
               <a
@@ -300,7 +301,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               >
                 <MessageSquare className={`size-4 transition-colors ${theme === 'dark' ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  {t('about.twitter')}
+                  {t('about:twitter')}
                 </span>
               </a>
               <a
@@ -312,7 +313,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               >
                 <Mail className={`size-4 transition-colors ${theme === 'dark' ? 'text-green-400 group-hover:text-green-300' : 'text-green-600 group-hover:text-green-500'}`} />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  {t('about.email')}
+                  {t('about:email')}
                 </span>
               </a>
             </div>

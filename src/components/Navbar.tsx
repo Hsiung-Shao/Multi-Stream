@@ -18,7 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from './ui/tooltip';
-import { useI18n } from '../i18n/index';
+import { useTranslation } from 'react-i18next';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { twitchService } from '../features/twitch/TwitchService';
 
@@ -59,7 +59,9 @@ export function Navbar({
   onAddStream,
   onSearchFocusChange
 }: NavbarProps) {
-  const { locale, setLocale, t } = useI18n();
+  const { t, i18n } = useTranslation(['navbar', 'common', 'favorites']);
+  const locale = i18n.language;
+  const setLocale = (lang: string) => i18n.changeLanguage(lang);
   // 使用 'lg' breakpoint (1024px) 以確保手機水平版面也使用手機版按鈕設計
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [searchValue, setSearchValue] = useState('');
@@ -187,7 +189,7 @@ export function Navbar({
   const handleAddToFavorites = async () => {
     const valueToAdd = searchValue.trim();
     if (!valueToAdd) {
-      alert(t('favorites.pasteUrl'));
+      alert(t('favorites:pasteUrl'));
       return;
     }
 
@@ -199,7 +201,7 @@ export function Navbar({
       urlToAdd = valueToAdd;
     } else {
       // 如果不是 URL 也不是搜尋結果，提示用戶
-      alert(t('favorites.pasteUrl'));
+      alert(t('favorites:pasteUrl'));
       return;
     }
 
@@ -218,7 +220,7 @@ export function Navbar({
       );
 
       if (result.success) {
-        alert(result.message || t('favorites.add'));
+        alert(result.message || t('favorites:add'));
         setSearchValue('');
         setSearchResults([]);
         setShowResults(false);
@@ -228,10 +230,10 @@ export function Navbar({
           onSearchFocusChange(false);
         }
       } else {
-        alert(result.message || t('common.error'));
+        alert(result.message || t('common:common.error'));
       }
     } catch (error) {
-      alert(`${t('common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
+      alert(`${t('common:common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
   };
 
@@ -306,10 +308,10 @@ export function Navbar({
 
   // 手機版面的導航連結列表
   const navLinks = [
-    { label: t('navbar.about'), onClick: onShowAbout },
-    { label: t('navbar.tutorial'), onClick: onShowTutorial },
-    { label: t('navbar.versionHistory'), onClick: onShowVersionHistory },
-    { label: t('navbar.feedback'), onClick: onShowFeedback }, // Updated
+    { label: t('navbar:about'), onClick: onShowAbout },
+    { label: t('navbar:tutorial'), onClick: onShowTutorial },
+    { label: t('navbar:versionHistory'), onClick: onShowVersionHistory },
+    { label: t('navbar:feedback'), onClick: onShowFeedback }, // Updated
   ];
 
   return (
@@ -337,7 +339,7 @@ export function Navbar({
                   <div className="p-4 flex flex-col h-full">
                     <SheetHeader className="mb-4 text-left">
                       <SheetTitle className={theme === 'dark' ? 'text-white' : 'text-black'}>
-                        {t('navbar.menu') || '選單'}
+                        {t('navbar:menu') || '選單'}
                       </SheetTitle>
                     </SheetHeader>
                     <div className="flex flex-col gap-2 flex-1">
@@ -364,7 +366,7 @@ export function Navbar({
                     {/* 語言切換 */}
                     <div className="mb-4">
                       <Label className={`text-sm mb-2 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {t('navbar.languageSwitch') || '語言'}
+                        {t('navbar:languageSwitch') || '語言'}
                       </Label>
                       <Select value={locale} onValueChange={(value: string) => setLocale(value as typeof locale)}>
                         <SelectTrigger
@@ -400,7 +402,7 @@ export function Navbar({
                       }}
                     >
                       <Coffee className="size-4 mr-2" />
-                      {t('navbar.sponsor')}
+                      {t('navbar:sponsor')}
                     </Button>
                   </div>
                 </SheetContent>
@@ -412,8 +414,8 @@ export function Navbar({
               {/* Icon and Title - 桌面版最左側 */}
               <div className="flex items-center gap-2">
                 <img src="/icon.png" alt="MultiStream Hub" className="w-6 h-6" />
-                <span className={`font-medium text-lg ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  MultiStream Hub
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  {t('navbar:tutorial')}
                 </span>
               </div>
 
@@ -428,11 +430,11 @@ export function Navbar({
                         onClick={onShowAbout}
                         className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                       >
-                        {t('navbar.about')}
+                        {t('navbar:about')}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('navbar.about')}</p>
+                      <p>{t('navbar:about')}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -445,11 +447,11 @@ export function Navbar({
                         onClick={onShowTutorial}
                         className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                       >
-                        {t('navbar.tutorial')}
+                        {t('navbar:tutorial')}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('navbar.tutorial')}</p>
+                      <p>{t('navbar:tutorial')}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -462,11 +464,11 @@ export function Navbar({
                         onClick={onShowVersionHistory}
                         className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                       >
-                        {t('navbar.versionHistory')}
+                        {t('navbar:versionHistory')}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('navbar.versionHistory')}</p>
+                      <p>{t('navbar:versionHistory')}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -478,11 +480,11 @@ export function Navbar({
                       onClick={onShowFeedback}
                       className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                     >
-                      {t('navbar.feedback')}
+                      {t('navbar:feedback')}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{t('navbar.feedback')}</p>
+                    <p>{t('navbar:feedback')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -496,7 +498,7 @@ export function Navbar({
           <Input
             ref={inputRef}
             type="text"
-            placeholder={t('navbar.searchPlaceholder')}
+            placeholder={t('navbar:searchPlaceholder')}
             value={searchValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
@@ -522,7 +524,7 @@ export function Navbar({
                 className={`h-7 px-2 text-xs ${theme === 'dark' ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-500/5'}`}
               >
                 <Plus className="size-3 mr-1" />
-                {t('navbar.addStream')}
+                {t('navbar:addStream')}
               </Button>
               <Button
                 variant="ghost"
@@ -531,7 +533,7 @@ export function Navbar({
                 className={`h-7 px-2 text-xs ${theme === 'dark' ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-500/5'}`}
               >
                 <Plus className="size-3 mr-1" />
-                {t('favorites.add')}
+                {t('favorites:add')}
               </Button>
             </div>
           )}
@@ -561,18 +563,14 @@ export function Navbar({
                 {searchResults.map((result, index) => (
                   <div
                     key={result.id}
-                    onClick={() => handleSelectResult(result)}
-                    className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors relative ${index === selectedIndex
-                      ? theme === 'dark'
-                        ? 'bg-gray-800'
-                        : 'bg-gray-100'
-                      : theme === 'dark'
-                        ? 'hover:bg-gray-800'
-                        : 'hover:bg-gray-50'
+                    className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${selectedIndex === index
+                      ? theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
+                      : theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                       }`}
+                    onMouseDown={() => handleSelectResult(result)}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
-                    {/* 圓形頭像 */}
+                    {/* 頻道頭像 */}
                     {result.thumbnailUrl ? (
                       <img
                         src={result.thumbnailUrl}
@@ -580,10 +578,8 @@ export function Navbar({
                         className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-                        }`}>
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                          }`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
                           {result.displayName.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -595,11 +591,11 @@ export function Navbar({
                       </div>
                       <div className={`text-sm flex items-center justify-between ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                         <div className="flex items-center">
-                          {t('navbar.twitch')}
+                          {t('navbar:twitch')}
                           {result.isLive && (
-                            <span className="ml-2">
-                              <span className="text-green-500" style={{ color: '#10b981' }}>●</span>
-                              <span> {t('navbar.live')}</span>
+                            <span className="ml-2 flex items-center">
+                              <span className="text-green-500 mr-1" style={{ color: '#10b981' }}>●</span>
+                              <span> {t('navbar:live')}</span>
                             </span>
                           )}
                         </div>
@@ -610,7 +606,7 @@ export function Navbar({
                       {/* 觀看人數 - 頻道資訊區域的右上角 */}
                       {result.isLive && result.viewerCount !== undefined && (
                         <div className={`absolute top-0 right-0 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {result.viewerCount.toLocaleString()} {t('navbar.viewers')}
+                          {result.viewerCount?.toLocaleString()} {t('navbar:viewers')}
                         </div>
                       )}
                     </div>
@@ -626,7 +622,7 @@ export function Navbar({
               ? 'bg-gray-900 border-gray-700 text-gray-400'
               : 'bg-white border-gray-200 text-gray-500'
               }`}>
-              <p className="text-sm text-center">{t('navbar.noResults')}</p>
+              <p className="text-sm">{t('navbar:noResults')}</p>
             </div>
           )}
         </div>
@@ -645,7 +641,7 @@ export function Navbar({
                 className={`h-7 px-2 text-xs ${theme === 'dark' ? 'text-purple-400 hover:text-white hover:bg-gray-800' : 'text-purple-600 hover:text-black hover:bg-gray-100'}`}
               >
                 <Plus className="size-3 mr-1" />
-                {t('navbar.addStream')}
+                {t('navbar:addStream')}
               </Button>
               {/* 控制面板按鈕 */}
               {onTogglePanel && (
@@ -676,7 +672,7 @@ export function Navbar({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{t('navbar.favorites')}</p>
+                    <p>{t('navbar:favorites')}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -694,7 +690,7 @@ export function Navbar({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{t('navbar.themeToggle')}</p>
+                  <p>{t('navbar:themeToggle')}</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -731,7 +727,7 @@ export function Navbar({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{t('navbar.languageSwitch')}</p>
+                  <span className="sr-only">{t('navbar:languageSwitch')}</span>
                 </TooltipContent>
               </Tooltip>
 
@@ -746,7 +742,7 @@ export function Navbar({
                   className={`bg-transparent ${theme === 'dark' ? 'border-gray-600 text-white hover:bg-gray-800 hover:border-gray-600' : 'border-gray-300 text-black hover:bg-gray-100 hover:border-gray-300'}`}
                 >
                   <LayoutDashboard className="size-4 mr-2" />
-                  {t('navbar.controlPanel')}
+                  {t('navbar:controlPanel')}
                 </Button>
               )}
 
@@ -756,12 +752,12 @@ export function Navbar({
                 onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
               >
                 <Coffee className="size-4 mr-2" />
-                {t('navbar.sponsor')}
+                {t('navbar:sponsor')}
               </Button>
             </>
           )}
         </div>
       </div>
-    </nav>
+    </nav >
   );
 }

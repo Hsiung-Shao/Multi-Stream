@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { FeedbackFormData } from './FeedbackTypes';
 import { FeedbackService, FeedbackPayload } from './FeedbackService';
 import packageJson from '../../../package.json';
-import { useI18n } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 
 interface FeedbackModalProps {
     theme: 'light' | 'dark';
@@ -19,7 +19,7 @@ interface FeedbackModalProps {
 }
 
 export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
-    const { t } = useI18n();
+    const { t } = useTranslation(['feedback', 'navbar']);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
@@ -62,7 +62,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
             }, 2000);
         } catch (error) {
             console.error('Submission error:', error);
-            alert(t('feedback.error'));
+            alert(t('error'));
         } finally {
             setIsSubmitting(false);
         }
@@ -82,10 +82,10 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         <CheckCircle2 className="w-10 h-10 text-green-600" />
                     </div>
                     <h2 className={`text-2xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                        {t('feedback.successTitle')}
+                        {t('successTitle')}
                     </h2>
                     <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {t('feedback.successMessage')}
+                        {t('successMessage')}
                     </p>
                 </div>
             </div>
@@ -102,9 +102,9 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                             <MessageSquare className="size-6 text-white" />
                         </div>
                         <div>
-                            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('feedback.title')}</h2>
+                            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('title')}</h2>
                             <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {t('navbar.feedback')}
+                                {t('feedback', { ns: 'navbar' })}
                             </p>
                         </div>
                     </div>
@@ -126,15 +126,15 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
                                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>
-                                    {t('feedback.part1')}
+                                    {t('part1')}
                                 </span>
-                                {t('feedback.basicSurvey')}
+                                {t('basicSurvey')}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Source */}
                                 <div>
-                                    <label className={labelStyle}>{t('feedback.sourceLabel')}</label>
+                                    <label className={labelStyle}>{t('sourceLabel')}</label>
                                     <Controller
                                         name="source"
                                         control={control}
@@ -142,24 +142,24 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder={t('feedback.required')} />
+                                                    <SelectValue placeholder={t('required')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
                                                     {['discord', 'google', 'friends', 'bahamut', 'instagram', 'threads', 'other'].map(opt => (
                                                         <SelectItem key={opt} value={opt} className={theme === 'dark' ? 'text-white' : 'text-black'}>
-                                                            {t(`feedback.source.${opt}` as any)}
+                                                            {t(`source.${opt}` as any)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         )}
                                     />
-                                    {errors.source && <span className="text-red-500 text-xs mt-1">{t('feedback.required')}</span>}
+                                    {errors.source && <span className="text-red-500 text-xs mt-1">{t('required')}</span>}
                                 </div>
 
                                 {/* Usage Duration */}
                                 <div>
-                                    <label className={labelStyle}>{t('feedback.usageDurationLabel')}</label>
+                                    <label className={labelStyle}>{t('usageDurationLabel')}</label>
                                     <Controller
                                         name="usageDuration"
                                         control={control}
@@ -167,7 +167,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder={t('feedback.required')} />
+                                                    <SelectValue placeholder={t('required')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
                                                     {[
@@ -178,19 +178,19 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                                         'yearPlus'
                                                     ].map(val => (
                                                         <SelectItem key={val} value={val} className={theme === 'dark' ? 'text-white' : 'text-black'}>
-                                                            {t(`feedback.usageDuration.${val}` as any)}
+                                                            {t(`usageDuration.${val}` as any)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
                                         )}
                                     />
-                                    {errors.usageDuration && <span className="text-red-500 text-xs mt-1">{t('feedback.required')}</span>}
+                                    {errors.usageDuration && <span className="text-red-500 text-xs mt-1">{t('required')}</span>}
                                 </div>
 
                                 {/* Usage Time (Checkbox Multi-select) */}
                                 <div className="col-span-1 md:col-span-2">
-                                    <label className={labelStyle}>{t('feedback.usageTimeLabel')}</label>
+                                    <label className={labelStyle}>{t('usageTimeLabel')}</label>
                                     <div className="flex flex-wrap gap-4">
                                         <Controller
                                             name="usageTime"
@@ -210,7 +210,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                                                 }}
                                                             />
                                                             <label htmlFor={`usage-time-${val}`} className={`ml-2 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} cursor-pointer`}>
-                                                                {t(`feedback.usageTime.${val}` as any)}
+                                                                {t(`usageTime.${val}` as any)}
                                                             </label>
                                                         </div>
                                                     ))}
@@ -222,7 +222,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
 
                                 {/* Rating */}
                                 <div className="col-span-1 md:col-span-2">
-                                    <label className={labelStyle}>{t('feedback.ratingLabel')}</label>
+                                    <label className={labelStyle}>{t('ratingLabel')}</label>
                                     <Controller
                                         name="rating"
                                         control={control}
@@ -252,14 +252,14 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
                                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800'}`}>
-                                    {t('feedback.part2')}
+                                    {t('part2')}
                                 </span>
-                                {t('feedback.coreFeedback')}
+                                {t('coreFeedback')}
                             </div>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className={labelStyle}>{t('feedback.feedbackTypeLabel')}</label>
+                                    <label className={labelStyle}>{t('feedbackTypeLabel')}</label>
                                     <Controller
                                         name="feedbackType"
                                         control={control}
@@ -267,12 +267,12 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder={t('feedback.required')} />
+                                                    <SelectValue placeholder={t('required')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
                                                     {['bug', 'feature', 'ui', 'other'].map(val => (
                                                         <SelectItem key={val} value={val} className={theme === 'dark' ? 'text-white' : 'text-black'}>
-                                                            {t(`feedback.type.${val}` as any)}
+                                                            {t(`type.${val}` as any)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -282,15 +282,15 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                 </div>
 
                                 <div>
-                                    <label className={labelStyle}>{t('feedback.contentLabel')}</label>
+                                    <label className={labelStyle}>{t('contentLabel')}</label>
                                     <Controller
                                         name="content"
                                         control={control}
-                                        rules={{ required: t('feedback.required') }}
+                                        rules={{ required: t('required') }}
                                         render={({ field }) => (
                                             <Textarea
                                                 {...field}
-                                                placeholder={t('feedback.contentPlaceholder')}
+                                                placeholder={t('contentPlaceholder')}
                                                 className={`min-h-[120px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
                                             />
                                         )}
@@ -304,13 +304,13 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
                                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'}`}>
-                                    {t('feedback.part3')}
+                                    {t('part3')}
                                 </span>
-                                {t('feedback.promotion')}
+                                {t('promotion')}
                             </div>
 
                             <div>
-                                <label className={labelStyle}>{t('feedback.npsLabel')}</label>
+                                <label className={labelStyle}>{t('npsLabel')}</label>
                                 <Controller
                                     name="npsScore"
                                     control={control}
@@ -329,10 +329,10 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                     )}
                                 />
                                 <div className={`flex justify-between text-xs mt-2 px-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    <span>{t('feedback.npsLow')}</span>
-                                    <span>{t('feedback.npsHigh')}</span>
+                                    <span>{t('npsLow')}</span>
+                                    <span>{t('npsHigh')}</span>
                                 </div>
-                                {errors.npsScore && <span className="text-red-500 text-xs mt-1">{t('feedback.selectScore')}</span>}
+                                {errors.npsScore && <span className="text-red-500 text-xs mt-1">{t('selectScore')}</span>}
                             </div>
                         </div>
 
@@ -347,7 +347,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         disabled={isSubmitting}
                         className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}
                     >
-                        {t('feedback.cancel')}
+                        {t('cancel')}
                     </Button>
                     <Button
                         onClick={handleSubmit(onSubmit)}
@@ -358,12 +358,12 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                {t('feedback.submitting')}
+                                {t('submitting')}
                             </>
                         ) : (
                             <>
                                 <Send className="w-4 h-4 mr-2" />
-                                {t('feedback.submit')}
+                                {t('submit')}
                             </>
                         )}
                     </Button>
