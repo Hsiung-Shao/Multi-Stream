@@ -8,7 +8,7 @@ interface ModalState {
     ytRisk: boolean;
 }
 
-export type PageType = 'home' | 'about' | 'privacy';
+export type PageType = 'home' | 'about' | 'privacy' | 'not-found';
 
 interface UIState {
     theme: 'light' | 'dark';

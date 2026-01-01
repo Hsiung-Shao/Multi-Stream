@@ -20,7 +20,10 @@ import { usePlayerStore } from './store/playerStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
 import { useAppInitialization } from './hooks/useAppInitialization';
+
 import { useThemeSystem } from './hooks/useThemeSystem';
+import { useRouter } from './hooks/useRouter';
+import { NotFoundPage } from './components/NotFoundPage';
 
 // 全局變數聲明 moved to src/types/global.d.ts
 
@@ -60,6 +63,7 @@ export default function App() {
   // Hooks
   useAppInitialization();
   useThemeSystem();
+  useRouter();
   useAutoRefresh();
 
   // YouTube Warning Logic State (Hook)
@@ -339,7 +343,7 @@ export default function App() {
           title="隱私權政策 - MultiStream Hub"
           description="MultiStream Hub 隱私權政策。了解我們如何保護您的隱私，以及我們收集和使用資料的方式。本網站為純前端工具，絕大多數資料僅儲存於您的瀏覽器本地。"
           keywords="隱私權政策, 隱私保護, 資料安全, MultiStream Hub, 個人資料保護"
-          url="https://multistreaming.org/privacy.html"
+          url="https://multistreaming.org/privacy"
         />
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
           <PrivacyPage
@@ -361,7 +365,7 @@ export default function App() {
           title="關於我們 - MultiStream Hub"
           description="了解 MultiStream Hub 的功能特色、技術架構和開發者資訊。一個完全免費的多平台直播串流觀看工具，支援 Twitch 和 YouTube。"
           keywords="關於 MultiStream Hub, 功能特色, 技術架構, 開發者資訊, 多平台直播工具"
-          url="https://multistreaming.org/about.html"
+          url="https://multistreaming.org/about"
         />
         <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
           <AboutPage
@@ -372,6 +376,15 @@ export default function App() {
           />
         </Suspense>
       </>
+    );
+  }
+
+  // Show 404 Page
+  if (currentPage === 'not-found') {
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+        <NotFoundPage />
+      </Suspense>
     );
   }
 
