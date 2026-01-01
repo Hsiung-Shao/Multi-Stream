@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { apiLoader } from '../utils/apiLoader';
 import { backupService } from '../features/backup';
 
 export function useAppInitialization() {
@@ -7,17 +6,7 @@ export function useAppInitialization() {
         // 等待收藏系統和必要的 API 初始化完成
         const initAndRefreshFavorites = async () => {
             try {
-                // 載入 Twitch Data API（用於檢查開台狀態）
-                if (!window.twitchApi || !window.twitchApi.checkMultipleChannelsLiveStatus) {
-                    await apiLoader.loadTwitchDataApi();
-                }
-
-                // 載入 YouTube Data API（用於檢查開台狀態）
-                if (!window.youtubeApiUtils || !window.youtubeApiUtils.checkChannelLiveStatus) {
-                    await apiLoader.loadYouTubeDataApi();
-                }
-
-                // 等待一小段時間確保 API 完全初始化
+                // 等待一小段時間確保 API 完全初始化 (模組化後通常不需要，但保留延遲以防萬一)
                 await new Promise(resolve => setTimeout(resolve, 500));
 
                 // 觸發收藏列表刷新事件

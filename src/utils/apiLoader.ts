@@ -9,16 +9,12 @@ export type ApiLoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
 interface ApiLoaderState {
   twitchPlayer: ApiLoadStatus;
   youtubePlayer: ApiLoadStatus;
-  twitchData: ApiLoadStatus;
-  youtubeData: ApiLoadStatus;
 }
 
 class ApiLoader {
   private state: ApiLoaderState = {
     twitchPlayer: 'idle',
     youtubePlayer: 'idle',
-    twitchData: 'idle',
-    youtubeData: 'idle',
   };
 
   private loadPromises: Map<string, Promise<void>> = new Map();
@@ -197,172 +193,7 @@ class ApiLoader {
     });
   }
 
-  /**
-   * 載入 Twitch 數據 API（搜尋、查詢用）
-   * 確保 window.twitchApi 可用
-   */
-  async loadTwitchDataApi(): Promise<void> {
-    if (this.state.twitchData === 'loaded') {
-      return Promise.resolve();
-    }
 
-    if (this.state.twitchData === 'loading') {
-      return this.loadPromises.get('twitchData') || Promise.resolve();
-    }
-
-    this.state.twitchData = 'loading';
-    const promise = new Promise<void>(async (resolve) => {
-      // 檢查 window.twitchApi 是否已初始化
-      if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
-        this.state.twitchData = 'loaded';
-        resolve();
-        return;
-      }
-
-      // 嘗試從 services 初始化 (React/Vite 架構適配)
-      try {
-        const { twitchService } = await import('../features/twitch/TwitchService');
-        if (!(window as any).twitchApi || !(window as any).twitchApi._isLegacy) {
-          (window as any).twitchApi = twitchService.getLegacyApi();
-          console.log('[ApiLoader] Initialized window.twitchApi from TwitchService');
-        }
-        this.state.twitchData = 'loaded';
-        resolve();
-        return;
-      } catch (e) {
-        console.warn('[ApiLoader] Failed to auto-init TwitchService', e);
-      }
-
-      // 等待 twitch-api.js 載入（向後兼容，最多等待 2 秒）
-      let waitCount = 0;
-      const checkInterval = setInterval(() => {
-        waitCount++;
-        const twApi = (window as any).twitchApi;
-        if (twApi && typeof twApi.searchChannels === 'function') {
-          clearInterval(checkInterval);
-          this.state.twitchData = 'loaded';
-          resolve();
-        } else if (waitCount >= 20) {
-          // 2 秒超時
-          clearInterval(checkInterval);
-          // 即使未載入也不阻止應用運行
-          this.state.twitchData = 'error';
-          console.warn('[ApiLoader] window.twitchApi load timeout');
-          resolve();
-        }
-      }, 100);
-    });
-
-    this.loadPromises.set('twitchData', promise);
-    return promise;
-  }
-
-  /**
-   * 載入 YouTube 數據 API（搜尋、查詢用）
-   * 確保 window.youtubeApiUtils 可用
-   */
-  async loadYouTubeDataApi(): Promise<void> {
-    if (this.state.youtubeData === 'loaded') {
-      return Promise.resolve();
-    }
-
-    if (this.state.youtubeData === 'loading') {
-      return this.loadPromises.get('youtubeData') || Promise.resolve();
-    }
-
-    this.state.youtubeData = 'loading';
-    const promise = new Promise<void>(async (resolve) => {
-      // 檢查 window.youtubeApiUtils 是否已初始化
-      if ((window as any).youtubeApiUtils && typeof (window as any).youtubeApiUtils.getApiKey === 'function') {
-        this.state.youtubeData = 'loaded';
-        resolve();
-        return;
-      }
-
-      // 嘗試從 services 初始化 (React/Vite 架構適配)
-      try {
-        // 動態導入避免循環依賴
-        const { youtubeApi } = await import('../utils/youtubeApi');
-
-
-        if (!(window as any).youtubeApiUtils) {
-          (window as any).youtubeApiUtils = {
-            checkChannelLiveStatus: youtubeApi.checkChannelLiveStatus.bind(youtubeApi),
-            getChannelIdFromVideoId: youtubeApi.getChannelIdFromVideoId.bind(youtubeApi),
-            getChannelTitleFromChannelId: youtubeApi.getChannelTitleFromChannelId.bind(youtubeApi),
-            getApiKey: youtubeApi.getApiKey.bind(youtubeApi),
-            getApiKeyFromPagesFunction: youtubeApi.getApiKeyFromPagesFunction.bind(youtubeApi)
-          };
-          console.log('[ApiLoader] Initialized window.youtubeApiUtils from youtubeApi');
-        }
-
-        resolve(); // 這裡我們初始化了 youtubeApiUtils
-
-        // 同步初始化 favoriteCategories/favoriteStreams 橋接 (如果需要)
-        // 注意：這部分邏輯原本在 initLegacyGlobals，如果是純新版 UI 調用 apiLoader，其實不需要這些 global。
-        // 但如果 App.tsx 的一些舊區塊 (如 refreshFavoritesStatus event handler) 還依賴 window.favoriteStreams.loadMultiple...
-        // 檢查發現 App.tsx 已經被重構去除了直接依賴，但 refreshFavoritesStatus 事件可能觸發舊邏輯?
-        // 不，refreshFavoritesStatus 在 ControlPanel 中被重構了。
-        // 但是，為了安全起見，如果我們偵測到舊結構缺失，我們是否應該補上？
-        // 暫時只補 youtubeApiUtils，因為它是 search functionality 的核心。
-
-        this.state.youtubeData = 'loaded';
-        return;
-
-      } catch (e) {
-        console.warn('[ApiLoader] Failed to auto-init Youtube/Favorites services', e);
-      }
-
-      // 等待 settings.js 載入（最多等待 2 秒）
-      let waitCount = 0;
-      const checkInterval = setInterval(() => {
-        waitCount++;
-        const ytUtils = (window as any).youtubeApiUtils;
-        if (ytUtils && typeof ytUtils.getApiKey === 'function') {
-          clearInterval(checkInterval);
-          this.state.youtubeData = 'loaded';
-          resolve();
-        } else if (waitCount >= 20) {
-          // 2 秒超時
-          clearInterval(checkInterval);
-          this.state.youtubeData = 'error';
-          console.warn('[ApiLoader] window.youtubeApiUtils load timeout');
-          resolve();
-        }
-      }, 100);
-    });
-
-    this.loadPromises.set('youtubeData', promise);
-    return promise;
-  }
-
-  /**
-   * 載入所有播放器 API（必要功能，應用啟動時載入）
-   */
-  async loadAllPlayerApis(): Promise<void> {
-    try {
-      await Promise.all([
-        this.loadTwitchPlayerApi(),
-        this.loadYouTubePlayerApi()
-      ]);
-    } catch (error) {
-      // 不阻止應用繼續運行
-    }
-  }
-
-  /**
-   * 載入所有數據 API（非必要功能，按需載入）
-   */
-  async loadAllDataApis(): Promise<void> {
-    try {
-      await Promise.all([
-        this.loadTwitchDataApi(),
-        this.loadYouTubeDataApi()
-      ]);
-    } catch (error) {
-      // 不阻止應用繼續運行
-    }
-  }
 
   /**
    * 獲取 API 載入狀態

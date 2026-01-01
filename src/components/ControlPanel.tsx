@@ -17,6 +17,8 @@ import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { favoritesLoader } from '../features/favorites/FavoritesLoader';
 import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
+import { twitchService } from '../features/twitch/TwitchService';
+import { youtubeApi } from '../utils/youtubeApi';
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -161,9 +163,9 @@ export function ControlPanel({
       let updatedFavorites = [...favoritesList];
 
       // 更新 Twitch 開台狀態
-      if (twitchFavorites.length > 0 && window.twitchApi && window.twitchApi.checkMultipleChannelsLiveStatus) {
+      if (twitchFavorites.length > 0) {
         const channelIds = twitchFavorites.map(f => f.channelId!);
-        const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelIds);
+        const liveStatuses = await twitchService.checkMultipleChannelsLiveStatus(channelIds);
 
         // 更新收藏列表中的開台狀態
         updatedFavorites = updatedFavorites.map(fav => {
@@ -182,7 +184,7 @@ export function ControlPanel({
       }
 
       // 更新 YouTube 開台狀態
-      if (youtubeFavorites.length > 0 && window.youtubeApiUtils?.checkChannelLiveStatus) {
+      if (youtubeFavorites.length > 0) {
         let isFirstYoutubeCheck = true;
         for (const fav of youtubeFavorites) {
           if (fav.channelId) {
@@ -204,7 +206,7 @@ export function ControlPanel({
             isFirstYoutubeCheck = false;
 
             try {
-              const status = await window.youtubeApiUtils.checkChannelLiveStatus(fav.channelId) as any;
+              const status = await youtubeApi.checkChannelLiveStatus(fav.channelId) as any;
               updatedFavorites = updatedFavorites.map(f => {
                 if (f.id === fav.id) {
                   return {

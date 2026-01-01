@@ -51,7 +51,7 @@ export const youtubeApi = {
             console.warn("Failed to get API key from function", e);
         }
 
-        // 回退到 config.js (Legacy global config)
+        // 回退到 config.js (保路供本地測試使用)
         if (typeof window !== 'undefined' && (window as any).CONFIG && (window as any).CONFIG.YOUTUBE_API_KEY) {
             return (window as any).CONFIG.YOUTUBE_API_KEY;
         }
