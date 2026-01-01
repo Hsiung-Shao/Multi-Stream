@@ -1,4 +1,4 @@
-import { useCallback, useEffect, lazy, Suspense } from 'react';
+import { useCallback, lazy, Suspense } from 'react';
 import { Navbar } from './components/Navbar';
 import { WelcomeCard } from './components/WelcomeCard';
 import { StreamContainer } from './components/StreamContainer';
@@ -13,13 +13,14 @@ const FavoritesManager = lazy(() => import('./components/FavoritesManager').then
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
-import { apiLoader } from './utils/apiLoader';
+
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { useStreamStore } from './store/useStreamStore';
 import { usePlayerStore } from './store/playerStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
 import { useAppInitialization } from './hooks/useAppInitialization';
+import { useThemeSystem } from './hooks/useThemeSystem';
 
 // 全局變數聲明 moved to src/types/global.d.ts
 
@@ -58,6 +59,7 @@ export default function App() {
 
   // Hooks
   useAppInitialization();
+  useThemeSystem();
   useAutoRefresh();
 
   // YouTube Warning Logic State (Hook)

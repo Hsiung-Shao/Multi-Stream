@@ -51,8 +51,25 @@ export const useUIStore = create<UIState>((set) => ({
     masterVolume: 100,
     masterMuted: false,
 
-    setTheme: (theme) => set({ theme }),
-    toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+    setTheme: (theme) => {
+        set({ theme });
+        try {
+            const saved = localStorage.getItem('userSettings');
+            const settings = saved ? JSON.parse(saved) : {};
+            settings.theme = theme;
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+        } catch (e) { }
+    },
+    toggleTheme: () => set((state) => {
+        const newTheme = state.theme === 'light' ? 'dark' : 'light';
+        try {
+            const saved = localStorage.getItem('userSettings');
+            const settings = saved ? JSON.parse(saved) : {};
+            settings.theme = newTheme;
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+        } catch (e) { }
+        return { theme: newTheme };
+    }),
 
     setPanelCollapsed: (collapsed) => set({ isPanelCollapsed: collapsed }),
     togglePanelCollapsed: () => set((state) => ({ isPanelCollapsed: !state.isPanelCollapsed })),
@@ -98,6 +115,9 @@ try {
         const settings = JSON.parse(saved);
         if (settings.masterVolume !== undefined) {
             useUIStore.setState({ masterVolume: settings.masterVolume });
+        }
+        if (settings.theme) {
+            useUIStore.setState({ theme: settings.theme });
         }
     }
 } catch (e) { }
