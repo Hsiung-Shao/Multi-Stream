@@ -1,0 +1,28 @@
+const common = {
+  'appName': 'MultiStream Hub',
+  'version.title': '버전 정보',
+  'version.close': '닫기',
+  'common.close': '닫기',
+  'common.loading': '로딩 중...',
+  'common.error': '오류',
+  'common.success': '성공',
+  'common.confirm': '확인',
+  'common.cancel': '취소',
+  'common.save': '저장',
+  'common.edit': '편집',
+  'common.delete': '삭제',
+  'common.remove': '제거',
+  'common.add': '추가',
+  'common.search': '검색',
+  'common.filter': '필터',
+  'common.all': '전체',
+  'common.yes': '예',
+  'common.no': '아니오',
+  'chineseTraditional': '繁體中文',
+  'chineseSimplified': '简体中文',
+  'english': 'English',
+  'japanese': '日本語',
+  'korean': '한국어',
+};
+
+export default common;

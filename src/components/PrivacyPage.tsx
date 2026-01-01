@@ -1,7 +1,9 @@
-import { ArrowLeft, Globe, Sun, Moon, Shield, Database, Lock, Eye, FileText, Users, AlertCircle } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
+﻿import { ArrowLeft, Globe, Sun, Moon, Shield, Database, Lock, Eye, FileText, Users, AlertCircle } from 'lucide-react';
+import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useI18n } from '../i18n/index';
+import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
+import { logEvent } from '../utils/analytics';
 
 interface PrivacyPageProps {
   theme: 'light' | 'dark';
@@ -12,8 +14,14 @@ interface PrivacyPageProps {
 }
 
 export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, onNavigateToTerms }: PrivacyPageProps) {
-  const { locale, setLocale, t } = useI18n();
-  
+  const { t, i18n } = useTranslation(['common', 'privacy', 'about']);
+  const locale = i18n.language;
+  const setLocale = (lang: string) => i18n.changeLanguage(lang);
+
+  useEffect(() => {
+    logEvent('PrivacyPage', 'page_view');
+  }, []);
+
   const languages = [
     { value: 'zh-TW' as const, label: t('chineseTraditional') },
     { value: 'zh-CN' as const, label: t('chineseSimplified') },
@@ -27,24 +35,17 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
       {/* Header Navigation */}
       <div className={`border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-6 py-4`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <MuiButton
-            variant="text"
+          <Button
+            variant="ghost"
             onClick={onBack}
-            color="secondary"
-            sx={{
-              color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-              '&:hover': {
-                color: theme === 'dark' ? '#ffffff' : '#000000',
-                backgroundColor: 'transparent',
-              },
-            }}
+            className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
           >
             <ArrowLeft className="size-4 mr-2" />
-            {t('about.backToHome')}
-          </MuiButton>
-          
+            {t('about:backToHome')}
+          </Button>
+
           <div className="flex items-center gap-4">
-            <Select value={locale} onValueChange={(value) => setLocale(value as any)}>
+            <Select value={locale} onValueChange={(value: string) => setLocale(value as any)}>
               <SelectTrigger className={`min-w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
@@ -57,22 +58,18 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                 ))}
               </SelectContent>
             </Select>
-            
-            <MuiButton
-              variant="text"
-              size="small"
-              onClick={onThemeToggle}
-              color="secondary"
-              sx={{
-                color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                '&:hover': {
-                  color: theme === 'dark' ? '#ffffff' : '#000000',
-                  backgroundColor: 'transparent',
-                },
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                onThemeToggle();
+                logEvent('PrivacyPage', 'toggle_theme', theme === 'dark' ? 'light' : 'dark');
               }}
+              className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </MuiButton>
+            </Button>
           </div>
         </div>
       </div>
@@ -84,22 +81,22 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500">
             <Shield className="size-12 text-white" />
           </div>
-          
+
           <h1 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            {t('privacy.title')}
+            {t('privacy:title')}
           </h1>
-          
+
           <div className={`flex items-center justify-center gap-8 mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             <p>
-              <strong>{t('privacy.effectiveDate')}</strong>{t('privacy.effectiveDateValue')}
+              <strong>{t('privacy:effectiveDate')}</strong>{t('privacy:effectiveDateValue')}
             </p>
             <p>
-              <strong>{t('privacy.lastUpdated')}</strong>{t('privacy.lastUpdatedValue')}
+              <strong>{t('privacy:lastUpdated')}</strong>{t('privacy:lastUpdatedValue')}
             </p>
           </div>
-          
+
           <p className={`max-w-3xl mx-auto text-lg leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {t('privacy.intro')}
+            {t('privacy:intro')}
           </p>
         </div>
 
@@ -109,13 +106,13 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Eye className="size-6" />}
-            title={t('privacy.section1.title')}
+            title={t('privacy:section1.title')}
             iconColor="blue"
           >
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section1.item1')}</li>
-              <li>{t('privacy.section1.item2')}</li>
-              <li>{t('privacy.section1.item3')}</li>
+              <li>{t('privacy:section1.item1')}</li>
+              <li>{t('privacy:section1.item2')}</li>
+              <li>{t('privacy:section1.item3')}</li>
             </ul>
           </PolicySection>
 
@@ -123,22 +120,22 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Database className="size-6" />}
-            title={t('privacy.section1_5.title')}
+            title={t('privacy:section1_5.title')}
             iconColor="green"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('privacy.section1_5.intro')}
+              {t('privacy:section1_5.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section1_5.item1')}</li>
-              <li>{t('privacy.section1_5.item2')}</li>
-              <li>{t('privacy.section1_5.item3')}</li>
-              <li>{t('privacy.section1_5.item4')}</li>
+              <li>{t('privacy:section1_5.item1')}</li>
+              <li>{t('privacy:section1_5.item2')}</li>
+              <li>{t('privacy:section1_5.item3')}</li>
+              <li>{t('privacy:section1_5.item4')}</li>
               <li>
-                {t('privacy.section1_5.item5')}
-                <a 
-                  href="https://policies.google.com/privacy" 
-                  target="_blank" 
+                {t('privacy:section1_5.item5')}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:underline ml-1"
                 >
@@ -152,23 +149,23 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Database className="size-6" />}
-            title={t('privacy.section2.title')}
+            title={t('privacy:section2.title')}
             iconColor="purple"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('privacy.section2.intro')}
+              {t('privacy:section2.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section2.item1')}</li>
-              <li>{t('privacy.section2.item2')}</li>
-              <li>{t('privacy.section2.item3')}</li>
+              <li>{t('privacy:section2.item1')}</li>
+              <li>{t('privacy:section2.item2')}</li>
+              <li>{t('privacy:section2.item3')}</li>
             </ul>
             <p className={`mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <strong>{t('privacy.section2.youCan')}</strong>
+              <strong>{t('privacy:section2.youCan')}</strong>
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section2.item4')}</li>
-              <li>{t('privacy.section2.item5')}</li>
+              <li>{t('privacy:section2.item4')}</li>
+              <li>{t('privacy:section2.item5')}</li>
             </ul>
           </PolicySection>
 
@@ -176,20 +173,20 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<FileText className="size-6" />}
-            title={t('privacy.section3.title')}
+            title={t('privacy:section3.title')}
             iconColor="red"
           >
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section3.item1')}</li>
-              <li>{t('privacy.section3.item2')}</li>
+              <li>{t('privacy:section3.item1')}</li>
+              <li>{t('privacy:section3.item2')}</li>
               <li>
-                {t('privacy.section3.item3')}
+                {t('privacy:section3.item3')}
                 <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
                   <li>
-                    {t('privacy.section3.item4')}
-                    <a 
-                      href="https://www.twitch.tv/p/legal/privacy-policy" 
-                      target="_blank" 
+                    {t('privacy:section3.item4')}
+                    <a
+                      href="https://www.twitch.tv/p/legal/privacy-policy"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline ml-1"
                     >
@@ -197,10 +194,10 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
                     </a>
                   </li>
                   <li>
-                    {t('privacy.section3.item5')}
-                    <a 
-                      href="https://policies.google.com/privacy" 
-                      target="_blank" 
+                    {t('privacy:section3.item5')}
+                    <a
+                      href="https://policies.google.com/privacy"
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline ml-1"
                     >
@@ -216,19 +213,19 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Lock className="size-6" />}
-            title={t('privacy.section4.title')}
+            title={t('privacy:section4.title')}
             iconColor="yellow"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('privacy.section4.intro')}
+              {t('privacy:section4.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section4.item1')}</li>
-              <li>{t('privacy.section4.item2')}</li>
-              <li>{t('privacy.section4.item3')}</li>
-              <li>{t('privacy.section4.item4')}</li>
-              <li>{t('privacy.section4.item5')}</li>
-              <li>{t('privacy.section4.item6')}</li>
+              <li>{t('privacy:section4.item1')}</li>
+              <li>{t('privacy:section4.item2')}</li>
+              <li>{t('privacy:section4.item3')}</li>
+              <li>{t('privacy:section4.item4')}</li>
+              <li>{t('privacy:section4.item5')}</li>
+              <li>{t('privacy:section4.item6')}</li>
             </ul>
           </PolicySection>
 
@@ -236,28 +233,28 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<AlertCircle className="size-6" />}
-            title={t('privacy.section5.title')}
+            title={t('privacy:section5.title')}
             iconColor="orange"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('privacy.section5.intro')}
+              {t('privacy:section5.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section5.item1')}</li>
-              <li>{t('privacy.section5.item2')}</li>
+              <li>{t('privacy:section5.item1')}</li>
+              <li>{t('privacy:section5.item2')}</li>
               <li>
-                {t('privacy.section5.item3')}
-                <a 
-                  href="https://policies.google.com/privacy" 
-                  target="_blank" 
+                {t('privacy:section5.item3')}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:underline ml-1"
                 >
                   https://policies.google.com/privacy
                 </a>
               </li>
-              <li>{t('privacy.section5.item4')}</li>
-              <li>{t('privacy.section5.item5')}</li>
+              <li>{t('privacy:section5.item4')}</li>
+              <li>{t('privacy:section5.item5')}</li>
             </ul>
           </PolicySection>
 
@@ -265,18 +262,18 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Shield className="size-6" />}
-            title={t('privacy.section5_5.title')}
+            title={t('privacy:section5_5.title')}
             iconColor="indigo"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('privacy.section5_5.intro')}
+              {t('privacy:section5_5.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section5_5.item1')}</li>
-              <li>{t('privacy.section5_5.item2')}</li>
-              <li>{t('privacy.section5_5.item3')}</li>
-              <li>{t('privacy.section5_5.item4')}</li>
-              <li>{t('privacy.section5_5.item5')}</li>
+              <li>{t('privacy:section5_5.item1')}</li>
+              <li>{t('privacy:section5_5.item2')}</li>
+              <li>{t('privacy:section5_5.item3')}</li>
+              <li>{t('privacy:section5_5.item4')}</li>
+              <li>{t('privacy:section5_5.item5')}</li>
             </ul>
           </PolicySection>
 
@@ -284,27 +281,27 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Users className="size-6" />}
-            title={t('privacy.section6.title')}
+            title={t('privacy:section6.title')}
             iconColor="cyan"
           >
             <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('privacy.section6.intro')}
+              {t('privacy:section6.intro')}
             </p>
             <ul className={`list-disc list-inside space-y-2 mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              <li>{t('privacy.section6.item1')}</li>
-              <li>{t('privacy.section6.item2')}</li>
-              <li>{t('privacy.section6.item3')}</li>
-              <li>{t('privacy.section6.item4')}</li>
+              <li>{t('privacy:section6.item1')}</li>
+              <li>{t('privacy:section6.item2')}</li>
+              <li>{t('privacy:section6.item3')}</li>
+              <li>{t('privacy:section6.item4')}</li>
             </ul>
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              {t('privacy.section6.contact')}
-              <a 
+              {t('privacy:section6.contact')}
+              <a
                 href="mailto:feedback@multistreaming.org"
                 className="text-blue-500 hover:underline ml-1"
               >
                 feedback@multistreaming.org
               </a>
-              {t('privacy.section6.responseTime')}
+              {t('privacy:section6.responseTime')}
             </p>
           </PolicySection>
 
@@ -312,11 +309,11 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<Shield className="size-6" />}
-            title={t('privacy.section7.title')}
+            title={t('privacy:section7.title')}
             iconColor="pink"
           >
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              {t('privacy.section7.content')}
+              {t('privacy:section7.content')}
             </p>
           </PolicySection>
 
@@ -324,11 +321,11 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<FileText className="size-6" />}
-            title={t('privacy.section8.title')}
+            title={t('privacy:section8.title')}
             iconColor="teal"
           >
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              {t('privacy.section8.content')}
+              {t('privacy:section8.content')}
             </p>
           </PolicySection>
 
@@ -336,12 +333,12 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <PolicySection
             theme={theme}
             icon={<AlertCircle className="size-6" />}
-            title={t('privacy.section9.title')}
+            title={t('privacy:section9.title')}
             iconColor="purple"
           >
             <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              {t('privacy.section9.content')}
-              <a 
+              {t('privacy:section9.content')}
+              <a
                 href="mailto:feedback@multistreaming.org"
                 className="text-blue-500 hover:underline ml-1"
               >
@@ -354,39 +351,42 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
         {/* Footer Note */}
         <div className={`mt-16 pt-8 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
           <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-            {t('privacy.footerNote')}
+            {t('privacy:footerNote')}
           </p>
         </div>
 
         {/* Footer Navigation */}
         <footer className={`text-center pt-8 mt-8 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
           <div className="flex justify-center gap-8 mb-6">
-            <button
+            <Button
+              variant="link"
               onClick={onBack}
               className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
-              {t('privacy.home')}
-            </button>
+              {t('privacy:home')}
+            </Button>
             {onNavigateToAbout && (
-              <button
+              <Button
+                variant="link"
                 onClick={onNavigateToAbout}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
-                {t('privacy.about')}
-              </button>
+                {t('privacy:about')}
+              </Button>
             )}
             {onNavigateToTerms && (
-              <button
+              <Button
+                variant="link"
                 onClick={onNavigateToTerms}
                 className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
               >
-                {t('privacy.terms')}
-              </button>
+                {t('privacy:terms')}
+              </Button>
             )}
           </div>
-          
+
           <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-            {t('about.copyright')}
+            {t('about:copyright')}
           </p>
         </footer>
       </div>

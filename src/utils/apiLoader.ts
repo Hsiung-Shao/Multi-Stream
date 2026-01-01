@@ -9,16 +9,12 @@ export type ApiLoadStatus = 'idle' | 'loading' | 'loaded' | 'error';
 interface ApiLoaderState {
   twitchPlayer: ApiLoadStatus;
   youtubePlayer: ApiLoadStatus;
-  twitchData: ApiLoadStatus;
-  youtubeData: ApiLoadStatus;
 }
 
 class ApiLoader {
   private state: ApiLoaderState = {
     twitchPlayer: 'idle',
     youtubePlayer: 'idle',
-    twitchData: 'idle',
-    youtubeData: 'idle',
   };
 
   private loadPromises: Map<string, Promise<void>> = new Map();
@@ -74,7 +70,7 @@ class ApiLoader {
       // 移除 crossOrigin 屬性，避免 CORS 檢查過於嚴格（腳本標籤通常不需要）
       // twitchScript.crossOrigin = 'anonymous';
       twitchScript.src = 'https://player.twitch.tv/js/embed/v1.js';
-      
+
       // 改進的 onload 處理：即使有 CORS 警告，只要 window.Twitch 可用就視為成功
       twitchScript.onload = () => {
         // 優化：使用 50ms 檢查間隔（更快檢測）
@@ -118,7 +114,7 @@ class ApiLoader {
           }
         }, 500); // 給一點時間讓腳本執行
       };
-      
+
       document.head.appendChild(twitchScript);
     });
 
@@ -197,121 +193,7 @@ class ApiLoader {
     });
   }
 
-  /**
-   * 載入 Twitch 數據 API（搜尋、查詢用）
-   * 此 API 通過 js/twitch-api.js 載入，這裡只檢查是否可用
-   */
-  async loadTwitchDataApi(): Promise<void> {
-    if (this.state.twitchData === 'loaded') {
-      return Promise.resolve();
-    }
 
-    if (this.state.twitchData === 'loading') {
-      return this.loadPromises.get('twitchData') || Promise.resolve();
-    }
-
-    this.state.twitchData = 'loading';
-    const promise = new Promise<void>((resolve) => {
-      // 檢查 window.twitchApi 是否已初始化
-      if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
-        this.state.twitchData = 'loaded';
-        resolve();
-        return;
-      }
-
-      // 等待 twitch-api.js 載入（最多等待 5 秒）
-      let waitCount = 0;
-      const checkInterval = setInterval(() => {
-        waitCount++;
-        if (window.twitchApi && typeof window.twitchApi.searchChannels === 'function') {
-          clearInterval(checkInterval);
-          this.state.twitchData = 'loaded';
-          resolve();
-        } else if (waitCount >= 50) {
-          // 5 秒超時
-          clearInterval(checkInterval);
-          // 即使未載入也不阻止應用運行
-          this.state.twitchData = 'error';
-          resolve();
-        }
-      }, 100);
-    });
-
-    this.loadPromises.set('twitchData', promise);
-    return promise;
-  }
-
-  /**
-   * 載入 YouTube 數據 API（搜尋、查詢用）
-   * 此 API 通過 js/settings.js 載入，這裡只檢查是否可用
-   */
-  async loadYouTubeDataApi(): Promise<void> {
-    if (this.state.youtubeData === 'loaded') {
-      return Promise.resolve();
-    }
-
-    if (this.state.youtubeData === 'loading') {
-      return this.loadPromises.get('youtubeData') || Promise.resolve();
-    }
-
-    this.state.youtubeData = 'loading';
-    const promise = new Promise<void>((resolve) => {
-      // 檢查 window.youtubeApiUtils 是否已初始化
-      if (window.youtubeApiUtils && typeof window.youtubeApiUtils.getApiKey === 'function') {
-        this.state.youtubeData = 'loaded';
-        resolve();
-        return;
-      }
-
-      // 等待 settings.js 載入（最多等待 5 秒）
-      let waitCount = 0;
-      const checkInterval = setInterval(() => {
-        waitCount++;
-        if (window.youtubeApiUtils && typeof window.youtubeApiUtils.getApiKey === 'function') {
-          clearInterval(checkInterval);
-          this.state.youtubeData = 'loaded';
-          resolve();
-        } else if (waitCount >= 50) {
-          // 5 秒超時
-          clearInterval(checkInterval);
-          // 即使未載入也不阻止應用運行
-          this.state.youtubeData = 'error';
-          resolve();
-        }
-      }, 100);
-    });
-
-    this.loadPromises.set('youtubeData', promise);
-    return promise;
-  }
-
-  /**
-   * 載入所有播放器 API（必要功能，應用啟動時載入）
-   */
-  async loadAllPlayerApis(): Promise<void> {
-    try {
-      await Promise.all([
-        this.loadTwitchPlayerApi(),
-        this.loadYouTubePlayerApi()
-      ]);
-    } catch (error) {
-      // 不阻止應用繼續運行
-    }
-  }
-
-  /**
-   * 載入所有數據 API（非必要功能，按需載入）
-   */
-  async loadAllDataApis(): Promise<void> {
-    try {
-      await Promise.all([
-        this.loadTwitchDataApi(),
-        this.loadYouTubeDataApi()
-      ]);
-    } catch (error) {
-      // 不阻止應用繼續運行
-    }
-  }
 
   /**
    * 獲取 API 載入狀態
@@ -332,21 +214,21 @@ class ApiLoader {
    * 根據 URL 列表判斷需要載入哪些 API
    */
   async preloadPlayerApisForUrls(urls: string[]): Promise<void> {
-    const needsTwitch = urls.some(url => 
-      url.includes('twitch.tv/') || 
+    const needsTwitch = urls.some(url =>
+      url.includes('twitch.tv/') ||
       (!url.includes('http://') && !url.includes('https://') && !url.includes('youtube.com'))
     );
-    
-    const needsYouTube = urls.some(url => 
+
+    const needsYouTube = urls.some(url =>
       url.includes('youtube.com') || url.includes('youtu.be/')
     );
 
     const loadPromises: Promise<void>[] = [];
-    
+
     if (needsTwitch) {
       loadPromises.push(this.loadTwitchPlayerApi());
     }
-    
+
     if (needsYouTube) {
       loadPromises.push(this.loadYouTubePlayerApi());
     }

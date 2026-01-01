@@ -180,17 +180,18 @@ export class BackupService {
 
         // Strategy Matrix
         // Local | DB  | Action
-        // YES   | YES | No Restore
-        // NO    | YES | Restore
-        // YES   | NO  | Reverse Backup
+        // YES   | YES | Merge (Smart Patch)
+        // NO    | YES | Full Restore
+        // YES   | NO  | Reverse Backup (Preserve Local)
         // NO    | NO  | No Action
 
         if (hasLocal && hasDb) {
-            return { success: true, restored: false, message: 'Local data exists', skipped: true };
+            // MERGE STRATEGY
+            return await this.performMerge(dbData);
         }
 
         if (!hasLocal && hasDb) {
-            // Restore
+            // FULL RESTORE STRATEGY
             return await this.performRestore(dbData);
         }
 
@@ -221,9 +222,102 @@ export class BackupService {
             // Should we restore UID? Usually yes for continuity
             if (data.uid) localStorage.setItem('ms_user_uuid', data.uid);
 
-            return { success: true, restored: true, message: 'Data restored from backup' };
+            return { success: true, restored: true, message: 'Data fully restored from backup' };
         } catch (e: any) {
             return { success: false, restored: false, message: e.message || 'Restore failed' };
+        }
+    }
+
+    /**
+     * MEGRE STRATEGY:
+     * - Favorites/Categories/Tags: Add items from Backup that are missing in Local.
+     * - Settings/Config: Local wins (do not overwrite).
+     */
+    async performMerge(backupData: BackupData): Promise<RestoreResult> {
+        try {
+            let mergedCount = 0;
+
+            // 1. Merge Favorites
+            const localFavsRaw = localStorage.getItem('favoriteStreams');
+            const localFavs = localFavsRaw ? JSON.parse(localFavsRaw) : [];
+            const backupFavs = backupData.favoriteStreams || [];
+
+            if (backupFavs.length > 0) {
+                let favsChanged = false;
+                backupFavs.forEach((bItem: any) => {
+                    // Check existence by ID (primary) or URL (secondary)
+                    const exists = localFavs.some((lItem: any) =>
+                        lItem.id === bItem.id || lItem.url === bItem.url
+                    );
+
+                    if (!exists) {
+                        localFavs.push(bItem);
+                        favsChanged = true;
+                        mergedCount++;
+                    }
+                });
+
+                if (favsChanged) {
+                    localStorage.setItem('favoriteStreams', JSON.stringify(localFavs));
+                }
+            }
+
+            // 2. Merge Categories
+            const localCatsRaw = localStorage.getItem('favoriteCategories');
+            const localCats = localCatsRaw ? JSON.parse(localCatsRaw) : [];
+            const backupCats = backupData.favoriteCategories || [];
+
+            if (backupCats.length > 0) {
+                let catsChanged = false;
+                backupCats.forEach((bCat: any) => {
+                    // Check by ID
+                    const exists = localCats.some((lCat: any) => lCat.id === bCat.id);
+                    if (!exists) {
+                        localCats.push(bCat);
+                        catsChanged = true;
+                        mergedCount++;
+                    }
+                });
+
+                if (catsChanged) {
+                    localStorage.setItem('favoriteCategories', JSON.stringify(localCats));
+                }
+            }
+
+            // 3. Merge Tags
+            const localTagsRaw = localStorage.getItem('preference_tags');
+            const localTags = localTagsRaw ? JSON.parse(localTagsRaw) : [];
+            const backupTags = backupData.preference_tags || [];
+
+            if (backupTags.length > 0) {
+                let tagsChanged = false;
+                backupTags.forEach((bTag: any) => {
+                    // Check by ID
+                    const exists = localTags.some((lTag: any) => lTag.id === bTag.id);
+                    if (!exists) {
+                        localTags.push(bTag);
+                        tagsChanged = true;
+                        mergedCount++;
+                    }
+                });
+
+                if (tagsChanged) {
+                    localStorage.setItem('preference_tags', JSON.stringify(localTags));
+                }
+            }
+
+            // 4. Other Settings: Local Wins (Do not overwrite)
+
+            if (mergedCount > 0) {
+                console.log(`[BackupService] Merged ${mergedCount} missing items from backup.`);
+                return { success: true, restored: true, message: `Merged ${mergedCount} items from backup` };
+            } else {
+                return { success: true, restored: false, message: 'Local data is up to date', skipped: true };
+            }
+
+        } catch (e: any) {
+            console.error('[BackupService] Merge failed', e);
+            return { success: false, restored: false, message: 'Merge failed: ' + e.message };
         }
     }
 }

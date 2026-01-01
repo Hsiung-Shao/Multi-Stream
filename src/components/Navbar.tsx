@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import { Search, Heart, Globe, Sun, Moon, LayoutDashboard, Coffee, Plus, Circle, Menu } from 'lucide-react';
-import { Button as MuiButton } from '@mui/material';
+import { Search, Heart, Globe, Sun, Moon, LayoutDashboard, Coffee, Plus, Menu } from 'lucide-react';
+import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Box, Drawer, useMediaQuery, useTheme as useMuiTheme } from '@mui/material';
+import { Label } from './ui/label';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from './ui/sheet';
+import { useMediaQuery } from '../hooks/use-media-query';
 import {
   Select,
   SelectContent,
@@ -16,16 +18,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from './ui/tooltip';
-import { useI18n } from '../i18n/index';
-
-// 聲明全局類型
-declare global {
-  interface Window {
-    favoriteStreams?: {
-      add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: any }>;
-    };
-  }
-}
+import { useTranslation } from 'react-i18next';
+import { logEvent } from '../utils/analytics';
+import { favoritesService } from '../features/favorites/FavoritesService';
+import { twitchService } from '../features/twitch/TwitchService';
 
 interface NavbarProps {
   theme: 'light' | 'dark';
@@ -64,10 +60,11 @@ export function Navbar({
   onAddStream,
   onSearchFocusChange
 }: NavbarProps) {
-  const { locale, setLocale, t } = useI18n();
-  const muiTheme = useMuiTheme();
-  // 使用 'lg' breakpoint 以確保手機水平版面也使用手機版按鈕設計
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down('lg'));
+  const { t, i18n } = useTranslation(['navbar', 'common', 'favorites']);
+  const locale = i18n.language;
+  const setLocale = (lang: string) => i18n.changeLanguage(lang);
+  // 使用 'lg' breakpoint (1024px) 以確保手機水平版面也使用手機版按鈕設計
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const [searchValue, setSearchValue] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -114,15 +111,10 @@ export function Navbar({
 
     setIsSearching(true);
     try {
-      if (window.twitchApi && window.twitchApi.searchChannels) {
-        const results = await window.twitchApi.searchChannels(query, 5);
-        setSearchResults(results || []);
-        setShowResults(true);
-        setSelectedIndex(-1);
-      } else {
-        setSearchResults([]);
-        setShowResults(false);
-      }
+      const results = await twitchService.searchChannels(query, 5);
+      setSearchResults(results || []);
+      setShowResults(true);
+      setSelectedIndex(-1);
     } catch (error) {
       setSearchResults([]);
       setShowResults(false);
@@ -198,7 +190,7 @@ export function Navbar({
   const handleAddToFavorites = async () => {
     const valueToAdd = searchValue.trim();
     if (!valueToAdd) {
-      alert(t('favorites.pasteUrl'));
+      alert(t('favorites:pasteUrl'));
       return;
     }
 
@@ -210,19 +202,26 @@ export function Navbar({
       urlToAdd = valueToAdd;
     } else {
       // 如果不是 URL 也不是搜尋結果，提示用戶
-      alert(t('favorites.pasteUrl'));
+      alert(t('favorites:pasteUrl'));
       return;
     }
 
-    if (!window.favoriteStreams) {
-      alert(t('favorites.systemNotInitialized'));
-      return;
-    }
+    // 直接調用 favoritesService
+    // if (!window.favoriteStreams) check removed
 
     try {
-      const result = await window.favoriteStreams.add(urlToAdd);
+      // 構建新的 addFavorite 調用
+      const result = await favoritesService.addFavorite(
+        urlToAdd,
+        undefined, // name
+        null, // categoryId
+        undefined, // providedChannelId
+        undefined, // providedVideoId
+        [] // tags
+      );
+
       if (result.success) {
-        alert(result.message || t('favorites.add'));
+        alert(result.message || t('favorites:add'));
         setSearchValue('');
         setSearchResults([]);
         setShowResults(false);
@@ -232,10 +231,10 @@ export function Navbar({
           onSearchFocusChange(false);
         }
       } else {
-        alert(result.message || t('common.error'));
+        alert(result.message || t('common:common.error'));
       }
     } catch (error) {
-      alert(`${t('common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
+      alert(`${t('common:common.error')}: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
   };
 
@@ -310,10 +309,10 @@ export function Navbar({
 
   // 手機版面的導航連結列表
   const navLinks = [
-    { label: t('navbar.about'), onClick: onShowAbout },
-    { label: t('navbar.tutorial'), onClick: onShowTutorial },
-    { label: t('navbar.versionHistory'), onClick: onShowVersionHistory },
-    { label: t('navbar.feedback'), onClick: onShowFeedback }, // Updated
+    { label: t('navbar:about'), onClick: onShowAbout },
+    { label: t('navbar:tutorial'), onClick: onShowTutorial },
+    { label: t('navbar:versionHistory'), onClick: onShowVersionHistory },
+    { label: t('navbar:feedback'), onClick: onShowFeedback }, // Updated
   ];
 
   return (
@@ -328,119 +327,88 @@ export function Navbar({
           {/* Mobile: Drawer Button */}
           {isMobile ? (
             <>
-              <MuiButton
-                variant="text"
-                size="small"
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setDrawerOpen(true)}
-                color="secondary"
-                sx={{
-                  color: theme === 'dark' ? '#ffffff' : '#000000',
-                  minWidth: 'auto',
-                  padding: '8px',
-                  '&:hover': {
-                    bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                  },
-                }}
+                className={theme === 'dark' ? 'text-white hover:bg-gray-800' : 'text-black hover:bg-gray-100'}
               >
                 <Menu className="size-5" />
-              </MuiButton>
-              <Drawer
-                anchor="left"
-                open={drawerOpen}
-                onClose={() => setDrawerOpen(false)}
-                PaperProps={{
-                  sx: {
-                    bgcolor: theme === 'dark' ? '#111827' : '#ffffff',
-                    color: theme === 'dark' ? '#ffffff' : '#000000',
-                    width: 280,
-                  }
-                }}
-              >
-                <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <h2 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('navbar.menu') || '選單'}
-                  </h2>
-                  <div className="flex flex-col gap-2 flex-1">
-                    {navLinks.map((link, index) => (
-                      link.onClick && (
-                        <MuiButton
-                          key={index}
-                          variant="text"
-                          fullWidth
-                          onClick={() => {
-                            link.onClick?.();
-                            setDrawerOpen(false);
-                          }}
-                          sx={{
-                            justifyContent: 'flex-start',
-                            color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                            '&:hover': {
-                              color: theme === 'dark' ? '#ffffff' : '#000000',
-                              bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                            },
-                          }}
-                        >
-                          {link.label}
-                        </MuiButton>
-                      )
-                    ))}
-                  </div>
-
-                  {/* 分隔線 */}
-                  <div className={`w-full h-px my-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`} />
-
-                  {/* 語言切換 */}
-                  <div className="mb-4">
-                    <label className={`text-sm mb-2 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {t('navbar.languageSwitch') || '語言'}
-                    </label>
-                    <Select value={locale} onValueChange={(value) => setLocale(value as typeof locale)}>
-                      <SelectTrigger
-                        className={`w-full ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : 'bg-white border-gray-300 text-black hover:bg-gray-50'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Globe className="size-4" />
-                          <SelectValue />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent
-                        className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}
-                      >
-                        {languages.map((lang) => (
-                          <SelectItem
-                            key={lang.value}
-                            value={lang.value}
-                            className={theme === 'dark' ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-black'}
+              </Button>
+              <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+                <SheetContent side="left" className={`w-[280px] p-0 ${theme === 'dark' ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white border-gray-200 text-black'}`}>
+                  <div className="p-4 flex flex-col h-full">
+                    <SheetHeader className="mb-4 text-left">
+                      <SheetTitle className={theme === 'dark' ? 'text-white' : 'text-black'}>
+                        {t('navbar:menu') || '選單'}
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="flex flex-col gap-2 flex-1">
+                      {navLinks.map((link, index) => (
+                        link.onClick && (
+                          <Button
+                            key={index}
+                            variant="ghost"
+                            className={`justify-start w-full ${theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}`}
+                            onClick={() => {
+                              link.onClick?.();
+                              setDrawerOpen(false);
+                            }}
                           >
-                            {lang.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                            {link.label}
+                          </Button>
+                        )
+                      ))}
+                    </div>
 
-                  {/* 贊助我 */}
-                  <MuiButton
-                    variant="contained"
-                    fullWidth
-                    color="secondary"
-                    onClick={() => {
-                      window.open('https://buymeacoffee.com/hsiung', '_blank');
-                      setDrawerOpen(false);
-                    }}
-                    sx={{
-                      background: 'linear-gradient(to right, #ec4899, #9333ea)',
-                      color: 'white',
-                      '&:hover': {
-                        background: 'linear-gradient(to right, #db2777, #7e22ce)',
-                      },
-                    }}
-                  >
-                    <Coffee className="size-4 mr-2" />
-                    {t('navbar.sponsor')}
-                  </MuiButton>
-                </Box>
-              </Drawer>
+                    {/* 分隔線 */}
+                    <div className={`w-full h-px my-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`} />
+
+                    {/* 語言切換 */}
+                    <div className="mb-4">
+                      <Label className={`text-sm mb-2 block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {t('navbar:languageSwitch') || '語言'}
+                      </Label>
+                      <Select value={locale} onValueChange={(value: string) => setLocale(value as typeof locale)}>
+                        <SelectTrigger
+                          className={`w-full ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : 'bg-white border-gray-300 text-black hover:bg-gray-50'}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Globe className="size-4" />
+                            <SelectValue />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent
+                          className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}
+                        >
+                          {languages.map((lang) => (
+                            <SelectItem
+                              key={lang.value}
+                              value={lang.value}
+                              className={theme === 'dark' ? 'text-gray-300 hover:bg-gray-800 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-black'}
+                            >
+                              {lang.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* 贊助我 */}
+                    <Button
+                      className="w-full text-white bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 border-none"
+                      onClick={() => {
+                        logEvent('Navbar', 'click_support', 'buy_me_a_coffee');
+                        window.open('https://buymeacoffee.com/hsiung', '_blank');
+                        setDrawerOpen(false);
+                      }}
+                    >
+                      <Coffee className="size-4 mr-2" />
+                      {t('navbar:sponsor')}
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </>
           ) : (
             /* Desktop: Icon, Title, and Links */
@@ -448,8 +416,8 @@ export function Navbar({
               {/* Icon and Title - 桌面版最左側 */}
               <div className="flex items-center gap-2">
                 <img src="/icon.png" alt="MultiStream Hub" className="w-6 h-6" />
-                <span className={`font-medium text-lg ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  MultiStream Hub
+                <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  {t('common:appName')}
                 </span>
               </div>
 
@@ -458,95 +426,67 @@ export function Navbar({
                 {onShowAbout && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <MuiButton
-                        variant="text"
-                        size="small"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={onShowAbout}
-                        color="secondary"
-                        sx={{
-                          color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                          '&:hover': {
-                            color: theme === 'dark' ? '#ffffff' : '#000000',
-                            bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                          },
-                        }}
+                        className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                       >
-                        {t('navbar.about')}
-                      </MuiButton>
+                        {t('navbar:about')}
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('navbar.about')}</p>
+                      <p>{t('navbar:about')}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
                 {onShowTutorial && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <MuiButton
-                        variant="text"
-                        size="small"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={onShowTutorial}
-                        color="secondary"
-                        sx={{
-                          color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                          '&:hover': {
-                            color: theme === 'dark' ? '#ffffff' : '#000000',
-                            bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                          },
-                        }}
+                        className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                       >
-                        {t('navbar.tutorial')}
-                      </MuiButton>
+                        {t('navbar:tutorial')}
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('navbar.tutorial')}</p>
+                      <p>{t('navbar:tutorial')}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
                 {onShowVersionHistory && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <MuiButton
-                        variant="text"
-                        size="small"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={onShowVersionHistory}
-                        color="secondary"
-                        sx={{
-                          color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                          '&:hover': {
-                            color: theme === 'dark' ? '#ffffff' : '#000000',
-                            bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                          },
-                        }}
+                        className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                       >
-                        {t('navbar.versionHistory')}
-                      </MuiButton>
+                        {t('navbar:versionHistory')}
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{t('navbar.versionHistory')}</p>
+                      <p>{t('navbar:versionHistory')}</p>
                     </TooltipContent>
                   </Tooltip>
                 )}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <MuiButton
-                      variant="text"
-                      size="small"
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={onShowFeedback}
-                      color="secondary"
-                      sx={{
-                        color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                        '&:hover': {
-                          color: theme === 'dark' ? '#ffffff' : '#000000',
-                          bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                        },
-                      }}
+                      className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                     >
-                      {t('navbar.feedback')}
-                    </MuiButton>
+                      {t('navbar:feedback')}
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{t('navbar.feedback')}</p>
+                    <p>{t('navbar:feedback')}</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -560,7 +500,7 @@ export function Navbar({
           <Input
             ref={inputRef}
             type="text"
-            placeholder={t('navbar.searchPlaceholder')}
+            placeholder={t('navbar:searchPlaceholder')}
             value={searchValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyPress}
@@ -579,114 +519,60 @@ export function Navbar({
           {/* Desktop: 顯示按鈕在搜尋框內 */}
           {!isMobile && (
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <MuiButton
-                variant="text"
-                size="small"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => handleAddStream()}
-                color="secondary"
-                sx={{
-                  height: '28px',
-                  paddingX: '8px',
-                  fontSize: '12px',
-                  color: theme === 'dark' ? '#a855f7' : '#9333ea',
-                  '&:hover': {
-                    color: theme === 'dark' ? '#c084fc' : '#7e22ce',
-                    bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
-                  },
-                }}
+                className={`h-7 px-2 text-xs ${theme === 'dark' ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-500/5'}`}
               >
                 <Plus className="size-3 mr-1" />
-                {t('navbar.addStream')}
-              </MuiButton>
-              <MuiButton
-                variant="text"
-                size="small"
+                {t('navbar:addStream')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleAddToFavorites}
-                color="secondary"
-                sx={{
-                  height: '28px',
-                  paddingX: '8px',
-                  fontSize: '12px',
-                  color: theme === 'dark' ? '#a855f7' : '#9333ea',
-                  '&:hover': {
-                    color: theme === 'dark' ? '#c084fc' : '#7e22ce',
-                    bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
-                  },
-                }}
+                className={`h-7 px-2 text-xs ${theme === 'dark' ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-500/5'}`}
               >
                 <Plus className="size-3 mr-1" />
-                {t('favorites.add')}
-              </MuiButton>
+                {t('favorites:add')}
+              </Button>
             </div>
           )}
 
           {/* Mobile: 搜尋框使用時（聚焦或有內容）顯示加入畫面按鈕（在搜尋框內） */}
           {isMobile && (isSearchFocused || searchValue.trim().length > 0) && searchValue.trim().length > 0 && (
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <MuiButton
-                variant="text"
-                size="small"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => handleAddStream()}
-                color="secondary"
-                sx={{
-                  height: '28px',
-                  paddingX: '6px',
-                  fontSize: '11px',
-                  color: theme === 'dark' ? '#a855f7' : '#9333ea',
-                  '&:hover': {
-                    color: theme === 'dark' ? '#c084fc' : '#7e22ce',
-                    bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
-                  },
-                }}
+                className={`h-7 px-1.5 text-[11px] ${theme === 'dark' ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-500/5'}`}
               >
                 <Plus className="size-2.5" />
-              </MuiButton>
+              </Button>
             </div>
           )}
 
-          {/* 搜尋結果下拉列表 */}
           {showResults && searchResults.length > 0 && (
-            <Box
+            <div
               className={`absolute top-full left-0 right-0 mt-1 rounded-lg border shadow-lg z-50 ${theme === 'dark'
                 ? 'bg-gray-900 border-gray-700'
                 : 'bg-white border-gray-200'
-                }`}
-              sx={{
-                maxHeight: '384px',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: theme === 'dark' ? '#374151' : '#f3f4f6',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: theme === 'dark' ? '#6b7280' : '#9ca3af',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    background: theme === 'dark' ? '#9ca3af' : '#6b7280',
-                  },
-                },
-              }}
+                } max-h-96 overflow-y-auto overflow-x-hidden`}
             >
               <div className="py-1">
                 {searchResults.map((result, index) => (
                   <div
                     key={result.id}
-                    onClick={() => handleSelectResult(result)}
-                    className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors relative ${index === selectedIndex
-                      ? theme === 'dark'
-                        ? 'bg-gray-800'
-                        : 'bg-gray-100'
-                      : theme === 'dark'
-                        ? 'hover:bg-gray-800'
-                        : 'hover:bg-gray-50'
+                    className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${selectedIndex === index
+                      ? theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
+                      : theme === 'dark' ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
                       }`}
+                    onMouseDown={() => handleSelectResult(result)}
                     onMouseEnter={() => setSelectedIndex(index)}
                   >
-                    {/* 圓形頭像 */}
+                    {/* 頻道頭像 */}
                     {result.thumbnailUrl ? (
                       <img
                         src={result.thumbnailUrl}
@@ -694,10 +580,8 @@ export function Navbar({
                         className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-                        }`}>
-                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                          }`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                        <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
                           {result.displayName.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -709,11 +593,11 @@ export function Navbar({
                       </div>
                       <div className={`text-sm flex items-center justify-between ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                         <div className="flex items-center">
-                          {t('navbar.twitch')}
+                          {t('navbar:twitch')}
                           {result.isLive && (
-                            <span className="ml-2">
-                              <span className="text-green-500" style={{ color: '#10b981' }}>●</span>
-                              <span> {t('navbar.live')}</span>
+                            <span className="ml-2 flex items-center">
+                              <span className="text-green-500 mr-1" style={{ color: '#10b981' }}>●</span>
+                              <span> {t('navbar:live')}</span>
                             </span>
                           )}
                         </div>
@@ -724,14 +608,14 @@ export function Navbar({
                       {/* 觀看人數 - 頻道資訊區域的右上角 */}
                       {result.isLive && result.viewerCount !== undefined && (
                         <div className={`absolute top-0 right-0 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {result.viewerCount.toLocaleString()} {t('navbar.viewers')}
+                          {result.viewerCount?.toLocaleString()} {t('navbar:viewers')}
                         </div>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            </Box>
+            </div>
           )}
 
           {/* 無搜尋結果提示 */}
@@ -740,7 +624,7 @@ export function Navbar({
               ? 'bg-gray-900 border-gray-700 text-gray-400'
               : 'bg-white border-gray-200 text-gray-500'
               }`}>
-              <p className="text-sm text-center">{t('navbar.noResults')}</p>
+              <p className="text-sm">{t('navbar:noResults')}</p>
             </div>
           )}
         </div>
@@ -752,46 +636,25 @@ export function Navbar({
           {isMobile ? (
             <>
               {/* 加入畫面按鈕 */}
-              <MuiButton
-                variant="text"
-                size="small"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => handleAddStream()}
-                color="secondary"
-                sx={{
-                  height: '28px',
-                  paddingX: '8px',
-                  fontSize: '11px',
-                  color: theme === 'dark' ? '#a855f7' : '#9333ea',
-                  '&:hover': {
-                    color: theme === 'dark' ? '#c084fc' : '#7e22ce',
-                    bgcolor: theme === 'dark' ? 'rgba(147, 51, 234, 0.1)' : 'rgba(147, 51, 234, 0.05)',
-                  },
-                }}
+                className={`h-7 px-2 text-xs ${theme === 'dark' ? 'text-purple-400 hover:text-white hover:bg-gray-800' : 'text-purple-600 hover:text-black hover:bg-gray-100'}`}
               >
                 <Plus className="size-3 mr-1" />
-                {t('navbar.addStream')}
-              </MuiButton>
+                {t('navbar:addStream')}
+              </Button>
               {/* 控制面板按鈕 */}
               {onTogglePanel && (
-                <MuiButton
-                  variant="outlined"
+                <Button
+                  variant="outline"
                   onClick={onTogglePanel}
-                  color="secondary"
-                  size="small"
-                  sx={{
-                    bgcolor: 'transparent',
-                    borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
-                    color: theme === 'dark' ? '#ffffff' : '#000000',
-                    minWidth: 'auto',
-                    padding: '6px 12px',
-                    '&:hover': {
-                      bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                      borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
-                    },
-                  }}
+                  size="sm"
+                  className={`bg-transparent px-3 py-1.5 h-auto ${theme === 'dark' ? 'border-gray-600 text-white hover:bg-gray-800 hover:border-gray-600' : 'border-gray-300 text-black hover:bg-gray-100 hover:border-gray-300'}`}
                 >
                   <LayoutDashboard className="size-4" />
-                </MuiButton>
+                </Button>
               )}
             </>
           ) : (
@@ -801,24 +664,17 @@ export function Navbar({
               {onShowFavorites && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <MuiButton
-                      variant="text"
-                      size="small"
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={onShowFavorites}
-                      color="secondary"
-                      sx={{
-                        color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                        '&:hover': {
-                          color: theme === 'dark' ? '#ffffff' : '#000000',
-                          bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                        },
-                      }}
+                      className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                     >
                       <Heart className="size-5" />
-                    </MuiButton>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{t('navbar.favorites')}</p>
+                    <p>{t('navbar:favorites')}</p>
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -826,24 +682,17 @@ export function Navbar({
               {/* 主題切換 */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <MuiButton
-                    variant="text"
-                    size="small"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onThemeToggle}
-                    color="secondary"
-                    sx={{
-                      color: theme === 'dark' ? '#d1d5db' : '#4b5563',
-                      '&:hover': {
-                        color: theme === 'dark' ? '#ffffff' : '#000000',
-                        bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                      },
-                    }}
+                    className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                   >
                     {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-                  </MuiButton>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{t('navbar.themeToggle')}</p>
+                  <p>{t('navbar:themeToggle')}</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -851,7 +700,7 @@ export function Navbar({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <Select value={locale} onValueChange={(value) => setLocale(value as typeof locale)}>
+                    <Select value={locale} onValueChange={(value: string) => setLocale(value as typeof locale)}>
                       <SelectTrigger
                         className={`w-[140px] h-9 ${theme === 'dark'
                           ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
@@ -880,7 +729,7 @@ export function Navbar({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{t('navbar.languageSwitch')}</p>
+                  <span className="sr-only">{t('navbar:languageSwitch')}</span>
                 </TooltipContent>
               </Tooltip>
 
@@ -889,45 +738,31 @@ export function Navbar({
 
               {/* 控制面板 */}
               {onTogglePanel && (
-                <MuiButton
-                  variant="outlined"
+                <Button
+                  variant="outline"
                   onClick={onTogglePanel}
-                  color="secondary"
-                  sx={{
-                    bgcolor: 'transparent',
-                    borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
-                    color: theme === 'dark' ? '#ffffff' : '#000000',
-                    '&:hover': {
-                      bgcolor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                      borderColor: theme === 'dark' ? '#4b5563' : '#d1d5db',
-                    },
-                  }}
+                  className={`bg-transparent ${theme === 'dark' ? 'border-gray-600 text-white hover:bg-gray-800 hover:border-gray-600' : 'border-gray-300 text-black hover:bg-gray-100 hover:border-gray-300'}`}
                 >
                   <LayoutDashboard className="size-4 mr-2" />
-                  {t('navbar.controlPanel')}
-                </MuiButton>
+                  {t('navbar:controlPanel')}
+                </Button>
               )}
 
               {/* 贊助我 */}
-              <MuiButton
-                variant="contained"
-                color="secondary"
-                onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
-                sx={{
-                  background: 'linear-gradient(to right, #ec4899, #9333ea)',
-                  color: 'white',
-                  '&:hover': {
-                    background: 'linear-gradient(to right, #db2777, #7e22ce)',
-                  },
+              <Button
+                className="text-white bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 border-none"
+                onClick={() => {
+                  logEvent('Navbar', 'click_support', 'buy_me_a_coffee');
+                  window.open('https://buymeacoffee.com/hsiung', '_blank');
                 }}
               >
                 <Coffee className="size-4 mr-2" />
-                {t('navbar.sponsor')}
-              </MuiButton>
+                {t('navbar:sponsor')}
+              </Button>
             </>
           )}
         </div>
       </div>
-    </nav>
+    </nav >
   );
 }

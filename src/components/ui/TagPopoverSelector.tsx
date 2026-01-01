@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { Button } from '@mui/material';
+import { Button } from './button';
+import { ScrollArea } from './scroll-area';
 import { Tag } from '../../features/favorites/types';
 import { TagChip } from './TagChip';
 import {
@@ -16,7 +17,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from './popover';
-import { useI18n } from '../../i18n/index';
+import { useTranslation } from 'react-i18next';
 
 interface TagPopoverSelectorProps {
     allTags: Tag[];
@@ -29,7 +30,7 @@ interface TagPopoverSelectorProps {
 export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, showSelectedChips = true }: TagPopoverSelectorProps) {
     const [open, setOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
-    const { t } = useI18n();
+    const { t } = useTranslation('tags');
 
     const selectedTags = useMemo(() => {
         return allTags.filter(tag => selectedTagIds.includes(tag.id));
@@ -63,26 +64,13 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
-                        variant="outlined"
-                        size="small"
-                        sx={{
-                            borderColor: theme === 'dark' ? '#374151' : '#d1d5db',
-                            color: theme === 'dark' ? '#d1d5db' : '#374151',
-                            justifyContent: 'space-between',
-                            textTransform: 'none',
-                            minWidth: '120px',
-                            height: '40px',
-                            '&:hover': {
-                                borderColor: theme === 'dark' ? '#9ca3af' : '#9ca3af',
-                                backgroundColor: theme === 'dark' ? '#1f2937' : '#f3f4f6',
-                            }
-                        }}
+                        variant="outline"
+                        size="sm"
+                        className={`justify-between w-[120px] h-10 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-400' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
                     >
                         <div className="flex items-center gap-2">
                             <Plus className="size-4" />
-                            {selectedTags.length > 0
-                                ? t('tags.selectedTags', { count: selectedTags.length })
-                                : t('tags.addTag')}
+                            {t('addTag')}
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -90,38 +78,40 @@ export function TagPopoverSelector({ allTags, selectedTagIds, onChange, theme, s
                 <PopoverContent className={`p-0 w-[240px] ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}`} align="start">
                     <Command className={theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-black'}>
                         <CommandInput
-                            placeholder={t('tags.searchTags')}
+                            placeholder={t('searchTags')}
                             value={searchValue}
                             onValueChange={setSearchValue}
                             className={theme === 'dark' ? 'border-gray-700' : ''}
                         />
-                        <CommandList>
-                            <CommandEmpty className="py-2 text-center text-sm text-gray-400">{t('tags.noTagsFound')}</CommandEmpty>
-                            <CommandGroup>
-                                {allTags.map((tag) => {
-                                    const isSelected = selectedTagIds.includes(tag.id);
-                                    return (
-                                        <CommandItem
-                                            key={tag.id}
-                                            onSelect={() => toggleTag(tag.id)}
-                                            className={`cursor-pointer ${theme === 'dark'
-                                                ? (isSelected ? 'bg-purple-900/50 aria-selected:bg-purple-900/70 border-l-2 border-purple-500' : 'aria-selected:bg-gray-700')
-                                                : (isSelected ? 'bg-purple-100 aria-selected:bg-purple-200 border-l-2 border-purple-500' : 'aria-selected:bg-gray-100')
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-2 w-full">
-                                                <Check
-                                                    className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100 text-purple-500" : "opacity-0"
-                                                        }`}
-                                                />
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                                                <span className={isSelected ? "font-bold" : ""}>{tag.name}</span>
-                                            </div>
-                                        </CommandItem>
-                                    )
-                                })}
-                            </CommandGroup>
-                        </CommandList>
+                        <ScrollArea className="h-[200px]">
+                            <CommandList className="max-h-full overflow-hidden">
+                                <CommandEmpty className="py-2 text-center text-sm text-gray-400">{t('noTagsFound')}</CommandEmpty>
+                                <CommandGroup>
+                                    {allTags.map((tag) => {
+                                        const isSelected = selectedTagIds.includes(tag.id);
+                                        return (
+                                            <CommandItem
+                                                key={tag.id}
+                                                onSelect={() => toggleTag(tag.id)}
+                                                className={`cursor-pointer ${theme === 'dark'
+                                                    ? (isSelected ? 'bg-purple-900/50 aria-selected:bg-purple-900/70 border-l-2 border-purple-500' : 'aria-selected:bg-gray-700')
+                                                    : (isSelected ? 'bg-purple-100 aria-selected:bg-purple-200 border-l-2 border-purple-500' : 'aria-selected:bg-gray-100')
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-2 w-full">
+                                                    <Check
+                                                        className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100 text-purple-500" : "opacity-0"
+                                                            }`}
+                                                    />
+                                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                                                    <span className={isSelected ? "font-bold" : ""}>{tag.name}</span>
+                                                </div>
+                                            </CommandItem>
+                                        )
+                                    })}
+                                </CommandGroup>
+                            </CommandList>
+                        </ScrollArea>
                     </Command>
                 </PopoverContent>
             </Popover>

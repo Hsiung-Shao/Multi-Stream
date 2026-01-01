@@ -38,6 +38,7 @@ export class TwitchConfigResolver implements ConfigResolverContract {
 
         // Helper to get global config value
         const getGlobal = (key: string): string | undefined => {
+            // 保留供本地測試使用 (config.js)
             if (win.CONFIG && win.CONFIG[key]) return win.CONFIG[key];
             return undefined;
         };

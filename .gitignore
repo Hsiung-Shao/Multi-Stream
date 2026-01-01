@@ -21,4 +21,6 @@ Thumbs.db
 
 # 本地配置文件（包含敏感資訊）
 config.js
-
+.env
+.env.local
+.env.*.local

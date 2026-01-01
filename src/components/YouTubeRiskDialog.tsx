@@ -1,20 +1,14 @@
 import React from 'react';
 import {
     Dialog,
-    DialogTitle,
     DialogContent,
-    DialogContentText,
-    DialogActions,
-    Button,
-    List,
-    ListItem,
-    ListItemText,
-    Typography,
-    Box,
-    useTheme
-} from '@mui/material';
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from './ui/dialog';
+import { Button } from './ui/button';
 import { AlertTriangle, Info, AlertOctagon } from 'lucide-react';
-import { useI18n } from '../i18n/index';
+import { useTranslation } from 'react-i18next';
 
 interface YouTubeRiskDialogProps {
     open: boolean;
@@ -31,8 +25,7 @@ export const YouTubeRiskDialog: React.FC<YouTubeRiskDialogProps> = ({
     onPauseOthers,
     onDontRemind
 }) => {
-    const { t } = useI18n();
-    const theme = useTheme();
+    const { t } = useTranslation('youtubeRisk');
 
     const isStrongWarning = streamCount >= 4;
 
@@ -46,87 +39,62 @@ export const YouTubeRiskDialog: React.FC<YouTubeRiskDialogProps> = ({
     };
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            aria-labelledby="youtube-risk-dialog-title"
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{
-                sx: {
-                    borderTop: `6px solid ${isStrongWarning ? theme.palette.error.main : theme.palette.warning.main}`,
-                }
-            }}
-        >
-            <DialogTitle id="youtube-risk-dialog-title" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {isStrongWarning ? (
-                    <AlertOctagon color={theme.palette.error.main} />
-                ) : (
-                    <AlertTriangle color={theme.palette.warning.main} />
-                )}
-                {t('youtubeRisk.title' as any)}
-            </DialogTitle>
-            <DialogContent>
-                <DialogContentText component="div" sx={{ mb: 2 }}>
-                    {formatText('youtubeRisk.body' as any, { n: streamCount })}
-                </DialogContentText>
+        <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+            <DialogContent className={`sm:max-w-[500px] border-t-[6px] ${isStrongWarning ? 'border-t-red-500' : 'border-t-yellow-500'} gap-4`}>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 text-xl">
+                        {isStrongWarning ? (
+                            <AlertOctagon className="text-red-500" />
+                        ) : (
+                            <AlertTriangle className="text-yellow-500" />
+                        )}
+                        {t('title' as any)}
+                    </DialogTitle>
+                </DialogHeader>
 
-                <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 1 }}>
-                    <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Info size={16} color={theme.palette.info.main} />
-                        {t('youtubeRisk.disclaimer.title' as any)}
-                    </Typography>
-                    <List dense disablePadding>
-                        <ListItem disablePadding sx={{ mb: 1 }}>
-                            <ListItemText
-                                primary={t('youtubeRisk.disclaimer.item1' as any)}
-                                primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                            />
-                        </ListItem>
-                        <ListItem disablePadding sx={{ mb: 1 }}>
-                            <ListItemText
-                                primary={t('youtubeRisk.disclaimer.item2' as any)}
-                                primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                            />
-                        </ListItem>
-                        <ListItem disablePadding>
-                            <ListItemText
-                                primary={t('youtubeRisk.disclaimer.item3' as any)}
-                                primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                            />
-                        </ListItem>
-                    </List>
-                </Box>
-            </DialogContent>
-            <DialogActions sx={{ flexDirection: 'column', gap: 1, p: 2, pt: 0, alignItems: 'stretch' }}>
-                <Box sx={{ display: 'flex', gap: 1, width: '100%', justifyContent: 'flex-end' }}>
-                    {onPauseOthers && (
-                        <Button
-                            onClick={onPauseOthers}
-                            color="secondary"
-                            variant="outlined"
-                        >
-                            {t('youtubeRisk.pauseOthers' as any)}
+                <div className="space-y-4 py-2">
+                    <div className="text-base">
+                        {formatText('body' as any, { n: streamCount })}
+                    </div>
+
+                    <div className="bg-muted/50 p-4 rounded-lg text-sm border">
+                        <h4 className="flex items-center gap-2 font-semibold mb-2">
+                            <Info size={16} className="text-blue-500" />
+                            {t('disclaimer.title' as any)}
+                        </h4>
+                        <ul className="space-y-2 list-none m-0 p-0 text-muted-foreground">
+                            <li>{t('disclaimer.item1' as any)}</li>
+                            <li>{t('disclaimer.item2' as any)}</li>
+                            <li>{t('disclaimer.item3' as any)}</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <DialogFooter className="flex-col sm:flex-col gap-3 items-stretch">
+                    <div className="flex justify-end gap-2 w-full">
+                        {onPauseOthers && (
+                            <Button
+                                variant="outline"
+                                onClick={onPauseOthers}
+                                className="border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                                {t('pauseOthers' as any)}
+                            </Button>
+                        )}
+                        <Button onClick={onClose}>
+                            {t('confirm' as any)}
                         </Button>
-                    )}
+                    </div>
                     <Button
-                        onClick={onClose}
-                        variant="contained"
-                        color="primary"
-                        autoFocus
+                        variant="ghost"
+                        size="sm"
+                        onClick={onDontRemind}
+                        className="text-xs text-muted-foreground self-center h-auto py-1"
                     >
-                        {t('youtubeRisk.confirm' as any)}
+                        {t('sessionIgnore' as any)}
                     </Button>
-                </Box>
-                <Button
-                    onClick={onDontRemind}
-                    color="inherit"
-                    size="small"
-                    sx={{ alignSelf: 'center', color: 'text.secondary', fontSize: '0.75rem' }}
-                >
-                    {t('youtubeRisk.sessionIgnore' as any)}
-                </Button>
-            </DialogActions>
+                </DialogFooter>
+            </DialogContent>
         </Dialog>
     );
 };

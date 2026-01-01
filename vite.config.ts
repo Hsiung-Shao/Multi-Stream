@@ -2,12 +2,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   define: {
     '__APP_VERSION__': JSON.stringify(process.env.npm_package_version),
   },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {
@@ -71,7 +72,7 @@ export default defineConfig({
             '@radix-ui/react-alert-dialog',
             '@radix-ui/react-scroll-area',
           ],
-          'vendor-mui': ['@mui/material', '@emotion/react', '@emotion/styled'],
+
           'vendor-icons': ['lucide-react'],
           // 大型組件單獨分組（懶加載）
           'lazy-components': [

@@ -1,80 +1,48 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import { Box, BoxProps } from "@mui/material";
-import { cn } from "./utils";
+import * as React from "react"
+import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
-interface ScrollAreaProps extends BoxProps {
-  orientation?: "vertical" | "horizontal" | "both";
-}
+import { cn } from "./utils"
 
-function ScrollArea({
-  className,
-  children,
-  orientation = "vertical",
-  sx,
-  ...props
-}: ScrollAreaProps) {
-  const scrollbarStyles = React.useMemo(() => {
-    const baseStyles = {
-      '&::-webkit-scrollbar': {
-        width: '10px',
-        height: '10px',
-      },
-      '&::-webkit-scrollbar-track': {
-        background: 'transparent',
-      },
-      '&::-webkit-scrollbar-thumb': {
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        borderRadius: '5px',
-        '&:hover': {
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-        },
-      },
-    };
-
-    if (orientation === 'vertical') {
-      return {
-        ...baseStyles,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-      };
-    } else if (orientation === 'horizontal') {
-      return {
-        ...baseStyles,
-        overflowX: 'auto',
-        overflowY: 'hidden',
-      };
-    } else {
-      return {
-        ...baseStyles,
-        overflow: 'auto',
-      };
-    }
-  }, [orientation]);
-
-  return (
-    <Box
-      data-slot="scroll-area"
-      className={cn("relative", className)}
-      sx={{
-        ...scrollbarStyles,
-        ...sx,
-      }}
-      {...props}
-    >
+const ScrollArea = React.forwardRef<
+  React.ElementRef<typeof ScrollAreaPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
+>(({ className, children, ...props }, ref) => (
+  <ScrollAreaPrimitive.Root
+    ref={ref}
+    className={cn("relative overflow-hidden", className)}
+    {...props}
+  >
+    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
       {children}
-    </Box>
-  );
-}
+    </ScrollAreaPrimitive.Viewport>
+    <ScrollBar />
+    <ScrollAreaPrimitive.Corner />
+  </ScrollAreaPrimitive.Root>
+))
+ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
-function ScrollBar({
-  className,
-  orientation = "vertical",
-  ...props
-}: BoxProps & { orientation?: "vertical" | "horizontal" }) {
-  // MUI Box 已經內建滾動條樣式，此組件保留以維持 API 兼容性
-  return null;
-}
+const ScrollBar = React.forwardRef<
+  React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
+>(({ className, orientation = "vertical", ...props }, ref) => (
+  <ScrollAreaPrimitive.ScrollAreaScrollbar
+    ref={ref}
+    orientation={orientation}
+    className={cn(
+      "flex touch-none select-none transition-colors",
+      orientation === "vertical" &&
+      "h-full w-2.5 border-l border-l-transparent p-[1px]",
+      orientation === "horizontal" &&
+      "h-2.5 flex-col border-t border-t-transparent p-[1px]",
+      className
+    )}
+    {...props}
+  >
+    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
+  </ScrollAreaPrimitive.ScrollAreaScrollbar>
+))
+ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName
 
-export { ScrollArea, ScrollBar };
+export { ScrollArea, ScrollBar }
