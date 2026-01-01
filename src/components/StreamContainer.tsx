@@ -142,7 +142,7 @@ export function StreamContainer({
         })}
       </div>
 
-      {chatLayoutType !== 'none' && (
+      {chatLayoutType !== 'none' && streams.length > 0 && (
         <ChatSidebar
           theme={theme}
           chatLayoutType={chatLayoutType}

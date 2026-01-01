@@ -239,7 +239,7 @@ export default function App() {
 
   // 切換靜音（簡化版本，與 muteAll 一樣簡單）
   const handleToggleMute = (id: number) => {
-    const masterMuted = (window as any).masterMuted || false;
+    // const masterMuted = (window as any).masterMuted || false; // Removed legacy global access
     const s = streams.find(st => st.id === id);
     if (!s) return;
 

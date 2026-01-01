@@ -5,8 +5,6 @@ interface ModalState {
     tutorial: boolean;
     favorites: boolean;
     feedback: boolean;
-    about: boolean; // Legacy/Unused if using page
-    privacy: boolean; // Legacy/Unused if using page
     ytRisk: boolean;
 }
 
@@ -44,8 +42,6 @@ export const useUIStore = create<UIState>((set) => ({
         tutorial: false,
         favorites: false,
         feedback: false,
-        about: false,
-        privacy: false,
         ytRisk: false,
     },
     masterVolume: 100,

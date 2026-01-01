@@ -10,6 +10,7 @@ import type { StreamData } from '../utils/streamUtils';
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useI18n } from '../i18n/index';
+import { useMediaQuery } from '../hooks/use-media-query';
 
 import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
@@ -56,19 +57,7 @@ const sortFavorites = (favs: FavoriteStream[]) => {
   });
 };
 
-function useCustomMediaQuery(query: string) {
-  const [matches, setMatches] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
-    const listener = () => setMatches(media.matches);
-    media.addEventListener('change', listener);
-    return () => media.removeEventListener('change', listener);
-  }, [matches, query]);
-  return matches;
-}
+
 
 export function ControlPanel({
   theme,
@@ -98,7 +87,7 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const { t } = useI18n();
   // 使用 'lg' (1200px) breakpoint 以確保手機水平版面也使用手機版設計
-  const isMobile = useCustomMediaQuery('(max-width: 1200px)');
+  const isMobile = useMediaQuery('(max-width: 1200px)');
   const [showAllChat, setShowAllChat] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteStream[]>([]);
   const [categories, setCategories] = useState<FavoriteCategory[]>([]);
