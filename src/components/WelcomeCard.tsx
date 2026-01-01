@@ -2,6 +2,7 @@ import { Shield, Mail, MessageSquare, Info, BookOpen, History, Heart, Users } fr
 import { Button } from './ui/button';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/use-media-query';
+import { logEvent } from '../utils/analytics';
 
 interface WelcomeCardProps {
   theme: 'light' | 'dark';
@@ -119,7 +120,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onShowAbout && (
                 <Button
                   variant="ghost"
-                  onClick={onShowAbout}
+                  onClick={() => {
+                    if (onShowAbout) onShowAbout();
+                    logEvent('WelcomeCard', 'click_nav', 'about');
+                  }}
                   className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
                     ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-blue-500/20'
                     : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -134,7 +138,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onShowTutorial && (
                 <Button
                   variant="ghost"
-                  onClick={onShowTutorial}
+                  onClick={() => {
+                    if (onShowTutorial) onShowTutorial();
+                    logEvent('WelcomeCard', 'click_nav', 'tutorial');
+                  }}
                   className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
                     ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-green-500/20'
                     : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -149,7 +156,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onShowVersionHistory && (
                 <Button
                   variant="ghost"
-                  onClick={onShowVersionHistory}
+                  onClick={() => {
+                    if (onShowVersionHistory) onShowVersionHistory();
+                    logEvent('WelcomeCard', 'click_nav', 'version_history');
+                  }}
                   className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
                     ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-yellow-500/20'
                     : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -164,7 +174,10 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               {onNavigateToPrivacy && (
                 <Button
                   variant="ghost"
-                  onClick={onNavigateToPrivacy}
+                  onClick={() => {
+                    if (onNavigateToPrivacy) onNavigateToPrivacy();
+                    logEvent('WelcomeCard', 'click_nav', 'privacy');
+                  }}
                   className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 h-auto ${theme === 'dark'
                     ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-red-500/20'
                     : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -252,6 +265,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://forms.gle/AjG922YrXFbyAdBa6"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logEvent('WelcomeCard', 'click_social', 'feedback_form')}
                 className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-blue-500/20'
                   : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -266,6 +280,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://discord.gg/3Uu6dZbtKd"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logEvent('WelcomeCard', 'click_social', 'discord')}
                 className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-purple-500/20'
                   : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -280,6 +295,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://forum.gamer.com.tw/C.php?bsn=60030&snA=677879"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logEvent('WelcomeCard', 'click_social', 'bahamut')}
                 className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-orange-500/20'
                   : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -294,6 +310,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 href="https://x.com/Hsiungshao"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logEvent('WelcomeCard', 'click_social', 'twitter')}
                 className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-gray-400/20'
                   : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
@@ -306,6 +323,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
               </a>
               <a
                 href="mailto:feedback@multistreaming.org"
+                onClick={() => logEvent('WelcomeCard', 'click_social', 'email')}
                 className={`group flex flex-col items-center gap-2 p-3 rounded-lg transition-all duration-200 ${theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-700 hover:shadow-lg hover:shadow-green-500/20'
                   : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'

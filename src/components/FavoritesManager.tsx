@@ -18,6 +18,7 @@ import { favoritesLoader } from '../features/favorites/FavoritesLoader';
 import { backupService } from '../features/backup/index';
 
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../features/favorites/types';
+import { logEvent } from '../utils/analytics';
 
 interface FavoritesManagerProps {
   theme: 'light' | 'dark';
@@ -164,6 +165,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         });
         loadData();
         debouncedBackup();
+        logEvent('Favorites', 'add_favorite', 'single_url');
       } else {
         showMessage('error', result.message || t('addFailed') || '加入失敗');
       }
@@ -243,10 +245,12 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
           : t('batchImportSuccess')?.replace('{success}', successCount.toString()) || `成功匯入 ${successCount} 個收藏`;
         showMessage('success', successMsg);
         // 匯入成功後切換到"我的收藏"標籤頁
+        // 匯入成功後切換到"我的收藏"標籤頁
         setActiveTab('favorites');
       } else {
         showMessage('error', t('batchImportFailed') || `匯入失敗: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '...' : ''}`);
       }
+      logEvent('Favorites', 'batch_import', 'text_input', successCount);
     } catch (error) {
       setIsImporting(false);
       showMessage('error', t('batchImportError') || `匯入錯誤: ${error instanceof Error ? error.message : '未知錯誤'}`);
@@ -274,6 +278,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
     setSelectedFavorites(new Set());
     loadData();
+    logEvent('Favorites', 'batch_delete', 'selection', deletedCount);
 
     // 刪除操作立即備份
     if (backupService.isEnabled()) {
@@ -430,6 +435,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     if (result.success) {
       showMessage('success', result.message || t('delete'));
       loadData();
+      logEvent('Favorites', 'remove_favorite', 'single');
 
       // 刪除操作立即備份
       if (backupService.isEnabled()) {
@@ -475,6 +481,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       resetAddCategory();
       loadData();
       debouncedBackup();
+      logEvent('Favorites', 'add_category', data.name);
     } else {
       showMessage('error', result.message || t('addCategory') + t('common:common.error'));
     }
@@ -491,6 +498,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     showMessage('success', t('tags:addTag'));
     resetAddTag();
     loadData();
+    logEvent('Favorites', 'add_tag', data.name);
   };
 
   const handleDeleteTag = (tagId: string) => {
@@ -498,6 +506,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       tagsService.removeTag(tagId);
       showMessage('success', '已刪除標籤');
       loadData();
+      logEvent('Favorites', 'remove_tag', tagId);
     }
   };
 
@@ -550,6 +559,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       showMessage('success', '已匯出JSON檔案');
+      logEvent('Favorites', 'export_json');
     } catch (error) {
       showMessage('error', `匯出失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
     }
@@ -685,6 +695,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
         }
 
         showMessage('success', t('favorites:batchImportSuccessWithFail', { success: importedCount, fail: skippedCount }));
+        logEvent('Favorites', 'import_json', 'file_upload', importedCount);
       } catch (error) {
         showMessage('error', t('favorites:batchImportError') + `: ${error instanceof Error ? error.message : 'JSON Parsing Error'}`);
       }

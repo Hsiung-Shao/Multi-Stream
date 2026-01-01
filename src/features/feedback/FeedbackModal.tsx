@@ -12,6 +12,8 @@ import { FeedbackFormData } from './FeedbackTypes';
 import { FeedbackService, FeedbackPayload } from './FeedbackService';
 import packageJson from '../../../package.json';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
+import { logEvent } from '../../utils/analytics';
 
 interface FeedbackModalProps {
     theme: 'light' | 'dark';
@@ -22,6 +24,10 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
     const { t } = useTranslation(['feedback', 'navbar']);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    useEffect(() => {
+        logEvent('Feedback', 'open_modal');
+    }, []);
 
     const { control, handleSubmit, formState: { errors } } = useForm<FeedbackFormData>({
         defaultValues: {
@@ -60,9 +66,11 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
             setTimeout(() => {
                 onClose();
             }, 2000);
+            logEvent('Feedback', 'submit_success', finalData.feedbackType);
         } catch (error) {
             console.error('Submission error:', error);
             alert(t('error'));
+            logEvent('Feedback', 'submit_error', error instanceof Error ? error.message : 'Unknown error');
         } finally {
             setIsSubmitting(false);
         }
@@ -202,8 +210,9 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                                             <Checkbox
                                                                 id={`usage-time-${val}`}
                                                                 checked={(field.value || []).includes(val)}
-                                                                onCheckedChange={(checked) => {
-                                                                    const newValue = checked
+                                                                onCheckedChange={(checked: boolean | 'indeterminate') => {
+                                                                    const isChecked = checked === true;
+                                                                    const newValue = isChecked
                                                                         ? [...(field.value || []), val]
                                                                         : (field.value || []).filter((v: string) => v !== val);
                                                                     field.onChange(newValue);

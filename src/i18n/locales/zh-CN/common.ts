@@ -1,4 +1,5 @@
 const common = {
+  'appName': 'MultiStream Hub',
   'version.title': '版本记录',
   'version.close': '关闭',
   'common.close': '关闭',

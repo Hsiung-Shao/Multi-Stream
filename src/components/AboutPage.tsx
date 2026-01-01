@@ -2,6 +2,8 @@ import { ArrowLeft, Globe, Sun, Moon, Tv, Grid, MessageCircle, Volume2, Star, Sm
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
+import { logEvent } from '../utils/analytics';
 
 interface AboutPageProps {
   theme: 'light' | 'dark';
@@ -13,6 +15,10 @@ interface AboutPageProps {
 export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }: AboutPageProps) {
   const { t, i18n } = useTranslation(['about', 'common']);
   const locale = i18n.language;
+
+  useEffect(() => {
+    logEvent('AboutPage', 'page_view');
+  }, []);
 
   const languages = [
     { value: 'zh-TW' as const, label: t('common:chineseTraditional') },
@@ -54,7 +60,10 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             <Button
               variant="ghost"
               size="icon"
-              onClick={onThemeToggle}
+              onClick={() => {
+                onThemeToggle();
+                logEvent('AboutPage', 'toggle_theme', theme === 'dark' ? 'light' : 'dark');
+              }}
               className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
@@ -293,6 +302,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 href="https://forms.gle/AjG922YrXFbyAdBa6"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logEvent('AboutPage', 'click_social', 'feedback_form')}
                 className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-750'
                   : 'bg-gray-50 hover:bg-gray-100'
@@ -313,6 +323,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 href="https://discord.gg/3Uu6dZbtKd"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => logEvent('AboutPage', 'click_social', 'discord')}
                 className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
                   ? 'bg-gray-800 hover:bg-gray-750'
                   : 'bg-gray-50 hover:bg-gray-100'
@@ -390,6 +401,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               href="https://forms.gle/AjG922YrXFbyAdBa6"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => logEvent('AboutPage', 'click_social', 'feedback_footer')}
               className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
               {t('about:giveFeedback')}

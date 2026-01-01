@@ -3,6 +3,8 @@ import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ScrollArea } from './ui/scroll-area';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
+import { logEvent } from '../utils/analytics';
 
 interface TutorialProps {
     theme: 'light' | 'dark';
@@ -11,6 +13,10 @@ interface TutorialProps {
 
 export function Tutorial({ theme, onClose }: TutorialProps) {
     const { t } = useTranslation('tutorial');
+
+    useEffect(() => {
+        logEvent('Tutorial', 'open_modal');
+    }, []);
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -35,7 +41,9 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
 
                 {/* Content */}
                 <div className="flex-1 overflow-hidden flex flex-col">
-                    <Tabs defaultValue="basic" className="flex flex-col h-full">
+                    <Tabs defaultValue="basic" className="flex flex-col h-full" onValueChange={(value: string) => {
+                        logEvent('Tutorial', 'switch_tab', value);
+                    }}>
                         <div className="px-6 pt-6 flex-shrink-0">
                             <TabsList className={`grid w-full grid-cols-3 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
                                 <TabsTrigger value="basic">{t('basic')}</TabsTrigger>

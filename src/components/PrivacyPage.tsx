@@ -2,6 +2,8 @@
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
+import { logEvent } from '../utils/analytics';
 
 interface PrivacyPageProps {
   theme: 'light' | 'dark';
@@ -15,6 +17,10 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
   const { t, i18n } = useTranslation(['common', 'privacy', 'about']);
   const locale = i18n.language;
   const setLocale = (lang: string) => i18n.changeLanguage(lang);
+
+  useEffect(() => {
+    logEvent('PrivacyPage', 'page_view');
+  }, []);
 
   const languages = [
     { value: 'zh-TW' as const, label: t('chineseTraditional') },
@@ -56,7 +62,10 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
             <Button
               variant="ghost"
               size="icon"
-              onClick={onThemeToggle}
+              onClick={() => {
+                onThemeToggle();
+                logEvent('PrivacyPage', 'toggle_theme', theme === 'dark' ? 'light' : 'dark');
+              }}
               className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}

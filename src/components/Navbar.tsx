@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { useTranslation } from 'react-i18next';
+import { logEvent } from '../utils/analytics';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { twitchService } from '../features/twitch/TwitchService';
 
@@ -397,6 +398,7 @@ export function Navbar({
                     <Button
                       className="w-full text-white bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 border-none"
                       onClick={() => {
+                        logEvent('Navbar', 'click_support', 'buy_me_a_coffee');
                         window.open('https://buymeacoffee.com/hsiung', '_blank');
                         setDrawerOpen(false);
                       }}
@@ -415,7 +417,7 @@ export function Navbar({
               <div className="flex items-center gap-2">
                 <img src="/icon.png" alt="MultiStream Hub" className="w-6 h-6" />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                  {t('navbar:tutorial')}
+                  {t('common:appName')}
                 </span>
               </div>
 
@@ -749,7 +751,10 @@ export function Navbar({
               {/* 贊助我 */}
               <Button
                 className="text-white bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 border-none"
-                onClick={() => window.open('https://buymeacoffee.com/hsiung', '_blank')}
+                onClick={() => {
+                  logEvent('Navbar', 'click_support', 'buy_me_a_coffee');
+                  window.open('https://buymeacoffee.com/hsiung', '_blank');
+                }}
               >
                 <Coffee className="size-4 mr-2" />
                 {t('navbar:sponsor')}

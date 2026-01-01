@@ -2,6 +2,8 @@ import { X, Calendar, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from './ui/scroll-area';
+import { useEffect } from 'react';
+import { logEvent } from '../utils/analytics';
 
 interface VersionHistoryProps {
   theme: 'light' | 'dark';
@@ -10,6 +12,10 @@ interface VersionHistoryProps {
 
 export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
   const { t } = useTranslation(['versionHistory', 'common']);
+
+  useEffect(() => {
+    logEvent('VersionHistory', 'open_modal');
+  }, []);
 
   const versions = [
     {

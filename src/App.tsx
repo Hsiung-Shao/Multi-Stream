@@ -1,4 +1,4 @@
-import { useCallback, lazy, Suspense } from 'react';
+import { useCallback, lazy, Suspense, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { WelcomeCard } from './components/WelcomeCard';
 import { StreamContainer } from './components/StreamContainer';
@@ -24,10 +24,19 @@ import { useAppInitialization } from './hooks/useAppInitialization';
 import { useThemeSystem } from './hooks/useThemeSystem';
 import { useRouter } from './hooks/useRouter';
 import { NotFoundPage } from './components/NotFoundPage';
+import { initGA, logPageView } from './utils/analytics';
+import { useTranslation } from 'react-i18next';
 
 // 全局變數聲明 moved to src/types/global.d.ts
 
 export default function App() {
+  // 初始化 GA4
+  useEffect(() => {
+    initGA();
+    logPageView(); // 初始頁面瀏覽
+  }, []);
+
+
   const theme = useUIStore(s => s.theme);
   const toggleTheme = useUIStore(s => s.toggleTheme);
 

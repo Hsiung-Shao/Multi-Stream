@@ -11,6 +11,7 @@ import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/use-media-query';
+import { logEvent } from '../utils/analytics';
 
 import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
@@ -342,13 +343,13 @@ export function ControlPanel({
   }, []);
 
   const layouts = [
-    { id: 1, icon: '📺', label: t('controlPanel:singleView'), cols: 1, rows: 1 },
-    { id: 2, icon: '⬅️➡️', label: t('controlPanel:splitHorizontal'), cols: 2, rows: 1 },
-    { id: 3, icon: '⬆️⬇️', label: t('controlPanel:splitVertical'), cols: 1, rows: 2 },
-    { id: 4, icon: '⊞', label: t('controlPanel:grid4'), cols: 2, rows: 2 },
-    { id: 5, icon: '⬆️⬇️⬇️', label: t('controlPanel:largeTop3'), cols: 3, rows: 2, special: 'top-large-bottom-three' },
-    { id: 6, icon: '⊞⊞', label: t('controlPanel:grid2x3'), cols: 3, rows: 2 },
-    { id: 9, icon: '⊞⊞⊞', label: t('controlPanel:grid3x3'), cols: 3, rows: 3 },
+    { id: 1, icon: '📺', label: t('controlPanel:singleView'), cols: 1, rows: 1, name: 'single_view' },
+    { id: 2, icon: '⬅️➡️', label: t('controlPanel:splitHorizontal'), cols: 2, rows: 1, name: 'split_horizontal' },
+    { id: 3, icon: '⬆️⬇️', label: t('controlPanel:splitVertical'), cols: 1, rows: 2, name: 'split_vertical' },
+    { id: 4, icon: '⊞', label: t('controlPanel:grid4'), cols: 2, rows: 2, name: 'grid_2x2' },
+    { id: 5, icon: '⬆️⬇️⬇️', label: t('controlPanel:largeTop3'), cols: 3, rows: 2, special: 'top-large-bottom-three', name: 'large_top_3' },
+    { id: 6, icon: '⊞⊞', label: t('controlPanel:grid2x3'), cols: 3, rows: 2, name: 'grid_2x3' },
+    { id: 9, icon: '⊞⊞⊞', label: t('controlPanel:grid3x3'), cols: 3, rows: 3, name: 'grid_3x3' },
   ];
 
   const chatLayouts = [
@@ -391,6 +392,8 @@ export function ControlPanel({
                   onClick={() => {
                     if (onLayoutChange) {
                       onLayoutChange(layout.id as LayoutType);
+                      // @ts-ignore - name property added above
+                      logEvent('ControlPanel', 'change_layout', layout.name || `layout_${layout.id}`);
                     }
                   }}
                   title={layout.label}
@@ -434,6 +437,7 @@ export function ControlPanel({
                     onClick={() => {
                       if (onChatLayoutChange) {
                         onChatLayoutChange(mappedType);
+                        logEvent('ControlPanel', 'change_chat_layout', mappedType);
                       }
                     }}
                     title={layout.label}
@@ -480,7 +484,10 @@ export function ControlPanel({
                 <Button
                   variant="outline"
                   className={`flex-1 ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-                  onClick={onShowFavorites}
+                  onClick={() => {
+                    onShowFavorites();
+                    logEvent('ControlPanel', 'open_modal', 'favorites_manager');
+                  }}
                 >
                   {t('controlPanel:manageFavorites')}
                 </Button>
@@ -653,6 +660,9 @@ export function ControlPanel({
                       }
                       if (onMasterVolumeChange) {
                         onMasterVolumeChange(newVolume);
+                        // 使用防抖或僅在放開時觸發記錄的邏輯比較複雜，這裡簡化為每次變更 (注意流量)
+                        // 實務上建議用 onValueCommit (如果 Slider 支援) 或封裝防抖
+                        // 暫時不在此處高頻觸發，改為選擇保留或僅記錄靜音操作，或優化 Slider 元件
                       }
                     }}
                     className="w-full"
@@ -667,6 +677,7 @@ export function ControlPanel({
                   onClick={() => {
                     if (onMasterMuteChange) {
                       onMasterMuteChange(!masterMuted);
+                      logEvent('ControlPanel', 'toggle_mute_all', !masterMuted ? 'mute' : 'unmute');
                     }
                   }}
                   className={masterMuted
