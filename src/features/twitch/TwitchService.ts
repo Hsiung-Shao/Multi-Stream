@@ -234,17 +234,6 @@ export class TwitchService implements TwitchApiContract {
 
     // --- Helpers ---
 
-    public getLegacyApi() {
-        return {
-            searchChannels: this.searchChannels.bind(this),
-            checkChannelLiveStatus: this.checkChannelLiveStatus.bind(this),
-            checkMultipleChannelsLiveStatus: this.checkMultipleChannelsLiveStatus.bind(this),
-            setConfig: this.setConfig.bind(this),
-            getConfig: this.getConfig.bind(this),
-            clearCache: this.clearCache.bind(this)
-        };
-    }
-
     private getFromCache<T>(key: string): T | null {
         const config = this.configResolver.resolve();
         if (!config.cacheEnabled) return null;

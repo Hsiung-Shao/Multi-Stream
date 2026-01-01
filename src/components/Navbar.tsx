@@ -20,15 +20,7 @@ import {
 } from './ui/tooltip';
 import { useI18n } from '../i18n/index';
 import { favoritesService } from '../features/favorites/FavoritesService';
-
-// 聲明全局類型
-declare global {
-  interface Window {
-    favoriteStreams?: {
-      add: (url: string, name?: string, categoryId?: string | null, providedChannelId?: string | null) => Promise<{ success: boolean; message: string; item?: any }>;
-    };
-  }
-}
+import { twitchService } from '../features/twitch/TwitchService';
 
 interface NavbarProps {
   theme: 'light' | 'dark';
@@ -116,15 +108,10 @@ export function Navbar({
 
     setIsSearching(true);
     try {
-      if (window.twitchApi && window.twitchApi.searchChannels) {
-        const results = await window.twitchApi.searchChannels(query, 5);
-        setSearchResults(results || []);
-        setShowResults(true);
-        setSelectedIndex(-1);
-      } else {
-        setSearchResults([]);
-        setShowResults(false);
-      }
+      const results = await twitchService.searchChannels(query, 5);
+      setSearchResults(results || []);
+      setShowResults(true);
+      setSelectedIndex(-1);
     } catch (error) {
       setSearchResults([]);
       setShowResults(false);

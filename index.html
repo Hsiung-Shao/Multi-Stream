@@ -182,13 +182,6 @@
   <script defer src="/config.js"></script>
 
   <script type="module" src="/src/main.tsx"></script>
-
-  <!-- 暴露 apiLoader 到全局，供舊代碼使用 -->
-  <script type="module">
-    import { apiLoader } from '/src/utils/apiLoader.ts';
-    window.apiLoader = apiLoader;
-  </script>
-
 </body>
 
 </html>

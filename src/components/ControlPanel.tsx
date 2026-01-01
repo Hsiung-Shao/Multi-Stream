@@ -10,12 +10,15 @@ import type { StreamData } from '../utils/streamUtils';
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useI18n } from '../i18n/index';
+import { useMediaQuery } from '../hooks/use-media-query';
 
 import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { favoritesLoader } from '../features/favorites/FavoritesLoader';
 import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
+import { twitchService } from '../features/twitch/TwitchService';
+import { youtubeApi } from '../utils/youtubeApi';
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -56,19 +59,7 @@ const sortFavorites = (favs: FavoriteStream[]) => {
   });
 };
 
-function useCustomMediaQuery(query: string) {
-  const [matches, setMatches] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia(query);
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
-    const listener = () => setMatches(media.matches);
-    media.addEventListener('change', listener);
-    return () => media.removeEventListener('change', listener);
-  }, [matches, query]);
-  return matches;
-}
+
 
 export function ControlPanel({
   theme,
@@ -98,7 +89,7 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const { t } = useI18n();
   // 使用 'lg' (1200px) breakpoint 以確保手機水平版面也使用手機版設計
-  const isMobile = useCustomMediaQuery('(max-width: 1200px)');
+  const isMobile = useMediaQuery('(max-width: 1200px)');
   const [showAllChat, setShowAllChat] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteStream[]>([]);
   const [categories, setCategories] = useState<FavoriteCategory[]>([]);
@@ -106,31 +97,6 @@ export function ControlPanel({
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // 處理全域音量變化
-  const handleMasterVolumeChange = (newVolume: number) => {
-    // 如果從靜音狀態拖動到非零值，自動取消靜音
-    if (newVolume > 0 && masterMuted && onMasterMuteChange) {
-      onMasterMuteChange(false);
-    }
-    if (onMasterVolumeChange) {
-      onMasterVolumeChange(newVolume);
-    }
-    // 同步到隱藏的 input 元素（用於與舊的 JavaScript 代碼兼容）
-    const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
-    if (masterVolSlider) {
-      masterVolSlider.value = newVolume.toString();
-      // 觸發 input 事件，讓舊的 JavaScript 代碼能夠響應
-      masterVolSlider.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  };
-
-  // 處理全域靜音/取消靜音
-  const handleMasterMuteAll = () => {
-    if (onMasterMuteChange) {
-      onMasterMuteChange(!masterMuted);
-    }
-  };
 
   // 同步 showAllChat 狀態：當所有串流的聊天室都顯示時，開關應該是開啟的
   useEffect(() => {
@@ -197,9 +163,9 @@ export function ControlPanel({
       let updatedFavorites = [...favoritesList];
 
       // 更新 Twitch 開台狀態
-      if (twitchFavorites.length > 0 && window.twitchApi && window.twitchApi.checkMultipleChannelsLiveStatus) {
+      if (twitchFavorites.length > 0) {
         const channelIds = twitchFavorites.map(f => f.channelId!);
-        const liveStatuses = await window.twitchApi.checkMultipleChannelsLiveStatus(channelIds);
+        const liveStatuses = await twitchService.checkMultipleChannelsLiveStatus(channelIds);
 
         // 更新收藏列表中的開台狀態
         updatedFavorites = updatedFavorites.map(fav => {
@@ -218,7 +184,7 @@ export function ControlPanel({
       }
 
       // 更新 YouTube 開台狀態
-      if (youtubeFavorites.length > 0 && window.youtubeApiUtils?.checkChannelLiveStatus) {
+      if (youtubeFavorites.length > 0) {
         let isFirstYoutubeCheck = true;
         for (const fav of youtubeFavorites) {
           if (fav.channelId) {
@@ -240,7 +206,7 @@ export function ControlPanel({
             isFirstYoutubeCheck = false;
 
             try {
-              const status = await window.youtubeApiUtils.checkChannelLiveStatus(fav.channelId) as any;
+              const status = await youtubeApi.checkChannelLiveStatus(fav.channelId) as any;
               updatedFavorites = updatedFavorites.map(f => {
                 if (f.id === fav.id) {
                   return {
@@ -351,133 +317,7 @@ export function ControlPanel({
     }
   };
 
-  // 應用總音量到所有串流
-  const applyMasterVolumeToAllStreams = (masterVol: number) => {
-    // 遍歷所有串流並應用總音量
-    streams.forEach(stream => {
-      if (!(window as any).streamData || !(window as any).streamData[stream.id]) return;
-      if (!(window as any).players || !(window as any).players[stream.id] || !(window as any).players[stream.id].player) return;
 
-      const player = (window as any).players[stream.id].player;
-      const streamVol = stream.volume || 100;
-
-      // 計算實際音量（考慮總音量）
-      const actualVol = Math.round((streamVol / 100) * masterVol);
-
-      try {
-        if ((window as any).players[stream.id].type === 'twitch') {
-          // Twitch 播放器
-          if (actualVol === 0) {
-            if (typeof player.setMuted === 'function') {
-              player.setMuted(true);
-            } else if (typeof player.setVolume === 'function') {
-              player.setVolume(0);
-            }
-          } else {
-            // 如果音量不為 0，先取消靜音，再設置音量
-            if (typeof player.setMuted === 'function') {
-              player.setMuted(false);
-            }
-            if (typeof player.setVolume === 'function') {
-              player.setVolume(actualVol / 100);
-            }
-          }
-        } else if ((window as any).players[stream.id].type === 'youtube') {
-          // YouTube 播放器
-          try {
-            const playerState = player.getPlayerState();
-            if (playerState !== undefined) {
-              if (actualVol === 0) {
-                if (typeof player.mute === 'function') {
-                  player.mute();
-                } else if (typeof player.setVolume === 'function') {
-                  player.setVolume(0);
-                }
-              } else {
-                if (typeof player.unMute === 'function') {
-                  player.unMute();
-                }
-                if (typeof player.setVolume === 'function') {
-                  player.setVolume(actualVol);
-                }
-              }
-            }
-          } catch (e) {
-            // 播放器尚未就緒，稍後再試
-            setTimeout(() => {
-              if ((window as any).players && (window as any).players[stream.id] && (window as any).players[stream.id].player) {
-                try {
-                  if (actualVol === 0) {
-                    if (typeof (window as any).players[stream.id].player.mute === 'function') {
-                      (window as any).players[stream.id].player.mute();
-                    }
-                  } else {
-                    if (typeof (window as any).players[stream.id].player.unMute === 'function') {
-                      (window as any).players[stream.id].player.unMute();
-                    }
-                    if (typeof (window as any).players[stream.id].player.setVolume === 'function') {
-                      (window as any).players[stream.id].player.setVolume(actualVol);
-                    }
-                  }
-                } catch (err) {
-                  // 靜默處理錯誤
-                }
-              }
-            }, 500);
-          }
-        }
-      } catch (e) {
-        // 靜默處理錯誤
-      }
-    });
-  };
-
-  // 同步總音量到全局變量並更新 DOM - 參考 js/volume.js
-  useEffect(() => {
-    (window as any).masterVolume = masterVolume;
-
-    // 更新 DOM 中的總音量滑塊（與舊代碼兼容）
-    const masterVolSlider = document.getElementById('master-volume') as HTMLInputElement;
-    if (masterVolSlider) {
-      // 如果是 input 元素，直接設置 value
-      if (masterVolSlider.tagName === 'INPUT') {
-        masterVolSlider.value = masterVolume.toString();
-      }
-      // 如果是其他元素，設置 data-value 屬性（供舊代碼讀取）
-      masterVolSlider.setAttribute('data-value', masterVolume.toString());
-    }
-
-    // 注意：不要直接操作 master-volume-value，因為 React 已經通過 {masterVolume}% 來渲染
-    // 直接操作 DOM 會與 React 的渲染衝突
-
-    // 直接應用總音量到所有串流
-    if (typeof (window as any).applyMasterVolumeToAllStreams === 'function') {
-      (window as any).applyMasterVolumeToAllStreams(masterVolume);
-    }
-
-    // 觸發自定義事件，通知 StreamBox 總音量已改變
-    window.dispatchEvent(new CustomEvent('masterVolumeChange', { detail: { volume: masterVolume } }));
-
-    // 觸發 updateMasterVolume 函數來更新所有播放器的音量（與舊代碼兼容）
-    if (typeof (window as any).updateMasterVolume === 'function') {
-      (window as any).updateMasterVolume();
-    }
-
-    // 保存到 localStorage（調用 autoSaveSettings 如果存在，以保持一致性）
-    try {
-      const saved = localStorage.getItem('userSettings');
-      const settings = saved ? JSON.parse(saved) : {};
-      settings.masterVolume = masterVolume;
-      localStorage.setItem('userSettings', JSON.stringify(settings));
-
-      // 調用 autoSaveSettings（如果存在）以觸發其他保存邏輯
-      if (typeof (window as any).autoSaveSettings === 'function') {
-        (window as any).autoSaveSettings();
-      }
-    } catch (e) {
-      // 保存失敗，靜默處理
-    }
-  }, [masterVolume]);
 
   const [navbarHeight, setNavbarHeight] = useState(64); // 默認 64px (4rem)
 
@@ -798,23 +638,23 @@ export function ControlPanel({
               <div className="flex items-center gap-3">
                 <Label className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t('controlPanel.masterVolume')}</Label>
                 {/* 隱藏的 input 元素，用於與舊的 JavaScript 代碼同步 */}
-                <input
-                  id="master-volume"
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={masterVolume}
-                  style={{ display: 'none' }}
-                  readOnly
-                  aria-label={t('controlPanel.masterVolume')}
-                />
-                <div className="w-full flex-1">
+                <div className="flex-1">
                   <Slider
                     value={[masterVolume]}
-                    onValueChange={(vals: number[]) => handleMasterVolumeChange(vals[0])}
                     min={0}
                     max={100}
                     step={1}
+                    onValueChange={(value) => {
+                      const newVolume = value[0];
+                      // 如果從靜音狀態拖動到非零值，自動取消靜音
+                      if (newVolume > 0 && masterMuted && onMasterMuteChange) {
+                        onMasterMuteChange(false);
+                      }
+                      if (onMasterVolumeChange) {
+                        onMasterVolumeChange(newVolume);
+                      }
+                    }}
+                    className="w-full"
                   />
                 </div>
                 <span id="master-volume-value" className={`text-sm min-w-[48px] text-right ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
@@ -823,7 +663,11 @@ export function ControlPanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleMasterMuteAll}
+                  onClick={() => {
+                    if (onMasterMuteChange) {
+                      onMasterMuteChange(!masterMuted);
+                    }
+                  }}
                   className={masterMuted
                     ? `border-red-600 bg-red-600/10 text-red-600 hover:bg-red-600/20 hover:border-red-700`
                     : `border-purple-600 bg-purple-600/10 text-purple-600 hover:bg-purple-600/20 hover:border-purple-700`

@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { StreamData, parseStreamUrl, validateUrl } from '../utils/streamUtils';
 import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
-import { apiLoader } from '../utils/apiLoader';
 import { favoritesService } from '../features/favorites/FavoritesService';
+import { twitchService } from '../features/twitch/TwitchService';
+import { youtubeApi } from '../utils/youtubeApi';
 
 interface StreamStoreState {
     streams: StreamData[];
@@ -42,17 +43,12 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
             !trimmedUrl.includes('youtu.be/')) {
 
             try {
-                await apiLoader.loadTwitchDataApi();
-                if (window.twitchApi && window.twitchApi.searchChannels) {
-                    const results = await window.twitchApi.searchChannels(trimmedUrl, 1);
-                    if (results && results.length > 0) {
-                        finalUrl = results[0].url;
-                        foundChannelName = results[0].display_name;
-                    } else {
-                        return { success: false, message: `找不到頻道 "${trimmedUrl}"` };
-                    }
+                const results = await twitchService.searchChannels(trimmedUrl, 1);
+                if (results && results.length > 0) {
+                    finalUrl = results[0].url;
+                    foundChannelName = results[0].displayName;
                 } else {
-                    return { success: false, message: 'Twitch API 未初始化' };
+                    return { success: false, message: `找不到頻道 "${trimmedUrl}"` };
                 }
             } catch (error: any) {
                 return { success: false, message: `搜尋頻道失敗: ${error.message || '未知錯誤'}` };
@@ -74,17 +70,14 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
         // 4. (可選) YouTube Channel ID 二次驗證邏輯
         if (parsed.platform === 'youtube' && parsed.channelId && parsed.videoId) {
             try {
-                await apiLoader.loadYouTubeDataApi();
-                if (window.youtubeApiUtils && window.youtubeApiUtils.getChannelIdFromVideoId) {
-                    const actualId = await window.youtubeApiUtils.getChannelIdFromVideoId(parsed.videoId);
-                    if (actualId && actualId !== parsed.channelId) {
-                        return {
-                            success: false,
-                            message: `頻道 ID 驗證失敗：目標影片不屬於該頻道 (預期: ${parsed.channelId}, 實際: ${actualId})`
-                        };
-                    }
-                    if (actualId) parsed.channelId = actualId;
+                const actualId = await youtubeApi.getChannelIdFromVideoId(parsed.videoId);
+                if (actualId && actualId !== parsed.channelId) {
+                    return {
+                        success: false,
+                        message: `頻道 ID 驗證失敗：目標影片不屬於該頻道 (預期: ${parsed.channelId}, 實際: ${actualId})`
+                    };
                 }
+                if (actualId) parsed.channelId = actualId;
             } catch (e) {
                 // 忽略驗證錯誤
             }
@@ -115,10 +108,10 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
             // ignore
         }
 
-        // 6. 更新 State
-        if (!window.streamCount) window.streamCount = 0;
-        window.streamCount++;
-        const newId = window.streamCount;
+        // 6. Generate ID (Max ID + 1 Strategy)
+        const currentIds = get().streams.map(s => s.id);
+        const maxId = currentIds.length > 0 ? Math.max(...currentIds) : 0;
+        const newId = maxId + 1;
 
         const newStream: StreamData = {
             id: newId,
@@ -133,18 +126,7 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
             displayName: displayName
         };
 
-        // 更新 Legacy Global
-        if (!window.streamData) (window as any).streamData = {};
-        window.streamData[newId] = {
-            platform: newStream.platform,
-            channelId: newStream.channelId,
-            videoId: newStream.videoId,
-            originalUrl: newStream.originalUrl,
-            volume: newStream.volume,
-            chatVisible: newStream.chatVisible,
-            name: newStream.name,
-            displayName: newStream.displayName
-        };
+        // Legacy Global Sync Removed
 
         set(state => {
             const newStreams = [...state.streams, newStream];
@@ -182,9 +164,7 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
             const currentCount = newStreams.length;
 
             // Cleanup Legacy Global
-            if (window.streamData && window.streamData[id]) {
-                delete window.streamData[id];
-            }
+
 
             // 重新計算佈局
             // 如果當前是自動模式 (userLayout === null)，則重新自動選擇
@@ -228,10 +208,7 @@ export const useStreamStore = create<StreamStoreState>((set, get) => ({
                 s.id === id ? { ...s, ...updates } : s
             )
         }));
-        // Sync Legacy
-        if (window.streamData && window.streamData[id]) {
-            Object.assign(window.streamData[id], updates);
-        }
+
     },
 
     setChatLayout: (layout) => set({ chatLayout: layout }),
