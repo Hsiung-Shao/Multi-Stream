@@ -72,7 +72,7 @@ export function useTwitchAuth(): TwitchAuth {
             return;
         }
 
-        const redirectUri = 'http://localhost:3000/'; // Fixed per requirement
+        const redirectUri = window.location.origin + '/'; // Dynamic based on environment
         const scope = 'user:read:follows';
         const state = Math.random().toString(36).substring(7);
 
