@@ -2,7 +2,7 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
-  'v2.3.0.date': '2026-01-02',
+  'v2.3.0.date': '2026-01-03',
   'v2.3.0.change1': 'Added import feature for followed Twitch channels',
   'v2.3.0.change2': 'Added \'Streaming Now\' tag for quickly filtering live channels',
   'v2.3.0.change3': 'Added bulk edit functionality for favorites',

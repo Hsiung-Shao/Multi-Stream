@@ -2,7 +2,7 @@ const versionHistory = {
   'title': '버전 기록',
   'subtitle': 'MultiStream Hub 업데이트 기록',
   'latest': '최신',
-  'v2.3.0.date': '2026-01-02',
+  'v2.3.0.date': '2026-01-03',
   'v2.3.0.change1': 'Twitch 팔로우 채널 가져오기 기능 추가',
   'v2.3.0.change2': '방송 중인 채널을 빠르게 필터링하기 위한 \'방송 중\' 태그 추가',
   'v2.3.0.change3': '여러 즐겨찾기 일괄 편집 기능 추가',
