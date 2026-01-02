@@ -19,6 +19,14 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
 
   const versions = [
     {
+      version: 'v2.3.0',
+      date: t('v2.3.0.date'),
+      changes: [
+        t('versionHistory:v2.3.0.change1'),
+        t('versionHistory:v2.3.0.change2'),
+      ],
+    },
+    {
       version: 'v2.2.1',
       date: t('v2.2.1.date'),
       changes: [

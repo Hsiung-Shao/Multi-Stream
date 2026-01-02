@@ -48,6 +48,22 @@ const favorites = {
   'batchImportFailed': '匯入失敗',
   'batchImportError': '匯入錯誤',
   'importJSON': '匯入JSON',
+  'twitchIntegration': 'Twitch 帳號整合',
+  'connectTwitch': '連結 Twitch 帳號',
+  'disconnectTwitch': '登出 Twitch',
+  'twitchConnectDescription': '連結您的 Twitch 帳號以快速匯入您追隨的頻道。Access Token 僅儲存於記憶體中，重新整理頁面後需重新連結。',
+  'importFollowedChannels': '匯入追隨頻道',
+  'importTwitchTitle': '從 Twitch 匯入頻道',
+  'importSelected': '匯入選取項目 ({count})',
+  'noChannelsFound': '找不到追隨的頻道',
+  'importSuccess': '成功匯入 {count} 個頻道',
+  'importFailed': '匯入頻道時發生錯誤',
+  'loading': '載入中...',
+  'importWithCount': '匯入 ({count})',
+  'import': '匯入',
+  'loadMore': '載入更多',
+  'connectedAs': '已連結為：{{name}}',
+  'searchPlaceholder': '搜尋頻道名稱或 ID...',
 };
 
 export default favorites;

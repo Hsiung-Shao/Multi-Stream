@@ -242,6 +242,17 @@ export function Tutorial({ theme, onClose }: TutorialProps) {
                                                         <li>{t('favorite.step5Item3')}</li>
                                                     </ul>
                                                 </div>
+                                                <div className={`p-3 rounded-lg ${theme === 'dark' ? 'bg-purple-900/20 border border-purple-500/30' : 'bg-purple-50 border border-purple-200'} mb-3`}>
+                                                    <p className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'}`}>
+                                                        {t('favorite.twitchImport.title')}
+                                                    </p>
+                                                    <ol className={`list-decimal list-inside ml-4 space-y-1 text-sm ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'}`}>
+                                                        <li>{t('favorite.twitchImport.step1')}</li>
+                                                        <li>{t('favorite.twitchImport.step2')}</li>
+                                                        <li>{t('favorite.twitchImport.step3')}</li>
+                                                        <li>{t('favorite.twitchImport.step4')}</li>
+                                                    </ol>
+                                                </div>
                                             </>
                                         }
                                     />
