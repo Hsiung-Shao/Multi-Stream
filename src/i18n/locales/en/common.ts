@@ -24,6 +24,13 @@ const common = {
   'japanese': '日本語',
   'common.korean': '한국어',
   'common.updated': 'Updated',
+  'layout.empty_stream_slot': 'Empty Stream Slot',
+  'layout.empty_chat_slot': 'Empty Chat Slot',
+  'layout.waiting_stream': 'Waiting for Stream...',
+  'layout.waiting_chat': 'Waiting for Chat...',
+  'layout.unknown_stream': 'Unknown Stream',
+  'layout.chat_window': 'Chat Window',
+  'layout.confirm_remove_window': 'Remove this window?',
 };
 
 export default common;

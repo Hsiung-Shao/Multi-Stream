@@ -24,6 +24,13 @@ const common = {
   'japanese': '日本語',
   'korean': '한국어',
   'common.updated': '已更新',
+  'layout.empty_stream_slot': '空白直播窗口',
+  'layout.empty_chat_slot': '空白聊天窗口',
+  'layout.waiting_stream': '等待直播...',
+  'layout.waiting_chat': '等待聊天室...',
+  'layout.unknown_stream': '未知直播',
+  'layout.chat_window': '聊天窗口',
+  'layout.confirm_remove_window': '确定移除此窗口？',
 };
 
 export default common;

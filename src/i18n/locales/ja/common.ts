@@ -24,6 +24,13 @@ const common = {
   'japanese': '日本語',
   'korean': '한국어',
   'common.updated': '更新しました',
+  'layout.empty_stream_slot': '空のストリームスロット',
+  'layout.empty_chat_slot': '空のチャットスロット',
+  'layout.waiting_stream': 'ストリームを待機中...',
+  'layout.waiting_chat': 'チャットを待機中...',
+  'layout.unknown_stream': '不明なストリーム',
+  'layout.chat_window': 'チャットウィンドウ',
+  'layout.confirm_remove_window': 'このウィンドウを削除しますか？',
 };
 
 export default common;

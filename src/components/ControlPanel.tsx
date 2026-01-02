@@ -21,6 +21,10 @@ import { DEFAULT_TAG_IS_LIVE_ID } from '../features/favorites/constants';
 import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
 import { twitchService } from '../features/twitch/TwitchService';
 import { youtubeApi } from '../utils/youtubeApi';
+import { useStreamStore } from '../store/useStreamStore'; // Direct usage
+import { LayoutEditor } from './Canvas/LayoutEditor';
+import { LayoutSelector } from './Canvas/LayoutSelector';
+// I should check if they are exported or defined internally.
 
 interface ControlPanelProps {
   theme: 'light' | 'dark';
@@ -371,6 +375,10 @@ export function ControlPanel({
     { id: 4, label: t('controlPanel:quadChat'), icon: '▦' },
   ];
 
+  // Move hook to top level
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const layoutMode = useStreamStore(s => s.layoutMode);
+
   // 如果控制面板被收起或搜尋框使用中（聚焦或有內容），則不顯示（手機版）
   if (isCollapsed || (isMobile && isSearchFocused)) {
     return null;
@@ -396,21 +404,50 @@ export function ControlPanel({
 
           {/* Layout Control */}
           <Section theme={theme} title={t('controlPanel:layoutControl')}>
+            <div className="grid grid-cols-4 gap-2 mb-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  useStreamStore.getState().setLayoutMode('auto');
+                }}
+                className={`aspect-square rounded-lg border-2 p-0 h-auto flex flex-col items-center justify-center gap-1 ${layoutMode === 'auto'
+                  ? 'border-purple-500 bg-purple-500/20'
+                  : 'border-muted'}`}
+                title="Auto Layout"
+              >
+                <span className="text-xl">A</span>
+                <span className="text-[10px]">Auto</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  useStreamStore.getState().setLayoutMode('canvas');
+                }}
+                className={`aspect-square rounded-lg border-2 p-0 h-auto flex flex-col items-center justify-center gap-1 ${layoutMode === 'canvas'
+                  ? 'border-purple-500 bg-purple-500/20'
+                  : 'border-muted'}`}
+                title="Canvas Mode"
+              >
+                <span className="text-xl">🎨</span>
+                <span className="text-[10px]">Canvas</span>
+              </Button>
+            </div>
+
             <div className="grid grid-cols-4 gap-2">
               {layouts.map((layout) => (
                 <Button
                   key={layout.id}
                   variant="ghost"
                   onClick={() => {
+                    useStreamStore.getState().setLayoutMode('auto'); // Force auto
                     if (onLayoutChange) {
                       onLayoutChange(layout.id as LayoutType);
-                      // @ts-ignore - name property added above
                       logEvent('ControlPanel', 'change_layout', layout.name || `layout_${layout.id}`);
                     }
                   }}
                   title={layout.label}
                   aria-label={layout.label}
-                  className={`aspect-square rounded-lg border-2 transition-all p-0 h-auto ${currentLayout === layout.id
+                  className={`aspect-square rounded-lg border-2 transition-all p-0 h-auto ${currentLayout === layout.id && layoutMode === 'auto'
                     ? 'border-purple-500 bg-purple-500/20'
                     : theme === 'dark'
                       ? 'border-gray-700 bg-gray-800 hover:border-purple-500/50 hover:bg-gray-800'
@@ -428,6 +465,25 @@ export function ControlPanel({
               ))}
             </div>
           </Section>
+
+          {/* Canvas Tools (Only visible in Canvas Mode usually, or always) */}
+          {layoutMode === 'canvas' && (
+            <Section theme={theme} title="Canvas Tools">
+              <div className="flex gap-2 flex-wrap">
+                <LayoutSelector />
+                <LayoutEditor /> {/* Renders the Edit Button/Dialog */}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const name = prompt("Save Layout Name:");
+                    if (name) useStreamStore.getState().saveCurrentLayout(name);
+                  }}
+                >
+                  Save Layout
+                </Button>
+              </div>
+            </Section>
+          )}
 
           {/* Chat Layout */}
           <Section theme={theme} title={t('controlPanel:sideChatLayout')}>

@@ -24,6 +24,7 @@ interface StreamBoxProps {
   chatLayoutType?: 'none' | 'single' | 'dual' | 'quad'; // 聊天室布局類型
   masterVolume?: number; // 主音量 (0-100)
   isMasterMuted?: boolean; // 主靜音狀態
+  mode?: 'normal' | 'stream-only'; // 正常模式或僅串流模式
 }
 
 // 全局變數聲明（這些應該在 window 對象上）
@@ -46,7 +47,8 @@ export function StreamBox({
   streamIndex,
   chatLayoutType = 'none',
   masterVolume = 100,
-  isMasterMuted = false
+  isMasterMuted = false,
+  mode = 'normal'
 }: StreamBoxProps) {
   const registerPlayer = usePlayerStore(s => s.registerPlayer);
   const unregisterPlayer = usePlayerStore(s => s.unregisterPlayer);
@@ -142,8 +144,8 @@ export function StreamBox({
     const chatResizer = chatResizerRef.current;
 
     // 根據 chatLayoutType 和 streamData.chatVisible 決定是否顯示聊天室
-    // 如果全屏聊天室佈局啟用（非 none），則 StreamBox 內的聊天室應該隱藏
-    const shouldShowChat = streamData.chatVisible && chatLayoutType === 'none';
+    // mode === 'stream-only' 時強制不顯示內部聊天室
+    const shouldShowChat = mode === 'normal' && streamData.chatVisible && chatLayoutType === 'none';
 
     if (contentWrapper) {
       if (shouldShowChat) {
@@ -224,7 +226,7 @@ export function StreamBox({
 
   // 監聽窗口大小變化，重新計算聊天室寬度
   useEffect(() => {
-    const shouldShowChat = streamData.chatVisible && chatLayoutType === 'none';
+    const shouldShowChat = mode === 'normal' && streamData.chatVisible && chatLayoutType === 'none';
     if (!shouldShowChat) return;
 
     const handleResize = () => {
@@ -820,7 +822,7 @@ export function StreamBox({
     >
       {/* Toolbar - 工具列表 */}
       <div
-        className={`controls flex items-center gap-2 px-2 h-6 min-h-[24px] ${theme === 'dark' ? 'bg-gray-800/95 border-b border-gray-700' : 'bg-gray-50/95 border-b border-gray-200'} backdrop-blur-sm`}
+        className={`controls canvas-drag-handle cursor-move flex items-center gap-2 px-2 h-6 min-h-[24px] ${theme === 'dark' ? 'bg-gray-800/95 border-b border-gray-700' : 'bg-gray-50/95 border-b border-gray-200'} backdrop-blur-sm`}
       >
         {/* 左側工具組 */}
         <div className="flex items-center gap-2 flex-1 min-w-0">

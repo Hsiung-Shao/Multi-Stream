@@ -24,6 +24,13 @@ const common = {
   'japanese': '日本語',
   'common.korean': '한국어',
   'common.updated': '업데이트됨',
+  'layout.empty_stream_slot': '빈 스트림 슬롯',
+  'layout.empty_chat_slot': '빈 채팅 슬롯',
+  'layout.waiting_stream': '스트림 대기 중...',
+  'layout.waiting_chat': '채팅 대기 중...',
+  'layout.unknown_stream': '알 수 없는 스트림',
+  'layout.chat_window': '채팅 창',
+  'layout.confirm_remove_window': '이 창을 삭제하시겠습니까?',
 };
 
 export default common;
