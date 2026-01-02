@@ -31,6 +31,9 @@ const common = {
   'layout.unknown_stream': '未知串流',
   'layout.chat_window': '聊天視窗',
   'layout.confirm_remove_window': '確定移除此視窗？',
+  'layout.select_stream': '選擇串流',
+  'canvas.add_group': '新增空白組',
+  'canvas.apply_layout_tooltip': '將當前視窗重新排列 (Canvas)',
 };
 
 export default common;

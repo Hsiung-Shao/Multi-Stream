@@ -35,6 +35,9 @@ export default function App() {
     initGA();
     logPageView(); // 初始頁面瀏覽
 
+    // Clear canvas items on page load
+    useStreamStore.getState().clearCanvasItems();
+
     // Check for Twitch OAuth redirect (implicit flow returns token in hash)
     if (window.location.hash && window.location.hash.includes('access_token')) {
       // Delay slightly to ensure UI store is ready? Usually not needed but safe.
@@ -429,7 +432,7 @@ export default function App() {
           />
         )}
 
-        {streams.length === 0 && (
+        {streams.length === 0 && useStreamStore.getState().layoutMode !== 'canvas' && (
           <div className="container mx-auto px-4 py-4" style={{ position: 'relative', zIndex: 10 }}>
             <WelcomeCard
               theme={theme}

@@ -846,7 +846,7 @@ export function StreamBox({
                 e.stopPropagation();
                 handleToggleMute();
               }}
-              className={`h-4 w-4 p-0 min-w-[16px] ${isMuted
+              className={`h-4 w-4 p-0 min-w-[16px] no-drag ${isMuted
                 ? (theme === 'dark' ? 'text-red-500 hover:bg-gray-700 hover:text-red-400' : 'text-red-600 hover:bg-gray-200 hover:text-red-500')
                 : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
                 }`}
@@ -881,7 +881,7 @@ export function StreamBox({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-4 w-4 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black'}`}
+            className={`h-4 w-4 p-0 no-drag ${theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black'}`}
             title="重新整理串流"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
@@ -895,7 +895,7 @@ export function StreamBox({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-4 w-4 p-0 ${streamData.chatVisible && chatLayoutType === 'none'
+            className={`h-4 w-4 p-0 no-drag ${streamData.chatVisible && chatLayoutType === 'none'
               ? (theme === 'dark' ? 'text-purple-400 bg-purple-500/30 hover:bg-purple-500/40 hover:text-purple-300' : 'text-purple-600 bg-purple-500/10 hover:bg-purple-500/15 hover:text-purple-700')
               : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-black')
               } ${streamData.chatVisible && chatLayoutType === 'none' ? 'border border-purple-500/50' : ''}`}
@@ -912,7 +912,7 @@ export function StreamBox({
           <Button
             variant="ghost"
             size="icon"
-            className={`h-4 w-4 p-0 ${theme === 'dark' ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-400' : 'text-gray-600 hover:bg-red-100 hover:text-red-600'}`}
+            className={`h-4 w-4 p-0 no-drag ${theme === 'dark' ? 'text-gray-400 hover:bg-red-900/20 hover:text-red-400' : 'text-gray-600 hover:bg-red-100 hover:text-red-600'}`}
             title="關閉串流"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();

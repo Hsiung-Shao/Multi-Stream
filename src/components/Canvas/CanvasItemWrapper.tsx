@@ -1,16 +1,16 @@
 import { useRef, useState, useEffect } from 'react';
 import Draggable, { DraggableEventHandler } from 'react-draggable';
-import { ResizableBox, ResizeCallbackData } from 'react-resizable';
+import { ResizableBox } from 'react-resizable';
 import { useStreamStore } from '../../store/useStreamStore';
 import { CanvasItem } from '../../types/canvas';
-import { StreamBox } from '../StreamBox';
-import { ChatBox } from './ChatBox';
 import { Button } from '../ui/button';
-import { X, GripHorizontal, Plus } from 'lucide-react';
+import { X, GripHorizontal, AlertTriangle } from 'lucide-react'; // Added AlertTriangle
 import { cn } from '../ui/utils';
-import { useUIStore } from '../../store/useUIStore';
 import { useCanvasCollision } from '../../hooks/useCanvasCollision';
-import { useTranslation } from 'react-i18next';
+import { blockRegistry } from './BlockRegistry';
+
+import { resolveCollision, snapToGrid } from '../../utils/canvasUtils';
+import { findAdjacentItems, calculateMagneticResize } from '../../utils/magneticUtils';
 
 import 'react-resizable/css/styles.css';
 
@@ -20,14 +20,18 @@ interface CanvasItemWrapperProps {
 }
 
 export function CanvasItemWrapper({ item, className }: CanvasItemWrapperProps) {
-    const { t } = useTranslation('common');
     const removeCanvasItem = useStreamStore(s => s.removeCanvasItem);
     const updateCanvasLayout = useStreamStore(s => s.updateCanvasLayout);
+    const updateCanvasItem = useStreamStore(s => s.updateCanvasItem);
     const canvasItems = useStreamStore(s => s.canvasItems); // Used for collision
-    const theme = useUIStore(s => s.theme);
-    const masterVolume = useUIStore(s => s.masterVolume);
-    const masterMuted = useUIStore(s => s.masterMuted);
     const streams = useStreamStore(s => s.streams);
+
+    // Grid Mode
+    const gridMode = useStreamStore(s => s.gridMode);
+    const gridSize = useStreamStore(s => s.gridSize);
+
+    // Magnetic Mode
+    const magneticMode = useStreamStore(s => s.magneticMode);
 
     // Collision & Snapping Hook
     const { getSnappedPosition } = useCanvasCollision({
@@ -36,8 +40,7 @@ export function CanvasItemWrapper({ item, className }: CanvasItemWrapperProps) {
         snapThreshold: 20
     });
 
-    // Internal state for smooth dragging/resizing without thrashing the store
-    // Also helps if we want to add constraints or snap logic later
+    // Internal state for smooth dragging/resizing
     const [bounds, setBounds] = useState({
         x: item.layout.x,
         y: item.layout.y,
@@ -60,43 +63,100 @@ export function CanvasItemWrapper({ item, className }: CanvasItemWrapperProps) {
     const stream = item.contentId ? streams.find(s => s.id === item.contentId) : null;
     const hasContent = !!stream;
 
+    // Generic Block Logic
+    const blockDef = blockRegistry.get(item.type);
+    const BlockComponent = blockDef?.component;
+
     // Determine if we should show the wrapper's header
-    // StreamBox has its own header (integrated handle)
-    // ChatBox and Empty Slot need the wrapper's header
-    const showWrapperHeader = item.type !== 'stream' || !hasContent;
+    // Rule: Show if block doesn't have custom header, OR if content is missing (so empty state needs header)
+    const useCustomHeader = blockDef?.customHeader;
+    const showWrapperHeader = !useCustomHeader || !hasContent;
 
     const title = stream
         ? (stream.displayName || stream.name || stream.channelId || `Stream ${stream.id}`)
-        : (item.type === 'stream' ? t('layout.empty_stream_slot') : t('layout.chat_window'));
+        : (blockDef?.label || 'Block'); // Fallback title
 
-    const typeLabel = item.type === 'stream' ? 'Stream' : 'Chat';
+    // Legacy removed: typeLabel
+
+
+
 
     const onDragStop: DraggableEventHandler = (_e, data) => {
-        // Apply snapping
-        const snapped = getSnappedPosition(data.x, data.y, bounds.w, bounds.h);
+        let newX = data.x;
+        let newY = data.y;
 
-        setBounds(prev => ({ ...prev, x: snapped.x, y: snapped.y }));
+        if (gridMode) {
+            const snapped = snapToGrid({ x: newX, y: newY, w: bounds.w, h: bounds.h }, gridSize);
+            newX = snapped.x;
+            newY = snapped.y;
+        } else {
+            // Apply snapping (Ad-hoc magnetism)
+            const snapped = getSnappedPosition(newX, newY, bounds.w, bounds.h);
+            newX = snapped.x;
+            newY = snapped.y;
+        }
 
-        // Persist to store
-        const newItems = canvasItems.map(ci =>
-            ci.i === item.i
-                ? { ...ci, layout: { ...ci.layout, x: snapped.x, y: snapped.y } }
-                : ci
+        setBounds(prev => ({ ...prev, x: newX, y: newY }));
+
+        // 1. Update Current Item Layout locally first
+        const currentUpdatedItem = { ...item, layout: { ...item.layout, x: newX, y: newY } };
+
+        // 2. Resolve Collision (Push others)
+        const allWithCurrentUpdated = canvasItems.map(ci =>
+            ci.i === item.i ? currentUpdatedItem : ci
         );
-        updateCanvasLayout(newItems);
+
+        const resolvedItems = resolveCollision(currentUpdatedItem, allWithCurrentUpdated, item.layout);
+
+        // 3. Update Store with ALL resolved items
+        updateCanvasLayout(resolvedItems);
     };
 
     const onResizeStop = (_e: any, data: any) => {
-        const newW = data.size.width;
-        const newH = data.size.height;
+        let newW = data.size.width;
+        let newH = data.size.height;
+
+        if (gridMode) {
+            const snapped = snapToGrid({ x: bounds.x, y: bounds.y, w: newW, h: newH }, gridSize);
+            newW = snapped.w;
+            newH = snapped.h;
+        }
 
         setBounds(prev => ({ ...prev, w: newW, h: newH }));
 
-        const newItems = canvasItems.map(ci =>
-            ci.i === item.i
-                ? { ...ci, layout: { ...ci.layout, w: newW, h: newH } }
-                : ci
+        // Base Update for Current Item
+        const newLayout = { ...item.layout, w: newW, h: newH };
+        let newItems = canvasItems.map(ci =>
+            ci.i === item.i ? { ...ci, layout: newLayout } : ci
         );
+
+        // Magnetic Resizing Logic
+        if (magneticMode) {
+            // Calculate Delta
+            const deltaW = newW - item.layout.w;
+            const deltaH = newH - item.layout.h;
+
+            // Handle Width Change (East Handle)
+            if (deltaW !== 0) {
+                const neighbors = findAdjacentItems(item, canvasItems, 'e');
+                const updates = calculateMagneticResize({ ...item, layout: newLayout }, neighbors, 'w', deltaW);
+
+                updates.forEach(up => {
+                    newItems = newItems.map(ni => ni.i === up.itemId ? { ...ni, layout: up.layout } : ni);
+                });
+            }
+
+            // Handle Height Change (South Handle)
+            if (deltaH !== 0) {
+                const neighbors = findAdjacentItems(item, canvasItems, 's');
+                const updates = calculateMagneticResize({ ...item, layout: newLayout }, neighbors, 'h', deltaH);
+
+                updates.forEach(up => {
+                    newItems = newItems.map(ni => ni.i === up.itemId ? { ...ni, layout: up.layout } : ni);
+                });
+            }
+        }
+
         updateCanvasLayout(newItems);
     };
 
@@ -107,7 +167,6 @@ export function CanvasItemWrapper({ item, className }: CanvasItemWrapperProps) {
             position={{ x: bounds.x, y: bounds.y }}
             onStop={onDragStop}
             nodeRef={nodeRef}
-            bounds="parent" // Optional: Constrain to canvas container
         >
             <div
                 ref={nodeRef}
@@ -133,13 +192,13 @@ export function CanvasItemWrapper({ item, className }: CanvasItemWrapperProps) {
                         "flex flex-col w-full h-full rounded-md shadow-sm overflow-hidden border",
                         hasContent ? "bg-transparent border-transparent" : "bg-muted/40 border-dashed border-muted-foreground/30"
                     )}>
-                        {/* Wrapper Header (for Chat & Empty) */}
+                        {/* Wrapper Header (If allowed by Block) */}
                         {showWrapperHeader && (
                             <div className="canvas-drag-handle h-8 min-h-[32px] w-full bg-muted/80 flex items-center justify-between px-2 cursor-move select-none border-b shrink-0 group">
                                 <div className="flex items-center gap-2 overflow-hidden">
                                     <GripHorizontal className="w-4 h-4 text-muted-foreground" />
                                     <span className="text-xs font-medium truncate text-muted-foreground">
-                                        {typeLabel}: {title}
+                                        {blockDef?.label || 'Block'}: {title}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-1 opacity-100 group-hover:opacity-100 transition-opacity">
@@ -147,13 +206,10 @@ export function CanvasItemWrapper({ item, className }: CanvasItemWrapperProps) {
                                         variant="ghost"
                                         size="icon"
                                         className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
-                                        // Must rewrite onMouseDown to stop propagation to prevent Drag start if clicked
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                        onClick={(e) => {
+                                        onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+                                        onClick={(e: React.MouseEvent) => {
                                             e.stopPropagation();
-                                            if (confirm(t('layout.confirm_remove_window'))) {
-                                                removeCanvasItem(item.i);
-                                            }
+                                            removeCanvasItem(item.i);
                                         }}
                                     >
                                         <X className="w-3 h-3" />
@@ -164,39 +220,17 @@ export function CanvasItemWrapper({ item, className }: CanvasItemWrapperProps) {
 
                         {/* Content */}
                         <div className="flex-1 w-full h-full min-h-0 relative">
-                            {hasContent ? (
-                                item.type === 'stream' ? (
-                                    <StreamBox
-                                        streamData={stream!}
-                                        theme={theme}
-                                        mode="stream-only"
-                                        masterVolume={masterVolume}
-                                        isMasterMuted={masterMuted}
-                                        layoutStyle={{
-                                            position: 'absolute',
-                                            top: '0',
-                                            left: '0',
-                                            width: '100%',
-                                            height: '100%'
-                                        }}
-                                        onRemove={() => {
-                                            // Handle remove from StreamBox (optional: maybe remove item too?)
-                                        }}
-                                        onReload={() => { }}
-                                        onToggleChat={() => { }}
-                                        onSeparateChat={() => { }}
-                                        streamIndex={-1}
-                                    />
-                                ) : (
-                                    <ChatBox streamId={item.contentId!} />
-                                )
+                            {BlockComponent ? (
+                                <BlockComponent
+                                    item={item}
+                                    onUpdate={(updates) => updateCanvasItem(item.i, updates)}
+                                    onRemove={() => removeCanvasItem(item.i)}
+                                // isInteracting can be passed if we track drag state
+                                />
                             ) : (
-                                // Empty State
-                                <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/50 gap-2">
-                                    <Plus className="w-8 h-8 opacity-20" />
-                                    <span className="text-xs">
-                                        {item.type === 'stream' ? t('layout.waiting_stream') : t('layout.waiting_chat')}
-                                    </span>
+                                <div className="w-full h-full flex flex-col items-center justify-center text-destructive">
+                                    <AlertTriangle className="w-8 h-8 mb-2" />
+                                    <span>Unknown Block Type: {item.type}</span>
                                 </div>
                             )}
                         </div>

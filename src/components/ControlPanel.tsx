@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Play, Volume2, VolumeX, ChevronUp, ChevronDown, RefreshCw, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star } from 'lucide-react';
+import { Play, Volume2, VolumeX, ChevronUp, ChevronDown, RefreshCw, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Label } from './ui/label';
@@ -12,6 +12,7 @@ import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/use-media-query';
 import { logEvent } from '../utils/analytics';
+import { Grid3X3, Magnet } from 'lucide-react';
 
 import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
@@ -378,6 +379,8 @@ export function ControlPanel({
   // Move hook to top level
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const layoutMode = useStreamStore(s => s.layoutMode);
+  const gridMode = useStreamStore(s => s.gridMode);
+  const toggleGridMode = useStreamStore(s => s.toggleGridMode);
 
   // 如果控制面板被收起或搜尋框使用中（聚焦或有內容），則不顯示（手機版）
   if (isCollapsed || (isMobile && isSearchFocused)) {
@@ -421,6 +424,7 @@ export function ControlPanel({
               <Button
                 variant="ghost"
                 onClick={() => {
+                  useStreamStore.getState().syncCanvasWithStreams();
                   useStreamStore.getState().setLayoutMode('canvas');
                 }}
                 className={`aspect-square rounded-lg border-2 p-0 h-auto flex flex-col items-center justify-center gap-1 ${layoutMode === 'canvas'
@@ -431,6 +435,51 @@ export function ControlPanel({
                 <span className="text-xl">🎨</span>
                 <span className="text-[10px]">Canvas</span>
               </Button>
+
+              {/* Grid Mode Toggle */}
+              {layoutMode === 'canvas' && (
+                <Button
+                  variant="ghost"
+                  onClick={toggleGridMode}
+                  className={`aspect-square rounded-lg border-2 p-0 h-auto flex flex-col items-center justify-center gap-1 ${gridMode
+                    ? 'border-purple-500 bg-purple-500/20'
+                    : 'border-muted'}`}
+                  title={gridMode ? "Disable Grid Snap" : "Enable Grid Snap"}
+                >
+                  <Grid3X3 className="w-5 h-5" />
+                  <span className="text-[10px]">{gridMode ? 'Grid On' : 'Grid Off'}</span>
+                </Button>
+              )}
+
+              {/* Magnetic Mode Toggle */}
+              {layoutMode === 'canvas' && (
+                <Button
+                  variant="ghost"
+                  onClick={useStreamStore.getState().toggleMagneticMode}
+                  className={`aspect-square rounded-lg border-2 p-0 h-auto flex flex-col items-center justify-center gap-1 ${useStreamStore.getState().magneticMode
+                    ? 'border-purple-500 bg-purple-500/20'
+                    : 'border-muted'}`}
+                  title="Toggle Magnetic Resizing"
+                >
+                  <Magnet className="w-5 h-5" />
+                  <span className="text-[10px]">Magnet</span>
+                </Button>
+              )}
+
+              {/* Add Group Button (Canvas Only) */}
+              {layoutMode === 'canvas' && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    useStreamStore.getState().addEmptyGroup();
+                  }}
+                  className="aspect-square rounded-lg border-2 border-dashed border-muted p-0 h-auto flex flex-col items-center justify-center gap-1 hover:border-purple-500 hover:bg-purple-500/10"
+                  title={t('canvas.add_group')}
+                >
+                  <Plus className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">{t('common.add')}</span>
+                </Button>
+              )}
             </div>
 
             <div className="grid grid-cols-4 gap-2">
@@ -439,13 +488,19 @@ export function ControlPanel({
                   key={layout.id}
                   variant="ghost"
                   onClick={() => {
-                    useStreamStore.getState().setLayoutMode('auto'); // Force auto
-                    if (onLayoutChange) {
-                      onLayoutChange(layout.id as LayoutType);
-                      logEvent('ControlPanel', 'change_layout', layout.name || `layout_${layout.id}`);
+                    if (layoutMode === 'canvas') {
+                      // Apply layout to canvas items without changing mode
+                      const type = layout.id === 0 || layout.name?.includes('focus') ? 'focus' : 'grid';
+                      useStreamStore.getState().applyStandardLayoutToCanvas(type);
+                    } else {
+                      useStreamStore.getState().setLayoutMode('auto'); // Ensure auto mode
+                      if (onLayoutChange) {
+                        onLayoutChange(layout.id as LayoutType);
+                        logEvent('ControlPanel', 'change_layout', layout.name || `layout_${layout.id}`);
+                      }
                     }
                   }}
-                  title={layout.label}
+                  title={layoutMode === 'canvas' ? t('canvas.apply_layout_tooltip') : layout.label}
                   aria-label={layout.label}
                   className={`aspect-square rounded-lg border-2 transition-all p-0 h-auto ${currentLayout === layout.id && layoutMode === 'auto'
                     ? 'border-purple-500 bg-purple-500/20'

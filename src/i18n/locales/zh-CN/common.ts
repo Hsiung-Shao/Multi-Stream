@@ -31,6 +31,9 @@ const common = {
   'layout.unknown_stream': '未知直播',
   'layout.chat_window': '聊天窗口',
   'layout.confirm_remove_window': '确定移除此窗口？',
+  'layout.select_stream': '选择串流',
+  'canvas.add_group': '新增空白组',
+  'canvas.apply_layout_tooltip': '将当前窗口重新排列 (Canvas)',
 };
 
 export default common;

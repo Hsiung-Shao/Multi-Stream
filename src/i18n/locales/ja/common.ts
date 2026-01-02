@@ -31,6 +31,9 @@ const common = {
   'layout.unknown_stream': '不明なストリーム',
   'layout.chat_window': 'チャットウィンドウ',
   'layout.confirm_remove_window': 'このウィンドウを削除しますか？',
+  'layout.select_stream': 'ストリームを選択',
+  'canvas.add_group': 'グループを追加',
+  'canvas.apply_layout_tooltip': '現在のウィンドウを再配置 (Canvas)',
 };
 
 export default common;

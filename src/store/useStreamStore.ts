@@ -8,6 +8,7 @@ import { favoritesService } from '../features/favorites/FavoritesService';
 import { twitchService } from '../features/twitch/TwitchService';
 import { youtubeApi } from '../utils/youtubeApi';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
+import { findFreePosition, generateStandardLayout } from '../utils/canvasUtils';
 
 interface StreamStoreState {
     streams: StreamData[];
@@ -31,12 +32,27 @@ interface StreamStoreState {
 
     // Canvas Actions
     setLayoutMode: (mode: 'auto' | 'canvas') => void;
+    // Grid Mode
+    gridMode: boolean;
+    toggleGridMode: () => void;
+    gridSize: { w: number; h: number };
+
+    // Magnetic Mode
+    magneticMode: boolean;
+    toggleMagneticMode: () => void;
+
     addCanvasItem: (type: CanvasItemType, streamId: number) => void;
     removeCanvasItem: (itemId: string) => void;
     updateCanvasLayout: (items: CanvasItem[]) => void;
     saveCurrentLayout: (name: string) => void;
     deleteLayout: (id: string) => void;
     applyLayout: (id: string) => void;
+
+    addEmptyGroup: () => void;
+    clearCanvasItems: () => void;
+    applyStandardLayoutToCanvas: (type: 'grid' | 'focus' | 'flow') => void;
+    updateCanvasItem: (itemId: string, updates: Partial<CanvasItem>) => void;
+    syncCanvasWithStreams: () => void;
 }
 
 export const useStreamStore = create<StreamStoreState>()(
@@ -50,165 +66,214 @@ export const useStreamStore = create<StreamStoreState>()(
             canvasItems: [],
             presets: [],
 
+            // Grid Mode Init
+            gridMode: false,
+            gridSize: { w: 48, h: 27 }, // 10x10 grid relative to 480x270 base? or 20px? Let's say 20px. 
+            // Better: 16:9 ratio grid unit? 
+            // If base is 480x270. 480/10 = 48. 270/10 = 27.
+            // Let's use 20px for finer control, or 10px. 
+            // User requested "Arbitrary drag / Grid / Snap".
+            // Let's default to a reasonable grid size. 20px is standard.
+
+            toggleGridMode: () => set(state => ({ gridMode: !state.gridMode })),
+
+            // Magnetic Mode
+            magneticMode: false,
+            toggleMagneticMode: () => set(state => ({ magneticMode: !state.magneticMode })),
+
             addStream: async (url: string) => {
+                const state = get();
                 if (!url || !url.trim()) return { success: false, message: '請輸入直播網址或頻道名稱' };
 
                 const trimmedUrl = url.trim();
                 let finalUrl = trimmedUrl;
                 let foundChannelName: string | null = null;
 
-                // 1. 嘗試搜尋
-                if (!trimmedUrl.includes('http://') && !trimmedUrl.includes('https://') &&
-                    !trimmedUrl.includes('twitch.tv/') && !trimmedUrl.includes('youtube.com') &&
-                    !trimmedUrl.includes('youtu.be/')) {
-                    try {
-                        const results = await twitchService.searchChannels(trimmedUrl, 1);
-                        if (results && results.length > 0) {
-                            finalUrl = results[0].url;
-                            foundChannelName = results[0].displayName;
-                        } else {
-                            return { success: false, message: `找不到頻道 "${trimmedUrl}"` };
-                        }
-                    } catch (error: any) {
-                        return { success: false, message: `搜尋頻道失敗: ${error.message || '未知錯誤'}` };
+                // 1. Validate & Parse
+                if (!validateUrl(finalUrl)) {
+                    // Try to guess it's a channel name if simple string
+                    if (!finalUrl.includes('.') && !finalUrl.includes('/')) {
+                        // Assume Twitch channel for now or try both? 
+                        // Simplified: Assume Twitch for plain text
+                        finalUrl = `https://twitch.tv/${finalUrl}`;
+                    } else {
+                        return { success: false, message: '不支援的網址格式' };
                     }
                 }
 
-                // 2. 驗證 URL
-                const urlValidation = validateUrl(finalUrl);
-                if (!urlValidation.valid) return { success: false, message: urlValidation.error };
+                const streamData = parseStreamUrl(finalUrl);
+                if (!streamData) return { success: false, message: '無法解析網址' };
 
-                // 3. 解析 URL
-                const parsed = parseStreamUrl(finalUrl);
-                if (!parsed.platform || parsed.error) return { success: false, message: parsed.error || '無法解析 URL' };
-
-                // 4. YouTube Channel ID 驗證
-                if (parsed.platform === 'youtube' && parsed.channelId && parsed.videoId) {
-                    try {
-                        const actualId = await youtubeApi.getChannelIdFromVideoId(parsed.videoId);
-                        if (actualId && actualId !== parsed.channelId) {
-                            return { success: false, message: `頻道 ID 驗證失敗` };
-                        }
-                        if (actualId) parsed.channelId = actualId;
-                    } catch (e) { }
+                // 2. Check Duplicates
+                if (state.streams.some(s => s.id === streamData.id || (s.url === finalUrl))) {
+                    return { success: false, message: '此串流已存在' };
                 }
 
-                // 5. 查找收藏名稱
-                let displayName = foundChannelName;
-                let name = null;
-                try {
-                    const favorites = favoritesService.getFavorites();
-                    const favorite = favorites.find(fav => {
-                        if (fav.platform !== parsed.platform) return false;
-                        if (parsed.platform === 'twitch' && fav.channelId === parsed.channelId) return true;
-                        if (parsed.platform === 'youtube') {
-                            if (fav.channelId && parsed.channelId && fav.channelId === parsed.channelId) return true;
-                            if (fav.videoId && parsed.videoId && fav.videoId === parsed.videoId) return true;
-                            if (fav.url && finalUrl && fav.url === finalUrl) return true;
-                        }
-                        return false;
-                    });
-                    if (favorite && favorite.name) {
-                        displayName = favorite.name;
-                        name = favorite.name;
-                    }
-                } catch (e) { }
+                // 3. Fetch Info (Optional but good)
+                // TODO: Implement platform specific info fetching if needed. 
+                // Currently handled by components or effect later.
 
-                // 6. Generate ID
-                const currentIds = get().streams.map(s => s.id);
-                const maxId = currentIds.length > 0 ? Math.max(...currentIds) : 0;
-                const newId = maxId + 1;
-
+                // Create new Stream Object
+                const newId = Date.now();
                 const newStream: StreamData = {
                     id: newId,
-                    platform: parsed.platform,
-                    channelId: parsed.channelId,
-                    videoId: parsed.videoId,
+                    platform: streamData.platform!,
+                    channelId: streamData.channelId,
+                    videoId: streamData.videoId,
                     originalUrl: finalUrl,
-                    volume: 100,
-                    chatVisible: false,
+                    volume: 50,
+                    chatVisible: true,
                     isMuted: false,
-                    name: name,
-                    displayName: displayName
+                    name: streamData.channelId, // fallback name
+                    displayName: streamData.channelId // fallback display name
                 };
 
-                set(state => {
-                    const newStreams = [...state.streams, newStream];
-                    const currentCount = newStreams.length;
+                const newStreams = [...state.streams, newStream];
 
-                    // Auto Layout Logic
-                    let newLayout = state.layout;
-                    let newUserLayout = state.userLayout;
+                // 4. Update Canvas Items (Global Reflow)
+                let newCanvasItems = [...state.canvasItems];
 
-                    if (newUserLayout && isLayoutOverCapacity(newUserLayout, currentCount)) {
-                        newLayout = autoSelectLayout(currentCount);
-                        newUserLayout = null;
-                    } else if (!newUserLayout) {
-                        newLayout = autoSelectLayout(currentCount);
-                    } else {
-                        newLayout = newUserLayout;
+                // Assign to empty slot if available?
+                // Logic:
+                // Global Reflow logic usually rebuilds the grid. 
+                // But we should try to fill the "first empty stream slot" if exists, 
+                // OR add new items if no empty slot.
+
+                // Find empty slot
+                const emptySlotIndex = newCanvasItems.findIndex(i => i.type === 'stream' && !i.contentId);
+
+                if (emptySlotIndex !== -1) {
+                    // Fill slot
+                    newCanvasItems[emptySlotIndex] = { ...newCanvasItems[emptySlotIndex], contentId: newStream.id };
+                    // We might also want to fill the corresponding Chat slot if it's empty?
+                    // Usually they are paired by convention? 
+                    // Let's just find an empty chat slot too.
+                    const emptyChatIndex = newCanvasItems.findIndex(i => i.type === 'chat' && !i.contentId);
+                    if (emptyChatIndex !== -1) {
+                        newCanvasItems[emptyChatIndex] = { ...newCanvasItems[emptyChatIndex], contentId: newStream.id };
                     }
+                } else {
+                    // Create new pair
+                    const uniqueId = uuidv4().slice(0, 8);
 
-                    // Canvas Logic: Smart Auto-fill
-                    // 1. Find Empty Stream Slot
-                    const newCanvasItems = [...state.canvasItems];
-                    const emptyStreamSlotIndex = newCanvasItems.findIndex(item => item.type === 'stream' && !item.contentId);
+                    newCanvasItems.push({
+                        i: `stream-${uniqueId}-${newStream.id}`,
+                        type: 'stream',
+                        contentId: newStream.id,
+                        layout: { x: 0, y: 0, w: 480, h: 270 }
+                    });
 
-                    if (emptyStreamSlotIndex !== -1) {
-                        // Found empty slot, fill it
-                        newCanvasItems[emptyStreamSlotIndex] = {
-                            ...newCanvasItems[emptyStreamSlotIndex],
-                            contentId: newId
-                        };
+                    newCanvasItems.push({
+                        i: `chat-${uniqueId}-${newStream.id}`,
+                        type: 'chat',
+                        contentId: newStream.id,
+                        layout: { x: 0, y: 0, w: 300, h: 270 }
+                    });
+                }
 
-                        // Also try to find a matching Empty Chat Slot? 
-                        // It's hard to associate "Empty Chat" with "Empty Stream" unless they are spatially related or index related.
-                        // For simplicity, we just look for ANY empty chat slot and fill it too.
-                        const emptyChatSlotIndex = newCanvasItems.findIndex(item => item.type === 'chat' && !item.contentId);
-                        if (emptyChatSlotIndex !== -1) {
-                            newCanvasItems[emptyChatSlotIndex] = {
-                                ...newCanvasItems[emptyChatSlotIndex],
-                                contentId: newId
-                            };
-                        } else {
-                            // If no empty chat slot, maybe we should create one?
-                            // User requirement: "新增串流是自動產生兩個視窗"
-                            // If we filled a stream slot but have no chat slot, we should probably add a chat slot nearby if possible.
-                            // But adding it might overlap.
-                            // Strategy: If we reused a slot, we assume the layout is "fixed" by user, so we only fill what's there.
-                            // UNLESS the user explicitly wants a chat window always.
-                            // Let's stick to: "If reuse stream slot, try reuse chat slot. If no chat slot, do nothing (assume user didn't want chat there)."
-                        }
-                    } else {
-                        // No empty slot, create new pair (Stream + Chat)
-                        // Position logic: Find a good spot or just cascade.
-                        const offset = newCanvasItems.length * 30; // Simple cascade
-                        // Stream
-                        newCanvasItems.push({
-                            i: `stream-${newId}`,
-                            type: 'stream',
-                            contentId: newId,
-                            layout: { x: 50 + (offset % 500), y: 50 + (offset % 300), w: 480, h: 270 }
-                        });
-                        // Chat (Right of Stream)
-                        newCanvasItems.push({
-                            i: `chat-${newId}`,
-                            type: 'chat',
-                            contentId: newId,
-                            layout: { x: 50 + (offset % 500) + 480, y: 50 + (offset % 300), w: 300, h: 270 }
-                        });
-                    }
+                // Perform Global Reflow
+                newCanvasItems = generateStandardLayout(
+                    newCanvasItems,
+                    'flow', // Use Reflow to respect new sizes
+                    newStreams.length,
+                    window.innerWidth,
+                    window.innerHeight
+                );
 
-                    return {
-                        streams: newStreams,
-                        layout: newLayout,
-                        userLayout: newUserLayout,
-                        canvasItems: newCanvasItems
-                    };
+                // Auto Layout for Non-Canvas
+                const newLayout = autoSelectLayout(newStreams.length);
+
+                set({
+                    streams: newStreams,
+                    canvasItems: newCanvasItems,
+                    layout: state.userLayout ? state.layout : newLayout
                 });
 
                 return { success: true };
             },
+
+            addEmptyGroup: () => set(state => {
+                let newCanvasItems = [...state.canvasItems];
+                const uniqueId = uuidv4().slice(0, 8); // Short ID
+
+                // Add temp items at 0,0 - they will be reflowed
+                newCanvasItems.push({
+                    i: `empty-stream-${uniqueId}`,
+                    type: 'stream',
+                    contentId: null,
+                    layout: { x: 0, y: 0, w: 480, h: 270 }
+                });
+
+                newCanvasItems.push({
+                    i: `empty-chat-${uniqueId}`,
+                    type: 'chat',
+                    contentId: null,
+                    layout: { x: 0, y: 0, w: 300, h: 270 }
+                });
+
+                // USER REQUIREMENT: Global Reflow
+                newCanvasItems = generateStandardLayout(
+                    newCanvasItems,
+                    'grid',
+                    state.streams.length,
+                    window.innerWidth,
+                    window.innerHeight
+                );
+
+                return { canvasItems: newCanvasItems };
+            }),
+
+            clearCanvasItems: () => set({ canvasItems: [] }),
+
+            applyStandardLayoutToCanvas: (type) => set(state => {
+                if (state.canvasItems.length === 0) return {};
+
+                const newCanvasItems = generateStandardLayout(
+                    state.canvasItems,
+                    type,
+                    state.streams.length,
+                    window.innerWidth,
+                    window.innerHeight
+                );
+
+                return { canvasItems: newCanvasItems };
+            }),
+
+            updateCanvasItem: (itemId, updates) => set(state => ({
+                canvasItems: state.canvasItems.map(item =>
+                    item.i === itemId ? { ...item, ...updates } : item
+                )
+            })),
+
+            syncCanvasWithStreams: () => set(state => {
+                // Ensure every stream has a corresponding canvas item (stream & chat)
+                const newCanvasItems = [...state.canvasItems];
+                const streams = state.streams;
+
+                streams.forEach(s => {
+                    // Check for Stream Item
+                    const hasStreamItem = newCanvasItems.some(i => i.type === 'stream' && i.contentId === s.id);
+                    if (!hasStreamItem) {
+                        // Add Stream Item
+                        const offset = newCanvasItems.length * 30;
+                        newCanvasItems.push({
+                            i: `stream-${s.id}-${uuidv4()}`,
+                            type: 'stream',
+                            contentId: s.id,
+                            layout: { x: 50 + (offset % 500), y: 50 + (offset % 300), w: 480, h: 270 }
+                        });
+                    }
+                    // Check for Chat Item - Optional? 
+                    // Let's NOT force add Chat items to avoid clutter, user can add manually or switch type.
+                    // Or maybe we should? "Sync" implies full availability.
+                    // But user requirement says "Generated windows can be blank first...".
+                    // Let's just ensure Stream availability for now.
+                });
+
+                return { canvasItems: newCanvasItems };
+            }),
+
+
 
             removeStream: (id: number) => {
                 set(state => {

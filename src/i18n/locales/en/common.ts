@@ -31,6 +31,9 @@ const common = {
   'layout.unknown_stream': 'Unknown Stream',
   'layout.chat_window': 'Chat Window',
   'layout.confirm_remove_window': 'Remove this window?',
+  'canvas.add_group': 'Add Group',
+  'canvas.apply_layout_tooltip': 'Arrange Windows (Canvas)',
+  'select_stream': 'Select Stream',
 };
 
 export default common;
