@@ -22,7 +22,8 @@ const common = {
   'chineseSimplified': '简体中文',
   'english': 'English',
   'japanese': '日本語',
-  'korean': '한국어',
+  'common.korean': '한국어',
+  'common.updated': '업데이트됨',
 };
 
 export default common;

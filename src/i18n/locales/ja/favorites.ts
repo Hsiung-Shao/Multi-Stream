@@ -64,6 +64,12 @@ const favorites = {
   'batchImportSuccessWithFail': '{success} 個成功、{fail} 個失敗',
   'batchImportFailed': 'インポート失敗',
   'batchImportError': 'インポートエラー',
+  'batchEdit': '一括編集',
+  'batchOperations': '一括操作',
+  'setCategory': 'カテゴリ設定',
+  'addTags': 'タグ追加',
+  'batchSetCategoryConfirm': '{{count}} 件のアイテムを以下のカテゴリに移動します：',
+  'batchAddTagsConfirm': '{{count}} 件のアイテムに以下のタグを追加します（追加モード）：',
 };
 
 export default favorites;

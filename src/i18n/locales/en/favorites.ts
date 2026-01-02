@@ -57,6 +57,12 @@ const favorites = {
   'loadMore': 'Load More',
   'connectedAs': 'Connected as: {{name}}',
   'searchPlaceholder': 'Search channel name or ID...',
+  'batchEdit': 'Batch Edit',
+  'batchOperations': 'Batch Operations',
+  'setCategory': 'Set Category',
+  'addTags': 'Add Tags',
+  'batchSetCategoryConfirm': 'Move {{count}} items to the following category:',
+  'batchAddTagsConfirm': 'Add the following tags to {{count}} items (Append mode):',
 };
 
 export default favorites;

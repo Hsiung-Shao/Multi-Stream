@@ -7,6 +7,8 @@ const tags = {
   'all': '所有',
   'clearAll': '清除全部',
   'filterTitle': '选择标签',
+  'isLive': '直播中',
+  'noTagsSelected': '未选择标签',
 };
 
 export default tags;

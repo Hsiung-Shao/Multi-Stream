@@ -22,6 +22,7 @@ import { useTwitchAuth } from '../hooks/useTwitchAuth';
 import { useTwitchUser, FollowedChannel } from '../hooks/useTwitchUser';
 import { TwitchImportDialog } from './TwitchImportDialog';
 import { Badge } from './ui/badge';
+import { BulkFavoritesActions } from './favorites/BulkFavoritesActions';
 
 
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../features/favorites/types';
@@ -1017,10 +1018,19 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     size="sm"
                     onClick={handleBatchDelete}
                     className="bg-red-600 hover:bg-red-700 text-white"
-
                   >
                     {t('delete')}
                   </Button>
+                  <BulkFavoritesActions
+                    selectedIds={Array.from(selectedFavorites)}
+                    theme={theme}
+                    categories={categories}
+                    tags={tags}
+                    favorites={favorites}
+                    onClearSelection={() => setSelectedFavorites(new Set())}
+                    onRefresh={loadData}
+                    showMessage={showMessage}
+                  />
                 </div>
 
                 {/* Tag Filter (Chip List) */}

@@ -57,6 +57,12 @@ const favorites = {
   'loadMore': '加载更多',
   'connectedAs': '已连接为：{{name}}',
   'searchPlaceholder': '搜索频道名称或 ID...',
+  'batchEdit': '批量编辑',
+  'batchOperations': '批量操作',
+  'setCategory': '设置分类',
+  'addTags': '添加标签',
+  'batchSetCategoryConfirm': '将 {{count}} 个项目移动到以下分类：',
+  'batchAddTagsConfirm': '为 {{count}} 个项目添加以下标签（附加模式）：',
 };
 
 export default favorites;

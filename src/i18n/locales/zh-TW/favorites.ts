@@ -64,6 +64,12 @@ const favorites = {
   'loadMore': '載入更多',
   'connectedAs': '已連結為：{{name}}',
   'searchPlaceholder': '搜尋頻道名稱或 ID...',
+  'batchEdit': '批量編輯',
+  'batchOperations': '批量操作',
+  'setCategory': '設定分類',
+  'addTags': '加入標籤',
+  'batchSetCategoryConfirm': '將 {{count}} 個項目移動到以下分類：',
+  'batchAddTagsConfirm': '為 {{count}} 個項目加入以下標籤（附加模式）：',
 };
 
 export default favorites;

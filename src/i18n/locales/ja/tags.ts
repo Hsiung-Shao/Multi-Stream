@@ -7,6 +7,8 @@ const tags = {
   'all': 'すべて',
   'clearAll': 'すべてクリア',
   'filterTitle': 'タグを選択',
+  'isLive': 'ライブ中',
+  'noTagsSelected': 'タグが選択されていません',
 };
 
 export default tags;

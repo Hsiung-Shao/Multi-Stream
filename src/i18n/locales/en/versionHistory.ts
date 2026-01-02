@@ -5,6 +5,7 @@ const versionHistory = {
   'v2.3.0.date': '2026-01-02',
   'v2.3.0.change1': 'Added import feature for followed Twitch channels',
   'v2.3.0.change2': 'Added \'Streaming Now\' tag for quickly filtering live channels',
+  'v2.3.0.change3': 'Added bulk edit functionality for favorites',
   'v2.2.1.date': '2026-01-02',
   'v2.2.1.change1': 'Performance optimization',
   'v2.2.1.change2': 'Adjusted some UI display styles',

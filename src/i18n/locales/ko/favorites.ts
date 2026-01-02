@@ -64,6 +64,12 @@ const favorites = {
   'batchImportSuccessWithFail': '{success}개 성공, {fail}개 실패',
   'batchImportFailed': '가져오기 실패',
   'batchImportError': '가져오기 에러',
+  'batchEdit': '일괄 편집',
+  'batchOperations': '일괄 작업',
+  'setCategory': '카테고리 설정',
+  'addTags': '태그 추가',
+  'batchSetCategoryConfirm': '{{count}} 항목을 다음 카테고리로 이동:',
+  'batchAddTagsConfirm': '{{count}} 항목에 다음 태그 추가 (추가 모드):',
 };
 
 export default favorites;

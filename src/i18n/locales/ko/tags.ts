@@ -7,6 +7,8 @@ const tags = {
   'all': '모두',
   'clearAll': '모두 지우기',
   'filterTitle': '태그 선택',
+  'isLive': '방송 중',
+  'noTagsSelected': '선택된 태그 없음',
 };
 
 export default tags;

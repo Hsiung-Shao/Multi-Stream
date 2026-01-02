@@ -24,6 +24,7 @@ export function VersionHistory({ theme, onClose }: VersionHistoryProps) {
       changes: [
         t('versionHistory:v2.3.0.change1'),
         t('versionHistory:v2.3.0.change2'),
+        t('versionHistory:v2.3.0.change3'),
       ],
     },
     {
