@@ -15,6 +15,10 @@ export function useRouter() {
                 setPage('about');
             } else if (path === '/privacy' || path === '/privacy.html') {
                 setPage('privacy');
+            } else if (path === '/canvas') {
+                setPage('canvas');
+            } else if (path === '/fixed') {
+                setPage('fixed');
             } else {
                 setPage('not-found');
             }
@@ -45,6 +49,12 @@ export function useRouter() {
                 break;
             case 'privacy':
                 targetPath = '/privacy';
+                break;
+            case 'canvas':
+                targetPath = '/canvas';
+                break;
+            case 'fixed':
+                targetPath = '/fixed';
                 break;
             case 'not-found':
                 // 如果是 404，不主動改變 URL，保留使用者輸入的錯誤網址

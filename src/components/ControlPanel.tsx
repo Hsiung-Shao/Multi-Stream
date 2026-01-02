@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Play, Volume2, VolumeX, ChevronUp, ChevronDown, RefreshCw, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star, Plus } from 'lucide-react';
+import {
+  Volume2, VolumeX, RefreshCw, Star, GripVertical,
+  ChevronUp, ChevronDown, X, Folder, FolderOpen, Play, Gamepad2, Youtube,
+  Magnet, MonitorPlay, MessageSquare, Grid3X3
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { ScrollArea } from './ui/scroll-area';
 import type { StreamData } from '../utils/streamUtils';
-// import { FavoriteStreamComponent } from './FavoriteStreamComponent'; // Removed as it is defined in-file
 import type { LayoutType } from '../utils/layoutUtils';
 import type { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/use-media-query';
 import { logEvent } from '../utils/analytics';
-import { Grid3X3, Magnet } from 'lucide-react';
 
 import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
@@ -466,18 +468,33 @@ export function ControlPanel({
                 </Button>
               )}
 
-              {/* Add Group Button (Canvas Only) */}
+              {/* Add Stream Button (Canvas Only) */}
               {layoutMode === 'canvas' && (
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    useStreamStore.getState().addEmptyGroup();
+                    useStreamStore.getState().addCanvasItem('stream', null);
                   }}
                   className="aspect-square rounded-lg border-2 border-dashed border-muted p-0 h-auto flex flex-col items-center justify-center gap-1 hover:border-purple-500 hover:bg-purple-500/10"
-                  title={t('canvas.add_group')}
+                  title="新增串流視窗"
                 >
-                  <Plus className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-[10px] text-muted-foreground">{t('common.add')}</span>
+                  <MonitorPlay className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">串流</span>
+                </Button>
+              )}
+
+              {/* Add Chat Button (Canvas Only) */}
+              {layoutMode === 'canvas' && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    useStreamStore.getState().addCanvasItem('chat', null);
+                  }}
+                  className="aspect-square rounded-lg border-2 border-dashed border-muted p-0 h-auto flex flex-col items-center justify-center gap-1 hover:border-purple-500 hover:bg-purple-500/10"
+                  title="新增聊天室視窗"
+                >
+                  <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground">聊天室</span>
                 </Button>
               )}
             </div>

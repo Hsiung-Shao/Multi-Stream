@@ -13,6 +13,8 @@ const FavoritesManager = lazy(() => import('./components/FavoritesManager').then
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
+const CanvasPage = lazy(() => import('./components/Pages/CanvasPage').then(module => ({ 'default': module.CanvasPage })));
+const FixedPage = lazy(() => import('./components/Pages/FixedPage').then(module => ({ 'default': module.FixedPage })));
 
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { useStreamStore } from './store/useStreamStore';
@@ -25,7 +27,7 @@ import { useThemeSystem } from './hooks/useThemeSystem';
 import { useRouter } from './hooks/useRouter';
 import { NotFoundPage } from './components/NotFoundPage';
 import { initGA, logPageView } from './utils/analytics';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 
 // 全局變數聲明 moved to src/types/global.d.ts
 
@@ -395,6 +397,22 @@ export default function App() {
           />
         </Suspense>
       </>
+    );
+  }
+
+  if (currentPage === 'canvas') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">載入畫布...</div>}>
+        <CanvasPage />
+      </Suspense>
+    );
+  }
+
+  if (currentPage === 'fixed') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">載入佈局...</div>}>
+        <FixedPage />
+      </Suspense>
     );
   }
 

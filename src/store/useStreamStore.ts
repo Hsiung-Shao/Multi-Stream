@@ -41,7 +41,7 @@ interface StreamStoreState {
     magneticMode: boolean;
     toggleMagneticMode: () => void;
 
-    addCanvasItem: (type: CanvasItemType, streamId: number) => void;
+    addCanvasItem: (type: CanvasItemType, streamId: number | null) => void;
     removeCanvasItem: (itemId: string) => void;
     updateCanvasLayout: (items: CanvasItem[]) => void;
     saveCurrentLayout: (name: string) => void;
@@ -105,7 +105,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 if (!streamData) return { success: false, message: '無法解析網址' };
 
                 // 2. Check Duplicates
-                if (state.streams.some(s => s.id === streamData.id || (s.url === finalUrl))) {
+                if (state.streams.some(s => s.originalUrl === finalUrl)) {
                     return { success: false, message: '此串流已存在' };
                 }
 

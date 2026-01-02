@@ -14,11 +14,11 @@
 
 繼續
 
-不做任何修改
 每當功能新增時，請根據多語言的原則，新增對應的翻譯
 
 如果功能本身可以模組化或是輕量化設計，優先朝這個方向思考
 如果有任何問題請先不要做任何修改，先反問再做處理
+不做任何修改
 嚴格遵守規則:你的最終回覆必須使用繁體中文，這包含implementation_plan.md、Walkthrough、Task等都必須使用繁體中文
 代理server 啟動指令: wrangler pages dev functions --port 8788
 Shadcn UI
