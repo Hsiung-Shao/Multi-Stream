@@ -23,6 +23,7 @@ const common = {
   'english': 'English',
   'japanese': '日本語',
   'korean': '한국어',
+  'common.updated': '更新しました',
 };
 
 export default common;

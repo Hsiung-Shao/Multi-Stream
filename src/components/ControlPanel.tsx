@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Play, Volume2, VolumeX, ChevronUp, ChevronDown, RefreshCw, GripVertical, X, Gamepad2, Youtube, Folder, FolderOpen, Star } from 'lucide-react';
 import { Button } from './ui/button';
 import { Slider } from './ui/slider';
@@ -17,6 +17,7 @@ import { TagFilterLayout } from './ui/TagFilterLayout';
 import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { favoritesLoader } from '../features/favorites/FavoritesLoader';
+import { DEFAULT_TAG_IS_LIVE_ID } from '../features/favorites/constants';
 import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
 import { twitchService } from '../features/twitch/TwitchService';
 import { youtubeApi } from '../utils/youtubeApi';
@@ -88,7 +89,7 @@ export function ControlPanel({
   onMasterMuteChange,
   onAddStream
 }: ControlPanelProps) {
-  const { t, i18n } = useTranslation(['common', 'controlPanel', 'favorites']);
+  const { t, i18n } = useTranslation(['common', 'controlPanel', 'favorites', 'tags']);
   const locale = i18n.language;
   // 使用 'lg' (1200px) breakpoint 以確保手機水平版面也使用手機版設計
   const isMobile = useMediaQuery('(max-width: 1200px)');
@@ -127,6 +128,17 @@ export function ControlPanel({
       // 載入數據時發生錯誤，繼續處理
     }
   }, []);
+
+  // 建構特殊的標籤列表（包含虛擬的"直播中"標籤）
+  const displayTags = useMemo(() => {
+    const isLiveTag: Tag = {
+      id: DEFAULT_TAG_IS_LIVE_ID,
+      name: t('tags:isLive') || '直播中',
+      color: '#ef4444', // Red-500
+      order: -100 // Ensure it's sorted first if order is used
+    };
+    return [isLiveTag, ...tags];
+  }, [tags, t]);
 
   useEffect(() => {
     loadFavorites();
@@ -514,7 +526,7 @@ export function ControlPanel({
               {/* Tag Filters */}
               {tags.length > 0 && (
                 <TagFilterLayout
-                  tags={tags}
+                  tags={displayTags}
                   selectedTags={filterTags}
                   onToggleTag={(tagId: string) => {
                     setFilterTags(prev =>
@@ -536,7 +548,10 @@ export function ControlPanel({
                   {categories.map(category => {
                     const categoryFavorites = favorites.filter(f => {
                       const matchCategory = f.categoryId === category.id;
-                      const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                      const matchTags = filterTags.length === 0 || filterTags.every(tId => {
+                        if (tId === DEFAULT_TAG_IS_LIVE_ID) return f.isLive === true;
+                        return f.tagIds?.includes(tId);
+                      });
                       return matchCategory && matchTags;
                     });
                     if (categoryFavorites.length === 0) return null;
@@ -612,7 +627,10 @@ export function ControlPanel({
                   {(() => {
                     const uncategorizedFavorites = sortFavorites(favorites.filter(f => {
                       const isUncategorized = !f.categoryId;
-                      const matchTags = filterTags.length === 0 || filterTags.every(tId => f.tagIds?.includes(tId));
+                      const matchTags = filterTags.length === 0 || filterTags.every(tId => {
+                        if (tId === DEFAULT_TAG_IS_LIVE_ID) return f.isLive === true;
+                        return f.tagIds?.includes(tId);
+                      });
                       return isUncategorized && matchTags;
                     }));
                     return uncategorizedFavorites.length > 0 ? (

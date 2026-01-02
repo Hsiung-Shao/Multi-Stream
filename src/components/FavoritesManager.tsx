@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2, Gamepad2, Youtube } from 'lucide-react';
 import { Button } from './ui/button';
@@ -16,6 +16,14 @@ import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { favoritesLoader } from '../features/favorites/FavoritesLoader';
 import { backupService } from '../features/backup/index';
+import { DEFAULT_TAG_IS_LIVE_ID } from '../features/favorites/constants';
+// Twitch Integration
+import { useTwitchAuth } from '../hooks/useTwitchAuth';
+import { useTwitchUser, FollowedChannel } from '../hooks/useTwitchUser';
+import { TwitchImportDialog } from './TwitchImportDialog';
+import { Badge } from './ui/badge';
+import { BulkFavoritesActions } from './favorites/BulkFavoritesActions';
+
 
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../features/favorites/types';
 import { logEvent } from '../utils/analytics';
@@ -115,6 +123,71 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
 
+  // Twitch Integration Hooks
+  const { token, isLoggedIn, login, logout, shouldOpenSettings, clearPendingFlag } = useTwitchAuth();
+  const { user: twitchUser, loading: twitchLoading, followedChannels, hasMore: twitchHasMore, fetchUser, fetchFollowedChannels, loadMore: loadMoreChannels, reset: resetTwitchUser } = useTwitchUser();
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  // Effect: Auto-open settings/import dialog if returning from auth redirect
+  useEffect(() => {
+    if (shouldOpenSettings) {
+      setActiveTab('settings');
+      clearPendingFlag();
+    }
+  }, [shouldOpenSettings, clearPendingFlag]);
+
+  // Effect: Fetch user data when token is available
+  useEffect(() => {
+    if (token && !twitchUser) {
+      fetchUser(token);
+    }
+  }, [token, twitchUser, fetchUser]);
+
+  const handleOpenImportDialog = async () => {
+    if (!token || !twitchUser) return;
+    setImportDialogOpen(true);
+    // Initial fetch if empty
+    if (followedChannels.length === 0) {
+      await fetchFollowedChannels(token, twitchUser.id);
+    }
+  };
+
+  const handleImportChannels = async (selectedChannels: FollowedChannel[]) => {
+    let imported = 0;
+    let failed = 0;
+
+    for (const channel of selectedChannels) {
+      // Construct Twitch URL
+      const url = `https://www.twitch.tv/${channel.broadcasterLogin}`;
+      try {
+        // Add to favorites
+        const result = await favoritesService.addFavorite(
+          url,
+          channel.broadcasterName, // Use name from Twitch
+          null, // No category
+          undefined,
+          undefined,
+          [] // No tags initially
+        );
+
+        if (result.success) imported++;
+        else failed++;
+      } catch (e) {
+        failed++;
+      }
+    }
+
+    showMessage('success', t('importSuccess', { count: imported }));
+    if (failed > 0) {
+      // Optional: show failed count
+    }
+
+    loadData(); // Refresh list
+    debouncedBackup();
+    setActiveTab('favorites'); // Switch to list
+  };
+
+
   // 載入收藏和分類列表
   const loadData = useCallback(() => {
     try {
@@ -132,6 +205,18 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+
+  // 建構特殊的標籤列表（包含虛擬的"直播中"標籤）
+  const displayTags = useMemo(() => {
+    const isLiveTag: Tag = {
+      id: DEFAULT_TAG_IS_LIVE_ID,
+      name: t('tags:isLive') || '直播中',
+      color: '#ef4444', // Red-500
+      order: -100 // Ensure it's sorted first if order is used
+    };
+    return [isLiveTag, ...tags];
+  }, [tags, t]);
 
   // 顯示訊息
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -365,9 +450,22 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
     // 1. Tag Filter (Priority)
     if (filterTags.length > 0) {
       result = result.filter(item => {
-        if (!item.tagIds) return false;
-        // Check if item has ALL selected tags
-        return filterTags.every(tId => item.tagIds?.includes(tId));
+        // Check "Streaming Now" tag
+        const isLiveTagSelected = filterTags.includes(DEFAULT_TAG_IS_LIVE_ID);
+        if (isLiveTagSelected) {
+          if (item.isLive !== true) return false;
+        }
+
+        // Filter out the "Streaming Now" tag for standard tag checking
+        const standardTags = filterTags.filter(t => t !== DEFAULT_TAG_IS_LIVE_ID);
+
+        if (standardTags.length > 0) {
+          if (!item.tagIds) return false;
+          // Check if item has ALL selected standard tags
+          return standardTags.every(tId => item.tagIds?.includes(tId));
+        }
+
+        return true;
       });
     }
 
@@ -920,10 +1018,19 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                     size="sm"
                     onClick={handleBatchDelete}
                     className="bg-red-600 hover:bg-red-700 text-white"
-
                   >
                     {t('delete')}
                   </Button>
+                  <BulkFavoritesActions
+                    selectedIds={Array.from(selectedFavorites)}
+                    theme={theme}
+                    categories={categories}
+                    tags={tags}
+                    favorites={favorites}
+                    onClearSelection={() => setSelectedFavorites(new Set())}
+                    onRefresh={loadData}
+                    showMessage={showMessage}
+                  />
                 </div>
 
                 {/* Tag Filter (Chip List) */}
@@ -933,7 +1040,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                       {t('tags:filterTitle')}:
                     </div>
                     <TagFilterLayout
-                      tags={tags}
+                      tags={displayTags}
                       selectedTags={filterTags}
                       onToggleTag={(tagId: string) => {
                         setFilterTags(prev =>
@@ -1153,6 +1260,61 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-4 overflow-y-auto flex-1 min-h-0">
+
+
+              {/* Twitch Integration Section */}
+              <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className={`${theme === 'dark' ? 'text-white' : 'text-black'} m-0`}>
+                      {t('twitchIntegration')}
+                    </h3>
+                    {isLoggedIn && <Badge className="bg-green-500 hover:bg-green-600 border-0">Connected</Badge>}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {t('twitchConnectDescription')}
+                  </p>
+
+                  {!isLoggedIn ? (
+                    <Button
+                      onClick={login}
+                      className="bg-[#9146ff] hover:bg-[#772ce8] text-white"
+                    >
+                      {t('connectTwitch')}
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {twitchUser && (
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          {twitchUser.profileImageUrl && (
+                            <img src={twitchUser.profileImageUrl} alt="Profile" className="w-6 h-6 rounded-full" />
+                          )}
+                          <span>{t('connectedAs', { name: twitchUser.displayName })}</span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleOpenImportDialog}
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          {t('importFollowedChannels')}
+                        </Button>
+                        <Button
+                          onClick={() => { logout(); resetTwitchUser(); }}
+                          variant="outline"
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          {t('disconnectTwitch')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
                 <h3 className={`mb-4 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{t('backup')}</h3>
                 <div className="space-y-3">
@@ -1179,6 +1341,18 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
           </Tabs >
         </div >
       </div >
+
+      {/* Twitch Import Dialog */}
+      <TwitchImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        channels={followedChannels}
+        loading={twitchLoading}
+        hasMore={twitchHasMore}
+        onLoadMore={() => token && twitchUser && loadMoreChannels(token, twitchUser.id)}
+        onImport={handleImportChannels}
+        theme={theme}
+      />
     </div >
   );
 }

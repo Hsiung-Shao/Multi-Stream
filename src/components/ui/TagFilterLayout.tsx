@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { TagChip } from './TagChip';
 import type { Tag } from '../../features/favorites/types';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from '../../features/favorites/constants';
+import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID, DEFAULT_TAG_IS_LIVE_ID } from '../../features/favorites/constants';
 
 interface TagFilterLayoutProps {
     tags: Tag[];
@@ -31,14 +31,18 @@ export function TagFilterLayout({
     const visibleTags = useMemo(() => {
         // 複製並排序
         const sorted = [...tags].sort((a, b) => {
-            // 檢查是否為平台標籤
+            // 1. 直播中標籤最優先
+            if (a.id === DEFAULT_TAG_IS_LIVE_ID) return -1;
+            if (b.id === DEFAULT_TAG_IS_LIVE_ID) return 1;
+
+            // 2. 平台標籤次優先
             const aIsPlatform = a.id === DEFAULT_TAG_TWITCH_ID || a.id === DEFAULT_TAG_YOUTUBE_ID;
             const bIsPlatform = b.id === DEFAULT_TAG_TWITCH_ID || b.id === DEFAULT_TAG_YOUTUBE_ID;
 
             if (aIsPlatform && !bIsPlatform) return -1;
             if (!aIsPlatform && bIsPlatform) return 1;
 
-            // 如果都是或都不是平台標籤，則保持原順序（或可按 order 排序）
+            // 3. 一般標籤按順序
             return (a.order || 0) - (b.order || 0);
         });
 

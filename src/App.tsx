@@ -34,6 +34,13 @@ export default function App() {
   useEffect(() => {
     initGA();
     logPageView(); // 初始頁面瀏覽
+
+    // Check for Twitch OAuth redirect (implicit flow returns token in hash)
+    if (window.location.hash && window.location.hash.includes('access_token')) {
+      // Delay slightly to ensure UI store is ready? Usually not needed but safe.
+      // Actually direct call is fine.
+      useUIStore.getState().openModal('favorites');
+    }
   }, []);
 
 

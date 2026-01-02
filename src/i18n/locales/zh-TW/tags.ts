@@ -10,6 +10,8 @@ const tags = {
   'tagName': '標籤名稱',
   'color': '顏色',
   'tagList': '標籤列表',
+  'isLive': '直播中',
+  'noTagsSelected': '未選擇標籤',
 };
 
 export default tags;

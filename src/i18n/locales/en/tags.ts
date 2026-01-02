@@ -7,6 +7,8 @@ const tags = {
   'all': 'All',
   'clearAll': 'Clear All',
   'filterTitle': 'Select Tags',
+  'isLive': 'Streaming Now',
+  'noTagsSelected': 'No tags selected',
 };
 
 export default tags;
