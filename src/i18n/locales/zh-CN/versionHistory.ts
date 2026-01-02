@@ -2,7 +2,7 @@ const versionHistory = {
   'title': '版本记录',
   'subtitle': 'MultiStream Hub 更新历史',
   'latest': '最新',
-  'v2.3.0.date': '2026-01-02',
+  'v2.3.0.date': '2026-01-03',
   'v2.3.0.change1': '新增 Twitch 用户关注频道导入功能',
   'v2.3.0.change2': '新增直播中的标签，用于快速筛选正在直播的频道',
   'v2.3.0.change3': '新增多个收藏同时编辑功能',

@@ -2,7 +2,7 @@ const versionHistory = {
   'title': '版本紀錄',
   'subtitle': 'MultiStream Hub 更新歷史',
   'latest': '最新',
-  'v2.3.0.date': '2026-01-02',
+  'v2.3.0.date': '2026-01-03',
   'v2.3.0.change1': '新增 Twitch 使用者追隨頻道匯入功能',
   'v2.3.0.change2': '新增直播中的標籤，用於快速篩選正在直播的頻道',
   'v2.3.0.change3': '新增多個收藏同時編輯功能',
