@@ -1,9 +1,20 @@
 
-
+import { useEffect } from 'react';
 import { DynamicIsland } from '../Navigation/DynamicIsland';
 import { CanvasContainer } from '../Canvas/CanvasContainer';
+import { useStreamStore } from '../../store/useStreamStore';
 
 export const CanvasPage = () => {
+    const setLayoutMode = useStreamStore(s => s.setLayoutMode);
+
+    useEffect(() => {
+        setLayoutMode('canvas');
+        return () => {
+            // Optional: reset to auto if needed when leaving
+            // setLayoutMode('auto'); 
+        };
+    }, [setLayoutMode]);
+
     return (
         <div className="w-full h-screen bg-black overflow-hidden relative">
             {/* Canvas Layer */}

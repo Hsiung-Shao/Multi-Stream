@@ -1,10 +1,10 @@
 import { useRef } from 'react';
 import { useStreamStore } from '../../store/useStreamStore';
 import { CanvasItem } from '../../types/canvas';
-import { Button } from '../ui/button';
-import { X, GripHorizontal, AlertTriangle } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { blockRegistry } from './BlockRegistry';
+import { WindowHeader } from './WindowParts/WindowHeader';
+import { WindowContent } from './WindowParts/WindowContent';
 
 interface CanvasItemWrapperProps {
     item: CanvasItem;
@@ -57,54 +57,25 @@ export function CanvasItemWrapper({
             {...props}
         >
             <div className={cn(
-                "w-full h-full rounded-xl overflow-hidden shadow-2xl transition-all border border-transparent group-hover:border-white/20 bg-black/40 backdrop-blur-sm",
+                "w-full h-full rounded-xl overflow-hidden shadow-2xl transition-all border border-transparent group-hover:border-white/20 bg-black/40 backdrop-blur-sm relative",
                 !hasContent && "border-white/10"
             )}>
 
-                {/* Control Bar */}
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-1 p-1 pl-3 pr-1 bg-black/80 backdrop-blur-md rounded-full border border-white/10 shadow-lg">
-                    {/* Drag Handle - Must match draggableHandle in GridEngine */}
-                    <div className="grid-item-drag-handle cursor-move mr-2 flex items-center text-white/70 hover:text-white">
-                        <GripHorizontal size={14} />
-                        <span className="text-[10px] font-medium ml-2 max-w-[100px] truncate select-none">
-                            {title}
-                        </span>
-                        <span className="text-xs font-bold text-yellow-300 ml-2 select-none">
-                            {item.layout.w} x {item.layout.h}
-                        </span>
-                    </div>
-
-                    <div className="h-3 w-[1px] bg-white/20 mx-1" />
-
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white"
-                        onMouseDown={(e) => e.stopPropagation()} // Prevent drag start on button click
-                        onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation();
-                            removeCanvasItem(item.i);
-                        }}
-                    >
-                        <X size={12} />
-                    </Button>
-                </div>
+                {/* Header / Controls */}
+                <WindowHeader
+                    title={title}
+                    width={item.layout.w}
+                    height={item.layout.h}
+                    onRemove={() => removeCanvasItem(item.i)}
+                />
 
                 {/* Content */}
-                <div className="w-full h-full">
-                    {BlockComponent ? (
-                        <BlockComponent
-                            item={item}
-                            onUpdate={(updates) => updateCanvasItem(item.i, updates)}
-                            onRemove={() => removeCanvasItem(item.i)}
-                        />
-                    ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-destructive">
-                            <AlertTriangle className="w-8 h-8 mb-2" />
-                            <span>Unknown Block</span>
-                        </div>
-                    )}
-                </div>
+                <WindowContent
+                    item={item}
+                    BlockComponent={BlockComponent}
+                    onUpdate={(updates) => updateCanvasItem(item.i, updates)}
+                    onRemove={() => removeCanvasItem(item.i)}
+                />
             </div>
         </div>
     );

@@ -1,11 +1,11 @@
-
 import { useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import { Home, Plus, Layout, Settings, Star, Tv } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useUIStore } from '../../store/useUIStore';
-import { AddStreamDialog } from '../Dialogs/AddStreamDialog';
+import { AddWindowDialog } from '../Dialogs/AddWindowDialog';
 import { SettingsDialog } from '../Dialogs/SettingsDialog';
+import { MediaSettingsDialog } from '../Dialogs/MediaSettingsDialog';
 
 export const DynamicIsland = () => {
     const nodeRef = useRef(null);
@@ -14,6 +14,7 @@ export const DynamicIsland = () => {
 
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+    const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
 
     return (
         <>
@@ -64,7 +65,7 @@ export const DynamicIsland = () => {
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => { /* TODO: Open Media Dialog */ }}
+                            onClick={() => setMediaDialogOpen(true)}
                             title="媒體控制"
                         >
                             <Tv size={20} />
@@ -95,8 +96,9 @@ export const DynamicIsland = () => {
                 </div>
             </Draggable>
 
-            <AddStreamDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+            <AddWindowDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
             <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
+            <MediaSettingsDialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen} />
         </>
     );
 };

@@ -34,6 +34,11 @@ const common = {
   'layout.select_stream': '選擇串流',
   'canvas.add_group': '新增空白組',
   'canvas.apply_layout_tooltip': '將當前視窗重新排列 (Canvas)',
+  'media.title': '媒體控制',
+  'media.description': '管理全局音量與其他媒體設定。',
+  'media.master_volume': '主音量',
+  'media.mute_all': '靜音所有',
+  'media.mute_desc': '快速靜音所有串流音訊。',
 };
 
 export default common;

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { useForm, Controller } from 'react-hook-form';
 import { X, Plus, Trash2, Edit2, Star, Folder, Play, Check, Loader2, Gamepad2, Youtube } from 'lucide-react';
 import { Button } from './ui/button';
@@ -803,31 +804,25 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   const favoriteCount = filteredFavorites.length;
 
+
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className={`max-w-4xl w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'} rounded-lg shadow-2xl max-h-[90vh] flex flex-col`}>
-        {/* Header */}
-        <div className={`flex items-center justify-between p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className={`max-w-4xl w-full max-h-[90vh] flex flex-col p-0 gap-0 ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <DialogHeader className={`p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
               <Star className="size-6 text-white" />
             </div>
             <div>
-              <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('title')}</h2>
-              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              <DialogTitle className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('title')}</DialogTitle>
+              <DialogDescription className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
                 {t('subtitle')}
-              </p>
+              </DialogDescription>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className={`h-8 w-8 ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}`}
-          >
-            <X className="size-5" />
-          </Button>
-        </div>
+        </DialogHeader>
+
 
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -1338,22 +1333,22 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
                 </div>
               </div>
             </TabsContent>
-          </Tabs >
-        </div >
-      </div >
+          </Tabs>
+        </div>
 
-      {/* Twitch Import Dialog */}
-      <TwitchImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        channels={followedChannels}
-        loading={twitchLoading}
-        hasMore={twitchHasMore}
-        onLoadMore={() => token && twitchUser && loadMoreChannels(token, twitchUser.id)}
-        onImport={handleImportChannels}
-        theme={theme}
-      />
-    </div >
+        {/* Twitch Import Dialog */}
+        <TwitchImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          channels={followedChannels}
+          loading={twitchLoading}
+          hasMore={twitchHasMore}
+          onLoadMore={() => token && twitchUser && loadMoreChannels(token, twitchUser.id)}
+          onImport={handleImportChannels}
+          theme={theme}
+        />
+      </DialogContent>
+    </Dialog >
   );
 }
 

@@ -34,6 +34,11 @@ const common = {
   'canvas.add_group': 'Add Group',
   'canvas.apply_layout_tooltip': 'Arrange Windows (Canvas)',
   'select_stream': 'Select Stream',
+  'media.title': 'Media Control',
+  'media.description': 'Manage global volume and other media settings.',
+  'media.master_volume': 'Master Volume',
+  'media.mute_all': 'Mute All',
+  'media.mute_desc': 'Quickly mute all streams audio.',
 };
 
 export default common;

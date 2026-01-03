@@ -7,6 +7,7 @@ import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/lay
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
 import { generateLayout, LayoutMode } from '../utils/layoutPresets';
+import { getSmartLayoutForStreamAndChat } from '../utils/layoutEngine';
 
 interface StreamStoreState {
     streams: StreamData[];
@@ -20,7 +21,7 @@ interface StreamStoreState {
     presets: LayoutPreset[];
 
     // Actions
-    addStream: (url: string) => Promise<{ success: boolean; message?: string }>;
+    addStream: (url: string, options?: { withChat?: boolean; withStream?: boolean }) => Promise<{ success: boolean; message?: string }>;
     removeStream: (id: number) => void;
     moveStream: (fromIndex: number, toIndex: number) => void;
     setChatLayout: (layout: ChatLayoutType) => void;
@@ -103,7 +104,7 @@ export const useStreamStore = create<StreamStoreState>()(
             magneticMode: false,
             toggleMagneticMode: () => set(state => ({ magneticMode: !state.magneticMode })),
 
-            addStream: async (url: string) => {
+            addStream: async (url: string, options = { withChat: true, withStream: true }) => {
                 const state = get();
                 if (!url || !url.trim()) return { success: false, message: '請輸入直播網址或頻道名稱' };
 
@@ -147,23 +148,25 @@ export const useStreamStore = create<StreamStoreState>()(
                 let newCanvasItems = [...state.canvasItems];
 
                 if (state.layoutMode === 'canvas') {
-                    // Add Stream Item
-                    // Note: We only add Stream item by default for simplicity in auto-reflow?
-                    // Or do we add Chat too? User pattern implies Stream+Chat.
-                    // Let's add Stream + Chat.
-                    // Standard Grid Units (24 cols total)
-                    newCanvasItems.push({
-                        i: `stream-${uniqueId}-${newStream.id}`,
-                        type: 'stream',
-                        contentId: newStream.id,
-                        layout: { x: 0, y: Infinity, w: 8, h: 5 } // Auto-place at bottom
-                    });
-                    newCanvasItems.push({
-                        i: `chat-${uniqueId}-${newStream.id}`,
-                        type: 'chat',
-                        contentId: newStream.id,
-                        layout: { x: 8, y: Infinity, w: 4, h: 5 } // Auto-place next to it if space?
-                    });
+                    // Intelligent Layout: 20x24 Stream + 4x24 Chat
+                    const smartLayout = getSmartLayoutForStreamAndChat(state.canvasItems); // default cols=24
+
+                    if (options.withStream) {
+                        newCanvasItems.push({
+                            i: `stream-${uniqueId}-${newStream.id}`,
+                            type: 'stream',
+                            contentId: newStream.id,
+                            layout: { ...smartLayout.stream }
+                        });
+                    }
+                    if (options.withChat) {
+                        newCanvasItems.push({
+                            i: `chat-${uniqueId}-${newStream.id}`,
+                            type: 'chat',
+                            contentId: newStream.id,
+                            layout: { ...smartLayout.chat }
+                        });
+                    }
 
                 } else {
                     // Legacy / Layout Mode Auto Reflow

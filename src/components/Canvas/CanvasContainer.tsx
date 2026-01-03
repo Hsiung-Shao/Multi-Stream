@@ -4,6 +4,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { CanvasItemWrapper } from './CanvasItemWrapper';
 import { GridEngine } from './GridEngine';
 import { registerStandardBlocks } from './blocks';
+import { calculateGridDimensions, getGridBackgroundStyle } from '../../utils/gridUtils';
 
 export function CanvasContainer() {
     const canvasItems = useStreamStore(s => s.canvasItems);
@@ -24,24 +25,14 @@ export function CanvasContainer() {
         setMounted(true);
 
         const handleResize = () => {
-            const cols = 24;
-            const screenW = window.innerWidth;
-            const colW = Math.floor(screenW / cols);
-            // Snap container width to exact multiple of colW to avoid subpixel drift
-            const snappedContainerW = colW * cols;
+            const { colWidth, rowHeight: rHeight, containerWidth: cWidth } = calculateGridDimensions(
+                window.innerWidth,
+                window.innerHeight
+            );
 
-            // Switch to 24x24 Grid Logic (Holodex Style)
-            // Screen is divided into 24x24 grid.
-            // Since screen is 16:9, each grid unit will be 16:9 aspect ratio.
-            // rowH = screenH / 24.
-            const screenH = window.innerHeight;
-            // Subtract topbar height? CanvasContainer often handles full height.
-            // Let's use innerHeight to be safe for now, assuming full viewport usage.
-            const rHeight = Math.floor(screenH / 24);
-
-            setContainerWidth(snappedContainerW);
+            setContainerWidth(cWidth);
             setRowHeight(rHeight);
-            setGridSize({ w: colW, h: rHeight });
+            setGridSize({ w: colWidth, h: rHeight });
         };
 
         handleResize();
@@ -52,17 +43,7 @@ export function CanvasContainer() {
     if (!mounted) return null;
 
     // Visual Grid Background
-    const bgSizeW = gridSize.w || 40;
-    const bgSizeH = Math.max(gridSize.h || 40, 10); // Safeguard
-
-    const gridStyle = {
-        width: `${containerWidth}px`, // Explicit width to match RGL
-        backgroundSize: `${bgSizeW}px ${bgSizeH}px`,
-        backgroundImage: `
-            linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)
-        `
-    };
+    const gridStyle = getGridBackgroundStyle(gridSize.w || 40, rowHeight, containerWidth);
 
     return (
         <ScrollArea className="w-full h-full bg-slate-950">
