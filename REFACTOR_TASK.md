@@ -1,7 +1,7 @@
 # Project Status: Major Refactor (Shadcn UI + 24x24 Grid)
 
 - [ ] **Phase 1: 基礎建設與頁面重構 (Infrastructure & Routing)** <!-- id: 100 -->
-  - [/] 安裝與配置 Shadcn UI 必要組件 (Dialog, Sheet, Dropdown, Slider, etc.) <!-- id: 101 -->
+  - [x] 安裝與配置 Shadcn UI 必要組件 (Dialog, Sheet, Dropdown, Slider, etc.) <!-- id: 101 -->
   - [ ] 路由重構 (Routing Refactor) <!-- id: 102 -->
     - [ ] 建立 `Home` 頁面 (保留 Navbar) <!-- id: 103 -->
     - [ ] 建立 `CanvasPage` (無 Navbar, 僅 Dynamic Island) <!-- id: 104 -->

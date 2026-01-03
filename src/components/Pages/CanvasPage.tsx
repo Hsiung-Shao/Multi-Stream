@@ -1,23 +1,21 @@
 
 
 import { DynamicIsland } from '../Navigation/DynamicIsland';
+import { CanvasContainer } from '../Canvas/CanvasContainer';
 
-/**
- * Phase 1: 基礎建設 - CanvasPage
- * 
- * TODO: 
- * - Implement 24x24 grid background
- * - Implement canvas item rendering
- */
 export const CanvasPage = () => {
     return (
-        <div className="w-full h-screen bg-gray-950 overflow-hidden relative">
-            <div className="absolute inset-0 flex items-center justify-center text-white/20 pointer-events-none select-none">
-                <h1 className="text-4xl font-bold">Infinite Canvas (Preview)</h1>
+        <div className="w-full h-screen bg-black overflow-hidden relative">
+            {/* Canvas Layer */}
+            <div className="absolute inset-0 z-0">
+                <CanvasContainer />
             </div>
 
-            {/* 動態島導航 */}
-            <DynamicIsland />
+            {/* UI Layer (Dynamic Island) */}
+            <div className="pointer-events-none absolute inset-0 z-50">
+                {/* Dynamic Island handles its own pointer events and fixed positioning */}
+                <DynamicIsland />
+            </div>
         </div>
     );
 };
