@@ -40,13 +40,13 @@ export const initGA = async () => {
 
         gaMeasurementId = fetchedId;
         ReactGA.initialize(fetchedId);
-        isInitialized = true;
-        isInitializing = false;
 
         // 初始化 IdentityManager 以取得/生成 UUID
-        // 即使 GA 初始化了，我們也需要確保 User ID 正確設定
-        // 這裡不需要 await，讓它非同步執行，以免阻擋事件佇列重播
-        identityManager.init().then(({ uuid, isNew }) => {
+        // 必須等待 Identity 初始化完成，確保 userId 被設定
+        // 這樣第一個 page_view 才會帶有正確的 uid，避免被切分為兩個使用者 (Anonymous -> Identified)
+        try {
+            const { uuid, isNew } = await identityManager.init();
+
             // 設定 User ID
             ReactGA.set({ userId: uuid });
 
@@ -56,14 +56,16 @@ export const initGA = async () => {
                     visitor_type: isNew ? 'new' : 'returning',
                 }
             });
-
-            // 處理積壓的事件
-            processQueue();
-        }).catch(err => {
+        } catch (err) {
             console.warn('IdentityManager init failed:', err);
-            // 即使 Identity 失敗， GA 還是算初始化完成，可以發送事件
-            processQueue();
-        });
+            // 即使 Identity 失敗，我們仍繼續初始化 GA，只是沒有 User ID
+        }
+
+        isInitialized = true;
+        isInitializing = false;
+
+        // 處理積壓的事件 (現在發出的事件都會帶有 User ID)
+        processQueue();
 
     } catch (e) {
         console.error('GA Init Error:', e);
