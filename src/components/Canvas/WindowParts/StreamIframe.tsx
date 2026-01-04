@@ -90,7 +90,7 @@ export function StreamIframe({
             if (containerRef.current) containerRef.current.innerHTML = '';
             isInitializingRef.current = false;
         };
-    }, [streamData.id, streamData.platform, streamData.channelId, streamData.videoId]); // Dependencies for recreation
+    }, [streamData.id, streamData.platform, streamData.channelId, streamData.videoId, (streamData as any)._reloadKey]); // Dependencies for recreation
 
     // Effect to apply Volume/Mute changes
     useEffect(() => {

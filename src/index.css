@@ -192,3 +192,21 @@ body.is-interacting {
   transform: scale(1.2);
   border-width: 4px;
 }
+
+/* React Beautiful DnD Dragging Styles */
+[data-rbd-draggable-context-id] {
+  color: inherit !important;
+}
+
+[data-rbd-drag-handle-context-id] {
+  cursor: grab !important;
+}
+
+[data-rbd-drag-handle-context-id]:active {
+  cursor: grabbing !important;
+}
+
+/* Ensure dragging item is visible */
+div[data-rbd-draggable-id] {
+  transition: background-color 0.2s ease, transform 0.2s ease !important;
+}
