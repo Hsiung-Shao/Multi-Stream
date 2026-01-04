@@ -15,7 +15,8 @@ import { Toaster } from './components/ui/sonner';
 import { HomePage } from './components/Pages/HomePage';
 const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
 const Tutorial = lazy(() => import('./components/Tutorial').then(module => ({ 'default': module.Tutorial })));
-const FavoritesManager = lazy(() => import('./components/FavoritesManager').then(module => ({ 'default': module.FavoritesManager })));
+const FavoritesManagerMain = lazy(() => import('./features/favorites/components/FavoritesManagerMain').then(module => ({ 'default': module.FavoritesManagerMain })));
+// const FavoritesManager = lazy(() => import('./components/FavoritesManager').then(module => ({ 'default': module.FavoritesManager })));
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
@@ -154,7 +155,7 @@ export default function App() {
 
       {modals.favorites && (
         <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
-          <FavoritesManager
+          <FavoritesManagerMain
             theme={theme}
             onClose={() => closeModal('favorites')}
           />
