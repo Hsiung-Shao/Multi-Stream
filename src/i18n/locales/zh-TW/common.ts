@@ -53,6 +53,7 @@ const common = {
   'common.add_combination': '新增組合',
   'common.add_stream_window': '新增串流視窗',
   'common.add_chat_window': '新增聊天室窗',
+  'common.fullscreen': '全螢幕',
 };
 
 export default common;

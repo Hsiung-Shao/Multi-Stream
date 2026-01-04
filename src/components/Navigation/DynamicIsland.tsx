@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart } from 'lucide-react';
+import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
-import { SettingsDialog } from '../Dialogs/SettingsDialog';
+// import { SettingsDialog } from '../Dialogs/SettingsDialog'; // Removed as per request
 import { MediaControlPanel } from './MediaControlPanel';
 import {
     DropdownMenu,
@@ -38,8 +38,7 @@ export const DynamicIsland = () => {
     const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
     const addCanvasItem = useStreamStore(s => s.addCanvasItem);
 
-    // const [addDialogOpen, setAddDialogOpen] = useState(false);
-    const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+    // const [settingsDialogOpen, setSettingsDialogOpen] = useState(false); // Removed
     const [mediaControlExpanded, setMediaControlExpanded] = useState(false);
 
     // Dynamic Island Hook
@@ -54,10 +53,8 @@ export const DynamicIsland = () => {
         let successCount = 0;
 
         try {
-            // Uncategorized by default
             const targetCategoryId: string | null = null;
 
-            // Add all streams
             for (const stream of streams) {
                 let url = '';
                 if (stream.platform === 'twitch') {
@@ -105,21 +102,14 @@ export const DynamicIsland = () => {
                 )}>
                     <div className="flex items-center gap-1">
 
-                        {/* Search Module */}
+                        {/* Group 1: Search Module */}
                         <IslandSearch />
 
                         <div className="w-[1px] h-6 bg-white/20 mx-1" />
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => setPage('home')}
-                            title={t('common.home') || "返回首頁"}
-                        >
-                            <Home size={20} />
-                        </Button>
+                        {/* Group 2: Controls */}
 
+                        {/* 1. Add Window */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
@@ -144,6 +134,7 @@ export const DynamicIsland = () => {
                             </DropdownMenuContent>
                         </DropdownMenu>
 
+                        {/* 2. Layout Settings */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -154,6 +145,7 @@ export const DynamicIsland = () => {
                             <Layout size={20} />
                         </Button>
 
+                        {/* 3. Media Controls */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -164,17 +156,18 @@ export const DynamicIsland = () => {
                             <Tv size={20} />
                         </Button>
 
+                        {/* 4. Favorites List (No-op placeholder) */}
                         <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => openModal('favorites')}
+                            onClick={() => { /* No-op */ }}
                             title={t('common.favorites') || "收藏清單"}
                         >
                             <Star size={20} />
                         </Button>
 
-                        {/* Save Canvas (One-click Favorite) */}
+                        {/* 5. One-click Favorite (Quick Save) */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -185,7 +178,18 @@ export const DynamicIsland = () => {
                             <FolderHeart size={20} />
                         </Button>
 
-                        {/* Clear Screen with AlertDialog */}
+                        {/* 6. Fullscreen (No-op placeholder) */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full hover:bg-white/10 text-white"
+                            onClick={() => { /* No-op */ }}
+                            title={t('common.fullscreen') || "全螢幕"}
+                        >
+                            <Maximize size={20} />
+                        </Button>
+
+                        {/* 7. Clear Canvas */}
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button
@@ -218,12 +222,26 @@ export const DynamicIsland = () => {
 
                         <div className="w-[1px] h-6 bg-white/20 mx-1" />
 
+                        {/* Group 3: Navigation */}
+
+                        {/* Home */}
                         <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => setSettingsDialogOpen(true)}
-                            title={t('common.settings') || "全域設定"}
+                            onClick={() => setPage('home')}
+                            title={t('common.home') || "返回首頁"}
+                        >
+                            <Home size={20} />
+                        </Button>
+
+                        {/* Settings request: Opens Favorites Manager now */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full hover:bg-white/10 text-white"
+                            onClick={() => openModal('favorites')}
+                            title={t('common.settings') || "設定"}
                         >
                             <Settings size={20} />
                         </Button>
@@ -231,7 +249,7 @@ export const DynamicIsland = () => {
                 </div>
             </div>
 
-            <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
+            {/* <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} /> */}
         </>
     );
 };

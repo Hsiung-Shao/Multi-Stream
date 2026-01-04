@@ -1,4 +1,4 @@
-import { ComponentType } from 'react';
+import { ComponentType, memo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { CanvasItem } from '../../../types/canvas';
 
@@ -10,7 +10,13 @@ interface WindowContentProps {
     resizingDimensions?: { w: number, h: number };
 }
 
-export function WindowContent({ item, BlockComponent, onUpdate, onRemove, resizingDimensions }: WindowContentProps) {
+export const WindowContent = memo(function WindowContent({
+    item,
+    BlockComponent,
+    onUpdate,
+    onRemove,
+    resizingDimensions
+}: WindowContentProps) {
     if (!BlockComponent) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center text-destructive">
@@ -30,4 +36,16 @@ export function WindowContent({ item, BlockComponent, onUpdate, onRemove, resizi
             />
         </div>
     );
-}
+}, (prevProps, nextProps) => {
+    // Custom comparison for performance
+    return (
+        prevProps.item.i === nextProps.item.i &&
+        prevProps.item.contentId === nextProps.item.contentId &&
+        prevProps.item.type === nextProps.item.type &&
+        prevProps.BlockComponent === nextProps.BlockComponent &&
+        prevProps.onUpdate === nextProps.onUpdate &&
+        prevProps.onRemove === nextProps.onRemove &&
+        prevProps.resizingDimensions?.w === nextProps.resizingDimensions?.w &&
+        prevProps.resizingDimensions?.h === nextProps.resizingDimensions?.h
+    );
+});

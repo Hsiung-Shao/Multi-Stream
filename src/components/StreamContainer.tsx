@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StreamBox } from './StreamBox';
 import { ChatSidebar } from './ChatSidebar';
-import { CanvasContainer } from './Canvas/CanvasContainer';
-import { calculateLayoutStyles, calculateLayout5MinHeightPercent } from '../utils/layoutUtils';
+import { calculateLayoutStyles } from '../utils/layoutUtils';
 import { getChatLayoutConfig } from '../utils/chatLayoutUtils';
 import { useStreamStore } from '../store/useStreamStore';
 import { useUIStore } from '../store/useUIStore';
@@ -18,7 +17,6 @@ export function StreamContainer({
 }: StreamContainerProps) {
   const streams = useStreamStore(s => s.streams);
   const layoutType = useStreamStore(s => s.layout);
-  const layoutMode = useStreamStore(s => s.layoutMode);
   const chatLayoutType = useStreamStore(s => s.chatLayout);
 
 
@@ -68,22 +66,6 @@ export function StreamContainer({
   // 計算容器高度
   const calculateContainerHeight = (): string => {
     const baseHeight = `calc(100vh - ${navbarHeight}px)`;
-    // Layout 5 logic
-    // layoutNum is defined in component scope now
-    // (Simply using the logic from original file)
-    let isLayout5 = false;
-    // Wait, original file checked `layoutType === 5`. 
-    // `layoutType` in store is string ('grid-2', etc).
-    // Original code seemed to use number for layoutType? 
-    // Let's check `calculateLayoutStyles` signature.
-    // It takes `layoutType`. In `useStreamStore`, layout is string.
-    // We need to ensure consistency. 
-    // The `calculateLayoutStyles` probably handles string? 
-    // Let's assume yes or convert. 
-    // Actually looking at `StreamContainer.tsx` original: `layoutType: LayoutType`. `LayoutType` is usually number or string union.
-    // If it's string, the check `layoutType === 5` would be false.
-    // Let's just trust `baseHeight` for now unless we see issues with specific layout.
-
     return baseHeight;
   };
 
@@ -120,33 +102,30 @@ export function StreamContainer({
           zIndex: 1
         }}
       >
-        {layoutMode === 'canvas' ? (
-          <CanvasContainer />
-        ) : (
-          streams.map((stream, index) => {
-            const layoutStyle = calculateLayoutStyles(layoutType, index, streams.length);
-            const boxKey = `${stream.id}-${stream._reloadKey || 0}`;
+        {/* Canvas mode is now handled by separate route /canvas -> NewCanvasPage */}
+        {streams.map((stream, index) => {
+          const layoutStyle = calculateLayoutStyles(layoutType, index, streams.length);
+          const boxKey = `${stream.id}-${stream._reloadKey || 0}`;
 
-            return (
-              <StreamBox
-                key={boxKey}
-                streamData={stream}
-                theme={theme}
-                layoutStyle={layoutStyle}
-                onRemove={handleRemove}
-                onReload={handleReload}
-                onToggleChat={handleToggleChat}
-                onSeparateChat={handleSeparateChat}
-                onVolumeChange={handleVolumeChange}
-                streamIndex={index}
-                chatLayoutType={chatLayoutType}
-                masterVolume={masterVolume}
-                isMasterMuted={isMasterMuted}
-                mode="normal"
-              />
-            );
-          })
-        )}
+          return (
+            <StreamBox
+              key={boxKey}
+              streamData={stream}
+              theme={theme}
+              layoutStyle={layoutStyle}
+              onRemove={handleRemove}
+              onReload={handleReload}
+              onToggleChat={handleToggleChat}
+              onSeparateChat={handleSeparateChat}
+              onVolumeChange={handleVolumeChange}
+              streamIndex={index}
+              chatLayoutType={chatLayoutType}
+              masterVolume={masterVolume}
+              isMasterMuted={isMasterMuted}
+              mode="normal"
+            />
+          );
+        })}
       </div>
 
       {chatLayoutType !== 'none' && streams.length > 0 && (

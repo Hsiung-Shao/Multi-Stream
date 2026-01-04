@@ -18,6 +18,7 @@ interface UIState {
     modals: ModalState;
     masterVolume: number;
     masterMuted: boolean;
+    showPerformanceOverlay: boolean;
     // Actions
     setTheme: (theme: 'light' | 'dark') => void;
     toggleTheme: () => void;
@@ -30,6 +31,7 @@ interface UIState {
     setMasterMuted: (muted: boolean | ((prev: boolean) => boolean)) => void;
     setPage: (page: PageType) => void;
     setSearchFocused: (focused: boolean) => void;
+    togglePerformanceOverlay: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -46,6 +48,7 @@ export const useUIStore = create<UIState>((set) => ({
     },
     masterVolume: 100,
     masterMuted: false,
+    showPerformanceOverlay: false,
 
     setTheme: (theme) => {
         set({ theme });
@@ -102,6 +105,7 @@ export const useUIStore = create<UIState>((set) => ({
     }),
     setPage: (page) => set({ page }),
     setSearchFocused: (focused) => set({ isSearchFocused: focused }),
+    togglePerformanceOverlay: () => set((state) => ({ showPerformanceOverlay: !state.showPerformanceOverlay })),
 }));
 
 // Initialize state from localStorage

@@ -179,6 +179,8 @@ export function StreamBox({
     const shouldShowChat = mode === 'normal' && streamData.chatVisible && chatLayoutType === 'none';
     if (!shouldShowChat) return;
 
+    let resizeTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const handleResize = () => {
       const playerContainer = playerContainerRef.current;
       const chatContainer = chatContainerRef.current;
@@ -203,13 +205,24 @@ export function StreamBox({
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    handleResize();
+    // Debounced handler to reduce reflow during resize
+    const debouncedResize = () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = setTimeout(handleResize, 150);
+    };
+
+    window.addEventListener('resize', debouncedResize);
+    handleResize(); // Initial call without debounce
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', debouncedResize);
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
     };
-  }, [streamData.chatVisible, streamData.platform, streamData.id, chatLayoutType]);
+  }, [streamData.chatVisible, streamData.platform, streamData.id, chatLayoutType, mode]);
 
   // 初始化播放器
 

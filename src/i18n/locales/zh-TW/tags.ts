@@ -12,6 +12,7 @@ const tags = {
   'tagList': '標籤列表',
   'isLive': '直播中',
   'noTagsSelected': '未選擇標籤',
+  'editTagMode': '正在編輯標籤 (修改上方表格並點擊更新)',
 };
 
 export default tags;

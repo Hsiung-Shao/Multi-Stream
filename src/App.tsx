@@ -10,6 +10,7 @@ import { initGA, logPageView } from './utils/analytics';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { Toaster } from './components/ui/sonner';
+import { PerformanceOverlay } from './components/Navigation/PerformanceOverlay';
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
@@ -20,7 +21,7 @@ const FavoritesManagerMain = lazy(() => import('./features/favorites/components/
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
-const CanvasPage = lazy(() => import('./components/Pages/CanvasPage').then(module => ({ 'default': module.CanvasPage })));
+const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
 const FixedPage = lazy(() => import('./components/Pages/FixedPage').then(module => ({ 'default': module.FixedPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 
@@ -179,6 +180,7 @@ export default function App() {
         onDontRemind={handleRiskDontRemind}
       />
 
+      <PerformanceOverlay />
       <Toaster />
     </>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Dialog, DialogContent } from '../../../components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { FavoritesSidebar } from './FavoritesSidebar';
 import { FavoritesToolbar } from './FavoritesToolbar';
@@ -21,7 +21,10 @@ import { useTwitchAuth } from '../../../hooks/useTwitchAuth';
 import { useTwitchUser, FollowedChannel } from '../../../hooks/useTwitchUser';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Edit2, Trash2, Star, Plus } from 'lucide-react';
+import { Edit2, Trash2, Star, Plus, Folder, RotateCw } from 'lucide-react';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../../../components/ui/alert-dialog';
+import { youtubeApi } from '../../../utils/youtubeApi';
+import { twitchService } from '../../twitch/TwitchService';
 
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../types';
 
@@ -39,6 +42,11 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+    const [deleteCategoryConfirmOpen, setDeleteCategoryConfirmOpen] = useState(false);
+    const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+
+    const [checkingLiveStatus, setCheckingLiveStatus] = useState(false);
+
     const [favorites, setFavorites] = useState<FavoriteStream[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [tags, setTags] = useState<Tag[]>([]);
@@ -49,6 +57,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     // --- Tag Editing State ---
     const [newTagName, setNewTagName] = useState('');
     const [newTagColor, setNewTagColor] = useState('#3b82f6');
+    const [editingTagId, setEditingTagId] = useState<string | null>(null);
+    const [deleteTagConfirmOpen, setDeleteTagConfirmOpen] = useState(false);
+    const [tagToDelete, setTagToDelete] = useState<string | null>(null);
 
     // --- Category Editing State ---
     const [newCategoryName, setNewCategoryName] = useState('');
@@ -194,29 +205,188 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     };
 
     const handleDeleteCategory = (id: string) => {
-        if (confirm(t('confirmDelete') || '確定要刪除嗎？')) {
-            favoritesService.removeCategory(id);
+        setCategoryToDelete(id);
+        setDeleteCategoryConfirmOpen(true);
+    };
+
+    const confirmDeleteCategory = () => {
+        if (categoryToDelete) {
+            favoritesService.removeCategory(categoryToDelete);
             loadData();
-            if (activeFilter === id) setActiveFilter('all');
+            if (activeFilter === categoryToDelete) setActiveFilter('all');
             toast.info('分類已刪除');
         }
+        setDeleteCategoryConfirmOpen(false);
+        setCategoryToDelete(null);
+    };
+
+
+
+    const handleCheckLiveStatus = async () => {
+        setCheckingLiveStatus(true);
+
+        // Define independent check functions
+        const checkTwitch = async () => {
+            try {
+                const twitchFavs = favorites.filter(f => f.platform === 'twitch' || f.url.includes('twitch.tv'));
+                if (twitchFavs.length === 0) return { success: true };
+
+                const logins = twitchFavs.map(f => {
+                    if (f.channelId) return f.channelId;
+                    const match = f.url.match(/twitch\.tv\/([^\/\?]+)/);
+                    return match ? match[1] : null;
+                }).filter(Boolean) as string[];
+
+                if (logins.length === 0) return { success: true };
+
+                // Use the existing service which handles Auth (User Token or App Token) automatically
+                const liveStatuses = await twitchService.checkMultipleChannelsLiveStatus(logins);
+
+                let updatedCount = 0;
+                twitchFavs.forEach(fav => {
+                    const login = fav.channelId || fav.url.match(/twitch\.tv\/([^\/\?]+)/)?.[1];
+                    if (login && liveStatuses[login.toLowerCase()]) {
+                        const status = liveStatuses[login.toLowerCase()];
+                        if (fav.isLive !== status.isLive) {
+                            favoritesService.updateFavorite(fav.id, {
+                                isLive: status.isLive || false,
+                                lastChecked: new Date().toISOString()
+                            });
+                            updatedCount++;
+                        }
+                    } else if (login && !liveStatuses[login.toLowerCase()] && fav.isLive) {
+                        // If channel was live but now not in the live results, mark as offline
+                        // Note: checkMultipleChannelsLiveStatus returns a map of LIVE status results. 
+                        // If it's not in the map, it might be offline or just not returned.
+                        // However, the service implementation returns an object with isLive=true for found streams.
+                        // Let's check logic: channelLogins.forEach init as offline. Then batch process updates to online.
+                        // So the result map SHOULD contain all requested logins.
+                        if (fav.isLive) {
+                            favoritesService.updateFavorite(fav.id, {
+                                isLive: false,
+                                lastChecked: new Date().toISOString()
+                            });
+                            updatedCount++;
+                        }
+                    }
+                });
+
+                // Wait, accessing private property 'twitchService' on favoritesService is not ideal if it's private.
+                // But looking at FavoritesService.ts, it imports `twitchService` and uses it.
+                // Actually, `twitchService` is exported directly from `../TwitchService`.
+                // I should import `twitchService` directly in this file as it is already imported line 13 likely?
+                // Let's check imports. Yes line 12: `import { favoritesService } from '../FavoritesService';`
+                // I need to make sure `twitchService` is imported.
+                // Let's use the imported `twitchService` directly.
+            } catch (e) {
+                console.error('Twitch check failed', e);
+                return { success: false, message: 'Twitch: 檢查失敗' };
+            }
+        };
+
+        const checkYouTube = async () => {
+            try {
+                const youtubeFavs = favorites.filter(f => f.platform === 'youtube' && f.channelId);
+                if (youtubeFavs.length === 0) return { success: true };
+
+                let updatedCount = 0;
+                let isFirst = true;
+
+                for (const fav of youtubeFavs) {
+                    // Optimization: Skip if live and checked recently (1h)
+                    if (fav.isLive && fav.lastChecked) {
+                        const lastCheckedTime = new Date(fav.lastChecked).getTime();
+                        if (Date.now() - lastCheckedTime < 60 * 60 * 1000) continue;
+                    }
+
+                    if (!isFirst) await new Promise(r => setTimeout(r, 2000));
+                    isFirst = false;
+
+                    try {
+                        const status = await youtubeApi.checkChannelLiveStatus(fav.channelId!);
+                        if (status.isLive !== fav.isLive) {
+                            favoritesService.updateFavorite(fav.id, {
+                                isLive: status.isLive,
+                                lastChecked: new Date().toISOString()
+                            });
+                            updatedCount++;
+                        }
+                    } catch (e) {
+                        console.error(`YouTube check failed for ${fav.name}`, e);
+                    }
+                }
+
+                if (updatedCount > 0) {
+                    loadData();
+                    return { success: true, message: `YouTube: 更新 ${updatedCount} 個頻道` };
+                }
+                return { success: true };
+            } catch (e) {
+                console.error('YouTube check failed', e);
+                return { success: false, message: 'YouTube: 檢查失敗' };
+            }
+        };
+
+        // Run in parallel
+        Promise.all([checkTwitch(), checkYouTube()]).then(results => {
+            const messages = results.map(r => r?.message).filter(Boolean);
+            if (messages.length > 0) {
+                toast.success(messages.join('\n'));
+            } else {
+                toast.info('所有頻道狀態皆為最新');
+            }
+            setCheckingLiveStatus(false);
+        });
     };
 
     // --- Tag Handlers ---
     const handleAddTag = () => {
         if (!newTagName.trim()) return;
-        tagsService.addTag(newTagName.trim(), newTagColor);
+
+        if (editingTagId) {
+            tagsService.updateTag(editingTagId, {
+                name: newTagName.trim(),
+                color: newTagColor
+            });
+            toast.success('標籤已更新');
+            setEditingTagId(null);
+        } else {
+            tagsService.addTag(newTagName.trim(), newTagColor);
+            toast.success('標籤已新增');
+        }
+
         setNewTagName('');
+        setNewTagColor('#3b82f6');
         loadData();
-        toast.success('標籤已新增');
+    };
+
+    const handleEditTag = (tag: Tag) => {
+        setEditingTagId(tag.id);
+        setNewTagName(tag.name);
+        setNewTagColor(tag.color);
+        toast.info(t('tags:editTagMode') || '正在編輯標籤');
+    };
+
+    const handleCancelEditTag = () => {
+        setEditingTagId(null);
+        setNewTagName('');
+        setNewTagColor('#3b82f6');
     };
 
     const handleDeleteTag = (tagId: string) => {
-        if (confirm(t('confirmDelete') || '確定要刪除嗎？')) {
-            tagsService.removeTag(tagId);
+        setTagToDelete(tagId);
+        setDeleteTagConfirmOpen(true);
+    };
+
+    const confirmDeleteTag = () => {
+        if (tagToDelete) {
+            tagsService.removeTag(tagToDelete);
             loadData();
+            if (activeFilter === `tag:${tagToDelete}`) setActiveFilter('all');
             toast.info('標籤已刪除');
         }
+        setDeleteTagConfirmOpen(false);
+        setTagToDelete(null);
     };
 
     // --- Twitch Handlers ---
@@ -236,6 +406,8 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
         <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className={`sm:max-w-5xl w-full h-[80vh] flex flex-col p-0 gap-0 overflow-hidden ${theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-white'
                 }`}>
+                <DialogTitle className="sr-only">Favorites Manager</DialogTitle>
+                <DialogDescription className="sr-only">Manage your favorite streams, tags, and settings</DialogDescription>
                 <div className="flex flex-1 min-h-0">
                     {/* Sidebar */}
                     <FavoritesSidebar
@@ -268,6 +440,21 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                         setIsAddDialogOpen(true);
                                     }}
                                 />
+
+                                {activeFilter === 'live' && (
+                                    <div className="mx-8 mt-4 flex justify-end">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleCheckLiveStatus}
+                                            disabled={checkingLiveStatus}
+                                            className="gap-2"
+                                        >
+                                            <RotateCw className={`size-4 ${checkingLiveStatus ? 'animate-spin' : ''}`} />
+                                            {checkingLiveStatus ? '檢查中...' : '重新整理直播狀態'}
+                                        </Button>
+                                    </div>
+                                )}
 
                                 <div className="flex-1 min-h-0 mt-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden">
                                     <ScrollArea className="h-full">
@@ -379,14 +566,17 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                                         </div>
                                                         <span className="font-medium text-sm">{cat.name}</span>
                                                     </div>
-                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex gap-1">
                                                         <Button
                                                             size="icon"
                                                             variant="ghost"
-                                                            className="size-8 text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                                                            onClick={() => handleDeleteCategory(cat.id)}
+                                                            className="size-8 text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                                            onClick={(e: React.MouseEvent) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteCategory(cat.id);
+                                                            }}
                                                         >
-                                                            <Trash2 className="size-3.5" />
+                                                            <Trash2 className="size-4" />
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -405,7 +595,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                         {activeTab === 'tags' && (
                             <div className="flex-1 flex flex-col gap-6 overflow-hidden">
                                 <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                                    <h3 className="text-lg font-bold mb-4 font-normal">{t('tags:addTag')}</h3>
+                                    <h3 className="text-lg font-bold mb-4 font-normal">
+                                        {editingTagId ? (t('tags:editTagMode') || '編輯標籤') : (t('tags:addTag') || '新增標籤')}
+                                    </h3>
                                     <div className="flex gap-4 items-end">
                                         <div className="flex-1 space-y-2">
                                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tags:tagName')}</label>
@@ -430,9 +622,14 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                             </div>
                                         </div>
                                         <Button onClick={handleAddTag} className="bg-purple-600 hover:bg-purple-700 text-white h-10 rounded-lg px-6">
-                                            <Plus className="size-4 mr-2" />
-                                            {t('create') || '新增'}
+                                            <Plus className={`size-4 mr-2 ${editingTagId ? 'hidden' : ''}`} />
+                                            {editingTagId ? (t('common:common.save') || '儲存') : (t('create') || '新增')}
                                         </Button>
+                                        {editingTagId && (
+                                            <Button onClick={handleCancelEditTag} variant="outline" className="h-10 rounded-lg px-6">
+                                                {t('common:common.cancel') || '取消'}
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -447,7 +644,12 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                                         <span className="font-medium text-sm">{tag.name}</span>
                                                     </div>
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Button size="icon" variant="ghost" className="size-8">
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="size-8"
+                                                            onClick={() => handleEditTag(tag)}
+                                                        >
                                                             <Edit2 className="size-3.5" />
                                                         </Button>
                                                         <Button
@@ -486,6 +688,40 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                     initialData={editingFavorite}
                     theme={theme}
                 />
+
+                <AlertDialog open={deleteCategoryConfirmOpen} onOpenChange={setDeleteCategoryConfirmOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>{t('confirmDelete') || '確定要刪除嗎？'}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                {t('confirmDeleteCategoryDesc') || '刪除分類後，該分類下的收藏將會變為未分類。'}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>{t('common:common.cancel') || '取消'}</AlertDialogCancel>
+                            <AlertDialogAction onClick={confirmDeleteCategory} className="bg-red-500 hover:bg-red-600">
+                                {t('common:common.delete') || '刪除'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog open={deleteTagConfirmOpen} onOpenChange={setDeleteTagConfirmOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>{t('confirmDelete') || '確定要刪除嗎？'}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                {t('confirmDeleteTagDesc') || '刪除標籤後，該標籤將從所有收藏中移除。'}
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>{t('common:common.cancel') || '取消'}</AlertDialogCancel>
+                            <AlertDialogAction onClick={confirmDeleteTag} className="bg-red-500 hover:bg-red-600">
+                                {t('common:common.delete') || '刪除'}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </DialogContent>
         </Dialog>
     );
