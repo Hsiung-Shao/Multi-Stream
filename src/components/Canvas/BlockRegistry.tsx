@@ -10,6 +10,8 @@ export interface BlockComponentProps {
     onRemove: () => void;
     // Is the block currently being dragged or resized?
     isInteracting?: boolean;
+    // Current resize dimensions (live)
+    resizingDimensions?: { w: number; h: number };
 }
 
 export interface BlockDefinition {

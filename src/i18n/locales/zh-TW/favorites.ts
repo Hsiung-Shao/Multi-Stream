@@ -70,6 +70,10 @@ const favorites = {
   'addTags': '加入標籤',
   'batchSetCategoryConfirm': '將 {{count}} 個項目移動到以下分類：',
   'batchAddTagsConfirm': '為 {{count}} 個項目加入以下標籤（附加模式）：',
+  'save_entire_canvas': '一鍵收藏當前畫布',
+  'canvas_save_default': 'Canvas',
+  'no_streams_to_save': '沒有可收藏的串流',
+  'batch_save_success_simple': '已收藏 {{count}} 個串流',
 };
 
 export default favorites;

@@ -39,6 +39,20 @@ const common = {
   'media.master_volume': '主音量',
   'media.mute_all': '靜音所有',
   'media.mute_desc': '快速靜音所有串流音訊。',
+  'common.home': '返回首頁',
+  'common.add_window': '新增視窗',
+  'common.layout': '佈局設定',
+  'common.media': '媒體控制',
+  'common.favorites': '收藏清單',
+  'common.settings': '全域設定',
+  'common.search_placeholder': '搜尋...',
+  'common.clear_screen': '清空畫面',
+  'common.confirm_clear': '確定要清空所有視窗嗎？',
+  'common.confirm_clear_title': '確定要清空所有視窗嗎？',
+  'common.confirm_clear_desc': '此動作將會移除畫布上所有的直播視窗與聊天室。',
+  'common.add_combination': '新增組合',
+  'common.add_stream_window': '新增串流視窗',
+  'common.add_chat_window': '新增聊天室窗',
 };
 
 export default common;

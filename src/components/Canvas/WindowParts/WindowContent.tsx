@@ -7,9 +7,10 @@ interface WindowContentProps {
     BlockComponent?: ComponentType<any>;
     onUpdate: (updates: Partial<CanvasItem>) => void;
     onRemove: () => void;
+    resizingDimensions?: { w: number, h: number };
 }
 
-export function WindowContent({ item, BlockComponent, onUpdate, onRemove }: WindowContentProps) {
+export function WindowContent({ item, BlockComponent, onUpdate, onRemove, resizingDimensions }: WindowContentProps) {
     if (!BlockComponent) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center text-destructive">
@@ -25,6 +26,7 @@ export function WindowContent({ item, BlockComponent, onUpdate, onRemove }: Wind
                 item={item}
                 onUpdate={onUpdate}
                 onRemove={onRemove}
+                resizingDimensions={resizingDimensions}
             />
         </div>
     );

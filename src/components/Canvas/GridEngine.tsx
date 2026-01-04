@@ -13,6 +13,9 @@ interface GridEngineProps {
     items: any[];
     children: React.ReactNode;
     onLayoutChange: (layout: Layout[]) => void;
+    // Callback for resize - using any to avoid strict RGL type conflicts
+    onResize?: (layout: any, oldItem: any, newItem: any, placeholder: any, e: any, element: any) => void;
+    onResizeStop?: (layout: any, oldItem: any, newItem: any, placeholder: any, e: any, element: any) => void;
 
     // Config
     cols?: number;
@@ -31,7 +34,9 @@ export function GridEngine({
     rowHeight = 30,
     width,
     isDraggable = true,
-    isResizable = true
+    isResizable = true,
+    onResize,
+    onResizeStop
 }: GridEngineProps) {
 
     // Construct the layouts object RGL expects
@@ -44,7 +49,7 @@ export function GridEngine({
             h: item.layout.h,
             minW: 2,
             minH: 2
-        })) as Layout[];
+        })) as any as Layout[]; // Double cast to bypass strict checks
         return { lg: layout, md: layout, sm: layout, xs: layout, xxs: layout };
     }, [items]);
 
@@ -62,6 +67,7 @@ export function GridEngine({
                 isDraggable={isDraggable}
                 isResizable={isResizable}
                 draggableHandle=".grid-item-drag-handle"
+                draggableCancel=".nodrag"
 
                 // Behavior
                 compactType="vertical" // Enforce gravity/snapping upwards
@@ -76,6 +82,8 @@ export function GridEngine({
                 // Visuals
                 margin={[0, 0]} // Zero margin to match visual grid
                 containerPadding={[0, 0]}
+                onResize={onResize}
+                onResizeStop={onResizeStop}
                 resizeHandles={['se']} // Standard corner resize
             >
                 {children}

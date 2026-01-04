@@ -24,6 +24,16 @@ const common = {
   'japanese': '日本語',
   'common.korean': '한국어',
   'common.updated': '업데이트됨',
+  'media.mute_desc': '모든 스트림 오디오를 빠르게 음소거합니다.',
+  'common.home': '홈',
+  'common.add_window': '창 추가',
+  'common.layout': '레이아웃',
+  'common.media': '미디어 제어',
+  'common.favorites': '즐겨찾기',
+  'common.settings': '설정',
+  'common.search_placeholder': '검색...',
+  'common.clear_screen': '화면 지우기',
+  'common.confirm_clear': '모든 창을 지우시겠습니까?',
   'layout.empty_stream_slot': '빈 스트림 슬롯',
   'layout.empty_chat_slot': '빈 채팅 슬롯',
   'layout.waiting_stream': '스트림 대기 중...',
@@ -34,6 +44,9 @@ const common = {
   'layout.select_stream': '스트림 선택',
   'canvas.add_group': '그룹 추가',
   'canvas.apply_layout_tooltip': '현재 창 재정렬 (Canvas)',
+  'common.add_combination': '조합 추가',
+  'common.add_stream_window': '스트림 창 추가',
+  'common.add_chat_window': '채팅 창 추가',
 };
 
 export default common;

@@ -808,7 +808,7 @@ export function FavoritesManager({ theme, onClose }: FavoritesManagerProps) {
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={`max-w-4xl w-full max-h-[90vh] flex flex-col p-0 gap-0 ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <DialogContent className={`sm:max-w-4xl w-full max-h-[90vh] flex flex-col p-0 gap-0 ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
         <DialogHeader className={`p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">

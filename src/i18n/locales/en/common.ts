@@ -39,6 +39,18 @@ const common = {
   'media.master_volume': 'Master Volume',
   'media.mute_all': 'Mute All',
   'media.mute_desc': 'Quickly mute all streams audio.',
+  'common.home': 'Home',
+  'common.add_window': 'Add Window',
+  'common.layout': 'Layout',
+  'common.media': 'Media Control',
+  'common.favorites': 'Favorites',
+  'common.settings': 'Settings',
+  'common.search_placeholder': 'Search...',
+  'common.clear_screen': 'Clear Screen',
+  'common.confirm_clear': 'Confirm clear all windows?',
+  'common.add_combination': 'Add Combination',
+  'common.add_stream_window': 'Add Stream Window',
+  'common.add_chat_window': 'Add Chat Window',
 };
 
 export default common;

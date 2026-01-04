@@ -20,6 +20,9 @@ export function CanvasContainer() {
     const [rowHeight, setRowHeight] = useState(30);
     const [containerWidth, setContainerWidth] = useState(1200);
 
+    // Track resizing item: { i: string, w: number, h: number }
+    const [resizingItem, setResizingItem] = useState<{ i: string, w: number, h: number } | null>(null);
+
     useEffect(() => {
         registerStandardBlocks();
         setMounted(true);
@@ -40,6 +43,15 @@ export function CanvasContainer() {
         return () => window.removeEventListener('resize', handleResize);
     }, [setGridSize]);
 
+    // RGL Resize Callback
+    const handleItemResize = (layout: any, oldItem: any, newItem: any) => {
+        setResizingItem({ i: newItem.i, w: newItem.w, h: newItem.h });
+    };
+
+    const handleItemResizeStop = () => {
+        setResizingItem(null);
+    };
+
     if (!mounted) return null;
 
     // Visual Grid Background
@@ -58,12 +70,23 @@ export function CanvasContainer() {
                         updateCanvasLayout(layout);
                     }}
                     rowHeight={rowHeight}
+                    onResize={handleItemResize}
+                    onResizeStop={handleItemResizeStop}
                 >
-                    {canvasItems.map(item => (
-                        <div key={item.i}>
-                            <CanvasItemWrapper item={item} />
-                        </div>
-                    ))}
+                    {canvasItems.map(item => {
+                        // Check if this item is being resized
+                        const isResizing = resizingItem && resizingItem.i === item.i;
+                        const dims = isResizing ? { w: resizingItem.w, h: resizingItem.h } : undefined;
+
+                        return (
+                            <div key={item.i}>
+                                <CanvasItemWrapper
+                                    item={item}
+                                    resizingDimensions={dims}
+                                />
+                            </div>
+                        );
+                    })}
                 </GridEngine>
 
                 {/* Empty State */}

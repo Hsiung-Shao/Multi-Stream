@@ -8,7 +8,7 @@ import { useUIStore } from '../../../store/useUIStore';
 import { Button } from '../../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
-export function StreamBlock({ item, onUpdate, onRemove }: BlockComponentProps) {
+export function StreamBlock({ item, onUpdate, onRemove, resizingDimensions }: BlockComponentProps) {
     const { t } = useTranslation('common');
     const streams = useStreamStore(s => s.streams);
     const updateCanvasItem = useStreamStore(s => s.updateCanvasItem);
@@ -112,6 +112,8 @@ export function StreamBlock({ item, onUpdate, onRemove }: BlockComponentProps) {
             onSeparateChat={() => { }}
             onVolumeChange={handleVolumeChange} // Connected to store update
             streamIndex={-1}
+            currentDimensions={{ w: item.layout.w, h: item.layout.h }}
+            resizingDimensions={resizingDimensions}
         />
     );
 }

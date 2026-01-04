@@ -112,7 +112,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 let finalUrl = trimmedUrl;
 
                 // 1. Validate & Parse
-                if (!validateUrl(finalUrl)) {
+                if (!validateUrl(finalUrl).valid) {
                     if (!finalUrl.includes('.') && !finalUrl.includes('/')) {
                         finalUrl = `https://twitch.tv/${finalUrl}`;
                     } else {
@@ -227,7 +227,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 return { canvasItems: newCanvasItems };
             }),
 
-            clearCanvasItems: () => set({ canvasItems: [] }),
+            clearCanvasItems: () => set({ canvasItems: [], streams: [] }),
 
             applyStandardLayoutToCanvas: (type) => set(state => {
                 // If user invokes this, maybe we should respect it?

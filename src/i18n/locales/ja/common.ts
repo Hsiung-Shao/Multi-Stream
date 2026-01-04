@@ -34,6 +34,9 @@ const common = {
   'layout.select_stream': 'ストリームを選択',
   'canvas.add_group': 'グループを追加',
   'canvas.apply_layout_tooltip': '現在のウィンドウを再配置 (Canvas)',
+  'common.add_combination': '組み合わせを追加',
+  'common.add_stream_window': 'ストリームウィンドウを追加',
+  'common.add_chat_window': 'チャットウィンドウを追加',
 };
 
 export default common;

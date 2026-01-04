@@ -1,102 +1,241 @@
 import { useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import { Home, Plus, Layout, Settings, Star, Tv } from 'lucide-react';
+import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useUIStore } from '../../store/useUIStore';
-import { AddWindowDialog } from '../Dialogs/AddWindowDialog';
+import { useStreamStore } from '../../store/useStreamStore';
 import { SettingsDialog } from '../Dialogs/SettingsDialog';
 import { MediaSettingsDialog } from '../Dialogs/MediaSettingsDialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu';
+import { useDynamicIsland } from '../../hooks/useDynamicIsland';
+import { IslandSearch } from './IslandSearch';
+import { cn } from '../ui/utils';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { favoritesService } from '../../features/favorites/FavoritesService';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '../../components/ui/alert-dialog';
 
 export const DynamicIsland = () => {
+    const { t } = useTranslation(['common', 'favorites']);
     const nodeRef = useRef(null);
     const setPage = useUIStore(s => s.setPage);
     const openModal = useUIStore(s => s.openModal);
+    const clearCanvasItems = useStreamStore(s => s.clearCanvasItems);
+    const streams = useStreamStore(s => s.streams);
+    const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
+    const addCanvasItem = useStreamStore(s => s.addCanvasItem);
 
-    const [addDialogOpen, setAddDialogOpen] = useState(false);
+    // const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
     const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
+
+    // Dynamic Island Hook
+    const { isCollapsed, handlers } = useDynamicIsland({ idleTime: 5000 });
+
+    const handleQuickSave = async () => {
+        if (streams.length === 0) {
+            toast.error(t('favorites:no_streams_to_save') || '沒有可收藏的串流');
+            return;
+        }
+
+        let successCount = 0;
+
+        try {
+            // Uncategorized by default
+            const targetCategoryId: string | null = null;
+
+            // Add all streams
+            for (const stream of streams) {
+                let url = '';
+                if (stream.platform === 'twitch') {
+                    url = `https://twitch.tv/${stream.channelId}`;
+                } else if (stream.platform === 'youtube') {
+                    url = stream.videoId
+                        ? `https://youtube.com/watch?v=${stream.videoId}`
+                        : `https://youtube.com/channel/${stream.channelId}`;
+                }
+
+                if (url) {
+                    await favoritesService.addFavorite(
+                        url,
+                        stream.displayName || stream.name || stream.channelId || stream.videoId || 'Stream',
+                        targetCategoryId
+                    );
+                    successCount++;
+                }
+            }
+
+            toast.success(t('favorites:batch_save_success_simple', { count: successCount }) || `已收藏 ${successCount} 個串流`);
+
+        } catch (error) {
+            console.error(error);
+            toast.error(t('common.error') || '發生錯誤');
+        }
+    };
 
     return (
         <>
             <Draggable
                 nodeRef={nodeRef}
                 bounds="parent"
-                defaultPosition={{ x: 0, y: 0 }} // Center or specific position
+                defaultPosition={{ x: 0, y: 0 }}
+                // If collapsed, maybe disable dragging to avoid confusion?
+                disabled={isCollapsed}
             >
                 <div
                     ref={nodeRef}
-                    className="fixed z-50 bottom-8 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-move pointer-events-auto"
-                    style={{ position: 'fixed' }} // Ensure it works with draggable 'fixed' logic if needed, but Draggable handles absolute by default usually. Let's start simple.
+                    className="fixed z-50 bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto"
+                    {...handlers} // Attach mouse handlers for auto-hide
                 >
-                    <div className="flex items-center gap-1 on-drag-cancel cursor-auto" onMouseDown={(e) => e.stopPropagation()}>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => setPage('home')}
-                            title="返回首頁"
-                        >
-                            <Home size={20} />
-                        </Button>
+                    <div className={cn(
+                        "bg-black/80 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-2xl transition-all duration-500 ease-in-out cursor-move",
+                        "hover:scale-105 active:scale-95",
+                        isCollapsed ? "translate-y-[200%] opacity-50" : "translate-y-0 opacity-100"
+                    )}>
+                        <div className="flex items-center gap-1 on-drag-cancel cursor-auto" onMouseDown={(e) => e.stopPropagation()}>
 
-                        <div className="w-[1px] h-6 bg-white/20 mx-1" />
+                            {/* Search Module */}
+                            <IslandSearch />
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => setAddDialogOpen(true)}
-                            title="新增視窗"
-                        >
-                            <Plus size={20} />
-                        </Button>
+                            <div className="w-[1px] h-6 bg-white/20 mx-1" />
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => { /* TODO: Open Layout Dialog */ }}
-                            title="佈局設定"
-                        >
-                            <Layout size={20} />
-                        </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-white/10 text-white"
+                                onClick={() => setPage('home')}
+                                title={t('common.home') || "返回首頁"}
+                            >
+                                <Home size={20} />
+                            </Button>
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => setMediaDialogOpen(true)}
-                            title="媒體控制"
-                        >
-                            <Tv size={20} />
-                        </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="rounded-full hover:bg-white/10 text-white"
+                                        title={t('common.add_window') || "新增視窗"}
+                                    >
+                                        <Plus size={20} />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent side="top" align="center" className="bg-black/90 border-white/10 backdrop-blur-md text-white z-[60]">
+                                    <DropdownMenuItem className="focus:bg-white/20 focus:text-white cursor-pointer" onClick={() => addEmptyGroup()}>
+                                        {t('common.add_combination') || "新增組合"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-white/20 focus:text-white cursor-pointer" onClick={() => addCanvasItem('stream', null)}>
+                                        {t('common.add_stream_window') || "新增串流視窗"}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="focus:bg-white/20 focus:text-white cursor-pointer" onClick={() => addCanvasItem('chat', null)}>
+                                        {t('common.add_chat_window') || "新增聊天室窗"}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => openModal('favorites')}
-                            title="收藏清單"
-                        >
-                            <Star size={20} />
-                        </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-white/10 text-white"
+                                onClick={() => { /* TODO: Open Layout Dialog */ }}
+                                title={t('common.layout') || "佈局設定"}
+                            >
+                                <Layout size={20} />
+                            </Button>
 
-                        <div className="w-[1px] h-6 bg-white/20 mx-1" />
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-white/10 text-white"
+                                onClick={() => setMediaDialogOpen(true)}
+                                title={t('common.media') || "媒體控制"}
+                            >
+                                <Tv size={20} />
+                            </Button>
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => setSettingsDialogOpen(true)}
-                            title="全域設定"
-                        >
-                            <Settings size={20} />
-                        </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-white/10 text-white"
+                                onClick={() => openModal('favorites')}
+                                title={t('common.favorites') || "收藏清單"}
+                            >
+                                <Star size={20} />
+                            </Button>
+
+                            {/* Save Canvas (One-click Favorite) */}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-white/10 text-white"
+                                onClick={handleQuickSave}
+                                title={t('favorites:save_entire_canvas') || "一鍵收藏當前畫布"}
+                            >
+                                <FolderHeart size={20} />
+                            </Button>
+
+                            {/* Clear Screen with AlertDialog */}
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="rounded-full hover:bg-white/10 text-red-400 hover:text-red-300"
+                                        title={t('common.clear_screen') || "清空畫面"}
+                                    >
+                                        <Trash2 size={20} />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="z-[60]">
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>{t('common.confirm_clear_title') || '確定要清空所有視窗嗎？'}</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            {t('common.confirm_clear_desc') || '此動作將會移除畫布上所有的直播視窗與聊天室。'}
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>{t('common.cancel') || '取消'}</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={() => clearCanvasItems()}
+                                            className="bg-red-500 hover:bg-red-600"
+                                        >
+                                            {t('common.confirm') || '確定清空'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+
+                            <div className="w-[1px] h-6 bg-white/20 mx-1" />
+
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-white/10 text-white"
+                                onClick={() => setSettingsDialogOpen(true)}
+                                title={t('common.settings') || "全域設定"}
+                            >
+                                <Settings size={20} />
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </Draggable>
 
-            <AddWindowDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
             <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
             <MediaSettingsDialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen} />
         </>

@@ -139,3 +139,56 @@ body.is-interacting {
   cursor: grabbing;
   user-select: none;
 }
+
+/* React Grid Layout Overrides */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  opacity: 0.5 !important;
+}
+
+/* Custom Resize Handle Styling */
+.react-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.react-grid-item:hover .react-resizable-handle {
+  opacity: 1;
+}
+
+.react-resizable-handle-se {
+  width: 20px !important;
+  height: 20px !important;
+  right: 2px !important;
+  bottom: 2px !important;
+  background: none !important;
+  z-index: 100 !important;
+  cursor: nwse-resize !important;
+}
+
+.react-resizable-handle-se::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 10px;
+  height: 10px;
+  border-right: 3px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 3px solid rgba(255, 255, 255, 0.5);
+  border-bottom-right-radius: 2px;
+  transition: all 0.2s;
+}
+
+.react-grid-item:hover .react-resizable-handle-se::after {
+  border-color: #facc15;
+  /* Yellow-400 */
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.react-resizable-handle-se:hover::after {
+  border-color: #fde047;
+  /* Yellow-300 */
+  transform: scale(1.2);
+  border-width: 4px;
+}

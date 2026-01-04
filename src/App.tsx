@@ -9,6 +9,7 @@ import { useRouter } from './hooks/useRouter';
 import { initGA, logPageView } from './utils/analytics';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
+import { Toaster } from './components/ui/sonner';
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
@@ -176,6 +177,8 @@ export default function App() {
         onPauseOthers={handlePauseOtherYouTubeStreams}
         onDontRemind={handleRiskDontRemind}
       />
+
+      <Toaster />
     </>
   );
 }
