@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize, Minimize } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -45,6 +45,31 @@ export const DynamicIsland = () => {
     // const [settingsDialogOpen, setSettingsDialogOpen] = useState(false); // Removed
     const [mediaControlExpanded, setMediaControlExpanded] = useState(false);
     const [layoutPickerExpanded, setLayoutPickerExpanded] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Fullscreen listener
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        };
+    }, []);
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch((err) => {
+                toast.error(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    };
 
     // Dynamic Island Hook
     const { isCollapsed, handlers } = useDynamicIsland({ idleTime: 5000 });
@@ -189,15 +214,15 @@ export const DynamicIsland = () => {
                             <FolderHeart size={20} />
                         </Button>
 
-                        {/* 6. Fullscreen (No-op placeholder) */}
+                        {/* 6. Fullscreen */}
                         <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => { /* No-op */ }}
-                            title={t('common.fullscreen') || "全螢幕"}
+                            onClick={toggleFullscreen}
+                            title={isFullscreen ? (t('common.exit_fullscreen') || "退出全螢幕") : (t('common.fullscreen') || "全螢幕")}
                         >
-                            <Maximize size={20} />
+                            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
                         </Button>
 
                         {/* 7. Clear Canvas */}

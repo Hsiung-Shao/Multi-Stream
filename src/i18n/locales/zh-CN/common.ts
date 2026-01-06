@@ -54,6 +54,7 @@ const common = {
   'common.add_stream_window': '新增串流窗口',
   'common.add_chat_window': '新增聊天室窗',
   'common.fullscreen': '全屏',
+  'common.exit_fullscreen': '退出全屏',
   'common.save_layout': '保存当前布局',
   'common.manage_layouts': '布局管理',
   'common.layout_list': '布局列表',

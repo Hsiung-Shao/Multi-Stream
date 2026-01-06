@@ -44,7 +44,7 @@
 12. [*] 視窗的智慧排版邏輯
 13. [*] 視窗的自動排列邏輯
 14. [*] 視窗的儲存使用者設定的布局
-15. [] 畫布全螢幕功能
+15. [*] 畫布全螢幕功能
 16. [*] 一鍵收藏功能
 17. [*] 拖曳角功能
 18. [*] Stream iframe 重構
@@ -100,6 +100,8 @@
 - UI元件要求使用 Shadcn UI
 - 在設計功能事都要以效能、安全性、可維護性三個角度來思考
 - 需求UIUX設計
+
+請分析我的代碼變動，寫一個 Commit Message。要求：1. 使用 Conventional Commits 格式（如 feat:, fix:）。2. 第一行簡述變動。3. 如果有重大邏輯修改，在 Body 部分詳細說明為什麼這樣改。
 
 代理server 啟動指令: wrangler pages dev functions --port 8788
 Shadcn UI
