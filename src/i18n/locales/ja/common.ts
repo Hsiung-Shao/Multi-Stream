@@ -54,6 +54,10 @@ const common = {
   'common.add_stream_window': '配信ウィンドウ追加',
   'common.add_chat_window': 'チャットウィンドウ追加',
   'common.fullscreen': '全画面',
+  'common.save_layout': '現在のレイアウトを保存',
+  'common.manage_layouts': 'レイアウト管理',
+  'common.layout_list': 'レイアウト一覧',
+  'common.manage': '管理',
 };
 
 export default common;

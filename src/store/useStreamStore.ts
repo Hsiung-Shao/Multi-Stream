@@ -2,12 +2,16 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { StreamData, parseStreamUrl, validateUrl } from '../utils/streamUtils';
+import { youtubeApi } from '../utils/youtubeApi';
 import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
 import { generateLayout, LayoutMode } from '../utils/layoutPresets';
-import { getSmartLayoutForStreamAndChat } from '../utils/layoutEngine';
+import { findAvailablePosition, findMaximalEmptyRect, repackAndMaximizeRows } from '../utils/layoutEngine';
+import { calculateAutoGridLayout } from '../utils/layoutPresets';
+import { CustomLayout, LayoutSlot } from '../types/canvas';
+import { layoutStorage } from '../utils/layoutStorage';
 
 interface StreamStoreState {
     streams: StreamData[];
@@ -19,15 +23,24 @@ interface StreamStoreState {
     // Canvas State
     canvasItems: CanvasItem[];
     presets: LayoutPreset[];
+    customLayouts: CustomLayout[]; // User saved layouts
 
     // Actions
-    addStream: (url: string, options?: { withChat?: boolean; withStream?: boolean }) => Promise<{ success: boolean; message?: string }>;
+    addStream: (url: string, options?: { withChat?: boolean; withStream?: boolean; displayName?: string }) => Promise<{ success: boolean; message?: string; streamId?: number }>;
     removeStream: (id: number) => void;
     moveStream: (fromIndex: number, toIndex: number) => void;
     setChatLayout: (layout: ChatLayoutType) => void;
     setLayout: (layout: LayoutType, isUserAction?: boolean) => void;
     updateStream: (id: number, updates: Partial<StreamData>) => void;
     setStreams: (streams: StreamData[]) => void;
+
+    // Custom Layout Actions
+    saveCustomLayout: (name: string) => Promise<void>;
+    deleteCustomLayout: (id: string) => Promise<void>;
+    renameCustomLayout: (id: string, newName: string) => Promise<void>;
+    updateCustomLayoutFromCurrent: (id: string) => Promise<void>;
+    applyCustomLayout: (id: string) => void;
+    loadCustomLayoutsFromBackup: () => Promise<void>;
 
     // Canvas Actions
     setLayoutMode: (mode: 'auto' | 'canvas') => void;
@@ -87,6 +100,7 @@ export const useStreamStore = create<StreamStoreState>()(
             chatLayout: 'none',
             canvasItems: [],
             presets: [],
+            customLayouts: [],
 
             // Grid Mode Init
             gridMode: true,
@@ -104,7 +118,7 @@ export const useStreamStore = create<StreamStoreState>()(
             magneticMode: false,
             toggleMagneticMode: () => set(state => ({ magneticMode: !state.magneticMode })),
 
-            addStream: async (url: string, options = { withChat: true, withStream: true }) => {
+            addStream: async (url: string, options = { withChat: true, withStream: true, displayName: undefined as string | undefined }) => {
                 const state = get();
                 if (!url || !url.trim()) return { success: false, message: '請輸入直播網址或頻道名稱' };
 
@@ -121,15 +135,66 @@ export const useStreamStore = create<StreamStoreState>()(
                 }
 
                 const streamData = parseStreamUrl(finalUrl);
-                if (!streamData) return { success: false, message: '無法解析網址' };
+                console.log('[addStream] parseStreamUrl result:', { finalUrl, streamData });
+                if (!streamData || !streamData.platform) {
+                    return { success: false, message: streamData?.error || '無法解析網址' };
+                }
 
                 // 2. Check Duplicates
-                if (state.streams.some(s => s.originalUrl === finalUrl)) {
-                    return { success: false, message: '此串流已存在' };
+                const existing = state.streams.find(s => s.originalUrl === finalUrl);
+                if (existing) {
+                    return { success: false, message: '此串流已存在', streamId: existing.id };
                 }
 
                 // Create new Stream Object
                 const newId = Date.now();
+                // Use provided displayName if available, otherwise fallback to channelId
+                const customDisplayName = (options as any).displayName;
+                let displayName = customDisplayName || streamData.channelId;
+                let name = streamData.channelId;
+
+                // Attempt to fetch Title for YouTube
+                if (streamData.platform === 'youtube') {
+                    // Default fallback
+                    if (!displayName) {
+                        if (streamData.videoId) {
+                            displayName = `YouTube Video (${streamData.videoId})`;
+                            name = 'YouTube Channel';
+                        } else {
+                            displayName = 'YouTube Stream';
+                            name = 'YouTube Channel';
+                        }
+                    }
+
+                    try {
+                        const shouldUpdateTitle = !options.displayName; // Only update from API if no custom name provided
+
+                        if (streamData.videoId) {
+                            const info = await youtubeApi.getVideoInfo(streamData.videoId);
+                            if (info && info.title) {
+                                if (shouldUpdateTitle) displayName = info.title;
+                                name = info.channelTitle || 'YouTube Channel';
+
+                                if (!streamData.channelId && info.channelId) {
+                                    streamData.channelId = info.channelId;
+                                }
+                            }
+                        } else if (streamData.channelId) {
+                            const title = await youtubeApi.getChannelTitleFromChannelId(streamData.channelId);
+                            if (title) {
+                                if (shouldUpdateTitle) displayName = title;
+                                name = title;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to fetch YouTube title:', e);
+                        // Start using fallback automatically if fetch failed
+                    }
+                } else if (!displayName && streamData.platform === 'twitch') {
+                    // Basic fallback for Twitch if parsing failed to get channelId (unlikely with regex)
+                    displayName = streamData.channelId || 'Twitch Stream';
+                }
+
                 const newStream: StreamData = {
                     id: newId,
                     platform: streamData.platform!,
@@ -139,8 +204,8 @@ export const useStreamStore = create<StreamStoreState>()(
                     volume: 50,
                     chatVisible: true,
                     isMuted: false,
-                    name: streamData.channelId,
-                    displayName: streamData.channelId
+                    name: name,
+                    displayName: displayName
                 };
 
                 const newStreams = [...state.streams, newStream];
@@ -148,26 +213,112 @@ export const useStreamStore = create<StreamStoreState>()(
                 let newCanvasItems = [...state.canvasItems];
 
                 if (state.layoutMode === 'canvas') {
-                    // Intelligent Layout: 20x24 Stream + 4x24 Chat
-                    const smartLayout = getSmartLayoutForStreamAndChat(state.canvasItems); // default cols=24
+                    // Hybrid Layout Logic with "Fill Empty Slot" Optimization
 
-                    if (options.withStream) {
-                        newCanvasItems.push({
-                            i: `stream-${uniqueId}-${newStream.id}`,
-                            type: 'stream',
-                            contentId: newStream.id,
-                            layout: { ...smartLayout.stream }
-                        });
+                    let streamPlaced = false;
+                    let chatPlaced = false;
+
+                    // 1. Try to fill empty STREAM slot
+                    const emptyStreamIndex = newCanvasItems.findIndex(i => i.type === 'stream' && !i.contentId);
+                    if (emptyStreamIndex !== -1) {
+                        newCanvasItems[emptyStreamIndex] = {
+                            ...newCanvasItems[emptyStreamIndex],
+                            i: `stream-${uniqueId}-${newStream.id}`, // Update ID to force refresh
+                            contentId: newStream.id
+                        };
+                        streamPlaced = true;
                     }
+
+                    // 2. Try to fill empty CHAT slot (only if requested)
                     if (options.withChat) {
-                        newCanvasItems.push({
-                            i: `chat-${uniqueId}-${newStream.id}`,
-                            type: 'chat',
-                            contentId: newStream.id,
-                            layout: { ...smartLayout.chat }
-                        });
+                        const emptyChatIndex = newCanvasItems.findIndex(i => i.type === 'chat' && !i.contentId);
+                        if (emptyChatIndex !== -1) {
+                            newCanvasItems[emptyChatIndex] = {
+                                ...newCanvasItems[emptyChatIndex],
+                                i: `chat-${uniqueId}-${newStream.id}`,
+                                contentId: newStream.id
+                            };
+                            chatPlaced = true;
+                        }
                     }
 
+                    // 3. Calculate how many NEW items we still need to add
+                    let addedCount = 0;
+                    if (options.withStream && !streamPlaced) addedCount++;
+                    if (options.withChat && !chatPlaced) addedCount++;
+
+                    if (addedCount > 0) {
+
+
+                        // If total <= 16, use Auto-Grid (Reshuffle ALL)
+                        if (false) { // FORCE Infinite Flow to preserve layout (User Request)
+                            // Create temporary list of ALL items (existing + new)
+                            // Then apply grid specs to them
+                            const tempItems = [...newCanvasItems]; // Use the map that might have modified items
+
+                            // Create new items placeholders ONLY if they weren't placed
+                            const newStreamId = (options.withStream && !streamPlaced) ? `stream-${uniqueId}-${newStream.id}` : null;
+                            const newChatId = (options.withChat && !chatPlaced) ? `chat-${uniqueId}-${newStream.id}` : null;
+
+                            if (newStreamId) {
+                                tempItems.push({
+                                    i: newStreamId,
+                                    type: 'stream',
+                                    contentId: newStream.id,
+                                    layout: { x: 0, y: 0, w: 1, h: 1 } // Placeholder
+                                });
+                            }
+                            if (newChatId) {
+                                tempItems.push({
+                                    i: newChatId,
+                                    type: 'chat',
+                                    contentId: newStream.id,
+                                    layout: { x: 0, y: 0, w: 1, h: 1 } // Placeholder
+                                });
+                            }
+
+                            // Apply Auto-Grid Layout
+                            const specs = calculateAutoGridLayout(tempItems.length);
+
+                            // Map specs first
+                            const tentativeItems = tempItems.map((item, idx) => ({
+                                ...item,
+                                layout: specs[idx]
+                            }));
+
+                            // Repack and Maximize
+                            newCanvasItems = repackAndMaximizeRows(tentativeItems);
+
+                        } else {
+                            // Infinite Flow Mode (> 16)
+                            // Keep existing items, append new ones at bottom
+                            // newCanvasItems is already [...state.canvasItems] potentially modified by slot filling
+
+                            if (options.withStream && !streamPlaced) {
+                                // Use Maximal Empty Rect for Stream
+                                const rect = findMaximalEmptyRect(newCanvasItems, 24, 6, 6);
+
+                                newCanvasItems.push({
+                                    i: `stream-${uniqueId}-${newStream.id}`,
+                                    type: 'stream',
+                                    contentId: newStream.id,
+                                    layout: { x: rect.x, y: rect.y, w: rect.w, h: rect.h }
+                                });
+                            }
+                            if (options.withChat && !chatPlaced) {
+                                const size = { w: 4, h: 6 }; // Default chat size (Max 4)
+
+                                const pos = findAvailablePosition(newCanvasItems, size.w, size.h);
+
+                                newCanvasItems.push({
+                                    i: `chat-${uniqueId}-${newStream.id}`,
+                                    type: 'chat',
+                                    contentId: newStream.id,
+                                    layout: { x: pos.x, y: pos.y, w: size.w, h: size.h }
+                                });
+                            }
+                        }
+                    }
                 } else {
                     // Legacy / Layout Mode Auto Reflow
                     // ... (Legacy logic preserved or largely irrelevant for Canvas Mode focused task)
@@ -196,32 +347,63 @@ export const useStreamStore = create<StreamStoreState>()(
                     layout: state.userLayout ? state.layout : newLayout
                 });
 
-                return { success: true };
+                return { success: true, streamId: newId };
             },
 
             addEmptyGroup: () => set(state => {
                 let newCanvasItems = [...state.canvasItems];
                 const uniqueId = uuidv4().slice(0, 8);
 
-                // Always add Stream + Chat pair
-                newCanvasItems.push({
-                    i: `empty-stream-${uniqueId}`,
-                    type: 'stream',
-                    contentId: null,
-                    layout: { x: 0, y: 0, w: 8, h: 5 } // Placeholder
-                });
-                newCanvasItems.push({
-                    i: `empty-chat-${uniqueId}`,
-                    type: 'chat',
-                    contentId: null,
-                    layout: { x: 0, y: 0, w: 4, h: 5 } // Placeholder
-                });
+                // Calculate future total: +2 items (Stream + Chat)
+                const futureTotal = state.canvasItems.length + 2;
 
-                // RGL auto places new items
-                if (state.layoutMode === 'canvas') {
-                    // newCanvasItems already pushed above
+                if (futureTotal <= 16) {
+                    // Auto-Grid Mode
+                    const tempItems = [...state.canvasItems];
+
+                    // Add Placeholders
+                    tempItems.push({
+                        i: `empty-stream-${uniqueId}`,
+                        type: 'stream',
+                        contentId: null,
+                        layout: { x: 0, y: 0, w: 1, h: 1 }
+                    });
+                    tempItems.push({
+                        i: `empty-chat-${uniqueId}`,
+                        type: 'chat',
+                        contentId: null,
+                        layout: { x: 0, y: 0, w: 1, h: 1 }
+                    });
+
+                    // Redistribute
+                    const specs = calculateAutoGridLayout(tempItems.length);
+                    const tentativeItems = tempItems.map((item, idx) => ({
+                        ...item,
+                        layout: specs[idx]
+                    }));
+                    newCanvasItems = repackAndMaximizeRows(tentativeItems);
+
                 } else {
-                    // Legacy fallback...
+                    // Infinite Flow Mode
+                    const chatSize = { w: 4, h: 6 }; // Chat size limit
+
+                    // Add Stream (Maximal Space)
+                    const streamRect = findMaximalEmptyRect(newCanvasItems, 24, 6, 6);
+                    newCanvasItems.push({
+                        i: `empty-stream-${uniqueId}`,
+                        type: 'stream',
+                        contentId: null,
+                        layout: { x: streamRect.x, y: streamRect.y, w: streamRect.w, h: streamRect.h }
+                    });
+
+                    // Add Chat
+                    const chatPos = findAvailablePosition(newCanvasItems, chatSize.w, chatSize.h);
+                    newCanvasItems.push({
+                        i: `empty-chat-${uniqueId}`,
+                        type: 'chat',
+                        contentId: null,
+                        layout: { x: chatPos.x, y: chatPos.y, w: chatSize.w, h: chatSize.h }
+                    });
                 }
 
                 return { canvasItems: newCanvasItems };
@@ -269,14 +451,14 @@ export const useStreamStore = create<StreamStoreState>()(
                             i: `stream-${s.id}-${uuidv4()}`,
                             type: 'stream',
                             contentId: s.id,
-                            layout: { x: 0, y: 0, w: 6, h: 6 }
+                            layout: { x: 0, y: Infinity, w: 6, h: 6 }
                         });
                         // Add Chat?
                         newCanvasItems.push({
                             i: `chat-${s.id}-${uuidv4()}`,
                             type: 'chat',
                             contentId: s.id,
-                            layout: { x: 0, y: 0, w: 6, h: 6 }
+                            layout: { x: 0, y: Infinity, w: 6, h: 6 }
                         });
                     }
                 });
@@ -290,12 +472,25 @@ export const useStreamStore = create<StreamStoreState>()(
                     const newStreams = state.streams.filter(s => s.id !== id);
                     const currentCount = newStreams.length;
 
-                    // Remove associated canvas items completely in Auto-Reflow mode
-                    // To keep it clean and reflow nicely.
+                    // Remove associated canvas items completely
                     let newCanvasItems = state.canvasItems.filter(item => item.contentId !== id);
 
+                    // Apply hybrid layout logic after removal
                     if (state.layoutMode === 'canvas') {
-                        // RGL will auto-compact when items are removed from DOM
+                        if (newCanvasItems.length <= 16 && newCanvasItems.length > 0) {
+                            const specs = calculateAutoGridLayout(newCanvasItems.length);
+                            newCanvasItems = newCanvasItems.map((item, idx) => {
+                                const spec = specs[idx];
+                                let w = spec.w;
+                                let h = spec.h;
+                                if (item.type === 'chat') {
+                                    w = Math.min(spec.w, 4);
+                                    h = Math.max(spec.h, 6);
+                                }
+                                return { ...item, layout: { ...spec, w, h } };
+                            });
+                        }
+                        // If > 16 or 0 items, RGL will handle compaction naturally.
                     }
 
                     let newLayout = state.layout;
@@ -364,24 +559,70 @@ export const useStreamStore = create<StreamStoreState>()(
 
             addCanvasItem: (type, streamId) => set(state => {
                 const id = uuidv4();
+                const futureTotal = state.canvasItems.length + 1;
+                let newItems: CanvasItem[] = [];
 
-                const newItems = [...state.canvasItems, {
-                    i: id,
-                    type,
-                    contentId: streamId,
-                    layout: { x: 0, y: Infinity, w: type === 'chat' ? 4 : 8, h: 5 } // Auto-place at bottom
-                }];
-                // Just normalize to be safe
+                if (futureTotal <= 16) {
+                    // Auto-Grid Mode
+                    const tempItems = [...state.canvasItems, {
+                        i: id,
+                        type,
+                        contentId: streamId,
+                        layout: { x: 0, y: 0, w: 1, h: 1 } // Placeholder
+                    }];
+
+                    const specs = calculateAutoGridLayout(tempItems.length);
+                    const tentativeItems = tempItems.map((item, idx) => ({
+                        ...item,
+                        layout: specs[idx]
+                    }));
+                    newItems = repackAndMaximizeRows(tentativeItems);
+
+                } else {
+                    // Infinite Flow Mode
+                    if (type === 'stream') {
+                        const rect = findMaximalEmptyRect(state.canvasItems, 24, 6, 6);
+                        newItems = [...state.canvasItems, {
+                            i: id,
+                            type,
+                            contentId: streamId,
+                            layout: { x: rect.x, y: rect.y, w: rect.w, h: rect.h }
+                        }];
+                    } else {
+                        // Chat or others
+                        const width = type === 'chat' ? 4 : 6;
+                        const height = 6;
+                        const pos = findAvailablePosition(state.canvasItems, width, height);
+                        newItems = [...state.canvasItems, {
+                            i: id,
+                            type,
+                            contentId: streamId,
+                            layout: { x: pos.x, y: pos.y, w: width, h: height }
+                        }];
+                    }
+                }
+
                 return {
-                    canvasItems: normalizeCanvasItems(newItems)
+                    canvasItems: newItems
                 };
             }),
 
-            removeCanvasItem: (itemId) => set(state => {
-                const newItems = state.canvasItems.filter(i => i.i !== itemId);
-                // RGL auto handles compaction visually, but we can normalize data if needed
+            removeCanvasItem: (id) => set(state => {
+                const filtered = state.canvasItems.filter(item => item.i !== id);
+
+                // If we dropped to <= 16, trigger Auto-Grid Layout recalculation
+                if (filtered.length <= 16 && filtered.length > 0) {
+                    const specs = calculateAutoGridLayout(filtered.length);
+                    const tentativeItems = filtered.map((item, idx) => ({
+                        ...item,
+                        layout: specs[idx]
+                    }));
+                    const reordered = repackAndMaximizeRows(tentativeItems);
+                    return { canvasItems: reordered };
+                }
+
                 return {
-                    canvasItems: newItems
+                    canvasItems: filtered
                 };
             }),
 
@@ -476,8 +717,173 @@ export const useStreamStore = create<StreamStoreState>()(
                 });
 
                 return { canvasItems: newItems };
-            })
+            }),
+
+            saveCustomLayout: async (name: string) => {
+                const state = get();
+                const slots: LayoutSlot[] = state.canvasItems.map(item => ({
+                    x: item.layout.x,
+                    y: item.layout.y,
+                    w: item.layout.w,
+                    h: item.layout.h,
+                    type: item.type
+                }));
+
+                const newLayout: CustomLayout = {
+                    id: uuidv4(),
+                    name,
+                    slots,
+                    createdAt: Date.now()
+                };
+
+                const updatedLayouts = [...state.customLayouts, newLayout];
+                set({ customLayouts: updatedLayouts });
+
+                // Sync to backup
+                await layoutStorage.saveToBackup(updatedLayouts);
+            },
+
+            deleteCustomLayout: async (id: string) => {
+                const state = get();
+                const updatedLayouts = state.customLayouts.filter(l => l.id !== id);
+                set({ customLayouts: updatedLayouts });
+                await layoutStorage.saveToBackup(updatedLayouts);
+            },
+
+            renameCustomLayout: async (id: string, newName: string) => {
+                const state = get();
+                const updatedLayouts = state.customLayouts.map(l =>
+                    l.id === id ? { ...l, name: newName } : l
+                );
+                set({ customLayouts: updatedLayouts });
+                await layoutStorage.saveToBackup(updatedLayouts);
+            },
+
+            updateCustomLayoutFromCurrent: async (id: string) => {
+                const state = get();
+                // 1. Get current items and transform to slots
+                const currentSlots: LayoutSlot[] = state.canvasItems.map(item => ({
+                    x: item.layout.x,
+                    y: item.layout.y,
+                    w: item.layout.w,
+                    h: item.layout.h,
+                    type: item.type as 'stream' | 'chat'
+                }));
+
+                // 2. Update the target layout
+                const updatedLayouts = state.customLayouts.map(l =>
+                    l.id === id ? { ...l, slots: currentSlots } : l
+                );
+
+                set({ customLayouts: updatedLayouts });
+                await layoutStorage.saveToBackup(updatedLayouts);
+            },
+
+            loadCustomLayoutsFromBackup: async () => {
+                const layouts = await layoutStorage.loadFromBackup();
+                if (layouts && layouts.length > 0) {
+                    // Merge strategy: Unique by ID, or prefer backup?
+                    // For now, let's just use what's in local storage as truth, 
+                    // but if local is empty, restore from backup.
+                    const current = get().customLayouts;
+                    if (current.length === 0) {
+                        set({ customLayouts: layouts });
+                    }
+                }
+            },
+
+            applyCustomLayout: (id: string) => {
+                const state = get();
+                const layout = state.customLayouts.find(l => l.id === id);
+                if (!layout) return;
+
+                // 1. Harvest current content
+                // Streams: We use state.streams as the source of truth for active streams.
+                const streamIds = state.streams.map(s => s.id);
+
+                // Chats: We use existing canvasItems to find active chat windows.
+                // We sort them by position to respect visual order "first one fills first slot".
+                const currentChatItems = state.canvasItems
+                    .filter(i => i.type === 'chat' && i.contentId)
+                    .sort((a, b) => {
+                        if (a.layout.y !== b.layout.y) return a.layout.y - b.layout.y;
+                        return a.layout.x - b.layout.x;
+                    });
+
+                const chatIds = currentChatItems.map(i => i.contentId!);
+
+                const newItems: CanvasItem[] = [];
+                const placedStreamIds = new Set<number>();
+
+                // Queues for distribution
+                const streamQueue = [...streamIds];
+                const chatQueue = [...chatIds];
+
+                // 2. Fill Slots from Layout Template
+                layout.slots.forEach((slot) => {
+                    const itemLayout = { x: slot.x, y: slot.y, w: slot.w, h: slot.h };
+                    const slotType = slot.type || 'stream'; // Default to stream if undefined
+
+                    if (slotType === 'stream') {
+                        const sId = streamQueue.shift();
+                        if (sId !== undefined) {
+                            newItems.push({
+                                i: `stream-${uuidv4()}-${sId}`,
+                                type: 'stream',
+                                contentId: sId,
+                                layout: itemLayout
+                            });
+                            placedStreamIds.add(sId);
+                        } else {
+                            // Create Empty Stream Window
+                            newItems.push({
+                                i: `empty-stream-${uuidv4()}`,
+                                type: 'stream',
+                                contentId: null, // Empty
+                                layout: itemLayout
+                            });
+                        }
+                    } else if (slotType === 'chat') {
+                        const cId = chatQueue.shift();
+                        if (cId !== undefined) {
+                            newItems.push({
+                                i: `chat-${uuidv4()}-${cId}`,
+                                type: 'chat',
+                                contentId: cId,
+                                layout: itemLayout
+                            });
+                        } else {
+                            // Create Empty Chat Window
+                            newItems.push({
+                                i: `empty-chat-${uuidv4()}`,
+                                type: 'chat',
+                                contentId: null, // Empty
+                                layout: itemLayout
+                            });
+                        }
+                    }
+                });
+
+                // 3. Handle Overflow
+                // Rule: "Prioritize showing streams" -> overflow streams should be added.
+                // Rule: "Multiple chat rooms then do not join" -> overflow chats are IGNORED.
+
+                while (streamQueue.length > 0) {
+                    const sId = streamQueue.shift()!;
+                    // Find position for overflow stream
+                    const pos = findAvailablePosition(newItems, 12, 12, 24);
+                    newItems.push({
+                        i: `stream-${uuidv4()}-${sId}`,
+                        type: 'stream',
+                        contentId: sId,
+                        layout: { x: pos.x, y: pos.y, w: 12, h: 12 }
+                    });
+                }
+
+                set({ canvasItems: newItems, layoutMode: 'canvas' });
+            },
         }),
+
         {
             name: 'stream-storage',
             partialize: (state) => ({
@@ -485,6 +891,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 layoutMode: state.layoutMode,
                 presets: state.presets,
                 canvasItems: state.canvasItems,
+                customLayouts: state.customLayouts
             })
         }
     )

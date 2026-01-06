@@ -21,18 +21,25 @@ export interface GridConfig {
  */
 export function calculateGridConfig(
     viewportWidth: number,
-    viewportHeight: number
+    viewportHeight: number,
+    totalRows: number = GRID_ROWS
 ): GridConfig {
     const cellWidth = viewportWidth / GRID_COLS;
-    const cellHeight = viewportHeight / GRID_ROWS;
+    // Cell Height is based on VIEWPORT height divided by DEFAULT 24 rows?
+    // OR should cell height remain constant based on Viewport/24, and container height grows?
+    // Requirement: "24x24 grid that perfectly fits the viewport".
+    // So 1 unit height = viewportHeight / 24.
+    // If we have 36 rows, container height = (viewportHeight / 24) * 36.
+
+    const cellHeight = viewportHeight / GRID_ROWS; // Base cell height derived from 24-row fit
 
     return {
         cols: GRID_COLS,
-        rows: GRID_ROWS,
+        rows: totalRows,
         cellWidth,
         cellHeight,
         containerWidth: viewportWidth,
-        containerHeight: viewportHeight
+        containerHeight: cellHeight * totalRows // Dynamic height
     };
 }
 

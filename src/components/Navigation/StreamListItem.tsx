@@ -1,4 +1,3 @@
-import { DraggableProvided } from '@hello-pangea/dnd';
 import { Volume2, VolumeX, RefreshCw, X, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Slider } from '../ui/slider';
@@ -7,10 +6,9 @@ import { StreamData } from '../../utils/streamUtils';
 import { TFunction } from 'i18next';
 
 interface StreamListItemProps {
-    stream: StreamData; // Need to verify type
+    stream: StreamData;
     index: number;
-    isDragging: boolean;
-    provided: DraggableProvided;
+    isDragging?: boolean;
     masterMuted: boolean;
     totalStreams: number;
     onToggleMute: (id: number) => void;
@@ -26,7 +24,6 @@ export const StreamListItem = ({
     stream,
     index,
     isDragging,
-    provided,
     masterMuted,
     totalStreams,
     onToggleMute,
@@ -40,35 +37,33 @@ export const StreamListItem = ({
 
     // 獲取串流顯示名稱
     const getStreamDisplayName = (stream: any) => {
-        return stream.displayName || stream.name || stream.channelId || stream.videoId || `串流 #${stream.id}`;
+        return stream.name || stream.videoId || `串流 #${stream.id}`;
     };
 
     return (
         <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
             className={cn(
                 "rounded-lg border transition-all text-white",
                 isDragging
                     ? "!bg-purple-500 !border-purple-300 shadow-2xl ring-4 ring-purple-300/50 scale-105 !text-white"
                     : "bg-gray-800/50 border-gray-700"
             )}
-            style={provided.draggableProps.style}
         >
             {/* 串流項目標題列 */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700">
                 <div
-                    {...provided.dragHandleProps}
-                    className="cursor-grab active:cursor-grabbing"
+                    className="cursor-grab active:cursor-grabbing hover:text-white text-gray-500 flex-shrink-0"
                 >
-                    <GripVertical className="size-4 text-gray-500" />
+                    <GripVertical className="size-4" />
                 </div>
-                <span className="text-sm font-medium flex-1 text-gray-300 truncate">
-                    #{index + 1} - {getStreamDisplayName(stream)}
-                </span>
+                <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-300 truncate" title={getStreamDisplayName(stream)}>
+                        #{index + 1} - {getStreamDisplayName(stream)}
+                    </div>
+                </div>
 
                 {/* 控制按鈕 */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                     {/* 靜音按鈕 */}
                     <Button
                         variant="ghost"

@@ -8,25 +8,15 @@ import { useTranslation } from 'react-i18next';
 
 interface DragHandleProps {
     title: string;
-    width?: number;
-    height?: number;
 }
 
-const DragHandle = memo(function DragHandle({ title, width, height }: DragHandleProps) {
+const DragHandle = memo(function DragHandle({ title }: DragHandleProps) {
     return (
         <div className="grid-item-drag-handle cursor-move flex items-center text-white/70 hover:text-white mr-1 gap-2">
             <GripHorizontal size={14} />
             <span className="text-[10px] font-medium max-w-[100px] truncate">
                 {title}
             </span>
-            {(width !== undefined && height !== undefined) && (
-                <>
-                    <div className="h-3 w-[1px] bg-white/20" />
-                    <span className="text-xs font-bold text-white/70">
-                        {width} x {height}
-                    </span>
-                </>
-            )}
         </div>
     );
 });
@@ -167,7 +157,7 @@ export const WindowHeader = memo(function WindowHeader({
             {/* Stream Layout: ID (with grid size) | Close */}
             {windowType === 'stream' && (
                 <>
-                    <DragHandle title={title} width={width} height={height} />
+                    <DragHandle title={title} />
                     <Divider />
                     <ActionButton
                         onClick={handleRemove}
@@ -181,7 +171,7 @@ export const WindowHeader = memo(function WindowHeader({
             {/* Chat Layout: ID (with grid size) | Close */}
             {windowType === 'chat' && (
                 <>
-                    <DragHandle title={title} width={width} height={height} />
+                    <DragHandle title={title} />
                     <Divider />
                     <ActionButton
                         onClick={handleRemove}
@@ -195,7 +185,7 @@ export const WindowHeader = memo(function WindowHeader({
             {/* Default Layout (Fallback) */}
             {windowType === 'default' && (
                 <>
-                    <DragHandle title={title} width={width} height={height} />
+                    <DragHandle title={title} />
                     <ActionButton
                         onClick={handleToggleCollapse}
                         title=""

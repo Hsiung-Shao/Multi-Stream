@@ -18,6 +18,7 @@ export default {
   // Dialog
   editFavorite: '编辑收藏',
   addFavorite: '新增收藏',
+  dialogDesc: '请输入收藏详细信息',
   streamUrl: '直播网址',
   streamName: '名称 (选填)',
   category: '分类',
@@ -34,7 +35,7 @@ export default {
 
   // Batch Import
   batchImportTitle: '批量导入网址',
-  batchImportPlaceholder: '请输入直播网址，每行一个...',
+
   startImport: '开始导入',
   importSuccess: '成功导入 {{count}} 笔数据',
 
@@ -50,6 +51,32 @@ export default {
   import: '导入备份',
   importWarning: '警告：导入将会覆盖现有的所有收藏数据，此操作无法恢复。',
   confirmImport: '我了解并确认要覆盖数据',
+  'backup.export_success': '备份导出成功',
+  'backup.export_error': '导出失败: {{error}}',
+  'backup.invalid_format': '无效的文件格式',
+  'backup.import_success': '导入成功，正在刷新数据...',
+  'backup.import_error': '导入失败: {{error}}',
+  'backup.unknown_error': '未知错误',
+  'backup.export_desc': '将您的所有收藏、分类与自定义设置下载为 JSON 文件。',
+  'backup.export_helper': '这是最安全的备份方式。您可以将此文件保存在外部硬盘或云端，以便在其他电脑上恢复您的个性化配置。',
+  'backup.export_btn': '立即下载备份文件 (.json)',
+  'backup.import_desc': '从之前备份的 JSON 文件中恢复数据。',
+  'backup.import_warning_detail': '警告：导入操作会“全数覆盖”您目前在浏览器中的所有数据，包括收藏、标签与布局设置。导入后页面会自动重新加载。',
+  'backup.processing': '正在处理并准备刷新...',
+  'backup.select_file': '选择文件并开始还原',
+
+  // Settings
+  'settings.theme_desc': '切换应用程序的亮色或暗色外观',
+  'settings.language_desc': '选择您偏好的界面语言',
+  'settings.about_desc': 'Multi-Stream 是一个开源的多流观看平台，致力于提供最佳的观看体验。',
+  'settings.sponsor': '赞助',
+
+  // Placeholders
+  'placeholder.search_url': '搜索名称或网址...',
+  'placeholder.stream_example': '例如: 游戏实况, 音乐台...',
+  'placeholder.category_example': '例如: 最爱, 游戏, 音乐...',
+  'customName': '自定义名称 (选填)',
+  'batchImportPlaceholder': '请输入 Twitch 频道网址，每行一个。\n例如：\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 
   // Twitch
   twitchIntegration: 'Twitch 导入',
@@ -76,4 +103,16 @@ export default {
   theme: '主题模式',
   language: '显示语言',
   about: '关于',
+  // Layout Manager
+  'layout_manager.delete_confirm': '删除',
+  'layout_manager.apply': '应用',
+  'layout_manager.update_from_current': '使用当前布局更新',
+  'layout_manager.update_from_current_desc': '将当前画面的视窗配置覆盖此存档',
+  'layout_manager.delete_layout': '删除布局',
+  'layout_manager.delete_layout_desc': '确定要删除此布局存档吗？此动作无法复原。',
+  'layout_manager.rename': '重命名',
+  'layout_manager.confirm_update': '确定要使用目前的画面配置来覆写“{{name}}”吗？',
+  'layout_manager.no_layouts': '尚无自定布局',
+  'layout_manager.no_layouts_desc': '调整视窗位置后，可将其存储为模板。',
 };
+

@@ -16,6 +16,7 @@ interface UIState {
     isPanelCollapsed: boolean;
     isSearchFocused: boolean;
     modals: ModalState;
+    favoritesTab: string; // 'favorites' | 'layouts' | 'twitch_import' etc.
     masterVolume: number;
     masterMuted: boolean;
     showPerformanceOverlay: boolean;
@@ -24,9 +25,10 @@ interface UIState {
     toggleTheme: () => void;
     setPanelCollapsed: (collapsed: boolean) => void;
     togglePanelCollapsed: () => void;
-    openModal: (name: keyof ModalState) => void;
+    openModal: (name: keyof ModalState, tab?: string) => void;
     closeModal: (name: keyof ModalState) => void;
     toggleModal: (name: keyof ModalState) => void;
+    setFavoritesTab: (tab: string) => void;
     setMasterVolume: (volume: number | ((prev: number) => number)) => void;
     setMasterMuted: (muted: boolean | ((prev: boolean) => boolean)) => void;
     setPage: (page: PageType) => void;
@@ -46,6 +48,7 @@ export const useUIStore = create<UIState>((set) => ({
         feedback: false,
         ytRisk: false,
     },
+    favoritesTab: 'favorites',
     masterVolume: 100,
     masterMuted: false,
     showPerformanceOverlay: false,
@@ -73,9 +76,13 @@ export const useUIStore = create<UIState>((set) => ({
     setPanelCollapsed: (collapsed) => set({ isPanelCollapsed: collapsed }),
     togglePanelCollapsed: () => set((state) => ({ isPanelCollapsed: !state.isPanelCollapsed })),
 
-    openModal: (name) => set((state) => ({ modals: { ...state.modals, [name]: true } })),
+    openModal: (name, tab) => set((state) => ({
+        modals: { ...state.modals, [name]: true },
+        favoritesTab: (name === 'favorites' && tab) ? tab : state.favoritesTab
+    })),
     closeModal: (name) => set((state) => ({ modals: { ...state.modals, [name]: false } })),
     toggleModal: (name) => set((state) => ({ modals: { ...state.modals, [name]: !state.modals[name] } })),
+    setFavoritesTab: (tab) => set({ favoritesTab: tab }),
 
     setMasterVolume: (volume) => set((state) => {
         const newVolume = typeof volume === 'function' ? volume(state.masterVolume) : volume;

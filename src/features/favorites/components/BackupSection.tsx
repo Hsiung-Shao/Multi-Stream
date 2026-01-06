@@ -31,9 +31,10 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             logEvent('Favorites', 'export_json');
-            onSuccess('已成功匯出備份檔案');
+            logEvent('Favorites', 'export_json');
+            onSuccess(t('backup.export_success'));
         } catch (error) {
-            onError(`匯出失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+            onError(t('backup.export_error', { error: error instanceof Error ? error.message : t('backup.unknown_error') }));
         }
     };
 
@@ -51,7 +52,7 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                 const data = JSON.parse(text);
 
                 if (!data.version && (!data.favoriteStreams || !Array.isArray(data.favoriteStreams))) {
-                    throw new Error('無效的檔案格式');
+                    throw new Error(t('backup.invalid_format'));
                 }
 
                 // 恢復邏輯與原版 FavoritesManager.tsx (Line 694-716) 一致
@@ -66,10 +67,11 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                 if (backupService.isEnabled()) await backupService.backup();
 
                 logEvent('Favorites', 'import_json', 'file_upload');
-                onSuccess('匯入成功，正在刷新資料...');
+                logEvent('Favorites', 'import_json', 'file_upload');
+                onSuccess(t('backup.import_success'));
                 setTimeout(() => window.location.reload(), 1000); // 重新啟動以載入全新數據庫
             } catch (error) {
-                onError(`匯入失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+                onError(t('backup.import_error', { error: error instanceof Error ? error.message : t('backup.unknown_error') }));
             } finally {
                 setIsProcessing(false);
             }
@@ -87,8 +89,8 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                         <Download className="size-6" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold font-normal">{t('exportJSON')}</h3>
-                        <p className="text-sm text-gray-500">將您的所有收藏、分類與自定義設定下載為 JSON 檔案。</p>
+                        <h3 className="text-xl font-bold font-normal">{t('export')}</h3>
+                        <p className="text-sm text-gray-500">{t('backup.export_desc')}</p>
                     </div>
                 </div>
 
@@ -96,14 +98,14 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                     <div className={`p-4 rounded-xl flex items-start gap-3 ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
                         <ShieldCheck className="size-5 text-green-500 mt-0.5" />
                         <p className="text-xs text-gray-500 leading-relaxed">
-                            這是最安全的備份方式。您可以將此檔案儲存在外部硬碟或雲端硬碟中，以便在其他電腦上恢復您的個人化配置。
+                            {t('backup.export_helper')}
                         </p>
                     </div>
                     <Button
                         onClick={handleExportJSON}
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white h-12 rounded-xl text-md font-medium"
                     >
-                        立即下載備份檔案 (.json)
+                        {t('backup.export_btn')}
                     </Button>
                 </div>
             </div>
@@ -116,8 +118,8 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                         <Upload className="size-6" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold font-normal">{t('importJSON')}</h3>
-                        <p className="text-sm text-gray-500">從先前備份的 JSON 檔案中恢復資料。</p>
+                        <h3 className="text-xl font-bold font-normal">{t('import')}</h3>
+                        <p className="text-sm text-gray-500">{t('backup.import_desc')}</p>
                     </div>
                 </div>
 
@@ -125,7 +127,7 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                     <div className={`p-4 rounded-xl flex items-start gap-3 ${theme === 'dark' ? 'bg-red-500/5 border border-red-500/10' : 'bg-red-50 border border-red-100'}`}>
                         <AlertTriangle className="size-5 text-red-500 mt-0.5" />
                         <p className="text-xs text-red-600 font-medium leading-relaxed">
-                            警告：匯入操作會「全數覆蓋」您目前在瀏覽器中的所有數據，包括收藏、標籤與佈局設定。匯入後頁面會自動重新整理。
+                            {t('backup.import_warning_detail')}
                         </p>
                     </div>
                     <Button
@@ -135,7 +137,7 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                         className={`w-full h-12 rounded-xl text-md font-medium ${theme === 'dark' ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-white'
                             }`}
                     >
-                        {isProcessing ? '正在處理並準備刷新...' : '選擇檔案並開始還原'}
+                        {isProcessing ? t('backup.processing') : t('backup.select_file')}
                     </Button>
                 </div>
             </div>

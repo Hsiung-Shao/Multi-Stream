@@ -1,3 +1,4 @@
+import i18n from '../i18n/i18n';
 
 // Helper for YouTube API calls
 // Extracted from settings.js to support TDD migration
@@ -32,6 +33,7 @@ export const youtubeApi = {
             } catch (error) {
                 // 獲取 API Key 時發生錯誤
                 console.error('Error fetching YouTube API Key:', error);
+                throw new Error(i18n.t('stream:apikey_error'));
             }
             return null;
         })();
@@ -61,13 +63,19 @@ export const youtubeApi = {
 
     // 從 videoID 透過 YouTube Data API 獲取頻道真實 ID
     async getChannelIdFromVideoId(videoId: string): Promise<string> {
+        const info = await this.getVideoInfo(videoId);
+        return info.channelId;
+    },
+
+    // 獲取影片詳細資訊
+    async getVideoInfo(videoId: string): Promise<{ title: string; channelId: string; channelTitle: string }> {
         const apiKey = await this.getApiKey();
         if (!apiKey) {
             throw new Error('YouTube API Key 未配置');
         }
 
         if (!videoId || typeof videoId !== 'string') {
-            throw new Error('無效的 videoID');
+            throw new Error(i18n.t('stream:youtube_video_id_invalid', { videoId: 'unknown' }));
         }
 
         try {
@@ -81,15 +89,19 @@ export const youtubeApi = {
             const data = await response.json();
 
             if (!data.items || data.items.length === 0) {
-                throw new Error('找不到該影片');
+                throw new Error(i18n.t('stream:video_not_found'));
             }
 
-            const channelId = data.items[0].snippet?.channelId;
-            if (!channelId) {
-                throw new Error('無法從影片中獲取頻道 ID');
+            const snippet = data.items[0].snippet;
+            if (!snippet) {
+                throw new Error(i18n.t('stream:fetch_video_error'));
             }
 
-            return channelId;
+            return {
+                title: snippet.title,
+                channelId: snippet.channelId,
+                channelTitle: snippet.channelTitle
+            };
         } catch (error) {
             throw error;
         }
@@ -103,7 +115,7 @@ export const youtubeApi = {
         }
 
         if (!channelId || typeof channelId !== 'string') {
-            throw new Error('無效的 channelId');
+            throw new Error(i18n.t('stream:channel_id_invalid'));
         }
 
         try {
@@ -117,12 +129,12 @@ export const youtubeApi = {
             const data = await response.json();
 
             if (!data.items || data.items.length === 0) {
-                throw new Error('找不到該頻道');
+                throw new Error(i18n.t('stream:channel_not_found'));
             }
 
             const title = data.items[0].snippet?.title;
             if (!title) {
-                throw new Error('無法獲取頻道標題');
+                throw new Error(i18n.t('stream:fetch_channel_error'));
             }
 
             return title;
@@ -136,10 +148,26 @@ export const youtubeApi = {
         // If it fails or implies uncertainty (which it theoretically shouldn't given the robust updates), 
         // fall back to the legacy full-scan API.
 
+        const fetchWithTimeout = async (url: string, options: RequestInit = {}) => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 10000); // 10s timeout
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
+            }
+        };
+
         try {
             // 1. Try New API (Low Cost, High Speed)
             const ogUrl = `/api/youtube-channel-live-og?channelId=${encodeURIComponent(channelId)}`;
-            const ogResp = await fetch(ogUrl, {
+            const ogResp = await fetchWithTimeout(ogUrl, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' }
             });
@@ -164,7 +192,7 @@ export const youtubeApi = {
         // 2. Fallback: Legacy API (Higher Cost, Full Scan)
         try {
             const url = `/api/youtube-channel-live?channelId=${encodeURIComponent(channelId)}`;
-            const response = await fetch(url, {
+            const response = await fetchWithTimeout(url, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json'

@@ -18,6 +18,7 @@ export default {
   // Dialog
   editFavorite: '編集',
   addFavorite: '新規追加',
+  dialogDesc: '詳細情報を入力してください',
   streamUrl: '配信URL',
   streamName: '名前 (任意)',
   category: 'カテゴリ',
@@ -34,7 +35,7 @@ export default {
 
   // Batch Import
   batchImportTitle: 'URL一括インポート',
-  batchImportPlaceholder: '配信URLを1行ずつ入力してください...',
+
   startImport: 'インポート開始',
   importSuccess: '{{count}} 件インポート成功',
 
@@ -50,6 +51,32 @@ export default {
   import: 'バックアップをインポート',
   importWarning: '警告：インポートすると既存のデータはすべて上書きされます。元に戻すことはできません。',
   confirmImport: '上書きを承認する',
+  'backup.export_success': 'バックアップの書き出しに成功しました',
+  'backup.export_error': '書き出し失敗: {{error}}',
+  'backup.invalid_format': '無効なファイル形式',
+  'backup.import_success': '読み込み成功。データを更新しています...',
+  'backup.import_error': '読み込み失敗: {{error}}',
+  'backup.unknown_error': '不明なエラー',
+  'backup.export_desc': 'すべてのお気に入り、カテゴリ、カスタム設定をJSONファイルとしてダウンロードします。',
+  'backup.export_helper': 'これは最も安全なバックアップ方法です。このファイルを外部ドライブやクラウドに保存して、他のPCで設定を復元できます。',
+  'backup.export_btn': 'バックアップをダウンロード (.json)',
+  'backup.import_desc': '以前にバックアップしたJSONファイルからデータを復元します。',
+  'backup.import_warning_detail': '警告：インポートすると、お気に入り、タグ、レイアウトを含むブラウザ内のすべての現在のデータが「完全に上書き」されます。インポート後、ページは自動的に再読み込みされます。',
+  'backup.processing': '処理中、更新準備中...',
+  'backup.select_file': 'ファイルを選択して復元',
+
+  // Settings
+  'settings.theme_desc': 'ライトモードとダークモードを切り替えます',
+  'settings.language_desc': 'インターフェースの言語を選択してください',
+  'settings.about_desc': 'Multi-Streamは、最高の視聴体験を提供することを目的としたオープンソースのマルチストリーム視聴プラットフォームです。',
+  'settings.sponsor': 'スポンサー',
+
+  // Placeholders
+  'placeholder.search_url': '名前またはURLを検索...',
+  'placeholder.stream_example': '例: ゲーム配信, 音楽...',
+  'placeholder.category_example': '例: お気に入り, ゲーム, 音楽...',
+  'customName': 'カスタム名 (任意)',
+  'batchImportPlaceholder': 'TwitchチャンネルのURLを1行に1つずつ入力してください。\n例：\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 
   // Twitch
   twitchIntegration: 'Twitch インポート',
@@ -76,4 +103,16 @@ export default {
   theme: 'テーマ',
   language: '表示言語',
   about: 'アプリについて',
+  // Layout Manager
+  'layout_manager.delete_confirm': '削除',
+  'layout_manager.apply': '適用',
+  'layout_manager.update_from_current': '現在のレイアウトで更新',
+  'layout_manager.update_from_current_desc': '現在のウィンドウ配置でこの保存を上書きします',
+  'layout_manager.delete_layout': 'レイアウトを削除',
+  'layout_manager.delete_layout_desc': 'このレイアウトを削除してもよろしいですか？この操作は取り消せません。',
+  'layout_manager.rename': '名前を変更',
+  'layout_manager.confirm_update': '「{{name}}」を現在のレイアウトで上書きしてもよろしいですか？',
+  'layout_manager.no_layouts': 'カスタムレイアウトがありません',
+  'layout_manager.no_layouts_desc': 'ウィンドウの位置を調整して、テンプレートとして保存できます。',
 };
+

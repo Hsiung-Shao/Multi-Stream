@@ -8,6 +8,7 @@ import { DynamicIsland } from '../Navigation/DynamicIsland';
 import { SimpleCanvas, CanvasWindow, WindowRenderProps } from '../Canvas';
 import { useStreamStore } from '../../store/useStreamStore';
 import { CanvasStreamContent } from './CanvasStreamContent';
+import { EmptyWindowContent } from '../Canvas/EmptyWindowContent';
 
 export const NewCanvasPage = () => {
     const setLayoutMode = useStreamStore(s => s.setLayoutMode);
@@ -53,24 +54,59 @@ export const NewCanvasPage = () => {
 
     // Handle window remove
     const handleWindowRemove = useCallback((id: string) => {
+        // 1. Get current state to verify window type
+        const state = useStreamStore.getState();
+        const item = state.canvasItems.find(i => i.i === id);
+
+        // 2. Remove the visual window (Canvas Item)
         removeCanvasItem(id);
+
+        // 3. If it's a stream window, we MUST remove the actual stream data
+        // This ensures it disappears from Media Control Panel and stops playing.
+        if (item && item.type === 'stream' && item.contentId) {
+            console.log('[NewCanvasPage] Removing stream data for closed window:', item.contentId);
+            state.removeStream(item.contentId);
+        }
     }, [removeCanvasItem]);
 
     // Render content for each window - now receives WindowRenderProps
     const renderContent = useCallback((window: CanvasWindow, renderProps: WindowRenderProps) => {
+        // Callback to update window content (passed to EmptyWindow)
+        const handleUpdateWindow = (id: string, updates: any) => {
+            // DEBUG: trace canvas item update flow
+            console.log('[NewCanvasPage] handleUpdateWindow:', { id, updates });
+            // We need a way to update the specific canvas item by its ID (window.id is the item.i)
+            // useStreamStore's updateCanvasItem takes (itemId, updates)
+            useStreamStore.getState().updateCanvasItem(id, updates);
+        };
+
         if (!window.contentId) {
             return (
-                <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
-                    空視窗
-                </div>
+                <EmptyWindowContent
+                    windowId={window.id}
+                    type={window.type}
+                    onUpdateWindow={handleUpdateWindow}
+                    renderProps={renderProps}
+                />
             );
         }
 
         const stream = streams.find(s => s.id === window.contentId);
+        console.log('[NewCanvasPage] renderContent stream lookup:', {
+            windowId: window.id,
+            contentId: window.contentId,
+            streamFound: !!stream,
+            allStreamIds: streams.map(s => s.id)
+        });
         if (!stream) {
+            // If stream not found but we have an ID, maybe render empty or error
+            // Fallback to empty for now but keep ID just in case? 
+            // Better to show "Stream Not Found" or reset.
+            // Let's render EmptyWindowContent but maybe with a warning? 
+            // Or just the placeholder text as before but cleaner.
             return (
-                <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
-                    串流未找到
+                <div className="w-full h-full flex items-center justify-center text-white/50 text-sm bg-slate-900 border border-white/10 rounded-lg">
+                    串流未找到 (ID: {window.contentId})
                 </div>
             );
         }
@@ -78,7 +114,9 @@ export const NewCanvasPage = () => {
         return (
             <CanvasStreamContent
                 stream={stream}
+                windowType={window.type}
                 renderProps={renderProps}
+                windowId={window.id} // Pass window ID for updates if needed
             />
         );
     }, [streams]);

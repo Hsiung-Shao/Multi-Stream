@@ -7,6 +7,7 @@ import { memo, useState, useMemo, useCallback } from 'react';
 import { GripHorizontal, X, ArrowLeftRight, RefreshCw } from 'lucide-react';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
+import { StreamChat } from '../StreamChat';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import type { StreamData } from '../../utils/streamUtils';
@@ -14,6 +15,8 @@ import type { StreamData } from '../../utils/streamUtils';
 interface CanvasStreamContentProps {
     stream: StreamData;
     renderProps: WindowRenderProps;
+    windowType?: 'stream' | 'chat';
+    windowId?: string;
 }
 
 // Divider subcomponent
@@ -23,9 +26,10 @@ const Divider = memo(function Divider() {
 
 export const CanvasStreamContent = memo(function CanvasStreamContent({
     stream,
-    renderProps
+    renderProps,
+    windowType = 'stream'
 }: CanvasStreamContentProps) {
-    const { dragHandlers, isDragging, isResizing, gridW, gridH, onRemove, onSwap } = renderProps;
+    const { dragHandlers, isDragging, isResizing, onRemove, onSwap } = renderProps;
 
     const [reloadKey, setReloadKey] = useState(0);
 
@@ -45,6 +49,13 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     }, [onRemove]);
 
     const title = useMemo(() => {
+        console.log('[CanvasStreamContent] Rendered:', {
+            streamId: stream.id,
+            platform: stream.platform,
+            videoId: stream.videoId,
+            channelId: stream.channelId,
+            windowType
+        });
         return stream.displayName || stream.name || stream.channelId || 'Unknown';
     }, [stream.displayName, stream.name, stream.channelId]);
 
@@ -63,15 +74,11 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                 )}
                 {...dragHandlers}
             >
-                {/* Drag Handle with Title and Grid Size */}
+                {/* Drag Handle with Title (Grid Size REMOVED) */}
                 <div className="cursor-grab flex items-center text-white/70 hover:text-white mr-1 gap-2">
                     <GripHorizontal size={14} />
                     <span className="text-[10px] font-medium max-w-[100px] truncate">
                         {title}
-                    </span>
-                    <div className="h-3 w-[1px] bg-white/20" />
-                    <span className="text-xs font-bold text-white/70">
-                        {gridW} x {gridH}
                     </span>
                 </div>
 
@@ -116,12 +123,22 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                 className="w-full h-full overflow-hidden"
                 style={{ pointerEvents: isDragging || isResizing ? 'none' : 'auto' }}
             >
-                <StreamIframe
-                    key={reloadKey}
-                    streamData={stream}
-                    volume={stream.volume ?? 100}
-                    isMuted={stream.isMuted ?? false}
-                />
+                {windowType === 'chat' ? (
+                    <StreamChat
+                        key={`chat-${reloadKey}`}
+                        platform={stream.platform}
+                        channelId={stream.channelId}
+                        videoId={stream.videoId}
+                        theme="dark"
+                    />
+                ) : (
+                    <StreamIframe
+                        key={`stream-${reloadKey}`}
+                        streamData={stream}
+                        volume={stream.volume ?? 100}
+                        isMuted={stream.isMuted ?? false}
+                    />
+                )}
             </div>
         </div>
     );

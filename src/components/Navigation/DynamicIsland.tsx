@@ -3,7 +3,6 @@ import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize }
 import { Button } from '../../components/ui/button';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
-// import { SettingsDialog } from '../Dialogs/SettingsDialog'; // Removed as per request
 import { MediaControlPanel } from './MediaControlPanel';
 import {
     DropdownMenu,
@@ -13,10 +12,15 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { useDynamicIsland } from '../../hooks/useDynamicIsland';
 import { IslandSearch } from './IslandSearch';
+import { IslandFavoritesMenu } from './IslandFavoritesMenu';
+import { IslandLayoutPicker } from './IslandLayoutPicker';
 import { cn } from '../ui/utils';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { favoritesService } from '../../features/favorites/FavoritesService';
+
+
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -40,6 +44,7 @@ export const DynamicIsland = () => {
 
     // const [settingsDialogOpen, setSettingsDialogOpen] = useState(false); // Removed
     const [mediaControlExpanded, setMediaControlExpanded] = useState(false);
+    const [layoutPickerExpanded, setLayoutPickerExpanded] = useState(false);
 
     // Dynamic Island Hook
     const { isCollapsed, handlers } = useDynamicIsland({ idleTime: 5000 });
@@ -135,12 +140,17 @@ export const DynamicIsland = () => {
                         </DropdownMenu>
 
                         {/* 2. Layout Settings */}
+                        <IslandLayoutPicker
+                            isExpanded={layoutPickerExpanded}
+                            onMouseLeave={() => setLayoutPickerExpanded(false)}
+                            onOpenSettings={() => openModal('favorites', 'layouts')}
+                        />
                         <Button
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => { /* TODO: Open Layout Dialog */ }}
-                            title={t('common.layout') || "佈局設定"}
+                            onClick={() => setLayoutPickerExpanded(!layoutPickerExpanded)}
+                            title={t('common.layout') || "布局設定"}
                         >
                             <Layout size={20} />
                         </Button>
@@ -156,16 +166,17 @@ export const DynamicIsland = () => {
                             <Tv size={20} />
                         </Button>
 
-                        {/* 4. Favorites List (No-op placeholder) */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => { /* No-op */ }}
-                            title={t('common.favorites') || "收藏清單"}
-                        >
-                            <Star size={20} />
-                        </Button>
+                        {/* 4. Favorites List */}
+                        <IslandFavoritesMenu>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-white/10 text-white"
+                                title={t('common.favorites') || "收藏清單"}
+                            >
+                                <Star size={20} />
+                            </Button>
+                        </IslandFavoritesMenu>
 
                         {/* 5. One-click Favorite (Quick Save) */}
                         <Button
@@ -240,7 +251,7 @@ export const DynamicIsland = () => {
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => openModal('favorites')}
+                            onClick={() => openModal('favorites', 'global_settings')}
                             title={t('common.settings') || "設定"}
                         >
                             <Settings size={20} />

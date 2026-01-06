@@ -54,6 +54,10 @@ const common = {
   'common.add_stream_window': '방송 창 추가',
   'common.add_chat_window': '채팅 창 추가',
   'common.fullscreen': '전체 화면',
+  'common.save_layout': '현재 레이아웃 저장',
+  'common.manage_layouts': '레이아웃 관리',
+  'common.layout_list': '레이아웃 목록',
+  'common.manage': '관리',
 };
 
 export default common;

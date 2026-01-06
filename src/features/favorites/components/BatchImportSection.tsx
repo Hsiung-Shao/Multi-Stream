@@ -76,7 +76,7 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
                 </div>
                 <div>
                     <h3 className="text-lg font-bold">{t('batchImport')}</h3>
-                    <p className="text-sm text-gray-500">{t('batchImportPlaceholder')?.split('\n')[0]}</p>
+                    <p className="text-sm text-gray-500">{t('favorites:batchImportPlaceholder')?.split('\n')[0]}</p>
                 </div>
             </div>
 
@@ -84,7 +84,7 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
                 <div className="space-y-2">
                     <Textarea
                         {...register('urls', { required: true })}
-                        placeholder={t('batchImportPlaceholder')}
+                        placeholder={t('favorites:batchImportPlaceholder')}
                         className={`min-h-[200px] text-sm resize-none ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'
                             }`}
                         disabled={isImporting}
@@ -99,10 +99,10 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
                             render={({ field }) => (
                                 <Select value={field.value} onValueChange={field.onChange} disabled={isImporting}>
                                     <SelectTrigger className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}>
-                                        <SelectValue placeholder={t('category')} />
+                                        <SelectValue placeholder={t('favorites:category')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="uncategorized">{t('uncategorized')}</SelectItem>
+                                        <SelectItem value="uncategorized">{t('favorites:uncategorized')}</SelectItem>
                                         {categories.map(cat => (
                                             <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                         ))}
@@ -123,7 +123,7 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
                                 {progress.current} / {progress.total}
                             </>
                         ) : (
-                            t('batchImportButton')
+                            t('favorites:startImport')
                         )}
                     </Button>
                 </div>

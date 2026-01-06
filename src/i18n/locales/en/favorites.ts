@@ -18,6 +18,7 @@ export default {
   // Dialog
   editFavorite: 'Edit Favorite',
   addFavorite: 'Add Favorite',
+  dialogDesc: 'Enter stream details',
   streamUrl: 'Stream URL',
   streamName: 'Name (Optional)',
   category: 'Category',
@@ -34,7 +35,7 @@ export default {
 
   // Batch Import
   batchImportTitle: 'Batch Import URLs',
-  batchImportPlaceholder: 'Enter stream URLs, one per line...',
+
   startImport: 'Start Import',
   importSuccess: 'Successfully imported {{count}} items',
 
@@ -50,6 +51,32 @@ export default {
   import: 'Import Backup',
   importWarning: 'WARNING: Importing will overwrite all existing data. This cannot be undone.',
   confirmImport: 'I understand and confirm overwrite',
+  'backup.export_success': 'Backup exported successfully',
+  'backup.export_error': 'Export failed: {{error}}',
+  'backup.invalid_format': 'Invalid file format',
+  'backup.import_success': 'Import successful, refreshing data...',
+  'backup.import_error': 'Import failed: {{error}}',
+  'backup.unknown_error': 'Unknown error',
+  'backup.export_desc': 'Download all your favorites, categories, and custom settings as a JSON file.',
+  'backup.export_helper': 'This is the safest way to backup. You can save this file to an external drive or cloud storage to restore your configuration on other computers.',
+  'backup.export_btn': 'Download Backup (.json)',
+  'backup.import_desc': 'Restore data from a previously backed up JSON file.',
+  'backup.import_warning_detail': 'WARNING: Import will OVERWRITE all current data in your browser, including favorites, tags, and layouts. The page will reload automatically after import.',
+  'backup.processing': 'Processing and refreshing...',
+  'backup.select_file': 'Select File and Restore',
+
+  // Settings
+  'settings.theme_desc': 'Toggle between light and dark mode',
+  'settings.language_desc': 'Select your preferred interface language',
+  'settings.about_desc': 'Multi-Stream is an open-source multi-stream viewing platform dedicated to providing the best viewing experience.',
+  'settings.sponsor': 'Sponsor',
+
+  // Placeholders
+  'placeholder.search_url': 'Search name or URL...',
+  'placeholder.stream_example': 'e.g. Gaming, Music...',
+  'placeholder.category_example': 'e.g. Favorites, Gaming, Music...',
+  'customName': 'Custom Name (Optional)',
+  'batchImportPlaceholder': 'Enter Twitch channel URLs, one per line.\nExample:\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 
   // Twitch
   twitchIntegration: 'Twitch Import',
@@ -76,4 +103,28 @@ export default {
   theme: 'Theme',
   language: 'Language',
   about: 'About',
+
+  // Dynamic Island
+  favorites_menu: 'Favorites',
+  online_only: 'Online Only',
+  added_count: 'Added {{count}} channels',
+  no_streams_in_category: 'No channels in category',
+  confirm_load_large: 'Are you sure you want to load {{count}} channels? This may cause lag.',
+  load_selected_count: 'Load {{count}} channels',
+  load_category_all: 'Load all in category',
+  no_streams_to_save: 'No streams to save',
+  save_entire_canvas: 'Save current canvas',
+  batch_save_success_simple: 'Saved {{count}} streams',
+  // Layout Manager
+  'layout_manager.delete_confirm': 'Delete',
+  'layout_manager.apply': 'Apply',
+  'layout_manager.update_from_current': 'Update from Current',
+  'layout_manager.update_from_current_desc': 'Overwrite this save with current window layout',
+  'layout_manager.delete_layout': 'Delete Layout',
+  'layout_manager.delete_layout_desc': 'Are you sure you want to delete this layout? This action cannot be undone.',
+  'layout_manager.rename': 'Rename',
+  'layout_manager.confirm_update': 'Are you sure you want to overwrite "{{name}}" with the current layout?',
+  'layout_manager.no_layouts': 'No custom layouts',
+  'layout_manager.no_layouts_desc': 'Adjust window positions and save them as a template.',
 };
+

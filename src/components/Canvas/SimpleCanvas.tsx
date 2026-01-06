@@ -8,6 +8,8 @@ import { DraggableWindow, CanvasWindow, WindowRenderProps } from './DraggableWin
 import { calculateGridConfig, GridConfig } from './gridConfig';
 import { checkCollision, Rect } from './collision';
 import { cn } from '../ui/utils';
+import { ScrollArea } from '../ui/scroll-area';
+import { calculateRequiredRows } from '../../utils/layoutEngine';
 
 interface SimpleCanvasProps {
     windows: CanvasWindow[];
@@ -26,7 +28,12 @@ export const SimpleCanvas = memo(function SimpleCanvas({
 }: SimpleCanvasProps) {
     // Grid configuration - recalculates on resize
     const [gridConfig, setGridConfig] = useState<GridConfig>(() =>
-        calculateGridConfig(window.innerWidth, window.innerHeight)
+        calculateGridConfig(window.innerWidth, window.innerHeight, calculateRequiredRows(windows.map(w => ({
+            i: w.id,
+            type: 'stream' as const,
+            contentId: null,
+            layout: { x: w.gridX, y: w.gridY, w: w.gridW, h: w.gridH }
+        }))))
     );
 
     // Swap mode state
@@ -35,12 +42,29 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     // Handle window resize
     useEffect(() => {
         const handleResize = () => {
-            setGridConfig(calculateGridConfig(window.innerWidth, window.innerHeight));
+            const items = windows.map(w => ({
+                i: w.id,
+                type: 'stream' as const,
+                contentId: null,
+                layout: { x: w.gridX, y: w.gridY, w: w.gridW, h: w.gridH }
+            }));
+            setGridConfig(calculateGridConfig(window.innerWidth, window.innerHeight, calculateRequiredRows(items)));
         };
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [windows]); // Added windows dependency to recalc rows on window change
+
+    // Recalculate grid when windows change (for infinite scrolling)
+    useEffect(() => {
+        const items = windows.map(w => ({
+            i: w.id,
+            type: 'stream' as const,
+            contentId: null,
+            layout: { x: w.gridX, y: w.gridY, w: w.gridW, h: w.gridH }
+        }));
+        setGridConfig(prev => calculateGridConfig(prev.containerWidth, prev.cellHeight * 24, calculateRequiredRows(items)));
+    }, [windows]);
 
     // Convert windows to pixel positions for collision detection
     const windowPositions = useMemo(() => {
@@ -87,12 +111,27 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         onWindowUpdate(updated);
     }, [windows, onWindowUpdate]);
 
-    // Handle size change (now includes position for corner resizing)
-    const handleSizeChange = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
-        const updated = windows.map(w =>
-            w.id === id ? { ...w, gridX, gridY, gridW, gridH } : w
-        );
-        onWindowUpdate(updated);
+    // Handle resize
+    const handleWindowResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
+        // Enforce constraints
+        const window = windows.find(w => w.id === id);
+        if (window) {
+            if (window.type === 'stream') {
+                gridW = Math.max(6, gridW);
+                gridH = Math.max(6, gridH);
+            } else if (window.type === 'chat') {
+                gridW = Math.max(3, Math.min(4, gridW)); // 3 <= W <= 4
+                gridH = Math.max(6, gridH);
+            }
+        }
+
+        const newWindows = windows.map(w => {
+            if (w.id === id) {
+                return { ...w, gridX, gridY, gridW, gridH };
+            }
+            return w;
+        });
+        onWindowUpdate(newWindows);
     }, [windows, onWindowUpdate]);
 
     // Handle swap request
@@ -148,48 +187,47 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     }, [swapSourceId]);
 
     return (
-        <div
-            className={cn(
-                "relative overflow-hidden bg-slate-950",
-                className
-            )}
-            style={{
-                width: gridConfig.containerWidth,
-                height: gridConfig.containerHeight,
-                contain: 'strict',
-                // Grid background
-                backgroundSize: `${gridConfig.cellWidth}px ${gridConfig.cellHeight}px`,
-                backgroundImage: `
-                    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)
-                `
-            }}
-        >
-            {/* Swap mode indicator */}
-            {swapSourceId && (
-                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-500/90 text-white px-4 py-2 rounded-lg text-sm shadow-lg">
-                    選擇要交換的視窗 (按 ESC 取消)
-                </div>
-            )}
+        <ScrollArea className={cn("h-full w-full bg-slate-950", className)}>
+            <div
+                className="relative overflow-hidden"
+                style={{
+                    width: gridConfig.containerWidth,
+                    height: gridConfig.containerHeight,
+                    // contain: 'strict', // Contain strict might clip children or affect scrolling?
+                    // Grid background
+                    backgroundSize: `${gridConfig.cellWidth}px ${gridConfig.cellHeight}px`,
+                    backgroundImage: `
+                        linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)
+                    `
+                }}
+            >
+                {/* Swap mode indicator */}
+                {swapSourceId && (
+                    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-500/90 text-white px-4 py-2 rounded-lg text-sm shadow-lg">
+                        選擇要交換的視窗 (按 ESC 取消)
+                    </div>
+                )}
 
-            {/* Windows */}
-            {windows.map(w => (
-                <DraggableWindow
-                    key={w.id}
-                    window={w}
-                    gridConfig={gridConfig}
-                    onPositionChange={handlePositionChange}
-                    onSizeChange={handleSizeChange}
-                    onRemove={onWindowRemove}
-                    onSwapRequest={handleSwapRequest}
-                    checkDragCollision={checkDragCollision}
-                    checkResizeCollision={checkResizeCollision}
-                    isSwapTarget={swapSourceId !== null && swapSourceId !== w.id}
-                >
-                    {(renderProps) => renderContent(w, renderProps)}
-                </DraggableWindow>
-            ))}
-        </div>
+                {/* Windows */}
+                {windows.map(w => (
+                    <DraggableWindow
+                        key={w.id}
+                        window={w}
+                        gridConfig={gridConfig}
+                        onPositionChange={handlePositionChange}
+                        onSizeChange={handleWindowResize}
+                        onRemove={onWindowRemove}
+                        onSwapRequest={handleSwapRequest}
+                        checkDragCollision={checkDragCollision}
+                        checkResizeCollision={checkResizeCollision}
+                        isSwapTarget={swapSourceId !== null && swapSourceId !== w.id}
+                    >
+                        {(renderProps) => renderContent(w, renderProps)}
+                    </DraggableWindow>
+                ))}
+            </div>
+        </ScrollArea>
     );
 });
 

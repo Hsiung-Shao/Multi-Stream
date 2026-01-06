@@ -1,5 +1,49 @@
 import { Layout } from 'react-grid-layout';
 
+/**
+ * Calculates a balanced grid layout for N items within a 24x24 container.
+ * Used for N <= 16.
+ */
+export const calculateAutoGridLayout = (count: number): { x: number, y: number, w: number, h: number }[] => {
+    const specs: { x: number, y: number, w: number, h: number }[] = [];
+
+    // Grid Logic Configuration
+    let cols = 1;
+    let rows = 1;
+
+    // Define grid structure based on count
+    if (count <= 1) { cols = 1; rows = 1; }
+    else if (count <= 2) { cols = 2; rows = 1; }
+    else if (count <= 4) { cols = 2; rows = 2; }
+    else if (count <= 6) { cols = 3; rows = 2; }
+    else if (count <= 9) { cols = 3; rows = 3; }
+    else if (count <= 12) { cols = 4; rows = 3; }
+    else { cols = 4; rows = 4; } // Max 16
+
+    // Avoid NaN if count is 0
+    if (count === 0) return [];
+
+    const cellW = Math.floor(24 / cols);
+    const cellH = Math.floor(24 / rows);
+
+    for (let i = 0; i < count; i++) {
+        // Vertical-First: Fill rows first (down), then columns (right)
+        // c = floor(i / rows)
+        // r = i % rows
+        const c = Math.floor(i / rows);
+        const r = i % rows;
+
+        specs.push({
+            x: c * cellW,
+            y: r * cellH,
+            w: cellW,
+            h: cellH
+        });
+    }
+
+    return specs;
+};
+
 // Define layout types
 export type LayoutMode = 'video_only' | 'with_chat';
 

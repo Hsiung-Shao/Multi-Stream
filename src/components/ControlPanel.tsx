@@ -21,12 +21,13 @@ import { tagsService } from '../features/favorites/TagsService';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { favoritesLoader } from '../features/favorites/FavoritesLoader';
 import { DEFAULT_TAG_IS_LIVE_ID } from '../features/favorites/constants';
-import type { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
+import { Tag, FavoriteStream, FavoriteCategory } from '../features/favorites/types';
 import { twitchService } from '../features/twitch/TwitchService';
 import { youtubeApi } from '../utils/youtubeApi';
 import { useStreamStore } from '../store/useStreamStore'; // Direct usage
 import { LayoutEditor } from './Canvas/LayoutEditor';
 import { LayoutSelector } from './Canvas/LayoutSelector';
+import { useLiveStatusCheck } from '../features/favorites/useLiveStatusCheck';
 // I should check if they are exported or defined internally.
 
 interface ControlPanelProps {
@@ -106,7 +107,7 @@ export function ControlPanel({
   const [tags, setTags] = useState<Tag[]>([]);
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // const [isRefreshing, setIsRefreshing] = useState(false); // Refactored to useLiveStatusCheck
 
   // 同步 showAllChat 狀態：當所有串流的聊天室都顯示時，開關應該是開啟的
   useEffect(() => {
@@ -170,91 +171,14 @@ export function ControlPanel({
     };
   }, [loadFavorites]);
 
-  // 刷新開台狀態
+  // 使用重構後的 Hook
+  const { checkNow, isRefreshing } = useLiveStatusCheck();
+
   const handleRefreshStatus = async () => {
-    // 移除 window 依賴檢查
-    // if (!window.favoriteStreams) return;
-
-    setIsRefreshing(true);
-    try {
-      const favoritesList = favoritesService.getFavorites();
-      const twitchFavorites = favoritesList.filter(f => f.platform === 'twitch' && f.channelId);
-      const youtubeFavorites = favoritesList.filter(f => f.platform === 'youtube' && f.channelId);
-
-      let updatedFavorites = [...favoritesList];
-
-      // 更新 Twitch 開台狀態
-      if (twitchFavorites.length > 0) {
-        const channelIds = twitchFavorites.map(f => f.channelId!);
-        const liveStatuses = await twitchService.checkMultipleChannelsLiveStatus(channelIds);
-
-        // 更新收藏列表中的開台狀態
-        updatedFavorites = updatedFavorites.map(fav => {
-          if (fav.platform === 'twitch' && fav.channelId && liveStatuses[fav.channelId]) {
-            return {
-              ...fav,
-              isLive: liveStatuses[fav.channelId].isLive || false,
-              lastChecked: new Date().toISOString(),
-              // 保存額外信息到 favorite 對象中（用於顯示）
-              viewerCount: liveStatuses[fav.channelId].viewerCount,
-              gameName: liveStatuses[fav.channelId].gameName
-            } as FavoriteStream;
-          }
-          return fav;
-        });
-      }
-
-      // 更新 YouTube 開台狀態
-      if (youtubeFavorites.length > 0) {
-        let isFirstYoutubeCheck = true;
-        for (const fav of youtubeFavorites) {
-          if (fav.channelId) {
-            // 優化: 如果目前是 LIVE 狀態，且 lastChecked 在 1 小時內，則跳過檢查
-            // 避免已開台的頻道仍頻繁觸發請求（風險較高）
-            if (fav.isLive && fav.lastChecked) {
-              const lastCheckedTime = new Date(fav.lastChecked).getTime();
-              const oneHourAgo = Date.now() - 60 * 60 * 1000;
-              if (lastCheckedTime > oneHourAgo) {
-                // 跳過此頻道，保留原狀態
-                continue;
-              }
-            }
-
-            // 增加請求間隔 (2000ms)，避免瞬間爆發流量
-            if (!isFirstYoutubeCheck) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-            isFirstYoutubeCheck = false;
-
-            try {
-              const status = await youtubeApi.checkChannelLiveStatus(fav.channelId) as any;
-              updatedFavorites = updatedFavorites.map(f => {
-                if (f.id === fav.id) {
-                  return {
-                    ...f,
-                    isLive: status.isLive || false,
-                    lastChecked: new Date().toISOString(),
-                    liveUrl: status.finalUrl || null,
-                    liveVideoId: status.liveVideoId || null
-                  };
-                }
-                return f;
-              });
-            } catch (e) {
-              // 靜默處理錯誤
-            }
-          }
-        }
-      }
-
-      // 保存更新後的收藏列表
-      favoritesService.saveFavorites(updatedFavorites);
-      setFavorites(updatedFavorites);
-    } catch (e) {
-      // 刷新開台狀態失敗，繼續處理
-    } finally {
-      setIsRefreshing(false);
-    }
+    // 透過 Hook 觸發全域檢查
+    await checkNow();
+    // 重新載入收藏列表以確保 UI 更新
+    loadFavorites();
   };
 
   // 切換分類展開/收起

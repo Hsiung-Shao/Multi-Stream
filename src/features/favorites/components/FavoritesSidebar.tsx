@@ -185,6 +185,12 @@ export function FavoritesSidebar({
 
             {/* Footer / System */}
             <div className="mt-auto p-4 pt-4 border-t border-gray-800 space-y-1">
+                <div className={navItemClass(activeTab === 'layouts')} onClick={() => onNavigate('layouts')}>
+                    <div className="flex items-center gap-3">
+                        <LayoutGrid className="size-4" />
+                        <span className="text-sm">{t('common:common.manage_layouts')}</span>
+                    </div>
+                </div>
                 <div className={navItemClass(activeTab === 'categories')} onClick={() => onNavigate('categories')}>
                     <div className="flex items-center gap-3">
                         <Folder className="size-4" />

@@ -54,6 +54,11 @@ const common = {
   'common.add_stream_window': 'Add Stream Window',
   'common.add_chat_window': 'Add Chat Window',
   'common.fullscreen': 'Fullscreen',
+  'common.timeout': 'Request timed out, please try again later',
+  'common.save_layout': 'Save Current Layout',
+  'common.manage_layouts': 'Manage Layouts',
+  'common.layout_list': 'Layout List',
+  'common.manage': 'Manage',
 };
 
 export default common;

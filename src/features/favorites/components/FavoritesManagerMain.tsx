@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useUIStore } from '../../../store/useUIStore';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { useTranslation } from 'react-i18next';
 import { FavoritesSidebar } from './FavoritesSidebar';
@@ -9,12 +10,14 @@ import { BatchImportSection } from './BatchImportSection';
 import { BackupSection } from './BackupSection';
 import { TwitchIntegrationSection } from './TwitchIntegrationSection';
 import { SettingsSection } from './SettingsSection';
+import { LayoutManagerSection } from './LayoutManagerSection';
 import { favoritesService } from '../FavoritesService';
 import { tagsService } from '../TagsService';
 import { favoritesLoader } from '../FavoritesLoader';
 import { logEvent } from '../../../utils/analytics';
 import { toast } from 'sonner';
 import { ScrollArea } from '../../../components/ui/scroll-area';
+import { useFavorites } from '../../../hooks/useFavorites';
 
 // Twitch Integration
 import { useTwitchAuth } from '../../../hooks/useTwitchAuth';
@@ -23,10 +26,9 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Edit2, Trash2, Star, Plus, Folder, RotateCw } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../../../components/ui/alert-dialog';
-import { youtubeApi } from '../../../utils/youtubeApi';
-import { twitchService } from '../../twitch/TwitchService';
+import { useLiveStatusCheck } from '../useLiveStatusCheck';
 
-import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../types';
+import type { FavoriteStream, Tag } from '../types';
 
 interface FavoritesManagerMainProps {
     theme: 'light' | 'dark';
@@ -37,7 +39,8 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const { t } = useTranslation(['favorites', 'common', 'tags']);
 
     // --- State ---
-    const [activeTab, setActiveTab] = useState('favorites'); // favorites, twitch_import, global_settings, tags, categories, backup, batch
+    const initialTab = useUIStore.getState().favoritesTab || 'favorites';
+    const [activeTab, setActiveTab] = useState(initialTab); // favorites, twitch_import, global_settings, tags, categories, backup, batch, layouts
     const [activeFilter, setActiveFilter] = useState('all'); // all, live, categoryId, or tag:tagId
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -45,10 +48,10 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const [deleteCategoryConfirmOpen, setDeleteCategoryConfirmOpen] = useState(false);
     const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
-    const [checkingLiveStatus, setCheckingLiveStatus] = useState(false);
 
-    const [favorites, setFavorites] = useState<FavoriteStream[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
+
+    // Using hook for reactivity
+    const { favorites, categories, refresh: refreshFavorites } = useFavorites();
     const [tags, setTags] = useState<Tag[]>([]);
 
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -79,10 +82,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
     // --- Data Loading ---
     const loadData = useCallback(() => {
-        setFavorites(favoritesService.getFavorites());
-        setCategories(favoritesService.getCategories());
+        refreshFavorites();
         setTags(tagsService.getAllTags());
-    }, []);
+    }, [refreshFavorites]);
 
     useEffect(() => {
         loadData();
@@ -147,7 +149,8 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const handleDelete = (id: string) => {
         if (confirm(t('confirmDelete') || '確定要刪除嗎？')) {
             favoritesService.removeFavorite(id);
-            loadData();
+            // Service emits event -> useFavorites updates
+            loadData(); // To refresh tags if needed, and confirm UI sync
             logEvent('Favorites', 'remove_favorite', 'single');
         }
     };
@@ -200,7 +203,8 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
         if (!newCategoryName.trim()) return;
         favoritesService.addCategory(newCategoryName.trim());
         setNewCategoryName('');
-        loadData();
+        // Categories update automatically via hook
+        loadData(); // For consistency
         toast.success(t('addCategorySuccess') || '分類已新增');
     };
 
@@ -222,121 +226,12 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
 
 
+    const { checkNow, isRefreshing } = useLiveStatusCheck();
+
     const handleCheckLiveStatus = async () => {
-        setCheckingLiveStatus(true);
-
-        // Define independent check functions
-        const checkTwitch = async () => {
-            try {
-                const twitchFavs = favorites.filter(f => f.platform === 'twitch' || f.url.includes('twitch.tv'));
-                if (twitchFavs.length === 0) return { success: true };
-
-                const logins = twitchFavs.map(f => {
-                    if (f.channelId) return f.channelId;
-                    const match = f.url.match(/twitch\.tv\/([^\/\?]+)/);
-                    return match ? match[1] : null;
-                }).filter(Boolean) as string[];
-
-                if (logins.length === 0) return { success: true };
-
-                // Use the existing service which handles Auth (User Token or App Token) automatically
-                const liveStatuses = await twitchService.checkMultipleChannelsLiveStatus(logins);
-
-                let updatedCount = 0;
-                twitchFavs.forEach(fav => {
-                    const login = fav.channelId || fav.url.match(/twitch\.tv\/([^\/\?]+)/)?.[1];
-                    if (login && liveStatuses[login.toLowerCase()]) {
-                        const status = liveStatuses[login.toLowerCase()];
-                        if (fav.isLive !== status.isLive) {
-                            favoritesService.updateFavorite(fav.id, {
-                                isLive: status.isLive || false,
-                                lastChecked: new Date().toISOString()
-                            });
-                            updatedCount++;
-                        }
-                    } else if (login && !liveStatuses[login.toLowerCase()] && fav.isLive) {
-                        // If channel was live but now not in the live results, mark as offline
-                        // Note: checkMultipleChannelsLiveStatus returns a map of LIVE status results. 
-                        // If it's not in the map, it might be offline or just not returned.
-                        // However, the service implementation returns an object with isLive=true for found streams.
-                        // Let's check logic: channelLogins.forEach init as offline. Then batch process updates to online.
-                        // So the result map SHOULD contain all requested logins.
-                        if (fav.isLive) {
-                            favoritesService.updateFavorite(fav.id, {
-                                isLive: false,
-                                lastChecked: new Date().toISOString()
-                            });
-                            updatedCount++;
-                        }
-                    }
-                });
-
-                // Wait, accessing private property 'twitchService' on favoritesService is not ideal if it's private.
-                // But looking at FavoritesService.ts, it imports `twitchService` and uses it.
-                // Actually, `twitchService` is exported directly from `../TwitchService`.
-                // I should import `twitchService` directly in this file as it is already imported line 13 likely?
-                // Let's check imports. Yes line 12: `import { favoritesService } from '../FavoritesService';`
-                // I need to make sure `twitchService` is imported.
-                // Let's use the imported `twitchService` directly.
-            } catch (e) {
-                console.error('Twitch check failed', e);
-                return { success: false, message: 'Twitch: 檢查失敗' };
-            }
-        };
-
-        const checkYouTube = async () => {
-            try {
-                const youtubeFavs = favorites.filter(f => f.platform === 'youtube' && f.channelId);
-                if (youtubeFavs.length === 0) return { success: true };
-
-                let updatedCount = 0;
-                let isFirst = true;
-
-                for (const fav of youtubeFavs) {
-                    // Optimization: Skip if live and checked recently (1h)
-                    if (fav.isLive && fav.lastChecked) {
-                        const lastCheckedTime = new Date(fav.lastChecked).getTime();
-                        if (Date.now() - lastCheckedTime < 60 * 60 * 1000) continue;
-                    }
-
-                    if (!isFirst) await new Promise(r => setTimeout(r, 2000));
-                    isFirst = false;
-
-                    try {
-                        const status = await youtubeApi.checkChannelLiveStatus(fav.channelId!);
-                        if (status.isLive !== fav.isLive) {
-                            favoritesService.updateFavorite(fav.id, {
-                                isLive: status.isLive,
-                                lastChecked: new Date().toISOString()
-                            });
-                            updatedCount++;
-                        }
-                    } catch (e) {
-                        console.error(`YouTube check failed for ${fav.name}`, e);
-                    }
-                }
-
-                if (updatedCount > 0) {
-                    loadData();
-                    return { success: true, message: `YouTube: 更新 ${updatedCount} 個頻道` };
-                }
-                return { success: true };
-            } catch (e) {
-                console.error('YouTube check failed', e);
-                return { success: false, message: 'YouTube: 檢查失敗' };
-            }
-        };
-
-        // Run in parallel
-        Promise.all([checkTwitch(), checkYouTube()]).then(results => {
-            const messages = results.map(r => r?.message).filter(Boolean);
-            if (messages.length > 0) {
-                toast.success(messages.join('\n'));
-            } else {
-                toast.info('所有頻道狀態皆為最新');
-            }
-            setCheckingLiveStatus(false);
-        });
+        await checkNow();
+        // Hook internal logic updates data, loadData() ensures UI sync via re-reading
+        loadData();
     };
 
     // --- Tag Handlers ---
@@ -447,11 +342,11 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                             variant="outline"
                                             size="sm"
                                             onClick={handleCheckLiveStatus}
-                                            disabled={checkingLiveStatus}
+                                            disabled={isRefreshing}
                                             className="gap-2"
                                         >
-                                            <RotateCw className={`size-4 ${checkingLiveStatus ? 'animate-spin' : ''}`} />
-                                            {checkingLiveStatus ? '檢查中...' : '重新整理直播狀態'}
+                                            <RotateCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                            {isRefreshing ? '檢查中...' : '重新整理直播狀態'}
                                         </Button>
                                     </div>
                                 )}
@@ -542,7 +437,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                             <Input
                                                 value={newCategoryName}
                                                 onChange={(e) => setNewCategoryName(e.target.value)}
-                                                placeholder="例如: 遊戲實況, 音樂台..."
+                                                placeholder={t('favorites:placeholder.stream_example')}
                                                 className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                                             />
@@ -592,6 +487,10 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                             </div>
                         )}
 
+                        {activeTab === 'layouts' && (
+                            <LayoutManagerSection />
+                        )}
+
                         {activeTab === 'tags' && (
                             <div className="flex-1 flex flex-col gap-6 overflow-hidden">
                                 <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
@@ -604,7 +503,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                             <Input
                                                 value={newTagName}
                                                 onChange={(e) => setNewTagName(e.target.value)}
-                                                placeholder="例如: 最愛, 遊戲, 音樂..."
+                                                placeholder={t('favorites:placeholder.category_example')}
                                                 className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                                             />

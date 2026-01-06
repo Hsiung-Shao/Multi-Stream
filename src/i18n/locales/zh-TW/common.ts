@@ -54,6 +54,11 @@ const common = {
   'common.add_stream_window': '新增串流視窗',
   'common.add_chat_window': '新增聊天室窗',
   'common.fullscreen': '全螢幕',
+  'common.timeout': '請求逾時，請稍後再試',
+  'common.save_layout': '儲存目前布局',
+  'common.manage_layouts': '布局管理',
+  'common.layout_list': '布局清單',
+  'common.manage': '管理',
 };
 
 export default common;

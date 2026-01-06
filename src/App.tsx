@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useUIStore } from './store/useUIStore';
 import { useStreamStore } from './store/useStreamStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
@@ -11,6 +12,7 @@ import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { Toaster } from './components/ui/sonner';
 import { PerformanceOverlay } from './components/Navigation/PerformanceOverlay';
+import { GlobalLiveStatusChecker } from './features/favorites/components/GlobalLiveStatusChecker';
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
@@ -26,6 +28,7 @@ const FixedPage = lazy(() => import('./components/Pages/FixedPage').then(module 
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 
 export default function App() {
+  const { t } = useTranslation();
   // 初始化 GA4
   useEffect(() => {
     initGA();
@@ -69,13 +72,13 @@ export default function App() {
         return <HomePage />;
       case 'canvas':
         return (
-          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">載入畫布...</div>}>
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <CanvasPage />
           </Suspense>
         );
       case 'fixed':
         return (
-          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">載入佈局...</div>}>
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <FixedPage />
           </Suspense>
         );
@@ -88,7 +91,7 @@ export default function App() {
               keywords="關於 MultiStream Hub, 功能特色, 技術架構, 開發者資訊, 多平台直播工具"
               url="https://multistreaming.org/about"
             />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <AboutPage
                 theme={theme}
                 onThemeToggle={toggleTheme}
@@ -107,7 +110,7 @@ export default function App() {
               keywords="隱私權政策, 隱私保護, 資料安全, MultiStream Hub, 個人資料保護"
               url="https://multistreaming.org/privacy"
             />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <PrivacyPage
                 theme={theme}
                 onThemeToggle={toggleTheme}
@@ -120,7 +123,7 @@ export default function App() {
       case 'not-found':
       default:
         return (
-          <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
             <NotFoundPage />
           </Suspense>
         );
@@ -137,7 +140,7 @@ export default function App() {
 
       {/* Global Modals */}
       {modals.history && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>
           <VersionHistory
             theme={theme}
             onClose={() => closeModal('history')}
@@ -146,7 +149,7 @@ export default function App() {
       )}
 
       {modals.tutorial && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>
           <Tutorial
             theme={theme}
             onClose={() => closeModal('tutorial')}
@@ -155,7 +158,7 @@ export default function App() {
       )}
 
       {modals.favorites && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>
           <FavoritesManagerMain
             theme={theme}
             onClose={() => closeModal('favorites')}
@@ -164,7 +167,7 @@ export default function App() {
       )}
 
       {modals.feedback && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">載入中...</div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>
           <FeedbackModal
             theme={theme}
             onClose={() => closeModal('feedback')}
@@ -181,6 +184,7 @@ export default function App() {
       />
 
       <PerformanceOverlay />
+      <GlobalLiveStatusChecker />
       <Toaster />
     </>
   );

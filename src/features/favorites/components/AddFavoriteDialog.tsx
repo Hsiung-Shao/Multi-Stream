@@ -73,13 +73,13 @@ export function AddFavoriteDialog({
                 <DialogHeader>
                     <DialogTitle>{initialData ? t('common:common.edit') : t('addFavorite')}</DialogTitle>
                     <DialogDescription>
-                        {initialData ? t('subtitle') : t('subtitle')}
+                        {initialData ? t('favorites:dialogDesc') : t('favorites:dialogDesc')}
                     </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">{t('pasteUrl')}</label>
+                        <label className="text-sm font-medium">{t('favorites:streamUrl')}</label>
                         <Input
                             {...register('url', { required: !initialData })}
                             placeholder="https://www.twitch.tv/..."
@@ -89,27 +89,27 @@ export function AddFavoriteDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">{t('customName')}</label>
+                        <label className="text-sm font-medium">{t('favorites:customName')}</label>
                         <Input
                             {...register('name')}
-                            placeholder={t('customName')}
+                            placeholder={t('favorites:customName')}
                             className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">{t('category')}</label>
+                            <label className="text-sm font-medium">{t('favorites:category')}</label>
                             <Controller
                                 name="categoryId"
                                 control={control}
                                 render={({ field }) => (
                                     <Select value={field.value} onValueChange={field.onChange}>
                                         <SelectTrigger className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}>
-                                            <SelectValue placeholder={t('uncategorized')} />
+                                            <SelectValue placeholder={t('favorites:uncategorized')} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="uncategorized">{t('uncategorized')}</SelectItem>
+                                            <SelectItem value="uncategorized">{t('favorites:uncategorized')}</SelectItem>
                                             {categories.map(cat => (
                                                 <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                             ))}

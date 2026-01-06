@@ -1,5 +1,22 @@
+
 import React from 'react';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Slider } from '../ui/slider';
 import { Switch } from '../ui/switch';
 import { ScrollArea } from '../ui/scroll-area';
@@ -9,6 +26,31 @@ import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { cn } from '../ui/utils';
 import { useTranslation } from 'react-i18next';
+
+// Wrapper for Sortable Item
+const SortableStreamItem = (props: any) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: props.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : 1,
+        position: 'relative' as 'relative',
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <StreamListItem {...props} isDragging={isDragging} />
+        </div>
+    );
+};
 
 interface MediaControlPanelProps {
     isExpanded: boolean;
@@ -30,15 +72,24 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
     const removeStream = useStreamStore(s => s.removeStream);
     const updateStream = useStreamStore(s => s.updateStream);
 
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     // 處理拖曳結束
-    const handleDragEnd = (result: DropResult) => {
-        if (!result.destination) return;
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
 
-        const sourceIndex = result.source.index;
-        const destinationIndex = result.destination.index;
+        if (active.id !== over?.id) {
+            const oldIndex = streams.findIndex((s) => s.id.toString() === active.id);
+            const newIndex = streams.findIndex((s) => s.id.toString() === over?.id);
 
-        if (sourceIndex !== destinationIndex) {
-            moveStream(sourceIndex, destinationIndex);
+            if (oldIndex !== -1 && newIndex !== -1) {
+                moveStream(oldIndex, newIndex);
+            }
         }
     };
 
@@ -83,7 +134,6 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
             moveStream(index, index + 1);
         }
     };
-
 
     return (
         <div
@@ -131,7 +181,7 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                 </div>
 
                 {/* 分隔線 */}
-                <div className="h-[1px] bg-white/10" />
+                <div className="h-3 w-[1px] bg-white/10" />
 
                 {/* 串流順序清單 */}
                 <div className="space-y-2">
@@ -144,50 +194,38 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                             {t('controlPanel:noStreams') || '目前沒有串流'}
                         </div>
                     ) : (
-                        <DragDropContext onDragEnd={handleDragEnd}>
-                            <Droppable droppableId="streams-list">
-                                {(provided) => (
-                                    <ScrollArea
-                                        className="h-[300px] pr-2"
-                                        {...provided.droppableProps}
-                                        ref={provided.innerRef}
-                                    >
-                                        <div className="space-y-2">
-                                            {streams.map((stream, index) => (
-                                                <Draggable
-                                                    key={stream.id}
-                                                    draggableId={stream.id.toString()}
-                                                    index={index}
-                                                >
-                                                    {(provided, snapshot) => (
-                                                        <StreamListItem
-                                                            stream={stream}
-                                                            index={index}
-                                                            isDragging={snapshot.isDragging}
-                                                            provided={provided}
-                                                            masterMuted={masterMuted}
-                                                            totalStreams={streams.length}
-                                                            onToggleMute={handleToggleMute}
-                                                            onVolumeChange={handleVolumeChange}
-                                                            onMoveUp={handleMoveUp}
-                                                            onMoveDown={handleMoveDown}
-                                                            onRefresh={handleRefreshStream}
-                                                            onRemove={removeStream}
-                                                            t={t}
-                                                        />
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder && React.isValidElement(provided.placeholder)
-                                                ? React.cloneElement(provided.placeholder as React.ReactElement<any>, {
-                                                    className: "bg-white/5 border-2 border-dashed border-white/20 rounded-lg backdrop-blur-sm"
-                                                })
-                                                : provided.placeholder}
-                                        </div>
-                                    </ScrollArea>
-                                )}
-                            </Droppable>
-                        </DragDropContext>
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={streams.map(s => s.id.toString())}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <ScrollArea className="h-[300px] pr-2">
+                                    <div className="space-y-2">
+                                        {streams.map((stream, index) => (
+                                            <SortableStreamItem
+                                                key={stream.id}
+                                                id={stream.id.toString()}
+                                                stream={stream}
+                                                index={index}
+                                                masterMuted={masterMuted}
+                                                totalStreams={streams.length}
+                                                onToggleMute={handleToggleMute}
+                                                onVolumeChange={handleVolumeChange}
+                                                onMoveUp={handleMoveUp}
+                                                onMoveDown={handleMoveDown}
+                                                onRefresh={handleRefreshStream}
+                                                onRemove={removeStream}
+                                                t={t}
+                                            />
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </SortableContext>
+                        </DndContext>
                     )}
                 </div>
             </div>

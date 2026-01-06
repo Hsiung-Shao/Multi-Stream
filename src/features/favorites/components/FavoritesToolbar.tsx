@@ -37,7 +37,7 @@ export function FavoritesToolbar({
                     <Input
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder={t('common:common.search') || '搜尋名稱或網址...'}
+                        placeholder={t('favorites:placeholder.search_url')}
                         className={`pl-10 ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-100/50 border-gray-200'
                             }`}
                     />

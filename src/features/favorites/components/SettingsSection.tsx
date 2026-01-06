@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../../components/ui/button';
+
 import { Label } from '../../../components/ui/label';
-import { Switch } from '../../../components/ui/switch';
+
 import {
     Select,
     SelectContent,
@@ -10,8 +10,7 @@ import {
     SelectValue,
 } from '../../../components/ui/select';
 import { Separator } from '../../../components/ui/separator';
-import { Github, Info, Globe, Moon, Sun, Monitor, Coffee } from 'lucide-react';
-import { Badge } from '../../../components/ui/badge';
+import { Github, Info, Moon, Sun, Monitor, Coffee } from 'lucide-react';
 
 interface SettingsSectionProps {
     theme: 'light' | 'dark';
@@ -65,14 +64,14 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                     <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                         <Monitor className="size-5" />
                     </div>
-                    <h3 className="text-lg font-bold font-normal">{t('settings:appearance') || '外觀設定'}</h3>
+                    <h3 className="text-lg font-bold font-normal">{t('favorites:appearance')}</h3>
                 </div>
 
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
-                            <Label className="text-base">{t('settings:theme') || '主題模式'}</Label>
-                            <p className="text-sm text-gray-500">切換應用程式的亮色或暗色外觀</p>
+                            <Label className="text-base">{t('favorites:theme')}</Label>
+                            <p className="text-sm text-gray-500">{t('favorites:settings.theme_desc')}</p>
                         </div>
                         <Select value={currentTheme} onValueChange={toggleTheme}>
                             <SelectTrigger className="w-32">
@@ -99,8 +98,8 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
 
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
-                            <Label className="text-base">{t('settings:language') || '顯示語言'}</Label>
-                            <p className="text-sm text-gray-500">選擇您偏好的介面語言</p>
+                            <Label className="text-base">{t('favorites:language')}</Label>
+                            <p className="text-sm text-gray-500">{t('favorites:settings.language_desc')}</p>
                         </div>
                         <Select value={i18n.language} onValueChange={changeLanguage}>
                             <SelectTrigger className="w-32">
@@ -124,12 +123,12 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                     <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
                         <Info className="size-5" />
                     </div>
-                    <h3 className="text-lg font-bold font-normal">{t('settings:about') || '關於'}</h3>
+                    <h3 className="text-lg font-bold font-normal">{t('favorites:about')}</h3>
                 </div>
 
                 <div className="space-y-4">
                     <p className="text-sm text-gray-500 leading-relaxed">
-                        Multi-Stream 是一個開源的多串流觀看平台，致力於提供最佳的觀看體驗。
+                        {t('favorites:settings.about_desc')}
                     </p>
 
                     <div className="flex flex-wrap gap-3 pt-2">
@@ -138,8 +137,8 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                    ? 'border-gray-700 hover:bg-gray-800'
-                                    : 'border-gray-200 hover:bg-gray-50'
+                                ? 'border-gray-700 hover:bg-gray-800'
+                                : 'border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
                             <Github className="size-4" />
@@ -150,8 +149,8 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                    ? 'border-gray-700 hover:bg-[#5865F2]/20 hover:text-[#5865F2]'
-                                    : 'border-gray-200 hover:bg-[#5865F2]/10 hover:text-[#5865F2]'
+                                ? 'border-gray-700 hover:bg-[#5865F2]/20 hover:text-[#5865F2]'
+                                : 'border-gray-200 hover:bg-[#5865F2]/10 hover:text-[#5865F2]'
                                 }`}
                             style={{ color: '#5865F2' }}
                         >
@@ -163,8 +162,8 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                    ? 'border-gray-700 hover:bg-gray-800'
-                                    : 'border-gray-200 hover:bg-gray-50'
+                                ? 'border-gray-700 hover:bg-gray-800'
+                                : 'border-gray-200 hover:bg-gray-50'
                                 }`}
                         >
                             <XIcon className="size-4" />
@@ -175,13 +174,13 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                    ? 'border-gray-700 hover:bg-[#FFDD00]/20 hover:text-[#FFDD00]'
-                                    : 'border-gray-200 hover:bg-[#FFDD00]/10 hover:text-[#FFDD00]'
+                                ? 'border-gray-700 hover:bg-[#FFDD00]/20 hover:text-[#FFDD00]'
+                                : 'border-gray-200 hover:bg-[#FFDD00]/10 hover:text-[#FFDD00]'
                                 }`}
                             style={{ color: '#FFDD00' }} // Standard BuyMeACoffee Yellow-ish (actually usually yellow/orange but let's stick to a readable gold)
                         >
                             <Coffee className="size-4" />
-                            <span className="text-sm font-medium">Sponsor</span>
+                            <span className="text-sm font-medium">{t('favorites:settings.sponsor')}</span>
                         </a>
                     </div>
 
