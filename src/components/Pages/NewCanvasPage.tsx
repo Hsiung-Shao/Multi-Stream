@@ -9,6 +9,7 @@ import { SimpleCanvas, CanvasWindow, WindowRenderProps } from '../Canvas';
 import { useStreamStore } from '../../store/useStreamStore';
 import { CanvasStreamContent } from './CanvasStreamContent';
 import { EmptyWindowContent } from '../Canvas/EmptyWindowContent';
+import { CanvasEmptyState } from '../Canvas/CanvasEmptyState';
 
 export const NewCanvasPage = () => {
     const setLayoutMode = useStreamStore(s => s.setLayoutMode);
@@ -125,6 +126,7 @@ export const NewCanvasPage = () => {
         <div className="w-full h-screen bg-black overflow-hidden relative">
             {/* Canvas Layer */}
             <div className="absolute inset-0 z-0">
+                {windows.length === 0 && <CanvasEmptyState />}
                 <SimpleCanvas
                     windows={windows}
                     onWindowUpdate={handleWindowUpdate}

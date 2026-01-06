@@ -59,6 +59,18 @@ const common = {
   'common.manage_layouts': '레이아웃 관리',
   'common.layout_list': '레이아웃 목록',
   'common.manage': '관리',
+  'empty_state.tips_title': '기능 소개',
+  'empty_state.tip_add': '스트림, 채팅 또는 프리셋을 추가하려면 추가 버튼을 클릭하세요',
+  'empty_state.tip_control': '미디어 제어 패널을 통해 마스터 볼륨 및 음소거 상태 관리',
+  'empty_state.tip_layout': '레이아웃 메뉴를 사용하여 자동 정렬 전환 또는 특정 레이아웃 선택',
+  'empty_state.tip_save': '현재 캔버스 구성을 즐겨찾기에 즉시 저장',
+  'empty_state.tip_search': '라이브 채널 또는 동영상을 검색하고 빠르게 추가',
+  'empty_state.tip_clear': '한 번의 클릭으로 캔버스의 모든 창 지우기',
+  'empty_state.tip_fullscreen': '최고의 시청 경험을 위해 전체 화면 모드로 전환',
+  'empty_state.tip_favorites_list': '즐겨찾기 목록 및 그룹 보기 및 관리',
+  'empty_state.tip_settings': '전역 설정 및 기본 설정 조정',
+  'empty_state.tip_home': '홈으로 돌아가기',
+  'empty_state.click_menu_hint': '시작하려면 아래의 다이내믹 아일랜드 버튼을 클릭하세요',
 };
 
 export default common;

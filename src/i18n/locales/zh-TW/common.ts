@@ -60,6 +60,18 @@ const common = {
   'common.manage_layouts': '布局管理',
   'common.layout_list': '布局清單',
   'common.manage': '管理',
+  'empty_state.tip_add': '點擊新增按鈕來加入直播、聊天室或預設組合',
+  'empty_state.tip_control': '透過媒體控制面板統一管理音量與靜音狀態',
+  'empty_state.tip_layout': '使用佈局選單來選擇特定佈局模式',
+  'empty_state.tip_save': '將當前畫布配置一鍵儲存至收藏清單',
+  'empty_state.tip_search': '搜尋並快速加入直播頻道或是影片',
+  'empty_state.tip_clear': '一鍵清空畫布上所有的視窗',
+  'empty_state.tip_fullscreen': '切換全螢幕模式以獲得最佳觀看體驗',
+  'empty_state.tip_favorites_list': '查看與管理您的收藏清單及群組',
+  'empty_state.tip_settings': '調整全域設定與偏好選項',
+  'empty_state.tip_home': '返回首頁',
+  'empty_state.tips_title': '功能介紹',
+  'empty_state.click_menu_hint': '點擊下方動態島按鈕以開始使用',
 };
 
 export default common;

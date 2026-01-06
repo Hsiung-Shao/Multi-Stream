@@ -60,6 +60,18 @@ const common = {
   'common.manage_layouts': 'Manage Layouts',
   'common.layout_list': 'Layout List',
   'common.manage': 'Manage',
+  'empty_state.tip_add': 'Click add to insert streams, chat rooms, or presets',
+  'empty_state.tip_control': 'Manage master volume and mute states via media panel',
+  'empty_state.tip_layout': 'Use layout menu to select specific layout modes',
+  'empty_state.tip_save': 'Instantly save current canvas configuration to favorites',
+  'empty_state.tip_search': 'Search and quickly add live channels or videos',
+  'empty_state.tip_clear': 'Clear all windows from the canvas with one click',
+  'empty_state.tip_fullscreen': 'Toggle fullscreen mode for the best viewing experience',
+  'empty_state.tip_favorites_list': 'View and manage your favorites list and groups',
+  'empty_state.tip_settings': 'Adjust global settings and preferences',
+  'empty_state.tip_home': 'Return to the home page',
+  'empty_state.tips_title': 'Features',
+  'empty_state.click_menu_hint': 'Click the Dynamic Island buttons below to get started',
 };
 
 export default common;

@@ -59,6 +59,18 @@ const common = {
   'common.manage_layouts': 'レイアウト管理',
   'common.layout_list': 'レイアウト一覧',
   'common.manage': '管理',
+  'empty_state.tips_title': '機能紹介',
+  'empty_state.tip_add': '追加ボタンをクリックして、配信、チャット、またはプリセットを追加',
+  'empty_state.tip_control': 'メディアコントロールパネルで音量とミュートを一括管理',
+  'empty_state.tip_layout': 'レイアウトメニューで自動配置の切り替えや特定のレイアウトを選択',
+  'empty_state.tip_save': '現在のキャンバス設定をお気に入りに即座に保存',
+  'empty_state.tip_search': '配信チャンネルや動画を検索して素早く追加',
+  'empty_state.tip_clear': 'キャンバス上のすべてのウィンドウをワンクリックでクリア',
+  'empty_state.tip_fullscreen': '全画面モードに切り替えて最適な視聴体験を提供',
+  'empty_state.tip_favorites_list': 'お気に入りリストとグループの表示と管理',
+  'empty_state.tip_settings': '全体設定と環境設定の調整',
+  'empty_state.tip_home': 'ホームに戻る',
+  'empty_state.click_menu_hint': '下のダイナミックアイランドボタンをクリックして開始',
 };
 
 export default common;

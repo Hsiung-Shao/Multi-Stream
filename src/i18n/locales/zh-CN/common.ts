@@ -59,6 +59,18 @@ const common = {
   'common.manage_layouts': '布局管理',
   'common.layout_list': '布局列表',
   'common.manage': '管理',
+  'empty_state.tips_title': '功能介绍',
+  'empty_state.tip_add': '点击新增按钮来加入直播、聊天室或预设组合',
+  'empty_state.tip_control': '通过媒体控制面板统一管理音量与静音状态',
+  'empty_state.tip_layout': '使用布局选单来选择特定布局模式',
+  'empty_state.tip_save': '将当前画布配置一键保存至收藏列表',
+  'empty_state.tip_search': '搜索并快速加入直播频道或是视频',
+  'empty_state.tip_clear': '一键清空画布上所有的窗口',
+  'empty_state.tip_fullscreen': '切换全屏模式以获得最佳观看体验',
+  'empty_state.tip_favorites_list': '查看与管理您的收藏列表及分组',
+  'empty_state.tip_settings': '调整全局设置与偏好选项',
+  'empty_state.tip_home': '返回首页',
+  'empty_state.click_menu_hint': '点击下方动态岛按钮以开始使用',
 };
 
 export default common;
