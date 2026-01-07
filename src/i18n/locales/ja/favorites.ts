@@ -3,8 +3,8 @@ export default {
   myFavorites: 'お気に入り',
   batchImport: '一括インポート',
   settings: '設定',
-  categoryManagement: 'カテゴリ管理',
-  manageCategories: 'カテゴリ管理',
+  categoryManagement: 'お気に入りリスト',
+  manageCategories: 'リスト管理',
 
   // Quick Filters
   all: 'すべて',
@@ -21,7 +21,7 @@ export default {
   dialogDesc: '詳細情報を入力してください',
   streamUrl: '配信URL',
   streamName: '名前 (任意)',
-  category: 'カテゴリ',
+  category: 'リスト',
   uncategorized: '未分類',
   cancel: 'キャンセル',
   save: '保存',
@@ -94,9 +94,9 @@ export default {
   loading: '読み込み中...',
   confirmDelete: '本当に削除しますか？',
   confirmDeleteCount: '選択した {{count}} 件を削除しますか？',
-  addCategory: 'カテゴリ追加',
-  categoryName: 'カテゴリ名',
-  addCategorySuccess: 'カテゴリを追加しました',
+  addCategory: 'リスト追加',
+  categoryName: 'リスト名',
+  addCategorySuccess: 'リストを追加しました',
 
   // Settings
   appearance: '外観設定',

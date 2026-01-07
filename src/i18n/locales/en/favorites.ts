@@ -3,8 +3,8 @@ export default {
   myFavorites: 'My Favorites',
   batchImport: 'Batch Import',
   settings: 'Settings',
-  categoryManagement: 'Categories',
-  manageCategories: 'Manage Categories',
+  categoryManagement: 'Favorites Lists',
+  manageCategories: 'Manage Lists',
 
   // Quick Filters
   all: 'All',
@@ -14,6 +14,9 @@ export default {
   batchDelete: 'Batch Delete',
   batchLoad: 'Batch Load',
   addNew: 'Add New',
+  load: 'Load',
+  loadSuccess: 'Loaded successfully',
+  loadError: 'Load failed',
 
   // Dialog
   editFavorite: 'Edit Favorite',
@@ -21,7 +24,7 @@ export default {
   dialogDesc: 'Enter stream details',
   streamUrl: 'Stream URL',
   streamName: 'Name (Optional)',
-  category: 'Category',
+  category: 'List',
   uncategorized: 'Uncategorized',
   cancel: 'Cancel',
   save: 'Save',
@@ -94,9 +97,9 @@ export default {
   loading: 'Loading...',
   confirmDelete: 'Are you sure you want to delete?',
   confirmDeleteCount: 'Are you sure you want to delete {{count}} items?',
-  addCategory: 'Add Category',
-  categoryName: 'Category Name',
-  addCategorySuccess: 'Category added',
+  addCategory: 'Add List',
+  categoryName: 'List Name',
+  addCategorySuccess: 'List added',
 
   // Settings
   appearance: 'Appearance',

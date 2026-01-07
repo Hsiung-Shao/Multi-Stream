@@ -265,7 +265,7 @@ export const DynamicIsland = () => {
                             variant="ghost"
                             size="icon"
                             className="rounded-full hover:bg-white/10 text-white"
-                            onClick={() => setPage('home')}
+                            onClick={() => setPage('tool')}
                             title={t('common.home') || "返回首頁"}
                         >
                             <Home size={20} />

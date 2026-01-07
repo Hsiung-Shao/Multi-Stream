@@ -19,6 +19,8 @@ export function useRouter() {
                 setPage('canvas');
             } else if (path === '/fixed') {
                 setPage('fixed');
+            } else if (path === '/tools') {
+                setPage('tool');
             } else {
                 setPage('not-found');
             }
@@ -43,6 +45,9 @@ export function useRouter() {
         switch (page) {
             case 'home':
                 targetPath = '/';
+                break;
+            case 'tool':
+                targetPath = '/tools';
                 break;
             case 'about':
                 targetPath = '/about';

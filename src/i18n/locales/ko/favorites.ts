@@ -3,8 +3,8 @@ export default {
   myFavorites: '즐겨찾기',
   batchImport: '일괄 가져오기',
   settings: '설정',
-  categoryManagement: '카테고리 관리',
-  manageCategories: '카테고리 관리',
+  categoryManagement: '즐겨찾기 리스트',
+  manageCategories: '리스트 관리',
 
   // Quick Filters
   all: '전체',
@@ -21,7 +21,7 @@ export default {
   dialogDesc: '세부 정보를 입력하세요',
   streamUrl: '방송 URL',
   streamName: '이름 (선택)',
-  category: '카테고리',
+  category: '리스트',
   uncategorized: '미분류',
   cancel: '취소',
   save: '저장',
@@ -94,9 +94,9 @@ export default {
   loading: '로딩 중...',
   confirmDelete: '삭제하시겠습니까?',
   confirmDeleteCount: '선택한 {{count}} 항목을 삭제하시겠습니까?',
-  addCategory: '카테고리 추가',
-  categoryName: '카테고리 이름',
-  addCategorySuccess: '카테고리가 추가되었습니다',
+  addCategory: '리스트 추가',
+  categoryName: '리스트 이름',
+  addCategorySuccess: '리스트가 추가되었습니다',
 
   // Settings
   appearance: '모양 설정',

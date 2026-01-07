@@ -1,3 +1,5 @@
+// [DEPRECATED] This component is currently unmounted and is a candidate for removal.
+// Please check before deleting or modifying.
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Volume2, VolumeX, RefreshCw, Star, GripVertical,

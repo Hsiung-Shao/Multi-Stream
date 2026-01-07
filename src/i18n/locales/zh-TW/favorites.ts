@@ -3,8 +3,8 @@ export default {
   myFavorites: '我的收藏',
   batchImport: '批量匯入',
   settings: '設定',
-  categoryManagement: '分類管理', // This is used as header
-  manageCategories: '管理分類',    // New: For the button/tab
+  categoryManagement: '收藏清單', // This is used as header
+  manageCategories: '管理清單',    // New: For the button/tab
 
   // Quick Filters
   all: '全部',
@@ -13,6 +13,10 @@ export default {
   searchPlaceholder: '搜尋收藏...',
   batchDelete: '批量刪除',
   batchLoad: '批量載入',
+
+  load: '載入',
+  loadSuccess: '載入成功',
+  loadError: '載入失敗',
   addNew: '新增收藏',
 
   // Dialog
@@ -21,8 +25,8 @@ export default {
   dialogDesc: '請輸入收藏詳細資訊',
   streamUrl: '直播網址',
   streamName: '名稱 (選填)',
-  category: '分類',
-  categories: '分類',
+  category: '收藏清單',
+  categories: '收藏清單',
   'navigation': '導覽',
   'confirmDeleteTagDesc': '刪除標籤後，該標籤將從所有收藏中移除。',
   uncategorized: '未分類',
@@ -100,9 +104,9 @@ export default {
   confirmDeleteCategoryDesc: '刪除分類後，該分類下的收藏將會變為未分類。',
   loginRequiredForStatus: '請先登入 Twitch 以檢查狀態',
   confirmDeleteCount: '確定要刪除選定的 {{count}} 項嗎？',
-  addCategory: '新增分類',
-  categoryName: '分類名稱',
-  addCategorySuccess: '分類已新增',
+  addCategory: '新增清單',
+  categoryName: '清單名稱',
+  addCategorySuccess: '清單已新增',
 
   // Settings
   appearance: '外觀設定',

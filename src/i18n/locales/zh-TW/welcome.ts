@@ -42,6 +42,16 @@ const welcome = {
   'authorMessageP2': '為了解決這個麻煩，我專門做了這個工具。而且後續還會嘗試整合 Twitch 功能，到時候大家就能直接匯入自己在 Twitch 上追隨的頻道，用起來會更方便～',
   'authorMessageP3': '不過有個小情況要跟大家說明：目前在 YouTube 方面，可能還是會跳轉到不同頻道的影片，暫時沒辦法直接精準定位直播內容。這部分我已經盡力優化了，現階段只能麻煩大家手動添加直播頻道，還請多多包涵～',
   'authorMessageP4': '如果大家用著覺得順手、實用，別忘了多多分享給身邊的朋友，讓更多人也能用上這個能提升效率的小幫手～',
+  // Dashboard
+  'quickAdd.title': '快速新增串流',
+  'quickAdd.placeholder': '貼上 Twitch 或 YouTube 連結...',
+  'favorites.title': '您的收藏',
+  'favorites.emptyTitle': '還沒有收藏與群組',
+  'favorites.emptyDesc': '建立群組以便快速載入您最愛的多位實況主。',
+  'activeStreams.title': '正在直播的收藏',
+  'activeStreams.liveChannels': '正在直播的頻道',
+  'activeStreams.empty': '目前沒有最愛的頻道正在直播。',
+  'import.title': '匯入工具',
 };
 
 export default welcome;

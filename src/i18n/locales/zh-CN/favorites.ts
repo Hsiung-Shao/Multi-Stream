@@ -3,8 +3,8 @@ export default {
   myFavorites: '我的收藏',
   batchImport: '批量导入',
   settings: '设置',
-  categoryManagement: '分类管理',
-  manageCategories: '管理分类',
+  categoryManagement: '收藏清单',
+  manageCategories: '管理清单',
 
   // Quick Filters
   all: '全部',
@@ -21,7 +21,7 @@ export default {
   dialogDesc: '请输入收藏详细信息',
   streamUrl: '直播网址',
   streamName: '名称 (选填)',
-  category: '分类',
+  category: '收藏清单',
   uncategorized: '未分类',
   cancel: '取消',
   save: '保存',
@@ -94,9 +94,9 @@ export default {
   loading: '加载中...',
   confirmDelete: '确定要删除吗？',
   confirmDeleteCount: '确定要删除选定的 {{count}} 项吗？',
-  addCategory: '新增分类',
-  categoryName: '分类名称',
-  addCategorySuccess: '分类已新增',
+  addCategory: '新增清单',
+  categoryName: '清单名称',
+  addCategorySuccess: '清单已新增',
 
   // Settings
   appearance: '外观设置',

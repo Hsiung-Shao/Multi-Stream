@@ -9,7 +9,6 @@ interface FavoriteListItemProps {
     favorite: FavoriteStream;
     categories: Category[];
     tags: Tag[];
-    theme: 'light' | 'dark';
     isSelected: boolean;
     onSelect: (id: string, checked: boolean) => void;
     onStartEdit: (favorite: FavoriteStream) => void;
@@ -21,7 +20,6 @@ export function FavoriteListItem({
     favorite,
     categories,
     tags,
-    theme,
     isSelected,
     onSelect,
     onStartEdit,
@@ -32,17 +30,11 @@ export function FavoriteListItem({
     const category = categories.find(c => c.id === favorite.categoryId);
 
     return (
-        <div className={`p-3 rounded-xl border transition-all duration-200 group ${theme === 'dark'
-                ? 'bg-gray-900/40 border-gray-800 hover:border-purple-500/50 hover:bg-gray-800/60'
-                : 'bg-white border-gray-200 hover:border-purple-500/50 hover:shadow-md'
-            } flex items-center gap-3`}>
+        <div className="p-3 rounded-xl border transition-all duration-200 group bg-white border-gray-200 hover:border-purple-500/50 hover:shadow-md dark:bg-gray-900/40 dark:border-gray-800 dark:hover:bg-gray-800/60 flex items-center gap-3">
             <Checkbox
                 checked={isSelected}
                 onCheckedChange={(checked: boolean | 'indeterminate') => onSelect(favorite.id, !!checked)}
-                className={theme === 'dark'
-                    ? 'border-gray-600 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500'
-                    : 'border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600'
-                }
+                className="border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 dark:border-gray-600 dark:data-[state=checked]:bg-purple-500 dark:data-[state=checked]:border-purple-500"
             />
 
             {/* Platform Icon */}
@@ -62,8 +54,8 @@ export function FavoriteListItem({
             {favorite.isLive !== null && (
                 <div
                     className={`w-2 h-2 rounded-full ring-4 ${favorite.isLive === true
-                            ? 'bg-green-500 ring-green-500/20 animate-pulse'
-                            : 'bg-gray-500 ring-gray-500/20'
+                        ? 'bg-green-500 ring-green-500/20 animate-pulse'
+                        : 'bg-gray-500 ring-gray-500/20'
                         }`}
                     title={favorite.isLive === true ? t('live') : t('offline')}
                 />
@@ -71,12 +63,11 @@ export function FavoriteListItem({
 
             {/* Stream Info */}
             <div className="flex-1 min-w-0">
-                <div className={`font-semibold truncate ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                <div className="font-semibold truncate text-gray-900 dark:text-gray-100">
                     {favorite.name}
                 </div>
                 <div className="flex items-center gap-2 text-xs mt-1 flex-wrap">
-                    <span className={`px-2 py-0.5 rounded-full ${theme === 'dark' ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
-                        }`}>
+                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                         {category?.name || t('uncategorized')}
                     </span>
                     {/* Tags Display */}
@@ -95,7 +86,7 @@ export function FavoriteListItem({
                     variant="ghost"
                     onClick={() => onStartEdit(favorite)}
                     title={t('common:common.edit')}
-                    className={`h-8 w-8 rounded-lg ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-black hover:bg-gray-100'}`}
+                    className="h-8 w-8 rounded-lg text-gray-500 hover:text-black hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700"
                 >
                     <Edit2 className="size-4" />
                 </Button>
@@ -104,7 +95,7 @@ export function FavoriteListItem({
                     variant="ghost"
                     onClick={() => onLoad(favorite.id)}
                     title={t('addStream')}
-                    className={`h-8 w-8 rounded-lg ${theme === 'dark' ? 'text-gray-400 hover:text-purple-400 hover:bg-purple-500/10' : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50'}`}
+                    className="h-8 w-8 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:text-gray-400 dark:hover:text-purple-400 dark:hover:bg-purple-500/10"
                 >
                     <Play className="size-4" />
                 </Button>
@@ -113,7 +104,7 @@ export function FavoriteListItem({
                     variant="ghost"
                     onClick={() => onDelete(favorite.id)}
                     title={t('delete')}
-                    className={`h-8 w-8 rounded-lg ${theme === 'dark' ? 'text-gray-400 hover:text-red-400 hover:bg-red-500/10' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'}`}
+                    className="h-8 w-8 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:text-gray-400 dark:hover:text-red-400 dark:hover:bg-red-500/10"
                 >
                     <Trash2 className="size-4" />
                 </Button>

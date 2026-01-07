@@ -14,6 +14,9 @@ const navbar = {
   'live': 'Live',
   'viewers': 'viewers',
   'twitch': 'Twitch',
+  'twitch': 'Twitch',
+  'canvas': 'Canvas',
+  'fixed': 'Fixed Layout',
 };
 
 export default navbar;

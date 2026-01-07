@@ -16,15 +16,17 @@ import { GlobalLiveStatusChecker } from './features/favorites/components/GlobalL
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
+import { LandingPage } from './components/Pages/LandingPage';
 const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
-const Tutorial = lazy(() => import('./components/Tutorial').then(module => ({ 'default': module.Tutorial })));
+// Tutorial modal removed, replaced by page
+// const Tutorial = lazy(() => import('./components/Tutorial').then(module => ({ 'default': module.Tutorial })));
 const FavoritesManagerMain = lazy(() => import('./features/favorites/components/FavoritesManagerMain').then(module => ({ 'default': module.FavoritesManagerMain })));
 // const FavoritesManager = lazy(() => import('./components/FavoritesManager').then(module => ({ 'default': module.FavoritesManager })));
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
 const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
-const FixedPage = lazy(() => import('./components/Pages/FixedPage').then(module => ({ 'default': module.FixedPage })));
+const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 
 export default function App() {
@@ -69,6 +71,8 @@ export default function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
+        return <LandingPage />;
+      case 'tool':
         return <HomePage />;
       case 'canvas':
         return (
@@ -76,10 +80,10 @@ export default function App() {
             <CanvasPage />
           </Suspense>
         );
-      case 'fixed':
+      case 'instructions':
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
-            <FixedPage />
+            <InstructionsPage />
           </Suspense>
         );
       case 'about':
@@ -148,14 +152,7 @@ export default function App() {
         </Suspense>
       )}
 
-      {modals.tutorial && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>
-          <Tutorial
-            theme={theme}
-            onClose={() => closeModal('tutorial')}
-          />
-        </Suspense>
-      )}
+      {/* Tutorial modal removed */}
 
       {modals.favorites && (
         <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>

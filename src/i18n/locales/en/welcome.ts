@@ -20,6 +20,14 @@ const welcome = {
   'quickStart': 'Quick Start',
   'step1Title': 'Add Stream',
   'step1Desc': 'Paste a Twitch or YouTube stream URL in the input box at the top of the screen, then click "Add Stream" to watch',
+  'favoritesWidget': {
+    'emptyDesc': 'Create groups to quickly load your favorite streamers.',
+  },
+  'activeStreams': {
+    'title': 'Live Favorites',
+    'liveChannels': 'Live Channels',
+    'empty': 'No favorite channels are currently live.',
+  },
   'step2Title': 'Adjust Layout',
   'step2Desc': 'Select your preferred display mode in the "Layout Control" area of the control panel, supporting single, split, grid, etc.',
   'step3Title': 'Favorites',
