@@ -1,4 +1,4 @@
-import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch } from 'lucide-react';
+import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch, History as HistoryIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../../../components/ui/badge';
 import {
@@ -213,6 +213,12 @@ export function FavoritesSidebar({
                     <div className="flex items-center gap-3">
                         <Database className="size-4" />
                         <span className="text-sm">{t('backup')}</span>
+                    </div>
+                </div>
+                <div className={navItemClass(activeTab === 'version_history')} onClick={() => onNavigate('version_history')}>
+                    <div className="flex items-center gap-3">
+                        <HistoryIcon className="size-4" />
+                        <span className="text-sm">{t('sidebar.version_history')}</span>
                     </div>
                 </div>
             </div>

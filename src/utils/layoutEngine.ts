@@ -62,24 +62,18 @@ export function calculateRequiredRows(items: CanvasItem[]): number {
 
     const maxY = items.reduce((max, item) => Math.max(max, item.layout.y + item.layout.h), 0);
 
-    // If empty or fits in 24, return 24.
-    if (maxY <= 24) return 24;
+    // Constraint: If items <= 16, avoid excessive buffer
+    // Only expand if content pushes beyond 24
+    if (items.length <= 16) {
+        if (maxY <= 24) return 24;
+        // Minimal expansion if slightly over
+        return Math.max(24, maxY + 2);
+    }
 
-    // Expand by 12s
-    // base 24.
-    // If maxY is 25, we need 24 + 12 = 36? Or just cover it?
-    // "Auto-extend by 24x12 block".
-    // So logic: Math.ceil((maxY - 24) / 12) * 12 + 24 ?
-    // Simpler: Math.ceil(maxY / 12) * 12.
-    // If maxY is 25 -> 36. 
-    // If maxY is 13 -> 24.
-    // If maxY is 24 -> 24.
+    // For Infinite Flow (> 16), keep the comfortable drag buffer
+    const requiredRows = Math.max(24, Math.ceil((maxY + 12) / 12) * 12);
 
-    // Ensure minimum 24
-    if (items.length <= 16) return 24; // Force fixed height for Auto-Grid mode
-
-    let rows = Math.ceil(maxY / 12) * 12;
-    return Math.max(24, rows);
+    return requiredRows;
 }
 
 /**

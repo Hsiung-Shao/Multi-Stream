@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Settings2, Folder, Tag as TagIcon, ChevronDown, Loader2 } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '../../../components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -9,28 +9,28 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
     DropdownMenuLabel,
-} from '../ui/dropdown-menu';
+} from '../../../components/ui/dropdown-menu';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogFooter,
-} from '../ui/dialog';
+} from '../../../components/ui/dialog';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '../ui/select';
-import { Badge } from '../ui/badge';
-import { TagPopoverSelector } from '../ui/TagPopoverSelector';
-import { TagChip } from '../ui/TagChip';
+} from '../../../components/ui/select';
+import { Badge } from '../../../components/ui/badge';
+import { TagPopoverSelector } from '../../../components/ui/TagPopoverSelector';
+import { TagChip } from '../../../components/ui/TagChip';
 
-import type { FavoriteCategory, Tag, FavoriteStream } from '../../features/favorites/types';
-import { favoritesService } from '../../features/favorites/FavoritesService';
-import { logEvent } from '../../utils/analytics';
+import type { FavoriteCategory, Tag, FavoriteStream } from '../types';
+import { favoritesService } from '../FavoritesService';
+import { logEvent } from '../../../utils/analytics';
 
 interface BulkFavoritesActionsProps {
     selectedIds: string[];
@@ -134,13 +134,17 @@ export function BulkFavoritesActions({
         <>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className={theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}>
-                        <Settings2 className="size-4 mr-2" />
-                        {t('batchEdit') || '批量編輯'}
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 min-w-[1.25rem]">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className={`h-8 text-xs ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300'}`}
+                    >
+                        <Settings2 className="size-3 mr-1.5" />
+                        {t('batchEdit') || '批次編輯'}
+                        <Badge variant="secondary" className="ml-1.5 h-5 px-1 min-w-[1.25rem] text-[10px]">
                             {selectedIds.length}
                         </Badge>
-                        <ChevronDown className="size-3 ml-2 opacity-50" />
+                        <ChevronDown className="size-3 ml-1 opacity-50" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className={theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}>
@@ -174,7 +178,12 @@ export function BulkFavoritesActions({
                     </DialogHeader>
                     <div className="py-4">
                         <p className="text-sm text-gray-500 mb-4">
-                            {t('batchSetCategoryConfirm', { count: selectedIds.length }) || `將 ${selectedIds.length} 個項目移動到以下分類：`}
+                            {t('batchSetCategoryConfirm', {
+                                count: selectedIds.length,
+                                category: targetCategory === 'uncategorized'
+                                    ? t('uncategorized')
+                                    : categories.find(c => c.id === targetCategory)?.name || t('uncategorized')
+                            })}
                         </p>
                         <Select value={targetCategory} onValueChange={setTargetCategory}>
                             <SelectTrigger className={theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : ''}>

@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
 
+import { useTranslation } from 'react-i18next';
 import { Label } from '../../../components/ui/label';
 
 import {
@@ -11,12 +11,6 @@ import {
 } from '../../../components/ui/select';
 import { Separator } from '../../../components/ui/separator';
 import { Github, Info, Moon, Sun, Monitor, Coffee } from 'lucide-react';
-
-interface SettingsSectionProps {
-    theme: 'light' | 'dark';
-    currentTheme: string;
-    onThemeChange: (theme: string) => void;
-}
 
 // Custom Icons
 const DiscordIcon = (props: any) => (
@@ -43,6 +37,12 @@ const XIcon = (props: any) => (
     </svg>
 );
 
+interface SettingsSectionProps {
+    theme: 'light' | 'dark';
+    currentTheme: string;
+    onThemeChange: (theme: string) => void;
+}
+
 export function SettingsSection({ theme, currentTheme, onThemeChange }: SettingsSectionProps) {
     const { t, i18n } = useTranslation(['common', 'favorites']);
 
@@ -56,10 +56,10 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
     };
 
     return (
-        <div className="flex-1 flex flex-col gap-8 max-w-2xl mx-auto w-full py-4 px-2">
+        <div className="flex-1 flex flex-col gap-4 max-w-2xl mx-auto w-full py-4 px-2 h-full overflow-hidden">
 
             {/* Appearance */}
-            <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+            <div className={`flex-shrink-0 p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                         <Monitor className="size-5" />
@@ -118,7 +118,7 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
             </div>
 
             {/* About */}
-            <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+            <div className={`flex-shrink-0 p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
                         <Info className="size-5" />
@@ -177,17 +177,12 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                                 ? 'border-gray-700 hover:bg-[#FFDD00]/20 hover:text-[#FFDD00]'
                                 : 'border-gray-200 hover:bg-[#FFDD00]/10 hover:text-[#FFDD00]'
                                 }`}
-                            style={{ color: '#FFDD00' }} // Standard BuyMeACoffee Yellow-ish (actually usually yellow/orange but let's stick to a readable gold)
+                            style={{ color: '#FFDD00' }}
                         >
+
                             <Coffee className="size-4" />
                             <span className="text-sm font-medium">{t('favorites:settings.sponsor')}</span>
                         </a>
-                    </div>
-
-                    <div className="pt-4 flex items-center gap-2 text-xs text-gray-500">
-                        <span>Version 2.3.1</span>
-                        <span>•</span>
-                        <span>© 2026 Multi-Stream</span>
                     </div>
                 </div>
             </div>

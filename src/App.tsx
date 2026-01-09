@@ -143,14 +143,7 @@ export default function App() {
       {renderPage()}
 
       {/* Global Modals */}
-      {modals.history && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>
-          <VersionHistory
-            theme={theme}
-            onClose={() => closeModal('history')}
-          />
-        </Suspense>
-      )}
+
 
       {/* Tutorial modal removed */}
 
@@ -168,6 +161,15 @@ export default function App() {
           <FeedbackModal
             theme={theme}
             onClose={() => closeModal('feedback')}
+          />
+        </Suspense>
+      )}
+
+      {modals.history && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">{t('common.loading')}</div>}>
+          <VersionHistory
+            theme={theme}
+            onClose={() => closeModal('history')}
           />
         </Suspense>
       )}

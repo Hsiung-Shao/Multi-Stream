@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Navbar } from '../Navbar';
-import { Dashboard } from '../Dashboard/Dashboard';
+
 import { SEO } from '../SEO';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -30,7 +30,7 @@ export function HomePage() {
                     theme={theme}
                     onThemeToggle={toggleTheme}
                     onShowAbout={() => setCurrentPage('about')}
-                    onShowTutorial={() => openModal('tutorial')}
+                    onShowTutorial={() => setCurrentPage('instructions')}
                     onShowFavorites={() => openModal('favorites')}
                     onShowFeedback={() => openModal('feedback')}
                     onAddStream={handleAddStream}
@@ -38,11 +38,7 @@ export function HomePage() {
                 />
                 {/* StreamContainer Removed */}
 
-                <div className="w-full px-4 py-8 relative z-10">
-                    <Dashboard
-                        onShowVersionHistory={() => openModal('history')}
-                    />
-                </div>
+
 
                 {/* Control Panel Removed */}
             </div>

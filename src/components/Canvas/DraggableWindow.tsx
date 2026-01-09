@@ -111,7 +111,8 @@ export const DraggableWindow = memo(function DraggableWindow({
         width: pixelPos.width,
         height: pixelPos.height,
         onDragEnd: handleDragEnd,
-        checkCollision: dragCollisionCheck
+        checkCollision: dragCollisionCheck,
+        maxRows: 1000 // Allow dragging beyond current bounds to trigger expansion
     });
 
     // Resize hook - now returns cornerHandlers instead of single resizeHandlers

@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 export function LandingPage() {
     const { t } = useTranslation();
     const setPage = useUIStore(s => s.setPage);
-    const openModal = useUIStore(s => s.openModal);
+
 
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden selection:bg-primary selection:text-primary-foreground">
@@ -30,7 +30,7 @@ export function LandingPage() {
                             <Github className="w-5 h-5" />
                         </a>
                         <Button
-                            onClick={() => setPage('tool')}
+                            onClick={() => setPage('canvas')}
                             className="font-semibold"
                         >
                             {t('landing.start_button')}
@@ -62,7 +62,7 @@ export function LandingPage() {
                                 <Button
                                     size="lg"
                                     className="h-14 px-8 text-lg rounded-full group bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all hover:scale-105"
-                                    onClick={() => setPage('tool')}
+                                    onClick={() => setPage('canvas')}
                                     id="landing-start-btn"
                                 >
                                     {t('landing.start_button')}
@@ -303,7 +303,7 @@ export function LandingPage() {
                         <Button
                             size="lg"
                             className="h-16 px-10 text-xl rounded-full shadow-2xl shadow-primary/30 hover:scale-105 transition-transform"
-                            onClick={() => setPage('tool')}
+                            onClick={() => setPage('canvas')}
                         >
                             {t('landing.start_button')}
                         </Button>
@@ -321,7 +321,7 @@ export function LandingPage() {
                         <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('privacy')}>
                             {t('landing.footer.privacy')}
                         </Button>
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => openModal('tutorial')}>
+                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('instructions')}>
                             {t('landing.footer.tutorial')}
                         </Button>
                         <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('faq')}>

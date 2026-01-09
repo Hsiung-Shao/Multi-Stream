@@ -13,6 +13,15 @@ export default {
   searchPlaceholder: 'Search favorites...',
   batchDelete: 'Batch Delete',
   batchLoad: 'Batch Load',
+  loadSelected: 'Load Selected',
+  deselectAll: 'Deselect All',
+  delete: 'Delete',
+  batchEdit: 'Batch Edit',
+  batchOperations: 'Batch Operations',
+  setCategory: 'Set List',
+  addTags: 'Add Tags',
+  batchSetCategoryConfirm: 'Are you sure you want to set {{count}} items to list "{{category}}"?',
+  batchAddTagsConfirm: 'Are you sure you want to add tags to {{count}} items?',
   addNew: 'Add New',
   load: 'Load',
   loadSuccess: 'Loaded successfully',
@@ -127,7 +136,9 @@ export default {
   'layout_manager.delete_layout_desc': 'Are you sure you want to delete this layout? This action cannot be undone.',
   'layout_manager.rename': 'Rename',
   'layout_manager.confirm_update': 'Are you sure you want to overwrite "{{name}}" with the current layout?',
-  'layout_manager.no_layouts': 'No custom layouts',
-  'layout_manager.no_layouts_desc': 'Adjust window positions and save them as a template.',
-};
+  'layout_manager.no_layouts': 'No Custom Layouts',
+  'layout_manager.no_layouts_desc': 'Save your window arrangement as a template.',
 
+  // Sidebar
+  'sidebar.version_history': 'Version History',
+};

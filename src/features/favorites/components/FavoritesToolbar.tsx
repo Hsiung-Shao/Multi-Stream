@@ -1,32 +1,44 @@
 import { Search, Trash2, CheckSquare, Square, Play, Plus } from 'lucide-react';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
+import { toast } from 'sonner';
+import { BulkFavoritesActions } from './BulkFavoritesActions';
+import type { FavoriteCategory, Tag, FavoriteStream } from '../types';
 import { useTranslation } from 'react-i18next';
 
 interface FavoritesToolbarProps {
     theme: 'light' | 'dark';
     searchQuery: string;
     onSearchChange: (query: string) => void;
-    selectedCount: number;
+    selectedIds: string[];
     onSelectAll: () => void;
     onDeselectAll: () => void;
     onBatchDelete: () => void;
     onBatchLoad: () => void;
     onAddNew: () => void;
+    categories: FavoriteCategory[];
+    tags: Tag[];
+    favorites: FavoriteStream[];
+    onRefresh: () => void;
 }
 
 export function FavoritesToolbar({
     theme,
     searchQuery,
     onSearchChange,
-    selectedCount,
+    selectedIds,
     onSelectAll,
     onDeselectAll,
     onBatchDelete,
     onBatchLoad,
-    onAddNew
+    onAddNew,
+    categories,
+    tags,
+    favorites,
+    onRefresh
 }: FavoritesToolbarProps) {
     const { t } = useTranslation(['favorites', 'common']);
+    const selectedCount = selectedIds.length;
 
     return (
         <div className="flex flex-col gap-4 mb-6">
@@ -75,6 +87,19 @@ export function FavoritesToolbar({
 
                 {selectedCount > 0 && (
                     <div className="flex items-center gap-2">
+                        <BulkFavoritesActions
+                            selectedIds={selectedIds}
+                            theme={theme}
+                            categories={categories}
+                            tags={tags}
+                            favorites={favorites}
+                            onClearSelection={onDeselectAll}
+                            onRefresh={onRefresh}
+                            showMessage={(type, text) => {
+                                if (type === 'success') toast.success(text);
+                                else toast.error(text);
+                            }}
+                        />
                         <Button
                             variant="outline"
                             size="sm"

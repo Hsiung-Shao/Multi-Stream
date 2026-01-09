@@ -13,6 +13,15 @@ export default {
   searchPlaceholder: '搜尋收藏...',
   batchDelete: '批量刪除',
   batchLoad: '批量載入',
+  loadSelected: '載入選取',
+  deselectAll: '取消全選',
+  delete: '刪除',
+  batchEdit: '批次編輯',
+  batchOperations: '批次操作',
+  setCategory: '設定分類',
+  addTags: '新增標籤',
+  batchSetCategoryConfirm: '確定要將 {{count}} 個項目設定為分類「{{category}}」嗎？',
+  batchAddTagsConfirm: '確定要為 {{count}} 個項目新增標籤嗎？',
 
   load: '載入',
   loadSuccess: '載入成功',
@@ -136,5 +145,8 @@ export default {
   'layout_manager.confirm_update': '確定要使用目前的畫面配置來覆寫「{{name}}」嗎？',
   'layout_manager.no_layouts': '尚無自定布局',
   'layout_manager.no_layouts_desc': '調整視窗位置後，可將其儲存為模板。',
+
+  // Sidebar
+  'sidebar.version_history': '版本資訊',
 };
 

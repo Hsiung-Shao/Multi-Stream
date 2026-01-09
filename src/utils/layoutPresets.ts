@@ -27,11 +27,11 @@ export const calculateAutoGridLayout = (count: number): { x: number, y: number, 
     const cellH = Math.floor(24 / rows);
 
     for (let i = 0; i < count; i++) {
-        // Vertical-First: Fill rows first (down), then columns (right)
-        // c = floor(i / rows)
-        // r = i % rows
-        const c = Math.floor(i / rows);
-        const r = i % rows;
+        // Horizontal-First: Fill columns first (right), then rows (down)
+        // r = floor(i / cols)
+        // c = i % cols
+        const r = Math.floor(i / cols);
+        const c = i % cols;
 
         specs.push({
             x: c * cellW,
@@ -192,4 +192,83 @@ export const generateLayout = (streamIds: (number | string)[], mode: LayoutMode 
     }
 
     return items;
+};
+
+/**
+ * Calculates a Dual-Direction layout:
+ * Streams fill from Left -> Right (Column-Major).
+ * Chats fill from Right -> Left (Column-Major).
+ */
+export const calculateDualDirectionLayout = (items: any[]): any[] => {
+    const count = items.length;
+    if (count === 0) return [];
+
+    // 1. Determine Grid Dimensions (Same logic as calculateAutoGridLayout)
+    let cols = 1;
+    let rows = 1;
+    if (count <= 1) { cols = 1; rows = 1; }
+    else if (count <= 2) { cols = 2; rows = 1; }
+    else if (count <= 4) { cols = 2; rows = 2; }
+    else if (count <= 6) { cols = 3; rows = 2; }
+    else if (count <= 9) { cols = 3; rows = 3; }
+    else if (count <= 12) { cols = 4; rows = 3; }
+    else { cols = 4; rows = 4; }
+
+    const cellW = Math.floor(24 / cols);
+    const cellH = Math.floor(24 / rows);
+
+    // 2. Separate Items
+    // Sort logic: Keep original order stable? Or rely on array order.
+    // For specific "S1, S2" mapping, we assume items are passed in a stable list.
+    const streams = items.filter(i => i.type === 'stream');
+    const chats = items.filter(i => i.type === 'chat');
+
+    // 3. Grid Tracking (2D array to mark occupied slots)
+    // grid[x][y]
+    const grid: boolean[][] = Array.from({ length: cols }, () => Array(rows).fill(false));
+
+    // 4. Place Chats (Right -> Left, Top -> Bottom)
+    // Outer: Col (desc), Inner: Row (asc)
+    const newItems: any[] = [];
+
+    let chatIdx = 0;
+    for (let x = cols - 1; x >= 0; x--) {
+        for (let y = 0; y < rows; y++) {
+            if (chatIdx < chats.length) {
+                // Place Chat
+                const chat = chats[chatIdx];
+                newItems.push({
+                    ...chat,
+                    layout: { x: x * cellW, y: y * cellH, w: cellW, h: cellH }
+                });
+                grid[x][y] = true; // Mark occupied
+                chatIdx++;
+            }
+        }
+    }
+
+    // 5. Place Streams (Left -> Right, Top -> Bottom)
+    // Outer: Col (asc), Inner: Row (asc)
+    let streamIdx = 0;
+    for (let x = 0; x < cols; x++) {
+        for (let y = 0; y < rows; y++) {
+            if (!grid[x][y]) { // Only if not occupied by chat
+                if (streamIdx < streams.length) {
+                    const stream = streams[streamIdx];
+                    newItems.push({
+                        ...stream,
+                        layout: { x: x * cellW, y: y * cellH, w: cellW, h: cellH }
+                    });
+                    grid[x][y] = true;
+                    streamIdx++;
+                }
+            }
+        }
+    }
+
+    // If there are leftover streams (e.g. more streams than slots - theoretically shouldn't happen if count logic is right),
+    // they get appended? calculateAutoGridLayout assumes count matches grid capacity approx.
+    // But cols*rows >= count is guaranteed by the dimension logic above.
+
+    return newItems;
 };

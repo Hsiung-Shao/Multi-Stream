@@ -37,58 +37,74 @@ export const EmptyWindowContent = ({ windowId, type, onUpdateWindow, renderProps
     };
 
     const handleStreamSelect = async (streamId: string) => {
+        // Initialize toastId
         let toastId: string | number | undefined;
+
         try {
             // Find stream in EXISTING streams
             const existingStream = streams.find(s => s.id.toString() === streamId);
 
             if (existingStream) {
                 onUpdateWindow(windowId, { contentId: existingStream.id });
-            } else {
-                // If it's a favorite not yet in "streams" store, we need to `addStream` first.
-                const fav = allFavorites.find(f => f.id === streamId);
-                if (fav) {
-                    toastId = toast.loading(t('common.loading') || '載入中...');
-
-                    // Safety Timeout: If addStream hangs for more than 15 seconds, force error.
-                    // This prevents the toast from spinning forever if backend/network fails silently.
-                    const safetyTimeoutId = setTimeout(() => {
-                        if (toastId) {
-                            console.warn('[EmptyWindowContent] addStream operation timed out (safety check).');
-                            toast.error(t('common.timeout') || '請求逾時，請稍後再試', { id: toastId });
-                        }
-                    }, 15000);
-
-                    try {
-                        // Add to store first - use liveUrl if available (resolved videoId), fallback to base url
-                        const addStream = useStreamStore.getState().addStream;
-                        const urlToAdd = (fav as any).liveUrl || fav.url;
-                        const result = await addStream(urlToAdd, {
-                            withChat: false,
-                            withStream: false,
-                            displayName: fav.name // Use favorite name
-                        });
-
-                        clearTimeout(safetyTimeoutId);
-
-                        if (result.streamId) {
-                            console.log('[EmptyWindowContent] addStream success, updating window:', { windowId, streamId: result.streamId });
-                            onUpdateWindow(windowId, { contentId: result.streamId });
-                            toast.dismiss(toastId);
-                        } else {
-                            console.warn('[EmptyWindowContent] addStream failed or no streamId:', result);
-                            toast.error(result.message || t('common.error') || '發生錯誤', { id: toastId });
-                        }
-                    } catch (err) {
-                        clearTimeout(safetyTimeoutId);
-                        throw err;
-                    }
-                }
+                return; // Immediate update, no loading needed
             }
+
+            // If it's a favorite not yet in "streams" store, we need to `addStream` first.
+            const fav = allFavorites.find(f => f.id === streamId);
+            if (!fav) return;
+
+            // Start Loading Toast
+            toastId = toast.loading(t('common.loading') || '載入中...');
+
+            // Safety Timeout
+            const safetyTimeoutId = setTimeout(() => {
+                if (toastId) {
+                    console.warn('[EmptyWindowContent] addStream operation timed out.');
+                    toast.dismiss(toastId);
+                    toast.error(t('common.timeout') || '請求逾時，請稍後再試');
+                }
+            }, 15000);
+
+            try {
+                // Add to store first - use liveUrl if available (resolved videoId), fallback to base url
+                const addStream = useStreamStore.getState().addStream;
+                const urlToAdd = (fav as any).liveUrl || fav.url;
+
+                const result = await addStream(urlToAdd, {
+                    withChat: false,
+                    withStream: false, // Local add only
+                    displayName: fav.name // Use favorite name
+                });
+
+                clearTimeout(safetyTimeoutId);
+
+                // Handle Result
+                if (result.success && result.streamId) {
+                    console.log('[EmptyWindowContent] addStream success:', { windowId, streamId: result.streamId });
+
+                    // Update Window Content
+                    onUpdateWindow(windowId, { contentId: result.streamId });
+
+                    // Dismiss Loading Toast (Success)
+                    toast.dismiss(toastId);
+                } else {
+                    console.warn('[EmptyWindowContent] addStream failed:', result);
+                    // Update Toast to Error
+                    toast.dismiss(toastId);
+                    toast.error(result.message || t('common.error') || '發生錯誤');
+                }
+            } catch (err) {
+                clearTimeout(safetyTimeoutId);
+                console.error('[EmptyWindowContent] addStream exception:', err);
+                // Update Toast to Error
+                toast.dismiss(toastId);
+                toast.error(t('common.error') || '發生未知錯誤');
+            }
+
         } catch (error) {
-            console.error('Selection failed', error);
-            if (toastId) toast.error(t('common.error') || '發生未知錯誤', { id: toastId });
-            else toast.error(t('common.error') || '發生未知錯誤');
+            console.error('Selection failed root error:', error);
+            if (toastId) toast.dismiss(toastId);
+            toast.error(t('common.error') || '發生未知錯誤');
         }
     };
 

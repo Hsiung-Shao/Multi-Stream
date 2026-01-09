@@ -23,6 +23,7 @@ interface UseDragOptions {
     height: number;
     onDragEnd: (x: number, y: number) => void;
     checkCollision?: (x: number, y: number) => boolean;
+    maxRows?: number; // Add maxRows to support dynamic grid height
 }
 
 export function useDrag(options: UseDragOptions) {
@@ -34,7 +35,8 @@ export function useDrag(options: UseDragOptions) {
         width,
         height,
         onDragEnd,
-        checkCollision
+        checkCollision,
+        maxRows = GRID_ROWS // Default to GRID_ROWS if not provided
     } = options;
 
     // Smooth position (follows cursor directly)
@@ -75,31 +77,30 @@ export function useDrag(options: UseDragOptions) {
 
         e.preventDefault();
 
-        // Cancel any pending animation frame
+        // Request animation frame for smooth updates
         if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
         }
 
-        // Use requestAnimationFrame for smooth updates
+        const clientX = e.clientX;
+        const clientY = e.clientY;
+
         rafRef.current = requestAnimationFrame(() => {
-            const deltaX = e.clientX - dragState.current.startX;
-            const deltaY = e.clientY - dragState.current.startY;
+            const deltaX = clientX - dragState.current.startX;
+            const deltaY = clientY - dragState.current.startY;
 
             // Raw position (follows cursor smoothly)
             let rawX = dragState.current.startPosX + deltaX;
             let rawY = dragState.current.startPosY + deltaY;
 
-            // Clamp raw position to bounds
-            rawX = Math.max(0, Math.min(rawX, (GRID_COLS * cellWidth) - width));
-            rawY = Math.max(0, Math.min(rawY, (GRID_ROWS * cellHeight) - height));
-
-            // Snapped position (where it will land)
+            // Snap calculation
             let snappedX = snapToGrid(rawX, cellWidth);
             let snappedY = snapToGrid(rawY, cellHeight);
 
             // Clamp snapped position
             snappedX = clampToGridBounds(snappedX, width, GRID_COLS, cellWidth);
-            snappedY = clampToGridBounds(snappedY, height, GRID_ROWS, cellHeight);
+            // Use dynamic maxRows for vertical clamping
+            snappedY = clampToGridBounds(snappedY, height, maxRows, cellHeight);
 
             // Check collision for snap position
             if (checkCollision && checkCollision(snappedX, snappedY)) {
@@ -112,7 +113,7 @@ export function useDrag(options: UseDragOptions) {
             setPosition({ x: rawX, y: rawY });
             setSnapPosition({ x: snappedX, y: snappedY });
         });
-    }, [cellWidth, cellHeight, width, height, checkCollision]);
+    }, [cellWidth, cellHeight, width, height, checkCollision, maxRows]);
 
     const handlePointerUp = useCallback((e: React.PointerEvent) => {
         if (!dragState.current.isDragging) return;

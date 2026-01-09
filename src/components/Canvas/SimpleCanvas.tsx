@@ -189,7 +189,7 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     return (
         <ScrollArea className={cn("h-full w-full bg-slate-950", className)}>
             <div
-                className="relative overflow-hidden"
+                className="relative"
                 style={{
                     width: gridConfig.containerWidth,
                     height: gridConfig.containerHeight,

@@ -11,6 +11,7 @@ import { BackupSection } from './BackupSection';
 import { TwitchIntegrationSection } from './TwitchIntegrationSection';
 import { SettingsSection } from './SettingsSection';
 import { LayoutManagerSection } from './LayoutManagerSection';
+import { VersionHistorySection } from './VersionHistorySection';
 import { favoritesService } from '../FavoritesService';
 import { tagsService } from '../TagsService';
 import { favoritesLoader } from '../FavoritesLoader';
@@ -325,7 +326,8 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                     theme={theme}
                                     searchQuery={searchQuery}
                                     onSearchChange={setSearchQuery}
-                                    selectedCount={selectedIds.size}
+                                    selectedIds={Array.from(selectedIds)}
+                                    // selectedCount prop is derived inside Toolbar now, removed
                                     onSelectAll={handleSelectAll}
                                     onDeselectAll={handleDeselectAll}
                                     onBatchDelete={handleBatchDelete}
@@ -334,6 +336,10 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                         setEditingFavorite(null);
                                         setIsAddDialogOpen(true);
                                     }}
+                                    categories={categories}
+                                    tags={tags}
+                                    favorites={favorites}
+                                    onRefresh={loadData}
                                 />
 
                                 {activeFilter === 'live' && (
@@ -361,7 +367,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                                         favorite={fav}
                                                         categories={categories}
                                                         tags={tags}
-                                                        theme={theme}
                                                         isSelected={selectedIds.has(fav.id)}
                                                         onSelect={handleSelect}
                                                         onStartEdit={(f) => {
@@ -568,12 +573,18 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                             </div>
                         )}
 
+
+
                         {activeTab === 'backup' && (
                             <BackupSection
                                 theme={theme}
                                 onSuccess={(msg) => toast.success(msg)}
                                 onError={(msg) => toast.error(msg)}
                             />
+                        )}
+
+                        {activeTab === 'version_history' && (
+                            <VersionHistorySection theme={theme} />
                         )}
                     </div>
                 </div>
