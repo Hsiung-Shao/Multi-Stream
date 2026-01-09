@@ -8,8 +8,8 @@ import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/lay
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
 import { generateLayout, LayoutMode } from '../utils/layoutPresets';
-import { findAvailablePosition, findMaximalEmptyRect, repackAndMaximizeRows } from '../utils/layoutEngine';
-import { calculateAutoGridLayout, calculateDualDirectionLayout } from '../utils/layoutPresets';
+import { findAvailablePosition } from '../utils/layoutEngine';
+import { calculateDualDirectionLayout } from '../utils/layoutPresets';
 import { CustomLayout, LayoutSlot } from '../types/canvas';
 import { layoutStorage } from '../utils/layoutStorage';
 
@@ -33,6 +33,7 @@ interface StreamStoreState {
     setLayout: (layout: LayoutType, isUserAction?: boolean) => void;
     updateStream: (id: number, updates: Partial<StreamData>) => void;
     setStreams: (streams: StreamData[]) => void;
+    setAllMuted: (muted: boolean) => void;
 
     // Custom Layout Actions
     saveCustomLayout: (name: string) => Promise<void>;
@@ -261,9 +262,17 @@ export const useStreamStore = create<StreamStoreState>()(
                     const futureTotalItems = totalCurrentItems + newItemsCount;
 
 
-                    // Decision: Smart Layout (Grid) vs Infinite Flow
-                    if (futureTotalItems <= 16) {
-                        // --- Smart Layout Mode (<= 16) ---
+                    // Decide Layout Strategy
+                    // Rule 1: "Have Empty Window" -> Fill or Append (No Reflow)
+                    // Rule 2: "No Empty Window" -> Standard Logic (Smart Layout if <= 16, Infinite Flow if > 16)
+
+                    const hasEmptyStreamSlot = state.canvasItems.some(i => i.type === 'stream' && !i.contentId);
+
+                    // Smart Layout (Reflow) only triggers if we started with NO empty slots AND fit within 16
+                    const useSmartLayout = !hasEmptyStreamSlot && futureTotalItems <= 16;
+
+                    if (useSmartLayout) {
+                        // --- Smart Layout Mode (<= 16 & No pre-existing empty slots) ---
                         // Re-calculate layout for ALL items to distribute them evenly
 
                         // 1. Prepare list of items
@@ -293,13 +302,11 @@ export const useStreamStore = create<StreamStoreState>()(
                         // This positions Streams (Left->Right) and Chats (Right->Left)
                         newCanvasItems = calculateDualDirectionLayout(tempItems);
 
-                        // 5. (Optional) Post-process or apply
-                        // The items returned already have 'layout' set correctly.
-                        // No mapping needed.
-
                     } else {
-                        // --- Infinite Flow Mode (> 16) ---
-                        // Append to bottom with fixed small size (Stream 6x6, Chat 4x6)
+                        // --- Infinite Flow / Append Mode ---
+                        // Used if:
+                        // 1. We had empty slots (fill/append, no reflow)
+                        // 2. OR Total items > 16 (too many for smart grid)
 
                         if (options?.withStream && !streamPlaced) {
                             // Use findAvailablePosition directly to enforce 6x6
@@ -449,23 +456,10 @@ export const useStreamStore = create<StreamStoreState>()(
                     // Remove associated canvas items completely
                     let newCanvasItems = state.canvasItems.filter(item => item.contentId !== id);
 
-                    // Apply hybrid layout logic after removal
-                    if (state.layoutMode === 'canvas') {
-                        if (newCanvasItems.length <= 16 && newCanvasItems.length > 0) {
-                            const specs = calculateAutoGridLayout(newCanvasItems.length);
-                            newCanvasItems = newCanvasItems.map((item, idx) => {
-                                const spec = specs[idx];
-                                let w = spec.w;
-                                let h = spec.h;
-                                if (item.type === 'chat') {
-                                    w = Math.min(spec.w, 4);
-                                    h = Math.max(spec.h, 6);
-                                }
-                                return { ...item, layout: { ...spec, w, h } };
-                            });
-                        }
-                        // If > 16 or 0 items, RGL will handle compaction naturally.
-                    }
+                    // Apply hybrid layout logic after removal (Removed Auto-Reflow)
+                    // if (state.layoutMode === 'canvas') {
+                    //      Original Logic Removed to prevent unwanted reflow
+                    // }
 
                     let newLayout = state.layout;
                     if (currentCount === 0) newLayout = 1;
@@ -485,8 +479,56 @@ export const useStreamStore = create<StreamStoreState>()(
             },
 
             updateStream: (id, updates) => {
+                set(state => {
+                    const newStreams = state.streams.map(s => {
+                        if (s.id !== id) return s;
+
+                        // Apply updates
+                        const updatedStream = { ...s, ...updates };
+
+                        // Special Logic: If user manually changes `isMuted`, 
+                        // and we have a stored `_restoreMuteState` (implying we are in a Master Mute session),
+                        // we must update the _restoreMuteState to match the new user preference.
+                        // This ensures that when Master Mute is released, we don't revert to an old state
+                        // that the user has explicitly overridden.
+                        if (updates.isMuted !== undefined && s._restoreMuteState !== undefined) {
+                            updatedStream._restoreMuteState = updates.isMuted;
+                        }
+                        return updatedStream;
+                    });
+
+                    return { streams: newStreams };
+                });
+            },
+
+            setAllMuted: (muted: boolean) => {
                 set(state => ({
-                    streams: state.streams.map(s => s.id === id ? { ...s, ...updates } : s)
+                    streams: state.streams.map(s => {
+                        if (muted) {
+                            // Enable Master Mute
+                            // Save current state (if not already saved - though usually it's cleared on unmute)
+                            // If _restoreMuteState exists, maybe we are re-applying? checking s.isMuted is safer.
+                            return {
+                                ...s,
+                                isMuted: true,
+                                // Save current 'isMuted' as the restore target. 
+                                // CAUTION: If we toggle True -> True, we shouldn't overwrite if already saved?
+                                // But UI safeguards usually Toggle. 
+                                // Let's assume we save the state 'just before' muting.
+                                _restoreMuteState: s.isMuted
+                            };
+                        } else {
+                            // Disable Master Mute (Unmute All / Restore)
+                            // Restore to saved state, or default to false (unmuted)
+                            // If _restoreMuteState is undefined, it means stream was added during mute or some other edge case.
+                            // Defaulting to false (unmuted) is safe for "Unmute All" semantics.
+                            const restoreState = s._restoreMuteState !== undefined ? s._restoreMuteState : false;
+
+                            // Remove the temporary state
+                            const { _restoreMuteState, ...rest } = s;
+                            return { ...rest, isMuted: restoreState };
+                        }
+                    })
                 }));
             },
 
@@ -566,17 +608,6 @@ export const useStreamStore = create<StreamStoreState>()(
 
             removeCanvasItem: (id) => set(state => {
                 const filtered = state.canvasItems.filter(item => item.i !== id);
-
-                // If we dropped to <= 16, trigger Auto-Grid Layout recalculation
-                if (filtered.length <= 16 && filtered.length > 0) {
-                    const specs = calculateAutoGridLayout(filtered.length);
-                    const tentativeItems = filtered.map((item, idx) => ({
-                        ...item,
-                        layout: specs[idx]
-                    }));
-                    const reordered = repackAndMaximizeRows(tentativeItems);
-                    return { canvasItems: reordered };
-                }
 
                 return {
                     canvasItems: filtered

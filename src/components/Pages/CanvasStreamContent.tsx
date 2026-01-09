@@ -11,6 +11,7 @@ import { StreamChat } from '../StreamChat';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import type { StreamData } from '../../utils/streamUtils';
+import { useUIStore } from '../../store/useUIStore';
 
 interface CanvasStreamContentProps {
     stream: StreamData;
@@ -48,16 +49,19 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
         onRemove();
     }, [onRemove]);
 
+    // Master Volume Control
+    const masterVolume = useUIStore(s => s.masterVolume);
+    // masterMuted is now handled as logic-only in ControlPanel (visual state/batch trigger), not rendering state override.
+
+    // Calculate effective volume and mute
+    const effectiveVolume = Math.round((stream.volume ?? 100) * (masterVolume / 100));
+    // Requirement: Individual Mute > Master Mute (Priority).
+    // ...
+    const effectiveMuted = stream.isMuted ?? false;
+
     const title = useMemo(() => {
-        console.log('[CanvasStreamContent] Rendered:', {
-            streamId: stream.id,
-            platform: stream.platform,
-            videoId: stream.videoId,
-            channelId: stream.channelId,
-            windowType
-        });
         return stream.displayName || stream.name || stream.channelId || 'Unknown';
-    }, [stream.displayName, stream.name, stream.channelId]);
+    }, [stream.displayName, stream.name, stream.channelId, effectiveVolume, effectiveMuted]);
 
     return (
         <div className="w-full h-full relative bg-slate-900 group">
@@ -135,8 +139,8 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     <StreamIframe
                         key={`stream-${reloadKey}`}
                         streamData={stream}
-                        volume={stream.volume ?? 100}
-                        isMuted={stream.isMuted ?? false}
+                        volume={effectiveVolume}
+                        isMuted={effectiveMuted}
                     />
                 )}
             </div>

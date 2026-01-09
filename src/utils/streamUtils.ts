@@ -11,10 +11,10 @@ export interface StreamData {
   volume: number;
   chatVisible: boolean;
   isMuted?: boolean;
-  name?: string | null;
   displayName?: string | null;
   _reloadTrigger?: number; // 用於強制重新加載播放器
   _reloadKey?: number; // 用於強制重新渲染組件
+  _restoreMuteState?: boolean; // 用於在總靜音解除時恢復個別靜音狀態
 }
 
 export interface UrlValidation {

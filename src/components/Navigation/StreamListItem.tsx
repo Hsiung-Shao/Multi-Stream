@@ -18,6 +18,7 @@ interface StreamListItemProps {
     onRefresh: (id: number) => void;
     onRemove: (id: number) => void;
     t: TFunction<["common", "controlPanel"]>;
+    dragListeners?: any;
 }
 
 export const StreamListItem = ({
@@ -32,7 +33,8 @@ export const StreamListItem = ({
     onMoveDown,
     onRefresh,
     onRemove,
-    t
+    t,
+    dragListeners
 }: StreamListItemProps) => {
 
     // 獲取串流顯示名稱
@@ -52,7 +54,8 @@ export const StreamListItem = ({
             {/* 串流項目標題列 */}
             <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700">
                 <div
-                    className="cursor-grab active:cursor-grabbing hover:text-white text-gray-500 flex-shrink-0"
+                    className="cursor-grab active:cursor-grabbing hover:text-white text-gray-500 flex-shrink-0 touch-none"
+                    {...dragListeners}
                 >
                     <GripVertical className="size-4" />
                 </div>

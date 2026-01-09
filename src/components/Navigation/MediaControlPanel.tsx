@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
     DndContext,
@@ -10,7 +9,6 @@ import {
     DragEndEvent
 } from '@dnd-kit/core';
 import {
-    arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
@@ -46,8 +44,8 @@ const SortableStreamItem = (props: any) => {
     };
 
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            <StreamListItem {...props} isDragging={isDragging} />
+        <div ref={setNodeRef} style={style} {...attributes}>
+            <StreamListItem {...props} dragListeners={listeners} isDragging={isDragging} />
         </div>
     );
 };
@@ -93,6 +91,16 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
         }
     };
 
+    // 處理雙擊總靜音 (解鎖所有的單獨靜音)
+    const handleMasterMuteDoubleClick = () => {
+        // 使用者要求：快速連點來解除所有的單獨靜音 (Unmute All Streams)
+        // 且 "右上角的靜音switch 依舊保持開關音效的功能" -> 意味著雙擊不應更改 Master Mute 本身?
+        // 但如果 Master Mute 是開啟的 (靜音中)，解除個別靜音後是否要有聲音?
+        // 根據 "單獨靜音歸單獨靜音... 不應解除全部靜音"，我們僅操作 setAllMuted(false)。
+
+        useStreamStore.getState().setAllMuted(false);
+    };
+
     // 處理串流重整
     const handleRefreshStream = (streamId: number) => {
         const stream = streams.find(s => s.id === streamId);
@@ -105,10 +113,10 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
 
     // 處理串流靜音切換
     const handleToggleMute = (streamId: number) => {
-        const stream = streams.find(s => s.id === streamId);
-        if (stream) {
-            updateStream(streamId, { isMuted: !stream.isMuted });
-        }
+        updateStream(streamId, { isMuted: !streams.find(s => s.id === streamId)?.isMuted });
+
+        // Removed: setMasterMuted(false) 
+        // User Request: "When individual mute is released, it should not release all mute"
     };
 
     // 處理串流音量變更
@@ -120,6 +128,9 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
         if (stream && stream.isMuted && volume > 0) {
             updateStream(streamId, { isMuted: false });
         }
+
+        // Removed: setMasterMuted(false)
+        // User Request: "When individual mute is released, it should not release all mute"
     };
 
     // 處理上下移動
@@ -150,7 +161,11 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                 {/* 總音量控制 */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                        <Label className="text-white text-sm font-medium">
+                        <Label
+                            className="text-white text-sm font-medium cursor-pointer select-none"
+                            onDoubleClick={handleMasterMuteDoubleClick}
+                            title="雙擊此處可切換全部靜音/解除全部靜音"
+                        >
                             {t('controlPanel:masterVolume') || '總音量'}
                         </Label>
                         <div className="flex items-center gap-2">
@@ -159,7 +174,17 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                             </span>
                             <Switch
                                 checked={!masterMuted}
-                                onCheckedChange={(checked: boolean) => setMasterMuted(!checked)}
+                                onCheckedChange={(checked: boolean) => {
+                                    // checked = true (Sound On) -> Muted = false
+                                    // checked = false (Sound Off) -> Muted = true
+                                    const newMuted = !checked;
+                                    setMasterMuted(newMuted);
+
+                                    // Master Switch acts as Batch Controller
+                                    // User Requirement: "總靜音開關功能依舊保持可以開關音量的功能"
+                                    // This means toggling this switch should Mute/Unmute everything.
+                                    useStreamStore.getState().setAllMuted(newMuted);
+                                }}
                                 className="data-[state=checked]:bg-purple-500"
                             />
                         </div>
@@ -170,10 +195,18 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                         max={100}
                         step={1}
                         onValueChange={(value) => {
-                            setMasterVolume(value[0]);
-                            // 如果從靜音狀態拖動到非零值,自動取消靜音
-                            if (value[0] > 0 && masterMuted) {
+                            const newVal = value[0];
+                            setMasterVolume(newVal);
+
+                            // Volume 0 -> Auto Mute (Batch)
+                            if (newVal === 0 && !masterMuted) {
+                                setMasterMuted(true);
+                                useStreamStore.getState().setAllMuted(true);
+                            }
+                            // Volume > 0 -> Auto Unmute (Batch) from Muted state
+                            else if (newVal > 0 && masterMuted) {
                                 setMasterMuted(false);
+                                useStreamStore.getState().setAllMuted(false);
                             }
                         }}
                         className="w-full"

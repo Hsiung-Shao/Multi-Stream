@@ -88,9 +88,9 @@ export const generateLayout = (streamIds: (number | string)[], mode: LayoutMode 
             items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 24 });
         } else {
             // 1 Stream + Chat (Sidebar)
-            // Stream: 18w x 24h, Chat: 6w x 24h
-            items.push({ type: 'stream', x: 0, y: 0, w: 18, h: 24 });
-            items.push({ type: 'chat', x: 18, y: 0, w: 6, h: 24 });
+            // Stream: 20w x 24h, Chat: 4w x 24h
+            items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 24 });
+            items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 24 });
         }
     }
     // N=2
@@ -101,58 +101,24 @@ export const generateLayout = (streamIds: (number | string)[], mode: LayoutMode 
             items.push({ type: 'stream', x: 12, y: 0, w: 12, h: 24 });
         } else {
             // 2 Streams + Chat
-            // Option A: Stacked. Top(Stream+Chat), Bottom(Stream+Chat)
-            // Height 12 each.
-            // Stream: 18w, Chat: 6w.
-            items.push({ type: 'stream', x: 0, y: 0, w: 18, h: 12 });
-            items.push({ type: 'chat', x: 18, y: 0, w: 6, h: 12 });
+            // Stream: 20w, Chat: 4w.
+            items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 12 });
+            items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 12 });
 
-            items.push({ type: 'stream', x: 0, y: 12, w: 18, h: 12 });
-            items.push({ type: 'chat', x: 18, y: 12, w: 6, h: 12 });
+            items.push({ type: 'stream', x: 0, y: 12, w: 20, h: 12 });
+            items.push({ type: 'chat', x: 20, y: 12, w: 4, h: 12 });
         }
     }
     // N=3
     else if (count === 3) {
+        // ... (Keep existing N=3 logic as it was mostly placeholders or "Video Only" fallback)
+        // Reverting to the code block logic for N=3:
         if (mode === 'video_only') {
             // 1 Big Left, 2 Small Right (Stacked)
-            // Big: 12w x 24h? Or 16w?
-            // If 16w, Right has 8w.
-            // 8w x 12h (2 blocks).
             items.push({ type: 'stream', x: 0, y: 0, w: 16, h: 24 }); // Main
             items.push({ type: 'stream', x: 16, y: 0, w: 8, h: 12 }); // Top Right
             items.push({ type: 'stream', x: 16, y: 12, w: 8, h: 12 }); // Bottom Right
         } else {
-            // 3 Streams with Chat (User: Chats on right)
-            // Maybe Main + 2 Side, but all chat logic compressed?
-            // Or simple grid?
-            // Let's try: Main Top (Width 18, Chat 6).
-            // Bottom 2 split?
-            // Or: Use the "Focus" layout logic.
-
-            // Implementation for "With Chat" N=3
-            // Main Left (14w x 24h), Chat Right (4w x 24h)? No.
-            // Let's stick to consistent columns.
-            // Col1: Main Stream (12w x 24h)
-            // Col2: Stream 2 (6w x 12h) + Chat 2 (6w x 12h)?
-            // This gets complex.
-
-            // Simplified "With Chat":
-            // 1 Main (16w x 24h). No chat for main?
-            // User: "3 -> Chats on right".
-            // Maybe: 1 Main (16w x 24h).
-            // Side: Col width 8.
-            // Top: Stream 2 (8w x 6h) + Chat 2 (8w x 6h) -- stacked?
-
-            // Let's follow a "Grid" approach for safety until refined.
-            // 2x2 Grid with one empty?
-            // Row 1: Stream1(12) + Chat1(4) | Stream2(12) + Chat2(4)? -> Width 32 overflow.
-
-            // Let's do: 3 Rows stacked? No.
-
-            // "Pin" style logic:
-            // Stream 1 (18w x 24h).
-            // Stream 2, 3 hidden?
-
             // Let's fallback to Video Only logic but reduce width to fit chat?
             // Stream 1 (15w x 24h).
             // Chat 1 (3w x 24h)?
@@ -169,20 +135,18 @@ export const generateLayout = (streamIds: (number | string)[], mode: LayoutMode 
     // N=4
     else if (count === 4) {
         // 2x2 Grid
-        // 12w x 12h each.
         items.push({ type: 'stream', x: 0, y: 0, w: 12, h: 12 });
         items.push({ type: 'stream', x: 12, y: 0, w: 12, h: 12 });
         items.push({ type: 'stream', x: 0, y: 12, w: 12, h: 12 });
         items.push({ type: 'stream', x: 12, y: 12, w: 12, h: 12 });
     }
     else {
-        // Generic Grid for 5+
-        // Cols = ceil(sqrt(n)). Rows = ceil(n/cols).
+        // ... (Keep existing generic logic)
         const colCount = Math.ceil(Math.sqrt(count));
         const rowCount = Math.ceil(count / colCount);
 
         const w = Math.floor(24 / colCount);
-        const h = Math.floor(24 / rowCount); // Distribute 24 units height.
+        const h = Math.floor(24 / rowCount);
 
         for (let i = 0; i < count; i++) {
             const r = Math.floor(i / colCount);
@@ -203,7 +167,7 @@ export const calculateDualDirectionLayout = (items: any[]): any[] => {
     const count = items.length;
     if (count === 0) return [];
 
-    // 1. Determine Grid Dimensions (Same logic as calculateAutoGridLayout)
+    // 1. Determine Grid Dimensions
     let cols = 1;
     let rows = 1;
     if (count <= 1) { cols = 1; rows = 1; }
@@ -218,17 +182,13 @@ export const calculateDualDirectionLayout = (items: any[]): any[] => {
     const cellH = Math.floor(24 / rows);
 
     // 2. Separate Items
-    // Sort logic: Keep original order stable? Or rely on array order.
-    // For specific "S1, S2" mapping, we assume items are passed in a stable list.
     const streams = items.filter(i => i.type === 'stream');
     const chats = items.filter(i => i.type === 'chat');
 
-    // 3. Grid Tracking (2D array to mark occupied slots)
-    // grid[x][y]
+    // 3. Grid Tracking
     const grid: boolean[][] = Array.from({ length: cols }, () => Array(rows).fill(false));
 
     // 4. Place Chats (Right -> Left, Top -> Bottom)
-    // Outer: Col (desc), Inner: Row (asc)
     const newItems: any[] = [];
 
     let chatIdx = 0;
@@ -237,9 +197,14 @@ export const calculateDualDirectionLayout = (items: any[]): any[] => {
             if (chatIdx < chats.length) {
                 // Place Chat
                 const chat = chats[chatIdx];
+                // Limit width to 4, right align in cell
+                const width = Math.min(cellW, 4);
+                const cellX = x * cellW;
+                const layoutX = (cellX + cellW) - width;
+
                 newItems.push({
                     ...chat,
-                    layout: { x: x * cellW, y: y * cellH, w: cellW, h: cellH }
+                    layout: { x: layoutX, y: y * cellH, w: width, h: cellH }
                 });
                 grid[x][y] = true; // Mark occupied
                 chatIdx++;
@@ -248,7 +213,6 @@ export const calculateDualDirectionLayout = (items: any[]): any[] => {
     }
 
     // 5. Place Streams (Left -> Right, Top -> Bottom)
-    // Outer: Col (asc), Inner: Row (asc)
     let streamIdx = 0;
     for (let x = 0; x < cols; x++) {
         for (let y = 0; y < rows; y++) {
@@ -266,9 +230,66 @@ export const calculateDualDirectionLayout = (items: any[]): any[] => {
         }
     }
 
-    // If there are leftover streams (e.g. more streams than slots - theoretically shouldn't happen if count logic is right),
-    // they get appended? calculateAutoGridLayout assumes count matches grid capacity approx.
-    // But cols*rows >= count is guaranteed by the dimension logic above.
+    // ---------------------------------------------------------
+    // Post-Processing: Eliminate Gaps (Dynamic Sizing)
+    // ---------------------------------------------------------
+
+    // Step A: "Gravity Right" for Chats
+    // Push chat windows as far right as possible within their row.
+    for (let r = 0; r < rows; r++) {
+        const rowItems = newItems.filter(i => i.layout.y === r * cellH);
+
+        // Sort items in this row by their current X descending
+        rowItems.sort((a, b) => b.layout.x - a.layout.x);
+
+        // Items processed from Right to Left
+        let currentRightEdge = 24; // Container Width
+
+        rowItems.forEach(item => {
+            if (item.type === 'chat') {
+                // Snap to current right edge
+                const targetX = currentRightEdge - item.layout.w;
+                // Move it if it's not already there
+                if (item.layout.x < targetX) {
+                    item.layout.x = targetX;
+                }
+                currentRightEdge = item.layout.x;
+            } else {
+                // Stream acts as a wall
+                currentRightEdge = item.layout.x;
+            }
+        });
+    }
+
+    // Step B: "Expand Streams"
+    // Expand streams to fill the gap to their immediate right.
+    newItems.forEach(item => {
+        if (item.type === 'stream') {
+            const currentR = item.layout.x + item.layout.w;
+            const y = item.layout.y;
+
+            // Find nearest obstruction to the right in the same row
+            let limitX = 24; // Default to container edge
+
+            newItems.forEach(other => {
+                if (other === item) return;
+                // Check simple row alignment
+                if (other.layout.y === y) {
+                    if (other.layout.x >= currentR) {
+                        if (other.layout.x < limitX) {
+                            limitX = other.layout.x;
+                        }
+                    }
+                }
+            });
+
+            // Expand width
+            const newW = limitX - item.layout.x;
+            if (newW > item.layout.w) {
+                item.layout.w = newW;
+            }
+        }
+    });
 
     return newItems;
 };
