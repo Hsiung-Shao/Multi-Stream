@@ -635,17 +635,33 @@ export const useStreamStore = create<StreamStoreState>()(
 
                 if (!itemToRemove) return;
 
-                // Mode check
+                // 1. If ALREADY Empty Window (no contentId), ALWAYS Remove
+                if (!itemToRemove.contentId) {
+                    set(state => ({
+                        canvasItems: state.canvasItems.filter(item => item.i !== id)
+                    }));
+                    return;
+                }
+
+                // 2. If has content, check Mode
                 if (closeWindowMode === 'empty') {
-                    // "Empty" Mode
+                    // "Keep Empty Window" Mode
                     if (itemToRemove.type === 'stream' && itemToRemove.contentId) {
-                        // If Stream Window -> Trigger Stream Removal (which handles linked chat too)
-                        // Trigger logic similar to removeStream but we're already inside the store fn
-                        // Calling actions from within actions is possible in Zustand if we use get()
-                        get().removeStream(itemToRemove.contentId, false); // false = respect mode (which is 'empty')
+                        const streamId = itemToRemove.contentId;
+
+                        // Clear content ID (make it empty)
+                        set(state => ({
+                            canvasItems: state.canvasItems.map(item =>
+                                item.i === id ? { ...item, contentId: null } : item
+                            )
+                        }));
+
+                        // Remove Stream Data but DO NOT force remove the canvas item
+                        // (WE just handled the canvas item update above)
+                        get().removeStream(streamId, false);
                         return;
                     } else {
-                        // If Chat Window (or already empty) -> Just clear contentId
+                        // Chat Window: Just clear contentId
                         set(state => ({
                             canvasItems: state.canvasItems.map(item =>
                                 item.i === id ? { ...item, contentId: null } : item
@@ -660,6 +676,11 @@ export const useStreamStore = create<StreamStoreState>()(
                     const filtered = state.canvasItems.filter(item => item.i !== id);
                     return { canvasItems: filtered };
                 });
+
+                // Cleanup Stream Data if needed (for Remove mode)
+                if (itemToRemove.type === 'stream' && itemToRemove.contentId) {
+                    get().removeStream(itemToRemove.contentId, true);
+                }
             },
 
             // Modified for RGL Layout Callback
