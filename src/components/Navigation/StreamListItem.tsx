@@ -39,7 +39,7 @@ export const StreamListItem = ({
 
     // 獲取串流顯示名稱
     const getStreamDisplayName = (stream: any) => {
-        return stream.name || stream.videoId || `串流 #${stream.id}`;
+        return stream.displayName || stream.name || stream.videoId || `串流 #${stream.id}`;
     };
 
     return (

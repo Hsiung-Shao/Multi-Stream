@@ -40,7 +40,7 @@
 - 在設計功能事都要以效能、安全性、可維護性三個角度來思考
 - 需求UIUX設計
 
-請分析我的代碼變動，寫一個 Commit Message。要求：1. 使用 Conventional Commits 格式（如 feat:, fix:）。2. 第一行簡述變動。3. 如果有重大邏輯修改，在 Body 部分詳細說明為什麼這樣改。
+請分析我的代碼變動，寫一個 Commit Message。要求：1. 使用 Conventional Commits 格式（如 feat:, fix:）。2. 第一行簡述變動。3. 如果有重大邏輯修改，在 Body 部分詳細說明為什麼這樣改。4.語言請用繁體中文。
 
 代理server 啟動指令: wrangler pages dev functions --port 8788
 Shadcn UI

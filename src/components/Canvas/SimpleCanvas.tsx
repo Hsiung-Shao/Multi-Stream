@@ -3,10 +3,10 @@
  * 24x24 grid that perfectly fits the viewport
  */
 
-import { memo, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { memo, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { DraggableWindow, CanvasWindow, WindowRenderProps } from './DraggableWindow';
 import { calculateGridConfig, GridConfig } from './gridConfig';
-import { checkCollision, Rect } from './collision';
+import { checkCollision, checkPointCollision, Rect } from './collision';
 import { cn } from '../ui/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { calculateRequiredRows } from '../../utils/layoutEngine';
@@ -36,8 +36,10 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         }))))
     );
 
-    // Swap mode state
+    // Swap mode state (Click based)
     const [swapSourceId, setSwapSourceId] = useState<string | null>(null);
+    // Swap mode state (Drag based)
+    const [dragSwapTargetId, setDragSwapTargetId] = useState<string | null>(null);
 
     // Handle window resize
     useEffect(() => {
@@ -66,6 +68,9 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         setGridConfig(prev => calculateGridConfig(prev.containerWidth, prev.cellHeight * 24, calculateRequiredRows(items)));
     }, [windows]);
 
+    // Container ref for pointer collision tracking
+    const containerRef = useRef<HTMLDivElement>(null);
+
     // Convert windows to pixel positions for collision detection
     const windowPositions = useMemo(() => {
         return windows.map(w => ({
@@ -79,19 +84,48 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         }));
     }, [windows, gridConfig]);
 
-    // Check drag collision
+    // Check drag collision - NOW RETURNS ID or NULL
     const checkDragCollision = useCallback((
         id: string,
         x: number,
         y: number,
         width: number,
-        height: number
-    ): boolean => {
+        height: number,
+        screenX?: number,
+        screenY?: number
+    ): string | null => {
+        // If screen coordinates are provided (Pointer Mode), use them
+        if (screenX !== undefined && screenY !== undefined && containerRef.current) {
+            const containerRect = containerRef.current.getBoundingClientRect();
+
+            const pointerContainerX = screenX - containerRect.left;
+            const pointerContainerY = screenY - containerRect.top;
+
+            // Use Point Collision with normalized coordinates
+            // Note: windowPositions are relative to the container 0,0
+            // Since we ref the container div inside the ScrollArea, 
+            // scroll offsets are already handled via getBoundingClientRect() of the moving container?
+            // Wait. simple way: 
+            // The ref must be on the scrolled content div (the one with the grid), not the wrapper.
+            // If the div is the one mapped over windows, it moves up when styled?
+            // OR SimpleCanvas renders a ScrollArea. The Child DIV is what we ref.
+            // The Child DIV grows.
+            // If ScrollArea implements native scroll, the child div moves up relative to viewport.
+            // So containerRect.top moves up.
+            // clientY is screen relative.
+            // clientY - containerRect.top gives Y relative to top of container. Correct.
+
+            // Check collision with POINTER position
+            return checkPointCollision(id, pointerContainerX, pointerContainerY, windowPositions);
+        }
+
+        // Fallback to Rect Collision (Traditional)
         const rect: Rect = { x, y, width, height };
-        return checkCollision(id, rect, windowPositions) !== null;
+        return checkCollision(id, rect, windowPositions);
     }, [windowPositions]);
 
-    // Check resize collision (now includes position for corner resizing)
+
+    // Check resize collision (still returns boolean)
     const checkResizeCollision = useCallback((
         id: string,
         x: number,
@@ -103,12 +137,64 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         return checkCollision(id, rect, windowPositions) !== null;
     }, [windowPositions]);
 
-    // Handle position change
-    const handlePositionChange = useCallback((id: string, gridX: number, gridY: number) => {
+    // Handle Drag Swap Hover
+    const handleSwapHover = useCallback((_sourceId: string, targetId: string | null) => {
+        setDragSwapTargetId(targetId);
+    }, []);
+
+    // Handle position change (Updated for Smart Swap)
+    const handlePositionChange = useCallback((id: string, gridX: number, gridY: number, collisionId?: string | null) => {
+        // 1. Identify Source Window
+        const source = windows.find(w => w.id === id);
+        if (!source) return;
+
+        // Use the reported collisionId from the drag operation if available
+        // This ensures consistent behavior with the visual feedback (green ring)
+        const targetId = collisionId;
+
+        if (targetId) {
+            // SWAP DETECTED
+            const target = windows.find(w => w.id === targetId);
+            if (target) {
+                // Perform Swap (Exchange Top-Left coordinates AND Dimensions)
+                // This ensures "Content Swap" behavior where the layout grid structure remains unchanged.
+                const updated = windows.map(w => {
+                    if (w.id === id) {
+                        // A takes B's position AND size
+                        return {
+                            ...w,
+                            gridX: target.gridX,
+                            gridY: target.gridY,
+                            gridW: target.gridW,
+                            gridH: target.gridH
+                        };
+                    }
+                    if (w.id === targetId) {
+                        // B takes A's *original* position AND size
+                        return {
+                            ...w,
+                            gridX: source.gridX,
+                            gridY: source.gridY,
+                            gridW: source.gridW,
+                            gridH: source.gridH
+                        };
+                    }
+                    return w;
+                });
+                onWindowUpdate(updated);
+                // Clear any drag state
+                setDragSwapTargetId(null);
+                return;
+            }
+        }
+
+        // NO COLLISION (or simple move)
         const updated = windows.map(w =>
             w.id === id ? { ...w, gridX, gridY } : w
         );
         onWindowUpdate(updated);
+        setDragSwapTargetId(null);
+
     }, [windows, onWindowUpdate]);
 
     // Handle resize
@@ -178,8 +264,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     // Cancel swap on Escape
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && swapSourceId) {
-                setSwapSourceId(null);
+            if (e.key === 'Escape') {
+                if (swapSourceId) setSwapSourceId(null);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -189,6 +275,7 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     return (
         <ScrollArea className={cn("h-full w-full bg-slate-950", className)}>
             <div
+                ref={containerRef}
                 className="relative"
                 style={{
                     width: gridConfig.containerWidth,
@@ -219,9 +306,10 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         onSizeChange={handleWindowResize}
                         onRemove={onWindowRemove}
                         onSwapRequest={handleSwapRequest}
+                        onSwapHover={handleSwapHover}
                         checkDragCollision={checkDragCollision}
                         checkResizeCollision={checkResizeCollision}
-                        isSwapTarget={swapSourceId !== null && swapSourceId !== w.id}
+                        isSwapTarget={(swapSourceId !== null && swapSourceId !== w.id) || (dragSwapTargetId === w.id)}
                     >
                         {(renderProps) => renderContent(w, renderProps)}
                     </DraggableWindow>

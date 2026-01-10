@@ -34,6 +34,9 @@ interface UIState {
     setPage: (page: PageType) => void;
     setSearchFocused: (focused: boolean) => void;
     togglePerformanceOverlay: () => void;
+    // Window functionality
+    closeWindowMode: 'remove' | 'empty';
+    setCloseWindowMode: (mode: 'remove' | 'empty') => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -113,6 +116,18 @@ export const useUIStore = create<UIState>((set) => ({
     setPage: (page) => set({ page }),
     setSearchFocused: (focused) => set({ isSearchFocused: focused }),
     togglePerformanceOverlay: () => set((state) => ({ showPerformanceOverlay: !state.showPerformanceOverlay })),
+
+    // Window functionality
+    closeWindowMode: 'remove',
+    setCloseWindowMode: (mode) => {
+        set({ closeWindowMode: mode });
+        try {
+            const saved = localStorage.getItem('userSettings');
+            const settings = saved ? JSON.parse(saved) : {};
+            settings.closeWindowMode = mode;
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+        } catch (e) { }
+    },
 }));
 
 // Initialize state from localStorage
@@ -125,6 +140,9 @@ try {
         }
         if (settings.theme) {
             useUIStore.setState({ theme: settings.theme });
+        }
+        if (settings.closeWindowMode) {
+            useUIStore.setState({ closeWindowMode: settings.closeWindowMode });
         }
     }
 } catch (e) { }

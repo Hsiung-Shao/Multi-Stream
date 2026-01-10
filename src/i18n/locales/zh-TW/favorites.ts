@@ -86,6 +86,10 @@ export default {
   'settings.language_desc': '選擇您偏好的介面語言',
   'settings.about_desc': 'Multi-Stream 是一個開源的多串流觀看平台，致力於提供最佳的觀看體驗。',
   'settings.sponsor': '贊助',
+  'settings.close_window_mode': '視窗關閉模式',
+  'settings.close_window_mode_desc': '選擇當關閉視窗時的行為',
+  'settings.mode_remove': '移除視窗 (預設)',
+  'settings.mode_empty': '保留空白視窗',
 
   // Placeholders
   'placeholder.search_url': '搜尋名稱或網址...',

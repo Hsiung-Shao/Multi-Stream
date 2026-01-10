@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { useUIStore } from './useUIStore';
 import { StreamData, parseStreamUrl, validateUrl } from '../utils/streamUtils';
 import { youtubeApi } from '../utils/youtubeApi';
 import { ChatLayoutType } from '../utils/chatLayoutUtils';
@@ -27,7 +28,7 @@ interface StreamStoreState {
 
     // Actions
     addStream: (url: string, options?: { withChat?: boolean; withStream?: boolean; displayName?: string }) => Promise<{ success: boolean; message?: string; streamId?: number }>;
-    removeStream: (id: number) => void;
+    removeStream: (id: number, forceRemove?: boolean) => void;
     moveStream: (fromIndex: number, toIndex: number) => void;
     setChatLayout: (layout: ChatLayoutType) => void;
     setLayout: (layout: LayoutType, isUserAction?: boolean) => void;
@@ -448,20 +449,41 @@ export const useStreamStore = create<StreamStoreState>()(
                 return { canvasItems: newCanvasItems };
             }),
 
-            removeStream: (id: number) => {
+            // Updated removeStream to support Close Window Mode
+            removeStream: (id: number, forceRemove = false) => {
                 set(state => {
+                    const { closeWindowMode } = useUIStore.getState();
+                    const shouldKeepEmpty = !forceRemove && closeWindowMode === 'empty';
+
+                    // 1. Remove Stream Data (Always happens)
                     const newStreams = state.streams.filter(s => s.id !== id);
                     const currentCount = newStreams.length;
 
-                    // Remove associated canvas items completely
-                    let newCanvasItems = state.canvasItems.filter(item => item.contentId !== id);
+                    // 2. Handle Canvas Items
+                    let newCanvasItems = state.canvasItems;
 
-                    // Apply hybrid layout logic after removal (Removed Auto-Reflow)
-                    // if (state.layoutMode === 'canvas') {
-                    //      Original Logic Removed to prevent unwanted reflow
-                    // }
+                    if (shouldKeepEmpty) {
+                        // "Empty" Mode: Keep windows but clear contentId
+                        newCanvasItems = state.canvasItems.map(item => {
+                            if (item.contentId === id) {
+                                return { ...item, contentId: null };
+                            }
+                            return item;
+                        });
+                    } else {
+                        // "Remove" Mode (or Forced): Remove windows completely
+                        newCanvasItems = state.canvasItems.filter(item => item.contentId !== id);
+                    }
 
+                    // 3. Layout Handling
+                    // Apply hybrid layout logic after removal (Removed Auto-Reflow as per previous tasks)
                     let newLayout = state.layout;
+                    // Only switch layout if we actually removed items and total count drops (and we care about auto-layout)
+                    // If we kept empty slots, the "visual" layout count effectively stays same? 
+                    // But `currentCount` matches `newStreams`.
+                    // The `autoSelectLayout` relies on stream count. 
+                    // If we have empty slots, we arguably don't need to change layout grid?
+                    // But `userLayout` handling handles capacity. 
                     if (currentCount === 0) newLayout = 1;
                     else if (!state.userLayout) newLayout = autoSelectLayout(currentCount);
 
@@ -606,13 +628,39 @@ export const useStreamStore = create<StreamStoreState>()(
                 };
             }),
 
-            removeCanvasItem: (id) => set(state => {
-                const filtered = state.canvasItems.filter(item => item.i !== id);
+            removeCanvasItem: (id) => {
+                const { closeWindowMode } = useUIStore.getState();
+                const state = get(); // Access current state
+                const itemToRemove = state.canvasItems.find(item => item.i === id);
 
-                return {
-                    canvasItems: filtered
-                };
-            }),
+                if (!itemToRemove) return;
+
+                // Mode check
+                if (closeWindowMode === 'empty') {
+                    // "Empty" Mode
+                    if (itemToRemove.type === 'stream' && itemToRemove.contentId) {
+                        // If Stream Window -> Trigger Stream Removal (which handles linked chat too)
+                        // Trigger logic similar to removeStream but we're already inside the store fn
+                        // Calling actions from within actions is possible in Zustand if we use get()
+                        get().removeStream(itemToRemove.contentId, false); // false = respect mode (which is 'empty')
+                        return;
+                    } else {
+                        // If Chat Window (or already empty) -> Just clear contentId
+                        set(state => ({
+                            canvasItems: state.canvasItems.map(item =>
+                                item.i === id ? { ...item, contentId: null } : item
+                            )
+                        }));
+                        return;
+                    }
+                }
+
+                // "Remove" Mode (Default): Completely remove item
+                set(state => {
+                    const filtered = state.canvasItems.filter(item => item.i !== id);
+                    return { canvasItems: filtered };
+                });
+            },
 
             // Modified for RGL Layout Callback
             updateCanvasLayout: (items: any[]) => set(state => {

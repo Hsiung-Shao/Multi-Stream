@@ -14,15 +14,15 @@ interface DragState {
     startPosY: number;
 }
 
-interface UseDragOptions {
+export interface UseDragOptions {
     cellWidth: number;
     cellHeight: number;
     currentX: number;
     currentY: number;
     width: number;
     height: number;
-    onDragEnd: (x: number, y: number) => void;
-    checkCollision?: (x: number, y: number) => boolean;
+    onDragEnd: (x: number, y: number, collisionId: string | null) => void;
+    checkCollision?: (x: number, y: number, screenX?: number, screenY?: number) => string | null;
     maxRows?: number; // Add maxRows to support dynamic grid height
 }
 
@@ -43,6 +43,8 @@ export function useDrag(options: UseDragOptions) {
     const [position, setPosition] = useState({ x: currentX, y: currentY });
     // Snapped position (where it will land - for ghost preview)
     const [snapPosition, setSnapPosition] = useState({ x: currentX, y: currentY });
+    // Collision ID for swap feedback
+    const [collisionId, setCollisionId] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
     const dragState = useRef<DragState>({
@@ -103,15 +105,18 @@ export function useDrag(options: UseDragOptions) {
             snappedY = clampToGridBounds(snappedY, height, maxRows, cellHeight);
 
             // Check collision for snap position
-            if (checkCollision && checkCollision(snappedX, snappedY)) {
-                // Keep last valid snap position, but still update smooth position
-                setPosition({ x: rawX, y: rawY });
-                return;
+            // Modified: We now allow staying in collision state (for swap)
+            // and report the collision ID
+            let collidedId: string | null = null;
+            if (checkCollision) {
+                // Pass snapped top-left AND raw pointer screen coords
+                collidedId = checkCollision(snappedX, snappedY, clientX, clientY);
             }
 
-            // Update both positions
+            // Update state
             setPosition({ x: rawX, y: rawY });
             setSnapPosition({ x: snappedX, y: snappedY });
+            setCollisionId(collidedId);
         });
     }, [cellWidth, cellHeight, width, height, checkCollision, maxRows]);
 
@@ -125,18 +130,33 @@ export function useDrag(options: UseDragOptions) {
 
         dragState.current.isDragging = false;
         setIsDragging(false);
+        setCollisionId(null);
 
         // Snap to final position
         setPosition({ x: snapPosition.x, y: snapPosition.y });
 
-        // Notify parent of final position
-        onDragEnd(snapPosition.x, snapPosition.y);
+        // Notify parent of final position AND collision (for swap)
+        // We need to re-check collision one last time to be sure? 
+        // Or rely on state? State might be one frame behind in rare cases but snapPosition is up to date in closure?
+        // Actually snapPosition in closure is from render.
+        // Let's re-calculate logic to be safe or use refs? 
+        // For simplicity, we can just pass the latest computed snapPosition from the state? 
+        // Actually, inside callback, state might be stale if we relied on `snapPosition` from closure.
+        // But `onDragEnd` will be called with the values we just set? No.
+
+        // Let's re-calculate cleanly to ensure 100% sync
+        // Accessing 'snapPosition' here is from the render cycle when handlePointerUp was created.
+        // Since we update snapPosition in RAF, the render cycle might update handlePointerUp.
+        // To be safe, let's recalculate the final snapX/Y from the last known Event? No event here.
+        // We can use a ref to track latest snapPosition.
+
+        onDragEnd(snapPosition.x, snapPosition.y, collisionId);
 
         // Clean up animation frame
         if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
         }
-    }, [onDragEnd, snapPosition]);
+    }, [onDragEnd, snapPosition, collisionId]);
 
     // Update position when props change (e.g., from swap)
     if (!isDragging && (position.x !== currentX || position.y !== currentY)) {
@@ -147,6 +167,7 @@ export function useDrag(options: UseDragOptions) {
     return {
         position,
         snapPosition,
+        collisionId,
         isDragging,
         dragHandlers: {
             onPointerDown: handlePointerDown,

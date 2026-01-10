@@ -12,17 +12,17 @@ declare global {
 
 export class FavoritesLoaderService {
     // Helper to safely add stream with retries
-    async safeAddStream(url: string, platform?: string, retries = 3): Promise<boolean> {
+    async safeAddStream(url: string, platform?: string, displayName?: string, retries = 3): Promise<boolean> {
         const { addStream } = useStreamStore.getState();
 
         try {
-            await addStream(url); // platform arg might not be supported by addStream signature yet, usually it parses URL
+            await addStream(url, { withChat: true, withStream: true, displayName }); // Pass displayName to addStream
             return true;
         } catch (e) {
             if (retries > 0) {
                 console.warn(`Failed to add stream (attempt ${4 - retries}/3), retrying...`, e);
                 await new Promise(resolve => setTimeout(resolve, 500));
-                return this.safeAddStream(url, platform, retries - 1);
+                return this.safeAddStream(url, platform, displayName, retries - 1);
             }
             console.error('Failed to add stream after multiple retries:', e);
             const i18n = (window as any).i18n || { t: (key: string) => key };
@@ -38,12 +38,14 @@ export class FavoritesLoaderService {
             return { success: false, message: i18n.t('invalidFavoriteItem') };
         }
 
+        const displayName = item.name; // Use favorite name as displayName
+
         // Logic to check live status
         if (item.isLive) {
             const liveUrl = item.liveUrl || item.url;
             try {
                 if (liveUrl) {
-                    await this.safeAddStream(liveUrl);
+                    await this.safeAddStream(liveUrl, undefined, displayName);
                     return { success: true };
                 }
             } catch (e) {
@@ -57,15 +59,13 @@ export class FavoritesLoaderService {
                 lastChecked: new Date().toISOString()
             });
 
-            if (item.isLive === true) {
-                return { success: false, message: i18n.t('channelNotLive') };
-            }
+            // Removed dead code: if (item.isLive === true) check is impossible here
 
             const fallbackUrl = item.url || (item.platform === 'youtube' && item.channelId ? `https://www.youtube.com/channel/${item.channelId}/live` : undefined);
 
             if (fallbackUrl) {
                 try {
-                    await this.safeAddStream(fallbackUrl);
+                    await this.safeAddStream(fallbackUrl, undefined, displayName);
                     return { success: true };
                 } catch (e) { }
             }
@@ -75,7 +75,7 @@ export class FavoritesLoaderService {
         if (item.platform === 'twitch' && item.channelId) {
             const fallbackUrl = item.url || `https://www.twitch.tv/${item.channelId}`;
             try {
-                await this.safeAddStream(fallbackUrl);
+                await this.safeAddStream(fallbackUrl, undefined, displayName);
                 return { success: true };
             } catch (e) { }
         }
@@ -83,7 +83,7 @@ export class FavoritesLoaderService {
         // Default fallback
         if (item.url) {
             try {
-                await this.safeAddStream(item.url);
+                await this.safeAddStream(item.url, undefined, displayName);
                 return { success: true };
             } catch (e) {
                 return { success: false, message: (e as Error).message };

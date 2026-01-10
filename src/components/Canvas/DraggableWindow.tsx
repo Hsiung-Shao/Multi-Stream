@@ -7,7 +7,7 @@
  * HEADERLESS VERSION - drag handlers are passed to children via render props
  */
 
-import { memo, useCallback, useMemo, ReactNode } from 'react';
+import { memo, useCallback, useMemo, ReactNode, useEffect } from 'react';
 import { useDrag } from './useDrag';
 import { useResize } from './useResize';
 import { GridConfig, PixelPosition } from './gridConfig';
@@ -45,11 +45,12 @@ interface DraggableWindowProps {
     window: CanvasWindow;
     gridConfig: GridConfig;
     children: ReactNode | ((props: WindowRenderProps) => ReactNode);
-    onPositionChange: (id: string, gridX: number, gridY: number) => void;
+    onPositionChange: (id: string, gridX: number, gridY: number, collisionId?: string | null) => void;
     onSizeChange: (id: string, gridX: number, gridY: number, gridW: number, gridH: number) => void;
     onRemove: (id: string) => void;
     onSwapRequest: (id: string) => void;
-    checkDragCollision: (id: string, x: number, y: number, width: number, height: number) => boolean;
+    onSwapHover: (sourceId: string, targetId: string | null) => void;
+    checkDragCollision: (id: string, x: number, y: number, width: number, height: number, screenX?: number, screenY?: number) => string | null;
     checkResizeCollision: (id: string, x: number, y: number, width: number, height: number) => boolean;
     isSwapTarget?: boolean;
 }
@@ -62,6 +63,7 @@ export const DraggableWindow = memo(function DraggableWindow({
     onSizeChange,
     onRemove,
     onSwapRequest,
+    onSwapHover,
     checkDragCollision,
     checkResizeCollision,
     isSwapTarget
@@ -76,9 +78,9 @@ export const DraggableWindow = memo(function DraggableWindow({
         height: window.gridH * cellHeight
     }), [window.gridX, window.gridY, window.gridW, window.gridH, cellWidth, cellHeight]);
 
-    // Drag collision checker
-    const dragCollisionCheck = useCallback((x: number, y: number) => {
-        return checkDragCollision(window.id, x, y, pixelPos.width, pixelPos.height);
+    // Drag collision checker (returns collision ID or null)
+    const dragCollisionCheck = useCallback((x: number, y: number, screenX?: number, screenY?: number) => {
+        return checkDragCollision(window.id, x, y, pixelPos.width, pixelPos.height, screenX, screenY);
     }, [window.id, pixelPos.width, pixelPos.height, checkDragCollision]);
 
     // Resize collision checker
@@ -87,11 +89,14 @@ export const DraggableWindow = memo(function DraggableWindow({
     }, [window.id, checkResizeCollision]);
 
     // Handle drag end - convert pixels back to grid
-    const handleDragEnd = useCallback((x: number, y: number) => {
+    const handleDragEnd = useCallback((x: number, y: number, collisionId: string | null) => {
         const gridX = Math.round(x / cellWidth);
         const gridY = Math.round(y / cellHeight);
-        onPositionChange(window.id, gridX, gridY);
-    }, [window.id, cellWidth, cellHeight, onPositionChange]);
+
+        onPositionChange(window.id, gridX, gridY, collisionId);
+        // Clear swap hover
+        onSwapHover(window.id, null);
+    }, [window.id, cellWidth, cellHeight, onPositionChange, onSwapHover]);
 
     // Handle resize end - convert pixels back to grid (now includes position)
     const handleResizeEnd = useCallback((x: number, y: number, width: number, height: number) => {
@@ -102,8 +107,8 @@ export const DraggableWindow = memo(function DraggableWindow({
         onSizeChange(window.id, gridX, gridY, gridW, gridH);
     }, [window.id, cellWidth, cellHeight, onSizeChange]);
 
-    // Drag hook - returns both smooth position and snap position
-    const { position, snapPosition, isDragging, dragHandlers } = useDrag({
+    // Drag hook - returns both smooth position and snap position AND collisionId
+    const { position, snapPosition, collisionId, isDragging, dragHandlers } = useDrag({
         cellWidth,
         cellHeight,
         currentX: pixelPos.x,
@@ -114,6 +119,13 @@ export const DraggableWindow = memo(function DraggableWindow({
         checkCollision: dragCollisionCheck,
         maxRows: 1000 // Allow dragging beyond current bounds to trigger expansion
     });
+
+    // Notify parent of swap hover state
+    useEffect(() => {
+        if (isDragging) {
+            onSwapHover(window.id, collisionId);
+        }
+    }, [collisionId, isDragging, window.id, onSwapHover]);
 
     // Resize hook - now returns cornerHandlers instead of single resizeHandlers
     const { size, position: resizePos, isResizing, cornerHandlers } = useResize({

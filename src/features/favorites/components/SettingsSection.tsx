@@ -1,5 +1,5 @@
-
 import { useTranslation } from 'react-i18next';
+import { useUIStore } from '../../../store/useUIStore';
 import { Label } from '../../../components/ui/label';
 
 import {
@@ -54,6 +54,10 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
         i18n.changeLanguage(lang);
         localStorage.setItem('i18nextLng', lang);
     };
+
+    // Reactive State
+    const closeWindowMode = useUIStore(s => s.closeWindowMode);
+    const setCloseWindowMode = useUIStore(s => s.setCloseWindowMode);
 
     return (
         <div className="flex-1 flex flex-col gap-4 max-w-2xl mx-auto w-full py-4 px-2 h-full overflow-hidden">
@@ -111,6 +115,27 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                                 <SelectItem value="en">English</SelectItem>
                                 <SelectItem value="ja">日本語</SelectItem>
                                 <SelectItem value="ko">한국어</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Separator className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} />
+
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <Label className="text-base">{t('favorites:settings.close_window_mode')}</Label>
+                            <p className="text-sm text-gray-500">{t('favorites:settings.close_window_mode_desc')}</p>
+                        </div>
+                        <Select
+                            value={closeWindowMode}
+                            onValueChange={(val: 'remove' | 'empty') => setCloseWindowMode(val)}
+                        >
+                            <SelectTrigger className="w-32">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="remove">{t('favorites:settings.mode_remove')}</SelectItem>
+                                <SelectItem value="empty">{t('favorites:settings.mode_empty')}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
