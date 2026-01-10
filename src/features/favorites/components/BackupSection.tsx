@@ -60,6 +60,7 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                     if (data.userSettings) localStorage.setItem('userSettings', JSON.stringify(data.userSettings));
                     if (data.favoriteStreams) favoritesService.saveFavorites(data.favoriteStreams);
                     if (data.favoriteCategories) favoritesService.saveCategories(data.favoriteCategories);
+                    if (data.preference_tags) tagsService.saveTags(data.preference_tags);
                     if (data.multiStreamLayout) localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
                 }
 

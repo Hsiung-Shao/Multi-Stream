@@ -33,6 +33,13 @@ import {
     AlertDialogTrigger,
 } from '../../components/ui/alert-dialog';
 
+import {
+    requestFullscreen,
+    exitFullscreen,
+    getFullscreenElement,
+    onFullscreenChange
+} from '../../utils/fullscreenUtils';
+
 export const DynamicIsland = () => {
     const { t } = useTranslation(['common', 'favorites']);
     const setPage = useUIStore(s => s.setPage);
@@ -50,24 +57,21 @@ export const DynamicIsland = () => {
     // Fullscreen listener
     useEffect(() => {
         const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
+            setIsFullscreen(!!getFullscreenElement());
         };
 
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        };
+        return onFullscreenChange(handleFullscreenChange);
     }, []);
 
     const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch((err) => {
+        if (!getFullscreenElement()) {
+            requestFullscreen(document.documentElement).catch((err) => {
                 toast.error(`Error attempting to enable fullscreen: ${err.message}`);
             });
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
+            exitFullscreen().catch((err) => {
+                console.error('Error exiting fullscreen:', err);
+            });
         }
     };
 
@@ -98,7 +102,7 @@ export const DynamicIsland = () => {
                 if (url) {
                     await favoritesService.addFavorite(
                         url,
-                        stream.displayName || stream.name || stream.channelId || stream.videoId || 'Stream',
+                        stream.displayName || stream.channelId || stream.videoId || 'Stream',
                         targetCategoryId
                     );
                     successCount++;
