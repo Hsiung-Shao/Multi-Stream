@@ -2,11 +2,27 @@ import React, { useState } from 'react';
 import { useStreamStore } from '../../store/useStreamStore';
 import { Button } from '../../components/ui/button';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { LayoutGrid, Save, ArrowUpRight, Settings, Plus } from 'lucide-react';
+import { LayoutGrid, Save, ArrowUpRight, Settings, Plus, Square, Columns2, PanelLeft, PanelRight, PanelBottom, Columns3, Monitor, Swords, Grid3x3, Grid, Smartphone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SaveLayoutDialog } from '../../components/Layout/SaveLayoutDialog';
 import { cn } from '../ui/utils';
 import { useUIStore } from '../../store/useUIStore';
+import { layoutTemplates, LayoutTemplate } from '../../utils/layoutPresets';
+
+const iconMap: Record<string, any> = {
+    'Square': Square,
+    'Columns2': Columns2,
+    'Columns3': Columns3,
+    'PanelLeft': PanelLeft,
+    'PanelRight': PanelRight,
+    'PanelBottom': PanelBottom,
+    'Monitor': Monitor,
+    'Swords': Swords,
+    'LayoutGrid': LayoutGrid,
+    'Grid3x3': Grid3x3,
+    'Grid': Grid,
+    'Smartphone': Smartphone
+};
 
 interface IslandLayoutPickerProps {
     isExpanded: boolean;
@@ -18,6 +34,7 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
     const { t } = useTranslation(['common', 'favorites']);
     const customLayouts = useStreamStore(state => state.customLayouts);
     const applyCustomLayout = useStreamStore(state => state.applyCustomLayout);
+    const applyTemplateLayout = useStreamStore(state => state.applyTemplateLayout);
 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
@@ -50,37 +67,92 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                         </Button>
                     </div>
 
-                    <div className="space-y-2">
-                        {(!customLayouts || customLayouts.length === 0) ? (
-                            <div className="py-8 text-center text-sm text-gray-500 border border-dashed border-white/10 rounded-lg bg-white/5">
-                                <p>尚無自定布局</p>
-                            </div>
-                        ) : (
+                    <div className="space-y-4">
+                        {/* Basic Templates Section */}
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">
+                                {t('layout.templates_landscape') || '基本布局 (橫向)'}
+                            </h4>
                             <ScrollArea className="h-[200px] -mr-3 pr-3">
-                                <div className="space-y-2">
-                                    {customLayouts.map(layout => (
-                                        <button
-                                            key={layout.id}
-                                            onClick={() => applyCustomLayout(layout.id)}
-                                            className="w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all flex items-center justify-between group"
-                                        >
-                                            <span className="text-sm text-gray-200 group-hover:text-white truncate">
-                                                {layout.name}
-                                            </span>
-                                            <ArrowUpRight className="size-3.5 text-gray-500 group-hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all" />
-                                        </button>
-                                    ))}
+                                <div className="grid grid-cols-4 gap-2 pb-2">
+                                    {layoutTemplates.filter(t => t.type === 'landscape').map(template => {
+                                        const Icon = iconMap[template.icon] || LayoutGrid;
+                                        return (
+                                            <button
+                                                key={template.id}
+                                                onClick={() => applyTemplateLayout(template.id)}
+                                                className="aspect-square flex flex-col items-center justify-center gap-1 rounded-lg bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 border border-white/5 transition-all group"
+                                                title={t(template.nameKey) || template.nameKey}
+                                            >
+                                                <Icon className="size-5 text-gray-300 group-hover:text-purple-300" />
+                                                <span className="text-[10px] text-gray-400 group-hover:text-purple-200">{template.count}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </ScrollArea>
-                        )}
 
-                        <Button
-                            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={() => setSaveDialogOpen(true)}
-                        >
-                            <Plus className="size-4 mr-2" />
-                            {t('common.save_layout') || '儲存目前布局'}
-                        </Button>
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1 mt-3">
+                                {t('layout.templates_vertical') || '直立模式'}
+                            </h4>
+                            <div className="grid grid-cols-4 gap-2">
+                                {layoutTemplates.filter(t => t.type === 'vertical').map(template => {
+                                    const Icon = iconMap[template.icon] || Smartphone;
+                                    return (
+                                        <button
+                                            key={template.id}
+                                            onClick={() => applyTemplateLayout(template.id)}
+                                            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-lg bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 border border-white/5 transition-all group"
+                                            title={t(template.nameKey) || template.nameKey}
+                                        >
+                                            <Icon className="size-5 text-gray-300 group-hover:text-purple-300" />
+                                            <span className="text-[10px] text-gray-400 group-hover:text-purple-200">{template.count}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="border-t border-white/10" />
+
+                        {/* User Layouts Section */}
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1">
+                                {t('layout.my_layouts') || '我的收藏'}
+                            </h4>
+
+                            {(!customLayouts || customLayouts.length === 0) ? (
+                                <div className="py-4 text-center text-xs text-gray-500 border border-dashed border-white/10 rounded-lg bg-white/5">
+                                    <p>尚無自定布局</p>
+                                </div>
+                            ) : (
+                                <ScrollArea className="h-[120px] -mr-3 pr-3">
+                                    <div className="space-y-2">
+                                        {customLayouts.map(layout => (
+                                            <button
+                                                key={layout.id}
+                                                onClick={() => applyCustomLayout(layout.id)}
+                                                className="w-full text-left px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/20 transition-all flex items-center justify-between group"
+                                            >
+                                                <span className="text-sm text-gray-200 group-hover:text-white truncate">
+                                                    {layout.name}
+                                                </span>
+                                                <ArrowUpRight className="size-3.5 text-gray-500 group-hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            )}
+
+                            <Button
+                                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                                onClick={() => setSaveDialogOpen(true)}
+                            >
+                                <Plus className="size-4 mr-2" />
+                                {t('common.save_layout') || '儲存目前布局'}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>

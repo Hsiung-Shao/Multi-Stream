@@ -37,6 +37,14 @@ interface UIState {
     // Window functionality
     closeWindowMode: 'remove' | 'empty';
     setCloseWindowMode: (mode: 'remove' | 'empty') => void;
+    // Hotkey & Hover State
+    hoveredWindowId: string | null;
+    setHoveredWindowId: (id: string | null) => void;
+    theaterWindowId: string | null;
+    setTheaterWindowId: (id: string | null) => void;
+    isHotkeyHelpOpen: boolean;
+    toggleHotkeyHelp: () => void;
+    setHotkeyHelpOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -128,6 +136,15 @@ export const useUIStore = create<UIState>((set) => ({
             localStorage.setItem('userSettings', JSON.stringify(settings));
         } catch (e) { }
     },
+
+    // Hotkey & Hover State
+    hoveredWindowId: null,
+    setHoveredWindowId: (id) => set({ hoveredWindowId: id }),
+    theaterWindowId: null,
+    setTheaterWindowId: (id) => set({ theaterWindowId: id }),
+    isHotkeyHelpOpen: false,
+    toggleHotkeyHelp: () => set((state) => ({ isHotkeyHelpOpen: !state.isHotkeyHelpOpen })),
+    setHotkeyHelpOpen: (open) => set({ isHotkeyHelpOpen: open }),
 }));
 
 // Initialize state from localStorage

@@ -10,6 +10,7 @@ import { checkCollision, checkPointCollision, Rect } from './collision';
 import { cn } from '../ui/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { calculateRequiredRows } from '../../utils/layoutEngine';
+import { useUIStore } from '../../store/useUIStore';
 
 interface SimpleCanvasProps {
     windows: CanvasWindow[];
@@ -35,6 +36,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
             layout: { x: w.gridX, y: w.gridY, w: w.gridW, h: w.gridH }
         }))))
     );
+
+    const theaterWindowId = useUIStore(s => s.theaterWindowId);
 
     // Swap mode state (Drag based)
     const [dragSwapTargetId, setDragSwapTargetId] = useState<string | null>(null);
@@ -248,6 +251,9 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         checkDragCollision={checkDragCollision}
                         checkResizeCollision={checkResizeCollision}
                         isSwapTarget={dragSwapTargetId === w.id}
+                        isTheaterMode={theaterWindowId === w.id}
+                        onMouseEnter={() => useUIStore.getState().setHoveredWindowId(w.contentId ? w.contentId.toString() : w.id)}
+                        onMouseLeave={() => useUIStore.getState().setHoveredWindowId(null)}
                     >
                         {(renderProps) => renderContent(w, renderProps)}
                     </DraggableWindow>

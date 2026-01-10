@@ -293,3 +293,484 @@ export const calculateDualDirectionLayout = (items: any[]): any[] => {
 
     return newItems;
 };
+
+// --- New: Layout Templates ---
+
+export interface LayoutTemplate {
+    id: string;
+    nameKey: string; // i18n key or simple name for now
+    icon: string; // Lucide icon name or similar (string identifier)
+    count: number; // Required stream count
+    type: 'landscape' | 'vertical';
+    // Function to generate items for N streams
+    generate: (streamIds: (number | string | null)[]) => any[];
+}
+
+export const layoutTemplates: LayoutTemplate[] = [
+    // --- Landscape ---
+    {
+        id: 'template-1-landscape',
+        nameKey: '1人 (橫)',
+        icon: 'Square',
+        count: 1,
+        type: 'landscape',
+        generate: (streamIds) => {
+            if (streamIds.length === 0) return [];
+            return [
+                { type: 'stream', x: 0, y: 0, w: 19, h: 24, contentId: streamIds[0] },
+                { type: 'chat', x: 19, y: 0, w: 5, h: 24, contentId: streamIds[0] }
+            ];
+        }
+    },
+    {
+        id: 'template-2-landscape',
+        nameKey: '2人 (橫)',
+        icon: 'Columns2',
+        count: 2,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Slot 1
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 9, h: 24, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 9, y: 0, w: 3, h: 24, contentId: streamIds[0] });
+            }
+            // Slot 2
+            if (streamIds[1]) {
+                items.push({ type: 'stream', x: 12, y: 0, w: 9, h: 24, contentId: streamIds[1] });
+                items.push({ type: 'chat', x: 21, y: 0, w: 3, h: 24, contentId: streamIds[1] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-3-focus',
+        nameKey: '3人 (焦點)',
+        icon: 'PanelLeft',
+        count: 3,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Main (Left)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 13, h: 24, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 13, y: 0, w: 3, h: 24, contentId: streamIds[0] });
+            }
+            // Side Top
+            if (streamIds[1]) {
+                items.push({ type: 'stream', x: 16, y: 0, w: 5, h: 12, contentId: streamIds[1] });
+                items.push({ type: 'chat', x: 21, y: 0, w: 3, h: 12, contentId: streamIds[1] });
+            }
+            // Side Bottom
+            if (streamIds[2]) {
+                items.push({ type: 'stream', x: 16, y: 12, w: 5, h: 12, contentId: streamIds[2] });
+                items.push({ type: 'chat', x: 21, y: 12, w: 3, h: 12, contentId: streamIds[2] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-4-grid',
+        nameKey: '4人 (網格)',
+        icon: 'LayoutGrid',
+        count: 4,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            const cells = [
+                { sx: 0, sy: 0, cx: 9, cy: 0 },
+                { sx: 12, sy: 0, cx: 21, cy: 0 },
+                { sx: 0, sy: 12, cx: 9, cy: 12 },
+                { sx: 12, sy: 12, cx: 21, cy: 12 },
+            ];
+            streamIds.slice(0, 4).forEach((id, idx) => {
+                const cell = cells[idx];
+                items.push({ type: 'stream', x: cell.sx, y: cell.sy, w: 9, h: 12, contentId: id });
+                items.push({ type: 'chat', x: cell.cx, y: cell.cy, w: 3, h: 12, contentId: id });
+            });
+            return items;
+        }
+    },
+    {
+        id: 'template-6-grid',
+        nameKey: '6人 (網格)',
+        icon: 'Grid3x3', // Close enough
+        count: 6,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            const w = 8; // Cell Width
+            const h = 12; // Cell Height
+            // Grid 3x2. 
+            // In each 8x12 cell: Stream 5w, Chat 3w.
+            const cols = 3;
+            streamIds.slice(0, 6).forEach((id, idx) => {
+                const c = idx % cols;
+                const r = Math.floor(idx / cols);
+                const baseX = c * w;
+                const baseY = r * h;
+
+                items.push({ type: 'stream', x: baseX, y: baseY, w: 5, h: 12, contentId: id });
+                items.push({ type: 'chat', x: baseX + 5, y: baseY, w: 3, h: 12, contentId: id });
+            });
+            return items;
+        }
+    },
+    // --- Focus Series (Sidebar/Main) ---
+    {
+        id: 'template-3-focus-left',
+        nameKey: 'layout.3_focus_left',
+        icon: 'PanelLeft',
+        count: 3,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Side 1 (Left Top)
+            if (streamIds[0]) items.push({ type: 'stream', x: 0, y: 0, w: 6, h: 12, contentId: streamIds[0] }); // No chat
+            // Side 2 (Left Bottom)
+            if (streamIds[1]) items.push({ type: 'stream', x: 0, y: 12, w: 6, h: 12, contentId: streamIds[1] }); // No chat
+            // Main (Right)
+            if (streamIds[2]) {
+                items.push({ type: 'stream', x: 6, y: 0, w: 14, h: 24, contentId: streamIds[2] });
+                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 24, contentId: streamIds[2] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-3-focus-right',
+        nameKey: 'layout.3_focus_right',
+        icon: 'PanelRight',
+        count: 3,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Main (Left)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: streamIds[0] });
+            }
+            // Side 1 (Right Top)
+            if (streamIds[1]) items.push({ type: 'stream', x: 18, y: 0, w: 6, h: 12, contentId: streamIds[1] });
+            // Side 2 (Right Bottom)
+            if (streamIds[2]) items.push({ type: 'stream', x: 18, y: 12, w: 6, h: 12, contentId: streamIds[2] });
+            return items;
+        }
+    },
+    {
+        id: 'template-4-focus-left',
+        nameKey: 'layout.4_focus_left',
+        icon: 'PanelLeft',
+        count: 4,
+        type: 'landscape',
+        generate: (streamIds) => {
+            // Right Main, Left 3 Stack
+            const items: any[] = [];
+            // Side Stack (x=0, w=6 h=8)
+            for (let i = 0; i < 3; i++) {
+                if (streamIds[i]) items.push({ type: 'stream', x: 0, y: i * 8, w: 6, h: 8, contentId: streamIds[i] });
+            }
+            // Main (Right)
+            if (streamIds[3]) {
+                items.push({ type: 'stream', x: 6, y: 0, w: 14, h: 24, contentId: streamIds[3] });
+                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 24, contentId: streamIds[3] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-4-focus-right',
+        nameKey: 'layout.4_focus_right',
+        icon: 'PanelRight',
+        count: 4,
+        type: 'landscape',
+        generate: (streamIds) => {
+            // Left Main, Right 3 Stack
+            const items: any[] = [];
+            // Main (Left)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: streamIds[0] });
+            }
+            // Side Stack (x=18, w=6 h=8)
+            for (let i = 0; i < 3; i++) {
+                if (streamIds[i + 1]) items.push({ type: 'stream', x: 18, y: i * 8, w: 6, h: 8, contentId: streamIds[i + 1] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-4-focus-bottom',
+        nameKey: 'layout.4_focus_bottom',
+        icon: 'PanelBottom',
+        count: 4,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Top Main (Full Width)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 16, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 16, contentId: streamIds[0] });
+            }
+            // Bottom Row (3 items, 8w each)
+            for (let i = 0; i < 3; i++) {
+                if (streamIds[i + 1]) {
+                    items.push({ type: 'stream', x: i * 8, y: 16, w: 8, h: 8, contentId: streamIds[i + 1] });
+                }
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-5-focus-center',
+        nameKey: 'layout.5_focus_center',
+        icon: 'Columns3',
+        count: 5,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Left Col (2 items)
+            if (streamIds[0]) items.push({ type: 'stream', x: 0, y: 0, w: 6, h: 12, contentId: streamIds[0] });
+            if (streamIds[1]) items.push({ type: 'stream', x: 0, y: 12, w: 6, h: 12, contentId: streamIds[1] });
+
+            // Center Main
+            if (streamIds[2]) {
+                items.push({ type: 'stream', x: 6, y: 0, w: 12, h: 16, contentId: streamIds[2] });
+                items.push({ type: 'chat', x: 6, y: 16, w: 12, h: 8, contentId: streamIds[2] }); // Large chat bottom
+            }
+
+            // Right Col (2 items)
+            if (streamIds[3]) items.push({ type: 'stream', x: 18, y: 0, w: 6, h: 12, contentId: streamIds[3] });
+            if (streamIds[4]) items.push({ type: 'stream', x: 18, y: 12, w: 6, h: 12, contentId: streamIds[4] });
+
+            return items;
+        }
+    },
+    {
+        id: 'template-5-focus-right-stack',
+        nameKey: 'layout.5_focus_right_stack',
+        icon: 'PanelRight',
+        count: 5,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Main Left (18w)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: streamIds[0] });
+            }
+            // Right Stack (6w, 4 items x 6h)
+            for (let i = 0; i < 4; i++) {
+                if (streamIds[i + 1]) items.push({ type: 'stream', x: 18, y: i * 6, w: 6, h: 6, contentId: streamIds[i + 1] });
+            }
+            return items;
+        }
+    },
+
+    // --- Cinema / Stage Series ---
+    {
+        id: 'template-5-cinema',
+        nameKey: 'layout.5_cinema',
+        icon: 'Monitor',
+        count: 5,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Top Main
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 14, contentId: streamIds[0] });
+                // No chat for main to verify cinema feel? Or add separate chat? Let's add chat overlay style (separate block)
+                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 5, contentId: streamIds[0] }); // Tiny chat corner? No, let's keep it clean: No chat for cinema.
+            }
+            // Bottom Row (4 items, 6w 10h)
+            for (let i = 0; i < 4; i++) {
+                if (streamIds[i + 1]) items.push({ type: 'stream', x: i * 6, y: 14, w: 6, h: 10, contentId: streamIds[i + 1] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-7-cinema',
+        nameKey: 'layout.7_cinema',
+        icon: 'Monitor',
+        count: 7,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Top Main (Full width)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 16, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 16, contentId: streamIds[0] });
+            }
+            // Bottom Row (6 items, 4w 8h)
+            for (let i = 0; i < 6; i++) {
+                if (streamIds[i + 1]) items.push({ type: 'stream', x: i * 4, y: 16, w: 4, h: 8, contentId: streamIds[i + 1] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-5-versus',
+        nameKey: 'layout.5_versus',
+        icon: 'Swords', // Lucide 'Swords' needs import, checking if available. Using Columns2 as fallback.
+        count: 5,
+        type: 'landscape',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Top Left (Player 1)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 10, h: 14, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 0, y: 14, w: 10, h: 10, contentId: streamIds[0] }); // Chat below
+            }
+            // Top Right (Player 2)
+            if (streamIds[1]) {
+                items.push({ type: 'stream', x: 14, y: 0, w: 10, h: 14, contentId: streamIds[1] });
+                items.push({ type: 'chat', x: 14, y: 14, w: 10, h: 10, contentId: streamIds[1] }); // Chat below
+            }
+            // Middle Divider items (3 small ones vertically in center? 4w)
+            // x=10, w=4
+            for (let i = 0; i < 3; i++) {
+                if (streamIds[i + 2]) {
+                    items.push({ type: 'stream', x: 10, y: i * 8, w: 4, h: 8, contentId: streamIds[i + 2] });
+                }
+            }
+            return items;
+        }
+    },
+
+    // --- High Density Grids ---
+    {
+        id: 'template-8-grid',
+        nameKey: 'layout.8_grid',
+        icon: 'LayoutGrid',
+        count: 8,
+        type: 'landscape',
+        generate: (streamIds) => {
+            // 4x2 Grid. No Chat.
+            const items: any[] = [];
+            const w = 6;
+            const h = 12;
+            streamIds.slice(0, 8).forEach((id, idx) => {
+                const c = idx % 4;
+                const r = Math.floor(idx / 4);
+                items.push({ type: 'stream', x: c * w, y: r * h, w, h, contentId: id });
+            });
+            return items;
+        }
+    },
+    {
+        id: 'template-12-grid',
+        nameKey: 'layout.12_grid',
+        icon: 'Grid3x3',
+        count: 12,
+        type: 'landscape',
+        generate: (streamIds) => {
+            // 4x3 Grid. No Chat.
+            const items: any[] = [];
+            const w = 6;
+            const h = 8;
+            streamIds.slice(0, 12).forEach((id, idx) => {
+                const c = idx % 4;
+                const r = Math.floor(idx / 4);
+                items.push({ type: 'stream', x: c * w, y: r * h, w, h, contentId: id });
+            });
+            return items;
+        }
+    },
+    {
+        id: 'template-16-grid',
+        nameKey: 'layout.16_grid',
+        icon: 'Grid', // fallback icon
+        count: 16,
+        type: 'landscape',
+        generate: (streamIds) => {
+            // 4x4 Grid. No Chat.
+            const items: any[] = [];
+            const w = 6;
+            const h = 6;
+            streamIds.slice(0, 16).forEach((id, idx) => {
+                const c = idx % 4;
+                const r = Math.floor(idx / 4);
+                items.push({ type: 'stream', x: c * w, y: r * h, w, h, contentId: id });
+            });
+            return items;
+        }
+    },
+
+    // --- Vertical ---
+    {
+        id: 'template-1-vertical',
+        nameKey: '1人 (直立)',
+        icon: 'Smartphone',
+        count: 1,
+        type: 'vertical',
+        generate: (streamIds) => {
+            if (streamIds.length === 0) return [];
+            return [
+                { type: 'stream', x: 0, y: 0, w: 24, h: 10, contentId: streamIds[0] },
+                { type: 'chat', x: 0, y: 10, w: 24, h: 14, contentId: streamIds[0] }
+            ];
+        }
+    },
+    {
+        id: 'template-2-vertical',
+        nameKey: '2人 (直立)',
+        icon: 'Smartphone',
+        count: 2,
+        type: 'vertical',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 8, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 0, y: 8, w: 24, h: 4, contentId: streamIds[0] });
+            }
+            if (streamIds[1]) {
+                items.push({ type: 'stream', x: 0, y: 12, w: 24, h: 8, contentId: streamIds[1] });
+                items.push({ type: 'chat', x: 0, y: 20, w: 24, h: 4, contentId: streamIds[1] });
+            }
+            return items;
+        }
+    },
+    {
+        id: 'template-3-vertical-stack',
+        nameKey: 'layout.3_vertical_stack',
+        icon: 'Smartphone',
+        count: 3,
+        type: 'vertical',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Top (Big)
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 10, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 0, y: 10, w: 24, h: 4, contentId: streamIds[0] });
+            }
+            // Mid
+            if (streamIds[1]) items.push({ type: 'stream', x: 0, y: 14, w: 24, h: 5, contentId: streamIds[1] });
+            // Bot
+            if (streamIds[2]) items.push({ type: 'stream', x: 0, y: 19, w: 24, h: 5, contentId: streamIds[2] });
+            return items;
+        }
+    },
+    {
+        id: 'template-4-vertical-split',
+        nameKey: 'layout.4_vertical_split',
+        icon: 'Smartphone',
+        count: 4,
+        type: 'vertical',
+        generate: (streamIds) => {
+            const items: any[] = [];
+            // Top Main
+            if (streamIds[0]) {
+                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 10, contentId: streamIds[0] });
+                items.push({ type: 'chat', x: 0, y: 10, w: 24, h: 4, contentId: streamIds[0] }); // Chat bar
+            }
+            // Bottom Row (3 items side-by-side) -> 8w each, 10h
+            for (let i = 0; i < 3; i++) {
+                if (streamIds[i + 1]) {
+                    items.push({ type: 'stream', x: i * 8, y: 14, w: 8, h: 10, contentId: streamIds[i + 1] });
+                }
+            }
+            return items;
+        }
+    }
+];

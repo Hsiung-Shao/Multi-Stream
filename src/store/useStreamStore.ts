@@ -8,7 +8,7 @@ import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
-import { generateLayout, LayoutMode } from '../utils/layoutPresets';
+import { generateLayout, LayoutMode, layoutTemplates } from '../utils/layoutPresets';
 import { findAvailablePosition } from '../utils/layoutEngine';
 import { calculateDualDirectionLayout } from '../utils/layoutPresets';
 import { CustomLayout, LayoutSlot } from '../types/canvas';
@@ -72,6 +72,7 @@ interface StreamStoreState {
 
     // New Action
     applyAutoLayout: (mode: LayoutMode) => void;
+    applyTemplateLayout: (templateId: string) => void;
 }
 
 
@@ -153,7 +154,6 @@ export const useStreamStore = create<StreamStoreState>()(
                 // Use provided displayName if available, otherwise fallback to channelId
                 const customDisplayName = (options as any).displayName;
                 let displayName = customDisplayName || streamData.channelId;
-                let name = streamData.channelId;
 
                 // Attempt to fetch Title for YouTube
                 if (streamData.platform === 'youtube') {
@@ -161,10 +161,8 @@ export const useStreamStore = create<StreamStoreState>()(
                     if (!displayName) {
                         if (streamData.videoId) {
                             displayName = `YouTube Video (${streamData.videoId})`;
-                            name = 'YouTube Channel';
                         } else {
                             displayName = 'YouTube Stream';
-                            name = 'YouTube Channel';
                         }
                     }
 
@@ -175,7 +173,6 @@ export const useStreamStore = create<StreamStoreState>()(
                             const info = await youtubeApi.getVideoInfo(streamData.videoId);
                             if (info && info.title) {
                                 if (shouldUpdateTitle) displayName = info.title;
-                                name = info.channelTitle || 'YouTube Channel';
 
                                 if (!streamData.channelId && info.channelId) {
                                     streamData.channelId = info.channelId;
@@ -185,7 +182,6 @@ export const useStreamStore = create<StreamStoreState>()(
                             const title = await youtubeApi.getChannelTitleFromChannelId(streamData.channelId);
                             if (title) {
                                 if (shouldUpdateTitle) displayName = title;
-                                name = title;
                             }
                         }
                     } catch (e) {
@@ -206,7 +202,6 @@ export const useStreamStore = create<StreamStoreState>()(
                     volume: 50,
                     chatVisible: true,
                     isMuted: false,
-                    name: name,
                     displayName: displayName
                 };
 
@@ -557,7 +552,41 @@ export const useStreamStore = create<StreamStoreState>()(
             setChatLayout: (layout) => set({ chatLayout: layout }),
 
             setLayout: (layout, isUserAction = true) => {
-                set(() => isUserAction ? { layout, userLayout: layout } : { layout });
+                set((state) => {
+                    const changes: Partial<StreamStoreState> = isUserAction ? { layout, userLayout: layout } : { layout };
+
+                    // If in Canvas Mode, apply standard layout transformations immediately
+                    if (state.layoutMode === 'canvas') {
+                        let standardType: 'grid' | 'focus' | 'flow' = 'grid';
+
+                        // Map legacy ID to standard types
+                        if (layout === 5) {
+                            standardType = 'focus';
+                        }
+                        // Layout 1, 2, 3, 4, 6, 9 are all variations of 'grid' in the new engine
+                        // passed with different parameters?
+                        // Actually generateStandardLayout (Focus) is hardcoded for 1 Main + Side.
+                        // generateStandardLayout (Grid) is generic N x M.
+                        // So for 1, 2, 3, 4, 6, 9 -> 'grid' is correct, as it auto-calculates NxM based on count.
+                        // However, user might expect Alt+2 to force 2 columns?
+                        // generateStandardLayout logic currently auto-calculates colCount based on sqrt(count).
+                        // It doesn't take "target columns" as input.
+                        // We might need to enhance generateStandardLayout if we want strict "Split Horizontal" vs "Split Vertical" behavior for N=2.
+                        // BUT, for now, just applying 'grid' or 'focus' is a huge improvement over "doing nothing".
+
+                        // We can reuse the logic from applyStandardLayoutToCanvas but inside here to be atomic
+                        const newCanvasItems = generateStandardLayout(
+                            state.canvasItems,
+                            standardType,
+                            state.streams.length,
+                            window.innerWidth,
+                            window.innerHeight
+                        );
+                        changes.canvasItems = newCanvasItems;
+                    }
+
+                    return changes;
+                });
             },
 
             setStreams: (streams) => set(state => {
@@ -745,9 +774,14 @@ export const useStreamStore = create<StreamStoreState>()(
                     if (spec.type === 'stream') {
                         if (streamIndex < streamIds.length) {
                             targetStreamId = streamIds[streamIndex];
-                            // Reuse ID if meaningful? New UUID is safer for now.
+
+                            // Optimization: Try to find existing item to reuse ID (prevents iframe reload)
+                            const existingItem = state.canvasItems.find(item =>
+                                item.type === 'stream' && item.contentId === targetStreamId
+                            );
+
                             newItem = {
-                                i: `stream-${uuidv4()}-${targetStreamId}`,
+                                i: existingItem ? existingItem.i : `stream-${uuidv4()}-${targetStreamId}`,
                                 type: 'stream',
                                 contentId: targetStreamId,
                                 layout: { x: spec.x, y: spec.y, w: spec.w, h: spec.h }
@@ -758,8 +792,14 @@ export const useStreamStore = create<StreamStoreState>()(
                         // Assuming 1:1 mapping order
                         if (chatIndex < streamIds.length) {
                             targetStreamId = streamIds[chatIndex];
+
+                            // Optimization: Try to find existing item to reuse ID
+                            const existingItem = state.canvasItems.find(item =>
+                                item.type === 'chat' && item.contentId === targetStreamId
+                            );
+
                             newItem = {
-                                i: `chat-${uuidv4()}-${targetStreamId}`,
+                                i: existingItem ? existingItem.i : `chat-${uuidv4()}-${targetStreamId}`,
                                 type: 'chat',
                                 contentId: targetStreamId,
                                 layout: { x: spec.x, y: spec.y, w: spec.w, h: spec.h }
@@ -774,6 +814,58 @@ export const useStreamStore = create<StreamStoreState>()(
                 });
 
                 return { canvasItems: newItems };
+            }),
+
+            applyTemplateLayout: (templateId) => set(state => {
+                const template = layoutTemplates.find(t => t.id === templateId);
+                if (!template) return {};
+
+                // 1. Prepare Stream IDs
+                // We need at least template.count IDs. 
+                // If we have fewer streams, we pad with null (creating empty windows).
+                // If we have more, we only use the first N (others are hidden from canvas).
+                const currentStreamIds = state.streams.map(s => s.id);
+                const needed = template.count;
+
+                const processingIds: (number | null)[] = [...currentStreamIds];
+
+                // Pad with nulls if needed
+                while (processingIds.length < needed) {
+                    processingIds.push(null);
+                }
+
+                // 2. Generate Items
+                // The template generator uses the IDs provided (including nulls)
+                // Note: The generator assumes input array covers indices 0..N-1
+                // We pass the full array, it slices inside.
+                const newItemsSpecs = template.generate(processingIds);
+
+                // 3. Convert Specs to CanvasItems
+                // Spec: { type, x, y, w, h, contentId }
+                const newCanvasItems: CanvasItem[] = newItemsSpecs.map(spec => {
+                    // Optimization: Reuse ID if matching content exists
+                    // We only reuse IDs for non-null content (streams/chats that exist), 
+                    // not for placeholder empty slots (which can be regenerated).
+                    let existingId: string | null = null;
+
+                    if (spec.contentId) {
+                        const existingItem = state.canvasItems.find(item =>
+                            item.type === spec.type && item.contentId === spec.contentId
+                        );
+                        if (existingItem) {
+                            existingId = existingItem.i;
+                        }
+                    }
+
+                    return {
+                        i: existingId || `${spec.type}-${uuidv4()}-${spec.contentId || 'empty'}`,
+                        type: spec.type,
+                        contentId: spec.contentId || null,
+                        layout: { x: spec.x, y: spec.y, w: spec.w, h: spec.h }
+                    };
+                });
+
+                return { canvasItems: newCanvasItems };
             }),
 
             saveCustomLayout: async (name: string) => {

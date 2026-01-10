@@ -51,6 +51,9 @@ interface DraggableWindowProps {
     checkDragCollision: (id: string, x: number, y: number, width: number, height: number, screenX?: number, screenY?: number) => string | null;
     checkResizeCollision: (id: string, x: number, y: number, width: number, height: number) => boolean;
     isSwapTarget?: boolean;
+    isTheaterMode?: boolean;
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
 }
 
 export const DraggableWindow = memo(function DraggableWindow({
@@ -63,7 +66,10 @@ export const DraggableWindow = memo(function DraggableWindow({
     onSwapHover,
     checkDragCollision,
     checkResizeCollision,
-    isSwapTarget
+    isSwapTarget,
+    isTheaterMode,
+    onMouseEnter,
+    onMouseLeave
 }: DraggableWindowProps) {
     const { cellWidth, cellHeight } = gridConfig;
 
@@ -188,9 +194,20 @@ export const DraggableWindow = memo(function DraggableWindow({
                     "shadow-lg group",
                     isDragging && "shadow-2xl border-purple-500/50 z-50 opacity-90",
                     isResizing && "border-blue-500/50 z-50",
-                    isSwapTarget && "ring-2 ring-green-500 ring-offset-2 ring-offset-slate-950"
+                    isSwapTarget && "ring-2 ring-green-500 ring-offset-2 ring-offset-slate-950",
+                    isTheaterMode && "z-[100] border-purple-500 shadow-2xl"
                 )}
-                style={{
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                style={isTheaterMode ? {
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    transform: 'none',
+                    zIndex: 100,
+                } : {
                     transform: `translate3d(${displayX}px, ${displayY}px, 0)`,
                     width: size.width,
                     height: size.height,

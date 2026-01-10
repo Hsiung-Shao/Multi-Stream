@@ -117,10 +117,25 @@ const common = {
   'landing.faq.a2': 'No. This is a client-side only app. No registration required. Twitch login is only needed if you want to import your follows (Token stored locally).',
   'landing.faq.q3': 'Where is my data stored?',
   'landing.faq.a3': 'All settings (favorites, layouts, theme) are stored in your browser\'s LocalStorage and IndexedDB. We do not upload data to any server.',
-  'landing.footer.about': 'About Us',
-  'landing.footer.privacy': 'Privacy Policy',
   'landing.footer.tutorial': 'Tutorial',
   'landing.footer.faq': 'FAQ',
+  // Hotkeys
+  'hotkeys.title': 'Keyboard Shortcuts',
+  'hotkeys.subtitle': 'Manage your workspace efficiently',
+  'hotkeys.section_global': 'Global Controls',
+  'hotkeys.section_window': 'Window Actions',
+  'hotkeys.hover_tip': 'Hover over a window to use',
+  'hotkeys.help': 'Show this help',
+  'hotkeys.search': 'Search / Add Stream',
+  'hotkeys.layouts': 'Switch Layout (Alt + 1-5)',
+  'hotkeys.quick_save': 'Quick Save Layout',
+  'hotkeys.master_mute': 'Toggle Master Mute',
+  'hotkeys.focus_mode': 'Toggle Focus Mode (Hide UI)',
+  'hotkeys.window_reload': 'Reload Stream',
+  'hotkeys.window_mute': 'Mute / Unmute',
+  'hotkeys.window_remove': 'Remove Window',
+  'hotkeys.window_fullscreen': 'Window Fullscreen',
+  'hotkeys.window_theater': 'Theater Mode (Maximize)',
 };
 
 export default common;

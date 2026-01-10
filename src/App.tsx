@@ -13,6 +13,8 @@ import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { Toaster } from './components/ui/sonner';
 import { PerformanceOverlay } from './components/Navigation/PerformanceOverlay';
 import { GlobalLiveStatusChecker } from './features/favorites/components/GlobalLiveStatusChecker';
+import { useHotkeys } from './hooks/useHotkeys';
+import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
@@ -57,6 +59,7 @@ export default function App() {
   useThemeSystem();
   useRouter();
   useAutoRefresh();
+  useHotkeys();
 
   // YouTube Warning Logic State (Hook) - Remains Global
   const {
@@ -143,6 +146,7 @@ export default function App() {
       {renderPage()}
 
       {/* Global Modals */}
+      <HotkeyHelpDialog />
 
 
       {/* Tutorial modal removed */}

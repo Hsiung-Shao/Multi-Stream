@@ -7,6 +7,7 @@ import { cn } from '../ui/utils';
 import { ScrollArea } from '../ui/scroll-area';
 
 import { useStreamStore } from '../../store/useStreamStore';
+import { useUIStore } from '../../store/useUIStore';
 import { twitchService } from '../../features/twitch/TwitchService';
 // ... existing imports
 
@@ -40,7 +41,16 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    const { isSearchFocused, setSearchFocused } = useUIStore();
     const addStream = useStreamStore(s => s.addStream);
+
+    // Sync store focus state with local state
+    useEffect(() => {
+        if (isSearchFocused) {
+            setExpanded(true);
+            setSearchFocused(false); // Reset trigger
+        }
+    }, [isSearchFocused, setSearchFocused]);
 
     // --- Logic from Navbar ---
     const isUrl = (text: string): boolean => {
