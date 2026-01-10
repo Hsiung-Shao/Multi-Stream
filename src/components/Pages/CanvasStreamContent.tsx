@@ -4,7 +4,7 @@
  */
 
 import { memo, useState, useMemo, useCallback } from 'react';
-import { GripHorizontal, X, ArrowLeftRight, RefreshCw } from 'lucide-react';
+import { GripHorizontal, X, RefreshCw } from 'lucide-react';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
 import { StreamChat } from '../StreamChat';
@@ -30,7 +30,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     renderProps,
     windowType = 'stream'
 }: CanvasStreamContentProps) {
-    const { dragHandlers, isDragging, isResizing, onRemove, onSwap } = renderProps;
+    const { dragHandlers, isDragging, isResizing, onRemove } = renderProps;
 
     const [reloadKey, setReloadKey] = useState(0);
 
@@ -38,11 +38,6 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
         e.stopPropagation();
         setReloadKey(k => k + 1);
     }, []);
-
-    const handleSwap = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        onSwap();
-    }, [onSwap]);
 
     const handleRemove = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -60,8 +55,8 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     const effectiveMuted = stream.isMuted ?? false;
 
     const title = useMemo(() => {
-        return stream.displayName || stream.name || stream.channelId || 'Unknown';
-    }, [stream.displayName, stream.name, stream.channelId, effectiveVolume, effectiveMuted]);
+        return stream.displayName || stream.channelId || 'Unknown';
+    }, [stream.displayName, stream.channelId, effectiveVolume, effectiveMuted]);
 
     return (
         <div className="w-full h-full relative bg-slate-900 group">
@@ -97,17 +92,6 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     title="重新載入"
                 >
                     <RefreshCw size={12} />
-                </Button>
-
-                {/* Swap Button */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 rounded-full hover:bg-green-500/20 text-white/70 hover:text-green-400 nodrag"
-                    onClick={handleSwap}
-                    title="交換位置"
-                >
-                    <ArrowLeftRight size={12} />
                 </Button>
 
                 {/* Remove Button */}

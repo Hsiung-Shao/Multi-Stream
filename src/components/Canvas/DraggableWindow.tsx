@@ -38,7 +38,6 @@ export interface WindowRenderProps {
     gridW: number;
     gridH: number;
     onRemove: () => void;
-    onSwap: () => void;
 }
 
 interface DraggableWindowProps {
@@ -48,7 +47,6 @@ interface DraggableWindowProps {
     onPositionChange: (id: string, gridX: number, gridY: number, collisionId?: string | null) => void;
     onSizeChange: (id: string, gridX: number, gridY: number, gridW: number, gridH: number) => void;
     onRemove: (id: string) => void;
-    onSwapRequest: (id: string) => void;
     onSwapHover: (sourceId: string, targetId: string | null) => void;
     checkDragCollision: (id: string, x: number, y: number, width: number, height: number, screenX?: number, screenY?: number) => string | null;
     checkResizeCollision: (id: string, x: number, y: number, width: number, height: number) => boolean;
@@ -62,7 +60,6 @@ export const DraggableWindow = memo(function DraggableWindow({
     onPositionChange,
     onSizeChange,
     onRemove,
-    onSwapRequest,
     onSwapHover,
     checkDragCollision,
     checkResizeCollision,
@@ -148,11 +145,6 @@ export const DraggableWindow = memo(function DraggableWindow({
         onRemove(window.id);
     }, [window.id, onRemove]);
 
-    // Handle swap
-    const handleSwap = useCallback(() => {
-        onSwapRequest(window.id);
-    }, [window.id, onSwapRequest]);
-
     // Render props for children
     const renderProps: WindowRenderProps = {
         dragHandlers,
@@ -160,8 +152,7 @@ export const DraggableWindow = memo(function DraggableWindow({
         isResizing,
         gridW: Math.round(size.width / cellWidth),
         gridH: Math.round(size.height / cellHeight),
-        onRemove: handleRemove,
-        onSwap: handleSwap
+        onRemove: handleRemove
     };
 
     // Render children - support both ReactNode and render props pattern

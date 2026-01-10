@@ -36,8 +36,6 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         }))))
     );
 
-    // Swap mode state (Click based)
-    const [swapSourceId, setSwapSourceId] = useState<string | null>(null);
     // Swap mode state (Drag based)
     const [dragSwapTargetId, setDragSwapTargetId] = useState<string | null>(null);
 
@@ -220,58 +218,6 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         onWindowUpdate(newWindows);
     }, [windows, onWindowUpdate]);
 
-    // Handle swap request
-    const handleSwapRequest = useCallback((id: string) => {
-        if (!swapSourceId) {
-            // First click - set source
-            setSwapSourceId(id);
-        } else if (swapSourceId === id) {
-            // Cancel swap
-            setSwapSourceId(null);
-        } else {
-            // Second click - perform swap
-            const source = windows.find(w => w.id === swapSourceId);
-            const target = windows.find(w => w.id === id);
-
-            if (source && target) {
-                const updated = windows.map(w => {
-                    if (w.id === swapSourceId) {
-                        return {
-                            ...w,
-                            gridX: target.gridX,
-                            gridY: target.gridY,
-                            gridW: target.gridW,
-                            gridH: target.gridH
-                        };
-                    }
-                    if (w.id === id) {
-                        return {
-                            ...w,
-                            gridX: source.gridX,
-                            gridY: source.gridY,
-                            gridW: source.gridW,
-                            gridH: source.gridH
-                        };
-                    }
-                    return w;
-                });
-                onWindowUpdate(updated);
-            }
-            setSwapSourceId(null);
-        }
-    }, [swapSourceId, windows, onWindowUpdate]);
-
-    // Cancel swap on Escape
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                if (swapSourceId) setSwapSourceId(null);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [swapSourceId]);
-
     return (
         <ScrollArea className={cn("h-full w-full bg-slate-950", className)}>
             <div
@@ -289,13 +235,6 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                     `
                 }}
             >
-                {/* Swap mode indicator */}
-                {swapSourceId && (
-                    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-500/90 text-white px-4 py-2 rounded-lg text-sm shadow-lg">
-                        選擇要交換的視窗 (按 ESC 取消)
-                    </div>
-                )}
-
                 {/* Windows */}
                 {windows.map(w => (
                     <DraggableWindow
@@ -305,11 +244,10 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         onPositionChange={handlePositionChange}
                         onSizeChange={handleWindowResize}
                         onRemove={onWindowRemove}
-                        onSwapRequest={handleSwapRequest}
                         onSwapHover={handleSwapHover}
                         checkDragCollision={checkDragCollision}
                         checkResizeCollision={checkResizeCollision}
-                        isSwapTarget={(swapSourceId !== null && swapSourceId !== w.id) || (dragSwapTargetId === w.id)}
+                        isSwapTarget={dragSwapTargetId === w.id}
                     >
                         {(renderProps) => renderContent(w, renderProps)}
                     </DraggableWindow>
