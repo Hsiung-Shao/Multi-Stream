@@ -166,6 +166,31 @@ const common = {
   'layout.4_vertical_split': '4人 (分層)',
   'layout.tab_builtin': '內建清單',
   'layout.tab_custom': '自定義清單',
+  'layout.tab_video': '僅串流',
+  'layout.tab_chat': '含聊天室',
+
+  // Template Names (Video)
+  'layout.t_1_v': '1人 (全螢幕)',
+  'layout.t_2_v': '2人 (分割)',
+  'layout.t_3_v': '3人 (焦點)',
+  'layout.t_4_v': '4人 (網格)',
+  'layout.t_5_v': '5人 (焦點)',
+  'layout.t_6_v': '6人 (網格)',
+
+  // Template Names (Chat)
+  'layout.t_1_c': '1人 (含聊天室)',
+  'layout.t_2_c': '2人 (含聊天室)',
+  'layout.t_3_c': '3人 (含聊天室)',
+  'layout.t_4_c': '4人 (含聊天室)',
+  'layout.t_5_c': '5人 (含聊天室)',
+  'layout.t_6_c': '6人 (含聊天室)',
+
+  // Special
+  'layout.t_5_cinema': '5人 (劇院)',
+  'layout.t_7_cinema': '7人 (劇院)',
+  'layout.t_8_grid': '8人 (網格)',
+  'layout.t_12_grid': '12人 (網格)',
+  'layout.t_16_grid': '16人 (網格)',
 };
 
 export default common;

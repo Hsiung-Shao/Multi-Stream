@@ -63,9 +63,10 @@ export const EmptyWindowContent = ({ windowId, type, onUpdateWindow, renderProps
                 const urlToAdd = (fav as any).liveUrl || fav.url;
 
                 return await addStream(urlToAdd, {
-                    withChat: true, // Try to fill an empty chat slot if available
+                    withChat: type === 'chat' ? false : true, // Only request paired chat if this is a stream window
                     withStream: false, // Do NOT create/fill another stream slot, as we are filling THIS window manually
-                    displayName: fav.name
+                    displayName: fav.name,
+                    targetWindowId: windowId // Pass the target window ID to fill specifically this slot
                 });
             };
 
@@ -79,7 +80,7 @@ export const EmptyWindowContent = ({ windowId, type, onUpdateWindow, renderProps
 
             if (result.success && result.streamId) {
                 console.log('[EmptyWindowContent] addStream success:', { windowId, streamId: result.streamId });
-                onUpdateWindow(windowId, { contentId: result.streamId });
+                // onUpdateWindow(windowId, { contentId: result.streamId }); // Removed: addStream now handles the update directly via targetWindowId
                 toast.success(t('common.success') || '成功載入');
             } else {
                 console.warn('[EmptyWindowContent] addStream failed:', result);

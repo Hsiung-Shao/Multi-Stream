@@ -36,10 +36,11 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
     const applyTemplateLayout = useStreamStore(state => state.applyTemplateLayout);
 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState<'builtin' | 'custom'>('builtin');
+    const [activeTab, setActiveTab] = useState<'video_only' | 'with_chat' | 'custom'>('video_only');
 
     // Separate templates
-    const landscapeTemplates = layoutTemplates.filter(t => t.type === 'landscape');
+    const videoTemplates = layoutTemplates.filter(t => t.type === 'video_only');
+    const chatTemplates = layoutTemplates.filter(t => t.type === 'with_chat');
 
 
     return (
@@ -73,64 +74,91 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex p-1 bg-white/5 rounded-lg">
+                    <div className="flex p-1 bg-white/5 rounded-lg mb-2">
                         <button
-                            onClick={() => setActiveTab('builtin')}
+                            onClick={() => setActiveTab('video_only')}
                             className={cn(
-                                "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
-                                activeTab === 'builtin'
+                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
+                                activeTab === 'video_only'
                                     ? "bg-white/10 text-white shadow-sm"
                                     : "text-gray-400 hover:text-white/80"
                             )}
                         >
-                            {t('layout.tab_builtin') || '內建清單'}
+                            {t('layout.tab_video') || '僅串流'}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('with_chat')}
+                            className={cn(
+                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
+                                activeTab === 'with_chat'
+                                    ? "bg-white/10 text-white shadow-sm"
+                                    : "text-gray-400 hover:text-white/80"
+                            )}
+                        >
+                            {t('layout.tab_chat') || '含聊天室'}
                         </button>
                         <button
                             onClick={() => setActiveTab('custom')}
                             className={cn(
-                                "flex-1 py-1.5 text-xs font-medium rounded-md transition-all",
+                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
                                 activeTab === 'custom'
                                     ? "bg-white/10 text-white shadow-sm"
                                     : "text-gray-400 hover:text-white/80"
                             )}
                         >
-                            {t('layout.tab_custom') || '自定義清單'}
+                            {t('layout.tab_custom') || '自訂義'}
                         </button>
                     </div>
 
                     {/* Content */}
-                    <div className="min-h-[280px]">
-                        {activeTab === 'builtin' ? (
+                    <div className="min-h-[250px]">
+                        {activeTab === 'video_only' && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                                {/* Basic Templates Section */}
-                                <div className="space-y-2">
-                                    <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider pl-1 flex items-center gap-2">
-                                        <Monitor className="size-3" />
-                                        {t('layout.templates_landscape') || '橫向布局'}
-                                    </h4>
-                                    <ScrollArea className="h-[250px] -mr-2 pr-2">
-                                        <div className="grid grid-cols-4 gap-2 pb-2">
-                                            {landscapeTemplates.map(template => {
-                                                const Icon = iconMap[template.icon] || LayoutGrid;
-                                                return (
-                                                    <button
-                                                        key={template.id}
-                                                        onClick={() => applyTemplateLayout(template.id)}
-                                                        className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 border border-white/5 transition-all group relative overflow-hidden"
-                                                        title={t(template.nameKey) || template.nameKey}
-                                                    >
-                                                        <Icon className="size-5 text-gray-300 group-hover:text-purple-300 transition-colors" />
-                                                        <span className="text-[10px] text-gray-400 group-hover:text-purple-200 font-medium">{template.count}</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </ScrollArea>
-                                </div>
-
-
+                                <ScrollArea className="h-[250px] -mr-2 pr-2">
+                                    <div className="grid grid-cols-4 gap-2 pb-2">
+                                        {videoTemplates.map(template => {
+                                            const Icon = iconMap[template.icon] || LayoutGrid;
+                                            return (
+                                                <button
+                                                    key={template.id}
+                                                    onClick={() => applyTemplateLayout(template.id)}
+                                                    className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 border border-white/5 transition-all group relative overflow-hidden"
+                                                    title={t(template.nameKey as any) || template.nameKey}
+                                                >
+                                                    <Icon className="size-5 text-gray-300 group-hover:text-purple-300 transition-colors" />
+                                                    <span className="text-[10px] text-gray-400 group-hover:text-purple-200 font-medium">{template.count}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </ScrollArea>
                             </div>
-                        ) : (
+                        )}
+
+                        {activeTab === 'with_chat' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <ScrollArea className="h-[250px] -mr-2 pr-2">
+                                    <div className="grid grid-cols-4 gap-2 pb-2">
+                                        {chatTemplates.map(template => {
+                                            const Icon = iconMap[template.icon] || LayoutGrid;
+                                            return (
+                                                <button
+                                                    key={template.id}
+                                                    onClick={() => applyTemplateLayout(template.id)}
+                                                    className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 border border-white/5 transition-all group relative overflow-hidden"
+                                                    title={t(template.nameKey as any) || template.nameKey}
+                                                >
+                                                    <Icon className="size-5 text-gray-300 group-hover:text-purple-300 transition-colors" />
+                                                    <span className="text-[10px] text-gray-400 group-hover:text-purple-200 font-medium">{template.count}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        )}
+
+                        {activeTab === 'custom' && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
                                 {/* User Layouts Section */}
                                 <div className="space-y-3">
@@ -149,7 +177,7 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                                             <p>尚無自定布局</p>
                                         </div>
                                     ) : (
-                                        <ScrollArea className="h-[200px] -mr-3 pr-3">
+                                        <ScrollArea className="h-[180px] -mr-3 pr-3">
                                             <div className="space-y-2">
                                                 {customLayouts.map(layout => (
                                                     <button
