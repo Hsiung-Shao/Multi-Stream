@@ -1,4 +1,4 @@
-import { Layout } from 'react-grid-layout';
+
 
 /**
  * Calculates a balanced grid layout for N items within a 24x24 container.
@@ -47,14 +47,7 @@ export const calculateAutoGridLayout = (count: number): { x: number, y: number, 
 // Define layout types
 export type LayoutMode = 'video_only' | 'with_chat';
 
-interface PresetItem {
-    i: string; // Will be replaced by actual ID
-    type: 'stream' | 'chat';
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-}
+
 
 /**
  * Generates a standard layout for N streams based on Holodex 24x24 grid system.
@@ -67,17 +60,7 @@ export const generateLayout = (streamIds: (number | string)[], mode: LayoutMode 
     let items: any[] = [];
 
     // Helper to add item
-    const addItem = (id: string | number, type: 'stream' | 'chat', x: number, y: number, w: number, h: number) => {
-        // Use a consistent ID format matching store
-        const uniqueSuffix = Math.random().toString(36).substr(2, 5);
-        // Note: Real IDs should come from existing items if possible to avoid re-mounting.
-        // But for "Applying Preset", we might be calculating new positions for EXISTING items.
-        // This function returns abstract layout specs, caller maps them to items.
 
-        // Actually, we return a list of layout objects keyed by index or simple structure?
-        // Let's return abstract definitions.
-        return { x, y, w, h };
-    };
 
     // --- Layout Logic (24x24 Grid) ---
     // 1 Grid Unit = 16:9 Aspect Ratio (approx)
@@ -315,10 +298,10 @@ export const layoutTemplates: LayoutTemplate[] = [
         count: 1,
         type: 'landscape',
         generate: (streamIds) => {
-            if (streamIds.length === 0) return [];
+            const id = streamIds[0] ?? null;
             return [
-                { type: 'stream', x: 0, y: 0, w: 19, h: 24, contentId: streamIds[0] },
-                { type: 'chat', x: 19, y: 0, w: 5, h: 24, contentId: streamIds[0] }
+                { type: 'stream', x: 0, y: 0, w: 19, h: 24, contentId: id },
+                { type: 'chat', x: 19, y: 0, w: 5, h: 24, contentId: id }
             ];
         }
     },
@@ -331,15 +314,15 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Slot 1
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 9, h: 24, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 9, y: 0, w: 3, h: 24, contentId: streamIds[0] });
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 9, h: 24, contentId: id0 });
+            items.push({ type: 'chat', x: 9, y: 0, w: 3, h: 24, contentId: id0 });
+
             // Slot 2
-            if (streamIds[1]) {
-                items.push({ type: 'stream', x: 12, y: 0, w: 9, h: 24, contentId: streamIds[1] });
-                items.push({ type: 'chat', x: 21, y: 0, w: 3, h: 24, contentId: streamIds[1] });
-            }
+            const id1 = streamIds[1] ?? null;
+            items.push({ type: 'stream', x: 12, y: 0, w: 9, h: 24, contentId: id1 });
+            items.push({ type: 'chat', x: 21, y: 0, w: 3, h: 24, contentId: id1 });
+
             return items;
         }
     },
@@ -352,20 +335,20 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Main (Left)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 13, h: 24, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 13, y: 0, w: 3, h: 24, contentId: streamIds[0] });
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 13, h: 24, contentId: id0 });
+            items.push({ type: 'chat', x: 13, y: 0, w: 3, h: 24, contentId: id0 });
+
             // Side Top
-            if (streamIds[1]) {
-                items.push({ type: 'stream', x: 16, y: 0, w: 5, h: 12, contentId: streamIds[1] });
-                items.push({ type: 'chat', x: 21, y: 0, w: 3, h: 12, contentId: streamIds[1] });
-            }
+            const id1 = streamIds[1] ?? null;
+            items.push({ type: 'stream', x: 16, y: 0, w: 5, h: 12, contentId: id1 });
+            items.push({ type: 'chat', x: 21, y: 0, w: 3, h: 12, contentId: id1 });
+
             // Side Bottom
-            if (streamIds[2]) {
-                items.push({ type: 'stream', x: 16, y: 12, w: 5, h: 12, contentId: streamIds[2] });
-                items.push({ type: 'chat', x: 21, y: 12, w: 3, h: 12, contentId: streamIds[2] });
-            }
+            const id2 = streamIds[2] ?? null;
+            items.push({ type: 'stream', x: 16, y: 12, w: 5, h: 12, contentId: id2 });
+            items.push({ type: 'chat', x: 21, y: 12, w: 3, h: 12, contentId: id2 });
+
             return items;
         }
     },
@@ -426,14 +409,14 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Side 1 (Left Top)
-            if (streamIds[0]) items.push({ type: 'stream', x: 0, y: 0, w: 6, h: 12, contentId: streamIds[0] }); // No chat
+            items.push({ type: 'stream', x: 0, y: 0, w: 6, h: 12, contentId: streamIds[0] ?? null }); // No chat
             // Side 2 (Left Bottom)
-            if (streamIds[1]) items.push({ type: 'stream', x: 0, y: 12, w: 6, h: 12, contentId: streamIds[1] }); // No chat
+            items.push({ type: 'stream', x: 0, y: 12, w: 6, h: 12, contentId: streamIds[1] ?? null }); // No chat
             // Main (Right)
-            if (streamIds[2]) {
-                items.push({ type: 'stream', x: 6, y: 0, w: 14, h: 24, contentId: streamIds[2] });
-                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 24, contentId: streamIds[2] });
-            }
+            const id2 = streamIds[2] ?? null;
+            items.push({ type: 'stream', x: 6, y: 0, w: 14, h: 24, contentId: id2 });
+            items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 24, contentId: id2 });
+
             return items;
         }
     },
@@ -446,14 +429,15 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Main (Left)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: streamIds[0] });
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: id0 });
+            items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: id0 });
+
             // Side 1 (Right Top)
-            if (streamIds[1]) items.push({ type: 'stream', x: 18, y: 0, w: 6, h: 12, contentId: streamIds[1] });
+            items.push({ type: 'stream', x: 18, y: 0, w: 6, h: 12, contentId: streamIds[1] ?? null });
             // Side 2 (Right Bottom)
-            if (streamIds[2]) items.push({ type: 'stream', x: 18, y: 12, w: 6, h: 12, contentId: streamIds[2] });
+            items.push({ type: 'stream', x: 18, y: 12, w: 6, h: 12, contentId: streamIds[2] ?? null });
+
             return items;
         }
     },
@@ -468,13 +452,14 @@ export const layoutTemplates: LayoutTemplate[] = [
             const items: any[] = [];
             // Side Stack (x=0, w=6 h=8)
             for (let i = 0; i < 3; i++) {
-                if (streamIds[i]) items.push({ type: 'stream', x: 0, y: i * 8, w: 6, h: 8, contentId: streamIds[i] });
+                const id = streamIds[i] ?? null;
+                items.push({ type: 'stream', x: 0, y: i * 8, w: 6, h: 8, contentId: id });
             }
             // Main (Right)
-            if (streamIds[3]) {
-                items.push({ type: 'stream', x: 6, y: 0, w: 14, h: 24, contentId: streamIds[3] });
-                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 24, contentId: streamIds[3] });
-            }
+            const id3 = streamIds[3] ?? null;
+            items.push({ type: 'stream', x: 6, y: 0, w: 14, h: 24, contentId: id3 });
+            items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 24, contentId: id3 });
+
             return items;
         }
     },
@@ -488,13 +473,13 @@ export const layoutTemplates: LayoutTemplate[] = [
             // Left Main, Right 3 Stack
             const items: any[] = [];
             // Main (Left)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: streamIds[0] });
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: id0 });
+            items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: id0 });
             // Side Stack (x=18, w=6 h=8)
             for (let i = 0; i < 3; i++) {
-                if (streamIds[i + 1]) items.push({ type: 'stream', x: 18, y: i * 8, w: 6, h: 8, contentId: streamIds[i + 1] });
+                const id = streamIds[i + 1] ?? null;
+                items.push({ type: 'stream', x: 18, y: i * 8, w: 6, h: 8, contentId: id });
             }
             return items;
         }
@@ -508,15 +493,14 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Top Main (Full Width)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 16, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 16, contentId: streamIds[0] });
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 16, contentId: id0 });
+            items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 16, contentId: id0 });
+
             // Bottom Row (3 items, 8w each)
             for (let i = 0; i < 3; i++) {
-                if (streamIds[i + 1]) {
-                    items.push({ type: 'stream', x: i * 8, y: 16, w: 8, h: 8, contentId: streamIds[i + 1] });
-                }
+                const id = streamIds[i + 1] ?? null;
+                items.push({ type: 'stream', x: i * 8, y: 16, w: 8, h: 8, contentId: id });
             }
             return items;
         }
@@ -530,18 +514,17 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Left Col (2 items)
-            if (streamIds[0]) items.push({ type: 'stream', x: 0, y: 0, w: 6, h: 12, contentId: streamIds[0] });
-            if (streamIds[1]) items.push({ type: 'stream', x: 0, y: 12, w: 6, h: 12, contentId: streamIds[1] });
+            items.push({ type: 'stream', x: 0, y: 0, w: 6, h: 12, contentId: streamIds[0] ?? null });
+            items.push({ type: 'stream', x: 0, y: 12, w: 6, h: 12, contentId: streamIds[1] ?? null });
 
             // Center Main
-            if (streamIds[2]) {
-                items.push({ type: 'stream', x: 6, y: 0, w: 12, h: 16, contentId: streamIds[2] });
-                items.push({ type: 'chat', x: 6, y: 16, w: 12, h: 8, contentId: streamIds[2] }); // Large chat bottom
-            }
+            const id2 = streamIds[2] ?? null;
+            items.push({ type: 'stream', x: 6, y: 0, w: 12, h: 16, contentId: id2 });
+            items.push({ type: 'chat', x: 6, y: 16, w: 12, h: 8, contentId: id2 }); // Large chat bottom
 
             // Right Col (2 items)
-            if (streamIds[3]) items.push({ type: 'stream', x: 18, y: 0, w: 6, h: 12, contentId: streamIds[3] });
-            if (streamIds[4]) items.push({ type: 'stream', x: 18, y: 12, w: 6, h: 12, contentId: streamIds[4] });
+            items.push({ type: 'stream', x: 18, y: 0, w: 6, h: 12, contentId: streamIds[3] ?? null });
+            items.push({ type: 'stream', x: 18, y: 12, w: 6, h: 12, contentId: streamIds[4] ?? null });
 
             return items;
         }
@@ -555,13 +538,13 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Main Left (18w)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: streamIds[0] });
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 14, h: 24, contentId: id0 });
+            items.push({ type: 'chat', x: 14, y: 0, w: 4, h: 24, contentId: id0 });
             // Right Stack (6w, 4 items x 6h)
             for (let i = 0; i < 4; i++) {
-                if (streamIds[i + 1]) items.push({ type: 'stream', x: 18, y: i * 6, w: 6, h: 6, contentId: streamIds[i + 1] });
+                const id = streamIds[i + 1] ?? null;
+                items.push({ type: 'stream', x: 18, y: i * 6, w: 6, h: 6, contentId: id });
             }
             return items;
         }
@@ -577,14 +560,15 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Top Main
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 14, contentId: streamIds[0] });
-                // No chat for main to verify cinema feel? Or add separate chat? Let's add chat overlay style (separate block)
-                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 5, contentId: streamIds[0] }); // Tiny chat corner? No, let's keep it clean: No chat for cinema.
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 14, contentId: id0 });
+            // No chat for main to verify cinema feel? Or add separate chat? Let's add chat overlay style (separate block)
+            items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 5, contentId: id0 }); // Tiny chat corner? No, let's keep it clean: No chat for cinema.
+
             // Bottom Row (4 items, 6w 10h)
             for (let i = 0; i < 4; i++) {
-                if (streamIds[i + 1]) items.push({ type: 'stream', x: i * 6, y: 14, w: 6, h: 10, contentId: streamIds[i + 1] });
+                const id = streamIds[i + 1] ?? null;
+                items.push({ type: 'stream', x: i * 6, y: 14, w: 6, h: 10, contentId: id });
             }
             return items;
         }
@@ -598,13 +582,14 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Top Main (Full width)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 16, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 16, contentId: streamIds[0] });
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 20, h: 16, contentId: id0 });
+            items.push({ type: 'chat', x: 20, y: 0, w: 4, h: 16, contentId: id0 });
+
             // Bottom Row (6 items, 4w 8h)
             for (let i = 0; i < 6; i++) {
-                if (streamIds[i + 1]) items.push({ type: 'stream', x: i * 4, y: 16, w: 4, h: 8, contentId: streamIds[i + 1] });
+                const id = streamIds[i + 1] ?? null;
+                items.push({ type: 'stream', x: i * 4, y: 16, w: 4, h: 8, contentId: id });
             }
             return items;
         }
@@ -618,21 +603,20 @@ export const layoutTemplates: LayoutTemplate[] = [
         generate: (streamIds) => {
             const items: any[] = [];
             // Top Left (Player 1)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 10, h: 14, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 0, y: 14, w: 10, h: 10, contentId: streamIds[0] }); // Chat below
-            }
+            const id0 = streamIds[0] ?? null;
+            items.push({ type: 'stream', x: 0, y: 0, w: 10, h: 14, contentId: id0 });
+            items.push({ type: 'chat', x: 0, y: 14, w: 10, h: 10, contentId: id0 }); // Chat below
+
             // Top Right (Player 2)
-            if (streamIds[1]) {
-                items.push({ type: 'stream', x: 14, y: 0, w: 10, h: 14, contentId: streamIds[1] });
-                items.push({ type: 'chat', x: 14, y: 14, w: 10, h: 10, contentId: streamIds[1] }); // Chat below
-            }
+            const id1 = streamIds[1] ?? null;
+            items.push({ type: 'stream', x: 14, y: 0, w: 10, h: 14, contentId: id1 });
+            items.push({ type: 'chat', x: 14, y: 14, w: 10, h: 10, contentId: id1 }); // Chat below
+
             // Middle Divider items (3 small ones vertically in center? 4w)
             // x=10, w=4
             for (let i = 0; i < 3; i++) {
-                if (streamIds[i + 2]) {
-                    items.push({ type: 'stream', x: 10, y: i * 8, w: 4, h: 8, contentId: streamIds[i + 2] });
-                }
+                const id = streamIds[i + 2] ?? null;
+                items.push({ type: 'stream', x: 10, y: i * 8, w: 4, h: 8, contentId: id });
             }
             return items;
         }
@@ -696,81 +680,4 @@ export const layoutTemplates: LayoutTemplate[] = [
             return items;
         }
     },
-
-    // --- Vertical ---
-    {
-        id: 'template-1-vertical',
-        nameKey: '1人 (直立)',
-        icon: 'Smartphone',
-        count: 1,
-        type: 'vertical',
-        generate: (streamIds) => {
-            if (streamIds.length === 0) return [];
-            return [
-                { type: 'stream', x: 0, y: 0, w: 24, h: 10, contentId: streamIds[0] },
-                { type: 'chat', x: 0, y: 10, w: 24, h: 14, contentId: streamIds[0] }
-            ];
-        }
-    },
-    {
-        id: 'template-2-vertical',
-        nameKey: '2人 (直立)',
-        icon: 'Smartphone',
-        count: 2,
-        type: 'vertical',
-        generate: (streamIds) => {
-            const items: any[] = [];
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 8, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 0, y: 8, w: 24, h: 4, contentId: streamIds[0] });
-            }
-            if (streamIds[1]) {
-                items.push({ type: 'stream', x: 0, y: 12, w: 24, h: 8, contentId: streamIds[1] });
-                items.push({ type: 'chat', x: 0, y: 20, w: 24, h: 4, contentId: streamIds[1] });
-            }
-            return items;
-        }
-    },
-    {
-        id: 'template-3-vertical-stack',
-        nameKey: 'layout.3_vertical_stack',
-        icon: 'Smartphone',
-        count: 3,
-        type: 'vertical',
-        generate: (streamIds) => {
-            const items: any[] = [];
-            // Top (Big)
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 10, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 0, y: 10, w: 24, h: 4, contentId: streamIds[0] });
-            }
-            // Mid
-            if (streamIds[1]) items.push({ type: 'stream', x: 0, y: 14, w: 24, h: 5, contentId: streamIds[1] });
-            // Bot
-            if (streamIds[2]) items.push({ type: 'stream', x: 0, y: 19, w: 24, h: 5, contentId: streamIds[2] });
-            return items;
-        }
-    },
-    {
-        id: 'template-4-vertical-split',
-        nameKey: 'layout.4_vertical_split',
-        icon: 'Smartphone',
-        count: 4,
-        type: 'vertical',
-        generate: (streamIds) => {
-            const items: any[] = [];
-            // Top Main
-            if (streamIds[0]) {
-                items.push({ type: 'stream', x: 0, y: 0, w: 24, h: 10, contentId: streamIds[0] });
-                items.push({ type: 'chat', x: 0, y: 10, w: 24, h: 4, contentId: streamIds[0] }); // Chat bar
-            }
-            // Bottom Row (3 items side-by-side) -> 8w each, 10h
-            for (let i = 0; i < 3; i++) {
-                if (streamIds[i + 1]) {
-                    items.push({ type: 'stream', x: i * 8, y: 14, w: 8, h: 10, contentId: streamIds[i + 1] });
-                }
-            }
-            return items;
-        }
-    }
 ];

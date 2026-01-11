@@ -164,6 +164,8 @@ const common = {
   'layout.2_vertical': '2人 (直立)',
   'layout.3_vertical_stack': '3人 (堆疊)',
   'layout.4_vertical_split': '4人 (分層)',
+  'layout.tab_builtin': '內建清單',
+  'layout.tab_custom': '自定義清單',
 };
 
 export default common;
