@@ -1,8 +1,8 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, Filter, Play, Grid2X2 } from 'lucide-react';
+import { RefreshCw, Filter, Play, Grid2X2, Hash } from 'lucide-react';
 import { useFavorites } from '../../hooks/useFavorites';
 import { useStreamStore } from '../../store/useStreamStore';
 import { cn } from '../ui/utils';
@@ -10,6 +10,8 @@ import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
+import { Tag } from '../../features/favorites/types';
+import { tagsService } from '../../features/favorites/TagsService';
 import {
     Popover,
     PopoverContent,
@@ -37,6 +39,18 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
     const [filterCategory, setFilterCategory] = useState<string | null>(null);
     const [showOnlineOnly, setShowOnlineOnly] = useState(true);
 
+    // Tags State
+    const [tags, setTags] = useState<Tag[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+    // Sync Tags
+    useEffect(() => {
+        const loadTags = () => setTags(tagsService.getAllTags());
+        loadTags();
+        window.addEventListener('tagsUpdated', loadTags);
+        return () => window.removeEventListener('tagsUpdated', loadTags);
+    }, []);
+
     // Filter Logic
     const filteredFavorites = useMemo(() => {
         let result = favorites;
@@ -53,8 +67,16 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
             });
         }
 
+        if (selectedTags.length > 0) {
+            result = result.filter(f => {
+                if (!f.tagIds || f.tagIds.length === 0) return false;
+                // OR Logic: Stream has at least one of the selected tags
+                return f.tagIds.some(tId => selectedTags.includes(tId));
+            });
+        }
+
         return result;
-    }, [favorites, showOnlineOnly, filterCategory]);
+    }, [favorites, showOnlineOnly, filterCategory, selectedTags]);
 
     // Handlers
     const handleRefresh = async () => {
@@ -182,6 +204,63 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                                     {cat.name}
                                 </DropdownMenuItem>
                             ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Tags Filter */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className={cn("h-7 text-xs rounded-full px-2 gap-1", selectedTags.length > 0 ? "text-purple-400 bg-purple-400/10" : "text-white/50 hover:text-white")}>
+                                <Hash size={12} />
+                                {selectedTags.length > 0 ? `已選 ${selectedTags.length}` : t('tags:tags', '標籤')}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-slate-900 border-white/10 text-white z-[70] w-48">
+                            <div className="p-2 space-y-1">
+                                {tags.map(tag => (
+                                    <div
+                                        key={tag.id}
+                                        className="flex items-center gap-2 p-1.5 rounded hover:bg-white/10 cursor-pointer"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setSelectedTags(prev =>
+                                                prev.includes(tag.id)
+                                                    ? prev.filter(id => id !== tag.id)
+                                                    : [...prev, tag.id]
+                                            );
+                                        }}
+                                    >
+                                        <Checkbox
+                                            checked={selectedTags.includes(tag.id)}
+                                            onCheckedChange={(checked: boolean) => {
+                                                setSelectedTags(prev =>
+                                                    checked
+                                                        ? [...prev, tag.id]
+                                                        : prev.filter(id => id !== tag.id)
+                                                );
+                                            }}
+                                            className="border-white/30 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500 size-3.5"
+                                        />
+                                        <div className="size-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                                        <span className="text-sm flex-1 truncate">{tag.name}</span>
+                                    </div>
+                                ))}
+                                {tags.length === 0 && (
+                                    <div className="text-xs text-white/40 px-2 py-1">{t('tags:noTagsFound', '沒有標籤')}</div>
+                                )}
+                            </div>
+                            {selectedTags.length > 0 && (
+                                <div className="p-2 border-t border-white/10">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full h-6 text-xs text-white/50 hover:text-white"
+                                        onClick={() => setSelectedTags([])}
+                                    >
+                                        {t('common.clear', '清除')}
+                                    </Button>
+                                </div>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
 

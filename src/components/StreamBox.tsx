@@ -390,31 +390,6 @@ export function StreamBox({
 
       >
         {/* StreamIframe */}
-        <StreamIframe
-          streamData={streamData}
-          volume={actualVolume}
-          isMuted={effectiveMuted}
-          className="player-container flex-shrink-0 relative transition-[width] duration-300 ease-in-out"
-        // Style width is handled by parent effect modifying this DOM element OR we pass width?
-        // The Chat Layout Effect modifies "playerContainerRef.current.style.width". 
-        // But now Render returns <StreamIframe>. `StreamIframe` renders a `div` with `w-full h-full`.
-        // And `StreamBox` layout effect uses `querySelector('#player' + id)` or `playerContainerRef`.
-        // We need to attach `playerContainerRef` to the DIV inside StreamIframe? 
-        // OR wrap StreamIframe in a div that gets the ref and style.
-        // Wrapping is safer to keep layout logic working.
-        />
-        {/* We need to attach the ref to a container around StreamIframe or pass ref to StreamIframe? */}
-        {/* StreamIframe has internal ref. */}
-        {/* Let's wrap StreamIframe with the div that has playerContainerRef and style */}
-        {/* Wait, the chunk replaces the div. */}
-        {/* I should wrap it. */}
-        {/* Actually, StreamIframe props: className goes to inner div. */}
-
-        {/* If I replace the div with StreamIframe, I lose the ref if I don't forward it. */}
-        {/* BUT, I removed playerContainerRef from logic (removed createTwitchPlayer etc). */}
-        {/* However, current StreamBox Chat Layout logic (useEffect at line 140) USES playerContainerRef to set WIDTH. */}
-        {/* So I MUST keeping playerContainerRef. */}
-        {/* So: */}
         <div
           ref={playerContainerRef}
           className="player-container"

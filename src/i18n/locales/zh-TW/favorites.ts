@@ -88,6 +88,7 @@ export default {
   'settings.sponsor': '贊助',
   'settings.close_window_mode': '視窗關閉模式',
   'settings.close_window_mode_desc': '選擇當關閉視窗時的行為',
+  'settings.feedback': '意見回饋',
   'settings.mode_remove': '移除視窗 (預設)',
   'settings.mode_empty': '保留空白視窗',
 

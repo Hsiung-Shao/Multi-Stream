@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from '../../../components/ui/select';
 import { Separator } from '../../../components/ui/separator';
-import { Github, Info, Moon, Sun, Monitor, Coffee } from 'lucide-react';
+import { Github, Info, Moon, Sun, Monitor, Coffee, MessageSquare } from 'lucide-react';
 
 // Custom Icons
 const DiscordIcon = (props: any) => (
@@ -58,6 +58,13 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
     // Reactive State
     const closeWindowMode = useUIStore(s => s.closeWindowMode);
     const setCloseWindowMode = useUIStore(s => s.setCloseWindowMode);
+    const openModal = useUIStore(s => s.openModal);
+    const closeModal = useUIStore(s => s.closeModal);
+
+    const handleFeedbackClick = () => {
+        closeModal('favorites');
+        openModal('feedback');
+    };
 
     return (
         <div className="flex-1 flex flex-col gap-4 max-w-2xl mx-auto w-full py-4 px-2 h-full overflow-hidden">
@@ -208,6 +215,17 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             <Coffee className="size-4" />
                             <span className="text-sm font-medium">{t('favorites:settings.sponsor')}</span>
                         </a>
+
+                        <button
+                            onClick={handleFeedbackClick}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
+                                ? 'border-gray-700 hover:bg-gray-800'
+                                : 'border-gray-200 hover:bg-gray-50'
+                                }`}
+                        >
+                            <MessageSquare className="size-4" />
+                            <span className="text-sm font-medium">{t('favorites:settings.feedback')}</span>
+                        </button>
                     </div>
                 </div>
             </div>
