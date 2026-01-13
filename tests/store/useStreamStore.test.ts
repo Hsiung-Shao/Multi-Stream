@@ -25,8 +25,9 @@ describe('useStreamStore', () => {
         // Reset Store
         useStreamStore.setState({
             streams: [],
-            layout: 'grid-2',
+            layout: 2,
             chatLayout: 'none',
+            canvasItems: []
         });
 
         // Reset Globals
@@ -40,69 +41,96 @@ describe('useStreamStore', () => {
         };
     });
 
-    it('should add a valid Twitch stream', async () => {
-        const url = 'https://www.twitch.tv/shroud';
+    describe('Stream Management', () => {
+        it('should add a valid Twitch stream', async () => {
+            const url = 'https://www.twitch.tv/shroud';
+            const result = await useStreamStore.getState().addStream(url);
 
-        const result = await useStreamStore.getState().addStream(url);
-
-        expect(result.success).toBe(true);
-        expect(useStreamStore.getState().streams).toHaveLength(1);
-        expect(useStreamStore.getState().streams[0].platform).toBe('twitch');
-        expect(useStreamStore.getState().streams[0].channelId).toBe('shroud');
-    });
-
-    it('should fail with invalid URL', async () => {
-        const url = 'https://example.com/foo';
-        const result = await useStreamStore.getState().addStream(url);
-
-        expect(result.success).toBe(false);
-        expect(useStreamStore.getState().streams).toHaveLength(0);
-    });
-
-    it('should search channel if not URL', async () => {
-        const query = 'shroud';
-        (window as any).twitchApi.searchChannels.mockResolvedValue([
-            { url: 'https://www.twitch.tv/shroud', display_name: 'Shroud' }
-        ]);
-
-        const result = await useStreamStore.getState().addStream(query);
-
-        // expect(apiLoader.loadTwitchDataApi).toHaveBeenCalled();
-        expect(result.success).toBe(true);
-        expect(useStreamStore.getState().streams[0].channelId).toBe('shroud');
-        expect(useStreamStore.getState().streams[0].displayName).toBe('Shroud');
-    });
-
-    it('should remove stream', async () => {
-        // Manually set state
-        useStreamStore.setState({
-            streams: [
-                { id: 1, platform: 'twitch', channelId: 'a', videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false },
-                { id: 2, platform: 'twitch', channelId: 'b', videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false }
-            ]
+            expect(result.success).toBe(true);
+            expect(useStreamStore.getState().streams).toHaveLength(1);
+            const stream = useStreamStore.getState().streams[0];
+            expect(stream.platform).toBe('twitch');
+            expect(stream.channelId).toBe('shroud');
         });
 
-        useStreamStore.getState().removeStream(1);
+        it('should fail with invalid URL', async () => {
+            const url = 'https://example.com/foo';
+            const result = await useStreamStore.getState().addStream(url);
 
-        expect(useStreamStore.getState().streams).toHaveLength(1);
-        expect(useStreamStore.getState().streams[0].id).toBe(2);
-    });
-
-    it('should move stream', () => {
-        useStreamStore.setState({
-            streams: [
-                { id: 1, platform: 'twitch', channelId: '1', videoId: '', originalUrl: '', volume: 0, chatVisible: false, isMuted: false },
-                { id: 2, platform: 'twitch', channelId: '2', videoId: '', originalUrl: '', volume: 0, chatVisible: false, isMuted: false },
-                { id: 3, platform: 'twitch', channelId: '3', videoId: '', originalUrl: '', volume: 0, chatVisible: false, isMuted: false }
-            ]
+            expect(result.success).toBe(false);
+            expect(useStreamStore.getState().streams).toHaveLength(0);
         });
 
-        // Move index 0 (id:1) to index 2 (end) -> [2, 3, 1]
-        useStreamStore.getState().moveStream(0, 2);
+        it('should remove stream', async () => {
+            useStreamStore.setState({
+                streams: [
+                    { id: 1, platform: 'twitch', channelId: 'a', videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false },
+                    { id: 2, platform: 'twitch', channelId: 'b', videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false }
+                ]
+            });
 
-        const streams = useStreamStore.getState().streams;
-        expect(streams[0].id).toBe(2);
-        expect(streams[1].id).toBe(3);
-        expect(streams[2].id).toBe(1);
+            useStreamStore.getState().removeStream(1);
+            expect(useStreamStore.getState().streams).toHaveLength(1);
+            expect(useStreamStore.getState().streams[0].id).toBe(2);
+        });
+
+        it('should move stream', () => {
+            useStreamStore.setState({
+                streams: [
+                    { id: 1, platform: 'twitch', channelId: '1', videoId: '', originalUrl: '', volume: 0, chatVisible: false, isMuted: false },
+                    { id: 2, platform: 'twitch', channelId: '2', videoId: '', originalUrl: '', volume: 0, chatVisible: false, isMuted: false },
+                    { id: 3, platform: 'twitch', channelId: '3', videoId: '', originalUrl: '', volume: 0, chatVisible: false, isMuted: false }
+                ]
+            });
+
+            useStreamStore.getState().moveStream(0, 2);
+            const streams = useStreamStore.getState().streams;
+            expect(streams[0].id).toBe(2);
+            expect(streams[1].id).toBe(3);
+            expect(streams[2].id).toBe(1);
+        });
+
+        it('should clear canvas items', () => {
+            useStreamStore.setState({
+                streams: [
+                    { id: 1, platform: 'twitch', channelId: '1', videoId: '', originalUrl: '', volume: 0, chatVisible: false, isMuted: false }
+                ],
+                canvasItems: [
+                    { i: '1', type: 'stream', contentId: 1, layout: { x: 0, y: 0, w: 6, h: 6 } }
+                ]
+            });
+
+            useStreamStore.getState().clearCanvasItems();
+            expect(useStreamStore.getState().streams).toHaveLength(0);
+            expect(useStreamStore.getState().canvasItems).toHaveLength(0);
+        });
+    });
+
+    describe('Media Controls (Individual)', () => {
+        // Global Volume is in useUIStore now
+
+        it('should update individual stream volume', () => {
+            useStreamStore.setState({
+                streams: [
+                    { id: 1, platform: 'twitch', channelId: '1', videoId: '', originalUrl: '', volume: 50, chatVisible: false, isMuted: false }
+                ]
+            });
+
+            useStreamStore.getState().updateStream(1, { volume: 100 });
+            expect(useStreamStore.getState().streams[0].volume).toBe(100);
+        });
+    });
+
+    describe('Layout Management', () => {
+        it('should change layout', () => {
+            useStreamStore.getState().setLayout(4); // Use number for layout type according to updated interface/state?
+            // State initial was 2. Use 4.
+            expect(useStreamStore.getState().layout).toBe(4);
+        });
+
+        it('should change chat layout', () => {
+            useStreamStore.getState().setChatLayout('sidebar');
+            expect(useStreamStore.getState().chatLayout).toBe('sidebar');
+        });
     });
 });

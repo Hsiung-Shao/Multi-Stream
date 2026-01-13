@@ -1,14 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { ChatSidebar } from './ChatSidebar';
-import type { StreamData } from '../utils/streamUtils';
+import { ChatSidebar } from '../../src/components/ChatSidebar';
+import type { StreamData } from '../../src/utils/streamUtils';
 
 // Mock dependencies
-vi.mock('./StreamChat', () => ({
+vi.mock('../../src/components/StreamChat', () => ({
     StreamChat: () => <div data-testid="stream-chat">Stream Chat Content</div>,
 }));
 
-vi.mock('../utils/chatLayoutUtils', () => ({
+vi.mock('../../src/utils/chatLayoutUtils', () => ({
     getChatLayoutConfig: (type: string) => {
         if (type === 'none') {
             return { grid: { rows: 0, cols: 0 }, positionKeys: [], videoAreaWidth: 100, chatAreaWidth: 0 };
