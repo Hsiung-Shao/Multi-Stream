@@ -115,6 +115,19 @@ const common = {
   'landing.faq.a2': 'いいえ、これはクライアントサイドのみのアプリです。登録は不要です。Twitchのフォローリストをインポートする場合のみ、一度だけ認証が必要です（トークンはローカルにのみ保存されます）。',
   'landing.faq.q3': '設定はどこに保存されますか？',
   'landing.faq.a3': 'すべての設定（お気に入り、レイアウト、テーマを含む）は、ブラウザの LocalStorage と IndexedDB に保存されます。サーバーにデータをアップロードすることはありません。',
+
+  'landing.footer.tutorial': '使い方',
+  'landing.footer.faq': 'よくある質問',
+  'landing.footer.about': '私たちについて',
+  'landing.footer.privacy': 'プライバシーポリシー',
+
+  // Cookie Consent
+  'cookie.title': 'Cookieの使用について',
+  'cookie.description': '私たちはCookieや類似の技術を使用して、閲覧体験の向上、サイトトラフィックの分析、パーソナライズされたコンテンツの提供を行っています。「承認」をクリックすることで、これらの技術の使用に同意したことになります。',
+  'cookie.accept': '承認',
+  'cookie.reject': '拒否',
+  'cookie.privacyLink': '詳細を見る',
+  'cookie.privacyNote': 'お客様のプライバシーは私たちにとって重要です。設定でいつでも変更できます。',
 };
 
 export default common;

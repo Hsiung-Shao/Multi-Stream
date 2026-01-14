@@ -119,6 +119,8 @@ const common = {
   'landing.faq.a3': 'All settings (favorites, layouts, theme) are stored in your browser\'s LocalStorage and IndexedDB. We do not upload data to any server.',
   'landing.footer.tutorial': 'Tutorial',
   'landing.footer.faq': 'FAQ',
+  'landing.footer.about': 'About Us',
+  'landing.footer.privacy': 'Privacy Policy',
   // Hotkeys
   'hotkeys.title': 'Keyboard Shortcuts',
   'hotkeys.subtitle': 'Manage your workspace efficiently',
@@ -136,6 +138,14 @@ const common = {
   'hotkeys.window_remove': 'Remove Window',
   'hotkeys.window_fullscreen': 'Window Fullscreen',
   'hotkeys.window_theater': 'Theater Mode (Maximize)',
+
+  // Cookie Consent
+  'cookie.title': 'Cookie Consent',
+  'cookie.description': 'We use cookies and similar technologies to improve your browsing experience, analyze site traffic, and provide personalized content. By clicking "Accept", you consent to our use of these technologies.',
+  'cookie.accept': 'Accept',
+  'cookie.reject': 'Reject',
+  'cookie.privacyLink': 'Learn More',
+  'cookie.privacyNote': 'Your privacy is important to us. You can change your preferences at any time in settings.',
 };
 
 export default common;

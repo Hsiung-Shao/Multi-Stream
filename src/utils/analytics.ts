@@ -1,10 +1,84 @@
 import ReactGA from 'react-ga4';
 import { identityManager } from '../features/analytics/IdentityManager';
+import { userSegmentationManager } from './userSegmentation';
 
 const EVENT_QUEUE: Array<() => void> = [];
 let isInitialized = false;
 let gaMeasurementId: string | null = null;
 let isInitializing = false;
+
+// ===== Cookie 同意相關 =====
+
+const CONSENT_KEY = 'cookie_consent';
+
+/**
+ * 檢查追蹤是否已啟用（使用者已同意）
+ */
+export const isTrackingEnabled = (): boolean => {
+    try {
+        const consent = localStorage.getItem(CONSENT_KEY);
+        return consent === 'accepted';
+    } catch {
+        return false;
+    }
+};
+
+/**
+ * 檢查是否已有同意記錄（無論同意或拒絕）
+ */
+export const hasConsentRecord = (): boolean => {
+    try {
+        const consent = localStorage.getItem(CONSENT_KEY);
+        return consent !== null;
+    } catch {
+        return false;
+    }
+};
+
+/**
+ * 設定追蹤同意狀態
+ */
+export const setTrackingConsent = (accepted: boolean): void => {
+    try {
+        localStorage.setItem(CONSENT_KEY, accepted ? 'accepted' : 'rejected');
+
+        if (accepted) {
+            // 使用者同意，初始化 GA4
+            initGA();
+        } else {
+            // 使用者拒絕，清除 GA cookies
+            disableTracking();
+        }
+    } catch (e) {
+        console.warn('Failed to save consent status:', e);
+    }
+};
+
+/**
+ * 停用追蹤並清除 GA cookies
+ */
+export const disableTracking = (): void => {
+    try {
+        localStorage.setItem(CONSENT_KEY, 'rejected');
+
+        // 清除 GA4 cookies
+        document.cookie.split(';').forEach(cookie => {
+            const name = cookie.split('=')[0].trim();
+            if (name.startsWith('_ga')) {
+                document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+            }
+        });
+
+        // 記錄事件（在停用前）
+        if (isInitialized) {
+            logEvent('Privacy', 'tracking_disabled', 'user_action');
+        }
+    } catch (e) {
+        console.warn('Failed to disable tracking:', e);
+    }
+};
+
+// ===== GA 設定取得 =====
 
 // 立即觸發設定取得 (最優先載入)
 // 這樣當 initGA 被呼叫時，請求可能已經完成或正在進行中，不用等待 React 渲染
@@ -21,15 +95,33 @@ const configPromise = fetch('/api/ga-config')
         return null;
     });
 
+// ===== GA 初始化 =====
+
 /**
  * 初始化 Google Analytics 4
+ * 
+ * 優化後的初始化順序：
+ * 1. 檢查使用者同意狀態
+ * 2. 初始化 IdentityManager（取得 UUID 和 isNew）
+ * 3. 初始化 GA4（帶著 User ID）
+ * 4. 設定使用者屬性
+ * 5. 初始化使用者分群
+ * 6. 處理事件佇列
  */
 export const initGA = async () => {
     // 防止重複初始化
     if (isInitialized || isInitializing) return;
+
+    // 檢查使用者是否已同意追蹤
+    if (!isTrackingEnabled()) {
+        console.info('GA4: Tracking not enabled (no consent)');
+        return;
+    }
+
     isInitializing = true;
 
     try {
+        // 1. 取得 GA Measurement ID
         const fetchedId = await configPromise;
 
         if (!fetchedId) {
@@ -38,32 +130,42 @@ export const initGA = async () => {
             return;
         }
 
+        // 2. 先初始化 IdentityManager（確保 UUID 在 GA4 初始化前就緒）
+        const { uuid, isNew } = await identityManager.init();
+
+        // 3. 初始化 GA4（帶著 User ID）
         gaMeasurementId = fetchedId;
-        ReactGA.initialize(fetchedId);
+        ReactGA.initialize(fetchedId, {
+            gaOptions: {
+                userId: uuid
+            }
+        });
+
         isInitialized = true;
         isInitializing = false;
 
-        // 初始化 IdentityManager 以取得/生成 UUID
-        // 即使 GA 初始化了，我們也需要確保 User ID 正確設定
-        // 這裡不需要 await，讓它非同步執行，以免阻擋事件佇列重播
-        identityManager.init().then(({ uuid, isNew }) => {
-            // 設定 User ID
-            ReactGA.set({ userId: uuid });
-
-            // 設定使用者屬性
-            ReactGA.set({
-                user_properties: {
-                    visitor_type: isNew ? 'new' : 'returning',
-                }
-            });
-
-            // 處理積壓的事件
-            processQueue();
-        }).catch(err => {
-            console.warn('IdentityManager init failed:', err);
-            // 即使 Identity 失敗， GA 還是算初始化完成，可以發送事件
-            processQueue();
+        // 4. 設定基本使用者屬性
+        ReactGA.set({
+            user_properties: {
+                visitor_type: isNew ? 'new' : 'returning',
+            }
         });
+
+        // 5. 初始化使用者分群系統
+        const segment = userSegmentationManager.init();
+
+        // 設定完整的使用者分群屬性
+        ReactGA.set({
+            user_properties: {
+                visitor_type: segment.visitor_type,
+                visit_frequency: segment.visit_frequency,
+                feature_depth: segment.feature_depth,
+                session_length: segment.session_length,
+            }
+        });
+
+        // 6. 處理積壓的事件
+        processQueue();
 
     } catch (e) {
         console.error('GA Init Error:', e);
@@ -79,10 +181,15 @@ const processQueue = () => {
     }
 };
 
+// ===== GA 事件追蹤 =====
+
 /**
  * 記錄頁面瀏覽 (Page View)
  */
 export const logPageView = () => {
+    // 如果追蹤未啟用，不發送事件
+    if (!isTrackingEnabled()) return;
+
     const task = () => {
         if (!gaMeasurementId) return;
         ReactGA.send({
@@ -102,6 +209,9 @@ export const logPageView = () => {
  * 記錄自定義事件 (Custom Event)
  */
 export const logEvent = (category: string, action: string, label?: string, value?: number) => {
+    // 如果追蹤未啟用，不發送事件
+    if (!isTrackingEnabled()) return;
+
     const task = () => {
         if (!gaMeasurementId) return;
         ReactGA.event({
@@ -123,6 +233,9 @@ export const logEvent = (category: string, action: string, label?: string, value
  * 特別為使用者屬性設定
  */
 export const setUserProperties = (properties: any) => {
+    // 如果追蹤未啟用，不發送事件
+    if (!isTrackingEnabled()) return;
+
     const task = () => {
         if (!gaMeasurementId) return;
         ReactGA.set(properties);
@@ -134,5 +247,3 @@ export const setUserProperties = (properties: any) => {
         EVENT_QUEUE.push(task);
     }
 };
-
-

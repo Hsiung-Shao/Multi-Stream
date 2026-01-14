@@ -115,6 +115,19 @@ const common = {
   'landing.faq.a2': '아니요. 이것은 클라이언트 사이드 전용 앱입니다. 등록이 필요 없습니다. Twitch 팔로우 목록을 가져오려는 경우에만 한 번의 인증이 필요합니다(토큰은 로컬에만 저장됨).',
   'landing.faq.q3': '내 설정은 어디에 저장되나요?',
   'landing.faq.a3': '모든 설정(즐겨찾기, 레이아웃, 테마 포함)은 브라우저의 LocalStorage 및 IndexedDB에 저장됩니다. 서버에 데이터를 업로드하지 않습니다.',
+
+  'landing.footer.tutorial': '사용법',
+  'landing.footer.faq': '자주 묻는 질문',
+  'landing.footer.about': '소개',
+  'landing.footer.privacy': '개인정보 보호 정책',
+
+  // Cookie Consent
+  'cookie.title': 'Cookie 사용 동의',
+  'cookie.description': '저희는 Cookie 및 유사한 기술을 사용하여 브라우징 경험을 개선하고, 사이트 트래픽을 분석하며, 개인화된 콘텐츠를 제공합니다. "수락"을 클릭하면 이러한 기술 사용에 동의하는 것입니다.',
+  'cookie.accept': '수락',
+  'cookie.reject': '거부',
+  'cookie.privacyLink': '자세히 보기',
+  'cookie.privacyNote': '귀하의 개인정보는 저희에게 중요합니다. 설정에서 언제든지 변경할 수 있습니다.',
 };
 
 export default common;

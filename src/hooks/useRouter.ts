@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/useUIStore';
+import { logPageView, logEvent, isTrackingEnabled } from '../utils/analytics';
 
 export function useRouter() {
     const page = useUIStore(s => s.page);
     const setPage = useUIStore(s => s.setPage);
+    const isFirstRender = useRef(true);
 
     // 初始化：從 URL 設定 Page 狀態
     useEffect(() => {
@@ -17,10 +19,10 @@ export function useRouter() {
                 setPage('privacy');
             } else if (path === '/canvas') {
                 setPage('canvas');
-            } else if (path === '/fixed') {
-                setPage('fixed');
             } else if (path === '/tools') {
                 setPage('tool');
+            } else if (path === '/instructions') {
+                setPage('instructions');
             } else {
                 setPage('not-found');
             }
@@ -36,6 +38,24 @@ export function useRouter() {
             window.removeEventListener('popstate', handlePopState);
         };
     }, [setPage]);
+
+    // 頁面切換追蹤：當 page 狀態改變時發送 GA4 事件
+    useEffect(() => {
+        // 跳過首次渲染（App.tsx 已經處理）
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        // 不追蹤 404 頁面
+        if (page === 'not-found') return;
+
+        // 發送 pageview 事件
+        if (isTrackingEnabled()) {
+            logPageView();
+            logEvent('Navigation', 'page_view', page);
+        }
+    }, [page]);
 
     // 同步：當 Page 狀態改變時更新 URL
     useEffect(() => {
@@ -58,8 +78,8 @@ export function useRouter() {
             case 'canvas':
                 targetPath = '/canvas';
                 break;
-            case 'fixed':
-                targetPath = '/fixed';
+            case 'instructions':
+                targetPath = '/instructions';
                 break;
             case 'not-found':
                 // 如果是 404，不主動改變 URL，保留使用者輸入的錯誤網址

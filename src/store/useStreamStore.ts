@@ -13,6 +13,8 @@ import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
 import { layoutStorage } from '../utils/layoutStorage';
+import { logEvent, isTrackingEnabled } from '../utils/analytics';
+import { userSegmentationManager, FEATURE_FLAGS } from '../utils/userSegmentation';
 
 interface StreamStoreState {
     streams: StreamData[];
@@ -853,6 +855,11 @@ export const useStreamStore = create<StreamStoreState>()(
             applyLayout: (id) => set(state => {
                 const preset = state.presets.find(p => p.id === id);
                 if (preset) {
+                    // GA4 追蹤：套用預設布局
+                    if (isTrackingEnabled()) {
+                        logEvent('Layout', 'apply_preset', preset.name || id);
+                        userSegmentationManager.recordFeatureUsage(FEATURE_FLAGS.LAYOUT_SWITCH);
+                    }
                     return { canvasItems: preset.items };
                 }
                 return {};
@@ -903,6 +910,12 @@ export const useStreamStore = create<StreamStoreState>()(
             applyTemplateLayout: (templateId) => set(state => {
                 const template = layoutTemplates.find(t => t.id === templateId);
                 if (!template) return {};
+
+                // GA4 追蹤：套用模板布局
+                if (isTrackingEnabled()) {
+                    logEvent('Layout', 'apply_preset', templateId);
+                    userSegmentationManager.recordFeatureUsage(FEATURE_FLAGS.LAYOUT_SWITCH);
+                }
 
                 // 1. Prepare Stream IDs
                 // We need at least template.count IDs. 
@@ -977,6 +990,12 @@ export const useStreamStore = create<StreamStoreState>()(
                 const updatedLayouts = [...state.customLayouts, newLayout];
                 set({ customLayouts: updatedLayouts });
 
+                // GA4 追蹤：儲存自訂布局
+                if (isTrackingEnabled()) {
+                    logEvent('Layout', 'create_custom', name);
+                    userSegmentationManager.recordFeatureUsage(FEATURE_FLAGS.CUSTOM_LAYOUT);
+                }
+
                 // Sync to backup
                 await layoutStorage.saveToBackup(updatedLayouts);
             },
@@ -1034,6 +1053,12 @@ export const useStreamStore = create<StreamStoreState>()(
                 const state = get();
                 const layout = state.customLayouts.find(l => l.id === id);
                 if (!layout) return;
+
+                // GA4 追蹤：套用自訂布局
+                if (isTrackingEnabled()) {
+                    logEvent('Layout', 'apply_custom', layout.name || id);
+                    userSegmentationManager.recordFeatureUsage(FEATURE_FLAGS.LAYOUT_SWITCH);
+                }
 
                 // 1. Harvest current content
                 // Streams: We use state.streams as the source of truth for active streams.

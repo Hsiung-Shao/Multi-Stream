@@ -115,6 +115,19 @@ const common = {
   'landing.faq.a2': '不需要。这是纯前端应用，无需注册即可使用所有功能。若需汇入 Twitch 追随清单，则需进行一次性授权（Token 仅存于本地）。',
   'landing.faq.q3': '我的设置会存去哪里？',
   'landing.faq.a3': '所有设置（包含收藏、布局、主题）皆存储在您浏览器的 LocalStorage 与 IndexedDB 中，我们不会将数据上传至任何服务器。',
+
+  'landing.footer.tutorial': '使用教学',
+  'landing.footer.faq': '常见问题',
+  'landing.footer.about': '关于我们',
+  'landing.footer.privacy': '隐私权政策',
+
+  // Cookie Consent
+  'cookie.title': 'Cookie 使用同意',
+  'cookie.description': '我们使用 Cookie 和类似技术来改善您的浏览体验、分析网站流量，并提供个性化内容。点击「接受」即表示您同意我们使用这些技术。',
+  'cookie.accept': '接受',
+  'cookie.reject': '拒绝',
+  'cookie.privacyLink': '了解更多',
+  'cookie.privacyNote': '您的隐私对我们很重要。您可以随时在设置中变更您的选择。',
 };
 
 export default common;

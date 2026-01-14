@@ -120,6 +120,8 @@ const common = {
   'landing.faq.a3': '所有設定（包含收藏、佈局、主題）皆儲存在您瀏覽器的 LocalStorage 與 IndexedDB 中，我們不會將資料上傳至任何伺服器。',
   'landing.footer.tutorial': '使用教學',
   'landing.footer.faq': '常見問題',
+  'landing.footer.about': '關於我們',
+  'landing.footer.privacy': '隱私權政策',
   // Hotkeys
   'hotkeys.title': '鍵盤快捷鍵',
   'hotkeys.subtitle': '透過鍵盤快速管理您的直播工作區',
@@ -191,6 +193,14 @@ const common = {
   'layout.t_8_grid': '8人 (網格)',
   'layout.t_12_grid': '12人 (網格)',
   'layout.t_16_grid': '16人 (網格)',
+
+  // Cookie Consent
+  'cookie.title': 'Cookie 使用同意',
+  'cookie.description': '我們使用 Cookie 和類似技術來改善您的瀏覽體驗、分析網站流量，並提供個人化內容。點擊「接受」即表示您同意我們使用這些技術。',
+  'cookie.accept': '接受',
+  'cookie.reject': '拒絕',
+  'cookie.privacyLink': '了解更多',
+  'cookie.privacyNote': '您的隱私對我們很重要。您可以隨時在設定中變更您的選擇。',
 };
 
 export default common;

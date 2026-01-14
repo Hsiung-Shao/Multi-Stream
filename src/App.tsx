@@ -15,6 +15,8 @@ import { PerformanceOverlay } from './components/Navigation/PerformanceOverlay';
 import { GlobalLiveStatusChecker } from './features/favorites/components/GlobalLiveStatusChecker';
 import { useHotkeys } from './hooks/useHotkeys';
 import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
+import { useEngagementTracking } from './hooks/useEngagementTracking';
+import { CookieConsent } from './components/CookieConsent';
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
@@ -60,6 +62,7 @@ export default function App() {
   useRouter();
   useAutoRefresh();
   useHotkeys();
+  useEngagementTracking(); // GA4 使用時間追蹤
 
   // YouTube Warning Logic State (Hook) - Remains Global
   const {
@@ -189,6 +192,7 @@ export default function App() {
       <PerformanceOverlay />
       <GlobalLiveStatusChecker />
       <Toaster />
+      <CookieConsent />
     </>
   );
 }
