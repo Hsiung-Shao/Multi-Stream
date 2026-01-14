@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Badge } from '../ui/badge';
-import { ScrollArea } from '../ui/scroll-area';
 import {
     Home,
     LayoutDashboard,
@@ -13,12 +12,13 @@ import {
     MessageSquare,
     Tv,
     LayoutGrid,
-    Command,
     Heart,
     Volume2,
     Github,
     ArrowRight
 } from 'lucide-react';
+
+import { SEO } from '../SEO';
 
 export function InstructionsPage() {
     const { t } = useTranslation('tutorial');
@@ -69,6 +69,11 @@ export function InstructionsPage() {
 
     return (
         <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+            <SEO
+                title="使用教學 - MultiStream Hub | How to Multistream"
+                description="MultiStream Hub 完整功能指南。了解如何新增串流、管理收藏、使用動態島 (Dynamic Island) 與聊天室整合功能。"
+                url="https://multistreaming.org/instructions"
+            />
             {/* Navbar Placeholder / Back Button */}
             <div className="sticky top-0 z-50 p-4 border-b bg-background/80 backdrop-blur-md flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -112,10 +117,10 @@ export function InstructionsPage() {
                         <Card key={idx} className="hover:shadow-lg transition-shadow duration-300 border-opacity-50">
                             <CardHeader>
                                 <div className="mb-4">{feature.icon}</div>
-                                <CardTitle>{t(feature.titleKey)}</CardTitle>
+                                <CardTitle>{t(feature.titleKey as any)}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-muted-foreground">{t(feature.descKey)}</p>
+                                <p className="text-muted-foreground">{t(feature.descKey as any)}</p>
                             </CardContent>
                         </Card>
                     ))}

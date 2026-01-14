@@ -3,6 +3,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { Button } from '../ui/button';
 import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { SEO } from '../SEO';
 
 export function LandingPage() {
     const { t } = useTranslation();
@@ -11,6 +12,12 @@ export function LandingPage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden selection:bg-primary selection:text-primary-foreground">
+            <SEO
+                title="MultiStream Hub - 免費多平台直播觀看工具 | 同時觀看 Twitch & YouTube (Free Multistreaming)"
+                description="免費的多平台直播串流工具。無需註冊、即開即用。支援同時觀看多個 Twitch 和 YouTube 直播 (Watch multiple streams)，提供聊天室整合與多種布局模式。"
+                keywords="MultiStream, multistreaming, free multistream, multi stream twitch, watch multiple streams, 同時觀看, 多平台直播, 免費直播工具"
+                url="https://multistreaming.org/"
+            />
             {/* Header */}
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
