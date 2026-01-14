@@ -130,12 +130,58 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                 <div className="flex-1 overflow-y-auto p-6">
                     <form id="feedback-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
-                        {/* Part 1: Basic Survey */}
+                        {/* Part 1: Core Feedback (Moved to Top) */}
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
-                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>
-                                    {t('part1')}
-                                </span>
+                                {t('coreFeedback')}
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className={labelStyle}>{t('feedbackTypeLabel')}</label>
+                                    <Controller
+                                        name="feedbackType"
+                                        control={control}
+                                        rules={{ required: true }}
+                                        render={({ field }) => (
+                                            <Select value={field.value} onValueChange={field.onChange}>
+                                                <SelectTrigger className={inputStyle}>
+                                                    <SelectValue placeholder={t('required')} />
+                                                </SelectTrigger>
+                                                <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
+                                                    {['bug', 'feature', 'ui', 'other'].map(val => (
+                                                        <SelectItem key={val} value={val} className={theme === 'dark' ? 'text-white' : 'text-black'}>
+                                                            {t(`type.${val}` as any)}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={labelStyle}>{t('contentLabel')}</label>
+                                    <Controller
+                                        name="content"
+                                        control={control}
+                                        rules={{ required: t('required') }}
+                                        render={({ field }) => (
+                                            <Textarea
+                                                {...field}
+                                                placeholder={t('contentPlaceholder')}
+                                                className={`min-h-[120px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
+                                            />
+                                        )}
+                                    />
+                                    {errors.content && <span className="text-red-500 text-xs mt-1">{errors.content.message}</span>}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Part 2: Basic Survey (Optional) */}
+                        <div className={sectionStyle}>
+                            <div className={headerStyle}>
                                 {t('basicSurvey')}
                             </div>
 
@@ -146,11 +192,10 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                     <Controller
                                         name="source"
                                         control={control}
-                                        rules={{ required: true }}
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder={t('required')} />
+                                                    <SelectValue placeholder={t('select')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
                                                     {['discord', 'google', 'friends', 'bahamut', 'instagram', 'threads', 'other'].map(opt => (
@@ -162,7 +207,6 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                             </Select>
                                         )}
                                     />
-                                    {errors.source && <span className="text-red-500 text-xs mt-1">{t('required')}</span>}
                                 </div>
 
                                 {/* Usage Duration */}
@@ -171,11 +215,10 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                     <Controller
                                         name="usageDuration"
                                         control={control}
-                                        rules={{ required: true }}
                                         render={({ field }) => (
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder={t('required')} />
+                                                    <SelectValue placeholder={t('select')} />
                                                 </SelectTrigger>
                                                 <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
                                                     {[
@@ -193,7 +236,6 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                             </Select>
                                         )}
                                     />
-                                    {errors.usageDuration && <span className="text-red-500 text-xs mt-1">{t('required')}</span>}
                                 </div>
 
                                 {/* Usage Time (Checkbox Multi-select) */}
@@ -242,7 +284,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                                         key={star}
                                                         type="button"
                                                         onClick={() => field.onChange(star)}
-                                                        className={`p-1 transition-colors hover:scale-110 ${star <= field.value
+                                                        className={`p-1 transition-colors hover:scale-110 ${star <= (field.value || 0)
                                                             ? 'text-yellow-400'
                                                             : theme === 'dark' ? 'text-gray-600' : 'text-gray-300'
                                                             }`}
@@ -257,64 +299,9 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                             </div>
                         </div>
 
-                        {/* Part 2: Core Feedback */}
+                        {/* Part 3: Promotion (Optional) */}
                         <div className={sectionStyle}>
                             <div className={headerStyle}>
-                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800'}`}>
-                                    {t('part2')}
-                                </span>
-                                {t('coreFeedback')}
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className={labelStyle}>{t('feedbackTypeLabel')}</label>
-                                    <Controller
-                                        name="feedbackType"
-                                        control={control}
-                                        rules={{ required: true }}
-                                        render={({ field }) => (
-                                            <Select value={field.value} onValueChange={field.onChange}>
-                                                <SelectTrigger className={inputStyle}>
-                                                    <SelectValue placeholder={t('required')} />
-                                                </SelectTrigger>
-                                                <SelectContent className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}>
-                                                    {['bug', 'feature', 'ui', 'other'].map(val => (
-                                                        <SelectItem key={val} value={val} className={theme === 'dark' ? 'text-white' : 'text-black'}>
-                                                            {t(`type.${val}` as any)}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        )}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className={labelStyle}>{t('contentLabel')}</label>
-                                    <Controller
-                                        name="content"
-                                        control={control}
-                                        rules={{ required: t('required') }}
-                                        render={({ field }) => (
-                                            <Textarea
-                                                {...field}
-                                                placeholder={t('contentPlaceholder')}
-                                                className={`min-h-[120px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300 text-black'}`}
-                                            />
-                                        )}
-                                    />
-                                    {errors.content && <span className="text-red-500 text-xs mt-1">{errors.content.message}</span>}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Part 3: Promotion */}
-                        <div className={sectionStyle}>
-                            <div className={headerStyle}>
-                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded ${theme === 'dark' ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'}`}>
-                                    {t('part3')}
-                                </span>
                                 {t('promotion')}
                             </div>
 
@@ -323,7 +310,6 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                 <Controller
                                     name="npsScore"
                                     control={control}
-                                    rules={{ required: true }}
                                     render={({ field }) => (
                                         <div className="px-2 pt-2">
                                             <Slider
@@ -341,7 +327,6 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                     <span>{t('npsLow')}</span>
                                     <span>{t('npsHigh')}</span>
                                 </div>
-                                {errors.npsScore && <span className="text-red-500 text-xs mt-1">{t('selectScore')}</span>}
                             </div>
                         </div>
 

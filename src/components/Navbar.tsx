@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import { Search, Heart, Globe, Sun, Moon, LayoutDashboard, Coffee, Plus, Menu } from 'lucide-react';
+import { Search, Heart, Globe, Sun, Moon, Coffee, Plus, Menu, LayoutTemplate, Monitor } from 'lucide-react';
+import { useUIStore } from '../store/useUIStore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -28,10 +29,8 @@ interface NavbarProps {
   onThemeToggle: () => void;
   onShowAbout?: () => void;
   onShowTutorial?: () => void;
-  onShowVersionHistory?: () => void;
   onShowFavorites?: () => void;
   onShowFeedback?: () => void; // Added
-  onTogglePanel?: () => void;
   onAddStream?: (url: string) => void;
   onSearchFocusChange?: (isFocused: boolean) => void;
 }
@@ -53,10 +52,9 @@ export function Navbar({
   onThemeToggle,
   onShowAbout,
   onShowTutorial,
-  onShowVersionHistory,
+
   onShowFavorites,
   onShowFeedback, // Added
-  onTogglePanel,
   onAddStream,
   onSearchFocusChange
 }: NavbarProps) {
@@ -190,7 +188,7 @@ export function Navbar({
   const handleAddToFavorites = async () => {
     const valueToAdd = searchValue.trim();
     if (!valueToAdd) {
-      alert(t('favorites:pasteUrl'));
+      alert(t('favorites:urlRequired'));
       return;
     }
 
@@ -202,7 +200,7 @@ export function Navbar({
       urlToAdd = valueToAdd;
     } else {
       // 如果不是 URL 也不是搜尋結果，提示用戶
-      alert(t('favorites:pasteUrl'));
+      alert(t('favorites:urlRequired'));
       return;
     }
 
@@ -221,7 +219,7 @@ export function Navbar({
       );
 
       if (result.success) {
-        alert(result.message || t('favorites:add'));
+        alert(result.message || t('favorites:addFavorite'));
         setSearchValue('');
         setSearchResults([]);
         setShowResults(false);
@@ -309,15 +307,19 @@ export function Navbar({
 
   // 手機版面的導航連結列表
   const navLinks = [
+    { label: t('navbar:canvas') || '畫布', onClick: () => setPage('canvas') },
+    { label: t('navbar:fixed') || '固定佈局', onClick: () => setPage('fixed') },
     { label: t('navbar:about'), onClick: onShowAbout },
-    { label: t('navbar:tutorial'), onClick: onShowTutorial },
-    { label: t('navbar:versionHistory'), onClick: onShowVersionHistory },
-    { label: t('navbar:feedback'), onClick: onShowFeedback }, // Updated
+    { label: t('navbar:tutorial'), onClick: () => setPage('instructions') },
+    { label: t('navbar:feedback'), onClick: onShowFeedback },
   ];
+
+  /* Navigation Handler */
+  const setPage = useUIStore(s => s.setPage);
 
   return (
     <nav
-      className={`w-full border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-4 md:px-6 py-3`}
+      className={`w-full border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-4 md:px-6 py-3 sticky top-0 z-50`}
       style={{ '--navbar-height': '4rem' } as CSSProperties}
     >
       <div className="flex items-center justify-between gap-4">
@@ -421,8 +423,29 @@ export function Navbar({
                 </span>
               </div>
 
-              {/* Links */}
               <div className="flex items-center gap-4">
+                {/* Main Navigation */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPage('canvas')}
+                  className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                >
+                  <Monitor className="size-4 mr-2" />
+                  {t('navbar:canvas') || '畫布'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPage('fixed')}
+                  className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                >
+                  <LayoutTemplate className="size-4 mr-2" />
+                  {t('navbar:fixed') || '固定佈局'}
+                </Button>
+
+                <div className={`h-4 w-px ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-300'}`} />
+
                 {onShowAbout && (
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -446,7 +469,7 @@ export function Navbar({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={onShowTutorial}
+                        onClick={() => setPage('instructions')}
                         className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
                       >
                         {t('navbar:tutorial')}
@@ -457,23 +480,7 @@ export function Navbar({
                     </TooltipContent>
                   </Tooltip>
                 )}
-                {onShowVersionHistory && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onShowVersionHistory}
-                        className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
-                      >
-                        {t('navbar:versionHistory')}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('navbar:versionHistory')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
+
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -535,7 +542,7 @@ export function Navbar({
                 className={`h-7 px-2 text-xs ${theme === 'dark' ? 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-500/5'}`}
               >
                 <Plus className="size-3 mr-1" />
-                {t('favorites:add')}
+                {t('favorites:addFavorite')}
               </Button>
             </div>
           )}
@@ -645,17 +652,7 @@ export function Navbar({
                 <Plus className="size-3 mr-1" />
                 {t('navbar:addStream')}
               </Button>
-              {/* 控制面板按鈕 */}
-              {onTogglePanel && (
-                <Button
-                  variant="outline"
-                  onClick={onTogglePanel}
-                  size="sm"
-                  className={`bg-transparent px-3 py-1.5 h-auto ${theme === 'dark' ? 'border-gray-600 text-white hover:bg-gray-800 hover:border-gray-600' : 'border-gray-300 text-black hover:bg-gray-100 hover:border-gray-300'}`}
-                >
-                  <LayoutDashboard className="size-4" />
-                </Button>
-              )}
+
             </>
           ) : (
             /* Desktop: 顯示所有按鈕 */
@@ -732,21 +729,6 @@ export function Navbar({
                   <span className="sr-only">{t('navbar:languageSwitch')}</span>
                 </TooltipContent>
               </Tooltip>
-
-              {/* 分隔線 */}
-              <div className={`w-px h-6 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`} />
-
-              {/* 控制面板 */}
-              {onTogglePanel && (
-                <Button
-                  variant="outline"
-                  onClick={onTogglePanel}
-                  className={`bg-transparent ${theme === 'dark' ? 'border-gray-600 text-white hover:bg-gray-800 hover:border-gray-600' : 'border-gray-300 text-black hover:bg-gray-100 hover:border-gray-300'}`}
-                >
-                  <LayoutDashboard className="size-4 mr-2" />
-                  {t('navbar:controlPanel')}
-                </Button>
-              )}
 
               {/* 贊助我 */}
               <Button

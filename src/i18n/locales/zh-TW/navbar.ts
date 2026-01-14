@@ -14,7 +14,10 @@ const navbar = {
   'live': '直播中',
   'viewers': '觀看',
   'twitch': 'Twitch',
+  'twitch': 'Twitch',
   'menu': '選單',
+  'canvas': '畫布',
+  'fixed': '固定佈局',
 };
 
 export default navbar;

@@ -1,4 +1,8 @@
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+import 'fake-indexeddb/auto';
+
+expect.extend(matchers);
 
 // Mock localStorage
 const localStorageMock = (function () {

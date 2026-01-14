@@ -8,7 +8,7 @@ interface ModalState {
     ytRisk: boolean;
 }
 
-export type PageType = 'home' | 'about' | 'privacy' | 'not-found';
+export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'not-found';
 
 interface UIState {
     theme: 'light' | 'dark';
@@ -16,20 +16,35 @@ interface UIState {
     isPanelCollapsed: boolean;
     isSearchFocused: boolean;
     modals: ModalState;
+    favoritesTab: string; // 'favorites' | 'layouts' | 'twitch_import' etc.
     masterVolume: number;
     masterMuted: boolean;
+    showPerformanceOverlay: boolean;
     // Actions
     setTheme: (theme: 'light' | 'dark') => void;
     toggleTheme: () => void;
     setPanelCollapsed: (collapsed: boolean) => void;
     togglePanelCollapsed: () => void;
-    openModal: (name: keyof ModalState) => void;
+    openModal: (name: keyof ModalState, tab?: string) => void;
     closeModal: (name: keyof ModalState) => void;
     toggleModal: (name: keyof ModalState) => void;
+    setFavoritesTab: (tab: string) => void;
     setMasterVolume: (volume: number | ((prev: number) => number)) => void;
     setMasterMuted: (muted: boolean | ((prev: boolean) => boolean)) => void;
     setPage: (page: PageType) => void;
     setSearchFocused: (focused: boolean) => void;
+    togglePerformanceOverlay: () => void;
+    // Window functionality
+    closeWindowMode: 'remove' | 'empty';
+    setCloseWindowMode: (mode: 'remove' | 'empty') => void;
+    // Hotkey & Hover State
+    hoveredWindowId: string | null;
+    setHoveredWindowId: (id: string | null) => void;
+    theaterWindowId: string | null;
+    setTheaterWindowId: (id: string | null) => void;
+    isHotkeyHelpOpen: boolean;
+    toggleHotkeyHelp: () => void;
+    setHotkeyHelpOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -44,8 +59,10 @@ export const useUIStore = create<UIState>((set) => ({
         feedback: false,
         ytRisk: false,
     },
+    favoritesTab: 'favorites',
     masterVolume: 100,
     masterMuted: false,
+    showPerformanceOverlay: false,
 
     setTheme: (theme) => {
         set({ theme });
@@ -70,9 +87,13 @@ export const useUIStore = create<UIState>((set) => ({
     setPanelCollapsed: (collapsed) => set({ isPanelCollapsed: collapsed }),
     togglePanelCollapsed: () => set((state) => ({ isPanelCollapsed: !state.isPanelCollapsed })),
 
-    openModal: (name) => set((state) => ({ modals: { ...state.modals, [name]: true } })),
+    openModal: (name, tab) => set((state) => ({
+        modals: { ...state.modals, [name]: true },
+        favoritesTab: (name === 'favorites' && tab) ? tab : state.favoritesTab
+    })),
     closeModal: (name) => set((state) => ({ modals: { ...state.modals, [name]: false } })),
     toggleModal: (name) => set((state) => ({ modals: { ...state.modals, [name]: !state.modals[name] } })),
+    setFavoritesTab: (tab) => set({ favoritesTab: tab }),
 
     setMasterVolume: (volume) => set((state) => {
         const newVolume = typeof volume === 'function' ? volume(state.masterVolume) : volume;
@@ -102,6 +123,28 @@ export const useUIStore = create<UIState>((set) => ({
     }),
     setPage: (page) => set({ page }),
     setSearchFocused: (focused) => set({ isSearchFocused: focused }),
+    togglePerformanceOverlay: () => set((state) => ({ showPerformanceOverlay: !state.showPerformanceOverlay })),
+
+    // Window functionality
+    closeWindowMode: 'remove',
+    setCloseWindowMode: (mode) => {
+        set({ closeWindowMode: mode });
+        try {
+            const saved = localStorage.getItem('userSettings');
+            const settings = saved ? JSON.parse(saved) : {};
+            settings.closeWindowMode = mode;
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+        } catch (e) { }
+    },
+
+    // Hotkey & Hover State
+    hoveredWindowId: null,
+    setHoveredWindowId: (id) => set({ hoveredWindowId: id }),
+    theaterWindowId: null,
+    setTheaterWindowId: (id) => set({ theaterWindowId: id }),
+    isHotkeyHelpOpen: false,
+    toggleHotkeyHelp: () => set((state) => ({ isHotkeyHelpOpen: !state.isHotkeyHelpOpen })),
+    setHotkeyHelpOpen: (open) => set({ isHotkeyHelpOpen: open }),
 }));
 
 // Initialize state from localStorage
@@ -114,6 +157,9 @@ try {
         }
         if (settings.theme) {
             useUIStore.setState({ theme: settings.theme });
+        }
+        if (settings.closeWindowMode) {
+            useUIStore.setState({ closeWindowMode: settings.closeWindowMode });
         }
     }
 } catch (e) { }

@@ -16,6 +16,11 @@ export class TagsService {
         return this.repo.getList();
     }
 
+    saveTags(list: Tag[]): void {
+        this.repo.saveList(list);
+        this.emitChangeEvent();
+    }
+
     addTag(name: string, color: string): Tag {
         const newTag: Tag = {
             id: `tag_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,

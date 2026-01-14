@@ -1,16 +1,16 @@
 export interface FeedbackFormData {
     // Part 1: Basic Survey
-    source: string;
-    usageTime: string[]; // Checkbox (Morning, Afternoon, Evening, LateNight)
-    usageDuration: string; // Select
-    rating: number; // 1-5
+    source?: string;
+    usageTime?: string[]; // Checkbox (Morning, Afternoon, Evening, LateNight)
+    usageDuration?: string; // Select
+    rating?: number; // 1-5
 
     // Part 2: Core Feedback
     feedbackType: 'bug' | 'feature' | 'ui' | 'other';
     content: string;
 
     // Part 3: Promotion
-    npsScore: number; // 0-10
+    npsScore?: number; // 0-10
 
     // System Info (Auto captured)
     userAgent?: string;

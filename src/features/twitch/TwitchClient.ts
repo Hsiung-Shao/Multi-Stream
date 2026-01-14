@@ -53,7 +53,15 @@ export class TwitchClient implements TwitchClientContract {
 
         // Execute Request
         try {
-            const res = await fetch(url, { method: 'GET', headers });
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+            const res = await fetch(url, {
+                method: 'GET',
+                headers,
+                signal: controller.signal
+            });
+            clearTimeout(id);
 
             if (debug) {
                 console.log(`[TwitchClient] Response ${res.status} ${res.statusText}`);
@@ -76,7 +84,7 @@ export class TwitchClient implements TwitchClientContract {
                     if (debug) console.log(`[TwitchClient] Error Body (Peek):`, errBody.slice(0, 500));
                     const safeRes = new Response(errBody, { status: res.status, statusText: res.statusText, headers: res.headers });
                     Object.defineProperty(safeRes, 'url', { value: res.url });
-                    return await this.handleError(safeRes, endpoint, params, headers, config);
+                    return await this.handleError(safeRes, endpoint, params, headers);
                 }
             }
 
@@ -88,6 +96,11 @@ export class TwitchClient implements TwitchClientContract {
             }
             if ((error as Error).message && (error as Error).message.includes('API')) throw error;
             if ((error as Error).message && (error as Error).message.includes('HTML')) throw error;
+
+            // Check for AbortError (Timeout)
+            if ((error as Error).name === 'AbortError') {
+                throw new Error('Twitch API 請求逾時 (10s)，請檢查網路狀況');
+            }
 
             if ((error as Error).name === 'TypeError' && (error as Error).message.includes('fetch')) {
                 throw new Error('無法連接到 Twitch API，請檢查網路連線');
@@ -120,8 +133,7 @@ export class TwitchClient implements TwitchClientContract {
         res: Response,
         endpoint: string,
         params: any,
-        originalHeaders: any,
-        config: TwitchApiConfig
+        originalHeaders: any
     ): Promise<any> {
         // 401 Re-auth
         if (res.status === 401) {
