@@ -85,10 +85,11 @@ export default {
   'settings.theme_desc': '切換應用程式的亮色或暗色外觀',
   'settings.language_desc': '選擇您偏好的介面語言',
   'settings.about_desc': 'Multi-Stream 是一個開源的多串流觀看平台，致力於提供最佳的觀看體驗。',
-  'settings.sponsor': '贊助',
+  'settings.sponsor': '贊助作者',
+  'settings.feedback': '意見回饋',
+  'group.ungrouped': '未分類',
   'settings.close_window_mode': '視窗關閉模式',
   'settings.close_window_mode_desc': '選擇當關閉視窗時的行為',
-  'settings.feedback': '意見回饋',
   'settings.mode_remove': '移除視窗 (預設)',
   'settings.mode_empty': '保留空白視窗',
 

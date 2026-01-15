@@ -70,6 +70,12 @@ export default {
   'settings.language_desc': '선호하는 인터페이스 언어 선택',
   'settings.about_desc': 'Multi-Stream은 최고의 시청 경험을 제공하기 위해 노력하는 오픈 소스 멀티 스트림 시청 플랫폼입니다.',
   'settings.sponsor': '후원',
+  'settings.feedback': '피드백',
+  'settings.close_window_mode': '창 닫기 모드',
+  'settings.close_window_mode_desc': '창을 닫을 때의 동작 선택',
+  'settings.mode_remove': '창 제거 (기본값)',
+  'settings.mode_empty': '빈 창 유지',
+  'group.ungrouped': '미분류',
 
   // Placeholders
   'placeholder.search_url': '이름 또는 URL 검색...',
@@ -114,5 +120,6 @@ export default {
   'layout_manager.confirm_update': '현재 레이아웃으로 "{{name}}"을(를) 덮어쓰시겠습니까?',
   'layout_manager.no_layouts': '사용자 지정 레이아웃 없음',
   'layout_manager.no_layouts_desc': '창 위치를 조정한 후 템플릿으로 저장할 수 있습니다.',
+  'sidebar.version_history': '업데이트 기록',
 };
 

@@ -70,6 +70,12 @@ export default {
   'settings.language_desc': '选择您偏好的界面语言',
   'settings.about_desc': 'Multi-Stream 是一个开源的多流观看平台，致力于提供最佳的观看体验。',
   'settings.sponsor': '赞助',
+  'settings.feedback': '意见反馈',
+  'settings.close_window_mode': '视窗关闭模式',
+  'settings.close_window_mode_desc': '选择当关闭视窗时的行为',
+  'settings.mode_remove': '移除视窗 (默认)',
+  'settings.mode_empty': '保留空白视窗',
+  'group.ungrouped': '未分类',
 
   // Placeholders
   'placeholder.search_url': '搜索名称或网址...',
@@ -114,5 +120,6 @@ export default {
   'layout_manager.confirm_update': '确定要使用目前的画面配置来覆写“{{name}}”吗？',
   'layout_manager.no_layouts': '尚无自定布局',
   'layout_manager.no_layouts_desc': '调整视窗位置后，可将其存储为模板。',
+  'sidebar.version_history': '版本信息',
 };
 

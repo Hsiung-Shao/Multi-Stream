@@ -1,13 +1,30 @@
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { Button } from '../ui/button';
-import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop } from 'lucide-react';
+import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { SEO } from '../SEO';
 
 export function LandingPage() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const setPage = useUIStore(s => s.setPage);
+    const theme = useUIStore(s => s.theme);
+    const toggleTheme = useUIStore(s => s.toggleTheme);
+
+    const languages = [
+        { value: 'zh-TW', label: '繁體中文' },
+        { value: 'zh-CN', label: '簡體中文' },
+        { value: 'en', label: 'English' },
+        { value: 'ja', label: '日本語' },
+        { value: 'ko', label: '한국어' },
+    ];
 
 
     return (
@@ -36,6 +53,14 @@ export function LandingPage() {
                         >
                             <Github className="w-5 h-5" />
                         </a>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleTheme}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </Button>
                         <Button
                             onClick={() => setPage('canvas')}
                             className="font-semibold"
@@ -340,6 +365,25 @@ export function LandingPage() {
                         <p className="text-xs opacity-50 max-w-2xl mx-auto">
                             {t('landing.footer.disclaimer')}
                         </p>
+                    </div>
+
+                    {/* Language Switcher */}
+                    <div className="flex justify-center mt-4">
+                        <Select value={i18n.language} onValueChange={(value: string) => i18n.changeLanguage(value)}>
+                            <SelectTrigger className="w-[140px] h-9 bg-background/50 border-white/10">
+                                <div className="flex items-center gap-2">
+                                    <Globe className="w-4 h-4" />
+                                    <SelectValue />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {languages.map((lang) => (
+                                    <SelectItem key={lang.value} value={lang.value}>
+                                        {lang.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </footer>

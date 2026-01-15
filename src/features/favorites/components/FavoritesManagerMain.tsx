@@ -428,7 +428,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                             <SettingsSection
                                 theme={theme}
                                 currentTheme={theme}
-                                onThemeChange={(val) => { console.log('Theme changed to', val); }}
+                                onThemeChange={(val) => {
+                                    useUIStore.getState().setTheme(val as 'light' | 'dark');
+                                }}
                             />
                         )}
 

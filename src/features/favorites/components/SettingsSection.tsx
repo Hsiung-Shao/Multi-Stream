@@ -177,7 +177,7 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             <span className="text-sm font-medium">GitHub</span>
                         </a>
                         <a
-                            href="https://discord.gg/3Uu6dZbtKd"
+                            href="https://discord.gg/KSGpfyfM3T"
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'

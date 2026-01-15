@@ -70,6 +70,12 @@ export default {
   'settings.language_desc': 'インターフェースの言語を選択してください',
   'settings.about_desc': 'Multi-Streamは、最高の視聴体験を提供することを目的としたオープンソースのマルチストリーム視聴プラットフォームです。',
   'settings.sponsor': 'スポンサー',
+  'settings.feedback': 'フィードバック',
+  'settings.close_window_mode': 'ウィンドウ終了モード',
+  'settings.close_window_mode_desc': 'ウィンドウを閉じる際の動作を選択',
+  'settings.mode_remove': 'ウィンドウを削除 (デフォルト)',
+  'settings.mode_empty': '空のウィンドウを残す',
+  'group.ungrouped': '未分類',
 
   // Placeholders
   'placeholder.search_url': '名前またはURLを検索...',
@@ -114,5 +120,6 @@ export default {
   'layout_manager.confirm_update': '「{{name}}」を現在のレイアウトで上書きしてもよろしいですか？',
   'layout_manager.no_layouts': 'カスタムレイアウトがありません',
   'layout_manager.no_layouts_desc': 'ウィンドウの位置を調整して、テンプレートとして保存できます。',
+  'sidebar.version_history': '更新履歴',
 };
 

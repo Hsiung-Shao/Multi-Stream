@@ -82,6 +82,8 @@ export default {
   'settings.language_desc': 'Select your preferred interface language',
   'settings.about_desc': 'Multi-Stream is an open-source multi-stream viewing platform dedicated to providing the best viewing experience.',
   'settings.sponsor': 'Sponsor',
+  'settings.feedback': 'Feedback',
+  'group.ungrouped': 'Ungrouped',
   'settings.close_window_mode': 'Close Window Mode',
   'settings.close_window_mode_desc': 'Choose behavior when closing windows',
   'settings.mode_remove': 'Remove Window (Default)',
