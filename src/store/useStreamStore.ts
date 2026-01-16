@@ -144,7 +144,7 @@ export const useStreamStore = create<StreamStoreState>()(
                     }
 
                     const streamData = parseStreamUrl(finalUrl);
-                    console.log('[addStream] parseStreamUrl result:', { finalUrl, streamData });
+
                     if (!streamData || !streamData.platform) {
                         return { success: false, message: streamData?.error || '無法解析網址' };
                     }

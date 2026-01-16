@@ -76,7 +76,7 @@ export const NewCanvasPage = () => {
         // 3. If it's a stream window, we MUST remove the actual stream data
         // This ensures it disappears from Media Control Panel and stops playing.
         if (item && item.type === 'stream' && item.contentId) {
-            console.log('[NewCanvasPage] Removing stream data for closed window:', item.contentId);
+
             state.removeStream(item.contentId);
         }
     }, [removeCanvasItem]);
@@ -86,7 +86,7 @@ export const NewCanvasPage = () => {
         // Callback to update window content (passed to EmptyWindow)
         const handleUpdateWindow = (id: string, updates: any) => {
             // DEBUG: trace canvas item update flow
-            console.log('[NewCanvasPage] handleUpdateWindow:', { id, updates });
+
             // We need a way to update the specific canvas item by its ID (window.id is the item.i)
             // useStreamStore's updateCanvasItem takes (itemId, updates)
             useStreamStore.getState().updateCanvasItem(id, updates);
@@ -104,12 +104,7 @@ export const NewCanvasPage = () => {
         }
 
         const stream = streams.find(s => s.id === window.contentId);
-        console.log('[NewCanvasPage] renderContent stream lookup:', {
-            windowId: window.id,
-            contentId: window.contentId,
-            streamFound: !!stream,
-            allStreamIds: streams.map(s => s.id)
-        });
+
         if (!stream) {
             // If stream not found but we have an ID, maybe render empty or error
             // Fallback to empty for now but keep ID just in case? 

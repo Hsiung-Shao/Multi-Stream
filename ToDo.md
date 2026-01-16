@@ -5,12 +5,6 @@
 代理server 啟動指令: wrangler pages dev functions --port 8788
 Shadcn UI
 
-## 需要優化的內容
-
-- Navbar 的 RWD 需要優化
-- 手機版面優化
-- 任意解析度版面優化
-
 ## 待新增功能
 
 ### [] 1. Twitch 分類搜尋

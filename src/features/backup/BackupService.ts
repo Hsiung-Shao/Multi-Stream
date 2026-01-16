@@ -309,7 +309,7 @@ export class BackupService {
             // 4. Other Settings: Local Wins (Do not overwrite)
 
             if (mergedCount > 0) {
-                console.log(`[BackupService] Merged ${mergedCount} missing items from backup.`);
+
                 return { success: true, restored: true, message: `Merged ${mergedCount} items from backup` };
             } else {
                 return { success: true, restored: false, message: 'Local data is up to date', skipped: true };

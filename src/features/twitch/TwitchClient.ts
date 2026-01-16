@@ -45,11 +45,7 @@ export class TwitchClient implements TwitchClientContract {
         }
 
         // Debug Request
-        if (debug) {
-            console.log(`[TwitchClient] GET ${url}`, {
-                headers: { ...headers, Authorization: headers.Authorization ? 'Bearer ******' : undefined }
-            });
-        }
+
 
         // Execute Request
         try {
@@ -63,9 +59,7 @@ export class TwitchClient implements TwitchClientContract {
             });
             clearTimeout(id);
 
-            if (debug) {
-                console.log(`[TwitchClient] Response ${res.status} ${res.statusText}`);
-            }
+
 
             // HTML / SPA Fallback Detection (Hard Check)
             const contentType = res.headers.get('content-type');
@@ -76,12 +70,12 @@ export class TwitchClient implements TwitchClientContract {
                 if (errBody.trim().startsWith('<') || (contentType && contentType.includes('text/html'))) {
                     const msg = `[TwitchClient] API Error: Received HTML instead of JSON. (Status: ${res.status}). Likely Network Error or SPA Fallback.`;
                     console.error(msg);
-                    if (debug) console.log('Body Peek:', errBody.slice(0, 80));
+
                     throw new Error(msg);
                 }
 
                 if (!res.ok) {
-                    if (debug) console.log(`[TwitchClient] Error Body (Peek):`, errBody.slice(0, 500));
+
                     const safeRes = new Response(errBody, { status: res.status, statusText: res.statusText, headers: res.headers });
                     Object.defineProperty(safeRes, 'url', { value: res.url });
                     return await this.handleError(safeRes, endpoint, params, headers);
@@ -143,8 +137,8 @@ export class TwitchClient implements TwitchClientContract {
                 originalHeaders['Authorization'] = `Bearer ${newToken}`;
 
                 // Retry Once
-                const win = (typeof window !== 'undefined' ? window : {}) as any;
-                if (win.__MS_DEBUG_TWITCH__) console.log('[TwitchClient] Retrying after 401...');
+
+
 
                 const baseUrl = 'https://api.twitch.tv/helix';
                 const retryUrl = this.buildUrl(baseUrl, endpoint, params);

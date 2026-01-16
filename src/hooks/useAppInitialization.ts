@@ -25,7 +25,7 @@ export function useAppInitialization() {
             // 這是為了防止 localStorage 數據意外丟失
             backupService.autoRestore().then(result => {
                 if (result.restored) {
-                    console.log('[App] Data restored/merged from backup:', result.message);
+
                     // 如果有數據變更，可能需要刷新 UI，這裡發送刷新事件
                     window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
                     window.dispatchEvent(new CustomEvent('favoritesUpdated', { detail: { action: 'restore' } }));
