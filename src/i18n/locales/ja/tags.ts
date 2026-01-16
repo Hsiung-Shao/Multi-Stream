@@ -3,12 +3,16 @@ const tags = {
   'searchTags': 'タグを検索...',
   'noTagsFound': 'タグが見つかりません',
   'addTag': 'タグを追加',
-  'selectedTags': '{count} 個のタグを選択済み',
+  'selectedTags': '{count} 個のタグを選択中',
   'all': 'すべて',
   'clearAll': 'すべてクリア',
-  'filterTitle': 'タグを選択',
-  'isLive': 'ライブ中',
-  'noTagsSelected': 'タグが選択されていません',
+  'filterTitle': 'タグでフィルタ',
+  'tagName': 'タグ名',
+  'color': 'カラー',
+  'tagList': 'タグリスト',
+  'isLive': '配信中',
+  'noTagsSelected': 'タグ未選択',
+  'editTagMode': '編集モード (上の表を変更して更新をクリック)',
 };
 
 export default tags;

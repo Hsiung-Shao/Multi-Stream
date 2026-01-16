@@ -42,6 +42,23 @@ const welcome = {
   'authorMessageP2': 'この問題を解決するために、このツールを開発しました。また、今後は Twitch 機能の統合も試みる予定で、その際は Twitch でフォローしているチャンネルを直接インポートできるようになり、さらに便利になります～',
   'authorMessageP3': 'ただし、小さな問題について説明させてください：現在 YouTube については、異なるチャンネルの動画にリダイレクトされる可能性があり、ライブコンテンツを直接正確に特定することはできません。この部分は最善を尽くして最適化しましたが、現時点では、ライブチャンネルを手動で追加していただく必要があります。ご理解いただければ幸いです～',
   'authorMessageP4': 'このツールが便利で実用的だと思われた方は、ぜひ周りの友人にもシェアして、より多くの人がこの効率を向上させる小さなヘルパーを使えるようにしてください～',
+  'favoritesWidget': {
+    'emptyDesc': 'グループを作成して、お気に入りのストリーマーをすばやく読み込みます。',
+  },
+  'activeStreams': {
+    'title': '配信中のお気に入り',
+    'empty': '現在、お気に入りのチャンネルは配信していません。',
+  },
+  // Dashboard
+  'quickAdd.title': 'クイック追加',
+  'quickAdd.placeholder': 'TwitchまたはYouTubeのリンクを貼り付け...',
+  'favorites.title': 'お気に入り',
+  'favorites.emptyTitle': 'お気に入りやグループがありません',
+  'favorites.emptyDesc': 'グループを作成して、お気に入りの配信者を素早く読み込みましょう。',
+  'activeStreams.title': '配信中のお気に入り',
+  'activeStreams.liveChannels': '配信中のチャンネル',
+  'activeStreams.empty': '現在配信中のお気に入りチャンネルはありません。',
+  'import.title': 'インポートツール',
 };
 
 export default welcome;

@@ -7,8 +7,12 @@ const tags = {
   'all': '所有',
   'clearAll': '清除全部',
   'filterTitle': '选择标签',
+  'tagName': '标签名称',
+  'color': '颜色',
+  'tagList': '标签列表',
   'isLive': '直播中',
   'noTagsSelected': '未选择标签',
+  'editTagMode': '正在编辑标签 (修改上方表格并点击更新)',
 };
 
 export default tags;

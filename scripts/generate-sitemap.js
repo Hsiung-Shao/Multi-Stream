@@ -8,8 +8,11 @@ const today = new Date().toISOString().split('T')[0];
 // 定義網站的所有路由
 const urls = [
   { url: '/', changefreq: 'daily', priority: 1.0, lastmod: today },
-  { url: '/about', changefreq: 'monthly', priority: 0.8, lastmod: today },
-  { url: '/privacy', changefreq: 'monthly', priority: 0.8, lastmod: today },
+  { url: '/canvas', changefreq: 'weekly', priority: 0.9, lastmod: today },
+  { url: '/instructions', changefreq: 'monthly', priority: 0.8, lastmod: today },
+  { url: '/about', changefreq: 'monthly', priority: 0.7, lastmod: today },
+  { url: '/privacy', changefreq: 'monthly', priority: 0.6, lastmod: today },
+  { url: '/faq', changefreq: 'monthly', priority: 0.6, lastmod: today },
 ];
 
 // 網站主機名

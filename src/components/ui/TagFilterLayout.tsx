@@ -12,7 +12,6 @@ interface TagFilterLayoutProps {
     selectedTags: string[];
     onToggleTag: (tagId: string) => void;
     onClear: () => void;
-    theme: 'light' | 'dark';
     maxVisibleTags?: number;
 }
 
@@ -21,7 +20,6 @@ export function TagFilterLayout({
     selectedTags,
     onToggleTag,
     onClear,
-    theme,
     maxVisibleTags = 5
 }: TagFilterLayoutProps) {
     const [open, setOpen] = useState(false);
@@ -78,7 +76,7 @@ export function TagFilterLayout({
                         <Button
                             variant="outline"
                             size="sm"
-                            className={`flex-shrink-0 h-auto px-2 py-1 ml-auto ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300'}`}
+                            className="flex-shrink-0 h-auto px-2 py-1 ml-auto border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-300 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:border-gray-700"
                         >
                             <span className="text-xs mr-1">{t('all')}</span>
                             <ChevronDown className="size-3" />
@@ -86,12 +84,12 @@ export function TagFilterLayout({
                     </PopoverTrigger>
                     {/* Popover Content: 限制寬度並使用 Flex Wrap */}
                     <PopoverContent
-                        className={`p-4 w-[440px] max-w-[90vw] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-300'}`}
+                        className="p-4 w-[440px] max-w-[90vw] bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700"
                         align="end"
                     >
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     {t('filterTitle')}
                                 </span>
                                 {selectedTags.length > 0 && (
@@ -125,7 +123,7 @@ export function TagFilterLayout({
                                     onClick={onClear}
                                     size="sm"
                                     disabled={selectedTags.length === 0}
-                                    className={`rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-none disabled:opacity-50 ${theme === 'dark' ? 'disabled:bg-gray-700 disabled:text-gray-400' : 'disabled:bg-gray-200 disabled:text-gray-400'}`}
+                                    className="rounded-full bg-purple-600 hover:bg-purple-700 text-white shadow-none disabled:opacity-50 disabled:bg-gray-200 disabled:text-gray-400 dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
                                 >
                                     {t('clearAll')}
                                 </Button>

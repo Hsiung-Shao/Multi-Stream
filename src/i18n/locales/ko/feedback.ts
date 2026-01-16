@@ -23,6 +23,7 @@ const feedback = {
   'successMessage': '소중한 의견을 접수했습니다. 지속적으로 개선하겠습니다.',
   'error': '전송 실패. 나중에 다시 시도해 주세요.',
   'required': '필수 항목입니다',
+  'select': '선택',
   'selectScore': '점수를 선택하세요',
   'source.discord': 'Discord 커뮤니티',
   'source.google': 'Google 검색',

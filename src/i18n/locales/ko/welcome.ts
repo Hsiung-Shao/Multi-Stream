@@ -42,6 +42,23 @@ const welcome = {
   'authorMessageP2': '이 문제를 해결하기 위해 이 도구를 특별히 만들었습니다. 또한 향후 Twitch 기능 통합도 시도할 예정이며, 그때는 Twitch에서 팔로우하는 채널을 직접 가져올 수 있어 더욱 편리해질 것입니다～',
   'authorMessageP3': '다만 작은 문제에 대해 설명드리겠습니다：현재 YouTube의 경우 다른 채널의 동영상으로 리디렉션될 수 있으며 라이브 콘텐츠를 직접 정확하게 찾을 수 없습니다. 이 부분은 최선을 다해 최적화했지만, 현재로서는 라이브 채널을 수동으로 추가해 주셔야 합니다. 양해 부탁드립니다～',
   'authorMessageP4': '이 도구가 편리하고 실용적이라고 생각하시면 주변 친구들과 공유하여 더 많은 사람들이 이 효율 향상 도우미를 사용할 수 있도록 해주세요～',
+  'favoritesWidget': {
+    'emptyDesc': '그룹을 생성하여 좋아하는 스트리머를 빠르게 로드하세요.',
+  },
+  'activeStreams': {
+    'title': '라이브 즐겨찾기',
+    'empty': '현재 방송 중인 즐겨찾기 채널이 없습니다.',
+  },
+  // Dashboard
+  'quickAdd.title': '빠른 채널 추가',
+  'quickAdd.placeholder': 'Twitch 또는 YouTube 링크 붙여넣기...',
+  'favorites.title': '즐겨찾기',
+  'favorites.emptyTitle': '즐겨찾기 또는 그룹 없음',
+  'favorites.emptyDesc': '그룹을 생성하여 즐겨찾는 스트리머를 빠르게 불러오세요.',
+  'activeStreams.title': '방송 중인 즐겨찾기',
+  'activeStreams.liveChannels': '방송 중인 채널',
+  'activeStreams.empty': '현재 방송 중인 즐겨찾기 채널이 없습니다.',
+  'import.title': '가져오기 도구',
 };
 
 export default welcome;

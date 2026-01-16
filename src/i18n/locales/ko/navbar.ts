@@ -14,6 +14,9 @@ const navbar = {
   'live': '라이브',
   'viewers': '시청자',
   'twitch': 'Twitch',
+  'menu': '메뉴',
+  'canvas': '캔버스',
+  'fixed': '고정 레이아웃',
 };
 
 export default navbar;

@@ -1,4 +1,6 @@
 // 串流相關工具函數
+import i18n from '../i18n/i18n';
+
 
 export interface StreamData {
   id: number;
@@ -9,10 +11,10 @@ export interface StreamData {
   volume: number;
   chatVisible: boolean;
   isMuted?: boolean;
-  name?: string | null;
   displayName?: string | null;
   _reloadTrigger?: number; // 用於強制重新加載播放器
   _reloadKey?: number; // 用於強制重新渲染組件
+  _restoreMuteState?: boolean; // 用於在總靜音解除時恢復個別靜音狀態
 }
 
 export interface UrlValidation {
@@ -24,7 +26,7 @@ export interface UrlValidation {
 // 驗證 URL
 export function validateUrl(url: string): UrlValidation {
   if (!url || typeof url !== 'string') {
-    return { valid: false, error: 'URL 不能為空' };
+    return { valid: false, error: i18n.t('stream:url_empty') };
   }
 
   // 先檢查是否包含支持的平台域名（更寬鬆的檢查）
@@ -32,7 +34,7 @@ export function validateUrl(url: string): UrlValidation {
   const hasYouTube = url.includes('youtube.com') || url.includes('youtu.be');
 
   if (!hasTwitch && !hasYouTube) {
-    return { valid: false, error: '不支援的平台，目前支援 Twitch、YouTube' };
+    return { valid: false, error: i18n.t('stream:unsupported_platform') };
   }
 
   // 嘗試解析 URL
@@ -48,10 +50,10 @@ export function validateUrl(url: string): UrlValidation {
       try {
         urlObj = new URL('https://' + url.replace(/^https?:\/\//, ''));
       } catch (e2) {
-        return { valid: false, error: '無效的 URL 格式' };
+        return { valid: false, error: i18n.t('stream:url_invalid_format') };
       }
     } else {
-      return { valid: false, error: '無效的 URL 格式' };
+      return { valid: false, error: i18n.t('stream:url_invalid_format') };
     }
   }
 
@@ -108,7 +110,7 @@ export function parseStreamUrl(url: string): {
       platform: null,
       channelId: '',
       videoId: '',
-      error: urlValidation.error || '無效的 URL'
+      error: urlValidation.error || i18n.t('stream:url_invalid_format')
     };
   }
 
@@ -125,7 +127,7 @@ export function parseStreamUrl(url: string): {
         platform: null,
         channelId: '',
         videoId: '',
-        error: '無法解析 Twitch 網址'
+        error: i18n.t('stream:twitch_parse_error')
       };
     }
     channelId = match[1];
@@ -135,7 +137,7 @@ export function parseStreamUrl(url: string): {
         platform: null,
         channelId: '',
         videoId: '',
-        error: '無效的 Twitch 頻道 ID'
+        error: i18n.t('stream:twitch_id_invalid')
       };
     }
     platform = 'twitch';
@@ -157,7 +159,7 @@ export function parseStreamUrl(url: string): {
         platform: null,
         channelId: '',
         videoId: '',
-        error: '請使用 YouTube 直播影片的完整網址（例如：https://www.youtube.com/watch?v=VIDEO_ID）\n\n頻道 /live 網址需要先檢查直播狀態，請從收藏功能中使用。'
+        error: i18n.t('stream:youtube_url_guide')
       };
     }
 
@@ -166,7 +168,7 @@ export function parseStreamUrl(url: string): {
         platform: null,
         channelId: '',
         videoId: '',
-        error: '無法解析 YouTube 網址，請確認網址格式正確\n\n支援的格式：\n- https://www.youtube.com/watch?v=VIDEO_ID\n- https://youtu.be/VIDEO_ID\n- https://www.youtube.com/live/VIDEO_ID'
+        error: i18n.t('stream:youtube_parse_error')
       };
     }
 
@@ -176,7 +178,7 @@ export function parseStreamUrl(url: string): {
         platform: null,
         channelId: '',
         videoId: '',
-        error: `無效的 YouTube 視頻 ID: ${videoId}`
+        error: i18n.t('stream:youtube_video_id_invalid', { videoId })
       };
     }
     platform = 'youtube';
@@ -185,7 +187,7 @@ export function parseStreamUrl(url: string): {
       platform: null,
       channelId: '',
       videoId: '',
-      error: '不支援的平台，目前支援 Twitch、YouTube'
+      error: i18n.t('stream:unsupported_platform')
     };
   }
 

@@ -23,6 +23,7 @@ const feedback = {
   'successMessage': 'We have received your valuable feedback and will continue to improve.',
   'error': 'Failed to submit feedback, please try again later.',
   'required': 'This field is required',
+  'select': 'Select',
   'selectScore': 'Please select a score',
   'source.discord': 'Discord Community',
   'source.google': 'Google Search',

@@ -20,6 +20,14 @@ const welcome = {
   'quickStart': 'Quick Start',
   'step1Title': 'Add Stream',
   'step1Desc': 'Paste a Twitch or YouTube stream URL in the input box at the top of the screen, then click "Add Stream" to watch',
+  'favoritesWidget': {
+    'emptyDesc': 'Create groups to quickly load your favorite streamers.',
+  },
+  'activeStreams': {
+    'title': 'Live Favorites',
+    'liveChannels': 'Live Channels',
+    'empty': 'No favorite channels are currently live.',
+  },
   'step2Title': 'Adjust Layout',
   'step2Desc': 'Select your preferred display mode in the "Layout Control" area of the control panel, supporting single, split, grid, etc.',
   'step3Title': 'Favorites',
@@ -42,6 +50,16 @@ const welcome = {
   'authorMessageP2': 'To solve this problem, I created this tool specifically. Moreover, I will try to integrate Twitch features in the future, so everyone can directly import the channels they follow on Twitch, which will be much more convenient～',
   'authorMessageP3': 'However, I need to explain a small issue: Currently on YouTube, it may still redirect to videos from different channels, and we cannot directly and precisely locate live content. I have done my best to optimize this part, but for now, I can only ask everyone to manually add live channels. I hope you understand～',
   'authorMessageP4': 'If you find this tool handy and useful, don\'t forget to share it with your friends so more people can use this efficiency-boosting helper～',
+  // Dashboard
+  'quickAdd.title': 'Quick Add Stream',
+  'quickAdd.placeholder': 'Paste Twitch or YouTube URL...',
+  'favorites.title': 'Favorites',
+  'favorites.emptyTitle': 'No Favorites or Groups',
+  'favorites.emptyDesc': 'Create groups to quickly load your favorite streamers.',
+  'activeStreams.title': 'Live Favorites',
+  'activeStreams.liveChannels': 'Live Channels',
+  'activeStreams.empty': 'No favorite channels are currently live.',
+  'import.title': 'Import Tool',
 };
 
 export default welcome;

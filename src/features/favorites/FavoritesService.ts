@@ -55,7 +55,7 @@ export class FavoritesService {
 
     saveFavorites(list: FavoriteStream[]) {
         this.favRepo.saveList(list);
-        backupService.scheduleBackup();
+        this.emitChangeEvent('update', 'bulk-update'); // Emit event for reactivity
     }
 
     /**

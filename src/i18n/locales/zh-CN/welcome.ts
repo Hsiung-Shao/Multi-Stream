@@ -42,6 +42,23 @@ const welcome = {
   'authorMessageP2': '为了解决这个麻烦，我专门做了这个工具。而且后续还会尝试整合 Twitch 功能，到时候大家就能直接导入自己在 Twitch 上追随的频道，用起来会更方便～',
   'authorMessageP3': '不过有个小情况要跟大家说明：目前在 YouTube 方面，可能还是会跳转到不同频道的影片，暂时没办法直接精确定位直播内容。这部分我已经尽力优化了，现阶段只能麻烦大家手动添加直播频道，还请多多包涵～',
   'authorMessageP4': '如果大家用着觉得顺手、实用，别忘了多多分享给身边的朋友，让更多人也能用上这个能提升效率的小帮手～',
+  'favoritesWidget': {
+    'emptyDesc': '建立群组以便快速加载您最爱的多位主播。',
+  },
+  'activeStreams': {
+    'title': '正在直播的收藏',
+    'empty': '目前没有最爱的频道正在直播。',
+  },
+  // Dashboard
+  'quickAdd.title': '快速新增串流',
+  'quickAdd.placeholder': '贴上 Twitch 或 YouTube 链接...',
+  'favorites.title': '您的收藏',
+  'favorites.emptyTitle': '还没有收藏与群组',
+  'favorites.emptyDesc': '建立群组以便快速载入您最爱的多位实况主。',
+  'activeStreams.title': '正在直播的收藏',
+  'activeStreams.liveChannels': '正在直播的频道',
+  'activeStreams.empty': '目前没有最爱的频道正在直播。',
+  'import.title': '导入工具',
 };
 
 export default welcome;
