@@ -79,7 +79,7 @@ export const EmptyWindowContent = ({ windowId, type, onUpdateWindow, renderProps
             const result = await Promise.race([addStreamPromise(), timeoutPromise]) as any;
 
             if (result.success && result.streamId) {
-                console.log('[EmptyWindowContent] addStream success:', { windowId, streamId: result.streamId });
+
                 // onUpdateWindow(windowId, { contentId: result.streamId }); // Removed: addStream now handles the update directly via targetWindowId
                 toast.success(t('common.success') || '成功載入');
             } else {

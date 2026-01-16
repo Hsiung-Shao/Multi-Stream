@@ -16,8 +16,8 @@ export const checkAppVersion = () => {
             return;
         }
 
-        console.log(`[VersionCheck] Version change detected: ${storedVersion} -> ${currentVersion}`);
-        console.log('[VersionCheck] Performing cleanup of stale session data...');
+
+
 
         // WHITELIST: Critical User Data that MUST BE PRESERVED
         const WHITELIST = [
@@ -53,14 +53,14 @@ export const checkAppVersion = () => {
 
         // Execute Removal
         itemsToRemove.forEach(key => {
-            console.log(`[VersionCheck] Removing stale key: ${key}`);
+
             localStorage.removeItem(key);
         });
 
         // Update Version
         localStorage.setItem('app_version', currentVersion);
 
-        console.log('[VersionCheck] Cleanup complete. Reloading...');
+
 
         // Force Reload to ensure fresh code is loaded
         // Note: We only reload if we actually detected a change.

@@ -9,11 +9,11 @@ import { useLiveStatusCheck } from '../useLiveStatusCheck';
  * to ensure background checks work even when ControlPanel is hidden.
  */
 export const GlobalLiveStatusChecker = () => {
-    const { checkNow, isRefreshing } = useLiveStatusCheck();
+    const { checkNow } = useLiveStatusCheck();
 
     useEffect(() => {
         const handleRefresh = () => {
-            console.log('[GlobalLiveStatusChecker] Received refresh event, triggering check...');
+
             checkNow();
         };
 

@@ -107,10 +107,10 @@ export const useLiveStatusCheck = () => {
 
             // 3. Save only if there were updates
             if (hasUpdates) {
-                console.log('[LiveCheck] Updates found, saving favorites...');
+
                 favoritesService.saveFavorites(updatedFavorites);
             } else {
-                console.log('[LiveCheck] No updates needed.');
+
             }
 
         } catch (e) {
