@@ -15,6 +15,7 @@ const navbar = {
   'viewers': 'viewers',
   'twitch': 'Twitch',
   'twitch': 'Twitch',
+  'menu': 'Menu',
   'canvas': 'Canvas',
   'fixed': 'Fixed Layout',
 };

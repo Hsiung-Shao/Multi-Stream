@@ -49,6 +49,16 @@ const welcome = {
     'title': '正在直播的收藏',
     'empty': '目前没有最爱的频道正在直播。',
   },
+  // Dashboard
+  'quickAdd.title': '快速新增串流',
+  'quickAdd.placeholder': '贴上 Twitch 或 YouTube 链接...',
+  'favorites.title': '您的收藏',
+  'favorites.emptyTitle': '还没有收藏与群组',
+  'favorites.emptyDesc': '建立群组以便快速载入您最爱的多位实况主。',
+  'activeStreams.title': '正在直播的收藏',
+  'activeStreams.liveChannels': '正在直播的频道',
+  'activeStreams.empty': '目前没有最爱的频道正在直播。',
+  'import.title': '导入工具',
 };
 
 export default welcome;

@@ -31,6 +31,7 @@ const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
 const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
 const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
+const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 
 export default function App() {
@@ -129,6 +130,12 @@ export default function App() {
               />
             </Suspense>
           </>
+        );
+      case 'faq':
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <FAQPage />
+          </Suspense>
         );
       case 'not-found':
       default:

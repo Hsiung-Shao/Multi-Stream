@@ -16,6 +16,7 @@ import zhTWPrivacy from './locales/zh-TW/privacy';
 import zhTWTags from './locales/zh-TW/tags';
 import zhTWYoutubeRisk from './locales/zh-TW/youtubeRisk';
 import zhTWStream from './locales/zh-TW/stream';
+import zhTWFAQ from './locales/zh-TW/faq';
 
 // Import other locales
 import zhCNCommon from './locales/zh-CN/common';
@@ -31,6 +32,7 @@ import zhCNPrivacy from './locales/zh-CN/privacy';
 import zhCNTags from './locales/zh-CN/tags';
 import zhCNYoutubeRisk from './locales/zh-CN/youtubeRisk';
 import zhCNStream from './locales/zh-CN/stream';
+import zhCNFAQ from './locales/zh-CN/faq';
 
 import enCommon from './locales/en/common';
 import enNavbar from './locales/en/navbar';
@@ -45,6 +47,7 @@ import enPrivacy from './locales/en/privacy';
 import enTags from './locales/en/tags';
 import enYoutubeRisk from './locales/en/youtubeRisk';
 import enStream from './locales/en/stream';
+import enFAQ from './locales/en/faq';
 
 import jaCommon from './locales/ja/common';
 import jaNavbar from './locales/ja/navbar';
@@ -59,6 +62,7 @@ import jaPrivacy from './locales/ja/privacy';
 import jaTags from './locales/ja/tags';
 import jaYoutubeRisk from './locales/ja/youtubeRisk';
 import jaStream from './locales/ja/stream';
+import jaFAQ from './locales/ja/faq';
 
 import koCommon from './locales/ko/common';
 import koNavbar from './locales/ko/navbar';
@@ -73,6 +77,7 @@ import koPrivacy from './locales/ko/privacy';
 import koTags from './locales/ko/tags';
 import koYoutubeRisk from './locales/ko/youtubeRisk';
 import koStream from './locales/ko/stream';
+import koFAQ from './locales/ko/faq';
 
 export const defaultNS = 'common';
 
@@ -91,6 +96,7 @@ export const resources = {
         tags: zhTWTags,
         youtubeRisk: zhTWYoutubeRisk,
         stream: zhTWStream,
+        faq: zhTWFAQ,
     },
     'zh-CN': {
         common: zhCNCommon,
@@ -106,6 +112,7 @@ export const resources = {
         tags: zhCNTags,
         youtubeRisk: zhCNYoutubeRisk,
         stream: zhCNStream,
+        faq: zhCNFAQ,
     },
     en: {
         common: enCommon,
@@ -121,6 +128,7 @@ export const resources = {
         tags: enTags,
         youtubeRisk: enYoutubeRisk,
         stream: enStream,
+        faq: enFAQ,
     },
     ja: {
         common: jaCommon,
@@ -136,6 +144,7 @@ export const resources = {
         tags: jaTags,
         youtubeRisk: jaYoutubeRisk,
         stream: jaStream,
+        faq: jaFAQ,
     },
     ko: {
         common: koCommon,
@@ -151,6 +160,7 @@ export const resources = {
         tags: koTags,
         youtubeRisk: koYoutubeRisk,
         stream: koStream,
+        faq: koFAQ,
     },
 } as const;
 

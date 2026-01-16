@@ -49,6 +49,16 @@ const welcome = {
     'title': '라이브 즐겨찾기',
     'empty': '현재 방송 중인 즐겨찾기 채널이 없습니다.',
   },
+  // Dashboard
+  'quickAdd.title': '빠른 채널 추가',
+  'quickAdd.placeholder': 'Twitch 또는 YouTube 링크 붙여넣기...',
+  'favorites.title': '즐겨찾기',
+  'favorites.emptyTitle': '즐겨찾기 또는 그룹 없음',
+  'favorites.emptyDesc': '그룹을 생성하여 즐겨찾는 스트리머를 빠르게 불러오세요.',
+  'activeStreams.title': '방송 중인 즐겨찾기',
+  'activeStreams.liveChannels': '방송 중인 채널',
+  'activeStreams.empty': '현재 방송 중인 즐겨찾기 채널이 없습니다.',
+  'import.title': '가져오기 도구',
 };
 
 export default welcome;

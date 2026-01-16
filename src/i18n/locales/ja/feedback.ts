@@ -23,6 +23,7 @@ const feedback = {
   'successMessage': '貴重なご意見を受け取りました。改善に役立てさせていただきます。',
   'error': '送信に失敗しました。後ほど再度お試しください。',
   'required': '必須項目です',
+  'select': '選択してください',
   'selectScore': 'スコアを選択してください',
   'source.discord': 'Discordコミュニティ',
   'source.google': 'Google検索',

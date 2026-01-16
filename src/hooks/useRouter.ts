@@ -23,6 +23,8 @@ export function useRouter() {
                 setPage('tool');
             } else if (path === '/instructions') {
                 setPage('instructions');
+            } else if (path === '/faq') {
+                setPage('faq');
             } else {
                 setPage('not-found');
             }
@@ -80,6 +82,9 @@ export function useRouter() {
                 break;
             case 'instructions':
                 targetPath = '/instructions';
+                break;
+            case 'faq':
+                targetPath = '/faq';
                 break;
             case 'not-found':
                 // 如果是 404，不主動改變 URL，保留使用者輸入的錯誤網址

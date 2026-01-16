@@ -14,6 +14,7 @@ const navbar = {
   'live': '直播中',
   'viewers': '观看',
   'twitch': 'Twitch',
+  'menu': '菜单',
   'canvas': '画布',
   'fixed': '固定布局',
 };

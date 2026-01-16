@@ -49,6 +49,16 @@ const welcome = {
     'title': '配信中のお気に入り',
     'empty': '現在、お気に入りのチャンネルは配信していません。',
   },
+  // Dashboard
+  'quickAdd.title': 'クイック追加',
+  'quickAdd.placeholder': 'TwitchまたはYouTubeのリンクを貼り付け...',
+  'favorites.title': 'お気に入り',
+  'favorites.emptyTitle': 'お気に入りやグループがありません',
+  'favorites.emptyDesc': 'グループを作成して、お気に入りの配信者を素早く読み込みましょう。',
+  'activeStreams.title': '配信中のお気に入り',
+  'activeStreams.liveChannels': '配信中のチャンネル',
+  'activeStreams.empty': '現在配信中のお気に入りチャンネルはありません。',
+  'import.title': 'インポートツール',
 };
 
 export default welcome;

@@ -23,6 +23,7 @@ const feedback = {
   'successMessage': '我们已收到您的宝贵意见，将会持续改进。',
   'error': '反馈发送失败，请稍后再试。',
   'required': '此栏位为必填',
+  'select': '请选择',
   'selectScore': '请选择分数',
   'source.discord': 'Discord 社群',
   'source.google': 'Google 搜索',
