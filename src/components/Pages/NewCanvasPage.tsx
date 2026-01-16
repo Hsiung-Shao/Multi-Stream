@@ -23,6 +23,16 @@ export const NewCanvasPage = () => {
         setLayoutMode('canvas');
     }, [setLayoutMode]);
 
+    // Optimize: Preload Player APIs based on current streams
+    useEffect(() => {
+        if (streams.length > 0) {
+            import('../../utils/apiLoader').then(({ apiLoader }) => {
+                const urls = streams.map(s => s.originalUrl);
+                apiLoader.preloadPlayerApisForUrls(urls);
+            });
+        }
+    }, [streams]);
+
     // Convert canvasItems to SimpleCanvas windows format
     const windows: CanvasWindow[] = useMemo(() => {
         return canvasItems.map(item => ({
@@ -36,7 +46,7 @@ export const NewCanvasPage = () => {
             title: (() => {
                 if (!item.contentId) return undefined;
                 const stream = streams.find(s => s.id === item.contentId);
-                return stream?.displayName || stream?.name || stream?.channelId;
+                return stream?.displayName || stream?.channelId;
             })()
         }));
     }, [canvasItems, streams]);

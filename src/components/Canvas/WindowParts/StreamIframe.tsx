@@ -96,11 +96,7 @@ export function StreamIframe({
 
             // Cleanup Player Instance
             if (playerRef.current) {
-                if (streamData.platform === 'youtube' && typeof playerRef.current.destroy === 'function') {
-                    try { playerRef.current.destroy(); } catch (e) { }
-                }
-                // Twitch player doesn't have a destroy method that cleans up DOM completely, 
-                // but since we remove the parent container via React (or manual clear below), it's fine.
+                safeDestroy();
             }
             playerRef.current = null;
 
@@ -114,7 +110,80 @@ export function StreamIframe({
         };
     }, [streamData.id, streamData.platform, streamData.channelId, streamData.videoId, (streamData as any)._reloadKey]);
 
-    // ... (keep useEffect for volume) ...
+    // Fix: Add useEffect for volume and mute updates
+    useEffect(() => {
+        if (playerRef.current) {
+            applyVolume(playerRef.current, volume, isMuted, streamData.platform);
+        }
+    }, [volume, isMuted, streamData.platform]);
+
+    // Fix: Handle Page Visibility (Twitch Background Throttling & Resource Spike)
+    useEffect(() => {
+        if (streamData.platform !== 'twitch') return;
+
+        let restoreTimeout: NodeJS.Timeout;
+
+        const handleVisibilityChange = () => {
+            const player = playerRef.current;
+            if (!player || !window.Twitch || !window.Twitch.Player) return;
+
+            if (document.visibilityState === 'hidden') {
+                // Background Mode: Downgrade quality to save resources
+                // Delayed slightly to avoid flickering on quick alt-tabs
+                restoreTimeout = setTimeout(() => {
+                    try {
+                        // Store current quality if needed? usually 'auto' is best target for restore.
+                        // Force low quality. '160p30' is standard low on Twitch.
+                        // Check available qualities first? player.getQualities()
+                        // Usually it's safe to just set '160p30' or '160p' if available, or just leave it if we want to be safe.
+                        // But to fix the "Explosion", we MUST lower bitrate.
+                        player.setQuality('160p30');
+                    } catch (e) { }
+                }, 30000); // Only trigger if backend for > 30s
+            } else {
+                // Foreground Mode: Restore Quality
+                clearTimeout(restoreTimeout);
+
+                // Debounce restoration to let browser UI settle
+                setTimeout(() => {
+                    try {
+                        if (player.isPaused()) {
+                            player.play();
+                        }
+                        // Restore to Auto
+                        player.setQuality('auto');
+                    } catch (e) {
+                        console.warn('[StreamIframe] Failed to restore Twitch quality:', e);
+                    }
+                }, 1000);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            clearTimeout(restoreTimeout);
+        };
+    }, [streamData.platform]);
+
+    // Cleanup helper
+    const safeDestroy = () => {
+        if (!playerRef.current) return;
+
+        const player = playerRef.current;
+        playerRef.current = null; // Detach reference immediately to prevent race conditions
+
+        try {
+            if (streamData.platform === 'youtube' && typeof player.destroy === 'function') {
+                // Wrap in setTimeout to push to next tick, avoiding React render-phase collisions (Error #301)
+                setTimeout(() => {
+                    try { player.destroy(); } catch (e) { }
+                }, 0);
+            }
+        } catch (e) {
+            console.warn('[StreamIframe] Error during cleanup:', e);
+        }
+    };
 
     const createTwitchPlayer = async (target: HTMLElement) => {
         if (!window.Twitch || !window.Twitch.Player) {
