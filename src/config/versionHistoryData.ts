@@ -14,6 +14,7 @@ export const versionHistoryData: VersionData[] = [
             'versionHistory:v3.0.0.dynamicIsland',
             'versionHistory:v3.0.0.favorites',
             'versionHistory:v3.0.0.redesign',
+            'versionHistory:v3.0.0.faq',
         ],
     },
     {
