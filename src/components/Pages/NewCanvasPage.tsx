@@ -66,19 +66,9 @@ export const NewCanvasPage = () => {
 
     // Handle window remove
     const handleWindowRemove = useCallback((id: string) => {
-        // 1. Get current state to verify window type
-        const state = useStreamStore.getState();
-        const item = state.canvasItems.find(i => i.i === id);
-
-        // 2. Remove the visual window (Canvas Item)
+        // removeCanvasItem handles stream removal internally based on closeWindowMode
+        // DO NOT call removeStream separately - it causes duplicate removal and React Error #301
         removeCanvasItem(id);
-
-        // 3. If it's a stream window, we MUST remove the actual stream data
-        // This ensures it disappears from Media Control Panel and stops playing.
-        if (item && item.type === 'stream' && item.contentId) {
-
-            state.removeStream(item.contentId);
-        }
     }, [removeCanvasItem]);
 
     // Render content for each window - now receives WindowRenderProps
