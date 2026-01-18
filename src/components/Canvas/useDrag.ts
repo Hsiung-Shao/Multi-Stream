@@ -160,10 +160,21 @@ export function useDrag(options: UseDragOptions) {
 
     // Update position when props change (e.g., from swap)
     // CRITICAL: Use useEffect to avoid setState during render phase (causes infinite re-render)
+    // Also use functional update to compare against current state
     useEffect(() => {
         if (!isDragging) {
-            setPosition({ x: currentX, y: currentY });
-            setSnapPosition({ x: currentX, y: currentY });
+            setPosition(prev => {
+                if (prev.x !== currentX || prev.y !== currentY) {
+                    return { x: currentX, y: currentY };
+                }
+                return prev;
+            });
+            setSnapPosition(prev => {
+                if (prev.x !== currentX || prev.y !== currentY) {
+                    return { x: currentX, y: currentY };
+                }
+                return prev;
+            });
         }
     }, [currentX, currentY, isDragging]);
 

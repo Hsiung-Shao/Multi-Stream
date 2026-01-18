@@ -198,10 +198,21 @@ export function useResize(options: UseResizeOptions) {
 
     // Update size and position when props change
     // CRITICAL: Use useEffect to avoid setState during render phase (causes infinite re-render)
+    // Also use functional update to compare against current state
     useEffect(() => {
         if (!isResizing) {
-            setSize({ width: currentWidth, height: currentHeight });
-            setPosition({ x: currentX, y: currentY });
+            setSize(prev => {
+                if (prev.width !== currentWidth || prev.height !== currentHeight) {
+                    return { width: currentWidth, height: currentHeight };
+                }
+                return prev;
+            });
+            setPosition(prev => {
+                if (prev.x !== currentX || prev.y !== currentY) {
+                    return { x: currentX, y: currentY };
+                }
+                return prev;
+            });
         }
     }, [currentWidth, currentHeight, currentX, currentY, isResizing]);
 

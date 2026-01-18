@@ -174,7 +174,23 @@ export function StreamIframe({
         playerRef.current = null; // Detach reference immediately to prevent race conditions
 
         try {
-            if (streamData.platform === 'youtube' && typeof player.destroy === 'function') {
+            if (streamData.platform === 'twitch') {
+                // Twitch Player doesn't have a destroy() method
+                // We need to manually cleanup: pause, remove listeners, and clear DOM
+                try {
+                    if (typeof player.pause === 'function') {
+                        player.pause();
+                    }
+                    // Remove all event listeners (Twitch uses addEventListener)
+                    if (typeof player.removeEventListener === 'function' && window.Twitch?.Player) {
+                        player.removeEventListener(window.Twitch.Player.READY, () => { });
+                        player.removeEventListener(window.Twitch.Player.PLAYING, () => { });
+                        player.removeEventListener(window.Twitch.Player.ENDED, () => { });
+                    }
+                } catch (e) {
+                    // Ignore cleanup errors
+                }
+            } else if (streamData.platform === 'youtube' && typeof player.destroy === 'function') {
                 // Wrap in setTimeout to push to next tick, avoiding React render-phase collisions (Error #301)
                 setTimeout(() => {
                     try { player.destroy(); } catch (e) { }

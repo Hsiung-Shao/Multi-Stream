@@ -3,7 +3,7 @@
  * Renders StreamIframe with floating pill-shaped header (matching WindowHeader style)
  */
 
-import { memo, useState, useMemo, useCallback } from 'react';
+import { memo, useState, useMemo, useCallback, useRef } from 'react';
 import { GripHorizontal, X, RefreshCw } from 'lucide-react';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
@@ -33,10 +33,22 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     const { dragHandlers, isDragging, isResizing, onRemove } = renderProps;
 
     const [reloadKey, setReloadKey] = useState(0);
+    const isReloadingRef = useRef(false);
 
     const handleReload = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        setReloadKey(k => k + 1);
+        // Debounce: prevent rapid reload clicks that can cause Twitch player issues
+        if (isReloadingRef.current) return;
+        isReloadingRef.current = true;
+
+        // Small delay to allow cleanup before re-creation
+        setTimeout(() => {
+            setReloadKey(k => k + 1);
+            // Reset after a short delay to allow new player to initialize
+            setTimeout(() => {
+                isReloadingRef.current = false;
+            }, 500);
+        }, 50);
     }, []);
 
     const handleRemove = useCallback((e: React.MouseEvent) => {
