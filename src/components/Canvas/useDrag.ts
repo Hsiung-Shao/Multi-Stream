@@ -3,7 +3,7 @@
  * Smooth dragging with ghost preview at snap position
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { snapToGrid, clampToGridBounds, GRID_COLS, GRID_ROWS } from './gridConfig';
 
 interface DragState {
@@ -159,10 +159,13 @@ export function useDrag(options: UseDragOptions) {
     }, [onDragEnd, snapPosition, collisionId]);
 
     // Update position when props change (e.g., from swap)
-    if (!isDragging && (position.x !== currentX || position.y !== currentY)) {
-        setPosition({ x: currentX, y: currentY });
-        setSnapPosition({ x: currentX, y: currentY });
-    }
+    // CRITICAL: Use useEffect to avoid setState during render phase (causes infinite re-render)
+    useEffect(() => {
+        if (!isDragging) {
+            setPosition({ x: currentX, y: currentY });
+            setSnapPosition({ x: currentX, y: currentY });
+        }
+    }, [currentX, currentY, isDragging]);
 
     return {
         position,

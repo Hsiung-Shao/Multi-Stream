@@ -3,7 +3,7 @@
  * Uses Pointer Events + requestAnimationFrame for smooth resizing
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { snapToGrid, GRID_COLS, GRID_ROWS } from './gridConfig';
 
 export type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
@@ -197,14 +197,13 @@ export function useResize(options: UseResizeOptions) {
     }, [cellWidth, cellHeight, currentX, currentY, currentWidth, currentHeight, minGridW, minGridH, checkCollision, onResizeEnd, position, size]);
 
     // Update size and position when props change
-    if (!isResizing) {
-        if (size.width !== currentWidth || size.height !== currentHeight) {
+    // CRITICAL: Use useEffect to avoid setState during render phase (causes infinite re-render)
+    useEffect(() => {
+        if (!isResizing) {
             setSize({ width: currentWidth, height: currentHeight });
-        }
-        if (position.x !== currentX || position.y !== currentY) {
             setPosition({ x: currentX, y: currentY });
         }
-    }
+    }, [currentWidth, currentHeight, currentX, currentY, isResizing]);
 
     return {
         size,
