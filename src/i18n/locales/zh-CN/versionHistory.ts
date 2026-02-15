@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '版本记录',
   'subtitle': 'MultiStream Hub 更新历史',
   'latest': '最新',
+  'v3.0.3.date': '2026-02-16',
+  'v3.0.3.change1': '添加 Brave 兼容性问题与 FAQ 教学',
   'v3.0.2.date': '2026-02-15',
   'v3.0.2.change1': '更新 Twitch 账号连接生命周期',
   'v3.0.1.date': '2026-01-19',

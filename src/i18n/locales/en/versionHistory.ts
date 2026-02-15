@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
+  'v3.0.3.date': '2026-02-16',
+  'v3.0.3.change1': 'Added Brave browser compatibility fix and FAQ tutorial',
   'v3.0.2.date': '2026-02-15',
   'v3.0.2.change1': 'Updated Twitch account linking lifecycle',
   'v3.0.1.date': '2026-01-19',
