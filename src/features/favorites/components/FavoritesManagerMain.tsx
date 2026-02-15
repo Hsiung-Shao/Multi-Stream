@@ -69,7 +69,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const [newCategoryName, setNewCategoryName] = useState('');
 
     // --- Twitch State ---
-    const { token, isLoggedIn, login, logout, shouldOpenSettings, clearPendingFlag } = useTwitchAuth();
+    const { token, isLoggedIn, login, logout, shouldOpenSettings, clearPendingFlag, clearToken } = useTwitchAuth();
     const {
         user: twitchUser,
         loading: twitchLoading,
@@ -294,6 +294,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
             if (result.success) imported++;
         }
         loadData();
+        clearToken();
         setActiveTab('favorites');
         toast.success(`成功匯入 ${imported} 個頻道`);
     };

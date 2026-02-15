@@ -3,6 +3,8 @@ import { twitchService } from '../features/twitch/TwitchService';
 
 const STATE_KEY = 'twitch_auth_state';
 const IMPORT_PENDING_KEY = 'twitch_import_pending';
+const TOKEN_KEY = 'twitch_user_token';
+export const RETURN_PAGE_KEY = 'twitch_return_page';
 
 export interface TwitchAuth {
     token: string | null;
@@ -10,8 +12,9 @@ export interface TwitchAuth {
     login: () => void;
     logout: () => void;
     isProcessing: boolean;
-    shouldOpenSettings: boolean; // Flag to indicate if settings should be opened after redirect
+    shouldOpenSettings: boolean;
     clearPendingFlag: () => void;
+    clearToken: () => void;
 }
 
 export function useTwitchAuth(): TwitchAuth {
@@ -19,14 +22,22 @@ export function useTwitchAuth(): TwitchAuth {
     const [isProcessing, setIsProcessing] = useState(false);
     const [shouldOpenSettings, setShouldOpenSettings] = useState(false);
 
-    // Initialize: Check hash for token
+    // Initialize: Check sessionStorage first, then hash
     useEffect(() => {
+        // 1. Check if token already exists in sessionStorage (e.g. after route navigation)
+        const storedToken = sessionStorage.getItem(TOKEN_KEY);
+        if (storedToken) {
+            setToken(storedToken);
+            const pending = sessionStorage.getItem(IMPORT_PENDING_KEY);
+            if (pending) {
+                setShouldOpenSettings(true);
+            }
+            return;
+        }
+
+        // 2. Check hash for token (OAuth redirect callback)
         const hash = window.location.hash;
         if (!hash) {
-            // If no hash, check if we have a pending import flag
-            // This is useful if the user refreshed or navigated back, but we want to re-open the modal if they are "logged in" logically (though token is gone on refresh per requirement)
-            // actually, per requirement, token is memory only, so on refresh it's gone.
-            // But if we just redirected back from Twitch, we might have the flag + hash.
             const pending = sessionStorage.getItem(IMPORT_PENDING_KEY);
             if (pending) {
                 setShouldOpenSettings(true);
@@ -36,7 +47,7 @@ export function useTwitchAuth(): TwitchAuth {
 
         if (hash.includes('access_token')) {
             setIsProcessing(true);
-            const params = new URLSearchParams(hash.substring(1)); // remove #
+            const params = new URLSearchParams(hash.substring(1));
             const accessToken = params.get('access_token');
             const state = params.get('state');
             const storedState = sessionStorage.getItem(STATE_KEY);
@@ -50,10 +61,10 @@ export function useTwitchAuth(): TwitchAuth {
 
             if (accessToken) {
                 setToken(accessToken);
+                sessionStorage.setItem(TOKEN_KEY, accessToken);
                 // Clear hash to clean up URL
                 window.history.replaceState(null, '', window.location.pathname);
 
-                // Check if we initiated this flow for import
                 const pending = sessionStorage.getItem(IMPORT_PENDING_KEY);
                 if (pending) {
                     setShouldOpenSettings(true);
@@ -72,12 +83,18 @@ export function useTwitchAuth(): TwitchAuth {
             return;
         }
 
-        const redirectUri = window.location.origin + '/'; // Dynamic based on environment
+        // Save current page for auto-return after OAuth
+        const currentPath = window.location.pathname;
+        if (currentPath && currentPath !== '/') {
+            sessionStorage.setItem(RETURN_PAGE_KEY, currentPath);
+        }
+
+        const redirectUri = window.location.origin + '/';
         const scope = 'user:read:follows';
         const state = Math.random().toString(36).substring(7);
 
         sessionStorage.setItem(STATE_KEY, state);
-        sessionStorage.setItem(IMPORT_PENDING_KEY, 'true'); // Flag to re-open UI
+        sessionStorage.setItem(IMPORT_PENDING_KEY, 'true');
 
         const authUrl = new URL('https://id.twitch.tv/oauth2/authorize');
         authUrl.searchParams.append('client_id', config.clientId);
@@ -93,7 +110,14 @@ export function useTwitchAuth(): TwitchAuth {
         setToken(null);
         setShouldOpenSettings(false);
         sessionStorage.removeItem(IMPORT_PENDING_KEY);
-        // Optional: Revoke token via API if needed, but for implicit flow just clearing client side is standard
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(RETURN_PAGE_KEY);
+    }, []);
+
+    const clearToken = useCallback(() => {
+        setToken(null);
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(IMPORT_PENDING_KEY);
     }, []);
 
     const clearPendingFlag = useCallback(() => {
@@ -108,6 +132,7 @@ export function useTwitchAuth(): TwitchAuth {
         logout,
         isProcessing,
         shouldOpenSettings,
-        clearPendingFlag
+        clearPendingFlag,
+        clearToken
     };
 }
