@@ -49,7 +49,17 @@ const faq = {
     'items.live_detection.content': '系統會定期於背景檢查您收藏的 Twitch 頻道是否在線 (Live)。當偵測到開台時，收藏列表會顯示綠色燈號與觀眾人數。',
 
     'items.empty_window.title': '空白視窗的用法',
-    'items.empty_window.content': '您可以透過「新增組合 -> 新增空白群組」加入一個空白視窗框。此視窗可用於占位，方便您先規劃佈局，之後再將收藏的頻道拖曳進去播放。'
+    'items.empty_window.content': '您可以透過「新增組合 -> 新增空白群組」加入一個空白視窗框。此視窗可用於占位，方便您先規劃佈局，之後再將收藏的頻道拖曳進去播放。',
+
+    'items.brave_twitch.title': 'Brave 瀏覽器 Twitch 無法播放',
+    'items.brave_twitch.content': '由於 Brave 瀏覽器的隱私保護機制，Twitch 的反機器人系統 (Kasada) 會偵測到 Brave 的瀏覽器標識並拒絕請求，導致 Twitch 串流無法正常播放（畫面卡住或顯示錯誤）。此問題可透過安裝 ModHeader 擴充功能，覆寫瀏覽器標識來解決。',
+    'items.brave_twitch.install_btn': '安裝 ModHeader 擴充功能',
+    'items.brave_twitch.download_btn': '下載設定檔 (twitch.json)',
+    'items.brave_twitch.step0': '在瀏覽器的擴充功能列表中找到已安裝的 ModHeader 套件',
+    'items.brave_twitch.step1': '開啟 ModHeader，點擊右上方的選單按鈕（三個點圖示）',
+    'items.brave_twitch.step2': '在選單中找到並點擊「Import profile」',
+    'items.brave_twitch.step3': '點擊「Load file」按鈕，選擇剛剛下載的 twitch.json 設定檔匯入',
+    'items.brave_twitch.tip': '匯入完成後，重新整理 Twitch 頁面即可正常播放。此設定僅影響 Twitch 相關請求的瀏覽器標識，不會影響其他網站的正常使用。'
 };
 
 export default faq;

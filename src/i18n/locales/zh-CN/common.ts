@@ -112,6 +112,9 @@ const common = {
   'landing.howto.step3': '享受观看',
   'landing.howto.step3_desc': '同时关注多场直播，不错过任何精彩时刻。',
   'landing.faq.title': '常见问题',
+  'landing.faq.q_brave': 'Brave 浏览器无法播放 Twitch？',
+  'landing.faq.a_brave': '由于 Brave 的隐私保护机制与 Twitch 的反机器人系统冲突，可能导致 Twitch 串流无法播放。您可以通过安装 ModHeader 扩展程序来解决此问题。',
+  'landing.faq.brave_link': '查看完整教学 →',
   'landing.faq.q1': '这项服务是免费的吗？',
   'landing.faq.a1': '是的，MultiStream Hub 完全免费且开源。',
   'landing.faq.q2': '我需要登录账号吗？',
@@ -204,6 +207,13 @@ const common = {
   'cookie.reject': '拒绝',
   'cookie.privacyLink': '了解更多',
   'cookie.privacyNote': '您的隐私对我们很重要。您可以随时在设置中变更您的选择。',
+  // Brave Detect Dialog
+  'braveDetect.title': 'Brave 浏览器兼容性提醒',
+  'braveDetect.body': '检测到您正在使用 Brave 浏览器。由于 Brave 的隐私保护功能，Twitch 串流可能无法正常播放（画面卡住或出现错误）。',
+  'braveDetect.hint': '您可以参考 FAQ 中的教学，通过安装 ModHeader 扩展程序来解决此问题。',
+  'braveDetect.close': '关闭',
+  'braveDetect.goToFAQ': '查看解决方案',
+  'braveDetect.dontRemind': '不再提醒',
 };
 
 export default common;

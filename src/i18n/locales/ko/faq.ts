@@ -49,6 +49,16 @@ const faq = {
     'items.live_detection.content': '시스템은 백그라운드에서 주기적으로 Twitch 채널의 방송 상태를 확인합니다. 방송 중인 채널에는 녹색 표시등과 시청자 수가 표시됩니다.',
 
     'items.empty_window.title': '빈 창 활용',
-    'items.empty_window.content': '빈 그룹을 추가하여 자리 표시자로 사용할 수 있습니다. 레이아웃을 미리 계획한 후 채널을 드래그하여 재생할 때 유용합니다.'
+    'items.empty_window.content': '빈 그룹을 추가하여 자리 표시자로 사용할 수 있습니다. 레이아웃을 미리 계획한 후 채널을 드래그하여 재생할 때 유용합니다.',
+
+    'items.brave_twitch.title': 'Brave 브라우저에서 Twitch 재생 불가',
+    'items.brave_twitch.content': 'Brave 브라우저의 개인정보 보호 기능으로 인해 Twitch의 안티봇 시스템(Kasada)이 Brave 브라우저 식별자를 감지하고 요청을 거부하여 Twitch 스트림이 정상적으로 재생되지 않습니다(화면 멈춤 또는 오류). ModHeader 확장 프로그램을 설치하여 브라우저 식별자를 덮어쓰면 해결할 수 있습니다.',
+    'items.brave_twitch.install_btn': 'ModHeader 확장 프로그램 설치',
+    'items.brave_twitch.download_btn': '설정 파일 다운로드 (twitch.json)',
+    'items.brave_twitch.step0': '브라우저 확장 프로그램 목록에서 설치된 ModHeader를 찾기',
+    'items.brave_twitch.step1': 'ModHeader를 열고 오른쪽 상단의 메뉴 버튼(점 3개 아이콘)을 클릭',
+    'items.brave_twitch.step2': '메뉴에서 "Import profile"을 찾아 클릭',
+    'items.brave_twitch.step3': '"Load file" 버튼을 클릭하고 다운로드한 twitch.json 설정 파일을 선택하여 가져오기',
+    'items.brave_twitch.tip': '가져오기 완료 후 Twitch 페이지를 새로고침하면 정상적으로 재생됩니다. 이 설정은 Twitch 관련 요청의 브라우저 식별자에만 영향을 미치며 다른 웹사이트에는 영향을 주지 않습니다.'
 };
 export default faq;

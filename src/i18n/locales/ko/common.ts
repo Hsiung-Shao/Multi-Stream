@@ -112,6 +112,9 @@ const common = {
   'landing.howto.step3': '시청 즐기기',
   'landing.howto.step3_desc': '여러 스트림을 동시에 확인하고 모든 순간을 즐기세요.',
   'landing.faq.title': '자주 묻는 질문',
+  'landing.faq.q_brave': 'Brave 브라우저에서 Twitch가 재생되지 않나요?',
+  'landing.faq.a_brave': 'Brave의 개인정보 보호 기능과 Twitch의 안티봇 시스템 충돌로 인해 Twitch 스트림이 재생되지 않을 수 있습니다. ModHeader 확장 프로그램을 설치하여 해결할 수 있습니다.',
+  'landing.faq.brave_link': '전체 가이드 보기 →',
   'landing.faq.q1': '이 서비스는 무료인가요?',
   'landing.faq.a1': '네, MultiStream Hub는 완전 무료 오픈 소스입니다.',
   'landing.faq.q2': '로그인이 필요한가요?',
@@ -204,6 +207,13 @@ const common = {
   'cookie.reject': '거부',
   'cookie.privacyLink': '자세히 보기',
   'cookie.privacyNote': '귀하의 개인정보는 저희에게 중요합니다. 설정에서 언제든지 변경할 수 있습니다.',
+  // Brave Detect Dialog
+  'braveDetect.title': 'Brave 브라우저 호환성 안내',
+  'braveDetect.body': 'Brave 브라우저를 사용 중입니다. Brave의 개인정보 보호 기능으로 인해 Twitch 스트림이 정상적으로 재생되지 않을 수 있습니다(화면 멈춤 또는 오류).',
+  'braveDetect.hint': 'FAQ의 가이드를 참고하여 ModHeader 확장 프로그램을 설치하면 해결할 수 있습니다.',
+  'braveDetect.close': '닫기',
+  'braveDetect.goToFAQ': '해결 방법 보기',
+  'braveDetect.dontRemind': '다시 표시하지 않기',
 };
 
 export default common;

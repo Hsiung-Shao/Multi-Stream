@@ -49,6 +49,16 @@ const faq = {
     'items.live_detection.content': 'システムはバックグラウンドで定期的にTwitchチャンネルの配信状況をチェックします。配信中のチャンネルには緑色のインジケーターと視聴者数が表示されます。',
 
     'items.empty_window.title': '空ウィンドウの使い方',
-    'items.empty_window.content': '「グループ追加 -> 空のグループを追加」でプレースホルダーウィンドウを作成できます。レイアウトを先に決めてから、チャンネルをドラッグして再生する際に便利です。'
+    'items.empty_window.content': '「グループ追加 -> 空のグループを追加」でプレースホルダーウィンドウを作成できます。レイアウトを先に決めてから、チャンネルをドラッグして再生する際に便利です。',
+
+    'items.brave_twitch.title': 'Brave ブラウザで Twitch が再生できない',
+    'items.brave_twitch.content': 'Brave ブラウザのプライバシー保護機能により、Twitch のアンチボットシステム (Kasada) が Brave のブラウザ識別子を検出してリクエストを拒否し、Twitch ストリームが正常に再生できなくなります（画面がフリーズまたはエラー表示）。ModHeader 拡張機能をインストールしてブラウザ識別子を上書きすることで解決できます。',
+    'items.brave_twitch.install_btn': 'ModHeader 拡張機能をインストール',
+    'items.brave_twitch.download_btn': '設定ファイルをダウンロード (twitch.json)',
+    'items.brave_twitch.step0': 'ブラウザの拡張機能リストからインストール済みの ModHeader を見つける',
+    'items.brave_twitch.step1': 'ModHeader を開き、右上のメニューボタン（3つの点アイコン）をクリック',
+    'items.brave_twitch.step2': 'メニューから「Import profile」を見つけてクリック',
+    'items.brave_twitch.step3': '「Load file」ボタンをクリックし、ダウンロードした twitch.json 設定ファイルを選択してインポート',
+    'items.brave_twitch.tip': 'インポート完了後、Twitch ページを更新すると正常に再生できます。この設定は Twitch 関連リクエストのブラウザ識別子のみに影響し、他のウェブサイトには影響しません。'
 };
 export default faq;
