@@ -112,6 +112,9 @@ const common = {
   'landing.howto.step3': 'Enjoy',
   'landing.howto.step3_desc': 'Watch multiple streams at once and never miss a moment.',
   'landing.faq.title': 'Frequently Asked Questions',
+  'landing.faq.q_brave': 'Twitch not working on Brave browser?',
+  'landing.faq.a_brave': 'Due to Brave\'s privacy protection conflicting with Twitch\'s anti-bot system, Twitch streams may fail to play. You can fix this by installing the ModHeader extension.',
+  'landing.faq.brave_link': 'View full tutorial →',
   'landing.faq.q1': 'Is this service free?',
   'landing.faq.a1': 'Yes, MultiStream Hub is completely free and open source.',
   'landing.faq.q2': 'Do I need to login?',
@@ -202,6 +205,13 @@ const common = {
   'cookie.reject': 'Reject',
   'cookie.privacyLink': 'Learn More',
   'cookie.privacyNote': 'Your privacy is important to us. You can change your preferences at any time in settings.',
+  // Brave Detect Dialog
+  'braveDetect.title': 'Brave Browser Compatibility Notice',
+  'braveDetect.body': 'We detected you are using Brave browser. Due to Brave\'s privacy protection features, Twitch streams may not play correctly (frozen screen or errors).',
+  'braveDetect.hint': 'Check the FAQ for a step-by-step guide on fixing this with the ModHeader extension.',
+  'braveDetect.close': 'Close',
+  'braveDetect.goToFAQ': 'View Solution',
+  'braveDetect.dontRemind': 'Don\'t remind me again',
 };
 
 export default common;

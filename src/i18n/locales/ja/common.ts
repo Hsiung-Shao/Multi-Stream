@@ -112,6 +112,9 @@ const common = {
   'landing.howto.step3': '視聴を楽しむ',
   'landing.howto.step3_desc': '複数の配信を同時にチェックして、すべての瞬間を楽しみましょう。',
   'landing.faq.title': 'よくある質問',
+  'landing.faq.q_brave': 'Brave ブラウザで Twitch が再生できない？',
+  'landing.faq.a_brave': 'Brave のプライバシー保護機能と Twitch のアンチボットシステムの競合により、Twitch ストリームが正常に再生できない場合があります。ModHeader 拡張機能をインストールすることで解決できます。',
+  'landing.faq.brave_link': '詳しい手順を見る →',
   'landing.faq.q1': 'このサービスは無料ですか？',
   'landing.faq.a1': 'はい、MultiStream Hubは完全に無料かつオープンソースです。',
   'landing.faq.q2': 'アカウントログインは必要ですか？',
@@ -204,6 +207,13 @@ const common = {
   'cookie.reject': '拒否',
   'cookie.privacyLink': '詳細を見る',
   'cookie.privacyNote': 'お客様のプライバシーは私たちにとって重要です。設定でいつでも変更できます。',
+  // Brave Detect Dialog
+  'braveDetect.title': 'Brave ブラウザ互換性のお知らせ',
+  'braveDetect.body': 'Brave ブラウザをお使いのようです。Brave のプライバシー保護機能により、Twitch ストリームが正常に再生できない場合があります（画面がフリーズまたはエラー表示）。',
+  'braveDetect.hint': 'FAQ の手順に従い、ModHeader 拡張機能をインストールすることで解決できます。',
+  'braveDetect.close': '閉じる',
+  'braveDetect.goToFAQ': '解決方法を見る',
+  'braveDetect.dontRemind': '今後表示しない',
 };
 
 export default common;

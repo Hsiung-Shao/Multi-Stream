@@ -49,6 +49,16 @@ const faq = {
     'items.live_detection.content': 'The system periodically checks the live status of your favorite Twitch channels in the background. Online channels show a green indicator and viewer count.',
 
     'items.empty_window.title': 'Empty Window Usage',
-    'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.'
+    'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.',
+
+    'items.brave_twitch.title': 'Twitch Not Working on Brave Browser',
+    'items.brave_twitch.content': 'Due to Brave\'s privacy protection, Twitch\'s anti-bot system (Kasada) detects the Brave browser signature and rejects requests, causing Twitch streams to fail (frozen screen or errors). This can be fixed by installing the ModHeader extension to override the browser signature.',
+    'items.brave_twitch.install_btn': 'Install ModHeader Extension',
+    'items.brave_twitch.download_btn': 'Download Profile (twitch.json)',
+    'items.brave_twitch.step0': 'Find the installed ModHeader extension in your browser\'s extension list',
+    'items.brave_twitch.step1': 'Open ModHeader and click the menu button (three dots icon) in the top right',
+    'items.brave_twitch.step2': 'Find and click "Import profile" in the menu',
+    'items.brave_twitch.step3': 'Click "Load file" and select the downloaded twitch.json profile to import',
+    'items.brave_twitch.tip': 'After importing, refresh the Twitch page to start streaming normally. This setting only affects browser signatures for Twitch-related requests and won\'t impact other websites.'
 };
 export default faq;

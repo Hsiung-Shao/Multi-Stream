@@ -179,7 +179,7 @@ export const DraggableWindow = memo(function DraggableWindow({
                 <div
                     className="absolute rounded-lg border-2 border-dashed border-purple-400/60 bg-purple-500/10 pointer-events-none"
                     style={{
-                        transform: `translate3d(${snapPosition.x}px, ${snapPosition.y}px, 0)`,
+                        transform: `translate(${snapPosition.x}px, ${snapPosition.y}px)`,
                         width: size.width,
                         height: size.height,
                         transition: 'transform 0.1s ease-out'
@@ -208,7 +208,7 @@ export const DraggableWindow = memo(function DraggableWindow({
                     transform: 'none',
                     zIndex: 100,
                 } : {
-                    transform: `translate3d(${displayX}px, ${displayY}px, 0)`,
+                    transform: `translate(${displayX}px, ${displayY}px)`,
                     width: size.width,
                     height: size.height,
                     willChange: isDragging || isResizing ? 'transform, width, height' : 'auto',

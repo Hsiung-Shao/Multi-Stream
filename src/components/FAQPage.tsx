@@ -2,8 +2,17 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../store/useUIStore';
 import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
-import { ArrowLeft, MonitorPlay, HelpCircle } from 'lucide-react';
+import { ArrowLeft, MonitorPlay, HelpCircle, Download, ExternalLink } from 'lucide-react';
 import { SEO } from './SEO';
+
+const MODHEADER_URL = 'https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj';
+const PROFILE_DOWNLOAD_PATH = '/docs/brave-fix/twitch.json';
+const STEP_IMAGES = [
+    '/docs/brave-fix/step0.png',
+    '/docs/brave-fix/step1.png',
+    '/docs/brave-fix/step2.png',
+    '/docs/brave-fix/step3.png',
+];
 
 export function FAQPage() {
     const { t } = useTranslation(['faq', 'common']);
@@ -11,6 +20,7 @@ export function FAQPage() {
 
     // FAQ items keys matching the i18n structure
     const faqItems = [
+        'brave_twitch',
         'dynamic_island',
         'favorites_manager',
         'media_control',
@@ -81,8 +91,14 @@ export function FAQPage() {
                                 </AccordionTrigger>
                                 <AccordionContent className="text-muted-foreground leading-relaxed pt-2 pb-4 text-base">
                                     {t(`faq:items.${item}.content` as any)}
+
+                                    {/* Special: Brave Twitch tutorial with steps */}
+                                    {item === 'brave_twitch' && (
+                                        <BraveTwitchGuide t={t} />
+                                    )}
+
                                     {/* Optional: Add tip if exists */}
-                                    {t(`faq:items.${item}.tip` as any, { defaultValue: '' }) && (
+                                    {item !== 'brave_twitch' && t(`faq:items.${item}.tip` as any, { defaultValue: '' }) && (
                                         <div className="mt-3 p-3 bg-secondary/30 rounded-lg border-l-2 border-primary text-sm">
                                             <span className="font-bold text-primary block mb-1">Tip:</span>
                                             {t(`faq:items.${item}.tip` as any)}
@@ -98,6 +114,65 @@ export function FAQPage() {
                     <p>{t('faq:footer_note' as any)}</p>
                 </div>
             </main>
+        </div>
+    );
+}
+
+function BraveTwitchGuide({ t }: { t: (key: any, options?: any) => string }) {
+    const stepKeys = ['step0', 'step1', 'step2', 'step3'] as const;
+
+    return (
+        <div className="mt-4 space-y-4">
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3">
+                <a
+                    href={MODHEADER_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
+                >
+                    <ExternalLink className="w-4 h-4" />
+                    {t('faq:items.brave_twitch.install_btn' as any)}
+                </a>
+                <a
+                    href={PROFILE_DOWNLOAD_PATH}
+                    download="twitch.json"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground font-medium text-sm hover:bg-secondary/80 transition-colors"
+                >
+                    <Download className="w-4 h-4" />
+                    {t('faq:items.brave_twitch.download_btn' as any)}
+                </a>
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-6">
+                {stepKeys.map((stepKey, index) => (
+                    <div key={stepKey} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-sm font-bold flex items-center justify-center">
+                                {index + 1}
+                            </span>
+                            <span className="font-medium text-foreground">
+                                {t(`faq:items.brave_twitch.${stepKey}` as any)}
+                            </span>
+                        </div>
+                        <div className="ml-8 rounded-lg overflow-hidden border border-white/10">
+                            <img
+                                src={STEP_IMAGES[index]}
+                                alt={`Step ${index + 1}`}
+                                className="w-full max-w-lg"
+                                loading="lazy"
+                            />
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Tip */}
+            <div className="p-3 bg-secondary/30 rounded-lg border-l-2 border-primary text-sm">
+                <span className="font-bold text-primary block mb-1">Tip:</span>
+                {t('faq:items.brave_twitch.tip' as any)}
+            </div>
         </div>
     );
 }

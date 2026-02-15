@@ -18,6 +18,7 @@ import { useHotkeys } from './hooks/useHotkeys';
 import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useEngagementTracking } from './hooks/useEngagementTracking';
 import { CookieConsent } from './components/CookieConsent';
+import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
@@ -218,6 +219,7 @@ export default function App() {
       <GlobalLiveStatusChecker />
       <Toaster />
       <CookieConsent />
+      <BraveDetectDialog />
     </>
   );
 }

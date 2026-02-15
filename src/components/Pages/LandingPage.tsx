@@ -300,6 +300,19 @@ export function LandingPage() {
                             </h2>
                         </div>
                         <Accordion type="single" collapsible className="w-full">
+                            <AccordionItem value="item-brave">
+                                <AccordionTrigger>{t('landing.faq.q_brave')}</AccordionTrigger>
+                                <AccordionContent className="text-muted-foreground">
+                                    {t('landing.faq.a_brave')}
+                                    <Button
+                                        variant="link"
+                                        className="px-1 h-auto text-primary"
+                                        onClick={() => setPage('faq')}
+                                    >
+                                        {t('landing.faq.brave_link')}
+                                    </Button>
+                                </AccordionContent>
+                            </AccordionItem>
                             <AccordionItem value="item-1">
                                 <AccordionTrigger>{t('landing.faq.q1')}</AccordionTrigger>
                                 <AccordionContent className="text-muted-foreground">
