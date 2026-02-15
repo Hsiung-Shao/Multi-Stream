@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
+  'v3.0.2.date': '2026-02-15',
+  'v3.0.2.change1': 'Updated Twitch account linking lifecycle',
   'v3.0.1.date': '2026-01-19',
   'v3.0.1.change1': 'Fixed infinite re-render error when closing streams',
   'v3.0.1.change2': 'Fixed Twitch stream freezing after reload',

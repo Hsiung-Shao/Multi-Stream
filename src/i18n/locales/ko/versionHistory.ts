@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '버전 기록',
   'subtitle': 'MultiStream Hub 업데이트 기록',
   'latest': '최신',
+  'v3.0.2.date': '2026-02-15',
+  'v3.0.2.change1': 'Twitch 계정 연동 라이프사이클 업데이트',
   'v3.0.1.date': '2026-01-19',
   'v3.0.1.change1': '스트림 종료 시 무한 렌더링 오류 수정',
   'v3.0.1.change2': 'Twitch 스트림 새로고침 후 멈추는 문제 수정',

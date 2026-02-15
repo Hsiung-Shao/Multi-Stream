@@ -1,12 +1,13 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUIStore } from './store/useUIStore';
+import { useUIStore, type PageType } from './store/useUIStore';
 import { useStreamStore } from './store/useStreamStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
 import { useAppInitialization } from './hooks/useAppInitialization';
 import { useThemeSystem } from './hooks/useThemeSystem';
 import { useRouter } from './hooks/useRouter';
+import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView } from './utils/analytics';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
@@ -47,6 +48,23 @@ export default function App() {
     // Check for Twitch OAuth redirect
     if (window.location.hash && window.location.hash.includes('access_token')) {
       useUIStore.getState().openModal('favorites');
+
+      // Auto-navigate back to the page user was on before OAuth
+      const returnPath = sessionStorage.getItem(RETURN_PAGE_KEY);
+      if (returnPath) {
+        const pathToPage: Record<string, PageType> = {
+          '/canvas': 'canvas',
+          '/tools': 'tool',
+          '/about': 'about',
+          '/instructions': 'instructions',
+          '/faq': 'faq',
+        };
+        const page = pathToPage[returnPath];
+        if (page) {
+          useUIStore.getState().setPage(page);
+        }
+        sessionStorage.removeItem(RETURN_PAGE_KEY);
+      }
     }
   }, []);
 
