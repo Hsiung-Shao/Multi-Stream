@@ -9,6 +9,8 @@ import { useThemeSystem } from './hooks/useThemeSystem';
 import { useRouter } from './hooks/useRouter';
 import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView } from './utils/analytics';
+import { initUmami } from './utils/umami';
+import { useCanvasRetention } from './hooks/useCanvasRetention';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { Toaster } from './components/ui/sonner';
@@ -41,6 +43,7 @@ export default function App() {
   // 初始化 GA4
   useEffect(() => {
     initGA();
+    initUmami();
     logPageView();
 
     // Clear canvas items on page load
@@ -83,6 +86,7 @@ export default function App() {
   useAutoRefresh();
   useHotkeys();
   useEngagementTracking(); // GA4 使用時間追蹤
+  useCanvasRetention(); // Umami canvas 留存追蹤
 
   // YouTube Warning Logic State (Hook) - Remains Global
   const {
