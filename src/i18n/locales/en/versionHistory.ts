@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
+  'v3.0.4.date': '2026-02-16',
+  'v3.0.4.change1': 'Fixed Twitch import failing to retrieve Client ID on initial page load',
   'v3.0.3.date': '2026-02-16',
   'v3.0.3.change1': 'Added Brave browser compatibility fix and FAQ tutorial',
   'v3.0.2.date': '2026-02-15',

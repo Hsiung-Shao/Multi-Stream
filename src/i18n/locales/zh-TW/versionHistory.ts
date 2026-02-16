@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '版本紀錄',
   'subtitle': 'MultiStream Hub 更新歷史',
   'latest': '最新',
+  'v3.0.4.date': '2026-02-16',
+  'v3.0.4.change1': '修復首次載入頁面時 Twitch 匯入功能無法取得 Client ID 的問題',
   'v3.0.3.date': '2026-02-16',
   'v3.0.3.change1': '添加 Brave 相容性問題與 FAQ 教學',
   'v3.0.2.date': '2026-02-15',
