@@ -1,7 +1,5 @@
 import { FeedbackFormData } from './FeedbackTypes';
-
-const API_BASE_URL = 'https://api.multistreaming.org';
-const FEEDBACK_ENDPOINT = `${API_BASE_URL}/api/feedback`;
+import { getSupabase } from '../../lib/supabase';
 
 export interface FeedbackPayload extends FeedbackFormData {
     userAgent: string;
@@ -13,31 +11,34 @@ export interface FeedbackPayload extends FeedbackFormData {
 
 export const FeedbackService = {
     /**
-     * Sends feedback data to the Discord Bot API.
+     * Sends feedback data to Supabase.
      * @param data The complete feedback data including system info.
      */
     sendFeedback: async (data: FeedbackPayload): Promise<void> => {
         try {
-            const response = await fetch(FEEDBACK_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
+            const supabase = await getSupabase();
+
+            if (!supabase) {
+                throw new Error('Supabase is not configured');
+            }
+
+            const { error } = await supabase.from('feedbacks').insert({
+                feedback_type: data.feedbackType,
+                content: data.content,
+                source: data.source || null,
+                usage_time: data.usageTime?.length ? data.usageTime : null,
+                usage_duration: data.usageDuration || null,
+                rating: data.rating ?? null,
+                nps_score: data.npsScore ?? null,
+                user_agent: data.userAgent,
+                screen_resolution: data.screenResolution,
+                window_size: data.windowSize,
+                theme: data.theme,
+                app_version: data.version,
             });
 
-            if (!response.ok) {
-                // Try to parse error message if available
-                let errorMessage = `HTTP error! status: ${response.status}`;
-                try {
-                    const errorBody = await response.json();
-                    if (errorBody && errorBody.message) {
-                        errorMessage = errorBody.message;
-                    }
-                } catch (e) {
-                    // Ignore JSON parse error, use default message
-                }
-                throw new Error(errorMessage);
+            if (error) {
+                throw new Error(error.message);
             }
         } catch (error) {
             console.error('Failed to send feedback:', error);
