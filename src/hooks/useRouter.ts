@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { logPageView, logEvent, isTrackingEnabled } from '../utils/analytics';
+import { trackPageView, trackEvent } from '../utils/umami';
 
 export function useRouter() {
     const page = useUIStore(s => s.page);
@@ -56,6 +57,10 @@ export function useRouter() {
         if (isTrackingEnabled()) {
             logPageView();
             logEvent('Navigation', 'page_view', page);
+
+            // Umami: SPA 路由追蹤
+            trackPageView(window.location.pathname);
+            trackEvent('page-navigate', { page });
         }
     }, [page]);
 
