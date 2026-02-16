@@ -9,7 +9,7 @@ export const RETURN_PAGE_KEY = 'twitch_return_page';
 export interface TwitchAuth {
     token: string | null;
     isLoggedIn: boolean;
-    login: () => void;
+    login: () => Promise<void>;
     logout: () => void;
     isProcessing: boolean;
     shouldOpenSettings: boolean;
@@ -76,7 +76,10 @@ export function useTwitchAuth(): TwitchAuth {
         }
     }, []);
 
-    const login = useCallback(() => {
+    const login = useCallback(async () => {
+        // 確保遠端配置已載入（修復首次載入 Client ID 缺失的問題）
+        await twitchService.ensureConfig();
+
         const config = twitchService.getConfig();
         if (!config.clientId) {
             alert('請先設定 Twitch Client ID');

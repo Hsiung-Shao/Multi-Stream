@@ -49,7 +49,7 @@ export class TwitchService implements TwitchApiContract {
 
     // --- Private: Lazy Config Loading ---
 
-    private async ensureConfig(): Promise<void> {
+    public async ensureConfig(): Promise<void> {
         // Optimization: If loaded or has static client ID, skip
         if (this.configLoaded) return;
         const current = this.configResolver.resolve();
