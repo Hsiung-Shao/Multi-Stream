@@ -37,6 +37,7 @@ const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(mo
 const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
 const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
+const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
 
 export default function App() {
   const { t } = useTranslation();
@@ -158,6 +159,12 @@ export default function App() {
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <FAQPage />
+          </Suspense>
+        );
+      case 'admin':
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <AdminPage />
           </Suspense>
         );
       case 'not-found':
