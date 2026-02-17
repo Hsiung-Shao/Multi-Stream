@@ -26,4 +26,5 @@ config.js
 .env
 .env.local
 .env.*.local
+.dev.vars
 multistream-hub-ab264674e6c2.json
