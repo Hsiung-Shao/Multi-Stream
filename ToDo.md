@@ -5,8 +5,6 @@
 代理server 啟動指令: wrangler pages dev functions --port 8788
 Shadcn UI
 
-<script defer src="https://cloud.umami.is/script.js" data-website-id="56e958bc-5b91-44d5-8fb5-60aa49c26226"></script>
-
 ## 待新增功能
 
 ### [] 1. Twitch 分類搜尋

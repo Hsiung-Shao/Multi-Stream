@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '版本紀錄',
   'subtitle': 'MultiStream Hub 更新歷史',
   'latest': '最新',
+  'v3.0.5.date': '2026-02-23',
+  'v3.0.5.change1': '畫布工具列改為滑鼠靠近螢幕底部時才彈出，減少視覺干擾',
   'v3.0.4.date': '2026-02-16',
   'v3.0.4.change1': '修復首次載入頁面時 Twitch 匯入功能無法取得 Client ID 的問題',
   'v3.0.3.date': '2026-02-16',

@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
+  'v3.0.5.date': '2026-02-23',
+  'v3.0.5.change1': 'Canvas toolbar now auto-hides and only appears when hovering near the bottom of the screen',
   'v3.0.4.date': '2026-02-16',
   'v3.0.4.change1': 'Fixed Twitch import failing to retrieve Client ID on initial page load',
   'v3.0.3.date': '2026-02-16',

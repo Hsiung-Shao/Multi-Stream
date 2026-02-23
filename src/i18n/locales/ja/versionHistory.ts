@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'バージョン履歴',
   'subtitle': 'MultiStream Hub更新履歴',
   'latest': '最新',
+  'v3.0.5.date': '2026-02-23',
+  'v3.0.5.change1': 'キャンバスツールバーを画面下部にマウスを近づけた時のみ表示するように変更',
   'v3.0.4.date': '2026-02-16',
   'v3.0.4.change1': '初回ページ読み込み時に Twitch インポートが Client ID を取得できない問題を修正',
   'v3.0.3.date': '2026-02-16',

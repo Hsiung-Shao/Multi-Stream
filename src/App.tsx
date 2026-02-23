@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
+import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore, type PageType } from './store/useUIStore';
 import { useStreamStore } from './store/useStreamStore';
@@ -21,6 +22,7 @@ import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useEngagementTracking } from './hooks/useEngagementTracking';
 import { CookieConsent } from './components/CookieConsent';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
+import { MobileApp } from './components/Mobile/MobileApp';
 
 // Pages
 import { HomePage } from './components/Pages/HomePage';
@@ -40,6 +42,7 @@ const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module 
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
 
 export default function App() {
+  const isMobile = useIsMobile();
   const { t } = useTranslation();
   // 初始化 GA4
   useEffect(() => {
@@ -97,6 +100,12 @@ export default function App() {
     handlePauseOtherYouTubeStreams,
     handleRiskDontRemind
   } = useYouTubeRisk();
+
+  // Mobile: Render MobileApp for core tabs, but fall through for full pages
+  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'not-found'].includes(currentPage);
+  if (isMobile && !isFullPage && currentPage !== 'home') {
+    return <MobileApp />;
+  }
 
   // Routing Logic
   const renderPage = () => {

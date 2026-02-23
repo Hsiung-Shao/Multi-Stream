@@ -1,72 +1,71 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+
+const BOTTOM_THRESHOLD = 80; // px from bottom edge to trigger show
+const HIDE_DELAY = 500; // ms delay before hiding after leaving
 
 interface UseDynamicIslandProps {
-    idleTime?: number; // Time in ms before auto-hiding
+    idleTime?: number; // kept for API compatibility, no longer used
 }
 
-export const useDynamicIsland = ({ idleTime = 15000 }: UseDynamicIslandProps = {}) => {
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+export const useDynamicIsland = (_props?: UseDynamicIslandProps) => {
+    const [isCollapsed, setIsCollapsed] = useState(true); // default hidden
+    const isHoveredRef = useRef(false);
+    const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const resetTimer = useCallback(() => {
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
+    const clearHideTimer = useCallback(() => {
+        if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
         }
-        setIsCollapsed(false);
+    }, []);
 
-        // Only set auto-hide timer if not currently hovered
-        if (!isHovered) {
-            timerRef.current = setTimeout(() => {
+    const scheduleHide = useCallback(() => {
+        clearHideTimer();
+        hideTimerRef.current = setTimeout(() => {
+            if (!isHoveredRef.current) {
                 setIsCollapsed(true);
-            }, idleTime);
-        }
-    }, [idleTime, isHovered]);
+            }
+        }, HIDE_DELAY);
+    }, [clearHideTimer]);
 
-    // Setup global mouse listener to reset timer on activity
+    // Global mousemove: show only when cursor is near bottom
     useEffect(() => {
-        const handleMouseMove = () => {
-            resetTimer();
-        };
+        const handleMouseMove = (e: MouseEvent) => {
+            const isNearBottom = e.clientY >= window.innerHeight - BOTTOM_THRESHOLD;
 
-        const handleKeyDown = () => {
-            resetTimer();
+            if (isNearBottom) {
+                clearHideTimer();
+                setIsCollapsed(false);
+            } else if (!isHoveredRef.current) {
+                // Cursor left bottom zone and not hovering toolbar
+                scheduleHide();
+            }
         };
 
         window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('keydown', handleKeyDown);
-
-        // Initial timer
-        resetTimer();
-
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('keydown', handleKeyDown);
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-            }
+            clearHideTimer();
         };
-    }, [resetTimer]);
+    }, [clearHideTimer, scheduleHide]);
 
-    // Handle hover state changes
+    // Toolbar hover handlers
     const handleMouseEnter = () => {
-        setIsHovered(true);
+        isHoveredRef.current = true;
+        clearHideTimer();
         setIsCollapsed(false);
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
-        }
     };
 
     const handleMouseLeave = () => {
-        setIsHovered(false);
-        resetTimer();
+        isHoveredRef.current = false;
+        scheduleHide();
     };
 
     return {
         isCollapsed,
         handlers: {
             onMouseEnter: handleMouseEnter,
-            onMouseLeave: handleMouseLeave
-        }
+            onMouseLeave: handleMouseLeave,
+        },
     };
 };
