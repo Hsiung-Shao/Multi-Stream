@@ -75,8 +75,8 @@ export const DynamicIsland = () => {
         }
     };
 
-    // Dynamic Island Hook
-    const { isCollapsed, handlers } = useDynamicIsland({ idleTime: 5000 });
+    // Dynamic Island Hook — shows when mouse near bottom edge
+    const { isCollapsed, handlers } = useDynamicIsland();
 
     const handleQuickSave = async () => {
         if (streams.length === 0) {
@@ -131,8 +131,7 @@ export const DynamicIsland = () => {
 
                 <div className={cn(
                     "bg-black/80 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-2xl transition-all duration-500 ease-in-out",
-                    "hover:scale-105 active:scale-95",
-                    isCollapsed ? "translate-y-[200%] opacity-50" : "translate-y-0 opacity-100"
+                    isCollapsed ? "translate-y-[200%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
                 )}>
                     <div className="flex items-center gap-1">
 

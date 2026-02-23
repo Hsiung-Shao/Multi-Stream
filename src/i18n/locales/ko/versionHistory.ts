@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '버전 기록',
   'subtitle': 'MultiStream Hub 업데이트 기록',
   'latest': '최신',
+  'v3.0.3.date': '2026-02-23',
+  'v3.0.3.change1': '캔버스 도구 모음이 화면 하단에 마우스를 가까이 가져갈 때만 표시되도록 변경',
   'v3.0.2.date': '2026-02-15',
   'v3.0.2.change1': 'Twitch 계정 연동 라이프사이클 업데이트',
   'v3.0.1.date': '2026-01-19',

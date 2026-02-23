@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '版本记录',
   'subtitle': 'MultiStream Hub 更新历史',
   'latest': '最新',
+  'v3.0.3.date': '2026-02-23',
+  'v3.0.3.change1': '画布工具栏改为鼠标靠近屏幕底部时才弹出，减少视觉干扰',
   'v3.0.2.date': '2026-02-15',
   'v3.0.2.change1': '更新 Twitch 账号连接生命周期',
   'v3.0.1.date': '2026-01-19',
