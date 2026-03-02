@@ -40,6 +40,7 @@ const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage'
 const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
+const VTuberExplorePage = lazy(() => import('./features/vtuber/pages/VTuberExplorePage').then(module => ({ 'default': module.VTuberExplorePage })));
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -102,7 +103,7 @@ export default function App() {
   } = useYouTubeRisk();
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
-  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'not-found'].includes(currentPage);
+  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'vtuber-explore', 'not-found'].includes(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return <MobileApp />;
   }
@@ -174,6 +175,12 @@ export default function App() {
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <AdminPage />
+          </Suspense>
+        );
+      case 'vtuber-explore':
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <VTuberExplorePage />
           </Suspense>
         );
       case 'not-found':

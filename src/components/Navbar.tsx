@@ -309,6 +309,7 @@ export function Navbar({
   const navLinks = [
     { label: t('navbar:canvas') || '畫布', onClick: () => setPage('canvas') },
     { label: t('navbar:fixed') || '固定佈局', onClick: () => setPage('fixed') },
+    { label: t('navbar:vtuber') || 'VTuber', onClick: () => setPage('vtuber-explore') },
     { label: t('navbar:about'), onClick: onShowAbout },
     { label: t('navbar:tutorial'), onClick: () => setPage('instructions') },
     { label: t('navbar:feedback'), onClick: onShowFeedback },

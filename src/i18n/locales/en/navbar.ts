@@ -18,6 +18,7 @@ const navbar = {
   'menu': 'Menu',
   'canvas': 'Canvas',
   'fixed': 'Fixed Layout',
+  'vtuber': 'VTuber Explore',
 };
 
 export default navbar;

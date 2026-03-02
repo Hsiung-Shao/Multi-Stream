@@ -126,6 +126,7 @@ const common = {
   'landing.footer.faq': 'よくある質問',
   'landing.footer.about': '私たちについて',
   'landing.footer.privacy': 'プライバシーポリシー',
+  'landing.footer.vtuber': 'VTuber 探索',
 
   // Hotkeys
   'hotkeys.title': 'キーボードショートカット',

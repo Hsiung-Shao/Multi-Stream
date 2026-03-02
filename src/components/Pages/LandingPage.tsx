@@ -44,12 +44,24 @@ export function LandingPage() {
                             MultiStream Hub
                         </span>
                     </div>
-                    <nav className="flex items-center gap-4">
+                    <nav className="flex items-center gap-1 sm:gap-2">
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('about')}>
+                            {t('landing.footer.about')}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('instructions')}>
+                            {t('landing.footer.tutorial')}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('faq')}>
+                            {t('landing.footer.faq')}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('vtuber-explore')}>
+                            {t('landing.footer.vtuber')}
+                        </Button>
                         <a
                             href="https://github.com/Hsiung-Shao/Multi-Stream"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-muted-foreground hover:text-foreground transition-colors p-2"
                         >
                             <Github className="w-5 h-5" />
                         </a>
@@ -357,20 +369,24 @@ export function LandingPage() {
             </main>
 
             {/* Footer */}
-            <footer className="py-12 border-t border-white/10 bg-background text-center text-muted-foreground text-sm">
-                <div className="container mx-auto px-4 flex flex-col gap-6">
-                    <div className="flex flex-wrap justify-center gap-6">
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('about')}>
+            <footer className="py-8 border-t border-white/10 bg-background text-center text-muted-foreground text-sm">
+                <div className="container mx-auto px-4 flex flex-col gap-4">
+                    {/* Mobile-only nav links (hidden on sm+, shown in header there) */}
+                    <div className="flex flex-wrap justify-center gap-4 sm:hidden">
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('about')}>
                             {t('landing.footer.about')}
                         </Button>
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('privacy')}>
-                            {t('landing.footer.privacy')}
-                        </Button>
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('instructions')}>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('instructions')}>
                             {t('landing.footer.tutorial')}
                         </Button>
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('faq')}>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('faq')}>
                             {t('landing.footer.faq')}
+                        </Button>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('vtuber-explore')}>
+                            {t('landing.footer.vtuber')}
+                        </Button>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('privacy')}>
+                            {t('landing.footer.privacy')}
                         </Button>
                     </div>
                     <div className="flex flex-col gap-2">

@@ -18,6 +18,7 @@ const navbar = {
   'menu': '選單',
   'canvas': '畫布',
   'fixed': '固定佈局',
+  'vtuber': 'VTuber 探索',
 };
 
 export default navbar;

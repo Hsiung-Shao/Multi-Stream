@@ -28,6 +28,8 @@ export function useRouter() {
                 setPage('faq');
             } else if (path === '/admin') {
                 setPage('admin');
+            } else if (path === '/vtubers') {
+                setPage('vtuber-explore');
             } else {
                 setPage('not-found');
             }
@@ -95,6 +97,9 @@ export function useRouter() {
                 break;
             case 'admin':
                 targetPath = '/admin';
+                break;
+            case 'vtuber-explore':
+                targetPath = '/vtubers';
                 break;
             case 'not-found':
                 // 如果是 404，不主動改變 URL，保留使用者輸入的錯誤網址

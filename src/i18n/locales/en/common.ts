@@ -125,6 +125,7 @@ const common = {
   'landing.footer.faq': 'FAQ',
   'landing.footer.about': 'About Us',
   'landing.footer.privacy': 'Privacy Policy',
+  'landing.footer.vtuber': 'VTuber Explore',
   // Hotkeys
   'hotkeys.title': 'Keyboard Shortcuts',
   'hotkeys.subtitle': 'Manage your stream workspace with keyboard shortcuts',

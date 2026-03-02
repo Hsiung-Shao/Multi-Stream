@@ -17,6 +17,7 @@ const navbar = {
   'menu': '메뉴',
   'canvas': '캔버스',
   'fixed': '고정 레이아웃',
+  'vtuber': 'VTuber 탐색',
 };
 
 export default navbar;

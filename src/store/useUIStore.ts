@@ -8,7 +8,7 @@ interface ModalState {
     ytRisk: boolean;
 }
 
-export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'not-found';
+export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'not-found';
 
 interface UIState {
     theme: 'light' | 'dark';

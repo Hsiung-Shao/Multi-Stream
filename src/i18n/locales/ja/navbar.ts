@@ -17,6 +17,7 @@ const navbar = {
   'menu': 'メニュー',
   'canvas': 'キャンバス',
   'fixed': '固定レイアウト',
+  'vtuber': 'VTuber 探索',
 };
 
 export default navbar;
