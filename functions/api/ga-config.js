@@ -4,61 +4,28 @@
 // 環境變數設定（在 Cloudflare Pages 的 Variables & Secrets 中設定）：
 // - GA_MEASUREMENT_ID: GA4 Measurement ID (例如 G-XXXXXXXXXX)
 
+import { jsonResponse, handleOptions } from '../lib/cors.js';
+
 /**
  * 處理 GA4 配置請求
  * @param {Object} context - 上下文對象
  * @returns {Promise<Response>} - JSON 回應
  */
 export async function onRequestGet(context) {
-    const { env } = context;
+    const { request, env } = context;
 
     try {
-        // 支援 GA_MEASUREMENT_ID 或 VITE_GA_MEASUREMENT_ID (相容性)
         const measurementId = env.GA_MEASUREMENT_ID || env.VITE_GA_MEASUREMENT_ID || null;
 
-        return new Response(
-            JSON.stringify({
-                measurementId: measurementId
-            }),
-            {
-                status: 200,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type',
-                    'Cache-Control': 'public, max-age=3600'
-                }
-            }
-        );
+        return jsonResponse({ measurementId }, 200, request, {
+            'Cache-Control': 'public, max-age=3600',
+        });
     } catch (error) {
-        return new Response(
-            JSON.stringify({
-                error: '伺服器錯誤',
-                message: error.message || '處理請求時發生未知錯誤'
-            }),
-            {
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                }
-            }
-        );
+        return jsonResponse({ error: '伺服器錯誤' }, 500, request);
     }
 }
 
 // 處理 OPTIONS 請求（CORS 預檢請求）
-export async function onRequestOptions() {
-    return new Response(null, {
-        status: 204,
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Max-Age': '86400'
-        }
-    });
+export async function onRequestOptions(context) {
+    return handleOptions(context.request);
 }

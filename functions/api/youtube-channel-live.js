@@ -5,29 +5,19 @@
 // 3) 只有 channelId match 且 isLiveNow 才回 LIVE（Fail-Closed）
 // 4) 排程直播（UPCOMING）會被標記，但不當作 LIVE（避免誤加串流）
 
-export async function onRequestGet(contextOrRequest, env) {
-  let request, envObj;
-  if (contextOrRequest && contextOrRequest.request) {
-    request = contextOrRequest.request;
-    envObj = contextOrRequest.env;
-  } else {
-    request = contextOrRequest;
-    envObj = env;
-  }
+import { getCorsHeaders, handleOptions } from '../lib/cors.js';
 
-  return handleChannelLiveRequest(request, envObj);
+// 保存 request 引用供 jsonHeaders 使用
+let _currentRequest = null;
+
+export async function onRequestGet(context) {
+  const { request } = context;
+  _currentRequest = request;
+  return handleChannelLiveRequest(request);
 }
 
-export async function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400'
-    }
-  });
+export async function onRequestOptions(context) {
+  return handleOptions(context.request);
 }
 
 const MAX_REDIRECTS = 6;
@@ -50,7 +40,7 @@ function baseHtmlHeaders(extra = {}) {
 function jsonHeaders() {
   return {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*'
+    ...getCorsHeaders(_currentRequest),
   };
 }
 

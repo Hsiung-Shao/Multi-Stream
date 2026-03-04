@@ -65,12 +65,12 @@ export const DynamicIsland = () => {
 
     const toggleFullscreen = () => {
         if (!getFullscreenElement()) {
-            requestFullscreen(document.documentElement).catch((err) => {
-                toast.error(`Error attempting to enable fullscreen: ${err.message}`);
+            requestFullscreen(document.documentElement).catch(() => {
+                toast.error('無法進入全螢幕');
             });
         } else {
-            exitFullscreen().catch((err) => {
-                console.error('Error exiting fullscreen:', err);
+            exitFullscreen().catch(() => {
+                console.error('Error exiting fullscreen');
             });
         }
     };
@@ -111,8 +111,8 @@ export const DynamicIsland = () => {
 
             toast.success(t('favorites:batch_save_success_simple', { count: successCount }) || `已收藏 ${successCount} 個串流`);
 
-        } catch (error) {
-            console.error(error);
+        } catch {
+            console.error('Quick save failed');
             toast.error(t('common.error') || '發生錯誤');
         }
     };

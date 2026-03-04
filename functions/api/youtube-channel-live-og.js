@@ -1,5 +1,14 @@
+import { getCorsHeaders, handleOptions } from '../lib/cors.js';
+
+let _currentRequest = null;
+
+export async function onRequestOptions(context) {
+    return handleOptions(context.request);
+}
+
 export async function onRequestGet(context) {
     const { request } = context;
+    _currentRequest = request;
     const url = new URL(request.url);
     const channelId = url.searchParams.get('channelId');
 
@@ -225,7 +234,7 @@ export async function onRequestGet(context) {
 function jsonHeaders() {
     return {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        ...getCorsHeaders(_currentRequest),
         'Cache-Control': 'no-store'
     };
 }

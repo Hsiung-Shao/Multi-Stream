@@ -16,6 +16,7 @@ import { layoutStorage } from '../utils/layoutStorage';
 import { logEvent, isTrackingEnabled } from '../utils/analytics';
 import { trackEvent as umamiTrack } from '../utils/umami';
 import { userSegmentationManager, FEATURE_FLAGS } from '../utils/userSegmentation';
+import { getCachedChannel, upsertChannel } from '../features/youtube/YouTubeChannelRepository';
 
 interface StreamStoreState {
     streams: StreamData[];
@@ -184,11 +185,23 @@ export const useStreamStore = create<StreamStoreState>()(
                                     if (!streamData.channelId && info.channelId) {
                                         streamData.channelId = info.channelId;
                                     }
+                                    // Cache channel data
+                                    if (info.channelId) {
+                                        upsertChannel({ channel_id: info.channelId, channel_title: info.channelTitle }).catch(() => {});
+                                    }
                                 }
                             } else if (streamData.channelId) {
-                                const title = await youtubeApi.getChannelTitleFromChannelId(streamData.channelId);
-                                if (title) {
-                                    if (shouldUpdateTitle) displayName = title;
+                                // Try Supabase cache first
+                                const cached = await getCachedChannel(streamData.channelId);
+                                if (cached) {
+                                    if (shouldUpdateTitle) displayName = cached.channel_title;
+                                } else {
+                                    const title = await youtubeApi.getChannelTitleFromChannelId(streamData.channelId);
+                                    if (title) {
+                                        if (shouldUpdateTitle) displayName = title;
+                                        // Cache for future use
+                                        upsertChannel({ channel_id: streamData.channelId, channel_title: title }).catch(() => {});
+                                    }
                                 }
                             }
                         } catch (e) {
@@ -770,6 +783,12 @@ export const useStreamStore = create<StreamStoreState>()(
                 const itemToRemove = state.canvasItems.find(item => item.i === id);
 
                 if (!itemToRemove) return;
+
+                // Track stream removal
+                if (itemToRemove.contentId && itemToRemove.type === 'stream') {
+                    const stream = state.streams.find(s => s.id === itemToRemove.contentId);
+                    if (stream) umamiTrack('stream-remove', { platform: stream.platform });
+                }
 
                 // 1. If ALREADY Empty Window (no contentId), ALWAYS Remove
                 if (!itemToRemove.contentId) {

@@ -1,17 +1,10 @@
 // Cloudflare Pages Function: YouTube 頻道頁面代理端點
 // 用於代理 YouTube 頻道頁面請求，解決 CORS 問題，用於提取 channel ID
 
-export async function onRequestGet(contextOrRequest, env) {
-  let request, envObj;
-  if (contextOrRequest && contextOrRequest.request) {
-    request = contextOrRequest.request;
-    envObj = contextOrRequest.env;
-  } else {
-    request = contextOrRequest;
-    envObj = env;
-  }
-  
-  return handleChannelPageRequest(request, envObj);
+import { getCorsHeaders, handleOptions } from '../lib/cors.js';
+
+export async function onRequestGet(context) {
+  return handleChannelPageRequest(context.request, context.env);
 }
 
 async function handleChannelPageRequest(request, env) {
@@ -26,7 +19,7 @@ async function handleChannelPageRequest(request, env) {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            ...getCorsHeaders(request)
           }
         }
       );
@@ -43,7 +36,7 @@ async function handleChannelPageRequest(request, env) {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            ...getCorsHeaders(request)
           }
         }
       );
@@ -73,7 +66,7 @@ async function handleChannelPageRequest(request, env) {
           status: response.status,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            ...getCorsHeaders(request)
           }
         }
       );
@@ -292,10 +285,8 @@ async function handleChannelPageRequest(request, env) {
         status: channelId ? 200 : 404,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Cache-Control': 'public, max-age=3600' // 快取 1 小時（頻道 ID 不會頻繁變化）
+          ...getCorsHeaders(request),
+          'Cache-Control': 'public, max-age=3600'
         }
       }
     );
@@ -309,7 +300,7 @@ async function handleChannelPageRequest(request, env) {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          ...getCorsHeaders(request)
         }
       }
     );
@@ -317,15 +308,7 @@ async function handleChannelPageRequest(request, env) {
 }
 
 // 處理 OPTIONS 請求（CORS 預檢請求）
-export async function onRequestOptions(contextOrRequest, env) {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400' // 24 小時
-    }
-  });
+export async function onRequestOptions(context) {
+  return handleOptions(context.request);
 }
 

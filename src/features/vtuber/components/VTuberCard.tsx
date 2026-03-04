@@ -50,7 +50,7 @@ export function VTuberCard({ vtuber, isLive, onClick }: VTuberCardProps) {
       </div>
 
       {/* Name */}
-      <div className="text-center min-w-0 w-full">
+      <div className="text-center min-w-0 w-full h-9">
         <h3 className="font-semibold text-sm text-foreground truncate">{vtuber.name}</h3>
         {vtuber.group_name && (
           <p className="text-xs text-muted-foreground truncate mt-0.5">{vtuber.group_name}</p>

@@ -22,6 +22,7 @@ import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useEngagementTracking } from './hooks/useEngagementTracking';
 import { CookieConsent } from './components/CookieConsent';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
+import { LoginDialog } from './components/Dialogs/LoginDialog';
 import { MobileApp } from './components/Mobile/MobileApp';
 
 // Pages
@@ -54,9 +55,13 @@ export default function App() {
     // Clear canvas items on page load
     useStreamStore.getState().clearCanvasItems();
 
-    // Check for Twitch OAuth redirect
+    // Check for OAuth redirect (Twitch import or Supabase auth)
     if (window.location.hash && window.location.hash.includes('access_token')) {
-      useUIStore.getState().openModal('favorites');
+      // 只在 Twitch 匯入流程（有 pending flag）時才開啟收藏管理
+      const isTwitchImport = sessionStorage.getItem('twitch_import_pending');
+      if (isTwitchImport) {
+        useUIStore.getState().openModal('favorites');
+      }
 
       // Auto-navigate back to the page user was on before OAuth
       const returnPath = sessionStorage.getItem(RETURN_PAGE_KEY);
@@ -247,6 +252,10 @@ export default function App() {
       <Toaster />
       <CookieConsent />
       <BraveDetectDialog />
+      <LoginDialog
+        open={modals.login}
+        onClose={() => closeModal('login')}
+      />
     </>
   );
 }

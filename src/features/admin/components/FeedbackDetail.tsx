@@ -8,11 +8,11 @@ import { Trash2, Save, Loader2, Bug, Lightbulb, Palette, HelpCircle, Monitor, Gl
 import type { FeedbackRecord, FeedbackStatus } from '../types';
 import { useUpdateFeedback, useDeleteFeedback } from '../hooks/useFeedbacks';
 
-const TYPE_CONFIG: Record<string, { label: string; icon: typeof Bug; color: string }> = {
-    bug: { label: 'Bug', icon: Bug, color: 'text-red-400' },
-    feature: { label: '功能建議', icon: Lightbulb, color: 'text-amber-400' },
-    ui: { label: 'UI/UX', icon: Palette, color: 'text-violet-400' },
-    other: { label: '其他', icon: HelpCircle, color: 'text-zinc-400' },
+const TYPE_CONFIG: Record<string, { label: string; icon: typeof Bug; color: string; bg: string }> = {
+    bug: { label: 'Bug', icon: Bug, color: 'text-red-400', bg: 'bg-red-500/10' },
+    feature: { label: '功能建議', icon: Lightbulb, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+    ui: { label: 'UI/UX', icon: Palette, color: 'text-violet-400', bg: 'bg-violet-500/10' },
+    other: { label: '其他', icon: HelpCircle, color: 'text-zinc-400', bg: 'bg-zinc-500/10' },
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -69,32 +69,32 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
 
     return (
         <Sheet open={open} onOpenChange={isOpen => { if (!isOpen) onClose(); }}>
-            <SheetContent className="bg-[#0a0a0c] border-l border-white/[0.06] text-white w-full sm:max-w-[480px] p-0 flex flex-col overflow-hidden">
+            <SheetContent className="bg-zinc-950 border-l border-zinc-800 text-white w-full sm:max-w-[480px] p-0 flex flex-col overflow-hidden">
                 <SheetHeader className="px-5 pt-5 pb-0">
                     <SheetTitle className="flex items-center gap-2.5 text-zinc-200">
-                        <div className={`w-7 h-7 rounded-md flex items-center justify-center bg-white/[0.05] ${typeConf.color}`}>
-                            <TypeIcon className="w-3.5 h-3.5" />
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeConf.bg} ${typeConf.color}`}>
+                            <TypeIcon className="w-4 h-4" />
                         </div>
-                        <span className="text-[14px] font-medium">{typeConf.label}</span>
-                        <span className="text-[11px] text-zinc-600 font-normal ml-auto">
+                        <span className="text-[15px] font-semibold">{typeConf.label}</span>
+                        <span className="text-[12px] text-zinc-500 font-normal ml-auto">
                             {new Date(record.created_at).toLocaleString('zh-TW')}
                         </span>
                     </SheetTitle>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
                     {/* Content */}
                     <div>
-                        <p className="text-[13px] leading-[1.7] text-zinc-300 whitespace-pre-wrap">
+                        <p className="text-[14px] leading-[1.8] text-zinc-200 whitespace-pre-wrap">
                             {record.content}
                         </p>
                     </div>
 
                     {/* Survey data */}
                     {(record.source || record.usage_time || record.usage_duration || record.rating != null || record.nps_score != null) && (
-                        <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] p-3.5 space-y-2.5">
-                            <h4 className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">問卷數據</h4>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-4 space-y-3">
+                            <h4 className="text-[12px] font-semibold text-zinc-400 uppercase tracking-wider">問卷數據</h4>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
                                 {record.source && (
                                     <InfoItem label="來源" value={SOURCE_LABELS[record.source] || record.source} />
                                 )}
@@ -115,9 +115,9 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
                     )}
 
                     {/* System info */}
-                    <div className="rounded-lg bg-white/[0.02] border border-white/[0.05] p-3.5 space-y-2">
-                        <h4 className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">系統資訊</h4>
-                        <div className="space-y-1.5">
+                    <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-4 space-y-2.5">
+                        <h4 className="text-[12px] font-semibold text-zinc-400 uppercase tracking-wider">系統資訊</h4>
+                        <div className="space-y-2">
                             {record.user_agent && (
                                 <SysItem icon={Globe} value={record.user_agent} />
                             )}
@@ -138,12 +138,12 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
 
                     {/* Management section */}
                     <div className="space-y-3 pt-1">
-                        <h4 className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">管理</h4>
+                        <h4 className="text-[12px] font-semibold text-zinc-400 uppercase tracking-wider">管理</h4>
 
                         <div className="space-y-1.5">
-                            <label className="text-[12px] text-zinc-500">狀態</label>
+                            <label className="text-[12px] text-zinc-400 font-medium">狀態</label>
                             <Select value={status} onValueChange={v => setStatus(v as FeedbackStatus)}>
-                                <SelectTrigger className="h-9 bg-white/[0.03] border-white/[0.06] text-zinc-300 text-[13px] rounded-lg">
+                                <SelectTrigger className="h-9 bg-zinc-900 border-zinc-700 text-zinc-300 text-[13px] rounded-lg">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -156,23 +156,23 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-[12px] text-zinc-500">備註</label>
+                            <label className="text-[12px] text-zinc-400 font-medium">備註</label>
                             <Textarea
                                 value={notes}
                                 onChange={e => setNotes(e.target.value)}
                                 placeholder="新增備註..."
-                                className="bg-white/[0.03] border-white/[0.06] text-zinc-300 placeholder:text-zinc-700 min-h-[72px] text-[13px] rounded-lg resize-none focus-visible:ring-1 focus-visible:ring-blue-500/30"
+                                className="bg-zinc-900 border-zinc-700 text-zinc-300 placeholder:text-zinc-600 min-h-[72px] text-[13px] rounded-lg resize-none focus-visible:ring-1 focus-visible:ring-blue-500/50"
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* Fixed bottom action bar */}
-                <div className="border-t border-white/[0.06] px-5 py-3.5 flex items-center gap-2 bg-[#0a0a0c]">
+                <div className="border-t border-zinc-800 px-5 py-4 flex items-center gap-2 bg-zinc-950">
                     <Button
                         onClick={handleSave}
                         disabled={updateMutation.isPending || !hasChanged}
-                        className="flex-1 h-9 bg-white/[0.08] hover:bg-white/[0.12] text-zinc-200 border border-white/[0.08] rounded-lg text-[13px] font-medium transition-all disabled:opacity-30"
+                        className="flex-1 h-9 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[13px] font-medium transition-all disabled:opacity-30 border-0"
                     >
                         {updateMutation.isPending ? (
                             <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -184,24 +184,24 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
 
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-white/[0.06] text-zinc-500 hover:text-red-400 hover:border-red-500/20 hover:bg-red-500/[0.06] transition-all">
+                            <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-zinc-700 text-zinc-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all">
                                 <Trash2 className="w-3.5 h-3.5" />
                             </button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="bg-zinc-900 border-zinc-800 max-w-[360px]">
                             <AlertDialogHeader>
-                                <AlertDialogTitle className="text-zinc-200 text-[15px]">刪除此回饋？</AlertDialogTitle>
-                                <AlertDialogDescription className="text-zinc-500 text-[13px]">
+                                <AlertDialogTitle className="text-zinc-100 text-[15px]">刪除此回饋？</AlertDialogTitle>
+                                <AlertDialogDescription className="text-zinc-400 text-[13px]">
                                     此操作無法復原。
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter className="gap-2">
-                                <AlertDialogCancel className="h-8 bg-white/[0.04] border-white/[0.06] text-zinc-300 hover:bg-white/[0.08] text-[13px]">
+                                <AlertDialogCancel className="h-9 bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 text-[13px]">
                                     取消
                                 </AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={handleDelete}
-                                    className="h-8 bg-red-600 hover:bg-red-700 text-white text-[13px]"
+                                    className="h-9 bg-red-600 hover:bg-red-500 text-white text-[13px]"
                                 >
                                     {deleteMutation.isPending ? '刪除中...' : '刪除'}
                                 </AlertDialogAction>
@@ -217,8 +217,8 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
 function InfoItem({ label, value }: { label: string; value: string }) {
     return (
         <div>
-            <dt className="text-[11px] text-zinc-600">{label}</dt>
-            <dd className="text-[12px] text-zinc-300 mt-0.5">{value}</dd>
+            <dt className="text-[12px] text-zinc-500">{label}</dt>
+            <dd className="text-[13px] text-zinc-200 mt-0.5">{value}</dd>
         </div>
     );
 }
@@ -226,8 +226,8 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 function SysItem({ icon: Icon, value }: { icon: typeof Globe; value: string }) {
     return (
         <div className="flex items-start gap-2">
-            <Icon className="w-3 h-3 text-zinc-600 mt-0.5 flex-shrink-0" />
-            <span className="text-[11px] text-zinc-500 break-all leading-relaxed">{value}</span>
+            <Icon className="w-3.5 h-3.5 text-zinc-500 mt-0.5 flex-shrink-0" />
+            <span className="text-[12px] text-zinc-400 break-all leading-relaxed">{value}</span>
         </div>
     );
 }

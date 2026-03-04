@@ -424,6 +424,16 @@ class VTuberRepository {
                 return;
             }
 
+            // 1. Fetch the contribution to get action & payload
+            const { data: contrib, error: fetchErr } = await supabase
+                .from('vtuber_contributions')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (fetchErr) throw fetchErr;
+
+            // 2. Update contribution status
             const { error } = await supabase
                 .from('vtuber_contributions')
                 .update({
@@ -434,10 +444,102 @@ class VTuberRepository {
                 .eq('id', id);
 
             if (error) throw error;
+
+            // 3. If approved, apply the change to vtubers table
+            if (decision === 'approved') {
+                await this.applyContribution(supabase, contrib);
+            }
         } catch (err) {
             console.warn('VTuberRepository.reviewContribution failed', err);
             throw err;
         }
+    }
+
+    /**
+     * Apply an approved contribution to the vtubers / vtuber_groups tables.
+     */
+    private async applyContribution(
+        supabase: import('@supabase/supabase-js').SupabaseClient,
+        contrib: Record<string, unknown>,
+    ): Promise<void> {
+        const action = contrib.action as string;
+        const payload = contrib.payload as VTuberContributionPayload;
+
+        if (action === 'add') {
+            // Resolve group_id from group_name if provided
+            let groupId: string | null = null;
+            if (payload.group_name) {
+                groupId = await this.resolveGroupId(supabase, payload.group_name);
+            }
+
+            const { error } = await supabase.from('vtubers').insert({
+                name: payload.name,
+                nationality: payload.nationality,
+                youtube_channel_id: payload.youtube_channel_id ?? null,
+                twitch_channel_id: payload.twitch_channel_id ?? null,
+                group_id: groupId,
+                debut_date: payload.debut_date ?? null,
+                contributed_by: (contrib.submitted_by as string) ?? null,
+            });
+            if (error) throw error;
+        } else if (action === 'edit' && contrib.target_vtuber_id) {
+            let groupId: string | null | undefined;
+            if (payload.group_name !== undefined) {
+                groupId = payload.group_name
+                    ? await this.resolveGroupId(supabase, payload.group_name)
+                    : null;
+            }
+
+            const updates: Record<string, unknown> = {
+                name: payload.name,
+                nationality: payload.nationality,
+                youtube_channel_id: payload.youtube_channel_id ?? null,
+                twitch_channel_id: payload.twitch_channel_id ?? null,
+                debut_date: payload.debut_date ?? null,
+            };
+            if (groupId !== undefined) {
+                updates.group_id = groupId;
+            }
+
+            const { error } = await supabase
+                .from('vtubers')
+                .update(updates)
+                .eq('id', contrib.target_vtuber_id as string);
+            if (error) throw error;
+        } else if (action === 'delete' && contrib.target_vtuber_id) {
+            const { error } = await supabase
+                .from('vtubers')
+                .delete()
+                .eq('id', contrib.target_vtuber_id as string);
+            if (error) throw error;
+        }
+    }
+
+    /**
+     * Find or create a vtuber_groups record by name, return its id.
+     */
+    private async resolveGroupId(
+        supabase: import('@supabase/supabase-js').SupabaseClient,
+        groupName: string,
+    ): Promise<string> {
+        // Try to find existing group
+        const { data: existing } = await supabase
+            .from('vtuber_groups')
+            .select('id')
+            .eq('name', groupName)
+            .maybeSingle();
+
+        if (existing) return existing.id as string;
+
+        // Create new group
+        const { data: created, error } = await supabase
+            .from('vtuber_groups')
+            .insert({ name: groupName })
+            .select('id')
+            .single();
+
+        if (error) throw error;
+        return (created as { id: string }).id;
     }
 
     // -----------------------------------------------------------------------

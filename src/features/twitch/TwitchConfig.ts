@@ -60,11 +60,10 @@ export class TwitchConfigResolver implements ConfigResolverContract {
             getStorage('twitchClientId') ||
             '';
 
-        // Client Secret
+        // Client Secret（僅從環境變數取得，不應存在前端 localStorage）
         config.clientSecret =
             getEnv('TWITCH_CLIENT_SECRET') ||
             getGlobal('TWITCH_CLIENT_SECRET') ||
-            getStorage('twitchClientSecret') ||
             '';
 
         // Access Token
@@ -127,12 +126,12 @@ export class TwitchConfigResolver implements ConfigResolverContract {
 
         try {
             if (updates.clientId !== undefined) localStorage.setItem('twitchClientId', updates.clientId);
-            if (updates.clientSecret !== undefined) localStorage.setItem('twitchClientSecret', updates.clientSecret);
+            // clientSecret 不應存儲在 localStorage — 僅透過環境變數或後端 API 取得
             if (updates.accessToken !== undefined) localStorage.setItem('twitchAccessToken', updates.accessToken);
             if (updates.proxyUrl !== undefined) localStorage.setItem('twitchProxyUrl', updates.proxyUrl);
             if (updates.useProxy !== undefined) localStorage.setItem('twitchUseProxy', updates.useProxy.toString());
-        } catch (e) {
-            console.error('Failed to persist Twitch config', e);
+        } catch {
+            console.error('Failed to persist Twitch config');
         }
 
         return merged;

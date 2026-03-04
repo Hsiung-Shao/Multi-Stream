@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../../store/useUIStore';
 import { useVTubers, useVTuberGroups, useVTuberLivestreams } from '../hooks/useVTubers';
@@ -8,14 +8,26 @@ import { VTuberFilterBar } from '../components/VTuberFilterBar';
 import { VTuberGrid } from '../components/VTuberGrid';
 import { VTuberDetailSheet } from '../components/VTuberDetailSheet';
 import { ContributeVTuberDialog } from '../components/ContributeVTuberDialog';
+import { EventCalendarView } from '../components/EventCalendarView';
+import { CreateEventDialog } from '../components/CreateEventDialog';
+import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
+import { useAuthContext } from '../../../contexts/AuthContext';
 import { SEO } from '../../../components/SEO';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../components/ui/dropdown-menu';
+import { EditProfileDialog } from '../../../components/Dialogs/EditProfileDialog';
+import { trackEvent } from '../../../utils/umami';
 import type { VTuberRecord } from '../types';
+
+type ExploreTab = 'vtubers' | 'events';
 
 export function VTuberExplorePage() {
   const { t } = useTranslation('vtuber');
   const setPage = useUIStore((s) => s.setPage);
+
+  // Tab
+  const [activeTab, setActiveTab] = useState<ExploreTab>('vtubers');
 
   // Filters
   const {
@@ -56,13 +68,42 @@ export function VTuberExplorePage() {
   // Contribute dialog
   const [contributeOpen, setContributeOpen] = useState(false);
 
+  // Create event dialog
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+
+  // Auth
+  const { isLoggedIn, profile, logout } = useAuthContext();
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+
+  // Umami tracking
+  const searchTrackTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    trackEvent('vtuber-explore-view', { tab: activeTab });
+    return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
+  }, []); // page view on mount + cleanup
+  const handleSearchWithTracking = (keyword: string) => {
+    setSearch(keyword);
+    if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
+    if (keyword.trim()) {
+      searchTrackTimer.current = setTimeout(() => {
+        trackEvent('vtuber-search', { keyword: keyword.trim() });
+      }, 1000);
+    }
+  };
+
+  const handleTabChange = (tab: ExploreTab) => {
+    setActiveTab(tab);
+    trackEvent('event-tab-view', { tab });
+  };
+
   const handleVTuberClick = (vtuber: VTuberRecord) => {
     setSelectedVTuber(vtuber);
     setSheetOpen(true);
+    trackEvent('vtuber-detail', { name: vtuber.name });
   };
 
   const handleAddToFavorites = (vtuber: VTuberRecord) => {
-    // Use the stream URL to add to favorites via the existing system
     const channelId = vtuber.twitch_channel_id || vtuber.youtube_channel_id;
     if (!channelId) return;
 
@@ -70,7 +111,6 @@ export function VTuberExplorePage() {
       ? `https://www.twitch.tv/${vtuber.twitch_channel_id}`
       : `https://www.youtube.com/channel/${vtuber.youtube_channel_id}`;
 
-    // Dispatch custom event for favorites system integration
     window.dispatchEvent(
       new CustomEvent('add-to-favorites', {
         detail: { url, name: vtuber.name, platform: vtuber.twitch_channel_id ? 'twitch' : 'youtube' },
@@ -103,50 +143,139 @@ export function VTuberExplorePage() {
             </Button>
             <h1 className="text-lg font-bold">{t('pageTitle')}</h1>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => setContributeOpen(true)}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {t('contribute')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Action button changes based on tab */}
+            {activeTab === 'vtubers' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => setContributeOpen(true)}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {t('contribute')}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => setCreateEventOpen(true)}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {t('createEvent')}
+              </Button>
+            )}
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5 px-2 h-8">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                        {profile?.display_name?.charAt(0) ?? '?'}
+                      </div>
+                    )}
+                    <span className="text-xs text-foreground hidden sm:inline max-w-[80px] truncate">
+                      {profile?.display_name}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel className="text-xs">{profile?.display_name}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => setEditProfileOpen(true)}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" />
+                    {t('common:editDisplayName', '修改名稱')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => logout()}>
+                    <LogOut className="w-3.5 h-3.5 mr-2" />
+                    {t('auth:logout', '登出')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => setLoginDialogOpen(true)}
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                {t('loginButton')}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div className="container mx-auto px-4">
+          <div className="flex gap-0 border-b border-transparent -mb-px">
+            <button
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'vtubers'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => handleTabChange('vtubers')}
+            >
+              <Users className="w-4 h-4" />
+              {t('vtubersTab')}
+            </button>
+            <button
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'events'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => handleTabChange('events')}
+            >
+              <CalendarDays className="w-4 h-4" />
+              {t('eventsTab')}
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main content */}
       <main className="flex-1 container mx-auto px-4 py-6 space-y-6">
-        {/* Search + Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <VTuberSearchInput value={search} onChange={setSearch} />
-          <VTuberFilterBar
-            nationality={nationality}
-            activity={activity}
-            groupId={groupId}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            groups={groups}
-            onNationalityChange={setNationality}
-            onActivityChange={setActivity}
-            onGroupChange={setGroupId}
-            onSortByChange={setSortBy}
-            onSortOrderChange={setSortOrder}
-            onReset={resetFilters}
-          />
-        </div>
+        {activeTab === 'vtubers' ? (
+          <>
+            {/* Search + Filters */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <VTuberSearchInput value={search} onChange={handleSearchWithTracking} />
+              <VTuberFilterBar
+                nationality={nationality}
+                activity={activity}
+                groupId={groupId}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                groups={groups}
+                onNationalityChange={(v) => { setNationality(v); trackEvent('vtuber-filter', { nationality: v || 'all' }); }}
+                onActivityChange={(v) => { setActivity(v); trackEvent('vtuber-filter', { activity: v || 'all' }); }}
+                onGroupChange={(v) => { setGroupId(v); trackEvent('vtuber-filter', { group: v || 'all' }); }}
+                onSortByChange={setSortBy}
+                onSortOrderChange={setSortOrder}
+                onReset={resetFilters}
+              />
+            </div>
 
-        {/* Grid */}
-        <VTuberGrid
-          vtubers={vtubersResult?.data ?? []}
-          totalCount={vtubersResult?.count ?? 0}
-          page={page}
-          pageSize={pageSize}
-          isLoading={isLoading}
-          liveVTuberIds={liveVTuberIds}
-          onPageChange={setFilterPage}
-          onVTuberClick={handleVTuberClick}
-        />
+            {/* Grid */}
+            <VTuberGrid
+              vtubers={vtubersResult?.data ?? []}
+              totalCount={vtubersResult?.count ?? 0}
+              page={page}
+              pageSize={pageSize}
+              isLoading={isLoading}
+              liveVTuberIds={liveVTuberIds}
+              onPageChange={setFilterPage}
+              onVTuberClick={handleVTuberClick}
+            />
+          </>
+        ) : (
+          <EventCalendarView />
+        )}
       </main>
 
       {/* Detail Sheet */}
@@ -162,6 +291,18 @@ export function VTuberExplorePage() {
         open={contributeOpen}
         onOpenChange={setContributeOpen}
       />
+
+      {/* Create Event Dialog */}
+      <CreateEventDialog
+        open={createEventOpen}
+        onOpenChange={setCreateEventOpen}
+      />
+
+      {/* Login Dialog */}
+      <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} />
+
+      {/* Edit Profile Dialog */}
+      <EditProfileDialog open={editProfileOpen} onClose={() => setEditProfileOpen(false)} />
     </div>
   );
 }

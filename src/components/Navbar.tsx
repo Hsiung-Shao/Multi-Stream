@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import { Search, Heart, Globe, Sun, Moon, Coffee, Plus, Menu, LayoutTemplate, Monitor } from 'lucide-react';
+import { Search, Heart, Globe, Sun, Moon, Coffee, Plus, Menu, LayoutTemplate, Monitor, UserRound, LogOut, Pencil } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -23,6 +23,17 @@ import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { twitchService } from '../features/twitch/TwitchService';
+import { useAuthContext } from '../contexts/AuthContext';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { EditProfileDialog } from './Dialogs/EditProfileDialog';
 
 interface NavbarProps {
   theme: 'light' | 'dark';
@@ -58,11 +69,13 @@ export function Navbar({
   onAddStream,
   onSearchFocusChange
 }: NavbarProps) {
-  const { t, i18n } = useTranslation(['navbar', 'common', 'favorites']);
+  const { t, i18n } = useTranslation(['navbar', 'common', 'favorites', 'auth']);
   const locale = i18n.language;
   const setLocale = (lang: string) => i18n.changeLanguage(lang);
   // 使用 'lg' breakpoint (1024px) 以確保手機水平版面也使用手機版按鈕設計
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { isLoggedIn, profile, logout } = useAuthContext();
+  const openModal = useUIStore(s => s.openModal);
   const [searchValue, setSearchValue] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -70,6 +83,7 @@ export function Navbar({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -319,6 +333,7 @@ export function Navbar({
   const setPage = useUIStore(s => s.setPage);
 
   return (
+    <>
     <nav
       className={`w-full border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-4 md:px-6 py-3 sticky top-0 z-50`}
       style={{ '--navbar-height': '4rem' } as CSSProperties}
@@ -396,6 +411,47 @@ export function Navbar({
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* 登入/登出 */}
+                    {isLoggedIn && profile ? (
+                      <div className="flex flex-col gap-2">
+                        <div className={`flex items-center gap-3 px-2 py-1.5 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <Avatar className="size-7">
+                            <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name} />
+                            <AvatarFallback className="text-xs">
+                              {profile.display_name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{profile.display_name}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          className={`justify-start w-full ${theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}`}
+                          onClick={() => {
+                            logout();
+                            setDrawerOpen(false);
+                          }}
+                        >
+                          <LogOut className="size-4 mr-2" />
+                          {t('auth:logout', '登出')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        className={`justify-start w-full ${theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}`}
+                        onClick={() => {
+                          openModal('login');
+                          setDrawerOpen(false);
+                        }}
+                      >
+                        <UserRound className="size-4 mr-2" />
+                        {t('auth:login_title', '登入')}
+                      </Button>
+                    )}
+
+                    {/* 分隔線 */}
+                    <div className={`w-full h-px ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'}`} />
 
                     {/* 贊助我 */}
                     <Button
@@ -677,6 +733,62 @@ export function Navbar({
                 </Tooltip>
               )}
 
+              {/* 登入 / 使用者選單 */}
+              {isLoggedIn && profile ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                    >
+                      <Avatar className="size-7">
+                        <AvatarImage src={profile.avatar_url || undefined} alt={profile.display_name} />
+                        <AvatarFallback className="text-xs">
+                          {profile.display_name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className={theme === 'dark' ? 'bg-gray-900 border-gray-700' : ''}>
+                    <DropdownMenuLabel className={theme === 'dark' ? 'text-gray-300' : ''}>
+                      {profile.display_name}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className={theme === 'dark' ? 'bg-gray-700' : ''} />
+                    <DropdownMenuItem
+                      onSelect={() => setEditProfileOpen(true)}
+                      className={theme === 'dark' ? 'text-gray-300 focus:bg-gray-800 focus:text-white' : ''}
+                    >
+                      <Pencil className="size-4 mr-2" />
+                      {t('common:editDisplayName', '修改名稱')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => logout()}
+                      className={theme === 'dark' ? 'text-gray-300 focus:bg-gray-800 focus:text-white' : ''}
+                    >
+                      <LogOut className="size-4 mr-2" />
+                      {t('auth:logout', '登出')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openModal('login')}
+                      className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-black hover:bg-gray-100'}
+                    >
+                      <UserRound className="size-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('auth:login_title', '登入')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
               {/* 主題切換 */}
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -747,5 +859,8 @@ export function Navbar({
         </div>
       </div>
     </nav >
+
+    <EditProfileDialog open={editProfileOpen} onClose={() => setEditProfileOpen(false)} />
+    </>
   );
 }

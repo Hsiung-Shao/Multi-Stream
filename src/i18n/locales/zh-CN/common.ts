@@ -215,6 +215,14 @@ const common = {
   'braveDetect.close': '关闭',
   'braveDetect.goToFAQ': '查看解决方案',
   'braveDetect.dontRemind': '不再提醒',
+
+  'editDisplayName': '修改显示名称',
+  'editDisplayNameDesc': '此名称将显示在你的活动与贡献中',
+  'displayNamePlaceholder': '输入新名称',
+  'fieldRequired': '此栏位为必填',
+  'tooLong': '名称过长（最多 50 字）',
+  'saveFailed': '保存失败，请稍后再试',
+  'saved': '已保存',
 };
 
 export default common;

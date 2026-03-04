@@ -6,6 +6,7 @@ interface ModalState {
     favorites: boolean;
     feedback: boolean;
     ytRisk: boolean;
+    login: boolean;
 }
 
 export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'not-found';
@@ -58,6 +59,7 @@ export const useUIStore = create<UIState>((set) => ({
         favorites: false,
         feedback: false,
         ytRisk: false,
+        login: false,
     },
     favoritesTab: 'favorites',
     masterVolume: 100,

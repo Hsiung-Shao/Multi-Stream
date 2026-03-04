@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.tsx";
 import "./index.css";
+import { AuthProvider } from "./contexts/AuthContext";
 import { apiLoader } from "./utils/apiLoader.ts";
 import "./i18n/i18n"; // Import i18n configuration
 import { checkAppVersion } from "./utils/versionCheck.ts";
@@ -39,8 +40,8 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
-    {/* <I18nProvider> removed, using global i18next instance */}
-    <App />
-    {/* </I18nProvider> */}
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </QueryClientProvider>
 );

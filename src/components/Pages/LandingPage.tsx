@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { Button } from '../ui/button';
-import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
+import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe, UserRound, LogOut, Pencil } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -11,12 +12,26 @@ import {
 } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { SEO } from '../SEO';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { EditProfileDialog } from '../Dialogs/EditProfileDialog';
 
 export function LandingPage() {
     const { t, i18n } = useTranslation();
     const setPage = useUIStore(s => s.setPage);
     const theme = useUIStore(s => s.theme);
     const toggleTheme = useUIStore(s => s.toggleTheme);
+    const openModal = useUIStore(s => s.openModal);
+    const { isLoggedIn, profile, logout } = useAuthContext();
+    const [editProfileOpen, setEditProfileOpen] = useState(false);
 
     const languages = [
         { value: 'zh-TW', label: '繁體中文' },
@@ -28,6 +43,7 @@ export function LandingPage() {
 
 
     return (
+        <>
         <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden selection:bg-primary selection:text-primary-foreground">
             <SEO
                 title="MultiStream Hub - 免費多平台直播觀看工具 | 同時觀看 Twitch & YouTube (Free Multistreaming)"
@@ -65,6 +81,39 @@ export function LandingPage() {
                         >
                             <Github className="w-5 h-5" />
                         </a>
+                        {isLoggedIn && profile ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="rounded-full">
+                                        <Avatar className="w-7 h-7">
+                                            <AvatarImage src={profile.avatar_url || undefined} />
+                                            <AvatarFallback className="text-xs">{profile.display_name?.[0] || 'U'}</AvatarFallback>
+                                        </Avatar>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>{profile.display_name || '使用者'}</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onSelect={() => setEditProfileOpen(true)}>
+                                        <Pencil className="w-4 h-4 mr-2" />
+                                        {t('common:editDisplayName', '修改名稱')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => logout()}>
+                                        <LogOut className="w-4 h-4 mr-2" />
+                                        {t('auth:logout', '登出')}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openModal('login')}
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <UserRound className="w-5 h-5" />
+                            </Button>
+                        )}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -417,6 +466,9 @@ export function LandingPage() {
                 </div>
             </footer>
         </div>
+
+        <EditProfileDialog open={editProfileOpen} onClose={() => setEditProfileOpen(false)} />
+        </>
     );
 }
 

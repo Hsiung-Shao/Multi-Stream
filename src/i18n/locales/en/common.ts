@@ -213,6 +213,14 @@ const common = {
   'braveDetect.close': 'Close',
   'braveDetect.goToFAQ': 'View Solution',
   'braveDetect.dontRemind': 'Don\'t remind me again',
+
+  'editDisplayName': 'Edit Display Name',
+  'editDisplayNameDesc': 'This name will appear on your events and contributions',
+  'displayNamePlaceholder': 'Enter new name',
+  'fieldRequired': 'This field is required',
+  'tooLong': 'Name is too long (max 50 characters)',
+  'saveFailed': 'Save failed. Please try again later.',
+  'saved': 'Saved',
 };
 
 export default common;

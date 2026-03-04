@@ -84,7 +84,7 @@ export class TokenProvider implements TokenProviderContract {
                 if (debug) console.debug('[TokenProvider] Fallback to direct OAuth');
                 return await this.fetchDirectly(config);
             }
-            throw new Error(`Unable to acquire token. Pages Error: ${pagesError instanceof Error ? pagesError.message : String(pagesError)}. No Client Secret for fallback.`);
+            throw new Error('Unable to acquire Twitch token');
         }
     }
 
@@ -118,8 +118,7 @@ export class TokenProvider implements TokenProviderContract {
         });
 
         if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(`Direct Auth Failed: ${res.status} - ${txt}`);
+            throw new Error(`Direct Auth Failed: ${res.status}`);
         }
 
         const data = await res.json();

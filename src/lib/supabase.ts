@@ -25,8 +25,8 @@ export const getSupabase = (): Promise<SupabaseClient | null> => {
                 supabaseInstance = createClient(config.url, config.anonKey);
                 return supabaseInstance;
             })
-            .catch(err => {
-                console.warn('Failed to initialize Supabase:', err);
+            .catch(() => {
+                console.warn('Failed to initialize Supabase');
                 initPromise = null; // 允許重試
                 return null;
             });

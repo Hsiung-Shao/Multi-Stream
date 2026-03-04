@@ -1,15 +1,20 @@
 # Cloudflare Pages Headers Configuration
-# 設定正確的 MIME type 和 CORS headers
+# 設定正確的 MIME type、安全標頭和 CORS headers
+
+# 全站安全標頭
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
 
 # JavaScript 文件
 /*.js
   Content-Type: application/javascript; charset=utf-8
-  Access-Control-Allow-Origin: *
 
 # 配置文件的特殊處理
 /config.js
   Content-Type: application/javascript; charset=utf-8
-  Access-Control-Allow-Origin: *
 
 # HTML 文件
 # Content Security Policy (CSP) 已設置在 HTTP headers 中
@@ -17,7 +22,7 @@
 # 注意：必須在 HTTP headers 中設置 CSP，才能讓 Cloudflare Zaraz 自動處理
 /*.html
   Content-Type: text/html; charset=utf-8
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv https://www.youtube.com https://*.youtube.com https://*.googleapis.com https://*.gstatic.com https://*.google-analytics.com https://*.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; connect-src 'self' https://api.twitch.tv https://*.twitch.tv https://www.googleapis.com https://*.googleapis.com https://*.youtube.com https://*.google-analytics.com https://*.googletagmanager.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co; media-src 'self' https://player.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv https://www.youtube.com https://*.youtube.com https://*.googleapis.com https://*.gstatic.com https://*.google-analytics.com https://*.googletagmanager.com https://static.cloudflareinsights.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com https://challenges.cloudflare.com; connect-src 'self' https://api.twitch.tv https://*.twitch.tv https://www.googleapis.com https://*.googleapis.com https://*.youtube.com https://*.google-analytics.com https://*.googletagmanager.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co https://*.supabase.co; media-src 'self' https://player.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;
 
 # CSS 文件
 /*.css

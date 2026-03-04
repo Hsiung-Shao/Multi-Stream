@@ -215,6 +215,14 @@ const common = {
   'braveDetect.close': '閉じる',
   'braveDetect.goToFAQ': '解決方法を見る',
   'braveDetect.dontRemind': '今後表示しない',
+
+  'editDisplayName': '表示名を変更',
+  'editDisplayNameDesc': 'この名前はイベントや投稿に表示されます',
+  'displayNamePlaceholder': '新しい名前を入力',
+  'fieldRequired': 'この項目は必須です',
+  'tooLong': '名前が長すぎます（最大50文字）',
+  'saveFailed': '保存に失敗しました。後でもう一度お試しください。',
+  'saved': '保存しました',
 };
 
 export default common;

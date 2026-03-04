@@ -4,7 +4,8 @@ import { getSupabase } from '../../lib/supabase';
 import { AdminLogin } from './components/AdminLogin';
 import { AdminDashboard } from './components/AdminDashboard';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Button } from '../../components/ui/button';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -15,39 +16,72 @@ const queryClient = new QueryClient({
     },
 });
 
-type AuthState = 'loading' | 'login' | 'authenticated';
+type AuthState = 'loading' | 'login' | 'authenticated' | 'error';
+
+const INIT_TIMEOUT_MS = 15_000;
 
 export function AdminPage() {
     const [authState, setAuthState] = useState<AuthState>('loading');
     const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         let cancelled = false;
+        let unsubscribeFn: (() => void) | null = null;
+
+        const timer = setTimeout(() => {
+            if (!cancelled) {
+                setAuthState(prev => prev === 'loading' ? 'error' : prev);
+                setErrorMessage('連線逾時，請檢查網路或 Supabase 設定');
+            }
+        }, INIT_TIMEOUT_MS);
 
         (async () => {
-            const client = await getSupabase();
-            if (cancelled) return;
+            try {
+                const client = await getSupabase();
+                if (cancelled) return;
 
-            if (!client) {
-                setAuthState('login');
-                return;
-            }
+                if (!client) {
+                    setAuthState('login');
+                    return;
+                }
 
-            setSupabase(client);
+                setSupabase(client);
 
-            const { data: { session } } = await client.auth.getSession();
-            if (cancelled) return;
+                const { data: { session }, error: sessionError } = await client.auth.getSession();
+                if (cancelled) return;
 
-            setAuthState(session ? 'authenticated' : 'login');
+                if (sessionError) {
+                    console.error('Admin getSession error:', sessionError.message);
+                    setAuthState('error');
+                    setErrorMessage('驗證服務異常，請稍後再試');
+                    return;
+                }
 
-            const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
                 setAuthState(session ? 'authenticated' : 'login');
-            });
 
-            return () => subscription.unsubscribe();
+                const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+                    if (!cancelled) {
+                        setAuthState(session ? 'authenticated' : 'login');
+                    }
+                });
+
+                unsubscribeFn = () => subscription.unsubscribe();
+            } catch (err) {
+                if (!cancelled) {
+                    console.error('Admin init error:', err);
+                    setAuthState('error');
+                    setErrorMessage('初始化失敗，請重新整理頁面');
+                }
+            }
         })();
 
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+            unsubscribeFn?.();
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleLogout = async () => {
@@ -58,12 +92,43 @@ export function AdminPage() {
         queryClient.clear();
     };
 
+    const handleRetry = () => {
+        setAuthState('loading');
+        setErrorMessage('');
+        window.location.reload();
+    };
+
     if (authState === 'loading') {
         return (
-            <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
-                    <span className="text-[13px] text-zinc-600">載入中</span>
+                    <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
+                    <span className="text-[13px] text-zinc-400">載入中</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (authState === 'error') {
+        return (
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3 max-w-[320px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                    <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/25 flex items-center justify-center">
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                    </div>
+                    <p className="text-[14px] text-zinc-200 font-medium">連線異常</p>
+                    <p className="text-[13px] text-zinc-400 leading-relaxed">
+                        {errorMessage}
+                    </p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 mt-2"
+                        onClick={handleRetry}
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        重試
+                    </Button>
                 </div>
             </div>
         );
@@ -72,13 +137,13 @@ export function AdminPage() {
     if (authState === 'login') {
         if (!supabase) {
             return (
-                <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3 max-w-[320px] text-center">
-                        <div className="w-10 h-10 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center justify-center">
+                <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 max-w-[320px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/25 flex items-center justify-center">
                             <AlertTriangle className="w-4 h-4 text-red-400" />
                         </div>
-                        <p className="text-[14px] text-zinc-300 font-medium">Supabase 未設定</p>
-                        <p className="text-[12px] text-zinc-600 leading-relaxed">
+                        <p className="text-[14px] text-zinc-200 font-medium">Supabase 未設定</p>
+                        <p className="text-[13px] text-zinc-400 leading-relaxed">
                             請確認 /api/supabase-config 端點正常運作
                         </p>
                     </div>

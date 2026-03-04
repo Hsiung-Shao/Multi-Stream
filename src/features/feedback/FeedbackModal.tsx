@@ -70,9 +70,9 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
             logEvent('Feedback', 'submit_success', finalData.feedbackType);
             umamiTrack('feedback-submit');
         } catch (error) {
-            console.error('Submission error:', error);
+            console.error('Submission error');
             alert(t('error'));
-            logEvent('Feedback', 'submit_error', error instanceof Error ? error.message : 'Unknown error');
+            logEvent('Feedback', 'submit_error', error instanceof Error ? error.message : 'unknown');
         } finally {
             setIsSubmitting(false);
         }

@@ -215,6 +215,14 @@ const common = {
   'braveDetect.close': '닫기',
   'braveDetect.goToFAQ': '해결 방법 보기',
   'braveDetect.dontRemind': '다시 표시하지 않기',
+
+  'editDisplayName': '표시 이름 변경',
+  'editDisplayNameDesc': '이 이름은 이벤트와 기여에 표시됩니다',
+  'displayNamePlaceholder': '새 이름 입력',
+  'fieldRequired': '이 항목은 필수입니다',
+  'tooLong': '이름이 너무 깁니다 (최대 50자)',
+  'saveFailed': '저장에 실패했습니다. 나중에 다시 시도해 주세요.',
+  'saved': '저장됨',
 };
 
 export default common;

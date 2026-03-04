@@ -30,9 +30,13 @@ import {
   CommandItem,
   CommandList,
 } from '../../../components/ui/command';
-import { Plus, X, Loader2, CheckCircle, Link2, Youtube, Twitch, ChevronsUpDown, Check, Users } from 'lucide-react';
+import { Plus, X, Loader2, CheckCircle, Link2, Youtube, Twitch, ChevronsUpDown, Check, Users, LogIn, Eye } from 'lucide-react';
 import { useSubmitContribution, useVTuberGroups } from '../hooks/useVTubers';
-import type { VTuberNationality, VTuberContributionPayload } from '../types';
+import { trackEvent } from '../../../utils/umami';
+import { useAuthContext } from '../../../contexts/AuthContext';
+import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
+import { VTuberCard } from './VTuberCard';
+import type { VTuberNationality, VTuberContributionPayload, VTuberRecord } from '../types';
 
 // ---------------------------------------------------------------------------
 // Props & Constants
@@ -62,18 +66,11 @@ const YT_CHANNEL_ID_REGEX = /^UC[a-zA-Z0-9_-]{22}$/;
 const YT_HANDLE_REGEX = /^@[a-zA-Z0-9_.-]{1,50}$/;
 const TWITCH_ID_REGEX = /^[a-zA-Z0-9_]{1,25}$/;
 
-/** Validate YouTube input: URL, channel ID, or @handle */
 function isValidYoutubeInput(input: string): boolean {
   const trimmed = input.trim();
-  if (!trimmed) return true; // optional field
-
-  // Direct channel ID
+  if (!trimmed) return true;
   if (YT_CHANNEL_ID_REGEX.test(trimmed)) return true;
-
-  // @handle
   if (YT_HANDLE_REGEX.test(trimmed)) return true;
-
-  // YouTube URL
   if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
     try {
       const url = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
@@ -83,20 +80,14 @@ function isValidYoutubeInput(input: string): boolean {
       return false;
     }
   }
-
   return false;
 }
 
-/** Extract Twitch username from URL or direct input */
 function extractTwitchId(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return '';
-
-  // URL format: twitch.tv/username
   const match = trimmed.match(/twitch\.tv\/([a-zA-Z0-9_]+)/);
   if (match) return match[1];
-
-  // Direct username
   return trimmed;
 }
 
@@ -147,22 +138,46 @@ export function ContributeVTuberDialog({ open, onOpenChange }: ContributeVTuberD
   const { t } = useTranslation('vtuber');
   const submitMutation = useSubmitContribution();
   const { data: groups = [] } = useVTuberGroups();
+  const { isLoggedIn, profile } = useAuthContext();
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState | 'channel', string>>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const set = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: undefined }));
   }, []);
 
+  // Build a preview VTuberRecord from form data
+  const previewVTuber = useMemo((): VTuberRecord => ({
+    id: 'preview',
+    name: form.name || 'VTuber',
+    img_url: null,
+    activity: 'active',
+    nationality: form.nationality,
+    group_id: null,
+    group_name: form.groupName || undefined,
+    youtube_channel_id: form.youtubeUrl.trim() || null,
+    youtube_subscriber_count: null,
+    twitch_channel_id: extractTwitchId(form.twitchInput) || null,
+    twitch_follower_count: null,
+    popular_video_type: null,
+    popular_video_id: null,
+    debut_date: form.debutDate || null,
+    channel_id_verified: false,
+    contributed_by: isLoggedIn ? (profile?.display_name ?? null) : (form.contributorName || null),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }), [form.name, form.nationality, form.youtubeUrl, form.twitchInput, form.groupName, form.debutDate, isLoggedIn, profile, form.contributorName]);
+
   const validate = (): boolean => {
     const errs: typeof errors = {};
 
-    if (!form.contributorName.trim()) errs.contributorName = t('fieldRequired');
+    if (!isLoggedIn && !form.contributorName.trim()) errs.contributorName = t('fieldRequired');
     if (!form.name.trim()) errs.name = t('fieldRequired');
 
-    // At least one channel
     if (!form.youtubeUrl.trim() && !form.twitchInput.trim()) {
       errs.channel = t('needAtLeastOneChannel');
     }
@@ -176,7 +191,6 @@ export function ContributeVTuberDialog({ open, onOpenChange }: ContributeVTuberD
       }
     }
 
-    // Source URLs
     const validUrls = form.sourceUrls.filter((u) => u.trim());
     if (validUrls.length === 0) {
       errs.sourceUrls = t('needAtLeastOneSource');
@@ -207,15 +221,20 @@ export function ContributeVTuberDialog({ open, onOpenChange }: ContributeVTuberD
       ...(form.debutDate && { debut_date: form.debutDate }),
     };
 
+    const submitterName = isLoggedIn
+      ? (profile?.display_name ?? 'User')
+      : form.contributorName.trim();
+
     await submitMutation.mutateAsync({
       action: 'add',
       payload,
-      submittedBy: form.contributorName.trim(),
-      submitterContact: form.contributorContact.trim() || undefined,
+      submittedBy: submitterName,
+      submitterContact: isLoggedIn ? undefined : (form.contributorContact.trim() || undefined),
       sourceUrls: form.sourceUrls.filter((u) => u.trim()).map((u) => u.trim()),
       sourceNote: form.sourceNote.trim() || undefined,
     });
 
+    trackEvent('vtuber-contribute-submit');
     setSubmitted(true);
   };
 
@@ -225,207 +244,264 @@ export function ContributeVTuberDialog({ open, onOpenChange }: ContributeVTuberD
       setForm(initialForm);
       setErrors({});
       setSubmitted(false);
+      setShowPreview(false);
       submitMutation.reset();
     }, 300);
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{t('contributeTitle')}</SheetTitle>
-          <SheetDescription className="text-xs">{t('contributeDesc')}</SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{t('contributeTitle')}</SheetTitle>
+            <SheetDescription className="text-xs">{t('contributeDesc')}</SheetDescription>
+          </SheetHeader>
 
-        {submitted ? (
-          <div className="flex flex-col items-center justify-center gap-4 py-16 animate-in fade-in duration-300">
-            <CheckCircle className="w-12 h-12 text-green-500" />
-            <p className="text-sm text-center text-foreground">{t('submitSuccess')}</p>
-            <Button variant="outline" onClick={handleClose}>{t('common:close', '關閉')}</Button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-5 pt-4">
-            {/* ── Contributor info ── */}
-            <fieldset className="space-y-3 rounded-lg border border-border/50 p-3">
-              <legend className="text-xs font-medium text-muted-foreground px-1">
-                {t('adminContributor')}
-              </legend>
-              <Field label={t('contributorName')} error={errors.contributorName} required>
-                <Input
-                  value={form.contributorName}
-                  onChange={(e) => set('contributorName', e.target.value)}
-                  placeholder={t('contributorNamePlaceholder')}
-                  maxLength={20}
-                />
-              </Field>
-              <Field label={t('contributorContact')}>
-                <Input
-                  value={form.contributorContact}
-                  onChange={(e) => set('contributorContact', e.target.value)}
-                  placeholder={t('contributorContactPlaceholder')}
-                  maxLength={100}
-                />
-              </Field>
-            </fieldset>
+          {submitted ? (
+            <div className="flex flex-col items-center justify-center gap-4 py-16 animate-in fade-in duration-300">
+              <CheckCircle className="w-12 h-12 text-green-500" />
+              <p className="text-sm text-center text-foreground">{t('submitSuccess')}</p>
+              <Button variant="outline" onClick={handleClose}>{t('common:close', '關閉')}</Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-5 pt-4">
+              {/* ── Contributor info ── */}
+              <fieldset className="space-y-3 rounded-lg border border-border/50 p-3">
+                <legend className="text-xs font-medium text-muted-foreground px-1">
+                  {t('adminContributor')}
+                </legend>
 
-            {/* ── VTuber info ── */}
-            <fieldset className="space-y-3 rounded-lg border border-border/50 p-3">
-              <legend className="text-xs font-medium text-muted-foreground px-1">VTuber</legend>
+                {isLoggedIn ? (
+                  <div className="flex items-center gap-3 p-2 rounded-md bg-primary/5 border border-primary/10">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        {profile?.display_name?.charAt(0) ?? '?'}
+                      </div>
+                    )}
+                    <span className="text-sm text-foreground">
+                      {t('loggedInAs', { name: profile?.display_name ?? 'User' })}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 border border-border/50">
+                      <LogIn className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className="text-xs text-muted-foreground flex-1">
+                        {t('loginToContribute')}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7 px-3"
+                        onClick={() => setLoginDialogOpen(true)}
+                      >
+                        {t('loginButton')}
+                      </Button>
+                    </div>
+                    <Field label={t('contributorName')} error={errors.contributorName} required>
+                      <Input
+                        value={form.contributorName}
+                        onChange={(e) => set('contributorName', e.target.value)}
+                        placeholder={t('contributorNamePlaceholder')}
+                        maxLength={20}
+                      />
+                    </Field>
+                    <Field label={t('contributorContact')}>
+                      <Input
+                        value={form.contributorContact}
+                        onChange={(e) => set('contributorContact', e.target.value)}
+                        placeholder={t('contributorContactPlaceholder')}
+                        maxLength={100}
+                      />
+                    </Field>
+                  </>
+                )}
+              </fieldset>
 
-              <Field label={t('vtuberName')} error={errors.name} required>
-                <Input
-                  value={form.name}
-                  onChange={(e) => set('name', e.target.value)}
-                  placeholder={t('vtuberNamePlaceholder')}
-                  maxLength={100}
-                />
-              </Field>
+              {/* ── VTuber info ── */}
+              <fieldset className="space-y-3 rounded-lg border border-border/50 p-3">
+                <legend className="text-xs font-medium text-muted-foreground px-1">VTuber</legend>
 
-              <Field label={t('nationality')}>
-                <Select value={form.nationality} onValueChange={(v) => set('nationality', v as VTuberNationality)}>
-                  <SelectTrigger size="sm" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {NATIONALITIES.map((n) => (
-                      <SelectItem key={n} value={n}>
-                        <span className="mr-1.5">{NATIONALITY_FLAGS[n]}</span>
-                        {t(n.toLowerCase())}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              {/* YouTube */}
-              <Field
-                label={t('youtubeChannel')}
-                error={errors.youtubeUrl || errors.channel}
-                icon={<Youtube className="w-4 h-4 text-red-500" />}
-              >
-                <Input
-                  value={form.youtubeUrl}
-                  onChange={(e) => set('youtubeUrl', e.target.value)}
-                  placeholder={t('youtubeChannelPlaceholder')}
-                />
-              </Field>
-
-              {/* Twitch */}
-              <Field
-                label={t('twitchChannel')}
-                error={errors.twitchInput}
-                icon={<Twitch className="w-4 h-4 text-violet-500" />}
-              >
-                <Input
-                  value={form.twitchInput}
-                  onChange={(e) => set('twitchInput', e.target.value)}
-                  placeholder={t('twitchChannelPlaceholder')}
-                />
-              </Field>
-
-              {/* Group combobox */}
-              <Field label={t('groupNameLabel')}>
-                <GroupCombobox
-                  groups={groups}
-                  value={form.groupName}
-                  onChange={(v) => set('groupName', v)}
-                  placeholder={t('groupSearchPlaceholder')}
-                  addNewLabel={t('groupAddNew')}
-                  noneLabel={t('groupNone')}
-                />
-              </Field>
-
-              {/* Debut date */}
-              <Field label={t('debutDateLabel')}>
-                <Input
-                  type="date"
-                  value={form.debutDate}
-                  onChange={(e) => set('debutDate', e.target.value)}
-                />
-              </Field>
-            </fieldset>
-
-            {/* ── Source verification ── */}
-            <fieldset className="space-y-3 rounded-lg border border-border/50 p-3">
-              <legend className="text-xs font-medium text-muted-foreground px-1 flex items-center gap-1">
-                <Link2 className="w-3 h-3" />
-                {t('sourceUrls')}
-              </legend>
-              <p className="text-[11px] text-muted-foreground">{t('sourceUrlsHint')}</p>
-
-              {form.sourceUrls.map((url, i) => (
-                <div key={i} className="flex items-center gap-1.5">
+                <Field label={t('vtuberName')} error={errors.name} required>
                   <Input
-                    type="url"
-                    value={url}
-                    onChange={(e) => {
-                      const next = [...form.sourceUrls];
-                      next[i] = e.target.value;
-                      set('sourceUrls', next);
-                    }}
-                    placeholder={t('sourceUrlsPlaceholder')}
-                    className="flex-1"
+                    value={form.name}
+                    onChange={(e) => set('name', e.target.value)}
+                    placeholder={t('vtuberNamePlaceholder')}
+                    maxLength={100}
                   />
-                  {form.sourceUrls.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => set('sourceUrls', form.sourceUrls.filter((_, j) => j !== i))}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              {errors.sourceUrls && <p className="text-[11px] text-destructive">{errors.sourceUrls}</p>}
+                </Field>
 
-              {form.sourceUrls.length < 3 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs gap-1"
-                  onClick={() => set('sourceUrls', [...form.sourceUrls, ''])}
+                <Field label={t('nationality')}>
+                  <Select value={form.nationality} onValueChange={(v) => set('nationality', v as VTuberNationality)}>
+                    <SelectTrigger size="sm" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NATIONALITIES.map((n) => (
+                        <SelectItem key={n} value={n}>
+                          <span className="mr-1.5">{NATIONALITY_FLAGS[n]}</span>
+                          {t(n.toLowerCase())}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field
+                  label={t('youtubeChannel')}
+                  error={errors.youtubeUrl || errors.channel}
+                  icon={<Youtube className="w-4 h-4 text-red-500" />}
                 >
-                  <Plus className="w-3 h-3" />
-                  {t('addSourceUrl')}
-                </Button>
+                  <Input
+                    value={form.youtubeUrl}
+                    onChange={(e) => set('youtubeUrl', e.target.value)}
+                    placeholder={t('youtubeChannelPlaceholder')}
+                  />
+                </Field>
+
+                <Field
+                  label={t('twitchChannel')}
+                  error={errors.twitchInput}
+                  icon={<Twitch className="w-4 h-4 text-violet-500" />}
+                >
+                  <Input
+                    value={form.twitchInput}
+                    onChange={(e) => set('twitchInput', e.target.value)}
+                    placeholder={t('twitchChannelPlaceholder')}
+                  />
+                </Field>
+
+                <Field label={t('groupNameLabel')}>
+                  <GroupCombobox
+                    groups={groups}
+                    value={form.groupName}
+                    onChange={(v) => set('groupName', v)}
+                    placeholder={t('groupSearchPlaceholder')}
+                    addNewLabel={t('groupAddNew')}
+                    noneLabel={t('groupNone')}
+                  />
+                </Field>
+
+                <Field label={t('debutDateLabel')}>
+                  <Input
+                    type="date"
+                    value={form.debutDate}
+                    onChange={(e) => set('debutDate', e.target.value)}
+                  />
+                </Field>
+              </fieldset>
+
+              {/* ── Preview ── */}
+              {form.name.trim() && (
+                <fieldset className="rounded-lg border border-border/50 p-3">
+                  <legend className="text-xs font-medium text-muted-foreground px-1 flex items-center gap-1">
+                    <Eye className="w-3 h-3" />
+                    {t('preview')}
+                  </legend>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+                    onClick={() => setShowPreview(!showPreview)}
+                  >
+                    {showPreview ? '▲' : '▼'} {t('preview')}
+                  </button>
+                  {showPreview && (
+                    <div className="flex justify-center animate-in fade-in duration-200">
+                      <div className="w-44">
+                        <VTuberCard vtuber={previewVTuber} />
+                      </div>
+                    </div>
+                  )}
+                </fieldset>
               )}
 
-              <Field label={t('sourceNote')}>
-                <Textarea
-                  value={form.sourceNote}
-                  onChange={(e) => set('sourceNote', e.target.value)}
-                  placeholder={t('sourceNotePlaceholder')}
-                  className="min-h-[60px] resize-y"
-                  maxLength={500}
-                />
-              </Field>
-            </fieldset>
+              {/* ── Source verification ── */}
+              <fieldset className="space-y-3 rounded-lg border border-border/50 p-3">
+                <legend className="text-xs font-medium text-muted-foreground px-1 flex items-center gap-1">
+                  <Link2 className="w-3 h-3" />
+                  {t('sourceUrls')}
+                </legend>
+                <p className="text-[11px] text-muted-foreground">{t('sourceUrlsHint')}</p>
 
-            {/* ── Submit ── */}
-            {submitMutation.isError && (
-              <p className="text-xs text-destructive text-center">{t('submitError')}</p>
-            )}
+                {form.sourceUrls.map((url, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <Input
+                      type="url"
+                      value={url}
+                      onChange={(e) => {
+                        const next = [...form.sourceUrls];
+                        next[i] = e.target.value;
+                        set('sourceUrls', next);
+                      }}
+                      placeholder={t('sourceUrlsPlaceholder')}
+                      className="flex-1"
+                    />
+                    {form.sourceUrls.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => set('sourceUrls', form.sourceUrls.filter((_, j) => j !== i))}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {errors.sourceUrls && <p className="text-[11px] text-destructive">{errors.sourceUrls}</p>}
 
-            <Button
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending}
-              className="w-full gap-2"
-            >
-              {submitMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t('submitting')}
-                </>
-              ) : (
-                t('submitContribution')
+                {form.sourceUrls.length < 3 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs gap-1"
+                    onClick={() => set('sourceUrls', [...form.sourceUrls, ''])}
+                  >
+                    <Plus className="w-3 h-3" />
+                    {t('addSourceUrl')}
+                  </Button>
+                )}
+
+                <Field label={t('sourceNote')}>
+                  <Textarea
+                    value={form.sourceNote}
+                    onChange={(e) => set('sourceNote', e.target.value)}
+                    placeholder={t('sourceNotePlaceholder')}
+                    className="min-h-[60px] resize-y"
+                    maxLength={500}
+                  />
+                </Field>
+              </fieldset>
+
+              {/* ── Submit ── */}
+              {submitMutation.isError && (
+                <p className="text-xs text-destructive text-center">{t('submitError')}</p>
               )}
-            </Button>
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
+
+              <Button
+                onClick={handleSubmit}
+                disabled={submitMutation.isPending}
+                className="w-full gap-2"
+              >
+                {submitMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t('submitting')}
+                  </>
+                ) : (
+                  t('submitContribution')
+                )}
+              </Button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <LoginDialog open={loginDialogOpen} onClose={() => setLoginDialogOpen(false)} />
+    </>
   );
 }
 
@@ -521,7 +597,6 @@ function GroupCombobox({
               {!search.trim() && noneLabel}
             </CommandEmpty>
             <CommandGroup>
-              {/* Clear option */}
               <CommandItem
                 value=""
                 onSelect={() => {
@@ -535,7 +610,6 @@ function GroupCombobox({
                 {noneLabel}
               </CommandItem>
 
-              {/* Existing groups */}
               {filtered.map((group) => (
                 <CommandItem
                   key={group.id}
@@ -552,7 +626,6 @@ function GroupCombobox({
                 </CommandItem>
               ))}
 
-              {/* Add new option */}
               {isNewValue && (
                 <CommandItem
                   value={`__new__${search.trim()}`}

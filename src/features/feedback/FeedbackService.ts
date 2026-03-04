@@ -41,7 +41,7 @@ export const FeedbackService = {
                 throw new Error(error.message);
             }
         } catch (error) {
-            console.error('Failed to send feedback:', error);
+            console.error('Failed to send feedback');
             throw error;
         }
     }

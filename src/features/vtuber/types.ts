@@ -111,3 +111,53 @@ export interface SubmitContributionInput {
   sourceUrls: string[];
   sourceNote?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------
+
+export type EventType = 'vtuber_event' | 'livestream' | 'community';
+export type EventStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export interface VTuberEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  event_type: EventType;
+  vtuber_id: string | null;
+  organizer_id: string;
+  start_time: string;
+  end_time: string | null;
+  location: string | null;
+  url: string | null;
+  image_url: string | null;
+  status: EventStatus;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  vtuber?: VTuberRecord;
+  organizer?: { display_name: string; avatar_url?: string | null };
+}
+
+export interface CreateEventInput {
+  title: string;
+  description?: string;
+  event_type: EventType;
+  vtuber_id?: string;
+  start_time: string;
+  end_time?: string;
+  location?: string;
+  url?: string;
+  image_url?: string;
+}
+
+export interface EventFilter {
+  event_type?: EventType;
+  status?: EventStatus;
+  vtuber_id?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+}
