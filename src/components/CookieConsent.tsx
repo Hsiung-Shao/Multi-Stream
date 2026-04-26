@@ -10,15 +10,18 @@ import { useTranslation } from 'react-i18next';
 import { Cookie, X, Check, Shield } from 'lucide-react';
 import { hasConsentRecord, setTrackingConsent } from '../utils/analytics';
 import { initUmami } from '../utils/umami';
+import { isSupportedLang, buildLangUrl, DEFAULT_LANG } from '../lib/i18nRouting';
 
 interface CookieConsentProps {
     onConsentChange?: (accepted: boolean) => void;
 }
 
 export function CookieConsent({ onConsentChange }: CookieConsentProps) {
-    const { t } = useTranslation('common');
+    const { t, i18n } = useTranslation('common');
     const [showBanner, setShowBanner] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
+    const lang = isSupportedLang(i18n.language) ? i18n.language : DEFAULT_LANG;
+    const privacyHref = buildLangUrl(lang, '/privacy');
 
     useEffect(() => {
         // 檢查是否已有同意記錄
@@ -79,7 +82,7 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
                             {t('cookie.description', '我們使用 Cookie 和類似技術來改善您的瀏覽體驗、分析網站流量，並提供個人化內容。點擊「接受」即表示您同意我們使用這些技術。')}
                         </p>
                         <a
-                            href="/privacy"
+                            href={privacyHref}
                             className="text-purple-400 hover:text-purple-300 underline text-xs mt-1 inline-block"
                         >
                             {t('cookie.privacyLink', '了解更多')}

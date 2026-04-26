@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
-import { useUIStore, type PageType } from './store/useUIStore';
+import { useUIStore } from './store/useUIStore';
+import { parsePath, pathToPage } from './lib/i18nRouting';
 import { useStreamStore } from './store/useStreamStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
@@ -64,17 +65,12 @@ export default function App() {
       }
 
       // Auto-navigate back to the page user was on before OAuth
+      // returnPath 可能含 lang prefix（例如 /zh-TW/canvas）；用 i18nRouting 解析子路徑
       const returnPath = sessionStorage.getItem(RETURN_PAGE_KEY);
       if (returnPath) {
-        const pathToPage: Record<string, PageType> = {
-          '/canvas': 'canvas',
-          '/tools': 'tool',
-          '/about': 'about',
-          '/instructions': 'instructions',
-          '/faq': 'faq',
-        };
-        const page = pathToPage[returnPath];
-        if (page) {
+        const { subpath } = parsePath(returnPath);
+        const page = pathToPage(subpath);
+        if (page !== 'not-found') {
           useUIStore.getState().setPage(page);
         }
         sessionStorage.removeItem(RETURN_PAGE_KEY);
@@ -139,7 +135,7 @@ export default function App() {
               title="關於我們 - MultiStream Hub"
               description="了解 MultiStream Hub 的功能特色、技術架構和開發者資訊。一個完全免費的多平台直播串流觀看工具，支援 Twitch 和 YouTube。"
               keywords="關於 MultiStream Hub, 功能特色, 技術架構, 開發者資訊, 多平台直播工具"
-              url="https://multistreaming.org/about"
+              pathWithoutLang="/about"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <AboutPage
@@ -158,7 +154,7 @@ export default function App() {
               title="隱私權政策 - MultiStream Hub"
               description="MultiStream Hub 隱私權政策。了解我們如何保護您的隱私，以及我們收集和使用資料的方式。本網站為純前端工具，絕大多數資料僅儲存於您的瀏覽器本地。"
               keywords="隱私權政策, 隱私保護, 資料安全, MultiStream Hub, 個人資料保護"
-              url="https://multistreaming.org/privacy"
+              pathWithoutLang="/privacy"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <PrivacyPage

@@ -44,7 +44,7 @@ export function FAQPage() {
                 title={`${t('faq:title')} - MultiStream Hub`}
                 description={t('faq:header_subtitle')}
                 keywords="FAQ, MultiStream Hub, help, guide, features, multistreaming"
-                url="https://multistreaming.org/faq"
+                pathWithoutLang="/faq"
             />
             {/* Header */}
             <header className="sticky top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">

@@ -123,7 +123,7 @@ export const NewCanvasPage = () => {
             <SEO
                 title="開始觀看直播 - MultiStream Hub | Multistream Viewer"
                 description="立即開始使用 MultiStream Hub。自定義您的多視窗直播布局，同時欣賞 Twitch 與 YouTube 的精彩內容。"
-                url="https://multistreaming.org/canvas"
+                pathWithoutLang="/canvas"
             />
             {/* Canvas Layer */}
             <div className="absolute inset-0 z-0">

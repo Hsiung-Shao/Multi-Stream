@@ -18,6 +18,7 @@ const staticAssets = [
   'functions',
   'robots.txt',
   'sitemap.xml',
+  'manifest.json',
   'ads.txt',
   '_headers',
   'about.html',

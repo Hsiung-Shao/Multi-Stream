@@ -1,80 +1,120 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  SUPPORTED_LANGS,
+  X_DEFAULT_LANG,
+  OG_LOCALE_MAP,
+  buildAbsoluteUrl,
+  isSupportedLang,
+  DEFAULT_LANG,
+  type SupportedLang,
+} from '../lib/i18nRouting';
 
 interface SEOProps {
   title?: string;
   description?: string;
   keywords?: string;
   image?: string;
-  url?: string;
+  /** 不含 lang prefix 的子路徑，例如 '/'、'/about'、'/faq' */
+  pathWithoutLang?: string;
   type?: 'website' | 'article';
-  locale?: string;
+  /** 自訂 robots 指令，例如 'noindex, nofollow'（admin 等不公開頁） */
+  robots?: string;
+}
+
+const SITE_ORIGIN = 'https://multistreaming.org';
+
+const HREFLANG_MARKER = 'data-seo-hreflang';
+
+function resolveLang(raw: string | undefined): SupportedLang {
+  if (raw && isSupportedLang(raw)) return raw;
+  return DEFAULT_LANG;
 }
 
 export function SEO({
-  title = 'MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube',
-  description = 'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。',
-  keywords = 'MultiStream, 多串流, Twitch, YouTube, 直播, 串流觀看, 多平台直播, 直播工具, 免費直播工具, 同時觀看多個直播, 直播整合, 聊天室整合',
-  image = 'https://multistreaming.org/icon.png',
-  url = 'https://multistreaming.org/',
+  title = 'MultiStream Hub｜多直播同步觀看工具',
+  description = '免費同時觀看多個 Twitch 與 YouTube 直播，無需註冊。多種布局模式、聊天室整合、獨立音量控制與本地收藏管理。',
+  keywords = '多直播觀看, multistream, multi twitch viewer, Twitch 多視窗, 同時觀看多個直播',
+  image = `${SITE_ORIGIN}/icon.png`,
+  pathWithoutLang = '/',
   type = 'website',
-  locale = 'zh_TW',
+  robots,
 }: SEOProps) {
-  useEffect(() => {
-    // 更新 title
-    if (title) {
-      document.title = title;
-    }
+  const { i18n } = useTranslation();
+  const lang = resolveLang(i18n.language);
+  const ogLocale = OG_LOCALE_MAP[lang];
+  const canonical = buildAbsoluteUrl(lang, pathWithoutLang, SITE_ORIGIN);
 
-    // 更新或創建 meta 標籤的輔助函數
-    const updateMetaTag = (property: string, content: string, isProperty = false) => {
-      const selector = isProperty ? `meta[property="${property}"]` : `meta[name="${property}"]`;
-      let element = document.querySelector(selector) as HTMLMetaElement;
-      
+  useEffect(() => {
+    document.title = title;
+
+    const updateMetaTag = (key: string, content: string, isProperty = false) => {
+      const selector = isProperty ? `meta[property="${key}"]` : `meta[name="${key}"]`;
+      let element = document.querySelector(selector) as HTMLMetaElement | null;
       if (!element) {
         element = document.createElement('meta');
-        if (isProperty) {
-          element.setAttribute('property', property);
-        } else {
-          element.setAttribute('name', property);
-        }
+        element.setAttribute(isProperty ? 'property' : 'name', key);
         document.head.appendChild(element);
       }
-      
       element.setAttribute('content', content);
     };
 
-    // 更新 Primary Meta Tags
+    // Primary
     updateMetaTag('title', title);
     updateMetaTag('description', description);
     updateMetaTag('keywords', keywords);
+    if (robots) {
+      updateMetaTag('robots', robots);
+    } else {
+      updateMetaTag('robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
+    }
 
-    // 更新 Open Graph Tags
+    // Open Graph
     updateMetaTag('og:type', type, true);
-    updateMetaTag('og:url', url, true);
+    updateMetaTag('og:url', canonical, true);
     updateMetaTag('og:title', title, true);
     updateMetaTag('og:description', description, true);
     updateMetaTag('og:image', image, true);
-    updateMetaTag('og:locale', locale, true);
+    updateMetaTag('og:locale', ogLocale, true);
 
-    // 更新 Twitter Card Tags
+    // Twitter
     updateMetaTag('twitter:card', 'summary_large_image');
-    updateMetaTag('twitter:url', url);
+    updateMetaTag('twitter:url', canonical);
     updateMetaTag('twitter:title', title);
     updateMetaTag('twitter:description', description);
     updateMetaTag('twitter:image', image);
 
-    // 更新 canonical URL
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
-    if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.setAttribute('rel', 'canonical');
-      document.head.appendChild(canonical);
+    // Canonical
+    let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonicalEl) {
+      canonicalEl = document.createElement('link');
+      canonicalEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalEl);
     }
-    canonical.setAttribute('href', url);
-  }, [title, description, keywords, image, url, type, locale]);
+    canonicalEl.setAttribute('href', canonical);
 
-  return null; // 此組件不渲染任何內容
+    // Hreflang：每次 effect 先清掉舊有由 SEO 元件產生的 alternate links，再重建
+    document.head.querySelectorAll(`link[rel="alternate"][${HREFLANG_MARKER}]`).forEach(el => el.remove());
+    const fragment = document.createDocumentFragment();
+    SUPPORTED_LANGS.forEach(l => {
+      const link = document.createElement('link');
+      link.setAttribute('rel', 'alternate');
+      link.setAttribute('hreflang', l);
+      link.setAttribute('href', buildAbsoluteUrl(l, pathWithoutLang, SITE_ORIGIN));
+      link.setAttribute(HREFLANG_MARKER, '');
+      fragment.appendChild(link);
+    });
+    const xDefault = document.createElement('link');
+    xDefault.setAttribute('rel', 'alternate');
+    xDefault.setAttribute('hreflang', 'x-default');
+    xDefault.setAttribute('href', buildAbsoluteUrl(X_DEFAULT_LANG, pathWithoutLang, SITE_ORIGIN));
+    xDefault.setAttribute(HREFLANG_MARKER, '');
+    fragment.appendChild(xDefault);
+    document.head.appendChild(fragment);
+
+    // <html lang="..."> 也同步，協助無障礙與爬蟲識別
+    document.documentElement.setAttribute('lang', lang);
+  }, [title, description, keywords, image, canonical, ogLocale, type, robots, pathWithoutLang, lang]);
+
+  return null;
 }
-
-
-

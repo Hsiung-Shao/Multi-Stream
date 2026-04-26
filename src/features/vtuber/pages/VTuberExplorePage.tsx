@@ -126,7 +126,7 @@ export function VTuberExplorePage() {
         title={`${t('pageTitle')} - MultiStream Hub`}
         description="Explore VTubers from Taiwan, Hong Kong, Malaysia, Japan, Korea and more. Find your favorite VTubers and add them to your collection."
         keywords="VTuber, explore, Taiwan VTuber, Twitch, YouTube, live streaming"
-        url="https://multistreaming.org/vtubers"
+        pathWithoutLang="/vtubers"
       />
 
       {/* Header */}

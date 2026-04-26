@@ -1,126 +1,112 @@
 import { useEffect, useRef } from 'react';
+import i18n from 'i18next';
 import { useUIStore } from '../store/useUIStore';
 import { logPageView, logEvent, isTrackingEnabled } from '../utils/analytics';
 import { trackPageView, trackEvent } from '../utils/umami';
+import {
+    DEFAULT_LANG,
+    isSupportedLang,
+    isRoutablePage,
+    parsePath,
+    pathToPage,
+    pageToPath,
+    buildLangUrl,
+    type SupportedLang,
+} from '../lib/i18nRouting';
+
+function resolveLang(): SupportedLang {
+    const current = i18n.language;
+    if (isSupportedLang(current)) return current;
+    const base = (current ?? '').split('-')[0];
+    if (base === 'zh') return 'zh-TW';
+    if (base === 'en') return 'en';
+    if (base === 'ja') return 'ja';
+    if (base === 'ko') return 'ko';
+    return DEFAULT_LANG;
+}
 
 export function useRouter() {
     const page = useUIStore(s => s.page);
     const setPage = useUIStore(s => s.setPage);
     const isFirstRender = useRef(true);
 
-    // 初始化：從 URL 設定 Page 狀態
+    // 從 URL 偵測語言與頁面，必要時 replaceState 補上 lang prefix
     useEffect(() => {
         const handlePopState = () => {
-            const path = window.location.pathname;
-            if (path === '/' || path === '/index.html') {
-                setPage('home');
-            } else if (path === '/about' || path === '/about.html') {
-                setPage('about');
-            } else if (path === '/privacy' || path === '/privacy.html') {
-                setPage('privacy');
-            } else if (path === '/canvas') {
-                setPage('canvas');
-            } else if (path === '/tools') {
-                setPage('tool');
-            } else if (path === '/instructions') {
-                setPage('instructions');
-            } else if (path === '/faq') {
-                setPage('faq');
-            } else if (path === '/admin') {
-                setPage('admin');
-            } else if (path === '/vtubers') {
-                setPage('vtuber-explore');
-            } else {
-                setPage('not-found');
+            const { lang, subpath } = parsePath(window.location.pathname);
+
+            if (!lang) {
+                // 無 prefix：補上偵測到的語言（不增加 history 長度）
+                // 保留 search 與 hash — OAuth callback 的 #access_token 依靠後續元件讀取
+                const target = resolveLang();
+                const newUrl = buildLangUrl(target, subpath) + window.location.search + window.location.hash;
+                window.history.replaceState(null, '', newUrl);
+                setPage(pathToPage(subpath));
+                return;
             }
+
+            if (lang !== i18n.language) {
+                i18n.changeLanguage(lang);
+            }
+            setPage(pathToPage(subpath));
         };
 
-        // 初始執行一次
         handlePopState();
-
-        // 監聽瀏覽器上一頁/下一頁
         window.addEventListener('popstate', handlePopState);
-
-        return () => {
-            window.removeEventListener('popstate', handlePopState);
-        };
+        return () => window.removeEventListener('popstate', handlePopState);
     }, [setPage]);
 
-    // 頁面切換追蹤：當 page 狀態改變時發送 GA4 事件
+    // 監聽 i18next 語言切換 → 即時更新 URL prefix（保留 subpath）
     useEffect(() => {
-        // 跳過首次渲染（App.tsx 已經處理）
+        const handler = (lng: string) => {
+            if (!isSupportedLang(lng)) return;
+            const { subpath } = parsePath(window.location.pathname);
+            const targetPath = buildLangUrl(lng, subpath);
+            if (window.location.pathname !== targetPath) {
+                // 保留 search 與 hash（避免清掉 OAuth callback 等狀態）
+                window.history.replaceState(null, '', targetPath + window.location.search + window.location.hash);
+            }
+        };
+        i18n.on('languageChanged', handler);
+        return () => i18n.off('languageChanged', handler);
+    }, []);
+
+    // 頁面切換追蹤
+    useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
             return;
         }
-
-        // 不追蹤 404 頁面
         if (page === 'not-found') return;
-
-        // 發送 pageview 事件
         if (isTrackingEnabled()) {
             logPageView();
             logEvent('Navigation', 'page_view', page);
-
-            // Umami: SPA 路由追蹤
             trackPageView(window.location.pathname);
             trackEvent('page-navigate', { page });
         }
     }, [page]);
 
-    // 同步：當 Page 狀態改變時更新 URL
+    // page 狀態變更 → 同步 URL，保留當前 lang prefix
     useEffect(() => {
-        const path = window.location.pathname;
-        let targetPath = '/';
+        if (page === 'not-found') return;
+        if (!isRoutablePage(page)) return; // 'landing'、'settings' 等非路由頁面不改 URL
 
-        switch (page) {
-            case 'home':
-                targetPath = '/';
-                break;
-            case 'tool':
-                targetPath = '/tools';
-                break;
-            case 'about':
-                targetPath = '/about';
-                break;
-            case 'privacy':
-                targetPath = '/privacy';
-                break;
-            case 'canvas':
-                targetPath = '/canvas';
-                break;
-            case 'instructions':
-                targetPath = '/instructions';
-                break;
-            case 'faq':
-                targetPath = '/faq';
-                break;
-            case 'admin':
-                targetPath = '/admin';
-                break;
-            case 'vtuber-explore':
-                targetPath = '/vtubers';
-                break;
-            case 'not-found':
-                // 如果是 404，不主動改變 URL，保留使用者輸入的錯誤網址
-                return;
-            default:
-                targetPath = '/';
-        }
+        const lang = resolveLang();
+        const targetSubpath = pageToPath(page);
+        const targetUrl = buildLangUrl(lang, targetSubpath);
 
-        // 避免重複 pushState (例如從 URL 初始化時已經是該路徑)
-        // 注意：這裡簡單比對，忽略 index.html 或結尾斜線差異
-        const currentPathNormalized = path.replace(/\/$/, '') || '/';
-        const targetPathNormalized = targetPath.replace(/\/$/, '') || '/';
+        const currentNormalized = window.location.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/';
+        const targetNormalized = targetUrl.replace(/\/$/, '') || '/';
 
-        if (currentPathNormalized !== targetPathNormalized) {
-            // 如果目前是 .html 結尾 (來自舊連結或是靜態檔)，我們使用 replaceState 改為乾淨的 URL
-            // 或者如果是全新的頁面切換，使用 pushState
-            if (path.endsWith('.html')) {
-                window.history.replaceState(null, '', targetPath);
-            } else {
-                window.history.pushState(null, '', targetPath);
-            }
+        if (currentNormalized === targetNormalized) return;
+
+        // 保留 search 與 hash — OAuth 等流程依賴 hash 由 lazy-loaded 元件後續讀取
+        const fullUrl = targetUrl + window.location.search + window.location.hash;
+
+        if (window.location.pathname.endsWith('.html')) {
+            window.history.replaceState(null, '', fullUrl);
+        } else {
+            window.history.pushState(null, '', fullUrl);
         }
     }, [page]);
 }

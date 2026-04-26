@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { SUPPORTED_LANGS, parsePath } from '../lib/i18nRouting';
 
 // Import namespaced translations for zh-TW as default/fallback
 import zhTWCommon from './locales/zh-TW/common';
@@ -174,25 +175,39 @@ export const resources = {
     },
 } as const;
 
+// 自製 path detector：從 URL 第一段（例如 /zh-TW/about）解析語言
+// 必須在 i18n.init 之前 addDetector 才會被 detection.order 中的 'path' 識別
+const languageDetector = new LanguageDetector();
+languageDetector.addDetector({
+    name: 'path',
+    lookup() {
+        if (typeof window === 'undefined') return undefined;
+        const { lang } = parsePath(window.location.pathname);
+        return lang ?? undefined;
+    },
+});
+
 i18n
-    .use(LanguageDetector)
+    .use(languageDetector)
     .use(initReactI18next)
     .init({
         resources,
         defaultNS,
-        keySeparator: false, // Disable key separator to support flat keys with dots
+        supportedLngs: [...SUPPORTED_LANGS],
+        nonExplicitSupportedLngs: true, // 'zh' → 'zh-TW' 之類的對應
+        keySeparator: false,
         nsSeparator: ':',
         fallbackLng: 'en',
         interpolation: {
-            escapeValue: false, // react already safes from xss
+            escapeValue: false,
         },
         detection: {
-            order: ['localStorage', 'navigator'],
+            order: ['path', 'localStorage', 'navigator'],
             caches: ['localStorage'],
             lookupLocalStorage: 'i18nextLng',
         },
         react: {
-            useSuspense: false, // Set to true if you want to use Suspense
+            useSuspense: false,
         },
     });
 

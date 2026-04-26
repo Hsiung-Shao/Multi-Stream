@@ -72,7 +72,7 @@ export function InstructionsPage() {
             <SEO
                 title="使用教學 - MultiStream Hub | How to Multistream"
                 description="MultiStream Hub 完整功能指南。了解如何新增串流、管理收藏、使用動態島 (Dynamic Island) 與聊天室整合功能。"
-                url="https://multistreaming.org/instructions"
+                pathWithoutLang="/instructions"
             />
             {/* Navbar Placeholder / Back Button */}
             <div className="sticky top-0 z-50 p-4 border-b bg-background/80 backdrop-blur-md flex justify-between items-center">
