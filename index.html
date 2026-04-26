@@ -11,16 +11,19 @@
   <!-- 注意：HTTP headers 中的 CSP 會覆蓋 meta 標籤中的 CSP，因此將 CSP 放在 headers 中可以讓 Zaraz 正常工作 -->
 
   <!-- Primary Meta Tags -->
-  <title>MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube</title>
-  <meta name="title" content="MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube" />
+  <title>MultiStream Hub｜多直播同步觀看工具</title>
+  <meta name="title" content="MultiStream Hub｜多直播同步觀看工具" />
   <meta name="description"
-    content="MultiStream Hub is a free multistreaming platform to watch Twitch & YouTube simultaneously. 支援同時觀看多個 Twitch 和 YouTube 直播。Features: Multi-view layout, Chat integration, Volume control. 無需註冊即可使用。" />
+    content="免費同時觀看多個 Twitch 與 YouTube 直播，無需註冊。提供多種布局模式、聊天室整合、獨立音量控制與本地收藏管理。" />
   <meta name="keywords"
-    content="MultiStream, multistreaming, free multistream, multi stream twitch, watch 2 stream, twitch multi viewer, multi platform streaming, how to watch multiple streams, multi twitch viewer, multistream viewer, muttstream, multstream, MultiStream Hub, 多串流, Twitch, YouTube, 直播, 串流觀看, 多平台直播, 直播工具, 免費直播工具, 同時觀看多個直播" />
+    content="多直播觀看, multistream, multi twitch viewer, Twitch 多視窗, 同時觀看多個直播, multi stream viewer, 直播聚合工具" />
   <meta name="author" content="Hsiung-Shao" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-  <meta name="language" content="繁體中文" />
-  <meta name="revisit-after" content="7 days" />
+  <meta name="theme-color" content="#7c3aed" />
+
+  <!-- Search Console / Bing Webmaster 驗證（待開通後填入 token） -->
+  <!-- <meta name="google-site-verification" content="" /> -->
+  <!-- <meta name="msvalidate.01" content="" /> -->
 
   <!-- Canonical URL -->
   <link rel="canonical" href="https://multistreaming.org/" />
@@ -28,12 +31,13 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://multistreaming.org/" />
-  <meta property="og:title" content="MultiStream Hub - 免費多平台直播串流觀看工具" />
-  <meta property="og:description" content="支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能，完全免費無需註冊。" />
+  <meta property="og:title" content="MultiStream Hub｜多直播同步觀看工具" />
+  <meta property="og:description" content="免費同時觀看多個 Twitch 與 YouTube 直播，無需註冊。多種布局模式、聊天室整合、獨立音量控制。" />
+  <!-- Phase 4 將替換為 /og-image.png（1200×630 設計版） -->
   <meta property="og:image" content="https://multistreaming.org/icon.png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:image:alt" content="MultiStream Hub - 多直播同步觀看工具" />
   <meta property="og:locale" content="zh_TW" />
   <meta property="og:locale:alternate" content="zh_CN" />
   <meta property="og:locale:alternate" content="en_US" />
@@ -44,22 +48,18 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://multistreaming.org/" />
-  <meta name="twitter:title" content="MultiStream Hub - 免費多平台直播串流觀看工具" />
-  <meta name="twitter:description" content="支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能，完全免費無需註冊。" />
+  <meta name="twitter:title" content="MultiStream Hub｜多直播同步觀看工具" />
+  <meta name="twitter:description" content="免費同時觀看多個 Twitch 與 YouTube 直播，無需註冊。多種布局模式、聊天室整合、獨立音量控制。" />
   <meta name="twitter:image" content="https://multistreaming.org/icon.png" />
-  <meta name="twitter:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具" />
+  <meta name="twitter:image:alt" content="MultiStream Hub - 多直播同步觀看工具" />
 
-  <!-- Favicon -->
+  <!-- Favicon & PWA Manifest -->
   <link rel="icon" type="image/png" href="/icon.png" fetchpriority="high">
   <link rel="shortcut icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="manifest" href="/manifest.json">
 
-  <!-- Alternate Languages (Hreflang) -->
-  <link rel="alternate" hreflang="zh-TW" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="zh-CN" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="en" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="ja" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="ko" href="https://multistreaming.org/" />
+  <!-- Hreflang：Phase 2 path prefix 路由完成後將改為各語言 URL；目前先保留 x-default -->
   <link rel="alternate" hreflang="x-default" href="https://multistreaming.org/" />
 
   <!-- Structured Data (JSON-LD) -->
@@ -68,20 +68,16 @@
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "MultiStream Hub",
-        "alternateName": "多串流觀看工具",
+        "alternateName": "多直播同步觀看工具",
         "url": "https://multistreaming.org/",
-        "description": "免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能。",
+        "description": "免費的多平台直播觀看工具，支援同時觀看多個 Twitch 與 YouTube 直播，提供多種布局模式、聊天室整合、獨立音量控制與本地收藏管理。",
         "applicationCategory": "MultimediaApplication",
         "operatingSystem": "Web Browser",
+        "browserRequirements": "Requires JavaScript. Modern browser (Chrome, Firefox, Edge, Safari).",
         "offers": {
           "@type": "Offer",
           "price": "0",
           "priceCurrency": "USD"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "5",
-          "ratingCount": "1"
         },
         "creator": {
           "@type": "Person",
@@ -91,17 +87,14 @@
           "多平台串流支援（Twitch、YouTube）",
           "多種布局模式",
           "聊天室整合",
-          "音量控制",
-          "收藏系統",
-          "響應式設計",
-          "多語言支援",
-          "XSS 防護和 CSP 安全策略",
-          "SEO 優化"
+          "獨立音量控制",
+          "本地收藏與多標籤管理",
+          "響應式設計（含手機版）",
+          "多語言支援（5 種語言）"
         ],
         "screenshot": "https://multistreaming.org/icon.png",
-        "softwareVersion": "2.0.1",
-        "datePublished": "2025-11-26",
-        "dateModified": "2025-01-XX",
+        "datePublished": "2025-11-27",
+        "dateModified": "2026-04-26",
         "inLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"]
       }
       </script>
@@ -133,7 +126,7 @@
         "url": "https://multistreaming.org/",
         "logo": "https://multistreaming.org/icon.png",
         "sameAs": [
-          "https://discord.gg/3Uu6dZbtKd"
+          "https://discord.gg/47kauArepY"
         ],
         "contactPoint": {
           "@type": "ContactPoint",
@@ -159,8 +152,6 @@
         j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
           'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
     })(window, document, 'script', 'dataLayer', 'GTM-WS5W6JWC');</script>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8415424787944153"
-    crossorigin="anonymous"></script>
   <!-- End Google Tag Manager -->
 </head>
 

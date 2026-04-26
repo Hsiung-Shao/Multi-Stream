@@ -1,0 +1,20 @@
+{
+  "name": "MultiStream Hub",
+  "short_name": "MultiStream",
+  "description": "免費多平台直播同步觀看工具",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#7c3aed",
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
