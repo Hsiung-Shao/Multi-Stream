@@ -320,7 +320,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               </a>
 
               <a
-                href="https://discord.gg/3Uu6dZbtKd"
+                href="https://discord.gg/47kauArepY"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logEvent('AboutPage', 'click_social', 'discord')}
