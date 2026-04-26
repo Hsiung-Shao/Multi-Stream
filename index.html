@@ -59,8 +59,8 @@
   <link rel="apple-touch-icon" href="/icon.png">
   <link rel="manifest" href="/manifest.json">
 
-  <!-- Hreflang：Phase 2 path prefix 路由完成後將改為各語言 URL；目前先保留 x-default -->
-  <link rel="alternate" hreflang="x-default" href="https://multistreaming.org/" />
+  <!-- Hreflang 由 src/components/SEO.tsx 在運行時動態產生五語 + x-default
+       （見 src/lib/i18nRouting.ts 的 OG_LOCALE_MAP / SUPPORTED_LANGS） -->
 
   <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">

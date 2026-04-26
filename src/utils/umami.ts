@@ -73,6 +73,8 @@ const configPromise = fetch('/api/umami-config')
  */
 export const initUmami = async (): Promise<void> => {
     if (isInitialized || isInitializing) return;
+    // Prerender 期間絕不初始化（puppeteer 注入 __PRERENDER__）
+    if (typeof window !== 'undefined' && (window as Window & { __PRERENDER__?: boolean }).__PRERENDER__) return;
     if (!isTrackingEnabled()) return;
 
     // Bot 偵測：跳過機器人流量

@@ -109,6 +109,9 @@ const configPromise = fetch('/api/ga-config')
  * 6. 處理事件佇列
  */
 export const initGA = async () => {
+    // Prerender 期間（puppeteer 注入 __PRERENDER__）絕不初始化追蹤
+    if (typeof window !== 'undefined' && (window as Window & { __PRERENDER__?: boolean }).__PRERENDER__) return;
+
     // 防止重複初始化
     if (isInitialized || isInitializing) return;
 
