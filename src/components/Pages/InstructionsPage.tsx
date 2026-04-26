@@ -70,8 +70,9 @@ export function InstructionsPage() {
     return (
         <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
             <SEO
-                title="使用教學 - MultiStream Hub | How to Multistream"
-                description="MultiStream Hub 完整功能指南。了解如何新增串流、管理收藏、使用動態島 (Dynamic Island) 與聊天室整合功能。"
+                title={t('seo:instructions.title')}
+                description={t('seo:instructions.description')}
+                keywords={t('seo:instructions.keywords')}
                 pathWithoutLang="/instructions"
             />
             {/* Navbar Placeholder / Back Button */}

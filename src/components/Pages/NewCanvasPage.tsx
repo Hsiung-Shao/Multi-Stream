@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DynamicIsland } from '../Navigation/DynamicIsland';
 import { SimpleCanvas, CanvasWindow, WindowRenderProps } from '../Canvas';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -13,6 +14,7 @@ import { CanvasEmptyState } from '../Canvas/CanvasEmptyState';
 import { SEO } from '../SEO';
 
 export const NewCanvasPage = () => {
+    const { t } = useTranslation();
     const setLayoutMode = useStreamStore(s => s.setLayoutMode);
     const streams = useStreamStore(s => s.streams);
     const canvasItems = useStreamStore(s => s.canvasItems);
@@ -121,8 +123,9 @@ export const NewCanvasPage = () => {
     return (
         <div className="w-full h-screen bg-black overflow-hidden relative">
             <SEO
-                title="開始觀看直播 - MultiStream Hub | Multistream Viewer"
-                description="立即開始使用 MultiStream Hub。自定義您的多視窗直播布局，同時欣賞 Twitch 與 YouTube 的精彩內容。"
+                title={t('seo:canvas.title')}
+                description={t('seo:canvas.description')}
+                keywords={t('seo:canvas.keywords')}
                 pathWithoutLang="/canvas"
             />
             {/* Canvas Layer */}

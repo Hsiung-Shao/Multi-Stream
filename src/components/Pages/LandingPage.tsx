@@ -46,11 +46,13 @@ export function LandingPage() {
         <>
         <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden selection:bg-primary selection:text-primary-foreground">
             <SEO
-                title="MultiStream Hub - 免費多平台直播觀看工具 | 同時觀看 Twitch & YouTube (Free Multistreaming)"
-                description="免費的多平台直播串流工具。無需註冊、即開即用。支援同時觀看多個 Twitch 和 YouTube 直播 (Watch multiple streams)，提供聊天室整合與多種布局模式。"
-                keywords="MultiStream, multistreaming, free multistream, multi stream twitch, watch multiple streams, 同時觀看, 多平台直播, 免費直播工具"
+                title={t('seo:home.title')}
+                description={t('seo:home.description')}
+                keywords={t('seo:home.keywords')}
                 pathWithoutLang="/"
             />
+            <FaqJsonLd />
+
             {/* Header */}
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -521,5 +523,39 @@ function UseCaseCard({ icon, title, desc, delay }: { icon: React.ReactNode, titl
                 <p className="text-muted-foreground leading-relaxed">{desc}</p>
             </div>
         </div>
+    );
+}
+
+// FAQPage JSON-LD：取 5 個核心 FAQ 項目，讓 Google 有機會在 SERP 顯示富摘要。
+// i18n 切換語言時會 re-render，schema 內容跟著切到對應語言版本。
+const FAQ_KEYS = [
+    'dynamic_island',
+    'favorites_manager',
+    'media_control',
+    'layout_control',
+    'twitch_linking',
+] as const;
+
+function FaqJsonLd() {
+    const { t } = useTranslation('faq');
+    const data = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: FAQ_KEYS.map(key => ({
+            '@type': 'Question',
+            name: t(`items.${key}.title`),
+            acceptedAnswer: {
+                '@type': 'Answer',
+                text: t(`items.${key}.content`),
+            },
+        })),
+    };
+    // Escape `<` 為 `<`，避免 i18n 內容若含 `</script>` 破壞 close tag（Google 官方建議）
+    const safeJson = JSON.stringify(data).replace(/</g, '\\u003c');
+    return (
+        <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: safeJson }}
+        />
     );
 }

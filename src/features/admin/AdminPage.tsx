@@ -6,6 +6,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { SEO } from '../../components/SEO';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -164,6 +165,12 @@ export function AdminPage() {
 
     return (
         <QueryClientProvider client={queryClient}>
+            <SEO
+                title="Admin | MultiStream Hub"
+                description="Internal admin console."
+                pathWithoutLang="/admin"
+                robots="noindex, nofollow"
+            />
             <AdminDashboard onLogout={handleLogout} />
         </QueryClientProvider>
     );

@@ -41,9 +41,9 @@ export function FAQPage() {
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col">
             <SEO
-                title={`${t('faq:title')} - MultiStream Hub`}
-                description={t('faq:header_subtitle')}
-                keywords="FAQ, MultiStream Hub, help, guide, features, multistreaming"
+                title={t('seo:faq.title')}
+                description={t('seo:faq.description')}
+                keywords={t('seo:faq.keywords')}
                 pathWithoutLang="/faq"
             />
             {/* Header */}

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Navbar } from '../Navbar';
 
 import { SEO } from '../SEO';
@@ -6,6 +7,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 
 export function HomePage() {
+    const { t } = useTranslation();
     const theme = useUIStore(s => s.theme);
     const toggleTheme = useUIStore(s => s.toggleTheme);
     const setCurrentPage = useUIStore(s => s.setPage);
@@ -24,7 +26,12 @@ export function HomePage() {
 
     return (
         <>
-            <SEO />
+            <SEO
+                title={t('seo:tools.title')}
+                description={t('seo:tools.description')}
+                keywords={t('seo:tools.keywords')}
+                pathWithoutLang="/tools"
+            />
             <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
                 <Navbar
                     theme={theme}

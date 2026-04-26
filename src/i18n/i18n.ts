@@ -19,6 +19,7 @@ import zhTWYoutubeRisk from './locales/zh-TW/youtubeRisk';
 import zhTWStream from './locales/zh-TW/stream';
 import zhTWFAQ from './locales/zh-TW/faq';
 import zhTWVtuber from './locales/zh-TW/vtuber';
+import zhTWSeo from './locales/zh-TW/seo';
 
 // Import other locales
 import zhCNCommon from './locales/zh-CN/common';
@@ -36,6 +37,7 @@ import zhCNYoutubeRisk from './locales/zh-CN/youtubeRisk';
 import zhCNStream from './locales/zh-CN/stream';
 import zhCNFAQ from './locales/zh-CN/faq';
 import zhCNVtuber from './locales/zh-CN/vtuber';
+import zhCNSeo from './locales/zh-CN/seo';
 
 import enCommon from './locales/en/common';
 import enNavbar from './locales/en/navbar';
@@ -52,6 +54,7 @@ import enYoutubeRisk from './locales/en/youtubeRisk';
 import enStream from './locales/en/stream';
 import enFAQ from './locales/en/faq';
 import enVtuber from './locales/en/vtuber';
+import enSeo from './locales/en/seo';
 
 import jaCommon from './locales/ja/common';
 import jaNavbar from './locales/ja/navbar';
@@ -68,6 +71,7 @@ import jaYoutubeRisk from './locales/ja/youtubeRisk';
 import jaStream from './locales/ja/stream';
 import jaFAQ from './locales/ja/faq';
 import jaVtuber from './locales/ja/vtuber';
+import jaSeo from './locales/ja/seo';
 
 import koCommon from './locales/ko/common';
 import koNavbar from './locales/ko/navbar';
@@ -84,6 +88,7 @@ import koYoutubeRisk from './locales/ko/youtubeRisk';
 import koStream from './locales/ko/stream';
 import koFAQ from './locales/ko/faq';
 import koVtuber from './locales/ko/vtuber';
+import koSeo from './locales/ko/seo';
 
 export const defaultNS = 'common';
 
@@ -104,6 +109,7 @@ export const resources = {
         stream: zhTWStream,
         faq: zhTWFAQ,
         vtuber: zhTWVtuber,
+        seo: zhTWSeo,
     },
     'zh-CN': {
         common: zhCNCommon,
@@ -121,6 +127,7 @@ export const resources = {
         stream: zhCNStream,
         faq: zhCNFAQ,
         vtuber: zhCNVtuber,
+        seo: zhCNSeo,
     },
     en: {
         common: enCommon,
@@ -138,6 +145,7 @@ export const resources = {
         stream: enStream,
         faq: enFAQ,
         vtuber: enVtuber,
+        seo: enSeo,
     },
     ja: {
         common: jaCommon,
@@ -155,6 +163,7 @@ export const resources = {
         stream: jaStream,
         faq: jaFAQ,
         vtuber: jaVtuber,
+        seo: jaSeo,
     },
     ko: {
         common: koCommon,
@@ -172,6 +181,7 @@ export const resources = {
         stream: koStream,
         faq: koFAQ,
         vtuber: koVtuber,
+        seo: koSeo,
     },
 } as const;
 
