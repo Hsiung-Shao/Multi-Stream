@@ -204,7 +204,9 @@ i18n
         resources,
         defaultNS,
         supportedLngs: [...SUPPORTED_LANGS],
-        nonExplicitSupportedLngs: true, // 'zh' → 'zh-TW' 之類的對應
+        // load: 'currentOnly' 防止 i18next 把 'zh-TW' 拆成 base 'zh' 去查；
+        // 我們的 resources 沒有 'zh' 這層，會導致 t() fallback 到英文
+        load: 'currentOnly',
         keySeparator: false,
         nsSeparator: ':',
         fallbackLng: 'en',
