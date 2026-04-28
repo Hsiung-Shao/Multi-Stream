@@ -4,12 +4,18 @@
 // - 產物寫到 root/og-image.png，由 copy-static-assets.js 複製到 build/
 
 import puppeteer from 'puppeteer';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUTPUT = resolve(__dirname, '..', 'og-image.png');
+const ROOT = resolve(__dirname, '..');
+const OUTPUT = resolve(ROOT, 'og-image.png');
+const ICON = resolve(ROOT, 'icon.png');
+
+// 讀 icon.png 為 base64 內嵌，puppeteer 不需透過 sirv 取檔
+const iconBase64 = (await readFile(ICON)).toString('base64');
+const iconDataUri = `data:image/png;base64,${iconBase64}`;
 
 // 內嵌 HTML — 自包含、不依賴外部資源（除了 Google Fonts，puppeteer 會等載入）
 const html = `<!DOCTYPE html>
@@ -43,14 +49,11 @@ const html = `<!DOCTYPE html>
   .brand-icon {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #a855f7, #7c3aed);
     border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
     box-shadow: 0 10px 40px rgba(124, 58, 237, 0.6);
   }
-  .brand-icon svg { width: 36px; height: 36px; }
+  .brand-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .brand-name {
     font-size: 32px;
     font-weight: 800;
@@ -175,11 +178,7 @@ const html = `<!DOCTYPE html>
 
   <div class="brand">
     <div class="brand-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="3" width="20" height="14" rx="2" />
-        <line x1="8" y1="21" x2="16" y2="21" />
-        <line x1="12" y1="17" x2="12" y2="21" />
-      </svg>
+      <img src="${iconDataUri}" alt="MultiStream Hub" />
     </div>
     <div class="brand-name">MultiStream Hub</div>
   </div>
