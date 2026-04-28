@@ -9,7 +9,6 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cookie, X, Check, Shield } from 'lucide-react';
 import { hasConsentRecord, setTrackingConsent } from '../utils/analytics';
-import { initUmami } from '../utils/umami';
 import { isSupportedLang, buildLangUrl, DEFAULT_LANG } from '../lib/i18nRouting';
 
 interface CookieConsentProps {
@@ -41,7 +40,6 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
         setTimeout(() => {
             setShowBanner(false);
             setTrackingConsent(true);
-            initUmami();
             onConsentChange?.(true);
         }, 300);
     };

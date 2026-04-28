@@ -14,7 +14,6 @@ import packageJson from '../../../package.json';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { logEvent } from '../../utils/analytics';
-import { trackEvent as umamiTrack } from '../../utils/umami';
 
 interface FeedbackModalProps {
     theme: 'light' | 'dark';
@@ -68,7 +67,6 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                 onClose();
             }, 2000);
             logEvent('Feedback', 'submit_success', finalData.feedbackType);
-            umamiTrack('feedback-submit');
         } catch (error) {
             console.error('Submission error');
             alert(t('error'));

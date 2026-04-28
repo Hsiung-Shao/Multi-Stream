@@ -1,6 +1,6 @@
 // Prerender 公開頁面為靜態 HTML
 // - 啟動 sirv 服務 build/，puppeteer 訪問每個 lang × route，把渲染後的 HTML 寫回對應路徑
-// - 注入 window.__PRERENDER__ = true 以阻止 GA/Umami 在 prerender 期間發送事件
+// - 注入 window.__PRERENDER__ = true 以阻止 GA 在 prerender 期間發送事件
 // - 攔截 Twitch/YouTube/AdSense 等第三方 request 加速且避免污染
 // - 路徑列表必須與 scripts/generate-sitemap.js 的 ROUTES / LANGS 對齊
 

@@ -17,7 +17,7 @@ import { Button } from '../../../components/ui/button';
 import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../components/ui/dropdown-menu';
 import { EditProfileDialog } from '../../../components/Dialogs/EditProfileDialog';
-import { trackEvent } from '../../../utils/umami';
+import { logEvent } from '../../../utils/analytics';
 import type { VTuberRecord } from '../types';
 
 type ExploreTab = 'vtubers' | 'events';
@@ -76,10 +76,10 @@ export function VTuberExplorePage() {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
-  // Umami tracking
+  // GA4 tracking
   const searchTrackTimer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
-    trackEvent('vtuber-explore-view', { tab: activeTab });
+    logEvent('VTuber', 'explore_view', activeTab);
     return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
   }, []); // page view on mount + cleanup
   const handleSearchWithTracking = (keyword: string) => {
@@ -87,20 +87,20 @@ export function VTuberExplorePage() {
     if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current);
     if (keyword.trim()) {
       searchTrackTimer.current = setTimeout(() => {
-        trackEvent('vtuber-search', { keyword: keyword.trim() });
+        logEvent('VTuber', 'search', keyword.trim());
       }, 1000);
     }
   };
 
   const handleTabChange = (tab: ExploreTab) => {
     setActiveTab(tab);
-    trackEvent('event-tab-view', { tab });
+    logEvent('VTuber', 'event_tab_view', tab);
   };
 
   const handleVTuberClick = (vtuber: VTuberRecord) => {
     setSelectedVTuber(vtuber);
     setSheetOpen(true);
-    trackEvent('vtuber-detail', { name: vtuber.name });
+    logEvent('VTuber', 'detail_view', vtuber.name);
   };
 
   const handleAddToFavorites = (vtuber: VTuberRecord) => {
@@ -252,9 +252,9 @@ export function VTuberExplorePage() {
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 groups={groups}
-                onNationalityChange={(v) => { setNationality(v); trackEvent('vtuber-filter', { nationality: v || 'all' }); }}
-                onActivityChange={(v) => { setActivity(v); trackEvent('vtuber-filter', { activity: v || 'all' }); }}
-                onGroupChange={(v) => { setGroupId(v); trackEvent('vtuber-filter', { group: v || 'all' }); }}
+                onNationalityChange={(v) => { setNationality(v); logEvent('VTuber', 'filter_nationality', v || 'all'); }}
+                onActivityChange={(v) => { setActivity(v); logEvent('VTuber', 'filter_activity', v || 'all'); }}
+                onGroupChange={(v) => { setGroupId(v); logEvent('VTuber', 'filter_group', v || 'all'); }}
                 onSortByChange={setSortBy}
                 onSortOrderChange={setSortOrder}
                 onReset={resetFilters}

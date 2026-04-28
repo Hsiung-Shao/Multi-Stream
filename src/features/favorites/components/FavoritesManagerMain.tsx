@@ -16,7 +16,6 @@ import { favoritesService } from '../FavoritesService';
 import { tagsService } from '../TagsService';
 import { favoritesLoader } from '../FavoritesLoader';
 import { logEvent } from '../../../utils/analytics';
-import { trackEvent as umamiTrack } from '../../../utils/umami';
 import { toast } from 'sonner';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { useFavorites } from '../../../hooks/useFavorites';
@@ -297,7 +296,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
         loadData();
         clearToken();
         setActiveTab('favorites');
-        umamiTrack('favorites-import', { source: 'twitch', count: imported });
+        logEvent('Favorites', 'twitch_import', 'count', imported);
         toast.success(`成功匯入 ${imported} 個頻道`);
     };
 

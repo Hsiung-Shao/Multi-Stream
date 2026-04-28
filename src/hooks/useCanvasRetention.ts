@@ -10,8 +10,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { useStreamStore } from '../store/useStreamStore';
-import { trackEvent } from '../utils/umami';
-import { isTrackingEnabled } from '../utils/analytics';
+import { logEvent, isTrackingEnabled } from '../utils/analytics';
 
 const MIN_SESSION_DURATION = 5; // 最少 5 秒才發送事件
 
@@ -38,10 +37,7 @@ export function useCanvasRetention() {
         const durationSec = Math.floor(totalMs / 1000);
         if (durationSec < MIN_SESSION_DURATION) return;
 
-        trackEvent('canvas-session', {
-            duration: durationSec,
-            streams: streams.length,
-        });
+        logEvent('Engagement', 'canvas_session', `${streams.length}_streams`, durationSec);
 
         // 重置
         accumulatedRef.current = 0;

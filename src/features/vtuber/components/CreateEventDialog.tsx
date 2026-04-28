@@ -19,7 +19,7 @@ import {
 } from '../../../components/ui/select';
 import { Loader2, CheckCircle, LogIn, Eye, EyeOff } from 'lucide-react';
 import { useCreateEvent } from '../hooks/useEvents';
-import { trackEvent } from '../../../utils/umami';
+import { logEvent } from '../../../utils/analytics';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { EventCard } from './EventCard';
@@ -96,7 +96,7 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
     };
 
     await createMutation.mutateAsync({ input, userId: user.id });
-    trackEvent('event-create-submit', { event_type: form.event_type });
+    logEvent('VTuber', 'event_create', form.event_type);
     setSubmitted(true);
   };
 

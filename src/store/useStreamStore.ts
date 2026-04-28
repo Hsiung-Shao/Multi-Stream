@@ -14,7 +14,6 @@ import { findAvailablePosition } from '../utils/layoutEngine';
 import { CustomLayout, LayoutSlot } from '../types/canvas';
 import { layoutStorage } from '../utils/layoutStorage';
 import { logEvent, isTrackingEnabled } from '../utils/analytics';
-import { trackEvent as umamiTrack } from '../utils/umami';
 import { userSegmentationManager, FEATURE_FLAGS } from '../utils/userSegmentation';
 import { getCachedChannel, upsertChannel } from '../features/youtube/YouTubeChannelRepository';
 
@@ -422,8 +421,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         layout: state.userLayout ? state.layout : newLayout
                     });
 
-                    // Umami: 追蹤串流新增
-                    umamiTrack('stream-add', { platform: newStream.platform });
+                    logEvent('Stream', 'add', newStream.platform);
 
                     return { success: true, streamId: newId };
                 } catch (error) {
@@ -787,7 +785,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 // Track stream removal
                 if (itemToRemove.contentId && itemToRemove.type === 'stream') {
                     const stream = state.streams.find(s => s.id === itemToRemove.contentId);
-                    if (stream) umamiTrack('stream-remove', { platform: stream.platform });
+                    if (stream) logEvent('Stream', 'remove', stream.platform);
                 }
 
                 // 1. If ALREADY Empty Window (no contentId), ALWAYS Remove

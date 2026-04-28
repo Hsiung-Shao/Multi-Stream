@@ -5,7 +5,7 @@ import { EventCard } from './EventCard';
 import { EventFilterBar } from './EventFilterBar';
 import { EventDetailSheet } from './EventDetailSheet';
 import { Loader2 } from 'lucide-react';
-import { trackEvent } from '../../../utils/umami';
+import { logEvent } from '../../../utils/analytics';
 import type { VTuberEvent, EventType } from '../types';
 
 export function EventCalendarView() {
@@ -25,7 +25,7 @@ export function EventCalendarView() {
   const handleEventClick = (event: VTuberEvent) => {
     setSelectedEvent(event);
     setDetailOpen(true);
-    trackEvent('event-detail', { title: event.title });
+    logEvent('VTuber', 'event_detail', event.title);
   };
 
   return (

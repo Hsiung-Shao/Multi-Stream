@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import i18n from 'i18next';
 import { useUIStore } from '../store/useUIStore';
 import { logPageView, logEvent, isTrackingEnabled } from '../utils/analytics';
-import { trackPageView, trackEvent } from '../utils/umami';
 import {
     DEFAULT_LANG,
     isSupportedLang,
@@ -81,8 +80,6 @@ export function useRouter() {
         if (isTrackingEnabled()) {
             logPageView();
             logEvent('Navigation', 'page_view', page);
-            trackPageView(window.location.pathname);
-            trackEvent('page-navigate', { page });
         }
     }, [page]);
 

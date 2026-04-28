@@ -32,7 +32,7 @@ import {
 } from '../../../components/ui/command';
 import { Plus, X, Loader2, CheckCircle, Link2, Youtube, Twitch, ChevronsUpDown, Check, Users, LogIn, Eye } from 'lucide-react';
 import { useSubmitContribution, useVTuberGroups } from '../hooks/useVTubers';
-import { trackEvent } from '../../../utils/umami';
+import { logEvent } from '../../../utils/analytics';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { VTuberCard } from './VTuberCard';
@@ -234,7 +234,7 @@ export function ContributeVTuberDialog({ open, onOpenChange }: ContributeVTuberD
       sourceNote: form.sourceNote.trim() || undefined,
     });
 
-    trackEvent('vtuber-contribute-submit');
+    logEvent('VTuber', 'contribute_submit');
     setSubmitted(true);
   };
 
