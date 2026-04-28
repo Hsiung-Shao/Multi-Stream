@@ -13,6 +13,7 @@ if (!fs.existsSync(buildDir)) {
 // 需要複製的文件和目錄
 const staticAssets = [
   'icon.png',
+  'og-image.png',
   'config.js',
   'js',
   'functions',

@@ -35,7 +35,7 @@ export function SEO({
   title = 'MultiStream Hub｜多直播同步觀看工具',
   description = '免費同時觀看多個 Twitch 與 YouTube 直播，無需註冊。多種布局模式、聊天室整合、獨立音量控制與本地收藏管理。',
   keywords = '多直播觀看, multistream, multi twitch viewer, Twitch 多視窗, 同時觀看多個直播',
-  image = `${SITE_ORIGIN}/icon.png`,
+  image = `${SITE_ORIGIN}/og-image.png`,
   pathWithoutLang = '/',
   type = 'website',
   robots,

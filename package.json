@@ -99,6 +99,7 @@
             "build:no-prerender": "vite build && node scripts/copy-static-assets.js",
             "generate-sitemap": "node scripts/generate-sitemap.js",
             "prebuild": "npm run generate-sitemap",
-            "prerender": "node scripts/prerender.mjs"
+            "prerender": "node scripts/prerender.mjs",
+            "generate-og-image": "node scripts/generate-og-image.mjs"
       }
 }
