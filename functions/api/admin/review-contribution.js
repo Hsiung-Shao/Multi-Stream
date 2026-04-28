@@ -107,6 +107,18 @@ export async function onRequestPost(context) {
         return jsonResponse({ success: false, error: '更新狀態失敗' }, 500, request);
     }
 
+    // 4. Audit log（best-effort，不影響主流程）
+    await insert(env, 'admin_actions', {
+        admin_user_id: userId,
+        action_type: 'review_vtuber_contribution',
+        target_id: id,
+        decision: action,
+        before_status: 'pending',
+        after_status: patch.status,
+        notes: patch.reviewer_notes,
+        metadata: createdVtuberId ? { created_vtuber_id: createdVtuberId, contribution_action: contribution.action } : { contribution_action: contribution.action },
+    });
+
     return jsonResponse({
         success: true,
         status: patch.status,

@@ -5,7 +5,7 @@
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest, getTrustLevel } from '../../lib/auth-helper.js';
-import { update, select } from '../../lib/supabase-server.js';
+import { update, select, insert } from '../../lib/supabase-server.js';
 
 const MAX_BODY_BYTES = 4 * 1024;
 
@@ -80,6 +80,17 @@ export async function onRequestPost(context) {
     if (!updateRes.ok) {
         return jsonResponse({ success: false, error: '更新狀態失敗' }, 500, request);
     }
+
+    // Audit log（best-effort）
+    await insert(env, 'admin_actions', {
+        admin_user_id: userId,
+        action_type: 'review_vtuber_event',
+        target_id: id,
+        decision: action,
+        before_status: 'pending',
+        after_status: patch.status,
+        notes: trimStr(notes, 500) || null,
+    });
 
     return jsonResponse({
         success: true,

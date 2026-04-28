@@ -4,9 +4,11 @@ import { getSupabase } from '../../lib/supabase';
 import { AdminLogin } from './components/AdminLogin';
 import { AdminDashboard } from './components/AdminDashboard';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw, ShieldOff } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { SEO } from '../../components/SEO';
+import { checkAdminPermission } from '../vtuber/apiClient';
+import { useUIStore } from '../../store/useUIStore';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -17,7 +19,7 @@ const queryClient = new QueryClient({
     },
 });
 
-type AuthState = 'loading' | 'login' | 'authenticated' | 'error';
+type AuthState = 'loading' | 'login' | 'authenticated' | 'error' | 'forbidden';
 
 const INIT_TIMEOUT_MS = 15_000;
 
@@ -25,6 +27,31 @@ export function AdminPage() {
     const [authState, setAuthState] = useState<AuthState>('loading');
     const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
     const [errorMessage, setErrorMessage] = useState('');
+    const [trustLevel, setTrustLevel] = useState<string | null>(null);
+    const setPage = useUIStore(s => s.setPage);
+
+    // 已登入後再額外驗證 trust_level（admin / moderator 才能進）
+    useEffect(() => {
+        if (authState !== 'authenticated') return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const result = await checkAdminPermission();
+                if (cancelled) return;
+                setTrustLevel(result.trust_level);
+                if (!result.allowed) {
+                    setAuthState('forbidden');
+                }
+            } catch {
+                if (!cancelled) {
+                    // API 失敗時保守視為無權，避免讓非 admin 看到後台 UI
+                    setAuthState('forbidden');
+                    setTrustLevel(null);
+                }
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [authState]);
 
     useEffect(() => {
         let cancelled = false;
@@ -105,6 +132,27 @@ export function AdminPage() {
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
                     <span className="text-[13px] text-zinc-400">載入中</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (authState === 'forbidden') {
+        return (
+            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                <SEO title="無權限 | MultiStream Hub" pathWithoutLang="/admin" robots="noindex, nofollow" />
+                <div className="flex flex-col items-center gap-3 max-w-[360px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center">
+                        <ShieldOff className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <p className="text-[14px] text-zinc-200 font-medium">無權限存取後台</p>
+                    <p className="text-[13px] text-zinc-400 leading-relaxed">
+                        此頁面僅限 admin / moderator 使用。<br />
+                        當前帳號等級：<span className="text-zinc-300">{trustLevel ?? '未知'}</span>
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => setPage('home')}>
+                        返回首頁
+                    </Button>
                 </div>
             </div>
         );
