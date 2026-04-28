@@ -19,7 +19,10 @@ export interface AuthState {
   session: Session | null;
   isLoading: boolean;
   isLoggedIn: boolean;
+  /** 純 admin（最高權限） */
   isAdmin: boolean;
+  /** admin 或 moderator — 可進後台、可審核投稿/活動 */
+  canModerate: boolean;
   isBanned: boolean;
   login: (provider: Provider) => Promise<void>;
   logout: () => Promise<void>;
@@ -42,25 +45,20 @@ export function useAuth(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
 
   // 從 user_profiles 取得用戶個人資料
+  // 錯誤 silent — UI 透過 isLoggedIn / profile === null 表達狀態
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const supabase = await getSupabase();
       if (!supabase) return null;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('supabase_auth_id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 = no rows returned (new user)
-        console.error('Error fetching profile:', error.code || 'unknown');
-      }
-
       return data as UserProfile | null;
     } catch {
-      console.error('Error fetching profile');
       return null;
     }
   }, []);
@@ -105,14 +103,9 @@ export function useAuth(): AuthState {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating profile:', error.code || 'unknown');
-        return null;
-      }
-
+      if (error) return null;
       return data as UserProfile;
     } catch {
-      console.error('Error creating profile');
       return null;
     }
   }, []);
@@ -181,29 +174,25 @@ export function useAuth(): AuthState {
 
   const login = useCallback(async (provider: Provider) => {
     const supabase = await getSupabase();
-    if (!supabase) return;
+    if (!supabase) throw new Error('Supabase not available');
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
+        // OAuth 回到首頁 root，由 useRouter 補上 lang prefix；hash 含 access_token 流程不變
         redirectTo: window.location.origin + '/',
       },
     });
 
-    if (error) {
-      console.error('Login error:', error.message || 'unknown');
-      throw error;
-    }
+    if (error) throw error;
   }, []);
 
   const logout = useCallback(async () => {
     const supabase = await getSupabase();
     if (!supabase) return;
 
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Logout error:', error.message || 'unknown');
-    }
+    // 即使 signOut 失敗也清前端狀態（user 體驗上已登出）
+    await supabase.auth.signOut().catch(() => undefined);
     setUser(null);
     setProfile(null);
     setSession(null);
@@ -229,15 +218,11 @@ export function useAuth(): AuthState {
         .update({ display_name: trimmed })
         .eq('id', profile.id);
 
-      if (error) {
-        console.error('Error updating display name:', error.code || 'unknown');
-        return false;
-      }
+      if (error) return false;
 
       setProfile((prev) => prev ? { ...prev, display_name: trimmed } : prev);
       return true;
     } catch {
-      console.error('Error updating display name');
       return false;
     }
   }, [profile]);
@@ -249,6 +234,7 @@ export function useAuth(): AuthState {
     isLoading,
     isLoggedIn: !!user,
     isAdmin: profile?.trust_level === 'admin',
+    canModerate: profile?.trust_level === 'admin' || profile?.trust_level === 'moderator',
     isBanned: profile?.trust_level === 'banned',
     login,
     logout,

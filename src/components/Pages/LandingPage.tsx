@@ -57,7 +57,7 @@ export function LandingPage() {
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <img src="/icon.png" alt="MultiStream Hub" className="w-10 h-10 rounded-lg shadow-lg" />
+                        <img src="/icon.png" alt="MultiStream Hub" width="40" height="40" className="w-10 h-10 rounded-lg shadow-lg" />
                         <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                             MultiStream Hub
                         </span>
@@ -167,7 +167,8 @@ export function LandingPage() {
                         </div>
 
                         {/* Feature Preview / UI Mockup placeholder */}
-                        <div className="mt-20 relative animate-fade-in-up delay-200 duration-1000">
+                        {/* min-h 預留 hero mockup 空間，避免下方 features 區段 fade-in 動畫造成 layout shift（CLS） */}
+                        <div className="mt-20 relative animate-fade-in-up delay-200 duration-1000 min-h-[260px] md:min-h-[400px]">
                             <div className="relative rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl p-2 md:p-4 max-w-5xl mx-auto overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10 h-32 bottom-0 w-full" />
                                 {/* Conceptual UI representation */}

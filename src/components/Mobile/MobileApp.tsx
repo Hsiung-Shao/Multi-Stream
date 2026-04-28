@@ -51,7 +51,7 @@ export function MobileApp() {
             {showHeader && (
                 <header className="flex items-center justify-between px-4 h-12 shrink-0 border-b border-white/10 bg-gray-950/80 backdrop-blur-lg z-40">
                     <div className="flex items-center gap-2">
-                        <img src="/icon.png" alt="MultiStream Hub" className="w-7 h-7 rounded-md" />
+                        <img src="/icon.png" alt="MultiStream Hub" width="28" height="28" className="w-7 h-7 rounded-md" />
                         <span className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                             MultiStream
                         </span>

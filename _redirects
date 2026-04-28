@@ -1,2 +1,19 @@
-# Cloudflare Pages SPA Redirects
-/* /index.html 200
+# Cloudflare Pages Redirects
+#
+# 處理順序：上至下匹配第一條符合的規則。
+# - 舊路徑（無 lang prefix）→ 301 redirect 到英文版（x-default）
+#   讓 Google 不再視為「客戶端重新導向」問題；既有書籤透過 301 永久搬遷
+# - SPA fallback 在最後
+
+# 舊路徑 301 → /en/{path}（x-default 對應國際使用者；returning user 進站後
+# 由 useRouter 監聽 i18next.language 並 replaceState 切到 user 偏好語言）
+/about            /en/about            301
+/canvas           /en/canvas           301
+/faq              /en/faq              301
+/instructions     /en/instructions     301
+/privacy          /en/privacy          301
+/tools            /en/tools            301
+/vtubers          /en/vtubers          301
+
+# SPA catch-all（必須在所有具體 redirect 之後）
+/*                /index.html          200

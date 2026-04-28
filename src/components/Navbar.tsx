@@ -474,7 +474,7 @@ export function Navbar({
             <>
               {/* Icon and Title - 桌面版最左側 */}
               <div className="flex items-center gap-2">
-                <img src="/icon.png" alt="MultiStream Hub" className="w-6 h-6" />
+                <img src="/icon.png" alt="MultiStream Hub" width="24" height="24" className="w-6 h-6" />
                 <span className={`text-xs font-medium ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
                   {t('common:appName')}
                 </span>
