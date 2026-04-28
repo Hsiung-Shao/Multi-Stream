@@ -32,6 +32,7 @@ import {
 } from '../../../components/ui/command';
 import { Plus, X, Loader2, CheckCircle, Link2, Youtube, Twitch, ChevronsUpDown, Check, Users, LogIn, Eye } from 'lucide-react';
 import { useSubmitContribution, useVTuberGroups } from '../hooks/useVTubers';
+import { formatApiError } from '../apiClient';
 import { logEvent } from '../../../utils/analytics';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
@@ -478,7 +479,9 @@ export function ContributeVTuberDialog({ open, onOpenChange }: ContributeVTuberD
 
               {/* ── Submit ── */}
               {submitMutation.isError && (
-                <p className="text-xs text-destructive text-center">{t('submitError')}</p>
+                <p className="text-xs text-destructive text-center">
+                  {formatApiError(submitMutation.error) || t('submitError')}
+                </p>
               )}
 
               <Button

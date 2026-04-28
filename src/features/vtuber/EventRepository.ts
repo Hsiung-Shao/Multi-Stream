@@ -137,66 +137,52 @@ class EventRepository {
     }
 
     /**
-     * 建立活動（需登入）
+     * 建立活動（需登入）— 走 Function /api/vtuber-event-create
      */
     async createEvent(input: CreateEventInput, userId: string): Promise<VTuberEvent> {
-        try {
-            const supabase = await getSupabase();
-            if (!supabase) return this.createEventMock(input, userId);
-
-            const { data, error } = await supabase
-                .from('vtuber_events')
-                .insert({
-                    title: input.title,
-                    description: input.description ?? null,
-                    event_type: input.event_type,
-                    vtuber_id: input.vtuber_id ?? null,
-                    organizer_id: userId,
-                    start_time: input.start_time,
-                    end_time: input.end_time ?? null,
-                    location: input.location ?? null,
-                    url: input.url ?? null,
-                    image_url: input.image_url ?? null,
-                    status: 'pending',
-                })
-                .select()
-                .single();
-
-            if (error) throw error;
-            return data as VTuberEvent;
-        } catch {
-            console.warn('EventRepository.createEvent: falling back to mock');
-            return this.createEventMock(input, userId);
-        }
+        const { createVTuberEvent } = await import('./apiClient');
+        const result = await createVTuberEvent({
+            title: input.title,
+            description: input.description,
+            eventType: input.event_type,
+            vtuberId: input.vtuber_id,
+            startTime: input.start_time,
+            endTime: input.end_time,
+            location: input.location,
+            url: input.url,
+            imageUrl: input.image_url,
+        });
+        return {
+            id: result.id ?? '',
+            title: input.title,
+            description: input.description ?? null,
+            event_type: input.event_type,
+            vtuber_id: input.vtuber_id ?? null,
+            organizer_id: userId,
+            start_time: input.start_time,
+            end_time: input.end_time ?? null,
+            location: input.location ?? null,
+            url: input.url ?? null,
+            image_url: input.image_url ?? null,
+            status: 'pending',
+            metadata: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        } as VTuberEvent;
     }
 
     /**
-     * 審核活動（Admin 用）
+     * 審核活動（Admin 用）— 走 Function /api/admin/review-event
      */
     async reviewEvent(
         id: string,
         decision: 'approved' | 'rejected',
     ): Promise<void> {
-        try {
-            const supabase = await getSupabase();
-            if (!supabase) {
-                console.log('[Mock] reviewEvent:', id, decision);
-                return;
-            }
-
-            const { error } = await supabase
-                .from('vtuber_events')
-                .update({
-                    status: decision,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', id);
-
-            if (error) throw error;
-        } catch {
-            console.warn('EventRepository.reviewEvent failed');
-            throw new Error('Review failed');
-        }
+        const { reviewVTuberEvent } = await import('./apiClient');
+        await reviewVTuberEvent({
+            id,
+            action: decision === 'approved' ? 'approve' : 'reject',
+        });
     }
 
     // -----------------------------------------------------------------------

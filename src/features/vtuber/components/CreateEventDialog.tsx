@@ -19,6 +19,7 @@ import {
 } from '../../../components/ui/select';
 import { Loader2, CheckCircle, LogIn, Eye, EyeOff } from 'lucide-react';
 import { useCreateEvent } from '../hooks/useEvents';
+import { formatApiError } from '../apiClient';
 import { logEvent } from '../../../utils/analytics';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
@@ -236,7 +237,9 @@ export function CreateEventDialog({ open, onOpenChange }: CreateEventDialogProps
               )}
 
               {createMutation.isError && (
-                <p className="text-xs text-destructive text-center">{t('eventSubmitError')}</p>
+                <p className="text-xs text-destructive text-center">
+                  {formatApiError(createMutation.error) || t('eventSubmitError')}
+                </p>
               )}
 
               <Button

@@ -343,36 +343,35 @@ class VTuberRepository {
 
     /**
      * 提交 VTuber 資料貢獻（新增 / 編輯 / 刪除請求）
+     * 走 Cloudflare Function 中介層 /api/vtuber-contribute（含 rate limit / 驗證 / 權限）
+     * dev 環境若 Function 不可用會 throw — 不再 fallback to mock，避免靜默成功誤導
      */
     async submitContribution(data: SubmitContributionInput): Promise<VTuberContribution> {
-        try {
-            const supabase = await getSupabase();
-            if (!supabase) return this.submitContributionMock(data);
-
-            const { data: result, error } = await supabase
-                .from('vtuber_contributions')
-                .insert({
-                    action: data.action,
-                    target_vtuber_id: data.targetVTuberId ?? null,
-                    payload: data.payload as unknown as Record<string, unknown>,
-                    status: 'pending',
-                    submitted_by: data.submittedBy,
-                    submitter_contact: data.submitterContact ?? null,
-                    source_urls: data.sourceUrls,
-                    source_note: data.sourceNote ?? null,
-                })
-                .select()
-                .single();
-
-            if (error) throw error;
-            return result as VTuberContribution;
-        } catch (err) {
-            console.warn(
-                'VTuberRepository.submitContribution: falling back to mock',
-                err,
-            );
-            return this.submitContributionMock(data);
-        }
+        const { submitVTuberContribution } = await import('./apiClient');
+        const result = await submitVTuberContribution({
+            action: data.action,
+            targetVtuberId: data.targetVTuberId ?? null,
+            payload: data.payload as unknown as Record<string, unknown>,
+            sourceUrls: data.sourceUrls,
+            sourceNote: data.sourceNote,
+            contributorName: data.submittedBy,
+            contributorContact: data.submitterContact,
+        });
+        // Function 只回 id；組成 VTuberContribution shape 讓 caller 用
+        return {
+            id: result.id ?? '',
+            action: data.action,
+            target_vtuber_id: data.targetVTuberId ?? null,
+            payload: data.payload as unknown as Record<string, unknown>,
+            status: 'pending',
+            submitted_by: data.submittedBy,
+            submitter_contact: data.submitterContact ?? null,
+            source_urls: data.sourceUrls,
+            source_note: data.sourceNote ?? null,
+            reviewer_notes: null,
+            reviewed_at: null,
+            created_at: new Date().toISOString(),
+        } as VTuberContribution;
     }
 
     /**
@@ -410,49 +409,20 @@ class VTuberRepository {
     }
 
     /**
-     * 審核貢獻（Admin 用）
+     * 審核貢獻（Admin 用）— 走 Function /api/admin/review-contribution
+     * Function 內已做 admin 權限驗證 + 用 service_role 執行，前端不需要直接打 Supabase
      */
     async reviewContribution(
         id: string,
         decision: 'approved' | 'rejected',
         reviewerNotes?: string,
     ): Promise<void> {
-        try {
-            const supabase = await getSupabase();
-            if (!supabase) {
-                console.log('[Mock] reviewContribution:', id, decision, reviewerNotes);
-                return;
-            }
-
-            // 1. Fetch the contribution to get action & payload
-            const { data: contrib, error: fetchErr } = await supabase
-                .from('vtuber_contributions')
-                .select('*')
-                .eq('id', id)
-                .single();
-
-            if (fetchErr) throw fetchErr;
-
-            // 2. Update contribution status
-            const { error } = await supabase
-                .from('vtuber_contributions')
-                .update({
-                    status: decision,
-                    reviewer_notes: reviewerNotes ?? null,
-                    reviewed_at: new Date().toISOString(),
-                })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            // 3. If approved, apply the change to vtubers table
-            if (decision === 'approved') {
-                await this.applyContribution(supabase, contrib);
-            }
-        } catch (err) {
-            console.warn('VTuberRepository.reviewContribution failed', err);
-            throw err;
-        }
+        const { reviewVTuberContribution } = await import('./apiClient');
+        await reviewVTuberContribution({
+            id,
+            action: decision === 'approved' ? 'approve' : 'reject',
+            notes: reviewerNotes,
+        });
     }
 
     /**
