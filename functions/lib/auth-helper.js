@@ -1,14 +1,22 @@
-// JWT 解析與權限檢查工具
+// JWT 驗證 + 權限檢查工具
 //
-// 預設用 base64 decode 取 sub（不驗章，信任 Cloudflare 邊緣）
-// 若 env.SUPABASE_JWT_SECRET 有設則用 HS256 驗章，更嚴格
+// 不自己驗章。改用 Supabase Auth REST /auth/v1/user 端點：把 user 帶來的
+// JWT 與 apikey (service_role) 一起送過去，Supabase 內部驗證後回傳 user。
 //
-// JWT payload sub = user UUID（auth.users.id），對應 user_profiles.supabase_auth_id
+// 好處：
+// 1. 兼容 HS256 / ES256 / 未來任何新算法 — Supabase 自己處理
+// 2. 不需 SUPABASE_JWT_SECRET（已棄用 — Supabase 升級到 JWT Signing Keys）
+// 3. 不需實作 JWKS / ES256 ECDSA 驗章
+//
+// 代價：每次登入用戶請求多 1 次 Supabase Auth HTTP call（~50-150ms）
+// 對 anti-spam 投稿場景完全可接受。
 
 import { rpc, select } from './supabase-server.js';
 
 /**
  * 從 Authorization header 解出 user_id（auth.users.id）
+ * 用 Supabase Auth REST /auth/v1/user 驗證 JWT 並取出 user
+ *
  * @param {Request} request
  * @param {Object} env
  * @returns {Promise<{ userId: string|null, verified: boolean }>}
@@ -22,30 +30,29 @@ export async function getUserIdFromRequest(request, env) {
     if (!token || token.split('.').length !== 3) {
         return { userId: null, verified: false };
     }
-
-    let verified = false;
-    if (env.SUPABASE_JWT_SECRET) {
-        try {
-            verified = await verifyHs256(token, env.SUPABASE_JWT_SECRET);
-        } catch {
-            verified = false;
-        }
-        if (!verified) {
-            return { userId: null, verified: false };
-        }
+    if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
+        return { userId: null, verified: false };
     }
 
     try {
-        const [, payloadB64] = token.split('.');
-        const payload = JSON.parse(base64UrlDecode(payloadB64));
-        const sub = payload && typeof payload.sub === 'string' ? payload.sub : null;
-        // 過期檢查（不論驗章與否都做）
-        if (payload && typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
-            return { userId: null, verified };
+        const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
+            },
+        });
+        // 401/403 → token 無效；只回傳結果，不暴露細節
+        if (!res.ok) {
+            return { userId: null, verified: false };
         }
-        return { userId: sub, verified };
+        const user = await res.json();
+        return {
+            userId: typeof user?.id === 'string' ? user.id : null,
+            verified: true,
+        };
     } catch {
-        return { userId: null, verified };
+        return { userId: null, verified: false };
     }
 }
 
@@ -89,29 +96,4 @@ export async function checkAndIncrementQuota(env, userId, type, quota) {
         quotaLimit: row?.quota_limit ?? quota,
         error: null,
     };
-}
-
-// ===== JWT 工具 =====
-
-function base64UrlDecode(str) {
-    const padded = str.replace(/-/g, '+').replace(/_/g, '/').padEnd(str.length + (4 - (str.length % 4)) % 4, '=');
-    return atob(padded);
-}
-
-async function verifyHs256(token, secret) {
-    const parts = token.split('.');
-    if (parts.length !== 3) return false;
-    const data = `${parts[0]}.${parts[1]}`;
-    const sig = base64UrlDecode(parts[2]);
-    const sigBytes = new Uint8Array(sig.length);
-    for (let i = 0; i < sig.length; i++) sigBytes[i] = sig.charCodeAt(i);
-
-    const key = await crypto.subtle.importKey(
-        'raw',
-        new TextEncoder().encode(secret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['verify'],
-    );
-    return crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(data));
 }
