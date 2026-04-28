@@ -18,9 +18,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
   const locale = i18n.language;
   const setLocale = (lang: string) => i18n.changeLanguage(lang);
 
-  useEffect(() => {
-    logEvent('PrivacyPage', 'page_view');
-  }, []);
+  // page_view 由 useRouter 統一發送（Navigation/page_view），這裡不再重複
 
   const languages = [
     { value: 'zh-TW' as const, label: t('chineseTraditional') },

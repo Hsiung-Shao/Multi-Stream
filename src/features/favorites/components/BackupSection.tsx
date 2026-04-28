@@ -31,7 +31,6 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             logEvent('Favorites', 'export_json');
-            logEvent('Favorites', 'export_json');
             onSuccess(t('backup.export_success'));
         } catch (error) {
             onError(t('backup.export_error', { error: error instanceof Error ? error.message : t('backup.unknown_error') }));
@@ -67,7 +66,6 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                 tagsService.initializeDefaults();
                 if (backupService.isEnabled()) await backupService.backup();
 
-                logEvent('Favorites', 'import_json', 'file_upload');
                 logEvent('Favorites', 'import_json', 'file_upload');
                 onSuccess(t('backup.import_success'));
                 setTimeout(() => window.location.reload(), 1000); // 重新啟動以載入全新數據庫

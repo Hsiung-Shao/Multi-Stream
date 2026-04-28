@@ -16,9 +16,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
   const { t, i18n } = useTranslation(['about', 'common']);
   const locale = i18n.language;
 
-  useEffect(() => {
-    logEvent('AboutPage', 'page_view');
-  }, []);
+  // page_view 由 useRouter 統一發送（Navigation/page_view），這裡不再重複
 
   const languages = [
     { value: 'zh-TW' as const, label: t('common:chineseTraditional') },
