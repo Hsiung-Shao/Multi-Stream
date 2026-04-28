@@ -1,23 +1,53 @@
 // IP-based rate limit（Cloudflare KV）
 // 用於匿名投稿；登入用戶走 DB 端 increment_contribution_quota RPC
 //
-// Key 格式：
-//   contrib:<type>:<scope>:<ip>:<bucket>
-//   - type: vtuber | event
-//   - scope: hour | day
-//   - ip: CF-Connecting-IP
-//   - bucket: hour: YYYYMMDDHH, day: YYYYMMDD
+// 上限可由環境變數覆寫（fallback 為下方預設）：
+//   RATE_LIMIT_VTUBER_ANON_HOUR (default 3)
+//   RATE_LIMIT_VTUBER_ANON_DAY  (default 10)
+//   RATE_LIMIT_VTUBER_USER_DAY  (default 20)
+//   RATE_LIMIT_EVENT_ANON_HOUR  (default 1)
+//   RATE_LIMIT_EVENT_ANON_DAY   (default 2)
+//   RATE_LIMIT_EVENT_USER_DAY   (default 5)
+//
+// Key 格式：contrib:<type>:<scope>:<ip>:<bucket>
 
-export const RATE_LIMITS = {
-    vtuber: {
-        anon: { hour: 3, day: 10 },
-        user: { day: 20 }, // user 由 DB RPC 處理 day 上限；hour 不額外限
-    },
-    event: {
-        anon: { hour: 1, day: 2 },
-        user: { day: 5 },
-    },
+const DEFAULTS = {
+    vtuber: { anon: { hour: 3, day: 10 }, user: { day: 20 } },
+    event: { anon: { hour: 1, day: 2 }, user: { day: 5 } },
 };
+
+function parsePositiveInt(raw, fallback) {
+    const n = parseInt(raw || '', 10);
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+/**
+ * 從 env 讀出當前 rate limit 配置（fallback 為內建預設值）
+ * @param {Object} env
+ * @returns {{ vtuber: { anon: {hour, day}, user: {day} }, event: {...} }}
+ */
+export function getRateLimits(env) {
+    return {
+        vtuber: {
+            anon: {
+                hour: parsePositiveInt(env?.RATE_LIMIT_VTUBER_ANON_HOUR, DEFAULTS.vtuber.anon.hour),
+                day: parsePositiveInt(env?.RATE_LIMIT_VTUBER_ANON_DAY, DEFAULTS.vtuber.anon.day),
+            },
+            user: {
+                day: parsePositiveInt(env?.RATE_LIMIT_VTUBER_USER_DAY, DEFAULTS.vtuber.user.day),
+            },
+        },
+        event: {
+            anon: {
+                hour: parsePositiveInt(env?.RATE_LIMIT_EVENT_ANON_HOUR, DEFAULTS.event.anon.hour),
+                day: parsePositiveInt(env?.RATE_LIMIT_EVENT_ANON_DAY, DEFAULTS.event.anon.day),
+            },
+            user: {
+                day: parsePositiveInt(env?.RATE_LIMIT_EVENT_USER_DAY, DEFAULTS.event.user.day),
+            },
+        },
+    };
+}
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -35,21 +65,14 @@ function nowBuckets() {
  * @param {KVNamespace} kv
  * @param {string} ip
  * @param {'vtuber'|'event'} type
- * @returns {Promise<{ allowed: boolean, reason?: string, current: { hour: number, day: number }, limit: { hour: number, day: number } }>}
+ * @param {{ hour: number, day: number }} limits - 從 getRateLimits() 取出對應 anon 區段
+ * @returns {Promise<{ allowed: boolean, reason?: string, current: { hour, day }, limit: { hour, day } }>}
  */
-export async function checkAndIncrementAnonQuota(kv, ip, type) {
+export async function checkAndIncrementAnonQuota(kv, ip, type, limits) {
     if (!ip) {
-        // 沒 IP 視同未通過（保守做法）
-        return {
-            allowed: false,
-            reason: 'no_ip',
-            current: { hour: 0, day: 0 },
-            limit: RATE_LIMITS[type].anon,
-        };
+        return { allowed: false, reason: 'no_ip', current: { hour: 0, day: 0 }, limit: limits };
     }
-    const limits = RATE_LIMITS[type].anon;
     const { hour: hourBucket, day: dayBucket } = nowBuckets();
-
     const hourKey = `contrib:${type}:hour:${ip}:${hourBucket}`;
     const dayKey = `contrib:${type}:day:${ip}:${dayBucket}`;
 
@@ -58,39 +81,22 @@ export async function checkAndIncrementAnonQuota(kv, ip, type) {
     const dayCount = parseInt(dayRaw || '0', 10);
 
     if (hourCount >= limits.hour) {
-        return {
-            allowed: false,
-            reason: 'hour_limit',
-            current: { hour: hourCount, day: dayCount },
-            limit: limits,
-        };
+        return { allowed: false, reason: 'hour_limit', current: { hour: hourCount, day: dayCount }, limit: limits };
     }
     if (dayCount >= limits.day) {
-        return {
-            allowed: false,
-            reason: 'day_limit',
-            current: { hour: hourCount, day: dayCount },
-            limit: limits,
-        };
+        return { allowed: false, reason: 'day_limit', current: { hour: hourCount, day: dayCount }, limit: limits };
     }
 
-    // 寫入：計數 +1，TTL 設為超過 bucket 結束的時間
     await Promise.all([
-        kv.put(hourKey, String(hourCount + 1), { expirationTtl: 3700 }),       // ~1h + buffer
-        kv.put(dayKey, String(dayCount + 1), { expirationTtl: 90000 }),         // ~25h + buffer
+        kv.put(hourKey, String(hourCount + 1), { expirationTtl: 3700 }),
+        kv.put(dayKey, String(dayCount + 1), { expirationTtl: 90000 }),
     ]);
 
-    return {
-        allowed: true,
-        current: { hour: hourCount + 1, day: dayCount + 1 },
-        limit: limits,
-    };
+    return { allowed: true, current: { hour: hourCount + 1, day: dayCount + 1 }, limit: limits };
 }
 
 /**
  * 取訪客 IP（Cloudflare 自動帶 CF-Connecting-IP）
- * @param {Request} request
- * @returns {string}
  */
 export function getVisitorIp(request) {
     return request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || '';
@@ -98,11 +104,8 @@ export function getVisitorIp(request) {
 
 /**
  * 檢查 IP 是否在 banlist（env.BANNED_IPS 逗號分隔）
- * @param {Object} env
- * @param {string} ip
- * @returns {boolean}
  */
 export function isIpBanned(env, ip) {
     if (!ip || !env.BANNED_IPS) return false;
-    return env.BANNED_IPS.split(',').map(s => s.trim()).includes(ip);
+    return env.BANNED_IPS.split(',').map(s => s.trim()).filter(Boolean).includes(ip);
 }

@@ -24,8 +24,9 @@
 
 import { jsonResponse, handleOptions } from '../lib/cors.js';
 import { getUserIdFromRequest, checkAndIncrementQuota } from '../lib/auth-helper.js';
-import { checkAndIncrementAnonQuota, getVisitorIp, isIpBanned, RATE_LIMITS } from '../lib/rate-limit.js';
+import { checkAndIncrementAnonQuota, getVisitorIp, isIpBanned, getRateLimits } from '../lib/rate-limit.js';
 import { insert } from '../lib/supabase-server.js';
+import { logError } from '../lib/logger.js';
 
 const MAX_BODY_BYTES = 16 * 1024; // 16KB
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
@@ -160,11 +161,13 @@ export async function onRequestPost(context) {
     }
 
     // 8. Rate limit
+    const limits = getRateLimits(env);
     if (isAnon) {
         if (!env.RATE_LIMIT_KV) {
+            await logError(env, 'vtuber-contribute', 'RATE_LIMIT_KV not configured', { requestIp: ip });
             return jsonResponse({ success: false, error: 'KV not configured' }, 500, request);
         }
-        const result = await checkAndIncrementAnonQuota(env.RATE_LIMIT_KV, ip, 'vtuber');
+        const result = await checkAndIncrementAnonQuota(env.RATE_LIMIT_KV, ip, 'vtuber', limits.vtuber.anon);
         if (!result.allowed) {
             return jsonResponse({
                 success: false,
@@ -174,7 +177,7 @@ export async function onRequestPost(context) {
             }, 429, request);
         }
     } else {
-        const result = await checkAndIncrementQuota(env, userId, 'vtuber', RATE_LIMITS.vtuber.user.day);
+        const result = await checkAndIncrementQuota(env, userId, 'vtuber', limits.vtuber.user.day);
         if (!result.allowed) {
             return jsonResponse({
                 success: false,
@@ -199,7 +202,11 @@ export async function onRequestPost(context) {
 
     const result = await insert(env, 'vtuber_contributions', row);
     if (!result.ok) {
-        // 不暴露原始錯誤給前端
+        await logError(env, 'vtuber-contribute', 'insert vtuber_contributions failed', {
+            metadata: { status: result.status, error: result.error?.slice(0, 500) },
+            requestIp: ip,
+            userId: userId || undefined,
+        });
         return jsonResponse({ success: false, error: '寫入失敗，請稍後再試' }, 500, request);
     }
 

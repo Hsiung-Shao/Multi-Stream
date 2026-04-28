@@ -5,8 +5,9 @@
 
 import { jsonResponse, handleOptions } from '../lib/cors.js';
 import { getUserIdFromRequest, checkAndIncrementQuota } from '../lib/auth-helper.js';
-import { checkAndIncrementAnonQuota, getVisitorIp, isIpBanned, RATE_LIMITS } from '../lib/rate-limit.js';
+import { checkAndIncrementAnonQuota, getVisitorIp, isIpBanned, getRateLimits } from '../lib/rate-limit.js';
 import { insert } from '../lib/supabase-server.js';
+import { logError } from '../lib/logger.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
@@ -34,6 +35,9 @@ function isValidIso(s) {
     return !isNaN(d.getTime());
 }
 
+// 過去時間容忍 5 分鐘 buffer（user 端 timezone / 表單填寫延遲）
+const PAST_TIME_TOLERANCE_MS = 5 * 60 * 1000;
+
 function validate(body) {
     if (!body || typeof body !== 'object') return '無效的請求資料';
     const { title, description, eventType, startTime, endTime, location, url, imageUrl } = body;
@@ -43,6 +47,9 @@ function validate(body) {
     if (description && description.length > 2000) return 'description 最多 2000 字';
     if (!EVENT_TYPES.has(eventType)) return 'eventType 無效';
     if (!isValidIso(startTime)) return 'startTime 格式錯誤';
+    // 不接受過去時間（容忍 5 分鐘）
+    const startMs = new Date(startTime).getTime();
+    if (startMs < Date.now() - PAST_TIME_TOLERANCE_MS) return 'startTime 不可為過去時間';
     if (endTime && !isValidIso(endTime)) return 'endTime 格式錯誤';
     if (endTime && new Date(endTime) <= new Date(startTime)) return 'endTime 必須晚於 startTime';
     if (location && location.length > 200) return 'location 最多 200 字';
@@ -122,11 +129,13 @@ export async function onRequestPost(context) {
         return jsonResponse({ success: false, error: validationError }, 400, request);
     }
 
+    const limits = getRateLimits(env);
     if (isAnon) {
         if (!env.RATE_LIMIT_KV) {
+            await logError(env, 'vtuber-event-create', 'RATE_LIMIT_KV not configured', { requestIp: ip });
             return jsonResponse({ success: false, error: 'KV not configured' }, 500, request);
         }
-        const result = await checkAndIncrementAnonQuota(env.RATE_LIMIT_KV, ip, 'event');
+        const result = await checkAndIncrementAnonQuota(env.RATE_LIMIT_KV, ip, 'event', limits.event.anon);
         if (!result.allowed) {
             return jsonResponse({
                 success: false,
@@ -134,7 +143,7 @@ export async function onRequestPost(context) {
             }, 429, request);
         }
     } else {
-        const result = await checkAndIncrementQuota(env, userId, 'event', RATE_LIMITS.event.user.day);
+        const result = await checkAndIncrementQuota(env, userId, 'event', limits.event.user.day);
         if (!result.allowed) {
             return jsonResponse({
                 success: false,
@@ -159,6 +168,11 @@ export async function onRequestPost(context) {
 
     const result = await insert(env, 'vtuber_events', row);
     if (!result.ok) {
+        await logError(env, 'vtuber-event-create', 'insert vtuber_events failed', {
+            metadata: { status: result.status, error: result.error?.slice(0, 500) },
+            requestIp: ip,
+            userId: userId || undefined,
+        });
         return jsonResponse({ success: false, error: '寫入失敗，請稍後再試' }, 500, request);
     }
 

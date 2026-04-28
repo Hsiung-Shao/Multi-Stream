@@ -9,6 +9,7 @@
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest, getTrustLevel } from '../../lib/auth-helper.js';
 import { update, select, insert } from '../../lib/supabase-server.js';
+import { logWarn, logError } from '../../lib/logger.js';
 
 const MAX_BODY_BYTES = 4 * 1024;
 
@@ -84,6 +85,10 @@ export async function onRequestPost(context) {
         };
         const createRes = await insert(env, 'vtubers', vtuberRow);
         if (!createRes.ok) {
+            await logError(env, 'review-contribution', 'insert vtubers failed', {
+                metadata: { status: createRes.status, error: createRes.error?.slice(0, 500), contribution_id: id },
+                userId,
+            });
             return jsonResponse({ success: false, error: '建立 VTuber 失敗' }, 500, request);
         }
         createdVtuberId = Array.isArray(createRes.data) ? createRes.data[0]?.id : null;
@@ -104,11 +109,15 @@ export async function onRequestPost(context) {
         patch,
     );
     if (!updateRes.ok) {
+        await logError(env, 'review-contribution', 'update vtuber_contributions failed', {
+            metadata: { status: updateRes.status, error: updateRes.error?.slice(0, 500), target_id: id },
+            userId,
+        });
         return jsonResponse({ success: false, error: '更新狀態失敗' }, 500, request);
     }
 
-    // 4. Audit log（best-effort，不影響主流程）
-    await insert(env, 'admin_actions', {
+    // 4. Audit log（best-effort）
+    const auditRes = await insert(env, 'admin_actions', {
         admin_user_id: userId,
         action_type: 'review_vtuber_contribution',
         target_id: id,
@@ -118,6 +127,12 @@ export async function onRequestPost(context) {
         notes: patch.reviewer_notes,
         metadata: createdVtuberId ? { created_vtuber_id: createdVtuberId, contribution_action: contribution.action } : { contribution_action: contribution.action },
     });
+    if (!auditRes.ok) {
+        await logWarn(env, 'review-contribution', 'admin_actions insert failed', {
+            metadata: { status: auditRes.status, error: auditRes.error?.slice(0, 500), target_id: id },
+            userId,
+        });
+    }
 
     return jsonResponse({
         success: true,

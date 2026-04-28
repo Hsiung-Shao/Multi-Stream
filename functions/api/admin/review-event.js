@@ -6,6 +6,7 @@
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest, getTrustLevel } from '../../lib/auth-helper.js';
 import { update, select, insert } from '../../lib/supabase-server.js';
+import { logWarn, logError } from '../../lib/logger.js';
 
 const MAX_BODY_BYTES = 4 * 1024;
 
@@ -78,11 +79,15 @@ export async function onRequestPost(context) {
         patch,
     );
     if (!updateRes.ok) {
+        await logError(env, 'review-event', 'update vtuber_events failed', {
+            metadata: { status: updateRes.status, error: updateRes.error?.slice(0, 500), target_id: id },
+            userId,
+        });
         return jsonResponse({ success: false, error: '更新狀態失敗' }, 500, request);
     }
 
     // Audit log（best-effort）
-    await insert(env, 'admin_actions', {
+    const auditRes = await insert(env, 'admin_actions', {
         admin_user_id: userId,
         action_type: 'review_vtuber_event',
         target_id: id,
@@ -91,6 +96,12 @@ export async function onRequestPost(context) {
         after_status: patch.status,
         notes: trimStr(notes, 500) || null,
     });
+    if (!auditRes.ok) {
+        await logWarn(env, 'review-event', 'admin_actions insert failed', {
+            metadata: { status: auditRes.status, error: auditRes.error?.slice(0, 500), target_id: id },
+            userId,
+        });
+    }
 
     return jsonResponse({
         success: true,

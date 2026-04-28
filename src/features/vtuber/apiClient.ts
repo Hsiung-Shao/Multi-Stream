@@ -12,16 +12,16 @@ export class ApiError extends Error {
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {
+    // 取不到 session 一律視同匿名（不印 console，避免污染瀏覽器 console）
     try {
         const supabase = await getSupabase();
         if (!supabase) return {};
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-            return { Authorization: `Bearer ${session.access_token}` };
+        const { data } = await supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        if (token) {
+            return { Authorization: `Bearer ${token}` };
         }
-    } catch {
-        // 取不到 session 視同匿名
-    }
+    } catch { /* silent — 視同匿名 */ }
     return {};
 }
 

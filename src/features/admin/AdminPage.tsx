@@ -126,84 +126,109 @@ export function AdminPage() {
         window.location.reload();
     };
 
+    // SEO 提到所有分支之上單一 mount，避免分支切換時 race（兩個 SEO useEffect
+    // 對 document.head 同時操作可能短暫顯示混合狀態）
+    const seoEl = (
+        <SEO
+            title="Admin | MultiStream Hub"
+            description="Internal admin console."
+            pathWithoutLang="/admin"
+            robots="noindex, nofollow"
+        />
+    );
+
     if (authState === 'loading') {
         return (
-            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
-                    <span className="text-[13px] text-zinc-400">載入中</span>
+            <>
+                {seoEl}
+                <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-5 h-5 text-zinc-400 animate-spin" />
+                        <span className="text-[13px] text-zinc-400">載入中</span>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
     if (authState === 'forbidden') {
         return (
-            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-                <SEO title="無權限 | MultiStream Hub" pathWithoutLang="/admin" robots="noindex, nofollow" />
-                <div className="flex flex-col items-center gap-3 max-w-[360px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center">
-                        <ShieldOff className="w-4 h-4 text-amber-400" />
+            <>
+                {seoEl}
+                <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 max-w-[360px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center">
+                            <ShieldOff className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <p className="text-[14px] text-zinc-200 font-medium">無權限存取後台</p>
+                        <p className="text-[13px] text-zinc-400 leading-relaxed">
+                            此頁面僅限 admin / moderator 使用。<br />
+                            當前帳號等級：<span className="text-zinc-300">{trustLevel ?? '未知'}</span>
+                        </p>
+                        <Button variant="outline" size="sm" className="mt-2" onClick={() => setPage('home')}>
+                            返回首頁
+                        </Button>
                     </div>
-                    <p className="text-[14px] text-zinc-200 font-medium">無權限存取後台</p>
-                    <p className="text-[13px] text-zinc-400 leading-relaxed">
-                        此頁面僅限 admin / moderator 使用。<br />
-                        當前帳號等級：<span className="text-zinc-300">{trustLevel ?? '未知'}</span>
-                    </p>
-                    <Button variant="outline" size="sm" className="mt-2" onClick={() => setPage('home')}>
-                        返回首頁
-                    </Button>
                 </div>
-            </div>
+            </>
         );
     }
 
     if (authState === 'error') {
         return (
-            <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3 max-w-[320px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                    <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/25 flex items-center justify-center">
-                        <AlertTriangle className="w-4 h-4 text-red-400" />
+            <>
+                {seoEl}
+                <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 max-w-[320px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/25 flex items-center justify-center">
+                            <AlertTriangle className="w-4 h-4 text-red-400" />
+                        </div>
+                        <p className="text-[14px] text-zinc-200 font-medium">連線異常</p>
+                        <p className="text-[13px] text-zinc-400 leading-relaxed">
+                            {errorMessage}
+                        </p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 mt-2"
+                            onClick={handleRetry}
+                        >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            重試
+                        </Button>
                     </div>
-                    <p className="text-[14px] text-zinc-200 font-medium">連線異常</p>
-                    <p className="text-[13px] text-zinc-400 leading-relaxed">
-                        {errorMessage}
-                    </p>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 mt-2"
-                        onClick={handleRetry}
-                    >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        重試
-                    </Button>
                 </div>
-            </div>
+            </>
         );
     }
 
     if (authState === 'login') {
         if (!supabase) {
             return (
-                <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3 max-w-[320px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                        <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/25 flex items-center justify-center">
-                            <AlertTriangle className="w-4 h-4 text-red-400" />
+                <>
+                    {seoEl}
+                    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-3 max-w-[320px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                            <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/25 flex items-center justify-center">
+                                <AlertTriangle className="w-4 h-4 text-red-400" />
+                            </div>
+                            <p className="text-[14px] text-zinc-200 font-medium">Supabase 未設定</p>
+                            <p className="text-[13px] text-zinc-400 leading-relaxed">
+                                請確認 /api/supabase-config 端點正常運作
+                            </p>
                         </div>
-                        <p className="text-[14px] text-zinc-200 font-medium">Supabase 未設定</p>
-                        <p className="text-[13px] text-zinc-400 leading-relaxed">
-                            請確認 /api/supabase-config 端點正常運作
-                        </p>
                     </div>
-                </div>
+                </>
             );
         }
         return (
-            <AdminLogin
-                supabase={supabase}
-                onSuccess={() => setAuthState('authenticated')}
-            />
+            <>
+                {seoEl}
+                <AdminLogin
+                    supabase={supabase}
+                    onSuccess={() => setAuthState('authenticated')}
+                />
+            </>
         );
     }
 
@@ -213,12 +238,7 @@ export function AdminPage() {
 
     return (
         <QueryClientProvider client={queryClient}>
-            <SEO
-                title="Admin | MultiStream Hub"
-                description="Internal admin console."
-                pathWithoutLang="/admin"
-                robots="noindex, nofollow"
-            />
+            {seoEl}
             <AdminDashboard onLogout={handleLogout} />
         </QueryClientProvider>
     );
