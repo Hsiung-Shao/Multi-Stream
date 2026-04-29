@@ -77,7 +77,7 @@ export function VTuberExplorePage() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
 
   // GA4 tracking
-  const searchTrackTimer = useRef<ReturnType<typeof setTimeout>>();
+  const searchTrackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     logEvent('VTuber', 'explore_view', activeTab);
     return () => { if (searchTrackTimer.current) clearTimeout(searchTrackTimer.current); };
@@ -141,7 +141,15 @@ export function VTuberExplorePage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="text-lg font-bold">{t('pageTitle')}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold">{t('pageTitle')}</h1>
+              <span
+                className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                title="此功能仍在測試階段，部分資料與互動可能尚未完善"
+              >
+                Beta
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Action button changes based on tab */}

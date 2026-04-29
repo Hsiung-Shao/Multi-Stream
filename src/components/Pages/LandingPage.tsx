@@ -72,8 +72,9 @@ export function LandingPage() {
                         <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('faq')}>
                             {t('landing.footer.faq')}
                         </Button>
-                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('vtuber-explore')}>
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm gap-1.5" onClick={() => setPage('vtuber-explore')}>
                             {t('landing.footer.vtuber')}
+                            <span className="px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">Beta</span>
                         </Button>
                         <a
                             href="https://github.com/Hsiung-Shao/Multi-Stream"
@@ -434,8 +435,9 @@ export function LandingPage() {
                         <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('faq')}>
                             {t('landing.footer.faq')}
                         </Button>
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('vtuber-explore')}>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs gap-1" onClick={() => setPage('vtuber-explore')}>
                             {t('landing.footer.vtuber')}
+                            <span className="px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">Beta</span>
                         </Button>
                         <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('privacy')}>
                             {t('landing.footer.privacy')}
