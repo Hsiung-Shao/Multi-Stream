@@ -5,6 +5,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { SEO } from '../../components/SEO';
 import { IdentitiesSection } from './IdentitiesSection';
+import { DisplayNameSection } from './DisplayNameSection';
 
 /**
  * 帳號設定頁 — Identity Linking、未來的 display name、2FA、刪除帳號入口都聚集這裡
@@ -66,18 +67,17 @@ export function AccountSettingsPage() {
                 {profile && (
                     <section className="rounded-xl border border-white/10 bg-card/50 p-5">
                         <h2 className="text-sm text-muted-foreground mb-1">
-                            {t('overview.displayName', '目前顯示名稱')}
+                            {t('overview.trustLevel', '帳號等級')}
                         </h2>
-                        <p className="text-base font-medium">{profile.display_name || '—'}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                            {t('overview.trustLevel', '帳號等級')}: <span className="text-foreground">{profile.trust_level}</span>
-                        </p>
+                        <p className="text-base font-medium capitalize">{profile.trust_level}</p>
                     </section>
                 )}
 
+                <DisplayNameSection />
+
                 <IdentitiesSection />
 
-                {/* 未來 PR 5/6/7 會加：DisplayNameSection / FavoritesSyncSection / MfaSection */}
+                {/* 未來 PR 6/7 會加：FavoritesSyncSection / MfaSection */}
             </main>
         </div>
     );

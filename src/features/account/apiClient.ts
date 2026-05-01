@@ -37,3 +37,14 @@ export const submitDeleteAccount = (confirmDisplayName: string) =>
         '/api/account/delete-account',
         { confirmDisplayName },
     );
+
+export interface UpdateDisplayNameResponse {
+    success: boolean;
+    displayName: string;
+    remaining: number;
+}
+
+export const submitUpdateDisplayName = (displayName: string) =>
+    postJson<UpdateDisplayNameResponse>('/api/account/update-display-name', { displayName });
+
+export { ApiError };
