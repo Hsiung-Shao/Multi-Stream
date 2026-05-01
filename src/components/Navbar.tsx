@@ -319,13 +319,14 @@ export function Navbar({
     }, 200);
   };
 
-  // 手機版面的導航連結列表
+  // 手機版面的導航連結列表（僅登入者看到「帳號設定」）
   const navLinks = [
     { label: t('navbar:canvas') || '畫布', onClick: () => setPage('canvas') },
     { label: t('navbar:fixed') || '固定佈局', onClick: () => setPage('fixed') },
     { label: t('navbar:vtuber') || 'VTuber', onClick: () => setPage('vtuber-explore') },
     { label: t('navbar:about'), onClick: onShowAbout },
     { label: t('navbar:tutorial'), onClick: () => setPage('instructions') },
+    ...(isLoggedIn ? [{ label: t('account:menuLabel', '帳號設定'), onClick: () => setPage('account') }] : []),
     { label: t('navbar:feedback'), onClick: onShowFeedback },
   ];
 

@@ -28,6 +28,12 @@ const account = {
     'identities.link': 'Link',
     'identities.unlink': 'Unlink',
     'identities.deleteAccount': 'Unlink & delete account',
+    'identities.errorTitle': 'Action failed',
+
+    'unlink.title': 'Unlink',
+    'unlink.description': 'Unlink {{provider}}? You will no longer be able to sign in via {{provider}}.',
+    'unlink.remainingHint': 'You will still have {{count}} other sign-in method(s) available.',
+    'unlink.confirm': 'Unlink',
 
     'deleteAccount.title': 'Delete account permanently',
     'deleteAccount.description': 'This will permanently delete your account and all data (favorites, contributions, events). This cannot be undone.',

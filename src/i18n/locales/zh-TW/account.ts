@@ -28,6 +28,12 @@ const account = {
     'identities.link': '連結',
     'identities.unlink': '解除',
     'identities.deleteAccount': '解除並刪除帳號',
+    'identities.errorTitle': '操作失敗',
+
+    'unlink.title': '解除連結',
+    'unlink.description': '確定要解除 {{provider}} 嗎？解除後將無法用 {{provider}} 登入此帳號。',
+    'unlink.remainingHint': '解除後仍有 {{count}} 個其他登入方式可使用。',
+    'unlink.confirm': '解除',
 
     'deleteAccount.title': '永久刪除帳號',
     'deleteAccount.description': '此操作會永久刪除你的帳號與所有資料（收藏、投稿、活動）。資料無法復原。',

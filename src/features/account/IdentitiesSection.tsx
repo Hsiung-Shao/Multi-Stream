@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
-import { Twitch, Youtube, MessageSquare, Loader2, Trash2, Plus, AlertTriangle } from 'lucide-react';
+// 註：lucide-react 新版把 Twitch / Youtube 品牌 icon 標為 deprecated（商標考量），
+// 改用通用 icon：Tv（streaming 概念）/ Globe（不暗示是 YouTube）/ MessageSquare
+import { Tv, Globe, MessageSquare, Loader2, Trash2, Plus, AlertTriangle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { DeleteAccountDialog } from '../../components/Dialogs/DeleteAccountDialog';
+import { UnlinkConfirmDialog } from './UnlinkConfirmDialog';
 import type { Provider, UserIdentity } from '@supabase/supabase-js';
 
 const SUPPORTED_PROVIDERS: ReadonlyArray<{ provider: Provider; label: string; Icon: React.ComponentType<{ className?: string }> }> = [
-    { provider: 'twitch', label: 'Twitch', Icon: Twitch },
-    { provider: 'google', label: 'Google', Icon: Youtube }, // 用 Youtube icon 暫代 Google
+    { provider: 'twitch', label: 'Twitch', Icon: Tv },
+    { provider: 'google', label: 'Google', Icon: Globe },
     { provider: 'discord', label: 'Discord', Icon: MessageSquare },
 ];
 
@@ -16,14 +19,15 @@ const SUPPORTED_PROVIDERS: ReadonlyArray<{ provider: Provider; label: string; Ic
  * 顯示與管理帳號連結的 OAuth providers。
  *
  * - 沒綁定的 provider：顯示「連結」按鈕
- * - 已綁定的 provider：顯示「已連結」徽章 + 「解除」按鈕
- * - 解除「最後一個」provider：阻擋並提示改走刪除帳號流程
+ * - 已綁定的 provider：顯示「解除」按鈕，點擊先彈 UnlinkConfirmDialog 二次確認
+ * - 解除「最後一個」provider：阻擋並改開 DeleteAccountDialog
  */
 export function IdentitiesSection() {
     const { t } = useTranslation('account');
     const { identities, linkIdentity, unlinkIdentity } = useAuthContext();
     const [busy, setBusy] = useState<Provider | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [unlinkTarget, setUnlinkTarget] = useState<UserIdentity | null>(null);
     const [error, setError] = useState('');
 
     const linkedProviders = new Set(identities.map((i) => i.provider));
@@ -40,18 +44,29 @@ export function IdentitiesSection() {
         }
     };
 
-    const handleUnlink = async (identity: UserIdentity) => {
-        // 最後一個 → 改走刪除帳號流程
+    // 點「解除」 → 開二次確認 dialog（最後一個則開刪帳號 dialog）
+    const handleUnlinkClick = (identity: UserIdentity) => {
+        setError('');
         if (identities.length <= 1) {
             setDeleteDialogOpen(true);
             return;
         }
-        setBusy(identity.provider as Provider);
+        setUnlinkTarget(identity);
+    };
+
+    // 確認後實際執行 unlink
+    const handleConfirmUnlink = async () => {
+        if (!unlinkTarget) return;
+        setBusy(unlinkTarget.provider as Provider);
         setError('');
         try {
-            await unlinkIdentity(identity);
+            await unlinkIdentity(unlinkTarget);
+            setUnlinkTarget(null);
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : '解除失敗');
+            // 顯示具體錯誤訊息（例如 Supabase Manual Linking 未啟用會回 422）
+            const msg = e instanceof Error ? e.message : '解除失敗';
+            setError(msg);
+            setUnlinkTarget(null);
         } finally {
             setBusy(null);
         }
@@ -68,9 +83,12 @@ export function IdentitiesSection() {
             </header>
 
             {error && (
-                <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    {error}
+                <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <div>
+                        <p className="font-medium">{t('identities.errorTitle', '操作失敗')}</p>
+                        <p className="mt-0.5 text-destructive/80 break-all">{error}</p>
+                    </div>
                 </div>
             )}
 
@@ -100,7 +118,7 @@ export function IdentitiesSection() {
                                 <Button
                                     size="sm"
                                     variant={isLastIdentity ? 'destructive' : 'outline'}
-                                    onClick={() => handleUnlink(linkedIdentity)}
+                                    onClick={() => handleUnlinkClick(linkedIdentity)}
                                     disabled={isBusy}
                                     className="gap-1"
                                 >
@@ -126,6 +144,14 @@ export function IdentitiesSection() {
                 })}
             </ul>
 
+            <UnlinkConfirmDialog
+                open={!!unlinkTarget}
+                identity={unlinkTarget}
+                remainingCount={Math.max(0, identities.length - 1)}
+                submitting={!!busy}
+                onConfirm={handleConfirmUnlink}
+                onCancel={() => !busy && setUnlinkTarget(null)}
+            />
             <DeleteAccountDialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} />
         </section>
     );
