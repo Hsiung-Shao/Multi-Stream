@@ -20,6 +20,7 @@ import zhTWStream from './locales/zh-TW/stream';
 import zhTWFAQ from './locales/zh-TW/faq';
 import zhTWVtuber from './locales/zh-TW/vtuber';
 import zhTWSeo from './locales/zh-TW/seo';
+import zhTWAccount from './locales/zh-TW/account';
 
 // Import other locales
 import zhCNCommon from './locales/zh-CN/common';
@@ -38,6 +39,7 @@ import zhCNStream from './locales/zh-CN/stream';
 import zhCNFAQ from './locales/zh-CN/faq';
 import zhCNVtuber from './locales/zh-CN/vtuber';
 import zhCNSeo from './locales/zh-CN/seo';
+import zhCNAccount from './locales/zh-CN/account';
 
 import enCommon from './locales/en/common';
 import enNavbar from './locales/en/navbar';
@@ -55,6 +57,7 @@ import enStream from './locales/en/stream';
 import enFAQ from './locales/en/faq';
 import enVtuber from './locales/en/vtuber';
 import enSeo from './locales/en/seo';
+import enAccount from './locales/en/account';
 
 import jaCommon from './locales/ja/common';
 import jaNavbar from './locales/ja/navbar';
@@ -72,6 +75,7 @@ import jaStream from './locales/ja/stream';
 import jaFAQ from './locales/ja/faq';
 import jaVtuber from './locales/ja/vtuber';
 import jaSeo from './locales/ja/seo';
+import jaAccount from './locales/ja/account';
 
 import koCommon from './locales/ko/common';
 import koNavbar from './locales/ko/navbar';
@@ -89,6 +93,7 @@ import koStream from './locales/ko/stream';
 import koFAQ from './locales/ko/faq';
 import koVtuber from './locales/ko/vtuber';
 import koSeo from './locales/ko/seo';
+import koAccount from './locales/ko/account';
 
 export const defaultNS = 'common';
 
@@ -110,6 +115,7 @@ export const resources = {
         faq: zhTWFAQ,
         vtuber: zhTWVtuber,
         seo: zhTWSeo,
+        account: zhTWAccount,
     },
     'zh-CN': {
         common: zhCNCommon,
@@ -128,6 +134,7 @@ export const resources = {
         faq: zhCNFAQ,
         vtuber: zhCNVtuber,
         seo: zhCNSeo,
+        account: zhCNAccount,
     },
     en: {
         common: enCommon,
@@ -146,6 +153,7 @@ export const resources = {
         faq: enFAQ,
         vtuber: enVtuber,
         seo: enSeo,
+        account: enAccount,
     },
     ja: {
         common: jaCommon,
@@ -164,6 +172,7 @@ export const resources = {
         faq: jaFAQ,
         vtuber: jaVtuber,
         seo: jaSeo,
+        account: jaAccount,
     },
     ko: {
         common: koCommon,
@@ -182,6 +191,7 @@ export const resources = {
         faq: koFAQ,
         vtuber: koVtuber,
         seo: koSeo,
+        account: koAccount,
     },
 } as const;
 

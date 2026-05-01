@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabase } from '../lib/supabase';
-import type { Session, User, Provider } from '@supabase/supabase-js';
+import type { Session, User, Provider, UserIdentity } from '@supabase/supabase-js';
 
 export interface UserProfile {
   id: string;
@@ -24,10 +24,16 @@ export interface AuthState {
   /** admin 或 moderator — 可進後台、可審核投稿/活動 */
   canModerate: boolean;
   isBanned: boolean;
+  /** 已連結的 OAuth identities（Twitch / Google / Discord） */
+  identities: UserIdentity[];
   login: (provider: Provider) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<boolean>;
+  /** 把當前 session 加綁一個新 OAuth provider（manual linking）。需 Supabase Dashboard 啟用 manual linking */
+  linkIdentity: (provider: Provider) => Promise<void>;
+  /** 解除一個已綁定的 OAuth identity；若是最後一個會 throw，呼叫端應改走 deleteAccount */
+  unlinkIdentity: (identity: UserIdentity) => Promise<void>;
 }
 
 /**
@@ -227,6 +233,32 @@ export function useAuth(): AuthState {
     }
   }, [profile]);
 
+  // 連結新 OAuth provider — Supabase 會跳到 OAuth flow，回來後 onAuthStateChange 觸發 user 更新
+  const linkIdentity = useCallback(async (provider: Provider) => {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('Supabase not available');
+    const { error } = await supabase.auth.linkIdentity({
+      provider,
+      options: { redirectTo: window.location.origin + '/' },
+    });
+    if (error) throw error;
+  }, []);
+
+  // 解除已綁 OAuth identity — 呼叫端必須先檢查至少剩 2 個 identity；
+  // 解除最後一個應改走 deleteAccount 流程（plan PR 4 設計）
+  const unlinkIdentity = useCallback(async (identity: UserIdentity) => {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('Supabase not available');
+    if (!user || !user.identities || user.identities.length <= 1) {
+      throw new Error('Cannot unlink last identity; use deleteAccount instead');
+    }
+    const { error } = await supabase.auth.unlinkIdentity(identity);
+    if (error) throw error;
+    // 重新撈 user，identities 陣列會更新
+    const { data: { user: refreshed } } = await supabase.auth.getUser();
+    if (refreshed) setUser(refreshed);
+  }, [user]);
+
   return {
     user,
     profile,
@@ -236,9 +268,12 @@ export function useAuth(): AuthState {
     isAdmin: profile?.trust_level === 'admin',
     canModerate: profile?.trust_level === 'admin' || profile?.trust_level === 'moderator',
     isBanned: profile?.trust_level === 'banned',
+    identities: user?.identities ?? [],
     login,
     logout,
     refreshProfile,
     updateDisplayName,
+    linkIdentity,
+    unlinkIdentity,
   };
 }

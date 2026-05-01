@@ -16,6 +16,7 @@ const PATH_TO_PAGE = {
   '/faq': 'faq',
   '/admin': 'admin',
   '/vtubers': 'vtuber-explore',
+  '/account': 'account',
 } as const;
 
 export type RoutablePage = typeof PATH_TO_PAGE[keyof typeof PATH_TO_PAGE];
@@ -30,6 +31,7 @@ const PAGE_TO_PATH: Record<RoutablePage, string> = {
   'faq': '/faq',
   'admin': '/admin',
   'vtuber-explore': '/vtubers',
+  'account': '/account',
 };
 
 export const OG_LOCALE_MAP: Record<SupportedLang, string> = {

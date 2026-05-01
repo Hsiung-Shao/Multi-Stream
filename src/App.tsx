@@ -42,6 +42,7 @@ const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'def
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
 const VTuberExplorePage = lazy(() => import('./features/vtuber/pages/VTuberExplorePage').then(module => ({ 'default': module.VTuberExplorePage })));
+const AccountSettingsPage = lazy(() => import('./features/account/AccountSettingsPage').then(module => ({ 'default': module.AccountSettingsPage })));
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -180,6 +181,12 @@ export default function App() {
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <VTuberExplorePage />
+          </Suspense>
+        );
+      case 'account':
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <AccountSettingsPage />
           </Suspense>
         );
       case 'not-found':
