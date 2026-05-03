@@ -14,7 +14,7 @@ import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { SEO } from '../../../components/SEO';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil, Settings } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../components/ui/dropdown-menu';
 import { EditProfileDialog } from '../../../components/Dialogs/EditProfileDialog';
 import { logEvent } from '../../../utils/analytics';
@@ -196,6 +196,10 @@ export function VTuberExplorePage() {
                   <DropdownMenuItem onSelect={() => setEditProfileOpen(true)}>
                     <Pencil className="w-3.5 h-3.5 mr-2" />
                     {t('common:editDisplayName', '修改名稱')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setPage('account')}>
+                    <Settings className="w-3.5 h-3.5 mr-2" />
+                    {t('account:menuLabel', '帳號設定')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => logout()}>
                     <LogOut className="w-3.5 h-3.5 mr-2" />
