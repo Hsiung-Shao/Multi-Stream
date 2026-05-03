@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { Button } from '../ui/button';
-import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe, UserRound, LogOut, Pencil } from 'lucide-react';
+import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe, UserRound, LogOut, Pencil, Settings } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -100,6 +100,10 @@ export function LandingPage() {
                                     <DropdownMenuItem onSelect={() => setEditProfileOpen(true)}>
                                         <Pencil className="w-4 h-4 mr-2" />
                                         {t('common:editDisplayName', '修改名稱')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => setPage('account')}>
+                                        <Settings className="w-4 h-4 mr-2" />
+                                        {t('account:menuLabel', '帳號設定')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onSelect={() => logout()}>
                                         <LogOut className="w-4 h-4 mr-2" />
