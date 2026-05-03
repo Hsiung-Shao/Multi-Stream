@@ -33,7 +33,11 @@ export function VTuberGrid({
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-3 rounded-xl border border-border/50 bg-card p-4">
+          <div
+            key={i}
+            style={{ animationDelay: `${i * 30}ms` }}
+            className="animate-fade-in-up flex flex-col items-center gap-3 rounded-xl border border-border/50 bg-card p-4"
+          >
             <Skeleton className="w-16 h-16 rounded-full" />
             <Skeleton className="w-20 h-4 rounded" />
             <Skeleton className="w-14 h-3 rounded" />
@@ -65,12 +69,13 @@ export function VTuberGrid({
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {vtubers.map((v) => (
+        {vtubers.map((v, i) => (
           <VTuberCard
             key={v.id}
             vtuber={v}
             isLive={liveVTuberIds?.has(v.id)}
             onClick={() => onVTuberClick(v)}
+            index={i}
           />
         ))}
       </div>
