@@ -14,6 +14,14 @@
 -- 執行頻率：每 2 分鐘（'*/2 * * * *'）
 -- 影響：每 2 分鐘觸發一次 https://multistreaming.org/api/cron/sync-livestreams
 -- 預期 Function 跑時 5-25 秒（YouTube HTML 並行偵測為瓶頸）
+--
+-- ⚠️ 啟用前提：本 Function 必須先合進 main → 部署到 multistreaming.org production
+--   （`mutli-stream.pages.dev` 沒部署 Functions、preview deploy 被 Cloudflare Access 擋，
+--    都不適合作為 cron 目標）
+-- ⚠️ Cloudflare Bot Fight Mode：`multistreaming.org` Zone 預設會擋 server-to-server 請求（403 challenge），
+--   啟用 cron 前需先在 Cloudflare Dashboard 加 WAF Custom Rule：
+--   `(http.request.uri.path matches "^/api/cron/" and http.request.headers["authorization"][0] contains "Bearer ")`
+--   action：Skip → All Bot Fight Mode features
 
 -- 確保 pg_net 已啟用（若未啟用會 raise error，使用者應先啟用）
 DO $$
@@ -38,7 +46,7 @@ SELECT cron.schedule(
     '*/2 * * * *',
     $$
     SELECT net.http_post(
-        url := 'https://multistreaming.org/api/cron/sync-livestreams',
+        url := 'https://mutli-stream.pages.dev/api/cron/sync-livestreams',
         headers := jsonb_build_object(
             'Content-Type', 'application/json',
             'Authorization', 'Bearer YOUR_CRON_SHARED_SECRET'

@@ -70,9 +70,15 @@ Shadcn UI
 ### [*] 26. PR 4 修補：mobile navbar 入口、解除二次確認、verbose error
 ### [*] 27. LandingPage / VTuberExplorePage user dropdown 補帳號設定入口
 
-### [] 28. PR 6 收藏跨裝置同步（cloudSync.ts + 衝突 dialog + onSignIn 觸發）
+### [*] 28. PR 6 收藏跨裝置同步（cloudSync.ts + 衝突 dialog + onSignIn 觸發 + AccountSettings 入口）
 
-### [] 29. PR 7 2FA TOTP（enroll/challenge/verify + backup codes + admin/moderator 強制）
+### [*] 29. PR 7 2FA TOTP（enroll/challenge/verify + backup codes + admin/moderator 強制）
+- DB：`user_mfa_secrets` table（service_role only RLS，hash 不外洩）— 待手動 apply migration
+- Frontend：TwoFactorSection / TotpEnrollDialog / TotpChallengeDialog / BackupCodesDialog
+- Backend：totp-status / totp-backup-codes (aal2 required) / totp-recover (rate limit 5/day)
+- Lib：`functions/lib/backup-codes.js`（SHA-256 + 排除易混淆字符 0/O/1/I/L）
+- 強制：`requireAal2ForAdmin` 已套到 review-contribution / review-event / check-permission
+- AdminPage 新增 `aal2_required` 狀態，引導 user 到帳號設定啟用 2FA
 
 ### [] 30. PR 8 紅隊資安測試（雲端，OWASP 15 vector + 修補）
 
@@ -82,10 +88,11 @@ Shadcn UI
 
 ### [*] 31. B3+B7+B8 卡片進場 stagger animation + hover 強化 + Skeleton 動畫
 
-### [] 32. B1 vtuber_livestreams 抓取機制
-- 需先決定 cron 機制：Cloudflare Worker / Supabase pg_cron+pg_net / GitHub Actions
-- Twitch helix /streams 一次最多 100 user_login
-- YouTube 用既有 youtube-channel-live.js 邏輯，每次 cron 處理 30 個（rotation）
+### [*] 32. B1 vtuber_livestreams 抓取機制（程式碼完成；cron 啟用待合 main + WAF skip rule）
+- B1.1 sync-livestreams.js Twitch helix /streams 批次抓取
+- B1.2 youtube-live-detect.js 並行 5 worker /channel/{id}/live 偵測
+- B1.3 pg_cron + pg_net schedule SQL（待手動 apply；目前已 unschedule 等正式啟用）
+- 啟用 SOP：合 main → WAF Custom Rule skip Bot Fight Mode for /api/cron/* with Bearer → SQL Editor 跑 migration
 
 ### [] 33. B2 Hero「現正直播」carousel（依賴 B1）
 
