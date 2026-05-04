@@ -1,15 +1,30 @@
 // 共用 CORS 工具函式
 // 限制 API 只接受來自允許的 origin 的請求
 
-const ALLOWED_ORIGINS = [
+const ALLOWED_EXACT_ORIGINS = [
     'https://multistreaming.org',
     'https://www.multistreaming.org',
 ];
 
-// 本地開發時允許 localhost
-if (typeof globalThis !== 'undefined') {
-    // Cloudflare Workers/Pages 中無法判斷 NODE_ENV，
-    // 改以 origin 比對 localhost pattern 處理
+// 允許 Cloudflare Pages preview deploy 的子網域（每個 build hash 不同，用 suffix 比對）
+const ALLOWED_SUFFIXES = [
+    '.mutli-stream.pages.dev', // 注意：專案名是 mutli-stream（拼寫保留）
+];
+
+function isAllowedOrigin(origin) {
+    if (!origin) return false;
+    if (ALLOWED_EXACT_ORIGINS.includes(origin)) return true;
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
+    // https://<hash>.mutli-stream.pages.dev / https://mutli-stream.pages.dev
+    try {
+        const u = new URL(origin);
+        if (u.protocol !== 'https:') return false;
+        return ALLOWED_SUFFIXES.some(suffix =>
+            u.hostname === suffix.slice(1) || u.hostname.endsWith(suffix)
+        );
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -19,13 +34,13 @@ if (typeof globalThis !== 'undefined') {
  */
 export function getCorsHeaders(request) {
     const origin = request?.headers?.get('Origin') || '';
-    const isLocalhost = origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:');
-    const isAllowed = ALLOWED_ORIGINS.includes(origin) || isLocalhost;
+    const isAllowed = isAllowedOrigin(origin);
 
     return {
-        'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+        'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_EXACT_ORIGINS[0],
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Vary': 'Origin',
     };
 }
 

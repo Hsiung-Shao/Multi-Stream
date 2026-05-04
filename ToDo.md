@@ -121,6 +121,14 @@ Shadcn UI
 
 ### [] 44. 個人 profile 公開頁 /u/{display_name}
 
+### [] 46. Admin 後台「意見回饋」列表頁
+- 資料表 `public.feedbacks` 已有 `status`（unread/read/replied）與 `admin_notes` 欄位
+- AdminPage 加 tab：「意見回饋」
+- 列表 + filter（status / feedback_type / 時間範圍）
+- 點開 detail 可標記 status 與寫 admin_notes
+- RLS 已有 admin_select / admin_update policy 可直接用
+- 預期工時：2-3h
+
 ---
 
 ## 已知技術債（暫不優先）
