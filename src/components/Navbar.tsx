@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import { Search, Heart, Globe, Sun, Moon, Coffee, Plus, Menu, LayoutTemplate, Monitor, UserRound, LogOut, Pencil, Settings } from 'lucide-react';
+import { Search, Heart, Globe, Sun, Moon, Coffee, Plus, Menu, LayoutTemplate, Monitor, UserRound, LogOut, Pencil, Settings, MessageSquareHeart } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -770,6 +770,15 @@ export function Navbar({
                       <Settings className="size-4 mr-2" />
                       {t('account:menuLabel', '帳號設定')}
                     </DropdownMenuItem>
+                    {onShowFeedback && (
+                      <DropdownMenuItem
+                        onSelect={onShowFeedback}
+                        className={theme === 'dark' ? 'text-gray-300 focus:bg-gray-800 focus:text-white' : ''}
+                      >
+                        <MessageSquareHeart className="size-4 mr-2" />
+                        {t('navbar:feedback', '意見回饋')}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onSelect={() => logout()}
                       className={theme === 'dark' ? 'text-gray-300 focus:bg-gray-800 focus:text-white' : ''}

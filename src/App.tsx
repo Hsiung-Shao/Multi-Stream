@@ -21,6 +21,7 @@ import { useHotkeys } from './hooks/useHotkeys';
 import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useEngagementTracking } from './hooks/useEngagementTracking';
 import { CookieConsent } from './components/CookieConsent';
+import { FeedbackFAB } from './components/Navigation/FeedbackFAB';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
 import { LoginDialog } from './components/Dialogs/LoginDialog';
 import { MobileApp } from './components/Mobile/MobileApp';
@@ -257,6 +258,8 @@ export default function App() {
         open={modals.login}
         onClose={() => closeModal('login')}
       />
+      {/* 全站浮動意見回饋按鈕 — admin / canvas 沉浸頁略過避免擋畫面 */}
+      {currentPage !== 'admin' && currentPage !== 'canvas' && <FeedbackFAB />}
     </>
   );
 }

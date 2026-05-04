@@ -14,7 +14,7 @@ import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { SEO } from '../../../components/SEO';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil, Settings } from 'lucide-react';
+import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil, Settings, MessageSquareHeart } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../components/ui/dropdown-menu';
 import { EditProfileDialog } from '../../../components/Dialogs/EditProfileDialog';
 import { logEvent } from '../../../utils/analytics';
@@ -25,6 +25,7 @@ type ExploreTab = 'vtubers' | 'events';
 export function VTuberExplorePage() {
   const { t } = useTranslation('vtuber');
   const setPage = useUIStore((s) => s.setPage);
+  const openModal = useUIStore((s) => s.openModal);
 
   // Tab
   const [activeTab, setActiveTab] = useState<ExploreTab>('vtubers');
@@ -200,6 +201,10 @@ export function VTuberExplorePage() {
                   <DropdownMenuItem onSelect={() => setPage('account')}>
                     <Settings className="w-3.5 h-3.5 mr-2" />
                     {t('account:menuLabel', '帳號設定')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => openModal('feedback')}>
+                    <MessageSquareHeart className="w-3.5 h-3.5 mr-2" />
+                    {t('navbar:feedback', '意見回饋')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => logout()}>
                     <LogOut className="w-3.5 h-3.5 mr-2" />

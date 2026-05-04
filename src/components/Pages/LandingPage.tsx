@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { Button } from '../ui/button';
-import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe, UserRound, LogOut, Pencil, Settings } from 'lucide-react';
+import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe, UserRound, LogOut, Pencil, Settings, MessageSquareHeart } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -104,6 +104,10 @@ export function LandingPage() {
                                     <DropdownMenuItem onSelect={() => setPage('account')}>
                                         <Settings className="w-4 h-4 mr-2" />
                                         {t('account:menuLabel', '帳號設定')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => openModal('feedback')}>
+                                        <MessageSquareHeart className="w-4 h-4 mr-2" />
+                                        {t('navbar:feedback', '意見回饋')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onSelect={() => logout()}>
                                         <LogOut className="w-4 h-4 mr-2" />
@@ -445,6 +449,9 @@ export function LandingPage() {
                         </Button>
                         <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('privacy')}>
                             {t('landing.footer.privacy')}
+                        </Button>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => openModal('feedback')}>
+                            {t('navbar:feedback', '意見回饋')}
                         </Button>
                     </div>
                     <div className="flex flex-col gap-2">
