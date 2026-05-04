@@ -6,6 +6,7 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { SEO } from '../../components/SEO';
 import { IdentitiesSection } from './IdentitiesSection';
 import { DisplayNameSection } from './DisplayNameSection';
+import { CloudSyncSection } from '../favorites/CloudSyncSection';
 
 /**
  * 帳號設定頁 — Identity Linking、未來的 display name、2FA、刪除帳號入口都聚集這裡
@@ -75,9 +76,11 @@ export function AccountSettingsPage() {
 
                 <DisplayNameSection />
 
+                <CloudSyncSection />
+
                 <IdentitiesSection />
 
-                {/* 未來 PR 6/7 會加：FavoritesSyncSection / MfaSection */}
+                {/* 未來 PR 7 會加：MfaSection */}
             </main>
         </div>
     );
