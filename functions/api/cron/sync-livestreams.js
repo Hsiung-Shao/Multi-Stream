@@ -25,6 +25,7 @@
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { select } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
+import { detectYouTubeLiveBatch } from '../../lib/youtube-live-detect.js';
 
 // 直接呼叫 Supabase REST (DELETE / batch INSERT) — supabase-server.js 沒對應 helper
 async function supabaseRequest(env, path, init = {}) {
@@ -164,6 +165,23 @@ export async function onRequestPost(context) {
             }
         }
 
+        // 3.5 YouTube live detection（並行 5 個 worker，每個 fetch 8s timeout）
+        const youtubeChannelIds = vtubers
+            .map(v => v.youtube_channel_id)
+            .filter(s => /^UC[a-zA-Z0-9_-]{22}$/.test(String(s || '')));
+
+        let liveYouTube = new Map();
+        if (youtubeChannelIds.length > 0) {
+            try {
+                liveYouTube = await detectYouTubeLiveBatch(youtubeChannelIds, 5);
+            } catch (err) {
+                await logError(env, 'sync-livestreams', 'youtube fetch failed', {
+                    metadata: { error: String(err).slice(0, 500) },
+                });
+                // 不 abort，繼續用空 map
+            }
+        }
+
         // 4. 組 vtuber_livestreams row
         const rows = [];
         for (const v of vtubers) {
@@ -182,7 +200,20 @@ export async function onRequestPost(context) {
                     });
                 }
             }
-            // YouTube 抓取在 B1.2
+            if (v.youtube_channel_id) {
+                const live = liveYouTube.get(v.youtube_channel_id);
+                if (live) {
+                    rows.push({
+                        vtuber_id: v.id,
+                        title: live.title,
+                        video_url: live.video_url,
+                        thumbnail_url: live.thumbnail_url,
+                        platform: 'youtube',
+                        start_time: null, // YouTube /live HTML 不易精準解 started_at
+                        viewer_count: null,
+                    });
+                }
+            }
         }
 
         // 5. swap：DELETE 全表 + INSERT
@@ -215,7 +246,9 @@ export async function onRequestPost(context) {
             metadata: {
                 vtubers_active: vtubers.length,
                 twitch_channels: twitchLogins.length,
+                youtube_channels: youtubeChannelIds.length,
                 live_twitch: liveTwitch.size,
+                live_youtube: liveYouTube.size,
                 inserted: rows.length,
             },
         });
@@ -225,7 +258,7 @@ export async function onRequestPost(context) {
                 success: true,
                 vtubers_active: vtubers.length,
                 live_twitch: liveTwitch.size,
-                live_youtube: 0, // TODO B1.2
+                live_youtube: liveYouTube.size,
                 inserted: rows.length,
             },
             200,
