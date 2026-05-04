@@ -102,6 +102,8 @@ export const createVTuberEvent = (body: CreateEventRequest) =>
 export interface AdminCheckPermissionResponse {
     allowed: boolean;
     trust_level: string | null;
+    aal?: 'aal1' | 'aal2';
+    /** 'unauthenticated' | 'forbidden' | 'aal2_required' | null */
     reason?: string;
 }
 

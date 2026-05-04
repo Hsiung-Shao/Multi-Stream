@@ -47,4 +47,37 @@ export interface UpdateDisplayNameResponse {
 export const submitUpdateDisplayName = (displayName: string) =>
     postJson<UpdateDisplayNameResponse>('/api/account/update-display-name', { displayName });
 
+// ===== 2FA =====
+
+export interface TotpStatusResponse {
+    success: boolean;
+    enrolled: boolean;
+    enrolledAt: string | null;
+    backupCodesRemaining: number;
+    requiredByTrustLevel: boolean;
+    trustLevel: 'new' | 'trusted' | 'moderator' | 'admin' | 'banned';
+    currentAal: 'aal1' | 'aal2';
+}
+
+export async function fetchTotpStatus(): Promise<TotpStatusResponse> {
+    const auth = await getAuthHeader();
+    const res = await fetch('/api/account/totp-status', { headers: auth });
+    let payload: any = null;
+    try { payload = await res.json(); } catch { /* non-JSON */ }
+    if (!res.ok) throw new ApiError(res.status, payload);
+    return payload as TotpStatusResponse;
+}
+
+export const generateBackupCodes = () =>
+    postJson<{ success: boolean; codes: string[] }>(
+        '/api/account/totp-backup-codes',
+        {},
+    );
+
+export const submitTotpRecover = (code: string) =>
+    postJson<{ success: boolean; remaining: number; message?: string }>(
+        '/api/account/totp-recover',
+        { code },
+    );
+
 export { ApiError };

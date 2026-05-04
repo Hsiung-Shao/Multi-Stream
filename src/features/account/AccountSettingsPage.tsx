@@ -6,6 +6,7 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { SEO } from '../../components/SEO';
 import { IdentitiesSection } from './IdentitiesSection';
 import { DisplayNameSection } from './DisplayNameSection';
+import { TwoFactorSection } from './TwoFactorSection';
 import { CloudSyncSection } from '../favorites/CloudSyncSection';
 
 /**
@@ -76,11 +77,11 @@ export function AccountSettingsPage() {
 
                 <DisplayNameSection />
 
+                <TwoFactorSection />
+
                 <CloudSyncSection />
 
                 <IdentitiesSection />
-
-                {/* 未來 PR 7 會加：MfaSection */}
             </main>
         </div>
     );

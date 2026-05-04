@@ -14,24 +14,38 @@
 import { rpc, select } from './supabase-server.js';
 
 /**
+ * 從 JWT payload base64 解出 aal（不驗章 — 呼叫端 已經/將要 走 Supabase Auth REST 驗章）
+ * @param {string} token
+ * @returns {'aal1' | 'aal2'}
+ */
+function decodeAal(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return payload?.aal === 'aal2' ? 'aal2' : 'aal1';
+    } catch {
+        return 'aal1';
+    }
+}
+
+/**
  * 從 Authorization header 解出 user_id（auth.users.id）
  * 用 Supabase Auth REST /auth/v1/user 驗證 JWT 並取出 user
  *
  * @param {Request} request
  * @param {Object} env
- * @returns {Promise<{ userId: string|null, verified: boolean }>}
+ * @returns {Promise<{ userId: string|null, verified: boolean, aal: 'aal1'|'aal2' }>}
  */
 export async function getUserIdFromRequest(request, env) {
     const authHeader = request.headers.get('Authorization') || '';
     if (!authHeader.startsWith('Bearer ')) {
-        return { userId: null, verified: false };
+        return { userId: null, verified: false, aal: 'aal1' };
     }
     const token = authHeader.slice(7).trim();
     if (!token || token.split('.').length !== 3) {
-        return { userId: null, verified: false };
+        return { userId: null, verified: false, aal: 'aal1' };
     }
     if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
-        return { userId: null, verified: false };
+        return { userId: null, verified: false, aal: 'aal1' };
     }
 
     try {
@@ -44,15 +58,16 @@ export async function getUserIdFromRequest(request, env) {
         });
         // 401/403 → token 無效；只回傳結果，不暴露細節
         if (!res.ok) {
-            return { userId: null, verified: false };
+            return { userId: null, verified: false, aal: 'aal1' };
         }
         const user = await res.json();
         return {
             userId: typeof user?.id === 'string' ? user.id : null,
             verified: true,
+            aal: decodeAal(token),
         };
     } catch {
-        return { userId: null, verified: false };
+        return { userId: null, verified: false, aal: 'aal1' };
     }
 }
 
@@ -70,6 +85,28 @@ export async function getTrustLevel(env, userId) {
     );
     if (!ok || !Array.isArray(data) || data.length === 0) return 'new';
     return data[0].trust_level || 'new';
+}
+
+/**
+ * Admin / Moderator 操作必須走過 2FA（aal2）
+ *
+ * @param {Object} env
+ * @param {string|null} userId - getUserIdFromRequest 拿到的 userId
+ * @param {'aal1'|'aal2'} aal - getUserIdFromRequest 拿到的 aal
+ * @returns {Promise<{ allowed: boolean, reason: string|null, trustLevel: string }>}
+ *   reason: 'unauthenticated' | 'banned' | 'aal2_required' | 'forbidden' | null
+ *   - allowed=true：trust_level 為 admin/moderator 且 aal2 通過
+ *   - allowed=false：拒絕。'aal2_required' 表示權限對但需要再過 2FA；其他拒絕原因 frontend 直接擋
+ */
+export async function requireAal2ForAdmin(env, userId, aal) {
+    if (!userId) return { allowed: false, reason: 'unauthenticated', trustLevel: 'new' };
+    const trustLevel = await getTrustLevel(env, userId);
+    if (trustLevel === 'banned') return { allowed: false, reason: 'banned', trustLevel };
+    if (trustLevel !== 'admin' && trustLevel !== 'moderator') {
+        return { allowed: false, reason: 'forbidden', trustLevel };
+    }
+    if (aal !== 'aal2') return { allowed: false, reason: 'aal2_required', trustLevel };
+    return { allowed: true, reason: null, trustLevel };
 }
 
 /**

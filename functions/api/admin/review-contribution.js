@@ -7,7 +7,7 @@
 // 雙重保險：前端呼叫前要先過 check-permission，後端再驗一次 trust_level
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
-import { getUserIdFromRequest, getTrustLevel } from '../../lib/auth-helper.js';
+import { getUserIdFromRequest, requireAal2ForAdmin } from '../../lib/auth-helper.js';
 import { update, select, insert } from '../../lib/supabase-server.js';
 import { logWarn, logError } from '../../lib/logger.js';
 
@@ -21,13 +21,14 @@ function trimStr(s, max) {
 export async function onRequestPost(context) {
     const { request, env } = context;
 
-    const { userId } = await getUserIdFromRequest(request, env);
-    if (!userId) {
-        return jsonResponse({ success: false, error: 'unauthenticated' }, 401, request);
-    }
-    const trust = await getTrustLevel(env, userId);
-    if (trust !== 'admin' && trust !== 'moderator') {
-        return jsonResponse({ success: false, error: 'forbidden' }, 403, request);
+    const { userId, aal } = await getUserIdFromRequest(request, env);
+    const gate = await requireAal2ForAdmin(env, userId, aal);
+    if (!gate.allowed) {
+        const status = gate.reason === 'unauthenticated' ? 401
+            : gate.reason === 'aal2_required' ? 403
+            : gate.reason === 'banned' ? 403
+            : 403;
+        return jsonResponse({ success: false, error: gate.reason }, status, request);
     }
 
     const contentType = request.headers.get('Content-Type') || '';

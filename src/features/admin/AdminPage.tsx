@@ -19,7 +19,7 @@ const queryClient = new QueryClient({
     },
 });
 
-type AuthState = 'loading' | 'login' | 'authenticated' | 'error' | 'forbidden';
+type AuthState = 'loading' | 'login' | 'authenticated' | 'error' | 'forbidden' | 'aal2_required';
 
 const INIT_TIMEOUT_MS = 15_000;
 
@@ -40,7 +40,7 @@ export function AdminPage() {
                 if (cancelled) return;
                 setTrustLevel(result.trust_level);
                 if (!result.allowed) {
-                    setAuthState('forbidden');
+                    setAuthState(result.reason === 'aal2_required' ? 'aal2_required' : 'forbidden');
                 }
             } catch {
                 if (!cancelled) {
@@ -168,6 +168,34 @@ export function AdminPage() {
                         <Button variant="outline" size="sm" className="mt-2" onClick={() => setPage('home')}>
                             返回首頁
                         </Button>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    if (authState === 'aal2_required') {
+        return (
+            <>
+                {seoEl}
+                <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 max-w-[400px] text-center bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-center">
+                            <ShieldOff className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <p className="text-[14px] text-zinc-200 font-medium">需先通過 2FA 驗證</p>
+                        <p className="text-[13px] text-zinc-400 leading-relaxed">
+                            Admin / Moderator 帳號必須啟用並通過 2FA 才能進入後台。<br />
+                            請到帳號設定啟用兩步驟驗證，或下次登入時輸入驗證碼後再回來。
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                            <Button variant="outline" size="sm" onClick={() => setPage('account')}>
+                                帳號設定
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setPage('home')}>
+                                返回首頁
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </>
