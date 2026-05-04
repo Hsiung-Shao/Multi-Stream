@@ -121,13 +121,13 @@ Shadcn UI
 
 ### [] 44. 個人 profile 公開頁 /u/{display_name}
 
-### [] 46. Admin 後台「意見回饋」列表頁
-- 資料表 `public.feedbacks` 已有 `status`（unread/read/replied）與 `admin_notes` 欄位
-- AdminPage 加 tab：「意見回饋」
-- 列表 + filter（status / feedback_type / 時間範圍）
-- 點開 detail 可標記 status 與寫 admin_notes
-- RLS 已有 admin_select / admin_update policy 可直接用
-- 預期工時：2-3h
+### [*] 46. Admin 後台「意見回饋」列表頁
+- 程式碼早已實作完整（AdminDashboard / FeedbackTable / FeedbackDetail / useFeedbacks）
+- 統計卡（總計 / 未讀 / 平均評分 / NPS / 類型 pie chart）
+- 列表含 filter（status / feedback_type / 時間範圍） + pagination
+- detail dialog 可標記 status 與寫 admin_notes
+- RLS feedbacks_admin_select / feedbacks_admin_update 已備妥
+- 缺的不是 code，是 user_profiles.trust_level 沒升為 admin（is_admin() 卡 RLS 拿不到資料）→ 升級後立即顯示
 
 ---
 
