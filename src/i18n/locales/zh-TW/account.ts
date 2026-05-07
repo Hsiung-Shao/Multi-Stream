@@ -74,6 +74,7 @@ const account = {
     'mfa.enroll.cancel': '取消',
     'mfa.enroll.error.invalid': '驗證碼錯誤或已過期',
     'mfa.enroll.error.generic': '啟用失敗，請稍後再試',
+    'mfa.enroll.error.timeout': '網路逾時，請重新整理頁面確認 2FA 狀態（伺服器端可能已啟用成功）',
     'mfa.unenroll.button': '停用 2FA',
     'mfa.unenroll.confirm': '確定要停用 2FA？停用後備援碼也會作廢。',
     'mfa.unenroll.error': '停用失敗',

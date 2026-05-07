@@ -11,7 +11,19 @@ import { getSupabase } from '../../lib/supabase';
 interface Props {
     open: boolean;
     onClose: () => void;
-    onEnrolled: () => void; // 成功後呼叫，外層用以觸發備援碼產生
+    onEnrolled: () => Promise<void> | void; // 成功後呼叫，外層用以觸發備援碼產生（必須 await）
+}
+
+// 給 supabase mfa.challenge / verify 加 client-side timeout — 在 Cloudflare Access
+// 環境下偶爾觀察到 client promise 不返回（DB 端已 verify 完）。timeout 後 catch
+// 會把 phase 設回 verify，user 可重整看狀態（factor 已 verified 的話會自動進已啟用）。
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timeout`)), ms),
+        ),
+    ]);
 }
 
 interface EnrollData {
@@ -98,27 +110,47 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
 
-            const challengeRes = await supabase.auth.mfa.challenge({ factorId: data.factorId });
+            const challengeRes = await withTimeout(
+                supabase.auth.mfa.challenge({ factorId: data.factorId }),
+                15000,
+                'challenge',
+            );
             if (challengeRes.error || !challengeRes.data) {
                 throw new Error(challengeRes.error?.message || 'challenge failed');
             }
-            const verifyRes = await supabase.auth.mfa.verify({
-                factorId: data.factorId,
-                challengeId: challengeRes.data.id,
-                code: otp,
-            });
+            const verifyRes = await withTimeout(
+                supabase.auth.mfa.verify({
+                    factorId: data.factorId,
+                    challengeId: challengeRes.data.id,
+                    code: otp,
+                }),
+                15000,
+                'verify',
+            );
             if (verifyRes.error) {
-                // 驗證失敗：清掉 OTP 但不關閉 dialog（user 可重試）
                 setOtp('');
                 setError(t('mfa.enroll.error.invalid', '驗證碼錯誤或已過期'));
                 setPhase('verify');
                 return;
             }
-            onEnrolled();
+            // 確保 client session 升 aal2（避免接下來 generateBackupCodes 用舊 aal1 token 被擋）
+            try {
+                await withTimeout(supabase.auth.refreshSession(), 5000, 'refreshSession');
+            } catch { /* refresh 失敗不致命 — onEnrolled 失敗時 user 仍可手動重產備援碼 */ }
+
+            // 必須 await onEnrolled — 讓備援碼 dialog 在 enroll dialog 關閉前就彈出，
+            // 避免 user 看到「dialog 一閃而過、什麼都沒發生」
+            await onEnrolled();
             reset();
-            // 不在這裡 onClose — 讓外層先彈備援碼 dialog 再關
         } catch (e) {
-            setError(e instanceof Error ? e.message : t('mfa.enroll.error.generic', '啟用失敗'));
+            setOtp(''); // 清掉 OTP 與成功失敗的 verify 路徑一致
+            const msg = e instanceof Error ? e.message : '';
+            if (/timeout/i.test(msg)) {
+                // verify 已可能在 server 端成功 — 引導 user 重整
+                setError(t('mfa.enroll.error.timeout', '網路逾時，請重新整理頁面確認 2FA 狀態'));
+            } else {
+                setError(msg || t('mfa.enroll.error.generic', '啟用失敗'));
+            }
             setPhase('verify');
         }
     };

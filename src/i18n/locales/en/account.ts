@@ -74,6 +74,7 @@ const account = {
     'mfa.enroll.cancel': 'Cancel',
     'mfa.enroll.error.invalid': 'Code is wrong or expired',
     'mfa.enroll.error.generic': 'Enable failed, please try again later',
+    'mfa.enroll.error.timeout': 'Network timeout — please refresh to check status (it may have succeeded server-side)',
     'mfa.unenroll.button': 'Disable 2FA',
     'mfa.unenroll.confirm': 'Disable 2FA? Backup codes will also be invalidated.',
     'mfa.unenroll.error': 'Disable failed',
