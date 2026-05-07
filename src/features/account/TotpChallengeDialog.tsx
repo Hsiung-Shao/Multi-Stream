@@ -11,7 +11,7 @@ import { getSupabase } from '../../lib/supabase';
 interface Props {
     open: boolean;
     onClose: () => void;
-    onSuccess: () => void; // session 已升 aal2 後呼叫
+    onSuccess: () => void | Promise<void>; // session 已升 aal2 後呼叫（可為 async）
     title?: string;
     description?: string;
 }
@@ -67,19 +67,21 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
 
     const handleVerify = async () => {
         if (!factorId || otp.length !== 6) return;
+        console.log('[TotpChallenge] handleVerify start, factorId=', factorId);
         setSubmitting(true);
         setError('');
         try {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
-            // timeout 拉長：在 Cloudflare Access 環境下 supabase-js mfa.verify 整個
-            // promise（含內部 _saveSession）可能 >10s 才完成，避免我們率先觸發 timeout
+            console.log('[TotpChallenge] before challenge');
             const ch = await withTimeout(
                 supabase.auth.mfa.challenge({ factorId }),
                 15000,
                 'challenge',
             );
+            console.log('[TotpChallenge] challenge result error=', ch.error, 'data=', !!ch.data);
             if (ch.error || !ch.data) throw new Error(ch.error?.message || 'challenge failed');
+            console.log('[TotpChallenge] before verify');
             const v = await withTimeout(
                 supabase.auth.mfa.verify({
                     factorId,
@@ -89,26 +91,28 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
                 20000,
                 'verify',
             );
+            console.log('[TotpChallenge] verify result error=', v.error);
             if (v.error) {
                 setOtp('');
                 setError(t('mfa.enroll.error.invalid', '驗證碼錯誤或已過期'));
                 setSubmitting(false);
                 return;
             }
+            console.log('[TotpChallenge] verify ok, before refreshSession');
             try {
                 await withTimeout(supabase.auth.refreshSession(), 10000, 'refreshSession');
-            } catch { /* refresh 失敗不致命 — caller 會自己處理 token 同步 */ }
+            } catch (e) { console.warn('[TotpChallenge] refresh threw', e); }
 
-            onSuccess();
+            console.log('[TotpChallenge] calling onSuccess (happy)');
+            try {
+                await onSuccess();
+            } catch (e) { console.error('[TotpChallenge] onSuccess threw', e); }
+            console.log('[TotpChallenge] onSuccess done, calling onClose');
             onClose();
         } catch (e) {
             const msg = e instanceof Error ? e.message : '';
+            console.warn('[TotpChallenge] handleVerify catch, msg=', msg);
 
-            // timeout：HTTP 沒在限時內完成或 supabase-js 內部 race。
-            // Verify 的 fetch 通常已經 200（server 端成功），只是 client _saveSession 慢。
-            // 不再硬性要求 isAal2Now=true 才放行 — caller (performUnenroll/performRegenerate)
-            // 自己會做 server 端真實狀態檢查 + 主動 refreshSession，token 同步問題交給它們處理。
-            // 短 best-effort（單次 refresh）讓 token cache 有機會就位後再 onSuccess。
             if (/timeout/i.test(msg)) {
                 try {
                     const sb = await getSupabase();
@@ -119,7 +123,11 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
                         ]).catch(() => undefined);
                     }
                 } catch { /* ignore */ }
-                onSuccess();
+                console.log('[TotpChallenge] calling onSuccess (timeout-path)');
+                try {
+                    await onSuccess();
+                } catch (e2) { console.error('[TotpChallenge] onSuccess threw (timeout)', e2); }
+                console.log('[TotpChallenge] onSuccess done (timeout), calling onClose');
                 onClose();
                 return;
             }

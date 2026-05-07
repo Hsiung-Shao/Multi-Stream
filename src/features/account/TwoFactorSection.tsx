@@ -191,6 +191,7 @@ export function TwoFactorSection() {
     // unenroll 用 aal1 token 被 gotrue 拒絕。此時 client SDK 路徑會默默失敗，server
     // fallback 是「停用按鈕本身可靠」的保證。
     const performUnenroll = async () => {
+        console.log('[2FA] performUnenroll START');
         setBusy(true);
         // 防呆：若先前 enroll timeout 留下 mfa_pending_backup_codes flag 還沒被消耗，
         // 此時 user 直接按停用 → unenroll 失敗時 useEffect 會誤觸發補拿備援碼。
@@ -333,12 +334,16 @@ export function TwoFactorSection() {
     // 不重複 confirm — 走過 challenge dialog = 已確認意圖。
     const handleChallengeSuccess = async () => {
         const what = pending;
+        console.log('[2FA] handleChallengeSuccess called, pending=', what);
         setPending(null);
         if (what === 'regenerate') {
             await performRegenerate();
         } else if (what === 'unenroll') {
+            console.log('[2FA] dispatching to performUnenroll');
             await performUnenroll();
+            console.log('[2FA] performUnenroll returned');
         } else {
+            console.warn('[2FA] handleChallengeSuccess fallback to reload, unexpected pending=', what);
             await reload();
         }
     };
