@@ -87,4 +87,12 @@ export const submitTotpRecover = (code: string) =>
         { code },
     );
 
+// Server-side fallback for unenroll — 用 service_role 直接刪 factor，繞過 client SDK
+// 在 Cloudflare Access / 慢網路下偶爾觀察到的 token 同步 race。要求 aal2。
+export const submitTotpUnenroll = () =>
+    postJson<{ success: boolean; factorsRemoved: number }>(
+        '/api/account/totp-unenroll',
+        {},
+    );
+
 export { ApiError };

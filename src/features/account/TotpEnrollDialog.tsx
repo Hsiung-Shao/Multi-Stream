@@ -11,7 +11,13 @@ import { getSupabase } from '../../lib/supabase';
 interface Props {
     open: boolean;
     onClose: () => void;
-    onEnrolled: () => Promise<void> | void; // 成功後呼叫，外層用以觸發備援碼產生（必須 await）
+    /**
+     * @deprecated 不再被內部呼叫。verify 成功（含 timeout-but-verified）一律設
+     * sessionStorage `mfa_pending_backup_codes=pending` flag 並 onClose，
+     * 由外層 reload + useEffect 偵測 `enrolled+0codes+flag` 補拿備援碼。
+     * Prop 保留以最小化外部介面改動。
+     */
+    onEnrolled?: () => Promise<void> | void;
 }
 
 // 給 supabase mfa.challenge / verify 加 client-side timeout — 在 Cloudflare Access
@@ -38,7 +44,8 @@ interface EnrollData {
  * 注意：mfa.verify 成功後 Supabase 會自動把 session 升 aal2，這代表
  * 後續呼叫 /api/account/totp-backup-codes（要求 aal2）會通過。
  */
-export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function TotpEnrollDialog({ open, onClose, onEnrolled: _onEnrolled }: Props) {
     const { t } = useTranslation('account');
     const [phase, setPhase] = useState<'init' | 'enrolling' | 'verify' | 'submitting'>('init');
     const [data, setData] = useState<EnrollData | null>(null);
@@ -162,24 +169,25 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
             }
             try {
                 await withTimeout(supabase.auth.refreshSession(), 5000, 'refreshSession');
-            } catch { /* refresh 失敗不致命 */ }
+            } catch { /* refresh 失敗不致命 — 外層 useEffect 會再 refresh 一次 */ }
 
-            // onEnrolled 改 fire-and-forget — 備援碼產生失敗不該卡 enroll 完成狀態
-            // （外層 handleEnrolled 自己有 try/catch + setError）
-            void onEnrolled();
+            // happy path 也走 sessionStorage flag + 外層 useEffect 路徑（不再 inline 產 codes）。
+            // mfa.verify 後 supabase-js 內部 _saveSession 與 client token cache 同步存在 race
+            // window，立刻 generateBackupCodes 可能用舊 aal1 token 撞 403。統一收斂到 flag
+            // 路徑可移除 inline retry 的脆弱性，由 useEffect 負責長 backoff 補拿備援碼。
+            try { sessionStorage.setItem('mfa_pending_backup_codes', 'pending'); } catch { /* ignore */ }
             reset();
-            onClose(); // 立刻關閉 dialog，避免短暫看到 init phase 又被誤點 → 撞 422
+            onClose();
         } catch (e) {
             const msg = e instanceof Error ? e.message : '';
 
-            // timeout：去 server 端查 factor 狀態。已 verified → 設旗標讓主畫面自動補拿備援碼。
-            // 不在這裡呼 onEnrolled — client SDK 沒走完 setSession，token 仍是 aal1，
-            // 立刻產生備援碼會撞 403。改由 TwoFactorSection 偵測 status enrolled+0codes+flag
-            // 後主動 refreshSession + 嘗試（也支援 user 重整後再進來自動觸發）
+            // timeout：先無條件設 flag（保險：即使 checkFactorVerified 自己 timeout/失敗，
+            // server 端可能仍 verified — useEffect 會檢查 status.enrolled 才消耗 flag，
+            // 所以 server 沒成功時不會誤產 codes）
             if (/timeout/i.test(msg)) {
+                try { sessionStorage.setItem('mfa_pending_backup_codes', 'pending'); } catch { /* ignore */ }
                 await new Promise(r => setTimeout(r, 1500));
                 if (await checkFactorVerified(factorId)) {
-                    try { sessionStorage.setItem('mfa_pending_backup_codes', 'pending'); } catch { /* ignore */ }
                     reset();
                     onClose();
                     return;
@@ -284,7 +292,6 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
                     </Button>
                     {phase === 'init' && (
                         <Button onClick={startEnroll} disabled={busy} className="gap-2">
-                            {phase === 'enrolling' && <Loader2 className="w-4 h-4 animate-spin" />}
                             {t('mfa.enroll.button', '啟用 2FA')}
                         </Button>
                     )}
