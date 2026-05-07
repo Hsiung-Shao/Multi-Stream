@@ -102,16 +102,32 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
         }
     };
 
+    // verify timeout 後查 server 端是否其實已成功（observed in production：
+    // supabase mfa.verify 偶爾 client promise 不 resolve，但 DB 端 factor 已 verified）
+    async function checkFactorVerified(factorId: string): Promise<boolean> {
+        try {
+            const supabase = await getSupabase();
+            if (!supabase) return false;
+            try { await supabase.auth.refreshSession(); } catch { /* ignore */ }
+            const { data: factors } = await supabase.auth.mfa.listFactors();
+            const all = (factors as { all?: Array<{ id: string; factor_type: string; status: string }> })?.all ?? [];
+            return all.some(f => f.id === factorId && f.factor_type === 'totp' && f.status === 'verified');
+        } catch {
+            return false;
+        }
+    }
+
     const handleVerify = async () => {
         if (!data || otp.length !== 6) return;
         setPhase('submitting');
         setError('');
+        const factorId = data.factorId;
         try {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
 
             const challengeRes = await withTimeout(
-                supabase.auth.mfa.challenge({ factorId: data.factorId }),
+                supabase.auth.mfa.challenge({ factorId }),
                 15000,
                 'challenge',
             );
@@ -120,7 +136,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
             }
             const verifyRes = await withTimeout(
                 supabase.auth.mfa.verify({
-                    factorId: data.factorId,
+                    factorId,
                     challengeId: challengeRes.data.id,
                     code: otp,
                 }),
@@ -133,24 +149,33 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
                 setPhase('verify');
                 return;
             }
-            // 確保 client session 升 aal2（避免接下來 generateBackupCodes 用舊 aal1 token 被擋）
             try {
                 await withTimeout(supabase.auth.refreshSession(), 5000, 'refreshSession');
-            } catch { /* refresh 失敗不致命 — onEnrolled 失敗時 user 仍可手動重產備援碼 */ }
+            } catch { /* refresh 失敗不致命 */ }
 
-            // 必須 await onEnrolled — 讓備援碼 dialog 在 enroll dialog 關閉前就彈出，
-            // 避免 user 看到「dialog 一閃而過、什麼都沒發生」
-            await onEnrolled();
+            // onEnrolled 改 fire-and-forget — 備援碼產生失敗不該卡 enroll 完成狀態
+            // （外層 handleEnrolled 自己有 try/catch + setError）
+            void onEnrolled();
             reset();
         } catch (e) {
-            setOtp(''); // 清掉 OTP 與成功失敗的 verify 路徑一致
             const msg = e instanceof Error ? e.message : '';
+
+            // timeout：去 server 端查 factor 狀態。已 verified → 視同成功
             if (/timeout/i.test(msg)) {
-                // verify 已可能在 server 端成功 — 引導 user 重整
+                await new Promise(r => setTimeout(r, 1500)); // 給 server 一點時間寫入
+                if (await checkFactorVerified(factorId)) {
+                    void onEnrolled();
+                    reset();
+                    return;
+                }
+                setOtp('');
                 setError(t('mfa.enroll.error.timeout', '網路逾時，請重新整理頁面確認 2FA 狀態'));
-            } else {
-                setError(msg || t('mfa.enroll.error.generic', '啟用失敗'));
+                setPhase('verify');
+                return;
             }
+
+            setOtp('');
+            setError(msg || t('mfa.enroll.error.generic', '啟用失敗'));
             setPhase('verify');
         }
     };

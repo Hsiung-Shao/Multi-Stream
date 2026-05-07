@@ -65,6 +65,20 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
         })();
     }, [open]);
 
+    // 透過 supabase.auth.getSession() 讀 aal — verify 成功後 client session 應該升 aal2
+    async function isAal2Now(): Promise<boolean> {
+        try {
+            const supabase = await getSupabase();
+            const { data } = (await supabase!.auth.getSession()) as { data: { session: { access_token?: string } | null } };
+            const token = data?.session?.access_token;
+            if (!token) return false;
+            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+            return payload?.aal === 'aal2';
+        } catch {
+            return false;
+        }
+    }
+
     const handleVerify = async () => {
         if (!factorId || otp.length !== 6) return;
         setSubmitting(true);
@@ -93,22 +107,31 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
                 setSubmitting(false);
                 return;
             }
-            // 強制刷 session 拿到新 aal2 access_token，否則接下來 onSuccess 路徑
-            // 內 fetch /api/account/totp-backup-codes 還是會帶舊 aal1 token → 403
             try {
                 await withTimeout(supabase.auth.refreshSession(), 5000, 'refreshSession');
-            } catch { /* refresh 失敗不致命，呼叫端 retry 仍可能成功 */ }
+            } catch { /* refresh 失敗不致命 — 下面用 getSession 確認是否真的升 aal2 */ }
 
             onSuccess();
             onClose();
         } catch (e) {
-            setOtp('');
             const msg = e instanceof Error ? e.message : '';
+
+            // timeout：verify 可能 server 端已成功（client hang）— 確認 session aal 後決定
             if (/timeout/i.test(msg)) {
+                await new Promise(r => setTimeout(r, 1500));
+                if (await isAal2Now()) {
+                    onSuccess();
+                    onClose();
+                    return;
+                }
+                setOtp('');
                 setError(t('mfa.enroll.error.timeout', '網路逾時，請重新整理頁面確認 2FA 狀態'));
-            } else {
-                setError(msg || t('mfa.enroll.error.generic', '失敗'));
+                setSubmitting(false);
+                return;
             }
+
+            setOtp('');
+            setError(msg || t('mfa.enroll.error.generic', '失敗'));
             setSubmitting(false);
         }
     };
