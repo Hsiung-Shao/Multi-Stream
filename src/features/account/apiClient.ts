@@ -62,7 +62,6 @@ export interface TotpStatusResponse {
     enrolled: boolean;
     enrolledAt: string | null;
     backupCodesRemaining: number;
-    requiredByTrustLevel: boolean;
     trustLevel: 'new' | 'trusted' | 'moderator' | 'admin' | 'banned';
     currentAal: 'aal1' | 'aal2';
 }

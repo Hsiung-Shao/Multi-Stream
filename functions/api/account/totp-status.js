@@ -8,7 +8,7 @@
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest, getTrustLevel } from '../../lib/auth-helper.js';
-import { select } from '../../lib/supabase-server.js';
+import { rpc, select } from '../../lib/supabase-server.js';
 
 function decodeAal(token) {
     try {
@@ -27,28 +27,20 @@ export async function onRequestGet(context) {
         return jsonResponse({ success: false, error: 'unauthenticated' }, 401, request);
     }
 
-    // 1-3 並行（互不依賴）：factors / 備援碼 / trust_level
-    const [factorsResult, secretsRes, trustLevel] = await Promise.all([
-        fetch(
-            `${env.SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(userId)}/factors`,
-            {
-                headers: {
-                    'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-                    'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-                },
-            },
-        ).then(async r => r.ok ? await r.json().catch(() => null) : null).catch(() => null),
+    // 1-3 並行：factors / 備援碼 / trust_level
+    // 改用 SECURITY DEFINER RPC 查 auth.mfa_factors（migration 20260507_get_user_totp_factors_rpc）—
+    // 之前用 /auth/v1/admin/users/{id}/factors GoTrue endpoint 在不同 Supabase
+    // 版本回應結構不一致，導致 enrolled 永遠 false
+    const [factorsRpc, secretsRes, trustLevel] = await Promise.all([
+        rpc(env, 'get_user_totp_factors', { p_user_id: userId }),
         select(env, `user_mfa_secrets?user_id=eq.${encodeURIComponent(userId)}&select=backup_codes_hashed`),
         getTrustLevel(env, userId),
     ]);
 
     let enrolled = false;
     let enrolledAt = null;
-    if (factorsResult) {
-        const factors = Array.isArray(factorsResult?.factors)
-            ? factorsResult.factors
-            : (Array.isArray(factorsResult) ? factorsResult : []);
-        const verified = factors.find(f => f.factor_type === 'totp' && f.status === 'verified');
+    if (factorsRpc.ok && Array.isArray(factorsRpc.data)) {
+        const verified = factorsRpc.data.find(f => f.status === 'verified');
         if (verified) {
             enrolled = true;
             enrolledAt = verified.created_at || null;
@@ -61,19 +53,17 @@ export async function onRequestGet(context) {
         backupCodesRemaining = Array.isArray(arr) ? arr.length : 0;
     }
 
-    const requiredByTrustLevel = trustLevel === 'admin' || trustLevel === 'moderator';
-
-    // 4. current AAL
+    // current AAL
     const authHeader = request.headers.get('Authorization') || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
     const currentAal = decodeAal(token);
 
+    // 移除 requiredByTrustLevel 欄位 — opt-in 後沒意義
     return jsonResponse({
         success: true,
         enrolled,
         enrolledAt,
         backupCodesRemaining,
-        requiredByTrustLevel,
         trustLevel,
         currentAal,
     }, 200, request, { 'Cache-Control': 'no-store' });
