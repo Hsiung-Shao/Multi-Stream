@@ -24,7 +24,17 @@ export const getSupabase = (): Promise<SupabaseClient | null> => {
                 }
 
                 cachedConfig = { url: config.url, anonKey: config.anonKey };
-                supabaseInstance = createClient(config.url, config.anonKey);
+                // 把 supabase-js auth 的 navigator.locks mutex 換成 no-op：在
+                // Cloudflare Access / 慢網路下觀察到 mfa.verify 完成 fetch 後
+                // 內部 _saveSession 會卡住而不釋放 navigator lock，導致後續所有
+                // supabase.auth.* 操作（getSession/refreshSession/listFactors/unenroll）
+                // 都被無限期 hang 在 mutex 上。disable lock 後 multi-tab 同時 refresh
+                // 可能拿到不同 token（極罕見），但單 tab 主流程不受影響。
+                supabaseInstance = createClient(config.url, config.anonKey, {
+                    auth: {
+                        lock: async <R>(_name: string, _acquireTimeout: number, fn: () => Promise<R>): Promise<R> => fn(),
+                    },
+                });
                 return supabaseInstance;
             })
             .catch(() => {
