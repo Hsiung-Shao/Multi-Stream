@@ -88,24 +88,23 @@ export async function getTrustLevel(env, userId) {
 }
 
 /**
- * Admin / Moderator 操作必須走過 2FA（aal2）
+ * Admin / Moderator 操作 gate：要求 trust_level=admin 或 moderator
+ *
+ * 設計選擇：2FA 為純 opt-in 安全功能、不在此處強制（admin 帳號仍可選擇啟用）。
+ * 個別敏感端點若需「最近驗證過 TOTP」雙重保險，自行檢查 aal（例如 totp-backup-codes）。
  *
  * @param {Object} env
  * @param {string|null} userId - getUserIdFromRequest 拿到的 userId
- * @param {'aal1'|'aal2'} aal - getUserIdFromRequest 拿到的 aal
  * @returns {Promise<{ allowed: boolean, reason: string|null, trustLevel: string }>}
- *   reason: 'unauthenticated' | 'banned' | 'aal2_required' | 'forbidden' | null
- *   - allowed=true：trust_level 為 admin/moderator 且 aal2 通過
- *   - allowed=false：拒絕。'aal2_required' 表示權限對但需要再過 2FA；其他拒絕原因 frontend 直接擋
+ *   reason: 'unauthenticated' | 'banned' | 'forbidden' | null
  */
-export async function requireAal2ForAdmin(env, userId, aal) {
+export async function requireAdminTrust(env, userId) {
     if (!userId) return { allowed: false, reason: 'unauthenticated', trustLevel: 'new' };
     const trustLevel = await getTrustLevel(env, userId);
     if (trustLevel === 'banned') return { allowed: false, reason: 'banned', trustLevel };
     if (trustLevel !== 'admin' && trustLevel !== 'moderator') {
         return { allowed: false, reason: 'forbidden', trustLevel };
     }
-    if (aal !== 'aal2') return { allowed: false, reason: 'aal2_required', trustLevel };
     return { allowed: true, reason: null, trustLevel };
 }
 

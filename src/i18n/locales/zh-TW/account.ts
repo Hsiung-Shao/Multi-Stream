@@ -58,11 +58,11 @@ const account = {
     'unlink.confirm': '解除',
 
     'mfa.title': '兩步驟驗證 (2FA)',
-    'mfa.description': '啟用後登入需額外輸入 6 位數驗證碼。Admin / Moderator 帳號強制需要。',
+    'mfa.description': '啟用後登入需額外輸入 6 位數驗證碼，提升帳號安全。',
     'mfa.statusOff': '尚未啟用',
     'mfa.statusOn': '已啟用',
     'mfa.enrolledAt': '啟用時間',
-    'mfa.adminRequired': '⚠️ 你的帳號等級為 {{level}}，需啟用 2FA 才能執行管理操作',
+    'mfa.recommendation': '建議啟用以提升帳號安全（選用功能）',
     'mfa.enroll.button': '啟用 2FA',
     'mfa.enroll.scanQr': '使用驗證器 App（Google Authenticator / Authy / 1Password 等）掃描 QR Code',
     'mfa.enroll.manualSecret': '或手動輸入金鑰',

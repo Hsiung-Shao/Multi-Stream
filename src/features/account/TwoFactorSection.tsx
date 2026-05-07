@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/button';
-import { Loader2, Shield, ShieldCheck, KeyRound, AlertTriangle } from 'lucide-react';
+import { Loader2, Shield, ShieldCheck, KeyRound } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import {
     fetchTotpStatus,
@@ -27,7 +27,7 @@ type PendingAction = 'regenerate' | 'unenroll' | null;
  */
 export function TwoFactorSection() {
     const { t } = useTranslation('account');
-    const { isLoggedIn, profile } = useAuthContext();
+    const { isLoggedIn } = useAuthContext();
     const [status, setStatus] = useState<TotpStatusResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -190,10 +190,10 @@ export function TwoFactorSection() {
                 </div>
             )}
 
-            {!loading && status && !status.enrolled && status.requiredByTrustLevel && (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-500 flex items-start gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                    <span>{t('mfa.adminRequired', '⚠️ 帳號等級需 2FA', { level: status.trustLevel })}</span>
+            {!loading && status && !status.enrolled && (
+                <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2 text-xs text-emerald-500/90 flex items-start gap-1">
+                    <Shield className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <span>{t('mfa.recommendation', '建議啟用以提升帳號安全（選用功能）')}</span>
                 </div>
             )}
 
@@ -256,11 +256,8 @@ export function TwoFactorSection() {
                             variant="outline"
                             size="sm"
                             onClick={handleUnenroll}
-                            disabled={busy || !!profile && (profile.trust_level === 'admin' || profile.trust_level === 'moderator')}
+                            disabled={busy}
                             className="gap-2 text-destructive hover:text-destructive"
-                            title={profile && (profile.trust_level === 'admin' || profile.trust_level === 'moderator')
-                                ? t('mfa.adminRequired', '帳號等級需 2FA', { level: profile.trust_level })
-                                : undefined}
                         >
                             {t('mfa.unenroll.button', '停用 2FA')}
                         </Button>

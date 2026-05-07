@@ -72,13 +72,13 @@ Shadcn UI
 
 ### [*] 28. PR 6 收藏跨裝置同步（cloudSync.ts + 衝突 dialog + onSignIn 觸發 + AccountSettings 入口）
 
-### [*] 29. PR 7 2FA TOTP（enroll/challenge/verify + backup codes + admin/moderator 強制）
-- DB：`user_mfa_secrets` table（service_role only RLS，hash 不外洩）— 待手動 apply migration
+### [*] 29. PR 7 2FA TOTP（純 opt-in 安全增強，admin 不強制）
+- DB：`user_mfa_secrets` table（service_role only RLS，hash 不外洩）— migration 已 apply
 - Frontend：TwoFactorSection / TotpEnrollDialog / TotpChallengeDialog / BackupCodesDialog
 - Backend：totp-status / totp-backup-codes (aal2 required) / totp-recover (rate limit 5/day)
 - Lib：`functions/lib/backup-codes.js`（SHA-256 + 排除易混淆字符 0/O/1/I/L）
-- 強制：`requireAal2ForAdmin` 已套到 review-contribution / review-event / check-permission
-- AdminPage 新增 `aal2_required` 狀態，引導 user 到帳號設定啟用 2FA
+- Admin gate：`requireAdminTrust` 只檢查 trust_level（不強制 aal2）— 2FA 全 opt-in
+- 備援碼產生仍保留 aal2 要求（敏感操作雙重保險）
 
 ### [] 30. PR 8 紅隊資安測試（雲端，OWASP 15 vector + 修補）
 

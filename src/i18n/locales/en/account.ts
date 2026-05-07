@@ -58,11 +58,11 @@ const account = {
     'unlink.confirm': 'Unlink',
 
     'mfa.title': 'Two-factor authentication (2FA)',
-    'mfa.description': 'Once enabled, sign-in requires an extra 6-digit code. Required for admin / moderator accounts.',
+    'mfa.description': 'Once enabled, sign-in requires an extra 6-digit code for added security.',
     'mfa.statusOff': 'Disabled',
     'mfa.statusOn': 'Enabled',
     'mfa.enrolledAt': 'Enrolled at',
-    'mfa.adminRequired': '⚠️ Your account level is {{level}} — 2FA is required for admin actions',
+    'mfa.recommendation': 'Recommended for stronger account security (optional)',
     'mfa.enroll.button': 'Enable 2FA',
     'mfa.enroll.scanQr': 'Scan with an authenticator app (Google Authenticator / Authy / 1Password, etc.)',
     'mfa.enroll.manualSecret': 'Or enter secret manually',
