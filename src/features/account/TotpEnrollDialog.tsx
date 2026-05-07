@@ -109,31 +109,6 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled: _onEnrolled }: Pro
         }
     };
 
-    // verify timeout 後查 server 端是否其實已成功（observed in production：
-    // supabase mfa.verify 偶爾 client promise 不 resolve，但 DB 端 factor 已 verified）
-    // 內部所有 await 都包 timeout — 整個 check 最多花 ~5s
-    async function checkFactorVerified(factorId: string): Promise<boolean> {
-        try {
-            const supabase = await getSupabase();
-            if (!supabase) return false;
-            try {
-                await withTimeout(supabase.auth.refreshSession(), 2500, 'refreshSession');
-            } catch { /* ignore */ }
-            const factors = await withTimeout(
-                supabase.auth.mfa.listFactors(),
-                2500,
-                'listFactors',
-            ).catch(() => null);
-            if (!factors) return false;
-            const all = (factors as { data?: { all?: Array<{ id: string; factor_type: string; status: string }> } })?.data?.all
-                ?? (factors as { all?: Array<{ id: string; factor_type: string; status: string }> })?.all
-                ?? [];
-            return all.some(f => f.id === factorId && f.factor_type === 'totp' && f.status === 'verified');
-        } catch {
-            return false;
-        }
-    }
-
     const handleVerify = async () => {
         if (!data || otp.length !== 6) return;
         setPhase('submitting');
@@ -183,20 +158,15 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled: _onEnrolled }: Pro
         } catch (e) {
             const msg = e instanceof Error ? e.message : '';
 
-            // timeout：先無條件設 flag（保險：即使 checkFactorVerified 自己 timeout/失敗，
-            // server 端可能仍 verified — useEffect 會檢查 status.enrolled 才消耗 flag，
-            // 所以 server 沒成功時不會誤產 codes）
+            // timeout：mfa.verify 的 fetch 通常已 200（server 端 verified），只是 supabase-js
+            // 內部 _saveSession 卡在 mutex。checkFactorVerified 也用 supabase.auth.* 同樣會
+            // 被卡，無法可靠判斷。直接信任 server 端已成功，設 flag + 關 dialog；外層 reload
+            // 後 useEffect 會驗證 status.enrolled 並補拿備援碼（server 真的沒 verified 時 flag
+            // 不會被消耗，下次再進來自然 ignore）。
             if (/timeout/i.test(msg)) {
                 try { sessionStorage.setItem('mfa_pending_backup_codes', 'pending'); } catch { /* ignore */ }
-                await new Promise(r => setTimeout(r, 1500));
-                if (await checkFactorVerified(factorId)) {
-                    reset();
-                    onClose();
-                    return;
-                }
-                setOtp('');
-                setError(t('mfa.enroll.error.timeout', '網路逾時，請重新整理頁面確認 2FA 狀態'));
-                setPhase('verify');
+                reset();
+                onClose();
                 return;
             }
 

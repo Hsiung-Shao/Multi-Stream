@@ -13,7 +13,7 @@ import { TotpEnrollDialog } from './TotpEnrollDialog';
 import { TotpChallengeDialog } from './TotpChallengeDialog';
 import { BackupCodesDialog } from './BackupCodesDialog';
 import { ConfirmDialog } from './ConfirmDialog';
-import { getSupabase, manualRefreshSession } from '../../lib/supabase';
+import { manualRefreshSession } from '../../lib/supabase';
 
 type PendingAction = 'regenerate' | 'unenroll' | null;
 type ConfirmKind = 'regenerate' | 'unenroll' | null;
@@ -68,12 +68,12 @@ export function TwoFactorSection() {
 
     // 自動補拿備援碼：enroll 流程（不論 happy path 或 timeout path）統一設
     // sessionStorage flag。status reload 後 enrolled=true + 0 codes + flag=pending
-    // → 此 effect 觸發 refreshSession + generateBackupCodes。也支援 user 重整後重進。
+    // → 此 effect 觸發補拿備援碼。也支援 user 重整後重進。
     //
-    // 為何 3 次 backoff：mfa.verify 後 supabase-js 內部 _saveSession 與 token cache 同步
-    // 在 Cloudflare Access / 慢網路下需數秒。1 次 retry 不夠，3 次（0/2s/5s）涵蓋大多數
-    // 觀察到的情境。每次嘗試前都主動 refreshSession 強制拉新 access_token。
+    // 用 manualRefreshSession + raw fetch 完全繞過 supabase-js（mfa.verify 後 mutex
+    // 可能卡死，supabase.auth.* 與 apiClient.generateBackupCodes 都會卡）。
     //
+    // 3 次 backoff (0/2s/5s) 涵蓋大多數 token 同步延遲場景；
     // flag 在 effect 進入後立刻消耗（idempotent）— 失敗才 setError 提示手動重新產生。
     useEffect(() => {
         if (!status?.enrolled) return;
@@ -86,7 +86,6 @@ export function TwoFactorSection() {
 
         let cancelled = false;
         (async () => {
-            const supabase = await getSupabase();
             const backoffMs = [0, 2000, 5000];
             let lastWasAal2Issue = false;
 
@@ -95,34 +94,55 @@ export function TwoFactorSection() {
                 if (wait > 0) await new Promise(r => setTimeout(r, wait));
                 if (cancelled) return;
 
-                // 每次 attempt 都主動 refreshSession 強拉新 aal2 token
-                if (supabase) {
-                    await Promise.race([
-                        supabase.auth.refreshSession(),
-                        new Promise(r => setTimeout(r, 3000)),
-                    ]).catch(() => undefined);
-                }
+                // 用 raw fetch refresh_token grant 拿新 aal2 token（繞過 supabase-js mutex）
+                const refreshed = await manualRefreshSession();
                 if (cancelled) return;
+                if (!refreshed?.access_token) {
+                    setError('登入狀態異常，請點下方「重新產生備援碼」手動產生');
+                    return;
+                }
 
                 try {
-                    const res = await generateBackupCodes();
-                    if (res.success) {
-                        setBackupCodes(res.codes);
-                        setBackupCodesOpen(true);
-                        setError('');
-                        await reload();
+                    const res = await fetch('/api/account/totp-backup-codes', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${refreshed.access_token}`,
+                        },
+                        body: '{}',
+                    });
+                    if (cancelled) return;
+
+                    if (res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        if (data?.success && Array.isArray(data?.codes)) {
+                            setBackupCodes(data.codes);
+                            setBackupCodesOpen(true);
+                            setError('');
+                            // 用同一 aal2 token 確認最新 status（避開卡 mutex 的 apiClient）
+                            try {
+                                const statusRes = await fetch('/api/account/totp-status', {
+                                    headers: { 'Authorization': `Bearer ${refreshed.access_token}` },
+                                });
+                                if (statusRes.ok) {
+                                    const statusData = await statusRes.json();
+                                    setStatus(statusData);
+                                }
+                            } catch { /* ignore */ }
+                            return;
+                        }
+                        setError('備援碼自動產生失敗，請點下方「重新產生備援碼」手動產生');
                         return;
                     }
-                    // success=false 但無 throw — 視為非 aal2 類錯誤，直接放棄
-                    setError('備援碼自動產生失敗，請點下方「重新產生備援碼」手動產生');
-                    return;
-                } catch (e) {
-                    if (e instanceof ApiError && e.status === 403) {
-                        // aal2 還沒同步 — 進下一輪 backoff
+                    if (res.status === 403) {
+                        // aal2 還沒同步 → 進下一輪 backoff（gotrue 內部 token 升級延遲）
                         lastWasAal2Issue = true;
                         continue;
                     }
-                    // 非 403 錯誤（5xx/network）— 直接放棄，不再 retry
+                    // 其他 status → 直接放棄
+                    setError('備援碼自動產生失敗，請點下方「重新產生備援碼」手動產生');
+                    return;
+                } catch {
                     setError('備援碼自動產生失敗，請點下方「重新產生備援碼」手動產生');
                     return;
                 }
@@ -135,7 +155,7 @@ export function TwoFactorSection() {
         })();
 
         return () => { cancelled = true; };
-    }, [status, reload]);
+    }, [status]);
 
     const isAal2 = status?.currentAal === 'aal2';
 
