@@ -48,6 +48,18 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
         try {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
+
+            // 先清掉之前 enroll 但沒 verify 的 totp factor（避免 Supabase
+            // 「friendly name already exists」422 — user 開過 dialog 又關掉時會殘留）
+            try {
+                const { data: factors } = await supabase.auth.mfa.listFactors();
+                const all = (factors as { all?: Array<{ id: string; factor_type: string; status: string }> })?.all ?? [];
+                const stale = all.filter(f => f.factor_type === 'totp' && f.status !== 'verified');
+                for (const f of stale) {
+                    await supabase.auth.mfa.unenroll({ factorId: f.id });
+                }
+            } catch { /* listFactors 失敗不致命，繼續嘗試 enroll */ }
+
             const res = await supabase.auth.mfa.enroll({ factorType: 'totp' });
             if (res.error || !res.data) {
                 throw new Error(res.error?.message || 'enroll failed');
@@ -61,6 +73,20 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
         } catch (e) {
             setError(e instanceof Error ? e.message : t('mfa.enroll.error.generic', '啟用失敗'));
             setPhase('init');
+        }
+    };
+
+    // 取消 / 關 dialog 時，把剛 enroll 但還沒 verify 的 factor 清掉。
+    // 否則下次再開 dialog 又會撞到 422 friendly-name conflict。
+    const cleanupAndClose = async () => {
+        const factorId = data?.factorId;
+        reset();
+        onClose();
+        if (factorId) {
+            try {
+                const supabase = await getSupabase();
+                await supabase?.auth.mfa.unenroll({ factorId });
+            } catch { /* best-effort */ }
         }
     };
 
@@ -109,7 +135,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
     const busy = phase === 'enrolling' || phase === 'submitting';
 
     return (
-        <Dialog open={open} onOpenChange={(v) => { if (!v && !busy) { reset(); onClose(); } }}>
+        <Dialog open={open} onOpenChange={(v) => { if (!v && !busy) cleanupAndClose(); }}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle>{t('mfa.title', '兩步驟驗證 (2FA)')}</DialogTitle>
@@ -173,7 +199,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
                 )}
 
                 <DialogFooter className="gap-2">
-                    <Button variant="outline" onClick={() => { reset(); onClose(); }} disabled={busy}>
+                    <Button variant="outline" onClick={cleanupAndClose} disabled={busy}>
                         {t('mfa.enroll.cancel', '取消')}
                     </Button>
                     {phase === 'init' && (
