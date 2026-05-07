@@ -77,8 +77,12 @@ export function TwoFactorSection() {
                 setBackupCodesOpen(true);
             }
         } catch (e) {
-            // 備援碼產生失敗不致命 — TOTP 已啟用，user 之後可在頁面再產一次
-            setError(e instanceof Error ? e.message : 'backup_codes_failed');
+            // 備援碼產生失敗不致命 — TOTP 已啟用、user 之後可手動「重新產生備援碼」
+            // 給明確指引取代 raw error key
+            const isAal2Issue = e instanceof ApiError && e.status === 403;
+            setError(isAal2Issue
+                ? '2FA 已啟用，但備援碼產生失敗（session 同步問題）。請點下方「重新產生備援碼」。'
+                : '2FA 已啟用，但備援碼產生失敗，請點下方「重新產生備援碼」。');
         }
         setEnrollOpen(false);
         await reload();

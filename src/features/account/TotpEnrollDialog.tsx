@@ -104,13 +104,23 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
 
     // verify timeout 後查 server 端是否其實已成功（observed in production：
     // supabase mfa.verify 偶爾 client promise 不 resolve，但 DB 端 factor 已 verified）
+    // 內部所有 await 都包 timeout — 整個 check 最多花 ~5s
     async function checkFactorVerified(factorId: string): Promise<boolean> {
         try {
             const supabase = await getSupabase();
             if (!supabase) return false;
-            try { await supabase.auth.refreshSession(); } catch { /* ignore */ }
-            const { data: factors } = await supabase.auth.mfa.listFactors();
-            const all = (factors as { all?: Array<{ id: string; factor_type: string; status: string }> })?.all ?? [];
+            try {
+                await withTimeout(supabase.auth.refreshSession(), 2500, 'refreshSession');
+            } catch { /* ignore */ }
+            const factors = await withTimeout(
+                supabase.auth.mfa.listFactors(),
+                2500,
+                'listFactors',
+            ).catch(() => null);
+            if (!factors) return false;
+            const all = (factors as { data?: { all?: Array<{ id: string; factor_type: string; status: string }> } })?.data?.all
+                ?? (factors as { all?: Array<{ id: string; factor_type: string; status: string }> })?.all
+                ?? [];
             return all.some(f => f.id === factorId && f.factor_type === 'totp' && f.status === 'verified');
         } catch {
             return false;
@@ -126,9 +136,10 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
 
+            // 縮短 timeout：mfa 操作通常 1-3s，10s 足夠；超時 fall through 到 server check
             const challengeRes = await withTimeout(
                 supabase.auth.mfa.challenge({ factorId }),
-                15000,
+                10000,
                 'challenge',
             );
             if (challengeRes.error || !challengeRes.data) {
@@ -140,7 +151,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
                     challengeId: challengeRes.data.id,
                     code: otp,
                 }),
-                15000,
+                10000,
                 'verify',
             );
             if (verifyRes.error) {
@@ -248,6 +259,13 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
                                 </InputOTP>
                             </div>
                         </div>
+
+                        {phase === 'submitting' && (
+                            <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2 text-xs text-blue-400 flex items-center gap-2">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                <span>驗證中⋯如超過 15 秒請重新整理頁面確認狀態</span>
+                            </div>
+                        )}
 
                         {error && (
                             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">

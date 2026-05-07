@@ -66,11 +66,18 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
     }, [open]);
 
     // 透過 supabase.auth.getSession() 讀 aal — verify 成功後 client session 應該升 aal2
+    // getSession 是同步讀 cache，但有些版本實作為 async；包 timeout 防 hang
     async function isAal2Now(): Promise<boolean> {
         try {
             const supabase = await getSupabase();
-            const { data } = (await supabase!.auth.getSession()) as { data: { session: { access_token?: string } | null } };
-            const token = data?.session?.access_token;
+            if (!supabase) return false;
+            try { await withTimeout(supabase.auth.refreshSession(), 2500, 'refreshSession'); } catch { /* ignore */ }
+            const sessionResult = await withTimeout(
+                supabase.auth.getSession() as Promise<{ data: { session: { access_token?: string } | null } }>,
+                2500,
+                'getSession',
+            ).catch(() => null);
+            const token = sessionResult?.data?.session?.access_token;
             if (!token) return false;
             const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
             return payload?.aal === 'aal2';
@@ -88,7 +95,7 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
             if (!supabase) throw new Error('Supabase not available');
             const ch = await withTimeout(
                 supabase.auth.mfa.challenge({ factorId }),
-                15000,
+                10000,
                 'challenge',
             );
             if (ch.error || !ch.data) throw new Error(ch.error?.message || 'challenge failed');
@@ -98,7 +105,7 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
                     challengeId: ch.data.id,
                     code: otp,
                 }),
-                15000,
+                10000,
                 'verify',
             );
             if (v.error) {
@@ -159,6 +166,12 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
                                 </InputOTPGroup>
                             </InputOTP>
                         </div>
+                        {submitting && (
+                            <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2 text-xs text-blue-400 flex items-center gap-2">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                <span>驗證中⋯如超過 15 秒請重新整理頁面</span>
+                            </div>
+                        )}
                         {error && (
                             <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
                                 {error}
