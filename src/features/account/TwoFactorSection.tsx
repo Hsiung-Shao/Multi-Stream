@@ -6,7 +6,6 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import {
     fetchTotpStatus,
     generateBackupCodes,
-    submitTotpUnenroll,
     ApiError,
     type TotpStatusResponse,
 } from './apiClient';
@@ -14,20 +13,10 @@ import { TotpEnrollDialog } from './TotpEnrollDialog';
 import { TotpChallengeDialog } from './TotpChallengeDialog';
 import { BackupCodesDialog } from './BackupCodesDialog';
 import { ConfirmDialog } from './ConfirmDialog';
-import { getSupabase } from '../../lib/supabase';
+import { getSupabase, manualRefreshSession } from '../../lib/supabase';
 
 type PendingAction = 'regenerate' | 'unenroll' | null;
 type ConfirmKind = 'regenerate' | 'unenroll' | null;
-
-// 給 supabase mfa SDK 加 timeout — 避免 client promise 不返回造成 spinner 死循環
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-    return Promise.race([
-        p,
-        new Promise<T>((_, reject) =>
-            setTimeout(() => reject(new Error(`${label} timeout`)), ms),
-        ),
-    ]);
-}
 
 /**
  * 2FA 設定區（PR 7）
@@ -191,115 +180,66 @@ export function TwoFactorSection() {
     // unenroll 用 aal1 token 被 gotrue 拒絕。此時 client SDK 路徑會默默失敗，server
     // fallback 是「停用按鈕本身可靠」的保證。
     const performUnenroll = async () => {
-        console.log('[2FA] performUnenroll START');
         setBusy(true);
         // 防呆：若先前 enroll timeout 留下 mfa_pending_backup_codes flag 還沒被消耗，
         // 此時 user 直接按停用 → unenroll 失敗時 useEffect 會誤觸發補拿備援碼。
-        // 進入 unenroll 流程前先清掉 flag，避免雙 dialog 衝突。
         try { sessionStorage.removeItem('mfa_pending_backup_codes'); } catch { /* ignore */ }
 
-        // 主動 refreshSession backoff：ChallengeDialog timeout 後 client token cache 可能
-        // 還沒升 aal2（supabase-js 內部 _saveSession 仍在處理）。在進入 unenroll 之前先
-        // 強制 refresh 拉新 access_token（gotrue 看到 user 已 verified TOTP → 回 aal2 token）。
-        // 兩次 backoff 0/2s，每次給 refresh 5s 完成；總計 ≤7s。
+        // 設計：完全繞過 supabase-js client SDK
+        //
+        // 觀察：mfa.verify 在 Cloudflare Access 環境下偶爾 hang 在 supabase-js 內部
+        // _saveSession（fetch 200 OK 但 promise 不 resolve）→ auth lock/mutex 不釋放
+        // → 後續所有 supabase.auth.* 操作（refreshSession/listFactors/unenroll/getSession）
+        // 都被卡住。listFactors+mfa.unenroll 與 getAuthHeader (apiClient) 都會 hang。
+        //
+        // 對策：用 manualRefreshSession（raw fetch /auth/v1/token grant_type=refresh_token）
+        // 直接拿新 aal2 access_token，再用此 token 直接 fetch 打 /api/account/totp-unenroll
+        // server endpoint。完全不依賴 supabase-js auth 的 internal mutex。
         try {
-            const sb = await getSupabase();
-            if (sb) {
-                for (const wait of [0, 2000]) {
-                    if (wait > 0) await new Promise(r => setTimeout(r, wait));
-                    await Promise.race([
-                        sb.auth.refreshSession(),
-                        new Promise(r => setTimeout(r, 5000)),
-                    ]).catch(() => undefined);
-                    // 檢查是否已 aal2，若是則提前跳出（不必跑滿）
-                    try {
-                        const { data } = await sb.auth.getSession();
-                        const token = data?.session?.access_token;
-                        if (token) {
-                            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-                            if (payload?.aal === 'aal2') break;
-                        }
-                    } catch { /* ignore */ }
-                }
+            // Step 1：手動 refresh 拿新的 aal2 token（gotrue 看到 user 已 verified TOTP，
+            // refresh_token grant 會回新的 aal2 access_token）
+            const refreshed = await manualRefreshSession();
+            if (!refreshed?.access_token) {
+                setError('登入狀態異常，請重新登入後再試');
+                return;
             }
-        } catch { /* ignore — 後續 step 2/3 會自己處理失敗 */ }
 
-        try {
-            // Step 1：嘗試 client SDK 路徑
+            // Step 2：用 aal2 token 直接 fetch 打 server endpoint
+            const res = await fetch('/api/account/totp-unenroll', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${refreshed.access_token}`,
+                },
+                body: '{}',
+            });
+            if (!res.ok) {
+                if (res.status === 403) setError('驗證未升級至 aal2，請重新登入後再試');
+                else if (res.status === 401) setError('登入已逾期，請重新登入');
+                else setError(t('mfa.unenroll.error', '停用失敗，請重新整理頁面後再試'));
+                return;
+            }
+
+            // Step 3：用同一個 aal2 token 確認 server 真實狀態
+            // （避開 apiClient.fetchTotpStatus，該 path 也透過 supabase-js getSession，
+            // 可能受 mutex 影響）
             try {
-                const supabase = await getSupabase();
-                if (supabase) {
-                    const factorsResult = await withTimeout(
-                        supabase.auth.mfa.listFactors(),
-                        5000,
-                        'listFactors',
-                    ).catch(() => null);
-                    const factorsData = factorsResult?.data;
-                    if (factorsData) {
-                        // 同時從 totp 與 all 收集 totp factor 並去重
-                        // （listFactors 結構：totp 是專屬陣列、all 含所有類型）
-                        const seen = new Set<string>();
-                        const targetIds: string[] = [];
-                        for (const f of (factorsData.totp ?? [])) {
-                            if (!seen.has(f.id)) { seen.add(f.id); targetIds.push(f.id); }
-                        }
-                        for (const f of (factorsData.all ?? [])) {
-                            if (f.factor_type !== 'totp') continue;
-                            if (!seen.has(f.id)) { seen.add(f.id); targetIds.push(f.id); }
-                        }
-                        for (const factorId of targetIds) {
-                            await withTimeout(
-                                supabase.auth.mfa.unenroll({ factorId }),
-                                5000,
-                                'unenroll',
-                            ).catch(() => undefined);
-                        }
+                const statusRes = await fetch('/api/account/totp-status', {
+                    headers: { 'Authorization': `Bearer ${refreshed.access_token}` },
+                });
+                if (statusRes.ok) {
+                    const data = await statusRes.json();
+                    setStatus(data);
+                    if (!data.enrolled) {
+                        setError('');
+                        return;
                     }
                 }
-            } catch { /* client SDK 任何錯誤都進 server fallback */ }
-
-            // Step 2：查 server 真實狀態
-            let stillEnrolled = true;
-            try {
-                const updated = await fetchTotpStatus();
-                setStatus(updated);
-                stillEnrolled = updated.enrolled;
-            } catch {
-                // 查不到狀態 → 假設仍 enrolled，走 fallback 試試
-                stillEnrolled = true;
-            }
-
-            if (!stillEnrolled) {
-                setError('');
-                return;
-            }
-
-            // Step 3：server-side fallback（service_role 直接 RPC 刪 factor）
-            try {
-                await submitTotpUnenroll();
-            } catch (e) {
-                if (e instanceof ApiError && e.status === 403) {
-                    setError('驗證未升級至 aal2，請重新登入後再試');
-                } else if (e instanceof ApiError && e.status === 401) {
-                    setError('登入已逾期，請重新登入');
-                } else {
-                    setError(e instanceof Error ? e.message : t('mfa.unenroll.error', '停用失敗'));
-                }
-                return;
-            }
-
-            // Step 4：再查一次確認 server 已停用
-            try {
-                const recheck = await fetchTotpStatus();
-                setStatus(recheck);
-                if (!recheck.enrolled) {
-                    setError('');
-                    return;
-                }
-                setError(t('mfa.unenroll.error', '停用失敗，請重新整理頁面後再試'));
-            } catch {
-                setError(t('mfa.unenroll.error', '停用失敗，請重新整理頁面後再試'));
-            }
+            } catch { /* status 查不到不致命 */ }
+            // server endpoint 已回 200 視為成功（即使後續 status 查不到）
+            setError('');
+        } catch (e) {
+            setError(e instanceof Error ? e.message : t('mfa.unenroll.error', '停用失敗'));
         } finally {
             setBusy(false);
         }
@@ -334,16 +274,12 @@ export function TwoFactorSection() {
     // 不重複 confirm — 走過 challenge dialog = 已確認意圖。
     const handleChallengeSuccess = async () => {
         const what = pending;
-        console.log('[2FA] handleChallengeSuccess called, pending=', what);
         setPending(null);
         if (what === 'regenerate') {
             await performRegenerate();
         } else if (what === 'unenroll') {
-            console.log('[2FA] dispatching to performUnenroll');
             await performUnenroll();
-            console.log('[2FA] performUnenroll returned');
         } else {
-            console.warn('[2FA] handleChallengeSuccess fallback to reload, unexpected pending=', what);
             await reload();
         }
     };
