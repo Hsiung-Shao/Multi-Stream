@@ -12,9 +12,11 @@ import {
 import { TotpEnrollDialog } from './TotpEnrollDialog';
 import { TotpChallengeDialog } from './TotpChallengeDialog';
 import { BackupCodesDialog } from './BackupCodesDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import { getSupabase } from '../../lib/supabase';
 
 type PendingAction = 'regenerate' | 'unenroll' | null;
+type ConfirmKind = 'regenerate' | 'unenroll' | null;
 
 /**
  * 2FA 設定區（PR 7）
@@ -39,6 +41,9 @@ export function TwoFactorSection() {
 
     const [backupCodesOpen, setBackupCodesOpen] = useState(false);
     const [backupCodes, setBackupCodes] = useState<string[]>([]);
+
+    // 二次確認 dialog（取代 window.confirm）— 確認後跳實際操作流程
+    const [confirmKind, setConfirmKind] = useState<ConfirmKind>(null);
 
     const reload = useCallback(async () => {
         if (!isLoggedIn) return;
@@ -123,24 +128,29 @@ export function TwoFactorSection() {
         }
     };
 
-    // 入口：使用者點按鈕。已 aal2 直接做；否則先彈 challenge。
-    const handleRegenerate = async () => {
-        if (!isAal2) {
-            setPending('regenerate');
-            setChallengeOpen(true);
-            return;
-        }
-        await performRegenerate();
-    };
+    // 點按鈕：先彈 ConfirmDialog 取代 window.confirm；user 確認後再決定走 aal2 直接路或先 challenge。
+    const requestRegenerate = () => setConfirmKind('regenerate');
+    const requestUnenroll = () => setConfirmKind('unenroll');
 
-    const handleUnenroll = async () => {
-        if (!isAal2) {
-            setPending('unenroll');
-            setChallengeOpen(true);
-            return;
+    // ConfirmDialog 按下「確認」之後實際分流
+    const onConfirmed = async () => {
+        const kind = confirmKind;
+        setConfirmKind(null);
+        if (kind === 'regenerate') {
+            if (!isAal2) {
+                setPending('regenerate');
+                setChallengeOpen(true);
+                return;
+            }
+            await performRegenerate();
+        } else if (kind === 'unenroll') {
+            if (!isAal2) {
+                setPending('unenroll');
+                setChallengeOpen(true);
+                return;
+            }
+            await performUnenroll();
         }
-        if (!confirm(t('mfa.unenroll.confirm', '確定要停用 2FA？'))) return;
-        await performUnenroll();
     };
 
     // ChallengeDialog 成功後 — verify 已把 session 升 aal2，直接呼叫 perform*，
@@ -235,13 +245,7 @@ export function TwoFactorSection() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                    // aal2 路徑：這裡 confirm；非 aal2 路徑會走 ChallengeDialog
-                                    // 之後再 confirm（performRegenerate 不檢查）
-                                    if (isAal2 && status.backupCodesRemaining > 0
-                                        && !confirm(t('mfa.backup.regenConfirm', '舊的備援碼將立刻作廢'))) return;
-                                    handleRegenerate();
-                                }}
+                                onClick={requestRegenerate}
                                 disabled={busy}
                                 className="gap-2"
                             >
@@ -255,7 +259,7 @@ export function TwoFactorSection() {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={handleUnenroll}
+                            onClick={requestUnenroll}
                             disabled={busy}
                             className="gap-2 text-destructive hover:text-destructive"
                         >
@@ -282,6 +286,26 @@ export function TwoFactorSection() {
                     setBackupCodesOpen(false);
                     setBackupCodes([]);
                 }}
+            />
+            <ConfirmDialog
+                open={confirmKind === 'unenroll'}
+                onClose={() => setConfirmKind(null)}
+                onConfirm={onConfirmed}
+                variant="destructive"
+                title={t('mfa.unenroll.title', '停用兩步驟驗證')}
+                description={t('mfa.unenroll.confirm', '確定要停用 2FA？停用後備援碼也會作廢。')}
+                confirmLabel={t('mfa.unenroll.button', '停用 2FA')}
+            />
+            <ConfirmDialog
+                open={confirmKind === 'regenerate'}
+                onClose={() => setConfirmKind(null)}
+                onConfirm={onConfirmed}
+                title={t('mfa.backup.regenerate', '重新產生備援碼')}
+                description={(status?.backupCodesRemaining ?? 0) > 0
+                    ? t('mfa.backup.regenConfirm', '舊的備援碼將立刻作廢，確定要重新產生嗎？')
+                    : t('mfa.backup.regenFirstTime', '將為你產生 8 組新的備援碼，請妥善保存。')
+                }
+                confirmLabel={t('mfa.backup.regenerate', '重新產生備援碼')}
             />
         </section>
     );

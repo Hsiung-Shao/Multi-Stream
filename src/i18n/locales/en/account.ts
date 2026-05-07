@@ -75,6 +75,7 @@ const account = {
     'mfa.enroll.error.invalid': 'Code is wrong or expired',
     'mfa.enroll.error.generic': 'Enable failed, please try again later',
     'mfa.enroll.error.timeout': 'Network timeout — please refresh to check status (it may have succeeded server-side)',
+    'mfa.unenroll.title': 'Disable two-factor authentication',
     'mfa.unenroll.button': 'Disable 2FA',
     'mfa.unenroll.confirm': 'Disable 2FA? Backup codes will also be invalidated.',
     'mfa.unenroll.error': 'Disable failed',
@@ -86,7 +87,8 @@ const account = {
     'mfa.backup.copyAll': 'Copy all',
     'mfa.backup.download': 'Download .txt',
     'mfa.backup.done': "I've saved them",
-    'mfa.backup.regenConfirm': 'Regenerate now? The old codes will be invalidated immediately.',
+    'mfa.backup.regenConfirm': 'The old codes will be invalidated immediately. Regenerate?',
+    'mfa.backup.regenFirstTime': 'We will generate 8 new backup codes — please save them.',
 
     'deleteAccount.title': 'Delete account permanently',
     'deleteAccount.description': 'This will permanently delete your account and all data (favorites, contributions, events). This cannot be undone.',

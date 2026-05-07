@@ -16,6 +16,15 @@ interface Props {
     description?: string;
 }
 
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timeout`)), ms),
+        ),
+    ]);
+}
+
 /**
  * 已 enroll 的 user 想做 aal2-required 操作（重新產生備援碼、停用 2FA）時，
  * 用此 dialog 重新驗證 TOTP 升級 session 至 aal2。
@@ -63,23 +72,43 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
         try {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
-            const ch = await supabase.auth.mfa.challenge({ factorId });
+            const ch = await withTimeout(
+                supabase.auth.mfa.challenge({ factorId }),
+                15000,
+                'challenge',
+            );
             if (ch.error || !ch.data) throw new Error(ch.error?.message || 'challenge failed');
-            const v = await supabase.auth.mfa.verify({
-                factorId,
-                challengeId: ch.data.id,
-                code: otp,
-            });
+            const v = await withTimeout(
+                supabase.auth.mfa.verify({
+                    factorId,
+                    challengeId: ch.data.id,
+                    code: otp,
+                }),
+                15000,
+                'verify',
+            );
             if (v.error) {
                 setOtp('');
                 setError(t('mfa.enroll.error.invalid', '驗證碼錯誤或已過期'));
                 setSubmitting(false);
                 return;
             }
+            // 強制刷 session 拿到新 aal2 access_token，否則接下來 onSuccess 路徑
+            // 內 fetch /api/account/totp-backup-codes 還是會帶舊 aal1 token → 403
+            try {
+                await withTimeout(supabase.auth.refreshSession(), 5000, 'refreshSession');
+            } catch { /* refresh 失敗不致命，呼叫端 retry 仍可能成功 */ }
+
             onSuccess();
             onClose();
         } catch (e) {
-            setError(e instanceof Error ? e.message : t('mfa.enroll.error.generic', '失敗'));
+            setOtp('');
+            const msg = e instanceof Error ? e.message : '';
+            if (/timeout/i.test(msg)) {
+                setError(t('mfa.enroll.error.timeout', '網路逾時，請重新整理頁面確認 2FA 狀態'));
+            } else {
+                setError(msg || t('mfa.enroll.error.generic', '失敗'));
+            }
             setSubmitting(false);
         }
     };

@@ -75,6 +75,7 @@ const account = {
     'mfa.enroll.error.invalid': '驗證碼錯誤或已過期',
     'mfa.enroll.error.generic': '啟用失敗，請稍後再試',
     'mfa.enroll.error.timeout': '網路逾時，請重新整理頁面確認 2FA 狀態（伺服器端可能已啟用成功）',
+    'mfa.unenroll.title': '停用兩步驟驗證',
     'mfa.unenroll.button': '停用 2FA',
     'mfa.unenroll.confirm': '確定要停用 2FA？停用後備援碼也會作廢。',
     'mfa.unenroll.error': '停用失敗',
@@ -86,7 +87,8 @@ const account = {
     'mfa.backup.copyAll': '複製全部',
     'mfa.backup.download': '下載 .txt',
     'mfa.backup.done': '我已妥善保存',
-    'mfa.backup.regenConfirm': '確定要重新產生？舊的備援碼將立刻作廢。',
+    'mfa.backup.regenConfirm': '舊的備援碼將立刻作廢，確定要重新產生嗎？',
+    'mfa.backup.regenFirstTime': '將為你產生 8 組新的備援碼，請妥善保存。',
 
     'deleteAccount.title': '永久刪除帳號',
     'deleteAccount.description': '此操作會永久刪除你的帳號與所有資料（收藏、投稿、活動）。資料無法復原。',
