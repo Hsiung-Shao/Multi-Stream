@@ -14,45 +14,18 @@
 //   要走完整 TOTP 驗證 → 升 aal2 → 才能看 / 重新產生 codes。
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
+import { getUserIdFromRequest } from '../../lib/auth-helper.js';
 import { logError } from '../../lib/logger.js';
 import { generateBackupCodes, hashBackupCodes } from '../../lib/backup-codes.js';
-
-async function getVerifiedUser(request, env) {
-    const authHeader = request.headers.get('Authorization') || '';
-    if (!authHeader.startsWith('Bearer ')) return null;
-    const token = authHeader.slice(7).trim();
-    if (!token || token.split('.').length !== 3) return null;
-    if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) return null;
-
-    try {
-        const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-            },
-        });
-        if (!res.ok) return null;
-        const user = await res.json();
-        // 解 JWT payload 取 aal（不驗章 — 上面 /auth/v1/user 已驗章）
-        let aal = 'aal1';
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-            aal = payload?.aal || 'aal1';
-        } catch { /* ignore */ }
-        return { userId: user?.id, aal };
-    } catch {
-        return null;
-    }
-}
 
 export async function onRequestPost(context) {
     const { request, env } = context;
 
-    const verified = await getVerifiedUser(request, env);
-    if (!verified?.userId) {
+    const { userId, aal } = await getUserIdFromRequest(request, env);
+    if (!userId) {
         return jsonResponse({ success: false, error: 'unauthenticated' }, 401, request);
     }
-    if (verified.aal !== 'aal2') {
+    if (aal !== 'aal2') {
         return jsonResponse({ success: false, error: 'aal2_required' }, 403, request);
     }
 
@@ -75,7 +48,7 @@ export async function onRequestPost(context) {
                 'Prefer': 'resolution=merge-duplicates,return=minimal',
             },
             body: JSON.stringify({
-                user_id: verified.userId,
+                user_id: userId,
                 backup_codes_hashed: hashed,
                 enrolled_at: new Date().toISOString(),
             }),
@@ -83,7 +56,7 @@ export async function onRequestPost(context) {
         if (!res.ok) {
             const errText = await res.text().catch(() => '');
             await logError(env, 'totp-backup-codes', 'upsert failed', {
-                userId: verified.userId,
+                userId,
                 metadata: { status: res.status, error: errText.slice(0, 500) },
             });
             return jsonResponse({ success: false, error: 'failed' }, 500, request);
@@ -97,7 +70,7 @@ export async function onRequestPost(context) {
         );
     } catch (err) {
         await logError(env, 'totp-backup-codes', 'unexpected', {
-            userId: verified.userId,
+            userId,
             metadata: { error: String(err).slice(0, 500) },
         });
         return jsonResponse({ success: false, error: 'failed' }, 500, request);

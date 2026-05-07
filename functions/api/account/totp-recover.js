@@ -20,7 +20,7 @@
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
-import { select, update } from '../../lib/supabase-server.js';
+import { rpc, select, update } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
 import { consumeBackupCode } from '../../lib/backup-codes.js';
 
@@ -70,7 +70,23 @@ export async function onRequestPost(context) {
     }
 
     try {
-        // 取 hash 列表
+        // 1. 先確認 user 還有 totp factor — 沒 factor 就沒得 recover，直接拒絕
+        //    （避免孤兒備援碼被誤用：unenroll 後 backup_codes 殘留時若不檢查，
+        //     user 可消耗備援碼但其實沒任何效果）
+        const factorsResult = await rpc(env, 'get_user_totp_factors', { p_user_id: userId });
+        if (!factorsResult.ok) {
+            await logError(env, 'totp-recover', 'list factors rpc failed', {
+                userId,
+                metadata: { error: factorsResult.error?.slice(0, 500) },
+            });
+            return jsonResponse({ success: false, error: 'failed' }, 500, request);
+        }
+        const totpFactors = Array.isArray(factorsResult.data) ? factorsResult.data : [];
+        if (totpFactors.length === 0) {
+            return jsonResponse({ success: false, error: 'no_factor_to_recover' }, 404, request);
+        }
+
+        // 2. 取備援碼 hash 列表
         const secretsRes = await select(
             env,
             `user_mfa_secrets?user_id=eq.${encodeURIComponent(userId)}&select=backup_codes_hashed,recovered_count`,
@@ -83,48 +99,30 @@ export async function onRequestPost(context) {
             : [];
         const recoveredCount = parseInt(secretsRes.data[0]?.recovered_count ?? 0, 10);
 
+        // 3. 比對備援碼 — 失敗不消耗
         const { matched, remaining } = await consumeBackupCode(stored, body.code);
         if (!matched) {
             return jsonResponse({ success: false, error: 'invalid_code' }, 400, request);
         }
 
-        // 移除該 user 所有 verified TOTP factor — 用 admin API 列出再逐一刪
-        try {
-            const factorsRes = await fetch(
-                `${env.SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(userId)}/factors`,
-                {
-                    headers: {
-                        'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-                        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-                    },
-                },
-            );
-            if (factorsRes.ok) {
-                const data = await factorsRes.json();
-                const factors = Array.isArray(data?.factors) ? data.factors : (Array.isArray(data) ? data : []);
-                for (const f of factors) {
-                    if (f.factor_type !== 'totp') continue;
-                    await fetch(
-                        `${env.SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(userId)}/factors/${encodeURIComponent(f.id)}`,
-                        {
-                            method: 'DELETE',
-                            headers: {
-                                'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
-                                'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-                            },
-                        },
-                    );
-                }
-            }
-        } catch (err) {
-            await logError(env, 'totp-recover', 'remove factors failed', {
-                userId,
-                metadata: { error: String(err).slice(0, 500) },
+        // 4. 用 RPC 逐一刪 totp factor（避開不穩定的 GoTrue admin REST DELETE）
+        let deletedCount = 0;
+        for (const f of totpFactors) {
+            const delRes = await rpc(env, 'delete_user_totp_factor', {
+                p_user_id: userId,
+                p_factor_id: f.id,
             });
-            // 不 abort：備援碼已消耗（避免 replay），讓 user 知道狀態
+            if (delRes.ok && delRes.data === true) deletedCount++;
+            else {
+                await logError(env, 'totp-recover', 'delete factor rpc failed', {
+                    userId,
+                    metadata: { factor_id: f.id, error: delRes.error?.slice(0, 500) },
+                });
+            }
         }
 
-        // 更新 backup_codes_hashed + recovered stats
+        // 5. 更新 backup_codes_hashed + recovered stats（即使部分 factor 刪失敗也消耗 code，
+        //    避免 replay；user 看回傳資訊知道狀態）
         const updateRes = await update(
             env,
             'user_mfa_secrets',
@@ -144,12 +142,13 @@ export async function onRequestPost(context) {
 
         await logInfo(env, 'totp-recover', '2fa reset via backup code', {
             userId,
-            metadata: { remaining: remaining.length },
+            metadata: { remaining: remaining.length, factors_deleted: deletedCount, factors_total: totpFactors.length },
         });
 
         return jsonResponse({
             success: true,
             remaining: remaining.length,
+            factorsRemoved: deletedCount,
             message: '2FA 已重置，請重新登入並重新啟用',
         }, 200, request);
     } catch (err) {

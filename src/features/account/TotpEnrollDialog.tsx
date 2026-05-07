@@ -157,6 +157,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
             // （外層 handleEnrolled 自己有 try/catch + setError）
             void onEnrolled();
             reset();
+            onClose(); // 立刻關閉 dialog，避免短暫看到 init phase 又被誤點 → 撞 422
         } catch (e) {
             const msg = e instanceof Error ? e.message : '';
 
@@ -166,6 +167,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
                 if (await checkFactorVerified(factorId)) {
                     void onEnrolled();
                     reset();
+                    onClose();
                     return;
                 }
                 setOtp('');
