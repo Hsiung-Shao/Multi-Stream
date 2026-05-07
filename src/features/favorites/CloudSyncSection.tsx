@@ -12,7 +12,7 @@ import { CloudSyncConflictDialog } from './CloudSyncConflictDialog';
  */
 export function CloudSyncSection() {
     const { t } = useTranslation('account');
-    const { status, error, lastSyncAt, conflict, syncNow, resolveConflict } = useCloudSync();
+    const { status, error, lastSyncAt, conflict, syncNow, resolveConflict, dismissConflict } = useCloudSync();
 
     const lastSyncDisplay = lastSyncAt
         ? new Date(lastSyncAt).toLocaleString('zh-TW', {
@@ -107,10 +107,7 @@ export function CloudSyncSection() {
                 diff={conflict?.diff ?? null}
                 submitting={status === 'pushing' || status === 'pulling'}
                 onResolve={resolveConflict}
-                onClose={() => {
-                    // 「稍後再說」— 不解決，user 下次登入會再被問
-                    // 這裡不做事，dialog 自己 unmount 即可
-                }}
+                onClose={dismissConflict}
             />
         </section>
     );

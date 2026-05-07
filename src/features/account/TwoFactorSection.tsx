@@ -18,6 +18,16 @@ import { getSupabase } from '../../lib/supabase';
 type PendingAction = 'regenerate' | 'unenroll' | null;
 type ConfirmKind = 'regenerate' | 'unenroll' | null;
 
+// 給 supabase mfa SDK 加 timeout — 避免 client promise 不返回造成 spinner 死循環
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timeout`)), ms),
+        ),
+    ]);
+}
+
 /**
  * 2FA 設定區（PR 7）
  *
@@ -111,18 +121,45 @@ export function TwoFactorSection() {
     };
 
     // 真正執行：停用 2FA。同樣不檢查 isAal2。
+    // listFactors / unenroll 各加 5s timeout 防 SDK hang；失敗後 reload 看 server 真實狀態
     const performUnenroll = async () => {
         setBusy(true);
+        let attemptedCount = 0;
+        let timeoutCount = 0;
         try {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
 
-            const { data: factors } = await supabase.auth.mfa.listFactors();
-            const targets = (factors?.totp || []).concat(
-                (factors?.all || []).filter(f => f.factor_type === 'totp' && !(factors?.totp || []).find(tf => tf.id === f.id)),
-            );
-            for (const f of targets) {
-                await supabase.auth.mfa.unenroll({ factorId: f.id });
+            const factorsResult = await withTimeout(
+                supabase.auth.mfa.listFactors(),
+                5000,
+                'listFactors',
+            ).catch(() => null);
+            const factorsData = factorsResult?.data;
+            if (factorsData) {
+                const targets = (factorsData.totp || []).concat(
+                    (factorsData.all || []).filter(f =>
+                        f.factor_type === 'totp'
+                        && !(factorsData.totp || []).find(tf => tf.id === f.id),
+                    ),
+                );
+                for (const f of targets) {
+                    attemptedCount++;
+                    try {
+                        await withTimeout(
+                            supabase.auth.mfa.unenroll({ factorId: f.id }),
+                            5000,
+                            'unenroll',
+                        );
+                    } catch {
+                        timeoutCount++;
+                        // 失敗不致命：reload 看真實狀態，user 可重試
+                    }
+                }
+            }
+            if (attemptedCount > 0 && timeoutCount === attemptedCount) {
+                // 全部 timeout — 給 user 明確訊息
+                setError('停用網路逾時，請重新整理頁面確認狀態');
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : t('mfa.unenroll.error', '停用失敗'));

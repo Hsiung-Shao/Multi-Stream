@@ -42,6 +42,8 @@ interface UseCloudSyncReturn {
     conflict: ConflictPayload | null;
     syncNow: () => Promise<void>;
     resolveConflict: (decision: ConflictResolution) => Promise<void>;
+    /** 「稍後再說」— 關閉 conflict dialog，回到 idle，不解決衝突；下次登入或 syncNow 才會再判定 */
+    dismissConflict: () => void;
 }
 
 // 既有 events（FavoritesService / TagsService 已 dispatch）
@@ -179,6 +181,12 @@ export function useCloudSync(): UseCloudSyncReturn {
         }
     }, [conflict, user, markSuccess]);
 
+    const dismissConflict = useCallback(() => {
+        setConflict(null);
+        setStatus('idle');
+        setError(null);
+    }, []);
+
     const syncNow = useCallback(async () => {
         if (!user) return;
         const supabase = await getSupabase();
@@ -252,5 +260,6 @@ export function useCloudSync(): UseCloudSyncReturn {
         conflict,
         syncNow,
         resolveConflict,
+        dismissConflict,
     };
 }

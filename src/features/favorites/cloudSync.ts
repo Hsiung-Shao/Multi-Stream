@@ -193,11 +193,11 @@ export async function replaceCloud(
     await pushToCloud(supabase, userId, local);
 }
 
-// ===== 合併演算法：item 級別 updated_at 較新者勝 =====
+// ===== 合併演算法：item 級別取聯集（同 key 以 cloud 勝） =====
 //
 // 注意：FavoriteStream / Category / Tag 在 local 沒有 updated_at 欄位（只有 addedAt / createdAt）。
-// 因此合併粒度退化為「ID 取聯集，相同 client_id 的內容以 cloud 為準」。
-// 若 local 對某個 client_id 有變更但雲端沒同步，這個演算法會**保留雲端版本**，user 變更會遺失。
+// 合併粒度退化為「ID 取聯集，相同 client_id 的內容以 cloud 為準」。
+// 若 local 對某個 client_id 有變更但雲端沒同步，這個演算法會保留雲端版本，user 變更會遺失。
 // 完整 updated_at 追蹤需要本地 schema 改造，本次先做基礎版。
 
 export function mergeByUpdatedAt(local: SnapshotLocal, cloud: SnapshotLocal): SnapshotLocal {
@@ -217,13 +217,43 @@ function mergeList<T>(local: T[], cloud: T[], keyOf: (x: T) => string): T[] {
     return Array.from(map.values());
 }
 
+// ===== 內容比較：判斷兩邊同 key 的項目「實質內容」是否相同 =====
+//
+// 重要：不能用 JSON.stringify 直接比，因為 key 順序、undefined vs null、空陣列順序
+// 等差異會造成假陽性。對每個 type 各自比較關鍵欄位。
+
+function favoriteEqual(a: FavoriteStream, b: FavoriteStream): boolean {
+    if (a.url !== b.url) return false;
+    if (a.name !== b.name) return false;
+    if (a.platform !== b.platform) return false;
+    if ((a.channelId ?? null) !== (b.channelId ?? null)) return false;
+    if ((a.videoId ?? null) !== (b.videoId ?? null)) return false;
+    if ((a.categoryId ?? null) !== (b.categoryId ?? null)) return false;
+    const at = (a.tagIds ?? []).slice().sort();
+    const bt = (b.tagIds ?? []).slice().sort();
+    if (at.length !== bt.length) return false;
+    for (let i = 0; i < at.length; i++) if (at[i] !== bt[i]) return false;
+    return true;
+}
+
+function categoryEqual(a: FavoriteCategory, b: FavoriteCategory): boolean {
+    return a.name === b.name;
+}
+
+function tagEqual(a: Tag, b: Tag): boolean {
+    return a.name === b.name && a.color === b.color && a.order === b.order;
+}
+
 // ===== Diff 統計（給 conflict dialog UI 顯示用） =====
+//
+// conflict 定義：**同 key 但內容不同**。同 key 同內容算「重複」不算衝突。
+// onlyLocal / onlyCloud 同舊定義（單邊存在）。
 
 export function diffSummary(local: SnapshotLocal, cloud: SnapshotLocal): DiffSummary {
     return {
-        favorites: diffByKey(local.favorites, cloud.favorites, (x) => x.id),
-        categories: diffByKey(local.categories, cloud.categories, (x) => x.id),
-        tags: diffByKey(local.tags, cloud.tags, (x) => x.id),
+        favorites: diffByKey(local.favorites, cloud.favorites, (x) => x.id, favoriteEqual),
+        categories: diffByKey(local.categories, cloud.categories, (x) => x.id, categoryEqual),
+        tags: diffByKey(local.tags, cloud.tags, (x) => x.id, tagEqual),
         total: {
             local: local.favorites.length + local.categories.length + local.tags.length,
             cloud: cloud.favorites.length + cloud.categories.length + cloud.tags.length,
@@ -231,18 +261,29 @@ export function diffSummary(local: SnapshotLocal, cloud: SnapshotLocal): DiffSum
     };
 }
 
-function diffByKey<T>(local: T[], cloud: T[], keyOf: (x: T) => string) {
-    const localKeys = new Set(local.map(keyOf));
-    const cloudKeys = new Set(cloud.map(keyOf));
+function diffByKey<T>(
+    local: T[],
+    cloud: T[],
+    keyOf: (x: T) => string,
+    equalFn: (a: T, b: T) => boolean,
+) {
+    const localMap = new Map<string, T>(local.map(x => [keyOf(x), x]));
+    const cloudMap = new Map<string, T>(cloud.map(x => [keyOf(x), x]));
     let onlyLocal = 0;
     let onlyCloud = 0;
     let conflict = 0;
-    for (const k of localKeys) {
-        if (cloudKeys.has(k)) conflict++;
-        else onlyLocal++;
+    for (const [k, lv] of localMap) {
+        const cv = cloudMap.get(k);
+        if (cv === undefined) {
+            onlyLocal++;
+        } else if (!equalFn(lv, cv)) {
+            // 同 key 不同內容 → 真的衝突
+            conflict++;
+        }
+        // 同 key 同內容 → 重複，不計
     }
-    for (const k of cloudKeys) {
-        if (!localKeys.has(k)) onlyCloud++;
+    for (const k of cloudMap.keys()) {
+        if (!localMap.has(k)) onlyCloud++;
     }
     return { onlyLocal, onlyCloud, conflict };
 }
