@@ -65,27 +65,6 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
         })();
     }, [open]);
 
-    // 透過 supabase.auth.getSession() 讀 aal — verify 成功後 client session 應該升 aal2
-    // getSession 是同步讀 cache，但有些版本實作為 async；包 timeout 防 hang
-    async function isAal2Now(): Promise<boolean> {
-        try {
-            const supabase = await getSupabase();
-            if (!supabase) return false;
-            try { await withTimeout(supabase.auth.refreshSession(), 2500, 'refreshSession'); } catch { /* ignore */ }
-            const sessionResult = await withTimeout(
-                supabase.auth.getSession() as Promise<{ data: { session: { access_token?: string } | null } }>,
-                2500,
-                'getSession',
-            ).catch(() => null);
-            const token = sessionResult?.data?.session?.access_token;
-            if (!token) return false;
-            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-            return payload?.aal === 'aal2';
-        } catch {
-            return false;
-        }
-    }
-
     const handleVerify = async () => {
         if (!factorId || otp.length !== 6) return;
         setSubmitting(true);
@@ -93,9 +72,11 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
         try {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
+            // timeout 拉長：在 Cloudflare Access 環境下 supabase-js mfa.verify 整個
+            // promise（含內部 _saveSession）可能 >10s 才完成，避免我們率先觸發 timeout
             const ch = await withTimeout(
                 supabase.auth.mfa.challenge({ factorId }),
-                10000,
+                15000,
                 'challenge',
             );
             if (ch.error || !ch.data) throw new Error(ch.error?.message || 'challenge failed');
@@ -105,7 +86,7 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
                     challengeId: ch.data.id,
                     code: otp,
                 }),
-                10000,
+                20000,
                 'verify',
             );
             if (v.error) {
@@ -115,25 +96,31 @@ export function TotpChallengeDialog({ open, onClose, onSuccess, title, descripti
                 return;
             }
             try {
-                await withTimeout(supabase.auth.refreshSession(), 5000, 'refreshSession');
-            } catch { /* refresh 失敗不致命 — 下面用 getSession 確認是否真的升 aal2 */ }
+                await withTimeout(supabase.auth.refreshSession(), 10000, 'refreshSession');
+            } catch { /* refresh 失敗不致命 — caller 會自己處理 token 同步 */ }
 
             onSuccess();
             onClose();
         } catch (e) {
             const msg = e instanceof Error ? e.message : '';
 
-            // timeout：verify 可能 server 端已成功（client hang）— 確認 session aal 後決定
+            // timeout：HTTP 沒在限時內完成或 supabase-js 內部 race。
+            // Verify 的 fetch 通常已經 200（server 端成功），只是 client _saveSession 慢。
+            // 不再硬性要求 isAal2Now=true 才放行 — caller (performUnenroll/performRegenerate)
+            // 自己會做 server 端真實狀態檢查 + 主動 refreshSession，token 同步問題交給它們處理。
+            // 短 best-effort（單次 refresh）讓 token cache 有機會就位後再 onSuccess。
             if (/timeout/i.test(msg)) {
-                await new Promise(r => setTimeout(r, 1500));
-                if (await isAal2Now()) {
-                    onSuccess();
-                    onClose();
-                    return;
-                }
-                setOtp('');
-                setError(t('mfa.enroll.error.timeout', '網路逾時，請重新整理頁面確認 2FA 狀態'));
-                setSubmitting(false);
+                try {
+                    const sb = await getSupabase();
+                    if (sb) {
+                        await Promise.race([
+                            sb.auth.refreshSession(),
+                            new Promise(r => setTimeout(r, 3000)),
+                        ]).catch(() => undefined);
+                    }
+                } catch { /* ignore */ }
+                onSuccess();
+                onClose();
                 return;
             }
 

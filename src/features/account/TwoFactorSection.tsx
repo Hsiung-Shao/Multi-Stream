@@ -196,6 +196,33 @@ export function TwoFactorSection() {
         // 此時 user 直接按停用 → unenroll 失敗時 useEffect 會誤觸發補拿備援碼。
         // 進入 unenroll 流程前先清掉 flag，避免雙 dialog 衝突。
         try { sessionStorage.removeItem('mfa_pending_backup_codes'); } catch { /* ignore */ }
+
+        // 主動 refreshSession backoff：ChallengeDialog timeout 後 client token cache 可能
+        // 還沒升 aal2（supabase-js 內部 _saveSession 仍在處理）。在進入 unenroll 之前先
+        // 強制 refresh 拉新 access_token（gotrue 看到 user 已 verified TOTP → 回 aal2 token）。
+        // 兩次 backoff 0/2s，每次給 refresh 5s 完成；總計 ≤7s。
+        try {
+            const sb = await getSupabase();
+            if (sb) {
+                for (const wait of [0, 2000]) {
+                    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+                    await Promise.race([
+                        sb.auth.refreshSession(),
+                        new Promise(r => setTimeout(r, 5000)),
+                    ]).catch(() => undefined);
+                    // 檢查是否已 aal2，若是則提前跳出（不必跑滿）
+                    try {
+                        const { data } = await sb.auth.getSession();
+                        const token = data?.session?.access_token;
+                        if (token) {
+                            const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+                            if (payload?.aal === 'aal2') break;
+                        }
+                    } catch { /* ignore */ }
+                }
+            }
+        } catch { /* ignore — 後續 step 2/3 會自己處理失敗 */ }
+
         try {
             // Step 1：嘗試 client SDK 路徑
             try {

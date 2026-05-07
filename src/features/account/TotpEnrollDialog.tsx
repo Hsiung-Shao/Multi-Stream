@@ -143,10 +143,12 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled: _onEnrolled }: Pro
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
 
-            // 縮短 timeout：mfa 操作通常 1-3s，10s 足夠；超時 fall through 到 server check
+            // timeout 拉長：Cloudflare Access / 慢網路下 supabase-js mfa.verify
+            // 整個 promise（含 _saveSession）可能 >10s 才完成；timeout fall through
+            // 也已交由 sessionStorage flag + useEffect 處理（不影響功能正確性）。
             const challengeRes = await withTimeout(
                 supabase.auth.mfa.challenge({ factorId }),
-                10000,
+                15000,
                 'challenge',
             );
             if (challengeRes.error || !challengeRes.data) {
@@ -158,7 +160,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled: _onEnrolled }: Pro
                     challengeId: challengeRes.data.id,
                     code: otp,
                 }),
-                10000,
+                20000,
                 'verify',
             );
             if (verifyRes.error) {
