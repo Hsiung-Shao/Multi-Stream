@@ -42,7 +42,12 @@ export function TwoFactorSection() {
 
     const reload = useCallback(async () => {
         if (!isLoggedIn) return;
-        setLoading(true);
+        // 第一次載入才顯示 spinner；之後 refresh 不要把 UI blank 成 spinner
+        // （這正是 user 看到的「section 只剩一個圓圈卡住」現象）
+        setStatus(prev => {
+            if (prev === null) setLoading(true);
+            return prev;
+        });
         setError('');
         try {
             const data = await fetchTotpStatus();
@@ -74,13 +79,8 @@ export function TwoFactorSection() {
         await reload();
     };
 
-    // 重新產生備援碼 — 必須 aal2
-    const handleRegenerate = async () => {
-        if (!isAal2) {
-            setPending('regenerate');
-            setChallengeOpen(true);
-            return;
-        }
+    // 真正執行：產備援碼。**不檢查** isAal2，呼叫端負責確保已升級。
+    const performRegenerate = async () => {
         setBusy(true);
         try {
             const res = await generateBackupCodes();
@@ -89,27 +89,20 @@ export function TwoFactorSection() {
                 setBackupCodesOpen(true);
             }
         } catch (e) {
-            if (e instanceof ApiError && e.status === 403) {
-                // session 顯示 aal2 但 server 端驗證失敗 — 強制再驗一次
-                setPending('regenerate');
-                setChallengeOpen(true);
-            } else {
-                setError(e instanceof Error ? e.message : 'failed');
-            }
+            // 仍然拒絕表示 server 端 aal 沒升級成功 — 顯示錯誤而非再彈 challenge
+            // （之前死循環的成因：失敗時又開 challenge → 又跑這 → ...）
+            const msg = e instanceof Error ? e.message : 'failed';
+            setError(e instanceof ApiError && e.status === 403
+                ? '驗證未升級至 aal2，請重新登入後重試'
+                : msg);
         } finally {
             setBusy(false);
             await reload();
         }
     };
 
-    // 停用 2FA — 必須 aal2，刪所有 verified TOTP factors + 清備援碼
-    const handleUnenroll = async () => {
-        if (!isAal2) {
-            setPending('unenroll');
-            setChallengeOpen(true);
-            return;
-        }
-        if (!confirm(t('mfa.unenroll.confirm', '確定要停用 2FA？'))) return;
+    // 真正執行：停用 2FA。同樣不檢查 isAal2。
+    const performUnenroll = async () => {
         setBusy(true);
         try {
             const supabase = await getSupabase();
@@ -122,10 +115,6 @@ export function TwoFactorSection() {
             for (const f of targets) {
                 await supabase.auth.mfa.unenroll({ factorId: f.id });
             }
-            // 備援碼：unenroll 後 enrolled=false，重新 enroll 時 generateBackupCodes 會
-            // upsert 覆蓋。留著的 hash 對沒有 factor 的 user 無實際安全風險（攻擊者
-            // 即使猜中 backup code，totp-recover 也只會 unenroll 不存在的 factors，
-            // 不會給 aal2 升級），故不額外打 API 清除。
         } catch (e) {
             setError(e instanceof Error ? e.message : t('mfa.unenroll.error', '停用失敗'));
         } finally {
@@ -134,11 +123,40 @@ export function TwoFactorSection() {
         }
     };
 
+    // 入口：使用者點按鈕。已 aal2 直接做；否則先彈 challenge。
+    const handleRegenerate = async () => {
+        if (!isAal2) {
+            setPending('regenerate');
+            setChallengeOpen(true);
+            return;
+        }
+        await performRegenerate();
+    };
+
+    const handleUnenroll = async () => {
+        if (!isAal2) {
+            setPending('unenroll');
+            setChallengeOpen(true);
+            return;
+        }
+        if (!confirm(t('mfa.unenroll.confirm', '確定要停用 2FA？'))) return;
+        await performUnenroll();
+    };
+
+    // ChallengeDialog 成功後 — verify 已把 session 升 aal2，直接呼叫 perform*，
+    // 不要回呼 handleRegenerate/handleUnenroll（它們檢查的 isAal2 在 closure 內仍是
+    // 舊值，會再彈 challenge dialog → 死循環）。
+    // 不重複 confirm — 走過 challenge dialog = 已確認意圖。
     const handleChallengeSuccess = async () => {
-        await reload(); // 拿新 aal2 token 後狀態
-        if (pending === 'regenerate') await handleRegenerate();
-        if (pending === 'unenroll') await handleUnenroll();
+        const what = pending;
         setPending(null);
+        if (what === 'regenerate') {
+            await performRegenerate();
+        } else if (what === 'unenroll') {
+            await performUnenroll();
+        } else {
+            await reload();
+        }
     };
 
     if (!isLoggedIn) return null;
@@ -218,7 +236,9 @@ export function TwoFactorSection() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                    if (status.backupCodesRemaining > 0
+                                    // aal2 路徑：這裡 confirm；非 aal2 路徑會走 ChallengeDialog
+                                    // 之後再 confirm（performRegenerate 不檢查）
+                                    if (isAal2 && status.backupCodesRemaining > 0
                                         && !confirm(t('mfa.backup.regenConfirm', '舊的備援碼將立刻作廢'))) return;
                                     handleRegenerate();
                                 }}

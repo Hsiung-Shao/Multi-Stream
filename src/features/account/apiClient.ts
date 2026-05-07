@@ -19,9 +19,17 @@ async function getAuthHeader(): Promise<Record<string, string>> {
     return {};
 }
 
+const REQUEST_TIMEOUT_MS = 15000;
+
+function fetchWithTimeout(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
     const auth = await getAuthHeader();
-    const res = await fetch(path, {
+    const res = await fetchWithTimeout(path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...auth },
         body: JSON.stringify(body),
@@ -61,7 +69,7 @@ export interface TotpStatusResponse {
 
 export async function fetchTotpStatus(): Promise<TotpStatusResponse> {
     const auth = await getAuthHeader();
-    const res = await fetch('/api/account/totp-status', { headers: auth });
+    const res = await fetchWithTimeout('/api/account/totp-status', { headers: auth });
     let payload: any = null;
     try { payload = await res.json(); } catch { /* non-JSON */ }
     if (!res.ok) throw new ApiError(res.status, payload);
