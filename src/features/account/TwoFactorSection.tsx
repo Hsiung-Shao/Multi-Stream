@@ -79,21 +79,52 @@ export function TwoFactorSection() {
     const isAal2 = status?.currentAal === 'aal2';
 
     // 啟用流程：enroll dialog → enrolled callback → 自動產備援碼 → 顯示
+    // verify 後 client token 不一定立刻同步到 aal2 — 給一次 retry 機會
+    // （observed in production：第一次 generateBackupCodes 用舊 aal1 token 拿到 403，
+    //  refreshSession + 等 1.5s + 重試會成功）
     const handleEnrolled = async () => {
+        const tryGenerate = async (): Promise<{ success: boolean; codes: string[] } | null> => {
+            try {
+                return await generateBackupCodes();
+            } catch (e) {
+                if (e instanceof ApiError && e.status === 403) return null; // aal2 還沒同步，retry
+                throw e;
+            }
+        };
+
+        let result: { success: boolean; codes: string[] } | null = null;
+        let lastError: unknown = null;
         try {
-            const res = await generateBackupCodes();
-            if (res.success) {
-                setBackupCodes(res.codes);
-                setBackupCodesOpen(true);
+            result = await tryGenerate();
+            if (!result) {
+                // 第一次 403 — refresh session + 等待 + retry
+                try {
+                    const supabase = await getSupabase();
+                    if (supabase) {
+                        await Promise.race([
+                            supabase.auth.refreshSession(),
+                            new Promise(r => setTimeout(r, 2000)),
+                        ]).catch(() => undefined);
+                    }
+                } catch { /* ignore */ }
+                await new Promise(r => setTimeout(r, 1500));
+                result = await tryGenerate();
             }
         } catch (e) {
-            // 備援碼產生失敗不致命 — TOTP 已啟用、user 之後可手動「重新產生備援碼」
-            // 給明確指引取代 raw error key
-            const isAal2Issue = e instanceof ApiError && e.status === 403;
-            setError(isAal2Issue
-                ? '2FA 已啟用，但備援碼產生失敗（session 同步問題）。請點下方「重新產生備援碼」。'
-                : '2FA 已啟用，但備援碼產生失敗，請點下方「重新產生備援碼」。');
+            lastError = e;
         }
+
+        if (result?.success) {
+            setBackupCodes(result.codes);
+            setBackupCodesOpen(true);
+        } else {
+            const isAal2Issue = lastError instanceof ApiError && lastError.status === 403;
+            const msg = isAal2Issue || result === null
+                ? '2FA 已啟用，但備援碼產生失敗（session 同步問題）。請點下方「重新產生備援碼」。'
+                : '2FA 已啟用，但備援碼產生失敗，請點下方「重新產生備援碼」。';
+            setError(msg);
+        }
+
         setEnrollOpen(false);
         await reload();
     };
@@ -121,11 +152,11 @@ export function TwoFactorSection() {
     };
 
     // 真正執行：停用 2FA。同樣不檢查 isAal2。
-    // listFactors / unenroll 各加 5s timeout 防 SDK hang；失敗後 reload 看 server 真實狀態
+    // listFactors / unenroll 各加 5s timeout 防 SDK hang；最後查 server 真實狀態決定 error
     const performUnenroll = async () => {
         setBusy(true);
-        let attemptedCount = 0;
-        let timeoutCount = 0;
+        let timeoutHappened = false;
+        let exceptionMsg: string | null = null;
         try {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase not available');
@@ -136,6 +167,8 @@ export function TwoFactorSection() {
                 'listFactors',
             ).catch(() => null);
             const factorsData = factorsResult?.data;
+            let attemptedCount = 0;
+            let timeoutCount = 0;
             if (factorsData) {
                 const targets = (factorsData.totp || []).concat(
                     (factorsData.all || []).filter(f =>
@@ -153,20 +186,31 @@ export function TwoFactorSection() {
                         );
                     } catch {
                         timeoutCount++;
-                        // 失敗不致命：reload 看真實狀態，user 可重試
                     }
                 }
             }
             if (attemptedCount > 0 && timeoutCount === attemptedCount) {
-                // 全部 timeout — 給 user 明確訊息
-                setError('停用網路逾時，請重新整理頁面確認狀態');
+                timeoutHappened = true;
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : t('mfa.unenroll.error', '停用失敗'));
-        } finally {
-            setBusy(false);
-            await reload();
+            exceptionMsg = e instanceof Error ? e.message : t('mfa.unenroll.error', '停用失敗');
         }
+        setBusy(false);
+
+        // 不依賴 client SDK 是否 timeout — 直接查 server 真實狀態。
+        // server 端 enrolled=false → 就算 client SDK timeout 也算成功（不顯示 error）
+        try {
+            const updated = await fetchTotpStatus();
+            setStatus(updated);
+            if (!updated.enrolled) {
+                setError('');
+                return;
+            }
+        } catch { /* fetchTotpStatus 失敗時 fall through 顯示 error */ }
+
+        // server 還是 enrolled=true 才算真失敗
+        if (exceptionMsg) setError(exceptionMsg);
+        else if (timeoutHappened) setError('停用網路逾時，請重新整理頁面確認狀態');
     };
 
     // 點按鈕：先彈 ConfirmDialog 取代 window.confirm；user 確認後再決定走 aal2 直接路或先 challenge。
@@ -185,12 +229,10 @@ export function TwoFactorSection() {
             }
             await performRegenerate();
         } else if (kind === 'unenroll') {
-            if (!isAal2) {
-                setPending('unenroll');
-                setChallengeOpen(true);
-                return;
-            }
-            await performUnenroll();
+            // 「停用 2FA」是高敏感操作 — 一律強制重新驗證 TOTP，不信任 session aal2 grace
+            // （避免「剛 enroll 完還在 aal2 視窗、攻擊者偷走電腦立刻停用」場景）
+            setPending('unenroll');
+            setChallengeOpen(true);
         }
     };
 
