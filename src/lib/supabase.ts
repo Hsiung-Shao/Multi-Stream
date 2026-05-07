@@ -38,18 +38,62 @@ export const getSupabase = (): Promise<SupabaseClient | null> => {
 };
 
 /**
- * 手動 refresh_token grant：繞過 supabase-js 內部 mutex（mfa.verify hang 時 lock 不釋放，
- * 後續所有 supabase.auth.* 操作都會被卡住）。直接用 fetch 打 gotrue refresh endpoint。
- * 回傳新的 access_token (升 aal2 後) 與 refresh_token；同時嘗試 setSession 同步寫回 client cache。
+ * 從 localStorage 直接讀 refresh_token，完全不依賴 supabase-js auth API。
+ * supabase-js v2 預設把 session 存在 `sb-{ref}-auth-token`，value 為 JSON 或
+ * base64 編碼 JSON。從 url hostname 第一段提取 ref。
+ */
+function readRefreshTokenFromStorage(): string | null {
+    if (!cachedConfig) return null;
+    try {
+        const hostname = new URL(cachedConfig.url).hostname;
+        const ref = hostname.split('.')[0];
+        const storageKey = `sb-${ref}-auth-token`;
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return null;
+
+        let parsed: unknown = null;
+        // 嘗試 base64 編碼格式（supabase-js 某些版本）
+        if (raw.startsWith('base64-')) {
+            try { parsed = JSON.parse(atob(raw.substring('base64-'.length))); } catch { /* ignore */ }
+        }
+        if (!parsed) {
+            try { parsed = JSON.parse(raw); } catch { /* ignore */ }
+        }
+        const obj = parsed as { refresh_token?: string; currentSession?: { refresh_token?: string } } | null;
+        return obj?.refresh_token ?? obj?.currentSession?.refresh_token ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * 手動 refresh_token grant：徹底繞過 supabase-js 內部 mutex（mfa.verify hang 時 lock
+ * 永遠不釋放，後續所有 supabase.auth.* 包含 getSession/refreshSession/setSession
+ * 都會卡住）。直接從 localStorage 讀 refresh_token，raw fetch 打 gotrue refresh endpoint。
+ * 回傳新的 access_token (升 aal2 後) 與 refresh_token。
  */
 export async function manualRefreshSession(): Promise<{ access_token: string; refresh_token: string } | null> {
-    const supabase = await getSupabase();
-    if (!supabase || !cachedConfig) return null;
-    let refreshToken: string | undefined;
-    try {
-        const { data } = await supabase.auth.getSession();
-        refreshToken = data?.session?.refresh_token;
-    } catch { /* ignore */ }
+    if (!cachedConfig) {
+        // ensure config is loaded
+        await getSupabase();
+        if (!cachedConfig) return null;
+    }
+
+    // 優先從 localStorage 直接讀（同步、不卡 mutex）；
+    // 若沒有再 race-timeout 嘗試 supabase.auth.getSession() 作為備援
+    let refreshToken: string | null = readRefreshTokenFromStorage();
+    if (!refreshToken) {
+        try {
+            const supabase = await getSupabase();
+            if (supabase) {
+                const result = await Promise.race([
+                    supabase.auth.getSession().then(r => r?.data?.session?.refresh_token ?? null),
+                    new Promise<null>(r => setTimeout(() => r(null), 1500)),
+                ]);
+                refreshToken = result;
+            }
+        } catch { /* ignore */ }
+    }
     if (!refreshToken) return null;
 
     try {
@@ -65,11 +109,19 @@ export async function manualRefreshSession(): Promise<{ access_token: string; re
         const data = await res.json();
         if (!data?.access_token || !data?.refresh_token) return null;
 
-        // best-effort：把新 session 同步回 supabase-js cache（可能受 mutex 影響卡住，但不阻塞主流程）
-        Promise.race([
-            supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }),
-            new Promise(r => setTimeout(r, 2000)),
-        ]).catch(() => undefined);
+        // best-effort：把新 session 同步回 supabase-js cache（可能受 mutex 影響卡住，
+        // 不阻塞主流程；fire-and-forget）
+        (async () => {
+            try {
+                const sb = await getSupabase();
+                if (sb) {
+                    await Promise.race([
+                        sb.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token }),
+                        new Promise(r => setTimeout(r, 2000)),
+                    ]);
+                }
+            } catch { /* ignore */ }
+        })();
 
         return { access_token: data.access_token, refresh_token: data.refresh_token };
     } catch {
