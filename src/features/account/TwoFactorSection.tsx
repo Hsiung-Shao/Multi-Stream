@@ -406,9 +406,29 @@ export function TwoFactorSection() {
 
             <TotpEnrollDialog
                 open={enrollOpen}
-                // dialog 任何方式關閉（成功/取消/timeout）都觸發 reload，讓 useEffect
-                // 看到最新 status.enrolled=true + sessionStorage flag → 補拿備援碼
-                onClose={() => { setEnrollOpen(false); reload(); }}
+                // dialog 任何方式關閉（成功/取消/timeout）都用 raw fetch 拉新 status：
+                // enroll 剛完成那刻 supabase.auth.getSession 可能還沒 sync 到新 aal2，
+                // apiClient.fetchTotpStatus 內部 getAuthHeader 拿到的 token 可能 stale，
+                // 導致 reload 拉到舊 enrolled=false。改用 manualRefreshSession (raw refresh)
+                // + Authorization Bearer raw fetch，繞過 supabase-js 確保拿到正確狀態。
+                onClose={async () => {
+                    setEnrollOpen(false);
+                    let updated = false;
+                    try {
+                        const refreshed = await manualRefreshSession();
+                        if (refreshed?.access_token) {
+                            const res = await fetch('/api/account/totp-status', {
+                                headers: { 'Authorization': `Bearer ${refreshed.access_token}` },
+                            });
+                            if (res.ok) {
+                                const data = await res.json();
+                                setStatus(data);
+                                updated = true;
+                            }
+                        }
+                    } catch { /* fallback */ }
+                    if (!updated) await reload();
+                }}
                 onEnrolled={handleEnrolled}
             />
             <TotpChallengeDialog
