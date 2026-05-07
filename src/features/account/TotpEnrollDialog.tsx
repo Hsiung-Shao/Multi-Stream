@@ -172,11 +172,14 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled }: Props) {
         } catch (e) {
             const msg = e instanceof Error ? e.message : '';
 
-            // timeout：去 server 端查 factor 狀態。已 verified → 視同成功
+            // timeout：去 server 端查 factor 狀態。已 verified → 設旗標讓主畫面自動補拿備援碼。
+            // 不在這裡呼 onEnrolled — client SDK 沒走完 setSession，token 仍是 aal1，
+            // 立刻產生備援碼會撞 403。改由 TwoFactorSection 偵測 status enrolled+0codes+flag
+            // 後主動 refreshSession + 嘗試（也支援 user 重整後再進來自動觸發）
             if (/timeout/i.test(msg)) {
-                await new Promise(r => setTimeout(r, 1500)); // 給 server 一點時間寫入
+                await new Promise(r => setTimeout(r, 1500));
                 if (await checkFactorVerified(factorId)) {
-                    void onEnrolled();
+                    try { sessionStorage.setItem('mfa_pending_backup_codes', 'pending'); } catch { /* ignore */ }
                     reset();
                     onClose();
                     return;

@@ -76,6 +76,50 @@ export function TwoFactorSection() {
 
     useEffect(() => { reload(); }, [reload]);
 
+    // 自動補拿備援碼：當 enroll 走 timeout 路徑（TotpEnrollDialog 會設 sessionStorage
+    // flag），主畫面 status reload 後 enrolled=true + 0 codes + flag=pending → 自動觸發
+    // refreshSession + generateBackupCodes。也支援 user 重整後進來自動觸發。
+    // 不需 useRef 防多觸發 — sessionStorage flag 用「先消耗、再執行」確保 idempotent
+    useEffect(() => {
+        if (!status?.enrolled) return;
+        if (status.backupCodesRemaining > 0) return;
+        let flag: string | null = null;
+        try { flag = sessionStorage.getItem('mfa_pending_backup_codes'); } catch { /* ignore */ }
+        if (flag !== 'pending') return;
+
+        try { sessionStorage.removeItem('mfa_pending_backup_codes'); } catch { /* ignore */ }
+
+        (async () => {
+            // 主動 refresh 拿新 aal2 token（verify timeout 後 client cache 可能還沒同步）
+            try {
+                const supabase = await getSupabase();
+                if (supabase) {
+                    await Promise.race([
+                        supabase.auth.refreshSession(),
+                        new Promise(r => setTimeout(r, 3000)),
+                    ]).catch(() => undefined);
+                }
+            } catch { /* ignore */ }
+
+            try {
+                const res = await generateBackupCodes();
+                if (res.success) {
+                    setBackupCodes(res.codes);
+                    setBackupCodesOpen(true);
+                    setError('');
+                    await reload();
+                    return;
+                }
+                setError('備援碼自動產生失敗，請點下方「重新產生備援碼」手動產生');
+            } catch (e) {
+                const isAal2Issue = e instanceof ApiError && e.status === 403;
+                setError(isAal2Issue
+                    ? '2FA session 未升級，請點下方「重新產生備援碼」手動產生'
+                    : '備援碼自動產生失敗，請點下方「重新產生備援碼」手動產生');
+            }
+        })();
+    }, [status, reload]);
+
     const isAal2 = status?.currentAal === 'aal2';
 
     // 啟用流程：enroll dialog → enrolled callback → 自動產備援碼 → 顯示
