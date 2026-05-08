@@ -21,9 +21,19 @@ export async function onRequestPost(context) {
     const { request, env } = context;
 
     // 1. 認證
-    const { userId } = await getUserIdFromRequest(request, env);
+    const { userId, aal } = await getUserIdFromRequest(request, env);
     if (!userId) {
         return jsonResponse({ success: false, error: 'unauthenticated' }, 401, request);
+    }
+
+    // 1b. 啟用 2FA 的 user 必須通過 TOTP 升 aal2 才能刪帳號
+    // 防止攻擊者偷到 aal1 token 後永久刪除帳號（不可逆操作）
+    const factorsCheck = await rpc(env, 'get_user_totp_factors', { p_user_id: userId });
+    const has2FA = factorsCheck.ok
+        && Array.isArray(factorsCheck.data)
+        && factorsCheck.data.some(f => f.status === 'verified');
+    if (has2FA && aal !== 'aal2') {
+        return jsonResponse({ success: false, error: 'aal2_required' }, 403, request);
     }
 
     // 2. Body 解析

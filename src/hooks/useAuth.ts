@@ -26,6 +26,12 @@ export interface AuthState {
   isBanned: boolean;
   /** 已連結的 OAuth identities（Twitch / Google / Discord） */
   identities: UserIdentity[];
+  /** user 啟用 2FA 但 session 仍是 aal1 — App 層應顯示強制 challenge gate */
+  mfaRequired: boolean;
+  /** 通過 TOTP 升 aal2 後呼叫，清除 mfaRequired */
+  onMfaVerified: () => void;
+  /** 重新檢查 aal level（例如手動 refreshSession 後） */
+  recheckMfa: () => Promise<void>;
   login: (provider: Provider) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -49,6 +55,40 @@ export function useAuth(): AuthState {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mfaRequired, setMfaRequired] = useState(false);
+
+  // 檢查當前 session 的 aal 等級：若 user 已 verified TOTP factor 但 session 仍 aal1，
+  // 必須強制升 aal2。用 supabase.auth.mfa.getAuthenticatorAssuranceLevel —— supabase
+  // client 已關 navigator.locks 不會卡 mutex；race timeout 防呆。
+  const checkMfaRequired = useCallback(async (): Promise<boolean> => {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) return false;
+      const result = await Promise.race([
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        new Promise<null>(r => setTimeout(() => r(null), 5000)),
+      ]);
+      if (!result) return false;
+      const { data, error } = result as Awaited<ReturnType<typeof supabase.auth.mfa.getAuthenticatorAssuranceLevel>>;
+      if (error || !data) return false;
+      return data.currentLevel === 'aal1' && data.nextLevel === 'aal2';
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const onMfaVerified = useCallback(() => {
+    setMfaRequired(false);
+    // 立刻拉 profile（aal2 升級後 RLS 放行）— 不等 onAuthStateChange，它可能 lag
+    if (user) {
+      fetchProfile(user.id).then(p => setProfile(p)).catch(() => undefined);
+    }
+  }, [user, fetchProfile]);
+
+  const recheckMfa = useCallback(async () => {
+    const required = await checkMfaRequired();
+    setMfaRequired(required);
+  }, [checkMfaRequired]);
 
   // 從 user_profiles 取得用戶個人資料
   // 錯誤 silent — UI 透過 isLoggedIn / profile === null 表達狀態
@@ -136,12 +176,19 @@ export function useAuth(): AuthState {
         setUser(currentSession.user);
         setSession(currentSession);
 
-        // 取得或建立 profile
-        let userProfile = await fetchProfile(currentSession.user.id);
-        if (!userProfile && mounted) {
-          userProfile = await createProfile(currentSession.user);
+        // 先檢查是否需要強制 mfa challenge（user 啟用 2FA 但 session aal1）
+        // 若需要 → 不嘗試 fetchProfile（aal2 RLS 會擋住，徒勞），等 user 升 aal2 後 onAuthStateChange/recheck 會補拉
+        const required = mounted ? await checkMfaRequired() : false;
+        if (mounted) setMfaRequired(required);
+
+        if (!required) {
+          // 取得或建立 profile（aal1 user 沒啟用 2FA，或 aal2 user 通過驗證）
+          let userProfile = await fetchProfile(currentSession.user.id);
+          if (!userProfile && mounted) {
+            userProfile = await createProfile(currentSession.user);
+          }
+          if (mounted) setProfile(userProfile);
         }
-        if (mounted) setProfile(userProfile);
       }
 
       setIsLoading(false);
@@ -155,13 +202,20 @@ export function useAuth(): AuthState {
           setUser(newSession?.user ?? null);
 
           if (newSession?.user) {
-            let userProfile = await fetchProfile(newSession.user.id);
-            if (!userProfile && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
-              userProfile = await createProfile(newSession.user);
+            // session 改變後也重新檢查 aal（OAuth login → aal1；mfa.verify → aal2；refresh 也可能升）
+            const required = await checkMfaRequired();
+            if (mounted) setMfaRequired(required);
+
+            if (!required) {
+              let userProfile = await fetchProfile(newSession.user.id);
+              if (!userProfile && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+                userProfile = await createProfile(newSession.user);
+              }
+              if (mounted) setProfile(userProfile);
             }
-            if (mounted) setProfile(userProfile);
           } else {
             setProfile(null);
+            setMfaRequired(false);
           }
         }
       );
@@ -269,6 +323,9 @@ export function useAuth(): AuthState {
     canModerate: profile?.trust_level === 'admin' || profile?.trust_level === 'moderator',
     isBanned: profile?.trust_level === 'banned',
     identities: user?.identities ?? [],
+    mfaRequired,
+    onMfaVerified,
+    recheckMfa,
     login,
     logout,
     refreshProfile,

@@ -12,7 +12,7 @@
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
-import { update } from '../../lib/supabase-server.js';
+import { rpc, update } from '../../lib/supabase-server.js';
 import { logError } from '../../lib/logger.js';
 import { normalizeDisplayName, validateDisplayName } from '../../lib/displayName.js';
 
@@ -42,9 +42,18 @@ export async function onRequestPost(context) {
     const { request, env } = context;
 
     // 1. Auth
-    const { userId } = await getUserIdFromRequest(request, env);
+    const { userId, aal } = await getUserIdFromRequest(request, env);
     if (!userId) {
         return jsonResponse({ success: false, error: 'unauthenticated' }, 401, request);
+    }
+
+    // 1b. 啟用 2FA 的 user 必須通過 TOTP 升 aal2 才能改名
+    const factorsCheck = await rpc(env, 'get_user_totp_factors', { p_user_id: userId });
+    const has2FA = factorsCheck.ok
+        && Array.isArray(factorsCheck.data)
+        && factorsCheck.data.some(f => f.status === 'verified');
+    if (has2FA && aal !== 'aal2') {
+        return jsonResponse({ success: false, error: 'aal2_required' }, 403, request);
     }
 
     // 2. Body
