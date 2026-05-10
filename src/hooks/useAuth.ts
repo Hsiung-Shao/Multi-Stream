@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabase } from '../lib/supabase';
+import { getSupabase, manualRefreshSession } from '../lib/supabase';
 import type { Session, User, Provider, UserIdentity } from '@supabase/supabase-js';
 
 export interface UserProfile {
@@ -57,21 +57,39 @@ export function useAuth(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
   const [mfaRequired, setMfaRequired] = useState(false);
 
-  // 檢查當前 session 的 aal 等級：若 user 已 verified TOTP factor 但 session 仍 aal1，
-  // 必須強制升 aal2。用 supabase.auth.mfa.getAuthenticatorAssuranceLevel —— supabase
-  // client 已關 navigator.locks 不會卡 mutex；race timeout 防呆。
+  // 檢查當前 session 是否需要強制升 aal2：
+  // 用 manualRefreshSession (raw fetch) + token decode + /api/account/totp-status，
+  // 完全繞過 supabase.auth.mfa.getAuthenticatorAssuranceLevel —— 該方法依賴
+  // supabase-js 內部 user object 的 factors 屬性，OAuth callback 剛完成時尚未
+  // hydrate 完整，可能誤判 nextLevel='aal1' 而不彈 gate（實測撞到此問題）。
+  //
+  // 邏輯：
+  //   token aal=aal2 → 不需要 gate
+  //   token aal=aal1 + server 看到 enrolled=true → 必須 gate
+  //   token aal=aal1 + server 看到 enrolled=false → 不需要（沒啟用 2FA 的 user）
   const checkMfaRequired = useCallback(async (): Promise<boolean> => {
     try {
-      const supabase = await getSupabase();
-      if (!supabase) return false;
-      const result = await Promise.race([
-        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
-        new Promise<null>(r => setTimeout(() => r(null), 5000)),
-      ]);
-      if (!result) return false;
-      const { data, error } = result as Awaited<ReturnType<typeof supabase.auth.mfa.getAuthenticatorAssuranceLevel>>;
-      if (error || !data) return false;
-      return data.currentLevel === 'aal1' && data.nextLevel === 'aal2';
+      const refreshed = await manualRefreshSession();
+      if (!refreshed?.access_token) return false;
+
+      // decode aal claim
+      let aal = 'aal1';
+      try {
+        const payload = JSON.parse(
+          atob(refreshed.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')),
+        );
+        aal = payload?.aal || 'aal1';
+      } catch { /* ignore */ }
+      if (aal === 'aal2') return false;
+
+      // 用 raw fetch 打 totp-status 看 server 端 enrolled 狀態（用 service_role 查
+      // mfa_factors，不受 client SDK race 與 RLS 影響）
+      const res = await fetch('/api/account/totp-status', {
+        headers: { 'Authorization': `Bearer ${refreshed.access_token}` },
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      return data?.enrolled === true;
     } catch {
       return false;
     }
