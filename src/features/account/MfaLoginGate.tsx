@@ -77,10 +77,17 @@ export function MfaLoginGate({ open, onSuccess, onLogout }: Props) {
                 setFactorId(factor.id);
             } catch (e) {
                 const msg = e instanceof Error ? e.message : 'failed';
+                if (msg === 'no_factor') {
+                    // user 沒啟用 2FA → 不該被 gate，自動 dismiss（caller 的 onSuccess
+                    // 會 setMfaRequired(false) 並 fetchProfile，等同沒擋）。
+                    // 觸發場景：useAuth 樂觀對 aal1 token 設 mfaRequired=true，但實際上
+                    // user 沒啟用 2FA — checkMfaRequired 還沒校正完成前 modal 已 mount
+                    setLoading(false);
+                    onSuccess();
+                    return;
+                }
                 if (msg === 'listFactors timeout') {
                     setError('無法載入 2FA 設定，請點下方使用備援碼或登出後重新登入');
-                } else if (msg === 'no_factor') {
-                    setError('找不到 2FA 設定，請點下方登出');
                 } else {
                     setError(msg);
                 }

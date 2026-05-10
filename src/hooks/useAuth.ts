@@ -65,6 +65,20 @@ export function useAuth(): AuthState {
     setMfaRequiredState(val);
   }, []);
 
+  // 同步 decode access_token 的 aal claim — 用來在 setUser 之前決定要不要先樂觀
+  // 設 mfaRequired=true，避免 OAuth callback 後 user 短暫看到「已登入但沒資料」UI
+  const decodeAalSync = (token: string | undefined | null): 'aal1' | 'aal2' => {
+    if (!token) return 'aal1';
+    try {
+      const payload = JSON.parse(
+        atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')),
+      );
+      return payload?.aal === 'aal2' ? 'aal2' : 'aal1';
+    } catch {
+      return 'aal1';
+    }
+  };
+
   // 從 user_profiles 取得用戶個人資料
   // 錯誤 silent — UI 透過 isLoggedIn / profile === null 表達狀態
   // 注意：必須宣告在 onMfaVerified 之前，避免 useCallback deps array TDZ
@@ -237,16 +251,21 @@ export function useAuth(): AuthState {
       if (!mounted) return;
 
       if (currentSession?.user) {
+        // 樂觀預設 mfaRequired：aal1 token 先設 true（避免短暫「已登入但沒資料」UI 錯覺），
+        // aal2 token 跳過。後續 checkMfaRequired 會校正（如果 user 沒啟用 2FA，校正回 false）
+        const tokenAal = decodeAalSync(currentSession.access_token);
+        if (tokenAal === 'aal1') {
+          setMfaRequired(true);
+        }
+
         setUser(currentSession.user);
         setSession(currentSession);
 
-        // 先檢查是否需要強制 mfa challenge（user 啟用 2FA 但 session aal1）
-        // 若需要 → 不嘗試 fetchProfile（aal2 RLS 會擋住，徒勞），等 user 升 aal2 後 onAuthStateChange/recheck 會補拉
+        // 確認是否真的需要 mfa challenge（看 user 有無 verified factor）
         const required = mounted ? await checkMfaRequired() : false;
         if (mounted) setMfaRequired(required);
 
         if (!required) {
-          // 取得或建立 profile（aal1 user 沒啟用 2FA，或 aal2 user 通過驗證）
           let userProfile = await fetchProfile(currentSession.user.id);
           if (!userProfile && mounted) {
             userProfile = await createProfile(currentSession.user);
@@ -274,6 +293,15 @@ export function useAuth(): AuthState {
               event === 'SIGNED_IN' ||
               event === 'USER_UPDATED' ||
               event === 'MFA_CHALLENGE_VERIFIED';
+
+            // 同樣樂觀預設：SIGNED_IN 拿到 aal1 token 立刻設 mfaRequired=true，
+            // 避免 await checkMfaRequired() 期間短暫 isLoggedIn=true 但 fetchProfile 撞 RLS
+            if (event === 'SIGNED_IN') {
+              const tokenAal = decodeAalSync(newSession.access_token);
+              if (tokenAal === 'aal1') {
+                setMfaRequired(true);
+              }
+            }
 
             let needsMfa = mfaRequiredRef.current;
             if (shouldRecheck) {
