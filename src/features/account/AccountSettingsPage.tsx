@@ -40,14 +40,31 @@ export function AccountSettingsPage() {
         [t],
     );
 
+    // 兩大分組：每組內垂直 stack 多個子 section
+    //   一般：基本資料 + 顯示名稱（GeneralSection）+ 兩步驟驗證 + 登入方式
+    //   收藏與同步：收藏列表(inline) + Twitch 匯入 + 雲端同步
     const sections = useMemo<Array<{ key: AccountSectionKey; node: React.ReactNode }>>(
         () => [
-            { key: 'general', node: <GeneralSection /> },
-            { key: '2fa', node: <TwoFactorSection /> },
-            { key: 'favorites', node: <FavoritesSection /> },
-            { key: 'twitch', node: <TwitchImportSection /> },
-            { key: 'sync', node: <CloudSyncSection /> },
-            { key: 'identities', node: <IdentitiesSection /> },
+            {
+                key: 'general',
+                node: (
+                    <div className="space-y-6">
+                        <GeneralSection />
+                        <TwoFactorSection />
+                        <IdentitiesSection />
+                    </div>
+                ),
+            },
+            {
+                key: 'favorites_sync',
+                node: (
+                    <div className="space-y-6">
+                        <FavoritesSection />
+                        <TwitchImportSection />
+                        <CloudSyncSection />
+                    </div>
+                ),
+            },
         ],
         [],
     );

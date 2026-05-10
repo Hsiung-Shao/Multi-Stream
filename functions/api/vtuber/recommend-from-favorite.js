@@ -19,7 +19,7 @@
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest, checkAndIncrementQuota } from '../../lib/auth-helper.js';
-import { insert } from '../../lib/supabase-server.js';
+import { insert, select } from '../../lib/supabase-server.js';
 import { getRateLimits } from '../../lib/rate-limit.js';
 import { logError, logInfo } from '../../lib/logger.js';
 
@@ -107,34 +107,85 @@ export async function onRequestPost(context) {
         payload.youtube_channel_id = body.channel_id;
     }
 
+    // 5.1 去重：先查 vtubers 是否已存在相同 channel_id（避免重複建立同一位 VTuber）
+    const channelCol = body.platform === 'twitch' ? 'twitch_channel_id' : 'youtube_channel_id';
+    const dedupeFilter = `${channelCol}=eq.${encodeURIComponent(body.channel_id)}&select=id&limit=1`;
+    const existsRes = await select(env, `vtubers?${dedupeFilter}`);
+    let existingVtuberId = null;
+    if (existsRes.ok && Array.isArray(existsRes.data) && existsRes.data.length > 0) {
+        existingVtuberId = existsRes.data[0].id;
+    }
+
+    // 5.2 不存在 → INSERT vtubers row（與 admin review approve 流程一致）
+    let createdVtuberId = null;
+    if (!existingVtuberId) {
+        const vtuberRow = {
+            name: payload.name,
+            img_url: null,
+            activity: 'active',
+            nationality: 'OTHER',
+            group_id: null,
+            youtube_channel_id: payload.youtube_channel_id || null,
+            twitch_channel_id: payload.twitch_channel_id || null,
+            debut_date: null,
+            channel_id_verified: false,
+            contributed_by: userId,
+        };
+        const createRes = await insert(env, 'vtubers', vtuberRow);
+        if (!createRes.ok) {
+            await logError(env, 'recommend-from-favorite', 'insert vtubers failed', {
+                userId,
+                metadata: { status: createRes.status, error: createRes.error?.slice(0, 500) },
+            });
+            return jsonResponse({ success: false, error: '建立 VTuber 失敗，請稍後再試' }, 500, request);
+        }
+        createdVtuberId = Array.isArray(createRes.data) ? createRes.data[0]?.id : null;
+    }
+
+    // 5.3 INSERT vtuber_contributions（status 取決於是否已存在；存在則只記錄推薦意圖，不重複建立）
     const row = {
         action: 'add',
-        target_vtuber_id: null,
+        target_vtuber_id: existingVtuberId, // 已存在 → 指向既有 vtuber
         payload,
         status: 'approved', // 「收藏+推薦」雙重意圖直接公開
         submitted_by: userId,
         submitter_contact: null,
         source_urls: [body.url],
-        source_note: 'recommended_from_favorites',
+        source_note: existingVtuberId
+            ? 'recommended_from_favorites_duplicate'
+            : 'recommended_from_favorites',
     };
 
     const insertResult = await insert(env, 'vtuber_contributions', row);
     if (!insertResult.ok) {
+        // 已建 vtubers row 但 contribution 寫不進去 → 不 rollback vtubers（探索頁仍可看到，僅缺少 audit log）
         await logError(env, 'recommend-from-favorite', 'insert vtuber_contributions failed', {
             userId,
-            metadata: { status: insertResult.status, error: insertResult.error?.slice(0, 500) },
+            metadata: {
+                status: insertResult.status,
+                error: insertResult.error?.slice(0, 500),
+                created_vtuber_id: createdVtuberId,
+            },
         });
-        return jsonResponse({ success: false, error: '寫入失敗，請稍後再試' }, 500, request);
+        // 仍視為部分成功（vtuber row 已建立）
     }
 
     await logInfo(env, 'recommend-from-favorite', 'recommended from favorite', {
         userId,
-        metadata: { platform: body.platform, channel_id: body.channel_id, name: payload.name },
+        metadata: {
+            platform: body.platform,
+            channel_id: body.channel_id,
+            name: payload.name,
+            existing_vtuber_id: existingVtuberId,
+            created_vtuber_id: createdVtuberId,
+        },
     });
 
     return jsonResponse({
         success: true,
         id: Array.isArray(insertResult.data) ? insertResult.data[0]?.id : null,
+        vtuber_id: existingVtuberId || createdVtuberId,
+        already_exists: !!existingVtuberId,
     }, 200, request);
 }
 

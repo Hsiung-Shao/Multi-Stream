@@ -1,27 +1,113 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Settings } from 'lucide-react';
+import { Star, Plus, Search } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { ScrollArea } from '../../components/ui/scroll-area';
 import { useUIStore } from '../../store/useUIStore';
 import { useFavorites } from '../../hooks/useFavorites';
+import { tagsService } from '../favorites/TagsService';
+import { favoritesService } from '../favorites/FavoritesService';
+import { favoritesLoader } from '../favorites/FavoritesLoader';
+import { FavoriteListItem } from '../favorites/components/FavoriteListItem';
+import {
+    AddFavoriteDialog,
+    type AddFavoriteFormValues,
+} from '../favorites/components/AddFavoriteDialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
+import { logEvent } from '../../utils/analytics';
+import type { FavoriteStream, Tag } from '../favorites/types';
 
 /**
- * 帳號頁「收藏列表」section：
- *   - 顯示收藏 summary（總數 / 直播中數）
- *   - 「管理收藏」按鈕：透過 useUIStore.openModal('favorites') 開啟既有
- *     FavoritesManagerMain dialog（與 /canvas 共用同一份元件，不重複實作）
+ * 帳號頁「收藏列表」section（inline 版）
  *
- * 推薦按鈕已加在 FavoriteListItem 內，dialog 開啟後自動可用。
+ * 設計：直接在帳號頁內顯示完整收藏列表（取代原本「管理收藏」按鈕開 FavoritesManagerMain
+ * dialog 的設計）。提供常用核心操作：搜尋 / 新增 / 編輯 / 刪除 / 載入 / 推薦。
+ *
+ * 進階功能（分類管理、標籤管理、批量匯入、備份/還原、版本歷史、Layout 管理）
+ * 仍保留在 /canvas 的 FavoritesManagerMain dialog；此 section 不引導打開該 dialog。
  */
 export function FavoritesSection() {
-    const { t } = useTranslation('account');
-    const openModal = useUIStore((s) => s.openModal);
-    const { favorites } = useFavorites();
+    const { t } = useTranslation(['account', 'favorites', 'common']);
+    const theme = useUIStore((s) => s.theme);
+    const themeMode: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light';
+
+    const { favorites, categories, refresh } = useFavorites();
+    const [tags, setTags] = useState<Tag[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [editing, setEditing] = useState<FavoriteStream | null>(null);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const reload = () => setTags(tagsService.getAllTags());
+        reload();
+        // tagsService 觸發的更新事件名稱不可知，favorites refresh 時順便 reload tags
+        window.addEventListener('favoritesUpdated', reload);
+        return () => window.removeEventListener('favoritesUpdated', reload);
+    }, []);
+
+    const filtered = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return favorites;
+        return favorites.filter(
+            (f) =>
+                f.name.toLowerCase().includes(q) ||
+                f.url.toLowerCase().includes(q),
+        );
+    }, [favorites, searchQuery]);
 
     const liveCount = useMemo(
         () => favorites.filter((f) => f.isLive === true).length,
         [favorites],
     );
+
+    const handleSubmit = (data: AddFavoriteFormValues) => {
+        if (editing) {
+            favoritesService.updateFavorite(editing.id, {
+                name: data.name,
+                categoryId:
+                    data.categoryId === 'uncategorized' ? null : data.categoryId,
+                tagIds: data.tagIds,
+            });
+            logEvent('Favorites', 'edit_favorite_account_page');
+        } else {
+            favoritesService.addFavorite(
+                data.url,
+                data.name || undefined,
+                data.categoryId === 'uncategorized' ? null : data.categoryId,
+                undefined,
+                undefined,
+                data.tagIds,
+            );
+            logEvent('Favorites', 'add_favorite_account_page');
+        }
+        setIsAddOpen(false);
+        setEditing(null);
+        refresh();
+    };
+
+    const handleLoad = async (id: string) => {
+        const fav = favorites.find((f) => f.id === id);
+        if (fav) await favoritesLoader.load(fav);
+    };
+
+    const confirmDelete = () => {
+        if (!deleteId) return;
+        favoritesService.removeFavorite(deleteId);
+        logEvent('Favorites', 'remove_favorite_account_page');
+        setDeleteId(null);
+        refresh();
+    };
 
     return (
         <section className="rounded-xl border border-white/10 bg-card/50 p-5 space-y-4">
@@ -33,8 +119,8 @@ export function FavoritesSection() {
                     </h2>
                     <p className="text-xs text-muted-foreground mt-1">
                         {t(
-                            'favorites.description',
-                            '管理你的收藏實況主、分類、標籤；可從這裡一鍵推薦給 VTuber 探索。',
+                            'favorites.descriptionInline',
+                            '管理你的收藏實況主，可從這裡一鍵推薦給 VTuber 探索。進階功能（分類、標籤、批量匯入）仍可在主畫面收藏管理視窗使用。',
                         )}
                     </p>
                 </div>
@@ -57,15 +143,104 @@ export function FavoritesSection() {
                 </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={t('favorites:searchPlaceholder', '搜尋收藏...')}
+                        className="pl-9"
+                    />
+                </div>
                 <Button
-                    onClick={() => openModal('favorites', 'favorites')}
+                    onClick={() => {
+                        setEditing(null);
+                        setIsAddOpen(true);
+                    }}
                     className="gap-2"
                 >
-                    <Settings className="w-4 h-4" />
-                    {t('favorites.manage', '管理收藏')}
+                    <Plus className="w-4 h-4" />
+                    {t('favorites:add', '新增')}
                 </Button>
             </div>
+
+            <div className="rounded-lg border border-white/10 bg-background/30 overflow-hidden">
+                <ScrollArea className="h-[420px]">
+                    <div className="p-2 space-y-2">
+                        {filtered.length > 0 ? (
+                            filtered.map((fav) => (
+                                <FavoriteListItem
+                                    key={fav.id}
+                                    favorite={fav}
+                                    categories={categories}
+                                    tags={tags}
+                                    isSelected={false}
+                                    onSelect={() => { /* 帳號頁不支援批次選取 */ }}
+                                    onStartEdit={(f) => {
+                                        setEditing(f);
+                                        setIsAddOpen(true);
+                                    }}
+                                    onDelete={(id) => setDeleteId(id)}
+                                    onLoad={handleLoad}
+                                />
+                            ))
+                        ) : (
+                            <div className="h-72 flex flex-col items-center justify-center text-muted-foreground gap-3">
+                                <Star className="size-8 opacity-30" />
+                                <p className="text-sm">
+                                    {searchQuery
+                                        ? t('favorites:noMatchingFavorites', '找不到符合的收藏')
+                                        : t('favorites:noFavorites', '尚無收藏')}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+            </div>
+
+            <AddFavoriteDialog
+                open={isAddOpen}
+                onOpenChange={(open) => {
+                    setIsAddOpen(open);
+                    if (!open) setEditing(null);
+                }}
+                onSubmit={handleSubmit}
+                categories={categories}
+                allTags={tags}
+                initialData={editing}
+                theme={themeMode}
+            />
+
+            <AlertDialog
+                open={!!deleteId}
+                onOpenChange={(open) => !open && setDeleteId(null)}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            {t('favorites:confirmDelete', '確定要刪除嗎？')}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t(
+                                'favorites:confirmDeleteDesc',
+                                '此操作無法復原，將從你的收藏中永久移除這筆資料。',
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>
+                            {t('common:common.cancel', '取消')}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDelete}
+                            className="bg-red-500 hover:bg-red-600"
+                        >
+                            {t('common:common.delete', '刪除')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </section>
     );
 }

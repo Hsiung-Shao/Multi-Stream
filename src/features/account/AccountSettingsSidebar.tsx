@@ -1,14 +1,10 @@
-import { useTranslation } from 'react-i18next';
-import { User, Shield, Star, Tv, Cloud, KeyRound, type LucideIcon } from 'lucide-react';
+import { User, Star, type LucideIcon } from 'lucide-react';
 import { cn } from '../../components/ui/utils';
 
-export type AccountSectionKey =
-    | 'general'
-    | '2fa'
-    | 'favorites'
-    | 'twitch'
-    | 'sync'
-    | 'identities';
+// 帳號頁兩大分組（合併原本 6 項）：
+//   general — 一般：基本資料 + 顯示名稱 + 兩步驟驗證 + 登入方式
+//   favorites_sync — 收藏與同步：收藏列表 + Twitch 匯入 + 雲端同步
+export type AccountSectionKey = 'general' | 'favorites_sync';
 
 export interface AccountSidebarItem {
     key: AccountSectionKey;
@@ -69,10 +65,6 @@ export function AccountSettingsSidebar({
 export function buildSidebarItems(t: (key: string, fallback: string) => string): AccountSidebarItem[] {
     return [
         { key: 'general', label: t('sidebar.general', '一般'), icon: User },
-        { key: '2fa', label: t('sidebar.twoFactor', '兩步驟驗證'), icon: Shield },
-        { key: 'favorites', label: t('sidebar.favorites', '收藏列表'), icon: Star },
-        { key: 'twitch', label: t('sidebar.twitch', 'Twitch 匯入'), icon: Tv },
-        { key: 'sync', label: t('sidebar.sync', '雲端同步'), icon: Cloud },
-        { key: 'identities', label: t('sidebar.identities', '登入方式'), icon: KeyRound },
+        { key: 'favorites_sync', label: t('sidebar.favoritesSync', '收藏與同步'), icon: Star },
     ];
 }

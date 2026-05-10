@@ -2,6 +2,31 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSupabase, manualRefreshSession } from '../lib/supabase';
 import type { Session, User, Provider, UserIdentity } from '@supabase/supabase-js';
 
+/**
+ * 把 Supabase Twitch OAuth callback 拿到的 provider_token 寫入 sessionStorage，
+ * 讓 useTwitchAuth 自動識別為「已連結」狀態，省去使用者再次走獨立 Twitch OAuth。
+ *
+ * 寫入條件：(1) session.provider_token 存在 (2) user 有 twitch identity
+ * 寫入時機：SIGNED_IN 事件 / 初始 getSession（OAuth 剛 callback 那次 mount）
+ *
+ * 注意：provider_token 不會跟著 supabase token refresh 持續存在，
+ *      所以後續 user 重新整理頁面時 sessionStorage 仍會保留（這就是我們要的）。
+ */
+const TWITCH_USER_TOKEN_KEY = 'twitch_user_token';
+function syncTwitchProviderToken(session: Session | null): void {
+  if (typeof window === 'undefined') return;
+  if (!session?.provider_token) return;
+  const hasTwitchIdentity = session.user?.identities?.some(
+    (i) => i.provider === 'twitch',
+  );
+  if (!hasTwitchIdentity) return;
+  try {
+    sessionStorage.setItem(TWITCH_USER_TOKEN_KEY, session.provider_token);
+  } catch {
+    /* sessionStorage 可能在某些隱私模式下不可用，靜默失敗 */
+  }
+}
+
 export interface UserProfile {
   id: string;
   supabase_auth_id: string;
@@ -247,6 +272,8 @@ export function useAuth(): AuthState {
           setMfaRequired(true);
         }
 
+        syncTwitchProviderToken(currentSession);
+
         setUser(currentSession.user);
         setSession(currentSession);
 
@@ -278,6 +305,12 @@ export function useAuth(): AuthState {
           setUser(newSession?.user ?? null);
 
           if (newSession?.user) {
+            // SIGNED_IN：剛 OAuth 完成，session.provider_token 此時還在；之後 token refresh 會丟失，
+            // 所以這是唯一寫入時機。useTwitchAuth 從 sessionStorage 讀 token，自動變「已連結」狀態。
+            if (event === 'SIGNED_IN') {
+              syncTwitchProviderToken(newSession);
+            }
+
             const shouldRecheck =
               event === 'SIGNED_IN' ||
               event === 'USER_UPDATED' ||
@@ -335,6 +368,9 @@ export function useAuth(): AuthState {
       options: {
         // OAuth 回到首頁 root，由 useRouter 補上 lang prefix；hash 含 access_token 流程不變
         redirectTo: window.location.origin + '/',
+        // Twitch：要求 user:read:follows，使 provider_token 可呼叫 helix/channels/followed
+        // 跳過獨立 Twitch OAuth 流程（帳號頁 Twitch 匯入直接拿 supabase session.provider_token）
+        scopes: provider === 'twitch' ? 'user:read:follows user:read:email' : undefined,
       },
     });
 
@@ -350,6 +386,8 @@ export function useAuth(): AuthState {
     setUser(null);
     setProfile(null);
     setSession(null);
+    // 同步清除 syncTwitchProviderToken 寫入的 token，避免登出後 useTwitchAuth 仍誤認為已連結
+    try { sessionStorage.removeItem(TWITCH_USER_TOKEN_KEY); } catch { /* ignore */ }
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -387,7 +425,10 @@ export function useAuth(): AuthState {
     if (!supabase) throw new Error('Supabase not available');
     const { error } = await supabase.auth.linkIdentity({
       provider,
-      options: { redirectTo: window.location.origin + '/' },
+      options: {
+        redirectTo: window.location.origin + '/',
+        scopes: provider === 'twitch' ? 'user:read:follows user:read:email' : undefined,
+      },
     });
     if (error) throw error;
   }, []);

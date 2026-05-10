@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
-import { Search, Heart, Globe, Sun, Moon, Coffee, Plus, Menu, LayoutTemplate, Monitor, UserRound, LogOut, Pencil, Settings, MessageSquareHeart } from 'lucide-react';
+import { Search, Heart, Globe, Sun, Moon, Coffee, Plus, Menu, LayoutTemplate, Monitor, UserRound, LogOut, Settings, MessageSquareHeart } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -33,7 +33,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { EditProfileDialog } from './Dialogs/EditProfileDialog';
 
 interface NavbarProps {
   theme: 'light' | 'dark';
@@ -83,7 +82,6 @@ export function Navbar({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -757,13 +755,6 @@ export function Navbar({
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className={theme === 'dark' ? 'bg-gray-700' : ''} />
                     <DropdownMenuItem
-                      onSelect={() => setEditProfileOpen(true)}
-                      className={theme === 'dark' ? 'text-gray-300 focus:bg-gray-800 focus:text-white' : ''}
-                    >
-                      <Pencil className="size-4 mr-2" />
-                      {t('common:editDisplayName', '修改名稱')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
                       onSelect={() => setPage('account')}
                       className={theme === 'dark' ? 'text-gray-300 focus:bg-gray-800 focus:text-white' : ''}
                     >
@@ -877,7 +868,6 @@ export function Navbar({
       </div>
     </nav >
 
-    <EditProfileDialog open={editProfileOpen} onClose={() => setEditProfileOpen(false)} />
     </>
   );
 }
