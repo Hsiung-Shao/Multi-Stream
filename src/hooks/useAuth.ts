@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSupabase, manualRefreshSession, fetchSupabaseRest } from '../lib/supabase';
+import { getSupabase, manualRefreshSession } from '../lib/supabase';
 import type { Session, User, Provider, UserIdentity } from '@supabase/supabase-js';
 
 export interface UserProfile {
@@ -138,20 +138,18 @@ export function useAuth(): AuthState {
   }, []);
 
   const onMfaVerified = useCallback(async () => {
-    // 設計：完全繞過 supabase-js client 拉 profile
+    // verify 通過 / no_factor 自動 dismiss 後：
+    // 1. 先用 manualRefreshSession 拿新 aal2 token + setSession 寫回 cache
+    //    （讓 reload 後從 localStorage 讀到的就是 aal2）
+    // 2. window.location.reload() 重整頁面
     //
-    // 觀察：mfa.verify 後 supabase.from('user_profiles').select() 在 race window
-    // 內可能根本不 fire HTTP request（network log 沒看到 GET user_profiles），
-    // 卡住造成「轉圈拿不到 profile」。
-    //
-    // 對策：用 manualRefreshSession 拿 fresh aal2 access_token + raw fetch
-    // PostgREST 直接拉 user_profiles。同時 best-effort setSession 寫回 supabase-js
-    // cache 讓後續 supabase.from() 能正常運作。
-    let aal2Token: string | null = null;
+    // 自動 reload 的好處：徹底清掉所有 stale state（race window 內各 component
+    // 用 aal1 token 拿不到 RLS 資料的錯誤狀態、supabase.from 卡住的 pending
+    // request 等）。reload 後 useAuth init 用 fresh aal2 token 重新拉 profile /
+    // favorites，UI 立即正確。
     try {
       const refreshed = await manualRefreshSession();
       if (refreshed) {
-        aal2Token = refreshed.access_token;
         const supabase = await getSupabase();
         if (supabase) {
           await Promise.race([
@@ -163,24 +161,15 @@ export function useAuth(): AuthState {
           ]).catch(() => undefined);
         }
       }
-    } catch { /* ignore */ }
+    } catch { /* ignore — reload 後 useAuth init 會自己再 refresh */ }
 
-    setMfaRequired(false);
-
-    // 用 raw fetch 拿 profile（繞過 supabase.from race）
-    if (user && aal2Token) {
-      const rows = await fetchSupabaseRest<UserProfile[]>(
-        `user_profiles?supabase_auth_id=eq.${encodeURIComponent(user.id)}&select=*`,
-        aal2Token,
-      );
-      const p = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-      setProfile(p);
-    } else if (user) {
-      // fallback：拿不到 fresh token 時用 supabase.from（可能仍 race，但盡力）
-      const p = await fetchProfile(user.id);
-      setProfile(p);
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    } else {
+      // SSR 防呆 fallback（理論上不會走到，client component 才用 useAuth）
+      setMfaRequired(false);
     }
-  }, [user, fetchProfile]);
+  }, []);
 
   const recheckMfa = useCallback(async () => {
     const required = await checkMfaRequired();
