@@ -28,8 +28,8 @@ export interface AuthState {
   identities: UserIdentity[];
   /** user 啟用 2FA 但 session 仍是 aal1 — App 層應顯示強制 challenge gate */
   mfaRequired: boolean;
-  /** 通過 TOTP 升 aal2 後呼叫，清除 mfaRequired */
-  onMfaVerified: () => void;
+  /** 通過 TOTP 升 aal2 後呼叫，清除 mfaRequired + 強制 refresh + 拉 profile */
+  onMfaVerified: () => void | Promise<void>;
   /** 重新檢查 aal level（例如手動 refreshSession 後） */
   recheckMfa: () => Promise<void>;
   login: (provider: Provider) => Promise<void>;
@@ -115,11 +115,31 @@ export function useAuth(): AuthState {
     }
   }, []);
 
-  const onMfaVerified = useCallback(() => {
+  const onMfaVerified = useCallback(async () => {
+    // 先強制把 aal2 token 寫進 supabase-js cache：mfa.verify 後 client cache
+    // 中的 access_token 仍可能是舊 aal1（race），導致接下來 fetchProfile 用
+    // 舊 token 被 RLS 擋住。manualRefreshSession (raw fetch refresh_token grant)
+    // 拿新 aal2 token 後 setSession 寫回，下游 supabase.from() 才能用新 token。
+    try {
+      const refreshed = await manualRefreshSession();
+      if (refreshed) {
+        const supabase = await getSupabase();
+        if (supabase) {
+          await Promise.race([
+            supabase.auth.setSession({
+              access_token: refreshed.access_token,
+              refresh_token: refreshed.refresh_token,
+            }),
+            new Promise(r => setTimeout(r, 2000)),
+          ]).catch(() => undefined);
+        }
+      }
+    } catch { /* ignore — fetchProfile 失敗會 setProfile(null) */ }
+
     setMfaRequired(false);
-    // 立刻拉 profile（aal2 升級後 RLS 放行）— 不等 onAuthStateChange，它可能 lag
     if (user) {
-      fetchProfile(user.id).then(p => setProfile(p)).catch(() => undefined);
+      const p = await fetchProfile(user.id);
+      setProfile(p);
     }
   }, [user, fetchProfile]);
 
