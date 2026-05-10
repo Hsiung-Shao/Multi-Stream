@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSupabase, manualRefreshSession } from '../lib/supabase';
 import type { Session, User, Provider, UserIdentity } from '@supabase/supabase-js';
 
@@ -55,7 +55,15 @@ export function useAuth(): AuthState {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaRequired, setMfaRequiredState] = useState(false);
+
+  // mfaRequired 同時用 ref 同步，方便 onAuthStateChange callback 在 closure 中讀最新值
+  // （callback 用 deps=[]，不能 capture state）
+  const mfaRequiredRef = useRef(false);
+  const setMfaRequired = useCallback((val: boolean) => {
+    mfaRequiredRef.current = val;
+    setMfaRequiredState(val);
+  }, []);
 
   // 從 user_profiles 取得用戶個人資料
   // 錯誤 silent — UI 透過 isLoggedIn / profile === null 表達狀態
@@ -233,6 +241,10 @@ export function useAuth(): AuthState {
       setIsLoading(false);
 
       // 監聽認證狀態變化
+      // 重要：限制 re-check mfaRequired 的事件範圍。INITIAL_SESSION / TOKEN_REFRESHED
+      // 發 race 一次回 false 會把 modal 誤關（observed in production：dialog 自動消失）。
+      // 只在 SIGNED_IN（新 OAuth login）/ USER_UPDATED（user metadata change）/
+      // MFA_CHALLENGE_VERIFIED（verify 成功降 aal2）這三個事件 re-check。
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, newSession) => {
           if (!mounted) return;
@@ -241,11 +253,20 @@ export function useAuth(): AuthState {
           setUser(newSession?.user ?? null);
 
           if (newSession?.user) {
-            // session 改變後也重新檢查 aal（OAuth login → aal1；mfa.verify → aal2；refresh 也可能升）
-            const required = await checkMfaRequired();
-            if (mounted) setMfaRequired(required);
+            const shouldRecheck =
+              event === 'SIGNED_IN' ||
+              event === 'USER_UPDATED' ||
+              event === 'MFA_CHALLENGE_VERIFIED';
 
-            if (!required) {
+            let needsMfa = mfaRequiredRef.current;
+            if (shouldRecheck) {
+              needsMfa = await checkMfaRequired();
+              if (!mounted) return;
+              setMfaRequired(needsMfa);
+            }
+            // INITIAL_SESSION / TOKEN_REFRESHED 等事件保持當前 mfaRequired 不變
+
+            if (!needsMfa) {
               let userProfile = await fetchProfile(newSession.user.id);
               if (!userProfile && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
                 userProfile = await createProfile(newSession.user);
@@ -357,7 +378,10 @@ export function useAuth(): AuthState {
     profile,
     session,
     isLoading,
-    isLoggedIn: !!user,
+    // 必須通過 MFA 才算 logged in。OAuth 後 user 已 set 但未 verify TOTP 的階段
+    // isLoggedIn=false：背景 UI 顯示 logged-out 樣式（不誤 fetchProfile 撞 RLS），
+    // MfaLoginGate 蓋上方提供 verify / 備援碼 / 登出三條出路。
+    isLoggedIn: !!user && !mfaRequired,
     isAdmin: profile?.trust_level === 'admin',
     canModerate: profile?.trust_level === 'admin' || profile?.trust_level === 'moderator',
     isBanned: profile?.trust_level === 'banned',

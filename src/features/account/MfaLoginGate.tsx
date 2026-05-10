@@ -60,14 +60,30 @@ export function MfaLoginGate({ open, onSuccess, onLogout }: Props) {
             try {
                 const supabase = await getSupabase();
                 if (!supabase) throw new Error('Supabase not available');
-                const { data, error: lfErr } = await supabase.auth.mfa.listFactors();
-                if (lfErr) throw new Error(lfErr.message);
+                // listFactors 加 5s race timeout：observed in production supabase-js
+                // 在某些 race 下不 resolve，導致 OTP slots 永遠不顯示。timeout 後
+                // 顯示 fallback error，user 仍可走「使用備援碼」或「登出」出路。
+                const result = await Promise.race([
+                    supabase.auth.mfa.listFactors(),
+                    new Promise<{ data: null; error: { message: string } }>(r =>
+                        setTimeout(() => r({ data: null, error: { message: 'listFactors timeout' } }), 5000),
+                    ),
+                ]);
+                if (result.error) throw new Error(result.error.message);
+                const data = result.data;
                 const factor = (data?.totp || [])[0]
                     || (data?.all || []).find(f => f.factor_type === 'totp' && f.status === 'verified');
                 if (!factor) throw new Error('no_factor');
                 setFactorId(factor.id);
             } catch (e) {
-                setError(e instanceof Error ? e.message : 'failed');
+                const msg = e instanceof Error ? e.message : 'failed';
+                if (msg === 'listFactors timeout') {
+                    setError('無法載入 2FA 設定，請點下方使用備援碼或登出後重新登入');
+                } else if (msg === 'no_factor') {
+                    setError('找不到 2FA 設定，請點下方登出');
+                } else {
+                    setError(msg);
+                }
             } finally {
                 setLoading(false);
             }
