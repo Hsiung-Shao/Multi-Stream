@@ -48,6 +48,30 @@ export const getSupabase = (): Promise<SupabaseClient | null> => {
 };
 
 /**
+ * Raw fetch PostgREST endpoint，不依賴 supabase-js client（避免 mfa.verify 後
+ * client 內部 race 卡住）。caller 提供 fresh access_token（建議用 manualRefreshSession 拿）。
+ * 適用於：onMfaVerified 後立刻拉 profile（supabase.from 在 race window 中可能不 fire request）。
+ */
+export async function fetchSupabaseRest<T>(path: string, accessToken: string): Promise<T | null> {
+  if (!cachedConfig) {
+    await getSupabase();
+    if (!cachedConfig) return null;
+  }
+  try {
+    const res = await fetch(`${cachedConfig.url}/rest/v1/${path}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': cachedConfig.anonKey,
+      },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 從 localStorage 直接讀 refresh_token，完全不依賴 supabase-js auth API。
  * supabase-js v2 預設把 session 存在 `sb-{ref}-auth-token`，value 為 JSON 或
  * base64 編碼 JSON。從 url hostname 第一段提取 ref。

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSupabase, manualRefreshSession } from '../lib/supabase';
+import { getSupabase, manualRefreshSession, fetchSupabaseRest } from '../lib/supabase';
 import type { Session, User, Provider, UserIdentity } from '@supabase/supabase-js';
 
 export interface UserProfile {
@@ -124,13 +124,20 @@ export function useAuth(): AuthState {
   }, []);
 
   const onMfaVerified = useCallback(async () => {
-    // 先強制把 aal2 token 寫進 supabase-js cache：mfa.verify 後 client cache
-    // 中的 access_token 仍可能是舊 aal1（race），導致接下來 fetchProfile 用
-    // 舊 token 被 RLS 擋住。manualRefreshSession (raw fetch refresh_token grant)
-    // 拿新 aal2 token 後 setSession 寫回，下游 supabase.from() 才能用新 token。
+    // 設計：完全繞過 supabase-js client 拉 profile
+    //
+    // 觀察：mfa.verify 後 supabase.from('user_profiles').select() 在 race window
+    // 內可能根本不 fire HTTP request（network log 沒看到 GET user_profiles），
+    // 卡住造成「轉圈拿不到 profile」。
+    //
+    // 對策：用 manualRefreshSession 拿 fresh aal2 access_token + raw fetch
+    // PostgREST 直接拉 user_profiles。同時 best-effort setSession 寫回 supabase-js
+    // cache 讓後續 supabase.from() 能正常運作。
+    let aal2Token: string | null = null;
     try {
       const refreshed = await manualRefreshSession();
       if (refreshed) {
+        aal2Token = refreshed.access_token;
         const supabase = await getSupabase();
         if (supabase) {
           await Promise.race([
@@ -142,10 +149,20 @@ export function useAuth(): AuthState {
           ]).catch(() => undefined);
         }
       }
-    } catch { /* ignore — fetchProfile 失敗會 setProfile(null) */ }
+    } catch { /* ignore */ }
 
     setMfaRequired(false);
-    if (user) {
+
+    // 用 raw fetch 拿 profile（繞過 supabase.from race）
+    if (user && aal2Token) {
+      const rows = await fetchSupabaseRest<UserProfile[]>(
+        `user_profiles?supabase_auth_id=eq.${encodeURIComponent(user.id)}&select=*`,
+        aal2Token,
+      );
+      const p = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+      setProfile(p);
+    } else if (user) {
+      // fallback：拿不到 fresh token 時用 supabase.from（可能仍 race，但盡力）
       const p = await fetchProfile(user.id);
       setProfile(p);
     }
