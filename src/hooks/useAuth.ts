@@ -57,6 +57,26 @@ export function useAuth(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
   const [mfaRequired, setMfaRequired] = useState(false);
 
+  // 從 user_profiles 取得用戶個人資料
+  // 錯誤 silent — UI 透過 isLoggedIn / profile === null 表達狀態
+  // 注意：必須宣告在 onMfaVerified 之前，避免 useCallback deps array TDZ
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) return null;
+
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('supabase_auth_id', userId)
+        .single();
+
+      return data as UserProfile | null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // 檢查當前 session 是否需要強制升 aal2：
   // 用 manualRefreshSession (raw fetch) + token decode + /api/account/totp-status，
   // 完全繞過 supabase.auth.mfa.getAuthenticatorAssuranceLevel —— 該方法依賴
@@ -107,25 +127,6 @@ export function useAuth(): AuthState {
     const required = await checkMfaRequired();
     setMfaRequired(required);
   }, [checkMfaRequired]);
-
-  // 從 user_profiles 取得用戶個人資料
-  // 錯誤 silent — UI 透過 isLoggedIn / profile === null 表達狀態
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const supabase = await getSupabase();
-      if (!supabase) return null;
-
-      const { data } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('supabase_auth_id', userId)
-        .single();
-
-      return data as UserProfile | null;
-    } catch {
-      return null;
-    }
-  }, []);
 
   // 建立新用戶的 user_profiles 記錄
   const createProfile = useCallback(async (authUser: User): Promise<UserProfile | null> => {
