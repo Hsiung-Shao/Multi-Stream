@@ -7,7 +7,6 @@ import { VTuberSearchInput } from '../components/VTuberSearchInput';
 import { VTuberFilterBar } from '../components/VTuberFilterBar';
 import { VTuberGrid } from '../components/VTuberGrid';
 import { VTuberDetailSheet } from '../components/VTuberDetailSheet';
-import { ContributeVTuberDialog } from '../components/ContributeVTuberDialog';
 import { EventCalendarView } from '../components/EventCalendarView';
 import { CreateEventDialog } from '../components/CreateEventDialog';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
@@ -66,8 +65,8 @@ export function VTuberExplorePage() {
   const [selectedVTuber, setSelectedVTuber] = useState<VTuberRecord | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Contribute dialog
-  const [contributeOpen, setContributeOpen] = useState(false);
+  // 投稿表單入口已移除：改由收藏列表上的「推薦」按鈕走一鍵推薦流程
+  // （/api/vtuber/recommend-from-favorite，status='approved' 直接公開）
 
   // Create event dialog
   const [createEventOpen, setCreateEventOpen] = useState(false);
@@ -153,18 +152,8 @@ export function VTuberExplorePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Action button changes based on tab */}
-            {activeTab === 'vtubers' ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-xs"
-                onClick={() => setContributeOpen(true)}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                {t('contribute')}
-              </Button>
-            ) : (
+            {/* Action button：vtubers tab 移除「投稿」按鈕（改由收藏列表「推薦」走簡化流程） */}
+            {activeTab === 'events' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -303,11 +292,7 @@ export function VTuberExplorePage() {
         onAddToFavorites={handleAddToFavorites}
       />
 
-      {/* Contribute Dialog */}
-      <ContributeVTuberDialog
-        open={contributeOpen}
-        onOpenChange={setContributeOpen}
-      />
+      {/* Contribute Dialog 已移除 — 改由收藏列表「推薦」按鈕一鍵推薦 */}
 
       {/* Create Event Dialog */}
       <CreateEventDialog

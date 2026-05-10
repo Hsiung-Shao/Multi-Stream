@@ -4,6 +4,7 @@ import { Checkbox } from '../../../components/ui/checkbox';
 import { TagList } from '../../../components/ui/TagList';
 import { useTranslation } from 'react-i18next';
 import type { FavoriteStream, Tag, FavoriteCategory as Category } from '../types';
+import { RecommendButton } from './RecommendButton';
 
 interface FavoriteListItemProps {
     favorite: FavoriteStream;
@@ -81,6 +82,7 @@ export function FavoriteListItem({
 
             {/* Actions */}
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <RecommendButton favorite={favorite} />
                 <Button
                     size="icon"
                     variant="ghost"
