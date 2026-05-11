@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 
 interface SEOProps {
   title?: string;
@@ -10,8 +10,12 @@ interface SEOProps {
   locale?: string;
 }
 
+// 預設 title 與 LandingPage 對齊，避免空 props 落到舊預設值產生雙標題
+// 任何未明確傳 title 的頁面都會用此值；新頁面建議明確傳 title
+export const DEFAULT_TITLE = 'MultiStream Hub - 免費多平台直播觀看工具 | 同時觀看 Twitch & YouTube (Free Multistreaming)';
+
 export function SEO({
-  title = 'MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube',
+  title = DEFAULT_TITLE,
   description = 'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。',
   keywords = 'MultiStream, 多串流, Twitch, YouTube, 直播, 串流觀看, 多平台直播, 直播工具, 免費直播工具, 同時觀看多個直播, 直播整合, 聊天室整合',
   image = 'https://multistreaming.org/icon.png',
@@ -19,7 +23,9 @@ export function SEO({
   type = 'website',
   locale = 'zh_TW',
 }: SEOProps) {
-  useEffect(() => {
+  // 用 useLayoutEffect 確保 document.title 在瀏覽器繪製前就同步完成，
+  // 讓父層 useRouter 的 useEffect（在子元件 effect 後執行）讀到的 title 已是當前頁面標題
+  useLayoutEffect(() => {
     // 更新 title
     if (title) {
       document.title = title;

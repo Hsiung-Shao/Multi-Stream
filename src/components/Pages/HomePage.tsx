@@ -24,7 +24,12 @@ export function HomePage() {
 
     return (
         <>
-            <SEO />
+            {/* 明確指定 title/url/description 避免空 props 落到預設值，與 LandingPage 區隔以解決雙標題問題 */}
+            <SEO
+                title="MultiStream Hub - 如何同時觀看多個直播"
+                description="進入 MultiStream Hub 主控台，貼上 Twitch 或 YouTube 連結即可同時觀看多個直播。支援多種布局、聊天室整合、音量控制。"
+                url="https://multistreaming.org/tools"
+            />
             <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
                 <Navbar
                     theme={theme}
