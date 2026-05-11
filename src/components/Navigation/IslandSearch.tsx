@@ -9,6 +9,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 import { twitchService } from '../../features/twitch/TwitchService';
+import { track } from '../../utils/analytics';
 // ... existing imports
 
 interface SearchResult {
@@ -75,6 +76,8 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
             setSearchResults(results || []);
             setShowResults(true);
             setSelectedIndex(-1);
+            // GA4: 追蹤搜尋結果出現
+            track.viewSearchResults(q.trim(), results?.length ?? 0);
         } catch (error) {
             setSearchResults([]);
             setShowResults(false);
