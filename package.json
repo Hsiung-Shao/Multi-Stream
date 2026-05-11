@@ -94,6 +94,7 @@
             "build": "vite build",
             "postbuild": "node scripts/copy-static-assets.js",
             "generate-sitemap": "node scripts/generate-sitemap.js",
-            "prebuild": "npm run generate-sitemap"
+            "prebuild": "npm run generate-sitemap",
+            "search-mentions": "node scripts/search-mentions.mjs"
       }
 }
