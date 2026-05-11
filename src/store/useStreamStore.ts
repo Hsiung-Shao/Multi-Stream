@@ -13,7 +13,7 @@ import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
 import { layoutStorage } from '../utils/layoutStorage';
-import { logEvent, isTrackingEnabled } from '../utils/analytics';
+import { logEvent, isTrackingEnabled, track } from '../utils/analytics';
 import { trackEvent as umamiTrack } from '../utils/umami';
 import { userSegmentationManager, FEATURE_FLAGS } from '../utils/userSegmentation';
 
@@ -411,6 +411,11 @@ export const useStreamStore = create<StreamStoreState>()(
 
                     // Umami: 追蹤串流新增
                     umamiTrack('stream-add', { platform: newStream.platform });
+
+                    // GA4: 追蹤串流開啟（含「是否本次工作階段第一個」flag）
+                    if (isTrackingEnabled()) {
+                        track.streamStart(newStream.platform, state.streams.length === 0);
+                    }
 
                     return { success: true, streamId: newId };
                 } catch (error) {
@@ -859,9 +864,10 @@ export const useStreamStore = create<StreamStoreState>()(
             applyLayout: (id) => set(state => {
                 const preset = state.presets.find(p => p.id === id);
                 if (preset) {
-                    // GA4 追蹤：套用預設布局
+                    // GA4 追蹤：套用預設布局，stream_count 為布局裡有指定 contentId 的 stream slot 數
                     if (isTrackingEnabled()) {
-                        logEvent('Layout', 'apply_preset', preset.name || id);
+                        const streamCount = preset.items.filter(i => i.type === 'stream' && i.contentId !== null).length;
+                        track.applyPreset(preset.name || id, streamCount);
                         userSegmentationManager.recordFeatureUsage(FEATURE_FLAGS.LAYOUT_SWITCH);
                     }
                     return { canvasItems: preset.items };
@@ -915,9 +921,9 @@ export const useStreamStore = create<StreamStoreState>()(
                 const template = layoutTemplates.find(t => t.id === templateId);
                 if (!template) return {};
 
-                // GA4 追蹤：套用模板布局
+                // GA4 追蹤：套用模板布局，stream_count 取模板的 slot 容量
                 if (isTrackingEnabled()) {
-                    logEvent('Layout', 'apply_preset', templateId);
+                    track.applyPreset(templateId, template.count);
                     userSegmentationManager.recordFeatureUsage(FEATURE_FLAGS.LAYOUT_SWITCH);
                 }
 

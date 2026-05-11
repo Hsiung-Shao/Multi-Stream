@@ -150,25 +150,20 @@
   <!-- Google AdSense 腳本（用於審核檢測） -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8415424787944153"
     crossorigin="anonymous"></script>
-  <!-- Google Tag Manager (GTM) -->
-  <script>(function (w, d, s, l, i) {
-      w[l] = w[l] || []; w[l].push({
-        'gtm.start':
-          new Date().getTime(), event: 'gtm.js'
-      }); var f = d.getElementsByTagName(s)[0],
-        j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
-          'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
-    })(window, document, 'script', 'dataLayer', 'GTM-WS5W6JWC');</script>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8415424787944153"
-    crossorigin="anonymous"></script>
-  <!-- End Google Tag Manager -->
+
+  <!-- GA4 boot stub：dataLayer 與 gtag 預先建立，正式初始化由 src/utils/analytics.ts 在環境檢查後接管 -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ window.dataLayer.push(arguments); }
+    window.gtag = gtag;
+    gtag('js', new Date());
+  </script>
+
+  <!-- GTM (GTM-WS5W6JWC) 已移除：codebase 沒有 dataLayer 業務事件、GTM 後台 3 個 tag 全屬 stream_heartbeat 系列，已被 native gtag.js 完整取代。CSP 仍允許 googletagmanager.com，將來如需重啟可直接還原此區塊。詳見 docs/ga4-gtm-investigation.md -->
 </head>
 
 <body>
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WS5W6JWC" height="0" width="0"
-      style="display:none;visibility:hidden"></iframe></noscript>
-  <!-- End Google Tag Manager (noscript) -->
+  <!-- GTM noscript iframe 已移除（搭配 head 區塊 GTM script 一併移除） -->
   <div id="root"></div>
 
   <!-- Google AdSense 廣告單元（隱藏，用於審核檢測） -->
