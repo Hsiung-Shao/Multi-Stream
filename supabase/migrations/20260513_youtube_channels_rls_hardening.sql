@@ -1,0 +1,101 @@
+-- YouTube Channels RLS Hardening:移除 always-true INSERT/UPDATE policy,改為 service_role only
+--
+-- 背景:
+--   `public.youtube_channels` 是後端定期從 YouTube Data API 抓回來的頻道 cache,
+--   欄位包含 channel_id、channel_title、thumbnail_url、subscriber_count、view_count、
+--   video_count、description、custom_url、published_at、last_live_*、fetched_at 等,
+--   屬於「全站共享、後端 owner」的快取資料,**沒有** owner / submitter / status 欄位,
+--   任何 write 都應該只由後端 service(Cloudflare Functions + service_role key)執行。
+--
+-- 現況(advisors WARN + 內部審查發現):
+--   `public.youtube_channels` 已啟用 RLS,但同時掛了三條 policy:
+--     1) youtube_channels_select   roles=public          cmd=SELECT  qual=true
+--     2) youtube_channels_insert   roles=authenticated   cmd=INSERT  with_check=true
+--     3) youtube_channels_update   roles=authenticated   cmd=UPDATE  qual=true, with_check=true
+--   問題:INSERT 與 UPDATE 兩條 policy 的條件都是 `true`,等於任何已登入帳號
+--         (拿到 anon JWT + 完成 OAuth 即 authenticated)都可以透過 PostgREST 直接
+--         寫入或竄改 youtube_channels 任意 row,包含改 subscriber_count / view_count /
+--         last_live_url 等公開展示欄位。屬於「authenticated 可任意污染快取」漏洞。
+--
+-- 修法:
+--   - DROP 兩條 always-true 寫入 policy。
+--   - **不**重新建立任何 INSERT/UPDATE/DELETE policy。
+--     PostgreSQL 行為:RLS enabled 且該 cmd 無任何 PERMISSIVE policy → 除 service_role
+--     之外所有 role 一律拒絕。service_role BYPASS RLS,不受影響。
+--   - 保留 `youtube_channels_select`(roles=public, cmd=SELECT, qual=true),
+--     公開讀取頻道資訊是預期行為(前端 anon SELECT 用於顯示頻道資訊卡)。
+--
+-- 配合改動(必須在 apply 前到位):
+--   - 後端新增 service-role-only endpoint(由 fullstack-engineer 實作),
+--     由 Cloudflare Function 用 SUPABASE_SERVICE_ROLE_KEY 執行 upsert。
+--   - 前端 Repository 不再直接 `from('youtube_channels').upsert(...)`,
+--     改呼叫上述後端 endpoint。
+--   - grep 確認 `src/` 內已無直接 upsert youtube_channels 的程式碼路徑。
+--
+-- 影響面評估:
+--   - row_count = 0(production 尚未被觸發),apply 後零資料風險。
+--   - anon SELECT:**不影響**(select policy 保留)。
+--   - authenticated INSERT/UPDATE:**會被擋下**(這正是目的;前端不該直接寫)。
+--   - service_role:不受 RLS 影響,正常 upsert。
+--   - cron / pg_net 觸發的後端 sync:走 service_role key,不受影響。
+--
+-- ============================================================================
+-- Step A:DROP always-true INSERT policy
+-- ============================================================================
+
+drop policy if exists "youtube_channels_insert" on public.youtube_channels;
+
+-- ============================================================================
+-- Step B:DROP always-true UPDATE policy
+-- ============================================================================
+
+drop policy if exists "youtube_channels_update" on public.youtube_channels;
+
+-- ============================================================================
+-- 註:保留 `youtube_channels_select`(public read),不在本 migration 動。
+-- ============================================================================
+
+-- ============================================================================
+-- 驗證查詢(apply 後手動執行)
+-- ============================================================================
+-- 1) 確認只剩 select policy:
+--    SELECT policyname, permissive, cmd, roles, qual, with_check
+--    FROM pg_policies
+--    WHERE schemaname='public' AND tablename='youtube_channels'
+--    ORDER BY policyname;
+--    預期:只有一條 "youtube_channels_select"(PERMISSIVE, SELECT, public, qual=true)。
+--
+-- 2) 確認 RLS 仍 enabled:
+--    SELECT relname, relrowsecurity, relforcerowsecurity
+--    FROM pg_class
+--    WHERE relname = 'youtube_channels';
+--    預期:relrowsecurity = true。
+--
+-- 3) 用 authenticated JWT 對 PostgREST 試打 INSERT/UPDATE youtube_channels,
+--    應該回 401/403(new row violates row-level security policy)。
+--
+-- 4) 後端 endpoint(service_role)upsert 應成功;前端 SELECT 應成功。
+--
+-- ============================================================================
+-- Rollback(緊急回滾用 — 不建議,等於把漏洞放回去)
+-- ============================================================================
+-- 若 apply 後發現後端 endpoint / 前端 Repository 改動還沒完全 deploy,
+-- 導致 production write path 全斷,可暫時跑以下 SQL 把舊 policy 還原:
+--
+-- create policy "youtube_channels_insert"
+--   on public.youtube_channels
+--   as permissive
+--   for insert
+--   to authenticated
+--   with check (true);
+--
+-- create policy "youtube_channels_update"
+--   on public.youtube_channels
+--   as permissive
+--   for update
+--   to authenticated
+--   using (true)
+--   with check (true);
+--
+-- ⚠️ 警告:回滾後 authenticated 又可以任意寫 youtube_channels,僅作為救火用途,
+--    務必在最短時間內把後端 endpoint deploy 完再重新 apply 本 migration。

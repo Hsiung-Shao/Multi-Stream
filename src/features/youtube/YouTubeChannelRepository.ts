@@ -57,30 +57,67 @@ export async function getCachedChannel(channelId: string): Promise<YouTubeChanne
 
 /**
  * Upsert a YouTube channel record.
- * Uses ON CONFLICT on channel_id to update existing records.
- * Also updates the in-memory cache.
+ *
+ * 走後端 endpoint `/api/youtube/cache-channel`（service_role 寫入），不再直接打 Supabase。
+ * 這是為了 RLS hardening：之後 youtube_channels 將禁止 anon/authenticated 直接 INSERT/UPDATE。
+ *
+ * 前端只負責傳 channel_id；metadata（title/thumbnail/subscriber_count 等）由後端
+ * 透過 YouTube Data API 抓最新一份再 upsert。caller 傳進來的 channel_title 等欄位會被
+ * 後端覆寫成最新值，這是預期行為。
+ *
+ * Fail-open：寫入失敗不 throw，caller（useStreamStore 用 .catch(() => {})）原本就視為非關鍵。
  */
 export async function upsertChannel(channel: YouTubeChannelData): Promise<boolean> {
-  // Update in-memory cache immediately
+  // L1: 先用 caller 給的資料更新 in-memory cache，避免本次 session 重複請求
   memoryCache.set(channel.channel_id, { data: channel, expiresAt: Date.now() + MEMORY_TTL_MS });
 
   try {
-    const supabase = await getSupabase();
-    if (!supabase) return false;
+    // 取 session token；無 session 時不寫入（後端會 401）— 避免無謂的請求
+    let accessToken: string | null = null;
+    try {
+      const supabase = await getSupabase();
+      if (supabase) {
+        const { data: sd } = await supabase.auth.getSession();
+        accessToken = sd?.session?.access_token ?? null;
+      }
+    } catch {
+      /* ignore — 視為無 session */
+    }
+    if (!accessToken) return false;
 
-    const { error } = await supabase
-      .from('youtube_channels')
-      .upsert(
-        {
-          ...channel,
-          fetched_at: new Date().toISOString(),
-        },
-        { onConflict: 'channel_id' }
-      );
+    const res = await fetch('/api/youtube/cache-channel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ channel_id: channel.channel_id }),
+    });
 
-    if (error) {
-      console.warn('Failed to upsert YouTube channel:', error.message);
+    if (!res.ok) {
+      // 不阻塞流程；fire-and-forget 失敗只 warn
+      let reason: string | undefined;
+      try {
+        const body = await res.json();
+        reason = body?.reason;
+      } catch {
+        /* non-JSON */
+      }
+      console.warn('[youtube cache] backend write failed:', res.status, reason);
       return false;
+    }
+
+    // 後端回傳的 channel 是最新 metadata，用它覆寫 in-memory cache
+    try {
+      const data = await res.json();
+      if (data?.ok && data?.channel?.channel_id) {
+        memoryCache.set(data.channel.channel_id, {
+          data: data.channel as YouTubeChannelData,
+          expiresAt: Date.now() + MEMORY_TTL_MS,
+        });
+      }
+    } catch {
+      /* response 不是 JSON 也不致命 */
     }
 
     return true;
