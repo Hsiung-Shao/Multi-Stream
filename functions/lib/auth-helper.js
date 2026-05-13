@@ -88,20 +88,31 @@ export async function getTrustLevel(env, userId) {
 }
 
 /**
- * Admin / Moderator 操作 gate：要求 trust_level=admin 或 moderator
+ * Admin / Moderator 操作 gate：要求 trust_level=admin 或 moderator + session aal=aal2
  *
- * 設計選擇：2FA 為純 opt-in 安全功能、不在此處強制（admin 帳號仍可選擇啟用）。
- * 個別敏感端點若需「最近驗證過 TOTP」雙重保險，自行檢查 aal（例如 totp-backup-codes）。
+ * 設計：所有 admin/moderator 後端操作強制要求 2FA（aal2）。
+ * - aal1 session 即使 trust_level=admin 也被擋下 → reason='mfa_required' (401)
+ * - 這是純粹的後端安全閘門，與前端 MfaLoginGate 形成雙保險：
+ *   攻擊者偷到 OAuth credentials 也無法直接呼叫 admin endpoints
+ *
+ * 檢查順序：
+ *   1. unauthenticated（無 userId）
+ *   2. banned（trust_level=banned）
+ *   3. mfa_required（aal !== aal2）← 在 forbidden 前，避免洩漏 trust_level 給未升級 session
+ *   4. forbidden（trust_level 非 admin/moderator）
+ *   5. allowed
  *
  * @param {Object} env
  * @param {string|null} userId - getUserIdFromRequest 拿到的 userId
+ * @param {'aal1'|'aal2'} aal - getUserIdFromRequest 拿到的 aal
  * @returns {Promise<{ allowed: boolean, reason: string|null, trustLevel: string }>}
- *   reason: 'unauthenticated' | 'banned' | 'forbidden' | null
+ *   reason: 'unauthenticated' | 'banned' | 'mfa_required' | 'forbidden' | null
  */
-export async function requireAdminTrust(env, userId) {
+export async function requireAdminTrust(env, userId, aal) {
     if (!userId) return { allowed: false, reason: 'unauthenticated', trustLevel: 'new' };
     const trustLevel = await getTrustLevel(env, userId);
     if (trustLevel === 'banned') return { allowed: false, reason: 'banned', trustLevel };
+    if (aal !== 'aal2') return { allowed: false, reason: 'mfa_required', trustLevel };
     if (trustLevel !== 'admin' && trustLevel !== 'moderator') {
         return { allowed: false, reason: 'forbidden', trustLevel };
     }
