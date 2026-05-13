@@ -1,52 +1,58 @@
-import ReactGA from 'react-ga4';
-import { identityManager } from '../features/analytics/IdentityManager';
-import { userSegmentationManager } from './userSegmentation';
-
-const EVENT_QUEUE: Array<() => void> = [];
-let isInitialized = false;
-let gaMeasurementId: string | null = null;
-let isInitializing = false;
-
-// ===== Cookie 同意相關 =====
-
-const CONSENT_KEY = 'cookie_consent';
-
 /**
- * 檢查追蹤是否已啟用（使用者已同意）
+ * MultiStream Hub — GA4 Analytics Module
+ *
+ * 設計原則：
+ * 1. Native gtag.js 取代 react-ga4（spec 要求）
+ * 2. 三段模式：live（正式環境真送）/ mock（內部環境 console.log）/ disabled（無同意）
+ * 3. 環境檢查：localhost / 127.0.0.1 / *.pages.dev → mock；multistreaming.org → live
+ * 4. send_page_view: false — 由我們手動送 page_view，避免雙計、配合 SPA 路由
+ * 5. 結構化 helper（track.*）為新事件首選；保留 logEvent() 為向後相容 wrapper
+ * 6. user_id 一律 SHA-256 + salt，禁絕 PII（spec 強制）
+ *
+ * 與 GTM 的關係：
+ * - GTM (GTM-WS5W6JWC) script 已從 index.html 移除，後台 3 個 stream_heartbeat 系列 tag 由本模組完整取代
+ * - 詳見 docs/ga4-gtm-investigation.md
+ *
+ * 與 Cloudflare Zaraz 的關係：
+ * - Zaraz 的 GA4 整合導致 user_engagement 沒被收集、跳出率 99%
+ * - 須在 CF dashboard 手動停用，見 docs/ga4-zaraz-disable.md
  */
+
+const GA_MEASUREMENT_ID = 'G-Q2LXVMDD46';
+const USER_ID_SALT = 'multistream_hub_analytics';
+const CONSENT_KEY = 'cookie_consent';
+const INTERNAL_USER_KEY = 'ms_internal_user';
+const SESSION_WATCH_SECONDS_KEY = 'ms_session_watch_seconds';
+const SESSION_MAX_STREAMS_KEY = 'ms_session_max_concurrent_streams';
+
+type Mode = 'uninitialized' | 'live' | 'mock' | 'disabled';
+let mode: Mode = 'uninitialized';
+let scriptInjected = false;
+
+// ===== Cookie 同意 =====
+
 export const isTrackingEnabled = (): boolean => {
     try {
-        const consent = localStorage.getItem(CONSENT_KEY);
-        return consent === 'accepted';
+        return localStorage.getItem(CONSENT_KEY) === 'accepted';
     } catch {
         return false;
     }
 };
 
-/**
- * 檢查是否已有同意記錄（無論同意或拒絕）
- */
 export const hasConsentRecord = (): boolean => {
     try {
-        const consent = localStorage.getItem(CONSENT_KEY);
-        return consent !== null;
+        return localStorage.getItem(CONSENT_KEY) !== null;
     } catch {
         return false;
     }
 };
 
-/**
- * 設定追蹤同意狀態
- */
 export const setTrackingConsent = (accepted: boolean): void => {
     try {
         localStorage.setItem(CONSENT_KEY, accepted ? 'accepted' : 'rejected');
-
         if (accepted) {
-            // 使用者同意，初始化 GA4
             initGA();
         } else {
-            // 使用者拒絕，清除 GA cookies
             disableTracking();
         }
     } catch (e) {
@@ -54,196 +60,352 @@ export const setTrackingConsent = (accepted: boolean): void => {
     }
 };
 
-/**
- * 停用追蹤並清除 GA cookies
- */
 export const disableTracking = (): void => {
     try {
         localStorage.setItem(CONSENT_KEY, 'rejected');
-
-        // 清除 GA4 cookies
-        document.cookie.split(';').forEach(cookie => {
+        document.cookie.split(';').forEach((cookie) => {
             const name = cookie.split('=')[0].trim();
             if (name.startsWith('_ga')) {
                 document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
             }
         });
-
-        // 記錄事件（在停用前）
-        if (isInitialized) {
-            logEvent('Privacy', 'tracking_disabled', 'user_action');
+        if (mode === 'live') {
+            sendEvent('tracking_disabled', { source: 'user_action' });
         }
+        mode = 'disabled';
     } catch (e) {
         console.warn('Failed to disable tracking:', e);
     }
 };
 
-// ===== GA 設定取得 =====
-
-// 立即觸發設定取得 (最優先載入)
-// 這樣當 initGA 被呼叫時，請求可能已經完成或正在進行中，不用等待 React 渲染
-const configPromise = fetch('/api/ga-config')
-    .then(res => {
-        if (!res.ok) throw new Error(`GA Config Fetch Error: ${res.status}`);
-        return res.json();
-    })
-    .then((data: any) => {
-        return data.measurementId as string;
-    })
-    .catch(err => {
-        console.warn('Failed to fetch GA Config:', err);
-        return null;
-    });
-
-// ===== GA 初始化 =====
+// ===== 環境判斷 =====
 
 /**
- * 初始化 Google Analytics 4
- * 
- * 優化後的初始化順序：
- * 1. 檢查使用者同意狀態
- * 2. 初始化 IdentityManager（取得 UUID 和 isNew）
- * 3. 初始化 GA4（帶著 User ID）
- * 4. 設定使用者屬性
- * 5. 初始化使用者分群
- * 6. 處理事件佇列
+ * 是否為內部環境（dev/preview/QA flag）— 不送任何 GA4 請求
  */
-export const initGA = async () => {
-    // 防止重複初始化
-    if (isInitialized || isInitializing) return;
+export const isInternalEnvironment = (): boolean => {
+    if (typeof window === 'undefined') return true;
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    if (hostname.endsWith('.pages.dev')) return true;
+    try {
+        if (localStorage.getItem(INTERNAL_USER_KEY) === '1') return true;
+    } catch {
+        /* localStorage 不可用視為非內部 */
+    }
+    return false;
+};
 
-    // 檢查使用者是否已同意追蹤
-    if (!isTrackingEnabled()) {
-        console.info('GA4: Tracking not enabled (no consent)');
+// ===== gtag 動態載入 =====
+
+const injectGtagScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        if (scriptInjected) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+        script.onload = () => {
+            scriptInjected = true;
+            resolve();
+        };
+        script.onerror = () => reject(new Error('Failed to load gtag.js'));
+        document.head.appendChild(script);
+    });
+};
+
+const installMockGtag = (): void => {
+    // 覆寫 boot stub 的 gtag，改為 console.info 模式
+    window.gtag = function mockGtag(...args: unknown[]) {
+        console.info('[GA4 Mock]', ...args);
+    };
+};
+
+// ===== 初始化 =====
+
+/**
+ * 初始化 GA4。依環境決定 live / mock / disabled，呼叫多次只會生效一次。
+ *
+ * Live 模式設定 send_page_view: false — 由 logPageView() 手動送，
+ * SPA 路由變更時才會觸發 page_view。
+ */
+export const initGA = async (): Promise<void> => {
+    if (mode !== 'uninitialized') return;
+
+    if (isInternalEnvironment()) {
+        mode = 'mock';
+        installMockGtag();
+        console.info('[GA4] Mock mode (internal environment, no requests sent)');
         return;
     }
 
-    isInitializing = true;
+    if (!isTrackingEnabled()) {
+        mode = 'disabled';
+        console.info('[GA4] Disabled (no consent)');
+        return;
+    }
 
     try {
-        // 1. 取得 GA Measurement ID
-        const fetchedId = await configPromise;
-
-        if (!fetchedId) {
-            console.warn('GA4 Measurement ID not found (Async). Analytics disabled.');
-            isInitializing = false;
-            return;
-        }
-
-        // 2. 先初始化 IdentityManager（確保 UUID 在 GA4 初始化前就緒）
-        const { uuid, isNew } = await identityManager.init();
-
-        // 3. 初始化 GA4（帶著 User ID）
-        gaMeasurementId = fetchedId;
-        ReactGA.initialize(fetchedId, {
-            gaOptions: {
-                userId: uuid
-            }
+        await injectGtagScript();
+        // boot stub 已建立 window.gtag = dataLayer.push 形式，可直接使用
+        window.gtag('config', GA_MEASUREMENT_ID, {
+            send_page_view: false,
+            cookie_flags: 'SameSite=None;Secure',
         });
-
-        isInitialized = true;
-        isInitializing = false;
-
-        // 4. 設定基本使用者屬性
-        ReactGA.set({
-            user_properties: {
-                visitor_type: isNew ? 'new' : 'returning',
-            }
-        });
-
-        // 5. 初始化使用者分群系統
-        const segment = userSegmentationManager.init();
-
-        // 設定完整的使用者分群屬性
-        ReactGA.set({
-            user_properties: {
-                visitor_type: segment.visitor_type,
-                visit_frequency: segment.visit_frequency,
-                feature_depth: segment.feature_depth,
-                session_length: segment.session_length,
-            }
-        });
-
-        // 6. 處理積壓的事件
-        processQueue();
-
+        mode = 'live';
+        console.info('[GA4] Live mode initialized');
     } catch (e) {
-        console.error('GA Init Error:', e);
-        isInitializing = false;
+        console.error('[GA4] Init failed:', e);
+        mode = 'disabled';
     }
 };
 
-const processQueue = () => {
-    if (!isInitialized) return;
-    while (EVENT_QUEUE.length > 0) {
-        const eventTask = EVENT_QUEUE.shift();
-        if (eventTask) eventTask();
-    }
-};
-
-// ===== GA 事件追蹤 =====
+// ===== 事件送出（核心） =====
 
 /**
- * 記錄頁面瀏覽 (Page View)
+ * 送 GA4 event。所有 helper 最終都走這裡。
+ * 內部環境 → console.info；正式環境 → window.gtag
  */
-export const logPageView = () => {
-    // 如果追蹤未啟用，不發送事件
-    if (!isTrackingEnabled()) return;
-
-    const task = () => {
-        if (!gaMeasurementId) return;
-        ReactGA.send({
-            hitType: "pageview",
-            page: window.location.pathname + window.location.search
-        });
-    };
-
-    if (isInitialized) {
-        task();
-    } else {
-        EVENT_QUEUE.push(task);
+const sendEvent = (eventName: string, params?: Record<string, unknown>): void => {
+    if (mode === 'uninitialized') {
+        // initGA 還沒執行，先 fall back 到環境檢查
+        if (isInternalEnvironment()) {
+            console.info('[GA4 Mock]', 'event', eventName, params);
+        }
+        // 真實環境若 initGA 還沒跑完，事件會丟失—呼叫端應在 init 之後才送
+        return;
     }
+    if (mode === 'disabled') return;
+    if (mode === 'mock') {
+        console.info('[GA4 Mock]', 'event', eventName, params);
+        return;
+    }
+    // mode === 'live'
+    window.gtag('event', eventName, params || {});
+};
+
+// ===== Page View =====
+
+/**
+ * 手動送 page_view。SPA 路由變更時呼叫。
+ * 確保 document.title 已是當前頁面標題（呼叫端應在 title 更新後才呼叫，
+ * 例如用 queueMicrotask / requestAnimationFrame）。
+ */
+export const logPageView = (): void => {
+    sendEvent('page_view', {
+        page_location: window.location.href,
+        page_path: window.location.pathname + window.location.search,
+        page_title: document.title,
+    });
+};
+
+// ===== User-ID（SHA-256 hash + salt） =====
+
+/**
+ * SHA-256 hash 工具，輸出 lowercase hex string
+ */
+async function sha256(input: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+/**
+ * Twitch OAuth 登入成功後呼叫。將 Twitch User ID 透過 SHA-256 + salt
+ * hash 後設為 GA4 user_id，供跨裝置識別。
+ *
+ * @param twitchUserId Twitch 平台回傳的 user id（不能是 username/email）
+ */
+export const setUserIdFromTwitchId = async (twitchUserId: string): Promise<void> => {
+    if (!twitchUserId) return;
+    const hashed = await sha256(`${twitchUserId}${USER_ID_SALT}`);
+    if (mode === 'mock' || (mode === 'uninitialized' && isInternalEnvironment())) {
+        console.info('[GA4 Mock]', 'config user_id', hashed);
+        return;
+    }
+    if (mode !== 'live') return;
+    window.gtag('config', GA_MEASUREMENT_ID, { user_id: hashed });
+    sendEvent('login', { method: 'Twitch' });
 };
 
 /**
- * 記錄自定義事件 (Custom Event)
+ * 登出時清除 user_id（傳 null 給 GA4）
  */
-export const logEvent = (category: string, action: string, label?: string, value?: number) => {
-    // 如果追蹤未啟用，不發送事件
-    if (!isTrackingEnabled()) return;
+export const clearUserId = (): void => {
+    if (mode === 'mock') {
+        console.info('[GA4 Mock]', 'config user_id', null);
+        return;
+    }
+    if (mode !== 'live') return;
+    window.gtag('config', GA_MEASUREMENT_ID, { user_id: null });
+};
 
-    const task = () => {
-        if (!gaMeasurementId) return;
-        ReactGA.event({
-            category,
-            action,
-            label,
-            value
-        });
-    };
+// ===== 結構化事件 helper（spec 要求） =====
 
-    if (isInitialized) {
-        task();
-    } else {
-        EVENT_QUEUE.push(task);
+export const track = {
+    /** 套用預設配置 */
+    applyPreset: (presetName: string, streamCount: number) =>
+        sendEvent('apply_preset', { preset_name: presetName, stream_count: streamCount }),
+
+    /** 套用自訂配置 */
+    applyCustom: (streamCount: number) =>
+        sendEvent('apply_custom', { stream_count: streamCount }),
+
+    /** 建立新自訂配置 */
+    createCustom: (streamCount: number) =>
+        sendEvent('create_custom', { stream_count: streamCount }),
+
+    /** 切換布局 */
+    changeLayout: (layoutType: string, streamCount: number) =>
+        sendEvent('change_layout', { layout_type: layoutType, stream_count: streamCount }),
+
+    /** 切換聊天室布局 */
+    changeChatLayout: (chatPosition: string) =>
+        sendEvent('change_chat_layout', { chat_position: chatPosition }),
+
+    /** 新增收藏 */
+    addFavorite: (platform: string, channelName: string) =>
+        sendEvent('add_favorite', { platform, channel_name: channelName }),
+
+    /** 移除收藏 */
+    removeFavorite: (platform: string, channelName: string) =>
+        sendEvent('remove_favorite', { platform, channel_name: channelName }),
+
+    /** 批量匯入 */
+    batchImport: (importCount: number, source: string) =>
+        sendEvent('batch_import', { import_count: importCount, source }),
+
+    /** Twitch 匯入 */
+    twitchImport: (importCount: number) =>
+        sendEvent('twitch_import', { import_count: importCount }),
+
+    /** 匯出 JSON 設定 */
+    exportJson: () => sendEvent('export_json'),
+
+    /** 匯入 JSON 設定 */
+    importJson: () => sendEvent('import_json'),
+
+    /** 全體靜音切換 */
+    toggleMuteAll: (isMuted: boolean) =>
+        sendEvent('toggle_mute_all', { is_muted: isMuted }),
+
+    /** 點擊贊助按鈕 */
+    clickDonationCta: (location: string, paymentMethod: string) =>
+        sendEvent('click_donation_cta', { location, payment_method: paymentMethod }),
+
+    /** 搜尋結果出現 */
+    viewSearchResults: (searchTerm: string, resultCount: number) =>
+        sendEvent('view_search_results', { search_term: searchTerm, result_count: resultCount }),
+
+    /** 直播視窗開啟 */
+    streamStart: (platform: string, isFirstStream: boolean) =>
+        sendEvent('stream_start', { platform, is_first_stream: isFirstStream }),
+
+    /** 觀看里程碑（5/15/30/60 分鐘） */
+    streamMilestone: (milestoneMinutes: number) =>
+        sendEvent('stream_milestone', { milestone_minutes: milestoneMinutes }),
+} as const;
+
+// ===== Heartbeat 與 Session 事件（spec 要求） =====
+
+export interface HeartbeatPayload {
+    streamCount: number;
+    platforms: string; // "twitch,youtube"
+    totalWatchSeconds: number;
+    isActive: boolean;
+}
+
+export const sendStreamHeartbeat = (payload: HeartbeatPayload): void => {
+    sendEvent('stream_heartbeat', {
+        stream_count: payload.streamCount,
+        platforms: payload.platforms,
+        total_watch_seconds: payload.totalWatchSeconds,
+        is_active: payload.isActive,
+    });
+};
+
+export const sendSessionPause = (activeWatchSeconds: number): void => {
+    sendEvent('session_pause', {
+        active_watch_seconds: activeWatchSeconds,
+    });
+};
+
+export const sendSessionResume = (): void => {
+    sendEvent('session_resume', {});
+};
+
+export const sendSessionEnd = (totalWatchSeconds: number, maxConcurrentStreams: number): void => {
+    sendEvent('session_end', {
+        total_watch_seconds: totalWatchSeconds,
+        max_concurrent_streams: maxConcurrentStreams,
+    });
+};
+
+// ===== Session storage：跨頁面重整保留累積秒數 =====
+
+export const getStoredWatchSeconds = (): number => {
+    try {
+        const v = sessionStorage.getItem(SESSION_WATCH_SECONDS_KEY);
+        return v ? Math.max(0, Number(v)) : 0;
+    } catch {
+        return 0;
     }
 };
 
-/**
- * 特別為使用者屬性設定
- */
-export const setUserProperties = (properties: any) => {
-    // 如果追蹤未啟用，不發送事件
-    if (!isTrackingEnabled()) return;
-
-    const task = () => {
-        if (!gaMeasurementId) return;
-        ReactGA.set(properties);
-    };
-
-    if (isInitialized) {
-        task();
-    } else {
-        EVENT_QUEUE.push(task);
+export const setStoredWatchSeconds = (seconds: number): void => {
+    try {
+        sessionStorage.setItem(SESSION_WATCH_SECONDS_KEY, String(Math.max(0, Math.floor(seconds))));
+    } catch {
+        /* sessionStorage 不可用就放棄持久化，當下值仍可用 */
     }
+};
+
+export const getStoredMaxStreams = (): number => {
+    try {
+        const v = sessionStorage.getItem(SESSION_MAX_STREAMS_KEY);
+        return v ? Math.max(0, Number(v)) : 0;
+    } catch {
+        return 0;
+    }
+};
+
+export const setStoredMaxStreams = (count: number): void => {
+    try {
+        sessionStorage.setItem(SESSION_MAX_STREAMS_KEY, String(Math.max(0, Math.floor(count))));
+    } catch {
+        /* ignore */
+    }
+};
+
+// ===== 向後相容 =====
+
+/**
+ * @deprecated 請改用 `track.*` 結構化 helper（spec 要求）。
+ *
+ * 既有 25+ 處呼叫保留可用：(category, action, label?, value?) → GA4 event(action, {event_category, event_label, value})。
+ * 此 wrapper 不會被刪除，但新事件不要用。
+ */
+export const logEvent = (category: string, action: string, label?: string, value?: number): void => {
+    sendEvent(action, {
+        event_category: category,
+        event_label: label,
+        value,
+    });
+};
+
+/**
+ * @deprecated 用於既有 ReactGA.set 呼叫。新程式請用 track.* helper。
+ */
+export const setUserProperties = (properties: Record<string, unknown>): void => {
+    if (mode === 'mock') {
+        console.info('[GA4 Mock]', 'set user_properties', properties);
+        return;
+    }
+    if (mode !== 'live') return;
+    window.gtag('set', 'user_properties', properties);
 };

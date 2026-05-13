@@ -19,7 +19,7 @@ import { PerformanceOverlay } from './components/Navigation/PerformanceOverlay';
 import { GlobalLiveStatusChecker } from './features/favorites/components/GlobalLiveStatusChecker';
 import { useHotkeys } from './hooks/useHotkeys';
 import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
-import { useEngagementTracking } from './hooks/useEngagementTracking';
+import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
 import { CookieConsent } from './components/CookieConsent';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
 import { MobileApp } from './components/Mobile/MobileApp';
@@ -89,7 +89,7 @@ export default function App() {
   useRouter();
   useAutoRefresh();
   useHotkeys();
-  useEngagementTracking(); // GA4 使用時間追蹤
+  useStreamHeartbeat(); // GA4 stream-aware 觀看時間追蹤（取代 useEngagementTracking，spec 對齊）
   useCanvasRetention(); // Umami canvas 留存追蹤
 
   // YouTube Warning Logic State (Hook) - Remains Global

@@ -2,7 +2,6 @@ import { ArrowLeft, Globe, Sun, Moon, Tv, Grid, MessageCircle, Volume2, Star, Sm
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
 import { logEvent } from '../utils/analytics';
 
 interface AboutPageProps {
@@ -16,10 +15,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
   const { t, i18n } = useTranslation(['about', 'common']);
   const locale = i18n.language;
 
-  useEffect(() => {
-    logEvent('AboutPage', 'page_view');
-  }, []);
-
+  // 註：page_view 由 useRouter 統一處理，此處不再額外送（避免雙計）
   const languages = [
     { value: 'zh-TW' as const, label: t('common:chineseTraditional') },
     { value: 'zh-CN' as const, label: t('common:chineseSimplified') },

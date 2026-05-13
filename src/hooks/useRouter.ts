@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/useUIStore';
-import { logPageView, logEvent, isTrackingEnabled } from '../utils/analytics';
+import { logPageView, isTrackingEnabled } from '../utils/analytics';
 import { trackPageView, trackEvent } from '../utils/umami';
 
 export function useRouter() {
@@ -56,9 +56,11 @@ export function useRouter() {
         if (page === 'not-found') return;
 
         // 發送 pageview 事件
+        // 注意：此 useEffect 在所有子元件 effect 之後執行，子層 SEO 元件已用 useLayoutEffect
+        // 完成 document.title 更新，所以這裡 logPageView 讀到的 title 已是當前頁面標題。
+        // 不再額外送 logEvent('Navigation', 'page_view', page) — 與 logPageView 重複，會雙計
         if (isTrackingEnabled()) {
             logPageView();
-            logEvent('Navigation', 'page_view', page);
 
             // Umami: SPA 路由追蹤
             trackPageView(window.location.pathname);

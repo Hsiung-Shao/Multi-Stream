@@ -20,7 +20,7 @@ import {
   TooltipTrigger,
 } from './ui/tooltip';
 import { useTranslation } from 'react-i18next';
-import { logEvent } from '../utils/analytics';
+import { logEvent, track } from '../utils/analytics';
 import { favoritesService } from '../features/favorites/FavoritesService';
 import { twitchService } from '../features/twitch/TwitchService';
 
@@ -113,6 +113,8 @@ export function Navbar({
       setSearchResults(results || []);
       setShowResults(true);
       setSelectedIndex(-1);
+      // GA4: 追蹤搜尋結果出現（去重由 GA4 後端 dedupe；同 query 連送也僅算一次曝光）
+      track.viewSearchResults(query.trim(), results?.length ?? 0);
     } catch (error) {
       setSearchResults([]);
       setShowResults(false);

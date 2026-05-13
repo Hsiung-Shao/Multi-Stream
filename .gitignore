@@ -28,3 +28,13 @@ config.js
 .env.*.local
 .dev.vars
 multistream-hub-ab264674e6c2.json
+.wrangler/
+.playwright-mcp/
+googleSearchConsole/
+docs/
+image/
+ga4Data/
+
+# 組建產出（Cloudflare Pages 會在部署時自動 npm run build，git 內無需追蹤）
+build/
+sitemap.xml
