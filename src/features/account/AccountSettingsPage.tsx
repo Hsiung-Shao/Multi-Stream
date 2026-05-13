@@ -10,7 +10,13 @@ import { TwoFactorSection } from './TwoFactorSection';
 import { CloudSyncSection } from '../favorites/CloudSyncSection';
 import { GeneralSection } from './GeneralSection';
 import { FavoritesSection } from './FavoritesSection';
-import { TwitchImportSection } from './TwitchImportSection';
+import { TwitchImportTab } from './TwitchImportTab';
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from '../../components/ui/tabs';
 import {
     AccountSettingsSidebar,
     buildSidebarItems,
@@ -40,9 +46,11 @@ export function AccountSettingsPage() {
         [t],
     );
 
-    // 兩大分組：每組內垂直 stack 多個子 section
-    //   一般：基本資料 + 顯示名稱（GeneralSection）+ 兩步驟驗證 + 登入方式
-    //   收藏與同步：雲端同步 → Twitch 匯入 → 收藏列表（inline）
+    // 兩大分組:每組內垂直 stack 多個子 section
+    //   一般:基本資料 + 顯示名稱(GeneralSection)+ 兩步驟驗證 + 登入方式
+    //   收藏與同步:Tabs 切換
+    //     - Tab「收藏列表」:雲端同步 → 收藏列表(inline)
+    //     - Tab「Twitch 匯入列表」:升級版 Twitch 匯入(分頁、多選、filter、一鍵匯入)
     const sections = useMemo<Array<{ key: AccountSectionKey; node: React.ReactNode }>>(
         () => [
             {
@@ -58,15 +66,27 @@ export function AccountSettingsPage() {
             {
                 key: 'favorites_sync',
                 node: (
-                    <div className="space-y-6">
-                        <CloudSyncSection />
-                        <TwitchImportSection />
-                        <FavoritesSection />
-                    </div>
+                    <Tabs defaultValue="favorites" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                            <TabsTrigger value="favorites">
+                                {t('tabs.favorites', '收藏列表')}
+                            </TabsTrigger>
+                            <TabsTrigger value="twitch">
+                                {t('tabs.twitchImport', 'Twitch 匯入列表')}
+                            </TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="favorites" className="space-y-6 mt-0">
+                            <CloudSyncSection />
+                            <FavoritesSection />
+                        </TabsContent>
+                        <TabsContent value="twitch" className="mt-0">
+                            <TwitchImportTab />
+                        </TabsContent>
+                    </Tabs>
                 ),
             },
         ],
-        [],
+        [t],
     );
 
     if (isLoading) {
