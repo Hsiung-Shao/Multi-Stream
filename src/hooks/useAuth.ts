@@ -3,6 +3,19 @@ import { getSupabase, manualRefreshSession } from '../lib/supabase';
 import type { Session, User, Provider, UserIdentity } from '@supabase/supabase-js';
 
 /**
+ * Module-level in-memory cache for checkMfaRequired result.
+ * 同一 userId 在 TTL 內直接回 cached value，避免 OAuth callback 後 init + SIGNED_IN event
+ * 連續觸發兩次 manualRefreshSession + totp-status fetch（每次累積 1-2s）。
+ *
+ * Invalidate 時機：logout、manualRefreshSession 失敗、user 切換。
+ */
+const MFA_CHECK_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let mfaCheckCache: { userId: string; value: boolean; expiresAt: number } | null = null;
+function invalidateMfaCache(): void {
+  mfaCheckCache = null;
+}
+
+/**
  * 把 Supabase Twitch OAuth callback 拿到的 provider_token 寫入 sessionStorage，
  * 讓 useTwitchAuth 自動識別為「已連結」狀態，省去使用者再次走獨立 Twitch OAuth。
  *
@@ -134,10 +147,17 @@ export function useAuth(): AuthState {
   //   token aal=aal2 → 不需要 gate
   //   token aal=aal1 + server 看到 enrolled=true → 必須 gate
   //   token aal=aal1 + server 看到 enrolled=false → 不需要（沒啟用 2FA 的 user）
-  const checkMfaRequired = useCallback(async (): Promise<boolean> => {
+  const checkMfaRequired = useCallback(async (userId?: string): Promise<boolean> => {
+    // 1. cache hit：同一 userId 在 TTL 內直接回（避免 init + SIGNED_IN 重複呼叫累積延遲）
+    if (userId && mfaCheckCache && mfaCheckCache.userId === userId && mfaCheckCache.expiresAt > Date.now()) {
+      return mfaCheckCache.value;
+    }
     try {
       const refreshed = await manualRefreshSession();
-      if (!refreshed?.access_token) return false;
+      if (!refreshed?.access_token) {
+        invalidateMfaCache();
+        return false;
+      }
 
       // decode aal claim
       let aal = 'aal1';
@@ -147,7 +167,12 @@ export function useAuth(): AuthState {
         );
         aal = payload?.aal || 'aal1';
       } catch { /* ignore */ }
-      if (aal === 'aal2') return false;
+      if (aal === 'aal2') {
+        if (userId) {
+          mfaCheckCache = { userId, value: false, expiresAt: Date.now() + MFA_CHECK_TTL_MS };
+        }
+        return false;
+      }
 
       // 用 raw fetch 打 totp-status 看 server 端 enrolled 狀態（用 service_role 查
       // mfa_factors，不受 client SDK race 與 RLS 影響）
@@ -156,37 +181,52 @@ export function useAuth(): AuthState {
       });
       if (!res.ok) return false;
       const data = await res.json();
-      return data?.enrolled === true;
+      const required = data?.enrolled === true;
+      if (userId) {
+        mfaCheckCache = { userId, value: required, expiresAt: Date.now() + MFA_CHECK_TTL_MS };
+      }
+      return required;
     } catch {
       return false;
     }
   }, []);
 
   const onMfaVerified = useCallback(async () => {
-    // verify 通過 / no_factor 自動 dismiss 後：
-    // 1. 先用 manualRefreshSession 拿新 aal2 token + setSession 寫回 cache
-    //    （讓 reload 後從 localStorage 讀到的就是 aal2）
-    // 2. window.location.reload() 重整頁面
+    // verify 通過 / no_factor 自動 dismiss 後：直接 reload，徹底清掉所有 stale state。
     //
-    // 自動 reload 的好處：徹底清掉所有 stale state（race window 內各 component
-    // 用 aal1 token 拿不到 RLS 資料的錯誤狀態、supabase.from 卡住的 pending
-    // request 等）。reload 後 useAuth init 用 fresh aal2 token 重新拉 profile /
-    // favorites，UI 立即正確。
-    try {
-      const refreshed = await manualRefreshSession();
-      if (refreshed) {
-        const supabase = await getSupabase();
-        if (supabase) {
-          await Promise.race([
-            supabase.auth.setSession({
+    // 關鍵：絕對不要 await setSession — supabase-js 在 mfa.verify 後 _saveSession 可能
+    // hang（雖然我們已 disable lock，仍有其他 race window）。reload 後 supabase init
+    // 會自己從 localStorage 讀回 session 並 refresh，不需要這層 await。
+    //
+    // mfa.verify 成功時 supabase-js 已把新 aal2 session 寫入 localStorage（gotrue-js
+    // 內部行為），reload 後讀回的就是 aal2 token。萬一沒寫入，useAuth init 第一次
+    // getSession 拿到 aal1 → checkMfaRequired 重 race 還是會走到 aal2（透過
+    // manualRefreshSession 拿）。
+    //
+    // 同時 invalidate mfa cache：reload 後要重 check 確認 aal2
+    invalidateMfaCache();
+
+    // 用 console.time 量段 2 結束點（reload 前最後一刻）
+    if (typeof console !== 'undefined' && typeof console.timeEnd === 'function') {
+      try { console.timeEnd('auth:verify-to-complete'); } catch { /* ignore */ }
+    }
+
+    // fire-and-forget：盡力把 fresh aal2 token 同步回 supabase-js cache，不阻塞 reload
+    void (async () => {
+      try {
+        const refreshed = await manualRefreshSession();
+        if (refreshed) {
+          const supabase = await getSupabase();
+          if (supabase) {
+            // 不 await — 若 hang 也不影響（reload 後重 init）
+            void supabase.auth.setSession({
               access_token: refreshed.access_token,
               refresh_token: refreshed.refresh_token,
-            }),
-            new Promise(r => setTimeout(r, 2000)),
-          ]).catch(() => undefined);
+            }).catch(() => undefined);
+          }
         }
-      }
-    } catch { /* ignore — reload 後 useAuth init 會自己再 refresh */ }
+      } catch { /* ignore */ }
+    })();
 
     if (typeof window !== 'undefined') {
       window.location.reload();
@@ -194,7 +234,7 @@ export function useAuth(): AuthState {
       // SSR 防呆 fallback（理論上不會走到，client component 才用 useAuth）
       setMfaRequired(false);
     }
-  }, []);
+  }, [setMfaRequired]);
 
   const recheckMfa = useCallback(async () => {
     const required = await checkMfaRequired();
@@ -269,6 +309,10 @@ export function useAuth(): AuthState {
         // aal2 token 跳過。後續 checkMfaRequired 會校正（如果 user 沒啟用 2FA，校正回 false）
         const tokenAal = decodeAalSync(currentSession.access_token);
         if (tokenAal === 'aal1') {
+          // 段 1 計時起點：aal1 token 偵測到 → MFA dialog 應該要彈出
+          if (typeof console !== 'undefined' && typeof console.time === 'function') {
+            try { console.time('auth:oauth-to-mfa-shown'); } catch { /* ignore */ }
+          }
           setMfaRequired(true);
         }
 
@@ -278,7 +322,8 @@ export function useAuth(): AuthState {
         setSession(currentSession);
 
         // 確認是否真的需要 mfa challenge（看 user 有無 verified factor）
-        const required = mounted ? await checkMfaRequired() : false;
+        // 帶 userId → 觸發 cache（init 與 SIGNED_IN event 同 userId 時，第二次直接 hit cache）
+        const required = mounted ? await checkMfaRequired(currentSession.user.id) : false;
         if (mounted) setMfaRequired(required);
 
         if (!required) {
@@ -321,13 +366,22 @@ export function useAuth(): AuthState {
             if (event === 'SIGNED_IN') {
               const tokenAal = decodeAalSync(newSession.access_token);
               if (tokenAal === 'aal1') {
+                // 段 1 計時起點（若 init 沒先觸發）：console.time 重複觸發同名 timer 會 warn，
+                // 邏輯上 OAuth callback 進來通常走 init 那條路，SIGNED_IN 隨後到。
+                // 為避免重複觸發，僅在還沒設 mfaRequired 時開 timer
+                if (!mfaRequiredRef.current) {
+                  if (typeof console !== 'undefined' && typeof console.time === 'function') {
+                    try { console.time('auth:oauth-to-mfa-shown'); } catch { /* ignore */ }
+                  }
+                }
                 setMfaRequired(true);
               }
             }
 
             let needsMfa = mfaRequiredRef.current;
             if (shouldRecheck) {
-              needsMfa = await checkMfaRequired();
+              // 帶 userId → 同一 userId 在 5min TTL 內 hit cache，init 已 fetch 過則此處 0ms
+              needsMfa = await checkMfaRequired(newSession.user.id);
               if (!mounted) return;
               setMfaRequired(needsMfa);
             }
@@ -386,6 +440,8 @@ export function useAuth(): AuthState {
     setUser(null);
     setProfile(null);
     setSession(null);
+    // 清除 mfa cache（user 換了會撞舊資料）
+    invalidateMfaCache();
     // 同步清除 syncTwitchProviderToken 寫入的 token，避免登出後 useTwitchAuth 仍誤認為已連結
     try { sessionStorage.removeItem(TWITCH_USER_TOKEN_KEY); } catch { /* ignore */ }
   }, []);

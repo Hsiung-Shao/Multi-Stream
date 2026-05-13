@@ -42,7 +42,7 @@ export function AccountSettingsPage() {
 
     // 兩大分組：每組內垂直 stack 多個子 section
     //   一般：基本資料 + 顯示名稱（GeneralSection）+ 兩步驟驗證 + 登入方式
-    //   收藏與同步：收藏列表(inline) + Twitch 匯入 + 雲端同步
+    //   收藏與同步：雲端同步 → Twitch 匯入 → 收藏列表（inline）
     const sections = useMemo<Array<{ key: AccountSectionKey; node: React.ReactNode }>>(
         () => [
             {
@@ -59,9 +59,9 @@ export function AccountSettingsPage() {
                 key: 'favorites_sync',
                 node: (
                     <div className="space-y-6">
-                        <FavoritesSection />
-                        <TwitchImportSection />
                         <CloudSyncSection />
+                        <TwitchImportSection />
+                        <FavoritesSection />
                     </div>
                 ),
             },
