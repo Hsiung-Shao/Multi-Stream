@@ -1,5 +1,9 @@
 // Cloudflare Pages Function：從收藏一鍵推薦 VTuber
 //
+// ⚠️ 等待新推薦設計(2026-05-13 移除 UI 入口 RecommendButton)
+// 目前**沒有任何 UI 引用此 endpoint**,保留實作供未來重新設計推薦功能時參考。
+// 若確認永久不再使用,可以連同 vtubers / vtuber_contributions tables 一併清理。
+//
 // POST /api/vtuber/recommend-from-favorite
 //   body: {
 //     name: string,           // favorite.name
