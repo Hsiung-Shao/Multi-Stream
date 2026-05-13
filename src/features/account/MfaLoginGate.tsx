@@ -56,17 +56,23 @@ export function MfaLoginGate({ open, onSuccess, onLogout }: Props) {
         setSubmitting(false);
         setLoading(true);
         setRecoverDone(false);
+
+        // 段 1 計時終點：dialog 開啟（loading 中也算「user 看到 dialog」）
+        if (typeof console !== 'undefined' && typeof console.timeEnd === 'function') {
+            try { console.timeEnd('auth:oauth-to-mfa-shown'); } catch { /* timer 不存在會 warn，吞掉 */ }
+        }
+
         (async () => {
             try {
                 const supabase = await getSupabase();
                 if (!supabase) throw new Error('Supabase not available');
-                // listFactors 加 5s race timeout：observed in production supabase-js
-                // 在某些 race 下不 resolve，導致 OTP slots 永遠不顯示。timeout 後
-                // 顯示 fallback error，user 仍可走「使用備援碼」或「登出」出路。
+                // listFactors timeout 2s（原 5s）：失敗快不掛慢，user 可立刻走備援碼/登出路徑。
+                // supabase-js 在 OAuth callback race 下 listFactors 偶爾不 resolve，
+                // 2s 已足夠覆蓋正常 case（< 500ms）。
                 const result = await Promise.race([
                     supabase.auth.mfa.listFactors(),
                     new Promise<{ data: null; error: { message: string } }>(r =>
-                        setTimeout(() => r({ data: null, error: { message: 'listFactors timeout' } }), 5000),
+                        setTimeout(() => r({ data: null, error: { message: 'listFactors timeout' } }), 2000),
                     ),
                 ]);
                 if (result.error) throw new Error(result.error.message);
@@ -95,10 +101,17 @@ export function MfaLoginGate({ open, onSuccess, onLogout }: Props) {
                 setLoading(false);
             }
         })();
+        // 故意只依賴 open：onSuccess 是 parent 每次 render 的新 closure，
+        // 不該因此重觸發 listFactors。
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
     const handleVerifyTotp = async () => {
         if (!factorId || otp.length !== 6) return;
+        // 段 2 計時起點：submit 點下去
+        if (typeof console !== 'undefined' && typeof console.time === 'function') {
+            try { console.time('auth:verify-to-complete'); } catch { /* ignore */ }
+        }
         setSubmitting(true);
         setError('');
         try {
@@ -125,10 +138,9 @@ export function MfaLoginGate({ open, onSuccess, onLogout }: Props) {
                 setSubmitting(false);
                 return;
             }
-            try {
-                await withTimeout(supabase.auth.refreshSession(), 10000, 'refreshSession');
-            } catch { /* refresh 失敗不致命 */ }
-
+            // 不 await refreshSession：reload 後 supabase init 會自動 refresh，
+            // 這層 await 是 hang 風險源（mutex disable 後仍偶爾觀察到 stuck）。
+            // verify 成功 → 直接交給 onSuccess 觸發 reload。
             onSuccess();
         } catch (e) {
             const msg = e instanceof Error ? e.message : '';
