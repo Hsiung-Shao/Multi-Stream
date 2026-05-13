@@ -102,10 +102,15 @@ export const createVTuberEvent = (body: CreateEventRequest) =>
 export interface AdminCheckPermissionResponse {
     allowed: boolean;
     trust_level: string | null;
-    /** 'unauthenticated' | 'forbidden' | null */
-    reason?: string;
+    /** 'unauthenticated' | 'mfa_required' | 'banned' | 'forbidden' | null */
+    reason?: 'unauthenticated' | 'mfa_required' | 'banned' | 'forbidden' | null;
 }
 
+/**
+ * 呼叫 /api/admin/check-permission。
+ * 注意：401（unauthenticated / mfa_required）由 getJson throw ApiError(401)，
+ * 呼叫端應 catch 後讀 err.payload.reason 判別語意。200 → 直接回 response。
+ */
 export const checkAdminPermission = () =>
     getJson<AdminCheckPermissionResponse>('/api/admin/check-permission');
 

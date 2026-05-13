@@ -21,10 +21,11 @@ function trimStr(s, max) {
 export async function onRequestPost(context) {
     const { request, env } = context;
 
-    const { userId } = await getUserIdFromRequest(request, env);
-    const gate = await requireAdminTrust(env, userId);
+    const { userId, aal } = await getUserIdFromRequest(request, env);
+    const gate = await requireAdminTrust(env, userId, aal);
     if (!gate.allowed) {
-        const status = gate.reason === 'unauthenticated' ? 401 : 403;
+        // 401: 驗證不足（unauthenticated / mfa_required）；403: 永久無權（banned / forbidden）
+        const status = (gate.reason === 'unauthenticated' || gate.reason === 'mfa_required') ? 401 : 403;
         return jsonResponse({ success: false, error: gate.reason }, status, request);
     }
 
