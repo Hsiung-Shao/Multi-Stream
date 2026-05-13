@@ -34,28 +34,10 @@ import {
     AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
 import { logEvent } from '../../utils/analytics';
+import { getPageNumbers } from '../../utils/pagination';
 import type { FavoriteStream, Tag } from '../favorites/types';
 
 const PAGE_SIZE = 15;
-
-/**
- * 計算分頁要顯示的頁碼列表(含 ellipsis 縮減)。
- * - total <= 7:全部頁碼顯示
- * - total > 7:首頁 + (current-1)~(current+1) + 末頁,缺口用 ellipsis 填
- */
-function getPageNumbers(current: number, total: number): Array<number | 'ellipsis'> {
-    if (total <= 7) {
-        return Array.from({ length: total }, (_, i) => i + 1);
-    }
-    const pages: Array<number | 'ellipsis'> = [1];
-    if (current > 3) pages.push('ellipsis');
-    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
-        pages.push(i);
-    }
-    if (current < total - 2) pages.push('ellipsis');
-    pages.push(total);
-    return pages;
-}
 
 /**
  * 帳號頁「收藏列表」section（inline 版）
