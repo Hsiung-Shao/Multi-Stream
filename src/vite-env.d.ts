@@ -1,3 +1,36 @@
 /// <reference types="vite/client" />
 
 declare const __APP_VERSION__: string;
+
+/**
+ * 全域 Window 擴充：GA4 / gtag.js + GTM dataLayer + IdentityManager backup hooks。
+ *
+ * 配合 src/utils/analytics.ts 使用。boot stub 在 index.html 中已初始化
+ * window.dataLayer 與 window.gtag，這裡只是讓 TypeScript 知道型別。
+ *
+ * 放在 vite-env.d.ts(ambient script，非 module)是為了讓宣告自動全域可見，
+ * 無需任何 import。不要在本檔加 `export {}`，否則會破壞 ambient 行為。
+ */
+interface Window {
+    /**
+     * gtag.js 全域函式。Boot stub 在 index.html 中設為 dataLayer.push 包裝；
+     * mock 模式下會被 analytics.ts 的 installMockGtag() 改寫為 console.info。
+     */
+    gtag: (...args: unknown[]) => void;
+
+    /**
+     * GTM / GA4 共用的事件佇列。在 boot stub 中初始化為 []。
+     * 注意:型別需與 src/features/analytics/types.ts 的 Window augmentation
+     * 保持一致(`any[]` / `Promise<any>` / `(backup: any) => void`),否則
+     * TS2717 subsequent property declarations 衝突。
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dataLayer: any[];
+
+    // 既有 IdentityManager 用到的全域(保留;型別對齊 features/analytics/types.ts)
+    __MS_USER_UUID__?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    __MS_LOAD_BACKUP__?: () => Promise<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    __MS_RESTORE_BACKUP__?: (backup: any) => void;
+}
