@@ -4,6 +4,15 @@ import { Star, Plus, Search } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { ScrollArea } from '../../components/ui/scroll-area';
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from '../../components/ui/pagination';
 import { useUIStore } from '../../store/useUIStore';
 import { useFavorites } from '../../hooks/useFavorites';
 import { tagsService } from '../favorites/TagsService';
@@ -27,6 +36,27 @@ import {
 import { logEvent } from '../../utils/analytics';
 import type { FavoriteStream, Tag } from '../favorites/types';
 
+const PAGE_SIZE = 15;
+
+/**
+ * 計算分頁要顯示的頁碼列表(含 ellipsis 縮減)。
+ * - total <= 7:全部頁碼顯示
+ * - total > 7:首頁 + (current-1)~(current+1) + 末頁,缺口用 ellipsis 填
+ */
+function getPageNumbers(current: number, total: number): Array<number | 'ellipsis'> {
+    if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const pages: Array<number | 'ellipsis'> = [1];
+    if (current > 3) pages.push('ellipsis');
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+        pages.push(i);
+    }
+    if (current < total - 2) pages.push('ellipsis');
+    pages.push(total);
+    return pages;
+}
+
 /**
  * 帳號頁「收藏列表」section（inline 版）
  *
@@ -44,6 +74,7 @@ export function FavoritesSection() {
     const { favorites, categories, refresh } = useFavorites();
     const [tags, setTags] = useState<Tag[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [editing, setEditing] = useState<FavoriteStream | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -65,6 +96,25 @@ export function FavoritesSection() {
                 f.url.toLowerCase().includes(q),
         );
     }, [favorites, searchQuery]);
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+    // 搜尋條件變動或刪除/新增後筆數減少時,若 currentPage 超出範圍 → reset 回最後一頁(或 1)
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    // 搜尋變動時主動 reset 到第 1 頁(避免「在第 5 頁搜尋 → 看空白」)
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery]);
+
+    const paginatedFavorites = useMemo(
+        () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+        [filtered, currentPage],
+    );
 
     const liveCount = useMemo(
         () => favorites.filter((f) => f.isLive === true).length,
@@ -168,8 +218,8 @@ export function FavoritesSection() {
             <div className="rounded-lg border border-white/10 bg-background/30 overflow-hidden">
                 <ScrollArea className="h-[420px]">
                     <div className="p-2 space-y-2">
-                        {filtered.length > 0 ? (
-                            filtered.map((fav) => (
+                        {paginatedFavorites.length > 0 ? (
+                            paginatedFavorites.map((fav) => (
                                 <FavoriteListItem
                                     key={fav.id}
                                     favorite={fav}
@@ -198,6 +248,70 @@ export function FavoritesSection() {
                     </div>
                 </ScrollArea>
             </div>
+
+            {totalPages > 1 && (
+                <Pagination>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious
+                                href="#"
+                                size="default"
+                                aria-label={t('favorites.pagination.previous', '上一頁')}
+                                aria-disabled={currentPage === 1}
+                                tabIndex={currentPage === 1 ? -1 : 0}
+                                className={
+                                    currentPage === 1
+                                        ? 'pointer-events-none opacity-50'
+                                        : ''
+                                }
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    if (currentPage > 1) setCurrentPage(currentPage - 1);
+                                }}
+                            />
+                        </PaginationItem>
+                        {getPageNumbers(currentPage, totalPages).map((page, idx) =>
+                            page === 'ellipsis' ? (
+                                <PaginationItem key={`ellipsis-${idx}`}>
+                                    <PaginationEllipsis />
+                                </PaginationItem>
+                            ) : (
+                                <PaginationItem key={page}>
+                                    <PaginationLink
+                                        href="#"
+                                        size="icon"
+                                        isActive={page === currentPage}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            setCurrentPage(page);
+                                        }}
+                                    >
+                                        {page}
+                                    </PaginationLink>
+                                </PaginationItem>
+                            ),
+                        )}
+                        <PaginationItem>
+                            <PaginationNext
+                                href="#"
+                                size="default"
+                                aria-label={t('favorites.pagination.next', '下一頁')}
+                                aria-disabled={currentPage === totalPages}
+                                tabIndex={currentPage === totalPages ? -1 : 0}
+                                className={
+                                    currentPage === totalPages
+                                        ? 'pointer-events-none opacity-50'
+                                        : ''
+                                }
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                                }}
+                            />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            )}
 
             <AddFavoriteDialog
                 open={isAddOpen}
