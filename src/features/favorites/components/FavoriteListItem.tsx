@@ -14,7 +14,10 @@ interface FavoriteListItemProps {
     onSelect: (id: string, checked: boolean) => void;
     onStartEdit: (favorite: FavoriteStream) => void;
     onDelete: (id: string) => void;
-    onLoad: (id: string) => void;
+    /** 載入到播放器。不傳則不渲染 Play 按鈕(帳號頁純管理用) */
+    onLoad?: (id: string) => void;
+    /** 顯示「直播中/離線」綠/灰圓點。預設 true,帳號頁傳 false */
+    showLiveIndicator?: boolean;
 }
 
 export function FavoriteListItem({
@@ -25,7 +28,8 @@ export function FavoriteListItem({
     onSelect,
     onStartEdit,
     onDelete,
-    onLoad
+    onLoad,
+    showLiveIndicator = true,
 }: FavoriteListItemProps) {
     const { t } = useTranslation(['favorites', 'common']);
     const category = categories.find(c => c.id === favorite.categoryId);
@@ -52,7 +56,7 @@ export function FavoriteListItem({
             </div>
 
             {/* Live Indicator */}
-            {favorite.isLive !== null && (
+            {showLiveIndicator && favorite.isLive !== null && (
                 <div
                     className={`w-2 h-2 rounded-full ring-4 ${favorite.isLive === true
                         ? 'bg-green-500 ring-green-500/20 animate-pulse'
@@ -92,15 +96,17 @@ export function FavoriteListItem({
                 >
                     <Edit2 className="size-4" />
                 </Button>
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => onLoad(favorite.id)}
-                    title={t('addStream')}
-                    className="h-8 w-8 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:text-gray-400 dark:hover:text-purple-400 dark:hover:bg-purple-500/10"
-                >
-                    <Play className="size-4" />
-                </Button>
+                {onLoad && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => onLoad(favorite.id)}
+                        title={t('addStream')}
+                        className="h-8 w-8 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:text-gray-400 dark:hover:text-purple-400 dark:hover:bg-purple-500/10"
+                    >
+                        <Play className="size-4" />
+                    </Button>
+                )}
                 <Button
                     size="icon"
                     variant="ghost"

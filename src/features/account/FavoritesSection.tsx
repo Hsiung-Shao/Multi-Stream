@@ -17,7 +17,6 @@ import { useUIStore } from '../../store/useUIStore';
 import { useFavorites } from '../../hooks/useFavorites';
 import { tagsService } from '../favorites/TagsService';
 import { favoritesService } from '../favorites/FavoritesService';
-import { favoritesLoader } from '../favorites/FavoritesLoader';
 import { FavoriteListItem } from '../favorites/components/FavoriteListItem';
 import {
     AddFavoriteDialog,
@@ -98,11 +97,6 @@ export function FavoritesSection() {
         [filtered, currentPage],
     );
 
-    const liveCount = useMemo(
-        () => favorites.filter((f) => f.isLive === true).length,
-        [favorites],
-    );
-
     const handleSubmit = (data: AddFavoriteFormValues) => {
         if (editing) {
             favoritesService.updateFavorite(editing.id, {
@@ -126,11 +120,6 @@ export function FavoritesSection() {
         setIsAddOpen(false);
         setEditing(null);
         refresh();
-    };
-
-    const handleLoad = async (id: string) => {
-        const fav = favorites.find((f) => f.id === id);
-        if (fav) await favoritesLoader.load(fav);
     };
 
     const confirmDelete = () => {
@@ -158,21 +147,11 @@ export function FavoritesSection() {
                 </div>
             </header>
 
-            <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-md border border-white/10 bg-background/30 p-3">
-                    <div className="text-xs text-muted-foreground">
-                        {t('favorites.totalLabel', '收藏總數')}
-                    </div>
-                    <div className="text-2xl font-bold mt-1">{favorites.length}</div>
+            <div className="rounded-md border border-white/10 bg-background/30 p-3">
+                <div className="text-xs text-muted-foreground">
+                    {t('favorites.totalLabel', '收藏總數')}
                 </div>
-                <div className="rounded-md border border-white/10 bg-background/30 p-3">
-                    <div className="text-xs text-muted-foreground">
-                        {t('favorites.liveLabel', '直播中')}
-                    </div>
-                    <div className="text-2xl font-bold mt-1 text-emerald-500">
-                        {liveCount}
-                    </div>
-                </div>
+                <div className="text-2xl font-bold mt-1">{favorites.length}</div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -214,7 +193,7 @@ export function FavoritesSection() {
                                         setIsAddOpen(true);
                                     }}
                                     onDelete={(id) => setDeleteId(id)}
-                                    onLoad={handleLoad}
+                                    showLiveIndicator={false}
                                 />
                             ))
                         ) : (
