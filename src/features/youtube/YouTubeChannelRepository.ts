@@ -61,9 +61,10 @@ export async function getCachedChannel(channelId: string): Promise<YouTubeChanne
  * 走後端 endpoint `/api/youtube/cache-channel`（service_role 寫入），不再直接打 Supabase。
  * 這是為了 RLS hardening：之後 youtube_channels 將禁止 anon/authenticated 直接 INSERT/UPDATE。
  *
- * 前端只負責傳 channel_id；metadata（title/thumbnail/subscriber_count 等）由後端
- * 透過 YouTube Data API 抓最新一份再 upsert。caller 傳進來的 channel_title 等欄位會被
- * 後端覆寫成最新值，這是預期行為。
+ * 設計（2026-05-13）：cache 的目的是「儲存 channel_id ↔ channel_title 對應」以節省 YouTube
+ * Data API quota（後續 user 查同一頻道直接從 Supabase 拿）。前端 youtubeApi 已從 YouTube
+ * Data API 拿到 channel_id + channel_title，**直接傳給後端**；後端不會再呼一次 YouTube API
+ * (避免雙倍消耗 quota)，只做 sanitize + service_role upsert。
  *
  * Fail-open：寫入失敗不 throw，caller（useStreamStore 用 .catch(() => {})）原本就視為非關鍵。
  */
@@ -91,7 +92,10 @@ export async function upsertChannel(channel: YouTubeChannelData): Promise<boolea
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ channel_id: channel.channel_id }),
+      body: JSON.stringify({
+        channel_id: channel.channel_id,
+        channel_title: channel.channel_title,
+      }),
     });
 
     if (!res.ok) {
