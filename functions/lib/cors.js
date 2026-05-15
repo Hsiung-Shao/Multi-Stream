@@ -30,15 +30,16 @@ function isAllowedOrigin(origin) {
 /**
  * 取得 CORS headers
  * @param {Request} request
+ * @param {{ methods?: string }} [opts] - 覆寫允許的 methods（預設 'GET, POST, OPTIONS'）
  * @returns {Object} headers 物件
  */
-export function getCorsHeaders(request) {
+export function getCorsHeaders(request, opts = {}) {
     const origin = request?.headers?.get('Origin') || '';
     const isAllowed = isAllowedOrigin(origin);
 
     return {
         'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_EXACT_ORIGINS[0],
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Methods': opts.methods || 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         'Vary': 'Origin',
     };
@@ -50,14 +51,15 @@ export function getCorsHeaders(request) {
  * @param {number} status - HTTP status code
  * @param {Request} request - 原始請求（用於 CORS）
  * @param {Object} extraHeaders - 額外 headers
+ * @param {{ methods?: string }} [corsOpts] - 覆寫 CORS Allow-Methods
  * @returns {Response}
  */
-export function jsonResponse(data, status, request, extraHeaders = {}) {
+export function jsonResponse(data, status, request, extraHeaders = {}, corsOpts = {}) {
     return new Response(JSON.stringify(data), {
         status,
         headers: {
             'Content-Type': 'application/json',
-            ...getCorsHeaders(request),
+            ...getCorsHeaders(request, corsOpts),
             ...extraHeaders,
         },
     });
@@ -66,13 +68,14 @@ export function jsonResponse(data, status, request, extraHeaders = {}) {
 /**
  * 處理 OPTIONS 預檢請求
  * @param {Request} request
+ * @param {{ methods?: string }} [opts] - 覆寫 CORS Allow-Methods（admin endpoints 需要 PUT/DELETE）
  * @returns {Response}
  */
-export function handleOptions(request) {
+export function handleOptions(request, opts = {}) {
     return new Response(null, {
         status: 204,
         headers: {
-            ...getCorsHeaders(request),
+            ...getCorsHeaders(request, opts),
             'Access-Control-Max-Age': '86400',
         },
     });
