@@ -287,13 +287,15 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
     const isPending = createMutation.isPending || updateMutation.isPending;
     const mutationError = createMutation.error || updateMutation.error;
 
-    // Reset form whenever dialog opens
+    // Reset form / mutation whenever dialog open state changes
+    // 包含 close → 確保 stale pending state 不會延續到下次 open(否則 button 永遠 disabled)
     useEffect(() => {
-        if (!open) return;
         setLocalError(null);
         createMutation.reset();
         updateMutation.reset();
-        setForm(target ? recordToForm(target) : defaultForm());
+        if (open) {
+            setForm(target ? recordToForm(target) : defaultForm());
+        }
         // 不把 mutation 加 deps,避免 re-reset
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, target?.id]);
@@ -662,7 +664,6 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                         <Button
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            disabled={isPending}
                             className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800"
                         >
                             取消
@@ -700,7 +701,6 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                     <AlertDialogFooter>
                         <AlertDialogCancel
                             className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700"
-                            disabled={isPending}
                         >
                             取消
                         </AlertDialogCancel>
