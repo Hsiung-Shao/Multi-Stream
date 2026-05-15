@@ -4,6 +4,7 @@ import { FavoriteStream, FavoriteUpdateEventDetail } from './types';
 import { backupService } from '../backup/index';
 import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from './constants';
 import { youtubeApi } from '../../utils/youtubeApi';
+import { getCachedChannel, upsertChannel } from '../youtube/YouTubeChannelRepository';
 
 export class FavoritesService {
     private favRepo: FavoritesRepository;
@@ -183,11 +184,23 @@ export class FavoritesService {
                         // Normalize URL to channel live format
                         url = `https://www.youtube.com/channel/${channelId}/live`;
 
-                        // If no name, try to fetch channel title
+                        // If no name, fetch channel title
+                        // 優先順序:Supabase cache(youtube_channels)→ YouTube Data API
+                        // - cache hit(channel_id 存在 + fetched_at < 24h + title 非空):直接用,免 quota
+                        // - cache miss:呼 API,成功則 upsertChannel 寫回 cache 給後續 user 共享
                         if (!name) {
                             try {
-                                const title = await youtubeApi.getChannelTitleFromChannelId(channelId);
-                                if (title) name = title;
+                                const cached = await getCachedChannel(channelId);
+                                if (cached?.channel_title) {
+                                    name = cached.channel_title;
+                                } else {
+                                    const title = await youtubeApi.getChannelTitleFromChannelId(channelId);
+                                    if (title) {
+                                        name = title;
+                                        // fire-and-forget 寫回 cache;失敗不影響加入收藏流程
+                                        upsertChannel({ channel_id: channelId, channel_title: title }).catch(() => {});
+                                    }
+                                }
                             } catch (e) { }
                         }
                     }
