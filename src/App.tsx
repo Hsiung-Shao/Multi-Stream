@@ -21,6 +21,7 @@ import { useHotkeys } from './hooks/useHotkeys';
 import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useEngagementTracking } from './hooks/useEngagementTracking';
 import { CookieConsent } from './components/CookieConsent';
+import { AnnouncementsProvider } from './features/announcements/AnnouncementsProvider';
 import { FeedbackFAB } from './components/Navigation/FeedbackFAB';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
 import { LoginDialog } from './components/Dialogs/LoginDialog';
@@ -253,6 +254,7 @@ export default function App() {
       <GlobalLiveStatusChecker />
       <Toaster />
       <CookieConsent />
+      <AnnouncementsProvider />
       <BraveDetectDialog />
       <LoginDialog
         open={modals.login}

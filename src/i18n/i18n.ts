@@ -21,6 +21,7 @@ import zhTWFAQ from './locales/zh-TW/faq';
 import zhTWVtuber from './locales/zh-TW/vtuber';
 import zhTWSeo from './locales/zh-TW/seo';
 import zhTWAccount from './locales/zh-TW/account';
+import zhTWAnnouncements from './locales/zh-TW/announcements';
 
 // Import other locales
 import zhCNCommon from './locales/zh-CN/common';
@@ -116,6 +117,7 @@ export const resources = {
         vtuber: zhTWVtuber,
         seo: zhTWSeo,
         account: zhTWAccount,
+        announcements: zhTWAnnouncements,
     },
     'zh-CN': {
         common: zhCNCommon,
@@ -135,6 +137,8 @@ export const resources = {
         vtuber: zhCNVtuber,
         seo: zhCNSeo,
         account: zhCNAccount,
+        // announcements: 暫共用 zh-TW(待後續補繁→簡轉換)
+        announcements: zhTWAnnouncements,
     },
     en: {
         common: enCommon,
@@ -154,6 +158,9 @@ export const resources = {
         vtuber: enVtuber,
         seo: enSeo,
         account: enAccount,
+        // announcements: 暫共用 zh-TW;組件呼叫 t() 已帶 inline fallback,英文使用者會看到中文
+        // 直到正式翻譯到位。優先級給 admin UI 上線
+        announcements: zhTWAnnouncements,
     },
     ja: {
         common: jaCommon,
@@ -173,6 +180,7 @@ export const resources = {
         vtuber: jaVtuber,
         seo: jaSeo,
         account: jaAccount,
+        announcements: zhTWAnnouncements,
     },
     ko: {
         common: koCommon,
@@ -192,6 +200,7 @@ export const resources = {
         vtuber: koVtuber,
         seo: koSeo,
         account: koAccount,
+        announcements: zhTWAnnouncements,
     },
 } as const;
 
