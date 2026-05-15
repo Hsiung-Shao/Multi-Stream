@@ -2,12 +2,13 @@
 // 用於代理 YouTube 頻道頁面請求，解決 CORS 問題，用於提取 channel ID
 
 import { getCorsHeaders, handleOptions } from '../lib/cors.js';
+import { writeChannelCacheBackground } from '../lib/youtube-channel-cache.js';
 
 export async function onRequestGet(context) {
-  return handleChannelPageRequest(context.request, context.env);
+  return handleChannelPageRequest(context.request, context.env, context);
 }
 
-async function handleChannelPageRequest(request, env) {
+async function handleChannelPageRequest(request, env, context) {
   try {
     const url = new URL(request.url);
     const username = url.searchParams.get('username') || url.searchParams.get('handle');
@@ -272,6 +273,12 @@ async function handleChannelPageRequest(request, env) {
       }
     }
     
+    // 順手寫 youtube_channels cache(背景 fire-and-forget,失敗不影響回應)
+    // 在 channelId + channelTitle 都拿到時觸發,節省後續 user 查同一頻道的 quota
+    if (channelId && channelTitle && context?.waitUntil) {
+      context.waitUntil(writeChannelCacheBackground(env, channelId, channelTitle));
+    }
+
     // 返回 JSON 格式的響應，包含 channelId 和 channelTitle
     return new Response(
       JSON.stringify({

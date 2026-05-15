@@ -6,6 +6,7 @@
 // 4) 排程直播（UPCOMING）會被標記，但不當作 LIVE（避免誤加串流）
 
 import { getCorsHeaders, handleOptions } from '../lib/cors.js';
+import { writeChannelCacheBackground } from '../lib/youtube-channel-cache.js';
 
 // 保存 request 引用供 jsonHeaders 使用
 let _currentRequest = null;
@@ -13,7 +14,7 @@ let _currentRequest = null;
 export async function onRequestGet(context) {
   const { request } = context;
   _currentRequest = request;
-  return handleChannelLiveRequest(request);
+  return handleChannelLiveRequest(request, context);
 }
 
 export async function onRequestOptions(context) {
@@ -136,6 +137,8 @@ function parseWatchHtml(html) {
 
   let videoId = vd?.videoId || null;
   let channelId = vd?.channelId || null;
+  // author = 頻道顯示名(YouTube 官方在 videoDetails 提供),供 youtube_channels cache 使用
+  const author = (typeof vd?.author === 'string' && vd.author.trim()) ? vd.author.trim() : null;
 
   // fallback：有些頁面 videoDetails 不完整，但 html 仍可能有 channelId
   if (!channelId) {
@@ -170,6 +173,7 @@ function parseWatchHtml(html) {
   return {
     videoId,
     channelId,
+    author,
     isLiveNow: !!isLiveNow,
     isUpcoming: !!isUpcoming,
     looksLikeConsent: !!looksLikeConsent
@@ -188,7 +192,11 @@ function extractVideoIdFromWatchUrl(watchUrl) {
 }
 
 // --- watch 驗證：替代 YouTube Data API 的第 3 步 ---
-async function verifyWatchUrlAgainstChannel(originalChannelId, watchUrl, stepInfo) {
+//
+// `cacheCtx` 為選填:`{ env, waitUntil }`。若提供且驗證通過(channelId match),
+// 會背景寫一筆 youtube_channels cache(channel_id + author),節省後續 quota。
+// 失敗只 console.warn,不影響驗證結果。
+async function verifyWatchUrlAgainstChannel(originalChannelId, watchUrl, stepInfo, cacheCtx = null) {
   const verifiedUrl = withCommonQuery(watchUrl);
 
   const { resp, text } = await fetchHtml(verifiedUrl, { redirect: 'follow' });
@@ -234,6 +242,12 @@ async function verifyWatchUrlAgainstChannel(originalChannelId, watchUrl, stepInf
       verifiedVideoChannelId: w.channelId,
       liveStatus: 'OFFLINE'
     };
+  }
+
+  // 順手寫 youtube_channels cache(channelId 已驗證 match,author 是頻道顯示名)
+  // Fire-and-forget,失敗不影響驗證流程。Caller 需透過 cacheCtx 傳入 context.
+  if (cacheCtx?.env && typeof cacheCtx.waitUntil === 'function' && w.author) {
+    cacheCtx.waitUntil(writeChannelCacheBackground(cacheCtx.env, originalChannelId, w.author));
   }
 
   // ✅ 排程直播：可回傳 upcoming，但外層不把它當 LIVE
@@ -366,7 +380,7 @@ function extractCandidatesFromChannelPageHtml(html) {
 // ------------------------------
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) {
+async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100, cacheCtx = null) {
   const channelHomeUrl = withCommonQuery(`https://www.youtube.com/channel/${channelId}`);
   const stepInfo = {
     step: stepBase,
@@ -398,7 +412,7 @@ async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) 
         candidateType: 'LIVE_CANDIDATE'
       };
 
-      const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, perCandidate);
+      const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, perCandidate, cacheCtx);
 
       redirectChain.push({
         ...perCandidate,
@@ -433,7 +447,7 @@ async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) 
         candidateType: 'UPCOMING_CANDIDATE'
       };
 
-      const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, perCandidate);
+      const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, perCandidate, cacheCtx);
 
       redirectChain.push({
         ...perCandidate,
@@ -465,7 +479,7 @@ async function tryChannelHomeFallback(channelId, redirectChain, stepBase = 100) 
 // ------------------------------
 // redirect 遞迴（保留你原本行為，但不再「看到 watch 就當 LIVE」）
 // ------------------------------
-async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain = []) {
+async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain = [], cacheCtx = null) {
   if (redirects >= MAX_REDIRECTS) {
     return {
       status: 'ERROR',
@@ -526,7 +540,7 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
 
       if (newUrl.includes('watch?v=')) {
         const videoId = extractVideoIdFromWatchUrl(newUrl);
-        const v = await verifyWatchUrlAgainstChannel(channelId, newUrl, stepInfo);
+        const v = await verifyWatchUrlAgainstChannel(channelId, newUrl, stepInfo, cacheCtx);
 
         if (v.liveStatus === 'LIVE') {
           return {
@@ -566,7 +580,7 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
       // 增加轉導延遲 (1500ms)
       await delay(1500);
 
-      return checkLiveStatusRecursive(channelId, newUrl, redirects + 1, redirectChain);
+      return checkLiveStatusRecursive(channelId, newUrl, redirects + 1, redirectChain, cacheCtx);
     }
 
     // --- 200 OK ---
@@ -574,7 +588,7 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
       // 如果這次 response.url 就已是 watch?v=
       if (finalUrl.includes('watch?v=')) {
         const videoId = extractVideoIdFromWatchUrl(finalUrl);
-        const v = await verifyWatchUrlAgainstChannel(channelId, finalUrl, stepInfo);
+        const v = await verifyWatchUrlAgainstChannel(channelId, finalUrl, stepInfo, cacheCtx);
 
         if (v.liveStatus === 'LIVE') {
           return {
@@ -622,7 +636,7 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
             const watchUrl = withCommonQuery(htmlCheckResult.finalUrl);
             const videoId = extractVideoIdFromWatchUrl(watchUrl);
 
-            const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, stepInfo);
+            const v = await verifyWatchUrlAgainstChannel(channelId, watchUrl, stepInfo, cacheCtx);
 
             if (v.liveStatus === 'LIVE') {
               stepInfo.redirectTo = watchUrl;
@@ -724,7 +738,12 @@ async function checkLiveStatusRecursive(channelId, url, redirects, redirectChain
   }
 }
 
-async function handleChannelLiveRequest(request) {
+async function handleChannelLiveRequest(request, context = null) {
+  // 組 cacheCtx 給下游 verify 函式用:有 env + waitUntil 才會啟用 youtube_channels cache 寫入
+  const cacheCtx = context && context.env && typeof context.waitUntil === 'function'
+    ? { env: context.env, waitUntil: (p) => context.waitUntil(p) }
+    : null;
+
   try {
     const url = new URL(request.url);
     const channelId = url.searchParams.get('channelId');
@@ -766,7 +785,7 @@ async function handleChannelLiveRequest(request) {
           timestamp: new Date().toISOString()
         };
 
-        const v = await verifyWatchUrlAgainstChannel(channelId, candidateWatch, stepInfo);
+        const v = await verifyWatchUrlAgainstChannel(channelId, candidateWatch, stepInfo, cacheCtx);
 
         // ✅ LIVE
         if (v.liveStatus === 'LIVE') {
@@ -819,7 +838,7 @@ async function handleChannelLiveRequest(request) {
     }
 
     // 入口 B：頻道首頁 HTML → 候選 → watch 驗證
-    const homeFallback = await tryChannelHomeFallback(channelId, redirectChain, 100);
+    const homeFallback = await tryChannelHomeFallback(channelId, redirectChain, 100, cacheCtx);
     if (homeFallback?.kind === 'LIVE') {
       return new Response(JSON.stringify({
         status: 200,
@@ -853,7 +872,7 @@ async function handleChannelLiveRequest(request) {
     }
 
     // 最後：redirect 遞迴（內含 watch 驗證）
-    const result = await checkLiveStatusRecursive(channelId, liveUrl, 0, redirectChain);
+    const result = await checkLiveStatusRecursive(channelId, liveUrl, 0, redirectChain, cacheCtx);
 
     // ✅ 最終輸出：UPCOMING 一律不當 LIVE（但提供 scheduledVideoId）
     const responseData = {
