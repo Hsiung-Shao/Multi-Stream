@@ -73,7 +73,8 @@ export async function upsertChannel(channel: YouTubeChannelData): Promise<boolea
   memoryCache.set(channel.channel_id, { data: channel, expiresAt: Date.now() + MEMORY_TTL_MS });
 
   try {
-    // 取 session token；無 session 時不寫入（後端會 401）— 避免無謂的請求
+    // 後端 endpoint 允許匿名寫入(收集 cache 對所有 user 都有益,
+    // 不該因為「未登入」而錯過貢獻)。有 session token 就帶上,沒有也無妨。
     let accessToken: string | null = null;
     try {
       const supabase = await getSupabase();
@@ -84,14 +85,13 @@ export async function upsertChannel(channel: YouTubeChannelData): Promise<boolea
     } catch {
       /* ignore — 視為無 session */
     }
-    if (!accessToken) return false;
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
     const res = await fetch('/api/youtube/cache-channel', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers,
       body: JSON.stringify({
         channel_id: channel.channel_id,
         channel_title: channel.channel_title,
