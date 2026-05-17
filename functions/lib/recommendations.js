@@ -15,9 +15,6 @@ export const COMMENT_MAX_LEN = 500;
 export const NAME_MAX_LEN = 100;
 export const URL_MAX_LEN = 2048;
 
-// 防留言塞 URL spam（簡單,不需完美）
-const URL_PATTERN = /(?:https?:\/\/|www\.)\S+/i;
-
 export function trimStr(s, max) {
     if (typeof s !== 'string') return '';
     return s.trim().slice(0, max);
@@ -51,7 +48,7 @@ export function validateRecommendInput(body) {
         const trimmed = body.comment.trim();
         if (trimmed.length === 0) return 'invalid_comment';
         if (trimmed.length > COMMENT_MAX_LEN) return 'comment_too_long';
-        if (URL_PATTERN.test(trimmed)) return 'comment_no_url';
+        // 2026-05-17 移除 URL regex(user 偏好);spam 控制改靠管理員手動撤 row
     }
     return null;
 }

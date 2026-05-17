@@ -1,14 +1,11 @@
 // GET  /api/categories                            → public,列 approved categories
-// POST /api/categories  { name, slug, description? } → authenticated,提分類(進 pending)
+// POST /api/categories  { name, slug, description? } → authenticated,提分類(自動 approved)
 //
-// 防濫用:
-//   POST 需登入 + trust_level ≠ banned + IP banlist + daily quota 'category_propose' (3/day)
-//
-// status='pending' 由 admin 後台審核 → approved → 才能被 tag
+// 2026-05-17 user 偏好「除了登入移除所有限制」:已拿掉 IP banlist / trust_level / quota
+// 保留:必登入(POST)、input format(防 5xx)、DB UNIQUE(name) / UNIQUE(slug)
 
 import { jsonResponse, handleOptions } from '../lib/cors.js';
-import { getUserIdFromRequest, getTrustLevel, checkAndIncrementQuota } from '../lib/auth-helper.js';
-import { getVisitorIp, isIpBanned } from '../lib/rate-limit.js';
+import { getUserIdFromRequest } from '../lib/auth-helper.js';
 import { select, insert } from '../lib/supabase-server.js';
 import { logError, logInfo } from '../lib/logger.js';
 
@@ -16,8 +13,6 @@ const MAX_BODY_BYTES = 2 * 1024;
 const NAME_MAX = 30;
 const SLUG_MAX = 50;
 const DESC_MAX = 200;
-// -1 = 無上限(user 偏好移除推薦相關所有限制)
-const CATEGORY_PROPOSE_QUOTA = -1;
 const SLUG_RE = /^[a-z0-9-]+$/;
 
 function trimStr(s, max) {
@@ -72,22 +67,13 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'invalid_json' }, 400, request);
     }
 
-    const ip = getVisitorIp(request);
-    if (isIpBanned(env, ip)) {
-        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
-    }
-
+    // 2026-05-17 只保留必登入(user 偏好移除所有非登入限制)
     const { userId } = await getUserIdFromRequest(request, env);
     if (!userId) {
         return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
     }
 
-    const trustLevel = await getTrustLevel(env, userId);
-    if (trustLevel === 'banned') {
-        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
-    }
-
-    // input validation
+    // input validation(保留防 5xx)
     const name = trimStr(body?.name, NAME_MAX);
     if (!name) return jsonResponse({ ok: false, error: 'name_required' }, 400, request);
 
@@ -108,16 +94,7 @@ export async function onRequestPost(context) {
         description = desc || null;
     }
 
-    // daily quota
-    const quota = await checkAndIncrementQuota(env, userId, 'category_propose', CATEGORY_PROPOSE_QUOTA);
-    if (!quota.allowed) {
-        return jsonResponse({
-            ok: false,
-            error: 'quota_exceeded',
-            current: quota.newCount,
-            limit: quota.quotaLimit,
-        }, 429, request);
-    }
+    // (已移除 daily quota — user 偏好,功能正常後再加回)
 
     const row = {
         name,

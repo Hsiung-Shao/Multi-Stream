@@ -28,7 +28,6 @@ interface Props {
 }
 
 const COMMENT_MAX = 500;
-const URL_PATTERN = /(?:https?:\/\/|www\.)\S+/i;
 
 export function RecommendDialog({ favorite, open, onOpenChange }: Props) {
     const [comment, setComment] = useState('');
@@ -58,10 +57,6 @@ export function RecommendDialog({ favorite, open, onOpenChange }: Props) {
         const trimmed = comment.trim();
         if (trimmed.length > COMMENT_MAX) {
             toast.error(`留言過長(上限 ${COMMENT_MAX} 字)`);
-            return;
-        }
-        if (trimmed && URL_PATTERN.test(trimmed)) {
-            toast.error('留言不能包含網址');
             return;
         }
 
@@ -111,7 +106,7 @@ export function RecommendDialog({ favorite, open, onOpenChange }: Props) {
                             placeholder="分享為什麼推薦他/她..."
                             className="bg-zinc-900 border-zinc-800 text-zinc-200 min-h-[88px] text-sm"
                         />
-                        <p className="text-[10px] text-zinc-500">禁止留網址 / 廣告連結</p>
+                        <p className="text-[10px] text-zinc-500">隨意留言,500 字內</p>
                     </div>
 
                     {mutation.isError && (

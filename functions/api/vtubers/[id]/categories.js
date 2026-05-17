@@ -1,22 +1,15 @@
 // POST   /api/vtubers/<vtuberId>/categories   { category_id }  → tag
 // DELETE /api/vtubers/<vtuberId>/categories?category_id=...    → untag (self only)
 //
-// 規則:
-//   - 必登入,trust_level ≠ banned
-//   - category 必須是 approved 才能 tag(server-side 二次驗證,避免 user 偽 ID)
-//   - vtuber_id 必須存在
-//   - UNIQUE(vtuber_id, category_id) → 已 tag 過回 already_tagged 200
-//   - 每日 quota category_tag 50
+// 2026-05-17 user 偏好「除了登入移除所有限制」:已拿掉 IP banlist / trust_level / quota / category status check
+// 保留:必登入(POST/DELETE)、UUID format、vtuber 存在性、DB UNIQUE(vtuber_id, category_id)
 
 import { jsonResponse, handleOptions } from '../../../lib/cors.js';
-import { getUserIdFromRequest, getTrustLevel, checkAndIncrementQuota } from '../../../lib/auth-helper.js';
-import { getVisitorIp, isIpBanned } from '../../../lib/rate-limit.js';
+import { getUserIdFromRequest } from '../../../lib/auth-helper.js';
 import { select, insert } from '../../../lib/supabase-server.js';
 import { logError } from '../../../lib/logger.js';
 
 const MAX_BODY_BYTES = 1 * 1024;
-// -1 = 無上限(user 偏好移除推薦相關所有限制)
-const CATEGORY_TAG_QUOTA = -1;
 const UUID_RE = /^[0-9a-fA-F-]{36}$/;
 
 // ========== POST: add tag ==========
@@ -51,33 +44,13 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'invalid_category_id' }, 400, request);
     }
 
-    const ip = getVisitorIp(request);
-    if (isIpBanned(env, ip)) {
-        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
-    }
-
+    // 2026-05-17 只保留必登入 + vtuber 存在性
     const { userId } = await getUserIdFromRequest(request, env);
     if (!userId) {
         return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
     }
-    const trustLevel = await getTrustLevel(env, userId);
-    if (trustLevel === 'banned') {
-        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
-    }
 
-    // 驗 category status=approved(server-side 防偽)
-    const catRes = await select(
-        env,
-        `vtuber_categories?id=eq.${encodeURIComponent(categoryId)}&select=id,status&limit=1`,
-    );
-    if (!catRes.ok || !Array.isArray(catRes.data) || catRes.data.length === 0) {
-        return jsonResponse({ ok: false, error: 'category_not_found' }, 404, request);
-    }
-    if (catRes.data[0].status !== 'approved') {
-        return jsonResponse({ ok: false, error: 'category_not_approved' }, 403, request);
-    }
-
-    // 驗 vtuber 存在
+    // 驗 vtuber 存在(防 FK 失敗 5xx)
     const vRes = await select(
         env,
         `vtubers?id=eq.${encodeURIComponent(vtuberId)}&select=id&limit=1`,
@@ -86,16 +59,7 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'vtuber_not_found' }, 404, request);
     }
 
-    // quota
-    const quota = await checkAndIncrementQuota(env, userId, 'category_tag', CATEGORY_TAG_QUOTA);
-    if (!quota.allowed) {
-        return jsonResponse({
-            ok: false,
-            error: 'quota_exceeded',
-            current: quota.newCount,
-            limit: quota.quotaLimit,
-        }, 429, request);
-    }
+    // (已移除:IP banlist、trust_level、category approved check、daily quota)
 
     // insert tag
     const row = {

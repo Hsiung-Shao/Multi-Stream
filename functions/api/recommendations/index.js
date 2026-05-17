@@ -1,25 +1,21 @@
 // Cloudflare Pages Function: 推薦 CRUD endpoint
 //
-// POST   /api/recommendations          → 推薦一個 vtuber(必登入 + 必收藏 + Turnstile)
-//   body: { name, platform: 'twitch'|'youtube', channel_id, url, comment?, turnstile_token? }
+// POST   /api/recommendations
+//   body: { name, platform: 'twitch'|'youtube', channel_id, url, comment? }
 //   200 { ok: true, recommendation_id, vtuber_id }
-//   200 { ok: false, reason: 'already_recommended' }   ← UNIQUE 衝突視同已推
+//   200 { ok: false, reason: 'already_recommended' }   ← DB UNIQUE 衝突視同已推
 //
 // GET    /api/recommendations?sort=daily|all-time|latest&category=<slug>&cursor=<id>&limit=24
 //   anon OK,public 都能看(顯示推薦數、留言)
-//   sort:
-//     - daily:  WHERE created_at >= now()-24h GROUP BY vtuber_id ORDER BY count DESC
-//     - all-time: GROUP BY vtuber_id ORDER BY count DESC
-//     - latest: ORDER BY created_at DESC,個別推薦(非彙總)
 //
-// DELETE /api/recommendations?id=<recommendation_id>   → 撤回自己推薦
-//   owner only(user_id must match auth.uid)
+// DELETE /api/recommendations?id=<recommendation_id>   → 撤回自己推薦(owner only)
 //
-// 7 層攔截:1.IP banlist  2.trust_level  3.Turnstile  4.KV per-IP/min  5.DB quota  6.UNIQUE  7.sanitize
+// 2026-05-17 重構:user 偏好「除了登入以外移除所有限制」(功能完全正常後再加回必要防護)。
+// 移除:IP banlist / trust_level / Turnstile / KV per-IP / DB daily quota / user_favorites
+// 保留:必登入(POST/DELETE)、input format(防 5xx)、DB UNIQUE/CHECK(資料完整性)
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
-import { getUserIdFromRequest, getTrustLevel, checkAndIncrementQuota } from '../../lib/auth-helper.js';
-import { getVisitorIp, isIpBanned } from '../../lib/rate-limit.js';
+import { getUserIdFromRequest } from '../../lib/auth-helper.js';
 import { select, insert } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
 import {
@@ -30,33 +26,8 @@ import {
 } from '../../lib/recommendations.js';
 
 const MAX_BODY_BYTES = 4 * 1024;
-// -1 = 無上限(RPC 仍會 count audit,只是不擋)
-const RECOMMEND_USER_DAILY_QUOTA = -1;
 const LIST_LIMIT_DEFAULT = 24;
 const LIST_LIMIT_MAX = 60;
-const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
-
-async function verifyTurnstileToken(env, token, ip) {
-    if (!env?.TURNSTILE_SECRET_KEY) return { ok: false, reason: 'turnstile_not_configured' };
-    if (!token || typeof token !== 'string' || token.length < 20 || token.length > 2048) {
-        return { ok: false, reason: 'invalid_turnstile_token' };
-    }
-    try {
-        const form = new URLSearchParams();
-        form.append('secret', env.TURNSTILE_SECRET_KEY);
-        form.append('response', token);
-        if (ip) form.append('remoteip', ip);
-        const res = await fetch(SITEVERIFY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: form.toString(),
-        });
-        const r = await res.json();
-        return r?.success ? { ok: true } : { ok: false, reason: 'turnstile_failed' };
-    } catch {
-        return { ok: false, reason: 'turnstile_network' };
-    }
-}
 
 // ========== POST: create recommendation ==========
 
@@ -82,63 +53,21 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'invalid_json' }, 400, request);
     }
 
-    // ---- 2. IP banlist ----
-    const ip = getVisitorIp(request);
-    if (isIpBanned(env, ip)) {
-        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
-    }
-
-    // ---- 3. must be authenticated ----
+    // ---- 2. must be authenticated(唯一保留的攔截) ----
+    // user 偏好「移除除了登入以外的所有限制」,功能完全正常後才會加回必要防護。
+    // 已移除:IP banlist / trust_level / Turnstile / KV / DB quota / user_favorites
     const { userId } = await getUserIdFromRequest(request, env);
     if (!userId) {
         return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
     }
 
-    // ---- 4. trust_level check ----
-    const trustLevel = await getTrustLevel(env, userId);
-    if (trustLevel === 'banned') {
-        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
-    }
-
-    // ---- 5. input validation ----
+    // ---- 3. input format(保留:防 5xx / db error,但極寬鬆) ----
     const validationErr = validateRecommendInput(body);
     if (validationErr) {
         return jsonResponse({ ok: false, error: validationErr }, 400, request);
     }
 
-    // ---- 6. Turnstile(optional but required if configured) ----
-    if (env.TURNSTILE_SECRET_KEY) {
-        const turnstile = await verifyTurnstileToken(env, body.turnstile_token, ip);
-        if (!turnstile.ok) {
-            return jsonResponse({ ok: false, error: turnstile.reason }, 403, request);
-        }
-    }
-
-    // ---- 7. (removed) KV per-IP rate limit ----
-    // 原本沿用 vtuber.anon 配額(hour 3 / day 10),但本 endpoint 強制必登入,
-    // anon 配額會誤殺登入 user(推 3 個收藏就 429)。
-    // 改為純信任 DB daily quota (50/day per user),足夠防濫用。
-
-    // ---- 8. DB daily quota ----
-    const quota = await checkAndIncrementQuota(env, userId, 'recommend', RECOMMEND_USER_DAILY_QUOTA);
-    if (!quota.allowed) {
-        return jsonResponse({
-            ok: false,
-            error: 'quota_exceeded',
-            current: quota.newCount,
-            limit: quota.quotaLimit,
-        }, 429, request);
-    }
-
-    // ---- 9. (removed) user_favorites 雲端驗證 ----
-    // 原本驗 user 收藏中是否有此 url,但 user_favorites 表只記「雲端同步」開啟的 user,
-    // 純 localStorage user 會被誤擋(收藏明明在 localStorage 卻 403 not_in_favorites)。
-    // 推薦本來就是社群行為,惡意推假 url 也只是建空白 vtuber,影響可控:
-    //   - UNIQUE(vtuber_id, user_id) 防同 user 重推
-    //   - trust_level=banned 可全站封鎖該 user
-    //   - admin 可從 vtuber_recommendations 表手動撤下異常 row
-
-    // ---- 10. ensure vtubers row exists ----
+    // ---- 4. ensure vtubers row exists ----
     const ensured = await ensureVtuberRow(env, {
         name: trimStr(body.name, 100),
         platform: body.platform,
