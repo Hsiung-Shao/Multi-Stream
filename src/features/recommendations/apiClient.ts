@@ -20,16 +20,44 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
     });
 }
 
+/**
+ * Fallback:supabase getSession() 偶爾被 auth.lock mutex 卡住超過 timeout,
+ * 此時直接從 localStorage 讀 access_token。supabase v2 預設 key 是 sb-<projectRef>-auth-token。
+ * token 可能比 in-memory 略舊(尚未 refresh),但通常仍 valid;若真過期,backend 會回 401,user 重登即可。
+ */
+function readSessionFromLocalStorage(): string | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const key = Object.keys(window.localStorage).find(
+            k => k.startsWith('sb-') && k.endsWith('-auth-token'),
+        );
+        if (!key) return null;
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const token = parsed?.access_token
+            || parsed?.currentSession?.access_token
+            || parsed?.session?.access_token;
+        if (typeof token === 'string' && token.length > 0) return token;
+    } catch { /* ignore */ }
+    return null;
+}
+
 async function authHeader(): Promise<Record<string, string>> {
+    // 先 try async getSession(會自動 refresh 過期 token)
     try {
         const supabase = await withTimeout(getSupabase(), AUTH_TIMEOUT_MS, 'get_supabase');
-        if (!supabase) return {};
-        const { data } = await withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, 'get_session');
-        const token = data?.session?.access_token;
-        if (token) return { Authorization: `Bearer ${token}` };
+        if (supabase) {
+            const { data } = await withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, 'get_session');
+            const token = data?.session?.access_token;
+            if (token) return { Authorization: `Bearer ${token}` };
+        }
     } catch (e) {
-        console.warn('[recommendations] authHeader failed', (e as Error)?.message);
+        console.warn('[recommendations] getSession timeout/error, trying localStorage fallback', (e as Error)?.message);
     }
+    // Fallback:從 localStorage 同步讀(supabase getSession 偶爾被 mutex 卡)
+    const fallback = readSessionFromLocalStorage();
+    if (fallback) return { Authorization: `Bearer ${fallback}` };
     return {};
 }
 
