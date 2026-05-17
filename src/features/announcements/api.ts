@@ -34,7 +34,7 @@ async function authHeader(): Promise<Record<string, string>> {
 export async function fetchActiveAnnouncements(): Promise<Announcement[]> {
     try {
         const headers = await authHeader();
-        const res = await fetch('/api/announcements/active', { headers, credentials: 'omit' });
+        const res = await fetch('/api/announcements/active', { headers, credentials: 'same-origin' });
         if (!res.ok) {
             const errText = await res.text().catch(() => '');
             console.warn('[announcements] /active non-ok', { status: res.status, body: errText.slice(0, 200) });
@@ -87,7 +87,7 @@ export async function submitAnnouncementResponse(input: RespondInput): Promise<R
         const res = await fetch('/api/announcements/respond', {
             method: 'POST',
             headers,
-            credentials: 'omit',
+            credentials: 'same-origin',
             body: JSON.stringify(body),
         });
         // 統一解析(成功與「已回應」都是 200)
@@ -111,7 +111,7 @@ export async function fetchAnnouncementResults(
 ): Promise<PollResults | SurveyResults | null> {
     try {
         const res = await fetch(`/api/announcements/${encodeURIComponent(id)}/results`, {
-            credentials: 'omit',
+            credentials: 'same-origin',
         });
         if (!res.ok) return null;
         const data = (await res.json()) as PollResults | SurveyResults | { success: false };
