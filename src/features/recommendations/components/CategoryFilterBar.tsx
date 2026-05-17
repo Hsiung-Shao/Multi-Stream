@@ -157,7 +157,7 @@ function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
                 <DialogHeader>
                     <DialogTitle className="text-zinc-100">提出新分類</DialogTitle>
                     <DialogDescription className="text-zinc-500 text-xs">
-                        新增後立刻可用,其他人也能用此分類為 VTuber 打 tag。每日上限 3 個。
+                        新增後立刻可用,其他人也能用此分類為 VTuber 打 tag。
                     </DialogDescription>
                 </DialogHeader>
 

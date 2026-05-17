@@ -16,7 +16,8 @@ const MAX_BODY_BYTES = 2 * 1024;
 const NAME_MAX = 30;
 const SLUG_MAX = 50;
 const DESC_MAX = 200;
-const CATEGORY_PROPOSE_QUOTA = 3;
+// -1 = 無上限(user 偏好移除推薦相關所有限制)
+const CATEGORY_PROPOSE_QUOTA = -1;
 const SLUG_RE = /^[a-z0-9-]+$/;
 
 function trimStr(s, max) {

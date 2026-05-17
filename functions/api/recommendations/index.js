@@ -31,7 +31,8 @@ import {
 } from '../../lib/recommendations.js';
 
 const MAX_BODY_BYTES = 4 * 1024;
-const RECOMMEND_USER_DAILY_QUOTA = 50;
+// -1 = 無上限(RPC 仍會 count audit,只是不擋)
+const RECOMMEND_USER_DAILY_QUOTA = -1;
 const LIST_LIMIT_DEFAULT = 24;
 const LIST_LIMIT_MAX = 60;
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';

@@ -15,7 +15,8 @@ import { select, insert } from '../../../lib/supabase-server.js';
 import { logError } from '../../../lib/logger.js';
 
 const MAX_BODY_BYTES = 1 * 1024;
-const CATEGORY_TAG_QUOTA = 50;
+// -1 = 無上限(user 偏好移除推薦相關所有限制)
+const CATEGORY_TAG_QUOTA = -1;
 const UUID_RE = /^[0-9a-fA-F-]{36}$/;
 
 // ========== POST: add tag ==========
