@@ -85,27 +85,57 @@ class ApiError extends Error {
     }
 }
 
+// supabase-js auth.getSession 偶爾被 mutex 卡住(同 MFA 慢的根源),
+// 不包 timeout 會讓整個 mutation hang，button 永卡 isPending=true。
+const AUTH_TIMEOUT_MS = 2000;
+const FETCH_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error(`${label}_timeout`)), ms);
+        p.then(
+            (v) => { clearTimeout(t); resolve(v); },
+            (e) => { clearTimeout(t); reject(e); },
+        );
+    });
+}
+
 async function getAuthHeader(): Promise<Record<string, string>> {
     try {
-        const supabase = await getSupabase();
+        const supabase = await withTimeout(getSupabase(), AUTH_TIMEOUT_MS, 'get_supabase');
         if (!supabase) return {};
-        const { data } = await supabase.auth.getSession();
+        const { data } = await withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, 'get_session');
         const token = data?.session?.access_token;
         if (token) return { Authorization: `Bearer ${token}` };
-    } catch { /* silent */ }
+    } catch (e) {
+        console.warn('[admin announcements] getAuthHeader failed', (e as Error)?.message);
+    }
     return {};
 }
 
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     const auth = await getAuthHeader();
-    const res = await fetch(path, {
-        ...init,
-        headers: {
-            ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-            ...auth,
-            ...(init.headers || {}),
-        },
-    });
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    let res: Response;
+    try {
+        res = await fetch(path, {
+            ...init,
+            signal: controller.signal,
+            headers: {
+                ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+                ...auth,
+                ...(init.headers || {}),
+            },
+        });
+    } catch (e) {
+        if ((e as Error)?.name === 'AbortError') {
+            throw new ApiError(0, { error: 'request_timeout' });
+        }
+        throw e;
+    } finally {
+        clearTimeout(abortTimer);
+    }
     let payload: any = null;
     try { payload = await res.json(); } catch { /* non-JSON */ }
     if (!res.ok || payload?.ok === false) {
@@ -119,6 +149,7 @@ export function formatAdminAnnouncementError(err: unknown): string {
         const code = err.payload?.error;
         // 友善訊息對照（盡量對齊 backend 回的 error code）
         const map: Record<string, string> = {
+            request_timeout: '請求逾時(15 秒),請稍後再試或重新整理頁面',
             unauthenticated: '請先登入',
             mfa_required: '需要二次驗證(2FA)',
             forbidden: '權限不足',
