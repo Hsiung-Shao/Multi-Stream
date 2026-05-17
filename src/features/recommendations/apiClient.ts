@@ -64,19 +64,34 @@ function readSessionFromLocalStorage(): string | null {
 
 async function authHeader(): Promise<Record<string, string>> {
     // 先 try async getSession(會自動 refresh 過期 token)
+    let sessionSource: string = 'none';
+    let sessionReturnedNull = false;
     try {
         const supabase = await withTimeout(getSupabase(), AUTH_TIMEOUT_MS, 'get_supabase');
         if (supabase) {
             const { data } = await withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS, 'get_session');
             const token = data?.session?.access_token;
-            if (token) return { Authorization: `Bearer ${token}` };
+            if (token) {
+                console.warn('[recommendations] authHeader source=getSession, tokenLen=' + token.length);
+                return { Authorization: `Bearer ${token}` };
+            }
+            // getSession 成功但 session=null(user 未登入 or supabase 還在 hydrate)
+            sessionReturnedNull = true;
+            sessionSource = 'getSession_returned_null';
+        } else {
+            sessionSource = 'getSupabase_returned_null';
         }
     } catch (e) {
-        console.warn('[recommendations] getSession timeout/error, trying localStorage fallback', (e as Error)?.message);
+        sessionSource = `getSession_threw_${(e as Error)?.message || 'unknown'}`;
+        console.warn('[recommendations] getSession timeout/error, trying localStorage fallback', sessionSource);
     }
     // Fallback:從 localStorage 同步讀(supabase getSession 偶爾被 mutex 卡)
     const fallback = readSessionFromLocalStorage();
-    if (fallback) return { Authorization: `Bearer ${fallback}` };
+    if (fallback) {
+        console.warn('[recommendations] authHeader source=localStorage_fallback, getSessionReason=' + sessionSource + ', tokenLen=' + fallback.length);
+        return { Authorization: `Bearer ${fallback}` };
+    }
+    console.warn('[recommendations] authHeader FAILED — no token from either path. getSession=' + sessionSource + ', localStorage=null, sessionReturnedNull=' + sessionReturnedNull);
     return {};
 }
 

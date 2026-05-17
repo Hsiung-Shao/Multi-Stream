@@ -11,8 +11,10 @@
 // DELETE /api/recommendations?id=<recommendation_id>   → 撤回自己推薦(owner only)
 //
 // 2026-05-17 重構:user 偏好「除了登入以外移除所有限制」(功能完全正常後再加回必要防護)。
-// 移除:IP banlist / trust_level / Turnstile / KV per-IP / DB daily quota / user_favorites
-// 保留:必登入(POST/DELETE)、input format(防 5xx)、DB UNIQUE/CHECK(資料完整性)
+// 2026-05-17(進一步):POST 不再需要登入,DB schema user_id 改 nullable + partial UNIQUE
+// DELETE/mine 仍維持登入(匿名無 owner 概念)
+// 移除:IP banlist / trust_level / Turnstile / KV per-IP / DB daily quota / user_favorites / POST 必登入
+// 保留:DELETE/mine 登入、input format(防 5xx)、DB CHECK(資料完整性)
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
@@ -53,13 +55,8 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'invalid_json' }, 400, request);
     }
 
-    // ---- 2. must be authenticated(唯一保留的攔截) ----
-    // user 偏好「移除除了登入以外的所有限制」,功能完全正常後才會加回必要防護。
-    // 已移除:IP banlist / trust_level / Turnstile / KV / DB quota / user_favorites
+    // 2026-05-17 移除「必登入」gate(user 偏好「先完成功能」)。仍取 userId 供 log/row。
     const { userId } = await getUserIdFromRequest(request, env);
-    if (!userId) {
-        return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
-    }
 
     // ---- 3. input format(保留:防 5xx / db error,但極寬鬆) ----
     const validationErr = validateRecommendInput(body);
@@ -82,7 +79,7 @@ export async function onRequestPost(context) {
     const comment = body.comment ? trimStr(body.comment, COMMENT_MAX_LEN) : null;
     const row = {
         vtuber_id: ensured.vtuberId,
-        user_id: userId,
+        user_id: userId || null,
         comment: comment || null,
     };
     const ins = await insert(env, 'vtuber_recommendations', row);
@@ -97,7 +94,7 @@ export async function onRequestPost(context) {
             }, 200, request);
         }
         await logError(env, 'recommendations', 'insert failed', {
-            userId,
+            userId: userId || null,
             metadata: { status: ins.status, error: errStr.slice(0, 500), vtuber_id: ensured.vtuberId },
         });
         return jsonResponse({ ok: false, error: 'insert_failed' }, 500, request);
@@ -105,7 +102,7 @@ export async function onRequestPost(context) {
 
     const created = Array.isArray(ins.data) ? ins.data[0] : ins.data;
     void logInfo(env, 'recommendations', 'recommended', {
-        userId,
+        userId: userId || null,
         metadata: { vtuber_id: ensured.vtuberId, has_comment: !!comment, already_in_vtubers: ensured.alreadyExists },
     });
 

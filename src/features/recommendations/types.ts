@@ -31,7 +31,7 @@ export interface RecommendationAggregate {
 export interface RecommendationLatest {
     id: string;
     vtuber_id: string;
-    user_id: string;
+    user_id: string | null;
     comment: string | null;
     created_at: string;
 }

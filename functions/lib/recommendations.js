@@ -67,6 +67,7 @@ export async function userHasFavorite(env, userId, url) {
 
 /**
  * 確保 vtubers row 存在(複製 recommend-from-favorite.js 邏輯但無 contributions 寫入)
+ * @param {{ name: string, platform: string, channelId: string, userId: string | null }} params
  * @returns {Promise<{ ok: boolean, vtuberId: string|null, alreadyExists: boolean, error?: string }>}
  */
 export async function ensureVtuberRow(env, { name, platform, channelId, userId }) {
