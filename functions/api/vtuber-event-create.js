@@ -163,7 +163,8 @@ export async function onRequestPost(context) {
         location: trimStr(body.location, 200) || null,
         url: body.url || null,
         image_url: body.imageUrl || null,
-        status: 'pending',
+        // 2026-05-17 改:status='approved' 直接公開(user 偏好移除審核流程)
+        status: 'approved',
     };
 
     const result = await insert(env, 'vtuber_events', row);

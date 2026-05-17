@@ -130,7 +130,7 @@ function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
                 slug: trimmedSlug,
                 description: description.trim() || undefined,
             });
-            toast.success('已送出分類提案,等待 admin 審核');
+            toast.success('已新增分類');
             setName('');
             setSlug('');
             setDescription('');
@@ -157,7 +157,7 @@ function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
                 <DialogHeader>
                     <DialogTitle className="text-zinc-100">提出新分類</DialogTitle>
                     <DialogDescription className="text-zinc-500 text-xs">
-                        提案後由 admin 審核,通過後其他人就能用此分類為 VTuber 打 tag。每日上限 3 個提案。
+                        新增後立刻可用,其他人也能用此分類為 VTuber 打 tag。每日上限 3 個。
                     </DialogDescription>
                 </DialogHeader>
 

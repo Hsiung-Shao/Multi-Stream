@@ -122,7 +122,8 @@ export async function onRequestPost(context) {
         name,
         slug,
         description,
-        status: 'pending',
+        // 2026-05-17 改:直接 approved(user 偏好移除審核;反正名稱/slug UNIQUE)
+        status: 'approved',
         proposed_by: userId,
     };
     const ins = await insert(env, 'vtuber_categories', row);

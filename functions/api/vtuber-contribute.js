@@ -189,11 +189,13 @@ export async function onRequestPost(context) {
     }
 
     // 9. 寫入 vtuber_contributions
+    // 2026-05-17 改:status='approved' 直接公開(user 偏好移除審核流程)
+    // action='add' 時下方會順手 INSERT vtubers row(若不存在),讓投稿立刻可見
     const row = {
         action: body.action,
         target_vtuber_id: body.targetVtuberId || null,
         payload: body.payload || {},
-        status: 'pending',
+        status: 'approved',
         submitted_by: isAnon ? trimStr(body.contributorName, 50) || 'anonymous' : userId,
         submitter_contact: isAnon ? trimStr(body.contributorContact, 200) || null : null,
         source_urls: body.sourceUrls,
