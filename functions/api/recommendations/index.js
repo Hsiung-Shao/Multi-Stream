@@ -1,0 +1,372 @@
+// Cloudflare Pages Function: 推薦 CRUD endpoint
+//
+// POST   /api/recommendations          → 推薦一個 vtuber(必登入 + 必收藏 + Turnstile)
+//   body: { name, platform: 'twitch'|'youtube', channel_id, url, comment?, turnstile_token? }
+//   200 { ok: true, recommendation_id, vtuber_id }
+//   200 { ok: false, reason: 'already_recommended' }   ← UNIQUE 衝突視同已推
+//
+// GET    /api/recommendations?sort=daily|all-time|latest&category=<slug>&cursor=<id>&limit=24
+//   anon OK,public 都能看(顯示推薦數、留言)
+//   sort:
+//     - daily:  WHERE created_at >= now()-24h GROUP BY vtuber_id ORDER BY count DESC
+//     - all-time: GROUP BY vtuber_id ORDER BY count DESC
+//     - latest: ORDER BY created_at DESC,個別推薦(非彙總)
+//
+// DELETE /api/recommendations?id=<recommendation_id>   → 撤回自己推薦
+//   owner only(user_id must match auth.uid)
+//
+// 7 層攔截:1.IP banlist  2.trust_level  3.Turnstile  4.KV per-IP/min  5.DB quota  6.UNIQUE  7.sanitize
+
+import { jsonResponse, handleOptions } from '../lib/cors.js';
+import { getUserIdFromRequest, getTrustLevel, checkAndIncrementQuota } from '../lib/auth-helper.js';
+import { getVisitorIp, isIpBanned, getRateLimits, checkAndIncrementAnonQuota } from '../lib/rate-limit.js';
+import { select, insert } from '../lib/supabase-server.js';
+import { logError, logInfo } from '../lib/logger.js';
+import {
+    validateRecommendInput,
+    trimStr,
+    COMMENT_MAX_LEN,
+    userHasFavorite,
+    ensureVtuberRow,
+} from '../lib/recommendations.js';
+
+const MAX_BODY_BYTES = 4 * 1024;
+const RECOMMEND_USER_DAILY_QUOTA = 50;
+const LIST_LIMIT_DEFAULT = 24;
+const LIST_LIMIT_MAX = 60;
+const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+
+async function verifyTurnstileToken(env, token, ip) {
+    if (!env?.TURNSTILE_SECRET_KEY) return { ok: false, reason: 'turnstile_not_configured' };
+    if (!token || typeof token !== 'string' || token.length < 20 || token.length > 2048) {
+        return { ok: false, reason: 'invalid_turnstile_token' };
+    }
+    try {
+        const form = new URLSearchParams();
+        form.append('secret', env.TURNSTILE_SECRET_KEY);
+        form.append('response', token);
+        if (ip) form.append('remoteip', ip);
+        const res = await fetch(SITEVERIFY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: form.toString(),
+        });
+        const r = await res.json();
+        return r?.success ? { ok: true } : { ok: false, reason: 'turnstile_failed' };
+    } catch {
+        return { ok: false, reason: 'turnstile_network' };
+    }
+}
+
+// ========== POST: create recommendation ==========
+
+export async function onRequestPost(context) {
+    const { request, env } = context;
+
+    // ---- 0. server misconfigured guard ----
+    if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
+        return jsonResponse({ ok: false, error: 'server_misconfigured' }, 500, request);
+    }
+
+    // ---- 1. content-type / size ----
+    const contentType = request.headers.get('Content-Type') || '';
+    if (!contentType.includes('application/json')) {
+        return jsonResponse({ ok: false, error: 'invalid_content_type' }, 400, request);
+    }
+    if (parseInt(request.headers.get('Content-Length') || '0', 10) > MAX_BODY_BYTES) {
+        return jsonResponse({ ok: false, error: 'body_too_large' }, 413, request);
+    }
+
+    let body;
+    try { body = await request.json(); } catch {
+        return jsonResponse({ ok: false, error: 'invalid_json' }, 400, request);
+    }
+
+    // ---- 2. IP banlist ----
+    const ip = getVisitorIp(request);
+    if (isIpBanned(env, ip)) {
+        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
+    }
+
+    // ---- 3. must be authenticated ----
+    const { userId } = await getUserIdFromRequest(request, env);
+    if (!userId) {
+        return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
+    }
+
+    // ---- 4. trust_level check ----
+    const trustLevel = await getTrustLevel(env, userId);
+    if (trustLevel === 'banned') {
+        return jsonResponse({ ok: false, error: 'banned' }, 403, request);
+    }
+
+    // ---- 5. input validation ----
+    const validationErr = validateRecommendInput(body);
+    if (validationErr) {
+        return jsonResponse({ ok: false, error: validationErr }, 400, request);
+    }
+
+    // ---- 6. Turnstile(optional but required if configured) ----
+    if (env.TURNSTILE_SECRET_KEY) {
+        const turnstile = await verifyTurnstileToken(env, body.turnstile_token, ip);
+        if (!turnstile.ok) {
+            return jsonResponse({ ok: false, error: turnstile.reason }, 403, request);
+        }
+    }
+
+    // ---- 7. KV per-IP rate limit(每小時/每日,沿用 vtuber 既有額度) ----
+    if (env.RATE_LIMIT_KV && ip) {
+        const limits = getRateLimits(env);
+        const r = await checkAndIncrementAnonQuota(env.RATE_LIMIT_KV, ip, 'vtuber', limits.vtuber.anon);
+        if (!r.allowed) {
+            return jsonResponse({ ok: false, error: 'rate_limited' }, 429, request);
+        }
+    }
+
+    // ---- 8. DB daily quota ----
+    const quota = await checkAndIncrementQuota(env, userId, 'recommend', RECOMMEND_USER_DAILY_QUOTA);
+    if (!quota.allowed) {
+        return jsonResponse({
+            ok: false,
+            error: 'quota_exceeded',
+            current: quota.newCount,
+            limit: quota.quotaLimit,
+        }, 429, request);
+    }
+
+    // ---- 9. user must have this url in favorites(防繞 UI) ----
+    const hasFav = await userHasFavorite(env, userId, body.url);
+    if (!hasFav) {
+        return jsonResponse({ ok: false, error: 'not_in_favorites' }, 403, request);
+    }
+
+    // ---- 10. ensure vtubers row exists ----
+    const ensured = await ensureVtuberRow(env, {
+        name: trimStr(body.name, 100),
+        platform: body.platform,
+        channelId: body.channel_id,
+        userId,
+    });
+    if (!ensured.ok) {
+        return jsonResponse({ ok: false, error: ensured.error || 'create_vtuber_failed' }, 500, request);
+    }
+
+    // ---- 11. insert recommendation ----
+    const comment = body.comment ? trimStr(body.comment, COMMENT_MAX_LEN) : null;
+    const row = {
+        vtuber_id: ensured.vtuberId,
+        user_id: userId,
+        comment: comment || null,
+    };
+    const ins = await insert(env, 'vtuber_recommendations', row);
+    if (!ins.ok) {
+        const errStr = ins.error || '';
+        if (ins.status === 409 || /23505|duplicate key/i.test(errStr)) {
+            // 已推過視同成功 dedupe(client 不該報錯)
+            return jsonResponse({
+                ok: false,
+                reason: 'already_recommended',
+                vtuber_id: ensured.vtuberId,
+            }, 200, request);
+        }
+        await logError(env, 'recommendations', 'insert failed', {
+            userId,
+            metadata: { status: ins.status, error: errStr.slice(0, 500), vtuber_id: ensured.vtuberId },
+        });
+        return jsonResponse({ ok: false, error: 'insert_failed' }, 500, request);
+    }
+
+    const created = Array.isArray(ins.data) ? ins.data[0] : ins.data;
+    void logInfo(env, 'recommendations', 'recommended', {
+        userId,
+        metadata: { vtuber_id: ensured.vtuberId, has_comment: !!comment, already_in_vtubers: ensured.alreadyExists },
+    });
+
+    return jsonResponse({
+        ok: true,
+        recommendation_id: created?.id,
+        vtuber_id: ensured.vtuberId,
+    }, 200, request);
+}
+
+// ========== GET: list recommendations ==========
+
+function parseSort(v) {
+    if (v === 'daily' || v === 'all-time' || v === 'latest') return v;
+    return 'daily';
+}
+
+function parseLimit(v) {
+    const n = parseInt(v || '', 10);
+    if (!Number.isFinite(n) || n <= 0) return LIST_LIMIT_DEFAULT;
+    return Math.min(n, LIST_LIMIT_MAX);
+}
+
+function isUuid(s) {
+    return typeof s === 'string' && /^[0-9a-fA-F-]{36}$/.test(s);
+}
+
+export async function onRequestGet(context) {
+    const { request, env } = context;
+
+    if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
+        return jsonResponse({ ok: false, error: 'server_misconfigured' }, 500, request);
+    }
+
+    const url = new URL(request.url);
+    const sort = parseSort(url.searchParams.get('sort'));
+    const limit = parseLimit(url.searchParams.get('limit'));
+    const categorySlug = url.searchParams.get('category');
+    const cursorVtuberId = url.searchParams.get('cursor');
+
+    // 排行榜(daily / all-time):用 PostgREST 聚合不方便,改 RPC 或直接 raw SQL via service_role
+    // 簡化:目前 vtuber_recommendations row 少,先用 select all + 前端 / endpoint 聚合
+    // 後續 V2 改 materialized view
+
+    if (sort === 'latest') {
+        // 最新留言模式(單筆 row,非彙總)
+        const filters = ['select=id,vtuber_id,user_id,comment,created_at', 'order=created_at.desc', `limit=${limit}`];
+        if (cursorVtuberId && isUuid(cursorVtuberId)) {
+            filters.push(`created_at=lt.${encodeURIComponent(cursorVtuberId)}`);  // cursor 是 ISO timestamp
+        }
+        const res = await select(env, `vtuber_recommendations?${filters.join('&')}`);
+        if (!res.ok) {
+            await logError(env, 'recommendations', 'list latest failed', {
+                metadata: { status: res.status, error: res.error?.slice(0, 500) },
+            });
+            return jsonResponse({ ok: false, error: 'fetch_failed' }, 500, request);
+        }
+        return jsonResponse(
+            { ok: true, sort, items: res.data || [] },
+            200,
+            request,
+            { 'Cache-Control': 'public, max-age=15' },
+        );
+    }
+
+    // daily / all-time: 用 RPC 走聚合(下方 helper SQL,實作完用 supabase functions create)
+    // 為了 V1 minimal:用 PostgREST horizontal filtering + 前端 group
+    // 排行榜:抓最近 24h 全部 row + return raw,讓前端 group
+    const since = sort === 'daily'
+        ? new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+        : null;
+
+    const filters = ['select=id,vtuber_id,user_id,comment,created_at'];
+    if (since) {
+        filters.push(`created_at=gte.${encodeURIComponent(since)}`);
+    }
+    filters.push('order=created_at.desc');
+    // 不分頁:rows 不會太多,V1 接受全量
+    filters.push('limit=2000');
+
+    const res = await select(env, `vtuber_recommendations?${filters.join('&')}`);
+    if (!res.ok) {
+        await logError(env, 'recommendations', 'list aggregated failed', {
+            metadata: { status: res.status, error: res.error?.slice(0, 500) },
+        });
+        return jsonResponse({ ok: false, error: 'fetch_failed' }, 500, request);
+    }
+
+    // 聚合:vtuber_id → { count, latest_at, comments: [...max 3] }
+    const map = new Map();
+    for (const r of res.data || []) {
+        if (!map.has(r.vtuber_id)) {
+            map.set(r.vtuber_id, {
+                vtuber_id: r.vtuber_id,
+                count: 0,
+                latest_at: r.created_at,
+                comments_preview: [],
+            });
+        }
+        const entry = map.get(r.vtuber_id);
+        entry.count++;
+        if (r.comment && entry.comments_preview.length < 3) {
+            entry.comments_preview.push({ comment: r.comment, created_at: r.created_at });
+        }
+    }
+
+    // 排序 by count desc, latest_at desc
+    let items = Array.from(map.values()).sort(
+        (a, b) => b.count - a.count || (b.latest_at > a.latest_at ? 1 : -1),
+    );
+
+    // 若有 category filter:抓 category_id 對應的 vtuber_id 集合再 filter
+    if (categorySlug && typeof categorySlug === 'string' && /^[a-z0-9-]+$/.test(categorySlug)) {
+        const catRes = await select(
+            env,
+            `vtuber_categories?slug=eq.${encodeURIComponent(categorySlug)}&status=eq.approved&select=id&limit=1`,
+        );
+        if (catRes.ok && Array.isArray(catRes.data) && catRes.data.length > 0) {
+            const catId = catRes.data[0].id;
+            const tagRes = await select(
+                env,
+                `vtuber_category_tags?category_id=eq.${encodeURIComponent(catId)}&select=vtuber_id&limit=1000`,
+            );
+            if (tagRes.ok && Array.isArray(tagRes.data)) {
+                const vtuberIdsInCat = new Set(tagRes.data.map(t => t.vtuber_id));
+                items = items.filter(it => vtuberIdsInCat.has(it.vtuber_id));
+            }
+        }
+    }
+
+    items = items.slice(0, limit);
+
+    return jsonResponse(
+        { ok: true, sort, items },
+        200,
+        request,
+        { 'Cache-Control': 'public, max-age=30' },
+    );
+}
+
+// ========== DELETE: revoke own recommendation ==========
+
+export async function onRequestDelete(context) {
+    const { request, env } = context;
+
+    if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
+        return jsonResponse({ ok: false, error: 'server_misconfigured' }, 500, request);
+    }
+
+    const { userId } = await getUserIdFromRequest(request, env);
+    if (!userId) {
+        return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
+    }
+
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    if (!isUuid(id)) {
+        return jsonResponse({ ok: false, error: 'invalid_id' }, 400, request);
+    }
+
+    // 用 service_role DELETE,filter 含 user_id 確保 owner only
+    const delUrl = `${env.SUPABASE_URL}/rest/v1/vtuber_recommendations?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(userId)}`;
+    try {
+        const res = await fetch(delUrl, {
+            method: 'DELETE',
+            headers: {
+                apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+                Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                Prefer: 'return=representation',
+            },
+        });
+        if (!res.ok) {
+            return jsonResponse({ ok: false, error: 'delete_failed' }, 500, request);
+        }
+        const deleted = await res.json().catch(() => []);
+        if (!Array.isArray(deleted) || deleted.length === 0) {
+            return jsonResponse({ ok: false, error: 'not_found' }, 404, request);
+        }
+        return jsonResponse({ ok: true }, 200, request);
+    } catch (e) {
+        await logError(env, 'recommendations', 'delete threw', {
+            userId,
+            metadata: { error: String(e).slice(0, 300), id },
+        });
+        return jsonResponse({ ok: false, error: 'delete_failed' }, 500, request);
+    }
+}
+
+export async function onRequestOptions(context) {
+    return handleOptions(context.request, { methods: 'GET, POST, DELETE, OPTIONS' });
+}
