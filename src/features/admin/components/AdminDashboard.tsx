@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Skeleton } from '../../../components/ui/skeleton';
-import { MessageSquare, Inbox, Star, TrendingUp, BarChart3, LogOut, Bug, Lightbulb, Palette, HelpCircle, RefreshCw, Users, CalendarDays, AlertTriangle, Megaphone } from 'lucide-react';
+import { MessageSquare, Inbox, Star, TrendingUp, BarChart3, LogOut, Bug, Lightbulb, Palette, HelpCircle, RefreshCw, Users, CalendarDays, AlertTriangle, Megaphone, Tag } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useFeedbacks, useFeedbackStats } from '../hooks/useFeedbacks';
 import { FeedbackTable } from './FeedbackTable';
@@ -8,6 +8,7 @@ import { FeedbackDetail } from './FeedbackDetail';
 import { VTuberContributionReview } from './VTuberContributionReview';
 import { EventReview } from './EventReview';
 import { AnnouncementsTab } from './AnnouncementsTab';
+import { CategoriesReviewTab } from './CategoriesReviewTab';
 import type { FeedbackRecord, FeedbackFilter } from '../types';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -20,7 +21,7 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof Bug; color: stri
     other: { label: '其他', icon: HelpCircle, color: 'text-zinc-400' },
 };
 
-type AdminTab = 'feedback' | 'vtuber' | 'events' | 'announcements';
+type AdminTab = 'feedback' | 'vtuber' | 'events' | 'announcements' | 'categories';
 
 export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const [activeTab, setActiveTab] = useState<AdminTab>('feedback');
@@ -134,6 +135,20 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 <Megaphone className="w-3.5 h-3.5" />
                                 推送公告
                                 {activeTab === 'announcements' && (
+                                    <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-blue-500 rounded-full" />
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('categories')}
+                                className={`relative flex items-center gap-1.5 px-3 h-full text-[13px] font-medium transition-colors ${
+                                    activeTab === 'categories'
+                                        ? 'text-zinc-100'
+                                        : 'text-zinc-400 hover:text-zinc-200'
+                                }`}
+                            >
+                                <Tag className="w-3.5 h-3.5" />
+                                分類審核
+                                {activeTab === 'categories' && (
                                     <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-blue-500 rounded-full" />
                                 )}
                             </button>
@@ -270,8 +285,10 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <VTuberContributionReview />
                 ) : activeTab === 'events' ? (
                     <EventReview />
-                ) : (
+                ) : activeTab === 'announcements' ? (
                     <AnnouncementsTab />
+                ) : (
+                    <CategoriesReviewTab />
                 )}
             </main>
 
