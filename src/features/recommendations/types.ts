@@ -64,6 +64,7 @@ export interface RecommendInput {
     url: string;
     comment?: string;
     turnstile_token?: string;
+    anonymous_id?: string;
 }
 
 // 我的推薦 tab 用

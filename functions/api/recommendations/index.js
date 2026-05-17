@@ -13,6 +13,7 @@
 // 2026-05-17 重構:user 偏好「除了登入以外移除所有限制」(功能完全正常後再加回必要防護)。
 // 2026-05-17(進一步):POST 不再需要登入,DB schema user_id 改 nullable + partial UNIQUE
 // DELETE/mine 仍維持登入(匿名無 owner 概念)
+// 2026-05-17(再進一步):匿名推薦加 localStorage anonymous_id dedupe(同瀏覽器不可重複推同 vtuber)
 // 移除:IP banlist / trust_level / Turnstile / KV per-IP / DB daily quota / user_favorites / POST 必登入
 // 保留:DELETE/mine 登入、input format(防 5xx)、DB CHECK(資料完整性)
 
@@ -80,6 +81,7 @@ export async function onRequestPost(context) {
     const row = {
         vtuber_id: ensured.vtuberId,
         user_id: userId || null,
+        anonymous_id: userId ? null : (body.anonymous_id || null),
         comment: comment || null,
     };
     const ins = await insert(env, 'vtuber_recommendations', row);

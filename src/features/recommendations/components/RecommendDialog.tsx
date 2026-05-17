@@ -19,17 +19,19 @@ import { Heart, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRecommendMutation } from '../hooks';
 import { formatRecommendError } from '../apiClient';
+import { getOrCreateAnonymousId } from '../anonymousId';
 import type { FavoriteStream } from '../../favorites/types';
 
 interface Props {
     favorite: FavoriteStream | null;
     open: boolean;
     onOpenChange: (v: boolean) => void;
+    onRecommended?: (favoriteId: string) => void;
 }
 
 const COMMENT_MAX = 500;
 
-export function RecommendDialog({ favorite, open, onOpenChange }: Props) {
+export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }: Props) {
     const [comment, setComment] = useState('');
     const mutation = useRecommendMutation();
     const isPending = mutation.isPending;
@@ -61,17 +63,22 @@ export function RecommendDialog({ favorite, open, onOpenChange }: Props) {
         }
 
         try {
+            const anonymousId = getOrCreateAnonymousId();
             const result = await mutation.mutateAsync({
                 name: favorite.name,
                 platform: favorite.platform,
                 channel_id: channelId,
                 url: favorite.url,
                 comment: trimmed || undefined,
+                anonymous_id: anonymousId || undefined,
             });
             if (result.ok === true) {
                 toast.success(`已推薦:${favorite.name}`);
+                onRecommended?.(favorite.id);
             } else if (result.reason === 'already_recommended') {
                 toast.message(`你已經推薦過 ${favorite.name} 了`);
+                // 同步 server 真實狀態到 local(可能 user 在別處推過或清過 localStorage)
+                onRecommended?.(favorite.id);
             }
             onOpenChange(false);
         } catch (e) {

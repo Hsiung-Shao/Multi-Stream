@@ -179,6 +179,7 @@ export function formatRecommendError(err: unknown): string {
             invalid_json: 'JSON 格式錯誤',
             invalid_content_type: 'Content-Type 必須為 application/json',
             invalid_turnstile_token: '驗證 token 無效',
+            invalid_anonymous_id: '匿名識別格式錯誤',
             invalid_data: '資料格式錯誤',
             not_in_favorites: '請先把這個頻道加入收藏才能推薦',
             not_found: '找不到資料',

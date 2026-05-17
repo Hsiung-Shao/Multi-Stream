@@ -2,6 +2,7 @@ import { Play, Edit2, Trash2, Youtube, Gamepad2, Heart } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { TagList } from '../../../components/ui/TagList';
+import { cn } from '../../../components/ui/utils';
 import { useTranslation } from 'react-i18next';
 import type { FavoriteStream, Tag, FavoriteCategory as Category } from '../types';
 
@@ -113,10 +114,12 @@ export function FavoriteListItem({
                         size="icon"
                         variant="ghost"
                         onClick={() => onRecommend(favorite)}
-                        title="推薦給社群"
-                        className="h-8 w-8 rounded-lg text-gray-500 hover:text-pink-600 hover:bg-pink-50 dark:text-gray-400 dark:hover:text-pink-400 dark:hover:bg-pink-500/10"
+                        title={favorite.recommendedAt ? '已推薦過' : '推薦給社群'}
+                        disabled={!!favorite.recommendedAt}
+                        aria-pressed={!!favorite.recommendedAt}
+                        className="h-8 w-8 rounded-lg text-gray-500 hover:text-pink-600 hover:bg-pink-50 dark:text-gray-400 dark:hover:text-pink-400 dark:hover:bg-pink-500/10 disabled:opacity-100 disabled:cursor-default"
                     >
-                        <Heart className="size-4" />
+                        <Heart className={cn('size-4', favorite.recommendedAt && 'fill-current text-rose-500')} />
                     </Button>
                 )}
                 <Button

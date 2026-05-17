@@ -37,6 +37,8 @@ export interface FavoriteStream {
     gameName?: string | null;
     liveVideoId?: string | null;
     liveUrl?: string | null;
+
+    recommendedAt?: string;  // ISO 字串;推薦成功後寫入(同瀏覽器 dedupe 用)
 }
 
 /**

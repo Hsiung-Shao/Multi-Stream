@@ -246,6 +246,16 @@ export class FavoritesService {
         return { success: true, message: 'favoriteUpdated' };
     }
 
+    markRecommended(id: string): { success: boolean; message: string } {
+        const success = this.favRepo.update(id, { recommendedAt: new Date().toISOString() });
+        if (!success) return { success: false, message: 'favoriteNotFound' };
+
+        const updatedItem = this.favRepo.getList().find(i => i.id === id);
+        this.emitChangeEvent('update', id, updatedItem);
+
+        return { success: true, message: 'favoriteUpdated' };
+    }
+
     removeFavorite(id: string): { success: boolean; message: string } {
         const removedItem = this.favRepo.remove(id);
         if (!removedItem) return { success: false, message: 'favoriteNotFound' };

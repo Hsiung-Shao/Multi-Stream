@@ -50,6 +50,11 @@ export function validateRecommendInput(body) {
         if (trimmed.length > COMMENT_MAX_LEN) return 'comment_too_long';
         // 2026-05-17 移除 URL regex(user 偏好);spam 控制改靠管理員手動撤 row
     }
+    if (body.anonymous_id !== undefined && body.anonymous_id !== null) {
+        if (typeof body.anonymous_id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(body.anonymous_id)) {
+            return 'invalid_anonymous_id';
+        }
+    }
     return null;
 }
 

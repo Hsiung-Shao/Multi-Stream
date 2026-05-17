@@ -605,6 +605,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                     favorite={recommendTarget}
                     open={!!recommendTarget}
                     onOpenChange={(v) => { if (!v) setRecommendTarget(null); }}
+                    onRecommended={(id) => favoritesService.markRecommended(id)}
                 />
 
                 <AddFavoriteDialog
