@@ -22,8 +22,15 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 
 /**
  * Fallback:supabase getSession() 偶爾被 auth.lock mutex 卡住超過 timeout,
- * 此時直接從 localStorage 讀 access_token。supabase v2 預設 key 是 sb-<projectRef>-auth-token。
- * token 可能比 in-memory 略舊(尚未 refresh),但通常仍 valid;若真過期,backend 會回 401,user 重登即可。
+ * 此時直接從 localStorage 讀 access_token。
+ *
+ * supabase-js v2 storage:
+ *   key:   sb-<projectRef>-auth-token
+ *   value: 可能是純 JSON 或 base64-prefix encoded JSON('base64-' + atob(...))
+ *          (同 lib/supabase.ts readRefreshTokenFromStorage 的處理)
+ *
+ * token 可能比 in-memory 略舊(尚未 refresh),但通常仍 valid;
+ * 若真過期 backend 回 401,user 重登即可。
  */
 function readSessionFromLocalStorage(): string | null {
     if (typeof window === 'undefined') return null;
@@ -34,7 +41,19 @@ function readSessionFromLocalStorage(): string | null {
         if (!key) return null;
         const raw = window.localStorage.getItem(key);
         if (!raw) return null;
-        const parsed = JSON.parse(raw);
+
+        // supabase-js 某些版本會把 value 用 'base64-' prefix 包起來
+        let parsed: any = null;
+        if (raw.startsWith('base64-')) {
+            try {
+                parsed = JSON.parse(atob(raw.substring('base64-'.length)));
+            } catch { /* fall through to JSON.parse */ }
+        }
+        if (!parsed) {
+            try { parsed = JSON.parse(raw); } catch { /* ignore */ }
+        }
+        if (!parsed) return null;
+
         const token = parsed?.access_token
             || parsed?.currentSession?.access_token
             || parsed?.session?.access_token;
