@@ -72,9 +72,9 @@ export function LandingPage() {
                         <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('faq')}>
                             {t('landing.footer.faq')}
                         </Button>
-                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm gap-1.5" onClick={() => setPage('vtuber-explore')}>
-                            {t('landing.footer.vtuber')}
-                            <span className="px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">Beta</span>
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm gap-1.5" onClick={() => setPage('recommendations')}>
+                            {t('landing.footer.recommendations', '推薦')}
+                            <span className="px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-pink-500/15 text-pink-400 border border-pink-500/30">New</span>
                         </Button>
                         <a
                             href="https://github.com/Hsiung-Shao/Multi-Stream"
@@ -443,9 +443,9 @@ export function LandingPage() {
                         <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('faq')}>
                             {t('landing.footer.faq')}
                         </Button>
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs gap-1" onClick={() => setPage('vtuber-explore')}>
-                            {t('landing.footer.vtuber')}
-                            <span className="px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">Beta</span>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs gap-1" onClick={() => setPage('recommendations')}>
+                            {t('landing.footer.recommendations', '推薦')}
+                            <span className="px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-pink-500/15 text-pink-400 border border-pink-500/30">New</span>
                         </Button>
                         <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('privacy')}>
                             {t('landing.footer.privacy')}
