@@ -26,7 +26,6 @@ import {
     validateRecommendInput,
     trimStr,
     COMMENT_MAX_LEN,
-    userHasFavorite,
     ensureVtuberRow,
 } from '../../lib/recommendations.js';
 
@@ -131,11 +130,13 @@ export async function onRequestPost(context) {
         }, 429, request);
     }
 
-    // ---- 9. user must have this url in favorites(防繞 UI) ----
-    const hasFav = await userHasFavorite(env, userId, body.url);
-    if (!hasFav) {
-        return jsonResponse({ ok: false, error: 'not_in_favorites' }, 403, request);
-    }
+    // ---- 9. (removed) user_favorites 雲端驗證 ----
+    // 原本驗 user 收藏中是否有此 url,但 user_favorites 表只記「雲端同步」開啟的 user,
+    // 純 localStorage user 會被誤擋(收藏明明在 localStorage 卻 403 not_in_favorites)。
+    // 推薦本來就是社群行為,惡意推假 url 也只是建空白 vtuber,影響可控:
+    //   - UNIQUE(vtuber_id, user_id) 防同 user 重推
+    //   - trust_level=banned 可全站封鎖該 user
+    //   - admin 可從 vtuber_recommendations 表手動撤下異常 row
 
     // ---- 10. ensure vtubers row exists ----
     const ensured = await ensureVtuberRow(env, {
