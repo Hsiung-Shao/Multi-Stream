@@ -65,3 +65,12 @@ export interface RecommendInput {
     comment?: string;
     turnstile_token?: string;
 }
+
+// 我的推薦 tab 用
+export interface MyRecommendation {
+    id: string;
+    vtuber_id: string;
+    comment: string | null;
+    created_at: string;
+    vtuber: VTuberInfo | null;
+}

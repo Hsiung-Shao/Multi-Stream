@@ -1,4 +1,4 @@
-import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch, History as HistoryIcon } from 'lucide-react';
+import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch, History as HistoryIcon, Heart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../../../components/ui/badge';
 import {
@@ -84,6 +84,17 @@ export function FavoritesSidebar({
                             <div className="flex items-center gap-3">
                                 <Twitch className="size-4" />
                                 <span className="text-sm">{t('twitchIntegration') || 'Twitch 匯入'}</span>
+                            </div>
+                        </div>
+
+                        {/* 我的推薦 */}
+                        <div
+                            className={navItemClass(activeTab === 'my_recommendations')}
+                            onClick={() => onNavigate('my_recommendations')}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Heart className="size-4" />
+                                <span className="text-sm">我的推薦</span>
                             </div>
                         </div>
                     </div>

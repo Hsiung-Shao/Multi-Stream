@@ -19,6 +19,8 @@ import { logEvent } from '../../../utils/analytics';
 import { toast } from 'sonner';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { useFavorites } from '../../../hooks/useFavorites';
+import { RecommendDialog } from '../../recommendations/components/RecommendDialog';
+import { MyRecommendationsTab } from '../../recommendations/components/MyRecommendationsTab';
 
 // Twitch Integration
 import { useTwitchAuth } from '../../../hooks/useTwitchAuth';
@@ -41,7 +43,8 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
     // --- State ---
     const initialTab = useUIStore.getState().favoritesTab || 'favorites';
-    const [activeTab, setActiveTab] = useState(initialTab); // favorites, twitch_import, global_settings, tags, categories, backup, batch, layouts
+    const [activeTab, setActiveTab] = useState(initialTab); // favorites, twitch_import, my_recommendations, global_settings, tags, categories, backup, batch, layouts
+    const [recommendTarget, setRecommendTarget] = useState<FavoriteStream | null>(null);
     const [activeFilter, setActiveFilter] = useState('all'); // all, live, categoryId, or tag:tagId
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -377,6 +380,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                                         }}
                                                         onDelete={handleDelete}
                                                         onLoad={handleLoad}
+                                                        onRecommend={(f) => setRecommendTarget(f)}
                                                     />
                                                 ))
                                             ) : (
@@ -590,8 +594,18 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                         {activeTab === 'version_history' && (
                             <VersionHistorySection theme={theme} />
                         )}
+
+                        {activeTab === 'my_recommendations' && (
+                            <MyRecommendationsTab />
+                        )}
                     </div>
                 </div>
+
+                <RecommendDialog
+                    favorite={recommendTarget}
+                    open={!!recommendTarget}
+                    onOpenChange={(v) => { if (!v) setRecommendTarget(null); }}
+                />
 
                 <AddFavoriteDialog
                     open={isAddDialogOpen}

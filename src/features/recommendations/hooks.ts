@@ -9,6 +9,7 @@ import type {
     CommentItem,
     RecommendInput,
     RecommendSort,
+    MyRecommendation,
 } from './types';
 
 const RECOMMEND_LIST_KEY = 'recommendations';
@@ -101,7 +102,10 @@ export function useRecommendMutation() {
                 body: input,
                 treatOkFalseAsResult: true,
             }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: [RECOMMEND_LIST_KEY] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: [RECOMMEND_LIST_KEY] });
+            qc.invalidateQueries({ queryKey: ['my-recommendations'] });
+        },
     });
 }
 
@@ -110,7 +114,24 @@ export function useDeleteRecommendation() {
     return useMutation({
         mutationFn: (recommendationId: string) =>
             apiFetch<{ ok: true }>(`/api/recommendations?id=${encodeURIComponent(recommendationId)}`, { method: 'DELETE' }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: [RECOMMEND_LIST_KEY] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: [RECOMMEND_LIST_KEY] });
+            qc.invalidateQueries({ queryKey: [MY_RECOMMENDATIONS_KEY] });
+        },
+    });
+}
+
+// ---------- 我的推薦 ----------
+
+const MY_RECOMMENDATIONS_KEY = 'my-recommendations';
+
+export function useMyRecommendations(enabled: boolean = true) {
+    return useQuery({
+        queryKey: [MY_RECOMMENDATIONS_KEY],
+        enabled,
+        queryFn: () => apiFetch<{ ok: true; items: MyRecommendation[] }>('/api/recommendations/mine'),
+        staleTime: 30_000,
+        select: (d) => d.items ?? [],
     });
 }
 

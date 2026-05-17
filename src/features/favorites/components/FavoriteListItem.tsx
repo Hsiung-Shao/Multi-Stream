@@ -1,4 +1,4 @@
-import { Play, Edit2, Trash2, Youtube, Gamepad2 } from 'lucide-react';
+import { Play, Edit2, Trash2, Youtube, Gamepad2, Heart } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { TagList } from '../../../components/ui/TagList';
@@ -17,6 +17,8 @@ interface FavoriteListItemProps {
     onLoad?: (id: string) => void;
     /** 顯示「直播中/離線」綠/灰圓點。預設 true,帳號頁傳 false */
     showLiveIndicator?: boolean;
+    /** 推薦到推薦頁。不傳則不渲染 Heart 按鈕(僅 canvas FavoritesManagerMain 提供) */
+    onRecommend?: (favorite: FavoriteStream) => void;
 }
 
 export function FavoriteListItem({
@@ -29,6 +31,7 @@ export function FavoriteListItem({
     onDelete,
     onLoad,
     showLiveIndicator = true,
+    onRecommend,
 }: FavoriteListItemProps) {
     const { t } = useTranslation(['favorites', 'common']);
     const category = categories.find(c => c.id === favorite.categoryId);
@@ -103,6 +106,17 @@ export function FavoriteListItem({
                         className="h-8 w-8 rounded-lg text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:text-gray-400 dark:hover:text-purple-400 dark:hover:bg-purple-500/10"
                     >
                         <Play className="size-4" />
+                    </Button>
+                )}
+                {onRecommend && (favorite.platform === 'twitch' || favorite.platform === 'youtube') && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => onRecommend(favorite)}
+                        title="推薦給社群"
+                        className="h-8 w-8 rounded-lg text-gray-500 hover:text-pink-600 hover:bg-pink-50 dark:text-gray-400 dark:hover:text-pink-400 dark:hover:bg-pink-500/10"
+                    >
+                        <Heart className="size-4" />
                     </Button>
                 )}
                 <Button
