@@ -19,7 +19,7 @@
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest, getTrustLevel, checkAndIncrementQuota } from '../../lib/auth-helper.js';
-import { getVisitorIp, isIpBanned, getRateLimits, checkAndIncrementAnonQuota } from '../../lib/rate-limit.js';
+import { getVisitorIp, isIpBanned } from '../../lib/rate-limit.js';
 import { select, insert } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
 import {
@@ -114,14 +114,10 @@ export async function onRequestPost(context) {
         }
     }
 
-    // ---- 7. KV per-IP rate limit(每小時/每日,沿用 vtuber 既有額度) ----
-    if (env.RATE_LIMIT_KV && ip) {
-        const limits = getRateLimits(env);
-        const r = await checkAndIncrementAnonQuota(env.RATE_LIMIT_KV, ip, 'vtuber', limits.vtuber.anon);
-        if (!r.allowed) {
-            return jsonResponse({ ok: false, error: 'rate_limited' }, 429, request);
-        }
-    }
+    // ---- 7. (removed) KV per-IP rate limit ----
+    // 原本沿用 vtuber.anon 配額(hour 3 / day 10),但本 endpoint 強制必登入,
+    // anon 配額會誤殺登入 user(推 3 個收藏就 429)。
+    // 改為純信任 DB daily quota (50/day per user),足夠防濫用。
 
     // ---- 8. DB daily quota ----
     const quota = await checkAndIncrementQuota(env, userId, 'recommend', RECOMMEND_USER_DAILY_QUOTA);
