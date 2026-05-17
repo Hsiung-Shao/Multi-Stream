@@ -17,18 +17,18 @@
 //
 // 7 層攔截:1.IP banlist  2.trust_level  3.Turnstile  4.KV per-IP/min  5.DB quota  6.UNIQUE  7.sanitize
 
-import { jsonResponse, handleOptions } from '../lib/cors.js';
-import { getUserIdFromRequest, getTrustLevel, checkAndIncrementQuota } from '../lib/auth-helper.js';
-import { getVisitorIp, isIpBanned, getRateLimits, checkAndIncrementAnonQuota } from '../lib/rate-limit.js';
-import { select, insert } from '../lib/supabase-server.js';
-import { logError, logInfo } from '../lib/logger.js';
+import { jsonResponse, handleOptions } from '../../lib/cors.js';
+import { getUserIdFromRequest, getTrustLevel, checkAndIncrementQuota } from '../../lib/auth-helper.js';
+import { getVisitorIp, isIpBanned, getRateLimits, checkAndIncrementAnonQuota } from '../../lib/rate-limit.js';
+import { select, insert } from '../../lib/supabase-server.js';
+import { logError, logInfo } from '../../lib/logger.js';
 import {
     validateRecommendInput,
     trimStr,
     COMMENT_MAX_LEN,
     userHasFavorite,
     ensureVtuberRow,
-} from '../lib/recommendations.js';
+} from '../../lib/recommendations.js';
 
 const MAX_BODY_BYTES = 4 * 1024;
 const RECOMMEND_USER_DAILY_QUOTA = 50;
