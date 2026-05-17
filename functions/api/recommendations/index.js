@@ -311,6 +311,21 @@ export async function onRequestGet(context) {
 
     items = items.slice(0, limit);
 
+    // 拉這批 vtuber metadata(name / img / channel ids / counts)讓前端不需二次 fetch
+    if (items.length > 0) {
+        const vtuberIds = items.map(it => it.vtuber_id);
+        const inClause = vtuberIds.map(id => encodeURIComponent(id)).join(',');
+        const vRes = await select(
+            env,
+            `vtubers?id=in.(${inClause})&select=id,name,img_url,nationality,activity,youtube_channel_id,youtube_subscriber_count,twitch_channel_id,twitch_follower_count,group_id`,
+        );
+        const vMap = new Map();
+        if (vRes.ok && Array.isArray(vRes.data)) {
+            for (const v of vRes.data) vMap.set(v.id, v);
+        }
+        items = items.map(it => ({ ...it, vtuber: vMap.get(it.vtuber_id) || null }));
+    }
+
     return jsonResponse(
         { ok: true, sort, items },
         200,

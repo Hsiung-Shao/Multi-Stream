@@ -9,7 +9,7 @@ interface ModalState {
     login: boolean;
 }
 
-export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'account' | 'not-found';
+export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'account' | 'recommendations' | 'not-found';
 
 interface UIState {
     theme: 'light' | 'dark';
