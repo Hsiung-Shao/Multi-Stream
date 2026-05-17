@@ -31,3 +31,7 @@ multistream-hub-ab264674e6c2.json
 docs/
 build/
 .wrangler/
+.playwright-mcp/
+image/
+ga4Data/
+googleSearchConsole/
