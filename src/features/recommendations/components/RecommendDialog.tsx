@@ -23,18 +23,19 @@ import { getOrCreateAnonymousId } from '../anonymousId';
 import { ProposeCategoryDialog } from './CategoryFilterBar';
 import { CategoryMultiSelect } from './CategoryMultiSelect';
 import { SUPPORTED_VTUBER_LANGS, LANG_LABEL, type VtuberLang } from '../../../lib/locale';
-import type { FavoriteStream } from '../../favorites/types';
+import type { RecommendTarget } from '../types';
 
 interface Props {
-    favorite: FavoriteStream | null;
+    target: RecommendTarget | null;
     open: boolean;
     onOpenChange: (v: boolean) => void;
+    /** 若 target 是 favorite,推薦成功後呼叫此 callback 同步 localStorage */
     onRecommended?: (favoriteId: string) => void;
 }
 
 const COMMENT_MAX = 500;
 
-export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }: Props) {
+export function RecommendDialog({ target, open, onOpenChange, onRecommended }: Props) {
     const [comment, setComment] = useState('');
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
     const [selectedLangs, setSelectedLangs] = useState<VtuberLang[]>([]);
@@ -50,9 +51,9 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
         setSelectedLangs([]);
         mutation.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, favorite?.id]);
+    }, [open, target?.url]);
 
-    if (!favorite) return null;
+    if (!target) return null;
 
     const toggleLang = (code: VtuberLang) => {
         setSelectedLangs(prev =>
@@ -62,11 +63,11 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
 
     const handleSubmit = async () => {
         // platform 必須是 twitch/youtube;other 不能推薦
-        if (favorite.platform !== 'twitch' && favorite.platform !== 'youtube') {
+        if (target.platform !== 'twitch' && target.platform !== 'youtube') {
             toast.error('目前只支援 Twitch / YouTube 推薦');
             return;
         }
-        const channelId = favorite.channelId;
+        const channelId = target.channelId;
         if (!channelId) {
             toast.error('找不到頻道 ID,無法推薦');
             return;
@@ -80,27 +81,26 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
         try {
             const anonymousId = getOrCreateAnonymousId();
             const result = await mutation.mutateAsync({
-                name: favorite.name,
-                platform: favorite.platform,
+                name: target.name,
+                platform: target.platform,
                 channel_id: channelId,
-                url: favorite.url,
+                url: target.url,
                 comment: trimmed || undefined,
                 anonymous_id: anonymousId || undefined,
                 category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
                 languages: selectedLangs.length > 0 ? selectedLangs : undefined,
+                img_url: target.imgUrl,
+                cross_channel_id: target.crossChannelId,
             });
             if (result.ok === true) {
-                toast.success(`已推薦:${favorite.name}`);
-                onRecommended?.(favorite.id);
+                toast.success(`已推薦:${target.name}`);
+                if (target.favoriteId) onRecommended?.(target.favoriteId);
             } else if (result.reason === 'already_recommended') {
-                toast.message(`你已經推薦過 ${favorite.name} 了`);
-                // 同步 server 真實狀態到 local(可能 user 在別處推過或清過 localStorage)
-                onRecommended?.(favorite.id);
+                toast.message(`你已經推薦過 ${target.name} 了`);
+                if (target.favoriteId) onRecommended?.(target.favoriteId);
             }
             onOpenChange(false);
         } catch (e) {
-            // 不關 dialog,讓 user 看到錯誤可修
-            // toast 也顯示一次,確保看得到
             toast.error(formatRecommendError(e));
         }
     };
@@ -112,7 +112,7 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
                 <DialogHeader>
                     <DialogTitle className="text-zinc-100 flex items-center gap-2">
                         <Heart className="w-4 h-4 text-pink-400 fill-pink-400" />
-                        推薦 {favorite.name}
+                        推薦 {target.name}
                     </DialogTitle>
                     <DialogDescription className="text-zinc-500 text-xs">
                         推薦會顯示在公開的「VTuber 推薦」頁;留言可以分享你為什麼喜歡這位實況主(選填)。

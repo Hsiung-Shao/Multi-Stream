@@ -12,24 +12,31 @@ import { useUIStore } from '../../../store/useUIStore';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { useRecommendations } from '../hooks';
 import { RecommendationCard } from '../components/RecommendationCard';
+import { RecommendDialog } from '../components/RecommendDialog';
 import { CategoryFilterBar } from '../components/CategoryFilterBar';
 import { formatRecommendError } from '../apiClient';
 import { Button } from '../../../components/ui/button';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { SEO } from '../../../components/SEO';
-import { ArrowLeft, Heart, Trophy, AlertTriangle, Inbox, Flame, Clock } from 'lucide-react';
-import type { RecommendSort, RecommendationAggregate } from '../types';
+import { ArrowLeft, Heart, Trophy, AlertTriangle, Inbox, Flame, Clock, Star } from 'lucide-react';
+import type { RecommendSort, RecommendationAggregate, RecommendTarget } from '../types';
 
 const TOP_RANKING_COUNT = 3;
 
 export function RecommendationsPage() {
     const setPage = useUIStore(s => s.setPage);
+    const openModal = useUIStore(s => s.openModal);
     const { isLoggedIn } = useAuthContext();
 
     const [sort, setSort] = useState<RecommendSort>('daily');
     const [categorySlug, setCategorySlug] = useState<string | null>(null);
     const [loginOpen, setLoginOpen] = useState(false);
+    const [recommendTarget, setRecommendTarget] = useState<RecommendTarget | null>(null);
+
+    const handleRecommendClick = (target: RecommendTarget) => {
+        setRecommendTarget(target);
+    };
 
     const { data, isLoading, isError, error, refetch } = useRecommendations({
         sort,
@@ -70,6 +77,15 @@ export function RecommendationsPage() {
                         <Heart className="w-5 h-5 text-pink-400 fill-pink-400/30" />
                         <h1 className="text-base font-semibold text-zinc-100">VTuber 推薦</h1>
                     </div>
+                    {/* #5 快捷鈕:打開我的收藏(FavoritesManagerMain Dialog) */}
+                    <button
+                        onClick={() => openModal('favorites')}
+                        className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-zinc-300 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+                        title="打開我的收藏"
+                    >
+                        <Star className="w-3.5 h-3.5" />
+                        我的收藏
+                    </button>
                 </div>
             </header>
 
@@ -117,7 +133,12 @@ export function RecommendationsPage() {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {topItems.map((it, idx) => (
-                                <RecommendationCard key={it.vtuber_id} item={it} rank={idx + 1} />
+                                <RecommendationCard
+                                    key={it.vtuber_id}
+                                    item={it}
+                                    rank={idx + 1}
+                                    onRecommendClick={handleRecommendClick}
+                                />
                             ))}
                         </div>
                     </section>
@@ -129,7 +150,11 @@ export function RecommendationsPage() {
                         <h2 className="text-sm font-semibold text-zinc-400 mb-3">其他推薦</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {restItems.map(it => (
-                                <RecommendationCard key={it.vtuber_id} item={it} />
+                                <RecommendationCard
+                                    key={it.vtuber_id}
+                                    item={it}
+                                    onRecommendClick={handleRecommendClick}
+                                />
                             ))}
                         </div>
                     </section>
@@ -177,6 +202,13 @@ export function RecommendationsPage() {
             </main>
 
             <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
+
+            {/* #3 推薦頁本身的 RecommendDialog(從 Card Heart 觸發) */}
+            <RecommendDialog
+                target={recommendTarget}
+                open={!!recommendTarget}
+                onOpenChange={(v) => { if (!v) setRecommendTarget(null); }}
+            />
         </div>
     );
 }

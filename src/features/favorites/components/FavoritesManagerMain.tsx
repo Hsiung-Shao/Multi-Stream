@@ -27,7 +27,7 @@ import { useTwitchAuth } from '../../../hooks/useTwitchAuth';
 import { useTwitchUser, FollowedChannel } from '../../../hooks/useTwitchUser';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Edit2, Trash2, Star, Plus, Folder, RotateCw } from 'lucide-react';
+import { Edit2, Trash2, Star, Plus, Folder, RotateCw, Heart, ExternalLink } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../../../components/ui/alert-dialog';
 import { useLiveStatusCheck } from '../useLiveStatusCheck';
 
@@ -325,6 +325,22 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
                     {/* Main Area */}
                     <div className="flex-1 flex flex-col p-8 overflow-hidden">
+                        {/* #5 快捷鈕:跳到 /recommendations 推薦頁(獨立外部頁) */}
+                        <div className="flex justify-end mb-3 -mt-2">
+                            <button
+                                onClick={() => {
+                                    onClose();
+                                    setTimeout(() => useUIStore.getState().setPage('recommendations'), 0);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-pink-400 bg-pink-500/10 border border-pink-500/30 hover:bg-pink-500/20 transition-colors"
+                                title="打開公開推薦頁"
+                            >
+                                <Heart className="w-3.5 h-3.5 fill-pink-400" />
+                                推薦頁
+                                <ExternalLink className="w-3 h-3 opacity-60" />
+                            </button>
+                        </div>
+
                         {activeTab === 'favorites' && (
                             <>
                                 <FavoritesToolbar
@@ -602,7 +618,13 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 </div>
 
                 <RecommendDialog
-                    favorite={recommendTarget}
+                    target={recommendTarget ? {
+                        name: recommendTarget.name,
+                        platform: recommendTarget.platform,
+                        channelId: recommendTarget.channelId ?? null,
+                        url: recommendTarget.url,
+                        favoriteId: recommendTarget.id,
+                    } : null}
                     open={!!recommendTarget}
                     onOpenChange={(v) => { if (!v) setRecommendTarget(null); }}
                     onRecommended={(id) => favoritesService.markRecommended(id)}

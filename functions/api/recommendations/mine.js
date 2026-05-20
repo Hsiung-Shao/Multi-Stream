@@ -49,7 +49,7 @@ export async function onRequestGet(context) {
     const inClause = vtuberIds.map(id => encodeURIComponent(id)).join(',');
     const vRes = await select(
         env,
-        `vtubers?id=in.(${inClause})&select=id,name,img_url,nationality,activity,youtube_channel_id,youtube_subscriber_count,twitch_channel_id,twitch_follower_count,group_id`,
+        `vtubers?id=in.(${inClause})&select=id,name,img_url,nationality,activity,youtube_channel_id,youtube_subscriber_count,twitch_channel_id,twitch_follower_count,group_id,languages`,
     );
     const vMap = new Map();
     if (vRes.ok && Array.isArray(vRes.data)) {

@@ -74,6 +74,14 @@ export function validateRecommendInput(body) {
             if (typeof l !== 'string' || !VTUBER_LANGS.includes(l)) return 'invalid_language';
         }
     }
+    if (body.img_url !== undefined && body.img_url !== null && body.img_url !== '') {
+        if (!isValidUrl(body.img_url)) return 'invalid_img_url';
+    }
+    if (body.cross_channel_id !== undefined && body.cross_channel_id !== null && body.cross_channel_id !== '') {
+        if (typeof body.cross_channel_id !== 'string' || body.cross_channel_id.length > 100) {
+            return 'invalid_cross_channel_id';
+        }
+    }
     return null;
 }
 
@@ -90,29 +98,119 @@ export async function userHasFavorite(env, userId, url) {
 }
 
 /**
- * 確保 vtubers row 存在(複製 recommend-from-favorite.js 邏輯但無 contributions 寫入)
- * @param {{ name: string, platform: string, channelId: string, userId: string | null }} params
- * @returns {Promise<{ ok: boolean, vtuberId: string|null, alreadyExists: boolean, error?: string }>}
+ * 確保 vtubers row 存在,並 merge 補缺的 metadata。
+ *
+ * Dedupe 策略(2026-05-17 #4 修):
+ *   1. 先用 user 推的 platform 對應欄位找(主鍵)
+ *   2. 找不到 + 有 crossChannelId(另一 platform) → 也用該欄位找
+ *   3. 找不到 → 新建 row
+ *   4. 找到既有 row → UPDATE 補缺欄位:
+ *      - 缺對應 platform channel_id → 補上
+ *      - 缺 img_url 且 user 帶了新 → 補上
+ *      - 缺 languages 或 languages 是空陣列 → 寫入新的(避免覆蓋既有非空 languages)
+ *
+ * @param {Object} env
+ * @param {{
+ *   name: string,
+ *   platform: 'twitch'|'youtube',
+ *   channelId: string,
+ *   userId: string | null,
+ *   imgUrl?: string | null,
+ *   languages?: string[] | null,
+ *   crossChannelId?: string | null,   // 另一 platform 的 channel_id(若 user 兩邊都有,前端可一起送)
+ * }} params
+ * @returns {Promise<{ ok: boolean, vtuberId: string|null, alreadyExists: boolean, merged?: boolean, error?: string }>}
  */
-export async function ensureVtuberRow(env, { name, platform, channelId, userId }) {
-    const channelCol = platform === 'twitch' ? 'twitch_channel_id' : 'youtube_channel_id';
-    const dedupeFilter = `${channelCol}=eq.${encodeURIComponent(channelId)}&select=id&limit=1`;
-    const existsRes = await select(env, `vtubers?${dedupeFilter}`);
-    if (existsRes.ok && Array.isArray(existsRes.data) && existsRes.data.length > 0) {
-        return { ok: true, vtuberId: existsRes.data[0].id, alreadyExists: true };
+export async function ensureVtuberRow(env, params) {
+    const { name, platform, channelId, userId, imgUrl, languages, crossChannelId } = params;
+
+    // ---- 1. 用 user 推的 platform 找 ----
+    const mainCol = platform === 'twitch' ? 'twitch_channel_id' : 'youtube_channel_id';
+    const crossCol = platform === 'twitch' ? 'youtube_channel_id' : 'twitch_channel_id';
+
+    let existing = null;
+    const mainRes = await select(
+        env,
+        `vtubers?${mainCol}=eq.${encodeURIComponent(channelId)}&select=id,name,img_url,languages,twitch_channel_id,youtube_channel_id&limit=1`,
+    );
+    if (mainRes.ok && Array.isArray(mainRes.data) && mainRes.data.length > 0) {
+        existing = mainRes.data[0];
     }
-    // 不存在 → 新建(沿用 recommend-from-favorite.js 預設值)
+
+    // ---- 2. 若主鍵找不到,且 user 帶了另一 platform 的 channel_id → 試 cross ----
+    if (!existing && typeof crossChannelId === 'string' && crossChannelId.length > 0) {
+        const crossRes = await select(
+            env,
+            `vtubers?${crossCol}=eq.${encodeURIComponent(crossChannelId)}&select=id,name,img_url,languages,twitch_channel_id,youtube_channel_id&limit=1`,
+        );
+        if (crossRes.ok && Array.isArray(crossRes.data) && crossRes.data.length > 0) {
+            existing = crossRes.data[0];
+        }
+    }
+
+    // ---- 3. 找到既有 → UPDATE 補缺欄位 ----
+    if (existing) {
+        const patch = {};
+        if (!existing[mainCol]) patch[mainCol] = channelId;
+        if (typeof crossChannelId === 'string' && crossChannelId.length > 0 && !existing[crossCol]) {
+            patch[crossCol] = crossChannelId;
+        }
+        if (typeof imgUrl === 'string' && imgUrl.length > 0 && !existing.img_url) {
+            patch.img_url = imgUrl;
+        }
+        // languages:row 是 null / [] 才寫入(避免覆蓋既有 user 設定)
+        const existingLangs = Array.isArray(existing.languages) ? existing.languages : null;
+        if (Array.isArray(languages) && languages.length > 0
+            && (!existingLangs || existingLangs.length === 0)) {
+            patch.languages = languages;
+        }
+        if (Object.keys(patch).length > 0) {
+            // 用 PATCH UPDATE
+            try {
+                const upd = await fetch(
+                    `${env.SUPABASE_URL}/rest/v1/vtubers?id=eq.${encodeURIComponent(existing.id)}`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+                            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                            Prefer: 'return=minimal',
+                        },
+                        body: JSON.stringify(patch),
+                    },
+                );
+                if (!upd.ok) {
+                    const err = await upd.text().catch(() => '');
+                    await logError(env, 'recommendations', 'merge update vtubers failed', {
+                        userId,
+                        metadata: { status: upd.status, error: err.slice(0, 500), vtuber_id: existing.id, patch_keys: Object.keys(patch) },
+                    });
+                    // 不阻塞:既有 row 仍可推薦
+                }
+            } catch (e) {
+                await logError(env, 'recommendations', 'merge update threw', {
+                    userId,
+                    metadata: { error: String(e).slice(0, 300), vtuber_id: existing.id },
+                });
+            }
+        }
+        return { ok: true, vtuberId: existing.id, alreadyExists: true, merged: Object.keys(patch).length > 0 };
+    }
+
+    // ---- 4. 不存在 → 新建,帶 user 送來的 metadata ----
     const vtuberRow = {
         name,
-        img_url: null,
+        img_url: typeof imgUrl === 'string' && imgUrl.length > 0 ? imgUrl : null,
         activity: 'active',
         nationality: 'OTHER',
         group_id: null,
-        youtube_channel_id: platform === 'youtube' ? channelId : null,
-        twitch_channel_id: platform === 'twitch' ? channelId : null,
+        youtube_channel_id: platform === 'youtube' ? channelId : (crossChannelId && platform === 'twitch' ? crossChannelId : null),
+        twitch_channel_id: platform === 'twitch' ? channelId : (crossChannelId && platform === 'youtube' ? crossChannelId : null),
         debut_date: null,
         channel_id_verified: false,
         contributed_by: userId,
+        languages: Array.isArray(languages) && languages.length > 0 ? languages : null,
     };
     const createRes = await insert(env, 'vtubers', vtuberRow);
     if (!createRes.ok) {

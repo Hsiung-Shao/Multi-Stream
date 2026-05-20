@@ -67,12 +67,15 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: validationErr }, 400, request);
     }
 
-    // ---- 4. ensure vtubers row exists ----
+    // ---- 4. ensure vtubers row exists(支援跨平台 dedupe + img_url + languages 寫入) ----
     const ensured = await ensureVtuberRow(env, {
         name: trimStr(body.name, 100),
         platform: body.platform,
         channelId: body.channel_id,
         userId,
+        imgUrl: typeof body.img_url === 'string' ? body.img_url : null,
+        languages: Array.isArray(body.languages) ? body.languages : null,
+        crossChannelId: typeof body.cross_channel_id === 'string' ? body.cross_channel_id : null,
     });
     if (!ensured.ok) {
         return jsonResponse({ ok: false, error: ensured.error || 'create_vtuber_failed' }, 500, request);
@@ -300,7 +303,7 @@ export async function onRequestGet(context) {
         const inClause = vtuberIds.map(id => encodeURIComponent(id)).join(',');
         const vRes = await select(
             env,
-            `vtubers?id=in.(${inClause})&select=id,name,img_url,nationality,activity,youtube_channel_id,youtube_subscriber_count,twitch_channel_id,twitch_follower_count,group_id`,
+            `vtubers?id=in.(${inClause})&select=id,name,img_url,nationality,activity,youtube_channel_id,youtube_subscriber_count,twitch_channel_id,twitch_follower_count,group_id,languages`,
         );
         const vMap = new Map();
         if (vRes.ok && Array.isArray(vRes.data)) {

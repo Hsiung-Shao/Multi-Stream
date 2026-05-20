@@ -15,6 +15,7 @@ export interface VTuberInfo {
     twitch_channel_id: string | null;
     twitch_follower_count: number | null;
     group_id: string | null;
+    languages: VtuberLang[] | null;
 }
 
 export interface CommentPreview {
@@ -57,6 +58,17 @@ export interface CommentItem {
     user: CommentUser;
 }
 
+// RecommendDialog target(統一從「收藏」或「推薦頁」觸發)
+export interface RecommendTarget {
+    name: string;
+    platform: 'twitch' | 'youtube' | 'other';
+    channelId: string | null;
+    url: string;
+    favoriteId?: string;       // 若從收藏觸發,callback 用來同步 localStorage
+    imgUrl?: string;           // 若已知 avatar
+    crossChannelId?: string;   // 另一平台 channel_id(讓 backend merge metadata)
+}
+
 // Mutation input
 export interface RecommendInput {
     name: string;
@@ -68,6 +80,8 @@ export interface RecommendInput {
     anonymous_id?: string;
     category_ids?: string[];
     languages?: VtuberLang[];
+    img_url?: string;
+    cross_channel_id?: string;  // 另一平台的 channel_id(讓 backend merge 跨平台 metadata)
 }
 
 // 我的推薦 tab 用

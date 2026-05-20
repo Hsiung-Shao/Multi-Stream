@@ -5,13 +5,16 @@
 import { useState, useMemo } from 'react';
 import { Heart, MessageSquare, Star, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { CommentList } from './CommentList';
-import type { RecommendationAggregate } from '../types';
+import type { RecommendationAggregate, RecommendTarget } from '../types';
 import { toast } from 'sonner';
 import { favoritesService } from '../../favorites/FavoritesService';
+import { LANG_LABEL } from '../../../lib/locale';
 
 interface Props {
     item: RecommendationAggregate;
     rank?: number;  // 排名(只在 podium 上 1-3 顯示)
+    /** 點 Heart 觸發推薦 dialog;不傳就不顯示按鈕 */
+    onRecommendClick?: (target: RecommendTarget) => void;
 }
 
 function formatNumber(n: number | null | undefined): string {
@@ -21,18 +24,36 @@ function formatNumber(n: number | null | undefined): string {
     return String(n);
 }
 
-export function RecommendationCard({ item, rank }: Props) {
+export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
     const [expanded, setExpanded] = useState(false);
     const [favPending, setFavPending] = useState(false);
     const [favAdded, setFavAdded] = useState(false);
 
     const v = item.vtuber;
+    // 顯示時優先 Twitch(若兩平台都有),但 sourceUrl 跟 channel_id 都會用到對應 platform
     const platform = useMemo<'twitch' | 'youtube' | null>(() => {
         if (!v) return null;
         if (v.twitch_channel_id) return 'twitch';
         if (v.youtube_channel_id) return 'youtube';
         return null;
     }, [v]);
+
+    const handleRecommendClick = () => {
+        if (!v || !platform || !onRecommendClick) return;
+        const primaryChannelId = platform === 'twitch' ? v.twitch_channel_id : v.youtube_channel_id;
+        const crossChannelId = platform === 'twitch' ? (v.youtube_channel_id ?? undefined) : (v.twitch_channel_id ?? undefined);
+        const url = platform === 'twitch'
+            ? `https://www.twitch.tv/${primaryChannelId}`
+            : `https://www.youtube.com/channel/${primaryChannelId}`;
+        onRecommendClick({
+            name: v.name,
+            platform,
+            channelId: primaryChannelId,
+            url,
+            imgUrl: v.img_url ?? undefined,
+            crossChannelId,
+        });
+    };
 
     const sourceUrl = useMemo(() => {
         if (!v) return null;
@@ -117,7 +138,7 @@ export function RecommendationCard({ item, rank }: Props) {
                             </span>
                         )}
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-zinc-500 mt-1">
+                    <div className="flex items-center gap-3 text-[11px] text-zinc-500 mt-1 flex-wrap">
                         {followerCount != null && (
                             <span title={`${followerLabel} ${followerCount.toLocaleString()}`}>
                                 {followerLabel} {formatNumber(followerCount)}
@@ -126,7 +147,24 @@ export function RecommendationCard({ item, rank }: Props) {
                         {v?.nationality && v.nationality !== 'OTHER' && (
                             <span>{v.nationality}</span>
                         )}
+                        {/* 跨平台徽章:同 VTuber 兩個平台都有就顯示兩個 */}
+                        {v?.twitch_channel_id && v?.youtube_channel_id && (
+                            <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-300">雙平台</span>
+                        )}
                     </div>
+                    {/* 語言 chips */}
+                    {v?.languages && v.languages.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap mt-1.5">
+                            {v.languages.map(code => (
+                                <span
+                                    key={code}
+                                    className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-300 border border-indigo-500/25"
+                                >
+                                    {LANG_LABEL[code]}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Recommend count */}
@@ -167,6 +205,18 @@ export function RecommendationCard({ item, rank }: Props) {
                         <><Star className="w-3.5 h-3.5" /> 加入收藏</>
                     )}
                 </button>
+
+                {onRecommendClick && (
+                    <button
+                        onClick={handleRecommendClick}
+                        disabled={!v || !platform}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs bg-pink-500/10 text-pink-300 border border-pink-500/30 hover:bg-pink-500/20 transition-colors disabled:opacity-50"
+                        title="推薦這位 VTuber"
+                    >
+                        <Heart className="w-3.5 h-3.5 fill-pink-400" />
+                        推薦
+                    </button>
+                )}
 
                 <button
                     onClick={() => setExpanded(v => !v)}
