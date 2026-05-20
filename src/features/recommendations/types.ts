@@ -1,5 +1,7 @@
 // 推薦系統前端共用 types(對齊 functions/api/recommendations/* response schema)
 
+import type { VtuberLang } from '../../lib/locale';
+
 export type RecommendSort = 'daily' | 'all-time' | 'latest';
 
 export interface VTuberInfo {
@@ -65,6 +67,7 @@ export interface RecommendInput {
     turnstile_token?: string;
     anonymous_id?: string;
     category_ids?: string[];
+    languages?: VtuberLang[];
 }
 
 // 我的推薦 tab 用

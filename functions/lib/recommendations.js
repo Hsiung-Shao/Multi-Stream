@@ -15,6 +15,9 @@ export const COMMENT_MAX_LEN = 500;
 export const NAME_MAX_LEN = 100;
 export const URL_MAX_LEN = 2048;
 
+// 對齊 src/lib/locale.ts SUPPORTED_VTUBER_LANGS(後端不引前端 module,獨立宣告)
+const VTUBER_LANGS = ['zh-TW', 'zh-CN', 'en', 'ja', 'ko'];
+
 export function trimStr(s, max) {
     if (typeof s !== 'string') return '';
     return s.trim().slice(0, max);
@@ -62,6 +65,13 @@ export function validateRecommendInput(body) {
             if (typeof id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(id)) {
                 return 'invalid_category_id';
             }
+        }
+    }
+    if (body.languages !== undefined && body.languages !== null) {
+        if (!Array.isArray(body.languages)) return 'invalid_languages';
+        if (body.languages.length > 5) return 'too_many_languages';
+        for (const l of body.languages) {
+            if (typeof l !== 'string' || !VTUBER_LANGS.includes(l)) return 'invalid_language';
         }
     }
     return null;

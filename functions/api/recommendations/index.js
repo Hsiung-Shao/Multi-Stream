@@ -15,6 +15,7 @@
 // DELETE/mine 仍維持登入(匿名無 owner 概念)
 // 2026-05-17(再進一步):匿名推薦加 localStorage anonymous_id dedupe(同瀏覽器不可重複推同 vtuber)
 // 2026-05-20 Phase C:POST body 接 category_ids[](可選);成功 insert recommendation 後 best-effort 寫 vtuber_category_tags
+// 2026-05-20 Phase B:POST body 接 languages[](可選);成功 ensureVtuberRow 後 union 寫回 vtubers.languages(best-effort)
 // 移除:IP banlist / trust_level / Turnstile / KV per-IP / DB daily quota / user_favorites / POST 必登入
 // 保留:DELETE/mine 登入、input format(防 5xx)、DB CHECK(資料完整性)
 
@@ -75,6 +76,33 @@ export async function onRequestPost(context) {
     });
     if (!ensured.ok) {
         return jsonResponse({ ok: false, error: ensured.error || 'create_vtuber_failed' }, 500, request);
+    }
+
+    // ---- 5. languages union 寫回 vtubers.languages(best-effort,不阻斷主流程) ----
+    if (Array.isArray(body.languages) && body.languages.length > 0) {
+        const existingRes = await select(env, `vtubers?id=eq.${encodeURIComponent(ensured.vtuberId)}&select=languages`);
+        const existingLangs = Array.isArray(existingRes.data?.[0]?.languages) ? existingRes.data[0].languages : [];
+        const merged = Array.from(new Set([...existingLangs, ...body.languages]));
+        if (merged.length !== existingLangs.length) {
+            try {
+                await fetch(`${env.SUPABASE_URL}/rest/v1/vtubers?id=eq.${encodeURIComponent(ensured.vtuberId)}`, {
+                    method: 'PATCH',
+                    headers: {
+                        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+                        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+                        'Content-Type': 'application/json',
+                        Prefer: 'return=minimal',
+                    },
+                    body: JSON.stringify({ languages: merged }),
+                });
+            } catch (e) {
+                void logError(env, 'recommendations', 'languages union failed', {
+                    userId: userId || null,
+                    metadata: { vtuber_id: ensured.vtuberId, error: String(e).slice(0, 300) },
+                });
+                // best-effort 不阻斷主流程
+            }
+        }
     }
 
     // ---- 11. insert recommendation ----

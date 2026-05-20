@@ -15,12 +15,14 @@ import {
 import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';
-import { Heart, Loader2, AlertTriangle, Plus } from 'lucide-react';
+import { Heart, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRecommendMutation, useCategories } from '../hooks';
 import { formatRecommendError } from '../apiClient';
 import { getOrCreateAnonymousId } from '../anonymousId';
 import { ProposeCategoryDialog } from './CategoryFilterBar';
+import { CategoryMultiSelect } from './CategoryMultiSelect';
+import { SUPPORTED_VTUBER_LANGS, LANG_LABEL, type VtuberLang } from '../../../lib/locale';
 import type { FavoriteStream } from '../../favorites/types';
 
 interface Props {
@@ -35,6 +37,7 @@ const COMMENT_MAX = 500;
 export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }: Props) {
     const [comment, setComment] = useState('');
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+    const [selectedLangs, setSelectedLangs] = useState<VtuberLang[]>([]);
     const [proposeOpen, setProposeOpen] = useState(false);
     const { data: categories = [], isLoading: catsLoading } = useCategories();
     const mutation = useRecommendMutation();
@@ -44,15 +47,16 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
     useEffect(() => {
         setComment('');
         setSelectedCategoryIds([]);
+        setSelectedLangs([]);
         mutation.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, favorite?.id]);
 
     if (!favorite) return null;
 
-    const toggleCategory = (id: string) => {
-        setSelectedCategoryIds(prev =>
-            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    const toggleLang = (code: VtuberLang) => {
+        setSelectedLangs(prev =>
+            prev.includes(code) ? prev.filter(x => x !== code) : [...prev, code]
         );
     };
 
@@ -83,6 +87,7 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
                 comment: trimmed || undefined,
                 anonymous_id: anonymousId || undefined,
                 category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+                languages: selectedLangs.length > 0 ? selectedLangs : undefined,
             });
             if (result.ok === true) {
                 toast.success(`已推薦:${favorite.name}`);
@@ -117,35 +122,35 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
                 <div className="space-y-3 py-2">
                     <div className="space-y-1.5">
                         <Label className="text-xs text-zinc-400">分類(選填,可多選)</Label>
+                        <CategoryMultiSelect
+                            allCategories={categories}
+                            selectedIds={selectedCategoryIds}
+                            onChange={setSelectedCategoryIds}
+                            onProposeClick={() => setProposeOpen(true)}
+                            isLoading={catsLoading}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-zinc-400">實況主主要語言(選填,可多選)</Label>
                         <div className="flex flex-wrap items-center gap-1.5">
-                            {catsLoading && (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-600" />
-                            )}
-                            {categories.map(cat => {
-                                const active = selectedCategoryIds.includes(cat.id);
+                            {SUPPORTED_VTUBER_LANGS.map(code => {
+                                const active = selectedLangs.includes(code);
                                 return (
                                     <button
-                                        key={cat.id}
+                                        key={code}
                                         type="button"
-                                        onClick={() => toggleCategory(cat.id)}
+                                        onClick={() => toggleLang(code)}
                                         className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
                                             active
-                                                ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
                                                 : 'bg-zinc-800/60 text-zinc-400 border border-zinc-700 hover:bg-zinc-800'
                                         }`}
                                     >
-                                        {cat.name}
+                                        {LANG_LABEL[code]}
                                     </button>
                                 );
                             })}
-                            <button
-                                type="button"
-                                onClick={() => setProposeOpen(true)}
-                                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-zinc-400 border border-dashed border-zinc-700 hover:border-zinc-500 hover:text-zinc-300 transition-colors"
-                            >
-                                <Plus className="w-3 h-3" />
-                                找不到?新增分類
-                            </button>
                         </div>
                     </div>
 
