@@ -4,6 +4,7 @@
 // 成功:toast + close。already_recommended:toast「已推薦過」+ close。
 
 import { useState, useEffect } from 'react';
+import { twitchService } from '../../twitch/TwitchService';
 import {
     Dialog,
     DialogContent,
@@ -40,6 +41,8 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
     const [selectedLangs, setSelectedLangs] = useState<VtuberLang[]>([]);
     const [proposeOpen, setProposeOpen] = useState(false);
+    // #2 自動抓 Twitch profile image(target 沒帶 imgUrl 時)
+    const [fetchedImgUrl, setFetchedImgUrl] = useState<string | null>(null);
     const { data: categories = [], isLoading: catsLoading } = useCategories();
     const mutation = useRecommendMutation();
     const isPending = mutation.isPending;
@@ -49,9 +52,31 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
         setComment('');
         setSelectedCategoryIds([]);
         setSelectedLangs([]);
+        setFetchedImgUrl(null);
         mutation.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, target?.url]);
+
+    // #2 Twitch profile image lookup(open 時觸發,5s timeout)
+    useEffect(() => {
+        if (!open || !target || target.imgUrl) return;
+        if (target.platform !== 'twitch' || !target.channelId) return;
+        let cancelled = false;
+        const login = target.channelId.toLowerCase();
+        const timer = setTimeout(() => { if (!cancelled) setFetchedImgUrl(null); }, 5000);
+        (async () => {
+            try {
+                const results = await twitchService.searchChannels(login, 5);
+                const match = results.find(r => r.login?.toLowerCase() === login);
+                const url = match?.thumbnailUrl;
+                if (!cancelled && typeof url === 'string' && url.length > 0) {
+                    setFetchedImgUrl(url);
+                }
+            } catch { /* silent — img_url 是 best-effort */ }
+            finally { clearTimeout(timer); }
+        })();
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [open, target?.platform, target?.channelId, target?.imgUrl]);
 
     if (!target) return null;
 
@@ -89,7 +114,7 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
                 anonymous_id: anonymousId || undefined,
                 category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
                 languages: selectedLangs.length > 0 ? selectedLangs : undefined,
-                img_url: target.imgUrl,
+                img_url: target.imgUrl || fetchedImgUrl || undefined,
                 cross_channel_id: target.crossChannelId,
             });
             if (result.ok === true) {
