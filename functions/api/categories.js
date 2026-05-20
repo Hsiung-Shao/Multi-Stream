@@ -2,7 +2,8 @@
 // POST /api/categories  { name }        → authenticated,提分類(自動 approved)
 //
 // 2026-05-17 user 偏好「除了登入移除所有限制」:已拿掉 IP banlist / trust_level / quota
-// 2026-05-20 改:slug server 自動產生(8 字 base62 + cat- 前綴),不接 client slug;移除 description
+// 2026-05-20 改:slug server 自動產生(8 字 base36 + cat- 前綴),不接 client slug;移除 description
+//   注意:base36(a-z + 0-9)對齊 DB CHECK constraint `slug ~ '^[a-z0-9-]+$'`(不允許大寫)
 // 保留:必登入(POST)、input format(防 5xx)、DB UNIQUE(name) / UNIQUE(slug)
 
 import { jsonResponse, handleOptions } from '../lib/cors.js';
@@ -14,7 +15,8 @@ const MAX_BODY_BYTES = 2 * 1024;
 const NAME_MAX = 30;
 const SLUG_RETRY_MAX = 3;
 const SLUG_RANDOM_LEN = 8;
-const SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+// base36(0-9 a-z),對齊 DB CHECK constraint `slug ~ '^[a-z0-9-]+$'`(不允許大寫)
+const SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
 function trimStr(s, max) {
     if (typeof s !== 'string') return '';
@@ -22,8 +24,9 @@ function trimStr(s, max) {
 }
 
 /**
- * server 自動產 slug,格式 `cat-<8 字 base62>`,例 `cat-A3xK9pQz`
+ * server 自動產 slug,格式 `cat-<8 字 base36>`,例 `cat-x7a4kp9q`
  * 用 crypto.getRandomValues 取密碼學隨機數,避免可預測碰撞
+ * 空間 36^8 ≈ 2.82e12,實務上不會撞
  */
 function generateCategorySlug() {
     const bytes = new Uint8Array(SLUG_RANDOM_LEN);
