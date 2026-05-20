@@ -55,6 +55,15 @@ export function validateRecommendInput(body) {
             return 'invalid_anonymous_id';
         }
     }
+    if (body.category_ids !== undefined && body.category_ids !== null) {
+        if (!Array.isArray(body.category_ids)) return 'invalid_category_ids';
+        if (body.category_ids.length > 10) return 'too_many_categories';
+        for (const id of body.category_ids) {
+            if (typeof id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+                return 'invalid_category_id';
+            }
+        }
+    }
     return null;
 }
 

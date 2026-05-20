@@ -14,6 +14,7 @@
 // 2026-05-17(進一步):POST 不再需要登入,DB schema user_id 改 nullable + partial UNIQUE
 // DELETE/mine 仍維持登入(匿名無 owner 概念)
 // 2026-05-17(再進一步):匿名推薦加 localStorage anonymous_id dedupe(同瀏覽器不可重複推同 vtuber)
+// 2026-05-20 Phase C:POST body 接 category_ids[](可選);成功 insert recommendation 後 best-effort 寫 vtuber_category_tags
 // 移除:IP banlist / trust_level / Turnstile / KV per-IP / DB daily quota / user_favorites / POST 必登入
 // 保留:DELETE/mine 登入、input format(防 5xx)、DB CHECK(資料完整性)
 
@@ -107,6 +108,34 @@ export async function onRequestPost(context) {
         userId: userId || null,
         metadata: { vtuber_id: ensured.vtuberId, has_comment: !!comment, already_in_vtubers: ensured.alreadyExists },
     });
+
+    // 2026-05-20 Phase C:推薦時順手寫 category tags(best-effort,不阻斷主流程)
+    // already_recommended early return 路徑不寫 tag — 維持簡單,避免 dedupe 後 tag union 處理。
+    if (Array.isArray(body.category_ids) && body.category_ids.length > 0) {
+        for (const categoryId of body.category_ids) {
+            const tagRow = {
+                vtuber_id: ensured.vtuberId,
+                category_id: categoryId,
+                tagged_by: userId || null,
+            };
+            const tagIns = await insert(env, 'vtuber_category_tags', tagRow);
+            if (!tagIns.ok) {
+                const errStr = tagIns.error || '';
+                const isDupe = tagIns.status === 409 || /23505|duplicate key/i.test(errStr);
+                if (!isDupe) {
+                    void logError(env, 'recommendations', 'tag insert failed', {
+                        userId: userId || null,
+                        metadata: {
+                            vtuber_id: ensured.vtuberId,
+                            category_id: categoryId,
+                            status: tagIns.status,
+                            error: errStr.slice(0, 300),
+                        },
+                    });
+                }
+            }
+        }
+    }
 
     return jsonResponse({
         ok: true,

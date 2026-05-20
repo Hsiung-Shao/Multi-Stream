@@ -169,6 +169,8 @@ export function formatRecommendError(err: unknown): string {
             invalid_channel_id: '頻道 ID 無效',
             invalid_id: 'ID 無效',
             invalid_category_id: '分類 ID 無效',
+            invalid_category_ids: '分類列表格式錯誤',
+            too_many_categories: '分類過多(上限 10)',
             invalid_vtuber_id: 'VTuber ID 無效',
             invalid_slug: 'slug 格式無效(只能 a-z, 0-9, dash)',
             invalid_description: '說明欄位錯誤',

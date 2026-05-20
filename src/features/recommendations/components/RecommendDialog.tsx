@@ -15,11 +15,12 @@ import {
 import { Button } from '../../../components/ui/button';
 import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';
-import { Heart, Loader2, AlertTriangle } from 'lucide-react';
+import { Heart, Loader2, AlertTriangle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRecommendMutation } from '../hooks';
+import { useRecommendMutation, useCategories } from '../hooks';
 import { formatRecommendError } from '../apiClient';
 import { getOrCreateAnonymousId } from '../anonymousId';
+import { ProposeCategoryDialog } from './CategoryFilterBar';
 import type { FavoriteStream } from '../../favorites/types';
 
 interface Props {
@@ -33,17 +34,27 @@ const COMMENT_MAX = 500;
 
 export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }: Props) {
     const [comment, setComment] = useState('');
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+    const [proposeOpen, setProposeOpen] = useState(false);
+    const { data: categories = [], isLoading: catsLoading } = useCategories();
     const mutation = useRecommendMutation();
     const isPending = mutation.isPending;
 
     // open/close 時 reset(對齊 memory: error_dialog_mutation_reset)
     useEffect(() => {
         setComment('');
+        setSelectedCategoryIds([]);
         mutation.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, favorite?.id]);
 
     if (!favorite) return null;
+
+    const toggleCategory = (id: string) => {
+        setSelectedCategoryIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    };
 
     const handleSubmit = async () => {
         // platform 必須是 twitch/youtube;other 不能推薦
@@ -71,6 +82,7 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
                 url: favorite.url,
                 comment: trimmed || undefined,
                 anonymous_id: anonymousId || undefined,
+                category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
             });
             if (result.ok === true) {
                 toast.success(`已推薦:${favorite.name}`);
@@ -89,6 +101,7 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-200 max-w-md">
                 <DialogHeader>
@@ -102,6 +115,40 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
                 </DialogHeader>
 
                 <div className="space-y-3 py-2">
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-zinc-400">分類(選填,可多選)</Label>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {catsLoading && (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-600" />
+                            )}
+                            {categories.map(cat => {
+                                const active = selectedCategoryIds.includes(cat.id);
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        type="button"
+                                        onClick={() => toggleCategory(cat.id)}
+                                        className={`px-2.5 py-1 rounded-full text-xs transition-colors ${
+                                            active
+                                                ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
+                                                : 'bg-zinc-800/60 text-zinc-400 border border-zinc-700 hover:bg-zinc-800'
+                                        }`}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                );
+                            })}
+                            <button
+                                type="button"
+                                onClick={() => setProposeOpen(true)}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-zinc-400 border border-dashed border-zinc-700 hover:border-zinc-500 hover:text-zinc-300 transition-colors"
+                            >
+                                <Plus className="w-3 h-3" />
+                                找不到?新增分類
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="space-y-1.5">
                         <Label className="text-xs text-zinc-400">
                             留言(選填,{comment.length} / {COMMENT_MAX})
@@ -143,5 +190,12 @@ export function RecommendDialog({ favorite, open, onOpenChange, onRecommended }:
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <ProposeCategoryDialog
+            open={proposeOpen}
+            onOpenChange={setProposeOpen}
+            onProposed={(id) => setSelectedCategoryIds(prev => prev.includes(id) ? prev : [...prev, id])}
+        />
+        </>
     );
 }

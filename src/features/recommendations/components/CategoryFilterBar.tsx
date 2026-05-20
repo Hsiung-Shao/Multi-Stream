@@ -87,9 +87,10 @@ export function CategoryFilterBar({ activeSlug, onChange, isLoggedIn, onRequestL
 interface ProposeProps {
     open: boolean;
     onOpenChange: (v: boolean) => void;
+    onProposed?: (categoryId: string) => void;
 }
 
-function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
+export function ProposeCategoryDialog({ open, onOpenChange, onProposed }: ProposeProps) {
     const [name, setName] = useState('');
     const propose = useProposeCategory();
     const isPending = propose.isPending;
@@ -101,9 +102,10 @@ function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
             return;
         }
         try {
-            await propose.mutateAsync({ name: trimmedName });
+            const res = await propose.mutateAsync({ name: trimmedName });
             toast.success('已新增分類');
             setName('');
+            onProposed?.(res.category.id);
             onOpenChange(false);
         } catch (e) {
             toast.error(formatRecommendError(e));
