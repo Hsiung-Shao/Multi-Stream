@@ -256,6 +256,23 @@ export class FavoritesService {
         return { success: true, message: 'favoriteUpdated' };
     }
 
+    /**
+     * 撤回推薦後同步 localStorage:對 (platform, channelId) 找到的 favorite 清掉 recommendedAt。
+     * 寫 undefined → spread 後該 key 值為 undefined → JSON.stringify drop 該 key → 等同清除。
+     */
+    unmarkRecommendedByChannel(platform: string, channelId: string): { success: boolean; message: string } {
+        if (!channelId) return { success: false, message: 'noChannelId' };
+        const list = this.favRepo.getList();
+        const target = list.find(f => f.platform === platform && f.channelId === channelId);
+        if (!target) return { success: false, message: 'favoriteNotFound' };
+        const success = this.favRepo.update(target.id, { recommendedAt: undefined });
+        if (!success) return { success: false, message: 'updateFailed' };
+
+        const updated = this.favRepo.getList().find(i => i.id === target.id);
+        this.emitChangeEvent('update', target.id, updated);
+        return { success: true, message: 'recommendationUnmarked' };
+    }
+
     removeFavorite(id: string): { success: boolean; message: string } {
         const removedItem = this.favRepo.remove(id);
         if (!removedItem) return { success: false, message: 'favoriteNotFound' };

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './apiClient';
+import { favoritesService } from '../favorites/FavoritesService';
 import type {
     RecommendationAggregate,
     RecommendationLatest,
@@ -109,14 +110,22 @@ export function useRecommendMutation() {
     });
 }
 
+export interface DeleteRecommendationInput {
+    recommendationId: string;
+    identity?: { platform: 'twitch' | 'youtube'; channelId: string };
+}
+
 export function useDeleteRecommendation() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (recommendationId: string) =>
+        mutationFn: ({ recommendationId }: DeleteRecommendationInput) =>
             apiFetch<{ ok: true }>(`/api/recommendations?id=${encodeURIComponent(recommendationId)}`, { method: 'DELETE' }),
-        onSuccess: () => {
+        onSuccess: (_, vars) => {
             qc.invalidateQueries({ queryKey: [RECOMMEND_LIST_KEY] });
             qc.invalidateQueries({ queryKey: [MY_RECOMMENDATIONS_KEY] });
+            if (vars.identity) {
+                favoritesService.unmarkRecommendedByChannel(vars.identity.platform, vars.identity.channelId);
+            }
         },
     });
 }

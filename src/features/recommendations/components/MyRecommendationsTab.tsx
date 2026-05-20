@@ -26,8 +26,16 @@ export function MyRecommendationsTab() {
 
     const handleConfirmDelete = async () => {
         if (!pendingDelete) return;
+        const v = pendingDelete.vtuber;
+        const channelId = v?.twitch_channel_id || v?.youtube_channel_id;
+        const platform: 'twitch' | 'youtube' | null = v?.twitch_channel_id
+            ? 'twitch'
+            : v?.youtube_channel_id ? 'youtube' : null;
         try {
-            await delMutation.mutateAsync(pendingDelete.id);
+            await delMutation.mutateAsync({
+                recommendationId: pendingDelete.id,
+                identity: channelId && platform ? { platform, channelId } : undefined,
+            });
             toast.success('已撤回推薦');
             setPendingDelete(null);
         } catch (e) {
