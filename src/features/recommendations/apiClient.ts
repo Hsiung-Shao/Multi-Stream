@@ -196,6 +196,7 @@ export function formatRecommendError(err: unknown): string {
             quota_exceeded: '今日額度已達上限',
             rate_limited: '操作過於頻繁,請稍後再試',
             duplicate_name_or_slug: '名稱或 slug 已被使用',
+            duplicate_name: '分類名稱已被使用',
             turnstile_failed: '人機驗證失敗,請重試',
             turnstile_network: '驗證連線失敗,請稍後再試',
             turnstile_not_configured: '伺服器設定錯誤',

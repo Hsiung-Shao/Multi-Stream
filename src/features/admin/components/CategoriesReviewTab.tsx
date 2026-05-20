@@ -142,7 +142,6 @@ export function CategoriesReviewTab() {
                         <TableHeader>
                             <TableRow className="border-zinc-800 hover:bg-transparent">
                                 <TableHead className="text-[11px] text-zinc-500 font-medium">名稱 / slug</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium">說明</TableHead>
                                 <TableHead className="text-[11px] text-zinc-500 font-medium w-[90px]">狀態</TableHead>
                                 <TableHead className="text-[11px] text-zinc-500 font-medium w-[140px]">提交時間</TableHead>
                                 <TableHead className="text-[11px] text-zinc-500 font-medium w-[160px] text-right">動作</TableHead>
@@ -154,9 +153,6 @@ export function CategoriesReviewTab() {
                                     <TableCell>
                                         <div className="font-medium text-zinc-100 text-[13px]">{c.name}</div>
                                         <div className="text-[11px] text-zinc-500 font-mono">{c.slug}</div>
-                                    </TableCell>
-                                    <TableCell className="text-[12px] text-zinc-400 max-w-xs">
-                                        <div className="line-clamp-2">{c.description || '—'}</div>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className={`text-[10px] ${STATUS_COLOR[c.status]}`}>

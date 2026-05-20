@@ -110,7 +110,6 @@ export interface AdminCategoryRecord {
     id: string;
     name: string;
     slug: string;
-    description: string | null;
     status: CategoryStatus;
     proposed_by: string | null;
     reviewer_notes: string | null;

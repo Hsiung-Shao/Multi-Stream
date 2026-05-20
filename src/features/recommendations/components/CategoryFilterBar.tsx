@@ -14,7 +14,6 @@ import {
     DialogTitle,
 } from '../../../components/ui/dialog';
 import { Input } from '../../../components/ui/input';
-import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';
 import { Plus, Tag, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -59,7 +58,7 @@ export function CategoryFilterBar({ activeSlug, onChange, isLoggedIn, onRequestL
                                 ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
                                 : 'bg-zinc-800/60 text-zinc-400 border border-zinc-700 hover:bg-zinc-800'
                         }`}
-                        title={cat.description || cat.name}
+                        title={cat.name}
                     >
                         {cat.name}
                     </button>
@@ -90,50 +89,21 @@ interface ProposeProps {
     onOpenChange: (v: boolean) => void;
 }
 
-function slugify(s: string): string {
-    return s
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 50);
-}
-
 function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
     const [name, setName] = useState('');
-    const [slug, setSlug] = useState('');
-    const [description, setDescription] = useState('');
     const propose = useProposeCategory();
     const isPending = propose.isPending;
 
-    const handleNameChange = (v: string) => {
-        setName(v);
-        // auto-fill slug 若 user 還沒手動改 slug(slug 是空 or 跟舊 name 的 slugify 結果一致)
-        if (!slug || slug === slugify(name)) {
-            setSlug(slugify(v));
-        }
-    };
-
     const handleSubmit = async () => {
         const trimmedName = name.trim();
-        const trimmedSlug = slug.trim();
         if (!trimmedName) {
             toast.error('請填寫分類名稱');
             return;
         }
-        if (!trimmedSlug || !/^[a-z0-9-]+$/.test(trimmedSlug)) {
-            toast.error('slug 只能是 a-z, 0-9, dash');
-            return;
-        }
         try {
-            await propose.mutateAsync({
-                name: trimmedName,
-                slug: trimmedSlug,
-                description: description.trim() || undefined,
-            });
+            await propose.mutateAsync({ name: trimmedName });
             toast.success('已新增分類');
             setName('');
-            setSlug('');
-            setDescription('');
             onOpenChange(false);
         } catch (e) {
             toast.error(formatRecommendError(e));
@@ -146,8 +116,6 @@ function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
             onOpenChange={(v) => {
                 if (!v) {
                     setName('');
-                    setSlug('');
-                    setDescription('');
                     propose.reset();
                 }
                 onOpenChange(v);
@@ -166,30 +134,10 @@ function ProposeCategoryDialog({ open, onOpenChange }: ProposeProps) {
                         <Label className="text-xs text-zinc-400">名稱 *</Label>
                         <Input
                             value={name}
-                            onChange={(e) => handleNameChange(e.target.value)}
+                            onChange={(e) => setName(e.target.value)}
                             maxLength={30}
                             placeholder="例如:V 歌手"
                             className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-xs text-zinc-400">slug *(只能 a-z, 0-9, dash)</Label>
-                        <Input
-                            value={slug}
-                            onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                            maxLength={50}
-                            placeholder="vsinger"
-                            className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9 font-mono text-xs"
-                        />
-                    </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-xs text-zinc-400">說明(選填,200 字以內)</Label>
-                        <Textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            maxLength={200}
-                            placeholder="這個分類代表什麼"
-                            className="bg-zinc-900 border-zinc-800 text-zinc-200 min-h-[64px] text-xs"
                         />
                     </div>
 

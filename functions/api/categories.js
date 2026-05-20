@@ -1,7 +1,8 @@
-// GET  /api/categories                            → public,列 approved categories
-// POST /api/categories  { name, slug, description? } → authenticated,提分類(自動 approved)
+// GET  /api/categories                  → public,列 approved categories
+// POST /api/categories  { name }        → authenticated,提分類(自動 approved)
 //
 // 2026-05-17 user 偏好「除了登入移除所有限制」:已拿掉 IP banlist / trust_level / quota
+// 2026-05-20 改:slug server 自動產生(8 字 base62 + cat- 前綴),不接 client slug;移除 description
 // 保留:必登入(POST)、input format(防 5xx)、DB UNIQUE(name) / UNIQUE(slug)
 
 import { jsonResponse, handleOptions } from '../lib/cors.js';
@@ -11,13 +12,27 @@ import { logError, logInfo } from '../lib/logger.js';
 
 const MAX_BODY_BYTES = 2 * 1024;
 const NAME_MAX = 30;
-const SLUG_MAX = 50;
-const DESC_MAX = 200;
-const SLUG_RE = /^[a-z0-9-]+$/;
+const SLUG_RETRY_MAX = 3;
+const SLUG_RANDOM_LEN = 8;
+const SLUG_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 function trimStr(s, max) {
     if (typeof s !== 'string') return '';
     return s.trim().slice(0, max);
+}
+
+/**
+ * server 自動產 slug,格式 `cat-<8 字 base62>`,例 `cat-A3xK9pQz`
+ * 用 crypto.getRandomValues 取密碼學隨機數,避免可預測碰撞
+ */
+function generateCategorySlug() {
+    const bytes = new Uint8Array(SLUG_RANDOM_LEN);
+    crypto.getRandomValues(bytes);
+    let suffix = '';
+    for (let i = 0; i < SLUG_RANDOM_LEN; i++) {
+        suffix += SLUG_ALPHABET[bytes[i] % SLUG_ALPHABET.length];
+    }
+    return `cat-${suffix}`;
 }
 
 // ========== GET: public list approved ==========
@@ -29,7 +44,7 @@ export async function onRequestGet(context) {
     }
     const res = await select(
         env,
-        'vtuber_categories?status=eq.approved&select=id,name,slug,description&order=name.asc&limit=200',
+        'vtuber_categories?status=eq.approved&select=id,name,slug&order=name.asc&limit=200',
     );
     if (!res.ok) {
         await logError(env, 'categories', 'list failed', {
@@ -45,7 +60,7 @@ export async function onRequestGet(context) {
     );
 }
 
-// ========== POST: propose new category(進 pending) ==========
+// ========== POST: propose new category(直接 approved) ==========
 
 export async function onRequestPost(context) {
     const { request, env } = context;
@@ -67,67 +82,57 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'invalid_json' }, 400, request);
     }
 
-    // 2026-05-17 只保留必登入(user 偏好移除所有非登入限制)
     const { userId } = await getUserIdFromRequest(request, env);
     if (!userId) {
         return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
     }
 
-    // input validation(保留防 5xx)
     const name = trimStr(body?.name, NAME_MAX);
     if (!name) return jsonResponse({ ok: false, error: 'name_required' }, 400, request);
 
-    const slug = trimStr(body?.slug, SLUG_MAX).toLowerCase();
-    if (!slug || !SLUG_RE.test(slug)) {
-        return jsonResponse({ ok: false, error: 'invalid_slug' }, 400, request);
+    // server-side slug 產生 + UNIQUE(slug) 碰撞 retry。
+    // 每次重 try 都產新 slug;UNIQUE(name) 碰撞則直接回 409(retry 也救不了)。
+    let lastInsErr = null;
+    let lastInsStatus = 500;
+    for (let attempt = 0; attempt < SLUG_RETRY_MAX; attempt++) {
+        const slug = generateCategorySlug();
+        const row = {
+            name,
+            slug,
+            status: 'approved',
+            proposed_by: userId,
+        };
+        const ins = await insert(env, 'vtuber_categories', row);
+        if (ins.ok) {
+            const created = Array.isArray(ins.data) ? ins.data[0] : ins.data;
+            void logInfo(env, 'categories', 'proposed', {
+                userId,
+                metadata: { id: created?.id, name, slug, attempt },
+            });
+            return jsonResponse({ ok: true, category: created }, 200, request);
+        }
+
+        lastInsErr = ins.error || '';
+        lastInsStatus = ins.status;
+
+        const isUniqueViolation = ins.status === 409 || /23505|duplicate key/i.test(lastInsErr);
+        if (!isUniqueViolation) break;
+
+        // 區分撞的是 name 還是 slug:PostgREST error details 含 `Key (name)=` 或 `Key (slug)=`,
+        // 也可看 constraint 名(vtuber_categories_name_key / vtuber_categories_slug_key)
+        const isNameDup = /Key \(name\)|categories_name_key/i.test(lastInsErr);
+        if (isNameDup) {
+            return jsonResponse({ ok: false, error: 'duplicate_name' }, 409, request);
+        }
+        // 視為 slug 撞:下一輪 attempt 重產 slug
     }
 
-    let description = null;
-    if (body?.description !== undefined && body?.description !== null && body?.description !== '') {
-        if (typeof body.description !== 'string') {
-            return jsonResponse({ ok: false, error: 'invalid_description' }, 400, request);
-        }
-        const desc = body.description.trim();
-        if (desc.length > DESC_MAX) {
-            return jsonResponse({ ok: false, error: 'description_too_long' }, 400, request);
-        }
-        description = desc || null;
-    }
-
-    // (已移除 daily quota — user 偏好,功能正常後再加回)
-
-    const row = {
-        name,
-        slug,
-        description,
-        // 2026-05-17 改:直接 approved(user 偏好移除審核;反正名稱/slug UNIQUE)
-        status: 'approved',
-        proposed_by: userId,
-    };
-    const ins = await insert(env, 'vtuber_categories', row);
-    if (!ins.ok) {
-        const errStr = ins.error || '';
-        if (ins.status === 409 || /23505|duplicate key/i.test(errStr)) {
-            return jsonResponse({ ok: false, error: 'duplicate_name_or_slug' }, 409, request);
-        }
-        await logError(env, 'categories', 'insert failed', {
-            userId,
-            metadata: { status: ins.status, error: errStr.slice(0, 500) },
-        });
-        return jsonResponse({ ok: false, error: 'insert_failed' }, 500, request);
-    }
-
-    const created = Array.isArray(ins.data) ? ins.data[0] : ins.data;
-    void logInfo(env, 'categories', 'proposed', {
+    // retry 用完仍失敗(極罕見:8 字 base62 = 62^8 ≈ 2.18e14 空間)
+    await logError(env, 'categories', 'insert failed after slug retries', {
         userId,
-        metadata: { id: created?.id, name, slug },
+        metadata: { status: lastInsStatus, error: (lastInsErr || '').slice(0, 500), name },
     });
-
-    return jsonResponse(
-        { ok: true, category: created },
-        200,
-        request,
-    );
+    return jsonResponse({ ok: false, error: 'insert_failed' }, 500, request);
 }
 
 export async function onRequestOptions(context) {

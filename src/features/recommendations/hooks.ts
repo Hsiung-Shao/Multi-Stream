@@ -55,7 +55,7 @@ export function useCategories() {
 export function useProposeCategory() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: (input: { name: string; slug: string; description?: string }) =>
+        mutationFn: (input: { name: string }) =>
             apiFetch<{ ok: true; category: Category }>('/api/categories', { method: 'POST', body: input }),
         onSuccess: () => qc.invalidateQueries({ queryKey: [CATEGORIES_KEY] }),
     });
