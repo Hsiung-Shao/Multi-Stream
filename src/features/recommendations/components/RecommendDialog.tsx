@@ -3,8 +3,11 @@
 // 收 favorite 資料 + 讓 user 選填 comment(0-500 字,禁 URL)→ POST /api/recommendations
 // 成功:toast + close。already_recommended:toast「已推薦過」+ close。
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { twitchService } from '../../twitch/TwitchService';
+import { Input } from '../../../components/ui/input';
+import { Check, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { parseChannelUrlSync, resolveYouTubeHandle } from '../parseChannelUrl';
 import {
     Dialog,
     DialogContent,
@@ -43,6 +46,18 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
     const [proposeOpen, setProposeOpen] = useState(false);
     // #2 自動抓 Twitch profile image(target 沒帶 imgUrl 時)
     const [fetchedImgUrl, setFetchedImgUrl] = useState<string | null>(null);
+
+    // 2026-05-21 跨平台 opt-in link:user 貼另一平台 URL,送 backend 做 OR dedupe + merge
+    const [crossUrlInput, setCrossUrlInput] = useState('');
+    type CrossState =
+        | { kind: 'idle' }
+        | { kind: 'resolving' }
+        | { kind: 'ok'; platform: 'twitch' | 'youtube'; channelId: string }
+        | { kind: 'warn'; message: string }
+        | { kind: 'error'; message: string };
+    const [crossState, setCrossState] = useState<CrossState>({ kind: 'idle' });
+    const crossDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const crossAbortRef = useRef<AbortController | null>(null);
     const { data: categories = [], isLoading: catsLoading } = useCategories();
     const mutation = useRecommendMutation();
     const isPending = mutation.isPending;
@@ -53,9 +68,63 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
         setSelectedCategoryIds([]);
         setSelectedLangs([]);
         setFetchedImgUrl(null);
+        setCrossUrlInput('');
+        setCrossState({ kind: 'idle' });
+        if (crossDebounceRef.current) clearTimeout(crossDebounceRef.current);
+        if (crossAbortRef.current) crossAbortRef.current.abort();
         mutation.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, target?.url]);
+
+    // 跨平台 URL parse:debounce 500ms,Twitch / YouTube /channel/UC 立即;@handle 走 endpoint resolve
+    useEffect(() => {
+        if (crossDebounceRef.current) clearTimeout(crossDebounceRef.current);
+        if (crossAbortRef.current) crossAbortRef.current.abort();
+        const trimmed = crossUrlInput.trim();
+        if (!trimmed) {
+            setCrossState({ kind: 'idle' });
+            return;
+        }
+        crossDebounceRef.current = setTimeout(() => {
+            const result = parseChannelUrlSync(trimmed);
+            if (result.ok) {
+                // 防誤觸:跟 user 主推 platform 相同 → 警告
+                if (target && result.platform === target.platform) {
+                    setCrossState({ kind: 'warn', message: '這是你要推薦的平台,請貼另一平台' });
+                    return;
+                }
+                if (target && result.channelId === target.channelId) {
+                    setCrossState({ kind: 'warn', message: '跟你正在推薦的頻道相同' });
+                    return;
+                }
+                setCrossState({ kind: 'ok', platform: result.platform, channelId: result.channelId });
+                return;
+            }
+            if (result.reason === 'youtube_handle_pending') {
+                // user 推 YouTube,@handle 另一平台不應該是 YouTube → 警告
+                if (target?.platform === 'youtube') {
+                    setCrossState({ kind: 'warn', message: '這是 YouTube handle,請貼 Twitch 網址' });
+                    return;
+                }
+                setCrossState({ kind: 'resolving' });
+                crossAbortRef.current = new AbortController();
+                resolveYouTubeHandle(result.handle, crossAbortRef.current.signal).then(channelId => {
+                    if (!channelId) {
+                        setCrossState({ kind: 'error', message: '找不到此 YouTube handle' });
+                        return;
+                    }
+                    setCrossState({ kind: 'ok', platform: 'youtube', channelId });
+                });
+                return;
+            }
+            if (result.reason === 'unsupported_platform') {
+                setCrossState({ kind: 'error', message: '只支援 Twitch / YouTube 頻道網址' });
+                return;
+            }
+            setCrossState({ kind: 'error', message: '請貼有效的頻道網址' });
+        }, 500);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [crossUrlInput, target?.platform, target?.channelId]);
 
     // #2 Twitch profile image lookup(open 時觸發,5s timeout)
     useEffect(() => {
@@ -115,7 +184,7 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
                 category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
                 languages: selectedLangs.length > 0 ? selectedLangs : undefined,
                 img_url: target.imgUrl || fetchedImgUrl || undefined,
-                cross_channel_id: target.crossChannelId,
+                cross_channel_id: crossState.kind === 'ok' ? crossState.channelId : target.crossChannelId,
             });
             if (result.ok === true) {
                 toast.success(`已推薦:${target.name}`);
@@ -154,6 +223,49 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
                             onProposeClick={() => setProposeOpen(true)}
                             isLoading={catsLoading}
                         />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-zinc-400">
+                            另一平台也有頻道?(選填,雙平台合併顯示)
+                        </Label>
+                        <Input
+                            type="url"
+                            value={crossUrlInput}
+                            onChange={(e) => setCrossUrlInput(e.target.value)}
+                            placeholder={
+                                target?.platform === 'twitch'
+                                    ? '貼 YouTube 頻道網址,如 https://www.youtube.com/@xxx'
+                                    : '貼 Twitch 頻道網址,如 https://www.twitch.tv/xxx'
+                            }
+                            className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9 text-sm"
+                        />
+                        {/* 解析狀態提示 */}
+                        {crossState.kind === 'ok' && (
+                            <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                                <Check className="w-3 h-3" />
+                                偵測到 {crossState.platform === 'twitch' ? 'Twitch' : 'YouTube'} ·
+                                <code className="font-mono text-[10px] text-emerald-300/80">{crossState.channelId}</code>
+                            </p>
+                        )}
+                        {crossState.kind === 'resolving' && (
+                            <p className="text-[11px] text-zinc-400 flex items-center gap-1">
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                解析 YouTube handle 中...
+                            </p>
+                        )}
+                        {crossState.kind === 'warn' && (
+                            <p className="text-[11px] text-amber-400 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {crossState.message}
+                            </p>
+                        )}
+                        {crossState.kind === 'error' && (
+                            <p className="text-[11px] text-red-400 flex items-center gap-1">
+                                <X className="w-3 h-3" />
+                                {crossState.message}
+                            </p>
+                        )}
                     </div>
 
                     <div className="space-y-1.5">
