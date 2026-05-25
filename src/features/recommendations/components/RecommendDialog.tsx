@@ -3,12 +3,14 @@
 // 收 favorite 資料 + 讓 user 選填 comment(0-500 字,禁 URL)→ POST /api/recommendations
 // 成功:toast + close。already_recommended:toast「已推薦過」+ close。
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { twitchService } from '../../twitch/TwitchService';
 import { Input } from '../../../components/ui/input';
 import { Check, X, RefreshCw, AlertCircle, Lock, LogIn, Link2, Link2Off } from 'lucide-react';
 import { parseChannelUrlSync, resolveYouTubeHandle } from '../parseChannelUrl';
 import { useVtuberSuggestions, type VtuberSearchResult } from '../useVtuberSuggestions';
+import { useCrossChannelName } from '../useCrossChannelName';
+import { useVtuberByChannel } from '../useVtuberByChannel';
 import { VtuberSuggestionList } from './VtuberSuggestionList';
 import {
     Dialog,
@@ -58,7 +60,7 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
     type CrossState =
         | { kind: 'idle' }
         | { kind: 'resolving' }
-        | { kind: 'ok'; platform: 'twitch' | 'youtube'; channelId: string }
+        | { kind: 'ok'; platform: 'twitch' | 'youtube'; channelId: string; channelTitle?: string }
         | { kind: 'warn'; message: string }
         | { kind: 'error'; message: string };
     const [crossState, setCrossState] = useState<CrossState>({ kind: 'idle' });
@@ -89,12 +91,61 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, target?.url]);
 
-    // suggestion query:用 target.name 觸發 fuzzy search(open 期間穩定,React Query staleTime 5min)
+    // 主推頻道是否已在 db?用 (platform, channelId) 精確查
+    // 若 db 已有 row 且另一平台 channelId 也填了 → 隱藏 cross URL 區與 suggestion
+    const { data: existingVtuber } = useVtuberByChannel(target?.platform, target?.channelId);
+    const shouldHideCrossUrl = useMemo(() => {
+        if (!existingVtuber || !target) return false;
+        const otherChannelId = target.platform === 'twitch'
+            ? existingVtuber.youtube_channel_id
+            : existingVtuber.twitch_channel_id;
+        return !!otherChannelId;
+    }, [existingVtuber, target?.platform]);
+
+    // 第一階段 suggestion query:用 target.name 觸發 fuzzy search
+    // (open 期間穩定,React Query staleTime 5min)
+    // 已連結另一平台時無需查(連帶 disable 兩階段 suggestion)
     const suggestionQuery = (target?.name || '').trim();
-    const { data: suggestions = [] } = useVtuberSuggestions(
+    const { data: primarySuggestions = [] } = useVtuberSuggestions(
         suggestionQuery,
-        open && !!target && !lockedSuggestion,
+        open && !!target && !lockedSuggestion && !shouldHideCrossUrl,
     );
+
+    // 第二階段 suggestion query:user 貼 cross URL 後,從該平台拿到 channel name
+    // 再查一次 db(蓋住「主推 displayName 跟另一平台不同名」的 case)
+    const crossHint = crossState.kind === 'ok'
+        ? {
+              platform: crossState.platform,
+              channelId: crossState.channelId,
+              youtubeTitle: crossState.platform === 'youtube'
+                  ? (crossState.channelTitle ?? null)
+                  : null,
+          }
+        : { platform: null, channelId: null, youtubeTitle: null };
+    const crossChannelName = useCrossChannelName(crossHint);
+    const crossSuggestionQuery = (crossChannelName || '').trim();
+    const { data: crossSuggestions = [] } = useVtuberSuggestions(
+        crossSuggestionQuery,
+        open && !!target && !lockedSuggestion && !shouldHideCrossUrl
+            && crossSuggestionQuery.length > 0
+            && crossSuggestionQuery !== suggestionQuery,
+    );
+
+    // 合併兩階段結果:同 id 取 score 較高,score DESC + recommend_count DESC,截前 5
+    const suggestions = useMemo<VtuberSearchResult[]>(() => {
+        const map = new Map<string, VtuberSearchResult>();
+        for (const s of primarySuggestions) {
+            const existing = map.get(s.id);
+            if (!existing || s.score > existing.score) map.set(s.id, s);
+        }
+        for (const s of crossSuggestions) {
+            const existing = map.get(s.id);
+            if (!existing || s.score > existing.score) map.set(s.id, s);
+        }
+        return Array.from(map.values())
+            .sort((a, b) => (b.score - a.score) || (b.recommend_count - a.recommend_count))
+            .slice(0, 5);
+    }, [primarySuggestions, crossSuggestions]);
 
     const handleSelectSuggestion = (s: VtuberSearchResult) => {
         if (!target) return;
@@ -154,12 +205,17 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
                 }
                 setCrossState({ kind: 'resolving' });
                 crossAbortRef.current = new AbortController();
-                resolveYouTubeHandle(result.handle, crossAbortRef.current.signal).then(channelId => {
-                    if (!channelId) {
+                resolveYouTubeHandle(result.handle, crossAbortRef.current.signal).then(resolved => {
+                    if (!resolved) {
                         setCrossState({ kind: 'error', message: '找不到此 YouTube handle' });
                         return;
                     }
-                    setCrossState({ kind: 'ok', platform: 'youtube', channelId });
+                    setCrossState({
+                        kind: 'ok',
+                        platform: 'youtube',
+                        channelId: resolved.channelId,
+                        channelTitle: resolved.channelTitle ?? undefined,
+                    });
                 });
                 return;
             }
@@ -274,6 +330,12 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
                         />
                     </div>
 
+                    {shouldHideCrossUrl ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-zinc-900/50 border border-zinc-800">
+                            <Link2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <p className="text-[11px] text-zinc-400">此頻道已與另一平台連結,毋需補貼</p>
+                        </div>
+                    ) : (
                     <div className="space-y-1.5">
                         <Label className="text-xs text-zinc-400">
                             另一平台也有頻道?(選填,雙平台合併顯示)
@@ -355,6 +417,7 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
                             </>
                         )}
                     </div>
+                    )}
 
                     <div className="space-y-1.5">
                         <Label className="text-xs text-zinc-400">實況主主要語言(選填,可多選)</Label>

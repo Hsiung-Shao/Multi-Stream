@@ -44,12 +44,18 @@ export function parseChannelUrlSync(rawUrl: string): ParseSyncResult {
     return { ok: false, reason: 'invalid_url' };
 }
 
+export interface YouTubeHandleResolved {
+    channelId: string;
+    channelTitle: string | null;
+}
+
 /**
- * Async resolve YouTube @handle → channel ID
+ * Async resolve YouTube @handle → channel ID + title
  * 走既有 /api/youtube-channel-page?handle=X(scrape ytInitialData)
- * 5s timeout;失敗 / 找不到 → null
+ * 5s timeout;失敗 / 找不到 → null。
+ * channelTitle 順便回傳,讓 caller 拿來做第二階段 suggestion fuzzy match。
  */
-export async function resolveYouTubeHandle(handle: string, signal?: AbortSignal): Promise<string | null> {
+export async function resolveYouTubeHandle(handle: string, signal?: AbortSignal): Promise<YouTubeHandleResolved | null> {
     if (!handle || !/^[A-Za-z0-9_.\-]{3,30}$/.test(handle)) return null;
     try {
         const res = await fetch(
@@ -60,7 +66,11 @@ export async function resolveYouTubeHandle(handle: string, signal?: AbortSignal)
         const data = await res.json().catch(() => null);
         const channelId = data?.channelId || data?.channel_id;
         if (typeof channelId === 'string' && /^UC[A-Za-z0-9_-]{22}$/.test(channelId)) {
-            return channelId;
+            const rawTitle = data?.channelTitle;
+            const channelTitle = typeof rawTitle === 'string' && rawTitle.trim().length > 0
+                ? rawTitle.trim()
+                : null;
+            return { channelId, channelTitle };
         }
         return null;
     } catch {
