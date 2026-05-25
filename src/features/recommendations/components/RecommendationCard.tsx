@@ -9,6 +9,12 @@ import type { RecommendationAggregate, RecommendTarget } from '../types';
 import { toast } from 'sonner';
 import { favoritesService } from '../../favorites/FavoritesService';
 import { LANG_LABEL } from '../../../lib/locale';
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from '../../../components/ui/dropdown-menu';
 
 interface Props {
     item: RecommendationAggregate;
@@ -30,7 +36,7 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
     const [favAdded, setFavAdded] = useState(false);
 
     const v = item.vtuber;
-    // 顯示時優先 Twitch(若兩平台都有),但 sourceUrl 跟 channel_id 都會用到對應 platform
+    // 顯示時優先 Twitch(若兩平台都有);channel_id 跟 follower count 都會用到對應 platform
     const platform = useMemo<'twitch' | 'youtube' | null>(() => {
         if (!v) return null;
         if (v.twitch_channel_id) return 'twitch';
@@ -55,32 +61,50 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
         });
     };
 
-    const sourceUrl = useMemo(() => {
-        if (!v) return null;
-        if (v.twitch_channel_id) return `https://www.twitch.tv/${v.twitch_channel_id}`;
-        if (v.youtube_channel_id) return `https://www.youtube.com/channel/${v.youtube_channel_id}`;
-        return null;
-    }, [v]);
+    const hasTwitch = !!v?.twitch_channel_id;
+    const hasYoutube = !!v?.youtube_channel_id;
+    const isDualPlatform = hasTwitch && hasYoutube;
 
     const followerCount = platform === 'twitch' ? v?.twitch_follower_count : v?.youtube_subscriber_count;
     const followerLabel = platform === 'twitch' ? '追隨' : '訂閱';
 
-    const handleAddFavorite = async () => {
-        if (!v || !sourceUrl || favPending || favAdded) return;
+    // 內部 helper:加單筆收藏,回傳是否成功(給 'both' 模式 short-circuit 用)
+    const addOne = async (p: 'twitch' | 'youtube'): Promise<boolean> => {
+        if (!v) return false;
+        const url = p === 'twitch'
+            ? `https://www.twitch.tv/${v.twitch_channel_id}`
+            : `https://www.youtube.com/channel/${v.youtube_channel_id}`;
+        try {
+            const result = await favoritesService.addFavorite(url, v.name, null);
+            const label = p === 'twitch' ? 'Twitch' : 'YouTube';
+            if (result.success) {
+                toast.success(`已加入 ${label}:${v.name}`);
+                return true;
+            }
+            if (result.message === 'streamAlreadyInFavorites') {
+                toast.message(`${v.name}(${label})已在你的收藏內`);
+                return true;
+            }
+            toast.error(result.message || `加入 ${label} 失敗`);
+            return false;
+        } catch (e) {
+            toast.error((e as Error)?.message || `加入 ${p} 失敗`);
+            return false;
+        }
+    };
+
+    const handleAdd = async (mode: 'twitch' | 'youtube' | 'both') => {
+        if (!v || favPending || favAdded) return;
         setFavPending(true);
         try {
-            const result = await favoritesService.addFavorite(sourceUrl, v.name, null);
-            if (result.success) {
-                setFavAdded(true);
-                toast.success(`已加入收藏:${v.name}`);
-            } else if (result.message === 'streamAlreadyInFavorites') {
-                setFavAdded(true);
-                toast.message(`${v.name} 已在你的收藏內`);
+            if (mode === 'both') {
+                const okT = await addOne('twitch');
+                const okY = await addOne('youtube');
+                if (okT && okY) setFavAdded(true);
             } else {
-                toast.error(result.message || '加入收藏失敗');
+                const ok = await addOne(mode);
+                if (ok) setFavAdded(true);
             }
-        } catch (e) {
-            toast.error((e as Error)?.message || '加入收藏失敗');
         } finally {
             setFavPending(false);
         }
@@ -188,23 +212,57 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
 
             {/* Actions */}
             <div className="px-3 pb-3 flex items-center gap-2">
-                <button
-                    onClick={handleAddFavorite}
-                    disabled={favPending || favAdded || !v}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
-                        favAdded
-                            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default'
-                            : 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50'
-                    }`}
-                >
-                    {favPending ? (
-                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 加入中</>
-                    ) : favAdded ? (
-                        <><Star className="w-3.5 h-3.5 fill-emerald-400" /> 已收藏</>
-                    ) : (
-                        <><Star className="w-3.5 h-3.5" /> 加入收藏</>
-                    )}
-                </button>
+                {isDualPlatform ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                disabled={favPending || favAdded || !v}
+                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
+                                    favAdded
+                                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default'
+                                        : 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50'
+                                }`}
+                            >
+                                {favPending ? (
+                                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 加入中</>
+                                ) : favAdded ? (
+                                    <><Star className="w-3.5 h-3.5 fill-emerald-400" /> 已收藏</>
+                                ) : (
+                                    <><Star className="w-3.5 h-3.5" /> 加入收藏 <ChevronDown className="w-3 h-3" /></>
+                                )}
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="min-w-[140px]">
+                            <DropdownMenuItem onSelect={() => handleAdd('twitch')}>
+                                <span className="text-violet-300">加入 Twitch</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAdd('youtube')}>
+                                <span className="text-red-300">加入 YouTube</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAdd('both')}>
+                                <span>兩個都加</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : (
+                    <button
+                        onClick={() => handleAdd(hasTwitch ? 'twitch' : 'youtube')}
+                        disabled={favPending || favAdded || !v || (!hasTwitch && !hasYoutube)}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
+                            favAdded
+                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default'
+                                : 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50'
+                        }`}
+                    >
+                        {favPending ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 加入中</>
+                        ) : favAdded ? (
+                            <><Star className="w-3.5 h-3.5 fill-emerald-400" /> 已收藏</>
+                        ) : (
+                            <><Star className="w-3.5 h-3.5" /> 加入收藏</>
+                        )}
+                    </button>
+                )}
 
                 {onRecommendClick && (
                     <button
