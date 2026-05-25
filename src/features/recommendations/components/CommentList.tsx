@@ -1,7 +1,9 @@
-// 留言列表(摺疊在 RecommendationCard 內)
+// 留言列表(摺疊在 RecommendationCard 內 / VtuberDetailPage)
 //
-// 顯示某 vtuber 的最新 20 則留言,含 user display_name + avatar_url。
+// 顯示某 vtuber 的留言串,含 user display_name + avatar_url。
+// 改 useInfiniteQuery 後支援「載入更多」分頁。
 
+import { useMemo } from 'react';
 import { useRecommendationComments } from '../hooks';
 import { Loader2, MessageSquare } from 'lucide-react';
 
@@ -22,7 +24,19 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function CommentList({ vtuberId, enabled }: Props) {
-    const { data: comments = [], isLoading, isError } = useRecommendationComments(vtuberId, enabled);
+    const {
+        data,
+        isLoading,
+        isError,
+        hasNextPage,
+        isFetchingNextPage,
+        fetchNextPage,
+    } = useRecommendationComments(vtuberId, enabled);
+
+    const comments = useMemo(
+        () => data?.pages.flatMap(p => p.items) ?? [],
+        [data],
+    );
 
     if (!enabled) return null;
 
@@ -53,41 +67,57 @@ export function CommentList({ vtuberId, enabled }: Props) {
     }
 
     return (
-        <ul className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
-            {comments.map(c => (
-                <li
-                    key={c.id}
-                    className="flex gap-2.5 p-2 rounded-md bg-zinc-900/40 border border-zinc-800/60"
-                >
-                    {c.user.avatar_url ? (
-                        <img
-                            src={c.user.avatar_url}
-                            alt={c.user.display_name || ''}
-                            width="28"
-                            height="28"
-                            className="w-7 h-7 rounded-full object-cover shrink-0"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                        />
-                    ) : (
-                        <div className="w-7 h-7 rounded-full bg-zinc-800 shrink-0" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-xs font-medium text-zinc-300 truncate">
-                                {c.user.display_name || '匿名用戶'}
-                            </span>
-                            <span className="text-[10px] text-zinc-500 shrink-0 tabular-nums">
-                                {formatRelativeTime(c.created_at)}
-                            </span>
+        <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+            <ul className="space-y-2">
+                {comments.map(c => (
+                    <li
+                        key={c.id}
+                        className="flex gap-2.5 p-2 rounded-md bg-zinc-900/40 border border-zinc-800/60"
+                    >
+                        {c.user.avatar_url ? (
+                            <img
+                                src={c.user.avatar_url}
+                                alt={c.user.display_name || ''}
+                                width="28"
+                                height="28"
+                                className="w-7 h-7 rounded-full object-cover shrink-0"
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
+                        ) : (
+                            <div className="w-7 h-7 rounded-full bg-zinc-800 shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-xs font-medium text-zinc-300 truncate">
+                                    {c.user.display_name || '匿名用戶'}
+                                </span>
+                                <span className="text-[10px] text-zinc-500 shrink-0 tabular-nums">
+                                    {formatRelativeTime(c.created_at)}
+                                </span>
+                            </div>
+                            <p className="text-[13px] text-zinc-200 whitespace-pre-wrap break-words mt-0.5">
+                                {c.comment}
+                            </p>
                         </div>
-                        <p className="text-[13px] text-zinc-200 whitespace-pre-wrap break-words mt-0.5">
-                            {c.comment}
-                        </p>
-                    </div>
-                </li>
-            ))}
-        </ul>
+                    </li>
+                ))}
+            </ul>
+            {hasNextPage && (
+                <button
+                    type="button"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="w-full py-1.5 text-[11px] text-zinc-400 hover:text-zinc-200 bg-zinc-900/40 hover:bg-zinc-800/60 border border-zinc-800/60 rounded-md transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                    {isFetchingNextPage ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> 載入中</>
+                    ) : (
+                        '載入更多留言'
+                    )}
+                </button>
+            )}
+        </div>
     );
 }

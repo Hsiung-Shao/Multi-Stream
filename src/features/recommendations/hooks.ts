@@ -1,6 +1,6 @@
 // 推薦系統 hooks(集中所有 TanStack Query 入口)
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { apiFetch } from './apiClient';
 import { favoritesService } from '../favorites/FavoritesService';
 import type {
@@ -71,12 +71,20 @@ export interface CommentsResponse {
 }
 
 export function useRecommendationComments(vtuberId: string | null, enabled: boolean) {
-    return useQuery({
+    return useInfiniteQuery({
         queryKey: [RECOMMEND_COMMENTS_KEY, vtuberId],
         enabled: enabled && !!vtuberId,
-        queryFn: () => apiFetch<CommentsResponse>(`/api/recommendations/${encodeURIComponent(vtuberId!)}/comments?limit=20`),
+        initialPageParam: null as string | null,
+        queryFn: ({ pageParam }) => {
+            const search = new URLSearchParams();
+            search.set('limit', '20');
+            if (pageParam) search.set('cursor', pageParam);
+            return apiFetch<CommentsResponse>(
+                `/api/recommendations/${encodeURIComponent(vtuberId!)}/comments?${search.toString()}`,
+            );
+        },
+        getNextPageParam: (lastPage: CommentsResponse) => lastPage.next_cursor,
         staleTime: 15_000,
-        select: (d) => d.items ?? [],
     });
 }
 

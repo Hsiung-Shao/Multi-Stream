@@ -92,3 +92,27 @@ export interface MyRecommendation {
     created_at: string;
     vtuber: VTuberInfo | null;
 }
+
+// VtuberDetailPage 用 — VTuberInfo + 累積推薦數 + 分類 tags
+export interface VtuberDetailCategory {
+    id: string;
+    name: string;
+    slug: string;
+}
+
+export interface VtuberDetail {
+    id: string;
+    name: string;
+    img_url: string | null;
+    nationality: string;
+    activity: string;
+    group_id: string | null;
+    youtube_channel_id: string | null;
+    youtube_subscriber_count: number | null;
+    twitch_channel_id: string | null;
+    twitch_follower_count: number | null;
+    languages: VtuberLang[] | null;
+    debut_date: string | null;
+    recommend_count: number;
+    categories: VtuberDetailCategory[];
+}

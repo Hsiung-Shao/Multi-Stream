@@ -9,7 +9,7 @@ interface ModalState {
     login: boolean;
 }
 
-export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'account' | 'recommendations' | 'not-found';
+export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'vtuber-detail' | 'account' | 'recommendations' | 'not-found';
 
 interface UIState {
     theme: 'light' | 'dark';
@@ -33,6 +33,10 @@ interface UIState {
     setMasterVolume: (volume: number | ((prev: number) => number)) => void;
     setMasterMuted: (muted: boolean | ((prev: boolean) => boolean)) => void;
     setPage: (page: PageType) => void;
+    /** 詳情頁要看的 vtuber id;切到 'vtuber-detail' 時設值,離開時清掉 */
+    selectedVtuberId: string | null;
+    /** 帶 id 時自動切 page='vtuber-detail';傳 null 時只清 id,不動 page */
+    setSelectedVtuberId: (id: string | null) => void;
     setSearchFocused: (focused: boolean) => void;
     togglePerformanceOverlay: () => void;
     // Window functionality
@@ -124,6 +128,11 @@ export const useUIStore = create<UIState>((set) => ({
         return { masterMuted: newMuted };
     }),
     setPage: (page) => set({ page }),
+    selectedVtuberId: null,
+    setSelectedVtuberId: (id) => set(id
+        ? { selectedVtuberId: id, page: 'vtuber-detail' }
+        : { selectedVtuberId: null }
+    ),
     setSearchFocused: (focused) => set({ isSearchFocused: focused }),
     togglePerformanceOverlay: () => set((state) => ({ showPerformanceOverlay: !state.showPerformanceOverlay })),
 

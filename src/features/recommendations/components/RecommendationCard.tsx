@@ -9,6 +9,7 @@ import type { RecommendationAggregate, RecommendTarget } from '../types';
 import { toast } from 'sonner';
 import { favoritesService } from '../../favorites/FavoritesService';
 import { LANG_LABEL } from '../../../lib/locale';
+import { useUIStore } from '../../../store/useUIStore';
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -31,9 +32,15 @@ function formatNumber(n: number | null | undefined): string {
 }
 
 export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
+    const setSelectedVtuberId = useUIStore(s => s.setSelectedVtuberId);
     const [expanded, setExpanded] = useState(false);
     const [favPending, setFavPending] = useState(false);
     const [favAdded, setFavAdded] = useState(false);
+
+    const handleCardClick = () => {
+        if (!v?.id) return;
+        setSelectedVtuberId(v.id);
+    };
 
     const v = item.vtuber;
     // 顯示時優先 Twitch(若兩平台都有);channel_id 跟 follower count 都會用到對應 platform
@@ -112,8 +119,15 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
 
     return (
         <article className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden hover:border-zinc-700 transition-colors">
-            {/* Header */}
-            <div className="p-3 flex items-start gap-3">
+            {/* Header(clickable → 進詳情頁)*/}
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={handleCardClick}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
+                className="p-3 flex items-start gap-3 cursor-pointer hover:bg-zinc-900/40 transition-colors"
+                title={v ? `查看「${v.name}」詳情` : undefined}
+            >
                 {/* Avatar */}
                 <div className="relative shrink-0">
                     {v?.img_url ? (
