@@ -28,6 +28,10 @@ interface Props {
     onProposeClick: () => void;
     isLoading?: boolean;
     placeholder?: string;
+    /** 把「新增分類」按鈕設為 disabled(例如匿名 user 不可新增) */
+    proposeDisabled?: boolean;
+    /** disabled 時的 hover 提示文字 */
+    proposeDisabledHint?: string;
 }
 
 export function CategoryMultiSelect({
@@ -37,6 +41,8 @@ export function CategoryMultiSelect({
     onProposeClick,
     isLoading,
     placeholder = '選擇分類…',
+    proposeDisabled = false,
+    proposeDisabledHint,
 }: Props) {
     const [open, setOpen] = useState(false);
 
@@ -141,13 +147,23 @@ export function CategoryMultiSelect({
                         <button
                             type="button"
                             onClick={() => {
+                                if (proposeDisabled) return;
                                 setOpen(false);
                                 onProposeClick();
                             }}
-                            className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 transition-colors"
+                            disabled={proposeDisabled}
+                            title={proposeDisabled ? proposeDisabledHint : undefined}
+                            className={cn(
+                                'flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs transition-colors',
+                                proposeDisabled
+                                    ? 'text-zinc-600 cursor-not-allowed'
+                                    : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100',
+                            )}
                         >
                             <Plus className="w-3.5 h-3.5" />
-                            找不到?新增分類
+                            {proposeDisabled
+                                ? (proposeDisabledHint || '找不到?新增分類')
+                                : '找不到?新增分類'}
                         </button>
                     </div>
                 </Command>

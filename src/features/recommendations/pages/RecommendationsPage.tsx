@@ -208,6 +208,7 @@ export function RecommendationsPage() {
                 target={recommendTarget}
                 open={!!recommendTarget}
                 onOpenChange={(v) => { if (!v) setRecommendTarget(null); }}
+                onRequestLogin={() => setLoginOpen(true)}
             />
         </div>
     );

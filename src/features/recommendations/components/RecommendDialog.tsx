@@ -6,8 +6,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { twitchService } from '../../twitch/TwitchService';
 import { Input } from '../../../components/ui/input';
-import { Check, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { Check, X, RefreshCw, AlertCircle, Lock, LogIn, Link2, Link2Off } from 'lucide-react';
 import { parseChannelUrlSync, resolveYouTubeHandle } from '../parseChannelUrl';
+import { useVtuberSuggestions, type VtuberSearchResult } from '../useVtuberSuggestions';
+import { VtuberSuggestionList } from './VtuberSuggestionList';
 import {
     Dialog,
     DialogContent,
@@ -27,6 +29,7 @@ import { getOrCreateAnonymousId } from '../anonymousId';
 import { ProposeCategoryDialog } from './CategoryFilterBar';
 import { CategoryMultiSelect } from './CategoryMultiSelect';
 import { SUPPORTED_VTUBER_LANGS, LANG_LABEL, type VtuberLang } from '../../../lib/locale';
+import { useAuth } from '../../../hooks/useAuth';
 import type { RecommendTarget } from '../types';
 
 interface Props {
@@ -35,11 +38,14 @@ interface Props {
     onOpenChange: (v: boolean) => void;
     /** 若 target 是 favorite,推薦成功後呼叫此 callback 同步 localStorage */
     onRecommended?: (favoriteId: string) => void;
+    /** 匿名 user 點留言區「登入」按鈕觸發;不傳則匿名提示只顯示文字 */
+    onRequestLogin?: () => void;
 }
 
 const COMMENT_MAX = 500;
 
-export function RecommendDialog({ target, open, onOpenChange, onRecommended }: Props) {
+export function RecommendDialog({ target, open, onOpenChange, onRecommended, onRequestLogin }: Props) {
+    const { isLoggedIn } = useAuth();
     const [comment, setComment] = useState('');
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
     const [selectedLangs, setSelectedLangs] = useState<VtuberLang[]>([]);
@@ -58,6 +64,11 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
     const [crossState, setCrossState] = useState<CrossState>({ kind: 'idle' });
     const crossDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const crossAbortRef = useRef<AbortController | null>(null);
+
+    // 2026-05-25「您是不是這位?」suggestion(從既有 vtubers fuzzy match user 主推的名稱)
+    // lockedSuggestion 非 null = user 已選某筆 suggestion → cross URL 被鎖定,顯示「已連結」徽章
+    const [lockedSuggestion, setLockedSuggestion] = useState<VtuberSearchResult | null>(null);
+    const [suggestionDismissed, setSuggestionDismissed] = useState(false);
     const { data: categories = [], isLoading: catsLoading } = useCategories();
     const mutation = useRecommendMutation();
     const isPending = mutation.isPending;
@@ -70,11 +81,46 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
         setFetchedImgUrl(null);
         setCrossUrlInput('');
         setCrossState({ kind: 'idle' });
+        setLockedSuggestion(null);
+        setSuggestionDismissed(false);
         if (crossDebounceRef.current) clearTimeout(crossDebounceRef.current);
         if (crossAbortRef.current) crossAbortRef.current.abort();
         mutation.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, target?.url]);
+
+    // suggestion query:用 target.name 觸發 fuzzy search(open 期間穩定,React Query staleTime 5min)
+    const suggestionQuery = (target?.name || '').trim();
+    const { data: suggestions = [] } = useVtuberSuggestions(
+        suggestionQuery,
+        open && !!target && !lockedSuggestion,
+    );
+
+    const handleSelectSuggestion = (s: VtuberSearchResult) => {
+        if (!target) return;
+        // 把該 vtuber 的「另一平台 channelId」反推 URL,寫進 cross URL state
+        const otherPlatform = target.platform === 'twitch' ? 'youtube' : 'twitch';
+        const otherChannelId = otherPlatform === 'twitch' ? s.twitch_channel_id : s.youtube_channel_id;
+        if (!otherChannelId) {
+            // suggestion 對應平台沒有 channelId → 仍可連結(只共享同 vtuber row),但 cross URL 無內容
+            setCrossUrlInput('');
+            setCrossState({ kind: 'idle' });
+        } else {
+            const reverseUrl = otherPlatform === 'twitch'
+                ? `https://www.twitch.tv/${otherChannelId}`
+                : `https://www.youtube.com/channel/${otherChannelId}`;
+            setCrossUrlInput(reverseUrl);
+            setCrossState({ kind: 'ok', platform: otherPlatform, channelId: otherChannelId });
+        }
+        setLockedSuggestion(s);
+    };
+
+    const handleUnlockSuggestion = () => {
+        setLockedSuggestion(null);
+        setCrossUrlInput('');
+        setCrossState({ kind: 'idle' });
+        // 不要把 suggestionDismissed 設回 true — user 解除是想重選,讓 list 重新出現
+    };
 
     // 跨平台 URL parse:debounce 500ms,Twitch / YouTube /channel/UC 立即;@handle 走 endpoint resolve
     useEffect(() => {
@@ -166,8 +212,9 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
             toast.error('找不到頻道 ID,無法推薦');
             return;
         }
-        const trimmed = comment.trim();
-        if (trimmed.length > COMMENT_MAX) {
+        // 匿名 user 不能留言(backend 也擋,前端先攔避免 401)
+        const effectiveComment = isLoggedIn ? comment.trim() : '';
+        if (effectiveComment.length > COMMENT_MAX) {
             toast.error(`留言過長(上限 ${COMMENT_MAX} 字)`);
             return;
         }
@@ -179,7 +226,7 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
                 platform: target.platform,
                 channel_id: channelId,
                 url: target.url,
-                comment: trimmed || undefined,
+                comment: effectiveComment || undefined,
                 anonymous_id: anonymousId || undefined,
                 category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
                 languages: selectedLangs.length > 0 ? selectedLangs : undefined,
@@ -222,6 +269,8 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
                             onChange={setSelectedCategoryIds}
                             onProposeClick={() => setProposeOpen(true)}
                             isLoading={catsLoading}
+                            proposeDisabled={!isLoggedIn}
+                            proposeDisabledHint={!isLoggedIn ? '登入後才能新增分類' : undefined}
                         />
                     </div>
 
@@ -229,42 +278,81 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
                         <Label className="text-xs text-zinc-400">
                             另一平台也有頻道?(選填,雙平台合併顯示)
                         </Label>
-                        <Input
-                            type="url"
-                            value={crossUrlInput}
-                            onChange={(e) => setCrossUrlInput(e.target.value)}
-                            placeholder={
-                                target?.platform === 'twitch'
-                                    ? '貼 YouTube 頻道網址,如 https://www.youtube.com/@xxx'
-                                    : '貼 Twitch 頻道網址,如 https://www.twitch.tv/xxx'
-                            }
-                            className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9 text-sm"
-                        />
-                        {/* 解析狀態提示 */}
-                        {crossState.kind === 'ok' && (
-                            <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                偵測到 {crossState.platform === 'twitch' ? 'Twitch' : 'YouTube'} ·
-                                <code className="font-mono text-[10px] text-emerald-300/80">{crossState.channelId}</code>
-                            </p>
-                        )}
-                        {crossState.kind === 'resolving' && (
-                            <p className="text-[11px] text-zinc-400 flex items-center gap-1">
-                                <RefreshCw className="w-3 h-3 animate-spin" />
-                                解析 YouTube handle 中...
-                            </p>
-                        )}
-                        {crossState.kind === 'warn' && (
-                            <p className="text-[11px] text-amber-400 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                {crossState.message}
-                            </p>
-                        )}
-                        {crossState.kind === 'error' && (
-                            <p className="text-[11px] text-red-400 flex items-center gap-1">
-                                <X className="w-3 h-3" />
-                                {crossState.message}
-                            </p>
+
+                        {lockedSuggestion ? (
+                            // 已從 suggestion 連結到既有 vtuber:顯示徽章 + 解除按鈕
+                            <div className="flex items-center justify-between px-2.5 py-2 rounded bg-emerald-500/10 border border-emerald-500/30">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <Link2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[12px] text-emerald-300 truncate">
+                                            已連結到「{lockedSuggestion.name}」
+                                        </p>
+                                        <p className="text-[10px] text-emerald-400/70">
+                                            提交後將與既有 VTuber 合併
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleUnlockSuggestion}
+                                    className="text-[11px] text-emerald-300 hover:text-emerald-200 flex items-center gap-1 shrink-0"
+                                >
+                                    <Link2Off className="w-3 h-3" />
+                                    解除
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                {/* 「您是不是這位?」suggestion(自動 fuzzy match,user 未 dismiss 才顯示) */}
+                                {!suggestionDismissed && suggestions.length > 0 && target && (
+                                    <VtuberSuggestionList
+                                        suggestions={suggestions}
+                                        currentPlatform={target.platform as 'twitch' | 'youtube'}
+                                        currentChannelId={target.channelId || ''}
+                                        onSelect={handleSelectSuggestion}
+                                        onDismiss={() => setSuggestionDismissed(true)}
+                                    />
+                                )}
+
+                                <Input
+                                    type="url"
+                                    value={crossUrlInput}
+                                    onChange={(e) => setCrossUrlInput(e.target.value)}
+                                    placeholder={
+                                        target?.platform === 'twitch'
+                                            ? '貼 YouTube 頻道網址,如 https://www.youtube.com/@xxx'
+                                            : '貼 Twitch 頻道網址,如 https://www.twitch.tv/xxx'
+                                    }
+                                    className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9 text-sm"
+                                />
+                                {/* 解析狀態提示 */}
+                                {crossState.kind === 'ok' && (
+                                    <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                                        <Check className="w-3 h-3" />
+                                        偵測到 {crossState.platform === 'twitch' ? 'Twitch' : 'YouTube'} ·
+                                        <code className="font-mono text-[10px] text-emerald-300/80">{crossState.channelId}</code>
+                                    </p>
+                                )}
+                                {crossState.kind === 'resolving' && (
+                                    <p className="text-[11px] text-zinc-400 flex items-center gap-1">
+                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                        解析 YouTube handle 中...
+                                    </p>
+                                )}
+                                {crossState.kind === 'warn' && (
+                                    <p className="text-[11px] text-amber-400 flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        {crossState.message}
+                                    </p>
+                                )}
+                                {crossState.kind === 'error' && (
+                                    <p className="text-[11px] text-red-400 flex items-center gap-1">
+                                        <X className="w-3 h-3" />
+                                        {crossState.message}
+                                    </p>
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -293,16 +381,37 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
 
                     <div className="space-y-1.5">
                         <Label className="text-xs text-zinc-400">
-                            留言(選填,{comment.length} / {COMMENT_MAX})
+                            留言(選填,{isLoggedIn ? `${comment.length} / ${COMMENT_MAX}` : '需登入'})
                         </Label>
+                        {!isLoggedIn && (
+                            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-zinc-900/60 border border-zinc-800">
+                                <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                                    <Lock className="w-3 h-3" />
+                                    匿名推薦不含留言,登入後可分享你為什麼推薦
+                                </p>
+                                {onRequestLogin && (
+                                    <button
+                                        type="button"
+                                        onClick={onRequestLogin}
+                                        className="flex items-center gap-1 text-[11px] text-pink-300 hover:text-pink-200 transition-colors"
+                                    >
+                                        <LogIn className="w-3 h-3" />
+                                        登入
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         <Textarea
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
                             maxLength={COMMENT_MAX}
-                            placeholder="分享為什麼推薦他/她..."
-                            className="bg-zinc-900 border-zinc-800 text-zinc-200 min-h-[88px] text-sm"
+                            disabled={!isLoggedIn}
+                            placeholder={isLoggedIn ? '分享為什麼推薦他/她...' : '匿名推薦不支援留言'}
+                            className="bg-zinc-900 border-zinc-800 text-zinc-200 min-h-[88px] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         />
-                        <p className="text-[10px] text-zinc-500">隨意留言,500 字內</p>
+                        {isLoggedIn && (
+                            <p className="text-[10px] text-zinc-500">隨意留言,500 字內</p>
+                        )}
                     </div>
 
                     {mutation.isError && (

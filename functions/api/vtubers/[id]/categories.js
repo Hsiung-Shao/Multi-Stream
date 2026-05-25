@@ -2,7 +2,10 @@
 // DELETE /api/vtubers/<vtuberId>/categories?category_id=...    → untag (self only)
 //
 // 2026-05-17 user 偏好「除了登入移除所有限制」:已拿掉 IP banlist / trust_level / quota / category status check
-// 保留:必登入(POST/DELETE)、UUID format、vtuber 存在性、DB UNIQUE(vtuber_id, category_id)
+// 2026-05-25 POST 改開放匿名:「選既有分類」屬於推薦的一部分,匿名 user 推薦時也該能標分類。
+//            vtuber_category_tags.tagged_by 已 nullable (migration 20260520),匿名寫入 tagged_by=null。
+//            DELETE 仍維持必登入(無 owner 概念,匿名無法 untag 自己標的)。
+// 保留:UUID format、vtuber 存在性、DB UNIQUE(vtuber_id, category_id)
 
 import { jsonResponse, handleOptions } from '../../../lib/cors.js';
 import { getUserIdFromRequest } from '../../../lib/auth-helper.js';
@@ -44,11 +47,8 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'invalid_category_id' }, 400, request);
     }
 
-    // 2026-05-17 只保留必登入 + vtuber 存在性
+    // 2026-05-25 POST 開放匿名,取 userId 僅為了寫進 tagged_by(匿名為 null)
     const { userId } = await getUserIdFromRequest(request, env);
-    if (!userId) {
-        return jsonResponse({ ok: false, error: 'unauthenticated' }, 401, request);
-    }
 
     // 驗 vtuber 存在(防 FK 失敗 5xx)
     const vRes = await select(
@@ -59,13 +59,15 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'vtuber_not_found' }, 404, request);
     }
 
-    // (已移除:IP banlist、trust_level、category approved check、daily quota)
+    // (已移除:IP banlist、trust_level、category approved check、daily quota、必登入)
+    // 走 service_role 寫入,繞 RLS vtuber_category_tags_self_insert (require tagged_by=auth.uid())。
+    // tagged_by 為 null 代表匿名標記,DB column 已 nullable。
 
     // insert tag
     const row = {
         vtuber_id: vtuberId,
         category_id: categoryId,
-        tagged_by: userId,
+        tagged_by: userId || null,
     };
     const ins = await insert(env, 'vtuber_category_tags', row);
     if (!ins.ok) {

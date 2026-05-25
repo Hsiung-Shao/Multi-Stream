@@ -61,6 +61,12 @@ export async function onRequestPost(context) {
     // 2026-05-17 移除「必登入」gate(user 偏好「先完成功能」)。仍取 userId 供 log/row。
     const { userId } = await getUserIdFromRequest(request, env);
 
+    // ---- 2.5 匿名只能推薦,留言屬於需登入的高品質貢獻 ----
+    // 前端置灰 textarea 已防誤觸,後端仍要擋 curl 直接打 endpoint 的情況。
+    if (!userId && typeof body.comment === 'string' && body.comment.trim().length > 0) {
+        return jsonResponse({ ok: false, error: 'comment_requires_login' }, 401, request);
+    }
+
     // ---- 3. input format(保留:防 5xx / db error,但極寬鬆) ----
     const validationErr = validateRecommendInput(body);
     if (validationErr) {
