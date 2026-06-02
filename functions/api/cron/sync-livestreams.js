@@ -242,6 +242,23 @@ export async function onRequestPost(context) {
             }
         }
 
+        // 更新 last_live_at（#34 卡片「上次直播」用）：對本輪在播的 vtuber 標記 now()
+        const liveVtuberIds = [...new Set(rows.map(r => r.vtuber_id))];
+        if (liveVtuberIds.length > 0) {
+            const idList = liveVtuberIds.map(id => encodeURIComponent(id)).join(',');
+            const touchRes = await supabaseRequest(
+                env,
+                `vtubers?id=in.(${idList})`,
+                { method: 'PATCH', body: JSON.stringify({ last_live_at: new Date().toISOString() }) },
+            );
+            if (!touchRes.ok) {
+                await logError(env, 'sync-livestreams', 'update last_live_at failed', {
+                    metadata: { status: touchRes.status, error: touchRes.error?.slice(0, 300) },
+                });
+                // 不阻斷主流程
+            }
+        }
+
         await logInfo(env, 'sync-livestreams', 'sync complete', {
             metadata: {
                 vtubers_active: vtubers.length,

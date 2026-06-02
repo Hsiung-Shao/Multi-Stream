@@ -16,6 +16,9 @@ export interface VTuberInfo {
     twitch_follower_count: number | null;
     group_id: string | null;
     languages: VtuberLang[] | null;
+    last_live_at?: string | null;              // #34 上次偵測到直播的時刻
+    twitch_follower_delta?: number | null;     // #34 Twitch 訂閱變化（日級，當前 − 前一筆快照）
+    youtube_subscriber_delta?: number | null;  // #34 YouTube 訂閱變化（週級）
 }
 
 export interface CommentPreview {
@@ -100,6 +103,16 @@ export interface VtuberDetailCategory {
     slug: string;
 }
 
+export interface SubscriberHistoryPoint {
+    recorded_at: string;
+    subscriber_count: number;
+}
+
+export interface SubscriberHistory {
+    twitch: SubscriberHistoryPoint[];
+    youtube: SubscriberHistoryPoint[];
+}
+
 export interface VtuberDetail {
     id: string;
     name: string;
@@ -113,6 +126,26 @@ export interface VtuberDetail {
     twitch_follower_count: number | null;
     languages: VtuberLang[] | null;
     debut_date: string | null;
+    last_live_at: string | null;
     recommend_count: number;
     categories: VtuberDetailCategory[];
+    subscriber_history: SubscriberHistory;
+}
+
+// 現正直播（/api/livestreams）— 由 cron 整表 swap 寫入，全部都是 live 中
+export interface Livestream {
+    id: string;
+    title: string | null;
+    video_url: string;
+    thumbnail_url: string | null;
+    platform: 'twitch' | 'youtube';
+    start_time: string | null;       // Twitch 有；YouTube 為 null
+    viewer_count: number | null;     // Twitch 有；YouTube 為 null
+    vtuber: {
+        id: string;
+        name: string;
+        img_url: string | null;
+        youtube_channel_id: string | null;
+        twitch_channel_id: string | null;
+    } | null;
 }

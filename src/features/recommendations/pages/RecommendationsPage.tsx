@@ -14,12 +14,14 @@ import { useRecommendations } from '../hooks';
 import { RecommendationCard } from '../components/RecommendationCard';
 import { RecommendDialog } from '../components/RecommendDialog';
 import { CategoryFilterBar } from '../components/CategoryFilterBar';
+import { LiveNowCarousel } from '../components/LiveNowCarousel';
+import { useForYou } from '../useForYou';
 import { formatRecommendError } from '../apiClient';
 import { Button } from '../../../components/ui/button';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { SEO } from '../../../components/SEO';
-import { ArrowLeft, Heart, Trophy, AlertTriangle, Inbox, Flame, Clock, Star } from 'lucide-react';
+import { ArrowLeft, Heart, Trophy, AlertTriangle, Inbox, Flame, Clock, Star, Sparkles } from 'lucide-react';
 import type { RecommendSort, RecommendationAggregate, RecommendTarget } from '../types';
 
 const TOP_RANKING_COUNT = 3;
@@ -29,7 +31,7 @@ export function RecommendationsPage() {
     const openModal = useUIStore(s => s.openModal);
     const { isLoggedIn } = useAuthContext();
 
-    const [sort, setSort] = useState<RecommendSort>('daily');
+    const [sort, setSort] = useState<RecommendSort | 'for-you'>('all-time');
     const [categorySlug, setCategorySlug] = useState<string | null>(null);
     const [loginOpen, setLoginOpen] = useState(false);
     const [recommendTarget, setRecommendTarget] = useState<RecommendTarget | null>(null);
@@ -38,11 +40,14 @@ export function RecommendationsPage() {
         setRecommendTarget(target);
     };
 
+    const isForYou = sort === 'for-you';
     const { data, isLoading, isError, error, refetch } = useRecommendations({
-        sort,
+        sort: isForYou ? 'all-time' : sort,
         category: categorySlug,
         limit: 60,
+        enabled: !isForYou,
     });
+    const forYou = useForYou(isForYou);
 
     // 只 aggregate 模式有 podium;latest 模式不顯示 podium
     const isAggregate = sort === 'daily' || sort === 'all-time';
@@ -90,6 +95,9 @@ export function RecommendationsPage() {
             </header>
 
             <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+                {/* 現正直播 Hero（無直播時自動隱藏，不佔版面） */}
+                <LiveNowCarousel />
+
                 {/* Sort tabs */}
                 <div className="flex items-center gap-2 flex-wrap">
                     <SortTab
@@ -109,6 +117,12 @@ export function RecommendationsPage() {
                         onClick={() => setSort('latest')}
                         icon={<Clock className="w-3.5 h-3.5" />}
                         label="最新留言"
+                    />
+                    <SortTab
+                        active={sort === 'for-you'}
+                        onClick={() => setSort('for-you')}
+                        icon={<Sparkles className="w-3.5 h-3.5" />}
+                        label="為你推薦"
                     />
                 </div>
 
@@ -160,10 +174,13 @@ export function RecommendationsPage() {
                     </section>
                 )}
 
+                {/* 為你推薦分頁 */}
+                {isForYou && <ForYouSection forYou={forYou} onRecommendClick={handleRecommendClick} />}
+
                 {/* Latest mode placeholder(V1 簡化:留言流目前只當 admin debug 用) */}
-                {!isAggregate && (
+                {sort === 'latest' && (
                     <div className="py-12 text-center text-zinc-500 text-sm">
-                        最新留言模式建置中,先看「今日熱門」吧
+                        最新留言模式建置中,先看「全時段」吧
                     </div>
                 )}
 
@@ -244,5 +261,62 @@ function EmptyState({ title, hint }: { title: string; hint: string }) {
             <p className="text-sm text-zinc-300">{title}</p>
             <p className="text-xs text-zinc-500 max-w-sm">{hint}</p>
         </div>
+    );
+}
+
+// 為你推薦分頁：依本地收藏推薦相似 vtuber（複用 RecommendationCard）
+function ForYouSection({
+    forYou,
+    onRecommendClick,
+}: {
+    forYou: ReturnType<typeof useForYou>;
+    onRecommendClick: (target: RecommendTarget) => void;
+}) {
+    if (!forYou.hasFavorites) {
+        return (
+            <EmptyState
+                title="先收藏幾位 VTuber 吧"
+                hint="把你喜歡的 VTuber 加入收藏,這裡就會推薦風格相似的其他實況主!"
+            />
+        );
+    }
+    if (forYou.isLoading) {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                    <Skeleton key={i} className="h-32 bg-zinc-900" />
+                ))}
+            </div>
+        );
+    }
+    if (forYou.isError) {
+        return (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/25">
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <p className="text-[13px] text-red-400">載入失敗:{formatRecommendError(forYou.error)}</p>
+            </div>
+        );
+    }
+    const items = forYou.data?.items ?? [];
+    if (items.length === 0) {
+        return (
+            <EmptyState
+                title="暫時沒有相似推薦"
+                hint="你收藏的 VTuber 還沒有足夠的同類資料,多收藏幾位或晚點再來看看!"
+            />
+        );
+    }
+    return (
+        <section>
+            <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-violet-400" />
+                <h2 className="text-sm font-semibold text-zinc-200">根據你的收藏推薦</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {items.map(it => (
+                    <RecommendationCard key={it.vtuber_id} item={it} onRecommendClick={onRecommendClick} />
+                ))}
+            </div>
+        </section>
     );
 }

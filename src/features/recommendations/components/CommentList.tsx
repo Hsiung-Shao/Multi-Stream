@@ -5,22 +5,12 @@
 
 import { useMemo } from 'react';
 import { useRecommendationComments } from '../hooks';
+import { formatRelativeTime } from '../timeFormat';
 import { Loader2, MessageSquare } from 'lucide-react';
 
 interface Props {
     vtuberId: string;
     enabled: boolean;  // 摺疊狀態用,只有展開時才 fetch
-}
-
-function formatRelativeTime(iso: string): string {
-    const t = new Date(iso).getTime();
-    if (Number.isNaN(t)) return '';
-    const diff = (Date.now() - t) / 1000;
-    if (diff < 60) return '剛剛';
-    if (diff < 3600) return `${Math.floor(diff / 60)} 分鐘前`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} 小時前`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)} 天前`;
-    return new Date(iso).toLocaleDateString('zh-TW');
 }
 
 export function CommentList({ vtuberId, enabled }: Props) {

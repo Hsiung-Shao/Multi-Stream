@@ -23,6 +23,7 @@ import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
 import { select, insert } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
+import { fetchVtuberMeta } from '../../lib/vtuber-meta.js';
 import {
     validateRecommendInput,
     trimStr,
@@ -303,19 +304,10 @@ export async function onRequestGet(context) {
 
     items = items.slice(0, limit);
 
-    // 拉這批 vtuber metadata(name / img / channel ids / counts)讓前端不需二次 fetch
+    // 拉這批 vtuber metadata + 訂閱變化（#34）讓前端不需二次 fetch
     if (items.length > 0) {
-        const vtuberIds = items.map(it => it.vtuber_id);
-        const inClause = vtuberIds.map(id => encodeURIComponent(id)).join(',');
-        const vRes = await select(
-            env,
-            `vtubers?id=in.(${inClause})&select=id,name,img_url,nationality,activity,youtube_channel_id,youtube_subscriber_count,twitch_channel_id,twitch_follower_count,group_id,languages`,
-        );
-        const vMap = new Map();
-        if (vRes.ok && Array.isArray(vRes.data)) {
-            for (const v of vRes.data) vMap.set(v.id, v);
-        }
-        items = items.map(it => ({ ...it, vtuber: vMap.get(it.vtuber_id) || null }));
+        const metaMap = await fetchVtuberMeta(env, items.map(it => it.vtuber_id));
+        items = items.map(it => ({ ...it, vtuber: metaMap.get(it.vtuber_id) || null }));
     }
 
     return jsonResponse(

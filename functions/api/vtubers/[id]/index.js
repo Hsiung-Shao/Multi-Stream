@@ -30,6 +30,7 @@ const VTUBER_FIELDS = [
     'twitch_follower_count',
     'languages',
     'debut_date',
+    'last_live_at',
 ].join(',');
 
 export async function onRequestGet(context) {
@@ -44,11 +45,13 @@ export async function onRequestGet(context) {
         return jsonResponse({ ok: false, error: 'invalid_id' }, 400, request);
     }
 
-    // 並行 3 個 fetch(主 / count / categories)
-    const [vtuberRes, recRes, tagsRes] = await Promise.all([
+    // 並行 4 個 fetch(主 / count / categories / 訂閱歷史)
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString();
+    const [vtuberRes, recRes, tagsRes, histRes] = await Promise.all([
         select(env, `vtubers?id=eq.${encodeURIComponent(id)}&select=${VTUBER_FIELDS}&limit=1`),
         select(env, `vtuber_recommendations?vtuber_id=eq.${encodeURIComponent(id)}&select=id`),
         select(env, `vtuber_category_tags?vtuber_id=eq.${encodeURIComponent(id)}&select=category:vtuber_categories(id,name,slug,status)`),
+        select(env, `vtuber_subscriber_history?vtuber_id=eq.${encodeURIComponent(id)}&recorded_at=gte.${encodeURIComponent(ninetyDaysAgo)}&select=platform,subscriber_count,recorded_at&order=recorded_at.asc`),
     ]);
 
     if (!vtuberRes.ok) {
@@ -85,6 +88,16 @@ export async function onRequestGet(context) {
         });
     }
 
+    // 訂閱歷史(近 90 天)分平台序列,給詳情頁畫訂閱數變化圖
+    const subscriber_history = { twitch: [], youtube: [] };
+    if (histRes.ok && Array.isArray(histRes.data)) {
+        for (const h of histRes.data) {
+            if (h.platform === 'twitch' || h.platform === 'youtube') {
+                subscriber_history[h.platform].push({ recorded_at: h.recorded_at, subscriber_count: h.subscriber_count });
+            }
+        }
+    }
+
     return jsonResponse(
         {
             ok: true,
@@ -92,6 +105,7 @@ export async function onRequestGet(context) {
                 ...vtuberRow,
                 recommend_count: recommendCount,
                 categories,
+                subscriber_history,
             },
         },
         200,

@@ -15,6 +15,7 @@ import { Skeleton } from '../../../components/ui/skeleton';
 import { Button } from '../../../components/ui/button';
 import { toast } from 'sonner';
 import { favoritesService } from '../../favorites/FavoritesService';
+import { formatRelativeTime } from '../timeFormat';
 import { LANG_LABEL } from '../../../lib/locale';
 import {
     DropdownMenu,
@@ -22,6 +23,8 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
 } from '../../../components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/ui/tabs';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
     ArrowLeft,
     Heart,
@@ -32,7 +35,7 @@ import {
     Tag,
     MessageSquare,
 } from 'lucide-react';
-import type { RecommendTarget } from '../types';
+import type { RecommendTarget, VtuberDetail, SubscriberHistoryPoint } from '../types';
 
 function formatNumber(n: number | null | undefined): string {
     if (n == null) return '—';
@@ -189,7 +192,7 @@ export function VtuberDetailPage() {
                 {v && (
                     <>
                         {/* Hero:avatar + name + meta */}
-                        <section className="flex items-start gap-4 sm:gap-6">
+                        <section className="flex items-start gap-4 sm:gap-6 animate-fade-in-up">
                             <div className="shrink-0">
                                 {v.img_url ? (
                                     <img
@@ -226,18 +229,11 @@ export function VtuberDetailPage() {
                                 </div>
 
                                 <div className="flex items-center gap-3 text-xs text-zinc-500 flex-wrap">
-                                    {v.twitch_follower_count != null && (
-                                        <span title={`追隨者 ${v.twitch_follower_count.toLocaleString()}`}>
-                                            Twitch 追隨 {formatNumber(v.twitch_follower_count)}
-                                        </span>
-                                    )}
-                                    {v.youtube_subscriber_count != null && (
-                                        <span title={`訂閱者 ${v.youtube_subscriber_count.toLocaleString()}`}>
-                                            YouTube 訂閱 {formatNumber(v.youtube_subscriber_count)}
-                                        </span>
-                                    )}
                                     {v.nationality && v.nationality !== 'OTHER' && (
                                         <span>{v.nationality}</span>
+                                    )}
+                                    {v.last_live_at && (
+                                        <span title="上次偵測到直播的時間">上次直播 {formatRelativeTime(v.last_live_at)}</span>
                                     )}
                                     {v.activity !== 'active' && (
                                         <span className="text-zinc-600">{v.activity === 'graduate' ? '已畢業' : '準備中'}</span>
@@ -275,8 +271,13 @@ export function VtuberDetailPage() {
                             </div>
                         </section>
 
+                        {/* 平台數據:雙平台 tab + 訂閱數視覺化 */}
+                        <section className="animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+                            <PlatformStats v={v} />
+                        </section>
+
                         {/* Actions */}
-                        <section className="flex items-center gap-2 flex-wrap">
+                        <section className="flex items-center gap-2 flex-wrap animate-fade-in-up" style={{ animationDelay: '160ms' }}>
                             <button
                                 onClick={handleRecommendClick}
                                 className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm bg-pink-500/10 text-pink-300 border border-pink-500/30 hover:bg-pink-500/20 transition-colors"
@@ -339,7 +340,7 @@ export function VtuberDetailPage() {
                         </section>
 
                         {/* Comments */}
-                        <section>
+                        <section className="animate-fade-in-up" style={{ animationDelay: '240ms' }}>
                             <div className="flex items-center gap-2 mb-3">
                                 <MessageSquare className="w-4 h-4 text-zinc-400" />
                                 <h3 className="text-sm font-semibold text-zinc-200">推薦留言</h3>
@@ -359,5 +360,89 @@ export function VtuberDetailPage() {
                 onRequestLogin={() => setLoginOpen(true)}
             />
         </div>
+    );
+}
+
+const TWITCH_COLOR = '#a78bfa';
+const YOUTUBE_COLOR = '#f87171';
+
+// 平台數據:雙平台 tab 切換;單平台直接顯示。各含訂閱數大字 + 變化折線圖。
+function PlatformStats({ v }: { v: VtuberDetail }) {
+    const hasTwitch = !!v.twitch_channel_id;
+    const hasYoutube = !!v.youtube_channel_id;
+
+    if (hasTwitch && hasYoutube) {
+        return (
+            <Tabs defaultValue="twitch">
+                <TabsList className="bg-zinc-900 border border-zinc-800">
+                    <TabsTrigger value="twitch">Twitch</TabsTrigger>
+                    <TabsTrigger value="youtube">YouTube</TabsTrigger>
+                </TabsList>
+                <TabsContent value="twitch" className="mt-3">
+                    <PlatformPanel count={v.twitch_follower_count} label="Twitch 追隨者" history={v.subscriber_history.twitch} color={TWITCH_COLOR} />
+                </TabsContent>
+                <TabsContent value="youtube" className="mt-3">
+                    <PlatformPanel count={v.youtube_subscriber_count} label="YouTube 訂閱者" history={v.subscriber_history.youtube} color={YOUTUBE_COLOR} />
+                </TabsContent>
+            </Tabs>
+        );
+    }
+    if (hasTwitch) {
+        return <PlatformPanel count={v.twitch_follower_count} label="Twitch 追隨者" history={v.subscriber_history.twitch} color={TWITCH_COLOR} />;
+    }
+    if (hasYoutube) {
+        return <PlatformPanel count={v.youtube_subscriber_count} label="YouTube 訂閱者" history={v.subscriber_history.youtube} color={YOUTUBE_COLOR} />;
+    }
+    return null;
+}
+
+function PlatformPanel({
+    count,
+    label,
+    history,
+    color,
+}: {
+    count: number | null;
+    label: string;
+    history: SubscriberHistoryPoint[];
+    color: string;
+}) {
+    return (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4 space-y-3">
+            <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-zinc-100 tabular-nums">{formatNumber(count)}</span>
+                <span className="text-xs text-zinc-500">{label}</span>
+            </div>
+            <SubscriberChart data={history} color={color} />
+        </div>
+    );
+}
+
+function SubscriberChart({ data, color }: { data: SubscriberHistoryPoint[]; color: string }) {
+    if (data.length < 2) {
+        return (
+            <div className="flex items-center justify-center h-[160px] text-xs text-zinc-600 border border-dashed border-zinc-800 rounded-lg">
+                訂閱數變化累積中(需至少 2 筆快照)
+            </div>
+        );
+    }
+    const chartData = data.map(d => ({
+        date: new Date(d.recorded_at).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' }),
+        count: d.subscriber_count,
+    }));
+    return (
+        <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickLine={false} />
+                <YAxis stroke="#71717a" fontSize={10} tickLine={false} domain={['auto', 'auto']} tickFormatter={(n) => formatNumber(n)} width={48} />
+                <Tooltip
+                    contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: '#a1a1aa' }}
+                    formatter={(value: number) => [value.toLocaleString(), '訂閱']}
+                />
+                <Line type="monotone" dataKey="count" stroke={color} strokeWidth={2} dot={{ r: 2.5, fill: color }} activeDot={{ r: 4 }} />
+            </LineChart>
+        </ResponsiveContainer>
     );
 }

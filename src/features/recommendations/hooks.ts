@@ -25,7 +25,7 @@ export interface RecommendationsListResponse {
     items: RecommendationAggregate[] | RecommendationLatest[];
 }
 
-export function useRecommendations(params: { sort: RecommendSort; category?: string | null; limit?: number }) {
+export function useRecommendations(params: { sort: RecommendSort; category?: string | null; limit?: number; enabled?: boolean }) {
     const search = new URLSearchParams();
     search.set('sort', params.sort);
     if (params.category) search.set('category', params.category);
@@ -34,6 +34,7 @@ export function useRecommendations(params: { sort: RecommendSort; category?: str
         queryKey: [RECOMMEND_LIST_KEY, params.sort, params.category || null, params.limit ?? 24],
         queryFn: () => apiFetch<RecommendationsListResponse>(`/api/recommendations?${search.toString()}`),
         staleTime: 30_000,
+        enabled: params.enabled ?? true,
     });
 }
 

@@ -3,8 +3,9 @@
 // 用法:在 RecommendationsPage grid 內 render 每個 aggregate
 
 import { useState, useMemo } from 'react';
-import { Heart, MessageSquare, Star, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Heart, MessageSquare, Star, ChevronDown, ChevronUp, Loader2, Radio, Clock } from 'lucide-react';
 import { CommentList } from './CommentList';
+import { formatRelativeTime } from '../timeFormat';
 import type { RecommendationAggregate, RecommendTarget } from '../types';
 import { toast } from 'sonner';
 import { favoritesService } from '../../favorites/FavoritesService';
@@ -74,6 +75,7 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
 
     const followerCount = platform === 'twitch' ? v?.twitch_follower_count : v?.youtube_subscriber_count;
     const followerLabel = platform === 'twitch' ? '追隨' : '訂閱';
+    const primaryDelta = platform === 'twitch' ? v?.twitch_follower_delta : v?.youtube_subscriber_delta;
 
     // 內部 helper:加單筆收藏,回傳是否成功(給 'both' 模式 short-circuit 用)
     const addOne = async (p: 'twitch' | 'youtube'): Promise<boolean> => {
@@ -178,8 +180,13 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
                     </div>
                     <div className="flex items-center gap-3 text-[11px] text-zinc-500 mt-1 flex-wrap">
                         {followerCount != null && (
-                            <span title={`${followerLabel} ${followerCount.toLocaleString()}`}>
+                            <span className="inline-flex items-center gap-1" title={`${followerLabel} ${followerCount.toLocaleString()}`}>
                                 {followerLabel} {formatNumber(followerCount)}
+                                {primaryDelta != null && primaryDelta !== 0 && (
+                                    <span className={primaryDelta > 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                        {primaryDelta > 0 ? '↑' : '↓'}{formatNumber(Math.abs(primaryDelta))}
+                                    </span>
+                                )}
                             </span>
                         )}
                         {v?.nationality && v.nationality !== 'OTHER' && (
@@ -201,6 +208,24 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
                                     {LANG_LABEL[code]}
                                 </span>
                             ))}
+                        </div>
+                    )}
+
+                    {/* #34 活躍資訊：上次直播 / 最近活動 */}
+                    {(v?.last_live_at || item.latest_at) && (
+                        <div className="flex items-center gap-2.5 flex-wrap mt-1.5 text-[10px] text-zinc-500">
+                            {v?.last_live_at && (
+                                <span className="inline-flex items-center gap-0.5" title="上次偵測到直播的時間">
+                                    <Radio className="w-2.5 h-2.5 text-red-400/70" />
+                                    {formatRelativeTime(v.last_live_at)}直播
+                                </span>
+                            )}
+                            {item.latest_at && (
+                                <span className="inline-flex items-center gap-0.5" title="最近一次被推薦的時間">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {formatRelativeTime(item.latest_at)}推薦
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
