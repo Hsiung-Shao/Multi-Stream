@@ -17,8 +17,8 @@
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { select, update, insert } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
+import { getTwitchAppToken } from '../../lib/twitch-token.js';
 
-const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const TWITCH_USERS_URL = 'https://api.twitch.tv/helix/users';
 const TWITCH_FOLLOWERS_URL = 'https://api.twitch.tv/helix/channels/followers';
 const YT_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
@@ -27,21 +27,7 @@ const YT_BATCH = 50;       // channels.list 一次最多 50 個 id
 const TWITCH_USER_BATCH = 100;
 
 // ===== Twitch =====
-
-async function getTwitchAppToken(env) {
-    const params = new URLSearchParams({
-        client_id: env.TWITCH_CLIENT_ID,
-        client_secret: env.TWITCH_CLIENT_SECRET,
-        grant_type: 'client_credentials',
-    });
-    const res = await fetch(TWITCH_TOKEN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
-    });
-    if (!res.ok) throw new Error(`twitch token ${res.status}`);
-    return (await res.json()).access_token;
-}
+// getTwitchAppToken 改用 lib/twitch-token.js（KV 快取，與 sync-livestreams 共用）
 
 // login（小寫）→ broadcaster_id
 async function fetchTwitchUserIds(env, token, logins) {

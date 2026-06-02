@@ -26,6 +26,7 @@ import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { select } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
 import { detectYouTubeLiveOgBatch } from '../../lib/youtube-live-og.js';
+import { getTwitchAppToken } from '../../lib/twitch-token.js';
 
 // 直接呼叫 Supabase REST (DELETE / batch INSERT) — supabase-server.js 沒對應 helper
 async function supabaseRequest(env, path, init = {}) {
@@ -47,26 +48,10 @@ async function supabaseRequest(env, path, init = {}) {
 }
 
 const TWITCH_BATCH_SIZE = 100; // helix /streams 限 100 user_login per call
-const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const TWITCH_STREAMS_URL = 'https://api.twitch.tv/helix/streams';
 
 // ===== Twitch =====
-
-async function getTwitchAppToken(env) {
-    const params = new URLSearchParams({
-        client_id: env.TWITCH_CLIENT_ID,
-        client_secret: env.TWITCH_CLIENT_SECRET,
-        grant_type: 'client_credentials',
-    });
-    const res = await fetch(TWITCH_TOKEN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
-    });
-    if (!res.ok) throw new Error(`Twitch token: ${res.status}`);
-    const data = await res.json();
-    return data.access_token;
-}
+// getTwitchAppToken 改用 lib/twitch-token.js（KV 快取，省每次 sync 重拿 token）
 
 /**
  * 撈當下 live 的 Twitch streams
