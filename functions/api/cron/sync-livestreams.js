@@ -25,7 +25,7 @@
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { select } from '../../lib/supabase-server.js';
 import { logError, logInfo } from '../../lib/logger.js';
-import { detectYouTubeLiveBatch } from '../../lib/youtube-live-detect.js';
+import { detectYouTubeLiveOgBatch } from '../../lib/youtube-live-og.js';
 
 // 直接呼叫 Supabase REST (DELETE / batch INSERT) — supabase-server.js 沒對應 helper
 async function supabaseRequest(env, path, init = {}) {
@@ -173,7 +173,7 @@ export async function onRequestPost(context) {
         let liveYouTube = new Map();
         if (youtubeChannelIds.length > 0) {
             try {
-                liveYouTube = await detectYouTubeLiveBatch(youtubeChannelIds, 5);
+                liveYouTube = await detectYouTubeLiveOgBatch(youtubeChannelIds, 5);
             } catch (err) {
                 await logError(env, 'sync-livestreams', 'youtube fetch failed', {
                     metadata: { error: String(err).slice(0, 500) },
