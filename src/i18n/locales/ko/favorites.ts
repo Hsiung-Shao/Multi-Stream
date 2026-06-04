@@ -12,6 +12,11 @@ export default {
   categoryManagement: '즐겨찾기 리스트',
   manageCategories: '리스트 관리',
 
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: '필터',
+  sidebarLiveNow: '라이브 중',
+  sidebarCategoryGroup: '카테고리',
+
   // Quick Filters
   all: '전체',
 

@@ -12,6 +12,11 @@ export default {
   categoryManagement: 'お気に入りリスト',
   manageCategories: 'リスト管理',
 
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: 'フィルター',
+  sidebarLiveNow: '配信中',
+  sidebarCategoryGroup: 'カテゴリー',
+
   // Quick Filters
   all: 'すべて',
 

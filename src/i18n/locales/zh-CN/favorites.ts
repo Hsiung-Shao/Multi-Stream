@@ -12,6 +12,11 @@ export default {
   categoryManagement: '收藏清单',
   manageCategories: '管理清单',
 
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: '过滤',
+  sidebarLiveNow: '正在直播',
+  sidebarCategoryGroup: '分类管理',
+
   // Quick Filters
   all: '全部',
 

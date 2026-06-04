@@ -1,9 +1,21 @@
-import { Play, Edit2, Trash2, Youtube, Twitch, Heart } from 'lucide-react';
+import { Play, Edit2, Trash2, Youtube, Heart } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { cn } from '../../../components/ui/utils';
 import { useTranslation } from 'react-i18next';
 import type { FavoriteStream, Tag, FavoriteCategory as Category } from '../types';
+
+/** Twitch 品牌實心 icon(對齊設計 FMRow 的 BrandTwitch,非 lucide 線框版) */
+function BrandTwitch({ className }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+            <path d="M2.149 0L.523 4.119v15.36h5.731V22h3.224l2.539-2.521h4.064L23.477 13.165V0H2.149zM21.176 12.067l-3.825 3.802h-3.825l-2.539 2.522v-2.522h-4.359V2.057h14.548v10.01z M19.149 5.529h-2.244v6.539h2.244V5.529z M13.298 5.529h-2.244v6.539h2.244V5.529z" />
+        </svg>
+    );
+}
+
+/** 平台 tag 不在 chip 區重複顯示(平台已由左側品牌 icon 表達,對齊設計) */
+const PLATFORM_TAG_NAMES = new Set(['twitch', 'youtube']);
 
 interface FavoriteListItemProps {
     favorite: FavoriteStream;
@@ -35,36 +47,48 @@ export function FavoriteListItem({
 }: FavoriteListItemProps) {
     const { t } = useTranslation(['favorites', 'common']);
     const category = categories.find(c => c.id === favorite.categoryId);
-    const itemTags = tags.filter(tag => favorite.tagIds?.includes(tag.id));
+    const itemTags = tags.filter(tag =>
+        favorite.tagIds?.includes(tag.id) && !PLATFORM_TAG_NAMES.has(tag.name.trim().toLowerCase())
+    );
+    const isYouTube = favorite.platform === 'youtube';
 
     return (
         <div className="p-3 rounded-xl border border-border bg-card hover:border-purple-500/40 transition-all duration-200 group flex items-center gap-3">
             <Checkbox
                 checked={isSelected}
                 onCheckedChange={(checked: boolean | 'indeterminate') => onSelect(favorite.id, !!checked)}
-                className="border-border data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                className="border-border data-[state=checked]:bg-[#9333ea] data-[state=checked]:border-[#9333ea] data-[state=checked]:text-white"
             />
 
-            {/* Platform Icon */}
+            {/* Platform Icon — 28x28 品牌色塊方框(對齊設計 FMRow) */}
             <div className="flex-shrink-0">
-                {favorite.platform === 'twitch' ? (
-                    <div className="size-7 rounded-lg flex items-center justify-center bg-purple-500/10 text-[#9146ff]">
-                        <Twitch className="size-4" />
+                {isYouTube ? (
+                    <div
+                        className="size-7 rounded-lg flex items-center justify-center"
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#FF0000' }}
+                    >
+                        <Youtube className="size-3.5" />
                     </div>
                 ) : (
-                    <div className="size-7 rounded-lg flex items-center justify-center bg-red-500/10 text-[#FF0000]">
-                        <Youtube className="size-4" />
+                    <div
+                        className="size-7 rounded-lg flex items-center justify-center"
+                        style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#9146FF' }}
+                    >
+                        <BrandTwitch className="size-3.5" />
                     </div>
                 )}
             </div>
 
-            {/* Live Indicator */}
+            {/* Live Indicator — 8x8 圓點 + 光環 + pulse(對齊設計 FMRow) */}
             {showLiveIndicator && favorite.isLive !== null && (
                 <div
-                    className={`w-2 h-2 rounded-full ring-4 ${favorite.isLive === true
-                        ? 'bg-green-500 ring-green-500/20 animate-pulse'
-                        : 'bg-muted-foreground/60 ring-muted-foreground/15'
-                        }`}
+                    className={`size-2 rounded-full flex-shrink-0 ${favorite.isLive === true ? 'animate-pulse' : ''}`}
+                    style={{
+                        background: favorite.isLive === true ? '#10b981' : '#6b7280',
+                        boxShadow: favorite.isLive === true
+                            ? '0 0 0 4px rgba(16,185,129,0.15)'
+                            : '0 0 0 4px rgba(107,114,128,0.15)',
+                    }}
                     title={favorite.isLive === true ? t('live') : t('offline')}
                 />
             )}
@@ -113,7 +137,7 @@ export function FavoriteListItem({
                         variant="ghost"
                         onClick={() => onLoad(favorite.id)}
                         title={t('addStream')}
-                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-purple-500 hover:bg-purple-500/10 dark:hover:text-purple-400"
+                        className="h-8 w-8 rounded-lg text-[#c084fc] hover:text-[#c084fc] hover:bg-purple-500/10"
                     >
                         <Play className="size-4" />
                     </Button>
@@ -136,7 +160,7 @@ export function FavoriteListItem({
                     variant="ghost"
                     onClick={() => onDelete(favorite.id)}
                     title={t('delete')}
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 dark:hover:text-red-400"
+                    className="h-8 w-8 rounded-lg text-[#f87171] hover:text-[#f87171] hover:bg-red-500/10"
                 >
                     <Trash2 className="size-4" />
                 </Button>

@@ -12,6 +12,11 @@ export default {
   categoryManagement: 'Favorites Lists',
   manageCategories: 'Manage Lists',
 
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: 'Filters',
+  sidebarLiveNow: 'Live Now',
+  sidebarCategoryGroup: 'Categories',
+
   // Quick Filters
   all: 'All',
 

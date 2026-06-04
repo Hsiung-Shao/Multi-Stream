@@ -102,9 +102,9 @@ export function FavoritesSidebar({
                         </div>
                     </div>
 
-                    {/* Quick Filters */}
+                    {/* Quick Filters — 設計分區「過濾」 */}
                     <div className={sectionClass}>
-                        <div className={labelClass}>{t('tags:filterTitle') || '過濾'}</div>
+                        <div className={labelClass}>{t('sidebarFilter')}</div>
                         <div
                             className={navItemClass(activeFilter === 'all' && activeTab === 'favorites')}
                             onClick={() => { onNavigate('favorites'); onFilterChange('all'); }}
@@ -119,16 +119,19 @@ export function FavoritesSidebar({
                             onClick={() => { onNavigate('favorites'); onFilterChange('live'); }}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="size-2 rounded-full bg-red-500 animate-pulse" />
-                                <span className="text-sm">{t('tags:isLive') || '正在直播'}</span>
+                                <span
+                                    className="size-2 rounded-full flex-shrink-0 animate-pulse"
+                                    style={{ background: '#ef4444', boxShadow: '0 0 6px #ef4444' }}
+                                />
+                                <span className="text-sm">{t('sidebarLiveNow')}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Categories */}
+                    {/* Categories — 設計分區「分類管理」(作為 filter) */}
                     <div className={sectionClass}>
                         <div className="flex items-center justify-between px-3 mb-2 group">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">{t('categoryManagement')}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">{t('sidebarCategoryGroup')}</span>
                         </div>
                         <div className="space-y-1">
                             {categories.map(cat => (
