@@ -1,51 +1,45 @@
 import { useUIStore } from '../store/useUIStore';
-import { ArrowLeft } from 'lucide-react';
+import { Button } from './ui/button';
+import { Home, MonitorPlay } from 'lucide-react';
 
 export function NotFoundPage() {
-    const theme = useUIStore(s => s.theme);
     const setPage = useUIStore(s => s.setPage);
 
     return (
-        <div className={`min-h-screen flex flex-col items-center justify-center p-4 ${theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-            <div className="max-w-md w-full text-center space-y-8">
-                {/* Graphic / Icon */}
-                <div className="relative w-32 h-32 mx-auto">
-                    <div className={`absolute inset-0 rounded-full opacity-20 ${theme === 'dark' ? 'bg-indigo-500' : 'bg-indigo-200'} animate-pulse`}></div>
-                    <div className={`relative flex items-center justify-center w-full h-full rounded-full border-4 ${theme === 'dark' ? 'border-gray-800 bg-gray-900' : 'border-white bg-white shadow-lg'}`}>
-                        <span className="text-4xl font-bold text-indigo-500">404</span>
-                    </div>
+        <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background text-foreground p-6">
+            {/* Background blur orb (design BlurOrb) */}
+            <div
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-[20%] -translate-x-1/2 h-[400px] w-[800px] max-w-full rounded-full bg-primary/20 blur-[100px]"
+            />
+
+            <div className="relative z-10 text-center max-w-lg mx-auto">
+                {/* Gradient 404 numeral */}
+                <div className="bg-gradient-to-br from-primary to-purple-400 bg-clip-text text-transparent text-[9rem] md:text-[12rem] font-extrabold leading-none tracking-tighter mb-2">
+                    404
                 </div>
 
-                {/* Text Content */}
-                <div className="space-y-4">
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                        {theme === 'dark' ? <span className="text-white">找不到頁面</span> : <span className="text-gray-900">找不到頁面</span>}
-                    </h1>
-                    <p className={`text-lg ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        抱歉，您欲訪問的頁面不存在，或已被移除。
-                    </p>
-                </div>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
+                    這裡什麼都沒有
+                </h1>
+                <p className="text-base text-muted-foreground leading-relaxed mb-8">
+                    你要找的頁面好像走丟了。也許是輸入錯了網址，也許是頁面已經被搬家。
+                </p>
 
-                {/* Action Button */}
-                <div className="pt-4">
-                    <button
-                        onClick={() => setPage('home')}
-                        className={`
-               inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all duration-200
-               ${theme === 'dark'
-                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30'
-                            }
-             `}
-                    >
-                        <ArrowLeft size={20} />
-                        返回首頁
-                    </button>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                    <Button onClick={() => setPage('home')}>
+                        <Home className="size-4 mr-2" />
+                        回到首頁
+                    </Button>
+                    <Button variant="ghost" onClick={() => setPage('canvas')}>
+                        <MonitorPlay className="size-4 mr-2" />
+                        前往 Canvas
+                    </Button>
                 </div>
             </div>
 
-            {/* Footer Decor */}
-            <div className={`absolute bottom-8 text-sm ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
+            {/* Footer decor */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-sm text-muted-foreground">
                 MultiStream Hub
             </div>
         </div>

@@ -24,7 +24,6 @@ export function InstructionsPage() {
     const { t } = useTranslation('tutorial');
     const { t: tCommon } = useTranslation('common');
     const setPage = useUIStore(s => s.setPage);
-    const theme = useUIStore(s => s.theme);
 
     const features = [
         {
@@ -68,7 +67,7 @@ export function InstructionsPage() {
     const faqs = ['q1', 'q2', 'q3', 'q4'];
 
     return (
-        <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="min-h-screen bg-background text-foreground">
             <SEO
                 title={t('seo:instructions.title')}
                 description={t('seo:instructions.description')}

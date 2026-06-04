@@ -47,7 +47,7 @@ export function FAQPage() {
                 pathWithoutLang="/faq"
             />
             {/* Header */}
-            <header className="sticky top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
+            <header className="sticky top-0 w-full z-50 border-b border-border bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button
@@ -82,10 +82,10 @@ export function FAQPage() {
                     <p className="text-muted-foreground">{t('faq:header_subtitle' as any)}</p>
                 </div>
 
-                <div className="bg-card/50 rounded-xl border border-white/5 p-6 backdrop-blur-sm">
+                <div className="bg-card rounded-xl border border-border p-6 backdrop-blur-sm">
                     <Accordion type="single" collapsible className="w-full space-y-2">
                         {faqItems.map((item) => (
-                            <AccordionItem key={item} value={item} className="border border-white/5 rounded-lg px-4 data-[state=open]:bg-white/5 transition-colors">
+                            <AccordionItem key={item} value={item} className="border border-border rounded-lg px-4 data-[state=open]:bg-accent/50 transition-colors">
                                 <AccordionTrigger className="hover:no-underline py-4 text-left font-semibold text-lg">
                                     {t(`faq:items.${item}.title` as any)}
                                 </AccordionTrigger>
@@ -156,7 +156,7 @@ function BraveTwitchGuide({ t }: { t: (key: any, options?: any) => string }) {
                                 {t(`faq:items.brave_twitch.${stepKey}` as any)}
                             </span>
                         </div>
-                        <div className="ml-8 rounded-lg overflow-hidden border border-white/10">
+                        <div className="ml-8 rounded-lg overflow-hidden border border-border">
                             <img
                                 src={STEP_IMAGES[index]}
                                 alt={`Step ${index + 1}`}

@@ -2,7 +2,6 @@ import { ArrowLeft, Globe, Sun, Moon, Tv, Grid, MessageCircle, Volume2, Star, Sm
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
 import { logEvent } from '../utils/analytics';
 
 interface AboutPageProps {
@@ -27,14 +26,14 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
   ];
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header Navigation */}
-      <div className={`border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-6 py-4`}>
+      <div className="border-b border-border bg-card/80 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={onBack}
-            className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
+            className="text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="size-4 mr-2" />
             {t('about:backToHome')}
@@ -42,7 +41,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
           <div className="flex items-center gap-2">
             <Select value={locale} onValueChange={(value: string) => i18n.changeLanguage(value)}>
-              <SelectTrigger className={`min-w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
+              <SelectTrigger className="min-w-[140px]">
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -62,7 +61,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 onThemeToggle();
                 logEvent('AboutPage', 'toggle_theme', theme === 'dark' ? 'light' : 'dark');
               }}
-              className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
+              className="text-muted-foreground hover:text-foreground"
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
             </Button>
@@ -83,7 +82,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             </div>
           </div>
 
-          <p className={`max-w-3xl mx-auto text-lg leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className="max-w-3xl mx-auto text-lg leading-relaxed text-muted-foreground">
             {t('about:intro')}
           </p>
         </div>
@@ -91,17 +90,17 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Website Intro Section */}
         <section className="mb-16">
           <div className="flex items-center gap-3 mb-8">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
-              <MessageSquare className={`size-6 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <MessageSquare className="size-6 text-primary" />
             </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about:websiteIntro')}</h2>
+            <h2 className="text-foreground">{t('about:websiteIntro')}</h2>
           </div>
 
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <p className="mb-4 text-muted-foreground">
               {t('about:intro')}
             </p>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+            <p className="text-muted-foreground">
               {t('about:intro2')}
             </p>
           </div>
@@ -109,13 +108,12 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* Main Features */}
         <section className="mb-16">
-          <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+          <h2 className="mb-8 text-center text-foreground">
             {t('about:featuresTitle')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FeatureCard
-              theme={theme}
               icon={<Tv className="size-6" />}
               title={t('about:feature1.title')}
               description={t('about:feature1.description')}
@@ -124,35 +122,30 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Grid className="size-6" />}
               title={t('about:feature2.title')}
               description={t('about:feature2.description')}
             />
 
             <FeatureCard
-              theme={theme}
               icon={<MessageCircle className="size-6" />}
               title={t('about:feature3.title')}
               description={t('about:feature3.description')}
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Volume2 className="size-6" />}
               title={t('about:feature4.title')}
               description={t('about:feature4.description')}
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Star className="size-6" />}
               title={t('about:feature5.title')}
               description={t('about:feature5.description')}
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Smartphone className="size-6" />}
               title={t('about:feature6.title')}
               description={t('about:feature6.description')}
@@ -160,7 +153,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Languages className="size-6" />}
               title={t('about:feature7.title')}
               description={t('about:feature7.description')}
@@ -168,7 +160,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Shield className="size-6" />}
               title={t('about:feature8.title')}
               description={t('about:feature8.description')}
@@ -176,7 +167,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Search className="size-6" />}
               title={t('about:feature9.title')}
               description={t('about:feature9.description')}
@@ -184,7 +174,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Radio className="size-6" />}
               title={t('about:feature10.title')}
               description={t('about:feature10.description')}
@@ -192,14 +181,12 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Youtube className="size-6" />}
               title={t('about:feature11.title')}
               description={t('about:feature11.description')}
             />
 
             <FeatureCard
-              theme={theme}
               icon={<Zap className="size-6" />}
               title={t('about:feature12.title')}
               description={t('about:feature12.description')}
@@ -207,7 +194,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             />
 
             <FeatureCard
-              theme={theme}
               icon={<RefreshCw className="size-6" />}
               title={t('about:feature13.title')}
               description={t('about:feature13.description')}
@@ -217,41 +203,36 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* Technical Features */}
         <section className="mb-16">
-          <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+          <h2 className="mb-8 text-center text-foreground">
             {t('about:techTitle')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TechFeatureCard
-              theme={theme}
               icon={<Code className="size-6 text-blue-400" />}
               title={t('about:tech1.title')}
               description={t('about:tech1.description')}
             />
 
             <TechFeatureCard
-              theme={theme}
               icon={<Broadcast className="size-6 text-purple-400" />}
               title={t('about:tech2.title')}
               description={t('about:tech2.description')}
             />
 
             <TechFeatureCard
-              theme={theme}
               icon={<Database className="size-6 text-green-400" />}
               title={t('about:tech3.title')}
               description={t('about:tech3.description')}
             />
 
             <TechFeatureCard
-              theme={theme}
               icon={<Globe className="size-6 text-cyan-400" />}
               title={t('about:tech4.title')}
               description={t('about:tech4.description')}
             />
 
             <TechFeatureCard
-              theme={theme}
               icon={<Gauge className="size-6 text-orange-400" />}
               title={t('about:tech5.title')}
               description={t('about:tech5.description')}
@@ -262,20 +243,20 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Creator Info */}
         <section className="mb-16">
           <div className="flex items-center gap-3 mb-8">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
-              <Users className={`size-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <Users className="size-6 text-blue-500" />
             </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about:creatorTitle')}</h2>
+            <h2 className="text-foreground">{t('about:creatorTitle')}</h2>
           </div>
 
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <p className="mb-4 text-muted-foreground">
               {t('about:creatorInfo1')}
             </p>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            <p className="mb-4 text-muted-foreground">
               {t('about:creatorInfo2')}
             </p>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+            <p className="text-muted-foreground">
               {t('about:creatorInfo3')}
             </p>
           </div>
@@ -284,14 +265,14 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* Contact Us */}
         <section className="mb-16">
           <div className="flex items-center gap-3 mb-8">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
-              <MessageSquare className={`size-6 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <MessageSquare className="size-6 text-primary" />
             </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about:contactTitle')}</h2>
+            <h2 className="text-foreground">{t('about:contactTitle')}</h2>
           </div>
 
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <p className="mb-6 text-muted-foreground">
               {t('about:contactIntro')}
             </p>
 
@@ -301,17 +282,14 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logEvent('AboutPage', 'click_social', 'feedback_form')}
-                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
-                  ? 'bg-gray-800 hover:bg-gray-750'
-                  : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
+                className="flex items-start gap-4 p-4 rounded-lg bg-muted hover:bg-accent transition-colors"
               >
-                <Mail className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
+                <Mail className="size-6 flex-shrink-0 text-blue-500" />
                 <div>
-                  <h3 className={`mb-1 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  <h3 className="mb-1 text-foreground">
                     {t('about:feedbackForm')}
                   </h3>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className="text-sm text-muted-foreground">
                     {t('about:feedbackFormDesc')}
                   </p>
                 </div>
@@ -322,17 +300,14 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logEvent('AboutPage', 'click_social', 'discord')}
-                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
-                  ? 'bg-gray-800 hover:bg-gray-750'
-                  : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
+                className="flex items-start gap-4 p-4 rounded-lg bg-muted hover:bg-accent transition-colors"
               >
-                <MessageSquare className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
+                <MessageSquare className="size-6 flex-shrink-0 text-primary" />
                 <div>
-                  <h3 className={`mb-1 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                  <h3 className="mb-1 text-foreground">
                     {t('about:discordCommunity')}
                   </h3>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <p className="text-sm text-muted-foreground">
                     {t('about:discordCommunityDesc')}
                   </p>
                 </div>
@@ -343,18 +318,18 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* Terms of Use */}
         <section className="mb-16">
-          <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+          <h2 className="mb-8 text-foreground">
             {t('about:termsTitle')}
           </h2>
 
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <p className="mb-4 text-muted-foreground">
               {t('about:terms1')}
             </p>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+            <p className="mb-4 text-muted-foreground">
               {t('about:terms2')}
             </p>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+            <p className="text-muted-foreground">
               {t('about:terms3')}
             </p>
           </div>
@@ -362,27 +337,27 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* Privacy & Security */}
         <section className="mb-16">
-          <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+          <h2 className="mb-8 text-foreground">
             {t('about:privacyTitle')}
           </h2>
 
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <p className="mb-4 text-muted-foreground">
               {t('about:privacy1')}
             </p>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className="text-sm text-muted-foreground">
               {t('about:privacy2')}: {t('about:privacyPolicy')}
             </p>
           </div>
         </section>
 
         {/* Footer */}
-        <footer className={`text-center pt-8 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+        <footer className="text-center pt-8 border-t border-border">
           <div className="flex justify-center gap-8 mb-6">
             <Button
               variant="link"
               onClick={onBack}
-              className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
+              className="text-muted-foreground hover:text-foreground hover:underline"
             >
               {t('about:home')}
             </Button>
@@ -390,7 +365,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               <Button
                 variant="link"
                 onClick={onNavigateToPrivacy}
-                className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
+                className="text-muted-foreground hover:text-foreground hover:underline"
               >
                 {t('about:privacyPolicy')}
               </Button>
@@ -400,16 +375,16 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => logEvent('AboutPage', 'click_social', 'feedback_footer')}
-              className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
+              className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground hover:underline"
             >
               {t('about:giveFeedback')}
             </a>
           </div>
 
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
+          <p className="text-sm text-muted-foreground">
             {t('about:copyright')}
           </p>
-          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-500'}`}>
+          <p className="text-sm mt-1 text-muted-foreground">
             {t('about:lastUpdated')}
           </p>
         </footer>
@@ -420,7 +395,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
 // Feature Card Component
 interface FeatureCardProps {
-  theme: 'light' | 'dark';
   icon: React.ReactNode;
   title: string;
   description: string;
@@ -428,7 +402,7 @@ interface FeatureCardProps {
   large?: boolean;
 }
 
-function FeatureCard({ theme, icon, title, description, gradient, large }: FeatureCardProps) {
+function FeatureCard({ icon, title, description, gradient, large }: FeatureCardProps) {
   if (gradient) {
     return (
       <div className={`p-6 rounded-xl bg-gradient-to-br ${gradient} ${large ? 'md:col-span-2 lg:col-span-1' : ''}`}>
@@ -446,17 +420,14 @@ function FeatureCard({ theme, icon, title, description, gradient, large }: Featu
   }
 
   return (
-    <div className={`p-6 rounded-xl border transition-all hover:scale-105 ${theme === 'dark'
-      ? 'bg-gray-900/50 border-gray-800 hover:border-purple-500/50'
-      : 'bg-white border-gray-200 hover:border-purple-400'
-      }`}>
+    <div className="p-6 rounded-xl bg-card border border-border transition-all hover:scale-105 hover:border-primary/50">
       <div className="flex items-start gap-4">
-        <div className={`p-2 rounded-lg flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <div className={theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}>{icon}</div>
+        <div className="p-2 rounded-lg flex-shrink-0 bg-muted">
+          <div className="text-primary">{icon}</div>
         </div>
         <div>
-          <h3 className={`mb-2 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{title}</h3>
-          <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <h3 className="mb-2 text-foreground">{title}</h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         </div>
@@ -467,20 +438,19 @@ function FeatureCard({ theme, icon, title, description, gradient, large }: Featu
 
 // Tech Feature Card Component
 interface TechFeatureCardProps {
-  theme: 'light' | 'dark';
   icon: React.ReactNode;
   title: string;
   description: string;
 }
 
-function TechFeatureCard({ theme, icon, title, description }: TechFeatureCardProps) {
+function TechFeatureCard({ icon, title, description }: TechFeatureCardProps) {
   return (
-    <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
+    <div className="p-6 rounded-xl bg-card border border-border">
       <div className="flex items-start gap-4">
         <div className="flex-shrink-0">{icon}</div>
         <div>
-          <h3 className={`mb-2 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{title}</h3>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <h3 className="mb-2 text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">
             {description}
           </p>
         </div>
