@@ -7,7 +7,7 @@ import { VTuberSearchInput } from '../components/VTuberSearchInput';
 import { VTuberFilterBar } from '../components/VTuberFilterBar';
 import { VTuberGrid } from '../components/VTuberGrid';
 import { VTuberDetailSheet } from '../components/VTuberDetailSheet';
-import { EventCalendarView } from '../components/EventCalendarView';
+import { EventScheduleView } from '../components/EventScheduleView';
 import { CreateEventDialog } from '../components/CreateEventDialog';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { useAuthContext } from '../../../contexts/AuthContext';
@@ -300,7 +300,7 @@ export function VTuberExplorePage({ initialTab = 'recommendations' }: VTuberExpl
             />
           </>
         ) : (
-          <EventCalendarView />
+          <EventScheduleView onCreateEvent={() => setCreateEventOpen(true)} />
         )}
       </main>
       )}
