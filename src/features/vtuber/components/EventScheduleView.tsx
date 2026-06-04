@@ -23,6 +23,11 @@ import type { VTuberEvent, VTuberRecord } from '../types';
 interface EventScheduleViewProps {
   /** ScheduleEmpty 的「推薦 VTuber」CTA → 開既有的建立活動流程 */
   onCreateEvent?: () => void;
+  /**
+   * 'days'（預設）：三日欄框架，活動頁/獨立使用。
+   * 'sidebar'：探索 hub 右側 sticky 側欄，垂直 timeline 變體（照設計稿 EventScheduleSidebar）。
+   */
+  variant?: 'days' | 'sidebar';
 }
 
 // 名稱衍生的穩定色（真實資料無設計 mock 的 color，用 hash 取穩定 hue）。
@@ -164,7 +169,7 @@ function buildSlots(events: VTuberEvent[]): Slot[] {
 
 // ════════════════════════════════════════════════════════════════════════════
 
-export function EventScheduleView({ onCreateEvent }: EventScheduleViewProps) {
+export function EventScheduleView({ onCreateEvent, variant = 'days' }: EventScheduleViewProps) {
   // 抓「今日 00:00 起、未來 7 天」、已核准的活動
   const { from, to } = useMemo(() => {
     const now = new Date();
@@ -193,6 +198,41 @@ export function EventScheduleView({ onCreateEvent }: EventScheduleViewProps) {
     logEvent('VTuber', 'event_detail', event.title);
   };
 
+  // ── 探索 hub：右側 sticky 側欄（垂直 timeline）──────────────────
+  if (variant === 'sidebar') {
+    // 只保留有事件的日框（側欄不顯示空日，避免冗長）
+    const nonEmptyFrames = frames.filter((f) => f.events.length > 0);
+    return (
+      <aside className="lg:sticky lg:top-[76px] h-fit rounded-2xl bg-card border border-border p-3.5">
+        <div className="flex items-center gap-2.5 mb-3.5">
+          <CalendarDays className="w-[18px] h-[18px] text-blue-400" />
+          <h2 className="text-[17px] font-bold tracking-[-0.005em] text-foreground">活動行程表</h2>
+        </div>
+
+        {isLoading ? (
+          <TimelineSkeleton />
+        ) : isError ? (
+          <ScheduleError />
+        ) : events.length === 0 ? (
+          <ScheduleEmpty onCreateEvent={onCreateEvent} />
+        ) : (
+          <div>
+            {nonEmptyFrames.map((frame, i) => (
+              <TimelineDay
+                key={frame.key}
+                frame={frame}
+                last={i === nonEmptyFrames.length - 1}
+                onEventClick={handleEventClick}
+              />
+            ))}
+          </div>
+        )}
+
+        <EventDetailSheet event={selectedEvent} open={detailOpen} onOpenChange={setDetailOpen} />
+      </aside>
+    );
+  }
+
   return (
     <section className="space-y-4">
       {/* SectionHeader */}
@@ -220,6 +260,131 @@ export function EventScheduleView({ onCreateEvent }: EventScheduleViewProps) {
 
       <EventDetailSheet event={selectedEvent} open={detailOpen} onOpenChange={setDetailOpen} />
     </section>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TIMELINE 變體（sidebar）— 依日分組的垂直 timeline，照設計稿 ScheduleTimeline compact
+// ════════════════════════════════════════════════════════════════════════════
+
+const TIMELINE_CAP = 5; // 每日最多顯示幾場，其餘收成「+ 還有 N 場」
+
+function TimelineDay({
+  frame,
+  last,
+  onEventClick,
+}: {
+  frame: DayFrame;
+  last: boolean;
+  onEventClick: (event: VTuberEvent) => void;
+}) {
+  const sorted = useMemo(
+    () =>
+      frame.events
+        .slice()
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()),
+    [frame.events],
+  );
+  const shown = sorted.slice(0, TIMELINE_CAP);
+  const more = sorted.length - TIMELINE_CAP;
+
+  return (
+    <div className={last ? '' : 'mb-4'}>
+      {/* Day header */}
+      <div className="flex items-center gap-2.5 pb-2 mb-2 border-b border-border/60">
+        <span
+          className={`inline-flex items-center justify-center min-w-[42px] h-6 px-2 rounded-md text-[11px] font-bold ${
+            frame.isToday ? 'bg-primary text-primary-foreground' : 'bg-foreground/6 text-foreground'
+          }`}
+        >
+          {frame.weekday}
+        </span>
+        <span className="text-xs text-muted-foreground tabular-nums">{frame.day}</span>
+        <span className="ml-auto text-[11px] text-muted-foreground">{frame.events.length} 場</span>
+      </div>
+
+      {/* 垂直 timeline */}
+      <div className="relative pl-4">
+        <div className="absolute top-1 bottom-1 left-[5px] w-0.5 rounded-full bg-foreground/[0.06]" />
+        {shown.map((event) => (
+          <TimelineRow key={event.id} event={event} onClick={() => onEventClick(event)} />
+        ))}
+        {more > 0 && (
+          <div className="pl-3.5 text-[11px] font-semibold text-[#93c5fd]">+ 還有 {more} 場直播</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TimelineRow({ event, onClick }: { event: VTuberEvent; onClick: () => void }) {
+  const live = isLiveNow(event);
+  const name = displayName(event);
+  const platform = platformOf(event.vtuber);
+  const tag = EVENT_TYPE_TAG[event.event_type];
+  const seed = event.vtuber?.id ?? event.vtuber?.name ?? event.title;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative block w-full text-left pb-3 pl-3.5 focus-visible:outline-none"
+    >
+      {/* dot */}
+      <span
+        className="absolute left-[-16px] top-1 w-3 h-3 rounded-full"
+        style={{
+          background: live ? 'var(--live-red, #ef4444)' : seedColor(seed),
+          border: '2px solid var(--background)',
+          boxShadow: live ? '0 0 0 3px rgba(239,68,68,0.2)' : 'none',
+        }}
+      />
+      <div className="flex items-baseline gap-2">
+        <span className={`text-xs font-bold tabular-nums ${live ? 'text-red-500' : 'text-foreground'}`}>
+          {hhmm(event.start_time)}
+        </span>
+        <span className="text-[11px] font-semibold text-muted-foreground truncate">{name}</span>
+        {live && <span className="w-1 h-1 rounded-full bg-red-500 live-pulse shrink-0" />}
+      </div>
+      <div className="text-[11px] text-muted-foreground mt-0.5 truncate leading-[1.4] group-hover:text-foreground transition-colors">
+        {event.title}
+      </div>
+      <div className="flex items-center gap-1 mt-1">
+        {platform && (
+          <span
+            className={`inline-flex items-center px-1.5 h-4 rounded border text-[9px] font-semibold ${PLATFORM_STYLE[platform].className}`}
+          >
+            {PLATFORM_STYLE[platform].label}
+          </span>
+        )}
+        {tag && (
+          <span className="inline-flex items-center px-1.5 py-px rounded-[3px] text-[9px] font-semibold bg-primary/15 text-primary border border-primary/30">
+            {tag}
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ── 側欄 timeline 載入骨架 ──
+function TimelineSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="space-y-2">
+          <div className="h-6 w-24 rounded bg-muted animate-pulse" />
+          <div className="pl-4 space-y-3">
+            {Array.from({ length: 3 }).map((__, j) => (
+              <div key={j} className="space-y-1.5">
+                <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
+                <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

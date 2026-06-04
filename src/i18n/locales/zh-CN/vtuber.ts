@@ -1,5 +1,5 @@
 export default {
-  pageTitle: 'VTuber 探索',
+  pageTitle: '探索',
   liveNow: '直播中',
   viewAll: '查看全部',
   filterByRegion: '地区',

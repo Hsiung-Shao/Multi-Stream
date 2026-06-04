@@ -1,5 +1,5 @@
 export default {
-  pageTitle: 'VTuber 탐색',
+  pageTitle: '탐색',
   liveNow: '방송 중',
   viewAll: '전체 보기',
   filterByRegion: '지역',

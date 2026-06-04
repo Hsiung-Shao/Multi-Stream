@@ -1,5 +1,5 @@
 export default {
-  pageTitle: 'VTuber Explore',
+  pageTitle: 'Explore',
   liveNow: 'Live Now',
   viewAll: 'View All',
   filterByRegion: 'Region',

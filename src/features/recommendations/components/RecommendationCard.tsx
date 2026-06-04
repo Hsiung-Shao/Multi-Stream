@@ -28,6 +28,63 @@ interface Props {
     onRecommendClick?: (target: RecommendTarget) => void;
 }
 
+// ── 共用:從 VTuberInfo 推 platform / 雙平台 / 收藏 url ──────────────
+// （RankingRow 與 RecommendationCard 共用同一套資料映射,避免雙頭維護）
+function resolvePlatform(v: RecommendationAggregate['vtuber']): 'twitch' | 'youtube' | null {
+    if (!v) return null;
+    if (v.twitch_channel_id) return 'twitch';
+    if (v.youtube_channel_id) return 'youtube';
+    return null;
+}
+
+function favoriteUrl(v: NonNullable<RecommendationAggregate['vtuber']>, p: 'twitch' | 'youtube'): string {
+    return p === 'twitch'
+        ? `https://www.twitch.tv/${v.twitch_channel_id}`
+        : `https://www.youtube.com/channel/${v.youtube_channel_id}`;
+}
+
+async function addFavoriteAndToast(
+    v: NonNullable<RecommendationAggregate['vtuber']>,
+    p: 'twitch' | 'youtube',
+): Promise<boolean> {
+    const label = p === 'twitch' ? 'Twitch' : 'YouTube';
+    try {
+        const result = await favoritesService.addFavorite(favoriteUrl(v, p), v.name, null);
+        if (result.success) {
+            toast.success(`已加入 ${label}:${v.name}`);
+            return true;
+        }
+        if (result.message === 'streamAlreadyInFavorites') {
+            toast.message(`${v.name}(${label})已在你的收藏內`);
+            return true;
+        }
+        toast.error(result.message || `加入 ${label} 失敗`);
+        return false;
+    } catch (e) {
+        toast.error((e as Error)?.message || `加入 ${p} 失敗`);
+        return false;
+    }
+}
+
+function recommendTargetOf(
+    v: NonNullable<RecommendationAggregate['vtuber']>,
+    platform: 'twitch' | 'youtube',
+): RecommendTarget {
+    const primaryChannelId = platform === 'twitch' ? v.twitch_channel_id : v.youtube_channel_id;
+    const crossChannelId = platform === 'twitch' ? (v.youtube_channel_id ?? undefined) : (v.twitch_channel_id ?? undefined);
+    const url = platform === 'twitch'
+        ? `https://www.twitch.tv/${primaryChannelId}`
+        : `https://www.youtube.com/channel/${primaryChannelId}`;
+    return {
+        name: v.name,
+        platform,
+        channelId: primaryChannelId,
+        url,
+        imgUrl: v.img_url ?? undefined,
+        crossChannelId,
+    };
+}
+
 function formatNumber(n: number | null | undefined): string {
     if (n == null) return '—';
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -531,5 +588,217 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
                 </div>
             )}
         </article>
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RANKING ROW 版型（今日推薦榜列表 rows，照設計稿 RankingList / _ref1 左欄）
+//  每列：rank 徽章 + 頭像 + 名稱 + LIVE + 平台 badge + 追隨/地區 + 語言 chip
+//        + heart 推薦數 + bookmark。共用 RecommendationCard 的資料映射/收藏流程。
+// ════════════════════════════════════════════════════════════════════════════
+
+interface RankingRowProps {
+    item: RecommendationAggregate;
+    rank: number;
+    /** 偵測到正在直播的 vtuber id 集合，用來標 LIVE 徽章 */
+    liveVtuberIds?: Set<string>;
+    /** 點 Heart 觸發推薦 dialog */
+    onRecommendClick?: (target: RecommendTarget) => void;
+    /** 是否為列表最後一列（控制底線）*/
+    last?: boolean;
+}
+
+export function RankingRow({ item, rank, liveVtuberIds, onRecommendClick, last }: RankingRowProps) {
+    const setSelectedVtuberId = useUIStore(s => s.setSelectedVtuberId);
+    const [favPending, setFavPending] = useState(false);
+    const [favAdded, setFavAdded] = useState(false);
+
+    const v = item.vtuber;
+    const platform = useMemo(() => resolvePlatform(v), [v]);
+    const hasTwitch = !!v?.twitch_channel_id;
+    const hasYoutube = !!v?.youtube_channel_id;
+    const isDualPlatform = hasTwitch && hasYoutube;
+    const isLive = !!(v && liveVtuberIds?.has(v.id));
+
+    const followerCount = platform === 'twitch' ? v?.twitch_follower_count : v?.youtube_subscriber_count;
+
+    const handleAdd = async (mode: 'twitch' | 'youtube' | 'both') => {
+        if (!v || favPending || favAdded) return;
+        setFavPending(true);
+        try {
+            if (mode === 'both') {
+                const okT = await addFavoriteAndToast(v, 'twitch');
+                const okY = await addFavoriteAndToast(v, 'youtube');
+                if (okT && okY) setFavAdded(true);
+            } else {
+                const ok = await addFavoriteAndToast(v, mode);
+                if (ok) setFavAdded(true);
+            }
+        } finally {
+            setFavPending(false);
+        }
+    };
+
+    const handleRecommendClick = () => {
+        if (!v || !platform || !onRecommendClick) return;
+        onRecommendClick(recommendTargetOf(v, platform));
+    };
+
+    const handleRowClick = () => {
+        if (v?.id) setSelectedVtuberId(v.id);
+    };
+
+    const avatarSize = 44;
+    const bookmarkBtnClass = favAdded
+        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 cursor-default'
+        : 'bg-foreground/4 text-muted-foreground border-foreground/8 hover:bg-foreground/8 hover:text-foreground disabled:opacity-50';
+
+    const bookmarkBtn = isDualPlatform ? (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button
+                    disabled={favPending || favAdded || !v}
+                    title="加入收藏"
+                    className={`inline-flex items-center justify-center w-7 h-7 rounded-md border transition-colors ${bookmarkBtnClass}`}
+                >
+                    {favPending ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : favAdded ? <Star className="w-3 h-3 fill-emerald-400" />
+                        : <Bookmark className="w-3 h-3" />}
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[140px]">
+                <DropdownMenuItem onSelect={() => handleAdd('twitch')}>
+                    <span className="text-[#c084fc]">加入 Twitch</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleAdd('youtube')}>
+                    <span className="text-[#f87171]">加入 YouTube</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleAdd('both')}>
+                    <span>兩個都加</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    ) : (
+        <button
+            onClick={() => handleAdd(hasTwitch ? 'twitch' : 'youtube')}
+            disabled={favPending || favAdded || !v || (!hasTwitch && !hasYoutube)}
+            title="加入收藏"
+            className={`inline-flex items-center justify-center w-7 h-7 rounded-md border transition-colors ${bookmarkBtnClass}`}
+        >
+            {favPending ? <Loader2 className="w-3 h-3 animate-spin" />
+                : favAdded ? <Star className="w-3 h-3 fill-emerald-400" />
+                : <Bookmark className="w-3 h-3" />}
+        </button>
+    );
+
+    return (
+        <div
+            className={`flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-foreground/[0.025] ${
+                last ? '' : 'border-b border-foreground/[0.04]'
+            }`}
+        >
+            <RankBadge rank={rank} size={28} />
+
+            {/* 頭像（點進詳情）*/}
+            <button
+                type="button"
+                onClick={handleRowClick}
+                title={v ? `查看「${v.name}」詳情` : undefined}
+                className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                {v?.img_url ? (
+                    <img
+                        src={v.img_url}
+                        alt={v.name}
+                        width={avatarSize}
+                        height={avatarSize}
+                        className="rounded-full object-cover"
+                        style={{
+                            width: avatarSize, height: avatarSize,
+                            boxShadow: isLive ? '0 0 0 2px rgba(239,68,68,0.45)' : '0 0 0 2px rgba(255,255,255,0.08)',
+                        }}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                ) : (
+                    <div
+                        className="rounded-full flex items-center justify-center text-white font-extrabold"
+                        style={{
+                            width: avatarSize, height: avatarSize, fontSize: 17,
+                            background: avatarGradient(v?.name ?? '?'),
+                            boxShadow: isLive ? '0 0 0 2px rgba(239,68,68,0.45)' : '0 0 0 2px rgba(255,255,255,0.08)',
+                        }}
+                    >
+                        {v?.name?.[0] ?? '?'}
+                    </div>
+                )}
+            </button>
+
+            {/* 名稱 + LIVE + 平台 + 追隨/地區 + 語言 */}
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <button
+                        type="button"
+                        onClick={handleRowClick}
+                        className="text-sm font-bold truncate hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                        title={v ? `查看「${v.name}」詳情` : undefined}
+                    >
+                        {v?.name ?? '未知 VTuber'}
+                    </button>
+                    {isLive && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-px rounded-[3px] bg-red-500 text-white text-[9px] font-bold tracking-[0.04em]">
+                            <span className="w-1 h-1 rounded-full bg-white live-pulse" />
+                            LIVE
+                        </span>
+                    )}
+                    {platform && <PlatformBadge kind={platform} />}
+                    {isDualPlatform && <PlatformBadge kind="duo" />}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+                    {followerCount != null && (
+                        <span className="inline-flex items-center gap-1 tabular-nums">
+                            <Users className="w-[11px] h-[11px]" /> {formatNumber(followerCount)}
+                        </span>
+                    )}
+                    {v?.nationality && v.nationality !== 'OTHER' && (
+                        <>
+                            <span>·</span>
+                            <span>{v.nationality}</span>
+                        </>
+                    )}
+                    {v?.languages && v.languages.length > 0 && (
+                        <span className="hidden sm:inline-flex gap-1">
+                            {v.languages.slice(0, 2).map(code => (
+                                <span
+                                    key={code}
+                                    className="text-[10px] px-[7px] py-px rounded border bg-[rgba(96,165,250,0.12)] text-[#93c5fd] border-[rgba(96,165,250,0.25)]"
+                                >
+                                    {LANG_LABEL[code]}
+                                </span>
+                            ))}
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            {/* heart 推薦數 + 推薦鈕 + bookmark */}
+            <div className="flex items-center gap-2 shrink-0">
+                {onRecommendClick && (
+                    <button
+                        onClick={handleRecommendClick}
+                        disabled={!v || !platform}
+                        title="推薦這位 VTuber"
+                        className="hidden sm:inline-flex items-center gap-1 px-2.5 py-[5px] rounded-full text-[12px] font-bold tabular-nums border bg-[rgba(236,72,153,0.12)] text-[#f472b6] border-[rgba(236,72,153,0.3)] hover:bg-[rgba(236,72,153,0.22)] transition-colors disabled:opacity-50"
+                    >
+                        <Heart className="w-2.5 h-2.5 fill-current" /> {item.count}
+                    </button>
+                )}
+                <span className="sm:hidden inline-flex items-center gap-1 px-2.5 py-[3px] rounded-full text-[12px] font-bold tabular-nums border bg-[rgba(236,72,153,0.12)] text-[#f472b6] border-[rgba(236,72,153,0.3)]">
+                    <Heart className="w-2.5 h-2.5 fill-current" /> {item.count}
+                </span>
+                {bookmarkBtn}
+            </div>
+        </div>
     );
 }
