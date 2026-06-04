@@ -183,7 +183,7 @@ export function LandingPage() {
                                 {/* Conceptual UI representation */}
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 opacity-80 group-hover:opacity-100 transition-opacity duration-500">
                                     {[1, 2, 3].map((i) => (
-                                        <div key={i} className="aspect-video bg-gray-800/50 rounded-lg border border-white/5 animate-pulse" style={{ animationDuration: `${i * 2}s` }} />
+                                        <div key={i} className="aspect-video bg-muted/50 rounded-lg border border-white/5 animate-pulse" style={{ animationDuration: `${i * 2}s` }} />
                                     ))}
                                 </div>
                             </div>
