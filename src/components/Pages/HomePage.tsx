@@ -32,7 +32,7 @@ export function HomePage() {
                 keywords={t('seo:tools.keywords')}
                 pathWithoutLang="/tools"
             />
-            <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
+            <div className="min-h-screen bg-background">
                 <Navbar
                     theme={theme}
                     onThemeToggle={toggleTheme}
