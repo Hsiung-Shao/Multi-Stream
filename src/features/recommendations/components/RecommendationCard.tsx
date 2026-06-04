@@ -1,9 +1,12 @@
 // 推薦卡片:VTuber 資訊 + 推薦數 + 留言摺疊 + 加收藏按鈕
 //
 // 用法:在 RecommendationsPage grid 內 render 每個 aggregate
+// variant:
+//   - 'podium'(rank 1-3,prominent=rank 1 較大):獎台直立佈局
+//   - 'card'(預設,rank 4+ / 一般推薦):一般推薦卡
 
 import { useState, useMemo } from 'react';
-import { Heart, MessageSquare, Star, ChevronDown, ChevronUp, Loader2, Radio, Clock } from 'lucide-react';
+import { Heart, MessageSquare, Star, ChevronDown, ChevronUp, Loader2, Radio, Clock, Bookmark, Users } from 'lucide-react';
 import { CommentList } from './CommentList';
 import { formatRelativeTime } from '../timeFormat';
 import type { RecommendationAggregate, RecommendTarget } from '../types';
@@ -30,6 +33,64 @@ function formatNumber(n: number | null | undefined): string {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return String(n);
+}
+
+// 金銀銅 rank 漸層(照設計稿 RANK_COLORS):top-3 用漸層底+黑字,其餘用半透明白
+const RANK_STYLE: Record<number, { gradient: string; glow: string; orb: string }> = {
+    1: { gradient: 'linear-gradient(135deg, #fde68a, #f59e0b)', glow: 'rgba(245,158,11,0.4)', orb: '#fde68a' },
+    2: { gradient: 'linear-gradient(135deg, #e5e7eb, #9ca3af)', glow: 'rgba(156,163,175,0.35)', orb: '#e5e7eb' },
+    3: { gradient: 'linear-gradient(135deg, #fdba74, #ea580c)', glow: 'rgba(234,88,12,0.35)', orb: '#fdba74' },
+};
+
+// rank 徽章(top-3 金銀銅漸層;4+ 半透明白)
+function RankBadge({ rank, size = 24 }: { rank: number; size?: number }) {
+    const s = RANK_STYLE[rank];
+    const fontSize = size >= 36 ? 16 : size >= 28 ? 13 : 11;
+    if (s) {
+        return (
+            <div
+                className="inline-flex items-center justify-center rounded-full font-extrabold tabular-nums shrink-0 text-[#0c0a09]"
+                style={{
+                    width: size, height: size, fontSize,
+                    background: s.gradient,
+                    boxShadow: `0 0 0 2px rgba(0,0,0,0.35), 0 4px 14px -2px ${s.glow}`,
+                }}
+            >
+                {rank}
+            </div>
+        );
+    }
+    return (
+        <div
+            className="inline-flex items-center justify-center rounded-full font-extrabold tabular-nums shrink-0 bg-foreground/6 border border-foreground/10 text-muted-foreground"
+            style={{ width: size, height: size, fontSize }}
+        >
+            {rank}
+        </div>
+    );
+}
+
+// platform 徽章(Twitch 紫 / YouTube 紅 / 雙平台 琥珀)
+function PlatformBadge({ kind }: { kind: 'twitch' | 'youtube' | 'duo' }) {
+    const map = {
+        twitch: 'bg-[rgba(145,70,255,0.15)] text-[#c084fc] border-[rgba(145,70,255,0.3)]',
+        youtube: 'bg-[rgba(239,0,0,0.15)] text-[#f87171] border-[rgba(239,0,0,0.3)]',
+        duo: 'bg-[rgba(245,158,11,0.18)] text-[#fbbf24] border-[rgba(245,158,11,0.35)]',
+    } as const;
+    const label = kind === 'twitch' ? 'Twitch' : kind === 'youtube' ? 'YouTube' : '雙平台';
+    return (
+        <span className={`inline-flex items-center h-[18px] px-[7px] rounded text-[10px] font-semibold border ${map[kind]}`}>
+            {label}
+        </span>
+    );
+}
+
+// 名稱衍生的穩定漸層色(真實資料無設計 mock 的 avatarColor,用 hash 取穩定 hue)
+function avatarGradient(name: string): string {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    const c = `oklch(0.62 0.2 ${h})`;
+    return `linear-gradient(135deg, color-mix(in oklch, ${c} 35%, transparent), ${c})`;
 }
 
 export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
@@ -119,66 +180,283 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
         }
     };
 
+    const isPodium = !!rank && rank <= 3;
+    const prominent = rank === 1;
+    const rankStyle = rank ? RANK_STYLE[rank] : undefined;
+    const avatarSize = prominent ? 60 : isPodium ? 48 : 44;
+    const note = item.comments_preview[0]?.comment ?? null;
+
+    // ── 動作鈕:收藏(雙平台 Dropdown)──────────────────────────────
+    const favBtnClass = favAdded
+        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 cursor-default'
+        : 'bg-foreground/4 text-muted-foreground border-foreground/8 hover:bg-foreground/8 hover:text-foreground disabled:opacity-50';
+
+    const favButton = isDualPlatform ? (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button
+                    disabled={favPending || favAdded || !v}
+                    className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-medium border transition-colors ${favBtnClass}`}
+                >
+                    {favPending ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> 加入中</>
+                    ) : favAdded ? (
+                        <><Star className="w-3 h-3 fill-emerald-400" /> 已收藏</>
+                    ) : (
+                        <><Bookmark className="w-3 h-3" /> 收藏 <ChevronDown className="w-2.5 h-2.5" /></>
+                    )}
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+                <DropdownMenuItem onSelect={() => handleAdd('twitch')}>
+                    <span className="text-[#c084fc]">加入 Twitch</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleAdd('youtube')}>
+                    <span className="text-[#f87171]">加入 YouTube</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleAdd('both')}>
+                    <span>兩個都加</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    ) : (
+        <button
+            onClick={() => handleAdd(hasTwitch ? 'twitch' : 'youtube')}
+            disabled={favPending || favAdded || !v || (!hasTwitch && !hasYoutube)}
+            className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-medium border transition-colors ${favBtnClass}`}
+        >
+            {favPending ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> 加入中</>
+            ) : favAdded ? (
+                <><Star className="w-3 h-3 fill-emerald-400" /> 已收藏</>
+            ) : (
+                <><Bookmark className="w-3 h-3" /> 收藏</>
+            )}
+        </button>
+    );
+
+    const recommendButton = onRecommendClick && (
+        <button
+            onClick={handleRecommendClick}
+            disabled={!v || !platform}
+            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-semibold border bg-[rgba(236,72,153,0.18)] text-[#f472b6] border-[rgba(236,72,153,0.4)] hover:bg-[rgba(236,72,153,0.28)] transition-colors disabled:opacity-50"
+            title="推薦這位 VTuber"
+        >
+            <Heart className="w-3 h-3 fill-current" />
+            推薦
+        </button>
+    );
+
+    const commentButton = (
+        <button
+            onClick={() => setExpanded(s => !s)}
+            className="inline-flex items-center gap-1 ml-auto h-7 px-2.5 rounded-md text-[11px] font-medium border bg-foreground/4 text-muted-foreground border-foreground/8 hover:bg-foreground/8 hover:text-foreground transition-colors"
+        >
+            <MessageSquare className="w-3 h-3" />
+            {expanded ? '收起' : '留言'}
+            {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+        </button>
+    );
+
+    // ── 頭像(優先真實圖,無則名稱首字漸層圈)────────────────────
+    const avatar = (
+        <div className="relative shrink-0">
+            {v?.img_url ? (
+                <img
+                    src={v.img_url}
+                    alt={v.name}
+                    width={avatarSize}
+                    height={avatarSize}
+                    className="rounded-full object-cover"
+                    style={{
+                        width: avatarSize,
+                        height: avatarSize,
+                        boxShadow: '0 0 0 2px rgba(255,255,255,0.08)',
+                    }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+            ) : (
+                <div
+                    className="rounded-full flex items-center justify-center text-white font-extrabold"
+                    style={{
+                        width: avatarSize,
+                        height: avatarSize,
+                        fontSize: prominent ? 24 : isPodium ? 19 : 17,
+                        background: avatarGradient(v?.name ?? '?'),
+                        boxShadow: '0 0 0 2px rgba(255,255,255,0.08)',
+                    }}
+                >
+                    {v?.name?.[0] ?? '?'}
+                </div>
+            )}
+        </div>
+    );
+
+    const heartPill = (
+        <span
+            className="inline-flex items-center gap-1 px-2.5 py-[3px] rounded-full text-[11px] font-bold tabular-nums border bg-[rgba(236,72,153,0.12)] text-[#f472b6] border-[rgba(236,72,153,0.3)]"
+            title={`${item.count} 人推薦`}
+        >
+            <Heart className="w-2.5 h-2.5 fill-current" /> {item.count}
+        </span>
+    );
+
+    // ════════════════════════════════════════════════════════════════
+    //  PODIUM 版型(rank 1-3,直立佈局)
+    // ════════════════════════════════════════════════════════════════
+    if (isPodium) {
+        return (
+            <article
+                className="relative flex flex-col gap-2.5 rounded-2xl border bg-card overflow-hidden transition-colors"
+                style={{
+                    padding: prominent ? 16 : 14,
+                    borderColor: rank === 1 ? 'rgba(251,191,36,0.3)' : 'var(--border)',
+                }}
+            >
+                {/* rank 角落 glow */}
+                {rankStyle && (
+                    <div
+                        className="absolute pointer-events-none rounded-full"
+                        style={{
+                            top: -40, right: -40, width: 160, height: 160,
+                            background: rankStyle.orb, opacity: 0.08, filter: 'blur(40px)',
+                        }}
+                    />
+                )}
+
+                {/* rank + 推薦數 */}
+                <div className="relative flex items-center gap-2">
+                    <RankBadge rank={rank!} size={prominent ? 36 : 28} />
+                    <span className="ml-auto">{heartPill}</span>
+                </div>
+
+                {/* 頭像 + 名稱 + platform(可點進詳情)*/}
+                <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={handleCardClick}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
+                    className="flex items-center gap-3 mt-1 cursor-pointer group"
+                    title={v ? `查看「${v.name}」詳情` : undefined}
+                >
+                    {avatar}
+                    <div className="min-w-0 flex-1">
+                        <span
+                            className="block truncate font-bold group-hover:text-primary transition-colors"
+                            style={{ fontSize: prominent ? 16 : 14 }}
+                        >
+                            {v?.name ?? '未知 VTuber'}
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {platform && <PlatformBadge kind={platform} />}
+                            {isDualPlatform && <PlatformBadge kind="duo" />}
+                        </div>
+                    </div>
+                </div>
+
+                {/* stats:追隨數 · 地區 */}
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                    {followerCount != null && (
+                        <span className="inline-flex items-center gap-1" title={`${followerLabel} ${followerCount.toLocaleString()}`}>
+                            <Users className="w-[11px] h-[11px]" /> {formatNumber(followerCount)}
+                            {primaryDelta != null && primaryDelta !== 0 && (
+                                <span className={primaryDelta > 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                    {primaryDelta > 0 ? '↑' : '↓'}{formatNumber(Math.abs(primaryDelta))}
+                                </span>
+                            )}
+                        </span>
+                    )}
+                    {v?.nationality && v.nationality !== 'OTHER' && (
+                        <>
+                            <span>·</span>
+                            <span>{v.nationality}</span>
+                        </>
+                    )}
+                </div>
+
+                {/* 語言 chips */}
+                {v?.languages && v.languages.length > 0 && (
+                    <div className="flex gap-1 flex-wrap">
+                        {v.languages.slice(0, prominent ? 3 : 2).map(code => (
+                            <span
+                                key={code}
+                                className="text-[10px] px-[7px] py-px rounded border bg-[rgba(96,165,250,0.12)] text-[#93c5fd] border-[rgba(96,165,250,0.25)]"
+                            >
+                                {LANG_LABEL[code]}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* note 引言(只在 prominent 顯示)*/}
+                {prominent && note && (
+                    <div className="text-[12px] leading-snug text-foreground italic px-2.5 py-2 rounded-lg bg-foreground/3 border border-foreground/6 mt-auto">
+                        「 {note} 」
+                    </div>
+                )}
+
+                {/* #34 活躍資訊 */}
+                {(v?.last_live_at || item.latest_at) && (
+                    <div className="flex items-center gap-2.5 flex-wrap text-[10px] text-muted-foreground">
+                        {v?.last_live_at && (
+                            <span className="inline-flex items-center gap-0.5" title="上次偵測到直播的時間">
+                                <Radio className="w-2.5 h-2.5 text-red-400/70" />
+                                {formatRelativeTime(v.last_live_at)}直播
+                            </span>
+                        )}
+                        {item.latest_at && (
+                            <span className="inline-flex items-center gap-0.5" title="最近一次被推薦的時間">
+                                <Clock className="w-2.5 h-2.5" />
+                                {formatRelativeTime(item.latest_at)}推薦
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* 動作鈕 */}
+                <div className="flex items-center gap-1.5 mt-auto pt-1">
+                    {favButton}
+                    {recommendButton}
+                    {commentButton}
+                </div>
+
+                {/* 留言展開 */}
+                {expanded && v && (
+                    <div className="border-t border-border/60 pt-3 mt-1">
+                        <CommentList vtuberId={v.id} enabled={expanded} />
+                    </div>
+                )}
+            </article>
+        );
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  CARD 版型(rank 4+ / 一般推薦)
+    // ════════════════════════════════════════════════════════════════
     return (
-        <article className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden hover:border-zinc-700 transition-colors">
-            {/* Header(clickable → 進詳情頁)*/}
+        <article className="group/card relative flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-3.5 transition-all duration-200 hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-10px_rgba(168,85,247,0.2)]">
+            {/* Top row:頭像 + 名稱 + platform + 推薦數(可點進詳情)*/}
             <div
                 role="button"
                 tabIndex={0}
                 onClick={handleCardClick}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
-                className="p-3 flex items-start gap-3 cursor-pointer hover:bg-zinc-900/40 transition-colors"
+                className="flex items-center gap-2.5 cursor-pointer group"
                 title={v ? `查看「${v.name}」詳情` : undefined}
             >
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                    {v?.img_url ? (
-                        <img
-                            src={v.img_url}
-                            alt={v.name}
-                            width="56"
-                            height="56"
-                            className="w-14 h-14 rounded-full object-cover border border-zinc-800"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                        />
-                    ) : (
-                        <div className="w-14 h-14 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-500 text-xl">
-                            {v?.name?.[0] ?? '?'}
-                        </div>
-                    )}
-                    {/* Rank badge for top 3 */}
-                    {rank && rank <= 3 && (
-                        <div
-                            className={`absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                rank === 1 ? 'bg-yellow-400 text-zinc-950' :
-                                rank === 2 ? 'bg-zinc-300 text-zinc-950' :
-                                'bg-amber-700 text-zinc-100'
-                            }`}
-                        >
-                            {rank}
-                        </div>
-                    )}
-                </div>
-
-                {/* Main info */}
+                {rank && <RankBadge rank={rank} size={24} />}
+                {avatar}
                 <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                        <h3 className="text-sm font-semibold text-zinc-100 truncate">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-bold truncate group-hover:text-primary transition-colors">
                             {v?.name ?? '未知 VTuber'}
-                        </h3>
-                        {platform && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                platform === 'twitch'
-                                    ? 'bg-violet-500/15 text-violet-300'
-                                    : 'bg-red-500/15 text-red-300'
-                            }`}>
-                                {platform === 'twitch' ? 'Twitch' : 'YouTube'}
-                            </span>
-                        )}
+                        </span>
+                        {platform && <PlatformBadge kind={platform} />}
+                        {isDualPlatform && <PlatformBadge kind="duo" />}
                     </div>
-                    <div className="flex items-center gap-3 text-[11px] text-zinc-500 mt-1 flex-wrap">
+                    <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                         {followerCount != null && (
                             <span className="inline-flex items-center gap-1" title={`${followerLabel} ${followerCount.toLocaleString()}`}>
                                 {followerLabel} {formatNumber(followerCount)}
@@ -190,144 +468,65 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
                             </span>
                         )}
                         {v?.nationality && v.nationality !== 'OTHER' && (
-                            <span>{v.nationality}</span>
-                        )}
-                        {/* 跨平台徽章:同 VTuber 兩個平台都有就顯示兩個 */}
-                        {v?.twitch_channel_id && v?.youtube_channel_id && (
-                            <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/15 text-amber-300">雙平台</span>
+                            <>
+                                <span>·</span>
+                                <span>{v.nationality}</span>
+                            </>
                         )}
                     </div>
-                    {/* 語言 chips */}
-                    {v?.languages && v.languages.length > 0 && (
-                        <div className="flex items-center gap-1 flex-wrap mt-1.5">
-                            {v.languages.map(code => (
-                                <span
-                                    key={code}
-                                    className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/12 text-indigo-300 border border-indigo-500/25"
-                                >
-                                    {LANG_LABEL[code]}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* #34 活躍資訊：上次直播 / 最近活動 */}
-                    {(v?.last_live_at || item.latest_at) && (
-                        <div className="flex items-center gap-2.5 flex-wrap mt-1.5 text-[10px] text-zinc-500">
-                            {v?.last_live_at && (
-                                <span className="inline-flex items-center gap-0.5" title="上次偵測到直播的時間">
-                                    <Radio className="w-2.5 h-2.5 text-red-400/70" />
-                                    {formatRelativeTime(v.last_live_at)}直播
-                                </span>
-                            )}
-                            {item.latest_at && (
-                                <span className="inline-flex items-center gap-0.5" title="最近一次被推薦的時間">
-                                    <Clock className="w-2.5 h-2.5" />
-                                    {formatRelativeTime(item.latest_at)}推薦
-                                </span>
-                            )}
-                        </div>
-                    )}
                 </div>
-
-                {/* Recommend count */}
-                <div
-                    className="flex flex-col items-center justify-center px-2.5 py-1 rounded-md bg-pink-500/10 border border-pink-500/30 shrink-0"
-                    title={`${item.count} 人推薦`}
-                >
-                    <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400" />
-                    <span className="text-xs font-bold text-pink-300 tabular-nums mt-0.5">{item.count}</span>
-                </div>
+                <span className="self-start">{heartPill}</span>
             </div>
 
-            {/* Comment preview(摺疊狀態顯示前 1 條,展開顯示全部) */}
-            {item.comments_preview.length > 0 && !expanded && (
-                <div className="px-3 pb-2">
-                    <p className="text-[12px] text-zinc-400 italic line-clamp-2">
-                        「{item.comments_preview[0].comment}」
-                    </p>
+            {/* 語言 chips */}
+            {v?.languages && v.languages.length > 0 && (
+                <div className="flex gap-1 flex-wrap">
+                    {v.languages.map(code => (
+                        <span
+                            key={code}
+                            className="text-[10px] px-[7px] py-px rounded border bg-[rgba(96,165,250,0.12)] text-[#93c5fd] border-[rgba(96,165,250,0.25)]"
+                        >
+                            {LANG_LABEL[code]}
+                        </span>
+                    ))}
                 </div>
             )}
 
-            {/* Actions */}
-            <div className="px-3 pb-3 flex items-center gap-2">
-                {isDualPlatform ? (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                disabled={favPending || favAdded || !v}
-                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
-                                    favAdded
-                                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default'
-                                        : 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50'
-                                }`}
-                            >
-                                {favPending ? (
-                                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 加入中</>
-                                ) : favAdded ? (
-                                    <><Star className="w-3.5 h-3.5 fill-emerald-400" /> 已收藏</>
-                                ) : (
-                                    <><Star className="w-3.5 h-3.5" /> 加入收藏 <ChevronDown className="w-3 h-3" /></>
-                                )}
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="min-w-[140px]">
-                            <DropdownMenuItem onSelect={() => handleAdd('twitch')}>
-                                <span className="text-violet-300">加入 Twitch</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleAdd('youtube')}>
-                                <span className="text-red-300">加入 YouTube</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleAdd('both')}>
-                                <span>兩個都加</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <button
-                        onClick={() => handleAdd(hasTwitch ? 'twitch' : 'youtube')}
-                        disabled={favPending || favAdded || !v || (!hasTwitch && !hasYoutube)}
-                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs transition-colors ${
-                            favAdded
-                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 cursor-default'
-                                : 'bg-zinc-800 text-zinc-200 border border-zinc-700 hover:bg-zinc-700 disabled:opacity-50'
-                        }`}
-                    >
-                        {favPending ? (
-                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 加入中</>
-                        ) : favAdded ? (
-                            <><Star className="w-3.5 h-3.5 fill-emerald-400" /> 已收藏</>
-                        ) : (
-                            <><Star className="w-3.5 h-3.5" /> 加入收藏</>
-                        )}
-                    </button>
-                )}
+            {/* note 引言 */}
+            {note && !expanded && (
+                <div className="text-[12px] leading-relaxed text-muted-foreground italic px-2.5 py-2 rounded-lg bg-foreground/[0.025] border border-foreground/[0.06] line-clamp-2">
+                    「 {note} 」
+                </div>
+            )}
 
-                {onRecommendClick && (
-                    <button
-                        onClick={handleRecommendClick}
-                        disabled={!v || !platform}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs bg-pink-500/10 text-pink-300 border border-pink-500/30 hover:bg-pink-500/20 transition-colors disabled:opacity-50"
-                        title="推薦這位 VTuber"
-                    >
-                        <Heart className="w-3.5 h-3.5 fill-pink-400" />
-                        推薦
-                    </button>
-                )}
+            {/* #34 活躍資訊 */}
+            {(v?.last_live_at || item.latest_at) && (
+                <div className="flex items-center gap-2.5 flex-wrap text-[10px] text-muted-foreground">
+                    {v?.last_live_at && (
+                        <span className="inline-flex items-center gap-0.5" title="上次偵測到直播的時間">
+                            <Radio className="w-2.5 h-2.5 text-red-400/70" />
+                            {formatRelativeTime(v.last_live_at)}直播
+                        </span>
+                    )}
+                    {item.latest_at && (
+                        <span className="inline-flex items-center gap-0.5" title="最近一次被推薦的時間">
+                            <Clock className="w-2.5 h-2.5" />
+                            {formatRelativeTime(item.latest_at)}推薦
+                        </span>
+                    )}
+                </div>
+            )}
 
-                <button
-                    onClick={() => setExpanded(v => !v)}
-                    className="flex items-center gap-1 ml-auto px-2.5 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors"
-                >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    {expanded ? '收起' : `留言`}
-                    {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
+            {/* 動作鈕 */}
+            <div className="flex items-center gap-1.5 mt-auto pt-0.5">
+                {favButton}
+                {recommendButton}
+                {commentButton}
             </div>
 
-            {/* Comment list(展開時 fetch) */}
+            {/* 留言展開 */}
             {expanded && v && (
-                <div className="px-3 pb-3 border-t border-zinc-800/60 pt-3">
+                <div className="border-t border-border/60 pt-3">
                     <CommentList vtuberId={v.id} enabled={expanded} />
                 </div>
             )}

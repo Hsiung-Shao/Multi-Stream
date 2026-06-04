@@ -37,3 +37,12 @@ ga4Data/
 googleSearchConsole/
 .codex/
 design-ref/
+
+# UI 改版本地產物（不入庫）
+multistream-hub-design-system/
+ui-verify/
+buildA-*.png
+buildB-*.png
+buildC-*.png
+current-recommendations-*.png
+current-vtuber-*.png
