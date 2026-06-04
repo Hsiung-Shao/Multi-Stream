@@ -1,33 +1,33 @@
 import { useTranslation } from 'react-i18next';
-import { Tv, Star, Settings, Plus, MessageSquare } from 'lucide-react';
+import { MonitorPlay, Compass, Star, Search, Settings } from 'lucide-react';
 import { useStreamStore } from '../../store/useStreamStore';
 import { cn } from '../ui/utils';
 
-export type MobileTab = 'watch' | 'chat' | 'favorites' | 'settings';
+export type MobileTab = 'watch' | 'explore' | 'favorites' | 'search' | 'settings';
 
 interface MobileBottomNavProps {
     activeTab: MobileTab;
     onTabChange: (tab: MobileTab) => void;
-    onAddStream: () => void;
     isLandscape?: boolean;
 }
 
-export function MobileBottomNav({ activeTab, onTabChange, onAddStream, isLandscape = false }: MobileBottomNavProps) {
+export function MobileBottomNav({ activeTab, onTabChange, isLandscape = false }: MobileBottomNavProps) {
     const { t } = useTranslation();
     const streams = useStreamStore(s => s.streams);
-    const streamCount = streams.length;
+    const streamCount = streams.filter(s => s.channelId).length;
 
-    const tabs: { id: MobileTab; icon: typeof Tv; label: string; badge?: number }[] = [
-        { id: 'watch', icon: Tv, label: t('mobile.nav.watch', '觀看') },
-        { id: 'chat', icon: MessageSquare, label: t('mobile.nav.chat', '聊天'), badge: streamCount > 0 ? streamCount : undefined },
+    const tabs: { id: MobileTab; icon: typeof MonitorPlay; label: string; badge?: number }[] = [
+        { id: 'watch', icon: MonitorPlay, label: t('mobile.nav.watch', '觀看'), badge: streamCount > 0 ? streamCount : undefined },
+        { id: 'explore', icon: Compass, label: t('mobile.nav.explore', '探索') },
         { id: 'favorites', icon: Star, label: t('mobile.nav.favorites', '收藏') },
+        { id: 'search', icon: Search, label: t('mobile.nav.search', '搜尋') },
         { id: 'settings', icon: Settings, label: t('mobile.nav.settings', '設定') },
     ];
 
-    // In landscape: slim horizontal bar or vertical sidebar
+    // In landscape: slim horizontal bar
     if (isLandscape) {
         return (
-            <nav className="flex items-center justify-around h-10 shrink-0 border-t border-white/5 bg-gray-950/95 backdrop-blur-lg z-50 px-4">
+            <nav className="flex items-center justify-around h-10 shrink-0 border-t border-white/5 bg-gray-950/95 backdrop-blur-lg z-50 px-2">
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -37,7 +37,7 @@ export function MobileBottomNav({ activeTab, onTabChange, onAddStream, isLandsca
                             key={tab.id}
                             onClick={() => onTabChange(tab.id)}
                             className={cn(
-                                'flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors relative',
+                                'flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors relative',
                                 isActive
                                     ? 'text-primary bg-primary/10'
                                     : 'text-muted-foreground active:text-foreground'
@@ -55,23 +55,14 @@ export function MobileBottomNav({ activeTab, onTabChange, onAddStream, isLandsca
                         </button>
                     );
                 })}
-
-                {/* Add button — inline in landscape */}
-                <button
-                    onClick={onAddStream}
-                    className="flex items-center gap-1 px-3 py-1 rounded-md bg-primary text-white text-[11px] font-semibold active:scale-95 transition-transform"
-                >
-                    <Plus className="w-4 h-4" />
-                    {t('mobile.nav.add', '新增')}
-                </button>
             </nav>
         );
     }
 
-    // Portrait: standard bottom nav with floating button
+    // Portrait: standard 5-tab bottom nav (design Mobile.jsx — no floating button)
     return (
-        <nav className="h-16 shrink-0 border-t border-white/10 bg-gray-950/95 backdrop-blur-lg z-50 relative">
-            <div className="flex items-center justify-around h-full px-2">
+        <nav className="shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-xl z-50 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <div className="flex items-stretch px-1">
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
@@ -81,14 +72,14 @@ export function MobileBottomNav({ activeTab, onTabChange, onAddStream, isLandsca
                             key={tab.id}
                             onClick={() => onTabChange(tab.id)}
                             className={cn(
-                                'flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative',
+                                'flex flex-col items-center justify-center gap-1 flex-1 py-1.5 transition-colors relative',
                                 isActive
                                     ? 'text-primary'
                                     : 'text-muted-foreground active:text-foreground'
                             )}
                         >
                             <div className="relative">
-                                <Icon className="w-5 h-5" />
+                                <Icon className={cn('w-[22px] h-[22px] transition-transform', isActive && '-translate-y-0.5')} />
                                 {tab.badge && (
                                     <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-primary text-[10px] text-white font-bold flex items-center justify-center">
                                         {tab.badge}
@@ -97,19 +88,11 @@ export function MobileBottomNav({ activeTab, onTabChange, onAddStream, isLandsca
                             </div>
                             <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
                             {isActive && (
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
+                                <span className="w-1 h-1 rounded-full bg-primary -mt-0.5" />
                             )}
                         </button>
                     );
                 })}
-
-                {/* Floating Add Button */}
-                <button
-                    onClick={onAddStream}
-                    className="absolute -top-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-primary shadow-lg shadow-primary/30 flex items-center justify-center text-white active:scale-95 transition-transform"
-                >
-                    <Plus className="w-6 h-6" />
-                </button>
             </div>
         </nav>
     );

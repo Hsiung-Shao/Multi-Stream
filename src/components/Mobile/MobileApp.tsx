@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { MobileBottomNav, type MobileTab } from './MobileBottomNav';
 import { MobileWatchPage } from './MobileWatchPage';
-import { MobileChatPanel } from './MobileChatPanel';
+import { MobileExplorePage } from './MobileExplorePage';
+import { MobileSearchPage } from './MobileSearchPage';
 import { MobileFavoritesPage } from './MobileFavoritesPage';
 import { MobileSettingsPage } from './MobileSettingsPage';
 import { MobileAddStreamModal } from './MobileAddStreamModal';
@@ -31,11 +32,13 @@ export function MobileApp() {
     const renderTab = () => {
         switch (activeTab) {
             case 'watch':
-                return <MobileWatchPage isLandscape={isLandscape} />;
-            case 'chat':
-                return <MobileChatPanel />;
+                return <MobileWatchPage isLandscape={isLandscape} onAddStream={() => setShowAddStream(true)} />;
+            case 'explore':
+                return <MobileExplorePage />;
             case 'favorites':
                 return <MobileFavoritesPage />;
+            case 'search':
+                return <MobileSearchPage onAddedStream={() => setActiveTab('watch')} />;
             case 'settings':
                 return <MobileSettingsPage />;
         }
@@ -69,7 +72,6 @@ export function MobileApp() {
             <MobileBottomNav
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                onAddStream={() => setShowAddStream(true)}
                 isLandscape={isLandscape}
             />
 
