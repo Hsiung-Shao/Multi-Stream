@@ -66,8 +66,11 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
         ? ((data?.items as RecommendationAggregate[]) || [])
         : [];
 
-    // 今日推薦榜:取前 10 名做列表 rows;卡片 grid 顯示全部被推薦的 VTuber
+    // 今日推薦榜（podium 版型）:取前 10 名;top-3 上獎台、4-10 排成列。
+    // 卡片 grid 另顯示全部被推薦的 VTuber。
     const rankingItems = aggregateItems.slice(0, 10);
+    const podiumItems = rankingItems.slice(0, 3);   // top-3 → PodiumCard
+    const restRanking = rankingItems.slice(3);      // 4-N → RankingRow
 
     return (
         <>
@@ -125,7 +128,7 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
                     {/* ── 左欄 ── */}
                     <div className="min-w-0 space-y-8">
-                        {/* 今日推薦榜（列表 rows）*/}
+                        {/* 今日推薦榜（podium 版型）：top-3 獎台 + 4-N 列 */}
                         {isAggregate && !isLoading && rankingItems.length > 0 && (
                             <section>
                                 <SectionHeader
@@ -138,18 +141,34 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
                                         </span>
                                     }
                                 />
-                                <div className="rounded-2xl bg-card border border-foreground/[0.06] overflow-hidden">
-                                    {rankingItems.map((it, idx) => (
-                                        <RankingRow
+
+                                {/* top-3 獎台：#1 prominent（1.4fr），#2/#3 一般（1fr）；手機/平板單欄堆疊 */}
+                                <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 items-stretch">
+                                    {podiumItems.map((it, idx) => (
+                                        <RecommendationCard
                                             key={it.vtuber_id}
                                             item={it}
                                             rank={idx + 1}
-                                            liveVtuberIds={liveVtuberIds}
                                             onRecommendClick={handleRecommendClick}
-                                            last={idx === rankingItems.length - 1}
                                         />
                                     ))}
                                 </div>
+
+                                {/* 4-N 列：包在 rounded-2xl border 容器，列間細分隔線 */}
+                                {restRanking.length > 0 && (
+                                    <div className="mt-3.5 rounded-2xl bg-card border border-foreground/[0.06] overflow-hidden">
+                                        {restRanking.map((it, idx) => (
+                                            <RankingRow
+                                                key={it.vtuber_id}
+                                                item={it}
+                                                rank={idx + 4}
+                                                liveVtuberIds={liveVtuberIds}
+                                                onRecommendClick={handleRecommendClick}
+                                                last={idx === restRanking.length - 1}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </section>
                         )}
 

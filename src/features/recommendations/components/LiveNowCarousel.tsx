@@ -1,8 +1,12 @@
-// 現正直播 carousel — RecommendationsPage 頂部 Hero 區
+// 現正直播 carousel — RecommendationsPage 頂部 Hero 區（split 變體）
 //
-// 設計稿 FeaturedTile（design-ref/ui_kits/multistream-hub/VTuberRecommend.jsx L477-573）：
-// 單張 16/7 大圖，每 5 秒自動切換，底部寬度動畫 pager + 左右箭頭，
-// hover 暫停，尊重 prefers-reduced-motion，無直播 / 載入中時整區不 render。
+// 設計稿 CarouselHero split=true 分支（design-ref/ui_kits/multistream-hub/VTuberRecommend.jsx L413）
+// ＋ SideMiniRow（L586）：版面 grid「1fr / 320px」，左 = 大圖 FeaturedTile，
+// 右 = 側欄迷你列表（標題「其他正在直播」+ 每筆 SideMiniRow，active 高亮 violet，
+// 點擊把該筆設為大圖 featured）。split 模式無 pager dots / 左右箭頭，
+// 改由右側列表點選切換；自動輪播仍每 5.5s 換 featured（右側 active 跟著移動），
+// hover 暫停、尊重 prefers-reduced-motion，無直播 / 載入中時整區不 render。
+// 手機（<lg）側欄堆到大圖下方。
 //
 // 資料源 useLivestreams（/api/livestreams，cron 每 2 分鐘更新）。
 // ⚠️ DEV-ONLY：本地 0 筆時注入 __devMockLivestreams 供 UI 驗證（import.meta.env.DEV 守衛，正式 build 不注入）。
@@ -10,14 +14,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Radio, Eye, Heart, Gamepad2, Play } from 'lucide-react';
-import {
-    Carousel,
-    CarouselContent,
-    CarouselItem,
-    CarouselPrevious,
-    CarouselNext,
-    type CarouselApi,
-} from '../../../components/ui/carousel';
 import { useLivestreams } from '../useLivestreams';
 import { DEV_MOCK_LIVESTREAMS, type LivestreamWithDisplay } from '../__devMockLivestreams';
 
@@ -56,9 +52,7 @@ function PlatformChip({ platform }: { platform: 'twitch' | 'youtube' }) {
 
 export function LiveNowCarousel() {
     const { data, isLoading } = useLivestreams();
-    const [api, setApi] = useState<CarouselApi>();
     const [selected, setSelected] = useState(0);
-    const [snaps, setSnaps] = useState<number[]>([]);
     const [scope, setScope] = useState<'today' | 'all'>('today'); // 純前端切換
     const pausedRef = useRef(false);
 
@@ -70,32 +64,29 @@ export function LiveNowCarousel() {
 
     // TODO(scope)：真實資料目前不分 today / all，toggle 暫不過濾，兩者顯示同一份。
 
-    // 同步 selected index + snap 點（給 pager 用）
-    useEffect(() => {
-        if (!api) return;
-        const sync = () => {
-            setSnaps(api.scrollSnapList());
-            setSelected(api.selectedScrollSnap());
-        };
-        sync();
-        api.on('select', sync);
-        api.on('reInit', sync);
-        return () => { api.off('select', sync); api.off('reInit', sync); };
-    }, [api]);
+    const count = streams.length;
 
-    // 自動播放（hover 暫停、尊重 reduced-motion）
+    // 資料筆數變動時，避免 selected 越界（例如 cron 更新後筆數變少）
     useEffect(() => {
-        if (!api) return;
+        if (selected >= count && count > 0) setSelected(0);
+    }, [count, selected]);
+
+    // 自動輪播：每 5.5s 推進 featured（split 模式右側 active 跟著移動）
+    // hover 暫停、尊重 prefers-reduced-motion、單筆不輪播
+    useEffect(() => {
+        if (count <= 1) return;
         const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         if (reduce) return;
         const id = window.setInterval(() => {
-            if (!pausedRef.current) api.scrollNext();
+            if (!pausedRef.current) setSelected(prev => (prev + 1) % count);
         }, AUTOPLAY_MS);
         return () => window.clearInterval(id);
-    }, [api]);
+    }, [count]);
 
     // 載入中或無直播 → 不佔版面（降級）
-    if (isLoading || streams.length === 0) return null;
+    if (isLoading || count === 0) return null;
+
+    const featured = streams[Math.min(selected, count - 1)];
 
     return (
         <section aria-label="正在直播的推薦 VTuber">
@@ -105,50 +96,38 @@ export function LiveNowCarousel() {
                     <Radio className="w-[18px] h-[18px] text-red-500" aria-hidden />
                     <h2 className="text-[17px] font-bold tracking-tight text-foreground">正在直播的推薦 VTuber</h2>
                     <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 tabular-nums">
-                        {streams.length}
+                        {count}
                     </span>
                 </div>
                 <ScopeToggle scope={scope} setScope={setScope} />
             </div>
 
-            <Carousel
-                opts={{ align: 'start', loop: streams.length > 1 }}
-                setApi={setApi}
+            {/* split 版面：左大圖 + 右側欄迷你列表（手機 <lg 堆疊單欄） */}
+            <div
+                className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-0 rounded-[18px] border border-border bg-card overflow-hidden"
                 onMouseEnter={() => { pausedRef.current = true; }}
                 onMouseLeave={() => { pausedRef.current = false; }}
-                className="rounded-[18px] border border-border bg-card overflow-hidden"
             >
-                <CarouselContent className="ml-0">
-                    {streams.map(s => (
-                        <CarouselItem key={s.id} className="pl-0 basis-full">
-                            <FeaturedTile stream={s} />
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-                {streams.length > 1 && (
-                    <>
-                        <CarouselPrevious className="left-4 size-8 bg-black/40 border-white/10 text-white hover:bg-black/60 hover:text-white" />
-                        <CarouselNext className="right-4 size-8 bg-black/40 border-white/10 text-white hover:bg-black/60 hover:text-white" />
-                    </>
-                )}
-            </Carousel>
+                {/* 左：featured 大圖 */}
+                <FeaturedTile stream={featured} />
 
-            {/* Pager dots（設計版寬度動畫） */}
-            {snaps.length > 1 && (
-                <div className="flex justify-start items-center gap-1.5 mt-3">
-                    {snaps.map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => api?.scrollTo(i)}
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                                i === selected ? 'w-6 bg-primary' : 'w-2 bg-foreground/15 hover:bg-foreground/30'
-                            }`}
-                            aria-label={`跳到第 ${i + 1} 個直播`}
-                            aria-current={i === selected}
-                        />
-                    ))}
-                </div>
-            )}
+                {/* 右：其他正在直播（側欄迷你列表） */}
+                {count > 1 && (
+                    <div className="flex flex-col gap-2 p-3 bg-black/25 border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+                        <div className="px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                            其他正在直播
+                        </div>
+                        {streams.map((s, i) => (
+                            <SideMiniRow
+                                key={s.id}
+                                stream={s}
+                                active={i === Math.min(selected, count - 1)}
+                                onSelect={() => setSelected(i)}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
         </section>
     );
 }
@@ -191,7 +170,7 @@ function FeaturedTile({ stream }: { stream: LivestreamWithDisplay }) {
             target="_blank"
             rel="noopener noreferrer"
             title={stream.title || name || '觀看直播'}
-            className="group block relative w-full aspect-[16/7] overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+            className="group block relative w-full aspect-[16/7] lg:aspect-auto lg:h-full lg:min-h-[260px] overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
             style={
                 hasThumb
                     ? undefined
@@ -308,5 +287,73 @@ function FeaturedTile({ stream }: { stream: LivestreamWithDisplay }) {
                 </div>
             </div>
         </a>
+    );
+}
+
+// 側欄迷你列（設計稿 SideMiniRow L586）：頭像漸層方塊 + LiveDot + 名稱 + game·觀看數。
+// active 高亮 violet；點擊把該筆設為大圖 featured。
+function SideMiniRow({
+    stream,
+    active,
+    onSelect,
+}: {
+    stream: LivestreamWithDisplay;
+    active: boolean;
+    onSelect: () => void;
+}) {
+    const v = stream.vtuber;
+    const name = v?.name ?? '未知 VTuber';
+    const grad = avatarGradient(name);
+    const viewers = formatViewers(stream.viewer_count);
+    // game · 觀看數（兩者皆可能缺；缺值優雅省略）
+    const meta = [stream.game, viewers && `${viewers} 觀看`].filter(Boolean).join(' · ');
+
+    return (
+        <button
+            type="button"
+            onClick={onSelect}
+            aria-pressed={active}
+            aria-label={`切換到 ${name} 的直播`}
+            className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[10px] text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                active
+                    ? 'bg-[rgba(168,85,247,0.12)] border border-[rgba(168,85,247,0.3)]'
+                    : 'border border-transparent hover:bg-foreground/[0.04]'
+            }`}
+        >
+            {/* 頭像漸層方塊（真實有圖用圖，無則名稱首字） */}
+            {v?.img_url ? (
+                <img
+                    src={v.img_url}
+                    alt=""
+                    className="w-10 h-10 rounded-lg object-cover shrink-0"
+                    style={{ boxShadow: active ? `0 0 0 2px ${grad.solid}` : undefined }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+            ) : (
+                <div
+                    className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center text-white text-base font-bold"
+                    style={{
+                        background: `linear-gradient(135deg, ${grad.solid}66, ${grad.solid})`,
+                        boxShadow: active ? `0 0 0 2px ${grad.solid}99` : undefined,
+                    }}
+                >
+                    {name[0] ?? '?'}
+                </div>
+            )}
+
+            <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                    <span className="w-[5px] h-[5px] rounded-full bg-red-500 live-pulse shrink-0" />
+                    <span className={`text-xs font-semibold truncate ${active ? 'text-foreground' : 'text-foreground'}`}>
+                        {name}
+                    </span>
+                </div>
+                {meta && (
+                    <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{meta}</div>
+                )}
+            </div>
+        </button>
     );
 }
