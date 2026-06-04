@@ -1,11 +1,21 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useAuth, type AuthState } from '../hooks/useAuth';
 import { MfaLoginGate } from '../features/account/MfaLoginGate';
+import { isDevAuthMockEnabled, buildDevAuthMock } from './devAuthMock';
 
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const auth = useAuth();
+  const realAuth = useAuth();
+
+  // DEV-only 唯讀 mock：僅在 import.meta.env.DEV 且 localStorage.devMockAuth==='1' 時，
+  // 用假的「已登入」唯讀狀態覆蓋真實 auth，供 auth-gated 頁面渲染截圖。
+  // 生產 build (DEV=false) 整段不啟用；mutation 全 no-op，不觸發任何網路寫入。
+  const auth = useMemo<AuthState>(
+    () => (isDevAuthMockEnabled() ? buildDevAuthMock() : realAuth),
+    [realAuth],
+  );
+
   return (
     <AuthContext.Provider value={auth}>
       {children}

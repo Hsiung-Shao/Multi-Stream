@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Loader2, Check, AlertTriangle } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
+import { AcctSection } from './AcctSection';
 import { submitUpdateDisplayName, ApiError } from './apiClient';
 import {
     normalizeDisplayName,
@@ -69,16 +70,13 @@ export function DisplayNameSection() {
     const inlineError = name && validationKey ? t(validationKey, '名稱格式錯誤') : '';
 
     return (
-        <section className="rounded-xl border border-white/10 bg-card/50 p-5 space-y-4">
-            <header>
-                <h2 className="text-lg font-semibold">{t('displayName.title', '顯示名稱')}</h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                    {t('displayName.description',
-                        `用於頁面與投稿者署名顯示。長度 ${DISPLAY_NAME_MIN}–${DISPLAY_NAME_MAX} 字。`,
-                        { min: DISPLAY_NAME_MIN, max: DISPLAY_NAME_MAX })}
-                </p>
-            </header>
-
+        <AcctSection
+            title={t('displayName.title', '顯示名稱')}
+            description={t('displayName.description',
+                `用於頁面與投稿者署名顯示。長度 ${DISPLAY_NAME_MIN}–${DISPLAY_NAME_MAX} 字。`,
+                { min: DISPLAY_NAME_MIN, max: DISPLAY_NAME_MAX })}
+        >
+          <div className="space-y-4">
             <div className="space-y-2">
                 <Input
                     value={name}
@@ -122,6 +120,7 @@ export function DisplayNameSection() {
                     {t('displayName.save', '儲存')}
                 </Button>
             </div>
-        </section>
+          </div>
+        </AcctSection>
     );
 }

@@ -7,6 +7,7 @@ import { Tv, Globe, MessageSquare, Loader2, Trash2, Plus, AlertTriangle } from '
 import { useAuthContext } from '../../contexts/AuthContext';
 import { DeleteAccountDialog } from '../../components/Dialogs/DeleteAccountDialog';
 import { UnlinkConfirmDialog } from './UnlinkConfirmDialog';
+import { AcctSection } from './AcctSection';
 import type { Provider, UserIdentity } from '@supabase/supabase-js';
 
 const SUPPORTED_PROVIDERS: ReadonlyArray<{ provider: Provider; label: string; Icon: React.ComponentType<{ className?: string }> }> = [
@@ -73,15 +74,12 @@ export function IdentitiesSection() {
     };
 
     return (
-        <section className="rounded-xl border border-white/10 bg-card/50 p-5 space-y-4">
-            <header>
-                <h2 className="text-lg font-semibold">{t('identities.title', '登入方式')}</h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                    {t('identities.description',
-                        '用任一連結的 OAuth 帳號都能登入此帳號。至少需保留一個；解除最後一個將永久刪除帳號。')}
-                </p>
-            </header>
-
+        <AcctSection
+            title={t('identities.title', '登入方式')}
+            description={t('identities.description',
+                '用任一連結的 OAuth 帳號都能登入此帳號。至少需保留一個；解除最後一個將永久刪除帳號。')}
+        >
+          <div className="space-y-4">
             {error && (
                 <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
@@ -101,7 +99,7 @@ export function IdentitiesSection() {
                     return (
                         <li
                             key={provider}
-                            className="flex items-center justify-between rounded-lg border border-white/5 bg-background/50 p-3"
+                            className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-3"
                         >
                             <div className="flex items-center gap-3">
                                 <Icon className="w-5 h-5 text-muted-foreground" />
@@ -153,6 +151,7 @@ export function IdentitiesSection() {
                 onCancel={() => !busy && setUnlinkTarget(null)}
             />
             <DeleteAccountDialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} />
-        </section>
+          </div>
+        </AcctSection>
     );
 }

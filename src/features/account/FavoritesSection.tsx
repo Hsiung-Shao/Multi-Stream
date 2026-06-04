@@ -34,6 +34,7 @@ import {
 } from '../../components/ui/alert-dialog';
 import { logEvent } from '../../utils/analytics';
 import { getPageNumbers } from '../../utils/pagination';
+import { AcctSection } from './AcctSection';
 import type { FavoriteStream, Tag } from '../favorites/types';
 
 const PAGE_SIZE = 15;
@@ -131,23 +132,16 @@ export function FavoritesSection() {
     };
 
     return (
-        <section className="rounded-xl border border-white/10 bg-card/50 p-5 space-y-4">
-            <header className="flex items-start gap-3">
-                <Star className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
-                <div className="flex-1">
-                    <h2 className="text-lg font-semibold">
-                        {t('favorites.title', '收藏列表')}
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {t(
-                            'favorites.descriptionInline',
-                            '管理你的收藏實況主，可從這裡一鍵推薦給 VTuber 探索。進階功能（分類、標籤、批量匯入）仍可在主畫面收藏管理視窗使用。',
-                        )}
-                    </p>
-                </div>
-            </header>
-
-            <div className="rounded-md border border-white/10 bg-background/30 p-3">
+        <AcctSection
+            icon={<Star className="w-5 h-5 text-yellow-500" />}
+            title={t('favorites.title', '收藏列表')}
+            description={t(
+                'favorites.descriptionInline',
+                '管理你的收藏實況主，可從這裡一鍵推薦給 VTuber 探索。進階功能（分類、標籤、批量匯入）仍可在主畫面收藏管理視窗使用。',
+            )}
+        >
+          <div className="space-y-4">
+            <div className="rounded-md border border-border bg-muted/40 p-3">
                 <div className="text-xs text-muted-foreground">
                     {t('favorites.totalLabel', '收藏總數')}
                 </div>
@@ -176,7 +170,7 @@ export function FavoritesSection() {
                 </Button>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-background/30 overflow-hidden">
+            <div className="rounded-lg border border-border bg-muted/40 overflow-hidden">
                 <ScrollArea className="h-[420px]">
                     <div className="p-2 space-y-2">
                         {paginatedFavorites.length > 0 ? (
@@ -309,13 +303,14 @@ export function FavoritesSection() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-red-500 hover:bg-red-600"
+                            className="bg-destructive text-white hover:bg-destructive/90"
                         >
                             {t('common:common.delete', '刪除')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </section>
+          </div>
+        </AcctSection>
     );
 }

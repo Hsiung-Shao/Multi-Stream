@@ -8,7 +8,9 @@ import { SEO } from '../../components/SEO';
 import { IdentitiesSection } from './IdentitiesSection';
 import { TwoFactorSection } from './TwoFactorSection';
 import { CloudSyncSection } from '../favorites/CloudSyncSection';
+import { ProfileSection } from './ProfileSection';
 import { GeneralSection } from './GeneralSection';
+import { DangerZoneSection } from './DangerZoneSection';
 import { FavoritesSection } from './FavoritesSection';
 import { TwitchImportTab } from './TwitchImportTab';
 import {
@@ -57,9 +59,11 @@ export function AccountSettingsPage() {
                 key: 'general',
                 node: (
                     <div className="space-y-6">
+                        <ProfileSection />
                         <GeneralSection />
                         <TwoFactorSection />
                         <IdentitiesSection />
+                        <DangerZoneSection />
                     </div>
                 ),
             },
@@ -106,7 +110,7 @@ export function AccountSettingsPage() {
                     pathWithoutLang="/account"
                     robots="noindex, nofollow"
                 />
-                <div className="flex flex-col items-center gap-3 max-w-sm text-center bg-card/50 border border-white/10 rounded-xl p-6">
+                <div className="flex flex-col items-center gap-3 max-w-sm text-center bg-card border border-border rounded-xl p-6">
                     <p className="text-sm">{t('signInRequired', '此頁面需登入後才能存取')}</p>
                     <Button variant="outline" size="sm" onClick={() => setPage('home')}>
                         {t('common:backToHome', '返回首頁')}
@@ -127,7 +131,7 @@ export function AccountSettingsPage() {
                 robots="noindex, nofollow"
             />
 
-            <header className="sticky top-0 w-full z-40 border-b border-white/10 bg-background/80 backdrop-blur-md">
+            <header className="sticky top-0 w-full z-40 border-b border-border bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 h-16 flex items-center gap-3">
                     <Button variant="ghost" size="icon" onClick={() => setPage('home')}>
                         <ArrowLeft className="w-5 h-5" />

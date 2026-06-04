@@ -231,7 +231,7 @@ export function TotpEnrollDialog({ open, onClose, onEnrolled: _onEnrolled }: Pro
                             </div>
                         </div>
 
-                        <div className="space-y-2 pt-2 border-t border-white/10">
+                        <div className="space-y-2 pt-2 border-t border-border">
                             <p className="text-sm font-medium">{t('mfa.enroll.verifyTitle', '輸入驗證碼確認')}</p>
                             <p className="text-xs text-muted-foreground">{t('mfa.enroll.verifyDesc', 'App 上顯示的 6 位數')}</p>
                             <div className="flex justify-center pt-1">

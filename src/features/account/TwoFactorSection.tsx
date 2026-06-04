@@ -13,6 +13,7 @@ import { TotpEnrollDialog } from './TotpEnrollDialog';
 import { TotpChallengeDialog } from './TotpChallengeDialog';
 import { BackupCodesDialog } from './BackupCodesDialog';
 import { ConfirmDialog } from './ConfirmDialog';
+import { AcctSection } from './AcctSection';
 import { manualRefreshSession } from '../../lib/supabase';
 
 type PendingAction = 'regenerate' | 'unenroll' | null;
@@ -307,28 +308,23 @@ export function TwoFactorSection() {
     if (!isLoggedIn) return null;
 
     return (
-        <section className="rounded-xl border border-white/10 bg-card/50 p-5 space-y-4">
-            <header className="flex items-start gap-3">
-                {status?.enrolled
-                    ? <ShieldCheck className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
-                    : <Shield className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
-                }
-                <div className="flex-1">
-                    <h2 className="text-lg font-semibold">{t('mfa.title', '兩步驟驗證 (2FA)')}</h2>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {t('mfa.description', '啟用後登入需額外輸入 6 位數驗證碼。')}
-                    </p>
-                </div>
-                {status && (
-                    <span className={`text-xs px-2 py-0.5 rounded ${status.enrolled
-                        ? 'bg-emerald-500/15 text-emerald-500'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                        {status.enrolled ? t('mfa.statusOn', '已啟用') : t('mfa.statusOff', '尚未啟用')}
-                    </span>
-                )}
-            </header>
-
+        <AcctSection
+            icon={status?.enrolled
+                ? <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                : <Shield className="w-5 h-5 text-muted-foreground" />
+            }
+            title={t('mfa.title', '兩步驟驗證 (2FA)')}
+            description={t('mfa.description', '啟用後登入需額外輸入 6 位數驗證碼。')}
+            headerExtra={status && (
+                <span className={`text-xs px-2 py-0.5 rounded ${status.enrolled
+                    ? 'bg-emerald-500/15 text-emerald-500'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
+                    {status.enrolled ? t('mfa.statusOn', '已啟用') : t('mfa.statusOff', '尚未啟用')}
+                </span>
+            )}
+        >
+          <div className="space-y-4">
             {loading && (
                 <div className="flex justify-center py-3">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -365,7 +361,7 @@ export function TwoFactorSection() {
                         </p>
                     )}
 
-                    <div className="rounded-md border border-white/10 bg-background/30 p-3 space-y-2">
+                    <div className="rounded-md border border-border bg-muted/40 p-3 space-y-2">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <KeyRound className="w-4 h-4 text-muted-foreground" />
@@ -403,6 +399,7 @@ export function TwoFactorSection() {
                     </div>
                 </>
             )}
+          </div>
 
             <TotpEnrollDialog
                 open={enrollOpen}
@@ -464,6 +461,6 @@ export function TwoFactorSection() {
                 }
                 confirmLabel={t('mfa.backup.regenerate', '重新產生備援碼')}
             />
-        </section>
+        </AcctSection>
     );
 }

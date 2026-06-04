@@ -1,26 +1,10 @@
-import { useTranslation } from 'react-i18next';
-import { useAuthContext } from '../../contexts/AuthContext';
 import { DisplayNameSection } from './DisplayNameSection';
 
 /**
- * 「一般」section：帳號等級 + DisplayNameSection（顯示名稱編輯）。
- * 對應原本 AccountSettingsPage 內第一塊「帳號等級」+ DisplayNameSection。
+ * 「一般」section 的顯示名稱編輯區塊。
+ *
+ * 帳號等級已移至 ProfileSection 的 badge 顯示，此處只保留顯示名稱編輯。
  */
 export function GeneralSection() {
-    const { t } = useTranslation('account');
-    const { profile } = useAuthContext();
-
-    return (
-        <div className="space-y-6">
-            {profile && (
-                <section className="rounded-xl border border-white/10 bg-card/50 p-5">
-                    <h2 className="text-sm text-muted-foreground mb-1">
-                        {t('overview.trustLevel', '帳號等級')}
-                    </h2>
-                    <p className="text-base font-medium capitalize">{profile.trust_level}</p>
-                </section>
-            )}
-            <DisplayNameSection />
-        </div>
-    );
+    return <DisplayNameSection />;
 }

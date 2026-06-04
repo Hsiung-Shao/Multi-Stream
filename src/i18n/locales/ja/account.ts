@@ -64,6 +64,14 @@ const account = {
     'deleteAccount.confirmNameLabel': 'To confirm, type your display name:',
     'deleteAccount.confirm': 'Delete permanently',
     'deleteAccount.error': 'Delete failed, please try again later',
+    'profile.title': 'Profile',
+    'profile.description': 'Once you link a login account, we read the following automatically; you can edit your display name anytime.',
+    'profile.noName': 'No name set',
+    'profile.joinedAt': 'Joined {{date}}',
+
+    'danger.title': 'Danger Zone',
+    'danger.description': 'Deleting your account permanently removes all cloud data: login methods, favorites, categories, tags and layouts. Local data stays in your browser.',
+    'danger.deleteButton': 'Delete Account',
 };
 
 export default account;

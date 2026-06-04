@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/button';
 import { Cloud, RefreshCw, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { useCloudSync } from './useCloudSync';
 import { CloudSyncConflictDialog } from './CloudSyncConflictDialog';
+import { AcctSection } from '../account/AcctSection';
 
 /**
  * 帳號設定頁的「收藏雲端同步」區塊
@@ -62,20 +63,15 @@ export function CloudSyncSection() {
     };
 
     return (
-        <section className="rounded-xl border border-white/10 bg-card/50 p-5 space-y-4">
-            <header>
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Cloud className="w-4 h-4 text-blue-400" />
-                    {t('cloudSync.title', '收藏雲端同步')}
-                </h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                    {t(
-                        'cloudSync.description',
-                        '登入時自動同步收藏、分類、標籤到雲端。其他裝置登入此帳號時會自動拉取。',
-                    )}
-                </p>
-            </header>
-
+        <AcctSection
+            icon={<Cloud className="w-5 h-5 text-purple-400" />}
+            title={t('cloudSync.title', '收藏雲端同步')}
+            description={t(
+                'cloudSync.description',
+                '登入時自動同步收藏、分類、標籤到雲端。其他裝置登入此帳號時會自動拉取。',
+            )}
+        >
+          <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground">
@@ -109,6 +105,7 @@ export function CloudSyncSection() {
                 onResolve={resolveConflict}
                 onClose={dismissConflict}
             />
-        </section>
+          </div>
+        </AcctSection>
     );
 }

@@ -64,6 +64,14 @@ const account = {
     'deleteAccount.confirmNameLabel': 'To confirm, type your display name:',
     'deleteAccount.confirm': 'Delete permanently',
     'deleteAccount.error': 'Delete failed, please try again later',
+    'profile.title': '个人资料',
+    'profile.description': '连结登录账号后我们会自动读取以下资料；可以随时编辑显示名称。',
+    'profile.noName': '尚未设置名称',
+    'profile.joinedAt': '加入于 {{date}}',
+
+    'danger.title': '危险区域',
+    'danger.description': '删除账号会永久移除所有云端资料：登录方式、收藏、分类、标签与布局。本机资料仍会留在你的浏览器里。',
+    'danger.deleteButton': '删除账号',
 };
 
 export default account;

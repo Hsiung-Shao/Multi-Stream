@@ -8,6 +8,15 @@ const account = {
     'overview.displayName': '目前顯示名稱',
     'overview.trustLevel': '帳號等級',
 
+    'profile.title': '個人資料',
+    'profile.description': '連結登入帳號後我們會自動讀取以下資料；可以隨時編輯顯示名稱。',
+    'profile.noName': '尚未設定名稱',
+    'profile.joinedAt': '加入於 {{date}}',
+
+    'danger.title': '危險區域',
+    'danger.description': '刪除帳號會永久移除所有雲端資料：登入方式、收藏、分類、標籤與布局。本機資料仍會留在你的瀏覽器裡。',
+    'danger.deleteButton': '刪除帳號',
+
     'displayName.title': '顯示名稱',
     'displayName.description': '用於頁面與投稿者署名顯示。長度 {{min}}–{{max}} 字。',
     'displayName.placeholder': '輸入顯示名稱',

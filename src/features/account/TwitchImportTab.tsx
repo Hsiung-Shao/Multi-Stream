@@ -306,7 +306,7 @@ export function TwitchImportTab() {
     // ============================================================================
     if (!isLoggedIn) {
         return (
-            <section className="rounded-xl border border-white/10 bg-card/50 p-6 space-y-5">
+            <section className="rounded-xl border border-border bg-card p-6 space-y-5">
                 <header className="flex items-start gap-3">
                     <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
                         <TwitchIcon />
@@ -335,7 +335,7 @@ export function TwitchImportTab() {
     // Render: 已登入
     // ============================================================================
     return (
-        <section className="rounded-xl border border-white/10 bg-card/50 p-6 space-y-5">
+        <section className="rounded-xl border border-border bg-card p-6 space-y-5">
             {/* Header:標題 + Twitch user info + 中斷連線 */}
             <header className="flex flex-wrap items-start gap-3 justify-between">
                 <div className="flex items-start gap-3 min-w-0">
@@ -446,7 +446,7 @@ export function TwitchImportTab() {
             </div>
 
             {/* Channel list */}
-            <div className="rounded-lg border border-white/10 bg-background/30 overflow-hidden">
+            <div className="rounded-lg border border-border bg-muted/40 overflow-hidden">
                 <ScrollArea className="h-[420px]">
                     <div className="p-2 space-y-1">
                         {twitchLoading && followedChannels.length === 0 ? (
@@ -487,7 +487,7 @@ export function TwitchImportTab() {
                                         className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
                                             isSelected
                                                 ? 'bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30'
-                                                : 'hover:bg-white/5 border border-transparent'
+                                                : 'hover:bg-muted border border-transparent'
                                         }`}
                                         onClick={() => toggleOne(channel.broadcasterLogin)}
                                     >
@@ -610,7 +610,7 @@ export function TwitchImportTab() {
             )}
 
             {/* Action buttons */}
-            <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-white/10">
+            <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-border">
                 <Button
                     variant="outline"
                     onClick={() => setConfirmImportAll(true)}

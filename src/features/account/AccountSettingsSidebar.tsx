@@ -33,7 +33,7 @@ export function AccountSettingsSidebar({
         <nav
             aria-label="account settings sections"
             className={cn(
-                'flex flex-col gap-1 p-2 rounded-xl border border-white/10 bg-card/40 sticky top-20 self-start',
+                'flex flex-col gap-1 p-2 rounded-xl border border-border bg-card sticky top-24 self-start',
                 className,
             )}
         >
@@ -48,8 +48,8 @@ export function AccountSettingsSidebar({
                         className={cn(
                             'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left',
                             isActive
-                                ? 'bg-primary/10 text-primary font-medium'
-                                : 'text-muted-foreground hover:bg-white/5 hover:text-foreground',
+                                ? 'bg-purple-500/12 text-purple-600 dark:text-purple-400 font-medium'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                         )}
                     >
                         <Icon className="w-4 h-4 shrink-0" />
