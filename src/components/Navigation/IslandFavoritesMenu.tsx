@@ -24,6 +24,10 @@ import {
     DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { useLiveStatusCheck } from '../../features/favorites/useLiveStatusCheck';
+import { Star } from 'lucide-react';
+
+// Favorites 面板主題色(對齊設計 FN.fav = gold)
+const FAV_ACCENT = '#fbbf24';
 
 export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode }) => {
     const { t } = useTranslation(['common', 'favorites']);
@@ -156,41 +160,86 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
             <PopoverTrigger asChild>
                 {children}
             </PopoverTrigger>
-            <PopoverContent className="w-[320px] p-0 bg-black/95 backdrop-blur-xl border border-white/10 text-white shadow-2xl" side="top" align="center" sideOffset={16}>
+            <PopoverContent
+                className="w-[320px] p-0 text-white"
+                side="top"
+                align="center"
+                sideOffset={16}
+                style={{
+                    background: 'rgba(12,12,17,0.92)',
+                    backdropFilter: 'blur(22px)',
+                    WebkitBackdropFilter: 'blur(22px)',
+                    borderRadius: 20,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 60px -18px rgba(0,0,0,0.75)',
+                }}
+            >
 
-                {/* Header */}
-                <div className="flex items-center justify-between p-3 border-b border-white/10">
-                    <span className="font-medium text-sm flex items-center gap-2">
-                        <Play size={14} className="text-purle-400 fill-purple-400" />
+                {/* Header(gold icon chip) */}
+                <div className="flex items-center justify-between" style={{ padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span className="font-semibold text-sm flex items-center gap-2.5">
+                        <span
+                            className="flex items-center justify-center"
+                            style={{
+                                width: 30,
+                                height: 30,
+                                borderRadius: 9,
+                                background: `${FAV_ACCENT}1f`,
+                                color: FAV_ACCENT,
+                                boxShadow: `inset 0 0 0 1px ${FAV_ACCENT}40`,
+                            }}
+                        >
+                            <Star size={16} fill="currentColor" />
+                        </span>
                         {t('favorites:favorites_menu', '收藏直播')}
                     </span>
                     <div className="flex items-center gap-1">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 rounded-full hover:bg-white/10"
+                            className="h-7 w-7 rounded-lg hover:bg-white/10"
                             onClick={handleRefresh}
                             disabled={isRefreshing}
+                            title={t('common.refresh', '重新整理')}
                         >
-                            <RefreshCw size={12} className={cn(isRefreshing && "animate-spin")} />
+                            <RefreshCw size={13} className={cn(isRefreshing && "animate-spin")} />
                         </Button>
                     </div>
                 </div>
 
                 {/* Filters */}
-                <div className="flex items-center gap-2 p-2 border-b border-white/10 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 p-2.5 border-b border-white/10 overflow-x-auto scrollbar-hide">
                     <Button
-                        variant={showOnlineOnly ? "secondary" : "ghost"}
+                        variant="ghost"
                         size="sm"
-                        className={cn("h-7 text-xs rounded-full px-3", showOnlineOnly ? "bg-white/20 text-white" : "text-white/50 hover:text-white")}
+                        className="h-7 text-xs rounded-full px-3 gap-1.5 shrink-0"
+                        style={showOnlineOnly
+                            ? { background: `${FAV_ACCENT}1f`, color: FAV_ACCENT, boxShadow: `inset 0 0 0 1px ${FAV_ACCENT}59` }
+                            : { color: 'rgba(255,255,255,0.6)' }}
                         onClick={() => setShowOnlineOnly(!showOnlineOnly)}
                     >
+                        <span
+                            className="inline-block rounded-full"
+                            style={{
+                                width: 6,
+                                height: 6,
+                                background: showOnlineOnly ? '#10b981' : 'rgba(255,255,255,0.4)',
+                                boxShadow: showOnlineOnly ? '0 0 5px #10b981' : 'none',
+                            }}
+                        />
                         {t('favorites:online_only', '僅顯示直播中')}
                     </Button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-7 text-xs rounded-full px-2 gap-1", filterCategory ? "text-purple-400 bg-purple-400/10" : "text-white/50 hover:text-white")}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs rounded-full px-2.5 gap-1 shrink-0"
+                                style={filterCategory
+                                    ? { background: `${FAV_ACCENT}1f`, color: FAV_ACCENT, boxShadow: `inset 0 0 0 1px ${FAV_ACCENT}59` }
+                                    : { color: 'rgba(255,255,255,0.6)' }}
+                            >
                                 <Grid2X2 size={12} />
                                 {filterCategory ? categories.find(c => c.id === filterCategory)?.name : t('common.category', '分類')}
                             </Button>
@@ -210,7 +259,14 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                     {/* Tags Filter */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className={cn("h-7 text-xs rounded-full px-2 gap-1", selectedTags.length > 0 ? "text-purple-400 bg-purple-400/10" : "text-white/50 hover:text-white")}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs rounded-full px-2.5 gap-1 shrink-0"
+                                style={selectedTags.length > 0
+                                    ? { background: `${FAV_ACCENT}1f`, color: FAV_ACCENT, boxShadow: `inset 0 0 0 1px ${FAV_ACCENT}59` }
+                                    : { color: 'rgba(255,255,255,0.6)' }}
+                            >
                                 <Hash size={12} />
                                 {selectedTags.length > 0 ? `已選 ${selectedTags.length}` : t('tags:tags', '標籤')}
                             </Button>
@@ -239,7 +295,7 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                                                         : prev.filter(id => id !== tag.id)
                                                 );
                                             }}
-                                            className="border-white/30 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500 size-3.5"
+                                            className="border-white/30 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400 data-[state=checked]:text-black size-3.5"
                                         />
                                         <div className="size-2 rounded-full" style={{ backgroundColor: tag.color }} />
                                         <span className="text-sm flex-1 truncate">{tag.name}</span>
@@ -279,16 +335,18 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                             filteredFavorites.map(fav => (
                                 <div
                                     key={fav.id}
-                                    className={cn(
-                                        "flex items-center gap-3 p-2 rounded-lg transition-colors cursor-pointer group",
-                                        selectedStreams.includes(fav.id) ? "bg-white/10" : "hover:bg-white/5"
-                                    )}
+                                    className="flex items-center gap-3 p-2 rounded-lg transition-colors cursor-pointer group"
+                                    style={selectedStreams.includes(fav.id)
+                                        ? { background: `${FAV_ACCENT}1f`, boxShadow: `inset 0 0 0 1px ${FAV_ACCENT}4d` }
+                                        : undefined}
+                                    onMouseEnter={(e) => { if (!selectedStreams.includes(fav.id)) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                    onMouseLeave={(e) => { if (!selectedStreams.includes(fav.id)) e.currentTarget.style.background = ''; }}
                                     onClick={() => handleSelect(fav.id)}
                                 >
                                     <Checkbox
                                         checked={selectedStreams.includes(fav.id)}
                                         onCheckedChange={() => handleSelect(fav.id)}
-                                        className="border-white/30 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
+                                        className="border-white/30 data-[state=checked]:bg-amber-400 data-[state=checked]:border-amber-400 data-[state=checked]:text-black"
                                     />
 
                                     <div className="flex-1 min-w-0">
@@ -324,7 +382,8 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                 {selectedStreams.length > 0 && (
                     <div className="p-3 border-t border-white/10 bg-black/50">
                         <Button
-                            className="w-full bg-white text-black hover:bg-white/90 gap-2 font-medium"
+                            className="w-full gap-2 font-semibold hover:brightness-110"
+                            style={{ background: FAV_ACCENT, color: '#1a1206', boxShadow: `0 8px 20px -8px ${FAV_ACCENT}` }}
                             onClick={handleBulkLoad}
                             size="sm"
                         >
