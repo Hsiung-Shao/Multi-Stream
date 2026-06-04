@@ -95,6 +95,7 @@ export default {
   events: '活動',
   eventsTab: '活動',
   vtubersTab: 'VTuber',
+  recommendationsTab: '推薦',
   createEvent: '新增活動',
   eventTitle: '活動名稱',
   eventTitlePlaceholder: '輸入活動名稱',

@@ -95,6 +95,7 @@ export default {
   events: '이벤트',
   eventsTab: '이벤트',
   vtubersTab: 'VTuber',
+  recommendationsTab: '추천',
   createEvent: '이벤트 만들기',
   eventTitle: '이벤트 이름',
   eventTitlePlaceholder: '이벤트 이름 입력',

@@ -95,6 +95,7 @@ export default {
   events: '活动',
   eventsTab: '活动',
   vtubersTab: 'VTuber',
+  recommendationsTab: '推荐',
   createEvent: '新增活动',
   eventTitle: '活动名称',
   eventTitlePlaceholder: '输入活动名称',

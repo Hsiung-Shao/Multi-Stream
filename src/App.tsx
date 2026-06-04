@@ -45,7 +45,6 @@ const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module 
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
 const VTuberExplorePage = lazy(() => import('./features/vtuber/pages/VTuberExplorePage').then(module => ({ 'default': module.VTuberExplorePage })));
 const AccountSettingsPage = lazy(() => import('./features/account/AccountSettingsPage').then(module => ({ 'default': module.AccountSettingsPage })));
-const RecommendationsPage = lazy(() => import('./features/recommendations/pages/RecommendationsPage').then(module => ({ 'default': module.RecommendationsPage })));
 const VtuberDetailPage = lazy(() => import('./features/recommendations/pages/VtuberDetailPage').then(module => ({ 'default': module.VtuberDetailPage })));
 
 export default function App() {
@@ -184,7 +183,7 @@ export default function App() {
       case 'vtuber-explore':
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
-            <VTuberExplorePage />
+            <VTuberExplorePage initialTab="vtubers" />
           </Suspense>
         );
       case 'account':
@@ -196,7 +195,7 @@ export default function App() {
       case 'recommendations':
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
-            <RecommendationsPage />
+            <VTuberExplorePage initialTab="recommendations" />
           </Suspense>
         );
       case 'vtuber-detail':

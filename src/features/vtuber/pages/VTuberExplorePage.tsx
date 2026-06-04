@@ -13,21 +13,26 @@ import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { useAuthContext } from '../../../contexts/AuthContext';
 import { SEO } from '../../../components/SEO';
 import { Button } from '../../../components/ui/button';
-import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil, Settings, MessageSquareHeart } from 'lucide-react';
+import { ArrowLeft, Plus, LogIn, LogOut, CalendarDays, Users, Pencil, Settings, MessageSquareHeart, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../components/ui/dropdown-menu';
 import { EditProfileDialog } from '../../../components/Dialogs/EditProfileDialog';
+import { RecommendationsPanel } from '../../recommendations/RecommendationsPanel';
 import { logEvent } from '../../../utils/analytics';
 import type { VTuberRecord } from '../types';
 
-type ExploreTab = 'vtubers' | 'events';
+type ExploreTab = 'recommendations' | 'vtubers' | 'events';
 
-export function VTuberExplorePage() {
+interface VTuberExplorePageProps {
+  initialTab?: ExploreTab;
+}
+
+export function VTuberExplorePage({ initialTab = 'recommendations' }: VTuberExplorePageProps) {
   const { t } = useTranslation('vtuber');
   const setPage = useUIStore((s) => s.setPage);
   const openModal = useUIStore((s) => s.openModal);
 
   // Tab
-  const [activeTab, setActiveTab] = useState<ExploreTab>('vtubers');
+  const [activeTab, setActiveTab] = useState<ExploreTab>(initialTab);
 
   // Filters
   const {
@@ -220,6 +225,17 @@ export function VTuberExplorePage() {
           <div className="flex gap-0 border-b border-transparent -mb-px">
             <button
               className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'recommendations'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => handleTabChange('recommendations')}
+            >
+              <Sparkles className="w-4 h-4" />
+              {t('recommendationsTab')}
+            </button>
+            <button
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'vtubers'
                   ? 'border-primary text-primary'
                   : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -244,7 +260,11 @@ export function VTuberExplorePage() {
         </div>
       </header>
 
-      {/* Main content */}
+      {/* 推薦 tab：複用 RecommendationsPanel（自帶 <main>，外觀維持原樣）。
+          其餘 tab 走原本 hub 的 <main> 容器 */}
+      {activeTab === 'recommendations' ? (
+        <RecommendationsPanel />
+      ) : (
       <main className="flex-1 container mx-auto px-4 py-6 space-y-6">
         {activeTab === 'vtubers' ? (
           <>
@@ -283,6 +303,7 @@ export function VTuberExplorePage() {
           <EventCalendarView />
         )}
       </main>
+      )}
 
       {/* Detail Sheet */}
       <VTuberDetailSheet
