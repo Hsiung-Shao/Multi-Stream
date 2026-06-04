@@ -1,4 +1,5 @@
 const common = {
+  'common.done': '完成',
   // ── Mobile shell（Phase 6：5-tab 手机外壳）──
   'mobile.nav.watch': '观看',
   'mobile.nav.explore': '探索',

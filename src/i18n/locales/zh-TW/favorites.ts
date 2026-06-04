@@ -1,4 +1,9 @@
 export default {
+  // Island favorites chooser
+  select_category: '選擇分類',
+  all_categories: '全部分類',
+  no_categories: '沒有分類',
+  select_tags_multi: '選擇標籤(可多選)',
   // Navigation
   favoritesManager: '收藏管理',
   myFavorites: '我的收藏',

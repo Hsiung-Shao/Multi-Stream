@@ -1,4 +1,5 @@
 const common = {
+  'common.done': '完了',
   // ── Mobile shell (Phase 6: 5タブのモバイルシェル) ──
   'mobile.nav.watch': '視聴',
   'mobile.nav.explore': '探索',

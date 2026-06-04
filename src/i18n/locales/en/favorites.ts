@@ -1,4 +1,9 @@
 export default {
+  // Island favorites chooser
+  select_category: 'Select category',
+  all_categories: 'All categories',
+  no_categories: 'No categories',
+  select_tags_multi: 'Select tags (multiple)',
   // Navigation
   favoritesManager: 'Favorites Manager',
   myFavorites: 'My Favorites',

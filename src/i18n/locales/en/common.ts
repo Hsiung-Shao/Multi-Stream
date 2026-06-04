@@ -1,4 +1,5 @@
 const common = {
+  'common.done': 'Done',
   // ── Mobile shell (Phase 6: 5-tab mobile shell) ──
   'mobile.nav.watch': 'Watch',
   'mobile.nav.explore': 'Explore',

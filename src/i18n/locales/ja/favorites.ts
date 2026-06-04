@@ -1,4 +1,9 @@
 export default {
+  // Island favorites chooser
+  select_category: 'カテゴリを選択',
+  all_categories: 'すべてのカテゴリ',
+  no_categories: 'カテゴリなし',
+  select_tags_multi: 'タグを選択（複数可）',
   // Navigation
   favoritesManager: 'お気に入り管理',
   myFavorites: 'お気に入り',
