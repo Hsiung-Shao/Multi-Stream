@@ -155,5 +155,23 @@ export default {
 
   // Sidebar
   'sidebar.version_history': '版本資訊',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: '貼上頻道網址,自動辨識平台',
+  editFavoriteDesc: '更新名稱、收藏清單與標籤',
+  channelUrlOrName: '頻道網址或名稱',
+  paste: '貼上',
+  pasteFromClipboard: '貼上剪貼簿',
+  urlHint: '支援 twitch.tv/名稱、youtube.com/@名稱 或直接輸入頻道名稱。',
+  whichPlatform: '這是哪個平台?',
+  preview: '預覽',
+  previewEmpty: '輸入網址後,這裡會即時預覽頻道',
+  displayName: '顯示名稱',
+  displayNamePlaceholder: '頻道顯示名稱',
+  optional: '選填',
+  multiSelect: '可多選',
+  autoLoadTitle: '新增後立即載入畫面',
+  autoLoadDesc: '儲存收藏的同時,把這台開到多視窗',
+  addAndLoad: '新增並載入',
 };
 

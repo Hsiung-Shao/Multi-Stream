@@ -125,5 +125,23 @@ export default {
   'layout_manager.no_layouts': '尚无自定布局',
   'layout_manager.no_layouts_desc': '调整视窗位置后，可将其存储为模板。',
   'sidebar.version_history': '版本信息',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: '粘贴频道网址,自动识别平台',
+  editFavoriteDesc: '更新名称、收藏清单与标签',
+  channelUrlOrName: '频道网址或名称',
+  paste: '粘贴',
+  pasteFromClipboard: '粘贴剪贴板',
+  urlHint: '支持 twitch.tv/名称、youtube.com/@名称 或直接输入频道名称。',
+  whichPlatform: '这是哪个平台?',
+  preview: '预览',
+  previewEmpty: '输入网址后,这里会即时预览频道',
+  displayName: '显示名称',
+  displayNamePlaceholder: '频道显示名称',
+  optional: '选填',
+  multiSelect: '可多选',
+  autoLoadTitle: '添加后立即加载画面',
+  autoLoadDesc: '保存收藏的同时,把这个频道开到多视窗',
+  addAndLoad: '添加并加载',
 };
 

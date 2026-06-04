@@ -125,5 +125,23 @@ export default {
   'layout_manager.no_layouts': 'カスタムレイアウトがありません',
   'layout_manager.no_layouts_desc': 'ウィンドウの位置を調整して、テンプレートとして保存できます。',
   'sidebar.version_history': '更新履歴',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: 'チャンネルURLを貼り付けると、プラットフォームを自動判別します',
+  editFavoriteDesc: '名前・リスト・タグを更新',
+  channelUrlOrName: 'チャンネルURLまたは名前',
+  paste: '貼り付け',
+  pasteFromClipboard: 'クリップボードから貼り付け',
+  urlHint: 'twitch.tv/名前、youtube.com/@名前、またはチャンネル名の入力に対応。',
+  whichPlatform: 'どのプラットフォームですか?',
+  preview: 'プレビュー',
+  previewEmpty: 'URLを入力すると、ここにチャンネルがプレビュー表示されます',
+  displayName: '表示名',
+  displayNamePlaceholder: 'チャンネルの表示名',
+  optional: '任意',
+  multiSelect: '複数選択可',
+  autoLoadTitle: '追加後すぐに画面に読み込む',
+  autoLoadDesc: '保存と同時にこのチャンネルをマルチビューに開きます',
+  addAndLoad: '追加して読み込む',
 };
 

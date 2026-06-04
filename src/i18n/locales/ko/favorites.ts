@@ -125,5 +125,23 @@ export default {
   'layout_manager.no_layouts': '사용자 지정 레이아웃 없음',
   'layout_manager.no_layouts_desc': '창 위치를 조정한 후 템플릿으로 저장할 수 있습니다.',
   'sidebar.version_history': '업데이트 기록',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: '채널 URL을 붙여넣으면 플랫폼이 자동으로 인식됩니다',
+  editFavoriteDesc: '이름, 목록, 태그를 업데이트',
+  channelUrlOrName: '채널 URL 또는 이름',
+  paste: '붙여넣기',
+  pasteFromClipboard: '클립보드에서 붙여넣기',
+  urlHint: 'twitch.tv/이름, youtube.com/@이름 또는 채널 이름 직접 입력을 지원합니다.',
+  whichPlatform: '어떤 플랫폼인가요?',
+  preview: '미리보기',
+  previewEmpty: 'URL을 입력하면 여기에서 채널을 미리 볼 수 있습니다',
+  displayName: '표시 이름',
+  displayNamePlaceholder: '채널 표시 이름',
+  optional: '선택',
+  multiSelect: '다중 선택',
+  autoLoadTitle: '추가 후 바로 화면에 로드',
+  autoLoadDesc: '저장과 동시에 이 채널을 멀티뷰에 엽니다',
+  addAndLoad: '추가 및 로드',
 };
 

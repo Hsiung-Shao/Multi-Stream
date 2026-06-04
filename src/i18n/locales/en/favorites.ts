@@ -151,4 +151,22 @@ export default {
 
   // Sidebar
   'sidebar.version_history': 'Version History',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: 'Paste a channel URL — the platform is detected automatically',
+  editFavoriteDesc: 'Update name, list and tags',
+  channelUrlOrName: 'Channel URL or name',
+  paste: 'Paste',
+  pasteFromClipboard: 'Paste from clipboard',
+  urlHint: 'Supports twitch.tv/name, youtube.com/@name, or just a channel name.',
+  whichPlatform: 'Which platform is this?',
+  preview: 'Preview',
+  previewEmpty: 'Enter a URL to preview the channel here',
+  displayName: 'Display name',
+  displayNamePlaceholder: 'Channel display name',
+  optional: 'Optional',
+  multiSelect: 'Multi-select',
+  autoLoadTitle: 'Load to screen right after adding',
+  autoLoadDesc: 'Open this channel into the multi-view as you save it',
+  addAndLoad: 'Add & Load',
 };
