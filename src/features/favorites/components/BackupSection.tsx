@@ -13,7 +13,7 @@ interface BackupSectionProps {
     onError: (message: string) => void;
 }
 
-export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps) {
+export function BackupSection({ onSuccess, onError }: BackupSectionProps) {
     const { t } = useTranslation(['favorites', 'common']);
     const [isProcessing, setIsProcessing] = useState(false);
 
@@ -81,22 +81,21 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
     return (
         <div className="flex-1 flex flex-col gap-8 max-w-2xl mx-auto w-full py-4 overflow-y-auto pr-4">
             {/* Export Section */}
-            <div className={`p-8 rounded-3xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200 shadow-sm'
-                }`}>
+            <div className="p-8 rounded-3xl border border-border bg-card">
                 <div className="flex items-center gap-4 mb-6">
                     <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-500">
                         <Download className="size-6" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold font-normal">{t('export')}</h3>
-                        <p className="text-sm text-gray-500">{t('backup.export_desc')}</p>
+                        <h3 className="text-xl font-bold font-normal text-foreground">{t('export')}</h3>
+                        <p className="text-sm text-muted-foreground">{t('backup.export_desc')}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <div className={`p-4 rounded-xl flex items-start gap-3 ${theme === 'dark' ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+                    <div className="p-4 rounded-xl flex items-start gap-3 bg-muted/50">
                         <ShieldCheck className="size-5 text-green-500 mt-0.5" />
-                        <p className="text-xs text-gray-500 leading-relaxed">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                             {t('backup.export_helper')}
                         </p>
                     </div>
@@ -110,22 +109,21 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
             </div>
 
             {/* Import Section */}
-            <div className={`p-8 rounded-3xl border border-dashed ${theme === 'dark' ? 'bg-gray-950/50 border-gray-700' : 'bg-gray-50/50 border-gray-300'
-                }`}>
+            <div className="p-8 rounded-3xl border border-dashed border-border bg-muted/30">
                 <div className="flex items-center gap-4 mb-6">
                     <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-500">
                         <Upload className="size-6" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold font-normal">{t('import')}</h3>
-                        <p className="text-sm text-gray-500">{t('backup.import_desc')}</p>
+                        <h3 className="text-xl font-bold font-normal text-foreground">{t('import')}</h3>
+                        <p className="text-sm text-muted-foreground">{t('backup.import_desc')}</p>
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <div className={`p-4 rounded-xl flex items-start gap-3 ${theme === 'dark' ? 'bg-red-500/5 border border-red-500/10' : 'bg-red-50 border border-red-100'}`}>
+                    <div className="p-4 rounded-xl flex items-start gap-3 bg-red-500/5 border border-red-500/15">
                         <AlertTriangle className="size-5 text-red-500 mt-0.5" />
-                        <p className="text-xs text-red-600 font-medium leading-relaxed">
+                        <p className="text-xs text-red-500 font-medium leading-relaxed">
                             {t('backup.import_warning_detail')}
                         </p>
                     </div>
@@ -133,8 +131,7 @@ export function BackupSection({ theme, onSuccess, onError }: BackupSectionProps)
                         onClick={handleImportJSON}
                         disabled={isProcessing}
                         variant="outline"
-                        className={`w-full h-12 rounded-xl text-md font-medium ${theme === 'dark' ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-300 hover:bg-white'
-                            }`}
+                        className="w-full h-12 rounded-xl text-md font-medium border-border hover:bg-accent"
                     >
                         {isProcessing ? t('backup.processing') : t('backup.select_file')}
                     </Button>

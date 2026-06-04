@@ -1,5 +1,6 @@
 export default {
   // Navigation
+  favoritesManager: 'Favorites Manager',
   myFavorites: 'My Favorites',
   batchImport: 'Batch Import',
   settings: 'Settings',

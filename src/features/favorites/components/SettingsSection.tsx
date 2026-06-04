@@ -43,7 +43,7 @@ interface SettingsSectionProps {
     onThemeChange: (theme: string) => void;
 }
 
-export function SettingsSection({ theme, currentTheme, onThemeChange }: SettingsSectionProps) {
+export function SettingsSection({ currentTheme, onThemeChange }: SettingsSectionProps) {
     const { t, i18n } = useTranslation(['common', 'favorites']);
 
     const toggleTheme = (value: string) => {
@@ -70,19 +70,19 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
         <div className="flex-1 flex flex-col gap-4 max-w-2xl mx-auto w-full py-4 px-2 h-full overflow-hidden">
 
             {/* Appearance */}
-            <div className={`flex-shrink-0 p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+            <div className="flex-shrink-0 p-6 rounded-2xl border border-border bg-card">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                         <Monitor className="size-5" />
                     </div>
-                    <h3 className="text-lg font-bold font-normal">{t('favorites:appearance')}</h3>
+                    <h3 className="text-lg font-bold font-normal text-foreground">{t('favorites:appearance')}</h3>
                 </div>
 
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <Label className="text-base">{t('favorites:theme')}</Label>
-                            <p className="text-sm text-gray-500">{t('favorites:settings.theme_desc')}</p>
+                            <p className="text-sm text-muted-foreground">{t('favorites:settings.theme_desc')}</p>
                         </div>
                         <Select value={currentTheme} onValueChange={toggleTheme}>
                             <SelectTrigger className="w-32">
@@ -105,12 +105,12 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                         </Select>
                     </div>
 
-                    <Separator className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} />
+                    <Separator className="bg-border" />
 
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <Label className="text-base">{t('favorites:language')}</Label>
-                            <p className="text-sm text-gray-500">{t('favorites:settings.language_desc')}</p>
+                            <p className="text-sm text-muted-foreground">{t('favorites:settings.language_desc')}</p>
                         </div>
                         <Select value={i18n.language} onValueChange={changeLanguage}>
                             <SelectTrigger className="w-32">
@@ -126,12 +126,12 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                         </Select>
                     </div>
 
-                    <Separator className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} />
+                    <Separator className="bg-border" />
 
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <Label className="text-base">{t('favorites:settings.close_window_mode')}</Label>
-                            <p className="text-sm text-gray-500">{t('favorites:settings.close_window_mode_desc')}</p>
+                            <p className="text-sm text-muted-foreground">{t('favorites:settings.close_window_mode_desc')}</p>
                         </div>
                         <Select
                             value={closeWindowMode}
@@ -150,16 +150,16 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
             </div>
 
             {/* About */}
-            <div className={`flex-shrink-0 p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+            <div className="flex-shrink-0 p-6 rounded-2xl border border-border bg-card">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
                         <Info className="size-5" />
                     </div>
-                    <h3 className="text-lg font-bold font-normal">{t('favorites:about')}</h3>
+                    <h3 className="text-lg font-bold font-normal text-foreground">{t('favorites:about')}</h3>
                 </div>
 
                 <div className="space-y-4">
-                    <p className="text-sm text-gray-500 leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                         {t('favorites:settings.about_desc')}
                     </p>
 
@@ -168,10 +168,7 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             href="https://github.com/Hsiung-Shao"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                ? 'border-gray-700 hover:bg-gray-800'
-                                : 'border-gray-200 hover:bg-gray-50'
-                                }`}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-foreground hover:bg-accent transition-colors"
                         >
                             <Github className="size-4" />
                             <span className="text-sm font-medium">GitHub</span>
@@ -180,10 +177,7 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             href="https://discord.gg/KSGpfyfM3T"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                ? 'border-gray-700 hover:bg-[#5865F2]/20 hover:text-[#5865F2]'
-                                : 'border-gray-200 hover:bg-[#5865F2]/10 hover:text-[#5865F2]'
-                                }`}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-[#5865F2]/15 hover:text-[#5865F2] transition-colors"
                             style={{ color: '#5865F2' }}
                         >
                             <DiscordIcon className="size-4" />
@@ -193,10 +187,7 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             href="https://x.com/Hsiungshao"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                ? 'border-gray-700 hover:bg-gray-800'
-                                : 'border-gray-200 hover:bg-gray-50'
-                                }`}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-foreground hover:bg-accent transition-colors"
                         >
                             <XIcon className="size-4" />
                             <span className="text-sm font-medium">X (Twitter)</span>
@@ -205,10 +196,7 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
                             href="https://buymeacoffee.com/hsiung"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                ? 'border-gray-700 hover:bg-[#FFDD00]/20 hover:text-[#FFDD00]'
-                                : 'border-gray-200 hover:bg-[#FFDD00]/10 hover:text-[#FFDD00]'
-                                }`}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-[#FFDD00]/15 hover:text-[#FFDD00] transition-colors"
                             style={{ color: '#FFDD00' }}
                         >
 
@@ -218,10 +206,7 @@ export function SettingsSection({ theme, currentTheme, onThemeChange }: Settings
 
                         <button
                             onClick={handleFeedbackClick}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${theme === 'dark'
-                                ? 'border-gray-700 hover:bg-gray-800'
-                                : 'border-gray-200 hover:bg-gray-50'
-                                }`}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-foreground hover:bg-accent transition-colors"
                         >
                             <MessageSquare className="size-4" />
                             <span className="text-sm font-medium">{t('favorites:settings.feedback')}</span>

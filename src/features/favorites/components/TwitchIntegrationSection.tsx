@@ -29,7 +29,6 @@ interface TwitchIntegrationSectionProps {
 }
 
 export function TwitchIntegrationSection({
-    theme,
     isLoggedIn,
     login,
     logout,
@@ -109,18 +108,18 @@ export function TwitchIntegrationSection({
     );
 
     return (
-        <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+        <div className="p-6 rounded-2xl border border-border bg-muted/40">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
                     <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
                         <TwitchSvg />
                     </div>
-                    <h3 className="text-lg font-bold font-normal">{t('twitchIntegration')}</h3>
+                    <h3 className="text-lg font-bold font-normal text-foreground">{t('twitchIntegration')}</h3>
                 </div>
                 {isLoggedIn && <Badge className="bg-green-500">Connected</Badge>}
             </div>
 
-            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                 {t('twitchConnectDescription')}
             </p>
 
@@ -134,21 +133,21 @@ export function TwitchIntegrationSection({
             ) : (
                 <div className="space-y-6">
                     {/* User Info Card */}
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-card border border-border">
                         <div className="flex items-center gap-3">
                             {twitchUser?.profileImageUrl && (
                                 <img src={twitchUser.profileImageUrl} alt="Profile" className="size-10 rounded-full" />
                             )}
                             <div className="flex flex-col">
-                                <span className="text-xs text-gray-500">{t('connectedAs', { name: '' })}</span>
-                                <span className="font-semibold">{twitchUser?.displayName || 'Unknown'}</span>
+                                <span className="text-xs text-muted-foreground">{t('connectedAs', { name: '' })}</span>
+                                <span className="font-semibold text-foreground">{twitchUser?.displayName || 'Unknown'}</span>
                             </div>
                         </div>
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => { logout(); resetTwitchUser(); setShowChannelList(false); }}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
                         >
                             {t('disconnectTwitch')}
                         </Button>
@@ -159,7 +158,7 @@ export function TwitchIntegrationSection({
                         <Button
                             onClick={handleShowChannels}
                             variant="outline"
-                            className={`w-full h-12 rounded-xl ${showChannelList ? 'bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/30' : ''}`}
+                            className={`w-full h-12 rounded-xl border-border ${showChannelList ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : ''}`}
                         >
                             {showChannelList ? 'Hide Channels' : t('importFollowedChannels')}
                         </Button>
@@ -169,12 +168,12 @@ export function TwitchIntegrationSection({
                                 {/* Search and Filter Toolbar */}
                                 <div className="flex flex-col gap-3 mb-4">
                                     <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                                         <Input
                                             placeholder={t('searchPlaceholder')}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className={`pl-10 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}`}
+                                            className="pl-10 bg-background border-border"
                                         />
                                     </div>
                                     <div className="flex items-center justify-between px-1">
@@ -183,29 +182,29 @@ export function TwitchIntegrationSection({
                                                 id="select-all-inline"
                                                 checked={filteredChannels.length > 0 && filteredChannels.every(c => selectedIds.has(c.broadcasterLogin))}
                                                 onCheckedChange={(c) => handleSelectAll(!!c)}
-                                                className={theme === 'dark' ? 'border-gray-500 data-[state=checked]:bg-purple-600' : ''}
+                                                className="border-border data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                             />
-                                            <label htmlFor="select-all-inline" className="text-sm cursor-pointer select-none">
+                                            <label htmlFor="select-all-inline" className="text-sm cursor-pointer select-none text-foreground">
                                                 {t('selectAll')}
                                             </label>
                                         </div>
-                                        <span className="text-sm text-gray-500">
+                                        <span className="text-sm text-muted-foreground">
                                             {selectedIds.size} Selected
                                         </span>
                                     </div>
                                 </div>
 
                                 {/* Channel List */}
-                                <div className={`rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden ${theme === 'dark' ? 'bg-gray-950/50' : 'bg-white'}`}>
+                                <div className="rounded-xl border border-border overflow-hidden bg-card">
                                     <ScrollArea className="h-[400px]">
                                         <div className="p-2 space-y-1">
                                             {loading && channels.length === 0 ? (
-                                                <div className="flex items-center justify-center py-8 text-gray-500">
+                                                <div className="flex items-center justify-center py-8 text-muted-foreground">
                                                     <Loader2 className="size-5 animate-spin mr-2" />
                                                     {t('loading')}
                                                 </div>
                                             ) : filteredChannels.length === 0 ? (
-                                                <div className="py-8 text-center text-gray-500 text-sm">
+                                                <div className="py-8 text-center text-muted-foreground text-sm">
                                                     {t('noChannelsFound')}
                                                 </div>
                                             ) : (
@@ -213,23 +212,23 @@ export function TwitchIntegrationSection({
                                                     <div
                                                         key={channel.broadcasterId}
                                                         className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedIds.has(channel.broadcasterLogin)
-                                                                ? 'bg-purple-50 dark:bg-purple-900/20 box-border border-purple-200 dark:border-purple-500/30'
-                                                                : 'hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent'
+                                                                ? 'bg-purple-500/10 box-border border border-purple-500/30'
+                                                                : 'hover:bg-accent border border-transparent'
                                                             }`}
                                                         onClick={() => toggleSelection(channel.broadcasterLogin)}
                                                     >
                                                         <Checkbox
                                                             checked={selectedIds.has(channel.broadcasterLogin)}
                                                             onCheckedChange={() => toggleSelection(channel.broadcasterLogin)}
-                                                            className="data-[state=checked]:bg-purple-600"
+                                                            className="border-border data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                                         />
                                                         <Avatar className="size-8">
                                                             <AvatarImage src={channel.profileImageUrl} />
                                                             <AvatarFallback>{channel.broadcasterName.slice(0, 2)}</AvatarFallback>
                                                         </Avatar>
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="text-sm font-medium truncate">{channel.broadcasterName}</div>
-                                                            <div className="text-xs text-gray-500 truncate">{channel.broadcasterLogin}</div>
+                                                            <div className="text-sm font-medium truncate text-foreground">{channel.broadcasterName}</div>
+                                                            <div className="text-xs text-muted-foreground truncate">{channel.broadcasterLogin}</div>
                                                         </div>
                                                     </div>
                                                 ))

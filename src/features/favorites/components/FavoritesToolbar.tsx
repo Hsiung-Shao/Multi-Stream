@@ -44,14 +44,12 @@ export function FavoritesToolbar({
         <div className="flex flex-col gap-4 mb-6">
             <div className="flex items-center justify-between gap-4">
                 <div className="relative flex-1 max-w-md">
-                    <Search className={`absolute left-3 top-1/2 -translate-y-1/2 size-4 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                        }`} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
                         placeholder={t('favorites:placeholder.search_url')}
-                        className={`pl-10 ${theme === 'dark' ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-100/50 border-gray-200'
-                            }`}
+                        className="pl-10 bg-muted/50 border-border"
                     />
                 </div>
                 <Button
@@ -63,13 +61,13 @@ export function FavoritesToolbar({
                 </Button>
             </div>
 
-            <div className="flex items-center justify-between pb-2 border-b border-gray-800">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
                 <div className="flex items-center gap-2">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={selectedCount > 0 ? onDeselectAll : onSelectAll}
-                        className={`text-xs ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'}`}
+                        className="text-xs text-muted-foreground hover:text-foreground"
                     >
                         {selectedCount > 0 ? (
                             <><Square className="size-3 mr-1.5" />{t('deselectAll')}</>
@@ -79,7 +77,7 @@ export function FavoritesToolbar({
                     </Button>
 
                     {selectedCount > 0 && (
-                        <span className={`text-xs font-medium ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`}>
+                        <span className="text-xs font-medium text-purple-400">
                             已選擇 {selectedCount} 項
                         </span>
                     )}
@@ -104,8 +102,7 @@ export function FavoritesToolbar({
                             variant="outline"
                             size="sm"
                             onClick={onBatchLoad}
-                            className={`h-8 text-xs ${theme === 'dark' ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300'
-                                }`}
+                            className="h-8 text-xs border-border text-foreground hover:bg-accent"
                         >
                             <Play className="size-3 mr-1.5" />
                             {t('loadSelected')}

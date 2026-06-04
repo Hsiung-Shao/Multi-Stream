@@ -1,5 +1,6 @@
 export default {
   // Navigation
+  favoritesManager: '收藏管理',
   myFavorites: '我的收藏',
   batchImport: '批量导入',
   settings: '设置',

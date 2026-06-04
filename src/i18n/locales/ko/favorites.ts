@@ -1,5 +1,6 @@
 export default {
   // Navigation
+  favoritesManager: '즐겨찾기 관리',
   myFavorites: '즐겨찾기',
   batchImport: '일괄 가져오기',
   settings: '설정',
