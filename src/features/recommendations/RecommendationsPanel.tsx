@@ -45,11 +45,15 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
     };
 
     const isForYou = sort === 'for-you';
+    // 只有 aggregate 模式(daily / all-time)需要打推薦列表 API。
+    // latest 是「建置中」placeholder、for-you 走 useForYou — 兩者都不該空打推薦 API,
+    // 否則一旦那次 fetch 失敗,會在 placeholder 上疊加多餘的「載入失敗」錯誤框。
+    const isAggregate = sort === 'daily' || sort === 'all-time';
     const { data, isLoading, isError, error, refetch } = useRecommendations({
-        sort: isForYou ? 'all-time' : sort,
+        sort: isAggregate ? sort : 'all-time',
         category: categorySlug,
         limit: 60,
-        enabled: !isForYou,
+        enabled: isAggregate,
     });
     const forYou = useForYou(isForYou);
 
@@ -61,7 +65,6 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
     );
 
     // 只 aggregate 模式有排行榜;latest 模式不顯示
-    const isAggregate = sort === 'daily' || sort === 'all-time';
     const aggregateItems = isAggregate
         ? ((data?.items as RecommendationAggregate[]) || [])
         : [];
