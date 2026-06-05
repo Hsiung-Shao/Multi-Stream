@@ -290,45 +290,48 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                     </div>
                 </div>
 
-                {/* Filters(in-panel chooser pills,點下切 menu 視圖,不另開 dropdown) */}
-                <div className="flex items-center gap-1.5 p-2.5 border-b border-white/10 overflow-x-auto scrollbar-hide">
-                    <button
-                        type="button"
-                        onClick={() => setShowOnlineOnly(!showOnlineOnly)}
-                        style={favPillStyle(showOnlineOnly)}
-                    >
-                        <span
-                            className="inline-block rounded-full"
-                            style={{
-                                width: 6,
-                                height: 6,
-                                background: showOnlineOnly ? '#10b981' : 'rgba(255,255,255,0.4)',
-                                boxShadow: showOnlineOnly ? '0 0 5px #10b981' : 'none',
-                            }}
-                        />
-                        {t('favorites:online_only', '僅顯示直播中')}
-                    </button>
+                {/* Filters(in-panel chooser pills,點下切 menu 視圖,不另開 dropdown)
+                    橫向溢出用 Shadcn ScrollArea 的細捲軸,取代原生粗捲軸 */}
+                <ScrollArea orientation="horizontal" className="border-b border-white/10">
+                    <div className="flex items-center gap-1.5 p-2.5 w-max">
+                        <button
+                            type="button"
+                            onClick={() => setShowOnlineOnly(!showOnlineOnly)}
+                            style={favPillStyle(showOnlineOnly)}
+                        >
+                            <span
+                                className="inline-block rounded-full"
+                                style={{
+                                    width: 6,
+                                    height: 6,
+                                    background: showOnlineOnly ? '#10b981' : 'rgba(255,255,255,0.4)',
+                                    boxShadow: showOnlineOnly ? '0 0 5px #10b981' : 'none',
+                                }}
+                            />
+                            {t('favorites:online_only', '僅顯示直播中')}
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setMenu(menu === 'cat' ? null : 'cat')}
-                        style={favPillStyle(!!filterCategory || menu === 'cat')}
-                    >
-                        <Grid2X2 size={11} />
-                        {filterCategory ? categories.find(c => c.id === filterCategory)?.name : t('common.category', '分類')}
-                        <ChevronDown size={11} />
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() => setMenu(menu === 'cat' ? null : 'cat')}
+                            style={favPillStyle(!!filterCategory || menu === 'cat')}
+                        >
+                            <Grid2X2 size={11} />
+                            {filterCategory ? categories.find(c => c.id === filterCategory)?.name : t('common.category', '分類')}
+                            <ChevronDown size={11} />
+                        </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setMenu(menu === 'tag' ? null : 'tag')}
-                        style={favPillStyle(selectedTags.length > 0 || menu === 'tag')}
-                    >
-                        <Hash size={11} />
-                        {t('tags:tags', '標籤')}{selectedTags.length > 0 ? ` · ${selectedTags.length}` : ''}
-                        <ChevronDown size={11} />
-                    </button>
-                </div>
+                        <button
+                            type="button"
+                            onClick={() => setMenu(menu === 'tag' ? null : 'tag')}
+                            style={favPillStyle(selectedTags.length > 0 || menu === 'tag')}
+                        >
+                            <Hash size={11} />
+                            {t('tags:tags', '標籤')}{selectedTags.length > 0 ? ` · ${selectedTags.length}` : ''}
+                            <ChevronDown size={11} />
+                        </button>
+                    </div>
+                </ScrollArea>
 
                 {/* Body: chooser 視圖(分類 / 標籤)取代列表,或顯示列表 */}
                 {menu === 'cat' ? (
@@ -357,7 +360,8 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                                     <button
                                         key={cat.id}
                                         type="button"
-                                        onClick={() => { setFilterCategory(cat.id); setMenu(null); }}
+                                        // 再次點選已選分類 → 取消選擇(回到全部);與標籤多選的 toggle 一致
+                                        onClick={() => { setFilterCategory(active ? null : cat.id); setMenu(null); }}
                                         style={favRowBtnStyle(active)}
                                     >
                                         <span className="flex items-center" style={{ gap: 9 }}>
