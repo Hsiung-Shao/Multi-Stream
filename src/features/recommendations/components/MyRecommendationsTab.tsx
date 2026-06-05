@@ -107,11 +107,6 @@ export function MyRecommendationsTab() {
                                         </span>
                                     )}
                                 </div>
-                                {it.comment && (
-                                    <p className="text-[12px] text-zinc-400 italic line-clamp-1 mt-0.5">
-                                        「{it.comment}」
-                                    </p>
-                                )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                                 <div
@@ -148,7 +143,7 @@ export function MyRecommendationsTab() {
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-zinc-100">撤回推薦?</AlertDialogTitle>
                         <AlertDialogDescription className="text-zinc-400">
-                            將撤回對「{pendingDelete?.vtuber?.name}」的推薦,留言一併消失。
+                            將撤回對「{pendingDelete?.vtuber?.name}」的推薦。
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

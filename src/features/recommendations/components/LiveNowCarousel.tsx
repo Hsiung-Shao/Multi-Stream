@@ -65,6 +65,8 @@ export function LiveNowCarousel() {
             : (data ?? []);
 
     // 「今日推薦」集合：近 24h 內被推薦過的 vtuber_id（daily 榜，與推薦榜共用同一 query cache）
+    // TODO(scope-cap)：daily 榜上限 60，若同日被推薦的 VTuber 超過 60 位，
+    //   排名 60 名外、正在直播者會被「今日」誤排除；待推薦量成長後改用專用「今日被推薦 id」查詢。
     const { data: dailyRec } = useRecommendations({ sort: 'daily', limit: 60 });
     const todayIds = useMemo(
         () => new Set(((dailyRec?.items as RecommendationAggregate[] | undefined) ?? []).map((it) => it.vtuber_id)),

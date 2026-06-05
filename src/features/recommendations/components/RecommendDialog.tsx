@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { twitchService } from '../../twitch/TwitchService';
 import { Input } from '../../../components/ui/input';
-import { Check, X, RefreshCw, AlertCircle, Link2, Link2Off } from 'lucide-react';
+import { Check, X, RefreshCw, AlertCircle, LogIn, Link2, Link2Off } from 'lucide-react';
 import { parseChannelUrlSync, resolveYouTubeHandle } from '../parseChannelUrl';
 import { useVtuberSuggestions, type VtuberSearchResult } from '../useVtuberSuggestions';
 import { useCrossChannelName } from '../useCrossChannelName';
@@ -39,11 +39,11 @@ interface Props {
     onOpenChange: (v: boolean) => void;
     /** 若 target 是 favorite,推薦成功後呼叫此 callback 同步 localStorage */
     onRecommended?: (favoriteId: string) => void;
-    /** 匿名 user 點留言區「登入」按鈕觸發;不傳則匿名提示只顯示文字 */
+    /** 匿名 user 點分類區「登入後可新增分類」連結觸發;不傳則不顯示登入入口 */
     onRequestLogin?: () => void;
 }
 
-export function RecommendDialog({ target, open, onOpenChange, onRecommended }: Props) {
+export function RecommendDialog({ target, open, onOpenChange, onRecommended, onRequestLogin }: Props) {
     const { isLoggedIn } = useAuth();
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
     const [selectedLangs, setSelectedLangs] = useState<VtuberLang[]>([]);
@@ -315,6 +315,16 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended }: P
                             proposeDisabled={!isLoggedIn}
                             proposeDisabledHint={!isLoggedIn ? '登入後才能新增分類' : undefined}
                         />
+                        {!isLoggedIn && onRequestLogin && (
+                            <button
+                                type="button"
+                                onClick={onRequestLogin}
+                                className="inline-flex items-center gap-1 text-[11px] text-pink-300 hover:text-pink-200 transition-colors"
+                            >
+                                <LogIn className="w-3 h-3" />
+                                登入後可新增分類
+                            </button>
+                        )}
                     </div>
 
                     {shouldHideCrossUrl ? (

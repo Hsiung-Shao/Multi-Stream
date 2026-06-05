@@ -1,4 +1,4 @@
-// 推薦卡片:VTuber 資訊 + 推薦數 + 留言摺疊 + 加收藏按鈕
+// 推薦卡片:VTuber 資訊 + 推薦數 + 加收藏按鈕
 //
 // 用法:在 RecommendationsPage grid 內 render 每個 aggregate
 // variant:

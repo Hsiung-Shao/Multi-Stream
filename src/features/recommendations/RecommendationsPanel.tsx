@@ -2,7 +2,7 @@
 //
 // 結構（與原 RecommendationsPage 一致，外觀/className 未改）:
 //   - 現正直播 Hero(LiveNowCarousel)
-//   - sort tabs(今日熱門 / 全時段 / 最新留言 / 為你推薦)
+//   - sort tabs(今日熱門 / 全時段 / 為你推薦)
 //   - category filter bar(僅 aggregate 模式)
 //   - Top 3 podium + 其餘 grid
 //   - 為你推薦分頁(ForYouSection)
