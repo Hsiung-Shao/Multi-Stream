@@ -2,13 +2,11 @@
 //
 // 觸發:RecommendationCard 點卡片 → setSelectedVtuberId(vtuberId) → page 切到此
 // 資料:useVtuberById(vtuberId)
-// 留言:CommentList(infinite)
 
 import { useState } from 'react';
 import { useUIStore } from '../../../store/useUIStore';
 import { useVtuberById } from '../useVtuberById';
 import { RecommendDialog } from '../components/RecommendDialog';
-import { CommentList } from '../components/CommentList';
 import { LoginDialog } from '../../../components/Dialogs/LoginDialog';
 import { SEO } from '../../../components/SEO';
 import { Skeleton } from '../../../components/ui/skeleton';
@@ -33,7 +31,6 @@ import {
     Star,
     ChevronDown,
     Tag,
-    MessageSquare,
 } from 'lucide-react';
 import type { RecommendTarget, VtuberDetail, SubscriberHistoryPoint } from '../types';
 
@@ -339,14 +336,6 @@ export function VtuberDetailPage() {
                             )}
                         </section>
 
-                        {/* Comments */}
-                        <section className="animate-fade-in-up" style={{ animationDelay: '240ms' }}>
-                            <div className="flex items-center gap-2 mb-3">
-                                <MessageSquare className="w-4 h-4 text-zinc-400" />
-                                <h3 className="text-sm font-semibold text-zinc-200">推薦留言</h3>
-                            </div>
-                            <CommentList vtuberId={v.id} enabled={true} />
-                        </section>
                     </>
                 )}
             </main>

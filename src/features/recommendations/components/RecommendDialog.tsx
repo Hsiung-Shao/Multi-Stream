@@ -1,12 +1,12 @@
 // 推薦 Dialog(從收藏列表 click「推薦」按鈕觸發)
 //
-// 收 favorite 資料 + 讓 user 選填 comment(0-500 字,禁 URL)→ POST /api/recommendations
+// 收 favorite 資料 → POST /api/recommendations(分類 / 語言 / 跨平台連結;留言功能已移除前端)
 // 成功:toast + close。already_recommended:toast「已推薦過」+ close。
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { twitchService } from '../../twitch/TwitchService';
 import { Input } from '../../../components/ui/input';
-import { Check, X, RefreshCw, AlertCircle, Lock, LogIn, Link2, Link2Off } from 'lucide-react';
+import { Check, X, RefreshCw, AlertCircle, Link2, Link2Off } from 'lucide-react';
 import { parseChannelUrlSync, resolveYouTubeHandle } from '../parseChannelUrl';
 import { useVtuberSuggestions, type VtuberSearchResult } from '../useVtuberSuggestions';
 import { useCrossChannelName } from '../useCrossChannelName';
@@ -21,7 +21,6 @@ import {
     DialogTitle,
 } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
-import { Textarea } from '../../../components/ui/textarea';
 import { Label } from '../../../components/ui/label';
 import { Heart, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -44,11 +43,8 @@ interface Props {
     onRequestLogin?: () => void;
 }
 
-const COMMENT_MAX = 500;
-
-export function RecommendDialog({ target, open, onOpenChange, onRecommended, onRequestLogin }: Props) {
+export function RecommendDialog({ target, open, onOpenChange, onRecommended }: Props) {
     const { isLoggedIn } = useAuth();
-    const [comment, setComment] = useState('');
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
     const [selectedLangs, setSelectedLangs] = useState<VtuberLang[]>([]);
     const [proposeOpen, setProposeOpen] = useState(false);
@@ -77,7 +73,6 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
 
     // open/close 時 reset(對齊 memory: error_dialog_mutation_reset)
     useEffect(() => {
-        setComment('');
         setSelectedCategoryIds([]);
         setSelectedLangs([]);
         setFetchedImgUrl(null);
@@ -268,13 +263,6 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
             toast.error('找不到頻道 ID,無法推薦');
             return;
         }
-        // 匿名 user 不能留言(backend 也擋,前端先攔避免 401)
-        const effectiveComment = isLoggedIn ? comment.trim() : '';
-        if (effectiveComment.length > COMMENT_MAX) {
-            toast.error(`留言過長(上限 ${COMMENT_MAX} 字)`);
-            return;
-        }
-
         try {
             const anonymousId = getOrCreateAnonymousId();
             const result = await mutation.mutateAsync({
@@ -282,7 +270,6 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
                 platform: target.platform,
                 channel_id: channelId,
                 url: target.url,
-                comment: effectiveComment || undefined,
                 anonymous_id: anonymousId || undefined,
                 category_ids: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
                 languages: selectedLangs.length > 0 ? selectedLangs : undefined,
@@ -312,7 +299,7 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
                         推薦 {target.name}
                     </DialogTitle>
                     <DialogDescription className="text-zinc-500 text-xs">
-                        推薦會顯示在公開的「VTuber 推薦」頁;留言可以分享你為什麼喜歡這位實況主(選填)。
+                        推薦會顯示在公開的「VTuber 推薦」頁。
                     </DialogDescription>
                 </DialogHeader>
 
@@ -440,41 +427,6 @@ export function RecommendDialog({ target, open, onOpenChange, onRecommended, onR
                                 );
                             })}
                         </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                        <Label className="text-xs text-zinc-400">
-                            留言(選填,{isLoggedIn ? `${comment.length} / ${COMMENT_MAX}` : '需登入'})
-                        </Label>
-                        {!isLoggedIn && (
-                            <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-zinc-900/60 border border-zinc-800">
-                                <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                                    <Lock className="w-3 h-3" />
-                                    匿名推薦不含留言,登入後可分享你為什麼推薦
-                                </p>
-                                {onRequestLogin && (
-                                    <button
-                                        type="button"
-                                        onClick={onRequestLogin}
-                                        className="flex items-center gap-1 text-[11px] text-pink-300 hover:text-pink-200 transition-colors"
-                                    >
-                                        <LogIn className="w-3 h-3" />
-                                        登入
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                        <Textarea
-                            value={comment}
-                            onChange={(e) => setComment(e.target.value)}
-                            maxLength={COMMENT_MAX}
-                            disabled={!isLoggedIn}
-                            placeholder={isLoggedIn ? '分享為什麼推薦他/她...' : '匿名推薦不支援留言'}
-                            className="bg-zinc-900 border-zinc-800 text-zinc-200 min-h-[88px] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                        {isLoggedIn && (
-                            <p className="text-[10px] text-zinc-500">隨意留言,500 字內</p>
-                        )}
                     </div>
 
                     {mutation.isError && (

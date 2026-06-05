@@ -6,8 +6,7 @@
 //   - 'card'(預設,rank 4+ / 一般推薦):一般推薦卡
 
 import { useState, useMemo } from 'react';
-import { Heart, MessageSquare, Star, ChevronDown, ChevronUp, Loader2, Radio, Clock, Bookmark, Users } from 'lucide-react';
-import { CommentList } from './CommentList';
+import { Heart, Star, ChevronDown, Loader2, Radio, Clock, Bookmark, Users } from 'lucide-react';
 import { formatRelativeTime } from '../timeFormat';
 import type { RecommendationAggregate, RecommendTarget } from '../types';
 import { toast } from 'sonner';
@@ -152,7 +151,6 @@ function avatarGradient(name: string): string {
 
 export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
     const setSelectedVtuberId = useUIStore(s => s.setSelectedVtuberId);
-    const [expanded, setExpanded] = useState(false);
     const [favPending, setFavPending] = useState(false);
     const [favAdded, setFavAdded] = useState(false);
 
@@ -241,7 +239,6 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
     const prominent = rank === 1;
     const rankStyle = rank ? RANK_STYLE[rank] : undefined;
     const avatarSize = prominent ? 60 : isPodium ? 48 : 44;
-    const note = item.comments_preview[0]?.comment ?? null;
 
     // ── 動作鈕:收藏(雙平台 Dropdown)──────────────────────────────
     const favBtnClass = favAdded
@@ -253,7 +250,7 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
             <DropdownMenuTrigger asChild>
                 <button
                     disabled={favPending || favAdded || !v}
-                    className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-medium border transition-colors ${favBtnClass}`}
+                    className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-medium border transition-colors whitespace-nowrap ${favBtnClass}`}
                 >
                     {favPending ? (
                         <><Loader2 className="w-3 h-3 animate-spin" /> 加入中</>
@@ -296,22 +293,11 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
         <button
             onClick={handleRecommendClick}
             disabled={!v || !platform}
-            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-semibold border bg-[rgba(236,72,153,0.18)] text-[#f472b6] border-[rgba(236,72,153,0.4)] hover:bg-[rgba(236,72,153,0.28)] transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11px] font-semibold border bg-[rgba(236,72,153,0.18)] text-[#f472b6] border-[rgba(236,72,153,0.4)] hover:bg-[rgba(236,72,153,0.28)] transition-colors disabled:opacity-50 whitespace-nowrap"
             title="推薦這位 VTuber"
         >
             <Heart className="w-3 h-3 fill-current" />
             推薦
-        </button>
-    );
-
-    const commentButton = (
-        <button
-            onClick={() => setExpanded(s => !s)}
-            className="inline-flex items-center gap-1 ml-auto h-7 px-2.5 rounded-md text-[11px] font-medium border bg-foreground/4 text-muted-foreground border-foreground/8 hover:bg-foreground/8 hover:text-foreground transition-colors"
-        >
-            <MessageSquare className="w-3 h-3" />
-            {expanded ? '收起' : '留言'}
-            {expanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
         </button>
     );
 
@@ -447,13 +433,6 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
                     </div>
                 )}
 
-                {/* note 引言(只在 prominent 顯示)*/}
-                {prominent && note && (
-                    <div className="text-[12px] leading-snug text-foreground italic px-2.5 py-2 rounded-lg bg-foreground/3 border border-foreground/6 mt-auto">
-                        「 {note} 」
-                    </div>
-                )}
-
                 {/* #34 活躍資訊 */}
                 {(v?.last_live_at || item.latest_at) && (
                     <div className="flex items-center gap-2.5 flex-wrap text-[10px] text-muted-foreground">
@@ -472,19 +451,11 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
                     </div>
                 )}
 
-                {/* 動作鈕 */}
-                <div className="flex items-center gap-1.5 mt-auto pt-1">
+                {/* 動作鈕（收藏 + 推薦，等分卡片寬度） */}
+                <div className="flex items-center gap-1 mt-auto pt-1 [&_button]:flex-1 [&_button]:ml-0 [&_button]:justify-center">
                     {favButton}
                     {recommendButton}
-                    {commentButton}
                 </div>
-
-                {/* 留言展開 */}
-                {expanded && v && (
-                    <div className="border-t border-border/60 pt-3 mt-1">
-                        <CommentList vtuberId={v.id} enabled={expanded} />
-                    </div>
-                )}
             </article>
         );
     }
@@ -549,13 +520,6 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
                 </div>
             )}
 
-            {/* note 引言 */}
-            {note && !expanded && (
-                <div className="text-[12px] leading-relaxed text-muted-foreground italic px-2.5 py-2 rounded-lg bg-foreground/[0.025] border border-foreground/[0.06] line-clamp-2">
-                    「 {note} 」
-                </div>
-            )}
-
             {/* #34 活躍資訊 */}
             {(v?.last_live_at || item.latest_at) && (
                 <div className="flex items-center gap-2.5 flex-wrap text-[10px] text-muted-foreground">
@@ -578,15 +542,7 @@ export function RecommendationCard({ item, rank, onRecommendClick }: Props) {
             <div className="flex items-center gap-1.5 mt-auto pt-0.5">
                 {favButton}
                 {recommendButton}
-                {commentButton}
             </div>
-
-            {/* 留言展開 */}
-            {expanded && v && (
-                <div className="border-t border-border/60 pt-3">
-                    <CommentList vtuberId={v.id} enabled={expanded} />
-                </div>
-            )}
         </article>
     );
 }

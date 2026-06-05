@@ -278,6 +278,7 @@ function TimelineDay({
   last: boolean;
   onEventClick: (event: VTuberEvent) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const sorted = useMemo(
     () =>
       frame.events
@@ -285,7 +286,7 @@ function TimelineDay({
         .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()),
     [frame.events],
   );
-  const shown = sorted.slice(0, TIMELINE_CAP);
+  const shown = open ? sorted : sorted.slice(0, TIMELINE_CAP);
   const more = sorted.length - TIMELINE_CAP;
 
   return (
@@ -310,7 +311,14 @@ function TimelineDay({
           <TimelineRow key={event.id} event={event} onClick={() => onEventClick(event)} />
         ))}
         {more > 0 && (
-          <div className="pl-3.5 text-[11px] font-semibold text-[#93c5fd]">+ 還有 {more} 場直播</div>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="ml-3.5 mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#93c5fd] hover:text-[#bfdbfe] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+          >
+            {open ? '收合' : `還有 ${more} 場直播`}
+            {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
         )}
       </div>
     </div>

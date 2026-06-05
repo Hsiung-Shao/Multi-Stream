@@ -19,7 +19,7 @@ interface ModalState {
     login: boolean;
 }
 
-export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'vtuber-detail' | 'account' | 'recommendations' | 'not-found';
+export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'vtuber-detail' | 'account' | 'recommendations' | 'recommendations-ranking' | 'not-found';
 
 interface UIState {
     theme: 'light' | 'dark' | 'system';
@@ -43,6 +43,10 @@ interface UIState {
     setMasterVolume: (volume: number | ((prev: number) => number)) => void;
     setMasterMuted: (muted: boolean | ((prev: boolean) => boolean)) => void;
     setPage: (page: PageType) => void;
+    /** 完整推薦排行頁進入時的初始排序(daily / all-time) */
+    fullRankingSort: 'daily' | 'all-time';
+    /** 設定初始排序並切到 'recommendations-ranking' 頁 */
+    openFullRanking: (sort: 'daily' | 'all-time') => void;
     /** 詳情頁要看的 vtuber id;切到 'vtuber-detail' 時設值,離開時清掉 */
     selectedVtuberId: string | null;
     /** 帶 id 時自動切 page='vtuber-detail';傳 null 時只清 id,不動 page */
@@ -145,6 +149,8 @@ export const useUIStore = create<UIState>((set) => ({
         return { masterMuted: newMuted };
     }),
     setPage: (page) => set({ page }),
+    fullRankingSort: 'all-time',
+    openFullRanking: (sort) => set({ fullRankingSort: sort, page: 'recommendations-ranking' }),
     selectedVtuberId: null,
     setSelectedVtuberId: (id) => set(id
         ? { selectedVtuberId: id, page: 'vtuber-detail' }

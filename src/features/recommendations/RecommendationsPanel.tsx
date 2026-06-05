@@ -24,7 +24,8 @@ import { useForYou } from './useForYou';
 import { formatRecommendError } from './apiClient';
 import { Skeleton } from '../../components/ui/skeleton';
 import { LoginDialog } from '../../components/Dialogs/LoginDialog';
-import { Trophy, AlertTriangle, Inbox, Flame, Clock, Sparkles, Users, ArrowRight } from 'lucide-react';
+import { Trophy, AlertTriangle, Inbox, Flame, Sparkles, Users, ArrowRight } from 'lucide-react';
+import { useUIStore } from '../../store/useUIStore';
 import type { RecommendSort, RecommendationAggregate, RecommendTarget } from './types';
 
 interface RecommendationsPanelProps {
@@ -34,6 +35,7 @@ interface RecommendationsPanelProps {
 
 export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProps = {}) {
     const { isLoggedIn } = useAuthContext();
+    const openFullRanking = useUIStore((s) => s.openFullRanking);
 
     const [sort, setSort] = useState<RecommendSort | 'for-you'>('all-time');
     const [categorySlug, setCategorySlug] = useState<string | null>(null);
@@ -45,9 +47,8 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
     };
 
     const isForYou = sort === 'for-you';
-    // 只有 aggregate 模式(daily / all-time)需要打推薦列表 API。
-    // latest 是「建置中」placeholder、for-you 走 useForYou — 兩者都不該空打推薦 API,
-    // 否則一旦那次 fetch 失敗,會在 placeholder 上疊加多餘的「載入失敗」錯誤框。
+    // 只有 aggregate 模式(daily / all-time)需要打推薦列表 API;
+    // for-you 走 useForYou,不該空打推薦 API。
     const isAggregate = sort === 'daily' || sort === 'all-time';
     const { data, isLoading, isError, error, refetch } = useRecommendations({
         sort: isAggregate ? sort : 'all-time',
@@ -104,12 +105,6 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
                         label="全時段"
                     />
                     <SortTab
-                        active={sort === 'latest'}
-                        onClick={() => setSort('latest')}
-                        icon={<Clock className="w-3.5 h-3.5" />}
-                        label="最新留言"
-                    />
-                    <SortTab
                         active={sort === 'for-you'}
                         onClick={() => setSort('for-you')}
                         icon={<Sparkles className="w-3.5 h-3.5" />}
@@ -139,9 +134,12 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
                                     title={sort === 'daily' ? '今日推薦榜' : '全時段推薦榜'}
                                     subtitle="社群推薦次數 · 即時更新"
                                     right={
-                                        <span className="inline-flex items-center gap-1 text-xs text-primary font-medium">
+                                        <button
+                                            onClick={() => openFullRanking(sort === 'daily' ? 'daily' : 'all-time')}
+                                            className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                                        >
                                             查看完整排行 <ArrowRight className="w-[11px] h-[11px]" />
-                                        </span>
+                                        </button>
                                     }
                                 />
 
@@ -197,13 +195,6 @@ export function RecommendationsPanel({ onCreateEvent }: RecommendationsPanelProp
 
                         {/* 為你推薦分頁 */}
                         {isForYou && <ForYouSection forYou={forYou} onRecommendClick={handleRecommendClick} />}
-
-                        {/* Latest mode placeholder(V1 簡化:留言流目前只當 admin debug 用) */}
-                        {sort === 'latest' && (
-                            <div className="py-12 text-center text-muted-foreground text-sm">
-                                最新留言模式建置中,先看「全時段」吧
-                            </div>
-                        )}
 
                         {/* Loading skeleton */}
                         {isLoading && (

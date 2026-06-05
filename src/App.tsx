@@ -47,6 +47,7 @@ const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module =>
 const VTuberExplorePage = lazy(() => import('./features/vtuber/pages/VTuberExplorePage').then(module => ({ 'default': module.VTuberExplorePage })));
 const AccountSettingsPage = lazy(() => import('./features/account/AccountSettingsPage').then(module => ({ 'default': module.AccountSettingsPage })));
 const VtuberDetailPage = lazy(() => import('./features/recommendations/pages/VtuberDetailPage').then(module => ({ 'default': module.VtuberDetailPage })));
+const RecommendationsRankingPage = lazy(() => import('./features/recommendations/pages/RecommendationsRankingPage').then(module => ({ 'default': module.RecommendationsRankingPage })));
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -107,7 +108,7 @@ export default function App() {
   } = useYouTubeRisk();
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
-  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'vtuber-explore', 'vtuber-detail', 'recommendations', 'not-found'].includes(currentPage);
+  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'vtuber-explore', 'vtuber-detail', 'recommendations', 'recommendations-ranking', 'not-found'].includes(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return <MobileApp />;
   }
@@ -203,6 +204,12 @@ export default function App() {
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <VtuberDetailPage />
+          </Suspense>
+        );
+      case 'recommendations-ranking':
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <RecommendationsRankingPage />
           </Suspense>
         );
       case 'not-found':

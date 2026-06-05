@@ -12,9 +12,11 @@
 // ⚠️ DEV-ONLY：本地 0 筆時注入 __devMockLivestreams 供 UI 驗證（import.meta.env.DEV 守衛，正式 build 不注入）。
 // 點「立即觀看」/ 大圖在新分頁開該直播 video_url。
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Radio, Eye, Heart, Gamepad2, Play } from 'lucide-react';
 import { useLivestreams } from '../useLivestreams';
+import { useRecommendations } from '../hooks';
+import type { RecommendationAggregate } from '../types';
 import { DEV_MOCK_LIVESTREAMS, type LivestreamWithDisplay } from '../__devMockLivestreams';
 
 const AUTOPLAY_MS = 5500;
@@ -53,16 +55,27 @@ function PlatformChip({ platform }: { platform: 'twitch' | 'youtube' }) {
 export function LiveNowCarousel() {
     const { data, isLoading } = useLivestreams();
     const [selected, setSelected] = useState(0);
-    const [scope, setScope] = useState<'today' | 'all'>('today'); // 純前端切換
+    const [scope, setScope] = useState<'today' | 'all'>('all'); // 預設全時段
     const pausedRef = useRef(false);
 
     // DEV-ONLY：本地空資料時注入 mock，讓 Hero 能渲染驗證；正式 build 不會用到
-    const streams: LivestreamWithDisplay[] =
+    const allStreams: LivestreamWithDisplay[] =
         (import.meta.env.DEV && (!data || data.length === 0))
             ? DEV_MOCK_LIVESTREAMS
             : (data ?? []);
 
-    // TODO(scope)：真實資料目前不分 today / all，toggle 暫不過濾，兩者顯示同一份。
+    // 「今日推薦」集合：近 24h 內被推薦過的 vtuber_id（daily 榜，與推薦榜共用同一 query cache）
+    const { data: dailyRec } = useRecommendations({ sort: 'daily', limit: 60 });
+    const todayIds = useMemo(
+        () => new Set(((dailyRec?.items as RecommendationAggregate[] | undefined) ?? []).map((it) => it.vtuber_id)),
+        [dailyRec],
+    );
+
+    // scope 過濾：all = 全部正在直播的被推薦 VTuber；today = 其中今天被推薦過的
+    const streams = useMemo(
+        () => (scope === 'all' ? allStreams : allStreams.filter((s) => s.vtuber && todayIds.has(s.vtuber.id))),
+        [scope, allStreams, todayIds],
+    );
 
     const count = streams.length;
 
@@ -83,10 +96,11 @@ export function LiveNowCarousel() {
         return () => window.clearInterval(id);
     }, [count]);
 
-    // 載入中或無直播 → 不佔版面（降級）
-    if (isLoading || count === 0) return null;
+    // 載入中或完全沒有任何直播 → 不佔版面（降級）
+    if (isLoading || allStreams.length === 0) return null;
 
-    const featured = streams[Math.min(selected, count - 1)];
+    // scope 過濾後可能為空（例如今日尚無被推薦者正在直播）→ 仍顯示區塊，內容改空提示
+    const featured = count > 0 ? streams[Math.min(selected, count - 1)] : null;
 
     return (
         <section aria-label="正在直播的推薦 VTuber">
@@ -95,39 +109,50 @@ export function LiveNowCarousel() {
                 <div className="flex items-center gap-2.5">
                     <Radio className="w-[18px] h-[18px] text-red-500" aria-hidden />
                     <h2 className="text-[17px] font-bold tracking-tight text-foreground">正在直播的推薦 VTuber</h2>
-                    <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 tabular-nums">
-                        {count}
-                    </span>
+                    {count > 0 && (
+                        <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 tabular-nums">
+                            {count}
+                        </span>
+                    )}
                 </div>
                 <ScopeToggle scope={scope} setScope={setScope} />
             </div>
 
-            {/* split 版面：左大圖 + 右側欄迷你列表（手機 <lg 堆疊單欄） */}
-            <div
-                className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-0 rounded-[18px] border border-border bg-card overflow-hidden"
-                onMouseEnter={() => { pausedRef.current = true; }}
-                onMouseLeave={() => { pausedRef.current = false; }}
-            >
-                {/* 左：featured 大圖 */}
-                <FeaturedTile stream={featured} />
+            {featured ? (
+                /* split 版面：左大圖 + 右側欄迷你列表（手機 <lg 堆疊單欄） */
+                <div
+                    className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-0 rounded-[18px] border border-border bg-card overflow-hidden"
+                    onMouseEnter={() => { pausedRef.current = true; }}
+                    onMouseLeave={() => { pausedRef.current = false; }}
+                >
+                    {/* 左：featured 大圖 */}
+                    <FeaturedTile stream={featured} />
 
-                {/* 右：其他正在直播（側欄迷你列表） */}
-                {count > 1 && (
-                    <div className="flex flex-col gap-2 p-3 bg-black/25 border-t lg:border-t-0 lg:border-l border-white/[0.06]">
-                        <div className="px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                            其他正在直播
+                    {/* 右：其他正在直播（側欄迷你列表） */}
+                    {count > 1 && (
+                        <div className="flex flex-col gap-2 p-3 bg-black/25 border-t lg:border-t-0 lg:border-l border-white/[0.06]">
+                            <div className="px-1.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                其他正在直播
+                            </div>
+                            {streams.map((s, i) => (
+                                <SideMiniRow
+                                    key={s.id}
+                                    stream={s}
+                                    active={i === Math.min(selected, count - 1)}
+                                    onSelect={() => setSelected(i)}
+                                />
+                            ))}
                         </div>
-                        {streams.map((s, i) => (
-                            <SideMiniRow
-                                key={s.id}
-                                stream={s}
-                                active={i === Math.min(selected, count - 1)}
-                                onSelect={() => setSelected(i)}
-                            />
-                        ))}
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            ) : (
+                /* 今日過濾後無正在直播者 → 空提示（不整塊消失） */
+                <div className="rounded-[18px] border border-border bg-card px-6 py-10 text-center">
+                    <p className="text-sm text-muted-foreground">
+                        今天還沒有被推薦的 VTuber 正在直播,切到「全時段推薦」看看吧
+                    </p>
+                </div>
+            )}
         </section>
     );
 }
