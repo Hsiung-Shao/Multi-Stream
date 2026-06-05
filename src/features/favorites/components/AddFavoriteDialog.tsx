@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import {
     Star, Pencil, Clipboard, Link2, Twitch, Youtube, Folder, Check,
-    Play, Plus, Trash2, Monitor, X,
+    Play, Plus, Trash2, X,
 } from 'lucide-react';
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../types';
 
@@ -75,7 +75,6 @@ export function AddFavoriteDialog({
     });
 
     const url = watch('url');
-    const editName = watch('name');
     const selectedTagIds = watch('tagIds');
 
     // 純視覺狀態(不影響送出 payload)
@@ -109,12 +108,8 @@ export function AddFavoriteDialog({
     const platform: AfPlatform | null = isEdit
         ? ((initialData?.platform === 'twitch' || initialData?.platform === 'youtube') ? initialData.platform : null)
         : (det.platform || manualPlatform);
-    const previewName = isEdit ? (editName?.trim() || initialData?.name || '') : det.handle;
     const accent = platformColor(platform);
-    // edit 一律可預覽;add 需偵測到 handle 才預覽
-    const canPreview = isEdit ? !!previewName : !!det.handle;
     const showPlatformPicker = !isEdit && !!det.handle && !det.platform;
-    const platformLabel = platform === 'twitch' ? 'Twitch' : platform === 'youtube' ? 'YouTube' : '';
 
     const pasteFromClipboard = async () => {
         try {
@@ -223,65 +218,6 @@ export function AddFavoriteDialog({
                                         );
                                     })}
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Honest preview card / empty state */}
-                        {canPreview && platform ? (
-                            <div
-                                className="rounded-[14px] overflow-hidden border"
-                                style={{
-                                    borderColor: `${accent}40`,
-                                    boxShadow: `0 0 0 1px ${accent}14, 0 14px 30px -18px ${accent}80`,
-                                }}
-                            >
-                                <div
-                                    className="relative flex items-center justify-center overflow-hidden"
-                                    style={{
-                                        aspectRatio: '16 / 6',
-                                        background: `linear-gradient(135deg, ${accent}33, var(--muted))`,
-                                    }}
-                                >
-                                    <div
-                                        className="absolute inset-0 opacity-50"
-                                        style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(127,127,127,0.08) 0 10px, transparent 10px 20px)' }}
-                                    />
-                                    <div className="relative size-12 rounded-full bg-black/35 flex items-center justify-center border border-white/15">
-                                        <Play className="size-5 text-white/85" />
-                                    </div>
-                                    <span className="absolute bottom-2.5 right-2.5 font-mono text-[10px] text-muted-foreground tracking-[0.04em]">
-                                        {t('favorites:preview')}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3 px-3.5 py-3 bg-muted/30">
-                                    <div
-                                        className="size-10 rounded-full shrink-0 flex items-center justify-center text-lg font-bold text-white uppercase"
-                                        style={{ background: `linear-gradient(135deg, ${accent}, ${accent}99)` }}
-                                    >
-                                        {previewName.charAt(0) || '?'}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[15px] font-bold text-foreground truncate">{previewName}</span>
-                                            <span
-                                                className="inline-flex items-center gap-1 px-[7px] py-px rounded-full text-[10.5px] font-semibold shrink-0"
-                                                style={{ background: `${accent}1f`, color: accent }}
-                                            >
-                                                {platform === 'twitch' ? <Twitch className="size-[11px]" /> : <Youtube className="size-[11px]" />}
-                                                {platformLabel}
-                                            </span>
-                                        </div>
-                                        {/* 誠實資訊:只顯示平台 + handle,不顯示直播狀態/遊戲/人數 */}
-                                        <div className="text-[11.5px] text-muted-foreground mt-0.5 truncate">
-                                            {platformLabel}{previewName ? ` · @${previewName}` : ''}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="rounded-[14px] border border-dashed border-border py-[26px] px-4 text-center text-muted-foreground bg-muted/20">
-                                <Monitor className="size-[26px] mx-auto opacity-40" />
-                                <div className="text-[12.5px] mt-2">{t('favorites:previewEmpty')}</div>
                             </div>
                         )}
 
