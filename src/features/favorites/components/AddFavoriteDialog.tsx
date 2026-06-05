@@ -20,6 +20,8 @@ interface AddFavoriteDialogProps {
     allTags: Tag[];
     initialData?: FavoriteStream | null;
     theme: 'light' | 'dark';
+    /** 是否顯示「新增後立即載入畫面」開關(僅在有畫布可載入的情境,如 canvas 的 FM) */
+    showAutoLoad?: boolean;
 }
 
 export interface AddFavoriteFormValues {
@@ -27,6 +29,8 @@ export interface AddFavoriteFormValues {
     name: string;
     categoryId: string;
     tagIds: string[];
+    /** 新增後是否立即把此頻道載入到畫布(僅 add 模式 + showAutoLoad 情境有效) */
+    autoLoad?: boolean;
 }
 
 // ---- Presentational platform detection -------------------------------------
@@ -60,7 +64,8 @@ export function AddFavoriteDialog({
     categories,
     allTags,
     initialData,
-    theme
+    theme,
+    showAutoLoad = false,
 }: AddFavoriteDialogProps) {
     const { t } = useTranslation(['favorites', 'common', 'tags']);
     const isEdit = !!initialData;
@@ -79,8 +84,7 @@ export function AddFavoriteDialog({
 
     // 純視覺狀態(不影響送出 payload)
     const [manualPlatform, setManualPlatform] = useState<AfPlatform | null>(null);
-    // autoLoad 預設 off:對齊現有「新增後不自動載入」行為,避免誤導。
-    // TODO(fullstack):待接 favoritesLoader 後讓此 toggle 真正生效。
+    // autoLoad 預設 off;開啟時新增成功後由 onSubmit 端(canvas FM)以 favoritesLoader 載入該頻道
     const [autoLoad, setAutoLoad] = useState(false);
 
     useEffect(() => {
@@ -150,7 +154,10 @@ export function AddFavoriteDialog({
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1">
+                <form
+                    onSubmit={handleSubmit((data) => onSubmit({ ...data, autoLoad: showAutoLoad && autoLoad }))}
+                    className="flex flex-col min-h-0 flex-1"
+                >
                     {/* Body */}
                     <div className="flex flex-col gap-[18px] p-5 overflow-y-auto">
                         {/* URL input + paste — add mode only */}
@@ -333,8 +340,8 @@ export function AddFavoriteDialog({
                             )}
                         </div>
 
-                        {/* Auto-load toggle — add mode only (純視覺,尚未接 favoritesLoader) */}
-                        {!isEdit && (
+                        {/* Auto-load toggle — add mode + 有畫布可載入時才顯示(接 favoritesLoader.load) */}
+                        {!isEdit && showAutoLoad && (
                             <button
                                 type="button"
                                 onClick={() => setAutoLoad((v) => !v)}

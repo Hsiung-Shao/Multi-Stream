@@ -188,7 +188,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 tagIds: data.tagIds
             });
         } else {
-            favoritesService.addFavorite(
+            const addPromise = favoritesService.addFavorite(
                 data.url,
                 data.name || undefined,
                 data.categoryId === 'uncategorized' ? null : data.categoryId,
@@ -196,6 +196,14 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 undefined,
                 data.tagIds
             );
+            // 「新增後立即載入畫面」:新增成功後把該頻道載入到 canvas(沿用既有 favoritesLoader)
+            if (data.autoLoad) {
+                addPromise
+                    .then(result => {
+                        if (result?.success && result.item) favoritesLoader.load(result.item);
+                    })
+                    .catch(() => { /* 載入失敗忽略,收藏本身已新增 */ });
+            }
         }
         setIsAddDialogOpen(false);
         setEditingFavorite(null);
@@ -631,6 +639,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                     allTags={tags}
                     initialData={editingFavorite}
                     theme={theme}
+                    showAutoLoad
                 />
 
                 <AlertDialog open={deleteCategoryConfirmOpen} onOpenChange={setDeleteCategoryConfirmOpen}>
