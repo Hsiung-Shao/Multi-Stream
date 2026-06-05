@@ -4,6 +4,17 @@ export default {
   all_categories: '모든 카테고리',
   no_categories: '카테고리 없음',
   select_tags_multi: '태그 선택 (다중)',
+  // FM Settings — 외관/재생 카드
+  theme_light: '라이트',
+  theme_dark: '다크',
+  theme_system: '시스템',
+  playback: '재생',
+  auto_mute_new: '새 스트림 열 때 자동 음소거',
+  auto_mute_new_desc: '한꺼번에 많이 열 때 음량 폭발을 방지합니다.',
+  yt_risk_warn: 'YouTube 다중 방송 경고',
+  yt_risk_warn_desc: 'YouTube 방송이 3개를 초과하면 경고합니다.',
+  bg_live_detect: '백그라운드에서 라이브 상태 자동 감지',
+  bg_live_detect_desc: '5분마다 즐겨찾기 채널을 확인합니다.',
   // Navigation
   favoritesManager: '즐겨찾기 관리',
   myFavorites: '즐겨찾기',

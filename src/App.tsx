@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from './store/useUIStore';
+import { useEffectiveTheme } from './hooks/useEffectiveTheme';
 import { parsePath, pathToPage } from './lib/i18nRouting';
 import { useStreamStore } from './store/useStreamStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
@@ -80,7 +81,7 @@ export default function App() {
     }
   }, []);
 
-  const theme = useUIStore(s => s.theme);
+  const theme = useEffectiveTheme();
   const toggleTheme = useUIStore(s => s.toggleTheme);
   const currentPage = useUIStore(s => s.page);
   const setCurrentPage = useUIStore(s => s.setPage);

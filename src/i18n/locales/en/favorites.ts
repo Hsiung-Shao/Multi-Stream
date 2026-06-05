@@ -4,6 +4,17 @@ export default {
   all_categories: 'All categories',
   no_categories: 'No categories',
   select_tags_multi: 'Select tags (multiple)',
+  // FM Settings — Appearance/Playback cards
+  theme_light: 'Light',
+  theme_dark: 'Dark',
+  theme_system: 'System',
+  playback: 'Playback',
+  auto_mute_new: 'Mute new streams on open',
+  auto_mute_new_desc: 'Avoid sudden loud volume when opening many at once.',
+  yt_risk_warn: 'YouTube multi-stream warning',
+  yt_risk_warn_desc: 'Warns when more than 3 YouTube streams are playing.',
+  bg_live_detect: 'Auto-detect live status in background',
+  bg_live_detect_desc: 'Checks your favorite channels every 5 minutes.',
   // Navigation
   favoritesManager: 'Favorites Manager',
   myFavorites: 'My Favorites',

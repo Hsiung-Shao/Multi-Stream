@@ -1,5 +1,15 @@
 import { create } from 'zustand';
 
+// 把單一欄位寫進 localStorage 'userSettings'(沿用既有持久化慣例)
+function persistUserSetting(key: string, value: unknown) {
+    try {
+        const saved = localStorage.getItem('userSettings');
+        const settings = saved ? JSON.parse(saved) : {};
+        settings[key] = value;
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+    } catch (e) { }
+}
+
 interface ModalState {
     history: boolean;
     tutorial: boolean;
@@ -12,7 +22,7 @@ interface ModalState {
 export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'vtuber-explore' | 'vtuber-detail' | 'account' | 'recommendations' | 'not-found';
 
 interface UIState {
-    theme: 'light' | 'dark';
+    theme: 'light' | 'dark' | 'system';
     page: PageType;
     isPanelCollapsed: boolean;
     isSearchFocused: boolean;
@@ -22,7 +32,7 @@ interface UIState {
     masterMuted: boolean;
     showPerformanceOverlay: boolean;
     // Actions
-    setTheme: (theme: 'light' | 'dark') => void;
+    setTheme: (theme: 'light' | 'dark' | 'system') => void;
     toggleTheme: () => void;
     setPanelCollapsed: (collapsed: boolean) => void;
     togglePanelCollapsed: () => void;
@@ -42,6 +52,13 @@ interface UIState {
     // Window functionality
     closeWindowMode: 'remove' | 'empty';
     setCloseWindowMode: (mode: 'remove' | 'empty') => void;
+    // Playback / detection settings(對齊設計 FM「播放」卡)
+    autoMuteNewStream: boolean;
+    setAutoMuteNewStream: (v: boolean) => void;
+    youtubeRiskWarning: boolean;
+    setYoutubeRiskWarning: (v: boolean) => void;
+    bgLiveDetect: boolean;
+    setBgLiveDetect: (v: boolean) => void;
     // Hotkey & Hover State
     hoveredWindowId: string | null;
     setHoveredWindowId: (id: string | null) => void;
@@ -148,6 +165,23 @@ export const useUIStore = create<UIState>((set) => ({
         } catch (e) { }
     },
 
+    // Playback / detection settings(對齊設計 FM「播放」卡)
+    autoMuteNewStream: true,
+    setAutoMuteNewStream: (v) => {
+        set({ autoMuteNewStream: v });
+        persistUserSetting('autoMuteNewStream', v);
+    },
+    youtubeRiskWarning: true,
+    setYoutubeRiskWarning: (v) => {
+        set({ youtubeRiskWarning: v });
+        persistUserSetting('youtubeRiskWarning', v);
+    },
+    bgLiveDetect: false,
+    setBgLiveDetect: (v) => {
+        set({ bgLiveDetect: v });
+        persistUserSetting('bgLiveDetect', v);
+    },
+
     // Hotkey & Hover State
     hoveredWindowId: null,
     setHoveredWindowId: (id) => set({ hoveredWindowId: id }),
@@ -171,6 +205,15 @@ try {
         }
         if (settings.closeWindowMode) {
             useUIStore.setState({ closeWindowMode: settings.closeWindowMode });
+        }
+        if (settings.autoMuteNewStream !== undefined) {
+            useUIStore.setState({ autoMuteNewStream: settings.autoMuteNewStream });
+        }
+        if (settings.youtubeRiskWarning !== undefined) {
+            useUIStore.setState({ youtubeRiskWarning: settings.youtubeRiskWarning });
+        }
+        if (settings.bgLiveDetect !== undefined) {
+            useUIStore.setState({ bgLiveDetect: settings.bgLiveDetect });
         }
     }
 } catch (e) { }

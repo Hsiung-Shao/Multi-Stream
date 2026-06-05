@@ -220,7 +220,8 @@ export const useStreamStore = create<StreamStoreState>()(
                         originalUrl: finalUrl,
                         volume: 50,
                         chatVisible: true,
-                        isMuted: false,
+                        // 「開新串流時自動靜音」設定(FM 播放卡):開啟時新串流預設靜音,避免一次開多台音量爆掉
+                        isMuted: useUIStore.getState().autoMuteNewStream,
                         displayName: displayName
                     };
 

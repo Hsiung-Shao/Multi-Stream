@@ -446,13 +446,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                         )}
 
                         {activeTab === 'global_settings' && (
-                            <SettingsSection
-                                theme={theme}
-                                currentTheme={theme}
-                                onThemeChange={(val) => {
-                                    useUIStore.getState().setTheme(val as 'light' | 'dark');
-                                }}
-                            />
+                            <SettingsSection />
                         )}
 
                         {activeTab === 'categories' && (

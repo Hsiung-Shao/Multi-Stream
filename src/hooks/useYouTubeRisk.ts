@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStreamStore } from '../store/useStreamStore';
 import { usePlayerStore } from '../store/playerStore';
+import { useUIStore } from '../store/useUIStore';
 
 export function useYouTubeRisk() {
     const streams = useStreamStore(s => s.streams);
@@ -24,6 +25,8 @@ export function useYouTubeRisk() {
     // Monitor Active YouTube Streams
     useEffect(() => {
         const checkInterval = setInterval(() => {
+            // 「YouTube 多直播風險提示」設定關閉時完全不提醒(FM 播放卡)
+            if (!useUIStore.getState().youtubeRiskWarning) return;
             // If user dismissed for session, do nothing
             if (ytRiskSessionDismissedRaw.current) return;
 

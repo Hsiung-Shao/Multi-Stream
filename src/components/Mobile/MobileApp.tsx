@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { MobileBottomNav, type MobileTab } from './MobileBottomNav';
 import { MobileWatchPage } from './MobileWatchPage';
 import { MobileExplorePage } from './MobileExplorePage';
@@ -21,7 +22,7 @@ const VersionHistory = lazy(() => import('../VersionHistory').then(m => ({ defau
 
 export function MobileApp() {
     const { t } = useTranslation();
-    const theme = useUIStore(s => s.theme);
+    const theme = useEffectiveTheme();
     const modals = useUIStore(s => s.modals);
     const closeModal = useUIStore(s => s.closeModal);
     const isLandscape = useMediaQuery('(orientation: landscape)');

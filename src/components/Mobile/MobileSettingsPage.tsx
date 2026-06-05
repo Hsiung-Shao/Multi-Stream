@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Sun, Moon, Globe, Info, FileText, HelpCircle, MessageSquareHeart, History } from 'lucide-react';
 import {
     Select,
@@ -11,7 +12,7 @@ import {
 
 export function MobileSettingsPage() {
     const { t, i18n } = useTranslation();
-    const theme = useUIStore(s => s.theme);
+    const theme = useEffectiveTheme();
     const toggleTheme = useUIStore(s => s.toggleTheme);
     const setPage = useUIStore(s => s.setPage);
     const openModal = useUIStore(s => s.openModal);

@@ -13,7 +13,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from '../../components/ui/pagination';
-import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { useFavorites } from '../../hooks/useFavorites';
 import { tagsService } from '../favorites/TagsService';
 import { favoritesService } from '../favorites/FavoritesService';
@@ -50,7 +50,7 @@ const PAGE_SIZE = 15;
  */
 export function FavoritesSection() {
     const { t } = useTranslation(['account', 'favorites', 'common']);
-    const theme = useUIStore((s) => s.theme);
+    const theme = useEffectiveTheme();
     const themeMode: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light';
 
     const { favorites, categories, refresh } = useFavorites();

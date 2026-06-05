@@ -4,6 +4,17 @@ export default {
   all_categories: 'すべてのカテゴリ',
   no_categories: 'カテゴリなし',
   select_tags_multi: 'タグを選択（複数可）',
+  // FM Settings — 外観/再生カード
+  theme_light: 'ライト',
+  theme_dark: 'ダーク',
+  theme_system: 'システム',
+  playback: '再生',
+  auto_mute_new: '新規ストリームを開いたら自動ミュート',
+  auto_mute_new_desc: '一度に多数開いたときの音量爆発を防ぎます。',
+  yt_risk_warn: 'YouTube 複数配信の警告',
+  yt_risk_warn_desc: 'YouTube 配信が 3 つを超えると警告します。',
+  bg_live_detect: 'バックグラウンドで配信状態を自動検出',
+  bg_live_detect_desc: '5 分ごとにお気に入りチャンネルを確認します。',
   // Navigation
   favoritesManager: 'お気に入り管理',
   myFavorites: 'お気に入り',

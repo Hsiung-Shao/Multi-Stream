@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
 import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe, UserRound, LogOut, Pencil, Settings, MessageSquareHeart } from 'lucide-react';
 import {
@@ -27,7 +28,7 @@ import { EditProfileDialog } from '../Dialogs/EditProfileDialog';
 export function LandingPage() {
     const { t, i18n } = useTranslation();
     const setPage = useUIStore(s => s.setPage);
-    const theme = useUIStore(s => s.theme);
+    const theme = useEffectiveTheme();
     const toggleTheme = useUIStore(s => s.toggleTheme);
     const openModal = useUIStore(s => s.openModal);
     const { isLoggedIn, profile, logout } = useAuthContext();

@@ -4,11 +4,12 @@ import { Navbar } from '../Navbar';
 
 import { SEO } from '../SEO';
 import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { useStreamStore } from '../../store/useStreamStore';
 
 export function HomePage() {
     const { t } = useTranslation();
-    const theme = useUIStore(s => s.theme);
+    const theme = useEffectiveTheme();
     const toggleTheme = useUIStore(s => s.toggleTheme);
     const setCurrentPage = useUIStore(s => s.setPage);
     const openModal = useUIStore(s => s.openModal);

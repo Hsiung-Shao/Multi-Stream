@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStreamStore } from '../../store/useStreamStore';
-import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { StreamChat } from '../StreamChat';
 import { MessageSquare } from 'lucide-react';
 import { cn } from '../ui/utils';
@@ -9,7 +9,7 @@ import { cn } from '../ui/utils';
 export function MobileChatPanel() {
     const { t } = useTranslation();
     const streams = useStreamStore(s => s.streams);
-    const theme = useUIStore(s => s.theme);
+    const theme = useEffectiveTheme();
 
     const activeStreams = streams.filter(s => s.channelId);
     const [selectedStreamId, setSelectedStreamId] = useState<number | null>(

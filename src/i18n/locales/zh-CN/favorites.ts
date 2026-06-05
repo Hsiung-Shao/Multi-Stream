@@ -4,6 +4,17 @@ export default {
   all_categories: '全部分类',
   no_categories: '没有分类',
   select_tags_multi: '选择标签（可多选）',
+  // FM Settings — 外观/播放卡(对齐设计 FMSettingsTab)
+  theme_light: '浅色',
+  theme_dark: '深色',
+  theme_system: '系统',
+  playback: '播放',
+  auto_mute_new: '打开新串流时自动静音',
+  auto_mute_new_desc: '避免一次打开很多台时音量爆掉。',
+  yt_risk_warn: 'YouTube 多直播风险提示',
+  yt_risk_warn_desc: '超过 3 个 YouTube 直播会跳警告。',
+  bg_live_detect: '后台自动检测直播状态',
+  bg_live_detect_desc: '每 5 分钟检查一次收藏频道。',
   // Navigation
   favoritesManager: '收藏管理',
   myFavorites: '我的收藏',
