@@ -17,6 +17,7 @@ import zhTWTags from './locales/zh-TW/tags';
 import zhTWYoutubeRisk from './locales/zh-TW/youtubeRisk';
 import zhTWStream from './locales/zh-TW/stream';
 import zhTWFAQ from './locales/zh-TW/faq';
+import zhTWAnnouncements from './locales/zh-TW/announcements';
 
 // Import other locales
 import zhCNCommon from './locales/zh-CN/common';
@@ -97,6 +98,7 @@ export const resources = {
         youtubeRisk: zhTWYoutubeRisk,
         stream: zhTWStream,
         faq: zhTWFAQ,
+        announcements: zhTWAnnouncements,
     },
     'zh-CN': {
         common: zhCNCommon,
@@ -113,6 +115,7 @@ export const resources = {
         youtubeRisk: zhCNYoutubeRisk,
         stream: zhCNStream,
         faq: zhCNFAQ,
+        announcements: zhTWAnnouncements,
     },
     en: {
         common: enCommon,
@@ -129,6 +132,7 @@ export const resources = {
         youtubeRisk: enYoutubeRisk,
         stream: enStream,
         faq: enFAQ,
+        announcements: zhTWAnnouncements,
     },
     ja: {
         common: jaCommon,
@@ -145,6 +149,7 @@ export const resources = {
         youtubeRisk: jaYoutubeRisk,
         stream: jaStream,
         faq: jaFAQ,
+        announcements: zhTWAnnouncements,
     },
     ko: {
         common: koCommon,
@@ -161,6 +166,7 @@ export const resources = {
         youtubeRisk: koYoutubeRisk,
         stream: koStream,
         faq: koFAQ,
+        announcements: zhTWAnnouncements,
     },
 } as const;
 

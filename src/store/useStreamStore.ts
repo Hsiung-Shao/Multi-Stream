@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useUIStore } from './useUIStore';
 import { StreamData, parseStreamUrl, validateUrl } from '../utils/streamUtils';
 import { youtubeApi } from '../utils/youtubeApi';
+import { upsertChannel } from '../features/youtube/YouTubeChannelRepository';
 import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
@@ -184,11 +185,18 @@ export const useStreamStore = create<StreamStoreState>()(
                                     if (!streamData.channelId && info.channelId) {
                                         streamData.channelId = info.channelId;
                                     }
+
+                                    // 收集 YouTube 頻道到離線資料庫(fire-and-forget,不阻塞加入)
+                                    if (info.channelId && info.channelTitle) {
+                                        upsertChannel({ channel_id: info.channelId, channel_title: info.channelTitle }).catch(() => {});
+                                    }
                                 }
                             } else if (streamData.channelId) {
                                 const title = await youtubeApi.getChannelTitleFromChannelId(streamData.channelId);
                                 if (title) {
                                     if (shouldUpdateTitle) displayName = title;
+                                    // 收集 YouTube 頻道到離線資料庫(fire-and-forget,不阻塞加入)
+                                    upsertChannel({ channel_id: streamData.channelId, channel_title: title }).catch(() => {});
                                 }
                             }
                         } catch (e) {

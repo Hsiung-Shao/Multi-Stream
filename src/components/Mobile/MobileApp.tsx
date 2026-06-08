@@ -11,6 +11,7 @@ import { SEO } from '../SEO';
 import { Toaster } from '../ui/sonner';
 import { GlobalLiveStatusChecker } from '../../features/favorites/components/GlobalLiveStatusChecker';
 import { CookieConsent } from '../CookieConsent';
+import { AnnouncementsProvider } from '../../features/announcements/AnnouncementsProvider';
 import { useMediaQuery } from '../../hooks/use-media-query';
 
 const FavoritesManagerMain = lazy(() => import('../../features/favorites/components/FavoritesManagerMain').then(m => ({ default: m.FavoritesManagerMain })));
@@ -109,6 +110,7 @@ export function MobileApp() {
             <GlobalLiveStatusChecker />
             <Toaster />
             <CookieConsent />
+            <AnnouncementsProvider />
         </div>
     );
 }

@@ -21,6 +21,7 @@ import { useHotkeys } from './hooks/useHotkeys';
 import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
 import { CookieConsent } from './components/CookieConsent';
+import { AnnouncementsProvider } from './features/announcements/AnnouncementsProvider';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
 import { MobileApp } from './components/Mobile/MobileApp';
 
@@ -239,6 +240,7 @@ export default function App() {
       <GlobalLiveStatusChecker />
       <Toaster />
       <CookieConsent />
+      <AnnouncementsProvider />
       <BraveDetectDialog />
     </>
   );
