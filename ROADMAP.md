@@ -106,7 +106,7 @@
 
 ## 跨階段待辦
 - **i18n 翻譯**:`announcements` 目前 5 語系共用 zh-TW;後續補 zh-CN / en / ja / ko 翻譯(`src/i18n/locales/<lang>/announcements.ts` + `i18n.ts` 指向各自版本)。
-- **admin 後台 UI**:目前公告發布僅後端 token endpoint;後續可做極簡 admin 發布介面(輸入 token)。
+- **admin 後台 UI**:✅ 已移植公告管理介面 — `AdminDashboard` 新增「推送公告」tab(列表 / 新增 / 編輯 / 刪除 / 查看投票問卷結果)。認證用 `X-Admin-Token`:admin 在公告分頁頂部輸入一次 `ADMIN_API_TOKEN`,存 localStorage(`ms_admin_api_token`)。注意 admin 進 dashboard 仍走既有 Supabase 帳密登入,公告 API 另用 token(雙重認證,簡易保護取捨)。
 - **部署 preview 端到端驗證**:Phase A 兩功能需在 Cloudflare Pages preview 設好 env 後完成最終驗證。
 
 ---
@@ -115,6 +115,7 @@
 | Phase | 功能 | 狀態 |
 |---|---|---|
 | A1 | 通知推送(投票/意見/公告) | ✅ 已移植,待 preview 驗證 |
+| A1+ | admin 公告管理 UI(X-Admin-Token 認證) | ✅ 已移植,待 preview 驗證 |
 | A2 | YouTube 頻道離線資料庫 | ✅ 已移植,待 preview 驗證 |
 | B | UI 重新設計 | 📐 已設計,待實作 |
 | C | 短暫播放回復 | 📐 已設計,待釐清情境 |

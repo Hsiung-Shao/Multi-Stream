@@ -6,8 +6,9 @@
 // - 刪除有 CASCADE 風險（會清掉所有 responses），跳二次確認。
 
 import { useState } from 'react';
-import { Megaphone, Plus, Pencil, Trash2, BarChart3, Loader2, AlertTriangle, Inbox } from 'lucide-react';
+import { Megaphone, Plus, Pencil, Trash2, BarChart3, Loader2, AlertTriangle, Inbox, KeyRound, Check } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Skeleton } from '../../../components/ui/skeleton';
 import {
@@ -32,6 +33,9 @@ import {
     useAdminAnnouncements,
     useDeleteAnnouncement,
     formatAdminAnnouncementError,
+    getAdminToken,
+    setAdminToken,
+    clearAdminToken,
     type AnnouncementRecord,
 } from '../hooks/useAdminAnnouncements';
 import { AnnouncementEditDialog } from './AnnouncementEditDialog';
@@ -88,6 +92,24 @@ export function AnnouncementsTab() {
 
     const [deleteTarget, setDeleteTarget] = useState<AnnouncementRecord | null>(null);
 
+    // 公告 API Token(後端 ADMIN_API_TOKEN 簡易保護;admin 輸入一次,存 localStorage)
+    const [tokenInput, setTokenInput] = useState('');
+    const [hasToken, setHasToken] = useState(() => getAdminToken().length > 0);
+
+    const handleSaveToken = () => {
+        const t = tokenInput.trim();
+        if (!t) return;
+        setAdminToken(t);
+        setHasToken(true);
+        setTokenInput('');
+        refetch();
+    };
+
+    const handleResetToken = () => {
+        clearAdminToken();
+        setHasToken(false);
+    };
+
     const handleCreate = () => {
         setEditTarget(null);
         setEditOpen(true);
@@ -115,6 +137,43 @@ export function AnnouncementsTab() {
 
     return (
         <div className="space-y-4">
+            {/* Admin API Token 設定列 */}
+            <div className="flex items-center gap-2 px-4 py-3 rounded-lg border border-zinc-800 bg-zinc-900/60">
+                <KeyRound className="w-4 h-4 text-zinc-400 shrink-0" />
+                {hasToken ? (
+                    <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="text-[13px] text-zinc-300">已設定公告 API Token</span>
+                        <button
+                            onClick={handleResetToken}
+                            className="ml-auto text-[12px] text-zinc-400 hover:text-zinc-200 underline transition-colors"
+                        >
+                            重設
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <span className="text-[13px] text-zinc-400 shrink-0">公告 API Token:</span>
+                        <Input
+                            type="password"
+                            value={tokenInput}
+                            onChange={(e) => setTokenInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveToken(); }}
+                            placeholder="輸入 ADMIN_API_TOKEN"
+                            className="h-8 max-w-xs bg-zinc-950 border-zinc-700 text-zinc-200 text-[13px]"
+                        />
+                        <Button
+                            size="sm"
+                            onClick={handleSaveToken}
+                            disabled={!tokenInput.trim()}
+                            className="h-8 text-xs bg-zinc-700 hover:bg-zinc-600"
+                        >
+                            儲存
+                        </Button>
+                    </>
+                )}
+            </div>
+
             {/* Header row */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -126,6 +185,7 @@ export function AnnouncementsTab() {
                 <Button
                     size="sm"
                     onClick={handleCreate}
+                    disabled={!hasToken}
                     className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 h-8"
                 >
                     <Plus className="w-3.5 h-3.5" />
