@@ -11,7 +11,7 @@ interface ModalState {
 export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'not-found';
 
 interface UIState {
-    theme: 'light' | 'dark';
+    theme: 'light' | 'dark' | 'system';
     page: PageType;
     isPanelCollapsed: boolean;
     isSearchFocused: boolean;
@@ -21,7 +21,7 @@ interface UIState {
     masterMuted: boolean;
     showPerformanceOverlay: boolean;
     // Actions
-    setTheme: (theme: 'light' | 'dark') => void;
+    setTheme: (theme: 'light' | 'dark' | 'system') => void;
     toggleTheme: () => void;
     setPanelCollapsed: (collapsed: boolean) => void;
     togglePanelCollapsed: () => void;

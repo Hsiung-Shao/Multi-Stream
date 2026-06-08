@@ -8,6 +8,9 @@ import { SaveLayoutDialog } from '../../components/Layout/SaveLayoutDialog';
 import { cn } from '../ui/utils';
 import { layoutTemplates } from '../../utils/layoutPresets';
 
+// Layout 面板主題色(對齊設計 FN.layout = violet)
+const LAYOUT_ACCENT = '#c084fc';
+
 const iconMap: Record<string, any> = {
     'Square': Square,
     'Columns2': Columns2,
@@ -48,41 +51,68 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
             <div
                 onMouseLeave={onMouseLeave}
                 className={cn(
-                    "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[340px] bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-500 ease-out origin-bottom",
+                    "absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 w-[340px] overflow-hidden transition-all duration-300 ease-out origin-bottom text-white",
                     isExpanded
                         ? "opacity-100 scale-100 translate-y-0"
-                        : "opacity-0 scale-95 translate-y-4 pointer-events-none"
+                        : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
                 )}
+                style={{
+                    background: 'rgba(12,12,17,0.92)',
+                    backdropFilter: 'blur(22px)',
+                    WebkitBackdropFilter: 'blur(22px)',
+                    borderRadius: 20,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 60px -18px rgba(0,0,0,0.75)',
+                }}
             >
-                <div className="p-4 space-y-4">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-white text-sm font-medium flex items-center gap-2">
-                            <LayoutGrid className="size-4 text-purple-400" />
-                            {t('common.layout_list') || '布局清單'}
-                        </h3>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs text-muted-foreground hover:text-white hover:bg-white/10"
-                            onClick={onOpenSettings}
+                {/* Panel header(violet icon chip) */}
+                <div
+                    className="flex items-center justify-between"
+                    style={{ padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                    <div className="flex items-center gap-2.5">
+                        <span
+                            className="flex items-center justify-center"
+                            style={{
+                                width: 30,
+                                height: 30,
+                                borderRadius: 9,
+                                background: `${LAYOUT_ACCENT}1f`,
+                                color: LAYOUT_ACCENT,
+                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
+                            }}
                         >
-                            <Settings className="size-3.5 mr-1" />
-                            {t('common.manage') || '管理'}
-                        </Button>
+                            <LayoutGrid className="size-4" />
+                        </span>
+                        <span className="text-sm font-semibold">{t('common.layout_list') || '布局清單'}</span>
                     </div>
 
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs hover:bg-white/10"
+                        style={{ color: LAYOUT_ACCENT }}
+                        onClick={onOpenSettings}
+                    >
+                        <Settings className="size-3.5 mr-1" />
+                        {t('common.manage') || '管理'}
+                    </Button>
+                </div>
+
+                <div className="p-4 space-y-4">
                     {/* Tabs */}
                     <div className="flex p-1 bg-white/5 rounded-lg mb-2">
                         <button
                             onClick={() => setActiveTab('video_only')}
                             className={cn(
                                 "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab === 'video_only'
-                                    ? "bg-white/10 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-white/80"
+                                activeTab !== 'video_only' && "text-gray-400 hover:text-white/80"
                             )}
+                            style={activeTab === 'video_only' ? {
+                                background: `${LAYOUT_ACCENT}2a`,
+                                color: LAYOUT_ACCENT,
+                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
+                            } : undefined}
                         >
                             {t('layout.tab_video') || '僅串流'}
                         </button>
@@ -90,10 +120,13 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                             onClick={() => setActiveTab('with_chat')}
                             className={cn(
                                 "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab === 'with_chat'
-                                    ? "bg-white/10 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-white/80"
+                                activeTab !== 'with_chat' && "text-gray-400 hover:text-white/80"
                             )}
+                            style={activeTab === 'with_chat' ? {
+                                background: `${LAYOUT_ACCENT}2a`,
+                                color: LAYOUT_ACCENT,
+                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
+                            } : undefined}
                         >
                             {t('layout.tab_chat') || '含聊天室'}
                         </button>
@@ -101,10 +134,13 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                             onClick={() => setActiveTab('custom')}
                             className={cn(
                                 "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab === 'custom'
-                                    ? "bg-white/10 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-white/80"
+                                activeTab !== 'custom' && "text-gray-400 hover:text-white/80"
                             )}
+                            style={activeTab === 'custom' ? {
+                                background: `${LAYOUT_ACCENT}2a`,
+                                color: LAYOUT_ACCENT,
+                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
+                            } : undefined}
                         >
                             {t('layout.tab_custom') || '自訂義'}
                         </button>

@@ -1,6 +1,5 @@
-import { Search, X, Plus, Loader2 } from 'lucide-react';
+import { Search, Plus, Loader2, X } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../ui/utils';
@@ -9,8 +8,9 @@ import { ScrollArea } from '../ui/scroll-area';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 import { twitchService } from '../../features/twitch/TwitchService';
-import { track } from '../../utils/analytics';
-// ... existing imports
+
+// Search 模組主題色(對齊設計 FN.search = blue)
+const SEARCH_ACCENT = '#5b9bff';
 
 interface SearchResult {
     id: string;
@@ -26,12 +26,12 @@ interface SearchResult {
 
 interface IslandSearchProps {
     onSearch?: (query: string) => void;
+    // 注意:2026-05-17 改為永遠展開(user 偏好不折疊),collapsed prop 仍接但不再控制顯隱
     collapsed?: boolean;
 }
 
-export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
+export function IslandSearch({ onSearch }: IslandSearchProps) {
     const { t } = useTranslation('common');
-    const [expanded, setExpanded] = useState(false);
     const [query, setQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [showResults, setShowResults] = useState(false);
@@ -45,15 +45,14 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
     const { isSearchFocused, setSearchFocused } = useUIStore();
     const addStream = useStreamStore(s => s.addStream);
 
-    // Sync store focus state with local state
+    // 從別處觸發 focus(例如 hotkey)時把 input 拉到 focus
     useEffect(() => {
         if (isSearchFocused) {
-            setExpanded(true);
+            inputRef.current?.focus();
             setSearchFocused(false); // Reset trigger
         }
     }, [isSearchFocused, setSearchFocused]);
 
-    // --- Logic from Navbar ---
     const isUrl = (text: string): boolean => {
         const trimmed = text.trim();
         return trimmed.includes('http://') ||
@@ -69,15 +68,12 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
             setShowResults(false);
             return;
         }
-
         setIsSearching(true);
         try {
             const results = await twitchService.searchChannels(q, 5);
             setSearchResults(results || []);
             setShowResults(true);
             setSelectedIndex(-1);
-            // GA4: 追蹤搜尋結果出現
-            track.viewSearchResults(q.trim(), results?.length ?? 0);
         } catch (error) {
             setSearchResults([]);
             setShowResults(false);
@@ -88,25 +84,21 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
 
     useEffect(() => {
         if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-
         const trimmed = query.trim();
         if (trimmed.length === 0 || isUrl(trimmed)) {
             setSearchResults([]);
             setShowResults(false);
             return;
         }
-
-        // Debounce 500ms
         searchTimeoutRef.current = setTimeout(() => {
             searchTwitchChannels(trimmed);
         }, 500);
-
         return () => {
             if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
         };
     }, [query, searchTwitchChannels]);
 
-    // Handle Click Outside
+    // Click outside → close results popup(input 保留)
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -117,34 +109,9 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // --- UI Handlers ---
-
-    useEffect(() => {
-        if (expanded && inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, [expanded]);
-
-    // Reset expanded state when island collapses
-    useEffect(() => {
-        if (collapsed && expanded) {
-            setExpanded(false);
-            setShowResults(false);
-        }
-    }, [collapsed, expanded]);
-
-    const handleToggle = () => {
-        setExpanded(!expanded);
-        if (!expanded) {
-            setQuery('');
-            setSearchResults([]);
-        }
-    };
-
     const handleSelectResult = (result: SearchResult) => {
-        addStream(result.url); // Add Stream
+        addStream(result.url);
         setQuery('');
-        setExpanded(false);
         setShowResults(false);
         if (onSearch) onSearch(result.login);
     };
@@ -155,25 +122,17 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
         if (!valueToAdd) return;
 
         let targetUrl = valueToAdd;
-
-        // If selection active
         if (showResults && selectedIndex >= 0 && searchResults[selectedIndex]) {
             targetUrl = searchResults[selectedIndex].url;
         }
 
-        // Use store action to add stream
-        // The store handles validation for URL or Twitch channel name
         const result = await addStream(targetUrl);
-
         if (result.success) {
             setQuery('');
-            setExpanded(false);
-            setShowResults(false); // Close on success
+            setShowResults(false);
         } else {
-            // TODO: Show error toast?
             alert(result.message || t('common.error'));
         }
-
         if (onSearch) onSearch(valueToAdd);
     };
 
@@ -193,12 +152,30 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
         }
     };
 
-    return (
-        <div ref={containerRef} className={cn("flex items-center transition-all duration-300 ease-in-out relative", expanded ? "w-64" : "w-auto")}>
+    const handleClear = () => {
+        setQuery('');
+        setSearchResults([]);
+        setShowResults(false);
+        inputRef.current?.focus();
+    };
 
-            {/* Results Popup (Above) */}
-            {showResults && searchResults.length > 0 && expanded && (
-                <div className="absolute bottom-full left-0 w-64 mb-2 rounded-lg border border-white/10 bg-black/90 backdrop-blur-md shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2">
+    return (
+        <div
+            ref={containerRef}
+            className="flex items-center w-64 relative"
+        >
+            {/* Results popup */}
+            {showResults && searchResults.length > 0 && (
+                <div
+                    className="absolute bottom-full left-0 w-64 mb-3 rounded-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2"
+                    style={{
+                        background: 'rgba(10,10,14,0.94)',
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
+                        border: `1px solid ${SEARCH_ACCENT}33`,
+                        boxShadow: `0 20px 40px -12px rgba(0,0,0,0.7), 0 0 0 1px ${SEARCH_ACCENT}14`,
+                    }}
+                >
                     <ScrollArea className="h-60 p-1">
                         {searchResults.map((result, index) => (
                             <div
@@ -232,40 +209,42 @@ export function IslandSearch({ onSearch, collapsed }: IslandSearchProps) {
             )}
 
             <form onSubmit={handleSubmit} className="flex items-center w-full relative">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn("rounded-full hover:bg-white/10 text-white z-10", expanded && "bg-white/10")}
-                    onClick={handleToggle}
-                    title={t('common.search') || "搜尋"}
-                >
-                    {expanded ? <X size={20} /> : <Search size={20} />}
-                </Button>
+                {/* Search icon prefix(純圖示,非按鈕) */}
+                <Search
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10"
+                    style={{ color: SEARCH_ACCENT }}
+                />
 
-                <div className={cn(
-                    "absolute left-0 pl-10 pr-8 transition-all duration-300 overflow-hidden",
-                    expanded ? "w-full opacity-100" : "w-0 opacity-0 pointer-events-none"
-                )}>
-                    <Input
-                        ref={inputRef}
-                        type="text"
-                        placeholder={t('common.search_placeholder') || "Search..."}
-                        value={query}
-                        onChange={(e) => {
-                            setQuery(e.target.value);
-                            setSelectedIndex(-1);
-                        }}
-                        onKeyDown={handleKeyDown}
-                        className="h-8 bg-transparent border-none text-white placeholder:text-white/50 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
-                </div>
+                <Input
+                    ref={inputRef}
+                    type="text"
+                    placeholder={t('common.search_placeholder') || 'Search...'}
+                    value={query}
+                    onChange={(e) => {
+                        setQuery(e.target.value);
+                        setSelectedIndex(-1);
+                    }}
+                    onKeyDown={handleKeyDown}
+                    className="h-8 pl-9 pr-9 bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:ring-1 focus-visible:ring-offset-0 rounded-full"
+                    style={{ ['--tw-ring-color' as any]: `${SEARCH_ACCENT}55` }}
+                />
 
-                {isSearching && expanded && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                {/* Right side:loading spinner OR clear button */}
+                {isSearching ? (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                         <Loader2 className="animate-spin text-white/50" size={14} />
                     </div>
-                )}
+                ) : query.length > 0 ? (
+                    <button
+                        type="button"
+                        onClick={handleClear}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                        title="清除"
+                    >
+                        <X size={12} />
+                    </button>
+                ) : null}
             </form>
         </div>
     );

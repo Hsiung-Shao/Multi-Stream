@@ -47,12 +47,12 @@ export const StreamListItem = ({
             className={cn(
                 "rounded-lg border transition-all text-white",
                 isDragging
-                    ? "!bg-purple-500 !border-purple-300 shadow-2xl ring-4 ring-purple-300/50 scale-105 !text-white"
-                    : "bg-gray-800/50 border-gray-700"
+                    ? "!bg-cyan-500 !border-cyan-300 shadow-2xl ring-4 ring-cyan-300/50 scale-105 !text-white"
+                    : "bg-white/[0.04] border-white/[0.06]"
             )}
         >
             {/* 串流項目標題列 */}
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.06]">
                 <div
                     className="cursor-grab active:cursor-grabbing hover:text-white text-gray-500 flex-shrink-0 touch-none"
                     {...dragListeners}
@@ -147,9 +147,9 @@ export const StreamListItem = ({
                         min={0}
                         max={100}
                         step={1}
-                        className="flex-1"
+                        className="flex-1 [&_[data-slot=slider-range]]:bg-cyan-400 [&_[data-slot=slider-thumb]]:border-cyan-400"
                     />
-                    <span className="text-xs min-w-[40px] text-right text-purple-400">
+                    <span className="text-xs min-w-[40px] text-right text-cyan-400">
                         {masterMuted ? `0% (${stream.volume || 100}%)` : `${stream.volume || 100}%`}
                     </span>
                 </div>

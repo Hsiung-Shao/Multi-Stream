@@ -4,6 +4,8 @@ import { useUIStore } from '../store/useUIStore';
 /**
  * Hook to manage theme system side effects.
  * Synchonizes the theme state from useUIStore to the document's classList and meta tags.
+ *
+ * theme === 'system' 時跟隨作業系統的 prefers-color-scheme,並在系統切換時即時更新。
  */
 export function useThemeSystem() {
     const theme = useUIStore((state) => state.theme);
@@ -11,16 +13,21 @@ export function useThemeSystem() {
     useEffect(() => {
         const root = window.document.documentElement;
 
-        // Remove both potential classes first to be clean (though usually we just toggle dark)
-        root.classList.remove('light', 'dark');
+        const apply = (resolved: 'light' | 'dark') => {
+            // Remove both potential classes first to be clean (though usually we just toggle dark)
+            root.classList.remove('light', 'dark');
+            root.classList.add(resolved);
+        };
 
-        // Add the current theme class
-        root.classList.add(theme);
+        if (theme === 'system') {
+            const mql = window.matchMedia('(prefers-color-scheme: dark)');
+            apply(mql.matches ? 'dark' : 'light');
+            // 跟隨系統切換
+            const onChange = (e: MediaQueryListEvent) => apply(e.matches ? 'dark' : 'light');
+            mql.addEventListener('change', onChange);
+            return () => mql.removeEventListener('change', onChange);
+        }
 
-        // Update meta theme-color for mobile browsers if needed
-        // const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-        // if (metaThemeColor) {
-        //     metaThemeColor.setAttribute('content', theme === 'dark' ? '#030712' : '#ffffff');
-        // }
+        apply(theme);
     }, [theme]);
 }

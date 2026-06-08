@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     DndContext,
     closestCenter,
@@ -19,11 +18,15 @@ import { Slider } from '../ui/slider';
 import { Switch } from '../ui/switch';
 import { ScrollArea } from '../ui/scroll-area';
 import { Label } from '../ui/label';
+import { Sliders, VolumeX, Volume2 } from 'lucide-react';
 import { StreamListItem } from './StreamListItem';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { cn } from '../ui/utils';
 import { useTranslation } from 'react-i18next';
+
+// Media 面板主題色(對齊設計 FN.media = cyan)
+const MEDIA_ACCENT = '#22d3ee';
 
 // Wrapper for Sortable Item
 const SortableStreamItem = (props: any) => {
@@ -150,26 +153,84 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
         <div
             onMouseLeave={onMouseLeave}
             className={cn(
-                "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[480px] bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-500 ease-out origin-bottom",
+                "absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 w-[480px] overflow-hidden transition-all duration-300 ease-out origin-bottom text-white",
                 isExpanded
                     ? "opacity-100 scale-100 translate-y-0"
-                    : "opacity-0 scale-95 translate-y-4 pointer-events-none"
+                    : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
             )}
-            style={{ maxHeight: '500px' }}
+            style={{
+                maxHeight: '500px',
+                background: 'rgba(12,12,17,0.92)',
+                backdropFilter: 'blur(22px)',
+                WebkitBackdropFilter: 'blur(22px)',
+                borderRadius: 20,
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 60px -18px rgba(0,0,0,0.75)',
+            }}
         >
+            {/* Panel header(cyan icon chip) */}
+            <div
+                className="flex items-center justify-between"
+                style={{ padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+            >
+                <div className="flex items-center gap-2.5">
+                    <span
+                        className="flex items-center justify-center"
+                        style={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 9,
+                            background: `${MEDIA_ACCENT}1f`,
+                            color: MEDIA_ACCENT,
+                            boxShadow: `inset 0 0 0 1px ${MEDIA_ACCENT}40`,
+                        }}
+                    >
+                        <Sliders size={16} />
+                    </span>
+                    <span className="text-sm font-semibold">{t('common.media') || '媒體控制'}</span>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => { setMasterMuted(true); useStreamStore.getState().setAllMuted(true); }}
+                    className="inline-flex items-center gap-1.5 font-semibold"
+                    style={{
+                        height: 28,
+                        padding: '0 11px',
+                        borderRadius: 9999,
+                        border: `1px solid ${MEDIA_ACCENT}40`,
+                        background: `${MEDIA_ACCENT}14`,
+                        color: MEDIA_ACCENT,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                    }}
+                    title={t('controlPanel:muteAll') || '全部靜音'}
+                >
+                    <VolumeX size={12} /> {t('controlPanel:muteAll') || '全部靜音'}
+                </button>
+            </div>
+
             <div className="p-4 space-y-4">
                 {/* 總音量控制 */}
-                <div className="space-y-3">
+                <div
+                    className="space-y-3"
+                    style={{
+                        padding: 14,
+                        borderRadius: 14,
+                        background: `${MEDIA_ACCENT}12`,
+                        border: `1px solid ${MEDIA_ACCENT}2e`,
+                    }}
+                >
                     <div className="flex items-center justify-between">
                         <Label
-                            className="text-white text-sm font-medium cursor-pointer select-none"
+                            className="text-white text-sm font-medium cursor-pointer select-none flex items-center gap-2"
                             onDoubleClick={handleMasterMuteDoubleClick}
                             title="雙擊此處可切換全部靜音/解除全部靜音"
                         >
+                            <Volume2 size={15} style={{ color: MEDIA_ACCENT }} />
                             {t('controlPanel:masterVolume') || '總音量'}
                         </Label>
                         <div className="flex items-center gap-2">
-                            <span className="text-purple-400 text-sm min-w-[48px] text-right">
+                            <span className="text-sm min-w-[48px] text-right font-semibold tabular-nums" style={{ color: MEDIA_ACCENT }}>
                                 {masterMuted ? '0%' : `${masterVolume}%`}
                             </span>
                             <Switch
@@ -185,7 +246,7 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                                     // This means toggling this switch should Mute/Unmute everything.
                                     useStreamStore.getState().setAllMuted(newMuted);
                                 }}
-                                className="data-[state=checked]:bg-purple-500"
+                                className="data-[state=checked]:bg-cyan-500"
                             />
                         </div>
                     </div>
@@ -209,16 +270,13 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                                 useStreamStore.getState().setAllMuted(false);
                             }
                         }}
-                        className="w-full"
+                        className="w-full [&_[data-slot=slider-range]]:bg-cyan-400 [&_[data-slot=slider-thumb]]:border-cyan-400"
                     />
                 </div>
 
-                {/* 分隔線 */}
-                <div className="h-3 w-[1px] bg-white/10" />
-
                 {/* 串流順序清單 */}
                 <div className="space-y-2">
-                    <Label className="text-white text-sm font-medium">
+                    <Label className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.55)' }}>
                         {t('controlPanel:streamOrder') || '串流順序'}
                     </Label>
 
