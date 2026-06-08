@@ -1,8 +1,24 @@
-import { ArrowLeft, Globe, Sun, Moon, Tv, Grid, MessageCircle, Volume2, Star, Smartphone, Languages, Shield, Search, Radio, Youtube, Zap, RefreshCw, Code, Radio as Broadcast, Database, Gauge, Users, Mail, MessageSquare } from 'lucide-react';
+// AboutPage — 依 multistream-hub-design-system 的 AboutPage.jsx 重建(editorial 版:
+// blur orbs、gradient hero、hued icon chips(AbChip = IconChip)、eyebrow section、
+// spotlight 三卡、feature grid、編號技術列表、creator 卡、contact 列、terms、
+// local-first 隱私區、footer)。保留 next 既有的 props/header 與多語系 i18n。
+// SEO 由 App.tsx 在 case 'about' 外層統一處理,此處不重複以免雙標題。
+
+import type { ReactNode } from 'react';
+import {
+  ArrowLeft, Globe, Sun, Moon,
+  Tv, Radio, Zap, LayoutGrid, MessagesSquare, Volume2, Star, Smartphone,
+  Languages, ShieldCheck, Search, Youtube, RefreshCw,
+  CodeXml, RadioTower, Database, Gauge,
+  Gift, Github, UserX, MessageCircle, Coffee, Mail,
+  ArrowUpRight, ArrowRight, Copyright, Megaphone,
+  type LucideIcon,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
+import { Eyebrow, IconChip, BlurOrb } from './ui/ds-primitives';
 
 interface AboutPageProps {
   theme: 'light' | 'dark';
@@ -11,36 +27,172 @@ interface AboutPageProps {
   onNavigateToPrivacy?: () => void;
 }
 
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+const GITHUB_URL = 'https://github.com/Hsiung-Shao/Multi-Stream';
+const DISCORD_URL = 'https://discord.gg/47kauArepY';
+const COFFEE_URL = 'https://buymeacoffee.com/hsiung';
+const FEEDBACK_URL = 'https://forms.gle/AjG922YrXFbyAdBa6';
+const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
+
 export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }: AboutPageProps) {
   const { t, i18n } = useTranslation(['about', 'common']);
+  const tx = t as unknown as TFn;
   const locale = i18n.language;
 
-  // 註：page_view 由 useRouter 統一處理，此處不再額外送（避免雙計）
   const languages = [
-    { value: 'zh-TW' as const, label: t('common:chineseTraditional') },
-    { value: 'zh-CN' as const, label: t('common:chineseSimplified') },
-    { value: 'en' as const, label: t('common:english') },
-    { value: 'ja' as const, label: t('common:japanese') },
-    { value: 'ko' as const, label: t('common:korean') },
+    { value: 'zh-TW' as const, label: tx('common:chineseTraditional') },
+    { value: 'zh-CN' as const, label: tx('common:chineseSimplified') },
+    { value: 'en' as const, label: tx('common:english') },
+    { value: 'ja' as const, label: tx('common:japanese') },
+    { value: 'ko' as const, label: tx('common:korean') },
+  ];
+
+  // spotlight 三卡 — 沿用既有 feature1 / feature10 / feature12 多語系 key。
+  const spotlight: { icon: LucideIcon; hue: string; title: string; desc: string }[] = [
+    { icon: Tv, hue: '#a855f7', title: tx('about:feature1.title'), desc: tx('about:feature1.description') },
+    { icon: Radio, hue: '#10b981', title: tx('about:feature10.title'), desc: tx('about:feature10.description') },
+    { icon: Zap, hue: '#ec4899', title: tx('about:feature12.title'), desc: tx('about:feature12.description') },
+  ];
+
+  // feature grid — 沿用既有 feature2-9 / feature11 / feature13 多語系 key,對齊 design 十項。
+  const features: { icon: LucideIcon; hue: string; title: string; desc: string }[] = [
+    { icon: LayoutGrid, hue: '#60a5fa', title: tx('about:feature2.title'), desc: tx('about:feature2.description') },
+    { icon: MessagesSquare, hue: '#c084fc', title: tx('about:feature3.title'), desc: tx('about:feature3.description') },
+    { icon: Volume2, hue: '#facc15', title: tx('about:feature4.title'), desc: tx('about:feature4.description') },
+    { icon: Star, hue: '#a855f7', title: tx('about:feature5.title'), desc: tx('about:feature5.description') },
+    { icon: Smartphone, hue: '#60a5fa', title: tx('about:feature6.title'), desc: tx('about:feature6.description') },
+    { icon: Languages, hue: '#4ade80', title: tx('about:feature7.title'), desc: tx('about:feature7.description') },
+    { icon: ShieldCheck, hue: '#ef4444', title: tx('about:feature8.title'), desc: tx('about:feature8.description') },
+    { icon: Search, hue: '#9146FF', title: tx('about:feature9.title'), desc: tx('about:feature9.description') },
+    { icon: Youtube, hue: '#FF3D3D', title: tx('about:feature11.title'), desc: tx('about:feature11.description') },
+    { icon: RefreshCw, hue: '#22d3ee', title: tx('about:feature13.title'), desc: tx('about:feature13.description') },
+  ];
+
+  // 技術特色 — 沿用既有 tech1-5 多語系 key。
+  const tech: { icon: LucideIcon; hue: string; title: string; desc: string }[] = [
+    { icon: CodeXml, hue: '#c084fc', title: tx('about:tech1.title'), desc: tx('about:tech1.description') },
+    { icon: RadioTower, hue: '#60a5fa', title: tx('about:tech2.title'), desc: tx('about:tech2.description') },
+    { icon: Database, hue: '#4ade80', title: tx('about:tech3.title'), desc: tx('about:tech3.description') },
+    { icon: Globe, hue: '#a855f7', title: tx('about:tech4.title'), desc: tx('about:tech4.description') },
+    { icon: Gauge, hue: '#facc15', title: tx('about:tech5.title'), desc: tx('about:tech5.description') },
+  ];
+
+  // hero pills(design 新增,defaultValue 帶 design 中文)
+  const pills: { icon: LucideIcon; label: string }[] = [
+    { icon: Gift, label: tx('about:pillFree', { defaultValue: '完全免費' }) },
+    { icon: Github, label: tx('about:pillOpenSource', { defaultValue: '開源專案' }) },
+    { icon: CodeXml, label: tx('about:pillFrontend', { defaultValue: '純前端' }) },
+    { icon: UserX, label: tx('about:pillNoSignup', { defaultValue: '無需註冊' }) },
+  ];
+
+  // 使用條款(design 新增 — 沿用既有 terms1-3 多語系 key)
+  const terms: { icon: LucideIcon; hue: string; text: string }[] = [
+    { icon: Gift, hue: '#4ade80', text: tx('about:terms1') },
+    { icon: Copyright, hue: '#60a5fa', text: tx('about:terms2') },
+    { icon: Megaphone, hue: '#facc15', text: tx('about:terms3') },
   ];
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
-      {/* Header Navigation */}
-      <div className={`border-b ${theme === 'dark' ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} px-6 py-4`}>
+    <div className="ab-page">
+      <style>{`
+        .ab-page { position: relative; min-height: 100vh; overflow: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+        .ab-wrap { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+        .ab-hero { padding-top: 132px; padding-bottom: 24px; text-align: center; }
+        .ab-hero-badge { width: 88px; height: 88px; border-radius: 24px; margin: 0 auto 28px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, oklch(0.63 0.23 304), #c084fc); box-shadow: 0 24px 60px -16px oklch(0.63 0.23 304 / 0.7), inset 0 1px 0 rgba(255,255,255,0.25); }
+        .ab-hero-title { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 0; background: linear-gradient(90deg, var(--foreground) 0%, color-mix(in oklch, var(--foreground) 70%, var(--muted-foreground)) 55%, var(--muted-foreground) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+        .ab-hero-sub { font-size: 18px; color: var(--muted-foreground); line-height: 1.7; max-width: 640px; margin: 20px auto 0; }
+        .ab-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 28px; }
+        .ab-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 9999px; background: oklch(0.21 0.034 264.665 / 0.5); border: 1px solid rgba(255,255,255,0.09); font-size: 13px; font-weight: 500; color: var(--foreground); }
+
+        .ab-section { padding-top: 76px; }
+        .ab-head { margin-bottom: 28px; }
+        .ab-head-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 10px 0 0; color: var(--foreground); }
+        .ab-head-sub { font-size: 15.5px; color: var(--muted-foreground); margin: 10px 0 0; line-height: 1.6; max-width: 640px; }
+
+        .ab-spotlight { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 18px; }
+        .ab-spot-card { position: relative; overflow: hidden; padding: 24px; border-radius: 18px; }
+        .ab-spot-orb { position: absolute; top: -40px; right: -40px; width: 140px; height: 140px; border-radius: 50%; filter: blur(40px); opacity: 0.12; pointer-events: none; }
+        .ab-spot-title { font-size: 18px; font-weight: 700; margin: 18px 0 8px; color: var(--foreground); }
+        .ab-spot-desc { font-size: 14px; color: var(--muted-foreground); margin: 0; line-height: 1.6; }
+
+        .ab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 14px; }
+        .ab-card { display: flex; gap: 14px; padding: 18px; border-radius: 16px; background: oklch(0.21 0.034 264.665 / 0.45); border: 1px solid rgba(255,255,255,0.06); transition: transform .25s ease, border-color .25s ease, background .25s ease; }
+        .ab-card:hover { transform: translateY(-3px); border-color: oklch(0.63 0.23 304 / 0.45); }
+        .ab-card-body { min-width: 0; }
+        .ab-card-title { font-size: 14.5px; font-weight: 700; margin: 2px 0 5px; color: var(--foreground); }
+        .ab-card-desc { font-size: 12.5px; color: var(--muted-foreground); margin: 0; line-height: 1.55; }
+
+        .ab-tech { border-radius: 18px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); background: oklch(0.21 0.034 264.665 / 0.4); }
+        .ab-tech-row { display: flex; align-items: center; gap: 16px; padding: 18px 22px; }
+        .ab-tech-row + .ab-tech-row { border-top: 1px solid rgba(255,255,255,0.06); }
+        .ab-tech-num { font-family: ${MONO}; font-size: 12px; color: var(--muted-foreground); width: 24px; flex-shrink: 0; }
+        .ab-tech-body { flex: 1; min-width: 0; }
+        .ab-tech-title { font-size: 15px; font-weight: 700; margin: 0 0 3px; color: var(--foreground); }
+        .ab-tech-desc { font-size: 13px; color: var(--muted-foreground); margin: 0; line-height: 1.5; }
+
+        .ab-creator { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; padding: 28px; border-radius: 20px; background: linear-gradient(135deg, oklch(0.63 0.23 304 / 0.1), oklch(0.21 0.034 264.665 / 0.5)); border: 1px solid oklch(0.63 0.23 304 / 0.18); }
+        .ab-avatar { width: 72px; height: 72px; border-radius: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, oklch(0.63 0.23 304), #c084fc); font-size: 30px; font-weight: 800; color: #fff; box-shadow: 0 16px 36px -12px oklch(0.63 0.23 304 / 0.6); }
+        .ab-creator-body { flex: 1; min-width: 260px; }
+        .ab-creator-name { font-size: 20px; font-weight: 800; margin: 0; color: var(--foreground); }
+        .ab-creator-role { font-size: 13px; color: #c084fc; font-weight: 600; }
+        .ab-creator-desc { font-size: 14.5px; color: var(--muted-foreground); line-height: 1.7; margin: 12px 0 0; }
+        .ab-social-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+        .ab-social { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 9999px; text-decoration: none; font-size: 14px; font-weight: 600; transition: transform .2s ease, box-shadow .2s ease; }
+        .ab-social:hover { transform: translateY(-2px); }
+        .ab-social.primary { background: var(--primary); color: #fff; box-shadow: 0 12px 28px -12px oklch(0.63 0.23 304 / 0.7); }
+        .ab-social.ghost { background: oklch(0.21 0.034 264.665 / 0.5); color: var(--foreground); border: 1px solid rgba(255,255,255,0.1); }
+        .ab-social.coffee { background: linear-gradient(90deg, #ec4899 0%, #9333ea 100%); color: #fff; }
+
+        .ab-contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .ab-link-row { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px; text-decoration: none; background: oklch(0.21 0.034 264.665 / 0.45); border: 1px solid rgba(255,255,255,0.07); transition: background .2s ease, border-color .2s ease; }
+        .ab-link-row:hover { background: oklch(0.21 0.034 264.665 / 0.7); border-color: oklch(0.63 0.23 304 / 0.4); }
+        .ab-link-body { flex: 1; min-width: 0; }
+        .ab-link-title { font-size: 15.5px; font-weight: 700; margin: 0 0 3px; color: var(--foreground); }
+        .ab-link-desc { font-size: 13px; color: var(--muted-foreground); margin: 0; }
+
+        .ab-terms { display: flex; flex-direction: column; gap: 14px; }
+        .ab-term { display: flex; gap: 16px; padding: 18px 20px; border-radius: 14px; background: oklch(0.21 0.034 264.665 / 0.4); border: 1px solid rgba(255,255,255,0.06); }
+        .ab-term-text { font-size: 14.5px; color: var(--muted-foreground); margin: 0; line-height: 1.7; align-self: center; }
+
+        .ab-privacy { padding: 26px; border-radius: 18px; background: linear-gradient(135deg, rgba(74,222,128,0.08), rgba(74,222,128,0.02)); border: 1px solid rgba(74,222,128,0.22); display: flex; align-items: flex-start; gap: 16px; }
+        .ab-privacy-chip { width: 46px; height: 46px; border-radius: 13px; background: rgba(74,222,128,0.15); color: #4ade80; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ab-privacy-eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4ade80; margin-bottom: 6px; }
+        .ab-privacy-title { font-size: 17px; font-weight: 700; margin: 0 0 8px; color: var(--foreground); }
+        .ab-privacy-desc { font-size: 14.5px; color: var(--muted-foreground); margin: 0; line-height: 1.7; }
+        .ab-privacy-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; background: transparent; border: 0; padding: 0; cursor: pointer; color: #4ade80; font-family: var(--font-sans); font-size: 14px; font-weight: 600; }
+
+        .ab-footer { padding-top: 64px; padding-bottom: 56px; margin-top: 76px; border-top: 1px solid rgba(255,255,255,0.07); text-align: center; }
+        .ab-footer-links { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; font-size: 14px; font-weight: 500; }
+        .ab-foot-link { color: var(--muted-foreground); text-decoration: none; background: none; border: 0; cursor: pointer; font-family: var(--font-sans); font-size: 14px; font-weight: 500; transition: color .2s ease; }
+        .ab-foot-link:hover { color: var(--foreground); }
+        .ab-copy { font-size: 13px; color: var(--muted-foreground); margin: 24px 0 0; }
+        .ab-updated { font-size: 12.5px; color: var(--muted-foreground); opacity: 0.8; margin: 6px 0 0; font-family: ${MONO}; }
+
+        /* a11y: 鍵盤聚焦可見性(自訂連結/按鈕,header 的 shadcn Button 自帶 ring) */
+        .ab-page a:focus-visible, .ab-page button:focus-visible { outline: 2px solid var(--ring, oklch(0.63 0.23 304)); outline-offset: 3px; border-radius: 6px; }
+        .ab-privacy-link:focus-visible { outline-color: #4ade80; }
+
+        @media (max-width: 860px) { .ab-spotlight { grid-template-columns: 1fr; } }
+        @media (max-width: 560px) { .ab-hero-title { font-size: 40px; } }
+      `}</style>
+
+      {/* Header Navigation(保留 next 既有,token 化) */}
+      <div className="relative z-10 border-b border-border bg-card/60 px-6 py-4 backdrop-blur">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
             onClick={onBack}
-            className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
+            className="text-muted-foreground hover:text-foreground hover:bg-transparent"
           >
             <ArrowLeft className="size-4 mr-2" />
-            {t('about:backToHome')}
+            {tx('about:backToHome')}
           </Button>
 
           <div className="flex items-center gap-2">
             <Select value={locale} onValueChange={(value: string) => i18n.changeLanguage(value)}>
-              <SelectTrigger className={`min-w-[140px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-300'}`}>
+              <SelectTrigger className="min-w-[140px] bg-card border-border text-foreground">
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -60,7 +212,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 onThemeToggle();
                 logEvent('AboutPage', 'toggle_theme', theme === 'dark' ? 'light' : 'dark');
               }}
-              className={theme === 'dark' ? 'text-gray-300 hover:text-white hover:bg-transparent' : 'text-gray-600 hover:text-black hover:bg-transparent'}
+              className="text-muted-foreground hover:text-foreground hover:bg-transparent"
             >
               {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
             </Button>
@@ -68,421 +220,276 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 mb-8 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500">
-            <div className="relative">
-              <div className="absolute inset-0 bg-white rounded-full blur-sm opacity-50"></div>
-              <svg className="size-12 text-white relative" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-            </div>
-          </div>
+      <BlurOrb top={-160} left="50%" w={760} h={460} color="oklch(0.63 0.23 304)" opacity={0.16} />
+      <BlurOrb top={520} right={-160} w={520} h={420} color="#3b82f6" opacity={0.07} />
 
-          <p className={`max-w-3xl mx-auto text-lg leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {t('about:intro')}
-          </p>
-        </div>
-
-        {/* Website Intro Section */}
-        <section className="mb-16">
-          <div className="flex items-center gap-3 mb-8">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
-              <MessageSquare className={`size-6 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
-            </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about:websiteIntro')}</h2>
-          </div>
-
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about:intro')}
-            </p>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              {t('about:intro2')}
-            </p>
+      <div className="ab-wrap">
+        {/* ---------- Hero ---------- */}
+        <section className="ab-hero">
+          <div className="ab-hero-badge"><Tv size={42} color="white" /></div>
+          <h1 className="ab-hero-title">MultiStream Hub</h1>
+          <p className="ab-hero-sub">{tx('about:intro')}</p>
+          <div className="ab-pills">
+            {pills.map((p) => {
+              const PillIcon = p.icon;
+              return (
+                <span className="ab-pill" key={p.label}>
+                  <PillIcon size={14} color="#c084fc" /> {p.label}
+                </span>
+              );
+            })}
           </div>
         </section>
 
-        {/* Main Features */}
-        <section className="mb-16">
-          <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            {t('about:featuresTitle')}
-          </h2>
+        {/* ---------- Main features ---------- */}
+        <section className="ab-section">
+          <AbHead
+            eyebrow={tx('about:featuresEyebrow', { defaultValue: 'Features' })}
+            title={tx('about:featuresTitle')}
+            sub={tx('about:featuresSub', { defaultValue: '圍繞「同時看多台」這件事打磨的每個細節，從多平台串流到自動排版。' })}
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FeatureCard
-              theme={theme}
-              icon={<Tv className="size-6" />}
-              title={t('about:feature1.title')}
-              description={t('about:feature1.description')}
-              gradient="from-pink-500 to-purple-500"
-              large
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Grid className="size-6" />}
-              title={t('about:feature2.title')}
-              description={t('about:feature2.description')}
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<MessageCircle className="size-6" />}
-              title={t('about:feature3.title')}
-              description={t('about:feature3.description')}
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Volume2 className="size-6" />}
-              title={t('about:feature4.title')}
-              description={t('about:feature4.description')}
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Star className="size-6" />}
-              title={t('about:feature5.title')}
-              description={t('about:feature5.description')}
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Smartphone className="size-6" />}
-              title={t('about:feature6.title')}
-              description={t('about:feature6.description')}
-              gradient="from-purple-500 to-indigo-500"
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Languages className="size-6" />}
-              title={t('about:feature7.title')}
-              description={t('about:feature7.description')}
-              gradient="from-blue-500 to-cyan-500"
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Shield className="size-6" />}
-              title={t('about:feature8.title')}
-              description={t('about:feature8.description')}
-              gradient="from-pink-600 to-red-600"
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Search className="size-6" />}
-              title={t('about:feature9.title')}
-              description={t('about:feature9.description')}
-              gradient="from-purple-600 to-purple-800"
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Radio className="size-6" />}
-              title={t('about:feature10.title')}
-              description={t('about:feature10.description')}
-              gradient="from-blue-600 to-indigo-700"
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Youtube className="size-6" />}
-              title={t('about:feature11.title')}
-              description={t('about:feature11.description')}
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<Zap className="size-6" />}
-              title={t('about:feature12.title')}
-              description={t('about:feature12.description')}
-              gradient="from-purple-500 to-pink-500"
-            />
-
-            <FeatureCard
-              theme={theme}
-              icon={<RefreshCw className="size-6" />}
-              title={t('about:feature13.title')}
-              description={t('about:feature13.description')}
-            />
-          </div>
-        </section>
-
-        {/* Technical Features */}
-        <section className="mb-16">
-          <h2 className={`mb-8 text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            {t('about:techTitle')}
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <TechFeatureCard
-              theme={theme}
-              icon={<Code className="size-6 text-blue-400" />}
-              title={t('about:tech1.title')}
-              description={t('about:tech1.description')}
-            />
-
-            <TechFeatureCard
-              theme={theme}
-              icon={<Broadcast className="size-6 text-purple-400" />}
-              title={t('about:tech2.title')}
-              description={t('about:tech2.description')}
-            />
-
-            <TechFeatureCard
-              theme={theme}
-              icon={<Database className="size-6 text-green-400" />}
-              title={t('about:tech3.title')}
-              description={t('about:tech3.description')}
-            />
-
-            <TechFeatureCard
-              theme={theme}
-              icon={<Globe className="size-6 text-cyan-400" />}
-              title={t('about:tech4.title')}
-              description={t('about:tech4.description')}
-            />
-
-            <TechFeatureCard
-              theme={theme}
-              icon={<Gauge className="size-6 text-orange-400" />}
-              title={t('about:tech5.title')}
-              description={t('about:tech5.description')}
-            />
-          </div>
-        </section>
-
-        {/* Creator Info */}
-        <section className="mb-16">
-          <div className="flex items-center gap-3 mb-8">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
-              <Users className={`size-6 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
-            </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about:creatorTitle')}</h2>
-          </div>
-
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about:creatorInfo1')}
-            </p>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about:creatorInfo2')}
-            </p>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              {t('about:creatorInfo3')}
-            </p>
-          </div>
-        </section>
-
-        {/* Contact Us */}
-        <section className="mb-16">
-          <div className="flex items-center gap-3 mb-8">
-            <div className={`p-2 rounded-lg ${theme === 'dark' ? 'bg-purple-500/20' : 'bg-purple-100'}`}>
-              <MessageSquare className={`size-6 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
-            </div>
-            <h2 className={theme === 'dark' ? 'text-white' : 'text-black'}>{t('about:contactTitle')}</h2>
-          </div>
-
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about:contactIntro')}
-            </p>
-
-            <div className="space-y-4">
-              <a
-                href="https://forms.gle/AjG922YrXFbyAdBa6"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => logEvent('AboutPage', 'click_social', 'feedback_form')}
-                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
-                  ? 'bg-gray-800 hover:bg-gray-750'
-                  : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
-              >
-                <Mail className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`} />
-                <div>
-                  <h3 className={`mb-1 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('about:feedbackForm')}
-                  </h3>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {t('about:feedbackFormDesc')}
-                  </p>
+          {/* spotlight trio */}
+          <div className="ab-spotlight">
+            {spotlight.map((f) => {
+              const Icon = f.icon;
+              return (
+                <div
+                  key={f.title}
+                  className="ab-card ab-spot-card"
+                  style={{
+                    background: `linear-gradient(155deg, ${f.hue}1f 0%, oklch(0.21 0.034 264.665 / 0.5) 60%)`,
+                    border: `1px solid ${f.hue}33`,
+                  }}
+                >
+                  <div className="ab-spot-orb" style={{ background: f.hue }} />
+                  <div style={{ position: 'relative' }}>
+                    <IconChip icon={Icon} hue={f.hue} size={50} />
+                    <h3 className="ab-spot-title">{f.title}</h3>
+                    <p className="ab-spot-desc">{f.desc}</p>
+                  </div>
                 </div>
-              </a>
+              );
+            })}
+          </div>
 
-              <a
-                href="https://discord.gg/3Uu6dZbtKd"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => logEvent('AboutPage', 'click_social', 'discord')}
-                className={`flex items-start gap-4 p-4 rounded-lg transition-colors ${theme === 'dark'
-                  ? 'bg-gray-800 hover:bg-gray-750'
-                  : 'bg-gray-50 hover:bg-gray-100'
-                  }`}
-              >
-                <MessageSquare className={`size-6 flex-shrink-0 ${theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}`} />
-                <div>
-                  <h3 className={`mb-1 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-                    {t('about:discordCommunity')}
-                  </h3>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {t('about:discordCommunityDesc')}
-                  </p>
+          {/* feature grid */}
+          <div className="ab-grid">
+            {features.map((f) => {
+              const Icon = f.icon;
+              return (
+                <div key={f.title} className="ab-card">
+                  <IconChip icon={Icon} hue={f.hue} size={40} />
+                  <div className="ab-card-body">
+                    <h4 className="ab-card-title">{f.title}</h4>
+                    <p className="ab-card-desc">{f.desc}</p>
+                  </div>
                 </div>
-              </a>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ---------- Tech ---------- */}
+        <section className="ab-section">
+          <AbHead
+            eyebrow={tx('about:techEyebrow', { defaultValue: 'Under the hood' })}
+            title={tx('about:techTitle')}
+            sub={tx('about:techSub', { defaultValue: '輕量、純前端、本地優先 —— 沒有後端伺服器，也不收你的資料。' })}
+          />
+          <div className="ab-tech">
+            {tech.map((tItem, i) => {
+              const Icon = tItem.icon;
+              return (
+                <div key={tItem.title} className="ab-tech-row">
+                  <span className="ab-tech-num">{String(i + 1).padStart(2, '0')}</span>
+                  <IconChip icon={Icon} hue={tItem.hue} size={40} />
+                  <div className="ab-tech-body">
+                    <h4 className="ab-tech-title">{tItem.title}</h4>
+                    <p className="ab-tech-desc">{tItem.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ---------- Creator ---------- */}
+        <section className="ab-section">
+          <AbHead
+            eyebrow={tx('about:creatorEyebrow', { defaultValue: 'Creator' })}
+            title={tx('about:creatorTitle')}
+          />
+          <div className="ab-creator">
+            <div className="ab-avatar">H</div>
+            <div className="ab-creator-body">
+              <div className="flex items-baseline gap-2.5 flex-wrap">
+                <h3 className="ab-creator-name">Hsiung-Shao</h3>
+                <span className="ab-creator-role">
+                  {tx('about:creatorRole', { defaultValue: '獨立開發者' })}
+                </span>
+              </div>
+              <p className="ab-creator-desc">
+                {tx('about:creatorDesc', { defaultValue: 'MultiStream Hub 由 Hsiung-Shao 獨立開發與維護。這個專案的初衷，是給直播愛好者一個免費、好用的多平台串流觀看工具，讓同時追多個直播這件事更方便、更有趣。功能會持續改進與優化，也歡迎大家提供寶貴的意見與建議。' })}
+              </p>
+              <div className="ab-social-row">
+                <a
+                  className="ab-social primary"
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => logEvent('AboutPage', 'click_social', 'github')}
+                >
+                  <Github size={16} /> GitHub
+                </a>
+                <a
+                  className="ab-social ghost"
+                  href={DISCORD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => logEvent('AboutPage', 'click_social', 'discord')}
+                >
+                  <MessageCircle size={16} /> {tx('about:joinDiscord', { defaultValue: '加入 Discord' })}
+                </a>
+                <a
+                  className="ab-social coffee"
+                  href={COFFEE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => logEvent('AboutPage', 'click_social', 'coffee')}
+                >
+                  <Coffee size={16} /> {tx('about:buyCoffee', { defaultValue: '請我喝杯咖啡' })}
+                </a>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Terms of Use */}
-        <section className="mb-16">
-          <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            {t('about:termsTitle')}
-          </h2>
-
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about:terms1')}
-            </p>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about:terms2')}
-            </p>
-            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
-              {t('about:terms3')}
-            </p>
-          </div>
-        </section>
-
-        {/* Privacy & Security */}
-        <section className="mb-16">
-          <h2 className={`mb-8 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
-            {t('about:privacyTitle')}
-          </h2>
-
-          <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-            <p className={`mb-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-              {t('about:privacy1')}
-            </p>
-            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-              {t('about:privacy2')}: {t('about:privacyPolicy')}
-            </p>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className={`text-center pt-8 border-t ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-          <div className="flex justify-center gap-8 mb-6">
-            <Button
-              variant="link"
-              onClick={onBack}
-              className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
+        {/* ---------- Contact ---------- */}
+        <section className="ab-section">
+          <AbHead
+            eyebrow={tx('about:contactEyebrow', { defaultValue: 'Contact' })}
+            title={tx('about:contactTitle')}
+            sub={tx('about:contactSub', { defaultValue: '有任何問題、建議或意見回饋，歡迎透過以下方式聯繫。' })}
+          />
+          <div className="ab-contact">
+            <a
+              className="ab-link-row"
+              href={FEEDBACK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => logEvent('AboutPage', 'click_social', 'feedback_form')}
             >
-              {t('about:home')}
-            </Button>
+              <IconChip icon={Mail} hue="#60a5fa" size={46} />
+              <div className="ab-link-body">
+                <h4 className="ab-link-title">{tx('about:feedbackForm')}</h4>
+                <p className="ab-link-desc">{tx('about:feedbackFormDesc')}</p>
+              </div>
+              <ArrowUpRight size={18} className="text-muted-foreground shrink-0" />
+            </a>
+            <a
+              className="ab-link-row"
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => logEvent('AboutPage', 'click_social', 'discord')}
+            >
+              <IconChip icon={MessageCircle} hue="#c084fc" size={46} />
+              <div className="ab-link-body">
+                <h4 className="ab-link-title">{tx('about:discordCommunity')}</h4>
+                <p className="ab-link-desc">{tx('about:discordCommunityDesc')}</p>
+              </div>
+              <ArrowUpRight size={18} className="text-muted-foreground shrink-0" />
+            </a>
+          </div>
+        </section>
+
+        {/* ---------- Terms ---------- */}
+        <section className="ab-section">
+          <AbHead
+            eyebrow={tx('about:termsEyebrow', { defaultValue: 'Terms' })}
+            title={tx('about:termsTitle')}
+          />
+          <div className="ab-terms">
+            {terms.map((term) => {
+              const Icon = term.icon;
+              return (
+                <div key={term.text} className="ab-term">
+                  <IconChip icon={Icon} hue={term.hue} size={38} />
+                  <p className="ab-term-text">{term.text}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ---------- Privacy ---------- */}
+        <section className="ab-section">
+          <AbHead
+            eyebrow={tx('about:privacyEyebrow', { defaultValue: 'Privacy' })}
+            title={tx('about:privacyTitle')}
+          />
+          <div className="ab-privacy">
+            <div className="ab-privacy-chip"><ShieldCheck size={22} /></div>
+            <div className="flex-1">
+              <div className="ab-privacy-eyebrow">
+                {tx('about:localFirstEyebrow', { defaultValue: 'Local first' })}
+              </div>
+              <h3 className="ab-privacy-title">
+                {tx('about:localFirstTitle', { defaultValue: '你的資料留在你這裡' })}
+              </h3>
+              <p className="ab-privacy-desc">
+                {tx('about:localFirstDesc', { defaultValue: '我們重視你的隱私權。你的設定與收藏資料都儲存在你的瀏覽器本地（LocalStorage 與 IndexedDB），我們不會收集能識別你個人的資料。唯一會回傳的是被加入的 YouTube 頻道 ID —— 以匿名、聚合的方式統計熱門頻道，不綁定任何使用者或裝置。' })}
+              </p>
+              {onNavigateToPrivacy && (
+                <button
+                  className="ab-privacy-link"
+                  onClick={onNavigateToPrivacy}
+                >
+                  {tx('about:privacyLinkText', { defaultValue: '詳細的隱私權政策請參閱：隱私權政策' })}
+                  <ArrowRight size={15} />
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Footer ---------- */}
+        <footer className="ab-footer">
+          <div className="ab-footer-links">
+            <button className="ab-foot-link" onClick={onBack}>
+              {tx('about:home')}
+            </button>
             {onNavigateToPrivacy && (
-              <Button
-                variant="link"
-                onClick={onNavigateToPrivacy}
-                className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
-              >
-                {t('about:privacyPolicy')}
-              </Button>
+              <button className="ab-foot-link" onClick={onNavigateToPrivacy}>
+                {tx('about:privacyPolicy')}
+              </button>
             )}
             <a
-              href="https://forms.gle/AjG922YrXFbyAdBa6"
+              className="ab-foot-link"
+              href={FEEDBACK_URL}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => logEvent('AboutPage', 'click_social', 'feedback_footer')}
-              className={`hover:underline ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
             >
-              {t('about:giveFeedback')}
+              {tx('about:giveFeedback')}
             </a>
           </div>
-
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-600'}`}>
-            {t('about:copyright')}
-          </p>
-          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-500'}`}>
-            {t('about:lastUpdated')}
-          </p>
+          <p className="ab-copy">{tx('about:copyright')}</p>
+          <p className="ab-updated">{tx('about:lastUpdated')}</p>
         </footer>
       </div>
     </div>
   );
 }
 
-// Feature Card Component
-interface FeatureCardProps {
-  theme: 'light' | 'dark';
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  gradient?: string;
-  large?: boolean;
-}
-
-function FeatureCard({ theme, icon, title, description, gradient, large }: FeatureCardProps) {
-  if (gradient) {
-    return (
-      <div className={`p-6 rounded-xl bg-gradient-to-br ${gradient} ${large ? 'md:col-span-2 lg:col-span-1' : ''}`}>
-        <div className="flex items-start gap-4">
-          <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm flex-shrink-0">
-            <div className="text-white">{icon}</div>
-          </div>
-          <div>
-            <h3 className="text-white mb-2">{title}</h3>
-            <p className="text-white/90 text-sm leading-relaxed">{description}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+// section header(eyebrow + title + 可選 sub),對齊 design 的 AbHeader。
+function AbHead({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }): ReactNode {
   return (
-    <div className={`p-6 rounded-xl border transition-all hover:scale-105 ${theme === 'dark'
-      ? 'bg-gray-900/50 border-gray-800 hover:border-purple-500/50'
-      : 'bg-white border-gray-200 hover:border-purple-400'
-      }`}>
-      <div className="flex items-start gap-4">
-        <div className={`p-2 rounded-lg flex-shrink-0 ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <div className={theme === 'dark' ? 'text-purple-400' : 'text-purple-600'}>{icon}</div>
-        </div>
-        <div>
-          <h3 className={`mb-2 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{title}</h3>
-          <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {description}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Tech Feature Card Component
-interface TechFeatureCardProps {
-  theme: 'light' | 'dark';
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-function TechFeatureCard({ theme, icon, title, description }: TechFeatureCardProps) {
-  return (
-    <div className={`p-6 rounded-xl ${theme === 'dark' ? 'bg-gray-900/50' : 'bg-white'}`}>
-      <div className="flex items-start gap-4">
-        <div className="flex-shrink-0">{icon}</div>
-        <div>
-          <h3 className={`mb-2 ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{title}</h3>
-          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-            {description}
-          </p>
-        </div>
-      </div>
+    <div className="ab-head">
+      <Eyebrow>{eyebrow}</Eyebrow>
+      <h2 className="ab-head-title">{title}</h2>
+      {sub && <p className="ab-head-sub">{sub}</p>}
     </div>
   );
 }
