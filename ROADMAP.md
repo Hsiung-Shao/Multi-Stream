@@ -85,7 +85,17 @@
 
 ---
 
-## Phase C — 短暫播放回復(需釐清 + 設計)🔄
+## Phase C — 短暫播放回復(✅ 已實作)🔄
+
+**已完成**:重整/重開後,若 10 分鐘內有上次未關閉的串流,彈提示詢問是否恢復(串流/布局/頻道位置)。
+- 根因:`App.tsx` 啟動時無條件 `clearCanvasItems()` 把 zustand persist 剛 rehydrate 的觀看狀態清掉。
+- 改:`useStreamStore` 加 `lastActiveAt`/`touchLastActive`/`restoreSession`(+persist);`useCanvasRetention` 在 canvas 有串流時持續記錄活動時間;`App.tsx` 改條件清空 + 彈 `RestoreSessionPrompt`(恢復/重新開始)。
+- 已驗證:注入假串流 + 重整 → 彈「恢復?(N 串流)」→ 恢復後 2 視窗布局位置完整還原。
+- 順手修 B0 遺留:App/MobileApp 傳頁面元件的 theme 改 `useEffectiveTheme`(修 system 主題失效)。
+
+---
+
+### (原規劃保留參考)
 
 **需求**:使用者不小心切換頁面後,回復原本觀看的內容、布局、頻道位置。
 
@@ -130,5 +140,5 @@
 | A1+ | admin 公告管理 UI(X-Admin-Token 認證) | ✅ 已移植,待 preview 驗證 |
 | A2 | YouTube 頻道離線資料庫 | ✅ 已移植,待 preview 驗證 |
 | B | UI 重新設計(首頁/收藏/動態島) | ✅ 已移植,待 preview 驗證 |
-| C | 短暫播放回復 | 📐 已設計,待釐清情境 |
+| C | 短暫播放回復(10 分鐘詢問恢復) | ✅ 已實作,待 preview 驗證 |
 | D | PWA | 📐 已設計,待實作 |
