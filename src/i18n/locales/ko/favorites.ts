@@ -1,10 +1,32 @@
 export default {
+  // Island favorites chooser
+  select_category: '카테고리 선택',
+  all_categories: '모든 카테고리',
+  no_categories: '카테고리 없음',
+  select_tags_multi: '태그 선택 (다중)',
+  // FM Settings — 외관/재생 카드
+  theme_light: '라이트',
+  theme_dark: '다크',
+  theme_system: '시스템',
+  playback: '재생',
+  auto_mute_new: '새 스트림 열 때 자동 음소거',
+  auto_mute_new_desc: '한꺼번에 많이 열 때 음량 폭발을 방지합니다.',
+  yt_risk_warn: 'YouTube 다중 방송 경고',
+  yt_risk_warn_desc: 'YouTube 방송이 3개를 초과하면 경고합니다.',
+  bg_live_detect: '백그라운드에서 라이브 상태 자동 감지',
+  bg_live_detect_desc: '5분마다 즐겨찾기 채널을 확인합니다.',
   // Navigation
+  favoritesManager: '즐겨찾기 관리',
   myFavorites: '즐겨찾기',
   batchImport: '일괄 가져오기',
   settings: '설정',
   categoryManagement: '즐겨찾기 리스트',
   manageCategories: '리스트 관리',
+
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: '필터',
+  sidebarLiveNow: '라이브 중',
+  sidebarCategoryGroup: '카테고리',
 
   // Quick Filters
   all: '전체',
@@ -124,5 +146,23 @@ export default {
   'layout_manager.no_layouts': '사용자 지정 레이아웃 없음',
   'layout_manager.no_layouts_desc': '창 위치를 조정한 후 템플릿으로 저장할 수 있습니다.',
   'sidebar.version_history': '업데이트 기록',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: '채널 URL을 붙여넣으면 플랫폼이 자동으로 인식됩니다',
+  editFavoriteDesc: '이름, 목록, 태그를 업데이트',
+  channelUrlOrName: '채널 URL 또는 이름',
+  paste: '붙여넣기',
+  pasteFromClipboard: '클립보드에서 붙여넣기',
+  urlHint: 'twitch.tv/이름, youtube.com/@이름 또는 채널 이름 직접 입력을 지원합니다.',
+  whichPlatform: '어떤 플랫폼인가요?',
+  preview: '미리보기',
+  previewEmpty: 'URL을 입력하면 여기에서 채널을 미리 볼 수 있습니다',
+  displayName: '표시 이름',
+  displayNamePlaceholder: '채널 표시 이름',
+  optional: '선택',
+  multiSelect: '다중 선택',
+  autoLoadTitle: '추가 후 바로 화면에 로드',
+  autoLoadDesc: '저장과 동시에 이 채널을 멀티뷰에 엽니다',
+  addAndLoad: '추가 및 로드',
 };
 

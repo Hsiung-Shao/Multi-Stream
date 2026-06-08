@@ -1,10 +1,32 @@
 export default {
+  // Island favorites chooser
+  select_category: 'カテゴリを選択',
+  all_categories: 'すべてのカテゴリ',
+  no_categories: 'カテゴリなし',
+  select_tags_multi: 'タグを選択（複数可）',
+  // FM Settings — 外観/再生カード
+  theme_light: 'ライト',
+  theme_dark: 'ダーク',
+  theme_system: 'システム',
+  playback: '再生',
+  auto_mute_new: '新規ストリームを開いたら自動ミュート',
+  auto_mute_new_desc: '一度に多数開いたときの音量爆発を防ぎます。',
+  yt_risk_warn: 'YouTube 複数配信の警告',
+  yt_risk_warn_desc: 'YouTube 配信が 3 つを超えると警告します。',
+  bg_live_detect: 'バックグラウンドで配信状態を自動検出',
+  bg_live_detect_desc: '5 分ごとにお気に入りチャンネルを確認します。',
   // Navigation
+  favoritesManager: 'お気に入り管理',
   myFavorites: 'お気に入り',
   batchImport: '一括インポート',
   settings: '設定',
   categoryManagement: 'お気に入りリスト',
   manageCategories: 'リスト管理',
+
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: 'フィルター',
+  sidebarLiveNow: '配信中',
+  sidebarCategoryGroup: 'カテゴリー',
 
   // Quick Filters
   all: 'すべて',
@@ -124,5 +146,23 @@ export default {
   'layout_manager.no_layouts': 'カスタムレイアウトがありません',
   'layout_manager.no_layouts_desc': 'ウィンドウの位置を調整して、テンプレートとして保存できます。',
   'sidebar.version_history': '更新履歴',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: 'チャンネルURLを貼り付けると、プラットフォームを自動判別します',
+  editFavoriteDesc: '名前・リスト・タグを更新',
+  channelUrlOrName: 'チャンネルURLまたは名前',
+  paste: '貼り付け',
+  pasteFromClipboard: 'クリップボードから貼り付け',
+  urlHint: 'twitch.tv/名前、youtube.com/@名前、またはチャンネル名の入力に対応。',
+  whichPlatform: 'どのプラットフォームですか?',
+  preview: 'プレビュー',
+  previewEmpty: 'URLを入力すると、ここにチャンネルがプレビュー表示されます',
+  displayName: '表示名',
+  displayNamePlaceholder: 'チャンネルの表示名',
+  optional: '任意',
+  multiSelect: '複数選択可',
+  autoLoadTitle: '追加後すぐに画面に読み込む',
+  autoLoadDesc: '保存と同時にこのチャンネルをマルチビューに開きます',
+  addAndLoad: '追加して読み込む',
 };
 

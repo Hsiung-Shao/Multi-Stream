@@ -34,6 +34,13 @@ interface UIState {
     setPage: (page: PageType) => void;
     setSearchFocused: (focused: boolean) => void;
     togglePerformanceOverlay: () => void;
+    // Playback / detection settings
+    autoMuteNewStream: boolean;
+    setAutoMuteNewStream: (v: boolean) => void;
+    youtubeRiskWarning: boolean;
+    setYoutubeRiskWarning: (v: boolean) => void;
+    bgLiveDetect: boolean;
+    setBgLiveDetect: (v: boolean) => void;
     // Window functionality
     closeWindowMode: 'remove' | 'empty';
     setCloseWindowMode: (mode: 'remove' | 'empty') => void;
@@ -125,6 +132,38 @@ export const useUIStore = create<UIState>((set) => ({
     setSearchFocused: (focused) => set({ isSearchFocused: focused }),
     togglePerformanceOverlay: () => set((state) => ({ showPerformanceOverlay: !state.showPerformanceOverlay })),
 
+    // Playback / detection settings(persist 到 userSettings)
+    autoMuteNewStream: true,
+    setAutoMuteNewStream: (v) => {
+        set({ autoMuteNewStream: v });
+        try {
+            const saved = localStorage.getItem('userSettings');
+            const settings = saved ? JSON.parse(saved) : {};
+            settings.autoMuteNewStream = v;
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+        } catch (e) { }
+    },
+    youtubeRiskWarning: true,
+    setYoutubeRiskWarning: (v) => {
+        set({ youtubeRiskWarning: v });
+        try {
+            const saved = localStorage.getItem('userSettings');
+            const settings = saved ? JSON.parse(saved) : {};
+            settings.youtubeRiskWarning = v;
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+        } catch (e) { }
+    },
+    bgLiveDetect: false,
+    setBgLiveDetect: (v) => {
+        set({ bgLiveDetect: v });
+        try {
+            const saved = localStorage.getItem('userSettings');
+            const settings = saved ? JSON.parse(saved) : {};
+            settings.bgLiveDetect = v;
+            localStorage.setItem('userSettings', JSON.stringify(settings));
+        } catch (e) { }
+    },
+
     // Window functionality
     closeWindowMode: 'remove',
     setCloseWindowMode: (mode) => {
@@ -160,6 +199,15 @@ try {
         }
         if (settings.closeWindowMode) {
             useUIStore.setState({ closeWindowMode: settings.closeWindowMode });
+        }
+        if (settings.autoMuteNewStream !== undefined) {
+            useUIStore.setState({ autoMuteNewStream: settings.autoMuteNewStream });
+        }
+        if (settings.youtubeRiskWarning !== undefined) {
+            useUIStore.setState({ youtubeRiskWarning: settings.youtubeRiskWarning });
+        }
+        if (settings.bgLiveDetect !== undefined) {
+            useUIStore.setState({ bgLiveDetect: settings.bgLiveDetect });
         }
     }
 } catch (e) { }

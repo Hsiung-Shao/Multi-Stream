@@ -216,7 +216,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         originalUrl: finalUrl,
                         volume: 50,
                         chatVisible: true,
-                        isMuted: false,
+                        isMuted: useUIStore.getState().autoMuteNewStream,
                         displayName: displayName
                     };
 
