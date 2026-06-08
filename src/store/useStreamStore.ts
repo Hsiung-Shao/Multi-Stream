@@ -70,6 +70,10 @@ interface StreamStoreState {
 
     addEmptyGroup: () => void;
     clearCanvasItems: () => void;
+    // 短暫播放回復(short-play restore)
+    lastActiveAt: number;
+    touchLastActive: () => void;
+    restoreSession: (data: { streams: StreamData[]; canvasItems: CanvasItem[]; layoutMode: 'auto' | 'canvas' }) => void;
     applyStandardLayoutToCanvas: (type: 'grid' | 'focus' | 'flow') => void;
     updateCanvasItem: (itemId: string, updates: Partial<CanvasItem>) => void;
     syncCanvasWithStreams: () => void;
@@ -108,6 +112,7 @@ export const useStreamStore = create<StreamStoreState>()(
             canvasItems: [],
             presets: [],
             customLayouts: [],
+            lastActiveAt: 0,
 
             // Grid Mode Init
             gridMode: true,
@@ -463,6 +468,14 @@ export const useStreamStore = create<StreamStoreState>()(
             }),
 
             clearCanvasItems: () => set({ canvasItems: [], streams: [] }),
+
+            // 短暫播放回復:記錄最後觀看活動時間 / 還原上次工作階段
+            touchLastActive: () => set({ lastActiveAt: Date.now() }),
+            restoreSession: (data) => set({
+                streams: data.streams,
+                canvasItems: data.canvasItems,
+                layoutMode: data.layoutMode,
+            }),
 
             applyStandardLayoutToCanvas: (type) => set(state => {
                 // If user invokes this, maybe we should respect it?
@@ -1172,7 +1185,8 @@ export const useStreamStore = create<StreamStoreState>()(
                 layoutMode: state.layoutMode,
                 presets: state.presets,
                 canvasItems: state.canvasItems,
-                customLayouts: state.customLayouts
+                customLayouts: state.customLayouts,
+                lastActiveAt: state.lastActiveAt
             })
         }
     )

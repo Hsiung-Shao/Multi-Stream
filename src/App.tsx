@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore, type PageType } from './store/useUIStore';
@@ -12,6 +12,7 @@ import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView } from './utils/analytics';
 import { initUmami } from './utils/umami';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
+import { useEffectiveTheme } from './hooks/useEffectiveTheme';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { Toaster } from './components/ui/sonner';
@@ -23,6 +24,9 @@ import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
 import { CookieConsent } from './components/CookieConsent';
 import { AnnouncementsProvider } from './features/announcements/AnnouncementsProvider';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
+import { RestoreSessionPrompt } from './components/Dialogs/RestoreSessionPrompt';
+import type { StreamData } from './utils/streamUtils';
+import type { CanvasItem } from './types/canvas';
 import { MobileApp } from './components/Mobile/MobileApp';
 
 // Pages
@@ -45,14 +49,41 @@ const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module =>
 export default function App() {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
+
+  // 短暫播放回復:待使用者確認是否恢復的上次工作階段
+  const [pendingRestore, setPendingRestore] = useState<{
+    streams: StreamData[];
+    canvasItems: CanvasItem[];
+    layoutMode: 'auto' | 'canvas';
+  } | null>(null);
+
+  const handleRestoreSession = () => {
+    if (pendingRestore) {
+      useStreamStore.getState().restoreSession(pendingRestore);
+      if (useUIStore.getState().page !== 'canvas') useUIStore.getState().setPage('canvas');
+    }
+    setPendingRestore(null);
+  };
+  const handleDiscardSession = () => setPendingRestore(null);
+
   // 初始化 GA4
   useEffect(() => {
     initGA();
     initUmami();
     logPageView();
 
-    // Clear canvas items on page load
-    useStreamStore.getState().clearCanvasItems();
+    // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
+    // 過期(或無串流)則維持「清空畫布」的既有行為。
+    {
+      const { streams, canvasItems, layoutMode, lastActiveAt } = useStreamStore.getState();
+      if (streams.length > 0) {
+        const withinWindow = Date.now() - lastActiveAt <= 10 * 60 * 1000;
+        if (withinWindow) {
+          setPendingRestore({ streams, canvasItems, layoutMode });
+        }
+        useStreamStore.getState().clearCanvasItems();
+      }
+    }
 
     // Check for Twitch OAuth redirect
     if (window.location.hash && window.location.hash.includes('access_token')) {
@@ -77,7 +108,7 @@ export default function App() {
     }
   }, []);
 
-  const theme = useUIStore(s => s.theme);
+  const theme = useEffectiveTheme();
   const toggleTheme = useUIStore(s => s.toggleTheme);
   const currentPage = useUIStore(s => s.page);
   const setCurrentPage = useUIStore(s => s.setPage);
@@ -105,7 +136,17 @@ export default function App() {
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'not-found'].includes(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
-    return <MobileApp />;
+    return (
+      <>
+        <MobileApp />
+        <RestoreSessionPrompt
+          open={!!pendingRestore}
+          streamCount={pendingRestore?.streams.length ?? 0}
+          onRestore={handleRestoreSession}
+          onDiscard={handleDiscardSession}
+        />
+      </>
+    );
   }
 
   // Routing Logic
@@ -242,6 +283,12 @@ export default function App() {
       <CookieConsent />
       <AnnouncementsProvider />
       <BraveDetectDialog />
+      <RestoreSessionPrompt
+        open={!!pendingRestore}
+        streamCount={pendingRestore?.streams.length ?? 0}
+        onRestore={handleRestoreSession}
+        onDiscard={handleDiscardSession}
+      />
     </>
   );
 }
