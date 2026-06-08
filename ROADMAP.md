@@ -58,7 +58,19 @@
 
 ---
 
-## Phase B — UI 功能重新設計(已設計,待實作)🎨
+## Phase B — UI 重新設計:首頁 + 收藏管理 + 動態島(✅ 已移植)🎨
+
+**已完成**:從 dev 移植三塊 UI 重設計到 next,並拆掉未移植功能(推薦/帳號)的入口。
+- B0 基礎:`index.css` 動畫(fade-in-up/live-pulse)+ `theme:'system'` 三段主題(useUIStore/useThemeSystem/useEffectiveTheme)。
+- B1 動態島:6 個 Navigation 元件(DynamicIsland 語意色 FN + IslandFavoritesMenu 金色 popover 等)+ scroll-area orientation 升級。
+- B2 收藏管理:13 個元件 token 化雙主題,拆 RecommendDialog/MyRecommendationsTab/Heart 推薦鈕;補 useUIStore 播放設定欄位 + dialog showCloseButton + 5 語系 favorites locale。
+- B3 首頁(LandingPage):Header/Footer 導航重設計 + Hero CLS;拆帳號下拉/推薦入口;SEO 改用 next 簽名。
+- 已驗證:各階段 tsc 移植檔案零真實型別錯誤;dev server 0 console error;動態島語意色/金色收藏 popover/首頁渲染正確、i18n 全中文。
+- **未做(超出本次三塊範圍)**:Mobile 外殼、Navbar、靜態頁(關於/隱私/FAQ/教學)、帳號頁/推薦頁(功能未移植)。
+
+---
+
+### (原規劃保留參考)
 
 **範圍**:整個導覽列重設計 + 設計 token 化(純前端,無 DB)。
 **來源(dev)**:`src/index.css`(oklch 設計變數)、`src/components/Navigation/*`(`DynamicIsland`、`IslandFavoritesMenu`、`MediaControlPanel`、`IslandLayoutPicker`、`IslandSearch`、`StreamListItem`)。
@@ -117,6 +129,6 @@
 | A1 | 通知推送(投票/意見/公告) | ✅ 已移植,待 preview 驗證 |
 | A1+ | admin 公告管理 UI(X-Admin-Token 認證) | ✅ 已移植,待 preview 驗證 |
 | A2 | YouTube 頻道離線資料庫 | ✅ 已移植,待 preview 驗證 |
-| B | UI 重新設計 | 📐 已設計,待實作 |
+| B | UI 重新設計(首頁/收藏/動態島) | ✅ 已移植,待 preview 驗證 |
 | C | 短暫播放回復 | 📐 已設計,待釐清情境 |
 | D | PWA | 📐 已設計,待實作 |
