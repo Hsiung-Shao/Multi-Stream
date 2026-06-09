@@ -191,7 +191,12 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                 </div>
                 <button
                     type="button"
-                    onClick={() => { setMasterMuted(true); useStreamStore.getState().setAllMuted(true); }}
+                    onClick={() => {
+                        // Toggle:點一下全部靜音,再點一下解除全部靜音(setAllMuted 會還原各路 _restoreMuteState)
+                        const next = !masterMuted;
+                        setMasterMuted(next);
+                        useStreamStore.getState().setAllMuted(next);
+                    }}
                     className="inline-flex items-center gap-1.5 font-semibold"
                     style={{
                         height: 28,
@@ -203,9 +208,11 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                         fontSize: 12,
                         cursor: 'pointer',
                     }}
-                    title={t('controlPanel:muteAll') || '全部靜音'}
+                    title={masterMuted ? (t('controlPanel:unmuteAll') || '解除靜音') : (t('controlPanel:muteAll') || '全部靜音')}
                 >
-                    <VolumeX size={12} /> {t('controlPanel:muteAll') || '全部靜音'}
+                    {masterMuted
+                        ? <><Volume2 size={12} /> {t('controlPanel:unmuteAll') || '解除靜音'}</>
+                        : <><VolumeX size={12} /> {t('controlPanel:muteAll') || '全部靜音'}</>}
                 </button>
             </div>
 
