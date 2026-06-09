@@ -13,9 +13,6 @@ function BrandTwitch({ className }: { className?: string }) {
     );
 }
 
-/** 平台 tag 不在 chip 區重複顯示(平台已由左側品牌 icon 表達,對齊設計) */
-const PLATFORM_TAG_NAMES = new Set(['twitch', 'youtube']);
-
 interface FavoriteListItemProps {
     favorite: FavoriteStream;
     categories: Category[];
@@ -43,9 +40,8 @@ export function FavoriteListItem({
 }: FavoriteListItemProps) {
     const { t } = useTranslation(['favorites', 'common']);
     const category = categories.find(c => c.id === favorite.categoryId);
-    const itemTags = tags.filter(tag =>
-        favorite.tagIds?.includes(tag.id) && !PLATFORM_TAG_NAMES.has(tag.name.trim().toLowerCase())
-    );
+    // 顯示收藏的所有標籤(含平台 tag Twitch/YouTube,使用者要求平台 tag 也要看得到)
+    const itemTags = tags.filter(tag => favorite.tagIds?.includes(tag.id));
     const isYouTube = favorite.platform === 'youtube';
 
     return (

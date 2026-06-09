@@ -2,15 +2,15 @@ import { useForm, Controller } from 'react-hook-form';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { TagPopoverSelector } from '../../../components/ui/TagPopoverSelector';
-import { TagChip } from '../../../components/ui/TagChip';
+import { TagWellSelector } from './TagWellSelector';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
     Star, Pencil, Clipboard, Link2, Twitch, Youtube, Folder, Check,
     Play, Plus, Trash2, X,
 } from 'lucide-react';
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../types';
+import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from '../constants';
 
 interface AddFavoriteDialogProps {
     open: boolean;
@@ -64,13 +64,12 @@ export function AddFavoriteDialog({
     categories,
     allTags,
     initialData,
-    theme,
     showAutoLoad = false,
 }: AddFavoriteDialogProps) {
     const { t } = useTranslation(['favorites', 'common', 'tags']);
     const isEdit = !!initialData;
 
-    const { register, handleSubmit, control, reset, setValue, watch } = useForm<AddFavoriteFormValues>({
+    const { register, handleSubmit, control, reset, setValue, getValues, watch } = useForm<AddFavoriteFormValues>({
         defaultValues: {
             url: '',
             name: '',
@@ -80,12 +79,13 @@ export function AddFavoriteDialog({
     });
 
     const url = watch('url');
-    const selectedTagIds = watch('tagIds');
 
     // 純視覺狀態(不影響送出 payload)
     const [manualPlatform, setManualPlatform] = useState<AfPlatform | null>(null);
     // autoLoad 預設 off;開啟時新增成功後由 onSubmit 端(canvas FM)以 favoritesLoader 載入該頻道
     const [autoLoad, setAutoLoad] = useState(false);
+    // 記住「上次依平台自動加入的平台 tag」,避免使用者手動移除後又被加回(只在 add 模式作用)
+    const appliedPlatformTagRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (initialData) {
@@ -105,6 +105,7 @@ export function AddFavoriteDialog({
         }
         setManualPlatform(null);
         setAutoLoad(false);
+        appliedPlatformTagRef.current = null;
     }, [initialData, reset, open]);
 
     // ---- presentational derived values ----
@@ -114,6 +115,25 @@ export function AddFavoriteDialog({
         : (det.platform || manualPlatform);
     const accent = platformColor(platform);
     const showPlatformPicker = !isEdit && !!det.handle && !det.platform;
+
+    // add 模式:依偵測到的平台自動預選平台 tag(Twitch/YouTube),讓平台 tag 在 tag well 內預先選好
+    // (使用者反映「新增時沒自動帶平台標籤」)。平台切換時移除舊的、加入新的;
+    // 使用者手動移除後(平台未變)不再強加(用 appliedPlatformTagRef 記錄上次自動套用的平台 tag)。
+    useEffect(() => {
+        if (isEdit) return;
+        const platformTagId = platform === 'twitch' ? DEFAULT_TAG_TWITCH_ID
+            : platform === 'youtube' ? DEFAULT_TAG_YOUTUBE_ID
+                : null;
+        const prev = appliedPlatformTagRef.current;
+        if (platformTagId === prev) return;
+        const current = getValues('tagIds') || [];
+        let next = prev ? current.filter(id => id !== prev) : [...current];
+        if (platformTagId && !next.includes(platformTagId)) next = [...next, platformTagId];
+        appliedPlatformTagRef.current = platformTagId;
+        if (next.length !== current.length || next.some((id, i) => id !== current[i])) {
+            setValue('tagIds', next, { shouldDirty: true });
+        }
+    }, [platform, isEdit, getValues, setValue]);
 
     const pasteFromClipboard = async () => {
         try {
@@ -278,7 +298,7 @@ export function AddFavoriteDialog({
                             />
                         </div>
 
-                        {/* Tags */}
+                        {/* Tags — 單一 tag well combobox(對齊 design AFTagPicker) */}
                         <div>
                             <div className="flex items-center justify-between mb-2.5">
                                 <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t('tags:addTag')}</label>
@@ -288,56 +308,13 @@ export function AddFavoriteDialog({
                                 name="tagIds"
                                 control={control}
                                 render={({ field }) => (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {allTags.map((tag) => {
-                                            const active = field.value.includes(tag.id);
-                                            return (
-                                                <button
-                                                    key={tag.id}
-                                                    type="button"
-                                                    onClick={() => field.onChange(
-                                                        active
-                                                            ? field.value.filter((id) => id !== tag.id)
-                                                            : [...field.value, tag.id]
-                                                    )}
-                                                    aria-pressed={active}
-                                                    className="inline-flex items-center gap-[7px] px-3 py-[7px] rounded-full text-[13px] font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                    style={active
-                                                        ? { background: `${tag.color}24`, borderColor: tag.color, color: 'var(--foreground)' }
-                                                        : { background: 'color-mix(in oklab, var(--muted) 40%, transparent)', borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
-                                                >
-                                                    <span
-                                                        className="size-2 rounded-full"
-                                                        style={{ background: tag.color, boxShadow: active ? `0 0 6px ${tag.color}` : 'none' }}
-                                                    />
-                                                    {tag.name}
-                                                    {active && <Check className="size-3" />}
-                                                </button>
-                                            );
-                                        })}
-                                        {/* 既有 Popover 選擇器:保留資料流(搜尋/選更多標籤) */}
-                                        <TagPopoverSelector
-                                            allTags={allTags}
-                                            selectedTagIds={field.value}
-                                            onChange={field.onChange}
-                                            theme={theme}
-                                            showSelectedChips={false}
-                                        />
-                                    </div>
+                                    <TagWellSelector
+                                        allTags={allTags}
+                                        selectedTagIds={field.value}
+                                        onChange={field.onChange}
+                                    />
                                 )}
                             />
-                            {/* 已選標籤可刪 chip 列(沿用既有 TagChip 行為) */}
-                            {selectedTagIds.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                    {allTags.filter((tag) => selectedTagIds.includes(tag.id)).map((tag) => (
-                                        <TagChip
-                                            key={tag.id}
-                                            tag={tag}
-                                            onDelete={() => setValue('tagIds', selectedTagIds.filter((id) => id !== tag.id))}
-                                        />
-                                    ))}
-                                </div>
-                            )}
                         </div>
 
                         {/* Auto-load toggle — add mode + 有畫布可載入時才顯示(接 favoritesLoader.load) */}
