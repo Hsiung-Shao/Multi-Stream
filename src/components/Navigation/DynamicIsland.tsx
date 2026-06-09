@@ -40,22 +40,8 @@ import {
     onFullscreenChange
 } from '../../utils/fullscreenUtils';
 
-// ---- Function color tokens (per design DynamicIsland.jsx) ------------------
-// 每個功能一個語意色 + glow,讓島上按鈕一眼可辨識。
-const FN = {
-    search: { c: '#5b9bff', glow: 'rgba(91,155,255,0.45)' },
-    add: { c: '#4ade80', glow: 'rgba(74,222,128,0.45)' },
-    layout: { c: '#c084fc', glow: 'rgba(192,132,252,0.45)' },
-    media: { c: '#22d3ee', glow: 'rgba(34,211,238,0.45)' },
-    fav: { c: '#fbbf24', glow: 'rgba(251,191,36,0.45)' },
-    save: { c: '#f472b6', glow: 'rgba(244,114,182,0.45)' },
-    screen: { c: '#a5b4fc', glow: 'rgba(165,180,252,0.4)' },
-    clear: { c: '#f87171', glow: 'rgba(248,113,113,0.45)' },
-    home: { c: '#cbd5e1', glow: 'rgba(203,213,225,0.35)' },
-    settings: { c: '#cbd5e1', glow: 'rgba(203,213,225,0.35)' },
-} as const;
-
-type FnKey = keyof typeof FN;
+// ---- Function color tokens(見 islandTokens.ts,與各面板共用) ----
+import { FN, type FnKey } from './islandTokens';
 
 // 島上分隔線(對齊設計:w1 h22 white/14 mx5)
 const IslandDivider = () => (

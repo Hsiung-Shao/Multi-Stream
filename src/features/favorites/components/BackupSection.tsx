@@ -8,7 +8,6 @@ import { logEvent } from '../../../utils/analytics';
 import { useState } from 'react';
 
 interface BackupSectionProps {
-    theme: 'light' | 'dark';
     onSuccess: (message: string) => void;
     onError: (message: string) => void;
 }

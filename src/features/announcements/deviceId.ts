@@ -12,25 +12,10 @@
  *   呼叫端要自行處理(顯示登入提示或不去重)。
  */
 
+import { v4 as uuidv4 } from 'uuid';
+
 const STORAGE_KEY = 'announcement:device_id';
 const MAX_LEN = 128; // 對齊 backend isValidDeviceId
-
-function generateUuid(): string {
-    if (typeof globalThis !== 'undefined' && globalThis.crypto?.randomUUID) {
-        return globalThis.crypto.randomUUID();
-    }
-    // RFC4122 v4 fallback
-    const bytes = new Uint8Array(16);
-    if (typeof globalThis !== 'undefined' && globalThis.crypto?.getRandomValues) {
-        globalThis.crypto.getRandomValues(bytes);
-    } else {
-        for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
-    }
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
 
 /**
  * 取(或建立)當前裝置的 announcement device id。
@@ -44,7 +29,7 @@ export function getOrCreateDeviceId(): string | null {
         if (existing && existing.length >= 1 && existing.length <= MAX_LEN) {
             return existing;
         }
-        const next = generateUuid();
+        const next = uuidv4();
         window.localStorage.setItem(STORAGE_KEY, next);
         return next;
     } catch {

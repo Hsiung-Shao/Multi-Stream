@@ -18,9 +18,10 @@ import {
     PopoverTrigger,
 } from '../ui/popover';
 import { useLiveStatusCheck } from '../../features/favorites/useLiveStatusCheck';
+import { FN, ISLAND_PANEL_STYLE, islandHeaderChipStyle } from './islandTokens';
 
 // Favorites 面板主題色(對齊設計 FN.fav = gold)
-const FAV_ACCENT = '#fbbf24';
+const FAV_ACCENT = FN.fav.c;
 
 // ---- in-panel chooser style helpers(對齊設計 favRowBtn / favPill / favClearBtn) ----
 const favPillStyle = (active: boolean): React.CSSProperties => ({
@@ -248,14 +249,7 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                 side="top"
                 align="center"
                 sideOffset={16}
-                style={{
-                    background: 'rgba(12,12,17,0.92)',
-                    backdropFilter: 'blur(22px)',
-                    WebkitBackdropFilter: 'blur(22px)',
-                    borderRadius: 20,
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 60px -18px rgba(0,0,0,0.75)',
-                }}
+                style={ISLAND_PANEL_STYLE}
             >
 
                 {/* Header(gold icon chip) */}
@@ -263,14 +257,7 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
                     <span className="font-semibold text-sm flex items-center gap-2.5">
                         <span
                             className="flex items-center justify-center"
-                            style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 9,
-                                background: `${FAV_ACCENT}1f`,
-                                color: FAV_ACCENT,
-                                boxShadow: `inset 0 0 0 1px ${FAV_ACCENT}40`,
-                            }}
+                            style={islandHeaderChipStyle(FAV_ACCENT)}
                         >
                             <Star size={16} fill="currentColor" />
                         </span>

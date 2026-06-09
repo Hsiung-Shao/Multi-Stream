@@ -17,7 +17,7 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
-import { Eyebrow, IconChip, BlurOrb } from './ui/ds-primitives';
+import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 
 interface PrivacyPageProps {
   theme: 'light' | 'dark';
@@ -235,9 +235,6 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
 
         .pv-section { padding-top: 72px; }
         .pv-section.tight { padding-top: 40px; }
-        .pv-head { margin-bottom: 28px; }
-        .pv-head-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 10px 0 0; color: var(--foreground); }
-        .pv-head-sub { font-size: 15.5px; color: var(--muted-foreground); margin: 10px 0 0; line-height: 1.6; max-width: 660px; }
 
         .pv-highlight { padding: 28px; border-radius: 20px; background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.02)); border: 1px solid rgba(16,185,129,0.25); display: flex; align-items: flex-start; gap: 18px; }
         .pv-highlight-chip { width: 50px; height: 50px; border-radius: 14px; background: rgba(16,185,129,0.15); color: ${GREEN}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -372,7 +369,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
 
         {/* ---------- Collect vs never ---------- */}
         <section className="pv-section">
-          <PvHead
+          <SectionHead color="#10b981"
             eyebrow={tx('privacy:transparencyEyebrow', { defaultValue: 'Transparency' })}
             title={tx('privacy:collectTitle', { defaultValue: '我們收集 / 不收集什麼' })}
             sub={tx('privacy:collectSub', { defaultValue: '把界線講清楚：我們只看匿名聚合數字，看不到任何指向你個人的東西。' })}
@@ -416,7 +413,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
 
         {/* ---------- Anonymous channel stats ---------- */}
         <section className="pv-section">
-          <PvHead
+          <SectionHead color="#10b981"
             eyebrow={tx('privacy:howEyebrow', { defaultValue: 'How it works' })}
             title={tx('privacy:anonStatsTitle', { defaultValue: '匿名頻道統計' })}
           />
@@ -430,7 +427,7 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
 
         {/* ---------- Full policy(保留 next 既有 9 段法律條文) ---------- */}
         <section className="pv-section">
-          <PvHead
+          <SectionHead color="#10b981"
             eyebrow={tx('privacy:detailsEyebrow', { defaultValue: 'Full policy' })}
             title={tx('privacy:detailsTitle', { defaultValue: '完整隱私權條款' })}
             sub={tx('privacy:intro')}
@@ -470,17 +467,6 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
           <p className="pv-updated">{tx('about:lastUpdated')}</p>
         </footer>
       </div>
-    </div>
-  );
-}
-
-// section header(eyebrow + title + 可選 sub),對齊 design 的 AbHeader。
-function PvHead({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }): ReactNode {
-  return (
-    <div className="pv-head">
-      <Eyebrow color="#10b981">{eyebrow}</Eyebrow>
-      <h2 className="pv-head-title">{title}</h2>
-      {sub && <p className="pv-head-sub">{sub}</p>}
     </div>
   );
 }

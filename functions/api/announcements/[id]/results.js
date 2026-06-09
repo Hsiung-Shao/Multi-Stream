@@ -19,6 +19,7 @@ import { select } from '../../../lib/supabase-server.js';
 import { logError } from '../../../lib/logger.js';
 import {
     fetchAnnouncementById,
+    isUuid,
     summarizePoll,
     summarizeSurvey,
 } from '../../../lib/announcements.js';
@@ -29,7 +30,7 @@ export async function onRequestGet(context) {
     const { request, env, params } = context;
     const id = params?.id;
 
-    if (typeof id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+    if (!isUuid(id)) {
         return jsonResponse({ success: false, error: 'invalid_id' }, 400, request);
     }
     if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {

@@ -80,3 +80,26 @@ export function handleOptions(request, opts = {}) {
         },
     });
 }
+
+/**
+ * JSON body 守門:Content-Type 檢查 + Content-Length 上限 + parse
+ * @param {Request} request
+ * @param {number} maxBytes - body 大小上限
+ * @returns {Promise<{ ok: true, body: any } | { ok: false, response: Response }>}
+ */
+export async function readJsonBody(request, maxBytes) {
+    const contentType = request.headers.get('Content-Type') || '';
+    if (!contentType.includes('application/json')) {
+        return { ok: false, response: jsonResponse({ ok: false, error: 'invalid_content_type' }, 400, request) };
+    }
+    const contentLength = parseInt(request.headers.get('Content-Length') || '0', 10);
+    if (contentLength > maxBytes) {
+        return { ok: false, response: jsonResponse({ ok: false, error: 'body_too_large' }, 413, request) };
+    }
+    try {
+        const body = await request.json();
+        return { ok: true, body };
+    } catch {
+        return { ok: false, response: jsonResponse({ ok: false, error: 'invalid_json' }, 400, request) };
+    }
+}

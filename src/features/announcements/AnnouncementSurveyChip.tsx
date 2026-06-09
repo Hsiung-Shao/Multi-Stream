@@ -125,12 +125,8 @@ export function AnnouncementSurveyChip({ announcement, onDismiss }: Props) {
         });
         setSubmitting(false);
 
-        if (result.ok) {
-            setFlag('voted', announcement.id);
-            setDone(true);
-            return;
-        }
-        if (!result.ok && 'reason' in result && result.reason === 'already_responded') {
+        // 送出成功與 backend 認定已回應(already_responded)都視為完成
+        if (result.ok || ('reason' in result && result.reason === 'already_responded')) {
             setFlag('voted', announcement.id);
             setDone(true);
             return;
@@ -146,8 +142,7 @@ export function AnnouncementSurveyChip({ announcement, onDismiss }: Props) {
         }
     };
 
-    const handleDismissChip: React.MouseEventHandler<HTMLButtonElement> = (e) => {
-        e.stopPropagation();
+    const dismissChip = () => {
         setFlag('dismissed', announcement.id);
         onDismiss();
     };
@@ -170,12 +165,14 @@ export function AnnouncementSurveyChip({ announcement, onDismiss }: Props) {
                     tabIndex={0}
                     aria-label={t('dontShowAgain', '不再顯示')}
                     className="ml-1 inline-flex items-center justify-center rounded-full p-1 hover:bg-primary-foreground/20"
-                    onClick={handleDismissChip}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        dismissChip();
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            setFlag('dismissed', announcement.id);
-                            onDismiss();
+                            dismissChip();
                         }
                     }}
                 >

@@ -9,7 +9,8 @@
 //
 // id 用 crypto.randomUUID 短前綴(8 字元),足以避免 collision 又便於 debug
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { Loader2, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import {
     Dialog,
@@ -89,10 +90,7 @@ interface FormState {
 
 function shortId(): string {
     // 8 字元 hex,collision 機率極低且方便人類閱讀
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID().replace(/-/g, '').slice(0, 8);
-    }
-    return Math.random().toString(36).slice(2, 10);
+    return uuidv4().replace(/-/g, '').slice(0, 8);
 }
 
 /**
@@ -304,19 +302,9 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
         setForm(prev => ({ ...prev, [key]: val }));
     };
 
-    // 切 type 時 reset payload-related fields,避免帶舊資料污染
-    const handleTypeChange = (next: AnnouncementType) => {
-        setForm(prev => ({
-            ...prev,
-            type: next,
-            poll_options: next === 'poll'
-                ? (prev.poll_options.length > 0 ? prev.poll_options : [{ id: shortId(), label: '' }, { id: shortId(), label: '' }])
-                : prev.poll_options,
-            survey_questions: next === 'survey'
-                ? (prev.survey_questions.length > 0 ? prev.survey_questions : [makeQuestion()])
-                : prev.survey_questions,
-        }));
-    };
+    // 切 type 只發生在新增模式(編輯時 Select disabled),而新增模式下
+    // poll_options / survey_questions 由 defaultForm 保證非空(移除鈕在最小數量時 disabled),直接換 type 即可
+    const handleTypeChange = (next: AnnouncementType) => updateField('type', next);
 
     // ---- Poll options helpers ----
     const addPollOption = () => updateField('poll_options', [...form.poll_options, { id: shortId(), label: '' }]);
@@ -371,11 +359,7 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
         }
     };
 
-    const errorText = useMemo(() => {
-        if (localError) return localError;
-        if (mutationError) return formatAdminAnnouncementError(mutationError);
-        return null;
-    }, [localError, mutationError]);
+    const errorText = localError ?? (mutationError ? formatAdminAnnouncementError(mutationError) : null);
 
     return (
         <>

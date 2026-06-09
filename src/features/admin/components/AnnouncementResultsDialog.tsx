@@ -157,6 +157,36 @@ function ChartTooltipContent({ active, payload }: any) {
     );
 }
 
+/** poll / survey 共用的橫向計票長條圖;compact 給 survey 單題用(較小字級與高度) */
+function ResultsBarChart({ items, compact = false }: { items: { label: string; count: number }[]; compact?: boolean }) {
+    const fontSize = compact ? 10 : 11;
+    return (
+        <ResponsiveContainer
+            width="100%"
+            height={compact ? Math.max(140, items.length * 30 + 40) : Math.max(180, items.length * 36 + 60)}
+        >
+            <BarChart
+                data={items}
+                layout="vertical"
+                margin={compact ? { top: 4, right: 24, left: 8, bottom: 4 } : { top: 8, right: 24, left: 8, bottom: 8 }}
+            >
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
+                <XAxis type="number" stroke="#71717a" fontSize={fontSize} allowDecimals={false} />
+                <YAxis
+                    type="category"
+                    dataKey="label"
+                    stroke="#71717a"
+                    fontSize={fontSize}
+                    width={compact ? 120 : 140}
+                    interval={0}
+                />
+                <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'rgba(167, 139, 250, 0.1)' }} />
+                <Bar dataKey="count" fill={CHART_COLOR} radius={[0, 4, 4, 0]} />
+            </BarChart>
+        </ResponsiveContainer>
+    );
+}
+
 interface Props {
     open: boolean;
     onOpenChange: (v: boolean) => void;
@@ -249,29 +279,12 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                             </p>
                                         ) : (
                                             <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-                                                <ResponsiveContainer width="100%" height={Math.max(180, pollSummary.options.length * 36 + 60)}>
-                                                    <BarChart
-                                                        data={pollSummary.options.map(o => ({
-                                                            label: o.label || `(無標籤)`,
-                                                            count: o.count,
-                                                        }))}
-                                                        layout="vertical"
-                                                        margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
-                                                    >
-                                                        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                                                        <XAxis type="number" stroke="#71717a" fontSize={11} allowDecimals={false} />
-                                                        <YAxis
-                                                            type="category"
-                                                            dataKey="label"
-                                                            stroke="#71717a"
-                                                            fontSize={11}
-                                                            width={140}
-                                                            interval={0}
-                                                        />
-                                                        <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'rgba(167, 139, 250, 0.1)' }} />
-                                                        <Bar dataKey="count" fill={CHART_COLOR} radius={[0, 4, 4, 0]} />
-                                                    </BarChart>
-                                                </ResponsiveContainer>
+                                                <ResultsBarChart
+                                                    items={pollSummary.options.map(o => ({
+                                                        label: o.label || `(無標籤)`,
+                                                        count: o.count,
+                                                    }))}
+                                                />
                                                 <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
                                                     {pollSummary.options.map(o => {
                                                         const pct = pollSummary.total > 0
@@ -313,29 +326,13 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                                         q.options.length === 0 ? (
                                                             <p className="text-xs text-zinc-500">沒有設定選項</p>
                                                         ) : (
-                                                            <ResponsiveContainer width="100%" height={Math.max(140, q.options.length * 30 + 40)}>
-                                                                <BarChart
-                                                                    data={q.options.map(o => ({
-                                                                        label: o.label || `(無標籤)`,
-                                                                        count: o.count,
-                                                                    }))}
-                                                                    layout="vertical"
-                                                                    margin={{ top: 4, right: 24, left: 8, bottom: 4 }}
-                                                                >
-                                                                    <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                                                                    <XAxis type="number" stroke="#71717a" fontSize={10} allowDecimals={false} />
-                                                                    <YAxis
-                                                                        type="category"
-                                                                        dataKey="label"
-                                                                        stroke="#71717a"
-                                                                        fontSize={10}
-                                                                        width={120}
-                                                                        interval={0}
-                                                                    />
-                                                                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'rgba(167, 139, 250, 0.1)' }} />
-                                                                    <Bar dataKey="count" fill={CHART_COLOR} radius={[0, 4, 4, 0]} />
-                                                                </BarChart>
-                                                            </ResponsiveContainer>
+                                                            <ResultsBarChart
+                                                                compact
+                                                                items={q.options.map(o => ({
+                                                                    label: o.label || `(無標籤)`,
+                                                                    count: o.count,
+                                                                }))}
+                                                            />
                                                         )
                                                     )}
 

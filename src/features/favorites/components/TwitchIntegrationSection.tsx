@@ -11,7 +11,6 @@ import { Loader2, Search } from 'lucide-react';
 import { FollowedChannel } from '../../../hooks/useTwitchUser';
 
 interface TwitchIntegrationSectionProps {
-    theme: 'light' | 'dark';
     isLoggedIn: boolean;
     login: () => void;
     logout: () => void;

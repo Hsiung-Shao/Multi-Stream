@@ -16,7 +16,7 @@
 //
 // 不洩漏 announcement 內部錯誤細節給 caller。
 
-import { jsonResponse, handleOptions } from '../../lib/cors.js';
+import { jsonResponse, handleOptions, readJsonBody } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
 import { getVisitorIp, isIpBanned } from '../../lib/rate-limit.js';
 import { insert } from '../../lib/supabase-server.js';
@@ -35,32 +35,16 @@ const MAX_BODY_BYTES = 16 * 1024;
 export async function onRequestPost(context) {
     const { request, env } = context;
 
-    // Content-Type / size 守門
-    const contentType = request.headers.get('Content-Type') || '';
-    if (!contentType.includes('application/json')) {
-        return jsonResponse({ ok: false, error: 'invalid_content_type' }, 400, request);
-    }
-    const contentLength = parseInt(request.headers.get('Content-Length') || '0', 10);
-    if (contentLength > MAX_BODY_BYTES) {
-        return jsonResponse({ ok: false, error: 'body_too_large' }, 413, request);
-    }
-
-    let body;
-    try {
-        body = await request.json();
-    } catch {
-        return jsonResponse({ ok: false, error: 'invalid_json' }, 400, request);
-    }
+    const parsed = await readJsonBody(request, MAX_BODY_BYTES);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.body;
 
     const ip = getVisitorIp(request);
     if (isIpBanned(env, ip)) {
         return jsonResponse({ ok: false, error: 'banned' }, 403, request);
     }
 
-    const { userId } = await getUserIdFromRequest(request, env);
-    const isAuthed = !!userId;
-
-    // ---- input shape 驗證 ----
+    // ---- input shape 驗證(不依賴 auth 的部分先做,失敗就不必打 Supabase)----
     if (!body || typeof body !== 'object') {
         return jsonResponse({ ok: false, error: 'invalid_body' }, 400, request);
     }
@@ -70,17 +54,13 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: 'announcement_id_required' }, 400, request);
     }
 
-    // device_id 驗證 + 匿名必填
+    // device_id 格式驗證(匿名必填的檢查要等 auth 結果,在下面)
     let deviceIdToUse = null;
     if (device_id !== undefined && device_id !== null && device_id !== '') {
         if (!isValidDeviceId(device_id)) {
             return jsonResponse({ ok: false, error: 'invalid_device_id' }, 400, request);
         }
         deviceIdToUse = device_id;
-    }
-    if (!isAuthed && !deviceIdToUse) {
-        // DB CHECK: user_id IS NOT NULL OR device_id IS NOT NULL
-        return jsonResponse({ ok: false, error: 'device_id_required' }, 400, request);
     }
 
     // text_response 長度
@@ -99,11 +79,23 @@ export async function onRequestPost(context) {
         textResponseToUse = trimmed;
     }
 
-    // ---- 取公告 + 校驗狀態 ----
     if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
         return jsonResponse({ ok: false, error: 'server_misconfigured' }, 500, request);
     }
-    const announcement = await fetchAnnouncementById(env, announcement_id);
+
+    // ---- auth 與取公告互不依賴,平行打(各省一段 HTTP roundtrip)----
+    const [{ userId }, announcement] = await Promise.all([
+        getUserIdFromRequest(request, env),
+        fetchAnnouncementById(env, announcement_id),
+    ]);
+    const isAuthed = !!userId;
+
+    if (!isAuthed && !deviceIdToUse) {
+        // DB CHECK: user_id IS NOT NULL OR device_id IS NOT NULL
+        return jsonResponse({ ok: false, error: 'device_id_required' }, 400, request);
+    }
+
+    // ---- 校驗公告狀態 ----
     if (!announcement) {
         return jsonResponse({ ok: false, error: 'not_found' }, 404, request);
     }
@@ -123,21 +115,18 @@ export async function onRequestPost(context) {
         return jsonResponse({ ok: false, error: validation.error }, 400, request);
     }
 
-    // ---- Rate limit ----
+    // ---- Rate limit(IP 與 device_id 是獨立 bucket,平行檢查)----
     if (env.RATE_LIMIT_KV) {
-        // IP rate limit
-        if (ip) {
-            const r = await checkAndIncrementRespondRateLimit(env.RATE_LIMIT_KV, `ip:${ip}`);
-            if (!r.allowed) {
-                return jsonResponse({ ok: false, error: 'rate_limited' }, 429, request);
-            }
-        }
-        // device_id rate limit(獨立 bucket;避免單 IP 多裝置共用 IP 互相影響)
-        if (deviceIdToUse) {
-            const r = await checkAndIncrementRespondRateLimit(env.RATE_LIMIT_KV, `dev:${deviceIdToUse}`);
-            if (!r.allowed) {
-                return jsonResponse({ ok: false, error: 'rate_limited' }, 429, request);
-            }
+        const [ipCheck, devCheck] = await Promise.all([
+            ip
+                ? checkAndIncrementRespondRateLimit(env.RATE_LIMIT_KV, `ip:${ip}`)
+                : Promise.resolve({ allowed: true }),
+            deviceIdToUse
+                ? checkAndIncrementRespondRateLimit(env.RATE_LIMIT_KV, `dev:${deviceIdToUse}`)
+                : Promise.resolve({ allowed: true }),
+        ]);
+        if (!ipCheck.allowed || !devCheck.allowed) {
+            return jsonResponse({ ok: false, error: 'rate_limited' }, 429, request);
         }
     }
 

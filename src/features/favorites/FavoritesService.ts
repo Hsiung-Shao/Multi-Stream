@@ -117,8 +117,12 @@ export class FavoritesService {
         categoryId: string | null = null,
         providedChannelId: string | null = null,
         providedVideoId: string | null = null,
-        tagIds: string[] = []
+        tagIds: string[] = [],
+        opts: { autoTagPlatform?: boolean } = {}
     ): Promise<{ success: boolean; message: string; item?: FavoriteStream }> {
+        // 平台預設 tag 的自動補只有一個決策點:autoTagPlatform=false 的 caller
+        // (AddFavoriteDialog 的 tag well)自己管理平台 tag,使用者移除後不在此強加回去
+        const autoTagPlatform = opts.autoTagPlatform !== false;
 
         // Initial duplicate check
         if (this.isDuplicate(url, providedChannelId)) {
@@ -133,7 +137,7 @@ export class FavoritesService {
         if (url.includes('twitch.tv')) {
             platform = 'twitch';
             // Auto-add default tag
-            if (!tagIds.includes(DEFAULT_TAG_TWITCH_ID)) {
+            if (autoTagPlatform && !tagIds.includes(DEFAULT_TAG_TWITCH_ID)) {
                 tagIds = [...tagIds, DEFAULT_TAG_TWITCH_ID];
             }
             const match = url.match(/twitch\.tv\/([^\/\?]+)/);
@@ -152,7 +156,7 @@ export class FavoritesService {
         } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
             platform = 'youtube';
             // Auto-add default tag
-            if (!tagIds.includes(DEFAULT_TAG_YOUTUBE_ID)) {
+            if (autoTagPlatform && !tagIds.includes(DEFAULT_TAG_YOUTUBE_ID)) {
                 tagIds = [...tagIds, DEFAULT_TAG_YOUTUBE_ID];
             }
             // Basic Video ID extraction

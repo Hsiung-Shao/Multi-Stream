@@ -19,7 +19,6 @@ interface AddFavoriteDialogProps {
     categories: Category[];
     allTags: Tag[];
     initialData?: FavoriteStream | null;
-    theme: 'light' | 'dark';
     /** 是否顯示「新增後立即載入畫面」開關(僅在有畫布可載入的情境,如 canvas 的 FM) */
     showAutoLoad?: boolean;
 }

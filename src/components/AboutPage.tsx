@@ -4,7 +4,6 @@
 // local-first 隱私區、footer)。保留 next 既有的 props/header 與多語系 i18n。
 // SEO 由 App.tsx 在 case 'about' 外層統一處理,此處不重複以免雙標題。
 
-import type { ReactNode } from 'react';
 import {
   ArrowLeft, Globe, Sun, Moon,
   Tv, Radio, Zap, LayoutGrid, MessagesSquare, Volume2, Star, Smartphone,
@@ -18,7 +17,7 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
-import { Eyebrow, IconChip, BlurOrb } from './ui/ds-primitives';
+import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 
 interface AboutPageProps {
   theme: 'light' | 'dark';
@@ -107,9 +106,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         .ab-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 9999px; background: oklch(0.21 0.034 264.665 / 0.5); border: 1px solid rgba(255,255,255,0.09); font-size: 13px; font-weight: 500; color: var(--foreground); }
 
         .ab-section { padding-top: 76px; }
-        .ab-head { margin-bottom: 28px; }
-        .ab-head-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 10px 0 0; color: var(--foreground); }
-        .ab-head-sub { font-size: 15.5px; color: var(--muted-foreground); margin: 10px 0 0; line-height: 1.6; max-width: 640px; }
 
         .ab-spotlight { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 18px; }
         .ab-spot-card { position: relative; overflow: hidden; padding: 24px; border-radius: 18px; }
@@ -243,7 +239,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* ---------- Main features ---------- */}
         <section className="ab-section">
-          <AbHead
+          <SectionHead
             eyebrow={tx('about:featuresEyebrow', { defaultValue: 'Features' })}
             title={tx('about:featuresTitle')}
             sub={tx('about:featuresSub', { defaultValue: '圍繞「同時看多台」這件事打磨的每個細節，從多平台串流到自動排版。' })}
@@ -292,7 +288,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* ---------- Tech ---------- */}
         <section className="ab-section">
-          <AbHead
+          <SectionHead
             eyebrow={tx('about:techEyebrow', { defaultValue: 'Under the hood' })}
             title={tx('about:techTitle')}
             sub={tx('about:techSub', { defaultValue: '輕量、純前端、本地優先 —— 沒有後端伺服器，也不收你的資料。' })}
@@ -316,7 +312,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* ---------- Creator ---------- */}
         <section className="ab-section">
-          <AbHead
+          <SectionHead
             eyebrow={tx('about:creatorEyebrow', { defaultValue: 'Creator' })}
             title={tx('about:creatorTitle')}
           />
@@ -367,7 +363,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* ---------- Contact ---------- */}
         <section className="ab-section">
-          <AbHead
+          <SectionHead
             eyebrow={tx('about:contactEyebrow', { defaultValue: 'Contact' })}
             title={tx('about:contactTitle')}
             sub={tx('about:contactSub', { defaultValue: '有任何問題、建議或意見回饋，歡迎透過以下方式聯繫。' })}
@@ -406,7 +402,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* ---------- Terms ---------- */}
         <section className="ab-section">
-          <AbHead
+          <SectionHead
             eyebrow={tx('about:termsEyebrow', { defaultValue: 'Terms' })}
             title={tx('about:termsTitle')}
           />
@@ -425,7 +421,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
 
         {/* ---------- Privacy ---------- */}
         <section className="ab-section">
-          <AbHead
+          <SectionHead
             eyebrow={tx('about:privacyEyebrow', { defaultValue: 'Privacy' })}
             title={tx('about:privacyTitle')}
           />
@@ -479,17 +475,6 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
           <p className="ab-updated">{tx('about:lastUpdated')}</p>
         </footer>
       </div>
-    </div>
-  );
-}
-
-// section header(eyebrow + title + 可選 sub),對齊 design 的 AbHeader。
-function AbHead({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }): ReactNode {
-  return (
-    <div className="ab-head">
-      <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="ab-head-title">{title}</h2>
-      {sub && <p className="ab-head-sub">{sub}</p>}
     </div>
   );
 }

@@ -6,53 +6,38 @@
 // 注意：後端用 ADMIN_API_TOKEN 驗證,前端不重複檢查；只負責把錯誤往上拋,由 UI 層顯示。
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type {
+    Announcement,
+    AnnouncementSegment,
+    AnnouncementType,
+    PollOption,
+    PollPayload,
+    SurveyQuestion,
+    SurveyQuestionType,
+    SurveyPayload,
+} from '../../announcements/types';
 
 // ---------- 共用型別 ----------
+// payload schema(poll options / survey questions)與使用者端是同一份 wire format,
+// 直接沿用 src/features/announcements/types.ts 避免兩份 source of truth 漂移;
+// admin 專屬欄位(status / created_by / timestamps)在 AnnouncementRecord 上補。
 
-export type AnnouncementType = 'announcement' | 'poll' | 'survey';
+export type {
+    AnnouncementType,
+    PollOption,
+    PollPayload,
+    SurveyQuestion,
+    SurveyQuestionType,
+    SurveyPayload,
+};
+
 export type AnnouncementStatus = 'draft' | 'published' | 'archived';
-export type TargetSegment = 'all' | 'authenticated';
+// admin 模組沿用的舊名,等同共用型別的 AnnouncementSegment
+export type TargetSegment = AnnouncementSegment;
 
-export interface PollOption {
-    id: string;
-    label: string;
-}
+export type AnnouncementPayload = Announcement['payload'];
 
-export interface PollPayload {
-    options: PollOption[];
-    multi_select: boolean;
-}
-
-export type SurveyQuestionType = 'single' | 'multi' | 'text';
-
-export interface SurveyQuestionOption {
-    id: string;
-    label: string;
-}
-
-export interface SurveyQuestion {
-    id: string;
-    label: string;
-    type: SurveyQuestionType;
-    options?: SurveyQuestionOption[];
-}
-
-export interface SurveyPayload {
-    questions: SurveyQuestion[];
-}
-
-export type AnnouncementPayload = PollPayload | SurveyPayload | Record<string, unknown> | null;
-
-export interface AnnouncementRecord {
-    id: string;
-    type: AnnouncementType;
-    title: string;
-    body: string | null;
-    payload: AnnouncementPayload;
-    target_segment: TargetSegment;
-    priority: number;
-    starts_at: string;
-    ends_at: string | null;
+export interface AnnouncementRecord extends Announcement {
     status: AnnouncementStatus;
     created_by: string | null;
     created_at: string;

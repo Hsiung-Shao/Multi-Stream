@@ -12,7 +12,7 @@
  *   - 未投票按 X / 點外面:寫 dismissed flag(下次也不再彈,避免騷擾)
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Dialog,
@@ -61,13 +61,12 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
 
     const totalVotes = results?.total ?? 0;
 
-    // 開啟時若已 voted(LocalStorage 旗標),直接拉結果
+    // 結果載入的唯一路徑:開啟中且 voted=true(剛送出或 backend 認定已投)就拉結果
     useEffect(() => {
         if (!open) return;
         let cancelled = false;
         // open 時 reset 一次性 state
         setErrorMsg(null);
-        // 已投票態下拉結果
         if (voted) {
             void fetchAnnouncementResults(announcement.id).then((r) => {
                 if (cancelled) return;
@@ -78,12 +77,6 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
             cancelled = true;
         };
     }, [open, voted, announcement.id]);
-
-    // 拉一次目前結果(按「查看結果」用):分離出來
-    const loadResults = async () => {
-        const r = await fetchAnnouncementResults(announcement.id);
-        if (r && r.type === 'poll') setResults(r);
-    };
 
     const toggleOption = (id: string) => {
         setSelected((prev) => {
@@ -106,17 +99,11 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
         });
         setSubmitting(false);
 
-        if (result.ok) {
+        // 送出成功與 backend 認定已投(already_responded)都視為已投;
+        // voted 翻 true 後由上面的 effect 統一拉結果
+        if (result.ok || ('reason' in result && result.reason === 'already_responded')) {
             setFlag('voted', announcement.id);
             setVoted(true);
-            await loadResults();
-            return;
-        }
-        if (!result.ok && 'reason' in result && result.reason === 'already_responded') {
-            // backend 認定已投 → UI 視為已投,直接拉結果
-            setFlag('voted', announcement.id);
-            setVoted(true);
-            await loadResults();
             return;
         }
         setErrorMsg(t('poll.submitError', '送出失敗,請稍後再試'));
@@ -132,8 +119,6 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
         }
         onClose();
     };
-
-    const orderedOptions = useMemo(() => options, [options]);
 
     // payload 結構壞掉 — 不要 render 內容,fallback 純文字 + 關閉
     if (!payload) {
@@ -178,7 +163,7 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
 
                         {multiSelect ? (
                             <div className="grid gap-2">
-                                {orderedOptions.map((opt) => {
+                                {options.map((opt) => {
                                     const checked = selected.includes(opt.id);
                                     const cid = `poll-opt-${announcement.id}-${opt.id}`;
                                     return (
@@ -203,7 +188,7 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
                                 onValueChange={(v: string) => toggleOption(v)}
                                 className="grid gap-2"
                             >
-                                {orderedOptions.map((opt) => {
+                                {options.map((opt) => {
                                     const cid = `poll-opt-${announcement.id}-${opt.id}`;
                                     return (
                                         <label
@@ -234,13 +219,13 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
                             {t('poll.totalVotes', '共 {{count}} 票', { count: totalVotes })}
                         </p>
                         <div className="grid gap-3">
-                            {(results?.options ?? orderedOptions.map((o) => ({
+                            {(results?.options ?? options.map((o) => ({
                                 id: o.id,
                                 label: o.label,
                                 count: 0,
                             }))).map((opt) => {
                                 const pct = totalVotes > 0 ? Math.round((opt.count / totalVotes) * 100) : 0;
-                                const labelText = opt.label ?? orderedOptions.find((o) => o.id === opt.id)?.label ?? opt.id;
+                                const labelText = opt.label ?? options.find((o) => o.id === opt.id)?.label ?? opt.id;
                                 return (
                                     <div key={opt.id} className="flex flex-col gap-1.5">
                                         <div className="flex items-center justify-between text-sm">

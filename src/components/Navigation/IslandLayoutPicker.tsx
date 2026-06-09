@@ -7,9 +7,16 @@ import { useTranslation } from 'react-i18next';
 import { SaveLayoutDialog } from '../../components/Layout/SaveLayoutDialog';
 import { cn } from '../ui/utils';
 import { layoutTemplates } from '../../utils/layoutPresets';
+import { FN, ISLAND_PANEL_STYLE, islandHeaderChipStyle } from './islandTokens';
 
 // Layout 面板主題色(對齊設計 FN.layout = violet)
-const LAYOUT_ACCENT = '#c084fc';
+const LAYOUT_ACCENT = FN.layout.c;
+
+const ACTIVE_TAB_STYLE: React.CSSProperties = {
+    background: `${LAYOUT_ACCENT}2a`,
+    color: LAYOUT_ACCENT,
+    boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
+};
 
 const iconMap: Record<string, any> = {
     'Square': Square,
@@ -56,14 +63,7 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                         ? "opacity-100 scale-100 translate-y-0"
                         : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
                 )}
-                style={{
-                    background: 'rgba(12,12,17,0.92)',
-                    backdropFilter: 'blur(22px)',
-                    WebkitBackdropFilter: 'blur(22px)',
-                    borderRadius: 20,
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 60px -18px rgba(0,0,0,0.75)',
-                }}
+                style={ISLAND_PANEL_STYLE}
             >
                 {/* Panel header(violet icon chip) */}
                 <div
@@ -73,14 +73,7 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                     <div className="flex items-center gap-2.5">
                         <span
                             className="flex items-center justify-center"
-                            style={{
-                                width: 30,
-                                height: 30,
-                                borderRadius: 9,
-                                background: `${LAYOUT_ACCENT}1f`,
-                                color: LAYOUT_ACCENT,
-                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
-                            }}
+                            style={islandHeaderChipStyle(LAYOUT_ACCENT)}
                         >
                             <LayoutGrid className="size-4" />
                         </span>
@@ -102,48 +95,23 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
                 <div className="p-4 space-y-4">
                     {/* Tabs */}
                     <div className="flex p-1 bg-white/5 rounded-lg mb-2">
-                        <button
-                            onClick={() => setActiveTab('video_only')}
-                            className={cn(
-                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab !== 'video_only' && "text-gray-400 hover:text-white/80"
-                            )}
-                            style={activeTab === 'video_only' ? {
-                                background: `${LAYOUT_ACCENT}2a`,
-                                color: LAYOUT_ACCENT,
-                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
-                            } : undefined}
-                        >
-                            {t('layout.tab_video') || '僅串流'}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('with_chat')}
-                            className={cn(
-                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab !== 'with_chat' && "text-gray-400 hover:text-white/80"
-                            )}
-                            style={activeTab === 'with_chat' ? {
-                                background: `${LAYOUT_ACCENT}2a`,
-                                color: LAYOUT_ACCENT,
-                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
-                            } : undefined}
-                        >
-                            {t('layout.tab_chat') || '含聊天室'}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('custom')}
-                            className={cn(
-                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab !== 'custom' && "text-gray-400 hover:text-white/80"
-                            )}
-                            style={activeTab === 'custom' ? {
-                                background: `${LAYOUT_ACCENT}2a`,
-                                color: LAYOUT_ACCENT,
-                                boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
-                            } : undefined}
-                        >
-                            {t('layout.tab_custom') || '自訂義'}
-                        </button>
+                        {([
+                            { id: 'video_only', label: t('layout.tab_video') || '僅串流' },
+                            { id: 'with_chat', label: t('layout.tab_chat') || '含聊天室' },
+                            { id: 'custom', label: t('layout.tab_custom') || '自訂義' },
+                        ] as const).map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
+                                    activeTab !== tab.id && "text-gray-400 hover:text-white/80"
+                                )}
+                                style={activeTab === tab.id ? ACTIVE_TAB_STYLE : undefined}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Content */}

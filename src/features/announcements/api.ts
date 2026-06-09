@@ -8,7 +8,23 @@
 import { getSupabase } from '../../lib/supabase';
 import type { Announcement, PollResults, SurveyResults } from './types';
 
+/** localStorage 是否有 Supabase session(預設 storage key:sb-<ref>-auth-token) */
+function hasStoredSession(): boolean {
+    try {
+        for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i);
+            if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) return true;
+        }
+    } catch {
+        // localStorage 不可用 → 視為無 session
+    }
+    return false;
+}
+
 async function authHeader(): Promise<Record<string, string>> {
+    // 匿名訪客直接回空 header,避免只為了「確認沒 token」就初始化整個 Supabase client
+    // (getSupabase 首次呼叫會打 /api/supabase-config + createClient)
+    if (typeof window === 'undefined' || !hasStoredSession()) return {};
     try {
         const supabase = await getSupabase();
         if (!supabase) return {};

@@ -1,7 +1,7 @@
 // 推送公告 Tab — 列表 + 編輯 / 刪除 / 查看結果
 //
 // 注意:
-// - 所有 admin 動作（建立 / 編輯 / 刪除）都由後端 requireAdminTrust(aal=2) 把關，前端只負責 UI。
+// - 所有 admin 動作（建立 / 編輯 / 刪除）都由後端 ADMIN_API_TOKEN（X-Admin-Token）把關，前端只負責 UI。
 // - 編輯「已 published」公告會跳二次確認（避免 user 已看過的內容被改動）。
 // - 刪除有 CASCADE 風險（會清掉所有 responses），跳二次確認。
 

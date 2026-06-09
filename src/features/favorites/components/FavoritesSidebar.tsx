@@ -11,7 +11,6 @@ import type { FavoriteCategory as Category, Tag } from '../types';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 
 interface FavoritesSidebarProps {
-    theme: 'light' | 'dark';
     categories: Category[];
     tags: Tag[];
     favoritesCount: number;

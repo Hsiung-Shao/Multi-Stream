@@ -23,6 +23,15 @@ export const BODY_MAX_LEN = 10000;
 // 預設 anon respond rate limit（per identity 每分鐘上限）
 const RESPOND_RATE_PER_MIN = 10;
 
+/**
+ * UUID 格式驗證(announcements 系統各 endpoint 共用)
+ * @param {unknown} id
+ * @returns {boolean}
+ */
+export function isUuid(id) {
+    return typeof id === 'string' && /^[0-9a-fA-F-]{36}$/.test(id);
+}
+
 // ---------- 取得公告 ----------
 
 /**
@@ -34,7 +43,7 @@ const RESPOND_RATE_PER_MIN = 10;
  * @returns {Promise<Object|null>}
  */
 export async function fetchAnnouncementById(env, id) {
-    if (typeof id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(id)) return null;
+    if (!isUuid(id)) return null;
     const res = await select(
         env,
         `announcements?id=eq.${encodeURIComponent(id)}&select=*&limit=1`,

@@ -16,6 +16,23 @@ export function Eyebrow({ children, color }: { children: ReactNode; color?: stri
     );
 }
 
+/** long-form 頁 section header(eyebrow + title + 可選 sub),對齊 design 的 AbHeader。
+ *  樣式為 index.css 的 .ds-head*;eyebrow 色用 color 參數(預設主色紫)。 */
+export function SectionHead({ eyebrow, title, sub, color }: {
+    eyebrow: string;
+    title: string;
+    sub?: string;
+    color?: string;
+}) {
+    return (
+        <div className="ds-head">
+            <Eyebrow color={color}>{eyebrow}</Eyebrow>
+            <h2 className="ds-head-title">{title}</h2>
+            {sub && <p className="ds-head-sub">{sub}</p>}
+        </div>
+    );
+}
+
 /** 彩色 icon chip(對齊 design 的 AbChip / IconChip):hue 半透明底 + 同色 icon + 同色淡邊。 */
 export function IconChip({
     icon: Icon,

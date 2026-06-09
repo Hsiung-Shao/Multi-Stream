@@ -211,6 +211,12 @@ div[data-rbd-draggable-id] {
   transition: background-color 0.2s ease, transform 0.2s ease !important;
 }
 
+/* === long-form 頁共用 section header(ds-primitives SectionHead) === */
+
+.ds-head { margin-bottom: 28px; }
+.ds-head-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 10px 0 0; color: var(--foreground); }
+.ds-head-sub { font-size: 15.5px; color: var(--muted-foreground); margin: 10px 0 0; line-height: 1.6; max-width: 640px; }
+
 /* === 全站共用動畫 === */
 
 @keyframes fade-in-up {

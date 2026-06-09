@@ -191,7 +191,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 data.categoryId === 'uncategorized' ? null : data.categoryId,
                 undefined,
                 undefined,
-                data.tagIds
+                data.tagIds,
+                // tag well 已預選平台 tag 且尊重使用者移除,關閉 service 端的自動補
+                { autoTagPlatform: false }
             );
             // 「新增後立即載入畫面」:新增成功後把該頻道載入到 canvas(沿用既有 favoritesLoader)
             if (data.autoLoad) {
@@ -316,7 +318,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 <div className="flex flex-1 min-h-0">
                     {/* Sidebar */}
                     <FavoritesSidebar
-                        theme={theme}
                         categories={categories}
                         tags={tags}
                         favoritesCount={favorites.length}
@@ -402,7 +403,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
                         {activeTab === 'batch' && (
                             <BatchImportSection
-                                theme={theme}
                                 categories={categories}
                                 onSuccess={() => {
                                     loadData();
@@ -416,7 +416,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                             <div className="flex-1 flex flex-col gap-8 max-w-4xl mx-auto w-full py-4 overflow-hidden">
                                 <ScrollArea className="h-full pr-4">
                                     <TwitchIntegrationSection
-                                        theme={theme}
                                         isLoggedIn={isLoggedIn}
                                         login={login}
                                         logout={logout}
@@ -582,7 +581,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
                         {activeTab === 'backup' && (
                             <BackupSection
-                                theme={theme}
                                 onSuccess={(msg) => toast.success(msg)}
                                 onError={(msg) => toast.error(msg)}
                             />
@@ -602,7 +600,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                     categories={categories}
                     allTags={tags}
                     initialData={editingFavorite}
-                    theme={theme}
                     showAutoLoad
                 />
 

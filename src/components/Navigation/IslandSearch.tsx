@@ -8,9 +8,10 @@ import { ScrollArea } from '../ui/scroll-area';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 import { twitchService } from '../../features/twitch/TwitchService';
+import { FN } from './islandTokens';
 
 // Search 模組主題色(對齊設計 FN.search = blue)
-const SEARCH_ACCENT = '#5b9bff';
+const SEARCH_ACCENT = FN.search.c;
 
 interface SearchResult {
     id: string;
@@ -26,8 +27,6 @@ interface SearchResult {
 
 interface IslandSearchProps {
     onSearch?: (query: string) => void;
-    // 注意:2026-05-17 改為永遠展開(user 偏好不折疊),collapsed prop 仍接但不再控制顯隱
-    collapsed?: boolean;
 }
 
 export function IslandSearch({ onSearch }: IslandSearchProps) {

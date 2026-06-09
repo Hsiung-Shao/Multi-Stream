@@ -11,7 +11,6 @@ import { logEvent } from '../../../utils/analytics';
 import type { FavoriteCategory as Category } from '../types';
 
 interface BatchImportSectionProps {
-    theme: 'light' | 'dark';
     categories: Category[];
     onSuccess: () => void;
 }

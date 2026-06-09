@@ -54,6 +54,16 @@ interface UIState {
     setHotkeyHelpOpen: (open: boolean) => void;
 }
 
+// 把單一設定寫進 localStorage 的 userSettings(所有 persist 類 setter 共用)
+function persistUserSetting(key: string, value: unknown) {
+    try {
+        const saved = localStorage.getItem('userSettings');
+        const settings = saved ? JSON.parse(saved) : {};
+        settings[key] = value;
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+    } catch (e) { }
+}
+
 export const useUIStore = create<UIState>((set) => ({
     theme: 'dark',
     page: 'home',
@@ -73,21 +83,11 @@ export const useUIStore = create<UIState>((set) => ({
 
     setTheme: (theme) => {
         set({ theme });
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.theme = theme;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('theme', theme);
     },
     toggleTheme: () => set((state) => {
         const newTheme = state.theme === 'light' ? 'dark' : 'light';
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.theme = newTheme;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('theme', newTheme);
         return { theme: newTheme };
     }),
 
@@ -104,15 +104,7 @@ export const useUIStore = create<UIState>((set) => ({
 
     setMasterVolume: (volume) => set((state) => {
         const newVolume = typeof volume === 'function' ? volume(state.masterVolume) : volume;
-
-        // Persist to localStorage
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.masterVolume = newVolume;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
-
+        persistUserSetting('masterVolume', newVolume);
         return { masterVolume: newVolume };
     }),
     setMasterMuted: (muted) => set((state) => {
@@ -136,44 +128,24 @@ export const useUIStore = create<UIState>((set) => ({
     autoMuteNewStream: true,
     setAutoMuteNewStream: (v) => {
         set({ autoMuteNewStream: v });
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.autoMuteNewStream = v;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('autoMuteNewStream', v);
     },
     youtubeRiskWarning: true,
     setYoutubeRiskWarning: (v) => {
         set({ youtubeRiskWarning: v });
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.youtubeRiskWarning = v;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('youtubeRiskWarning', v);
     },
     bgLiveDetect: false,
     setBgLiveDetect: (v) => {
         set({ bgLiveDetect: v });
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.bgLiveDetect = v;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('bgLiveDetect', v);
     },
 
     // Window functionality
     closeWindowMode: 'remove',
     setCloseWindowMode: (mode) => {
         set({ closeWindowMode: mode });
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.closeWindowMode = mode;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('closeWindowMode', mode);
     },
 
     // Hotkey & Hover State

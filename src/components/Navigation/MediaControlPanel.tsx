@@ -24,9 +24,10 @@ import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { cn } from '../ui/utils';
 import { useTranslation } from 'react-i18next';
+import { FN, ISLAND_PANEL_STYLE, islandHeaderChipStyle } from './islandTokens';
 
 // Media 面板主題色(對齊設計 FN.media = cyan)
-const MEDIA_ACCENT = '#22d3ee';
+const MEDIA_ACCENT = FN.media.c;
 
 // Wrapper for Sortable Item
 const SortableStreamItem = (props: any) => {
@@ -158,15 +159,7 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                     ? "opacity-100 scale-100 translate-y-0"
                     : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
             )}
-            style={{
-                maxHeight: '500px',
-                background: 'rgba(12,12,17,0.92)',
-                backdropFilter: 'blur(22px)',
-                WebkitBackdropFilter: 'blur(22px)',
-                borderRadius: 20,
-                border: '1px solid rgba(255,255,255,0.12)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 30px 60px -18px rgba(0,0,0,0.75)',
-            }}
+            style={{ maxHeight: '500px', ...ISLAND_PANEL_STYLE }}
         >
             {/* Panel header(cyan icon chip) */}
             <div
@@ -176,14 +169,7 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                 <div className="flex items-center gap-2.5">
                     <span
                         className="flex items-center justify-center"
-                        style={{
-                            width: 30,
-                            height: 30,
-                            borderRadius: 9,
-                            background: `${MEDIA_ACCENT}1f`,
-                            color: MEDIA_ACCENT,
-                            boxShadow: `inset 0 0 0 1px ${MEDIA_ACCENT}40`,
-                        }}
+                        style={islandHeaderChipStyle(MEDIA_ACCENT)}
                     >
                         <Sliders size={16} />
                     </span>
