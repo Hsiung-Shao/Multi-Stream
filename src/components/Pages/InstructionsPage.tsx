@@ -18,11 +18,17 @@ import {
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-// ---- 內容模型(只用到 p / steps / callout 三種區塊)----------------------------
+// ---- 內容模型(p / steps / callout / img 四種區塊)----------------------------
 type Block =
     | { type: 'p'; text: string }
     | { type: 'steps'; items: string[] }
-    | { type: 'callout'; title: string; text: string };
+    | { type: 'callout'; title: string; text: string }
+    | { type: 'img'; src: string; alt: string; caption?: string; w: number; h: number };
+
+// 教學截圖(由 scripts/convert-tutorial-images.mjs 轉出);w/h 為實際像素,防 CLS
+const TUT_IMG_DIR = '/docs/tutorial/';
+const img = (file: string, w: number, h: number, alt: string, caption?: string): Block =>
+    ({ type: 'img', src: TUT_IMG_DIR + file, w, h, alt, caption });
 
 interface Section { id: string; heading: string; blocks: Block[]; }
 
@@ -75,6 +81,22 @@ function Block({ block, accent }: { block: Block; accent: string }) {
                     </li>
                 ))}
             </ol>
+        );
+    }
+    if (block.type === 'img') {
+        return (
+            <figure className="tut-fig">
+                <img
+                    className="tut-img"
+                    src={block.src}
+                    alt={block.alt}
+                    width={block.w}
+                    height={block.h}
+                    loading="lazy"
+                    decoding="async"
+                />
+                {block.caption && <figcaption className="tut-fig-cap">{block.caption}</figcaption>}
+            </figure>
         );
     }
     // callout
@@ -374,6 +396,8 @@ export function InstructionsPage() {
                     id: 'getting-started', heading: tx('gettingStarted.title'), blocks: [
                         { type: 'p', text: tx('gettingStarted.content') },
                         { type: 'steps', items: [tx('gettingStarted.step1'), tx('gettingStarted.step2'), tx('gettingStarted.step3'), tx('gettingStarted.step4')] },
+                        img('island-search-bar.webp', 1403, 994, tx('img.islandSearchBar.alt'), tx('img.islandSearchBar.cap')),
+                        img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
                     ],
                 },
             ],
@@ -384,11 +408,39 @@ export function InstructionsPage() {
             excerpt: tx('features.canvas.description'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(6),
             accent: '#60a5fa', accent2: '#2563eb', icon: LayoutGrid,
             sections: [
-                { id: 'auto-layout', heading: tx('features.canvas.autoLayout'), blocks: [{ type: 'p', text: tx('features.canvas.autoLayout.desc') }] },
-                { id: 'drag-drop', heading: tx('features.canvas.dragDrop'), blocks: [{ type: 'p', text: tx('features.canvas.dragDrop.desc') }] },
+                {
+                    id: 'add-window', heading: tx('features.canvas.addWindow'), blocks: [
+                        { type: 'p', text: tx('features.canvas.addWindow.desc') },
+                        img('island-add-window.webp', 1403, 994, tx('img.islandAddWindow.alt'), tx('img.islandAddWindow.cap')),
+                        img('add-window-combo.webp', 1600, 1229, tx('img.addWindowCombo.alt'), tx('img.addWindowCombo.cap')),
+                        img('add-window-stream.webp', 1600, 1228, tx('img.addWindowStream.alt'), tx('img.addWindowStream.cap')),
+                        img('add-window-chat.webp', 1600, 1240, tx('img.addWindowChat.alt'), tx('img.addWindowChat.cap')),
+                    ],
+                },
+                {
+                    id: 'auto-layout', heading: tx('features.canvas.autoLayout'), blocks: [
+                        { type: 'p', text: tx('features.canvas.autoLayout.desc') },
+                        img('island-layout-picker.webp', 1403, 994, tx('img.islandLayoutPicker.alt'), tx('img.islandLayoutPicker.cap')),
+                    ],
+                },
+                {
+                    id: 'drag-drop', heading: tx('features.canvas.dragDrop'), blocks: [
+                        { type: 'p', text: tx('features.canvas.dragDrop.desc') },
+                        img('window-drag-resize.webp', 1356, 493, tx('img.windowDragResize.alt'), tx('img.windowDragResize.cap')),
+                    ],
+                },
+                {
+                    id: 'custom-layout', heading: tx('features.canvas.customLayout'), blocks: [
+                        { type: 'p', text: tx('features.canvas.customLayout.desc') },
+                        img('island-save-canvas.webp', 1403, 994, tx('img.islandSaveCanvas.alt'), tx('img.islandSaveCanvas.cap')),
+                        img('custom-layout-save.webp', 1600, 791, tx('img.customLayoutSave.alt'), tx('img.customLayoutSave.cap')),
+                        img('custom-layout-saved.webp', 1600, 791, tx('img.customLayoutSaved.alt'), tx('img.customLayoutSaved.cap')),
+                        img('layout-manager.webp', 1068, 823, tx('img.layoutManager.alt'), tx('img.layoutManager.cap')),
+                    ],
+                },
                 { id: 'context-menu', heading: tx('features.canvas.contextMenu'), blocks: [{ type: 'p', text: tx('features.canvas.contextMenu.desc') }] },
             ],
         },
@@ -401,7 +453,13 @@ export function InstructionsPage() {
             readLabel: readLabel(3),
             accent: '#4ade80', accent2: '#16a34a', icon: Search,
             sections: [
-                { id: 'twitch', heading: tx('features.search.twitch'), blocks: [{ type: 'p', text: tx('features.search.twitch.desc') }] },
+                {
+                    id: 'twitch', heading: tx('features.search.twitch'), blocks: [
+                        { type: 'p', text: tx('features.search.twitch.desc') },
+                        img('island-search-bar.webp', 1403, 994, tx('img.islandSearchBar.alt'), tx('img.islandSearchBar.cap')),
+                        img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
+                    ],
+                },
                 { id: 'url', heading: tx('features.search.url'), blocks: [{ type: 'p', text: tx('features.search.url.desc') }] },
             ],
         },
@@ -411,11 +469,19 @@ export function InstructionsPage() {
             excerpt: tx('features.island.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(4),
             accent: '#a78bfa', accent2: '#6d28d9', icon: Tv,
             sections: [
                 { id: 'quick-actions', heading: tx('features.island.quickActions'), blocks: [{ type: 'p', text: tx('features.island.quickActions.desc') }] },
                 { id: 'status', heading: tx('features.island.status'), blocks: [{ type: 'p', text: tx('features.island.status.desc') }] },
+                {
+                    id: 'buttons', heading: tx('features.island.buttons'), blocks: [
+                        { type: 'p', text: tx('features.island.buttons.desc') },
+                        img('island-fullscreen.webp', 1403, 994, tx('img.islandFullscreen.alt'), tx('img.islandFullscreen.cap')),
+                        img('island-clear-canvas.webp', 1403, 994, tx('img.islandClearCanvas.alt'), tx('img.islandClearCanvas.cap')),
+                        img('island-home.webp', 1403, 994, tx('img.islandHome.alt'), tx('img.islandHome.cap')),
+                    ],
+                },
             ],
         },
         {
@@ -424,11 +490,31 @@ export function InstructionsPage() {
             excerpt: tx('features.favorites.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(5),
+            readLabel: readLabel(6),
             accent: '#facc15', accent2: '#ca8a04', icon: Star,
             sections: [
+                {
+                    id: 'quick-list', heading: tx('features.favorites.quickList'), blocks: [
+                        { type: 'p', text: tx('features.favorites.quickList.desc') },
+                        img('island-favorites-list.webp', 1403, 994, tx('img.islandFavoritesList.alt'), tx('img.islandFavoritesList.cap')),
+                        img('favorites-live-list.webp', 324, 387, tx('img.favoritesLiveList.alt'), tx('img.favoritesLiveList.cap')),
+                        img('favorites-filter-category.webp', 313, 247, tx('img.favoritesFilterCategory.alt'), tx('img.favoritesFilterCategory.cap')),
+                        img('favorites-filter-tags.webp', 332, 251, tx('img.favoritesFilterTags.alt'), tx('img.favoritesFilterTags.cap')),
+                    ],
+                },
+                {
+                    id: 'add', heading: tx('features.favorites.add'), blocks: [
+                        { type: 'p', text: tx('features.favorites.add.desc') },
+                        img('favorites-add-dialog.webp', 557, 546, tx('img.favoritesAddDialog.alt'), tx('img.favoritesAddDialog.cap')),
+                    ],
+                },
                 { id: 'import', heading: tx('features.favorites.import'), blocks: [{ type: 'callout', title: tx('features.favorites.proTip'), text: tx('features.favorites.import.desc') }] },
-                { id: 'group', heading: tx('features.favorites.group'), blocks: [{ type: 'p', text: tx('features.favorites.group.desc') }] },
+                {
+                    id: 'group', heading: tx('features.favorites.group'), blocks: [
+                        { type: 'p', text: tx('features.favorites.group.desc') },
+                        img('favorites-manager.webp', 1031, 798, tx('img.favoritesManager.alt'), tx('img.favoritesManager.cap')),
+                    ],
+                },
             ],
         },
         {
@@ -437,10 +523,21 @@ export function InstructionsPage() {
             excerpt: tx('features.media.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(4),
             accent: '#f472b6', accent2: '#db2777', icon: Volume2,
             sections: [
-                { id: 'master', heading: tx('features.media.global'), blocks: [{ type: 'p', text: tx('features.media.global.desc') }] },
+                {
+                    id: 'master', heading: tx('features.media.global'), blocks: [
+                        { type: 'p', text: tx('features.media.global.desc') },
+                        img('island-media-control.webp', 1403, 994, tx('img.islandMediaControl.alt'), tx('img.islandMediaControl.cap')),
+                    ],
+                },
+                {
+                    id: 'per-window', heading: tx('features.media.window'), blocks: [
+                        { type: 'p', text: tx('features.media.window.desc') },
+                        img('window-media-controls.webp', 443, 88, tx('img.windowMediaControls.alt'), tx('img.windowMediaControls.cap')),
+                    ],
+                },
             ],
         },
         {
@@ -449,10 +546,16 @@ export function InstructionsPage() {
             excerpt: tx('features.settings.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(5),
             accent: '#94a3b8', accent2: '#475569', icon: SettingsIcon,
             sections: [
-                { id: 'general', heading: tx('features.settings.general'), blocks: [{ type: 'p', text: tx('features.settings.general.desc') }] },
+                {
+                    id: 'general', heading: tx('features.settings.general'), blocks: [
+                        { type: 'p', text: tx('features.settings.general.desc') },
+                        img('island-settings.webp', 1403, 994, tx('img.islandSettings.alt'), tx('img.islandSettings.cap')),
+                        img('settings-panel.webp', 1038, 826, tx('img.settingsPanel.alt'), tx('img.settingsPanel.cap')),
+                    ],
+                },
                 { id: 'performance', heading: tx('features.settings.performance'), blocks: [{ type: 'p', text: tx('features.settings.performance.desc') }] },
                 { id: 'data', heading: tx('features.settings.data'), blocks: [{ type: 'p', text: tx('features.settings.data.desc') }] },
                 { id: 'twitch', heading: tx('features.settings.twitch'), blocks: [{ type: 'p', text: tx('features.settings.twitch.desc') }] },
@@ -590,6 +693,10 @@ export function InstructionsPage() {
                 .tut-step { display: flex; gap: 14px; align-items: flex-start; }
                 .tut-step-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
                 .tut-step-text { font-size: 16px; color: var(--foreground); opacity: 0.92; line-height: 1.6; padding-top: 2px; }
+                .tut-fig { margin: 4px 0 22px; }
+                .tut-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+                .tut-fig-cap { margin-top: 8px; font-size: 13px; color: var(--muted-foreground); line-height: 1.5; }
+
                 .tut-callout { padding: 18px 20px; margin: 0 0 20px; border-radius: 14px; }
                 .tut-callout-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
                 .tut-callout-title { font-size: 14px; font-weight: 700; }

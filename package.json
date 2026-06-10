@@ -82,6 +82,7 @@
             "jsdom": "^27.4.0",
             "postcss": "^8.4.47",
             "shadcn": "^3.6.2",
+            "sharp": "^0.34.5",
             "tailwindcss": "^4.1.3",
             "vite": "6.3.5",
             "vitest": "^4.0.16"
@@ -93,6 +94,7 @@
             "build": "vite build",
             "postbuild": "node scripts/copy-static-assets.js",
             "generate-sitemap": "node scripts/generate-sitemap.js",
+            "convert-tutorial-images": "node scripts/convert-tutorial-images.mjs",
             "prebuild": "npm run generate-sitemap",
             "search-mentions": "node scripts/search-mentions.mjs"
       }
