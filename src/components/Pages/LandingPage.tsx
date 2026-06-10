@@ -471,27 +471,20 @@ function UseCaseCard({ icon, title, desc, delay }: { icon: React.ReactNode, titl
     );
 }
 
-// FAQPage JSON-LD：取 5 個核心 FAQ 項目，讓 Google 有機會在 SERP 顯示富摘要。
+// FAQPage JSON-LD：對應本頁可見的 FAQ 手風琴(landing.faq.q1–q3),讓 Google 有機會在 SERP 顯示富摘要。
 // i18n 切換語言時會 re-render，schema 內容跟著切到對應語言版本。
-const FAQ_KEYS = [
-    'dynamic_island',
-    'favorites_manager',
-    'media_control',
-    'layout_control',
-    'twitch_linking',
-] as const;
-
+// /faq 頁有自己完整的 FAQPage JSON-LD(FAQPage.tsx 經 SEO 元件注入)。
 function FaqJsonLd() {
-    const { t } = useTranslation('faq');
+    const { t } = useTranslation('common');
     const data = {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
-        mainEntity: FAQ_KEYS.map(key => ({
+        mainEntity: [1, 2, 3].map(n => ({
             '@type': 'Question',
-            name: t(`items.${key}.title`),
+            name: t(`landing.faq.q${n}`),
             acceptedAnswer: {
                 '@type': 'Answer',
-                text: t(`items.${key}.content`),
+                text: t(`landing.faq.a${n}`),
             },
         })),
     };

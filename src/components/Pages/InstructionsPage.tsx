@@ -1,7 +1,8 @@
 // InstructionsPage — 依 multistream-hub-design-system 的 Blog.jsx (TutorialBlogPage) 重建為
 // 部落格式教學頁:列表頁(雜誌/卡片/清單三版型 + 搜尋 + 分類 tabs)+ 文章閱讀頁
 // (側邊目錄 scrollspy + 內容區塊 + 相關文章)。
-// 內容沿用 next 既有 tutorial 多語系 i18n(6 大功能 + 快速上手 + 4 題 FAQ → 8 篇文章),只換 design 視覺。
+// 內容沿用 next 既有 tutorial 多語系 i18n(6 大功能 + 快速上手 → 7 篇文章),只換 design 視覺。
+// FAQ 內容已移至 /faq(FAQPage),本頁專注 how-to 教學。
 // 部落格框架文字(搜尋框、版型、精選、目錄、繼續閱讀…)為 design 新增,以 defaultValue 帶繁中、其餘語系暫 fallback。
 // SEO 與頂部返回列由本元件自帶(App.tsx 的 'instructions' case 不另包 SEO)。
 
@@ -12,7 +13,7 @@ import { SEO } from '../SEO';
 import {
     Home, Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
     Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
-    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, BookOpen,
+    Rocket, Volume2, Star, Settings as SettingsIcon, Tv,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -561,27 +562,12 @@ export function InstructionsPage() {
                 { id: 'twitch', heading: tx('features.settings.twitch'), blocks: [{ type: 'p', text: tx('features.settings.twitch.desc') }] },
             ],
         },
-        {
-            slug: 'faq',
-            title: tx('faq.title'),
-            excerpt: tx('blog.faqExcerpt', { defaultValue: '關於播放、效能、平台支援與資料儲存的常見疑問。' }),
-            category: 'faq',
-            catLabel: tx('tabs.faq'),
-            readLabel: readLabel(3),
-            accent: '#818cf8', accent2: '#4f46e5', icon: BookOpen,
-            sections: [1, 2, 3, 4].map((n) => ({
-                id: `q${n}`,
-                heading: tx(`faq.q${n}`),
-                blocks: [{ type: 'p', text: tx(`faq.a${n}`) }] as Block[],
-            })),
-        },
     ], [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const cats = useMemo(() => ([
         { id: 'all', label: tx('blog.cat.all', { defaultValue: '全部' }) },
         { id: 'basics', label: tx('tabs.basics') },
         { id: 'advanced', label: tx('tabs.advanced') },
-        { id: 'faq', label: tx('tabs.faq') },
     ]), [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const article = articles.find((a) => a.slug === slug);

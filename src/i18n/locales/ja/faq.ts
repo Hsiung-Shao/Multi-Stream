@@ -1,55 +1,12 @@
 const faq = {
-    'title': 'FAQ',
-    'header_title': 'よくある質問と機能ガイド',
-    'header_subtitle': 'MultiStream Hubの強力な機能を活用して、究極の視聴環境を構築しましょう。',
-    'go_to_canvas': 'キャンバスへ',
-    'footer_note': 'その他の質問は、GitHubまたはフィードバック機能からお問い合わせください。',
+    'title': 'よくある質問 (FAQ)',
+    'header_title': 'よくある質問とトラブルシューティング',
+    'header_subtitle': '再生、パフォーマンス、データ保存に関するよくある質問にお答えします。',
 
-    'items.dynamic_island.title': 'ダイナミックアイランド (Dynamic Island)',
-    'items.dynamic_island.content': '画面下部中央にあるフローティングツールバーです。検索、ウィンドウ追加、レイアウト切替、メディア操作、お気に入りに素早くアクセスできます。アイドル時は自動的に隠れます。',
-    'items.dynamic_island.tip': 'アイコンをクリックすると、各メニューが展開されます。',
-
-    'items.favorites_manager.title': 'お気に入り管理',
-    'items.favorites_manager.content': 'TwitchとYouTubeチャンネルを一括管理。追加、編集、削除、タグやカテゴリによる整理が可能です。Twitch連携でのフォローリストインポートや、URL手動入力にも対応しています。',
-
-    'items.media_control.title': 'メディアコントロール',
-    'items.media_control.content': 'ダイナミックアイランドのTVアイコンからアクセスできます。「マスターボリューム」の調整や、全ウィンドウの「一括ミュート」が可能です。',
-
-    'items.search_bar.title': '検索バー',
-    'items.search_bar.content': 'ダイナミックアイランドまたはナビゲーションバーにあります。Twitch/YouTubeのURL直接入力や、Twitchチャンネルのキーワード検索が可能です。',
-
-    'items.layout_control.title': 'レイアウト設定',
-    'items.layout_control.content': 'グリッド、マスタースレーブ、縦並びなどのプリセットに加え、「フリーキャンバス」モードも提供。フリーモードではウィンドウを自由に配置・サイズ変更できます。',
-
-    'items.one_click_favorite.title': 'ワンクリックお気に入り',
-    'items.one_click_favorite.content': 'ダイナミックアイランドの「フォルダ＋ハート」アイコンです。現在キャンバスで開いているすべてのウィンドウを、一括でお気に入りリストに保存します。',
-
-    'items.clear_canvas.title': 'キャンバスをクリア',
-    'items.clear_canvas.content': 'ダイナミックアイランド右側のゴミ箱アイコンです。確認後、キャンバス上のすべてのウィンドウを削除します。',
-
-    'items.fullscreen.title': '全画面表示',
-    'items.fullscreen.content': 'アプリ全体または個別のビデオウィンドウを全画面モードに切り替え、没入感のある視聴体験を提供します。',
-
-    'items.batch_import.title': '一括インポート',
-    'items.batch_import.content': 'お気に入り管理の「一括インポート」タブで、複数のURLやJSONデータを貼り付け、一度に多数のチャンネルを追加できます。',
-
-    'items.multi_tabs.title': 'マルチタブ',
-    'items.multi_tabs.content': 'チャットウィンドウはタブ機能をサポートしています。一つのウィンドウで複数のチャットルームを開き、タブで切り替えることで画面スペースを節約できます。',
-
-    'items.categories.title': 'カテゴリ',
-    'items.categories.content': 'カスタムカテゴリ（例：Vtuber、音楽、eスポーツなど）を作成して整理できます。管理画面でチャンネルをドラッグ＆ドロップして分類できます。',
-
-    'items.backup_restore.title': 'バックアップと復元',
-    'items.backup_restore.content': '「バックアップ」タブから、設定、お気に入り、タグ、レイアウトをJSONファイルとしてエクスポートできます。後でインポートして環境を復元できます。',
-
-    'items.twitch_linking.title': 'Twitchアカウント連携',
-    'items.twitch_linking.content': 'Twitchアカウントでログインすると、フォローリストを読み込み、選択してお気に入りにインポートできます。公開情報のみアクセスし、認証情報は保存しません。',
-
-    'items.live_detection.title': '配信検知',
-    'items.live_detection.content': 'システムはバックグラウンドで定期的にTwitchチャンネルの配信状況をチェックします。配信中のチャンネルには緑色のインジケーターと視聴者数が表示されます。',
-
-    'items.empty_window.title': '空ウィンドウの使い方',
-    'items.empty_window.content': '「グループ追加 -> 空のグループを追加」でプレースホルダーウィンドウを作成できます。レイアウトを先に決めてから、チャンネルをドラッグして再生する際に便利です。',
+    'cat_compat': '再生と互換性',
+    'cat_compat_blurb': 'ブラウザやプラットフォーム、再生に関するトラブルシューティング。',
+    'cat_usage': 'パフォーマンスとデータ',
+    'cat_usage_blurb': 'パフォーマンス調整、データ保存、レイアウトの占位に関するよくある質問。',
 
     'items.brave_twitch.title': 'Brave ブラウザで Twitch が再生できない',
     'items.brave_twitch.content': 'Brave ブラウザのプライバシー保護機能により、Twitch のアンチボットシステム (Kasada) が Brave のブラウザ識別子を検出してリクエストを拒否し、Twitch ストリームが正常に再生できなくなります（画面がフリーズまたはエラー表示）。ModHeader 拡張機能をインストールしてブラウザ識別子を上書きすることで解決できます。',
@@ -59,6 +16,25 @@ const faq = {
     'items.brave_twitch.step1': 'ModHeader を開き、右上のメニューボタン（3つの点アイコン）をクリック',
     'items.brave_twitch.step2': 'メニューから「Import profile」を見つけてクリック',
     'items.brave_twitch.step3': '「Load file」ボタンをクリックし、ダウンロードした twitch.json 設定ファイルを選択してインポート',
-    'items.brave_twitch.tip': 'インポート完了後、Twitch ページを更新すると正常に再生できます。この設定は Twitch 関連リクエストのブラウザ識別子のみに影響し、他のウェブサイトには影響しません。'
+    'items.brave_twitch.tip': 'インポート完了後、Twitch ページを更新すると正常に再生できます。この設定は Twitch 関連リクエストのブラウザ識別子のみに影響し、他のウェブサイトには影響しません。',
+
+    'items.youtube_playback.title': 'なぜYouTube動画が再生できないのですか？',
+    'items.youtube_playback.content': '一部のYouTube動画や配信は、クリエイターによって埋め込み再生が許可されていないため、外部プラットフォームでは再生できません。',
+
+    'items.platform_support.title': '対応しているプラットフォームは？',
+    'items.platform_support.content': '現在、主にTwitchとYouTube Liveに対応しています。将来的にはさらに多くのプラットフォームが追加される可能性があります。',
+
+    'items.live_detection.title': '配信検知',
+    'items.live_detection.content': 'システムはバックグラウンドで定期的にTwitchチャンネルの配信状況をチェックします。配信中のチャンネルには緑色のインジケーターと視聴者数が表示されます。',
+
+    'items.performance.title': 'パフォーマンスを改善するには？',
+    'items.performance.content': '複数の高画質ストリームを同時に再生すると、CPUと帯域幅を大量に消費します。個々のストリームの画質を下げるか、同時再生数を減らすことをお勧めします。',
+
+    'items.data_saved.title': '設定は保存されますか？',
+    'items.data_saved.content': 'はい、レイアウト、お気に入り、設定はブラウザに自動的に保存され、次回アクセス時に復元されます。',
+
+    'items.empty_window.title': '空ウィンドウの使い方',
+    'items.empty_window.content': '「グループ追加 -> 空のグループを追加」でプレースホルダーウィンドウを作成できます。レイアウトを先に決めてから、チャンネルをドラッグして再生する際に便利です。'
 };
+
 export default faq;

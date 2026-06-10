@@ -1,12 +1,13 @@
 // FAQ — 依 multistream-hub-design-system 的 FAQPage.jsx 重建(editorial 版:blur orbs、
 // gradient hero、hued icon chips、eyebrow、平滑手風琴、即時搜尋 + 分類過濾、CTA + footer)。
-// 內容沿用 next 既有的多語系 i18n(faq namespace 的 16 個 item),Brave 題保留 ModHeader 圖文教學。
+// 定位為疑難排解(troubleshooting):7 題真問答(faq namespace),功能 how-to 在 /instructions 教學頁。
+// Brave 題保留 ModHeader 圖文教學;並輸出 FAQPage JSON-LD 結構化資料(經 SEO 元件注入)。
 
 import { useState, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../store/useUIStore';
 import {
-    HelpCircle, Search, X, Plus, Minus, PlugZap, Sparkles, SearchX,
+    HelpCircle, Search, X, Plus, Minus, PlugZap, Database, SearchX,
     Github, MessageCircle, Download, ExternalLink,
 } from 'lucide-react';
 import { SEO } from './SEO';
@@ -24,23 +25,19 @@ const GITHUB_ISSUES_URL = 'https://github.com/Hsiung-Shao';
 const DISCORD_URL = 'https://discord.gg/47kauArepY';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
-// FAQ 分組:結構/分類沿用 design,內容是 next 既有 i18n 的 16 個 item key。
+// FAQ 分組:播放與相容性 / 效能與資料,共 7 題(item key 對應 faq namespace)。
 const FAQ_GROUPS = [
     {
         id: 'compat',
         icon: PlugZap,
         hue: '#60a5fa',
-        items: ['brave_twitch', 'live_detection', 'empty_window'],
+        items: ['brave_twitch', 'youtube_playback', 'platform_support', 'live_detection'],
     },
     {
-        id: 'features',
-        icon: Sparkles,
+        id: 'usage',
+        icon: Database,
         hue: '#4ade80',
-        items: [
-            'dynamic_island', 'favorites_manager', 'media_control', 'search_bar',
-            'layout_control', 'one_click_favorite', 'clear_canvas', 'fullscreen',
-            'batch_import', 'multi_tabs', 'categories', 'backup_restore', 'twitch_linking',
-        ],
+        items: ['performance', 'data_saved', 'empty_window'],
     },
 ];
 
@@ -58,11 +55,11 @@ export function FAQPage() {
     const tx = t as unknown as TFn;
 
     const catLabel = (id: string) =>
-        id === 'compat' ? tx('faq:cat_compat', { defaultValue: '相容性與疑難' })
-            : tx('faq:cat_features', { defaultValue: '功能用法' });
+        id === 'compat' ? tx('faq:cat_compat', { defaultValue: '播放與相容性' })
+            : tx('faq:cat_usage', { defaultValue: '效能與資料' });
     const catBlurb = (id: string) =>
-        id === 'compat' ? tx('faq:cat_compat_blurb', { defaultValue: '瀏覽器與平台相關的疑難排解。' })
-            : tx('faq:cat_features_blurb', { defaultValue: '動態島、收藏、布局與聊天室的進階用法。' });
+        id === 'compat' ? tx('faq:cat_compat_blurb', { defaultValue: '瀏覽器、平台與播放相關的疑難排解。' })
+            : tx('faq:cat_usage_blurb', { defaultValue: '效能調校、資料儲存與佈局占位的常見疑問。' });
 
     const itemText = (item: string) =>
         (tx(`faq:items.${item}.title`) + ' ' + tx(`faq:items.${item}.content`)).toLowerCase();
@@ -164,8 +161,17 @@ export function FAQPage() {
             <SEO
                 title={`${tx('faq:title')} - MultiStream Hub`}
                 description={tx('faq:header_subtitle')}
-                keywords="FAQ, MultiStream Hub, help, guide, features, multistreaming"
+                keywords="FAQ, MultiStream Hub, help, troubleshooting, Brave, Twitch, YouTube, multistreaming"
                 url="https://multistreaming.org/faq"
+                jsonLd={{
+                    '@context': 'https://schema.org',
+                    '@type': 'FAQPage',
+                    mainEntity: FAQ_GROUPS.flatMap(g => g.items).map(item => ({
+                        '@type': 'Question',
+                        name: tx(`faq:items.${item}.title`),
+                        acceptedAnswer: { '@type': 'Answer', text: tx(`faq:items.${item}.content`) },
+                    })),
+                }}
             />
 
             <BlurOrb top={-160} left="50%" w={760} h={460} color="oklch(0.63 0.23 304)" opacity={0.16} />
@@ -185,7 +191,7 @@ export function FAQPage() {
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder={tx('faq:search_placeholder', { defaultValue: '搜尋問題,例如「Brave」、「布局」、「收藏」…' })}
+                            placeholder={tx('faq:search_placeholder', { defaultValue: '搜尋問題,例如「Brave」、「效能」、「YouTube」…' })}
                         />
                         {query && (
                             <button className="faq-search-clear" onClick={() => setQuery('')} aria-label="清除搜尋">

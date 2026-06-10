@@ -10,7 +10,6 @@ const tutorial = {
 
   'tabs.basics': '基础操作',
   'tabs.advanced': '进阶功能',
-  'tabs.faq': '常见问题',
 
   'intro.title': '欢迎使用 MultiStream Hub',
   'intro.content': '打造您的极致观看体验。MultiStream Hub 不仅仅是一个多重串流播放器，它是一个全方位的直播仪表板。通过这份详细指南，您将学会如何运用画布、动态岛、搜索与设置等强大功能，最大化您的观看效率。',
@@ -68,15 +67,6 @@ const tutorial = {
   'gettingStarted.step3': '从搜索结果中点击加入。',
   'gettingStarted.step4': '重复步骤，打造您的多视角观看体验！',
 
-  'faq.title': '❓ 常见问题',
-  'faq.q1': '为什么 YouTube 视频无法播放？',
-  'faq.a1': '部分 YouTube 视频或直播可能被创作者设定为“不允许嵌入播放”，这类内容无法在第三方平台播放。',
-  'faq.q2': '如何改善性能问题？',
-  'faq.a2': '同时播放多个高画质串流会消耗大量 CPU 和网络带宽。建议在设置中降低个别串流的画质，或减少同时播放的数量。',
-  'faq.q3': '支持哪些平台？',
-  'faq.a3': '目前主要支持 Twitch 和 YouTube 直播。未来可能会增加更多平台的支持。',
-  'faq.q4': '我的设置会被保存吗？',
-  'faq.a4': '是的，您的布局、收藏和设置会自动储存在您的浏览器中，下次访问时会自动还原。',
   'hero.badge': 'v2.0 全新设计',
   'features.favorites.proTip': '专业提示',
 

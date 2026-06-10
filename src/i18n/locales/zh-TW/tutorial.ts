@@ -10,7 +10,6 @@ const tutorial = {
 
   'tabs.basics': '基礎操作',
   'tabs.advanced': '進階功能',
-  'tabs.faq': '常見問題',
 
   'intro.title': '歡迎使用 MultiStream Hub',
   'intro.content': '打造您的極致觀看體驗。MultiStream Hub 不僅僅是一個多重串流播放器，它是一個全方位的直播儀表板。透過這份詳細指南，您將學會如何運用畫布、動態島、搜尋與設定等強大功能，最大化您的觀看效率。',
@@ -68,15 +67,6 @@ const tutorial = {
   'gettingStarted.step3': '從搜尋結果中點擊加入。',
   'gettingStarted.step4': '重複步驟，打造您的多視角觀看體驗！',
 
-  'faq.title': '❓ 常見問題',
-  'faq.q1': '為什麼 YouTube 影片無法播放？',
-  'faq.a1': '部分 YouTube 影片或直播可能被創作者設定為「不允許嵌入播放」，這類內容無法在第三方平台播放。',
-  'faq.q2': '如何改善效能問題？',
-  'faq.a2': '同時播放多個高畫質串流會消耗大量 CPU 和網路頻寬。建議在設定中降低個別串流的畫質，或減少同時播放的數量。',
-  'faq.q3': '支援哪些平台？',
-  'faq.a3': '目前主要支援 Twitch 和 YouTube 直播。未來可能會增加更多平台的支援。',
-  'faq.q4': '我的設定會被保存嗎？',
-  'faq.a4': '是的，您的布局、收藏和設定會自動儲存在您的瀏覽器中，下次訪問時會自動還原。',
   'hero.badge': 'v2.0 全新設計',
   'features.favorites.proTip': '專業提示',
 

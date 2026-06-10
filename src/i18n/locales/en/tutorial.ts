@@ -10,7 +10,6 @@ const tutorial = {
 
   'tabs.basics': 'Basics',
   'tabs.advanced': 'Advanced',
-  'tabs.faq': 'FAQ',
 
   'intro.title': 'Welcome to MultiStream Hub',
   'intro.content': 'Maximize your viewing experience. MultiStream Hub is more than just a multi-stream player; it is a comprehensive live dashboard. Through this guide, you will learn how to use the Canvas, Dynamic Island, Search, and Settings to optimize your workflow.',
@@ -68,15 +67,6 @@ const tutorial = {
   'gettingStarted.step3': 'Click to add from the search results.',
   'gettingStarted.step4': 'Repeat to build your multi-view experience!',
 
-  'faq.title': '❓ FAQ',
-  'faq.q1': 'Why won\'t YouTube videos play?',
-  'faq.a1': 'Some YouTube videos or streams are restricted from embedding by content creators and cannot be played on third-party platforms.',
-  'faq.q2': 'How to improve performance?',
-  'faq.a2': 'Simultaneously playing multiple high-quality streams consumes significant CPU and bandwidth. Try lowering the quality of individual streams or reducing the number of active streams.',
-  'faq.q3': 'Which platforms are supported?',
-  'faq.a3': 'Currently supports Twitch and YouTube Live. More platforms may be added in the future.',
-  'faq.q4': 'Are my settings saved?',
-  'faq.a4': 'Yes, your layout, favorites, and settings are automatically saved in your browser and restored on your next visit.',
   'hero.badge': 'v2.0 New Design',
   'features.favorites.proTip': 'Pro Tip',
 
