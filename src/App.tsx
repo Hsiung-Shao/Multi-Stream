@@ -23,6 +23,7 @@ import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
 import { CookieConsent } from './components/CookieConsent';
 import { AnnouncementsProvider } from './features/announcements/AnnouncementsProvider';
+import { FeedbackFAB } from './components/Navigation/FeedbackFAB';
 import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
 import { RestoreSessionPrompt } from './components/Dialogs/RestoreSessionPrompt';
 import type { StreamData } from './utils/streamUtils';
@@ -289,6 +290,8 @@ export default function App() {
         onRestore={handleRestoreSession}
         onDiscard={handleDiscardSession}
       />
+      {/* 全站浮動意見回饋按鈕 — admin / canvas 沉浸頁略過避免擋畫面 */}
+      {currentPage !== 'admin' && currentPage !== 'canvas' && <FeedbackFAB />}
     </>
   );
 }

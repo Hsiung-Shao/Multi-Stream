@@ -55,7 +55,7 @@ export function LandingPage() {
                             {t('landing.footer.faq')}
                         </Button>
                         <a
-                            href="https://github.com/Hsiung-Shao/Multi-Stream"
+                            href="https://github.com/Hsiung-Shao"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-muted-foreground hover:text-foreground transition-colors p-2"

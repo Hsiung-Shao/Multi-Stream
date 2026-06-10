@@ -17,6 +17,7 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
+import { useUIStore } from '../store/useUIStore';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 
 interface AboutPageProps {
@@ -28,16 +29,16 @@ interface AboutPageProps {
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-const GITHUB_URL = 'https://github.com/Hsiung-Shao/Multi-Stream';
+const GITHUB_URL = 'https://github.com/Hsiung-Shao';
 const DISCORD_URL = 'https://discord.gg/47kauArepY';
 const COFFEE_URL = 'https://buymeacoffee.com/hsiung';
-const FEEDBACK_URL = 'https://forms.gle/AjG922YrXFbyAdBa6';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
 export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }: AboutPageProps) {
   const { t, i18n } = useTranslation(['about', 'common']);
   const tx = t as unknown as TFn;
   const locale = i18n.language;
+  const openModal = useUIStore((s) => s.openModal);
 
   const languages = [
     { value: 'zh-TW' as const, label: tx('common:chineseTraditional') },
@@ -142,7 +143,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         .ab-social.coffee { background: linear-gradient(90deg, #ec4899 0%, #9333ea 100%); color: #fff; }
 
         .ab-contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-        .ab-link-row { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px; text-decoration: none; background: oklch(0.21 0.034 264.665 / 0.45); border: 1px solid rgba(255,255,255,0.07); transition: background .2s ease, border-color .2s ease; }
+        .ab-link-row { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px; text-decoration: none; background: oklch(0.21 0.034 264.665 / 0.45); border: 1px solid rgba(255,255,255,0.07); transition: background .2s ease, border-color .2s ease; cursor: pointer; font-family: var(--font-sans); text-align: left; color: inherit; width: 100%; }
         .ab-link-row:hover { background: oklch(0.21 0.034 264.665 / 0.7); border-color: oklch(0.63 0.23 304 / 0.4); }
         .ab-link-body { flex: 1; min-width: 0; }
         .ab-link-title { font-size: 15.5px; font-weight: 700; margin: 0 0 3px; color: var(--foreground); }
@@ -369,12 +370,13 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
             sub={tx('about:contactSub', { defaultValue: '有任何問題、建議或意見回饋，歡迎透過以下方式聯繫。' })}
           />
           <div className="ab-contact">
-            <a
+            <button
+              type="button"
               className="ab-link-row"
-              href={FEEDBACK_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => logEvent('AboutPage', 'click_social', 'feedback_form')}
+              onClick={() => {
+                logEvent('AboutPage', 'click_social', 'feedback_form');
+                openModal('feedback');
+              }}
             >
               <IconChip icon={Mail} hue="#60a5fa" size={46} />
               <div className="ab-link-body">
@@ -382,7 +384,7 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 <p className="ab-link-desc">{tx('about:feedbackFormDesc')}</p>
               </div>
               <ArrowUpRight size={18} className="text-muted-foreground shrink-0" />
-            </a>
+            </button>
             <a
               className="ab-link-row"
               href={DISCORD_URL}
@@ -461,15 +463,16 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
                 {tx('about:privacyPolicy')}
               </button>
             )}
-            <a
+            <button
+              type="button"
               className="ab-foot-link"
-              href={FEEDBACK_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => logEvent('AboutPage', 'click_social', 'feedback_footer')}
+              onClick={() => {
+                logEvent('AboutPage', 'click_social', 'feedback_footer');
+                openModal('feedback');
+              }}
             >
               {tx('about:giveFeedback')}
-            </a>
+            </button>
           </div>
           <p className="ab-copy">{tx('about:copyright')}</p>
           <p className="ab-updated">{tx('about:lastUpdated')}</p>

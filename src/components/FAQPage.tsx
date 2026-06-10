@@ -20,7 +20,7 @@ const STEP_IMAGES = [
     '/docs/brave-fix/step2.png',
     '/docs/brave-fix/step3.png',
 ];
-const GITHUB_ISSUES_URL = 'https://github.com/Hsiung-Shao/Multi-Stream/issues';
+const GITHUB_ISSUES_URL = 'https://github.com/Hsiung-Shao';
 const DISCORD_URL = 'https://discord.gg/47kauArepY';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
