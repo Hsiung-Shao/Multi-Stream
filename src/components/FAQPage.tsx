@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../store/useUIStore';
 import {
     HelpCircle, Search, X, Plus, Minus, PlugZap, Database, SearchX,
-    Github, MessageCircle, Download, ExternalLink,
+    MessageCircle, Download, ExternalLink,
 } from 'lucide-react';
 import { SEO } from './SEO';
 import { BlurOrb, IconChip } from './ui/ds-primitives';
@@ -21,7 +21,6 @@ const STEP_IMAGES = [
     '/docs/brave-fix/step2.png',
     '/docs/brave-fix/step3.png',
 ];
-const GITHUB_ISSUES_URL = 'https://github.com/Hsiung-Shao';
 const DISCORD_URL = 'https://discord.gg/47kauArepY';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
@@ -269,12 +268,9 @@ export function FAQPage() {
                 <div className="faq-cta">
                     <div className="faq-cta-orb" />
                     <h3>{tx('faq:cta_title', { defaultValue: '還是沒找到答案?' })}</h3>
-                    <p>{tx('faq:cta_desc', { defaultValue: '把你的問題丟到 GitHub Issue,或加入 Discord 社群,我們很樂意幫忙。' })}</p>
+                    <p>{tx('faq:cta_desc', { defaultValue: '加入 Discord 社群問我們,我們很樂意幫忙。' })}</p>
                     <div className="faq-cta-row">
-                        <a className="faq-cta-btn primary" href={GITHUB_ISSUES_URL} target="_blank" rel="noopener noreferrer">
-                            <Github size={16} /> {tx('faq:cta_issue', { defaultValue: '開一個 Issue' })}
-                        </a>
-                        <a className="faq-cta-btn ghost" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+                        <a className="faq-cta-btn primary" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
                             <MessageCircle size={16} /> {tx('faq:cta_discord', { defaultValue: '加入 Discord' })}
                         </a>
                     </div>
