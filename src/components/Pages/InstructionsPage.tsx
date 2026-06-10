@@ -616,7 +616,7 @@ export function InstructionsPage() {
             {/* 頂部返回列(next 長文頁自帶 header,token 化) */}
             <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-md">
                 <button
-                    onClick={() => setPage('landing')}
+                    onClick={() => setPage('home')}
                     className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.06] transition-colors"
                 >
                     <Home size={15} /> {tx('blog.backHome', { defaultValue: '返回首頁' })}

@@ -277,7 +277,7 @@ export function FAQPage() {
                 {/* Footer */}
                 <footer className="faq-footer">
                     <div className="faq-footer-links">
-                        <button className="faq-foot-link" onClick={() => setPage('landing')}>{tx('faq:foot_home', { defaultValue: '首頁' })}</button>
+                        <button className="faq-foot-link" onClick={() => setPage('home')}>{tx('faq:foot_home', { defaultValue: '首頁' })}</button>
                         <button className="faq-foot-link" onClick={() => setPage('about')}>{tx('faq:foot_about', { defaultValue: '關於' })}</button>
                         <button className="faq-foot-link" onClick={() => setPage('privacy')}>{tx('faq:foot_privacy', { defaultValue: '隱私權政策' })}</button>
                     </div>

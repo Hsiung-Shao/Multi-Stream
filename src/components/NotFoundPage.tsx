@@ -32,7 +32,7 @@ export function NotFoundPage() {
                 </p>
                 <div className="flex gap-3 justify-center flex-wrap">
                     <button
-                        onClick={() => setPage('landing')}
+                        onClick={() => setPage('home')}
                         className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                     >
                         <Home size={14} /> 回到首頁
