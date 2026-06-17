@@ -17,6 +17,18 @@ const queryClient = new QueryClient({
 
 type AuthState = 'loading' | 'login' | 'authenticated';
 
+// 通過條件:有 session 且 AAL 已達標(未綁定 MFA 時 aal1 即可;已綁定 MFA 時必須升到 aal2)。
+// 對應 feedbacks 的 RLS restrictive policy:已驗證 MFA 的 admin 需 aal2 才能讀寫。
+async function isFullyAuthenticated(client: SupabaseClient): Promise<boolean> {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return false;
+
+    const { data: aal, error } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !aal) return true; // 無法判定時不阻擋(沿用 session 存在即視為通過)
+    if (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') return false;
+    return true;
+}
+
 export function AdminPage() {
     const [authState, setAuthState] = useState<AuthState>('loading');
     const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
@@ -35,13 +47,18 @@ export function AdminPage() {
 
             setSupabase(client);
 
-            const { data: { session } } = await client.auth.getSession();
+            const authed = await isFullyAuthenticated(client);
             if (cancelled) return;
 
-            setAuthState(session ? 'authenticated' : 'login');
+            setAuthState(authed ? 'authenticated' : 'login');
 
-            const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-                setAuthState(session ? 'authenticated' : 'login');
+            const { data: { subscription } } = client.auth.onAuthStateChange(async (_event, session) => {
+                if (!session) {
+                    setAuthState('login');
+                    return;
+                }
+                const ok = await isFullyAuthenticated(client);
+                if (!cancelled) setAuthState(ok ? 'authenticated' : 'login');
             });
 
             return () => subscription.unsubscribe();
