@@ -96,10 +96,13 @@ const common = {
   'landing.platforms.youtube': 'YouTube 直播',
   'landing.platforms.twitch': 'Twitch 直播',
   'landing.platforms.desc': '完美整合两大平台，让您不再需要在分页间切换，只需一个介面即可掌控全场。',
+  'landing.privacy.eyebrow': '本地优先',
   'landing.privacy.title': '隐私优先＆本地存储',
   'landing.privacy.desc': '我们重视您的数据安全。MultiStream Hub 是一个纯前端应用程序，您的收藏列表、设置与观看纪录皆存储在您的浏览器本地，我们不会（也无法）搜集您的个人资料。无需注册，即刻使用。',
   'landing.favorites.title': '强大的收藏与汇入功能',
   'landing.favorites.desc': '支援从 Twitch 账号一键汇入您的追随列表。建立自订群组，将喜爱的主播分类管理。',
+  'landing.favorites.feature1': '汇入 Twitch 追随列表',
+  'landing.favorites.feature2': '自订群组',
   'landing.cta.title': '立即体验自定义多重画面',
   'landing.cta.desc': '简单、直觉、免安装。开始打造属于您的观看介面。',
   'landing.footer.copyright': '© 2026 MultiStream Hub. All rights reserved.',
@@ -214,6 +217,16 @@ const common = {
   'braveDetect.close': '关闭',
   'braveDetect.goToFAQ': '查看解决方案',
   'braveDetect.dontRemind': '不再提醒',
+  // 静态页共用 header(StaticPageHeader)
+  'header.backHome': '返回首页',
+  'header.toCanvas': '前往 Canvas',
+  'header.language': '语言',
+  'header.toggleTheme': '切换主题',
+  // 404 页
+  'notFound.title': '这里什么都没有',
+  'notFound.description': '你要找的页面好像走丢了。也许是输入错了网址,也许是页面已经被搬家。',
+  'notFound.backHome': '回到首页',
+  'notFound.toCanvas': '前往 Canvas',
 };
 
 export default common;

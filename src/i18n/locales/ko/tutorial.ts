@@ -139,6 +139,19 @@ const tutorial = {
   'footer.copyright': '© 2026 MultiStream Hub. 오픈 소스 프로젝트.',
   'footer.github': 'GitHub',
   'footer.license': '라이선스',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'blog.minRead': '{{n}}분',
+  'blog.cat.all': '전체',
+  'blog.allArticles': '모든 가이드',
+  'blog.related': '계속 읽기',
+  'blog.team': 'MultiStream Hub 팀',
+  'blog.searchPlaceholder': '가이드 검색…',
+  'blog.layout.magazine': '매거진',
+  'blog.layout.cards': '카드',
+  'blog.layout.list': '리스트',
+  'blog.featured': '추천',
+  'blog.readMore': '읽기',
+  'blog.noResults': '"{{q}}"에 해당하는 글을 찾을 수 없습니다',
 };
 
 export default tutorial;

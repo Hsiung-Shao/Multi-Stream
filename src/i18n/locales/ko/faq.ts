@@ -1,4 +1,5 @@
 const faq = {
+    'tipLabel': '팁',
     'title': '자주 묻는 질문 (FAQ)',
     'header_title': '자주 묻는 질문 및 문제 해결',
     'header_subtitle': '재생, 성능, 데이터 저장에 관한 자주 묻는 질문의 답을 찾아보세요.',
@@ -34,7 +35,21 @@ const faq = {
     'items.data_saved.content': '네, 레이아웃, 즐겨찾기 및 설정은 브라우저에 자동으로 저장되며 다음 방문 시 복원됩니다.',
 
     'items.empty_window.title': '빈 창 활용',
-    'items.empty_window.content': '빈 그룹을 추가하여 자리 표시자로 사용할 수 있습니다. 레이아웃을 미리 계획한 후 채널을 드래그하여 재생할 때 유용합니다.'
+    'items.empty_window.content': '빈 그룹을 추가하여 자리 표시자로 사용할 수 있습니다. 레이아웃을 미리 계획한 후 채널을 드래그하여 재생할 때 유용합니다.',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'cat_all': '전체',
+  'support_eyebrow': '지원',
+  'search_placeholder': '질문 검색, 예: "Brave", "성능", "YouTube"…',
+  'search_found': '"{{query}}"와(과) 일치하는 질문 {{count}}개를 찾았습니다',
+  'search_none': '"{{query}}"와(과) 일치하는 질문이 없습니다',
+  'empty_title': '관련 질문을 찾을 수 없습니다',
+  'empty_desc': '다른 키워드로 시도하거나 Discord에서 직접 문의해 주세요.',
+  'cta_title': '답을 찾지 못하셨나요？',
+  'cta_desc': 'Discord 커뮤니티에 참여해 물어보세요. 기꺼이 도와드리겠습니다.',
+  'cta_discord': 'Discord 참여',
+  'foot_home': '홈',
+  'foot_about': '소개',
+  'foot_privacy': '개인정보 처리방침',
 };
 
 export default faq;

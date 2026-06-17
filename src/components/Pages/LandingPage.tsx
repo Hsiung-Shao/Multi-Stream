@@ -266,7 +266,7 @@ export function LandingPage() {
                                             <div className="p-2 bg-green-400/10 rounded-full">
                                                 <Zap className="w-6 h-6" />
                                             </div>
-                                            <span className="font-semibold tracking-wider text-sm uppercase">Local First</span>
+                                            <span className="font-semibold tracking-wider text-sm uppercase">{t('landing.privacy.eyebrow')}</span>
                                         </div>
                                         <h3 className="text-2xl font-bold">{t('landing.privacy.title')}</h3>
                                         <p className="text-muted-foreground leading-relaxed">
@@ -285,13 +285,13 @@ export function LandingPage() {
                                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary">
                                             <Check className="w-4 h-4" />
                                         </div>
-                                        <span className="text-foreground/80">Twitch Follows Import</span>
+                                        <span className="text-foreground/80">{t('landing.favorites.feature1')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary">
                                             <Check className="w-4 h-4" />
                                         </div>
-                                        <span className="text-foreground/80">Custom Grouping</span>
+                                        <span className="text-foreground/80">{t('landing.favorites.feature2')}</span>
                                     </li>
 
                                 </ul>

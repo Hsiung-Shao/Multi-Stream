@@ -8,10 +8,10 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUIStore } from '../../store/useUIStore';
 import { SEO } from '../SEO';
+import { StaticPageHeader } from '../StaticPageHeader';
 import {
-    Home, Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
+    Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
     Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
     Rocket, Volume2, Star, Settings as SettingsIcon, Tv,
     type LucideIcon,
@@ -376,7 +376,6 @@ function BlogList({ articles, cats, onOpen, labels }: {
 export function InstructionsPage() {
     const { t, i18n } = useTranslation(['tutorial', 'common']);
     const tx = t as unknown as TFn;
-    const setPage = useUIStore((s) => s.setPage);
     const [slug, setSlug] = useState<string | null>(null);
 
     const readLabel = (n: number) => tx('blog.minRead', { defaultValue: '{{n}} 分鐘', n });
@@ -706,22 +705,8 @@ export function InstructionsPage() {
                 }
             `}</style>
 
-            {/* 頂部返回列(next 長文頁自帶 header,token 化) */}
-            <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-md">
-                <button
-                    onClick={() => setPage('home')}
-                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.06] transition-colors"
-                >
-                    <Home size={15} /> {tx('blog.backHome', { defaultValue: '返回首頁' })}
-                </button>
-                <span className="hidden md:block text-sm font-semibold text-foreground">{tx('title')}</span>
-                <button
-                    onClick={() => setPage('canvas')}
-                    className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                    {tx('blog.toCanvas', { defaultValue: '前往 Canvas' })} <ArrowRight size={14} />
-                </button>
-            </div>
+            {/* 頂部返回列 — 三靜態頁共用 header */}
+            <StaticPageHeader title={tx('title')} analyticsCategory="InstructionsPage" />
 
             {article
                 ? <BlogArticle

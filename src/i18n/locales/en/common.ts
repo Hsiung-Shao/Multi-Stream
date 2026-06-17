@@ -96,10 +96,13 @@ const common = {
   'landing.platforms.youtube': 'YouTube Live',
   'landing.platforms.twitch': 'Twitch Live',
   'landing.platforms.desc': 'Seamlessly integrated. No more tab switching. Control everything from one interface.',
+  'landing.privacy.eyebrow': 'Local First',
   'landing.privacy.title': 'Privacy First & Local Storage',
   'landing.privacy.desc': 'Your data stays with you. MultiStream Hub is a client-side only application. Your favorites, settings, and watch history are stored locally in your browser. We do not collect your personal data. No registration required.',
   'landing.favorites.title': 'Powerful Favorites & Import',
   'landing.favorites.desc': 'Import your follow list from Twitch with one click. Create custom groups to organize your favorite streamers.',
+  'landing.favorites.feature1': 'Twitch Follows Import',
+  'landing.favorites.feature2': 'Custom Grouping',
   'landing.cta.title': 'Experience Custom Multi-View Now',
   'landing.cta.desc': 'Simple, intuitive, no installation required. Start building your interface today.',
   'landing.footer.copyright': '© 2026 MultiStream Hub. All rights reserved.',
@@ -212,6 +215,16 @@ const common = {
   'braveDetect.close': 'Close',
   'braveDetect.goToFAQ': 'View Solution',
   'braveDetect.dontRemind': 'Don\'t remind me again',
+  // Shared static-page header (StaticPageHeader)
+  'header.backHome': 'Back to Home',
+  'header.toCanvas': 'Go to Canvas',
+  'header.language': 'Language',
+  'header.toggleTheme': 'Toggle theme',
+  // 404 page
+  'notFound.title': 'Nothing to see here',
+  'notFound.description': 'The page you are looking for seems to have wandered off. Maybe the URL was mistyped, or the page has moved.',
+  'notFound.backHome': 'Back to Home',
+  'notFound.toCanvas': 'Go to Canvas',
 };
 
 export default common;

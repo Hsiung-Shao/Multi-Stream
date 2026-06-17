@@ -139,6 +139,19 @@ const tutorial = {
   'footer.copyright': '© 2026 MultiStream Hub. 開源專案。',
   'footer.github': 'GitHub',
   'footer.license': '授權條款',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'blog.minRead': '{{n}} 分鐘',
+  'blog.cat.all': '全部',
+  'blog.allArticles': '所有教學',
+  'blog.related': '繼續閱讀',
+  'blog.team': 'MultiStream Hub 團隊',
+  'blog.searchPlaceholder': '搜尋教學文章…',
+  'blog.layout.magazine': '雜誌',
+  'blog.layout.cards': '卡片',
+  'blog.layout.list': '清單',
+  'blog.featured': '精選',
+  'blog.readMore': '開始閱讀',
+  'blog.noResults': '找不到符合「{{q}}」的文章',
 };
 
 export default tutorial;

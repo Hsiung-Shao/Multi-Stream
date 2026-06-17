@@ -34,6 +34,7 @@ import zhCNTags from './locales/zh-CN/tags';
 import zhCNYoutubeRisk from './locales/zh-CN/youtubeRisk';
 import zhCNStream from './locales/zh-CN/stream';
 import zhCNFAQ from './locales/zh-CN/faq';
+import zhCNAnnouncements from './locales/zh-CN/announcements';
 
 import enCommon from './locales/en/common';
 import enNavbar from './locales/en/navbar';
@@ -49,6 +50,7 @@ import enTags from './locales/en/tags';
 import enYoutubeRisk from './locales/en/youtubeRisk';
 import enStream from './locales/en/stream';
 import enFAQ from './locales/en/faq';
+import enAnnouncements from './locales/en/announcements';
 
 import jaCommon from './locales/ja/common';
 import jaNavbar from './locales/ja/navbar';
@@ -64,6 +66,7 @@ import jaTags from './locales/ja/tags';
 import jaYoutubeRisk from './locales/ja/youtubeRisk';
 import jaStream from './locales/ja/stream';
 import jaFAQ from './locales/ja/faq';
+import jaAnnouncements from './locales/ja/announcements';
 
 import koCommon from './locales/ko/common';
 import koNavbar from './locales/ko/navbar';
@@ -79,6 +82,7 @@ import koTags from './locales/ko/tags';
 import koYoutubeRisk from './locales/ko/youtubeRisk';
 import koStream from './locales/ko/stream';
 import koFAQ from './locales/ko/faq';
+import koAnnouncements from './locales/ko/announcements';
 
 export const defaultNS = 'common';
 
@@ -115,7 +119,7 @@ export const resources = {
         youtubeRisk: zhCNYoutubeRisk,
         stream: zhCNStream,
         faq: zhCNFAQ,
-        announcements: zhTWAnnouncements,
+        announcements: zhCNAnnouncements,
     },
     en: {
         common: enCommon,
@@ -132,7 +136,7 @@ export const resources = {
         youtubeRisk: enYoutubeRisk,
         stream: enStream,
         faq: enFAQ,
-        announcements: zhTWAnnouncements,
+        announcements: enAnnouncements,
     },
     ja: {
         common: jaCommon,
@@ -149,7 +153,7 @@ export const resources = {
         youtubeRisk: jaYoutubeRisk,
         stream: jaStream,
         faq: jaFAQ,
-        announcements: zhTWAnnouncements,
+        announcements: jaAnnouncements,
     },
     ko: {
         common: koCommon,
@@ -166,7 +170,7 @@ export const resources = {
         youtubeRisk: koYoutubeRisk,
         stream: koStream,
         faq: koFAQ,
-        announcements: zhTWAnnouncements,
+        announcements: koAnnouncements,
     },
 } as const;
 

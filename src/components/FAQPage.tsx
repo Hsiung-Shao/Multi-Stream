@@ -11,6 +11,7 @@ import {
     MessageCircle, Download, ExternalLink,
 } from 'lucide-react';
 import { SEO } from './SEO';
+import { StaticPageHeader } from './StaticPageHeader';
 import { BlurOrb, IconChip } from './ui/ds-primitives';
 
 const MODHEADER_URL = 'https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj';
@@ -97,9 +98,10 @@ export function FAQPage() {
     return (
         <div className="faq-page">
             <style>{`
-                .faq-page { position: relative; min-height: 100vh; overflow: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+                /* overflow: clip(非 hidden):裁切 BlurOrb 同時不建立 scroll container,sticky header 才會生效 */
+                .faq-page { position: relative; min-height: 100vh; overflow: clip; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
                 .faq-wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 24px 96px; }
-                .faq-hero { padding-top: 112px; text-align: center; }
+                .faq-hero { padding-top: 56px; text-align: center; }
                 .faq-hero-badge { width: 76px; height: 76px; border-radius: 22px; margin: 0 auto 26px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, oklch(0.63 0.23 304), #c084fc); box-shadow: 0 24px 56px -16px oklch(0.63 0.23 304 / 0.7), inset 0 1px 0 rgba(255,255,255,0.25); }
                 .faq-eyebrow { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #c084fc; }
                 .faq-title { font-size: 52px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; margin: 14px 0 0; background: linear-gradient(90deg, #ffffff 0%, #e5e7eb 55%, #9ca3af 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
@@ -172,6 +174,9 @@ export function FAQPage() {
                     })),
                 }}
             />
+
+            {/* 頂部返回列 — 三靜態頁共用 header */}
+            <StaticPageHeader title={tx('faq:title')} analyticsCategory="FAQPage" />
 
             <BlurOrb top={-160} left="50%" w={760} h={460} color="oklch(0.63 0.23 304)" opacity={0.16} />
             <BlurOrb top={620} right={-180} w={520} h={420} color="#3b82f6" opacity={0.06} />
@@ -323,7 +328,7 @@ function FaqItem({
                         {item === 'brave_twitch' && <BraveTwitchGuide t={t} />}
                         {tip ? (
                             <div className="faq-tip">
-                                <b>Tip</b>
+                                <b>{t('faq:tipLabel')}</b>
                                 {tip}
                             </div>
                         ) : null}
@@ -375,7 +380,7 @@ function BraveTwitchGuide({ t }: { t: TFn }) {
                 ))}
             </div>
             <div className="faq-tip">
-                <b>Tip</b>
+                <b>{t('faq:tipLabel')}</b>
                 {t('faq:items.brave_twitch.tip')}
             </div>
         </div>

@@ -67,6 +67,28 @@ const about = {
   'terms3': '為維持網站運營和持續開發，本網站可能會顯示第三方廣告（如 Google AdSense）。這些廣告由第三方服務提供商管理，我們不會收集您的個人資訊用於廣告投放。',
   'privacy1': '我們重視您的隱私權。本網站不會主動收集任何個人資料，所有設定和收藏資料都儲存在您的瀏覽器本地。',
   'privacy2': '詳細的隱私權政策請參閱',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'featuresEyebrow': '功能特色',
+  'featuresSub': '圍繞「同時看多台」這件事打磨的每個細節，從多平台串流到自動排版。',
+  'techEyebrow': '技術內幕',
+  'techSub': '輕量、純前端、本地優先 —— 沒有後端伺服器，也不收你的資料。',
+  'creatorEyebrow': '開發者',
+  'creatorRole': '獨立開發者',
+  'creatorDesc': 'MultiStream Hub 由 Hsiung-Shao 獨立開發與維護。這個專案的初衷，是給直播愛好者一個免費、好用的多平台串流觀看工具，讓同時追多個直播這件事更方便、更有趣。功能會持續改進與優化，也歡迎大家提供寶貴的意見與建議。',
+  'joinDiscord': '加入 Discord',
+  'buyCoffee': '請我喝杯咖啡',
+  'contactEyebrow': '聯絡',
+  'contactSub': '有任何問題、建議或意見回饋，歡迎透過以下方式聯繫。',
+  'termsEyebrow': '使用條款',
+  'privacyEyebrow': '隱私',
+  'localFirstEyebrow': '本機優先',
+  'localFirstTitle': '你的資料留在你這裡',
+  'localFirstDesc': '我們重視你的隱私權。你的設定與收藏資料都儲存在你的瀏覽器本地（LocalStorage 與 IndexedDB），我們不會收集能識別你個人的資料。唯一會回傳的是被加入的 YouTube 頻道 ID —— 以匿名、聚合的方式統計熱門頻道，不綁定任何使用者或裝置。',
+  'privacyLinkText': '詳細的隱私權政策請參閱：隱私權政策',
+  'pillFree': '完全免費',
+  'pillOpenSource': '開源專案',
+  'pillFrontend': '純前端',
+  'pillNoSignup': '無需註冊',
 };
 
 export default about;

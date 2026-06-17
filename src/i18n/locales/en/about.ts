@@ -67,6 +67,28 @@ const about = {
   'terms3': 'To maintain website operations and continuous development, this website may display third-party advertisements (such as Google AdSense). These ads are managed by third-party service providers, and we do not collect your personal information for advertising purposes.',
   'privacy1': 'We value your privacy. This website does not actively collect any personal data. All settings and favorites are stored locally in your browser.',
   'privacy2': 'For detailed privacy policy, please refer to',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'featuresEyebrow': 'Features',
+  'featuresSub': 'Every detail polished around watching multiple streams at once — from multi-platform streaming to automatic layouts.',
+  'techEyebrow': 'Under the hood',
+  'techSub': 'Lightweight, frontend-only, local-first — no backend servers, and we don\'t collect your data.',
+  'creatorEyebrow': 'Creator',
+  'creatorRole': 'Indie Developer',
+  'creatorDesc': 'MultiStream Hub is independently developed and maintained by Hsiung-Shao. The goal of this project is to give streaming fans a free, easy-to-use multi-platform viewing tool that makes following several streams at once more convenient and fun. Features keep improving, and your feedback and suggestions are always welcome.',
+  'joinDiscord': 'Join Discord',
+  'buyCoffee': 'Buy Me a Coffee',
+  'contactEyebrow': 'Contact',
+  'contactSub': 'Have questions, suggestions, or feedback? Reach out through any of the methods below.',
+  'termsEyebrow': 'Terms',
+  'privacyEyebrow': 'Privacy',
+  'localFirstEyebrow': 'Local first',
+  'localFirstTitle': 'Your data stays with you',
+  'localFirstDesc': 'We take your privacy seriously. Your settings and favorites are stored locally in your browser (LocalStorage and IndexedDB), and we don\'t collect any personally identifiable data. The only thing sent back is the IDs of YouTube channels you add — used anonymously and in aggregate to track popular channels, never tied to any user or device.',
+  'privacyLinkText': 'For the full privacy policy, see: Privacy Policy',
+  'pillFree': 'Completely Free',
+  'pillOpenSource': 'Open Source',
+  'pillFrontend': 'Frontend Only',
+  'pillNoSignup': 'No Sign-up',
 };
 
 export default about;

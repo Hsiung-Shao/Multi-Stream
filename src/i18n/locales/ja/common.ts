@@ -96,10 +96,13 @@ const common = {
   'landing.platforms.youtube': 'YouTube Live',
   'landing.platforms.twitch': 'Twitch Live',
   'landing.platforms.desc': '2つの主要プラットフォームを完全に統合。タブを切り替える必要はもうありません。すべての操作を1つのインターフェースで。',
+  'landing.privacy.eyebrow': 'ローカルファースト',
   'landing.privacy.title': 'プライバシー優先＆ローカル保存',
   'landing.privacy.desc': 'あなたのデータは安全です。MultiStream Hubは純粋なフロントエンドアプリケーションであり、お気に入り、設定、視聴履歴はすべてブラウザのローカルに保存されます。個人情報を収集することは（技術的にも）ありません。登録不要で、すぐにご利用いただけます。',
   'landing.favorites.title': '強力なお気に入りとインポート機能',
   'landing.favorites.desc': 'Twitchアカウントからフォローリストをワンクリックでインポート。カスタムグループを作成して、お気に入りの配信者を分類管理しましょう。',
+  'landing.favorites.feature1': 'Twitch フォローのインポート',
+  'landing.favorites.feature2': 'カスタムグループ',
   'landing.cta.title': 'カスタムマルチビューを今すぐ体験',
   'landing.cta.desc': 'シンプル、直感的、インストール不要。あなただけの視聴環境を作り始めましょう。',
   'landing.footer.copyright': '© 2026 MultiStream Hub. All rights reserved.',
@@ -214,6 +217,16 @@ const common = {
   'braveDetect.close': '閉じる',
   'braveDetect.goToFAQ': '解決方法を見る',
   'braveDetect.dontRemind': '今後表示しない',
+  // 静的ページ共通 header(StaticPageHeader)
+  'header.backHome': 'ホームに戻る',
+  'header.toCanvas': 'Canvasへ',
+  'header.language': '言語',
+  'header.toggleTheme': 'テーマ切替',
+  // 404 ページ
+  'notFound.title': 'ここには何もありません',
+  'notFound.description': 'お探しのページは見つかりませんでした。URL が間違っているか、ページが移動した可能性があります。',
+  'notFound.backHome': 'ホームに戻る',
+  'notFound.toCanvas': 'Canvas へ',
 };
 
 export default common;

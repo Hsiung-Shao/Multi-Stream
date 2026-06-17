@@ -1,4 +1,5 @@
 const faq = {
+    'tipLabel': 'ヒント',
     'title': 'よくある質問 (FAQ)',
     'header_title': 'よくある質問とトラブルシューティング',
     'header_subtitle': '再生、パフォーマンス、データ保存に関するよくある質問にお答えします。',
@@ -34,7 +35,21 @@ const faq = {
     'items.data_saved.content': 'はい、レイアウト、お気に入り、設定はブラウザに自動的に保存され、次回アクセス時に復元されます。',
 
     'items.empty_window.title': '空ウィンドウの使い方',
-    'items.empty_window.content': '「グループ追加 -> 空のグループを追加」でプレースホルダーウィンドウを作成できます。レイアウトを先に決めてから、チャンネルをドラッグして再生する際に便利です。'
+    'items.empty_window.content': '「グループ追加 -> 空のグループを追加」でプレースホルダーウィンドウを作成できます。レイアウトを先に決めてから、チャンネルをドラッグして再生する際に便利です。',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'cat_all': 'すべて',
+  'support_eyebrow': 'サポート',
+  'search_placeholder': '質問を検索（例：「Brave」「パフォーマンス」「YouTube」）…',
+  'search_found': '「{{query}}」に一致する質問が {{count}} 件見つかりました',
+  'search_none': '「{{query}}」に一致する質問はありません',
+  'empty_title': '該当する質問が見つかりません',
+  'empty_desc': '別のキーワードで試すか、Discord で直接お尋ねください。',
+  'cta_title': '答えが見つかりませんか？',
+  'cta_desc': 'Discord コミュニティに参加してお尋ねください。喜んでお手伝いします。',
+  'cta_discord': 'Discord に参加',
+  'foot_home': 'ホーム',
+  'foot_about': '概要',
+  'foot_privacy': 'プライバシーポリシー',
 };
 
 export default faq;

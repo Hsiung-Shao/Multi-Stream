@@ -1,4 +1,5 @@
 const faq = {
+    'tipLabel': 'Tip',
     'title': 'FAQ',
     'header_title': 'FAQ & Troubleshooting',
     'header_subtitle': 'Answers to common questions about playback, performance, and data storage.',
@@ -34,7 +35,21 @@ const faq = {
     'items.data_saved.content': 'Yes, your layout, favorites, and settings are automatically saved in your browser and restored on your next visit.',
 
     'items.empty_window.title': 'Empty Window Usage',
-    'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.'
+    'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'cat_all': 'All',
+  'support_eyebrow': 'Support',
+  'search_placeholder': 'Search questions, e.g. "Brave", "performance", "YouTube"…',
+  'search_found': 'Found {{count}} question(s) matching "{{query}}"',
+  'search_none': 'No questions matching "{{query}}"',
+  'empty_title': 'No matching questions',
+  'empty_desc': 'Try a different keyword, or just ask us on Discord.',
+  'cta_title': 'Still can\'t find an answer?',
+  'cta_desc': 'Join our Discord community and ask us — we\'re happy to help.',
+  'cta_discord': 'Join Discord',
+  'foot_home': 'Home',
+  'foot_about': 'About',
+  'foot_privacy': 'Privacy Policy',
 };
 
 export default faq;

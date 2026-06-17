@@ -139,6 +139,19 @@ const tutorial = {
   'footer.copyright': '© 2026 MultiStream Hub. オープンソースプロジェクト。',
   'footer.github': 'GitHub',
   'footer.license': 'ライセンス',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'blog.minRead': '{{n}} 分',
+  'blog.cat.all': 'すべて',
+  'blog.allArticles': 'すべての記事',
+  'blog.related': '続けて読む',
+  'blog.team': 'MultiStream Hub チーム',
+  'blog.searchPlaceholder': '記事を検索…',
+  'blog.layout.magazine': 'マガジン',
+  'blog.layout.cards': 'カード',
+  'blog.layout.list': 'リスト',
+  'blog.featured': '注目',
+  'blog.readMore': '読む',
+  'blog.noResults': '「{{q}}」に一致する記事が見つかりません',
 };
 
 export default tutorial;

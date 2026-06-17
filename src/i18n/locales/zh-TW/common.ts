@@ -211,6 +211,20 @@ const common = {
   'braveDetect.close': '關閉',
   'braveDetect.goToFAQ': '查看解決方案',
   'braveDetect.dontRemind': '不再提醒',
+  // 靜態頁共用 header(StaticPageHeader)
+  'header.backHome': '返回首頁',
+  'header.toCanvas': '前往 Canvas',
+  'header.language': '語言',
+  'header.toggleTheme': '切換主題',
+  // 404 頁
+  'notFound.title': '這裡什麼都沒有',
+  'notFound.description': '你要找的頁面好像走丟了。也許是輸入錯了網址,也許是頁面已經被搬家。',
+  'notFound.backHome': '回到首頁',
+  'notFound.toCanvas': '前往 Canvas',
+  // Landing 補充(原為硬編碼英文)
+  'landing.privacy.eyebrow': '本機優先',
+  'landing.favorites.feature1': '匯入 Twitch 追蹤清單',
+  'landing.favorites.feature2': '自訂分組',
 };
 
 export default common;

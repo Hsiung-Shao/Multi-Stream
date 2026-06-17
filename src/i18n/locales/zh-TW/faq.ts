@@ -1,4 +1,5 @@
 const faq = {
+    'tipLabel': '提示',
     'title': '常見問題 (FAQ)',
     'header_title': '常見問題與疑難排解',
     'header_subtitle': '播放問題、效能調校與資料儲存的常見疑問，都在這裡找到解答。',
@@ -34,7 +35,21 @@ const faq = {
     'items.data_saved.content': '是的，您的布局、收藏和設定會自動儲存在您的瀏覽器中，下次訪問時會自動還原。',
 
     'items.empty_window.title': '空白視窗的用法',
-    'items.empty_window.content': '您可以透過「新增組合 -> 新增空白群組」加入一個空白視窗框。此視窗可用於占位，方便您先規劃佈局，之後再將收藏的頻道拖曳進去播放。'
+    'items.empty_window.content': '您可以透過「新增組合 -> 新增空白群組」加入一個空白視窗框。此視窗可用於占位，方便您先規劃佈局，之後再將收藏的頻道拖曳進去播放。',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'cat_all': '全部',
+  'support_eyebrow': '支援',
+  'search_placeholder': '搜尋問題，例如「Brave」、「效能」、「YouTube」…',
+  'search_found': '找到 {{count}} 則符合「{{query}}」的問題',
+  'search_none': '沒有符合「{{query}}」的問題',
+  'empty_title': '找不到相關問題',
+  'empty_desc': '換個關鍵字試試，或直接到 Discord 問我們。',
+  'cta_title': '還是沒找到答案？',
+  'cta_desc': '加入 Discord 社群問我們，我們很樂意幫忙。',
+  'cta_discord': '加入 Discord',
+  'foot_home': '首頁',
+  'foot_about': '關於',
+  'foot_privacy': '隱私權政策',
 };
 
 export default faq;

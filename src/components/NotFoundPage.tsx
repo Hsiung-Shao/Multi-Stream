@@ -1,11 +1,13 @@
 // 404 — 依 multistream-hub-design-system 的 Pages.jsx NotFoundPage 重建。
 // 漸層 404 數字 + blur orb 背景 + 回首頁 / 前往 Canvas 復原按鈕。
 
+import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../store/useUIStore';
 import { Home } from 'lucide-react';
 import { BlurOrb } from './ui/ds-primitives';
 
 export function NotFoundPage() {
+    const { t } = useTranslation('common');
     const setPage = useUIStore(s => s.setPage);
 
     return (
@@ -26,22 +28,22 @@ export function NotFoundPage() {
                 >
                     404
                 </div>
-                <h1 className="text-[28px] font-bold mb-3">這裡什麼都沒有</h1>
+                <h1 className="text-[28px] font-bold mb-3">{t('notFound.title')}</h1>
                 <p className="text-base text-muted-foreground mb-8 leading-relaxed">
-                    你要找的頁面好像走丟了。也許是輸入錯了網址,也許是頁面已經被搬家。
+                    {t('notFound.description')}
                 </p>
                 <div className="flex gap-3 justify-center flex-wrap">
                     <button
                         onClick={() => setPage('home')}
                         className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                     >
-                        <Home size={14} /> 回到首頁
+                        <Home size={14} /> {t('notFound.backHome')}
                     </button>
                     <button
                         onClick={() => setPage('canvas')}
                         className="inline-flex items-center h-9 px-4 rounded-lg text-sm font-medium text-muted-foreground hover:bg-white/[0.06] hover:text-foreground transition-colors"
                     >
-                        前往 Canvas
+                        {t('notFound.toCanvas')}
                     </button>
                 </div>
             </div>

@@ -67,6 +67,28 @@ const about = {
   'terms3': '웹사이트 운영 및 지속적인 개발을 유지하기 위해 이 웹사이트는 서드파티 광고(Google AdSense 등)를 표시할 수 있습니다. 이러한 광고는 서드파티 서비스 제공업체에서 관리하며, 광고 배치를 위해 개인 정보를 수집하지 않습니다.',
   'privacy1': '우리는 귀하의 개인정보 보호를 소중히 여깁니다. 이 웹사이트는 개인 데이터를 적극적으로 수집하지 않으며, 모든 설정과 즐겨찾기는 브라우저의 로컬에 저장됩니다.',
   'privacy2': '자세한 개인정보 보호 정책은 다음을 참조하세요',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'featuresEyebrow': '기능',
+  'featuresSub': '"여러 방송 동시 시청"에 초점을 맞춰 다듬은 디테일 — 멀티플랫폼 스트리밍부터 자동 레이아웃까지.',
+  'techEyebrow': '기술 들여다보기',
+  'techSub': '가볍고 순수 프런트엔드, 로컬 우선 —— 백엔드 서버도 없고 당신의 데이터도 수집하지 않습니다.',
+  'creatorEyebrow': '개발자',
+  'creatorRole': '인디 개발자',
+  'creatorDesc': 'MultiStream Hub 는 Hsiung-Shao 가 개인이 개발하고 운영합니다. 이 프로젝트의 목표는 방송 팬에게 무료이고 쓰기 편한 멀티플랫폼 시청 도구를 제공하여 여러 방송을 동시에 보는 일을 더 편리하고 즐겁게 만드는 것입니다. 기능은 계속 개선되고 있으며 여러분의 의견과 제안도 언제나 환영합니다.',
+  'joinDiscord': 'Discord 참여',
+  'buyCoffee': '커피 한 잔 사주기',
+  'contactEyebrow': '문의',
+  'contactSub': '질문, 제안 또는 피드백이 있으면 아래 방법으로 언제든지 연락해 주세요.',
+  'termsEyebrow': '이용약관',
+  'privacyEyebrow': '개인정보',
+  'localFirstEyebrow': '로컬 우선',
+  'localFirstTitle': '당신의 데이터는 당신 곁에',
+  'localFirstDesc': '당신의 개인정보를 소중히 여깁니다. 설정과 즐겨찾기는 모두 브라우저 로컬(LocalStorage 및 IndexedDB)에 저장되며, 개인을 식별할 수 있는 데이터는 수집하지 않습니다. 전송되는 것은 추가된 YouTube 채널 ID뿐이며, 익명·집계 방식으로 인기 채널 통계에만 사용되고 특정 사용자나 기기에 연결되지 않습니다.',
+  'privacyLinkText': '자세한 개인정보 처리방침 보기：개인정보 처리방침',
+  'pillFree': '완전 무료',
+  'pillOpenSource': '오픈소스',
+  'pillFrontend': '프런트엔드 전용',
+  'pillNoSignup': '회원가입 불필요',
 };
 
 export default about;

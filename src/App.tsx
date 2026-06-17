@@ -179,12 +179,7 @@ export default function App() {
               url="https://multistreaming.org/about"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
-              <AboutPage
-                theme={theme}
-                onThemeToggle={toggleTheme}
-                onBack={() => setCurrentPage('home')}
-                onNavigateToPrivacy={() => setCurrentPage('privacy')}
-              />
+              <AboutPage />
             </Suspense>
           </>
         );

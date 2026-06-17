@@ -1,11 +1,11 @@
 // AboutPage — 依 multistream-hub-design-system 的 AboutPage.jsx 重建(editorial 版:
 // blur orbs、gradient hero、hued icon chips(AbChip = IconChip)、eyebrow section、
 // spotlight 三卡、feature grid、編號技術列表、creator 卡、contact 列、terms、
-// local-first 隱私區、footer)。保留 next 既有的 props/header 與多語系 i18n。
+// local-first 隱私區、footer)。header 改用三靜態頁共用的 StaticPageHeader,保留多語系 i18n。
 // SEO 由 App.tsx 在 case 'about' 外層統一處理,此處不重複以免雙標題。
 
 import {
-  ArrowLeft, Globe, Sun, Moon,
+  Globe,
   Tv, Radio, Zap, LayoutGrid, MessagesSquare, Volume2, Star, Smartphone,
   Languages, ShieldCheck, Search, Youtube, RefreshCw,
   CodeXml, RadioTower, Database, Gauge,
@@ -13,19 +13,11 @@ import {
   ArrowUpRight, ArrowRight, Copyright, Megaphone,
   type LucideIcon,
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
 import { useUIStore } from '../store/useUIStore';
+import { StaticPageHeader } from './StaticPageHeader';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
-
-interface AboutPageProps {
-  theme: 'light' | 'dark';
-  onThemeToggle: () => void;
-  onBack: () => void;
-  onNavigateToPrivacy?: () => void;
-}
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -34,19 +26,11 @@ const DISCORD_URL = 'https://discord.gg/47kauArepY';
 const COFFEE_URL = 'https://buymeacoffee.com/hsiung';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
-export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }: AboutPageProps) {
-  const { t, i18n } = useTranslation(['about', 'common']);
+export function AboutPage() {
+  const { t } = useTranslation(['about', 'common']);
   const tx = t as unknown as TFn;
-  const locale = i18n.language;
   const openModal = useUIStore((s) => s.openModal);
-
-  const languages = [
-    { value: 'zh-TW' as const, label: tx('common:chineseTraditional') },
-    { value: 'zh-CN' as const, label: tx('common:chineseSimplified') },
-    { value: 'en' as const, label: tx('common:english') },
-    { value: 'ja' as const, label: tx('common:japanese') },
-    { value: 'ko' as const, label: tx('common:korean') },
-  ];
+  const setPage = useUIStore((s) => s.setPage);
 
   // spotlight 三卡 — 沿用既有 feature1 / feature10 / feature12 多語系 key。
   const spotlight: { icon: LucideIcon; hue: string; title: string; desc: string }[] = [
@@ -96,7 +80,8 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
   return (
     <div className="ab-page">
       <style>{`
-        .ab-page { position: relative; min-height: 100vh; overflow: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+        /* overflow: clip(非 hidden):裁切 BlurOrb 同時不建立 scroll container,sticky header 才會生效 */
+        .ab-page { position: relative; min-height: 100vh; overflow: clip; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
         .ab-wrap { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 0 24px; }
 
         .ab-hero { padding-top: 132px; padding-bottom: 24px; text-align: center; }
@@ -175,47 +160,8 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         @media (max-width: 560px) { .ab-hero-title { font-size: 40px; } }
       `}</style>
 
-      {/* Header Navigation(保留 next 既有,token 化) */}
-      <div className="relative z-10 border-b border-border bg-card/60 px-6 py-4 backdrop-blur">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="text-muted-foreground hover:text-foreground hover:bg-transparent"
-          >
-            <ArrowLeft className="size-4 mr-2" />
-            {tx('about:backToHome')}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <Select value={locale} onValueChange={(value: string) => i18n.changeLanguage(value)}>
-              <SelectTrigger className="min-w-[140px] bg-card border-border text-foreground">
-                <Globe className="size-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {languages.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                onThemeToggle();
-                logEvent('AboutPage', 'toggle_theme', theme === 'dark' ? 'light' : 'dark');
-              }}
-              className="text-muted-foreground hover:text-foreground hover:bg-transparent"
-            >
-              {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* 頂部返回列 — 三靜態頁共用 header */}
+      <StaticPageHeader title={tx('about:title')} analyticsCategory="AboutPage" />
 
       <BlurOrb top={-160} left="50%" w={760} h={460} color="oklch(0.63 0.23 304)" opacity={0.16} />
       <BlurOrb top={520} right={-160} w={520} h={420} color="#3b82f6" opacity={0.07} />
@@ -439,15 +385,13 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
               <p className="ab-privacy-desc">
                 {tx('about:localFirstDesc', { defaultValue: '我們重視你的隱私權。你的設定與收藏資料都儲存在你的瀏覽器本地（LocalStorage 與 IndexedDB），我們不會收集能識別你個人的資料。唯一會回傳的是被加入的 YouTube 頻道 ID —— 以匿名、聚合的方式統計熱門頻道，不綁定任何使用者或裝置。' })}
               </p>
-              {onNavigateToPrivacy && (
-                <button
-                  className="ab-privacy-link"
-                  onClick={onNavigateToPrivacy}
-                >
-                  {tx('about:privacyLinkText', { defaultValue: '詳細的隱私權政策請參閱：隱私權政策' })}
-                  <ArrowRight size={15} />
-                </button>
-              )}
+              <button
+                className="ab-privacy-link"
+                onClick={() => setPage('privacy')}
+              >
+                {tx('about:privacyLinkText', { defaultValue: '詳細的隱私權政策請參閱：隱私權政策' })}
+                <ArrowRight size={15} />
+              </button>
             </div>
           </div>
         </section>
@@ -455,14 +399,12 @@ export function AboutPage({ theme, onThemeToggle, onBack, onNavigateToPrivacy }:
         {/* ---------- Footer ---------- */}
         <footer className="ab-footer">
           <div className="ab-footer-links">
-            <button className="ab-foot-link" onClick={onBack}>
+            <button className="ab-foot-link" onClick={() => setPage('home')}>
               {tx('about:home')}
             </button>
-            {onNavigateToPrivacy && (
-              <button className="ab-foot-link" onClick={onNavigateToPrivacy}>
-                {tx('about:privacyPolicy')}
-              </button>
-            )}
+            <button className="ab-foot-link" onClick={() => setPage('privacy')}>
+              {tx('about:privacyPolicy')}
+            </button>
             <button
               type="button"
               className="ab-foot-link"
