@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
@@ -83,8 +83,9 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
         }
     };
 
-    const handleMfaSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleMfaSubmit = async (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (loading || code.length !== 6) return; // 防重複送出 / 不足 6 碼
         setError('');
         setLoading(true);
 
@@ -97,16 +98,28 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
 
             if (verifyError) {
                 setError('驗證碼錯誤或已過期,請重新輸入');
+                setCode(''); // 清空以便重打新碼後再次自動驗證(TOTP 每 30s 換碼)
                 return;
             }
 
             onSuccess();
         } catch {
             setError('驗證時發生錯誤，請稍後再試');
+            setCode('');
         } finally {
             setLoading(false);
         }
     };
+
+    // 輸入滿 6 碼即自動送出驗證(免按鈕)。effect 僅在 code/step 變動時觸發:
+    // 5→6 觸發一次;驗證失敗會清空 code(length 0 不觸發),重打到 6 碼才再次觸發 → 不會無限迴圈。
+    useEffect(() => {
+        if (step === 'mfa' && code.length === 6 && !loading) {
+            handleMfaSubmit();
+        }
+        // handleMfaSubmit 依當下 render 的 code/factorId/challengeId 閉包,毋須列入 deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [code, step]);
 
     const handleBackToPassword = async () => {
         // 退回密碼步驟前登出 aal1 session,避免殘留半登入狀態
