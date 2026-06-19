@@ -17,10 +17,10 @@ import { BlurOrb, IconChip } from './ui/ds-primitives';
 const MODHEADER_URL = 'https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj';
 const PROFILE_DOWNLOAD_PATH = '/docs/brave-fix/twitch.json';
 const STEP_IMAGES = [
-    '/docs/brave-fix/step0.png',
-    '/docs/brave-fix/step1.png',
-    '/docs/brave-fix/step2.png',
-    '/docs/brave-fix/step3.png',
+    '/docs/brave-fix/step0.webp',
+    '/docs/brave-fix/step1.webp',
+    '/docs/brave-fix/step2.webp',
+    '/docs/brave-fix/step3.webp',
 ];
 const DISCORD_URL = 'https://discord.gg/47kauArepY';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
