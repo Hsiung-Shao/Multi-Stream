@@ -52,13 +52,19 @@ export function AdminPage() {
 
             setAuthState(authed ? 'authenticated' : 'login');
 
-            const { data: { subscription } } = client.auth.onAuthStateChange(async (_event, session) => {
+            const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
                 if (!session) {
                     setAuthState('login');
                     return;
                 }
-                const ok = await isFullyAuthenticated(client);
-                if (!cancelled) setAuthState(ok ? 'authenticated' : 'login');
+                // Supabase 已知死鎖:在 onAuthStateChange callback 內直接呼叫會取得 auth lock 的方法
+                // (getSession / getAuthenticatorAssuranceLevel)會與 callback 本身持有的 lock 互鎖,
+                // 造成 mfa.verify() 後 promise 永不 resolve、登入畫面卡在「驗證中」。
+                // 解法:用 setTimeout 把 AAL 檢查推遲到 callback 結束、lock 釋放之後再執行。
+                setTimeout(async () => {
+                    const ok = await isFullyAuthenticated(client);
+                    if (!cancelled) setAuthState(ok ? 'authenticated' : 'login');
+                }, 0);
             });
 
             return () => subscription.unsubscribe();
