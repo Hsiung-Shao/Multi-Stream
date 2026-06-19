@@ -49,10 +49,11 @@
   <meta name="twitter:image" content="https://multistreaming.org/icon.png" />
   <meta name="twitter:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具" />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="/icon.png" fetchpriority="high">
-  <link rel="shortcut icon" type="image/png" href="/icon.png">
-  <link rel="apple-touch-icon" href="/icon.png">
+  <!-- Favicon：用輕量 192x192 logo.png（5KB，public/ 不經 hash），避免 1024x1024 icon.png(293KB)
+       被當 favicon 以 high priority 載入而拖累首屏。大圖 icon.png 仍保留供 og:image / JSON-LD 社群分享使用。 -->
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="shortcut icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
 
   <!-- Alternate Languages (Hreflang) -->
   <link rel="alternate" hreflang="zh-TW" href="https://multistreaming.org/" />
@@ -147,9 +148,8 @@
   <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
   <link rel="dns-prefetch" href="https://player.twitch.tv">
 
-  <!-- Google AdSense 腳本（用於審核檢測） -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8415424787944153"
-    crossorigin="anonymous"></script>
+  <!-- Google AdSense 腳本：改為「使用者接受 Cookie 後」才由 src/utils/adsense.ts 動態注入 -->
+  <!-- （與 GA4/Umami 同意機制一致；未同意時不載入 → 不設第三方 cookie、不拖累首屏、符合 GDPR） -->
 
   <!-- GA4 boot stub：dataLayer 與 gtag 預先建立，正式初始化由 src/utils/analytics.ts 在環境檢查後接管 -->
   <script>

@@ -15,23 +15,16 @@ import { useCanvasRetention } from './hooks/useCanvasRetention';
 import { useEffectiveTheme } from './hooks/useEffectiveTheme';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
-import { Toaster } from './components/ui/sonner';
-import { PerformanceOverlay } from './components/Navigation/PerformanceOverlay';
-import { GlobalLiveStatusChecker } from './features/favorites/components/GlobalLiveStatusChecker';
 import { useHotkeys } from './hooks/useHotkeys';
-import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
-import { CookieConsent } from './components/CookieConsent';
-import { AnnouncementsProvider } from './features/announcements/AnnouncementsProvider';
-import { FeedbackFAB } from './components/Navigation/FeedbackFAB';
-import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
 import { RestoreSessionPrompt } from './components/Dialogs/RestoreSessionPrompt';
 import type { StreamData } from './utils/streamUtils';
 import type { CanvasItem } from './types/canvas';
 import { MobileApp } from './components/Mobile/MobileApp';
 
 // Pages
-import { HomePage } from './components/Pages/HomePage';
+// HomePage（'tool' 主控台）較重且非 landing 首屏需要，改 lazy 以縮小初始 chunk。
+const HomePage = lazy(() => import('./components/Pages/HomePage').then(module => ({ 'default': module.HomePage })));
 import { LandingPage } from './components/Pages/LandingPage';
 const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
 // Tutorial modal removed, replaced by page
@@ -46,6 +39,8 @@ const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage'
 const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
+// 全站常駐但非首屏所需的全域元件，集中為單一 lazy chunk（見 DeferredGlobals.tsx）
+const DeferredGlobals = lazy(() => import('./components/DeferredGlobals'));
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -156,7 +151,11 @@ export default function App() {
       case 'home':
         return <LandingPage />;
       case 'tool':
-        return <HomePage />;
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <HomePage />
+          </Suspense>
+        );
       case 'canvas':
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
@@ -232,10 +231,6 @@ export default function App() {
       {/* Main Content */}
       {renderPage()}
 
-      {/* Global Modals */}
-      <HotkeyHelpDialog />
-
-
       {/* Tutorial modal removed */}
 
       {modals.favorites && (
@@ -273,20 +268,17 @@ export default function App() {
         onDontRemind={handleRiskDontRemind}
       />
 
-      <PerformanceOverlay />
-      <GlobalLiveStatusChecker />
-      <Toaster />
-      <CookieConsent />
-      <AnnouncementsProvider />
-      <BraveDetectDialog />
       <RestoreSessionPrompt
         open={!!pendingRestore}
         streamCount={pendingRestore?.streams.length ?? 0}
         onRestore={handleRestoreSession}
         onDiscard={handleDiscardSession}
       />
-      {/* 全站浮動意見回饋按鈕 — admin / canvas 沉浸頁略過避免擋畫面 */}
-      {currentPage !== 'admin' && currentPage !== 'canvas' && <FeedbackFAB />}
+
+      {/* 常駐但非首屏所需的全域元件，延後載入以縮小首屏 entry（見 DeferredGlobals.tsx） */}
+      <Suspense fallback={null}>
+        <DeferredGlobals />
+      </Suspense>
     </>
   );
 }

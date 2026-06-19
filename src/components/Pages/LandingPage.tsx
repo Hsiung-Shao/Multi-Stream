@@ -39,7 +39,7 @@ export function LandingPage() {
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <img src="/icon.png" alt="MultiStream Hub" width="40" height="40" className="w-10 h-10 rounded-lg shadow-lg" />
+                        <img src="/logo.png" alt="MultiStream Hub" width="40" height="40" className="w-10 h-10 rounded-lg shadow-lg" />
                         <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                             MultiStream Hub
                         </span>
@@ -58,6 +58,7 @@ export function LandingPage() {
                             href="https://github.com/Hsiung-Shao"
                             target="_blank"
                             rel="noopener noreferrer"
+                            aria-label="GitHub"
                             className="text-muted-foreground hover:text-foreground transition-colors p-2"
                         >
                             <Github className="w-5 h-5" />
@@ -66,6 +67,7 @@ export function LandingPage() {
                             variant="ghost"
                             size="icon"
                             onClick={toggleTheme}
+                            aria-label={t('landing.aria.toggle_theme', '切換深色／淺色模式')}
                             className="text-muted-foreground hover:text-foreground transition-colors"
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -389,7 +391,7 @@ export function LandingPage() {
                     </div>
                     <div className="flex flex-col gap-2">
                         <p>{t('landing.footer.copyright')}</p>
-                        <p className="text-xs opacity-50 max-w-2xl mx-auto">
+                        <p className="text-xs max-w-2xl mx-auto">
                             {t('landing.footer.disclaimer')}
                         </p>
                     </div>
@@ -397,7 +399,7 @@ export function LandingPage() {
                     {/* Language Switcher */}
                     <div className="flex justify-center mt-4">
                         <Select value={i18n.language} onValueChange={(value: string) => i18n.changeLanguage(value)}>
-                            <SelectTrigger className="w-[140px] h-9 bg-background/50 border-white/10">
+                            <SelectTrigger aria-label={t('landing.aria.language', '選擇語言')} className="w-[140px] h-9 bg-background/50 border-white/10">
                                 <div className="flex items-center gap-2">
                                     <Globe className="w-4 h-4" />
                                     <SelectValue />
@@ -428,7 +430,8 @@ function FeatureCard({ icon, title, desc, delay }: { icon: React.ReactNode, titl
             <div className="mb-4 p-3 rounded-lg bg-secondary/50 inline-block group-hover:scale-110 transition-transform duration-300">
                 {icon}
             </div>
-            <h3 className="text-xl font-bold mb-2 text-foreground">{title}</h3>
+            {/* h2：features 是 hero(h1)後的第一個內容區段，用 h2 避免 heading 跳級（a11y heading-order） */}
+            <h2 className="text-xl font-bold mb-2 text-foreground">{title}</h2>
             <p className="text-muted-foreground leading-relaxed">{desc}</p>
         </div>
     );

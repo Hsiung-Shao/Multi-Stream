@@ -100,6 +100,18 @@ export default defineConfig({
       },
     },
   },
+  // vite preview（serve production build）也需要把 /api 代理到 wrangler，
+  // 才能在 localhost:3000 上以正式建置模擬線上現況（含後端 Functions）。
+  preview: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8788',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

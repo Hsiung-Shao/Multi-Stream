@@ -47,7 +47,9 @@
   --card-foreground: oklch(0.985 0.002 247.839);
   --popover: oklch(0.21 0.034 264.665);
   --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.63 0.23 304);
+  /* L 由 0.63 調暗為 0.57：白字按鈕(bg-primary + primary-foreground)達 WCAG AA 4.5:1
+     （原 3.67:1 不足）。仍清楚是品牌紫，且 text-primary 多用於圖示(門檻 3:1)不受影響。 */
+  --primary: oklch(0.57 0.23 304);
   --primary-foreground: oklch(0.98 0.01 308);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);

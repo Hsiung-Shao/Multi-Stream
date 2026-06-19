@@ -8,8 +8,9 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cookie, X, Check, Shield } from 'lucide-react';
-import { hasConsentRecord, setTrackingConsent } from '../utils/analytics';
+import { hasConsentRecord, isTrackingEnabled, setTrackingConsent } from '../utils/analytics';
 import { initUmami } from '../utils/umami';
+import { loadAdSense } from '../utils/adsense';
 
 interface CookieConsentProps {
     onConsentChange?: (accepted: boolean) => void;
@@ -22,15 +23,19 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
 
     useEffect(() => {
         // 檢查是否已有同意記錄
-        const hasRecord = hasConsentRecord();
-        if (!hasRecord) {
-            // 延遲顯示橫幅，避免干擾首次載入
-            const timer = setTimeout(() => {
-                setShowBanner(true);
-                setIsAnimating(true);
-            }, 1500);
-            return () => clearTimeout(timer);
+        if (hasConsentRecord()) {
+            // 已決定過：若先前接受過，補注入 AdSense（橫幅不會再出現）
+            if (isTrackingEnabled()) {
+                loadAdSense();
+            }
+            return;
         }
+        // 尚未決定：延遲顯示橫幅，避免干擾首次載入
+        const timer = setTimeout(() => {
+            setShowBanner(true);
+            setIsAnimating(true);
+        }, 1500);
+        return () => clearTimeout(timer);
     }, []);
 
     const handleAccept = () => {
@@ -39,6 +44,7 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
             setShowBanner(false);
             setTrackingConsent(true);
             initUmami();
+            loadAdSense();
             onConsentChange?.(true);
         }, 300);
     };
@@ -107,8 +113,8 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
 
                 {/* 隱私權圖示 */}
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700/50">
-                    <Shield className="w-3 h-3 text-gray-500" />
-                    <span className="text-xs text-gray-500">
+                    <Shield className="w-3 h-3 text-gray-400" />
+                    <span className="text-xs text-gray-400">
                         {t('cookie.privacyNote', '您的隱私對我們很重要。您可以隨時在設定中變更您的選擇。')}
                     </span>
                 </div>

@@ -19,23 +19,8 @@ import zhTWStream from './locales/zh-TW/stream';
 import zhTWFAQ from './locales/zh-TW/faq';
 import zhTWAnnouncements from './locales/zh-TW/announcements';
 
-// Import other locales
-import zhCNCommon from './locales/zh-CN/common';
-import zhCNNavbar from './locales/zh-CN/navbar';
-import zhCNControlPanel from './locales/zh-CN/controlPanel';
-import zhCNWelcome from './locales/zh-CN/welcome';
-import zhCNAbout from './locales/zh-CN/about';
-import zhCNTutorial from './locales/zh-CN/tutorial';
-import zhCNVersionHistory from './locales/zh-CN/versionHistory';
-import zhCNFavorites from './locales/zh-CN/favorites';
-import zhCNFeedback from './locales/zh-CN/feedback';
-import zhCNPrivacy from './locales/zh-CN/privacy';
-import zhCNTags from './locales/zh-CN/tags';
-import zhCNYoutubeRisk from './locales/zh-CN/youtubeRisk';
-import zhCNStream from './locales/zh-CN/stream';
-import zhCNFAQ from './locales/zh-CN/faq';
-import zhCNAnnouncements from './locales/zh-CN/announcements';
-
+// 其餘語言（zh-CN / ja / ko）改為 lazy load（見檔案下方 lazyLoaders / ensureLanguageLoaded），
+// 只有 zh-TW（預設/主要語言）與 en（fallback + 國際 + 多數偵測情境）會打包進首屏 entry。
 import enCommon from './locales/en/common';
 import enNavbar from './locales/en/navbar';
 import enControlPanel from './locales/en/controlPanel';
@@ -51,38 +36,6 @@ import enYoutubeRisk from './locales/en/youtubeRisk';
 import enStream from './locales/en/stream';
 import enFAQ from './locales/en/faq';
 import enAnnouncements from './locales/en/announcements';
-
-import jaCommon from './locales/ja/common';
-import jaNavbar from './locales/ja/navbar';
-import jaControlPanel from './locales/ja/controlPanel';
-import jaWelcome from './locales/ja/welcome';
-import jaAbout from './locales/ja/about';
-import jaTutorial from './locales/ja/tutorial';
-import jaVersionHistory from './locales/ja/versionHistory';
-import jaFavorites from './locales/ja/favorites';
-import jaFeedback from './locales/ja/feedback';
-import jaPrivacy from './locales/ja/privacy';
-import jaTags from './locales/ja/tags';
-import jaYoutubeRisk from './locales/ja/youtubeRisk';
-import jaStream from './locales/ja/stream';
-import jaFAQ from './locales/ja/faq';
-import jaAnnouncements from './locales/ja/announcements';
-
-import koCommon from './locales/ko/common';
-import koNavbar from './locales/ko/navbar';
-import koControlPanel from './locales/ko/controlPanel';
-import koWelcome from './locales/ko/welcome';
-import koAbout from './locales/ko/about';
-import koTutorial from './locales/ko/tutorial';
-import koVersionHistory from './locales/ko/versionHistory';
-import koFavorites from './locales/ko/favorites';
-import koFeedback from './locales/ko/feedback';
-import koPrivacy from './locales/ko/privacy';
-import koTags from './locales/ko/tags';
-import koYoutubeRisk from './locales/ko/youtubeRisk';
-import koStream from './locales/ko/stream';
-import koFAQ from './locales/ko/faq';
-import koAnnouncements from './locales/ko/announcements';
 
 export const defaultNS = 'common';
 
@@ -104,23 +57,6 @@ export const resources = {
         faq: zhTWFAQ,
         announcements: zhTWAnnouncements,
     },
-    'zh-CN': {
-        common: zhCNCommon,
-        navbar: zhCNNavbar,
-        controlPanel: zhCNControlPanel,
-        welcome: zhCNWelcome,
-        about: zhCNAbout,
-        tutorial: zhCNTutorial,
-        versionHistory: zhCNVersionHistory,
-        favorites: zhCNFavorites,
-        feedback: zhCNFeedback,
-        privacy: zhCNPrivacy,
-        tags: zhCNTags,
-        youtubeRisk: zhCNYoutubeRisk,
-        stream: zhCNStream,
-        faq: zhCNFAQ,
-        announcements: zhCNAnnouncements,
-    },
     en: {
         common: enCommon,
         navbar: enNavbar,
@@ -137,40 +73,6 @@ export const resources = {
         stream: enStream,
         faq: enFAQ,
         announcements: enAnnouncements,
-    },
-    ja: {
-        common: jaCommon,
-        navbar: jaNavbar,
-        controlPanel: jaControlPanel,
-        welcome: jaWelcome,
-        about: jaAbout,
-        tutorial: jaTutorial,
-        versionHistory: jaVersionHistory,
-        favorites: jaFavorites,
-        feedback: jaFeedback,
-        privacy: jaPrivacy,
-        tags: jaTags,
-        youtubeRisk: jaYoutubeRisk,
-        stream: jaStream,
-        faq: jaFAQ,
-        announcements: jaAnnouncements,
-    },
-    ko: {
-        common: koCommon,
-        navbar: koNavbar,
-        controlPanel: koControlPanel,
-        welcome: koWelcome,
-        about: koAbout,
-        tutorial: koTutorial,
-        versionHistory: koVersionHistory,
-        favorites: koFavorites,
-        feedback: koFeedback,
-        privacy: koPrivacy,
-        tags: koTags,
-        youtubeRisk: koYoutubeRisk,
-        stream: koStream,
-        faq: koFAQ,
-        announcements: koAnnouncements,
     },
 } as const;
 
@@ -195,5 +97,57 @@ i18n
             useSuspense: false, // Set to true if you want to use Suspense
         },
     });
+
+// ===== 其餘語言的 lazy load =====
+// zh-TW / en 已打包進首屏 entry；zh-CN / ja / ko 在需要時才動態載入，避免拖累 landing 首屏體積。
+type LocaleBundle = Record<string, Record<string, string>>;
+const lazyLoaders: Record<string, () => Promise<{ default: LocaleBundle }>> = {
+    'zh-CN': () => import('./locales/zh-CN'),
+    ja: () => import('./locales/ja'),
+    ko: () => import('./locales/ko'),
+};
+const loadedLazyLangs = new Set<string>();
+const lazyPromises = new Map<string, Promise<void>>();
+
+// 將偵測到的語言（可能含地區，如 ja-JP）對應到 lazy loader 的 key。
+// 注意：zh 系列必須保留地區（zh-CN / zh-TW 不可化簡為 zh）。
+const resolveLazyKey = (lng?: string): string | null => {
+    if (!lng) return null;
+    if (lazyLoaders[lng]) return lng;
+    const base = lng.split('-')[0];
+    if (base !== 'zh' && lazyLoaders[base]) return base;
+    return null;
+};
+
+/**
+ * 確保指定語言的翻譯資源已載入（zh-TW / en 一律視為已載入）。
+ * 在 main.tsx 首次 render 前 await，可避免 lazy 語言使用者看到 fallback 閃爍。
+ */
+export const ensureLanguageLoaded = (lng?: string): Promise<void> => {
+    const key = resolveLazyKey(lng);
+    if (!key || loadedLazyLangs.has(key)) return Promise.resolve();
+    if (lazyPromises.has(key)) return lazyPromises.get(key)!;
+    const p = lazyLoaders[key]()
+        .then((mod) => {
+            Object.entries(mod.default).forEach(([ns, res]) => {
+                i18n.addResourceBundle(key, ns, res, true, true);
+            });
+            loadedLazyLangs.add(key);
+        })
+        .catch(() => {
+            // 載入失敗時維持 fallback 語言，不中斷應用
+        });
+    lazyPromises.set(key, p);
+    return p;
+};
+
+// 執行期切換語言時，補載資源後再重新觸發 render（首次切到該語言才需要）
+i18n.on('languageChanged', (lng) => {
+    const key = resolveLazyKey(lng);
+    if (!key || loadedLazyLangs.has(key)) return;
+    ensureLanguageLoaded(lng).then(() => {
+        if (i18n.language === lng) i18n.changeLanguage(lng);
+    });
+});
 
 export default i18n;
