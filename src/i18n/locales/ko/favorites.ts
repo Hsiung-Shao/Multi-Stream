@@ -134,6 +134,11 @@ export default {
   theme: '테마',
   language: '언어',
   about: '정보',
+
+  // ExitLag 제휴 프로모션 (사이드바)
+  exitlag_title: '스트리밍 지연 감소',
+  exitlag_subtitle: 'ExitLag 멀티패스 가속',
+
   // Layout Manager
   'layout_manager.delete_confirm': '삭제',
   'layout_manager.apply': '적용',

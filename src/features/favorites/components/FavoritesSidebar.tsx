@@ -1,4 +1,4 @@
-import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch, History as HistoryIcon } from 'lucide-react';
+import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch, History as HistoryIcon, Zap, ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../../../components/ui/badge';
 import {
@@ -9,6 +9,10 @@ import {
 import { useState } from 'react';
 import type { FavoriteCategory as Category, Tag } from '../types';
 import { ScrollArea } from '../../../components/ui/scroll-area';
+import { logEvent } from '../../../utils/analytics';
+
+// ExitLag 聯盟推廣連結(sidebar 底部常駐 promo)
+const EXITLAG_AFFILIATE_URL = 'https://www.exitlag.com/refer/10318098';
 
 interface FavoritesSidebarProps {
     categories: Category[];
@@ -226,6 +230,28 @@ export function FavoritesSidebar({
                         <span className="text-sm">{t('sidebar.version_history')}</span>
                     </div>
                 </div>
+
+                {/* ExitLag 聯盟推廣:常駐 promo(橘色 accent + rel=sponsored + 點擊埋點) */}
+                <a
+                    href={EXITLAG_AFFILIATE_URL}
+                    target="_blank"
+                    rel="sponsored noopener noreferrer"
+                    onClick={() => logEvent('FavoritesSidebar', 'click_affiliate', 'exitlag')}
+                    className="mt-2 flex items-center gap-3 px-3 py-2.5 rounded-lg border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/15 transition-colors"
+                >
+                    <span className="shrink-0 size-8 rounded-lg flex items-center justify-center bg-orange-500/20 text-orange-500">
+                        <Zap className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground truncate">
+                            {t('favorites:exitlag_title', { defaultValue: '降低直播延遲' })}
+                        </span>
+                        <span className="block text-[11px] text-orange-400/90 truncate">
+                            {t('favorites:exitlag_subtitle', { defaultValue: 'ExitLag 多路徑加速' })}
+                        </span>
+                    </span>
+                    <ArrowUpRight className="size-4 text-orange-500 shrink-0" />
+                </a>
             </div>
         </div>
     );

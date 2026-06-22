@@ -147,6 +147,10 @@ export default {
   language: 'Language',
   about: 'About',
 
+  // ExitLag affiliate promo (sidebar)
+  exitlag_title: 'Reduce Stream Lag',
+  exitlag_subtitle: 'ExitLag multi-path boost',
+
   // Dynamic Island
   favorites_menu: 'Favorites',
   online_only: 'Online Only',

@@ -134,6 +134,11 @@ export default {
   theme: '主题模式',
   language: '显示语言',
   about: '关于',
+
+  // ExitLag 联盟推广(侧边栏)
+  exitlag_title: '降低直播延迟',
+  exitlag_subtitle: 'ExitLag 多路径加速',
+
   // Layout Manager
   'layout_manager.delete_confirm': '删除',
   'layout_manager.apply': '应用',

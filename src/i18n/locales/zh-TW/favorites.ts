@@ -151,6 +151,10 @@ export default {
   language: '顯示語言',
   about: '關於',
 
+  // ExitLag 聯盟推廣(sidebar 底部 promo)
+  exitlag_title: '降低直播延遲',
+  exitlag_subtitle: 'ExitLag 多路徑加速',
+
   // Dynamic Island
   favorites_menu: '收藏直播',
   online_only: '僅顯示直播中',

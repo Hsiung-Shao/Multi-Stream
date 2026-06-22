@@ -134,6 +134,11 @@ export default {
   theme: 'テーマ',
   language: '表示言語',
   about: 'アプリについて',
+
+  // ExitLag アフィリエイト(サイドバー)
+  exitlag_title: '配信の遅延を軽減',
+  exitlag_subtitle: 'ExitLag マルチパス高速化',
+
   // Layout Manager
   'layout_manager.delete_confirm': '削除',
   'layout_manager.apply': '適用',
