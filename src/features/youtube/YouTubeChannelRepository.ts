@@ -132,26 +132,36 @@ export async function upsertChannel(channel: YouTubeChannelData): Promise<boolea
 
 const CHANNEL_ID_REGEX = /^UC[A-Za-z0-9_-]{22}$/;
 
+// 本 session 內已確認蒐集(DB 命中或寫入成功）的 channelId。
+// 直播檢查會每 5 分鐘對所有 YT 收藏重跑，靠這個 set 短路掉重複的 getCachedChannel 往返。
+const collectedChannelIds = new Set<string>();
+
 /**
  * 蒐集用:把 channel_id ↔ channel_title 寫進離線資料庫，但「寫入前先查 DB」避免重複 POST。
  *
  * 給「新增收藏」「直播狀態查詢」兩條蒐集路徑共用。fire-and-forget：
  * - channelId 不是合法 YT 格式 / 沒有 title → 直接略過
+ * - 本 session 已蒐集過 → 直接略過（不再查 DB）
  * - getCachedChannel 命中(且未過期）→ 不重複寫入
- * - 任何錯誤都吞掉，絕不阻塞呼叫端主流程
+ * - 任何錯誤都吞掉，絕不阻塞呼叫端主流程（失敗不記入 set，保留下次重試）
  */
 export async function cacheChannelIfAbsent(
   channelId: string | null | undefined,
   channelTitle: string | null | undefined,
 ): Promise<void> {
   if (!channelId || !CHANNEL_ID_REGEX.test(channelId)) return;
+  if (collectedChannelIds.has(channelId)) return;
   const title = (channelTitle ?? '').trim();
   if (!title) return;
 
   try {
     // 查 DB（L1 memoryCache → L2 Supabase；>24h stale 會回 null 而觸發刷新）
-    if (await getCachedChannel(channelId)) return;
+    if (await getCachedChannel(channelId)) {
+      collectedChannelIds.add(channelId);
+      return;
+    }
     await upsertChannel({ channel_id: channelId, channel_title: title });
+    collectedChannelIds.add(channelId);
   } catch {
     /* fire-and-forget：蒐集失敗不影響呼叫端 */
   }

@@ -290,8 +290,6 @@ function decodeHtmlEntities(s) {
     if (!s) return '';
     return s
         .replace(/&quot;/g, '"')
-        .replace(/&#0?39;/g, "'")
-        .replace(/&#x27;/gi, "'")
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&#(\d+);/g, (_, n) => safeFromCodePoint(parseInt(n, 10)))

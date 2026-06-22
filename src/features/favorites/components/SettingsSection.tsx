@@ -91,6 +91,21 @@ export function SettingsSection() {
     // 社群外連按鈕共用樣式(對齊現行 token,非舊版硬編 gray)
     const linkBtnClass = 'flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background hover:bg-foreground/[0.04] transition-colors text-sm font-medium text-foreground';
 
+    // 關於卡的社群外連(event 為 GA label,沿用既有值避免事件斷層)
+    const socialLinks: {
+        key: string;
+        url: string;
+        Icon: React.ComponentType<{ className?: string }>;
+        label: string;
+        event: string;
+        iconClass: string;
+    }[] = [
+        { key: 'github', url: GITHUB_URL, Icon: Github, label: 'GitHub', event: 'github', iconClass: 'size-4' },
+        { key: 'discord', url: DISCORD_URL, Icon: DiscordIcon, label: 'Discord', event: 'discord', iconClass: 'size-4' },
+        { key: 'x', url: X_URL, Icon: XIcon, label: 'X (Twitter)', event: 'twitter', iconClass: 'size-4' },
+        { key: 'coffee', url: COFFEE_URL, Icon: Coffee, label: t('favorites:settings.sponsor'), event: 'coffee', iconClass: 'size-4 text-amber-500' },
+    ];
+
     const themeOptions = [
         { id: 'light' as const, Icon: Sun, label: t('favorites:theme_light') },
         { id: 'dark' as const, Icon: Moon, label: t('favorites:theme_dark') },
@@ -181,46 +196,19 @@ export function SettingsSection() {
                     {t('favorites:settings.about_desc')}
                 </p>
                 <div className="flex flex-wrap gap-3">
-                    <a
-                        href={GITHUB_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => logEvent('FavoritesSettings', 'click_social', 'github')}
-                        className={linkBtnClass}
-                    >
-                        <Github className="size-4" />
-                        <span>GitHub</span>
-                    </a>
-                    <a
-                        href={DISCORD_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => logEvent('FavoritesSettings', 'click_social', 'discord')}
-                        className={linkBtnClass}
-                    >
-                        <DiscordIcon className="size-4" />
-                        <span>Discord</span>
-                    </a>
-                    <a
-                        href={X_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => logEvent('FavoritesSettings', 'click_social', 'twitter')}
-                        className={linkBtnClass}
-                    >
-                        <XIcon className="size-4" />
-                        <span>X (Twitter)</span>
-                    </a>
-                    <a
-                        href={COFFEE_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => logEvent('FavoritesSettings', 'click_social', 'coffee')}
-                        className={linkBtnClass}
-                    >
-                        <Coffee className="size-4 text-amber-500" />
-                        <span>{t('favorites:settings.sponsor')}</span>
-                    </a>
+                    {socialLinks.map(({ key, url, Icon, label, event, iconClass }) => (
+                        <a
+                            key={key}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => logEvent('FavoritesSettings', 'click_social', event)}
+                            className={linkBtnClass}
+                        >
+                            <Icon className={iconClass} />
+                            <span>{label}</span>
+                        </a>
+                    ))}
                     <button type="button" onClick={handleFeedbackClick} className={linkBtnClass}>
                         <MessageSquare className="size-4" />
                         <span>{t('favorites:settings.feedback')}</span>
