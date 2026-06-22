@@ -136,6 +136,7 @@ export default {
   // Misc
   loading: 'Loading...',
   confirmDelete: 'Are you sure you want to delete?',
+  confirmDeleteCategoryDesc: 'After deleting a category, its favorites will become uncategorized.',
   confirmDeleteCount: 'Are you sure you want to delete {{count}} items?',
   addCategory: 'Add List',
   categoryName: 'List Name',
