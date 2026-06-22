@@ -87,7 +87,7 @@ export function FavoriteListItem({
 
             {/* Stream Info */}
             <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate text-foreground">
+                <div className="font-semibold truncate text-foreground min-w-0">
                     {favorite.name}
                 </div>
                 <div className="flex items-center gap-1.5 text-xs mt-1 flex-wrap">
@@ -113,7 +113,7 @@ export function FavoriteListItem({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                 <Button
                     size="icon"
                     variant="ghost"

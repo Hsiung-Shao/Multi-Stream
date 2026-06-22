@@ -150,13 +150,13 @@ export class UserSegmentationManager {
         safeSetItem(STORAGE_KEYS.CURRENT_SEGMENT, JSON.stringify(segment));
 
         // 發送到 GA4 (設定 User Properties)
+        // 注意:setUserProperties 內部已做 gtag('set', 'user_properties', ...),
+        // 此處直接傳維度物件,不可再包一層 user_properties(否則雙層巢狀、GA4 收不到)。
         setUserProperties({
-            user_properties: {
-                visitor_type: segment.visitor_type,
-                visit_frequency: segment.visit_frequency,
-                feature_depth: segment.feature_depth,
-                session_length: segment.session_length,
-            }
+            visitor_type: segment.visitor_type,
+            visit_frequency: segment.visit_frequency,
+            feature_depth: segment.feature_depth,
+            session_length: segment.session_length,
         });
 
         return segment;

@@ -10,6 +10,7 @@ import { useThemeSystem } from './hooks/useThemeSystem';
 import { useRouter } from './hooks/useRouter';
 import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView } from './utils/analytics';
+import { userSegmentationManager } from './utils/userSegmentation';
 import { initUmami } from './utils/umami';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
 import { useEffectiveTheme } from './hooks/useEffectiveTheme';
@@ -23,8 +24,6 @@ import type { CanvasItem } from './types/canvas';
 import { MobileApp } from './components/Mobile/MobileApp';
 
 // Pages
-// HomePage（'tool' 主控台）較重且非 landing 首屏需要，改 lazy 以縮小初始 chunk。
-const HomePage = lazy(() => import('./components/Pages/HomePage').then(module => ({ 'default': module.HomePage })));
 import { LandingPage } from './components/Pages/LandingPage';
 const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
 // Tutorial modal removed, replaced by page
@@ -64,9 +63,13 @@ export default function App() {
 
   // 初始化 GA4
   useEffect(() => {
-    initGA();
+    // initGA 為 async(需動態載入 gtag.js):必須等初始化完成(進 live/mock)
+    // 才送 page_view 與分群 user_properties,否則 mode 仍 uninitialized 會被丟棄。
+    initGA().then(() => {
+      userSegmentationManager.init();
+      logPageView();
+    });
     initUmami();
-    logPageView();
 
     // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
     // 過期(或無串流)則維持「清空畫布」的既有行為。
@@ -90,7 +93,6 @@ export default function App() {
       if (returnPath) {
         const pathToPage: Record<string, PageType> = {
           '/canvas': 'canvas',
-          '/tools': 'tool',
           '/about': 'about',
           '/instructions': 'instructions',
           '/faq': 'faq',
@@ -150,12 +152,6 @@ export default function App() {
     switch (currentPage) {
       case 'home':
         return <LandingPage />;
-      case 'tool':
-        return (
-          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
-            <HomePage />
-          </Suspense>
-        );
       case 'canvas':
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
@@ -225,9 +221,6 @@ export default function App() {
 
   return (
     <>
-      {/* Global SEO Default? */}
-      {/* <SEO /> is inside pages now? HomePage has it. */}
-
       {/* Main Content */}
       {renderPage()}
 

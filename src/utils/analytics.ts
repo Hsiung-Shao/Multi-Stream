@@ -19,7 +19,6 @@
  */
 
 const GA_MEASUREMENT_ID = 'G-Q2LXVMDD46';
-const USER_ID_SALT = 'multistream_hub_analytics';
 const CONSENT_KEY = 'cookie_consent';
 const INTERNAL_USER_KEY = 'ms_internal_user';
 const SESSION_WATCH_SECONDS_KEY = 'ms_session_watch_seconds';
@@ -51,7 +50,11 @@ export const setTrackingConsent = (accepted: boolean): void => {
     try {
         localStorage.setItem(CONSENT_KEY, accepted ? 'accepted' : 'rejected');
         if (accepted) {
-            initGA();
+            // 從「先前拒絕」切回接受時,mount 階段 initGA 已把 mode 設為 disabled,
+            // 需重置回 uninitialized 才能重新初始化進入 live;並補送當前頁 page_view,
+            // 否則使用者得 reload 才會開始有資料。
+            if (mode === 'disabled') mode = 'uninitialized';
+            initGA().then(() => logPageView());
         } else {
             disableTracking();
         }
@@ -199,50 +202,6 @@ export const logPageView = (): void => {
         page_path: window.location.pathname + window.location.search,
         page_title: document.title,
     });
-};
-
-// ===== User-ID（SHA-256 hash + salt） =====
-
-/**
- * SHA-256 hash 工具，輸出 lowercase hex string
- */
-async function sha256(input: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(input);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-}
-
-/**
- * Twitch OAuth 登入成功後呼叫。將 Twitch User ID 透過 SHA-256 + salt
- * hash 後設為 GA4 user_id，供跨裝置識別。
- *
- * @param twitchUserId Twitch 平台回傳的 user id（不能是 username/email）
- */
-export const setUserIdFromTwitchId = async (twitchUserId: string): Promise<void> => {
-    if (!twitchUserId) return;
-    const hashed = await sha256(`${twitchUserId}${USER_ID_SALT}`);
-    if (mode === 'mock' || (mode === 'uninitialized' && isInternalEnvironment())) {
-        console.info('[GA4 Mock]', 'config user_id', hashed);
-        return;
-    }
-    if (mode !== 'live') return;
-    window.gtag('config', GA_MEASUREMENT_ID, { user_id: hashed });
-    sendEvent('login', { method: 'Twitch' });
-};
-
-/**
- * 登出時清除 user_id（傳 null 給 GA4）
- */
-export const clearUserId = (): void => {
-    if (mode === 'mock') {
-        console.info('[GA4 Mock]', 'config user_id', null);
-        return;
-    }
-    if (mode !== 'live') return;
-    window.gtag('config', GA_MEASUREMENT_ID, { user_id: null });
 };
 
 // ===== 結構化事件 helper（spec 要求） =====

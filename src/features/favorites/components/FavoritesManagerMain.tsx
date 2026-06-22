@@ -165,16 +165,24 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
         }
     };
 
+    // 載入成功後切到 canvas 觀看頁並關閉收藏管理 modal,否則使用者被全螢幕 modal 擋住、看不到剛載入的串流
+    const goToCanvasAndClose = () => {
+        useUIStore.getState().setPage('canvas');
+        onClose();
+    };
+
     const handleLoad = async (id: string) => {
         const fav = favorites.find(f => f.id === id);
         if (fav) {
-            await favoritesLoader.load(fav);
+            const result = await favoritesLoader.load(fav);
+            if (result.success) goToCanvasAndClose();
         }
     };
 
     const handleBatchLoad = async () => {
         const selected = favorites.filter(f => selectedIds.has(f.id));
-        await favoritesLoader.loadMultiple(selected);
+        const result = await favoritesLoader.loadMultiple(selected);
+        if (result.successCount > 0) goToCanvasAndClose();
     };
 
     const handleAddOrEditSubmit = (data: AddFavoriteFormValues) => {
@@ -198,8 +206,12 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
             // 「新增後立即載入畫面」:新增成功後把該頻道載入到 canvas(沿用既有 favoritesLoader)
             if (data.autoLoad) {
                 addPromise
-                    .then(result => {
-                        if (result?.success && result.item) favoritesLoader.load(result.item);
+                    .then(async result => {
+                        if (result?.success && result.item) {
+                            const loaded = await favoritesLoader.load(result.item);
+                            // 與「載入」按鈕一致:載入成功才切 canvas + 關 modal
+                            if (loaded.success) goToCanvasAndClose();
+                        }
                     })
                     .catch(() => { /* 載入失敗忽略,收藏本身已新增 */ });
             }
@@ -368,7 +380,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                 )}
 
                                 <div className="flex-1 min-h-0 mt-4 rounded-xl border border-border bg-muted/30 overflow-hidden">
-                                    <ScrollArea className="h-full">
+                                    {/* [&>div>div]:!block:Radix ScrollArea viewport 內預設 display:table 的子層會被長收藏名稱撐寬,
+                                        導致卡片寬=內容寬、truncate 失效;改 block 讓卡片寬=viewport 寬,名稱才會正確省略 */}
+                                    <ScrollArea className="h-full [&>div>div]:!block">
                                         <div className="p-2 space-y-2">
                                             {filteredFavorites.length > 0 ? (
                                                 filteredFavorites.map(fav => (

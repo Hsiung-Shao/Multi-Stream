@@ -1,2 +1,4 @@
 # Cloudflare Pages SPA Redirects
+# /tools 舊主控台已移除,301 永久導向實際觀看頁 /canvas(須在 SPA fallback 之前)
+/tools /canvas 301
 /* /index.html 200
