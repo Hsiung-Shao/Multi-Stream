@@ -20,8 +20,6 @@ export function useRouter() {
                 setPage('privacy');
             } else if (path === '/canvas') {
                 setPage('canvas');
-            } else if (path === '/tools') {
-                setPage('tool');
             } else if (path === '/instructions') {
                 setPage('instructions');
             } else if (path === '/faq') {
@@ -76,9 +74,6 @@ export function useRouter() {
         switch (page) {
             case 'home':
                 targetPath = '/';
-                break;
-            case 'tool':
-                targetPath = '/tools';
                 break;
             case 'about':
                 targetPath = '/about';
