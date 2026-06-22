@@ -8,10 +8,10 @@ interface ModalState {
     ytRisk: boolean;
 }
 
-export type PageType = 'landing' | 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'not-found';
+export type PageType = 'home' | 'tool' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'admin' | 'not-found';
 
 interface UIState {
-    theme: 'light' | 'dark';
+    theme: 'light' | 'dark' | 'system';
     page: PageType;
     isPanelCollapsed: boolean;
     isSearchFocused: boolean;
@@ -21,7 +21,7 @@ interface UIState {
     masterMuted: boolean;
     showPerformanceOverlay: boolean;
     // Actions
-    setTheme: (theme: 'light' | 'dark') => void;
+    setTheme: (theme: 'light' | 'dark' | 'system') => void;
     toggleTheme: () => void;
     setPanelCollapsed: (collapsed: boolean) => void;
     togglePanelCollapsed: () => void;
@@ -34,6 +34,13 @@ interface UIState {
     setPage: (page: PageType) => void;
     setSearchFocused: (focused: boolean) => void;
     togglePerformanceOverlay: () => void;
+    // Playback / detection settings
+    autoMuteNewStream: boolean;
+    setAutoMuteNewStream: (v: boolean) => void;
+    youtubeRiskWarning: boolean;
+    setYoutubeRiskWarning: (v: boolean) => void;
+    bgLiveDetect: boolean;
+    setBgLiveDetect: (v: boolean) => void;
     // Window functionality
     closeWindowMode: 'remove' | 'empty';
     setCloseWindowMode: (mode: 'remove' | 'empty') => void;
@@ -45,6 +52,16 @@ interface UIState {
     isHotkeyHelpOpen: boolean;
     toggleHotkeyHelp: () => void;
     setHotkeyHelpOpen: (open: boolean) => void;
+}
+
+// 把單一設定寫進 localStorage 的 userSettings(所有 persist 類 setter 共用)
+function persistUserSetting(key: string, value: unknown) {
+    try {
+        const saved = localStorage.getItem('userSettings');
+        const settings = saved ? JSON.parse(saved) : {};
+        settings[key] = value;
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+    } catch (e) { }
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -66,21 +83,11 @@ export const useUIStore = create<UIState>((set) => ({
 
     setTheme: (theme) => {
         set({ theme });
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.theme = theme;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('theme', theme);
     },
     toggleTheme: () => set((state) => {
         const newTheme = state.theme === 'light' ? 'dark' : 'light';
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.theme = newTheme;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('theme', newTheme);
         return { theme: newTheme };
     }),
 
@@ -97,15 +104,7 @@ export const useUIStore = create<UIState>((set) => ({
 
     setMasterVolume: (volume) => set((state) => {
         const newVolume = typeof volume === 'function' ? volume(state.masterVolume) : volume;
-
-        // Persist to localStorage
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.masterVolume = newVolume;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
-
+        persistUserSetting('masterVolume', newVolume);
         return { masterVolume: newVolume };
     }),
     setMasterMuted: (muted) => set((state) => {
@@ -125,16 +124,28 @@ export const useUIStore = create<UIState>((set) => ({
     setSearchFocused: (focused) => set({ isSearchFocused: focused }),
     togglePerformanceOverlay: () => set((state) => ({ showPerformanceOverlay: !state.showPerformanceOverlay })),
 
+    // Playback / detection settings(persist 到 userSettings)
+    autoMuteNewStream: true,
+    setAutoMuteNewStream: (v) => {
+        set({ autoMuteNewStream: v });
+        persistUserSetting('autoMuteNewStream', v);
+    },
+    youtubeRiskWarning: true,
+    setYoutubeRiskWarning: (v) => {
+        set({ youtubeRiskWarning: v });
+        persistUserSetting('youtubeRiskWarning', v);
+    },
+    bgLiveDetect: false,
+    setBgLiveDetect: (v) => {
+        set({ bgLiveDetect: v });
+        persistUserSetting('bgLiveDetect', v);
+    },
+
     // Window functionality
     closeWindowMode: 'remove',
     setCloseWindowMode: (mode) => {
         set({ closeWindowMode: mode });
-        try {
-            const saved = localStorage.getItem('userSettings');
-            const settings = saved ? JSON.parse(saved) : {};
-            settings.closeWindowMode = mode;
-            localStorage.setItem('userSettings', JSON.stringify(settings));
-        } catch (e) { }
+        persistUserSetting('closeWindowMode', mode);
     },
 
     // Hotkey & Hover State
@@ -160,6 +171,15 @@ try {
         }
         if (settings.closeWindowMode) {
             useUIStore.setState({ closeWindowMode: settings.closeWindowMode });
+        }
+        if (settings.autoMuteNewStream !== undefined) {
+            useUIStore.setState({ autoMuteNewStream: settings.autoMuteNewStream });
+        }
+        if (settings.youtubeRiskWarning !== undefined) {
+            useUIStore.setState({ youtubeRiskWarning: settings.youtubeRiskWarning });
+        }
+        if (settings.bgLiveDetect !== undefined) {
+            useUIStore.setState({ bgLiveDetect: settings.bgLiveDetect });
         }
     }
 } catch (e) { }

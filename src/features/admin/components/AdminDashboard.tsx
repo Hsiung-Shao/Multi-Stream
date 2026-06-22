@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Skeleton } from '../../../components/ui/skeleton';
-import { MessageSquare, Inbox, Star, TrendingUp, BarChart3, LogOut, Bug, Lightbulb, Palette, HelpCircle, RefreshCw } from 'lucide-react';
+import { MessageSquare, Inbox, Star, TrendingUp, BarChart3, LogOut, Bug, Lightbulb, Palette, HelpCircle, RefreshCw, Megaphone } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useFeedbacks, useFeedbackStats } from '../hooks/useFeedbacks';
 import { FeedbackTable } from './FeedbackTable';
 import { FeedbackDetail } from './FeedbackDetail';
 import type { FeedbackRecord, FeedbackFilter } from '../types';
 import { useQueryClient } from '@tanstack/react-query';
+import { AnnouncementsTab } from './AnnouncementsTab';
 
 const PIE_COLORS = ['#f87171', '#fbbf24', '#a78bfa', '#71717a'];
 
@@ -24,6 +25,7 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     });
     const [selectedRecord, setSelectedRecord] = useState<FeedbackRecord | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'feedback' | 'announcements'>('feedback');
     const queryClient = useQueryClient();
 
     const { data: feedbackData, isLoading: listLoading } = useFeedbacks(filter);
@@ -64,13 +66,23 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {/* Header */}
             <header className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#09090b]/80 backdrop-blur-xl">
                 <div className="max-w-6xl mx-auto px-5 h-12 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <BarChart3 className="w-4 h-4 text-zinc-500" />
-                            <h1 className="text-[14px] font-medium text-zinc-200">Feedback</h1>
-                        </div>
-                        {lastUpdated && (
-                            <span className="text-[11px] text-zinc-600">
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setActiveTab('feedback')}
+                            className={`flex items-center gap-1.5 px-2.5 h-8 rounded-md text-[13px] font-medium transition-colors ${activeTab === 'feedback' ? 'text-zinc-100 bg-white/[0.06]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]'}`}
+                        >
+                            <BarChart3 className="w-3.5 h-3.5" />
+                            Feedback
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('announcements')}
+                            className={`flex items-center gap-1.5 px-2.5 h-8 rounded-md text-[13px] font-medium transition-colors ${activeTab === 'announcements' ? 'text-zinc-100 bg-white/[0.06]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]'}`}
+                        >
+                            <Megaphone className="w-3.5 h-3.5" />
+                            推送公告
+                        </button>
+                        {activeTab === 'feedback' && lastUpdated && (
+                            <span className="text-[11px] text-zinc-600 ml-2">
                                 {lastUpdated} 更新
                             </span>
                         )}
@@ -95,6 +107,10 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             </header>
 
             <main className="max-w-6xl mx-auto px-5 py-5 space-y-5">
+                {activeTab === 'announcements' ? (
+                    <AnnouncementsTab />
+                ) : (
+                <>
                 {/* Stats row */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
                     {/* Stat cards */}
@@ -176,6 +192,8 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     onFilterChange={handleFilterChange}
                     onSelect={handleSelect}
                 />
+                </>
+                )}
             </main>
 
             {/* Detail sheet */}

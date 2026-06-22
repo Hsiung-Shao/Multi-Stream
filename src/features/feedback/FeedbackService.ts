@@ -1,5 +1,4 @@
 import { FeedbackFormData } from './FeedbackTypes';
-import { getSupabase } from '../../lib/supabase';
 
 export interface FeedbackPayload extends FeedbackFormData {
     userAgent: string;
@@ -11,38 +10,35 @@ export interface FeedbackPayload extends FeedbackFormData {
 
 export const FeedbackService = {
     /**
-     * Sends feedback data to Supabase.
-     * @param data The complete feedback data including system info.
+     * 送意見回饋到 Cloudflare Function /api/feedback/submit
+     * Function 用 service_role 寫入 feedbacks 表（繞過 RLS），含 IP rate limit
+     * 與先前直連 supabase.from('feedbacks').insert() 不同
      */
     sendFeedback: async (data: FeedbackPayload): Promise<void> => {
+        let session: { access_token?: string } | null = null;
         try {
+            const { getSupabase } = await import('../../lib/supabase');
             const supabase = await getSupabase();
-
-            if (!supabase) {
-                throw new Error('Supabase is not configured');
+            if (supabase) {
+                const { data: sd } = await supabase.auth.getSession();
+                session = sd?.session ?? null;
             }
+        } catch { /* 取不到 session 視同匿名 */ }
 
-            const { error } = await supabase.from('feedbacks').insert({
-                feedback_type: data.feedbackType,
-                content: data.content,
-                source: data.source || null,
-                usage_time: data.usageTime?.length ? data.usageTime : null,
-                usage_duration: data.usageDuration || null,
-                rating: data.rating ?? null,
-                nps_score: data.npsScore ?? null,
-                user_agent: data.userAgent,
-                screen_resolution: data.screenResolution,
-                window_size: data.windowSize,
-                theme: data.theme,
-                app_version: data.version,
-            });
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (session?.access_token) {
+            headers.Authorization = `Bearer ${session.access_token}`;
+        }
 
-            if (error) {
-                throw new Error(error.message);
-            }
-        } catch (error) {
-            console.error('Failed to send feedback:', error);
-            throw error;
+        const res = await fetch('/api/feedback/submit', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+            let payload: { error?: string } = {};
+            try { payload = await res.json(); } catch { /* non-JSON */ }
+            throw new Error(payload.error || `提交失敗 (HTTP ${res.status})`);
         }
     }
 };

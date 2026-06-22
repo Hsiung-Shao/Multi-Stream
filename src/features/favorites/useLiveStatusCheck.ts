@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { favoritesService } from './FavoritesService';
 import { twitchService } from '../twitch/TwitchService';
 import { youtubeApi } from '../../utils/youtubeApi';
+import { cacheChannelIfAbsent } from '../youtube/YouTubeChannelRepository';
 import { FavoriteStream } from './types';
 
 export const useLiveStatusCheck = () => {
@@ -72,6 +73,12 @@ export const useLiveStatusCheck = () => {
 
                     try {
                         const status = await youtubeApi.checkChannelLiveStatus(fav.channelId);
+
+                        // 順手蒐集到離線頻道資料庫:寫官方頻道名、查 DB 去重、不更動使用者收藏資料。
+                        // fire-and-forget,失敗不影響直播狀態檢查。
+                        if (status.channelTitle) {
+                            cacheChannelIfAbsent(fav.channelId, status.channelTitle).catch(() => {});
+                        }
 
                         // Check if updates are needed
                         // Important: Always update if we have a new liveUrl (finalUrl) and it's different

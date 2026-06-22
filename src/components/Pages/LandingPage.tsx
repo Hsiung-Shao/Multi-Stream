@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
 import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
 import {
@@ -15,8 +16,9 @@ import { SEO } from '../SEO';
 export function LandingPage() {
     const { t, i18n } = useTranslation();
     const setPage = useUIStore(s => s.setPage);
-    const theme = useUIStore(s => s.theme);
+    const theme = useEffectiveTheme();
     const toggleTheme = useUIStore(s => s.toggleTheme);
+    const openModal = useUIStore(s => s.openModal);
 
     const languages = [
         { value: 'zh-TW', label: '繁體中文' },
@@ -28,28 +30,36 @@ export function LandingPage() {
 
 
     return (
+        <>
         <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden selection:bg-primary selection:text-primary-foreground">
-            <SEO
-                title="MultiStream Hub - 免費多平台直播觀看工具 | 同時觀看 Twitch & YouTube (Free Multistreaming)"
-                description="免費的多平台直播串流工具。無需註冊、即開即用。支援同時觀看多個 Twitch 和 YouTube 直播 (Watch multiple streams)，提供聊天室整合與多種布局模式。"
-                keywords="MultiStream, multistreaming, free multistream, multi stream twitch, watch multiple streams, 同時觀看, 多平台直播, 免費直播工具"
-                url="https://multistreaming.org/"
-            />
+            <SEO />
+            <FaqJsonLd />
+
             {/* Header */}
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <img src="/icon.png" alt="MultiStream Hub" className="w-10 h-10 rounded-lg shadow-lg" />
+                        <img src="/logo.png" alt="MultiStream Hub" width="40" height="40" className="w-10 h-10 rounded-lg shadow-lg" />
                         <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                             MultiStream Hub
                         </span>
                     </div>
-                    <nav className="flex items-center gap-4">
+                    <nav className="flex items-center gap-1 sm:gap-2">
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('about')}>
+                            {t('landing.footer.about')}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('instructions')}>
+                            {t('landing.footer.tutorial')}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('faq')}>
+                            {t('landing.footer.faq')}
+                        </Button>
                         <a
-                            href="https://github.com/Hsiung-Shao/Multi-Stream"
+                            href="https://github.com/Hsiung-Shao"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="GitHub"
+                            className="text-muted-foreground hover:text-foreground transition-colors p-2"
                         >
                             <Github className="w-5 h-5" />
                         </a>
@@ -57,6 +67,7 @@ export function LandingPage() {
                             variant="ghost"
                             size="icon"
                             onClick={toggleTheme}
+                            aria-label={t('landing.aria.toggle_theme', '切換深色／淺色模式')}
                             className="text-muted-foreground hover:text-foreground transition-colors"
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -104,13 +115,14 @@ export function LandingPage() {
                         </div>
 
                         {/* Feature Preview / UI Mockup placeholder */}
-                        <div className="mt-20 relative animate-fade-in-up delay-200 duration-1000">
+                        {/* min-h 預留 hero mockup 空間，避免下方 features 區段 fade-in 動畫造成 layout shift（CLS） */}
+                        <div className="mt-20 relative animate-fade-in-up delay-200 duration-1000 min-h-[260px] md:min-h-[400px]">
                             <div className="relative rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl p-2 md:p-4 max-w-5xl mx-auto overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10 h-32 bottom-0 w-full" />
                                 {/* Conceptual UI representation */}
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 opacity-80 group-hover:opacity-100 transition-opacity duration-500">
                                     {[1, 2, 3].map((i) => (
-                                        <div key={i} className="aspect-video bg-gray-800/50 rounded-lg border border-white/5 animate-pulse" style={{ animationDuration: `${i * 2}s` }} />
+                                        <div key={i} className="aspect-video bg-muted/50 rounded-lg border border-white/5 animate-pulse" style={{ animationDuration: `${i * 2}s` }} />
                                     ))}
                                 </div>
                             </div>
@@ -256,7 +268,7 @@ export function LandingPage() {
                                             <div className="p-2 bg-green-400/10 rounded-full">
                                                 <Zap className="w-6 h-6" />
                                             </div>
-                                            <span className="font-semibold tracking-wider text-sm uppercase">Local First</span>
+                                            <span className="font-semibold tracking-wider text-sm uppercase">{t('landing.privacy.eyebrow')}</span>
                                         </div>
                                         <h3 className="text-2xl font-bold">{t('landing.privacy.title')}</h3>
                                         <p className="text-muted-foreground leading-relaxed">
@@ -275,13 +287,13 @@ export function LandingPage() {
                                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary">
                                             <Check className="w-4 h-4" />
                                         </div>
-                                        <span className="text-foreground/80">Twitch Follows Import</span>
+                                        <span className="text-foreground/80">{t('landing.favorites.feature1')}</span>
                                     </li>
                                     <li className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary">
                                             <Check className="w-4 h-4" />
                                         </div>
-                                        <span className="text-foreground/80">Custom Grouping</span>
+                                        <span className="text-foreground/80">{t('landing.favorites.feature2')}</span>
                                     </li>
 
                                 </ul>
@@ -357,25 +369,29 @@ export function LandingPage() {
             </main>
 
             {/* Footer */}
-            <footer className="py-12 border-t border-white/10 bg-background text-center text-muted-foreground text-sm">
-                <div className="container mx-auto px-4 flex flex-col gap-6">
-                    <div className="flex flex-wrap justify-center gap-6">
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('about')}>
+            <footer className="py-8 border-t border-white/10 bg-background text-center text-muted-foreground text-sm">
+                <div className="container mx-auto px-4 flex flex-col gap-4">
+                    {/* Mobile-only nav links (hidden on sm+, shown in header there) */}
+                    <div className="flex flex-wrap justify-center gap-4 sm:hidden">
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('about')}>
                             {t('landing.footer.about')}
                         </Button>
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('privacy')}>
-                            {t('landing.footer.privacy')}
-                        </Button>
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('instructions')}>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('instructions')}>
                             {t('landing.footer.tutorial')}
                         </Button>
-                        <Button variant="link" className="text-muted-foreground hover:text-foreground" onClick={() => setPage('faq')}>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('faq')}>
                             {t('landing.footer.faq')}
+                        </Button>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('privacy')}>
+                            {t('landing.footer.privacy')}
+                        </Button>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => openModal('feedback')}>
+                            {t('navbar:feedback', '意見回饋')}
                         </Button>
                     </div>
                     <div className="flex flex-col gap-2">
                         <p>{t('landing.footer.copyright')}</p>
-                        <p className="text-xs opacity-50 max-w-2xl mx-auto">
+                        <p className="text-xs max-w-2xl mx-auto">
                             {t('landing.footer.disclaimer')}
                         </p>
                     </div>
@@ -383,7 +399,7 @@ export function LandingPage() {
                     {/* Language Switcher */}
                     <div className="flex justify-center mt-4">
                         <Select value={i18n.language} onValueChange={(value: string) => i18n.changeLanguage(value)}>
-                            <SelectTrigger className="w-[140px] h-9 bg-background/50 border-white/10">
+                            <SelectTrigger aria-label={t('landing.aria.language', '選擇語言')} className="w-[140px] h-9 bg-background/50 border-white/10">
                                 <div className="flex items-center gap-2">
                                     <Globe className="w-4 h-4" />
                                     <SelectValue />
@@ -401,6 +417,7 @@ export function LandingPage() {
                 </div>
             </footer>
         </div>
+        </>
     );
 }
 
@@ -413,7 +430,8 @@ function FeatureCard({ icon, title, desc, delay }: { icon: React.ReactNode, titl
             <div className="mb-4 p-3 rounded-lg bg-secondary/50 inline-block group-hover:scale-110 transition-transform duration-300">
                 {icon}
             </div>
-            <h3 className="text-xl font-bold mb-2 text-foreground">{title}</h3>
+            {/* h2：features 是 hero(h1)後的第一個內容區段，用 h2 避免 heading 跳級（a11y heading-order） */}
+            <h2 className="text-xl font-bold mb-2 text-foreground">{title}</h2>
             <p className="text-muted-foreground leading-relaxed">{desc}</p>
         </div>
     );
@@ -453,5 +471,32 @@ function UseCaseCard({ icon, title, desc, delay }: { icon: React.ReactNode, titl
                 <p className="text-muted-foreground leading-relaxed">{desc}</p>
             </div>
         </div>
+    );
+}
+
+// FAQPage JSON-LD：對應本頁可見的 FAQ 手風琴(landing.faq.q1–q3),讓 Google 有機會在 SERP 顯示富摘要。
+// i18n 切換語言時會 re-render，schema 內容跟著切到對應語言版本。
+// /faq 頁有自己完整的 FAQPage JSON-LD(FAQPage.tsx 經 SEO 元件注入)。
+function FaqJsonLd() {
+    const { t } = useTranslation('common');
+    const data = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [1, 2, 3].map(n => ({
+            '@type': 'Question',
+            name: t(`landing.faq.q${n}`),
+            acceptedAnswer: {
+                '@type': 'Answer',
+                text: t(`landing.faq.a${n}`),
+            },
+        })),
+    };
+    // Escape `<` 為 `<`，避免 i18n 內容若含 `</script>` 破壞 close tag（Google 官方建議）
+    const safeJson = JSON.stringify(data).replace(/</g, '\\u003c');
+    return (
+        <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: safeJson }}
+        />
     );
 }

@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { MobileBottomNav, type MobileTab } from './MobileBottomNav';
 import { MobileWatchPage } from './MobileWatchPage';
 import { MobileChatPanel } from './MobileChatPanel';
@@ -11,6 +12,7 @@ import { SEO } from '../SEO';
 import { Toaster } from '../ui/sonner';
 import { GlobalLiveStatusChecker } from '../../features/favorites/components/GlobalLiveStatusChecker';
 import { CookieConsent } from '../CookieConsent';
+import { AnnouncementsProvider } from '../../features/announcements/AnnouncementsProvider';
 import { useMediaQuery } from '../../hooks/use-media-query';
 
 const FavoritesManagerMain = lazy(() => import('../../features/favorites/components/FavoritesManagerMain').then(m => ({ default: m.FavoritesManagerMain })));
@@ -19,7 +21,7 @@ const VersionHistory = lazy(() => import('../VersionHistory').then(m => ({ defau
 
 export function MobileApp() {
     const { t } = useTranslation();
-    const theme = useUIStore(s => s.theme);
+    const theme = useEffectiveTheme();
     const modals = useUIStore(s => s.modals);
     const closeModal = useUIStore(s => s.closeModal);
     const isLandscape = useMediaQuery('(orientation: landscape)');
@@ -51,7 +53,7 @@ export function MobileApp() {
             {showHeader && (
                 <header className="flex items-center justify-between px-4 h-12 shrink-0 border-b border-white/10 bg-gray-950/80 backdrop-blur-lg z-40">
                     <div className="flex items-center gap-2">
-                        <img src="/icon.png" alt="MultiStream Hub" className="w-7 h-7 rounded-md" />
+                        <img src="/logo.png" alt="MultiStream Hub" className="w-7 h-7 rounded-md" />
                         <span className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                             MultiStream
                         </span>
@@ -109,6 +111,7 @@ export function MobileApp() {
             <GlobalLiveStatusChecker />
             <Toaster />
             <CookieConsent />
+            <AnnouncementsProvider />
         </div>
     );
 }

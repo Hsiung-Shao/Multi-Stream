@@ -143,7 +143,7 @@ export const youtubeApi = {
         }
     },
 
-    async checkChannelLiveStatus(channelId: string): Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string; isUpcoming?: boolean; scheduledStartTime?: string }> {
+    async checkChannelLiveStatus(channelId: string): Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string; isUpcoming?: boolean; scheduledStartTime?: string; channelTitle?: string }> {
         // Strategy: Try the new lightweight "OG Image" API first. 
         // If it fails or implies uncertainty (which it theoretically shouldn't given the robust updates), 
         // fall back to the legacy full-scan API.
@@ -182,7 +182,8 @@ export const youtubeApi = {
                     liveVideoId: data.videoId || data.liveVideoId,
                     finalUrl: data.finalUrl,
                     isUpcoming: !!data.isUpcoming,
-                    scheduledStartTime: data.scheduledStartTime
+                    scheduledStartTime: data.scheduledStartTime,
+                    channelTitle: data.channelTitle || undefined
                 };
             }
         } catch (e) {

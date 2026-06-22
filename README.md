@@ -178,7 +178,7 @@ multi-stream/
 ## 🤝 貢獻
 
 歡迎提交 Issue 和 Pull Request！
-如果您喜歡這個工具，歡迎加入我們的 [Discord](https://discord.gg/3Uu6dZbtKd) 或給予星星支持！
+如果您喜歡這個工具，歡迎加入我們的 [Discord](https://discord.gg/47kauArepY) 或給予星星支持！
 
 ## 📞 意見回饋
 

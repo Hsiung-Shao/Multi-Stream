@@ -1,10 +1,32 @@
 export default {
+  // Island favorites chooser
+  select_category: 'Select category',
+  all_categories: 'All categories',
+  no_categories: 'No categories',
+  select_tags_multi: 'Select tags (multiple)',
+  // FM Settings — Appearance/Playback cards
+  theme_light: 'Light',
+  theme_dark: 'Dark',
+  theme_system: 'System',
+  playback: 'Playback',
+  auto_mute_new: 'Mute new streams on open',
+  auto_mute_new_desc: 'Avoid sudden loud volume when opening many at once.',
+  yt_risk_warn: 'YouTube multi-stream warning',
+  yt_risk_warn_desc: 'Warns when more than 3 YouTube streams are playing.',
+  bg_live_detect: 'Auto-detect live status in background',
+  bg_live_detect_desc: 'Checks your favorite channels every 5 minutes.',
   // Navigation
+  favoritesManager: 'Favorites Manager',
   myFavorites: 'My Favorites',
   batchImport: 'Batch Import',
   settings: 'Settings',
   categoryManagement: 'Favorites Lists',
   manageCategories: 'Manage Lists',
+
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: 'Filters',
+  sidebarLiveNow: 'Live Now',
+  sidebarCategoryGroup: 'Categories',
 
   // Quick Filters
   all: 'All',
@@ -114,6 +136,7 @@ export default {
   // Misc
   loading: 'Loading...',
   confirmDelete: 'Are you sure you want to delete?',
+  confirmDeleteCategoryDesc: 'After deleting a category, its favorites will become uncategorized.',
   confirmDeleteCount: 'Are you sure you want to delete {{count}} items?',
   addCategory: 'Add List',
   categoryName: 'List Name',
@@ -124,6 +147,10 @@ export default {
   theme: 'Theme',
   language: 'Language',
   about: 'About',
+
+  // ExitLag affiliate promo (sidebar)
+  exitlag_title: 'Reduce Stream Lag',
+  exitlag_subtitle: 'ExitLag multi-path boost',
 
   // Dynamic Island
   favorites_menu: 'Favorites',
@@ -150,4 +177,22 @@ export default {
 
   // Sidebar
   'sidebar.version_history': 'Version History',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: 'Paste a channel URL — the platform is detected automatically',
+  editFavoriteDesc: 'Update name, list and tags',
+  channelUrlOrName: 'Channel URL or name',
+  paste: 'Paste',
+  pasteFromClipboard: 'Paste from clipboard',
+  urlHint: 'Supports twitch.tv/name, youtube.com/@name, or just a channel name.',
+  whichPlatform: 'Which platform is this?',
+  preview: 'Preview',
+  previewEmpty: 'Enter a URL to preview the channel here',
+  displayName: 'Display name',
+  displayNamePlaceholder: 'Channel display name',
+  optional: 'Optional',
+  multiSelect: 'Multi-select',
+  autoLoadTitle: 'Load to screen right after adding',
+  autoLoadDesc: 'Open this channel into the multi-view as you save it',
+  addAndLoad: 'Add & Load',
 };

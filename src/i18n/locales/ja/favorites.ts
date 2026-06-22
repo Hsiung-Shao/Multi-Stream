@@ -1,10 +1,32 @@
 export default {
+  // Island favorites chooser
+  select_category: 'カテゴリを選択',
+  all_categories: 'すべてのカテゴリ',
+  no_categories: 'カテゴリなし',
+  select_tags_multi: 'タグを選択（複数可）',
+  // FM Settings — 外観/再生カード
+  theme_light: 'ライト',
+  theme_dark: 'ダーク',
+  theme_system: 'システム',
+  playback: '再生',
+  auto_mute_new: '新規ストリームを開いたら自動ミュート',
+  auto_mute_new_desc: '一度に多数開いたときの音量爆発を防ぎます。',
+  yt_risk_warn: 'YouTube 複数配信の警告',
+  yt_risk_warn_desc: 'YouTube 配信が 3 つを超えると警告します。',
+  bg_live_detect: 'バックグラウンドで配信状態を自動検出',
+  bg_live_detect_desc: '5 分ごとにお気に入りチャンネルを確認します。',
   // Navigation
+  favoritesManager: 'お気に入り管理',
   myFavorites: 'お気に入り',
   batchImport: '一括インポート',
   settings: '設定',
   categoryManagement: 'お気に入りリスト',
   manageCategories: 'リスト管理',
+
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: 'フィルター',
+  sidebarLiveNow: '配信中',
+  sidebarCategoryGroup: 'カテゴリー',
 
   // Quick Filters
   all: 'すべて',
@@ -112,6 +134,11 @@ export default {
   theme: 'テーマ',
   language: '表示言語',
   about: 'アプリについて',
+
+  // ExitLag アフィリエイト(サイドバー)
+  exitlag_title: '配信の遅延を軽減',
+  exitlag_subtitle: 'ExitLag マルチパス高速化',
+
   // Layout Manager
   'layout_manager.delete_confirm': '削除',
   'layout_manager.apply': '適用',
@@ -124,5 +151,48 @@ export default {
   'layout_manager.no_layouts': 'カスタムレイアウトがありません',
   'layout_manager.no_layouts_desc': 'ウィンドウの位置を調整して、テンプレートとして保存できます。',
   'sidebar.version_history': '更新履歴',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: 'チャンネルURLを貼り付けると、プラットフォームを自動判別します',
+  editFavoriteDesc: '名前・リスト・タグを更新',
+  channelUrlOrName: 'チャンネルURLまたは名前',
+  paste: '貼り付け',
+  pasteFromClipboard: 'クリップボードから貼り付け',
+  urlHint: 'twitch.tv/名前、youtube.com/@名前、またはチャンネル名の入力に対応。',
+  whichPlatform: 'どのプラットフォームですか?',
+  preview: 'プレビュー',
+  previewEmpty: 'URLを入力すると、ここにチャンネルがプレビュー表示されます',
+  displayName: '表示名',
+  displayNamePlaceholder: 'チャンネルの表示名',
+  optional: '任意',
+  multiSelect: '複数選択可',
+  autoLoadTitle: '追加後すぐに画面に読み込む',
+  autoLoadDesc: '保存と同時にこのチャンネルをマルチビューに開きます',
+  addAndLoad: '追加して読み込む',
+
+  // 補齊在地化:一括操作 / ダイナミックアイランド / カテゴリ削除確認(zh-TW/en と整合)
+  loadSelected: '選択を読み込む',
+  deselectAll: '選択を解除',
+  delete: '削除',
+  batchEdit: '一括編集',
+  batchOperations: '一括操作',
+  setCategory: 'カテゴリを設定',
+  addTags: 'タグを追加',
+  batchSetCategoryConfirm: '{{count}} 件をカテゴリ「{{category}}」に設定しますか？',
+  batchAddTagsConfirm: '{{count}} 件にタグを追加しますか？',
+  load: '読み込み',
+  loadSuccess: '読み込みました',
+  loadError: '読み込みに失敗しました',
+  confirmDeleteCategoryDesc: 'カテゴリを削除すると、その中のお気に入りは未分類になります。',
+  favorites_menu: 'お気に入り配信',
+  online_only: '配信中のみ表示',
+  added_count: '{{count}} 個のチャンネルを読み込みました',
+  no_streams_in_category: 'カテゴリにチャンネルがありません',
+  confirm_load_large: '{{count}} 個のチャンネルを読み込みますか？動作が重くなる可能性があります',
+  load_selected_count: '{{count}} 個のチャンネルを読み込む',
+  load_category_all: 'このカテゴリのすべてを読み込む',
+  no_streams_to_save: '保存できるストリームがありません',
+  save_entire_canvas: '現在のキャンバスを保存',
+  batch_save_success_simple: '{{count}} 個のストリームを保存しました',
 };
 

@@ -1,4 +1,4 @@
-import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch, History as HistoryIcon } from 'lucide-react';
+import { Star, Folder, Settings, LayoutGrid, FilePlus, ChevronDown, ChevronRight, Hash, Database, Twitch, History as HistoryIcon, Zap, ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '../../../components/ui/badge';
 import {
@@ -9,9 +9,12 @@ import {
 import { useState } from 'react';
 import type { FavoriteCategory as Category, Tag } from '../types';
 import { ScrollArea } from '../../../components/ui/scroll-area';
+import { logEvent } from '../../../utils/analytics';
+
+// ExitLag 聯盟推廣連結(sidebar 底部常駐 promo)
+const EXITLAG_AFFILIATE_URL = 'https://www.exitlag.com/refer/10318098';
 
 interface FavoritesSidebarProps {
-    theme: 'light' | 'dark';
     categories: Category[];
     tags: Tag[];
     favoritesCount: number;
@@ -23,7 +26,6 @@ interface FavoritesSidebarProps {
 }
 
 export function FavoritesSidebar({
-    theme,
     categories,
     tags,
     favoritesCount,
@@ -36,21 +38,25 @@ export function FavoritesSidebar({
     const [isTagsOpen, setIsTagsOpen] = useState(true);
 
     const sectionClass = `space-y-1 mb-6`;
-    const labelClass = `px-3 text-[10px] font-bold uppercase tracking-wider mb-2 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`;
+    const labelClass = `px-3 text-[10px] font-bold uppercase tracking-wider mb-2 text-muted-foreground/80`;
 
     const navItemClass = (isActive: boolean) => `
     flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 group
     ${isActive
-            ? (theme === 'dark' ? 'bg-purple-500/10 text-purple-400 font-medium' : 'bg-purple-50 text-purple-600 font-medium')
-            : (theme === 'dark' ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200' : 'text-gray-600 hover:bg-gray-100 hover:text-black')
+            ? 'bg-purple-500/10 text-purple-400 font-medium'
+            : 'text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground'
         }
   `;
 
     return (
-        <div className={`w-64 h-full border-r flex flex-col ${theme === 'dark' ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50/50 border-gray-200'
-            }`}>
+        <div className="w-64 h-full border-r border-border bg-background/40 flex flex-col">
+            {/* Header */}
+            <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
+                <Star className="size-4 text-purple-400 fill-purple-400" />
+                <h2 className="text-base font-bold text-foreground">{t('favoritesManager') || '收藏管理'}</h2>
+            </div>
             <ScrollArea className="flex-1">
-                <div className="p-4">
+                <div className="px-4 pb-4 pt-1">
                     {/* Primary Navigation */}
                     <div className={sectionClass}>
                         <div className={labelClass}>{t('navigation')}</div>
@@ -88,9 +94,9 @@ export function FavoritesSidebar({
                         </div>
                     </div>
 
-                    {/* Quick Filters */}
+                    {/* Quick Filters — 設計分區「過濾」 */}
                     <div className={sectionClass}>
-                        <div className={labelClass}>{t('tags:filterTitle') || '過濾'}</div>
+                        <div className={labelClass}>{t('sidebarFilter')}</div>
                         <div
                             className={navItemClass(activeFilter === 'all' && activeTab === 'favorites')}
                             onClick={() => { onNavigate('favorites'); onFilterChange('all'); }}
@@ -105,16 +111,19 @@ export function FavoritesSidebar({
                             onClick={() => { onNavigate('favorites'); onFilterChange('live'); }}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="size-2 rounded-full bg-red-500 animate-pulse" />
-                                <span className="text-sm">{t('tags:isLive') || '正在直播'}</span>
+                                <span
+                                    className="size-2 rounded-full flex-shrink-0 animate-pulse"
+                                    style={{ background: '#ef4444', boxShadow: '0 0 6px #ef4444' }}
+                                />
+                                <span className="text-sm">{t('sidebarLiveNow')}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Categories */}
+                    {/* Categories — 設計分區「分類管理」(作為 filter) */}
                     <div className={sectionClass}>
                         <div className="flex items-center justify-between px-3 mb-2 group">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{t('categoryManagement')}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">{t('sidebarCategoryGroup')}</span>
                         </div>
                         <div className="space-y-1">
                             {categories.map(cat => (
@@ -124,13 +133,13 @@ export function FavoritesSidebar({
                                     onClick={() => { onNavigate('favorites'); onFilterChange(cat.id); }}
                                 >
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <Folder className="size-3.5 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                                        <Folder className="size-3.5 text-muted-foreground group-hover:text-purple-400 transition-colors" />
                                         <span className="text-sm truncate">{cat.name}</span>
                                     </div>
                                 </div>
                             ))}
                             {categories.length === 0 && (
-                                <div className="px-3 text-xs text-gray-500 italic py-2">
+                                <div className="px-3 text-xs text-muted-foreground italic py-2">
                                     {t('noCategories')}
                                 </div>
                             )}
@@ -146,9 +155,9 @@ export function FavoritesSidebar({
                         <CollapsibleTrigger className="flex items-center justify-between w-full group py-1 cursor-pointer">
                             <div className={labelClass.replace('mb-2', 'mb-0')}>{t('tags:tagList') || '標籤列表'}</div>
                             {isTagsOpen ? (
-                                <ChevronDown className="size-3 text-gray-500 group-hover:text-gray-300" />
+                                <ChevronDown className="size-3 text-muted-foreground group-hover:text-foreground" />
                             ) : (
-                                <ChevronRight className="size-3 text-gray-500 group-hover:text-gray-300" />
+                                <ChevronRight className="size-3 text-muted-foreground group-hover:text-foreground" />
                             )}
                         </CollapsibleTrigger>
 
@@ -174,7 +183,7 @@ export function FavoritesSidebar({
                                     );
                                 })
                             ) : (
-                                <div className="px-3 text-xs text-gray-500 italic py-2">
+                                <div className="px-3 text-xs text-muted-foreground italic py-2">
                                     {t('tags:noTagsFound') || '沒有標籤'}
                                 </div>
                             )}
@@ -184,7 +193,7 @@ export function FavoritesSidebar({
             </ScrollArea>
 
             {/* Footer / System */}
-            <div className="mt-auto p-4 pt-4 border-t border-gray-800 space-y-1">
+            <div className="mt-auto p-4 pt-4 border-t border-border space-y-1">
                 <div className={navItemClass(activeTab === 'layouts')} onClick={() => onNavigate('layouts')}>
                     <div className="flex items-center gap-3">
                         <LayoutGrid className="size-4" />
@@ -221,6 +230,28 @@ export function FavoritesSidebar({
                         <span className="text-sm">{t('sidebar.version_history')}</span>
                     </div>
                 </div>
+
+                {/* ExitLag 聯盟推廣:常駐 promo(橘色 accent + rel=sponsored + 點擊埋點) */}
+                <a
+                    href={EXITLAG_AFFILIATE_URL}
+                    target="_blank"
+                    rel="sponsored noopener noreferrer"
+                    onClick={() => logEvent('FavoritesSidebar', 'click_affiliate', 'exitlag')}
+                    className="mt-2 flex items-center gap-3 px-3 py-2.5 rounded-lg border border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/15 transition-colors"
+                >
+                    <span className="shrink-0 size-8 rounded-lg flex items-center justify-center bg-orange-500/20 text-orange-500">
+                        <Zap className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground truncate">
+                            {t('favorites:exitlag_title', { defaultValue: '降低直播延遲' })}
+                        </span>
+                        <span className="block text-[11px] text-orange-400/90 truncate">
+                            {t('favorites:exitlag_subtitle', { defaultValue: 'ExitLag 多路徑加速' })}
+                        </span>
+                    </span>
+                    <ArrowUpRight className="size-4 text-orange-500 shrink-0" />
+                </a>
             </div>
         </div>
     );

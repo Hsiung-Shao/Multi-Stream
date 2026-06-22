@@ -16,7 +16,6 @@ import { favoritesService } from '../FavoritesService';
 import { tagsService } from '../TagsService';
 import { favoritesLoader } from '../FavoritesLoader';
 import { logEvent } from '../../../utils/analytics';
-import { trackEvent as umamiTrack } from '../../../utils/umami';
 import { toast } from 'sonner';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { useFavorites } from '../../../hooks/useFavorites';
@@ -186,14 +185,24 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 tagIds: data.tagIds
             });
         } else {
-            favoritesService.addFavorite(
+            const addPromise = favoritesService.addFavorite(
                 data.url,
                 data.name || undefined,
                 data.categoryId === 'uncategorized' ? null : data.categoryId,
                 undefined,
                 undefined,
-                data.tagIds
+                data.tagIds,
+                // tag well 已預選平台 tag 且尊重使用者移除,關閉 service 端的自動補
+                { autoTagPlatform: false }
             );
+            // 「新增後立即載入畫面」:新增成功後把該頻道載入到 canvas(沿用既有 favoritesLoader)
+            if (data.autoLoad) {
+                addPromise
+                    .then(result => {
+                        if (result?.success && result.item) favoritesLoader.load(result.item);
+                    })
+                    .catch(() => { /* 載入失敗忽略,收藏本身已新增 */ });
+            }
         }
         setIsAddDialogOpen(false);
         setEditingFavorite(null);
@@ -297,20 +306,18 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
         loadData();
         clearToken();
         setActiveTab('favorites');
-        umamiTrack('favorites-import', { source: 'twitch', count: imported });
+        logEvent('Favorites', 'twitch_import', 'count', imported);
         toast.success(`成功匯入 ${imported} 個頻道`);
     };
 
     return (
         <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className={`sm:max-w-5xl w-full h-[80vh] flex flex-col p-0 gap-0 overflow-hidden ${theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-white'
-                }`}>
+            <DialogContent className="sm:max-w-5xl w-full h-[80vh] max-h-[800px] flex flex-col p-0 gap-0 overflow-hidden rounded-[14px] border-border bg-card shadow-2xl">
                 <DialogTitle className="sr-only">Favorites Manager</DialogTitle>
                 <DialogDescription className="sr-only">Manage your favorite streams, tags, and settings</DialogDescription>
                 <div className="flex flex-1 min-h-0">
                     {/* Sidebar */}
                     <FavoritesSidebar
-                        theme={theme}
                         categories={categories}
                         tags={tags}
                         favoritesCount={favorites.length}
@@ -360,7 +367,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                     </div>
                                 )}
 
-                                <div className="flex-1 min-h-0 mt-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden">
+                                <div className="flex-1 min-h-0 mt-4 rounded-xl border border-border bg-muted/30 overflow-hidden">
                                     <ScrollArea className="h-full">
                                         <div className="p-2 space-y-2">
                                             {filteredFavorites.length > 0 ? (
@@ -381,9 +388,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                                     />
                                                 ))
                                             ) : (
-                                                <div className="h-64 flex flex-col items-center justify-center text-gray-400 gap-4">
-                                                    <div className="size-16 rounded-3xl bg-gray-50 dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-800 flex items-center justify-center">
-                                                        <Star className="size-8 opacity-20" />
+                                                <div className="h-64 flex flex-col items-center justify-center text-muted-foreground gap-4">
+                                                    <div className="size-16 rounded-3xl bg-muted/50 border border-dashed border-border flex items-center justify-center">
+                                                        <Star className="size-8 opacity-30" />
                                                     </div>
                                                     <p className="text-sm font-medium">{t('noFavorites')}</p>
                                                 </div>
@@ -396,7 +403,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
                         {activeTab === 'batch' && (
                             <BatchImportSection
-                                theme={theme}
                                 categories={categories}
                                 onSuccess={() => {
                                     loadData();
@@ -410,7 +416,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                             <div className="flex-1 flex flex-col gap-8 max-w-4xl mx-auto w-full py-4 overflow-hidden">
                                 <ScrollArea className="h-full pr-4">
                                     <TwitchIntegrationSection
-                                        theme={theme}
                                         isLoggedIn={isLoggedIn}
                                         login={login}
                                         logout={logout}
@@ -428,27 +433,21 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                         )}
 
                         {activeTab === 'global_settings' && (
-                            <SettingsSection
-                                theme={theme}
-                                currentTheme={theme}
-                                onThemeChange={(val) => {
-                                    useUIStore.getState().setTheme(val as 'light' | 'dark');
-                                }}
-                            />
+                            <SettingsSection />
                         )}
 
                         {activeTab === 'categories' && (
                             <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-                                <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                                    <h3 className="text-lg font-bold mb-4 font-normal">{t('addCategory') || '新增分類'}</h3>
+                                <div className="p-6 rounded-2xl border border-border bg-muted/40">
+                                    <h3 className="text-lg font-bold mb-4 font-normal text-foreground">{t('addCategory') || '新增分類'}</h3>
                                     <div className="flex gap-4 items-end">
                                         <div className="flex-1 space-y-2">
-                                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('categoryName') || '分類名稱'}</label>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('categoryName') || '分類名稱'}</label>
                                             <Input
                                                 value={newCategoryName}
                                                 onChange={(e) => setNewCategoryName(e.target.value)}
                                                 placeholder={t('favorites:placeholder.stream_example')}
-                                                className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}
+                                                className="bg-background border-border"
                                                 onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                                             />
                                         </div>
@@ -459,23 +458,22 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                     </div>
                                 </div>
 
-                                <div className="flex-1 min-h-0 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden">
+                                <div className="flex-1 min-h-0 rounded-xl border border-border bg-muted/30 overflow-hidden">
                                     <ScrollArea className="h-full">
-                                        <div className="p-2 space-y-2">
+                                        <div className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {categories.map(cat => (
-                                                <div key={cat.id} className={`p-4 rounded-xl border flex items-center justify-between group transition-all duration-200 ${theme === 'dark' ? 'bg-gray-950 border-gray-800 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-400 font-normal'
-                                                    }`}>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500">
+                                                <div key={cat.id} className="p-4 rounded-xl border border-border bg-card hover:border-purple-500/45 flex items-center justify-between group transition-all duration-200">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="size-9 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-400">
                                                             <Folder className="size-4" />
                                                         </div>
-                                                        <span className="font-medium text-sm">{cat.name}</span>
+                                                        <span className="font-medium text-sm text-foreground truncate">{cat.name}</span>
                                                     </div>
                                                     <div className="flex gap-1">
                                                         <Button
                                                             size="icon"
                                                             variant="ghost"
-                                                            className="size-8 text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                                            className="size-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
                                                             onClick={(e: React.MouseEvent) => {
                                                                 e.stopPropagation();
                                                                 handleDeleteCategory(cat.id);
@@ -487,7 +485,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                                 </div>
                                             ))}
                                             {categories.length === 0 && (
-                                                <div className="p-8 text-center text-gray-400 text-sm">
+                                                <div className="p-8 text-center text-muted-foreground text-sm sm:col-span-2">
                                                     {t('noCategories')}
                                                 </div>
                                             )}
@@ -503,31 +501,31 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
                         {activeTab === 'tags' && (
                             <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-                                <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
-                                    <h3 className="text-lg font-bold mb-4 font-normal">
+                                <div className="p-6 rounded-2xl border border-border bg-muted/40">
+                                    <h3 className="text-lg font-bold mb-4 font-normal text-foreground">
                                         {editingTagId ? (t('tags:editTagMode') || '編輯標籤') : (t('tags:addTag') || '新增標籤')}
                                     </h3>
                                     <div className="flex gap-4 items-end">
                                         <div className="flex-1 space-y-2">
-                                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tags:tagName')}</label>
+                                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('tags:tagName')}</label>
                                             <Input
                                                 value={newTagName}
                                                 onChange={(e) => setNewTagName(e.target.value)}
                                                 placeholder={t('favorites:placeholder.category_example')}
-                                                className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}
+                                                className="bg-background border-border"
                                                 onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tags:color')}</label>
-                                            <div className="flex items-center gap-3 h-10 px-3 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-800">
+                                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('tags:color')}</label>
+                                            <div className="flex items-center gap-3 h-10 px-3 rounded-lg border border-border bg-background">
                                                 <input
                                                     type="color"
                                                     value={newTagColor}
                                                     onChange={(e) => setNewTagColor(e.target.value)}
                                                     className="size-6 p-0 border-0 bg-transparent cursor-pointer rounded overflow-hidden"
                                                 />
-                                                <span className="text-xs font-mono uppercase text-gray-500">{newTagColor}</span>
+                                                <span className="text-xs font-mono uppercase text-muted-foreground">{newTagColor}</span>
                                             </div>
                                         </div>
                                         <Button onClick={handleAddTag} className="bg-purple-600 hover:bg-purple-700 text-white h-10 rounded-lg px-6">
@@ -542,21 +540,22 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                     </div>
                                 </div>
 
-                                <div className="flex-1 min-h-0 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden">
+                                <div className="flex-1 min-h-0 rounded-xl border border-border bg-muted/30 overflow-hidden">
                                     <ScrollArea className="h-full">
                                         <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                             {tags.map(tag => (
-                                                <div key={tag.id} className={`p-4 rounded-xl border flex items-center justify-between group transition-all duration-200 ${theme === 'dark' ? 'bg-gray-950 border-gray-800 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-400 font-normal'
-                                                    }`}>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="size-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                                                        <span className="font-medium text-sm">{tag.name}</span>
+                                                <div key={tag.id} className="p-4 rounded-xl border border-border bg-card hover:border-purple-500/45 flex items-center justify-between group transition-all duration-200">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <span className="size-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${tag.color}1f` }}>
+                                                            <span className="size-2.5 rounded-full" style={{ backgroundColor: tag.color, boxShadow: `0 0 6px ${tag.color}99` }} />
+                                                        </span>
+                                                        <span className="font-medium text-sm text-foreground truncate">{tag.name}</span>
                                                     </div>
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Button
                                                             size="icon"
                                                             variant="ghost"
-                                                            className="size-8"
+                                                            className="size-8 text-muted-foreground hover:text-foreground"
                                                             onClick={() => handleEditTag(tag)}
                                                         >
                                                             <Edit2 className="size-3.5" />
@@ -582,7 +581,6 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
 
                         {activeTab === 'backup' && (
                             <BackupSection
-                                theme={theme}
                                 onSuccess={(msg) => toast.success(msg)}
                                 onError={(msg) => toast.error(msg)}
                             />
@@ -591,6 +589,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                         {activeTab === 'version_history' && (
                             <VersionHistorySection theme={theme} />
                         )}
+
                     </div>
                 </div>
 
@@ -601,7 +600,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                     categories={categories}
                     allTags={tags}
                     initialData={editingFavorite}
-                    theme={theme}
+                    showAutoLoad
                 />
 
                 <AlertDialog open={deleteCategoryConfirmOpen} onOpenChange={setDeleteCategoryConfirmOpen}>

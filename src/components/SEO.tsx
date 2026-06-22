@@ -8,6 +8,7 @@ interface SEOProps {
   url?: string;
   type?: 'website' | 'article';
   locale?: string;
+  jsonLd?: object;
 }
 
 // 預設 title 與 LandingPage 對齊，避免空 props 落到舊預設值產生雙標題
@@ -22,7 +23,10 @@ export function SEO({
   url = 'https://multistreaming.org/',
   type = 'website',
   locale = 'zh_TW',
+  jsonLd,
 }: SEOProps) {
+  // 以序列化字串當依賴,避免呼叫端每次 render 傳新物件導致 effect 重跑
+  const jsonLdStr = jsonLd ? JSON.stringify(jsonLd) : null;
   // 用 useLayoutEffect 確保 document.title 在瀏覽器繪製前就同步完成，
   // 讓父層 useRouter 的 useEffect（在子元件 effect 後執行）讀到的 title 已是當前頁面標題
   useLayoutEffect(() => {
@@ -77,7 +81,21 @@ export function SEO({
       document.head.appendChild(canonical);
     }
     canonical.setAttribute('href', url);
-  }, [title, description, keywords, image, url, type, locale]);
+
+    // 更新或移除 JSON-LD 結構化資料(無 jsonLd 時清掉,避免跨頁殘留)
+    let ldScript = document.querySelector('script[data-seo-jsonld]') as HTMLScriptElement | null;
+    if (jsonLdStr) {
+      if (!ldScript) {
+        ldScript = document.createElement('script');
+        ldScript.type = 'application/ld+json';
+        ldScript.setAttribute('data-seo-jsonld', '');
+        document.head.appendChild(ldScript);
+      }
+      ldScript.textContent = jsonLdStr;
+    } else if (ldScript) {
+      ldScript.remove();
+    }
+  }, [title, description, keywords, image, url, type, locale, jsonLdStr]);
 
   return null; // 此組件不渲染任何內容
 }

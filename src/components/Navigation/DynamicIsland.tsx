@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize, Minimize } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { useEffect, useState, forwardRef } from 'react';
+import type { ComponentType } from 'react';
+import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize, Minimize, AlertTriangle } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { MediaControlPanel } from './MediaControlPanel';
@@ -40,6 +40,85 @@ import {
     onFullscreenChange
 } from '../../utils/fullscreenUtils';
 
+// ---- Function color tokens(見 islandTokens.ts,與各面板共用) ----
+import { FN, type FnKey } from './islandTokens';
+
+// 島上分隔線(對齊設計:w1 h22 white/14 mx5)
+const IslandDivider = () => (
+    <div className="shrink-0" style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.14)', margin: '0 5px' }} />
+);
+
+interface IslandBtnProps {
+    fn: FnKey;
+    icon: ComponentType<{ size?: number; strokeWidth?: number; fill?: string }>;
+    title: string;
+    active?: boolean;
+    fill?: boolean;
+    onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}
+
+// 共用島按鈕:語意色 + hover/active glow + active 指示條(對齊設計 IslandBtn L129-152)
+// 用 forwardRef + spread 讓 Radix asChild 的 trigger(dropdown/popover/alert-dialog)能正常轉發 props/ref。
+const IslandBtn = forwardRef<HTMLButtonElement, IslandBtnProps & React.ButtonHTMLAttributes<HTMLButtonElement>>(
+    ({ fn, icon: Icon, title, active = false, fill = false, onClick, ...rest }, ref) => {
+        const [hover, setHover] = useState(false);
+        const col = FN[fn];
+        const on = active || hover;
+        return (
+            <button
+                ref={ref}
+                type="button"
+                title={title}
+                aria-label={title}
+                aria-pressed={active}
+                onClick={onClick}
+                onMouseEnter={() => setHover(true)}
+                onMouseLeave={() => setHover(false)}
+                className="relative inline-flex items-center justify-center shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 11,
+                    border: 0,
+                    background: active ? `${col.c}29` : hover ? `${col.c}1a` : 'transparent',
+                    color: col.c,
+                    cursor: 'pointer',
+                    transition: 'all 0.18s',
+                    boxShadow: on ? `inset 0 0 0 1px ${col.c}55, 0 8px 18px -8px ${col.glow}` : 'none',
+                }}
+                {...rest}
+            >
+                <span
+                    className="flex"
+                    style={{
+                        opacity: on ? 1 : 0.9,
+                        filter: on ? `drop-shadow(0 0 5px ${col.glow})` : 'none',
+                        transition: 'all 0.18s',
+                    }}
+                >
+                    <Icon size={19} strokeWidth={2} fill={fill ? 'currentColor' : 'none'} />
+                </span>
+                {active && (
+                    <span
+                        style={{
+                            position: 'absolute',
+                            bottom: 3,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: 13,
+                            height: 2.5,
+                            borderRadius: 2,
+                            background: col.c,
+                            boxShadow: `0 0 6px ${col.c}`,
+                        }}
+                    />
+                )}
+            </button>
+        );
+    }
+);
+IslandBtn.displayName = 'IslandBtn';
+
 export const DynamicIsland = () => {
     const { t } = useTranslation(['common', 'favorites']);
     const setPage = useUIStore(s => s.setPage);
@@ -65,12 +144,12 @@ export const DynamicIsland = () => {
 
     const toggleFullscreen = () => {
         if (!getFullscreenElement()) {
-            requestFullscreen(document.documentElement).catch((err) => {
-                toast.error(`Error attempting to enable fullscreen: ${err.message}`);
+            requestFullscreen(document.documentElement).catch(() => {
+                toast.error('無法進入全螢幕');
             });
         } else {
-            exitFullscreen().catch((err) => {
-                console.error('Error exiting fullscreen:', err);
+            exitFullscreen().catch(() => {
+                console.error('Error exiting fullscreen');
             });
         }
     };
@@ -111,8 +190,8 @@ export const DynamicIsland = () => {
 
             toast.success(t('favorites:batch_save_success_simple', { count: successCount }) || `已收藏 ${successCount} 個串流`);
 
-        } catch (error) {
-            console.error(error);
+        } catch {
+            console.error('Quick save failed');
             toast.error(t('common.error') || '發生錯誤');
         }
     };
@@ -129,30 +208,35 @@ export const DynamicIsland = () => {
                     onMouseLeave={() => setMediaControlExpanded(false)}
                 />
 
-                <div className={cn(
-                    "bg-black/80 backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2 border border-white/10 shadow-2xl transition-all duration-500 ease-in-out",
-                    isCollapsed ? "translate-y-[200%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
-                )}>
-                    <div className="flex items-center gap-1">
+                <div
+                    className={cn(
+                        "relative flex items-center transition-all duration-500 ease-in-out",
+                        isCollapsed ? "translate-y-[200%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+                    )}
+                    style={{
+                        background: 'linear-gradient(180deg, rgba(28,28,36,0.86), rgba(10,10,14,0.92))',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        borderRadius: 9999,
+                        padding: '7px 10px',
+                        gap: 3,
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 50px -16px rgba(0,0,0,0.7)',
+                    }}
+                >
+                    <div className="flex items-center" style={{ gap: 3 }}>
 
                         {/* Group 1: Search Module */}
                         <IslandSearch />
 
-                        <div className="w-[1px] h-6 bg-white/20 mx-1" />
+                        <IslandDivider />
 
                         {/* Group 2: Controls */}
 
                         {/* 1. Add Window */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="rounded-full hover:bg-white/10 text-white"
-                                    title={t('common.add_window') || "新增視窗"}
-                                >
-                                    <Plus size={20} />
-                                </Button>
+                                <IslandBtn fn="add" icon={Plus} title={t('common.add_window') || '新增視窗'} />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent side="top" align="center" className="bg-black/90 border-white/10 backdrop-blur-md text-white z-[60]">
                                 <DropdownMenuItem className="focus:bg-white/20 focus:text-white cursor-pointer" onClick={() => addEmptyGroup()}>
@@ -173,76 +257,69 @@ export const DynamicIsland = () => {
                             onMouseLeave={() => setLayoutPickerExpanded(false)}
                             onOpenSettings={() => openModal('favorites', 'layouts')}
                         />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
+                        <IslandBtn
+                            fn="layout"
+                            icon={Layout}
+                            title={t('common.layout') || '布局設定'}
+                            active={layoutPickerExpanded}
                             onClick={() => setLayoutPickerExpanded(!layoutPickerExpanded)}
-                            title={t('common.layout') || "布局設定"}
-                        >
-                            <Layout size={20} />
-                        </Button>
+                        />
 
                         {/* 3. Media Controls */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
+                        <IslandBtn
+                            fn="media"
+                            icon={Tv}
+                            title={t('common.media') || '媒體控制'}
+                            active={mediaControlExpanded}
                             onClick={() => setMediaControlExpanded(!mediaControlExpanded)}
-                            title={t('common.media') || "媒體控制"}
-                        >
-                            <Tv size={20} />
-                        </Button>
+                        />
 
                         {/* 4. Favorites List */}
                         <IslandFavoritesMenu>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="rounded-full hover:bg-white/10 text-white"
-                                title={t('common.favorites') || "收藏清單"}
-                            >
-                                <Star size={20} />
-                            </Button>
+                            <IslandBtn fn="fav" icon={Star} fill title={t('common.favorites') || '收藏清單'} />
                         </IslandFavoritesMenu>
 
                         {/* 5. One-click Favorite (Quick Save) */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
+                        <IslandBtn
+                            fn="save"
+                            icon={FolderHeart}
+                            title={t('favorites:save_entire_canvas') || '一鍵收藏當前畫布'}
                             onClick={handleQuickSave}
-                            title={t('favorites:save_entire_canvas') || "一鍵收藏當前畫布"}
-                        >
-                            <FolderHeart size={20} />
-                        </Button>
+                        />
+
+                        <IslandDivider />
 
                         {/* 6. Fullscreen */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
+                        <IslandBtn
+                            fn="screen"
+                            icon={isFullscreen ? Minimize : Maximize}
+                            title={isFullscreen ? (t('common.exit_fullscreen') || '退出全螢幕') : (t('common.fullscreen') || '全螢幕')}
                             onClick={toggleFullscreen}
-                            title={isFullscreen ? (t('common.exit_fullscreen') || "退出全螢幕") : (t('common.fullscreen') || "全螢幕")}
-                        >
-                            {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-                        </Button>
+                        />
 
                         {/* 7. Clear Canvas */}
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="rounded-full hover:bg-white/10 text-red-400 hover:text-red-300"
-                                    title={t('common.clear_screen') || "清空畫面"}
-                                >
-                                    <Trash2 size={20} />
-                                </Button>
+                                <IslandBtn fn="clear" icon={Trash2} title={t('common.clear_screen') || '清空畫面'} />
                             </AlertDialogTrigger>
                             <AlertDialogContent className="z-[60]">
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>{t('common.confirm_clear_title') || '確定要清空所有視窗嗎？'}</AlertDialogTitle>
+                                    <div className="flex items-center gap-3">
+                                        <span
+                                            className="flex items-center justify-center shrink-0"
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 11,
+                                                background: 'rgba(248,113,113,0.14)',
+                                                color: '#f87171',
+                                                boxShadow: 'inset 0 0 0 1px rgba(248,113,113,0.35)',
+                                            }}
+                                        >
+                                            <AlertTriangle size={20} />
+                                        </span>
+                                        <AlertDialogTitle>{t('common.confirm_clear_title') || '確定要清空所有視窗嗎？'}</AlertDialogTitle>
+                                    </div>
                                     <AlertDialogDescription>
                                         {t('common.confirm_clear_desc') || '此動作將會移除畫布上所有的直播視窗與聊天室。'}
                                     </AlertDialogDescription>
@@ -259,31 +336,25 @@ export const DynamicIsland = () => {
                             </AlertDialogContent>
                         </AlertDialog>
 
-                        <div className="w-[1px] h-6 bg-white/20 mx-1" />
+                        <IslandDivider />
 
                         {/* Group 3: Navigation */}
 
                         {/* Home */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
+                        <IslandBtn
+                            fn="home"
+                            icon={Home}
+                            title={t('common.home') || '返回首頁'}
                             onClick={() => setPage('home')}
-                            title={t('common.home') || "返回首頁"}
-                        >
-                            <Home size={20} />
-                        </Button>
+                        />
 
                         {/* Settings request: Opens Favorites Manager now */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full hover:bg-white/10 text-white"
+                        <IslandBtn
+                            fn="settings"
+                            icon={Settings}
+                            title={t('common.settings') || '設定'}
                             onClick={() => openModal('favorites', 'global_settings')}
-                            title={t('common.settings') || "設定"}
-                        >
-                            <Settings size={20} />
-                        </Button>
+                        />
                     </div>
                 </div>
             </div>

@@ -1,10 +1,32 @@
 export default {
+  // Island favorites chooser
+  select_category: '카테고리 선택',
+  all_categories: '모든 카테고리',
+  no_categories: '카테고리 없음',
+  select_tags_multi: '태그 선택 (다중)',
+  // FM Settings — 외관/재생 카드
+  theme_light: '라이트',
+  theme_dark: '다크',
+  theme_system: '시스템',
+  playback: '재생',
+  auto_mute_new: '새 스트림 열 때 자동 음소거',
+  auto_mute_new_desc: '한꺼번에 많이 열 때 음량 폭발을 방지합니다.',
+  yt_risk_warn: 'YouTube 다중 방송 경고',
+  yt_risk_warn_desc: 'YouTube 방송이 3개를 초과하면 경고합니다.',
+  bg_live_detect: '백그라운드에서 라이브 상태 자동 감지',
+  bg_live_detect_desc: '5분마다 즐겨찾기 채널을 확인합니다.',
   // Navigation
+  favoritesManager: '즐겨찾기 관리',
   myFavorites: '즐겨찾기',
   batchImport: '일괄 가져오기',
   settings: '설정',
   categoryManagement: '즐겨찾기 리스트',
   manageCategories: '리스트 관리',
+
+  // Sidebar section labels (對齊設計 FMSidebar 分區)
+  sidebarFilter: '필터',
+  sidebarLiveNow: '라이브 중',
+  sidebarCategoryGroup: '카테고리',
 
   // Quick Filters
   all: '전체',
@@ -112,6 +134,11 @@ export default {
   theme: '테마',
   language: '언어',
   about: '정보',
+
+  // ExitLag 제휴 프로모션 (사이드바)
+  exitlag_title: '스트리밍 지연 감소',
+  exitlag_subtitle: 'ExitLag 멀티패스 가속',
+
   // Layout Manager
   'layout_manager.delete_confirm': '삭제',
   'layout_manager.apply': '적용',
@@ -124,5 +151,48 @@ export default {
   'layout_manager.no_layouts': '사용자 지정 레이아웃 없음',
   'layout_manager.no_layouts_desc': '창 위치를 조정한 후 템플릿으로 저장할 수 있습니다.',
   'sidebar.version_history': '업데이트 기록',
+
+  // Add/Edit Favorite Dialog (Phase 3 redesign)
+  addFavoriteDesc: '채널 URL을 붙여넣으면 플랫폼이 자동으로 인식됩니다',
+  editFavoriteDesc: '이름, 목록, 태그를 업데이트',
+  channelUrlOrName: '채널 URL 또는 이름',
+  paste: '붙여넣기',
+  pasteFromClipboard: '클립보드에서 붙여넣기',
+  urlHint: 'twitch.tv/이름, youtube.com/@이름 또는 채널 이름 직접 입력을 지원합니다.',
+  whichPlatform: '어떤 플랫폼인가요?',
+  preview: '미리보기',
+  previewEmpty: 'URL을 입력하면 여기에서 채널을 미리 볼 수 있습니다',
+  displayName: '표시 이름',
+  displayNamePlaceholder: '채널 표시 이름',
+  optional: '선택',
+  multiSelect: '다중 선택',
+  autoLoadTitle: '추가 후 바로 화면에 로드',
+  autoLoadDesc: '저장과 동시에 이 채널을 멀티뷰에 엽니다',
+  addAndLoad: '추가 및 로드',
+
+  // 補齊在地化:일괄 작업 / 다이내믹 아일랜드 / 카테고리 삭제 확인(zh-TW/en 정합)
+  loadSelected: '선택 항목 열기',
+  deselectAll: '선택 해제',
+  delete: '삭제',
+  batchEdit: '일괄 편집',
+  batchOperations: '일괄 작업',
+  setCategory: '리스트 설정',
+  addTags: '태그 추가',
+  batchSetCategoryConfirm: '{{count}}개 항목을 「{{category}}」 리스트로 설정하시겠습니까?',
+  batchAddTagsConfirm: '{{count}}개 항목에 태그를 추가하시겠습니까?',
+  load: '열기',
+  loadSuccess: '불러왔습니다',
+  loadError: '불러오지 못했습니다',
+  confirmDeleteCategoryDesc: '카테고리를 삭제하면 해당 카테고리의 즐겨찾기는 미분류로 변경됩니다.',
+  favorites_menu: '즐겨찾기 라이브',
+  online_only: '라이브 중만 표시',
+  added_count: '채널 {{count}}개를 불러왔습니다',
+  no_streams_in_category: '카테고리에 채널이 없습니다',
+  confirm_load_large: '채널 {{count}}개를 불러오시겠습니까? 끊김이 발생할 수 있습니다',
+  load_selected_count: '채널 {{count}}개 열기',
+  load_category_all: '이 카테고리 전체 열기',
+  no_streams_to_save: '저장할 스트림이 없습니다',
+  save_entire_canvas: '현재 캔버스 저장',
+  batch_save_success_simple: '스트림 {{count}}개를 저장했습니다',
 };
 

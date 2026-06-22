@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStreamStore } from '../../../store/useStreamStore';
 import { LayoutPreview } from '../../../components/Layout/LayoutPreview';
 import { Button } from '../../../components/ui/button';
@@ -55,10 +55,10 @@ export const LayoutManagerSection = () => {
                 <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
                     <LayoutGrid className="size-5" />
                 </div>
-                <h3 className="text-lg font-bold font-normal">{t('common.manage_layouts')}</h3>
+                <h3 className="text-lg font-bold font-normal text-foreground">{t('common.manage_layouts')}</h3>
             </div>
 
-            <div className="flex-1 min-h-0 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30 overflow-hidden">
+            <div className="flex-1 min-h-0 rounded-xl border border-border bg-muted/30 overflow-hidden">
                 <ScrollArea className="h-full">
                     {(!customLayouts || customLayouts.length === 0) ? (
                         <div className="flex flex-col items-center justify-center p-8 text-muted-foreground min-h-[300px]">

@@ -30,6 +30,7 @@ const controlPanel = {
   'mediaControl': '媒體控制',
   'masterVolume': '總音量',
   'muteAll': '全部靜音',
+  'unmuteAll': '解除靜音',
   'streamOrder': '串流順序',
   'noStreams': '暫無串流',
   'volume': '音量',

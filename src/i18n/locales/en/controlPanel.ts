@@ -30,6 +30,7 @@ const controlPanel = {
   'mediaControl': 'Media Control',
   'masterVolume': 'Master Volume',
   'muteAll': 'Mute All',
+  'unmuteAll': 'Unmute All',
   'streamOrder': 'Stream Order',
   'noStreams': 'No Streams',
   'volume': 'Volume',

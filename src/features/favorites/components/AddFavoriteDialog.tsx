@@ -1,13 +1,16 @@
 import { useForm, Controller } from 'react-hook-form';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../../../components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { TagPopoverSelector } from '../../../components/ui/TagPopoverSelector';
-import { TagChip } from '../../../components/ui/TagChip';
+import { TagWellSelector } from './TagWellSelector';
 import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import {
+    Star, Pencil, Clipboard, Link2, Twitch, Youtube, Folder, Check,
+    Play, Plus, Trash2, X,
+} from 'lucide-react';
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../types';
+import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from '../constants';
 
 interface AddFavoriteDialogProps {
     open: boolean;
@@ -16,7 +19,8 @@ interface AddFavoriteDialogProps {
     categories: Category[];
     allTags: Tag[];
     initialData?: FavoriteStream | null;
-    theme: 'light' | 'dark';
+    /** 是否顯示「新增後立即載入畫面」開關(僅在有畫布可載入的情境,如 canvas 的 FM) */
+    showAutoLoad?: boolean;
 }
 
 export interface AddFavoriteFormValues {
@@ -24,7 +28,33 @@ export interface AddFavoriteFormValues {
     name: string;
     categoryId: string;
     tagIds: string[];
+    /** 新增後是否立即把此頻道載入到畫布(僅 add 模式 + showAutoLoad 情境有效) */
+    autoLoad?: boolean;
 }
+
+// ---- Presentational platform detection -------------------------------------
+// 純展示用:只驅動 input icon 顏色、預覽卡、何時顯示平台選擇器。
+// 不改變實際送出的 url —— 真實平台解析仍在 favoritesService.addFavorite 內進行。
+type AfPlatform = 'twitch' | 'youtube';
+function detectPlatform(input: string): { platform: AfPlatform | null; handle: string } {
+    const s = (input || '').trim();
+    if (!s) return { platform: null, handle: '' };
+    let m: RegExpMatchArray | null;
+    if ((m = s.match(/twitch\.tv\/([A-Za-z0-9_]{2,40})/i))) return { platform: 'twitch', handle: m[1] };
+    if ((m = s.match(/youtube\.com\/@([A-Za-z0-9_.\-]{2,40})/i))) return { platform: 'youtube', handle: m[1] };
+    if ((m = s.match(/youtube\.com\/channel\/([A-Za-z0-9_\-]{4,40})/i))) return { platform: 'youtube', handle: m[1] };
+    if ((m = s.match(/youtu\.be\/([A-Za-z0-9_\-]{4,40})/i))) return { platform: 'youtube', handle: m[1] };
+    if (/^@?[A-Za-z0-9_.\-]{2,40}$/.test(s)) return { platform: null, handle: s.replace(/^@/, '') };
+    return { platform: null, handle: '' };
+}
+
+// 平台主色(僅用於 input icon / 預覽 / badge 的品牌色點綴,非主題 token)
+function platformColor(p: AfPlatform | null): string {
+    return p === 'youtube' ? '#FF3D3D' : p === 'twitch' ? '#9146FF' : '';
+}
+
+// 共用 eyebrow label 樣式
+const afLabel = 'block text-[11px] font-bold uppercase tracking-[0.06em] text-muted-foreground mb-2.5';
 
 export function AddFavoriteDialog({
     open,
@@ -33,11 +63,12 @@ export function AddFavoriteDialog({
     categories,
     allTags,
     initialData,
-    theme
+    showAutoLoad = false,
 }: AddFavoriteDialogProps) {
     const { t } = useTranslation(['favorites', 'common', 'tags']);
+    const isEdit = !!initialData;
 
-    const { register, handleSubmit, control, reset, setValue, watch } = useForm<AddFavoriteFormValues>({
+    const { register, handleSubmit, control, reset, setValue, getValues, watch } = useForm<AddFavoriteFormValues>({
         defaultValues: {
             url: '',
             name: '',
@@ -46,7 +77,14 @@ export function AddFavoriteDialog({
         }
     });
 
-    const selectedTagIds = watch('tagIds');
+    const url = watch('url');
+
+    // 純視覺狀態(不影響送出 payload)
+    const [manualPlatform, setManualPlatform] = useState<AfPlatform | null>(null);
+    // autoLoad 預設 off;開啟時新增成功後由 onSubmit 端(canvas FM)以 favoritesLoader 載入該頻道
+    const [autoLoad, setAutoLoad] = useState(false);
+    // 記住「上次依平台自動加入的平台 tag」,避免使用者手動移除後又被加回(只在 add 模式作用)
+    const appliedPlatformTagRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (initialData) {
@@ -64,109 +102,280 @@ export function AddFavoriteDialog({
                 tagIds: []
             });
         }
+        setManualPlatform(null);
+        setAutoLoad(false);
+        appliedPlatformTagRef.current = null;
     }, [initialData, reset, open]);
+
+    // ---- presentational derived values ----
+    const det = detectPlatform(url || '');
+    const platform: AfPlatform | null = isEdit
+        ? ((initialData?.platform === 'twitch' || initialData?.platform === 'youtube') ? initialData.platform : null)
+        : (det.platform || manualPlatform);
+    const accent = platformColor(platform);
+    const showPlatformPicker = !isEdit && !!det.handle && !det.platform;
+
+    // add 模式:依偵測到的平台自動預選平台 tag(Twitch/YouTube),讓平台 tag 在 tag well 內預先選好
+    // (使用者反映「新增時沒自動帶平台標籤」)。平台切換時移除舊的、加入新的;
+    // 使用者手動移除後(平台未變)不再強加(用 appliedPlatformTagRef 記錄上次自動套用的平台 tag)。
+    useEffect(() => {
+        if (isEdit) return;
+        const platformTagId = platform === 'twitch' ? DEFAULT_TAG_TWITCH_ID
+            : platform === 'youtube' ? DEFAULT_TAG_YOUTUBE_ID
+                : null;
+        const prev = appliedPlatformTagRef.current;
+        if (platformTagId === prev) return;
+        const current = getValues('tagIds') || [];
+        let next = prev ? current.filter(id => id !== prev) : [...current];
+        if (platformTagId && !next.includes(platformTagId)) next = [...next, platformTagId];
+        appliedPlatformTagRef.current = platformTagId;
+        if (next.length !== current.length || next.some((id, i) => id !== current[i])) {
+            setValue('tagIds', next, { shouldDirty: true });
+        }
+    }, [platform, isEdit, getValues, setValue]);
+
+    const pasteFromClipboard = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) setValue('url', text.trim(), { shouldDirty: true });
+        } catch {
+            // 剪貼簿不可用時忽略(權限/環境)
+        }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className={`sm:max-w-[500px] ${theme === 'dark' ? 'bg-gray-900 border-gray-800 text-white' : 'bg-white'
-                }`}>
-                <DialogHeader>
-                    <DialogTitle>{initialData ? t('common:common.edit') : t('addFavorite')}</DialogTitle>
-                    <DialogDescription>
-                        {initialData ? t('favorites:dialogDesc') : t('favorites:dialogDesc')}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">{t('favorites:streamUrl')}</label>
-                        <Input
-                            {...register('url', { required: !initialData })}
-                            placeholder="https://www.twitch.tv/..."
-                            disabled={!!initialData}
-                            className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
-                        />
+            <DialogContent
+                showCloseButton={false}
+                className="sm:max-w-[540px] w-full max-h-[92vh] p-0 gap-0 overflow-hidden rounded-[18px] border-border bg-card text-foreground flex flex-col"
+            >
+                {/* Header: gradient icon chip + title/subtitle + close */}
+                <div className="flex items-center gap-3 px-5 py-[18px] border-b border-border">
+                    <div className="size-9 shrink-0 rounded-[10px] flex items-center justify-center bg-gradient-to-br from-primary to-purple-400 text-white shadow-[0_6px_18px_-6px_rgba(168,85,247,0.6)]">
+                        {isEdit ? <Pencil className="size-[18px]" /> : <Star className="size-[18px]" />}
                     </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">{t('favorites:customName')}</label>
-                        <Input
-                            {...register('name')}
-                            placeholder={t('favorites:customName')}
-                            className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}
-                        />
+                    <div className="flex-1 min-w-0">
+                        <DialogTitle className="text-[17px] font-bold leading-tight">
+                            {isEdit ? t('favorites:editFavorite') : t('favorites:addFavorite')}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                            {isEdit ? t('favorites:editFavoriteDesc') : t('favorites:addFavoriteDesc')}
+                        </DialogDescription>
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => onOpenChange(false)}
+                        title={t('common:common.close')}
+                        aria-label={t('common:common.close')}
+                        className="size-8 shrink-0 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <X className="size-[18px]" />
+                    </button>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">{t('favorites:category')}</label>
+                <form
+                    onSubmit={handleSubmit((data) => onSubmit({ ...data, autoLoad: showAutoLoad && autoLoad }))}
+                    className="flex flex-col min-h-0 flex-1"
+                >
+                    {/* Body */}
+                    <div className="flex flex-col gap-[18px] p-5 overflow-y-auto">
+                        {/* URL input + paste — add mode only */}
+                        {!isEdit && (
+                            <div>
+                                <label className={afLabel}>{t('favorites:channelUrlOrName')}</label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <span
+                                            className="absolute left-3 top-1/2 -translate-y-1/2 flex transition-colors z-10"
+                                            style={{ color: accent || 'var(--muted-foreground)' }}
+                                        >
+                                            {platform === 'twitch' ? <Twitch className="size-4" />
+                                                : platform === 'youtube' ? <Youtube className="size-4" />
+                                                    : <Link2 className="size-4" />}
+                                        </span>
+                                        <Input
+                                            {...register('url', { required: !initialData })}
+                                            placeholder="twitch.tv/shroud 或 youtube.com/@..."
+                                            className={`h-11 pl-[38px] bg-background border-border ${det.handle ? 'border-primary/50' : ''}`}
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={pasteFromClipboard}
+                                        title={t('favorites:pasteFromClipboard')}
+                                        className="h-11 px-3.5 gap-1.5 bg-muted/40 border-border text-foreground hover:bg-accent shrink-0"
+                                    >
+                                        <Clipboard className="size-[15px]" />
+                                        {t('favorites:paste')}
+                                    </Button>
+                                </div>
+                                <p className="text-[11.5px] text-muted-foreground mt-2 leading-relaxed">
+                                    {t('favorites:urlHint')}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Platform picker — add mode, ambiguous input */}
+                        {showPlatformPicker && (
+                            <div>
+                                <label className={afLabel}>{t('favorites:whichPlatform')}</label>
+                                <div className="flex gap-2">
+                                    {([
+                                        { id: 'twitch' as const, label: 'Twitch' },
+                                        { id: 'youtube' as const, label: 'YouTube' },
+                                    ]).map((p) => {
+                                        const active = manualPlatform === p.id;
+                                        const c = platformColor(p.id);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => setManualPlatform(p.id)}
+                                                aria-pressed={active}
+                                                className="flex-1 h-11 rounded-[10px] inline-flex items-center justify-center gap-2 text-sm font-semibold border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                style={active
+                                                    ? { background: `${c}1f`, borderColor: c, color: c }
+                                                    : { background: 'transparent', borderColor: 'var(--border)', color: 'var(--muted-foreground)' }}
+                                            >
+                                                {p.id === 'twitch' ? <Twitch className="size-4" /> : <Youtube className="size-4" />}
+                                                {p.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Display name — edit mode */}
+                        {isEdit && (
+                            <div>
+                                <label className={afLabel}>{t('favorites:displayName')}</label>
+                                <Input
+                                    {...register('name')}
+                                    placeholder={t('favorites:displayNamePlaceholder')}
+                                    className="h-11 bg-background border-border"
+                                />
+                            </div>
+                        )}
+
+                        {/* Category pills */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2.5">
+                                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t('favorites:category')}</label>
+                                <span className="text-[11px] text-muted-foreground">{t('favorites:optional')}</span>
+                            </div>
                             <Controller
                                 name="categoryId"
                                 control={control}
                                 render={({ field }) => (
-                                    <Select value={field.value} onValueChange={field.onChange}>
-                                        <SelectTrigger className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}>
-                                            <SelectValue placeholder={t('favorites:uncategorized')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="uncategorized">{t('favorites:uncategorized')}</SelectItem>
-                                            {categories.map(cat => (
-                                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex flex-wrap gap-2">
+                                        {categories.map((c) => {
+                                            const active = field.value === c.id;
+                                            return (
+                                                <button
+                                                    key={c.id}
+                                                    type="button"
+                                                    onClick={() => field.onChange(active ? 'uncategorized' : c.id)}
+                                                    aria-pressed={active}
+                                                    className={`inline-flex items-center gap-1.5 px-3 py-[7px] rounded-full text-[13px] font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                                        active
+                                                            ? 'bg-primary/15 border-primary/60 text-primary'
+                                                            : 'bg-muted/40 border-border text-muted-foreground hover:bg-accent'
+                                                    }`}
+                                                >
+                                                    <Folder className="size-[13px]" />
+                                                    {c.name}
+                                                </button>
+                                            );
+                                        })}
+                                        {categories.length === 0 && (
+                                            <span className="text-[12.5px] text-muted-foreground">{t('favorites:noCategories')}</span>
+                                        )}
+                                    </div>
                                 )}
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">{t('tags:addTag')}</label>
-                            <div className="flex gap-2">
-                                <Controller
-                                    name="tagIds"
-                                    control={control}
-                                    render={({ field }) => (
-                                        <TagPopoverSelector
-                                            allTags={allTags}
-                                            selectedTagIds={field.value}
-                                            onChange={field.onChange}
-                                            theme={theme}
-                                            showSelectedChips={false}
-                                        />
-                                    )}
-                                />
+                        {/* Tags — 單一 tag well combobox(對齊 design AFTagPicker) */}
+                        <div>
+                            <div className="flex items-center justify-between mb-2.5">
+                                <label className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t('tags:addTag')}</label>
+                                <span className="text-[11px] text-muted-foreground">{t('favorites:multiSelect')}</span>
                             </div>
+                            <Controller
+                                name="tagIds"
+                                control={control}
+                                render={({ field }) => (
+                                    <TagWellSelector
+                                        allTags={allTags}
+                                        selectedTagIds={field.value}
+                                        onChange={field.onChange}
+                                    />
+                                )}
+                            />
                         </div>
+
+                        {/* Auto-load toggle — add mode + 有畫布可載入時才顯示(接 favoritesLoader.load) */}
+                        {!isEdit && showAutoLoad && (
+                            <button
+                                type="button"
+                                onClick={() => setAutoLoad((v) => !v)}
+                                aria-pressed={autoLoad}
+                                className={`flex items-center gap-3 w-full text-left px-3.5 py-3 rounded-[12px] border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                    autoLoad ? 'bg-primary/10 border-primary/35' : 'bg-muted/30 border-border'
+                                }`}
+                            >
+                                <span className="flex size-[34px] rounded-[9px] items-center justify-center bg-primary/15 text-primary shrink-0">
+                                    <Play className="size-4" />
+                                </span>
+                                <span className="flex-1">
+                                    <span className="block text-[13.5px] font-semibold text-foreground">{t('favorites:autoLoadTitle')}</span>
+                                    <span className="block text-[11.5px] text-muted-foreground mt-px">{t('favorites:autoLoadDesc')}</span>
+                                </span>
+                                <span className={`relative w-10 h-[22px] rounded-full shrink-0 transition-colors ${autoLoad ? 'bg-primary' : 'bg-muted-foreground/35'}`}>
+                                    <span className={`absolute top-0.5 size-[18px] rounded-full bg-white shadow transition-all ${autoLoad ? 'left-5' : 'left-0.5'}`} />
+                                </span>
+                            </button>
+                        )}
                     </div>
 
-                    {/* Selected Tags Preview */}
-                    {selectedTagIds.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {allTags.filter(tag => selectedTagIds.includes(tag.id)).map(tag => (
-                                <TagChip
-                                    key={tag.id}
-                                    tag={tag}
-                                    onDelete={() => {
-                                        setValue('tagIds', selectedTagIds.filter(id => id !== tag.id));
-                                    }}
-                                />
-                            ))}
+                    {/* Footer */}
+                    <div className="flex items-center justify-between gap-2.5 px-5 py-3.5 border-t border-border bg-muted/30">
+                        <div>
+                            {isEdit && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => onOpenChange(false)}
+                                    className="h-10 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                    <Trash2 className="size-[15px]" />
+                                    {t('common:common.delete')}
+                                </Button>
+                            )}
                         </div>
-                    )}
-
-                    <DialogFooter className="pt-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            className={theme === 'dark' ? 'border-gray-700 hover:bg-gray-800' : ''}
-                        >
-                            {t('common:common.cancel')}
-                        </Button>
-                        <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">
-                            {initialData ? t('common:common.save') : t('common:common.add')}
-                        </Button>
-                    </DialogFooter>
+                        <div className="flex items-center gap-2.5">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                className="h-10 border-border hover:bg-accent"
+                            >
+                                {t('common:common.cancel')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="h-10 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
+                            >
+                                {isEdit
+                                    ? <><Check className="size-[15px]" />{t('common:common.save')}</>
+                                    : autoLoad
+                                        ? <><Play className="size-[15px]" />{t('favorites:addAndLoad')}</>
+                                        : <><Plus className="size-[15px]" />{t('favorites:addFavorite')}</>}
+                            </Button>
+                        </div>
+                    </div>
                 </form>
             </DialogContent>
         </Dialog>

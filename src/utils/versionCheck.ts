@@ -16,6 +16,11 @@ export const checkAppVersion = () => {
             return;
         }
 
+        // 首次造訪（無任何已存版本）：此時載入的就是最新程式碼，沒有「過時快取」要清，
+        // 不需 reload。先前無條件 reload 會讓每個新訪客（與每次 Lighthouse 量測，因其
+        // 一律從空 storage 開始）都多跑一次完整重載 → 嚴重拖累首屏 FCP/LCP。
+        const isFirstVisit = storedVersion === null;
+
 
 
 
@@ -63,9 +68,11 @@ export const checkAppVersion = () => {
 
 
         // Force Reload to ensure fresh code is loaded
-        // Note: We only reload if we actually detected a change.
-        // If strict reload is required, we can uncomment:
-        window.location.reload();
+        // 僅在「從舊版本升級」時 reload（清掉可能殘留的記憶體狀態）；
+        // 首次造訪不 reload（見上方說明）。
+        if (!isFirstVisit) {
+            window.location.reload();
+        }
 
     } catch (e) {
         console.error('[VersionCheck] Error during version check:', e);

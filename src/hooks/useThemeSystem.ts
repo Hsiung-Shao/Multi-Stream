@@ -1,26 +1,20 @@
 import { useEffect } from 'react';
-import { useUIStore } from '../store/useUIStore';
+import { useEffectiveTheme } from './useEffectiveTheme';
 
 /**
  * Hook to manage theme system side effects.
- * Synchonizes the theme state from useUIStore to the document's classList and meta tags.
+ * Synchonizes the resolved theme to the document's classList.
+ *
+ * 主題解析(含 'system' 跟隨 prefers-color-scheme 與即時切換)
+ * 統一由 useEffectiveTheme 負責,這裡只負責把結果套到 documentElement。
  */
 export function useThemeSystem() {
-    const theme = useUIStore((state) => state.theme);
+    const resolved = useEffectiveTheme();
 
     useEffect(() => {
         const root = window.document.documentElement;
-
         // Remove both potential classes first to be clean (though usually we just toggle dark)
         root.classList.remove('light', 'dark');
-
-        // Add the current theme class
-        root.classList.add(theme);
-
-        // Update meta theme-color for mobile browsers if needed
-        // const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-        // if (metaThemeColor) {
-        //     metaThemeColor.setAttribute('content', theme === 'dark' ? '#030712' : '#ffffff');
-        // }
-    }, [theme]);
+        root.classList.add(resolved);
+    }, [resolved]);
 }

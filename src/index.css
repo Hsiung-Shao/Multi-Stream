@@ -47,7 +47,9 @@
   --card-foreground: oklch(0.985 0.002 247.839);
   --popover: oklch(0.21 0.034 264.665);
   --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.63 0.23 304);
+  /* L 由 0.63 調暗為 0.57：白字按鈕(bg-primary + primary-foreground)達 WCAG AA 4.5:1
+     （原 3.67:1 不足）。仍清楚是品牌紫，且 text-primary 多用於圖示(門檻 3:1)不受影響。 */
+  --primary: oklch(0.57 0.23 304);
   --primary-foreground: oklch(0.98 0.01 308);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -209,4 +211,49 @@ body.is-interacting {
 /* Ensure dragging item is visible */
 div[data-rbd-draggable-id] {
   transition: background-color 0.2s ease, transform 0.2s ease !important;
+}
+
+/* === long-form 頁共用 section header(ds-primitives SectionHead) === */
+
+.ds-head { margin-bottom: 28px; }
+.ds-head-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 10px 0 0; color: var(--foreground); }
+.ds-head-sub { font-size: 15.5px; color: var(--muted-foreground); margin: 10px 0 0; line-height: 1.6; max-width: 640px; }
+
+/* === 全站共用動畫 === */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 600ms cubic-bezier(0.21, 1, 0.32, 1) backwards;
+}
+
+/* LIVE badge 紅點脈衝（比預設 animate-pulse 更顯眼） */
+@keyframes live-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.live-pulse {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+/* 尊重使用者 reduced-motion 設定 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .live-pulse {
+    animation: none !important;
+  }
 }

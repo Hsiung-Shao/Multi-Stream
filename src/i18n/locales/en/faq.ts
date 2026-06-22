@@ -1,55 +1,13 @@
 const faq = {
+    'tipLabel': 'Tip',
     'title': 'FAQ',
-    'header_title': 'Features & FAQ',
-    'header_subtitle': 'Explore the powerful features of MultiStream Hub and build your ultimate streaming dashboard.',
-    'go_to_canvas': 'Go to Canvas',
-    'footer_note': 'If you have further questions, feel free to contact us via GitHub or Feedback.',
+    'header_title': 'FAQ & Troubleshooting',
+    'header_subtitle': 'Answers to common questions about playback, performance, and data storage.',
 
-    'items.dynamic_island.title': 'Dynamic Island',
-    'items.dynamic_island.content': 'A floating toolbar at the bottom center providing quick access to search, add windows, layout switching, media controls, and favorites. It auto-hides when idle and reappears on hover.',
-    'items.dynamic_island.tip': 'Click icons on the Dynamic Island to expand their respective menus.',
-
-    'items.favorites_manager.title': 'Favorites Manager',
-    'items.favorites_manager.content': 'Centralize your Twitch & YouTube channels. Support for adding, editing, deleting, and customizing with tags and categories. Implement Twitch account linking to import follows, or add manually via URL.',
-
-    'items.media_control.title': 'Media Controls',
-    'items.media_control.content': 'Access the Media Control Panel via the TV icon on the Dynamic Island. Adjust "Master Volume" or "Mute All" windows instantly without handling each stream individually.',
-
-    'items.search_bar.title': 'Search Bar',
-    'items.search_bar.content': 'Located on the Dynamic Island or Navbar. Supports direct URL entry (Twitch/YouTube) or keyword search for Twitch channels.',
-
-    'items.layout_control.title': 'Layout Control',
-    'items.layout_control.content': 'Offers various presets (Grid, Master/Slave, Vertical) and "Free Canvas" mode. In Free mode, drag and resize windows freely.',
-
-    'items.one_click_favorite.title': 'One-Click Favorite',
-    'items.one_click_favorite.content': 'The "Folder Heart" icon on Dynamic Island. Click to save all currently open windows on the canvas to your favorites list for quick access later.',
-
-    'items.clear_canvas.title': 'Clear Canvas',
-    'items.clear_canvas.content': 'The Trash icon on the right of the Dynamic Island. Removes all windows from the canvas upon confirmation.',
-
-    'items.fullscreen.title': 'Fullscreen',
-    'items.fullscreen.content': 'Toggle fullscreen mode for the entire app or specific video windows via the fullscreen icons for an immersive experience.',
-
-    'items.batch_import.title': 'Batch Import',
-    'items.batch_import.content': 'In the "Batch Import" tab of Favorites Manager, paste multiple URLs or JSON data to import multiple channels at once.',
-
-    'items.multi_tabs.title': 'Multi-tabs',
-    'items.multi_tabs.content': 'Chat windows support multiple tabs. Open multiple chat rooms in a single window and switch between them to save screen space.',
-
-    'items.categories.title': 'Categories',
-    'items.categories.content': 'Create custom categories (e.g., Vtuber, Music, Esports) to organize your favorites. Drag and drop channels into categories within the manager.',
-
-    'items.backup_restore.title': 'Backup & Restore',
-    'items.backup_restore.content': 'Export all settings, favorites, tags, and layouts as a JSON file via the "Backup" tab. Import this file later or on another device to restore your setup.',
-
-    'items.twitch_linking.title': 'Twitch Account Linking',
-    'items.twitch_linking.content': 'Link your Twitch account to import your follow list. We only access public follow data and do not store your credentials.',
-
-    'items.live_detection.title': 'Live Detection',
-    'items.live_detection.content': 'The system periodically checks the live status of your favorite Twitch channels in the background. Online channels show a green indicator and viewer count.',
-
-    'items.empty_window.title': 'Empty Window Usage',
-    'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.',
+    'cat_compat': 'Playback & Compatibility',
+    'cat_compat_blurb': 'Troubleshooting for browsers, platforms, and playback issues.',
+    'cat_usage': 'Performance & Data',
+    'cat_usage_blurb': 'Common questions about performance tuning, data storage, and layout placeholders.',
 
     'items.brave_twitch.title': 'Twitch Not Working on Brave Browser',
     'items.brave_twitch.content': 'Due to Brave\'s privacy protection, Twitch\'s anti-bot system (Kasada) detects the Brave browser signature and rejects requests, causing Twitch streams to fail (frozen screen or errors). This can be fixed by installing the ModHeader extension to override the browser signature.',
@@ -59,6 +17,39 @@ const faq = {
     'items.brave_twitch.step1': 'Open ModHeader and click the menu button (three dots icon) in the top right',
     'items.brave_twitch.step2': 'Find and click "Import profile" in the menu',
     'items.brave_twitch.step3': 'Click "Load file" and select the downloaded twitch.json profile to import',
-    'items.brave_twitch.tip': 'After importing, refresh the Twitch page to start streaming normally. This setting only affects browser signatures for Twitch-related requests and won\'t impact other websites.'
+    'items.brave_twitch.tip': 'After importing, refresh the Twitch page to start streaming normally. This setting only affects browser signatures for Twitch-related requests and won\'t impact other websites.',
+
+    'items.youtube_playback.title': 'Why won\'t YouTube videos play?',
+    'items.youtube_playback.content': 'Some YouTube videos or streams are restricted from embedding by content creators and cannot be played on third-party platforms.',
+
+    'items.platform_support.title': 'Which platforms are supported?',
+    'items.platform_support.content': 'Currently supports Twitch and YouTube Live. More platforms may be added in the future.',
+
+    'items.live_detection.title': 'Live Detection',
+    'items.live_detection.content': 'The system periodically checks the live status of your favorite Twitch channels in the background. Online channels show a green indicator and viewer count.',
+
+    'items.performance.title': 'How to improve performance?',
+    'items.performance.content': 'Simultaneously playing multiple high-quality streams consumes significant CPU and bandwidth. Try lowering the quality of individual streams or reducing the number of active streams.',
+
+    'items.data_saved.title': 'Are my settings saved?',
+    'items.data_saved.content': 'Yes, your layout, favorites, and settings are automatically saved in your browser and restored on your next visit.',
+
+    'items.empty_window.title': 'Empty Window Usage',
+    'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.',
+  // —— i18n 修補：design 改版新增 key，各語言在地化 ——
+  'cat_all': 'All',
+  'support_eyebrow': 'Support',
+  'search_placeholder': 'Search questions, e.g. "Brave", "performance", "YouTube"…',
+  'search_found': 'Found {{count}} question(s) matching "{{query}}"',
+  'search_none': 'No questions matching "{{query}}"',
+  'empty_title': 'No matching questions',
+  'empty_desc': 'Try a different keyword, or just ask us on Discord.',
+  'cta_title': 'Still can\'t find an answer?',
+  'cta_desc': 'Join our Discord community and ask us — we\'re happy to help.',
+  'cta_discord': 'Join Discord',
+  'foot_home': 'Home',
+  'foot_about': 'About',
+  'foot_privacy': 'Privacy Policy',
 };
+
 export default faq;

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore, type PageType } from './store/useUIStore';
@@ -12,20 +12,19 @@ import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView } from './utils/analytics';
 import { initUmami } from './utils/umami';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
+import { useEffectiveTheme } from './hooks/useEffectiveTheme';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
-import { Toaster } from './components/ui/sonner';
-import { PerformanceOverlay } from './components/Navigation/PerformanceOverlay';
-import { GlobalLiveStatusChecker } from './features/favorites/components/GlobalLiveStatusChecker';
 import { useHotkeys } from './hooks/useHotkeys';
-import { HotkeyHelpDialog } from './components/Dialogs/HotkeyHelpDialog';
 import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
-import { CookieConsent } from './components/CookieConsent';
-import { BraveDetectDialog } from './components/Dialogs/BraveDetectDialog';
+import { RestoreSessionPrompt } from './components/Dialogs/RestoreSessionPrompt';
+import type { StreamData } from './utils/streamUtils';
+import type { CanvasItem } from './types/canvas';
 import { MobileApp } from './components/Mobile/MobileApp';
 
 // Pages
-import { HomePage } from './components/Pages/HomePage';
+// HomePage（'tool' 主控台）較重且非 landing 首屏需要，改 lazy 以縮小初始 chunk。
+const HomePage = lazy(() => import('./components/Pages/HomePage').then(module => ({ 'default': module.HomePage })));
 import { LandingPage } from './components/Pages/LandingPage';
 const VersionHistory = lazy(() => import('./components/VersionHistory').then(module => ({ 'default': module.VersionHistory })));
 // Tutorial modal removed, replaced by page
@@ -40,18 +39,47 @@ const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage'
 const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
+// 全站常駐但非首屏所需的全域元件，集中為單一 lazy chunk（見 DeferredGlobals.tsx）
+const DeferredGlobals = lazy(() => import('./components/DeferredGlobals'));
 
 export default function App() {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
+
+  // 短暫播放回復:待使用者確認是否恢復的上次工作階段
+  const [pendingRestore, setPendingRestore] = useState<{
+    streams: StreamData[];
+    canvasItems: CanvasItem[];
+    layoutMode: 'auto' | 'canvas';
+  } | null>(null);
+
+  const handleRestoreSession = () => {
+    if (pendingRestore) {
+      useStreamStore.getState().restoreSession(pendingRestore);
+      if (useUIStore.getState().page !== 'canvas') useUIStore.getState().setPage('canvas');
+    }
+    setPendingRestore(null);
+  };
+  const handleDiscardSession = () => setPendingRestore(null);
+
   // 初始化 GA4
   useEffect(() => {
     initGA();
     initUmami();
     logPageView();
 
-    // Clear canvas items on page load
-    useStreamStore.getState().clearCanvasItems();
+    // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
+    // 過期(或無串流)則維持「清空畫布」的既有行為。
+    {
+      const { streams, canvasItems, layoutMode, lastActiveAt } = useStreamStore.getState();
+      if (streams.length > 0) {
+        const withinWindow = Date.now() - lastActiveAt <= 10 * 60 * 1000;
+        if (withinWindow) {
+          setPendingRestore({ streams, canvasItems, layoutMode });
+        }
+        useStreamStore.getState().clearCanvasItems();
+      }
+    }
 
     // Check for Twitch OAuth redirect
     if (window.location.hash && window.location.hash.includes('access_token')) {
@@ -76,7 +104,7 @@ export default function App() {
     }
   }, []);
 
-  const theme = useUIStore(s => s.theme);
+  const theme = useEffectiveTheme();
   const toggleTheme = useUIStore(s => s.toggleTheme);
   const currentPage = useUIStore(s => s.page);
   const setCurrentPage = useUIStore(s => s.setPage);
@@ -104,7 +132,17 @@ export default function App() {
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'not-found'].includes(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
-    return <MobileApp />;
+    return (
+      <>
+        <MobileApp />
+        <RestoreSessionPrompt
+          open={!!pendingRestore}
+          streamCount={pendingRestore?.streams.length ?? 0}
+          onRestore={handleRestoreSession}
+          onDiscard={handleDiscardSession}
+        />
+      </>
+    );
   }
 
   // Routing Logic
@@ -113,7 +151,11 @@ export default function App() {
       case 'home':
         return <LandingPage />;
       case 'tool':
-        return <HomePage />;
+        return (
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <HomePage />
+          </Suspense>
+        );
       case 'canvas':
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
@@ -136,12 +178,7 @@ export default function App() {
               url="https://multistreaming.org/about"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
-              <AboutPage
-                theme={theme}
-                onThemeToggle={toggleTheme}
-                onBack={() => setCurrentPage('home')}
-                onNavigateToPrivacy={() => setCurrentPage('privacy')}
-              />
+              <AboutPage />
             </Suspense>
           </>
         );
@@ -194,10 +231,6 @@ export default function App() {
       {/* Main Content */}
       {renderPage()}
 
-      {/* Global Modals */}
-      <HotkeyHelpDialog />
-
-
       {/* Tutorial modal removed */}
 
       {modals.favorites && (
@@ -235,11 +268,17 @@ export default function App() {
         onDontRemind={handleRiskDontRemind}
       />
 
-      <PerformanceOverlay />
-      <GlobalLiveStatusChecker />
-      <Toaster />
-      <CookieConsent />
-      <BraveDetectDialog />
+      <RestoreSessionPrompt
+        open={!!pendingRestore}
+        streamCount={pendingRestore?.streams.length ?? 0}
+        onRestore={handleRestoreSession}
+        onDiscard={handleDiscardSession}
+      />
+
+      {/* 常駐但非首屏所需的全域元件，延後載入以縮小首屏 entry（見 DeferredGlobals.tsx） */}
+      <Suspense fallback={null}>
+        <DeferredGlobals />
+      </Suspense>
     </>
   );
 }

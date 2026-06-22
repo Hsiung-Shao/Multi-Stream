@@ -277,7 +277,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 </span>
               </a>
               <a
-                href="https://discord.gg/3Uu6dZbtKd"
+                href="https://discord.gg/47kauArepY"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logEvent('WelcomeCard', 'click_social', 'discord')}

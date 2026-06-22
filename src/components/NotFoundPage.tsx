@@ -1,52 +1,51 @@
+// 404 — 依 multistream-hub-design-system 的 Pages.jsx NotFoundPage 重建。
+// 漸層 404 數字 + blur orb 背景 + 回首頁 / 前往 Canvas 復原按鈕。
+
+import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../store/useUIStore';
-import { ArrowLeft } from 'lucide-react';
+import { Home } from 'lucide-react';
+import { BlurOrb } from './ui/ds-primitives';
 
 export function NotFoundPage() {
-    const theme = useUIStore(s => s.theme);
+    const { t } = useTranslation('common');
     const setPage = useUIStore(s => s.setPage);
 
     return (
-        <div className={`min-h-screen flex flex-col items-center justify-center p-4 ${theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
-            <div className="max-w-md w-full text-center space-y-8">
-                {/* Graphic / Icon */}
-                <div className="relative w-32 h-32 mx-auto">
-                    <div className={`absolute inset-0 rounded-full opacity-20 ${theme === 'dark' ? 'bg-indigo-500' : 'bg-indigo-200'} animate-pulse`}></div>
-                    <div className={`relative flex items-center justify-center w-full h-full rounded-full border-4 ${theme === 'dark' ? 'border-gray-800 bg-gray-900' : 'border-white bg-white shadow-lg'}`}>
-                        <span className="text-4xl font-bold text-indigo-500">404</span>
-                    </div>
-                </div>
+        <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-6 pt-16 bg-background text-foreground">
+            <BlurOrb top="20%" left="50%" w={800} h={400} opacity={0.2} />
 
-                {/* Text Content */}
-                <div className="space-y-4">
-                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                        {theme === 'dark' ? <span className="text-white">找不到頁面</span> : <span className="text-gray-900">找不到頁面</span>}
-                    </h1>
-                    <p className={`text-lg ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                        抱歉，您欲訪問的頁面不存在，或已被移除。
-                    </p>
+            <div className="relative z-[1] text-center max-w-[520px]">
+                <div
+                    className="font-extrabold leading-none mb-2"
+                    style={{
+                        fontSize: 144,
+                        letterSpacing: '-0.04em',
+                        background: 'linear-gradient(135deg, var(--primary), #c084fc)',
+                        WebkitBackgroundClip: 'text',
+                        backgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                    }}
+                >
+                    404
                 </div>
-
-                {/* Action Button */}
-                <div className="pt-4">
+                <h1 className="text-[28px] font-bold mb-3">{t('notFound.title')}</h1>
+                <p className="text-base text-muted-foreground mb-8 leading-relaxed">
+                    {t('notFound.description')}
+                </p>
+                <div className="flex gap-3 justify-center flex-wrap">
                     <button
                         onClick={() => setPage('home')}
-                        className={`
-               inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all duration-200
-               ${theme === 'dark'
-                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30'
-                            }
-             `}
+                        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                     >
-                        <ArrowLeft size={20} />
-                        返回首頁
+                        <Home size={14} /> {t('notFound.backHome')}
+                    </button>
+                    <button
+                        onClick={() => setPage('canvas')}
+                        className="inline-flex items-center h-9 px-4 rounded-lg text-sm font-medium text-muted-foreground hover:bg-white/[0.06] hover:text-foreground transition-colors"
+                    >
+                        {t('notFound.toCanvas')}
                     </button>
                 </div>
-            </div>
-
-            {/* Footer Decor */}
-            <div className={`absolute bottom-8 text-sm ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`}>
-                MultiStream Hub
             </div>
         </div>
     );

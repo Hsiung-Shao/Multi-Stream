@@ -96,10 +96,13 @@ const common = {
   'landing.platforms.youtube': 'YouTube 라이브',
   'landing.platforms.twitch': 'Twitch 라이브',
   'landing.platforms.desc': '두 주요 플랫폼을 완벽하게 통합했습니다. 더 이상 탭을 전환할 필요가 없습니다. 하나의 인터페이스에서 모든 것을 제어하세요.',
+  'landing.privacy.eyebrow': '로컬 우선',
   'landing.privacy.title': '개인정보 보호 우선 & 로컬 저장',
   'landing.privacy.desc': '여러분의 데이터는 안전합니다. MultiStream Hub는 순수 프런트엔드 애플리케이션으로, 즐겨찾기, 설정, 시청 기록은 모두 브라우저 로컬에 저장됩니다. 우리는 개인 정보를 수집하지 않으며(할 수도 없습니다). 등록 없이 바로 사용하세요.',
   'landing.favorites.title': '강력한 즐겨찾기 및 가져오기',
   'landing.favorites.desc': 'Twitch 계정에서 팔로우 목록을 원클릭으로 가져오세요. 맞춤 그룹을 만들어 좋아하는 스트리머를 분류하고 관리하세요.',
+  'landing.favorites.feature1': 'Twitch 팔로우 가져오기',
+  'landing.favorites.feature2': '맞춤 그룹',
   'landing.cta.title': '지금 바로 커스텀 멀티뷰 경험하기',
   'landing.cta.desc': '간편하고 직관적이며 설치가 필요 없습니다. 나만의 시청 환경을 만들어보세요.',
   'landing.footer.copyright': '© 2026 MultiStream Hub. All rights reserved.',
@@ -214,6 +217,16 @@ const common = {
   'braveDetect.close': '닫기',
   'braveDetect.goToFAQ': '해결 방법 보기',
   'braveDetect.dontRemind': '다시 표시하지 않기',
+  // 정적 페이지 공용 header(StaticPageHeader)
+  'header.backHome': '홈으로 돌아가기',
+  'header.toCanvas': 'Canvas로 이동',
+  'header.language': '언어',
+  'header.toggleTheme': '테마 전환',
+  // 404 페이지
+  'notFound.title': '여기에는 아무것도 없습니다',
+  'notFound.description': '찾으시는 페이지를 찾을 수 없습니다. 주소를 잘못 입력했거나 페이지가 이동되었을 수 있습니다.',
+  'notFound.backHome': '홈으로 돌아가기',
+  'notFound.toCanvas': 'Canvas로 이동',
 };
 
 export default common;

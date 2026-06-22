@@ -7,6 +7,16 @@ import { useTranslation } from 'react-i18next';
 import { SaveLayoutDialog } from '../../components/Layout/SaveLayoutDialog';
 import { cn } from '../ui/utils';
 import { layoutTemplates } from '../../utils/layoutPresets';
+import { FN, ISLAND_PANEL_STYLE, islandHeaderChipStyle } from './islandTokens';
+
+// Layout 面板主題色(對齊設計 FN.layout = violet)
+const LAYOUT_ACCENT = FN.layout.c;
+
+const ACTIVE_TAB_STYLE: React.CSSProperties = {
+    background: `${LAYOUT_ACCENT}2a`,
+    color: LAYOUT_ACCENT,
+    boxShadow: `inset 0 0 0 1px ${LAYOUT_ACCENT}40`,
+};
 
 const iconMap: Record<string, any> = {
     'Square': Square,
@@ -48,66 +58,60 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
             <div
                 onMouseLeave={onMouseLeave}
                 className={cn(
-                    "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[340px] bg-black/90 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-500 ease-out origin-bottom",
+                    "absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 w-[340px] overflow-hidden transition-all duration-300 ease-out origin-bottom text-white",
                     isExpanded
                         ? "opacity-100 scale-100 translate-y-0"
-                        : "opacity-0 scale-95 translate-y-4 pointer-events-none"
+                        : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
                 )}
+                style={ISLAND_PANEL_STYLE}
             >
-                <div className="p-4 space-y-4">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-white text-sm font-medium flex items-center gap-2">
-                            <LayoutGrid className="size-4 text-purple-400" />
-                            {t('common.layout_list') || '布局清單'}
-                        </h3>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs text-muted-foreground hover:text-white hover:bg-white/10"
-                            onClick={onOpenSettings}
+                {/* Panel header(violet icon chip) */}
+                <div
+                    className="flex items-center justify-between"
+                    style={{ padding: '13px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                    <div className="flex items-center gap-2.5">
+                        <span
+                            className="flex items-center justify-center"
+                            style={islandHeaderChipStyle(LAYOUT_ACCENT)}
                         >
-                            <Settings className="size-3.5 mr-1" />
-                            {t('common.manage') || '管理'}
-                        </Button>
+                            <LayoutGrid className="size-4" />
+                        </span>
+                        <span className="text-sm font-semibold">{t('common.layout_list') || '布局清單'}</span>
                     </div>
 
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs hover:bg-white/10"
+                        style={{ color: LAYOUT_ACCENT }}
+                        onClick={onOpenSettings}
+                    >
+                        <Settings className="size-3.5 mr-1" />
+                        {t('common.manage') || '管理'}
+                    </Button>
+                </div>
+
+                <div className="p-4 space-y-4">
                     {/* Tabs */}
                     <div className="flex p-1 bg-white/5 rounded-lg mb-2">
-                        <button
-                            onClick={() => setActiveTab('video_only')}
-                            className={cn(
-                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab === 'video_only'
-                                    ? "bg-white/10 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-white/80"
-                            )}
-                        >
-                            {t('layout.tab_video') || '僅串流'}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('with_chat')}
-                            className={cn(
-                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab === 'with_chat'
-                                    ? "bg-white/10 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-white/80"
-                            )}
-                        >
-                            {t('layout.tab_chat') || '含聊天室'}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('custom')}
-                            className={cn(
-                                "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
-                                activeTab === 'custom'
-                                    ? "bg-white/10 text-white shadow-sm"
-                                    : "text-gray-400 hover:text-white/80"
-                            )}
-                        >
-                            {t('layout.tab_custom') || '自訂義'}
-                        </button>
+                        {([
+                            { id: 'video_only', label: t('layout.tab_video') || '僅串流' },
+                            { id: 'with_chat', label: t('layout.tab_chat') || '含聊天室' },
+                            { id: 'custom', label: t('layout.tab_custom') || '自訂義' },
+                        ] as const).map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={cn(
+                                    "flex-1 py-1.5 text-[11px] font-medium rounded-md transition-all",
+                                    activeTab !== tab.id && "text-gray-400 hover:text-white/80"
+                                )}
+                                style={activeTab === tab.id ? ACTIVE_TAB_STYLE : undefined}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
 
                     {/* Content */}

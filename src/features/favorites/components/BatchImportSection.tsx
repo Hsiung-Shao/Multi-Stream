@@ -11,7 +11,6 @@ import { logEvent } from '../../../utils/analytics';
 import type { FavoriteCategory as Category } from '../types';
 
 interface BatchImportSectionProps {
-    theme: 'light' | 'dark';
     categories: Category[];
     onSuccess: () => void;
 }
@@ -21,7 +20,7 @@ interface BatchImportFormValues {
     categoryId: string;
 }
 
-export function BatchImportSection({ theme, categories, onSuccess }: BatchImportSectionProps) {
+export function BatchImportSection({ categories, onSuccess }: BatchImportSectionProps) {
     const { t } = useTranslation(['favorites', 'common']);
     const [isImporting, setIsImporting] = useState(false);
     const [progress, setProgress] = useState({ current: 0, total: 0 });
@@ -68,15 +67,14 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
     };
 
     return (
-        <div className={`p-6 rounded-2xl border ${theme === 'dark' ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-gray-200'
-            }`}>
+        <div className="p-6 rounded-2xl border border-border bg-muted/40">
             <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                     <Folder className="size-5" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-bold">{t('batchImport')}</h3>
-                    <p className="text-sm text-gray-500">{t('favorites:batchImportPlaceholder')?.split('\n')[0]}</p>
+                    <h3 className="text-lg font-bold text-foreground">{t('batchImport')}</h3>
+                    <p className="text-sm text-muted-foreground">{t('favorites:batchImportPlaceholder')?.split('\n')[0]}</p>
                 </div>
             </div>
 
@@ -85,8 +83,7 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
                     <Textarea
                         {...register('urls', { required: true })}
                         placeholder={t('favorites:batchImportPlaceholder')}
-                        className={`min-h-[200px] text-sm resize-none ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'
-                            }`}
+                        className="min-h-[200px] text-sm resize-none bg-background border-border"
                         disabled={isImporting}
                     />
                 </div>
@@ -98,7 +95,7 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
                             control={control}
                             render={({ field }) => (
                                 <Select value={field.value} onValueChange={field.onChange} disabled={isImporting}>
-                                    <SelectTrigger className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white'}>
+                                    <SelectTrigger className="bg-background border-border">
                                         <SelectValue placeholder={t('favorites:category')} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -115,7 +112,7 @@ export function BatchImportSection({ theme, categories, onSuccess }: BatchImport
                     <Button
                         type="submit"
                         disabled={isImporting}
-                        className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px]"
+                        className="bg-purple-600 hover:bg-purple-700 text-white min-w-[140px]"
                     >
                         {isImporting ? (
                             <>

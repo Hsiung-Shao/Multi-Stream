@@ -1,305 +1,743 @@
+// InstructionsPage — 依 multistream-hub-design-system 的 Blog.jsx (TutorialBlogPage) 重建為
+// 部落格式教學頁:列表頁(雜誌/卡片/清單三版型 + 搜尋 + 分類 tabs)+ 文章閱讀頁
+// (側邊目錄 scrollspy + 內容區塊 + 相關文章)。
+// 內容沿用 next 既有 tutorial 多語系 i18n(6 大功能 + 快速上手 → 7 篇文章),只換 design 視覺。
+// FAQ 內容已移至 /faq(FAQPage),本頁專注 how-to 教學。
+// 部落格框架文字(搜尋框、版型、精選、目錄、繼續閱讀…)為 design 新增,以 defaultValue 帶繁中、其餘語系暫 fallback。
+// SEO 與頂部返回列由本元件自帶(App.tsx 的 'instructions' case 不另包 SEO)。
+
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUIStore } from '../../store/useUIStore';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Badge } from '../ui/badge';
+import { SEO } from '../SEO';
+import { StaticPageHeader } from '../StaticPageHeader';
 import {
-    Home,
-    LayoutDashboard,
-    Search,
-    Settings,
-    MessageSquare,
-    Tv,
-    LayoutGrid,
-    Heart,
-    Volume2,
-    Github,
-    ArrowRight
+    Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
+    Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
+    Rocket, Volume2, Star, Settings as SettingsIcon, Tv,
+    type LucideIcon,
 } from 'lucide-react';
 
-import { SEO } from '../SEO';
+type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-export function InstructionsPage() {
-    const { t } = useTranslation('tutorial');
-    const { t: tCommon } = useTranslation('common');
-    const setPage = useUIStore(s => s.setPage);
-    const theme = useUIStore(s => s.theme);
+// ---- 內容模型(p / steps / callout / img 四種區塊)----------------------------
+type Block =
+    | { type: 'p'; text: string }
+    | { type: 'steps'; items: string[] }
+    | { type: 'callout'; title: string; text: string }
+    | { type: 'img'; src: string; alt: string; caption?: string; w: number; h: number };
 
-    const features = [
-        {
-            icon: <LayoutGrid className="w-8 h-8 text-blue-500" />,
-            titleKey: 'features.canvas.title',
-            descKey: 'features.canvas.description',
-            tab: 'basics'
-        },
-        {
-            icon: <Tv className="w-8 h-8 text-purple-500" />,
-            titleKey: 'features.island.title',
-            descKey: 'features.island.description',
-            tab: 'advanced'
-        },
-        {
-            icon: <Search className="w-8 h-8 text-green-500" />,
-            titleKey: 'features.search.title',
-            descKey: 'features.search.description',
-            tab: 'basics'
-        },
-        {
-            icon: <Heart className="w-8 h-8 text-red-500" />,
-            titleKey: 'features.favorites.title',
-            descKey: 'features.favorites.description',
-            tab: 'advanced'
-        },
-        {
-            icon: <Volume2 className="w-8 h-8 text-yellow-500" />,
-            titleKey: 'features.media.title',
-            descKey: 'features.media.description',
-            tab: 'advanced'
-        },
-        {
-            icon: <Settings className="w-8 h-8 text-gray-500" />,
-            titleKey: 'features.settings.title',
-            descKey: 'features.settings.description',
-            tab: 'advanced'
-        }
-    ];
+// 教學截圖(由 scripts/convert-tutorial-images.mjs 轉出);w/h 為實際像素,防 CLS
+const TUT_IMG_DIR = '/docs/tutorial/';
+const img = (file: string, w: number, h: number, alt: string, caption?: string): Block =>
+    ({ type: 'img', src: TUT_IMG_DIR + file, w, h, alt, caption });
 
-    const faqs = ['q1', 'q2', 'q3', 'q4'];
+interface Section { id: string; heading: string; blocks: Block[]; }
+
+interface Article {
+    slug: string;
+    title: string;
+    excerpt: string;
+    category: string;
+    catLabel: string;
+    readLabel: string;
+    accent: string;
+    accent2: string;
+    icon: LucideIcon;
+    featured?: boolean;
+    sections: Section[];
+}
+
+// =============================================================================
+// 共用視覺小元件(純 props,不碰 i18n)
+// =============================================================================
+function HeroBlock({ Icon, catLabel, accent, accent2, height, big }: {
+    Icon: LucideIcon; catLabel: string; accent: string; accent2: string; height: number; big?: boolean;
+}) {
+    return (
+        <div className="tut-hero-block" style={{ height, background: `linear-gradient(135deg, ${accent}, ${accent2})` }}>
+            <div className="tut-hero-overlay" />
+            <Icon className="tut-hero-icon" size={big ? 72 : 40} style={{ right: big ? 28 : 14, bottom: big ? 24 : 12 }} />
+            <span className="tut-hero-cat">{catLabel}</span>
+        </div>
+    );
+}
+
+function Meta({ readLabel }: { readLabel: string }) {
+    return (
+        <div className="tut-meta">
+            <span className="tut-meta-read"><Clock size={12} /> {readLabel}</span>
+        </div>
+    );
+}
+
+function Block({ block, accent }: { block: Block; accent: string }) {
+    if (block.type === 'p') return <p className="tut-p">{block.text}</p>;
+    if (block.type === 'steps') {
+        return (
+            <ol className="tut-steps">
+                {block.items.map((it, i) => (
+                    <li key={i} className="tut-step">
+                        <span className="tut-step-num">{i + 1}</span>
+                        <span className="tut-step-text">{it}</span>
+                    </li>
+                ))}
+            </ol>
+        );
+    }
+    if (block.type === 'img') {
+        return (
+            <figure className="tut-fig">
+                <img
+                    className="tut-img"
+                    src={block.src}
+                    alt={block.alt}
+                    width={block.w}
+                    height={block.h}
+                    loading="lazy"
+                    decoding="async"
+                />
+                {block.caption && <figcaption className="tut-fig-cap">{block.caption}</figcaption>}
+            </figure>
+        );
+    }
+    // callout
+    return (
+        <div className="tut-callout" style={{ background: `linear-gradient(135deg, ${accent}1a, transparent)`, border: `1px solid ${accent}33` }}>
+            <div className="tut-callout-head">
+                <ShieldCheck size={17} style={{ color: accent }} />
+                <span className="tut-callout-title" style={{ color: accent }}>{block.title}</span>
+            </div>
+            <p className="tut-callout-text">{block.text}</p>
+        </div>
+    );
+}
+
+function FeaturedCard({ article, onOpen, featuredLabel, readMoreLabel }: {
+    article: Article; onOpen: (s: string) => void; featuredLabel: string; readMoreLabel: string;
+}) {
+    return (
+        <article className="tut-featured" onClick={() => onOpen(article.slug)}>
+            <HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={260} big />
+            <div>
+                <span className="tut-featured-eyebrow"><Sparkles size={13} /> {featuredLabel}</span>
+                <h2 className="tut-featured-title">{article.title}</h2>
+                <p className="tut-featured-excerpt">{article.excerpt}</p>
+                <Meta readLabel={article.readLabel} />
+                <div className="tut-read-more">{readMoreLabel} <ArrowRight size={16} /></div>
+            </div>
+        </article>
+    );
+}
+
+function MagazineCard({ article, onOpen }: { article: Article; onOpen: (s: string) => void }) {
+    return (
+        <article className="tut-card" onClick={() => onOpen(article.slug)}>
+            <div className="tut-card-pad"><HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={150} /></div>
+            <div className="tut-card-body">
+                <h3 className="tut-card-title">{article.title}</h3>
+                <p className="tut-card-excerpt">{article.excerpt}</p>
+                <Meta readLabel={article.readLabel} />
+            </div>
+        </article>
+    );
+}
+
+function UniformCard({ article, onOpen }: { article: Article; onOpen: (s: string) => void }) {
+    return (
+        <article className="tut-ucard" onClick={() => onOpen(article.slug)}>
+            <HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={120} />
+            <div className="tut-ucard-body">
+                <h3 className="tut-ucard-title">{article.title}</h3>
+                <p className="tut-ucard-excerpt">{article.excerpt}</p>
+                <Meta readLabel={article.readLabel} />
+            </div>
+        </article>
+    );
+}
+
+function ListRow({ article, onOpen, first }: { article: Article; onOpen: (s: string) => void; first: boolean }) {
+    return (
+        <article className={`tut-row${first ? ' first' : ''}`} onClick={() => onOpen(article.slug)}>
+            <div className="tut-row-hero"><HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={66} /></div>
+            <div className="tut-row-body">
+                <span className="tut-row-cat" style={{ color: article.accent }}>{article.catLabel}</span>
+                <h3 className="tut-row-title">{article.title}</h3>
+                <p className="tut-row-excerpt">{article.excerpt}</p>
+            </div>
+            <div className="tut-row-meta"><Meta readLabel={article.readLabel} /></div>
+            <ChevronRight className="tut-row-chevron" size={20} />
+        </article>
+    );
+}
+
+// =============================================================================
+// 文章閱讀頁(目錄 scrollspy + 內容區塊 + 相關文章)
+// =============================================================================
+function BlogArticle({ article, allArticles, onBack, onOpen, labels }: {
+    article: Article;
+    allArticles: Article[];
+    onBack: () => void;
+    onOpen: (s: string) => void;
+    labels: { allArticles: string; toc: string; related: string; team: string };
+}) {
+    const [activeId, setActiveId] = useState<string | undefined>(article.sections[0]?.id);
+
+    const related = allArticles
+        .filter((a) => a.slug !== article.slug && a.category === article.category)
+        .concat(allArticles.filter((a) => a.slug !== article.slug && a.category !== article.category))
+        .slice(0, 3);
+
+    // Scrollspy:依目前可視區段更新目錄高亮
+    useEffect(() => {
+        const headings = article.sections
+            .map((s) => document.getElementById('sec-' + s.id))
+            .filter((el): el is HTMLElement => Boolean(el));
+        const obs = new IntersectionObserver((entries) => {
+            const vis = entries.filter((e) => e.isIntersecting)
+                .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+            if (vis[0]) setActiveId((vis[0].target as HTMLElement).dataset.sid);
+        }, { rootMargin: '-72px 0px -65% 0px', threshold: 0 });
+        headings.forEach((h) => obs.observe(h));
+        return () => obs.disconnect();
+    }, [article]);
+
+    const jumpTo = (id: string) => {
+        const el = document.getElementById('sec-' + id);
+        if (!el) return;
+        const y = el.getBoundingClientRect().top + window.scrollY - 88;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+    };
 
     return (
-        <div className={`min-h-screen ${theme === 'dark' ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="tut-wrap">
+            <button className="tut-back" onClick={onBack}>
+                <ArrowLeft size={15} /> {labels.allArticles}
+            </button>
+
+            <header className="tut-art-head">
+                <div className="tut-art-cat-row">
+                    <span className="tut-art-cat" style={{ background: `${article.accent}22`, color: article.accent, border: `1px solid ${article.accent}44` }}>{article.catLabel}</span>
+                    <Meta readLabel={article.readLabel} />
+                </div>
+                <h1 className="tut-art-title">{article.title}</h1>
+                <p className="tut-art-excerpt">{article.excerpt}</p>
+                <div className="tut-author-row">
+                    <div className="tut-avatar" style={{ background: `linear-gradient(135deg, ${article.accent}, ${article.accent2})` }}>{labels.team[0]}</div>
+                    <div>
+                        <div className="tut-author-name">{labels.team}</div>
+                    </div>
+                </div>
+            </header>
+
+            <HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={300} big />
+
+            <div className="tut-art-body">
+                <aside className="tut-toc">
+                    <div className="tut-toc-label">{labels.toc}</div>
+                    <nav className="tut-toc-nav">
+                        {article.sections.map((s) => (
+                            <button key={s.id} className={`tut-toc-btn${activeId === s.id ? ' on' : ''}`} onClick={() => jumpTo(s.id)}>
+                                {s.heading}
+                            </button>
+                        ))}
+                    </nav>
+                </aside>
+
+                <div className="tut-content">
+                    {article.sections.map((s) => (
+                        <section key={s.id} id={'sec-' + s.id} data-sid={s.id} className="tut-section">
+                            <h2 className="tut-section-h">{s.heading}</h2>
+                            {s.blocks.map((b, i) => <Block key={i} block={b} accent={article.accent} />)}
+                        </section>
+                    ))}
+                </div>
+            </div>
+
+            {related.length > 0 && (
+                <div className="tut-related">
+                    <h2 className="tut-related-h">{labels.related}</h2>
+                    <div className="tut-related-grid">
+                        {related.map((a) => <UniformCard key={a.slug} article={a} onOpen={onOpen} />)}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
+// 列表頁(masthead + 工具列 + 分類 + 三種版型)
+// =============================================================================
+type Layout = 'magazine' | 'cards' | 'list';
+
+function BlogList({ articles, cats, onOpen, labels }: {
+    articles: Article[];
+    cats: { id: string; label: string }[];
+    onOpen: (s: string) => void;
+    labels: {
+        mastEyebrow: string; mastTitle: string; mastSub: string;
+        searchPlaceholder: string; layoutMagazine: string; layoutCards: string; layoutList: string;
+        featured: string; readMore: string; noResults: (q: string) => string;
+    };
+}) {
+    const [query, setQuery] = useState('');
+    const [cat, setCat] = useState('all');
+    const [layout, setLayout] = useState<Layout>('magazine');
+
+    const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return articles.filter((a) => {
+            const okCat = cat === 'all' || a.category === cat;
+            const okQ = !q || (a.title + a.excerpt + a.catLabel).toLowerCase().includes(q);
+            return okCat && okQ;
+        });
+    }, [articles, query, cat]);
+
+    const featured = filtered.find((a) => a.featured);
+    const rest = filtered.filter((a) => a !== featured);
+
+    const layoutOpts: { id: Layout; icon: LucideIcon; label: string }[] = [
+        { id: 'magazine', icon: LayoutTemplate, label: labels.layoutMagazine },
+        { id: 'cards', icon: LayoutGrid, label: labels.layoutCards },
+        { id: 'list', icon: ListIcon, label: labels.layoutList },
+    ];
+
+    return (
+        <div className="tut-wrap">
+            <header className="tut-mast">
+                <div className="tut-eyebrow-row">
+                    <span className="tut-eyebrow">{labels.mastEyebrow}</span>
+                    <span className="tut-eyebrow-line" />
+                </div>
+                <h1 className="tut-mast-title">{labels.mastTitle}</h1>
+                <p className="tut-mast-sub">{labels.mastSub}</p>
+            </header>
+
+            <div className="tut-toolbar">
+                <div className="tut-search">
+                    <Search className="tut-search-icon" size={16} />
+                    <input
+                        className="tut-search-input"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder={labels.searchPlaceholder}
+                    />
+                </div>
+                <div className="tut-layout-switch">
+                    {layoutOpts.map((o) => {
+                        const Ico = o.icon;
+                        return (
+                            <button key={o.id} className={`tut-layout-btn${layout === o.id ? ' on' : ''}`} title={o.label} onClick={() => setLayout(o.id)}>
+                                <Ico size={15} /> <span>{o.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="tut-cats">
+                {cats.map((c) => (
+                    <button key={c.id} className={`tut-cat${cat === c.id ? ' on' : ''}`} onClick={() => setCat(c.id)}>{c.label}</button>
+                ))}
+            </div>
+
+            {filtered.length === 0 && (
+                <div className="tut-empty">
+                    <SearchX size={40} style={{ opacity: 0.4 }} />
+                    <p>{labels.noResults(query)}</p>
+                </div>
+            )}
+
+            {layout === 'magazine' && featured && (
+                <FeaturedCard article={featured} onOpen={onOpen} featuredLabel={labels.featured} readMoreLabel={labels.readMore} />
+            )}
+            {layout === 'magazine' && rest.length > 0 && (
+                <div className="tut-grid-mag">
+                    {rest.map((a) => <MagazineCard key={a.slug} article={a} onOpen={onOpen} />)}
+                </div>
+            )}
+            {layout === 'cards' && (
+                <div className="tut-grid-cards">
+                    {filtered.map((a) => <UniformCard key={a.slug} article={a} onOpen={onOpen} />)}
+                </div>
+            )}
+            {layout === 'list' && (
+                <div className="tut-list">
+                    {filtered.map((a, i) => <ListRow key={a.slug} article={a} onOpen={onOpen} first={i === 0} />)}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
+// Root — 內容組裝(全部來自 next 既有 tutorial i18n)+ 視圖路由(列表 ⇄ 文章)
+// =============================================================================
+export function InstructionsPage() {
+    const { t, i18n } = useTranslation(['tutorial', 'common']);
+    const tx = t as unknown as TFn;
+    const [slug, setSlug] = useState<string | null>(null);
+
+    const readLabel = (n: number) => tx('blog.minRead', { defaultValue: '{{n}} 分鐘', n });
+
+    // next 既有 tutorial i18n → 8 篇文章(內容皆既有 key,多語系完整保留)
+    const articles: Article[] = useMemo(() => [
+        {
+            slug: 'quick-start',
+            title: tx('hero.title'),
+            excerpt: tx('hero.subtitle'),
+            category: 'basics',
+            catLabel: tx('tabs.basics'),
+            readLabel: readLabel(4),
+            accent: '#c084fc', accent2: '#7c3aed', icon: Rocket, featured: true,
+            sections: [
+                { id: 'intro', heading: tx('intro.title'), blocks: [{ type: 'p', text: tx('intro.content') }] },
+                {
+                    id: 'getting-started', heading: tx('gettingStarted.title'), blocks: [
+                        { type: 'p', text: tx('gettingStarted.content') },
+                        { type: 'steps', items: [tx('gettingStarted.step1'), tx('gettingStarted.step2'), tx('gettingStarted.step3'), tx('gettingStarted.step4')] },
+                        img('island-search-bar.webp', 1403, 994, tx('img.islandSearchBar.alt'), tx('img.islandSearchBar.cap')),
+                        img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
+                    ],
+                },
+            ],
+        },
+        {
+            slug: 'canvas',
+            title: tx('features.canvas.title'),
+            excerpt: tx('features.canvas.description'),
+            category: 'basics',
+            catLabel: tx('tabs.basics'),
+            readLabel: readLabel(6),
+            accent: '#60a5fa', accent2: '#2563eb', icon: LayoutGrid,
+            sections: [
+                {
+                    id: 'add-window', heading: tx('features.canvas.addWindow'), blocks: [
+                        { type: 'p', text: tx('features.canvas.addWindow.desc') },
+                        img('island-add-window.webp', 1403, 994, tx('img.islandAddWindow.alt'), tx('img.islandAddWindow.cap')),
+                        img('add-window-combo.webp', 1600, 1229, tx('img.addWindowCombo.alt'), tx('img.addWindowCombo.cap')),
+                        img('add-window-stream.webp', 1600, 1228, tx('img.addWindowStream.alt'), tx('img.addWindowStream.cap')),
+                        img('add-window-chat.webp', 1600, 1240, tx('img.addWindowChat.alt'), tx('img.addWindowChat.cap')),
+                    ],
+                },
+                {
+                    id: 'auto-layout', heading: tx('features.canvas.autoLayout'), blocks: [
+                        { type: 'p', text: tx('features.canvas.autoLayout.desc') },
+                        img('island-layout-picker.webp', 1403, 994, tx('img.islandLayoutPicker.alt'), tx('img.islandLayoutPicker.cap')),
+                    ],
+                },
+                {
+                    id: 'drag-drop', heading: tx('features.canvas.dragDrop'), blocks: [
+                        { type: 'p', text: tx('features.canvas.dragDrop.desc') },
+                        img('window-drag-resize.webp', 1356, 493, tx('img.windowDragResize.alt'), tx('img.windowDragResize.cap')),
+                    ],
+                },
+                {
+                    id: 'custom-layout', heading: tx('features.canvas.customLayout'), blocks: [
+                        { type: 'p', text: tx('features.canvas.customLayout.desc') },
+                        img('island-save-canvas.webp', 1403, 994, tx('img.islandSaveCanvas.alt'), tx('img.islandSaveCanvas.cap')),
+                        img('custom-layout-save.webp', 1600, 791, tx('img.customLayoutSave.alt'), tx('img.customLayoutSave.cap')),
+                        img('custom-layout-saved.webp', 1600, 791, tx('img.customLayoutSaved.alt'), tx('img.customLayoutSaved.cap')),
+                        img('layout-manager.webp', 1068, 823, tx('img.layoutManager.alt'), tx('img.layoutManager.cap')),
+                    ],
+                },
+                { id: 'context-menu', heading: tx('features.canvas.contextMenu'), blocks: [{ type: 'p', text: tx('features.canvas.contextMenu.desc') }] },
+            ],
+        },
+        {
+            slug: 'search',
+            title: tx('features.search.title'),
+            excerpt: tx('features.search.description'),
+            category: 'basics',
+            catLabel: tx('tabs.basics'),
+            readLabel: readLabel(3),
+            accent: '#4ade80', accent2: '#16a34a', icon: Search,
+            sections: [
+                {
+                    id: 'twitch', heading: tx('features.search.twitch'), blocks: [
+                        { type: 'p', text: tx('features.search.twitch.desc') },
+                        img('island-search-bar.webp', 1403, 994, tx('img.islandSearchBar.alt'), tx('img.islandSearchBar.cap')),
+                        img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
+                    ],
+                },
+                { id: 'url', heading: tx('features.search.url'), blocks: [{ type: 'p', text: tx('features.search.url.desc') }] },
+            ],
+        },
+        {
+            slug: 'dynamic-island',
+            title: tx('features.island.title'),
+            excerpt: tx('features.island.description'),
+            category: 'advanced',
+            catLabel: tx('tabs.advanced'),
+            readLabel: readLabel(4),
+            accent: '#a78bfa', accent2: '#6d28d9', icon: Tv,
+            sections: [
+                { id: 'quick-actions', heading: tx('features.island.quickActions'), blocks: [{ type: 'p', text: tx('features.island.quickActions.desc') }] },
+                { id: 'status', heading: tx('features.island.status'), blocks: [{ type: 'p', text: tx('features.island.status.desc') }] },
+                {
+                    id: 'buttons', heading: tx('features.island.buttons'), blocks: [
+                        { type: 'p', text: tx('features.island.buttons.desc') },
+                        img('island-fullscreen.webp', 1403, 994, tx('img.islandFullscreen.alt'), tx('img.islandFullscreen.cap')),
+                        img('island-clear-canvas.webp', 1403, 994, tx('img.islandClearCanvas.alt'), tx('img.islandClearCanvas.cap')),
+                        img('island-home.webp', 1403, 994, tx('img.islandHome.alt'), tx('img.islandHome.cap')),
+                    ],
+                },
+            ],
+        },
+        {
+            slug: 'favorites',
+            title: tx('features.favorites.title'),
+            excerpt: tx('features.favorites.description'),
+            category: 'advanced',
+            catLabel: tx('tabs.advanced'),
+            readLabel: readLabel(6),
+            accent: '#facc15', accent2: '#ca8a04', icon: Star,
+            sections: [
+                {
+                    id: 'quick-list', heading: tx('features.favorites.quickList'), blocks: [
+                        { type: 'p', text: tx('features.favorites.quickList.desc') },
+                        img('island-favorites-list.webp', 1403, 994, tx('img.islandFavoritesList.alt'), tx('img.islandFavoritesList.cap')),
+                        img('favorites-live-list.webp', 324, 387, tx('img.favoritesLiveList.alt'), tx('img.favoritesLiveList.cap')),
+                        img('favorites-filter-category.webp', 313, 247, tx('img.favoritesFilterCategory.alt'), tx('img.favoritesFilterCategory.cap')),
+                        img('favorites-filter-tags.webp', 332, 251, tx('img.favoritesFilterTags.alt'), tx('img.favoritesFilterTags.cap')),
+                    ],
+                },
+                {
+                    id: 'add', heading: tx('features.favorites.add'), blocks: [
+                        { type: 'p', text: tx('features.favorites.add.desc') },
+                        img('favorites-add-dialog.webp', 557, 546, tx('img.favoritesAddDialog.alt'), tx('img.favoritesAddDialog.cap')),
+                    ],
+                },
+                { id: 'import', heading: tx('features.favorites.import'), blocks: [{ type: 'callout', title: tx('features.favorites.proTip'), text: tx('features.favorites.import.desc') }] },
+                {
+                    id: 'group', heading: tx('features.favorites.group'), blocks: [
+                        { type: 'p', text: tx('features.favorites.group.desc') },
+                        img('favorites-manager.webp', 1031, 798, tx('img.favoritesManager.alt'), tx('img.favoritesManager.cap')),
+                    ],
+                },
+            ],
+        },
+        {
+            slug: 'media',
+            title: tx('features.media.title'),
+            excerpt: tx('features.media.description'),
+            category: 'advanced',
+            catLabel: tx('tabs.advanced'),
+            readLabel: readLabel(4),
+            accent: '#f472b6', accent2: '#db2777', icon: Volume2,
+            sections: [
+                {
+                    id: 'master', heading: tx('features.media.global'), blocks: [
+                        { type: 'p', text: tx('features.media.global.desc') },
+                        img('island-media-control.webp', 1403, 994, tx('img.islandMediaControl.alt'), tx('img.islandMediaControl.cap')),
+                    ],
+                },
+                {
+                    id: 'per-window', heading: tx('features.media.window'), blocks: [
+                        { type: 'p', text: tx('features.media.window.desc') },
+                        img('window-media-controls.webp', 443, 88, tx('img.windowMediaControls.alt'), tx('img.windowMediaControls.cap')),
+                    ],
+                },
+            ],
+        },
+        {
+            slug: 'settings',
+            title: tx('features.settings.title'),
+            excerpt: tx('features.settings.description'),
+            category: 'advanced',
+            catLabel: tx('tabs.advanced'),
+            readLabel: readLabel(5),
+            accent: '#94a3b8', accent2: '#475569', icon: SettingsIcon,
+            sections: [
+                {
+                    id: 'general', heading: tx('features.settings.general'), blocks: [
+                        { type: 'p', text: tx('features.settings.general.desc') },
+                        img('island-settings.webp', 1403, 994, tx('img.islandSettings.alt'), tx('img.islandSettings.cap')),
+                        img('settings-panel.webp', 1038, 826, tx('img.settingsPanel.alt'), tx('img.settingsPanel.cap')),
+                    ],
+                },
+                { id: 'performance', heading: tx('features.settings.performance'), blocks: [{ type: 'p', text: tx('features.settings.performance.desc') }] },
+                { id: 'data', heading: tx('features.settings.data'), blocks: [{ type: 'p', text: tx('features.settings.data.desc') }] },
+                { id: 'twitch', heading: tx('features.settings.twitch'), blocks: [{ type: 'p', text: tx('features.settings.twitch.desc') }] },
+            ],
+        },
+    ], [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const cats = useMemo(() => ([
+        { id: 'all', label: tx('blog.cat.all', { defaultValue: '全部' }) },
+        { id: 'basics', label: tx('tabs.basics') },
+        { id: 'advanced', label: tx('tabs.advanced') },
+    ]), [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const article = articles.find((a) => a.slug === slug);
+
+    // 開啟/切換文章時捲回頂端
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    }, [slug]);
+
+    return (
+        <div className="tut-page">
             <SEO
                 title="使用教學 - MultiStream Hub | How to Multistream"
                 description="MultiStream Hub 完整功能指南。了解如何新增串流、管理收藏、使用動態島 (Dynamic Island) 與聊天室整合功能。"
                 url="https://multistreaming.org/instructions"
             />
-            {/* Navbar Placeholder / Back Button */}
-            <div className="sticky top-0 z-50 p-4 border-b bg-background/80 backdrop-blur-md flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" onClick={() => setPage('home')}>
-                        <Home className="w-4 h-4 mr-2" />
-                        {tCommon('common.home')}
-                    </Button>
-                </div>
-                <h1 className="text-lg font-bold hidden md:block">{t('pageTitle')}</h1>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => setPage('canvas')}>
-                        <LayoutDashboard className="w-4 h-4 mr-2" />
-                        {t('tabs.basics')}
-                    </Button>
-                </div>
-            </div>
 
-            <main className="container mx-auto px-4 py-12 max-w-6xl">
-                {/* Hero Section */}
-                <div className="text-center mb-16 space-y-6">
-                    <Badge variant="secondary" className="mb-4 text-primary">{t('hero.badge')}</Badge>
-                    <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent pb-2">
-                        {t('hero.title')}
-                    </h1>
-                    <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                        {t('hero.subtitle')}
-                    </p>
-                    <div className="flex justify-center gap-4 pt-4">
-                        <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8" onClick={() => setPage('canvas')}>
-                            {t('hero.start')} <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
-                        <Button size="lg" variant="outline" className="rounded-full px-8" onClick={() => window.open('https://github.com/Hsiung-Shao/Multi-Stream', '_blank')}>
-                            <Github className="mr-2 w-4 h-4" /> {t('hero.github')}
-                        </Button>
-                    </div>
-                </div>
+            {/* 樣式對齊 design Blog.jsx,沿用 next 的 oklch token */}
+            <style>{`
+                .tut-page { min-height: 100vh; background: var(--background); color: var(--foreground); }
+                .tut-wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 96px; }
 
-                {/* Feature Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-                    {features.map((feature, idx) => (
-                        <Card key={idx} className="hover:shadow-lg transition-shadow duration-300 border-opacity-50">
-                            <CardHeader>
-                                <div className="mb-4">{feature.icon}</div>
-                                <CardTitle>{t(feature.titleKey as any)}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-muted-foreground">{t(feature.descKey as any)}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                .tut-mast { margin-bottom: 36px; }
+                .tut-eyebrow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+                .tut-eyebrow { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--primary); }
+                .tut-eyebrow-line { height: 1px; flex: 1; background: linear-gradient(90deg, var(--primary), transparent); }
+                .tut-mast-title { font-size: 46px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 14px; line-height: 1.08; color: var(--foreground); }
+                .tut-mast-sub { font-size: 18px; color: var(--muted-foreground); margin: 0; max-width: 620px; line-height: 1.6; }
 
-                {/* Detailed Tabs */}
-                <Tabs defaultValue="basics" className="mb-16">
-                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-3 lg:w-[450px] mx-auto mb-8">
-                        <TabsTrigger value="basics">{t('tabs.basics')}</TabsTrigger>
-                        <TabsTrigger value="advanced">{t('tabs.advanced')}</TabsTrigger>
-                        <TabsTrigger value="faq">{t('tabs.faq')}</TabsTrigger>
-                    </TabsList>
+                .tut-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+                .tut-search { position: relative; flex: 1; min-width: 240px; }
+                .tut-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); pointer-events: none; }
+                .tut-search-input { width: 100%; height: 44px; padding: 0 14px 0 40px; box-sizing: border-box; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--foreground); font-family: var(--font-sans); font-size: 15px; outline: none; }
+                .tut-layout-switch { display: flex; padding: 3px; gap: 2px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; }
+                .tut-layout-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 7px; border: 0; cursor: pointer; font-family: var(--font-sans); font-size: 13px; font-weight: 600; background: transparent; color: var(--muted-foreground); transition: all 0.15s; }
+                .tut-layout-btn.on { background: var(--primary); color: var(--primary-foreground); }
 
-                    {/* Basics Tab */}
-                    <TabsContent value="basics" className="space-y-8 animate-in fade-in-50">
-                        <div className="grid md:grid-cols-2 gap-8">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <LayoutGrid className="w-5 h-5 text-blue-500" />
-                                        {t('features.canvas.title')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                        <h4 className="font-semibold mb-2">{t('features.canvas.autoLayout')}</h4>
-                                        <p className="text-sm text-muted-foreground">{t('features.canvas.autoLayout.desc')}</p>
-                                    </div>
-                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                        <h4 className="font-semibold mb-2">{t('features.canvas.dragDrop')}</h4>
-                                        <p className="text-sm text-muted-foreground">{t('features.canvas.dragDrop.desc')}</p>
-                                    </div>
-                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                        <h4 className="font-semibold mb-2">{t('features.canvas.contextMenu')}</h4>
-                                        <p className="text-sm text-muted-foreground">{t('features.canvas.contextMenu.desc')}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Search className="w-5 h-5 text-green-500" />
-                                        {t('features.search.title')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                        <h4 className="font-semibold mb-2">{t('features.search.twitch')}</h4>
-                                        <p className="text-sm text-muted-foreground">{t('features.search.twitch.desc')}</p>
-                                    </div>
-                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                        <h4 className="font-semibold mb-2">{t('features.search.url')}</h4>
-                                        <p className="text-sm text-muted-foreground">{t('features.search.url.desc')}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </TabsContent>
+                .tut-cats { display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+                .tut-cat { height: 34px; padding: 0 14px; border-radius: 9999px; cursor: pointer; font-family: var(--font-sans); font-size: 13px; font-weight: 600; background: var(--card); color: var(--muted-foreground); border: 1px solid var(--border); transition: all 0.15s; }
+                .tut-cat.on { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
 
-                    {/* Advanced Tab */}
-                    <TabsContent value="advanced" className="space-y-8 animate-in fade-in-50">
-                        <div className="grid md:grid-cols-2 gap-8">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Tv className="w-5 h-5 text-purple-500" />
-                                        {t('features.island.title')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <p className="text-muted-foreground mb-4">{t('features.island.description')}</p>
-                                    <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-                                        <li>{t('features.island.quickActions.desc')}</li>
-                                        <li>{t('features.island.status.desc')}</li>
-                                    </ul>
-                                </CardContent>
-                            </Card>
+                .tut-empty { text-align: center; padding: 80px 0; color: var(--muted-foreground); }
+                .tut-empty p { margin-top: 16px; font-size: 16px; }
 
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Heart className="w-5 h-5 text-red-500" />
-                                        {t('features.favorites.title')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="bg-muted/50 p-4 rounded-lg">
-                                        <Badge className="mb-2 bg-purple-600">{t('features.favorites.proTip')}</Badge>
-                                        <h4 className="font-semibold mb-1">{t('features.favorites.import')}</h4>
-                                        <p className="text-sm text-muted-foreground">{t('features.favorites.import.desc')}</p>
-                                    </div>
-                                    <div className="p-2">
-                                        <h4 className="font-semibold mb-1">{t('features.favorites.group')}</h4>
-                                        <p className="text-sm text-muted-foreground">{t('features.favorites.group.desc')}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                .tut-hero-block { position: relative; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+                .tut-hero-overlay { position: absolute; inset: 0; background: radial-gradient(circle at 75% 25%, rgba(255,255,255,0.25), transparent 60%); }
+                .tut-hero-icon { position: absolute; color: rgba(255,255,255,0.85); }
+                .tut-hero-cat { position: absolute; top: 14px; left: 14px; padding: 3px 10px; border-radius: 9999px; background: rgba(0,0,0,0.35); backdrop-filter: blur(6px); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
 
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Volume2 className="w-5 h-5 text-yellow-500" />
-                                        {t('features.media.title')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-muted-foreground text-sm">{t('features.media.global.desc')}</p>
-                                </CardContent>
-                            </Card>
+                .tut-meta { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted-foreground); }
+                .tut-meta-read { display: inline-flex; align-items: center; gap: 4px; }
 
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Settings className="w-5 h-5 text-gray-500" />
-                                        {t('features.settings.title')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="grid gap-2 text-sm text-muted-foreground">
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span>{t('features.settings.general')}</span>
-                                        <span className="text-xs opacity-70">{t('features.settings.general.desc')}</span>
-                                    </div>
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span>{t('features.settings.performance')}</span>
-                                        <span className="text-xs opacity-70">{t('features.settings.performance.desc')}</span>
-                                    </div>
-                                    <div className="flex justify-between border-b pb-2">
-                                        <span>{t('features.settings.data')}</span>
-                                        <span className="text-xs opacity-70">{t('features.settings.data.desc')}</span>
-                                    </div>
-                                    <div className="flex justify-between pt-2">
-                                        <span>{t('features.settings.twitch')}</span>
-                                        <span className="text-xs opacity-70">{t('features.settings.twitch.desc')}</span>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </TabsContent>
+                .tut-featured { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: center; padding: 24px; border-radius: 20px; cursor: pointer; background: var(--card); border: 1px solid var(--border); box-shadow: 0 24px 60px -24px rgba(0,0,0,0.45); }
+                .tut-featured-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+                .tut-featured-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.15; color: var(--foreground); }
+                .tut-featured-excerpt { font-size: 15.5px; color: var(--muted-foreground); margin: 0 0 18px; line-height: 1.65; }
+                .tut-read-more { margin-top: 20px; display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-weight: 600; font-size: 15px; }
 
-                    {/* FAQ Tab */}
-                    <TabsContent value="faq" className="animate-in fade-in-50">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <MessageSquare className="w-5 h-5 text-blue-400" />
-                                    {t('faq.title')}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {faqs.map((q, idx) => (
-                                    <div key={idx} className="border-b last:border-0 pb-4 last:pb-0">
-                                        <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                                            <Badge variant="outline" className="h-6 w-6 flex items-center justify-center rounded-full p-0">Q</Badge>
-                                            {t(`faq.${q}`)}
-                                        </h4>
-                                        <p className="text-muted-foreground leading-relaxed pl-8">
-                                            {t(`faq.a${idx + 1}`)}
-                                        </p>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                .tut-grid-mag { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 24px; }
+                .tut-card { display: flex; flex-direction: column; cursor: pointer; border-radius: 16px; overflow: hidden; background: var(--card); border: 1px solid var(--border); transition: transform 0.15s, border-color 0.15s; }
+                .tut-card:hover { transform: translateY(-3px); border-color: var(--primary); }
+                .tut-card-pad { padding: 14px; padding-bottom: 0; }
+                .tut-card-body { padding: 16px 18px 20px; }
+                .tut-card-title { font-size: 18.5px; font-weight: 700; margin: 0 0 8px; line-height: 1.3; color: var(--foreground); }
+                .tut-card-excerpt { font-size: 14px; color: var(--muted-foreground); margin: 0 0 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-            </main>
+                .tut-grid-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+                .tut-ucard { display: flex; flex-direction: column; cursor: pointer; border-radius: 16px; overflow: hidden; background: var(--card); border: 1px solid var(--border); transition: transform 0.15s, border-color 0.15s; height: 100%; }
+                .tut-ucard:hover { transform: translateY(-3px); border-color: var(--primary); }
+                .tut-ucard-body { padding: 14px 16px 18px; display: flex; flex-direction: column; flex: 1; }
+                .tut-ucard-title { font-size: 16.5px; font-weight: 700; margin: 0 0 8px; line-height: 1.3; color: var(--foreground); }
+                .tut-ucard-excerpt { font-size: 13.5px; color: var(--muted-foreground); margin: 0 0 14px; line-height: 1.55; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-            {/* Footer */}
-            <footer className="border-t bg-background/50 py-8 text-center text-sm text-muted-foreground">
-                <p>{t('footer.copyright')}</p>
-                <div className="mt-4 flex justify-center gap-4">
-                    <Button variant="link" size="sm" onClick={() => window.open('https://github.com/Hsiung-Shao/Multi-Stream', '_blank')}>
-                        {t('footer.github')}
-                    </Button>
-                    <Button variant="link" size="sm">
-                        {t('footer.license')}
-                    </Button>
-                </div>
-            </footer>
+                .tut-list { display: flex; flex-direction: column; }
+                .tut-row { display: flex; align-items: center; gap: 20px; padding: 20px 4px; cursor: pointer; border-bottom: 1px solid var(--border); }
+                .tut-row.first { border-top: 1px solid var(--border); }
+                .tut-row-hero { width: 96px; flex-shrink: 0; }
+                .tut-row-body { flex: 1; min-width: 0; }
+                .tut-row-cat { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+                .tut-row-title { font-size: 19px; font-weight: 700; margin: 4px 0 6px; transition: color 0.15s; color: var(--foreground); }
+                .tut-row:hover .tut-row-title { color: var(--primary); }
+                .tut-row-excerpt { font-size: 14px; color: var(--muted-foreground); margin: 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+                .tut-row-meta { flex-shrink: 0; text-align: right; }
+                .tut-row-chevron { color: var(--muted-foreground); flex-shrink: 0; }
+
+                .tut-back { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 28px; padding: 8px 14px 8px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 9999px; cursor: pointer; color: var(--muted-foreground); font-family: var(--font-sans); font-size: 13.5px; font-weight: 600; }
+                .tut-back:hover { color: var(--foreground); }
+                .tut-art-head { margin-bottom: 28px; }
+                .tut-art-cat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+                .tut-art-cat { padding: 4px 12px; border-radius: 9999px; font-size: 12.5px; font-weight: 700; }
+                .tut-art-title { font-size: 42px; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 16px; line-height: 1.12; color: var(--foreground); }
+                .tut-art-excerpt { font-size: 19px; color: var(--muted-foreground); margin: 0; line-height: 1.6; max-width: 720px; }
+                .tut-author-row { display: flex; align-items: center; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+                .tut-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+                .tut-author-name { font-size: 14px; font-weight: 600; color: var(--foreground); }
+
+                .tut-art-body { display: grid; grid-template-columns: 220px 1fr; gap: 48px; margin-top: 40px; align-items: start; }
+                .tut-toc { position: sticky; top: 88px; }
+                .tut-toc-label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted-foreground); margin-bottom: 14px; }
+                .tut-toc-nav { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--border); }
+                .tut-toc-btn { text-align: left; padding: 7px 0 7px 16px; margin-left: -1px; cursor: pointer; background: transparent; border: none; border-left: 2px solid transparent; color: var(--muted-foreground); font-weight: 500; font-family: var(--font-sans); font-size: 13.5px; line-height: 1.4; transition: color 0.15s; }
+                .tut-toc-btn.on { border-left-color: var(--primary); color: var(--foreground); font-weight: 600; }
+                .tut-content { max-width: 680px; }
+                .tut-section { margin-bottom: 44px; scroll-margin-top: 96px; }
+                .tut-section-h { font-size: 26px; font-weight: 700; letter-spacing: -0.015em; margin: 0 0 18px; color: var(--foreground); }
+
+                .tut-p { font-size: 16.5px; color: var(--foreground); opacity: 0.92; line-height: 1.78; margin: 0 0 18px; }
+                .tut-steps { margin: 0 0 20px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+                .tut-step { display: flex; gap: 14px; align-items: flex-start; }
+                .tut-step-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+                .tut-step-text { font-size: 16px; color: var(--foreground); opacity: 0.92; line-height: 1.6; padding-top: 2px; }
+                .tut-fig { margin: 4px 0 22px; }
+                .tut-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+                .tut-fig-cap { margin-top: 8px; font-size: 13px; color: var(--muted-foreground); line-height: 1.5; }
+
+                .tut-callout { padding: 18px 20px; margin: 0 0 20px; border-radius: 14px; }
+                .tut-callout-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+                .tut-callout-title { font-size: 14px; font-weight: 700; }
+                .tut-callout-text { font-size: 15px; color: var(--foreground); opacity: 0.88; margin: 0; line-height: 1.6; }
+
+                .tut-related { margin-top: 40px; padding-top: 40px; border-top: 1px solid var(--border); }
+                .tut-related-h { font-size: 22px; font-weight: 700; margin: 0 0 20px; color: var(--foreground); }
+                .tut-related-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+                .tut-page a:focus-visible, .tut-page button:focus-visible, .tut-search-input:focus-visible { outline: 2px solid var(--ring, var(--primary)); outline-offset: 3px; border-radius: 8px; }
+
+                @media (max-width: 860px) {
+                    .tut-featured { grid-template-columns: 1fr; }
+                    .tut-grid-mag, .tut-grid-cards, .tut-related-grid { grid-template-columns: 1fr; }
+                    .tut-art-body { grid-template-columns: 1fr; gap: 24px; }
+                    .tut-toc { display: none; }
+                }
+                @media (max-width: 560px) {
+                    .tut-mast-title { font-size: 34px; }
+                    .tut-art-title { font-size: 32px; }
+                }
+            `}</style>
+
+            {/* 頂部返回列 — 三靜態頁共用 header */}
+            <StaticPageHeader title={tx('title')} analyticsCategory="InstructionsPage" />
+
+            {article
+                ? <BlogArticle
+                    article={article}
+                    allArticles={articles}
+                    onBack={() => setSlug(null)}
+                    onOpen={setSlug}
+                    labels={{
+                        allArticles: tx('blog.allArticles', { defaultValue: '所有教學' }),
+                        toc: tx('toc'),
+                        related: tx('blog.related', { defaultValue: '繼續閱讀' }),
+                        team: tx('blog.team', { defaultValue: 'MultiStream Hub 團隊' }),
+                    }}
+                />
+                : <BlogList
+                    articles={articles}
+                    cats={cats}
+                    onOpen={setSlug}
+                    labels={{
+                        mastEyebrow: tx('title'),
+                        mastTitle: tx('hero.title'),
+                        mastSub: tx('hero.subtitle'),
+                        searchPlaceholder: tx('blog.searchPlaceholder', { defaultValue: '搜尋教學文章…' }),
+                        layoutMagazine: tx('blog.layout.magazine', { defaultValue: '雜誌' }),
+                        layoutCards: tx('blog.layout.cards', { defaultValue: '卡片' }),
+                        layoutList: tx('blog.layout.list', { defaultValue: '清單' }),
+                        featured: tx('blog.featured', { defaultValue: '精選' }),
+                        readMore: tx('blog.readMore', { defaultValue: '開始閱讀' }),
+                        noResults: (q: string) => tx('blog.noResults', { defaultValue: '找不到符合「{{q}}」的文章', q }),
+                    }}
+                />}
         </div>
     );
 }
