@@ -51,6 +51,10 @@ export async function onRequestGet(context) {
 
         const html = await htmlResp.text();
 
+        // 順手解析「官方頻道名」供離線頻道資料庫蒐集用(零額外請求，HTML 已在手上）。
+        // 在 videoId 瀑布前先取，確保所有 return 分支（含 offline / 找不到 videoId）都帶得出。
+        const channelTitle = extractChannelTitle(html);
+
         // Debug: Try to find page title to see if we hit Consent page
         const titleMatch = html.match(/<title>(.*?)<\/title>/);
         const pageTitle = titleMatch ? titleMatch[1] : 'Unknown Title';
@@ -119,6 +123,7 @@ export async function onRequestGet(context) {
         if (!videoId) {
             return new Response(JSON.stringify({
                 isLive: false,
+                channelTitle,
                 message: 'Video ID not found in HTML',
                 debug: { liveUrl, pageTitle, snippet: html.substring(0, 1000) } // Increased snippet again
             }), { status: 200, headers: jsonHeaders() });
@@ -168,6 +173,7 @@ export async function onRequestGet(context) {
                 isLive: false,
                 isUpcoming: true,
                 videoId: videoId,
+                channelTitle,
                 scheduledVideoId: videoId,
                 scheduledStartTime: scheduledStartTime,
                 finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
@@ -186,6 +192,7 @@ export async function onRequestGet(context) {
             return new Response(JSON.stringify({
                 isLive: true,
                 videoId: videoId,
+                channelTitle,
                 finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
                 message: 'Live confirmed via Image Server',
                 debug: {
@@ -204,6 +211,7 @@ export async function onRequestGet(context) {
             isLive: false,
             isUpcoming: false,
             videoId: videoId, // Return the ID anyway as it was found
+            channelTitle,
             finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
             message: 'Video ID found but not Live or Upcoming',
             debug: {
@@ -228,4 +236,73 @@ function jsonHeaders() {
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store'
     };
+}
+
+// 從頻道 /live 頁 HTML 解析「官方頻道名」(涵蓋直播中與離線兩態)。
+// 直播 watch 頁:og:title 可能是影片標題,故 "author"(videoDetails)排第一;
+// 離線頻道頁:og:title / itemprop=name / channelMetadataRenderer.title 才是頻道名。
+function extractChannelTitle(html) {
+    if (!html) return null;
+
+    // 1. videoDetails.author(直播 watch 頁 → 頻道名;JSON 字串)
+    const author = html.match(/"author":"((?:[^"\\]|\\.)*)"/);
+    if (author) {
+        const v = decodeJsonString(author[1]);
+        if (v) return v;
+    }
+
+    // 2. og:title(離線頻道頁 → 頻道名;支援 property/content 兩種屬性順序)
+    const og = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["']/i)
+        || html.match(/<meta[^>]*content=["']([^"']*)["'][^>]*property=["']og:title["']/i);
+    if (og) {
+        const v = decodeHtmlEntities(og[1]).trim();
+        if (v) return v;
+    }
+
+    // 3. itemprop="name"
+    const ip = html.match(/<meta[^>]*itemprop=["']name["'][^>]*content=["']([^"']*)["']/i);
+    if (ip) {
+        const v = decodeHtmlEntities(ip[1]).trim();
+        if (v) return v;
+    }
+
+    // 4. channelMetadataRenderer.title(JSON)
+    const meta = html.match(/"channelMetadataRenderer":\{"title":"((?:[^"\\]|\\.)*)"/);
+    if (meta) {
+        const v = decodeJsonString(meta[1]);
+        if (v) return v;
+    }
+
+    return null;
+}
+
+// 解 JSON 字串內容(\uXXXX、\"、\\ 等);失敗則回原字串 trim。
+function decodeJsonString(raw) {
+    try {
+        return JSON.parse('"' + raw + '"').trim();
+    } catch {
+        return (raw || '').trim();
+    }
+}
+
+// 解常見 HTML entity(og:title / meta content 用);&amp; 放最後避免二次解碼。
+function decodeHtmlEntities(s) {
+    if (!s) return '';
+    return s
+        .replace(/&quot;/g, '"')
+        .replace(/&#0?39;/g, "'")
+        .replace(/&#x27;/gi, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#(\d+);/g, (_, n) => safeFromCodePoint(parseInt(n, 10)))
+        .replace(/&#x([0-9a-f]+);/gi, (_, n) => safeFromCodePoint(parseInt(n, 16)))
+        .replace(/&amp;/g, '&');
+}
+
+function safeFromCodePoint(code) {
+    try {
+        return String.fromCodePoint(code);
+    } catch {
+        return '';
+    }
 }

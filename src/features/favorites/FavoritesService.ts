@@ -4,6 +4,7 @@ import { FavoriteStream, FavoriteUpdateEventDetail } from './types';
 import { backupService } from '../backup/index';
 import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from './constants';
 import { youtubeApi } from '../../utils/youtubeApi';
+import { cacheChannelIfAbsent } from '../youtube/YouTubeChannelRepository';
 
 export class FavoritesService {
     private favRepo: FavoritesRepository;
@@ -133,6 +134,8 @@ export class FavoritesService {
         let platform: 'twitch' | 'youtube' | 'other' = 'other';
         let channelId = providedChannelId;
         let videoId = providedVideoId;
+        // 官方頻道名(離線頻道資料庫蒐集用):僅在既有 API 流程已順手取得時才填，不額外打 API
+        let officialTitle: string | null = null;
 
         if (url.includes('twitch.tv')) {
             platform = 'twitch';
@@ -174,10 +177,13 @@ export class FavoritesService {
             // If we have videoId but no channelId, try to resolve it via API
             if (videoId && !channelId) {
                 try {
-                    // Use static import
-                    const resolvedChannelId = await youtubeApi.getChannelIdFromVideoId(videoId);
+                    // 用 getVideoInfo 一次取回 channelId + channelTitle(getChannelIdFromVideoId
+                    // 內部本來就呼叫它，改用這個=零額外 API,還順手拿到官方頻道名供 cache 用)
+                    const info = await youtubeApi.getVideoInfo(videoId);
+                    const resolvedChannelId = info.channelId;
                     if (resolvedChannelId) {
                         channelId = resolvedChannelId;
+                        if (info.channelTitle) officialTitle = info.channelTitle;
 
                         // Check duplicate AGAIN with resolved channelId
                         if (this.isDuplicate(url, channelId)) {
@@ -187,13 +193,8 @@ export class FavoritesService {
                         // Normalize URL to channel live format
                         url = `https://www.youtube.com/channel/${channelId}/live`;
 
-                        // If no name, try to fetch channel title
-                        if (!name) {
-                            try {
-                                const title = await youtubeApi.getChannelTitleFromChannelId(channelId);
-                                if (title) name = title;
-                            } catch (e) { }
-                        }
+                        // If no name, use the official channel title we already fetched
+                        if (!name && officialTitle) name = officialTitle;
                     }
                 } catch (e) {
                     console.warn('Failed to resolve YouTube channel info', e);
@@ -223,6 +224,11 @@ export class FavoritesService {
 
         this.favRepo.add(newItem);
         this.emitChangeEvent('add', uniqueId, newItem);
+
+        // 順手蒐集到離線頻道資料庫(僅 YouTube 且已取得官方頻道名;查 DB 去重、fire-and-forget)
+        if (platform === 'youtube' && officialTitle) {
+            cacheChannelIfAbsent(channelId, officialTitle).catch(() => {});
+        }
 
         return { success: true, message: 'addedToFavorites', item: newItem };
     }
