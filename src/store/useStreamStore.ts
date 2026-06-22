@@ -682,9 +682,19 @@ export const useStreamStore = create<StreamStoreState>()(
                 }));
             },
 
-            setChatLayout: (layout) => set({ chatLayout: layout }),
+            setChatLayout: (layout) => {
+                // 僅在實際變更時送 GA4 事件,避免重複選同一布局也計入
+                if (layout !== get().chatLayout) {
+                    track.changeChatLayout(layout);
+                }
+                set({ chatLayout: layout });
+            },
 
             setLayout: (layout, isUserAction = true) => {
+                // 僅追蹤使用者主動切換;系統自動套用(isUserAction=false)不計入
+                if (isUserAction) {
+                    track.changeLayout(String(layout), get().streams.length);
+                }
                 set((state) => {
                     const changes: Partial<StreamStoreState> = isUserAction ? { layout, userLayout: layout } : { layout };
 

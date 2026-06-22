@@ -22,6 +22,7 @@ import { Sliders, VolumeX, Volume2 } from 'lucide-react';
 import { StreamListItem } from './StreamListItem';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
+import { track } from '../../utils/analytics';
 import { cn } from '../ui/utils';
 import { useTranslation } from 'react-i18next';
 import { FN, ISLAND_PANEL_STYLE, islandHeaderChipStyle } from './islandTokens';
@@ -93,6 +94,15 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                 moveStream(oldIndex, newIndex);
             }
         }
+    };
+
+    // 切換全體靜音(主按鈕 + 總開關共用):同步 UI 狀態、批次靜音、送 GA4 事件。
+    // 需求:總靜音開關須連動 setAllMuted,讓開關即 Mute/Unmute 全部串流。
+    // 注意:雙擊「解除個別靜音」與音量歸零的自動靜音屬不同語意,不走此函式。
+    const applyMasterMute = (next: boolean) => {
+        setMasterMuted(next);
+        useStreamStore.getState().setAllMuted(next);
+        track.toggleMuteAll(next);
     };
 
     // 處理雙擊總靜音 (解鎖所有的單獨靜音)
@@ -179,9 +189,7 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                     type="button"
                     onClick={() => {
                         // Toggle:點一下全部靜音,再點一下解除全部靜音(setAllMuted 會還原各路 _restoreMuteState)
-                        const next = !masterMuted;
-                        setMasterMuted(next);
-                        useStreamStore.getState().setAllMuted(next);
+                        applyMasterMute(!masterMuted);
                     }}
                     className="inline-flex items-center gap-1.5 font-semibold"
                     style={{
@@ -231,13 +239,8 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
                                 onCheckedChange={(checked: boolean) => {
                                     // checked = true (Sound On) -> Muted = false
                                     // checked = false (Sound Off) -> Muted = true
-                                    const newMuted = !checked;
-                                    setMasterMuted(newMuted);
-
-                                    // Master Switch acts as Batch Controller
-                                    // User Requirement: "總靜音開關功能依舊保持可以開關音量的功能"
-                                    // This means toggling this switch should Mute/Unmute everything.
-                                    useStreamStore.getState().setAllMuted(newMuted);
+                                    // Master Switch acts as Batch Controller:切換即 Mute/Unmute 全部
+                                    applyMasterMute(!checked);
                                 }}
                                 className="data-[state=checked]:bg-cyan-500"
                             />

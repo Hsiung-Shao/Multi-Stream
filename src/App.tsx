@@ -10,6 +10,7 @@ import { useThemeSystem } from './hooks/useThemeSystem';
 import { useRouter } from './hooks/useRouter';
 import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView } from './utils/analytics';
+import { userSegmentationManager } from './utils/userSegmentation';
 import { initUmami } from './utils/umami';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
 import { useEffectiveTheme } from './hooks/useEffectiveTheme';
@@ -64,9 +65,13 @@ export default function App() {
 
   // 初始化 GA4
   useEffect(() => {
-    initGA();
+    // initGA 為 async(需動態載入 gtag.js):必須等初始化完成(進 live/mock)
+    // 才送 page_view 與分群 user_properties,否則 mode 仍 uninitialized 會被丟棄。
+    initGA().then(() => {
+      userSegmentationManager.init();
+      logPageView();
+    });
     initUmami();
-    logPageView();
 
     // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
     // 過期(或無串流)則維持「清空畫布」的既有行為。

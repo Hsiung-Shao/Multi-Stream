@@ -25,6 +25,7 @@ import {
     setStoredMaxStreams,
     track,
 } from '../utils/analytics';
+import { userSegmentationManager } from '../utils/userSegmentation';
 
 const HEARTBEAT_INTERVAL_MS = 60_000;
 const MAX_TICK_DRIFT_S = Math.ceil(HEARTBEAT_INTERVAL_MS / 1000) + 5;
@@ -102,6 +103,8 @@ export function useStreamHeartbeat(): void {
                 isActive: isVisibleRef.current,
             });
             checkMilestones();
+            // 隨觀看時間更新 session_length 分群維度(spec:應在 heartbeat 中呼叫)
+            userSegmentationManager.updateSessionLength();
         };
 
         const startTimer = () => {
