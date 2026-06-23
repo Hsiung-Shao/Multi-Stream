@@ -259,6 +259,18 @@ export function AddFavoriteDialog({
                             </div>
                         )}
 
+                        {/* Custom name — add mode(選填;留空時由 addFavorite 自動帶入官方頻道名) */}
+                        {!isEdit && (
+                            <div>
+                                <label className={afLabel}>{t('favorites:customName')}</label>
+                                <Input
+                                    {...register('name')}
+                                    placeholder={t('favorites:customNamePlaceholder')}
+                                    className="h-11 bg-background border-border"
+                                />
+                            </div>
+                        )}
+
                         {/* Category pills */}
                         <div>
                             <div className="flex items-center justify-between mb-2.5">

@@ -4,7 +4,7 @@ import { FavoriteStream, FavoriteUpdateEventDetail } from './types';
 import { backupService } from '../backup/index';
 import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from './constants';
 import { youtubeApi } from '../../utils/youtubeApi';
-import { cacheChannelIfAbsent } from '../youtube/YouTubeChannelRepository';
+import { cacheChannelIfAbsent, getCachedChannel } from '../youtube/YouTubeChannelRepository';
 
 export class FavoritesService {
     private favRepo: FavoritesRepository;
@@ -174,15 +174,20 @@ export class FavoritesService {
                 }
             }
 
-            // If we have videoId but no channelId, try to resolve it via API
+            // 從 /channel/UCxxx 取出 channelId(若 URL 直接帶 channel)
+            if (!channelId) {
+                const chMatch = url.match(/youtube\.com\/channel\/(UC[A-Za-z0-9_-]{22})/);
+                if (chMatch) channelId = chMatch[1];
+            }
+
+            // --- 解析 channelId(+ 官方頻道名)---
+            // channelId 解析不受 name 影響(供直播偵測);官方頻道名只在 caller 沒給 name 時才覆寫。
             if (videoId && !channelId) {
+                // videoId 路徑:getVideoInfo 一次取回 channelId + channelTitle(原有行為;唯一用 Data API 的路徑)
                 try {
-                    // 用 getVideoInfo 一次取回 channelId + channelTitle(getChannelIdFromVideoId
-                    // 內部本來就呼叫它，改用這個=零額外 API,還順手拿到官方頻道名供 cache 用)
                     const info = await youtubeApi.getVideoInfo(videoId);
-                    const resolvedChannelId = info.channelId;
-                    if (resolvedChannelId) {
-                        channelId = resolvedChannelId;
+                    if (info.channelId) {
+                        channelId = info.channelId;
                         if (info.channelTitle) officialTitle = info.channelTitle;
 
                         // Check duplicate AGAIN with resolved channelId
@@ -193,11 +198,63 @@ export class FavoritesService {
                         // Normalize URL to channel live format
                         url = `https://www.youtube.com/channel/${channelId}/live`;
 
-                        // If no name, use the official channel title we already fetched
                         if (!name && officialTitle) name = officialTitle;
                     }
                 } catch (e) {
                     console.warn('Failed to resolve YouTube channel info', e);
+                }
+            } else if (!channelId) {
+                // @handle :走後端抓取端點(零 quota)解析 channelId + 官方頻道名。
+                // 只認 @handle —— 後端一律以 youtube.com/@<name> 抓取,legacy /c/、/user/ 語意不同,
+                // 強行當 @handle 查會命中錯誤頻道,故維持原本 URL fallback。
+                const handleMatch = url.match(/youtube\.com\/@([^\/\?]+)/);
+                if (handleMatch) {
+                    try {
+                        const resolved = await youtubeApi.resolveChannelByHandle(decodeURIComponent(handleMatch[1]));
+                        if (resolved?.channelId) {
+                            channelId = resolved.channelId;
+                            if (resolved.channelTitle) officialTitle = resolved.channelTitle;
+
+                            // Check duplicate AGAIN with resolved channelId
+                            if (this.isDuplicate(url, channelId)) {
+                                return { success: false, message: 'streamAlreadyInFavorites' };
+                            }
+
+                            // Normalize URL to channel live format(讓這類收藏也能做直播偵測)
+                            url = `https://www.youtube.com/channel/${channelId}/live`;
+                        }
+                        if (!name && resolved?.channelTitle) name = resolved.channelTitle;
+                    } catch (e) {
+                        console.warn('Failed to resolve YouTube channel by handle', e);
+                    }
+                }
+            }
+
+            // /channel/UCxxx :有 channelId 但 caller 沒給 name → 零 quota 瀑布取官方頻道名
+            // 離線快取(0)→ og 抓取(0)→ Data API getChannelTitleFromChannelId(1，最後手段)
+            if (!name && channelId) {
+                try {
+                    const cached = await getCachedChannel(channelId);
+                    if (cached?.channel_title) {
+                        name = cached.channel_title; // 已在離線快取,無須再寫入
+                    } else {
+                        let title: string | null = null;
+                        try {
+                            const status = await youtubeApi.checkChannelLiveStatus(channelId);
+                            if (status.channelTitle) title = status.channelTitle;
+                        } catch { /* 抓取失敗,退到 Data API */ }
+                        if (!title) {
+                            try {
+                                title = await youtubeApi.getChannelTitleFromChannelId(channelId);
+                            } catch { /* 仍取不到,退回 fallback */ }
+                        }
+                        if (title) {
+                            name = title;
+                            officialTitle = title;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to resolve YouTube channel title', e);
                 }
             }
 

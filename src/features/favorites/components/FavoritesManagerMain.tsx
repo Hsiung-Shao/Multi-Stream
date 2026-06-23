@@ -13,6 +13,7 @@ import { SettingsSection } from './SettingsSection';
 import { LayoutManagerSection } from './LayoutManagerSection';
 import { VersionHistorySection } from './VersionHistorySection';
 import { favoritesService } from '../FavoritesService';
+import { twitchService } from '../../twitch/TwitchService';
 import { tagsService } from '../TagsService';
 import { favoritesLoader } from '../FavoritesLoader';
 import { logEvent } from '../../../utils/analytics';
@@ -193,16 +194,32 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 tagIds: data.tagIds
             });
         } else {
-            const addPromise = favoritesService.addFavorite(
-                data.url,
-                data.name || undefined,
-                data.categoryId === 'uncategorized' ? null : data.categoryId,
-                undefined,
-                undefined,
-                data.tagIds,
-                // tag well 已預選平台 tag 且尊重使用者移除,關閉 service 端的自動補
-                { autoTagPlatform: false }
-            );
+            // 留空自訂名稱時:Twitch 先解析官方顯示名(YouTube 由 addFavorite 內零 quota 解析)。
+            // 包成 async wrapper 以維持「即時關閉對話框」的樂觀 UX,不阻塞 setIsAddDialogOpen。
+            const doAdd = async () => {
+                let name = data.name?.trim() || undefined;
+                if (!name) {
+                    const m = data.url.match(/twitch\.tv\/([^/?]+)/i);
+                    if (m) {
+                        try {
+                            const login = m[1].toLowerCase();
+                            const names = await twitchService.getDisplayNames([login]);
+                            if (names[login]) name = names[login];
+                        } catch { /* 取不到就讓 addFavorite 退回 handle */ }
+                    }
+                }
+                return favoritesService.addFavorite(
+                    data.url,
+                    name,
+                    data.categoryId === 'uncategorized' ? null : data.categoryId,
+                    undefined,
+                    undefined,
+                    data.tagIds,
+                    // tag well 已預選平台 tag 且尊重使用者移除,關閉 service 端的自動補
+                    { autoTagPlatform: false }
+                );
+            };
+            const addPromise = doAdd();
             // 「新增後立即載入畫面」:新增成功後把該頻道載入到 canvas(沿用既有 favoritesLoader)
             if (data.autoLoad) {
                 addPromise

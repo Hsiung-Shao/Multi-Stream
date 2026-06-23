@@ -143,6 +143,38 @@ export const youtubeApi = {
         }
     },
 
+    // 透過後端抓取端點(零 YouTube Data API quota)把 @handle / 自訂網址名稱解析成
+    // channelId + 官方頻道名。端點 /api/youtube-channel-page 內部抓取頻道頁 HTML 解析,
+    // 解析不到 channelId 會回 404。失敗一律回 null,由呼叫端退回 fallback。
+    async resolveChannelByHandle(handle: string): Promise<{ channelId: string | null; channelTitle: string | null } | null> {
+        const clean = (handle || '').trim().replace(/^@/, '');
+        if (!clean) return null;
+
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        try {
+            const url = `/api/youtube-channel-page?handle=${encodeURIComponent(clean)}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
+            });
+            clearTimeout(id);
+
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            const channelId = data?.channelId || null;
+            const channelTitle = data?.channelTitle || null;
+            if (!channelId && !channelTitle) return null;
+            return { channelId, channelTitle };
+        } catch (e) {
+            clearTimeout(id);
+            console.warn('[YouTubeAPI] resolveChannelByHandle failed', e);
+            return null;
+        }
+    },
+
     async checkChannelLiveStatus(channelId: string): Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string; isUpcoming?: boolean; scheduledStartTime?: string; channelTitle?: string }> {
         // Strategy: Try the new lightweight "OG Image" API first. 
         // If it fails or implies uncertainty (which it theoretically shouldn't given the robust updates), 

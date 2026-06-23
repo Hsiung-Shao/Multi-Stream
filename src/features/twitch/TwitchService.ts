@@ -209,6 +209,42 @@ export class TwitchService implements TwitchApiContract {
         return results;
     }
 
+    public async getDisplayNames(logins: string[]): Promise<Record<string, string>> {
+        const results: Record<string, string> = {};
+        if (!logins?.length) return results;
+        await this.ensureConfig();
+
+        const BATCH_SIZE = 100;
+        // De-dup + normalize to lowercase login (Helix /users expects login names)
+        const unique = Array.from(new Set(logins.map(l => l.trim().toLowerCase()).filter(Boolean)));
+
+        for (let i = 0; i < unique.length; i += BATCH_SIZE) {
+            const batch = unique.slice(i, i + BATCH_SIZE);
+            try {
+                const qs = new URLSearchParams();
+                batch.forEach(login => qs.append('login', login));
+                const data = await this.client.get<any>(`/users?${qs.toString()}`);
+
+                if (data?.data) {
+                    data.data.forEach((user: any) => {
+                        const login = (user.login || '').toLowerCase();
+                        if (login && user.display_name) {
+                            results[login] = user.display_name;
+                        }
+                    });
+                }
+
+                if (i + BATCH_SIZE < unique.length) {
+                    await new Promise(r => setTimeout(r, 200));
+                }
+            } catch (e) {
+                // Batch failed? Swallow per legacy convention; return whatever resolved so far.
+            }
+        }
+
+        return results;
+    }
+
     public setConfig(config: Partial<TwitchApiConfig>): void {
         const newConf = this.configResolver.update(config);
         // If secrets changed, clear token

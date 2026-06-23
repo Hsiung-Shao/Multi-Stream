@@ -120,6 +120,7 @@ export default {
   'placeholder.stream_example': '例如: 遊戲實況, 音樂台...',
   'placeholder.category_example': '例如: 最愛, 遊戲, 音樂...',
   'customName': '自訂名稱 (選填)',
+  'customNamePlaceholder': '留空將自動帶入官方頻道名稱',
 
   'batchImportPlaceholder': '請輸入 Twitch 頻道網址，每行一個。\n例如：\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 

@@ -107,6 +107,7 @@ export default {
   'placeholder.stream_example': '例如: 游戏实况, 音乐台...',
   'placeholder.category_example': '例如: 最爱, 游戏, 音乐...',
   'customName': '自定义名称 (选填)',
+  'customNamePlaceholder': '留空将自动带入官方频道名称',
   'batchImportPlaceholder': '请输入 Twitch 频道网址，每行一个。\n例如：\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 
   // Twitch

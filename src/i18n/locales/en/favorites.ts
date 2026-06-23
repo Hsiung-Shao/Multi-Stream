@@ -119,6 +119,7 @@ export default {
   'placeholder.stream_example': 'e.g. Gaming, Music...',
   'placeholder.category_example': 'e.g. Favorites, Gaming, Music...',
   'customName': 'Custom Name (Optional)',
+  'customNamePlaceholder': 'Leave blank to use the official channel name',
   'batchImportPlaceholder': 'Enter Twitch channel URLs, one per line.\nExample:\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 
   // Twitch

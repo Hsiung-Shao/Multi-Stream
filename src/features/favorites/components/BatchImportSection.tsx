@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Loader2, Folder, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { favoritesService } from '../FavoritesService';
+import { twitchService } from '../../twitch/TwitchService';
 import { tagsService } from '../TagsService';
 import { logEvent } from '../../../utils/analytics';
 import type { FavoriteCategory as Category } from '../types';
@@ -48,10 +49,25 @@ export function BatchImportSection({ categories, onSuccess }: BatchImportSection
         const categoryId = data.categoryId === 'uncategorized' ? null : data.categoryId;
         let successCount = 0;
 
+        // 先批次解析所有 Twitch 頻道的官方顯示名(整批一次 /users,避免逐筆觸發前端 rate limit)。
+        // YouTube 不在此預解析,逐筆交由 addFavorite 走零 quota 路徑。
+        const twitchLogins = urlList
+            .map(u => u.match(/twitch\.tv\/([^/?]+)/i)?.[1]?.toLowerCase())
+            .filter((v): v is string => !!v);
+        let twitchNames: Record<string, string> = {};
+        if (twitchLogins.length > 0) {
+            try {
+                twitchNames = await twitchService.getDisplayNames(twitchLogins);
+            } catch { /* 取不到就讓 addFavorite 退回 handle */ }
+        }
+
         for (let i = 0; i < urlList.length; i++) {
             const url = urlList[i];
             try {
-                const result = await favoritesService.addFavorite(url, undefined, categoryId);
+                const login = url.match(/twitch\.tv\/([^/?]+)/i)?.[1]?.toLowerCase();
+                // Twitch → 官方顯示名;非 Twitch / 取不到 → undefined,由 addFavorite 解析官方名
+                const name = login ? twitchNames[login] : undefined;
+                const result = await favoritesService.addFavorite(url, name, categoryId);
                 if (result.success) successCount++;
             } catch (e) {
                 // Silently fails for individual URLs

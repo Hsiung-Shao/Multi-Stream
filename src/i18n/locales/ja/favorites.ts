@@ -107,6 +107,7 @@ export default {
   'placeholder.stream_example': '例: ゲーム配信, 音楽...',
   'placeholder.category_example': '例: お気に入り, ゲーム, 音楽...',
   'customName': 'カスタム名 (任意)',
+  'customNamePlaceholder': '空欄の場合は公式チャンネル名を自動入力します',
   'batchImportPlaceholder': 'TwitchチャンネルのURLを1行に1つずつ入力してください。\n例：\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 
   // Twitch

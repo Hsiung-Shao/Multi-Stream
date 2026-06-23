@@ -107,6 +107,7 @@ export default {
   'placeholder.stream_example': '예: 게임 방송, 음악...',
   'placeholder.category_example': '예: 즐겨찾기, 게임, 음악...',
   'customName': '사용자 지정 이름 (선택 사항)',
+  'customNamePlaceholder': '비워 두면 공식 채널 이름이 자동으로 입력됩니다',
   'batchImportPlaceholder': 'Twitch 채널 URL을 한 줄에 하나씩 입력하세요.\n예:\nhttps://www.twitch.tv/shroud\nhttps://www.twitch.tv/ninja',
 
   // Twitch

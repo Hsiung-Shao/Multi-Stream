@@ -137,6 +137,12 @@ export interface TwitchApiContract {
     checkMultipleChannelsLiveStatus(channelLogins: string[]): Promise<Record<string, LiveStatusResult>>;
 
     /**
+     * Resolves official display names for the given channel logins (helix/users, batched).
+     * Returns a map of lowercased login -> display_name (missing logins are simply absent).
+     */
+    getDisplayNames(logins: string[]): Promise<Record<string, string>>;
+
+    /**
      * Updates configuration
      */
     setConfig(config: Partial<TwitchApiConfig>): void;
