@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
+  'v3.1.2.date': '2026-06-23',
+  'v3.1.2.favoritesNaming': 'You can now give a new favorite a custom display name, and when you leave it blank, including during batch import, it is automatically named after the official channel name',
   'v3.1.1.date': '2026-06-22',
   'v3.1.1.favoritesNameFix': 'Fixed long favorite names overflowing instead of truncating in the list',
   'v3.1.1.favoritesLoadFix': 'Loading a favorite stream now switches to the viewing canvas and closes the Favorites Manager, so it no longer blocks the streams you just loaded',

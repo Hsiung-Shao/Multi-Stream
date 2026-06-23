@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '版本记录',
   'subtitle': 'MultiStream Hub 更新历史',
   'latest': '最新',
+  'v3.1.2.date': '2026-06-23',
+  'v3.1.2.favoritesNaming': '收藏命名优化：新增收藏可自定义显示名称，未填写时（含批量导入）将自动以官方频道名称命名',
   'v3.1.1.date': '2026-06-22',
   'v3.1.1.favoritesNameFix': '修复收藏项目名称过长时溢出、无法正确截断的显示问题',
   'v3.1.1.favoritesLoadFix': '载入收藏串流后自动切换到观看画面并关闭收藏管理窗口，不再被窗口挡住看不到刚载入的画面',
