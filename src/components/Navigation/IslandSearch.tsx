@@ -1,5 +1,6 @@
-import { Search, Plus, Loader2, X } from 'lucide-react';
+import { Plus, Loader2, X, Twitch as TwitchIcon, Youtube as YoutubeIcon } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { Input } from '../ui/input';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../ui/utils';
@@ -8,21 +9,40 @@ import { ScrollArea } from '../ui/scroll-area';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 import { twitchService } from '../../features/twitch/TwitchService';
+import { youtubeApi } from '../../utils/youtubeApi';
+import { favoritesService } from '../../features/favorites/FavoritesService';
+import { searchYoutubeChannels } from '../../features/youtube/searchYoutubeChannels';
 import { FN } from './islandTokens';
 
 // Search 模組主題色(對齊設計 FN.search = blue)
 const SEARCH_ACCENT = FN.search.c;
+const TWITCH_COLOR = '#9146FF';
+const YOUTUBE_COLOR = '#FF0000';
+
+type Platform = 'twitch' | 'youtube';
 
 interface SearchResult {
     id: string;
-    login: string;
+    platform: Platform;
     displayName: string;
-    title?: string;
-    isLive: boolean;
     thumbnailUrl?: string;
+    // twitch
+    login?: string;
+    isLive?: boolean;
     gameName?: string;
-    viewerCount?: number;
-    url: string;
+    url?: string;
+    // youtube
+    channelId?: string;
+    subscriber?: number | null;
+    isVtuber?: boolean;
+    nationality?: string | null;
+}
+
+function formatSubscribers(n?: number | null): string {
+    if (n == null) return '';
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+    return String(n);
 }
 
 interface IslandSearchProps {
@@ -30,7 +50,8 @@ interface IslandSearchProps {
 }
 
 export function IslandSearch({ onSearch }: IslandSearchProps) {
-    const { t } = useTranslation('common');
+    const { t } = useTranslation(['common', 'navbar']);
+    const [platform, setPlatform] = useState<Platform>('twitch');
     const [query, setQuery] = useState('');
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [showResults, setShowResults] = useState(false);
@@ -40,6 +61,8 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    // 遞增的請求序號:丟棄「較晚 resolve 的過期請求」,避免切平台/快速輸入時舊結果覆蓋新結果
+    const reqIdRef = useRef(0);
 
     const { isSearchFocused, setSearchFocused } = useUIStore();
     const addStream = useStreamStore(s => s.addStream);
@@ -61,23 +84,53 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
             trimmed.includes('youtu.be/');
     };
 
-    const searchTwitchChannels = useCallback(async (q: string) => {
+    // 依平台搜尋:Twitch 即時打 API;YouTube 搜本站資料(vtubers + youtube_channels)
+    const runSearch = useCallback(async (q: string, p: Platform) => {
         if (!q || q.trim().length === 0 || isUrl(q)) {
             setSearchResults([]);
             setShowResults(false);
             return;
         }
+        const myId = ++reqIdRef.current;
         setIsSearching(true);
         try {
-            const results = await twitchService.searchChannels(q, 5);
-            setSearchResults(results || []);
+            let mapped: SearchResult[];
+            if (p === 'twitch') {
+                const results = await twitchService.searchChannels(q, 5);
+                mapped = (results || []).map((r: any) => ({
+                    id: r.id,
+                    platform: 'twitch' as const,
+                    displayName: r.displayName,
+                    thumbnailUrl: r.thumbnailUrl,
+                    login: r.login,
+                    isLive: r.isLive,
+                    gameName: r.gameName,
+                    url: r.url,
+                }));
+            } else {
+                const results = await searchYoutubeChannels(q, 8);
+                mapped = results.map(r => ({
+                    id: r.channelId,
+                    platform: 'youtube' as const,
+                    displayName: r.title,
+                    thumbnailUrl: r.thumbnail || undefined,
+                    channelId: r.channelId,
+                    subscriber: r.subscriber,
+                    isVtuber: r.isVtuber,
+                    nationality: r.nationality,
+                }));
+            }
+            // 過期請求(已被更新的搜尋/切平台取代)→ 丟棄,避免覆蓋新結果
+            if (myId !== reqIdRef.current) return;
+            setSearchResults(mapped);
             setShowResults(true);
             setSelectedIndex(-1);
-        } catch (error) {
+        } catch {
+            if (myId !== reqIdRef.current) return;
             setSearchResults([]);
             setShowResults(false);
         } finally {
-            setIsSearching(false);
+            if (myId === reqIdRef.current) setIsSearching(false);
         }
     }, []);
 
@@ -90,12 +143,12 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
             return;
         }
         searchTimeoutRef.current = setTimeout(() => {
-            searchTwitchChannels(trimmed);
+            runSearch(trimmed, platform);
         }, 500);
         return () => {
             if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
         };
-    }, [query, searchTwitchChannels]);
+    }, [query, platform, runSearch]);
 
     // Click outside → close results popup(input 保留)
     useEffect(() => {
@@ -108,31 +161,99 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const togglePlatform = () => {
+        reqIdRef.current++; // 作廢任何 in-flight 舊平台請求,避免其結果回填到新平台
+        setPlatform(p => (p === 'twitch' ? 'youtube' : 'twitch'));
+        setSearchResults([]);
+        setSelectedIndex(-1);
+    };
+
+    // YouTube 頻道:正在直播→加入播放;沒直播→加入收藏(YouTube 頻道沒直播即無可播影片)
+    const addYoutubeChannel = async (result: SearchResult) => {
+        const channelId = result.channelId;
+        if (!channelId) return;
+        const loadingId = toast.loading(t('navbar:resolvingLive'));
+        try {
+            const live = await youtubeApi.checkChannelLiveStatus(channelId);
+            if (live.isLive) {
+                const watchUrl = live.finalUrl
+                    || (live.liveVideoId ? `https://www.youtube.com/watch?v=${live.liveVideoId}` : '');
+                if (watchUrl) {
+                    const res = await addStream(watchUrl);
+                    toast.dismiss(loadingId);
+                    if (res.success) toast.success(t('navbar:addedToCanvas'));
+                    else toast.error(res.message || t('common.error'));
+                    return;
+                }
+            }
+            // 沒直播 → 加入收藏
+            const channelUrl = `https://www.youtube.com/channel/${channelId}`;
+            const res = await favoritesService.addFavorite(channelUrl, result.displayName, null, channelId);
+            toast.dismiss(loadingId);
+            if (res.success) {
+                toast.success(t('navbar:addedToFavorites'));
+            } else if (res.message === 'streamAlreadyInFavorites') {
+                toast.info(t('navbar:alreadyInFavorites'));
+            } else {
+                toast.error(t('common.error'));
+            }
+        } catch {
+            toast.dismiss(loadingId);
+            toast.error(t('common.error'));
+        }
+    };
+
     const handleSelectResult = (result: SearchResult) => {
-        addStream(result.url);
         setQuery('');
         setShowResults(false);
-        if (onSearch) onSearch(result.login);
+        if (result.platform === 'youtube') {
+            void addYoutubeChannel(result);
+            if (onSearch) onSearch(result.displayName);
+            return;
+        }
+        // Twitch:URL 直接加入播放
+        if (result.url) addStream(result.url);
+        if (onSearch) onSearch(result.login || result.displayName);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const valueToAdd = query.trim();
-        if (!valueToAdd) return;
+        const value = query.trim();
+        if (!value) return;
 
-        let targetUrl = valueToAdd;
+        // 有明確選取 → 選該結果
         if (showResults && selectedIndex >= 0 && searchResults[selectedIndex]) {
-            targetUrl = searchResults[selectedIndex].url;
+            handleSelectResult(searchResults[selectedIndex]);
+            return;
         }
-
-        const result = await addStream(targetUrl);
-        if (result.success) {
-            setQuery('');
-            setShowResults(false);
-        } else {
-            alert(result.message || t('common.error'));
+        // 貼 URL → 直接加入播放(任何平台)
+        if (isUrl(value)) {
+            const res = await addStream(value);
+            if (res.success) {
+                setQuery('');
+                setShowResults(false);
+            } else {
+                alert(res.message || t('common.error'));
+            }
+            if (onSearch) onSearch(value);
+            return;
         }
-        if (onSearch) onSearch(valueToAdd);
+        // 純文字、無選取 → 選第一個結果(若有)
+        if (searchResults.length > 0) {
+            handleSelectResult(searchResults[0]);
+            return;
+        }
+        // Twitch:純文字當 channel 名嘗試加入(失敗則提示)
+        if (platform === 'twitch') {
+            const res = await addStream(value);
+            if (res.success) {
+                setQuery('');
+                setShowResults(false);
+            } else {
+                alert(res.message || t('common.error'));
+            }
+            if (onSearch) onSearch(value);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -152,11 +273,14 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
     };
 
     const handleClear = () => {
+        reqIdRef.current++; // 作廢 in-flight 請求,避免清空後舊結果又被填回
         setQuery('');
         setSearchResults([]);
         setShowResults(false);
         inputRef.current?.focus();
     };
+
+    const platformColor = platform === 'twitch' ? TWITCH_COLOR : YOUTUBE_COLOR;
 
     return (
         <div
@@ -195,10 +319,26 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
                                 )}
                                 <div className="flex-1 min-w-0">
                                     <div className="text-sm font-medium text-white truncate">{result.displayName}</div>
-                                    <div className="text-xs text-white/60 flex items-center gap-1">
-                                        {result.isLive && <span className="w-2 h-2 rounded-full bg-green-500 block" />}
-                                        <span className="truncate">{result.gameName || 'Twitch'}</span>
-                                    </div>
+                                    {result.platform === 'twitch' ? (
+                                        <div className="text-xs text-white/60 flex items-center gap-1">
+                                            {result.isLive && <span className="w-2 h-2 rounded-full bg-green-500 block" />}
+                                            <span className="truncate">{result.gameName || 'Twitch'}</span>
+                                        </div>
+                                    ) : (
+                                        <div className="text-xs text-white/60 flex items-center gap-1.5">
+                                            {result.isVtuber && (
+                                                <span className="px-1 rounded bg-pink-500/20 text-pink-300 text-[10px] leading-tight">
+                                                    {t('navbar:vtuberBadge')}
+                                                </span>
+                                            )}
+                                            {result.subscriber != null && (
+                                                <span>{formatSubscribers(result.subscriber)}</span>
+                                            )}
+                                            {result.nationality && (
+                                                <span className="opacity-70 truncate">{result.nationality}</span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                                 <Plus size={14} className="text-white/40" />
                             </div>
@@ -208,17 +348,25 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
             )}
 
             <form onSubmit={handleSubmit} className="flex items-center w-full relative">
-                {/* Search icon prefix(純圖示,非按鈕) */}
-                <Search
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10"
-                    style={{ color: SEARCH_ACCENT }}
-                />
+                {/* 平台切換按鈕(取代純圖示;點擊在 Twitch/YouTube 間切換) */}
+                <button
+                    type="button"
+                    onClick={togglePlatform}
+                    className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                    title={platform === 'twitch' ? t('navbar:twitch') : t('navbar:youtube')}
+                    aria-label={platform === 'twitch' ? t('navbar:twitch') : t('navbar:youtube')}
+                >
+                    {platform === 'twitch'
+                        ? <TwitchIcon size={15} style={{ color: TWITCH_COLOR }} />
+                        : <YoutubeIcon size={15} style={{ color: YOUTUBE_COLOR }} />}
+                </button>
 
                 <Input
                     ref={inputRef}
                     type="text"
-                    placeholder={t('common.search_placeholder') || 'Search...'}
+                    placeholder={platform === 'twitch'
+                        ? (t('common.search_placeholder') || 'Search...')
+                        : t('navbar:searchYoutubePlaceholder')}
                     value={query}
                     onChange={(e) => {
                         setQuery(e.target.value);
@@ -226,7 +374,7 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
                     }}
                     onKeyDown={handleKeyDown}
                     className="h-8 pl-9 pr-9 bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:ring-1 focus-visible:ring-offset-0 rounded-full"
-                    style={{ ['--tw-ring-color' as any]: `${SEARCH_ACCENT}55` }}
+                    style={{ ['--tw-ring-color' as any]: `${platformColor}55` }}
                 />
 
                 {/* Right side:loading spinner OR clear button */}

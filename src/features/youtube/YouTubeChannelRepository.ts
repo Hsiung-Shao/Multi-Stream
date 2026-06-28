@@ -166,29 +166,3 @@ export async function cacheChannelIfAbsent(
     /* fire-and-forget：蒐集失敗不影響呼叫端 */
   }
 }
-
-/**
- * Search cached YouTube channels by title (for autocomplete).
- */
-export async function searchChannels(query: string, limit = 10): Promise<YouTubeChannelData[]> {
-  try {
-    const supabase = await getSupabase();
-    if (!supabase) return [];
-
-    // Escape LIKE wildcard characters
-    const escaped = query.replace(/[%_]/g, '\\$&');
-
-    const { data, error } = await supabase
-      .from('youtube_channels')
-      .select('*')
-      .ilike('channel_title', `%${escaped}%`)
-      .order('subscriber_count', { ascending: false, nullsFirst: false })
-      .limit(limit);
-
-    if (error || !data) return [];
-
-    return data as YouTubeChannelData[];
-  } catch {
-    return [];
-  }
-}

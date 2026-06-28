@@ -17,6 +17,13 @@ const navbar = {
   'menu': '메뉴',
   'canvas': '캔버스',
   'fixed': '고정 레이아웃',
+  'youtube': 'YouTube',
+  'searchYoutubePlaceholder': 'VTuber / YouTube 채널 검색',
+  'resolvingLive': '라이브 상태 확인 중…',
+  'addedToCanvas': '화면에 추가됨',
+  'addedToFavorites': '즐겨찾기에 추가됨',
+  'vtuberBadge': 'VTuber',
+  'alreadyInFavorites': '이미 즐겨찾기에 있습니다',
 };
 
 export default navbar;
