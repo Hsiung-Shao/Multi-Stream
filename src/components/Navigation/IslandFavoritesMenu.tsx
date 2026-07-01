@@ -110,7 +110,13 @@ const FavChooser = ({
     </div>
 );
 
-export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode }) => {
+export const IslandFavoritesMenu = ({
+    children,
+    onOpenChange,
+}: {
+    children: React.ReactNode;
+    onOpenChange?: (open: boolean) => void;
+}) => {
     const { t } = useTranslation(['common', 'favorites']);
     const { favorites, categories, refresh } = useFavorites();
     // const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
@@ -240,7 +246,7 @@ export const IslandFavoritesMenu = ({ children }: { children: React.ReactNode })
     };
 
     return (
-        <Popover open={isOpen} onOpenChange={(open: boolean) => { setIsOpen(open); if (!open) setMenu(null); }}>
+        <Popover open={isOpen} onOpenChange={(open: boolean) => { setIsOpen(open); onOpenChange?.(open); if (!open) setMenu(null); }}>
             <PopoverTrigger asChild>
                 {children}
             </PopoverTrigger>

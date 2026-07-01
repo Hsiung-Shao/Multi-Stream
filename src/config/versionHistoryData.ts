@@ -6,6 +6,14 @@ export interface VersionData {
 
 export const versionHistoryData: VersionData[] = [
     {
+        version: 'v3.2.0',
+        dateKey: 'versionHistory:v3.2.0.date',
+        changeKeys: [
+            'versionHistory:v3.2.0.youtubeChannelSearch',
+            'versionHistory:v3.2.0.dynamicIslandUx',
+        ],
+    },
+    {
         version: 'v3.1.2',
         dateKey: 'versionHistory:v3.1.2.date',
         changeKeys: [

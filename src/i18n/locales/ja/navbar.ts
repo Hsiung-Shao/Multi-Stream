@@ -17,6 +17,13 @@ const navbar = {
   'menu': 'メニュー',
   'canvas': 'キャンバス',
   'fixed': '固定レイアウト',
+  'youtube': 'YouTube',
+  'searchYoutubePlaceholder': 'VTuber / YouTubeチャンネルを検索',
+  'resolvingLive': '配信状態を確認中…',
+  'addedToCanvas': '画面に追加しました',
+  'addedToFavorites': 'お気に入りに追加しました',
+  'vtuberBadge': 'VTuber',
+  'alreadyInFavorites': '既にお気に入りに登録済みです',
 };
 
 export default navbar;

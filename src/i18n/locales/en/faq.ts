@@ -36,6 +36,10 @@ const faq = {
 
     'items.empty_window.title': 'Empty Window Usage',
     'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.',
+
+    'items.youtube_search.title': 'Why can\'t I find some YouTube channels?',
+    'items.youtube_search.content': 'The Dynamic Island\'s YouTube channel search matches names against the channels already indexed on our site — it does not search all of YouTube in real time. If a channel doesn\'t show up, it usually means we haven\'t added it to our catalog yet. Also, a matched YouTube channel is added to your favorites rather than previewed and played instantly like a Twitch channel, because the catalog doesn\'t hold that channel\'s current live URL. Once the channel goes live, load it from your favorites to watch.',
+    'items.youtube_search.tip': 'If a channel you want never appears, let us know on Discord and we\'ll add it to the catalog.',
   // —— i18n 修補：design 改版新增 key，各語言在地化 ——
   'cat_all': 'All',
   'support_eyebrow': 'Support',

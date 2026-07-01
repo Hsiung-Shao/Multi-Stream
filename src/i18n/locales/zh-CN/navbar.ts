@@ -17,6 +17,13 @@ const navbar = {
   'menu': '菜单',
   'canvas': '画布',
   'fixed': '固定布局',
+  'youtube': 'YouTube',
+  'searchYoutubePlaceholder': '搜索 VTuber / YouTube 频道',
+  'resolvingLive': '检查直播状态中…',
+  'addedToCanvas': '已加入画面',
+  'addedToFavorites': '已加入收藏',
+  'vtuberBadge': 'VTuber',
+  'alreadyInFavorites': '已在收藏列表中',
 };
 
 export default navbar;

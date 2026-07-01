@@ -18,6 +18,13 @@ const navbar = {
   'menu': 'Menu',
   'canvas': 'Canvas',
   'fixed': 'Fixed Layout',
+  'youtube': 'YouTube',
+  'searchYoutubePlaceholder': 'Search VTuber / YouTube channel',
+  'resolvingLive': 'Checking live status…',
+  'addedToCanvas': 'Added to canvas',
+  'addedToFavorites': 'Added to favorites',
+  'vtuberBadge': 'VTuber',
+  'alreadyInFavorites': 'Already in favorites',
 };
 
 export default navbar;

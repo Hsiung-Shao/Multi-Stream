@@ -37,9 +37,11 @@ interface IslandLayoutPickerProps {
     isExpanded: boolean;
     onMouseLeave?: () => void;
     onOpenSettings: () => void;
+    // SaveLayoutDialog 是 portal(不在島子樹),其 open 需上拋給動態島釘住,避免操作時島被誤隱藏
+    onSaveDialogOpenChange?: (open: boolean) => void;
 }
 
-export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }: IslandLayoutPickerProps) => {
+export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings, onSaveDialogOpenChange }: IslandLayoutPickerProps) => {
     const { t } = useTranslation(['common', 'favorites'] as const);
     const customLayouts = useStreamStore(state => state.customLayouts);
     const applyCustomLayout = useStreamStore(state => state.applyCustomLayout);
@@ -47,6 +49,12 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
 
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'video_only' | 'with_chat' | 'custom'>('video_only');
+
+    // 同步內部狀態並上拋,讓動態島在 dialog 開啟期間維持釘住
+    const handleSaveDialogChange = (open: boolean) => {
+        setSaveDialogOpen(open);
+        onSaveDialogOpenChange?.(open);
+    };
 
     // Separate templates
     const videoTemplates = layoutTemplates.filter(t => t.type === 'video_only');
@@ -206,7 +214,7 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
 
                                     <Button
                                         className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-900/20"
-                                        onClick={() => setSaveDialogOpen(true)}
+                                        onClick={() => handleSaveDialogChange(true)}
                                     >
                                         <Plus className="size-4 mr-2" />
                                         {t('common.save_layout') || '儲存目前布局'}
@@ -220,7 +228,7 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings }:
 
             <SaveLayoutDialog
                 open={saveDialogOpen}
-                onOpenChange={setSaveDialogOpen}
+                onOpenChange={handleSaveDialogChange}
             />
         </>
     );

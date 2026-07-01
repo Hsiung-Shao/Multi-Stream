@@ -34,6 +34,8 @@ const tutorial = {
   'features.search.description': 'More than just a URL input, it is a powerful global search entry.',
   'features.search.twitch': 'Twitch Channel Search',
   'features.search.twitch.desc': 'Type a streamer\'s name to search Twitch channels instantly with live previews (including avatar and title).',
+  'features.search.youtube': 'YouTube Channel Search',
+  'features.search.youtube.desc': 'Type a VTuber or YouTuber name in the same search box to find matching YouTube channels from our built-in catalog. Unlike the instant Twitch search, this matches channels already indexed on our site rather than searching all of YouTube in real time, so a result is added to your favorites instead of playing right away like Twitch. Once that channel goes live, load it from your favorites to watch. If a channel you want never shows up, it simply isn\'t in our catalog yet — let us know on Discord.',
   'features.search.url': 'URL Recognition',
   'features.search.url.desc': 'Paste a Twitch or YouTube URL, and the system automatically recognizes and adds the corresponding player or chat.',
 

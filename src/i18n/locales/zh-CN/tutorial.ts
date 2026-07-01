@@ -34,6 +34,8 @@ const tutorial = {
   'features.search.description': '不仅是输入网址，它是一个强大的全局搜索入口。',
   'features.search.twitch': 'Twitch 频道搜索',
   'features.search.twitch.desc': '直接输入主播名称，系统会自动搜索 Twitch 频道并显示即时预览（包含头像与直播标题）。',
+  'features.search.youtube': 'YouTube 频道搜索',
+  'features.search.youtube.desc': '在同一个搜索框输入 VTuber 或 YouTuber 的名称，即可从本站已收录的频道名单中找到对应的 YouTube 频道。与 Twitch 的即时搜索不同，这里比对的是站内收录的频道数据（并非即时搜索整个 YouTube），因此搜索结果会加入您的收藏，而非像 Twitch 那样直接播放；待该频道开播后，再从收藏列表载入观看即可。若搜索不到想看的频道，代表本站尚未收录，欢迎到 Discord 回报。',
   'features.search.url': '网址智能识别',
   'features.search.url.desc': '粘贴 Twitch 或 YouTube 网址，系统会自动识别并加入对应的播放器或聊天室。',
 
