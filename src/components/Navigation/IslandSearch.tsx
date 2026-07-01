@@ -47,9 +47,11 @@ function formatSubscribers(n?: number | null): string {
 
 interface IslandSearchProps {
     onSearch?: (query: string) => void;
+    // 聚焦/失焦時回報「使用中」,讓動態島在搜尋時不自動隱藏
+    onActiveChange?: (active: boolean) => void;
 }
 
-export function IslandSearch({ onSearch }: IslandSearchProps) {
+export function IslandSearch({ onSearch, onActiveChange }: IslandSearchProps) {
     const { t } = useTranslation(['common', 'navbar']);
     const [platform, setPlatform] = useState<Platform>('twitch');
     const [query, setQuery] = useState('');
@@ -372,6 +374,14 @@ export function IslandSearch({ onSearch }: IslandSearchProps) {
                         setQuery(e.target.value);
                         setSelectedIndex(-1);
                     }}
+                    onFocus={() => {
+                        onActiveChange?.(true);
+                        // 重新聚焦時:若已有結果且 query 仍有效,重新顯示(失焦後再聚焦也看得到)
+                        if (searchResults.length > 0 && query.trim() && !isUrl(query)) {
+                            setShowResults(true);
+                        }
+                    }}
+                    onBlur={() => onActiveChange?.(false)}
                     onKeyDown={handleKeyDown}
                     className="h-8 pl-9 pr-9 bg-white/5 border border-white/10 text-white placeholder:text-white/50 focus-visible:ring-1 focus-visible:ring-offset-0 rounded-full"
                     style={{ ['--tw-ring-color' as any]: `${platformColor}55` }}

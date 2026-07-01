@@ -132,6 +132,12 @@ export const DynamicIsland = () => {
     const [mediaControlExpanded, setMediaControlExpanded] = useState(false);
     const [layoutPickerExpanded, setLayoutPickerExpanded] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    // portal 彈出 UI 的 open 狀態 + 搜尋聚焦:任一為真即「使用中」,釘住動態島不隱藏
+    const [addMenuOpen, setAddMenuOpen] = useState(false);
+    const [clearDialogOpen, setClearDialogOpen] = useState(false);
+    const [favMenuOpen, setFavMenuOpen] = useState(false);
+    const [searchActive, setSearchActive] = useState(false);
+    const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
     // Fullscreen listener
     useEffect(() => {
@@ -155,7 +161,13 @@ export const DynamicIsland = () => {
     };
 
     // Dynamic Island Hook — shows when mouse near bottom edge
-    const { isCollapsed, handlers } = useDynamicIsland();
+    const { isCollapsed, setPinned, handlers } = useDynamicIsland();
+
+    // 彙整「使用中」訊號 → 釘住/解除釘住(單一真實來源)
+    const pinned = mediaControlExpanded || layoutPickerExpanded || addMenuOpen || favMenuOpen || clearDialogOpen || searchActive || saveDialogOpen;
+    useEffect(() => {
+        setPinned(pinned);
+    }, [pinned, setPinned]);
 
     const handleQuickSave = async () => {
         if (streams.length === 0) {
@@ -227,14 +239,14 @@ export const DynamicIsland = () => {
                     <div className="flex items-center" style={{ gap: 3 }}>
 
                         {/* Group 1: Search Module */}
-                        <IslandSearch />
+                        <IslandSearch onActiveChange={setSearchActive} />
 
                         <IslandDivider />
 
                         {/* Group 2: Controls */}
 
                         {/* 1. Add Window */}
-                        <DropdownMenu>
+                        <DropdownMenu open={addMenuOpen} onOpenChange={setAddMenuOpen}>
                             <DropdownMenuTrigger asChild>
                                 <IslandBtn fn="add" icon={Plus} title={t('common.add_window') || '新增視窗'} />
                             </DropdownMenuTrigger>
@@ -256,6 +268,7 @@ export const DynamicIsland = () => {
                             isExpanded={layoutPickerExpanded}
                             onMouseLeave={() => setLayoutPickerExpanded(false)}
                             onOpenSettings={() => openModal('favorites', 'layouts')}
+                            onSaveDialogOpenChange={setSaveDialogOpen}
                         />
                         <IslandBtn
                             fn="layout"
@@ -275,7 +288,7 @@ export const DynamicIsland = () => {
                         />
 
                         {/* 4. Favorites List */}
-                        <IslandFavoritesMenu>
+                        <IslandFavoritesMenu onOpenChange={setFavMenuOpen}>
                             <IslandBtn fn="fav" icon={Star} fill title={t('common.favorites') || '收藏清單'} />
                         </IslandFavoritesMenu>
 
@@ -298,7 +311,7 @@ export const DynamicIsland = () => {
                         />
 
                         {/* 7. Clear Canvas */}
-                        <AlertDialog>
+                        <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
                             <AlertDialogTrigger asChild>
                                 <IslandBtn fn="clear" icon={Trash2} title={t('common.clear_screen') || '清空畫面'} />
                             </AlertDialogTrigger>
