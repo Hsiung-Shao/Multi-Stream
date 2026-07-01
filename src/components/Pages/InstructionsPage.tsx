@@ -460,6 +460,7 @@ export function InstructionsPage() {
                         img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
                     ],
                 },
+                { id: 'youtube', heading: tx('features.search.youtube'), blocks: [{ type: 'p', text: tx('features.search.youtube.desc') }] },
                 { id: 'url', heading: tx('features.search.url'), blocks: [{ type: 'p', text: tx('features.search.url.desc') }] },
             ],
         },

@@ -36,6 +36,10 @@ const faq = {
 
     'items.empty_window.title': '空白视窗的用法',
     'items.empty_window.content': '您可以通过"新增组合 -> 新增空白群组"加入一个空白视窗框。此视窗可用于占位，方便您先规划布局，之后再将收藏的频道拖曳进去播放。',
+
+    'items.youtube_search.title': '为什么有些 YouTube 频道搜索不到？',
+    'items.youtube_search.content': '动态岛搜索框的 YouTube 频道搜索，是从本站已收录的频道名单中比对，并不是即时搜索整个 YouTube。若搜索不到，通常代表该频道尚未被本站收录。此外，搜索到的 YouTube 频道会加入收藏，而不像 Twitch 频道那样可即时预览并直接播放——因为名单中没有该频道当前的直播网址；待频道开播后，再从收藏列表载入即可观看。',
+    'items.youtube_search.tip': '若想看的频道一直搜索不到，欢迎到 Discord 回报，我们会将它补进收录名单。',
   // —— i18n 修補：design 改版新增 key，各語言在地化 ——
   'cat_all': '全部',
   'support_eyebrow': '支持',

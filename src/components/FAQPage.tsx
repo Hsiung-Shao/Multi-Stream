@@ -37,7 +37,7 @@ const FAQ_GROUPS = [
         id: 'usage',
         icon: Database,
         hue: '#4ade80',
-        items: ['performance', 'data_saved', 'empty_window'],
+        items: ['performance', 'data_saved', 'empty_window', 'youtube_search'],
     },
 ];
 

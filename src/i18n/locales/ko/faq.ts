@@ -36,6 +36,10 @@ const faq = {
 
     'items.empty_window.title': '빈 창 활용',
     'items.empty_window.content': '빈 그룹을 추가하여 자리 표시자로 사용할 수 있습니다. 레이아웃을 미리 계획한 후 채널을 드래그하여 재생할 때 유용합니다.',
+
+    'items.youtube_search.title': '왜 일부 YouTube 채널이 검색되지 않나요?',
+    'items.youtube_search.content': '다이내믹 아일랜드의 YouTube 채널 검색은 사이트에 이미 수록된 채널 목록과 이름을 대조하며, YouTube 전체를 실시간으로 검색하는 것이 아닙니다. 검색되지 않는다면 대개 해당 채널이 아직 사이트에 수록되지 않은 것입니다. 또한 검색된 YouTube 채널은 Twitch 채널처럼 즉시 미리보기 및 재생되지 않고 즐겨찾기에 추가됩니다. 목록에 해당 채널의 현재 방송 URL이 없기 때문입니다. 채널이 방송을 시작하면 즐겨찾기에서 불러와 시청하세요.',
+    'items.youtube_search.tip': '원하는 채널이 계속 검색되지 않으면 Discord로 알려 주세요. 수록 목록에 추가하겠습니다.',
   // —— i18n 修補：design 改版新增 key，各語言在地化 ——
   'cat_all': '전체',
   'support_eyebrow': '지원',

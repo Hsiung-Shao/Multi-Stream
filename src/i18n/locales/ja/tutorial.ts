@@ -34,6 +34,8 @@ const tutorial = {
   'features.search.description': '単なるURL入力欄ではなく、強力なグローバル検索エントリです。',
   'features.search.twitch': 'Twitchチャンネル検索',
   'features.search.twitch.desc': '配信者名を入力すると、Twitchチャンネルを即座に検索し、ライブプレビュー（アイコンとタイトルを含む）を表示します。',
+  'features.search.youtube': 'YouTube チャンネル検索',
+  'features.search.youtube.desc': '同じ検索ボックスに VTuber や YouTuber の名前を入力すると、サイトに収録済みのチャンネル名簿から該当する YouTube チャンネルを見つけられます。Twitch のリアルタイム検索とは異なり、ここで照合するのはサイト収録のチャンネルデータで（YouTube 全体をリアルタイムに検索するわけではありません）、検索結果は Twitch のようにすぐ再生されるのではなくお気に入りに追加されます。そのチャンネルが配信を開始したら、お気に入りから読み込んで視聴してください。見たいチャンネルが見つからない場合は、まだ収録されていないだけですので、Discord までお知らせください。',
   'features.search.url': 'URL自動認識',
   'features.search.url.desc': 'TwitchまたはYouTubeのURLを貼り付けると、システムが自動的に認識し、対応するプレーヤーまたはチャットを追加します。',
 

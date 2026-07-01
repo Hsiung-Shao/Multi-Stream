@@ -36,6 +36,10 @@ const faq = {
 
     'items.empty_window.title': '空白視窗的用法',
     'items.empty_window.content': '您可以透過「新增組合 -> 新增空白群組」加入一個空白視窗框。此視窗可用於占位，方便您先規劃佈局，之後再將收藏的頻道拖曳進去播放。',
+
+    'items.youtube_search.title': '為什麼有些 YouTube 頻道搜尋不到？',
+    'items.youtube_search.content': '動態島搜尋框的 YouTube 頻道搜尋，是從本站已收錄的頻道名單中比對，並不是即時搜尋整個 YouTube。若搜尋不到，通常代表該頻道尚未被本站收錄。此外，搜尋到的 YouTube 頻道會加入收藏，而不像 Twitch 頻道那樣可即時預覽並直接播放——因為名單中沒有該頻道當前的直播網址；待頻道開台後，再從收藏清單載入即可觀看。',
+    'items.youtube_search.tip': '若想看的頻道一直搜尋不到，歡迎到 Discord 回報，我們會將它補進收錄名單。',
   // —— i18n 修補：design 改版新增 key，各語言在地化 ——
   'cat_all': '全部',
   'support_eyebrow': '支援',

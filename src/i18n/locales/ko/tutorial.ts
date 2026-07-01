@@ -34,6 +34,8 @@ const tutorial = {
   'features.search.description': '단순한 URL 입력창이 아닌, 강력한 통합 검색 도구입니다.',
   'features.search.twitch': 'Twitch 채널 검색',
   'features.search.twitch.desc': '스트리머 이름을 입력하면 Twitch 채널을 즉시 검색하고 미리보기(프로필 및 방송 제목 포함)를 표시합니다.',
+  'features.search.youtube': 'YouTube 채널 검색',
+  'features.search.youtube.desc': '같은 검색창에 VTuber 또는 YouTuber 이름을 입력하면 사이트에 수록된 채널 목록에서 해당 YouTube 채널을 찾을 수 있습니다. Twitch의 실시간 검색과 달리, 여기서는 사이트에 수록된 채널 데이터와 대조하며(YouTube 전체를 실시간으로 검색하는 것이 아닙니다), 따라서 검색 결과는 Twitch처럼 바로 재생되지 않고 즐겨찾기에 추가됩니다. 해당 채널이 방송을 시작하면 즐겨찾기에서 불러와 시청하세요. 원하는 채널이 나오지 않으면 아직 수록되지 않은 것이니 Discord로 알려 주세요.',
   'features.search.url': 'URL 자동 인식',
   'features.search.url.desc': 'Twitch 또는 YouTube URL을 붙여넣으면 시스템이 자동으로 인식하여 해당 플레이어 또는 채팅을 추가합니다.',
 
