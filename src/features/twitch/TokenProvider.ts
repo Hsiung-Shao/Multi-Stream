@@ -69,23 +69,11 @@ export class TokenProvider implements TokenProviderContract {
 
     private async fetchNewToken(): Promise<string> {
         const win = (typeof window !== 'undefined' ? window : {}) as any;
-        const debug = !!win.__MS_DEBUG_TWITCH__;
-
-        // Try Pages Function first (Standard Production Path)
-        try {
-            if (debug) console.debug('[TokenProvider] Fetching from Pages /api/twitch-token');
-            return await this.fetchFromPages();
-        } catch (pagesError) {
-            if (debug) console.warn('[TokenProvider] Pages fetch failed:', pagesError);
-
-            // Fallback to Direct (If Secret is Available)
-            const config = this.getConfig();
-            if (config.clientSecret && config.clientId) {
-                if (debug) console.debug('[TokenProvider] Fallback to direct OAuth');
-                return await this.fetchDirectly(config);
-            }
-            throw new Error(`Unable to acquire token. Pages Error: ${pagesError instanceof Error ? pagesError.message : String(pagesError)}. No Client Secret for fallback.`);
-        }
+        if (win.__MS_DEBUG_TWITCH__) console.debug('[TokenProvider] Fetching from Pages /api/twitch-token');
+        // 只走後端 Pages Function 鑄造 token。
+        // 已移除「前端持有 client_secret 直連 id.twitch.tv」的 fallback：
+        // client_secret 不應存在於前端（見 TwitchConfig），避免外洩管道。
+        return await this.fetchFromPages();
     }
 
     private async fetchFromPages(): Promise<string> {
@@ -100,30 +88,6 @@ export class TokenProvider implements TokenProviderContract {
 
         const data = await res.json();
         if (!data.access_token) throw new Error('No access_token in Pages response');
-
-        return this.processToken(data);
-    }
-
-    private async fetchDirectly(config: TwitchApiConfig): Promise<string> {
-        const params = new URLSearchParams({
-            client_id: config.clientId,
-            client_secret: config.clientSecret!,
-            grant_type: 'client_credentials'
-        });
-
-        const res = await fetch(config.oauthTokenUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        });
-
-        if (!res.ok) {
-            const txt = await res.text();
-            throw new Error(`Direct Auth Failed: ${res.status} - ${txt}`);
-        }
-
-        const data = await res.json();
-        if (!data.access_token) throw new Error('No access_token in Direct response');
 
         return this.processToken(data);
     }

@@ -24,6 +24,7 @@ const announcements = {
     'survey.questionCount': '第 {{current}} / {{total}} 題',
 
     'announcement.title': '系統公告',
+    'announcement.viewDetail': '查看詳情',
 };
 
 export default announcements;

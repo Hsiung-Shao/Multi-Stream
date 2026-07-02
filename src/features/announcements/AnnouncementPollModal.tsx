@@ -39,6 +39,8 @@ interface Props {
     announcement: Announcement;
     open: boolean;
     onClose: () => void;
+    /** admin 發布預覽模式:不打 API、不寫 LocalStorage flag(送出直接顯示本地假結果) */
+    preview?: boolean;
 }
 
 function isPollPayload(p: unknown): p is PollPayload {
@@ -47,7 +49,7 @@ function isPollPayload(p: unknown): p is PollPayload {
     return Array.isArray(opts) && opts.every((o) => o && typeof (o as { id?: unknown }).id === 'string');
 }
 
-export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
+export function AnnouncementPollModal({ announcement, open, onClose, preview = false }: Props) {
     const { t } = useTranslation('announcements');
     const payload = isPollPayload(announcement.payload) ? announcement.payload : null;
     const multiSelect = payload?.multi_select === true;
@@ -67,7 +69,8 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
         let cancelled = false;
         // open 時 reset 一次性 state
         setErrorMsg(null);
-        if (voted) {
+        // 預覽模式不拉真實結果(handleSubmit 已組本地假結果)
+        if (voted && !preview) {
             void fetchAnnouncementResults(announcement.id).then((r) => {
                 if (cancelled) return;
                 if (r && r.type === 'poll') setResults(r);
@@ -76,7 +79,7 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
         return () => {
             cancelled = true;
         };
-    }, [open, voted, announcement.id]);
+    }, [open, voted, announcement.id, preview]);
 
     const toggleOption = (id: string) => {
         setSelected((prev) => {
@@ -89,6 +92,24 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
 
     const handleSubmit = async () => {
         if (selected.length === 0 || submitting) return;
+
+        // 預覽模式:不打 API、不寫 flag,直接以本次選擇組假結果展示「投完」狀態
+        if (preview) {
+            setResults({
+                success: true,
+                announcement_id: announcement.id,
+                type: 'poll',
+                total: 1,
+                options: options.map((o) => ({
+                    id: o.id,
+                    label: o.label,
+                    count: selected.includes(o.id) ? 1 : 0,
+                })),
+            });
+            setVoted(true);
+            return;
+        }
+
         setSubmitting(true);
         setErrorMsg(null);
         const deviceId = getOrCreateDeviceId();
@@ -111,6 +132,11 @@ export function AnnouncementPollModal({ announcement, open, onClose }: Props) {
 
     const handleOpenChange = (next: boolean) => {
         if (next) return; // 開啟由 provider 控制
+        // 預覽模式:關閉不寫任何 flag
+        if (preview) {
+            onClose();
+            return;
+        }
         // 關閉:已投票寫 voted、未投票寫 dismissed
         if (voted) {
             setFlag('voted', announcement.id);

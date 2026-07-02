@@ -1,6 +1,13 @@
 # Cloudflare Pages Headers Configuration
 # 設定正確的 MIME type 和 CORS headers
 
+# 全站安全標頭（適用所有回應）
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
 # JavaScript 文件
 /*.js
   Content-Type: application/javascript; charset=utf-8

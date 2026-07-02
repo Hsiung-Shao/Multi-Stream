@@ -1,14 +1,17 @@
 "use client";
 
-import { useTheme } from "next-themes@0.4.6";
-import { Toaster as Sonner, ToasterProps } from "sonner@2.0.3";
+import { Toaster as Sonner, ToasterProps } from "sonner";
+import { useAppliedTheme } from "../../hooks/useAppliedTheme";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
+  // 跟隨 app 實際套用的主題(而非 OS 主題):
+  // toast 背景吃 documentElement 的 --popover,文字色由 sonner 依 theme 決定,
+  // 兩者來源必須一致,否則會出現深底配深字(對比不足)。
+  const theme = useAppliedTheme();
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={theme}
       className="toaster group"
       style={
         {

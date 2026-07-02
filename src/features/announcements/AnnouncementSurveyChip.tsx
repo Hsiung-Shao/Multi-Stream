@@ -36,7 +36,14 @@ import type { Announcement, SurveyChoiceItem, SurveyPayload, SurveyQuestion } fr
 interface Props {
     announcement: Announcement;
     onDismiss: () => void;
+    /** admin 發布預覽模式:不打 API、不寫 LocalStorage flag(送出直接顯示「謝謝填寫」) */
+    preview?: boolean;
+    /** chip 定位 class(admin 預覽改為 inline 渲染時注入;前台維持右下角 fixed) */
+    chipClassName?: string;
 }
+
+/** 前台 chip 預設定位:右下角 floating — 不擋 FeedbackFAB(FAB 在 right-6 bottom-6,這個放 right-4 bottom-20 上方) */
+const DEFAULT_CHIP_POSITION = 'fixed bottom-20 right-4 z-40';
 
 function isSurveyPayload(p: unknown): p is SurveyPayload {
     if (!p || typeof p !== 'object') return false;
@@ -54,7 +61,12 @@ type AnswerMap = Record<string, string[] | string>; // qId → option_ids[] 或 
 
 const TEXT_MAX_LEN = 2000;
 
-export function AnnouncementSurveyChip({ announcement, onDismiss }: Props) {
+export function AnnouncementSurveyChip({
+    announcement,
+    onDismiss,
+    preview = false,
+    chipClassName = DEFAULT_CHIP_POSITION,
+}: Props) {
     const { t } = useTranslation('announcements');
     const payload = isSurveyPayload(announcement.payload) ? announcement.payload : null;
     const questions = useMemo<SurveyQuestion[]>(() => payload?.questions ?? [], [payload]);
@@ -103,6 +115,13 @@ export function AnnouncementSurveyChip({ announcement, onDismiss }: Props) {
 
     const handleSubmit = async () => {
         if (!canSubmit || submitting) return;
+
+        // 預覽模式:不打 API、不寫 flag,直接展示「謝謝填寫」狀態
+        if (preview) {
+            setDone(true);
+            return;
+        }
+
         setSubmitting(true);
         setErrorMsg(null);
 
@@ -143,17 +162,17 @@ export function AnnouncementSurveyChip({ announcement, onDismiss }: Props) {
     };
 
     const dismissChip = () => {
-        setFlag('dismissed', announcement.id);
+        // 預覽模式不寫 flag
+        if (!preview) setFlag('dismissed', announcement.id);
         onDismiss();
     };
 
     return (
         <>
-            {/* 右下角 floating chip — 不擋 FeedbackFAB(FAB 在 right-6 bottom-6,這個放 right-4 bottom-20 上方) */}
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg pl-4 pr-2 py-2 text-sm hover:bg-primary/90 transition-colors max-w-[calc(100vw-2rem)]"
+                className={`${chipClassName} flex items-center gap-2 rounded-full bg-primary text-primary-foreground shadow-lg pl-4 pr-2 py-2 text-sm hover:bg-primary/90 transition-colors max-w-[calc(100vw-2rem)]`}
                 aria-label={announcement.title}
             >
                 <ClipboardList className="size-4 shrink-0" />

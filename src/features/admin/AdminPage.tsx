@@ -83,10 +83,10 @@ export function AdminPage() {
 
     if (authState === 'loading') {
         return (
-            <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+            <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-5 h-5 text-zinc-500 animate-spin" />
-                    <span className="text-[13px] text-zinc-600">載入中</span>
+                    <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+                    <span className="text-[13px] text-muted-foreground">載入中</span>
                 </div>
             </div>
         );
@@ -95,13 +95,13 @@ export function AdminPage() {
     if (authState === 'login') {
         if (!supabase) {
             return (
-                <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+                <div className="min-h-screen bg-background flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3 max-w-[320px] text-center">
-                        <div className="w-10 h-10 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center justify-center">
-                            <AlertTriangle className="w-4 h-4 text-red-400" />
+                        <div className="w-10 h-10 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center">
+                            <AlertTriangle className="w-4 h-4 text-destructive" />
                         </div>
-                        <p className="text-[14px] text-zinc-300 font-medium">Supabase 未設定</p>
-                        <p className="text-[12px] text-zinc-600 leading-relaxed">
+                        <p className="text-[14px] text-foreground font-medium">Supabase 未設定</p>
+                        <p className="text-[12px] text-muted-foreground leading-relaxed">
                             請確認 /api/supabase-config 端點正常運作
                         </p>
                     </div>

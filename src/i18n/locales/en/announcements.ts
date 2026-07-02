@@ -24,6 +24,7 @@ const announcements = {
     'survey.questionCount': 'Question {{current}} / {{total}}',
 
     'announcement.title': 'System Announcement',
+    'announcement.viewDetail': 'View details',
 };
 
 export default announcements;

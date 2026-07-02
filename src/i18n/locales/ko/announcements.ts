@@ -24,6 +24,7 @@ const announcements = {
     'survey.questionCount': '{{current}} / {{total}}번째 질문',
 
     'announcement.title': '시스템 공지',
+    'announcement.viewDetail': '자세히 보기',
 };
 
 export default announcements;
