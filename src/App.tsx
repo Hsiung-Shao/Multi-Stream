@@ -13,7 +13,7 @@ import { initGA, logPageView } from './utils/analytics';
 import { userSegmentationManager } from './utils/userSegmentation';
 import { initUmami } from './utils/umami';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
-import { useEffectiveTheme } from './hooks/useEffectiveTheme';
+import { useAppliedTheme } from './hooks/useAppliedTheme';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
 import { YouTubeRiskDialog } from './components/YouTubeRiskDialog';
 import { useHotkeys } from './hooks/useHotkeys';
@@ -106,7 +106,9 @@ export default function App() {
     }
   }, []);
 
-  const theme = useEffectiveTheme();
+  // 用「實際套用」的主題(admin 強制深色),讓 theme prop 與 documentElement class 永遠一致,
+  // 避免在 /admin 開啟全域 modal(hotkey)時出現淺色面板疊在深色後台上
+  const theme = useAppliedTheme();
   const toggleTheme = useUIStore(s => s.toggleTheme);
   const currentPage = useUIStore(s => s.page);
   const setCurrentPage = useUIStore(s => s.setPage);

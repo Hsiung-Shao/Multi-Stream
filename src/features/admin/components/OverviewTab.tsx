@@ -11,25 +11,7 @@ import {
 import { Skeleton } from '../../../components/ui/skeleton';
 import { useFeedbackStats } from '../hooks/useFeedbacks';
 import { TYPE_CONFIG, STATUS_CONFIG } from './feedbackConfig';
-
-/** recharts 的 SVG fill 支援 CSS 變數,直接吃 index.css 的 --chart-* token */
-const CHART_COLORS = [
-    'var(--chart-1)',
-    'var(--chart-2)',
-    'var(--chart-3)',
-    'var(--chart-4)',
-    'var(--chart-5)',
-];
-
-/** Tooltip 用語意 token,跟隨主題 */
-const TOOLTIP_STYLE: React.CSSProperties = {
-    backgroundColor: 'var(--popover)',
-    color: 'var(--popover-foreground)',
-    border: '1px solid var(--border)',
-    borderRadius: 8,
-    fontSize: 12,
-    padding: '6px 10px',
-};
+import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from './chartTheme';
 
 export function OverviewTab() {
     const { data: stats, isLoading, dataUpdatedAt } = useFeedbackStats();
@@ -106,14 +88,14 @@ export function OverviewTab() {
                                 <XAxis
                                     dataKey="date"
                                     tickFormatter={(d: string) => d.slice(5)}
-                                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                    tick={AXIS_TICK}
                                     tickLine={false}
                                     axisLine={{ stroke: 'var(--border)' }}
                                     interval={6}
                                 />
                                 <YAxis
                                     allowDecimals={false}
-                                    tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                    tick={AXIS_TICK}
                                     tickLine={false}
                                     axisLine={false}
                                 />

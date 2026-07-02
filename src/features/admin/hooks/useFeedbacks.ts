@@ -55,9 +55,13 @@ export function useFeedbackStats() {
             const supabase = await getSupabase();
             if (!supabase) throw new Error('Supabase 未初始化');
 
+            // 註:PostgREST 預設單次回傳上限 1000 筆;明確以最新優先排序,
+            // 超過上限時統計偏向近期資料(趨勢/近7日仍正確),而非默默拿最舊的 1000 筆。
+            // 資料量真的變大時應改為 DB 端聚合(RPC)。
             const { data, error } = await supabase
                 .from('feedbacks')
-                .select('feedback_type, status, rating, nps_score, created_at');
+                .select('feedback_type, status, rating, nps_score, created_at')
+                .order('created_at', { ascending: false });
 
             if (error) throw new Error(error.message);
 

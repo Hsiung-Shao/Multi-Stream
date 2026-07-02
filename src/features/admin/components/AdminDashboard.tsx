@@ -71,17 +71,19 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                 </header>
 
+                {/* forceMount + inactive 隱藏:切換 tab 不卸載內容,
+                    保留各分頁的篩選/分頁/詳情等 local state(對齊舊版行為) */}
                 <main className="max-w-6xl mx-auto w-full px-4 sm:px-5 py-5">
-                    <TabsContent value="overview">
+                    <TabsContent value="overview" forceMount className="data-[state=inactive]:hidden">
                         <OverviewTab />
                     </TabsContent>
-                    <TabsContent value="feedback">
+                    <TabsContent value="feedback" forceMount className="data-[state=inactive]:hidden">
                         <FeedbackTab />
                     </TabsContent>
-                    <TabsContent value="ratings">
+                    <TabsContent value="ratings" forceMount className="data-[state=inactive]:hidden">
                         <RatingsTab />
                     </TabsContent>
-                    <TabsContent value="announcements">
+                    <TabsContent value="announcements" forceMount className="data-[state=inactive]:hidden">
                         <AnnouncementsTab />
                     </TabsContent>
                 </main>

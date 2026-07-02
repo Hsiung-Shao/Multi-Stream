@@ -12,7 +12,8 @@
  * announcement 為 null 表示表單尚未通過驗證(disabledReason 說明原因)。
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Eye, Megaphone } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { showAnnouncementToast } from '../../announcements/AnnouncementToast';
@@ -33,6 +34,21 @@ export function AnnouncementPreview({ announcement, disabledReason }: Props) {
     const [surveyPreviewKey, setSurveyPreviewKey] = useState(0);
 
     const type = announcement?.type;
+
+    // 預覽元件卸載(編輯 Dialog 關閉)時把還掛著的預覽 toast 收掉,
+    // 避免 toast 活得比它所屬的 Dialog 久、飄在後台其他畫面上
+    useEffect(() => {
+        return () => {
+            toast.dismiss('announcement:__preview__');
+        };
+    }, []);
+
+    // survey chip 的重掛 key:依 payload「結構」而非 title——
+    // 標題打字不重掛(避免預覽中的填答狀態被清空),但題目/選項改動要重掛
+    // (否則 chip 內部 answers 可能殘留已被刪除的 option id,預覽失真)
+    const surveyStructureKey = type === 'survey' && announcement
+        ? JSON.stringify(announcement.payload)
+        : '';
 
     const handleToastPreview = () => {
         if (!announcement) return;
@@ -93,7 +109,7 @@ export function AnnouncementPreview({ announcement, disabledReason }: Props) {
                     </p>
                     <div className="flex items-center">
                         <AnnouncementSurveyChip
-                            key={`${surveyPreviewKey}-${announcement.title}`}
+                            key={`${surveyPreviewKey}-${surveyStructureKey}`}
                             announcement={announcement}
                             preview
                             chipClassName="relative"

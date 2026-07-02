@@ -12,15 +12,7 @@ import { useFeedbacks, useFeedbackStats } from '../hooks/useFeedbacks';
 import { FeedbackTable } from './FeedbackTable';
 import { FeedbackDetail } from './FeedbackDetail';
 import type { FeedbackRecord, FeedbackFilter } from '../types';
-
-const TOOLTIP_STYLE: React.CSSProperties = {
-    backgroundColor: 'var(--popover)',
-    color: 'var(--popover-foreground)',
-    border: '1px solid var(--border)',
-    borderRadius: 8,
-    fontSize: 12,
-    padding: '6px 10px',
-};
+import { TOOLTIP_STYLE, AXIS_TICK } from './chartTheme';
 
 /** NPS 依區段配色:批評者(0-6)紅、中立者(7-8)黃、推薦者(9-10)綠 */
 function npsColor(score: number): string {
@@ -72,13 +64,13 @@ export function RatingsTab() {
                                 <BarChart data={ratingData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                     <XAxis
                                         dataKey="label"
-                                        tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                        tick={AXIS_TICK}
                                         tickLine={false}
                                         axisLine={{ stroke: 'var(--border)' }}
                                     />
                                     <YAxis
                                         allowDecimals={false}
-                                        tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                        tick={AXIS_TICK}
                                         tickLine={false}
                                         axisLine={false}
                                     />
@@ -97,6 +89,7 @@ export function RatingsTab() {
                 <section className="rounded-xl border border-border bg-card p-4">
                     <h3 className="text-[13px] font-medium mb-1">NPS 分布</h3>
                     <p className="text-[11px] text-muted-foreground mb-3">
+                        平均 {stats?.avgNps != null ? `${stats.avgNps} / 10` : '—'}.
                         NPS 分數 {stats?.npsScore != null ? stats.npsScore : '—'}
                         (批評者 0-6.中立 7-8.推薦者 9-10)
                     </p>
@@ -108,13 +101,13 @@ export function RatingsTab() {
                                 <BarChart data={npsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                     <XAxis
                                         dataKey="label"
-                                        tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                        tick={AXIS_TICK}
                                         tickLine={false}
                                         axisLine={{ stroke: 'var(--border)' }}
                                     />
                                     <YAxis
                                         allowDecimals={false}
-                                        tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                        tick={AXIS_TICK}
                                         tickLine={false}
                                         axisLine={false}
                                     />
