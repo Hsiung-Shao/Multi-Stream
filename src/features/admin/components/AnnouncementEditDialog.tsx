@@ -6,6 +6,7 @@
 //   - survey: questions[] (id / label / type) + 若 single|multi 則 options[]
 //
 // 編輯已 published 公告會跳二次確認(避免影響 user 已看到的內容)
+// 表單下方有 1:1 前台預覽(AnnouncementPreview,重用真實前台元件)
 //
 // id 用 crypto.randomUUID 短前綴(8 字元),足以避免 collision 又便於 debug
 
@@ -35,6 +36,7 @@ import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
 import { Switch } from '../../../components/ui/switch';
 import { Label } from '../../../components/ui/label';
+import { ScrollArea } from '../../../components/ui/scroll-area';
 import {
     Select,
     SelectContent,
@@ -53,6 +55,8 @@ import {
     type SurveyQuestionType,
     type AnnouncementWriteInput,
 } from '../hooks/useAdminAnnouncements';
+import type { Announcement } from '../../announcements/types';
+import { AnnouncementPreview } from './AnnouncementPreview';
 
 // ---------- Local form types(用陣列方便加減) ----------
 
@@ -264,6 +268,25 @@ function formToWriteInput(f: FormState): AnnouncementWriteInput {
     return input;
 }
 
+/**
+ * 表單 → 前台 Announcement 型別(給 1:1 預覽用)。
+ * 內部走 formToWriteInput,確保空選項過濾等規則與實際送出完全一致。
+ */
+function formToPreviewAnnouncement(f: FormState): Announcement {
+    const input = formToWriteInput(f);
+    return {
+        id: '__preview__',
+        type: input.type,
+        title: input.title,
+        body: input.body ?? null,
+        payload: (input.payload ?? null) as Announcement['payload'],
+        target_segment: input.target_segment ?? 'all',
+        priority: input.priority ?? 0,
+        starts_at: input.starts_at ?? new Date().toISOString(),
+        ends_at: input.ends_at ?? null,
+    };
+}
+
 // ---------- Component ----------
 
 interface Props {
@@ -361,29 +384,34 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
 
     const errorText = localError ?? (mutationError ? formatAdminAnnouncementError(mutationError) : null);
 
+    // 預覽:驗證通過才能預覽(與送出同一套 validateForm)
+    const previewValidation = validateForm(form);
+    const previewAnnouncement = previewValidation.ok ? formToPreviewAnnouncement(form) : null;
+
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-200 max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
                     <DialogHeader>
-                        <DialogTitle className="text-zinc-100">
+                        <DialogTitle>
                             {isEdit ? '編輯公告' : '新增公告'}
                         </DialogTitle>
-                        <DialogDescription className="text-zinc-500 text-xs">
+                        <DialogDescription className="text-xs">
                             {isEdit ? `ID: ${target?.id}` : '建立後預設為「草稿」狀態,可以日後再發佈'}
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4 py-2">
+                    <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
+                        <div className="space-y-4 py-2">
                         {/* type */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-zinc-400">類型 *</Label>
+                            <Label className="text-xs text-muted-foreground">類型 *</Label>
                             <Select
                                 value={form.type}
                                 onValueChange={(v: string) => handleTypeChange(v as AnnouncementType)}
                                 disabled={isEdit}
                             >
-                                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9">
+                                <SelectTrigger className="h-9 w-full">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -393,17 +421,17 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                 </SelectContent>
                             </Select>
                             {isEdit && (
-                                <p className="text-[11px] text-zinc-500">類型在建立後不可變更(避免破壞 responses 結構)</p>
+                                <p className="text-[11px] text-muted-foreground">類型在建立後不可變更(避免破壞 responses 結構)</p>
                             )}
                         </div>
 
                         {/* title */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-zinc-400">標題 *</Label>
+                            <Label className="text-xs text-muted-foreground">標題 *</Label>
                             <Input
                                 value={form.title}
                                 onChange={(e) => updateField('title', e.target.value)}
-                                className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9"
+                                className="h-9"
                                 maxLength={200}
                                 placeholder="例如:重要更新通知"
                             />
@@ -411,26 +439,26 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
 
                         {/* body */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-zinc-400">內文(選填)</Label>
+                            <Label className="text-xs text-muted-foreground">內文(選填)</Label>
                             <Textarea
                                 value={form.body}
                                 onChange={(e) => updateField('body', e.target.value)}
-                                className="bg-zinc-900 border-zinc-800 text-zinc-200 min-h-[88px] resize-y"
+                                className="min-h-[88px] resize-y"
                                 maxLength={10000}
                                 placeholder="(可選)補充說明、條款、背景..."
                             />
-                            <p className="text-[10px] text-zinc-500 text-right tabular-nums">{form.body.length} / 10000</p>
+                            <p className="text-[10px] text-muted-foreground text-right tabular-nums">{form.body.length} / 10000</p>
                         </div>
 
                         {/* segment + priority */}
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-zinc-400">目標族群 *</Label>
+                                <Label className="text-xs text-muted-foreground">目標族群 *</Label>
                                 <Select
                                     value={form.target_segment}
                                     onValueChange={(v: string) => updateField('target_segment', v as TargetSegment)}
                                 >
-                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9">
+                                    <SelectTrigger className="h-9 w-full">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -440,12 +468,12 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                 </Select>
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-zinc-400">優先度</Label>
+                                <Label className="text-xs text-muted-foreground">優先度</Label>
                                 <Input
                                     type="number"
                                     value={Number.isFinite(form.priority) ? form.priority : 0}
                                     onChange={(e) => updateField('priority', parseInt(e.target.value, 10) || 0)}
-                                    className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9 tabular-nums"
+                                    className="h-9 tabular-nums"
                                     placeholder="0"
                                 />
                             </div>
@@ -454,33 +482,33 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                         {/* time window */}
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-zinc-400">開始時間</Label>
+                                <Label className="text-xs text-muted-foreground">開始時間</Label>
                                 <Input
                                     type="datetime-local"
                                     value={form.starts_at}
                                     onChange={(e) => updateField('starts_at', e.target.value)}
-                                    className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9"
+                                    className="h-9"
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-xs text-zinc-400">結束時間(空 = 不過期)</Label>
+                                <Label className="text-xs text-muted-foreground">結束時間(空 = 不過期)</Label>
                                 <Input
                                     type="datetime-local"
                                     value={form.ends_at}
                                     onChange={(e) => updateField('ends_at', e.target.value)}
-                                    className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9"
+                                    className="h-9"
                                 />
                             </div>
                         </div>
 
                         {/* status */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-zinc-400">狀態 *</Label>
+                            <Label className="text-xs text-muted-foreground">狀態 *</Label>
                             <Select
                                 value={form.status}
                                 onValueChange={(v: string) => updateField('status', v as AnnouncementStatus)}
                             >
-                                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-200 h-9">
+                                <SelectTrigger className="h-9 w-full">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -493,11 +521,11 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
 
                         {/* payload — Poll */}
                         {form.type === 'poll' && (
-                            <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+                            <div className="space-y-3 rounded-lg border border-border bg-card p-3">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium text-zinc-300">投票選項</span>
+                                    <span className="text-xs font-medium text-foreground">投票選項</span>
                                     <div className="flex items-center gap-2">
-                                        <Label className="text-[11px] text-zinc-400">允許多選</Label>
+                                        <Label className="text-[11px] text-muted-foreground">允許多選</Label>
                                         <Switch
                                             checked={form.poll_multi_select}
                                             onCheckedChange={(v: boolean) => updateField('poll_multi_select', !!v)}
@@ -507,22 +535,22 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                 <div className="space-y-2">
                                     {form.poll_options.map((opt, idx) => (
                                         <div key={opt.id} className="flex items-center gap-2">
-                                            <span className="text-[11px] text-zinc-500 w-6 tabular-nums">{idx + 1}.</span>
+                                            <span className="text-[11px] text-muted-foreground w-6 tabular-nums">{idx + 1}.</span>
                                             <Input
                                                 value={opt.label}
                                                 onChange={(e) => updatePollOption(opt.id, e.target.value)}
-                                                className="bg-zinc-900 border-zinc-800 text-zinc-200 h-8 text-sm"
+                                                className="h-8 text-sm"
                                                 placeholder={`選項 ${idx + 1}`}
                                                 maxLength={120}
                                             />
-                                            <span className="text-[10px] text-zinc-600 font-mono w-16 truncate" title={opt.id}>
+                                            <span className="text-[10px] text-muted-foreground/70 font-mono w-16 truncate" title={opt.id}>
                                                 {opt.id}
                                             </span>
                                             <button
                                                 type="button"
                                                 onClick={() => removePollOption(opt.id)}
                                                 disabled={form.poll_options.length <= 2}
-                                                className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                                 title="移除"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -535,7 +563,7 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                     size="sm"
                                     variant="outline"
                                     onClick={addPollOption}
-                                    className="gap-1.5 text-xs h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                                    className="gap-1.5 text-xs h-7"
                                 >
                                     <Plus className="w-3 h-3" />
                                     新增選項
@@ -545,16 +573,16 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
 
                         {/* payload — Survey */}
                         {form.type === 'survey' && (
-                            <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
-                                <span className="text-xs font-medium text-zinc-300">問卷題目</span>
+                            <div className="space-y-3 rounded-lg border border-border bg-card p-3">
+                                <span className="text-xs font-medium text-foreground">問卷題目</span>
                                 {form.survey_questions.map((q, qi) => (
-                                    <div key={q.id} className="space-y-2 rounded-md border border-zinc-800 bg-zinc-950/50 p-3">
+                                    <div key={q.id} className="space-y-2 rounded-md border border-border bg-background/50 p-3">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[11px] text-zinc-500 w-7 tabular-nums">Q{qi + 1}</span>
+                                            <span className="text-[11px] text-muted-foreground w-7 tabular-nums">Q{qi + 1}</span>
                                             <Input
                                                 value={q.label}
                                                 onChange={(e) => updateSurveyQuestion(q.id, { label: e.target.value })}
-                                                className="bg-zinc-900 border-zinc-800 text-zinc-200 h-8 text-sm flex-1"
+                                                className="h-8 text-sm flex-1"
                                                 placeholder="題目"
                                                 maxLength={500}
                                             />
@@ -562,7 +590,7 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                                 value={q.type}
                                                 onValueChange={(v: string) => updateSurveyQuestion(q.id, { type: v as SurveyQuestionType })}
                                             >
-                                                <SelectTrigger className="w-[100px] bg-zinc-900 border-zinc-800 text-zinc-200 h-8 text-xs">
+                                                <SelectTrigger className="w-[100px] h-8 text-xs">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -571,14 +599,14 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                                     <SelectItem value="text">文字</SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            <span className="text-[10px] text-zinc-600 font-mono w-14 truncate" title={q.id}>
+                                            <span className="text-[10px] text-muted-foreground/70 font-mono w-14 truncate" title={q.id}>
                                                 {q.id}
                                             </span>
                                             <button
                                                 type="button"
                                                 onClick={() => removeSurveyQuestion(q.id)}
                                                 disabled={form.survey_questions.length <= 1}
-                                                className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                                 title="移除題目"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -589,11 +617,11 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                             <div className="pl-9 space-y-1.5">
                                                 {q.options.map((opt, oi) => (
                                                     <div key={opt.id} className="flex items-center gap-2">
-                                                        <span className="text-[10px] text-zinc-500 w-5 tabular-nums">{oi + 1}.</span>
+                                                        <span className="text-[10px] text-muted-foreground w-5 tabular-nums">{oi + 1}.</span>
                                                         <Input
                                                             value={opt.label}
                                                             onChange={(e) => updateSurveyOption(q.id, opt.id, e.target.value)}
-                                                            className="bg-zinc-900 border-zinc-800 text-zinc-300 h-7 text-xs"
+                                                            className="h-7 text-xs"
                                                             placeholder={`選項 ${oi + 1}`}
                                                             maxLength={120}
                                                         />
@@ -601,7 +629,7 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                                             type="button"
                                                             onClick={() => removeSurveyOption(q.id, opt.id)}
                                                             disabled={q.options.length <= 2}
-                                                            className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                            className="w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                                             title="移除選項"
                                                         >
                                                             <Trash2 className="w-3 h-3" />
@@ -613,7 +641,7 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => addSurveyOption(q.id)}
-                                                    className="gap-1 text-[11px] h-6 bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 ml-7"
+                                                    className="gap-1 text-[11px] h-6 ml-7"
                                                 >
                                                     <Plus className="w-3 h-3" />
                                                     新增選項
@@ -627,7 +655,7 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                     size="sm"
                                     variant="outline"
                                     onClick={addSurveyQuestion}
-                                    className="gap-1.5 text-xs h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                                    className="gap-1.5 text-xs h-7"
                                 >
                                     <Plus className="w-3 h-3" />
                                     新增題目
@@ -635,27 +663,33 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                             </div>
                         )}
 
+                        {/* 1:1 前台預覽 */}
+                        <AnnouncementPreview
+                            announcement={previewAnnouncement}
+                            disabledReason={previewValidation.ok ? undefined : previewValidation.error}
+                        />
+
                         {/* error */}
                         {errorText && (
-                            <div className="flex items-start gap-2 px-3 py-2 rounded-md bg-red-500/10 border border-red-500/25">
-                                <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
-                                <p className="text-[12px] text-red-400">{errorText}</p>
+                            <div className="flex items-start gap-2 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/25">
+                                <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                                <p className="text-[12px] text-destructive">{errorText}</p>
                             </div>
                         )}
-                    </div>
+                        </div>
+                    </ScrollArea>
 
                     <DialogFooter>
                         <Button
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            className="bg-zinc-900 border-zinc-700 text-zinc-200 hover:bg-zinc-800"
                         >
                             取消
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={isPending}
-                            className="bg-blue-600 hover:bg-blue-500 gap-1.5"
+                            className="gap-1.5"
                         >
                             {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                             {isEdit ? '儲存變更' : '建立'}
@@ -669,10 +703,10 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                 open={!!pendingConfirm}
                 onOpenChange={(v) => { if (!v) setPendingConfirm(null); }}
             >
-                <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-zinc-100">確定要修改已發布的公告?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-zinc-400">
+                        <AlertDialogTitle>確定要修改已發布的公告?</AlertDialogTitle>
+                        <AlertDialogDescription>
                             此公告目前狀態為「已發布」,使用者可能已看過或已投票/填過問卷。
                             <br />
                             <span className="text-amber-400">
@@ -683,15 +717,13 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel
-                            className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700"
-                        >
+                        <AlertDialogCancel>
                             取消
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => pendingConfirm && executeSubmit(pendingConfirm)}
                             disabled={isPending}
-                            className="bg-amber-600 hover:bg-amber-500"
+                            className="bg-amber-600 hover:bg-amber-500 text-white"
                         >
                             {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
                             確認修改

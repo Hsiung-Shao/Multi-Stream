@@ -134,8 +134,8 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#09090b] relative overflow-hidden">
-            {/* Subtle grid background */}
+        <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
+            {/* Subtle grid background(裝飾性;admin 恆為深色) */}
             <div
                 className="absolute inset-0 opacity-[0.03]"
                 style={{
@@ -145,21 +145,21 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
             />
 
             {/* Radial glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/[0.04] rounded-full blur-[120px]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
 
             <div className="relative w-full max-w-[380px] mx-4">
                 {/* Logo area */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/[0.05] border border-white/[0.08] mb-4 backdrop-blur-sm">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-card border border-border mb-4 backdrop-blur-sm">
                         {step === 'mfa'
-                            ? <KeyRound className="w-5 h-5 text-zinc-400" />
-                            : <Shield className="w-5 h-5 text-zinc-400" />}
+                            ? <KeyRound className="w-5 h-5 text-muted-foreground" />
+                            : <Shield className="w-5 h-5 text-muted-foreground" />}
                     </div>
-                    <h1 className="text-[15px] font-medium text-zinc-200 tracking-tight">
+                    <h1 className="text-[15px] font-medium text-foreground tracking-tight">
                         MultiStream Admin
                     </h1>
-                    <p className="text-[13px] text-zinc-500 mt-1">
-                        {step === 'mfa' ? '二階驗證' : '回饋管理後台'}
+                    <p className="text-[13px] text-muted-foreground mt-1">
+                        {step === 'mfa' ? '二階驗證' : '管理後台'}
                     </p>
                 </div>
 
@@ -175,7 +175,7 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
                                 required
                                 autoComplete="email"
                                 autoFocus
-                                className="h-10 bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 rounded-lg text-[13px] focus-visible:ring-1 focus-visible:ring-blue-500/40 focus-visible:border-blue-500/40 transition-colors"
+                                className="h-10 rounded-lg text-[13px]"
                             />
                         </div>
                         <div className="relative">
@@ -186,12 +186,12 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
                                 placeholder="密碼"
                                 required
                                 autoComplete="current-password"
-                                className="h-10 bg-white/[0.04] border-white/[0.08] text-zinc-200 placeholder:text-zinc-600 rounded-lg text-[13px] pr-10 focus-visible:ring-1 focus-visible:ring-blue-500/40 focus-visible:border-blue-500/40 transition-colors"
+                                className="h-10 rounded-lg text-[13px] pr-10"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400 transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                                 tabIndex={-1}
                             >
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -199,16 +199,16 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
                         </div>
 
                         {error && (
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/[0.08] border border-red-500/20">
-                                <div className="w-1 h-1 rounded-full bg-red-400 flex-shrink-0" />
-                                <p className="text-[12px] text-red-400">{error}</p>
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                                <div className="w-1 h-1 rounded-full bg-destructive flex-shrink-0" />
+                                <p className="text-[12px] text-destructive">{error}</p>
                             </div>
                         )}
 
                         <Button
                             type="submit"
                             disabled={loading}
-                            className="w-full h-10 bg-white/[0.08] hover:bg-white/[0.12] text-zinc-200 border border-white/[0.08] rounded-lg text-[13px] font-medium transition-all duration-200 disabled:opacity-40"
+                            className="w-full h-10 rounded-lg text-[13px] font-medium"
                         >
                             {loading ? (
                                 <>
@@ -221,7 +221,7 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
                 ) : (
                     /* MFA form */
                     <form onSubmit={handleMfaSubmit} className="space-y-3">
-                        <p className="text-[12px] text-zinc-500 text-center leading-relaxed mb-1">
+                        <p className="text-[12px] text-muted-foreground text-center leading-relaxed mb-1">
                             請輸入驗證器 App 顯示的 6 位數驗證碼
                         </p>
                         <Input
@@ -233,20 +233,20 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
                             placeholder="000000"
                             required
                             autoFocus
-                            className="h-12 bg-white/[0.04] border-white/[0.08] text-zinc-100 placeholder:text-zinc-700 rounded-lg text-center text-[20px] tracking-[0.5em] font-mono focus-visible:ring-1 focus-visible:ring-blue-500/40 focus-visible:border-blue-500/40 transition-colors"
+                            className="h-12 rounded-lg text-center text-[20px] tracking-[0.5em] font-mono"
                         />
 
                         {error && (
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/[0.08] border border-red-500/20">
-                                <div className="w-1 h-1 rounded-full bg-red-400 flex-shrink-0" />
-                                <p className="text-[12px] text-red-400">{error}</p>
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
+                                <div className="w-1 h-1 rounded-full bg-destructive flex-shrink-0" />
+                                <p className="text-[12px] text-destructive">{error}</p>
                             </div>
                         )}
 
                         <Button
                             type="submit"
                             disabled={loading || code.length !== 6}
-                            className="w-full h-10 bg-white/[0.08] hover:bg-white/[0.12] text-zinc-200 border border-white/[0.08] rounded-lg text-[13px] font-medium transition-all duration-200 disabled:opacity-40"
+                            className="w-full h-10 rounded-lg text-[13px] font-medium"
                         >
                             {loading ? (
                                 <>
@@ -260,7 +260,7 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
                             type="button"
                             onClick={handleBackToPassword}
                             disabled={loading}
-                            className="w-full inline-flex items-center justify-center gap-1.5 text-[12px] text-zinc-600 hover:text-zinc-400 transition-colors disabled:opacity-40"
+                            className="w-full inline-flex items-center justify-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
                         >
                             <ArrowLeft className="w-3 h-3" />
                             返回
@@ -268,7 +268,7 @@ export function AdminLogin({ supabase, onSuccess }: AdminLoginProps) {
                     </form>
                 )}
 
-                <p className="text-[11px] text-zinc-700 text-center mt-6">
+                <p className="text-[11px] text-muted-foreground/60 text-center mt-6">
                     僅限授權管理員存取
                 </p>
             </div>

@@ -60,9 +60,9 @@ const STATUS_LABEL: Record<AnnouncementRecord['status'], string> = {
 };
 
 const STATUS_COLOR: Record<AnnouncementRecord['status'], string> = {
-    draft: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/25',
+    draft: 'bg-muted text-muted-foreground border-border',
     published: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
-    archived: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/15',
+    archived: 'bg-muted text-muted-foreground/70 border-border',
 };
 
 const SEGMENT_LABEL: Record<AnnouncementRecord['target_segment'], string> = {
@@ -138,35 +138,36 @@ export function AnnouncementsTab() {
     return (
         <div className="space-y-4">
             {/* Admin API Token 設定列 */}
-            <div className="flex items-center gap-2 px-4 py-3 rounded-lg border border-zinc-800 bg-zinc-900/60">
-                <KeyRound className="w-4 h-4 text-zinc-400 shrink-0" />
+            <div className="flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-card">
+                <KeyRound className="w-4 h-4 text-muted-foreground shrink-0" />
                 {hasToken ? (
                     <>
                         <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="text-[13px] text-zinc-300">已設定公告 API Token</span>
+                        <span className="text-[13px] text-foreground">已設定公告 API Token</span>
                         <button
                             onClick={handleResetToken}
-                            className="ml-auto text-[12px] text-zinc-400 hover:text-zinc-200 underline transition-colors"
+                            className="ml-auto text-[12px] text-muted-foreground hover:text-foreground underline transition-colors"
                         >
                             重設
                         </button>
                     </>
                 ) : (
                     <>
-                        <span className="text-[13px] text-zinc-400 shrink-0">公告 API Token:</span>
+                        <span className="text-[13px] text-muted-foreground shrink-0">公告 API Token:</span>
                         <Input
                             type="password"
                             value={tokenInput}
                             onChange={(e) => setTokenInput(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleSaveToken(); }}
                             placeholder="輸入 ADMIN_API_TOKEN"
-                            className="h-8 max-w-xs bg-zinc-950 border-zinc-700 text-zinc-200 text-[13px]"
+                            className="h-8 max-w-xs text-[13px]"
                         />
                         <Button
                             size="sm"
+                            variant="secondary"
                             onClick={handleSaveToken}
                             disabled={!tokenInput.trim()}
-                            className="h-8 text-xs bg-zinc-700 hover:bg-zinc-600"
+                            className="h-8 text-xs"
                         >
                             儲存
                         </Button>
@@ -177,8 +178,8 @@ export function AnnouncementsTab() {
             {/* Header row */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Megaphone className="w-4 h-4 text-zinc-400" />
-                    <span className="text-[13px] text-zinc-300 font-medium">
+                    <Megaphone className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-[13px] text-foreground font-medium">
                         共 {announcements?.length ?? 0} 筆
                     </span>
                 </div>
@@ -186,7 +187,7 @@ export function AnnouncementsTab() {
                     size="sm"
                     onClick={handleCreate}
                     disabled={!hasToken}
-                    className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 h-8"
+                    className="gap-1.5 text-xs h-8"
                 >
                     <Plus className="w-3.5 h-3.5" />
                     新增公告
@@ -195,14 +196,14 @@ export function AnnouncementsTab() {
 
             {/* Error banner */}
             {isError && (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/25">
-                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                    <p className="text-[13px] text-red-400">
+                <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/25">
+                    <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                    <p className="text-[13px] text-destructive">
                         資料載入失敗:{formatAdminAnnouncementError(error)}
                     </p>
                     <button
                         onClick={() => refetch()}
-                        className="ml-auto text-red-400 hover:text-red-300 transition-colors text-[12px] underline"
+                        className="ml-auto text-destructive hover:text-destructive/80 transition-colors text-[12px] underline"
                     >
                         重新載入
                     </button>
@@ -210,47 +211,47 @@ export function AnnouncementsTab() {
             )}
 
             {deleteMutation.isError && (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/25">
-                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                    <p className="text-[13px] text-red-400">
+                <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-destructive/10 border border-destructive/25">
+                    <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                    <p className="text-[13px] text-destructive">
                         刪除失敗:{formatAdminAnnouncementError(deleteMutation.error)}
                     </p>
                 </div>
             )}
 
             {/* Table */}
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
                 {isLoading ? (
                     <div className="p-4 space-y-2">
                         {[1, 2, 3].map(i => (
-                            <Skeleton key={i} className="h-12 bg-zinc-800 rounded" />
+                            <Skeleton key={i} className="h-12 rounded" />
                         ))}
                     </div>
                 ) : !announcements || announcements.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-3 py-16 text-zinc-500">
+                    <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
                         <Inbox className="w-10 h-10" />
                         <span className="text-sm">尚未建立任何公告</span>
                     </div>
                 ) : (
-                    <Table className="text-zinc-200">
+                    <Table>
                         <TableHeader>
-                            <TableRow className="border-zinc-800 hover:bg-transparent">
-                                <TableHead className="text-[11px] text-zinc-500 font-medium">標題</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium w-[80px]">類型</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium w-[90px]">狀態</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium w-[80px]">目標</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium w-[60px] text-right">優先度</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium w-[140px]">開始</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium w-[140px]">結束</TableHead>
-                                <TableHead className="text-[11px] text-zinc-500 font-medium w-[160px] text-right">動作</TableHead>
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="text-[11px] text-muted-foreground font-medium">標題</TableHead>
+                                <TableHead className="text-[11px] text-muted-foreground font-medium w-[80px]">類型</TableHead>
+                                <TableHead className="text-[11px] text-muted-foreground font-medium w-[90px]">狀態</TableHead>
+                                <TableHead className="text-[11px] text-muted-foreground font-medium w-[80px]">目標</TableHead>
+                                <TableHead className="text-[11px] text-muted-foreground font-medium w-[60px] text-right">優先度</TableHead>
+                                <TableHead className="text-[11px] text-muted-foreground font-medium w-[140px]">開始</TableHead>
+                                <TableHead className="text-[11px] text-muted-foreground font-medium w-[140px]">結束</TableHead>
+                                <TableHead className="text-[11px] text-muted-foreground font-medium w-[160px] text-right">動作</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {announcements.map((a) => {
                                 const canViewResults = a.type === 'poll' || a.type === 'survey';
                                 return (
-                                    <TableRow key={a.id} className="border-zinc-800 hover:bg-zinc-800/40">
-                                        <TableCell className="text-[13px] text-zinc-100 font-medium">
+                                    <TableRow key={a.id} className="hover:bg-accent/40">
+                                        <TableCell className="text-[13px] text-foreground font-medium">
                                             <div className="line-clamp-1 max-w-[340px]">{a.title}</div>
                                         </TableCell>
                                         <TableCell>
@@ -263,16 +264,16 @@ export function AnnouncementsTab() {
                                                 {STATUS_LABEL[a.status]}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-[12px] text-zinc-400">
+                                        <TableCell className="text-[12px] text-muted-foreground">
                                             {SEGMENT_LABEL[a.target_segment]}
                                         </TableCell>
-                                        <TableCell className="text-[12px] text-zinc-400 text-right tabular-nums">
+                                        <TableCell className="text-[12px] text-muted-foreground text-right tabular-nums">
                                             {a.priority}
                                         </TableCell>
-                                        <TableCell className="text-[11px] text-zinc-500 tabular-nums">
+                                        <TableCell className="text-[11px] text-muted-foreground tabular-nums">
                                             {formatTime(a.starts_at)}
                                         </TableCell>
-                                        <TableCell className="text-[11px] text-zinc-500 tabular-nums">
+                                        <TableCell className="text-[11px] text-muted-foreground tabular-nums">
                                             {formatTime(a.ends_at)}
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -280,7 +281,7 @@ export function AnnouncementsTab() {
                                                 {canViewResults && (
                                                     <button
                                                         onClick={() => handleViewResults(a)}
-                                                        className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60 transition-colors"
+                                                        className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                                                         title="查看結果"
                                                     >
                                                         <BarChart3 className="w-3.5 h-3.5" />
@@ -288,14 +289,14 @@ export function AnnouncementsTab() {
                                                 )}
                                                 <button
                                                     onClick={() => handleEdit(a)}
-                                                    className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700/60 transition-colors"
+                                                    className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                                                     title="編輯"
                                                 >
                                                     <Pencil className="w-3.5 h-3.5" />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteTarget(a)}
-                                                    className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                    className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                                                     title="刪除"
                                                     disabled={deleteMutation.isPending}
                                                 >
@@ -334,10 +335,10 @@ export function AnnouncementsTab() {
                 open={!!deleteTarget}
                 onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
             >
-                <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-zinc-100">刪除公告?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-zinc-400">
+                        <AlertDialogTitle>刪除公告?</AlertDialogTitle>
+                        <AlertDialogDescription>
                             確定要刪除「{deleteTarget?.title}」?
                             <br />
                             <span className="text-amber-400">
@@ -346,12 +347,12 @@ export function AnnouncementsTab() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700">
+                        <AlertDialogCancel>
                             取消
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleConfirmDelete}
-                            className="bg-red-600 hover:bg-red-500"
+                            className="bg-destructive hover:bg-destructive/90 text-white"
                             disabled={deleteMutation.isPending}
                         >
                             {deleteMutation.isPending ? (

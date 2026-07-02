@@ -25,6 +25,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '../../../components/ui/dialog';
+import { ScrollArea } from '../../../components/ui/scroll-area';
 import {
     useAnnouncementResponses,
     formatAdminAnnouncementError,
@@ -144,15 +145,17 @@ function summarizeSurvey(
     };
 }
 
-const CHART_COLOR = '#a78bfa';
-const CHART_GRID = '#27272a';
+// 圖表色走 index.css 的 CSS 變數,跟隨主題
+const CHART_COLOR = 'var(--chart-1)';
+const CHART_GRID = 'var(--border)';
+const CHART_AXIS = 'var(--muted-foreground)';
 
 function ChartTooltipContent({ active, payload }: any) {
     if (!active || !payload || !payload[0]) return null;
     return (
-        <div className="bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1 text-xs text-zinc-200">
+        <div className="bg-popover border border-border rounded-md px-2 py-1 text-xs text-popover-foreground">
             <div className="font-medium">{payload[0].payload.label}</div>
-            <div className="text-zinc-400 tabular-nums">{payload[0].value} 票</div>
+            <div className="text-muted-foreground tabular-nums">{payload[0].value} 票</div>
         </div>
     );
 }
@@ -171,16 +174,16 @@ function ResultsBarChart({ items, compact = false }: { items: { label: string; c
                 margin={compact ? { top: 4, right: 24, left: 8, bottom: 4 } : { top: 8, right: 24, left: 8, bottom: 8 }}
             >
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                <XAxis type="number" stroke="#71717a" fontSize={fontSize} allowDecimals={false} />
+                <XAxis type="number" stroke={CHART_AXIS} fontSize={fontSize} allowDecimals={false} />
                 <YAxis
                     type="category"
                     dataKey="label"
-                    stroke="#71717a"
+                    stroke={CHART_AXIS}
                     fontSize={fontSize}
                     width={compact ? 120 : 140}
                     interval={0}
                 />
-                <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'rgba(167, 139, 250, 0.1)' }} />
+                <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'var(--accent)', opacity: 0.4 }} />
                 <Bar dataKey="count" fill={CHART_COLOR} radius={[0, 4, 4, 0]} />
             </BarChart>
         </ResponsiveContainer>
@@ -219,37 +222,37 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-200 max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
                 <DialogHeader>
-                    <DialogTitle className="text-zinc-100 flex items-center gap-2">
+                    <DialogTitle className="flex items-center gap-2">
                         <BarChartIcon className="w-4 h-4 text-violet-400" />
                         結果統計
                     </DialogTitle>
-                    <DialogDescription className="text-zinc-400 text-sm">
+                    <DialogDescription className="text-sm">
                         {target?.title}
                     </DialogDescription>
                 </DialogHeader>
 
                 {isAnnouncement && (
-                    <div className="py-8 flex flex-col items-center gap-2 text-zinc-500">
+                    <div className="py-8 flex flex-col items-center gap-2 text-muted-foreground">
                         <MessageSquare className="w-10 h-10" />
                         <p className="text-sm">「公告」類型不收集使用者回應,沒有結果可顯示。</p>
                     </div>
                 )}
 
                 {!isAnnouncement && (
-                    <>
+                    <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
                         {isLoading && (
-                            <div className="py-12 flex flex-col items-center gap-2 text-zinc-400">
+                            <div className="py-12 flex flex-col items-center gap-2 text-muted-foreground">
                                 <Loader2 className="w-6 h-6 animate-spin" />
                                 <p className="text-sm">載入中...</p>
                             </div>
                         )}
 
                         {isError && (
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-500/10 border border-red-500/25">
-                                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                                <p className="text-[13px] text-red-400">
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 border border-destructive/25">
+                                <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+                                <p className="text-[13px] text-destructive">
                                     讀取失敗:{formatAdminAnnouncementError(error)}
                                 </p>
                             </div>
@@ -258,10 +261,10 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                         {data && (
                             <div className="space-y-4">
                                 {/* Header: total */}
-                                <div className="flex items-center gap-4 px-3 py-2 rounded-md bg-zinc-900/60 border border-zinc-800">
-                                    <Users className="w-4 h-4 text-zinc-400" />
-                                    <span className="text-sm text-zinc-300">
-                                        總回應數:<span className="font-semibold text-zinc-100 tabular-nums">{data.total}</span>
+                                <div className="flex items-center gap-4 px-3 py-2 rounded-md bg-card border border-border">
+                                    <Users className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-foreground">
+                                        總回應數:<span className="font-semibold tabular-nums">{data.total}</span>
                                     </span>
                                     {data.truncated && (
                                         <span className="text-[11px] text-amber-400 ml-auto">
@@ -274,11 +277,11 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                 {isPoll && pollSummary && (
                                     <div className="space-y-2">
                                         {pollSummary.options.length === 0 ? (
-                                            <p className="text-sm text-zinc-500 text-center py-8">
+                                            <p className="text-sm text-muted-foreground text-center py-8">
                                                 此投票沒有設定選項
                                             </p>
                                         ) : (
-                                            <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+                                            <div className="rounded-lg border border-border bg-card p-4">
                                                 <ResultsBarChart
                                                     items={pollSummary.options.map(o => ({
                                                         label: o.label || `(無標籤)`,
@@ -291,9 +294,9 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                                             ? Math.round((o.count / pollSummary.total) * 1000) / 10
                                                             : 0;
                                                         return (
-                                                            <div key={o.id} className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-zinc-900/60">
-                                                                <span className="text-zinc-300 truncate">{o.label || '(無標籤)'}</span>
-                                                                <span className="text-zinc-500 tabular-nums shrink-0">
+                                                            <div key={o.id} className="flex items-center justify-between gap-2 px-2 py-1 rounded bg-muted/60">
+                                                                <span className="text-foreground truncate">{o.label || '(無標籤)'}</span>
+                                                                <span className="text-muted-foreground tabular-nums shrink-0">
                                                                     {o.count} / {pct}%
                                                                 </span>
                                                             </div>
@@ -309,22 +312,22 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                 {isSurvey && surveySummary && (
                                     <div className="space-y-3">
                                         {surveySummary.questions.length === 0 ? (
-                                            <p className="text-sm text-zinc-500 text-center py-8">
+                                            <p className="text-sm text-muted-foreground text-center py-8">
                                                 此問卷沒有設定題目
                                             </p>
                                         ) : (
                                             surveySummary.questions.map((q, qi) => (
-                                                <div key={q.id} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 space-y-2">
+                                                <div key={q.id} className="rounded-lg border border-border bg-card p-3 space-y-2">
                                                     <div className="flex items-baseline justify-between">
-                                                        <h4 className="text-sm font-medium text-zinc-200">
+                                                        <h4 className="text-sm font-medium text-foreground">
                                                             Q{qi + 1}. {q.label}
                                                         </h4>
-                                                        <span className="text-[11px] text-zinc-500 capitalize">{q.type}</span>
+                                                        <span className="text-[11px] text-muted-foreground capitalize">{q.type}</span>
                                                     </div>
 
                                                     {(q.type === 'single' || q.type === 'multi') && q.options && (
                                                         q.options.length === 0 ? (
-                                                            <p className="text-xs text-zinc-500">沒有設定選項</p>
+                                                            <p className="text-xs text-muted-foreground">沒有設定選項</p>
                                                         ) : (
                                                             <ResultsBarChart
                                                                 compact
@@ -338,22 +341,24 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
 
                                                     {q.type === 'text' && (
                                                         <div className="space-y-1">
-                                                            <p className="text-[11px] text-zinc-500">
+                                                            <p className="text-[11px] text-muted-foreground">
                                                                 共 {q.textCount ?? 0} 則文字回應
                                                             </p>
                                                             {(q.textResponses?.length ?? 0) === 0 ? (
-                                                                <p className="text-xs text-zinc-500 italic">尚無文字回應</p>
+                                                                <p className="text-xs text-muted-foreground italic">尚無文字回應</p>
                                                             ) : (
-                                                                <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-                                                                    {q.textResponses!.map((t, ti) => (
-                                                                        <div
-                                                                            key={ti}
-                                                                            className="text-xs text-zinc-300 px-2 py-1.5 rounded bg-zinc-950 border border-zinc-800 whitespace-pre-wrap break-words"
-                                                                        >
-                                                                            {t}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
+                                                                <ScrollArea className="max-h-48 pr-1">
+                                                                    <div className="space-y-1">
+                                                                        {q.textResponses!.map((t, ti) => (
+                                                                            <div
+                                                                                key={ti}
+                                                                                className="text-xs text-foreground px-2 py-1.5 rounded bg-background border border-border whitespace-pre-wrap break-words"
+                                                                            >
+                                                                                {t}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </ScrollArea>
                                                             )}
                                                         </div>
                                                     )}
@@ -364,7 +369,7 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                 )}
                             </div>
                         )}
-                    </>
+                    </ScrollArea>
                 )}
             </DialogContent>
         </Dialog>
