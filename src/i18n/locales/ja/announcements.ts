@@ -24,6 +24,7 @@ const announcements = {
     'survey.questionCount': '{{current}} / {{total}} 問目',
 
     'announcement.title': 'システムからのお知らせ',
+    'announcement.viewDetail': '詳細を見る',
 };
 
 export default announcements;

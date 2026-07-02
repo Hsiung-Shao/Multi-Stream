@@ -20,8 +20,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { fetchActiveAnnouncements } from './api';
-import { isFlagSet } from './storage';
+import { isFlagSet, setFlag } from './storage';
 import { AnnouncementToast } from './AnnouncementToast';
+import { AnnouncementDetailDialog } from './AnnouncementDetailDialog';
 import { AnnouncementPollModal } from './AnnouncementPollModal';
 import { AnnouncementSurveyChip } from './AnnouncementSurveyChip';
 import type { Announcement } from './types';
@@ -42,6 +43,8 @@ export function AnnouncementsProvider() {
     const handledRef = useRef<Set<string>>(new Set());
     // chip 顯示中的 id 集合(可能有複數,但 UX 上只顯示最高 priority 一個)
     const [visibleChipIds, setVisibleChipIds] = useState<Set<string>>(new Set());
+    // toast 點「查看詳情」後開啟的公告詳情(同一時間一個)
+    const [detailAnnouncement, setDetailAnnouncement] = useState<Announcement | null>(null);
 
     // 拉公告
     useEffect(() => {
@@ -118,8 +121,23 @@ export function AnnouncementsProvider() {
     return (
         <>
             {toasts.map((a) => (
-                <AnnouncementToast key={a.id} announcement={a} />
+                <AnnouncementToast
+                    key={a.id}
+                    announcement={a}
+                    onViewDetail={() => setDetailAnnouncement(a)}
+                />
             ))}
+
+            {/* 詳情 Dialog:關閉不寫 flag(下次進站仍會彈,與 toast 自然消失一致);
+                詳情內「不再顯示」才寫 dismissed */}
+            <AnnouncementDetailDialog
+                announcement={detailAnnouncement}
+                open={detailAnnouncement !== null}
+                onClose={() => setDetailAnnouncement(null)}
+                onDismissForever={() => {
+                    if (detailAnnouncement) setFlag('dismissed', detailAnnouncement.id);
+                }}
+            />
 
             {pollToShow && (
                 <AnnouncementPollModal

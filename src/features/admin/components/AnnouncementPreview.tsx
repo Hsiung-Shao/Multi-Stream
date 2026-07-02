@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { Eye, Megaphone } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { showAnnouncementToast } from '../../announcements/AnnouncementToast';
+import { AnnouncementDetailDialog } from '../../announcements/AnnouncementDetailDialog';
 import { AnnouncementPollModal } from '../../announcements/AnnouncementPollModal';
 import { AnnouncementSurveyChip } from '../../announcements/AnnouncementSurveyChip';
 import type { Announcement } from '../../announcements/types';
@@ -30,6 +31,8 @@ interface Props {
 
 export function AnnouncementPreview({ announcement, disabledReason }: Props) {
     const [pollPreviewOpen, setPollPreviewOpen] = useState(false);
+    // toast 點「查看詳情」後開啟的詳情 Dialog 預覽
+    const [detailPreviewOpen, setDetailPreviewOpen] = useState(false);
     // 換 key 重掛 survey chip,重設「謝謝填寫」等內部狀態
     const [surveyPreviewKey, setSurveyPreviewKey] = useState(0);
 
@@ -53,7 +56,11 @@ export function AnnouncementPreview({ announcement, disabledReason }: Props) {
     const handleToastPreview = () => {
         if (!announcement) return;
         // 不傳 onDismissForever → 按「不再顯示」只關閉 toast,不寫 localStorage
-        showAnnouncementToast(announcement, { dismissLabel: '不再顯示' });
+        showAnnouncementToast(announcement, {
+            dismissLabel: '不再顯示',
+            detailLabel: '查看詳情',
+            onViewDetail: () => setDetailPreviewOpen(true),
+        });
     };
 
     return (
@@ -83,7 +90,7 @@ export function AnnouncementPreview({ announcement, disabledReason }: Props) {
                         預覽通知
                     </Button>
                     <p className="text-[11px] text-muted-foreground">
-                        通知會彈出於畫面角落,8 秒後自動消失(與前台一致);修改表單後可重按更新
+                        通知彈出於畫面角落,8 秒後自動消失;點「查看詳情」可預覽完整公告 Dialog;修改表單後可重按更新
                     </p>
                 </div>
             ) : type === 'poll' ? (
@@ -126,6 +133,16 @@ export function AnnouncementPreview({ announcement, disabledReason }: Props) {
                     open
                     preview
                     onClose={() => setPollPreviewOpen(false)}
+                />
+            )}
+
+            {/* announcement 詳情 Dialog 預覽(onDismissForever 傳 noop:按鈕看得到但不寫 storage) */}
+            {type === 'announcement' && announcement && (
+                <AnnouncementDetailDialog
+                    announcement={announcement}
+                    open={detailPreviewOpen}
+                    onClose={() => setDetailPreviewOpen(false)}
+                    onDismissForever={() => {}}
                 />
             )}
         </div>
