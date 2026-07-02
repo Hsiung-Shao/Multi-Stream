@@ -60,12 +60,9 @@ export class TwitchConfigResolver implements ConfigResolverContract {
             getStorage('twitchClientId') ||
             '';
 
-        // Client Secret
-        config.clientSecret =
-            getEnv('TWITCH_CLIENT_SECRET') ||
-            getGlobal('TWITCH_CLIENT_SECRET') ||
-            getStorage('twitchClientSecret') ||
-            '';
+        // Client Secret：不從前端任何來源解析（env / window.CONFIG / localStorage）。
+        // client_secret 只應存在後端；token 一律透過 /api/twitch-token 由後端鑄造。
+        // 保留 config.clientSecret = '' （DEFAULT_CONFIG），避免任何前端外洩管道。
 
         // Access Token
         config.accessToken =
@@ -127,7 +124,7 @@ export class TwitchConfigResolver implements ConfigResolverContract {
 
         try {
             if (updates.clientId !== undefined) localStorage.setItem('twitchClientId', updates.clientId);
-            if (updates.clientSecret !== undefined) localStorage.setItem('twitchClientSecret', updates.clientSecret);
+            // 不持久化 clientSecret 到 localStorage（避免前端外洩;secret 只在後端）
             if (updates.accessToken !== undefined) localStorage.setItem('twitchAccessToken', updates.accessToken);
             if (updates.proxyUrl !== undefined) localStorage.setItem('twitchProxyUrl', updates.proxyUrl);
             if (updates.useProxy !== undefined) localStorage.setItem('twitchUseProxy', updates.useProxy.toString());
