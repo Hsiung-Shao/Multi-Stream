@@ -62,7 +62,9 @@ export function AnnouncementDetailDialog({ announcement, open, onClose, onDismis
                 </DialogHeader>
 
                 {announcement.body && (
-                    <ScrollArea className="max-h-[55vh]">
+                    /* max-h 必須下在 Radix viewport 而非 Root:Root 高度 auto 時
+                       viewport 的 h-full 解析不到,內容會被裁切且無捲軸 */
+                    <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-[55vh]">
                         <p className="whitespace-pre-line text-sm leading-relaxed text-foreground pr-3">
                             {announcement.body}
                         </p>

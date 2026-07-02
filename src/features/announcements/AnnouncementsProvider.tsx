@@ -43,8 +43,11 @@ export function AnnouncementsProvider() {
     const handledRef = useRef<Set<string>>(new Set());
     // chip 顯示中的 id 集合(可能有複數,但 UX 上只顯示最高 priority 一個)
     const [visibleChipIds, setVisibleChipIds] = useState<Set<string>>(new Set());
-    // toast 點「查看詳情」後開啟的公告詳情(同一時間一個)
+    // toast 點「查看詳情」後開啟的公告詳情(同一時間一個)。
+    // open 與 announcement 分開管理:關閉只翻 open,保留 announcement
+    // 讓 Radix Dialog 播完退場動畫(與 admin 預覽路徑行為一致)
     const [detailAnnouncement, setDetailAnnouncement] = useState<Announcement | null>(null);
+    const [detailOpen, setDetailOpen] = useState(false);
 
     // 拉公告
     useEffect(() => {
@@ -124,7 +127,10 @@ export function AnnouncementsProvider() {
                 <AnnouncementToast
                     key={a.id}
                     announcement={a}
-                    onViewDetail={() => setDetailAnnouncement(a)}
+                    onViewDetail={() => {
+                        setDetailAnnouncement(a);
+                        setDetailOpen(true);
+                    }}
                 />
             ))}
 
@@ -132,8 +138,8 @@ export function AnnouncementsProvider() {
                 詳情內「不再顯示」才寫 dismissed */}
             <AnnouncementDetailDialog
                 announcement={detailAnnouncement}
-                open={detailAnnouncement !== null}
-                onClose={() => setDetailAnnouncement(null)}
+                open={detailOpen}
+                onClose={() => setDetailOpen(false)}
                 onDismissForever={() => {
                     if (detailAnnouncement) setFlag('dismissed', detailAnnouncement.id);
                 }}

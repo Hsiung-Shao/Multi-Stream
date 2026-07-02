@@ -90,7 +90,9 @@ export function AnnouncementPreview({ announcement, disabledReason }: Props) {
                         預覽通知
                     </Button>
                     <p className="text-[11px] text-muted-foreground">
-                        通知彈出於畫面角落,8 秒後自動消失;點「查看詳情」可預覽完整公告 Dialog;修改表單後可重按更新
+                        通知彈出於畫面角落,8 秒後自動消失
+                        {announcement.body ? ';點「查看詳情」可預覽完整公告 Dialog' : '(無內文時不顯示「查看詳情」按鈕)'}
+                        ;修改表單後可重按更新
                     </p>
                 </div>
             ) : type === 'poll' ? (

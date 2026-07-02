@@ -347,7 +347,8 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                                             {(q.textResponses?.length ?? 0) === 0 ? (
                                                                 <p className="text-xs text-muted-foreground italic">尚無文字回應</p>
                                                             ) : (
-                                                                <ScrollArea className="max-h-48 pr-1">
+                                                                // max-h 下在 viewport(Root auto 高度時 h-full 解析不到)
+                                                                <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-48 pr-1">
                                                                     <div className="space-y-1">
                                                                         {q.textResponses!.map((t, ti) => (
                                                                             <div
