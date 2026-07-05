@@ -39,9 +39,12 @@ interface IslandLayoutPickerProps {
     onOpenSettings: () => void;
     // SaveLayoutDialog 是 portal(不在島子樹),其 open 需上拋給動態島釘住,避免操作時島被誤隱藏
     onSaveDialogOpenChange?: (open: boolean) => void;
+    // 'popover'(預設):彈出在觸發按鈕正上方置中,對齊原本動態島的呈現方式。
+    // 'inline':拿掉彈出定位與 hover 自動收合,以一般文件流渲染,供邊緣停靠型態的詳細畫面直接嵌入。
+    variant?: 'popover' | 'inline';
 }
 
-export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings, onSaveDialogOpenChange }: IslandLayoutPickerProps) => {
+export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings, onSaveDialogOpenChange, variant = 'popover' }: IslandLayoutPickerProps) => {
     const { t } = useTranslation(['common', 'favorites'] as const);
     const customLayouts = useStreamStore(state => state.customLayouts);
     const applyCustomLayout = useStreamStore(state => state.applyCustomLayout);
@@ -64,14 +67,16 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings, o
     return (
         <>
             <div
-                onMouseLeave={onMouseLeave}
-                className={cn(
-                    "absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 w-[340px] overflow-hidden transition-all duration-300 ease-out origin-bottom text-white",
-                    isExpanded
-                        ? "opacity-100 scale-100 translate-y-0"
-                        : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
-                )}
-                style={ISLAND_PANEL_STYLE}
+                onMouseLeave={variant === 'popover' ? onMouseLeave : undefined}
+                className={variant === 'inline'
+                    ? "relative w-full overflow-hidden text-white"
+                    : cn(
+                        "absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 w-[340px] overflow-hidden transition-all duration-300 ease-out origin-bottom text-white",
+                        isExpanded
+                            ? "opacity-100 scale-100 translate-y-0"
+                            : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
+                    )}
+                style={variant === 'inline' ? undefined : ISLAND_PANEL_STYLE}
             >
                 {/* Panel header(violet icon chip) */}
                 <div

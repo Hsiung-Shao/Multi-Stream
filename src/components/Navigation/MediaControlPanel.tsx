@@ -58,9 +58,12 @@ const SortableStreamItem = (props: any) => {
 interface MediaControlPanelProps {
     isExpanded: boolean;
     onMouseLeave?: () => void;
+    // 'popover'(預設):彈出在觸發按鈕正上方置中,對齊原本動態島的呈現方式。
+    // 'inline':拿掉彈出定位與 hover 自動收合,以一般文件流渲染,供邊緣停靠型態的詳細畫面直接嵌入。
+    variant?: 'popover' | 'inline';
 }
 
-export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPanelProps) => {
+export const MediaControlPanel = ({ isExpanded, onMouseLeave, variant = 'popover' }: MediaControlPanelProps) => {
     const { t } = useTranslation(['common', 'controlPanel']);
 
     // UI Store
@@ -162,14 +165,16 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave }: MediaControlPane
 
     return (
         <div
-            onMouseLeave={onMouseLeave}
-            className={cn(
-                "absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 w-[480px] overflow-hidden transition-all duration-300 ease-out origin-bottom text-white",
-                isExpanded
-                    ? "opacity-100 scale-100 translate-y-0"
-                    : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
-            )}
-            style={{ maxHeight: '500px', ...ISLAND_PANEL_STYLE }}
+            onMouseLeave={variant === 'popover' ? onMouseLeave : undefined}
+            className={variant === 'inline'
+                ? "relative w-full overflow-hidden text-white"
+                : cn(
+                    "absolute bottom-full left-1/2 -translate-x-1/2 mb-3.5 w-[480px] overflow-hidden transition-all duration-300 ease-out origin-bottom text-white",
+                    isExpanded
+                        ? "opacity-100 scale-100 translate-y-0"
+                        : "opacity-0 scale-95 translate-y-3.5 pointer-events-none"
+                )}
+            style={variant === 'inline' ? { maxHeight: '500px' } : { maxHeight: '500px', ...ISLAND_PANEL_STYLE }}
         >
             {/* Panel header(cyan icon chip) */}
             <div

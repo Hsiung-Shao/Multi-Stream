@@ -57,6 +57,7 @@ const common = {
   'common.add_chat_window': 'Add Chat Window',
   'common.fullscreen': 'Fullscreen',
   'common.exit_fullscreen': 'Exit Fullscreen',
+  'common.back': 'Back',
   'common.timeout': 'Request timed out, please try again later',
   'common.save_layout': 'Save Current Layout',
   'common.manage_layouts': 'Manage Layouts',

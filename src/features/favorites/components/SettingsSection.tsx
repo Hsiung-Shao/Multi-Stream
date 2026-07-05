@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../../store/useUIStore';
 import { Label } from '../../../components/ui/label';
@@ -44,6 +45,39 @@ function FMCard({ title, children }: { title: string; children: React.ReactNode 
     );
 }
 
+// 分段切換鈕(主題三段切換、動態島樣式/大小/停靠邊皆用同一套樣式)
+function SegmentedControl<T extends string>({
+    value,
+    options,
+    onChange,
+}: {
+    value: T;
+    options: { id: T; label: string; Icon?: ComponentType<{ className?: string }> }[];
+    onChange: (id: T) => void;
+}) {
+    return (
+        <div className="inline-flex gap-1 p-1 rounded-lg bg-muted text-muted-foreground">
+            {options.map(({ id, label, Icon }) => (
+                <button
+                    key={id}
+                    type="button"
+                    onClick={() => onChange(id)}
+                    aria-pressed={value === id}
+                    className={cn(
+                        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                        value === id
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'hover:text-foreground',
+                    )}
+                >
+                    {Icon && <Icon className="size-4" />}
+                    {label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 // 一列設定:左 label(+ 說明),右控制項(對齊設計 FMSettingRow)
 function SettingRow({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
     return (
@@ -63,6 +97,14 @@ export function SettingsSection() {
     // 主題:讀 raw 選擇值(含 'system')以正確高亮三段切換
     const theme = useUIStore(s => s.theme);
     const setTheme = useUIStore(s => s.setTheme);
+
+    // 動態島樣式(桌面限定)+ 邊緣停靠的凸起大小/停靠邊
+    const islandStyle = useUIStore(s => s.islandStyle);
+    const setIslandStyle = useUIStore(s => s.setIslandStyle);
+    const islandEdgeSize = useUIStore(s => s.islandEdgeSize);
+    const setIslandEdgeSize = useUIStore(s => s.setIslandEdgeSize);
+    const islandEdgeSide = useUIStore(s => s.islandEdgeSide);
+    const setIslandEdgeSide = useUIStore(s => s.setIslandEdgeSide);
 
     // 播放 / 偵測設定
     const autoMuteNewStream = useUIStore(s => s.autoMuteNewStream);
@@ -112,6 +154,20 @@ export function SettingsSection() {
         { id: 'system' as const, Icon: Monitor, label: t('favorites:theme_system') },
     ];
 
+    const islandStyleOptions = [
+        { id: 'original' as const, label: t('favorites:island_style_original') },
+        { id: 'edgeDock' as const, label: t('favorites:island_style_edge_dock') },
+    ];
+    const islandSizeOptions = [
+        { id: 'sm' as const, label: t('favorites:island_size_sm') },
+        { id: 'md' as const, label: t('favorites:island_size_md') },
+        { id: 'lg' as const, label: t('favorites:island_size_lg') },
+    ];
+    const islandSideOptions = [
+        { id: 'left' as const, label: t('favorites:island_side_left') },
+        { id: 'right' as const, label: t('favorites:island_side_right') },
+    ];
+
     return (
         <ScrollArea className="flex-1 h-full">
             <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full py-4 px-2 pr-4">
@@ -120,26 +176,23 @@ export function SettingsSection() {
             {/* 外觀 */}
             <FMCard title={t('favorites:appearance')}>
                 <SettingRow label={t('favorites:theme')}>
-                    <div className="inline-flex gap-1 p-1 rounded-lg bg-muted text-muted-foreground">
-                        {themeOptions.map(({ id, Icon, label }) => (
-                            <button
-                                key={id}
-                                type="button"
-                                onClick={() => setTheme(id)}
-                                aria-pressed={theme === id}
-                                className={cn(
-                                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                                    theme === id
-                                        ? 'bg-background text-foreground shadow-sm'
-                                        : 'hover:text-foreground',
-                                )}
-                            >
-                                <Icon className="size-4" />
-                                {label as string}
-                            </button>
-                        ))}
-                    </div>
+                    <SegmentedControl value={theme} options={themeOptions} onChange={setTheme} />
                 </SettingRow>
+
+                <SettingRow label={t('favorites:island_style')} desc={t('favorites:island_style_desc')}>
+                    <SegmentedControl value={islandStyle} options={islandStyleOptions} onChange={setIslandStyle} />
+                </SettingRow>
+
+                {islandStyle === 'edgeDock' && (
+                    <>
+                        <SettingRow label={t('favorites:island_size')}>
+                            <SegmentedControl value={islandEdgeSize} options={islandSizeOptions} onChange={setIslandEdgeSize} />
+                        </SettingRow>
+                        <SettingRow label={t('favorites:island_side')}>
+                            <SegmentedControl value={islandEdgeSide} options={islandSideOptions} onChange={setIslandEdgeSide} />
+                        </SettingRow>
+                    </>
+                )}
 
                 <SettingRow label={t('favorites:language')}>
                     <Select value={i18n.language} onValueChange={changeLanguage}>

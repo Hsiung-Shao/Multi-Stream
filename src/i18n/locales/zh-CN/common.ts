@@ -57,6 +57,7 @@ const common = {
   'common.add_chat_window': '新增聊天室窗',
   'common.fullscreen': '全屏',
   'common.exit_fullscreen': '退出全屏幕',
+  'common.back': '返回',
   'common.timeout': '请求超时，请稍后再试',
   'common.save_layout': '保存目前布局',
   'common.manage_layouts': '布局管理',

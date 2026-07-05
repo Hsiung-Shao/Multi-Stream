@@ -11,15 +11,12 @@ import {
     DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
 import { useDynamicIsland } from '../../hooks/useDynamicIsland';
+import { useIslandQuickActions } from '../../hooks/useIslandQuickActions';
 import { IslandSearch } from './IslandSearch';
 import { IslandFavoritesMenu } from './IslandFavoritesMenu';
 import { IslandLayoutPicker } from './IslandLayoutPicker';
 import { cn } from '../ui/utils';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { favoritesService } from '../../features/favorites/FavoritesService';
-
-
 
 import {
     AlertDialog,
@@ -32,13 +29,6 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '../../components/ui/alert-dialog';
-
-import {
-    requestFullscreen,
-    exitFullscreen,
-    getFullscreenElement,
-    onFullscreenChange
-} from '../../utils/fullscreenUtils';
 
 // ---- Function color tokens(見 islandTokens.ts,與各面板共用) ----
 import { FN, type FnKey } from './islandTokens';
@@ -124,14 +114,12 @@ export const DynamicIsland = () => {
     const setPage = useUIStore(s => s.setPage);
     const openModal = useUIStore(s => s.openModal);
     const clearCanvasItems = useStreamStore(s => s.clearCanvasItems);
-    const streams = useStreamStore(s => s.streams);
     const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
     const addCanvasItem = useStreamStore(s => s.addCanvasItem);
 
     // const [settingsDialogOpen, setSettingsDialogOpen] = useState(false); // Removed
     const [mediaControlExpanded, setMediaControlExpanded] = useState(false);
     const [layoutPickerExpanded, setLayoutPickerExpanded] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
     // portal 彈出 UI 的 open 狀態 + 搜尋聚焦:任一為真即「使用中」,釘住動態島不隱藏
     const [addMenuOpen, setAddMenuOpen] = useState(false);
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
@@ -139,26 +127,8 @@ export const DynamicIsland = () => {
     const [searchActive, setSearchActive] = useState(false);
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
-    // Fullscreen listener
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!getFullscreenElement());
-        };
-
-        return onFullscreenChange(handleFullscreenChange);
-    }, []);
-
-    const toggleFullscreen = () => {
-        if (!getFullscreenElement()) {
-            requestFullscreen(document.documentElement).catch(() => {
-                toast.error('無法進入全螢幕');
-            });
-        } else {
-            exitFullscreen().catch(() => {
-                console.error('Error exiting fullscreen');
-            });
-        }
-    };
+    // 一鍵收藏 / 全螢幕:與邊緣停靠型態共用邏輯(見 useIslandQuickActions)
+    const { isFullscreen, toggleFullscreen, handleQuickSave } = useIslandQuickActions();
 
     // Dynamic Island Hook — shows when mouse near bottom edge
     const { isCollapsed, setPinned, handlers } = useDynamicIsland();
@@ -168,45 +138,6 @@ export const DynamicIsland = () => {
     useEffect(() => {
         setPinned(pinned);
     }, [pinned, setPinned]);
-
-    const handleQuickSave = async () => {
-        if (streams.length === 0) {
-            toast.error(t('favorites:no_streams_to_save') || '沒有可收藏的串流');
-            return;
-        }
-
-        let successCount = 0;
-
-        try {
-            const targetCategoryId: string | null = null;
-
-            for (const stream of streams) {
-                let url = '';
-                if (stream.platform === 'twitch') {
-                    url = `https://twitch.tv/${stream.channelId}`;
-                } else if (stream.platform === 'youtube') {
-                    url = stream.videoId
-                        ? `https://youtube.com/watch?v=${stream.videoId}`
-                        : `https://youtube.com/channel/${stream.channelId}`;
-                }
-
-                if (url) {
-                    await favoritesService.addFavorite(
-                        url,
-                        stream.displayName || stream.channelId || stream.videoId || 'Stream',
-                        targetCategoryId
-                    );
-                    successCount++;
-                }
-            }
-
-            toast.success(t('favorites:batch_save_success_simple', { count: successCount }) || `已收藏 ${successCount} 個串流`);
-
-        } catch {
-            console.error('Quick save failed');
-            toast.error(t('common.error') || '發生錯誤');
-        }
-    };
 
     return (
         <>

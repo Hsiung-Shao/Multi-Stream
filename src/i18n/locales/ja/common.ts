@@ -57,6 +57,7 @@ const common = {
   'common.add_chat_window': 'チャットウィンドウ追加',
   'common.fullscreen': '全画面',
   'common.exit_fullscreen': '全画面終了',
+  'common.back': '戻る',
   'common.timeout': 'タイムアウトしました。後でもう一度お試しください',
   'common.save_layout': '現在のレイアウトを保存',
   'common.manage_layouts': 'レイアウト管理',

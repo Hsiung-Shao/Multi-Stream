@@ -57,6 +57,7 @@ const common = {
   'common.add_chat_window': '채팅 창 추가',
   'common.fullscreen': '전체 화면',
   'common.exit_fullscreen': '전체 화면 종료',
+  'common.back': '뒤로',
   'common.timeout': '요청 시간 초과, 나중에 다시 시도해주세요',
   'common.save_layout': '현재 레이아웃 저장',
   'common.manage_layouts': '레이아웃 관리',

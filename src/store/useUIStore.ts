@@ -44,6 +44,15 @@ interface UIState {
     // Window functionality
     closeWindowMode: 'remove' | 'empty';
     setCloseWindowMode: (mode: 'remove' | 'empty') => void;
+    // 動態島樣式(桌面限定):original = 現行下緣浮現型態;edgeDock = 邊緣停靠型態
+    islandStyle: 'original' | 'edgeDock';
+    setIslandStyle: (style: 'original' | 'edgeDock') => void;
+    islandEdgeSide: 'left' | 'right';
+    setIslandEdgeSide: (side: 'left' | 'right') => void;
+    islandEdgeSize: 'sm' | 'md' | 'lg';
+    setIslandEdgeSize: (size: 'sm' | 'md' | 'lg') => void;
+    islandEdgeY: number; // 凸起垂直位置,百分比 0-100
+    setIslandEdgeY: (y: number) => void;
     // Hotkey & Hover State
     hoveredWindowId: string | null;
     setHoveredWindowId: (id: string | null) => void;
@@ -148,6 +157,28 @@ export const useUIStore = create<UIState>((set) => ({
         persistUserSetting('closeWindowMode', mode);
     },
 
+    // 動態島樣式與邊緣停靠設定
+    islandStyle: 'original',
+    setIslandStyle: (style) => {
+        set({ islandStyle: style });
+        persistUserSetting('islandStyle', style);
+    },
+    islandEdgeSide: 'left',
+    setIslandEdgeSide: (side) => {
+        set({ islandEdgeSide: side });
+        persistUserSetting('islandEdgeSide', side);
+    },
+    islandEdgeSize: 'md',
+    setIslandEdgeSize: (size) => {
+        set({ islandEdgeSize: size });
+        persistUserSetting('islandEdgeSize', size);
+    },
+    islandEdgeY: 50,
+    setIslandEdgeY: (y) => {
+        set({ islandEdgeY: y });
+        persistUserSetting('islandEdgeY', y);
+    },
+
     // Hotkey & Hover State
     hoveredWindowId: null,
     setHoveredWindowId: (id) => set({ hoveredWindowId: id }),
@@ -180,6 +211,18 @@ try {
         }
         if (settings.bgLiveDetect !== undefined) {
             useUIStore.setState({ bgLiveDetect: settings.bgLiveDetect });
+        }
+        if (settings.islandStyle) {
+            useUIStore.setState({ islandStyle: settings.islandStyle });
+        }
+        if (settings.islandEdgeSide) {
+            useUIStore.setState({ islandEdgeSide: settings.islandEdgeSide });
+        }
+        if (settings.islandEdgeSize) {
+            useUIStore.setState({ islandEdgeSize: settings.islandEdgeSize });
+        }
+        if (settings.islandEdgeY !== undefined) {
+            useUIStore.setState({ islandEdgeY: settings.islandEdgeY });
         }
     }
 } catch (e) { }

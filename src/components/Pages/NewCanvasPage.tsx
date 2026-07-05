@@ -5,8 +5,10 @@
 
 import { useEffect, useCallback, useMemo } from 'react';
 import { DynamicIsland } from '../Navigation/DynamicIsland';
+import { DynamicIslandEdgeDock } from '../Navigation/DynamicIslandEdgeDock';
 import { SimpleCanvas, CanvasWindow, WindowRenderProps } from '../Canvas';
 import { useStreamStore } from '../../store/useStreamStore';
+import { useUIStore } from '../../store/useUIStore';
 import { CanvasStreamContent } from './CanvasStreamContent';
 import { EmptyWindowContent } from '../Canvas/EmptyWindowContent';
 import { CanvasEmptyState } from '../Canvas/CanvasEmptyState';
@@ -14,6 +16,7 @@ import { SEO } from '../SEO';
 
 export const NewCanvasPage = () => {
     const setLayoutMode = useStreamStore(s => s.setLayoutMode);
+    const islandStyle = useUIStore(s => s.islandStyle);
     const streams = useStreamStore(s => s.streams);
     const canvasItems = useStreamStore(s => s.canvasItems);
     const updateCanvasLayout = useStreamStore(s => s.updateCanvasLayout);
@@ -144,7 +147,7 @@ export const NewCanvasPage = () => {
 
             {/* UI Layer (Dynamic Island) */}
             <div className="pointer-events-none absolute inset-0 z-50">
-                <DynamicIsland />
+                {islandStyle === 'edgeDock' ? <DynamicIslandEdgeDock /> : <DynamicIsland />}
             </div>
         </div>
     );
