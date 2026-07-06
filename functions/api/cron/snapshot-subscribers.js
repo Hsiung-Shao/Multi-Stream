@@ -3,11 +3,17 @@
 // POST /api/cron/snapshot-subscribers
 //   Authorization: Bearer ${CRON_SHARED_SECRET}
 //
-// 流程（每日觸發一次）：
+// 流程（每日觸發一次，實際工作在 context.waitUntil 背景執行，
+// 立即回 202 避免拖過 pg_net 的 28s 逾時）：
 //   Twitch：helix /users?login=batch 換 broadcaster_id → /channels/followers 拿 total（精確）
 //           → UPDATE vtubers.twitch_follower_count + INSERT history（每日一筆，日級變化）
-//   YouTube：channels.list?part=statistics&id=batch 拿 subscriberCount（API 四捨五入到 3 位有效）
+//   YouTube（vtubers 表）：channels.list?part=statistics&id=batch 拿 subscriberCount（API 四捨五入到 3 位有效）
 //           → UPDATE vtubers.youtube_subscriber_count；history 每「ISO 週」只記一筆（週級變化）
+//   YouTube（youtube_channels 全表快取，供搜尋排序/頻道卡片顯示用）：
+//           對齊 scripts/enrich-youtube-channels.mjs 邏輯，channels.list?part=snippet,statistics
+//           全表刷新頭像/訂閱數/觀看數/影片數等欄位，hiddenSubscriberCount 或未回傳時沿用舊值不抹 null。
+//           與上面 vtubers 的 YouTube 抓取各自獨立呼叫（id 集合有重疊也各自查一次），
+//           換取程式碼互不耦合、其中一邊出錯不影響另一邊；quota 成本使用者已確認可忽略不計。
 //
 // 環境變數：
 //   CRON_SHARED_SECRET / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
@@ -25,6 +31,126 @@ const YT_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
 const UC_RE = /^UC[A-Za-z0-9_-]{22}$/;
 const YT_BATCH = 50;       // channels.list 一次最多 50 個 id
 const TWITCH_USER_BATCH = 100;
+
+// ===== youtube_channels 全表快取刷新（對齊 scripts/enrich-youtube-channels.mjs） =====
+const YTC_SELECT_PAGE = 1000;
+const YTC_UPSERT_BATCH = 500;
+const YTC_API_SLEEP_MS = 200;
+const YTC_TITLE_MAX = 200;
+const YTC_DESC_MAX = 5000;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function chunk(arr, size) {
+    const out = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+}
+
+// 分頁抓 youtube_channels 全表現況（當「保留基準」：hidden/未回傳時沿用舊值）
+async function fetchAllYoutubeChannels(env) {
+    const rows = [];
+    for (let offset = 0; ; offset += YTC_SELECT_PAGE) {
+        const res = await select(
+            env,
+            `youtube_channels?select=channel_id,subscriber_count,thumbnail_url,fetched_at&order=channel_id.asc&limit=${YTC_SELECT_PAGE}&offset=${offset}`,
+        );
+        if (!res.ok) throw new Error(`select youtube_channels ${res.status}`);
+        const page = res.data || [];
+        rows.push(...page);
+        if (page.length < YTC_SELECT_PAGE) break;
+    }
+    return rows;
+}
+
+async function fetchYoutubeChannelMetaBatch(env, ids) {
+    const ytHeaders = env.YOUTUBE_API_REFERER ? { Referer: env.YOUTUBE_API_REFERER } : {};
+    const url = `${YT_CHANNELS_URL}?part=snippet,statistics&maxResults=50&id=${ids.join(',')}&key=${env.YOUTUBE_API_KEY}`;
+    const res = await fetch(url, { headers: ytHeaders });
+    if (!res.ok) throw new Error(`youtube channels ${res.status}`);
+    const data = await res.json();
+    return data.items || [];
+}
+
+// 每筆欄位集必須一致，否則 PostgREST bulk upsert 會把缺的 key 當 NULL 寫入
+function toChannelRow(item, base, nowIso) {
+    const sn = item.snippet || {};
+    const st = item.statistics || {};
+    const th = sn.thumbnails || {};
+    const thumb = th.high?.url || th.medium?.url || th.default?.url || base?.thumbnail_url || null;
+    const title = (sn.title || '').trim().slice(0, YTC_TITLE_MAX) || item.id;
+
+    let subs;
+    if (st.hiddenSubscriberCount) subs = base?.subscriber_count ?? null;
+    else if (st.subscriberCount != null) subs = st.subscriberCount;
+    else subs = base?.subscriber_count ?? null;
+
+    return {
+        channel_id: item.id,
+        channel_title: title,
+        thumbnail_url: thumb,
+        subscriber_count: subs,
+        view_count: st.viewCount ?? null,
+        video_count: st.videoCount ?? null,
+        custom_url: sn.customUrl ?? null,
+        description: (sn.description || '').slice(0, YTC_DESC_MAX) || null,
+        published_at: sn.publishedAt ?? null,
+        fetched_at: nowIso,
+        updated_at: nowIso,
+    };
+}
+
+// supabase-server.js 的 insert() 不支援 on_conflict/merge-duplicates，這裡照 sync-livestreams.js
+// 的既有作法直接發 service_role request
+async function upsertYoutubeChannelsBatch(env, rows) {
+    const url = `${env.SUPABASE_URL}/rest/v1/youtube_channels?on_conflict=channel_id`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            Prefer: 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify(rows),
+    });
+    if (!res.ok) throw new Error(`upsert youtube_channels ${res.status}`);
+}
+
+async function refreshYoutubeChannelsCache(env) {
+    if (!env.YOUTUBE_API_KEY) return;
+
+    const all = await fetchAllYoutubeChannels(env);
+    const baseMap = new Map(all.map((r) => [r.channel_id, r]));
+    const ids = all.map((r) => r.channel_id);
+    const nowIso = new Date().toISOString();
+    const batches = chunk(ids, YT_BATCH);
+
+    let updated = 0;
+    let failedBatches = 0;
+    for (let i = 0; i < batches.length; i++) {
+        try {
+            const items = await fetchYoutubeChannelMetaBatch(env, batches[i]);
+            const rows = items.map((it) => toChannelRow(it, baseMap.get(it.id), nowIso));
+            if (rows.length > 0) {
+                for (const upsertBatch of chunk(rows, YTC_UPSERT_BATCH)) {
+                    await upsertYoutubeChannelsBatch(env, upsertBatch);
+                }
+                updated += rows.length;
+            }
+        } catch (err) {
+            failedBatches++;
+            await logError(env, 'snapshot-subscribers', 'youtube_channels batch failed', {
+                metadata: { batchIndex: i, error: String(err).slice(0, 300) },
+            });
+        }
+        if (i < batches.length - 1) await sleep(YTC_API_SLEEP_MS);
+    }
+
+    await logInfo(env, 'snapshot-subscribers', 'youtube_channels refresh complete', {
+        metadata: { total: ids.length, updated, failed_batches: failedBatches },
+    });
+}
 
 // ===== Twitch =====
 // getTwitchAppToken 改用 lib/twitch-token.js（KV 快取，與 sync-livestreams 共用）
@@ -110,6 +236,14 @@ export async function onRequestPost(context) {
         return jsonResponse({ success: false, error: 'supabase not configured' }, 500, request);
     }
 
+    // 實際工作丟到背景執行，立即回應 pg_net（避免 vtubers + youtube_channels 兩段
+    // 加總後的執行時間拖過 pg_net 的 28s 逾時；結果一律看 system_logs）
+    context.waitUntil(runSnapshot(env));
+
+    return jsonResponse({ success: true, accepted: true }, 202, request);
+}
+
+async function runSnapshot(env) {
     try {
         const vRes = await select(
             env,
@@ -119,7 +253,7 @@ export async function onRequestPost(context) {
             await logError(env, 'snapshot-subscribers', 'fetch vtubers failed', {
                 metadata: { status: vRes.status, error: String(vRes.error || '').slice(0, 300) },
             });
-            return jsonResponse({ success: false, error: 'fetch vtubers failed' }, 500, request);
+            return;
         }
         const vtubers = vRes.data || [];
 
@@ -177,17 +311,19 @@ export async function onRequestPost(context) {
         await logInfo(env, 'snapshot-subscribers', 'snapshot complete', {
             metadata: { vtubers: vtubers.length, twitch_snapshots: twitchUpdated, youtube_snapshots: youtubeUpdated },
         });
-
-        return jsonResponse(
-            { success: true, twitch_snapshots: twitchUpdated, youtube_snapshots: youtubeUpdated },
-            200,
-            request,
-        );
     } catch (err) {
         await logError(env, 'snapshot-subscribers', 'unexpected error', {
             metadata: { error: String(err).slice(0, 300) },
         });
-        return jsonResponse({ success: false, error: 'snapshot failed' }, 500, request);
+    }
+
+    // ---- youtube_channels 全表快取刷新（獨立區塊，失敗不影響上面的 vtubers 流程） ----
+    try {
+        await refreshYoutubeChannelsCache(env);
+    } catch (err) {
+        await logError(env, 'snapshot-subscribers', 'youtube_channels refresh failed', {
+            metadata: { error: String(err).slice(0, 300) },
+        });
     }
 }
 
