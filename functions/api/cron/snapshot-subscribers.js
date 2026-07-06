@@ -53,7 +53,7 @@ async function fetchAllYoutubeChannels(env) {
     for (let offset = 0; ; offset += YTC_SELECT_PAGE) {
         const res = await select(
             env,
-            `youtube_channels?select=channel_id,subscriber_count,thumbnail_url,fetched_at&order=channel_id.asc&limit=${YTC_SELECT_PAGE}&offset=${offset}`,
+            `youtube_channels?select=channel_id,subscriber_count,view_count,video_count,thumbnail_url,fetched_at&order=channel_id.asc&limit=${YTC_SELECT_PAGE}&offset=${offset}`,
         );
         if (!res.ok) throw new Error(`select youtube_channels ${res.status}`);
         const page = res.data || [];
@@ -90,8 +90,8 @@ function toChannelRow(item, base, nowIso) {
         channel_title: title,
         thumbnail_url: thumb,
         subscriber_count: subs,
-        view_count: st.viewCount ?? null,
-        video_count: st.videoCount ?? null,
+        view_count: st.viewCount ?? base?.view_count ?? null,
+        video_count: st.videoCount ?? base?.video_count ?? null,
         custom_url: sn.customUrl ?? null,
         description: (sn.description || '').slice(0, YTC_DESC_MAX) || null,
         published_at: sn.publishedAt ?? null,
@@ -244,6 +244,20 @@ export async function onRequestPost(context) {
 }
 
 async function runSnapshot(env) {
+    // vtubers 流程與 youtube_channels 全表刷新是兩個獨立區塊，
+    // 分開呼叫確保其中一個 early return/例外不會連帶跳過另一個
+    await runVtuberSnapshot(env);
+
+    try {
+        await refreshYoutubeChannelsCache(env);
+    } catch (err) {
+        await logError(env, 'snapshot-subscribers', 'youtube_channels refresh failed', {
+            metadata: { error: String(err).slice(0, 300) },
+        });
+    }
+}
+
+async function runVtuberSnapshot(env) {
     try {
         const vRes = await select(
             env,
@@ -313,15 +327,6 @@ async function runSnapshot(env) {
         });
     } catch (err) {
         await logError(env, 'snapshot-subscribers', 'unexpected error', {
-            metadata: { error: String(err).slice(0, 300) },
-        });
-    }
-
-    // ---- youtube_channels 全表快取刷新（獨立區塊，失敗不影響上面的 vtubers 流程） ----
-    try {
-        await refreshYoutubeChannelsCache(env);
-    } catch (err) {
-        await logError(env, 'snapshot-subscribers', 'youtube_channels refresh failed', {
             metadata: { error: String(err).slice(0, 300) },
         });
     }
