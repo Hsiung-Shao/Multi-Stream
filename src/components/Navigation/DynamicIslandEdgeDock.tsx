@@ -141,12 +141,14 @@ export const DynamicIslandEdgeDock = () => {
 
     const panelWidth = view === 'media' ? 480 : view === 'layout' ? 340 : 300;
 
-    // 面板開啟或內容(清單/子畫面)改變高度時,重新量測並夾限垂直位置,避免貼近視窗上下緣時被裁到看不到
+    // 面板開啟或內容(清單/子畫面)改變高度時,重新量測並夾限垂直位置,避免貼近視窗上下緣時被裁到看不到。
+    // 額外用 ResizeObserver 監看面板實際尺寸(不只是 open/view/y/panelWidth 這幾個 state)——
+    // 像搜尋結果展開/收合這種「面板高度變了但上述 state 都沒變」的情況,單靠 deps 不會觸發重算。
     useLayoutEffect(() => {
         if (!open) { setPanelTop(null); return; }
+        const el = panelRef.current;
+        if (!el) return;
         const recalc = () => {
-            const el = panelRef.current;
-            if (!el) return;
             const vh = window.innerHeight;
             const margin = 16;
             const centerPx = (y / 100) * vh;
@@ -155,7 +157,12 @@ export const DynamicIslandEdgeDock = () => {
         };
         recalc();
         window.addEventListener('resize', recalc);
-        return () => window.removeEventListener('resize', recalc);
+        const ro = new ResizeObserver(recalc);
+        ro.observe(el);
+        return () => {
+            window.removeEventListener('resize', recalc);
+            ro.disconnect();
+        };
     }, [open, view, y, panelWidth]);
 
     return (
@@ -318,7 +325,7 @@ export const DynamicIslandEdgeDock = () => {
                         <>
                             <DetailHeader title={t('favorites:island_search_channel') || '搜尋頻道'} backLabel={backLabel} onBack={() => setView('list')} />
                             <div className="p-3">
-                                <IslandSearch onSearch={() => setOpen(false)} />
+                                <IslandSearch onSearch={() => setOpen(false)} resultsPlacement="inline" />
                             </div>
                         </>
                     )}

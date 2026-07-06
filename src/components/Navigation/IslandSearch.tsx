@@ -49,9 +49,13 @@ interface IslandSearchProps {
     onSearch?: (query: string) => void;
     // 聚焦/失焦時回報「使用中」,讓動態島在搜尋時不自動隱藏
     onActiveChange?: (active: boolean) => void;
+    // 結果彈窗定位:'overlay'(預設)= 絕對定位往上彈出(給固定在畫面下緣的原本動態島用);
+    // 'inline' = 文件流內的區塊,渲染在 input 下方,給邊緣停靠這種側邊面板用
+    // (面板高度靠量測子元素 offsetHeight 決定,absolute 彈窗不會撐開高度,會被面板的 overflow-hidden 裁掉)。
+    resultsPlacement?: 'overlay' | 'inline';
 }
 
-export function IslandSearch({ onSearch, onActiveChange }: IslandSearchProps) {
+export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'overlay' }: IslandSearchProps) {
     const { t } = useTranslation(['common', 'navbar']);
     const [platform, setPlatform] = useState<Platform>('twitch');
     const [query, setQuery] = useState('');
@@ -283,69 +287,76 @@ export function IslandSearch({ onSearch, onActiveChange }: IslandSearchProps) {
     };
 
     const platformColor = platform === 'twitch' ? TWITCH_COLOR : YOUTUBE_COLOR;
+    const isInline = resultsPlacement === 'inline';
+
+    const resultsListNode = (
+        <ScrollArea className="h-60 p-1">
+            {searchResults.map((result, index) => (
+                <div
+                    key={result.id}
+                    className={cn(
+                        "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors",
+                        selectedIndex === index ? "bg-white/20" : "hover:bg-white/10"
+                    )}
+                    onMouseDown={() => handleSelectResult(result)}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                >
+                    {result.thumbnailUrl ? (
+                        <img src={result.thumbnailUrl} alt={result.displayName} className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">{result.displayName.charAt(0)}</span>
+                        </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-white truncate">{result.displayName}</div>
+                        {result.platform === 'twitch' ? (
+                            <div className="text-xs text-white/60 flex items-center gap-1">
+                                {result.isLive && <span className="w-2 h-2 rounded-full bg-green-500 block" />}
+                                <span className="truncate">{result.gameName || 'Twitch'}</span>
+                            </div>
+                        ) : (
+                            <div className="text-xs text-white/60 flex items-center gap-1.5">
+                                {result.isVtuber && (
+                                    <span className="px-1 rounded bg-pink-500/20 text-pink-300 text-[10px] leading-tight">
+                                        {t('navbar:vtuberBadge')}
+                                    </span>
+                                )}
+                                {result.subscriber != null && (
+                                    <span>{formatSubscribers(result.subscriber)}</span>
+                                )}
+                                {result.nationality && (
+                                    <span className="opacity-70 truncate">{result.nationality}</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    <Plus size={14} className="text-white/40" />
+                </div>
+            ))}
+        </ScrollArea>
+    );
+
+    const resultsBoxStyle = {
+        background: 'rgba(10,10,14,0.94)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: `1px solid ${SEARCH_ACCENT}33`,
+        boxShadow: `0 20px 40px -12px rgba(0,0,0,0.7), 0 0 0 1px ${SEARCH_ACCENT}14`,
+    };
 
     return (
         <div
             ref={containerRef}
-            className="flex items-center w-64 relative"
+            className={isInline ? "flex flex-col w-64 relative" : "flex items-center w-64 relative"}
         >
-            {/* Results popup */}
-            {showResults && searchResults.length > 0 && (
+            {/* Results popup(overlay:絕對定位往上彈出,給固定在下緣的原本動態島用) */}
+            {!isInline && showResults && searchResults.length > 0 && (
                 <div
                     className="absolute bottom-full left-0 w-64 mb-3 rounded-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2"
-                    style={{
-                        background: 'rgba(10,10,14,0.94)',
-                        backdropFilter: 'blur(16px)',
-                        WebkitBackdropFilter: 'blur(16px)',
-                        border: `1px solid ${SEARCH_ACCENT}33`,
-                        boxShadow: `0 20px 40px -12px rgba(0,0,0,0.7), 0 0 0 1px ${SEARCH_ACCENT}14`,
-                    }}
+                    style={resultsBoxStyle}
                 >
-                    <ScrollArea className="h-60 p-1">
-                        {searchResults.map((result, index) => (
-                            <div
-                                key={result.id}
-                                className={cn(
-                                    "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors",
-                                    selectedIndex === index ? "bg-white/20" : "hover:bg-white/10"
-                                )}
-                                onMouseDown={() => handleSelectResult(result)}
-                                onMouseEnter={() => setSelectedIndex(index)}
-                            >
-                                {result.thumbnailUrl ? (
-                                    <img src={result.thumbnailUrl} alt={result.displayName} className="w-8 h-8 rounded-full object-cover" />
-                                ) : (
-                                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                                        <span className="text-xs font-bold text-white">{result.displayName.charAt(0)}</span>
-                                    </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium text-white truncate">{result.displayName}</div>
-                                    {result.platform === 'twitch' ? (
-                                        <div className="text-xs text-white/60 flex items-center gap-1">
-                                            {result.isLive && <span className="w-2 h-2 rounded-full bg-green-500 block" />}
-                                            <span className="truncate">{result.gameName || 'Twitch'}</span>
-                                        </div>
-                                    ) : (
-                                        <div className="text-xs text-white/60 flex items-center gap-1.5">
-                                            {result.isVtuber && (
-                                                <span className="px-1 rounded bg-pink-500/20 text-pink-300 text-[10px] leading-tight">
-                                                    {t('navbar:vtuberBadge')}
-                                                </span>
-                                            )}
-                                            {result.subscriber != null && (
-                                                <span>{formatSubscribers(result.subscriber)}</span>
-                                            )}
-                                            {result.nationality && (
-                                                <span className="opacity-70 truncate">{result.nationality}</span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                <Plus size={14} className="text-white/40" />
-                            </div>
-                        ))}
-                    </ScrollArea>
+                    {resultsListNode}
                 </div>
             )}
 
@@ -403,6 +414,16 @@ export function IslandSearch({ onSearch, onActiveChange }: IslandSearchProps) {
                     </button>
                 ) : null}
             </form>
+
+            {/* Results popup(inline:文件流內區塊,渲染在 input 下方,給邊緣停靠這種側邊面板用) */}
+            {isInline && showResults && searchResults.length > 0 && (
+                <div
+                    className="w-64 mt-2 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2"
+                    style={resultsBoxStyle}
+                >
+                    {resultsListNode}
+                </div>
+            )}
         </div>
     );
 }
