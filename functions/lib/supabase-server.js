@@ -78,3 +78,24 @@ export function select(env, tableWithQuery, opts = {}) {
 export function remove(env, table, filter) {
     return sbFetch(env, `${table}?${filter}`, { method: 'DELETE', prefer: 'return=representation' });
 }
+
+/**
+ * 用 service_role 批次 upsert(on_conflict),取代逐筆 insert/update 的 N 次呼叫
+ * @param {Object} env
+ * @param {string} table
+ * @param {Object[]} rows - 每筆欄位集須一致,缺的 key 在 merge-duplicates 下會被視為 NULL 寫入
+ * @param {{ onConflict?: string, ignoreDuplicates?: boolean }} [opts]
+ *   - onConflict: 衝突鍵欄位,預設 'id'
+ *   - ignoreDuplicates: true 時撞衝突鍵直接略過(用於「已存在就不動」的批次寫入,例如日期唯一索引防重複快照);
+ *     false(預設)時撞衝突鍵會 merge 覆蓋提供的欄位
+ * @returns {Promise<{ ok, status, data, error }>}
+ */
+export function upsert(env, table, rows, opts = {}) {
+    const { onConflict = 'id', ignoreDuplicates = false } = opts;
+    const resolution = ignoreDuplicates ? 'ignore-duplicates' : 'merge-duplicates';
+    return sbFetch(env, `${table}?on_conflict=${onConflict}`, {
+        method: 'POST',
+        body: rows,
+        prefer: `resolution=${resolution},return=minimal`,
+    });
+}
