@@ -2,6 +2,8 @@ const versionHistory = {
   'title': '版本记录',
   'subtitle': 'MultiStream Hub 更新历史',
   'latest': '最新',
+  'v3.3.0.date': '2026-07-06',
+  'v3.3.0.dynamicIslandEdgeDock': '动态岛新增"边缘停靠"外观：可选择贴齐屏幕左侧或右侧，以可拖动的小箭头凸起呈现，大小可调整；展开后的搜索、新增窗口、布局设置、媒体控制等功能与原本动态岛完全一致，可在设置的外观分页切换',
   'v3.2.0.date': '2026-07-01',
   'v3.2.0.youtubeChannelSearch': '动态岛搜索框新增 YouTube 频道搜索：输入名称即可从站内收录的 VTuber / YouTube 频道中找到并加入收藏',
   'v3.2.0.dynamicIslandUx': '动态岛交互优化：操作菜单或搜索时不再自动隐藏，离开后停留约 2 秒才收起；重新点回搜索框会显示先前的搜索结果',

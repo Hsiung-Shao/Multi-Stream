@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
+  'v3.3.0.date': '2026-07-06',
+  'v3.3.0.dynamicIslandEdgeDock': 'New Dynamic Island appearance, "Edge Dock": a small draggable arrow tab that snaps to the left or right edge of the screen, with adjustable size. Once expanded, search, add window, layout, media control and every other feature work exactly like the original Dynamic Island — switch between the two under Settings > Appearance',
   'v3.2.0.date': '2026-07-01',
   'v3.2.0.youtubeChannelSearch': 'The Dynamic Island search box now supports YouTube channel search: type a name to find VTuber/YouTube channels from our catalog and add them to your favorites',
   'v3.2.0.dynamicIslandUx': 'Dynamic Island interaction improvements: it no longer auto-hides while you use its menus or search, waits about 2 seconds after you leave before collapsing, and refocusing the search box restores your previous results',

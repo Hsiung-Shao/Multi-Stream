@@ -6,6 +6,13 @@ export interface VersionData {
 
 export const versionHistoryData: VersionData[] = [
     {
+        version: 'v3.3.0',
+        dateKey: 'versionHistory:v3.3.0.date',
+        changeKeys: [
+            'versionHistory:v3.3.0.dynamicIslandEdgeDock',
+        ],
+    },
+    {
         version: 'v3.2.0',
         dateKey: 'versionHistory:v3.2.0.date',
         changeKeys: [
