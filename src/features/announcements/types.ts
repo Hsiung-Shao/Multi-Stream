@@ -8,6 +8,8 @@ export type AnnouncementSegment = 'all' | 'authenticated';
 export interface PollOption {
     id: string;
     label: string;
+    /** survey single/multi 專用:「其他」選項,選中時填答者可自由輸入文字(每題最多一個) */
+    is_other?: boolean;
 }
 
 export interface PollPayload {
@@ -91,4 +93,6 @@ export interface SurveyChoiceItem {
     question_id: string;
     option_ids?: string[];
     text?: string;
+    /** 勾選 is_other 選項時的自由填寫內容(option_ids 需包含該 is_other 選項) */
+    other_text?: string;
 }

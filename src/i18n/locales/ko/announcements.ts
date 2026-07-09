@@ -21,6 +21,7 @@ const announcements = {
     'survey.submitError': '제출에 실패했습니다. 나중에 다시 시도해 주세요',
     'survey.requiredHint': '모든 질문에 답한 후 제출해 주세요',
     'survey.textPlaceholder': '여기에 답변을 입력하세요…',
+    'survey.otherPlaceholder': '자세히 적어 주세요…',
     'survey.questionCount': '{{current}} / {{total}}번째 질문',
 
     'announcement.title': '시스템 공지',

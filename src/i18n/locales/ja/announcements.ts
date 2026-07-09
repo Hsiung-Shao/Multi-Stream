@@ -21,6 +21,7 @@ const announcements = {
     'survey.submitError': '送信に失敗しました。後でもう一度お試しください',
     'survey.requiredHint': 'すべての質問に回答してから送信してください',
     'survey.textPlaceholder': 'ここに回答を入力してください…',
+    'survey.otherPlaceholder': '具体的にご記入ください…',
     'survey.questionCount': '{{current}} / {{total}} 問目',
 
     'announcement.title': 'システムからのお知らせ',

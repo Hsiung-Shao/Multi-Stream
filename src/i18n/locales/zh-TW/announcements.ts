@@ -21,6 +21,7 @@ const announcements = {
     'survey.submitError': '送出失敗，請稍後再試',
     'survey.requiredHint': '請完成所有題目後再送出',
     'survey.textPlaceholder': '請在此輸入你的回答…',
+    'survey.otherPlaceholder': '請說明…',
     'survey.questionCount': '第 {{current}} / {{total}} 題',
 
     'announcement.title': '系統公告',

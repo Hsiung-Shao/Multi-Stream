@@ -21,6 +21,7 @@ const announcements = {
     'survey.submitError': 'Submission failed, please try again later',
     'survey.requiredHint': 'Please answer all questions before submitting',
     'survey.textPlaceholder': 'Enter your answer here…',
+    'survey.otherPlaceholder': 'Please specify…',
     'survey.questionCount': 'Question {{current}} / {{total}}',
 
     'announcement.title': 'System Announcement',

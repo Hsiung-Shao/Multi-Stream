@@ -17,6 +17,7 @@ export const STATUSES = new Set(['draft', 'published', 'archived']);
 
 export const DEVICE_ID_MAX_LEN = 128; // 對齊 DB CHECK
 export const TEXT_RESPONSE_MAX_LEN = 2000;
+export const OTHER_TEXT_MAX_LEN = 500; // survey「其他」選項自由填寫上限(對齊前端 AnnouncementSurveyChip)
 export const TITLE_MAX_LEN = 200;
 export const BODY_MAX_LEN = 10000;
 
@@ -189,6 +190,10 @@ export function validateResponseAgainstAnnouncement(announcement, input) {
             }
             if (seen.has(oid)) return { ok: false, error: 'duplicate_option' };
             seen.add(oid);
+            // poll 不支援「其他」自由填寫(choices 原封存 DB,不擋會被塞任意欄位)
+            if (c && typeof c === 'object' && c.other_text !== undefined) {
+                return { ok: false, error: 'invalid_other_text' };
+            }
         }
         const multi = payload?.multi_select === true;
         if (!multi && choices.length > 1) return { ok: false, error: 'multi_select_disabled' };
@@ -218,12 +223,33 @@ export function validateResponseAgainstAnnouncement(announcement, input) {
                 const validIds = new Set(
                     (q.options || []).map((o) => o?.id).filter((s) => typeof s === 'string'),
                 );
+                const seenIds = new Set();
                 for (const oid of ids) {
                     if (typeof oid !== 'string' || !validIds.has(oid)) {
                         return { ok: false, error: 'invalid_option_id' };
                     }
+                    // 重複 option_id 會讓統計灌票(poll 分支已防,survey 也要)
+                    if (seenIds.has(oid)) return { ok: false, error: 'duplicate_option' };
+                    seenIds.add(oid);
                 }
                 if (qType === 'single' && ids.length > 1) return { ok: false, error: 'single_select_only' };
+                // 「其他」選項:勾了 is_other 選項就必須帶非空 other_text;沒勾就不准帶
+                const otherIds = new Set(
+                    (q.options || [])
+                        .filter((o) => o?.is_other === true && typeof o?.id === 'string')
+                        .map((o) => o.id),
+                );
+                const otherSelected = ids.some((oid) => otherIds.has(oid));
+                if (otherSelected) {
+                    if (typeof c.other_text !== 'string' || c.other_text.trim().length === 0) {
+                        return { ok: false, error: 'other_text_required' };
+                    }
+                    if (c.other_text.length > OTHER_TEXT_MAX_LEN) {
+                        return { ok: false, error: 'other_text_too_long' };
+                    }
+                } else if (c.other_text !== undefined) {
+                    return { ok: false, error: 'invalid_other_text' };
+                }
             } else if (qType === 'text') {
                 if (typeof c.text !== 'string' || c.text.trim().length === 0) {
                     return { ok: false, error: 'text_required' };
@@ -231,6 +257,8 @@ export function validateResponseAgainstAnnouncement(announcement, input) {
                 if (c.text.length > TEXT_RESPONSE_MAX_LEN) {
                     return { ok: false, error: 'text_too_long' };
                 }
+                // text 題不接受 other_text(choices 原封存 DB,不擋會被塞任意大小的欄位)
+                if (c.other_text !== undefined) return { ok: false, error: 'invalid_other_text' };
             } else {
                 return { ok: false, error: 'invalid_question_type' };
             }
@@ -312,6 +340,8 @@ export function summarizePoll(responses, options) {
 
 /**
  * 統計 survey 結果（option count；text 題目只回 count，內容不公開）。
+ * 注意:「其他」選項的 other_text 同樣刻意不進 public 統計(隱私),
+ * 只有 admin 端(AnnouncementResultsDialog 前端彙整 raw responses)看得到內容。
  * @param {Array<{choices: any, text_response: string|null}>} responses
  * @param {Array<{id: string, label?: string, type: string, options?: Array<{id, label?}>}>} questions
  * @returns {{ total: number, questions: Array<Object> }}
