@@ -70,17 +70,21 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
         return stream.displayName || stream.channelId || 'Unknown';
     }, [stream.displayName, stream.channelId, effectiveVolume, effectiveMuted]);
 
+    const isChatWindow = windowType === 'chat';
+
     return (
-        <div className="w-full h-full relative bg-slate-900 group">
-            {/* Floating Pill-Shaped Header (matching WindowHeader style) */}
+        <div className={cn("w-full h-full relative bg-slate-900 group", isChatWindow && "flex flex-col")}>
+            {/* Stream windows keep floating controls; chat windows reserve space so Twitch UI is never covered. */}
             <div
+                data-window-toolbar={windowType}
                 className={cn(
-                    "absolute top-2 left-1/2 -translate-x-1/2 z-[60]",
                     "flex items-center gap-1 p-1 pl-3 pr-1",
                     "bg-black/80 backdrop-blur-md rounded-full",
                     "border border-white/10 shadow-lg",
                     "transition-opacity select-none",
-                    "opacity-0 group-hover:opacity-100",
+                    isChatWindow
+                        ? "relative z-10 m-1 mb-0 h-8 shrink-0 opacity-100 rounded-md"
+                        : "absolute top-2 left-1/2 -translate-x-1/2 z-[60] opacity-0 group-hover:opacity-100",
                     isDragging && "opacity-100 bg-purple-900/80 cursor-grabbing"
                 )}
                 {...dragHandlers}
@@ -120,10 +124,10 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
 
             {/* Stream Content - fills entire area */}
             <div
-                className="w-full h-full overflow-hidden"
+                className={cn("w-full overflow-hidden", isChatWindow ? "flex-1 min-h-0" : "h-full")}
                 style={{ pointerEvents: isDragging || isResizing ? 'none' : 'auto' }}
             >
-                {windowType === 'chat' ? (
+                {isChatWindow ? (
                     <StreamChat
                         key={`chat-${reloadKey}`}
                         platform={stream.platform}

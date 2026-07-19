@@ -2,6 +2,8 @@ const versionHistory = {
   'title': 'Version History',
   'subtitle': 'MultiStream Hub Update History',
   'latest': 'Latest',
+  'v3.3.1.date': '2026-07-19',
+  'v3.3.1.chatToolbarNoOverlay': 'Fixed an issue where the chat window toolbar floated on top of the chat content and covered the Twitch chat input box and buttons. The chat window toolbar now occupies its own space and no longer blocks the chat UI (the floating toolbar on stream windows is unchanged)',
   'v3.3.0.date': '2026-07-06',
   'v3.3.0.dynamicIslandEdgeDock': 'New Dynamic Island appearance, "Edge Dock": a small draggable arrow tab that snaps to the left or right edge of the screen, with adjustable size. Once expanded, search, add window, layout, media control and every other feature work exactly like the original Dynamic Island — switch between the two under Settings > Appearance',
   'v3.2.0.date': '2026-07-01',

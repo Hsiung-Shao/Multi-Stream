@@ -290,7 +290,7 @@ export const ChatSidebar = React.memo(function ChatSidebar({
         padding: '8px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        zIndex: 1  // 參考正式環境：確保聊天室在串流上方，但不會覆蓋控制面板（控制面板 z-index: 40）
+        zIndex: 20  // Keep chat above player iframes while staying below global controls (z-index: 40+).
       }}
     >
       {renderChatPanels()}

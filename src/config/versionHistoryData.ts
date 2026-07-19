@@ -6,6 +6,13 @@ export interface VersionData {
 
 export const versionHistoryData: VersionData[] = [
     {
+        version: 'v3.3.1',
+        dateKey: 'versionHistory:v3.3.1.date',
+        changeKeys: [
+            'versionHistory:v3.3.1.chatToolbarNoOverlay',
+        ],
+    },
+    {
         version: 'v3.3.0',
         dateKey: 'versionHistory:v3.3.0.date',
         changeKeys: [
