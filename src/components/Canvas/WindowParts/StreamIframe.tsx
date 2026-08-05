@@ -232,7 +232,9 @@ export function StreamIframe({
             await apiLoader.loadYouTubePlayerApi();
         }
 
-        new window.YT.Player(target, {
+        // 立即存入 ref：若在 onReady 之前就卸載，safeDestroy 仍拿得到實例可清理，
+        // 否則播放器會留在 DOM 外持續播放（洩漏）。onReady 會再以 event.target 覆寫。
+        playerRef.current = new window.YT.Player(target, {
             videoId: streamData.videoId,
             width: '100%',
             height: '100%',

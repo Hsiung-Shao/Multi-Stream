@@ -561,7 +561,10 @@ export const useStreamStore = create<StreamStoreState>()(
 
                     // 3. Layout Handling
                     // If we are NOT in empty mode, we must reflow the layout to matches the new count.
-                    if (!shouldKeepEmpty) {
+                    //
+                    // canvas 模式例外：使用者在畫布上自己排的版面不該因為關掉一個視窗就被模板整個推翻。
+                    // 那裡改由 NewCanvasPage 的 resolveHoleFill 只讓緊鄰的視窗補上空洞，其餘維持原狀。
+                    if (!shouldKeepEmpty && state.layoutMode !== 'canvas') {
                         const streamCount = newStreams.length;
                         // Determine implied mode based on previous state content
                         // If we had any chat windows, we try to maintain 'with_chat' mode if possible/logical.
@@ -592,16 +595,15 @@ export const useStreamStore = create<StreamStoreState>()(
                         newCanvasItems = targetItems.map(target => {
                             const matchIndex = availableItems.findIndex(p => p.type === target.type && p.contentId === target.contentId);
 
+                            // 模板產生的是扁平的 { x, y, w, h }，沒有 layout 屬性；
+                            // 直接展開 target.layout 會得到 {}，把剩餘視窗的座標全部清空（畫布會整個壞掉）。
+                            const layout = target.layout || { x: target.x, y: target.y, w: target.w, h: target.h };
+
                             if (matchIndex !== -1) {
                                 const existing = availableItems[matchIndex];
                                 availableItems.splice(matchIndex, 1);
-                                return { ...existing, layout: { ...target.layout } }; // target.layout is likely valid here from fallback or template? 
-                                // Wait, template returns x,y. Fallback returns layout object.
-                                // We need the robust check here too.
+                                return { ...existing, layout: { ...layout } };
                             }
-
-                            // Re-constructing layout object carefully
-                            const layout = target.layout || { x: target.x, y: target.y, w: target.w, h: target.h };
 
                             return {
                                 ...target,

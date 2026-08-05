@@ -5,12 +5,24 @@
 
 import { memo, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { DraggableWindow, CanvasWindow, WindowRenderProps } from './DraggableWindow';
-import { calculateGridConfig, GridConfig } from './gridConfig';
+import { calculateGridConfig, GridConfig, GRID_COLS, PixelPosition } from './gridConfig';
 import { checkCollision, checkPointCollision, Rect } from './collision';
+import { resolvePushResize } from './pushResize';
 import { cn } from '../ui/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { calculateRequiredRows } from '../../utils/layoutEngine';
 import { useUIStore } from '../../store/useUIStore';
+
+/**
+ * 各類型視窗的格線尺寸限制。使用者拖出來的尺寸與推擠時能壓縮到的下限都以此為準——
+ * 兩者若各寫一份會逐漸漂移，導致推擠算出的佈局在落地時又被夾成另一個值。
+ */
+const SIZE_LIMITS = {
+    stream: { minW: 6, minH: 6, maxW: Infinity },
+    chat: { minW: 3, minH: 6, maxW: 4 },
+} as const;
+
+export const limitsOf = (w: CanvasWindow) => SIZE_LIMITS[w.type] ?? SIZE_LIMITS.stream;
 
 interface SimpleCanvasProps {
     windows: CanvasWindow[];
@@ -126,17 +138,31 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     }, [windowPositions]);
 
 
-    // Check resize collision (still returns boolean)
-    const checkResizeCollision = useCallback((
-        id: string,
-        x: number,
-        y: number,
-        width: number,
-        height: number
-    ): boolean => {
-        const rect: Rect = { x, y, width, height };
-        return checkCollision(id, rect, windowPositions) !== null;
-    }, [windowPositions]);
+    // resize 過程中鄰居的讓位預覽（只畫輪廓，放開才落地）
+    const [resizeGhosts, setResizeGhosts] = useState<Record<string, PixelPosition> | null>(null);
+
+    // 把使用者拖出來的尺寸夾進該類型視窗的合法範圍
+    const clampDesired = useCallback((w: CanvasWindow, gridW: number, gridH: number) => {
+        const { minW, minH, maxW } = limitsOf(w);
+        return { w: Math.max(minW, Math.min(maxW, gridW)), h: Math.max(minH, gridH) };
+    }, []);
+
+    const solveResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
+        const target = windows.find(w => w.id === id);
+        if (!target) return null;
+        const size = clampDesired(target, gridW, gridH);
+        return resolvePushResize(
+            windows,
+            id,
+            { x: gridX, y: gridY, w: size.w, h: size.h },
+            {
+                gridCols: GRID_COLS,
+                minSize: limitsOf,
+                // 縮小留下的空白由連鎖填補消化時，優先把空間讓給直播畫面
+                prefer: w => (w.type === 'stream' ? 1 : 0),
+            },
+        );
+    }, [windows, clampDesired]);
 
     // Handle Drag Swap Hover
     const handleSwapHover = useCallback((_sourceId: string, targetId: string | null) => {
@@ -198,28 +224,37 @@ export const SimpleCanvas = memo(function SimpleCanvas({
 
     }, [windows, onWindowUpdate]);
 
-    // Handle resize
-    const handleWindowResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
-        // Enforce constraints
-        const window = windows.find(w => w.id === id);
-        if (window) {
-            if (window.type === 'stream') {
-                gridW = Math.max(6, gridW);
-                gridH = Math.max(6, gridH);
-            } else if (window.type === 'chat') {
-                gridW = Math.max(3, Math.min(4, gridW)); // 3 <= W <= 4
-                gridH = Math.max(6, gridH);
-            }
+    // resize 拖曳中：算出鄰居讓位後的位置，但只拿來畫 ghost
+    const handleSizePreview = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
+        const solved = solveResize(id, gridX, gridY, gridW, gridH);
+        if (!solved) return;
+
+        const ghosts: Record<string, PixelPosition> = {};
+        for (const next of solved.windows) {
+            if (next.id === id) continue;
+            const before = windows.find(w => w.id === next.id);
+            if (!before) continue;
+            const moved = before.gridX !== next.gridX || before.gridY !== next.gridY
+                || before.gridW !== next.gridW || before.gridH !== next.gridH;
+            if (!moved) continue;
+            ghosts[next.id] = {
+                x: next.gridX * gridConfig.cellWidth,
+                y: next.gridY * gridConfig.cellHeight,
+                width: next.gridW * gridConfig.cellWidth,
+                height: next.gridH * gridConfig.cellHeight,
+            };
         }
 
-        const newWindows = windows.map(w => {
-            if (w.id === id) {
-                return { ...w, gridX, gridY, gridW, gridH };
-            }
-            return w;
-        });
-        onWindowUpdate(newWindows);
-    }, [windows, onWindowUpdate]);
+        setResizeGhosts(Object.keys(ghosts).length > 0 ? ghosts : null);
+    }, [solveResize, windows, gridConfig.cellWidth, gridConfig.cellHeight]);
+
+    // resize 結束：把推擠結果真正落地
+    const handleWindowResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
+        setResizeGhosts(null);
+        const solved = solveResize(id, gridX, gridY, gridW, gridH);
+        if (!solved) return;
+        onWindowUpdate(solved.windows);
+    }, [solveResize, onWindowUpdate]);
 
     return (
         <ScrollArea className={cn("h-full w-full bg-slate-950", className)}>
@@ -246,10 +281,11 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         gridConfig={gridConfig}
                         onPositionChange={handlePositionChange}
                         onSizeChange={handleWindowResize}
+                        onSizePreview={handleSizePreview}
+                        ghostRect={resizeGhosts?.[w.id] ?? null}
                         onRemove={onWindowRemove}
                         onSwapHover={handleSwapHover}
                         checkDragCollision={checkDragCollision}
-                        checkResizeCollision={checkResizeCollision}
                         isSwapTarget={dragSwapTargetId === w.id}
                         isTheaterMode={theaterWindowId === w.id}
                         onMouseEnter={() => useUIStore.getState().setHoveredWindowId(w.contentId ? w.contentId.toString() : w.id)}

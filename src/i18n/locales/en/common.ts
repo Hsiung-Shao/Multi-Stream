@@ -32,6 +32,7 @@ const common = {
   'layout.waiting_chat': 'Waiting for chat...',
   'layout.unknown_stream': 'Unknown Stream',
   'layout.chat_window': 'Chat Window',
+  'chat.popout': 'Open chat in a new window (use if you cannot send messages)',
   'layout.confirm_remove_window': 'Remove this window?',
   'layout.select_stream': 'Select Stream',
   'canvas.add_group': 'Add Empty Group',

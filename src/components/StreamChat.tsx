@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { getTwitchChatUrl, getYouTubeChatUrl } from '../utils/chatUtils';
 import { Button } from './ui/button';
 import { RefreshCw } from 'lucide-react';
+import { ChatPopoutButton } from './ChatPopoutButton';
+import { cn } from './ui/utils';
 
 interface StreamChatProps {
     platform: 'twitch' | 'youtube';
@@ -9,9 +11,12 @@ interface StreamChatProps {
     videoId?: string;
     className?: string; // For layout/sizing
     theme?: 'light' | 'dark';
+    // 自帶的迷你工具列（目前只放「另開視窗」）。呼叫端若已有自己的視窗工具列，
+    // 傳 false 改把 ChatPopoutButton 併進該工具列，避免疊兩條 bar。
+    showToolbar?: boolean;
 }
 
-export function StreamChat({ platform, channelId, videoId, className, theme }: StreamChatProps) {
+export function StreamChat({ platform, channelId, videoId, className, theme, showToolbar = true }: StreamChatProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [retryCount, setRetryCount] = useState(0);
     const [isError, setIsError] = useState(false);
@@ -97,14 +102,28 @@ export function StreamChat({ platform, channelId, videoId, className, theme }: S
         );
     }
 
-    return (
+    const iframe = (
         <iframe
             ref={iframeRef}
             key={`${loadKey}-${theme}`} // Force recreation on reload or theme change
             src={src}
-            className={`w-full h-full border-0 ${className || ''}`}
+            className={showToolbar ? 'w-full flex-1 min-h-0 border-0' : `w-full h-full border-0 ${className || ''}`}
             title={`chat-${platform}-${channelId}`}
-            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+            // allow-forms：送出訊息需要表單提交
+            // allow-storage-access-by-user-activation：讓 Twitch/YouTube 能透過 Storage Access API
+            //   向瀏覽器索取第三方 cookie 權限，這是 iframe 內能維持登入態（進而能發言）的前提
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-storage-access-by-user-activation"
         />
+    );
+
+    if (!showToolbar) return iframe;
+
+    return (
+        <div className={cn('w-full h-full flex flex-col bg-black', className)}>
+            <div className="flex h-7 shrink-0 items-center justify-end gap-1 border-b border-white/10 bg-black/80 px-1">
+                <ChatPopoutButton platform={platform} channelId={channelId} videoId={videoId} />
+            </div>
+            {iframe}
+        </div>
     );
 }

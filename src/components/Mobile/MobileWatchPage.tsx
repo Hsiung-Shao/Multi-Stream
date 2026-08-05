@@ -5,6 +5,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { Volume2, VolumeX, X, Tv, ChevronDown, ChevronUp } from 'lucide-react';
 import { Slider } from '../ui/slider';
 import { cn } from '../ui/utils';
+import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
 
 interface MobileWatchPageProps {
     isLandscape?: boolean;
@@ -22,6 +23,14 @@ export function MobileWatchPage({ isLandscape = false }: MobileWatchPageProps) {
     const [expandedStream, setExpandedStream] = useState<number | null>(null);
 
     const activeStreams = streams.filter(s => s.channelId);
+
+    // 主音量 × 個別音量。算法對齊桌機版 StreamBox 的 actualVolume / effectiveMuted，
+    // 讓兩端行為一致。改用 StreamIframe（Twitch Player API / YouTube IFrame API）之後
+    // 這個值才真的會傳到播放器——先前是純 iframe embed，滑桿完全接不到任何東西。
+    const resolveAudio = (stream: { volume?: number; isMuted?: boolean }) => {
+        const volume = masterMuted ? 0 : Math.round(((stream.volume ?? 100) / 100) * masterVolume);
+        return { volume, muted: masterMuted || (stream.isMuted ?? false) || volume === 0 };
+    };
 
     if (activeStreams.length === 0) {
         return (
@@ -68,57 +77,49 @@ export function MobileWatchPage({ isLandscape = false }: MobileWatchPageProps) {
 
                 {/* Horizontal stream grid */}
                 <div className="flex-1 min-h-0 flex gap-1 p-1 overflow-x-auto">
-                    {activeStreams.map((stream) => (
-                        <div
-                            key={stream.id}
-                            className="h-full shrink-0 flex flex-col rounded-lg overflow-hidden border border-white/5 bg-gray-900/40"
-                            style={{
-                                width: activeStreams.length === 1
-                                    ? '100%'
-                                    : activeStreams.length === 2
-                                        ? 'calc(50% - 2px)'
-                                        : 'calc(50% - 2px)',
-                                minWidth: '280px',
-                            }}
-                        >
-                            {/* Stream Embed — fills available height */}
-                            <div className="flex-1 min-h-0 relative">
-                                {stream.platform === 'twitch' ? (
-                                    <iframe
-                                        src={`https://player.twitch.tv/?channel=${stream.channelId}&parent=${window.location.hostname}&muted=false`}
-                                        className="absolute inset-0 w-full h-full border-0"
-                                        allowFullScreen
-                                        title={`twitch-${stream.channelId}`}
+                    {activeStreams.map((stream) => {
+                        const audio = resolveAudio(stream);
+                        return (
+                            <div
+                                key={stream.id}
+                                className="h-full shrink-0 flex flex-col rounded-lg overflow-hidden border border-white/5 bg-gray-900/40"
+                                style={{
+                                    width: activeStreams.length === 1
+                                        ? '100%'
+                                        : activeStreams.length === 2
+                                            ? 'calc(50% - 2px)'
+                                            : 'calc(50% - 2px)',
+                                    minWidth: '280px',
+                                }}
+                            >
+                                {/* Stream Embed — fills available height */}
+                                <div className="flex-1 min-h-0 relative">
+                                    <StreamIframe
+                                        streamData={stream}
+                                        volume={audio.volume}
+                                        isMuted={audio.muted}
                                     />
-                                ) : (
-                                    <iframe
-                                        src={`https://www.youtube.com/embed/${stream.videoId || stream.channelId}?autoplay=1&mute=0`}
-                                        className="absolute inset-0 w-full h-full border-0"
-                                        allowFullScreen
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        title={`youtube-${stream.channelId}`}
-                                    />
-                                )}
-                            </div>
+                                </div>
 
-                            {/* Compact control bar */}
-                            <div className="flex items-center gap-1.5 px-2 py-1 shrink-0">
-                                <div className={cn(
-                                    'w-1.5 h-1.5 rounded-full shrink-0',
-                                    stream.platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#FF0000]'
-                                )} />
-                                <span className="text-xs font-medium text-foreground flex-1 truncate">
-                                    {stream.displayName || stream.channelId}
-                                </span>
-                                <button
-                                    onClick={() => removeStream(stream.id)}
-                                    className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
+                                {/* Compact control bar */}
+                                <div className="flex items-center gap-1.5 px-2 py-1 shrink-0">
+                                    <div className={cn(
+                                        'w-1.5 h-1.5 rounded-full shrink-0',
+                                        stream.platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#FF0000]'
+                                    )} />
+                                    <span className="text-xs font-medium text-foreground flex-1 truncate">
+                                        {stream.displayName || stream.channelId}
+                                    </span>
+                                    <button
+                                        onClick={() => removeStream(stream.id)}
+                                        className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -153,6 +154,7 @@ export function MobileWatchPage({ isLandscape = false }: MobileWatchPageProps) {
             {/* Stream List */}
             {activeStreams.map((stream) => {
                 const isExpanded = expandedStream === stream.id;
+                const audio = resolveAudio(stream);
 
                 return (
                     <div
@@ -161,22 +163,11 @@ export function MobileWatchPage({ isLandscape = false }: MobileWatchPageProps) {
                     >
                         {/* Stream Embed */}
                         <div className="relative w-full aspect-video">
-                            {stream.platform === 'twitch' ? (
-                                <iframe
-                                    src={`https://player.twitch.tv/?channel=${stream.channelId}&parent=${window.location.hostname}&muted=false`}
-                                    className="w-full h-full border-0"
-                                    allowFullScreen
-                                    title={`twitch-${stream.channelId}`}
-                                />
-                            ) : (
-                                <iframe
-                                    src={`https://www.youtube.com/embed/${stream.videoId || stream.channelId}?autoplay=1&mute=0`}
-                                    className="w-full h-full border-0"
-                                    allowFullScreen
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    title={`youtube-${stream.channelId}`}
-                                />
-                            )}
+                            <StreamIframe
+                                streamData={stream}
+                                volume={audio.volume}
+                                isMuted={audio.muted}
+                            />
                         </div>
 
                         {/* Stream Controls Bar */}
