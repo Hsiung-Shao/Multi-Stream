@@ -32,6 +32,7 @@ const common = {
   'layout.waiting_chat': 'チャット待機中...',
   'layout.unknown_stream': '不明なストリーム',
   'layout.chat_window': 'チャットウィンドウ',
+  'chat.popout': 'チャットを別ウィンドウで開く（発言できない場合）',
   'layout.confirm_remove_window': 'このウィンドウを削除しますか？',
   'layout.select_stream': 'ストリームを選択',
   'canvas.add_group': '空のグループを追加',

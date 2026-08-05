@@ -31,6 +31,7 @@ const common = {
   'layout.waiting_chat': '等待聊天室...',
   'layout.unknown_stream': '未知串流',
   'layout.chat_window': '聊天視窗',
+  'chat.popout': '另開聊天視窗（無法發言時可用）',
   'layout.confirm_remove_window': '確定移除此視窗？',
   'layout.select_stream': '選擇串流',
   'canvas.add_group': '新增空白組',

@@ -8,6 +8,7 @@ import { GripHorizontal, X, RefreshCw } from 'lucide-react';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
 import { StreamChat } from '../StreamChat';
+import { ChatPopoutButton } from '../ChatPopoutButton';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import type { StreamData } from '../../utils/streamUtils';
@@ -99,6 +100,15 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
 
                 <Divider />
 
+                {/* 另開原生聊天室：第三方 cookie 被封鎖時 iframe 內無法發言的逃生口 */}
+                {isChatWindow && (
+                    <ChatPopoutButton
+                        platform={stream.platform}
+                        channelId={stream.channelId}
+                        videoId={stream.videoId}
+                    />
+                )}
+
                 {/* Reload Button */}
                 <Button
                     variant="ghost"
@@ -134,6 +144,8 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                         channelId={stream.channelId}
                         videoId={stream.videoId}
                         theme="dark"
+                        // 這個視窗已有自己的工具列（上方），popout 按鈕併在那裡，不要再疊一條
+                        showToolbar={false}
                     />
                 ) : (
                     <StreamIframe

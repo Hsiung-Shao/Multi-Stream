@@ -32,6 +32,7 @@ const common = {
   'layout.waiting_chat': '채팅 대기 중...',
   'layout.unknown_stream': '알 수 없는 스트림',
   'layout.chat_window': '채팅 창',
+  'chat.popout': '채팅을 새 창에서 열기 (메시지를 보낼 수 없을 때)',
   'layout.confirm_remove_window': '이 창을 제거하시겠습니까?',
   'layout.select_stream': '스트림 선택',
   'canvas.add_group': '빈 그룹 추가',

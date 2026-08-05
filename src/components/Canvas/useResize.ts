@@ -29,7 +29,8 @@ interface UseResizeOptions {
     minGridW?: number;
     minGridH?: number;
     onResizeEnd: (x: number, y: number, width: number, height: number) => void;
-    checkCollision?: (x: number, y: number, width: number, height: number) => boolean;
+    /** 拖曳過程中回報目前尺寸，供上層預覽鄰居讓位後的位置 */
+    onResizePreview?: (x: number, y: number, width: number, height: number) => void;
 }
 
 export function useResize(options: UseResizeOptions) {
@@ -43,7 +44,7 @@ export function useResize(options: UseResizeOptions) {
         minGridW = 4,
         minGridH = 3,
         onResizeEnd,
-        checkCollision
+        onResizePreview
     } = options;
 
     const [size, setSize] = useState({ width: currentWidth, height: currentHeight });
@@ -161,13 +162,12 @@ export function useResize(options: UseResizeOptions) {
                 newWidth = Math.min(newWidth, maxWidth);
                 newHeight = Math.min(newHeight, maxHeight);
 
-                // Check collision if provided
-                if (checkCollision && checkCollision(newX, newY, newWidth, newHeight)) {
-                    return;
-                }
-
+                // 這裡刻意不再偵測與鄰居的碰撞。舊版一碰到就整個 return，視窗完全不動也沒有
+                // 任何回饋；在滿版格線佈局下所有格子彼此緊貼，等於永遠拉不大。
+                // 讓位改由上層的 resolvePushResize 解算，這裡只負責跟手與夾住畫布邊界。
                 setSize({ width: newWidth, height: newHeight });
                 setPosition({ x: newX, y: newY });
+                onResizePreview?.(newX, newY, newWidth, newHeight);
             });
         };
 
@@ -194,7 +194,7 @@ export function useResize(options: UseResizeOptions) {
             onPointerUp: handlePointerUp,
             onPointerCancel: handlePointerUp
         };
-    }, [cellWidth, cellHeight, currentX, currentY, currentWidth, currentHeight, minGridW, minGridH, checkCollision, onResizeEnd, position, size]);
+    }, [cellWidth, cellHeight, currentX, currentY, currentWidth, currentHeight, minGridW, minGridH, onResizePreview, onResizeEnd, position, size]);
 
     // Update size and position when props change
     // CRITICAL: Use useEffect to avoid setState during render phase (causes infinite re-render)

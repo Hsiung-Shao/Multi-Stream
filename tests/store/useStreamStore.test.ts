@@ -121,6 +121,47 @@ describe('useStreamStore', () => {
         });
     });
 
+    describe('關閉視窗後的 canvas 佈局', () => {
+        const threeStreams = [
+            { id: 1, platform: 'twitch' as const, channelId: 'a', videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false },
+            { id: 2, platform: 'twitch' as const, channelId: 'b', videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false },
+            { id: 3, platform: 'twitch' as const, channelId: 'c', videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false },
+        ];
+        const threeItems = [
+            { i: 'w1', type: 'stream' as const, contentId: 1, layout: { x: 0, y: 0, w: 8, h: 24 } },
+            { i: 'w2', type: 'stream' as const, contentId: 2, layout: { x: 8, y: 0, w: 8, h: 24 } },
+            { i: 'w3', type: 'stream' as const, contentId: 3, layout: { x: 16, y: 0, w: 8, h: 24 } },
+        ];
+
+        it('canvas 模式不套模板重排，保留使用者自己排的版面', () => {
+            useStreamStore.setState({ streams: threeStreams, canvasItems: threeItems, layoutMode: 'canvas' });
+
+            useStreamStore.getState().removeStream(2, true);
+
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.map(i => i.i)).toEqual(['w1', 'w3']);
+            // 其餘視窗維持原座標，空洞留給 NewCanvasPage 的 resolveHoleFill 處理
+            expect(items.find(i => i.i === 'w1')!.layout).toEqual({ x: 0, y: 0, w: 8, h: 24 });
+            expect(items.find(i => i.i === 'w3')!.layout).toEqual({ x: 16, y: 0, w: 8, h: 24 });
+        });
+
+        it('非 canvas 模式套用模板時，layout 不得被清成空物件', () => {
+            useStreamStore.setState({ streams: threeStreams, canvasItems: threeItems, layoutMode: 'auto' });
+
+            useStreamStore.getState().removeStream(2, true);
+
+            // 模板產生的是扁平的 {x,y,w,h}，展開 target.layout 會得到 {} 讓整個畫布壞掉
+            for (const item of useStreamStore.getState().canvasItems) {
+                expect(Number.isFinite(item.layout.x), `${item.i}.x`).toBe(true);
+                expect(Number.isFinite(item.layout.y), `${item.i}.y`).toBe(true);
+                expect(Number.isFinite(item.layout.w), `${item.i}.w`).toBe(true);
+                expect(Number.isFinite(item.layout.h), `${item.i}.h`).toBe(true);
+                expect(item.layout.w).toBeGreaterThan(0);
+                expect(item.layout.h).toBeGreaterThan(0);
+            }
+        });
+    });
+
     describe('Layout Management', () => {
         it('should change layout', () => {
             useStreamStore.getState().setLayout(4); // Use number for layout type according to updated interface/state?

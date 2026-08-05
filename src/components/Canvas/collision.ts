@@ -51,44 +51,6 @@ export function checkCollision(
 }
 
 /**
- * Find the nearest valid position that doesn't collide
- * Returns the original position if valid, or adjusted position if collision
- */
-export function findValidPosition(
-    targetId: string,
-    desiredRect: Rect,
-    originalRect: Rect,
-    allWindows: Array<{ id: string; position: PixelPosition }>
-): Rect {
-    // If no collision, return desired position
-    if (!checkCollision(targetId, desiredRect, allWindows)) {
-        return desiredRect;
-    }
-
-    // Return original position if collision detected
-    // This prevents the window from moving to an invalid position
-    return originalRect;
-}
-
-/**
- * Check if resize would cause collision
- */
-export function checkResizeCollision(
-    targetId: string,
-    newSize: { width: number; height: number },
-    currentPosition: { x: number; y: number },
-    allWindows: Array<{ id: string; position: PixelPosition }>
-): boolean {
-    const newRect: Rect = {
-        x: currentPosition.x,
-        y: currentPosition.y,
-        width: newSize.width,
-        height: newSize.height
-    };
-
-    return checkCollision(targetId, newRect, allWindows) !== null;
-}
-/**
  * Check if a point is inside a rectangle
  */
 export function isPointInRect(point: { x: number; y: number }, rect: Rect): boolean {

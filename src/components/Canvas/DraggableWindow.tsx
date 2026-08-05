@@ -7,7 +7,7 @@
  * HEADERLESS VERSION - drag handlers are passed to children via render props
  */
 
-import { memo, useCallback, useMemo, ReactNode, useEffect } from 'react';
+import { memo, useCallback, useMemo, useRef, ReactNode, useEffect } from 'react';
 import { useDrag } from './useDrag';
 import { useResize } from './useResize';
 import { GridConfig, PixelPosition } from './gridConfig';
@@ -49,7 +49,10 @@ interface DraggableWindowProps {
     onRemove: (id: string) => void;
     onSwapHover: (sourceId: string, targetId: string | null) => void;
     checkDragCollision: (id: string, x: number, y: number, width: number, height: number, screenX?: number, screenY?: number) => string | null;
-    checkResizeCollision: (id: string, x: number, y: number, width: number, height: number) => boolean;
+    /** resize 拖曳中回報目前格線尺寸，讓上層算出鄰居的讓位預覽 */
+    onSizePreview?: (id: string, gridX: number, gridY: number, gridW: number, gridH: number) => void;
+    /** 本視窗被推擠後的預期落點（像素）。resize 進行中才有值，用來畫 ghost */
+    ghostRect?: PixelPosition | null;
     isSwapTarget?: boolean;
     isTheaterMode?: boolean;
     onMouseEnter?: () => void;
@@ -65,7 +68,8 @@ export const DraggableWindow = memo(function DraggableWindow({
     onRemove,
     onSwapHover,
     checkDragCollision,
-    checkResizeCollision,
+    onSizePreview,
+    ghostRect,
     isSwapTarget,
     isTheaterMode,
     onMouseEnter,
@@ -86,10 +90,21 @@ export const DraggableWindow = memo(function DraggableWindow({
         return checkDragCollision(window.id, x, y, pixelPos.width, pixelPos.height, screenX, screenY);
     }, [window.id, pixelPos.width, pixelPos.height, checkDragCollision]);
 
-    // Resize collision checker
-    const resizeCollisionCheck = useCallback((x: number, y: number, width: number, height: number) => {
-        return checkResizeCollision(window.id, x, y, width, height);
-    }, [window.id, checkResizeCollision]);
+    // resize 過程中回報格線尺寸給上層算讓位預覽。
+    // 由於已 snap 到格線，實際變動遠少於 pointermove 次數，這裡再去重一次，
+    // 避免每一幀都觸發上層 setState 而重繪整個畫布。
+    const lastPreviewRef = useRef('');
+    const handleResizePreview = useCallback((x: number, y: number, width: number, height: number) => {
+        if (!onSizePreview) return;
+        const gridX = Math.round(x / cellWidth);
+        const gridY = Math.round(y / cellHeight);
+        const gridW = Math.round(width / cellWidth);
+        const gridH = Math.round(height / cellHeight);
+        const key = `${gridX},${gridY},${gridW},${gridH}`;
+        if (key === lastPreviewRef.current) return;
+        lastPreviewRef.current = key;
+        onSizePreview(window.id, gridX, gridY, gridW, gridH);
+    }, [window.id, cellWidth, cellHeight, onSizePreview]);
 
     // Handle drag end - convert pixels back to grid
     const handleDragEnd = useCallback((x: number, y: number, collisionId: string | null) => {
@@ -107,6 +122,7 @@ export const DraggableWindow = memo(function DraggableWindow({
         const gridY = Math.round(y / cellHeight);
         const gridW = Math.round(width / cellWidth);
         const gridH = Math.round(height / cellHeight);
+        lastPreviewRef.current = '';
         onSizeChange(window.id, gridX, gridY, gridW, gridH);
     }, [window.id, cellWidth, cellHeight, onSizeChange]);
 
@@ -139,7 +155,7 @@ export const DraggableWindow = memo(function DraggableWindow({
         currentX: pixelPos.x,
         currentY: pixelPos.y,
         onResizeEnd: handleResizeEnd,
-        checkCollision: resizeCollisionCheck
+        onResizePreview: handleResizePreview
     });
 
     // Compute actual display position (use resize position when resizing)
@@ -183,6 +199,21 @@ export const DraggableWindow = memo(function DraggableWindow({
                         width: size.width,
                         height: size.height,
                         transition: 'transform 0.1s ease-out'
+                    }}
+                />
+            )}
+
+            {/* 讓位預覽：鄰居正在被推擠時，先畫出它將落到的位置。
+                拖曳過程中不真的搬動 iframe——每一幀重排多個直播播放器會嚴重掉幀，
+                所以只畫輪廓，放開滑鼠才落地。 */}
+            {ghostRect && (
+                <div
+                    className="absolute rounded-lg border-2 border-dashed border-blue-400/50 bg-blue-500/10 pointer-events-none z-40"
+                    style={{
+                        transform: `translate(${ghostRect.x}px, ${ghostRect.y}px)`,
+                        width: ghostRect.width,
+                        height: ghostRect.height,
+                        transition: 'transform 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out'
                     }}
                 />
             )}
