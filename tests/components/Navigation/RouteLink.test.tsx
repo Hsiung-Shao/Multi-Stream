@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RouteLink } from '../../../src/components/Navigation/RouteLink';
 import { PAGE_PATHS, pathToPage, pageToPath } from '../../../src/config/routes';
@@ -53,7 +54,7 @@ describe('RouteLink', () => {
     });
 
     it('外部 onClick 先執行；若它已 preventDefault 就不導頁', () => {
-        const onClick = vi.fn((e: React.MouseEvent<HTMLAnchorElement>) => e.preventDefault());
+        const onClick = vi.fn((e: ReactMouseEvent<HTMLAnchorElement>) => e.preventDefault());
         render(<RouteLink to="home" onClick={onClick}>首頁</RouteLink>);
         fireEvent.click(screen.getByRole('link', { name: '首頁' }), { button: 0 });
         expect(onClick).toHaveBeenCalledTimes(1);

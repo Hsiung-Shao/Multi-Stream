@@ -9,32 +9,32 @@ import type { PageType } from '../store/useUIStore';
 export type RoutePage = Exclude<PageType, 'settings' | 'not-found'>;
 
 export const PAGE_PATHS: Record<RoutePage, string> = {
-  home: '/',
-  canvas: '/canvas',
-  about: '/about',
-  instructions: '/instructions',
-  faq: '/faq',
-  privacy: '/privacy',
-  admin: '/admin',
+    home: '/',
+    canvas: '/canvas',
+    about: '/about',
+    instructions: '/instructions',
+    faq: '/faq',
+    privacy: '/privacy',
+    admin: '/admin',
 };
 
 /** 舊版靜態檔網址別名（與原 useRouter 行為完全對等，勿擴大） */
 const LEGACY_HTML_ALIASES: Record<string, RoutePage> = {
-  '/index.html': 'home',
-  '/about.html': 'about',
-  '/privacy.html': 'privacy',
+    '/index.html': 'home',
+    '/about.html': 'about',
+    '/privacy.html': 'privacy',
 };
 
 /** URL pathname → 頁面；未知路徑回 'not-found' */
 export function pathToPage(pathname: string): PageType {
-  const legacy = LEGACY_HTML_ALIASES[pathname];
-  if (legacy) return legacy;
-  const hit = (Object.keys(PAGE_PATHS) as RoutePage[]).find((p) => PAGE_PATHS[p] === pathname);
-  return hit ?? 'not-found';
+    const legacy = LEGACY_HTML_ALIASES[pathname];
+    if (legacy) return legacy;
+    const hit = (Object.keys(PAGE_PATHS) as RoutePage[]).find((p) => PAGE_PATHS[p] === pathname);
+    return hit ?? 'not-found';
 }
 
 /** 頁面 → 應同步的 URL；'not-found' 回 null 表示「不要動 URL」 */
 export function pageToPath(page: PageType): string | null {
-  if (page === 'not-found') return null;
-  return (PAGE_PATHS as Partial<Record<PageType, string>>)[page] ?? '/';
+    if (page === 'not-found') return null;
+    return (PAGE_PATHS as Partial<Record<PageType, string>>)[page] ?? '/';
 }
