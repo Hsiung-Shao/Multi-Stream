@@ -2,33 +2,17 @@ import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { logPageView, isTrackingEnabled } from '../utils/analytics';
 import { trackPageView, trackEvent } from '../utils/umami';
+import { pathToPage, pageToPath } from '../config/routes';
 
 export function useRouter() {
     const page = useUIStore(s => s.page);
     const setPage = useUIStore(s => s.setPage);
     const isFirstRender = useRef(true);
 
-    // 初始化：從 URL 設定 Page 狀態
+    // 初始化：從 URL 設定 Page 狀態（對照表見 src/config/routes.ts）
     useEffect(() => {
         const handlePopState = () => {
-            const path = window.location.pathname;
-            if (path === '/' || path === '/index.html') {
-                setPage('home');
-            } else if (path === '/about' || path === '/about.html') {
-                setPage('about');
-            } else if (path === '/privacy' || path === '/privacy.html') {
-                setPage('privacy');
-            } else if (path === '/canvas') {
-                setPage('canvas');
-            } else if (path === '/instructions') {
-                setPage('instructions');
-            } else if (path === '/faq') {
-                setPage('faq');
-            } else if (path === '/admin') {
-                setPage('admin');
-            } else {
-                setPage('not-found');
-            }
+            setPage(pathToPage(window.location.pathname));
         };
 
         // 初始執行一次
@@ -69,36 +53,9 @@ export function useRouter() {
     // 同步：當 Page 狀態改變時更新 URL
     useEffect(() => {
         const path = window.location.pathname;
-        let targetPath = '/';
-
-        switch (page) {
-            case 'home':
-                targetPath = '/';
-                break;
-            case 'about':
-                targetPath = '/about';
-                break;
-            case 'privacy':
-                targetPath = '/privacy';
-                break;
-            case 'canvas':
-                targetPath = '/canvas';
-                break;
-            case 'instructions':
-                targetPath = '/instructions';
-                break;
-            case 'faq':
-                targetPath = '/faq';
-                break;
-            case 'admin':
-                targetPath = '/admin';
-                break;
-            case 'not-found':
-                // 如果是 404，不主動改變 URL，保留使用者輸入的錯誤網址
-                return;
-            default:
-                targetPath = '/';
-        }
+        // 404 回 null：不主動改變 URL，保留使用者輸入的錯誤網址
+        const targetPath = pageToPath(page);
+        if (targetPath === null) return;
 
         // 避免重複 pushState (例如從 URL 初始化時已經是該路徑)
         // 注意：這裡簡單比對，忽略 index.html 或結尾斜線差異

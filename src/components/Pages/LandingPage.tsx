@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
+import { RouteLink } from '../Navigation/RouteLink';
 import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
 import {
     Select,
@@ -15,7 +16,6 @@ import { SEO } from '../SEO';
 
 export function LandingPage() {
     const { t, i18n } = useTranslation();
-    const setPage = useUIStore(s => s.setPage);
     const theme = useEffectiveTheme();
     const toggleTheme = useUIStore(s => s.toggleTheme);
     const openModal = useUIStore(s => s.openModal);
@@ -45,14 +45,14 @@ export function LandingPage() {
                         </span>
                     </div>
                     <nav className="flex items-center gap-1 sm:gap-2">
-                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('about')}>
-                            {t('landing.footer.about')}
+                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                            <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
                         </Button>
-                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('instructions')}>
-                            {t('landing.footer.tutorial')}
+                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                            <RouteLink to="instructions">{t('landing.footer.tutorial')}</RouteLink>
                         </Button>
-                        <Button variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm" onClick={() => setPage('faq')}>
-                            {t('landing.footer.faq')}
+                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                            <RouteLink to="faq">{t('landing.footer.faq')}</RouteLink>
                         </Button>
                         <a
                             href="https://github.com/Hsiung-Shao"
@@ -72,11 +72,8 @@ export function LandingPage() {
                         >
                             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </Button>
-                        <Button
-                            onClick={() => setPage('canvas')}
-                            className="font-semibold"
-                        >
-                            {t('landing.start_button')}
+                        <Button asChild className="font-semibold">
+                            <RouteLink to="canvas">{t('landing.start_button')}</RouteLink>
                         </Button>
                     </nav>
                 </div>
@@ -103,13 +100,14 @@ export function LandingPage() {
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 <Button
+                                    asChild
                                     size="lg"
                                     className="h-14 px-8 text-lg rounded-full group bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all hover:scale-105"
-                                    onClick={() => setPage('canvas')}
-                                    id="landing-start-btn"
                                 >
-                                    {t('landing.start_button')}
-                                    <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    <RouteLink to="canvas" id="landing-start-btn">
+                                        {t('landing.start_button')}
+                                        <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    </RouteLink>
                                 </Button>
                             </div>
                         </div>
@@ -316,12 +314,8 @@ export function LandingPage() {
                                 <AccordionTrigger>{t('landing.faq.q_brave')}</AccordionTrigger>
                                 <AccordionContent className="text-muted-foreground">
                                     {t('landing.faq.a_brave')}
-                                    <Button
-                                        variant="link"
-                                        className="px-1 h-auto text-primary"
-                                        onClick={() => setPage('faq')}
-                                    >
-                                        {t('landing.faq.brave_link')}
+                                    <Button asChild variant="link" className="px-1 h-auto text-primary">
+                                        <RouteLink to="faq">{t('landing.faq.brave_link')}</RouteLink>
                                     </Button>
                                 </AccordionContent>
                             </AccordionItem>
@@ -358,11 +352,11 @@ export function LandingPage() {
                             {t('landing.cta.desc')}
                         </p>
                         <Button
+                            asChild
                             size="lg"
                             className="h-16 px-10 text-xl rounded-full shadow-2xl shadow-primary/30 hover:scale-105 transition-transform"
-                            onClick={() => setPage('canvas')}
                         >
-                            {t('landing.start_button')}
+                            <RouteLink to="canvas">{t('landing.start_button')}</RouteLink>
                         </Button>
                     </div>
                 </section>
@@ -373,17 +367,17 @@ export function LandingPage() {
                 <div className="container mx-auto px-4 flex flex-col gap-4">
                     {/* Mobile-only nav links (hidden on sm+, shown in header there) */}
                     <div className="flex flex-wrap justify-center gap-4 sm:hidden">
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('about')}>
-                            {t('landing.footer.about')}
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                            <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
                         </Button>
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('instructions')}>
-                            {t('landing.footer.tutorial')}
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                            <RouteLink to="instructions">{t('landing.footer.tutorial')}</RouteLink>
                         </Button>
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('faq')}>
-                            {t('landing.footer.faq')}
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                            <RouteLink to="faq">{t('landing.footer.faq')}</RouteLink>
                         </Button>
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => setPage('privacy')}>
-                            {t('landing.footer.privacy')}
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                            <RouteLink to="privacy">{t('landing.footer.privacy')}</RouteLink>
                         </Button>
                         <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => openModal('feedback')}>
                             {t('navbar:feedback', '意見回饋')}

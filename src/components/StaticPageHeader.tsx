@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../store/useUIStore';
 import { useEffectiveTheme } from '../hooks/useEffectiveTheme';
 import { Button } from './ui/button';
+import { RouteLink } from './Navigation/RouteLink';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { SUPPORTED_LANGUAGES } from '../i18n/languages';
 import { logEvent } from '../utils/analytics';
@@ -21,20 +22,19 @@ interface StaticPageHeaderProps {
 
 export function StaticPageHeader({ title, analyticsCategory = 'StaticPageHeader' }: StaticPageHeaderProps) {
     const { t, i18n } = useTranslation('common');
-    const setPage = useUIStore((s) => s.setPage);
     const toggleTheme = useUIStore((s) => s.toggleTheme);
     const theme = useEffectiveTheme();
 
     return (
         <div className="sticky top-0 z-50 flex items-center justify-between gap-2 px-4 py-3 border-b border-border bg-background/80 backdrop-blur-md">
             {/* 左:返回首頁 */}
-            <button
-                onClick={() => setPage('home')}
+            <RouteLink
+                to="home"
                 className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.06] transition-colors shrink-0"
             >
                 <Home size={15} />
                 <span className="hidden sm:inline">{t('header.backHome')}</span>
-            </button>
+            </RouteLink>
 
             {/* 中:標題 — 絕對置中,避免左右兩側寬度不對稱造成偏移 */}
             <span className="hidden md:block absolute left-1/2 -translate-x-1/2 max-w-[40%] truncate text-sm font-semibold text-foreground">
@@ -71,14 +71,14 @@ export function StaticPageHeader({ title, analyticsCategory = 'StaticPageHeader'
                     {theme === 'dark' ? <Sun className="size-5" /> : <Moon className="size-5" />}
                 </Button>
 
-                <button
-                    onClick={() => setPage('canvas')}
+                <RouteLink
+                    to="canvas"
                     className="inline-flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
                 >
                     <span className="hidden sm:inline">{t('header.toCanvas')}</span>
                     <span className="sm:hidden">Canvas</span>
                     <ArrowRight size={14} />
-                </button>
+                </RouteLink>
             </div>
         </div>
     );

@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
 import { useUIStore } from '../store/useUIStore';
 import { StaticPageHeader } from './StaticPageHeader';
+import { RouteLink } from './Navigation/RouteLink';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -30,7 +31,6 @@ export function AboutPage() {
   const { t } = useTranslation(['about', 'common']);
   const tx = t as unknown as TFn;
   const openModal = useUIStore((s) => s.openModal);
-  const setPage = useUIStore((s) => s.setPage);
 
   // spotlight 三卡 — 沿用既有 feature1 / feature10 / feature12 多語系 key。
   const spotlight: { icon: LucideIcon; hue: string; title: string; desc: string }[] = [
@@ -143,7 +143,7 @@ export function AboutPage() {
         .ab-privacy-eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4ade80; margin-bottom: 6px; }
         .ab-privacy-title { font-size: 17px; font-weight: 700; margin: 0 0 8px; color: var(--foreground); }
         .ab-privacy-desc { font-size: 14.5px; color: var(--muted-foreground); margin: 0; line-height: 1.7; }
-        .ab-privacy-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; background: transparent; border: 0; padding: 0; cursor: pointer; color: #4ade80; font-family: var(--font-sans); font-size: 14px; font-weight: 600; }
+        .ab-privacy-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; background: transparent; border: 0; padding: 0; cursor: pointer; text-decoration: none; color: #4ade80; font-family: var(--font-sans); font-size: 14px; font-weight: 600; }
 
         .ab-footer { padding-top: 64px; padding-bottom: 56px; margin-top: 76px; border-top: 1px solid rgba(255,255,255,0.07); text-align: center; }
         .ab-footer-links { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; font-size: 14px; font-weight: 500; }
@@ -385,13 +385,10 @@ export function AboutPage() {
               <p className="ab-privacy-desc">
                 {tx('about:localFirstDesc', { defaultValue: '我們重視你的隱私權。你的設定與收藏資料都儲存在你的瀏覽器本地（LocalStorage 與 IndexedDB），我們不會收集能識別你個人的資料。唯一會回傳的是被加入的 YouTube 頻道 ID —— 以匿名、聚合的方式統計熱門頻道，不綁定任何使用者或裝置。' })}
               </p>
-              <button
-                className="ab-privacy-link"
-                onClick={() => setPage('privacy')}
-              >
+              <RouteLink to="privacy" className="ab-privacy-link">
                 {tx('about:privacyLinkText', { defaultValue: '詳細的隱私權政策請參閱：隱私權政策' })}
                 <ArrowRight size={15} />
-              </button>
+              </RouteLink>
             </div>
           </div>
         </section>
@@ -399,12 +396,12 @@ export function AboutPage() {
         {/* ---------- Footer ---------- */}
         <footer className="ab-footer">
           <div className="ab-footer-links">
-            <button className="ab-foot-link" onClick={() => setPage('home')}>
+            <RouteLink className="ab-foot-link" to="home">
               {tx('about:home')}
-            </button>
-            <button className="ab-foot-link" onClick={() => setPage('privacy')}>
+            </RouteLink>
+            <RouteLink className="ab-foot-link" to="privacy">
               {tx('about:privacyPolicy')}
-            </button>
+            </RouteLink>
             <button
               type="button"
               className="ab-foot-link"

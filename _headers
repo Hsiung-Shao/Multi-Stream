@@ -1,12 +1,37 @@
 # Cloudflare Pages Headers Configuration
 # 設定正確的 MIME type 和 CORS headers
+#
+# ⚠ Cloudflare _headers 語意：一個請求命中多條規則時，header 會「全部套用」；
+#   同名 header 的值會以逗號「合併」而不是覆寫（要移除上層 header 用「! Header-Name」）。
+#   因此同一個 header（例如 CSP）只能出現在一個會命中的區塊裡。
+#
+# SPA 真實路由（/、/canvas、/about …）是由 _redirects 的 `/* /index.html 200` 服務，
+# 路徑不含 .html，所以只有 /* 區塊會命中它們；/*.html 僅命中直接請求 /index.html 的情況。
 
-# 全站安全標頭（適用所有回應）
+# 全站安全標頭（適用所有回應，含 SPA 真實路由）
+#
+# CSP 觀察期（Report-Only 不會阻擋任何請求，只在瀏覽器 console 回報違規）：
+# 原強制版 CSP 只命中 /index.html、從未套用到真實路由，允許清單尚未納入 Supabase / AdSense / Umami 等
+# 後來新增的第三方；先以 Report-Only 在 preview/production 收集違規，清單補齊後再改名為
+# Content-Security-Policy 強制。已補入目前已知 host：*.supabase.co（REST/Realtime）、
+# googlesyndication / doubleclick（AdSense）、*.analytics.google.com / stats.g.doubleclick.net（GA4 區域端點）、
+# cloud.umami.is / api-gateway.umami.dev（Umami Cloud，實際 UMAMI_SCRIPT_URL 以 Cloudflare env 為準）。
+# 本站有第三方 iframe 內嵌需求，刻意不加 frame-ancestors / X-Frame-Options。
 /*
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv https://www.youtube.com https://*.youtube.com https://*.googleapis.com https://*.gstatic.com https://*.google-analytics.com https://*.googletagmanager.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://cloud.umami.is; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.googlesyndication.com; connect-src 'self' https://api.twitch.tv https://*.twitch.tv https://www.googleapis.com https://*.googleapis.com https://*.youtube.com https://*.google-analytics.com https://*.analytics.google.com https://stats.g.doubleclick.net https://*.googletagmanager.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co https://*.supabase.co wss://*.supabase.co https://*.googlesyndication.com https://*.doubleclick.net https://cloud.umami.is https://api-gateway.umami.dev; media-src 'self' https://player.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;
+
+# 後台：伺服器層 noindex（不依賴 JS 執行；前端 NotFoundPage/Admin 另有 <SEO noindex>）
+/admin
+  X-Robots-Tag: noindex, follow
+
+# Vite 產出的 hashed 資產（build/assets 只有 [name]-[hash].js/.css/.woff2，內容永不變動）
+# 與下方 /*.png 等圖片規則沒有路徑交集，不會發生 Cache-Control 合併
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
 
 # JavaScript 文件
 /*.js
@@ -18,10 +43,9 @@
   Content-Type: application/javascript; charset=utf-8
   Access-Control-Allow-Origin: *
 
-# HTML 文件
-# Content Security Policy (CSP) 已設置在 HTTP headers 中
-# Cloudflare Zaraz 會自動修改此 CSP，添加 nonce 以允許其腳本執行
-# 注意：必須在 HTTP headers 中設置 CSP，才能讓 Cloudflare Zaraz 自動處理
+# HTML 文件（僅命中直接請求 /index.html、google 驗證檔等 .html 路徑；SPA 真實路由不會進來）
+# 下方為「強制版」CSP，自上線以來只對 /index.html 直連生效；真實路由目前由上方 /* 的 Report-Only 觀察中。
+# 已驗證 Cloudflare Zaraz 不會注入 nonce，'unsafe-inline' 維持有效。
 /*.html
   Content-Type: text/html; charset=utf-8
   Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv https://www.youtube.com https://*.youtube.com https://*.googleapis.com https://*.gstatic.com https://*.google-analytics.com https://*.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://player.twitch.tv https://www.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; connect-src 'self' https://api.twitch.tv https://*.twitch.tv https://www.googleapis.com https://*.googleapis.com https://*.youtube.com https://*.google-analytics.com https://*.googletagmanager.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://cloudflareinsights.com https://ipapi.co; media-src 'self' https://player.twitch.tv https://*.twitch.tv https://www.youtube.com https://*.youtube.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;

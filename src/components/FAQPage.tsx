@@ -5,13 +5,13 @@
 
 import { useState, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUIStore } from '../store/useUIStore';
 import {
     HelpCircle, Search, X, Plus, Minus, PlugZap, Database, SearchX,
     MessageCircle, Download, ExternalLink,
 } from 'lucide-react';
 import { SEO } from './SEO';
 import { StaticPageHeader } from './StaticPageHeader';
+import { RouteLink } from './Navigation/RouteLink';
 import { BlurOrb, IconChip } from './ui/ds-primitives';
 
 const MODHEADER_URL = 'https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj';
@@ -45,7 +45,6 @@ type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 export function FAQPage() {
     const { t } = useTranslation(['faq', 'common']);
-    const setPage = useUIStore(s => s.setPage);
 
     const [query, setQuery] = useState('');
     const [activeCat, setActiveCat] = useState<string>('all');
@@ -162,7 +161,6 @@ export function FAQPage() {
             <SEO
                 title={`${tx('faq:title')} - MultiStream Hub`}
                 description={tx('faq:header_subtitle')}
-                keywords="FAQ, MultiStream Hub, help, troubleshooting, Brave, Twitch, YouTube, multistreaming"
                 url="https://multistreaming.org/faq"
                 jsonLd={{
                     '@context': 'https://schema.org',
@@ -284,9 +282,9 @@ export function FAQPage() {
                 {/* Footer */}
                 <footer className="faq-footer">
                     <div className="faq-footer-links">
-                        <button className="faq-foot-link" onClick={() => setPage('home')}>{tx('faq:foot_home', { defaultValue: '首頁' })}</button>
-                        <button className="faq-foot-link" onClick={() => setPage('about')}>{tx('faq:foot_about', { defaultValue: '關於' })}</button>
-                        <button className="faq-foot-link" onClick={() => setPage('privacy')}>{tx('faq:foot_privacy', { defaultValue: '隱私權政策' })}</button>
+                        <RouteLink className="faq-foot-link" to="home">{tx('faq:foot_home', { defaultValue: '首頁' })}</RouteLink>
+                        <RouteLink className="faq-foot-link" to="about">{tx('faq:foot_about', { defaultValue: '關於' })}</RouteLink>
+                        <RouteLink className="faq-foot-link" to="privacy">{tx('faq:foot_privacy', { defaultValue: '隱私權政策' })}</RouteLink>
                     </div>
                     <p className="faq-copy">© 2026 MultiStream Hub. All rights reserved.</p>
                 </footer>

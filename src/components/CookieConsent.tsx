@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Cookie, X, Check, Shield } from 'lucide-react';
 import { hasConsentRecord, isTrackingEnabled, setTrackingConsent } from '../utils/analytics';
 import { initUmami } from '../utils/umami';
+import { RouteLink } from './Navigation/RouteLink';
 import { loadAdSense } from '../utils/adsense';
 
 interface CookieConsentProps {
@@ -84,12 +85,12 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
                         <p>
                             {t('cookie.description', '我們使用 Cookie 和類似技術來改善您的瀏覽體驗、分析網站流量，並提供個人化內容。點擊「接受」即表示您同意我們使用這些技術。')}
                         </p>
-                        <a
-                            href="/privacy"
+                        <RouteLink
+                            to="privacy"
                             className="text-purple-400 hover:text-purple-300 underline text-xs mt-1 inline-block"
                         >
                             {t('cookie.privacyLink', '了解更多')}
-                        </a>
+                        </RouteLink>
                     </div>
 
                     {/* 按鈕 */}

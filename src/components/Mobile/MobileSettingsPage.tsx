@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
+import { RouteLink } from '../Navigation/RouteLink';
+import type { RoutePage } from '../../config/routes';
 import { Sun, Moon, Globe, Info, FileText, HelpCircle, MessageSquareHeart, History } from 'lucide-react';
 import {
     Select,
@@ -13,7 +15,6 @@ export function MobileSettingsPage() {
     const { t, i18n } = useTranslation();
     const theme = useUIStore(s => s.theme);
     const toggleTheme = useUIStore(s => s.toggleTheme);
-    const setPage = useUIStore(s => s.setPage);
     const openModal = useUIStore(s => s.openModal);
 
     const languages = [
@@ -79,9 +80,9 @@ export function MobileSettingsPage() {
                     {t('mobile.settings.more', '更多')}
                 </h2>
                 <div className="rounded-xl bg-gray-900/50 border border-white/5 overflow-hidden divide-y divide-white/5">
-                    <SettingsLink icon={Info} label={t('landing.footer.about', '關於')} onClick={() => setPage('about')} />
-                    <SettingsLink icon={HelpCircle} label={t('landing.footer.faq', '常見問題')} onClick={() => setPage('faq')} />
-                    <SettingsLink icon={FileText} label={t('landing.footer.tutorial', '使用教學')} onClick={() => setPage('instructions')} />
+                    <SettingsLink icon={Info} label={t('landing.footer.about', '關於')} to="about" />
+                    <SettingsLink icon={HelpCircle} label={t('landing.footer.faq', '常見問題')} to="faq" />
+                    <SettingsLink icon={FileText} label={t('landing.footer.tutorial', '使用教學')} to="instructions" />
                     <SettingsLink icon={MessageSquareHeart} label={t('mobile.settings.feedback', '意見回饋')} onClick={() => openModal('feedback')} />
                     <SettingsLink icon={History} label={t('mobile.settings.version_history', '版本紀錄')} onClick={() => openModal('history')} />
                 </div>
@@ -95,15 +96,31 @@ export function MobileSettingsPage() {
     );
 }
 
-function SettingsLink({ icon: Icon, label, onClick }: { icon: typeof Info; label: string; onClick: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            className="flex items-center gap-3 w-full px-4 py-3 text-left active:bg-white/5 transition-colors"
-        >
+type SettingsLinkProps =
+    | { icon: typeof Info; label: string; to: RoutePage; onClick?: never }
+    | { icon: typeof Info; label: string; onClick: () => void; to?: never };
+
+const SETTINGS_LINK_CLASS = 'flex items-center gap-3 w-full px-4 py-3 text-left active:bg-white/5 transition-colors';
+
+/** 站內頁面用 RouteLink（真實 <a href>，爬蟲可追蹤）；開 modal 等動作維持 <button> */
+function SettingsLink({ icon: Icon, label, to, onClick }: SettingsLinkProps) {
+    const inner = (
+        <>
             <Icon className="w-5 h-5 text-muted-foreground" />
             <span className="flex-1 text-sm font-medium">{label}</span>
             <span className="text-muted-foreground/50 text-lg">›</span>
+        </>
+    );
+    if (to) {
+        return (
+            <RouteLink to={to} className={SETTINGS_LINK_CLASS}>
+                {inner}
+            </RouteLink>
+        );
+    }
+    return (
+        <button onClick={onClick} className={SETTINGS_LINK_CLASS}>
+            {inner}
         </button>
     );
 }

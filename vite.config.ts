@@ -1,15 +1,53 @@
 
 /// <reference types="vitest" />
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
+import pkg from './package.json';
+import { SEO_DEFAULT_TITLE, SEO_DEFAULT_DESCRIPTION, SEO_ROBOTS_INDEX } from './src/seo/defaults';
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/**
+ * 把 index.html 的 %SEO_*% / %APP_VERSION% / %BUILD_DATE% 佔位換成單一來源的值，
+ * 讓伺服器直出的 <title>/meta/JSON-LD 與執行期 SEO.tsx 寫入的一致（dev 與 build 都生效）。
+ * 殘留佔位直接讓 build 失敗，避免把 "%SEO_TITLE%" 部署上線。
+ */
+function seoHtmlPlugin(): Plugin {
+  const replacements: Record<string, string> = {
+    '%SEO_TITLE%': escapeHtml(SEO_DEFAULT_TITLE),
+    '%SEO_DESCRIPTION%': escapeHtml(SEO_DEFAULT_DESCRIPTION),
+    '%SEO_ROBOTS%': SEO_ROBOTS_INDEX,
+    // 兩者進 JSON-LD 字串值：semver / ISO 日期都不含需跳脫字元
+    '%APP_VERSION%': pkg.version,
+    '%BUILD_DATE%': new Date().toISOString().slice(0, 10),
+  };
+  return {
+    name: 'seo-html-placeholders',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        let out = html;
+        for (const [key, value] of Object.entries(replacements)) {
+          out = out.split(key).join(value);
+        }
+        const leftover = out.match(/%(SEO_[A-Z_]+|APP_VERSION|BUILD_DATE)%/);
+        if (leftover) {
+          throw new Error(`[seo-html-placeholders] index.html 仍有未替換的佔位 ${leftover[0]}`);
+        }
+        return out;
+      },
+    },
+  };
+}
 
 export default defineConfig({
   define: {
-    '__APP_VERSION__': JSON.stringify(process.env.npm_package_version),
+    '__APP_VERSION__': JSON.stringify(process.env.npm_package_version ?? pkg.version),
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [seoHtmlPlugin(), react(), tailwindcss()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {

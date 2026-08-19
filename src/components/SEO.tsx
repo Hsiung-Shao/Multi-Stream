@@ -1,29 +1,38 @@
 import { useLayoutEffect } from 'react';
+import {
+  SEO_DEFAULT_TITLE,
+  SEO_DEFAULT_DESCRIPTION,
+  SEO_DEFAULT_IMAGE,
+  SEO_SITE_URL,
+  SEO_ROBOTS_INDEX,
+  SEO_ROBOTS_NOINDEX,
+} from '../seo/defaults';
 
 interface SEOProps {
   title?: string;
   description?: string;
-  keywords?: string;
   image?: string;
   url?: string;
   type?: 'website' | 'article';
   locale?: string;
   jsonLd?: object;
+  /** true → robots 設為 noindex,follow 並移除 canonical（404 / admin 等不該進索引的頁面） */
+  noindex?: boolean;
 }
 
-// 預設 title 與 LandingPage 對齊，避免空 props 落到舊預設值產生雙標題
-// 任何未明確傳 title 的頁面都會用此值；新頁面建議明確傳 title
-export const DEFAULT_TITLE = 'MultiStream Hub - 免費多平台直播觀看工具 | 同時觀看 Twitch & YouTube (Free Multistreaming)';
+// 預設 title 與 index.html（build 時由 seoHtmlPlugin 注入同一常數）對齊，單一來源在 src/seo/defaults.ts
+// 保留既有 export 名稱供外部引用
+export const DEFAULT_TITLE = SEO_DEFAULT_TITLE;
 
 export function SEO({
-  title = DEFAULT_TITLE,
-  description = 'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。',
-  keywords = 'MultiStream, 多串流, Twitch, YouTube, 直播, 串流觀看, 多平台直播, 直播工具, 免費直播工具, 同時觀看多個直播, 直播整合, 聊天室整合',
-  image = 'https://multistreaming.org/icon.png',
-  url = 'https://multistreaming.org/',
+  title = SEO_DEFAULT_TITLE,
+  description = SEO_DEFAULT_DESCRIPTION,
+  image = SEO_DEFAULT_IMAGE,
+  url = `${SEO_SITE_URL}/`,
   type = 'website',
   locale = 'zh_TW',
   jsonLd,
+  noindex = false,
 }: SEOProps) {
   // 以序列化字串當依賴,避免呼叫端每次 render 傳新物件導致 effect 重跑
   const jsonLdStr = jsonLd ? JSON.stringify(jsonLd) : null;
@@ -39,7 +48,7 @@ export function SEO({
     const updateMetaTag = (property: string, content: string, isProperty = false) => {
       const selector = isProperty ? `meta[property="${property}"]` : `meta[name="${property}"]`;
       let element = document.querySelector(selector) as HTMLMetaElement;
-      
+
       if (!element) {
         element = document.createElement('meta');
         if (isProperty) {
@@ -49,14 +58,15 @@ export function SEO({
         }
         document.head.appendChild(element);
       }
-      
+
       element.setAttribute('content', content);
     };
 
     // 更新 Primary Meta Tags
     updateMetaTag('title', title);
     updateMetaTag('description', description);
-    updateMetaTag('keywords', keywords);
+    // 每個 SEO mount 都重新斷言 robots：從 404/admin（noindex）切回一般頁面時會自動恢復 index
+    updateMetaTag('robots', noindex ? SEO_ROBOTS_NOINDEX : SEO_ROBOTS_INDEX);
 
     // 更新 Open Graph Tags
     updateMetaTag('og:type', type, true);
@@ -73,14 +83,18 @@ export function SEO({
     updateMetaTag('twitter:description', description);
     updateMetaTag('twitter:image', image);
 
-    // 更新 canonical URL
-    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
-    if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.setAttribute('rel', 'canonical');
-      document.head.appendChild(canonical);
+    // 更新 canonical URL（noindex 頁面不該宣告 canonical，否則軟 404 會把權重導向首頁）
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (noindex) {
+      canonical?.remove();
+    } else {
+      if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonical);
+      }
+      canonical.setAttribute('href', url);
     }
-    canonical.setAttribute('href', url);
 
     // 更新或移除 JSON-LD 結構化資料(無 jsonLd 時清掉,避免跨頁殘留)
     let ldScript = document.querySelector('script[data-seo-jsonld]') as HTMLScriptElement | null;
@@ -95,10 +109,7 @@ export function SEO({
     } else if (ldScript) {
       ldScript.remove();
     }
-  }, [title, description, keywords, image, url, type, locale, jsonLdStr]);
+  }, [title, description, image, url, type, locale, jsonLdStr, noindex]);
 
   return null; // 此組件不渲染任何內容
 }
-
-
-

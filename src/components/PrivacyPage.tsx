@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { RouteLink } from './Navigation/RouteLink';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
@@ -22,8 +23,7 @@ import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 interface PrivacyPageProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
-  onBack: () => void;
-  onNavigateToAbout?: () => void;
+  /** 站內導覽改用 <RouteLink>（真實 <a href>），不再由父層注入 callback；terms 頁尚未存在，保留可選 callback */
   onNavigateToTerms?: () => void;
 }
 
@@ -37,7 +37,7 @@ const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 const GREEN = '#10b981';
 const GREEN_LIGHT = '#4ade80';
 
-export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, onNavigateToTerms }: PrivacyPageProps) {
+export function PrivacyPage({ theme, onThemeToggle, onNavigateToTerms }: PrivacyPageProps) {
   const { t, i18n } = useTranslation(['common', 'privacy', 'about']);
   const tx = t as unknown as TFn;
   const locale = i18n.language;
@@ -288,12 +288,14 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
       <div className="relative z-10 border-b border-border bg-card/60 px-6 py-4 backdrop-blur">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Button
+            asChild
             variant="ghost"
-            onClick={onBack}
             className="text-muted-foreground hover:text-foreground hover:bg-transparent"
           >
-            <ArrowLeft className="size-4 mr-2" />
-            {tx('about:backToHome')}
+            <RouteLink to="home">
+              <ArrowLeft className="size-4 mr-2" />
+              {tx('about:backToHome')}
+            </RouteLink>
           </Button>
 
           <div className="flex items-center gap-2">
@@ -455,10 +457,8 @@ export function PrivacyPage({ theme, onThemeToggle, onBack, onNavigateToAbout, o
         {/* ---------- Footer ---------- */}
         <footer className="pv-footer">
           <div className="pv-footer-links">
-            <button className="pv-foot-link" onClick={onBack}>{tx('privacy:home')}</button>
-            {onNavigateToAbout && (
-              <button className="pv-foot-link" onClick={onNavigateToAbout}>{tx('privacy:about')}</button>
-            )}
+            <RouteLink className="pv-foot-link" to="home">{tx('privacy:home')}</RouteLink>
+            <RouteLink className="pv-foot-link" to="about">{tx('privacy:about')}</RouteLink>
             {onNavigateToTerms && (
               <button className="pv-foot-link" onClick={onNavigateToTerms}>{tx('privacy:terms')}</button>
             )}

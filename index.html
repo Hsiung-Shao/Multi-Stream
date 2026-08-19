@@ -6,21 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Content Security Policy (CSP) -->
-  <!-- CSP 已移至 _headers 文件中的 HTTP headers，讓 Cloudflare Zaraz 可以自動修改 -->
-  <!-- Cloudflare Zaraz 會自動在 HTTP headers 的 CSP 中添加 nonce，無需手動配置 -->
-  <!-- 注意：HTTP headers 中的 CSP 會覆蓋 meta 標籤中的 CSP，因此將 CSP 放在 headers 中可以讓 Zaraz 正常工作 -->
+  <!-- CSP 以 HTTP header 設定於 _headers（目前 /* 為 Report-Only 觀察期；/*.html 為強制版，僅命中 /index.html 直連）。 -->
+  <!-- 已驗證 Cloudflare Zaraz 不會在 CSP 注入 nonce，'unsafe-inline' 維持有效，下方 GA4 inline stub 不受影響。 -->
 
   <!-- Primary Meta Tags -->
-  <title>MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube</title>
-  <meta name="title" content="MultiStream Hub - 免費多平台直播串流觀看工具 | Twitch & YouTube" />
-  <meta name="description"
-    content="MultiStream Hub is a free multistreaming platform to watch Twitch & YouTube simultaneously. 支援同時觀看多個 Twitch 和 YouTube 直播。Features: Multi-view layout, Chat integration, Volume control. 無需註冊即可使用。" />
-  <meta name="keywords"
-    content="MultiStream, multistreaming, free multistream, multi stream twitch, watch 2 stream, twitch multi viewer, multi platform streaming, how to watch multiple streams, multi twitch viewer, multistream viewer, muttstream, multstream, MultiStream Hub, 多串流, Twitch, YouTube, 直播, 串流觀看, 多平台直播, 直播工具, 免費直播工具, 同時觀看多個直播" />
+  <!-- %SEO_TITLE% / %SEO_DESCRIPTION% / %SEO_ROBOTS% 由 vite.config.ts 的 seoHtmlPlugin 在 build/dev 時
+       以 src/seo/defaults.ts 的常數替換，與執行期 SEO.tsx 寫入的值保持單一來源。 -->
+  <title>%SEO_TITLE%</title>
+  <meta name="title" content="%SEO_TITLE%" />
+  <meta name="description" content="%SEO_DESCRIPTION%" />
   <meta name="author" content="Hsiung-Shao" />
-  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-  <meta name="language" content="繁體中文" />
-  <meta name="revisit-after" content="7 days" />
+  <meta name="robots" content="%SEO_ROBOTS%" />
 
   <!-- Canonical URL -->
   <link rel="canonical" href="https://multistreaming.org/" />
@@ -28,11 +24,11 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://multistreaming.org/" />
-  <meta property="og:title" content="MultiStream Hub - 免費多平台直播串流觀看工具" />
-  <meta property="og:description" content="支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能，完全免費無需註冊。" />
+  <meta property="og:title" content="%SEO_TITLE%" />
+  <meta property="og:description" content="%SEO_DESCRIPTION%" />
   <meta property="og:image" content="https://multistreaming.org/icon.png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:width" content="1024" />
+  <meta property="og:image:height" content="1024" />
   <meta property="og:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具" />
   <meta property="og:locale" content="zh_TW" />
   <meta property="og:locale:alternate" content="zh_CN" />
@@ -44,8 +40,8 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://multistreaming.org/" />
-  <meta name="twitter:title" content="MultiStream Hub - 免費多平台直播串流觀看工具" />
-  <meta name="twitter:description" content="支援同時觀看多個 Twitch 和 YouTube 直播，提供多種布局模式、聊天室整合、音量控制和收藏功能，完全免費無需註冊。" />
+  <meta name="twitter:title" content="%SEO_TITLE%" />
+  <meta name="twitter:description" content="%SEO_DESCRIPTION%" />
   <meta name="twitter:image" content="https://multistreaming.org/icon.png" />
   <meta name="twitter:image:alt" content="MultiStream Hub - 多平台直播串流觀看工具" />
 
@@ -55,15 +51,11 @@
   <link rel="shortcut icon" type="image/png" href="/logo.png">
   <link rel="apple-touch-icon" href="/logo.png">
 
-  <!-- Alternate Languages (Hreflang) -->
-  <link rel="alternate" hreflang="zh-TW" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="zh-CN" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="en" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="ja" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="ko" href="https://multistreaming.org/" />
-  <link rel="alternate" hreflang="x-default" href="https://multistreaming.org/" />
+  <!-- Hreflang 已移除：本站多語系為 client-side 切換、沒有語言專屬 URL，
+       全部 alternate 指向同一網址屬無效標記；待導入 URL-based locale 後再依各語言 URL 重加。 -->
 
-  <!-- Structured Data (JSON-LD) -->
+  <!-- Structured Data (JSON-LD)
+       softwareVersion / dateModified 由 seoHtmlPlugin 於 build 時注入（package.json version / 建置日期） -->
   <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -79,11 +71,7 @@
           "price": "0",
           "priceCurrency": "USD"
         },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "5",
-          "ratingCount": "1"
-        },
+        "isAccessibleForFree": true,
         "creator": {
           "@type": "Person",
           "name": "Hsiung-Shao"
@@ -99,10 +87,9 @@
           "XSS 防護和 CSP 安全策略",
           "SEO 優化"
         ],
-        "screenshot": "https://multistreaming.org/icon.png",
-        "softwareVersion": "2.0.1",
+        "softwareVersion": "%APP_VERSION%",
         "datePublished": "2025-11-26",
-        "dateModified": "2025-01-XX",
+        "dateModified": "%BUILD_DATE%",
         "inLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"]
       }
       </script>
@@ -114,15 +101,7 @@
         "name": "MultiStream Hub",
         "url": "https://multistreaming.org/",
         "description": "免費的多平台直播串流觀看工具",
-        "inLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"],
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": {
-            "@type": "EntryPoint",
-            "urlTemplate": "https://multistreaming.org/?search={search_term_string}"
-          },
-          "query-input": "required name=search_term_string"
-        }
+        "inLanguage": ["zh-TW", "zh-CN", "en", "ja", "ko"]
       }
       </script>
 
@@ -134,7 +113,8 @@
         "url": "https://multistreaming.org/",
         "logo": "https://multistreaming.org/icon.png",
         "sameAs": [
-          "https://discord.gg/47kauArepY"
+          "https://discord.gg/47kauArepY",
+          "https://github.com/Hsiung-Shao"
         ],
         "contactPoint": {
           "@type": "ContactPoint",

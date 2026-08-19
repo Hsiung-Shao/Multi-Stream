@@ -9,6 +9,7 @@ import { MobileFavoritesPage } from './MobileFavoritesPage';
 import { MobileSettingsPage } from './MobileSettingsPage';
 import { MobileAddStreamModal } from './MobileAddStreamModal';
 import { SEO } from '../SEO';
+import { SEO_CANVAS } from '../../seo/defaults';
 import { Toaster } from '../ui/sonner';
 import { GlobalLiveStatusChecker } from '../../features/favorites/components/GlobalLiveStatusChecker';
 import { CookieConsent } from '../CookieConsent';
@@ -47,7 +48,8 @@ export function MobileApp() {
 
     return (
         <div className="h-dvh bg-background text-foreground flex flex-col overflow-hidden">
-            <SEO />
+            {/* 手機版 /canvas 也要有正確的 title/canonical，不能落到首頁預設值 */}
+            <SEO title={SEO_CANVAS.title} description={SEO_CANVAS.description} url={SEO_CANVAS.url} />
 
             {/* Mobile Header — hidden in landscape to save vertical space */}
             {showHeader && (
