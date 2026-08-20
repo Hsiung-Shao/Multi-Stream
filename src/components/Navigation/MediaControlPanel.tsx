@@ -295,7 +295,10 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave, variant = 'popover
                                 items={streams.map(s => s.id.toString())}
                                 strategy={verticalListSortingStrategy}
                             >
-                                <ScrollArea className="h-[300px] pr-2">
+                                {/* [&>div>div]:!block:Radix ScrollArea viewport 內預設 display:table 的子層會被超長串流標題撐寬,
+                                    導致整份清單寬=最長標題寬、truncate 失效,右側控制鈕與音量%被推出面板外;
+                                    改 block 讓列寬=viewport 寬(同 FavoritesManagerMain 的修法) */}
+                                <ScrollArea className="h-[300px] pr-2 [&>div>div]:!block">
                                     <div className="space-y-2">
                                         {streams.map((stream, index) => (
                                             <SortableStreamItem
