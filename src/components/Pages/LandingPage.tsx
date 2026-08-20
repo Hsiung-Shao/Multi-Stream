@@ -17,6 +17,7 @@ import { SEO } from '../SEO';
 
 export function LandingPage() {
     const { t, i18n } = useTranslation();
+    const tx = t as unknown as (key: string, options?: Record<string, unknown>) => string;
     const theme = useEffectiveTheme();
     const toggleTheme = useUIStore(s => s.toggleTheme);
     const openModal = useUIStore(s => s.openModal);
@@ -33,7 +34,7 @@ export function LandingPage() {
     return (
         <>
         <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden selection:bg-primary selection:text-primary-foreground">
-            <SEO title={t('seo:home.title')} description={t('seo:home.description')} />
+            <SEO title={tx('seo:home.title')} description={tx('seo:home.description')} />
             <FaqJsonLd />
 
             {/* Header */}
@@ -133,14 +134,20 @@ export function LandingPage() {
                         {/* Feature Preview / UI Mockup placeholder */}
                         {/* min-h 預留 hero mockup 空間，避免下方 features 區段 fade-in 動畫造成 layout shift（CLS） */}
                         <div className="mt-20 relative animate-fade-in-up delay-200 duration-1000 min-h-[260px] md:min-h-[400px]">
-                            <div className="relative rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl p-2 md:p-4 max-w-5xl mx-auto overflow-hidden group">
-                                <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10 h-32 bottom-0 w-full" />
-                                {/* Conceptual UI representation */}
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 opacity-80 group-hover:opacity-100 transition-opacity duration-500">
-                                    {[1, 2, 3].map((i) => (
-                                        <div key={i} className="aspect-video bg-muted/50 rounded-lg border border-white/5 animate-pulse" style={{ animationDuration: `${i * 2}s` }} />
-                                    ))}
-                                </div>
+                            <div className="relative rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl p-2 md:p-4 max-w-5xl mx-auto overflow-hidden">
+                                {/* 真實產品截圖（3 直播 + 3 聊天室）；近 LCP 元素故 eager + fetchpriority high */}
+                                <img
+                                    src="/screenshots/canvas-hero.webp"
+                                    srcSet="/screenshots/canvas-hero-800.webp 800w, /screenshots/canvas-hero.webp 1600w"
+                                    sizes="(max-width: 1024px) 100vw, 1024px"
+                                    alt={t('landing.hero_screenshot_alt', 'MultiStream Hub 畫布同時播放三個直播視窗與聊天室')}
+                                    width={1600}
+                                    height={900}
+                                    loading="eager"
+                                    decoding="async"
+                                    {...({ fetchpriority: 'high' } as Record<string, string>)}
+                                    className="w-full h-auto rounded-lg border border-white/5"
+                                />
                             </div>
                         </div>
                     </div>

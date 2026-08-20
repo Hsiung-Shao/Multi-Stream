@@ -17,7 +17,7 @@ export const SEO_DEFAULT_TITLE = 'MultiStream Hub｜免費 Twitch & YouTube 多�
 export const SEO_DEFAULT_DESCRIPTION =
   'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。';
 
-export const SEO_DEFAULT_IMAGE = `${SEO_SITE_URL}/icon.png`;
+export const SEO_DEFAULT_IMAGE = `${SEO_SITE_URL}/og-image.png`;
 
 /** 可索引頁面的 robots meta（與 index.html 靜態值一致） */
 export const SEO_ROBOTS_INDEX = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';

@@ -21,6 +21,7 @@ import { SEO_CANVAS } from '../../seo/defaults';
 
 export const NewCanvasPage = () => {
     const { t } = useTranslation();
+    const tx = t as unknown as (key: string, options?: Record<string, unknown>) => string;
     const setLayoutMode = useStreamStore(s => s.setLayoutMode);
     const islandStyle = useUIStore(s => s.islandStyle);
     const streams = useStreamStore(s => s.streams);
@@ -168,7 +169,7 @@ export const NewCanvasPage = () => {
 
     return (
         <div className="w-full h-screen bg-black overflow-hidden relative">
-            <SEO title={t('seo:canvas.title')} description={t('seo:canvas.description')} url={SEO_CANVAS.url} />
+            <SEO title={tx('seo:canvas.title')} description={tx('seo:canvas.description')} url={SEO_CANVAS.url} />
             {/* Canvas Layer */}
             <div className="absolute inset-0 z-0">
                 {windows.length === 0 && <CanvasEmptyState />}

@@ -134,6 +134,7 @@ const common = {
   'landing.footer.about': '關於我們',
   'landing.footer.privacy': '隱私權政策',
   'landing.footer.support': '支持我們',
+  'landing.hero_screenshot_alt': 'MultiStream Hub 畫布同時播放三個直播視窗與聊天室',
   // Hotkeys
   'hotkeys.title': '鍵盤快捷鍵',
   'hotkeys.subtitle': '透過鍵盤快速管理您的直播工作區',

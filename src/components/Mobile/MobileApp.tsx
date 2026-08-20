@@ -22,6 +22,7 @@ const VersionHistory = lazy(() => import('../VersionHistory').then(m => ({ defau
 
 export function MobileApp() {
     const { t } = useTranslation();
+    const tx = t as unknown as (key: string, options?: Record<string, unknown>) => string;
     const theme = useEffectiveTheme();
     const modals = useUIStore(s => s.modals);
     const closeModal = useUIStore(s => s.closeModal);
@@ -49,7 +50,7 @@ export function MobileApp() {
     return (
         <div className="h-dvh bg-background text-foreground flex flex-col overflow-hidden">
             {/* 手機版 /canvas 也要有正確的 title/canonical，不能落到首頁預設值 */}
-            <SEO title={t('seo:canvas.title')} description={t('seo:canvas.description')} url={SEO_CANVAS.url} />
+            <SEO title={tx('seo:canvas.title')} description={tx('seo:canvas.description')} url={SEO_CANVAS.url} />
 
             {/* Mobile Header — hidden in landscape to save vertical space */}
             {showHeader && (

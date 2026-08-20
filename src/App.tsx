@@ -45,6 +45,8 @@ const DeferredGlobals = lazy(() => import('./components/DeferredGlobals'));
 export default function App() {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
+  // i18next 此版型別不接受 'ns:key' 前綴字串，沿用專案慣例（InstructionsPage/FAQPage）以 cast 繞過
+  const tx = t as unknown as (key: string, options?: Record<string, unknown>) => string;
 
   // 短暫播放回復:待使用者確認是否恢復的上次工作階段
   const [pendingRestore, setPendingRestore] = useState<{
@@ -170,8 +172,8 @@ export default function App() {
         return (
           <>
             <SEO
-              title={t('seo:about.title')}
-              description={t('seo:about.description')}
+              title={tx('seo:about.title')}
+              description={tx('seo:about.description')}
               url="https://multistreaming.org/about"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
@@ -183,8 +185,8 @@ export default function App() {
         return (
           <>
             <SEO
-              title={t('seo:privacy.title')}
-              description={t('seo:privacy.description')}
+              title={tx('seo:privacy.title')}
+              description={tx('seo:privacy.description')}
               url="https://multistreaming.org/privacy"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
@@ -205,8 +207,8 @@ export default function App() {
         return (
           <>
             <SEO
-              title={t('seo:support.title')}
-              description={t('seo:support.description')}
+              title={tx('seo:support.title')}
+              description={tx('seo:support.description')}
               url="https://multistreaming.org/support"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>

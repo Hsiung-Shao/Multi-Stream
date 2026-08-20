@@ -79,6 +79,11 @@
   Content-Type: image/svg+xml
   Cache-Control: public, max-age=31536000, immutable
 
+# WebP（og/hero 截圖可能重製，不用 immutable，一週快取）
+/*.webp
+  Content-Type: image/webp
+  Cache-Control: public, max-age=604800
+
 # 圖標文件
 /icon.png
   Content-Type: image/png
