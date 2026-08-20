@@ -5,6 +5,8 @@ const tutorial = {
 
   'hero.title': '打造您的極致觀看體驗',
   'hero.subtitle': 'MultiStream Hub 是一個專爲多工處理設計的直播儀表板。整合 Twitch 與 YouTube，讓您在單一視窗中掌控全局。',
+  'article.quickStart.title': '快速上手指南：從新增串流到自動排版',
+  'article.quickStart.excerpt': '第一次使用 MultiStream Hub？本指南帶您從貼上網址新增第一個直播開始，一步步學會搜尋頻道、切換佈局與整合聊天室。',
   'hero.start': '立即開始',
   'hero.github': 'GitHub',
 

@@ -84,6 +84,7 @@ const common = {
   'empty_state.click_menu_hint': '시작하려면 아래의 다이내믹 아일랜드 버튼을 클릭하세요',
   'landing.hero_title': '나만의 스트리밍 대시보드',
   'landing.hero_subtitle': 'e스포츠 멀티뷰 관전부터 버튜버(VTuber) 대형 합방 기획까지, MultiStream Hub는 최고의 시청 경험을 제공합니다. Twitch와 YouTube 스트림을 완벽하게 통합하고, 실시간 채팅 및 사용자 정의 레이아웃으로 자신만의 대시보드를 구축하세요.',
+  'landing.hero_definition': 'MultiStream Hub는 무료로 회원가입이나 설치 없이 사용할 수 있는 웹 기반 멀티 스트리밍 시청 도구로, Twitch와 YouTube 라이브 방송을 한 화면에서 최대 16개까지 동시에 시청할 수 있습니다. URL 붙여넣기나 채널 검색으로 방송을 빠르게 추가하고, 자동 그리드 레이아웃 또는 자유롭게 배치·크기 조절이 가능한 캔버스 모드로 정리하세요. 여러 채팅창 동시 표시와 방송별 개별 음량 조절, 즐겨찾기와 방송 시작 감지 기능을 갖추었으며 번체 중국어·영어·일본어·한국어·간체 중국어 5개 언어를 지원합니다. e스포츠 다중 시점 관전과 버튜버 합방 시청에 최적화된 방송 대시보드입니다.',
   'landing.start_button': '지금 시작하기',
   'landing.feature.multiview': '멀티 뷰',
   'landing.feature.multiview_desc': '여러 Twitch 및 YouTube 스트림 동시 재생 지원. PIP(Picture-in-Picture) 모드와 유연한 크기 조절로, 좋아하는 스트리머의 순간을 놓치지 마세요.',

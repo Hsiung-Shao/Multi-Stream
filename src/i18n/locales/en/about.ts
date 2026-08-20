@@ -1,7 +1,8 @@
 const about = {
   'backToHome': '← Back to Home',
   'title': 'About MultiStream Hub',
-  'intro': 'MultiStream Hub is a completely free multi-platform live streaming viewing tool designed for users who love watching multiple streams simultaneously. We support Twitch and YouTube, two major streaming platforms, allowing you to watch multiple live streams on the same page without switching between multiple tabs.',
+  'heroTitle': 'MultiStream Hub — Free Multi-Stream Viewer for Twitch & YouTube',
+  'intro': 'MultiStream Hub is a completely free, no-registration web tool for watching multiple live streams at once. It supports Twitch and YouTube, the two major streaming platforms, letting you watch up to 16 streams on a single page without switching between tabs. Built-in features include chat integration, automatic and free-form layout modes, per-stream volume control, a favorites system, and five interface languages.',
   'intro2': 'This tool is independently developed and maintained by individual developers, completely free and open to everyone. No registration or payment required. Feel free to share it with your friends!',
   'websiteIntro': 'Website Introduction',
   'featuresTitle': 'Main Features',

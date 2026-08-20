@@ -1,7 +1,8 @@
 const about = {
   'backToHome': '← 返回首页',
   'title': '关于 MultiStream Hub',
-  'intro': 'MultiStream Hub 是一个完全免费的多平台直播串流观看工具，专为喜爱同时观看多个直播的用户设计。我们支持 Twitch 和 YouTube 两大主流直播平台，让您可以在同一个页面上同时观看多个直播串流，无需在多个分页间切换。',
+  'heroTitle': 'MultiStream Hub — 免费多直播同时观看工具',
+  'intro': 'MultiStream Hub 是一个完全免费、免注册的网页版多直播观看工具，支持 Twitch 与 YouTube 两大直播平台，让您在同一页面同时观看最多 16 个直播串流，无需在多个标签页间切换。内置聊天室整合、自动与自由两种布局模式、独立音量控制与收藏系统，并提供繁中、英、日、韩、简中五种界面语言。',
   'intro2': '本工具由个人开发者独立开发维护，完全免费开放给所有人使用，无需注册、无需付费，欢迎分享给您的朋友！',
   'websiteIntro': '网站介绍',
   'featuresTitle': '主要功能特色',

@@ -5,6 +5,8 @@ const tutorial = {
 
   'hero.title': 'Maximize Your Viewing Experience',
   'hero.subtitle': 'MultiStream Hub is a live dashboard designed for multitasking. Integrate Twitch and YouTube streams in a single window to master it all.',
+  'article.quickStart.title': 'Quick Start Guide: From Adding Streams to Auto Layout',
+  'article.quickStart.excerpt': 'New to MultiStream Hub? This guide walks you through adding your first stream from a URL, then searching channels, switching layouts, and integrating chat.',
   'hero.start': 'Start Now',
   'hero.github': 'GitHub',
 

@@ -5,6 +5,8 @@ const tutorial = {
 
   'hero.title': '최고의 시청 경험을 만들어보세요',
   'hero.subtitle': 'MultiStream Hub는 멀티태스킹을 위해 설계된 라이브 대시보드입니다. Twitch와 YouTube를 통합하여 단일 창에서 모든 것을 제어하세요.',
+  'article.quickStart.title': '빠른 시작 가이드: 방송 추가부터 자동 레이아웃까지',
+  'article.quickStart.excerpt': 'MultiStream Hub가 처음이신가요? URL을 붙여넣어 첫 방송을 추가하는 방법부터 채널 검색, 레이아웃 전환, 채팅 통합까지 차례대로 안내합니다.',
   'hero.start': '지금 시작하기',
   'hero.github': 'GitHub',
 

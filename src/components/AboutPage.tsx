@@ -170,7 +170,7 @@ export function AboutPage() {
         {/* ---------- Hero ---------- */}
         <section className="ab-hero">
           <div className="ab-hero-badge"><Tv size={42} color="white" /></div>
-          <h1 className="ab-hero-title">MultiStream Hub</h1>
+          <h1 className="ab-hero-title">{tx('about:heroTitle')}</h1>
           <p className="ab-hero-sub">{tx('about:intro')}</p>
           <div className="ab-pills">
             {pills.map((p) => {

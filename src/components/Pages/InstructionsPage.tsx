@@ -384,8 +384,9 @@ export function InstructionsPage() {
     const articles: Article[] = useMemo(() => [
         {
             slug: 'quick-start',
-            title: tx('hero.title'),
-            excerpt: tx('hero.subtitle'),
+            // 獨立於頁面 H1(hero.title)的標題,避免 H1 與 featured 卡 H2 同字(SEO)
+            title: tx('article.quickStart.title'),
+            excerpt: tx('article.quickStart.excerpt'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
             readLabel: readLabel(4),

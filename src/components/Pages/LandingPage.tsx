@@ -104,8 +104,14 @@ export function LandingPage() {
                                     {t('landing.hero_title')}
                                 </span>
                             </h1>
-                            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
+                            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-6 leading-relaxed">
                                 {t('landing.hero_subtitle')}
+                            </p>
+
+                            {/* GEO 定義段：含規格數字（免費/免註冊/16 路/Twitch+YouTube）的可引用描述，
+                                供搜尋與 AI 引擎摘錄；字級與透明度低於副標，避免搶 CTA 視覺 */}
+                            <p className="text-base md:text-lg text-muted-foreground/80 max-w-3xl mx-auto mb-10 leading-relaxed text-left md:text-center">
+                                {t('landing.hero_definition')}
                             </p>
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

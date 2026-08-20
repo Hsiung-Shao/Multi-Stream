@@ -5,6 +5,8 @@ const tutorial = {
 
   'hero.title': '最高の視聴体験をあなたに',
   'hero.subtitle': 'MultiStream Hubは、マルチタスク専用に設計されたライブダッシュボードです。TwitchとYouTubeを統合し、単一のウィンドウで全てをコントロールします。',
+  'article.quickStart.title': 'クイックスタートガイド：配信の追加から自動レイアウトまで',
+  'article.quickStart.excerpt': 'MultiStream Hub が初めての方へ。URL を貼り付けて最初の配信を追加する方法から、チャンネル検索、レイアウト切り替え、チャット統合までを順を追って解説します。',
   'hero.start': '今すぐ開始',
   'hero.github': 'GitHub',
 
