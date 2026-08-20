@@ -15,8 +15,9 @@ import youtubeRisk from './youtubeRisk';
 import stream from './stream';
 import faq from './faq';
 import announcements from './announcements';
+import seo from './seo';
 
 export default {
   common, navbar, controlPanel, welcome, about, tutorial, versionHistory,
-  favorites, feedback, privacy, tags, youtubeRisk, stream, faq, announcements,
+  favorites, feedback, privacy, tags, youtubeRisk, stream, faq, announcements, seo,
 };

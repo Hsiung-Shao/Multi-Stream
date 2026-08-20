@@ -580,8 +580,8 @@ export function InstructionsPage() {
     return (
         <div className="tut-page">
             <SEO
-                title="使用教學 - MultiStream Hub | How to Multistream"
-                description="MultiStream Hub 完整功能指南。了解如何新增串流、管理收藏、使用動態島 (Dynamic Island) 與聊天室整合功能。"
+                title={tx('seo:instructions.title')}
+                description={tx('seo:instructions.description')}
                 url="https://multistreaming.org/instructions"
             />
 

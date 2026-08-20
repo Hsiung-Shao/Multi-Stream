@@ -18,6 +18,7 @@ import zhTWYoutubeRisk from './locales/zh-TW/youtubeRisk';
 import zhTWStream from './locales/zh-TW/stream';
 import zhTWFAQ from './locales/zh-TW/faq';
 import zhTWAnnouncements from './locales/zh-TW/announcements';
+import zhTWSeo from './locales/zh-TW/seo';
 
 // 其餘語言（zh-CN / ja / ko）改為 lazy load（見檔案下方 lazyLoaders / ensureLanguageLoaded），
 // 只有 zh-TW（預設/主要語言）與 en（fallback + 國際 + 多數偵測情境）會打包進首屏 entry。
@@ -36,6 +37,7 @@ import enYoutubeRisk from './locales/en/youtubeRisk';
 import enStream from './locales/en/stream';
 import enFAQ from './locales/en/faq';
 import enAnnouncements from './locales/en/announcements';
+import enSeo from './locales/en/seo';
 
 export const defaultNS = 'common';
 
@@ -56,6 +58,7 @@ export const resources = {
         stream: zhTWStream,
         faq: zhTWFAQ,
         announcements: zhTWAnnouncements,
+        seo: zhTWSeo,
     },
     en: {
         common: enCommon,
@@ -73,6 +76,7 @@ export const resources = {
         stream: enStream,
         faq: enFAQ,
         announcements: enAnnouncements,
+        seo: enSeo,
     },
 } as const;
 
@@ -149,5 +153,23 @@ i18n.on('languageChanged', (lng) => {
         if (i18n.language === lng) i18n.changeLanguage(lng);
     });
 });
+
+// ===== <html lang> 同步 =====
+// index.html 靜態 lang="zh-TW"；實際內容語言由 i18next 偵測（localStorage/navigator）決定，
+// 不同步會造成「英文內文 + zh-TW lang」的語言訊號錯位（SEO/無障礙皆錯）。
+const HTML_LANG: Record<string, string> = { 'zh-TW': 'zh-TW', 'zh-CN': 'zh-CN', en: 'en', ja: 'ja', ko: 'ko' };
+export const toHtmlLang = (lng?: string): string => {
+    if (!lng) return 'zh-TW';
+    if (HTML_LANG[lng]) return HTML_LANG[lng];
+    const base = lng.split('-')[0]; // 'en-US' → 'en'；zh 系列上面已精確命中
+    return HTML_LANG[base] ?? base;
+};
+const syncHtmlLang = (lng?: string) => {
+    if (typeof document !== 'undefined') {
+        document.documentElement.lang = toHtmlLang(lng ?? i18n.language);
+    }
+};
+syncHtmlLang(i18n.language); // init 為同步流程（zh-TW/en 已打包），此時 language 已解析完成
+i18n.on('languageChanged', syncHtmlLang);
 
 export default i18n;

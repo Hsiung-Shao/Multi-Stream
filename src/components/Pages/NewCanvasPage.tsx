@@ -15,10 +15,12 @@ import { useUIStore } from '../../store/useUIStore';
 import { CanvasStreamContent } from './CanvasStreamContent';
 import { EmptyWindowContent } from '../Canvas/EmptyWindowContent';
 import { CanvasEmptyState } from '../Canvas/CanvasEmptyState';
+import { useTranslation } from 'react-i18next';
 import { SEO } from '../SEO';
 import { SEO_CANVAS } from '../../seo/defaults';
 
 export const NewCanvasPage = () => {
+    const { t } = useTranslation();
     const setLayoutMode = useStreamStore(s => s.setLayoutMode);
     const islandStyle = useUIStore(s => s.islandStyle);
     const streams = useStreamStore(s => s.streams);
@@ -166,7 +168,7 @@ export const NewCanvasPage = () => {
 
     return (
         <div className="w-full h-screen bg-black overflow-hidden relative">
-            <SEO title={SEO_CANVAS.title} description={SEO_CANVAS.description} url={SEO_CANVAS.url} />
+            <SEO title={t('seo:canvas.title')} description={t('seo:canvas.description')} url={SEO_CANVAS.url} />
             {/* Canvas Layer */}
             <div className="absolute inset-0 z-0">
                 {windows.length === 0 && <CanvasEmptyState />}

@@ -169,8 +169,8 @@ export default function App() {
         return (
           <>
             <SEO
-              title="關於我們 - MultiStream Hub"
-              description="了解 MultiStream Hub 的功能特色、技術架構和開發者資訊。一個完全免費的多平台直播串流觀看工具，支援 Twitch 和 YouTube。"
+              title={t('seo:about.title')}
+              description={t('seo:about.description')}
               url="https://multistreaming.org/about"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
@@ -182,8 +182,8 @@ export default function App() {
         return (
           <>
             <SEO
-              title="隱私權政策 - MultiStream Hub"
-              description="MultiStream Hub 隱私權政策。了解我們如何保護您的隱私，以及我們收集和使用資料的方式。本網站為純前端工具，絕大多數資料僅儲存於您的瀏覽器本地。"
+              title={t('seo:privacy.title')}
+              description={t('seo:privacy.description')}
               url="https://multistreaming.org/privacy"
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>

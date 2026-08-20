@@ -32,7 +32,7 @@ export function LandingPage() {
     return (
         <>
         <div className="min-h-screen bg-background text-foreground flex flex-col overflow-x-hidden selection:bg-primary selection:text-primary-foreground">
-            <SEO />
+            <SEO title={t('seo:home.title')} description={t('seo:home.description')} />
             <FaqJsonLd />
 
             {/* Header */}
