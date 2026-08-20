@@ -95,6 +95,7 @@
             "generate-sitemap": "node scripts/generate-sitemap.js",
             "convert-tutorial-images": "node scripts/convert-tutorial-images.mjs",
             "prebuild": "npm run generate-sitemap",
-            "search-mentions": "node scripts/search-mentions.mjs"
+            "search-mentions": "node scripts/search-mentions.mjs",
+            "indexnow": "node scripts/indexnow-submit.mjs"
       }
 }

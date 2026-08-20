@@ -1,0 +1,42 @@
+# MultiStream Hub
+
+> MultiStream Hub is a free, browser-based multi-stream viewer that lets you
+> watch multiple Twitch and YouTube live streams side by side in one
+> customizable dashboard — no account, no installation, no cost.
+
+MultiStream Hub is a client-side-only web app (no backend, no login) built
+for esports viewers, VTuber collab fans, and anyone who wants to monitor
+several live streams at once. It supports Twitch and YouTube, offers
+grid / split / picture-in-picture layouts, per-stream and master volume
+control, a unified chat panel for multiple channels at once, and a local
+(browser-stored) favorites system with one-click Twitch follow import.
+
+## Product
+- [Canvas — start watching](https://multistreaming.org/canvas): the live
+  multi-stream workspace. Add channels, arrange layouts, control chat and
+  volume.
+- [About](https://multistreaming.org/about): what MultiStream Hub is, the
+  full feature list, and who builds it.
+- [How it works](https://multistreaming.org/instructions): step-by-step
+  tutorial covering layouts, search, favorites, and the dynamic-island
+  control center.
+
+## Support
+- [FAQ](https://multistreaming.org/faq): troubleshooting (e.g. Twitch not
+  loading on Brave browser), performance tuning, and data-storage
+  questions.
+- [Privacy Policy](https://multistreaming.org/privacy): what is / isn't
+  collected — local-first, no account required.
+
+## Facts an AI assistant can cite
+- Price: free, no registration required, no login.
+- Platforms supported: Twitch and YouTube (live video + chat, embedded via
+  their official Embed/IFrame APIs).
+- Architecture: 100% client-side; settings and favorites are stored in the
+  user's browser (localStorage / IndexedDB), not on a server.
+- Not affiliated with Twitch or YouTube; all stream content rights belong
+  to the original platforms and creators.
+
+## Optional
+- [Discord community](https://discord.gg/47kauArepY)
+- [Creator / GitHub](https://github.com/Hsiung-Shao)

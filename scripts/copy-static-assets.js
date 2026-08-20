@@ -11,18 +11,18 @@ if (!fs.existsSync(buildDir)) {
 }
 
 // 需要複製的文件和目錄
+// 注意：
+// - 'functions' 已移除：Cloudflare Pages（git 整合）只讀 repo 根的 functions/，
+//   複製進 build 會讓 /functions/api/*.js 原始碼被當靜態檔公開下載（資安問題，2026-08-20 修正）。
+// - 'js'/'about.html'/'privacy.html'/'terms.html' 已移除：檔案早已不存在，屬殘留項。
+// - public/ 內的檔案（llms.txt、_routes.json、logo.png、docs/…）由 Vite 自動複製，不需列在此。
 const staticAssets = [
   'icon.png',
   'config.js',
-  'js',
-  'functions',
   'robots.txt',
   'sitemap.xml',
   'ads.txt',
   '_headers',
-  'about.html',
-  'privacy.html',
-  'terms.html',
   'google4fd4a3e732a2da10.html'
 ];
 
