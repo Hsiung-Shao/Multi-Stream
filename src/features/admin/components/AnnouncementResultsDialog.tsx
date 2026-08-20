@@ -58,6 +58,7 @@ interface SurveyQuestionSummary {
     options?: SurveyOptionSummary[];
     textResponses?: string[]; // type=text 時收集
     textCount?: number;
+    otherTexts?: string[]; // single/multi 勾選「其他」選項的自由填寫內容
 }
 interface SurveySummary {
     total: number;
@@ -94,6 +95,8 @@ function summarizeSurvey(
 ): SurveySummary {
     const optionCounts = new Map<string, Map<string, number>>();
     const textResponses = new Map<string, string[]>();
+    const otherTexts = new Map<string, string[]>();
+    const otherOptionIds = new Map<string, Set<string>>(); // qId → 該題 is_other 選項 id
     for (const q of questions) {
         if (q.type === 'text') {
             textResponses.set(q.id, []);
@@ -101,6 +104,8 @@ function summarizeSurvey(
             const m = new Map<string, number>();
             for (const o of q.options ?? []) m.set(o.id, 0);
             optionCounts.set(q.id, m);
+            otherTexts.set(q.id, []);
+            otherOptionIds.set(q.id, new Set((q.options ?? []).filter(o => o.is_other === true).map(o => o.id)));
         }
     }
     let total = 0;
@@ -124,6 +129,15 @@ function summarizeSurvey(
                 for (const oid of ids) {
                     if (typeof oid === 'string' && m.has(oid)) m.set(oid, (m.get(oid) ?? 0) + 1);
                 }
+                // 只收「該回應確實勾了 is_other 選項」的 other_text(舊資料/選項被改掉的殘留不亂入)
+                const other = (c as any).other_text;
+                const otherIds = otherOptionIds.get(qId);
+                if (
+                    typeof other === 'string' && other.trim() &&
+                    otherIds && ids.some((oid: string) => otherIds.has(oid))
+                ) {
+                    otherTexts.get(qId)!.push(other.trim());
+                }
             }
         }
     }
@@ -140,6 +154,7 @@ function summarizeSurvey(
                 label: q.label,
                 type: q.type,
                 options: (q.options ?? []).map(o => ({ id: o.id, label: o.label, count: m.get(o.id) ?? 0 })),
+                otherTexts: otherTexts.get(q.id) ?? [],
             };
         }),
     };
@@ -222,7 +237,8 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+            {/* flex-col 容器只有 max-h 時子項不會被壓縮(ScrollArea 長到內容全高被裁切),改用 grid rows 約束中段高度 */}
+            <DialogContent className="max-w-3xl max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <BarChartIcon className="w-4 h-4 text-violet-400" />
@@ -241,7 +257,7 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                 )}
 
                 {!isAnnouncement && (
-                    <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
+                    <ScrollArea className="-mr-3 pr-3">
                         {isLoading && (
                             <div className="py-12 flex flex-col items-center gap-2 text-muted-foreground">
                                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -337,6 +353,27 @@ export function AnnouncementResultsDialog({ open, onOpenChange, target }: Props)
                                                                 }))}
                                                             />
                                                         )
+                                                    )}
+
+                                                    {(q.type === 'single' || q.type === 'multi') && (q.otherTexts?.length ?? 0) > 0 && (
+                                                        <div className="space-y-1">
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                「其他」填寫內容({q.otherTexts!.length} 則)
+                                                            </p>
+                                                            {/* max-h 下在 viewport(Root auto 高度時 h-full 解析不到) */}
+                                                            <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-48 pr-1">
+                                                                <div className="space-y-1">
+                                                                    {q.otherTexts!.map((t, ti) => (
+                                                                        <div
+                                                                            key={ti}
+                                                                            className="text-xs text-foreground px-2 py-1.5 rounded bg-background border border-border whitespace-pre-wrap break-words"
+                                                                        >
+                                                                            {t}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </ScrollArea>
+                                                        </div>
                                                     )}
 
                                                     {q.type === 'text' && (

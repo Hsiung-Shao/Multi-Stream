@@ -21,6 +21,7 @@ const announcements = {
     'survey.submitError': '提交失败，请稍后再试',
     'survey.requiredHint': '请完成所有题目后再提交',
     'survey.textPlaceholder': '请在此输入你的回答…',
+    'survey.otherPlaceholder': '请说明…',
     'survey.questionCount': '第 {{current}} / {{total}} 题',
 
     'announcement.title': '系统公告',

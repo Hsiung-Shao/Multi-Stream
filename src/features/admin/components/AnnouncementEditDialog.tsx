@@ -67,6 +67,8 @@ interface FormPollOption {
 interface FormSurveyOption {
     id: string;
     label: string;
+    /** 「其他」選項:填答者選中後可自由輸入文字,每題最多一個 */
+    isOther?: boolean;
 }
 interface FormSurveyQuestion {
     id: string;
@@ -177,6 +179,7 @@ function recordToForm(r: AnnouncementRecord): FormState {
                 ? q.options.map((o: any) => ({
                     id: typeof o?.id === 'string' && o.id ? o.id : shortId(),
                     label: typeof o?.label === 'string' ? o.label : '',
+                    ...(o?.is_other === true ? { isOther: true } : {}),
                 }))
                 : [{ id: shortId(), label: '' }, { id: shortId(), label: '' }],
         }));
@@ -223,6 +226,10 @@ function validateForm(f: FormState): ValidationResult {
             if (qIds.has(q.id)) return { ok: false, error: `第 ${qi + 1} 題 ID 重複` };
             qIds.add(q.id);
             if (q.type === 'single' || q.type === 'multi') {
+                // 「其他」選項 label 被清空會在送出時被 filter 默默丟掉(按鈕卻仍 disabled),明確擋下
+                if (q.options.some(o => o.isOther && !o.label.trim())) {
+                    return { ok: false, error: `第 ${qi + 1} 題的「其他」選項缺少文字` };
+                }
                 const opts = q.options.map(o => ({ ...o, label: o.label.trim() })).filter(o => o.label);
                 if (opts.length < 2) return { ok: false, error: `第 ${qi + 1} 題至少需要 2 個有效選項` };
                 const oIds = new Set(opts.map(o => o.id));
@@ -258,7 +265,11 @@ function formToWriteInput(f: FormState): AnnouncementWriteInput {
                 const base: any = { id: q.id, label: q.label.trim(), type: q.type };
                 if (q.type !== 'text') {
                     base.options = q.options
-                        .map(o => ({ id: o.id, label: o.label.trim() }))
+                        .map(o => ({
+                            id: o.id,
+                            label: o.label.trim(),
+                            ...(o.isOther ? { is_other: true } : {}),
+                        }))
                         .filter(o => o.label);
                 }
                 return base;
@@ -341,9 +352,12 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
         updateField('survey_questions', form.survey_questions.filter(q => q.id !== id));
     const updateSurveyQuestion = (id: string, patch: Partial<FormSurveyQuestion>) =>
         updateField('survey_questions', form.survey_questions.map(q => q.id === id ? { ...q, ...patch } : q));
-    const addSurveyOption = (qId: string) =>
+    // isOther:「其他」選項,label 預設「其他」可再編輯;每題最多一個(按鈕端 disabled)
+    const addSurveyOption = (qId: string, isOther = false) =>
         updateField('survey_questions', form.survey_questions.map(q =>
-            q.id === qId ? { ...q, options: [...q.options, { id: shortId(), label: '' }] } : q));
+            q.id === qId
+                ? { ...q, options: [...q.options, { id: shortId(), label: isOther ? '其他' : '', ...(isOther ? { isOther: true } : {}) }] }
+                : q));
     const removeSurveyOption = (qId: string, oId: string) =>
         updateField('survey_questions', form.survey_questions.map(q =>
             q.id === qId ? { ...q, options: q.options.filter(o => o.id !== oId) } : q));
@@ -391,7 +405,8 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+                {/* flex-col 容器只有 max-h 時子項不會被壓縮(ScrollArea 長到內容全高被裁切),改用 grid rows 約束中段高度 */}
+                <DialogContent className="max-w-2xl max-h-[85vh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>
                             {isEdit ? '編輯公告' : '新增公告'}
@@ -401,7 +416,7 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <ScrollArea className="flex-1 min-h-0 -mr-3 pr-3">
+                    <ScrollArea className="-mr-3 pr-3">
                         <div className="space-y-4 py-2">
                         {/* type */}
                         <div className="space-y-1.5">
@@ -625,6 +640,11 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                                             placeholder={`選項 ${oi + 1}`}
                                                             maxLength={120}
                                                         />
+                                                        {opt.isOther && (
+                                                            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/25">
+                                                                其他
+                                                            </span>
+                                                        )}
                                                         <button
                                                             type="button"
                                                             onClick={() => removeSurveyOption(q.id, opt.id)}
@@ -636,16 +656,30 @@ export function AnnouncementEditDialog({ open, onOpenChange, target }: Props) {
                                                         </button>
                                                     </div>
                                                 ))}
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => addSurveyOption(q.id)}
-                                                    className="gap-1 text-[11px] h-6 ml-7"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                    新增選項
-                                                </Button>
+                                                <div className="flex items-center gap-2 ml-7">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => addSurveyOption(q.id)}
+                                                        className="gap-1 text-[11px] h-6"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                        新增選項
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => addSurveyOption(q.id, true)}
+                                                        disabled={q.options.some(o => o.isOther)}
+                                                        className="gap-1 text-[11px] h-6"
+                                                        title="填答者選中後可自由輸入文字,每題最多一個"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                        新增「其他」選項
+                                                    </Button>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

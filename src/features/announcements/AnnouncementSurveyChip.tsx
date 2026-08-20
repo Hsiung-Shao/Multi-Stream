@@ -24,10 +24,12 @@ import {
     DialogTitle,
 } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
+import { ScrollArea } from '../../components/ui/scroll-area';
 import { setFlag } from './storage';
 import { getOrCreateDeviceId } from './deviceId';
 import { submitAnnouncementResponse } from './api';
@@ -60,6 +62,7 @@ function isSurveyPayload(p: unknown): p is SurveyPayload {
 type AnswerMap = Record<string, string[] | string>; // qId → option_ids[] 或 text
 
 const TEXT_MAX_LEN = 2000;
+const OTHER_TEXT_MAX_LEN = 500; // 對齊 functions/lib/announcements.js OTHER_TEXT_MAX_LEN
 
 export function AnnouncementSurveyChip({
     announcement,
@@ -73,6 +76,8 @@ export function AnnouncementSurveyChip({
 
     const [open, setOpen] = useState(false);
     const [answers, setAnswers] = useState<AnswerMap>({});
+    // qId → 「其他」選項的自由填寫文字(僅在該題勾選 is_other 選項時使用/送出)
+    const [otherTexts, setOtherTexts] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
     const [done, setDone] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -100,7 +105,29 @@ export function AnnouncementSurveyChip({
         setAnswers((prev) => ({ ...prev, [qId]: text.slice(0, TEXT_MAX_LEN) }));
     };
 
-    /** 全部題目至少要有一個有效答案才允許送出 */
+    const setOtherText = (qId: string, text: string) => {
+        setOtherTexts((prev) => ({ ...prev, [qId]: text.slice(0, OTHER_TEXT_MAX_LEN) }));
+    };
+
+    /** 「其他」自由填寫輸入框(single/multi 共用;不 autoFocus,避免鍵盤導航掃過選項時被搶焦點) */
+    const renderOtherInput = (qId: string) => (
+        <Input
+            placeholder={t('survey.otherPlaceholder', '請說明…')}
+            value={otherTexts[qId] ?? ''}
+            onChange={(e) => setOtherText(qId, e.target.value)}
+            maxLength={OTHER_TEXT_MAX_LEN}
+            className="ml-7 w-auto h-8 text-sm"
+        />
+    );
+
+    /** 該題被勾選的選項中,是否包含 is_other 選項(=== true 對齊後端嚴格判斷) */
+    const isOtherSelected = (q: SurveyQuestion): boolean => {
+        const a = answers[q.id];
+        if (!Array.isArray(a)) return false;
+        return (q.options ?? []).some((opt) => opt.is_other === true && a.includes(opt.id));
+    };
+
+    /** 全部題目至少要有一個有效答案才允許送出;勾了「其他」則必須填文字 */
     const canSubmit = useMemo(() => {
         for (const q of questions) {
             const a = answers[q.id];
@@ -108,10 +135,12 @@ export function AnnouncementSurveyChip({
                 if (typeof a !== 'string' || a.trim().length === 0) return false;
             } else {
                 if (!Array.isArray(a) || a.length === 0) return false;
+                if (isOtherSelected(q) && !(otherTexts[q.id] ?? '').trim()) return false;
             }
         }
         return true;
-    }, [questions, answers]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [questions, answers, otherTexts]);
 
     const handleSubmit = async () => {
         if (!canSubmit || submitting) return;
@@ -132,7 +161,11 @@ export function AnnouncementSurveyChip({
             if (q.type === 'text' && typeof a === 'string') {
                 choices.push({ question_id: q.id, text: a.trim() });
             } else if ((q.type === 'single' || q.type === 'multi') && Array.isArray(a)) {
-                choices.push({ question_id: q.id, option_ids: a });
+                const item: SurveyChoiceItem = { question_id: q.id, option_ids: a };
+                if (isOtherSelected(q)) {
+                    item.other_text = (otherTexts[q.id] ?? '').trim();
+                }
+                choices.push(item);
             }
         }
 
@@ -200,16 +233,19 @@ export function AnnouncementSurveyChip({
             </button>
 
             <Dialog open={open} onOpenChange={handleOpenChange}>
-                <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+                {/* 用 grid rows 約束中段高度讓 ScrollArea 可捲,題目多時 Header/Footer 固定 */}
+                <DialogContent className="sm:max-w-lg max-h-[85vh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
                     <DialogHeader>
                         <DialogTitle>{announcement.title}</DialogTitle>
-                        {announcement.body && (
-                            <DialogDescription className="whitespace-pre-line">
-                                {announcement.body}
-                            </DialogDescription>
-                        )}
                     </DialogHeader>
 
+                    {/* body 放進捲動區:header 是 auto row 不可捲,長 body 會把中段壓到 0、footer 被裁 */}
+                    <ScrollArea className="-mr-3 pr-3">
+                    {announcement.body && (
+                        <DialogDescription className="whitespace-pre-line mb-4">
+                            {announcement.body}
+                        </DialogDescription>
+                    )}
                     {done ? (
                         <div className="py-8 text-center">
                             <p className="text-base font-medium">
@@ -255,15 +291,20 @@ export function AnnouncementSurveyChip({
                                             >
                                                 {(q.options ?? []).map((opt) => {
                                                     const oid = `${qid}-${opt.id}`;
+                                                    const selected =
+                                                        Array.isArray(answers[q.id]) &&
+                                                        (answers[q.id] as string[]).includes(opt.id);
                                                     return (
-                                                        <label
-                                                            key={opt.id}
-                                                            htmlFor={oid}
-                                                            className="flex items-center gap-3 rounded-md border border-border p-2.5 cursor-pointer hover:bg-accent/40"
-                                                        >
-                                                            <RadioGroupItem value={opt.id} id={oid} />
-                                                            <span className="text-sm">{opt.label}</span>
-                                                        </label>
+                                                        <div key={opt.id} className="grid gap-1.5">
+                                                            <label
+                                                                htmlFor={oid}
+                                                                className="flex items-center gap-3 rounded-md border border-border p-2.5 cursor-pointer hover:bg-accent/40"
+                                                            >
+                                                                <RadioGroupItem value={opt.id} id={oid} />
+                                                                <span className="text-sm">{opt.label}</span>
+                                                            </label>
+                                                            {opt.is_other === true && selected && renderOtherInput(q.id)}
+                                                        </div>
                                                     );
                                                 })}
                                             </RadioGroup>
@@ -277,18 +318,20 @@ export function AnnouncementSurveyChip({
                                                         (answers[q.id] as string[]).includes(opt.id);
                                                     const oid = `${qid}-${opt.id}`;
                                                     return (
-                                                        <label
-                                                            key={opt.id}
-                                                            htmlFor={oid}
-                                                            className="flex items-center gap-3 rounded-md border border-border p-2.5 cursor-pointer hover:bg-accent/40"
-                                                        >
-                                                            <Checkbox
-                                                                id={oid}
-                                                                checked={checked}
-                                                                onCheckedChange={() => toggleMulti(q.id, opt.id)}
-                                                            />
-                                                            <span className="text-sm">{opt.label}</span>
-                                                        </label>
+                                                        <div key={opt.id} className="grid gap-1.5">
+                                                            <label
+                                                                htmlFor={oid}
+                                                                className="flex items-center gap-3 rounded-md border border-border p-2.5 cursor-pointer hover:bg-accent/40"
+                                                            >
+                                                                <Checkbox
+                                                                    id={oid}
+                                                                    checked={checked}
+                                                                    onCheckedChange={() => toggleMulti(q.id, opt.id)}
+                                                                />
+                                                                <span className="text-sm">{opt.label}</span>
+                                                            </label>
+                                                            {opt.is_other === true && checked && renderOtherInput(q.id)}
+                                                        </div>
                                                     );
                                                 })}
                                             </div>
@@ -297,20 +340,23 @@ export function AnnouncementSurveyChip({
                                 );
                             })}
 
-                            {errorMsg && (
-                                <p className="text-xs text-destructive" role="alert">
-                                    {errorMsg}
-                                </p>
-                            )}
-                            {!canSubmit && (
-                                <p className="text-xs text-muted-foreground">
-                                    {t('survey.requiredHint', '請完成所有題目後再送出')}
-                                </p>
-                            )}
                         </div>
                     )}
+                    </ScrollArea>
 
-                    <DialogFooter>
+                    {/* 提示/錯誤放捲動區外(footer 上方),送出失敗時使用者一定看得到 */}
+                    <div className="flex flex-col gap-2">
+                        {!done && errorMsg && (
+                            <p className="text-xs text-destructive" role="alert">
+                                {errorMsg}
+                            </p>
+                        )}
+                        {!done && !canSubmit && (
+                            <p className="text-xs text-muted-foreground">
+                                {t('survey.requiredHint', '請完成所有題目後再送出')}
+                            </p>
+                        )}
+                        <DialogFooter>
                         {done ? (
                             <Button onClick={() => handleOpenChange(false)}>
                                 {t('close', '關閉')}
@@ -329,7 +375,8 @@ export function AnnouncementSurveyChip({
                                 </Button>
                             </>
                         )}
-                    </DialogFooter>
+                        </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>
