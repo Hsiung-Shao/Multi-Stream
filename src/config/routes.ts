@@ -14,6 +14,7 @@ export const PAGE_PATHS: Record<RoutePage, string> = {
     about: '/about',
     instructions: '/instructions',
     faq: '/faq',
+    support: '/support',
     privacy: '/privacy',
     admin: '/admin',
 };

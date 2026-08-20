@@ -131,6 +131,7 @@ const common = {
   'landing.footer.faq': '자주 묻는 질문',
   'landing.footer.about': '소개',
   'landing.footer.privacy': '개인정보 처리방침',
+  'landing.footer.support': '후원하기',
 
   // Hotkeys
   'hotkeys.title': '키보드 단축키',

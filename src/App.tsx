@@ -36,6 +36,7 @@ const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module =>
 const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
 const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
 const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
+const SupportPage = lazy(() => import('./components/SupportPage').then(module => ({ 'default': module.SupportPage })));
 const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
 // 全站常駐但非首屏所需的全域元件，集中為單一 lazy chunk（見 DeferredGlobals.tsx）
@@ -133,7 +134,7 @@ export default function App() {
   } = useYouTubeRisk();
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
-  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'admin', 'not-found'].includes(currentPage);
+  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
       <>
@@ -199,6 +200,19 @@ export default function App() {
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <FAQPage />
           </Suspense>
+        );
+      case 'support':
+        return (
+          <>
+            <SEO
+              title={t('seo:support.title')}
+              description={t('seo:support.description')}
+              url="https://multistreaming.org/support"
+            />
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <SupportPage />
+            </Suspense>
+          </>
         );
       case 'admin':
         return (

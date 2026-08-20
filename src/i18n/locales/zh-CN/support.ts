@@ -1,0 +1,18 @@
+// 支持页（/support）文案
+export default {
+    'title': '支持我们',
+    'hero.title': '支持 MultiStream Hub',
+    'hero.subtitle': 'MultiStream Hub 是完全免费、无需注册的多直播观看工具。如果它让你的观看体验更好，欢迎通过以下方式支持网站持续运营。',
+    'coffee.title': '请开发者喝杯咖啡',
+    'coffee.desc': '一次性小额赞助，直接用于服务器与域名等运营成本。金额不限，心意最重要。',
+    'coffee.cta': '前往 Buy Me a Coffee',
+    'affiliate.title': '通过联盟链接购买 ExitLag',
+    'affiliate.desc': 'ExitLag 是多路径网络加速器，可降低直播与游戏延迟。通过此链接订阅，你无需多花一分钱，本站可获得少量分成。',
+    'affiliate.cta': '前往 ExitLag',
+    'affiliate.disclosure': '联盟披露：这是联盟营销链接，通过它完成的订阅会让本站获得分成，价格对你完全相同。',
+    'other.title': '其他支持方式',
+    'other.discord.title': '加入 Discord 社区',
+    'other.discord.desc': '反馈问题、许愿功能，或和大家聊聊直播。',
+    'other.share.title': '分享给朋友',
+    'other.share.desc': '把 MultiStream Hub 介绍给同样在追直播、电竞赛事或 VTuber 联动的朋友，就是最好的支持。',
+};

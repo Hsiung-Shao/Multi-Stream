@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { RouteLink } from '../Navigation/RouteLink';
 import type { RoutePage } from '../../config/routes';
-import { Sun, Moon, Globe, Info, FileText, HelpCircle, MessageSquareHeart, History } from 'lucide-react';
+import { Sun, Moon, Globe, Info, FileText, HelpCircle, MessageSquareHeart, History, Heart } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -83,6 +83,7 @@ export function MobileSettingsPage() {
                     <SettingsLink icon={Info} label={t('landing.footer.about', '關於')} to="about" />
                     <SettingsLink icon={HelpCircle} label={t('landing.footer.faq', '常見問題')} to="faq" />
                     <SettingsLink icon={FileText} label={t('landing.footer.tutorial', '使用教學')} to="instructions" />
+                    <SettingsLink icon={Heart} label={t('landing.footer.support', '支持我們')} to="support" />
                     <SettingsLink icon={MessageSquareHeart} label={t('mobile.settings.feedback', '意見回饋')} onClick={() => openModal('feedback')} />
                     <SettingsLink icon={History} label={t('mobile.settings.version_history', '版本紀錄')} onClick={() => openModal('history')} />
                 </div>

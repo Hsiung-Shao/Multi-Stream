@@ -18,6 +18,7 @@ const ROUTE_SOURCES = {
   '/about': ['src/components/AboutPage.tsx', 'src/i18n/locales/zh-TW/about.ts'],
   '/privacy': ['src/components/PrivacyPage.tsx', 'src/i18n/locales/zh-TW/privacy.ts'],
   '/faq': ['src/components/FAQPage.tsx', 'src/i18n/locales/zh-TW/faq.ts'],
+  '/support': ['src/components/SupportPage.tsx', 'src/i18n/locales/zh-TW/support.ts'],
 };
 
 function gitLastMod(files) {
@@ -41,6 +42,7 @@ const urls = [
   { url: '/about', changefreq: 'monthly', priority: 0.7 },
   { url: '/privacy', changefreq: 'monthly', priority: 0.6 },
   { url: '/faq', changefreq: 'monthly', priority: 0.6 },
+  { url: '/support', changefreq: 'monthly', priority: 0.5 },
 ].map((u) => ({ ...u, lastmod: gitLastMod(ROUTE_SOURCES[u.url]) }));
 
 // 網站主機名

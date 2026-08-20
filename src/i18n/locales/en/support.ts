@@ -1,0 +1,18 @@
+// Support page (/support) copy
+export default {
+    'title': 'Support Us',
+    'hero.title': 'Support MultiStream Hub',
+    'hero.subtitle': 'MultiStream Hub is completely free — no paywall, no registration. If it makes your viewing experience better, here are a few ways to help keep it running.',
+    'coffee.title': 'Buy the developer a coffee',
+    'coffee.desc': 'A one-time small donation that goes directly toward server and domain costs. Any amount is appreciated.',
+    'coffee.cta': 'Go to Buy Me a Coffee',
+    'affiliate.title': 'Get ExitLag via our affiliate link',
+    'affiliate.desc': 'ExitLag is a multipath network accelerator that reduces stream and gaming latency. Subscribing through this link costs you nothing extra, and the site earns a small commission.',
+    'affiliate.cta': 'Go to ExitLag',
+    'affiliate.disclosure': 'Affiliate disclosure: this is an affiliate link — subscriptions made through it earn this site a commission at no extra cost to you.',
+    'other.title': 'Other ways to support',
+    'other.discord.title': 'Join the Discord community',
+    'other.discord.desc': 'Report issues, request features, or just hang out and talk streams.',
+    'other.share.title': 'Share with friends',
+    'other.share.desc': 'Telling friends who watch esports, streams or VTuber collabs about MultiStream Hub is the best support of all.',
+};

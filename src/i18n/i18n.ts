@@ -19,6 +19,7 @@ import zhTWStream from './locales/zh-TW/stream';
 import zhTWFAQ from './locales/zh-TW/faq';
 import zhTWAnnouncements from './locales/zh-TW/announcements';
 import zhTWSeo from './locales/zh-TW/seo';
+import zhTWSupport from './locales/zh-TW/support';
 
 // 其餘語言（zh-CN / ja / ko）改為 lazy load（見檔案下方 lazyLoaders / ensureLanguageLoaded），
 // 只有 zh-TW（預設/主要語言）與 en（fallback + 國際 + 多數偵測情境）會打包進首屏 entry。
@@ -38,6 +39,7 @@ import enStream from './locales/en/stream';
 import enFAQ from './locales/en/faq';
 import enAnnouncements from './locales/en/announcements';
 import enSeo from './locales/en/seo';
+import enSupport from './locales/en/support';
 
 export const defaultNS = 'common';
 
@@ -59,6 +61,7 @@ export const resources = {
         faq: zhTWFAQ,
         announcements: zhTWAnnouncements,
         seo: zhTWSeo,
+        support: zhTWSupport,
     },
     en: {
         common: enCommon,
@@ -77,6 +80,7 @@ export const resources = {
         faq: enFAQ,
         announcements: enAnnouncements,
         seo: enSeo,
+        support: enSupport,
     },
 } as const;
 

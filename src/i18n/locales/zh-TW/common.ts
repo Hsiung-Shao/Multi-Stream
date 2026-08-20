@@ -127,6 +127,7 @@ const common = {
   'landing.footer.faq': '常見問題',
   'landing.footer.about': '關於我們',
   'landing.footer.privacy': '隱私權政策',
+  'landing.footer.support': '支持我們',
   // Hotkeys
   'hotkeys.title': '鍵盤快捷鍵',
   'hotkeys.subtitle': '透過鍵盤快速管理您的直播工作區',

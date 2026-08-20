@@ -130,6 +130,7 @@ const common = {
   'landing.footer.faq': 'FAQ',
   'landing.footer.about': 'About Us',
   'landing.footer.privacy': 'Privacy Policy',
+  'landing.footer.support': 'Support Us',
   // Hotkeys
   'hotkeys.title': 'Keyboard Shortcuts',
   'hotkeys.subtitle': 'Manage your stream workspace with keyboard shortcuts',

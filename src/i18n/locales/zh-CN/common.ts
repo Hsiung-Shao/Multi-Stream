@@ -131,6 +131,7 @@ const common = {
   'landing.footer.faq': '常见问题',
   'landing.footer.about': '关于我们',
   'landing.footer.privacy': '隐私权政策',
+  'landing.footer.support': '支持我们',
 
   // Hotkeys
   'hotkeys.title': '键盘快捷键',
