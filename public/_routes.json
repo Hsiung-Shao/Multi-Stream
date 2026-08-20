@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/docs/*",
+    "/screenshots/*",
+    "/icon.png",
+    "/logo.png",
+    "/og-image.png",
+    "/config.js",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/ads.txt",
+    "/llms.txt",
+    "/4ccfee63650d6e208918e7cf9f01aaffd8ea7397197b5298e2cd4930144f6934.txt",
+    "/google4fd4a3e732a2da10.html"
+  ]
+}
