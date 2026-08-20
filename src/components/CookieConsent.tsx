@@ -63,26 +63,26 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
 
     return (
         <div
-            className={`fixed bottom-0 left-0 right-0 z-[9999] p-4 transition-all duration-300 ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+            className={`fixed bottom-0 left-0 right-0 z-[9999] p-2 md:p-4 transition-all duration-300 ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
                 }`}
         >
-            <div className="max-w-4xl mx-auto bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl p-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="max-w-4xl mx-auto bg-gray-900/95 backdrop-blur-md border border-gray-700 rounded-xl shadow-2xl p-3 md:p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
                     {/* 圖示和標題 */}
-                    <div className="flex items-center gap-3 shrink-0">
-                        <div className="p-2 bg-purple-600/20 rounded-lg">
-                            <Cookie className="w-6 h-6 text-purple-400" />
+                    <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                        <div className="p-1.5 md:p-2 bg-purple-600/20 rounded-lg">
+                            <Cookie className="w-5 h-5 md:w-6 md:h-6 text-purple-400" />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-white">
+                            <h3 className="font-semibold text-white text-sm md:text-base">
                                 {t('cookie.title', 'Cookie 使用同意')}
                             </h3>
                         </div>
                     </div>
 
                     {/* 說明文字 */}
-                    <div className="flex-1 text-sm text-gray-300">
-                        <p>
+                    <div className="flex-1 text-xs md:text-sm text-gray-300">
+                        <p className="line-clamp-2 md:line-clamp-none">
                             {t('cookie.description', '我們使用 Cookie 和類似技術來改善您的瀏覽體驗、分析網站流量，並提供個人化內容。點擊「接受」即表示您同意我們使用這些技術。')}
                         </p>
                         <RouteLink
@@ -94,17 +94,17 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
                     </div>
 
                     {/* 按鈕 */}
-                    <div className="flex gap-3 shrink-0 w-full md:w-auto">
+                    <div className="flex gap-2 md:gap-3 shrink-0 w-full md:w-auto">
                         <button
                             onClick={handleReject}
-                            className="flex-1 md:flex-none px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors flex items-center justify-center gap-2"
+                            className="flex-1 md:flex-none px-3 py-1.5 text-sm md:px-4 md:py-2 md:text-base bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                             <X className="w-4 h-4" />
                             <span>{t('cookie.reject', '拒絕')}</span>
                         </button>
                         <button
                             onClick={handleAccept}
-                            className="flex-1 md:flex-none px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                            className="flex-1 md:flex-none px-3 py-1.5 text-sm md:px-4 md:py-2 md:text-base bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
                             <Check className="w-4 h-4" />
                             <span>{t('cookie.accept', '接受')}</span>
@@ -113,7 +113,7 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
                 </div>
 
                 {/* 隱私權圖示 */}
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700/50">
+                <div className="hidden md:flex items-center gap-2 mt-3 pt-3 border-t border-gray-700/50">
                     <Shield className="w-3 h-3 text-gray-400" />
                     <span className="text-xs text-gray-400">
                         {t('cookie.privacyNote', '您的隱私對我們很重要。您可以隨時在設定中變更您的選擇。')}

@@ -3,6 +3,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
 import { RouteLink } from '../Navigation/RouteLink';
+import { StreamUrlQuickAdd } from '../StreamUrlQuickAdd';
 import { MonitorPlay, MessageSquare, MessageCircle, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
 import {
     Select,
@@ -121,6 +122,11 @@ export function LandingPage() {
                                         <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </RouteLink>
                                 </Button>
+                            </div>
+
+                            {/* 快速入口：貼上網址直接開始（成功後導向 /canvas） */}
+                            <div className="mt-6 flex justify-center">
+                                <StreamUrlQuickAdd size="lg" navigateToCanvas />
                             </div>
                         </div>
 

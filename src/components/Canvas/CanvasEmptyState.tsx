@@ -2,6 +2,7 @@ import { Plus, Layout, Tv, FolderHeart, Search, Trash2, Maximize, Star, Settings
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { cn } from '../ui/utils';
+import { StreamUrlQuickAdd } from '../StreamUrlQuickAdd';
 
 export const CanvasEmptyState = () => {
     const { t } = useTranslation('common');
@@ -72,8 +73,21 @@ export const CanvasEmptyState = () => {
                     isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 )}
             >
+                {/* 主要入口：H1 + 產品說明 + 快速新增輸入框（外層 pointer-events-none，此區要可互動） */}
+                <div className="pointer-events-auto text-center mb-12">
+                    <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 mb-3 drop-shadow-sm">
+                        {t('empty_state.headline') || "同時觀看多個直播"}
+                    </h1>
+                    <p className="text-gray-400 text-sm md:text-base font-light max-w-2xl mx-auto mb-6 leading-relaxed">
+                        {t('empty_state.intro') || "MultiStream Hub 讓你在同一個畫面同時觀看多個 Twitch 與 YouTube 直播，支援聊天室整合與自由佈局，完全免費、無需註冊。貼上網址或頻道名稱即可開始。"}
+                    </p>
+                    <div className="flex justify-center">
+                        <StreamUrlQuickAdd size="md" />
+                    </div>
+                </div>
+
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 mb-2 drop-shadow-sm">
+                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 mb-2 drop-shadow-sm">
                         {t('empty_state.tips_title') || "功能介紹"}
                     </h2>
                     <div className="h-1 w-24 bg-gradient-to-r from-transparent via-blue-500 to-transparent mx-auto opacity-50 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
