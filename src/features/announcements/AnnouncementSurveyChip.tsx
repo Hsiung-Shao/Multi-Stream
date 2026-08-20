@@ -139,6 +139,8 @@ export function AnnouncementSurveyChip({
             }
         }
         return true;
+        // isOtherSelected 是元件內穩定的純函式（只讀取參數與 answers），其值變化已由 answers 依賴涵蓋；
+        // 列入 deps 會因每次 render 產生新 function reference 而讓 memo 失效，故略過此警告。
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [questions, answers, otherTexts]);
 

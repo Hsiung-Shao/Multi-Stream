@@ -4,7 +4,7 @@ import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
 import { RouteLink } from '../Navigation/RouteLink';
 import { StreamUrlQuickAdd } from '../StreamUrlQuickAdd';
-import { MonitorPlay, MessageSquare, MessageCircle, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
+import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -59,15 +59,11 @@ export function LandingPage() {
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="support">{t('landing.footer.support', '支持我們')}</RouteLink>
                         </Button>
-                        <a
-                            href="https://discord.gg/47kauArepY"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Discord"
-                            className="text-muted-foreground hover:text-foreground transition-colors p-2"
-                        >
-                            <MessageCircle className="w-5 h-5" />
-                        </a>
+                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                            <a href="https://discord.gg/47kauArepY" target="_blank" rel="noopener noreferrer">
+                                Discord
+                            </a>
+                        </Button>
                         <a
                             href="https://github.com/Hsiung-Shao"
                             target="_blank"
