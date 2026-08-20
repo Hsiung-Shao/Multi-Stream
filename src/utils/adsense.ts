@@ -1,7 +1,7 @@
 /**
  * Google AdSense 載入器
  *
- * 設計原則（與 GA4/Umami 的同意機制一致）：
+ * 設計原則（與 GA4 的同意機制一致）：
  * - AdSense 腳本會設定第三方 cookie，因此只在使用者「接受 Cookie」後才注入，
  *   而非在 index.html 無條件載入。
  * - 未同意時（含 Lighthouse 等首次造訪）完全不載入 → 不設第三方 cookie、

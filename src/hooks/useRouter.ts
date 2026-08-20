@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { logPageView, isTrackingEnabled } from '../utils/analytics';
-import { trackPageView, trackEvent } from '../utils/umami';
 import { pathToPage, pageToPath } from '../config/routes';
 
 export function useRouter() {
@@ -43,10 +42,6 @@ export function useRouter() {
         // 不再額外送 logEvent('Navigation', 'page_view', page) — 與 logPageView 重複，會雙計
         if (isTrackingEnabled()) {
             logPageView();
-
-            // Umami: SPA 路由追蹤
-            trackPageView(window.location.pathname);
-            trackEvent('page-navigate', { page });
         }
     }, [page]);
 

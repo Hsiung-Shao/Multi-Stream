@@ -11,7 +11,6 @@ import { useRouter } from './hooks/useRouter';
 import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView } from './utils/analytics';
 import { userSegmentationManager } from './utils/userSegmentation';
-import { initUmami } from './utils/umami';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
 import { useAppliedTheme } from './hooks/useAppliedTheme';
 import { SEO } from './components/SEO'; // Default SEO for App? Or remove?
@@ -72,7 +71,6 @@ export default function App() {
       userSegmentationManager.init();
       logPageView();
     });
-    initUmami();
 
     // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
     // 過期(或無串流)則維持「清空畫布」的既有行為。
@@ -124,7 +122,7 @@ export default function App() {
   useAutoRefresh();
   useHotkeys();
   useStreamHeartbeat(); // GA4 stream-aware 觀看時間追蹤（取代 useEngagementTracking，spec 對齊）
-  useCanvasRetention(); // Umami canvas 留存追蹤
+  useCanvasRetention(); // canvas 活動時間記錄（短暫播放回復用）
 
   // YouTube Warning Logic State (Hook) - Remains Global
   const {

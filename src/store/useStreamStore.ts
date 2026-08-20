@@ -15,7 +15,6 @@ import { findAvailablePosition } from '../utils/layoutEngine';
 import { CustomLayout, LayoutSlot } from '../types/canvas';
 import { layoutStorage } from '../utils/layoutStorage';
 import { logEvent, isTrackingEnabled, track } from '../utils/analytics';
-import { trackEvent as umamiTrack } from '../utils/umami';
 import { userSegmentationManager, FEATURE_FLAGS } from '../utils/userSegmentation';
 
 interface StreamStoreState {
@@ -421,9 +420,6 @@ export const useStreamStore = create<StreamStoreState>()(
                         canvasItems: newCanvasItems,
                         layout: state.userLayout ? state.layout : newLayout
                     });
-
-                    // Umami: 追蹤串流新增
-                    umamiTrack('stream-add', { platform: newStream.platform });
 
                     // GA4: 追蹤串流開啟（含「是否本次工作階段第一個」flag）
                     if (isTrackingEnabled()) {
