@@ -10,9 +10,9 @@ import { useState } from 'react';
 import type { FavoriteCategory as Category, Tag } from '../types';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { logEvent } from '../../../utils/analytics';
+import { EXITLAG_AFFILIATE_URL } from '../../../config/links';
 
 // ExitLag 聯盟推廣連結(sidebar 底部常駐 promo)
-import { EXITLAG_AFFILIATE_URL } from '../../../config/links';
 
 interface FavoritesSidebarProps {
     categories: Category[];

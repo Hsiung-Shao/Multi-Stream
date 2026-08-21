@@ -13,6 +13,10 @@ import { SEO } from './SEO';
 import { StaticPageHeader } from './StaticPageHeader';
 import { RouteLink } from './Navigation/RouteLink';
 import { BlurOrb, IconChip } from './ui/ds-primitives';
+import { DISCORD_URL } from '../config/links';
+import { PAGE_PATHS } from '../config/routes';
+import { SEO_SITE_URL } from '../seo/defaults';
+import { graph, breadcrumb, SITE_ID, APP_ID } from '../seo/jsonld';
 
 const MODHEADER_URL = 'https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj';
 const PROFILE_DOWNLOAD_PATH = '/docs/brave-fix/twitch.json';
@@ -22,10 +26,6 @@ const STEP_IMAGES = [
     '/docs/brave-fix/step2.webp',
     '/docs/brave-fix/step3.webp',
 ];
-import { DISCORD_URL } from '../config/links';
-import { PAGE_PATHS } from '../config/routes';
-import { SEO_SITE_URL } from '../seo/defaults';
-import { graph, breadcrumb, SITE_ID, APP_ID } from '../seo/jsonld';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
 // FAQ 分組:播放與相容性 / 效能與資料,共 7 題(item key 對應 faq namespace)。
