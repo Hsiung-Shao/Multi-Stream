@@ -12,7 +12,7 @@ import { ScrollArea } from '../../../components/ui/scroll-area';
 import { logEvent } from '../../../utils/analytics';
 
 // ExitLag 聯盟推廣連結(sidebar 底部常駐 promo)
-const EXITLAG_AFFILIATE_URL = 'https://www.exitlag.com/refer/10318098';
+import { EXITLAG_AFFILIATE_URL } from '../../../config/links';
 
 interface FavoritesSidebarProps {
     categories: Category[];

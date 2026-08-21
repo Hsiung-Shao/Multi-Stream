@@ -12,14 +12,10 @@ import {
 import { Switch } from '../../../components/ui/switch';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { cn } from '../../../components/ui/utils';
-import { Sun, Moon, Monitor, Github, Coffee, MessageSquare } from 'lucide-react';
+import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare } from 'lucide-react';
 import { logEvent } from '../../../utils/analytics';
 
-// 品牌外連(對齊 AboutPage / 全站統一連結;Discord 用統一邀請碼,非舊版過期碼)
-const GITHUB_URL = 'https://github.com/Hsiung-Shao';
-const DISCORD_URL = 'https://discord.gg/47kauArepY';
-const X_URL = 'https://x.com/Hsiungshao';
-const COFFEE_URL = 'https://buymeacoffee.com/hsiung';
+import { GITHUB_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
 
 // 品牌 icon(lucide 無 Discord / X 品牌標誌,沿用收藏管理舊版自繪 SVG)
 const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -146,6 +142,7 @@ export function SettingsSection() {
         { key: 'discord', url: DISCORD_URL, Icon: DiscordIcon, label: 'Discord', event: 'discord', iconClass: 'size-4' },
         { key: 'x', url: X_URL, Icon: XIcon, label: 'X (Twitter)', event: 'twitter', iconClass: 'size-4' },
         { key: 'coffee', url: COFFEE_URL, Icon: Coffee, label: t('favorites:settings.sponsor'), event: 'coffee', iconClass: 'size-4 text-amber-500' },
+        { key: 'patreon', url: PATREON_URL, Icon: HeartHandshake, label: 'Patreon', event: 'patreon', iconClass: 'size-4 text-[#ff424d]' },
     ];
 
     const themeOptions = [

@@ -12,7 +12,7 @@ const about = {
   'termsTitle': 'Terms of Use',
   'privacyTitle': 'Privacy and Security',
   'lastUpdated': 'Last Updated: 2025-12-09',
-  'copyright': '© 2025 Hsiung-Shao. All rights reserved.',
+  'copyright': '© 2026 Hsiung-Shao. All rights reserved.',
   'home': 'Home',
   'privacyPolicy': 'Privacy Policy',
   'giveFeedback': 'Give Feedback',

@@ -9,7 +9,7 @@ import {
   Tv, Radio, Zap, LayoutGrid, MessagesSquare, Volume2, Star, Smartphone,
   Languages, ShieldCheck, Search, Youtube, RefreshCw,
   CodeXml, RadioTower, Database, Gauge,
-  Gift, Github, UserX, MessageCircle, Coffee, Mail,
+  Gift, Github, UserX, MessageCircle, Coffee, HeartHandshake, AtSign, Mail,
   ArrowUpRight, ArrowRight, Copyright, Megaphone,
   type LucideIcon,
 } from 'lucide-react';
@@ -19,12 +19,10 @@ import { useUIStore } from '../store/useUIStore';
 import { StaticPageHeader } from './StaticPageHeader';
 import { RouteLink } from './Navigation/RouteLink';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
+import { GITHUB_URL, DISCORD_URL, COFFEE_URL, PATREON_URL, X_URL } from '../config/links';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-const GITHUB_URL = 'https://github.com/Hsiung-Shao';
-const DISCORD_URL = 'https://discord.gg/47kauArepY';
-const COFFEE_URL = 'https://buymeacoffee.com/hsiung';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
 export function AboutPage() {
@@ -126,6 +124,7 @@ export function AboutPage() {
         .ab-social.primary { background: var(--primary); color: #fff; box-shadow: 0 12px 28px -12px oklch(0.63 0.23 304 / 0.7); }
         .ab-social.ghost { background: oklch(0.21 0.034 264.665 / 0.5); color: var(--foreground); border: 1px solid rgba(255,255,255,0.1); }
         .ab-social.coffee { background: linear-gradient(90deg, #ec4899 0%, #9333ea 100%); color: #fff; }
+        .ab-social.patreon { background: #ff424d; color: #fff; }
 
         .ab-contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
         .ab-link-row { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px; text-decoration: none; background: oklch(0.21 0.034 264.665 / 0.45); border: 1px solid rgba(255,255,255,0.07); transition: background .2s ease, border-color .2s ease; cursor: pointer; font-family: var(--font-sans); text-align: left; color: inherit; width: 100%; }
@@ -302,6 +301,24 @@ export function AboutPage() {
                   onClick={() => logEvent('AboutPage', 'click_social', 'coffee')}
                 >
                   <Coffee size={16} /> {tx('about:buyCoffee', { defaultValue: '請我喝杯咖啡' })}
+                </a>
+                <a
+                  className="ab-social patreon"
+                  href={PATREON_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => logEvent('AboutPage', 'click_social', 'patreon')}
+                >
+                  <HeartHandshake size={16} /> Patreon
+                </a>
+                <a
+                  className="ab-social ghost"
+                  href={X_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => logEvent('AboutPage', 'click_social', 'twitter')}
+                >
+                  <AtSign size={16} /> X
                 </a>
               </div>
             </div>

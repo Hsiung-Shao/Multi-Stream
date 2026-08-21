@@ -1,18 +1,16 @@
-// 支持頁（/support）：Buy Me a Coffee 贊助 + ExitLag 聯盟連結（含聯盟揭露）+ 其他支持方式。
+// 支持頁（/support）：Patreon 每月贊助 + Buy Me a Coffee 一次性贊助 + ExitLag 聯盟連結（含聯盟揭露）+ 其他支持方式。
 // 版面沿用靜態頁慣例：StaticPageHeader + BlurOrb + 卡片區 + 頁尾 RouteLink。
 
 import { useTranslation } from 'react-i18next';
-import { Coffee, Zap, MessageCircle, Share2, Heart, ExternalLink } from 'lucide-react';
+import { Coffee, Zap, MessageCircle, Share2, Heart, HeartHandshake, ExternalLink } from 'lucide-react';
 import { StaticPageHeader } from './StaticPageHeader';
 import { RouteLink } from './Navigation/RouteLink';
 import { BlurOrb } from './ui/ds-primitives';
 import { logEvent } from '../utils/analytics';
+import { COFFEE_URL, PATREON_URL, EXITLAG_AFFILIATE_URL, DISCORD_URL } from '../config/links';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-const COFFEE_URL = 'https://buymeacoffee.com/hsiung';
-const EXITLAG_AFFILIATE_URL = 'https://www.exitlag.com/refer/10318098';
-const DISCORD_URL = 'https://discord.gg/47kauArepY';
 
 export function SupportPage() {
     const { t } = useTranslation(['support', 'common', 'about']);
@@ -34,6 +32,28 @@ export function SupportPage() {
                         {tx('support:hero.subtitle')}
                     </p>
                 </header>
+
+                {/* Patreon（每月贊助，排最前） */}
+                <section className="rounded-2xl border border-[#ff424d]/30 bg-[#ff424d]/[0.07] backdrop-blur p-6 md:p-8 mb-6">
+                    <div className="flex items-start gap-4">
+                        <span className="shrink-0 size-11 rounded-xl flex items-center justify-center bg-[#ff424d]/20 text-[#ff424d]">
+                            <HeartHandshake size={22} />
+                        </span>
+                        <div className="min-w-0">
+                            <h2 className="text-lg font-semibold mb-1.5">{tx('support:patreon.title')}</h2>
+                            <p className="text-sm text-muted-foreground leading-relaxed mb-4">{tx('support:patreon.desc')}</p>
+                            <a
+                                href={PATREON_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => logEvent('SupportPage', 'click_support', 'patreon')}
+                                className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-semibold text-white bg-[#ff424d] hover:bg-[#e63b45] transition-colors"
+                            >
+                                <HeartHandshake size={15} /> {tx('support:patreon.cta')} <ExternalLink size={13} />
+                            </a>
+                        </div>
+                    </div>
+                </section>
 
                 {/* Buy Me a Coffee */}
                 <section className="rounded-2xl border border-border bg-card/60 backdrop-blur p-6 md:p-8 mb-6">

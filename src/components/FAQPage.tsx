@@ -22,7 +22,7 @@ const STEP_IMAGES = [
     '/docs/brave-fix/step2.webp',
     '/docs/brave-fix/step3.webp',
 ];
-const DISCORD_URL = 'https://discord.gg/47kauArepY';
+import { DISCORD_URL } from '../config/links';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
 // FAQ 分組:播放與相容性 / 效能與資料,共 7 題(item key 對應 faq namespace)。
@@ -44,7 +44,7 @@ const FAQ_GROUPS = [
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 export function FAQPage() {
-    const { t } = useTranslation(['faq', 'common']);
+    const { t } = useTranslation(['faq', 'common', 'about']);
 
     const [query, setQuery] = useState('');
     const [activeCat, setActiveCat] = useState<string>('all');
@@ -286,7 +286,7 @@ export function FAQPage() {
                         <RouteLink className="faq-foot-link" to="about">{tx('faq:foot_about', { defaultValue: '關於' })}</RouteLink>
                         <RouteLink className="faq-foot-link" to="privacy">{tx('faq:foot_privacy', { defaultValue: '隱私權政策' })}</RouteLink>
                     </div>
-                    <p className="faq-copy">© 2026 MultiStream Hub. All rights reserved.</p>
+                    <p className="faq-copy">{tx('about:copyright')}</p>
                 </footer>
             </div>
         </div>

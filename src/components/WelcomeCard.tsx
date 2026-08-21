@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from '../hooks/use-media-query';
 import { logEvent } from '../utils/analytics';
+import { DISCORD_URL, X_URL, FEEDBACK_FORM_URL } from '../config/links';
 
 interface WelcomeCardProps {
   theme: 'light' | 'dark';
@@ -262,7 +263,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
             </p>
             <div className="grid grid-cols-2 gap-2">
               <a
-                href="https://forms.gle/AjG922YrXFbyAdBa6"
+                href={FEEDBACK_FORM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logEvent('WelcomeCard', 'click_social', 'feedback_form')}
@@ -277,7 +278,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 </span>
               </a>
               <a
-                href="https://discord.gg/47kauArepY"
+                href={DISCORD_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logEvent('WelcomeCard', 'click_social', 'discord')}
@@ -307,7 +308,7 @@ export function WelcomeCard({ theme, onShowVersionHistory, onShowTutorial, onSho
                 </span>
               </a>
               <a
-                href="https://x.com/Hsiungshao"
+                href={X_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => logEvent('WelcomeCard', 'click_social', 'twitter')}

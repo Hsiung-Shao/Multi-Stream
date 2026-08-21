@@ -12,7 +12,7 @@ const about = {
   'termsTitle': '使用条款',
   'privacyTitle': '隐私与安全',
   'lastUpdated': '最后更新：2025-12-09',
-  'copyright': '© 2025 Hsiung-Shao. All rights reserved.',
+  'copyright': '© 2026 Hsiung-Shao. All rights reserved.',
   'home': '首页',
   'privacyPolicy': '隐私权政策',
   'giveFeedback': '给予意见反馈',

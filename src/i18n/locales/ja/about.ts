@@ -12,7 +12,7 @@ const about = {
   'termsTitle': '利用規約',
   'privacyTitle': 'プライバシーとセキュリティ',
   'lastUpdated': '最終更新：2025-12-09',
-  'copyright': '© 2025 Hsiung-Shao. All rights reserved.',
+  'copyright': '© 2026 Hsiung-Shao. All rights reserved.',
   'home': 'ホーム',
   'privacyPolicy': 'プライバシーポリシー',
   'giveFeedback': 'フィードバックを送信',

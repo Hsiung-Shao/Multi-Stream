@@ -14,6 +14,7 @@ import {
 } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { SEO } from '../SEO';
+import { DISCORD_URL, GITHUB_URL } from '../../config/links';
 
 export function LandingPage() {
     const { t, i18n } = useTranslation();
@@ -60,12 +61,12 @@ export function LandingPage() {
                             <RouteLink to="support">{t('landing.footer.support', '支持我們')}</RouteLink>
                         </Button>
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
-                            <a href="https://discord.gg/47kauArepY" target="_blank" rel="noopener noreferrer">
+                            <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
                                 Discord
                             </a>
                         </Button>
                         <a
-                            href="https://github.com/Hsiung-Shao"
+                            href={GITHUB_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="GitHub"
