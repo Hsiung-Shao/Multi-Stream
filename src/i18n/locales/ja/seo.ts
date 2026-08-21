@@ -33,4 +33,6 @@ export default {
     'instructions.media.description': '複数配信でも騒がしくない：ウィンドウごとの音量、マスタースライダー、新規配信の自動ミュート。',
     'instructions.settings.title': '設定とパフォーマンス：テーマ、データバックアップ、Twitch 連携 - MultiStream Hub',
     'instructions.settings.description': 'MultiStream Hub の外観、パフォーマンス設定、ローカルデータのバックアップ、Twitch アカウント連携を調整。',
+    'creator.title': '開発者 Hsiung-Shao - MultiStream Hub',
+    'creator.description': 'MultiStream Hub の個人開発者 Hsiung-Shao の紹介：この無料マルチ配信視聴ツールを作った理由と、連絡・サポートの方法。',
 };

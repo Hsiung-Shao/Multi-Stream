@@ -124,6 +124,10 @@ export const ROUTE_META = {
         'zh-TW': { title: '設定與效能調校：主題、資料備份與 Twitch 連結 - MultiStream Hub', description: '調整 MultiStream Hub 的外觀、效能選項、本地資料備份與 Twitch 帳號連結，打造專屬的觀看環境。' },
         en: { title: 'Settings & Performance: Themes, Data Backup and Twitch Link - MultiStream Hub', description: 'Tune MultiStream Hub\'s look, performance options, local data backup and Twitch account link.' },
     },
+    '/about/creator': {
+        'zh-TW': { title: '開發者 Hsiung-Shao - MultiStream Hub', description: '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。' },
+        en: { title: 'Hsiung-Shao, Creator of MultiStream Hub', description: 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.' },
+    },
     '/admin': {
         noindex: true,
         'zh-TW': { title: 'Admin - MultiStream Hub', description: '' },

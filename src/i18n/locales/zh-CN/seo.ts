@@ -33,4 +33,6 @@ export default {
     'instructions.media.description': '同时看多个直播也不吵：每个窗口独立音量、总音量一键调整、新串流自动静音。',
     'instructions.settings.title': '设置与性能调校：主题、数据备份与 Twitch 连接 - MultiStream Hub',
     'instructions.settings.description': '调整 MultiStream Hub 的外观、性能选项、本地数据备份与 Twitch 账号连接，打造专属的观看环境。',
+    'creator.title': '开发者 Hsiung-Shao - MultiStream Hub',
+    'creator.description': '认识 MultiStream Hub 的独立开发者 Hsiung-Shao：为什么做这个免费的多直播观看工具，以及如何联系与支持。',
 };

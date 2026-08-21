@@ -31,6 +31,7 @@ const SEO_NS_ROUTES: Record<string, string> = {
     '/instructions': 'instructions',
     '/privacy': 'privacy',
     '/support': 'support',
+    '/about/creator': 'creator',
     ...Object.fromEntries(GUIDE_SLUGS.map((s) => [guidePath(s), `instructions.${s}`])),
 };
 

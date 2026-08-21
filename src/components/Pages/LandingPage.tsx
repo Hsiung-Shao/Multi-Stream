@@ -410,6 +410,9 @@ export function LandingPage() {
                         <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
                             <RouteLink to="privacy">{t('landing.footer.privacy')}</RouteLink>
                         </Button>
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                            <RouteLink to="creator">{tx('about:creator.pageTitle')}</RouteLink>
+                        </Button>
                         <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => openModal('feedback')}>
                             {t('navbar:feedback', '意見回饋')}
                         </Button>

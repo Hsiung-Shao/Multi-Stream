@@ -34,4 +34,6 @@ export default {
     'instructions.media.description': 'Watch many streams without the noise: per-window volume, one master slider and auto-mute for new streams.',
     'instructions.settings.title': 'Settings & Performance: Themes, Data Backup and Twitch Link - MultiStream Hub',
     'instructions.settings.description': 'Tune MultiStream Hub\'s look, performance options, local data backup and Twitch account link.',
+    'creator.title': 'Hsiung-Shao, Creator of MultiStream Hub',
+    'creator.description': 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.',
 };

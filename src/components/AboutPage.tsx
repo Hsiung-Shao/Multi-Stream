@@ -118,6 +118,10 @@ export function AboutPage() {
         .ab-creator-name { font-size: 20px; font-weight: 800; margin: 0; color: var(--foreground); }
         .ab-creator-role { font-size: 13px; color: #c084fc; font-weight: 600; }
         .ab-creator-desc { font-size: 14.5px; color: var(--muted-foreground); line-height: 1.7; margin: 12px 0 0; }
+        .ab-creator-link { color: inherit; text-decoration: none; }
+        .ab-creator-link:hover { color: #c084fc; }
+        .ab-creator-more { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 13.5px; font-weight: 600; color: #c084fc; text-decoration: none; }
+        .ab-creator-more:hover { text-decoration: underline; }
         .ab-social-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
         .ab-social { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 9999px; text-decoration: none; font-size: 14px; font-weight: 600; transition: transform .2s ease, box-shadow .2s ease; }
         .ab-social:hover { transform: translateY(-2px); }
@@ -266,7 +270,11 @@ export function AboutPage() {
             <div className="ab-avatar">H</div>
             <div className="ab-creator-body">
               <div className="flex items-baseline gap-2.5 flex-wrap">
-                <h3 className="ab-creator-name">Hsiung-Shao</h3>
+                <h3 className="ab-creator-name">
+                  <RouteLink to="creator" className="ab-creator-link" onClick={() => logEvent('AboutPage', 'click_social', 'creator_page')}>
+                    Hsiung-Shao
+                  </RouteLink>
+                </h3>
                 <span className="ab-creator-role">
                   {tx('about:creatorRole', { defaultValue: '獨立開發者' })}
                 </span>
@@ -274,6 +282,9 @@ export function AboutPage() {
               <p className="ab-creator-desc">
                 {tx('about:creatorDesc', { defaultValue: 'MultiStream Hub 由 Hsiung-Shao 獨立開發與維護。這個專案的初衷，是給直播愛好者一個免費、好用的多平台串流觀看工具，讓同時追多個直播這件事更方便、更有趣。功能會持續改進與優化，也歡迎大家提供寶貴的意見與建議。' })}
               </p>
+              <RouteLink to="creator" className="ab-creator-more" onClick={() => logEvent('AboutPage', 'click_social', 'creator_page')}>
+                {tx('about:creator.readMore')} <ArrowRight size={14} />
+              </RouteLink>
               <div className="ab-social-row">
                 <a
                   className="ab-social primary"

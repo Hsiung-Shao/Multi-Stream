@@ -17,6 +17,9 @@ control, a unified chat panel for multiple channels at once, and a local
   volume.
 - [About](https://multistreaming.org/about): what MultiStream Hub is, the
   full feature list, and who builds it.
+- [Creator](https://multistreaming.org/about/creator): Hsiung-Shao, the
+  independent developer — why the tool exists, project facts, and verified
+  social links (GitHub, X, Discord, Patreon, Buy Me a Coffee).
 - [How it works](https://multistreaming.org/instructions): step-by-step
   tutorial covering layouts, search, favorites, and the dynamic-island
   control center. Individual guides:

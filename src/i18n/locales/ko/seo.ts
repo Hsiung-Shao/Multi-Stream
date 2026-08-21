@@ -33,4 +33,6 @@ export default {
     'instructions.media.description': '여러 방송을 봐도 시끄럽지 않게: 창별 음량, 마스터 슬라이더, 새 방송 자동 음소거.',
     'instructions.settings.title': '설정과 성능: 테마, 데이터 백업, Twitch 연동 - MultiStream Hub',
     'instructions.settings.description': 'MultiStream Hub의 외관, 성능 옵션, 로컬 데이터 백업, Twitch 계정 연동을 조정하세요.',
+    'creator.title': '개발자 Hsiung-Shao - MultiStream Hub',
+    'creator.description': 'MultiStream Hub의 1인 개발자 Hsiung-Shao를 소개합니다: 이 무료 멀티 스트리밍 시청 도구를 만든 이유와 연락·후원 방법.',
 };

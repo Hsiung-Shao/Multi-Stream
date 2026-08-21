@@ -90,6 +90,16 @@ const about = {
   'pillOpenSource': '開源專案',
   'pillFrontend': '純前端',
   'pillNoSignup': '無需註冊',
+  // —— 開發者頁（/about/creator）——
+  'creator.pageTitle': '開發者',
+  'creator.whyTitle': '為什麼做 MultiStream Hub',
+  'creator.why': '我自己就是同時追好幾台直播的人：電競賽事要看多個視角、VTuber 聯動要開好幾個分頁，結果不是音量打架就是瀏覽器當掉。市面上的工具不是只支援 Twitch，就是要登入、有上限、或在手機上不能用。MultiStream Hub 是我為自己做的解法：Twitch 與 YouTube 一起看、最多 16 路、自由拖曳佈局、每路獨立音量，而且永遠免費、不用註冊、資料只留在你的瀏覽器。',
+  'creator.factsTitle': '專案資訊',
+  'creator.factLaunched': '上線：2025 年 11 月',
+  'creator.factVersion': '目前版本：v{{version}}',
+  'creator.factOpenSource': '原始碼公開',
+  'creator.linksTitle': '社群與支持',
+  'creator.readMore': '完整介紹',
 };
 
 export default about;

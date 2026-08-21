@@ -5,7 +5,8 @@ import { useUIStore } from './store/useUIStore';
 import { PAGE_PATHS, pathToPage } from './config/routes';
 import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
 import { SEO_SITE_URL } from './seo/defaults';
-import { graph, breadcrumb, webPage, techArticle, ORG_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
+import { graph, breadcrumb, webPage, techArticle, ORG_ID, PERSON_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
+import { GITHUB_URL, X_URL, PATREON_URL, COFFEE_URL } from './config/links';
 import { toHtmlLang } from './i18n/i18n';
 import { useStreamStore } from './store/useStreamStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
@@ -39,6 +40,7 @@ const FavoritesManagerMain = lazy(() => import('./features/favorites/components/
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
+const CreatorPage = lazy(() => import('./components/Pages/CreatorPage').then(module => ({ 'default': module.CreatorPage })));
 const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
 const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
 const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
@@ -152,7 +154,7 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  const isFullPage = ['about', 'creator', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
     || isGuidePage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
@@ -250,6 +252,44 @@ export default function App() {
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <AboutPage />
+            </Suspense>
+          </>
+        );
+      case 'creator':
+        return (
+          <>
+            <SEO
+              title={tx('seo:creator.title')}
+              description={tx('seo:creator.description')}
+              url={`${SEO_SITE_URL}${PAGE_PATHS.creator}`}
+              image={`${SEO_SITE_URL}/icon.png`}
+              jsonLd={graph(
+                webPage({
+                  type: 'ProfilePage', path: PAGE_PATHS.creator, name: tx('seo:creator.title'),
+                  description: tx('seo:creator.description'), inLanguage,
+                  extra: { mainEntity: { '@id': PERSON_ID } },
+                }),
+                {
+                  '@type': 'Person',
+                  '@id': PERSON_ID,
+                  name: 'Hsiung-Shao',
+                  url: `${SEO_SITE_URL}${PAGE_PATHS.creator}`,
+                  image: `${SEO_SITE_URL}/icon.png`,
+                  jobTitle: tx('about:creatorRole'),
+                  description: tx('about:creatorDesc'),
+                  sameAs: [GITHUB_URL, X_URL, PATREON_URL, COFFEE_URL],
+                  knowsAbout: ['Live streaming', 'Twitch', 'YouTube', 'Web development', 'React'],
+                  affiliation: { '@id': ORG_ID },
+                },
+                breadcrumb([
+                  { name: 'MultiStream Hub', path: '/' },
+                  { name: tx('about:title'), path: PAGE_PATHS.about },
+                  { name: tx('about:creator.pageTitle'), path: PAGE_PATHS.creator },
+                ]),
+              )}
+            />
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <CreatorPage />
             </Suspense>
           </>
         );
