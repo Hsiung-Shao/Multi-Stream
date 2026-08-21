@@ -186,7 +186,7 @@ function ListRow({ article, first }: { article: Article; first: boolean }) {
 function BlogArticle({ article, allArticles, labels }: {
     article: Article;
     allArticles: Article[];
-    labels: { allArticles: string; toc: string; related: string; team: string };
+    labels: { allArticles: string; toc: string; related: string; team: string; crumbHome: string; crumbHub: string };
 }) {
     const [activeId, setActiveId] = useState<string | undefined>(article.sections[0]?.id);
 
@@ -218,6 +218,16 @@ function BlogArticle({ article, allArticles, labels }: {
 
     return (
         <div className="tut-wrap">
+            {/* 可見麵包屑（與 <SEO jsonLd> 的 BreadcrumbList 對應，Google 建議兩者並存） */}
+            <nav className="tut-crumbs" aria-label="Breadcrumb">
+                <ol>
+                    <li><RouteLink to="home">{labels.crumbHome}</RouteLink></li>
+                    <li aria-hidden="true"><ChevronRight size={13} /></li>
+                    <li><RouteLink to="instructions">{labels.crumbHub}</RouteLink></li>
+                    <li aria-hidden="true"><ChevronRight size={13} /></li>
+                    <li aria-current="page">{article.title}</li>
+                </ol>
+            </nav>
             <RouteLink to="instructions" className="tut-back">
                 <ArrowLeft size={15} /> {labels.allArticles}
             </RouteLink>
@@ -599,6 +609,12 @@ export function InstructionsPage() {
                 .tut-card-link { color: inherit; text-decoration: none; }
                 .tut-card-link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
                 .tut-card-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+                .tut-crumbs { margin-bottom: 14px; font-size: 13px; color: var(--muted-foreground); }
+                .tut-crumbs ol { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 0; }
+                .tut-crumbs a { color: var(--muted-foreground); text-decoration: none; }
+                .tut-crumbs a:hover { color: var(--foreground); }
+                .tut-crumbs li[aria-current="page"] { color: var(--foreground); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
+                .tut-crumbs li[aria-hidden] { display: inline-flex; opacity: 0.5; }
 
                 .tut-mast { margin-bottom: 36px; }
                 .tut-eyebrow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -728,6 +744,8 @@ export function InstructionsPage() {
                         toc: tx('toc'),
                         related: tx('blog.related', { defaultValue: '繼續閱讀' }),
                         team: tx('blog.team', { defaultValue: 'MultiStream Hub 團隊' }),
+                        crumbHome: 'MultiStream Hub',
+                        crumbHub: tx('title'),
                     }}
                 />
                 : <BlogList

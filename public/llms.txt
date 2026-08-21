@@ -19,7 +19,21 @@ control, a unified chat panel for multiple channels at once, and a local
   full feature list, and who builds it.
 - [How it works](https://multistreaming.org/instructions): step-by-step
   tutorial covering layouts, search, favorites, and the dynamic-island
-  control center.
+  control center. Individual guides:
+  - [Quick start](https://multistreaming.org/instructions/quick-start): add
+    your first Twitch or YouTube stream from a URL, then layouts and chat.
+  - [Canvas & layouts](https://multistreaming.org/instructions/canvas): auto
+    grid, free drag, resize, snapping, chat window placement.
+  - [Smart search](https://multistreaming.org/instructions/search): add
+    streams by URL or channel name with live-status detection.
+  - [Dynamic island](https://multistreaming.org/instructions/dynamic-island):
+    the control center for layouts, media, favorites and fullscreen.
+  - [Favorites](https://multistreaming.org/instructions/favorites): track
+    streamers, save layouts, import Twitch follows, live alerts.
+  - [Media controls](https://multistreaming.org/instructions/media):
+    per-stream volume, master volume and mute.
+  - [Settings](https://multistreaming.org/instructions/settings): themes,
+    performance options, data backup, Twitch account link.
 
 ## Support
 - [FAQ](https://multistreaming.org/faq): troubleshooting (e.g. Twitch not

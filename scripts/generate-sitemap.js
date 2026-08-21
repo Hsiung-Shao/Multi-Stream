@@ -19,6 +19,13 @@ const ROUTE_SOURCES = {
   '/privacy': ['src/components/PrivacyPage.tsx', 'src/i18n/locales/zh-TW/privacy.ts'],
   '/faq': ['src/components/FAQPage.tsx', 'src/i18n/locales/zh-TW/faq.ts'],
   '/support': ['src/components/SupportPage.tsx', 'src/i18n/locales/zh-TW/support.ts'],
+  // 教學文章 7 篇（slug 清單與 src/config/guides.ts 的 GUIDE_SLUGS 一致；tests/functions/sitemap.test.ts 鎖）
+  ...Object.fromEntries(
+    ['quick-start', 'canvas', 'search', 'dynamic-island', 'favorites', 'media', 'settings'].map((s) => [
+      `/instructions/${s}`,
+      ['src/components/Pages/InstructionsPage.tsx', 'src/i18n/locales/zh-TW/tutorial.ts'],
+    ])
+  ),
 };
 
 function gitLastMod(files) {
@@ -43,6 +50,9 @@ const urls = [
   { url: '/privacy', changefreq: 'monthly', priority: 0.6 },
   { url: '/faq', changefreq: 'monthly', priority: 0.6 },
   { url: '/support', changefreq: 'monthly', priority: 0.5 },
+  ...['quick-start', 'canvas', 'search', 'dynamic-island', 'favorites', 'media', 'settings'].map((s) => ({
+    url: `/instructions/${s}`, changefreq: 'monthly', priority: 0.6,
+  })),
 ].map((u) => ({ ...u, lastmod: gitLastMod(ROUTE_SOURCES[u.url]) }));
 
 // 網站主機名
