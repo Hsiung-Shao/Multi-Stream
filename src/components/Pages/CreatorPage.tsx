@@ -89,7 +89,8 @@ export function CreatorPage() {
                     <div>
                         <div className="cr-eyebrow">{tx('about:creatorEyebrow', { defaultValue: 'Creator' })}</div>
                         <h1 className="cr-name">{CREATOR_NAME}</h1>
-                        <div className="cr-role">{tx('about:creatorRole')}</div>
+                        {/* 暱稱「宅熊」：站內第一人稱以此自稱，schema 以 alternateName 對應 */}
+                        <div className="cr-role">{tx('about:creator.nickname')} · {tx('about:creatorRole')}</div>
                     </div>
                 </header>
                 <p className="cr-desc">{tx('about:creatorDesc')}</p>

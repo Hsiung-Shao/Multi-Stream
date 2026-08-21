@@ -92,6 +92,7 @@ const about = {
   'pillNoSignup': '登録不要',
   // —— 開發者頁（/about/creator）——
   'creator.pageTitle': '開発者',
+  'creator.nickname': '宅熊',
   'creator.whyTitle': 'MultiStream Hub を作った理由',
   'creator.why': '私自身、複数の配信を同時に追う視聴者です。e スポーツでは複数視点を見たいし、VTuber のコラボではタブをいくつも開く。結果は音声の取り合いかブラウザのクラッシュでした。既存のツールは Twitch 専用だったり、ログインが必要だったり、上限があったり、スマホで使えなかったり。MultiStream Hub は自分のために作った解決策です：Twitch と YouTube を一緒に、最大 16 配信、自由なドラッグ配置、配信ごとの音量。そして永久に無料、登録不要、データはあなたのブラウザにだけ残ります。',
   'creator.factsTitle': 'プロジェクト情報',

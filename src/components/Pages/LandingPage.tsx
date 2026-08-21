@@ -105,14 +105,13 @@ export function LandingPage() {
                                     {t('landing.hero_title')}
                                 </span>
                             </h1>
-                            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-6 leading-relaxed">
+                            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-4 leading-relaxed">
                                 {t('landing.hero_subtitle')}
                             </p>
 
-                            {/* GEO 定義段：含規格數字（免費/免註冊/16 路/Twitch+YouTube）的可引用描述，
-                                供搜尋與 AI 引擎摘錄；字級與透明度低於副標，避免搶 CTA 視覺 */}
-                            <p className="text-base md:text-lg text-muted-foreground/80 max-w-3xl mx-auto mb-10 leading-relaxed text-left md:text-center">
-                                {t('landing.hero_definition')}
+                            {/* 規格一行（免費/免註冊/16 路/音量/聊天室）；完整 GEO 定義段移到截圖下方獨立區塊，首屏不堆字 */}
+                            <p className="text-sm md:text-base text-muted-foreground/70 max-w-2xl mx-auto mb-10 tracking-wide">
+                                {t('landing.hero_brief')}
                             </p>
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -153,6 +152,16 @@ export function LandingPage() {
                                 />
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                {/* GEO 定義段：含規格數字的可引用描述（供搜尋/AI 引擎摘錄），獨立成區塊、有 H2，不擠在 Hero */}
+                <section className="py-14 md:py-16 border-t border-white/5">
+                    <div className="container mx-auto px-4 max-w-3xl">
+                        <h2 className="text-2xl md:text-3xl font-bold mb-4 text-center">{t('landing.what_title')}</h2>
+                        <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+                            {t('landing.hero_definition')}
+                        </p>
                     </div>
                 </section>
 

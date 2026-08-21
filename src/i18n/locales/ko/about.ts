@@ -92,6 +92,7 @@ const about = {
   'pillNoSignup': '회원가입 불필요',
   // —— 開發者頁（/about/creator）——
   'creator.pageTitle': '개발자',
+  'creator.nickname': '宅熊',
   'creator.whyTitle': 'MultiStream Hub를 만든 이유',
   'creator.why': '저 역시 여러 방송을 동시에 보는 시청자입니다. e스포츠에서는 여러 시점을 보고 싶고, 버튜버 합방에서는 탭을 여러 개 열게 되죠. 결과는 늘 소리가 뒤섞이거나 브라우저가 죽는 것이었습니다. 기존 도구는 Twitch 전용이거나, 로그인이 필요하거나, 개수 제한이 있거나, 모바일에서 쓸 수 없었습니다. MultiStream Hub는 제가 저를 위해 만든 해결책입니다: Twitch와 YouTube를 함께, 최대 16개, 자유 드래그 레이아웃, 방송별 음량. 그리고 영원히 무료, 회원가입 불필요, 데이터는 브라우저에만 남습니다.',
   'creator.factsTitle': '프로젝트 정보',

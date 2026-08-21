@@ -92,6 +92,7 @@ const about = {
   'pillNoSignup': 'No Sign-up',
   // —— 開發者頁（/about/creator）——
   'creator.pageTitle': 'Creator',
+  'creator.nickname': '宅熊',
   'creator.whyTitle': 'Why I built MultiStream Hub',
   'creator.why': 'I watch several streams at once myself — multiple POVs during esports events, VTuber collabs spread across tabs — and it always ended with fighting audio or a crashed browser. Existing tools were Twitch-only, needed a login, capped the stream count, or didn\'t work on mobile. MultiStream Hub is the fix I built for myself: Twitch and YouTube together, up to 16 streams, free-drag layouts, per-stream volume, and it stays free, account-less, with your data kept in your browser.',
   'creator.factsTitle': 'Project facts',

@@ -164,7 +164,7 @@ export default function App() {
       <>
         <MobileApp />
         <RestoreSessionPrompt
-          open={!!pendingRestore}
+          open={!!pendingRestore && currentPage === 'canvas'}
           streamCount={pendingRestore?.streams.length ?? 0}
           onRestore={handleRestoreSession}
           onDiscard={handleDiscardSession}
@@ -302,6 +302,7 @@ export default function App() {
                   '@type': 'Person',
                   '@id': PERSON_ID,
                   name: 'Hsiung-Shao',
+                  alternateName: tx('about:creator.nickname'),
                   url: `${SEO_SITE_URL}${PAGE_PATHS.creator}`,
                   image: `${SEO_SITE_URL}/icon.png`,
                   jobTitle: tx('about:creatorRole'),
@@ -421,8 +422,9 @@ export default function App() {
         onDontRemind={handleRiskDontRemind}
       />
 
+      {/* 只在 /canvas 彈出：在 About/教學等頁面被問「要恢復畫布嗎」很突兀；資料先留著，使用者進 canvas 時再問 */}
       <RestoreSessionPrompt
-        open={!!pendingRestore}
+        open={!!pendingRestore && currentPage === 'canvas'}
         streamCount={pendingRestore?.streams.length ?? 0}
         onRestore={handleRestoreSession}
         onDiscard={handleDiscardSession}
