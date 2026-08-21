@@ -57,4 +57,13 @@ describe('SEO', () => {
         rerender(<SEO />);
         expect(document.querySelector('script[data-seo-jsonld]')).toBeNull();
     });
+
+    it('jsonLd：內容含 < 時跳脫為 \\u003c，避免 </script> 提前關閉標籤；解析回來仍等值', () => {
+        const payload = { '@type': 'Article', headline: 'a </script><b>b' };
+        render(<SEO jsonLd={payload} />);
+        const text = document.querySelector('script[data-seo-jsonld]')?.textContent ?? '';
+        expect(text).not.toContain('</script>');
+        expect(text).toContain('\\u003c/script>');
+        expect(JSON.parse(text)).toEqual(payload);
+    });
 });

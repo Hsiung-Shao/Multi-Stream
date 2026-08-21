@@ -49,7 +49,9 @@ export function SEO({
   const { i18n } = useTranslation();
   const ogLocale = locale ?? OG_LOCALE[toHtmlLang(i18n.language)] ?? 'zh_TW';
   // 以序列化字串當依賴,避免呼叫端每次 render 傳新物件導致 effect 重跑
-  const jsonLdStr = jsonLd ? JSON.stringify(jsonLd) : null;
+  // 跳脫 <：避免 jsonLd 內容含 </script> 時提前關閉 script 標籤（textContent 注入雖不解析 HTML，
+  // 但 JSON-LD 會被抓取器原樣讀取，跳脫是 schema.org 建議做法，與 LandingPage FaqJsonLd 一致）
+  const jsonLdStr = jsonLd ? JSON.stringify(jsonLd).replace(/</g, '\\u003c') : null;
   // 用 useLayoutEffect 確保 document.title 在瀏覽器繪製前就同步完成，
   // 讓父層 useRouter 的 useEffect（在子元件 effect 後執行）讀到的 title 已是當前頁面標題
   useLayoutEffect(() => {

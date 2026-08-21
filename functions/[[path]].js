@@ -44,11 +44,12 @@ export async function onRequest(context) {
         const clean = rawPath.replace(/\/+$/, '') || '/';
         return Response.redirect(url.origin + clean + url.search, 301);
     }
-    if (REDIRECTS[rawPath]) {
+    // Object.hasOwn：避免 /constructor、/toString 這類原型鏈 key 被當成已知路由
+    if (Object.hasOwn(REDIRECTS, rawPath)) {
         return Response.redirect(url.origin + REDIRECTS[rawPath], 301);
     }
 
-    const entry = ROUTE_META[rawPath];
+    const entry = Object.hasOwn(ROUTE_META, rawPath) ? ROUTE_META[rawPath] : undefined;
     const lang = pickLang(request.headers.get('accept-language'));
     const meta = entry ? entry[lang] : NOT_FOUND_META[lang];
     const status = entry ? 200 : 404;
