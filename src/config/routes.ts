@@ -1,12 +1,19 @@
 import type { PageType } from '../store/useUIStore';
+import { GUIDE_SLUGS, guidePage, guidePath, type GuidePage } from './guides';
 
 /**
  * 頁面 ↔ URL 的單一對照表。
  * 供 useRouter（URL 同步）與 RouteLink（真實 <a href>）共用，避免兩處各自維護而漂移。
+ * 教學文章頁（instructions:<slug> ↔ /instructions/<slug>）由 guides.ts 的 GUIDE_SLUGS 展開，
+ * 仍是精確字串對照：pathToPage / pageToPath / edge ROUTE_META 一比一測試都不需要參數化邏輯。
  */
 
 /** 有對應 URL 的頁面（'settings' 無路由、'not-found' 保留使用者輸入的錯誤網址） */
 export type RoutePage = Exclude<PageType, 'settings' | 'not-found'>;
+
+const GUIDE_PATHS = Object.fromEntries(
+    GUIDE_SLUGS.map((s) => [guidePage(s), guidePath(s)]),
+) as Record<GuidePage, string>;
 
 export const PAGE_PATHS: Record<RoutePage, string> = {
     home: '/',
@@ -17,6 +24,7 @@ export const PAGE_PATHS: Record<RoutePage, string> = {
     support: '/support',
     privacy: '/privacy',
     admin: '/admin',
+    ...GUIDE_PATHS,
 };
 
 /** 舊版靜態檔網址別名（與原 useRouter 行為完全對等，勿擴大） */

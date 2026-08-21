@@ -13,15 +13,16 @@ import enSeo from '../../src/i18n/locales/en/seo';
 import zhTWFaq from '../../src/i18n/locales/zh-TW/faq';
 import enFaq from '../../src/i18n/locales/en/faq';
 import { PAGE_PATHS } from '../../src/config/routes';
+import { GUIDE_SLUGS, guidePath } from '../../src/config/guides';
 import { SEO_ROBOTS_INDEX, SEO_ROBOTS_NOINDEX } from '../../src/seo/defaults';
 
 const rootDir = resolve(__dirname, '../..');
 
 type Meta = { title: string; description: string };
-type RouteEntry = { 'zh-TW': Meta; en: Meta; noindex?: boolean };
+type RouteEntry = { 'zh-TW': Meta; en: Meta; noindex?: boolean; type?: 'article' };
 const routeMeta = ROUTE_META as Record<string, RouteEntry>;
 
-// locale seo.ts 的 key 前綴 ↔ edge 路由
+// locale seo.ts 的 key 前綴 ↔ edge 路由（教學文章 7 篇由 GUIDE_SLUGS 展開）
 const SEO_NS_ROUTES: Record<string, string> = {
     '/': 'home',
     '/canvas': 'canvas',
@@ -29,6 +30,7 @@ const SEO_NS_ROUTES: Record<string, string> = {
     '/instructions': 'instructions',
     '/privacy': 'privacy',
     '/support': 'support',
+    ...Object.fromEntries(GUIDE_SLUGS.map((s) => [guidePath(s), `instructions.${s}`])),
 };
 
 describe('edge seo-meta ↔ i18n locale 同步', () => {
@@ -53,6 +55,14 @@ describe('edge seo-meta ↔ i18n locale 同步', () => {
     it('ROUTE_META 覆蓋 PAGE_PATHS 的全部路由（不多不少）', () => {
         const expected = Object.values(PAGE_PATHS).sort();
         expect(Object.keys(routeMeta).sort()).toEqual(expected);
+    });
+
+    it('教學文章路由全部標 type: article，且只有它們是 article', () => {
+        const articleRoutes = Object.entries(routeMeta)
+            .filter(([, v]) => v.type === 'article')
+            .map(([k]) => k)
+            .sort();
+        expect(articleRoutes).toEqual(GUIDE_SLUGS.map(guidePath).sort());
     });
 
     it('/admin 標記 noindex；404 meta 兩語言齊備', () => {

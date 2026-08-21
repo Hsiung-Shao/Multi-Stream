@@ -18,4 +18,19 @@ export default {
     'support.title': '支持我们 - MultiStream Hub',
     'support.description':
         'MultiStream Hub 是完全免费的多直播观看工具。通过 Buy Me a Coffee 赞助或联盟链接支持网站运营，让服务持续免费。',
+    // 教學文章頁（/instructions/<slug>，見 src/config/guides.ts）
+    'instructions.quick-start.title': '快速上手：添加串流到自动排版 - MultiStream Hub',
+    'instructions.quick-start.description': '第一次使用 MultiStream Hub？从粘贴 Twitch / YouTube 网址添加直播开始，学会搜索频道、切换布局与整合聊天室。',
+    'instructions.canvas.title': '画布与布局：自由拖拽多直播窗口 - MultiStream Hub',
+    'instructions.canvas.description': '认识 MultiStream Hub 的画布工作区：自动网格、自由拖拽、调整大小、磁吸对齐与聊天窗口配置。',
+    'instructions.search.title': '智能搜索：用网址或频道名添加 Twitch / YouTube 直播 - MultiStream Hub',
+    'instructions.search.description': '搜索框不只粘贴网址：直接输入 Twitch 频道名或 YouTube 频道，即时查看开播状态并一键加入画布。',
+    'instructions.dynamic-island.title': '动态岛控制中心：布局、媒体、收藏一站操作 - MultiStream Hub',
+    'instructions.dynamic-island.description': '动态岛是 MultiStream Hub 的控制中心：切换布局、全局音量、收藏列表、全屏与清空画布都在这里。',
+    'instructions.favorites.title': '收藏管理：追踪主播、保存常用组合与开播检测 - MultiStream Hub',
+    'instructions.favorites.description': '把喜欢的主播与常用布局存起来，导入 Twitch 关注列表，开播时立即得知并一键打开。',
+    'instructions.media.title': '媒体控制：独立音量、总音量与静音 - MultiStream Hub',
+    'instructions.media.description': '同时看多个直播也不吵：每个窗口独立音量、总音量一键调整、新串流自动静音。',
+    'instructions.settings.title': '设置与性能调校：主题、数据备份与 Twitch 连接 - MultiStream Hub',
+    'instructions.settings.description': '调整 MultiStream Hub 的外观、性能选项、本地数据备份与 Twitch 账号连接，打造专属的观看环境。',
 };

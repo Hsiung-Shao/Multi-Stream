@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { pathToPage } from '../config/routes';
+import type { GuidePage } from '../config/guides';
 
 interface ModalState {
     history: boolean;
@@ -9,7 +10,8 @@ interface ModalState {
     ytRisk: boolean;
 }
 
-export type PageType = 'home' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'support' | 'admin' | 'not-found';
+// 'instructions:<slug>' 為教學文章頁（見 src/config/guides.ts），slug 內嵌在 page 字串
+export type PageType = 'home' | 'about' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'support' | 'admin' | 'not-found' | GuidePage;
 
 interface UIState {
     theme: 'light' | 'dark' | 'system';

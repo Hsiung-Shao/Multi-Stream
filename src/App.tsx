@@ -1,7 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
-import { useUIStore, type PageType } from './store/useUIStore';
+import { useUIStore } from './store/useUIStore';
+import { PAGE_PATHS, pathToPage } from './config/routes';
+import { GUIDE_META, guidePath, guideSlugOf, isGuidePage } from './config/guides';
+import { SEO_SITE_URL } from './seo/defaults';
 import { useStreamStore } from './store/useStreamStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
@@ -92,14 +95,9 @@ export default function App() {
       // Auto-navigate back to the page user was on before OAuth
       const returnPath = sessionStorage.getItem(RETURN_PAGE_KEY);
       if (returnPath) {
-        const pathToPage: Record<string, PageType> = {
-          '/canvas': 'canvas',
-          '/about': 'about',
-          '/instructions': 'instructions',
-          '/faq': 'faq',
-        };
-        const page = pathToPage[returnPath];
-        if (page) {
+        // 與 useRouter 共用 routes.ts 的對照表（含 /instructions/<slug>），未知路徑不導頁
+        const page = pathToPage(returnPath);
+        if (page !== 'not-found') {
           useUIStore.getState().setPage(page);
         }
         sessionStorage.removeItem(RETURN_PAGE_KEY);
@@ -134,7 +132,9 @@ export default function App() {
   } = useYouTubeRisk();
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
-  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage);
+  // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
+  const isFullPage = ['about', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+    || isGuidePage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
       <>
@@ -151,6 +151,27 @@ export default function App() {
 
   // Routing Logic
   const renderPage = () => {
+    // 教學列表 + 7 篇文章共用 InstructionsPage；<SEO> 放 Suspense 外，切頁瞬間 title/meta 就正確
+    // （useRouter 的 GA4 pageview 讀 document.title，不能等 lazy chunk）。文章頁用該篇專屬的
+    // seo:instructions.<slug>.* 與 og:type=article。
+    if (currentPage === 'instructions' || isGuidePage(currentPage)) {
+      const slug = isGuidePage(currentPage) ? guideSlugOf(currentPage) : null;
+      const path = slug ? guidePath(slug) : PAGE_PATHS.instructions;
+      return (
+        <>
+          <SEO
+            title={tx(slug ? `seo:instructions.${slug}.title` : 'seo:instructions.title')}
+            description={tx(slug ? `seo:instructions.${slug}.description` : 'seo:instructions.description')}
+            url={`${SEO_SITE_URL}${path}`}
+            type={slug ? 'article' : 'website'}
+            image={slug ? `${SEO_SITE_URL}${GUIDE_META[slug].image}` : undefined}
+          />
+          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <InstructionsPage />
+          </Suspense>
+        </>
+      );
+    }
     switch (currentPage) {
       case 'home':
         return <LandingPage />;
@@ -158,12 +179,6 @@ export default function App() {
         return (
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <CanvasPage />
-          </Suspense>
-        );
-      case 'instructions':
-        return (
-          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
-            <InstructionsPage />
           </Suspense>
         );
       case 'about':

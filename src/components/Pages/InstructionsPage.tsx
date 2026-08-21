@@ -4,11 +4,15 @@
 // 內容沿用 next 既有 tutorial 多語系 i18n(6 大功能 + 快速上手 → 7 篇文章),只換 design 視覺。
 // FAQ 內容已移至 /faq(FAQPage),本頁專注 how-to 教學。
 // 部落格框架文字(搜尋框、版型、精選、目錄、繼續閱讀…)為 design 新增,以 defaultValue 帶繁中、其餘語系暫 fallback。
-// SEO 與頂部返回列由本元件自帶(App.tsx 的 'instructions' case 不另包 SEO)。
+// 路由:列表 = /instructions、文章 = /instructions/<slug>(page 'instructions:<slug>',見 src/config/guides.ts);
+// 卡片與返回鈕都是 RouteLink 真實 <a href>,爬蟲可沿連結走完 7 篇,上一頁會回列表。
+// SEO(含每篇文章的 title/description/JSON-LD)由 App.tsx 在 Suspense 外統一處理,本元件不自帶。
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SEO } from '../SEO';
+import { useUIStore } from '../../store/useUIStore';
+import { RouteLink } from '../Navigation/RouteLink';
+import { guidePage, guideSlugOf, isGuidePage, type GuideSlug } from '../../config/guides';
 import { StaticPageHeader } from '../StaticPageHeader';
 import {
     Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
@@ -34,7 +38,7 @@ const img = (file: string, w: number, h: number, alt: string, caption?: string):
 interface Section { id: string; heading: string; blocks: Block[]; }
 
 interface Article {
-    slug: string;
+    slug: GuideSlug;
     title: string;
     excerpt: string;
     category: string;
@@ -112,15 +116,21 @@ function Block({ block, accent }: { block: Block; accent: string }) {
     );
 }
 
-function FeaturedCard({ article, onOpen, featuredLabel, readMoreLabel }: {
-    article: Article; onOpen: (s: string) => void; featuredLabel: string; readMoreLabel: string;
+// 卡片標題是真實 <a href="/instructions/<slug>">(RouteLink),用 .tut-card-link::after 鋪滿整卡
+// (stretched-link):整卡可點、Ctrl/中鍵可開新分頁、爬蟲看得到連結,且不產生巢狀互動元素。
+function CardLink({ slug, children }: { slug: GuideSlug; children: ReactNode }) {
+    return <RouteLink to={guidePage(slug)} className="tut-card-link">{children}</RouteLink>;
+}
+
+function FeaturedCard({ article, featuredLabel, readMoreLabel }: {
+    article: Article; featuredLabel: string; readMoreLabel: string;
 }) {
     return (
-        <article className="tut-featured" onClick={() => onOpen(article.slug)}>
+        <article className="tut-featured">
             <HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={260} big />
             <div>
                 <span className="tut-featured-eyebrow"><Sparkles size={13} /> {featuredLabel}</span>
-                <h2 className="tut-featured-title">{article.title}</h2>
+                <h2 className="tut-featured-title"><CardLink slug={article.slug}>{article.title}</CardLink></h2>
                 <p className="tut-featured-excerpt">{article.excerpt}</p>
                 <Meta readLabel={article.readLabel} />
                 <div className="tut-read-more">{readMoreLabel} <ArrowRight size={16} /></div>
@@ -129,12 +139,12 @@ function FeaturedCard({ article, onOpen, featuredLabel, readMoreLabel }: {
     );
 }
 
-function MagazineCard({ article, onOpen }: { article: Article; onOpen: (s: string) => void }) {
+function MagazineCard({ article }: { article: Article }) {
     return (
-        <article className="tut-card" onClick={() => onOpen(article.slug)}>
+        <article className="tut-card">
             <div className="tut-card-pad"><HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={150} /></div>
             <div className="tut-card-body">
-                <h3 className="tut-card-title">{article.title}</h3>
+                <h3 className="tut-card-title"><CardLink slug={article.slug}>{article.title}</CardLink></h3>
                 <p className="tut-card-excerpt">{article.excerpt}</p>
                 <Meta readLabel={article.readLabel} />
             </div>
@@ -142,12 +152,12 @@ function MagazineCard({ article, onOpen }: { article: Article; onOpen: (s: strin
     );
 }
 
-function UniformCard({ article, onOpen }: { article: Article; onOpen: (s: string) => void }) {
+function UniformCard({ article }: { article: Article }) {
     return (
-        <article className="tut-ucard" onClick={() => onOpen(article.slug)}>
+        <article className="tut-ucard">
             <HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={120} />
             <div className="tut-ucard-body">
-                <h3 className="tut-ucard-title">{article.title}</h3>
+                <h3 className="tut-ucard-title"><CardLink slug={article.slug}>{article.title}</CardLink></h3>
                 <p className="tut-ucard-excerpt">{article.excerpt}</p>
                 <Meta readLabel={article.readLabel} />
             </div>
@@ -155,13 +165,13 @@ function UniformCard({ article, onOpen }: { article: Article; onOpen: (s: string
     );
 }
 
-function ListRow({ article, onOpen, first }: { article: Article; onOpen: (s: string) => void; first: boolean }) {
+function ListRow({ article, first }: { article: Article; first: boolean }) {
     return (
-        <article className={`tut-row${first ? ' first' : ''}`} onClick={() => onOpen(article.slug)}>
+        <article className={`tut-row${first ? ' first' : ''}`}>
             <div className="tut-row-hero"><HeroBlock Icon={article.icon} catLabel={article.catLabel} accent={article.accent} accent2={article.accent2} height={66} /></div>
             <div className="tut-row-body">
                 <span className="tut-row-cat" style={{ color: article.accent }}>{article.catLabel}</span>
-                <h3 className="tut-row-title">{article.title}</h3>
+                <h3 className="tut-row-title"><CardLink slug={article.slug}>{article.title}</CardLink></h3>
                 <p className="tut-row-excerpt">{article.excerpt}</p>
             </div>
             <div className="tut-row-meta"><Meta readLabel={article.readLabel} /></div>
@@ -173,11 +183,9 @@ function ListRow({ article, onOpen, first }: { article: Article; onOpen: (s: str
 // =============================================================================
 // 文章閱讀頁(目錄 scrollspy + 內容區塊 + 相關文章)
 // =============================================================================
-function BlogArticle({ article, allArticles, onBack, onOpen, labels }: {
+function BlogArticle({ article, allArticles, labels }: {
     article: Article;
     allArticles: Article[];
-    onBack: () => void;
-    onOpen: (s: string) => void;
     labels: { allArticles: string; toc: string; related: string; team: string };
 }) {
     const [activeId, setActiveId] = useState<string | undefined>(article.sections[0]?.id);
@@ -210,9 +218,9 @@ function BlogArticle({ article, allArticles, onBack, onOpen, labels }: {
 
     return (
         <div className="tut-wrap">
-            <button className="tut-back" onClick={onBack}>
+            <RouteLink to="instructions" className="tut-back">
                 <ArrowLeft size={15} /> {labels.allArticles}
-            </button>
+            </RouteLink>
 
             <header className="tut-art-head">
                 <div className="tut-art-cat-row">
@@ -257,7 +265,7 @@ function BlogArticle({ article, allArticles, onBack, onOpen, labels }: {
                 <div className="tut-related">
                     <h2 className="tut-related-h">{labels.related}</h2>
                     <div className="tut-related-grid">
-                        {related.map((a) => <UniformCard key={a.slug} article={a} onOpen={onOpen} />)}
+                        {related.map((a) => <UniformCard key={a.slug} article={a} />)}
                     </div>
                 </div>
             )}
@@ -270,10 +278,9 @@ function BlogArticle({ article, allArticles, onBack, onOpen, labels }: {
 // =============================================================================
 type Layout = 'magazine' | 'cards' | 'list';
 
-function BlogList({ articles, cats, onOpen, labels }: {
+function BlogList({ articles, cats, labels }: {
     articles: Article[];
     cats: { id: string; label: string }[];
-    onOpen: (s: string) => void;
     labels: {
         mastEyebrow: string; mastTitle: string; mastSub: string;
         searchPlaceholder: string; layoutMagazine: string; layoutCards: string; layoutList: string;
@@ -349,21 +356,21 @@ function BlogList({ articles, cats, onOpen, labels }: {
             )}
 
             {layout === 'magazine' && featured && (
-                <FeaturedCard article={featured} onOpen={onOpen} featuredLabel={labels.featured} readMoreLabel={labels.readMore} />
+                <FeaturedCard article={featured} featuredLabel={labels.featured} readMoreLabel={labels.readMore} />
             )}
             {layout === 'magazine' && rest.length > 0 && (
                 <div className="tut-grid-mag">
-                    {rest.map((a) => <MagazineCard key={a.slug} article={a} onOpen={onOpen} />)}
+                    {rest.map((a) => <MagazineCard key={a.slug} article={a} />)}
                 </div>
             )}
             {layout === 'cards' && (
                 <div className="tut-grid-cards">
-                    {filtered.map((a) => <UniformCard key={a.slug} article={a} onOpen={onOpen} />)}
+                    {filtered.map((a) => <UniformCard key={a.slug} article={a} />)}
                 </div>
             )}
             {layout === 'list' && (
                 <div className="tut-list">
-                    {filtered.map((a, i) => <ListRow key={a.slug} article={a} onOpen={onOpen} first={i === 0} />)}
+                    {filtered.map((a, i) => <ListRow key={a.slug} article={a} first={i === 0} />)}
                 </div>
             )}
         </div>
@@ -376,7 +383,9 @@ function BlogList({ articles, cats, onOpen, labels }: {
 export function InstructionsPage() {
     const { t, i18n } = useTranslation(['tutorial', 'common']);
     const tx = t as unknown as TFn;
-    const [slug, setSlug] = useState<string | null>(null);
+    // 目前文章由 page 推導（'instructions:<slug>'），URL 同步與上一頁行為交給 useRouter
+    const page = useUIStore((s) => s.page);
+    const slug: GuideSlug | null = isGuidePage(page) ? guideSlugOf(page) : null;
 
     const readLabel = (n: number) => tx('blog.minRead', { defaultValue: '{{n}} 分鐘', n });
 
@@ -580,16 +589,16 @@ export function InstructionsPage() {
 
     return (
         <div className="tut-page">
-            <SEO
-                title={tx('seo:instructions.title')}
-                description={tx('seo:instructions.description')}
-                url="https://multistreaming.org/instructions"
-            />
-
             {/* 樣式對齊 design Blog.jsx,沿用 next 的 oklch token */}
             <style>{`
                 .tut-page { min-height: 100vh; background: var(--background); color: var(--foreground); }
                 .tut-wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 96px; }
+
+                /* stretched-link:卡片標題內的 <a> 用 ::after 鋪滿整張卡,整卡可點且仍是真實連結 */
+                .tut-featured, .tut-card, .tut-ucard, .tut-row { position: relative; }
+                .tut-card-link { color: inherit; text-decoration: none; }
+                .tut-card-link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+                .tut-card-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
 
                 .tut-mast { margin-bottom: 36px; }
                 .tut-eyebrow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -714,8 +723,6 @@ export function InstructionsPage() {
                 ? <BlogArticle
                     article={article}
                     allArticles={articles}
-                    onBack={() => setSlug(null)}
-                    onOpen={setSlug}
                     labels={{
                         allArticles: tx('blog.allArticles', { defaultValue: '所有教學' }),
                         toc: tx('toc'),
@@ -726,7 +733,6 @@ export function InstructionsPage() {
                 : <BlogList
                     articles={articles}
                     cats={cats}
-                    onOpen={setSlug}
                     labels={{
                         mastEyebrow: tx('title'),
                         mastTitle: tx('hero.title'),

@@ -84,4 +84,14 @@ describe('routes 對照表', () => {
         expect(pageToPath('not-found')).toBeNull();
         expect(pageToPath('settings')).toBe('/');
     });
+
+    it('教學文章路由：instructions:<slug> ↔ /instructions/<slug>，未知 slug 為 404', () => {
+        expect(pathToPage('/instructions/canvas')).toBe('instructions:canvas');
+        expect(pageToPath('instructions:quick-start')).toBe('/instructions/quick-start');
+        expect(pathToPage('/instructions/nope')).toBe('not-found');
+        expect(pathToPage('/instructions')).toBe('instructions');
+
+        render(<RouteLink to="instructions:canvas">畫布</RouteLink>);
+        expect(screen.getByRole('link', { name: '畫布' })).toHaveAttribute('href', '/instructions/canvas');
+    });
 });
