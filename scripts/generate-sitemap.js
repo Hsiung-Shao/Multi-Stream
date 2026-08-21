@@ -20,6 +20,7 @@ const ROUTE_SOURCES = {
   '/faq': ['src/components/FAQPage.tsx', 'src/i18n/locales/zh-TW/faq.ts'],
   '/support': ['src/components/SupportPage.tsx', 'src/i18n/locales/zh-TW/support.ts'],
   '/about/creator': ['src/components/Pages/CreatorPage.tsx', 'src/i18n/locales/zh-TW/about.ts'],
+  '/compare': ['src/components/Pages/ComparisonPage.tsx', 'src/i18n/locales/zh-TW/compare.ts'],
   // 教學文章 7 篇（slug 清單與 src/config/guides.ts 的 GUIDE_SLUGS 一致；tests/functions/sitemap.test.ts 鎖）
   ...Object.fromEntries(
     ['quick-start', 'canvas', 'search', 'dynamic-island', 'favorites', 'media', 'settings'].map((s) => [
@@ -52,6 +53,7 @@ const urls = [
   { url: '/faq', changefreq: 'monthly', priority: 0.6 },
   { url: '/support', changefreq: 'monthly', priority: 0.5 },
   { url: '/about/creator', changefreq: 'yearly', priority: 0.4 },
+  { url: '/compare', changefreq: 'monthly', priority: 0.7 },
   ...['quick-start', 'canvas', 'search', 'dynamic-island', 'favorites', 'media', 'settings'].map((s) => ({
     url: `/instructions/${s}`, changefreq: 'monthly', priority: 0.6,
   })),

@@ -41,6 +41,9 @@ const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').the
 const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
 const CreatorPage = lazy(() => import('./components/Pages/CreatorPage').then(module => ({ 'default': module.CreatorPage })));
+const ComparisonPage = lazy(() => import('./components/Pages/ComparisonPage').then(module => ({ 'default': module.ComparisonPage })));
+// FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
+import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
 const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
 const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
 const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
@@ -154,7 +157,7 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'creator', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  const isFullPage = ['about', 'creator', 'compare', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
     || isGuidePage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
@@ -252,6 +255,32 @@ export default function App() {
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <AboutPage />
+            </Suspense>
+          </>
+        );
+      case 'compare':
+        return (
+          <>
+            <SEO
+              title={tx('seo:compare.title')}
+              description={tx('seo:compare.description')}
+              url={`${SEO_SITE_URL}${PAGE_PATHS.compare}`}
+              jsonLd={graph(
+                webPage({ type: 'WebPage', path: PAGE_PATHS.compare, name: tx('seo:compare.title'), description: tx('seo:compare.description'), inLanguage }),
+                {
+                  '@type': 'FAQPage',
+                  '@id': `${SEO_SITE_URL}${PAGE_PATHS.compare}#faq`,
+                  mainEntity: Array.from({ length: COMPARE_FAQ_COUNT }, (_, i) => i + 1).map((n) => ({
+                    '@type': 'Question',
+                    name: tx(`compare:faq.q${n}`),
+                    acceptedAnswer: { '@type': 'Answer', text: tx(`compare:faq.a${n}`) },
+                  })),
+                },
+                breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: tx('compare:title'), path: PAGE_PATHS.compare }]),
+              )}
+            />
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <ComparisonPage />
             </Suspense>
           </>
         );

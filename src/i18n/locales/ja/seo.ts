@@ -35,4 +35,6 @@ export default {
     'instructions.settings.description': 'MultiStream Hub の外観、パフォーマンス設定、ローカルデータのバックアップ、Twitch アカウント連携を調整。',
     'creator.title': '開発者 Hsiung-Shao - MultiStream Hub',
     'creator.description': 'MultiStream Hub の個人開発者 Hsiung-Shao の紹介：この無料マルチ配信視聴ツールを作った理由と、連絡・サポートの方法。',
+    'compare.title': 'MultiTwitch 代替ツール比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
+    'compare.description': '4 つのマルチ配信同時視聴ツールを比較：対応プラットフォーム、同時視聴数、レイアウト、複数チャット、共有リンク、モバイル対応、料金。',
 };

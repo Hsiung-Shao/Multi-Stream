@@ -35,4 +35,6 @@ export default {
     'instructions.settings.description': '调整 MultiStream Hub 的外观、性能选项、本地数据备份与 Twitch 账号连接，打造专属的观看环境。',
     'creator.title': '开发者 Hsiung-Shao - MultiStream Hub',
     'creator.description': '认识 MultiStream Hub 的独立开发者 Hsiung-Shao：为什么做这个免费的多直播观看工具，以及如何联系与支持。',
+    'compare.title': 'MultiTwitch 替代方案比较：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
+    'compare.description': '四款多直播同时观看工具比较：支持平台、同时路数、布局、多聊天室、分享链接、手机版与价格，帮你挑最合适的。',
 };

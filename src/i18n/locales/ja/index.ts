@@ -17,8 +17,9 @@ import faq from './faq';
 import announcements from './announcements';
 import seo from './seo';
 import support from './support';
+import compare from './compare';
 
 export default {
   common, navbar, controlPanel, welcome, about, tutorial, versionHistory,
-  favorites, feedback, privacy, tags, youtubeRisk, stream, faq, announcements, seo, support,
+  favorites, feedback, privacy, tags, youtubeRisk, stream, faq, announcements, seo, support, compare,
 };

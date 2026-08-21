@@ -36,4 +36,6 @@ export default {
     'instructions.settings.description': 'Tune MultiStream Hub\'s look, performance options, local data backup and Twitch account link.',
     'creator.title': 'Hsiung-Shao, Creator of MultiStream Hub',
     'creator.description': 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.',
+    'compare.title': 'MultiTwitch Alternatives Compared: MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
+    'compare.description': 'Compare four multi-stream viewers on platforms, stream limits, layouts, multi-chat, share links, mobile support and price.',
 };

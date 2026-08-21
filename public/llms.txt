@@ -38,6 +38,10 @@ control, a unified chat panel for multiple channels at once, and a local
   - [Settings](https://multistreaming.org/instructions/settings): themes,
     performance options, data backup, Twitch account link.
 
+- [Compare](https://multistreaming.org/compare): honest feature comparison of
+  MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am (platforms,
+  stream limits, layouts, multi-chat, share links, mobile, price).
+
 ## Support
 - [FAQ](https://multistreaming.org/faq): troubleshooting (e.g. Twitch not
   loading on Brave browser), performance tuning, and data-storage

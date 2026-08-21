@@ -47,7 +47,7 @@ const FAQ_GROUPS = [
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 export function FAQPage() {
-    const { t } = useTranslation(['faq', 'common', 'about']);
+    const { t } = useTranslation(['faq', 'common', 'about', 'compare']);
 
     const [query, setQuery] = useState('');
     const [activeCat, setActiveCat] = useState<string>('all');
@@ -295,6 +295,7 @@ export function FAQPage() {
                         <RouteLink className="faq-foot-link" to="home">{tx('faq:foot_home', { defaultValue: '首頁' })}</RouteLink>
                         <RouteLink className="faq-foot-link" to="about">{tx('faq:foot_about', { defaultValue: '關於' })}</RouteLink>
                         <RouteLink className="faq-foot-link" to="privacy">{tx('faq:foot_privacy', { defaultValue: '隱私權政策' })}</RouteLink>
+                        <RouteLink className="faq-foot-link" to="compare">{tx('compare:title')}</RouteLink>
                     </div>
                     <p className="faq-copy">{tx('about:copyright')}</p>
                 </footer>

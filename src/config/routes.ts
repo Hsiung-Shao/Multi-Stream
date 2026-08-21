@@ -25,6 +25,7 @@ export const PAGE_PATHS: Record<RoutePage, string> = {
     privacy: '/privacy',
     admin: '/admin',
     creator: '/about/creator',
+    compare: '/compare',
     ...GUIDE_PATHS,
 };
 

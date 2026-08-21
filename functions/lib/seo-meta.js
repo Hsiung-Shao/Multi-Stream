@@ -128,6 +128,10 @@ export const ROUTE_META = {
         'zh-TW': { title: '開發者 Hsiung-Shao - MultiStream Hub', description: '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。' },
         en: { title: 'Hsiung-Shao, Creator of MultiStream Hub', description: 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.' },
     },
+    '/compare': {
+        'zh-TW': { title: 'MultiTwitch 替代方案比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am', description: '四款多直播同時觀看工具比較：支援平台、同時路數、佈局、多聊天室、分享連結、手機版與價格，幫你挑最適合的。' },
+        en: { title: 'MultiTwitch Alternatives Compared: MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am', description: 'Compare four multi-stream viewers on platforms, stream limits, layouts, multi-chat, share links, mobile support and price.' },
+    },
     '/admin': {
         noindex: true,
         'zh-TW': { title: 'Admin - MultiStream Hub', description: '' },

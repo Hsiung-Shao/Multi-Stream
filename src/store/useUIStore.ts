@@ -11,7 +11,7 @@ interface ModalState {
 }
 
 // 'instructions:<slug>' 為教學文章頁（見 src/config/guides.ts），slug 內嵌在 page 字串
-export type PageType = 'home' | 'about' | 'creator' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'support' | 'admin' | 'not-found' | GuidePage;
+export type PageType = 'home' | 'about' | 'creator' | 'compare' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'support' | 'admin' | 'not-found' | GuidePage;
 
 interface UIState {
     theme: 'light' | 'dark' | 'system';
