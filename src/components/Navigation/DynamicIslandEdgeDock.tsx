@@ -3,7 +3,7 @@ import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Search, Plus, Layout, Tv, Tv2, Star, FolderHeart, Maximize, Minimize, Trash2, Home, Settings,
-    LayoutGrid, MessageSquare, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle,
+    LayoutGrid, MessageSquare, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, Share2,
 } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -92,7 +92,7 @@ export const DynamicIslandEdgeDock = () => {
     const y = useUIStore(s => s.islandEdgeY);
     const setY = useUIStore(s => s.setIslandEdgeY);
 
-    const { isFullscreen, toggleFullscreen, handleQuickSave } = useIslandQuickActions();
+    const { isFullscreen, toggleFullscreen, handleQuickSave, handleShareCanvas } = useIslandQuickActions();
 
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<ViewKey>('list');
@@ -249,6 +249,12 @@ export const DynamicIslandEdgeDock = () => {
                                     color={FN.save.c}
                                     label={t('favorites:save_entire_canvas') || '一鍵收藏當前畫布'}
                                     onClick={handleQuickSave}
+                                />
+                                <FunctionRow
+                                    icon={Share2}
+                                    color={FN.share.c}
+                                    label={t('common.share_canvas') || '分享畫布'}
+                                    onClick={handleShareCanvas}
                                 />
 
                                 <div className="my-1 border-t border-white/[0.08]" />

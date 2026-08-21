@@ -1,6 +1,6 @@
 import { useEffect, useState, forwardRef } from 'react';
 import type { ComponentType } from 'react';
-import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize, Minimize, AlertTriangle } from 'lucide-react';
+import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize, Minimize, AlertTriangle, Share2 } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { MediaControlPanel } from './MediaControlPanel';
@@ -128,7 +128,7 @@ export const DynamicIsland = () => {
     const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
     // 一鍵收藏 / 全螢幕:與邊緣停靠型態共用邏輯(見 useIslandQuickActions)
-    const { isFullscreen, toggleFullscreen, handleQuickSave } = useIslandQuickActions();
+    const { isFullscreen, toggleFullscreen, handleQuickSave, handleShareCanvas } = useIslandQuickActions();
 
     // Dynamic Island Hook — shows when mouse near bottom edge
     const { isCollapsed, setPinned, handlers } = useDynamicIsland();
@@ -229,6 +229,14 @@ export const DynamicIsland = () => {
                             icon={FolderHeart}
                             title={t('favorites:save_entire_canvas') || '一鍵收藏當前畫布'}
                             onClick={handleQuickSave}
+                        />
+
+                        {/* 5b. Share canvas（/canvas?streams=… 複製到剪貼簿） */}
+                        <IslandBtn
+                            fn="share"
+                            icon={Share2}
+                            title={t('common.share_canvas') || '分享畫布'}
+                            onClick={handleShareCanvas}
                         />
 
                         <IslandDivider />

@@ -14,6 +14,7 @@ export const FN = {
     fav: { c: '#fbbf24', glow: 'rgba(251,191,36,0.45)' },
     save: { c: '#f472b6', glow: 'rgba(244,114,182,0.45)' },
     screen: { c: '#a5b4fc', glow: 'rgba(165,180,252,0.4)' },
+    share: { c: '#34d399', glow: 'rgba(52,211,153,0.45)' },
     clear: { c: '#f87171', glow: 'rgba(248,113,113,0.45)' },
     home: { c: '#cbd5e1', glow: 'rgba(203,213,225,0.35)' },
     settings: { c: '#cbd5e1', glow: 'rgba(203,213,225,0.35)' },

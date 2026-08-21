@@ -15,6 +15,8 @@ import { GlobalLiveStatusChecker } from '../../features/favorites/components/Glo
 import { CookieConsent } from '../CookieConsent';
 import { AnnouncementsProvider } from '../../features/announcements/AnnouncementsProvider';
 import { useMediaQuery } from '../../hooks/use-media-query';
+import { useIslandQuickActions } from '../../hooks/useIslandQuickActions';
+import { Share2 } from 'lucide-react';
 
 const FavoritesManagerMain = lazy(() => import('../../features/favorites/components/FavoritesManagerMain').then(m => ({ default: m.FavoritesManagerMain })));
 const FeedbackModal = lazy(() => import('../../features/feedback/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
@@ -27,6 +29,7 @@ export function MobileApp() {
     const modals = useUIStore(s => s.modals);
     const closeModal = useUIStore(s => s.closeModal);
     const isLandscape = useMediaQuery('(orientation: landscape)');
+    const { handleShareCanvas } = useIslandQuickActions();
 
     const [activeTab, setActiveTab] = useState<MobileTab>('watch');
     const [showAddStream, setShowAddStream] = useState(false);
@@ -61,6 +64,16 @@ export function MobileApp() {
                             MultiStream
                         </span>
                     </div>
+                    {/* 分享畫布：複製 /canvas?streams=… 連結（與桌機動態島共用 useIslandQuickActions） */}
+                    <button
+                        type="button"
+                        onClick={handleShareCanvas}
+                        aria-label={t('common.share_canvas') || '分享畫布'}
+                        title={t('common.share_canvas') || '分享畫布'}
+                        className="inline-flex items-center justify-center size-9 rounded-lg text-emerald-300 hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
+                    >
+                        <Share2 size={18} />
+                    </button>
                 </header>
             )}
 
