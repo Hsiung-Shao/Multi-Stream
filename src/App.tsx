@@ -14,7 +14,9 @@ import { useAppInitialization } from './hooks/useAppInitialization';
 import { useThemeSystem } from './hooks/useThemeSystem';
 import { useRouter } from './hooks/useRouter';
 import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
-import { initGA, logPageView } from './utils/analytics';
+import { initGA, logPageView, logEvent } from './utils/analytics';
+import { parseShare } from './utils/shareLink';
+import { applyShareLink } from './utils/applyShareLink';
 import { userSegmentationManager } from './utils/userSegmentation';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
 import { useAppliedTheme } from './hooks/useAppliedTheme';
@@ -45,6 +47,13 @@ const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module 
 const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
 // 全站常駐但非首屏所需的全域元件，集中為單一 lazy chunk（見 DeferredGlobals.tsx）
 const DeferredGlobals = lazy(() => import('./components/DeferredGlobals'));
+
+// 可分享連結：模組載入時就快照 ?streams=（只在 /canvas 生效），之後 URL 會被換回乾淨路徑
+const INITIAL_SHARE = (() => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  return path === PAGE_PATHS.canvas ? parseShare(window.location.search) : null;
+})();
 
 export default function App() {
   const isMobile = useIsMobile();
@@ -77,9 +86,17 @@ export default function App() {
       logPageView();
     });
 
-    // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
-    // 過期(或無串流)則維持「清空畫布」的既有行為。
-    {
+    if (INITIAL_SHARE) {
+      // 可分享連結（/canvas?streams=…）優先於短暫播放回復：分享連結是明確意圖，session 回復只是猜測。
+      // 先清掉舊串流（避免混入），序列加入後把 URL 換回乾淨的 /canvas（reload 不會重加、canonical 不帶 query）。
+      useStreamStore.getState().clearCanvasItems();
+      logEvent('Share', 'open_link', undefined, INITIAL_SHARE.streams.length);
+      applyShareLink(INITIAL_SHARE).finally(() => {
+        window.history.replaceState(null, '', PAGE_PATHS.canvas);
+      });
+    } else {
+      // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
+      // 過期(或無串流)則維持「清空畫布」的既有行為。
       const { streams, canvasItems, layoutMode, lastActiveAt } = useStreamStore.getState();
       if (streams.length > 0) {
         const withinWindow = Date.now() - lastActiveAt <= 10 * 60 * 1000;
