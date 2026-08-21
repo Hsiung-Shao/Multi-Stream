@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 declare const __APP_VERSION__: string;
+/** 教學內容（InstructionsPage + tutorial 文案）的 git 最後修改日 YYYY-MM-DD，vite.config define 注入 */
+declare const __GUIDES_DATE_MODIFIED__: string;
 
 /**
  * 全域 Window 擴充：GA4 / gtag.js + GTM dataLayer + IdentityManager backup hooks。

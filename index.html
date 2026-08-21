@@ -56,10 +56,12 @@
 
   <!-- Structured Data (JSON-LD)
        softwareVersion / dateModified 由 seoHtmlPlugin 於 build 時注入（package.json version / 建置日期） -->
-  <script type="application/ld+json">
+  <!-- WebApplication 只對 / 與 /canvas 輸出：其他路由由 functions/[[path]].js 依 id 移除（頁面專屬 schema 另由 <SEO jsonLd> 注入） -->
+  <script type="application/ld+json" id="ld-webapp">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
+        "@id": "https://multistreaming.org/#webapp",
         "name": "MultiStream Hub",
         "alternateName": "多串流觀看工具",
         "url": "https://multistreaming.org/",
@@ -99,6 +101,7 @@
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
+        "@id": "https://multistreaming.org/#website",
         "name": "MultiStream Hub",
         "url": "https://multistreaming.org/",
         "description": "免費的多平台直播串流觀看工具",
@@ -110,6 +113,7 @@
       {
         "@context": "https://schema.org",
         "@type": "Organization",
+        "@id": "https://multistreaming.org/#organization",
         "name": "MultiStream Hub",
         "url": "https://multistreaming.org/",
         "logo": "https://multistreaming.org/icon.png",

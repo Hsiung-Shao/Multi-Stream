@@ -4,6 +4,8 @@
 export const ROBOTS_INDEX = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 export const ROBOTS_NOINDEX = 'noindex, follow';
 export const OG_LOCALE = { 'zh-TW': 'zh_TW', en: 'en_US' };
+/** index.html 的 WebApplication JSON-LD（script#ld-webapp）只在這些路由保留，其餘由 [[path]].js 移除 */
+export const WEBAPP_JSONLD_ROUTES = ['/', '/canvas'];
 
 export const ROUTE_META = {
     '/': {

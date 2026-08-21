@@ -7,7 +7,7 @@
 // 路由範圍由 public/_routes.json 控制：靜態資產（/assets/*、圖檔、robots/sitemap/llms…）已排除，
 // 不會消耗 function 呼叫；functions/api/* 是更具體路由，優先於本 catch-all。
 // ⚠ _headers 不套用到 Function 回應 → 安全標頭由 functions/lib/security-headers.js 帶（測試鎖同步）。
-import { ROUTE_META, NOT_FOUND_META, OG_LOCALE, ROBOTS_INDEX, ROBOTS_NOINDEX } from './lib/seo-meta.js';
+import { ROUTE_META, NOT_FOUND_META, OG_LOCALE, ROBOTS_INDEX, ROBOTS_NOINDEX, WEBAPP_JSONLD_ROUTES } from './lib/seo-meta.js';
 import { HTML_SECURITY_HEADERS } from './lib/security-headers.js';
 
 const ORIGIN = 'https://multistreaming.org';
@@ -60,7 +60,13 @@ export async function onRequest(context) {
     // 可能拿到無 body 的 304，HTMLRewriter 會無內容可改。
     const shell = await env.ASSETS.fetch(new Request(url.origin + '/'));
 
-    const transformed = new HTMLRewriter()
+    // og:type：教學文章為 article，其餘 website（index.html 靜態值為 website）
+    const ogType = entry && entry.type === 'article' ? 'article' : 'website';
+    // WebApplication JSON-LD 只在 / 與 /canvas 輸出；其他路由移除，避免每個子頁都宣告「我是這個應用程式」
+    // （頁面專屬 schema 由前端 <SEO jsonLd> 注入：AboutPage / TechArticle / BreadcrumbList…）
+    const keepWebAppJsonLd = WEBAPP_JSONLD_ROUTES.includes(rawPath);
+
+    const rewriter = new HTMLRewriter()
         .on('html', {
             element(el) {
                 el.setAttribute('lang', lang);
@@ -78,6 +84,7 @@ export async function onRequest(context) {
         .on('meta[property="og:description"]', setContent(meta.description))
         .on('meta[property="og:url"]', setContent(pageUrl))
         .on('meta[property="og:locale"]', setContent(OG_LOCALE[lang]))
+        .on('meta[property="og:type"]', setContent(ogType))
         .on('meta[name="twitter:title"]', setContent(meta.title))
         .on('meta[name="twitter:description"]', setContent(meta.description))
         .on('meta[name="twitter:url"]', setContent(pageUrl))
@@ -94,8 +101,15 @@ export async function onRequest(context) {
                           el.setAttribute('href', pageUrl);
                       },
                   },
-        )
-        .transform(shell);
+        );
+    if (!keepWebAppJsonLd) {
+        rewriter.on('script#ld-webapp', {
+            element(el) {
+                el.remove();
+            },
+        });
+    }
+    const transformed = rewriter.transform(shell);
 
     const headers = new Headers(transformed.headers);
     for (const [key, value] of Object.entries(HTML_SECURITY_HEADERS)) headers.set(key, value);

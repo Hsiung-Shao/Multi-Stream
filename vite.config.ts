@@ -3,6 +3,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
+import { execSync } from 'child_process';
 import tailwindcss from '@tailwindcss/vite';
 import pkg from './package.json';
 import { SEO_DEFAULT_TITLE, SEO_DEFAULT_DESCRIPTION, SEO_ROBOTS_INDEX } from './src/seo/defaults';
@@ -43,9 +44,27 @@ function seoHtmlPlugin(): Plugin {
   };
 }
 
+/**
+ * 教學內容的 git 最後修改日（供 TechArticle.dateModified）。與 scripts/generate-sitemap.js 的
+ * /instructions lastmod 同一組來源檔、同一退回策略（無 git 歷史/失敗 → build 日），兩邊自洽。
+ */
+function guidesDateModified(): string {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const out = execSync(
+      'git log -1 --format=%cI -- src/components/Pages/InstructionsPage.tsx src/i18n/locales/zh-TW/tutorial.ts',
+      { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    ).trim();
+    return out ? out.slice(0, 10) : today;
+  } catch {
+    return today;
+  }
+}
+
 export default defineConfig({
   define: {
     '__APP_VERSION__': JSON.stringify(process.env.npm_package_version ?? pkg.version),
+    '__GUIDES_DATE_MODIFIED__': JSON.stringify(guidesDateModified()),
   },
   plugins: [seoHtmlPlugin(), react(), tailwindcss()],
   resolve: {

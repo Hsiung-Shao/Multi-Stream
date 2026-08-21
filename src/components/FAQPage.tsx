@@ -23,6 +23,9 @@ const STEP_IMAGES = [
     '/docs/brave-fix/step3.webp',
 ];
 import { DISCORD_URL } from '../config/links';
+import { PAGE_PATHS } from '../config/routes';
+import { SEO_SITE_URL } from '../seo/defaults';
+import { graph, breadcrumb, SITE_ID, APP_ID } from '../seo/jsonld';
 const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 
 // FAQ 分組:播放與相容性 / 效能與資料,共 7 題(item key 對應 faq namespace)。
@@ -161,16 +164,23 @@ export function FAQPage() {
             <SEO
                 title={`${tx('faq:title')} - MultiStream Hub`}
                 description={tx('faq:header_subtitle')}
-                url="https://multistreaming.org/faq"
-                jsonLd={{
-                    '@context': 'https://schema.org',
-                    '@type': 'FAQPage',
-                    mainEntity: FAQ_GROUPS.flatMap(g => g.items).map(item => ({
-                        '@type': 'Question',
-                        name: tx(`faq:items.${item}.title`),
-                        acceptedAnswer: { '@type': 'Answer', text: tx(`faq:items.${item}.content`) },
-                    })),
-                }}
+                url={`${SEO_SITE_URL}${PAGE_PATHS.faq}`}
+                jsonLd={graph(
+                    {
+                        '@type': 'FAQPage',
+                        '@id': `${SEO_SITE_URL}${PAGE_PATHS.faq}#webpage`,
+                        url: `${SEO_SITE_URL}${PAGE_PATHS.faq}`,
+                        name: `${tx('faq:title')} - MultiStream Hub`,
+                        isPartOf: { '@id': SITE_ID },
+                        about: { '@id': APP_ID },
+                        mainEntity: FAQ_GROUPS.flatMap(g => g.items).map(item => ({
+                            '@type': 'Question',
+                            name: tx(`faq:items.${item}.title`),
+                            acceptedAnswer: { '@type': 'Answer', text: tx(`faq:items.${item}.content`) },
+                        })),
+                    },
+                    breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: tx('faq:title'), path: PAGE_PATHS.faq }]),
+                )}
             />
 
             {/* 頂部返回列 — 三靜態頁共用 header */}

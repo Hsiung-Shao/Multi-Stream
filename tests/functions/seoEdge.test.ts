@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { ROUTE_META, NOT_FOUND_META, ROBOTS_INDEX, ROBOTS_NOINDEX } from '../../functions/lib/seo-meta.js';
+import { ROUTE_META, NOT_FOUND_META, ROBOTS_INDEX, ROBOTS_NOINDEX, WEBAPP_JSONLD_ROUTES } from '../../functions/lib/seo-meta.js';
 // @ts-expect-error 同上
 import { HTML_SECURITY_HEADERS } from '../../functions/lib/security-headers.js';
 import zhTWSeo from '../../src/i18n/locales/zh-TW/seo';
@@ -15,6 +15,7 @@ import enFaq from '../../src/i18n/locales/en/faq';
 import { PAGE_PATHS } from '../../src/config/routes';
 import { GUIDE_SLUGS, guidePath } from '../../src/config/guides';
 import { SEO_ROBOTS_INDEX, SEO_ROBOTS_NOINDEX } from '../../src/seo/defaults';
+import { ORG_ID, SITE_ID, APP_ID } from '../../src/seo/jsonld';
 
 const rootDir = resolve(__dirname, '../..');
 
@@ -74,6 +75,34 @@ describe('edge seo-meta ↔ i18n locale 同步', () => {
     it('robots 常數與 src/seo/defaults.ts 一致', () => {
         expect(ROBOTS_INDEX).toBe(SEO_ROBOTS_INDEX);
         expect(ROBOTS_NOINDEX).toBe(SEO_ROBOTS_NOINDEX);
+    });
+});
+
+describe('edge JSON-LD 處理（WebApplication 只留 / 與 /canvas）', () => {
+    const indexHtml = readFileSync(resolve(rootDir, 'index.html'), 'utf8');
+    const edgeSrc = readFileSync(resolve(rootDir, 'functions/[[path]].js'), 'utf8');
+
+    it('WEBAPP_JSONLD_ROUTES 都是已知路由且含首頁', () => {
+        const routes = WEBAPP_JSONLD_ROUTES as string[];
+        expect(routes).toContain('/');
+        for (const r of routes) expect(Object.values(PAGE_PATHS)).toContain(r);
+    });
+
+    it('index.html 的 WebApplication 帶 id="ld-webapp"，三段 JSON-LD 都有可被引用的 @id', () => {
+        expect(indexHtml).toContain('<script type="application/ld+json" id="ld-webapp">');
+        for (const id of ['#webapp', '#website', '#organization']) {
+            expect(indexHtml).toContain(`"@id": "https://multistreaming.org/${id}"`);
+        }
+        // 前端 jsonld.ts 引用的 @id 必須與 index.html 一致
+        expect(ORG_ID).toBe('https://multistreaming.org/#organization');
+        expect(SITE_ID).toBe('https://multistreaming.org/#website');
+        expect(APP_ID).toBe('https://multistreaming.org/#webapp');
+    });
+
+    it('[[path]].js 有移除 script#ld-webapp 與改寫 og:type 的邏輯（文字層鎖）', () => {
+        expect(edgeSrc).toContain("rewriter.on('script#ld-webapp'");
+        expect(edgeSrc).toContain('WEBAPP_JSONLD_ROUTES.includes(rawPath)');
+        expect(edgeSrc).toContain(`meta[property="og:type"]`);
     });
 });
 

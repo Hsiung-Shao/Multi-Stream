@@ -3,8 +3,10 @@ import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from './store/useUIStore';
 import { PAGE_PATHS, pathToPage } from './config/routes';
-import { GUIDE_META, guidePath, guideSlugOf, isGuidePage } from './config/guides';
+import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
 import { SEO_SITE_URL } from './seo/defaults';
+import { graph, breadcrumb, webPage, techArticle, ORG_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
+import { toHtmlLang } from './i18n/i18n';
 import { useStreamStore } from './store/useStreamStore';
 import { useYouTubeRisk } from './hooks/useYouTubeRisk';
 import { useAutoRefresh } from './hooks/useAutoRefresh';
@@ -46,7 +48,7 @@ const DeferredGlobals = lazy(() => import('./components/DeferredGlobals'));
 
 export default function App() {
   const isMobile = useIsMobile();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // i18next 此版型別不接受 'ns:key' 前綴字串，沿用專案慣例（InstructionsPage/FAQPage）以 cast 繞過
   const tx = t as unknown as (key: string, options?: Record<string, unknown>) => string;
 
@@ -149,6 +151,19 @@ export default function App() {
     );
   }
 
+  // JSON-LD 用的語言碼（與 <html lang> 同步）
+  const inLanguage = toHtmlLang(i18n.language);
+  // 靜態頁共用：頁面節點（WebPage 子型別）+ 首頁 › 本頁 麵包屑
+  const staticPageJsonLd = (
+    page: 'about' | 'privacy' | 'support',
+    type: WebPageType,
+    crumbName: string,
+    extra?: Record<string, unknown>,
+  ) => graph(
+    webPage({ type, path: PAGE_PATHS[page], name: tx(`seo:${page}.title`), description: tx(`seo:${page}.description`), inLanguage, extra }),
+    breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: crumbName, path: PAGE_PATHS[page] }]),
+  );
+
   // Routing Logic
   const renderPage = () => {
     // 教學列表 + 7 篇文章共用 InstructionsPage；<SEO> 放 Suspense 外，切頁瞬間 title/meta 就正確
@@ -157,14 +172,38 @@ export default function App() {
     if (currentPage === 'instructions' || isGuidePage(currentPage)) {
       const slug = isGuidePage(currentPage) ? guideSlugOf(currentPage) : null;
       const path = slug ? guidePath(slug) : PAGE_PATHS.instructions;
+      const title = tx(slug ? `seo:instructions.${slug}.title` : 'seo:instructions.title');
+      const description = tx(slug ? `seo:instructions.${slug}.description` : 'seo:instructions.description');
+      const hubCrumbs = [{ name: 'MultiStream Hub', path: '/' }, { name: tx('tutorial:title'), path: PAGE_PATHS.instructions }];
+      const jsonLd = slug
+        ? graph(
+          techArticle({
+            path,
+            headline: title.replace(/\s*-\s*MultiStream Hub$/, ''),
+            description,
+            image: `${SEO_SITE_URL}${GUIDE_META[slug].image}`,
+            inLanguage,
+            datePublished: GUIDE_META[slug].datePublished,
+            dateModified: GUIDES_DATE_MODIFIED,
+          }),
+          breadcrumb([...hubCrumbs, { name: title.replace(/\s*-\s*MultiStream Hub$/, ''), path }]),
+        )
+        : graph(
+          webPage({
+            type: 'CollectionPage', path, name: title, description, inLanguage,
+            extra: { hasPart: GUIDE_SLUGS.map((s) => ({ '@id': `${SEO_SITE_URL}${guidePath(s)}#article` })) },
+          }),
+          breadcrumb(hubCrumbs),
+        );
       return (
         <>
           <SEO
-            title={tx(slug ? `seo:instructions.${slug}.title` : 'seo:instructions.title')}
-            description={tx(slug ? `seo:instructions.${slug}.description` : 'seo:instructions.description')}
+            title={title}
+            description={description}
             url={`${SEO_SITE_URL}${path}`}
             type={slug ? 'article' : 'website'}
             image={slug ? `${SEO_SITE_URL}${GUIDE_META[slug].image}` : undefined}
+            jsonLd={jsonLd}
           />
           <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <InstructionsPage />
@@ -187,7 +226,10 @@ export default function App() {
             <SEO
               title={tx('seo:about.title')}
               description={tx('seo:about.description')}
-              url="https://multistreaming.org/about"
+              url={`${SEO_SITE_URL}${PAGE_PATHS.about}`}
+              jsonLd={staticPageJsonLd('about', 'AboutPage', tx('about:title'), {
+                mainEntity: { '@id': ORG_ID },
+              })}
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <AboutPage />
@@ -200,7 +242,8 @@ export default function App() {
             <SEO
               title={tx('seo:privacy.title')}
               description={tx('seo:privacy.description')}
-              url="https://multistreaming.org/privacy"
+              url={`${SEO_SITE_URL}${PAGE_PATHS.privacy}`}
+              jsonLd={staticPageJsonLd('privacy', 'WebPage', tx('privacy:title'))}
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <PrivacyPage
@@ -222,7 +265,8 @@ export default function App() {
             <SEO
               title={tx('seo:support.title')}
               description={tx('seo:support.description')}
-              url="https://multistreaming.org/support"
+              url={`${SEO_SITE_URL}${PAGE_PATHS.support}`}
+              jsonLd={staticPageJsonLd('support', 'WebPage', tx('support:title'))}
             />
             <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <SupportPage />
