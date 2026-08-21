@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { pathToPage } from '../config/routes';
 
 interface ModalState {
     history: boolean;
@@ -75,7 +76,9 @@ function persistUserSetting(key: string, value: unknown) {
 
 export const useUIStore = create<UIState>((set) => ({
     theme: 'dark',
-    page: 'home',
+    // 初值直接由 URL 推導：避免首次 mount 時 page='home' 與 URL 不符而 pushState('/')，
+    // 把 deep-link 的 query 砍掉、多塞一筆 history（routes.ts 對本檔只有 type import，無執行期循環）
+    page: typeof window !== 'undefined' ? pathToPage(window.location.pathname) : 'home',
     isPanelCollapsed: false,
     isSearchFocused: false,
     modals: {
