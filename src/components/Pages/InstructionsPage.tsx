@@ -17,7 +17,7 @@ import { StaticPageHeader } from '../StaticPageHeader';
 import {
     Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
     Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
-    Rocket, Volume2, Star, Settings as SettingsIcon, Tv,
+    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -461,7 +461,7 @@ export function InstructionsPage() {
                         img('layout-manager.webp', 1068, 823, tx('img.layoutManager.alt'), tx('img.layoutManager.cap')),
                     ],
                 },
-                { id: 'context-menu', heading: tx('features.canvas.contextMenu'), blocks: [{ type: 'p', text: tx('features.canvas.contextMenu.desc') }] },
+                { id: 'layout-rules', heading: tx('features.canvas.layoutRules'), blocks: [{ type: 'p', text: tx('features.canvas.layoutRules.desc') }] },
             ],
         },
         {
@@ -494,7 +494,7 @@ export function InstructionsPage() {
             accent: '#a78bfa', accent2: '#6d28d9', icon: Tv,
             sections: [
                 { id: 'quick-actions', heading: tx('features.island.quickActions'), blocks: [{ type: 'p', text: tx('features.island.quickActions.desc') }] },
-                { id: 'status', heading: tx('features.island.status'), blocks: [{ type: 'p', text: tx('features.island.status.desc') }] },
+                { id: 'search', heading: tx('features.island.search'), blocks: [{ type: 'p', text: tx('features.island.search.desc') }] },
                 {
                     id: 'buttons', heading: tx('features.island.buttons'), blocks: [
                         { type: 'p', text: tx('features.island.buttons.desc') },
@@ -503,6 +503,7 @@ export function InstructionsPage() {
                         img('island-home.webp', 1403, 994, tx('img.islandHome.alt'), tx('img.islandHome.cap')),
                     ],
                 },
+                { id: 'edge-dock', heading: tx('features.island.edgeDock'), blocks: [{ type: 'p', text: tx('features.island.edgeDock.desc') }] },
             ],
         },
         {
@@ -556,7 +557,6 @@ export function InstructionsPage() {
                 {
                     id: 'per-window', heading: tx('features.media.window'), blocks: [
                         { type: 'p', text: tx('features.media.window.desc') },
-                        img('window-media-controls.webp', 443, 88, tx('img.windowMediaControls.alt'), tx('img.windowMediaControls.cap')),
                     ],
                 },
             ],
@@ -577,9 +577,37 @@ export function InstructionsPage() {
                         img('settings-panel.webp', 1038, 826, tx('img.settingsPanel.alt'), tx('img.settingsPanel.cap')),
                     ],
                 },
-                { id: 'performance', heading: tx('features.settings.performance'), blocks: [{ type: 'p', text: tx('features.settings.performance.desc') }] },
+                { id: 'playback', heading: tx('features.settings.playback'), blocks: [{ type: 'p', text: tx('features.settings.playback.desc') }] },
                 { id: 'data', heading: tx('features.settings.data'), blocks: [{ type: 'p', text: tx('features.settings.data.desc') }] },
                 { id: 'twitch', heading: tx('features.settings.twitch'), blocks: [{ type: 'p', text: tx('features.settings.twitch.desc') }] },
+            ],
+        },
+        {
+            slug: 'share',
+            title: tx('features.share.title'),
+            excerpt: tx('features.share.description'),
+            category: 'advanced',
+            catLabel: tx('tabs.advanced'),
+            readLabel: readLabel(3),
+            accent: '#38bdf8', accent2: '#0284c7', icon: Share2,
+            sections: [
+                { id: 'how', heading: tx('features.share.how'), blocks: [{ type: 'p', text: tx('features.share.how.desc') }] },
+                { id: 'format', heading: tx('features.share.format'), blocks: [{ type: 'p', text: tx('features.share.format.desc') }] },
+                { id: 'limits', heading: tx('features.share.limits'), blocks: [{ type: 'callout', title: tx('features.favorites.proTip'), text: tx('features.share.limits.desc') }] },
+            ],
+        },
+        {
+            slug: 'shortcuts',
+            title: tx('features.shortcuts.title'),
+            excerpt: tx('features.shortcuts.description'),
+            category: 'advanced',
+            catLabel: tx('tabs.advanced'),
+            readLabel: readLabel(3),
+            accent: '#fb923c', accent2: '#ea580c', icon: Keyboard,
+            sections: [
+                { id: 'global', heading: tx('features.shortcuts.global'), blocks: [{ type: 'p', text: tx('features.shortcuts.global.desc') }] },
+                { id: 'window', heading: tx('features.shortcuts.window'), blocks: [{ type: 'p', text: tx('features.shortcuts.window.desc') }] },
+                { id: 'theater', heading: tx('features.shortcuts.theater'), blocks: [{ type: 'p', text: tx('features.shortcuts.theater.desc') }] },
             ],
         },
     ], [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps

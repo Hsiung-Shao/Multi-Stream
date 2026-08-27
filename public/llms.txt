@@ -26,7 +26,8 @@ control, a unified chat panel for multiple channels at once, and a local
   - [Quick start](https://multistreaming.org/instructions/quick-start): add
     your first Twitch or YouTube stream from a URL, then layouts and chat.
   - [Canvas & layouts](https://multistreaming.org/instructions/canvas): auto
-    grid, free drag, resize, snapping, chat window placement.
+    layouts, drag grip and corner handles, swap two windows by dropping one on
+    the other, neighbours push aside on resize, gaps backfill on close.
   - [Smart search](https://multistreaming.org/instructions/search): add
     streams by URL or channel name with live-status detection.
   - [Dynamic island](https://multistreaming.org/instructions/dynamic-island):
@@ -36,7 +37,13 @@ control, a unified chat panel for multiple channels at once, and a local
   - [Media controls](https://multistreaming.org/instructions/media):
     per-stream volume, master volume and mute.
   - [Settings](https://multistreaming.org/instructions/settings): themes,
-    performance options, data backup, Twitch account link.
+    island style, auto-mute new streams, background live detection, backup.
+  - [Share your canvas](https://multistreaming.org/instructions/share): copy
+    the current line-up as /canvas?streams=tw:<channel>,yt:<videoId> (up to 16
+    streams, chat=1 when a chat window is present).
+  - [Shortcuts & theater mode](https://multistreaming.org/instructions/shortcuts):
+    Ctrl+/ cheat sheet, Ctrl+K search, Alt+number layouts, and R / M / Delete /
+    F / T on the window under the cursor.
 
 - [Compare](https://multistreaming.org/compare): honest feature comparison of
   MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am (platforms,

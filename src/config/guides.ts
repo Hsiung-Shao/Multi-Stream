@@ -14,6 +14,8 @@ export const GUIDE_SLUGS = [
     'favorites',
     'media',
     'settings',
+    'share',
+    'shortcuts',
 ] as const;
 
 export type GuideSlug = typeof GUIDE_SLUGS[number];
@@ -48,4 +50,7 @@ export const GUIDE_META: Record<GuideSlug, { category: 'basics' | 'advanced'; da
     'favorites': { category: 'advanced', datePublished: '2026-06-08', image: '/docs/tutorial/island-favorites-list.webp' },
     'media': { category: 'advanced', datePublished: '2026-06-08', image: '/docs/tutorial/island-media-control.webp' },
     'settings': { category: 'advanced', datePublished: '2026-06-08', image: '/docs/tutorial/island-settings.webp' },
+    // 2026-08-27 新增。image 先借用既有截圖，待補拍後換掉（清單見 TODO-tutorial-screenshots.md）
+    'share': { category: 'advanced', datePublished: '2026-08-27', image: '/docs/tutorial/island-home.webp' },
+    'shortcuts': { category: 'advanced', datePublished: '2026-08-27', image: '/docs/tutorial/island-fullscreen.webp' },
 };

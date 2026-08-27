@@ -1,5 +1,5 @@
 const { SitemapStream, streamToPromise } = require('sitemap');
-const { createWriteStream } = require('fs');
+const { createWriteStream, readFileSync } = require('fs');
 const { execSync } = require('child_process');
 const path = require('path');
 
@@ -7,6 +7,15 @@ const rootDir = path.resolve(__dirname, '..');
 
 // 獲取當前日期（ISO 格式：YYYY-MM-DD）——僅作 git 失敗時的 fallback
 const today = new Date().toISOString().split('T')[0];
+
+// 教學文章 slug 直接從單一來源 src/config/guides.ts 解析出來（本檔是純 node，不能 import TS）。
+// 手抄一份 slug 清單只會遲早漂移——漏列的路由不會報錯，只會靜默從 sitemap 消失。
+const GUIDE_SLUGS = (() => {
+  const src = readFileSync(path.resolve(rootDir, 'src/config/guides.ts'), 'utf8');
+  const block = src.match(/export const GUIDE_SLUGS = \[([\s\S]*?)\] as const;/);
+  if (!block) throw new Error('generate-sitemap: 解析不到 GUIDE_SLUGS');
+  return [...block[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+})();
 
 // 每條路由的代表性內容來源檔：lastmod = 這些檔案最後一次 commit 的日期。
 // Google 若判定 lastmod 不可靠（每次 build 整批刷新）會整份忽略，故改用 git 真實異動日期。
@@ -21,9 +30,9 @@ const ROUTE_SOURCES = {
   '/support': ['src/components/SupportPage.tsx', 'src/i18n/locales/zh-TW/support.ts'],
   '/about/creator': ['src/components/Pages/CreatorPage.tsx', 'src/i18n/locales/zh-TW/about.ts'],
   '/compare': ['src/components/Pages/ComparisonPage.tsx', 'src/i18n/locales/zh-TW/compare.ts'],
-  // 教學文章 7 篇（slug 清單與 src/config/guides.ts 的 GUIDE_SLUGS 一致；tests/functions/sitemap.test.ts 鎖）
+  // 教學文章（slug 清單解析自 src/config/guides.ts；tests/functions/sitemap.test.ts 鎖覆蓋率）
   ...Object.fromEntries(
-    ['quick-start', 'canvas', 'search', 'dynamic-island', 'favorites', 'media', 'settings'].map((s) => [
+    GUIDE_SLUGS.map((s) => [
       `/instructions/${s}`,
       ['src/components/Pages/InstructionsPage.tsx', 'src/i18n/locales/zh-TW/tutorial.ts'],
     ])
@@ -54,7 +63,7 @@ const urls = [
   { url: '/support', changefreq: 'monthly', priority: 0.5 },
   { url: '/about/creator', changefreq: 'yearly', priority: 0.4 },
   { url: '/compare', changefreq: 'monthly', priority: 0.7 },
-  ...['quick-start', 'canvas', 'search', 'dynamic-island', 'favorites', 'media', 'settings'].map((s) => ({
+  ...GUIDE_SLUGS.map((s) => ({
     url: `/instructions/${s}`, changefreq: 'monthly', priority: 0.6,
   })),
 ].map((u) => ({ ...u, lastmod: gitLastMod(ROUTE_SOURCES[u.url]) }));

@@ -96,8 +96,8 @@ export const ROUTE_META = {
     },
     '/instructions/canvas': {
         type: 'article',
-        'zh-TW': { title: '畫布與佈局：自由拖曳多直播視窗 - MultiStream Hub', description: '認識 MultiStream Hub 的畫布工作區：自動網格、自由拖曳、調整大小、磁吸對齊與聊天視窗配置。' },
-        en: { title: 'Canvas & Layouts: Arrange Multiple Streams Freely - MultiStream Hub', description: 'Learn the MultiStream Hub canvas: auto grid, free drag, resize, magnetic snapping and chat window placement.' },
+        'zh-TW': { title: '畫布與佈局：自由拖曳多直播視窗 - MultiStream Hub', description: '認識 MultiStream Hub 的畫布工作區：自動排版、拖曳把手與四角縮放、拖到另一個視窗上互換，以及放大時鄰居自動讓位、關閉後空白自動填補。' },
+        en: { title: 'Canvas & Layouts: Arrange Multiple Streams Freely - MultiStream Hub', description: 'Get to know the MultiStream Hub canvas: automatic layouts, a drag grip and four corner handles, swapping two windows by dropping one on the other, neighbours stepping aside as you enlarge, and gaps backfilled when you close a window.' },
     },
     '/instructions/search': {
         type: 'article',
@@ -121,8 +121,18 @@ export const ROUTE_META = {
     },
     '/instructions/settings': {
         type: 'article',
-        'zh-TW': { title: '設定與效能調校：主題、資料備份與 Twitch 連結 - MultiStream Hub', description: '調整 MultiStream Hub 的外觀、效能選項、本地資料備份與 Twitch 帳號連結，打造專屬的觀看環境。' },
-        en: { title: 'Settings & Performance: Themes, Data Backup and Twitch Link - MultiStream Hub', description: 'Tune MultiStream Hub\'s look, performance options, local data backup and Twitch account link.' },
+        'zh-TW': { title: '設定與播放行為：主題、動態島樣式、資料備份 - MultiStream Hub', description: '調整 MultiStream Hub 的主題與語言、動態島樣式、新串流自動靜音與背景開台偵測，並把收藏與布局備份到檔案。' },
+        en: { title: 'Settings & Playback: Themes, Island Style, Data Backup - MultiStream Hub', description: 'Set MultiStream Hub\'s theme and language, dynamic island style, auto-mute for new streams and background live detection, then back up favourites and layouts to a file.' },
+    },
+    '/instructions/share': {
+        type: 'article',
+        'zh-TW': { title: '分享畫布：把多直播組合變成一條連結 - MultiStream Hub', description: '一鍵把目前正在看的多個直播組成連結貼給朋友。認識 /canvas?streams= 的格式、16 路上限，以及為什麼 YouTube 連結會在直播結束後失效。' },
+        en: { title: 'Share Your Canvas: Turn a Multi-Stream Line-Up Into One Link - MultiStream Hub', description: 'Copy the multi-stream line-up you are watching into a single link for a friend. Learn the /canvas?streams= format, the 16-stream limit, and why YouTube links stop working once a broadcast ends.' },
+    },
+    '/instructions/shortcuts': {
+        type: 'article',
+        'zh-TW': { title: '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub', description: 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Alt + 數字切布局，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。' },
+        en: { title: 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub', description: 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Alt + number to switch layouts, plus R / M / Delete / F / T on whichever window you hover — including theater mode.' },
     },
     '/about/creator': {
         'zh-TW': { title: '開發者 Hsiung-Shao - MultiStream Hub', description: '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。' },

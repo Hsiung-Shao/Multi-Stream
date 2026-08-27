@@ -66,9 +66,14 @@ export const useHotkeys = () => {
         }
 
         // Master Mute: Ctrl + M
+        // 桌機畫布的播放器只看各路的 isMuted(見 CanvasStreamContent 的 effectiveMuted),
+        // 所以只翻 masterMuted 旗標不會真的靜音——必須跟著呼叫 setAllMuted,
+        // 與 MediaControlPanel 的 applyMasterMute 走同一條路。
         if (e.ctrlKey && key === 'm') {
             e.preventDefault();
-            setMasterMuted((prev) => !prev);
+            const next = !useUIStore.getState().masterMuted;
+            setMasterMuted(next);
+            useStreamStore.getState().setAllMuted(next);
             return;
         }
 
