@@ -27,6 +27,14 @@ const schedulePrewarm = (cb: () => void) => {
 };
 
 if (window.location.pathname !== '/') {
+  // preconnect 從 index.html 移到這裡：首頁不需要播放器，靜態 preconnect 是純浪費。
+  // 這行要立刻執行（不進 idle），連線才來得及在真正載播放器之前握手完成。
+  const preconnect = document.createElement('link');
+  preconnect.rel = 'preconnect';
+  preconnect.href = 'https://player.twitch.tv';
+  preconnect.crossOrigin = '';
+  document.head.appendChild(preconnect);
+
   schedulePrewarm(() => {
     apiLoader.loadTwitchPlayerApi().catch(() => {
       // 預熱失敗，將在需要時重試
