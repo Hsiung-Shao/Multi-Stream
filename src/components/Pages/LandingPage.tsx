@@ -402,30 +402,30 @@ export function LandingPage() {
             {/* Footer */}
             <footer className="py-8 border-t border-white/10 bg-background text-center text-muted-foreground text-sm">
                 <div className="container mx-auto px-4 flex flex-col gap-4">
-                    {/* Mobile-only nav links (hidden on sm+, shown in header there) */}
-                    <div className="flex flex-wrap justify-center gap-4 sm:hidden">
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                    {/* 站內導覽：桌機也顯示。header 只放得下五項，/compare 與 /about/creator 在桌機原本沒有任何來自首頁的內部連結。 */}
+                    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                             <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
                         </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                             <RouteLink to="instructions">{t('landing.footer.tutorial')}</RouteLink>
                         </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                             <RouteLink to="faq">{t('landing.footer.faq')}</RouteLink>
                         </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                             <RouteLink to="support">{t('landing.footer.support', '支持我們')}</RouteLink>
                         </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                             <RouteLink to="privacy">{t('landing.footer.privacy')}</RouteLink>
                         </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                             <RouteLink to="compare">{tx('compare:title')}</RouteLink>
                         </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs">
+                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                             <RouteLink to="creator">{tx('about:creator.pageTitle')}</RouteLink>
                         </Button>
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs" onClick={() => openModal('feedback')}>
+                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm" onClick={() => openModal('feedback')}>
                             {t('navbar:feedback', '意見回饋')}
                         </Button>
                     </div>
