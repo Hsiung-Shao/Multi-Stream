@@ -415,7 +415,13 @@ export function InstructionsPage() {
                 {
                     id: 'getting-started', heading: tx('gettingStarted.title'), blocks: [
                         { type: 'p', text: tx('gettingStarted.content') },
-                        { type: 'steps', items: [tx('gettingStarted.step1'), tx('gettingStarted.step2'), tx('gettingStarted.step3'), tx('gettingStarted.step4')] },
+                        {
+                            type: 'steps', items: [
+                                tx('gettingStarted.step1'), tx('gettingStarted.step2'), tx('gettingStarted.step3'),
+                                tx('gettingStarted.step4'), tx('gettingStarted.step5'), tx('gettingStarted.step6'),
+                            ],
+                        },
+                        img('island-overview.webp', 1440, 900, tx('img.islandOverview.alt'), tx('img.islandOverview.cap')),
                         img('island-search-bar.webp', 1403, 994, tx('img.islandSearchBar.alt'), tx('img.islandSearchBar.cap')),
                         img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
                     ],
@@ -435,6 +441,7 @@ export function InstructionsPage() {
                     id: 'add-window', heading: tx('features.canvas.addWindow'), blocks: [
                         { type: 'p', text: tx('features.canvas.addWindow.desc') },
                         img('island-add-window.webp', 1403, 994, tx('img.islandAddWindow.alt'), tx('img.islandAddWindow.cap')),
+                        img('island-add-menu.webp', 1440, 900, tx('img.islandAddMenu.alt'), tx('img.islandAddMenu.cap')),
                         img('add-window-combo.webp', 1600, 1229, tx('img.addWindowCombo.alt'), tx('img.addWindowCombo.cap')),
                         img('add-window-stream.webp', 1600, 1228, tx('img.addWindowStream.alt'), tx('img.addWindowStream.cap')),
                         img('add-window-chat.webp', 1600, 1240, tx('img.addWindowChat.alt'), tx('img.addWindowChat.cap')),
@@ -444,11 +451,13 @@ export function InstructionsPage() {
                     id: 'auto-layout', heading: tx('features.canvas.autoLayout'), blocks: [
                         { type: 'p', text: tx('features.canvas.autoLayout.desc') },
                         img('island-layout-picker.webp', 1403, 994, tx('img.islandLayoutPicker.alt'), tx('img.islandLayoutPicker.cap')),
+                        img('layout-picker-panel.webp', 1440, 900, tx('img.layoutPickerPanel.alt'), tx('img.layoutPickerPanel.cap')),
                     ],
                 },
                 {
                     id: 'drag-drop', heading: tx('features.canvas.dragDrop'), blocks: [
                         { type: 'p', text: tx('features.canvas.dragDrop.desc') },
+                        img('window-toolbar.webp', 1440, 900, tx('img.windowToolbar.alt'), tx('img.windowToolbar.cap')),
                         img('window-drag-resize.webp', 1356, 493, tx('img.windowDragResize.alt'), tx('img.windowDragResize.cap')),
                     ],
                 },
@@ -493,7 +502,12 @@ export function InstructionsPage() {
             readLabel: readLabel(4),
             accent: '#a78bfa', accent2: '#6d28d9', icon: Tv,
             sections: [
-                { id: 'quick-actions', heading: tx('features.island.quickActions'), blocks: [{ type: 'p', text: tx('features.island.quickActions.desc') }] },
+                {
+                    id: 'quick-actions', heading: tx('features.island.quickActions'), blocks: [
+                        { type: 'p', text: tx('features.island.quickActions.desc') },
+                        img('island-overview.webp', 1440, 900, tx('img.islandOverview.alt'), tx('img.islandOverview.cap')),
+                    ],
+                },
                 { id: 'search', heading: tx('features.island.search'), blocks: [{ type: 'p', text: tx('features.island.search.desc') }] },
                 {
                     id: 'buttons', heading: tx('features.island.buttons'), blocks: [
@@ -503,7 +517,12 @@ export function InstructionsPage() {
                         img('island-home.webp', 1403, 994, tx('img.islandHome.alt'), tx('img.islandHome.cap')),
                     ],
                 },
-                { id: 'edge-dock', heading: tx('features.island.edgeDock'), blocks: [{ type: 'p', text: tx('features.island.edgeDock.desc') }] },
+                {
+                    id: 'edge-dock', heading: tx('features.island.edgeDock'), blocks: [
+                        { type: 'p', text: tx('features.island.edgeDock.desc') },
+                        img('island-edge-dock.webp', 1440, 900, tx('img.islandEdgeDock.alt'), tx('img.islandEdgeDock.cap')),
+                    ],
+                },
             ],
         },
         {
@@ -557,6 +576,8 @@ export function InstructionsPage() {
                 {
                     id: 'per-window', heading: tx('features.media.window'), blocks: [
                         { type: 'p', text: tx('features.media.window.desc') },
+                        img('media-control-panel.webp', 1440, 900, tx('img.mediaControlPanel.alt'), tx('img.mediaControlPanel.cap')),
+                        img('window-toolbar.webp', 1440, 900, tx('img.windowToolbar.alt'), tx('img.windowToolbar.cap')),
                     ],
                 },
             ],
@@ -574,7 +595,7 @@ export function InstructionsPage() {
                     id: 'general', heading: tx('features.settings.general'), blocks: [
                         { type: 'p', text: tx('features.settings.general.desc') },
                         img('island-settings.webp', 1403, 994, tx('img.islandSettings.alt'), tx('img.islandSettings.cap')),
-                        img('settings-panel.webp', 1038, 826, tx('img.settingsPanel.alt'), tx('img.settingsPanel.cap')),
+                        img('settings-global.webp', 1440, 900, tx('img.settingsGlobal.alt'), tx('img.settingsGlobal.cap')),
                     ],
                 },
                 { id: 'playback', heading: tx('features.settings.playback'), blocks: [{ type: 'p', text: tx('features.settings.playback.desc') }] },
@@ -591,7 +612,12 @@ export function InstructionsPage() {
             readLabel: readLabel(3),
             accent: '#38bdf8', accent2: '#0284c7', icon: Share2,
             sections: [
-                { id: 'how', heading: tx('features.share.how'), blocks: [{ type: 'p', text: tx('features.share.how.desc') }] },
+                {
+                    id: 'how', heading: tx('features.share.how'), blocks: [
+                        { type: 'p', text: tx('features.share.how.desc') },
+                        img('share-copied.webp', 1440, 900, tx('img.shareCopied.alt'), tx('img.shareCopied.cap')),
+                    ],
+                },
                 { id: 'format', heading: tx('features.share.format'), blocks: [{ type: 'p', text: tx('features.share.format.desc') }] },
                 { id: 'limits', heading: tx('features.share.limits'), blocks: [{ type: 'callout', title: tx('features.favorites.proTip'), text: tx('features.share.limits.desc') }] },
             ],
@@ -605,9 +631,19 @@ export function InstructionsPage() {
             readLabel: readLabel(3),
             accent: '#fb923c', accent2: '#ea580c', icon: Keyboard,
             sections: [
-                { id: 'global', heading: tx('features.shortcuts.global'), blocks: [{ type: 'p', text: tx('features.shortcuts.global.desc') }] },
+                {
+                    id: 'global', heading: tx('features.shortcuts.global'), blocks: [
+                        { type: 'p', text: tx('features.shortcuts.global.desc') },
+                        img('hotkey-help.webp', 1440, 900, tx('img.hotkeyHelp.alt'), tx('img.hotkeyHelp.cap')),
+                    ],
+                },
                 { id: 'window', heading: tx('features.shortcuts.window'), blocks: [{ type: 'p', text: tx('features.shortcuts.window.desc') }] },
-                { id: 'theater', heading: tx('features.shortcuts.theater'), blocks: [{ type: 'p', text: tx('features.shortcuts.theater.desc') }] },
+                {
+                    id: 'theater', heading: tx('features.shortcuts.theater'), blocks: [
+                        { type: 'p', text: tx('features.shortcuts.theater.desc') },
+                        img('theater-mode.webp', 1440, 900, tx('img.theaterMode.alt'), tx('img.theaterMode.cap')),
+                    ],
+                },
             ],
         },
     ], [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps

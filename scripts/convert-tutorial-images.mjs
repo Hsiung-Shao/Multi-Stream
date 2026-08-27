@@ -46,6 +46,19 @@ const MAP = {
     '螢幕擷取畫面 2026-06-09 162702.png': 'window-media-controls',
     '收藏管理介面.png': 'island-settings', // 原檔名標錯:紅框實際標在設定齒輪
     '螢幕擷取畫面 2026-06-10 064145.png': 'settings-panel',
+
+    // 2026-08-28 重拍(真實直播 tw:lofigirl + 真實聊天室,1440x900 深色)。
+    // 檔名前綴 g- 代表 guides,與早期人工命名的草稿分開。
+    'g-island-overview.png': 'island-overview',
+    'g-island-add-menu.png': 'island-add-menu',
+    'g-island-layout-picker.png': 'layout-picker-panel',
+    'g-island-media-panel.png': 'media-control-panel',
+    'g-island-share-toast.png': 'share-copied',
+    'g-window-toolbar.png': 'window-toolbar',
+    'g-hotkey-help.png': 'hotkey-help',
+    'g-theater-mode.png': 'theater-mode',
+    'g-settings-global.png': 'settings-global',
+    'g-edge-dock.png': 'island-edge-dock',
 };
 
 // 刻意不轉的來源(過小 / 內容重複)
