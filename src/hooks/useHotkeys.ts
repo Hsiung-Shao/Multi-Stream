@@ -11,6 +11,7 @@ export const useHotkeys = () => {
         setMasterMuted,
         togglePanelCollapsed,
         hoveredWindowId,
+        hoveredCanvasItemId,
         setHoveredWindowId,
         theaterWindowId,
         setTheaterWindowId
@@ -165,21 +166,19 @@ export const useHotkeys = () => {
             }
 
             // Theater Mode: T (App Logic Fullscreen)
+            // 用「視窗身分」而非串流身分：一路串流可能同時有畫面視窗與聊天室視窗，
+            // 用串流身分會兩個一起放大。
             if (key === 't') {
                 e.preventDefault();
-                // Toggle logic
-                if (theaterWindowId === hoveredWindowId) {
-                    setTheaterWindowId(null);
-                } else {
-                    setTheaterWindowId(hoveredWindowId);
-                }
+                const target = hoveredCanvasItemId ?? hoveredWindowId;
+                setTheaterWindowId(theaterWindowId === target ? null : target);
                 return;
             }
         }
 
     }, [
         toggleHotkeyHelp, setSearchFocused, setMasterMuted, togglePanelCollapsed,
-        setLayout, streams, updateStream, removeStream, hoveredWindowId, setHoveredWindowId,
+        setLayout, streams, updateStream, removeStream, hoveredWindowId, hoveredCanvasItemId, setHoveredWindowId,
         theaterWindowId, setTheaterWindowId
     ]);
 

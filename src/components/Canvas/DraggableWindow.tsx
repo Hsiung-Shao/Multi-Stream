@@ -34,10 +34,12 @@ export interface CanvasWindow {
 }
 
 /**
- * 視窗在快捷鍵世界裡的身分：有內容的視窗用「串流 id」，空視窗才退回視窗 id。
- * useHotkeys 的 R / M / Delete / F / T 都拿 hoveredWindowId 去比對串流，
- * 所以 hover 記下的值與劇場模式的比對對象必須是同一個——兩邊各算一次就是
- * 「T 對空視窗有效、對真的在播的視窗沒反應」那個 bug 的來源。
+ * 視窗的「串流身分」：有內容用串流 id，空視窗退回視窗 id。
+ * useHotkeys 的 R / M / Delete / F 都拿 hoveredWindowId 去比對 streams，所以 hover
+ * 必須上報這個值——它與視窗 id 不同，兩邊各算一次就是「快捷鍵對空視窗有效、對真的
+ * 在播的視窗沒反應」那個 bug 的來源。
+ * 劇場模式不能用它（同一路的畫面視窗與聊天室視窗共用同一個串流 id，會一起被放大），
+ * 那條路走 hoveredCanvasItemId。
  */
 export const hoverIdOf = (w: CanvasWindow) => (w.contentId ? String(w.contentId) : w.id);
 
@@ -74,8 +76,8 @@ interface DraggableWindowProps {
     ghostRect?: PixelPosition | null;
     isSwapTarget?: boolean;
     isTheaterMode?: boolean;
-    /** 滑鼠進出視窗；傳 null 代表離開。上層必須給穩定身分的函式 */
-    onHoverChange?: (hoveredId: string | null) => void;
+    /** 滑鼠進出視窗；離開時兩個參數都傳 null。上層必須給穩定身分的函式 */
+    onHoverChange?: (hoveredId: string | null, canvasItemId: string | null) => void;
 }
 
 export const DraggableWindow = memo(function DraggableWindow({
@@ -191,11 +193,11 @@ export const DraggableWindow = memo(function DraggableWindow({
     }, [window.id, onRemove]);
 
     const handleMouseEnter = useCallback(() => {
-        onHoverChange?.(hoverIdOf(window));
+        onHoverChange?.(hoverIdOf(window), window.id);
     }, [onHoverChange, window]);
 
     const handleMouseLeave = useCallback(() => {
-        onHoverChange?.(null);
+        onHoverChange?.(null, null);
     }, [onHoverChange]);
 
     // Render props for children —— 必須 memo（見檔頭效能約束 2）

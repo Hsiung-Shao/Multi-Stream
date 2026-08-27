@@ -13,7 +13,7 @@
  */
 
 import { memo, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
-import { DraggableWindow, hoverIdOf, CanvasWindow, WindowRenderProps } from './DraggableWindow';
+import { DraggableWindow, CanvasWindow, WindowRenderProps } from './DraggableWindow';
 import { calculateGridConfig, GridConfig, GRID_COLS, PixelPosition } from './gridConfig';
 import { checkCollision, checkPointCollision, Rect } from './collision';
 import { resolvePushResize } from './pushResize';
@@ -272,8 +272,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         onWindowUpdateRef.current(solved.windows);
     }, [solveResize]);
 
-    const handleHoverChange = useCallback((hoveredId: string | null) => {
-        useUIStore.getState().setHoveredWindowId(hoveredId);
+    const handleHoverChange = useCallback((hoveredId: string | null, canvasItemId: string | null) => {
+        useUIStore.getState().setHoveredWindowId(hoveredId, canvasItemId);
     }, []);
 
     return (
@@ -308,7 +308,7 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         onSwapHover={handleSwapHover}
                         checkDragCollision={checkDragCollision}
                         isSwapTarget={dragSwapTargetId === w.id}
-                        isTheaterMode={theaterWindowId === hoverIdOf(w)}
+                        isTheaterMode={theaterWindowId === w.id}
                         onHoverChange={handleHoverChange}
                     />
                 ))}

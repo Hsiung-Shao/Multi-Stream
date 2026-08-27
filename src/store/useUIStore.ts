@@ -57,8 +57,15 @@ interface UIState {
     islandEdgeY: number; // 凸起垂直位置,百分比 0-100
     setIslandEdgeY: (y: number) => void;
     // Hotkey & Hover State
+    /** 游標所在視窗的「串流身分」：R / M / Delete / F 都用它去比對 streams */
     hoveredWindowId: string | null;
-    setHoveredWindowId: (id: string | null) => void;
+    /**
+     * 游標所在視窗的「視窗身分」（canvasItems 的 i）。
+     * 劇場模式必須用這個——一路串流可以同時有畫面視窗和聊天室視窗，兩者共用同一個
+     * 串流 id，只靠串流身分會把兩個視窗一起放大。
+     */
+    hoveredCanvasItemId: string | null;
+    setHoveredWindowId: (id: string | null, canvasItemId?: string | null) => void;
     theaterWindowId: string | null;
     setTheaterWindowId: (id: string | null) => void;
     isHotkeyHelpOpen: boolean;
@@ -186,7 +193,8 @@ export const useUIStore = create<UIState>((set) => ({
 
     // Hotkey & Hover State
     hoveredWindowId: null,
-    setHoveredWindowId: (id) => set({ hoveredWindowId: id }),
+    hoveredCanvasItemId: null,
+    setHoveredWindowId: (id, canvasItemId = null) => set({ hoveredWindowId: id, hoveredCanvasItemId: canvasItemId }),
     theaterWindowId: null,
     setTheaterWindowId: (id) => set({ theaterWindowId: id }),
     isHotkeyHelpOpen: false,
