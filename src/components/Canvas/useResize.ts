@@ -1,9 +1,13 @@
 /**
  * useResize hook - High performance resize handling from all 4 corners
  * Uses Pointer Events + requestAnimationFrame for smooth resizing
+ *
+ * 效能取向：與 useDrag 同一套分工——縮放過程中的 transform / width / height 與
+ * 「W × H」指示器都直接寫 DOM，不進 React state。進 state 的只有 isResizing（起訖各一次）。
+ * 鄰居讓位預覽仍走 onResizePreview 回呼，但那條路徑在 DraggableWindow 已用格線粒度去重。
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
 import { snapToGrid, GRID_COLS, GRID_ROWS } from './gridConfig';
 
 export type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
@@ -19,6 +23,9 @@ interface ResizeState {
     startPosY: number;
 }
 
+/** 非縮放狀態下視窗使用的 transition，收尾時要先寫回它才有「滑到定位」的手感 */
+const IDLE_TRANSITION = 'transform 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out';
+
 interface UseResizeOptions {
     cellWidth: number;
     cellHeight: number;
@@ -31,6 +38,10 @@ interface UseResizeOptions {
     onResizeEnd: (x: number, y: number, width: number, height: number) => void;
     /** 拖曳過程中回報目前尺寸，供上層預覽鄰居讓位後的位置 */
     onResizePreview?: (x: number, y: number, width: number, height: number) => void;
+    /** 被縮放的視窗元素；縮放中直接寫它的 transform / width / height */
+    nodeRef: RefObject<HTMLElement | null>;
+    /** 中央的「W × H」指示器；縮放中直接寫它的 textContent */
+    sizeLabelRef: RefObject<HTMLElement | null>;
 }
 
 export function useResize(options: UseResizeOptions) {
@@ -44,11 +55,11 @@ export function useResize(options: UseResizeOptions) {
         minGridW = 4,
         minGridH = 3,
         onResizeEnd,
-        onResizePreview
+        onResizePreview,
+        nodeRef,
+        sizeLabelRef,
     } = options;
 
-    const [size, setSize] = useState({ width: currentWidth, height: currentHeight });
-    const [position, setPosition] = useState({ x: currentX, y: currentY });
     const [isResizing, setIsResizing] = useState(false);
 
     const resizeState = useRef<ResizeState>({
@@ -62,6 +73,18 @@ export function useResize(options: UseResizeOptions) {
         startPosY: 0
     });
     const rafRef = useRef<number | undefined>(undefined);
+    /** 縮放中最新的幾何值；放開時用它通知上層（不像舊版讀 state 可能落後一幀） */
+    const liveRef = useRef({ x: currentX, y: currentY, width: currentWidth, height: currentHeight });
+
+    // 幾何與回呼放 ref，讓 cornerHandlers 維持穩定身分
+    const latestRef = useRef({
+        cellWidth, cellHeight, currentWidth, currentHeight, currentX, currentY,
+        minGridW, minGridH, onResizeEnd, onResizePreview,
+    });
+    latestRef.current = {
+        cellWidth, cellHeight, currentWidth, currentHeight, currentX, currentY,
+        minGridW, minGridH, onResizeEnd, onResizePreview,
+    };
 
     // Create handler for specific corner
     const createCornerHandlers = useCallback((corner: ResizeCorner) => {
@@ -71,16 +94,18 @@ export function useResize(options: UseResizeOptions) {
 
             (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
+            const g = latestRef.current;
             resizeState.current = {
                 isResizing: true,
                 corner,
                 startX: e.clientX,
                 startY: e.clientY,
-                startWidth: currentWidth,
-                startHeight: currentHeight,
-                startPosX: currentX,
-                startPosY: currentY
+                startWidth: g.currentWidth,
+                startHeight: g.currentHeight,
+                startPosX: g.currentX,
+                startPosY: g.currentY
             };
+            liveRef.current = { x: g.currentX, y: g.currentY, width: g.currentWidth, height: g.currentHeight };
 
             setIsResizing(true);
         };
@@ -94,9 +119,13 @@ export function useResize(options: UseResizeOptions) {
                 cancelAnimationFrame(rafRef.current);
             }
 
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+
             rafRef.current = requestAnimationFrame(() => {
-                const deltaX = e.clientX - resizeState.current.startX;
-                const deltaY = e.clientY - resizeState.current.startY;
+                const g = latestRef.current;
+                const deltaX = clientX - resizeState.current.startX;
+                const deltaY = clientY - resizeState.current.startY;
                 const corner = resizeState.current.corner;
 
                 let newWidth = resizeState.current.startWidth;
@@ -124,14 +153,14 @@ export function useResize(options: UseResizeOptions) {
                 }
 
                 // Snap to grid
-                newWidth = snapToGrid(newWidth, cellWidth);
-                newHeight = snapToGrid(newHeight, cellHeight);
-                newX = snapToGrid(newX, cellWidth);
-                newY = snapToGrid(newY, cellHeight);
+                newWidth = snapToGrid(newWidth, g.cellWidth);
+                newHeight = snapToGrid(newHeight, g.cellHeight);
+                newX = snapToGrid(newX, g.cellWidth);
+                newY = snapToGrid(newY, g.cellHeight);
 
                 // Enforce minimums
-                const minWidth = minGridW * cellWidth;
-                const minHeight = minGridH * cellHeight;
+                const minWidth = g.minGridW * g.cellWidth;
+                const minHeight = g.minGridH * g.cellHeight;
 
                 // For corners that move position, prevent going below minimum
                 if (corner === 'nw' || corner === 'sw') {
@@ -157,17 +186,27 @@ export function useResize(options: UseResizeOptions) {
                 newY = Math.max(0, newY);
 
                 // Clamp size to not exceed grid bounds
-                const maxWidth = (GRID_COLS * cellWidth) - newX;
-                const maxHeight = (GRID_ROWS * cellHeight) - newY;
+                const maxWidth = (GRID_COLS * g.cellWidth) - newX;
+                const maxHeight = (GRID_ROWS * g.cellHeight) - newY;
                 newWidth = Math.min(newWidth, maxWidth);
                 newHeight = Math.min(newHeight, maxHeight);
 
                 // 這裡刻意不再偵測與鄰居的碰撞。舊版一碰到就整個 return，視窗完全不動也沒有
                 // 任何回饋；在滿版格線佈局下所有格子彼此緊貼，等於永遠拉不大。
                 // 讓位改由上層的 resolvePushResize 解算，這裡只負責跟手與夾住畫布邊界。
-                setSize({ width: newWidth, height: newHeight });
-                setPosition({ x: newX, y: newY });
-                onResizePreview?.(newX, newY, newWidth, newHeight);
+                const node = nodeRef.current;
+                if (node) {
+                    node.style.transform = `translate(${newX}px, ${newY}px)`;
+                    node.style.width = `${newWidth}px`;
+                    node.style.height = `${newHeight}px`;
+                }
+                const label = sizeLabelRef.current;
+                if (label) {
+                    label.textContent = `${Math.round(newWidth / g.cellWidth)} × ${Math.round(newHeight / g.cellHeight)}`;
+                }
+
+                liveRef.current = { x: newX, y: newY, width: newWidth, height: newHeight };
+                g.onResizePreview?.(newX, newY, newWidth, newHeight);
             });
         };
 
@@ -179,13 +218,26 @@ export function useResize(options: UseResizeOptions) {
             (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
             resizeState.current.isResizing = false;
-            setIsResizing(false);
-
-            onResizeEnd(position.x, position.y, size.width, size.height);
 
             if (rafRef.current) {
                 cancelAnimationFrame(rafRef.current);
+                rafRef.current = undefined;
             }
+
+            const { x, y, width, height } = liveRef.current;
+
+            // 收尾：先寫回非縮放狀態的 transition，再落到最終幾何 → 保留原本的過場動畫。
+            // React 隨後 re-render（可能帶著推擠修正後的值）會覆寫同一批屬性。
+            const node = nodeRef.current;
+            if (node) {
+                node.style.transition = IDLE_TRANSITION;
+                node.style.transform = `translate(${x}px, ${y}px)`;
+                node.style.width = `${width}px`;
+                node.style.height = `${height}px`;
+            }
+
+            setIsResizing(false);
+            latestRef.current.onResizeEnd(x, y, width, height);
         };
 
         return {
@@ -194,37 +246,17 @@ export function useResize(options: UseResizeOptions) {
             onPointerUp: handlePointerUp,
             onPointerCancel: handlePointerUp
         };
-    }, [cellWidth, cellHeight, currentX, currentY, currentWidth, currentHeight, minGridW, minGridH, onResizePreview, onResizeEnd, position, size]);
+    }, [nodeRef, sizeLabelRef]);
 
-    // Update size and position when props change
-    // CRITICAL: Use useEffect to avoid setState during render phase (causes infinite re-render)
-    // Also use functional update to compare against current state
-    useEffect(() => {
-        if (!isResizing) {
-            setSize(prev => {
-                if (prev.width !== currentWidth || prev.height !== currentHeight) {
-                    return { width: currentWidth, height: currentHeight };
-                }
-                return prev;
-            });
-            setPosition(prev => {
-                if (prev.x !== currentX || prev.y !== currentY) {
-                    return { x: currentX, y: currentY };
-                }
-                return prev;
-            });
-        }
-    }, [currentWidth, currentHeight, currentX, currentY, isResizing]);
+    const cornerHandlers = useMemo(() => ({
+        nw: createCornerHandlers('nw'),
+        ne: createCornerHandlers('ne'),
+        sw: createCornerHandlers('sw'),
+        se: createCornerHandlers('se')
+    }), [createCornerHandlers]);
 
     return {
-        size,
-        position,
         isResizing,
-        cornerHandlers: {
-            nw: createCornerHandlers('nw'),
-            ne: createCornerHandlers('ne'),
-            sw: createCornerHandlers('sw'),
-            se: createCornerHandlers('se')
-        }
+        cornerHandlers
     };
 }

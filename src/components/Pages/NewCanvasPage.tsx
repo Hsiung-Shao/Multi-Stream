@@ -12,8 +12,7 @@ import { resolveChainFill } from '../Canvas/pushResize';
 import { GRID_COLS } from '../Canvas/gridConfig';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
-import { CanvasStreamContent } from './CanvasStreamContent';
-import { EmptyWindowContent } from '../Canvas/EmptyWindowContent';
+import { CanvasWindowBody } from './CanvasWindowBody';
 import { CanvasEmptyState } from '../Canvas/CanvasEmptyState';
 import { useTranslation } from 'react-i18next';
 import { SEO } from '../SEO';
@@ -49,7 +48,9 @@ export const NewCanvasPage = () => {
         }
     }, [streams]);
 
-    // Convert canvasItems to SimpleCanvas windows format
+    // Convert canvasItems to SimpleCanvas windows format。
+    // 刻意「不」在這裡帶入串流標題：標題由 CanvasWindowBody 自己訂閱。
+    // 這裡一旦依賴 streams，任何一路的音量／靜音／開台狀態變動都會重建整張畫布。
     const windows: CanvasWindow[] = useMemo(() => {
         return canvasItems.map(item => ({
             id: item.i,
@@ -59,13 +60,8 @@ export const NewCanvasPage = () => {
             gridH: item.layout.h,
             contentId: item.contentId ?? undefined,
             type: item.type as 'stream' | 'chat',
-            title: (() => {
-                if (!item.contentId) return undefined;
-                const stream = streams.find(s => s.id === item.contentId);
-                return stream?.displayName || stream?.channelId;
-            })()
         }));
-    }, [canvasItems, streams]);
+    }, [canvasItems]);
 
     // Handle window update
     const handleWindowUpdate = useCallback((updatedWindows: CanvasWindow[]) => {
@@ -120,52 +116,17 @@ export const NewCanvasPage = () => {
         }
     }, [removeCanvasItem, updateCanvasLayout]);
 
-    // Render content for each window - now receives WindowRenderProps
-    const renderContent = useCallback((window: CanvasWindow, renderProps: WindowRenderProps) => {
-        // Callback to update window content (passed to EmptyWindow)
-        const handleUpdateWindow = (id: string, updates: any) => {
-            // DEBUG: trace canvas item update flow
-
-            // We need a way to update the specific canvas item by its ID (window.id is the item.i)
-            // useStreamStore's updateCanvasItem takes (itemId, updates)
-            useStreamStore.getState().updateCanvasItem(id, updates);
-        };
-
-        if (!window.contentId) {
-            return (
-                <EmptyWindowContent
-                    windowId={window.id}
-                    type={window.type}
-                    onUpdateWindow={handleUpdateWindow}
-                    renderProps={renderProps}
-                />
-            );
-        }
-
-        const stream = streams.find(s => s.id === window.contentId);
-
-        if (!stream) {
-            // If stream not found but we have an ID, maybe render empty or error
-            // Fallback to empty for now but keep ID just in case? 
-            // Better to show "Stream Not Found" or reset.
-            // Let's render EmptyWindowContent but maybe with a warning? 
-            // Or just the placeholder text as before but cleaner.
-            return (
-                <div className="w-full h-full flex items-center justify-center text-white/50 text-sm bg-slate-900 border border-white/10 rounded-lg">
-                    串流未找到 (ID: {window.contentId})
-                </div>
-            );
-        }
-
-        return (
-            <CanvasStreamContent
-                stream={stream}
-                windowType={window.type}
-                renderProps={renderProps}
-                windowId={window.id} // Pass window ID for updates if needed
-            />
-        );
-    }, [streams]);
+    // Render content for each window - now receives WindowRenderProps。
+    // 穩定身分（空 deps）是刻意的：內容改由 CanvasWindowBody 自己訂閱那一路串流，
+    // 這裡不能依賴 streams，否則任一路更新就會重繪畫布上所有視窗（見 CanvasWindowBody 檔頭）。
+    const renderContent = useCallback((window: CanvasWindow, renderProps: WindowRenderProps) => (
+        <CanvasWindowBody
+            windowId={window.id}
+            contentId={window.contentId}
+            type={window.type}
+            renderProps={renderProps}
+        />
+    ), []);
 
     return (
         <div className="w-full h-screen bg-black overflow-hidden relative">

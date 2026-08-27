@@ -1,9 +1,19 @@
 /**
  * useDrag hook - High performance drag handling
  * Smooth dragging with ghost preview at snap position
+ *
+ * 效能取向：拖曳過程中「跟手」與「落點預覽」都直接寫 DOM style，不進 React state。
+ * 每秒 60 次的 setState 會讓整個視窗子樹（含播放器容器）逐幀重新協調，串流一多就掉幀。
+ * 進 state 的只有兩件事：
+ *   - isDragging：一次拖曳只翻轉兩次（起、訖）
+ *   - collisionId：換手感的綠框，格線粒度且值相同就不 set
+ *
+ * 與 React 的分工：視窗的 transform 在 render 時仍由 pixelPos（props 推導）寫出。
+ * 拖曳期間 pixelPos 不變 → React 不會碰 DOM 的 transform → 手寫的值不會被蓋掉；
+ * 放開後 React 依新座標重寫，兩邊自洽。
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
 import { snapToGrid, clampToGridBounds, GRID_COLS, GRID_ROWS } from './gridConfig';
 
 interface DragState {
@@ -13,6 +23,9 @@ interface DragState {
     startPosX: number;
     startPosY: number;
 }
+
+/** 非拖曳狀態下視窗使用的 transition，收尾時要先寫回它才有「滑進格子」的手感 */
+const IDLE_TRANSITION = 'transform 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out';
 
 export interface UseDragOptions {
     cellWidth: number;
@@ -24,6 +37,10 @@ export interface UseDragOptions {
     onDragEnd: (x: number, y: number, collisionId: string | null) => void;
     checkCollision?: (x: number, y: number, screenX?: number, screenY?: number) => string | null;
     maxRows?: number; // Add maxRows to support dynamic grid height
+    /** 被拖曳的視窗元素；拖曳中直接寫它的 transform */
+    nodeRef: RefObject<HTMLElement | null>;
+    /** 落點預覽（ghost）元素；拖曳中直接寫它的 transform */
+    ghostRef: RefObject<HTMLElement | null>;
 }
 
 export function useDrag(options: UseDragOptions) {
@@ -36,14 +53,12 @@ export function useDrag(options: UseDragOptions) {
         height,
         onDragEnd,
         checkCollision,
-        maxRows = GRID_ROWS // Default to GRID_ROWS if not provided
+        maxRows = GRID_ROWS, // Default to GRID_ROWS if not provided
+        nodeRef,
+        ghostRef,
     } = options;
 
-    // Smooth position (follows cursor directly)
-    const [position, setPosition] = useState({ x: currentX, y: currentY });
-    // Snapped position (where it will land - for ghost preview)
-    const [snapPosition, setSnapPosition] = useState({ x: currentX, y: currentY });
-    // Collision ID for swap feedback
+    // Collision ID for swap feedback（格線粒度，變了才 set）
     const [collisionId, setCollisionId] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -55,6 +70,14 @@ export function useDrag(options: UseDragOptions) {
         startPosY: 0
     });
     const rafRef = useRef<number | undefined>(undefined);
+    /** 最新的落點（格線對齊後的像素座標），放開時要用它通知上層 */
+    const snapRef = useRef({ x: currentX, y: currentY });
+    const collisionRef = useRef<string | null>(null);
+
+    // 幾何與回呼放 ref：pointermove 的 handler 不必因為它們變動而重建，
+    // dragHandlers 才能維持穩定身分（否則 DraggableWindow 的 renderProps 又會逐幀改變）。
+    const latestRef = useRef({ cellWidth, cellHeight, width, height, maxRows, currentX, currentY, checkCollision, onDragEnd });
+    latestRef.current = { cellWidth, cellHeight, width, height, maxRows, currentX, currentY, checkCollision, onDragEnd };
 
     const handlePointerDown = useCallback((e: React.PointerEvent) => {
         e.preventDefault();
@@ -67,12 +90,15 @@ export function useDrag(options: UseDragOptions) {
             isDragging: true,
             startX: e.clientX,
             startY: e.clientY,
-            startPosX: currentX,
-            startPosY: currentY
+            startPosX: latestRef.current.currentX,
+            startPosY: latestRef.current.currentY
         };
+        snapRef.current = { x: latestRef.current.currentX, y: latestRef.current.currentY };
+        collisionRef.current = null;
 
+        setCollisionId(null);
         setIsDragging(true);
-    }, [currentX, currentY]);
+    }, []);
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (!dragState.current.isDragging) return;
@@ -88,37 +114,37 @@ export function useDrag(options: UseDragOptions) {
         const clientY = e.clientY;
 
         rafRef.current = requestAnimationFrame(() => {
+            const geom = latestRef.current;
             const deltaX = clientX - dragState.current.startX;
             const deltaY = clientY - dragState.current.startY;
 
             // Raw position (follows cursor smoothly)
-            let rawX = dragState.current.startPosX + deltaX;
-            let rawY = dragState.current.startPosY + deltaY;
+            const rawX = dragState.current.startPosX + deltaX;
+            const rawY = dragState.current.startPosY + deltaY;
 
-            // Snap calculation
-            let snappedX = snapToGrid(rawX, cellWidth);
-            let snappedY = snapToGrid(rawY, cellHeight);
+            // Snap calculation + clamp（垂直用動態 maxRows，允許拖出目前範圍以觸發擴張）
+            const snappedX = clampToGridBounds(snapToGrid(rawX, geom.cellWidth), geom.width, GRID_COLS, geom.cellWidth);
+            const snappedY = clampToGridBounds(snapToGrid(rawY, geom.cellHeight), geom.height, geom.maxRows, geom.cellHeight);
 
-            // Clamp snapped position
-            snappedX = clampToGridBounds(snappedX, width, GRID_COLS, cellWidth);
-            // Use dynamic maxRows for vertical clamping
-            snappedY = clampToGridBounds(snappedY, height, maxRows, cellHeight);
+            // 跟手與落點預覽：直接寫 DOM
+            const node = nodeRef.current;
+            if (node) node.style.transform = `translate(${rawX}px, ${rawY}px)`;
+            const ghost = ghostRef.current;
+            if (ghost) ghost.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
+
+            snapRef.current = { x: snappedX, y: snappedY };
 
             // Check collision for snap position
-            // Modified: We now allow staying in collision state (for swap)
-            // and report the collision ID
-            let collidedId: string | null = null;
-            if (checkCollision) {
-                // Pass snapped top-left AND raw pointer screen coords
-                collidedId = checkCollision(snappedX, snappedY, clientX, clientY);
+            // Modified: We now allow staying in collision state (for swap) and report the collision ID
+            const collided = geom.checkCollision
+                ? geom.checkCollision(snappedX, snappedY, clientX, clientY)
+                : null;
+            if (collided !== collisionRef.current) {
+                collisionRef.current = collided;
+                setCollisionId(collided);
             }
-
-            // Update state
-            setPosition({ x: rawX, y: rawY });
-            setSnapPosition({ x: snappedX, y: snappedY });
-            setCollisionId(collidedId);
         });
-    }, [cellWidth, cellHeight, width, height, checkCollision, maxRows]);
+    }, [nodeRef, ghostRef]);
 
     const handlePointerUp = useCallback((e: React.PointerEvent) => {
         if (!dragState.current.isDragging) return;
@@ -129,65 +155,43 @@ export function useDrag(options: UseDragOptions) {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
 
         dragState.current.isDragging = false;
-        setIsDragging(false);
-        setCollisionId(null);
 
-        // Snap to final position
-        setPosition({ x: snapPosition.x, y: snapPosition.y });
-
-        // Notify parent of final position AND collision (for swap)
-        // We need to re-check collision one last time to be sure? 
-        // Or rely on state? State might be one frame behind in rare cases but snapPosition is up to date in closure?
-        // Actually snapPosition in closure is from render.
-        // Let's re-calculate logic to be safe or use refs? 
-        // For simplicity, we can just pass the latest computed snapPosition from the state? 
-        // Actually, inside callback, state might be stale if we relied on `snapPosition` from closure.
-        // But `onDragEnd` will be called with the values we just set? No.
-
-        // Let's re-calculate cleanly to ensure 100% sync
-        // Accessing 'snapPosition' here is from the render cycle when handlePointerUp was created.
-        // Since we update snapPosition in RAF, the render cycle might update handlePointerUp.
-        // To be safe, let's recalculate the final snapX/Y from the last known Event? No event here.
-        // We can use a ref to track latest snapPosition.
-
-        onDragEnd(snapPosition.x, snapPosition.y, collisionId);
-
-        // Clean up animation frame
+        // Clean up animation frame（避免已排程的 RAF 在收尾之後又把 transform 寫回去）
         if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
+            rafRef.current = undefined;
         }
-    }, [onDragEnd, snapPosition, collisionId]);
 
-    // Update position when props change (e.g., from swap)
-    // CRITICAL: Use useEffect to avoid setState during render phase (causes infinite re-render)
-    // Also use functional update to compare against current state
-    useEffect(() => {
-        if (!isDragging) {
-            setPosition(prev => {
-                if (prev.x !== currentX || prev.y !== currentY) {
-                    return { x: currentX, y: currentY };
-                }
-                return prev;
-            });
-            setSnapPosition(prev => {
-                if (prev.x !== currentX || prev.y !== currentY) {
-                    return { x: currentX, y: currentY };
-                }
-                return prev;
-            });
+        // snapRef 是 RAF 內剛寫入的值，不像舊版讀 state 那樣可能落後一幀
+        const { x, y } = snapRef.current;
+        const collided = collisionRef.current;
+
+        // 收尾：先把 transition 寫回非拖曳狀態的值，再落到格線位置 → 保留原本「滑進格子」的動畫。
+        // React 隨後 re-render 會寫入同樣（或被推擠修正後）的值，不會互相打架。
+        const node = nodeRef.current;
+        if (node) {
+            node.style.transition = IDLE_TRANSITION;
+            node.style.transform = `translate(${x}px, ${y}px)`;
         }
-    }, [currentX, currentY, isDragging]);
+
+        collisionRef.current = null;
+        setCollisionId(null);
+        setIsDragging(false);
+
+        // Notify parent of final position AND collision (for swap)
+        latestRef.current.onDragEnd(x, y, collided);
+    }, [nodeRef]);
+
+    const dragHandlers = useMemo(() => ({
+        onPointerDown: handlePointerDown,
+        onPointerMove: handlePointerMove,
+        onPointerUp: handlePointerUp,
+        onPointerCancel: handlePointerUp
+    }), [handlePointerDown, handlePointerMove, handlePointerUp]);
 
     return {
-        position,
-        snapPosition,
         collisionId,
         isDragging,
-        dragHandlers: {
-            onPointerDown: handlePointerDown,
-            onPointerMove: handlePointerMove,
-            onPointerUp: handlePointerUp,
-            onPointerCancel: handlePointerUp
-        }
+        dragHandlers,
     };
 }

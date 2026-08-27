@@ -69,7 +69,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
 
     const title = useMemo(() => {
         return stream.displayName || stream.channelId || 'Unknown';
-    }, [stream.displayName, stream.channelId, effectiveVolume, effectiveMuted]);
+    }, [stream.displayName, stream.channelId]);
 
     const isChatWindow = windowType === 'chat';
 

@@ -3,8 +3,18 @@
  * Uses CSS Transform for GPU acceleration
  * Features smooth dragging with ghost preview at snap position
  * Supports resizing from all 4 corners
- * 
+ *
  * HEADERLESS VERSION - drag handlers are passed to children via render props
+ *
+ * 效能約束（改動前請先讀）：
+ * 1. 這個元件是 memo 的，但只有「所有 prop 都維持穩定身分」時才擋得住重繪。
+ *    上層 SimpleCanvas 的每一個回呼都必須是穩定的，不可以在 map 裡寫 inline 箭頭。
+ * 2. renderProps 必須是 useMemo 出來的：它是內容子樹（CanvasStreamContent /
+ *    EmptyWindowContent）唯一的 prop，一旦逐次 render 就是新物件，內容的 memo 全部失效，
+ *    拖曳時每一幀都會重新協調所有播放器容器。
+ * 3. 拖曳／縮放中的幾何變化由 useDrag / useResize 直接寫 DOM，不進 state。
+ *    這裡 render 出來的 transform / width / height 一律取自 pixelPos（props 推導），
+ *    互動期間它不變，React 不會碰 DOM，手寫的值不會被蓋掉。
  */
 
 import { memo, useCallback, useMemo, useRef, ReactNode, useEffect } from 'react';
@@ -21,7 +31,6 @@ export interface CanvasWindow {
     gridH: number;
     contentId?: number;
     type: 'stream' | 'chat';
-    title?: string;
 }
 
 export interface DragHandlers {
@@ -35,6 +44,7 @@ export interface WindowRenderProps {
     dragHandlers: DragHandlers;
     isDragging: boolean;
     isResizing: boolean;
+    /** 已落地的格線尺寸（縮放進行中不會逐格更新——那會讓內容子樹跟著重繪） */
     gridW: number;
     gridH: number;
     onRemove: () => void;
@@ -43,7 +53,8 @@ export interface WindowRenderProps {
 interface DraggableWindowProps {
     window: CanvasWindow;
     gridConfig: GridConfig;
-    children: ReactNode | ((props: WindowRenderProps) => ReactNode);
+    /** 內容渲染函式；必須是穩定身分（見檔頭效能約束 1） */
+    renderContent: (window: CanvasWindow, renderProps: WindowRenderProps) => ReactNode;
     onPositionChange: (id: string, gridX: number, gridY: number, collisionId?: string | null) => void;
     onSizeChange: (id: string, gridX: number, gridY: number, gridW: number, gridH: number) => void;
     onRemove: (id: string) => void;
@@ -55,14 +66,14 @@ interface DraggableWindowProps {
     ghostRect?: PixelPosition | null;
     isSwapTarget?: boolean;
     isTheaterMode?: boolean;
-    onMouseEnter?: () => void;
-    onMouseLeave?: () => void;
+    /** 滑鼠進出視窗；傳 null 代表離開。上層必須給穩定身分的函式 */
+    onHoverChange?: (hoveredId: string | null) => void;
 }
 
 export const DraggableWindow = memo(function DraggableWindow({
     window,
     gridConfig,
-    children,
+    renderContent,
     onPositionChange,
     onSizeChange,
     onRemove,
@@ -72,10 +83,14 @@ export const DraggableWindow = memo(function DraggableWindow({
     ghostRect,
     isSwapTarget,
     isTheaterMode,
-    onMouseEnter,
-    onMouseLeave
+    onHoverChange
 }: DraggableWindowProps) {
     const { cellWidth, cellHeight } = gridConfig;
+
+    // 互動期間直接被寫 style 的三個元素
+    const nodeRef = useRef<HTMLDivElement>(null);
+    const dragGhostRef = useRef<HTMLDivElement>(null);
+    const sizeLabelRef = useRef<HTMLDivElement>(null);
 
     // Calculate pixel position from grid position
     const pixelPos: PixelPosition = useMemo(() => ({
@@ -126,8 +141,8 @@ export const DraggableWindow = memo(function DraggableWindow({
         onSizeChange(window.id, gridX, gridY, gridW, gridH);
     }, [window.id, cellWidth, cellHeight, onSizeChange]);
 
-    // Drag hook - returns both smooth position and snap position AND collisionId
-    const { position, snapPosition, collisionId, isDragging, dragHandlers } = useDrag({
+    // Drag hook - 幾何直接寫 DOM，只回報 isDragging 與 collisionId
+    const { collisionId, isDragging, dragHandlers } = useDrag({
         cellWidth,
         cellHeight,
         currentX: pixelPos.x,
@@ -136,7 +151,9 @@ export const DraggableWindow = memo(function DraggableWindow({
         height: pixelPos.height,
         onDragEnd: handleDragEnd,
         checkCollision: dragCollisionCheck,
-        maxRows: 1000 // Allow dragging beyond current bounds to trigger expansion
+        maxRows: 1000, // Allow dragging beyond current bounds to trigger expansion
+        nodeRef,
+        ghostRef: dragGhostRef,
     });
 
     // Notify parent of swap hover state
@@ -146,8 +163,8 @@ export const DraggableWindow = memo(function DraggableWindow({
         }
     }, [collisionId, isDragging, window.id, onSwapHover]);
 
-    // Resize hook - now returns cornerHandlers instead of single resizeHandlers
-    const { size, position: resizePos, isResizing, cornerHandlers } = useResize({
+    // Resize hook - 四角把手；幾何同樣直接寫 DOM
+    const { isResizing, cornerHandlers } = useResize({
         cellWidth,
         cellHeight,
         currentWidth: pixelPos.width,
@@ -155,30 +172,35 @@ export const DraggableWindow = memo(function DraggableWindow({
         currentX: pixelPos.x,
         currentY: pixelPos.y,
         onResizeEnd: handleResizeEnd,
-        onResizePreview: handleResizePreview
+        onResizePreview: handleResizePreview,
+        nodeRef,
+        sizeLabelRef,
     });
-
-    // Compute actual display position (use resize position when resizing)
-    const displayX = isResizing ? resizePos.x : position.x;
-    const displayY = isResizing ? resizePos.y : position.y;
 
     // Handle remove
     const handleRemove = useCallback(() => {
         onRemove(window.id);
     }, [window.id, onRemove]);
 
-    // Render props for children
-    const renderProps: WindowRenderProps = {
+    const handleMouseEnter = useCallback(() => {
+        onHoverChange?.(window.contentId ? window.contentId.toString() : window.id);
+    }, [onHoverChange, window.contentId, window.id]);
+
+    const handleMouseLeave = useCallback(() => {
+        onHoverChange?.(null);
+    }, [onHoverChange]);
+
+    // Render props for children —— 必須 memo（見檔頭效能約束 2）
+    const renderProps: WindowRenderProps = useMemo(() => ({
         dragHandlers,
         isDragging,
         isResizing,
-        gridW: Math.round(size.width / cellWidth),
-        gridH: Math.round(size.height / cellHeight),
+        gridW: window.gridW,
+        gridH: window.gridH,
         onRemove: handleRemove
-    };
+    }), [dragHandlers, isDragging, isResizing, window.gridW, window.gridH, handleRemove]);
 
-    // Render children - support both ReactNode and render props pattern
-    const renderedChildren = typeof children === 'function' ? children(renderProps) : children;
+    const renderedChildren = renderContent(window, renderProps);
 
     // Corner handle base styles
     const cornerHandleClass = cn(
@@ -193,11 +215,12 @@ export const DraggableWindow = memo(function DraggableWindow({
             {/* Ghost Preview - shows where window will land */}
             {isDragging && (
                 <div
+                    ref={dragGhostRef}
                     className="absolute rounded-lg border-2 border-dashed border-purple-400/60 bg-purple-500/10 pointer-events-none"
                     style={{
-                        transform: `translate(${snapPosition.x}px, ${snapPosition.y}px)`,
-                        width: size.width,
-                        height: size.height,
+                        transform: `translate(${pixelPos.x}px, ${pixelPos.y}px)`,
+                        width: pixelPos.width,
+                        height: pixelPos.height,
                         transition: 'transform 0.1s ease-out'
                     }}
                 />
@@ -220,6 +243,7 @@ export const DraggableWindow = memo(function DraggableWindow({
 
             {/* Actual Window - NO INTERNAL HEADER */}
             <div
+                ref={nodeRef}
                 className={cn(
                     "absolute rounded-lg overflow-hidden border border-white/10 bg-slate-900/95",
                     "shadow-lg group",
@@ -228,8 +252,8 @@ export const DraggableWindow = memo(function DraggableWindow({
                     isSwapTarget && "ring-2 ring-green-500 ring-offset-2 ring-offset-slate-950",
                     isTheaterMode && "z-[100] border-purple-500 shadow-2xl"
                 )}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 style={isTheaterMode ? {
                     position: 'fixed',
                     top: 0,
@@ -239,9 +263,9 @@ export const DraggableWindow = memo(function DraggableWindow({
                     transform: 'none',
                     zIndex: 100,
                 } : {
-                    transform: `translate(${displayX}px, ${displayY}px)`,
-                    width: size.width,
-                    height: size.height,
+                    transform: `translate(${pixelPos.x}px, ${pixelPos.y}px)`,
+                    width: pixelPos.width,
+                    height: pixelPos.height,
                     willChange: isDragging || isResizing ? 'transform, width, height' : 'auto',
                     contain: 'layout style paint',
                     transition: (isDragging || isResizing) ? 'none' : 'transform 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out'
@@ -288,10 +312,13 @@ export const DraggableWindow = memo(function DraggableWindow({
                     <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-r-2 border-b-2 border-white/40" />
                 </div>
 
-                {/* Size indicator during resize */}
+                {/* Size indicator during resize —— 文字由 useResize 直接寫，不走 state */}
                 {isResizing && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white text-xs px-3 py-1.5 rounded z-20">
-                        {Math.round(size.width / cellWidth)} × {Math.round(size.height / cellHeight)}
+                    <div
+                        ref={sizeLabelRef}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white text-xs px-3 py-1.5 rounded z-20"
+                    >
+                        {window.gridW} × {window.gridH}
                     </div>
                 )}
             </div>

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStreamStore } from '../../store/useStreamStore';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
@@ -22,7 +23,8 @@ interface EmptyWindowContentProps {
     renderProps: WindowRenderProps;
 }
 
-export const EmptyWindowContent = ({ windowId, type, onUpdateWindow, renderProps }: EmptyWindowContentProps) => {
+// memo 必要：renderProps 由 DraggableWindow useMemo 產出，拖曳中身分不變 → 這裡整棵子樹可以 bail out
+export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, type, onUpdateWindow, renderProps }: EmptyWindowContentProps) {
     const { t } = useTranslation(['common', 'favorites']);
     const streams = useStreamStore(s => s.streams);
     const { dragHandlers, isDragging, onRemove } = renderProps;
@@ -196,4 +198,4 @@ export const EmptyWindowContent = ({ windowId, type, onUpdateWindow, renderProps
             </div>
         </div>
     );
-};
+});
