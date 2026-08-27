@@ -33,6 +33,14 @@ export interface CanvasWindow {
     type: 'stream' | 'chat';
 }
 
+/**
+ * 視窗在快捷鍵世界裡的身分：有內容的視窗用「串流 id」，空視窗才退回視窗 id。
+ * useHotkeys 的 R / M / Delete / F / T 都拿 hoveredWindowId 去比對串流，
+ * 所以 hover 記下的值與劇場模式的比對對象必須是同一個——兩邊各算一次就是
+ * 「T 對空視窗有效、對真的在播的視窗沒反應」那個 bug 的來源。
+ */
+export const hoverIdOf = (w: CanvasWindow) => (w.contentId ? String(w.contentId) : w.id);
+
 export interface DragHandlers {
     onPointerDown: (e: React.PointerEvent) => void;
     onPointerMove: (e: React.PointerEvent) => void;
@@ -183,8 +191,8 @@ export const DraggableWindow = memo(function DraggableWindow({
     }, [window.id, onRemove]);
 
     const handleMouseEnter = useCallback(() => {
-        onHoverChange?.(window.contentId ? window.contentId.toString() : window.id);
-    }, [onHoverChange, window.contentId, window.id]);
+        onHoverChange?.(hoverIdOf(window));
+    }, [onHoverChange, window]);
 
     const handleMouseLeave = useCallback(() => {
         onHoverChange?.(null);

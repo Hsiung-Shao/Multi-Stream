@@ -3,7 +3,7 @@
  * Renders StreamIframe with floating pill-shaped header (matching WindowHeader style)
  */
 
-import { memo, useState, useMemo, useCallback, useRef } from 'react';
+import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { GripHorizontal, X, RefreshCw } from 'lucide-react';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
@@ -36,8 +36,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     const [reloadKey, setReloadKey] = useState(0);
     const isReloadingRef = useRef(false);
 
-    const handleReload = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
+    const reload = useCallback(() => {
         // Debounce: prevent rapid reload clicks that can cause Twitch player issues
         if (isReloadingRef.current) return;
         isReloadingRef.current = true;
@@ -51,6 +50,20 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
             }, 500);
         }, 50);
     }, []);
+
+    const handleReload = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        reload();
+    }, [reload]);
+
+    // 快捷鍵 R:useHotkeys 對「游標所在視窗」發 stream-reload-<串流 id>。
+    // 在接上這個監聽之前,那個事件全專案沒有任何人在聽,所以 R 按下去毫無反應。
+    useEffect(() => {
+        const evt = `stream-reload-${stream.id}`;
+        const onReload = () => reload();
+        window.addEventListener(evt, onReload);
+        return () => window.removeEventListener(evt, onReload);
+    }, [stream.id, reload]);
 
     const handleRemove = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -73,8 +86,16 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
 
     const isChatWindow = windowType === 'chat';
 
+    // 根節點的 id 是快捷鍵 F（視窗全螢幕）要找的元素：useHotkeys 用
+    // document.getElementById(`stream-container-${hoveredWindowId}`) 取它來 requestFullscreen。
+    // 在補上這個 id 之前，那個查詢永遠回 null，所以 F 按下去毫無反應。
+    // 只掛在畫面視窗上：同一路串流的聊天室視窗共用同一個 stream.id，兩邊都掛會產生重複 id，
+    // getElementById 只回第一個，全螢幕就可能開到聊天室去。
     return (
-        <div className={cn("w-full h-full relative bg-slate-900 group", isChatWindow && "flex flex-col")}>
+        <div
+            id={isChatWindow ? undefined : `stream-container-${stream.id}`}
+            className={cn("w-full h-full relative bg-slate-900 group", isChatWindow && "flex flex-col")}
+        >
             {/* Stream windows keep floating controls; chat windows reserve space so Twitch UI is never covered. */}
             <div
                 data-window-toolbar={windowType}
