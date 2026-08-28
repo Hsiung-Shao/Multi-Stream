@@ -181,6 +181,12 @@ const tutorial = {
   'img.settingsGlobal.cap': '所有全局设置都在这一页，左边那排是收藏管理的其他分页',
   'img.islandEdgeDock.alt': '切换成边缘停靠后，控制列缩成画面左缘的一条细边，中间有一个展开箭头',
   'img.islandEdgeDock.cap': '嫌底部的岛挡画面，就把它收到左边或右边',
+  'img.islandEdgeDockOpen.alt': '边缘停靠展开后的直式菜单，由上而下是搜索频道、新增窗口、布局设置、媒体控制、收藏清单、一键收藏当前画布、分享画布、全屏、清空画面、返回首页、全局设置',
+  'img.islandEdgeDockOpen.cap': '点一下那条细边就会展开，功能和底部的动态岛一模一样',
+  'img.favoritesPanel.alt': '收藏直播面板，上方三个筛选钮（仅显示直播中、分类、标签），下方每笔收藏一列，有平台徽章、分类标签与勾选框',
+  'img.favoritesPanel.cap': '直播中的会标上 LIVE；勾选多个可以一次全部加到画布',
+  'img.emptyWindowPicker.alt': '刚新增的空窗口，上方可切换串流与聊天室，下方是「正在直播的收藏」下拉菜单，展开后列出可选的频道',
+  'img.emptyWindowPicker.cap': '空窗口不会自己播东西，从下拉挑一个频道才会开始',
 
   'footer.copyright': '© 2026 MultiStream Hub. 开源项目。',
   'footer.github': 'GitHub',

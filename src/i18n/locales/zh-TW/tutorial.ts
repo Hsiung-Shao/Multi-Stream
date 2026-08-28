@@ -181,6 +181,12 @@ const tutorial = {
   'img.settingsGlobal.cap': '所有全域設定都在這一頁，左邊那排是收藏管理的其他分頁',
   'img.islandEdgeDock.alt': '切換成邊緣停靠後，控制列縮成畫面左緣的一條細邊，中間有一個展開箭頭',
   'img.islandEdgeDock.cap': '嫌底部的島擋畫面，就把它收到左邊或右邊',
+  'img.islandEdgeDockOpen.alt': '邊緣停靠展開後的直式選單，由上而下是搜尋頻道、新增視窗、佈局設定、媒體控制、收藏清單、一鍵收藏當前畫布、分享畫布、全螢幕、清空畫面、返回首頁、全域設定',
+  'img.islandEdgeDockOpen.cap': '點一下那條細邊就會展開，功能和底部的動態島一模一樣',
+  'img.favoritesPanel.alt': '收藏直播面板，上方三個篩選鈕（僅顯示直播中、分類、標籤），下方每筆收藏一列，有平台徽章、分類標籤與勾選框',
+  'img.favoritesPanel.cap': '直播中的會標上 LIVE；勾選多個可以一次全部加到畫布',
+  'img.emptyWindowPicker.alt': '剛新增的空視窗，上方可切換串流與聊天室，下方是「正在直播的收藏」下拉選單，展開後列出可選的頻道',
+  'img.emptyWindowPicker.cap': '空視窗不會自己播東西，從下拉挑一個頻道才會開始',
 
   'footer.copyright': '© 2026 MultiStream Hub. 開源專案。',
   'footer.github': 'GitHub',

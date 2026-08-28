@@ -59,6 +59,9 @@ const MAP = {
     'g-theater-mode.png': 'theater-mode',
     'g-settings-global.png': 'settings-global',
     'g-edge-dock.png': 'island-edge-dock',
+    'g-edge-dock-open.png': 'island-edge-dock-open',
+    'g-favorites-panel.png': 'favorites-panel',
+    'g-empty-window-picker.png': 'empty-window-picker',
 };
 
 // 刻意不轉的來源(過小 / 內容重複)

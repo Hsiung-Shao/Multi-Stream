@@ -442,6 +442,7 @@ export function InstructionsPage() {
                         { type: 'p', text: tx('features.canvas.addWindow.desc') },
                         img('island-add-window.webp', 1403, 994, tx('img.islandAddWindow.alt'), tx('img.islandAddWindow.cap')),
                         img('island-add-menu.webp', 1440, 900, tx('img.islandAddMenu.alt'), tx('img.islandAddMenu.cap')),
+                        img('empty-window-picker.webp', 1440, 900, tx('img.emptyWindowPicker.alt'), tx('img.emptyWindowPicker.cap')),
                         img('add-window-combo.webp', 1600, 1229, tx('img.addWindowCombo.alt'), tx('img.addWindowCombo.cap')),
                         img('add-window-stream.webp', 1600, 1228, tx('img.addWindowStream.alt'), tx('img.addWindowStream.cap')),
                         img('add-window-chat.webp', 1600, 1240, tx('img.addWindowChat.alt'), tx('img.addWindowChat.cap')),
@@ -521,6 +522,7 @@ export function InstructionsPage() {
                     id: 'edge-dock', heading: tx('features.island.edgeDock'), blocks: [
                         { type: 'p', text: tx('features.island.edgeDock.desc') },
                         img('island-edge-dock.webp', 1440, 900, tx('img.islandEdgeDock.alt'), tx('img.islandEdgeDock.cap')),
+                        img('island-edge-dock-open.webp', 1440, 900, tx('img.islandEdgeDockOpen.alt'), tx('img.islandEdgeDockOpen.cap')),
                     ],
                 },
             ],
@@ -538,6 +540,7 @@ export function InstructionsPage() {
                     id: 'quick-list', heading: tx('features.favorites.quickList'), blocks: [
                         { type: 'p', text: tx('features.favorites.quickList.desc') },
                         img('island-favorites-list.webp', 1403, 994, tx('img.islandFavoritesList.alt'), tx('img.islandFavoritesList.cap')),
+                        img('favorites-panel.webp', 1440, 900, tx('img.favoritesPanel.alt'), tx('img.favoritesPanel.cap')),
                         img('favorites-live-list.webp', 324, 387, tx('img.favoritesLiveList.alt'), tx('img.favoritesLiveList.cap')),
                         img('favorites-filter-category.webp', 313, 247, tx('img.favoritesFilterCategory.alt'), tx('img.favoritesFilterCategory.cap')),
                         img('favorites-filter-tags.webp', 332, 251, tx('img.favoritesFilterTags.alt'), tx('img.favoritesFilterTags.cap')),

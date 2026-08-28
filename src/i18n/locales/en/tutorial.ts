@@ -181,6 +181,12 @@ const tutorial = {
   'img.settingsGlobal.cap': 'Every global setting lives on this page; the column on the left is the rest of Favorites Manager',
   'img.islandEdgeDock.alt': 'With edge dock enabled, the control bar shrinks to a thin strip on the left edge with a small chevron in the middle',
   'img.islandEdgeDock.cap': 'If the island at the bottom gets in the way, dock it to the left or right edge instead',
+  'img.islandEdgeDockOpen.alt': 'The edge dock expanded into a vertical menu: search channels, add window, layout settings, media controls, favourites, save the current canvas, share the canvas, fullscreen, clear the canvas, back to home, global settings',
+  'img.islandEdgeDockOpen.cap': 'Click the thin strip and it opens — the same actions as the island at the bottom',
+  'img.favoritesPanel.alt': 'The favourites panel: three filter chips at the top (live only, category, tag) and one row per favourite with a platform badge, category chip and checkbox',
+  'img.favoritesPanel.cap': 'Anything live gets a LIVE badge; tick several to add them all to the canvas at once',
+  'img.emptyWindowPicker.alt': 'A freshly added empty window: Stream and Chat tabs at the top, and a live-favourites dropdown below listing the channels you can pick',
+  'img.emptyWindowPicker.cap': 'An empty window plays nothing until you pick a channel from the dropdown',
 
   'footer.copyright': '© 2026 MultiStream Hub. Open Source Project.',
   'footer.github': 'GitHub',

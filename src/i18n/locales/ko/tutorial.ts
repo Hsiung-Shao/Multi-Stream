@@ -181,6 +181,12 @@ const tutorial = {
   'img.settingsGlobal.cap': '전역 설정은 모두 이 페이지에 있습니다. 왼쪽 목록은 즐겨찾기 관리의 다른 페이지들입니다',
   'img.islandEdgeDock.alt': '가장자리 도크로 바꾸면 컨트롤 바가 화면 왼쪽 가장자리의 얇은 띠로 줄고 가운데에 펼치기 화살표가 생깁니다',
   'img.islandEdgeDock.cap': '아래쪽 아일랜드가 거슬리면 왼쪽이나 오른쪽 가장자리로 옮길 수 있습니다',
+  'img.islandEdgeDockOpen.alt': '가장자리 도크를 펼친 세로 메뉴. 위에서부터 채널 검색, 창 추가, 레이아웃 설정, 미디어 컨트롤, 즐겨찾기 목록, 현재 캔버스 저장, 캔버스 공유, 전체 화면, 화면 비우기, 홈으로, 전역 설정',
+  'img.islandEdgeDockOpen.cap': '얇은 띠를 누르면 펼쳐지며, 기능은 아래쪽 아일랜드와 완전히 같습니다',
+  'img.favoritesPanel.alt': '즐겨찾기 패널. 위쪽에 필터 세 개(방송 중만, 분류, 태그)가 있고 아래에 즐겨찾기마다 한 줄씩 플랫폼 배지, 분류 칩, 체크박스가 있습니다',
+  'img.favoritesPanel.cap': '방송 중이면 LIVE 배지가 붙습니다. 여러 개를 체크하면 한 번에 캔버스에 추가할 수 있습니다',
+  'img.emptyWindowPicker.alt': '방금 추가한 빈 창. 위쪽에 영상/채팅 탭이 있고, 아래에 방송 중인 즐겨찾기 드롭다운이 열려 고를 수 있는 채널이 나열되어 있습니다',
+  'img.emptyWindowPicker.cap': '빈 창은 아무것도 재생하지 않습니다. 드롭다운에서 채널을 골라야 시작됩니다',
 
   'footer.copyright': '© 2026 MultiStream Hub. 오픈 소스 프로젝트.',
   'footer.github': 'GitHub',

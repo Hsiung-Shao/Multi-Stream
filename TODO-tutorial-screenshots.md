@@ -2,7 +2,7 @@
 
 2026-08-28 更新。
 
-## 已重拍（10 張，真實直播）
+## 已重拍（13 張，真實直播）
 
 用 chrome-devtools 驅動的真實瀏覽器拍攝，內容是**真的在直播**的 Twitch 頻道 `lofigirl`（24 小時開台）與真實聊天室，1440×900、深色主題：
 
@@ -18,19 +18,19 @@
 | `theater-mode` | 劇場模式撐滿畫面 | shortcuts |
 | `settings-global` | 收藏管理 → 設定（外觀＋播放全部項目） | settings |
 | `island-edge-dock` | 邊緣停靠收合成細邊 | dynamic-island |
+| `island-edge-dock-open` | 邊緣停靠展開後的直式選單 | dynamic-island |
+| `favorites-panel` | 收藏直播面板（四筆、篩選鈕、LIVE 徽章、勾選框） | favorites |
+| `empty-window-picker` | 空視窗的串流／聊天室分頁與選台下拉 | canvas |
 
 原始 PNG 在 `image/ToDo/g-*.png`（gitignored），對照表在 `scripts/convert-tutorial-images.mjs` 的 `MAP`。要重跑：`npm run convert-tutorial-images`。
 
-## 還沒拍到的
+## 還沒拍到的（只剩一張）
 
 | 想拍的畫面 | 為什麼還沒拍 | 建議 slug |
 |---|---|---|
-| 邊緣停靠**展開**後的樣子 | 展開靠 pointerdown/up 的拖曳判定，自動化送的合成事件打不進去；收合狀態那張已能說明概念 | `island-edge-dock-open` |
-| 搜尋框輸入後的**即時結果清單** | Twitch 搜尋要 `.dev.vars` 的憑證，那個檔案只在主工作區（gitignored），worktree 的 wrangler 拿不到；YouTube 那側查 Supabase 也同樣缺設定 | `search-results-live` |
-| 收藏面板有內容的樣子 | 這個瀏覽器 profile 沒有任何收藏，拍出來是「沒有符合的資料」 | `favorites-list-filled` |
-| 空視窗的選台下拉 | 同上，需要先有收藏頻道才看得到選項 | `empty-window-picker` |
+| 搜尋框輸入後的**即時結果清單** | Twitch 搜尋要 `.dev.vars` 的憑證，那個檔案只在主工作區（gitignored），worktree 的 wrangler 拿不到；YouTube 那側查 `/api/supabase-config` 也是同一個來源，同樣拿不到 | `search-results-live` |
 
-前兩張你自己在正式環境操作時順手截最快。要交給我拍的話，搜尋那張需要把 `.dev.vars` 複製一份到 worktree（我沒有自作主張搬你的密鑰檔）。
+你自己在正式環境操作時順手截最快。要交給我拍的話，把 `.dev.vars` 複製一份到 worktree 即可（我沒有自作主張搬你的密鑰檔）。搜尋那一段目前沿用舊圖 `search-twitch-results.webp`，內容沒講錯，只是視覺是舊版。
 
 ## 仍在使用的舊圖
 
