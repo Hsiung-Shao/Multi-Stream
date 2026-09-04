@@ -28,6 +28,19 @@ curl -s https://multistreaming.org/faq | wc -c   # 8111
 | `/privacy.html` 未建立索引 | `301 → /privacy`（`functions/[[path]].js` 的 `REDIRECTS`） |
 | `/?search={search_term_string}` 未建立索引 | production HTML 已無 `search_term_string`；`SearchAction` 在 commit `53043b28` 移除 |
 
+### 1b. 2026-09-04 更新：GSC「網頁索引」報表數字（使用者匯出）
+
+| GSC 分類 | 數量 | 對應的頁 | 解讀 |
+|---|---|---|---|
+| 已建立索引 | 7 | `/`、`/instructions`、`/about`、`/faq`、`/privacy`、`/canvas`、`/support` | 與成效報表「有曝光的 7 頁」完全吻合。**`/faq` 已經被收錄**（上一版 HANDOFF 寫它未索引，已過時） |
+| 已找到 - 目前尚未建立索引 | 8 | 7 篇教學文章 + `/about/creator` | 08-21 Phase 3 上線，08-22 未索引數從 5 跳到 12。「驗證已開始」= Google 排隊中，不是被拒 |
+| 已檢索 - 目前尚未建立索引 | 3 | `/compare` + `/privacy.html` + `/?search=`（後兩條已 301／已移除） | **真問題只剩 `/compare`**：爬過、判定內容太薄。這就是本文件要解的那個問題 |
+| 頁面會重新導向 | 1 | `http://multistreaming.org/` | 正常 301 |
+
+分支 `claude/homepage-links-canvas-perf-5f573e` 09-04 已把 `/compare` 從「全站零內鏈」補到「每頁 footer 都有」（`SiteFooter`），sitemap 也多了 2 篇新文章；**但這些要 push 部署後 GSC 才看得到**。預期：教學文章排到爬之後會撞同一面空殼牆，所以 SSG 仍是必要的，內鏈只是前置。
+
+使用者 09-04 決定：**SSG 在新 session 依本文件開工**。
+
 ### 2. 行動裝置 LCP 卡在 CSR 天花板
 
 Chrome DevTools 效能追蹤（production build、純 Node static server + gzip、4x CPU 節流、Slow 4G、412×823）：
@@ -109,5 +122,5 @@ slug 清單的單一來源是 `src/config/guides.ts` 的 `GUIDE_SLUGS`（`script
 3. 用 `curl -s https://multistreaming.org/faq | wc -c` 確認 HTML 真的帶內文了。
 4. 跑 `npm run indexnow`（會讀 repo 根的 `sitemap.xml`）通知支援 IndexNow 的搜尋引擎。
    ⚠ **一定要部署完才跑**。本輪新增的 `/instructions/share`、`/instructions/shortcuts` 在 production 還是 404，提前提交等於叫爬蟲去撞 404。
-5. GSC 對 `/faq`、`/compare` 手動「要求建立索引」。
+5. GSC 對 `/compare` 與 9 篇 `/instructions/<slug>` 手動「要求建立索引」（`/faq` 09-04 已被收錄，不用再提）。
 6. CrUX 是 28 天滾動窗，網頁體驗報表要等資料回填，不要當天就下結論。
