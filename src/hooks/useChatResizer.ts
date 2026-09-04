@@ -50,10 +50,10 @@ export function useChatResizer(
             // If resizer is inside container, it moves with it. 
             // If it's outside or absolute relative to parent, we might need to move it.
             // But typically resizer is part of the layout or positioned by CSS relative to container edge.
-            // In StreamBox, it seems absolute.
+            // 目前唯一使用者(MobileWatchPage)的 resizer 是 absolute。
 
             // Legacy behavior: setupChatResizer usually updated style.right of resizer if separate?
-            // In StreamBox.tsx: style={{ right: '350px' }} initially.
+            // 舊版桌機串流框(已移除)初始寫 style={{ right: '350px' }},此處沿用同一慣例。
             // We should update the resizer's style.right to match width if it's "left" resize for a "right" docked chat.
             if (direction === 'left') {
                 resizer.style.right = `${newWidth}px`;

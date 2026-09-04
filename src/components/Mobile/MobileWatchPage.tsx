@@ -24,7 +24,7 @@ export function MobileWatchPage({ isLandscape = false }: MobileWatchPageProps) {
 
     const activeStreams = streams.filter(s => s.channelId);
 
-    // 主音量 × 個別音量。算法對齊桌機版 StreamBox 的 actualVolume / effectiveMuted，
+    // 主音量 × 個別音量。算法對齊桌機版 CanvasStreamContent 的 effectiveVolume / effectiveMuted，
     // 讓兩端行為一致。改用 StreamIframe（Twitch Player API / YouTube IFrame API）之後
     // 這個值才真的會傳到播放器——先前是純 iframe embed，滑桿完全接不到任何東西。
     const resolveAudio = (stream: { volume?: number; isMuted?: boolean }) => {
