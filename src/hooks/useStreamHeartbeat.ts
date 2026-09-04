@@ -49,7 +49,8 @@ export function useStreamHeartbeat(): void {
     const totalWatchSecondsRef = useRef<number>(getStoredWatchSeconds());
     const maxStreamsRef = useRef<number>(getStoredMaxStreams());
     const lastTickAtRef = useRef<number>(Date.now());
-    const isVisibleRef = useRef<boolean>(!document.hidden);
+    // SSG 預渲染在 Node 執行 render 本體（無 document）：視為可見；client 端維持原語意
+    const isVisibleRef = useRef<boolean>(typeof document === 'undefined' ? true : !document.hidden);
     const milestonesSent = useRef<Set<number>>(new Set());
 
     // 從之前累計的觀看秒數，標記已達成的 milestone（避免 reload 後重複送）

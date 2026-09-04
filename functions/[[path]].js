@@ -26,6 +26,15 @@ function pickLang(acceptLanguage) {
     return acceptLanguage && /(^|[,;\s])zh\b/i.test(acceptLanguage) ? 'zh-TW' : 'en';
 }
 
+/**
+ * 預渲染檔的 ASSETS 取檔路徑（不帶 .html：Pages 對 x.html 在 /x 提供服務，帶 .html 反而會 308）。
+ * 首頁對應 root.html（不能叫 index.html，Pages 會把 /dir/index 正規化成 /dir/ 的 308）。
+ * 與 scripts/prerender.mjs 的 outFileFor / ROOT_FILE 必須一致（tests/functions/prerender.test.ts 鎖）。
+ */
+export function prerenderPathFor(lang, rawPath) {
+    return `/_prerender/${lang}${rawPath === '/' ? '/root' : rawPath}`;
+}
+
 const setContent = (value) => ({
     element(el) {
         el.setAttribute('content', value);
@@ -56,9 +65,15 @@ export async function onRequest(context) {
     const noindex = !entry || entry.noindex === true;
     const pageUrl = ORIGIN + rawPath;
 
-    // 取 SPA shell。一定用「乾淨的」Request：轉發原請求的 If-None-Match 等條件標頭
+    // 取 shell。一定用「乾淨的」Request：轉發原請求的 If-None-Match 等條件標頭
     // 可能拿到無 body 的 304，HTMLRewriter 會無內容可改。
-    const shell = await env.ASSETS.fetch(new Request(url.origin + '/'));
+    // 已知路由優先取預渲染 HTML（scripts/prerender.mjs 產出 build/_prerender/<lang>/<route>.html，
+    // 帶完整內文，供爬蟲與首屏 LCP）；CSR-only 路由（/canvas、/admin）、404 或取檔失敗 → 空殼 index.html。
+    const prerenderPath = entry ? prerenderPathFor(lang, rawPath) : null;
+    let shell = prerenderPath ? await env.ASSETS.fetch(new Request(url.origin + prerenderPath)) : null;
+    if (!shell || shell.status !== 200) {
+        shell = await env.ASSETS.fetch(new Request(url.origin + '/'));
+    }
 
     // og:type：教學文章為 article，其餘 website（index.html 靜態值為 website）
     const ogType = entry && entry.type === 'article' ? 'article' : 'website';

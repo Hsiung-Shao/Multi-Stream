@@ -39,7 +39,7 @@ export function ComparisonPage() {
 
     return (
         <div className="cmp-page">
-            <style>{`
+            <style dangerouslySetInnerHTML={{ __html: `
                 .cmp-page { position: relative; min-height: 100vh; overflow: clip; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
                 .cmp-wrap { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 24px 24px 96px; }
                 .cmp-crumbs { font-size: 13px; color: var(--muted-foreground); margin-bottom: 28px; }
@@ -87,7 +87,7 @@ export function ComparisonPage() {
                 .cmp-cta p { color: var(--muted-foreground); margin: 0 0 20px; }
                 .cmp-disclaimer { margin-top: 28px; font-size: 12px; color: var(--muted-foreground); opacity: 0.75; text-align: center; }
                 @media (max-width: 640px) { .cmp-h1 { font-size: 28px; } .cmp-sub { font-size: 15px; } }
-            `}</style>
+            ` }} />
 
             <StaticPageHeader title={tx('compare:title')} analyticsCategory="ComparisonPage" />
             <BlurOrb top={-160} left="50%" w={760} h={460} color="oklch(0.63 0.23 304)" opacity={0.14} />

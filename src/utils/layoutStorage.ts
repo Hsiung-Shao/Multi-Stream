@@ -12,17 +12,22 @@ interface StreamDB extends DBSchema {
 const DB_NAME = 'multi-stream-db';
 const STORE_NAME = 'custom-layouts';
 
-const dbPromise = openDB<StreamDB>(DB_NAME, 1, {
-    upgrade(db) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        store.createIndex('by-date', 'createdAt');
-    },
-});
+// 延遲到第一次用到才開 DB：模組頂層就 openDB 會讓 SSG 預渲染（Node 無 indexedDB）在 import 時直接炸
+let dbPromise: ReturnType<typeof openDB<StreamDB>> | null = null;
+const getDb = () => {
+    dbPromise ??= openDB<StreamDB>(DB_NAME, 1, {
+        upgrade(db) {
+            const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            store.createIndex('by-date', 'createdAt');
+        },
+    });
+    return dbPromise;
+};
 
 export const layoutStorage = {
     async saveToBackup(layouts: CustomLayout[]) {
         try {
-            const db = await dbPromise;
+            const db = await getDb();
             const tx = db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
 
@@ -44,7 +49,7 @@ export const layoutStorage = {
 
     async loadFromBackup(): Promise<CustomLayout[]> {
         try {
-            const db = await dbPromise;
+            const db = await getDb();
             return await db.getAllFromIndex(STORE_NAME, 'by-date');
         } catch (error) {
             console.error('Failed to load layouts from IndexedDB:', error);
@@ -54,7 +59,7 @@ export const layoutStorage = {
 
     async deleteFromBackup(id: string) {
         try {
-            const db = await dbPromise;
+            const db = await getDb();
             await db.delete(STORE_NAME, id);
         } catch (error) {
             console.error('Failed to delete layout from IndexedDB:', error);

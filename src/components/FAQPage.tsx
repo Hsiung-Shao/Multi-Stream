@@ -99,7 +99,7 @@ export function FAQPage() {
 
     return (
         <div className="faq-page">
-            <style>{`
+            <style dangerouslySetInnerHTML={{ __html: `
                 /* overflow: clip(非 hidden):裁切 BlurOrb 同時不建立 scroll container,sticky header 才會生效 */
                 .faq-page { position: relative; min-height: 100vh; overflow: clip; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
                 .faq-wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 24px 96px; }
@@ -155,7 +155,7 @@ export function FAQPage() {
                 .faq-cta-btn.ghost:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
                 .faq-copy { font-size: 13px; color: var(--muted-foreground); margin: 22px 0 0; }
                 @media (max-width: 560px) { .faq-title { font-size: 40px; } }
-            `}</style>
+            ` }} />
 
             <SEO
                 title={`${tx('faq:title')} - MultiStream Hub`}

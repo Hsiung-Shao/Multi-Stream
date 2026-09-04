@@ -668,7 +668,7 @@ export function InstructionsPage() {
     return (
         <div className="tut-page">
             {/* 樣式對齊 design Blog.jsx,沿用 next 的 oklch token */}
-            <style>{`
+            <style dangerouslySetInnerHTML={{ __html: `
                 .tut-page { min-height: 100vh; background: var(--background); color: var(--foreground); }
                 .tut-wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 96px; }
 
@@ -798,7 +798,7 @@ export function InstructionsPage() {
                     .tut-mast-title { font-size: 34px; }
                     .tut-art-title { font-size: 32px; }
                 }
-            `}</style>
+            ` }} />
 
             {/* 頂部返回列 — 三靜態頁共用 header */}
             <StaticPageHeader title={tx('title')} analyticsCategory="InstructionsPage" />

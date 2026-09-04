@@ -36,7 +36,7 @@ export function CreatorPage() {
 
     return (
         <div className="cr-page">
-            <style>{`
+            <style dangerouslySetInnerHTML={{ __html: `
                 .cr-page { position: relative; min-height: 100vh; overflow: clip; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
                 .cr-wrap { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 24px 24px 96px; }
                 .cr-crumbs { font-size: 13px; color: var(--muted-foreground); margin-bottom: 28px; }
@@ -66,7 +66,7 @@ export function CreatorPage() {
                 .cr-social.coffee { background: linear-gradient(90deg, #ec4899 0%, #9333ea 100%); color: #fff; }
                 .cr-social.patreon { background: #ff424d; color: #fff; }
                 @media (max-width: 560px) { .cr-name { font-size: 28px; } .cr-avatar { width: 72px; height: 72px; font-size: 30px; } }
-            `}</style>
+            ` }} />
 
             <StaticPageHeader title={tx('about:creator.pageTitle')} analyticsCategory="CreatorPage" />
             <BlurOrb top={-140} left="50%" w={700} h={420} color="oklch(0.63 0.23 304)" opacity={0.14} />

@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
-import { useUIStore } from './store/useUIStore';
+import { useUIStore, type PageType } from './store/useUIStore';
+import { lazyWithPreload } from './utils/lazyWithPreload';
 import { PAGE_PATHS, pathToPage } from './config/routes';
 import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
 import { SEO_SITE_URL } from './seo/defaults';
@@ -38,20 +39,55 @@ const VersionHistory = lazy(() => import('./components/VersionHistory').then(mod
 const FavoritesManagerMain = lazy(() => import('./features/favorites/components/FavoritesManagerMain').then(module => ({ 'default': module.FavoritesManagerMain })));
 // const FavoritesManager = lazy(() => import('./components/FavoritesManager').then(module => ({ 'default': module.FavoritesManager })));
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
-const AboutPage = lazy(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
-const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
-const CreatorPage = lazy(() => import('./components/Pages/CreatorPage').then(module => ({ 'default': module.CreatorPage })));
-const ComparisonPage = lazy(() => import('./components/Pages/ComparisonPage').then(module => ({ 'default': module.ComparisonPage })));
+// 頁面元件用 lazyWithPreload（行為 = React.lazy，多 preload()）：hydrate 預渲染 HTML 前
+// main.tsx 會先 preloadPageChunks()，首輪 hydration 才不會留下 dehydrated 的 Suspense 邊界（見該檔說明）
+const AboutPage = lazyWithPreload(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
+const PrivacyPage = lazyWithPreload(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
+const CreatorPage = lazyWithPreload(() => import('./components/Pages/CreatorPage').then(module => ({ 'default': module.CreatorPage })));
+const ComparisonPage = lazyWithPreload(() => import('./components/Pages/ComparisonPage').then(module => ({ 'default': module.ComparisonPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
-const CanvasPage = lazy(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
-const InstructionsPage = lazy(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
-const FAQPage = lazy(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
-const SupportPage = lazy(() => import('./components/SupportPage').then(module => ({ 'default': module.SupportPage })));
-const NotFoundPage = lazy(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
-const AdminPage = lazy(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
+const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
+const InstructionsPage = lazyWithPreload(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
+const FAQPage = lazyWithPreload(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
+const SupportPage = lazyWithPreload(() => import('./components/SupportPage').then(module => ({ 'default': module.SupportPage })));
+const NotFoundPage = lazyWithPreload(() => import('./components/NotFoundPage').then(module => ({ 'default': module.NotFoundPage })));
+const AdminPage = lazyWithPreload(() => import('./features/admin/AdminPage').then(module => ({ 'default': module.AdminPage })));
 // 全站常駐但非首屏所需的全域元件，集中為單一 lazy chunk（見 DeferredGlobals.tsx）
-const DeferredGlobals = lazy(() => import('./components/DeferredGlobals'));
+const DeferredGlobals = lazyWithPreload(() => import('./components/DeferredGlobals'));
+
+const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> = {
+  about: AboutPage,
+  privacy: PrivacyPage,
+  creator: CreatorPage,
+  compare: ComparisonPage,
+  canvas: CanvasPage,
+  instructions: InstructionsPage,
+  faq: FAQPage,
+  support: SupportPage,
+  'not-found': NotFoundPage,
+  admin: AdminPage,
+  // home：LandingPage 是靜態 import，沒有 chunk
+};
+
+/**
+ * 已預載（preload() 完成）的 chunk 不包 Suspense。
+ * hydrate 預渲染 HTML 時，server 與 client 的樹上都不會有 Suspense 邊界；React 18 對 server 邊界是延後
+ * 選擇性 hydrate，而 zustand persist 讓 client snapshot ≠ server snapshot 會排 SyncLane 更新，Sync 更新
+ * 碰到還沒 hydrate 的邊界只能放棄改 client render（#421）。沒有邊界就沒有這個問題。
+ * 未預載（一般 CSR 切頁）時行為與原本的 <Suspense> 完全相同。
+ */
+function ChunkSuspense({ chunk, fallback, children }: { chunk: { isLoaded: () => boolean }; fallback: ReactNode; children: ReactNode }) {
+  return chunk.isLoaded() ? <>{children}</> : <Suspense fallback={fallback}>{children}</Suspense>;
+}
+
+/** 把某頁首輪 render 會碰到的所有 lazy chunk 載好（該頁 + 常駐的 DeferredGlobals）；chunk 失敗不擋 render */
+export function preloadPageChunks(page: PageType): Promise<void> {
+  const pageChunk = isGuidePage(page) ? InstructionsPage : PAGE_CHUNKS[page];
+  return Promise.all([DeferredGlobals.preload(), pageChunk?.preload()])
+    .then(() => undefined)
+    .catch(() => undefined);
+}
 
 // 可分享連結：模組載入時就快照 ?streams=（只在 /canvas 生效），之後 URL 會被換回乾淨路徑
 const INITIAL_SHARE = (() => {
@@ -227,9 +263,9 @@ export default function App() {
             image={slug ? `${SEO_SITE_URL}${GUIDE_META[slug].image}` : undefined}
             jsonLd={jsonLd}
           />
-          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+          <ChunkSuspense chunk={InstructionsPage} fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <InstructionsPage />
-          </Suspense>
+          </ChunkSuspense>
         </>
       );
     }
@@ -238,9 +274,9 @@ export default function App() {
         return <LandingPage />;
       case 'canvas':
         return (
-          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+          <ChunkSuspense chunk={CanvasPage} fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <CanvasPage />
-          </Suspense>
+          </ChunkSuspense>
         );
       case 'about':
         return (
@@ -253,9 +289,9 @@ export default function App() {
                 mainEntity: { '@id': ORG_ID },
               })}
             />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+            <ChunkSuspense chunk={AboutPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <AboutPage />
-            </Suspense>
+            </ChunkSuspense>
           </>
         );
       case 'compare':
@@ -279,9 +315,9 @@ export default function App() {
                 breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: tx('compare:title'), path: PAGE_PATHS.compare }]),
               )}
             />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+            <ChunkSuspense chunk={ComparisonPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <ComparisonPage />
-            </Suspense>
+            </ChunkSuspense>
           </>
         );
       case 'creator':
@@ -318,9 +354,9 @@ export default function App() {
                 ]),
               )}
             />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+            <ChunkSuspense chunk={CreatorPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <CreatorPage />
-            </Suspense>
+            </ChunkSuspense>
           </>
         );
       case 'privacy':
@@ -332,19 +368,19 @@ export default function App() {
               url={`${SEO_SITE_URL}${PAGE_PATHS.privacy}`}
               jsonLd={staticPageJsonLd('privacy', 'WebPage', tx('privacy:title'))}
             />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+            <ChunkSuspense chunk={PrivacyPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <PrivacyPage
                 theme={theme}
                 onThemeToggle={toggleTheme}
               />
-            </Suspense>
+            </ChunkSuspense>
           </>
         );
       case 'faq':
         return (
-          <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+          <ChunkSuspense chunk={FAQPage} fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
             <FAQPage />
-          </Suspense>
+          </ChunkSuspense>
         );
       case 'support':
         return (
@@ -355,9 +391,9 @@ export default function App() {
               url={`${SEO_SITE_URL}${PAGE_PATHS.support}`}
               jsonLd={staticPageJsonLd('support', 'WebPage', tx('support:title'))}
             />
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+            <ChunkSuspense chunk={SupportPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <SupportPage />
-            </Suspense>
+            </ChunkSuspense>
           </>
         );
       case 'admin':
@@ -365,17 +401,17 @@ export default function App() {
           <>
             {/* 後台不進索引；_headers 另有 /admin X-Robots-Tag 作伺服器層保險 */}
             <SEO noindex title="Admin - MultiStream Hub" />
-            <Suspense fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
+            <ChunkSuspense chunk={AdminPage} fallback={<div className="min-h-screen bg-gray-950 flex items-center justify-center text-white">{t('common.loading')}</div>}>
               <AdminPage />
-            </Suspense>
+            </ChunkSuspense>
           </>
         );
       case 'not-found':
       default:
         return (
-          <Suspense fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+          <ChunkSuspense chunk={NotFoundPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
             <NotFoundPage />
-          </Suspense>
+          </ChunkSuspense>
         );
     }
   };
@@ -431,9 +467,9 @@ export default function App() {
       />
 
       {/* 常駐但非首屏所需的全域元件，延後載入以縮小首屏 entry（見 DeferredGlobals.tsx） */}
-      <Suspense fallback={null}>
+      <ChunkSuspense chunk={DeferredGlobals} fallback={null}>
         <DeferredGlobals />
-      </Suspense>
+      </ChunkSuspense>
     </>
   );
 }

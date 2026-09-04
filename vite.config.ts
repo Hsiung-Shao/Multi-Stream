@@ -61,7 +61,9 @@ function guidesDateModified(): string {
   }
 }
 
-export default defineConfig({
+// isSsrBuild：`vite build --ssr src/entry-server.tsx`（SSG 預渲染用，見 scripts/prerender.mjs）。
+// SSR 產物是給 Node 一次性執行的，不需要（也不能）套 client 的 manualChunks 分包。
+export default defineConfig(({ isSsrBuild }) => ({
   define: {
     '__APP_VERSION__': JSON.stringify(process.env.npm_package_version ?? pkg.version),
     '__GUIDES_DATE_MODIFIED__': JSON.stringify(guidesDateModified()),
@@ -99,7 +101,7 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'build',
-    rollupOptions: {
+    rollupOptions: isSsrBuild ? {} : {
       output: {
         manualChunks: {
           // 核心庫
@@ -160,4 +162,4 @@ export default defineConfig({
     setupFiles: './tests/setup.ts',
     include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
   },
-});
+}));

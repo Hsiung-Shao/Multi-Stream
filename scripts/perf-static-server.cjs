@@ -29,6 +29,14 @@ http.createServer((req, res) => {
   let rel = decodeURIComponent(url.pathname);
   let file = path.join(ROOT, rel);
 
+  // 預渲染頁（build/_prerender/<lang>/<route>.html，scripts/prerender.mjs 產出）：
+  // 對齊 functions/[[path]].js 的取檔規則（首頁 → root.html），語言用 en（Lighthouse / 無 Accept-Language 的爬蟲都是 en）。
+  // 沒有預渲染檔的路由（/canvas、404）才落到下方 SPA fallback，與線上 Function 行為一致。
+  const LANG = process.env.PRERENDER_LANG || 'en';
+  if (!path.extname(rel)) {
+    const pre = path.join(ROOT, '_prerender', LANG, rel === '/' ? 'root.html' : rel.replace(/^\//, '') + '.html');
+    if (fs.existsSync(pre) && fs.statSync(pre).isFile()) file = pre;
+  }
   // SPA fallback：非靜態資產一律回 index.html（對齊 Cloudflare Pages 的 /* -> /index.html 200）
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     file = path.join(ROOT, 'index.html');

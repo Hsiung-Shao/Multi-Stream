@@ -78,7 +78,7 @@ export function AboutPage() {
 
   return (
     <div className="ab-page">
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         /* overflow: clip(非 hidden):裁切 BlurOrb 同時不建立 scroll container,sticky header 才會生效 */
         .ab-page { position: relative; min-height: 100vh; overflow: clip; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
         .ab-wrap { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 0 24px; }
@@ -158,7 +158,7 @@ export function AboutPage() {
 
         @media (max-width: 860px) { .ab-spotlight { grid-template-columns: 1fr; } }
         @media (max-width: 560px) { .ab-hero-title { font-size: 40px; } }
-      `}</style>
+      ` }} />
 
       {/* 頂部返回列 — 三靜態頁共用 header */}
       <StaticPageHeader title={tx('about:title')} analyticsCategory="AboutPage" />

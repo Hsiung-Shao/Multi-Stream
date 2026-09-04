@@ -45,3 +45,5 @@ design-ref/
 multistream-hub-design-system/
 ui-verify/
 graphify-out/
+# SSG 預渲染的 SSR 中間產物（scripts/prerender.mjs 跑完會刪）
+build-ssr/

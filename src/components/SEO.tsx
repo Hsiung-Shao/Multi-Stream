@@ -112,20 +112,18 @@ export function SEO({
       canonical.setAttribute('href', url);
     }
 
-    // 更新或移除 JSON-LD 結構化資料(無 jsonLd 時清掉,避免跨頁殘留)
-    let ldScript = document.querySelector('script[data-seo-jsonld]') as HTMLScriptElement | null;
-    if (jsonLdStr) {
-      if (!ldScript) {
-        ldScript = document.createElement('script');
-        ldScript.type = 'application/ld+json';
-        ldScript.setAttribute('data-seo-jsonld', '');
-        document.head.appendChild(ldScript);
-      }
-      ldScript.textContent = jsonLdStr;
-    } else if (ldScript) {
-      ldScript.remove();
-    }
-  }, [title, description, image, url, type, ogLocale, jsonLdStr, noindex]);
+  }, [title, description, image, url, type, ogLocale, noindex]);
 
-  return null; // 此組件不渲染任何內容
+  // JSON-LD 直接 render 進 tree（而非 effect 寫 document.head）：
+  // SSG 預渲染（entry-server.tsx）在 Node 不執行 effect，寫進 tree 才會出現在靜態 HTML；
+  // 放在 <body> 內對 Google 同樣有效（與 LandingPage 的 FaqJsonLd 同一做法）。
+  // 換頁時該頁沒有 jsonLd → 不 render → 自然不會跨頁殘留。
+  if (!jsonLdStr) return null;
+  return (
+    <script
+      type="application/ld+json"
+      data-seo-jsonld=""
+      dangerouslySetInnerHTML={{ __html: jsonLdStr }}
+    />
+  );
 }

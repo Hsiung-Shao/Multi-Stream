@@ -221,7 +221,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
 
   return (
     <div className="pv-page">
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .pv-page { position: relative; min-height: 100vh; overflow: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
         .pv-wrap { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 0 24px; }
 
@@ -278,7 +278,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
         .pv-page a:focus-visible, .pv-page button:focus-visible { outline: 2px solid var(--ring, oklch(0.63 0.23 304)); outline-offset: 3px; border-radius: 6px; }
 
         @media (max-width: 560px) { .pv-hero-title { font-size: 38px; } .pv-policy-body { padding-left: 0; } }
-      `}</style>
+      ` }} />
 
       {/* Header Navigation(保留 next 既有,token 化) */}
       <div className="relative z-10 border-b border-border bg-card/60 px-6 py-4 backdrop-blur">
