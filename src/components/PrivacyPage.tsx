@@ -24,7 +24,7 @@ import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 interface PrivacyPageProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
-  /** 站內導覽改用 <RouteLink>（真實 <a href>），不再由父層注入 callback；terms 頁尚未存在，保留可選 callback */
+  // 站內導覽由全站共用 <SiteFooter> 負責，不再由父層注入 callback（terms 頁不存在，舊的 onNavigateToTerms 已移除）
 }
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
