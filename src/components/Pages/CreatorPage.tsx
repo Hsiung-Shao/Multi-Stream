@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Github, MessageCircle, Coffee, HeartHandshake, AtSign, ChevronRight, Rocket, CodeXml, Tag } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
+import { SiteFooter } from '../SiteFooter';
 import { BlurOrb } from '../ui/ds-primitives';
 import { logEvent } from '../../utils/analytics';
 import { GITHUB_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../config/links';
@@ -64,9 +65,6 @@ export function CreatorPage() {
                 .cr-social.ghost { background: oklch(0.21 0.034 264.665 / 0.5); border: 1px solid rgba(255,255,255,0.1); }
                 .cr-social.coffee { background: linear-gradient(90deg, #ec4899 0%, #9333ea 100%); color: #fff; }
                 .cr-social.patreon { background: #ff424d; color: #fff; }
-                .cr-footer { margin-top: 64px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; gap: 24px; justify-content: center; font-size: 14px; }
-                .cr-footer a { color: var(--muted-foreground); text-decoration: none; }
-                .cr-footer a:hover { color: var(--foreground); }
                 @media (max-width: 560px) { .cr-name { font-size: 28px; } .cr-avatar { width: 72px; height: 72px; font-size: 30px; } }
             `}</style>
 
@@ -132,11 +130,7 @@ export function CreatorPage() {
                     </div>
                 </section>
 
-                <footer className="cr-footer">
-                    <RouteLink to="about">{tx('about:title')}</RouteLink>
-                    <RouteLink to="support">{tx('common:landing.footer.support', { defaultValue: '支持我們' })}</RouteLink>
-                    <RouteLink to="home">{tx('about:home')}</RouteLink>
-                </footer>
+                <SiteFooter analyticsCategory="CreatorPage" />
             </main>
         </div>
     );

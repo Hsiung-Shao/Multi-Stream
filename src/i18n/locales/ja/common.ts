@@ -145,6 +145,7 @@ const common = {
   'landing.footer.about': '私たちについて',
   'landing.footer.privacy': 'プライバシーポリシー',
   'landing.footer.support': 'サポート',
+  'landing.footer.nav': 'サイトナビゲーション',
   'landing.hero_screenshot_alt': 'MultiStream Hub のキャンバスで 3 つのライブ配信とチャットを同時表示',
 
   // Hotkeys

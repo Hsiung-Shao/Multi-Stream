@@ -3,6 +3,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
 import { RouteLink } from '../Navigation/RouteLink';
+import { SiteFooter } from '../SiteFooter';
 import { StreamUrlQuickAdd } from '../StreamUrlQuickAdd';
 import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
 import {
@@ -21,7 +22,6 @@ export function LandingPage() {
     const tx = t as unknown as (key: string, options?: Record<string, unknown>) => string;
     const theme = useEffectiveTheme();
     const toggleTheme = useUIStore(s => s.toggleTheme);
-    const openModal = useUIStore(s => s.openModal);
 
     const languages = [
         { value: 'zh-TW', label: '繁體中文' },
@@ -399,63 +399,24 @@ export function LandingPage() {
                 </section>
             </main>
 
-            {/* Footer */}
-            <footer className="py-8 border-t border-white/10 bg-background text-center text-muted-foreground text-sm">
-                <div className="container mx-auto px-4 flex flex-col gap-4">
-                    {/* 站內導覽：桌機也顯示。header 只放得下五項，/compare 與 /about/creator 在桌機原本沒有任何來自首頁的內部連結。 */}
-                    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                            <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
-                        </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                            <RouteLink to="instructions">{t('landing.footer.tutorial')}</RouteLink>
-                        </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                            <RouteLink to="faq">{t('landing.footer.faq')}</RouteLink>
-                        </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                            <RouteLink to="support">{t('landing.footer.support', '支持我們')}</RouteLink>
-                        </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                            <RouteLink to="privacy">{t('landing.footer.privacy')}</RouteLink>
-                        </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                            <RouteLink to="compare">{tx('compare:title')}</RouteLink>
-                        </Button>
-                        <Button asChild variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                            <RouteLink to="creator">{tx('about:creator.pageTitle')}</RouteLink>
-                        </Button>
-                        <Button variant="link" size="sm" className="text-muted-foreground hover:text-foreground text-xs sm:text-sm" onClick={() => openModal('feedback')}>
-                            {t('navbar:feedback', '意見回饋')}
-                        </Button>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <p>{t('landing.footer.copyright')}</p>
-                        <p className="text-xs max-w-2xl mx-auto">
-                            {t('landing.footer.disclaimer')}
-                        </p>
-                    </div>
-
-                    {/* Language Switcher */}
-                    <div className="flex justify-center mt-4">
-                        <Select value={i18n.language} onValueChange={(value: string) => i18n.changeLanguage(value)}>
-                            <SelectTrigger aria-label={t('landing.aria.language', '選擇語言')} className="w-[140px] h-9 bg-background/50 border-white/10">
-                                <div className="flex items-center gap-2">
-                                    <Globe className="w-4 h-4" />
-                                    <SelectValue />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {languages.map((lang) => (
-                                    <SelectItem key={lang.value} value={lang.value}>
-                                        {lang.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </footer>
+            <SiteFooter className="mt-0" analyticsCategory="LandingPage">
+                {/* 語言切換:首頁沒有 StaticPageHeader,切換器放頁尾 */}
+                <Select value={i18n.language} onValueChange={(value: string) => i18n.changeLanguage(value)}>
+                    <SelectTrigger aria-label={t('landing.aria.language', '選擇語言')} className="w-[140px] h-9 bg-background/50 border-white/10">
+                        <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4" />
+                            <SelectValue />
+                        </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {languages.map((lang) => (
+                            <SelectItem key={lang.value} value={lang.value}>
+                                {lang.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </SiteFooter>
         </div>
         </>
     );

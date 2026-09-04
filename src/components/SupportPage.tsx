@@ -4,7 +4,7 @@
 import { useTranslation } from 'react-i18next';
 import { Coffee, Zap, MessageCircle, Share2, Heart, HeartHandshake, ExternalLink } from 'lucide-react';
 import { StaticPageHeader } from './StaticPageHeader';
-import { RouteLink } from './Navigation/RouteLink';
+import { SiteFooter } from './SiteFooter';
 import { BlurOrb } from './ui/ds-primitives';
 import { logEvent } from '../utils/analytics';
 import { COFFEE_URL, PATREON_URL, EXITLAG_AFFILIATE_URL, DISCORD_URL } from '../config/links';
@@ -128,20 +128,7 @@ export function SupportPage() {
                 </section>
 
                 {/* Footer */}
-                <footer className="border-t border-border pt-6 text-center">
-                    <div className="flex justify-center gap-5 mb-3">
-                        <RouteLink className="text-sm text-muted-foreground hover:text-foreground transition-colors" to="home">
-                            {tx('about:home', { defaultValue: '首頁' })}
-                        </RouteLink>
-                        <RouteLink className="text-sm text-muted-foreground hover:text-foreground transition-colors" to="about">
-                            {t('landing.footer.about', { ns: 'common', defaultValue: '關於我們' })}
-                        </RouteLink>
-                        <RouteLink className="text-sm text-muted-foreground hover:text-foreground transition-colors" to="privacy">
-                            {t('landing.footer.privacy', { ns: 'common', defaultValue: '隱私權政策' })}
-                        </RouteLink>
-                    </div>
-                    <p className="text-xs text-muted-foreground/60">{tx('about:copyright', { defaultValue: '© 2026 MultiStream Hub. All rights reserved.' })}</p>
-                </footer>
+                <SiteFooter analyticsCategory="SupportPage" />
             </main>
         </div>
     );

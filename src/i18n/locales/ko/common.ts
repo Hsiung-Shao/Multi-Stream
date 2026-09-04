@@ -145,6 +145,7 @@ const common = {
   'landing.footer.about': '소개',
   'landing.footer.privacy': '개인정보 처리방침',
   'landing.footer.support': '후원하기',
+  'landing.footer.nav': '사이트 내비게이션',
   'landing.hero_screenshot_alt': 'MultiStream Hub 캔버스에서 3개의 라이브 방송과 채팅을 동시에 표시',
 
   // Hotkeys

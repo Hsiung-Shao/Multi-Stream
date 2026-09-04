@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { RouteLink } from './Navigation/RouteLink';
+import { SiteFooter } from './SiteFooter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
 import { logEvent } from '../utils/analytics';
@@ -24,7 +25,6 @@ interface PrivacyPageProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   /** 站內導覽改用 <RouteLink>（真實 <a href>），不再由父層注入 callback；terms 頁尚未存在，保留可選 callback */
-  onNavigateToTerms?: () => void;
 }
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -37,7 +37,7 @@ const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
 const GREEN = '#10b981';
 const GREEN_LIGHT = '#4ade80';
 
-export function PrivacyPage({ theme, onThemeToggle, onNavigateToTerms }: PrivacyPageProps) {
+export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
   const { t, i18n } = useTranslation(['common', 'privacy', 'about']);
   const tx = t as unknown as TFn;
   const locale = i18n.language;
@@ -271,10 +271,6 @@ export function PrivacyPage({ theme, onThemeToggle, onNavigateToTerms }: Privacy
         .pv-note { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.07); }
         .pv-note p { font-size: 13px; color: var(--muted-foreground); margin: 0; font-family: ${MONO}; }
 
-        .pv-footer { padding-top: 60px; padding-bottom: 56px; margin-top: 64px; border-top: 1px solid rgba(255,255,255,0.07); text-align: center; }
-        .pv-footer-links { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; font-size: 14px; font-weight: 500; }
-        .pv-foot-link { color: var(--muted-foreground); text-decoration: none; background: none; border: 0; cursor: pointer; font-family: var(--font-sans); font-size: 14px; font-weight: 500; transition: color .2s ease; }
-        .pv-foot-link:hover { color: var(--foreground); }
         .pv-copy { font-size: 13px; color: var(--muted-foreground); margin: 24px 0 0; }
         .pv-updated { font-size: 12.5px; color: var(--muted-foreground); opacity: 0.8; margin: 6px 0 0; font-family: ${MONO}; }
 
@@ -455,17 +451,7 @@ export function PrivacyPage({ theme, onThemeToggle, onNavigateToTerms }: Privacy
         </section>
 
         {/* ---------- Footer ---------- */}
-        <footer className="pv-footer">
-          <div className="pv-footer-links">
-            <RouteLink className="pv-foot-link" to="home">{tx('privacy:home')}</RouteLink>
-            <RouteLink className="pv-foot-link" to="about">{tx('privacy:about')}</RouteLink>
-            {onNavigateToTerms && (
-              <button className="pv-foot-link" onClick={onNavigateToTerms}>{tx('privacy:terms')}</button>
-            )}
-          </div>
-          <p className="pv-copy">{tx('about:copyright')}</p>
-          <p className="pv-updated">{tx('about:lastUpdated')}</p>
-        </footer>
+        <SiteFooter analyticsCategory="PrivacyPage" />
       </div>
     </div>
   );

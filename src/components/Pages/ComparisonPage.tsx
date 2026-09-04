@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Scale, ExternalLink, ArrowRight, ChevronRight, Check, Minus } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
+import { SiteFooter } from '../SiteFooter';
 import { BlurOrb } from '../ui/ds-primitives';
 import { Button } from '../ui/button';
 import { logEvent } from '../../utils/analytics';
@@ -85,9 +86,6 @@ export function ComparisonPage() {
                 .cmp-cta h2 { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
                 .cmp-cta p { color: var(--muted-foreground); margin: 0 0 20px; }
                 .cmp-disclaimer { margin-top: 28px; font-size: 12px; color: var(--muted-foreground); opacity: 0.75; text-align: center; }
-                .cmp-footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; gap: 24px; justify-content: center; font-size: 14px; flex-wrap: wrap; }
-                .cmp-footer a { color: var(--muted-foreground); text-decoration: none; }
-                .cmp-footer a:hover { color: var(--foreground); }
                 @media (max-width: 640px) { .cmp-h1 { font-size: 28px; } .cmp-sub { font-size: 15px; } }
             `}</style>
 
@@ -194,11 +192,7 @@ export function ComparisonPage() {
 
                 <p className="cmp-disclaimer">{tx('compare:disclaimer')}</p>
 
-                <footer className="cmp-footer">
-                    <RouteLink to="home">{tx('common:header.backHome')}</RouteLink>
-                    <RouteLink to="instructions">{tx('common:landing.footer.tutorial', { defaultValue: '使用教學' })}</RouteLink>
-                    <RouteLink to="faq">{tx('common:landing.footer.faq', { defaultValue: 'FAQ' })}</RouteLink>
-                </footer>
+                <SiteFooter analyticsCategory="ComparisonPage" />
             </main>
         </div>
     );

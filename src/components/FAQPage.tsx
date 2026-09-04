@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { SEO } from './SEO';
 import { StaticPageHeader } from './StaticPageHeader';
-import { RouteLink } from './Navigation/RouteLink';
+import { SiteFooter } from './SiteFooter';
 import { BlurOrb, IconChip } from './ui/ds-primitives';
 import { DISCORD_URL } from '../config/links';
 import { PAGE_PATHS } from '../config/routes';
@@ -153,10 +153,6 @@ export function FAQPage() {
                 .faq-cta-btn.primary:hover { transform: translateY(-2px); }
                 .faq-cta-btn.ghost { background: rgba(255,255,255,0.05); color: var(--foreground); border: 1px solid rgba(255,255,255,0.12); }
                 .faq-cta-btn.ghost:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
-                .faq-footer { padding-top: 60px; margin-top: 64px; border-top: 1px solid rgba(255,255,255,0.07); text-align: center; }
-                .faq-footer-links { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
-                .faq-foot-link { color: var(--muted-foreground); text-decoration: none; transition: color .2s ease; background: none; border: 0; cursor: pointer; font-family: var(--font-sans); font-size: 14px; font-weight: 500; }
-                .faq-foot-link:hover { color: var(--foreground); }
                 .faq-copy { font-size: 13px; color: var(--muted-foreground); margin: 22px 0 0; }
                 @media (max-width: 560px) { .faq-title { font-size: 40px; } }
             `}</style>
@@ -290,15 +286,7 @@ export function FAQPage() {
                 </div>
 
                 {/* Footer */}
-                <footer className="faq-footer">
-                    <div className="faq-footer-links">
-                        <RouteLink className="faq-foot-link" to="home">{tx('faq:foot_home', { defaultValue: '首頁' })}</RouteLink>
-                        <RouteLink className="faq-foot-link" to="about">{tx('faq:foot_about', { defaultValue: '關於' })}</RouteLink>
-                        <RouteLink className="faq-foot-link" to="privacy">{tx('faq:foot_privacy', { defaultValue: '隱私權政策' })}</RouteLink>
-                        <RouteLink className="faq-foot-link" to="compare">{tx('compare:title')}</RouteLink>
-                    </div>
-                    <p className="faq-copy">{tx('about:copyright')}</p>
-                </footer>
+                <SiteFooter analyticsCategory="FAQPage" />
             </div>
         </div>
     );

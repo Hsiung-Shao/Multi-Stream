@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { RouteLink } from '../Navigation/RouteLink';
+import { SiteFooter } from '../SiteFooter';
 import { guidePage, guideSlugOf, isGuidePage, type GuideSlug } from '../../config/guides';
 import { StaticPageHeader } from '../StaticPageHeader';
 import {
@@ -831,6 +832,8 @@ export function InstructionsPage() {
                         noResults: (q: string) => tx('blog.noResults', { defaultValue: '找不到符合「{{q}}」的文章', q }),
                     }}
                 />}
+
+            <SiteFooter analyticsCategory="InstructionsPage" />
         </div>
     );
 }

@@ -18,6 +18,7 @@ import { logEvent } from '../utils/analytics';
 import { useUIStore } from '../store/useUIStore';
 import { StaticPageHeader } from './StaticPageHeader';
 import { RouteLink } from './Navigation/RouteLink';
+import { SiteFooter } from './SiteFooter';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 import { GITHUB_URL, DISCORD_URL, COFFEE_URL, PATREON_URL, X_URL } from '../config/links';
 
@@ -148,10 +149,6 @@ export function AboutPage() {
         .ab-privacy-desc { font-size: 14.5px; color: var(--muted-foreground); margin: 0; line-height: 1.7; }
         .ab-privacy-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; background: transparent; border: 0; padding: 0; cursor: pointer; text-decoration: none; color: #4ade80; font-family: var(--font-sans); font-size: 14px; font-weight: 600; }
 
-        .ab-footer { padding-top: 64px; padding-bottom: 56px; margin-top: 76px; border-top: 1px solid rgba(255,255,255,0.07); text-align: center; }
-        .ab-footer-links { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; font-size: 14px; font-weight: 500; }
-        .ab-foot-link { color: var(--muted-foreground); text-decoration: none; background: none; border: 0; cursor: pointer; font-family: var(--font-sans); font-size: 14px; font-weight: 500; transition: color .2s ease; }
-        .ab-foot-link:hover { color: var(--foreground); }
         .ab-copy { font-size: 13px; color: var(--muted-foreground); margin: 24px 0 0; }
         .ab-updated { font-size: 12.5px; color: var(--muted-foreground); opacity: 0.8; margin: 6px 0 0; font-family: ${MONO}; }
 
@@ -422,28 +419,7 @@ export function AboutPage() {
         </section>
 
         {/* ---------- Footer ---------- */}
-        <footer className="ab-footer">
-          <div className="ab-footer-links">
-            <RouteLink className="ab-foot-link" to="home">
-              {tx('about:home')}
-            </RouteLink>
-            <RouteLink className="ab-foot-link" to="privacy">
-              {tx('about:privacyPolicy')}
-            </RouteLink>
-            <button
-              type="button"
-              className="ab-foot-link"
-              onClick={() => {
-                logEvent('AboutPage', 'click_social', 'feedback_footer');
-                openModal('feedback');
-              }}
-            >
-              {tx('about:giveFeedback')}
-            </button>
-          </div>
-          <p className="ab-copy">{tx('about:copyright')}</p>
-          <p className="ab-updated">{tx('about:lastUpdated')}</p>
-        </footer>
+        <SiteFooter analyticsCategory="AboutPage" />
       </div>
     </div>
   );
