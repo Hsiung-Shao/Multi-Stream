@@ -40,6 +40,13 @@ Object.defineProperty(window, 'matchMedia', {
     })),
 });
 
+// jsdom 沒有 ResizeObserver;Radix 的 Popper(DropdownMenu / Popover)與 Slider 掛載時都會用到
+globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+} as unknown as typeof ResizeObserver;
+
 // Mock Globals
 (window as any).streamCount = 0;
 (window as any).streamData = {};

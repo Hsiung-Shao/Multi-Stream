@@ -1,47 +1,73 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useThemeSystem } from '../../src/hooks/useThemeSystem';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useUIStore } from '../../src/store/useUIStore';
 
-// Mock useUIStore
+// useThemeSystem 沒有回傳值:它只把 useAppliedTheme 解析出的主題同步到 <html class>。
+// 主題解析鏈:useUIStore.theme('light' | 'dark' | 'system')→ useEffectiveTheme(system 看 matchMedia)
+// → useAppliedTheme(admin 頁一律 dark)。這裡測的是整條鏈落到 DOM 的結果。
 vi.mock('../../src/store/useUIStore');
 
-describe('useThemeSystem', () => {
-    let mockTheme = 'light';
-    let mockToggleTheme = vi.fn();
+type UIState = { theme: 'light' | 'dark' | 'system'; page: string };
 
+const mockUI = (state: UIState) => {
+    (useUIStore as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+        (selector: (s: UIState) => unknown) => selector(state),
+    );
+};
+
+const mockSystemDark = (matches: boolean) => {
+    (window.matchMedia as ReturnType<typeof vi.fn>).mockImplementation((query: string) => ({
+        matches,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    }));
+};
+
+describe('useThemeSystem', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockTheme = 'light';
-        // Reset document class
-        document.documentElement.classList.remove('dark');
-
-        // Mock implementation
-        (useUIStore as any).mockImplementation((selector: any) => selector({
-            theme: mockTheme,
-            toggleTheme: mockToggleTheme
-        }));
+        document.documentElement.classList.remove('light', 'dark');
+        mockSystemDark(false);
     });
 
-    it('should apply light theme class', () => {
+    it('applies light class for theme=light', () => {
+        mockUI({ theme: 'light', page: 'home' });
         renderHook(() => useThemeSystem());
+        expect(document.documentElement.classList.contains('light')).toBe(true);
         expect(document.documentElement.classList.contains('dark')).toBe(false);
     });
 
-    it('should apply dark theme class', () => {
-        mockTheme = 'dark';
+    it('applies dark class for theme=dark', () => {
+        mockUI({ theme: 'dark', page: 'home' });
+        renderHook(() => useThemeSystem());
+        expect(document.documentElement.classList.contains('dark')).toBe(true);
+        expect(document.documentElement.classList.contains('light')).toBe(false);
+    });
+
+    it('theme=system follows prefers-color-scheme', () => {
+        mockSystemDark(true);
+        mockUI({ theme: 'system', page: 'home' });
         renderHook(() => useThemeSystem());
         expect(document.documentElement.classList.contains('dark')).toBe(true);
     });
 
-    it('should toggle theme via store', () => {
-        const { result } = renderHook(() => useThemeSystem());
+    it('admin page forces dark even when theme=light', () => {
+        mockUI({ theme: 'light', page: 'admin' });
+        renderHook(() => useThemeSystem());
+        expect(document.documentElement.classList.contains('dark')).toBe(true);
+        expect(document.documentElement.classList.contains('light')).toBe(false);
+    });
 
-        act(() => {
-            // function returned by hook (handleToggleTheme) calls store.toggleTheme
-            result.current.handleToggleTheme();
-        });
-
-        expect(mockToggleTheme).toHaveBeenCalled();
+    it('replaces a stale class instead of stacking both', () => {
+        document.documentElement.classList.add('dark');
+        mockUI({ theme: 'light', page: 'home' });
+        renderHook(() => useThemeSystem());
+        expect(document.documentElement.className).toBe('light');
     });
 });

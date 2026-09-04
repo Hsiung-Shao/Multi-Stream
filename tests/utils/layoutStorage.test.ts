@@ -1,69 +1,57 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { layoutStorage } from '../../src/utils/layoutStorage';
+import type { CustomLayout } from '../../src/types/canvas';
 
-// Use doMock for modules with top-level await or complex side effects if necessary
-// But standard vi.mock works if we don't have top-level await issues.
-// layoutStorage uses 'idb' which might be ESM. 
-// We mock 'idb' before import.
+// 用 fake-indexeddb(tests/setup.ts 已全域載入)跑真的 idb,不 mock 內部實作:
+// 這個模組的價值就在 IndexedDB 的 clear → put → index 讀取流程,mock 掉就什麼都沒測到。
 
-const mockDB = {
-    put: vi.fn(),
-    get: vi.fn(),
-    delete: vi.fn(),
-    getAll: vi.fn(),
-    getAllKeys: vi.fn(),
-};
+const mk = (id: string, name: string, createdAt: number): CustomLayout => ({
+    id,
+    name,
+    slots: [],
+    createdAt,
+});
 
-const mockOpenDB = vi.fn().mockResolvedValue(mockDB);
-
-vi.mock('idb', () => ({
-    openDB: mockOpenDB
-}));
-
-// Dynamic import to ensure mock is applied
 describe('layoutStorage', () => {
-    let layoutStorage: any;
-
     beforeEach(async () => {
-        vi.clearAllMocks();
-        // Re-import to get fresh module if possible, or just use the imported one.
-        // Since it's a singleton export, we might need to reset it or just verify method calls.
-        const module = await import('../../src/utils/layoutStorage');
-        layoutStorage = module.layoutStorage;
+        await layoutStorage.saveToBackup([]);
     });
 
-    it('should save layout', async () => {
-        const layoutData = { streams: [], id: '1' };
-        await layoutStorage.saveLayout('test-layout', layoutData);
-        // We expect put to be called on db
-        expect(mockDB.put).toHaveBeenCalledWith('layouts', layoutData, 'test-layout');
+    it('starts empty', async () => {
+        expect(await layoutStorage.loadFromBackup()).toEqual([]);
     });
 
-    it('should load layout', async () => {
-        const mockData = { streams: [] };
-        mockDB.get.mockResolvedValue(mockData);
+    it('saveToBackup then loadFromBackup round-trips, ordered by createdAt', async () => {
+        const newer = mk('b', 'Newer', 2000);
+        const older = mk('a', 'Older', 1000);
+        await layoutStorage.saveToBackup([newer, older]);
 
-        const result = await layoutStorage.loadLayout('test-layout');
-        expect(mockDB.get).toHaveBeenCalledWith('layouts', 'test-layout');
-        expect(result).toBe(mockData);
+        const loaded = await layoutStorage.loadFromBackup();
+        expect(loaded.map(l => l.id)).toEqual(['a', 'b']);
+        expect(loaded[0]).toEqual(older);
+        expect(loaded[1]).toEqual(newer);
     });
 
-    it('should delete layout', async () => {
-        await layoutStorage.deleteLayout('test-layout');
-        expect(mockDB.delete).toHaveBeenCalledWith('layouts', 'test-layout');
+    it('saveToBackup replaces the whole backup (removed layouts disappear)', async () => {
+        await layoutStorage.saveToBackup([mk('a', 'A', 1), mk('b', 'B', 2)]);
+        await layoutStorage.saveToBackup([mk('b', 'B renamed', 2)]);
+
+        const loaded = await layoutStorage.loadFromBackup();
+        expect(loaded).toHaveLength(1);
+        expect(loaded[0]).toMatchObject({ id: 'b', name: 'B renamed' });
     });
 
-    it('should get all layouts', async () => {
-        // getList returns keys
-        mockDB.getAllKeys.mockResolvedValue(['layout1', 'layout2']);
+    it('deleteFromBackup removes one layout by id', async () => {
+        await layoutStorage.saveToBackup([mk('a', 'A', 1), mk('b', 'B', 2)]);
+        await layoutStorage.deleteFromBackup('a');
 
-        // The implementation might get values or keys. 
-        // layoutStorage.getLayoutList() -> returns keys or object?
-        // Checking source (inferred): likely returns list of layouts.
-        // Wait, the previous test file content says it checks keys or list.
-        // Let's assume getList returns keys.
+        const loaded = await layoutStorage.loadFromBackup();
+        expect(loaded.map(l => l.id)).toEqual(['b']);
+    });
 
-        const list = await layoutStorage.getLayoutList();
-        expect(mockDB.getAllKeys).toHaveBeenCalled();
-        expect(list).toEqual(['layout1', 'layout2']);
+    it('deleteFromBackup on a missing id is a no-op', async () => {
+        await layoutStorage.saveToBackup([mk('a', 'A', 1)]);
+        await expect(layoutStorage.deleteFromBackup('nope')).resolves.toBeUndefined();
+        expect(await layoutStorage.loadFromBackup()).toHaveLength(1);
     });
 });
