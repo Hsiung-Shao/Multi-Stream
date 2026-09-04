@@ -117,7 +117,6 @@ export const DynamicIsland = () => {
     const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
     const addCanvasItem = useStreamStore(s => s.addCanvasItem);
 
-    // const [settingsDialogOpen, setSettingsDialogOpen] = useState(false); // Removed
     const [mediaControlExpanded, setMediaControlExpanded] = useState(false);
     const [layoutPickerExpanded, setLayoutPickerExpanded] = useState(false);
     // portal 彈出 UI 的 open 狀態 + 搜尋聚焦:任一為真即「使用中」,釘住動態島不隱藏
@@ -311,7 +310,6 @@ export const DynamicIsland = () => {
                 </div>
             </div>
 
-            {/* <SettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} /> */}
         </>
     );
 };
