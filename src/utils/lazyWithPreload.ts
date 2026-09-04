@@ -26,9 +26,15 @@ export function lazyWithPreload<T extends ComponentType<any>>(loader: Loader<T>)
     const Component = ((props: ComponentProps<T>) =>
         createElement((resolved ?? Lazy) as ComponentType<any>, props)) as PreloadableComponent<T>;
     Component.preload = () => {
-        pending ??= loader().then((m) => {
-            resolved = m.default;
-        });
+        pending ??= loader().then(
+            (m) => {
+                resolved = m.default;
+            },
+            (err) => {
+                pending = null; // 失敗（例：部署切版瞬間 chunk 404）不永久快取，下次 preload 重試
+                throw err;
+            },
+        );
         return pending;
     };
     Component.isLoaded = () => resolved !== null;

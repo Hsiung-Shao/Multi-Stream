@@ -81,12 +81,15 @@ function ChunkSuspense({ chunk, fallback, children }: { chunk: { isLoaded: () =>
   return chunk.isLoaded() ? <>{children}</> : <Suspense fallback={fallback}>{children}</Suspense>;
 }
 
-/** 把某頁首輪 render 會碰到的所有 lazy chunk 載好（該頁 + 常駐的 DeferredGlobals）；chunk 失敗不擋 render */
-export function preloadPageChunks(page: PageType): Promise<void> {
+/**
+ * 把某頁首輪 render 會碰到的所有 lazy chunk 載好（該頁 + 常駐的 DeferredGlobals）。
+ * 回傳是否全部成功：失敗不丟例外（呼叫端決定要 hydrate 還是退回 createRoot）。
+ */
+export function preloadPageChunks(page: PageType): Promise<boolean> {
   const pageChunk = isGuidePage(page) ? InstructionsPage : PAGE_CHUNKS[page];
   return Promise.all([DeferredGlobals.preload(), pageChunk?.preload()])
-    .then(() => undefined)
-    .catch(() => undefined);
+    .then(() => true)
+    .catch(() => false);
 }
 
 // 可分享連結：模組載入時就快照 ?streams=（只在 /canvas 生效），之後 URL 會被換回乾淨路徑

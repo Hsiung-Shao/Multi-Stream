@@ -61,7 +61,9 @@ async function renderNow(route: string, lang: PrerenderLang): Promise<string> {
     await i18n.changeLanguage(lang);
     // 與 client（main.tsx）對稱：chunk 先預載，App 的 ChunkSuspense 就不會輸出 Suspense 邊界，
     // 產物裡沒有 <!--$--> 標記，client hydrate 時也沒有可被同步更新打斷的 dehydrated 邊界。
-    await preloadPageChunks(page);
+    if (!(await preloadPageChunks(page))) {
+        throw new Error(`entry-server: ${route} 的 chunk 預載失敗`);
+    }
 
     // server 端不發任何查詢：useQuery 停在 pending，與 client 首次 render（尚未 fetch）同形
     const queryClient = new QueryClient({

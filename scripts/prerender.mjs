@@ -44,7 +44,8 @@ const setMeta = (html, attr, key, content) =>
     replaceOnce(
         html,
         new RegExp(`(<meta ${attr}="${key}" content=")[^"]*(")`),
-        `$1${escapeHtml(content)}$2`,
+        // 用函式而非字串樣板：內容若含 $1 / $& 等字樣，字串型 replacement 會被 String.replace 當成特殊樣式
+        (_m, open, close) => `${open}${escapeHtml(content)}${close}`,
         `<meta ${attr}="${key}">`,
     );
 
@@ -76,7 +77,7 @@ export function applyHead(shell, route, lang, theme, appHtml) {
     out = setMeta(out, 'name', 'twitter:title', meta.title);
     out = setMeta(out, 'name', 'twitter:description', meta.description);
     out = setMeta(out, 'name', 'twitter:url', pageUrl);
-    out = replaceOnce(out, /(<link rel="canonical" href=")[^"]*(")/, `$1${escapeHtml(pageUrl)}$2`, '<link rel="canonical">');
+    out = replaceOnce(out, /(<link rel="canonical" href=")[^"]*(")/, (_m, open, close) => `${open}${escapeHtml(pageUrl)}${close}`, '<link rel="canonical">');
     if (!WEBAPP_JSONLD_ROUTES.includes(route)) {
         out = replaceOnce(
             out,

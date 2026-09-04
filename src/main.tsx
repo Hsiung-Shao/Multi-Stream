@@ -89,7 +89,16 @@ ensureLanguageLoaded(i18n.language).finally(() => {
     // 先把當頁與 DeferredGlobals 的 chunk 載好再 hydrate：否則 lazy 邊界會留在 dehydrated 狀態，
     // 隨後 zustand client snapshot ≠ server snapshot 的同步更新會逼 React 放棄 hydrate（#421）而閃 Loading。
     // 預渲染 HTML 已經畫在畫面上，這段等待不影響首屏。
-    preloadPageChunks(useUIStore.getState().page).then(() => hydrateRoot(root, app));
+    // chunk 載入失敗（例：部署切版瞬間 404）就不 hydrate：帶 Suspense 的樹對上無邊界的 HTML 只會 mismatch，
+    // 直接清空走 createRoot 與其他不 hydrate 的情況一致。
+    preloadPageChunks(useUIStore.getState().page).then((ok) => {
+      if (ok) {
+        hydrateRoot(root, app);
+      } else {
+        root.replaceChildren();
+        createRoot(root).render(app);
+      }
+    });
   } else {
     root.replaceChildren();
     createRoot(root).render(app);
