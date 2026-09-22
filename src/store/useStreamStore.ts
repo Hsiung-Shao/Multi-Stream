@@ -9,7 +9,8 @@ import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
-import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect } from '../utils/layoutPresets';
+import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout } from '../utils/layoutPresets';
+import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId } from '../utils/canvasItemOps';
 import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
@@ -75,6 +76,10 @@ interface StreamStoreState {
     restoreSession: (data: { streams: StreamData[]; canvasItems: CanvasItem[]; layoutMode: 'auto' | 'canvas' }) => void;
     applyStandardLayoutToCanvas: (type: 'grid' | 'focus' | 'flow') => void;
     updateCanvasItem: (itemId: string, updates: Partial<CanvasItem>) => void;
+    /** 兩個視窗互換位置與尺寸（i 不變，播放器不重建） */
+    swapCanvasItems: (aId: string, bId: string) => void;
+    /** 與「主畫面」（面積最大的串流視窗）互換位置 */
+    setMainCanvasItem: (itemId: string) => void;
     syncCanvasWithStreams: () => void;
 
     // New Action
@@ -330,15 +335,24 @@ export const useStreamStore = create<StreamStoreState>()(
                             // If the user requests chat, OR if we are adding a chat window, we favor 'with_chat' mode.
                             // However, for consistency, we base it on the resulting composition.
                             // If options.withChat is true, we act in 'with_chat' mode for this operation.
-                            const targetMode: LayoutMode = (options.withChat) ? 'with_chat' : 'video_only';
+                            // 共用聊天室版面（N 串 + 1 聊）新增一路時維持同一種版面：不替新串流補聊天室，
+                            // 聊天室繼續顯示原本那一路（沿用它的 contentId，下面的 ID 池就會沿用同一個 i）。
+                            const sharedChat = isSharedChatLayout(state.canvasItems)
+                                ? state.canvasItems.find(i => i.type === 'chat')!
+                                : null;
+                            const targetMode: LayoutMode = sharedChat ? 'shared_chat' : (options.withChat) ? 'with_chat' : 'video_only';
                             const streamCount = newStreams.length;
 
                             // 2. Select Template
                             // We look for a template that matches the count and mode.
                             let targetItems: any[] = [];
-                            const template = layoutTemplates.find(t => t.count === streamCount && t.type === targetMode);
+                            const template = sharedChat ? undefined : layoutTemplates.find(t => t.count === streamCount && t.type === targetMode);
 
-                            if (template) {
+                            if (sharedChat) {
+                                targetItems = generateSharedChatLayout(
+                                    newStreams.map(s => s.id), getCanvasAspect(), sharedChat.contentId ?? newStreams[0]?.id ?? null,
+                                );
+                            } else if (template) {
                                 // Generate items from template
                                 const streamIds = newStreams.map(s => s.id);
                                 targetItems = generateLayoutFromTemplate(template.id, streamIds, getCanvasAspect());
@@ -485,6 +499,17 @@ export const useStreamStore = create<StreamStoreState>()(
                 )
             })),
 
+            swapCanvasItems: (aId, bId) => set(state => {
+                const next = swapItemLayouts(state.canvasItems, aId, bId);
+                return next === state.canvasItems ? {} : { canvasItems: next };
+            }),
+
+            setMainCanvasItem: (itemId) => set(state => {
+                const mainId = selectMainStreamItemId(state.canvasItems);
+                if (!mainId || mainId === itemId) return {};
+                return { canvasItems: swapItemLayouts(state.canvasItems, itemId, mainId) };
+            }),
+
             syncCanvasWithStreams: () => set(state => {
                 let newCanvasItems = [...state.canvasItems];
                 const streams = state.streams;
@@ -525,11 +550,14 @@ export const useStreamStore = create<StreamStoreState>()(
                     const currentCount = newStreams.length;
 
                     // 2. Handle Canvas Items
-                    let newCanvasItems = state.canvasItems;
+                    // 共用聊天室正在顯示被移除的這一路時，先改指向另一路（否則下面會把聊天室一起刪掉）
+                    const sharedBefore = isSharedChatLayout(state.canvasItems);
+                    const retargeted = retargetChatsOf(state.canvasItems, id);
+                    let newCanvasItems = retargeted;
 
                     if (shouldKeepEmpty) {
                         // "Empty" Mode: Keep windows but clear contentId
-                        newCanvasItems = state.canvasItems.map(item => {
+                        newCanvasItems = retargeted.map(item => {
                             if (item.contentId === id) {
                                 return { ...item, contentId: null };
                             }
@@ -537,7 +565,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         });
                     } else {
                         // "Remove" Mode (or Forced): Remove windows completely
-                        newCanvasItems = state.canvasItems.filter(item => item.contentId !== id);
+                        newCanvasItems = retargeted.filter(item => item.contentId !== id);
                     }
 
                     // 3. Layout Handling
@@ -550,14 +578,18 @@ export const useStreamStore = create<StreamStoreState>()(
                         // Determine implied mode based on previous state content
                         // If we had any chat windows, we try to maintain 'with_chat' mode if possible/logical.
                         const hasChat = state.canvasItems.some(i => i.type === 'chat');
-                        const mode: LayoutMode = hasChat ? 'with_chat' : 'video_only';
+                        const mode: LayoutMode = sharedBefore ? 'shared_chat' : hasChat ? 'with_chat' : 'video_only';
 
                         // Select Template
-                        const template = layoutTemplates.find(t => t.count === streamCount && t.type === mode);
+                        const template = sharedBefore ? undefined : layoutTemplates.find(t => t.count === streamCount && t.type === mode);
                         let targetItems: any[] = [];
                         const streamIds = newStreams.map(s => s.id);
 
-                        if (template) {
+                        if (sharedBefore && streamIds.length > 0) {
+                            // 共用聊天室版面維持同一種版面；聊天室沿用（可能剛改指向的）那一路
+                            const chatContent = retargeted.find(i => i.type === 'chat')?.contentId ?? streamIds[0];
+                            targetItems = generateSharedChatLayout(streamIds, getCanvasAspect(), chatContent);
+                        } else if (template) {
                             targetItems = generateLayoutFromTemplate(template.id, streamIds, getCanvasAspect());
                         } else {
                             // Fallback Auto Grid
@@ -571,8 +603,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         }
 
                         // Diff & Patch ID Preservation
-                        // Diff & Patch ID Preservation
-                        const availableItems = [...state.canvasItems];
+                        const availableItems = [...retargeted];
                         newCanvasItems = targetItems.map(target => {
                             const matchIndex = availableItems.findIndex(p => p.type === target.type && p.contentId === target.contentId);
 
@@ -959,7 +990,16 @@ export const useStreamStore = create<StreamStoreState>()(
                 // The template generator uses the IDs provided (including nulls)
                 // Note: The generator assumes input array covers indices 0..N-1
                 // We pass the full array, it slices inside.
-                const newItemsSpecs = template.generate(processingIds, getCanvasAspect());
+                let newItemsSpecs: any[];
+                if (template.type === 'shared_chat') {
+                    // 共用聊天室沿用「現有聊天室正在顯示、且仍在新版面上」的那一路，
+                    // 這樣聊天室 item 也能被下面的 ID 池配對到、沿用原本的 i
+                    const onLayout = processingIds.slice(0, needed);
+                    const keep = state.canvasItems.find(i => i.type === 'chat' && i.contentId != null && onLayout.includes(i.contentId));
+                    newItemsSpecs = generateSharedChatLayout(onLayout, getCanvasAspect(), keep?.contentId ?? onLayout[0] ?? null);
+                } else {
+                    newItemsSpecs = template.generate(processingIds, getCanvasAspect());
+                }
 
                 // 3. Convert Specs to CanvasItems
                 const availableItems = [...state.canvasItems];
@@ -969,9 +1009,9 @@ export const useStreamStore = create<StreamStoreState>()(
                     let existingId: string | null = null;
                     let existingItem: CanvasItem | null = null;
 
-                    if (spec.contentId || spec.contentId === null) {
-                        // Even for null (empty), we try to reuse one to avoid churn, 
-                        // BUT we must avoid duplicates.
+                    // 只重用有內容的 item：空槽的 ID 帶著舊版面的配對語意（empty-stream-X ↔ empty-chat-X），
+                    // 沿用到新位置會讓之後的「新增串流填空槽」把聊天室配到不相鄰的槽（applyCustomLayout 同理）
+                    if (spec.contentId != null) {
                         const matchIndex = availableItems.findIndex(item =>
                             item.type === spec.type && item.contentId === spec.contentId
                         );

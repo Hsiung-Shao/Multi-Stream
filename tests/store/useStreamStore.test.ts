@@ -296,4 +296,135 @@ describe('useStreamStore', () => {
             expect(ids).not.toContain('empty-chat-A');
         });
     });
+
+    // 版面重設計（2026-09）：N 串 + 1 共用聊天室、設為主畫面、交換。
+    // 所有操作都只能改 layout / contentId，不能改 `i`（畫布 React key，改了播放器就重建靜音）。
+    describe('N 串 + 1 共用聊天室與主畫面／交換', () => {
+        const mk = (id: number, ch: string) => ({ id, platform: 'twitch' as const, channelId: ch, videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false });
+        const streams3 = [mk(1, 'a'), mk(2, 'b'), mk(3, 'c')];
+        const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+        const sharedItems = () => [
+            { i: 'w1', type: 'stream' as const, contentId: 1, layout: L(0, 0, 10, 10) },
+            { i: 'w2', type: 'stream' as const, contentId: 2, layout: L(10, 0, 10, 10) },
+            { i: 'w3', type: 'stream' as const, contentId: 3, layout: L(0, 10, 10, 10) },
+            { i: 'chat', type: 'chat' as const, contentId: 1, layout: L(20, 0, 4, 24) },
+        ];
+
+        it('套用共用聊天室版型：串流與聊天室沿用原本的 i，只留 1 個聊天室', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [mk(1, 'a'), mk(2, 'b')],
+                canvasItems: [
+                    { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 8, 12) },
+                    { i: 'c1', type: 'chat', contentId: 1, layout: L(8, 0, 4, 12) },
+                    { i: 'w2', type: 'stream', contentId: 2, layout: L(12, 0, 8, 12) },
+                    { i: 'c2', type: 'chat', contentId: 2, layout: L(20, 0, 4, 12) },
+                ],
+            });
+            useStreamStore.getState().applyTemplateLayout('template-4-sharedchat');
+            const items = useStreamStore.getState().canvasItems;
+            const chats = items.filter(i => i.type === 'chat');
+            expect(chats).toHaveLength(1);
+            expect(chats[0]).toMatchObject({ i: 'c1', contentId: 1 });
+            expect(items.find(i => i.contentId === 1 && i.type === 'stream')!.i).toBe('w1');
+            expect(items.find(i => i.contentId === 2 && i.type === 'stream')!.i).toBe('w2');
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(4);
+            expect(new Set(items.map(i => i.i)).size).toBe(items.length);
+        });
+
+        it('套用共用聊天室版型：沿用聊天室正在顯示的那一路（不強制切回第一路）', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [mk(1, 'a'), mk(2, 'b')],
+                canvasItems: [
+                    { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 10, 12) },
+                    { i: 'w2', type: 'stream', contentId: 2, layout: L(10, 0, 10, 12) },
+                    { i: 'cx', type: 'chat', contentId: 2, layout: L(20, 0, 4, 24) },
+                ],
+            });
+            useStreamStore.getState().applyTemplateLayout('template-2-sharedchat');
+            const chat = useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!;
+            expect(chat).toMatchObject({ i: 'cx', contentId: 2 });
+        });
+
+        it('套用版型時空槽不沿用舊 ID', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [],
+                canvasItems: [
+                    { i: 'empty-stream-A', type: 'stream', contentId: null, layout: L(0, 0, 12, 24) },
+                    { i: 'empty-chat-A', type: 'chat', contentId: null, layout: L(12, 0, 4, 24) },
+                ],
+            });
+            useStreamStore.getState().applyTemplateLayout('template-2-sharedchat');
+            const ids = useStreamStore.getState().canvasItems.map(i => i.i);
+            expect(ids).not.toContain('empty-stream-A');
+            expect(ids).not.toContain('empty-chat-A');
+        });
+
+        it('共用模式下新增串流：仍只有 1 個聊天室，既有 i 全部保留', async () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: streams3, canvasItems: sharedItems() });
+            const r = await useStreamStore.getState().addStream('https://www.twitch.tv/newone');
+            expect(r.success).toBe(true);
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.filter(i => i.type === 'chat')).toHaveLength(1);
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(4);
+            for (const id of ['w1', 'w2', 'w3', 'chat']) expect(items.map(i => i.i)).toContain(id);
+            expect(items.find(i => i.i === 'chat')!.contentId).toBe(1);
+        });
+
+        it('移除聊天室正在顯示的那一路：聊天室改指向另一路而不是消失', () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: streams3, canvasItems: sharedItems() });
+            useStreamStore.getState().removeStream(1, true);
+            const chat = useStreamStore.getState().canvasItems.find(i => i.type === 'chat');
+            expect(chat).toBeDefined();
+            expect(chat!.i).toBe('chat');
+            expect(chat!.contentId).toBe(2); // 依位置（上→下、左→右）取第一個
+        });
+
+        it('非 canvas 模式移除後重排：仍維持共用聊天室版面', () => {
+            useStreamStore.setState({ layoutMode: 'auto', streams: streams3, canvasItems: sharedItems() });
+            useStreamStore.getState().removeStream(3, true);
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.filter(i => i.type === 'chat')).toHaveLength(1);
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(2);
+            expect(items.find(i => i.type === 'chat')!.i).toBe('chat');
+        });
+
+        it('每路各一聊天室的版面：移除行為不變（那一路的聊天室跟著移除）', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [mk(1, 'a'), mk(2, 'b')],
+                canvasItems: [
+                    { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 8, 12) },
+                    { i: 'c1', type: 'chat', contentId: 1, layout: L(8, 0, 4, 12) },
+                    { i: 'w2', type: 'stream', contentId: 2, layout: L(12, 0, 8, 12) },
+                    { i: 'c2', type: 'chat', contentId: 2, layout: L(20, 0, 4, 12) },
+                ],
+            });
+            useStreamStore.getState().removeStream(1, true);
+            expect(useStreamStore.getState().canvasItems.map(i => i.i)).toEqual(['w2', 'c2']);
+        });
+
+        it('swapCanvasItems：只互換兩個 layout，i 與內容不變', () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: streams3, canvasItems: sharedItems() });
+            useStreamStore.getState().swapCanvasItems('w1', 'w3');
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.map(i => [i.i, i.contentId])).toEqual(sharedItems().map(i => [i.i, i.contentId]));
+            expect(items.find(i => i.i === 'w1')!.layout).toEqual(L(0, 10, 10, 10));
+            expect(items.find(i => i.i === 'w3')!.layout).toEqual(L(0, 0, 10, 10));
+            expect(items.find(i => i.i === 'w2')!.layout).toEqual(L(10, 0, 10, 10));
+        });
+
+        it('setMainCanvasItem：與面積最大的串流互換（同面積取左上）', () => {
+            const items = sharedItems();
+            items[1] = { ...items[1], layout: L(10, 0, 10, 14) }; // w2 最大
+            useStreamStore.setState({ layoutMode: 'canvas', streams: streams3, canvasItems: items });
+            useStreamStore.getState().setMainCanvasItem('w3');
+            const after = useStreamStore.getState().canvasItems;
+            expect(after.find(i => i.i === 'w3')!.layout).toEqual(L(10, 0, 10, 14));
+            expect(after.find(i => i.i === 'w2')!.layout).toEqual(L(0, 10, 10, 10));
+            expect(after.map(i => i.i).sort()).toEqual(['chat', 'w1', 'w2', 'w3']);
+        });
+    });
 });
