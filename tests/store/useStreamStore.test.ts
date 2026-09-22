@@ -174,4 +174,42 @@ describe('useStreamStore', () => {
             expect(useStreamStore.getState().chatLayout).toBe('sidebar');
         });
     });
+
+    // 首頁「貼上網址馬上看」黑畫面（2026-09）：畫布掛載前 layoutMode 仍是預設 'auto'，
+    // 舊分支寫死 pixel 座標 w:480/300 且同在 x:0,y:0，在 24 格網格下被放大約 20 倍並互相重疊。
+    describe('畫布掛載前（layoutMode = auto）新增串流', () => {
+        const overlaps = (a: { x: number; y: number; w: number; h: number }, b: typeof a) =>
+            a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+        it('座標落在 24 格網格內，播放器與聊天室不重疊', async () => {
+            useStreamStore.setState({ layoutMode: 'auto' });
+            const result = await useStreamStore.getState().addStream('https://www.twitch.tv/assentw');
+            expect(result.success).toBe(true);
+
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.some(i => i.type === 'stream')).toBe(true);
+            for (const { layout } of items) {
+                expect(layout.x).toBeGreaterThanOrEqual(0);
+                expect(layout.w).toBeGreaterThan(0);
+                expect(layout.x + layout.w).toBeLessThanOrEqual(24);
+            }
+            for (let a = 0; a < items.length; a++) {
+                for (let b = a + 1; b < items.length; b++) {
+                    expect(overlaps(items[a].layout, items[b].layout)).toBe(false);
+                }
+            }
+        });
+
+        it('與畫布掛載後（canvas 模式）新增的結果一致', async () => {
+            useStreamStore.setState({ layoutMode: 'auto' });
+            await useStreamStore.getState().addStream('https://www.twitch.tv/assentw');
+            const fromAuto = useStreamStore.getState().canvasItems.map(i => ({ type: i.type, layout: i.layout }));
+
+            useStreamStore.setState({ streams: [], canvasItems: [], layoutMode: 'canvas' });
+            await useStreamStore.getState().addStream('https://www.twitch.tv/assentw');
+            const fromCanvas = useStreamStore.getState().canvasItems.map(i => ({ type: i.type, layout: i.layout }));
+
+            expect(fromAuto).toEqual(fromCanvas);
+        });
+    });
 });

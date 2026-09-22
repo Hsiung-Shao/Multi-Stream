@@ -227,7 +227,11 @@ export const useStreamStore = create<StreamStoreState>()(
                     const newStreams = [...state.streams, newStream];
                     let newCanvasItems = [...state.canvasItems];
 
-                    if (state.layoutMode === 'canvas') {
+                    // 一律走模板排版，不看 layoutMode：layoutMode 預設 'auto'，只有 NewCanvasPage 掛載後才變 'canvas'，
+                    // 首頁「貼上網址馬上看」、?streams= 分享連結都會在畫布掛載前呼叫 addStream。
+                    // 原本 'auto' 走的舊分支寫死 pixel 座標（w:480 / w:300、兩者同在 x:0,y:0），
+                    // 在 24 格網格下被放大約 20 倍且互相重疊 → 首頁貼連結黑畫面（2026-09 修）。
+                    {
                         // Smart Layout System: Template-Based Architecture
 
                         // 0. Check for Empty Slots (Targeted or Global)
@@ -391,25 +395,6 @@ export const useStreamStore = create<StreamStoreState>()(
                                 }
                             });
                         }
-                    } else {
-                        // Legacy / Layout Mode Auto Reflow
-                        // This part runs if layoutMode is NOT 'canvas'. 
-                        // But we usually are in 'canvas' mode for this app now.
-                        // Keep existing logic or update? 
-                        // We should probably force canvas mode logic or just leave it for now if 'auto' mode is deprecated.
-                        // Assuming 'canvas' mode is primary.
-                        newCanvasItems.push({
-                            i: `stream-${uuidv4()}-${newStream.id}`,
-                            type: 'stream',
-                            contentId: newStream.id,
-                            layout: { x: 0, y: 0, w: 480, h: 270 }
-                        });
-                        newCanvasItems.push({
-                            i: `chat-${uuidv4()}-${newStream.id}`,
-                            type: 'chat',
-                            contentId: newStream.id,
-                            layout: { x: 0, y: 0, w: 300, h: 270 }
-                        });
                     }
 
                     // Auto Layout for Non-Canvas
