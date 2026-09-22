@@ -5,6 +5,7 @@ import { youtubeApi } from '../../utils/youtubeApi';
 import { cacheChannelIfAbsent } from '../youtube/YouTubeChannelRepository';
 import { FavoriteStream } from './types';
 import { shouldCheckChannel, recordChannelCheck } from './liveCheckThrottle';
+import { fetchLiveStatuses, isLiveStatusFresh, toLiveStatusResult, type LiveStatusRow } from './liveStatusRepository';
 
 export interface CheckNowOptions {
     /** 使用者手動觸發：略過每頻道節流（見 liveCheckThrottle.ts） */
@@ -60,37 +61,48 @@ export const useLiveStatusCheck = () => {
 
             // 2. Check YouTube Status
             if (youtubeFavorites.length > 0) {
-                let isFirstYoutubeCheck = true;
-                for (const fav of youtubeFavorites) {
-                    if (!fav.channelId) continue;
-
+                // 先決定這一輪要處理哪些頻道
+                const candidates = youtubeFavorites.filter(fav => {
+                    if (!fav.channelId) return false;
                     // Optimization: Skip if live and checked recently (< 1 hour)
-                    if (fav.isLive && fav.lastChecked) {
-                        const lastCheckedTime = new Date(fav.lastChecked).getTime();
-                        if (Date.now() - lastCheckedTime < 60 * 60 * 1000) {
-                            continue;
-                        }
+                    if (fav.isLive && fav.lastChecked
+                        && Date.now() - new Date(fav.lastChecked).getTime() < 60 * 60 * 1000) {
+                        return false;
                     }
-
                     // 每頻道節流：離線頻道 15 分鐘、其餘 4 分鐘內查過就跳過（跨分頁、跨重新整理共用）
-                    if (!shouldCheckChannel(fav.channelId, Date.now(), force)) {
-                        continue;
-                    }
+                    return shouldCheckChannel(fav.channelId, Date.now(), force);
+                });
 
-                    // Rate limiting: 2000ms delay between requests
-                    if (!isFirstYoutubeCheck) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                // 共享表：別的使用者 3 分鐘內查過的頻道直接用資料庫的結果，不打端點（整輪只讀一次）
+                const shared = candidates.length > 0
+                    ? await fetchLiveStatuses(candidates.map(fav => fav.channelId as string))
+                    : new Map<string, LiveStatusRow>();
+
+                let isFirstYoutubeCheck = true;
+                for (const fav of candidates) {
+                    const channelId = fav.channelId as string;
+                    const sharedRow = shared.get(channelId);
+                    const fromShared = !!sharedRow && isLiveStatusFresh(sharedRow);
+
+                    // Rate limiting: 打端點之間間隔 2 秒；讀共享表的結果不需要
+                    if (!fromShared) {
+                        if (!isFirstYoutubeCheck) {
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                        }
+                        isFirstYoutubeCheck = false;
                     }
-                    isFirstYoutubeCheck = false;
 
                     try {
-                        const status = await youtubeApi.checkChannelLiveStatus(fav.channelId);
-                        recordChannelCheck(fav.channelId, !!status.isLive);
+                        const status = fromShared && sharedRow
+                            ? toLiveStatusResult(sharedRow)
+                            : await youtubeApi.checkChannelLiveStatus(channelId);
+                        recordChannelCheck(channelId, !!status.isLive);
 
                         // 順手蒐集到離線頻道資料庫:寫官方頻道名、查 DB 去重、不更動使用者收藏資料。
-                        // fire-and-forget,失敗不影響直播狀態檢查。
-                        if (status.channelTitle) {
-                            cacheChannelIfAbsent(fav.channelId, status.channelTitle).catch(() => {});
+                        // fire-and-forget,失敗不影響直播狀態檢查。只在真的打了端點時做——
+                        // 讀共享表時每輪都做會讓每個頻道多一次 Supabase 查詢。
+                        if (!fromShared && status.channelTitle) {
+                            cacheChannelIfAbsent(channelId, status.channelTitle).catch(() => {});
                         }
 
                         // Check if updates are needed
@@ -120,7 +132,7 @@ export const useLiveStatusCheck = () => {
                             });
                         }
                     } catch (e) {
-                        console.warn(`[LiveCheck] YouTube check failed for ${fav.channelId}`, e);
+                        console.warn(`[LiveCheck] YouTube check failed for ${channelId}`, e);
                     }
                 }
             }
