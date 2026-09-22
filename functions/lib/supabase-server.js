@@ -26,9 +26,15 @@ async function sbFetch(env, path, opts = {}) {
             headers,
             body: body !== undefined ? JSON.stringify(body) : undefined,
         });
-        const data = res.ok ? await res.json() : null;
-        const error = res.ok ? null : await res.text();
-        return { ok: res.ok, status: res.status, data, error, headers: res.headers };
+        // Prefer: return=minimal 的成功回應是空 body，無條件 res.json() 會丟 SyntaxError，
+        // 讓「其實已寫入」的 upsert 被回報成失敗（memory error_postgrest_upsert_not_null_and_empty_body；
+        // 當初只修在 next 分支，main 一直沒有）。先讀文字，非空才解析。
+        const text = await res.text();
+        if (!res.ok) {
+            return { ok: false, status: res.status, data: null, error: text, headers: res.headers };
+        }
+        const data = text ? JSON.parse(text) : null;
+        return { ok: true, status: res.status, data, error: null, headers: res.headers };
     } catch (e) {
         return { ok: false, status: 500, data: null, error: String(e) };
     }
