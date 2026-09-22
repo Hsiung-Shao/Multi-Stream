@@ -1,4 +1,52 @@
+// ── Edge 快取 ──────────────────────────────────────────────────────────────
+// 2026-09 CPU 超限事件：本端點單月 1.32M 次（全站 78%），每次抓約 1.6MB 的 YouTube 頁面再解析，
+// 單次 CPU 8–11ms 貼著免費方案 10ms 上限，且原本完全不快取（快取命中率 0.92%）。
+// 解析成本壓不下來（</head> 就在 1.1–1.5MB 處，無法只讀前段），所以用 Cache API 讓同一頻道
+// 在 TTL 內只抓一次：多位使用者／多個分頁收藏同一頻道時，命中幾乎不耗 CPU。
+// 代價：開播偵測最多延遲 CACHE_TTL_SECONDS。Cache API 只在自訂網域生效，*.pages.dev 上是 no-op。
+const CACHE_TTL_SECONDS = 180;
+// YouTube 抓取失敗（多半是被限流）也快取，但縮短：避免「查不到」被當成「沒開播」太久，同時不在限流時猛打
+const FAILED_FETCH_CACHE_TTL_SECONDS = 60;
+const FETCH_FAILED_HEADER = 'X-Live-Og-Fetch-Failed';
+const CHANNEL_ID_RE = /^UC[a-zA-Z0-9_-]{22}$/;
+
 export async function onRequestGet(context) {
+    const url = new URL(context.request.url);
+    const channelId = url.searchParams.get('channelId');
+    // 格式不合的交給原邏輯回 400，不進快取（避免任意字串產生無限多個快取 key）
+    if (!channelId || !CHANNEL_ID_RE.test(channelId)) return detectLiveOg(context);
+
+    const cache = typeof caches !== 'undefined' ? caches.default : null;
+    // 正規化 key：只留 channelId，其他查詢參數（例如加亂數想繞過快取）一律忽略
+    const cacheKey = new Request(`${url.origin}/api/youtube-channel-live-og?channelId=${channelId}`);
+
+    if (cache) {
+        const hit = await cache.match(cacheKey);
+        if (hit) return toClientResponse(hit, 'HIT');
+    }
+
+    const response = await detectLiveOg(context);
+
+    if (cache && response.status === 200) {
+        const ttl = response.headers.get(FETCH_FAILED_HEADER) ? FAILED_FETCH_CACHE_TTL_SECONDS : CACHE_TTL_SECONDS;
+        const stored = new Response(response.clone().body, response);
+        stored.headers.set('Cache-Control', `public, max-age=${ttl}`);
+        context.waitUntil(cache.put(cacheKey, stored));
+    }
+
+    return toClientResponse(response, 'MISS');
+}
+
+// 回給瀏覽器的版本：維持原本的 no-store（快取只在 edge 層），並標示命中狀態方便觀察
+function toClientResponse(response, cacheStatus) {
+    const out = new Response(response.body, response);
+    out.headers.set('Cache-Control', 'no-store');
+    out.headers.set('X-Edge-Cache', cacheStatus);
+    out.headers.delete(FETCH_FAILED_HEADER);
+    return out;
+}
+
+async function detectLiveOg(context) {
     const { request } = context;
     const url = new URL(request.url);
     const channelId = url.searchParams.get('channelId');
@@ -46,7 +94,7 @@ export async function onRequestGet(context) {
                 isLive: false,
                 message: `YouTube Page Fetch Failed: ${htmlResp.status}`,
                 debug: { liveUrl, status: htmlResp.status }
-            }), { status: 200, headers: jsonHeaders() });
+            }), { status: 200, headers: { ...jsonHeaders(), [FETCH_FAILED_HEADER]: '1' } });
         }
 
         const html = await htmlResp.text();
