@@ -9,7 +9,7 @@ import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
-import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout } from '../utils/layoutPresets';
+import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect } from '../utils/layoutPresets';
 import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
@@ -341,7 +341,7 @@ export const useStreamStore = create<StreamStoreState>()(
                             if (template) {
                                 // Generate items from template
                                 const streamIds = newStreams.map(s => s.id);
-                                targetItems = generateLayoutFromTemplate(template.id, streamIds);
+                                targetItems = generateLayoutFromTemplate(template.id, streamIds, getCanvasAspect());
                             } else {
                                 // Fallback: Auto Grid (Video Only default for large numbers)
                                 // If count > 6 or no template found, we use auto grid.
@@ -558,7 +558,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         const streamIds = newStreams.map(s => s.id);
 
                         if (template) {
-                            targetItems = generateLayoutFromTemplate(template.id, streamIds);
+                            targetItems = generateLayoutFromTemplate(template.id, streamIds, getCanvasAspect());
                         } else {
                             // Fallback Auto Grid
                             const specs = calculateAutoGridLayout(streamCount);
@@ -897,7 +897,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 let targetItems: any[] = [];
 
                 if (template) {
-                    targetItems = generateLayoutFromTemplate(template.id, streamIds);
+                    targetItems = generateLayoutFromTemplate(template.id, streamIds, getCanvasAspect());
                 } else {
                     const specs = calculateAutoGridLayout(count);
                     targetItems = specs.map((spec, index) => ({
@@ -959,7 +959,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 // The template generator uses the IDs provided (including nulls)
                 // Note: The generator assumes input array covers indices 0..N-1
                 // We pass the full array, it slices inside.
-                const newItemsSpecs = template.generate(processingIds);
+                const newItemsSpecs = template.generate(processingIds, getCanvasAspect());
 
                 // 3. Convert Specs to CanvasItems
                 const availableItems = [...state.canvasItems];

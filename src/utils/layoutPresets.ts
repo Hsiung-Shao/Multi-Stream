@@ -45,7 +45,8 @@ export const calculateAutoGridLayout = (count: number): { x: number, y: number, 
 };
 
 // Define layout types
-export type LayoutMode = 'video_only' | 'with_chat';
+// shared_chat：N 路串流共用 1 個聊天室（聊天室標頭分頁切換顯示哪一路）
+export type LayoutMode = 'video_only' | 'with_chat' | 'shared_chat';
 
 export interface LayoutTemplate {
     id: string;
@@ -55,8 +56,117 @@ export interface LayoutTemplate {
     type: LayoutMode;
     // Function to generate items for N streams
     // contentId can be number (streamId) or null (empty slot)
-    generate: (streamIds: (number | string | null)[]) => any[];
+    // aspect：畫布寬高比（W/H），16:9 感知的版型用它算格數；其餘版型忽略
+    generate: (streamIds: (number | string | null)[], aspect: number) => any[];
 }
+
+// ==================================================================================
+// 16:9 感知
+// ==================================================================================
+//
+// 畫布是 24 欄 × 24 列、依視窗寬高等分，所以格子不是正方形：一塊 w×h 格的像素比例是
+// (w/h)·aspect。舊版型把格數寫死，串流格在多數螢幕上都不是 16:9，畫面上下（或左右）
+// 出現大片黑邊。這裡改用「16:9 單位格（tile）」描述版型結構，再依實際寬高比換算成整數格。
+
+const DEFAULT_ASPECT = 16 / 9;
+/** 與 SimpleCanvas 的 SIZE_LIMITS.stream 一致：推擠與縮放都不會讓串流小於 6×6 */
+const MIN_STREAM_CELLS = 6;
+/** 共用聊天室的寬度（SIZE_LIMITS.chat.maxW）；聊天室滿高 */
+const SHARED_CHAT_W = 4;
+
+/** 畫布寬高比，與 gridConfig 同源（SimpleCanvas 以 window.innerWidth/innerHeight 切格） */
+export const getCanvasAspect = (): number => {
+    if (typeof window === 'undefined' || !window.innerWidth || !window.innerHeight) return DEFAULT_ASPECT;
+    return window.innerWidth / window.innerHeight;
+};
+
+export interface Tile { x: number; y: number; w: number; h: number }
+export interface FitArea { x0: number; cols: number; rows: number }
+export interface GridRect { x: number; y: number; w: number; h: number }
+
+const FULL_AREA: FitArea = { x0: 0, cols: 24, rows: 24 };
+
+/**
+ * 找出 K×R 個 tile 在 area 內的最大單位尺寸：u 欄 × v 列，v = round(u·aspect·9/16)。
+ * 塞不下任何 16:9 解時退回「欄寬塞滿、列高平分」（比例會偏，但不低於最小尺寸，列可超出 24 讓畫布往下長）。
+ */
+function fitUnit(K: number, R: number, aspect: number, area: FitArea): { u: number; v: number; fits: boolean } {
+    const maxU = Math.floor(area.cols / K);
+    for (let u = maxU; u >= MIN_STREAM_CELLS; u--) {
+        const v = Math.max(MIN_STREAM_CELLS, Math.round((u * aspect * 9) / 16));
+        if (v * R <= area.rows) return { u, v, fits: true };
+    }
+    return { u: Math.max(MIN_STREAM_CELLS, maxU), v: Math.max(MIN_STREAM_CELLS, Math.floor(area.rows / R)), fits: false };
+}
+
+/**
+ * 把以 16:9 tile 描述的版型換算成整數格，並在 area 內水平、垂直置中。
+ * tile 座標可以是小數（例如最後一列置中時的 0.5），換算後四捨五入到整數格。
+ */
+export function fitTiles(tiles: Tile[], aspect: number = DEFAULT_ASPECT, area: FitArea = FULL_AREA): GridRect[] {
+    if (tiles.length === 0) return [];
+    const K = Math.max(...tiles.map(t => t.x + t.w));
+    const R = Math.max(...tiles.map(t => t.y + t.h));
+    const { u, v } = fitUnit(K, R, aspect, area);
+    const offX = area.x0 + Math.max(0, Math.floor((area.cols - K * u) / 2));
+    const offY = Math.max(0, Math.floor((area.rows - R * v) / 2));
+    return tiles.map(t => ({
+        x: offX + Math.round(t.x * u),
+        y: offY + Math.round(t.y * v),
+        w: Math.round(t.w * u),
+        h: Math.round(t.h * v),
+    }));
+}
+
+/** k 欄均分的格線 tile；最後一列不滿時整列水平置中 */
+function gridTiles(count: number, k: number): Tile[] {
+    const tiles: Tile[] = [];
+    const lastRowCount = count % k || k;
+    const lastRow = Math.ceil(count / k) - 1;
+    for (let i = 0; i < count; i++) {
+        const r = Math.floor(i / k);
+        const shift = r === lastRow ? (k - lastRowCount) / 2 : 0;
+        tiles.push({ x: (i % k) + shift, y: r, w: 1, h: 1 });
+    }
+    return tiles;
+}
+
+/**
+ * N 路串流 + 1 個共用聊天室。
+ * 串流區（24 − 聊天室寬）裡列舉 k 欄的格線，取畫面總面積最大者；串流區與聊天室整塊水平置中、聊天室滿高。
+ * 16:9 螢幕上 4 路＝田字、3 路＝田字缺一（最後一格置中）、2 路＝上下疊（比左右並排的畫面大）。
+ */
+export function generateSharedChatLayout(
+    streamIds: (number | string | null)[],
+    aspect: number = DEFAULT_ASPECT,
+    chatContentId: number | string | null = streamIds[0] ?? null,
+): any[] {
+    const n = Math.max(1, streamIds.length);
+    const area: FitArea = { x0: 0, cols: 24 - SHARED_CHAT_W, rows: 24 };
+    const maxK = Math.min(n, Math.floor(area.cols / MIN_STREAM_CELLS));
+
+    let best = { k: 1, u: 0, v: 0, score: -1 };
+    for (let k = 1; k <= maxK; k++) {
+        const { u, v, fits } = fitUnit(k, Math.ceil(n / k), aspect, area);
+        // 真的塞得下 16:9 的解永遠優先於退而求其次的解；同級比畫面總面積，平手取欄數多（較不往下長）
+        const score = (fits ? 1e6 : 0) + u * v;
+        if (score > best.score || (score === best.score && k > best.k)) best = { k, u, v, score };
+    }
+
+    const tiles = gridTiles(n, best.k);
+    const rects = fitTiles(tiles, aspect, area);
+    // fitTiles 在串流區內置中；改成「串流區 + 聊天室」整塊置中，聊天室緊貼串流右側
+    const blockW = best.k * best.u;
+    const shiftX = Math.floor((24 - (blockW + SHARED_CHAT_W)) / 2) - Math.floor((area.cols - blockW) / 2);
+    const items: any[] = rects.map((r, i) => ({ type: 'stream', ...r, x: r.x + shiftX, contentId: streamIds[i] ?? null }));
+    items.push({ type: 'chat', x: Math.floor((24 - (blockW + SHARED_CHAT_W)) / 2) + blockW, y: 0, w: SHARED_CHAT_W, h: 24, contentId: chatContentId });
+    return items;
+}
+
+/** 以 tile 結構定義的純串流版型 */
+const tileTemplate = (tiles: Tile[]) =>
+    (streamIds: (number | string | null)[], aspect: number) =>
+        fitTiles(tiles, aspect).map((r, i) => ({ type: 'stream', ...r, contentId: streamIds[i] ?? null }));
 
 /**
  * Generates a standard layout for N streams.
@@ -69,7 +179,7 @@ export const getStandardLayout = (count: number, mode: LayoutMode = 'video_only'
     if (standardTemplate) {
         // Generate placeholder IDs if not provided
         const ids = Array(count).fill(null);
-        return standardTemplate.generate(ids);
+        return standardTemplate.generate(ids, DEFAULT_ASPECT);
     }
 
     // Fallback: Auto Grid
@@ -86,7 +196,11 @@ export const getStandardLayout = (count: number, mode: LayoutMode = 'video_only'
 /**
  * Generates a Layout Spec (CanvasItems) based on a template ID and provided stream IDs.
  */
-export const generateLayoutFromTemplate = (templateId: string, streamIds: (number | string)[]): any[] => {
+export const generateLayoutFromTemplate = (
+    templateId: string,
+    streamIds: (number | string)[],
+    aspect: number = DEFAULT_ASPECT,
+): any[] => {
     const template = layoutTemplates.find(t => t.id === templateId);
     if (!template) return [];
 
@@ -96,7 +210,7 @@ export const generateLayoutFromTemplate = (templateId: string, streamIds: (numbe
         paddedIds.push(null);
     }
 
-    return template.generate(paddedIds);
+    return template.generate(paddedIds, aspect);
 }
 
 export const layoutTemplates: LayoutTemplate[] = [
@@ -113,16 +227,16 @@ export const layoutTemplates: LayoutTemplate[] = [
             { type: 'stream', x: 0, y: 0, w: 24, h: 24, contentId: streamIds[0] ?? null }
         ]
     },
+    // 2～6 路：結構（主次、欄列）與圖示不變，尺寸依畫布寬高比換算成最接近 16:9 的整數格並置中
     {
         id: 'template-2-landscape',
         nameKey: 'layout.t_2_v',
         icon: 'Columns2',
         count: 2,
         type: 'video_only',
-        generate: (streamIds) => [
-            { type: 'stream', x: 0, y: 0, w: 12, h: 24, contentId: streamIds[0] ?? null },
-            { type: 'stream', x: 12, y: 0, w: 12, h: 24, contentId: streamIds[1] ?? null }
-        ]
+        generate: tileTemplate([
+            { x: 0, y: 0, w: 1, h: 1 }, { x: 1, y: 0, w: 1, h: 1 },
+        ])
     },
     {
         id: 'template-3-landscape', // Renamed from focus to landscape for consistency as default "3-person"
@@ -130,11 +244,11 @@ export const layoutTemplates: LayoutTemplate[] = [
         icon: 'PanelLeft',
         count: 3,
         type: 'video_only',
-        generate: (streamIds) => [
-            { type: 'stream', x: 0, y: 0, w: 16, h: 24, contentId: streamIds[0] ?? null }, // Main
-            { type: 'stream', x: 16, y: 0, w: 8, h: 12, contentId: streamIds[1] ?? null }, // Top Right
-            { type: 'stream', x: 16, y: 12, w: 8, h: 12, contentId: streamIds[2] ?? null } // Bottom Right
-        ]
+        generate: tileTemplate([
+            { x: 0, y: 0, w: 2, h: 2 }, // Main
+            { x: 2, y: 0, w: 1, h: 1 }, // Top Right
+            { x: 2, y: 1, w: 1, h: 1 }, // Bottom Right
+        ])
     },
     {
         id: 'template-4-landscape',
@@ -142,12 +256,7 @@ export const layoutTemplates: LayoutTemplate[] = [
         icon: 'LayoutGrid',
         count: 4,
         type: 'video_only',
-        generate: (streamIds) => [
-            { type: 'stream', x: 0, y: 0, w: 12, h: 12, contentId: streamIds[0] ?? null },
-            { type: 'stream', x: 12, y: 0, w: 12, h: 12, contentId: streamIds[1] ?? null },
-            { type: 'stream', x: 0, y: 12, w: 12, h: 12, contentId: streamIds[2] ?? null },
-            { type: 'stream', x: 12, y: 12, w: 12, h: 12, contentId: streamIds[3] ?? null }
-        ]
+        generate: tileTemplate(gridTiles(4, 2))
     },
     {
         id: 'template-5-landscape',
@@ -155,16 +264,14 @@ export const layoutTemplates: LayoutTemplate[] = [
         icon: 'Columns3',
         count: 5,
         type: 'video_only',
-        generate: (streamIds) => [
+        generate: tileTemplate([
             // Left Col
-            { type: 'stream', x: 0, y: 0, w: 6, h: 12, contentId: streamIds[0] ?? null },
-            { type: 'stream', x: 0, y: 12, w: 6, h: 12, contentId: streamIds[1] ?? null },
+            { x: 0, y: 0, w: 1, h: 1 }, { x: 0, y: 1, w: 1, h: 1 },
             // Center Main
-            { type: 'stream', x: 6, y: 0, w: 12, h: 24, contentId: streamIds[2] ?? null },
+            { x: 1, y: 0, w: 2, h: 2 },
             // Right Col
-            { type: 'stream', x: 18, y: 0, w: 6, h: 12, contentId: streamIds[3] ?? null },
-            { type: 'stream', x: 18, y: 12, w: 6, h: 12, contentId: streamIds[4] ?? null },
-        ]
+            { x: 3, y: 0, w: 1, h: 1 }, { x: 3, y: 1, w: 1, h: 1 },
+        ])
     },
     {
         id: 'template-6-landscape',
@@ -172,16 +279,7 @@ export const layoutTemplates: LayoutTemplate[] = [
         icon: 'Grid3x3',
         count: 6,
         type: 'video_only',
-        generate: (streamIds) => {
-            const items: any[] = [];
-            const w = 8, h = 12; // 24/3 = 8
-            for (let i = 0; i < 6; i++) {
-                const c = i % 3;
-                const r = Math.floor(i / 3);
-                items.push({ type: 'stream', x: c * w, y: r * h, w, h, contentId: streamIds[i] ?? null });
-            }
-            return items;
-        }
+        generate: tileTemplate(gridTiles(6, 3))
     },
 
     // ==================================================================================
@@ -292,6 +390,18 @@ export const layoutTemplates: LayoutTemplate[] = [
             return items;
         }
     },
+
+    // ==================================================================================
+    // 2b. SHARED CHAT MODE（N 串 + 1 個共用聊天室）
+    // ==================================================================================
+    ...[2, 3, 4].map((n): LayoutTemplate => ({
+        id: `template-${n}-sharedchat`,
+        nameKey: `layout.t_${n}_sc`,
+        icon: 'PanelRight',
+        count: n,
+        type: 'shared_chat',
+        generate: (streamIds, aspect) => generateSharedChatLayout(streamIds.slice(0, n), aspect),
+    })),
 
     // ==================================================================================
     // 3. SPECIAL / CREATIVE (Video Only Presets exposed as Custom or Special)
