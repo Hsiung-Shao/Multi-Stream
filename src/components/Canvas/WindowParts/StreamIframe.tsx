@@ -31,6 +31,10 @@ export function StreamIframe({
     const unregisterPlayer = usePlayerStore(s => s.unregisterPlayer);
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<any>(null); // Hold direct reference to player instance
+    // READY / onReady 是非同步回呼，閉包裡的 volume/isMuted 是建立當下的舊值；
+    // 使用者在播放器就緒前就按了取消靜音，READY 會拿舊值把它蓋回靜音。一律讀最新值。
+    const latestAudioRef = useRef({ volume, isMuted });
+    latestAudioRef.current = { volume, isMuted };
 
     // Track initialization state to prevent double creation
     const isInitializingRef = useRef(false);
@@ -43,22 +47,19 @@ export function StreamIframe({
             currentStreamIdRef.current = streamData.id;
         }
 
+        // 播放器建立是 async（要先載入 Twitch/YouTube API），cleanup 卻是同步的：
+        // 若 await 期間元件已卸載，沒有這個旗標就會把孤兒 player 註冊進 registry，
+        // 還會覆蓋同一串流新實例的註冊 → 音量/靜音按鈕操作到已失聯的 player（2026-09）。
+        let cancelled = false;
+        const isCancelled = () => cancelled;
+
         const loadPlayer = async () => {
             if (!containerRef.current) return;
             if (isInitializingRef.current) return;
 
-            // Check if player already exists in global store/cache
-            const existingEntry = usePlayerStore.getState().getPlayer(streamData.id);
-            if (existingEntry && existingEntry.player) {
-                playerRef.current = existingEntry.player;
-                // We might need to re-attach the existing player to the DOM if we were unmounted?
-                // But usually the player object is tied to the iframe. If the iframe is gone, the player is dead.
-                // The store might hold a stale reference if we didn't cleanup properly. 
-                // For now, we assume we create a NEW player since we are mounting.
-                // If we want to support "moving" iframes without reload, that requires Reparenting, which is complex.
-                // We will stick to destruction/recreation for stability.
-            }
-
+            // 一律建立新的 player，不沿用 registry 裡同一串流的舊實例：player 綁定它自己的 iframe，
+            // iframe 不在了 player 就是死的。也不可把別人的 player 放進 playerRef——cleanup 以
+            // playerRef 判斷 registry 註冊是不是自己的，指錯人會刪掉並停掉別的實例（2026-09 code review）。
             isInitializingRef.current = true;
 
             try {
@@ -75,10 +76,10 @@ export function StreamIframe({
 
                 if (streamData.platform === 'twitch') {
                     // Twitch embeds INSIDE the target
-                    await createTwitchPlayer(playerTarget);
+                    await createTwitchPlayer(playerTarget, isCancelled);
                 } else if (streamData.platform === 'youtube') {
                     // YouTube REPLACES the target
-                    await createYouTubePlayer(playerTarget);
+                    await createYouTubePlayer(playerTarget, isCancelled);
                 }
             } catch (err) {
                 console.error('[StreamIframe] Error creating player:', err);
@@ -91,8 +92,13 @@ export function StreamIframe({
         loadPlayer();
 
         return () => {
-            // Cleanup state
-            unregisterPlayer(streamData.id);
+            cancelled = true;
+
+            // 只註銷「自己」的註冊：registry 以 stream id 為 key，同一串流可能已有新實例註冊
+            const entry = usePlayerStore.getState().getPlayer(streamData.id);
+            if (!entry || entry.player === playerRef.current) {
+                unregisterPlayer(streamData.id);
+            }
 
             // Cleanup Player Instance
             if (playerRef.current) {
@@ -201,10 +207,11 @@ export function StreamIframe({
         }
     };
 
-    const createTwitchPlayer = async (target: HTMLElement) => {
+    const createTwitchPlayer = async (target: HTMLElement, isCancelled: () => boolean) => {
         if (!window.Twitch || !window.Twitch.Player) {
             await apiLoader.loadTwitchPlayerApi();
         }
+        if (isCancelled()) return;
 
         const options = {
             width: '100%',
@@ -222,15 +229,18 @@ export function StreamIframe({
         registerPlayer(streamData.id, { type: 'twitch', player });
 
         player.addEventListener(window.Twitch.Player.READY, () => {
-            applyVolume(player, volume, isMuted, 'twitch');
+            if (isCancelled()) return;
+            const { volume: v, isMuted: m } = latestAudioRef.current;
+            applyVolume(player, v, m, 'twitch');
             onReady?.();
         });
     };
 
-    const createYouTubePlayer = async (target: HTMLElement) => {
+    const createYouTubePlayer = async (target: HTMLElement, isCancelled: () => boolean) => {
         if (!window.YT || !window.YT.Player) {
             await apiLoader.loadYouTubePlayerApi();
         }
+        if (isCancelled()) return;
 
         // 立即存入 ref：若在 onReady 之前就卸載，safeDestroy 仍拿得到實例可清理，
         // 否則播放器會留在 DOM 外持續播放（洩漏）。onReady 會再以 event.target 覆寫。
@@ -249,9 +259,15 @@ export function StreamIframe({
             },
             events: {
                 onReady: (event: any) => {
+                    if (isCancelled()) {
+                        // 已卸載：不註冊，並確保不會在畫面外繼續播放
+                        try { event.target.destroy(); } catch { /* 已被 cleanup 銷毀 */ }
+                        return;
+                    }
                     playerRef.current = event.target;
                     handleYouTubeLiveSeek(event.target);
-                    applyVolume(event.target, volume, isMuted, 'youtube');
+                    const { volume: v, isMuted: m } = latestAudioRef.current;
+                    applyVolume(event.target, v, m, 'youtube');
                     registerPlayer(streamData.id, { type: 'youtube', player: event.target });
                     onReady?.();
                 },
