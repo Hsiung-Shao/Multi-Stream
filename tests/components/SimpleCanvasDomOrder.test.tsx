@@ -2,10 +2,10 @@
 // 瀏覽器搬動含 iframe 的節點會讓 iframe 重載，Twitch 播放器回到網址上的 muted=true，
 // 且 StreamIframe 的 player 物件從此失聯，UI 按鈕救不回來。jsdom 不會重載 iframe，
 // 所以這裡直接量「React 有沒有 insertBefore 既有節點」——那正是觸發重載的 DOM 動作。
-import { describe, it, expect } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, act, fireEvent } from '@testing-library/react';
 import { SimpleCanvas, stableRenderOrder } from '../../src/components/Canvas/SimpleCanvas';
-import type { CanvasWindow } from '../../src/components/Canvas/DraggableWindow';
+import type { CanvasWindow, WindowRenderProps } from '../../src/components/Canvas/DraggableWindow';
 
 const win = (id: string, gridX: number, gridY: number): CanvasWindow => ({
     id, gridX, gridY, gridW: 8, gridH: 8, type: 'stream', contentId: 1,
@@ -74,5 +74,34 @@ describe('SimpleCanvas 視窗 DOM 順序', () => {
         watcher.stop();
         expect(watcher.moved).toEqual([]);
         expect(container.querySelectorAll('[data-win]')).toHaveLength(3);
+    });
+
+    // 拖曳換位的落點提示（2026-09 版面重設計）：拖曳開始時其他視窗會 append 一層提示，
+    // 必須是「新增節點」而不是把含 iframe 的內容節點搬來搬去。
+    it('拖曳時其他視窗出現「可放在這裡交換」，放開後消失；全程不搬動既有節點', () => {
+        // jsdom 沒有 pointer capture
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        const withHandle = (w: CanvasWindow, rp: WindowRenderProps) => (
+            <div data-win={w.id}><span data-handle={w.id} {...rp.dragHandlers}>drag</span></div>
+        );
+        const windows = [win('a', 0, 0), win('b', 8, 0), win('c', 16, 0)];
+        const { container } = render(
+            <SimpleCanvas windows={windows} onWindowUpdate={noop} onWindowRemove={noop} renderContent={withHandle} />,
+        );
+        const existing = new Set<Node>();
+        container.querySelectorAll('*').forEach(n => existing.add(n));
+        const watcher = watchMoves(container, existing);
+
+        const handle = container.querySelector('[data-handle="a"]')!;
+        act(() => { fireEvent.pointerDown(handle, { clientX: 10, clientY: 10, pointerId: 1 }); });
+        const hints = [...container.querySelectorAll('[data-swap-hint]')].map(h => h.closest('[data-canvas-window-id]')!.getAttribute('data-canvas-window-id'));
+        expect(hints.sort()).toEqual(['b', 'c']);
+
+        act(() => { fireEvent.pointerUp(handle, { clientX: 10, clientY: 10, pointerId: 1 }); });
+        expect(container.querySelectorAll('[data-swap-hint]')).toHaveLength(0);
+
+        watcher.stop();
+        expect(watcher.moved).toEqual([]);
     });
 });

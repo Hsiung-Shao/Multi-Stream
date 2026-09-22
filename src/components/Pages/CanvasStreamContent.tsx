@@ -45,6 +45,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
 
     // 以下 selector 都回傳原始值：只有結果改變時才重繪，拖曳、音量變動都不會牽動
     const isTheater = useUIStore(s => windowId !== undefined && s.theaterWindowId === windowId);
+    const hintsLearned = useUIStore(s => s.canvasHintsLearned);
     const isMain = useStreamStore(s => windowId !== undefined && selectMainStreamItemId(s.canvasItems) === windowId);
     const sharedChat = useStreamStore(s => isSharedChatLayout(s.canvasItems));
     const shownInSharedChat = useStreamStore(s =>
@@ -248,6 +249,17 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     />
                 )}
             </div>
+
+            {/* hover 操作說明：放在工具列正下方（底部是播放器控制列）。拖曳／縮放過幾次後收起。
+                排在內容之後 append，出現或消失都不會搬動播放器節點 */}
+            {!isChatWindow && !hintsLearned && !isTheater && (
+                <div
+                    data-hover-hint
+                    className="absolute top-11 left-1/2 -translate-x-1/2 z-[59] max-w-[92%] truncate rounded-full border border-white/10 bg-black/75 px-2.5 py-0.5 text-[10px] text-white/80 pointer-events-none select-none opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                    {t('canvas.hover_hint')}
+                </div>
+            )}
         </div>
     );
 });

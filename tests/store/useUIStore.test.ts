@@ -42,4 +42,13 @@ describe('useUIStore', () => {
         useUIStore.getState().setCloseWindowMode('remove');
         expect(useUIStore.getState().closeWindowMode).toBe('remove');
     });
+
+    it('畫布操作累計 5 次後才收起 hover 說明，並寫入 userSettings', () => {
+        useUIStore.setState({ canvasHintsLearned: false });
+        for (let i = 0; i < 4; i++) useUIStore.getState().recordCanvasManipulation();
+        expect(useUIStore.getState().canvasHintsLearned).toBe(false);
+        useUIStore.getState().recordCanvasManipulation();
+        expect(useUIStore.getState().canvasHintsLearned).toBe(true);
+        expect(JSON.parse(localStorage.getItem('userSettings') || '{}').canvasHintsLearned).toBe(true);
+    });
 });

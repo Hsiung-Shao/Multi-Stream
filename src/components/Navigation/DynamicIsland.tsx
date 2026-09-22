@@ -1,6 +1,6 @@
 import { useEffect, useState, forwardRef } from 'react';
 import type { ComponentType } from 'react';
-import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize, Minimize, AlertTriangle, Share2 } from 'lucide-react';
+import { Home, Plus, Layout, Settings, Star, Tv, Trash2, FolderHeart, Maximize, Minimize, AlertTriangle, Share2, CircleHelp } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { MediaControlPanel } from './MediaControlPanel';
@@ -113,6 +113,8 @@ export const DynamicIsland = () => {
     const { t } = useTranslation(['common', 'favorites']);
     const setPage = useUIStore(s => s.setPage);
     const openModal = useUIStore(s => s.openModal);
+    // 快捷鍵說明（Radix Dialog，portal）開著時也算「使用中」，照島上 portal UI 的慣例納入釘住
+    const hotkeyHelpOpen = useUIStore(s => s.isHotkeyHelpOpen);
     const clearCanvasItems = useStreamStore(s => s.clearCanvasItems);
     const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
     const addCanvasItem = useStreamStore(s => s.addCanvasItem);
@@ -133,7 +135,7 @@ export const DynamicIsland = () => {
     const { isCollapsed, setPinned, handlers } = useDynamicIsland();
 
     // 彙整「使用中」訊號 → 釘住/解除釘住(單一真實來源)
-    const pinned = mediaControlExpanded || layoutPickerExpanded || addMenuOpen || favMenuOpen || clearDialogOpen || searchActive || saveDialogOpen;
+    const pinned = mediaControlExpanded || layoutPickerExpanded || addMenuOpen || favMenuOpen || clearDialogOpen || searchActive || saveDialogOpen || hotkeyHelpOpen;
     useEffect(() => {
         setPinned(pinned);
     }, [pinned, setPinned]);
@@ -290,6 +292,14 @@ export const DynamicIsland = () => {
                         <IslandDivider />
 
                         {/* Group 3: Navigation */}
+
+                        {/* 操作說明：常駐入口，打開快捷鍵表（內有「重看導覽」） */}
+                        <IslandBtn
+                            fn="help"
+                            icon={CircleHelp}
+                            title={t('canvas.help_button')}
+                            onClick={() => useUIStore.getState().setHotkeyHelpOpen(true)}
+                        />
 
                         {/* Home */}
                         <IslandBtn

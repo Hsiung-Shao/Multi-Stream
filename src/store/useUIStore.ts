@@ -70,6 +70,18 @@ interface UIState {
     setTheaterWindowId: (id: string | null) => void;
     isHotkeyHelpOpen: boolean;
     toggleHotkeyHelp: () => void;
+
+    // 畫布可發現性
+    /** 使用者已實際拖曳／縮放過數次：hover 時不再浮出操作說明文字（外框與換位提示保留）。持久化 */
+    canvasHintsLearned: boolean;
+    /** 拖曳或縮放落地一次（SimpleCanvas 呼叫）；累計到門檻就設 canvasHintsLearned */
+    recordCanvasManipulation: () => void;
+    /** 畫布首次導覽是否開啟 */
+    isCanvasTourOpen: boolean;
+    setCanvasTourOpen: (open: boolean) => void;
+    /** 目前頁面有掛導覽（在畫布頁）：快捷鍵說明裡的「重看導覽」只在這時顯示 */
+    canvasTourAvailable: boolean;
+    setCanvasTourAvailable: (available: boolean) => void;
     setHotkeyHelpOpen: (open: boolean) => void;
 }
 
@@ -83,7 +95,11 @@ function persistUserSetting(key: string, value: unknown) {
     } catch (e) { }
 }
 
-export const useUIStore = create<UIState>((set) => ({
+// 拖曳／縮放落地幾次之後，視為已學會畫布操作（hover 說明文字收起）。計數只存在本次工作階段，達標才持久化
+const HINT_LEARNED_AFTER = 5;
+let canvasManipulations = 0;
+
+export const useUIStore = create<UIState>((set, get) => ({
     theme: 'dark',
     // 初值直接由 URL 推導：避免首次 mount 時 page='home' 與 URL 不符而 pushState('/')，
     // 把 deep-link 的 query 砍掉、多塞一筆 history（routes.ts 對本檔只有 type import，無執行期循環）
@@ -200,6 +216,20 @@ export const useUIStore = create<UIState>((set) => ({
     isHotkeyHelpOpen: false,
     toggleHotkeyHelp: () => set((state) => ({ isHotkeyHelpOpen: !state.isHotkeyHelpOpen })),
     setHotkeyHelpOpen: (open) => set({ isHotkeyHelpOpen: open }),
+
+    canvasHintsLearned: false,
+    recordCanvasManipulation: () => {
+        if (get().canvasHintsLearned) return;
+        canvasManipulations++;
+        if (canvasManipulations >= HINT_LEARNED_AFTER) {
+            set({ canvasHintsLearned: true });
+            persistUserSetting('canvasHintsLearned', true);
+        }
+    },
+    isCanvasTourOpen: false,
+    setCanvasTourOpen: (open) => set({ isCanvasTourOpen: open }),
+    canvasTourAvailable: false,
+    setCanvasTourAvailable: (available) => set({ canvasTourAvailable: available }),
 }));
 
 // Initialize state from localStorage
@@ -236,6 +266,9 @@ try {
         }
         if (settings.islandEdgeY !== undefined) {
             useUIStore.setState({ islandEdgeY: settings.islandEdgeY });
+        }
+        if (settings.canvasHintsLearned === true) {
+            useUIStore.setState({ canvasHintsLearned: true });
         }
     }
 } catch (e) { }

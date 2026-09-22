@@ -83,6 +83,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
 
     // Swap mode state (Drag based)
     const [dragSwapTargetId, setDragSwapTargetId] = useState<string | null>(null);
+    // 正在拖曳的視窗：其他視窗據此顯示「可放在這裡交換」（只在拖曳開始／結束各變一次）
+    const [draggingWindowId, setDraggingWindowId] = useState<string | null>(null);
 
     // resize 過程中鄰居的讓位預覽（只畫輪廓，放開才落地）
     const [resizeGhosts, setResizeGhosts] = useState<Record<string, PixelPosition> | null>(null);
@@ -241,6 +243,7 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                 onWindowUpdateRef.current(updated);
                 // Clear any drag state
                 setDragSwapTargetId(null);
+                useUIStore.getState().recordCanvasManipulation();
                 return;
             }
         }
@@ -251,6 +254,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         );
         onWindowUpdateRef.current(updated);
         setDragSwapTargetId(null);
+        // 點工具列按鈕也會走一次拖曳起落（位置不變），那不算使用者學會了拖曳
+        if (source.gridX !== gridX || source.gridY !== gridY) useUIStore.getState().recordCanvasManipulation();
     }, []);
 
     // resize 拖曳中：算出鄰居讓位後的位置，但只拿來畫 ghost
@@ -285,10 +290,15 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         const solved = solveResize(id, gridX, gridY, gridW, gridH);
         if (!solved) return;
         onWindowUpdateRef.current(solved.windows);
+        useUIStore.getState().recordCanvasManipulation();
     }, [solveResize]);
 
     const handleHoverChange = useCallback((hoveredId: string | null, canvasItemId: string | null) => {
         useUIStore.getState().setHoveredWindowId(hoveredId, canvasItemId);
+    }, []);
+
+    const handleDragStateChange = useCallback((id: string, dragging: boolean) => {
+        setDraggingWindowId(prev => (dragging ? id : prev === id ? null : prev));
     }, []);
 
     return (
@@ -325,6 +335,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         isSwapTarget={dragSwapTargetId === w.id}
                         isTheaterMode={theaterWindowId === w.id}
                         onHoverChange={handleHoverChange}
+                        onDragStateChange={handleDragStateChange}
+                        isSwapCandidate={draggingWindowId !== null && draggingWindowId !== w.id}
                     />
                 ))}
             </div>

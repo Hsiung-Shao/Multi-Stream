@@ -18,6 +18,7 @@ export const FN = {
     clear: { c: '#f87171', glow: 'rgba(248,113,113,0.45)' },
     home: { c: '#cbd5e1', glow: 'rgba(203,213,225,0.35)' },
     settings: { c: '#cbd5e1', glow: 'rgba(203,213,225,0.35)' },
+    help: { c: '#a5b4fc', glow: 'rgba(165,180,252,0.4)' },
 } as const;
 
 export type FnKey = keyof typeof FN;

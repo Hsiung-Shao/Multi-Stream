@@ -8,6 +8,7 @@ import { DynamicIsland } from '../Navigation/DynamicIsland';
 import { DynamicIslandEdgeDock } from '../Navigation/DynamicIslandEdgeDock';
 import { SimpleCanvas, CanvasWindow, WindowRenderProps } from '../Canvas';
 import { limitsOf } from '../Canvas/SimpleCanvas';
+import { CanvasTour } from '../Canvas/CanvasTour';
 import { resolveChainFill } from '../Canvas/pushResize';
 import { GRID_COLS } from '../Canvas/gridConfig';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -146,6 +147,9 @@ export const NewCanvasPage = () => {
             <div className="pointer-events-none absolute inset-0 z-50">
                 {islandStyle === 'edgeDock' ? <DynamicIslandEdgeDock /> : <DynamicIsland />}
             </div>
+
+            {/* 首次導覽（portal 到 body）。只有桌機畫布會渲染本頁，手機走 MobileApp 不需要 */}
+            <CanvasTour />
         </div>
     );
 };

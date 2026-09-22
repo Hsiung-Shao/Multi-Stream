@@ -257,3 +257,10 @@ div[data-rbd-draggable-id] {
     animation: none !important;
   }
 }
+
+/* 畫布首次導覽：CanvasTour 在目標視窗根節點掛 data-tour-active，強制顯示平常 hover 才出現的工具列與縮放角。
+   用屬性選擇器而不是讓每個視窗訂閱 store，導覽開關時畫布不必重繪。 */
+[data-tour-active] [data-window-toolbar],
+[data-tour-active] [data-corner] {
+  opacity: 1 !important;
+}

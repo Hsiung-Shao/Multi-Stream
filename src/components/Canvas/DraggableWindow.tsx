@@ -22,6 +22,7 @@ import { useDrag } from './useDrag';
 import { useResize } from './useResize';
 import { GridConfig, PixelPosition } from './gridConfig';
 import { cn } from '../ui/utils';
+import { SwapHint } from './SwapHint';
 
 export interface CanvasWindow {
     id: string;
@@ -78,6 +79,10 @@ interface DraggableWindowProps {
     isTheaterMode?: boolean;
     /** 滑鼠進出視窗；離開時兩個參數都傳 null。上層必須給穩定身分的函式 */
     onHoverChange?: (hoveredId: string | null, canvasItemId: string | null) => void;
+    /** 拖曳開始／結束時回報（只在邊界觸發，不是每幀）。上層必須給穩定身分的函式 */
+    onDragStateChange?: (id: string, dragging: boolean) => void;
+    /** 有其他視窗正在拖曳、而本視窗是可交換的落點：顯示「可放在這裡交換」 */
+    isSwapCandidate?: boolean;
 }
 
 export const DraggableWindow = memo(function DraggableWindow({
@@ -93,7 +98,9 @@ export const DraggableWindow = memo(function DraggableWindow({
     ghostRect,
     isSwapTarget,
     isTheaterMode,
-    onHoverChange
+    onHoverChange,
+    onDragStateChange,
+    isSwapCandidate,
 }: DraggableWindowProps) {
     const { cellWidth, cellHeight } = gridConfig;
 
@@ -172,6 +179,11 @@ export const DraggableWindow = memo(function DraggableWindow({
             onSwapHover(window.id, collisionId);
         }
     }, [collisionId, isDragging, window.id, onSwapHover]);
+
+    // 拖曳開始／結束通知上層，讓其他視窗標示「可放在這裡交換」（拖曳換位原本沒有任何提示）
+    useEffect(() => {
+        onDragStateChange?.(window.id, isDragging);
+    }, [isDragging, window.id, onDragStateChange]);
 
     // Resize hook - 四角把手；幾何同樣直接寫 DOM
     const { isResizing, cornerHandlers } = useResize({
@@ -254,9 +266,11 @@ export const DraggableWindow = memo(function DraggableWindow({
             {/* Actual Window - NO INTERNAL HEADER */}
             <div
                 ref={nodeRef}
+                data-canvas-window-id={window.id}
                 className={cn(
                     "absolute rounded-lg overflow-hidden border border-white/10 bg-slate-900/95",
-                    "shadow-lg group",
+                    // hover 外框微亮：提示這是可以拖、可以縮放的視窗
+                    "shadow-lg group hover:border-purple-400/40",
                     isDragging && "shadow-2xl border-purple-500/50 z-50 opacity-90",
                     isResizing && "border-blue-500/50 z-50",
                     isSwapTarget && "ring-2 ring-green-500 ring-offset-2 ring-offset-slate-950",
@@ -289,11 +303,15 @@ export const DraggableWindow = memo(function DraggableWindow({
                     {renderedChildren}
                 </div>
 
+                {/* 拖曳換位的落點提示。放在內容之後 append，不會搬動含 iframe 的內容節點 */}
+                {(isSwapCandidate || isSwapTarget) && !isDragging && <SwapHint active={!!isSwapTarget} />}
+
                 {/* Four Corner Resize Handles */}
                 {/* NW - Top Left */}
                 <div
                     className={cn(cornerHandleClass, "top-0 left-0 cursor-nw-resize")}
                     {...cornerHandlers.nw}
+                    data-corner="nw"
                 >
                     <div className="absolute top-0.5 left-0.5 w-2 h-2 border-l-2 border-t-2 border-white/40" />
                 </div>
@@ -302,6 +320,7 @@ export const DraggableWindow = memo(function DraggableWindow({
                 <div
                     className={cn(cornerHandleClass, "top-0 right-0 cursor-ne-resize")}
                     {...cornerHandlers.ne}
+                    data-corner="ne"
                 >
                     <div className="absolute top-0.5 right-0.5 w-2 h-2 border-r-2 border-t-2 border-white/40" />
                 </div>
@@ -310,6 +329,7 @@ export const DraggableWindow = memo(function DraggableWindow({
                 <div
                     className={cn(cornerHandleClass, "bottom-0 left-0 cursor-sw-resize")}
                     {...cornerHandlers.sw}
+                    data-corner="sw"
                 >
                     <div className="absolute bottom-0.5 left-0.5 w-2 h-2 border-l-2 border-b-2 border-white/40" />
                 </div>
@@ -318,6 +338,8 @@ export const DraggableWindow = memo(function DraggableWindow({
                 <div
                     className={cn(cornerHandleClass, "bottom-0 right-0 cursor-se-resize")}
                     {...cornerHandlers.se}
+                    data-corner="se"
+                    data-tour="resize-corner"
                 >
                     <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-r-2 border-b-2 border-white/40" />
                 </div>

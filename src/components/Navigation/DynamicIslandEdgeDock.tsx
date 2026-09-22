@@ -3,7 +3,7 @@ import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     Search, Plus, Layout, Tv, Tv2, Star, FolderHeart, Maximize, Minimize, Trash2, Home, Settings,
-    LayoutGrid, MessageSquare, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, Share2,
+    LayoutGrid, MessageSquare, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, Share2, CircleHelp,
 } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -310,6 +310,13 @@ export const DynamicIslandEdgeDock = () => {
 
                                 <div className="my-1 border-t border-white/[0.08]" />
 
+                                {/* 操作說明：打開快捷鍵表（內有「重看導覽」） */}
+                                <FunctionRow
+                                    icon={CircleHelp}
+                                    color={FN.help.c}
+                                    label={t('canvas.help_button')}
+                                    onClick={() => { setOpen(false); useUIStore.getState().setHotkeyHelpOpen(true); }}
+                                />
                                 <FunctionRow
                                     icon={Home}
                                     color={FN.home.c}

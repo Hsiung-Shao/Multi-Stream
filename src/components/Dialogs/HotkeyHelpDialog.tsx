@@ -7,17 +7,23 @@ import {
 } from "../ui/dialog";
 import { useUIStore } from "../../store/useUIStore";
 import { useTranslation } from "react-i18next";
-import { Keyboard, Search, Grid, Save, VolumeX, Monitor, RefreshCw, Trash2, Maximize, AppWindow } from "lucide-react";
+import { Keyboard, Search, Grid, Save, VolumeX, Monitor, RefreshCw, Trash2, Maximize, AppWindow, Compass } from "lucide-react";
 
 export const HotkeyHelpDialog = () => {
     const { t } = useTranslation('common'); // We will add keys to common.ts later
     const isOpen = useUIStore((state) => state.isHotkeyHelpOpen);
     const setOpen = useUIStore((state) => state.setHotkeyHelpOpen);
+    // 只在畫布頁（CanvasTour 有掛）顯示「重看導覽」
+    const canReplayTour = useUIStore((state) => state.canvasTourAvailable);
+    const replayTour = () => {
+        setOpen(false);
+        useUIStore.getState().setCanvasTourOpen(true);
+    };
 
     const globalHotkeys = [
         { keys: ["Ctrl", "/"], description: t('hotkeys.help', "Show this help"), icon: Keyboard },
         { keys: ["Ctrl", "K"], description: t('hotkeys.search', "Search / Add Stream"), icon: Search },
-        { keys: ["Alt", "1-9"], description: t('hotkeys.layouts', "Switch Layouts"), icon: Grid },
+        { keys: ["Alt", "1-6, 9"], description: t('hotkeys.layouts', "Switch Layouts"), icon: Grid },
         { keys: ["Ctrl", "S"], description: t('hotkeys.quick_save', "Quick Save Layout"), icon: Save },
         { keys: ["Ctrl", "M"], description: t('hotkeys.master_mute', "Master Mute Toggle"), icon: VolumeX },
         { keys: ["Shift", "F"], description: t('hotkeys.focus_mode', "Toggle Focus Mode"), icon: Monitor },
@@ -96,6 +102,19 @@ export const HotkeyHelpDialog = () => {
                         </div>
                     </div>
                 </div>
+
+                {canReplayTour && (
+                    <div className="flex justify-end border-t border-white/10 pt-3">
+                        <button
+                            type="button"
+                            onClick={replayTour}
+                            className="flex items-center gap-1.5 rounded-md border border-white/15 px-3 py-1.5 text-xs text-slate-200 hover:bg-white/10"
+                        >
+                            <Compass size={14} className="text-indigo-300" />
+                            {t('hotkeys.replay_tour')}
+                        </button>
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     );
