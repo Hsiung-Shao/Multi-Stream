@@ -62,14 +62,37 @@ export function swapItemLayouts(items: readonly CanvasItem[], aId: string, bId: 
     });
 }
 
-/** 「主畫面」＝面積最大的串流視窗；同面積取最上、再取最左 */
+/**
+ * 「主畫面」＝面積最大、有內容的串流視窗；同面積取最上、再取最左。
+ * 空槽不算：否則「保留空視窗」模式下主畫面那路被關掉後，★ 只會把串流換進空槽。
+ */
 export function selectMainStreamItemId(items: readonly CanvasItem[]): string | null {
     let best: CanvasItem | null = null;
     for (const it of items) {
-        if (it.type !== 'stream') continue;
+        if (it.type !== 'stream' || it.contentId == null) continue;
         if (!best) { best = it; continue; }
         const area = it.layout.w * it.layout.h, bestArea = best.layout.w * best.layout.h;
         if (area > bestArea || (area === bestArea && byPosition(it, best) < 0)) best = it;
     }
     return best?.i ?? null;
 }
+
+// ---- 以 canvasItems 陣列身分快取的衍生值 ----
+// 每個畫布視窗都會訂閱這些值；store 任何更新（音量、直播狀態）都會讓每個視窗重跑 selector。
+// canvasItems 只有版面真的變動才換新陣列，用 WeakMap 以陣列身分快取，一次更新只算一次而非「視窗數 × 掃描」。
+function cachedByItems<T>(compute: (items: readonly CanvasItem[]) => T) {
+    const cache = new WeakMap<readonly CanvasItem[], T>();
+    return (items: readonly CanvasItem[]): T => {
+        if (cache.has(items)) return cache.get(items)!;
+        const value = compute(items);
+        cache.set(items, value);
+        return value;
+    };
+}
+
+export const mainStreamItemIdOf = cachedByItems(selectMainStreamItemId);
+
+/** 共用聊天室模式下那個聊天室正在顯示的串流 id；不是共用模式回 undefined（顯示空槽時為 null） */
+export const sharedChatContentIdOf = cachedByItems((items): number | null | undefined =>
+    isSharedChatLayout(items) ? (items.find(it => it.type === 'chat')!.contentId ?? null) : undefined,
+);

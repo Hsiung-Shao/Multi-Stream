@@ -427,4 +427,43 @@ describe('useStreamStore', () => {
             expect(after.map(i => i.i).sort()).toEqual(['chat', 'w1', 'w2', 'w3']);
         });
     });
+
+    describe('共用聊天室：有空槽時新增（Strategy A）與主畫面判定', () => {
+        const mk = (id: number, ch: string) => ({ id, platform: 'twitch' as const, channelId: ch, videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false });
+        const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+
+        it('填空槽：新串流進空槽，聊天室維持顯示原本那一路、不新增聊天室', async () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [mk(1, 'a')],
+                canvasItems: [
+                    { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 10, 12) },
+                    { i: 'w2', type: 'stream', contentId: null, layout: L(0, 12, 10, 12) },
+                    { i: 'chat', type: 'chat', contentId: 1, layout: L(10, 0, 4, 24) },
+                ],
+            });
+            const r = await useStreamStore.getState().addStream('https://www.twitch.tv/newone');
+            expect(r.success).toBe(true);
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.map(i => i.i)).toEqual(['w1', 'w2', 'chat']);
+            expect(items.find(i => i.i === 'w2')!.contentId).toBe(r.streamId);
+            expect(items.find(i => i.i === 'chat')!.contentId).toBe(1);
+        });
+
+        it('主畫面不算空槽：最大的是空槽時，★ 與最大的「有內容」串流互換', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [mk(1, 'a'), mk(2, 'b')],
+                canvasItems: [
+                    { i: 'empty', type: 'stream', contentId: null, layout: L(0, 0, 16, 24) },
+                    { i: 'w1', type: 'stream', contentId: 1, layout: L(16, 0, 8, 12) },
+                    { i: 'w2', type: 'stream', contentId: 2, layout: L(16, 12, 8, 12) },
+                ],
+            });
+            useStreamStore.getState().setMainCanvasItem('w2');
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.find(i => i.i === 'w2')!.layout).toEqual(L(16, 0, 8, 12));
+            expect(items.find(i => i.i === 'empty')!.layout).toEqual(L(0, 0, 16, 24));
+        });
+    });
 });

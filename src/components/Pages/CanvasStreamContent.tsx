@@ -15,7 +15,7 @@ import { cn } from '../ui/utils';
 import type { StreamData } from '../../utils/streamUtils';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
-import { isSharedChatLayout, selectMainStreamItemId } from '../../utils/canvasItemOps';
+import { mainStreamItemIdOf, sharedChatContentIdOf } from '../../utils/canvasItemOps';
 import { SharedChatTabs } from '../Canvas/SharedChatTabs';
 
 interface CanvasStreamContentProps {
@@ -46,11 +46,11 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     // 以下 selector 都回傳原始值：只有結果改變時才重繪，拖曳、音量變動都不會牽動
     const isTheater = useUIStore(s => windowId !== undefined && s.theaterWindowId === windowId);
     const hintsLearned = useUIStore(s => s.canvasHintsLearned);
-    const isMain = useStreamStore(s => windowId !== undefined && selectMainStreamItemId(s.canvasItems) === windowId);
-    const sharedChat = useStreamStore(s => isSharedChatLayout(s.canvasItems));
-    const shownInSharedChat = useStreamStore(s =>
-        !isChatWindow && isSharedChatLayout(s.canvasItems) && s.canvasItems.some(i => i.type === 'chat' && i.contentId === stream.id)
-    );
+    // 衍生值以 canvasItems 身分快取（見 canvasItemOps），多個視窗訂閱也只算一次
+    const isMain = useStreamStore(s => windowId !== undefined && mainStreamItemIdOf(s.canvasItems) === windowId);
+    const sharedChatContentId = useStreamStore(s => sharedChatContentIdOf(s.canvasItems));
+    const sharedChat = sharedChatContentId !== undefined;
+    const shownInSharedChat = !isChatWindow && sharedChatContentId === stream.id;
 
     const handleTheater = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();

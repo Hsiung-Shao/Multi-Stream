@@ -49,6 +49,7 @@ export interface DragHandlers {
     onPointerMove: (e: React.PointerEvent) => void;
     onPointerUp: (e: React.PointerEvent) => void;
     onPointerCancel: (e: React.PointerEvent) => void;
+    onLostPointerCapture: (e: React.PointerEvent) => void;
 }
 
 export interface WindowRenderProps {
@@ -181,8 +182,11 @@ export const DraggableWindow = memo(function DraggableWindow({
     }, [collisionId, isDragging, window.id, onSwapHover]);
 
     // 拖曳開始／結束通知上層，讓其他視窗標示「可放在這裡交換」（拖曳換位原本沒有任何提示）
+    // 用 cleanup 回報結束：拖曳中視窗被卸載（例如按 Delete）時也會清掉，其他視窗的提示層不會殘留
     useEffect(() => {
-        onDragStateChange?.(window.id, isDragging);
+        if (!isDragging || !onDragStateChange) return;
+        onDragStateChange(window.id, true);
+        return () => onDragStateChange(window.id, false);
     }, [isDragging, window.id, onDragStateChange]);
 
     // Resize hook - 四角把手；幾何同樣直接寫 DOM

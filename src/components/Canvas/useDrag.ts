@@ -151,8 +151,8 @@ export function useDrag(options: UseDragOptions) {
 
         e.preventDefault();
 
-        // Release pointer capture
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        // Release pointer capture（由 lostpointercapture 進來時 capture 已經沒了，觸控筆抬起後 pointer 也可能已失效）
+        try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* 已釋放 */ }
 
         dragState.current.isDragging = false;
 
@@ -186,7 +186,10 @@ export function useDrag(options: UseDragOptions) {
         onPointerDown: handlePointerDown,
         onPointerMove: handlePointerMove,
         onPointerUp: handlePointerUp,
-        onPointerCancel: handlePointerUp
+        onPointerCancel: handlePointerUp,
+        // capture 意外遺失（例如 pointerup 落進跨網域 iframe）時也要收尾，否則視窗會卡在拖曳狀態、
+        // 內容層維持 pointer-events:none 連點擊都救不回來。正常放開時 isDragging 已是 false，這裡直接略過。
+        onLostPointerCapture: handlePointerUp,
     }), [handlePointerDown, handlePointerMove, handlePointerUp]);
 
     return {

@@ -104,4 +104,48 @@ describe('SimpleCanvas 視窗 DOM 順序', () => {
         watcher.stop();
         expect(watcher.moved).toEqual([]);
     });
+
+    const withHandle = (w: CanvasWindow, rp: WindowRenderProps) => (
+        <div data-win={w.id}><span data-handle={w.id} {...rp.dragHandlers}>drag</span></div>
+    );
+    const startDrag = (container: HTMLElement, id: string) => {
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        const handle = container.querySelector(`[data-handle="${id}"]`)!;
+        act(() => { fireEvent.pointerDown(handle, { clientX: 10, clientY: 10, pointerId: 1 }); });
+        return handle;
+    };
+    const hintedIds = (container: HTMLElement) =>
+        [...container.querySelectorAll('[data-swap-hint]')].map(h => h.closest('[data-canvas-window-id]')!.getAttribute('data-canvas-window-id'));
+
+    it('拖曳中遺失 pointer capture（pointerup 落進 iframe）也會收尾，提示層不殘留', () => {
+        const { container } = render(
+            <SimpleCanvas windows={[win('a', 0, 0), win('b', 8, 0)]} onWindowUpdate={noop} onWindowRemove={noop} renderContent={withHandle} />,
+        );
+        const handle = startDrag(container, 'a');
+        expect(hintedIds(container)).toEqual(['b']);
+        act(() => { fireEvent(handle, new Event('lostpointercapture', { bubbles: true })); });
+        expect(hintedIds(container)).toEqual([]);
+    });
+
+    it('拖曳中的視窗被移除，其他視窗的提示層也會清掉', () => {
+        const { container, rerender } = render(
+            <SimpleCanvas windows={[win('a', 0, 0), win('b', 8, 0)]} onWindowUpdate={noop} onWindowRemove={noop} renderContent={withHandle} />,
+        );
+        startDrag(container, 'a');
+        expect(hintedIds(container)).toEqual(['b']);
+        act(() => {
+            rerender(<SimpleCanvas windows={[win('b', 8, 0)]} onWindowUpdate={noop} onWindowRemove={noop} renderContent={withHandle} />);
+        });
+        expect(hintedIds(container)).toEqual([]);
+    });
+
+    it('只在同類型視窗上標示落點（拖串流時聊天室不邀請交換）', () => {
+        const chat: CanvasWindow = { ...win('c', 16, 0), type: 'chat' };
+        const { container } = render(
+            <SimpleCanvas windows={[win('a', 0, 0), win('b', 8, 0), chat]} onWindowUpdate={noop} onWindowRemove={noop} renderContent={withHandle} />,
+        );
+        startDrag(container, 'a');
+        expect(hintedIds(container)).toEqual(['b']);
+    });
 });

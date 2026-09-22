@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import i18n from '../../src/i18n/i18n';
-import { CanvasTour, CANVAS_TOUR_DONE_KEY } from '../../src/components/Canvas/CanvasTour';
+import { CanvasTour, CANVAS_TOUR_DONE_KEY, resetCanvasTourSessionForTest } from '../../src/components/Canvas/CanvasTour';
 import { useStreamStore } from '../../src/store/useStreamStore';
 import { useUIStore } from '../../src/store/useUIStore';
 
@@ -31,6 +31,7 @@ describe('CanvasTour', () => {
         await i18n.changeLanguage('zh-TW');
         vi.useFakeTimers();
         localStorage.clear();
+        resetCanvasTourSessionForTest();
         useUIStore.setState({ isCanvasTourOpen: false, canvasTourAvailable: false });
         useStreamStore.setState({ canvasItems: [] });
         document.body.innerHTML = '';
@@ -103,5 +104,37 @@ describe('CanvasTour', () => {
         expect(useUIStore.getState().canvasTourAvailable).toBe(true);
         unmount();
         expect(useUIStore.getState().canvasTourAvailable).toBe(false);
+    });
+
+    it('localStorage 寫不進去時，關掉後本次工作階段內不會再自動重開', () => {
+        // 只讓導覽的 key 寫不進去（store 的 persist、i18n 也會寫 localStorage）。
+        // tests/setup.ts 的 setItem 本身就是 vi.fn：先取出原實作，結束後放回（mockRestore 會把實作清掉）
+        const setItem = localStorage.setItem as unknown as ReturnType<typeof vi.fn>;
+        const original = setItem.getMockImplementation()!;
+        setItem.mockImplementation((k: string, v: string) => {
+            if (k === CANVAS_TOUR_DONE_KEY) throw new Error('blocked');
+            original(k, v);
+        });
+        try {
+            setStreams(2);
+            render(<CanvasTour />);
+            act(() => { vi.advanceTimersByTime(1600); });
+            fireEvent.click(screen.getByText('略過'));
+            expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBeNull();
+            act(() => { vi.advanceTimersByTime(5000); });
+            expect(screen.queryByRole('dialog')).toBeNull();
+        } finally {
+            setItem.mockImplementation(original);
+        }
+    });
+
+    it('空畫布上要求開啟（重看導覽）不會懸著，之後加串流也不會突然跳出', () => {
+        localStorage.setItem(CANVAS_TOUR_DONE_KEY, '1');
+        render(<CanvasTour />);
+        act(() => { useUIStore.getState().setCanvasTourOpen(true); });
+        expect(useUIStore.getState().isCanvasTourOpen).toBe(false);
+        act(() => { setStreams(2); });
+        act(() => { vi.advanceTimersByTime(5000); });
+        expect(screen.queryByRole('dialog')).toBeNull();
     });
 });

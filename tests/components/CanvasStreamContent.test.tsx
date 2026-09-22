@@ -33,6 +33,7 @@ const renderProps: WindowRenderProps = {
         onPointerMove: vi.fn(),
         onPointerUp: vi.fn(),
         onPointerCancel: vi.fn(),
+        onLostPointerCapture: vi.fn(),
     },
     isDragging: false,
     isResizing: false,

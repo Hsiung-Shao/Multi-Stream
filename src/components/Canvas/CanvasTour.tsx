@@ -13,8 +13,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
-import { selectMainStreamItemId } from '../../utils/canvasItemOps';
-import type { CanvasItem } from '../../types/canvas';
+import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
 
 export const CANVAS_TOUR_DONE_KEY = 'canvas_tour_done';
 /** 有串流之後等播放器與工具列掛好再開始，避免聚光燈指到還沒出現的元素 */
@@ -25,17 +24,23 @@ type StepId = 'drag' | 'swap' | 'resize' | 'theater';
 
 interface Rect { top: number; left: number; width: number; height: number }
 
-const hasStream = (i: CanvasItem) => i.type === 'stream' && i.contentId != null;
-
 const findWindow = (id: string) =>
     Array.from(document.querySelectorAll<HTMLElement>('[data-canvas-window-id]')).find(el => el.dataset.canvasWindowId === id) ?? null;
 
+// localStorage 讀寫失敗（封鎖網站資料等）時，靠這個旗標確保本次工作階段內不會一關掉又自動重開
+let dismissedThisSession = false;
+
 function readTourDone(): boolean {
+    if (dismissedThisSession) return true;
     try { return localStorage.getItem(CANVAS_TOUR_DONE_KEY) === '1'; } catch { return false; }
 }
 function writeTourDone() {
-    try { localStorage.setItem(CANVAS_TOUR_DONE_KEY, '1'); } catch { /* 無痕模式寫不進去：本次工作階段內不再顯示即可 */ }
+    dismissedThisSession = true;
+    try { localStorage.setItem(CANVAS_TOUR_DONE_KEY, '1'); } catch { /* 寫不進去：上面的旗標擋住本次工作階段 */ }
 }
+
+/** 測試用：重設工作階段旗標 */
+export function resetCanvasTourSessionForTest() { dismissedThisSession = false; }
 
 export function CanvasTour() {
     const { t } = useTranslation('common');
@@ -43,11 +48,10 @@ export function CanvasTour() {
     const setOpen = useUIStore(s => s.setCanvasTourOpen);
     // 主畫面視窗（第一步、縮放、放大都指它）與另一個有內容的串流視窗（交換那步）
     // selector 都回傳字串：畫布其他變動（音量、拖曳）不會讓導覽重繪
-    const mainId = useStreamStore(s => selectMainStreamItemId(s.canvasItems.filter(hasStream)));
+    const mainId = useStreamStore(s => mainStreamItemIdOf(s.canvasItems));
     const otherId = useStreamStore(s => {
-        const withStream = s.canvasItems.filter(hasStream);
-        const main = selectMainStreamItemId(withStream);
-        return withStream.find(i => i.i !== main)?.i ?? null;
+        const main = mainStreamItemIdOf(s.canvasItems);
+        return s.canvasItems.find(i => i.type === 'stream' && i.contentId != null && i.i !== main)?.i ?? null;
     });
 
     const [stepIdx, setStepIdx] = useState(0);
@@ -62,6 +66,11 @@ export function CanvasTour() {
             useUIStore.getState().setCanvasTourOpen(false);
         };
     }, []);
+
+    // 沒有任何串流時（例如在空畫布上按「重看導覽」）不要讓開啟旗標懸著，否則之後一加串流就突然跳出
+    useEffect(() => {
+        if (open && !mainId) setOpen(false);
+    }, [open, mainId, setOpen]);
 
     // 首次：有串流之後自動開啟
     useEffect(() => {

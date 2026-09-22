@@ -287,15 +287,22 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     // resize 結束：把推擠結果真正落地
     const handleWindowResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
         setResizeGhosts(null);
+        const before = windowsRef.current.find(w => w.id === id);
         const solved = solveResize(id, gridX, gridY, gridW, gridH);
         if (!solved) return;
         onWindowUpdateRef.current(solved.windows);
-        useUIStore.getState().recordCanvasManipulation();
+        // 只點到縮放角、尺寸沒變，不算學會了縮放
+        if (before && (before.gridX !== gridX || before.gridY !== gridY || before.gridW !== gridW || before.gridH !== gridH)) {
+            useUIStore.getState().recordCanvasManipulation();
+        }
     }, [solveResize]);
 
     const handleHoverChange = useCallback((hoveredId: string | null, canvasItemId: string | null) => {
         useUIStore.getState().setHoveredWindowId(hoveredId, canvasItemId);
     }, []);
+
+    // 只標示同類型的落點：串流換到滿高 4 欄的聊天室上會變成細長條，不主動邀請使用者這樣做
+    const draggingType = draggingWindowId ? (windows.find(w => w.id === draggingWindowId)?.type ?? null) : null;
 
     const handleDragStateChange = useCallback((id: string, dragging: boolean) => {
         setDraggingWindowId(prev => (dragging ? id : prev === id ? null : prev));
@@ -336,7 +343,7 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         isTheaterMode={theaterWindowId === w.id}
                         onHoverChange={handleHoverChange}
                         onDragStateChange={handleDragStateChange}
-                        isSwapCandidate={draggingWindowId !== null && draggingWindowId !== w.id}
+                        isSwapCandidate={draggingType !== null && draggingWindowId !== w.id && w.type === draggingType}
                     />
                 ))}
             </div>
