@@ -1,3 +1,6 @@
+import { getCorsHeaders, isRequestFromAllowedSite } from '../lib/cors.js';
+import { upsert } from '../lib/supabase-server.js';
+
 // ── Edge 快取 ──────────────────────────────────────────────────────────────
 // 2026-09 CPU 超限事件：本端點單月 1.32M 次（全站 78%），每次抓約 1.6MB 的 YouTube 頁面再解析，
 // 單次 CPU 8–11ms 貼著免費方案 10ms 上限，且原本完全不快取（快取命中率 0.92%）。
@@ -9,12 +12,26 @@ const CACHE_TTL_SECONDS = 180;
 const FAILED_FETCH_CACHE_TTL_SECONDS = 60;
 const FETCH_FAILED_HEADER = 'X-Live-Og-Fetch-Failed';
 const CHANNEL_ID_RE = /^UC[a-zA-Z0-9_-]{22}$/;
+const VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
+// 排程在這之後的「即將直播」視為週表框（頻道擺一個很遠未來的排程直播放週表圖），不算真的要開播
+const SCHEDULE_FRAME_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function onRequestGet(context) {
-    const url = new URL(context.request.url);
+    const { request } = context;
+    // 只接受本站頁面發出的請求（30 天有 26k 次 curl 直接打）。header 可偽造，真正的防線是 WAF rate limiting。
+    if (!isRequestFromAllowedSite(request)) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        });
+    }
+
+    const url = new URL(request.url);
     const channelId = url.searchParams.get('channelId');
     // 格式不合的交給原邏輯回 400，不進快取（避免任意字串產生無限多個快取 key）
-    if (!channelId || !CHANNEL_ID_RE.test(channelId)) return detectLiveOg(context);
+    if (!channelId || !CHANNEL_ID_RE.test(channelId)) {
+        return toClientResponse(await detectLiveOg(context), 'SKIP', request);
+    }
 
     const cache = typeof caches !== 'undefined' ? caches.default : null;
     // 正規化 key：只留 channelId，其他查詢參數（例如加亂數想繞過快取）一律忽略
@@ -22,10 +39,16 @@ export async function onRequestGet(context) {
 
     if (cache) {
         const hit = await cache.match(cacheKey);
-        if (hit) return toClientResponse(hit, 'HIT');
+        if (hit) return toClientResponse(hit, 'HIT', request);
     }
 
     const response = await detectLiveOg(context);
+
+    // 寫進共享表 youtube_live_status，讓其他使用者直接讀資料庫、不必再觸發本端點。
+    // 抓取失敗不寫（只留在 edge 快取 60 秒），「查不到」不能當成全站共用的「沒開播」。
+    if (response.status === 200 && !response.headers.get(FETCH_FAILED_HEADER)) {
+        context.waitUntil(persistLiveStatus(context.env, channelId, response.clone()));
+    }
 
     if (cache && response.status === 200) {
         const ttl = response.headers.get(FETCH_FAILED_HEADER) ? FAILED_FETCH_CACHE_TTL_SECONDS : CACHE_TTL_SECONDS;
@@ -34,16 +57,67 @@ export async function onRequestGet(context) {
         context.waitUntil(cache.put(cacheKey, stored));
     }
 
-    return toClientResponse(response, 'MISS');
+    return toClientResponse(response, 'MISS', request);
 }
 
-// 回給瀏覽器的版本：維持原本的 no-store（快取只在 edge 層），並標示命中狀態方便觀察
-function toClientResponse(response, cacheStatus) {
+// 回給瀏覽器的版本：維持原本的 no-store（快取只在 edge 層），並標示命中狀態方便觀察。
+// CORS 改用白名單（原本是 '*'，任何網站都能在瀏覽器裡拿本站當免費的開播偵測 API）。
+function toClientResponse(response, cacheStatus, request) {
     const out = new Response(response.body, response);
     out.headers.set('Cache-Control', 'no-store');
     out.headers.set('X-Edge-Cache', cacheStatus);
     out.headers.delete(FETCH_FAILED_HEADER);
+    for (const [key, value] of Object.entries(getCorsHeaders(request, { methods: 'GET, OPTIONS' }))) {
+        out.headers.set(key, value);
+    }
     return out;
+}
+
+/**
+ * 端點回應 → youtube_live_status 的一列。沒有實際抓到頻道資料（沒有 videoId 也沒有頻道名）就回 null：
+ * YouTube 對不存在的頻道回 404（走 fetch-failed，不會進到這裡），這一關再擋掉格式正確但沒有內容的結果，
+ * 避免有人用隨機 ID 灌表。
+ */
+export function toLiveStatusRow(channelId, data, now = Date.now()) {
+    if (!data || typeof data !== 'object' || data.error) return null;
+    const videoId = typeof data.videoId === 'string' && VIDEO_ID_RE.test(data.videoId) ? data.videoId : null;
+    const channelTitle = typeof data.channelTitle === 'string' && data.channelTitle.trim()
+        ? data.channelTitle.trim().slice(0, 200)
+        : null;
+    if (!videoId && !channelTitle) return null;
+
+    // scheduledStartTime 是 epoch 秒字串；幾百年後的週表框也要能表示，超出 Date 範圍就當作沒有
+    const startSec = Number(data.scheduledStartTime);
+    const start = Number.isFinite(startSec) && startSec > 0 ? new Date(startSec * 1000) : null;
+    const scheduledStartAt = start && !Number.isNaN(start.getTime()) ? start : null;
+
+    const isUpcoming = data.isUpcoming === true;
+    const isScheduleFrame = isUpcoming && scheduledStartAt !== null
+        && scheduledStartAt.getTime() - now > SCHEDULE_FRAME_AFTER_MS;
+
+    return {
+        channel_id: channelId,
+        is_live: data.isLive === true,
+        is_upcoming: isUpcoming && !isScheduleFrame,
+        is_schedule_frame: isScheduleFrame,
+        video_id: videoId,
+        channel_title: channelTitle,
+        scheduled_start_at: scheduledStartAt ? scheduledStartAt.toISOString() : null,
+        checked_at: new Date(now).toISOString(),
+    };
+}
+
+// 寫庫失敗不影響回應（在 waitUntil 裡跑）；沒設 service_role 的環境（本機、preview）直接略過
+async function persistLiveStatus(env, channelId, response) {
+    if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) return;
+    try {
+        const row = toLiveStatusRow(channelId, await response.json());
+        if (!row) return;
+        const res = await upsert(env, 'youtube_live_status', [row], { onConflict: 'channel_id' });
+        if (!res.ok) console.warn('[live-og] 寫入 youtube_live_status 失敗', res.status);
+    } catch {
+        // 解析或網路錯誤：下一位使用者查詢時會再寫一次
+    }
 }
 
 async function detectLiveOg(context) {

@@ -28,6 +28,30 @@ function isAllowedOrigin(origin) {
 }
 
 /**
+ * 請求是否來自本站頁面（由瀏覽器發出）。
+ * 同源的 GET fetch 不帶 Origin header，所以依序看 Sec-Fetch-Site、Origin、Referer。
+ * ⚠ 這些 header 都能被偽造：只擋得住不費心的濫用（裸 curl、別的網站的前端）。
+ *   真正的防線是 Cloudflare WAF 的 rate limiting rule，不要把這個函式當成授權機制。
+ * @param {Request} request
+ * @returns {boolean}
+ */
+export function isRequestFromAllowedSite(request) {
+    const h = request?.headers;
+    if (!h) return false;
+    if (h.get('Sec-Fetch-Site') === 'same-origin') return true;
+    if (isAllowedOrigin(h.get('Origin'))) return true;
+    const referer = h.get('Referer');
+    if (referer) {
+        try {
+            return isAllowedOrigin(new URL(referer).origin);
+        } catch {
+            return false;
+        }
+    }
+    return false;
+}
+
+/**
  * 取得 CORS headers
  * @param {Request} request
  * @param {{ methods?: string }} [opts] - 覆寫允許的 methods（預設 'GET, POST, OPTIONS'）
