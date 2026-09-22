@@ -4,7 +4,8 @@
  */
 
 import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { GripHorizontal, X, RefreshCw } from 'lucide-react';
+import { GripHorizontal, X, RefreshCw, Maximize2, Minimize2, Star, MessageSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
 import { StreamChat } from '../StreamChat';
@@ -13,6 +14,9 @@ import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import type { StreamData } from '../../utils/streamUtils';
 import { useUIStore } from '../../store/useUIStore';
+import { useStreamStore } from '../../store/useStreamStore';
+import { isSharedChatLayout, selectMainStreamItemId } from '../../utils/canvasItemOps';
+import { SharedChatTabs } from '../Canvas/SharedChatTabs';
 
 interface CanvasStreamContentProps {
     stream: StreamData;
@@ -20,6 +24,9 @@ interface CanvasStreamContentProps {
     windowType?: 'stream' | 'chat';
     windowId?: string;
 }
+
+// 工具列本身是拖曳把手：新按鈕擋掉 pointerdown，點擊時才不會順手拖動視窗
+const stopPointerDown = (e: React.PointerEvent) => e.stopPropagation();
 
 // Divider subcomponent
 const Divider = memo(function Divider() {
@@ -29,9 +36,33 @@ const Divider = memo(function Divider() {
 export const CanvasStreamContent = memo(function CanvasStreamContent({
     stream,
     renderProps,
-    windowType = 'stream'
+    windowType = 'stream',
+    windowId,
 }: CanvasStreamContentProps) {
+    const { t } = useTranslation('common');
     const { dragHandlers, isDragging, isResizing, onRemove } = renderProps;
+    const isChatWindow = windowType === 'chat';
+
+    // 以下 selector 都回傳原始值：只有結果改變時才重繪，拖曳、音量變動都不會牽動
+    const isTheater = useUIStore(s => windowId !== undefined && s.theaterWindowId === windowId);
+    const isMain = useStreamStore(s => windowId !== undefined && selectMainStreamItemId(s.canvasItems) === windowId);
+    const sharedChat = useStreamStore(s => isSharedChatLayout(s.canvasItems));
+    const shownInSharedChat = useStreamStore(s =>
+        !isChatWindow && isSharedChatLayout(s.canvasItems) && s.canvasItems.some(i => i.type === 'chat' && i.contentId === stream.id)
+    );
+
+    const handleTheater = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (windowId === undefined) return;
+        const ui = useUIStore.getState();
+        // 與快捷鍵 T 同一個狀態：theaterWindowId 存的是畫布視窗 id
+        ui.setTheaterWindowId(ui.theaterWindowId === windowId ? null : windowId);
+    }, [windowId]);
+
+    const handleSetMain = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (windowId !== undefined) useStreamStore.getState().setMainCanvasItem(windowId);
+    }, [windowId]);
 
     const [reloadKey, setReloadKey] = useState(0);
     const isReloadingRef = useRef(false);
@@ -84,8 +115,6 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
         return stream.displayName || stream.channelId || 'Unknown';
     }, [stream.displayName, stream.channelId]);
 
-    const isChatWindow = windowType === 'chat';
-
     // 根節點的 id 是快捷鍵 F（視窗全螢幕）要找的元素：useHotkeys 用
     // document.getElementById(`stream-container-${hoveredWindowId}`) 取它來 requestFullscreen。
     // 在補上這個 id 之前，那個查詢永遠回 null，所以 F 按下去毫無反應。
@@ -112,12 +141,24 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                 {...dragHandlers}
             >
                 {/* Drag Handle with Title (Grid Size REMOVED) */}
-                <div className="cursor-grab flex items-center text-white/70 hover:text-white mr-1 gap-2">
-                    <GripHorizontal size={14} />
-                    <span className="text-[10px] font-medium max-w-[100px] truncate">
-                        {title}
-                    </span>
+                <div className={cn("cursor-grab flex items-center text-white/70 hover:text-white mr-1 gap-2", isChatWindow && sharedChat && "mr-0")}>
+                    <GripHorizontal size={14} className="shrink-0" />
+                    {isChatWindow && sharedChat && windowId !== undefined ? null : (
+                        <span className="text-[10px] font-medium max-w-[100px] truncate">
+                            {title}
+                        </span>
+                    )}
+                    {shownInSharedChat && (
+                        <span className="shrink-0 text-sky-300" title={t('canvas.toolbar_in_chat')} aria-label={t('canvas.toolbar_in_chat')} role="img">
+                            <MessageSquare size={11} />
+                        </span>
+                    )}
                 </div>
+
+                {/* 共用聊天室：標題換成分頁，切換聊天室顯示哪一路 */}
+                {isChatWindow && sharedChat && windowId !== undefined && (
+                    <SharedChatTabs chatItemId={windowId} activeStreamId={stream.id} />
+                )}
 
                 <Divider />
 
@@ -130,13 +171,43 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     />
                 )}
 
+                {/* 放大（劇院模式）與設為主畫面：原本只有快捷鍵 T 與拖曳換位，畫面上沒有入口 */}
+                {!isChatWindow && windowId !== undefined && (
+                    <>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
+                            onPointerDown={stopPointerDown}
+                            onClick={handleTheater}
+                            title={isTheater ? t('canvas.toolbar_exit_theater') : t('canvas.toolbar_theater')}
+                            aria-pressed={isTheater}
+                            data-tour="theater"
+                        >
+                            {isTheater ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                        </Button>
+                        {!isMain && !isTheater && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-amber-300 nodrag"
+                                onPointerDown={stopPointerDown}
+                                onClick={handleSetMain}
+                                title={t('canvas.toolbar_set_main')}
+                            >
+                                <Star size={12} />
+                            </Button>
+                        )}
+                    </>
+                )}
+
                 {/* Reload Button */}
                 <Button
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
                     onClick={handleReload}
-                    title="重新載入"
+                    title={t('canvas.toolbar_reload')}
                 >
                     <RefreshCw size={12} />
                 </Button>
@@ -147,7 +218,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     size="icon"
                     className="h-6 w-6 rounded-full hover:bg-red-500/20 text-white/70 hover:text-red-400 nodrag"
                     onClick={handleRemove}
-                    title="移除"
+                    title={t('canvas.toolbar_remove')}
                 >
                     <X size={12} />
                 </Button>

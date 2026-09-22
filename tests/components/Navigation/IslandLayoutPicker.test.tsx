@@ -98,6 +98,24 @@ describe('IslandLayoutPicker', () => {
         expect(mockApplyTemplate).toHaveBeenCalledWith(chatTemplates[0].id);
     });
 
+    it('chat 分頁：共用聊天室版型排在前面一組，點選套用', () => {
+        render(<IslandLayoutPicker isExpanded={true} onOpenSettings={vi.fn()} />);
+        fireEvent.click(screen.getByText('layout.tab_chat'));
+        const shared = layoutTemplates.filter(t => t.type === 'shared_chat');
+        expect(shared.map(t => t.count)).toEqual([2, 3, 4]);
+
+        const sharedHeading = screen.getByText('layout.group_shared_chat');
+        const perStreamHeading = screen.getByText('layout.group_per_stream_chat');
+        // 共用那組在前（DOM 順序）
+        expect(sharedHeading.compareDocumentPosition(perStreamHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+        for (const tpl of shared) {
+            expect(screen.getByTitle(tpl.nameKey)).toBeInTheDocument();
+        }
+        fireEvent.click(screen.getByTitle('layout.t_4_sc'));
+        expect(mockApplyTemplate).toHaveBeenCalledWith('template-4-sharedchat');
+    });
+
     it('lists and applies custom layouts', () => {
         render(<IslandLayoutPicker isExpanded={true} onOpenSettings={vi.fn()} />);
         fireEvent.click(screen.getByText('layout.tab_custom'));

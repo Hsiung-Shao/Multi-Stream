@@ -62,6 +62,13 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings, o
     // Separate templates
     const videoTemplates = layoutTemplates.filter(t => t.type === 'video_only');
     const chatTemplates = layoutTemplates.filter(t => t.type === 'with_chat');
+    const sharedChatTemplates = layoutTemplates.filter(t => t.type === 'shared_chat');
+
+    // 「含聊天室」分頁分成兩組：共用一個聊天室（N 串 + 1 聊）排前面，每路各一個聊天室其次
+    const chatGroups = [
+        { id: 'shared', label: t('layout.group_shared_chat'), templates: sharedChatTemplates },
+        { id: 'per_stream', label: t('layout.group_per_stream_chat'), templates: chatTemplates },
+    ];
 
 
     return (
@@ -155,21 +162,28 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings, o
                         {activeTab === 'with_chat' && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <ScrollArea className="h-[250px] -mr-2 pr-2">
-                                    <div className="grid grid-cols-4 gap-2 pb-2">
-                                        {chatTemplates.map(template => {
-                                            const Icon = iconMap[template.icon] || LayoutGrid;
-                                            return (
-                                                <button
-                                                    key={template.id}
-                                                    onClick={() => applyTemplateLayout(template.id)}
-                                                    className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 border border-white/5 transition-all group relative overflow-hidden"
-                                                    title={t(template.nameKey as any) || template.nameKey}
-                                                >
-                                                    <Icon className="size-5 text-gray-300 group-hover:text-purple-300 transition-colors" />
-                                                    <span className="text-[10px] text-gray-400 group-hover:text-purple-200 font-medium">{template.count}</span>
-                                                </button>
-                                            );
-                                        })}
+                                    <div className="space-y-3 pb-2">
+                                        {chatGroups.map(group => (
+                                            <div key={group.id} className="space-y-1.5">
+                                                <h4 className="text-[10px] font-semibold text-gray-400 pl-0.5">{group.label}</h4>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {group.templates.map(template => {
+                                                        const Icon = iconMap[template.icon] || LayoutGrid;
+                                                        return (
+                                                            <button
+                                                                key={template.id}
+                                                                onClick={() => applyTemplateLayout(template.id)}
+                                                                className="aspect-square flex flex-col items-center justify-center gap-1.5 rounded-lg bg-white/5 hover:bg-purple-600/20 hover:border-purple-500/50 border border-white/5 transition-all group relative overflow-hidden"
+                                                                title={t(template.nameKey as any) || template.nameKey}
+                                                            >
+                                                                <Icon className="size-5 text-gray-300 group-hover:text-purple-300 transition-colors" />
+                                                                <span className="text-[10px] text-gray-400 group-hover:text-purple-200 font-medium">{template.count}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </ScrollArea>
                             </div>
