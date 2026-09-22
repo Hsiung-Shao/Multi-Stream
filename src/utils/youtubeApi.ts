@@ -196,10 +196,12 @@ export const youtubeApi = {
             }
         };
 
-        // OG 端點回 5xx(多半是 Cloudflare CPU 超限)時不可退到舊版全頁掃描:
-        // 舊版更重,超載時 fallback 等於把負載加倍(2026-09 CPU 超限事件的放大器)。
+        // OG 端點回任何 HTTP 錯誤都不可退到舊版全頁掃描,只有網路層例外才退:
+        // - 5xx(多半是 Cloudflare CPU 超限):舊版更重,超載時 fallback 等於把負載加倍(2026-09 CPU 超限事件的放大器)
+        // - 403(來源檢查不通過,例如擋 Referer 的擴充套件):退到舊版等於繞過限制又更耗資源
+        // - 400(channelId 格式錯):舊版一樣回 400
         // 改為直接丟錯,呼叫端保留原本狀態、下一輪再查。
-        let ogServerStatus = 0;
+        let ogErrorStatus = 0;
 
         try {
             // 1. Try New API (Low Cost, High Speed)
@@ -223,13 +225,13 @@ export const youtubeApi = {
                     channelTitle: data.channelTitle || undefined
                 };
             }
-            if (ogResp.status >= 500) ogServerStatus = ogResp.status;
+            ogErrorStatus = ogResp.status;
         } catch (e) {
             console.warn("[YouTubeAPI] Lightweight check failed, falling back to legacy", e);
         }
 
-        if (ogServerStatus) {
-            throw new Error(`[YouTubeAPI] live-og HTTP ${ogServerStatus}, skip legacy fallback`);
+        if (ogErrorStatus) {
+            throw new Error(`[YouTubeAPI] live-og HTTP ${ogErrorStatus}, skip legacy fallback`);
         }
 
         // 2. Fallback: Legacy API (Higher Cost, Full Scan)

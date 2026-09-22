@@ -1,4 +1,5 @@
-// OG 端點 5xx 時不可退到舊版全頁掃描（2026-09 CPU 超限事件：超載時 fallback 會把負載加倍）
+// OG 端點回 HTTP 錯誤時不可退到舊版全頁掃描（2026-09 CPU 超限事件：超載時 fallback 會把負載加倍；
+// 403 時 fallback 等於繞過來源限制）。只有網路層例外才退。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { youtubeApi } from '../../src/utils/youtubeApi';
 
@@ -27,6 +28,12 @@ describe('youtubeApi.checkChannelLiveStatus fallback', () => {
     it('OG 端點 503 → 丟錯，不打舊版端點', async () => {
         fetchMock.mockResolvedValueOnce(json({ error: 'cpu' }, 503));
         await expect(youtubeApi.checkChannelLiveStatus(CH)).rejects.toThrow(/503/);
+        expect(legacyCalls()).toHaveLength(0);
+    });
+
+    it('OG 端點 403（來源檢查不通過）→ 丟錯，不退到舊版繞過限制', async () => {
+        fetchMock.mockResolvedValueOnce(json({ error: 'Forbidden' }, 403));
+        await expect(youtubeApi.checkChannelLiveStatus(CH)).rejects.toThrow(/403/);
         expect(legacyCalls()).toHaveLength(0);
     });
 

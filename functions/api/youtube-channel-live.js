@@ -5,6 +5,8 @@
 // 3) 只有 channelId match 且 isLiveNow 才回 LIVE（Fail-Closed）
 // 4) 排程直播（UPCOMING）會被標記，但不當作 LIVE（避免誤加串流）
 
+import { isRequestFromAllowedSite } from '../lib/cors.js';
+
 export async function onRequestGet(contextOrRequest, env) {
   let request, envObj;
   if (contextOrRequest && contextOrRequest.request) {
@@ -13,6 +15,15 @@ export async function onRequestGet(contextOrRequest, env) {
   } else {
     request = contextOrRequest;
     envObj = env;
+  }
+
+  // 與 youtube-channel-live-og 相同的來源限制：這支是更重的全頁掃描，沒有限制的話
+  // 擋住 live-og 只會讓濫用改打這裡（2026-09）。header 可偽造，真正防線是 WAF rate limiting。
+  if (!isRequestFromAllowedSite(request)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
   }
 
   return handleChannelLiveRequest(request, envObj);
