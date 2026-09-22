@@ -212,4 +212,88 @@ describe('useStreamStore', () => {
             expect(fromAuto).toEqual(fromCanvas);
         });
     });
+
+    // 切換自訂佈局後聲音全部靜音、救不回來（2026-09）：applyCustomLayout 每次都用 uuid 重產 item ID，
+    // ID 是畫布的 React key → 所有播放器 iframe 被卸載重建，重建期間 player registry 錯位。
+    describe('套用自訂佈局', () => {
+        it('既有串流與聊天室的視窗 ID 保持不變（播放器不重建）', async () => {
+            useStreamStore.setState({ layoutMode: 'canvas' });
+            await useStreamStore.getState().addStream('https://www.twitch.tv/assentw');
+            // 串流 ID 是 Date.now()，同一毫秒連續新增會撞號，這裡刻意隔開
+            await new Promise(r => setTimeout(r, 5));
+            await useStreamStore.getState().addStream('https://www.twitch.tv/devilcatwith2cat');
+
+            const before = useStreamStore.getState().canvasItems.filter(i => i.contentId != null);
+            expect(before.length).toBeGreaterThanOrEqual(2);
+
+            useStreamStore.setState({
+                customLayouts: [{
+                    id: 'L1',
+                    name: 'test',
+                    createdAt: 0,
+                    slots: [
+                        { x: 0, y: 0, w: 12, h: 12, type: 'stream' },
+                        { x: 12, y: 0, w: 12, h: 12, type: 'stream' },
+                        { x: 0, y: 12, w: 12, h: 12, type: 'chat' },
+                        { x: 12, y: 12, w: 12, h: 12, type: 'chat' },
+                    ],
+                }],
+            });
+            useStreamStore.getState().applyCustomLayout('L1');
+
+            const after = useStreamStore.getState().canvasItems;
+            for (const prev of before) {
+                const same = after.find(i => i.type === prev.type && i.contentId === prev.contentId);
+                expect(same, `${prev.type} ${prev.contentId}`).toBeDefined();
+                expect(same!.i).toBe(prev.i);
+            }
+            // 版面確實換成自訂佈局的位置
+            expect(after.filter(i => i.type === 'stream').map(i => i.layout).sort((a, b) => a.x - b.x))
+                .toEqual([{ x: 0, y: 0, w: 12, h: 12 }, { x: 12, y: 0, w: 12, h: 12 }]);
+        });
+
+        it('空槽與新視窗仍拿到唯一 ID', async () => {
+            useStreamStore.setState({ layoutMode: 'canvas' });
+            await useStreamStore.getState().addStream('https://www.twitch.tv/assentw');
+            useStreamStore.setState({
+                customLayouts: [{
+                    id: 'L2',
+                    name: 'test',
+                    createdAt: 0,
+                    slots: [
+                        { x: 0, y: 0, w: 8, h: 12, type: 'stream' },
+                        { x: 8, y: 0, w: 8, h: 12, type: 'stream' },
+                        { x: 16, y: 0, w: 8, h: 12, type: 'stream' },
+                    ],
+                }],
+            });
+            useStreamStore.getState().applyCustomLayout('L2');
+            const ids = useStreamStore.getState().canvasItems.map(i => i.i);
+            expect(new Set(ids).size).toBe(ids.length);
+        });
+
+        it('空槽不沿用舊 ID（避免舊版面的 empty-stream-X ↔ empty-chat-X 配對跑到不相鄰的槽）', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [],
+                canvasItems: [
+                    { i: 'empty-stream-A', type: 'stream', contentId: null, layout: { x: 0, y: 0, w: 12, h: 24 } },
+                    { i: 'empty-chat-A', type: 'chat', contentId: null, layout: { x: 12, y: 0, w: 12, h: 24 } },
+                ],
+                customLayouts: [{
+                    id: 'L3',
+                    name: 'test',
+                    createdAt: 0,
+                    slots: [
+                        { x: 0, y: 0, w: 12, h: 24, type: 'stream' },
+                        { x: 12, y: 0, w: 12, h: 24, type: 'chat' },
+                    ],
+                }],
+            });
+            useStreamStore.getState().applyCustomLayout('L3');
+            const ids = useStreamStore.getState().canvasItems.map(i => i.i);
+            expect(ids).not.toContain('empty-stream-A');
+            expect(ids).not.toContain('empty-chat-A');
+        });
+    });
 });

@@ -1102,6 +1102,17 @@ export const useStreamStore = create<StreamStoreState>()(
                 const newItems: CanvasItem[] = [];
                 const placedStreamIds = new Set<number>();
 
+                // 重用既有視窗 ID：ID 是畫布的 React key，一變播放器 iframe 就整個卸載重建，
+                // 直播中斷重連、重建期間 player registry 錯位 → 切換自訂佈局後靜音救不回（2026-09 修）。
+                // 取出即移除，避免兩個槽拿到同一個 ID。
+                // 只重用有內容的視窗：空視窗沒有 iframe，而空槽 ID 帶有 empty-stream-X ↔ empty-chat-X 的配對語意
+                // （addStream 依此把聊天室填進「同組」槽位），重用會把舊版面的配對帶到新版面不相鄰的位置。
+                const idPool = state.canvasItems.filter(item => item.contentId != null);
+                const reuseId = (type: CanvasItem['type'], contentId: number, fallback: string) => {
+                    const idx = idPool.findIndex(item => item.type === type && item.contentId === contentId);
+                    return idx === -1 ? fallback : idPool.splice(idx, 1)[0].i;
+                };
+
                 // Queues for distribution
                 const streamQueue = [...streamIds];
                 const chatQueue = [...chatIds];
@@ -1115,7 +1126,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         const sId = streamQueue.shift();
                         if (sId !== undefined) {
                             newItems.push({
-                                i: `stream-${uuidv4()}-${sId}`,
+                                i: reuseId('stream', sId, `stream-${uuidv4()}-${sId}`),
                                 type: 'stream',
                                 contentId: sId,
                                 layout: itemLayout
@@ -1134,7 +1145,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         const cId = chatQueue.shift();
                         if (cId !== undefined) {
                             newItems.push({
-                                i: `chat-${uuidv4()}-${cId}`,
+                                i: reuseId('chat', cId, `chat-${uuidv4()}-${cId}`),
                                 type: 'chat',
                                 contentId: cId,
                                 layout: itemLayout
@@ -1160,7 +1171,7 @@ export const useStreamStore = create<StreamStoreState>()(
                     // Find position for overflow stream
                     const pos = findAvailablePosition(newItems, 12, 12, 24);
                     newItems.push({
-                        i: `stream-${uuidv4()}-${sId}`,
+                        i: reuseId('stream', sId, `stream-${uuidv4()}-${sId}`),
                         type: 'stream',
                         contentId: sId,
                         layout: { x: pos.x, y: pos.y, w: 12, h: 12 }
