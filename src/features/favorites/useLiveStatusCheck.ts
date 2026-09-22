@@ -4,11 +4,18 @@ import { twitchService } from '../twitch/TwitchService';
 import { youtubeApi } from '../../utils/youtubeApi';
 import { cacheChannelIfAbsent } from '../youtube/YouTubeChannelRepository';
 import { FavoriteStream } from './types';
+import { shouldCheckChannel, recordChannelCheck } from './liveCheckThrottle';
+
+export interface CheckNowOptions {
+    /** 使用者手動觸發：略過每頻道節流（見 liveCheckThrottle.ts） */
+    force?: boolean;
+}
 
 export const useLiveStatusCheck = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const checkNow = useCallback(async () => {
+    const checkNow = useCallback(async (options?: CheckNowOptions) => {
+        const force = options?.force === true;
         if (isRefreshing) return;
         setIsRefreshing(true);
 
@@ -65,6 +72,11 @@ export const useLiveStatusCheck = () => {
                         }
                     }
 
+                    // 每頻道節流：離線頻道 15 分鐘、其餘 4 分鐘內查過就跳過（跨分頁、跨重新整理共用）
+                    if (!shouldCheckChannel(fav.channelId, Date.now(), force)) {
+                        continue;
+                    }
+
                     // Rate limiting: 2000ms delay between requests
                     if (!isFirstYoutubeCheck) {
                         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -73,6 +85,7 @@ export const useLiveStatusCheck = () => {
 
                     try {
                         const status = await youtubeApi.checkChannelLiveStatus(fav.channelId);
+                        recordChannelCheck(fav.channelId, !!status.isLive);
 
                         // 順手蒐集到離線頻道資料庫:寫官方頻道名、查 DB 去重、不更動使用者收藏資料。
                         // fire-and-forget,失敗不影響直播狀態檢查。

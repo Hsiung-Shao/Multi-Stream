@@ -269,7 +269,8 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const { checkNow, isRefreshing } = useLiveStatusCheck();
 
     const handleCheckLiveStatus = async () => {
-        await checkNow();
+        // 使用者手動按下 → 略過每頻道節流，全部重查
+        await checkNow({ force: true });
         // Hook internal logic updates data, loadData() ensures UI sync via re-reading
         loadData();
     };
