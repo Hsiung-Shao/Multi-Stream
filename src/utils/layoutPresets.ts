@@ -65,8 +65,9 @@ export interface LayoutTemplate {
 // ==================================================================================
 //
 // 畫布是 24 欄 × 24 列、依視窗寬高等分，所以格子不是正方形：一塊 w×h 格的像素比例是
-// (w/h)·aspect。舊版型把格數寫死，串流格在多數螢幕上都不是 16:9，畫面上下（或左右）
-// 出現大片黑邊。這裡改用「16:9 單位格（tile）」描述版型結構，再依實際寬高比換算成整數格。
+// (w/h)·aspect。舊版型把格數寫死，寬螢幕上串流格比 16:9 寬，畫面左右出現黑邊。
+// 這裡改用「16:9 單位格（tile）」描述版型結構，再依實際寬高比換算成整數格：
+// 高度填滿畫布（上下不留空），寬度不超過 16:9，多出的寬度水平置中。
 
 const DEFAULT_ASPECT = 16 / 9;
 /** 與 SimpleCanvas 的 SIZE_LIMITS.stream 一致：推擠與縮放都不會讓串流小於 6×6 */
@@ -87,20 +88,23 @@ export interface GridRect { x: number; y: number; w: number; h: number }
 const FULL_AREA: FitArea = { x0: 0, cols: 24, rows: 24 };
 
 /**
- * 找出 K×R 個 tile 在 area 內的最大單位尺寸：u 欄 × v 列，v = round(u·aspect·9/16)。
- * 塞不下任何 16:9 解時退回「欄寬塞滿、列高平分」（比例會偏，但不低於最小尺寸，列可超出 24 讓畫布往下長）。
+ * K×R 個 tile 在 area 內的單位尺寸 u 欄 × v 列。
+ * 高度一律填滿（使用者裁定「上下不留空」：寧可播放器內有黑邊，也不要畫布上下空白）；
+ * 寬度最多到 16:9（u ≈ v·16/(9·aspect)），不會比 16:9 更寬，所以不會出現左右黑邊，多出的寬度留給水平置中。
+ * 列數塞不下最小尺寸時（例如 5 列以上）不低於 6，畫布往下長。
  */
 function fitUnit(K: number, R: number, aspect: number, area: FitArea): { u: number; v: number; fits: boolean } {
+    const v = Math.max(MIN_STREAM_CELLS, Math.floor(area.rows / R));
     const maxU = Math.floor(area.cols / K);
-    for (let u = maxU; u >= MIN_STREAM_CELLS; u--) {
-        const v = Math.max(MIN_STREAM_CELLS, Math.round((u * aspect * 9) / 16));
-        if (v * R <= area.rows) return { u, v, fits: true };
-    }
-    return { u: Math.max(MIN_STREAM_CELLS, maxU), v: Math.max(MIN_STREAM_CELLS, Math.floor(area.rows / R)), fits: false };
+    const u = Math.max(MIN_STREAM_CELLS, Math.min(maxU, Math.round((v * 16) / (9 * aspect))));
+    return { u, v, fits: v * R <= area.rows };
 }
 
+/** 一個 u×v 格視窗裡實際 16:9 畫面的邊長指標（與寬 u·aspect、高 v·16/9 取小者成正比），用來比較哪種排法畫面最大 */
+const pictureSize = (u: number, v: number, aspect: number) => Math.min(u * aspect, (v * 16) / 9);
+
 /**
- * 把以 16:9 tile 描述的版型換算成整數格，並在 area 內水平、垂直置中。
+ * 把以 16:9 tile 描述的版型換算成整數格：高度填滿 area，寬度上限 16:9 並水平置中。
  * tile 座標可以是小數（例如最後一列置中時的 0.5），換算後四捨五入到整數格。
  */
 export function fitTiles(tiles: Tile[], aspect: number = DEFAULT_ASPECT, area: FitArea = FULL_AREA): GridRect[] {
@@ -148,8 +152,8 @@ export function generateSharedChatLayout(
     let best = { k: 1, u: 0, v: 0, score: -1 };
     for (let k = 1; k <= maxK; k++) {
         const { u, v, fits } = fitUnit(k, Math.ceil(n / k), aspect, area);
-        // 真的塞得下 16:9 的解永遠優先於退而求其次的解；同級比畫面總面積，平手取欄數多（較不往下長）
-        const score = (fits ? 1e6 : 0) + u * v;
+        // 不必往下長的解永遠優先；同級比每路實際畫面大小（路數相同，等同比總面積），平手取欄數多
+        const score = (fits ? 1e6 : 0) + pictureSize(u, v, aspect);
         if (score > best.score || (score === best.score && k > best.k)) best = { k, u, v, score };
     }
 

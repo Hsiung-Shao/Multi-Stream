@@ -52,11 +52,16 @@ describe('fitTiles', () => {
         ]);
     });
 
-    it('塞不下 16:9 時置中留白而不是撐出黑邊（2 路並排，上下留白）', () => {
+    it('上下不留空：高度一律填滿（2 路並排在 16:9 上是兩個 12×24）', () => {
         const rects = fitTiles([{ x: 0, y: 0, w: 1, h: 1 }, { x: 1, y: 0, w: 1, h: 1 }], 16 / 9);
-        expect(rects.map(r => r.w)).toEqual([12, 12]);
-        expect(rects[0].h).toBe(12);
-        expect(rects[0].y).toBe(6); // (24 - 12) / 2
+        expect(rects).toEqual([{ x: 0, y: 0, w: 12, h: 24 }, { x: 12, y: 0, w: 12, h: 24 }]);
+    });
+
+    it('寬度不超過 16:9：21:9 上 1 格不會撐滿寬度，而是水平置中', () => {
+        const [r] = fitTiles([{ x: 0, y: 0, w: 1, h: 1 }], 21 / 9);
+        expect(r.h).toBe(24);
+        expect(r.w).toBeLessThan(24);
+        expect(r.x).toBe(Math.floor((24 - r.w) / 2));
     });
 
     it('area 參數：只在指定欄範圍內擬合', () => {
@@ -70,16 +75,17 @@ describe('16:9 感知的純串流版型', () => {
 
     for (const [label, aspect] of Object.entries(ASPECTS)) {
         for (const n of [2, 3, 4, 5, 6]) {
-            it(`template-${n}-landscape @ ${label}：整數、界內、不重疊、每格接近 16:9`, () => {
+            it(`template-${n}-landscape @ ${label}：整數、界內、不重疊、高度填滿、不比 16:9 寬`, () => {
                 const specs = generateLayoutFromTemplate(`template-${n}-landscape`, ids.slice(0, n), aspect) as Spec[];
                 expect(specs).toHaveLength(n);
                 expectSaneLayout(specs);
                 specs.forEach((s, i) => expect(s.contentId).toBe(ids[i]));
-                // 5 路橫向 4 個 tile，每個 tile 只有 6 欄；比 16:9 窄的螢幕上 16:9 高度不到 6 列，
-                // 會被串流最小高度夾住而偏離比例——這是刻意取捨（寧可略扁也不低於最小尺寸）
-                if (n === 5 && aspect < 16 / 9) return;
+                // 上下不留空
+                expect(Math.min(...specs.map(s => s.y))).toBe(0);
+                expect(Math.max(...specs.map(s => s.y + s.h))).toBe(24);
+                // 寬度上限 16:9（整數格四捨五入容許 10%）；最小 6 欄夾住時例外
                 for (const s of specs) {
-                    expect(Math.abs(pixelRatio(s, aspect) / (16 / 9) - 1)).toBeLessThan(0.1);
+                    if (s.w > 6) expect(pixelRatio(s, aspect)).toBeLessThan((16 / 9) * 1.1);
                 }
             });
         }
@@ -118,6 +124,9 @@ describe('N 串 + 1 共用聊天室', () => {
                 const streamRight = Math.max(...streams.map(s => s.x + s.w));
                 expect(chats[0].x).toBeGreaterThanOrEqual(streamRight);
                 streams.forEach((s, i) => expect(s.contentId).toBe(ids[i]));
+                // 上下不留空
+                expect(Math.min(...streams.map(s => s.y))).toBe(0);
+                expect(Math.max(...streams.map(s => s.y + s.h))).toBe(24);
             });
         }
     }
