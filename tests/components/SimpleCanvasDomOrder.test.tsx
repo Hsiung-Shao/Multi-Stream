@@ -148,4 +148,42 @@ describe('SimpleCanvas 視窗 DOM 順序', () => {
         startDrag(container, 'a');
         expect(hintedIds(container)).toEqual(['b']);
     });
+
+    // 使用者回報（2026-09-24 錄影）：聊天室比上限 4 欄寬時，點到左上角（與「⠿」把手重疊的縮放角）
+    // 就會觸發一次沒有移動的縮放，落地時寬度被夾回 4 欄，聊天室自己變窄、右邊留下空白。
+    it('點一下縮放角（沒有移動）不改變任何視窗；超寬的聊天室不會被夾回上限', () => {
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        const onWindowUpdate = vi.fn();
+        const chat: CanvasWindow = { id: 'chat', gridX: 18, gridY: 0, gridW: 6, gridH: 24, type: 'chat', contentId: 1 };
+        const stream: CanvasWindow = { id: 's', gridX: 0, gridY: 0, gridW: 18, gridH: 24, type: 'stream', contentId: 1 };
+        const { container } = render(
+            <SimpleCanvas windows={[stream, chat]} onWindowUpdate={onWindowUpdate} onWindowRemove={noop} renderContent={renderContent} />,
+        );
+        const nw = container.querySelector('[data-canvas-window-id="chat"] [data-corner="nw"]')!;
+        act(() => { fireEvent.pointerDown(nw, { clientX: 5, clientY: 5, pointerId: 1 }); });
+        act(() => { fireEvent.pointerUp(nw, { clientX: 5, clientY: 5, pointerId: 1 }); });
+        // 純點擊：完全不落地（不跑推擠／連鎖填補，也就不可能改到任何視窗）
+        expect(onWindowUpdate).not.toHaveBeenCalled();
+    });
+
+    it('超寬的聊天室往內拖 1 欄：變成 5 欄，不會被一次夾到上限 4 欄', async () => {
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
+        const onWindowUpdate = vi.fn();
+        const chat: CanvasWindow = { id: 'chat', gridX: 18, gridY: 0, gridW: 6, gridH: 24, type: 'chat', contentId: 1 };
+        const stream: CanvasWindow = { id: 's', gridX: 0, gridY: 0, gridW: 18, gridH: 24, type: 'stream', contentId: 1 };
+        const { container } = render(
+            <SimpleCanvas windows={[stream, chat]} onWindowUpdate={onWindowUpdate} onWindowRemove={noop} renderContent={renderContent} />,
+        );
+        const cell = window.innerWidth / 24;
+        const ne = container.querySelector('[data-canvas-window-id="chat"] [data-corner="ne"]')!;
+        act(() => { fireEvent.pointerDown(ne, { clientX: 1000, clientY: 5, pointerId: 1 }); });
+        act(() => { fireEvent.pointerMove(ne, { clientX: 1000 - cell, clientY: 5, pointerId: 1 }); });
+        // useResize 在 requestAnimationFrame 裡處理移動
+        await act(async () => { await new Promise(r => requestAnimationFrame(() => r(null))); });
+        act(() => { fireEvent.pointerUp(ne, { clientX: 1000 - cell, clientY: 5, pointerId: 1 }); });
+        const last = onWindowUpdate.mock.calls.at(-1)?.[0] as CanvasWindow[] | undefined;
+        expect(last?.find(w => w.id === 'chat')!.gridW).toBe(5);
+    });
 });

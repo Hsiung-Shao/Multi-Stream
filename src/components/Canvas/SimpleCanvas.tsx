@@ -173,7 +173,10 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     // 把使用者拖出來的尺寸夾進該類型視窗的合法範圍
     const clampDesired = useCallback((w: CanvasWindow, gridW: number, gridH: number) => {
         const { minW, minH, maxW } = limitsOf(w);
-        return { w: Math.max(minW, Math.min(maxW, gridW)), h: Math.max(minH, gridH) };
+        // 上限只擋「放大超過上限」：本來就比上限寬的視窗（舊版型、連鎖填補留下的）不在縮放時被硬夾回去，
+        // 否則點一下縮放角聊天室就自己變窄（2026-09-24 使用者錄影回報）
+        const effectiveMaxW = Math.max(maxW, w.gridW);
+        return { w: Math.max(minW, Math.min(effectiveMaxW, gridW)), h: Math.max(minH, gridH) };
     }, []);
 
     const solveResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
@@ -288,13 +291,13 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     const handleWindowResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
         setResizeGhosts(null);
         const before = windowsRef.current.find(w => w.id === id);
+        // 只是點了一下縮放角（位置尺寸都沒變）：什麼都不做，不跑推擠／連鎖填補，也不夾尺寸。
+        // 縮放角與工具列的拖曳把手相鄰，使用者常常只是想點工具列。
+        if (before && before.gridX === gridX && before.gridY === gridY && before.gridW === gridW && before.gridH === gridH) return;
         const solved = solveResize(id, gridX, gridY, gridW, gridH);
         if (!solved) return;
         onWindowUpdateRef.current(solved.windows);
-        // 只點到縮放角、尺寸沒變，不算學會了縮放
-        if (before && (before.gridX !== gridX || before.gridY !== gridY || before.gridW !== gridW || before.gridH !== gridH)) {
-            useUIStore.getState().recordCanvasManipulation();
-        }
+        useUIStore.getState().recordCanvasManipulation();
     }, [solveResize]);
 
     const handleHoverChange = useCallback((hoveredId: string | null, canvasItemId: string | null) => {
