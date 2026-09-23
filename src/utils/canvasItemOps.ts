@@ -14,7 +14,7 @@ const byPosition = (a: CanvasItem, b: CanvasItem) => a.layout.y - b.layout.y || 
 /**
  * 「N 串 + 1 共用聊天室」：畫布上恰好 1 個聊天室，且串流視窗（含空槽）至少 2 個，
  * 或那個聊天室帶 sharedChat 標記（共用版面刪到只剩 1 路時靠標記維持共用模式）。
- * 聊天室標頭在這個狀態下才顯示分頁；新增串流時也依此決定要不要替每一路補聊天室。
+ * 新增／移除串流時依此決定要不要替每一路補聊天室、聊天室要不要改指向其他路。
  */
 export function isSharedChatLayout(items: readonly CanvasItem[]): boolean {
     let chats = 0, streams = 0, flagged = false;
