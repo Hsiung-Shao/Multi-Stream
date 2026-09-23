@@ -10,7 +10,7 @@ import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/lay
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
 import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout } from '../utils/layoutPresets';
-import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId } from '../utils/canvasItemOps';
+import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag } from '../utils/canvasItemOps';
 import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
@@ -386,7 +386,7 @@ export const useStreamStore = create<StreamStoreState>()(
 
                                     // Preserve the ID ('i') but update the layout
                                     return {
-                                        ...existingItem,
+                                        ...withSharedFlag(existingItem, !!target.sharedChat),
                                         layout: {
                                             x: target.layout?.x ?? target.x,
                                             y: target.layout?.y ?? target.y,
@@ -614,7 +614,7 @@ export const useStreamStore = create<StreamStoreState>()(
                             if (matchIndex !== -1) {
                                 const existing = availableItems[matchIndex];
                                 availableItems.splice(matchIndex, 1);
-                                return { ...existing, layout: { ...layout } };
+                                return { ...withSharedFlag(existing, !!target.sharedChat), layout: { ...layout } };
                             }
 
                             return {
@@ -948,7 +948,7 @@ export const useStreamStore = create<StreamStoreState>()(
 
                         // Handle potential simple x,y vs layout object
                         const newLayout = target.layout || { x: target.x, y: target.y, w: target.w, h: target.h };
-                        return { ...existing, layout: newLayout };
+                        return { ...withSharedFlag(existing, !!target.sharedChat), layout: newLayout };
                     }
 
                     const layout = target.layout || { x: target.x, y: target.y, w: target.w, h: target.h };
@@ -1027,7 +1027,9 @@ export const useStreamStore = create<StreamStoreState>()(
                         i: existingId || `${spec.type}-${uuidv4()}-${spec.contentId || 'empty'}`,
                         type: spec.type,
                         contentId: spec.contentId || null,
-                        layout: { x: spec.x, y: spec.y, w: spec.w, h: spec.h }
+                        layout: { x: spec.x, y: spec.y, w: spec.w, h: spec.h },
+                        // 共用聊天室標記只跟著版型走：換成其他版型時重建的 item 不帶，沿用 ID 也不會殘留
+                        ...(spec.sharedChat ? { sharedChat: true } : {}),
                     };
                 });
 
@@ -1041,7 +1043,8 @@ export const useStreamStore = create<StreamStoreState>()(
                     y: item.layout.y,
                     w: item.layout.w,
                     h: item.layout.h,
-                    type: item.type
+                    type: item.type,
+                    ...(item.sharedChat ? { sharedChat: true } : {}),
                 }));
 
                 const newLayout: CustomLayout = {
@@ -1088,7 +1091,8 @@ export const useStreamStore = create<StreamStoreState>()(
                     y: item.layout.y,
                     w: item.layout.w,
                     h: item.layout.h,
-                    type: item.type as 'stream' | 'chat'
+                    type: item.type as 'stream' | 'chat',
+                    ...(item.sharedChat ? { sharedChat: true } : {}),
                 }));
 
                 // 2. Update the target layout
@@ -1188,7 +1192,8 @@ export const useStreamStore = create<StreamStoreState>()(
                                 i: reuseId('chat', cId, `chat-${uuidv4()}-${cId}`),
                                 type: 'chat',
                                 contentId: cId,
-                                layout: itemLayout
+                                layout: itemLayout,
+                                ...(slot.sharedChat ? { sharedChat: true } : {}),
                             });
                         } else {
                             // Create Empty Chat Window
@@ -1196,7 +1201,8 @@ export const useStreamStore = create<StreamStoreState>()(
                                 i: `empty-chat-${uuidv4()}`,
                                 type: 'chat',
                                 contentId: null, // Empty
-                                layout: itemLayout
+                                layout: itemLayout,
+                                ...(slot.sharedChat ? { sharedChat: true } : {}),
                             });
                         }
                     }

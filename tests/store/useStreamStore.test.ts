@@ -466,4 +466,80 @@ describe('useStreamStore', () => {
             expect(items.find(i => i.i === 'empty')!.layout).toEqual(L(0, 0, 16, 24));
         });
     });
+
+    // 共用聊天室刪到只剩 1 路時，原本無法和「1 人含聊天室」區分，再加一路就變成每路一聊（code review #3）。
+    // 修法：共用聊天室的 item 自帶 sharedChat 標記。
+    describe('共用聊天室剩 1 路', () => {
+        const mk = (id: number, ch: string) => ({ id, platform: 'twitch' as const, channelId: ch, videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false });
+
+        it('套用共用版型產生的聊天室帶 sharedChat 標記；每路一聊的版型不帶', () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: [mk(1, 'a'), mk(2, 'b')], canvasItems: [] });
+            useStreamStore.getState().applyTemplateLayout('template-2-sharedchat');
+            expect(useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!.sharedChat).toBe(true);
+
+            useStreamStore.getState().applyTemplateLayout('template-2-chat');
+            for (const c of useStreamStore.getState().canvasItems.filter(i => i.type === 'chat')) {
+                expect(c.sharedChat).toBeFalsy();
+            }
+        });
+
+        it('3+1 刪到剩 1 路再新增：仍是共用聊天室（1 個聊天室、i 保留）', async () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: [mk(1, 'a'), mk(2, 'b'), mk(3, 'c')], canvasItems: [] });
+            useStreamStore.getState().applyTemplateLayout('template-3-sharedchat');
+            const chatId = useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!.i;
+
+            useStreamStore.getState().removeStream(2, true);
+            useStreamStore.getState().removeStream(3, true);
+            let items = useStreamStore.getState().canvasItems;
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(1);
+            expect(items.filter(i => i.type === 'chat')).toHaveLength(1);
+
+            const r = await useStreamStore.getState().addStream('https://www.twitch.tv/newone');
+            expect(r.success).toBe(true);
+            items = useStreamStore.getState().canvasItems;
+            expect(items.filter(i => i.type === 'chat')).toHaveLength(1);
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(2);
+            expect(items.find(i => i.type === 'chat')!.i).toBe(chatId);
+        });
+
+        it('自訂版面記住共用聊天室：只有 1 路時套用，之後新增仍是 1 個聊天室', async () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas',
+                streams: [mk(1, 'a')],
+                canvasItems: [],
+                customLayouts: [{
+                    id: 'S1', name: 'shared', createdAt: 0,
+                    slots: [
+                        { x: 0, y: 0, w: 20, h: 12, type: 'stream' },
+                        { x: 0, y: 12, w: 20, h: 12, type: 'stream' },
+                        { x: 20, y: 0, w: 4, h: 24, type: 'chat', sharedChat: true },
+                    ],
+                }],
+            });
+            useStreamStore.getState().applyCustomLayout('S1');
+            expect(useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!.sharedChat).toBe(true);
+            // 移除空槽後只剩 1 串流＋1 聊天室，仍要維持共用
+            useStreamStore.setState({ canvasItems: useStreamStore.getState().canvasItems.filter(i => !(i.type === 'stream' && i.contentId == null)) });
+            await useStreamStore.getState().addStream('https://www.twitch.tv/newone');
+            expect(useStreamStore.getState().canvasItems.filter(i => i.type === 'chat')).toHaveLength(1);
+        });
+
+        it('從共用版面切到每路一聊，被沿用的聊天室不殘留標記', () => {
+            useStreamStore.setState({ layoutMode: 'auto', streams: [mk(1, 'a'), mk(2, 'b')], canvasItems: [] });
+            useStreamStore.getState().applyTemplateLayout('template-2-sharedchat');
+            const chatId = useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!.i;
+            useStreamStore.getState().applyAutoLayout('with_chat');
+            const reused = useStreamStore.getState().canvasItems.find(i => i.i === chatId);
+            expect(reused).toBeDefined();
+            expect(reused!.sharedChat).toBeFalsy();
+        });
+
+        it('「1 人含聊天室」再新增一路：行為不變，仍是每路各一個聊天室', async () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: [mk(1, 'a')], canvasItems: [] });
+            useStreamStore.getState().applyTemplateLayout('template-1-chat');
+            const r = await useStreamStore.getState().addStream('https://www.twitch.tv/newone');
+            expect(r.success).toBe(true);
+            expect(useStreamStore.getState().canvasItems.filter(i => i.type === 'chat')).toHaveLength(2);
+        });
+    });
 });

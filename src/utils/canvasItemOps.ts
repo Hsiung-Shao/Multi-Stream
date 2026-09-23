@@ -11,16 +11,28 @@ type StreamId = number;
 const byPosition = (a: CanvasItem, b: CanvasItem) => a.layout.y - b.layout.y || a.layout.x - b.layout.x;
 
 /**
- * 「N 串 + 1 共用聊天室」：畫布上恰好 1 個聊天室，且串流視窗（含空槽）至少 2 個。
+ * 「N 串 + 1 共用聊天室」：畫布上恰好 1 個聊天室，且串流視窗（含空槽）至少 2 個，
+ * 或那個聊天室帶 sharedChat 標記（共用版面刪到只剩 1 路時靠標記維持共用模式）。
  * 聊天室標頭在這個狀態下才顯示分頁；新增串流時也依此決定要不要替每一路補聊天室。
  */
 export function isSharedChatLayout(items: readonly CanvasItem[]): boolean {
-    let chats = 0, streams = 0;
+    let chats = 0, streams = 0, flagged = false;
     for (const it of items) {
-        if (it.type === 'chat') chats++;
+        if (it.type === 'chat') { chats++; if (it.sharedChat) flagged = true; }
         else if (it.type === 'stream') streams++;
     }
-    return chats === 1 && streams >= 2;
+    return chats === 1 && (streams >= 2 || flagged);
+}
+
+/**
+ * 沿用既有 item（保留 i）時，sharedChat 標記一律跟著新版型走：
+ * 從共用版面換成每路一聊時，被沿用的那個聊天室不能還帶著舊標記。
+ */
+export function withSharedFlag(item: CanvasItem, shared: boolean): CanvasItem {
+    if (shared) return item.sharedChat ? item : { ...item, sharedChat: true };
+    if (!item.sharedChat) return item;
+    const { sharedChat: _drop, ...rest } = item;
+    return rest;
 }
 
 /** 畫布上有內容的串流 contentId，依位置（上→下、左→右）排序；聊天室分頁與改指向都用這個順序 */

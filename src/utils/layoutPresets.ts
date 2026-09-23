@@ -155,7 +155,7 @@ export function generateSharedChatLayout(
 
     const rects = fitTiles(gridTiles(n, best.k), aspect, area);
     const items: any[] = rects.map((r, i) => ({ type: 'stream', ...r, contentId: streamIds[i] ?? null }));
-    items.push({ type: 'chat', x: area.cols, y: 0, w: SHARED_CHAT_W, h: 24, contentId: chatContentId });
+    items.push({ type: 'chat', x: area.cols, y: 0, w: SHARED_CHAT_W, h: 24, contentId: chatContentId, sharedChat: true });
     return items;
 }
 
