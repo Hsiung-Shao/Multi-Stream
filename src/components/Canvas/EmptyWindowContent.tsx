@@ -115,7 +115,7 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
     };
 
     return (
-        <div className="w-full h-full bg-slate-900 text-white relative group border border-white/10 rounded-lg">
+        <div className="w-full h-full bg-slate-900 text-white relative group border border-white/10 rounded-lg" data-empty-window={type}>
 
             {/* Drag Handle - Top Center */}
             <div

@@ -208,6 +208,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
                     onClick={handleReload}
                     title={t('canvas.toolbar_reload')}
+                    data-tour="reload"
                 >
                     <RefreshCw size={12} />
                 </Button>
@@ -219,6 +220,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     className="h-6 w-6 rounded-full hover:bg-red-500/20 text-white/70 hover:text-red-400 nodrag"
                     onClick={handleRemove}
                     title={t('canvas.toolbar_remove')}
+                    data-tour="remove"
                 >
                     <X size={12} />
                 </Button>

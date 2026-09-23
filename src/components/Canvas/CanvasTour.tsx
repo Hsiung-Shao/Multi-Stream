@@ -10,7 +10,9 @@
  * data-corner / data-tour），平常 hover 才出現的工具列與縮放角靠在目標視窗掛 data-tour-active
  * 由 CSS 強制顯示（見 index.css），所以導覽開關時畫布與播放器都不會重繪。
  */
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
+import { cn } from '../ui/utils';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -19,19 +21,24 @@ import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
 import { hasConsentRecord, CONSENT_CHANGE_EVENT } from '../../utils/analytics';
 
 export const CANVAS_TOUR_DONE_KEY = 'canvas_tour_done';
-/** 有串流之後等播放器與工具列掛好再開始，避免聚光燈指到還沒出現的元素 */
+/** 進畫布後稍等，讓播放器、工具列與動態島掛好，避免聚光燈指到還沒出現的元素 */
 const START_DELAY_MS = 1500;
 const PAD = 6;
 /** 聚光框離螢幕邊緣至少留這麼多，框線才不會被裁掉 */
 const EDGE = 3;
 
 type StepId =
-    | 'drag' | 'swap' | 'resize' | 'theater'
-    | 'island' | 'search' | 'layout' | 'media' | 'collect' | 'help'
-    | 'dock';
+    | 'welcome' | 'windows_intro'
+    | 'drag' | 'swap' | 'resize' | 'theater' | 'controls' | 'chat' | 'empty'
+    | 'island' | 'search' | 'add' | 'layout' | 'media' | 'collect' | 'more' | 'help'
+    | 'dock' | 'summary';
 
 /** 一般型態動態島的介紹步驟；邊緣停靠型只有一步（dock） */
-const ISLAND_STEPS: StepId[] = ['island', 'search', 'layout', 'media', 'collect', 'help'];
+const ISLAND_STEPS: StepId[] = ['island', 'search', 'add', 'layout', 'media', 'collect', 'more', 'help'];
+/** 需要強制顯示主畫面視窗工具列與縮放角的步驟 */
+const WINDOW_STEPS: StepId[] = ['drag', 'swap', 'resize', 'theater', 'controls'];
+/** 沒有目標、置中顯示的說明頁（歡迎、空畫布時的視窗說明、總整） */
+const PAGE_STEPS: StepId[] = ['welcome', 'windows_intro', 'summary'];
 /** 動態島從收起到展開有 0.5 秒動畫；切到島的步驟後等動畫結束再量一次位置 */
 const ISLAND_SETTLE_MS = 600;
 
@@ -43,16 +50,25 @@ function stepTargets(step: StepId, win: HTMLElement | null): (HTMLElement | null
     switch (step) {
         case 'drag': return [win?.querySelector<HTMLElement>('[data-window-toolbar="stream"]') ?? null];
         case 'theater': return [win?.querySelector<HTMLElement>('[data-tour="theater"]') ?? null];
+        case 'controls': return [
+            win?.querySelector<HTMLElement>('[data-tour="reload"]') ?? null,
+            win?.querySelector<HTMLElement>('[data-tour="remove"]') ?? null,
+        ];
+        case 'chat': return [qs('[data-window-toolbar="chat"]')];
+        case 'empty': return [qs('[data-empty-window]')];
         // 縮放：框住整個視窗、四個角各加角框（任一角都能拖，不是只有右下）
         case 'swap':
         case 'resize': return [win];
         case 'island': return [qs('[data-tour="island"]')];
-        case 'search': return [qs('[data-tour="island-search"]'), islandBtn('add')];
+        case 'search': return [qs('[data-tour="island-search"]')];
+        case 'add': return [islandBtn('add')];
         case 'layout': return [islandBtn('layout')];
         case 'media': return [islandBtn('media')];
         case 'collect': return [islandBtn('fav'), islandBtn('save'), islandBtn('share')];
+        case 'more': return [islandBtn('screen'), islandBtn('clear'), islandBtn('home'), islandBtn('settings')];
         case 'help': return [islandBtn('help')];
         case 'dock': return [qs('[data-tour="island-dock"]')];
+        default: return [];
     }
 }
 
@@ -72,6 +88,22 @@ function cornerStyle(c: typeof CORNERS[number], r: Rect): React.CSSProperties {
         borderRightWidth: c[1] === 'e' ? B : 0,
         borderStyle: 'solid',
     };
+}
+
+/** 總整頁：全部操作與快捷鍵（標籤走 i18n，按鍵字串各語言相同） */
+function summaryRows(t: TFunction<'common'>): [string, string][] {
+    return [
+        [t('canvas.tour_sum_move'), '⠿'],
+        [t('canvas.tour_sum_swap'), '⠿ → ▣'],
+        [t('canvas.tour_sum_resize'), '◰'],
+        [t('hotkeys.window_theater'), 'T / Esc'],
+        [t('hotkeys.window_fullscreen'), 'F'],
+        [t('hotkeys.window_mute'), 'M'],
+        [t('hotkeys.window_reload'), 'R'],
+        [t('canvas.tour_sum_layouts'), 'Alt + 1-6, 9'],
+        [t('hotkeys.search'), 'Ctrl + K'],
+        [t('hotkeys.help'), 'Ctrl + /  ·  ?'],
+    ];
 }
 
 const findWindow = (id: string) =>
@@ -104,6 +136,9 @@ export function CanvasTour() {
         const main = mainStreamItemIdOf(s.canvasItems);
         return s.canvasItems.find(i => i.type === 'stream' && i.contentId != null && i.i !== main)?.i ?? null;
     });
+    // 有聊天室／空視窗時才介紹對應的操作（沒有可以框的東西）
+    const hasChat = useStreamStore(s => s.canvasItems.some(i => i.type === 'chat' && i.contentId != null));
+    const hasEmpty = useStreamStore(s => s.canvasItems.some(i => i.contentId == null));
 
     const [stepIdx, setStepIdx] = useState(0);
     // 第一次造訪的訪客會同時看到 Cookie 橫幅（z-9999、在畫面底部），它正好蓋住要介紹的動態島；
@@ -127,22 +162,23 @@ export function CanvasTour() {
         };
     }, []);
 
-    // 沒有任何串流時（例如在空畫布上按「重看導覽」）不要讓開啟旗標懸著，否則之後一加串流就突然跳出
+    // 首次進畫布就開始（空畫布也一樣：先歡迎、再用文字說明視窗操作、接著介紹動態島）
     useEffect(() => {
-        if (open && !mainId) setOpen(false);
-    }, [open, mainId, setOpen]);
-
-    // 首次：有串流之後自動開啟
-    useEffect(() => {
-        if (open || !mainId || !consentReady || readTourDone()) return;
+        if (open || !consentReady || readTourDone()) return;
         const timer = setTimeout(() => setOpen(true), START_DELAY_MS);
         return () => clearTimeout(timer);
-    }, [open, mainId, consentReady, setOpen]);
+    }, [open, consentReady, setOpen]);
 
-    const steps = useMemo<StepId[]>(() => [
-        ...(otherId ? ['drag', 'swap', 'resize', 'theater'] as StepId[] : ['drag', 'resize', 'theater'] as StepId[]),
-        ...(islandStyle === 'edgeDock' ? ['dock'] as StepId[] : ISLAND_STEPS),
-    ], [otherId, islandStyle]);
+    const steps = useMemo<StepId[]>(() => {
+        const list: StepId[] = ['welcome'];
+        if (mainId) list.push(...(otherId ? ['drag', 'swap', 'resize', 'theater', 'controls'] as StepId[] : ['drag', 'resize', 'theater', 'controls'] as StepId[]));
+        else list.push('windows_intro');
+        if (hasChat) list.push('chat');
+        if (hasEmpty) list.push('empty');
+        list.push(...(islandStyle === 'edgeDock' ? ['dock'] as StepId[] : ISLAND_STEPS));
+        list.push('summary');
+        return list;
+    }, [mainId, otherId, hasChat, hasEmpty, islandStyle]);
     const step = steps[Math.min(stepIdx, steps.length - 1)];
 
     const close = useCallback(() => {
@@ -160,12 +196,12 @@ export function CanvasTour() {
 
     // 找出目標元素、掛 data-tour-active 讓工具列與縮放角顯示，並量位置
     useLayoutEffect(() => {
-        if (!open || !mainId) return;
+        if (!open) return;
         const targetWindowId = step === 'swap' ? otherId : mainId;
         const win = targetWindowId ? findWindow(targetWindowId) : null;
-        const main = findWindow(mainId);
-        // 只有畫布步驟需要強制顯示工具列與縮放角；介紹動態島時畫面保持乾淨
-        if (!ISLAND_STEPS.includes(step) && step !== 'dock') main?.setAttribute('data-tour-active', '');
+        const main = mainId ? findWindow(mainId) : null;
+        // 只有視窗步驟需要強制顯示工具列與縮放角；其他時候畫面保持乾淨
+        if (WINDOW_STEPS.includes(step)) main?.setAttribute('data-tour-active', '');
 
         const measure = () => {
             const els = stepTargets(step, win).filter((el): el is HTMLElement => !!el);
@@ -206,11 +242,12 @@ export function CanvasTour() {
         return () => window.removeEventListener('keydown', onKey, true);
     }, [open, next, back, close, stepIdx]);
 
-    if (!open || !mainId) return null;
+    if (!open) return null;
 
     const vw = window.innerWidth, vh = window.innerHeight;
-    const CARD_W = 300, CARD_H = 170;
-    // 卡片放在目標下方，放不下就放上方；找不到目標時置中
+    const isPage = PAGE_STEPS.includes(step);
+    const CARD_W = isPage ? 400 : 300, CARD_H = step === 'summary' ? 420 : isPage ? 220 : 170;
+    // 卡片放在目標下方，放不下就放上方；說明頁與找不到目標時置中
     const centerCard = step === 'resize' && rect;
     const cardTop = centerCard
         ? rect.top + rect.height / 2 - CARD_H / 2
@@ -251,10 +288,22 @@ export function CanvasTour() {
                 aria-labelledby="canvas-tour-title"
                 aria-describedby="canvas-tour-body"
                 className="fixed rounded-xl border border-indigo-400/60 bg-indigo-950/95 p-4 text-white shadow-2xl"
-                style={{ top: cardTop, left: cardLeft, width: CARD_W }}
+                style={{ top: Math.max(12, cardTop), left: Math.max(12, cardLeft), width: CARD_W, maxWidth: 'calc(100vw - 24px)' }}
             >
-                <h2 id="canvas-tour-title" className="mb-1.5 text-sm font-semibold">{t(`canvas.tour_${step}_title` as any)}</h2>
-                <p id="canvas-tour-body" className="mb-4 text-xs leading-relaxed text-indigo-100/90">{t(`canvas.tour_${step}_body` as any)}</p>
+                <h2 id="canvas-tour-title" className={cn('mb-1.5 font-semibold', isPage ? 'text-base' : 'text-sm')}>{t(`canvas.tour_${step}_title` as any)}</h2>
+                <p id="canvas-tour-body" className="mb-4 whitespace-pre-line text-xs leading-relaxed text-indigo-100/90">{t(`canvas.tour_${step}_body` as any)}</p>
+                {step === 'summary' && (
+                    <dl className="mb-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-xs" data-tour-summary>
+                        {summaryRows(t).map(([label, keys]) => (
+                            <Fragment key={label}>
+                                <dt className="text-indigo-100/90">{label}</dt>
+                                <dd className="text-right">
+                                    <kbd className="rounded border border-white/15 bg-black/40 px-1.5 py-0.5 font-mono text-[10px] text-white/90">{keys}</kbd>
+                                </dd>
+                            </Fragment>
+                        ))}
+                    </dl>
+                )}
                 <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] text-indigo-200/70">
                         {t('canvas.tour_progress', { current: stepIdx + 1, total: steps.length })}

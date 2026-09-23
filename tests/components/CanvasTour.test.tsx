@@ -1,4 +1,5 @@
-// 畫布首次導覽（2026-09 版面重設計）：使用者回報「不知道怎麼調整」，拖曳／換位／縮放／放大原本都藏在 hover 或快捷鍵後面。
+// 畫布導覽（2026-09 版面重設計）：使用者回報「不知道怎麼調整」，拖曳／換位／縮放／放大原本都藏在 hover 或快捷鍵後面；
+// 之後要求導覽更完整、一進畫布就顯示：歡迎頁 → 視窗操作 → 聊天室／空視窗（有才顯示）→ 動態島 → 操作一覽。
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import i18n from '../../src/i18n/i18n';
@@ -13,7 +14,7 @@ const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
 function fakeWindow(id: string) {
     const el = document.createElement('div');
     el.setAttribute('data-canvas-window-id', id);
-    el.innerHTML = `<div data-window-toolbar="stream"><button data-tour="theater"></button></div><div data-corner="se"></div>`;
+    el.innerHTML = '<div data-window-toolbar="stream"><button data-tour="theater"></button><button data-tour="reload"></button><button data-tour="remove"></button></div><div data-corner="se"></div>';
     document.body.appendChild(el);
     return el;
 }
@@ -23,12 +24,15 @@ function fakeIsland() {
     const el = document.createElement('div');
     el.setAttribute('data-tour', 'island');
     el.innerHTML = '<div data-tour="island-search"></div>'
-        + ['add', 'layout', 'media', 'fav', 'save', 'share', 'help'].map(fn => `<button data-island-fn="${fn}"></button>`).join('');
+        + ['add', 'layout', 'media', 'fav', 'save', 'share', 'screen', 'clear', 'help', 'home', 'settings']
+            .map(fn => `<button data-island-fn="${fn}"></button>`).join('');
     document.body.appendChild(el);
 }
 
 const spotlight = () => document.querySelector('[data-canvas-tour] .border-indigo-300');
 const clickNext = () => fireEvent.click([...document.querySelectorAll('[data-canvas-tour] button')].pop()!);
+const title = () => document.getElementById('canvas-tour-title')?.textContent;
+const start = () => act(() => { vi.advanceTimersByTime(1600); });
 
 function setStreams(n: number) {
     useStreamStore.setState({
@@ -38,6 +42,11 @@ function setStreams(n: number) {
     });
     for (let i = 1; i <= n; i++) fakeWindow(`w${i}`);
 }
+
+const ISLAND_TITLES = [
+    '下方的動態島：所有主要功能都在這', '搜尋或貼上網址加入直播', '新增視窗', '一鍵切換版面',
+    '媒體控制', '收藏、儲存與分享', '全螢幕、清空與設定', '忘了怎麼操作？',
+];
 
 describe('CanvasTour', () => {
     beforeEach(async () => {
@@ -55,22 +64,103 @@ describe('CanvasTour', () => {
         vi.useRealTimers();
     });
 
-    it('第一次有串流時自動開啟；略過後寫入旗標並關閉', () => {
+    it('一進畫布就從歡迎頁開始（置中、沒有聚光框）；略過後寫入旗標並關閉', () => {
         setStreams(2);
         render(<CanvasTour />);
         expect(screen.queryByRole('dialog')).toBeNull();
-        act(() => { vi.advanceTimersByTime(1600); });
+        start();
 
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByText('拖曳工具列移動視窗')).toBeInTheDocument();
-        expect(screen.getByText('1 / 10')).toBeInTheDocument();
-        // 目標視窗掛上 data-tour-active，平常 hover 才出現的工具列與縮放角由 CSS 強制顯示
+        expect(title()).toBe('歡迎使用多直播畫布');
+        expect(screen.getByText('1 / 15')).toBeInTheDocument();
+        expect(spotlight()).toBeNull();
+
+        // 下一步是拖曳：目標視窗掛上 data-tour-active，平常 hover 才出現的工具列與縮放角由 CSS 強制顯示
+        clickNext();
+        expect(title()).toBe('拖曳工具列移動視窗');
         expect(document.querySelector('[data-canvas-window-id="w1"]')!.hasAttribute('data-tour-active')).toBe(true);
 
         fireEvent.click(screen.getByText('略過'));
         expect(screen.queryByRole('dialog')).toBeNull();
         expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBe('1');
         expect(document.querySelector('[data-tour-active]')).toBeNull();
+    });
+
+    it('空畫布也會開始：視窗操作改成一頁文字說明，接著介紹動態島與操作一覽', () => {
+        fakeIsland();
+        render(<CanvasTour />);
+        start();
+        expect(title()).toBe('歡迎使用多直播畫布');
+        expect(screen.getByText('1 / 11')).toBeInTheDocument();
+        clickNext();
+        expect(title()).toBe('畫面上的視窗怎麼操作');
+        expect(spotlight()).toBeNull();
+        clickNext();
+        expect(title()).toBe(ISLAND_TITLES[0]);
+    });
+
+    it('完整走一遍（1 路）：視窗 → 動態島每顆按鈕都有框到 → 操作一覽 → 開始使用', () => {
+        setStreams(1);
+        fakeIsland();
+        render(<CanvasTour />);
+        start();
+        expect(screen.getByText('1 / 14')).toBeInTheDocument();
+
+        clickNext();
+        expect(title()).toBe('拖曳工具列移動視窗');
+        clickNext();
+        expect(title()).toBe('拖曳四個角調整大小');
+        // 四個角都框起來（不是只框右下角）
+        expect([...document.querySelectorAll('[data-tour-corner]')].map(el => el.getAttribute('data-tour-corner')).sort())
+            .toEqual(['ne', 'nw', 'se', 'sw']);
+        clickNext();
+        expect(title()).toBe('放大某一路');
+        clickNext();
+        expect(title()).toBe('重新載入與移除');
+        expect(spotlight()).not.toBeNull();
+
+        for (const t of ISLAND_TITLES) {
+            clickNext();
+            expect(title()).toBe(t);
+            expect(spotlight(), t).not.toBeNull();
+            // 介紹動態島時不強制顯示視窗工具列
+            expect(document.querySelector('[data-tour-active]')).toBeNull();
+        }
+
+        clickNext();
+        expect(title()).toBe('操作一覽');
+        expect(spotlight()).toBeNull();
+        expect(document.querySelectorAll('[data-tour-summary] dt')).toHaveLength(10);
+        expect(screen.getByText('移動視窗（拖曳工具列）')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByText('開始使用'));
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBe('1');
+    });
+
+    it('畫面上有聊天室與空視窗時，多介紹聊天室選單與空視窗', () => {
+        setStreams(1);
+        useStreamStore.setState({
+            canvasItems: [
+                ...useStreamStore.getState().canvasItems,
+                { i: 'c1', type: 'chat', contentId: 1, layout: L(20, 0, 4, 24) },
+                { i: 'e1', type: 'stream', contentId: null, layout: L(10, 0, 10, 10) },
+            ],
+        });
+        const chat = document.createElement('div');
+        chat.setAttribute('data-window-toolbar', 'chat');
+        const empty = document.createElement('div');
+        empty.setAttribute('data-empty-window', 'stream');
+        document.body.append(chat, empty);
+
+        render(<CanvasTour />);
+        start();
+        expect(screen.getByText('1 / 16')).toBeInTheDocument();
+        for (let i = 0; i < 5; i++) clickNext();
+        expect(title()).toBe('用選單切換聊天室顯示哪一路');
+        expect(spotlight()).not.toBeNull();
+        clickNext();
+        expect(title()).toBe('空視窗：直接填入內容');
+        expect(spotlight()).not.toBeNull();
     });
 
     it('已看過就不再自動開啟', () => {
@@ -81,48 +171,10 @@ describe('CanvasTour', () => {
         expect(screen.queryByRole('dialog')).toBeNull();
     });
 
-    it('沒有串流時不開啟', () => {
-        render(<CanvasTour />);
-        act(() => { vi.advanceTimersByTime(5000); });
-        expect(screen.queryByRole('dialog')).toBeNull();
-    });
-
-    it('只有 1 路時跳過「交換」那一步；最後一步按「開始使用」結束', () => {
-        setStreams(1);
-        fakeIsland();
-        render(<CanvasTour />);
-        act(() => { vi.advanceTimersByTime(1600); });
-        expect(screen.getByText('1 / 9')).toBeInTheDocument();
-
-        fireEvent.click(screen.getByText('下一步'));
-        expect(screen.getByText('拖曳四個角調整大小')).toBeInTheDocument();
-        // 四個角都框起來（不是只框右下角）
-        expect([...document.querySelectorAll('[data-tour-corner]')].map(el => el.getAttribute('data-tour-corner')).sort())
-            .toEqual(['ne', 'nw', 'se', 'sw']);
-        fireEvent.click(screen.getByText('下一步'));
-        expect(screen.getByText('放大某一路')).toBeInTheDocument();
-
-        // 接著逐一介紹下方動態島；每一步都找得到目標（有聚光框，不是整片置中）
-        const islandTitles = [
-            '下方的動態島：所有主要功能都在這', '搜尋或貼上網址加入直播', '一鍵切換版面',
-            '媒體控制', '收藏、儲存與分享', '忘了怎麼操作？',
-        ];
-        for (const title of islandTitles) {
-            clickNext();
-            expect(screen.getByText(title)).toBeInTheDocument();
-            expect(spotlight(), title).not.toBeNull();
-            // 介紹動態島時不強制顯示視窗工具列
-            expect(document.querySelector('[data-tour-active]')).toBeNull();
-        }
-        fireEvent.click(screen.getByText('開始使用'));
-        expect(screen.queryByRole('dialog')).toBeNull();
-        expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBe('1');
-    });
-
     it('導覽期間釘住動態島：isCanvasTourOpen 為 true', () => {
         setStreams(2);
         render(<CanvasTour />);
-        act(() => { vi.advanceTimersByTime(1600); });
+        start();
         expect(useUIStore.getState().isCanvasTourOpen).toBe(true);
     });
 
@@ -133,23 +185,39 @@ describe('CanvasTour', () => {
         dock.setAttribute('data-tour', 'island-dock');
         document.body.appendChild(dock);
         render(<CanvasTour />);
-        act(() => { vi.advanceTimersByTime(1600); });
-        expect(screen.getByText('1 / 5')).toBeInTheDocument();
-        for (let i = 0; i < 4; i++) clickNext();
-        expect(screen.getByText('動態島停靠在畫面邊緣')).toBeInTheDocument();
+        start();
+        expect(screen.getByText('1 / 8')).toBeInTheDocument();
+        for (let i = 0; i < 6; i++) clickNext();
+        expect(title()).toBe('動態島停靠在畫面邊緣');
         expect(spotlight()).not.toBeNull();
+        clickNext();
+        expect(title()).toBe('操作一覽');
     });
 
     it('Esc 略過；從快捷鍵說明重看（setCanvasTourOpen）時從第一步開始', () => {
         setStreams(2);
         render(<CanvasTour />);
-        act(() => { vi.advanceTimersByTime(1600); });
-        fireEvent.click(screen.getByText('下一步'));
+        start();
+        clickNext();
         fireEvent.keyDown(window, { key: 'Escape' });
         expect(screen.queryByRole('dialog')).toBeNull();
 
         act(() => { useUIStore.getState().setCanvasTourOpen(true); });
-        expect(screen.getByText('1 / 10')).toBeInTheDocument();
+        expect(screen.getByText('1 / 15')).toBeInTheDocument();
+    });
+
+    it('可以回上一步（按鈕與方向鍵 ←），第一步沒有上一步', () => {
+        setStreams(2);
+        render(<CanvasTour />);
+        start();
+        expect(screen.queryByText('上一步')).toBeNull();
+        clickNext();
+        clickNext();
+        expect(screen.getByText('3 / 15')).toBeInTheDocument();
+        fireEvent.click(screen.getByText('上一步'));
+        expect(screen.getByText('2 / 15')).toBeInTheDocument();
+        fireEvent.keyDown(window, { key: 'ArrowLeft' });
+        expect(screen.getByText('1 / 15')).toBeInTheDocument();
     });
 
     it('掛載期間標記導覽可用（快捷鍵說明據此顯示「重看導覽」），卸載時清除', () => {
@@ -171,7 +239,7 @@ describe('CanvasTour', () => {
         try {
             setStreams(2);
             render(<CanvasTour />);
-            act(() => { vi.advanceTimersByTime(1600); });
+            start();
             fireEvent.click(screen.getByText('略過'));
             expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBeNull();
             act(() => { vi.advanceTimersByTime(5000); });
@@ -179,16 +247,6 @@ describe('CanvasTour', () => {
         } finally {
             setItem.mockImplementation(original);
         }
-    });
-
-    it('空畫布上要求開啟（重看導覽）不會懸著，之後加串流也不會突然跳出', () => {
-        localStorage.setItem(CANVAS_TOUR_DONE_KEY, '1');
-        render(<CanvasTour />);
-        act(() => { useUIStore.getState().setCanvasTourOpen(true); });
-        expect(useUIStore.getState().isCanvasTourOpen).toBe(false);
-        act(() => { setStreams(2); });
-        act(() => { vi.advanceTimersByTime(5000); });
-        expect(screen.queryByRole('dialog')).toBeNull();
     });
 
     it('第一次造訪還沒回應 Cookie 橫幅時先不開始，回應後才開始（橫幅會蓋住動態島）', () => {
@@ -199,21 +257,7 @@ describe('CanvasTour', () => {
         expect(screen.queryByRole('dialog')).toBeNull();
 
         act(() => { setTrackingConsent(false); });
-        act(() => { vi.advanceTimersByTime(1600); });
+        start();
         expect(screen.getByRole('dialog')).toBeInTheDocument();
-    });
-
-    it('可以回上一步（按鈕與方向鍵 ←），第一步沒有上一步', () => {
-        setStreams(2);
-        render(<CanvasTour />);
-        act(() => { vi.advanceTimersByTime(1600); });
-        expect(screen.queryByText('上一步')).toBeNull();
-        clickNext();
-        clickNext();
-        expect(screen.getByText('3 / 10')).toBeInTheDocument();
-        fireEvent.click(screen.getByText('上一步'));
-        expect(screen.getByText('2 / 10')).toBeInTheDocument();
-        fireEvent.keyDown(window, { key: 'ArrowLeft' });
-        expect(screen.getByText('1 / 10')).toBeInTheDocument();
     });
 });
