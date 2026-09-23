@@ -61,7 +61,7 @@ const common = {
   'canvas.tour_search_title': '검색하거나 링크를 붙여 방송 추가',
   'canvas.tour_search_body': '채널 이름으로 Twitch／YouTube 를 검색하거나 방송 링크를 붙여넣고 Enter. 옆의 ＋ 로 빈 창이나 채팅을 추가할 수 있습니다.',
   'canvas.tour_layout_title': '한 번에 레이아웃 전환',
-  'canvas.tour_layout_body': '방송만／채팅 포함 프리셋을 고르세요. 「채팅 1개 공유」는 여러 방송＋채팅 1개 구성이며, 채팅 위 탭으로 표시할 방송을 바꿉니다. 직접 만든 레이아웃도 저장할 수 있습니다.',
+  'canvas.tour_layout_body': '방송만／채팅 포함 프리셋을 고르세요. 「채팅 1개 공유」는 여러 방송＋채팅 1개 구성이며, 채팅 위 메뉴로 표시할 방송을 바꿉니다. 직접 만든 레이아웃도 저장할 수 있습니다.',
   'canvas.tour_media_title': '미디어 제어',
   'canvas.tour_media_body': '전체 음량, 모두 음소거, 방송별 음량과 순서를 조절합니다.',
   'canvas.tour_collect_title': '즐겨찾기·저장·공유',

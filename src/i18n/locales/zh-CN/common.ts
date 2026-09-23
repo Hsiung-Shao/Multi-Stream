@@ -61,7 +61,7 @@ const common = {
   'canvas.tour_search_title': '搜索或粘贴网址加入直播',
   'canvas.tour_search_body': '输入频道名称搜索 Twitch／YouTube，或直接粘贴直播网址按 Enter。旁边的 ＋ 可以新增空白窗口或聊天室。',
   'canvas.tour_layout_title': '一键切换布局',
-  'canvas.tour_layout_body': '选「仅串流」或「含聊天室」的预设布局；「共用一个聊天室」就是 N 串 1 聊，聊天室上方的分页可以切换显示哪一路。排好的布局也能存成自定义布局。',
+  'canvas.tour_layout_body': '选「仅串流」或「含聊天室」的预设布局；「共用一个聊天室」就是 N 串 1 聊，聊天室上方的下拉菜单可以切换显示哪一路。排好的布局也能存成自定义布局。',
   'canvas.tour_media_title': '媒体控制',
   'canvas.tour_media_body': '调整总音量、全部静音，或分别调整每一路的音量与顺序。',
   'canvas.tour_collect_title': '收藏、保存与分享',

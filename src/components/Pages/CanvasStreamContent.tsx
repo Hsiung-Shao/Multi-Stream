@@ -16,7 +16,7 @@ import type { StreamData } from '../../utils/streamUtils';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { mainStreamItemIdOf, sharedChatContentIdOf } from '../../utils/canvasItemOps';
-import { SharedChatTabs } from '../Canvas/SharedChatTabs';
+import { ChatStreamSelect } from '../Canvas/ChatStreamSelect';
 
 interface CanvasStreamContentProps {
     stream: StreamData;
@@ -49,7 +49,6 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     // 衍生值以 canvasItems 身分快取（見 canvasItemOps），多個視窗訂閱也只算一次
     const isMain = useStreamStore(s => windowId !== undefined && mainStreamItemIdOf(s.canvasItems) === windowId);
     const sharedChatContentId = useStreamStore(s => sharedChatContentIdOf(s.canvasItems));
-    const sharedChat = sharedChatContentId !== undefined;
     const shownInSharedChat = !isChatWindow && sharedChatContentId === stream.id;
 
     const handleTheater = useCallback((e: React.MouseEvent) => {
@@ -142,9 +141,9 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                 {...dragHandlers}
             >
                 {/* Drag Handle with Title (Grid Size REMOVED) */}
-                <div className={cn("cursor-grab flex items-center text-white/70 hover:text-white mr-1 gap-2", isChatWindow && sharedChat && "mr-0")}>
+                <div className={cn("cursor-grab flex items-center text-white/70 hover:text-white mr-1 gap-2", isChatWindow && "mr-0")}>
                     <GripHorizontal size={14} className="shrink-0" />
-                    {isChatWindow && sharedChat && windowId !== undefined ? null : (
+                    {isChatWindow && windowId !== undefined ? null : (
                         <span className="text-[10px] font-medium max-w-[100px] truncate">
                             {title}
                         </span>
@@ -156,9 +155,9 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     )}
                 </div>
 
-                {/* 共用聊天室：標題換成分頁，切換聊天室顯示哪一路 */}
-                {isChatWindow && sharedChat && windowId !== undefined && (
-                    <SharedChatTabs chatItemId={windowId} activeStreamId={stream.id} />
+                {/* 聊天室：標題換成下拉選單，切換聊天室顯示哪一路 */}
+                {isChatWindow && windowId !== undefined && (
+                    <ChatStreamSelect chatItemId={windowId} activeStreamId={stream.id} />
                 )}
 
                 <Divider />

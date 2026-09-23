@@ -105,18 +105,33 @@ describe('CanvasStreamContent 工具列：放大、設為主畫面、共用聊�
         expect(items.find(i => i.i === 'w1')!.layout).toEqual(L(0, 10, 10, 10));
     });
 
-    it('共用聊天室：標頭是分頁，點另一路只改聊天室的 contentId（i 不變）', () => {
-        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="chat" />);
-        const tabs = screen.getAllByRole('tab');
-        expect(tabs.map(t => t.textContent)).toEqual(['Alpha', 'Bravo', 'Charlie']);
-        expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+    // Radix Select 在 jsdom 需要的 API
+    const polyfillSelect = () => {
+        Element.prototype.hasPointerCapture ??= () => false;
+        Element.prototype.releasePointerCapture ??= () => {};
+        Element.prototype.scrollIntoView ??= () => {};
+    };
+    const openSelect = () => {
+        const trigger = screen.getByRole('combobox');
+        fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+        return trigger;
+    };
 
-        fireEvent.click(tabs[2]);
+    it('聊天室標頭是下拉選單：列出畫布上的串流，選另一路只改聊天室的 contentId（i 不變）', () => {
+        polyfillSelect();
+        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="chat" />);
+        const trigger = openSelect();
+        expect(trigger).toHaveTextContent('Alpha');
+        const options = screen.getAllByRole('option');
+        expect(options.map(o => o.textContent)).toEqual(['Alpha', 'Bravo', 'Charlie']);
+
+        fireEvent.click(options[2]);
         const chat = useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!;
         expect(chat).toMatchObject({ i: 'chat', contentId: 3 });
     });
 
-    it('每路各一聊天室的版面不顯示分頁', () => {
+    it('每路各一聊天室的版面也能用選單切換', () => {
+        polyfillSelect();
         useStreamStore.setState({
             canvasItems: [
                 { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 8, 12) },
@@ -126,7 +141,22 @@ describe('CanvasStreamContent 工具列：放大、設為主畫面、共用聊�
             ],
         });
         render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="c1" />);
-        expect(screen.queryByRole('tab')).toBeNull();
-        expect(screen.getByText('Alpha')).toBeInTheDocument();
+        openSelect();
+        expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['Alpha', 'Bravo']);
+        fireEvent.click(screen.getAllByRole('option')[1]);
+        expect(useStreamStore.getState().canvasItems.find(i => i.i === 'c1')!.contentId).toBe(2);
+    });
+
+    it('聊天室顯示的那一路不在畫布上時，仍列在選單裡（不會變成空白）', () => {
+        polyfillSelect();
+        useStreamStore.setState({
+            canvasItems: [
+                { i: 'w2', type: 'stream', contentId: 2, layout: L(0, 0, 20, 24) },
+                { i: 'chat', type: 'chat', contentId: 1, layout: L(20, 0, 4, 24) },
+            ],
+        });
+        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="chat" />);
+        expect(openSelect()).toHaveTextContent('Alpha');
+        expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['Alpha', 'Bravo']);
     });
 });

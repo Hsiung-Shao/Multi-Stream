@@ -61,7 +61,7 @@ const common = {
   'canvas.tour_search_title': '検索または URL を貼って配信を追加',
   'canvas.tour_search_body': 'チャンネル名で Twitch／YouTube を検索するか、配信 URL を貼って Enter。横の ＋ で空のウィンドウやチャットを追加できます。',
   'canvas.tour_layout_title': 'ワンクリックでレイアウト切替',
-  'canvas.tour_layout_body': '配信のみ／チャットありのプリセットを選べます。「チャットを1つ共有」は複数配信＋1チャットで、チャット上部のタブで表示する配信を切り替えます。自分のレイアウトも保存できます。',
+  'canvas.tour_layout_body': '配信のみ／チャットありのプリセットを選べます。「チャットを1つ共有」は複数配信＋1チャットで、チャット上部のメニューで表示する配信を切り替えます。自分のレイアウトも保存できます。',
   'canvas.tour_media_title': 'メディア操作',
   'canvas.tour_media_body': '全体の音量、一括ミュート、配信ごとの音量と順番を調整できます。',
   'canvas.tour_collect_title': 'お気に入り・保存・共有',

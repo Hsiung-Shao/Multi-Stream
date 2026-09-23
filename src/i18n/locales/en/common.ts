@@ -61,7 +61,7 @@ const common = {
   'canvas.tour_search_title': 'Search or paste a link to add a stream',
   'canvas.tour_search_body': 'Type a channel name to search Twitch or YouTube, or paste a stream URL and press Enter. The + next to it adds an empty window or chat.',
   'canvas.tour_layout_title': 'Switch layouts in one click',
-  'canvas.tour_layout_body': 'Pick a stream-only or with-chat preset. One shared chat is the N-streams-plus-one-chat layout; tabs on the chat switch which stream it shows. You can also save your own layouts.',
+  'canvas.tour_layout_body': 'Pick a stream-only or with-chat preset. One shared chat is the N-streams-plus-one-chat layout; the menu on top of the chat switches which stream it shows. You can also save your own layouts.',
   'canvas.tour_media_title': 'Media controls',
   'canvas.tour_media_body': 'Adjust the master volume, mute everything, or set each stream volume and order.',
   'canvas.tour_collect_title': 'Favorites, save and share',

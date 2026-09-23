@@ -60,7 +60,7 @@ const common = {
   'canvas.tour_search_title': '搜尋或貼上網址加入直播',
   'canvas.tour_search_body': '輸入頻道名稱搜尋 Twitch／YouTube，或直接貼上直播網址按 Enter。旁邊的 ＋ 可以新增空白視窗或聊天室。',
   'canvas.tour_layout_title': '一鍵切換版面',
-  'canvas.tour_layout_body': '選「僅串流」或「含聊天室」的預設版面；「共用一個聊天室」就是 N 串 1 聊，聊天室上方的分頁可以切換顯示哪一路。排好的版面也能存成自訂版面。',
+  'canvas.tour_layout_body': '選「僅串流」或「含聊天室」的預設版面；「共用一個聊天室」就是 N 串 1 聊，聊天室上方的下拉選單可以切換顯示哪一路。排好的版面也能存成自訂版面。',
   'canvas.tour_media_title': '媒體控制',
   'canvas.tour_media_body': '調整總音量、全部靜音，或個別調整每一路的音量與順序。',
   'canvas.tour_collect_title': '收藏、儲存與分享',
