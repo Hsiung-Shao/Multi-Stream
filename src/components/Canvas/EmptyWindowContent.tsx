@@ -15,6 +15,10 @@ import { cn } from '../ui/utils';
 import { Button } from '../ui/button';
 import { useFavorites } from '../../hooks/useFavorites';
 import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
+import { ScrollArea } from '../ui/scroll-area';
+import { IslandSearch } from '../Navigation/IslandSearch';
+import { streamContentIdsByPosition } from '../../utils/canvasItemOps';
 
 interface EmptyWindowContentProps {
     windowId: string;
@@ -33,6 +37,14 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
     const { favorites: allFavorites, liveFavorites: liveParams } = useFavorites();
 
     const liveFavorites = liveParams;
+
+    // 聊天室視窗：直接從畫布上正在看的串流挑（依位置排序）；只取 id 與名稱，音量等變動不會重繪
+    const canvasStreamIds = useStreamStore(useShallow(s => streamContentIdsByPosition(s.canvasItems)));
+    const canvasStreamLabels = useStreamStore(useShallow(s => canvasStreamIds.map(id => {
+        const st = s.streams.find(x => x.id === id);
+        return st ? (st.displayName || st.channelId || st.videoId) : String(id);
+    })));
+    const handleCanvasStreamSelect = (value: string) => onUpdateWindow(windowId, { contentId: Number(value) });
 
     const handleTypeChange = (newType: string) => {
         onUpdateWindow(windowId, { type: newType as 'stream' | 'chat' });
@@ -103,7 +115,7 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
     };
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white p-4 gap-6 relative group border border-white/10 rounded-lg">
+        <div className="w-full h-full bg-slate-900 text-white relative group border border-white/10 rounded-lg">
 
             {/* Drag Handle - Top Center */}
             <div
@@ -142,8 +154,11 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
                 </Button>
             </div>
 
-            <div className="flex flex-col items-center gap-2">
-                <h3 className="text-lg font-medium text-white/70">
+            {/* 視窗可能被縮得很小：內容放進 ScrollArea，放不下時可捲動 */}
+            <ScrollArea className="h-full w-full">
+            <div className="flex min-h-full flex-col items-center justify-center gap-4 p-4 pt-10">
+            <div className="flex flex-col items-center gap-1">
+                <h3 className="text-base font-medium text-white/70">
                     {t('common.empty_window', '空視窗')}
                 </h3>
                 <p className="text-sm text-white/50">
@@ -169,13 +184,48 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
                 </TabsList>
             </Tabs>
 
-            {/* Live Favorites Dropdown */}
-            <div className="w-full max-w-[280px] space-y-2">
+            {type === 'stream' ? (
+                // 串流視窗：直接搜尋頻道或貼網址，結果填進這一格（沿用動態島的搜尋）
+                <div className="w-full max-w-[320px] space-y-1.5" data-empty-window-search>
+                    <label className="ml-1 text-xs font-medium text-white/50">
+                        {t('canvas.empty_search_label')}
+                    </label>
+                    <IslandSearch resultsPlacement="inline" targetWindowId={windowId} />
+                </div>
+            ) : (
+                // 聊天室視窗：從畫布上正在看的串流挑
+                <div className="w-full max-w-[280px] space-y-1.5">
+                    <label className="ml-1 text-xs font-medium text-white/50">
+                        {t('canvas.empty_chat_from_canvas')}
+                    </label>
+                    <Select onValueChange={handleCanvasStreamSelect}>
+                        <SelectTrigger className="w-full bg-black/40 border-white/10 text-white" aria-label={t('canvas.empty_chat_from_canvas')}>
+                            <SelectValue placeholder={t('canvas.empty_chat_placeholder')} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-900 border-white/10 text-white">
+                            {canvasStreamIds.length > 0 ? (
+                                canvasStreamIds.map((id, idx) => (
+                                    <SelectItem key={id} value={String(id)} className="focus:bg-white/10 focus:text-white cursor-pointer">
+                                        <span className="truncate">{canvasStreamLabels[idx]}</span>
+                                    </SelectItem>
+                                ))
+                            ) : (
+                                <div className="p-2 text-sm text-white/50 text-center">
+                                    {t('canvas.empty_chat_no_streams')}
+                                </div>
+                            )}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
+
+            {/* 正在直播的收藏：第二種選法 */}
+            <div className="w-full max-w-[280px] space-y-1.5">
                 <label className="text-xs font-medium text-white/50 ml-1">
                     {t('favorites.live_now', '正在直播的收藏')}
                 </label>
                 <Select onValueChange={handleStreamSelect}>
-                    <SelectTrigger className="w-full bg-black/40 border-white/10 text-white mb-2">
+                    <SelectTrigger className="w-full bg-black/40 border-white/10 text-white">
                         <SelectValue placeholder={t('favorites.select_live_stream', '選擇直播频道...')} />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-white/10 text-white">
@@ -196,6 +246,8 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
                     </SelectContent>
                 </Select>
             </div>
+            </div>
+            </ScrollArea>
         </div>
     );
 });

@@ -53,9 +53,11 @@ interface IslandSearchProps {
     // 'inline' = 文件流內的區塊,渲染在 input 下方,給邊緣停靠這種側邊面板用
     // (面板高度靠量測子元素 offsetHeight 決定,absolute 彈窗不會撐開高度,會被面板的 overflow-hidden 裁掉)。
     resultsPlacement?: 'overlay' | 'inline';
+    /** 指定要填入的畫布空視窗（空的串流視窗裡直接搜尋／貼網址時用）；不給則照一般新增串流排版 */
+    targetWindowId?: string;
 }
 
-export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'overlay' }: IslandSearchProps) {
+export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'overlay', targetWindowId }: IslandSearchProps) {
     const { t } = useTranslation(['common', 'navbar']);
     const [platform, setPlatform] = useState<Platform>('twitch');
     const [query, setQuery] = useState('');
@@ -71,7 +73,14 @@ export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'ove
     const reqIdRef = useRef(0);
 
     const { isSearchFocused, setSearchFocused } = useUIStore();
-    const addStream = useStreamStore(s => s.addStream);
+    const storeAddStream = useStreamStore(s => s.addStream);
+    // 有指定空視窗時填進那一格（不另外配聊天室：使用者是在這個視窗裡選內容）
+    const addStream = useCallback(
+        (url: string) => targetWindowId
+            ? storeAddStream(url, { withChat: false, withStream: true, displayName: undefined, targetWindowId })
+            : storeAddStream(url),
+        [storeAddStream, targetWindowId],
+    );
 
     // 從別處觸發 focus(例如 hotkey)時把 input 拉到 focus
     useEffect(() => {
