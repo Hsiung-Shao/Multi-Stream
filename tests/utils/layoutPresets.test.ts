@@ -16,9 +16,6 @@ const ASPECTS: Record<string, number> = {
     '4:3': 4 / 3,
 };
 
-/** 一個 w×h 格的像素比例是 (w/h)·aspect（格子本身不是正方形） */
-const pixelRatio = (s: Spec, aspect: number) => (s.w / s.h) * aspect;
-
 function expectSaneLayout(specs: Spec[]) {
     for (const s of specs) {
         for (const k of ['x', 'y', 'w', 'h'] as const) expect(Number.isInteger(s[k])).toBe(true);
@@ -57,11 +54,15 @@ describe('fitTiles', () => {
         expect(rects).toEqual([{ x: 0, y: 0, w: 12, h: 24 }, { x: 12, y: 0, w: 12, h: 24 }]);
     });
 
-    it('寬度不超過 16:9：21:9 上 1 格不會撐滿寬度，而是水平置中', () => {
-        const [r] = fitTiles([{ x: 0, y: 0, w: 1, h: 1 }], 21 / 9);
-        expect(r.h).toBe(24);
-        expect(r.w).toBeLessThan(24);
-        expect(r.x).toBe(Math.floor((24 - r.w) / 2));
+    it('左右也不留空：21:9 上 1 格撐滿 24×24（使用者裁定「不留空」，寧可播放器內有黑邊）', () => {
+        expect(fitTiles([{ x: 0, y: 0, w: 1, h: 1 }], 21 / 9)).toEqual([{ x: 0, y: 0, w: 24, h: 24 }]);
+    });
+
+    it('除不盡時以邊界取整：3 欄塞進 20 欄無縫、無重疊', () => {
+        const rects = fitTiles([0, 1, 2].map(x => ({ x, y: 0, w: 1, h: 1 })), 16 / 9, { x0: 0, cols: 20, rows: 24 });
+        expect(rects[0].x).toBe(0);
+        for (let i = 1; i < 3; i++) expect(rects[i].x).toBe(rects[i - 1].x + rects[i - 1].w);
+        expect(rects[2].x + rects[2].w).toBe(20);
     });
 
     it('area 參數：只在指定欄範圍內擬合', () => {
@@ -70,23 +71,18 @@ describe('fitTiles', () => {
     });
 });
 
-describe('16:9 感知的純串流版型', () => {
+describe('純串流版型（填滿畫布）', () => {
     const ids = [1, 2, 3, 4, 5, 6];
 
     for (const [label, aspect] of Object.entries(ASPECTS)) {
         for (const n of [2, 3, 4, 5, 6]) {
-            it(`template-${n}-landscape @ ${label}：整數、界內、不重疊、高度填滿、不比 16:9 寬`, () => {
+            it(`template-${n}-landscape @ ${label}：整數、界內、不重疊、填滿整個畫布`, () => {
                 const specs = generateLayoutFromTemplate(`template-${n}-landscape`, ids.slice(0, n), aspect) as Spec[];
                 expect(specs).toHaveLength(n);
                 expectSaneLayout(specs);
                 specs.forEach((s, i) => expect(s.contentId).toBe(ids[i]));
-                // 上下不留空
-                expect(Math.min(...specs.map(s => s.y))).toBe(0);
-                expect(Math.max(...specs.map(s => s.y + s.h))).toBe(24);
-                // 寬度上限 16:9（整數格四捨五入容許 10%）；最小 6 欄夾住時例外
-                for (const s of specs) {
-                    if (s.w > 6) expect(pixelRatio(s, aspect)).toBeLessThan((16 / 9) * 1.1);
-                }
+                // 上下左右都不留空：總面積剛好 24×24（已驗證不重疊，所以面積相等＝填滿）
+                expect(specs.reduce((a, s) => a + s.w * s.h, 0)).toBe(24 * 24);
             });
         }
     }
@@ -124,9 +120,11 @@ describe('N 串 + 1 共用聊天室', () => {
                 const streamRight = Math.max(...streams.map(s => s.x + s.w));
                 expect(chats[0].x).toBeGreaterThanOrEqual(streamRight);
                 streams.forEach((s, i) => expect(s.contentId).toBe(ids[i]));
-                // 上下不留空
-                expect(Math.min(...streams.map(s => s.y))).toBe(0);
-                expect(Math.max(...streams.map(s => s.y + s.h))).toBe(24);
+                // 串流區（左側 20 欄）上下左右都不留空；n 很大時列高被夾到 6、畫布往下長
+                if (Math.ceil(n / 3) * 6 <= 24) {
+                    expect(chats[0].x).toBe(20);
+                    expect(streams.reduce((a, s) => a + s.w * s.h, 0)).toBe(20 * 24);
+                }
             });
         }
     }
@@ -138,13 +136,18 @@ describe('N 串 + 1 共用聊天室', () => {
         expect(ys.size).toBe(2);
     });
 
-    it('3 路時最後一列那一格水平置中', () => {
+    it('3 路時最後一列那一格撐滿整列（不留空）', () => {
         const streams = (generateSharedChatLayout([1, 2, 3], 16 / 9, 1) as Spec[]).filter(s => s.type === 'stream');
         const [a, b, c] = streams;
         expect(a.y).toBe(b.y);
-        expect(c.y).toBeGreaterThan(a.y);
-        const rowCenter = (a.x + b.x + b.w) / 2;
-        expect(Math.abs(c.x + c.w / 2 - rowCenter)).toBeLessThanOrEqual(1);
+        expect(c.y).toBe(a.y + a.h);
+        expect(c.x).toBe(a.x);
+        expect(c.w).toBe(a.w + b.w);
+    });
+
+    it('2 路在一般螢幕上下疊、各撐滿寬度（每路畫面比左右並排大）', () => {
+        const streams = (generateSharedChatLayout([1, 2], 1800 / 1087, 1) as Spec[]).filter(s => s.type === 'stream');
+        expect(streams.map(s => [s.x, s.y, s.w, s.h])).toEqual([[0, 0, 20, 12], [0, 12, 20, 12]]);
     });
 
     it('聊天室顯示的那一路由第三個參數決定，空槽時為 null', () => {

@@ -61,13 +61,12 @@ export interface LayoutTemplate {
 }
 
 // ==================================================================================
-// 16:9 感知
+// 版型填滿與排法選擇
 // ==================================================================================
 //
 // 畫布是 24 欄 × 24 列、依視窗寬高等分，所以格子不是正方形：一塊 w×h 格的像素比例是
-// (w/h)·aspect。舊版型把格數寫死，寬螢幕上串流格比 16:9 寬，畫面左右出現黑邊。
-// 這裡改用「16:9 單位格（tile）」描述版型結構，再依實際寬高比換算成整數格：
-// 高度填滿畫布（上下不留空），寬度不超過 16:9，多出的寬度水平置中。
+// (w/h)·aspect。使用者裁定「上下、左右都不留空」：版型一律把整塊區域填滿，寧可播放器內有黑邊，
+// 也不要畫布上有空白。螢幕比例（aspect）用在「選排法」：同樣 N 路，挑每路實際 16:9 畫面最大的那種。
 
 const DEFAULT_ASPECT = 16 / 9;
 /** 與 SimpleCanvas 的 SIZE_LIMITS.stream 一致：推擠與縮放都不會讓串流小於 6×6 */
@@ -87,58 +86,55 @@ export interface GridRect { x: number; y: number; w: number; h: number }
 
 const FULL_AREA: FitArea = { x0: 0, cols: 24, rows: 24 };
 
-/**
- * K×R 個 tile 在 area 內的單位尺寸 u 欄 × v 列。
- * 高度一律填滿（使用者裁定「上下不留空」：寧可播放器內有黑邊，也不要畫布上下空白）；
- * 寬度最多到 16:9（u ≈ v·16/(9·aspect)），不會比 16:9 更寬，所以不會出現左右黑邊，多出的寬度留給水平置中。
- * 列數塞不下最小尺寸時（例如 5 列以上）不低於 6，畫布往下長。
- */
-function fitUnit(K: number, R: number, aspect: number, area: FitArea): { u: number; v: number; fits: boolean } {
-    const v = Math.max(MIN_STREAM_CELLS, Math.floor(area.rows / R));
-    const maxU = Math.floor(area.cols / K);
-    const u = Math.max(MIN_STREAM_CELLS, Math.min(maxU, Math.round((v * 16) / (9 * aspect))));
-    return { u, v, fits: v * R <= area.rows };
+/** K×R 格線在 area 內每格的欄寬、列高（可為小數）；列高低於最小尺寸時夾到 6，畫布往下長 */
+function cellSize(K: number, R: number, area: FitArea) {
+    const cw = area.cols / K;
+    const rh = Math.max(MIN_STREAM_CELLS, area.rows / R);
+    return { cw, rh, fits: area.rows / R >= MIN_STREAM_CELLS };
 }
 
-/** 一個 u×v 格視窗裡實際 16:9 畫面的邊長指標（與寬 u·aspect、高 v·16/9 取小者成正比），用來比較哪種排法畫面最大 */
-const pictureSize = (u: number, v: number, aspect: number) => Math.min(u * aspect, (v * 16) / 9);
+/** 一個 cw×rh 格視窗裡實際 16:9 畫面的邊長指標（寬 cw·aspect、高 rh·16/9 取小者），用來比較哪種排法畫面最大 */
+const pictureSize = (cw: number, rh: number, aspect: number) => Math.min(cw * aspect, (rh * 16) / 9);
 
 /**
- * 把以 16:9 tile 描述的版型換算成整數格：高度填滿 area，寬度上限 16:9 並水平置中。
- * tile 座標可以是小數（例如最後一列置中時的 0.5），換算後四捨五入到整數格。
+ * 把以 tile 描述的版型結構換算成整數格，並把 area 完全填滿。
+ * 以邊界取整（第 i 條欄線在 round(i·cols/K)）而不是各格各自取整，相鄰視窗不會有縫也不會重疊，
+ * 除不盡的格數分散到各欄。tile 座標可以是小數（最後一列撐滿整列時會用到）。
  */
-export function fitTiles(tiles: Tile[], aspect: number = DEFAULT_ASPECT, area: FitArea = FULL_AREA): GridRect[] {
+export function fitTiles(tiles: Tile[], _aspect: number = DEFAULT_ASPECT, area: FitArea = FULL_AREA): GridRect[] {
     if (tiles.length === 0) return [];
     const K = Math.max(...tiles.map(t => t.x + t.w));
     const R = Math.max(...tiles.map(t => t.y + t.h));
-    const { u, v } = fitUnit(K, R, aspect, area);
-    const offX = area.x0 + Math.max(0, Math.floor((area.cols - K * u) / 2));
-    const offY = Math.max(0, Math.floor((area.rows - R * v) / 2));
-    return tiles.map(t => ({
-        x: offX + Math.round(t.x * u),
-        y: offY + Math.round(t.y * v),
-        w: Math.round(t.w * u),
-        h: Math.round(t.h * v),
-    }));
+    const { cw, rh } = cellSize(K, R, area);
+    const colEdge = (i: number) => area.x0 + Math.round(i * cw);
+    const rowEdge = (j: number) => Math.round(j * rh);
+    return tiles.map(t => {
+        const x = colEdge(t.x), y = rowEdge(t.y);
+        return { x, y, w: colEdge(t.x + t.w) - x, h: rowEdge(t.y + t.h) - y };
+    });
 }
 
-/** k 欄均分的格線 tile；最後一列不滿時整列水平置中 */
+/** k 欄均分的格線 tile；最後一列不滿時把該列的格子撐寬、填滿整列 */
 function gridTiles(count: number, k: number): Tile[] {
     const tiles: Tile[] = [];
     const lastRowCount = count % k || k;
     const lastRow = Math.ceil(count / k) - 1;
     for (let i = 0; i < count; i++) {
         const r = Math.floor(i / k);
-        const shift = r === lastRow ? (k - lastRowCount) / 2 : 0;
-        tiles.push({ x: (i % k) + shift, y: r, w: 1, h: 1 });
+        if (r === lastRow) {
+            const w = k / lastRowCount;
+            tiles.push({ x: (i % k) * w, y: r, w, h: 1 });
+        } else {
+            tiles.push({ x: i % k, y: r, w: 1, h: 1 });
+        }
     }
     return tiles;
 }
 
 /**
- * N 路串流 + 1 個共用聊天室。
- * 串流區（24 − 聊天室寬）裡列舉 k 欄的格線，取畫面總面積最大者；串流區與聊天室整塊水平置中、聊天室滿高。
- * 16:9 螢幕上 4 路＝田字、3 路＝田字缺一（最後一格置中）、2 路＝上下疊（比左右並排的畫面大）。
+ * N 路串流 + 1 個共用聊天室（聊天室固定在最右側、滿高）。
+ * 串流區（24 − 聊天室寬）裡列舉 k 欄的格線，挑每路實際畫面最大的排法，並把串流區完全填滿。
+ * 16:9 螢幕上 4 路＝田字、3 路＝上 2 下 1（下面那格撐滿整列）、2 路＝上下疊（比左右並排的畫面大）。
  */
 export function generateSharedChatLayout(
     streamIds: (number | string | null)[],
@@ -149,21 +145,17 @@ export function generateSharedChatLayout(
     const area: FitArea = { x0: 0, cols: 24 - SHARED_CHAT_W, rows: 24 };
     const maxK = Math.min(n, Math.floor(area.cols / MIN_STREAM_CELLS));
 
-    let best = { k: 1, u: 0, v: 0, score: -1 };
+    let best = { k: 1, score: -1 };
     for (let k = 1; k <= maxK; k++) {
-        const { u, v, fits } = fitUnit(k, Math.ceil(n / k), aspect, area);
-        // 不必往下長的解永遠優先；同級比每路實際畫面大小（路數相同，等同比總面積），平手取欄數多
-        const score = (fits ? 1e6 : 0) + pictureSize(u, v, aspect);
-        if (score > best.score || (score === best.score && k > best.k)) best = { k, u, v, score };
+        const { cw, rh, fits } = cellSize(k, Math.ceil(n / k), area);
+        // 不必往下長的解永遠優先；同級比每路實際畫面大小（以一般格計，最後一列撐寬的格只會更大）
+        const score = (fits ? 1e6 : 0) + pictureSize(cw, rh, aspect);
+        if (score > best.score) best = { k, score };
     }
 
-    const tiles = gridTiles(n, best.k);
-    const rects = fitTiles(tiles, aspect, area);
-    // fitTiles 在串流區內置中；改成「串流區 + 聊天室」整塊置中，聊天室緊貼串流右側
-    const blockW = best.k * best.u;
-    const shiftX = Math.floor((24 - (blockW + SHARED_CHAT_W)) / 2) - Math.floor((area.cols - blockW) / 2);
-    const items: any[] = rects.map((r, i) => ({ type: 'stream', ...r, x: r.x + shiftX, contentId: streamIds[i] ?? null }));
-    items.push({ type: 'chat', x: Math.floor((24 - (blockW + SHARED_CHAT_W)) / 2) + blockW, y: 0, w: SHARED_CHAT_W, h: 24, contentId: chatContentId });
+    const rects = fitTiles(gridTiles(n, best.k), aspect, area);
+    const items: any[] = rects.map((r, i) => ({ type: 'stream', ...r, contentId: streamIds[i] ?? null }));
+    items.push({ type: 'chat', x: area.cols, y: 0, w: SHARED_CHAT_W, h: 24, contentId: chatContentId });
     return items;
 }
 
@@ -231,7 +223,7 @@ export const layoutTemplates: LayoutTemplate[] = [
             { type: 'stream', x: 0, y: 0, w: 24, h: 24, contentId: streamIds[0] ?? null }
         ]
     },
-    // 2～6 路：結構（主次、欄列）與圖示不變，尺寸依畫布寬高比換算成最接近 16:9 的整數格並置中
+    // 2～6 路：結構（主次、欄列）與圖示不變，以 tile 描述並填滿整個畫布
     {
         id: 'template-2-landscape',
         nameKey: 'layout.t_2_v',

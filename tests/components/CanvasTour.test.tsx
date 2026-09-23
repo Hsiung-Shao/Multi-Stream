@@ -12,7 +12,7 @@ const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
 function fakeWindow(id: string) {
     const el = document.createElement('div');
     el.setAttribute('data-canvas-window-id', id);
-    el.innerHTML = `<div data-window-toolbar="stream"><button data-tour="theater"></button></div><div data-corner="se" data-tour="resize-corner"></div>`;
+    el.innerHTML = `<div data-window-toolbar="stream"><button data-tour="theater"></button></div><div data-corner="se"></div>`;
     document.body.appendChild(el);
     return el;
 }
@@ -80,6 +80,9 @@ describe('CanvasTour', () => {
 
         fireEvent.click(screen.getByText('下一步'));
         expect(screen.getByText('拖曳四個角調整大小')).toBeInTheDocument();
+        // 四個角都框起來（不是只框右下角）
+        expect([...document.querySelectorAll('[data-tour-corner]')].map(el => el.getAttribute('data-tour-corner')).sort())
+            .toEqual(['ne', 'nw', 'se', 'sw']);
         fireEvent.click(screen.getByText('下一步'));
         expect(screen.getByText('放大某一路')).toBeInTheDocument();
         fireEvent.click(screen.getByText('開始使用'));

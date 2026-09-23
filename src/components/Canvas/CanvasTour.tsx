@@ -19,10 +19,28 @@ export const CANVAS_TOUR_DONE_KEY = 'canvas_tour_done';
 /** 有串流之後等播放器與工具列掛好再開始，避免聚光燈指到還沒出現的元素 */
 const START_DELAY_MS = 1500;
 const PAD = 6;
+/** 聚光框離螢幕邊緣至少留這麼多，框線才不會被裁掉 */
+const EDGE = 3;
 
 type StepId = 'drag' | 'swap' | 'resize' | 'theater';
 
 interface Rect { top: number; left: number; width: number; height: number }
+
+const CORNERS = ['nw', 'ne', 'sw', 'se'] as const;
+/** 聚光框四個角的 L 形角框：貼齊框線、往內 3px 粗 */
+function cornerStyle(c: typeof CORNERS[number], r: Rect): React.CSSProperties {
+    const S = 28, B = 3;
+    const top = c[0] === 'n' ? r.top : r.top + r.height - S;
+    const left = c[1] === 'w' ? r.left : r.left + r.width - S;
+    return {
+        top, left,
+        borderTopWidth: c[0] === 'n' ? B : 0,
+        borderBottomWidth: c[0] === 's' ? B : 0,
+        borderLeftWidth: c[1] === 'w' ? B : 0,
+        borderRightWidth: c[1] === 'e' ? B : 0,
+        borderStyle: 'solid',
+    };
+}
 
 const findWindow = (id: string) =>
     Array.from(document.querySelectorAll<HTMLElement>('[data-canvas-window-id]')).find(el => el.dataset.canvasWindowId === id) ?? null;
@@ -107,7 +125,8 @@ export function CanvasTour() {
         const pick = (): HTMLElement | null => {
             if (!win) return null;
             if (step === 'drag') return win.querySelector('[data-window-toolbar="stream"]');
-            if (step === 'resize') return win.querySelector('[data-tour="resize-corner"]');
+            // 縮放：框住整個視窗、四個角各加角框（任一角都能拖，不是只有右下）
+            if (step === 'resize') return win;
             if (step === 'theater') return win.querySelector('[data-tour="theater"]');
             return win;
         };
@@ -115,7 +134,11 @@ export function CanvasTour() {
             const el = pick();
             if (!el) { setRect(null); return; }
             const r = el.getBoundingClientRect();
-            setRect({ top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 });
+            // 往外留 PAD，但夾在可視範圍內：版面填滿畫布，視窗常貼著螢幕邊，超出去的框線與角框會被裁掉看不到
+            const top = Math.max(EDGE, r.top - PAD), left = Math.max(EDGE, r.left - PAD);
+            const bottom = Math.min(window.innerHeight - EDGE, r.bottom + PAD);
+            const right = Math.min(window.innerWidth - EDGE, r.right + PAD);
+            setRect({ top, left, width: Math.max(0, right - left), height: Math.max(0, bottom - top) });
         };
         measure();
         window.addEventListener('resize', measure);
@@ -143,10 +166,15 @@ export function CanvasTour() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const CARD_W = 300, CARD_H = 170;
     // 卡片放在目標下方，放不下就放上方；找不到目標時置中
-    const cardTop = rect
+    const centerCard = step === 'resize' && rect;
+    const cardTop = centerCard
+        ? rect.top + rect.height / 2 - CARD_H / 2
+        : rect
         ? (rect.top + rect.height + 12 + CARD_H < vh ? rect.top + rect.height + 12 : Math.max(12, rect.top - CARD_H - 12))
         : vh / 2 - CARD_H / 2;
-    const cardLeft = rect
+    const cardLeft = centerCard
+        ? rect.left + rect.width / 2 - CARD_W / 2
+        : rect
         ? Math.min(Math.max(12, rect.left + rect.width / 2 - CARD_W / 2), vw - CARD_W - 12)
         : vw / 2 - CARD_W / 2;
     const last = stepIdx >= steps.length - 1;
@@ -163,6 +191,15 @@ export function CanvasTour() {
             ) : (
                 <div aria-hidden className="fixed inset-0 bg-slate-950/60" />
             )}
+            {step === 'resize' && rect && CORNERS.map(c => (
+                <div
+                    key={c}
+                    aria-hidden
+                    data-tour-corner={c}
+                    className="pointer-events-none fixed h-7 w-7 border-amber-300 transition-all duration-200"
+                    style={cornerStyle(c, rect)}
+                />
+            ))}
             <div
                 role="dialog"
                 aria-modal="true"

@@ -343,7 +343,6 @@ export const DraggableWindow = memo(function DraggableWindow({
                     className={cn(cornerHandleClass, "bottom-0 right-0 cursor-se-resize")}
                     {...cornerHandlers.se}
                     data-corner="se"
-                    data-tour="resize-corner"
                 >
                     <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-r-2 border-b-2 border-white/40" />
                 </div>
