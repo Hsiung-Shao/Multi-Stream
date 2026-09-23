@@ -542,4 +542,75 @@ describe('useStreamStore', () => {
             expect(useStreamStore.getState().canvasItems.filter(i => i.type === 'chat')).toHaveLength(2);
         });
     });
+
+    // 手動新增視窗（動態島 ＋）原本固定 6×6 塞在空位，常常很小或在畫面下方；改為新增後依目前組成重排、填滿畫布。
+    describe('新增視窗後自動融入版面', () => {
+        const mk = (id: number, ch: string) => ({ id, platform: 'twitch' as const, channelId: ch, videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false });
+        const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+        const area = (items: { layout: { w: number; h: number } }[]) => items.reduce((a, i) => a + i.layout.w * i.layout.h, 0);
+        const overlaps = (a: { x: number; y: number; w: number; h: number }, b: typeof a) =>
+            a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+        const expectNoOverlap = (items: { i: string; layout: { x: number; y: number; w: number; h: number } }[]) => {
+            for (let a = 0; a < items.length; a++) for (let b = a + 1; b < items.length; b++) {
+                expect(overlaps(items[a].layout, items[b].layout), `${items[a].i} / ${items[b].i}`).toBe(false);
+            }
+        };
+        const base = () => [
+            { i: 'w1', type: 'stream' as const, contentId: 1, layout: L(0, 0, 20, 12) },
+            { i: 'w2', type: 'stream' as const, contentId: 2, layout: L(0, 12, 20, 12) },
+            { i: 'chat', type: 'chat' as const, contentId: 1, layout: L(20, 0, 4, 24), sharedChat: true },
+        ];
+
+        it('新增串流視窗：既有 i 不變、新的空槽排最後、整個畫布填滿不重疊', () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: [mk(1, 'a'), mk(2, 'b')], canvasItems: base() });
+            useStreamStore.getState().addCanvasItem('stream', null);
+            const items = useStreamStore.getState().canvasItems;
+            expect(items).toHaveLength(4);
+            for (const id of ['w1', 'w2', 'chat']) expect(items.map(i => i.i)).toContain(id);
+            expectNoOverlap(items);
+            expect(area(items)).toBe(24 * 24);
+            expect(items.find(i => i.i === 'chat')!.layout).toEqual(L(20, 0, 4, 24));
+            // 原本在上面的 w1 仍排在最前面
+            const w1 = items.find(i => i.i === 'w1')!.layout;
+            expect([w1.x, w1.y]).toEqual([0, 0]);
+            // 內容不變
+            expect(items.find(i => i.i === 'w1')!.contentId).toBe(1);
+            expect(items.find(i => i.i === 'chat')!.contentId).toBe(1);
+        });
+
+        it('新增聊天室視窗：聊天室在右側一欄上下平分', () => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: [mk(1, 'a'), mk(2, 'b')], canvasItems: base() });
+            useStreamStore.getState().addCanvasItem('chat', null);
+            const items = useStreamStore.getState().canvasItems;
+            const chats = items.filter(i => i.type === 'chat');
+            expect(chats).toHaveLength(2);
+            expect(chats.map(c => c.layout.x)).toEqual([20, 20]);
+            expect(chats.reduce((a, c) => a + c.layout.h, 0)).toBe(24);
+            expectNoOverlap(items);
+            expect(area(items)).toBe(24 * 24);
+        });
+
+        it('新增組合（串流＋聊天室）也會重排填滿', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas', streams: [mk(1, 'a')],
+                canvasItems: [{ i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 24, 24) }],
+            });
+            useStreamStore.getState().addEmptyGroup();
+            const items = useStreamStore.getState().canvasItems;
+            expect(items).toHaveLength(3);
+            expectNoOverlap(items);
+            expect(area(items)).toBe(24 * 24);
+        });
+
+        it('沒有聊天室時，串流填滿整個畫布', () => {
+            useStreamStore.setState({
+                layoutMode: 'canvas', streams: [mk(1, 'a')],
+                canvasItems: [{ i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 24, 24) }],
+            });
+            useStreamStore.getState().addCanvasItem('stream', null);
+            const items = useStreamStore.getState().canvasItems;
+            expectNoOverlap(items);
+            expect(area(items)).toBe(24 * 24);
+        });
+    });
 });

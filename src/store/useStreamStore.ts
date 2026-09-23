@@ -10,7 +10,7 @@ import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/lay
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
 import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout } from '../utils/layoutPresets';
-import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag } from '../utils/canvasItemOps';
+import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag, relayoutItems } from '../utils/canvasItemOps';
 import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
@@ -459,7 +459,8 @@ export const useStreamStore = create<StreamStoreState>()(
                     layout: { x: chatPos.x, y: chatPos.y, w: 4, h: 6 }
                 });
 
-                return { canvasItems: newCanvasItems };
+                // 新增後依目前組成重排、填滿畫布（原本固定小尺寸塞在空位，常常很小或在畫面下方）
+                return { canvasItems: relayoutItems(newCanvasItems, getCanvasAspect(), [`empty-stream-${uniqueId}`, `empty-chat-${uniqueId}`]) };
             }),
 
             clearCanvasItems: () => set({ canvasItems: [], streams: [] }),
@@ -809,8 +810,9 @@ export const useStreamStore = create<StreamStoreState>()(
                     }];
                 }
 
+                // 新增後依目前組成重排、填滿畫布（其他視窗只改 layout，i 不變，播放器不重建）
                 return {
-                    canvasItems: newItems
+                    canvasItems: relayoutItems(newItems, getCanvasAspect(), [id])
                 };
             }),
 

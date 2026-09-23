@@ -131,6 +131,43 @@ function gridTiles(count: number, k: number): Tile[] {
     return tiles;
 }
 
+/** 在 area 內挑每路實際畫面最大的 k 欄格線，填滿 area 並回傳各路的格子 */
+function bestGridRects(n: number, aspect: number, area: FitArea): GridRect[] {
+    const maxK = Math.max(1, Math.min(n, Math.floor(area.cols / MIN_STREAM_CELLS)));
+    let best = { k: 1, score: -1 };
+    for (let k = 1; k <= maxK; k++) {
+        const { cw, rh, fits } = cellSize(k, Math.ceil(n / k), area);
+        // 不必往下長的解永遠優先；同級比每路實際畫面大小（以一般格計，最後一列撐寬的格只會更大）
+        const score = (fits ? 1e6 : 0) + pictureSize(cw, rh, aspect);
+        if (score > best.score) best = { k, score };
+    }
+    return fitTiles(gridTiles(n, best.k), aspect, area);
+}
+
+/**
+ * 通用版面：串流填滿左側、聊天室在最右側一欄（寬 4、多個時上下平分）。
+ * 手動新增視窗後的自動重排、共用聊天室版型都走這裡；沒有聊天室時串流填滿整個畫布。
+ * 回傳 streams 與 chats 兩組格子（依序對應呼叫端的視窗順序）。
+ */
+export function generateColumnLayout(
+    nStreams: number,
+    nChats: number,
+    aspect: number = DEFAULT_ASPECT,
+): { streams: GridRect[]; chats: GridRect[] } {
+    const chatCols = nChats > 0 ? SHARED_CHAT_W : 0;
+    const streamArea: FitArea = { x0: 0, cols: 24 - chatCols, rows: 24 };
+    const streams = nStreams > 0 ? bestGridRects(nStreams, aspect, streamArea) : [];
+    const chats: GridRect[] = [];
+    if (nChats > 0) {
+        const rh = Math.max(MIN_STREAM_CELLS, 24 / nChats);
+        for (let i = 0; i < nChats; i++) {
+            const y = Math.round(i * rh);
+            chats.push({ x: streamArea.cols, y, w: SHARED_CHAT_W, h: Math.round((i + 1) * rh) - y });
+        }
+    }
+    return { streams, chats };
+}
+
 /**
  * N 路串流 + 1 個共用聊天室（聊天室固定在最右側、滿高）。
  * 串流區（24 − 聊天室寬）裡列舉 k 欄的格線，挑每路實際畫面最大的排法，並把串流區完全填滿。
@@ -142,20 +179,9 @@ export function generateSharedChatLayout(
     chatContentId: number | string | null = streamIds[0] ?? null,
 ): any[] {
     const n = Math.max(1, streamIds.length);
-    const area: FitArea = { x0: 0, cols: 24 - SHARED_CHAT_W, rows: 24 };
-    const maxK = Math.min(n, Math.floor(area.cols / MIN_STREAM_CELLS));
-
-    let best = { k: 1, score: -1 };
-    for (let k = 1; k <= maxK; k++) {
-        const { cw, rh, fits } = cellSize(k, Math.ceil(n / k), area);
-        // 不必往下長的解永遠優先；同級比每路實際畫面大小（以一般格計，最後一列撐寬的格只會更大）
-        const score = (fits ? 1e6 : 0) + pictureSize(cw, rh, aspect);
-        if (score > best.score) best = { k, score };
-    }
-
-    const rects = fitTiles(gridTiles(n, best.k), aspect, area);
-    const items: any[] = rects.map((r, i) => ({ type: 'stream', ...r, contentId: streamIds[i] ?? null }));
-    items.push({ type: 'chat', x: area.cols, y: 0, w: SHARED_CHAT_W, h: 24, contentId: chatContentId, sharedChat: true });
+    const { streams, chats } = generateColumnLayout(n, 1, aspect);
+    const items: any[] = streams.map((r, i) => ({ type: 'stream', ...r, contentId: streamIds[i] ?? null }));
+    items.push({ type: 'chat', ...chats[0], contentId: chatContentId, sharedChat: true });
     return items;
 }
 

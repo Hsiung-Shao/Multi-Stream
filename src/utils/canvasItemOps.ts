@@ -5,6 +5,7 @@
  * 一改就會卸載重建播放器 iframe（回到 muted=true 且 player 失聯，見切版面靜音事故）。
  */
 import type { CanvasItem } from '../types/canvas';
+import { generateColumnLayout } from './layoutPresets';
 
 type StreamId = number;
 
@@ -108,3 +109,23 @@ export const mainStreamItemIdOf = cachedByItems(selectMainStreamItemId);
 export const sharedChatContentIdOf = cachedByItems((items): number | null | undefined =>
     isSharedChatLayout(items) ? (items.find(it => it.type === 'chat')!.contentId ?? null) : undefined,
 );
+
+/**
+ * 依目前的串流／聊天室數重排整個畫布（串流填滿左側、聊天室在右側一欄），用於手動新增視窗之後。
+ * 既有視窗依畫面位置（上→下、左→右）排序、newIds 排在最後，所以原本在左上的仍在左上。
+ * 只改 layout，i、contentId、sharedChat 都不動。
+ */
+export function relayoutItems(items: readonly CanvasItem[], aspect: number, newIds: readonly string[] = []): CanvasItem[] {
+    const isNew = (it: CanvasItem) => newIds.includes(it.i);
+    const ordered = (type: CanvasItem['type']) => [
+        ...items.filter(it => it.type === type && !isNew(it)).sort(byPosition),
+        ...items.filter(it => it.type === type && isNew(it)),
+    ];
+    const streams = ordered('stream');
+    const chats = ordered('chat');
+    const rects = generateColumnLayout(streams.length, chats.length, aspect);
+    const layoutOf = new Map<string, CanvasItem['layout']>();
+    streams.forEach((it, idx) => layoutOf.set(it.i, rects.streams[idx]));
+    chats.forEach((it, idx) => layoutOf.set(it.i, rects.chats[idx]));
+    return items.map(it => (layoutOf.has(it.i) ? { ...it, layout: { ...layoutOf.get(it.i)! } } : it));
+}
