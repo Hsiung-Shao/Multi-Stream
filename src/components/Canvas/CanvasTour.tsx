@@ -1,7 +1,9 @@
 /**
- * CanvasTour —— 畫布首次導覽（4 步聚光燈）。
+ * CanvasTour —— 畫布首次導覽（聚光燈）：先教畫布視窗（拖曳、換位、縮放、放大），再教下方動態島。
  *
- * 畫布的拖曳、換位、縮放、放大原本都藏在 hover 或快捷鍵後面，使用者回報「不知道怎麼調整」。
+ * 畫布的拖曳、換位、縮放、放大原本都藏在 hover 或快捷鍵後面，使用者回報「不知道怎麼調整」；
+ * 動態島平常收起，滑鼠移到底部才出現，新使用者也不知道它在哪、每顆按鈕做什麼。
+ * 導覽期間 DynamicIsland 把 isCanvasTourOpen 納入 pinned，島會保持展開。
  * 第一次進畫布、而且至少有一路串流時跑一次；看完或略過就寫入 localStorage，之後可從快捷鍵說明重看。
  *
  * 不碰畫布的 React 狀態：目標用 DOM 屬性定位（data-canvas-window-id / data-window-toolbar /
@@ -14,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
+import { hasConsentRecord, CONSENT_CHANGE_EVENT } from '../../utils/analytics';
 
 export const CANVAS_TOUR_DONE_KEY = 'canvas_tour_done';
 /** 有串流之後等播放器與工具列掛好再開始，避免聚光燈指到還沒出現的元素 */
@@ -22,7 +25,36 @@ const PAD = 6;
 /** 聚光框離螢幕邊緣至少留這麼多，框線才不會被裁掉 */
 const EDGE = 3;
 
-type StepId = 'drag' | 'swap' | 'resize' | 'theater';
+type StepId =
+    | 'drag' | 'swap' | 'resize' | 'theater'
+    | 'island' | 'search' | 'layout' | 'media' | 'collect' | 'help'
+    | 'dock';
+
+/** 一般型態動態島的介紹步驟；邊緣停靠型只有一步（dock） */
+const ISLAND_STEPS: StepId[] = ['island', 'search', 'layout', 'media', 'collect', 'help'];
+/** 動態島從收起到展開有 0.5 秒動畫；切到島的步驟後等動畫結束再量一次位置 */
+const ISLAND_SETTLE_MS = 600;
+
+const qs = (sel: string) => document.querySelector<HTMLElement>(sel);
+const islandBtn = (fn: string) => qs(`[data-island-fn="${fn}"]`);
+
+/** 各步驟要框住的元素（可以多個，聚光框取聯集） */
+function stepTargets(step: StepId, win: HTMLElement | null): (HTMLElement | null)[] {
+    switch (step) {
+        case 'drag': return [win?.querySelector<HTMLElement>('[data-window-toolbar="stream"]') ?? null];
+        case 'theater': return [win?.querySelector<HTMLElement>('[data-tour="theater"]') ?? null];
+        // 縮放：框住整個視窗、四個角各加角框（任一角都能拖，不是只有右下）
+        case 'swap':
+        case 'resize': return [win];
+        case 'island': return [qs('[data-tour="island"]')];
+        case 'search': return [qs('[data-tour="island-search"]'), islandBtn('add')];
+        case 'layout': return [islandBtn('layout')];
+        case 'media': return [islandBtn('media')];
+        case 'collect': return [islandBtn('fav'), islandBtn('save'), islandBtn('share')];
+        case 'help': return [islandBtn('help')];
+        case 'dock': return [qs('[data-tour="island-dock"]')];
+    }
+}
 
 interface Rect { top: number; left: number; width: number; height: number }
 
@@ -67,12 +99,22 @@ export function CanvasTour() {
     // 主畫面視窗（第一步、縮放、放大都指它）與另一個有內容的串流視窗（交換那步）
     // selector 都回傳字串：畫布其他變動（音量、拖曳）不會讓導覽重繪
     const mainId = useStreamStore(s => mainStreamItemIdOf(s.canvasItems));
+    const islandStyle = useUIStore(s => s.islandStyle);
     const otherId = useStreamStore(s => {
         const main = mainStreamItemIdOf(s.canvasItems);
         return s.canvasItems.find(i => i.type === 'stream' && i.contentId != null && i.i !== main)?.i ?? null;
     });
 
     const [stepIdx, setStepIdx] = useState(0);
+    // 第一次造訪的訪客會同時看到 Cookie 橫幅（z-9999、在畫面底部），它正好蓋住要介紹的動態島；
+    // 自動開啟等使用者回應橫幅之後才開始。手動「重看導覽」不受影響
+    const [consentReady, setConsentReady] = useState(hasConsentRecord);
+    useEffect(() => {
+        if (consentReady) return;
+        const onConsent = () => setConsentReady(true);
+        window.addEventListener(CONSENT_CHANGE_EVENT, onConsent);
+        return () => window.removeEventListener(CONSENT_CHANGE_EVENT, onConsent);
+    }, [consentReady]);
     const [rect, setRect] = useState<Rect | null>(null);
     const primaryRef = useRef<HTMLButtonElement>(null);
 
@@ -92,15 +134,15 @@ export function CanvasTour() {
 
     // 首次：有串流之後自動開啟
     useEffect(() => {
-        if (open || !mainId || readTourDone()) return;
+        if (open || !mainId || !consentReady || readTourDone()) return;
         const timer = setTimeout(() => setOpen(true), START_DELAY_MS);
         return () => clearTimeout(timer);
-    }, [open, mainId, setOpen]);
+    }, [open, mainId, consentReady, setOpen]);
 
-    const steps = useMemo<StepId[]>(
-        () => (otherId ? ['drag', 'swap', 'resize', 'theater'] : ['drag', 'resize', 'theater']),
-        [otherId],
-    );
+    const steps = useMemo<StepId[]>(() => [
+        ...(otherId ? ['drag', 'swap', 'resize', 'theater'] as StepId[] : ['drag', 'resize', 'theater'] as StepId[]),
+        ...(islandStyle === 'edgeDock' ? ['dock'] as StepId[] : ISLAND_STEPS),
+    ], [otherId, islandStyle]);
     const step = steps[Math.min(stepIdx, steps.length - 1)];
 
     const close = useCallback(() => {
@@ -114,36 +156,38 @@ export function CanvasTour() {
         else setStepIdx(i => i + 1);
     }, [stepIdx, steps.length, close]);
 
+    const back = useCallback(() => setStepIdx(i => Math.max(0, i - 1)), []);
+
     // 找出目標元素、掛 data-tour-active 讓工具列與縮放角顯示，並量位置
     useLayoutEffect(() => {
         if (!open || !mainId) return;
         const targetWindowId = step === 'swap' ? otherId : mainId;
         const win = targetWindowId ? findWindow(targetWindowId) : null;
         const main = findWindow(mainId);
-        main?.setAttribute('data-tour-active', '');
+        // 只有畫布步驟需要強制顯示工具列與縮放角；介紹動態島時畫面保持乾淨
+        if (!ISLAND_STEPS.includes(step) && step !== 'dock') main?.setAttribute('data-tour-active', '');
 
-        const pick = (): HTMLElement | null => {
-            if (!win) return null;
-            if (step === 'drag') return win.querySelector('[data-window-toolbar="stream"]');
-            // 縮放：框住整個視窗、四個角各加角框（任一角都能拖，不是只有右下）
-            if (step === 'resize') return win;
-            if (step === 'theater') return win.querySelector('[data-tour="theater"]');
-            return win;
-        };
         const measure = () => {
-            const el = pick();
-            if (!el) { setRect(null); return; }
-            const r = el.getBoundingClientRect();
+            const els = stepTargets(step, win).filter((el): el is HTMLElement => !!el);
+            if (els.length === 0) { setRect(null); return; }
+            const rs = els.map(el => el.getBoundingClientRect());
             // 往外留 PAD，但夾在可視範圍內：版面填滿畫布，視窗常貼著螢幕邊，超出去的框線與角框會被裁掉看不到
-            const top = Math.max(EDGE, r.top - PAD), left = Math.max(EDGE, r.left - PAD);
-            const bottom = Math.min(window.innerHeight - EDGE, r.bottom + PAD);
-            const right = Math.min(window.innerWidth - EDGE, r.right + PAD);
+            const top = Math.max(EDGE, Math.min(...rs.map(r => r.top)) - PAD);
+            const left = Math.max(EDGE, Math.min(...rs.map(r => r.left)) - PAD);
+            const bottom = Math.min(window.innerHeight - EDGE, Math.max(...rs.map(r => r.bottom)) + PAD);
+            const right = Math.min(window.innerWidth - EDGE, Math.max(...rs.map(r => r.right)) + PAD);
             setRect({ top, left, width: Math.max(0, right - left), height: Math.max(0, bottom - top) });
         };
         measure();
+        // 島剛被釘住展開時還在動畫中，量到的是收起時的位置
+        const settle = setTimeout(measure, ISLAND_SETTLE_MS);
         window.addEventListener('resize', measure);
+        // 動畫被延後（分頁在背景時轉場會暫停）也要跟上：任何轉場結束都重量一次
+        document.addEventListener('transitionend', measure, true);
         return () => {
+            clearTimeout(settle);
             window.removeEventListener('resize', measure);
+            document.removeEventListener('transitionend', measure, true);
             main?.removeAttribute('data-tour-active');
         };
     }, [open, step, mainId, otherId]);
@@ -155,11 +199,12 @@ export function CanvasTour() {
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
             else if (e.key === 'Enter' || e.key === 'ArrowRight') { e.preventDefault(); next(); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); back(); }
         };
         // capture：先於全域快捷鍵（Esc 平常用來離開劇院模式）
         window.addEventListener('keydown', onKey, true);
         return () => window.removeEventListener('keydown', onKey, true);
-    }, [open, next, close, stepIdx]);
+    }, [open, next, back, close, stepIdx]);
 
     if (!open || !mainId) return null;
 
@@ -219,9 +264,18 @@ export function CanvasTour() {
                             <button
                                 type="button"
                                 onClick={close}
-                                className="rounded-md border border-white/20 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
+                                className="rounded-md px-2 py-1 text-xs text-white/60 hover:text-white"
                             >
                                 {t('canvas.tour_skip')}
+                            </button>
+                        )}
+                        {stepIdx > 0 && (
+                            <button
+                                type="button"
+                                onClick={back}
+                                className="rounded-md border border-white/20 px-3 py-1 text-xs text-white/80 hover:bg-white/10"
+                            >
+                                {t('canvas.tour_back')}
                             </button>
                         )}
                         <button

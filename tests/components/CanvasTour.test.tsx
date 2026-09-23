@@ -5,6 +5,7 @@ import i18n from '../../src/i18n/i18n';
 import { CanvasTour, CANVAS_TOUR_DONE_KEY, resetCanvasTourSessionForTest } from '../../src/components/Canvas/CanvasTour';
 import { useStreamStore } from '../../src/store/useStreamStore';
 import { useUIStore } from '../../src/store/useUIStore';
+import { setTrackingConsent } from '../../src/utils/analytics';
 
 const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
 
@@ -16,6 +17,18 @@ function fakeWindow(id: string) {
     document.body.appendChild(el);
     return el;
 }
+
+/** 一般型態動態島：導覽用 data-tour / data-island-fn 找目標 */
+function fakeIsland() {
+    const el = document.createElement('div');
+    el.setAttribute('data-tour', 'island');
+    el.innerHTML = '<div data-tour="island-search"></div>'
+        + ['add', 'layout', 'media', 'fav', 'save', 'share', 'help'].map(fn => `<button data-island-fn="${fn}"></button>`).join('');
+    document.body.appendChild(el);
+}
+
+const spotlight = () => document.querySelector('[data-canvas-tour] .border-indigo-300');
+const clickNext = () => fireEvent.click([...document.querySelectorAll('[data-canvas-tour] button')].pop()!);
 
 function setStreams(n: number) {
     useStreamStore.setState({
@@ -31,8 +44,10 @@ describe('CanvasTour', () => {
         await i18n.changeLanguage('zh-TW');
         vi.useFakeTimers();
         localStorage.clear();
+        // 已回應過 Cookie 橫幅（否則導覽會等橫幅關掉才開始，見專屬測試）
+        localStorage.setItem('cookie_consent', 'rejected');
         resetCanvasTourSessionForTest();
-        useUIStore.setState({ isCanvasTourOpen: false, canvasTourAvailable: false });
+        useUIStore.setState({ isCanvasTourOpen: false, canvasTourAvailable: false, islandStyle: 'original' });
         useStreamStore.setState({ canvasItems: [] });
         document.body.innerHTML = '';
     });
@@ -48,7 +63,7 @@ describe('CanvasTour', () => {
 
         expect(screen.getByRole('dialog')).toBeInTheDocument();
         expect(screen.getByText('拖曳工具列移動視窗')).toBeInTheDocument();
-        expect(screen.getByText('1 / 4')).toBeInTheDocument();
+        expect(screen.getByText('1 / 10')).toBeInTheDocument();
         // 目標視窗掛上 data-tour-active，平常 hover 才出現的工具列與縮放角由 CSS 強制顯示
         expect(document.querySelector('[data-canvas-window-id="w1"]')!.hasAttribute('data-tour-active')).toBe(true);
 
@@ -74,9 +89,10 @@ describe('CanvasTour', () => {
 
     it('只有 1 路時跳過「交換」那一步；最後一步按「開始使用」結束', () => {
         setStreams(1);
+        fakeIsland();
         render(<CanvasTour />);
         act(() => { vi.advanceTimersByTime(1600); });
-        expect(screen.getByText('1 / 3')).toBeInTheDocument();
+        expect(screen.getByText('1 / 9')).toBeInTheDocument();
 
         fireEvent.click(screen.getByText('下一步'));
         expect(screen.getByText('拖曳四個角調整大小')).toBeInTheDocument();
@@ -85,9 +101,43 @@ describe('CanvasTour', () => {
             .toEqual(['ne', 'nw', 'se', 'sw']);
         fireEvent.click(screen.getByText('下一步'));
         expect(screen.getByText('放大某一路')).toBeInTheDocument();
+
+        // 接著逐一介紹下方動態島；每一步都找得到目標（有聚光框，不是整片置中）
+        const islandTitles = [
+            '下方的動態島：所有主要功能都在這', '搜尋或貼上網址加入直播', '一鍵切換版面',
+            '媒體控制', '收藏、儲存與分享', '忘了怎麼操作？',
+        ];
+        for (const title of islandTitles) {
+            clickNext();
+            expect(screen.getByText(title)).toBeInTheDocument();
+            expect(spotlight(), title).not.toBeNull();
+            // 介紹動態島時不強制顯示視窗工具列
+            expect(document.querySelector('[data-tour-active]')).toBeNull();
+        }
         fireEvent.click(screen.getByText('開始使用'));
         expect(screen.queryByRole('dialog')).toBeNull();
         expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBe('1');
+    });
+
+    it('導覽期間釘住動態島：isCanvasTourOpen 為 true', () => {
+        setStreams(2);
+        render(<CanvasTour />);
+        act(() => { vi.advanceTimersByTime(1600); });
+        expect(useUIStore.getState().isCanvasTourOpen).toBe(true);
+    });
+
+    it('邊緣停靠型動態島：島的介紹只有一步，指向停靠標籤', () => {
+        useUIStore.setState({ islandStyle: 'edgeDock' });
+        setStreams(2);
+        const dock = document.createElement('div');
+        dock.setAttribute('data-tour', 'island-dock');
+        document.body.appendChild(dock);
+        render(<CanvasTour />);
+        act(() => { vi.advanceTimersByTime(1600); });
+        expect(screen.getByText('1 / 5')).toBeInTheDocument();
+        for (let i = 0; i < 4; i++) clickNext();
+        expect(screen.getByText('動態島停靠在畫面邊緣')).toBeInTheDocument();
+        expect(spotlight()).not.toBeNull();
     });
 
     it('Esc 略過；從快捷鍵說明重看（setCanvasTourOpen）時從第一步開始', () => {
@@ -99,7 +149,7 @@ describe('CanvasTour', () => {
         expect(screen.queryByRole('dialog')).toBeNull();
 
         act(() => { useUIStore.getState().setCanvasTourOpen(true); });
-        expect(screen.getByText('1 / 4')).toBeInTheDocument();
+        expect(screen.getByText('1 / 10')).toBeInTheDocument();
     });
 
     it('掛載期間標記導覽可用（快捷鍵說明據此顯示「重看導覽」），卸載時清除', () => {
@@ -139,5 +189,31 @@ describe('CanvasTour', () => {
         act(() => { setStreams(2); });
         act(() => { vi.advanceTimersByTime(5000); });
         expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('第一次造訪還沒回應 Cookie 橫幅時先不開始，回應後才開始（橫幅會蓋住動態島）', () => {
+        localStorage.removeItem('cookie_consent');
+        setStreams(2);
+        render(<CanvasTour />);
+        act(() => { vi.advanceTimersByTime(5000); });
+        expect(screen.queryByRole('dialog')).toBeNull();
+
+        act(() => { setTrackingConsent(false); });
+        act(() => { vi.advanceTimersByTime(1600); });
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('可以回上一步（按鈕與方向鍵 ←），第一步沒有上一步', () => {
+        setStreams(2);
+        render(<CanvasTour />);
+        act(() => { vi.advanceTimersByTime(1600); });
+        expect(screen.queryByText('上一步')).toBeNull();
+        clickNext();
+        clickNext();
+        expect(screen.getByText('3 / 10')).toBeInTheDocument();
+        fireEvent.click(screen.getByText('上一步'));
+        expect(screen.getByText('2 / 10')).toBeInTheDocument();
+        fireEvent.keyDown(window, { key: 'ArrowLeft' });
+        expect(screen.getByText('1 / 10')).toBeInTheDocument();
     });
 });

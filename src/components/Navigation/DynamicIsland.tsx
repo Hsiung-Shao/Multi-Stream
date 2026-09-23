@@ -61,6 +61,7 @@ const IslandBtn = forwardRef<HTMLButtonElement, IslandBtnProps & React.ButtonHTM
                 title={title}
                 aria-label={title}
                 aria-pressed={active}
+                data-island-fn={fn}
                 onClick={onClick}
                 onMouseEnter={() => setHover(true)}
                 onMouseLeave={() => setHover(false)}
@@ -115,6 +116,8 @@ export const DynamicIsland = () => {
     const openModal = useUIStore(s => s.openModal);
     // 快捷鍵說明（Radix Dialog，portal）開著時也算「使用中」，照島上 portal UI 的慣例納入釘住
     const hotkeyHelpOpen = useUIStore(s => s.isHotkeyHelpOpen);
+    // 畫布導覽會逐一介紹島上的按鈕：導覽期間島必須展開
+    const tourOpen = useUIStore(s => s.isCanvasTourOpen);
     const clearCanvasItems = useStreamStore(s => s.clearCanvasItems);
     const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
     const addCanvasItem = useStreamStore(s => s.addCanvasItem);
@@ -135,7 +138,7 @@ export const DynamicIsland = () => {
     const { isCollapsed, setPinned, handlers } = useDynamicIsland();
 
     // 彙整「使用中」訊號 → 釘住/解除釘住(單一真實來源)
-    const pinned = mediaControlExpanded || layoutPickerExpanded || addMenuOpen || favMenuOpen || clearDialogOpen || searchActive || saveDialogOpen || hotkeyHelpOpen;
+    const pinned = mediaControlExpanded || layoutPickerExpanded || addMenuOpen || favMenuOpen || clearDialogOpen || searchActive || saveDialogOpen || hotkeyHelpOpen || tourOpen;
     useEffect(() => {
         setPinned(pinned);
     }, [pinned, setPinned]);
@@ -153,6 +156,7 @@ export const DynamicIsland = () => {
                 />
 
                 <div
+                    data-tour="island"
                     className={cn(
                         "relative flex items-center transition-all duration-500 ease-in-out",
                         isCollapsed ? "translate-y-[200%] opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
@@ -171,7 +175,9 @@ export const DynamicIsland = () => {
                     <div className="flex items-center" style={{ gap: 3 }}>
 
                         {/* Group 1: Search Module */}
-                        <IslandSearch onActiveChange={setSearchActive} />
+                        <div data-tour="island-search" className="flex">
+                            <IslandSearch onActiveChange={setSearchActive} />
+                        </div>
 
                         <IslandDivider />
 

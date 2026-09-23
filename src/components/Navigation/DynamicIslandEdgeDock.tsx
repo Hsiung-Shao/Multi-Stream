@@ -172,6 +172,7 @@ export const DynamicIslandEdgeDock = () => {
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
+                data-tour="island-dock"
                 className="fixed z-50 flex items-center justify-center cursor-grab active:cursor-grabbing select-none touch-none pointer-events-auto text-white/75"
                 style={{
                     top: `${y}%`,

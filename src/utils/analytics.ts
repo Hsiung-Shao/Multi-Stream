@@ -20,6 +20,8 @@
 
 const GA_MEASUREMENT_ID = 'G-Q2LXVMDD46';
 const CONSENT_KEY = 'cookie_consent';
+/** 使用者回應 Cookie 橫幅後在 window 上廣播（畫布導覽等橫幅關掉才開始） */
+export const CONSENT_CHANGE_EVENT = 'cookie-consent-change';
 const INTERNAL_USER_KEY = 'ms_internal_user';
 const SESSION_WATCH_SECONDS_KEY = 'ms_session_watch_seconds';
 const SESSION_MAX_STREAMS_KEY = 'ms_session_max_concurrent_streams';
@@ -61,6 +63,8 @@ export const setTrackingConsent = (accepted: boolean): void => {
     } catch (e) {
         console.warn('Failed to save consent status:', e);
     }
+    // 寫不寫得進 localStorage 都要通知：橫幅已經關掉了
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT));
 };
 
 export const disableTracking = (): void => {
