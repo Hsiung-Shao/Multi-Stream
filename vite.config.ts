@@ -7,6 +7,8 @@ import { execSync } from 'child_process';
 import tailwindcss from '@tailwindcss/vite';
 import pkg from './package.json';
 import { SEO_DEFAULT_TITLE, SEO_DEFAULT_DESCRIPTION, SEO_ROBOTS_INDEX } from './src/seo/defaults';
+// vendor 分包規則（為什麼改成依套件名分類見該檔）
+import { vendorChunkOf } from './src/buildConfig/vendorChunks';
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -103,30 +105,7 @@ export default defineConfig(({ isSsrBuild }) => ({
     outDir: 'build',
     rollupOptions: isSsrBuild ? {} : {
       output: {
-        manualChunks: {
-          // 核心庫
-          'vendor-react': ['react', 'react-dom', 'zustand', '@tanstack/react-query'],
-
-          // UI 基礎組件
-          'vendor-radix': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-select',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-slider',
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-alert-dialog',
-            '@radix-ui/react-scroll-area',
-          ],
-
-          // 圖表庫 - 獨立打包
-          'vendor-charts': ['recharts'],
-
-          // 工具庫
-          'vendor-utils': ['clsx', 'tailwind-merge', 'i18next', 'react-i18next', 'lucide-react'],
-        },
+        manualChunks: vendorChunkOf,
       },
     },
     // 啟用代碼分割優化

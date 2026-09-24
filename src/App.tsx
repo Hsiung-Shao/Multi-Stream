@@ -29,7 +29,8 @@ import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
 import { RestoreSessionPrompt } from './components/Dialogs/RestoreSessionPrompt';
 import type { StreamData } from './utils/streamUtils';
 import type { CanvasItem } from './types/canvas';
-import { MobileApp } from './components/Mobile/MobileApp';
+// 手機殼層只在手機的畫布／收藏等分頁用到：lazy 載入，桌機與所有預渲染頁都不下載
+const MobileApp = lazy(() => import('./components/Mobile/MobileApp').then(module => ({ 'default': module.MobileApp })));
 
 // Pages
 import { LandingPage } from './components/Pages/LandingPage';
@@ -201,7 +202,9 @@ export default function App() {
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
       <>
-        <MobileApp />
+        <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+          <MobileApp />
+        </Suspense>
         <RestoreSessionPrompt
           open={!!pendingRestore && currentPage === 'canvas'}
           streamCount={pendingRestore?.streams.length ?? 0}
