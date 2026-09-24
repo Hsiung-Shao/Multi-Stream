@@ -288,7 +288,7 @@ const common = {
   'cookie.description': '我們使用 Cookie 和類似技術來改善您的瀏覽體驗、分析網站流量，並提供個人化內容。點擊「接受」即表示您同意我們使用這些技術。',
   'cookie.accept': '接受',
   'cookie.reject': '拒絕',
-  'cookie.privacyLink': '了解更多',
+  'cookie.privacyLink': '查看隱私權政策',
   'cookie.privacyNote': '您的隱私對我們很重要。您可以隨時在設定中變更您的選擇。',
   // Brave Detect Dialog
   'braveDetect.title': 'Brave 瀏覽器相容性提醒',

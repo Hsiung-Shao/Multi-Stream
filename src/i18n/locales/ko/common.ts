@@ -294,7 +294,7 @@ const common = {
   'cookie.description': '저희는 Cookie 및 유사한 기술을 사용하여 브라우징 경험을 개선하고, 사이트 트래픽을 분석하며, 개인화된 콘텐츠를 제공합니다. "수락"을 클릭하면 이러한 기술 사용에 동의하는 것입니다.',
   'cookie.accept': '수락',
   'cookie.reject': '거부',
-  'cookie.privacyLink': '자세히 보기',
+  'cookie.privacyLink': '개인정보 처리방침 보기',
   'cookie.privacyNote': '귀하의 개인정보는 저희에게 중요합니다. 설정에서 언제든지 변경할 수 있습니다.',
   // Brave Detect Dialog
   'braveDetect.title': 'Brave 브라우저 호환성 안내',

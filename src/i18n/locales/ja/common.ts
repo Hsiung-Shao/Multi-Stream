@@ -294,7 +294,7 @@ const common = {
   'cookie.description': '私たちはCookieや類似の技術を使用して、閲覧体験の向上、サイトトラフィックの分析、パーソナライズされたコンテンツの提供を行っています。「承認」をクリックすることで、これらの技術の使用に同意したことになります。',
   'cookie.accept': '承認',
   'cookie.reject': '拒否',
-  'cookie.privacyLink': '詳細を見る',
+  'cookie.privacyLink': 'プライバシーポリシーを見る',
   'cookie.privacyNote': 'お客様のプライバシーは私たちにとって重要です。設定でいつでも変更できます。',
   // Brave Detect Dialog
   'braveDetect.title': 'Brave ブラウザ互換性のお知らせ',

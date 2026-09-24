@@ -87,7 +87,7 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
                             to="privacy"
                             className="text-purple-400 hover:text-purple-300 underline text-xs mt-1 inline-block"
                         >
-                            {t('cookie.privacyLink', '了解更多')}
+                            {t('cookie.privacyLink', '查看隱私權政策')}
                         </RouteLink>
                     </div>
 

@@ -294,7 +294,7 @@ const common = {
   'cookie.description': '我们使用 Cookie 和类似技术来改善您的浏览体验、分析网站流量，并提供个性化内容。点击「接受」即表示您同意我们使用这些技术。',
   'cookie.accept': '接受',
   'cookie.reject': '拒绝',
-  'cookie.privacyLink': '了解更多',
+  'cookie.privacyLink': '查看隐私权政策',
   'cookie.privacyNote': '您的隐私对我们很重要。您可以随时在设置中变更您的选择。',
   // Brave Detect Dialog
   'braveDetect.title': 'Brave 浏览器兼容性提醒',

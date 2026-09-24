@@ -292,7 +292,7 @@ const common = {
   'cookie.description': 'We use cookies and similar technologies to improve your browsing experience, analyze site traffic, and provide personalized content. By clicking "Accept", you consent to our use of these technologies.',
   'cookie.accept': 'Accept',
   'cookie.reject': 'Reject',
-  'cookie.privacyLink': 'Learn More',
+  'cookie.privacyLink': 'Read our Privacy Policy',
   'cookie.privacyNote': 'Your privacy is important to us. You can change your preferences at any time in settings.',
   // Brave Detect Dialog
   'braveDetect.title': 'Brave Browser Compatibility Notice',

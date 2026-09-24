@@ -86,10 +86,11 @@
   Content-Type: image/svg+xml
   Cache-Control: public, max-age=31536000, immutable
 
-# WebP（og/hero 截圖可能重製，不用 immutable，一週快取）
+# WebP（og/hero 截圖可能重製，不用 immutable）。30 天＋背景重新驗證；
+# 截圖內容大改時請換檔名（例 canvas-hero-v2.webp），不要原檔覆蓋（2026-09 PageSpeed：原本 7 天被標「快取過短」）
 /*.webp
   Content-Type: image/webp
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
 
 # 圖標文件
 /icon.png
