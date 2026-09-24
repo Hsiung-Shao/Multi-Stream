@@ -135,12 +135,14 @@ export function LandingPage() {
 
                         {/* Feature Preview / UI Mockup placeholder */}
                         {/* min-h 預留 hero mockup 空間，避免下方 features 區段 fade-in 動畫造成 layout shift（CLS） */}
-                        <div className="mt-20 relative animate-fade-in-up delay-200 duration-1000 min-h-[260px] md:min-h-[400px]">
+                        {/* 不加淡入動畫：這張圖是 LCP 元素，從 opacity 0 開始會延後 LCP 的 render（2026-09 PageSpeed） */}
+                        <div className="mt-20 relative min-h-[260px] md:min-h-[400px]">
                             <div className="relative rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl p-2 md:p-4 max-w-5xl mx-auto overflow-hidden">
                                 {/* 真實產品截圖（3 直播 + 3 聊天室）；近 LCP 元素故 eager + fetchpriority high */}
                                 <img
                                     src="/screenshots/canvas-hero.webp"
-                                    srcSet="/screenshots/canvas-hero-800.webp 800w, /screenshots/canvas-hero.webp 1600w"
+                                    // 1200w：桌機 DPR1（sizes 1024px）原本只能跳到 1600w（111 KB），改抓 65 KB
+                                    srcSet="/screenshots/canvas-hero-800.webp 800w, /screenshots/canvas-hero-1200.webp 1200w, /screenshots/canvas-hero.webp 1600w"
                                     sizes="(max-width: 1024px) 100vw, 1024px"
                                     alt={t('landing.hero_screenshot_alt', 'MultiStream Hub 畫布同時播放三個直播視窗與聊天室')}
                                     width={1600}
