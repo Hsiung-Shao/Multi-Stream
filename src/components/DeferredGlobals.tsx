@@ -8,6 +8,7 @@
  * 需由 App 傳 props 或與 App 狀態強耦合者（YouTubeRiskDialog、RestoreSessionPrompt、各 Modal）
  * 仍保留在 App.tsx。
  */
+import { useEffect } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { Toaster } from './ui/sonner';
 import { PerformanceOverlay } from './Navigation/PerformanceOverlay';
@@ -17,8 +18,12 @@ import { CookieConsent } from './CookieConsent';
 import { AnnouncementsProvider } from '../features/announcements/AnnouncementsProvider';
 import { FeedbackFAB } from './Navigation/FeedbackFAB';
 import { BraveDetectDialog } from './Dialogs/BraveDetectDialog';
+import { startWebVitalsReporting } from '../utils/webVitals';
 
 export default function DeferredGlobals() {
+    // 真實使用者 Web Vitals 歸因（CLS/LCP/INP → GA4 web_vitals 事件，未同意 Cookie 不送）；
+    // 放在這個延後 chunk：observer 是 buffered，晚一點啟動也拿得到載入期間的資料
+    useEffect(() => { startWebVitalsReporting(); }, []);
     const currentPage = useUIStore(s => s.page);
     // 全站浮動意見回饋按鈕 — admin / canvas 沉浸頁略過避免擋畫面
     const showFeedbackFab = currentPage !== 'admin' && currentPage !== 'canvas';

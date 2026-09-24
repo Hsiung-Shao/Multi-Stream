@@ -274,6 +274,31 @@ export const track = {
         sendEvent('stream_milestone', { milestone_minutes: milestoneMinutes }),
 } as const;
 
+// ===== Web Vitals（真實使用者量測，見 utils/webVitals.ts） =====
+
+export interface WebVitalPayload {
+    name: 'CLS' | 'LCP' | 'INP';
+    /** CLS 為無單位分數，LCP/INP 為毫秒 */
+    value: number;
+    rating: 'good' | 'needs-improvement' | 'poor';
+    /** 造成此數值的元素 selector（CLS 最大位移、LCP 元素、INP 互動目標） */
+    debugTarget: string;
+    /** 進站網址：CrUX 把 SPA 整段工作階段算在進站網址上，換頁後 page_path 會不同 */
+    landingPath: string;
+}
+
+export const sendWebVital = (p: WebVitalPayload): void => {
+    sendEvent('web_vitals', {
+        metric_name: p.name,
+        // CLS 放大 1000 倍取整：GA4 自訂指標只收數字，方便加總與平均
+        value: p.name === 'CLS' ? Math.round(p.value * 1000) : Math.round(p.value),
+        metric_rating: p.rating,
+        debug_target: p.debugTarget.slice(0, 100),
+        landing_path: p.landingPath,
+        page_path: window.location.pathname,
+    });
+};
+
 // ===== Heartbeat 與 Session 事件（spec 要求） =====
 
 export interface HeartbeatPayload {
