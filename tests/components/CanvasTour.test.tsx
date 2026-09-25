@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import i18n from '../../src/i18n/i18n';
-import { CanvasTour, CANVAS_TOUR_DONE_KEY, resetCanvasTourSessionForTest } from '../../src/components/Canvas/CanvasTour';
+import { CanvasTour, CANVAS_TOUR_DONE_KEY, CANVAS_TOUR_INTRO_DONE_KEY, resetCanvasTourSessionForTest } from '../../src/components/Canvas/CanvasTour';
 import { useStreamStore } from '../../src/store/useStreamStore';
 import { useUIStore } from '../../src/store/useUIStore';
 import { setTrackingConsent } from '../../src/utils/analytics';
@@ -85,11 +85,67 @@ describe('CanvasTour', () => {
         expect(document.querySelector('[data-tour-active]')).toBeNull();
     });
 
-    it('空畫布也會開始：視窗操作改成一頁文字說明，接著介紹動態島與操作一覽', () => {
+    // 使用者回報：空畫布沒有視窗可以框，視窗操作那段看不懂 → 分兩段：先教加直播，加了再教操作
+    it('空畫布只跑第一段：歡迎 → 指向搜尋框「先加入第一路直播」；看完只記第一段', () => {
         fakeIsland();
         render(<CanvasTour />);
         start();
         expect(title()).toBe('歡迎使用多直播畫布');
+        expect(screen.getByText('1 / 2')).toBeInTheDocument();
+        expect(document.getElementById('canvas-tour-body')!.textContent).toContain('畫布現在是空的');
+        clickNext();
+        expect(title()).toBe('先加入第一路直播');
+        expect(spotlight()).not.toBeNull();
+
+        fireEvent.click(screen.getByText('開始加入直播'));
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(localStorage.getItem(CANVAS_TOUR_INTRO_DONE_KEY)).toBe('1');
+        expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBeNull();
+        // 還沒加直播：不會再自動開
+        act(() => { vi.advanceTimersByTime(5000); });
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('第一段看過後，第一路直播加入就接著跑第二段：有真實視窗可框，不再重複搜尋框', () => {
+        localStorage.setItem(CANVAS_TOUR_INTRO_DONE_KEY, '1');
+        fakeIsland();
+        render(<CanvasTour />);
+        act(() => { vi.advanceTimersByTime(5000); });
+        expect(screen.queryByRole('dialog')).toBeNull();
+
+        act(() => { setStreams(1); });
+        start();
+        expect(title()).toBe('直播加好了！');
+        // windows_ready + 4 個視窗步驟 + 動態島 7 步（少了搜尋框）+ 操作一覽
+        expect(screen.getByText('1 / 13')).toBeInTheDocument();
+        clickNext();
+        expect(title()).toBe('拖曳工具列移動視窗');
+        expect(spotlight()).not.toBeNull();
+        const titles: string[] = [];
+        for (let i = 0; i < 11; i++) { clickNext(); titles.push(title()!); }
+        expect(titles).not.toContain(ISLAND_TITLES[1]);
+        expect(titles[titles.length - 1]).toBe('操作一覽');
+
+        fireEvent.click(screen.getByText('開始使用'));
+        expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBe('1');
+    });
+
+    it('第一段按「略過」：整個導覽都不再自動跑，加入直播後也不接第二段', () => {
+        fakeIsland();
+        render(<CanvasTour />);
+        start();
+        fireEvent.click(screen.getByText('略過'));
+        expect(localStorage.getItem(CANVAS_TOUR_DONE_KEY)).toBe('1');
+        act(() => { setStreams(1); });
+        act(() => { vi.advanceTimersByTime(5000); });
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('空畫布從快捷鍵說明「重看導覽」：仍是完整版（視窗操作用一頁文字說明）', () => {
+        localStorage.setItem(CANVAS_TOUR_DONE_KEY, '1');
+        fakeIsland();
+        render(<CanvasTour />);
+        act(() => { useUIStore.getState().setCanvasTourOpen(true); });
         expect(screen.getByText('1 / 11')).toBeInTheDocument();
         clickNext();
         expect(title()).toBe('畫面上的視窗怎麼操作');

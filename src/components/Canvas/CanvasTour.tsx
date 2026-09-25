@@ -4,7 +4,11 @@
  * 畫布的拖曳、換位、縮放、放大原本都藏在 hover 或快捷鍵後面，使用者回報「不知道怎麼調整」；
  * 動態島平常收起，滑鼠移到底部才出現，新使用者也不知道它在哪、每顆按鈕做什麼。
  * 導覽期間 DynamicIsland 把 isCanvasTourOpen 納入 pinned，島會保持展開。
- * 第一次進畫布、而且至少有一路串流時跑一次；看完或略過就寫入 localStorage，之後可從快捷鍵說明重看。
+ * 第一次進畫布自動跑一次；看完或略過就寫入 localStorage，之後可從快捷鍵說明重看。
+ * 空畫布時分兩段（使用者回報：沒有視窗可以框，視窗操作那段看不懂）：
+ *   第一段 intro：歡迎 → 指向動態島搜尋框「先加入第一路直播」。
+ *   第二段 windows：第一路直播加入後自動接著跑，這時有真實視窗可以框（拖曳、縮放、放大…），再介紹動態島其他功能。
+ * 一進來就有直播（例如分享網址）則直接跑完整版 full。
  *
  * 不碰畫布的 React 狀態：目標用 DOM 屬性定位（data-canvas-window-id / data-window-toolbar /
  * data-corner / data-tour），平常 hover 才出現的工具列與縮放角靠在目標視窗掛 data-tour-active
@@ -21,6 +25,8 @@ import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
 import { hasConsentRecord, CONSENT_CHANGE_EVENT } from '../../utils/analytics';
 
 export const CANVAS_TOUR_DONE_KEY = 'canvas_tour_done';
+/** 空畫布的第一段（教加直播）已看過：之後第一路直播加入時接著跑第二段 */
+export const CANVAS_TOUR_INTRO_DONE_KEY = 'canvas_tour_intro_done';
 /** 進畫布後稍等，讓播放器、工具列與動態島掛好，避免聚光燈指到還沒出現的元素 */
 const START_DELAY_MS = 1500;
 const PAD = 6;
@@ -28,7 +34,7 @@ const PAD = 6;
 const EDGE = 3;
 
 type StepId =
-    | 'welcome' | 'windows_intro'
+    | 'welcome' | 'windows_intro' | 'start' | 'windows_ready'
     | 'drag' | 'swap' | 'resize' | 'theater' | 'controls' | 'chat' | 'empty'
     | 'island' | 'search' | 'add' | 'layout' | 'media' | 'collect' | 'more' | 'help'
     | 'dock' | 'summary';
@@ -37,8 +43,11 @@ type StepId =
 const ISLAND_STEPS: StepId[] = ['island', 'search', 'add', 'layout', 'media', 'collect', 'more', 'help'];
 /** 需要強制顯示主畫面視窗工具列與縮放角的步驟 */
 const WINDOW_STEPS: StepId[] = ['drag', 'swap', 'resize', 'theater', 'controls'];
-/** 沒有目標、置中顯示的說明頁（歡迎、空畫布時的視窗說明、總整） */
-const PAGE_STEPS: StepId[] = ['welcome', 'windows_intro', 'summary'];
+/** 沒有目標、置中顯示的說明頁（歡迎、空畫布時的視窗說明、第二段開頭、總整） */
+const PAGE_STEPS: StepId[] = ['welcome', 'windows_intro', 'windows_ready', 'summary'];
+
+/** full：完整版；intro：空畫布的第一段（教加直播）；windows：加入第一路直播後的第二段 */
+type TourMode = 'full' | 'intro' | 'windows';
 /** 動態島從收起到展開有 0.5 秒動畫；切到島的步驟後等動畫結束再量一次位置 */
 const ISLAND_SETTLE_MS = 600;
 
@@ -61,6 +70,8 @@ function stepTargets(step: StepId, win: HTMLElement | null): (HTMLElement | null
         case 'resize': return [win];
         case 'island': return [qs('[data-tour="island"]')];
         case 'search': return [qs('[data-tour="island-search"]')];
+        // 第一段最後一步：一般型態指搜尋框，邊緣停靠型指停靠標籤（搜尋在展開後的清單裡）
+        case 'start': return [qs('[data-tour="island-search"]') ?? qs('[data-tour="island-dock"]')];
         case 'add': return [islandBtn('add')];
         case 'layout': return [islandBtn('layout')];
         case 'media': return [islandBtn('media')];
@@ -106,23 +117,30 @@ function summaryRows(t: TFunction<'common'>): [string, string][] {
     ];
 }
 
+/** 內文 key：空畫布第一段的歡迎頁講「先加直播」；邊緣停靠型的「先加入直播」要先展開停靠標籤 */
+function bodyKey(step: StepId, mode: TourMode, islandStyle: string): string {
+    if (step === 'welcome' && mode === 'intro') return 'canvas.tour_welcome_empty_body';
+    if (step === 'start' && islandStyle === 'edgeDock') return 'canvas.tour_start_body_dock';
+    return `canvas.tour_${step}_body`;
+}
+
 const findWindow = (id: string) =>
     Array.from(document.querySelectorAll<HTMLElement>('[data-canvas-window-id]')).find(el => el.dataset.canvasWindowId === id) ?? null;
 
-// localStorage 讀寫失敗（封鎖網站資料等）時，靠這個旗標確保本次工作階段內不會一關掉又自動重開
-let dismissedThisSession = false;
+// localStorage 讀寫失敗（封鎖網站資料等）時，靠這個集合確保本次工作階段內不會一關掉又自動重開
+const doneThisSession = new Set<string>();
 
-function readTourDone(): boolean {
-    if (dismissedThisSession) return true;
-    try { return localStorage.getItem(CANVAS_TOUR_DONE_KEY) === '1'; } catch { return false; }
+function readFlag(key: string): boolean {
+    if (doneThisSession.has(key)) return true;
+    try { return localStorage.getItem(key) === '1'; } catch { return false; }
 }
-function writeTourDone() {
-    dismissedThisSession = true;
-    try { localStorage.setItem(CANVAS_TOUR_DONE_KEY, '1'); } catch { /* 寫不進去：上面的旗標擋住本次工作階段 */ }
+function writeFlag(key: string) {
+    doneThisSession.add(key);
+    try { localStorage.setItem(key, '1'); } catch { /* 寫不進去：上面的集合擋住本次工作階段 */ }
 }
 
 /** 測試用：重設工作階段旗標 */
-export function resetCanvasTourSessionForTest() { dismissedThisSession = false; }
+export function resetCanvasTourSessionForTest() { doneThisSession.clear(); }
 
 export function CanvasTour() {
     const { t } = useTranslation('common');
@@ -141,6 +159,8 @@ export function CanvasTour() {
     const hasEmpty = useStreamStore(s => s.canvasItems.some(i => i.contentId == null));
 
     const [stepIdx, setStepIdx] = useState(0);
+    // 自動開啟時決定跑哪一段；從快捷鍵說明「重看導覽」（store 直接設 open）一律是完整版，關閉時會重設回 full
+    const [mode, setMode] = useState<TourMode>('full');
     // 第一次造訪的訪客會同時看到 Cookie 橫幅（z-9999、在畫面底部），它正好蓋住要介紹的動態島；
     // 自動開啟等使用者回應橫幅之後才開始。手動「重看導覽」不受影響
     const [consentReady, setConsentReady] = useState(hasConsentRecord);
@@ -162,35 +182,54 @@ export function CanvasTour() {
         };
     }, []);
 
-    // 首次進畫布就開始（空畫布也一樣：先歡迎、再用文字說明視窗操作、接著介紹動態島）
+    // 自動開啟：有直播 → 完整版（第一段看過就只跑第二段）；空畫布 → 第一段；第一段看過但還沒加直播 → 等
+    // mainId 在依賴裡：空畫布看完第一段後，第一路直播加入的那一刻就會排程第二段
     useEffect(() => {
-        if (open || !consentReady || readTourDone()) return;
-        const timer = setTimeout(() => setOpen(true), START_DELAY_MS);
+        if (open || !consentReady || readFlag(CANVAS_TOUR_DONE_KEY)) return;
+        const introDone = readFlag(CANVAS_TOUR_INTRO_DONE_KEY);
+        let nextMode: TourMode;
+        if (mainId) nextMode = introDone ? 'windows' : 'full';
+        else if (!introDone) nextMode = 'intro';
+        else return;
+        const timer = setTimeout(() => { setMode(nextMode); setStepIdx(0); setOpen(true); }, START_DELAY_MS);
         return () => clearTimeout(timer);
-    }, [open, consentReady, setOpen]);
+    }, [open, consentReady, mainId, setOpen]);
 
     const steps = useMemo<StepId[]>(() => {
-        const list: StepId[] = ['welcome'];
+        if (mode === 'intro') return ['welcome', 'start'];
+        const list: StepId[] = mode === 'windows' ? ['windows_ready'] : ['welcome'];
         if (mainId) list.push(...(otherId ? ['drag', 'swap', 'resize', 'theater', 'controls'] as StepId[] : ['drag', 'resize', 'theater', 'controls'] as StepId[]));
         else list.push('windows_intro');
         if (hasChat) list.push('chat');
         if (hasEmpty) list.push('empty');
-        list.push(...(islandStyle === 'edgeDock' ? ['dock'] as StepId[] : ISLAND_STEPS));
+        // 第二段不再重複第一段教過的搜尋框
+        const island = islandStyle === 'edgeDock' ? ['dock'] as StepId[] : ISLAND_STEPS;
+        list.push(...(mode === 'windows' ? island.filter(s => s !== 'search') : island));
         list.push('summary');
         return list;
-    }, [mainId, otherId, hasChat, hasEmpty, islandStyle]);
+    }, [mode, mainId, otherId, hasChat, hasEmpty, islandStyle]);
     const step = steps[Math.min(stepIdx, steps.length - 1)];
 
+    // 略過／Esc：整個導覽都不再自動跑（包括空畫布的第二段）
     const close = useCallback(() => {
-        writeTourDone();
+        writeFlag(CANVAS_TOUR_DONE_KEY);
         setOpen(false);
         setStepIdx(0);
+        setMode('full');
     }, [setOpen]);
 
     const next = useCallback(() => {
-        if (stepIdx >= steps.length - 1) close();
-        else setStepIdx(i => i + 1);
-    }, [stepIdx, steps.length, close]);
+        if (stepIdx < steps.length - 1) { setStepIdx(i => i + 1); return; }
+        if (mode === 'intro') {
+            // 看完第一段：只記第一段，等第一路直播加入再接第二段
+            writeFlag(CANVAS_TOUR_INTRO_DONE_KEY);
+            setOpen(false);
+            setStepIdx(0);
+            setMode('full');
+            return;
+        }
+        close();
+    }, [stepIdx, steps.length, mode, close, setOpen]);
 
     const back = useCallback(() => setStepIdx(i => Math.max(0, i - 1)), []);
 
@@ -291,7 +330,7 @@ export function CanvasTour() {
                 style={{ top: Math.max(12, cardTop), left: Math.max(12, cardLeft), width: CARD_W, maxWidth: 'calc(100vw - 24px)' }}
             >
                 <h2 id="canvas-tour-title" className={cn('mb-1.5 font-semibold', isPage ? 'text-base' : 'text-sm')}>{t(`canvas.tour_${step}_title` as any)}</h2>
-                <p id="canvas-tour-body" className="mb-4 whitespace-pre-line text-xs leading-relaxed text-indigo-100/90">{t(`canvas.tour_${step}_body` as any)}</p>
+                <p id="canvas-tour-body" className="mb-4 whitespace-pre-line text-xs leading-relaxed text-indigo-100/90">{t(bodyKey(step, mode, islandStyle) as any)}</p>
                 {step === 'summary' && (
                     <dl className="mb-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-xs" data-tour-summary>
                         {summaryRows(t).map(([label, keys]) => (
@@ -333,7 +372,7 @@ export function CanvasTour() {
                             onClick={next}
                             className="rounded-md bg-indigo-500 px-3 py-1 text-xs font-medium hover:bg-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200"
                         >
-                            {last ? t('canvas.tour_done') : t('canvas.tour_next')}
+                            {last ? t(mode === 'intro' ? 'canvas.tour_start_done' : 'canvas.tour_done') : t('canvas.tour_next')}
                         </button>
                     </div>
                 </div>
