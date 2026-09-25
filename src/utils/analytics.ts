@@ -29,6 +29,9 @@ const SESSION_MAX_STREAMS_KEY = 'ms_session_max_concurrent_streams';
 type Mode = 'uninitialized' | 'live' | 'mock' | 'disabled';
 let mode: Mode = 'uninitialized';
 let scriptInjected = false;
+/** 已同意但 gtag.js 還沒載好時送出的事件（sendEvent 排隊、initGA 進 live 後補送）；設上限防止載入失敗時無限累積 */
+const pendingEvents: Array<[string, Record<string, unknown>]> = [];
+const MAX_PENDING_EVENTS = 50;
 
 // ===== Cookie 同意 =====
 
@@ -80,6 +83,7 @@ export const disableTracking = (): void => {
             sendEvent('tracking_disabled', { source: 'user_action' });
         }
         mode = 'disabled';
+        pendingEvents.length = 0;
     } catch (e) {
         console.warn('Failed to disable tracking:', e);
     }
@@ -150,12 +154,19 @@ export const initGA = async (): Promise<void> => {
 
     if (!isTrackingEnabled()) {
         mode = 'disabled';
+        pendingEvents.length = 0;
         console.info('[GA4] Disabled (no consent)');
         return;
     }
 
     try {
         await injectGtagScript();
+        // 載入期間使用者改按「拒絕」（disableTracking 已設 disabled）：不要再切回 live、也不補送排隊事件
+        if (!isTrackingEnabled()) {
+            mode = 'disabled';
+            pendingEvents.length = 0;
+            return;
+        }
         // boot stub 已建立 window.gtag = dataLayer.push 形式，可直接使用
         window.gtag('config', GA_MEASUREMENT_ID, {
             send_page_view: false,
@@ -163,9 +174,12 @@ export const initGA = async (): Promise<void> => {
         });
         mode = 'live';
         console.info('[GA4] Live mode initialized');
+        // 載入期間排隊的事件補送（見 sendEvent）
+        for (const [name, params] of pendingEvents.splice(0)) window.gtag('event', name, params);
     } catch (e) {
         console.error('[GA4] Init failed:', e);
         mode = 'disabled';
+        pendingEvents.length = 0;
     }
 };
 
@@ -180,8 +194,14 @@ const sendEvent = (eventName: string, params?: Record<string, unknown>): void =>
         // initGA 還沒執行，先 fall back 到環境檢查
         if (isInternalEnvironment()) {
             console.info('[GA4 Mock]', 'event', eventName, params);
+            return;
         }
-        // 真實環境若 initGA 還沒跑完，事件會丟失—呼叫端應在 init 之後才送
+        // 已同意、gtag.js 還在載入（進站初期，或剛按下「接受」）：先排隊，initGA 進 live 後補送。
+        // 例：web-vitals 的 LCP 就在第一次點擊定案，而新訪客的第一次點擊常常正是 Cookie 橫幅的「接受」。
+        // 沒同意（或還沒回應）的事件照舊丟棄。
+        if (isTrackingEnabled() && pendingEvents.length < MAX_PENDING_EVENTS) {
+            pendingEvents.push([eventName, params || {}]);
+        }
         return;
     }
     if (mode === 'disabled') return;
@@ -290,8 +310,9 @@ export interface WebVitalPayload {
 export const sendWebVital = (p: WebVitalPayload): void => {
     sendEvent('web_vitals', {
         metric_name: p.name,
+        // 不用 GA4 保留字 value（會被當成事件價值加總進「事件價值」報表）。
         // CLS 放大 1000 倍取整：GA4 自訂指標只收數字，方便加總與平均
-        value: p.name === 'CLS' ? Math.round(p.value * 1000) : Math.round(p.value),
+        metric_value: p.name === 'CLS' ? Math.round(p.value * 1000) : Math.round(p.value),
         metric_rating: p.rating,
         debug_target: p.debugTarget.slice(0, 100),
         landing_path: p.landingPath,

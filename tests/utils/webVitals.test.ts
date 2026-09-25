@@ -30,10 +30,10 @@ describe('webVitals', () => {
 
         const events = info.mock.calls.filter(c => c[2] === 'web_vitals').map(c => c[3] as Record<string, unknown>);
         expect(events).toHaveLength(3);
-        expect(events[0]).toMatchObject({ metric_name: 'CLS', value: 243, metric_rating: 'poor', debug_target: 'main>div.hero', landing_path: '/' });
-        expect(events[1]).toMatchObject({ metric_name: 'LCP', value: 1835, debug_target: 'img.hero' });
+        expect(events[0]).toMatchObject({ metric_name: 'CLS', metric_value: 243, metric_rating: 'poor', debug_target: 'main>div.hero', landing_path: '/' });
+        expect(events[1]).toMatchObject({ metric_name: 'LCP', metric_value: 1835, debug_target: 'img.hero' });
         // 沒有歸因目標時送空字串，不送 undefined
-        expect(events[2]).toMatchObject({ metric_name: 'INP', value: 96, debug_target: '' });
+        expect(events[2]).toMatchObject({ metric_name: 'INP', metric_value: 96, debug_target: '' });
         info.mockRestore();
     });
 

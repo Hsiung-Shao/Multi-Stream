@@ -13,10 +13,8 @@ export const getSupabase = (): Promise<SupabaseClient | null> => {
     if (supabaseInstance) return Promise.resolve(supabaseInstance);
 
     if (!initPromise) {
-        // 設定檔與 SDK chunk 並行下載
-        const sdk = import('@supabase/supabase-js');
-        // config 先失敗時 sdk 不會被 await：先掛空 catch，避免 chunk 載入失敗變成 unhandled rejection
-        sdk.catch(() => {});
+        // 確認設定完整才下載 SDK chunk：環境沒設 Supabase（或設定請求失敗）時不白載 gzip 約 59 KB。
+        // 代價是首次使用多一段串行下載，但只發生一次
         initPromise = fetch('/api/supabase-config')
             .then(res => {
                 if (!res.ok) throw new Error(`Supabase Config Fetch Error: ${res.status}`);
@@ -28,7 +26,7 @@ export const getSupabase = (): Promise<SupabaseClient | null> => {
                     return null;
                 }
 
-                const { createClient } = await sdk;
+                const { createClient } = await import('@supabase/supabase-js');
                 supabaseInstance = createClient(config.url, config.anonKey);
                 return supabaseInstance;
             })

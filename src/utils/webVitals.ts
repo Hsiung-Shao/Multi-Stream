@@ -14,10 +14,24 @@ import { sendWebVital } from './analytics';
 
 let started = false;
 
+/**
+ * 這份文件的進站路徑（CrUX 歸屬整段工作階段的網址）。取自導覽記錄而不是當下的 location：
+ * 本模組在延後載入的 DeferredGlobals 裡才啟動，那之前 SPA 可能已經換過頁。
+ */
+function landingPathOf(): string {
+    try {
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (nav?.name) return new URL(nav.name).pathname;
+    } catch {
+        // 不支援 Navigation Timing：退回當下路徑
+    }
+    return window.location.pathname;
+}
+
 export function startWebVitalsReporting(): void {
     if (started || typeof window === 'undefined') return;
     started = true;
-    const landingPath = window.location.pathname;
+    const landingPath = landingPathOf();
 
     onCLS(m => sendWebVital({
         name: 'CLS', value: m.value, rating: m.rating, landingPath,

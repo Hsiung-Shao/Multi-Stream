@@ -202,7 +202,8 @@ export default function App() {
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
       <>
-        <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+        {/* fallback 與 MobileApp 根節點同底色（跟主題走），淺色主題載入時不閃黑 */}
+        <Suspense fallback={<div className="h-dvh bg-background" />}>
           <MobileApp />
         </Suspense>
         <RestoreSessionPrompt
