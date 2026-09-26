@@ -291,9 +291,9 @@ describe('CanvasTour', () => {
         expect(islandInput().value).toBe('');
     });
 
-    it('空畫布有收藏：第一段最後多介紹「你的收藏」', () => {
+    it('空畫布有收藏正在直播：第一段最後多介紹「你的收藏」', () => {
         localStorage.setItem('favoriteStreams', JSON.stringify([
-            { id: 'f1', url: 'https://www.twitch.tv/a', name: 'a', platform: 'twitch', addedAt: '2026-01-01' },
+            { id: 'f1', url: 'https://www.twitch.tv/a', name: 'a', platform: 'twitch', addedAt: '2026-01-01', isLive: true },
         ]));
         fakeIsland();
         fakeQuickAdd();
@@ -310,9 +310,9 @@ describe('CanvasTour', () => {
         expect(localStorage.getItem(CANVAS_TOUR_INTRO_DONE_KEY)).toBe('1');
     });
 
-    it('只有沒開播的 YouTube 收藏：空畫布不顯示收藏區，導覽也不介紹', () => {
+    it('收藏都沒在直播：空畫布不顯示收藏區，導覽也不介紹', () => {
         localStorage.setItem('favoriteStreams', JSON.stringify([
-            { id: 'y', url: 'https://www.youtube.com/channel/UC1', name: 'y', platform: 'youtube', addedAt: '2026-01-01', isLive: false },
+            { id: 't', url: 'https://www.twitch.tv/t', name: 't', platform: 'twitch', addedAt: '2026-01-01', isLive: false },
         ]));
         fakeIsland();
         fakeQuickAdd();

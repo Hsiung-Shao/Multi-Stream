@@ -1,11 +1,10 @@
 /**
- * 空畫布的「你的收藏」：有收藏的使用者一進畫布就能看到哪些正在直播、一鍵加入（2026-09 使用者需求）。
- * 取代空畫布下方的功能介紹（導覽已涵蓋）；沒有收藏時不渲染，空畫布維持原本的新手畫面。
+ * 空畫布的「你的收藏」：只列出此刻正在直播的收藏頻道，一鍵加入（2026-09 使用者需求：只顯示正在直播的）。
+ * 取代空畫布下方的功能介紹（導覽已涵蓋）；沒有收藏在直播時不渲染，空畫布維持原本的新手畫面。
  *
- * - 直播狀態沿用進畫布時既有的收藏直播檢查（refreshFavoritesStatus → GlobalLiveStatusChecker），這裡不另外打 API
+ * - 直播狀態沿用進畫布時既有的收藏直播檢查（refreshFavoritesStatus → GlobalLiveStatusChecker），這裡不另外打 API；
+ *   檢查結果回來（favoritesUpdated）後清單才出現或更新
  * - 加入邏輯與動態島收藏選單共用 loadFavoritesToCanvas
- * - YouTube 收藏沒開播時沒有可播的影片（與 IslandSearch 同一語意），停用並標「未開播」；
- *   Twitch 沒開播仍可加入（播放器會顯示離線畫面，開播後自動開始）
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +16,6 @@ import type { FavoriteStream } from '../../features/favorites/types';
 import { ScrollArea } from '../ui/scroll-area';
 import { Checkbox } from '../ui/checkbox';
 import { Button } from '../ui/button';
-import { cn } from '../ui/utils';
 
 const PLATFORM_COLOR: Record<FavoriteStream['platform'], string> = {
     twitch: '#9146FF',
@@ -25,31 +23,24 @@ const PLATFORM_COLOR: Record<FavoriteStream['platform'], string> = {
     other: '#94a3b8',
 };
 
-/** 直播中在前（觀眾多的優先），其餘依名稱 */
-export function sortFavoritesForEmptyState(favs: FavoriteStream[]): FavoriteStream[] {
-    return [...favs].sort((a, b) => {
-        const la = a.isLive === true, lb = b.isLive === true;
-        if (la !== lb) return la ? -1 : 1;
-        if (la && lb) return (b.viewerCount ?? 0) - (a.viewerCount ?? 0);
-        return a.name.localeCompare(b.name);
-    });
-}
+/** 空畫布是否顯示收藏區、導覽是否介紹收藏區，都用這個判斷 */
+export const isLiveFavorite = (f: FavoriteStream) => f.isLive === true;
 
-/** 能不能加入畫布：YouTube 沒開播就沒有可播的影片；空畫布是否顯示收藏區、導覽是否介紹收藏區都用這個判斷 */
-export const isPlayableFavorite = (f: FavoriteStream) => f.isLive === true || f.platform !== 'youtube';
+/** 正在直播的收藏，觀眾多的在前 */
+export function liveFavoritesForEmptyState(favs: FavoriteStream[]): FavoriteStream[] {
+    return favs.filter(isLiveFavorite).sort((a, b) => (b.viewerCount ?? 0) - (a.viewerCount ?? 0));
+}
 
 export function EmptyStateFavorites() {
     const { t } = useTranslation(['common', 'favorites']);
     const { favorites } = useFavorites();
-    const sorted = useMemo(() => sortFavoritesForEmptyState(favorites), [favorites]);
-    const liveCount = useMemo(() => favorites.filter(f => f.isLive === true).length, [favorites]);
+    const live = useMemo(() => liveFavoritesForEmptyState(favorites), [favorites]);
     const [selected, setSelected] = useState<Set<string>>(() => new Set());
     const [busy, setBusy] = useState(false);
-    // 以目前仍存在的收藏計算：勾選後在別處刪掉的收藏不算進「加入所選（n）」
-    const selectedFavs = useMemo(() => sorted.filter(f => selected.has(f.id)), [sorted, selected]);
+    // 以目前清單計算：勾選後被刪掉或下播的收藏不算進「加入所選（n）」
+    const selectedFavs = useMemo(() => live.filter(f => selected.has(f.id)), [live, selected]);
 
-    // 與 CanvasEmptyState 的條件一致：沒有任何可加入的收藏就不顯示（全是沒開播的 YouTube 時保留新手畫面）
-    if (!favorites.some(isPlayableFavorite)) return null;
+    if (live.length === 0) return null;
 
     const load = async (favs: FavoriteStream[]) => {
         if (busy || favs.length === 0) return;
@@ -81,9 +72,7 @@ export function EmptyStateFavorites() {
                         {t('empty_state.favorites_title')}
                     </h2>
                     <p className="text-[11px] text-white/50">
-                        {liveCount > 0
-                            ? t('empty_state.favorites_live_count', { count: liveCount })
-                            : t('empty_state.favorites_none_live')}
+                        {t('empty_state.favorites_live_count', { count: live.length })}
                     </p>
                 </div>
                 <Button
@@ -100,43 +89,35 @@ export function EmptyStateFavorites() {
             {/* 限高要下在 viewport（下在 Root 不會捲動）；!block 讓長名稱的 truncate 生效（見 error 庫 Radix ScrollArea 兩個陷阱） */}
             <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-64 [&>div>div]:!block">
                 <ul className="space-y-0.5 pr-2">
-                    {sorted.map(f => {
-                        const playable = isPlayableFavorite(f);
-                        const live = f.isLive === true;
+                    {live.map(f => {
+                        const meta = [
+                            f.viewerCount != null ? t('empty_state.favorites_viewers', { count: f.viewerCount }) : null,
+                            f.gameName || f.liveTitle,
+                        ].filter(Boolean).join(' · ');
                         return (
                             <li key={f.id} className="flex items-center gap-2 rounded-lg px-1 hover:bg-white/5">
                                 <Checkbox
                                     checked={selected.has(f.id)}
-                                    disabled={!playable || busy}
+                                    disabled={busy}
                                     onCheckedChange={() => toggle(f.id)}
                                     aria-label={t('empty_state.favorites_select', { name: f.name })}
                                 />
                                 <button
                                     type="button"
-                                    disabled={!playable || busy}
+                                    disabled={busy}
                                     onClick={() => load([f])}
-                                    title={playable ? t('empty_state.favorites_add_one', { name: f.name }) : t('empty_state.favorites_offline_youtube')}
-                                    className={cn(
-                                        'flex min-w-0 flex-1 items-center gap-2 py-1.5 text-left',
-                                        playable ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
-                                    )}
+                                    title={t('empty_state.favorites_add_one', { name: f.name })}
+                                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 py-1.5 text-left"
                                 >
                                     <span className="size-2 shrink-0 rounded-full" style={{ background: PLATFORM_COLOR[f.platform] }} aria-hidden />
                                     <span className="min-w-0 flex-1">
                                         <span className="block truncate text-sm text-white/90">{f.name}</span>
-                                        <span className="block truncate text-[11px] text-white/45">
-                                            {live
-                                                ? [f.viewerCount != null ? t('empty_state.favorites_viewers', { count: f.viewerCount }) : null, f.gameName || f.liveTitle]
-                                                    .filter(Boolean).join(' · ')
-                                                : playable ? t('empty_state.favorites_offline') : t('empty_state.favorites_offline_youtube')}
-                                        </span>
+                                        {meta && <span className="block truncate text-[11px] text-white/45">{meta}</span>}
                                     </span>
-                                    {live && (
-                                        <span className="shrink-0 rounded bg-red-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                                            {t('empty_state.favorites_live')}
-                                        </span>
-                                    )}
-                                    {playable && <Plus size={14} className="shrink-0 text-white/40" aria-hidden />}
+                                    <span className="shrink-0 rounded bg-red-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                                        {t('empty_state.favorites_live')}
+                                    </span>
+                                    <Plus size={14} className="shrink-0 text-white/40" aria-hidden />
                                 </button>
                             </li>
                         );

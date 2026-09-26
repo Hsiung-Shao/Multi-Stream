@@ -1,4 +1,4 @@
-// 空畫布的「你的收藏」（2026-09 使用者需求：有收藏的人一進畫布就能一鍵加入正在直播的頻道）
+// 空畫布的「你的收藏」（2026-09 使用者需求：只列出正在直播的收藏，一鍵加入）
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import i18n from '../../src/i18n/i18n';
@@ -9,11 +9,11 @@ vi.mock('../../src/features/favorites/loadFavoritesToCanvas', () => ({
     loadFavoritesToCanvas: (favs: FavoriteStream[]) => loadFavoritesToCanvas(favs),
 }));
 
-import { EmptyStateFavorites, sortFavoritesForEmptyState } from '../../src/components/Canvas/EmptyStateFavorites';
+import { EmptyStateFavorites, liveFavoritesForEmptyState } from '../../src/components/Canvas/EmptyStateFavorites';
 import { CanvasEmptyState } from '../../src/components/Canvas/CanvasEmptyState';
 
 const fav = (id: string, name: string, extra: Partial<FavoriteStream> = {}): FavoriteStream => ({
-    id, name, url: `https://www.twitch.tv/${name}`, platform: 'twitch', addedAt: '2026-01-01', ...extra,
+    id, name, url: `https://www.twitch.tv/${name}`, platform: 'twitch', addedAt: '2026-01-01', isLive: true, ...extra,
 });
 const seed = (list: FavoriteStream[]) => localStorage.setItem('favoriteStreams', JSON.stringify(list));
 
@@ -24,14 +24,14 @@ describe('EmptyStateFavorites', () => {
         loadFavoritesToCanvas.mockClear();
     });
 
-    it('直播中在前（觀眾多的優先），其餘依名稱', () => {
-        const sorted = sortFavoritesForEmptyState([
-            fav('1', 'zed'),
-            fav('2', 'alpha'),
-            fav('3', 'small', { isLive: true, viewerCount: 10 }),
-            fav('4', 'big', { isLive: true, viewerCount: 900 }),
+    it('只留正在直播的，觀眾多的在前', () => {
+        const live = liveFavoritesForEmptyState([
+            fav('1', 'offline', { isLive: false }),
+            fav('2', 'unknown', { isLive: null }),
+            fav('3', 'small', { viewerCount: 10 }),
+            fav('4', 'big', { viewerCount: 900 }),
         ]);
-        expect(sorted.map(f => f.name)).toEqual(['big', 'small', 'alpha', 'zed']);
+        expect(live.map(f => f.name)).toEqual(['big', 'small']);
     });
 
     it('沒有收藏時不渲染', () => {
@@ -73,15 +73,26 @@ describe('EmptyStateFavorites', () => {
         expect(screen.getByRole('button', { name: /加入所選/ })).toHaveTextContent('加入所選（1）');
     });
 
-    it('YouTube 沒開播：停用、標示未開播；Twitch 沒開播仍可加入', () => {
-        seed([
-            fav('y', 'ytch', { platform: 'youtube', url: 'https://www.youtube.com/channel/UC1', isLive: false }),
-            fav('t', 'twch', { isLive: false }),
-        ]);
+    it('沒開播的收藏不列出；全部沒開播時整區不渲染', () => {
+        seed([fav('on', 'onair'), fav('off', 'offair', { isLive: false })]);
+        const { unmount } = render(<EmptyStateFavorites />);
+        expect(screen.getByText('onair')).toBeInTheDocument();
+        expect(screen.queryByText('offair')).toBeNull();
+        unmount();
+        seed([fav('off', 'offair', { isLive: false })]);
+        const { container } = render(<EmptyStateFavorites />);
+        expect(container.innerHTML).toBe('');
+    });
+
+    it('收藏下播（直播狀態更新）時從清單消失，勾選數也跟著扣掉', async () => {
+        seed([fav('1', 'a'), fav('2', 'b')]);
         render(<EmptyStateFavorites />);
-        expect(screen.getByTitle('未開播（YouTube 開播後才能加入）')).toBeDisabled();
-        expect(screen.getByLabelText('選取 ytch')).toBeDisabled();
-        expect(screen.getByTitle('把 twch 加入畫布')).not.toBeDisabled();
+        fireEvent.click(screen.getByLabelText('選取 a'));
+        fireEvent.click(screen.getByLabelText('選取 b'));
+        seed([fav('1', 'a'), fav('2', 'b', { isLive: false })]);
+        await act(async () => { window.dispatchEvent(new Event('favoritesUpdated')); });
+        expect(screen.queryByText('b')).toBeNull();
+        expect(screen.getByRole('button', { name: /加入所選/ })).toHaveTextContent('加入所選（1）');
     });
 });
 
@@ -99,14 +110,14 @@ describe('CanvasEmptyState', () => {
         expect(document.querySelector('[data-tour="quick-add"]')).not.toBeNull();
     });
 
-    it('只有沒開播的 YouTube 收藏（沒有能加入的）：維持功能介紹', () => {
-        seed([fav('y', 'ytch', { platform: 'youtube', url: 'https://www.youtube.com/channel/UC1', isLive: false })]);
+    it('有收藏但都沒在直播：維持功能介紹', () => {
+        seed([fav('t', 'twch', { isLive: false }), fav('y', 'ytch', { platform: 'youtube', url: 'https://www.youtube.com/channel/UC1', isLive: false })]);
         render(<CanvasEmptyState />);
         expect(screen.getByText('功能介紹')).toBeInTheDocument();
         expect(screen.queryByText('你的收藏')).toBeNull();
     });
 
-    it('有收藏：「你的收藏」取代功能介紹', () => {
+    it('有收藏正在直播：「你的收藏」取代功能介紹', () => {
         seed([fav('1', 'a')]);
         render(<CanvasEmptyState />);
         expect(screen.getByText('你的收藏')).toBeInTheDocument();

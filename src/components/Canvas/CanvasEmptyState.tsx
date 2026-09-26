@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import { cn } from '../ui/utils';
 import { StreamSearchBox } from '../StreamSearchBox';
 import { useFavorites } from '../../hooks/useFavorites';
-import { EmptyStateFavorites, isPlayableFavorite } from './EmptyStateFavorites';
+import { EmptyStateFavorites, isLiveFavorite } from './EmptyStateFavorites';
 
 export const CanvasEmptyState = () => {
     const { t } = useTranslation('common');
     const [isVisible, setIsVisible] = useState(false);
-    // 有可加入的收藏：輸入框下方改顯示「你的收藏」取代功能介紹（導覽已涵蓋那些功能）；沒有（或全是沒開播的 YouTube）維持新手畫面
-    const hasFavorites = useFavorites().favorites.some(isPlayableFavorite);
+    // 有收藏正在直播：輸入框下方改顯示「你的收藏」（只列直播中的）取代功能介紹；沒有就維持新手畫面
+    const hasFavorites = useFavorites().favorites.some(isLiveFavorite);
 
     useEffect(() => {
         setIsVisible(true);

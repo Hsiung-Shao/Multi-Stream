@@ -25,7 +25,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
 import { hasConsentRecord, CONSENT_CHANGE_EVENT } from '../../utils/analytics';
 import { useFavorites } from '../../hooks/useFavorites';
-import { isPlayableFavorite } from './EmptyStateFavorites';
+import { isLiveFavorite } from './EmptyStateFavorites';
 
 export const CANVAS_TOUR_DONE_KEY = 'canvas_tour_done';
 /** 空畫布的第一段（教加直播）已看過：之後第一路直播加入時接著跑第二段 */
@@ -180,8 +180,8 @@ export function CanvasTour() {
     const hasChat = useStreamStore(s => s.canvasItems.some(i => i.type === 'chat' && i.contentId != null));
     const hasEmpty = useStreamStore(s => s.canvasItems.some(i => i.contentId == null));
     // 空畫布有收藏時會顯示「你的收藏」，第一段多介紹這一區
-    // 條件與 CanvasEmptyState 顯示收藏區一致：至少一個可以加入的收藏
-    const hasFavorites = useFavorites().favorites.some(isPlayableFavorite);
+    // 條件與 CanvasEmptyState 顯示收藏區一致：至少一個收藏正在直播
+    const hasFavorites = useFavorites().favorites.some(isLiveFavorite);
 
     const [stepIdx, setStepIdx] = useState(0);
     // 自動開啟時決定跑哪一段；從快捷鍵說明「重看導覽」（store 直接設 open）一律是完整版，關閉時會重設回 full
