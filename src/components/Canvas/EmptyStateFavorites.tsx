@@ -35,7 +35,8 @@ export function sortFavoritesForEmptyState(favs: FavoriteStream[]): FavoriteStre
     });
 }
 
-const isPlayable = (f: FavoriteStream) => f.isLive === true || f.platform !== 'youtube';
+/** 能不能加入畫布：YouTube 沒開播就沒有可播的影片；空畫布是否顯示收藏區、導覽是否介紹收藏區都用這個判斷 */
+export const isPlayableFavorite = (f: FavoriteStream) => f.isLive === true || f.platform !== 'youtube';
 
 export function EmptyStateFavorites() {
     const { t } = useTranslation(['common', 'favorites']);
@@ -44,8 +45,11 @@ export function EmptyStateFavorites() {
     const liveCount = useMemo(() => favorites.filter(f => f.isLive === true).length, [favorites]);
     const [selected, setSelected] = useState<Set<string>>(() => new Set());
     const [busy, setBusy] = useState(false);
+    // 以目前仍存在的收藏計算：勾選後在別處刪掉的收藏不算進「加入所選（n）」
+    const selectedFavs = useMemo(() => sorted.filter(f => selected.has(f.id)), [sorted, selected]);
 
-    if (favorites.length === 0) return null;
+    // 與 CanvasEmptyState 的條件一致：沒有任何可加入的收藏就不顯示（全是沒開播的 YouTube 時保留新手畫面）
+    if (!favorites.some(isPlayableFavorite)) return null;
 
     const load = async (favs: FavoriteStream[]) => {
         if (busy || favs.length === 0) return;
@@ -85,11 +89,11 @@ export function EmptyStateFavorites() {
                 <Button
                     size="sm"
                     className="h-7 text-xs"
-                    disabled={selected.size === 0 || busy}
-                    onClick={() => load(sorted.filter(f => selected.has(f.id)))}
+                    disabled={selectedFavs.length === 0 || busy}
+                    onClick={() => load(selectedFavs)}
                 >
                     {busy ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                    {t('empty_state.favorites_add_selected', { count: selected.size })}
+                    {t('empty_state.favorites_add_selected', { count: selectedFavs.length })}
                 </Button>
             </div>
 
@@ -97,7 +101,7 @@ export function EmptyStateFavorites() {
             <ScrollArea className="[&>[data-radix-scroll-area-viewport]]:max-h-64 [&>div>div]:!block">
                 <ul className="space-y-0.5 pr-2">
                     {sorted.map(f => {
-                        const playable = isPlayable(f);
+                        const playable = isPlayableFavorite(f);
                         const live = f.isLive === true;
                         return (
                             <li key={f.id} className="flex items-center gap-2 rounded-lg px-1 hover:bg-white/5">

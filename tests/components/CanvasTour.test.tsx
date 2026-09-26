@@ -9,6 +9,8 @@ import { useUIStore } from '../../src/store/useUIStore';
 import { setTrackingConsent } from '../../src/utils/analytics';
 
 const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+/** 搜尋框的共同結構（StreamSearchBox／IslandSearch 都是 form 裡的平台鈕＋input） */
+const SEARCH_BOX = '<form><button data-search-platform></button><input /></form>';
 
 /** 導覽只靠 DOM 屬性找目標；這裡手工放出與畫布相同的屬性結構 */
 function fakeWindow(id: string) {
@@ -23,7 +25,7 @@ function fakeWindow(id: string) {
 function fakeIsland() {
     const el = document.createElement('div');
     el.setAttribute('data-tour', 'island');
-    el.innerHTML = '<div data-tour="island-search"><button data-tour="island-search-platform"></button><input /></div>'
+    el.innerHTML = '<div data-tour="island-search">' + SEARCH_BOX + '</div>'
         + ['add', 'layout', 'media', 'fav', 'save', 'share', 'screen', 'clear', 'help', 'home', 'settings']
             .map(fn => `<button data-island-fn="${fn}"></button>`).join('');
     document.body.appendChild(el);
@@ -48,13 +50,15 @@ const ISLAND_TITLES = [
     '媒體控制', '收藏、儲存與分享', '全螢幕、清空與設定', '忘了怎麼操作？',
 ];
 
-/** 空畫布中央的快速新增輸入框（導覽「貼連結」那一步框它） */
+/** 空畫布中央的大搜尋框（導覽第一段的貼連結／搜尋／平台都在這裡示範） */
 function fakeQuickAdd() {
     const el = document.createElement('div');
     el.setAttribute('data-tour', 'quick-add');
+    el.innerHTML = SEARCH_BOX;
     document.body.appendChild(el);
 }
-const searchInput = () => document.querySelector<HTMLInputElement>('[data-tour="island-search"] input')!;
+const centerInput = () => document.querySelector<HTMLInputElement>('[data-tour="quick-add"] input')!;
+const islandInput = () => document.querySelector<HTMLInputElement>('[data-tour="island-search"] input')!;
 
 describe('CanvasTour', () => {
     beforeEach(async () => {
@@ -94,13 +98,13 @@ describe('CanvasTour', () => {
     });
 
     // 使用者回報：空畫布沒有視窗可以框，視窗操作那段看不懂 → 分兩段：先教加直播，加了再教操作
-    it('空畫布只跑第一段：歡迎 → 貼連結（中央輸入框）→ 搜尋頻道 → 切換平台；看完只記第一段', () => {
+    it('空畫布只跑第一段：歡迎 → 貼連結 → 搜尋頻道 → 切換平台（都在中央大搜尋框）→ 動態島也有同一個搜尋框；看完只記第一段', () => {
         fakeIsland();
         fakeQuickAdd();
         render(<CanvasTour />);
         start();
         expect(title()).toBe('歡迎使用多直播畫布');
-        expect(screen.getByText('1 / 4')).toBeInTheDocument();
+        expect(screen.getByText('1 / 5')).toBeInTheDocument();
         expect(document.getElementById('canvas-tour-body')!.textContent).toContain('畫布現在是空的');
         clickNext();
         expect(title()).toBe('方法一：貼上直播網址');
@@ -110,6 +114,9 @@ describe('CanvasTour', () => {
         expect(spotlight()).not.toBeNull();
         clickNext();
         expect(title()).toBe('切換搜尋 Twitch 或 YouTube');
+        expect(spotlight()).not.toBeNull();
+        clickNext();
+        expect(title()).toBe('動態島也有同一個搜尋框');
         expect(spotlight()).not.toBeNull();
 
         fireEvent.click(screen.getByText('開始加入直播'));
@@ -235,7 +242,7 @@ describe('CanvasTour', () => {
         expect(spotlight()).not.toBeNull();
     });
 
-    it('搜尋那一步在動態島搜尋框逐字打出範例字；離開這一步（下一步／上一步／Esc）一律清空', () => {
+    it('第一段的搜尋那一步在中央大搜尋框逐字打出範例字（動態島不動）；離開這一步（下一步／上一步／Esc）一律清空', () => {
         fakeIsland();
         fakeQuickAdd();
         render(<CanvasTour />);
@@ -244,24 +251,44 @@ describe('CanvasTour', () => {
         clickNext(); // search
         expect(title()).toBe('方法二：搜尋頻道');
         act(() => { vi.advanceTimersByTime(130); });
-        expect(searchInput().value).toBe(TOUR_SEARCH_DEMO.slice(0, 1));
+        expect(centerInput().value).toBe(TOUR_SEARCH_DEMO.slice(0, 1));
         act(() => { vi.advanceTimersByTime(1000); });
-        expect(searchInput().value).toBe(TOUR_SEARCH_DEMO);
+        expect(centerInput().value).toBe(TOUR_SEARCH_DEMO);
+        expect(islandInput().value).toBe('');
 
         clickNext(); // platform
-        expect(searchInput().value).toBe('');
+        expect(centerInput().value).toBe('');
 
         fireEvent.click(screen.getByText('上一步')); // 回到 search：重新示範
         act(() => { vi.advanceTimersByTime(1000); });
-        expect(searchInput().value).toBe(TOUR_SEARCH_DEMO);
+        expect(centerInput().value).toBe(TOUR_SEARCH_DEMO);
         fireEvent.click(screen.getByText('上一步'));
-        expect(searchInput().value).toBe('');
+        expect(centerInput().value).toBe('');
 
         clickNext();
         act(() => { vi.advanceTimersByTime(1000); });
         fireEvent.keyDown(window, { key: 'Escape' });
         expect(screen.queryByRole('dialog')).toBeNull();
-        expect(searchInput().value).toBe('');
+        expect(centerInput().value).toBe('');
+    });
+
+    it('完整版的搜尋那一步在動態島示範；畫面上還有空視窗的搜尋框時也不會打錯地方', () => {
+        setStreams(1);
+        // 空視窗的搜尋框排在動態島前面（DOM 順序），不限定範圍的查詢會先找到它
+        const emptyWin = document.createElement('div');
+        emptyWin.setAttribute('data-empty-window', 'stream');
+        emptyWin.innerHTML = SEARCH_BOX;
+        document.body.prepend(emptyWin);
+        fakeIsland();
+        render(<CanvasTour />);
+        start();
+        while (title() !== ISLAND_TITLES[1]) clickNext();
+        act(() => { vi.advanceTimersByTime(1000); });
+        expect(islandInput().value).toBe(TOUR_SEARCH_DEMO);
+        expect(emptyWin.querySelector('input')!.value).toBe('');
+        clickNext();
+        expect(title()).toBe(ISLAND_TITLES[2]);
+        expect(islandInput().value).toBe('');
     });
 
     it('空畫布有收藏：第一段最後多介紹「你的收藏」', () => {
@@ -275,15 +302,26 @@ describe('CanvasTour', () => {
         document.body.appendChild(fav);
         render(<CanvasTour />);
         start();
-        expect(screen.getByText('1 / 5')).toBeInTheDocument();
-        for (let i = 0; i < 4; i++) clickNext();
+        expect(screen.getByText('1 / 6')).toBeInTheDocument();
+        for (let i = 0; i < 5; i++) clickNext();
         expect(title()).toBe('你的收藏');
         expect(spotlight()).not.toBeNull();
         fireEvent.click(screen.getByText('開始加入直播'));
         expect(localStorage.getItem(CANVAS_TOUR_INTRO_DONE_KEY)).toBe('1');
     });
 
-    it('邊緣停靠型動態島的第一段：貼連結 → 指向停靠標籤（搜尋框收在裡面，不示範輸入）', () => {
+    it('只有沒開播的 YouTube 收藏：空畫布不顯示收藏區，導覽也不介紹', () => {
+        localStorage.setItem('favoriteStreams', JSON.stringify([
+            { id: 'y', url: 'https://www.youtube.com/channel/UC1', name: 'y', platform: 'youtube', addedAt: '2026-01-01', isLive: false },
+        ]));
+        fakeIsland();
+        fakeQuickAdd();
+        render(<CanvasTour />);
+        start();
+        expect(screen.getByText('1 / 5')).toBeInTheDocument();
+    });
+
+    it('邊緣停靠型動態島的第一段：中央大搜尋框的三步 → 指向停靠標籤', () => {
         useUIStore.setState({ islandStyle: 'edgeDock' });
         fakeQuickAdd();
         const dock = document.createElement('div');
@@ -291,9 +329,13 @@ describe('CanvasTour', () => {
         document.body.appendChild(dock);
         render(<CanvasTour />);
         start();
-        expect(screen.getByText('1 / 3')).toBeInTheDocument();
+        expect(screen.getByText('1 / 5')).toBeInTheDocument();
         clickNext();
         expect(title()).toBe('方法一：貼上直播網址');
+        clickNext();
+        expect(title()).toBe('方法二：搜尋頻道');
+        clickNext();
+        expect(title()).toBe('切換搜尋 Twitch 或 YouTube');
         clickNext();
         expect(title()).toBe('先加入第一路直播');
         expect(spotlight()).not.toBeNull();

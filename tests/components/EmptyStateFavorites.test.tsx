@@ -1,6 +1,6 @@
 // 空畫布的「你的收藏」（2026-09 使用者需求：有收藏的人一進畫布就能一鍵加入正在直播的頻道）
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import i18n from '../../src/i18n/i18n';
 import type { FavoriteStream } from '../../src/features/favorites/types';
 
@@ -61,6 +61,18 @@ describe('EmptyStateFavorites', () => {
         expect(loadFavoritesToCanvas.mock.calls[0][0].map((f: FavoriteStream) => f.id).sort()).toEqual(['1', '3']);
     });
 
+    it('勾選後在別處刪掉的收藏：「加入所選」只算仍存在的', async () => {
+        seed([fav('1', 'a'), fav('2', 'b')]);
+        render(<EmptyStateFavorites />);
+        fireEvent.click(screen.getByLabelText('選取 a'));
+        fireEvent.click(screen.getByLabelText('選取 b'));
+        expect(screen.getByRole('button', { name: /加入所選/ })).toHaveTextContent('加入所選（2）');
+        // 別處刪掉 b（收藏服務會廣播 favoritesUpdated）
+        seed([fav('1', 'a')]);
+        await act(async () => { window.dispatchEvent(new Event('favoritesUpdated')); });
+        expect(screen.getByRole('button', { name: /加入所選/ })).toHaveTextContent('加入所選（1）');
+    });
+
     it('YouTube 沒開播：停用、標示未開播；Twitch 沒開播仍可加入', () => {
         seed([
             fav('y', 'ytch', { platform: 'youtube', url: 'https://www.youtube.com/channel/UC1', isLive: false }),
@@ -85,6 +97,13 @@ describe('CanvasEmptyState', () => {
         expect(screen.queryByText('你的收藏')).toBeNull();
         // 導覽「貼連結」那一步要框的中央輸入框
         expect(document.querySelector('[data-tour="quick-add"]')).not.toBeNull();
+    });
+
+    it('只有沒開播的 YouTube 收藏（沒有能加入的）：維持功能介紹', () => {
+        seed([fav('y', 'ytch', { platform: 'youtube', url: 'https://www.youtube.com/channel/UC1', isLive: false })]);
+        render(<CanvasEmptyState />);
+        expect(screen.getByText('功能介紹')).toBeInTheDocument();
+        expect(screen.queryByText('你的收藏')).toBeNull();
     });
 
     it('有收藏：「你的收藏」取代功能介紹', () => {

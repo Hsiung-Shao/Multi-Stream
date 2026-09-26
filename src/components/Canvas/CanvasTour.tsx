@@ -6,8 +6,8 @@
  * 導覽期間 DynamicIsland 把 isCanvasTourOpen 納入 pinned，島會保持展開。
  * 第一次進畫布自動跑一次；看完或略過就寫入 localStorage，之後可從快捷鍵說明重看。
  * 空畫布時分兩段（使用者回報：沒有視窗可以框，視窗操作那段看不懂）：
- *   第一段 intro：歡迎 → 逐步教兩種加入方式：貼連結（中央輸入框）→ 搜尋頻道（動態島搜尋框，實際打出範例字讓結果展開）
- *   → 切換搜尋平台（Twitch／YouTube）→ 有收藏時再介紹空畫布上的「你的收藏」。
+ *   第一段 intro：歡迎 → 在空畫布中央的大搜尋框逐步教兩種加入方式：貼連結 → 搜尋頻道（實際打出範例字讓結果展開）
+ *   → 切換搜尋平台（Twitch／YouTube）→ 動態島也有同一個搜尋框（邊緣停靠型改指停靠標籤）→ 有可加入的收藏時介紹「你的收藏」。
  *   第二段 windows：第一路直播加入後自動接著跑，這時有真實視窗可以框（拖曳、縮放、放大…），再介紹動態島其他功能。
  * 一進來就有直播（例如分享網址）則直接跑完整版 full。
  *
@@ -25,6 +25,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
 import { hasConsentRecord, CONSENT_CHANGE_EVENT } from '../../utils/analytics';
 import { useFavorites } from '../../hooks/useFavorites';
+import { isPlayableFavorite } from './EmptyStateFavorites';
 
 export const CANVAS_TOUR_DONE_KEY = 'canvas_tour_done';
 /** 空畫布的第一段（教加直播）已看過：之後第一路直播加入時接著跑第二段 */
@@ -40,7 +41,7 @@ export const TOUR_SEARCH_DEMO = 'lofi';
 const DEMO_TYPE_MS = 120;
 
 type StepId =
-    | 'welcome' | 'windows_intro' | 'start' | 'windows_ready' | 'paste' | 'platform' | 'favorites'
+    | 'welcome' | 'windows_intro' | 'start' | 'windows_ready' | 'paste' | 'platform' | 'favorites' | 'island_search'
     | 'drag' | 'swap' | 'resize' | 'theater' | 'controls' | 'chat' | 'empty'
     | 'island' | 'search' | 'add' | 'layout' | 'media' | 'collect' | 'more' | 'help'
     | 'dock' | 'summary';
@@ -60,10 +61,17 @@ type TourMode = 'full' | 'intro' | 'windows';
 const ISLAND_SETTLE_MS = 600;
 
 const qs = (sel: string) => document.querySelector<HTMLElement>(sel);
+
+/**
+ * 「搜尋頻道／切換平台」兩步要框的搜尋框：第一段在空畫布中央的大搜尋框，完整版在動態島。
+ * 查詢一律「範圍＋內部屬性」：同頁可能有好幾個搜尋框（空視窗裡也有一個），不限定範圍會框錯。
+ */
+const SEARCH_SCOPE_CENTER = '[data-tour="quick-add"]';
+const SEARCH_SCOPE_ISLAND = '[data-tour="island-search"]';
 const islandBtn = (fn: string) => qs(`[data-island-fn="${fn}"]`);
 
 /** 各步驟要框住的元素（可以多個，聚光框取聯集） */
-function stepTargets(step: StepId, win: HTMLElement | null): (HTMLElement | null)[] {
+function stepTargets(step: StepId, win: HTMLElement | null, searchScope: string): (HTMLElement | null)[] {
     switch (step) {
         case 'drag': return [win?.querySelector<HTMLElement>('[data-window-toolbar="stream"]') ?? null];
         case 'theater': return [win?.querySelector<HTMLElement>('[data-tour="theater"]') ?? null];
@@ -78,8 +86,9 @@ function stepTargets(step: StepId, win: HTMLElement | null): (HTMLElement | null
         case 'resize': return [win];
         case 'island': return [qs('[data-tour="island"]')];
         // 搜尋框＋示範輸入後展開的結果清單（清單出現前只框搜尋框）
-        case 'search': return [qs('[data-tour="island-search"]'), qs('[data-tour="island-search-results"]')];
-        case 'platform': return [qs('[data-tour="island-search-platform"]')];
+        case 'search': return [qs(`${searchScope} form`) ?? qs(searchScope), qs(`${searchScope} [data-search-results]`)];
+        case 'platform': return [qs(`${searchScope} [data-search-platform]`)];
+        case 'island_search': return [qs(SEARCH_SCOPE_ISLAND)];
         // 框輸入框本身（外層 div 是整列寬，框起來會比輸入框寬很多）
         case 'paste': return [qs('[data-tour="quick-add"] form') ?? qs('[data-tour="quick-add"]')];
         case 'favorites': return [qs('[data-tour="empty-favorites"]')];
@@ -171,7 +180,8 @@ export function CanvasTour() {
     const hasChat = useStreamStore(s => s.canvasItems.some(i => i.type === 'chat' && i.contentId != null));
     const hasEmpty = useStreamStore(s => s.canvasItems.some(i => i.contentId == null));
     // 空畫布有收藏時會顯示「你的收藏」，第一段多介紹這一區
-    const hasFavorites = useFavorites().favorites.length > 0;
+    // 條件與 CanvasEmptyState 顯示收藏區一致：至少一個可以加入的收藏
+    const hasFavorites = useFavorites().favorites.some(isPlayableFavorite);
 
     const [stepIdx, setStepIdx] = useState(0);
     // 自動開啟時決定跑哪一段；從快捷鍵說明「重看導覽」（store 直接設 open）一律是完整版，關閉時會重設回 full
@@ -220,8 +230,8 @@ export function CanvasTour() {
     const steps = useMemo<StepId[]>(() => {
         if (mode === 'intro') {
             const list: StepId[] = islandStyle === 'edgeDock'
-                ? ['welcome', 'paste', 'start']
-                : ['welcome', 'paste', 'search', 'platform'];
+                ? ['welcome', 'paste', 'search', 'platform', 'start']
+                : ['welcome', 'paste', 'search', 'platform', 'island_search'];
             if (hasFavorites) list.push('favorites');
             return list;
         }
@@ -237,6 +247,7 @@ export function CanvasTour() {
         return list;
     }, [mode, mainId, otherId, hasChat, hasEmpty, hasFavorites, islandStyle]);
     const step = steps[Math.min(stepIdx, steps.length - 1)];
+    const searchScope = mode === 'intro' ? SEARCH_SCOPE_CENTER : SEARCH_SCOPE_ISLAND;
 
     // 略過／Esc：整個導覽都不再自動跑（包括空畫布的第二段）
     const close = useCallback(() => {
@@ -271,7 +282,7 @@ export function CanvasTour() {
         if (WINDOW_STEPS.includes(step)) main?.setAttribute('data-tour-active', '');
 
         const measure = () => {
-            const els = stepTargets(step, win).filter((el): el is HTMLElement => !!el);
+            const els = stepTargets(step, win, searchScope).filter((el): el is HTMLElement => !!el);
             if (els.length === 0) { setRect(null); return; }
             const rs = els.map(el => el.getBoundingClientRect());
             // 往外留 PAD，但夾在可視範圍內：版面填滿畫布，視窗常貼著螢幕邊，超出去的框線與角框會被裁掉看不到
@@ -287,10 +298,10 @@ export function CanvasTour() {
         window.addEventListener('resize', measure);
         // 動畫被延後（分頁在背景時轉場會暫停）也要跟上：任何轉場結束都重量一次
         document.addEventListener('transitionend', measure, true);
-        // 搜尋那一步：示範輸入後結果清單才出現，監看動態島內的 DOM 變化重量（只在這一步掛）
-        const island = step === 'search' ? qs('[data-tour="island"]') : null;
-        const mo = island ? new MutationObserver(measure) : null;
-        if (island) mo!.observe(island, { childList: true, subtree: true });
+        // 搜尋那一步：示範輸入後結果清單才出現，監看搜尋框範圍內的 DOM 變化重量（只在這一步掛）
+        const scopeEl = step === 'search' ? qs(searchScope) : null;
+        const mo = scopeEl ? new MutationObserver(measure) : null;
+        if (scopeEl) mo!.observe(scopeEl, { childList: true, subtree: true });
         return () => {
             clearTimeout(settle);
             mo?.disconnect();
@@ -298,14 +309,14 @@ export function CanvasTour() {
             document.removeEventListener('transitionend', measure, true);
             main?.removeAttribute('data-tour-active');
         };
-    }, [open, step, mainId, otherId]);
+    }, [open, step, mainId, otherId, searchScope]);
 
     // 「搜尋頻道」那一步：在動態島搜尋框一個字一個字打出範例字，讓真的搜尋結果展開給使用者看。
     // 用原生 value setter＋input 事件，React 的 onChange 照常觸發（不碰 IslandSearch 的內部狀態）；
     // 離開這一步（下一步、上一步、略過、Esc、關閉）一律清空，結果清單跟著收起。
     useEffect(() => {
         if (!open || step !== 'search') return;
-        const input = qs('[data-tour="island-search"] input') as HTMLInputElement | null;
+        const input = qs(`${searchScope} input`) as HTMLInputElement | null;
         if (!input) return;
         const typeInto = (value: string) => {
             Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
@@ -317,7 +328,7 @@ export function CanvasTour() {
             timers.forEach(clearTimeout);
             typeInto('');
         };
-    }, [open, step]);
+    }, [open, step, searchScope]);
 
     // Esc 略過、Enter／→ 下一步；焦點放在主要按鈕
     useEffect(() => {

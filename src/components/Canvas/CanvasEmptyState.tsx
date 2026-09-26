@@ -2,15 +2,15 @@ import { Plus, Layout, Tv, FolderHeart, Search, Trash2, Maximize, Star, Settings
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { cn } from '../ui/utils';
-import { StreamUrlQuickAdd } from '../StreamUrlQuickAdd';
+import { StreamSearchBox } from '../StreamSearchBox';
 import { useFavorites } from '../../hooks/useFavorites';
-import { EmptyStateFavorites } from './EmptyStateFavorites';
+import { EmptyStateFavorites, isPlayableFavorite } from './EmptyStateFavorites';
 
 export const CanvasEmptyState = () => {
     const { t } = useTranslation('common');
     const [isVisible, setIsVisible] = useState(false);
-    // 有收藏：輸入框下方改顯示「你的收藏」取代功能介紹（導覽已涵蓋那些功能）；沒有收藏維持新手畫面
-    const hasFavorites = useFavorites().favorites.length > 0;
+    // 有可加入的收藏：輸入框下方改顯示「你的收藏」取代功能介紹（導覽已涵蓋那些功能）；沒有（或全是沒開播的 YouTube）維持新手畫面
+    const hasFavorites = useFavorites().favorites.some(isPlayableFavorite);
 
     useEffect(() => {
         setIsVisible(true);
@@ -87,7 +87,7 @@ export const CanvasEmptyState = () => {
                     </p>
                     {/* data-tour：導覽「貼連結」那一步框這裡 */}
                     <div className="flex justify-center" data-tour="quick-add">
-                        <StreamUrlQuickAdd size="md" />
+                        <StreamSearchBox size="md" />
                     </div>
                 </div>
 

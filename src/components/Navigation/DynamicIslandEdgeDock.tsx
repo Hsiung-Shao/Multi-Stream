@@ -339,7 +339,7 @@ export const DynamicIslandEdgeDock = () => {
                         <>
                             <DetailHeader title={t('favorites:island_search_channel') || '搜尋頻道'} backLabel={backLabel} onBack={() => setView('list')} />
                             <div className="p-3">
-                                <IslandSearch onSearch={() => setOpen(false)} resultsPlacement="inline" />
+                                <IslandSearch onSearch={() => setOpen(false)} resultsPlacement="inline" respondToGlobalFocus />
                             </div>
                         </>
                     )}

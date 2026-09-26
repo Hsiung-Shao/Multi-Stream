@@ -4,7 +4,7 @@ import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
-import { StreamUrlQuickAdd } from '../StreamUrlQuickAdd';
+import { StreamSearchBox } from '../StreamSearchBox';
 import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
 import {
     Select,
@@ -127,9 +127,9 @@ export function LandingPage() {
                                 </Button>
                             </div>
 
-                            {/* 快速入口：貼上網址直接開始（成功後導向 /canvas） */}
+                            {/* 快速入口：貼網址或搜尋頻道直接開始（與動態島搜尋同一套，成功後導向 /canvas） */}
                             <div className="mt-6 flex justify-center">
-                                <StreamUrlQuickAdd size="lg" navigateToCanvas />
+                                <StreamSearchBox size="lg" navigateToCanvas />
                             </div>
                         </div>
 

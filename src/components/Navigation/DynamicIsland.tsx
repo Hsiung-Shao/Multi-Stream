@@ -176,7 +176,7 @@ export const DynamicIsland = () => {
 
                         {/* Group 1: Search Module */}
                         <div data-tour="island-search" className="flex">
-                            <IslandSearch onActiveChange={setSearchActive} />
+                            <IslandSearch onActiveChange={setSearchActive} respondToGlobalFocus />
                         </div>
 
                         <IslandDivider />
