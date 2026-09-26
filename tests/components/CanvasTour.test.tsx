@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import i18n from '../../src/i18n/i18n';
-import { CanvasTour, CANVAS_TOUR_DONE_KEY, CANVAS_TOUR_INTRO_DONE_KEY, resetCanvasTourSessionForTest } from '../../src/components/Canvas/CanvasTour';
+import { CanvasTour, CANVAS_TOUR_DONE_KEY, CANVAS_TOUR_INTRO_DONE_KEY, TOUR_SEARCH_DEMO, resetCanvasTourSessionForTest } from '../../src/components/Canvas/CanvasTour';
 import { useStreamStore } from '../../src/store/useStreamStore';
 import { useUIStore } from '../../src/store/useUIStore';
 import { setTrackingConsent } from '../../src/utils/analytics';
@@ -23,7 +23,7 @@ function fakeWindow(id: string) {
 function fakeIsland() {
     const el = document.createElement('div');
     el.setAttribute('data-tour', 'island');
-    el.innerHTML = '<div data-tour="island-search"></div>'
+    el.innerHTML = '<div data-tour="island-search"><button data-tour="island-search-platform"></button><input /></div>'
         + ['add', 'layout', 'media', 'fav', 'save', 'share', 'screen', 'clear', 'help', 'home', 'settings']
             .map(fn => `<button data-island-fn="${fn}"></button>`).join('');
     document.body.appendChild(el);
@@ -44,9 +44,17 @@ function setStreams(n: number) {
 }
 
 const ISLAND_TITLES = [
-    '下方的動態島：所有主要功能都在這', '搜尋或貼上網址加入直播', '新增視窗', '一鍵切換版面',
+    '下方的動態島：所有主要功能都在這', '方法二：搜尋頻道', '切換搜尋 Twitch 或 YouTube', '新增視窗', '一鍵切換版面',
     '媒體控制', '收藏、儲存與分享', '全螢幕、清空與設定', '忘了怎麼操作？',
 ];
+
+/** 空畫布中央的快速新增輸入框（導覽「貼連結」那一步框它） */
+function fakeQuickAdd() {
+    const el = document.createElement('div');
+    el.setAttribute('data-tour', 'quick-add');
+    document.body.appendChild(el);
+}
+const searchInput = () => document.querySelector<HTMLInputElement>('[data-tour="island-search"] input')!;
 
 describe('CanvasTour', () => {
     beforeEach(async () => {
@@ -71,7 +79,7 @@ describe('CanvasTour', () => {
         start();
 
         expect(title()).toBe('歡迎使用多直播畫布');
-        expect(screen.getByText('1 / 15')).toBeInTheDocument();
+        expect(screen.getByText('1 / 16')).toBeInTheDocument();
         expect(spotlight()).toBeNull();
 
         // 下一步是拖曳：目標視窗掛上 data-tour-active，平常 hover 才出現的工具列與縮放角由 CSS 強制顯示
@@ -86,15 +94,22 @@ describe('CanvasTour', () => {
     });
 
     // 使用者回報：空畫布沒有視窗可以框，視窗操作那段看不懂 → 分兩段：先教加直播，加了再教操作
-    it('空畫布只跑第一段：歡迎 → 指向搜尋框「先加入第一路直播」；看完只記第一段', () => {
+    it('空畫布只跑第一段：歡迎 → 貼連結（中央輸入框）→ 搜尋頻道 → 切換平台；看完只記第一段', () => {
         fakeIsland();
+        fakeQuickAdd();
         render(<CanvasTour />);
         start();
         expect(title()).toBe('歡迎使用多直播畫布');
-        expect(screen.getByText('1 / 2')).toBeInTheDocument();
+        expect(screen.getByText('1 / 4')).toBeInTheDocument();
         expect(document.getElementById('canvas-tour-body')!.textContent).toContain('畫布現在是空的');
         clickNext();
-        expect(title()).toBe('先加入第一路直播');
+        expect(title()).toBe('方法一：貼上直播網址');
+        expect(spotlight()).not.toBeNull();
+        clickNext();
+        expect(title()).toBe('方法二：搜尋頻道');
+        expect(spotlight()).not.toBeNull();
+        clickNext();
+        expect(title()).toBe('切換搜尋 Twitch 或 YouTube');
         expect(spotlight()).not.toBeNull();
 
         fireEvent.click(screen.getByText('開始加入直播'));
@@ -116,7 +131,7 @@ describe('CanvasTour', () => {
         act(() => { setStreams(1); });
         start();
         expect(title()).toBe('直播加好了！');
-        // windows_ready + 4 個視窗步驟 + 動態島 7 步（少了搜尋框）+ 操作一覽
+        // windows_ready + 4 個視窗步驟 + 動態島 7 步（少了第一段教過的搜尋框與平台切換）+ 操作一覽
         expect(screen.getByText('1 / 13')).toBeInTheDocument();
         clickNext();
         expect(title()).toBe('拖曳工具列移動視窗');
@@ -124,6 +139,7 @@ describe('CanvasTour', () => {
         const titles: string[] = [];
         for (let i = 0; i < 11; i++) { clickNext(); titles.push(title()!); }
         expect(titles).not.toContain(ISLAND_TITLES[1]);
+        expect(titles).not.toContain(ISLAND_TITLES[2]);
         expect(titles[titles.length - 1]).toBe('操作一覽');
 
         fireEvent.click(screen.getByText('開始使用'));
@@ -146,7 +162,7 @@ describe('CanvasTour', () => {
         fakeIsland();
         render(<CanvasTour />);
         act(() => { useUIStore.getState().setCanvasTourOpen(true); });
-        expect(screen.getByText('1 / 11')).toBeInTheDocument();
+        expect(screen.getByText('1 / 12')).toBeInTheDocument();
         clickNext();
         expect(title()).toBe('畫面上的視窗怎麼操作');
         expect(spotlight()).toBeNull();
@@ -159,7 +175,7 @@ describe('CanvasTour', () => {
         fakeIsland();
         render(<CanvasTour />);
         start();
-        expect(screen.getByText('1 / 14')).toBeInTheDocument();
+        expect(screen.getByText('1 / 15')).toBeInTheDocument();
 
         clickNext();
         expect(title()).toBe('拖曳工具列移動視窗');
@@ -210,13 +226,78 @@ describe('CanvasTour', () => {
 
         render(<CanvasTour />);
         start();
-        expect(screen.getByText('1 / 16')).toBeInTheDocument();
+        expect(screen.getByText('1 / 17')).toBeInTheDocument();
         for (let i = 0; i < 5; i++) clickNext();
         expect(title()).toBe('用選單切換聊天室顯示哪一路');
         expect(spotlight()).not.toBeNull();
         clickNext();
         expect(title()).toBe('空視窗：直接填入內容');
         expect(spotlight()).not.toBeNull();
+    });
+
+    it('搜尋那一步在動態島搜尋框逐字打出範例字；離開這一步（下一步／上一步／Esc）一律清空', () => {
+        fakeIsland();
+        fakeQuickAdd();
+        render(<CanvasTour />);
+        start();
+        clickNext(); // paste
+        clickNext(); // search
+        expect(title()).toBe('方法二：搜尋頻道');
+        act(() => { vi.advanceTimersByTime(130); });
+        expect(searchInput().value).toBe(TOUR_SEARCH_DEMO.slice(0, 1));
+        act(() => { vi.advanceTimersByTime(1000); });
+        expect(searchInput().value).toBe(TOUR_SEARCH_DEMO);
+
+        clickNext(); // platform
+        expect(searchInput().value).toBe('');
+
+        fireEvent.click(screen.getByText('上一步')); // 回到 search：重新示範
+        act(() => { vi.advanceTimersByTime(1000); });
+        expect(searchInput().value).toBe(TOUR_SEARCH_DEMO);
+        fireEvent.click(screen.getByText('上一步'));
+        expect(searchInput().value).toBe('');
+
+        clickNext();
+        act(() => { vi.advanceTimersByTime(1000); });
+        fireEvent.keyDown(window, { key: 'Escape' });
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(searchInput().value).toBe('');
+    });
+
+    it('空畫布有收藏：第一段最後多介紹「你的收藏」', () => {
+        localStorage.setItem('favoriteStreams', JSON.stringify([
+            { id: 'f1', url: 'https://www.twitch.tv/a', name: 'a', platform: 'twitch', addedAt: '2026-01-01' },
+        ]));
+        fakeIsland();
+        fakeQuickAdd();
+        const fav = document.createElement('section');
+        fav.setAttribute('data-tour', 'empty-favorites');
+        document.body.appendChild(fav);
+        render(<CanvasTour />);
+        start();
+        expect(screen.getByText('1 / 5')).toBeInTheDocument();
+        for (let i = 0; i < 4; i++) clickNext();
+        expect(title()).toBe('你的收藏');
+        expect(spotlight()).not.toBeNull();
+        fireEvent.click(screen.getByText('開始加入直播'));
+        expect(localStorage.getItem(CANVAS_TOUR_INTRO_DONE_KEY)).toBe('1');
+    });
+
+    it('邊緣停靠型動態島的第一段：貼連結 → 指向停靠標籤（搜尋框收在裡面，不示範輸入）', () => {
+        useUIStore.setState({ islandStyle: 'edgeDock' });
+        fakeQuickAdd();
+        const dock = document.createElement('div');
+        dock.setAttribute('data-tour', 'island-dock');
+        document.body.appendChild(dock);
+        render(<CanvasTour />);
+        start();
+        expect(screen.getByText('1 / 3')).toBeInTheDocument();
+        clickNext();
+        expect(title()).toBe('方法一：貼上直播網址');
+        clickNext();
+        expect(title()).toBe('先加入第一路直播');
+        expect(spotlight()).not.toBeNull();
+        expect(document.getElementById('canvas-tour-body')!.textContent).toContain('停靠');
     });
 
     it('已看過就不再自動開啟', () => {
@@ -259,7 +340,7 @@ describe('CanvasTour', () => {
         expect(screen.queryByRole('dialog')).toBeNull();
 
         act(() => { useUIStore.getState().setCanvasTourOpen(true); });
-        expect(screen.getByText('1 / 15')).toBeInTheDocument();
+        expect(screen.getByText('1 / 16')).toBeInTheDocument();
     });
 
     it('可以回上一步（按鈕與方向鍵 ←），第一步沒有上一步', () => {
@@ -269,11 +350,11 @@ describe('CanvasTour', () => {
         expect(screen.queryByText('上一步')).toBeNull();
         clickNext();
         clickNext();
-        expect(screen.getByText('3 / 15')).toBeInTheDocument();
+        expect(screen.getByText('3 / 16')).toBeInTheDocument();
         fireEvent.click(screen.getByText('上一步'));
-        expect(screen.getByText('2 / 15')).toBeInTheDocument();
+        expect(screen.getByText('2 / 16')).toBeInTheDocument();
         fireEvent.keyDown(window, { key: 'ArrowLeft' });
-        expect(screen.getByText('1 / 15')).toBeInTheDocument();
+        expect(screen.getByText('1 / 16')).toBeInTheDocument();
     });
 
     it('掛載期間標記導覽可用（快捷鍵說明據此顯示「重看導覽」），卸載時清除', () => {

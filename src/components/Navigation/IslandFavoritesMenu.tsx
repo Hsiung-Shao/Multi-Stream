@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, Filter, Play, Grid2X2, Hash, Star, ChevronDown, Check, X } from 'lucide-react';
 import { useFavorites } from '../../hooks/useFavorites';
-import { useStreamStore } from '../../store/useStreamStore';
+import { loadFavoritesToCanvas } from '../../features/favorites/loadFavoritesToCanvas';
 import { cn } from '../ui/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
@@ -119,9 +119,6 @@ export const IslandFavoritesMenu = ({
 }) => {
     const { t } = useTranslation(['common', 'favorites']);
     const { favorites, categories, refresh } = useFavorites();
-    // const addEmptyGroup = useStreamStore(s => s.addEmptyGroup);
-    // const addCanvasItem = useStreamStore(s => s.addCanvasItem); // unused
-    const addStream = useStreamStore(s => s.addStream);
 
     const { checkNow, isRefreshing } = useLiveStatusCheck();
 
@@ -187,29 +184,7 @@ export const IslandFavoritesMenu = ({
     const handleBulkLoad = async () => {
         if (selectedStreams.length === 0) return;
 
-        const chunks = favorites.filter(f => selectedStreams.includes(f.id));
-
-        // Add all selected streams
-        // We probably need to position them or just add them sequentially
-        // `addStream` adds to the list. `SimpleCanvas` will auto-layout NEW items if logic exists,
-        // or we might need to manually place them.
-        // The store's `addStream` usually handles layout.
-
-        let addedCount = 0;
-        for (const fav of chunks) {
-            try {
-                // Use liveUrl if available to skip resolution
-                const urlToAdd = (fav as any).liveUrl || fav.url;
-                await addStream(urlToAdd, {
-                    withChat: true,
-                    withStream: true,
-                    displayName: fav.name
-                });
-                addedCount++;
-            } catch (e) {
-                console.error(`Failed to add ${fav.name}`, e);
-            }
-        }
+        const addedCount = await loadFavoritesToCanvas(favorites.filter(f => selectedStreams.includes(f.id)));
 
         toast.success(t('favorites:added_count', { count: addedCount }) || `已載入 ${addedCount} 個頻道`);
         setSelectedStreams([]);
@@ -230,17 +205,7 @@ export const IslandFavoritesMenu = ({
             }
         }
 
-        let addedCount = 0;
-        for (const fav of catStreams) {
-            // Use liveUrl if available
-            const urlToAdd = (fav as any).liveUrl || fav.url;
-            await addStream(urlToAdd, {
-                withChat: true,
-                withStream: true,
-                displayName: fav.name
-            });
-            addedCount++;
-        }
+        const addedCount = await loadFavoritesToCanvas(catStreams);
         toast.success(t('favorites:added_count', { count: addedCount }) || `已載入 ${addedCount} 個頻道`);
         setIsOpen(false);
     };

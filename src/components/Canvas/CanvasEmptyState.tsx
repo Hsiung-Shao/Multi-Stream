@@ -3,10 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { cn } from '../ui/utils';
 import { StreamUrlQuickAdd } from '../StreamUrlQuickAdd';
+import { useFavorites } from '../../hooks/useFavorites';
+import { EmptyStateFavorites } from './EmptyStateFavorites';
 
 export const CanvasEmptyState = () => {
     const { t } = useTranslation('common');
     const [isVisible, setIsVisible] = useState(false);
+    // 有收藏：輸入框下方改顯示「你的收藏」取代功能介紹（導覽已涵蓋那些功能）；沒有收藏維持新手畫面
+    const hasFavorites = useFavorites().favorites.length > 0;
 
     useEffect(() => {
         setIsVisible(true);
@@ -81,10 +85,13 @@ export const CanvasEmptyState = () => {
                     <p className="text-gray-400 text-sm md:text-base font-light max-w-2xl mx-auto mb-6 leading-relaxed">
                         {t('empty_state.intro') || "MultiStream Hub 讓你在同一個畫面同時觀看多個 Twitch 與 YouTube 直播，支援聊天室整合與自由佈局，完全免費、無需註冊。貼上網址或頻道名稱即可開始。"}
                     </p>
-                    <div className="flex justify-center">
+                    {/* data-tour：導覽「貼連結」那一步框這裡 */}
+                    <div className="flex justify-center" data-tour="quick-add">
                         <StreamUrlQuickAdd size="md" />
                     </div>
                 </div>
+
+                {hasFavorites ? <EmptyStateFavorites /> : (<>
 
                 <div className="text-center mb-12">
                     <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60 mb-2 drop-shadow-sm">
@@ -125,6 +132,7 @@ export const CanvasEmptyState = () => {
                         {t('empty_state.click_menu_hint') || "點擊下方動態島按鈕以開始使用"}
                     </p>
                 </div>
+                </>)}
             </div>
         </div>
     );

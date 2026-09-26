@@ -362,6 +362,7 @@ export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'ove
             {/* Results popup(overlay:絕對定位往上彈出,給固定在下緣的原本動態島用) */}
             {!isInline && showResults && searchResults.length > 0 && (
                 <div
+                    data-tour="island-search-results"
                     className="absolute bottom-full left-0 w-64 mb-3 rounded-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2"
                     style={resultsBoxStyle}
                 >
@@ -374,6 +375,7 @@ export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'ove
                 <button
                     type="button"
                     onClick={togglePlatform}
+                    data-tour="island-search-platform"
                     className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10 w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
                     title={platform === 'twitch' ? t('navbar:twitch') : t('navbar:youtube')}
                     aria-label={platform === 'twitch' ? t('navbar:twitch') : t('navbar:youtube')}
@@ -427,6 +429,7 @@ export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'ove
             {/* Results popup(inline:文件流內區塊,渲染在 input 下方,給邊緣停靠這種側邊面板用) */}
             {isInline && showResults && searchResults.length > 0 && (
                 <div
+                    data-tour="island-search-results"
                     className="w-64 mt-2 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2"
                     style={resultsBoxStyle}
                 >
