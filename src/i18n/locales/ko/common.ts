@@ -43,7 +43,7 @@ const common = {
   'canvas.toolbar_reload': '새로고침 (R)',
   'canvas.toolbar_remove': '제거',
   'canvas.toolbar_in_chat': '채팅이 이 방송을 표시 중',
-  'canvas.toolbar_chat_width': '채팅 너비: {{size}} (클릭하여 변경)',
+  'canvas.toolbar_chat_layout': '채팅 너비 및 접기',
   'canvas.chat_width_narrow': '좁게',
   'canvas.chat_width_standard': '기본',
   'canvas.chat_width_wide': '넓게',

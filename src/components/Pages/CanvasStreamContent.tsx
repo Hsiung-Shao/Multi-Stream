@@ -4,7 +4,7 @@
  */
 
 import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { GripHorizontal, X, RefreshCw, Maximize2, Minimize2, Star, MessageSquare, ArrowLeftRight, PanelRightClose } from 'lucide-react';
+import { GripHorizontal, X, RefreshCw, Maximize2, Minimize2, Star, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
@@ -17,7 +17,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { mainStreamItemIdOf, sharedChatContentIdOf } from '../../utils/canvasItemOps';
 import { ChatStreamSelect } from '../Canvas/ChatStreamSelect';
-import { chatWidthLevel, nextChatWidthStep } from '../../utils/layoutPresets';
+import { ChatLayoutMenu } from '../Canvas/ChatLayoutMenu';
 
 interface CanvasStreamContentProps {
     stream: StreamData;
@@ -51,19 +51,6 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     const isMain = useStreamStore(s => windowId !== undefined && mainStreamItemIdOf(s.canvasItems) === windowId);
     const sharedChatContentId = useStreamStore(s => sharedChatContentIdOf(s.canvasItems));
     const shownInSharedChat = !isChatWindow && sharedChatContentId === stream.id;
-    // 只有聊天室視窗需要；串流視窗的 selector 回傳常數，偏好寬度變動不會讓它們重繪
-    const chatColumnWidth = useStreamStore(s => (isChatWindow ? s.chatColumnWidth : 0));
-
-    const handleChatWidth = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        const store = useStreamStore.getState();
-        store.setChatColumnWidth(nextChatWidthStep(store.chatColumnWidth));
-    }, []);
-
-    const handleCollapseChat = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        useStreamStore.getState().collapseChats();
-    }, []);
 
     const handleTheater = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -176,33 +163,8 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
 
                 <Divider />
 
-                {/* 聊天室欄寬（三段循環；也可以直接拖聊天室左緣）與收合。作用在畫面上所有聊天室 */}
-                {isChatWindow && (
-                    <>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
-                            onPointerDown={stopPointerDown}
-                            onClick={handleChatWidth}
-                            title={t('canvas.toolbar_chat_width', { size: t(`canvas.chat_width_${chatWidthLevel(chatColumnWidth)}`) })}
-                            data-tour="chat-width"
-                        >
-                            <ArrowLeftRight size={12} />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
-                            onPointerDown={stopPointerDown}
-                            onClick={handleCollapseChat}
-                            title={t('canvas.toolbar_collapse_chat')}
-                            data-tour="chat-collapse"
-                        >
-                            <PanelRightClose size={12} />
-                        </Button>
-                    </>
-                )}
+                {/* 聊天室欄寬（窄／標準／寬，也可以直接拖聊天室左緣）與收合。作用在畫面上所有聊天室 */}
+                {isChatWindow && <ChatLayoutMenu />}
 
                 {/* 另開原生聊天室：第三方 cookie 被封鎖時 iframe 內無法發言的逃生口 */}
                 {isChatWindow && (

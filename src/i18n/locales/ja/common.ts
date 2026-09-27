@@ -43,7 +43,7 @@ const common = {
   'canvas.toolbar_reload': '再読み込み (R)',
   'canvas.toolbar_remove': '削除',
   'canvas.toolbar_in_chat': 'チャットはこの配信を表示中',
-  'canvas.toolbar_chat_width': 'チャットの幅：{{size}}（クリックで切り替え）',
+  'canvas.toolbar_chat_layout': 'チャットの幅と折りたたみ',
   'canvas.chat_width_narrow': '狭い',
   'canvas.chat_width_standard': '標準',
   'canvas.chat_width_wide': '広い',

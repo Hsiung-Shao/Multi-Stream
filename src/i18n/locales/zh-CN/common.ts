@@ -43,7 +43,7 @@ const common = {
   'canvas.toolbar_reload': '重新加载（R）',
   'canvas.toolbar_remove': '移除',
   'canvas.toolbar_in_chat': '聊天室正在显示这一路',
-  'canvas.toolbar_chat_width': '聊天室宽度：{{size}}（点一下切换）',
+  'canvas.toolbar_chat_layout': '聊天室宽度与收起',
   'canvas.chat_width_narrow': '窄',
   'canvas.chat_width_standard': '标准',
   'canvas.chat_width_wide': '宽',

@@ -75,16 +75,8 @@ const MIN_STREAM_CELLS = 6;
 export const DEFAULT_CHAT_COLS = 4;
 export const MIN_CHAT_COLS = 3;
 export const MAX_CHAT_COLS = 8;
-/** 工具列「寬度」按鈕循環的三段：窄／標準／寬 */
+/** 工具列寬度選單的三段：窄／標準／寬 */
 export const CHAT_WIDTH_STEPS = [3, 4, 6] as const;
-
-/** 寬度按鈕的下一段：比目前寬的第一段，已是最寬（或拖得比「寬」更寬）就回到最窄 */
-export const nextChatWidthStep = (cols: number): number =>
-    CHAT_WIDTH_STEPS.find(w => w > cols) ?? CHAT_WIDTH_STEPS[0];
-
-/** 目前寬度對應的段位名稱（拖曳出來的中間值歸到最接近、且不大於它的那一段） */
-export const chatWidthLevel = (cols: number): 'narrow' | 'standard' | 'wide' =>
-    cols >= CHAT_WIDTH_STEPS[2] ? 'wide' : cols >= CHAT_WIDTH_STEPS[1] ? 'standard' : 'narrow';
 
 /** 聊天室欄寬夾進合法範圍（0 = 收合，見 canvasItemOps.collapseChats，不經過這裡） */
 export const clampChatCols = (cols: number): number =>

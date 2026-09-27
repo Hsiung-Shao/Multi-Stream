@@ -179,27 +179,30 @@ describe('CanvasStreamContent 工具列：聊天室寬度與收合', () => {
         });
     });
 
-    it('寬度鈕依序切換 標準 → 寬 → 窄，並顯示目前段位', () => {
+    // Radix DropdownMenu 靠 pointerdown／Enter 開啟，fireEvent.click 打不開
+    const openMenu = () => fireEvent.keyDown(screen.getByTitle('聊天室寬度與收合'), { key: 'Enter' });
+
+    it('寬度選單：目前段位打勾，選「寬」改成 6 欄並重排', () => {
         render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="chat" />);
-        fireEvent.click(screen.getByTitle('聊天室寬度：標準（點一下切換）'));
+        openMenu();
+        expect(screen.getByRole('menuitemradio', { name: '標準' })).toHaveAttribute('aria-checked', 'true');
+        fireEvent.click(screen.getByRole('menuitemradio', { name: '寬' }));
         expect(useStreamStore.getState().chatColumnWidth).toBe(6);
-        fireEvent.click(screen.getByTitle('聊天室寬度：寬（點一下切換）'));
-        expect(useStreamStore.getState().chatColumnWidth).toBe(3);
-        expect(useStreamStore.getState().canvasItems.find(i => i.i === 'chat')!.layout).toEqual(L(21, 0, 3, 24));
+        expect(useStreamStore.getState().canvasItems.find(i => i.i === 'chat')!.layout).toEqual(L(18, 0, 6, 24));
     });
 
-    it('收合鈕：聊天室寬 0、串流填滿全寬', () => {
+    it('選單的「收合」：聊天室寬 0、串流填滿全寬', () => {
         render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="chat" />);
-        fireEvent.click(screen.getByTitle('收合聊天室（畫面讓給直播）'));
+        openMenu();
+        fireEvent.click(screen.getByRole('menuitem', { name: '收合聊天室（畫面讓給直播）' }));
         const items = useStreamStore.getState().canvasItems;
         expect(items.find(i => i.i === 'chat')!.layout.w).toBe(0);
         expect(items.filter(i => i.type === 'stream').every(i => i.layout.w === 24)).toBe(true);
     });
 
-    it('串流視窗沒有這兩顆鈕', () => {
+    it('串流視窗沒有這個選單', () => {
         render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="stream" renderProps={renderProps} windowId="w1" />);
-        expect(screen.queryByTitle(/聊天室寬度/)).toBeNull();
-        expect(screen.queryByTitle('收合聊天室（畫面讓給直播）')).toBeNull();
+        expect(screen.queryByTitle('聊天室寬度與收合')).toBeNull();
     });
 
     it('收合後的右緣標籤：點一下展開並恢復偏好寬度', async () => {

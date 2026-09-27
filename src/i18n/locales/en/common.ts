@@ -43,7 +43,7 @@ const common = {
   'canvas.toolbar_reload': 'Reload (R)',
   'canvas.toolbar_remove': 'Remove',
   'canvas.toolbar_in_chat': 'Chat is showing this stream',
-  'canvas.toolbar_chat_width': 'Chat width: {{size}} (click to change)',
+  'canvas.toolbar_chat_layout': 'Chat width & collapse',
   'canvas.chat_width_narrow': 'Narrow',
   'canvas.chat_width_standard': 'Standard',
   'canvas.chat_width_wide': 'Wide',

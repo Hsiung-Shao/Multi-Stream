@@ -1,7 +1,7 @@
 // 聊天室欄寬與收合（階段 3 後半）：版面純函式
 import { describe, it, expect } from 'vitest';
 import {
-    generateColumnLayout, clampChatCols, nextChatWidthStep, chatWidthLevel, generateSharedChatLayout,
+    generateColumnLayout, clampChatCols, generateSharedChatLayout,
 } from '../../src/utils/layoutPresets';
 import {
     relayoutItems, collapseChats, expandChats, chatsCollapsed, isCollapsedChat, keepChatsCollapsed, sharedChatContentIdOf,
@@ -49,11 +49,10 @@ describe('generateColumnLayout 的聊天室欄寬', () => {
         expect(chat).toMatchObject({ x: 18, w: 6 });
     });
 
-    it('clampChatCols／三段循環／段位名稱', () => {
+    it('clampChatCols：非數字退回預設、取整、夾在 3～8', () => {
         expect(clampChatCols(NaN)).toBe(4);
         expect(clampChatCols(5.4)).toBe(5);
-        expect([3, 4, 5, 6, 8].map(nextChatWidthStep)).toEqual([4, 6, 6, 3, 3]);
-        expect([3, 4, 5, 6, 8].map(chatWidthLevel)).toEqual(['narrow', 'standard', 'standard', 'wide', 'wide']);
+        expect([0, 2, 9].map(clampChatCols)).toEqual([3, 3, 8]);
     });
 });
 
