@@ -10,7 +10,7 @@ import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/lay
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
 import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout, DEFAULT_CHAT_COLS, clampChatCols } from '../utils/layoutPresets';
-import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag, relayoutItems, collapseChats, expandChats, keepChatsCollapsed, chatsCollapsed } from '../utils/canvasItemOps';
+import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag, relayoutItems, collapseChats, expandChats, keepChatsCollapsed, chatsCollapsed, isCollapsedChat } from '../utils/canvasItemOps';
 import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
@@ -103,7 +103,8 @@ interface StreamStoreState {
 // We can just return items as is, or do basic initial grid assignment if needed.
 // For migration, we'll simplify this to just ensure valid grid units.
 const normalizeCanvasItems = (items: CanvasItem[]): CanvasItem[] => {
-    return items.map(item => ({
+    // 收合的聊天室寬 0 是合法值（見 canvasItemOps），不能被下面的 `|| 6` 補成 6——那會把它放到畫布外（x = 24）
+    return items.map(item => isCollapsedChat(item) ? item : ({
         ...item,
         layout: {
             x: item.layout.x ?? 0,

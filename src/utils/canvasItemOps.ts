@@ -131,8 +131,39 @@ export function chatsCollapsed(items: readonly CanvasItem[]): boolean {
 
 /** 收合全部聊天室：串流填滿全寬，聊天室寬 0（i、contentId、sharedChat 都不動） */
 export function collapseChats(items: readonly CanvasItem[], aspect: number): CanvasItem[] {
-    if (!items.some(it => it.type === 'chat')) return items as CanvasItem[];
-    return layoutColumns(items, aspect, [], 0);
+    return resizeChatColumn(items, aspect, 0);
+}
+
+/** 與 SimpleCanvas 的 SIZE_LIMITS.stream 一致 */
+const MIN_STREAM_W = 6;
+
+/**
+ * 把右側聊天室欄改成 toCols 欄（0 = 收合），用於調寬、收合、展開。
+ * 聊天室本來就是右側一欄、串流都在它左邊時，只把串流的欄線依比例縮放：使用者自己排的大小與位置
+ * （例如一大三小的主畫面）都保留，高度與上下位置完全不動。以「邊」取整，相鄰視窗不會有縫或重疊。
+ * 聊天室不是一欄（每路一聊、被拖到中間），或縮放後有串流窄於下限時，才退回整個重排（layoutColumns）。
+ * 沒有聊天室時什麼都不做。
+ */
+function resizeChatColumn(items: readonly CanvasItem[], aspect: number, toCols: number): CanvasItem[] {
+    const chats = items.filter(it => it.type === 'chat');
+    if (chats.length === 0) return items as CanvasItem[];
+    const { x: colX, w: fromCols } = chats[0].layout;
+    const isColumn = colX + fromCols === 24 && chats.every(c => c.layout.x === colX && c.layout.w === fromCols);
+    const streams = items.filter(it => it.type === 'stream');
+    if (!isColumn || streams.length === 0 || streams.some(s => s.layout.x + s.layout.w > colX)) {
+        return layoutColumns(items, aspect, [], toCols);
+    }
+
+    const toX = 24 - toCols;
+    const edge = (e: number) => Math.round((e * toX) / colX);
+    const next = items.map(it => {
+        if (it.type === 'chat') return { ...it, layout: { ...it.layout, x: toX, w: toCols } };
+        const x = edge(it.layout.x);
+        return { ...it, layout: { ...it.layout, x, w: edge(it.layout.x + it.layout.w) - x } };
+    });
+    return next.some(it => it.type === 'stream' && it.layout.w < MIN_STREAM_W)
+        ? layoutColumns(items, aspect, [], toCols)
+        : next;
 }
 
 /**
@@ -159,9 +190,9 @@ export function relayoutItems(
     return layoutColumns(items, aspect, newIds, chatsCollapsed(items) ? 0 : chatCols);
 }
 
-/** 展開聊天室（寬 chatCols）並重排；不論目前是否收合 */
+/** 展開聊天室（寬 chatCols）；也用於調寬。不論目前是否收合（見 resizeChatColumn） */
 export function expandChats(items: readonly CanvasItem[], aspect: number, chatCols: number): CanvasItem[] {
-    return layoutColumns(items, aspect, [], chatCols);
+    return resizeChatColumn(items, aspect, chatCols);
 }
 
 function layoutColumns(items: readonly CanvasItem[], aspect: number, newIds: readonly string[], chatCols: number): CanvasItem[] {

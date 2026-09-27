@@ -256,6 +256,21 @@ describe('CanvasTour', () => {
         expect(title()).not.toBe('用選單切換聊天室顯示哪一路');
     });
 
+    it('收合的空聊天室也不算「空視窗」（畫面上沒有它）', () => {
+        setStreams(1);
+        useStreamStore.setState({
+            canvasItems: [
+                ...useStreamStore.getState().canvasItems,
+                { i: 'c1', type: 'chat', contentId: null, layout: L(24, 0, 0, 24) },
+            ],
+        });
+        render(<CanvasTour />);
+        start();
+        const seen: string[] = [];
+        for (let i = 0; i < 20; i++) { seen.push(title() ?? ''); clickNext(); if (!screen.queryByRole('dialog')) break; }
+        expect(seen).not.toContain('空視窗：直接填入內容');
+    });
+
     it('第一段的搜尋那一步在中央大搜尋框逐字打出範例字（動態島不動）；離開這一步（下一步／上一步／Esc）一律清空', () => {
         fakeIsland();
         fakeQuickAdd();

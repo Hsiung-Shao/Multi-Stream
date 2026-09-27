@@ -105,3 +105,51 @@ describe('聊天室收合（寬 0 表示法）', () => {
         expect(sharedChatContentIdOf(collapseChats(shared(), ASPECT))).toBeUndefined();
     });
 });
+
+describe('調寬／收合保留使用者排好的串流', () => {
+    /** 一大三小：主畫面 w1 佔左側 12×24，右邊三路 8 欄各 8 列；聊天室寬 4 */
+    const custom = (): CanvasItem[] => [
+        item('w1', 'stream', 1, 0, 0, 12, 24),
+        item('w2', 'stream', 2, 12, 0, 8, 8),
+        item('w3', 'stream', 3, 12, 8, 8, 8),
+        item('w4', 'stream', 4, 12, 16, 8, 8),
+        item('c', 'chat', 1, 20, 0, 4, 24, { sharedChat: true }),
+    ];
+
+    it('收合：欄線依比例放寬，上下位置與高度不動，主畫面仍是最大那格', () => {
+        const after = collapseChats(custom(), ASPECT);
+        const w = (id: string) => after.find(i => i.i === id)!.layout;
+        expect(w('w1')).toEqual({ x: 0, y: 0, w: 14, h: 24 });
+        expect(w('w2')).toEqual({ x: 14, y: 0, w: 10, h: 8 });
+        expect(w('w4')).toEqual({ x: 14, y: 16, w: 10, h: 8 });
+        expect(coverage(after.filter(i => !isCollapsedChat(i)).map(i => i.layout)).every(n => n === 1)).toBe(true);
+    });
+
+    it('收合再展開：回到原本的排法', () => {
+        const back = expandChats(collapseChats(custom(), ASPECT), ASPECT, 4);
+        expect(back.map(i => i.layout)).toEqual(custom().map(i => i.layout));
+    });
+
+    it('調寬到 8：仍保留一大三小、整個畫布無縫', () => {
+        const after = expandChats(custom(), ASPECT, 8);
+        expect(after.find(i => i.i === 'w1')!.layout).toEqual({ x: 0, y: 0, w: 10, h: 24 });
+        expect(after.find(i => i.i === 'c')!.layout).toEqual({ x: 16, y: 0, w: 8, h: 24 });
+        expect(coverage(after.map(i => i.layout)).every(n => n === 1)).toBe(true);
+    });
+
+    it('縮放後有串流窄於 6 欄：退回整個重排（不產生過窄的視窗）', () => {
+        const three = [
+            item('a', 'stream', 1, 0, 0, 7, 24), item('b', 'stream', 2, 7, 0, 7, 24), item('d', 'stream', 3, 14, 0, 6, 24),
+            item('c', 'chat', 1, 20, 0, 4, 24),
+        ];
+        const after = expandChats(three, ASPECT, 8);
+        expect(after.filter(i => i.type === 'stream').every(i => i.layout.w >= 6)).toBe(true);
+        expect(coverage(after.map(i => i.layout)).every(n => n === 1)).toBe(true);
+    });
+
+    it('沒有聊天室：什麼都不做（不重排使用者的串流）', () => {
+        const items = [item('a', 'stream', 1, 0, 0, 16, 24), item('b', 'stream', 2, 16, 0, 8, 24)];
+        expect(expandChats(items, ASPECT, 6)).toBe(items);
+        expect(collapseChats(items, ASPECT)).toBe(items);
+    });
+});
