@@ -187,7 +187,7 @@ describe('CanvasTour', () => {
         clickNext();
         expect(title()).toBe('拖曳工具列移動視窗');
         clickNext();
-        expect(title()).toBe('拖曳四個角調整大小');
+        expect(title()).toBe('拖曳四個角或邊緣調整大小');
         // 四個角都框起來（不是只框右下角）
         expect([...document.querySelectorAll('[data-tour-corner]')].map(el => el.getAttribute('data-tour-corner')).sort())
             .toEqual(['ne', 'nw', 'se', 'sw']);
@@ -240,6 +240,20 @@ describe('CanvasTour', () => {
         clickNext();
         expect(title()).toBe('空視窗：直接填入內容');
         expect(spotlight()).not.toBeNull();
+    });
+
+    it('聊天室收合時不介紹聊天室（畫面上沒有可以框的聊天室）', () => {
+        setStreams(1);
+        useStreamStore.setState({
+            canvasItems: [
+                ...useStreamStore.getState().canvasItems,
+                { i: 'c1', type: 'chat', contentId: 1, layout: L(24, 0, 0, 24) },
+            ],
+        });
+        render(<CanvasTour />);
+        start();
+        for (let i = 0; i < 5; i++) clickNext();
+        expect(title()).not.toBe('用選單切換聊天室顯示哪一路');
     });
 
     it('第一段的搜尋那一步在中央大搜尋框逐字打出範例字（動態島不動）；離開這一步（下一步／上一步／Esc）一律清空', () => {

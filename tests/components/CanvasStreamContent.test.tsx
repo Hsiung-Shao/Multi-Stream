@@ -160,3 +160,54 @@ describe('CanvasStreamContent 工具列：放大、設為主畫面、共用聊�
         expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['Alpha', 'Bravo']);
     });
 });
+
+// 聊天室欄寬與收合（階段 3 後半）
+describe('CanvasStreamContent 工具列：聊天室寬度與收合', () => {
+    const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+    const mk = (id: number, name: string): StreamData => ({ ...stream, id, channelId: name, displayName: name });
+
+    beforeEach(async () => {
+        await i18n.changeLanguage('zh-TW');
+        useStreamStore.setState({
+            streams: [mk(1, 'Alpha'), mk(2, 'Bravo')],
+            chatColumnWidth: 4,
+            canvasItems: [
+                { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 20, 12) },
+                { i: 'w2', type: 'stream', contentId: 2, layout: L(0, 12, 20, 12) },
+                { i: 'chat', type: 'chat', contentId: 1, layout: L(20, 0, 4, 24), sharedChat: true },
+            ],
+        });
+    });
+
+    it('寬度鈕依序切換 標準 → 寬 → 窄，並顯示目前段位', () => {
+        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="chat" />);
+        fireEvent.click(screen.getByTitle('聊天室寬度：標準（點一下切換）'));
+        expect(useStreamStore.getState().chatColumnWidth).toBe(6);
+        fireEvent.click(screen.getByTitle('聊天室寬度：寬（點一下切換）'));
+        expect(useStreamStore.getState().chatColumnWidth).toBe(3);
+        expect(useStreamStore.getState().canvasItems.find(i => i.i === 'chat')!.layout).toEqual(L(21, 0, 3, 24));
+    });
+
+    it('收合鈕：聊天室寬 0、串流填滿全寬', () => {
+        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="chat" />);
+        fireEvent.click(screen.getByTitle('收合聊天室（畫面讓給直播）'));
+        const items = useStreamStore.getState().canvasItems;
+        expect(items.find(i => i.i === 'chat')!.layout.w).toBe(0);
+        expect(items.filter(i => i.type === 'stream').every(i => i.layout.w === 24)).toBe(true);
+    });
+
+    it('串流視窗沒有這兩顆鈕', () => {
+        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="stream" renderProps={renderProps} windowId="w1" />);
+        expect(screen.queryByTitle(/聊天室寬度/)).toBeNull();
+        expect(screen.queryByTitle('收合聊天室（畫面讓給直播）')).toBeNull();
+    });
+
+    it('收合後的右緣標籤：點一下展開並恢復偏好寬度', async () => {
+        const { ChatCollapsedTab } = await import('../../src/components/Canvas/ChatCollapsedTab');
+        useStreamStore.getState().setChatColumnWidth(6);
+        useStreamStore.getState().collapseChats();
+        render(<ChatCollapsedTab />);
+        fireEvent.click(screen.getByRole('button', { name: '展開聊天室' }));
+        expect(useStreamStore.getState().canvasItems.find(i => i.i === 'chat')!.layout).toEqual(L(18, 0, 6, 24));
+    });
+});

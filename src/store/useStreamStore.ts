@@ -9,8 +9,8 @@ import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
 import { generateStandardLayout } from '../utils/canvasUtils';
-import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout } from '../utils/layoutPresets';
-import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag, relayoutItems } from '../utils/canvasItemOps';
+import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout, DEFAULT_CHAT_COLS, clampChatCols } from '../utils/layoutPresets';
+import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag, relayoutItems, collapseChats, expandChats, keepChatsCollapsed, chatsCollapsed } from '../utils/canvasItemOps';
 import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
 import { CustomLayout, LayoutSlot } from '../types/canvas';
@@ -85,6 +85,15 @@ interface StreamStoreState {
     // New Action
     applyAutoLayout: (mode: LayoutMode) => void;
     applyTemplateLayout: (templateId: string) => void;
+
+    /** 右側聊天室欄的寬度偏好（格數 3～8）；重排、共用聊天室版型、展開收合的聊天室都用它 */
+    chatColumnWidth: number;
+    /** 調整聊天室欄寬：寫入偏好並把畫布重排成「串流在左、聊天室在右側一欄」（i 不變） */
+    setChatColumnWidth: (cols: number) => void;
+    /** 收合全部聊天室，串流填滿全寬（見 canvasItemOps 的收合表示法） */
+    collapseChats: () => void;
+    /** 展開收合的聊天室，恢復偏好寬度 */
+    expandChats: () => void;
 }
 
 
@@ -105,6 +114,20 @@ const normalizeCanvasItems = (items: CanvasItem[]): CanvasItem[] => {
     }));
 };
 
+/**
+ * 目前畫布轉成自訂版面的 slot。聊天室收合時先以偏好寬度展開再存：
+ * 自訂版面存的是「版面長相」，套用時聊天室應該看得到，也避免存出寬 0 的 slot。
+ */
+const slotsOf = (items: CanvasItem[], chatCols: number): LayoutSlot[] =>
+    (chatsCollapsed(items) ? expandChats(items, getCanvasAspect(), chatCols) : items).map(item => ({
+        x: item.layout.x,
+        y: item.layout.y,
+        w: item.layout.w,
+        h: item.layout.h,
+        type: item.type,
+        ...(item.sharedChat ? { sharedChat: true } : {}),
+    }));
+
 export const useStreamStore = create<StreamStoreState>()(
     persist(
         (set, get) => ({
@@ -114,6 +137,7 @@ export const useStreamStore = create<StreamStoreState>()(
             userLayout: null,
             chatLayout: 'none',
             canvasItems: [],
+            chatColumnWidth: DEFAULT_CHAT_COLS,
             presets: [],
             customLayouts: [],
             lastActiveAt: 0,
@@ -351,6 +375,7 @@ export const useStreamStore = create<StreamStoreState>()(
                             if (sharedChat) {
                                 targetItems = generateSharedChatLayout(
                                     newStreams.map(s => s.id), getCanvasAspect(), sharedChat.contentId ?? newStreams[0]?.id ?? null,
+                                    state.chatColumnWidth,
                                 );
                             } else if (template) {
                                 // Generate items from template
@@ -408,6 +433,8 @@ export const useStreamStore = create<StreamStoreState>()(
                                     };
                                 }
                             });
+                            // 聊天室原本收合就維持收合（加一路不該把使用者收起來的聊天室打開）
+                            newCanvasItems = keepChatsCollapsed(state.canvasItems, newCanvasItems, getCanvasAspect());
                         }
                     }
 
@@ -460,7 +487,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 });
 
                 // 新增後依目前組成重排、填滿畫布（原本固定小尺寸塞在空位，常常很小或在畫面下方）
-                return { canvasItems: relayoutItems(newCanvasItems, getCanvasAspect(), [`empty-stream-${uniqueId}`, `empty-chat-${uniqueId}`]) };
+                return { canvasItems: relayoutItems(newCanvasItems, getCanvasAspect(), [`empty-stream-${uniqueId}`, `empty-chat-${uniqueId}`], state.chatColumnWidth) };
             }),
 
             clearCanvasItems: () => set({ canvasItems: [], streams: [] }),
@@ -589,7 +616,7 @@ export const useStreamStore = create<StreamStoreState>()(
                         if (sharedBefore && streamIds.length > 0) {
                             // 共用聊天室版面維持同一種版面；聊天室沿用（可能剛改指向的）那一路
                             const chatContent = retargeted.find(i => i.type === 'chat')?.contentId ?? streamIds[0];
-                            targetItems = generateSharedChatLayout(streamIds, getCanvasAspect(), chatContent);
+                            targetItems = generateSharedChatLayout(streamIds, getCanvasAspect(), chatContent, state.chatColumnWidth);
                         } else if (template) {
                             targetItems = generateLayoutFromTemplate(template.id, streamIds, getCanvasAspect());
                         } else {
@@ -624,6 +651,7 @@ export const useStreamStore = create<StreamStoreState>()(
                                 i: target.i || `${target.type}-${uuidv4().slice(0, 8)}-${target.contentId || 'empty'}`
                             };
                         });
+                        newCanvasItems = keepChatsCollapsed(state.canvasItems, newCanvasItems, getCanvasAspect());
                     }
 
                     // Update layout property (legacy)
@@ -812,9 +840,23 @@ export const useStreamStore = create<StreamStoreState>()(
 
                 // 新增後依目前組成重排、填滿畫布（其他視窗只改 layout，i 不變，播放器不重建）
                 return {
-                    canvasItems: relayoutItems(newItems, getCanvasAspect(), [id])
+                    canvasItems: relayoutItems(newItems, getCanvasAspect(), [id], state.chatColumnWidth)
                 };
             }),
+
+            setChatColumnWidth: (cols) => set(state => {
+                const chatColumnWidth = clampChatCols(cols);
+                return { chatColumnWidth, canvasItems: expandChats(state.canvasItems, getCanvasAspect(), chatColumnWidth) };
+            }),
+
+            collapseChats: () => set(state => {
+                const next = collapseChats(state.canvasItems, getCanvasAspect());
+                return next === state.canvasItems ? {} : { canvasItems: next };
+            }),
+
+            expandChats: () => set(state => ({
+                canvasItems: expandChats(state.canvasItems, getCanvasAspect(), state.chatColumnWidth),
+            })),
 
             removeCanvasItem: (id) => {
                 const { closeWindowMode } = useUIStore.getState();
@@ -998,7 +1040,7 @@ export const useStreamStore = create<StreamStoreState>()(
                     // 這樣聊天室 item 也能被下面的 ID 池配對到、沿用原本的 i
                     const onLayout = processingIds.slice(0, needed);
                     const keep = state.canvasItems.find(i => i.type === 'chat' && i.contentId != null && onLayout.includes(i.contentId));
-                    newItemsSpecs = generateSharedChatLayout(onLayout, getCanvasAspect(), keep?.contentId ?? onLayout[0] ?? null);
+                    newItemsSpecs = generateSharedChatLayout(onLayout, getCanvasAspect(), keep?.contentId ?? onLayout[0] ?? null, state.chatColumnWidth);
                 } else {
                     newItemsSpecs = template.generate(processingIds, getCanvasAspect());
                 }
@@ -1040,14 +1082,7 @@ export const useStreamStore = create<StreamStoreState>()(
 
             saveCustomLayout: async (name: string) => {
                 const state = get();
-                const slots: LayoutSlot[] = state.canvasItems.map(item => ({
-                    x: item.layout.x,
-                    y: item.layout.y,
-                    w: item.layout.w,
-                    h: item.layout.h,
-                    type: item.type,
-                    ...(item.sharedChat ? { sharedChat: true } : {}),
-                }));
+                const slots = slotsOf(state.canvasItems, state.chatColumnWidth);
 
                 const newLayout: CustomLayout = {
                     id: uuidv4(),
@@ -1088,14 +1123,7 @@ export const useStreamStore = create<StreamStoreState>()(
             updateCustomLayoutFromCurrent: async (id: string) => {
                 const state = get();
                 // 1. Get current items and transform to slots
-                const currentSlots: LayoutSlot[] = state.canvasItems.map(item => ({
-                    x: item.layout.x,
-                    y: item.layout.y,
-                    w: item.layout.w,
-                    h: item.layout.h,
-                    type: item.type as 'stream' | 'chat',
-                    ...(item.sharedChat ? { sharedChat: true } : {}),
-                }));
+                const currentSlots = slotsOf(state.canvasItems, state.chatColumnWidth);
 
                 // 2. Update the target layout
                 const updatedLayouts = state.customLayouts.map(l =>
@@ -1237,6 +1265,7 @@ export const useStreamStore = create<StreamStoreState>()(
                 layoutMode: state.layoutMode,
                 presets: state.presets,
                 canvasItems: state.canvasItems,
+                chatColumnWidth: state.chatColumnWidth,
                 customLayouts: state.customLayouts,
                 lastActiveAt: state.lastActiveAt
             })

@@ -126,6 +126,14 @@ export function useDrag(options: UseDragOptions) {
             const snappedX = clampToGridBounds(snapToGrid(rawX, geom.cellWidth), geom.width, GRID_COLS, geom.cellWidth);
             const snappedY = clampToGridBounds(snapToGrid(rawY, geom.cellHeight), geom.height, geom.maxRows, geom.cellHeight);
 
+            // 碰撞偵測要「先讀」：它會量畫布容器的 getBoundingClientRect。
+            // 若排在下面的寫 transform 之後，每一幀都會強制瀏覽器同步重排（forced reflow）——
+            // 2026-09 正式建置 trace（CPU 20x）量到拖曳兩次共 639 ms 花在這裡。
+            // 先讀再寫，這一幀的 layout 還是乾淨的，讀取不必重算。
+            const collided = geom.checkCollision
+                ? geom.checkCollision(snappedX, snappedY, clientX, clientY)
+                : null;
+
             // 跟手與落點預覽：直接寫 DOM
             const node = nodeRef.current;
             if (node) node.style.transform = `translate(${rawX}px, ${rawY}px)`;
@@ -134,11 +142,7 @@ export function useDrag(options: UseDragOptions) {
 
             snapRef.current = { x: snappedX, y: snappedY };
 
-            // Check collision for snap position
-            // Modified: We now allow staying in collision state (for swap) and report the collision ID
-            const collided = geom.checkCollision
-                ? geom.checkCollision(snappedX, snappedY, clientX, clientY)
-                : null;
+            // 允許停在碰撞狀態（拖到另一個視窗上＝換位），回報碰撞對象的 id
             if (collided !== collisionRef.current) {
                 collisionRef.current = collided;
                 setCollisionId(collided);

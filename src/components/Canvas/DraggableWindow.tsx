@@ -23,6 +23,7 @@ import { useResize } from './useResize';
 import { GridConfig, PixelPosition } from './gridConfig';
 import { cn } from '../ui/utils';
 import { SwapHint } from './SwapHint';
+import { limitsOf, effectiveMaxW } from './sizeLimits';
 
 export interface CanvasWindow {
     id: string;
@@ -189,7 +190,11 @@ export const DraggableWindow = memo(function DraggableWindow({
         return () => onDragStateChange(window.id, false);
     }, [isDragging, window.id, onDragStateChange]);
 
-    // Resize hook - 四角把手；幾何同樣直接寫 DOM
+    // 尺寸限制以原始值傳入：縮放預覽與落地（SimpleCanvas.clampDesired）用同一組值，放開才不會彈回
+    const { minW: minGridW, minH: minGridH } = limitsOf(window);
+    const maxGridW = effectiveMaxW(window);
+
+    // Resize hook - 四角＋四邊把手；幾何同樣直接寫 DOM
     const { isResizing, cornerHandlers } = useResize({
         cellWidth,
         cellHeight,
@@ -197,6 +202,9 @@ export const DraggableWindow = memo(function DraggableWindow({
         currentHeight: pixelPos.height,
         currentX: pixelPos.x,
         currentY: pixelPos.y,
+        minGridW,
+        minGridH,
+        maxGridW,
         onResizeEnd: handleResizeEnd,
         onResizePreview: handleResizePreview,
         nodeRef,
@@ -235,6 +243,9 @@ export const DraggableWindow = memo(function DraggableWindow({
         "hover:bg-blue-500/30",
         isResizing && "opacity-100 bg-blue-500/50"
     );
+    // 四條邊的把手：避開四角（角把手 16px），平常透明，滑到上面才亮。
+    // 上緣較細：聊天室工具列只離上緣 4px，太粗會吃掉工具列的拖曳範圍
+    const edgeHandleClass = "absolute z-10 opacity-0 hover:opacity-100 hover:bg-blue-500/30 transition-opacity";
 
     return (
         <>
@@ -346,6 +357,12 @@ export const DraggableWindow = memo(function DraggableWindow({
                 >
                     <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-r-2 border-b-2 border-white/40" />
                 </div>
+
+                {/* Four Edge Resize Handles */}
+                <div className={cn(edgeHandleClass, "top-0 left-4 right-4 h-1 cursor-n-resize")} {...cornerHandlers.n} data-edge="n" />
+                <div className={cn(edgeHandleClass, "bottom-0 left-4 right-4 h-1.5 cursor-s-resize")} {...cornerHandlers.s} data-edge="s" />
+                <div className={cn(edgeHandleClass, "left-0 top-4 bottom-4 w-1.5 cursor-w-resize")} {...cornerHandlers.w} data-edge="w" />
+                <div className={cn(edgeHandleClass, "right-0 top-4 bottom-4 w-1.5 cursor-e-resize")} {...cornerHandlers.e} data-edge="e" />
 
                 {/* Size indicator during resize —— 文字由 useResize 直接寫，不走 state */}
                 {isResizing && (

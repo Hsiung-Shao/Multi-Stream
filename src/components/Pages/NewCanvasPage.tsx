@@ -9,6 +9,8 @@ import { DynamicIslandEdgeDock } from '../Navigation/DynamicIslandEdgeDock';
 import { SimpleCanvas, CanvasWindow, WindowRenderProps } from '../Canvas';
 import { limitsOf } from '../Canvas/SimpleCanvas';
 import { CanvasTour } from '../Canvas/CanvasTour';
+import { ChatCollapsedTab } from '../Canvas/ChatCollapsedTab';
+import { isCollapsedChat, chatsCollapsed } from '../../utils/canvasItemOps';
 import { resolveChainFill } from '../Canvas/pushResize';
 import { GRID_COLS } from '../Canvas/gridConfig';
 import { useStreamStore } from '../../store/useStreamStore';
@@ -28,6 +30,8 @@ export const NewCanvasPage = () => {
     const canvasItems = useStreamStore(s => s.canvasItems);
     const updateCanvasLayout = useStreamStore(s => s.updateCanvasLayout);
     const removeCanvasItem = useStreamStore(s => s.removeCanvasItem);
+    const setChatColumnWidth = useStreamStore(s => s.setChatColumnWidth);
+    const showCollapsedTab = useStreamStore(s => chatsCollapsed(s.canvasItems));
 
     useEffect(() => {
         setLayoutMode('canvas');
@@ -52,8 +56,9 @@ export const NewCanvasPage = () => {
     // Convert canvasItems to SimpleCanvas windows format。
     // 刻意「不」在這裡帶入串流標題：標題由 CanvasWindowBody 自己訂閱。
     // 這裡一旦依賴 streams，任何一路的音量／靜音／開台狀態變動都會重建整張畫布。
+    // 收合的聊天室（寬 0，見 canvasItemOps）不交給 SimpleCanvas：推擠、碰撞、連鎖填補都看不到它
     const windows: CanvasWindow[] = useMemo(() => {
-        return canvasItems.map(item => ({
+        return canvasItems.filter(item => !isCollapsedChat(item)).map(item => ({
             id: item.i,
             gridX: item.layout.x,
             gridY: item.layout.y,
@@ -90,7 +95,7 @@ export const NewCanvasPage = () => {
         const after = useStreamStore.getState().canvasItems;
         if (!removed || after.length >= before.length) return;
 
-        const rest: CanvasWindow[] = after.map(item => ({
+        const rest: CanvasWindow[] = after.filter(item => !isCollapsedChat(item)).map(item => ({
             id: item.i,
             gridX: item.layout.x,
             gridY: item.layout.y,
@@ -140,8 +145,12 @@ export const NewCanvasPage = () => {
                     onWindowUpdate={handleWindowUpdate}
                     onWindowRemove={handleWindowRemove}
                     renderContent={renderContent}
+                    onChatColumnResize={setChatColumnWidth}
                 />
             </div>
+
+            {/* 聊天室收合時，右緣的展開標籤 */}
+            {showCollapsedTab && <ChatCollapsedTab />}
 
             {/* UI Layer (Dynamic Island) */}
             <div className="pointer-events-none absolute inset-0 z-50">
