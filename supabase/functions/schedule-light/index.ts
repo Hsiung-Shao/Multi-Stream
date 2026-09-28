@@ -10,9 +10,9 @@
 //   ?shard_size=500&concurrency=25&budget_ms=60000 可調
 
 import { loadRoster } from '../_shared/roster.ts';
-import { groupByChannel, writeLiveStatus } from '../_shared/live_status.ts';
+import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { classifyNewVideos, exhausted, loadPendingYouTube, refreshPending, rssSweep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, refreshPending, rssSweep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
@@ -57,9 +57,12 @@ Deno.serve((req) => {
     // 4. last_live_at + 共享表
     const liveVtubers = [...refreshed.filter((s) => s.status === 'live').map((s) => s.vtuber_id), ...twitchResult.liveVtuberIds];
     await touchLastLiveAt(db, liveVtubers, stats, now);
-    const byChannel = groupByChannel(refreshed);
+    // 共享表：這輪 RSS 掃到的頻道 + 有重查場次的頻道；場次狀態從資料庫讀「目前所有 scheduled/live」，
+    // 不能只用 refreshed（near 範圍與本輪剛寫入的場次都不在裡面，會寫出假的「無直播」）
     const touched = new Map(sweep.processed.map((c) => [c.channelId, c]));
-    for (const c of youtube) if (byChannel.has(c.channelId)) touched.set(c.channelId, c);
+    const refreshedChannels = new Set(refreshed.map((s) => s.channel_id));
+    for (const c of youtube) if (refreshedChannels.has(c.channelId)) touched.set(c.channelId, c);
+    const byChannel = await loadCurrentByChannel(db, [...touched.keys()]);
     stats.live_status_rows = await writeLiveStatus(db, [...touched.values()], byChannel, now);
 
     // 5. snapshot（heavy_refreshed_at 取 Heavy 最後成功時間）

@@ -16,9 +16,9 @@
 //   ?shard_size=400&budget_ms=60000&concurrency=25&tiers=1 可調
 
 import { loadRoster, recomputeTiers } from '../_shared/roster.ts';
-import { groupByChannel, writeLiveStatus } from '../_shared/live_status.ts';
+import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { classifyNewVideos, exhausted, loadPendingYouTube, refreshPending, rssSweep, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, refreshPending, rssSweep, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 import { RSS_FAIL_STREAK_DEAD, RSS_FAIL_STREAK_FOR_FALLBACK } from '../_shared/rules.ts';
@@ -70,10 +70,11 @@ Deno.serve((req) => {
     const liveVtubers = refreshed.filter((s) => s.status === 'live').map((s) => s.vtuber_id);
     await touchLastLiveAt(db, liveVtubers, stats, now);
 
-    // 4b. 共享表：這輪 RSS 掃到的頻道 + 有待處理場次的頻道
-    const byChannel = groupByChannel(refreshed);
+    // 4b. 共享表：這輪 RSS 掃到的頻道 + 有重查場次的頻道；場次狀態從資料庫讀目前所有 scheduled/live
     const touched = new Map(sweep.processed.map((c) => [c.channelId, c]));
-    for (const c of roster) if (byChannel.has(c.channelId)) touched.set(c.channelId, c);
+    const refreshedChannels = new Set(refreshed.map((s) => s.channel_id));
+    for (const c of roster) if (refreshedChannels.has(c.channelId)) touched.set(c.channelId, c);
+    const byChannel = await loadCurrentByChannel(db, [...touched.keys()]);
     stats.live_status_rows = await writeLiveStatus(db, [...touched.values()], byChannel, now);
 
     // 5. snapshot

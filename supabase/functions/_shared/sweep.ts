@@ -73,9 +73,9 @@ export async function rssSweep(
     // Heavy 每一圈開頭會把這些 streak 降回備援門檻再試一次
     if (shouldSkipChannel(ch.rssFailStreak)) {
       opts.stats.rss_skipped_dead += 1;
+      processed.push(ch); // 跳過也算「這一片處理過」，游標才會前進
       return;
     }
-    processed.push(ch);
     let entries: RssEntry[] = [];
     let ok = false;
     let error: string | null = null;
@@ -95,13 +95,14 @@ export async function rssSweep(
       entries = r.entries;
       if (r.status === 429) {
         // YouTube 對單一 IP 的 RSS 限速（本地實測：90 秒內連打 2 萬次會開始回 429）。
-        // 這不是頻道的問題：不算 fail streak，而且這一輪不再開始新的頻道，下一輪從游標繼續
+        // 這不是頻道的問題：不算 fail streak、不算已處理（游標不越過它），而且這一輪不再開始新的頻道
         opts.stats.rss_rate_limited += 1;
         opts.deadline.at = Date.now();
         stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: ch.rssFailStreak, rss_last_error: 'http 429', last_checked_at: nowIso });
         return;
       }
     }
+    processed.push(ch);
     if (ok) {
       opts.stats.rss_ok += 1;
       opts.stats.rss_entries += entries.length;
@@ -148,7 +149,6 @@ export async function writeChannelStates(db: Db, updates: Record<string, unknown
     );
     for (const r of rows) tiers.set(r.channel_id, r.tier);
   }
-  const keys = ['channel_id', 'tier', 'rss_fail_streak', 'rss_last_ok_at', 'rss_last_error', 'last_checked_at'];
   const rows = updates.map((u) => {
     const id = String(u.channel_id);
     const known = tiers.get(id);
@@ -156,13 +156,16 @@ export async function writeChannelStates(db: Db, updates: Record<string, unknown
     if (known == null) base.tier_reason = 'first_seen';
     return base;
   });
-  // 批次 upsert 要求每筆欄位集一致：有 tier_reason 的（新列）與沒有的分兩批送
-  const fresh = rows.filter((r) => 'tier_reason' in r);
-  const existing = rows.filter((r) => !('tier_reason' in r));
-  const normalize = (list: Record<string, unknown>[], extra: string[]) =>
-    list.map((r) => Object.fromEntries([...keys, ...extra].map((k) => [k, r[k] ?? null])));
-  if (existing.length) await db.upsert('schedule_channel_state', normalize(existing, []), 'channel_id');
-  if (fresh.length) await db.upsert('schedule_channel_state', normalize(fresh, ['tier_reason']), 'channel_id');
+  // 批次 upsert 要求每筆欄位集一致，但不能用「缺的補 null」湊齊：失敗列沒有 rss_last_ok_at，
+  // 補 null 會把既有的最後成功時間覆寫掉。改成依欄位集分組，各組各自 upsert。
+  const groups = new Map<string, Record<string, unknown>[]>();
+  for (const r of rows) {
+    const sig = Object.keys(r).sort().join(',');
+    const list = groups.get(sig) ?? [];
+    list.push(r);
+    groups.set(sig, list);
+  }
+  for (const list of groups.values()) await db.upsert('schedule_channel_state', list, 'channel_id');
 }
 
 /**
@@ -204,8 +207,10 @@ export async function classifyNewVideos(
     seenRows.push({ video_id: id, channel_id: cand.channel.channelId, kind: cls.kind, published_at: cand.entry.publishedAt });
     // 30 天內發布的新影片（含一般上傳）才算活動：T2/T3 升 T1。
     // 第一次掃描時 RSS 回的是頻道最新 15 支，可能是幾年前的舊片，不能一律當活動
-    const publishedAt = cand.entry.publishedAt ?? v.facts.scheduledStartTime ?? null;
-    const publishedMs = publishedAt ? Date.parse(publishedAt) : NaN;
+    // 備援路徑沒有 publishedAt，用 actualStart / scheduledStart 代替；未來的時間（常駐框在幾年後）
+    // 夾到 now，否則 last_new_video_at 會是未來、頻道永遠 T1
+    const publishedAt = cand.entry.publishedAt ?? v.facts.actualStartTime ?? v.facts.scheduledStartTime ?? null;
+    const publishedMs = publishedAt ? Math.min(Date.parse(publishedAt), now) : NaN;
     if (Number.isFinite(publishedMs) && now - publishedMs <= TIER1_DAYS * 86_400_000) {
       const prev = latestNew.get(cand.channel.channelId) ?? 0;
       latestNew.set(cand.channel.channelId, Math.max(prev, publishedMs));
@@ -279,8 +284,9 @@ function toStreamRow(ch: RosterChannel, v: YouTubeVideo, status: StreamStatus, f
  * scope 決定配額：
  *   - 'near'（Light 每 5 分鐘）：直播中、或排定時間在 2 小時內（含已過期待判定）的非常駐框場次。
  *     遠期排程與常駐框每 5 分鐘重查沒有意義，卻會把每日配額吃到 3,000+ 單位。
- *   - 'all'（Heavy 每一片）：所有非常駐框的 scheduled / live（抓 tombstone 與改期）。
- *   - 'frames'（Heavy 游標歸零時）：常駐框，一圈查一次就夠（確認還在、或被改回正常排程）。
+ *   - 'all'（Heavy 每一片）：有排定時間、非常駐框的 scheduled / live（抓 tombstone 與改期）。
+ *   - 'frames'（Heavy 游標歸零時）：常駐框，以及沒有排定時間的待機室（本地實測有 193 筆，永遠不會過期），
+ *     一圈查一次就夠（確認還在、或被改回正常排程）。
  */
 export type PendingScope = 'near' | 'all' | 'frames';
 
@@ -288,7 +294,10 @@ export async function loadPendingYouTube(db: Db, now: number, scope: PendingScop
   const nowIso = encodeURIComponent(new Date(now).toISOString());
   const base = `select=${STREAMS_COLS}&platform=eq.youtube&fetched_at=lt.${nowIso}`;
   if (scope === 'frames') {
-    return db.selectAll<StreamRecord>('streams', `${base}&status=eq.scheduled&is_schedule_frame=eq.true`);
+    return db.selectAll<StreamRecord>(
+      'streams',
+      `${base}&status=eq.scheduled&or=(is_schedule_frame.eq.true,scheduled_start.is.null)`,
+    );
   }
   if (scope === 'near') {
     const soon = encodeURIComponent(new Date(now + NEAR_WINDOW_MS).toISOString());
@@ -297,7 +306,27 @@ export async function loadPendingYouTube(db: Db, now: number, scope: PendingScop
       `${base}&is_schedule_frame=eq.false&or=(status.eq.live,and(status.eq.scheduled,scheduled_start.lte.${soon}))`,
     );
   }
-  return db.selectAll<StreamRecord>('streams', `${base}&status=in.(scheduled,live)&is_schedule_frame=eq.false`);
+  return db.selectAll<StreamRecord>(
+    'streams',
+    `${base}&is_schedule_frame=eq.false&or=(status.eq.live,and(status.eq.scheduled,scheduled_start.not.is.null))`,
+  );
+}
+
+/** 共享表要看的「目前狀態」：這些頻道所有 scheduled / live 的場次（含常駐框、含本輪剛寫入的） */
+export async function loadCurrentByChannel(db: Db, channelIds: readonly string[]): Promise<Map<string, StreamRecord[]>> {
+  const out = new Map<string, StreamRecord[]>();
+  for (let i = 0; i < channelIds.length; i += 100) {
+    const rows = await db.selectAll<StreamRecord>(
+      'streams',
+      `select=${STREAMS_COLS}&platform=eq.youtube&status=in.(scheduled,live)&channel_id=${inList(channelIds.slice(i, i + 100))}`,
+    );
+    for (const r of rows) {
+      const list = out.get(r.channel_id) ?? [];
+      list.push(r);
+      out.set(r.channel_id, list);
+    }
+  }
+  return out;
 }
 
 /** Light 重查的時間窗：排定時間在 2 小時內的才每 5 分鐘查 */

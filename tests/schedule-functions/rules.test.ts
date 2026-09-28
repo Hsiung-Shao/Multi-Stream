@@ -137,10 +137,12 @@ describe('snapshot 視窗', () => {
 });
 
 describe('youtube_live_status 列', () => {
-  const ch = { externalId: 'UCxxxxxxxxxxxxxxxxxxxxxx', displayName: '頻道名' };
+  const ch = { externalId: 'UCxxxxxxxxxxxxxxxxxxxxxx' };
   it('直播中優先', () => {
     const row = buildLiveStatusRow(ch, [stream({ status: 'scheduled', scheduled_start: '2026-09-29T00:00:00Z' }), stream({ status: 'live', external_id: 'LiveLiveLiv' })], NOW);
-    expect(row).toMatchObject({ channel_id: ch.externalId, is_live: true, is_upcoming: false, is_schedule_frame: false, video_id: 'LiveLiveLiv', channel_title: '頻道名' });
+    expect(row).toMatchObject({ channel_id: ch.externalId, is_live: true, is_upcoming: false, is_schedule_frame: false, video_id: 'LiveLiveLiv' });
+    // channel_title 不送（不覆寫 live-og 端點寫入的官方頻道名）
+    expect('channel_title' in row).toBe(false);
   });
   it('多個待機室取最近的一個；常駐框只有在沒有待機室時才標', () => {
     const row = buildLiveStatusRow(

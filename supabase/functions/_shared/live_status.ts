@@ -12,7 +12,6 @@ export interface LiveStatusRow extends Record<string, unknown> {
   is_upcoming: boolean;
   is_schedule_frame: boolean;
   video_id: string | null;
-  channel_title: string | null;
   scheduled_start_at: string | null;
   checked_at: string;
 }
@@ -22,18 +21,19 @@ export interface LiveStatusRow extends Record<string, unknown> {
  * streams 的 channel_id 是 vtuber_channels.id，共享表的 channel_id 是 YouTube 的 UC…。
  */
 export function buildLiveStatusRow(
-  channel: Pick<RosterChannel, 'externalId' | 'displayName'>,
+  channel: Pick<RosterChannel, 'externalId'>,
   streams: readonly (StreamRow | StreamRecord)[],
   now: number,
 ): LiveStatusRow {
   const checkedAt = new Date(now).toISOString();
+  // channel_title 不在這裡寫：vtuber_channels.display_name 對 YouTube 幾乎都是 null，
+  // 帶 null 去 upsert 會把 live-og 端點先前寫進去的官方頻道名清掉。欄位不送，既有值就保留。
   const base: LiveStatusRow = {
     channel_id: channel.externalId,
     is_live: false,
     is_upcoming: false,
     is_schedule_frame: false,
     video_id: null,
-    channel_title: channel.displayName ? channel.displayName.slice(0, 200) : null,
     scheduled_start_at: null,
     checked_at: checkedAt,
   };
@@ -64,15 +64,4 @@ export async function writeLiveStatus(
   if (rows.length === 0) return 0;
   await db.upsert('youtube_live_status', rows, 'channel_id');
   return rows.length;
-}
-
-export function groupByChannel(streams: readonly (StreamRow | StreamRecord)[]): Map<string, (StreamRow | StreamRecord)[]> {
-  const m = new Map<string, (StreamRow | StreamRecord)[]>();
-  for (const s of streams) {
-    if (s.status !== 'scheduled' && s.status !== 'live') continue;
-    const list = m.get(s.channel_id) ?? [];
-    list.push(s);
-    m.set(s.channel_id, list);
-  }
-  return m;
 }
