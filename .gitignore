@@ -46,3 +46,9 @@ ui-verify/
 graphify-out/
 # SSG 預渲染的 SSR 中間產物（scripts/prerender.mjs 跑完會刪）
 build-ssr/
+
+# 本地 Supabase：seed 來自正式站資料、functions/.env 含金鑰
+supabase/seed.sql
+supabase/functions/.env
+supabase/.temp/
+scripts/local/reports/
