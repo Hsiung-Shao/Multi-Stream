@@ -16,7 +16,8 @@ export function SelectionBar({ count, room, busy, onOpen, onClear }: SelectionBa
     const { t } = useTranslation('schedule');
     if (count === 0) return null;
     return (
-        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4" role="region" aria-live="polite" aria-label={t('selection.count', { count })}>
+        // 右下角有意見回饋浮動按鈕（FeedbackFAB：fixed bottom-5 right-5）：窄螢幕右側讓出位置，避免蓋住
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center pl-4 pr-20 sm:px-4" role="region" aria-live="polite" aria-label={t('selection.count', { count })}>
             <div className="flex w-full max-w-xl flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border bg-background/95 px-4 py-3 shadow-2xl backdrop-blur">
                 <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{t('selection.count', { count })}</div>
