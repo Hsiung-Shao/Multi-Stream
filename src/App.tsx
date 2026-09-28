@@ -46,6 +46,7 @@ const AboutPage = lazyWithPreload(() => import('./components/AboutPage').then(mo
 const PrivacyPage = lazyWithPreload(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
 const CreatorPage = lazyWithPreload(() => import('./components/Pages/CreatorPage').then(module => ({ 'default': module.CreatorPage })));
 const ComparisonPage = lazyWithPreload(() => import('./components/Pages/ComparisonPage').then(module => ({ 'default': module.ComparisonPage })));
+const SchedulePage = lazyWithPreload(() => import('./components/Pages/SchedulePage').then(module => ({ 'default': module.SchedulePage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
 const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
@@ -62,6 +63,7 @@ const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> =
   privacy: PrivacyPage,
   creator: CreatorPage,
   compare: ComparisonPage,
+  schedule: SchedulePage,
   canvas: CanvasPage,
   instructions: InstructionsPage,
   faq: FAQPage,
@@ -197,7 +199,7 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'creator', 'compare', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
     || isGuidePage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
@@ -324,6 +326,23 @@ export default function App() {
             />
             <ChunkSuspense chunk={ComparisonPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <ComparisonPage />
+            </ChunkSuspense>
+          </>
+        );
+      case 'schedule':
+        return (
+          <>
+            <SEO
+              title={tx('seo:schedule.title')}
+              description={tx('seo:schedule.description')}
+              url={`${SEO_SITE_URL}${PAGE_PATHS.schedule}`}
+              jsonLd={graph(
+                webPage({ type: 'CollectionPage', path: PAGE_PATHS.schedule, name: tx('seo:schedule.title'), description: tx('seo:schedule.description'), inLanguage }),
+                breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: tx('schedule:title'), path: PAGE_PATHS.schedule }]),
+              )}
+            />
+            <ChunkSuspense chunk={SchedulePage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <SchedulePage />
             </ChunkSuspense>
           </>
         );

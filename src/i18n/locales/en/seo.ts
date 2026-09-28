@@ -42,4 +42,6 @@ export default {
     'creator.description': 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.',
     'compare.title': 'MultiTwitch Alternatives Compared: MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
     'compare.description': 'Compare four multi-stream viewers on platforms, stream limits, layouts, multi-chat, share links, mobile support and price.',
+    'schedule.title': 'Taiwanese VTuber Stream Schedule: Who Is Live and Who Streams Next - MultiStream Hub',
+    'schedule.description': 'Taiwanese VTuber YouTube waiting rooms and live Twitch channels in one schedule: see who is live now and the next 7 days, then watch several together in one click.',
 };

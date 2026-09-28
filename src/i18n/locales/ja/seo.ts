@@ -41,4 +41,6 @@ export default {
     'creator.description': 'MultiStream Hub の個人開発者 Hsiung-Shao の紹介：この無料マルチ配信視聴ツールを作った理由と、連絡・サポートの方法。',
     'compare.title': 'MultiTwitch 代替ツール比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
     'compare.description': '4 つのマルチ配信同時視聴ツールを比較：対応プラットフォーム、同時視聴数、レイアウト、複数チャット、共有リンク、モバイル対応、料金。',
+    'schedule.title': '台湾 VTuber 配信スケジュール：今だれが配信中か、7 日間の配信予定 - MultiStream Hub',
+    'schedule.description': '台湾 VTuber の YouTube 待機所と Twitch の配信中チャンネルをひとつのスケジュールに。今の配信と 7 日間の予定を確認し、ワンクリックで同時視聴できます。',
 };

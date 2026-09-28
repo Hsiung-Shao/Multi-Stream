@@ -27,7 +27,7 @@ type TFn = (key: string, options?: Record<string, unknown>) => string;
 const LINK_CLS = 'text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors';
 
 export function SiteFooter({ children, className, analyticsCategory = 'SiteFooter' }: SiteFooterProps) {
-    const { t } = useTranslation(['common', 'compare']);
+    const { t } = useTranslation(['common', 'compare', 'schedule']);
     // i18next 此版型別不接受 'ns:key' 前綴字串,沿用專案慣例以 cast 繞過
     const tx = t as unknown as TFn;
     const track = (label: string) => logEvent(analyticsCategory, 'footer_click', label);
@@ -36,6 +36,7 @@ export function SiteFooter({ children, className, analyticsCategory = 'SiteFoote
         { to: 'about', label: tx('common:landing.footer.about') },
         { to: 'instructions', label: tx('common:landing.footer.tutorial') },
         { to: 'faq', label: tx('common:landing.footer.faq') },
+        { to: 'schedule', label: tx('schedule:title') },
         { to: 'compare', label: tx('compare:title') },
         { to: 'support', label: tx('common:landing.footer.support') },
         { to: 'privacy', label: tx('common:landing.footer.privacy') },

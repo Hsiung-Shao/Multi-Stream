@@ -289,6 +289,14 @@ export const track = {
     streamStart: (platform: string, isFirstStream: boolean) =>
         sendEvent('stream_start', { platform, is_first_stream: isFirstStream }),
 
+    /** 週表勾選後在畫布開啟（tab：live/upcoming；scope：all/favorites） */
+    scheduleOpenMulti: (selectedCount: number, addedCount: number, tab: string, scope: string) =>
+        sendEvent('schedule_open_multi', { selected_count: selectedCount, added_count: addedCount, tab, scope }),
+
+    /** 週表篩選變更（filter：scope/nationality/group/platform/tab） */
+    scheduleFilterChange: (filter: string, value: string) =>
+        sendEvent('schedule_filter_change', { filter, value }),
+
     /** 觀看里程碑（5/15/30/60 分鐘） */
     streamMilestone: (milestoneMinutes: number) =>
         sendEvent('stream_milestone', { milestone_minutes: milestoneMinutes }),

@@ -33,6 +33,7 @@ const SEO_NS_ROUTES: Record<string, string> = {
     '/support': 'support',
     '/about/creator': 'creator',
     '/compare': 'compare',
+    '/schedule': 'schedule',
     ...Object.fromEntries(GUIDE_SLUGS.map((s) => [guidePath(s), `instructions.${s}`])),
 };
 

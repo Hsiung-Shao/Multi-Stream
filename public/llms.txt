@@ -45,6 +45,11 @@ control, a unified chat panel for multiple channels at once, and a local
     Ctrl+/ cheat sheet, Ctrl+K search, Alt+number layouts, and R / M / Delete /
     F / T on the window under the cursor.
 
+- [Stream schedule](https://multistreaming.org/schedule): Taiwanese VTuber
+  schedule built from YouTube waiting rooms and live Twitch channels (live now,
+  next 7 days, just ended); tick several streamers to open them together on
+  the canvas.
+
 - [Compare](https://multistreaming.org/compare): honest feature comparison of
   MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am (platforms,
   stream limits, layouts, multi-chat, share links, mobile, price).

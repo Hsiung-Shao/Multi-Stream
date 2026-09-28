@@ -49,6 +49,9 @@ export function LandingPage() {
                     </div>
                     <nav className="flex items-center gap-1 sm:gap-2">
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                            <RouteLink to="schedule">{tx('schedule:title')}</RouteLink>
+                        </Button>
+                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
                         </Button>
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">

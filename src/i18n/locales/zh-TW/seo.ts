@@ -38,4 +38,6 @@ export default {
     'creator.description': '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。',
     'compare.title': 'MultiTwitch 替代方案比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
     'compare.description': '四款多直播同時觀看工具比較：支援平台、同時路數、佈局、多聊天室、分享連結、手機版與價格，幫你挑最適合的。',
+    'schedule.title': '台灣 VTuber 開台週表：誰正在直播、接下來 7 天誰會開台 - MultiStream Hub',
+    'schedule.description': '整理台灣 VTuber 的 YouTube 待機室與 Twitch 直播中頻道，看誰正在開台、未來 7 天的開台時間，勾選幾位一鍵同時觀看。',
 };

@@ -41,4 +41,6 @@ export default {
     'creator.description': 'MultiStream Hub의 1인 개발자 Hsiung-Shao를 소개합니다: 이 무료 멀티 스트리밍 시청 도구를 만든 이유와 연락·후원 방법.',
     'compare.title': 'MultiTwitch 대안 비교: MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
     'compare.description': '멀티 스트리밍 동시 시청 도구 4종 비교: 지원 플랫폼, 동시 시청 수, 레이아웃, 다중 채팅, 공유 링크, 모바일 지원, 가격.',
+    'schedule.title': '대만 VTuber 방송 스케줄: 지금 누가 방송 중이고 7일 동안 누가 방송하나 - MultiStream Hub',
+    'schedule.description': '대만 VTuber의 YouTube 대기실과 Twitch 방송 채널을 하나의 스케줄로. 지금 방송과 7일간의 예정을 보고 한 번에 함께 시청하세요.',
 };

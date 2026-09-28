@@ -4,6 +4,11 @@ declare const __APP_VERSION__: string;
 /** 教學內容（InstructionsPage + tutorial 文案）的 git 最後修改日 YYYY-MM-DD，vite.config define 注入 */
 declare const __GUIDES_DATE_MODIFIED__: string;
 
+interface ImportMetaEnv {
+    /** 開台週表 snapshot 的完整網址；未設定時由 /api/supabase-config 的 Supabase URL 推導（見 features/schedule/snapshotSource.ts） */
+    readonly VITE_SCHEDULE_SNAPSHOT_URL?: string;
+}
+
 /**
  * 全域 Window 擴充：GA4 / gtag.js + GTM dataLayer。
  *

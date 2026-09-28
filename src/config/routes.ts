@@ -26,6 +26,7 @@ export const PAGE_PATHS: Record<RoutePage, string> = {
     admin: '/admin',
     creator: '/about/creator',
     compare: '/compare',
+    schedule: '/schedule',
     ...GUIDE_PATHS,
 };
 

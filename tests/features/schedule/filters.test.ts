@@ -1,0 +1,95 @@
+import { describe, expect, it } from 'vitest';
+import {
+    countByTab,
+    filterStreams,
+    groupByDay,
+    isFavoriteChannel,
+    listGroups,
+    sameHourKeys,
+    sortLive,
+    toFavoriteKeys,
+} from '../../../src/features/schedule/filters';
+import { DEFAULT_FILTERS } from '../../../src/features/schedule/types';
+import { makeSnapshot, NOW } from './fixtures';
+
+const noFav = toFavoriteKeys([]);
+const TZ = 'Asia/Taipei';
+
+describe('filterStreams', () => {
+    it('預設只顯示 TW', () => {
+        const snap = makeSnapshot();
+        expect(DEFAULT_FILTERS.nationality).toBe('TW');
+        expect(filterStreams(snap, 'live', DEFAULT_FILTERS, noFav).map((s) => s.vtuber_id)).toEqual(['v1']);
+        expect(filterStreams(snap, 'upcoming', DEFAULT_FILTERS, noFav).map((s) => s.external_id)).toEqual(['TaiOneWait1', 'TaiTwoWait1', 'TaiTwoWait2']);
+    });
+
+    it('地區：all 不限、OTHER 是 TW/HK/MY/JP 以外', () => {
+        const snap = makeSnapshot();
+        snap.channels.v2.nationality = 'KR';
+        expect(filterStreams(snap, 'live', { ...DEFAULT_FILTERS, nationality: 'all' }, noFav)).toHaveLength(3);
+        expect(filterStreams(snap, 'upcoming', { ...DEFAULT_FILTERS, nationality: 'OTHER' }, noFav).map((s) => s.vtuber_id)).toEqual(['v2', 'v2']);
+    });
+
+    it('團體與平台', () => {
+        const snap = makeSnapshot();
+        const all = { ...DEFAULT_FILTERS, nationality: 'all' as const };
+        expect(filterStreams(snap, 'upcoming', { ...all, group: '子午計畫' }, noFav).map((s) => s.vtuber_id)).toEqual(['v1']);
+        expect(filterStreams(snap, 'live', { ...all, platform: 'twitch' }, noFav).map((s) => s.vtuber_id)).toEqual(['v1', 'v4']);
+    });
+
+    it('收藏範圍：不套地區篩選；Twitch login 不分大小寫；同一人另一平台的場次也顯示', () => {
+        const snap = makeSnapshot();
+        const fav = toFavoriteKeys([
+            { platform: 'twitch', channelId: 'taione' }, // 名冊存 TaiOne
+            { platform: 'youtube', channelId: 'UC0000000000000000000003' }, // JP
+            { platform: 'other', channelId: 'x' },
+            { platform: 'youtube', channelId: null },
+        ]);
+        const f = { ...DEFAULT_FILTERS, scope: 'favorites' as const };
+        expect(filterStreams(snap, 'live', f, fav).map((s) => s.vtuber_id)).toEqual(['v1', 'v3']);
+        // v1 的 YouTube 待機室也算（收藏的是 Twitch）
+        expect(filterStreams(snap, 'upcoming', f, fav).map((s) => s.external_id)).toEqual(['TaiOneWait1', 'JpWaiting01']);
+        expect(isFavoriteChannel(undefined, fav)).toBe(false);
+    });
+
+    it('countByTab 與 listGroups', () => {
+        const snap = makeSnapshot();
+        expect(countByTab(snap, DEFAULT_FILTERS, noFav)).toEqual({ live: 1, upcoming: 3, recent: 1 });
+        expect(listGroups(snap)).toEqual(['ホロ', '子午計畫'].sort((a, b) => a.localeCompare(b)));
+    });
+});
+
+describe('groupByDay', () => {
+    it('連續 7 天（空的日子也保留），依本地日期分組、每天依時間排序；超出 7 天併到最後一天', () => {
+        const snap = makeSnapshot();
+        const far = { ...snap.upcoming[0], external_id: 'FarFuture01', scheduled_start: '2026-10-20T12:00:00Z' };
+        const late = { ...snap.upcoming[0], external_id: 'LateOverdue', scheduled_start: '2026-09-28T15:00:00Z' }; // 台北 9/28 23:00，已過期但在 3 小時內
+        const days = groupByDay([snap.upcoming[1], snap.upcoming[0], snap.upcoming[2], far, late], NOW, TZ);
+        expect(days.map((d) => d.dayKey)).toEqual(['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05']);
+        expect(days[0].streams.map((s) => s.external_id)).toEqual(['LateOverdue', 'TaiOneWait1', 'TaiTwoWait1']);
+        expect(days[1].streams.map((s) => s.external_id)).toEqual(['TaiTwoWait2']);
+        expect(days[6].streams.map((s) => s.external_id)).toEqual(['FarFuture01']);
+        expect(days[3].streams).toEqual([]);
+    });
+
+    it('跨午夜：UTC 16:30 在台北是隔天 00:30', () => {
+        const snap = makeSnapshot();
+        const s = { ...snap.upcoming[0], scheduled_start: '2026-09-29T16:30:00Z' };
+        const days = groupByDay([s], NOW, TZ);
+        expect(days[1].dayKey).toBe('2026-09-30');
+        expect(days[1].streams).toHaveLength(1);
+    });
+});
+
+describe('sameHourKeys / sortLive', () => {
+    it('同一個本地小時的場次', () => {
+        const snap = makeSnapshot();
+        const hour = sameHourKeys(snap.upcoming, snap.upcoming[0], TZ).map((s) => s.external_id);
+        expect(hour).toEqual(['TaiOneWait1', 'TaiTwoWait1']);
+    });
+
+    it('直播中依觀看數由多到少', () => {
+        const snap = makeSnapshot();
+        expect(sortLive(snap.live).map((s) => s.viewer_count)).toEqual([900, 50, 10]);
+    });
+});

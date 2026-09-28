@@ -142,6 +142,10 @@ export const ROUTE_META = {
         'zh-TW': { title: 'MultiTwitch 替代方案比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am', description: '四款多直播同時觀看工具比較：支援平台、同時路數、佈局、多聊天室、分享連結、手機版與價格，幫你挑最適合的。' },
         en: { title: 'MultiTwitch Alternatives Compared: MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am', description: 'Compare four multi-stream viewers on platforms, stream limits, layouts, multi-chat, share links, mobile support and price.' },
     },
+    '/schedule': {
+        'zh-TW': { title: '台灣 VTuber 開台週表：誰正在直播、接下來 7 天誰會開台 - MultiStream Hub', description: '整理台灣 VTuber 的 YouTube 待機室與 Twitch 直播中頻道，看誰正在開台、未來 7 天的開台時間，勾選幾位一鍵同時觀看。' },
+        en: { title: 'Taiwanese VTuber Stream Schedule: Who Is Live and Who Streams Next - MultiStream Hub', description: 'Taiwanese VTuber YouTube waiting rooms and live Twitch channels in one schedule: see who is live now and the next 7 days, then watch several together in one click.' },
+    },
     '/admin': {
         noindex: true,
         'zh-TW': { title: 'Admin - MultiStream Hub', description: '' },
