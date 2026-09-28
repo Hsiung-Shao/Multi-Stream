@@ -89,12 +89,12 @@ function stream(partial: Partial<StreamRecord>): StreamRecord {
 }
 
 describe('snapshot 視窗', () => {
-  it('upcoming：未來 7 天內、非常駐框、scheduled；recent：24 小時內結束', () => {
+  it('upcoming：未來 7 天內、非常駐框、scheduled；recent：12 小時內結束', () => {
     expect(isUpcomingForSnapshot(stream({ scheduled_start: new Date(NOW + DAY).toISOString() }), NOW)).toBe(true);
     expect(isUpcomingForSnapshot(stream({ scheduled_start: new Date(NOW + 8 * DAY).toISOString() }), NOW)).toBe(false);
     expect(isUpcomingForSnapshot(stream({ scheduled_start: new Date(NOW + DAY).toISOString(), is_schedule_frame: true }), NOW)).toBe(false);
     expect(isRecentForSnapshot(stream({ status: 'ended', actual_end: new Date(NOW - 2 * HOUR).toISOString() }), NOW)).toBe(true);
-    expect(isRecentForSnapshot(stream({ status: 'ended', actual_end: new Date(NOW - 30 * HOUR).toISOString() }), NOW)).toBe(false);
+    expect(isRecentForSnapshot(stream({ status: 'ended', actual_end: new Date(NOW - 13 * HOUR).toISOString() }), NOW)).toBe(false);
   });
 
   it('buildSnapshot：分三桶、null 時間欄位省略、hidden 與常駐框不進、channels 只含有場次的實況主', () => {
@@ -115,17 +115,23 @@ describe('snapshot 視窗', () => {
     const snap = buildSnapshot(streams, vtubers, new Map([['g1', '某團']]), NOW, null);
     expect(snap.version).toBe(1);
     expect('heavy_refreshed_at' in snap).toBe(false);
-    expect(snap.live.map((s) => s.id)).toEqual(['a', 'f']);
-    expect(snap.upcoming.map((s) => s.id)).toEqual(['b']);
-    expect(snap.recent.map((s) => s.id)).toEqual(['c']);
+    expect(snap.live.map((s) => s.external_id)).toEqual(['AbCdEfGhIjK', '123']);
+    expect(snap.upcoming.map((s) => s.external_id)).toEqual(['BbBbBbBbBbB']);
+    expect(snap.recent.map((s) => s.external_id)).toEqual(['CcCcCcCcCcC']);
     expect(Object.keys(snap.channels).sort()).toEqual(['v1', 'v2', 'v4']);
     expect(snap.channels.v1).toEqual({ name: '一號', avatar: 'https://img/1', group: '某團', nationality: 'TW', youtube: 'UC1' });
     expect(snap.channels.v2).toEqual({ name: '二號', nationality: 'JP', youtube: 'UC2', twitch: 'two' });
     const live = snap.live[0];
-    expect(live.url).toBe('https://www.youtube.com/watch?v=AbCdEfGhIjK');
-    expect('scheduled_start' in live).toBe(false);
-    expect('actual_end' in live).toBe(false);
-    expect(snap.live[1].url).toBe('https://www.twitch.tv/four');
+    // 可推導欄位（id / url / thumbnail_url）不放，null 時間欄位省略
+    expect(live).toEqual({
+      vtuber_id: 'v1',
+      platform: 'youtube',
+      external_id: 'AbCdEfGhIjK',
+      source: 'yt_waiting_room',
+      status: 'live',
+      viewer_count: 10,
+      actual_start: new Date(NOW - HOUR).toISOString(),
+    });
     expect('title' in snap.upcoming[0]).toBe(false);
   });
 });

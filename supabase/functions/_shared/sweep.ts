@@ -8,7 +8,7 @@
 import type { Db } from './db.ts';
 import { inList } from './db.ts';
 import { fetchChannelRss, type RssEntry } from './rss.ts';
-import { classifyYouTubeVideo, isExpired, shouldUseApiFallback, TIER1_DAYS, type StreamStatus } from './rules.ts';
+import { classifyYouTubeVideo, isExpired, shouldSkipChannel, shouldUseApiFallback, TIER1_DAYS, type StreamStatus } from './rules.ts';
 import type { YouTubeClient, YouTubeVideo } from './youtube.ts';
 import type { TwitchClient } from './twitch.ts';
 import type { RosterChannel, RunStats, StreamRecord, StreamRow } from './types.ts';
@@ -69,6 +69,12 @@ export async function rssSweep(
   const nowIso = new Date(opts.now).toISOString();
 
   await mapLimit(channels, opts.concurrency, opts.deadline, async (ch) => {
+    // 連續失敗太多次（RSS 與 API 備援都失敗，通常是已刪除／停用的頻道）：跳過，不再花配額；
+    // Heavy 每一圈開頭會把這些 streak 降回備援門檻再試一次
+    if (shouldSkipChannel(ch.rssFailStreak)) {
+      opts.stats.rss_skipped_dead += 1;
+      return;
+    }
     processed.push(ch);
     let entries: RssEntry[] = [];
     let ok = false;
@@ -87,6 +93,14 @@ export async function rssSweep(
       ok = r.ok;
       error = r.error;
       entries = r.entries;
+      if (r.status === 429) {
+        // YouTube 對單一 IP 的 RSS 限速（本地實測：90 秒內連打 2 萬次會開始回 429）。
+        // 這不是頻道的問題：不算 fail streak，而且這一輪不再開始新的頻道，下一輪從游標繼續
+        opts.stats.rss_rate_limited += 1;
+        opts.deadline.at = Date.now();
+        stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: ch.rssFailStreak, rss_last_error: 'http 429', last_checked_at: nowIso });
+        return;
+      }
     }
     if (ok) {
       opts.stats.rss_ok += 1;
@@ -209,11 +223,14 @@ export async function classifyNewVideos(
   if (latestNew.size) {
     await db.upsert(
       'schedule_channel_state',
-      [...latestNew].map(([channelId, ms]) => {
-        const ch = candidates.values().next().value?.channel; // 只為取型別；下面用 promotedSet / roster 的 tier
-        const tier = promotedSet.has(channelId) ? 1 : ch ? 1 : 1;
-        return { channel_id: channelId, tier, tier_reason: 'new_video_seen', tier_updated_at: nowIso, last_new_video_at: new Date(ms).toISOString() };
-      }),
+      // 30 天內有新影片的頻道依定義就是 T1（原本就是 T1 的也一起刷新 last_new_video_at）
+      [...latestNew].map(([channelId, ms]) => ({
+        channel_id: channelId,
+        tier: 1,
+        tier_reason: 'new_video_seen',
+        tier_updated_at: nowIso,
+        last_new_video_at: new Date(ms).toISOString(),
+      })),
       'channel_id',
     );
   }

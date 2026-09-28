@@ -9,9 +9,9 @@ export const EXPIRE_AFTER_HOURS = 3;
 export const RSS_FAIL_STREAK_FOR_FALLBACK = 3;
 export const TIER1_DAYS = 30;
 export const TIER2_DAYS = 90;
-/** 本週表只看未來 7 天 + 過去 24 小時 */
+/** 本週表只看未來 7 天 + 過去 12 小時（本地實測 24 小時的 recent 有 430 場、佔 snapshot 三分之一） */
 export const UPCOMING_WINDOW_DAYS = 7;
-export const RECENT_WINDOW_HOURS = 24;
+export const RECENT_WINDOW_HOURS = 12;
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
@@ -101,6 +101,12 @@ export function computeTier(input: TierInput, now: number): { tier: Tier; reason
 /** RSS 連續失敗達門檻 → 這個頻道改走 playlistItems.list */
 export function shouldUseApiFallback(rssFailStreak: number): boolean {
   return rssFailStreak >= RSS_FAIL_STREAK_FOR_FALLBACK;
+}
+
+/** RSS 與 API 備援都連續失敗達此數 → 視為死頻道，掃描時跳過（Heavy 每圈開頭降回門檻再試一次） */
+export const RSS_FAIL_STREAK_DEAD = 10;
+export function shouldSkipChannel(rssFailStreak: number): boolean {
+  return rssFailStreak >= RSS_FAIL_STREAK_DEAD;
 }
 
 /** 進 snapshot 的 upcoming：未來 7 天內、非常駐框、狀態 scheduled */

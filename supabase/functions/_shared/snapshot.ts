@@ -21,17 +21,20 @@ export interface SnapshotChannel {
   twitch?: string; // login
 }
 
+/**
+ * 場次的精簡表示。前端可自行推導的欄位不放（本地實測 860 場 + 580 頻道的 snapshot 有 600KB，砍掉後約一半）：
+ *   - 觀看網址：youtube → https://www.youtube.com/watch?v=<external_id>；twitch → https://www.twitch.tv/<channels[vtuber_id].twitch>
+ *   - 縮圖：youtube → https://i.ytimg.com/vi/<external_id>/hqdefault.jpg；twitch → https://static-cdn.jtvnw.net/previews-ttv/live_user_<login>-640x360.jpg
+ *   - 主鍵：(platform, external_id) 唯一，不另帶資料庫 uuid
+ */
 export interface SnapshotStream {
-  id: string;
   vtuber_id: string;
   platform: 'youtube' | 'twitch';
   external_id: string;
   source: string;
   status: string;
-  url: string;
   title?: string;
   category?: string;
-  thumbnail_url?: string;
   viewer_count?: number;
   scheduled_start?: string;
   actual_start?: string;
@@ -58,10 +61,7 @@ interface VtuberRow {
   twitch_channel_id: string | null;
 }
 
-function streamUrl(s: StreamRecord, twitchLogin: string | undefined): string {
-  if (s.platform === 'youtube') return `https://www.youtube.com/watch?v=${s.external_id}`;
-  return twitchLogin ? `https://www.twitch.tv/${twitchLogin}` : 'https://www.twitch.tv/';
-}
+const TITLE_MAX = 120;
 
 function omitNull<T extends Record<string, unknown>>(obj: T): T {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== null && v !== undefined)) as T;
@@ -83,16 +83,13 @@ export function buildSnapshot(
 
   const toItem = (s: StreamRecord): SnapshotStream =>
     omitNull({
-      id: s.id,
       vtuber_id: s.vtuber_id,
       platform: s.platform,
       external_id: s.external_id,
       source: s.source,
       status: s.status,
-      url: streamUrl(s, vmap.get(s.vtuber_id)?.twitch_channel_id ?? undefined),
-      title: s.title,
+      title: s.title ? s.title.slice(0, TITLE_MAX) : null,
       category: s.category,
-      thumbnail_url: s.thumbnail_url,
       viewer_count: s.viewer_count,
       scheduled_start: s.scheduled_start,
       actual_start: s.actual_start,

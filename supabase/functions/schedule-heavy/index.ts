@@ -21,6 +21,7 @@ import { publishSnapshot } from '../_shared/snapshot.ts';
 import { classifyNewVideos, exhausted, loadPendingYouTube, refreshPending, rssSweep, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
+import { RSS_FAIL_STREAK_DEAD, RSS_FAIL_STREAK_FOR_FALLBACK } from '../_shared/rules.ts';
 
 const JOB = 'schedule_heavy_rss';
 /** 牆鐘預算（RSS 抓取不再開始新頻道的時間點）；真正的限制是 CPU 時間，見檔頭 */
@@ -43,6 +44,8 @@ Deno.serve((req) => {
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
     const start = roster.length ? shard.cursor_position % roster.length : 0;
     if (start === 0 || params.get('tiers') === '1') {
+      // 死頻道每圈再試一次：streak 降回備援門檻（3），這一圈若還是失敗會再累積回 10
+      await db.update('schedule_channel_state', `rss_fail_streak=gte.${RSS_FAIL_STREAK_DEAD}`, { rss_fail_streak: RSS_FAIL_STREAK_FOR_FALLBACK });
       const tiers = await recomputeTiers(db, roster, now);
       (stats as Record<string, unknown>).tiers = tiers.counts;
       (stats as Record<string, unknown>).metric_date = tiers.latestMetricDate;

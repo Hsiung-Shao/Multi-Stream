@@ -47,6 +47,8 @@ export interface RunStats extends Record<string, unknown> {
   rss_ok: number;
   rss_failed: number;
   rss_fallback_used: number;
+  rss_rate_limited: number;
+  rss_skipped_dead: number;
   rss_entries: number;
   new_video_candidates: number;
   videos_list_calls: number;
@@ -77,6 +79,8 @@ export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats 
     rss_ok: 0,
     rss_failed: 0,
     rss_fallback_used: 0,
+    rss_rate_limited: 0,
+    rss_skipped_dead: 0,
     rss_entries: 0,
     new_video_candidates: 0,
     videos_list_calls: 0,
