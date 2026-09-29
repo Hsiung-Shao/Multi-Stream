@@ -34,6 +34,10 @@ export const OVERRIDES = {
         夢想之都工作室: ['煦'], // 官網沒列，推定離開但無公告
         YahooTV: ['虎妮'], // 長休，官方說不是畢業
     },
+    // 日期只有非官方出處（PTT、巴哈），看起來是估的：標 date-approx，不寫入資料庫
+    date_approx: {
+        比鄰星域: ['星見遙'],
+    },
     // 查證後不是企業勢
     reclassify: {
         恋Vaichu: { kind: 'circle', note: '官方頻道自稱「台V 社團勢」（2026-09-29 查證）' },
@@ -67,12 +71,14 @@ export function applyOverrides(agencies) {
         a.subgroups = [...new Set((a.subgroups ?? []).map((n) => normalizeSubgroup(a.agency, n)).filter(Boolean))];
         const left = new Set(OVERRIDES.left_continues[a.agency] ?? []);
         const unverified = new Set(OVERRIDES.status_unverified[a.agency] ?? []);
+        const approxDate = new Set(OVERRIDES.date_approx[a.agency] ?? []);
         if (OVERRIDES.reclassify[a.agency]) a.reclassify = OVERRIDES.reclassify[a.agency];
         if (OVERRIDES.notes[a.agency]) a.notes = [a.notes, OVERRIDES.notes[a.agency]].filter(Boolean).join('；');
         for (const m of a.members ?? []) {
             m.subgroup = normalizeSubgroup(a.agency, m.subgroup);
             if (left.has(m.name)) m.left_continues = true;
             if (unverified.has(m.name) && !(m.sources ?? []).includes('status-unverified')) m.sources = [...(m.sources ?? []), 'status-unverified'];
+            if (approxDate.has(m.name) && !(m.sources ?? []).includes('date-approx')) m.sources = [...(m.sources ?? []), 'date-approx'];
         }
     }
     return agencies;

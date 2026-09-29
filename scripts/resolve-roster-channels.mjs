@@ -160,6 +160,7 @@ async function main() {
         }
         m._db_id = hit?.id ?? null;
         m._db_group_id = hit?.group_id ?? null;
+        m._db_name = hit?.name ?? null;
         m._db_activity = hit?.activity ?? null;
         if (hit) report.matched += 1;
         else if (m.youtube_channel_id || m.twitch_login) report.newWithChannel += 1;

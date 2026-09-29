@@ -30,6 +30,11 @@
         "虎妮"
       ]
     },
+    "date_approx": {
+      "比鄰星域": [
+        "星見遙"
+      ]
+    },
     "reclassify": {
       "恋Vaichu": {
         "kind": "circle",
@@ -5059,7 +5064,8 @@
           "is_official_channel": false,
           "sources": [
             "https://www.ptt.cc/bbs/Vtuber/M.1701604285.A.B7B.html",
-            "https://forum.gamer.com.tw/C.php?bsn=60608&snA=7667"
+            "https://forum.gamer.com.tw/C.php?bsn=60608&snA=7667",
+            "date-approx"
           ],
           "left_continues": true
         },

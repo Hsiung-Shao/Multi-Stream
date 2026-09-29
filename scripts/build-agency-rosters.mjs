@@ -7,7 +7,8 @@
 // 規則（2026-09-29 使用者裁定＋code review 修正）：
 //   - 逐家查證優先於第三方快照；本次沒查到的人不動
 //   - 比對：YouTube 頻道 ID 或 Twitch login 任一符合（resolve 用 Twitch 比到的人，SQL 也要用 Twitch 找得到）；
-//     頻道對不到但資料庫有同名且完全沒頻道的一列（_match_name）：以名字認人並補頻道
+//     頻道對不到但資料庫有同名且完全沒頻道的一列（_match_name）：以名字認人並補頻道；SQL 一律以資料庫 id 定位
+//   - 頻道對上但名字完全不像（頻道轉給新人等）：不動、列 nameMismatch
 //   - 子團只為「有成員的」建立；名字撞到別家的團體 → 加公司名前綴，絕不搶走別家的團
 //   - 既有成員：只在目前沒團體、或就在這家（含子團）時才改所屬／狀態；掛在別家的人列報告、不動
 //   - 新成員：查得到頻道才新增；頻道或名字已存在就跳過並列報告（vtubers.name 有 UNIQUE）
@@ -44,9 +45,30 @@ export function matchCond(m, alias = 'v') {
     return conds.length === 1 ? conds[0] : `(${conds.join(' or ')})`;
 }
 
+/** 既有成員以資料庫 id 精準定位（resolve 已比對過頻道或名字；避免同一人兩列、或 Twitch 比到的人被 YouTube 條件漏掉） */
+const byId = (m, alias = 'v') => `${alias}.id = ${q(m._db_id)}`;
+
 /** 這家公司（頂層）與其子團的 id 集合（SQL 子查詢） */
 const topId = (agency) => `(select id from public.vtuber_groups where name = ${q(agency)} and parent_id is null)`;
 const treeSql = (agency) => `(select id from public.vtuber_groups where id = ${topId(agency)} or parent_id = ${topId(agency)})`;
+
+/** 名字寬鬆比對：去空白與符號、全半形統一；互相包含，或中文部分／英數部分互相包含 */
+const normName = (s) => (s ?? '').normalize('NFKC').toLowerCase().replace(/[\s·・‧.\-_()（）【】[\]'’]/g, '');
+const cjkPart = (s) => normName(s).replace(/[a-z0-9]/g, '');
+const latPart = (s) => normName(s).replace(/[^a-z0-9]/g, '');
+export function looksLikeSamePerson(dbName, names) {
+    const A = normName(dbName);
+    if (!A) return true;
+    return names.some((x) => {
+        const B = normName(x);
+        if (!B) return false;
+        if (A.includes(B) || B.includes(A)) return true;
+        const ca = cjkPart(dbName), cb = cjkPart(x);
+        if (ca && cb && (ca.includes(cb) || cb.includes(ca))) return true;
+        const la = latPart(dbName), lb = latPart(x);
+        return la.length > 2 && lb.length > 2 && (la.includes(lb) || lb.includes(la));
+    });
+}
 
 export function planRosters(resolved, existingGroups = [], dbRows = []) {
     const groupByName = new Map(existingGroups.map((g) => [g.name, g]));
@@ -57,7 +79,7 @@ export function planRosters(resolved, existingGroups = [], dbRows = []) {
     const collaborators = []; // { m, agency }
     const officials = []; // { m, agency }
     const reclassify = [];
-    const report = { agencies: resolved.length, missingAgency: [], subgroupRenamed: [], otherGroup: [], nameTaken: [], noChannel: [], unresolved: [], duplicates: [] };
+    const report = { agencies: resolved.length, missingAgency: [], subgroupRenamed: [], otherGroup: [], nameMismatch: [], nameTaken: [], noChannel: [], unresolved: [], duplicates: [] };
     const seen = new Map(); // 頻道鍵 → 公司（YouTube 與 Twitch 兩個鍵都登記）
 
     for (const a of resolved) {
@@ -70,11 +92,54 @@ export function planRosters(resolved, existingGroups = [], dbRows = []) {
         const nonAgency = a.reclassify && a.reclassify.kind !== 'agency';
         const treeIds = new Set([top.id, ...existingGroups.filter((g) => g.parent_id === top.id).map((g) => g.id)]);
 
-        // 子團：只為有成員的建立；撞到別家的團名 → 加公司名前綴
-        const subName = new Map();
+        // 1. 先把成員分類（決定誰會真的寫入）
+        const accepted = []; // { m, kind: 'update' | 'insert' }
         for (const m of a.members ?? []) {
-            if (!m.subgroup || nonAgency || m.collaborator || m.is_official_channel || m.subgroup === a.agency) continue;
-            if (subName.has(m.subgroup)) continue;
+            if (m._unresolved) report.unresolved.push(`${a.agency}/${m.name}：${m._unresolved}`);
+            if (m.collaborator) {
+                if (m._db_id || matchCond(m)) collaborators.push({ m, agency: a.agency });
+                continue;
+            }
+            if (!matchCond(m) && !m._db_id) {
+                report.noChannel.push(`${a.agency}/${m.name}（${m.status ?? '?'}）`);
+                continue;
+            }
+            const keys = [m.youtube_channel_id, m.twitch_login && `tw:${m.twitch_login.toLowerCase()}`].filter(Boolean);
+            const dup = keys.find((k) => seen.has(k));
+            if (dup) {
+                report.duplicates.push(`${m.name}：${seen.get(dup)} 與 ${a.agency}（取先出現的）`);
+                continue;
+            }
+            for (const k of keys) seen.set(k, a.agency);
+            if (m.is_official_channel) {
+                if (m._db_id) officials.push({ m, agency: a.agency });
+                continue;
+            }
+            if (m._db_id) {
+                // 頻道對上但名字完全不像（例：頻道在前一位畢業後轉給新人）→ 不動，給人確認
+                if (!m._match_name && m._db_name && !looksLikeSamePerson(m._db_name, [m.name, ...(m.aliases ?? [])])) {
+                    report.nameMismatch.push(`${a.agency}/${m.name}（資料庫同頻道的是「${m._db_name}」）`);
+                    continue;
+                }
+                // 目前掛在別家的人不動（例：已轉籍、或研究把轉個人勢寫成畢業），列報告給人確認
+                if (!m.left_continues && m._db_group_id && !treeIds.has(m._db_group_id)) {
+                    report.otherGroup.push(`${a.agency}/${m.name}（名冊寫 ${m.status}，資料庫目前在別的團體）`);
+                    continue;
+                }
+                accepted.push({ m, kind: 'update' });
+            } else {
+                if (dbNames.has(m.name)) {
+                    report.nameTaken.push(`${a.agency}/${m.name}`);
+                    continue;
+                }
+                accepted.push({ m, kind: 'insert' });
+            }
+        }
+
+        // 2. 子團：只為「真的會掛上成員」的建立（轉個人勢的人不掛子團）；撞到別家的團名 → 加公司名前綴
+        const subName = new Map();
+        for (const { m } of accepted) {
+            if (!m.subgroup || nonAgency || m.left_continues || m.subgroup === a.agency || subName.has(m.subgroup)) continue;
             let name = m.subgroup;
             const g = groupByName.get(name);
             if (g && g.parent_id !== top.id) {
@@ -91,42 +156,9 @@ export function planRosters(resolved, existingGroups = [], dbRows = []) {
             subgroups.push({ name, agency: a.agency });
         }
 
-        for (const m of a.members ?? []) {
-            if (m._unresolved) report.unresolved.push(`${a.agency}/${m.name}：${m._unresolved}`);
-            const target = (m.subgroup && subName.get(m.subgroup)) || a.agency;
-            if (m.collaborator) {
-                if (matchCond(m)) collaborators.push({ m, agency: a.agency });
-                continue;
-            }
-            if (!matchCond(m)) {
-                report.noChannel.push(`${a.agency}/${m.name}（${m.status ?? '?'}）`);
-                continue;
-            }
-            const keys = [m.youtube_channel_id, m.twitch_login && `tw:${m.twitch_login.toLowerCase()}`].filter(Boolean);
-            const dup = keys.find((k) => seen.has(k));
-            if (dup) {
-                report.duplicates.push(`${m.name}：${seen.get(dup)} 與 ${a.agency}（取先出現的）`);
-                continue;
-            }
-            for (const k of keys) seen.set(k, a.agency);
-            if (m.is_official_channel) {
-                if (m._db_id) officials.push({ m, agency: a.agency });
-                continue;
-            }
-            if (m._db_id) {
-                // 目前掛在別家的人不動（例：已轉籍、或研究把轉個人勢寫成畢業），列報告給人確認
-                if (!m.left_continues && m._db_group_id && !treeIds.has(m._db_group_id)) {
-                    report.otherGroup.push(`${a.agency}/${m.name}（名冊寫 ${m.status}，資料庫目前在別的團體）`);
-                    continue;
-                }
-                updates.push({ m, target, agency: a.agency });
-            } else {
-                if (dbNames.has(m.name)) {
-                    report.nameTaken.push(`${a.agency}/${m.name}`);
-                    continue;
-                }
-                inserts.push({ m, target, agency: a.agency });
-            }
+        for (const { m, kind } of accepted) {
+            const target = (!nonAgency && m.subgroup && subName.get(m.subgroup)) || a.agency;
+            (kind === 'update' ? updates : inserts).push({ m, target, agency: a.agency });
         }
     }
     return { subgroups, updates, inserts, collaborators, officials, reclassify, report };
@@ -140,6 +172,7 @@ export function buildRosterSql(plan, header) {
     out.push('create table if not exists backup.vtubers_rosters_20260929 as select id, group_id, former_group_id, is_official, activity, graduated_at, debut_date, youtube_channel_id, twitch_channel_id from public.vtubers;');
     out.push('create table if not exists backup.vtuber_groups_rosters_20260929 as select * from public.vtuber_groups;');
     out.push('create table if not exists backup.vtuber_channels_ids_20260929 as select id from public.vtuber_channels;');
+    out.push('create table if not exists backup.rosters_meta_20260929 as select now() as applied_at;');
     out.push('');
 
     out.push('-- ===== 1a. 重新分類（查證後不是企業勢）=====');
@@ -156,8 +189,7 @@ export function buildRosterSql(plan, header) {
     out.push('-- ===== 2. 既有成員：所屬、狀態、畢業日、出道日（空的才補）、補另一個平台 =====');
     out.push('-- 目前沒團體、或就在這家（含子團）才改；成員要掛的團體必須屬於這家');
     for (const { m, target, agency } of plan.updates) {
-        // 以名字認到的人（資料庫那列沒有任何頻道）：用名字＋「沒頻道」找，更新時一併補上頻道
-        const cond = m._match_name ? `(v.name = ${q(m.name)} and v.youtube_channel_id is null and v.twitch_channel_id is null)` : matchCond(m);
+        const cond = byId(m);
         const verified = statusVerified(m);
         const left = m.left_continues === true;
         const act = left ? null : verified ? toActivity(m.status) : null;
@@ -167,7 +199,7 @@ export function buildRosterSql(plan, header) {
         const sets = left
             ? [
                   `group_id = case when v.group_id in ${tree} then null else v.group_id end`,
-                  `former_group_id = ${topId(agency)}`,
+                  `former_group_id = case when v.former_group_id is null or v.former_group_id in ${tree} then ${topId(agency)} else v.former_group_id end`,
                   // 原本記引退的不改回 active（避免重新開始追蹤已引退的人）
                   `activity = case when v.activity = 'graduate' then v.activity else 'active' end`,
               ]
@@ -175,24 +207,27 @@ export function buildRosterSql(plan, header) {
         sets.push(`graduated_at = ${grad ? `${q(grad)}::date` : 'v.graduated_at'}`);
         sets.push(`debut_date = coalesce(v.debut_date, ${debut ? `${q(debut)}::date` : 'null'})`);
         if (m.twitch_login) sets.push(`twitch_channel_id = coalesce(v.twitch_channel_id, ${q(m.twitch_login)})`);
-        if (m.youtube_channel_id) sets.push(`youtube_channel_id = coalesce(v.youtube_channel_id, ${q(m.youtube_channel_id)})`);
+        // 另一列已經用了這個 YouTube 頻道（同一人兩列）就不補，避免撞 UNIQUE 讓整支 migration 失敗
+        if (m.youtube_channel_id) sets.push(`youtube_channel_id = coalesce(v.youtube_channel_id, case when exists (select 1 from public.vtubers x where x.youtube_channel_id = ${q(m.youtube_channel_id)} and x.id <> v.id) then null else ${q(m.youtube_channel_id)} end)`);
         const changed = [
-            left ? `v.group_id in ${tree} or v.former_group_id is distinct from ${topId(agency)} or v.activity not in ('active', 'graduate')` : `v.group_id is distinct from g.id`,
+            left ? `v.group_id in ${tree} or v.former_group_id is null or v.activity not in ('active', 'graduate')` : `v.group_id is distinct from g.id`,
             act ? `v.activity is distinct from ${q(act)}` : null,
             grad ? `v.graduated_at is distinct from ${q(grad)}::date` : null,
             debut ? `v.debut_date is null` : null,
             m.twitch_login ? `v.twitch_channel_id is null` : null,
-            m.youtube_channel_id ? `v.youtube_channel_id is null` : null,
+            m.youtube_channel_id ? `(v.youtube_channel_id is null and not exists (select 1 from public.vtubers x where x.youtube_channel_id = ${q(m.youtube_channel_id)} and x.id <> v.id))` : null,
         ].filter(Boolean);
         const scope = left ? '' : ` and (v.group_id is null or v.group_id in ${tree})`;
         out.push(`-- ${m.name}`);
-        out.push(`update public.vtubers v set ${sets.join(', ')} from public.vtuber_groups g where g.name = ${q(target)} and g.id in ${tree} and ${cond}${scope} and (${changed.join(' or ')});`);
+        out.push(left
+            ? `update public.vtubers v set ${sets.join(', ')} where ${cond} and ${topId(agency)} is not null and (${changed.join(' or ')});`
+            : `update public.vtubers v set ${sets.join(', ')} from public.vtuber_groups g where g.name = ${q(target)} and g.id in ${tree} and ${cond}${scope} and (${changed.join(' or ')});`);
     }
     out.push('');
 
     out.push('-- ===== 2b. 官方頻道：標記 is_official、掛公司 =====');
     for (const { m, agency } of plan.officials ?? []) {
-        out.push(`update public.vtubers v set is_official = true, group_id = coalesce(v.group_id, ${topId(agency)}) where ${matchCond(m)} and (v.group_id is null or v.group_id in ${treeSql(agency)}) and (v.is_official = false or v.group_id is null);`);
+        out.push(`update public.vtubers v set is_official = true, group_id = coalesce(v.group_id, ${topId(agency)}) where ${byId(m)} and (v.group_id is null or v.group_id in ${treeSql(agency)}) and (v.is_official = false or v.group_id is null);`);
     }
     out.push('');
 
@@ -210,8 +245,8 @@ export function buildRosterSql(plan, header) {
     out.push('');
 
     out.push('-- ===== 4. 頻道表（週表名冊的來源）：本次涉及的成員缺哪個平台就補 =====');
-    for (const { m } of [...plan.updates, ...plan.inserts]) {
-        const who = matchCond(m, 'v');
+    for (const { m } of [...plan.updates.map((x) => ({ ...x, existing: true })), ...plan.inserts]) {
+        const who = m._db_id ? byId(m) : matchCond(m, 'v');
         if (m.youtube_channel_id) {
             out.push(`insert into public.vtuber_channels (vtuber_id, platform, external_id, handle) select v.id, 'youtube', ${q(m.youtube_channel_id)}, ${q(m.youtube_channel_id)} from public.vtubers v where ${who} and not exists (select 1 from public.vtuber_channels c where c.platform = 'youtube' and c.external_id = ${q(m.youtube_channel_id)} and c.status = 'active') limit 1;`);
         }
@@ -223,7 +258,7 @@ export function buildRosterSql(plan, header) {
 
     out.push('-- ===== 5. 合作藝人：不掛團（目前掛在這家或其子團的解除）=====');
     for (const { m, agency } of plan.collaborators) {
-        out.push(`update public.vtubers v set group_id = null where ${matchCond(m)} and v.group_id in ${treeSql(agency)};`);
+        out.push(`update public.vtubers v set group_id = null where ${m._db_id ? byId(m) : matchCond(m)} and v.group_id in ${treeSql(agency)};`);
     }
     out.push('');
     out.push('-- ===== 6. 成員數校正（之後由 trigger 維護）=====');
@@ -245,10 +280,10 @@ function main() {
     const header = `-- 企業勢逐家名冊（含畢業）。由 scripts/build-agency-rosters.mjs 產生，不要手改。
 -- 來源：scripts/data/tw-agency-rosters-2026-09.json（2026-09-29 逐家查證，每位成員附出處）
 -- 依賴：20260929110000（kind／parent_id）、20260929120000（graduated_at／former_group_id／is_official）
--- 部署順序：本檔 → Edge Function → 前端；避開排程時段
+-- 部署順序：本檔 → Edge Function → 前端；避開排程時段。重新套用前先 drop 第 0 段的 backup 表（否則沿用舊快照）
 -- 回滾（依第 0 段備份）：
 --   delete from public.vtubers where contributed_by = '${CONTRIBUTED_BY}';
---   delete from public.vtuber_channels c where not exists (select 1 from backup.vtuber_channels_ids_20260929 b where b.id = c.id);
+--   delete from public.vtuber_channels c where c.created_at = (select applied_at from backup.rosters_meta_20260929) and not exists (select 1 from backup.vtuber_channels_ids_20260929 b where b.id = c.id);
 --   update public.vtubers v set group_id = b.group_id, former_group_id = b.former_group_id, is_official = b.is_official, activity = b.activity, graduated_at = b.graduated_at,
 --     debut_date = b.debut_date, youtube_channel_id = b.youtube_channel_id, twitch_channel_id = b.twitch_channel_id from backup.vtubers_rosters_20260929 b where b.id = v.id;
 --   delete from public.vtuber_groups g where not exists (select 1 from backup.vtuber_groups_rosters_20260929 b where b.id = g.id);
@@ -266,6 +301,7 @@ function main() {
         noChannel: r.noChannel.length,
         unresolved: r.unresolved.length,
         otherGroup: r.otherGroup,
+        nameMismatch: r.nameMismatch,
         nameTaken: r.nameTaken,
         subgroupRenamed: r.subgroupRenamed,
         missingAgency: r.missingAgency,

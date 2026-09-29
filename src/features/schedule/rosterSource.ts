@@ -68,13 +68,14 @@ const toMember = (r: MemberRow, group: string, left: boolean): RosterMember => {
 
 /**
  * 官方頻道不是藝人。首選資料庫的 is_official（企業勢名冊產生器標記）；
- * 欄位還沒上線或沒標到時退回名字判斷：名字等於公司或團名，或帶「官方頻道／Official Channel」。
+ * 欄位已上線（flag 為 boolean）時只再認明寫「官方頻道／Official Channel／(官方)」的名字，不用「名字等於團名」猜
+ * （藝人名剛好和團名相同時會被誤判）；欄位還沒上線（flag 為 undefined）才退回名字等於公司或團名。
  * 它們仍掛在團體上（週表篩選看得到官方直播），只是名冊不列。
  */
 export function isOfficialChannel(name: string, groupNames: readonly string[], flag?: boolean): boolean {
     if (flag) return true;
     const n = name.normalize('NFKC').trim().toLowerCase();
-    if (groupNames.some((g) => g.normalize('NFKC').trim().toLowerCase() === n)) return true;
+    if (flag === undefined && groupNames.some((g) => g.normalize('NFKC').trim().toLowerCase() === n)) return true;
     return /官方頻道|official\s*channel/i.test(n) || /[(（]官方[)）]/.test(n);
 }
 

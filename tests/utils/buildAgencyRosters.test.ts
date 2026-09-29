@@ -2,7 +2,7 @@
 // 新成員（同名跳過）、合作藝人、官方頻道、left_continues、status-unverified、date-approx、reclassify、以名字認人、重複
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error scripts 目錄的 ESM JS 無型別宣告
-import { planRosters, buildRosterSql, toActivity, matchCond, CONTRIBUTED_BY } from '../../scripts/build-agency-rosters.mjs';
+import { planRosters, buildRosterSql, toActivity, matchCond, looksLikeSamePerson, CONTRIBUTED_BY } from '../../scripts/build-agency-rosters.mjs';
 // @ts-expect-error 同上
 import { indexDb, matchDb, normalizeHandle } from '../../scripts/resolve-roster-channels.mjs';
 // @ts-expect-error 同上
@@ -43,7 +43,8 @@ const resolved = [
             member({ name: '玖玖巴', collaborator: true, youtube_channel_id: 'UCjojoba00000000000000aa', _db_id: 'v3' }),
             member({ name: '子午計畫官方', is_official_channel: true, youtube_channel_id: 'UCofficial00000000000000', _db_id: 'v4' }),
             member({ name: '新的官方', is_official_channel: true, youtube_channel_id: 'UCofficial11111111111111' }),
-            member({ name: '沒頻道的人' }),
+            member({ name: '沒頻道的人', subgroup: '只有沒頻道成員的子團' }),
+            member({ name: '新人接手的頻道', youtube_channel_id: 'UCreused0000000000000000', _db_id: 'v9', _db_name: '已畢業的前輩', _db_group_id: 'g1' }),
         ],
     },
     {
@@ -59,7 +60,16 @@ const resolved = [
 describe('planRosters', () => {
     const plan = planRosters(resolved, groups, [{ name: '同名的人' }]);
 
+    it('頻道對上但名字完全不像：不動，列 nameMismatch', () => {
+        expect(plan.report.nameMismatch).toEqual(['子午計畫/新人接手的頻道（資料庫同頻道的是「已畢業的前輩」）']);
+        expect(names(plan.updates)).not.toContain('新人接手的頻道');
+        expect(looksLikeSamePerson('艾琳妮雅·裴利', ['艾琳妮雅'])).toBe(true);
+        expect(looksLikeSamePerson('実Hitomi', ['實 Hitomi'])).toBe(true);
+        expect(looksLikeSamePerson('北溟', ['姬宮乃愛'])).toBe(false);
+    });
+
     it('子團只為有成員的建；撞到別家的團名加公司前綴；沒有的公司列 missingAgency', () => {
+        expect(plan.subgroups.map((x: { name: string }) => x.name)).not.toContain('只有沒頻道成員的子團');
         expect(plan.subgroups).toEqual([
             { name: 'NEO(n)', agency: '子午計畫' },
             { name: '沉珀 Aetris', agency: '子午計畫' },
@@ -94,24 +104,24 @@ describe('buildRosterSql', () => {
         expect(sql).not.toContain("'空的子團'");
     });
 
-    it('既有成員：YouTube 或 Twitch 都能比對；只改沒團體或在本家的；成員要掛的團體必須屬於本家', () => {
-        const l = lineOf(sql, "'UCnew000000000000000000a'");
-        expect(l).toContain("(v.youtube_channel_id = 'UCnew000000000000000000a' or lower(v.twitch_channel_id) = 'oldtw')");
+    it('既有成員：以資料庫 id 定位（Twitch 比到的人也更新得到）；只改沒團體或在本家的；成員要掛的團體必須屬於本家', () => {
+        const l = lineOf(sql, "v.id = 'v5'");
+        expect(l).toContain("youtube_channel_id = coalesce(v.youtube_channel_id, case when exists (select 1 from public.vtubers x where x.youtube_channel_id = 'UCnew000000000000000000a' and x.id <> v.id) then null else 'UCnew000000000000000000a' end)");
         expect(l).toContain("and (v.group_id is null or v.group_id in (select id from public.vtuber_groups where id = (select id from public.vtuber_groups where name = '子午計畫' and parent_id is null)");
         expect(l).toContain("g.name = '子午計畫' and g.id in (select id");
     });
 
     it('畢業：狀態與精確日期寫入；date-approx 的日期不寫', () => {
-        const seki = lineOf(sql, "'UCseki00000000000000000a'");
+        const seki = lineOf(sql, "v.id = 'v2'");
         expect(seki).toContain("activity = 'graduate'");
         expect(seki).toContain("graduated_at = '2024-03-30'::date");
-        expect(lineOf(sql, "'UCapprox0000000000000000'")).toContain('debut_date = coalesce(v.debut_date, null)');
+        expect(lineOf(sql, "v.id = 'v8'")).toContain('debut_date = coalesce(v.debut_date, null)');
     });
 
-    it('以名字認人：資料庫那列沒有任何頻道時用名字找，並補上頻道', () => {
-        const l = lineOf(sql, "v.name = '只有名字的舊人'");
-        expect(l).toContain('v.youtube_channel_id is null and v.twitch_channel_id is null');
-        expect(l).toContain("youtube_channel_id = coalesce(v.youtube_channel_id, 'UCnameonly00000000000000')");
+    it('以名字認人：以 id 定位並補上頻道；頻道表也以 id 補', () => {
+        const l = lineOf(sql, "v.id = 'v7'");
+        expect(l).toContain("then null else 'UCnameonly00000000000000' end)");
+        expect(sql).toContain("select v.id, 'youtube', 'UCnameonly00000000000000', 'UCnameonly00000000000000' from public.vtubers v where v.id = 'v7'");
     });
 
     it('新成員：頻道或名字已存在就跳過；只有 Twitch 的也補頻道表；帶 contributed_by', () => {
@@ -122,13 +132,13 @@ describe('buildRosterSql', () => {
     });
 
     it('官方頻道標 is_official；新的官方頻道不新增', () => {
-        expect(sql).toContain("update public.vtubers v set is_official = true, group_id = coalesce(v.group_id, (select id from public.vtuber_groups where name = '子午計畫' and parent_id is null)) where v.youtube_channel_id = 'UCofficial00000000000000'");
+        expect(sql).toContain("update public.vtubers v set is_official = true, group_id = coalesce(v.group_id, (select id from public.vtuber_groups where name = '子午計畫' and parent_id is null)) where v.id = 'v4'");
         expect(sql).not.toContain('UCofficial11111111111111');
     });
 
     it('status-unverified：只掛團，不改狀態與畢業日', () => {
         const p = planRosters([{ agency: '預見娛樂', subgroups: [], members: [member({ name: '啵妮', status: 'graduated', graduation_date: '2025-01-01', youtube_channel_id: 'UCboni000000000000000000', _db_id: 'b', sources: ['u', 'status-unverified'] })] }], groups);
-        const l = lineOf(buildRosterSql(p, '--'), "'UCboni000000000000000000'");
+        const l = lineOf(buildRosterSql(p, '--'), "v.id = 'b'");
         expect(l).toContain('activity = v.activity');
         expect(l).toContain('graduated_at = v.graduated_at');
     });
@@ -139,9 +149,11 @@ describe('buildRosterSql', () => {
             member({ name: '小金碧碧', status: 'graduated', graduation_date: '2026-01-05', left_continues: true, youtube_channel_id: 'UCbibi000000000000000000' }),
         ] }], groups);
         const out = buildRosterSql(p, '--');
-        const l = lineOf(out, "'UCzhoumo0000000000000000'");
+        const l = lineOf(out, "v.id = 'z'");
         expect(l).toContain("group_id = case when v.group_id in (select id from public.vtuber_groups where id = (select id from public.vtuber_groups where name = '雲際線工作室' and parent_id is null)");
-        expect(l).toContain("former_group_id = (select id from public.vtuber_groups where name = '雲際線工作室' and parent_id is null)");
+        expect(l).toContain("former_group_id = case when v.former_group_id is null or v.former_group_id in (select id");
+        // 不依賴子團是否存在（不 join vtuber_groups g）
+        expect(l).not.toContain('from public.vtuber_groups g');
         expect(l).toContain("activity = case when v.activity = 'graduate' then v.activity else 'active' end");
         expect(l).toContain("graduated_at = '2025-05-29'::date");
         expect(out).toContain("'小金碧碧', 'TW', 'active'");
@@ -157,7 +169,15 @@ describe('buildRosterSql', () => {
     });
 
     it('合作藝人只從這家或其子團解除', () => {
-        expect(sql).toContain("update public.vtubers v set group_id = null where v.youtube_channel_id = 'UCjojoba00000000000000aa' and v.group_id in (select id from public.vtuber_groups where id = (select id");
+        expect(sql).toContain("update public.vtubers v set group_id = null where v.id = 'v3' and v.group_id in (select id from public.vtuber_groups where id = (select id");
+    });
+});
+
+describe('回滾', () => {
+    it('只刪這次新增的頻道（以套用時間定位），不誤刪之後其他流程加的', () => {
+        const p = planRosters([], []);
+        const out = buildRosterSql(p, '--');
+        expect(out).toContain('create table if not exists backup.rosters_meta_20260929 as select now() as applied_at;');
     });
 });
 
