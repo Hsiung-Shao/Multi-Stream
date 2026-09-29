@@ -101,6 +101,12 @@ function StreamBadges({ stream }: { stream: ScheduleStream }) {
     );
 }
 
+/** 團體名（Twitch 與 YouTube 共用同一位實況主的團體）；沒有團體時不顯示 */
+function GroupTag({ channel, className }: { channel: ScheduleChannel | undefined; className?: string }) {
+    if (!channel?.group) return null;
+    return <span className={cn('min-w-0 truncate text-xs text-muted-foreground', className)} title={channel.group}>{channel.group}</span>;
+}
+
 const PLATFORM_DOT: Record<string, string> = {
     youtube: 'bg-[#ff3b3b]',
     twitch: 'bg-[#a970ff]',
@@ -265,6 +271,7 @@ export function LiveTile({ stream, channel, now, selected, onToggle, personLinks
                 <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-1.5">
                         <PersonName channel={channel} name={name} personLinks={personLinks} className="truncate text-sm font-semibold text-foreground" />
+                        {personLinks && <GroupTag channel={channel} className="max-w-[50%] shrink-[2]" />}
                         <StreamBadges stream={stream} />
                     </div>
                     <div className="truncate text-[13px] text-muted-foreground" title={stream.title}>{displayTitle(stream, t('card.untitled'))}</div>
@@ -338,11 +345,13 @@ export function SlotRow({ stream, channel, now, selected, onToggle, personLinks 
                     <>
                         <span className="flex min-w-0 items-center gap-1.5">
                             <PersonName channel={channel} name={name} personLinks className="truncate text-sm font-semibold text-foreground" />
-                            {channel?.group && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{channel.group}</span>}
+                            <GroupTag channel={channel} className="hidden sm:inline" />
                             {/* 手機列寬有限：標籤收起，名字優先 */}
                             <span className="hidden sm:contents"><StreamBadges stream={stream} /></span>
                         </span>
                         <RowMain stream={stream} channel={channel} rounded="rounded-xl" className="block w-full truncate text-[13px] text-muted-foreground">
+                            {/* 手機名字列放不下團名：改放在標題前面 */}
+                            {channel?.group && <span className="sm:hidden">{channel.group} · </span>}
                             {displayTitle(stream, t('card.untitled'))}
                         </RowMain>
                     </>
@@ -389,6 +398,7 @@ export function RecentRow({ stream, channel, now, personLinks = true }: Omit<Sel
                 {personLinks && (
                     <>
                         <PersonName channel={channel} name={name} personLinks className="max-w-[45%] shrink-0 truncate font-medium text-foreground" />
+                        <GroupTag channel={channel} className="max-w-[30%] shrink-0" />
                         <span className="shrink-0 text-muted-foreground" aria-hidden="true">·</span>
                     </>
                 )}

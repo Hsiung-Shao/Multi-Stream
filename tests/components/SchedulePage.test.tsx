@@ -97,6 +97,14 @@ describe('SchedulePage', () => {
         expect(useUIStore.getState().page).toBe('schedule:taione');
     });
 
+    it('團名在 Twitch 與 YouTube 的卡片上都顯示（直播中、接下來）', async () => {
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        // 台一的直播是 Twitch、待機室是 YouTube，團體是同一位實況主的
+        expect(within(section(/直播中/)).getByText('子午計畫')).toBeInTheDocument();
+        expect(within(section(/接下來/)).getAllByText(/子午計畫/).length).toBeGreaterThan(0);
+    });
+
     it('點直播中的卡片：加入畫布（附聊天室）並切到畫布，不開原平台', async () => {
         renderPage();
         await screen.findByText('台一 Twitch');
