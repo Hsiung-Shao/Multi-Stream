@@ -1,0 +1,333 @@
+{
+  "_說明": "台灣 VTuber 團體分類（2026-09-29 查證）。成員來自 docs/TaiwanVTuberTrackingDataJson-master/api/v2/all/groups.json（2026-03 快照），以 YouTube 頻道 ID／Twitch login 對到 vtubers。未列在這裡的台灣團體一律 kind=unverified。kind：agency 企業勢／circle 社團／personal 個人工作室或家族／unverified 未查證。subgroups：只有逐人對應查得到才建子團。collaborators：合作藝人，不掛團。exclude：不是團體（例如節目），不建立。",
+  "verified_at": "2026-09-29",
+  "companies": [
+    {
+      "name": "春魚創意",
+      "note": "春魚創意股份有限公司（統編 50968413），與 STORIA 合辦 SquareLive 品牌",
+      "source_url": "https://zh.wikipedia.org/zh-tw/春魚工作室",
+      "subgroups": [
+        {
+          "name": "極深空計畫",
+          "members": [
+            "厄倫蒂兒",
+            "涅默",
+            "埃穆亞",
+            "熙歌"
+          ],
+          "source_url": "https://zh.wikipedia.org/zh-tw/春魚工作室"
+        },
+        {
+          "name": "瑟拉斯蒂歐",
+          "members": [
+            "雲隙光",
+            "冰霧",
+            "白白虹",
+            "幻月"
+          ],
+          "source_url": "https://zh.wikipedia.org/zh-tw/春魚工作室"
+        },
+        {
+          "name": "諦覓司",
+          "members": [
+            "穆恩佐",
+            "格萊伊",
+            "賽特珞",
+            "艾斯珀達"
+          ],
+          "source_url": "https://zh.wikipedia.org/zh-tw/春魚工作室"
+        },
+        {
+          "name": "Para≠dox",
+          "members": [
+            "拉斐利婭",
+            "安特羅迦"
+          ],
+          "source_url": "https://gnn.gamer.com.tw/detail.php?sn=304923"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "SquareLive",
+      "kind": "agency",
+      "parent": "春魚創意",
+      "note": "春魚創意與 STORIA 合辦的品牌；已查到子團的成員掛子團，其餘掛這裡",
+      "source_url": "https://zh.wikipedia.org/zh-tw/春魚工作室",
+      "collaborators": [
+        "兔姬"
+      ]
+    },
+    {
+      "name": "預見娛樂",
+      "kind": "agency",
+      "note": "魔競娛樂子公司；子團 EXITUS、MeloNyx、Alluria、音雲漫步計畫、CaKano、ælis（逐人對應未查到，成員先掛公司層）",
+      "source_url": "https://www.envisionvtuber.com.tw/artist/list/all"
+    },
+    {
+      "name": "子午計畫",
+      "kind": "agency",
+      "note": "子午計畫有限公司；新團沉珀 Aetris 2026-09-18～20 出道（頻道未收錄）；玖玖巴、KSP 為合作藝人",
+      "source_url": "https://official-website.meridianproject.tw/talents",
+      "collaborators": [
+        "玖玖巴",
+        "KSP"
+      ]
+    },
+    {
+      "name": "ReLive Project",
+      "kind": "agency",
+      "note": "媒體專訪執行長，簽約 12 位",
+      "source_url": "https://relive-project0.com/"
+    },
+    {
+      "name": "Mojoy Live",
+      "kind": "agency",
+      "note": "MOJOY 平台（育碧台東、智寶國際等出資）",
+      "source_url": "https://mojoy.io/"
+    },
+    {
+      "name": "Limnos",
+      "kind": "agency",
+      "note": "2026-08-17 宣布，2026-10-31 停止營運；成員 10 月陸續畢業",
+      "source_url": "https://game.udn.com/game/story/122089/9698123"
+    },
+    {
+      "name": "TSA Studio",
+      "kind": "agency",
+      "note": "時空管制署；產業地圖列為經紀公司",
+      "source_url": "https://vtubervibes.com/industry-map/"
+    },
+    {
+      "name": "哇啦咚咚工作室",
+      "kind": "agency",
+      "note": "WaraDoNDoN；旗下 Reverie",
+      "source_url": "https://vtubervibes.com/industry-map/"
+    },
+    {
+      "name": "雲際線工作室",
+      "kind": "agency",
+      "note": "Cloud Horizon；產業地圖列為經紀公司",
+      "source_url": "https://vtubervibes.com/industry-map/"
+    },
+    {
+      "name": "鹿鳴娛樂",
+      "kind": "agency",
+      "note": "Moschus Hoot；自有網域商務信箱、期生招募",
+      "source_url": "https://x.com/MoschusHoot"
+    },
+    {
+      "name": "VerseLink",
+      "kind": "agency",
+      "note": "官網招募與成員頁",
+      "source_url": "https://verselink.studio/member"
+    },
+    {
+      "name": "Vlive Lab",
+      "kind": "agency",
+      "note": "未來實驗所；官網商務媒合",
+      "source_url": "https://vlivelab.com/"
+    },
+    {
+      "name": "靛之森",
+      "kind": "agency",
+      "note": "Ainomori；由艷世 YENZdesign 製作營運",
+      "source_url": "https://ainomori.tv/"
+    },
+    {
+      "name": "比爾數位科技",
+      "kind": "agency",
+      "note": "比爾數位科技有限公司",
+      "source_url": "https://www.incgmedia.com/people/bd-rellusion-vtuber-solution"
+    },
+    {
+      "name": "Mirolive",
+      "kind": "agency",
+      "note": "米諾文創娛樂有限公司（依漏列查證的名稱對應，未逐筆附出處）"
+    },
+    {
+      "name": "箱箱The Box",
+      "kind": "agency",
+      "note": "箱箱有限公司（依漏列查證的名稱對應，未逐筆附出處）"
+    },
+    {
+      "name": "蜂沛創意行銷有限公司",
+      "kind": "agency",
+      "note": "璐洛洛的經紀公司（依漏列查證的名稱對應，未逐筆附出處）"
+    },
+    {
+      "name": "公共電視文化事業基金會",
+      "kind": "agency",
+      "note": "公視 VTuber（依漏列查證的名稱對應，未逐筆附出處）"
+    },
+    {
+      "name": "YahooTV",
+      "kind": "agency",
+      "note": "Yahoo 奇摩 VTuber 大合虎子（依漏列查證的名稱對應，未逐筆附出處）"
+    },
+    {
+      "name": "夢想之都工作室",
+      "kind": "agency",
+      "note": "傾向企業勢（官網徵選與商務信箱，查不到公司登記）",
+      "source_url": "https://www.dreamcity.studio/vtuber/"
+    },
+    {
+      "name": "L.M. Live",
+      "kind": "agency",
+      "note": "傾向企業勢（期生制度，查不到公司登記）",
+      "source_url": "https://usadanews.com/agencies/l-m-live/"
+    },
+    {
+      "name": "恋Vaichu",
+      "kind": "agency",
+      "note": "傾向企業勢（自稱經紀，查不到公司登記）；Yuki 白昭雪、幽夢聆音為合作藝人",
+      "source_url": "https://www.youtube.com/channel/UC93733Iz1fQKLJmUeiDuUmQ",
+      "collaborators": [
+        "Yuki 白昭雪",
+        "幽夢聆音"
+      ]
+    },
+    {
+      "name": "點一璃Glaçage",
+      "kind": "agency",
+      "note": "傾向企業勢（設計工作室營運藝人，查不到公司登記）",
+      "source_url": "https://x.com/GlacageDesign"
+    },
+    {
+      "name": "Leor Live",
+      "kind": "agency",
+      "note": "傾向企業勢（官網自稱培育 VTuber 的台灣團隊，查不到公司登記）",
+      "source_url": "https://www.leorlive.com/"
+    },
+    {
+      "name": "SPECIAL DEFENSE SQUAD",
+      "kind": "agency",
+      "note": "傾向企業勢（公司網域信箱與徵選，查不到公司名稱）",
+      "source_url": "https://x.com/sdsquad777"
+    },
+    {
+      "name": "比鄰星域",
+      "kind": "agency",
+      "note": "傾向企業勢（Proxima Sector；查不到公司名稱）",
+      "source_url": "https://www.facebook.com/ProximaSector/"
+    },
+    {
+      "name": "古德文創",
+      "kind": "agency",
+      "note": "傾向企業勢（Goodcc；以品牌名義主辦賽事，查不到統編）",
+      "source_url": "https://x.com/goodcc_tw"
+    },
+    {
+      "name": "花遊工作室",
+      "kind": "agency",
+      "note": "傾向企業勢（自稱經營團隊、參展，查不到公司登記）",
+      "source_url": "https://www.moelong.com/moelongnews/archives/16213"
+    },
+    {
+      "name": "Yololive",
+      "kind": "agency",
+      "note": "傾向企業勢（YoloLive production，高雄經營團隊，查不到公司登記）",
+      "source_url": "https://www.facebook.com/YoloLiveProduction/"
+    },
+    {
+      "name": "終焉理想庭",
+      "kind": "circle",
+      "note": "成員多為個人勢兼掛的共同企劃",
+      "source_url": "https://x.com/ultimateutopia8"
+    },
+    {
+      "name": "土芒果社",
+      "kind": "circle",
+      "note": "成員頻道自註 TMG_Not_Company",
+      "source_url": "https://x.com/fangdongtmg"
+    },
+    {
+      "name": "煥悅工作室",
+      "kind": "circle",
+      "note": "第三方企劃列為社團勢力",
+      "source_url": "https://x.com/huanyue_vtuber"
+    },
+    {
+      "name": "織女星project",
+      "kind": "circle",
+      "note": "同好團（ALYR）",
+      "source_url": "https://x.com/alyr_01"
+    },
+    {
+      "name": "白拓Hakutaku",
+      "kind": "circle",
+      "note": "台灣社團白拓",
+      "source_url": "https://vtuberknower.com/sumine_ruri_debut/"
+    },
+    {
+      "name": "ParalReturners",
+      "kind": "circle",
+      "note": "獨立團體（異箱團）",
+      "source_url": "https://x.com/paralreterners"
+    },
+    {
+      "name": "超異界通信+",
+      "kind": "circle",
+      "note": "非人設定 VTuber 的共同企劃",
+      "source_url": "https://idconnect-plus.netlify.app/"
+    },
+    {
+      "name": "MOMOMO團",
+      "kind": "circle",
+      "note": "傾向社團（查不到經營方）",
+      "source_url": "https://www.facebook.com/p/Momomo%E5%9C%98-%E3%83%A2%E3%83%A2%E3%83%A2%E5%9B%A3-100064154940201/"
+    },
+    {
+      "name": "塩月家",
+      "kind": "personal",
+      "note": "以家族設定經營",
+      "source_url": "https://shiotsukistudio.carrd.co/"
+    },
+    {
+      "name": "Lamplighter5",
+      "kind": "personal",
+      "note": "愛琳諾菈的個人工作室（兼營素材販售）",
+      "source_url": "https://www.youtube.com/channel/UCmO8xJjIYrv6kGtGJF_nIMg"
+    },
+    {
+      "name": "芥川組",
+      "kind": "unverified",
+      "note": "像有營運方的企劃，查不到公司名",
+      "source_url": "https://portaly.cc/StudioAkutagawa"
+    },
+    {
+      "name": "星軌工作室",
+      "kind": "unverified",
+      "note": "營運中（三期生 2025-07 出道），查不到公司資料",
+      "source_url": "https://x.com/PleiadesAim_ST"
+    },
+    {
+      "name": "弓炬計畫",
+      "kind": "unverified",
+      "note": "經紀／推廣企劃，查不到公司；莉諾、潮汐春実為合作藝人",
+      "source_url": "https://lit.link/en/torchbow",
+      "collaborators": [
+        "莉諾です",
+        "潮汐春実"
+      ]
+    },
+    {
+      "name": "湮雨計畫",
+      "kind": "unverified",
+      "note": "有期生招募，經營方查不到",
+      "source_url": "https://x.com/rui_neu"
+    },
+    {
+      "name": "CormaNewMedia",
+      "kind": "unverified",
+      "note": "可能是科碼新媒體股份有限公司（僅從名稱推斷）"
+    }
+  ],
+  "exclude": [
+    {
+      "name": "你啊罵火鍋",
+      "reason": "VTuber Podcast 節目，不是團體"
+    }
+  ]
+}

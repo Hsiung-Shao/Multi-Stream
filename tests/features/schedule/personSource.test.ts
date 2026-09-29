@@ -1,6 +1,6 @@
 // 個人週表資料層：slug 檢查、查無此人、合併場次掛到主場次、7 天／30 天分段、連線設定來源
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchPerson, resetPersonSourceCache, splitPersonStreams, type PersonStreamRow } from '../../../src/features/schedule/personSource';
+import { agencyOf, fetchPerson, resetPersonSourceCache, splitPersonStreams, type PersonStreamRow } from '../../../src/features/schedule/personSource';
 
 const NOW = Date.parse('2026-09-29T04:00:00Z');
 
@@ -53,6 +53,15 @@ describe('splitPersonStreams', () => {
     });
 });
 
+describe('agencyOf', () => {
+    it('子團取所屬公司、企業勢本身取自己、社團與未查證沒有', () => {
+        expect(agencyOf({ name: '瑟拉斯蒂歐', kind: 'agency', parent: { name: '春魚創意', kind: 'agency' } })).toBe('春魚創意');
+        expect(agencyOf({ name: '子午計畫', kind: 'agency', parent: null })).toBe('子午計畫');
+        expect(agencyOf({ name: '某社團', kind: 'circle', parent: null })).toBeNull();
+        expect(agencyOf(null)).toBeNull();
+    });
+});
+
 describe('fetchPerson', () => {
     beforeEach(() => resetPersonSourceCache());
     const env = { envUrl: 'http://127.0.0.1:57321/', envAnonKey: 'anon-test', now: NOW };
@@ -75,14 +84,14 @@ describe('fetchPerson', () => {
             if (url.includes('/rest/v1/vtubers')) {
                 return jsonResponse([{
                     id: 'v1', name: '台一', img_url: 'https://yt3.ggpht.com/a', nationality: 'TW', youtube_channel_id: 'UC1', twitch_channel_id: 'taione',
-                    slug: 'taione', schedule_indexable: true, vtuber_groups: { name: '子午計畫' },
+                    slug: 'taione', schedule_indexable: true, vtuber_groups: { name: '子午計畫', kind: 'agency', parent: null },
                 }]);
             }
             if (url.includes('status=in.')) return jsonResponse([row({ id: 'yt', status: 'live' })]);
             return jsonResponse([row({ id: 'e1', status: 'ended', actual_end: '2026-09-28T00:00:00Z' })]);
         });
         const p = await fetchPerson('taione', { ...env, fetchFn: fetchFn as unknown as typeof fetch });
-        expect(p?.channel).toEqual({ name: '台一', nationality: 'TW', slug: 'taione', avatar: 'https://yt3.ggpht.com/a', group: '子午計畫', youtube: 'UC1', twitch: 'taione' });
+        expect(p?.channel).toEqual({ name: '台一', nationality: 'TW', slug: 'taione', avatar: 'https://yt3.ggpht.com/a', group: '子午計畫', agency: '子午計畫', youtube: 'UC1', twitch: 'taione' });
         expect(p?.indexable).toBe(true);
         expect(p?.live).toHaveLength(1);
         expect(p?.recent.map((s) => s.external_id)).toEqual(['e1']);
@@ -111,6 +120,19 @@ describe('fetchPerson', () => {
         await fetchPerson('someone', opts);
         expect(fetchFn.mock.calls.filter((c) => c[0] === '/api/supabase-config')).toHaveLength(1);
         expect(fetchFn.mock.calls[1][0]).toMatch(/^https:\/\/x\.supabase\.co\/rest\/v1\/vtubers\?/);
+    });
+
+    it('團體新欄位還沒上線（PostgREST 400）時退回只查團名', async () => {
+        const fetchFn = vi.fn(async (url: string) => {
+            if (url.includes('/rest/v1/vtubers') && decodeURIComponent(url).includes('parent:parent_id')) return new Response('{"code":"42703"}', { status: 400 });
+            if (url.includes('/rest/v1/vtubers')) {
+                return jsonResponse([{ id: 'v1', name: '台一', img_url: null, nationality: 'TW', youtube_channel_id: 'UC1', twitch_channel_id: null, slug: 'taione', schedule_indexable: false, vtuber_groups: { name: '子午計畫' } }]);
+            }
+            return jsonResponse([]);
+        });
+        const p = await fetchPerson('taione', { ...env, fetchFn: fetchFn as unknown as typeof fetch });
+        expect(p?.channel.group).toBe('子午計畫');
+        expect(p?.channel.agency).toBeUndefined();
     });
 
     it('HTTP 錯誤丟出 SnapshotError（交給 TanStack Query 重試／顯示錯誤）', async () => {

@@ -7,6 +7,7 @@ import type {
     ScheduleStream,
     ScheduleTab,
 } from './types';
+import { GROUP_ANY_AGENCY, GROUP_NO_AGENCY } from './types';
 
 /** 收藏比對用的鍵：YouTube 頻道 ID 原樣、Twitch login 轉小寫 */
 export interface FavoriteKeys {
@@ -60,17 +61,28 @@ export function filterStreams(
     return snapshot[tab].filter((s) => {
         const ch = snapshot.channels[s.vtuber_id];
         if (filters.platform !== 'all' && s.platform !== filters.platform) return false;
-        if (filters.group !== 'all' && ch?.group !== filters.group) return false;
+        if (!matchesAgency(ch, filters.group)) return false;
         if (filters.scope === 'favorites') return isFavoriteChannel(ch, favorites);
         return matchesNationality(ch, filters.nationality);
     });
 }
 
-/** snapshot 裡出現過的團體（依名稱排序），給團體下拉選單 */
+/** 所屬篩選：不限／所有企業勢／非企業勢／指定企業勢 */
+export function matchesAgency(ch: ScheduleChannel | undefined, want: string): boolean {
+    if (want === 'all') return true;
+    if (want === GROUP_ANY_AGENCY) return !!ch?.agency;
+    if (want === GROUP_NO_AGENCY) return !ch?.agency;
+    return ch?.agency === want;
+}
+
+/**
+ * snapshot 裡出現過的企業勢（依週表上的人數多到少，同數依名稱），給「所屬」下拉選單。
+ * 只列企業勢：台灣有兩百多個社團與未查證的小團體，全列會讓下拉無法使用（卡片上仍顯示團名）。
+ */
 export function listGroups(snapshot: ScheduleSnapshot): string[] {
-    const set = new Set<string>();
-    for (const ch of Object.values(snapshot.channels)) if (ch.group) set.add(ch.group);
-    return [...set].sort((a, b) => a.localeCompare(b));
+    const count = new Map<string, number>();
+    for (const ch of Object.values(snapshot.channels)) if (ch.agency) count.set(ch.agency, (count.get(ch.agency) ?? 0) + 1);
+    return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
 }
 
 /** 各分頁在目前篩選下的筆數（分頁標籤上的數字） */

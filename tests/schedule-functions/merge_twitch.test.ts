@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computeMerges, mergeChanges, MERGE_WINDOW_MS, type MergeInput } from '../../supabase/functions/_shared/merge.ts';
 import { TwitchClient, toScheduleSegment } from '../../supabase/functions/_shared/twitch.ts';
 import { scheduleRowsFor } from '../../supabase/functions/_shared/sweep.ts';
-import { buildSnapshot, type SnapshotSourceRow } from '../../supabase/functions/_shared/snapshot.ts';
+import { buildSnapshot, resolveGroups, type SnapshotSourceRow } from '../../supabase/functions/_shared/snapshot.ts';
 import type { RosterChannel } from '../../supabase/functions/_shared/types.ts';
 
 const T0 = Date.parse('2026-09-29T12:00:00Z');
@@ -259,6 +259,22 @@ describe('Twitch 週表的補強（code review 修正）', () => {
     const stats = emptyStats('heavy', T0);
     await expect(softStep(stats, 'merge', async () => { throw new Error('db down'); })).resolves.toBeUndefined();
     expect(stats.errors).toEqual(['merge: db down']);
+  });
+});
+
+describe('snapshot 所屬企業勢', () => {
+  it('resolveGroups：企業勢子團取所屬公司、企業勢本身取自己、社團與未查證沒有', () => {
+    const g = resolveGroups([
+      { id: 'c', name: '春魚創意', kind: 'agency', parent_id: null },
+      { id: 's', name: '瑟拉斯蒂歐', kind: 'agency', parent_id: 'c' },
+      { id: 'a', name: '子午計畫', kind: 'agency', parent_id: null },
+      { id: 'k', name: '某社團', kind: 'circle', parent_id: null },
+      { id: 'u', name: '某團', kind: 'unverified', parent_id: null },
+    ]);
+    expect(g.get('s')).toEqual({ name: '瑟拉斯蒂歐', agency: '春魚創意' });
+    expect(g.get('a')).toEqual({ name: '子午計畫', agency: '子午計畫' });
+    expect(g.get('k')?.agency).toBeNull();
+    expect(g.get('u')?.agency).toBeNull();
   });
 });
 

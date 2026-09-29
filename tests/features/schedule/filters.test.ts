@@ -12,7 +12,7 @@ import {
     sortLive,
     toFavoriteKeys,
 } from '../../../src/features/schedule/filters';
-import { DEFAULT_FILTERS } from '../../../src/features/schedule/types';
+import { DEFAULT_FILTERS, GROUP_ANY_AGENCY, GROUP_NO_AGENCY } from '../../../src/features/schedule/types';
 import { makeSnapshot, NOW } from './fixtures';
 
 const noFav = toFavoriteKeys([]);
@@ -37,6 +37,9 @@ describe('filterStreams', () => {
         const snap = makeSnapshot();
         const all = { ...DEFAULT_FILTERS, nationality: 'all' as const };
         expect(filterStreams(snap, 'upcoming', { ...all, group: '子午計畫' }, noFav).map((s) => s.vtuber_id)).toEqual(['v1']);
+        // 所屬：所有企業勢／非企業勢（v1 屬子午計畫；v2、v3 沒有企業勢）
+        expect(filterStreams(snap, 'upcoming', { ...all, group: GROUP_ANY_AGENCY }, noFav).map((s) => s.vtuber_id)).toEqual(['v1']);
+        expect(filterStreams(snap, 'upcoming', { ...all, group: GROUP_NO_AGENCY }, noFav).map((s) => s.vtuber_id)).toEqual(['v2', 'v2', 'v3']);
         expect(filterStreams(snap, 'live', { ...all, platform: 'twitch' }, noFav).map((s) => s.vtuber_id)).toEqual(['v1', 'v4']);
     });
 
@@ -58,7 +61,8 @@ describe('filterStreams', () => {
     it('countByTab 與 listGroups', () => {
         const snap = makeSnapshot();
         expect(countByTab(snap, DEFAULT_FILTERS, noFav)).toEqual({ live: 1, upcoming: 3, recent: 1 });
-        expect(listGroups(snap)).toEqual(['ホロ', '子午計畫'].sort((a, b) => a.localeCompare(b)));
+        // 只列企業勢（ホロ 在 fixture 裡沒有 agency，不列）
+        expect(listGroups(snap)).toEqual(['子午計畫']);
     });
 });
 

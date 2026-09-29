@@ -111,7 +111,8 @@ const daysAgo = (n) => new Date(Date.now() - n * 86400_000).toISOString().slice(
 
 const main = async () => {
   const t0 = Date.now();
-  const groups = await fetchAll('vtuber_groups');
+  // 子團的 parent_id 指向同表的公司：公司（parent_id 為 null）排前面，分批插入時不會先插到子團
+  const groups = (await fetchAll('vtuber_groups')).sort((a, b) => (a.parent_id ? 1 : 0) - (b.parent_id ? 1 : 0));
   const vtubers = await fetchAll('vtubers');
   const channels = await fetchAll('vtuber_channels');
   const yt = await fetchAll('youtube_channels');

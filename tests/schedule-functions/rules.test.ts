@@ -112,7 +112,7 @@ describe('snapshot 視窗', () => {
       { id: 'v3', name: '三號', img_url: null, nationality: 'TW', group_id: null, youtube_channel_id: 'UC3', twitch_channel_id: null },
       { id: 'v4', name: '四號', img_url: null, nationality: 'TW', group_id: null, youtube_channel_id: null, twitch_channel_id: 'four' },
     ];
-    const snap = buildSnapshot(streams, vtubers, new Map([['g1', '某團']]), NOW, null);
+    const snap = buildSnapshot(streams, vtubers, new Map([['g1', { name: '某團', agency: null }]]), NOW, null);
     expect(snap.version).toBe(1);
     expect('heavy_refreshed_at' in snap).toBe(false);
     expect(snap.live.map((s) => s.external_id)).toEqual(['AbCdEfGhIjK', '123']);

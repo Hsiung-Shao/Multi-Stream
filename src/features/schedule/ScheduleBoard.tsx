@@ -15,7 +15,7 @@ import { LiveTile, RecentRow } from './ScheduleCard';
 import { ScheduleToolbar } from './ScheduleToolbar';
 import { DayTimeline } from './DayTimeline';
 import { SelectionBar } from './SelectionBar';
-import { DEFAULT_FILTERS, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
+import { DEFAULT_FILTERS, GROUP_ANY_AGENCY, GROUP_NO_AGENCY, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
 
 const FILTERS_STORAGE_KEY = 'schedule-filters-v1';
 /** 直播中預設先顯示幾位（約兩列），其餘收合 */
@@ -86,7 +86,10 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
 
     const groups = useMemo(() => listGroups(snapshot), [snapshot]);
     useEffect(() => {
-        if (filters.group !== 'all' && !groups.includes(filters.group)) setFilters((f) => ({ ...f, group: 'all' }));
+        // 企業勢名稱不在這份 snapshot 裡、或 snapshot 完全沒有所屬資料（舊版 snapshot）時回到「全部」，避免整片空白
+        const special = filters.group === GROUP_ANY_AGENCY || filters.group === GROUP_NO_AGENCY;
+        const valid = filters.group === 'all' || (groups.length > 0 && (special || groups.includes(filters.group)));
+        if (!valid) setFilters((f) => ({ ...f, group: 'all' }));
     }, [groups, filters.group]);
 
     const counts = useMemo(() => countByTab(snapshot, filters, favoriteKeys), [snapshot, filters, favoriteKeys]);

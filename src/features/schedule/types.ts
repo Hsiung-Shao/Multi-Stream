@@ -17,6 +17,8 @@ export interface ScheduleChannel {
     twitch?: string;
     /** 個人週表頁網址 /schedule/<slug>（vtubers.slug，產生後固定） */
     slug?: string;
+    /** 所屬企業勢（公司名）；社團、個人工作室、未查證的團體沒有這個欄位 */
+    agency?: string;
 }
 
 /** 同一場的另一個平台（雙平台同步開台時，後端把次要場次併進主場次，主場次優先 YouTube） */
@@ -60,10 +62,14 @@ export type NationalityFilter = 'all' | 'TW' | 'HK' | 'MY' | 'JP' | 'OTHER';
 export type PlatformFilter = 'all' | SchedulePlatform;
 export type ScopeFilter = 'all' | 'favorites';
 
+/** 所屬篩選的兩個特殊值：所有企業勢、非企業勢；其餘值是企業勢（公司）名稱 */
+export const GROUP_ANY_AGENCY = '__agency';
+export const GROUP_NO_AGENCY = '__indie';
+
 export interface ScheduleFilterState {
     scope: ScopeFilter;
     nationality: NationalityFilter;
-    /** 團體名稱；'all' 為不限 */
+    /** 所屬：'all' 不限／GROUP_ANY_AGENCY／GROUP_NO_AGENCY／企業勢名稱（沿用 group 鍵名，舊的儲存值會自動回到 all） */
     group: string;
     platform: PlatformFilter;
 }

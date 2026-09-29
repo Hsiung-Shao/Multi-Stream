@@ -1,12 +1,12 @@
-// 篩選工具列：範圍、地區、平台是一鍵切換的膠囊；團體項目多，維持下拉。
+// 篩選工具列：範圍、地區、平台是一鍵切換的膠囊；「所屬」項目多，維持下拉（只列企業勢，見 filters.listGroups）。
 // 捲動時固定在頁首下方（StaticPageHeader 高 61px）。
 // 手機上所有控制排成單行、可橫向滑動，避免固定列疊成三行吃掉半個螢幕。
 
 import { useTranslation } from 'react-i18next';
 import { Heart } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { cn } from '../../components/ui/utils';
-import type { NationalityFilter, PlatformFilter, ScheduleFilterState } from './types';
+import { GROUP_ANY_AGENCY, GROUP_NO_AGENCY, type NationalityFilter, type PlatformFilter, type ScheduleFilterState } from './types';
 
 const NATIONALITIES: NationalityFilter[] = ['TW', 'HK', 'MY', 'JP', 'OTHER', 'all'];
 const PLATFORMS: PlatformFilter[] = ['all', 'youtube', 'twitch'];
@@ -81,6 +81,9 @@ export function ScheduleToolbar({ value, groups, onChange }: ScheduleToolbarProp
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">{t('group.all')}</SelectItem>
+                        <SelectItem value={GROUP_ANY_AGENCY}>{t('group.agencyAll')}</SelectItem>
+                        <SelectItem value={GROUP_NO_AGENCY}>{t('group.indie')}</SelectItem>
+                        {groups.length > 0 && <SelectSeparator />}
                         {groups.map((g) => (
                             <SelectItem key={g} value={g}>{g}</SelectItem>
                         ))}

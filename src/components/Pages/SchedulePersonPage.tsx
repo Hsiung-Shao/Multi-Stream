@@ -118,7 +118,8 @@ function PersonHeader({ person, onWatchLive, busy }: { person: SchedulePerson; o
             <div className="min-w-0 flex-1">
                 <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-[2.125rem]">{ch.name}</h1>
                 <p className="mt-1 text-[15px] text-muted-foreground">
-                    {[ch.group, t(`nationality.${ch.nationality}`, { defaultValue: ch.nationality })].filter(Boolean).join(' · ')}
+                    {/* 企業勢子團：公司 · 子團 · 地區（公司與團名相同時只寫一次） */}
+                    {[ch.agency && ch.agency !== ch.group ? ch.agency : null, ch.group, t(`nationality.${ch.nationality}`, { defaultValue: ch.nationality })].filter(Boolean).join(' · ')}
                 </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                     {live && (

@@ -9,7 +9,7 @@ export function makeSnapshot(): ScheduleSnapshot {
         generated_at: '2026-09-29T03:59:00Z',
         heavy_refreshed_at: '2026-09-29T03:50:00Z',
         channels: {
-            v1: { name: '台一', nationality: 'TW', group: '子午計畫', youtube: 'UC0000000000000000000001', twitch: 'TaiOne', avatar: 'https://yt3.ggpht.com/a', slug: 'taione' },
+            v1: { name: '台一', nationality: 'TW', group: '子午計畫', youtube: 'UC0000000000000000000001', twitch: 'TaiOne', avatar: 'https://yt3.ggpht.com/a', slug: 'taione', agency: '子午計畫' },
             v2: { name: '台二', nationality: 'TW', youtube: 'UC0000000000000000000002' },
             v3: { name: '日三', nationality: 'JP', group: 'ホロ', youtube: 'UC0000000000000000000003' },
             v4: { name: '馬四', nationality: 'MY', twitch: 'mafour' },

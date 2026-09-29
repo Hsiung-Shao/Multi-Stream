@@ -84,7 +84,7 @@ interface VtuberRow {
     twitch_channel_id: string | null;
     slug: string;
     schedule_indexable: boolean;
-    vtuber_groups: { name: string } | null;
+    vtuber_groups: { name: string; kind?: string; parent?: { name: string; kind: string } | null } | null;
 }
 
 export interface PersonStreamRow {
@@ -151,12 +151,26 @@ export function splitPersonStreams(vtuberId: string, rows: readonly PersonStream
     return { live, upcoming, recent };
 }
 
+/** 所屬企業勢：與後端 snapshot.resolveGroups 同一規則（子團取所屬公司、企業勢本身取自己） */
+export function agencyOf(g: VtuberRow['vtuber_groups']): string | null {
+    if (!g || g.kind !== 'agency') return null;
+    return g.parent?.kind === 'agency' ? g.parent.name : g.name;
+}
+
 /** 依 slug 查個人週表；slug 不合規則或查無此人回 null（頁面顯示 404） */
 export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): Promise<SchedulePerson | null> {
     if (!SCHEDULE_SLUG_RE.test(slug)) return null;
     const cfg = await resolveRestConfig(opts);
-    const vtuberSelect = 'id,name,img_url,nationality,youtube_channel_id,twitch_channel_id,slug,schedule_indexable,vtuber_groups(name)';
-    const vtubers = await restGet<VtuberRow[]>(cfg, `vtubers?select=${encodeURIComponent(vtuberSelect)}&slug=eq.${encodeURIComponent(slug)}&limit=1`, opts);
+    const vtuberCols = 'id,name,img_url,nationality,youtube_channel_id,twitch_channel_id,slug,schedule_indexable';
+    const bySlug = `&slug=eq.${encodeURIComponent(slug)}&limit=1`;
+    let vtubers: VtuberRow[];
+    try {
+        vtubers = await restGet<VtuberRow[]>(cfg, `vtubers?select=${encodeURIComponent(`${vtuberCols},vtuber_groups(name,kind,parent:parent_id(name,kind))`)}${bySlug}`, opts);
+    } catch (e) {
+        // vtuber_groups 的 kind／parent_id 還沒上線（migration 未套）時 PostgREST 回 400：退回只查團名
+        if (!(e instanceof SnapshotError && e.message.includes('HTTP 400'))) throw e;
+        vtubers = await restGet<VtuberRow[]>(cfg, `vtubers?select=${encodeURIComponent(`${vtuberCols},vtuber_groups(name)`)}${bySlug}`, opts);
+    }
     const v = vtubers[0];
     if (!v) return null;
 
@@ -174,6 +188,8 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     const channel: ScheduleChannel = { name: v.name, nationality: v.nationality, slug: v.slug };
     if (v.img_url) channel.avatar = v.img_url;
     if (v.vtuber_groups?.name) channel.group = v.vtuber_groups.name;
+    const agency = agencyOf(v.vtuber_groups);
+    if (agency) channel.agency = agency;
     if (v.youtube_channel_id) channel.youtube = v.youtube_channel_id;
     if (v.twitch_channel_id) channel.twitch = v.twitch_channel_id;
 

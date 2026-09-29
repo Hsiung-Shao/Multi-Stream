@@ -21,6 +21,33 @@ export interface SnapshotChannel {
   twitch?: string; // login
   /** 個人週表頁 /schedule/<slug> */
   slug?: string;
+  /** 所屬企業勢（公司名）：企業勢子團取所屬公司、企業勢本身取自己；社團／個人工作室／未查證不輸出 */
+  agency?: string;
+}
+
+/** 團體 id → 顯示名與所屬企業勢 */
+export interface SnapshotGroupInfo {
+  name: string;
+  agency: string | null;
+}
+
+export interface GroupRow {
+  id: string;
+  name: string;
+  kind: string;
+  parent_id: string | null;
+}
+
+/** 由 vtuber_groups 算出每個團體的所屬企業勢（子團往上找公司） */
+export function resolveGroups(rows: readonly GroupRow[]): Map<string, SnapshotGroupInfo> {
+  const byId = new Map(rows.map((g) => [g.id, g]));
+  const out = new Map<string, SnapshotGroupInfo>();
+  for (const g of rows) {
+    const parent = g.parent_id ? byId.get(g.parent_id) : undefined;
+    const agency = g.kind === 'agency' ? (parent?.kind === 'agency' ? parent.name : g.name) : null;
+    out.set(g.id, { name: g.name, agency });
+  }
+  return out;
 }
 
 /** 合併進主場次的另一平台場次（雙平台同一場，見 merge.ts） */
@@ -85,7 +112,7 @@ function omitNull<T extends Record<string, unknown>>(obj: T): T {
 export function buildSnapshot(
   streams: readonly SnapshotSourceRow[],
   vtubers: readonly VtuberRow[],
-  groups: ReadonlyMap<string, string>,
+  groups: ReadonlyMap<string, SnapshotGroupInfo>,
   now: number,
   heavyRefreshedAt: string | null,
 ): Snapshot {
@@ -147,7 +174,8 @@ export function buildSnapshot(
     channels[id] = omitNull({
       name: v.name,
       avatar: v.img_url,
-      group: v.group_id ? groups.get(v.group_id) ?? null : null,
+      group: v.group_id ? groups.get(v.group_id)?.name ?? null : null,
+      agency: v.group_id ? groups.get(v.group_id)?.agency ?? null : null,
       nationality: v.nationality,
       youtube: v.youtube_channel_id,
       twitch: v.twitch_channel_id,
@@ -190,8 +218,15 @@ export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: str
       )),
     );
   }
-  const groupRows = await db.selectAll<{ id: string; name: string }>('vtuber_groups', 'select=id,name');
-  const groups = new Map(groupRows.map((g) => [g.id, g.name]));
+  // kind／parent_id 由 20260929110000 migration 新增；migration 還沒套的環境退回只讀團名（沒有所屬企業勢），snapshot 照常發布
+  let groupRows: GroupRow[];
+  try {
+    groupRows = await db.selectAll<GroupRow>('vtuber_groups', 'select=id,name,kind,parent_id');
+  } catch {
+    const legacy = await db.selectAll<{ id: string; name: string }>('vtuber_groups', 'select=id,name');
+    groupRows = legacy.map((g) => ({ ...g, kind: 'unverified', parent_id: null }));
+  }
+  const groups = resolveGroups(groupRows);
 
   const snapshot = buildSnapshot(streams, vtubers, groups, now, heavyRefreshedAt);
   const body = JSON.stringify(snapshot);
