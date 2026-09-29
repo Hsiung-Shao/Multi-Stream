@@ -41,6 +41,9 @@ export default {
     'card.select': '选择 {{name}}',
     'card.openOriginal': '在 {{platform}} 打开',
     'card.untitled': '（未命名）',
+    'card.alsoOn': '也在 {{platform}}',
+    'card.fromSchedule': '周表预告',
+    'card.fromScheduleHint': '来自 Twitch 周表设置，主播可能临时变动',
 
     'selection.count': '已选 {{count}} 位',
     'selection.open': '在画布同时观看',
@@ -64,6 +67,22 @@ export default {
     'state.updatedAt': '数据更新于 {{time}}',
 
     'about.title': '数据来源',
-    'about.body': '周表只收录平台上已建立的排程：YouTube 的直播待机室，以及 Twitch 正在直播的频道。主播只发周表图、没有开待机室的场次不会出现。预定时间超过 14 天的「常驻框」不列入，预定时间过后 3 小时仍未开播的场次会自动移除。',
+    'about.body': '周表只收录平台上已建立的排程：YouTube 的直播待机室、Twitch 的周表设置，以及正在直播的频道。主播只发周表图、没有建立排程的场次不会出现。同一场在 YouTube 与 Twitch 同步开播时合并成一张卡，加入画布时优先 YouTube。排定时间超过 14 天的“常驻框”不列入，排定时间过后 3 小时仍未开播的场次会自动移除。',
     'about.tz': '时间按你的设备时区显示。',
+
+    'person.backToSchedule': '回到开播周表',
+    'person.live': '正在直播',
+    'person.watchOnCanvas': '在画布观看',
+    'person.openYouTube': 'YouTube 频道',
+    'person.openTwitch': 'Twitch 频道',
+    'person.upcoming': '接下来 7 天',
+    'person.noneUpcoming': '接下来 7 天还没有排程。',
+    'person.recent': '最近 30 天',
+    'person.noneRecent': '最近 30 天没有直播记录。',
+    'person.showAllRecent': '显示全部 {{count}} 场',
+    'person.inactive': '最近没有这位主播的直播或排程。',
+    'person.notFound.title': '找不到这位主播',
+    'person.notFound.body': '网址可能打错了，或这位主播已不在名册中。',
+    'person.seo.title': '{{name}} 开播时间与直播周表 - MultiStream Hub',
+    'person.seo.description': '{{name}} 的开播周表：正在直播、接下来 7 天的待机室与 Twitch 周表，以及最近 30 天的直播记录。',
 };

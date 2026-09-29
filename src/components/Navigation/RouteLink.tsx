@@ -1,10 +1,11 @@
 import { forwardRef, type AnchorHTMLAttributes, type MouseEvent } from 'react';
 import { useUIStore } from '../../store/useUIStore';
-import { PAGE_PATHS, type RoutePage } from '../../config/routes';
+import { pageToPath, type RoutePage } from '../../config/routes';
+import type { SchedulePersonPage } from '../../config/schedulePerson';
 
 export interface RouteLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
     /** 目標頁面（對應 URL 見 src/config/routes.ts） */
-    to: RoutePage;
+    to: RoutePage | SchedulePersonPage;
 }
 
 const isPlainLeftClick = (e: MouseEvent<HTMLAnchorElement>) =>
@@ -27,7 +28,7 @@ export const RouteLink = forwardRef<HTMLAnchorElement, RouteLinkProps>(function 
     return (
         <a
             ref={ref}
-            href={PAGE_PATHS[to]}
+            href={pageToPath(to) ?? '/'}
             target={target}
             onClick={(e) => {
                 onClick?.(e);

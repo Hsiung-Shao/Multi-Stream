@@ -3,3 +3,4 @@ Allow: /
 
 # Sitemap
 Sitemap: https://multistreaming.org/sitemap.xml
+Sitemap: https://multistreaming.org/sitemap-schedule.xml

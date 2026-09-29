@@ -41,6 +41,9 @@ export default {
     'card.select': '選取 {{name}}',
     'card.openOriginal': '在 {{platform}} 開啟',
     'card.untitled': '（未命名）',
+    'card.alsoOn': '也在 {{platform}}',
+    'card.fromSchedule': '週表預告',
+    'card.fromScheduleHint': '來自 Twitch 週表設定，實況主可能臨時更動',
 
     'selection.count': '已選 {{count}} 位',
     'selection.open': '在畫布同時觀看',
@@ -64,6 +67,22 @@ export default {
     'state.updatedAt': '資料更新於 {{time}}',
 
     'about.title': '資料來源',
-    'about.body': '週表只收錄平台上已建立的排程：YouTube 的直播待機室，以及 Twitch 正在直播的頻道。實況主只發週表圖、沒有開待機室的場次不會出現。排定時間超過 14 天的「常駐框」不列入，排定時間過後 3 小時仍未開台的場次會自動移除。',
+    'about.body': '週表只收錄平台上已建立的排程：YouTube 的直播待機室、Twitch 的週表設定，以及正在直播的頻道。實況主只發週表圖、沒有建立排程的場次不會出現。同一場在 YouTube 與 Twitch 同步開台時合併成一張卡，加入畫布時優先 YouTube。排定時間超過 14 天的「常駐框」不列入，排定時間過後 3 小時仍未開台的場次會自動移除。',
     'about.tz': '時間依你的裝置時區顯示。',
+
+    'person.backToSchedule': '回到開台週表',
+    'person.live': '正在直播',
+    'person.watchOnCanvas': '在畫布觀看',
+    'person.openYouTube': 'YouTube 頻道',
+    'person.openTwitch': 'Twitch 頻道',
+    'person.upcoming': '接下來 7 天',
+    'person.noneUpcoming': '接下來 7 天還沒有排程。',
+    'person.recent': '最近 30 天',
+    'person.noneRecent': '最近 30 天沒有直播紀錄。',
+    'person.showAllRecent': '顯示全部 {{count}} 場',
+    'person.inactive': '最近沒有這位實況主的直播或排程。',
+    'person.notFound.title': '找不到這位實況主',
+    'person.notFound.body': '網址可能打錯了，或這位實況主已不在名冊中。',
+    'person.seo.title': '{{name}} 開台時間與直播週表 - MultiStream Hub',
+    'person.seo.description': '{{name}} 的開台週表：正在直播、接下來 7 天的待機室與 Twitch 週表，以及最近 30 天的直播紀錄。',
 };

@@ -19,6 +19,15 @@ export interface SnapshotChannel {
   nationality: string;
   youtube?: string; // UC…
   twitch?: string; // login
+  /** 個人週表頁 /schedule/<slug> */
+  slug?: string;
+}
+
+/** 合併進主場次的另一平台場次（雙平台同一場，見 merge.ts） */
+export interface SnapshotAlso {
+  platform: 'youtube' | 'twitch';
+  external_id: string;
+  source: string;
 }
 
 /**
@@ -39,6 +48,7 @@ export interface SnapshotStream {
   scheduled_start?: string;
   actual_start?: string;
   actual_end?: string;
+  also?: SnapshotAlso[];
 }
 
 export interface Snapshot {
@@ -59,7 +69,11 @@ interface VtuberRow {
   group_id: string | null;
   youtube_channel_id: string | null;
   twitch_channel_id: string | null;
+  slug?: string | null;
 }
+
+/** snapshot 需要的場次欄位：streams 列＋合併指向 */
+export type SnapshotSourceRow = StreamRecord & { merged_with?: string | null };
 
 const TITLE_MAX = 120;
 
@@ -69,7 +83,7 @@ function omitNull<T extends Record<string, unknown>>(obj: T): T {
 
 /** 純函式：把 streams 與名冊組成 snapshot（測試直接餵資料） */
 export function buildSnapshot(
-  streams: readonly StreamRecord[],
+  streams: readonly SnapshotSourceRow[],
   vtubers: readonly VtuberRow[],
   groups: ReadonlyMap<string, string>,
   now: number,
@@ -81,7 +95,22 @@ export function buildSnapshot(
   const recent: SnapshotStream[] = [];
   const usedVtubers = new Set<string>();
 
-  const toItem = (s: StreamRecord): SnapshotStream =>
+  // 合併：被併入的場次（merged_with 指向一個會輸出的主場次）不單獨輸出，改掛在主場次的 also
+  const visible = (s: SnapshotSourceRow) => s.status !== 'hidden' && !s.is_schedule_frame;
+  const byId = new Map(streams.map((s) => [s.id, s]));
+  const alsoOf = new Map<string, SnapshotAlso[]>();
+  const merged = new Set<string>();
+  for (const s of streams) {
+    if (!s.merged_with || !visible(s)) continue;
+    const primary = byId.get(s.merged_with);
+    if (!primary || !visible(primary)) continue;
+    merged.add(s.id);
+    const list = alsoOf.get(primary.id) ?? [];
+    list.push({ platform: s.platform, external_id: s.external_id, source: s.source });
+    alsoOf.set(primary.id, list);
+  }
+
+  const toItem = (s: SnapshotSourceRow): SnapshotStream =>
     omitNull({
       vtuber_id: s.vtuber_id,
       platform: s.platform,
@@ -94,10 +123,11 @@ export function buildSnapshot(
       scheduled_start: s.scheduled_start,
       actual_start: s.actual_start,
       actual_end: s.actual_end,
+      also: alsoOf.get(s.id) ?? null,
     }) as SnapshotStream;
 
   for (const s of streams) {
-    if (s.status === 'hidden' || s.is_schedule_frame) continue;
+    if (!visible(s) || merged.has(s.id)) continue;
     if (s.status === 'live') live.push(toItem(s));
     else if (isUpcomingForSnapshot(s, now)) upcoming.push(toItem(s));
     else if (isRecentForSnapshot(s, now)) recent.push(toItem(s));
@@ -121,6 +151,7 @@ export function buildSnapshot(
       nationality: v.nationality,
       youtube: v.youtube_channel_id,
       twitch: v.twitch_channel_id,
+      slug: v.slug ?? null,
     }) as SnapshotChannel;
   }
 
@@ -138,13 +169,13 @@ export function buildSnapshot(
 /** 從資料庫組 snapshot 並上傳；回傳位元組數 */
 export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: string | null): Promise<number> {
   const cols =
-    'id,vtuber_id,channel_id,platform,external_id,source,status,scheduled_start,scheduled_end,actual_start,actual_end,title,category,thumbnail_url,viewer_count,is_schedule_frame,fetched_at';
+    'id,vtuber_id,channel_id,platform,external_id,source,status,scheduled_start,scheduled_end,actual_start,actual_end,title,category,thumbnail_url,viewer_count,is_schedule_frame,fetched_at,merged_with';
   const sinceIso = new Date(now - RECENT_WINDOW_HOURS * 3_600_000).toISOString();
-  const active = await db.selectAll<StreamRecord>(
+  const active = await db.selectAll<SnapshotSourceRow>(
     'streams',
     `select=${cols}&status=in.(scheduled,live)&is_schedule_frame=eq.false`,
   );
-  const ended = await db.selectAll<StreamRecord>(
+  const ended = await db.selectAll<SnapshotSourceRow>(
     'streams',
     `select=${cols}&status=eq.ended&actual_end=gte.${encodeURIComponent(sinceIso)}`,
   );
@@ -155,7 +186,7 @@ export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: str
     vtubers.push(
       ...(await db.select<VtuberRow>(
         'vtubers',
-        `select=id,name,img_url,nationality,group_id,youtube_channel_id,twitch_channel_id&id=${inList(vtuberIds.slice(i, i + 100))}&limit=100`,
+        `select=id,name,img_url,nationality,group_id,youtube_channel_id,twitch_channel_id,slug&id=${inList(vtuberIds.slice(i, i + 100))}&limit=100`,
       )),
     );
   }

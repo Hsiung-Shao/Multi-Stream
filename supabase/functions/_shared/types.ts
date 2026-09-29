@@ -61,6 +61,14 @@ export interface RunStats extends Record<string, unknown> {
   twitch_streams_calls: number;
   twitch_live: number;
   twitch_ended: number;
+  twitch_schedule_calls: number;
+  twitch_schedule_channels: number;
+  twitch_schedule_segments: number;
+  twitch_schedule_canceled: number;
+  twitch_schedule_failed: number;
+  twitch_schedule_rate_limited: number;
+  merges_changed: number;
+  indexable_changed: number;
   live_status_rows: number;
   last_live_at_updated: number;
   snapshot_bytes: number;
@@ -93,6 +101,14 @@ export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats 
     twitch_streams_calls: 0,
     twitch_live: 0,
     twitch_ended: 0,
+    twitch_schedule_calls: 0,
+    twitch_schedule_channels: 0,
+    twitch_schedule_segments: 0,
+    twitch_schedule_canceled: 0,
+    twitch_schedule_failed: 0,
+    twitch_schedule_rate_limited: 0,
+    merges_changed: 0,
+    indexable_changed: 0,
     live_status_rows: 0,
     last_live_at_updated: 0,
     snapshot_bytes: 0,

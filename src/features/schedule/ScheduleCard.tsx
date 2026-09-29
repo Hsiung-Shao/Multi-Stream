@@ -3,10 +3,14 @@
 //   - SlotRow：時間軸上的一場，頭像＋時間＋名字＋標題（timeline.oshi.tw 的掃讀方式）
 //   - RecentRow：剛結束，一行頭像＋名字＋相對時間，不能勾選
 // 勾選框永遠看得到（觸控裝置沒有 hover），但只在選取時用主色。
+// 名字連到個人週表頁（/schedule/<slug>）；其餘部分開原平台（stretched link：標題連結的 ::after 蓋滿整列，
+// 名字與勾選框用 relative z-10 浮在上面，避免 <a> 巢狀）。個人頁本身傳 personLinks={false}。
 
 import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
 import { cn } from '../../components/ui/utils';
+import { RouteLink } from '../../components/Navigation/RouteLink';
+import { schedulePersonPage } from '../../config/schedulePerson';
 import { formatClock, formatRelative } from './formatTime';
 import { thumbnailUrl, watchUrl } from './streamLinks';
 import type { ScheduleChannel, ScheduleStream } from './types';
@@ -17,6 +21,67 @@ interface SelectableProps {
     now: number;
     selected: boolean;
     onToggle: (stream: ScheduleStream) => void;
+    /** 名字是否連到個人週表頁（個人頁本身關掉） */
+    personLinks?: boolean;
+}
+
+/**
+ * stretched link：連結的 ::after 蓋滿整列（列本身要 relative）。沒有網址（Twitch 缺 login）時不蓋，
+ * 否則整列看起來可點、點了卻沒反應。
+ */
+function stretchLink(href: string | null, rounded: 'rounded-xl' | 'rounded-lg'): string {
+    if (!href) return '';
+    return cn('after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-ring', rounded === 'rounded-xl' ? 'after:rounded-xl' : 'after:rounded-lg');
+}
+
+/** 沒有標題（常見於 Twitch 週表段）時退回遊戲分類 */
+function displayTitle(stream: ScheduleStream, untitled: string): string {
+    return stream.title || stream.category || untitled;
+}
+
+/** 名字：有 slug 且允許時連到個人週表頁 */
+function PersonName({ channel, name, personLinks, className }: { channel: ScheduleChannel | undefined; name: string; personLinks: boolean; className?: string }) {
+    if (personLinks && channel?.slug) {
+        return (
+            <RouteLink
+                to={schedulePersonPage(channel.slug)}
+                className={cn('relative z-10 rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', className)}
+            >
+                {name}
+            </RouteLink>
+        );
+    }
+    return <span className={className}>{name}</span>;
+}
+
+/** 「週表預告」與「也在 Twitch」等小標籤：文字表達，不只靠顏色 */
+function StreamBadges({ stream }: { stream: ScheduleStream }) {
+    const { t } = useTranslation('schedule');
+    const fromSchedule = stream.source === 'twitch_schedule';
+    // 同平台的併入（Twitch 週表預告已變成 Twitch 直播）不是「另一個平台」，不顯示；
+    // 同一個平台併入兩筆（Twitch 直播＋Twitch 週表）只顯示一個標籤
+    const also = [...new Map((stream.also ?? []).filter((a) => a.platform !== stream.platform).map((a) => [a.platform, a])).values()];
+    if (!fromSchedule && also.length === 0) return null;
+    return (
+        <>
+            {fromSchedule && (
+                <span title={t('card.fromScheduleHint')} className="shrink-0 rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted-foreground">
+                    {t('card.fromSchedule')}
+                </span>
+            )}
+            {also.map((a) => (
+                <span
+                    key={`${a.platform}:${a.external_id}`}
+                    className={cn(
+                        'shrink-0 rounded px-1.5 text-[11px] font-medium leading-[18px]',
+                        a.platform === 'twitch' ? 'bg-[#a970ff]/15 text-[#6d28d9] dark:text-[#c4a5ff]' : 'bg-[#ff3b3b]/12 text-[#b91c1c] dark:text-[#ff8a8a]',
+                    )}
+                >
+                    {t('card.alsoOn', { platform: t(a.platform === 'youtube' ? 'platform.youtube' : 'platform.twitch') })}
+                </span>
+            ))}
+        </>
+    );
 }
 
 const PLATFORM_DOT: Record<string, string> = {
@@ -68,7 +133,7 @@ function SelectToggle({ selected, label, onToggle, className, overlay = false }:
     );
 }
 
-export function LiveTile({ stream, channel, now, selected, onToggle }: SelectableProps) {
+export function LiveTile({ stream, channel, now, selected, onToggle, personLinks = true }: SelectableProps) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
     const name = channel?.name ?? stream.vtuber_id;
@@ -111,8 +176,11 @@ export function LiveTile({ stream, channel, now, selected, onToggle }: Selectabl
             <div className="mt-2 flex gap-2.5">
                 <Avatar channel={channel} size="md" platform={stream.platform} />
                 <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-foreground">{name}</div>
-                    <div className="truncate text-[13px] text-muted-foreground" title={stream.title}>{stream.title || t('card.untitled')}</div>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                        <PersonName channel={channel} name={name} personLinks={personLinks} className="truncate text-sm font-semibold text-foreground" />
+                        <StreamBadges stream={stream} />
+                    </div>
+                    <div className="truncate text-[13px] text-muted-foreground" title={stream.title}>{displayTitle(stream, t('card.untitled'))}</div>
                     <div className="truncate text-xs text-muted-foreground">
                         {platformLabel}
                         {stream.category ? ` · ${stream.category}` : ''}
@@ -124,7 +192,7 @@ export function LiveTile({ stream, channel, now, selected, onToggle }: Selectabl
     );
 }
 
-export function SlotRow({ stream, channel, now, selected, onToggle }: SelectableProps) {
+export function SlotRow({ stream, channel, now, selected, onToggle, personLinks = true }: SelectableProps) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
     const name = channel?.name ?? stream.vtuber_id;
@@ -139,46 +207,79 @@ export function SlotRow({ stream, channel, now, selected, onToggle }: Selectable
                 selected ? 'bg-primary/12 ring-1 ring-primary/60' : 'hover:bg-foreground/[0.04]',
             )}
         >
-            <SelectToggle selected={selected} label={t('card.select', { name })} onToggle={() => onToggle(stream)} />
-            <a href={href ?? undefined} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-3 rounded-md outline-offset-2">
-                <Avatar channel={channel} size="md" platform={stream.platform} />
-                <span className="w-12 shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatClock(stream.scheduled_start, locale)}</span>
-                <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-2">
-                        <span className="truncate text-sm font-semibold text-foreground">{name}</span>
-                        {channel?.group && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{channel.group}</span>}
-                    </span>
-                    <span className="block truncate text-[13px] text-muted-foreground" title={stream.title}>{stream.title || t('card.untitled')}</span>
-                </span>
-                {/* 平台已由頭像上的小圓點＋螢幕閱讀器標籤表達；右側只在過了預定時間時提醒 */}
-                <span className="sr-only">{platformLabel}</span>
-                {overdue && <span className="hidden shrink-0 text-xs font-medium text-amber-500 md:inline">{t('timeline.overdue')}</span>}
-            </a>
+            <SelectToggle selected={selected} label={t('card.select', { name })} onToggle={() => onToggle(stream)} className="relative z-10" />
+            <Avatar channel={channel} size="md" platform={stream.platform} />
+            <span className="w-12 shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatClock(stream.scheduled_start, locale)}</span>
+            <span className="min-w-0 flex-1">
+                {personLinks ? (
+                    <>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                            <PersonName channel={channel} name={name} personLinks className="truncate text-sm font-semibold text-foreground" />
+                            {channel?.group && <span className="hidden truncate text-xs text-muted-foreground sm:inline">{channel.group}</span>}
+                            <StreamBadges stream={stream} />
+                        </span>
+                        <a
+                            href={href ?? undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={stream.title}
+                            className={cn('block truncate text-[13px] text-muted-foreground outline-none', stretchLink(href, 'rounded-xl'))}
+                        >
+                            {displayTitle(stream, t('card.untitled'))}
+                            {/* 平台已由頭像上的小圓點表達；這裡補給螢幕閱讀器 */}
+                            <span className="sr-only"> · {t('card.openOriginal', { platform: platformLabel })}</span>
+                        </a>
+                    </>
+                ) : (
+                    // 個人頁：每列都是同一個人，名字不重複；標題當主行、平台與分類當副行
+                    <>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                            <a
+                                href={href ?? undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={stream.title}
+                                className={cn('truncate text-sm font-semibold text-foreground outline-none', stretchLink(href, 'rounded-xl'))}
+                            >
+                                {displayTitle(stream, t('card.untitled'))}
+                                <span className="sr-only"> · {t('card.openOriginal', { platform: platformLabel })}</span>
+                            </a>
+                            <StreamBadges stream={stream} />
+                        </span>
+                        <span className="block truncate text-[13px] text-muted-foreground">
+                            {platformLabel}
+                            {stream.category && stream.title ? ` · ${stream.category}` : ''}
+                        </span>
+                    </>
+                )}
+            </span>
+            {overdue && <span className="hidden shrink-0 text-xs font-medium text-amber-500 md:inline">{t('timeline.overdue')}</span>}
         </li>
     );
 }
 
-export function RecentRow({ stream, channel, now }: Omit<SelectableProps, 'selected' | 'onToggle'>) {
+export function RecentRow({ stream, channel, now, personLinks = true }: Omit<SelectableProps, 'selected' | 'onToggle'>) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
     const name = channel?.name ?? stream.vtuber_id;
     const href = watchUrl(stream, channel);
     return (
-        <li className="min-w-0">
-            <a
-                href={href ?? undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-foreground/[0.04]"
-                title={stream.title}
-            >
-                <Avatar channel={channel} size="sm" platform={stream.platform} />
-                <span className="min-w-0 flex-1 truncate">
-                    <span className="font-medium text-foreground">{name}</span>
-                    <span className="text-muted-foreground"> · {stream.title || t('card.untitled')}</span>
-                </span>
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatRelative(stream.actual_end, now, locale)}</span>
-            </a>
+        <li className="relative flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-foreground/[0.04]">
+            <Avatar channel={channel} size="sm" platform={stream.platform} />
+            <span className="min-w-0 flex-1 truncate">
+                {personLinks && <PersonName channel={channel} name={name} personLinks className="font-medium text-foreground" />}
+                <a
+                    href={href ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={stream.title}
+                    className={cn('text-muted-foreground outline-none', stretchLink(href, 'rounded-lg'))}
+                >
+                    {personLinks ? ' · ' : ''}
+                    {displayTitle(stream, t('card.untitled'))}
+                </a>
+            </span>
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatRelative(stream.actual_end, now, locale)}</span>
         </li>
     );
 }

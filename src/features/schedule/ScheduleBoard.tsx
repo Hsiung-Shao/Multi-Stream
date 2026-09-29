@@ -3,22 +3,19 @@
 // 所以可以放心讀 localStorage（收藏、篩選）與 Date.now()。
 // 版面依 PRODUCT.md：時間是主軸、現在最大聲、剛結束最安靜；拿掉分頁，一頁由上而下讀完。
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { ChevronDown, Heart } from 'lucide-react';
 import { useFavorites } from '../../hooks/useFavorites';
-import { useStreamStore } from '../../store/useStreamStore';
-import { useUIStore } from '../../store/useUIStore';
 import { track } from '../../utils/analytics';
 import { cn } from '../../components/ui/utils';
 import { countByTab, filterStreams, listGroups, sortLive, toFavoriteKeys } from './filters';
-import { CANVAS_MAX_STREAMS, openOnCanvas, toOpenTargets } from './openOnCanvas';
+import { useScheduleSelection } from './useScheduleSelection';
 import { LiveTile, RecentRow } from './ScheduleCard';
 import { ScheduleToolbar } from './ScheduleToolbar';
 import { DayTimeline } from './DayTimeline';
 import { SelectionBar } from './SelectionBar';
-import { DEFAULT_FILTERS, streamKey, type ScheduleFilterState, type ScheduleSnapshot, type ScheduleStream } from './types';
+import { DEFAULT_FILTERS, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
 
 const FILTERS_STORAGE_KEY = 'schedule-filters-v1';
 /** 直播中預設先顯示幾位（約兩列），其餘收合 */
@@ -77,12 +74,8 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     const favoriteKeys = useMemo(() => toFavoriteKeys(favorites), [favorites]);
     const [filters, setFilters] = useState<ScheduleFilterState>(loadFilters);
     const [now, setNow] = useState(() => Date.now());
-    const [selected, setSelected] = useState<Map<string, ScheduleStream>>(() => new Map());
-    const [busy, setBusy] = useState(false);
     const [liveExpanded, setLiveExpanded] = useState(false);
     const [recentExpanded, setRecentExpanded] = useState(false);
-    const canvasCount = useStreamStore((s) => s.streams.length);
-    const room = Math.max(0, CANVAS_MAX_STREAMS - canvasCount);
 
     // 相對時間（「3 分鐘前」）與「現在」線每分鐘刷新；snapshot 更新時也對齊
     useEffect(() => {
@@ -110,47 +103,7 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
         track.scheduleFilterChange(key, value);
     };
 
-    const toggle = useCallback((s: ScheduleStream) => {
-        setSelected((prev) => {
-            const next = new Map(prev);
-            const k = streamKey(s);
-            if (next.has(k)) next.delete(k);
-            else next.set(k, s);
-            return next;
-        });
-    }, []);
-
-    const selectMany = useCallback((list: ScheduleStream[]) => {
-        setSelected((prev) => {
-            const next = new Map(prev);
-            for (const s of list) next.set(streamKey(s), s);
-            return next;
-        });
-    }, []);
-
-    const selectedKeys = useMemo(() => new Set(selected.keys()), [selected]);
-
-    const openSelected = async () => {
-        const list = [...selected.values()];
-        const targets = toOpenTargets(list, snapshot.channels);
-        const kinds = new Set(list.map((s) => (s.status === 'live' ? 'live' : 'upcoming')));
-        setBusy(true);
-        try {
-            const addStream = useStreamStore.getState().addStream;
-            const res = await openOnCanvas(targets, useStreamStore.getState().streams.length, addStream);
-            track.scheduleOpenMulti(list.length, res.added, kinds.size > 1 ? 'mixed' : [...kinds][0] ?? 'live', filters.scope);
-            if (res.added === 0) toast.error(t('toast.none'));
-            else if (res.failed > 0) toast.warning(t('toast.partial', { added: res.added, failed: res.failed }));
-            else toast.success(t('toast.added', { count: res.added }));
-            if (res.skipped > 0) toast.info(t('toast.skipped', { count: res.skipped }));
-            if (res.added > 0) {
-                setSelected(new Map());
-                useUIStore.getState().setPage('canvas');
-            }
-        } finally {
-            setBusy(false);
-        }
-    };
+    const sel = useScheduleSelection(snapshot.channels, filters.scope);
 
     const nothingInFavorites = filters.scope === 'favorites' && counts.live + counts.upcoming + counts.recent === 0;
     const liveShown = liveExpanded ? live : live.slice(0, LIVE_PREVIEW);
@@ -185,8 +138,8 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                                         stream={s}
                                         channel={snapshot.channels[s.vtuber_id]}
                                         now={now}
-                                        selected={selectedKeys.has(streamKey(s))}
-                                        onToggle={toggle}
+                                        selected={sel.selectedKeys.has(streamKey(s))}
+                                        onToggle={sel.toggle}
                                     />
                                 ))}
                             </div>
@@ -202,9 +155,9 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                                 streams={upcoming}
                                 channels={snapshot.channels}
                                 now={now}
-                                selected={selectedKeys}
-                                onToggle={toggle}
-                                onSelectMany={selectMany}
+                                selected={sel.selectedKeys}
+                                onToggle={sel.toggle}
+                                onSelectMany={sel.selectMany}
                                 onDayChange={(d) => track.scheduleFilterChange('day', d)}
                             />
                         )}
@@ -227,7 +180,7 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                 </div>
             )}
 
-            <SelectionBar count={selected.size} room={room} busy={busy} onOpen={openSelected} onClear={() => setSelected(new Map())} />
+            <SelectionBar count={sel.selected.size} room={sel.room} busy={sel.busy} onOpen={() => sel.open()} onClear={sel.clear} />
         </>
     );
 }

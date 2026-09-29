@@ -15,6 +15,14 @@ export function thumbnailUrl(s: ScheduleStream, ch: ScheduleChannel | undefined)
 }
 
 /**
+ * YouTube 頭像網址帶尺寸參數 =s88-…，放大顯示（個人頁頁首、og:image）時改成 400px；其他來源原樣回傳。
+ * edge 端 functions/lib/schedule-person.js 有同一份（tests/functions/schedulePersonEdge.test.ts 比對）。
+ */
+export function largerAvatar(url: string): string {
+    return /^https:\/\/yt3\.(ggpht|googleusercontent)\.com\//.test(url) ? url.replace(/=s\d+-/, '=s400-') : url;
+}
+
+/**
  * 給 useStreamStore.addStream 的輸入：YouTube 用 watch 網址（addStream 不收頻道網址）、Twitch 用 login。
  * 拿不到（Twitch 沒有 login）就回 null，呼叫端略過。
  */

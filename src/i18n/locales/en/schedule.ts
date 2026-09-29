@@ -41,6 +41,9 @@ export default {
     'card.select': 'Select {{name}}',
     'card.openOriginal': 'Open on {{platform}}',
     'card.untitled': '(untitled)',
+    'card.alsoOn': 'Also on {{platform}}',
+    'card.fromSchedule': 'Twitch schedule',
+    'card.fromScheduleHint': 'From the streamer’s Twitch schedule; it may change at short notice',
 
     'selection.count': '{{count}} selected',
     'selection.open': 'Watch together on canvas',
@@ -64,6 +67,22 @@ export default {
     'state.updatedAt': 'Data updated {{time}}',
 
     'about.title': 'Where the data comes from',
-    'about.body': 'The schedule only lists streams that exist on the platforms: YouTube waiting rooms and Twitch channels that are live right now. Streams a creator only announced in a schedule image will not appear. "Placeholder" waiting rooms scheduled more than 14 days out are left out, and anything still not live 3 hours after its start time is removed.',
+    'about.body': 'The schedule only lists streams that exist on the platforms: YouTube waiting rooms, Twitch schedules, and channels that are live. Streams announced only in a schedule image do not appear. When the same stream runs on YouTube and Twitch at once, it shows as one card and opens the YouTube stream on the canvas. Placeholder rooms scheduled more than 14 days out are skipped, and streams that have not started 3 hours after their scheduled time are removed.',
     'about.tz': 'Times are shown in your device time zone.',
+
+    'person.backToSchedule': 'Back to the schedule',
+    'person.live': 'Live now',
+    'person.watchOnCanvas': 'Watch on canvas',
+    'person.openYouTube': 'YouTube channel',
+    'person.openTwitch': 'Twitch channel',
+    'person.upcoming': 'Next 7 days',
+    'person.noneUpcoming': 'Nothing scheduled for the next 7 days.',
+    'person.recent': 'Last 30 days',
+    'person.noneRecent': 'No streams in the last 30 days.',
+    'person.showAllRecent': 'Show all {{count}} streams',
+    'person.inactive': 'No recent streams or schedules from this streamer.',
+    'person.notFound.title': 'Streamer not found',
+    'person.notFound.body': 'The link may be mistyped, or this streamer is no longer listed.',
+    'person.seo.title': '{{name}} stream schedule and live times - MultiStream Hub',
+    'person.seo.description': '{{name}}’s stream schedule: live now, YouTube waiting rooms and Twitch schedule for the next 7 days, and streams from the last 30 days.',
 };

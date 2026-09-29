@@ -12,7 +12,7 @@
 import { loadRoster } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, refreshPending, rssSweep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, refreshPending, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
@@ -53,6 +53,9 @@ Deno.serve((req) => {
 
     // 3. Twitch 直播中
     const twitchResult = await syncTwitchLive(db, twitch, twitchChannels, stats, now);
+    // 直播狀態每 5 分鐘變一次，合併也要跟著重算（例如 Twitch 預告剛開台、YouTube 待機室同時開）
+    // 合併是附加功能：失敗只記錯誤，不能擋住後面的共享表與 snapshot
+    await softStep(stats, 'merge', () => applyMerges(db, stats, now));
 
     // 4. last_live_at + 共享表
     const liveVtubers = [...refreshed.filter((s) => s.status === 'live').map((s) => s.vtuber_id), ...twitchResult.liveVtuberIds];

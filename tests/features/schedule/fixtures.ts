@@ -9,7 +9,7 @@ export function makeSnapshot(): ScheduleSnapshot {
         generated_at: '2026-09-29T03:59:00Z',
         heavy_refreshed_at: '2026-09-29T03:50:00Z',
         channels: {
-            v1: { name: '台一', nationality: 'TW', group: '子午計畫', youtube: 'UC0000000000000000000001', twitch: 'TaiOne', avatar: 'https://yt3.ggpht.com/a' },
+            v1: { name: '台一', nationality: 'TW', group: '子午計畫', youtube: 'UC0000000000000000000001', twitch: 'TaiOne', avatar: 'https://yt3.ggpht.com/a', slug: 'taione' },
             v2: { name: '台二', nationality: 'TW', youtube: 'UC0000000000000000000002' },
             v3: { name: '日三', nationality: 'JP', group: 'ホロ', youtube: 'UC0000000000000000000003' },
             v4: { name: '馬四', nationality: 'MY', twitch: 'mafour' },
@@ -21,7 +21,7 @@ export function makeSnapshot(): ScheduleSnapshot {
         ],
         upcoming: [
             // 台北 20:00、20:30 同一個小時；隔天 09:00
-            { vtuber_id: 'v1', platform: 'youtube', external_id: 'TaiOneWait1', source: 'yt_waiting_room', status: 'scheduled', title: '晚上雜談', scheduled_start: '2026-09-29T12:00:00Z' },
+            { vtuber_id: 'v1', platform: 'youtube', external_id: 'TaiOneWait1', source: 'yt_waiting_room', status: 'scheduled', title: '晚上雜談', scheduled_start: '2026-09-29T12:00:00Z', also: [{ platform: 'twitch', external_id: 'seg-1', source: 'twitch_schedule' }] },
             { vtuber_id: 'v2', platform: 'youtube', external_id: 'TaiTwoWait1', source: 'yt_waiting_room', status: 'scheduled', title: '歌回', scheduled_start: '2026-09-29T12:30:00Z' },
             { vtuber_id: 'v2', platform: 'youtube', external_id: 'TaiTwoWait2', source: 'yt_waiting_room', status: 'scheduled', title: '早安', scheduled_start: '2026-09-30T01:00:00Z' },
             { vtuber_id: 'v3', platform: 'youtube', external_id: 'JpWaiting01', source: 'yt_waiting_room', status: 'scheduled', title: '予定', scheduled_start: '2026-09-29T13:00:00Z' },

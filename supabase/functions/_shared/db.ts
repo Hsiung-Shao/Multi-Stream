@@ -112,6 +112,16 @@ export class Db {
     return Number.isFinite(total) ? total : 0;
   }
 
+  /** 呼叫 Postgres 函式（PostgREST /rpc）。 */
+  async rpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<T | null> {
+    const res = await this.fetchFn(`${this.url}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify(args),
+    });
+    return this.parse<T>(res, `rpc ${fn}`);
+  }
+
   /** 上傳 Storage 物件（x-upsert）。 */
   async putStorageObject(
     bucket: string,

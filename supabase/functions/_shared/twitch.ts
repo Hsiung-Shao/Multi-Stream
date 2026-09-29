@@ -9,6 +9,7 @@ import type { Db } from './db.ts';
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const STREAMS_URL = 'https://api.twitch.tv/helix/streams';
 const USERS_URL = 'https://api.twitch.tv/helix/users';
+const SCHEDULE_URL = 'https://api.twitch.tv/helix/schedule';
 const TOKEN_NAME = 'twitch_app';
 /** 提前 1 小時視為過期，避免邊界用到剛失效的 token */
 const TOKEN_BUFFER_MS = 3_600_000;
@@ -33,6 +34,54 @@ export interface TwitchLiveStream {
   thumbnailUrl: string | null;
 }
 
+/** helix 非 2xx：帶狀態碼，呼叫端可分辨 429（限速）與其他錯誤 */
+export class HelixError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super(`twitch helix HTTP ${status}`);
+    this.name = 'HelixError';
+    this.status = status;
+  }
+}
+
+export interface TwitchScheduleSegment {
+  id: string;
+  startTime: string;
+  endTime: string | null;
+  title: string | null;
+  category: string | null;
+  /** 有值＝這段被取消（重複時段取消到這個時間為止） */
+  canceledUntil: string | null;
+  isRecurring: boolean;
+}
+
+export interface TwitchSchedule {
+  segments: TwitchScheduleSegment[];
+  vacation: { start: string; end: string } | null;
+  /**
+   * 翻到頁數上限還沒走完時，最後一段的開始時間：只有這個時間以前的段是完整的，
+   * 之後「沒回來」不代表取消（tombstone 只能作用到這裡）。沒有這個欄位＝已涵蓋到 until。
+   */
+  coveredUntil?: string;
+}
+
+/** helix schedule 的一段 → 內部表示（缺 id 或開始時間的丟掉） */
+export function toScheduleSegment(s: Record<string, unknown>): TwitchScheduleSegment | null {
+  const id = typeof s.id === 'string' ? s.id : '';
+  const start = typeof s.start_time === 'string' ? s.start_time : '';
+  if (!id || !start || !Number.isFinite(Date.parse(start))) return null;
+  const category = s.category as { name?: string } | null | undefined;
+  return {
+    id,
+    startTime: start,
+    endTime: typeof s.end_time === 'string' ? s.end_time : null,
+    title: typeof s.title === 'string' && s.title ? s.title.slice(0, 300) : null,
+    category: category?.name ? String(category.name).slice(0, 100) : null,
+    canceledUntil: typeof s.canceled_until === 'string' ? s.canceled_until : null,
+    isRecurring: s.is_recurring === true,
+  };
+}
+
 interface TokenRow extends Record<string, unknown> {
   name: string;
   token: string;
@@ -44,7 +93,7 @@ export class TwitchClient {
   private readonly timeoutMs: number;
   private memToken: { token: string; expiresAt: number } | null = null;
   /** 統計：本次執行呼叫了幾次 helix */
-  calls = { streams: 0, users: 0, token: 0 };
+  calls = { streams: 0, users: 0, token: 0, schedule: 0 };
   private readonly opts: TwitchClientOptions;
 
   constructor(opts: TwitchClientOptions) {
@@ -105,24 +154,71 @@ export class TwitchClient {
     return data.access_token;
   }
 
-  private async helix(url: string): Promise<unknown> {
+  /** 帶 token 打 helix；401（token 被撤銷）會清快取重拿一次。回傳原始 Response，由呼叫端決定狀態碼怎麼處理。 */
+  private async helixResponse(url: string): Promise<Response> {
     const token = await this.getAppToken();
     const res = await this.fetchWithTimeout(url, {
       headers: { 'Client-Id': this.opts.clientId, Authorization: `Bearer ${token}` },
     });
-    if (res.status === 401) {
-      // token 被撤銷：清快取，重拿一次
-      this.memToken = null;
-      if (this.opts.db) await this.opts.db.update('service_tokens', `name=eq.${TOKEN_NAME}`, { expires_at: new Date(0).toISOString() });
-      const retryToken = await this.getAppToken();
-      const retry = await this.fetchWithTimeout(url, {
-        headers: { 'Client-Id': this.opts.clientId, Authorization: `Bearer ${retryToken}` },
-      });
-      if (!retry.ok) throw new Error(`twitch helix HTTP ${retry.status}`);
-      return retry.json();
-    }
-    if (!res.ok) throw new Error(`twitch helix HTTP ${res.status}`);
+    if (res.status !== 401) return res;
+    this.memToken = null;
+    if (this.opts.db) await this.opts.db.update('service_tokens', `name=eq.${TOKEN_NAME}`, { expires_at: new Date(0).toISOString() });
+    const retryToken = await this.getAppToken();
+    return this.fetchWithTimeout(url, {
+      headers: { 'Client-Id': this.opts.clientId, Authorization: `Bearer ${retryToken}` },
+    });
+  }
+
+  private async helix(url: string): Promise<unknown> {
+    const res = await this.helixResponse(url);
+    if (!res.ok) throw new HelixError(res.status);
     return res.json();
+  }
+
+  /** 同 helix，但 404 回 null（例如 /schedule：頻道沒有設定週表時 Twitch 回 404） */
+  private async helixOrNull(url: string): Promise<unknown | null> {
+    const res = await this.helixResponse(url);
+    if (res.status === 404) {
+      await res.text().catch(() => '');
+      return null;
+    }
+    if (!res.ok) throw new HelixError(res.status);
+    return res.json();
+  }
+
+  /**
+   * 頻道週表（/helix/schedule）：一次只能查一個 broadcaster，每頁最多 25 段；翻頁到超過 until 為止。
+   * 沒有週表回 null。重複時段 Twitch 會展開成一段一段（各有自己的 segment id）。
+   */
+  async fetchSchedule(broadcasterId: string, startTime: string, until: number, maxPages = 4): Promise<TwitchSchedule | null> {
+    const segments: TwitchScheduleSegment[] = [];
+    let vacation: TwitchSchedule['vacation'] = null;
+    let cursor: string | null = null;
+    for (let page = 0; page < maxPages; page++) {
+      const params = new URLSearchParams({ broadcaster_id: broadcasterId, start_time: startTime, first: '25' });
+      if (cursor) params.set('after', cursor);
+      const body = (await this.helixOrNull(`${SCHEDULE_URL}?${params}`)) as
+        | { data?: { segments?: Record<string, unknown>[] | null; vacation?: { start_time?: string; end_time?: string } | null }; pagination?: { cursor?: string } }
+        | null;
+      this.calls.schedule += 1;
+      if (!body) return page === 0 ? null : { segments, vacation };
+      const data = body.data ?? {};
+      if (data.vacation?.start_time && data.vacation?.end_time) {
+        vacation = { start: data.vacation.start_time, end: data.vacation.end_time };
+      }
+      let last = 0;
+      for (const s of data.segments ?? []) {
+        const seg = toScheduleSegment(s);
+        if (!seg) continue;
+        segments.push(seg);
+        last = Math.max(last, Date.parse(seg.startTime));
+      }
+      cursor = body.pagination?.cursor ?? null;
+      if (!cursor || last > until) return { segments, vacation };
+    }
+    // 翻到上限還有下一頁：只宣告涵蓋到最後一段
+    const lastStart = segments.reduce((m, s) => Math.max(m, Date.parse(s.startTime)), 0);
+    return { segments, vacation, coveredUntil: new Date(lastStart).toISOString() };
   }
 
   /** 直播中的頻道（user_id 每批 100）。不在回傳裡的就是沒開台。 */

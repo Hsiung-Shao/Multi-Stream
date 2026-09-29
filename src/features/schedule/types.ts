@@ -15,6 +15,15 @@ export interface ScheduleChannel {
     youtube?: string;
     /** Twitch login（小寫） */
     twitch?: string;
+    /** 個人週表頁網址 /schedule/<slug>（vtubers.slug，產生後固定） */
+    slug?: string;
+}
+
+/** 同一場的另一個平台（雙平台同步開台時，後端把次要場次併進主場次，主場次優先 YouTube） */
+export interface ScheduleAlso {
+    platform: SchedulePlatform;
+    external_id: string;
+    source: string;
 }
 
 export interface ScheduleStream {
@@ -30,6 +39,8 @@ export interface ScheduleStream {
     scheduled_start?: string;
     actual_start?: string;
     actual_end?: string;
+    /** 併進這一場的其他平台場次（例：YouTube 待機室＋同時段的 Twitch 週表） */
+    also?: ScheduleAlso[];
 }
 
 export interface ScheduleSnapshot {

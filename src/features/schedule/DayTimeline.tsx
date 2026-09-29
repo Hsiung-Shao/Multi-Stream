@@ -17,6 +17,8 @@ interface DayTimelineProps {
     onToggle: (s: ScheduleStream) => void;
     onSelectMany: (list: ScheduleStream[]) => void;
     onDayChange?: (dayKey: string) => void;
+    /** 名字是否連到個人週表頁（個人頁本身關掉） */
+    personLinks?: boolean;
 }
 
 function dayLabel(dayKey: string, locale: string): { weekday: string; date: string } {
@@ -28,7 +30,7 @@ function dayLabel(dayKey: string, locale: string): { weekday: string; date: stri
     };
 }
 
-export function DayTimeline({ streams, channels, now, selected, onToggle, onSelectMany, onDayChange }: DayTimelineProps) {
+export function DayTimeline({ streams, channels, now, selected, onToggle, onSelectMany, onDayChange, personLinks = true }: DayTimelineProps) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
     const days = useMemo(() => groupByDay(streams, now), [streams, now]);
@@ -122,6 +124,7 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
                                                 now={now}
                                                 selected={selected.has(streamKey(s))}
                                                 onToggle={onToggle}
+                                                personLinks={personLinks}
                                             />
                                         ))}
                                     </ul>

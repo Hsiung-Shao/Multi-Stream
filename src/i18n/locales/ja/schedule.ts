@@ -41,6 +41,9 @@ export default {
     'card.select': '{{name}} を選択',
     'card.openOriginal': '{{platform}} で開く',
     'card.untitled': '（タイトルなし）',
+    'card.alsoOn': '{{platform}} でも配信',
+    'card.fromSchedule': 'Twitch 予定',
+    'card.fromScheduleHint': 'Twitch の配信スケジュールより。急な変更の可能性があります',
 
     'selection.count': '{{count}} 人選択中',
     'selection.open': 'キャンバスで同時に見る',
@@ -64,6 +67,22 @@ export default {
     'state.updatedAt': 'データ更新：{{time}}',
 
     'about.title': 'データについて',
-    'about.body': 'スケジュールには、プラットフォーム上に実際に作成された予定だけを載せています。YouTube の配信待機所と、Twitch で配信中のチャンネルです。スケジュール画像だけで告知された配信は表示されません。14 日以上先の「常設枠」は除外し、予定時刻から 3 時間たっても始まらない配信は自動的に消えます。',
+    'about.body': 'スケジュールには各プラットフォームで作成済みの予定のみを掲載します：YouTube の待機所、Twitch の配信スケジュール、配信中のチャンネル。スケジュール画像だけで告知された配信は表示されません。YouTube と Twitch の同時配信は 1 枚のカードにまとめ、キャンバスには YouTube を優先して追加します。14 日以上先の「常設枠」は除外し、予定時刻から 3 時間経っても始まらない配信は自動で消えます。',
     'about.tz': '時刻はお使いの端末のタイムゾーンで表示されます。',
+
+    'person.backToSchedule': '配信スケジュールに戻る',
+    'person.live': '配信中',
+    'person.watchOnCanvas': 'キャンバスで見る',
+    'person.openYouTube': 'YouTube チャンネル',
+    'person.openTwitch': 'Twitch チャンネル',
+    'person.upcoming': 'これから 7 日間',
+    'person.noneUpcoming': 'これから 7 日間の予定はまだありません。',
+    'person.recent': '直近 30 日',
+    'person.noneRecent': '直近 30 日の配信はありません。',
+    'person.showAllRecent': '全 {{count}} 件を表示',
+    'person.inactive': 'このライバーの最近の配信や予定はありません。',
+    'person.notFound.title': 'ライバーが見つかりません',
+    'person.notFound.body': 'URL が間違っているか、名簿から外れた可能性があります。',
+    'person.seo.title': '{{name}} の配信スケジュール - MultiStream Hub',
+    'person.seo.description': '{{name}} の配信スケジュール：配信中、これから 7 日間の待機所と Twitch スケジュール、直近 30 日の配信履歴。',
 };

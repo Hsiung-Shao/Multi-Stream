@@ -1,5 +1,6 @@
 import type { PageType } from '../store/useUIStore';
 import { GUIDE_SLUGS, guidePage, guidePath, type GuidePage } from './guides';
+import { isSchedulePersonPage, schedulePersonFromPath, schedulePersonPath, schedulePersonSlugOf, type SchedulePersonPage } from './schedulePerson';
 
 /**
  * 頁面 ↔ URL 的單一對照表。
@@ -8,8 +9,11 @@ import { GUIDE_SLUGS, guidePage, guidePath, type GuidePage } from './guides';
  * 仍是精確字串對照：pathToPage / pageToPath / edge ROUTE_META 一比一測試都不需要參數化邏輯。
  */
 
-/** 有對應 URL 的頁面（'settings' 無路由、'not-found' 保留使用者輸入的錯誤網址） */
-export type RoutePage = Exclude<PageType, 'settings' | 'not-found'>;
+/**
+ * 有固定 URL 的頁面（'settings' 無路由、'not-found' 保留使用者輸入的錯誤網址）。
+ * 個人週表頁 schedule:<slug> 的 slug 是資料庫任意值，不在這張表裡（見 schedulePerson.ts）。
+ */
+export type RoutePage = Exclude<PageType, 'settings' | 'not-found' | SchedulePersonPage>;
 
 const GUIDE_PATHS = Object.fromEntries(
     GUIDE_SLUGS.map((s) => [guidePage(s), guidePath(s)]),
@@ -42,11 +46,12 @@ export function pathToPage(pathname: string): PageType {
     const legacy = LEGACY_HTML_ALIASES[pathname];
     if (legacy) return legacy;
     const hit = (Object.keys(PAGE_PATHS) as RoutePage[]).find((p) => PAGE_PATHS[p] === pathname);
-    return hit ?? 'not-found';
+    return hit ?? schedulePersonFromPath(pathname) ?? 'not-found';
 }
 
 /** 頁面 → 應同步的 URL；'not-found' 回 null 表示「不要動 URL」 */
 export function pageToPath(page: PageType): string | null {
     if (page === 'not-found') return null;
+    if (isSchedulePersonPage(page)) return schedulePersonPath(schedulePersonSlugOf(page));
     return (PAGE_PATHS as Partial<Record<PageType, string>>)[page] ?? '/';
 }

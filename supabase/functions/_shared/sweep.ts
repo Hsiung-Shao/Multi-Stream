@@ -8,9 +8,19 @@
 import type { Db } from './db.ts';
 import { inList } from './db.ts';
 import { fetchChannelRss, type RssEntry } from './rss.ts';
-import { classifyYouTubeVideo, isExpired, shouldSkipChannel, shouldUseApiFallback, TIER1_DAYS, type StreamStatus } from './rules.ts';
+import {
+  classifyYouTubeVideo,
+  EXPIRE_AFTER_HOURS,
+  isExpired,
+  shouldSkipChannel,
+  shouldUseApiFallback,
+  TIER1_DAYS,
+  UPCOMING_WINDOW_DAYS as UPCOMING_DAYS,
+  type StreamStatus,
+} from './rules.ts';
 import type { YouTubeClient, YouTubeVideo } from './youtube.ts';
-import type { TwitchClient } from './twitch.ts';
+import { HelixError, type TwitchClient, type TwitchSchedule } from './twitch.ts';
+import { mergeChanges, type MergeInput } from './merge.ts';
 import type { RosterChannel, RunStats, StreamRecord, StreamRow } from './types.ts';
 
 export interface Deadline {
@@ -423,11 +433,11 @@ export async function syncTwitchLive(
   if (rows.length) await db.upsert('streams', rows, 'platform,external_id');
   stats.twitch_live += rows.length;
 
-  // 上一輪 live 但這輪沒出現 → ended
+  // 上一輪 live 但這輪沒出現 → ended（只看 twitch_live；週表預告的狀態由 syncTwitchSchedule 管）
   const liveIds = new Set(rows.map((r) => r.external_id));
   const stale = await db.selectAll<{ id: string; external_id: string }>(
     'streams',
-    'select=id,external_id&platform=eq.twitch&status=eq.live',
+    'select=id,external_id&platform=eq.twitch&source=eq.twitch_live&status=eq.live',
   );
   const endedIds = stale.filter((s) => !liveIds.has(s.external_id)).map((s) => s.id);
   for (let i = 0; i < endedIds.length; i += 100) {
@@ -440,6 +450,170 @@ export async function syncTwitchLive(
   }
   stats.twitch_ended += endedIds.length;
   return { liveVtuberIds };
+}
+
+/**
+ * Twitch 週表段落 → streams 列（純函式，測試直接餵）。
+ * 取消（canceled_until 有值）或落在休假期間的段標 canceled；只收 [now − 3 小時, until] 內開始的段。
+ */
+export function scheduleRowsFor(
+  ch: RosterChannel,
+  schedule: TwitchSchedule,
+  now: number,
+  until: number,
+): StreamRow[] {
+  const nowIso = new Date(now).toISOString();
+  const vac = schedule.vacation ? { s: Date.parse(schedule.vacation.start), e: Date.parse(schedule.vacation.end) } : null;
+  const rows: StreamRow[] = [];
+  for (const seg of schedule.segments) {
+    const t = Date.parse(seg.startTime);
+    if (!Number.isFinite(t) || t < now - EXPIRE_AFTER_HOURS * 3_600_000 || t > until) continue;
+    const onVacation = !!vac && t >= vac.s && t < vac.e;
+    rows.push({
+      vtuber_id: ch.vtuberId,
+      channel_id: ch.channelId,
+      platform: 'twitch',
+      external_id: seg.id,
+      source: 'twitch_schedule',
+      status: seg.canceledUntil || onVacation ? 'canceled' : 'scheduled',
+      scheduled_start: seg.startTime,
+      scheduled_end: seg.endTime,
+      actual_start: null,
+      actual_end: null,
+      title: seg.title,
+      category: seg.category,
+      thumbnail_url: null,
+      viewer_count: null,
+      is_schedule_frame: false,
+      fetched_at: nowIso,
+    });
+  }
+  return rows;
+}
+
+/**
+ * Twitch 週表：一個頻道一次 /helix/schedule（沒有批次端點）。
+ * 回來的段 upsert；這個頻道未來、之前有但這次沒回來的段標 canceled（含整個週表被刪＝404）。
+ * 預告過了開始時間 3 小時仍是 scheduled 的，標 expired。
+ */
+export async function syncTwitchSchedule(
+  db: Db,
+  twitch: TwitchClient,
+  channels: RosterChannel[],
+  opts: { concurrency: number; deadline: Deadline; stats: RunStats; now: number; days?: number },
+): Promise<{ processed: number; advance: number }> {
+  const { stats, now } = opts;
+  const nowIso = new Date(now).toISOString();
+  const until = now + (opts.days ?? UPCOMING_DAYS) * 86_400_000;
+  // 每個頻道的結果：true＝完成、false＝這輪沒處理到（被限速或還沒輪到）
+  const done = new Array<boolean>(channels.length).fill(false);
+  const indexed = channels.map((ch, i) => ({ ch, i }));
+
+  await mapLimit(indexed, opts.concurrency, opts.deadline, async ({ ch, i }) => {
+    let schedule: TwitchSchedule | null;
+    try {
+      schedule = await twitch.fetchSchedule(ch.externalId, nowIso, until);
+    } catch (e) {
+      if (e instanceof HelixError && e.status === 429) {
+        // 被限速：這輪不再開始新的頻道，這個頻道下一輪從游標重試（不算失敗）
+        stats.twitch_schedule_rate_limited += 1;
+        opts.deadline.at = Date.now();
+        return;
+      }
+      // 其他錯誤（例如頻道被停權）：算處理過，避免卡住游標
+      done[i] = true;
+      stats.twitch_schedule_failed += 1;
+      if (stats.errors.length < 20) stats.errors.push(`twitch schedule ${ch.externalId}: ${e instanceof Error ? e.message : e}`.slice(0, 200));
+      return;
+    }
+    done[i] = true;
+    const rows = schedule ? scheduleRowsFor(ch, schedule, now, until) : [];
+    if (rows.length) {
+      await db.upsert('streams', rows, 'platform,external_id');
+      stats.twitch_schedule_segments += rows.length;
+    }
+    // tombstone：未來的預告這次沒回來 → 取消；翻頁沒走完時只作用到最後拿到的那一段（之後的沒被看到，不是取消）
+    const keep = new Set(rows.map((r) => r.external_id));
+    const coveredFilter = schedule?.coveredUntil ? `&scheduled_start=lte.${encodeURIComponent(schedule.coveredUntil)}` : '';
+    const existing = await db.select<{ id: string; external_id: string }>(
+      'streams',
+      `select=id,external_id&channel_id=eq.${ch.channelId}&source=eq.twitch_schedule&status=eq.scheduled&scheduled_start=gt.${encodeURIComponent(nowIso)}${coveredFilter}&limit=200`,
+    );
+    const gone = existing.filter((r) => !keep.has(r.external_id)).map((r) => r.id);
+    if (gone.length) {
+      await db.update('streams', `id=${inList(gone)}`, { status: 'canceled', fetched_at: nowIso });
+      stats.twitch_schedule_canceled += gone.length;
+    }
+  });
+  stats.twitch_schedule_calls = twitch.calls.schedule;
+  const processed = done.filter(Boolean).length;
+  // 游標只前進到「從頭連續完成」的位置，被限速或沒輪到的頻道下一輪重來
+  const firstMissing = done.indexOf(false);
+  const advance = firstMissing === -1 ? channels.length : firstMissing;
+
+  const expiredBefore = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
+  stats.streams_expired += await db.update(
+    'streams',
+    `source=eq.twitch_schedule&status=eq.scheduled&scheduled_start=lt.${expiredBefore}`,
+    { status: 'expired', fetched_at: nowIso },
+  );
+  return { processed, advance };
+}
+
+/**
+ * 離開 Twitch 名冊的頻道（畢業、停用）不會再輪到，它之前寫進去的未來預告要一次清掉。
+ * Twitch 游標歸零那一片呼叫：讀目前所有未來的 twitch_schedule（數百筆），不在名冊裡的標 canceled。
+ */
+export async function cancelOrphanTwitchSchedule(db: Db, rosterChannelIds: ReadonlySet<string>, stats: RunStats, now: number): Promise<void> {
+  const nowIso = new Date(now).toISOString();
+  const rows = await db.selectAll<{ id: string; channel_id: string }>(
+    'streams',
+    `select=id,channel_id&source=eq.twitch_schedule&status=eq.scheduled&scheduled_start=gt.${encodeURIComponent(nowIso)}`,
+  );
+  const orphan = rows.filter((r) => !rosterChannelIds.has(r.channel_id)).map((r) => r.id);
+  for (let i = 0; i < orphan.length; i += 100) {
+    await db.update('streams', `id=${inList(orphan.slice(i, i + 100))}`, { status: 'canceled', fetched_at: nowIso });
+  }
+  stats.twitch_schedule_canceled += orphan.length;
+}
+
+/**
+ * 附加步驟（Twitch 週表、合併、可索引旗標）失敗時只記錯誤不中斷：
+ * 這些都是加分功能，不能擋住 RSS 游標前進與 snapshot 發布（runJob 遇到例外不會存游標）。
+ */
+export async function softStep(stats: RunStats, label: string, fn: () => Promise<void>): Promise<void> {
+  try {
+    await fn();
+  } catch (e) {
+    if (stats.errors.length < 20) stats.errors.push(`${label}: ${e instanceof Error ? e.message : e}`.slice(0, 200));
+  }
+}
+
+/**
+ * 雙平台合併（見 merge.ts）：讀所有 scheduled／live 場次，加上最近 EXPIRE_AFTER_HOURS 內結束的場次（只當主場次），
+ * 只寫 merged_with 有變的列。
+ */
+export async function applyMerges(db: Db, stats: RunStats, now: number): Promise<void> {
+  const cols = 'select=id,vtuber_id,platform,source,status,scheduled_start,actual_start,is_schedule_frame,merged_with';
+  const endedSince = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
+  const rows = [
+    ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)`)),
+    ...(await db.selectAll<MergeInput>('streams', `${cols}&status=eq.ended&actual_end=gte.${endedSince}`)),
+  ];
+  const changes = mergeChanges(rows);
+  const byTarget = new Map<string, string[]>();
+  for (const c of changes) {
+    const key = c.merged_with ?? '';
+    const list = byTarget.get(key) ?? [];
+    list.push(c.id);
+    byTarget.set(key, list);
+  }
+  for (const [target, ids] of byTarget) {
+    for (let i = 0; i < ids.length; i += 100) {
+      await db.update('streams', `id=${inList(ids.slice(i, i + 100))}`, { merged_with: target || null });
+    }
+  }
+  stats.merges_changed += changes.length;
 }
 
 /** vtubers.last_live_at：這輪偵測到直播中的實況主 */

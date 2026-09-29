@@ -41,6 +41,9 @@ export default {
     'card.select': '{{name}} 선택',
     'card.openOriginal': '{{platform}}에서 열기',
     'card.untitled': '(제목 없음)',
+    'card.alsoOn': '{{platform}}에서도 방송',
+    'card.fromSchedule': 'Twitch 일정',
+    'card.fromScheduleHint': 'Twitch 방송 일정에서 가져왔으며 갑자기 바뀔 수 있습니다',
 
     'selection.count': '{{count}}명 선택됨',
     'selection.open': '캔버스에서 함께 보기',
@@ -64,6 +67,22 @@ export default {
     'state.updatedAt': '데이터 업데이트 {{time}}',
 
     'about.title': '데이터 출처',
-    'about.body': '스케줄에는 플랫폼에 실제로 만들어진 일정만 담습니다. YouTube 방송 대기실과 지금 방송 중인 Twitch 채널입니다. 스케줄 이미지로만 공지한 방송은 나타나지 않습니다. 14일 이상 뒤로 잡힌 "상시 대기실"은 제외하고, 예정 시각에서 3시간이 지나도 시작하지 않은 방송은 자동으로 사라집니다.',
+    'about.body': '일정표에는 플랫폼에 실제로 등록된 일정만 표시합니다: YouTube 대기실, Twitch 방송 일정, 방송 중인 채널. 일정 이미지로만 공지된 방송은 나타나지 않습니다. YouTube와 Twitch 동시 방송은 카드 하나로 합치고, 캔버스에는 YouTube를 우선 추가합니다. 14일 넘게 남은 "상시 대기실"은 제외하고, 예정 시각 3시간이 지나도 시작하지 않은 방송은 자동으로 사라집니다.',
     'about.tz': '시간은 기기의 시간대로 표시됩니다.',
+
+    'person.backToSchedule': '방송 일정표로 돌아가기',
+    'person.live': '방송 중',
+    'person.watchOnCanvas': '캔버스에서 보기',
+    'person.openYouTube': 'YouTube 채널',
+    'person.openTwitch': 'Twitch 채널',
+    'person.upcoming': '앞으로 7일',
+    'person.noneUpcoming': '앞으로 7일 동안 예정된 방송이 없습니다.',
+    'person.recent': '최근 30일',
+    'person.noneRecent': '최근 30일 동안 방송 기록이 없습니다.',
+    'person.showAllRecent': '전체 {{count}}개 보기',
+    'person.inactive': '이 스트리머의 최근 방송이나 일정이 없습니다.',
+    'person.notFound.title': '스트리머를 찾을 수 없습니다',
+    'person.notFound.body': '주소가 잘못되었거나 이 스트리머가 목록에서 빠졌을 수 있습니다.',
+    'person.seo.title': '{{name}} 방송 일정 - MultiStream Hub',
+    'person.seo.description': '{{name}}의 방송 일정: 지금 방송 중, 앞으로 7일간의 대기실과 Twitch 일정, 최근 30일 방송 기록.',
 };

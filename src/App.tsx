@@ -5,6 +5,7 @@ import { useUIStore, type PageType } from './store/useUIStore';
 import { lazyWithPreload } from './utils/lazyWithPreload';
 import { PAGE_PATHS, pathToPage } from './config/routes';
 import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
+import { isSchedulePersonPage, schedulePersonSlugOf } from './config/schedulePerson';
 import { SEO_SITE_URL } from './seo/defaults';
 import { graph, breadcrumb, webPage, techArticle, ORG_ID, PERSON_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
 import { GITHUB_URL, X_URL, PATREON_URL, COFFEE_URL } from './config/links';
@@ -47,6 +48,7 @@ const PrivacyPage = lazyWithPreload(() => import('./components/PrivacyPage').the
 const CreatorPage = lazyWithPreload(() => import('./components/Pages/CreatorPage').then(module => ({ 'default': module.CreatorPage })));
 const ComparisonPage = lazyWithPreload(() => import('./components/Pages/ComparisonPage').then(module => ({ 'default': module.ComparisonPage })));
 const SchedulePage = lazyWithPreload(() => import('./components/Pages/SchedulePage').then(module => ({ 'default': module.SchedulePage })));
+const SchedulePersonPage = lazyWithPreload(() => import('./components/Pages/SchedulePersonPage').then(module => ({ 'default': module.SchedulePersonPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
 const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
@@ -89,7 +91,7 @@ function ChunkSuspense({ chunk, fallback, children }: { chunk: { isLoaded: () =>
  * 回傳是否全部成功：失敗不丟例外（呼叫端決定要 hydrate 還是退回 createRoot）。
  */
 export function preloadPageChunks(page: PageType): Promise<boolean> {
-  const pageChunk = isGuidePage(page) ? InstructionsPage : PAGE_CHUNKS[page];
+  const pageChunk = isGuidePage(page) ? InstructionsPage : isSchedulePersonPage(page) ? SchedulePersonPage : PAGE_CHUNKS[page];
   return Promise.all([DeferredGlobals.preload(), pageChunk?.preload()])
     .then(() => true)
     .catch(() => false);
@@ -200,7 +202,7 @@ export default function App() {
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
   const isFullPage = ['about', 'creator', 'compare', 'schedule', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
-    || isGuidePage(currentPage);
+    || isGuidePage(currentPage) || isSchedulePersonPage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
       <>
@@ -233,6 +235,15 @@ export default function App() {
 
   // Routing Logic
   const renderPage = () => {
+    // 個人週表頁：<SEO> 由頁面在資料到了之後自己帶（title 含實況主名字）；edge 已先把同一套 meta 注入 HTML 殼
+    if (isSchedulePersonPage(currentPage)) {
+      const slug = schedulePersonSlugOf(currentPage);
+      return (
+        <ChunkSuspense chunk={SchedulePersonPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+          <SchedulePersonPage key={slug} slug={slug} />
+        </ChunkSuspense>
+      );
+    }
     // 教學列表 + 7 篇文章共用 InstructionsPage；<SEO> 放 Suspense 外，切頁瞬間 title/meta 就正確
     // （useRouter 的 GA4 pageview 讀 document.title，不能等 lazy chunk）。文章頁用該篇專屬的
     // seo:instructions.<slug>.* 與 og:type=article。

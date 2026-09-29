@@ -78,6 +78,18 @@ describe('SchedulePage', () => {
         expect(within(section(/剛結束/)).queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
+    it('名字連到個人週表頁（沒有 slug 的不連）；合併場次標「也在 Twitch」', async () => {
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        const upcoming = section(/接下來/);
+        const nameLink = within(section(/直播中/)).getByRole('link', { name: '台一' });
+        expect(nameLink).toHaveAttribute('href', '/schedule/taione');
+        expect(within(upcoming).getByText('也在 Twitch')).toBeInTheDocument();
+        expect(within(upcoming).queryByRole('link', { name: '台二' })).not.toBeInTheDocument();
+        fireEvent.click(nameLink);
+        expect(useUIStore.getState().page).toBe('schedule:taione');
+    });
+
     it('收藏範圍：沒收藏時顯示引導', async () => {
         renderPage();
         await screen.findByText('台一 Twitch');

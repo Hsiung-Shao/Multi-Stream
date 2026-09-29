@@ -18,12 +18,29 @@
 import { loadRoster, recomputeTiers } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, refreshPending, rssSweep, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
-import { loadShard, runJob } from '../_shared/run.ts';
+import {
+  applyMerges,
+  cancelOrphanTwitchSchedule,
+  classifyNewVideos,
+  exhausted,
+  loadCurrentByChannel,
+  loadPendingYouTube,
+  refreshPending,
+  rssSweep,
+  softStep,
+  syncTwitchSchedule,
+  touchLastLiveAt,
+  writeChannelStates,
+} from '../_shared/sweep.ts';
+import { loadShard, runJob, saveShard } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 import { RSS_FAIL_STREAK_DEAD, RSS_FAIL_STREAK_FOR_FALLBACK } from '../_shared/rules.ts';
 
 const JOB = 'schedule_heavy_rss';
+const TWITCH_JOB = 'schedule_twitch';
+/** Twitch 週表：每頻道一次呼叫、無批次，並行 8 個在 helix 800 點／分內很寬鬆 */
+const TWITCH_CONCURRENCY = 8;
+const TWITCH_BUDGET_MS = 40_000;
 /** 牆鐘預算（RSS 抓取不再開始新頻道的時間點）；真正的限制是 CPU 時間，見檔頭 */
 const DEFAULT_BUDGET_MS = 60_000;
 const DEFAULT_CONCURRENCY = 25;
@@ -76,6 +93,37 @@ Deno.serve((req) => {
     for (const c of roster) if (refreshedChannels.has(c.channelId)) touched.set(c.channelId, c);
     const byChannel = await loadCurrentByChannel(db, [...touched.keys()]);
     stats.live_status_rows = await writeLiveStatus(db, [...touched.values()], byChannel, now);
+
+    // 4c～4d 是附加功能：任何一步失敗只記進 stats.errors，不能擋住 RSS 游標前進與 snapshot 發布
+    // 4c. Twitch 週表（階段 2）：另一個游標，每片一批頻道；/helix/schedule 一次只能查一個頻道
+    await softStep(stats, 'twitch schedule', async () => {
+      const twitchRoster = (await loadRoster(db, 'twitch')).sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
+      const tShard = await loadShard(db, TWITCH_JOB);
+      const tSize = Number(params.get('twitch_size')) || tShard.shard_size;
+      const tStart = twitchRoster.length ? tShard.cursor_position % twitchRoster.length : 0;
+      if (tStart === 0) await cancelOrphanTwitchSchedule(db, new Set(twitchRoster.map((c) => c.channelId)), stats, now);
+      const tSlice = [...twitchRoster.slice(tStart), ...twitchRoster.slice(0, tStart)].slice(0, tSize);
+      const tResult = await syncTwitchSchedule(db, ctx.twitch, tSlice, {
+        concurrency: TWITCH_CONCURRENCY,
+        deadline: { at: Date.now() + TWITCH_BUDGET_MS },
+        stats,
+        now,
+      });
+      stats.twitch_schedule_channels = tResult.processed;
+      await saveShard(db, TWITCH_JOB, {
+        cursor_position: (tStart + tResult.advance) % Math.max(twitchRoster.length, 1),
+        total_items: twitchRoster.length,
+        stats: { ...stats, finished_at: new Date().toISOString() },
+      });
+    });
+
+    // 4d. 雙平台合併；游標歸零那一片更新個人頁的可索引旗標
+    await softStep(stats, 'merge', () => applyMerges(db, stats, now));
+    if (start === 0) {
+      await softStep(stats, 'indexable', async () => {
+        stats.indexable_changed = (await db.rpc<number>('refresh_schedule_indexable')) ?? 0;
+      });
+    }
 
     // 5. snapshot
     stats.snapshot_bytes = await publishSnapshot(db, now, new Date(now).toISOString());

@@ -20,13 +20,13 @@ export class SnapshotError extends Error {
     }
 }
 
-async function fetchWithTimeout(url: string, timeoutMs: number, signal?: AbortSignal, fetchFn: typeof fetch = fetch): Promise<Response> {
+export async function fetchWithTimeout(url: string, timeoutMs: number, signal?: AbortSignal, fetchFn: typeof fetch = fetch, headers?: Record<string, string>): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const onOuterAbort = () => controller.abort();
     signal?.addEventListener('abort', onOuterAbort);
     try {
-        return await fetchFn(url, { signal: controller.signal });
+        return await fetchFn(url, { signal: controller.signal, headers });
     } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') {
             throw new SnapshotError(signal?.aborted ? 'network' : 'timeout', 'snapshot request aborted');

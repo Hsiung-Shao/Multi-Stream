@@ -9,6 +9,7 @@
 // ⚠ _headers 不套用到 Function 回應 → 安全標頭由 functions/lib/security-headers.js 帶（測試鎖同步）。
 import { ROUTE_META, NOT_FOUND_META, OG_LOCALE, ROBOTS_INDEX, ROBOTS_NOINDEX, WEBAPP_JSONLD_ROUTES } from './lib/seo-meta.js';
 import { HTML_SECURITY_HEADERS } from './lib/security-headers.js';
+import { resolveSchedulePerson, schedulePersonMeta } from './lib/schedule-person.js';
 
 const ORIGIN = 'https://multistreaming.org';
 
@@ -60,10 +61,33 @@ export async function onRequest(context) {
 
     const entry = Object.hasOwn(ROUTE_META, rawPath) ? ROUTE_META[rawPath] : undefined;
     const lang = pickLang(request.headers.get('accept-language'));
-    const meta = entry ? entry[lang] : NOT_FOUND_META[lang];
-    const status = entry ? 200 : 404;
-    const noindex = !entry || entry.noindex === true;
     const pageUrl = ORIGIN + rawPath;
+
+    // 個人週表頁 /schedule/<slug>：slug 是資料庫任意值，不在 ROUTE_META 白名單裡，查一次資料庫決定
+    // 200（注入該實況主的 title/description/og:image，不活躍 → noindex）、301（大小寫）或真 404。
+    // 查詢失敗時照常回 SPA 殼＋週表通用 meta：暫時性錯誤不能讓頁面被當成 404 或 noindex。
+    const person = entry ? { kind: 'none' } : await resolveSchedulePerson(env, rawPath);
+    if (person.kind === 'redirect') {
+        return Response.redirect(url.origin + person.location + url.search, 301);
+    }
+    let meta;
+    let status;
+    let noindex;
+    let image = null;
+    if (person.kind === 'found') {
+        meta = schedulePersonMeta(lang, person.name);
+        status = 200;
+        noindex = !person.indexable;
+        image = person.image;
+    } else if (person.kind === 'error') {
+        meta = ROUTE_META['/schedule'][lang];
+        status = 200;
+        noindex = false;
+    } else {
+        meta = entry ? entry[lang] : NOT_FOUND_META[lang];
+        status = entry ? 200 : 404;
+        noindex = !entry || entry.noindex === true;
+    }
 
     // 取 shell。一定用「乾淨的」Request：轉發原請求的 If-None-Match 等條件標頭
     // 可能拿到無 body 的 304，HTMLRewriter 會無內容可改。
@@ -117,6 +141,17 @@ export async function onRequest(context) {
                       },
                   },
         );
+    if (image) {
+        // 頭像不是 1200×630：拿掉寬高宣告，alt 改成實況主名字所在的標題
+        const drop = { element(el) { el.remove(); } };
+        rewriter
+            .on('meta[property="og:image"]', setContent(image))
+            .on('meta[name="twitter:image"]', setContent(image))
+            .on('meta[property="og:image:width"]', drop)
+            .on('meta[property="og:image:height"]', drop)
+            .on('meta[property="og:image:alt"]', setContent(meta.title))
+            .on('meta[name="twitter:image:alt"]', setContent(meta.title));
+    }
     if (!keepWebAppJsonLd) {
         rewriter.on('script#ld-webapp', {
             element(el) {
