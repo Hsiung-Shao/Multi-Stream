@@ -3,6 +3,9 @@ import {
     countByTab,
     filterStreams,
     groupByDay,
+    groupByHour,
+    nowDividerIndex,
+    pickDefaultDay,
     isFavoriteChannel,
     listGroups,
     sameHourKeys,
@@ -78,6 +81,32 @@ describe('groupByDay', () => {
         const days = groupByDay([s], NOW, TZ);
         expect(days[1].dayKey).toBe('2026-09-30');
         expect(days[1].streams).toHaveLength(1);
+    });
+});
+
+describe('groupByHour / pickDefaultDay / nowDividerIndex', () => {
+    it('同一個本地整點的場次歸在一組，順序保留', () => {
+        const snap = makeSnapshot();
+        const hours = groupByHour([snap.upcoming[0], snap.upcoming[1], snap.upcoming[3]]); // 台北 20:00、20:30、21:00
+        expect(hours.map((h) => h.streams.map((s) => s.external_id))).toEqual([['TaiOneWait1', 'TaiTwoWait1'], ['JpWaiting01']]);
+        expect(groupByHour([{ ...snap.upcoming[0], scheduled_start: undefined }])).toEqual([]);
+    });
+
+    it('預設日：今天有場次就今天，否則第一個有場次的日子', () => {
+        const snap = makeSnapshot();
+        const days = groupByDay([snap.upcoming[2]], NOW, TZ); // 只有明天有
+        expect(pickDefaultDay(days)).toBe('2026-09-30');
+        expect(pickDefaultDay(groupByDay([], NOW, TZ))).toBe('2026-09-29');
+        expect(pickDefaultDay([])).toBeNull();
+    });
+
+    it('現在線插在第一個整點 ≥ 目前整點的組之前；全部都過了回 -1', () => {
+        const snap = makeSnapshot();
+        const hours = groupByHour([snap.upcoming[0], snap.upcoming[3]]); // 20:00、21:00（台北）
+        expect(nowDividerIndex(hours, Date.parse('2026-09-29T11:30:00Z'))).toBe(0); // 台北 19:30
+        expect(nowDividerIndex(hours, Date.parse('2026-09-29T12:10:00Z'))).toBe(0); // 20:10 → 20 點那組仍算「現在」
+        expect(nowDividerIndex(hours, Date.parse('2026-09-29T13:05:00Z'))).toBe(1);
+        expect(nowDividerIndex(hours, Date.parse('2026-09-29T15:00:00Z'))).toBe(-1);
     });
 });
 

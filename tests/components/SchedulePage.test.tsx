@@ -1,9 +1,9 @@
-// 開台週表頁：預設只顯示 TW、分頁、收藏範圍、勾選一鍵多開
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// 開台週表頁：預設只顯示 TW、直播中／接下來（時間軸）／剛結束三段、收藏範圍、勾選一鍵多開
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../src/i18n/i18n';
-import { makeSnapshot } from '../features/schedule/fixtures';
+import { makeSnapshot, NOW } from '../features/schedule/fixtures';
 
 // vi.mock 會被提到檔案最上方：mock 內用到的變數要用 vi.hoisted 宣告
 const h = vi.hoisted(() => ({
@@ -35,10 +35,13 @@ function renderPage() {
 }
 
 const seedFavorites = (list: object[]) => localStorage.setItem('favoriteStreams', JSON.stringify(list));
-const clickTab = (name: RegExp) => fireEvent.mouseDown(screen.getByRole('tab', { name }), { button: 0 });
+const section = (name: RegExp) => screen.getByRole('region', { name });
 
 describe('SchedulePage', () => {
     beforeEach(async () => {
+        // 只假造 Date（不動計時器，TanStack Query 與 waitFor 照常運作）：時間軸的「今天」固定在 fixture 那天
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(NOW);
         await i18n.changeLanguage('zh-TW');
         localStorage.clear();
         vi.clearAllMocks();
@@ -47,38 +50,42 @@ describe('SchedulePage', () => {
         useUIStore.setState({ page: 'schedule' });
     });
 
-    it('先顯示載入中，snapshot 回來後預設只列 TW 的直播中場次', async () => {
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('先顯示載入中，snapshot 回來後三段都出現，預設只列 TW', async () => {
         renderPage();
         expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('台灣 VTuber 開台週表');
         expect(screen.getByLabelText('載入週表中…')).toBeInTheDocument();
         await screen.findByText('台一 Twitch');
         expect(screen.queryByText('日三直播')).not.toBeInTheDocument(); // JP 被預設篩掉
         expect(screen.queryByText('馬四')).not.toBeInTheDocument(); // MY
-        // 分頁數字：直播中 1、即將開台 3、剛結束 1
-        expect(screen.getByRole('tab', { name: /直播中/ })).toHaveTextContent('1');
-        expect(screen.getByRole('tab', { name: /即將開台/ })).toHaveTextContent('3');
+        expect(screen.getByRole('heading', { name: /直播中/ })).toHaveTextContent('1');
+        expect(screen.getByRole('heading', { name: /接下來/ })).toHaveTextContent('3');
+        expect(within(section(/剛結束/)).getByText(/昨晚/)).toBeInTheDocument();
     });
 
-    it('即將開台是依日分欄的看板；剛結束不能勾選', async () => {
+    it('接下來：預設今天的時間軸，切到明天看得到隔天的場次；剛結束不能勾選', async () => {
         renderPage();
         await screen.findByText('台一 Twitch');
-        clickTab(/即將開台/);
-        await screen.findByText('晚上雜談');
-        expect(screen.getByText('歌回')).toBeInTheDocument();
-        expect(screen.getByText('早安')).toBeInTheDocument();
-        clickTab(/剛結束/);
-        await screen.findByText('昨晚');
-        expect(screen.queryByLabelText('選取 台二')).not.toBeInTheDocument();
+        const upcoming = section(/接下來/);
+        expect(within(upcoming).getByText('晚上雜談')).toBeInTheDocument();
+        expect(within(upcoming).getByText('歌回')).toBeInTheDocument();
+        expect(within(upcoming).queryByText('早安')).not.toBeInTheDocument();
+        fireEvent.click(within(upcoming).getByRole('tab', { name: /明天/ }));
+        expect(await within(upcoming).findByText('早安')).toBeInTheDocument();
+        expect(within(section(/剛結束/)).queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
-    it('收藏範圍：沒收藏時顯示引導；有收藏時不受 TW 預設影響', async () => {
+    it('收藏範圍：沒收藏時顯示引導', async () => {
         renderPage();
         await screen.findByText('台一 Twitch');
         fireEvent.click(screen.getByRole('radio', { name: '我的收藏' }));
         expect(await screen.findByText('你的收藏裡還沒有週表上的實況主')).toBeInTheDocument();
     });
 
-    it('收藏了日本的實況主，收藏範圍會顯示他', async () => {
+    it('收藏了日本的實況主，收藏範圍會顯示他（不受預設 TW 影響）', async () => {
         seedFavorites([{ id: 'f1', url: 'https://www.youtube.com/channel/UC0000000000000000000003/live', name: '日三', platform: 'youtube', channelId: 'UC0000000000000000000003', addedAt: '2026-01-01' }]);
         renderPage();
         await screen.findByText('台一 Twitch');
@@ -87,15 +94,11 @@ describe('SchedulePage', () => {
         expect(screen.queryByText('台一 Twitch')).not.toBeInTheDocument();
     });
 
-    it('勾選後「在畫布同時觀看」依序加入並切到畫布', async () => {
+    it('勾選直播中一位、再用「全選」勾同一小時的兩位，依序加入畫布並切到畫布', async () => {
         renderPage();
         await screen.findByText('台一 Twitch');
-        fireEvent.click(screen.getByLabelText('選取 台一'));
-        clickTab(/即將開台/);
-        await screen.findByText('晚上雜談');
-        // 同一小時（台北 20 點）有兩場：用「選取這個時段」一次勾
-        const selectHour = screen.getAllByRole('button', { name: '選取這個時段' });
-        fireEvent.click(selectHour[0]);
+        fireEvent.click(within(section(/直播中/)).getByRole('checkbox', { name: '選取 台一' }));
+        fireEvent.click(within(section(/接下來/)).getByRole('button', { name: '全選 2 位' }));
         const bar = screen.getByRole('region', { name: /已選/ });
         expect(within(bar).getByText('已選 3 位')).toBeInTheDocument();
         fireEvent.click(within(bar).getByRole('button', { name: /在畫布同時觀看/ }));
@@ -106,14 +109,14 @@ describe('SchedulePage', () => {
             'https://www.youtube.com/watch?v=TaiTwoWait1',
         ]);
         await waitFor(() => expect(useUIStore.getState().page).toBe('canvas'));
-        expect(track.scheduleOpenMulti).toHaveBeenCalledWith(3, 3, 'upcoming', 'all');
+        expect(track.scheduleOpenMulti).toHaveBeenCalledWith(3, 3, 'mixed', 'all');
     });
 
-    it('畫布剩餘路數不足時提示', async () => {
+    it('畫布剩餘路數不足時提示並停用按鈕', async () => {
         h.canvas.streams = Array.from({ length: 16 }, () => ({}));
         renderPage();
         await screen.findByText('台一 Twitch');
-        fireEvent.click(screen.getByLabelText('選取 台一'));
+        fireEvent.click(within(section(/直播中/)).getByRole('checkbox', { name: '選取 台一' }));
         expect(screen.getByText('畫布最多 16 路，目前還能加 0 路')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /在畫布同時觀看/ })).toBeDisabled();
     });

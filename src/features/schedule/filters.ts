@@ -121,6 +121,43 @@ export function groupByDay(streams: readonly ScheduleStream[], now: number, time
     return uniqueKeys.map((dayKey) => ({ dayKey, streams: (buckets.get(dayKey) ?? []).sort(byStart) }));
 }
 
+export interface HourBucket {
+    /** 該整點（本地時區）的 ISO 時間 */
+    hourIso: string;
+    streams: ScheduleStream[];
+}
+
+/** 一天內依本地整點分組（輸入需已依排定時間排序） */
+export function groupByHour(streams: readonly ScheduleStream[]): HourBucket[] {
+    const out: HourBucket[] = [];
+    for (const s of streams) {
+        if (!s.scheduled_start) continue;
+        const d = new Date(s.scheduled_start);
+        d.setMinutes(0, 0, 0);
+        const hourIso = d.toISOString();
+        const last = out[out.length - 1];
+        if (last && last.hourIso === hourIso) last.streams.push(s);
+        else out.push({ hourIso, streams: [s] });
+    }
+    return out;
+}
+
+/** 預設顯示哪一天：今天有場次就今天，否則第一個有場次的日子，全空就今天 */
+export function pickDefaultDay(days: readonly DayBucket[]): string | null {
+    if (days.length === 0) return null;
+    return (days.find((d) => d.streams.length > 0) ?? days[0]).dayKey;
+}
+
+/**
+ * 今天的時間軸上「現在」線要插在哪個整點組之前：第一個整點 ≥ 目前整點的組。
+ * 回傳 -1 表示全部都在現在之前（例如只剩過了預定時間還沒開的場次）。
+ */
+export function nowDividerIndex(hours: readonly HourBucket[], now: number): number {
+    const current = new Date(now);
+    current.setMinutes(0, 0, 0);
+    return hours.findIndex((h) => Date.parse(h.hourIso) >= current.getTime());
+}
+
 /** 同一個小時（本地時區）開始的場次：「選取這個時段」用 */
 export function sameHourKeys(streams: readonly ScheduleStream[], anchor: ScheduleStream, timeZone?: string): ScheduleStream[] {
     if (!anchor.scheduled_start) return [anchor];

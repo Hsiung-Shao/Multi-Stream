@@ -1,40 +1,35 @@
-// 週表的資料區塊：分頁、篩選、卡片、勾選與一鍵多開。
+// 週表的資料區塊：篩選列、直播中、接下來（時間軸）、剛結束，以及勾選一鍵多開。
 // 只在 snapshot 已載入時掛上（預渲染與首輪 hydration 都不會 render 這裡），
 // 所以可以放心讀 localStorage（收藏、篩選）與 Date.now()。
+// 版面依 PRODUCT.md：時間是主軸、現在最大聲、剛結束最安靜；拿掉分頁，一頁由上而下讀完。
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Heart } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { ChevronDown, Heart } from 'lucide-react';
 import { useFavorites } from '../../hooks/useFavorites';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 import { track } from '../../utils/analytics';
+import { cn } from '../../components/ui/utils';
 import { countByTab, filterStreams, listGroups, sortLive, toFavoriteKeys } from './filters';
 import { CANVAS_MAX_STREAMS, openOnCanvas, toOpenTargets } from './openOnCanvas';
-import { ScheduleCard } from './ScheduleCard';
-import { ScheduleFilters } from './ScheduleFilters';
+import { LiveTile, RecentRow } from './ScheduleCard';
+import { ScheduleToolbar } from './ScheduleToolbar';
+import { DayTimeline } from './DayTimeline';
 import { SelectionBar } from './SelectionBar';
-import { WeekBoard } from './WeekBoard';
-import {
-    DEFAULT_FILTERS,
-    streamKey,
-    type ScheduleFilterState,
-    type ScheduleSnapshot,
-    type ScheduleStream,
-    type ScheduleTab,
-} from './types';
+import { DEFAULT_FILTERS, streamKey, type ScheduleFilterState, type ScheduleSnapshot, type ScheduleStream } from './types';
 
 const FILTERS_STORAGE_KEY = 'schedule-filters-v1';
-const TABS: ScheduleTab[] = ['live', 'upcoming', 'recent'];
+/** 直播中預設先顯示幾位（約兩列），其餘收合 */
+const LIVE_PREVIEW = 10;
+const RECENT_PREVIEW = 12;
 
 function loadFilters(): ScheduleFilterState {
     try {
         const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
         if (!raw) return DEFAULT_FILTERS;
-        const parsed = JSON.parse(raw) as Partial<ScheduleFilterState>;
-        return { ...DEFAULT_FILTERS, ...parsed };
+        return { ...DEFAULT_FILTERS, ...(JSON.parse(raw) as Partial<ScheduleFilterState>) };
     } catch {
         return DEFAULT_FILTERS;
     }
@@ -48,39 +43,63 @@ function saveFilters(f: ScheduleFilterState): void {
     }
 }
 
+function SectionHeading({ id, title, count, live, children }: { id: string; title: string; count: number; live?: boolean; children?: React.ReactNode }) {
+    return (
+        <div className="mb-3 flex items-center gap-3">
+            <h2 id={id} className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-foreground">
+                {live && <span className="live-pulse size-2.5 rounded-full bg-[#e5173f]" aria-hidden="true" />}
+                {title}
+                <span className="rounded-full bg-foreground/[0.07] px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">{count}</span>
+            </h2>
+            {children && <div className="ml-auto">{children}</div>}
+        </div>
+    );
+}
+
+function ExpandButton({ expanded, total, onClick }: { expanded: boolean; total: number; onClick: () => void }) {
+    const { t } = useTranslation('schedule');
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-expanded={expanded}
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+            {expanded ? t('section.showLess') : t('section.showAll', { count: total })}
+            <ChevronDown size={14} aria-hidden="true" className={cn('transition-transform duration-200', expanded && 'rotate-180')} />
+        </button>
+    );
+}
+
 export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     const { t } = useTranslation('schedule');
     const { favorites } = useFavorites();
     const favoriteKeys = useMemo(() => toFavoriteKeys(favorites), [favorites]);
     const [filters, setFilters] = useState<ScheduleFilterState>(loadFilters);
-    const [tab, setTab] = useState<ScheduleTab>('live');
     const [now, setNow] = useState(() => Date.now());
     const [selected, setSelected] = useState<Map<string, ScheduleStream>>(() => new Map());
     const [busy, setBusy] = useState(false);
+    const [liveExpanded, setLiveExpanded] = useState(false);
+    const [recentExpanded, setRecentExpanded] = useState(false);
     const canvasCount = useStreamStore((s) => s.streams.length);
     const room = Math.max(0, CANVAS_MAX_STREAMS - canvasCount);
 
-    // 相對時間（「3 分鐘前」）每分鐘刷新；snapshot 更新時也對齊
+    // 相對時間（「3 分鐘前」）與「現在」線每分鐘刷新；snapshot 更新時也對齊
     useEffect(() => {
         setNow(Date.now());
         const id = setInterval(() => setNow(Date.now()), 60_000);
         return () => clearInterval(id);
     }, [snapshot.generated_at]);
 
-    // 篩選到的團體若已不在 snapshot（資料更新後消失），回到「全部團體」
     const groups = useMemo(() => listGroups(snapshot), [snapshot]);
     useEffect(() => {
         if (filters.group !== 'all' && !groups.includes(filters.group)) setFilters((f) => ({ ...f, group: 'all' }));
     }, [groups, filters.group]);
 
     const counts = useMemo(() => countByTab(snapshot, filters, favoriteKeys), [snapshot, filters, favoriteKeys]);
-    const listFor = useCallback(
-        (which: ScheduleTab) => {
-            const list = filterStreams(snapshot, which, filters, favoriteKeys);
-            return which === 'live' ? sortLive(list) : list;
-        },
-        [snapshot, filters, favoriteKeys],
-    );
+    const live = useMemo(() => sortLive(filterStreams(snapshot, 'live', filters, favoriteKeys)), [snapshot, filters, favoriteKeys]);
+    const upcoming = useMemo(() => filterStreams(snapshot, 'upcoming', filters, favoriteKeys), [snapshot, filters, favoriteKeys]);
+    const recent = useMemo(() => filterStreams(snapshot, 'recent', filters, favoriteKeys), [snapshot, filters, favoriteKeys]);
 
     const changeFilter = (key: keyof ScheduleFilterState, value: string) => {
         setFilters((prev) => {
@@ -89,11 +108,6 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
             return next;
         });
         track.scheduleFilterChange(key, value);
-    };
-
-    const changeTab = (value: string) => {
-        setTab(value as ScheduleTab);
-        track.scheduleFilterChange('tab', value);
     };
 
     const toggle = useCallback((s: ScheduleStream) => {
@@ -119,11 +133,12 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     const openSelected = async () => {
         const list = [...selected.values()];
         const targets = toOpenTargets(list, snapshot.channels);
+        const kinds = new Set(list.map((s) => (s.status === 'live' ? 'live' : 'upcoming')));
         setBusy(true);
         try {
             const addStream = useStreamStore.getState().addStream;
             const res = await openOnCanvas(targets, useStreamStore.getState().streams.length, addStream);
-            track.scheduleOpenMulti(list.length, res.added, tab, filters.scope);
+            track.scheduleOpenMulti(list.length, res.added, kinds.size > 1 ? 'mixed' : [...kinds][0] ?? 'live', filters.scope);
             if (res.added === 0) toast.error(t('toast.none'));
             else if (res.failed > 0) toast.warning(t('toast.partial', { added: res.added, failed: res.failed }));
             else toast.success(t('toast.added', { count: res.added }));
@@ -137,75 +152,81 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
         }
     };
 
-    const emptyState = (which: ScheduleTab) => {
-        if (filters.scope === 'favorites' && counts[which] === 0 && TABS.every((x) => counts[x] === 0)) {
-            return (
-                <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-14 text-center">
-                    <Heart className="text-muted-foreground" aria-hidden="true" />
-                    <p className="font-medium">{t('state.emptyFavorites')}</p>
-                    <p className="max-w-md text-sm text-muted-foreground">{t('state.emptyFavoritesHint')}</p>
-                </div>
-            );
-        }
-        return <p className="rounded-xl border border-dashed border-border px-6 py-14 text-center text-sm text-muted-foreground">{t('state.empty')}</p>;
-    };
-
-    const grid = (which: ScheduleTab) => {
-        const list = listFor(which);
-        if (list.length === 0) return emptyState(which);
-        const selectable = which !== 'recent';
-        return (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {list.map((s) => (
-                    <ScheduleCard
-                        key={streamKey(s)}
-                        stream={s}
-                        channel={snapshot.channels[s.vtuber_id]}
-                        tab={which}
-                        now={now}
-                        selectable={selectable}
-                        selected={selectedKeys.has(streamKey(s))}
-                        onToggle={toggle}
-                    />
-                ))}
-            </div>
-        );
-    };
-
-    const upcomingList = listFor('upcoming');
+    const nothingInFavorites = filters.scope === 'favorites' && counts.live + counts.upcoming + counts.recent === 0;
+    const liveShown = liveExpanded ? live : live.slice(0, LIVE_PREVIEW);
+    const recentShown = recentExpanded ? recent : recent.slice(0, RECENT_PREVIEW);
 
     return (
         <>
-            <div className="mb-4">
-                <ScheduleFilters value={filters} groups={groups} onChange={changeFilter} />
-            </div>
-            <Tabs value={tab} onValueChange={changeTab} className="gap-4">
-                {/* 手機（375px）三個分頁加數字會超寬：窄螢幕撐滿寬度並縮內距 */}
-                <TabsList className="h-10 w-full sm:w-fit">
-                    {TABS.map((x) => (
-                        <TabsTrigger key={x} value={x} className="px-2 sm:px-4">
-                            {t(`tabs.${x}` as 'tabs.live')}
-                            <span className="ml-1.5 rounded-full bg-background/60 px-1.5 text-xs tabular-nums text-muted-foreground">{counts[x]}</span>
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-                <TabsContent value="live">{grid('live')}</TabsContent>
-                <TabsContent value="upcoming">
-                    {upcomingList.length === 0 ? (
-                        emptyState('upcoming')
-                    ) : (
-                        <WeekBoard
-                            streams={upcomingList}
-                            channels={snapshot.channels}
-                            now={now}
-                            selected={selectedKeys}
-                            onToggle={toggle}
-                            onSelectMany={selectMany}
-                        />
+            <ScheduleToolbar value={filters} groups={groups} onChange={changeFilter} />
+
+            {nothingInFavorites ? (
+                <div className="mt-8 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-14 text-center">
+                    <Heart className="text-muted-foreground" aria-hidden="true" />
+                    <p className="font-semibold">{t('state.emptyFavorites')}</p>
+                    <p className="max-w-md text-sm text-muted-foreground">{t('state.emptyFavoritesHint')}</p>
+                </div>
+            ) : (
+                <div className="mt-6 space-y-12">
+                    <section aria-labelledby="sch-live">
+                        <SectionHeading id="sch-live" title={t('section.live')} count={live.length} live={live.length > 0}>
+                            {live.length > LIVE_PREVIEW && (
+                                <ExpandButton expanded={liveExpanded} total={live.length} onClick={() => setLiveExpanded((v) => !v)} />
+                            )}
+                        </SectionHeading>
+                        {live.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t('state.noneLive')}</p>
+                        ) : (
+                            // 手機兩欄（單欄大圖一屏只看得到一位）；桌機依寬度自動排
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] sm:gap-x-4 sm:gap-y-5">
+                                {liveShown.map((s) => (
+                                    <LiveTile
+                                        key={streamKey(s)}
+                                        stream={s}
+                                        channel={snapshot.channels[s.vtuber_id]}
+                                        now={now}
+                                        selected={selectedKeys.has(streamKey(s))}
+                                        onToggle={toggle}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    <section aria-labelledby="sch-upcoming">
+                        <SectionHeading id="sch-upcoming" title={t('section.upcoming')} count={upcoming.length} />
+                        {upcoming.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">{t('state.noneUpcoming')}</p>
+                        ) : (
+                            <DayTimeline
+                                streams={upcoming}
+                                channels={snapshot.channels}
+                                now={now}
+                                selected={selectedKeys}
+                                onToggle={toggle}
+                                onSelectMany={selectMany}
+                                onDayChange={(d) => track.scheduleFilterChange('day', d)}
+                            />
+                        )}
+                    </section>
+
+                    {recent.length > 0 && (
+                        <section aria-labelledby="sch-recent">
+                            <SectionHeading id="sch-recent" title={t('section.recent')} count={recent.length}>
+                                {recent.length > RECENT_PREVIEW && (
+                                    <ExpandButton expanded={recentExpanded} total={recent.length} onClick={() => setRecentExpanded((v) => !v)} />
+                                )}
+                            </SectionHeading>
+                            <ul className="grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {recentShown.map((s) => (
+                                    <RecentRow key={streamKey(s)} stream={s} channel={snapshot.channels[s.vtuber_id]} now={now} />
+                                ))}
+                            </ul>
+                        </section>
                     )}
-                </TabsContent>
-                <TabsContent value="recent">{grid('recent')}</TabsContent>
-            </Tabs>
+                </div>
+            )}
+
             <SelectionBar count={selected.size} room={room} busy={busy} onOpen={openSelected} onClear={() => setSelected(new Map())} />
         </>
     );
