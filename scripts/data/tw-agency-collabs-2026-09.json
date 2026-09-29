@@ -187,7 +187,7 @@
           ]
         }
       ],
-      "notes": "官方出處＝春魚官方 Portaly（X 簡介連結的官方多連結頁）與 @Springfish2018 合作公告圖。Portaly「旗下VTuber團體」列：瀕臨絕種團 RESCUTE、惡獸時代 Monstar、極深空計畫 Xtreme Deep Field Project、瑟拉斯蒂歐 Celestial、Timaeus 諦覓司（區塊標題另寫作「諦覓司 Timaeus」）、Para≠dox ∞ 五律悖反；終端少女只出現在「活動終止藝人」區（平平子）。成員狀態：平平子、十五號、歐貝爾、阿爾姿列在官方「活動終止藝人」；海唧 2023-03-22 解約（新聞，官方頁未列）。SquareLive：官方 Portaly 團體清單沒有它，資料庫下也沒有成員；維基寫是春魚與 STORIA/Narrator 遊戲工作室聯合成立的品牌，2022 年極深空計畫新聞稿用「SquareLive 新成員」、白白虹初配信標題也掛「Square Live」，看起來是品牌/廠牌名而非藝人團，查不到官方說明，建議不當子團（kind/status 為推定值）。合作藝人：Portaly 分「合作實況主」（哈瓜哈瓜、REN、UMA_kagami 卡嘎咪）與「合作藝人 Cooperation VTuber」（茸茸鼠、よしか⁂、厭世醫師阿萬）。兔姬：2023-10-19 官方合作公告（經「惡兔重工」、含 3D 合作）已確認，但現行 Portaly 名單已沒有她，她的 X 簡介也不再提春魚、商務改走自己信箱；查不到官方終止公告，所以 status 填 null（疑似已結束，需人工確認）。よしか⁂：遊戲角落新聞引述官方公告為 2024-08-31 加盟，因手上沒有官方原文，since 暫填 null。厭世醫師阿萬：官方 Portaly 列為合作藝人、本人 X 自稱「春魚合作夥伴」，起始日查不到。祈菈．貝希毛絲：只有維基寫她是 STORIA/Narrator 所屬，春魚官方頁與公告都查不到，不應列為春魚合作藝人。YouTube ID 一律以頻道頁 externalId 取得（直接抓 channelId 會抓到推薦頻道，已避開）。",
+      "notes": "官方出處＝春魚官方 Portaly（X 簡介連結的官方多連結頁）與 @Springfish2018 合作公告圖。Portaly「旗下VTuber團體」列：瀕臨絕種團 RESCUTE、惡獸時代 Monstar、極深空計畫 Xtreme Deep Field Project、瑟拉斯蒂歐 Celestial、Timaeus 諦覓司（區塊標題另寫作「諦覓司 Timaeus」）、Para≠dox ∞ 五律悖反；終端少女只出現在「活動終止藝人」區（平平子）。成員狀態：平平子、十五號、歐貝爾、阿爾姿列在官方「活動終止藝人」；海唧 2023-03-22 解約（新聞，官方頁未列）。SquareLive：官方 Portaly 團體清單沒有它，資料庫下也沒有成員；維基寫是春魚與 STORIA/Narrator 遊戲工作室聯合成立的品牌，2022 年極深空計畫新聞稿用「SquareLive 新成員」、白白虹初配信標題也掛「Square Live」，看起來是品牌/廠牌名而非藝人團，查不到官方說明，建議不當子團（kind/status 為推定值）。合作藝人：Portaly 分「合作實況主」（哈瓜哈瓜、REN、UMA_kagami 卡嘎咪）與「合作藝人 Cooperation VTuber」（茸茸鼠、よしか⁂、厭世醫師阿萬）。兔姬：2023-10-19 官方合作公告（經「惡兔重工」、含 3D 合作）已確認，但現行 Portaly 名單已沒有兔姬，兔姬的 X 簡介也不再提春魚、商務改走自己信箱；查不到官方終止公告，所以 status 填 null（疑似已結束，需人工確認）。よしか⁂：遊戲角落新聞引述官方公告為 2024-08-31 加盟，因手上沒有官方原文，since 暫填 null。厭世醫師阿萬：官方 Portaly 列為合作藝人、本人 X 自稱「春魚合作夥伴」，起始日查不到。祈菈．貝希毛絲：只有維基寫祈菈是 STORIA/Narrator 所屬，春魚官方頁與公告都查不到，不應列為春魚合作藝人。YouTube ID 一律以頻道頁 externalId 取得（直接抓 channelId 會抓到推薦頻道，已避開）。",
       "excluded": [],
       "members": [
         {
@@ -558,7 +558,7 @@
           ]
         }
       ],
-      "notes": "官網首頁「角色介紹」區用緞帶圖片標期別，依序是：一期生（灰妲 DaDa、諾櫻 Noe、梓凜 Tsulin）→二期生（熙薇妮 Winnie、燎漓 Loli、咪姆 MeeMu、冰煉 BANG）→三期生（魯波 LUPO、鄲森 Single、舒狐 Sofox）→「Oblivion期生」（空条千子 Senko、十六月 OctJun）→四期生（濛瀧 Taki、梅迪歐 Meteor、咲鼠 Sparky）。上次研究把 空条千子、十六月 推定為 3 期，實際官網把她們另列為「Oblivion期生」，要更正。官方標籤只寫「一期生」等，不帶公司名；若資料庫團名需要全域唯一，可加前綴「ReLive Project 」。資料庫的「薇妮」官網寫作「熙薇妮」。安提·萊特不在官網名單上（已畢業），查不到她屬於哪一期，所以沒有分配；鄲森官網仍列（上次研究指出頻道已標停止活動、2024-12-29 有畢業直播）。官網沒有合作藝人區塊。",
+      "notes": "官網首頁「角色介紹」區用緞帶圖片標期別，依序是：一期生（灰妲 DaDa、諾櫻 Noe、梓凜 Tsulin）→二期生（熙薇妮 Winnie、燎漓 Loli、咪姆 MeeMu、冰煉 BANG）→三期生（魯波 LUPO、鄲森 Single、舒狐 Sofox）→「Oblivion期生」（空条千子 Senko、十六月 OctJun）→四期生（濛瀧 Taki、梅迪歐 Meteor、咲鼠 Sparky）。上次研究把 空条千子、十六月 推定為 3 期，實際官網把這兩位另列為「Oblivion期生」，要更正。官方標籤只寫「一期生」等，不帶公司名；若資料庫團名需要全域唯一，可加前綴「ReLive Project 」。資料庫的「薇妮」官網寫作「熙薇妮」。安提·萊特不在官網名單上（已畢業），查不到安提·萊特屬於哪一期，所以沒有分配；鄲森官網仍列（上次研究指出頻道已標停止活動、2024-12-29 有畢業直播）。官網沒有合作藝人區塊。",
       "excluded": [],
       "members": []
     },
@@ -658,7 +658,7 @@
     {
       "agency": "古德文創",
       "subgroups": [],
-      "notes": "重要：古德文創官網（goodcc.com.tw，官方 X @goodcc_tw 簡介連結）首頁只有一個「合作藝人」區塊，資料來自 /influencer-static/pagination/all.json，共 7 人：SobadRush、長毛、Zonda、葉月（ハヅキ）、漏打、Sazki、沐橙。資料庫把 葉月、sazki 當正式所屬，但官網把她們和沐橙同樣列為「合作藝人」，查不到任何「古德文創所屬」的官方說法；建議把 葉月、sazki 也改成合作（或至少標註待確認）。沐橙：確認是合作藝人，不是正式成員（也是金古盃主持）。SobadRush、長毛、Zonda 是真人實況主／賽評，漏打 從官方介紹看不出是不是 VTuber；是否收進資料庫由呼叫端決定。官方 JSON 裡 Zonda 的 youtube/fb 欄位填反了，YouTube 以 @ZondaJungda 為準。漏打的 @Loda3393、沐橙的 @Noon_0606 handle 目前解析不到頻道（沐橙 ID 用舊研究的 UC6gt86ZrdTydcg-rZ-isikw，頻道名「Noon Ch. 沐橙」已驗證）。官網沒有起訖日期。",
+      "notes": "重要：古德文創官網（goodcc.com.tw，官方 X @goodcc_tw 簡介連結）首頁只有一個「合作藝人」區塊，資料來自 /influencer-static/pagination/all.json，共 7 人：SobadRush、長毛、Zonda、葉月（ハヅキ）、漏打、Sazki、沐橙。資料庫把 葉月、sazki 當正式所屬，但官網把這兩位和沐橙同樣列為「合作藝人」，查不到任何「古德文創所屬」的官方說法；建議把 葉月、sazki 也改成合作（或至少標註待確認）。沐橙：確認是合作藝人，不是正式成員（也是金古盃主持）。SobadRush、長毛、Zonda 是真人實況主／賽評，漏打 從官方介紹看不出是不是 VTuber；是否收進資料庫由呼叫端決定。官方 JSON 裡 Zonda 的 youtube/fb 欄位填反了，YouTube 以 @ZondaJungda 為準。漏打的 @Loda3393、沐橙的 @Noon_0606 handle 目前解析不到頻道（沐橙 ID 用舊研究的 UC6gt86ZrdTydcg-rZ-isikw，頻道名「Noon Ch. 沐橙」已驗證）。官網沒有起訖日期。",
       "excluded": [
         {
           "name": "漏打",
@@ -739,7 +739,7 @@
     {
       "agency": "YahooTV",
       "subgroups": [],
-      "notes": "虎妮是 Yahoo TV 節目《虎妮好朋友》的角色，沒有子團，也查不到官方合作藝人名單。上次研究提過《虎妮好朋友》新成員 大合虎子 Taiga Torako（2022-12-10 初配信，新聞出處），她是節目成員不是合作藝人，本批不處理；她的 YouTube @TaigaTorako 目前仍解析不到。",
+      "notes": "虎妮是 Yahoo TV 節目《虎妮好朋友》的角色，沒有子團，也查不到官方合作藝人名單。上次研究提過《虎妮好朋友》新成員 大合虎子 Taiga Torako（2022-12-10 初配信，新聞出處），Taiga Torako 是節目成員不是合作藝人，本批不處理；該 YouTube @TaigaTorako 目前仍解析不到。",
       "excluded": [],
       "members": []
     },
@@ -1153,7 +1153,7 @@
           ]
         }
       ],
-      "notes": "『宮氏海水浴場』是公視專屬 VTuber 頻道/企劃（YT 頻道 ID UCoOv_rsFOBChxYmi4dvtiVQ；X @PTS_VTuber 建立於 2025-07）。官方自介：行動藝術家幽夜南栖系、鄰家大姊姊海月波波、頻道惡魔製作人凱文布魯，另有營運夥伴笨蛋粉圓、emo 偶爾出現（非正式藝人，未列入成員）。三名成員資料庫都還沒有。公視小媒不屬於此企劃；她的 X 名稱標『7/28(五)畢業典禮』(2023)，應確認是否標 former。查無官方合作藝人。",
+      "notes": "『宮氏海水浴場』是公視專屬 VTuber 頻道/企劃（YT 頻道 ID UCoOv_rsFOBChxYmi4dvtiVQ；X @PTS_VTuber 建立於 2025-07）。官方自介：行動藝術家幽夜南栖系、鄰家大姊姊海月波波、頻道惡魔製作人凱文布魯，另有營運夥伴笨蛋粉圓、emo 偶爾出現（非正式藝人，未列入成員）。三名成員資料庫都還沒有。公視小媒不屬於此企劃；小媒的 X 名稱標『7/28(五)畢業典禮』(2023)，應確認是否標 former。查無官方合作藝人。",
       "excluded": [],
       "members": []
     },
@@ -1249,7 +1249,7 @@
           ]
         }
       ],
-      "notes": "官網「旗下藝人」導覽：浠 MIZUKI 列在 霓 NEO(n) 標題之前，為獨立成員、不屬 NEO(n)（資料庫把她掛公司層是對的）。NEO(n) 官網成員＝澪/橙/煌，與資料庫一致。汐Seki(/talents/seki)、響Hibiki(/talents/hibiki) 個人頁仍在且標為旗下藝人、無畢業註記，但未出現在官網導覽清單，不屬任何子團；維持公司層。官網沒有列任何已解散子團。",
+      "notes": "官網「旗下藝人」導覽：浠 MIZUKI 列在 霓 NEO(n) 標題之前，為獨立成員、不屬 NEO(n)（資料庫把浠Mizuki 掛公司層是對的）。NEO(n) 官網成員＝澪/橙/煌，與資料庫一致。汐Seki(/talents/seki)、響Hibiki(/talents/hibiki) 個人頁仍在且標為旗下藝人、無畢業註記，但未出現在官網導覽清單，不屬任何子團；維持公司層。官網沒有列任何已解散子團。",
       "excluded": [],
       "members": [
         {
