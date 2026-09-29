@@ -123,6 +123,10 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
                     {/* 企業勢子團：公司 · 子團 · 地區（公司與團名相同時只寫一次） */}
                     {[ch.agency && ch.agency !== ch.group ? ch.agency : null, ch.group, t(`nationality.${ch.nationality}`, { defaultValue: ch.nationality })].filter(Boolean).join(' · ')}
                 </p>
+                {/* 合作藝人：不是正式所屬，另起一行 */}
+                {ch.collabs && ch.collabs.length > 0 && (
+                    <p className="mt-0.5 text-sm text-muted-foreground">{t('person.collabs', { agencies: ch.collabs.join(t('person.listSeparator')) })}</p>
+                )}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                     {live && (
                         <Button onClick={onWatchLive} disabled={busy} className="gap-1.5">

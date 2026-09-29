@@ -44,6 +44,7 @@ export default {
     'card.openOriginal': '{{platform}} で開く',
     'card.untitled': '（タイトルなし）',
     'card.alsoOn': '{{platform}} でも配信',
+    'card.collab': '{{agency}}・コラボ',
     'card.fromSchedule': 'Twitch 予定',
     'card.fromScheduleHint': 'Twitch の配信スケジュールより。急な変更の可能性があります',
 
@@ -87,6 +88,8 @@ export default {
     'person.notFound.body': 'URL が間違っているか、名簿から外れた可能性があります。',
     'person.seo.title': '{{name}} の配信スケジュール - MultiStream Hub',
     'person.seo.description': '{{name}} の配信スケジュール：配信中、これから 7 日間の待機所と Twitch スケジュール、直近 30 日の配信履歴。',
+    'person.collabs': 'コラボ：{{agencies}}',
+    'person.listSeparator': '、',
 
     'card.watch': '{{name}} をキャンバスで見る',
     'toast.watchUnavailable': 'この配信は再生できるチャンネルがありません',
@@ -120,4 +123,10 @@ export default {
     'roster.loading': 'メンバーを読み込み中…',
     'roster.error': 'メンバー一覧を読み込めませんでした',
     'roster.empty': 'このグループのメンバー情報はまだありません',
+    'roster.collabSection': 'コラボタレント',
+    'roster.collabCount': 'コラボ {{count}} 人',
+    'roster.collab': 'コラボ',
+    'roster.pastCollab': '過去のコラボ',
+    'roster.showPastCollabs': '過去のコラボ {{count}} 人を表示',
+    'roster.hidePastCollabs': '過去のコラボを閉じる',
 };

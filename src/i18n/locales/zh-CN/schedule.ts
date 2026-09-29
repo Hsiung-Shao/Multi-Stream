@@ -44,6 +44,7 @@ export default {
     'card.openOriginal': '在 {{platform}} 打开',
     'card.untitled': '（未命名）',
     'card.alsoOn': '也在 {{platform}}',
+    'card.collab': '{{agency}}・合作',
     'card.fromSchedule': '周表预告',
     'card.fromScheduleHint': '来自 Twitch 周表设置，主播可能临时变动',
 
@@ -87,6 +88,8 @@ export default {
     'person.notFound.body': '网址可能打错了，或这位主播已不在名册中。',
     'person.seo.title': '{{name}} 开播时间与直播周表 - MultiStream Hub',
     'person.seo.description': '{{name}} 的开播周表：正在直播、接下来 7 天的待机室与 Twitch 周表，以及最近 30 天的直播记录。',
+    'person.collabs': '合作：{{agencies}}',
+    'person.listSeparator': '、',
 
     'card.watch': '在画布观看 {{name}}',
     'toast.watchUnavailable': '这场没有可播放的频道',
@@ -120,4 +123,10 @@ export default {
     'roster.loading': '加载成员中…',
     'roster.error': '成员名册暂时无法加载',
     'roster.empty': '还没有这家的成员资料',
+    'roster.collabSection': '合作艺人',
+    'roster.collabCount': '合作 {{count}} 位',
+    'roster.collab': '合作',
+    'roster.pastCollab': '曾合作',
+    'roster.showPastCollabs': '显示曾合作 {{count}} 位',
+    'roster.hidePastCollabs': '收起曾合作',
 };

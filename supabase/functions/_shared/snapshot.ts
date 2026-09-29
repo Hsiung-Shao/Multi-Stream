@@ -3,7 +3,7 @@
 // 時間欄位為 null 時直接省略。
 
 import type { Db } from './db.ts';
-import { inList } from './db.ts';
+import { DbError, inList } from './db.ts';
 import { isRecentForSnapshot, isUpcomingForSnapshot, RECENT_WINDOW_HOURS } from './rules.ts';
 import type { StreamRecord } from './types.ts';
 
@@ -23,6 +23,8 @@ export interface SnapshotChannel {
   slug?: string;
   /** 所屬企業勢（公司名）：企業勢子團取所屬公司、企業勢本身取自己；社團／個人工作室／未查證不輸出 */
   agency?: string;
+  /** 合作中的企業勢（公司名；不含主所屬公司）：vtuber_group_links role=collaborator、已開始（since 空或已到）且未結束（until 空或未到） */
+  collabs?: string[];
 }
 
 /** 團體 id → 顯示名與所屬企業勢 */
@@ -48,6 +50,32 @@ export function resolveGroups(rows: readonly GroupRow[]): Map<string, SnapshotGr
     out.set(g.id, { name: g.name, agency });
   }
   return out;
+}
+
+export interface GroupLinkRow {
+  vtuber_id: string;
+  group_id: string;
+}
+
+/** 台北日期（YYYY-MM-DD）；台灣沒有日光節約，固定 +8 */
+export function taipeiDate(now: number): string {
+  return new Date(now + 8 * 3_600_000).toISOString().slice(0, 10);
+}
+
+/** 合作關係 → 每位藝人合作中的公司名（依名稱排序、去重、排除主所屬公司與非企業勢） */
+export function resolveCollabs(
+  links: readonly GroupLinkRow[],
+  groups: ReadonlyMap<string, SnapshotGroupInfo>,
+): Map<string, string[]> {
+  const out = new Map<string, Set<string>>();
+  for (const l of links) {
+    const agency = groups.get(l.group_id)?.agency;
+    if (!agency) continue;
+    const set = out.get(l.vtuber_id) ?? new Set<string>();
+    set.add(agency);
+    out.set(l.vtuber_id, set);
+  }
+  return new Map([...out].map(([id, set]) => [id, [...set].sort()]));
 }
 
 /** 合併進主場次的另一平台場次（雙平台同一場，見 merge.ts） */
@@ -115,6 +143,7 @@ export function buildSnapshot(
   groups: ReadonlyMap<string, SnapshotGroupInfo>,
   now: number,
   heavyRefreshedAt: string | null,
+  collabs: ReadonlyMap<string, readonly string[]> = new Map(),
 ): Snapshot {
   const vmap = new Map(vtubers.map((v) => [v.id, v]));
   const live: SnapshotStream[] = [];
@@ -171,11 +200,14 @@ export function buildSnapshot(
   for (const id of usedVtubers) {
     const v = vmap.get(id);
     if (!v) continue;
+    const agency = v.group_id ? groups.get(v.group_id)?.agency ?? null : null;
+    const collabList = (collabs.get(id) ?? []).filter((a) => a !== agency);
     channels[id] = omitNull({
       name: v.name,
       avatar: v.img_url,
       group: v.group_id ? groups.get(v.group_id)?.name ?? null : null,
-      agency: v.group_id ? groups.get(v.group_id)?.agency ?? null : null,
+      agency,
+      collabs: collabList.length ? collabList : null,
       nationality: v.nationality,
       youtube: v.youtube_channel_id,
       twitch: v.twitch_channel_id,
@@ -227,8 +259,27 @@ export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: str
     groupRows = legacy.map((g) => ({ ...g, kind: 'unverified', parent_id: null }));
   }
   const groups = resolveGroups(groupRows);
+  // vtuber_group_links 由 20260930100000 新增；表還沒建（404／400）的環境視為沒有合作。
+  // 其他錯誤也不擋 snapshot 發布（合作是附屬資訊），但留 log，下一輪發布會補回
+  let links: GroupLinkRow[] = [];
+  try {
+    // since／until 是已公告的起訖日（台北日期）：開始當天起、結束當天以前算合作中
+    const today = taipeiDate(now);
+    links = await db.selectAll<GroupLinkRow>(
+      'vtuber_group_links',
+      `select=vtuber_id,group_id&role=eq.collaborator&or=(since.is.null,since.lte.${today})&and=(or(until.is.null,until.gte.${today}))`,
+      'vtuber_id,group_id', // 這張表沒有 id 欄，分頁排序用主鍵
+    );
+  } catch (e) {
+    if (!(e instanceof DbError && (e.status === 404 || e.status === 400))) {
+      console.warn(`vtuber_group_links: ${e instanceof Error ? e.message : 'error'}`);
+    }
+    links = [];
+  }
+  const used = new Set(vtuberIds);
+  const collabs = resolveCollabs(links.filter((l) => used.has(l.vtuber_id)), groups);
 
-  const snapshot = buildSnapshot(streams, vtubers, groups, now, heavyRefreshedAt);
+  const snapshot = buildSnapshot(streams, vtubers, groups, now, heavyRefreshedAt, collabs);
   const body = JSON.stringify(snapshot);
   await db.putStorageObject(SNAPSHOT_BUCKET, SNAPSHOT_PATH, body, 'application/json', SNAPSHOT_CACHE_SECONDS);
   return new TextEncoder().encode(body).length;

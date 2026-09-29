@@ -41,6 +41,16 @@ export async function resolveRestConfig(opts: RestOptions): Promise<RestConfig> 
     return cachedConfig;
 }
 
+/** 台北日期（YYYY-MM-DD）；台灣沒有日光節約，固定 +8。與後端 snapshot.taipeiDate 同規則 */
+export function taipeiDate(now: number): string {
+    return new Date(now + 8 * 3_600_000).toISOString().slice(0, 10);
+}
+
+/** 合作關係在 today（台北日期）是否進行中：已開始（since 空或已到）且未結束（until 空或未到） */
+export function isCollabActive(since: string | null | undefined, until: string | null | undefined, today: string): boolean {
+    return (!since || since <= today) && (!until || until >= today);
+}
+
 /** GET /rest/v1/<path>，回傳陣列；非 2xx 或格式不對丟 SnapshotError */
 export async function restGet<T>(cfg: RestConfig, path: string, opts: RestOptions): Promise<T> {
     const res = await fetchWithTimeout(`${cfg.url}/rest/v1/${path}`, opts.timeoutMs ?? SNAPSHOT_TIMEOUT_MS, opts.signal, opts.fetchFn, {

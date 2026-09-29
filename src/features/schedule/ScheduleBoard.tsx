@@ -115,8 +115,14 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     const liveIds = useMemo(() => new Set(snapshot.live.map((s) => s.vtuber_id)), [snapshot]);
 
     const cardActions = useMemo<ScheduleCardActions>(
-        () => ({ watch: (s, ch) => void watch(s, ch), busyKey, isFavorite: fav.isFavorite, toggleFavorite: (ch) => void fav.toggle(ch) }),
-        [watch, busyKey, fav.isFavorite, fav.toggle],
+        () => ({
+            watch: (s, ch) => void watch(s, ch),
+            busyKey,
+            isFavorite: fav.isFavorite,
+            toggleFavorite: (ch) => void fav.toggle(ch),
+            focusAgency: rosterAgency,
+        }),
+        [watch, busyKey, fav.isFavorite, fav.toggle, rosterAgency],
     );
 
     const changeFilter = (key: keyof ScheduleFilterState, value: string) => {

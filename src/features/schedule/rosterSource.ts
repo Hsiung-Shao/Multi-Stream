@@ -2,9 +2,10 @@
 // anon 查 PostgREST（restClient.ts），vtuber_groups 與 vtubers 都是公開可讀。
 // graduated_at／former_group_id 由 20260929120000 migration 新增；還沒上線的環境 PostgREST 回 400，退回不帶這兩欄。
 // 離開公司但繼續活動的人（former_group_id）也列入，在名冊裡算「已畢業」。
+// 合作藝人（vtuber_group_links role=collaborator，20260930100000 新增）另列一區；表還沒上線的環境回 404／400，視為沒有合作。
 
 import { SnapshotError } from './snapshotSource';
-import { resolveRestConfig, restGet, type RestOptions } from './restClient';
+import { isCollabActive, resolveRestConfig, restGet, taipeiDate, type RestConfig, type RestOptions } from './restClient';
 
 export interface RosterMember {
     id: string;
@@ -17,6 +18,8 @@ export interface RosterMember {
     graduated?: string;
     /** 所屬團體（子團或公司本身）的名稱 */
     group: string;
+    /** 合作藝人：active 仍合作、past 合作已結束 */
+    collab?: 'active' | 'past';
 }
 
 export interface RosterSection {
@@ -30,6 +33,16 @@ export interface AgencyRoster {
     sections: RosterSection[];
     activeCount: number;
     graduatedCount: number;
+    /** 合作藝人（不是正式成員）：仍合作在前，依名字排序 */
+    collaborators: RosterMember[];
+    /** 仍在合作的人數 */
+    collabCount: number;
+}
+
+interface LinkRow {
+    since?: string | null;
+    until: string | null;
+    vtubers: MemberRow | null;
 }
 
 interface GroupRow {
@@ -55,6 +68,7 @@ const MEMBER_COLS = 'id,name,img_url,slug,activity,debut_date,group_id';
 /** graduated_at／former_group_id／is_official 由 20260929120000 migration 新增 */
 const MEMBER_COLS_NEW = `${MEMBER_COLS},graduated_at,former_group_id,is_official`;
 const MEMBER_LIMIT = 500;
+const LINK_COLS = `since,until,vtubers(${MEMBER_COLS},is_official)`;
 
 const toMember = (r: MemberRow, group: string, left: boolean): RosterMember => {
     // 離開公司但繼續活動（轉個人勢）：在這家的名冊裡算「已畢業」
@@ -85,7 +99,13 @@ const byDebut = (a: RosterMember, b: RosterMember) => (a.debut ?? '9999').locale
  * 查詢結果 → 依團體分區塊：子團依成員多到少、公司本身的成員最後；空的區塊不輸出。
  * 每區內依出道日排序（現役／已畢業的切分交給畫面）。
  */
-export function buildRoster(agency: string, groups: readonly GroupRow[], rows: readonly MemberRow[]): AgencyRoster {
+export function buildRoster(
+    agency: string,
+    groups: readonly GroupRow[],
+    rows: readonly MemberRow[],
+    links: readonly LinkRow[] = [],
+    today = taipeiDate(Date.now()),
+): AgencyRoster {
     const nameOf = new Map(groups.map((g) => [g.id, g.name]));
     const top = groups.find((g) => g.name === agency);
     const bucket = new Map<string, RosterMember[]>();
@@ -104,12 +124,40 @@ export function buildRoster(agency: string, groups: readonly GroupRow[], rows: r
         .sort((a, b) => Number(a.id === top?.id) - Number(b.id === top?.id) || b.members.length - a.members.length || a.name.localeCompare(b.name))
         .map(({ name, members }) => ({ name, members }));
     const all = sections.flatMap((s) => s.members);
+    // 合作：同一人同時是正式成員就不重複列；還沒開始的不列，結束日已過＝曾合作
+    const memberIds = new Set(all.map((m) => m.id));
+    const seen = new Set<string>();
+    const collaborators: RosterMember[] = [];
+    for (const l of links) {
+        const v = l.vtubers;
+        if (!v || memberIds.has(v.id) || seen.has(v.id) || isOfficialChannel(v.name, groupNames, v.is_official)) continue;
+        if (l.since && l.since > today) continue;
+        seen.add(v.id);
+        collaborators.push({ ...toMember(v, agency, false), collab: isCollabActive(l.since, l.until, today) ? 'active' : 'past' });
+    }
+    collaborators.sort((a, b) => Number(a.collab === 'past') - Number(b.collab === 'past') || a.name.localeCompare(b.name));
     return {
         agency,
         sections,
         activeCount: all.filter((m) => m.activity !== 'graduate').length,
         graduatedCount: all.filter((m) => m.activity === 'graduate').length,
+        collaborators,
+        collabCount: collaborators.filter((m) => m.collab === 'active').length,
     };
+}
+
+/**
+ * 合作關係（嵌入藝人資料）。合作是附屬資訊：查詢失敗（表還沒建的 404／400、逾時、5xx）都回空陣列，
+ * 不讓整份名冊顯示錯誤；呼叫端中止（signal）照常往外丟。
+ */
+async function fetchCollabLinks(cfg: RestConfig, ids: string, opts: RestOptions): Promise<LinkRow[]> {
+    try {
+        return await restGet<LinkRow[]>(cfg, `vtuber_group_links?select=${LINK_COLS}&group_id=in.(${ids})&role=eq.collaborator&limit=${MEMBER_LIMIT}`, opts);
+    } catch (e) {
+        if (opts.signal?.aborted) throw e;
+        if (!(e instanceof SnapshotError && /HTTP 404/.test(e.message))) console.warn('roster collabs unavailable');
+        return [];
+    }
 }
 
 /** 依公司名稱查名冊；查無此公司回 null */
@@ -127,13 +175,15 @@ export async function fetchAgencyRoster(agency: string, opts: RestOptions = {}):
     const groups: GroupRow[] = [topRow, ...children];
     const ids = groups.map((g) => g.id).join(',');
     const tail = `&order=debut_date.asc.nullslast&limit=${MEMBER_LIMIT}`;
-    let rows: MemberRow[];
-    try {
-        // 現役與引退（group_id）＋離開後繼續活動（former_group_id）
-        rows = await restGet<MemberRow[]>(cfg, `vtubers?select=${MEMBER_COLS_NEW}&or=(group_id.in.(${ids}),former_group_id.in.(${ids}))${tail}`, opts);
-    } catch (e) {
-        if (!(e instanceof SnapshotError && e.message.includes('HTTP 400'))) throw e;
-        rows = await restGet<MemberRow[]>(cfg, `vtubers?select=${MEMBER_COLS}&group_id=in.(${ids})${tail}`, opts);
-    }
-    return buildRoster(agency, groups, rows);
+    const fetchMembers = async (): Promise<MemberRow[]> => {
+        try {
+            // 現役與引退（group_id）＋離開後繼續活動（former_group_id）
+            return await restGet<MemberRow[]>(cfg, `vtubers?select=${MEMBER_COLS_NEW}&or=(group_id.in.(${ids}),former_group_id.in.(${ids}))${tail}`, opts);
+        } catch (e) {
+            if (!(e instanceof SnapshotError && e.message.includes('HTTP 400'))) throw e;
+            return restGet<MemberRow[]>(cfg, `vtubers?select=${MEMBER_COLS}&group_id=in.(${ids})${tail}`, opts);
+        }
+    };
+    const [rows, links] = await Promise.all([fetchMembers(), fetchCollabLinks(cfg, ids, opts)]);
+    return buildRoster(agency, groups, rows, links);
 }

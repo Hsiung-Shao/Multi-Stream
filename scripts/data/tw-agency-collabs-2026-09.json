@@ -1,0 +1,1658 @@
+{
+  "_說明": "台灣 VTuber 企業勢的子團官方名稱與合作藝人。2026-09-30 由研究代理逐家查證（官網、官方公告、官方 YouTube 為準；wiki 只作線索），每筆附出處。members＝合作藝人（resolve-roster-channels.mjs 的輸入格式）；excluded＝人工排除（見 _overrides）。",
+  "verified_at": "2026-09-30",
+  "_overrides": {
+    "display_name": {
+      "哈瓜Jongie": "哈瓜 Jongie",
+      "Ren0809k": "Ren",
+      "よしか⁂": "YOSHIKA⁂",
+      "UMA_kagami 卡嘎咪": "卡嘎咪"
+    },
+    "not_vtuber": {
+      "古德文創": [
+        "漏打",
+        "SobadRush",
+        "長毛",
+        "Zonda"
+      ]
+    }
+  },
+  "agencies": [
+    {
+      "agency": "春魚創意",
+      "subgroups": [
+        {
+          "official_name": "Para≠dox ∞ 五律悖反",
+          "aliases": [
+            "Para≠dox",
+            "五律悖反",
+            "Para≠dox ∞"
+          ],
+          "db_name": "Para≠dox",
+          "verdict": "rename",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "安特羅迦",
+            "拉斐利婭",
+            "蕾忒",
+            "佐霏",
+            "瑟思安"
+          ],
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://www.youtube.com/@Paradox.2026",
+            "https://www.facebook.com/Paradox5th/"
+          ]
+        },
+        {
+          "official_name": "Timaeus 諦覓司",
+          "aliases": [
+            "諦覓司",
+            "諦覓司 Timaeus",
+            "Timaeus"
+          ],
+          "db_name": "諦覓司",
+          "verdict": "rename",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "穆恩佐",
+            "格萊伊",
+            "賽特珞",
+            "艾斯珀達"
+          ],
+          "sources": [
+            "https://portaly.cc/springfish"
+          ]
+        },
+        {
+          "official_name": "瑟拉斯蒂歐 Celestial",
+          "aliases": [
+            "瑟拉斯蒂歐",
+            "瑟拉斯蒂歐Celestial",
+            "Celestial"
+          ],
+          "db_name": "瑟拉斯蒂歐",
+          "verdict": "rename",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "雲隙光",
+            "冰霧",
+            "白白虹",
+            "幻月"
+          ],
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://www.facebook.com/Celestial2024"
+          ]
+        },
+        {
+          "official_name": "極深空計畫 Xtreme Deep Field Project",
+          "aliases": [
+            "極深空計畫",
+            "Xtreme Deep Field Project",
+            "XDFP"
+          ],
+          "db_name": "極深空計畫",
+          "verdict": "rename",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "厄倫蒂兒",
+            "涅默",
+            "埃穆亞",
+            "熙歌"
+          ],
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://www.facebook.com/Xtreme.Deep.Field.Project"
+          ]
+        },
+        {
+          "official_name": "惡獸時代 Monstar",
+          "aliases": [
+            "惡獸時代Monstar",
+            "惡獸時代",
+            "Monstar"
+          ],
+          "db_name": "惡獸時代Monstar",
+          "verdict": "rename",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "歐妲",
+            "阿爾姿",
+            "海唧"
+          ],
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://www.facebook.com/Monstar666666666"
+          ]
+        },
+        {
+          "official_name": "瀕臨絕種團 RESCUTE",
+          "aliases": [
+            "瀕臨絕種團RESCUTE",
+            "瀕臨絕種團",
+            "瀕臨絕種團 Rescute",
+            "RESCUTE"
+          ],
+          "db_name": "瀕臨絕種團RESCUTE",
+          "verdict": "rename",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "露恰露恰",
+            "十五號",
+            "歐貝爾"
+          ],
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://www.facebook.com/RESCUTE119"
+          ]
+        },
+        {
+          "official_name": "終端少女",
+          "aliases": [
+            "Computer Terminal Girls"
+          ],
+          "db_name": "終端少女",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "disbanded",
+          "members": [
+            "平平子"
+          ],
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://www.facebook.com/ComputerTerminalGirls"
+          ]
+        },
+        {
+          "official_name": "SquareLive",
+          "aliases": [
+            "Square Live"
+          ],
+          "db_name": "SquareLive",
+          "verdict": "not_subgroup",
+          "kind": "project",
+          "status": "disbanded",
+          "members": [],
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://www.techbang.com/posts/100320-springfish-studio-unveils-new-vtuber-xtreme-deep-field-project",
+            "https://zh.wikipedia.org/zh-tw/春魚工作室"
+          ]
+        }
+      ],
+      "notes": "官方出處＝春魚官方 Portaly（X 簡介連結的官方多連結頁）與 @Springfish2018 合作公告圖。Portaly「旗下VTuber團體」列：瀕臨絕種團 RESCUTE、惡獸時代 Monstar、極深空計畫 Xtreme Deep Field Project、瑟拉斯蒂歐 Celestial、Timaeus 諦覓司（區塊標題另寫作「諦覓司 Timaeus」）、Para≠dox ∞ 五律悖反；終端少女只出現在「活動終止藝人」區（平平子）。成員狀態：平平子、十五號、歐貝爾、阿爾姿列在官方「活動終止藝人」；海唧 2023-03-22 解約（新聞，官方頁未列）。SquareLive：官方 Portaly 團體清單沒有它，資料庫下也沒有成員；維基寫是春魚與 STORIA/Narrator 遊戲工作室聯合成立的品牌，2022 年極深空計畫新聞稿用「SquareLive 新成員」、白白虹初配信標題也掛「Square Live」，看起來是品牌/廠牌名而非藝人團，查不到官方說明，建議不當子團（kind/status 為推定值）。合作藝人：Portaly 分「合作實況主」（哈瓜哈瓜、REN、UMA_kagami 卡嘎咪）與「合作藝人 Cooperation VTuber」（茸茸鼠、よしか⁂、厭世醫師阿萬）。兔姬：2023-10-19 官方合作公告（經「惡兔重工」、含 3D 合作）已確認，但現行 Portaly 名單已沒有她，她的 X 簡介也不再提春魚、商務改走自己信箱；查不到官方終止公告，所以 status 填 null（疑似已結束，需人工確認）。よしか⁂：遊戲角落新聞引述官方公告為 2024-08-31 加盟，因手上沒有官方原文，since 暫填 null。厭世醫師阿萬：官方 Portaly 列為合作藝人、本人 X 自稱「春魚合作夥伴」，起始日查不到。祈菈．貝希毛絲：只有維基寫她是 STORIA/Narrator 所屬，春魚官方頁與公告都查不到，不應列為春魚合作藝人。YouTube ID 一律以頻道頁 externalId 取得（直接抓 channelId 會抓到推薦頻道，已避開）。",
+      "excluded": [],
+      "members": [
+        {
+          "name": "哈瓜 Jongie",
+          "aliases": [
+            "哈瓜",
+            "哈瓜哈瓜",
+            "Jongie",
+            "哈瓜Jongie"
+          ],
+          "status": "active",
+          "since": "2023-05-22",
+          "until": null,
+          "youtube_channel_id": "UCiRPyZwWivfAuqNW303B86Q",
+          "youtube_handle": "@Jongie",
+          "twitch_login": "jongie",
+          "verdict": "confirmed",
+          "sources": [
+            "https://x.com/Springfish2018/status/1660888549309448192",
+            "https://portaly.cc/springfish"
+          ]
+        },
+        {
+          "name": "Ren",
+          "aliases": [
+            "Ren",
+            "REN",
+            "Ren0809k"
+          ],
+          "status": "active",
+          "since": "2023-05-23",
+          "until": null,
+          "youtube_channel_id": null,
+          "youtube_handle": null,
+          "twitch_login": "ren0809k",
+          "verdict": "confirmed",
+          "sources": [
+            "https://x.com/Springfish2018/status/1660933708604375042",
+            "https://portaly.cc/springfish"
+          ]
+        },
+        {
+          "name": "Comame ch.茸茸鼠",
+          "aliases": [
+            "茸茸鼠",
+            "茸茸鼠こまめ",
+            "こまめ",
+            "Comame"
+          ],
+          "status": "active",
+          "since": "2023-06-25",
+          "until": null,
+          "youtube_channel_id": "UCBLqkkSpOi6a95Lf4BsTh7Q",
+          "youtube_handle": "@mochikomame",
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://x.com/Springfish2018/status/1672832049756131328",
+            "https://portaly.cc/springfish"
+          ]
+        },
+        {
+          "name": "USAGIHIME 兔姬",
+          "aliases": [
+            "兔姬",
+            "USAGIHIME"
+          ],
+          "status": null,
+          "since": "2023-10-19",
+          "until": null,
+          "youtube_channel_id": "UC0u_-3zgLkSYpQOxlBi-5Ng",
+          "youtube_handle": "@UsagiHime777",
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://x.com/Springfish2018/status/1714959586380443992"
+          ]
+        },
+        {
+          "name": "YOSHIKA⁂",
+          "aliases": [
+            "YOSHIKA⁂",
+            "YOSHIKA⁂Ch.",
+            "Yoshika⁂",
+            "YOSHIKA",
+            "よしか⁂"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UC3xQCiEPSkco54WhuiDcngw",
+          "youtube_handle": "@YOSHIKA-Ch",
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://x.com/yosi_k14",
+            "https://game.udn.com/game/story/122089/8201564"
+          ]
+        },
+        {
+          "name": "卡嘎咪",
+          "aliases": [
+            "kagami(Uma)",
+            "卡嘎咪",
+            "UMA_kagami",
+            "Kagami",
+            "UMA_kagami 卡嘎咪"
+          ],
+          "status": "active",
+          "since": "2025-03-16",
+          "until": null,
+          "youtube_channel_id": "UC2aD3SGRZgUsIP-gJ0BkeYg",
+          "youtube_handle": "@UMA_kagami",
+          "twitch_login": "uma_kagami",
+          "verdict": "confirmed",
+          "sources": [
+            "https://x.com/Springfish2018/status/1901121246357819514",
+            "https://portaly.cc/springfish"
+          ]
+        },
+        {
+          "name": "厭世醫師阿萬 Doctor R1",
+          "aliases": [
+            "厭世醫師阿萬",
+            "阿萬R1",
+            "阿萬"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UCyEdVShpd0J11uf1Tsz-Udw",
+          "youtube_handle": "@Dr.lifesucks",
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://portaly.cc/springfish",
+            "https://x.com/drlifesucks"
+          ]
+        },
+        {
+          "name": "祈菈．貝希毛絲",
+          "aliases": [],
+          "status": null,
+          "since": null,
+          "until": null,
+          "youtube_channel_id": null,
+          "youtube_handle": null,
+          "twitch_login": null,
+          "verdict": "no_official_source",
+          "sources": [
+            "https://zh.wikipedia.org/zh-tw/春魚工作室"
+          ]
+        }
+      ]
+    },
+    {
+      "agency": "比鄰星域",
+      "subgroups": [
+        {
+          "official_name": "破曉晨星",
+          "aliases": [
+            "破曉晨星 Phosphorus",
+            "Phosphorus",
+            "一期"
+          ],
+          "db_name": "破曉晨星",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "disbanded",
+          "members": [
+            "星見遙",
+            "萊菈 希格娜斯",
+            "月城九曜"
+          ],
+          "sources": [
+            "https://www.youtube.com/channel/UCeZSiI9Kcyld9AjLuUdNKkA",
+            "https://forum.gamer.com.tw/C.php?bsn=60608&snA=7667"
+          ]
+        },
+        {
+          "official_name": "異星迷走 KOZMII",
+          "aliases": [
+            "KOZMII",
+            "異星迷走",
+            "二期"
+          ],
+          "db_name": "異星迷走 KOZMII",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "佐藍",
+            "白月心宿",
+            "莉莉·埃絲忒"
+          ],
+          "sources": [
+            "https://www.youtube.com/channel/UC9txSCFCcrwjBliA2WSnODQ/channels",
+            "https://www.plurk.com/ProximaSector",
+            "https://forum.gamer.com.tw/C.php?bsn=60608&snA=7667"
+          ]
+        },
+        {
+          "official_name": "群星計畫",
+          "aliases": [],
+          "db_name": "群星計畫",
+          "verdict": "ok",
+          "kind": "project",
+          "status": "active",
+          "members": [
+            "紗羅",
+            "佩爾戴斯"
+          ],
+          "sources": [
+            "https://www.youtube.com/channel/UCZuQvHMvbkuPOT8MpDVgh_Q",
+            "https://forum.gamer.com.tw/C.php?bsn=60608&snA=7667"
+          ]
+        }
+      ],
+      "notes": "官方出處：官方 lit.link（https://lit.link/en/proximasector）現役只列 紗羅、佐藍、白月心宿；官方網站 wix.proxima.tw 已失效。三個子團名稱比對官方與成員頻道自稱：紗羅頻道「【群星計畫 / 比鄰星域所屬】」、月城九曜「【破曉晨星 / 比鄰星域所屬】」、佐藍/白月心宿/莉莉「【KOZMII / 比鄰星域所屬】」，官方噗浪也用 #KOZMII。「異星迷走」與「Phosphorus」只在巴哈粉絲整理串看到（作者自稱非官方），官方自稱多半只寫 KOZMII；資料庫現名可保留，但若要嚴格用官方寫法可改成「KOZMII」。破曉晨星：星見遙 2024-01-01 轉個人勢、萊菈頻道已無所屬標示，月城九曜頻道仍掛所屬但資料庫記已畢業；三人都已不在官方現役名單，所以 status 填 disbanded（推定）。資料庫的 former_members_left 有星見遙，已補進破曉晨星成員。佩爾戴斯頻道標「長期休止中」、莉莉標「無限期活動休止」。官方 YouTube 的「頻道」分頁另有一區「無序樂章Vsinger」（無序樂章 / DisorderlyMovement 與 梨亞卓恩、諾特、貝絲·提努多、克蕾芙），但這些頻道沒有任何「比鄰星域所屬」字樣，查不到屬於比鄰星域或合作的官方說明，所以不列為子團或合作藝人（需人工確認）。查不到任何官方合作藝人名單。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "L.M. Live",
+      "subgroups": [
+        {
+          "official_name": "神諭誓約計畫 (OAOP)",
+          "aliases": [
+            "OAOP",
+            "Oracle And Oath Project",
+            "神諭誓約計畫",
+            "一期生"
+          ],
+          "db_name": "OAOP",
+          "verdict": "rename",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "蕾·古露絲",
+            "八上菟比",
+            "媞法賽拉"
+          ],
+          "sources": [
+            "https://x.com/LMLive_TW/status/1805607415557275844",
+            "https://www.youtube.com/channel/UCWGxJQL3dmqH21-CbayS_Rw/channels"
+          ]
+        },
+        {
+          "official_name": "AHYMN",
+          "aliases": [
+            "二期生"
+          ],
+          "db_name": "AHYMN",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "璦格蓓菈",
+            "海希霖涅",
+            "雅列姬塔",
+            "桃芽鹿妮",
+            "涅露茉茉"
+          ],
+          "sources": [
+            "https://x.com/LMLive_TW",
+            "https://www.youtube.com/channel/UCWGxJQL3dmqH21-CbayS_Rw/channels"
+          ]
+        }
+      ],
+      "notes": "官方 X @LMLive_TW 簡介：一期生 @ReGulus_OAO、@YakamiTubi_OAO；二期生 @AgaBerrilaAhymn、@HydroRineAhymn、@YarleKintar、@MomogaLuniAhymn、@NeruMomoAhymn（成員 X 也各自寫「@LMLive_TW 所屬一期生/二期生」）。一期團官方公告（2024-06-25）寫作「神諭誓約計畫 (OAOP)」，官方 YouTube 頻道分頁區塊名「Oracle And Oath Project」，所以建議把 OAOP 改成完整官方名。AHYMN 官方只寫英文「AHYMN」，查不到中文團名。媞法賽拉 已不在官方 X 的一期生名單（頻道標已畢業），所以 OAOP 目前實際只剩 2 人，團仍在活動。查不到官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "ReLive Project",
+      "subgroups": [
+        {
+          "official_name": "一期生",
+          "aliases": [
+            "ReLive Project 1期生",
+            "1期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "灰妲",
+            "諾櫻",
+            "梓凜"
+          ],
+          "sources": [
+            "https://relive-project0.com/"
+          ]
+        },
+        {
+          "official_name": "二期生",
+          "aliases": [
+            "ReLive Project 2期生",
+            "2期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "薇妮",
+            "燎漓",
+            "咪姆",
+            "冰煉"
+          ],
+          "sources": [
+            "https://relive-project0.com/"
+          ]
+        },
+        {
+          "official_name": "三期生",
+          "aliases": [
+            "ReLive Project 3期生",
+            "3期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "魯波",
+            "鄲森",
+            "舒狐"
+          ],
+          "sources": [
+            "https://relive-project0.com/"
+          ]
+        },
+        {
+          "official_name": "Oblivion期生",
+          "aliases": [],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "空条千子",
+            "十六月 OctJun"
+          ],
+          "sources": [
+            "https://relive-project0.com/"
+          ]
+        },
+        {
+          "official_name": "四期生",
+          "aliases": [
+            "ReLive Project 4期生",
+            "4期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "濛瀧",
+            "梅迪歐",
+            "咲鼠"
+          ],
+          "sources": [
+            "https://relive-project0.com/"
+          ]
+        }
+      ],
+      "notes": "官網首頁「角色介紹」區用緞帶圖片標期別，依序是：一期生（灰妲 DaDa、諾櫻 Noe、梓凜 Tsulin）→二期生（熙薇妮 Winnie、燎漓 Loli、咪姆 MeeMu、冰煉 BANG）→三期生（魯波 LUPO、鄲森 Single、舒狐 Sofox）→「Oblivion期生」（空条千子 Senko、十六月 OctJun）→四期生（濛瀧 Taki、梅迪歐 Meteor、咲鼠 Sparky）。上次研究把 空条千子、十六月 推定為 3 期，實際官網把她們另列為「Oblivion期生」，要更正。官方標籤只寫「一期生」等，不帶公司名；若資料庫團名需要全域唯一，可加前綴「ReLive Project 」。資料庫的「薇妮」官網寫作「熙薇妮」。安提·萊特不在官網名單上（已畢業），查不到她屬於哪一期，所以沒有分配；鄲森官網仍列（上次研究指出頻道已標停止活動、2024-12-29 有畢業直播）。官網沒有合作藝人區塊。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "Vlive Lab",
+      "subgroups": [
+        {
+          "official_name": "冥界SCP事務所",
+          "aliases": [
+            "第一、二期生【冥界SCP事務所】",
+            "未來實驗所"
+          ],
+          "db_name": "冥界SCP事務所",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "魔王桑德斯",
+            "夜神遂心",
+            "龍川若雪"
+          ],
+          "sources": [
+            "https://vlivelab.com/"
+          ]
+        }
+      ],
+      "notes": "官網 Talents 區標題為「第一、二期生【冥界SCP事務所】」，列【魔王】桑德斯 · 闇（初配信 2023/7/16）、【狼執事】夜神遂心（2025/4）、【冰龍】龍川若雪（2025/8）。官網沒寫誰是一期、誰是二期，所以不拆期別。官網自稱「合作型Vtuber科技實驗型事務所」，但沒有列出任何合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "VerseLink",
+      "subgroups": [
+        {
+          "official_name": "一期生",
+          "aliases": [
+            "VerseLink 一期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "諾鴉・奈菲墨",
+            "米菈"
+          ],
+          "sources": [
+            "https://verselink.studio/member"
+          ]
+        },
+        {
+          "official_name": "二期生",
+          "aliases": [
+            "VerseLink 二期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "迷夜夜",
+            "福栗"
+          ],
+          "sources": [
+            "https://verselink.studio/member"
+          ]
+        },
+        {
+          "official_name": "三期生",
+          "aliases": [
+            "VerseLink 三期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "貝芮納",
+            "希沫洛佩"
+          ],
+          "sources": [
+            "https://verselink.studio/member"
+          ]
+        }
+      ],
+      "notes": "官網成員頁的篩選器分成 一期生／二期生／三期生／合作夥伴；「合作夥伴」篩選結果顯示「沒有符合條件的成員」（https://verselink.studio/member?filter=network），所以目前沒有合作藝人。官網寫法：諾鴉．奈菲墨（全形點，資料庫用「・」）、貝芮納．尤格里斯（資料庫只寫「貝芮納」）。期別是否要建成子團由呼叫端決定；官方只稱「X期生」，沒有團名。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "點一璃Glaçage",
+      "subgroups": [],
+      "notes": "官網「旗下藝人」頁（Google Sites）只列 4 人：優菈YOLO、趙錦漓Lily Zhao、夏木日葵Himari、利歐·奧崙Rio Oren，沒有子團、期別，也沒有合作藝人區塊。首頁寫的「藝人合作」是聯絡信箱，不是名單。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "古德文創",
+      "subgroups": [],
+      "notes": "重要：古德文創官網（goodcc.com.tw，官方 X @goodcc_tw 簡介連結）首頁只有一個「合作藝人」區塊，資料來自 /influencer-static/pagination/all.json，共 7 人：SobadRush、長毛、Zonda、葉月（ハヅキ）、漏打、Sazki、沐橙。資料庫把 葉月、sazki 當正式所屬，但官網把她們和沐橙同樣列為「合作藝人」，查不到任何「古德文創所屬」的官方說法；建議把 葉月、sazki 也改成合作（或至少標註待確認）。沐橙：確認是合作藝人，不是正式成員（也是金古盃主持）。SobadRush、長毛、Zonda 是真人實況主／賽評，漏打 從官方介紹看不出是不是 VTuber；是否收進資料庫由呼叫端決定。官方 JSON 裡 Zonda 的 youtube/fb 欄位填反了，YouTube 以 @ZondaJungda 為準。漏打的 @Loda3393、沐橙的 @Noon_0606 handle 目前解析不到頻道（沐橙 ID 用舊研究的 UC6gt86ZrdTydcg-rZ-isikw，頻道名「Noon Ch. 沐橙」已驗證）。官網沒有起訖日期。",
+      "excluded": [
+        {
+          "name": "漏打",
+          "reason": "not_vtuber"
+        },
+        {
+          "name": "SobadRush",
+          "reason": "not_vtuber"
+        },
+        {
+          "name": "長毛",
+          "reason": "not_vtuber"
+        },
+        {
+          "name": "Zonda",
+          "reason": "not_vtuber"
+        }
+      ],
+      "members": [
+        {
+          "name": "葉月（ハヅキ）",
+          "aliases": [
+            "葉月 Hazuki",
+            "葉月 Hatsuki",
+            "葉月"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UCsIBbeApZk3ZKq2khrxpMNQ",
+          "youtube_handle": null,
+          "twitch_login": "hatsuki_vt",
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.goodcc.com.tw/influencer-static/pagination/all.json",
+            "https://www.goodcc.com.tw/"
+          ]
+        },
+        {
+          "name": "Sazki",
+          "aliases": [
+            "sazki",
+            "sazki ch."
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UCQSkfRwoAVG0J5MUo2spPWw",
+          "youtube_handle": "@sazkich",
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.goodcc.com.tw/influencer-static/pagination/all.json",
+            "https://www.goodcc.com.tw/"
+          ]
+        },
+        {
+          "name": "沐橙",
+          "aliases": [
+            "Noon",
+            "沐橙 Noon",
+            "Noon Ch. 沐橙"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UC6gt86ZrdTydcg-rZ-isikw",
+          "youtube_handle": "@Noon_0606",
+          "twitch_login": "noon_0606",
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.goodcc.com.tw/influencer-static/pagination/all.json",
+            "https://x.com/goodcc_tw/status/1994949503011397654"
+          ]
+        }
+      ]
+    },
+    {
+      "agency": "YahooTV",
+      "subgroups": [],
+      "notes": "虎妮是 Yahoo TV 節目《虎妮好朋友》的角色，沒有子團，也查不到官方合作藝人名單。上次研究提過《虎妮好朋友》新成員 大合虎子 Taiga Torako（2022-12-10 初配信，新聞出處），她是節目成員不是合作藝人，本批不處理；她的 YouTube @TaigaTorako 目前仍解析不到。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "預見娛樂",
+      "subgroups": [
+        {
+          "official_name": "EXITUS",
+          "aliases": [
+            "一期生EXITUS"
+          ],
+          "db_name": "EXITUS",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "利卡洛斯",
+            "姬城三千華",
+            "帕蘿妮",
+            "神無月鹿比",
+            "艾琳妮雅",
+            "詩雨蔻達"
+          ],
+          "sources": [
+            "https://www.envisionvtuber.com.tw/artist/list/2",
+            "https://www.envisionvtuber.com.tw/about/1"
+          ]
+        },
+        {
+          "official_name": "MeloNyx",
+          "aliases": [
+            "二期生MeloNyx"
+          ],
+          "db_name": "MeloNyx",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "依可露",
+            "希妮·亞里絲",
+            "愛喵Andi",
+            "瓦西瓦瓦",
+            "結月莉莉奈",
+            "若櫻依兔",
+            "酒樂霧子"
+          ],
+          "sources": [
+            "https://www.envisionvtuber.com.tw/artist/list/3",
+            "https://www.envisionvtuber.com.tw/about/1"
+          ]
+        },
+        {
+          "official_name": "Alluria",
+          "aliases": [],
+          "db_name": "Alluria",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "希洛萊昂",
+            "涅爾菲",
+            "穆克蕗",
+            "魁",
+            "鯨諾"
+          ],
+          "sources": [
+            "https://www.envisionvtuber.com.tw/artist/list/4"
+          ]
+        },
+        {
+          "official_name": "音雲漫步計畫",
+          "aliases": [],
+          "db_name": "音雲漫步計畫",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "心",
+            "百百波美",
+            "羽芝扉扉",
+            "量產型猫飼步歌貳貳機"
+          ],
+          "sources": [
+            "https://www.envisionvtuber.com.tw/artist/list/6",
+            "https://gnn.gamer.com.tw/detail.php?sn=273141"
+          ]
+        },
+        {
+          "official_name": "CaKano",
+          "aliases": [],
+          "db_name": "CaKano",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "克克米伊",
+            "崎塔",
+            "諾恪里"
+          ],
+          "sources": [
+            "https://www.envisionvtuber.com.tw/artist/list/7"
+          ]
+        },
+        {
+          "official_name": "ælis",
+          "aliases": [],
+          "db_name": "ælis",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "珮蕾",
+            "睏睏幽昵",
+            "茶帽瑪緹",
+            "梅奧奧"
+          ],
+          "sources": [
+            "https://www.envisionvtuber.com.tw/artist/list/8",
+            "https://game.udn.com/game/story/122089/9419436"
+          ]
+        }
+      ],
+      "notes": "官網藝人頁分類即子團（懶貓子單獨一類，非子團）。官網標示【已畢業】：利卡洛斯(EXITUS)、愛喵Andi(MeloNyx)。梅奧奧 2025-12 以 ælis 四人之一出道，2026 年遭公司解約（udn 報導引公司聲明），官網 ælis 頁已只剩 3 人，應標 former。官網寫法差異：艾琳妮雅 官網作「艾琳妮雅·裴利」。官網無合作藝人/客座分類，查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "Mojoy Live",
+      "subgroups": [
+        {
+          "official_name": "九相狩",
+          "aliases": [],
+          "db_name": "九相狩",
+          "verdict": "ok",
+          "kind": "project",
+          "status": "active",
+          "members": [
+            "霓霞",
+            "北溟",
+            "天雪花苑",
+            "冬伏 凜",
+            "禮若凌"
+          ],
+          "sources": [
+            "https://www.youtube.com/watch?v=daJWzy3bal0",
+            "https://x.com/Mojoy_Live/status/1800841611431326090"
+          ]
+        },
+        {
+          "official_name": "異寵聯邦",
+          "aliases": [],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "project",
+          "status": "active",
+          "members": [
+            "天蕓茶茶",
+            "春櫻桃桃"
+          ],
+          "sources": [
+            "https://www.youtube.com/watch?v=daJWzy3bal0"
+          ]
+        },
+        {
+          "official_name": "七宗罪",
+          "aliases": [
+            "二期生"
+          ],
+          "db_name": "七宗罪",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "卡密拉",
+            "史黛娜",
+            "坎妮絲",
+            "尤利斯",
+            "愛思堤亞",
+            "芙樂兒",
+            "蕾娜"
+          ],
+          "sources": [
+            "https://mojoy.io/talent-detail/kamira",
+            "https://mojoy.io/talent-detail/cannice",
+            "https://mojoy.io/talent-detail/estia",
+            "https://mojoy.io/talent-detail/stena",
+            "https://mojoy.io/talent-detail/ulyss",
+            "https://mojoy.io/talent-detail/fleur",
+            "https://mojoy.io/talent-detail/reina"
+          ]
+        },
+        {
+          "official_name": "萬蠱百花",
+          "aliases": [
+            "三期生"
+          ],
+          "db_name": "萬蠱百花",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "凝淵",
+            "月瑤",
+            "朔璃",
+            "雲汐"
+          ],
+          "sources": [
+            "https://mojoy.io/talent-detail/ningyuan",
+            "https://mojoy.io/talent-detail/yueyao",
+            "https://mojoy.io/talent-detail/shuoli",
+            "https://mojoy.io/talent-detail/yunsi"
+          ]
+        }
+      ],
+      "notes": "一期生（2024-06-17~20 初配信，共 7 人）官方分兩個 IP：【九相狩】霓霞、北溟、天雪花苑、冬伏凜、禮若凌；【異寵聯邦】天蕓茶茶、春櫻桃桃（出處：天蕓茶茶官方頻道的『Mojoy Live 一期生 前導影片』說明欄，官方逐團列名）。資料庫把天蕓茶茶掛在九相狩是錯的，應移到新增的『異寵聯邦』。官網現況只列天蕓茶茶一位一期生；冬伏凜、霓霞、天雪花苑、禮若凌、春櫻桃桃、北溟皆不在官網名單，推測已離開但查無官方公告，勿直接標畢業。前導影片中北溟的頻道連結為 @himemiya_noa，此頻道現為官網列名的『姬宮乃愛』，兩者關係官方未說明。朔璃官網標【脫退】，應標 former。官網寫法：卡密拉‧弗拉迪夢、史黛娜‧蒂爾拉、坎妮絲‧瑟比拉、尤利斯‧貝莉雅、愛思堤亞‧天蓓菈、芙樂兒‧阿斯莫迪、蕾娜‧沃爾瓦。官網另有『Coser』分類（AYA彩彩）與姬宮乃愛，非合作 VTuber 分類。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "雲際線工作室",
+      "subgroups": [
+        {
+          "official_name": "星滿街",
+          "aliases": [
+            "Code：City"
+          ],
+          "db_name": "星滿街",
+          "verdict": "ok",
+          "kind": "project",
+          "status": "active",
+          "members": [
+            "妮歐",
+            "薇恩‧黛娜",
+            "角蓮"
+          ],
+          "sources": [
+            "https://x.com/CloudhorizonSt/status/1613522822609113088",
+            "https://news.qoo-app.com/post/300488/cloudhorizon-new-vtubers",
+            "https://www.youtube.com/@cloudhorizonHP"
+          ]
+        },
+        {
+          "official_name": "十三月商團",
+          "aliases": [
+            "Code：Troupe"
+          ],
+          "db_name": "十三月商團",
+          "verdict": "ok",
+          "kind": "project",
+          "status": "active",
+          "members": [
+            "伊莉莎",
+            "月下香幽芳",
+            "小金碧碧"
+          ],
+          "sources": [
+            "https://x.com/CloudhorizonSt/status/1613522822609113088",
+            "https://news.qoo-app.com/post/300488/cloudhorizon-new-vtubers",
+            "https://www.youtube.com/@cloudhorizonHP"
+          ]
+        }
+      ],
+      "notes": "官方 X 2023-01-12 公布兩個企劃『星滿街』(Code：City)、『十三月商團』(Code：Troupe)。成員名單來自官方預告片（QooApp 轉述）：星滿街＝妮歐、薇恩‧黛娜、角蓮；十三月商團＝伊莉莎、月下香幽芳；官方 YouTube 另有影片『隱藏版人物揭露！小金碧碧加入《十三月商團》』(2023-07-21)。資料庫缺：星滿街少薇恩‧黛娜、十三月商團少月下香幽芳、小金碧碧（三人目前在 former_members_left，應掛回各自子團並標 former）。兩團現況是否仍活動官方未公告，status 暫填 active。另：members_without_subgroup 的李李鈴蘭、瑪格麗特．溫特斯、神稻櫻火於 2022-07 自雲際線畢業、轉生至箱箱The Box（巴哈 GNN 233031、QooApp 281544），應標 former。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "鹿鳴娛樂",
+      "subgroups": [
+        {
+          "official_name": "AxTris",
+          "aliases": [
+            "一期生"
+          ],
+          "db_name": "AxTris",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "安戈洛",
+            "斐莉雅",
+            "艾弗爾"
+          ],
+          "sources": [
+            "https://www.youtube.com/@MoschusHoot",
+            "https://x.com/Aiverr_AxTris",
+            "https://x.com/englar_axtris"
+          ]
+        },
+        {
+          "official_name": "創傷劇團",
+          "aliases": [
+            "創傷劇團Trauma Troupe",
+            "Trauma Troupe",
+            "二期生"
+          ],
+          "db_name": "創傷劇團Trauma Troupe",
+          "verdict": "rename",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "伊莉西亞",
+            "凱利斯",
+            "尼貝爾",
+            "絡綺"
+          ],
+          "sources": [
+            "https://x.com/Nibel_TT_MH",
+            "https://www.plurk.com/Nibel_TT",
+            "https://x.com/alicia_tt_mh",
+            "https://www.youtube.com/channel/UC1qgH6rkw-_NfbZw9Z8_XXA"
+          ]
+        }
+      ],
+      "notes": "官方 YouTube 影片標題『VTuber新人團體「AxTris」3月22日｜鹿鳴娛樂』(2024)。安戈洛 X/YouTube 名稱標【已永久結束活動】，應標 former。二期生團名：官方可見處（團長尼貝爾 X 名稱『創傷劇團團長』、Plurk 自介『我是創傷劇團的團長』）只寫『創傷劇團』；英文 Trauma Troupe 僅見於帳號縮寫 TT，未找到官方中英並列寫法，建議改名為『創傷劇團』並把 Trauma Troupe 當別名（若要保留中英並列需再找官方公告確認）。絡綺的官方出處未直接取得（僅第三方搜尋摘要）。官網 moschushoot.com 無法連線。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "花遊工作室",
+      "subgroups": [
+        {
+          "official_name": "AliS",
+          "aliases": [
+            "二期生"
+          ],
+          "db_name": "AliS",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "黑薔薇優璃愛",
+            "納希斯Narciss"
+          ],
+          "sources": [
+            "https://www.youtube.com/watch?v=Uk0e0Hu2pkc",
+            "https://x.com/Huayu_Yuria",
+            "https://x.com/Huayu_Narciss"
+          ]
+        },
+        {
+          "official_name": "希望旅團",
+          "aliases": [
+            "三期生"
+          ],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "茱莉葉塔",
+            "比托利亞"
+          ],
+          "sources": [
+            "https://x.com/Huayu_Giulietta",
+            "https://x.com/Huayu_Bitoria",
+            "https://x.com/huayu_0730"
+          ]
+        }
+      ],
+      "notes": "AliS 官方 PV（花遊工作室頻道）：2023-07-10 出道，成員黑薔薇 優璃愛、納希斯。納希斯 X 名稱標『已完結』，應標 former。新增三期生【希望旅團】：茱莉葉塔（YT @Giulietta_Huayu）、比托利亞（YT @Bitoria_Huayu），帳號 2026-03 建立，資料庫尚無此二人。官方 X 目前列『花遊家的主播們』：天櫻咲樂、黑薔薇優璃愛、納希斯、茱莉葉塔、比托利亞；紫藤堇不在列。海晞、朔礼已於 2022-10 畢業（萌朧報導），應標 former。一期（天櫻咲樂、紫藤堇、海晞、朔礼）無官方團名。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "夢想之都工作室",
+      "subgroups": [],
+      "notes": "官網 dreamcity.studio/vtuber 旗下 VTuber：嘟比、灯理、陳旭元、妮酷、CB.Ortega、花燐（官方 X 夢都大家庭列同樣 6 個帳號）。無子團。資料庫的『煦』不在官網與官方 X 名單中，查無官方出處，需確認是否誤列或已離開。妮酷是與國立陽明交通大學國際宣傳辦公室合作的校園勢 VTuber（YT @Niku_NYCU），官網仍列為旗下，不歸為合作藝人。CB.Ortega 官網定位為虛擬經紀人。資料庫寫法『CB Ortega』，官網作『CB.Ortega』。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "SPECIAL DEFENSE SQUAD",
+      "subgroups": [],
+      "notes": "官方 X @sdsquad777（SDS │ SPECIAL DEFENSE SQUAD）無公布子團名稱；只見『隊員』與一期生說法，無具名期別團。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "比爾數位科技",
+      "subgroups": [],
+      "notes": "旗下碧兒、瑟菲娜、諾菈（媒體報導），無官方子團名稱；官網 billdigital.com.tw 仍是『建設中』空頁。V娘Project 為手遊募資企劃（邀 65 位以上台 V 入遊戲），不是合作藝人名單。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "箱箱The Box",
+      "subgroups": [],
+      "notes": "成員森森鈴蘭、瑪格麗特．諾爾絲、柴崎楓音 2022-09 起依序出道（巴哈 GNN 237070），無子團。柴崎楓音 2023-04 改到 Vtype 以個人勢活動（萌朧報導），資料庫已列 former，正確。官方寫法為『瑪格麗特．諾爾絲』，資料庫寫『瑪格麗特 · 諾爾絲』。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "公共電視文化事業基金會",
+      "subgroups": [
+        {
+          "official_name": "宮氏海水浴場",
+          "aliases": [],
+          "db_name": null,
+          "verdict": "add",
+          "kind": "project",
+          "status": "active",
+          "members": [
+            "幽夜南栖系",
+            "海月波波",
+            "凱文布魯"
+          ],
+          "sources": [
+            "https://www.youtube.com/@pts_vtuber",
+            "https://x.com/PTS_VTuber"
+          ]
+        }
+      ],
+      "notes": "『宮氏海水浴場』是公視專屬 VTuber 頻道/企劃（YT 頻道 ID UCoOv_rsFOBChxYmi4dvtiVQ；X @PTS_VTuber 建立於 2025-07）。官方自介：行動藝術家幽夜南栖系、鄰家大姊姊海月波波、頻道惡魔製作人凱文布魯，另有營運夥伴笨蛋粉圓、emo 偶爾出現（非正式藝人，未列入成員）。三名成員資料庫都還沒有。公視小媒不屬於此企劃；她的 X 名稱標『7/28(五)畢業典禮』(2023)，應確認是否標 former。查無官方合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "子午計畫",
+      "subgroups": [
+        {
+          "official_name": "霓 NEO(n)",
+          "aliases": [
+            "NEO",
+            "NEO(n)"
+          ],
+          "db_name": "NEO",
+          "verdict": "rename",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "澪Rei",
+            "橙Yuzumi",
+            "煌Kirali"
+          ],
+          "sources": [
+            "https://official-website.meridianproject.tw/",
+            "https://official-website.meridianproject.tw/talents/rei"
+          ]
+        },
+        {
+          "official_name": "序境 TeRaź",
+          "aliases": [],
+          "db_name": "序境 TeRaź",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "幸Sachi",
+            "雪Koyuki",
+            "煦Hiyori",
+            "実Hitomi"
+          ],
+          "sources": [
+            "https://official-website.meridianproject.tw/",
+            "https://official-website.meridianproject.tw/talents/koyuki"
+          ]
+        },
+        {
+          "official_name": "扉暮 IANVS",
+          "aliases": [],
+          "db_name": "扉暮 IANVS",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "祈Iruni",
+            "玥Itsuki"
+          ],
+          "sources": [
+            "https://official-website.meridianproject.tw/"
+          ]
+        },
+        {
+          "official_name": "月蝕屋 MΦONLIT",
+          "aliases": [
+            "MOONLIT"
+          ],
+          "db_name": "月蝕屋 MΦONLIT",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "朔Sakuro",
+            "朧Oboro",
+            "宵Yoruno"
+          ],
+          "sources": [
+            "https://official-website.meridianproject.tw/"
+          ]
+        },
+        {
+          "official_name": "沉珀 Aetris",
+          "aliases": [],
+          "db_name": "沉珀 Aetris",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "莓Ichii",
+            "宓Iseri",
+            "璃Miri"
+          ],
+          "sources": [
+            "https://official-website.meridianproject.tw/",
+            "https://official-website.meridianproject.tw/newtalents"
+          ]
+        }
+      ],
+      "notes": "官網「旗下藝人」導覽：浠 MIZUKI 列在 霓 NEO(n) 標題之前，為獨立成員、不屬 NEO(n)（資料庫把她掛公司層是對的）。NEO(n) 官網成員＝澪/橙/煌，與資料庫一致。汐Seki(/talents/seki)、響Hibiki(/talents/hibiki) 個人頁仍在且標為旗下藝人、無畢業註記，但未出現在官網導覽清單，不屬任何子團；維持公司層。官網沒有列任何已解散子團。",
+      "excluded": [],
+      "members": [
+        {
+          "name": "KSP",
+          "aliases": [],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UCtTU6L8VDMdz0E62TxHbIZg",
+          "youtube_handle": "@KSPKSP",
+          "twitch_login": "kspksp",
+          "verdict": "confirmed",
+          "sources": [
+            "https://official-website.meridianproject.tw/talents/ksp",
+            "https://official-website.meridianproject.tw/"
+          ]
+        },
+        {
+          "name": "玖玖巴",
+          "aliases": [
+            "JOJOBA",
+            "玖玖巴 JOJOBA"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UCs5FNYPHeZz5f7N1BDExxfg",
+          "youtube_handle": "@玖玖巴",
+          "twitch_login": "998rrr",
+          "verdict": "confirmed",
+          "sources": [
+            "https://official-website.meridianproject.tw/talents/jojoba",
+            "https://official-website.meridianproject.tw/"
+          ]
+        }
+      ]
+    },
+    {
+      "agency": "TSA Studio",
+      "subgroups": [
+        {
+          "official_name": "Paparazzi",
+          "aliases": [
+            "TSA Studio男團 Paparazzi"
+          ],
+          "db_name": "Paparazzi",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "天泣8號Tenki",
+            "常闇やみや",
+            "逆恩Neon",
+            "里莫リモRimoRimo",
+            "銀刻 INK"
+          ],
+          "sources": [
+            "https://www.plurk.com/tsastudio",
+            "https://x.com/ink1221_vtuber/status/1947647516515696692",
+            "https://www.youtube.com/watch?v=-qgx-03T3_M"
+          ]
+        },
+        {
+          "official_name": "Reality",
+          "aliases": [
+            "TSA Studio三期生 Reality",
+            "三期生"
+          ],
+          "db_name": "Reality",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "火吻怪盜卡門",
+            "魔希玖玖",
+            "天藍朵朵"
+          ],
+          "sources": [
+            "https://www.plurk.com/tsastudio"
+          ]
+        },
+        {
+          "official_name": "ReBirth",
+          "aliases": [
+            "Rebirth",
+            "TSA Studio二期生 Rebirth",
+            "二期生"
+          ],
+          "db_name": "ReBirth",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "清音零零",
+            "愛鈴貝貝"
+          ],
+          "sources": [
+            "https://www.plurk.com/tsastudio",
+            "https://nitter.1d4.us/retime2088"
+          ]
+        },
+        {
+          "official_name": "SUPER",
+          "aliases": [
+            "Super",
+            "TSA Studio一期生 Super",
+            "一期生"
+          ],
+          "db_name": "SUPER",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "裴妮",
+            "舒芙Suki"
+          ],
+          "sources": [
+            "https://www.plurk.com/tsastudio"
+          ]
+        }
+      ],
+      "notes": "官方 Plurk 簡介寫法為「TSA Studio一期生 Super／二期生 Rebirth／三期生 Reality／男團 Paparazzi」（Super、Rebirth 大小寫與資料庫不同）；成員 X 自稱「TSA所屬【ReBirth】」「TSA所屬【Paparazzi】」。SUPER 全大寫只有資料庫寫法，官方 X 無法抓取確認，大小寫留待人工確認，名稱本身無誤。Paparazzi 成員依官方 cover 影片標註（Tenki/YAMI/Neon/RimoRimo）與銀刻 INK 自稱，官方未列表逐一公布。期別並稱建議：「一期生 SUPER」「二期生 ReBirth」「三期生 Reality」「男團 Paparazzi」。未發現合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "Limnos",
+      "subgroups": [
+        {
+          "official_name": "NKshoujo",
+          "aliases": [],
+          "db_name": "NKshoujo",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "disbanded",
+          "members": [
+            "希翁",
+            "光逸 幸",
+            "克蕾",
+            "繆・索緹絲",
+            "庫路路",
+            "史黛菈 埃蕾諾亞",
+            "黑銀夜烏"
+          ],
+          "sources": [
+            "https://news.gamebase.com.tw/news/detail/99416492"
+          ]
+        },
+        {
+          "official_name": "黑箱劇場",
+          "aliases": [
+            "Black Box Theater"
+          ],
+          "db_name": "黑箱劇場",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "disbanded",
+          "members": [
+            "火野貝",
+            "凝川眠",
+            "汐海黑兔"
+          ],
+          "sources": [
+            "https://news.gamebase.com.tw/news/detail/99416492",
+            "https://limnos1101.web66.tw/"
+          ]
+        }
+      ],
+      "notes": "NKshoujo 與 黑箱劇場 原是兩個前身團體，2023-11-01 合併更名為「利姆諾斯 Limnos」，公告稱兩箱成員成為 Limnos「直屬成員」，舊團名不再作為子團保留，所以兩者都標 disbanded（也可以改用 former_group 處理）。夏蘿、奇露琪露、艾提是合併後才出道的成員，不屬於任何舊團；萌朧的「一期生/二期生/三期生」分法沒有官方出處，不採用。Limnos 已公告 2026-10-31 解散（萌朧 2026-08-17 報導，官方原文未取得）。官網 limnos1101.web66.tw 沒有成員名單。未發現合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "Mirolive",
+      "subgroups": [
+        {
+          "official_name": "MiroLink",
+          "aliases": [
+            "Mirolink"
+          ],
+          "db_name": "MiroLink",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "Kilin",
+            "肉肉薔蒔",
+            "榭伊"
+          ],
+          "sources": [
+            "https://www.moelong.com/moelongnews/archives/12105",
+            "https://www.youtube.com/watch?v=gT16aIsPeV0"
+          ]
+        }
+      ],
+      "notes": "MiroLink 2022-04-09 出道，成員 肉肉薔蒔(YT UCWR2gJU1YY9zpASHEpMfTVg)、榭伊(YT UCXxUxZEkRdZUZ5o3PcC_eUA)、Kilin；資料庫缺前兩人。Kilin 自己的直播標題寫【Mirolink】（L 小寫）。目前是否仍運作查不到官方說法，status 暫填 active。官網查不到（官方只有 X @MiroliveTw 和 FB，都抓不到）。萌朧等二手資料提到「一期生」（塔芭絲可、冬華凜、星之川涅緒、星之川倷緒、梅莉帕可斯）和「二期生」（阿莎莉亞等），Plurk 轉述的官方推文（x.com/MiroliveTw/status/1917246286191116642）也寫「MiroLive二期生…阿莎莉亞」，但沒有官方完整期別名單，所以沒新增期別子團。阿莎莉亞已於 2025-05 解約，星之川倷緒 2023-05-02 畢業。未發現合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "Leor Live",
+      "subgroups": [
+        {
+          "official_name": "NєSh1",
+          "aliases": [
+            "一期生",
+            "NeSh1"
+          ],
+          "db_name": "NєSh1",
+          "verdict": "ok",
+          "kind": "generation",
+          "status": "active",
+          "members": [
+            "莫爾",
+            "妮亞露",
+            "詩瑠"
+          ],
+          "sources": [
+            "https://www.leorlive.com/旗下藝人",
+            "https://portaly.cc/LeorLive",
+            "https://portaly.cc/Shizuru",
+            "https://portaly.cc/Nyaru"
+          ]
+        }
+      ],
+      "notes": "官網旗下藝人頁寫「一期生：莫爾、妮亞露、詩瑠」和「合作藝人：卡桑德拉、月洛櫻」。詩瑠、妮亞露的 Portaly 簡介都自稱「NєSh1 ✧ Leor Live 所屬」，官方 Portaly 也把一期生標成 NєSh1，所以 NєSh1 是一期生的團名。月洛櫻的 Portaly 經紀人聯絡信箱是 Leor Live 的。",
+      "excluded": [],
+      "members": [
+        {
+          "name": "卡桑德拉",
+          "aliases": [
+            "Cassandra",
+            "卡桑德拉Cassandra"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UC1NuOGhljtTP7p-dNRsntWw",
+          "youtube_handle": "@cassandradesu",
+          "twitch_login": "cassandra_desu_",
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.leorlive.com/旗下藝人",
+            "https://portaly.cc/LeorLive",
+            "https://portaly.cc/cassandra"
+          ]
+        },
+        {
+          "name": "月洛櫻",
+          "aliases": [
+            "Luoying",
+            "月洛櫻Luoying"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UCpOgcFX03oV43HOPhhBzr4A",
+          "youtube_handle": "@yueluoying_",
+          "twitch_login": "yueluoying_",
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.leorlive.com/旗下藝人",
+            "https://portaly.cc/LeorLive",
+            "https://portaly.cc/yueluoying"
+          ]
+        }
+      ]
+    },
+    {
+      "agency": "哇啦咚咚工作室",
+      "subgroups": [
+        {
+          "official_name": "Reverie",
+          "aliases": [],
+          "db_name": "Reverie",
+          "verdict": "ok",
+          "kind": "unit",
+          "status": "active",
+          "members": [
+            "露熙妲",
+            "涅菈",
+            "蘿貝塔",
+            "星璃"
+          ],
+          "sources": [
+            "https://game.udn.com/game/story/122089/7735404",
+            "https://www.moelong.com/moelongnews/archives/21842"
+          ]
+        }
+      ],
+      "notes": "Reverie 2024-01-30/31 出道。成員 X 帳號：@Luxida_Reverie、@Nera_Reverie、@Robetta_Reverie、@Seri_Reverie。找不到工作室官網；出處是新聞稿和官方 PV 標題「【Reverie】哇啦咚咚工作室Vtuber團體正式登場」。X 抓不到，沒辦法直接看官方原文。未發現其他子團或合作藝人。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "靛之森",
+      "subgroups": [],
+      "notes": "沒有查到官方子團或合作藝人。官網 ainomori.tv 首頁目前 404（商品頁還在）。YouTube @AinoMori 和官方宣傳影片提到的成員有 鳥羽樂奈、夜彩、天希、京洛、米果、尹鹿，另有 伊索渡(AesopDu)，資料庫沒有伊索渡。PTT 說尹鹿 2022-05-02 停止活動，只能當線索。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "Yololive",
+      "subgroups": [],
+      "notes": "沒有查到官方子團或合作藝人，也找不到官網，只有 FB YoloLive production。兔乃艾露的 lit.link 自稱 Yololive_Tw 所屬（YT UCjSOYNtHGZ6LTt4Zo6wPmaA）。啵妮、神光ダブル 沒查到官方資料。",
+      "excluded": [],
+      "members": []
+    },
+    {
+      "agency": "恋Vaichu",
+      "subgroups": [],
+      "notes": "官方 YouTube 頻道（UC93733Iz1fQKLJmUeiDuUmQ）簡介原文：「RenVaichu 簡稱 V戀人 || 台V 社團勢 || 旗下藝人：ORI 央莉、Yuunana悠77、DONT U冬優奈奈 / 合作藝人：Yuki 白昭雪、森兔 Sento、幽夢聆音 Yumerin、橘 Mika」。沒有子團。弗倫頓不在官方合作名單上，status 欄只是依 schema 填的佔位值，不代表判定。合作藝人的頻道 ID 是用 YouTube 搜尋對名字找到的，不是官方直接給的連結；森兔的頻道名稱本身帶【RenVaichu】。橘 Mika 找不到可以確認的頻道。",
+      "excluded": [],
+      "members": [
+        {
+          "name": "Yuki 白昭雪",
+          "aliases": [
+            "白昭雪",
+            "Yuki Ch. 白昭雪"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UC_dwiOGE_uWNYtbyFg1PNeg",
+          "youtube_handle": null,
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.youtube.com/channel/UC93733Iz1fQKLJmUeiDuUmQ"
+          ]
+        },
+        {
+          "name": "幽夢聆音 Yumerin",
+          "aliases": [
+            "幽夢聆音",
+            "Yumerin"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UC_IgAilU3h-oNWWMg2AcGlA",
+          "youtube_handle": null,
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.youtube.com/channel/UC93733Iz1fQKLJmUeiDuUmQ"
+          ]
+        },
+        {
+          "name": "森兔 Sento",
+          "aliases": [
+            "森兔",
+            "Sento",
+            "森兔Sento【RenVaichu】"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": "UCVOnuviqBMGQTVu3f6vGC-g",
+          "youtube_handle": null,
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.youtube.com/channel/UC93733Iz1fQKLJmUeiDuUmQ"
+          ]
+        },
+        {
+          "name": "橘 Mika",
+          "aliases": [
+            "橘Mika",
+            "Mika"
+          ],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": null,
+          "youtube_handle": null,
+          "twitch_login": null,
+          "verdict": "confirmed",
+          "sources": [
+            "https://www.youtube.com/channel/UC93733Iz1fQKLJmUeiDuUmQ"
+          ]
+        },
+        {
+          "name": "弗倫頓",
+          "aliases": [],
+          "status": "active",
+          "since": null,
+          "until": null,
+          "youtube_channel_id": null,
+          "youtube_handle": null,
+          "twitch_login": null,
+          "verdict": "no_official_source",
+          "sources": []
+        }
+      ]
+    },
+    {
+      "agency": "蜂沛創意行銷有限公司",
+      "subgroups": [],
+      "notes": "查不到這家公司的官網、子團或合作藝人，也找不到把 璐洛洛（YT UCRf7OJA3azS4RsGd_G96FUw）和這家公司連起來的官方出處。建議人工確認這家公司的歸屬資料。",
+      "excluded": [],
+      "members": []
+    }
+  ]
+}

@@ -44,6 +44,7 @@ export default {
     'card.openOriginal': '{{platform}}에서 열기',
     'card.untitled': '(제목 없음)',
     'card.alsoOn': '{{platform}}에서도 방송',
+    'card.collab': '{{agency}} · 협업',
     'card.fromSchedule': 'Twitch 일정',
     'card.fromScheduleHint': 'Twitch 방송 일정에서 가져왔으며 갑자기 바뀔 수 있습니다',
 
@@ -87,6 +88,8 @@ export default {
     'person.notFound.body': '주소가 잘못되었거나 이 스트리머가 목록에서 빠졌을 수 있습니다.',
     'person.seo.title': '{{name}} 방송 일정 - MultiStream Hub',
     'person.seo.description': '{{name}}의 방송 일정: 지금 방송 중, 앞으로 7일간의 대기실과 Twitch 일정, 최근 30일 방송 기록.',
+    'person.collabs': '협업: {{agencies}}',
+    'person.listSeparator': ', ',
 
     'card.watch': '{{name}} 캔버스에서 보기',
     'toast.watchUnavailable': '이 방송은 재생할 수 있는 채널이 없습니다',
@@ -120,4 +123,10 @@ export default {
     'roster.loading': '멤버를 불러오는 중…',
     'roster.error': '멤버 목록을 불러오지 못했습니다',
     'roster.empty': '아직 이 소속사의 멤버 정보가 없습니다',
+    'roster.collabSection': '협업 탤런트',
+    'roster.collabCount': '협업 {{count}}명',
+    'roster.collab': '협업',
+    'roster.pastCollab': '이전 협업',
+    'roster.showPastCollabs': '이전 협업 {{count}}명 보기',
+    'roster.hidePastCollabs': '이전 협업 접기',
 };

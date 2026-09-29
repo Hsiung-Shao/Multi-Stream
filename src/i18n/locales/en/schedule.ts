@@ -44,6 +44,7 @@ export default {
     'card.openOriginal': 'Open on {{platform}}',
     'card.untitled': '(untitled)',
     'card.alsoOn': 'Also on {{platform}}',
+    'card.collab': '{{agency}} · Collab',
     'card.fromSchedule': 'Twitch schedule',
     'card.fromScheduleHint': 'From the streamer’s Twitch schedule; it may change at short notice',
 
@@ -87,6 +88,8 @@ export default {
     'person.notFound.body': 'The link may be mistyped, or this streamer is no longer listed.',
     'person.seo.title': '{{name}} stream schedule and live times - MultiStream Hub',
     'person.seo.description': '{{name}}’s stream schedule: live now, YouTube waiting rooms and Twitch schedule for the next 7 days, and streams from the last 30 days.',
+    'person.collabs': 'Collaborates with {{agencies}}',
+    'person.listSeparator': ', ',
 
     'card.watch': 'Watch {{name}} on the canvas',
     'toast.watchUnavailable': 'No playable channel for this stream',
@@ -120,4 +123,10 @@ export default {
     'roster.loading': 'Loading members…',
     'roster.error': 'Could not load the member list',
     'roster.empty': 'No member data for this agency yet',
+    'roster.collabSection': 'Collaborating talents',
+    'roster.collabCount': '{{count}} collaborating',
+    'roster.collab': 'Collab',
+    'roster.pastCollab': 'Past collab',
+    'roster.showPastCollabs': 'Show {{count}} past collabs',
+    'roster.hidePastCollabs': 'Hide past collabs',
 };

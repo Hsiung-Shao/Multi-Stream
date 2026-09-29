@@ -20,8 +20,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export const CONTRIBUTED_BY = 'research:2026-09-29';
-const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
-const qn = (s) => (s == null || s === '' ? 'null' : q(s));
+export const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
+export const qn = (s) => (s == null || s === '' ? 'null' : q(s));
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function toActivity(status) {
@@ -49,8 +49,8 @@ export function matchCond(m, alias = 'v') {
 const byId = (m, alias = 'v') => `${alias}.id = ${q(m._db_id)}`;
 
 /** 這家公司（頂層）與其子團的 id 集合（SQL 子查詢） */
-const topId = (agency) => `(select id from public.vtuber_groups where name = ${q(agency)} and parent_id is null)`;
-const treeSql = (agency) => `(select id from public.vtuber_groups where id = ${topId(agency)} or parent_id = ${topId(agency)})`;
+export const topId = (agency) => `(select id from public.vtuber_groups where name = ${q(agency)} and parent_id is null)`;
+export const treeSql = (agency) => `(select id from public.vtuber_groups where id = ${topId(agency)} or parent_id = ${topId(agency)})`;
 
 /** 名字寬鬆比對：去空白與符號、全半形統一；互相包含，或中文部分／英數部分互相包含 */
 const normName = (s) => (s ?? '').normalize('NFKC').toLowerCase().replace(/[\s·・‧•.\-‐_()（）【】[\]'’☆★♡♥♪〜~!！?？ー]/g, '');

@@ -75,11 +75,13 @@ function includesQ(value: string | undefined, q: string): boolean {
     return !!value && value.normalize('NFKC').toLowerCase().includes(q);
 }
 
-/** 實況主本身是否符合搜尋字（名字、網址 slug、團體、所屬公司） */
+/** 實況主本身是否符合搜尋字（名字、網址 slug、團體、所屬公司、合作公司） */
 export function channelMatchesQuery(ch: ScheduleChannel | undefined, q: string): boolean {
     if (!q) return true;
     if (!ch) return false;
-    return includesQ(ch.name, q) || includesQ(ch.slug, q) || includesQ(ch.group, q) || includesQ(ch.agency, q);
+    return (
+        includesQ(ch.name, q) || includesQ(ch.slug, q) || includesQ(ch.group, q) || includesQ(ch.agency, q) || !!ch.collabs?.some((a) => includesQ(a, q))
+    );
 }
 
 /** 場次是否符合搜尋字：實況主符合，或標題、遊戲分類符合（q 需先 normalizeQuery） */
@@ -132,21 +134,24 @@ export function listMatchingChannels(snapshot: ScheduleSnapshot, query: string, 
         .map(({ id, channel }) => ({ id, channel }));
 }
 
-/** 所屬篩選：不限／所有企業勢／非企業勢／指定企業勢 */
+/** 所屬篩選：不限／所有企業勢／非企業勢／指定企業勢（含這家的合作藝人）；「所有／非企業勢」只看正式所屬 */
 export function matchesAgency(ch: ScheduleChannel | undefined, want: string): boolean {
     if (want === 'all') return true;
     if (want === GROUP_ANY_AGENCY) return !!ch?.agency;
     if (want === GROUP_NO_AGENCY) return !ch?.agency;
-    return ch?.agency === want;
+    return ch?.agency === want || !!ch?.collabs?.includes(want);
 }
 
 /**
  * snapshot 裡出現過的企業勢（依週表上的人數多到少，同數依名稱），給「所屬」下拉選單。
  * 只列企業勢：台灣有兩百多個社團與未查證的小團體，全列會讓下拉無法使用（卡片上仍顯示團名）。
+ * 人數與 matchesAgency 同一口徑：正式所屬＋合作（只有合作藝人在週表上的公司也選得到）。
  */
 export function listGroups(snapshot: ScheduleSnapshot): string[] {
     const count = new Map<string, number>();
-    for (const ch of Object.values(snapshot.channels)) if (ch.agency) count.set(ch.agency, (count.get(ch.agency) ?? 0) + 1);
+    for (const ch of Object.values(snapshot.channels)) {
+        for (const a of new Set([ch.agency, ...(ch.collabs ?? [])])) if (a) count.set(a, (count.get(a) ?? 0) + 1);
+    }
     return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
 }
 

@@ -6,7 +6,7 @@
 
 import { SCHEDULE_SLUG_RE } from '../../config/schedulePerson';
 import { SnapshotError } from './snapshotSource';
-import { resetRestConfigCache, resolveRestConfig, restGet, type RestOptions } from './restClient';
+import { isCollabActive, resetRestConfigCache, resolveRestConfig, restGet, taipeiDate, type RestConfig, type RestOptions } from './restClient';
 import type { ScheduleAlso, ScheduleChannel, ScheduleStream } from './types';
 
 /** 最近幾天的直播紀錄 */
@@ -116,6 +116,30 @@ export function agencyOf(g: VtuberRow['vtuber_groups']): string | null {
     return g.parent?.kind === 'agency' ? g.parent.name : g.name;
 }
 
+interface CollabLinkRow {
+    since?: string | null;
+    until: string | null;
+    vtuber_groups: VtuberRow['vtuber_groups'];
+}
+
+/** 合作中的企業勢（已開始且未結束）。合作是附屬資訊：查詢失敗（表還沒上線、逾時、5xx）回空陣列，不讓個人頁整頁出錯 */
+async function fetchCollabAgencies(cfg: RestConfig, vtuberId: string, today: string, opts: PersonFetchOptions): Promise<string[]> {
+    let links: CollabLinkRow[];
+    try {
+        links = await restGet<CollabLinkRow[]>(
+            cfg,
+            `vtuber_group_links?select=${encodeURIComponent('since,until,vtuber_groups(name,kind,parent:parent_id(name,kind))')}&vtuber_id=eq.${vtuberId}&role=eq.collaborator`,
+            opts,
+        );
+    } catch (e) {
+        if (opts.signal?.aborted) throw e;
+        if (!(e instanceof SnapshotError && /HTTP 404/.test(e.message))) console.warn('person collabs unavailable');
+        return [];
+    }
+    const names = links.filter((l) => isCollabActive(l.since, l.until, today)).map((l) => agencyOf(l.vtuber_groups));
+    return [...new Set(names.filter((n): n is string => !!n))].sort();
+}
+
 /** 依 slug 查個人週表；slug 不合規則或查無此人回 null（頁面顯示 404） */
 export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): Promise<SchedulePerson | null> {
     if (!SCHEDULE_SLUG_RE.test(slug)) return null;
@@ -138,9 +162,10 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     // 拆成兩支查詢：合在一起用 scheduled_start 排序＋limit 時，Twitch 直播（scheduled_start 為 null）
     // 與最新的紀錄會最先被截掉。兩支並行，合併邏輯需要看到所有列才能把次要場次掛到主場次。
     const base = `streams?select=${STREAM_COLS}&vtuber_id=eq.${v.id}&is_schedule_frame=eq.false`;
-    const [active, ended] = await Promise.all([
+    const [active, ended, collabs] = await Promise.all([
         restGet<PersonStreamRow[]>(cfg, `${base}&status=in.(scheduled,live)&order=scheduled_start.asc.nullsfirst&limit=${ACTIVE_LIMIT}`, opts),
         restGet<PersonStreamRow[]>(cfg, `${base}&status=eq.ended&actual_end=gte.${since}&order=actual_end.desc&limit=${RECENT_LIMIT}`, opts),
+        fetchCollabAgencies(cfg, v.id, taipeiDate(now), opts),
     ]);
     const rows = [...active, ...ended];
 
@@ -149,6 +174,8 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     if (v.vtuber_groups?.name) channel.group = v.vtuber_groups.name;
     const agency = agencyOf(v.vtuber_groups);
     if (agency) channel.agency = agency;
+    const otherCollabs = collabs.filter((a) => a !== agency);
+    if (otherCollabs.length) channel.collabs = otherCollabs;
     if (v.youtube_channel_id) channel.youtube = v.youtube_channel_id;
     if (v.twitch_channel_id) channel.twitch = v.twitch_channel_id;
 

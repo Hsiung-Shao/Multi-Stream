@@ -25,6 +25,8 @@ export interface ScheduleCardActions {
     busyKey: string | null;
     isFavorite: (channel: ScheduleChannel | undefined) => boolean;
     toggleFavorite: (channel: ScheduleChannel | undefined) => void;
+    /** 「所屬」目前選的公司（沒選特定公司為 null）：合作藝人在這家的篩選下標「合作」 */
+    focusAgency?: string | null;
 }
 
 export const ScheduleCardActionsContext = createContext<ScheduleCardActions | null>(null);
@@ -101,10 +103,33 @@ function StreamBadges({ stream }: { stream: ScheduleStream }) {
     );
 }
 
-/** 團體名（Twitch 與 YouTube 共用同一位實況主的團體）；沒有團體時不顯示 */
+/**
+ * 卡片上的團體標示（Twitch 與 YouTube 共用同一位實況主的團體）：
+ * 正在篩選的公司是他的合作公司 →「公司・合作」；否則正式所屬的團名；沒有所屬但有合作 →「第一家合作公司・合作」。
+ */
+function useGroupLabel(channel: ScheduleChannel | undefined): { text: string; title: string } | null {
+    const { t } = useTranslation('schedule');
+    const focus = useCardActions()?.focusAgency ?? null;
+    if (!channel) return null;
+    const collabs = channel.collabs ?? [];
+    const collabText = (agency: string) => t('card.collab', { agency });
+    const title = [channel.group, ...collabs.map(collabText)].filter(Boolean).join('、');
+    if (focus && collabs.includes(focus)) return { text: collabText(focus), title };
+    if (channel.group) return { text: channel.group, title };
+    if (collabs.length) return { text: collabText(collabs[0]), title };
+    return null;
+}
+
 function GroupTag({ channel, className }: { channel: ScheduleChannel | undefined; className?: string }) {
-    if (!channel?.group) return null;
-    return <span className={cn('min-w-0 truncate text-xs text-muted-foreground', className)} title={channel.group}>{channel.group}</span>;
+    const label = useGroupLabel(channel);
+    if (!label) return null;
+    return <span className={cn('min-w-0 truncate text-xs text-muted-foreground', className)} title={label.title}>{label.text}</span>;
+}
+
+/** 手機列：團名放在標題前面 */
+function GroupPrefix({ channel }: { channel: ScheduleChannel | undefined }) {
+    const label = useGroupLabel(channel);
+    return label ? <span className="sm:hidden">{label.text} · </span> : null;
 }
 
 const PLATFORM_DOT: Record<string, string> = {
@@ -351,7 +376,7 @@ export function SlotRow({ stream, channel, now, selected, onToggle, personLinks 
                         </span>
                         <RowMain stream={stream} channel={channel} rounded="rounded-xl" className="block w-full truncate text-[13px] text-muted-foreground">
                             {/* 手機名字列放不下團名：改放在標題前面 */}
-                            {channel?.group && <span className="sm:hidden">{channel.group} · </span>}
+                            <GroupPrefix channel={channel} />
                             {displayTitle(stream, t('card.untitled'))}
                         </RowMain>
                     </>

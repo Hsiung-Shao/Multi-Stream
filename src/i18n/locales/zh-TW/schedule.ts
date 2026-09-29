@@ -44,6 +44,7 @@ export default {
     'card.openOriginal': '在 {{platform}} 開啟',
     'card.untitled': '（未命名）',
     'card.alsoOn': '也在 {{platform}}',
+    'card.collab': '{{agency}}・合作',
     'card.fromSchedule': '週表預告',
     'card.fromScheduleHint': '來自 Twitch 週表設定，實況主可能臨時更動',
 
@@ -87,6 +88,8 @@ export default {
     'person.notFound.body': '網址可能打錯了，或這位實況主已不在名冊中。',
     'person.seo.title': '{{name}} 開台時間與直播週表 - MultiStream Hub',
     'person.seo.description': '{{name}} 的開台週表：正在直播、接下來 7 天的待機室與 Twitch 週表，以及最近 30 天的直播紀錄。',
+    'person.collabs': '合作：{{agencies}}',
+    'person.listSeparator': '、',
 
     'card.watch': '在畫布觀看 {{name}}',
     'toast.watchUnavailable': '這場沒有可播放的頻道',
@@ -120,4 +123,10 @@ export default {
     'roster.loading': '載入成員中…',
     'roster.error': '成員名冊暫時無法載入',
     'roster.empty': '還沒有這家的成員資料',
+    'roster.collabSection': '合作藝人',
+    'roster.collabCount': '合作 {{count}} 位',
+    'roster.collab': '合作',
+    'roster.pastCollab': '曾合作',
+    'roster.showPastCollabs': '顯示曾合作 {{count}} 位',
+    'roster.hidePastCollabs': '收合曾合作',
 };

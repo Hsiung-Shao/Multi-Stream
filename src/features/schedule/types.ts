@@ -19,6 +19,8 @@ export interface ScheduleChannel {
     slug?: string;
     /** 所屬企業勢（公司名）；社團、個人工作室、未查證的團體沒有這個欄位 */
     agency?: string;
+    /** 合作中的企業勢（公司名；不含 agency）：合作藝人不是正式所屬，但選這家公司時要帶出來 */
+    collabs?: string[];
 }
 
 /** 同一場的另一個平台（雙平台同步開台時，後端把次要場次併進主場次，主場次優先 YouTube） */
