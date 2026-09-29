@@ -105,7 +105,7 @@ function StreamBadges({ stream }: { stream: ScheduleStream }) {
 
 /**
  * 卡片上的團體標示（Twitch 與 YouTube 共用同一位實況主的團體）：
- * 正在篩選的公司是他的合作公司 →「公司・合作」；否則正式所屬的團名；沒有所屬但有合作 →「第一家合作公司・合作」。
+ * 正在篩選的公司是這位實況主的合作公司 →「公司・合作」；否則正式所屬的團名；沒有所屬但有合作 →「第一家合作公司・合作」。
  */
 function useGroupLabel(channel: ScheduleChannel | undefined): { text: string; title: string } | null {
     const { t } = useTranslation('schedule');
