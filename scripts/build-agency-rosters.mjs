@@ -53,7 +53,7 @@ const topId = (agency) => `(select id from public.vtuber_groups where name = ${q
 const treeSql = (agency) => `(select id from public.vtuber_groups where id = ${topId(agency)} or parent_id = ${topId(agency)})`;
 
 /** 名字寬鬆比對：去空白與符號、全半形統一；互相包含，或中文部分／英數部分互相包含 */
-const normName = (s) => (s ?? '').normalize('NFKC').toLowerCase().replace(/[\s·・‧.\-_()（）【】[\]'’]/g, '');
+const normName = (s) => (s ?? '').normalize('NFKC').toLowerCase().replace(/[\s·・‧•.\-‐_()（）【】[\]'’☆★♡♥♪〜~!！?？ー]/g, '');
 const cjkPart = (s) => normName(s).replace(/[a-z0-9]/g, '');
 const latPart = (s) => normName(s).replace(/[^a-z0-9]/g, '');
 export function looksLikeSamePerson(dbName, names) {
@@ -64,7 +64,8 @@ export function looksLikeSamePerson(dbName, names) {
         if (!B) return false;
         if (A.includes(B) || B.includes(A)) return true;
         const ca = cjkPart(dbName), cb = cjkPart(x);
-        if (ca && cb && (ca.includes(cb) || cb.includes(ca))) return true;
+        // 中文部分至少 2 個字才算（「小A」與「小B」不會只因共用一個「小」就判成同一人）
+        if (ca.length >= 2 && cb.length >= 2 && (ca.includes(cb) || cb.includes(ca))) return true;
         const la = latPart(dbName), lb = latPart(x);
         return la.length > 2 && lb.length > 2 && (la.includes(lb) || lb.includes(la));
     });
@@ -167,6 +168,8 @@ export function planRosters(resolved, existingGroups = [], dbRows = []) {
 export function buildRosterSql(plan, header) {
     const out = [header.trimEnd(), ''];
     out.push('-- ===== 0. 套用前備份（回滾用；backup schema 不經 PostgREST 對外）=====');
+    // 上次套用的備份還在就停：沿用舊快照會讓回滾還原到錯的狀態
+    out.push("do $$ begin if to_regclass('backup.rosters_meta_20260929') is not null then raise exception '已有 backup.rosters_meta_20260929：確認後 drop 第 0 段的 backup 表再重新套用'; end if; end $$;");
     out.push('create schema if not exists backup;');
     out.push('revoke all on schema backup from public, anon, authenticated;');
     out.push('create table if not exists backup.vtubers_rosters_20260929 as select id, group_id, former_group_id, is_official, activity, graduated_at, debut_date, youtube_channel_id, twitch_channel_id from public.vtubers;');
@@ -210,7 +213,9 @@ export function buildRosterSql(plan, header) {
         // 另一列已經用了這個 YouTube 頻道（同一人兩列）就不補，避免撞 UNIQUE 讓整支 migration 失敗
         if (m.youtube_channel_id) sets.push(`youtube_channel_id = coalesce(v.youtube_channel_id, case when exists (select 1 from public.vtubers x where x.youtube_channel_id = ${q(m.youtube_channel_id)} and x.id <> v.id) then null else ${q(m.youtube_channel_id)} end)`);
         const changed = [
-            left ? `v.group_id in ${tree} or v.former_group_id is null or v.activity not in ('active', 'graduate')` : `v.group_id is distinct from g.id`,
+            left
+                ? `v.group_id in ${tree} or v.former_group_id is null or (v.former_group_id in ${tree} and v.former_group_id <> ${topId(agency)}) or v.activity not in ('active', 'graduate')`
+                : `v.group_id is distinct from g.id`,
             act ? `v.activity is distinct from ${q(act)}` : null,
             grad ? `v.graduated_at is distinct from ${q(grad)}::date` : null,
             debut ? `v.debut_date is null` : null,
@@ -245,13 +250,17 @@ export function buildRosterSql(plan, header) {
     out.push('');
 
     out.push('-- ===== 4. 頻道表（週表名冊的來源）：本次涉及的成員缺哪個平台就補 =====');
-    for (const { m } of [...plan.updates.map((x) => ({ ...x, existing: true })), ...plan.inserts]) {
-        const who = m._db_id ? byId(m) : matchCond(m, 'v');
+    for (const { m, agency } of [...plan.updates, ...plan.inserts]) {
+        // 既有成員與第 2 段同範圍（沒團體、在這家、或轉個人勢前所屬是這家），且那列記的頻道就是這個或空的
+        const who = m._db_id
+            ? `${byId(m)} and (v.group_id is null or v.group_id in ${treeSql(agency)} or v.former_group_id = ${topId(agency)})`
+            : matchCond(m, 'v');
         if (m.youtube_channel_id) {
-            out.push(`insert into public.vtuber_channels (vtuber_id, platform, external_id, handle) select v.id, 'youtube', ${q(m.youtube_channel_id)}, ${q(m.youtube_channel_id)} from public.vtubers v where ${who} and not exists (select 1 from public.vtuber_channels c where c.platform = 'youtube' and c.external_id = ${q(m.youtube_channel_id)} and c.status = 'active') limit 1;`);
+            const own = m._db_id ? ` and (v.youtube_channel_id is null or v.youtube_channel_id = ${q(m.youtube_channel_id)})` : '';
+            out.push(`insert into public.vtuber_channels (vtuber_id, platform, external_id, handle) select v.id, 'youtube', ${q(m.youtube_channel_id)}, ${q(m.youtube_channel_id)} from public.vtubers v where ${who}${own} and not exists (select 1 from public.vtuber_channels c where c.platform = 'youtube' and c.external_id = ${q(m.youtube_channel_id)} and c.status = 'active') limit 1;`);
         }
         if (m.twitch_login && m._twitch_id) {
-            out.push(`insert into public.vtuber_channels (vtuber_id, platform, external_id, handle) select v.id, 'twitch', ${q(m._twitch_id)}, ${q(m.twitch_login.toLowerCase())} from public.vtubers v where ${who} and not exists (select 1 from public.vtuber_channels c where c.platform = 'twitch' and c.status = 'active' and (c.external_id = ${q(m._twitch_id)} or lower(c.handle) = ${q(m.twitch_login.toLowerCase())})) limit 1;`);
+            out.push(`insert into public.vtuber_channels (vtuber_id, platform, external_id, handle) select v.id, 'twitch', ${q(m._twitch_id)}, ${q(m.twitch_login.toLowerCase())} from public.vtubers v where ${who}${m._db_id ? ` and (v.twitch_channel_id is null or lower(v.twitch_channel_id) = ${q(m.twitch_login.toLowerCase())})` : ''} and not exists (select 1 from public.vtuber_channels c where c.platform = 'twitch' and c.status = 'active' and (c.external_id = ${q(m._twitch_id)} or lower(c.handle) = ${q(m.twitch_login.toLowerCase())})) limit 1;`);
         }
     }
     out.push('');
@@ -268,6 +277,23 @@ export function buildRosterSql(plan, header) {
     return out.join('\n');
 }
 
+/** migration 檔頭：依賴、套用前提與回滾步驟（測試會檢查回滾 SQL） */
+export const ROSTER_HEADER = `-- 企業勢逐家名冊（含畢業）。由 scripts/build-agency-rosters.mjs 產生，不要手改。
+-- 來源：scripts/data/tw-agency-rosters-2026-09.json（2026-09-29 逐家查證，每位成員附出處）
+-- 依賴：20260929110000（kind／parent_id）、20260929120000（graduated_at／former_group_id／is_official）
+-- 部署順序：本檔 → Edge Function → 前端；避開排程時段。
+-- **須單一交易套用**（apply_migration 或 psql -1）：回滾靠 created_at＝交易開始時間辨識本檔新增的頻道。
+-- 重新套用前先 drop 第 0 段的 backup 表（第 0 段偵測到舊備份會直接中止）。
+-- 正式站套用前先確認既有成員 id 都在：本檔第 2 段的 v.id 清單 select count(*) 應等於第 2 段筆數（id 取自本地匯出的正式站資料）。
+-- 回滾（依第 0 段備份）：
+--   delete from public.vtubers where contributed_by = '${CONTRIBUTED_BY}';
+--   delete from public.vtuber_channels c where c.created_at = (select applied_at from backup.rosters_meta_20260929) and not exists (select 1 from backup.vtuber_channels_ids_20260929 b where b.id = c.id);
+--   update public.vtubers v set group_id = b.group_id, former_group_id = b.former_group_id, is_official = b.is_official, activity = b.activity, graduated_at = b.graduated_at,
+--     debut_date = b.debut_date, youtube_channel_id = b.youtube_channel_id, twitch_channel_id = b.twitch_channel_id from backup.vtubers_rosters_20260929 b where b.id = v.id;
+--   delete from public.vtuber_groups g where not exists (select 1 from backup.vtuber_groups_rosters_20260929 b where b.id = g.id);
+--   update public.vtuber_groups g set kind = b.kind, parent_id = b.parent_id, verified_at = b.verified_at, note = b.note, member_count = b.member_count
+--     from backup.vtuber_groups_rosters_20260929 b where b.id = g.id;`;
+
 function main() {
     const arg = (n) => {
         const i = process.argv.indexOf(n);
@@ -277,18 +303,7 @@ function main() {
     const groups = arg('--groups') ? JSON.parse(readFileSync(resolve(arg('--groups')), 'utf8')) : [];
     const db = arg('--db') ? JSON.parse(readFileSync(resolve(arg('--db')), 'utf8')) : [];
     const plan = planRosters(resolved, groups, db);
-    const header = `-- 企業勢逐家名冊（含畢業）。由 scripts/build-agency-rosters.mjs 產生，不要手改。
--- 來源：scripts/data/tw-agency-rosters-2026-09.json（2026-09-29 逐家查證，每位成員附出處）
--- 依賴：20260929110000（kind／parent_id）、20260929120000（graduated_at／former_group_id／is_official）
--- 部署順序：本檔 → Edge Function → 前端；避開排程時段。重新套用前先 drop 第 0 段的 backup 表（否則沿用舊快照）
--- 回滾（依第 0 段備份）：
---   delete from public.vtubers where contributed_by = '${CONTRIBUTED_BY}';
---   delete from public.vtuber_channels c where c.created_at = (select applied_at from backup.rosters_meta_20260929) and not exists (select 1 from backup.vtuber_channels_ids_20260929 b where b.id = c.id);
---   update public.vtubers v set group_id = b.group_id, former_group_id = b.former_group_id, is_official = b.is_official, activity = b.activity, graduated_at = b.graduated_at,
---     debut_date = b.debut_date, youtube_channel_id = b.youtube_channel_id, twitch_channel_id = b.twitch_channel_id from backup.vtubers_rosters_20260929 b where b.id = v.id;
---   delete from public.vtuber_groups g where not exists (select 1 from backup.vtuber_groups_rosters_20260929 b where b.id = g.id);
---   update public.vtuber_groups g set kind = b.kind, parent_id = b.parent_id, verified_at = b.verified_at, note = b.note, member_count = b.member_count
---     from backup.vtuber_groups_rosters_20260929 b where b.id = g.id;`;
+    const header = ROSTER_HEADER;
     const sql = buildRosterSql(plan, header);
     const r = plan.report;
     console.log(JSON.stringify({

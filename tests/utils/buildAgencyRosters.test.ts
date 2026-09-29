@@ -2,7 +2,7 @@
 // 新成員（同名跳過）、合作藝人、官方頻道、left_continues、status-unverified、date-approx、reclassify、以名字認人、重複
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error scripts 目錄的 ESM JS 無型別宣告
-import { planRosters, buildRosterSql, toActivity, matchCond, looksLikeSamePerson, CONTRIBUTED_BY } from '../../scripts/build-agency-rosters.mjs';
+import { planRosters, buildRosterSql, toActivity, matchCond, looksLikeSamePerson, CONTRIBUTED_BY, ROSTER_HEADER } from '../../scripts/build-agency-rosters.mjs';
 // @ts-expect-error 同上
 import { indexDb, matchDb, normalizeHandle } from '../../scripts/resolve-roster-channels.mjs';
 // @ts-expect-error 同上
@@ -66,6 +66,14 @@ describe('planRosters', () => {
         expect(looksLikeSamePerson('艾琳妮雅·裴利', ['艾琳妮雅'])).toBe(true);
         expect(looksLikeSamePerson('実Hitomi', ['實 Hitomi'])).toBe(true);
         expect(looksLikeSamePerson('北溟', ['姬宮乃愛'])).toBe(false);
+        // 符號不影響；只共用一個中文字不算同一人
+        expect(looksLikeSamePerson('☆星乃ルナ♪', ['星乃ルナ'])).toBe(true);
+        expect(looksLikeSamePerson('小雪', ['小月'])).toBe(false);
+        expect(looksLikeSamePerson('雪', ['小雪'])).toBe(true);
+        // 以名字認回的人（_match_name）不做名字檢查
+        const byName = planRosters([{ agency: '子午計畫', subgroups: [], members: [member({ name: '新名字', youtube_channel_id: 'UCmatch00000000000000000', _db_id: 'm1', _db_name: '完全不同', _match_name: true })] }], groups);
+        expect(names(byName.updates)).toEqual(['新名字']);
+        expect(byName.report.nameMismatch).toEqual([]);
     });
 
     it('子團只為有成員的建；撞到別家的團名加公司前綴；沒有的公司列 missingAgency', () => {
@@ -77,6 +85,13 @@ describe('planRosters', () => {
         ]);
         expect(plan.report.subgroupRenamed).toEqual(['SUPER → 預見娛樂 SUPER']);
         expect(planRosters([{ agency: '不存在', members: [] }], groups).report.missingAgency).toEqual(['不存在']);
+        // 子團成員全是轉個人勢／在別家／名字不符：子團不建
+        const p = planRosters([{ agency: '子午計畫', subgroups: ['A團', 'B團', 'C團'], members: [
+            member({ name: '離開的人', subgroup: 'A團', left_continues: true, youtube_channel_id: 'UCleft000000000000000000', _db_id: 'l1', _db_group_id: 'g1' }),
+            member({ name: '在別家', subgroup: 'B團', youtube_channel_id: 'UCother00000000000000000', _db_id: 'o', _db_group_id: 'o1' }),
+            member({ name: '名字不符', subgroup: 'C團', youtube_channel_id: 'UCmis0000000000000000000', _db_id: 'n', _db_name: '另一個人', _db_group_id: 'g1' }),
+        ] }], groups);
+        expect(p.subgroups).toEqual([]);
     });
 
     it('掛在別家的人不動並列報告；同名的新人跳過；YouTube 或 Twitch 任一重複都算同一人', () => {
@@ -122,6 +137,11 @@ describe('buildRosterSql', () => {
         const l = lineOf(sql, "v.id = 'v7'");
         expect(l).toContain("then null else 'UCnameonly00000000000000' end)");
         expect(sql).toContain("select v.id, 'youtube', 'UCnameonly00000000000000', 'UCnameonly00000000000000' from public.vtubers v where v.id = 'v7'");
+        // 頻道表與第 2 段同範圍，且那列記的頻道要是這個或空的
+        const ch = lineOf(sql, "where v.id = 'v7'", 'insert into public.vtuber_channels');
+        expect(ch).toContain("and (v.group_id is null or v.group_id in (select id");
+        expect(ch).toContain("and (v.youtube_channel_id is null or v.youtube_channel_id = 'UCnameonly00000000000000')");
+        expect(lineOf(sql, "where v.id = 'v1'", "insert into public.vtuber_channels (vtuber_id, platform, external_id, handle) select v.id, 'twitch'")).toContain("lower(v.twitch_channel_id) = 'kirali'");
     });
 
     it('新成員：頻道或名字已存在就跳過；只有 Twitch 的也補頻道表；帶 contributed_by', () => {
@@ -154,6 +174,9 @@ describe('buildRosterSql', () => {
         expect(l).toContain("former_group_id = case when v.former_group_id is null or v.former_group_id in (select id");
         // 不依賴子團是否存在（不 join vtuber_groups g）
         expect(l).not.toContain('from public.vtuber_groups g');
+        // 公司不存在就什麼都不做；前所屬指向本家子團也會正規化成公司
+        expect(l).toContain("and (select id from public.vtuber_groups where name = '雲際線工作室' and parent_id is null) is not null and (");
+        expect(l).toContain('or (v.former_group_id in (select id');
         expect(l).toContain("activity = case when v.activity = 'graduate' then v.activity else 'active' end");
         expect(l).toContain("graduated_at = '2025-05-29'::date");
         expect(out).toContain("'小金碧碧', 'TW', 'active'");
@@ -178,6 +201,15 @@ describe('回滾', () => {
         const p = planRosters([], []);
         const out = buildRosterSql(p, '--');
         expect(out).toContain('create table if not exists backup.rosters_meta_20260929 as select now() as applied_at;');
+        // 舊備份還在就中止，且檢查在建表之前
+        expect(out.indexOf("to_regclass('backup.rosters_meta_20260929') is not null then raise exception")).toBeGreaterThan(-1);
+        expect(out.indexOf('to_regclass')).toBeLessThan(out.indexOf('create table if not exists backup.'));
+        // 檔頭回滾：只刪本次時間點新增、且不在備份裡的頻道；還原成員與團體
+        expect(ROSTER_HEADER).toContain("delete from public.vtubers where contributed_by = '" + CONTRIBUTED_BY + "';");
+        expect(ROSTER_HEADER).toContain('c.created_at = (select applied_at from backup.rosters_meta_20260929) and not exists (select 1 from backup.vtuber_channels_ids_20260929 b where b.id = c.id)');
+        expect(ROSTER_HEADER).toContain('former_group_id = b.former_group_id, is_official = b.is_official');
+        expect(ROSTER_HEADER).toContain('note = b.note');
+        expect(ROSTER_HEADER).toContain('須單一交易套用');
     });
 });
 

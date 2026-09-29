@@ -56,6 +56,9 @@ describe('isOfficialChannel', () => {
         expect(isOfficialChannel('MeridianProject子午計畫', names, true)).toBe(true);
         // 名字裡有 Official 但不是「Official Channel」：不誤殺真人
         expect(isOfficialChannel('Official髭男', names)).toBe(false);
+        // 資料庫已有 is_official 欄位（false）：名字剛好等於團名的藝人不再被當成官方頻道；明寫「官方頻道」的仍排除
+        expect(isOfficialChannel('子午計畫', names, false)).toBe(false);
+        expect(isOfficialChannel('子午計畫(官方頻道)', names, false)).toBe(true);
         expect(isOfficialChannel('煌Kirali', names)).toBe(false);
         const r = buildRoster('子午計畫', [{ id: 'g', name: '子午計畫', parent_id: null }], [row('子午計畫', 'g'), row('煌Kirali', 'g')]);
         expect(r.sections[0].members.map((m) => m.name)).toEqual(['煌Kirali']);
