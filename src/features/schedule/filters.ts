@@ -94,6 +94,7 @@ export function matchesQuery(ch: ScheduleChannel | undefined, s: ScheduleStream,
  * 依篩選條件過濾一個分頁的場次。
  * - 收藏範圍時不套國籍篩選：使用者自己挑的頻道，不該因為預設 TW 被藏起來。
  * - 有搜尋字時不套國籍與所屬篩選：使用者在找特定的人（例如日本的實況主），不該被預設 TW 藏起來；平台與收藏範圍照套。
+ * - 選了特定企業勢時不套國籍篩選（2026-09-30 使用者裁定）：要看的是這家的所有人（含非台灣成員與合作藝人），與成員名冊一致。
  */
 export function filterStreams(
     snapshot: ScheduleSnapshot,
@@ -112,6 +113,7 @@ export function filterStreams(
         }
         if (!matchesAgency(ch, filters.group)) return false;
         if (filters.scope === 'favorites') return isFavoriteChannel(ch, favorites);
+        if (isSpecificAgency(filters.group)) return true;
         return matchesNationality(ch, filters.nationality);
     });
 }
@@ -134,25 +136,48 @@ export function listMatchingChannels(snapshot: ScheduleSnapshot, query: string, 
         .map(({ id, channel }) => ({ id, channel }));
 }
 
-/** 所屬篩選：不限／所有企業勢／非企業勢／指定企業勢（含這家的合作藝人）；「所有／非企業勢」只看正式所屬 */
-export function matchesAgency(ch: ScheduleChannel | undefined, want: string): boolean {
-    if (want === 'all') return true;
-    if (want === GROUP_ANY_AGENCY) return !!ch?.agency;
-    if (want === GROUP_NO_AGENCY) return !ch?.agency;
-    return ch?.agency === want || !!ch?.collabs?.includes(want);
+/** 「所屬」選的是某一家企業勢（不是全部／所有企業勢／非企業勢） */
+export function isSpecificAgency(group: string): boolean {
+    return group !== 'all' && group !== GROUP_ANY_AGENCY && group !== GROUP_NO_AGENCY;
 }
 
 /**
- * snapshot 裡出現過的企業勢（依週表上的人數多到少，同數依名稱），給「所屬」下拉選單。
- * 只列企業勢：台灣有兩百多個社團與未查證的小團體，全列會讓下拉無法使用（卡片上仍顯示團名）。
- * 人數與 matchesAgency 同一口徑：正式所屬＋合作（只有合作藝人在週表上的公司也選得到）。
+ * 所屬篩選：不限／所有企業勢／非企業勢／指定企業勢。合作藝人一律算企業勢（2026-09-30 使用者裁定）：
+ * 有合作就出現在「所有企業勢」與該公司，不出現在「非企業勢」。
  */
-export function listGroups(snapshot: ScheduleSnapshot): string[] {
+export function matchesAgency(ch: ScheduleChannel | undefined, want: string): boolean {
+    if (want === 'all') return true;
+    const hasAgency = !!ch?.agency || !!ch?.collabs?.length;
+    if (want === GROUP_ANY_AGENCY) return hasAgency;
+    if (want === GROUP_NO_AGENCY) return !hasAgency;
+    return ch?.agency === want || !!ch?.collabs?.includes(want);
+}
+
+/** 「所屬」選單的一家企業勢：count＝這份 snapshot 裡有場次的人數（正式所屬＋合作） */
+export interface AgencyOption {
+    name: string;
+    count: number;
+}
+
+/**
+ * 「所屬」下拉選單：全部企業勢（snapshot.agencies），本週有場次的依人數多到少在前，沒有場次的依名稱排在後面（仍可選，看成員名冊）。
+ * 只列企業勢：台灣有兩百多個社團與未查證的小團體，全列會讓下拉無法使用（卡片上仍顯示團名）。
+ * 人數與 matchesAgency 同一口徑：正式所屬＋合作。舊版 snapshot 沒有 agencies 時只列有場次的。
+ */
+export function listGroups(snapshot: ScheduleSnapshot): AgencyOption[] {
     const count = new Map<string, number>();
+    for (const name of snapshot.agencies ?? []) count.set(name, 0);
     for (const ch of Object.values(snapshot.channels)) {
         for (const a of new Set([ch.agency, ...(ch.collabs ?? [])])) if (a) count.set(a, (count.get(a) ?? 0) + 1);
     }
-    return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name);
+    return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh-Hant')).map(([name, n]) => ({ name, count: n }));
+}
+
+/** 存下的「所屬」值在這份 snapshot 還有效嗎：全部、所有企業勢、非企業勢，或選單裡有的公司（snapshot 完全沒有所屬資料時只有「全部」有效） */
+export function isValidGroup(group: string, groups: readonly AgencyOption[]): boolean {
+    if (group === 'all') return true;
+    if (!groups.length) return false;
+    return !isSpecificAgency(group) || groups.some((g) => g.name === group);
 }
 
 /** 各分頁在目前篩選下的筆數（分頁標籤上的數字） */

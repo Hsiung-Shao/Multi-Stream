@@ -23,6 +23,7 @@ export default {
     'scope.favorites': '我的收藏',
 
     'filter.nationality': '地區',
+    'filter.nationalityOffForAgency': '選了公司時會顯示這家所有地區的成員',
     'filter.group': '所屬',
     'filter.platform': '平台',
     'nationality.all': '全部地區',
@@ -34,6 +35,7 @@ export default {
     'group.all': '全部所屬',
     'group.agencyAll': '企業勢（全部）',
     'group.indie': '非企業勢',
+    'group.noStreams': '本週無場次',
     'platform.all': '全部',
     'platform.youtube': 'YouTube',
     'platform.twitch': 'Twitch',

@@ -1,7 +1,7 @@
 // 合作藝人（vtuber_group_links role=collaborator）：snapshot 的 collabs、所屬篩選、名冊合作區、個人頁；表還沒上線時退回
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildSnapshot, resolveCollabs, resolveGroups, taipeiDate as edgeTaipeiDate, type SnapshotSourceRow } from '../../../supabase/functions/_shared/snapshot.ts';
-import { channelMatchesQuery, filterStreams, listGroups, matchesAgency } from '../../../src/features/schedule/filters';
+import { channelMatchesQuery, countByTab, filterStreams, isValidGroup, listGroups, matchesAgency } from '../../../src/features/schedule/filters';
 import { buildRoster, fetchAgencyRoster } from '../../../src/features/schedule/rosterSource';
 import { fetchPerson, resetPersonSourceCache } from '../../../src/features/schedule/personSource';
 import { isCollabActive, resetRestConfigCache, taipeiDate } from '../../../src/features/schedule/restClient';
@@ -53,7 +53,11 @@ describe('snapshot collabs', () => {
                 ['v1', ['SquareLive', '春魚創意']],
                 ['v2', ['春魚創意']], // 正式所屬就是春魚：不重複列為合作
             ]),
+            ['SquareLive', '春魚創意'],
         );
+        // 全部企業勢（「所屬」選單列出本週沒有場次的公司用）；沒有時不輸出欄位
+        expect(snap.agencies).toEqual(['SquareLive', '春魚創意']);
+        expect('agencies' in buildSnapshot([], [], groups, T0, null)).toBe(false);
         expect(snap.channels.v1.collabs).toEqual(['SquareLive', '春魚創意']);
         expect(snap.channels.v1.agency).toBeUndefined();
         expect(snap.channels.v2.agency).toBe('春魚創意');
@@ -81,22 +85,53 @@ describe('所屬篩選與搜尋', () => {
     it('listGroups：合作也算進人數；只有合作藝人的公司也出現在選單', () => {
         const snap = makeSnapshot();
         snap.channels.v2 = { ...snap.channels.v2, collabs: ['子午計畫', '只有合作的公司'] };
-        expect(listGroups(snap)).toEqual(['子午計畫', '只有合作的公司']);
+        expect(listGroups(snap).map((g: { name: string }) => g.name)).toEqual(['子午計畫', '只有合作的公司']);
     });
 
     const collab = { name: '兔姬', nationality: 'TW', collabs: ['SquareLive', '春魚創意'] };
 
-    it('選特定公司會帶出合作藝人；「所有企業勢／非企業勢」只看正式所屬', () => {
+    it('選特定公司會帶出合作藝人；合作也算企業勢（「所有企業勢」有、「非企業勢」沒有）', () => {
         expect(matchesAgency(collab, '春魚創意')).toBe(true);
         expect(matchesAgency(collab, 'SquareLive')).toBe(true);
         expect(matchesAgency(collab, '子午計畫')).toBe(false);
-        expect(matchesAgency(collab, GROUP_ANY_AGENCY)).toBe(false);
-        expect(matchesAgency(collab, GROUP_NO_AGENCY)).toBe(true);
+        expect(matchesAgency(collab, GROUP_ANY_AGENCY)).toBe(true);
+        expect(matchesAgency(collab, GROUP_NO_AGENCY)).toBe(false);
+        const indie = { name: '個人', nationality: 'TW' };
+        expect(matchesAgency(indie, GROUP_ANY_AGENCY)).toBe(false);
+        expect(matchesAgency(indie, GROUP_NO_AGENCY)).toBe(true);
     });
 
     it('搜尋合作公司名找得到人', () => {
         expect(channelMatchesQuery(collab, '春魚')).toBe(true);
         expect(channelMatchesQuery(collab, '子午')).toBe(false);
+    });
+
+    it('選特定公司時不套地區：非台灣的成員與合作藝人也出現；所有企業勢仍套地區', () => {
+        const snap = makeSnapshot();
+        snap.channels.v3 = { ...snap.channels.v3, collabs: ['子午計畫'] }; // 日三（JP）與子午計畫合作
+        const pick = (group: string) => filterStreams(snap, 'upcoming', { ...DEFAULT_FILTERS, group }, { youtube: new Set(), twitch: new Set() }).map((s) => s.vtuber_id);
+        expect(pick('子午計畫')).toContain('v3');
+        expect(pick(GROUP_ANY_AGENCY)).not.toContain('v3');
+    });
+
+    it('選特定公司時分頁計數與列表同口徑；公司＋收藏範圍只看收藏', () => {
+        const snap = makeSnapshot();
+        snap.channels.v3 = { ...snap.channels.v3, collabs: ['子午計畫'] };
+        const none = { youtube: new Set<string>(), twitch: new Set<string>() };
+        const f = { ...DEFAULT_FILTERS, group: '子午計畫' };
+        expect(countByTab(snap, f, none).upcoming).toBe(filterStreams(snap, 'upcoming', f, none).length);
+        expect(countByTab(snap, f, none).live).toBe(2); // v1（TW）＋ v3（JP 合作）
+        const favJP = { youtube: new Set(['UC0000000000000000000003']), twitch: new Set<string>() };
+        expect(filterStreams(snap, 'live', { ...f, scope: 'favorites' }, favJP).map((x) => x.vtuber_id)).toEqual(['v3']);
+    });
+
+    it('isValidGroup：本週沒場次但在企業勢清單裡的公司不重設；清單沒有的才重設', () => {
+        const groups = [{ name: '子午計畫', count: 1 }, { name: '春魚創意', count: 0 }];
+        expect(isValidGroup('春魚創意', groups)).toBe(true);
+        expect(isValidGroup('已改名的公司', groups)).toBe(false);
+        expect(isValidGroup(GROUP_ANY_AGENCY, groups)).toBe(true);
+        expect(isValidGroup('all', [])).toBe(true);
+        expect(isValidGroup(GROUP_NO_AGENCY, [])).toBe(false);
     });
 
     it('filterStreams：選合作公司時場次出現', () => {

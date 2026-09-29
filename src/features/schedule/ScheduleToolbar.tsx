@@ -1,20 +1,22 @@
 // 篩選工具列：範圍、地區、平台是一鍵切換的膠囊；「所屬」項目多，維持下拉（只列企業勢，見 filters.listGroups）。
+// 選了特定企業勢時不套地區（見 filters.filterStreams），地區膠囊一併停用。
 // 捲動時固定在頁首下方（StaticPageHeader 高 61px）。
 // 手機上所有控制排成單行、可橫向滑動，避免固定列疊成三行吃掉半個螢幕。
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heart, Search, X } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { cn } from '../../components/ui/utils';
 import { GROUP_ANY_AGENCY, GROUP_NO_AGENCY, type NationalityFilter, type PlatformFilter, type ScheduleFilterState } from './types';
+import { isSpecificAgency, type AgencyOption } from './filters';
 
 const NATIONALITIES: NationalityFilter[] = ['TW', 'HK', 'MY', 'JP', 'OTHER', 'all'];
 const PLATFORMS: PlatformFilter[] = ['all', 'youtube', 'twitch'];
 
 interface ScheduleToolbarProps {
     value: ScheduleFilterState;
-    groups: string[];
+    groups: AgencyOption[];
     onChange: (key: keyof ScheduleFilterState, value: string) => void;
     /** 週表內搜尋：送出 debounce 後的值（清空立即送出） */
     onQueryChange: (q: string) => void;
@@ -96,6 +98,9 @@ const Divider = () => <span className="h-5 w-px shrink-0 bg-border" aria-hidden=
 export function ScheduleToolbar({ value, groups, onChange, onQueryChange, searching }: ScheduleToolbarProps) {
     const { t } = useTranslation('schedule');
     const favorites = value.scope === 'favorites';
+    const agencyPicked = isSpecificAgency(value.group);
+    const active = groups.filter((g) => g.count > 0);
+    const idle = groups.filter((g) => g.count === 0);
     // 有搜尋字時不套地區與所屬（見 filters.filterStreams），控制項一併停用避免誤會
 
     return (
@@ -115,10 +120,21 @@ export function ScheduleToolbar({ value, groups, onChange, onQueryChange, search
 
                 <Divider />
 
-                {/* 收藏範圍不套地區篩選（見 filters.ts），膠囊一併停用避免誤會 */}
-                <div role="radiogroup" aria-label={t('filter.nationality')} className="flex shrink-0 items-center gap-1">
+                {/* 收藏範圍、選了特定企業勢時不套地區篩選（見 filters.ts），膠囊一併停用避免誤會 */}
+                <div
+                    role="radiogroup"
+                    aria-label={t('filter.nationality')}
+                    title={agencyPicked ? t('filter.nationalityOffForAgency') : undefined}
+                    className="flex shrink-0 items-center gap-1"
+                >
                     {NATIONALITIES.map((n) => (
-                        <Pill key={n} active={value.nationality === n} disabled={favorites || searching} onClick={() => onChange('nationality', n)}>
+                        // 選了公司時實際顯示所有地區：反白「全部地區」，不反白原本存的地區，避免誤以為只看台灣
+                        <Pill
+                            key={n}
+                            active={agencyPicked ? n === 'all' : value.nationality === n}
+                            disabled={favorites || searching || agencyPicked}
+                            onClick={() => onChange('nationality', n)}
+                        >
                             {t(`nationality.${n}` as 'nationality.all')}
                         </Pill>
                     ))}
@@ -142,10 +158,22 @@ export function ScheduleToolbar({ value, groups, onChange, onQueryChange, search
                         <SelectItem value="all">{t('group.all')}</SelectItem>
                         <SelectItem value={GROUP_ANY_AGENCY}>{t('group.agencyAll')}</SelectItem>
                         <SelectItem value={GROUP_NO_AGENCY}>{t('group.indie')}</SelectItem>
-                        {groups.length > 0 && <SelectSeparator />}
-                        {groups.map((g) => (
-                            <SelectItem key={g} value={g}>{g}</SelectItem>
+                        {active.length > 0 && <SelectSeparator />}
+                        {active.map((g) => (
+                            <SelectItem key={g.name} value={g.name}>{g.name}</SelectItem>
                         ))}
+                        {/* 本週沒有場次的公司仍可選（看成員名冊），另列一組 */}
+                        {idle.length > 0 && (
+                            <>
+                                <SelectSeparator />
+                                <SelectGroup>
+                                    <SelectLabel className="text-xs text-muted-foreground">{t('group.noStreams')}</SelectLabel>
+                                    {idle.map((g) => (
+                                        <SelectItem key={g.name} value={g.name}>{g.name}</SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </>
+                        )}
                     </SelectContent>
                 </Select>
             </div>

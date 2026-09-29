@@ -13,7 +13,7 @@ import { StreamSearchBox } from '../../components/StreamSearchBox';
 import { schedulePersonPage } from '../../config/schedulePerson';
 import { track } from '../../utils/analytics';
 import { cn } from '../../components/ui/utils';
-import { countByTab, filterStreams, listGroups, listMatchingChannels, sortLive } from './filters';
+import { countByTab, filterStreams, isSpecificAgency, isValidGroup, listGroups, listMatchingChannels, sortLive } from './filters';
 import { useScheduleSelection } from './useScheduleSelection';
 import { useWatchOnCanvas } from './useWatchOnCanvas';
 import { useFavoriteChannel } from './useFavoriteChannel';
@@ -22,7 +22,7 @@ import { ScheduleToolbar } from './ScheduleToolbar';
 import { AgencyRoster } from './AgencyRoster';
 import { DayTimeline } from './DayTimeline';
 import { SelectionBar } from './SelectionBar';
-import { DEFAULT_FILTERS, GROUP_ANY_AGENCY, GROUP_NO_AGENCY, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
+import { DEFAULT_FILTERS, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
 
 const FILTERS_STORAGE_KEY = 'schedule-filters-v1';
 /** 直播中預設先顯示幾位（約兩列），其餘收合 */
@@ -97,10 +97,9 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
 
     const groups = useMemo(() => listGroups(snapshot), [snapshot]);
     useEffect(() => {
-        // 企業勢名稱不在這份 snapshot 裡、或 snapshot 完全沒有所屬資料（舊版 snapshot）時回到「全部」，避免整片空白
-        const special = filters.group === GROUP_ANY_AGENCY || filters.group === GROUP_NO_AGENCY;
-        const valid = filters.group === 'all' || (groups.length > 0 && (special || groups.includes(filters.group)));
-        if (!valid) setFilters((f) => ({ ...f, group: 'all' }));
+        // 企業勢名稱不在這份 snapshot 裡（改名、刪除，或舊版 snapshot 沒有 agencies 且本週沒場次）時回到「全部」，避免整片空白。
+        // 刻意不存檔：CDN 還是舊 snapshot 的過渡期被重設，換到新 snapshot 後會自動回到使用者存的公司
+        if (!isValidGroup(filters.group, groups)) setFilters((f) => ({ ...f, group: 'all' }));
     }, [groups, filters.group]);
 
     const counts = useMemo(() => countByTab(snapshot, filters, favoriteKeys, deferredQuery), [snapshot, filters, favoriteKeys, deferredQuery]);
@@ -111,7 +110,7 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     const matchedPeople = useMemo(() => listMatchingChannels(snapshot, deferredQuery).filter((p) => p.channel.slug), [snapshot, deferredQuery]);
     const noResults = searching && counts.live + counts.upcoming + counts.recent === 0;
     // 「所屬」選了某家企業勢（不是全部／企業勢全部／非企業勢）且沒在搜尋時，顯示這家的成員名冊
-    const rosterAgency = !searching && filters.group !== 'all' && filters.group !== GROUP_ANY_AGENCY && filters.group !== GROUP_NO_AGENCY ? filters.group : null;
+    const rosterAgency = !searching && isSpecificAgency(filters.group) ? filters.group : null;
     const liveIds = useMemo(() => new Set(snapshot.live.map((s) => s.vtuber_id)), [snapshot]);
 
     const cardActions = useMemo<ScheduleCardActions>(

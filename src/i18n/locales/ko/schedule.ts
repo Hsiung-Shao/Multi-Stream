@@ -23,6 +23,7 @@ export default {
     'scope.favorites': '내 즐겨찾기',
 
     'filter.nationality': '지역',
+    'filter.nationalityOffForAgency': '소속사를 선택하면 모든 지역의 멤버를 표시합니다',
     'filter.group': '소속',
     'filter.platform': '플랫폼',
     'nationality.all': '전체 지역',
@@ -34,6 +35,7 @@ export default {
     'group.all': '전체 소속',
     'group.agencyAll': '기업세 전체',
     'group.indie': '개인세·기타',
+    'group.noStreams': '이번 주 방송 없음',
     'platform.all': '전체',
     'platform.youtube': 'YouTube',
     'platform.twitch': 'Twitch',

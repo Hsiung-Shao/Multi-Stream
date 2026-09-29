@@ -55,6 +55,8 @@ export interface ScheduleSnapshot {
     live: ScheduleStream[];
     upcoming: ScheduleStream[];
     recent: ScheduleStream[];
+    /** 所有企業勢（頂層公司）；舊版 snapshot 沒有 */
+    agencies?: string[];
 }
 
 export type ScheduleTab = 'live' | 'upcoming' | 'recent';

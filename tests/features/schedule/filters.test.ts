@@ -62,7 +62,10 @@ describe('filterStreams', () => {
         const snap = makeSnapshot();
         expect(countByTab(snap, DEFAULT_FILTERS, noFav)).toEqual({ live: 1, upcoming: 3, recent: 1 });
         // 只列企業勢（ホロ 在 fixture 裡沒有 agency，不列）
-        expect(listGroups(snap)).toEqual(['子午計畫']);
+        expect(listGroups(snap)).toEqual([{ name: '子午計畫', count: 1 }]);
+        // snapshot 帶出全部企業勢時，本週沒有場次的也列（人數 0，依名稱排在後面）
+        const idle = ['春魚創意', 'Aa'].sort((x, y) => x.localeCompare(y));
+        expect(listGroups({ ...snap, agencies: ['春魚創意', '子午計畫', 'Aa'] })).toEqual([{ name: '子午計畫', count: 1 }, ...idle.map((name) => ({ name, count: 0 }))]);
     });
 });
 

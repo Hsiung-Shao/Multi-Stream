@@ -23,6 +23,7 @@ export default {
     'scope.favorites': 'My favorites',
 
     'filter.nationality': 'Region',
+    'filter.nationalityOffForAgency': 'Showing members from every region for the selected agency',
     'filter.group': 'Agency',
     'filter.platform': 'Platform',
     'nationality.all': 'All regions',
@@ -34,6 +35,7 @@ export default {
     'group.all': 'Any agency',
     'group.agencyAll': 'All agencies',
     'group.indie': 'Independent',
+    'group.noStreams': 'No streams this week',
     'platform.all': 'All',
     'platform.youtube': 'YouTube',
     'platform.twitch': 'Twitch',

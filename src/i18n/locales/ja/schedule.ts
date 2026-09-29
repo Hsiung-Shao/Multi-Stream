@@ -23,6 +23,7 @@ export default {
     'scope.favorites': 'お気に入り',
 
     'filter.nationality': '地域',
+    'filter.nationalityOffForAgency': '事務所を選ぶと全地域のメンバーを表示します',
     'filter.group': '所属',
     'filter.platform': 'プラットフォーム',
     'nationality.all': 'すべての地域',
@@ -34,6 +35,7 @@ export default {
     'group.all': 'すべての所属',
     'group.agencyAll': '企業勢（すべて）',
     'group.indie': '個人勢・その他',
+    'group.noStreams': '今週は配信予定なし',
     'platform.all': 'すべて',
     'platform.youtube': 'YouTube',
     'platform.twitch': 'Twitch',

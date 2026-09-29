@@ -114,6 +114,8 @@ export interface Snapshot {
   live: SnapshotStream[];
   upcoming: SnapshotStream[];
   recent: SnapshotStream[];
+  /** 所有企業勢（頂層公司，依名稱排序）：「所屬」選單要列出本週沒有場次的公司 */
+  agencies?: string[];
 }
 
 interface VtuberRow {
@@ -144,6 +146,7 @@ export function buildSnapshot(
   now: number,
   heavyRefreshedAt: string | null,
   collabs: ReadonlyMap<string, readonly string[]> = new Map(),
+  agencies: readonly string[] = [],
 ): Snapshot {
   const vmap = new Map(vtubers.map((v) => [v.id, v]));
   const live: SnapshotStream[] = [];
@@ -223,6 +226,7 @@ export function buildSnapshot(
     live,
     upcoming,
     recent,
+    agencies: agencies.length ? [...agencies] : null,
   }) as Snapshot;
 }
 
@@ -279,7 +283,11 @@ export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: str
   const used = new Set(vtuberIds);
   const collabs = resolveCollabs(links.filter((l) => used.has(l.vtuber_id)), groups);
 
-  const snapshot = buildSnapshot(streams, vtubers, groups, now, heavyRefreshedAt, collabs);
+  const agencies = groupRows
+    .filter((g) => g.kind === 'agency' && !g.parent_id)
+    .map((g) => g.name)
+    .sort((a, b) => a.localeCompare(b));
+  const snapshot = buildSnapshot(streams, vtubers, groups, now, heavyRefreshedAt, collabs, agencies);
   const body = JSON.stringify(snapshot);
   await db.putStorageObject(SNAPSHOT_BUCKET, SNAPSHOT_PATH, body, 'application/json', SNAPSHOT_CACHE_SECONDS);
   return new TextEncoder().encode(body).length;
