@@ -293,6 +293,10 @@ export const track = {
     scheduleOpenMulti: (selectedCount: number, addedCount: number, tab: string, scope: string) =>
         sendEvent('schedule_open_multi', { selected_count: selectedCount, added_count: addedCount, tab, scope }),
 
+    /** 週表／個人頁點卡片在畫布觀看（result：added/switched/full/failed；source：board/person） */
+    scheduleWatch: (platform: string, status: string, source: string, result: string) =>
+        sendEvent('schedule_watch', { platform, status, source, result }),
+
     /** 週表篩選變更（filter：scope/nationality/group/platform/tab） */
     scheduleFilterChange: (filter: string, value: string) =>
         sendEvent('schedule_filter_change', { filter, value }),

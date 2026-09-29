@@ -15,18 +15,36 @@ export interface FavoriteKeys {
     twitch: Set<string>;
 }
 
-interface FavoriteLike {
+export interface FavoriteLike {
     platform: string;
     channelId?: string | null;
+    url?: string | null;
+}
+
+/**
+ * 收藏項目的頻道識別：YouTube 頻道 ID、Twitch login（小寫）。
+ * 舊資料可能沒有 channelId，改從網址取（twitch.tv/<login>、youtube.com/channel/<UC…>）。
+ * 週表的愛心顯示（toFavoriteKeys）與切換（useFavoriteChannel.favoritesOf）共用這一個函式，避免兩邊判斷不一致。
+ */
+export function favoriteChannelKey(f: FavoriteLike): { platform: 'youtube' | 'twitch'; id: string } | null {
+    if (f.platform === 'youtube') {
+        const id = f.channelId || f.url?.match(/youtube\.com\/channel\/(UC[\w-]+)/)?.[1];
+        return id ? { platform: 'youtube', id } : null;
+    }
+    if (f.platform === 'twitch') {
+        const id = f.channelId || f.url?.match(/twitch\.tv\/([^/?#]+)/)?.[1];
+        return id ? { platform: 'twitch', id: id.toLowerCase() } : null;
+    }
+    return null;
 }
 
 export function toFavoriteKeys(favorites: readonly FavoriteLike[]): FavoriteKeys {
     const youtube = new Set<string>();
     const twitch = new Set<string>();
     for (const f of favorites) {
-        if (!f.channelId) continue;
-        if (f.platform === 'youtube') youtube.add(f.channelId);
-        else if (f.platform === 'twitch') twitch.add(f.channelId.toLowerCase());
+        const key = favoriteChannelKey(f);
+        if (key?.platform === 'youtube') youtube.add(key.id);
+        else if (key?.platform === 'twitch') twitch.add(key.id);
     }
     return { youtube, twitch };
 }
@@ -48,23 +66,70 @@ function matchesNationality(ch: ScheduleChannel | undefined, want: ScheduleFilte
     return n === want;
 }
 
+/** 搜尋字正規化：全半形統一（NFKC）、不分大小寫、去頭尾空白 */
+export function normalizeQuery(q: string): string {
+    return q.normalize('NFKC').toLowerCase().trim();
+}
+
+function includesQ(value: string | undefined, q: string): boolean {
+    return !!value && value.normalize('NFKC').toLowerCase().includes(q);
+}
+
+/** 實況主本身是否符合搜尋字（名字、網址 slug、團體、所屬公司） */
+export function channelMatchesQuery(ch: ScheduleChannel | undefined, q: string): boolean {
+    if (!q) return true;
+    if (!ch) return false;
+    return includesQ(ch.name, q) || includesQ(ch.slug, q) || includesQ(ch.group, q) || includesQ(ch.agency, q);
+}
+
+/** 場次是否符合搜尋字：實況主符合，或標題、遊戲分類符合（q 需先 normalizeQuery） */
+export function matchesQuery(ch: ScheduleChannel | undefined, s: ScheduleStream, q: string): boolean {
+    if (!q) return true;
+    return channelMatchesQuery(ch, q) || includesQ(s.title, q) || includesQ(s.category, q);
+}
+
 /**
  * 依篩選條件過濾一個分頁的場次。
- * 收藏範圍時不套國籍篩選：使用者自己挑的頻道，不該因為預設 TW 被藏起來。
+ * - 收藏範圍時不套國籍篩選：使用者自己挑的頻道，不該因為預設 TW 被藏起來。
+ * - 有搜尋字時不套國籍與所屬篩選：使用者在找特定的人（例如日本的實況主），不該被預設 TW 藏起來；平台與收藏範圍照套。
  */
 export function filterStreams(
     snapshot: ScheduleSnapshot,
     tab: ScheduleTab,
     filters: ScheduleFilterState,
     favorites: FavoriteKeys,
+    query = '',
 ): ScheduleStream[] {
+    const q = normalizeQuery(query);
     return snapshot[tab].filter((s) => {
         const ch = snapshot.channels[s.vtuber_id];
         if (filters.platform !== 'all' && s.platform !== filters.platform) return false;
+        if (q) {
+            if (!matchesQuery(ch, s, q)) return false;
+            return filters.scope === 'favorites' ? isFavoriteChannel(ch, favorites) : true;
+        }
         if (!matchesAgency(ch, filters.group)) return false;
         if (filters.scope === 'favorites') return isFavoriteChannel(ch, favorites);
         return matchesNationality(ch, filters.nationality);
     });
+}
+
+/**
+ * 搜尋框下方的「實況主」捷徑：名字等符合的實況主（只限這份 snapshot 裡有場次的人），名字開頭符合的排前面。
+ */
+export function listMatchingChannels(snapshot: ScheduleSnapshot, query: string, limit = 8): { id: string; channel: ScheduleChannel }[] {
+    const q = normalizeQuery(query);
+    if (!q) return [];
+    const hits: { id: string; channel: ScheduleChannel; rank: number }[] = [];
+    for (const [id, ch] of Object.entries(snapshot.channels)) {
+        if (!channelMatchesQuery(ch, q)) continue;
+        const name = ch.name.normalize('NFKC').toLowerCase();
+        hits.push({ id, channel: ch, rank: name.startsWith(q) ? 0 : name.includes(q) ? 1 : 2 });
+    }
+    return hits
+        .sort((a, b) => a.rank - b.rank || a.channel.name.localeCompare(b.channel.name))
+        .slice(0, limit)
+        .map(({ id, channel }) => ({ id, channel }));
 }
 
 /** 所屬篩選：不限／所有企業勢／非企業勢／指定企業勢 */
@@ -90,11 +155,12 @@ export function countByTab(
     snapshot: ScheduleSnapshot,
     filters: ScheduleFilterState,
     favorites: FavoriteKeys,
+    query = '',
 ): Record<ScheduleTab, number> {
     return {
-        live: filterStreams(snapshot, 'live', filters, favorites).length,
-        upcoming: filterStreams(snapshot, 'upcoming', filters, favorites).length,
-        recent: filterStreams(snapshot, 'recent', filters, favorites).length,
+        live: filterStreams(snapshot, 'live', filters, favorites, query).length,
+        upcoming: filterStreams(snapshot, 'upcoming', filters, favorites, query).length,
+        recent: filterStreams(snapshot, 'recent', filters, favorites, query).length,
     };
 }
 

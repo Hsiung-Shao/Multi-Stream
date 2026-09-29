@@ -9,7 +9,7 @@ const NOW = Date.parse('2026-09-29T04:00:00Z'); // 台北 12:00
 
 const h = vi.hoisted(() => ({
     fetchPerson: vi.fn(),
-    track: { scheduleFilterChange: vi.fn(), scheduleOpenMulti: vi.fn() },
+    track: { scheduleFilterChange: vi.fn(), scheduleOpenMulti: vi.fn(), scheduleWatch: vi.fn() },
     addStream: vi.fn(async (_url: string, _opts?: unknown) => ({ success: true })),
 }));
 vi.mock('../../src/features/schedule/personSource', () => ({ fetchPerson: (slug: string) => h.fetchPerson(slug) }));
@@ -85,11 +85,11 @@ describe('SchedulePersonPage', () => {
         renderPage();
         const live = await screen.findByRole('region', { name: /正在直播/ });
         expect(within(live).getByText('也在 Twitch')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: /在畫布觀看/ }));
+        fireEvent.click(screen.getByRole('button', { name: '在畫布觀看' }));
         await waitFor(() => expect(h.addStream).toHaveBeenCalledTimes(1));
         expect(h.addStream.mock.calls[0][0]).toBe('https://www.youtube.com/watch?v=TaiOneLive01');
         await waitFor(() => expect(useUIStore.getState().page).toBe('canvas'));
-        expect(h.track.scheduleOpenMulti).toHaveBeenCalledWith(1, 1, 'live', 'person');
+        expect(h.track.scheduleWatch).toHaveBeenCalledWith('youtube', 'live', 'person', 'added');
     });
 
     it('接下來：Twitch 週表段標「週表預告」，沒有標題時顯示分類；名字不再連回自己', async () => {

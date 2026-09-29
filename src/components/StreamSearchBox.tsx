@@ -1,7 +1,7 @@
 // 首頁 Hero 與 /canvas 空狀態的大搜尋框（取代原本只能貼網址的 StreamUrlQuickAdd）。
 // 功能與動態島搜尋框一致（2026-09 使用者要求）：貼網址、打頻道名稱即時搜尋、Twitch／YouTube 切換，
 // 邏輯共用 useStreamSearch。首頁是 SSG 預渲染頁：render 內不碰 window，搜尋與事件都在 effect／handler 裡。
-import { lazy, Suspense, useCallback, useId, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Loader2, X, Twitch as TwitchIcon, Youtube as YoutubeIcon } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
@@ -21,9 +21,13 @@ interface StreamSearchBoxProps {
     /** 加入成功後導向 /canvas（首頁用） */
     navigateToCanvas?: boolean;
     className?: string;
+    /** 一開始就帶入的搜尋字（週表「找不到」時把週表的搜尋字帶過來，直接顯示全站結果） */
+    initialQuery?: string;
+    /** 一開始搜哪個平台 */
+    initialPlatform?: 'twitch' | 'youtube';
 }
 
-export function StreamSearchBox({ size = 'md', navigateToCanvas = false, className }: StreamSearchBoxProps) {
+export function StreamSearchBox({ size = 'md', navigateToCanvas = false, className, initialQuery, initialPlatform }: StreamSearchBoxProps) {
     const { t } = useTranslation(['common', 'navbar']);
     const setPage = useUIStore((s) => s.setPage);
     const [error, setError] = useState('');
@@ -32,7 +36,12 @@ export function StreamSearchBox({ size = 'md', navigateToCanvas = false, classNa
     const errorId = `${inputId}-error`;
 
     const onAdded = useCallback(() => { if (navigateToCanvas) setPage('canvas'); }, [navigateToCanvas, setPage]);
-    const s = useStreamSearch({ onAdded, onError: setError });
+    const s = useStreamSearch({ onAdded, onError: setError, initialPlatform });
+    const { changeQuery } = s;
+    // 帶入的搜尋字改變時同步（週表搜尋框繼續打字時，這裡的全站結果跟著更新）
+    useEffect(() => {
+        if (initialQuery) changeQuery(initialQuery);
+    }, [initialQuery, changeQuery]);
     const isLg = size === 'lg';
     const iconSize = isLg ? 18 : 16;
 

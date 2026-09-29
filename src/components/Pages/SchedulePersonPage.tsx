@@ -4,9 +4,9 @@
 // 這裡的 <SEO> 在資料到了之後再斷言一次（同一套文案），並補 ProfilePage＋BroadcastEvent JSON-LD。
 // 版面沿用公共週表的元件（LiveTile／DayTimeline／RecentRow），名字不再連到自己。
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronRight, ExternalLink, MonitorPlay, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ExternalLink, Heart, MonitorPlay, RefreshCw, SearchX } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -15,7 +15,9 @@ import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { usePersonSchedule } from '../../features/schedule/usePersonSchedule';
 import { useScheduleSelection } from '../../features/schedule/useScheduleSelection';
-import { LiveTile, RecentRow } from '../../features/schedule/ScheduleCard';
+import { LiveTile, RecentRow, ScheduleCardActionsContext, type ScheduleCardActions } from '../../features/schedule/ScheduleCard';
+import { useWatchOnCanvas } from '../../features/schedule/useWatchOnCanvas';
+import { useFavoriteChannel } from '../../features/schedule/useFavoriteChannel';
 import { DayTimeline } from '../../features/schedule/DayTimeline';
 import { SelectionBar } from '../../features/schedule/SelectionBar';
 import type { SchedulePerson } from '../../features/schedule/personSource';
@@ -94,7 +96,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     );
 }
 
-function PersonHeader({ person, onWatchLive, busy }: { person: SchedulePerson; onWatchLive: () => void; busy: boolean }) {
+function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }: { person: SchedulePerson; onWatchLive: () => void; busy: boolean; favorite: boolean; onToggleFavorite: () => void }) {
     const { t } = useTranslation('schedule');
     const ch = person.channel;
     const live = person.live.length > 0;
@@ -128,6 +130,12 @@ function PersonHeader({ person, onWatchLive, busy }: { person: SchedulePerson; o
                             {t('person.watchOnCanvas')}
                         </Button>
                     )}
+                    {(ch.youtube || ch.twitch) && (
+                        <Button variant={favorite ? 'secondary' : 'outline'} onClick={onToggleFavorite} aria-pressed={favorite} className="gap-1.5">
+                            <Heart size={16} aria-hidden="true" className={favorite ? 'fill-[#e5173f] text-[#e5173f]' : undefined} />
+                            {t(favorite ? 'favorite.saved' : 'favorite.save')}
+                        </Button>
+                    )}
                     {channelLinks(person).map((l) => (
                         <a
                             key={l.platform}
@@ -151,8 +159,14 @@ function PersonBody({ person }: { person: SchedulePerson }) {
     const { t } = useTranslation('schedule');
     const [now, setNow] = useState(() => Date.now());
     const [recentExpanded, setRecentExpanded] = useState(false);
-    const channels = { [person.id]: person.channel };
+    const channels = useMemo(() => ({ [person.id]: person.channel }), [person.id, person.channel]);
     const sel = useScheduleSelection(channels, 'person');
+    const { watch, busyKey } = useWatchOnCanvas('person');
+    const fav = useFavoriteChannel();
+    const cardActions = useMemo<ScheduleCardActions>(
+        () => ({ watch: (s, ch) => void watch(s, ch), busyKey, isFavorite: fav.isFavorite, toggleFavorite: (ch) => void fav.toggle(ch) }),
+        [watch, busyKey, fav.isFavorite, fav.toggle],
+    );
 
     useEffect(() => {
         setNow(Date.now());
@@ -160,14 +174,23 @@ function PersonBody({ person }: { person: SchedulePerson }) {
         return () => clearInterval(id);
     }, [person]);
 
-    // 直播中一鍵加入畫布（GA4 事件由 useScheduleSelection 以 scope='person' 送出）
-    const watchLive = () => void sel.open(person.live);
+    // 直播中一鍵在畫布觀看：一場就走「點卡片」同一條路（已在畫布上直接切過去）；同時多平台開台則一次加入
+    const watchLive = () => {
+        if (person.live.length === 1) void watch(person.live[0], person.channel);
+        else void sel.open(person.live);
+    };
     const recentShown = recentExpanded ? person.recent : person.recent.slice(0, RECENT_PREVIEW);
     const nothing = person.live.length + person.upcoming.length + person.recent.length === 0;
 
     return (
-        <>
-            <PersonHeader person={person} onWatchLive={watchLive} busy={sel.busy} />
+        <ScheduleCardActionsContext.Provider value={cardActions}>
+            <PersonHeader
+                person={person}
+                onWatchLive={watchLive}
+                busy={sel.busy || busyKey !== null}
+                favorite={fav.isFavorite(person.channel)}
+                onToggleFavorite={() => void fav.toggle(person.channel)}
+            />
 
             {nothing ? (
                 <p className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">{t('person.inactive')}</p>
@@ -240,7 +263,7 @@ function PersonBody({ person }: { person: SchedulePerson }) {
             )}
 
             <SelectionBar count={sel.selected.size} room={sel.room} busy={sel.busy} onOpen={() => sel.open()} onClear={sel.clear} />
-        </>
+        </ScheduleCardActionsContext.Provider>
     );
 }
 

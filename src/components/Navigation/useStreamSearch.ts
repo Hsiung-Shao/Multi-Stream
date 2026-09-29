@@ -68,11 +68,13 @@ export interface UseStreamSearchOptions {
     onError: (message: string) => void;
     /** 回應全域「聚焦搜尋框」（Ctrl+K）；同頁可能有好幾個搜尋框，只能有一個回應 */
     respondToGlobalFocus?: boolean;
+    /** 一開始搜哪個平台（預設 Twitch；週表的退路搜尋用 YouTube，台灣 VTuber 多在 YouTube） */
+    initialPlatform?: SearchPlatform;
 }
 
-export function useStreamSearch({ targetWindowId, onSearch, onAdded, onError, respondToGlobalFocus = false }: UseStreamSearchOptions) {
+export function useStreamSearch({ targetWindowId, onSearch, onAdded, onError, respondToGlobalFocus = false, initialPlatform = 'twitch' }: UseStreamSearchOptions) {
     const { t } = useTranslation(['common', 'navbar']);
-    const [platform, setPlatform] = useState<SearchPlatform>('twitch');
+    const [platform, setPlatform] = useState<SearchPlatform>(initialPlatform);
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<StreamSearchResult[]>([]);
     const [showResults, setShowResults] = useState(false);

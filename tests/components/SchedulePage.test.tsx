@@ -8,12 +8,18 @@ import { makeSnapshot, NOW } from '../features/schedule/fixtures';
 // vi.mock 會被提到檔案最上方：mock 內用到的變數要用 vi.hoisted 宣告
 const h = vi.hoisted(() => ({
     fetchSnapshot: vi.fn(),
-    track: { scheduleFilterChange: vi.fn(), scheduleOpenMulti: vi.fn() },
+    track: { scheduleFilterChange: vi.fn(), scheduleOpenMulti: vi.fn(), scheduleWatch: vi.fn() },
     addStream: vi.fn(async (_url: string, _opts?: unknown) => ({ success: true })),
     canvas: { streams: [] as unknown[] },
 }));
 vi.mock('../../src/features/schedule/snapshotSource', () => ({ fetchSnapshot: () => h.fetchSnapshot() }));
 vi.mock('../../src/utils/analytics', () => ({ logEvent: vi.fn(), track: h.track }));
+// 全站搜尋框會打 Twitch／YouTube API：換成只顯示帶入字的替身
+vi.mock('../../src/components/StreamSearchBox', () => ({
+    StreamSearchBox: ({ initialQuery, initialPlatform }: { initialQuery?: string; initialPlatform?: string }) => (
+        <div data-testid="global-search">{`${initialPlatform}:${initialQuery}`}</div>
+    ),
+}));
 vi.mock('../../src/store/useStreamStore', () => ({
     useStreamStore: Object.assign(
         (selector: (s: { streams: unknown[] }) => unknown) => selector({ streams: h.canvas.streams }),
@@ -23,6 +29,7 @@ vi.mock('../../src/store/useStreamStore', () => ({
 const { fetchSnapshot, track, addStream } = h;
 
 import { SchedulePage } from '../../src/components/Pages/SchedulePage';
+import { favoritesService } from '../../src/features/favorites/FavoritesService';
 import { useUIStore } from '../../src/store/useUIStore';
 
 function renderPage() {
@@ -88,6 +95,124 @@ describe('SchedulePage', () => {
         expect(within(upcoming).queryByRole('link', { name: '台二' })).not.toBeInTheDocument();
         fireEvent.click(nameLink);
         expect(useUIStore.getState().page).toBe('schedule:taione');
+    });
+
+    it('點直播中的卡片：加入畫布（附聊天室）並切到畫布，不開原平台', async () => {
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        const live = section(/直播中/);
+        fireEvent.click(within(live).getByRole('button', { name: '在畫布觀看 台一' }));
+        await waitFor(() => expect(addStream).toHaveBeenCalledTimes(1));
+        expect(addStream).toHaveBeenCalledWith('TaiOne', { withChat: true, withStream: true, displayName: '台一' });
+        await waitFor(() => expect(useUIStore.getState().page).toBe('canvas'));
+        expect(track.scheduleWatch).toHaveBeenCalledWith('twitch', 'live', 'board', 'added');
+        // 原平台改成小圖示外部連結
+        const original = within(live).getByRole('link', { name: '在 Twitch 開啟' });
+        expect(original).toHaveAttribute('href', 'https://www.twitch.tv/TaiOne');
+        expect(original).toHaveAttribute('target', '_blank');
+    });
+
+    it('點「接下來」的一列：YouTube 待機室加入畫布', async () => {
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        fireEvent.click(within(section(/接下來/)).getByRole('button', { name: /晚上雜談/ }));
+        await waitFor(() => expect(addStream).toHaveBeenCalledWith('https://www.youtube.com/watch?v=TaiOneWait1', expect.objectContaining({ withChat: true })));
+    });
+
+    it('已經在畫布上：不重複加入，直接切到畫布', async () => {
+        h.canvas.streams = [{ platform: 'twitch', channelId: 'taione', videoId: '' }];
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        fireEvent.click(within(section(/直播中/)).getByRole('button', { name: '在畫布觀看 台一' }));
+        await waitFor(() => expect(useUIStore.getState().page).toBe('canvas'));
+        expect(addStream).not.toHaveBeenCalled();
+    });
+
+    it('store 回報已存在（網址形式不同的同一路）：當成已在畫布，直接切過去', async () => {
+        addStream.mockResolvedValueOnce({ success: false, message: '此串流已存在', streamId: 7 } as unknown as { success: boolean });
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        fireEvent.click(within(section(/直播中/)).getByRole('button', { name: '在畫布觀看 台一' }));
+        await waitFor(() => expect(useUIStore.getState().page).toBe('canvas'));
+        expect(track.scheduleWatch).toHaveBeenCalledWith('twitch', 'live', 'board', 'switched');
+    });
+
+    it('畫布已滿：不加入、不切頁', async () => {
+        h.canvas.streams = Array.from({ length: 16 }, () => ({ platform: 'youtube', channelId: 'x', videoId: 'y' }));
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        fireEvent.click(within(section(/直播中/)).getByRole('button', { name: '在畫布觀看 台一' }));
+        await waitFor(() => expect(track.scheduleWatch).toHaveBeenCalledWith('twitch', 'live', 'board', 'full'));
+        expect(addStream).not.toHaveBeenCalled();
+        expect(useUIStore.getState().page).toBe('schedule');
+    });
+
+    it('搜尋：即時篩選、不受預設地區限制、列出實況主捷徑', async () => {
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        fireEvent.change(screen.getByRole('searchbox', { name: '搜尋週表' }), { target: { value: '日三' } });
+        // 日三是 JP，預設只看 TW 時原本看不到；搜尋時不套地區
+        expect(await screen.findByText('日三直播')).toBeInTheDocument();
+        expect(screen.queryByText('台一 Twitch')).not.toBeInTheDocument();
+        // 地區膠囊在搜尋時停用
+        expect(screen.getByRole('radio', { name: '台灣' })).toBeDisabled();
+        // 實況主捷徑：只列有個人頁的人（日三在測試資料裡沒有 slug）
+        expect(screen.queryByRole('navigation', { name: '實況主' })).not.toBeInTheDocument();
+        fireEvent.change(screen.getByRole('searchbox', { name: '搜尋週表' }), { target: { value: '台一' } });
+        const people = await screen.findByRole('navigation', { name: '實況主' });
+        expect(within(people).getByRole('link', { name: '台一' })).toHaveAttribute('href', '/schedule/taione');
+    });
+
+    it('搜尋標題也會命中；週表上找不到時改用全站搜尋（預設搜 YouTube）', async () => {
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        const box = screen.getByRole('searchbox', { name: '搜尋週表' });
+        fireEvent.change(box, { target: { value: '歌回' } });
+        expect(await within(section(/接下來/)).findByText('歌回')).toBeInTheDocument();
+        fireEvent.change(box, { target: { value: '完全不存在的人' } });
+        expect(await screen.findByText('週表上找不到「完全不存在的人」')).toBeInTheDocument();
+        expect(screen.getByTestId('global-search')).toHaveTextContent('youtube:完全不存在的人');
+        fireEvent.keyDown(box, { key: 'Escape' });
+        expect(await screen.findByText('台一 Twitch')).toBeInTheDocument();
+    });
+
+    it('在「我的收藏」範圍搜尋找不到時，可以一鍵改在全部範圍搜尋', async () => {
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        fireEvent.click(screen.getByRole('radio', { name: '我的收藏' }));
+        fireEvent.change(screen.getByRole('searchbox', { name: '搜尋週表' }), { target: { value: '台一' } });
+        fireEvent.click(await screen.findByRole('button', { name: '改在全部範圍與平台搜尋' }));
+        expect(await screen.findByText('台一 Twitch')).toBeInTheDocument();
+        expect(screen.getByRole('radio', { name: '我的收藏' })).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('愛心：未收藏時加入（YouTube 優先），不觸發在畫布觀看', async () => {
+        const add = vi.spyOn(favoritesService, 'addFavorite').mockResolvedValue({ success: true, message: 'addedToFavorites' });
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        const heart = within(section(/直播中/)).getByRole('button', { name: '收藏 台一' });
+        expect(heart).toHaveAttribute('aria-pressed', 'false');
+        fireEvent.click(heart);
+        await waitFor(() => expect(add).toHaveBeenCalledWith('https://www.youtube.com/channel/UC0000000000000000000001', '台一', null, 'UC0000000000000000000001'));
+        expect(addStream).not.toHaveBeenCalled();
+        add.mockRestore();
+    });
+
+    it('愛心：已收藏時顯示已收藏，再點一次兩個平台的收藏都移除', async () => {
+        seedFavorites([
+            { id: 'a', url: 'https://www.youtube.com/channel/UC0000000000000000000001', name: '台一', platform: 'youtube', channelId: 'UC0000000000000000000001', addedAt: '2026-01-01' },
+            { id: 'b', url: 'https://www.twitch.tv/taione', name: '台一', platform: 'twitch', channelId: 'taione', addedAt: '2026-01-01' },
+            { id: 'c', url: 'https://www.youtube.com/channel/UC-other', name: '別人', platform: 'youtube', channelId: 'UC-other', addedAt: '2026-01-01' },
+        ]);
+        const remove = vi.spyOn(favoritesService, 'removeFavorite');
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        const heart = within(section(/直播中/)).getByRole('button', { name: '取消收藏 台一' });
+        expect(heart).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.click(heart);
+        await waitFor(() => expect(remove).toHaveBeenCalledTimes(2));
+        expect(remove.mock.calls.map((c) => c[0])).toEqual(['a', 'b']);
+        remove.mockRestore();
     });
 
     it('收藏範圍：沒收藏時顯示引導', async () => {
