@@ -19,6 +19,7 @@ import { useWatchOnCanvas } from './useWatchOnCanvas';
 import { useFavoriteChannel } from './useFavoriteChannel';
 import { LiveTile, RecentRow, ScheduleCardActionsContext, type ScheduleCardActions } from './ScheduleCard';
 import { ScheduleToolbar } from './ScheduleToolbar';
+import { AgencyRoster } from './AgencyRoster';
 import { DayTimeline } from './DayTimeline';
 import { SelectionBar } from './SelectionBar';
 import { DEFAULT_FILTERS, GROUP_ANY_AGENCY, GROUP_NO_AGENCY, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
@@ -109,6 +110,9 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     // 捷徑只列有個人頁的人（沒有 slug 的點了沒地方去）
     const matchedPeople = useMemo(() => listMatchingChannels(snapshot, deferredQuery).filter((p) => p.channel.slug), [snapshot, deferredQuery]);
     const noResults = searching && counts.live + counts.upcoming + counts.recent === 0;
+    // 「所屬」選了某家企業勢（不是全部／企業勢全部／非企業勢）且沒在搜尋時，顯示這家的成員名冊
+    const rosterAgency = !searching && filters.group !== 'all' && filters.group !== GROUP_ANY_AGENCY && filters.group !== GROUP_NO_AGENCY ? filters.group : null;
+    const liveIds = useMemo(() => new Set(snapshot.live.map((s) => s.vtuber_id)), [snapshot]);
 
     const cardActions = useMemo<ScheduleCardActions>(
         () => ({ watch: (s, ch) => void watch(s, ch), busyKey, isFavorite: fav.isFavorite, toggleFavorite: (ch) => void fav.toggle(ch) }),
@@ -133,6 +137,8 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     return (
         <ScheduleCardActionsContext.Provider value={cardActions}>
             <ScheduleToolbar value={filters} groups={groups} onChange={changeFilter} onQueryChange={setQuery} searching={searching} />
+
+            {rosterAgency && <AgencyRoster key={rosterAgency} agency={rosterAgency} liveIds={liveIds} />}
 
             {searching && matchedPeople.length > 0 && (
                 <nav aria-label={t('search.people')} className="mt-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">

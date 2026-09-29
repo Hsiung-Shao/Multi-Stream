@@ -9,11 +9,16 @@ import { makeSnapshot, NOW } from '../features/schedule/fixtures';
 const h = vi.hoisted(() => ({
     fetchSnapshot: vi.fn(),
     track: { scheduleFilterChange: vi.fn(), scheduleOpenMulti: vi.fn(), scheduleWatch: vi.fn() },
+    fetchAgencyRoster: vi.fn(),
     addStream: vi.fn(async (_url: string, _opts?: unknown) => ({ success: true })),
     canvas: { streams: [] as unknown[] },
 }));
 vi.mock('../../src/features/schedule/snapshotSource', () => ({ fetchSnapshot: () => h.fetchSnapshot() }));
 vi.mock('../../src/utils/analytics', () => ({ logEvent: vi.fn(), track: h.track }));
+vi.mock('../../src/features/schedule/rosterSource', async (orig) => ({
+    ...(await orig<typeof import('../../src/features/schedule/rosterSource')>()),
+    fetchAgencyRoster: (agency: string) => h.fetchAgencyRoster(agency),
+}));
 // 全站搜尋框會打 Twitch／YouTube API：換成只顯示帶入字的替身
 vi.mock('../../src/components/StreamSearchBox', () => ({
     StreamSearchBox: ({ initialQuery, initialPlatform }: { initialQuery?: string; initialPlatform?: string }) => (
@@ -103,6 +108,29 @@ describe('SchedulePage', () => {
         // 台一的直播是 Twitch、待機室是 YouTube，團體是同一位實況主的
         expect(within(section(/直播中/)).getByText('子午計畫')).toBeInTheDocument();
         expect(within(section(/接下來/)).getAllByText(/子午計畫/).length).toBeGreaterThan(0);
+    });
+
+    it('所屬選了某家企業勢：顯示成員名冊（直播中標示、已畢業收合）；搜尋時隱藏', async () => {
+        const { buildRoster } = await import('../../src/features/schedule/rosterSource');
+        h.fetchAgencyRoster.mockResolvedValue(
+            buildRoster('子午計畫', [{ id: 'g', name: '子午計畫', parent_id: null }], [
+                { id: 'v1', name: '台一', img_url: null, slug: 'taione', activity: 'active', debut_date: '2021-01-01', group_id: 'g' },
+                { id: 'old', name: '已畢業的人', img_url: null, slug: 'oldone', activity: 'graduate', debut_date: '2020-01-01', graduated_at: '2023-06-30', group_id: 'g' },
+            ]),
+        );
+        localStorage.setItem('schedule-filters-v1', JSON.stringify({ group: '子午計畫' }));
+        renderPage();
+        await screen.findByText('台一 Twitch');
+        const roster = await screen.findByRole('region', { name: /子午計畫 成員/ });
+        expect(h.fetchAgencyRoster).toHaveBeenCalledWith('子午計畫');
+        expect(within(roster).getByText('現役 1 位 · 已畢業 1 位')).toBeInTheDocument();
+        expect(within(roster).getByRole('link', { name: /台一/ })).toHaveAttribute('href', '/schedule/taione');
+        expect(within(roster).getByText('直播中')).toBeInTheDocument(); // 台一正在 Twitch 直播
+        expect(within(roster).queryByText('已畢業的人')).not.toBeInTheDocument();
+        fireEvent.click(within(roster).getByRole('button', { name: '顯示已畢業 1 位' }));
+        expect(within(roster).getByText('已畢業的人')).toBeInTheDocument();
+        fireEvent.change(screen.getByRole('searchbox', { name: '搜尋週表' }), { target: { value: '台一' } });
+        await waitFor(() => expect(screen.queryByRole('region', { name: /子午計畫 成員/ })).not.toBeInTheDocument());
     });
 
     it('點直播中的卡片：加入畫布（附聊天室）並切到畫布，不開原平台', async () => {

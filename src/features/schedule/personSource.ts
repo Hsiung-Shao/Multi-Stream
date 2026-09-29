@@ -1,13 +1,12 @@
 // 個人週表頁（/schedule/<slug>）的資料：直接以 anon 身分查 PostgREST，不載入 supabase-js（省約 59 KB gzip）。
 //
-// 連線資訊解析順序與 snapshotSource 相同：
-//   1. VITE_SCHEDULE_SUPABASE_URL ＋ VITE_SCHEDULE_SUPABASE_ANON_KEY（本地開發指向本地 Supabase；anon key 本來就是公開值）
-//   2. /api/supabase-config（正式站，與 getSupabase 同一個來源）
+// 連線與逾時見 restClient.ts（與團體名冊共用）。
 // RLS 已排除隱藏的場次與常駐框（見 migration 20260928100000_schedule_stage1）；這裡仍帶 is_schedule_frame=eq.false 以防萬一。
 // client fetch 一律加逾時（memory error_client_fetch_needs_timeout）。
 
 import { SCHEDULE_SLUG_RE } from '../../config/schedulePerson';
-import { SnapshotError, SNAPSHOT_TIMEOUT_MS, fetchWithTimeout } from './snapshotSource';
+import { SnapshotError } from './snapshotSource';
+import { resetRestConfigCache, resolveRestConfig, restGet, type RestOptions } from './restClient';
 import type { ScheduleAlso, ScheduleChannel, ScheduleStream } from './types';
 
 /** 最近幾天的直播紀錄 */
@@ -28,52 +27,12 @@ export interface SchedulePerson {
     recent: ScheduleStream[];
 }
 
-interface RestConfig {
-    url: string;
-    anonKey: string;
-}
-
-export interface PersonFetchOptions {
-    envUrl?: string;
-    envAnonKey?: string;
-    fetchFn?: typeof fetch;
-    signal?: AbortSignal;
-    timeoutMs?: number;
+export interface PersonFetchOptions extends RestOptions {
     now?: number;
 }
 
-let cachedConfig: RestConfig | null = null;
-
-/** 測試用：清掉 supabase-config 的快取 */
-export function resetPersonSourceCache(): void {
-    cachedConfig = null;
-}
-
-async function resolveRestConfig(opts: PersonFetchOptions): Promise<RestConfig> {
-    const envUrl = opts.envUrl ?? (import.meta.env.VITE_SCHEDULE_SUPABASE_URL as string | undefined);
-    const envKey = opts.envAnonKey ?? (import.meta.env.VITE_SCHEDULE_SUPABASE_ANON_KEY as string | undefined);
-    if (envUrl && envKey) return { url: envUrl.replace(/\/$/, ''), anonKey: envKey };
-    if (!cachedConfig) {
-        const res = await fetchWithTimeout('/api/supabase-config', opts.timeoutMs ?? SNAPSHOT_TIMEOUT_MS, opts.signal, opts.fetchFn);
-        if (!res.ok) throw new SnapshotError('config', `supabase-config HTTP ${res.status}`);
-        const cfg = (await res.json().catch(() => null)) as { url?: string; anonKey?: string } | null;
-        if (!cfg?.url || !cfg.anonKey) throw new SnapshotError('config', 'supabase-config incomplete');
-        cachedConfig = { url: cfg.url.replace(/\/$/, ''), anonKey: cfg.anonKey };
-    }
-    return cachedConfig;
-}
-
-async function restGet<T>(cfg: RestConfig, path: string, opts: PersonFetchOptions): Promise<T> {
-    const res = await fetchWithTimeout(`${cfg.url}/rest/v1/${path}`, opts.timeoutMs ?? SNAPSHOT_TIMEOUT_MS, opts.signal, opts.fetchFn, {
-        apikey: cfg.anonKey,
-        Authorization: `Bearer ${cfg.anonKey}`,
-        Accept: 'application/json',
-    });
-    if (!res.ok) throw new SnapshotError('http', `rest HTTP ${res.status}`);
-    const data: unknown = await res.json().catch(() => null);
-    if (!Array.isArray(data)) throw new SnapshotError('format', 'unexpected rest response');
-    return data as T;
-}
+/** 測試用：清掉 supabase-config 的快取（連線設定已抽到 restClient.ts） */
+export const resetPersonSourceCache = resetRestConfigCache;
 
 interface VtuberRow {
     id: string;
