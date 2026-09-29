@@ -20,7 +20,7 @@
 //   - 可重跑：第二次套用零變動（改名、建團、搬人、關係都有「已是目標狀態就跳過」的條件）
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { q, qn, topId, treeSql, matchCond, looksLikeSamePerson } from './build-agency-rosters.mjs';
+import { q, qn, topId, treeSql, matchCond, looksLikeSamePerson, commentSafe } from './build-agency-rosters.mjs';
 
 export const CONTRIBUTED_BY = 'research:2026-09-30';
 export const VERIFIED_AT = '2026-09-30';
@@ -273,7 +273,7 @@ export function buildCollabSql(plan, header) {
     out.push('');
     out.push('-- ===== 4. 子團成員對齊（只動目前在本家或其子團、或完全沒有團體的人）=====');
     for (const mv of plan.moves) {
-        out.push(`-- ${mv.name} → ${mv.target}`);
+        out.push(`-- ${commentSafe(mv.name)} → ${commentSafe(mv.target)}`);
         out.push(
             `update public.vtubers v set group_id = g.id from public.vtuber_groups g where g.id = ${subgroupSql(mv.agency, mv.target)} and v.id = ${q(mv.id)} and (v.group_id in ${treeSql(mv.agency)} or (v.group_id is null and v.former_group_id is null)) and v.group_id is distinct from g.id;`,
         );
@@ -282,7 +282,7 @@ export function buildCollabSql(plan, header) {
 
     out.push('-- ===== 5. 合作：既有藝人加關係（掛頂層公司）=====');
     for (const l of plan.links) {
-        out.push(`-- ${l.m.name}（${l.agency}）`);
+        out.push(`-- ${commentSafe(l.m.name)}（${commentSafe(l.agency)}）`);
         out.push(
             `insert into public.vtuber_group_links (vtuber_id, group_id, role, since, until, source_url, verified_at) ${linkValues(l, `v.id`)} from public.vtubers v where v.id = ${q(l.m._db_id)} and ${topId(l.agency)} is not null ${linkUpsert};`,
         );
@@ -291,7 +291,7 @@ export function buildCollabSql(plan, header) {
     out.push(`-- ===== 6. 合作：新增藝人（不設 group_id；contributed_by='${CONTRIBUTED_BY}'；頻道或名字已存在就跳過）＋頻道表＋關係 =====`);
     for (const l of plan.inserts) {
         const m = l.m;
-        out.push(`-- ${m.name}（${l.agency}）`);
+        out.push(`-- ${commentSafe(m.name)}（${commentSafe(l.agency)}）`);
         out.push(
             `insert into public.vtubers (name, nationality, activity, youtube_channel_id, twitch_channel_id, img_url, contributed_by) select ${q(m.name)}, 'TW', 'active', ${qn(m.youtube_channel_id)}, ${qn(m.twitch_login)}, ${qn(m._avatar)}, ${q(CONTRIBUTED_BY)} where not exists (select 1 from public.vtubers x where ${matchCond(m, 'x')} or x.name = ${q(m.name)});`,
         );

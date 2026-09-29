@@ -22,6 +22,8 @@ import { resolve } from 'node:path';
 export const CONTRIBUTED_BY = 'research:2026-09-29';
 export const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 export const qn = (s) => (s == null || s === '' ? 'null' : q(s));
+/** 寫進 SQL 註解的外部文字：去掉所有換行（單獨的 \r 或 U+2028 也會結束 -- 註解，後面的內容就變成 SQL） */
+export const commentSafe = (s) => String(s ?? '').replace(/[\r\n\u2028\u2029\u0085]/g, ' ');
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function toActivity(status) {

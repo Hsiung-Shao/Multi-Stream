@@ -1,0 +1,61 @@
+{
+  "_說明": "依官網標示調整資料庫（2026-09-30 使用者：「古德文創那就全部標記為合作藝人」「依據官網所標示的調整當前資料庫的資料進行更新」）。只改官網或本人官方帳號明確標示者；名單消失但沒公告的不改（列在 tw-groups-pending.md）。產生 migration：scripts/build-official-fixes.mjs。",
+  "verified_at": "2026-09-30",
+  "collab_convert": [
+    {
+      "agency": "古德文創",
+      "id": "6161a7b7-849d-478a-b07c-e1972b27c976",
+      "name": "葉月 Hazuki",
+      "source": "https://www.goodcc.com.tw/influencer-static/pagination/all.json",
+      "note": "官網唯一的藝人名單即「合作藝人」，使用者裁定古德文創全部改為合作"
+    },
+    {
+      "agency": "古德文創",
+      "id": "84dcab29-7779-473d-8179-6cfd3ce40d1d",
+      "name": "sazki",
+      "source": "https://www.goodcc.com.tw/influencer-static/pagination/all.json",
+      "note": "同上"
+    }
+  ],
+  "departures": [
+    {
+      "agency": "花遊工作室",
+      "id": "2841e83e-9b96-4e36-bb22-595af6ac77dc",
+      "name": "納希斯Narciss",
+      "left_date": null,
+      "official_label": "已完結",
+      "source": "https://x.com/Huayu_Narciss",
+      "note": "本人官方 X 名稱標「已完結」；查不到官方精確日期，graduated_at 不寫"
+    }
+  ],
+  "new_members": [
+    {
+      "agency": "花遊工作室",
+      "subgroup": "希望旅團",
+      "name": "茱莉葉塔",
+      "status": "active",
+      "youtube_channel_id": "UCqgXGPKOaLGGtHPPuAB7qwQ",
+      "twitch_login": null,
+      "avatar": "https://yt3.ggpht.com/7Vsl-kDIfeRriO5fF7AwElTdAaritSiC7LPbs66bApWnBzFt2pKeazPQLxa3sQDVKinO2RmV5g=s88-c-k-c0x00ffffff-no-rj",
+      "sources": ["https://www.youtube.com/channel/UCqgXGPKOaLGGtHPPuAB7qwQ", "https://x.com/Huayu_Giulietta"],
+      "note": "頻道簡介：花遊工作室所屬三期生【希望旅團】"
+    },
+    {
+      "agency": "花遊工作室",
+      "subgroup": "希望旅團",
+      "name": "比托利亞",
+      "status": "active",
+      "youtube_channel_id": "UCF2iSeWZlM17X3relZMs_fQ",
+      "twitch_login": null,
+      "avatar": "https://yt3.ggpht.com/XI1ZOsZxyf2PwUW9OiIikCTyB7BWWg3AJR5wgSWyAvseD9my7sJSPCa6IhzWgAtDUQCI11WdeM4=s88-c-k-c0x00ffffff-no-rj",
+      "sources": ["https://www.youtube.com/channel/UCF2iSeWZlM17X3relZMs_fQ", "https://x.com/Huayu_Bitoria"],
+      "note": "頻道簡介：花遊三期生 希望旅團"
+    }
+  ],
+  "not_applied": [
+    { "agency": "公共電視文化事業基金會", "names": ["幽夜南栖系", "海月波波", "凱文布魯"], "reason": "宮氏海水浴場用企劃共用頻道 UCoOv_rsFOBChxYmi4dvtiVQ，三人沒有各自頻道" },
+    { "agency": "Mojoy Live", "names": ["禮若凌"], "reason": "只有前導影片出處，查不到頻道；已不在官網名單、也沒有離開公告" },
+    { "agency": "靛之森", "names": ["伊索渡"], "reason": "只在官方宣傳影片出現，查不到頻道；官網 404" },
+    { "agency": "花遊工作室／鹿鳴娛樂／Mojoy Live／雲際線工作室", "names": ["朔礼", "海晞", "安戈洛", "朔璃", "李李鈴蘭", "瑪格麗特．溫特斯", "神稻櫻火"], "reason": "資料庫已是已畢業；離開日期只有第三方報導，不寫入" }
+  ]
+}
