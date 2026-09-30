@@ -261,11 +261,6 @@ export function LiveTile({ stream, channel, now, selected, onToggle, personLinks
                 <span className="size-1.5 rounded-full bg-white" aria-hidden="true" />
                 LIVE
             </span>
-            {stream.viewer_count != null && (
-                <span className="absolute bottom-2 left-2 rounded bg-black/75 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white">
-                    {t('card.viewers', { count: stream.viewer_count })}
-                </span>
-            )}
             {busy && (
                 <span className="absolute inset-0 grid place-items-center bg-black/40" aria-hidden="true">
                     <Loader2 size={22} className="animate-spin text-white" />

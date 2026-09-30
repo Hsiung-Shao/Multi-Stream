@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { YouTubeClient, toYouTubeVideo } from '../../supabase/functions/_shared/youtube.ts';
+import { QuotaBudgetError, YouTubeClient, toYouTubeVideo } from '../../supabase/functions/_shared/youtube.ts';
 import { classifyYouTubeVideo } from '../../supabase/functions/_shared/rules.ts';
 
 const NOW = Date.parse('2026-09-28T12:00:00Z');
@@ -90,16 +90,19 @@ describe('YouTubeClient', () => {
     await expect(yt.listVideos(['AbCdEfGhIjK'])).rejects.toThrow(/HTTP 403/);
   });
 
-  it('playlistItems 備援：UU + channelId 去掉 UC，回 videoId 清單', async () => {
-    let url = '';
-    const fetchFn = (async (input: string | URL | Request) => {
-      url = String(input);
-      return new Response(JSON.stringify({ items: [{ contentDetails: { videoId: 'a' } }, { contentDetails: {} }, { contentDetails: { videoId: 'b' } }] }), { status: 200 });
+  it('呼叫上限：remainingVideos＝剩餘次數 × 50；用完再呼叫丟 QuotaBudgetError（不會真的打出去）', async () => {
+    let calls = 0;
+    const fetchFn = (async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ items: [] }), { status: 200 });
     }) as unknown as typeof fetch;
-    const yt = new YouTubeClient({ apiKey: 'k', referer: 'x', fetch: fetchFn });
-    const ids = await yt.listRecentUploads('UCabc');
-    expect(new URL(url).searchParams.get('playlistId')).toBe('UUabc');
-    expect(ids).toEqual(['a', 'b']);
-    expect(yt.quota.playlistItemsList).toBe(1);
+    const yt = new YouTubeClient({ apiKey: 'k', referer: 'x', fetch: fetchFn, maxCalls: 2 });
+    expect(yt.remainingVideos()).toBe(100);
+    await yt.listVideos(Array.from({ length: 60 }, (_, i) => `v${String(i).padStart(10, '0')}`));
+    expect(calls).toBe(2);
+    expect(yt.remainingVideos()).toBe(0);
+    await expect(yt.listVideos(['AbCdEfGhIjK'])).rejects.toBeInstanceOf(QuotaBudgetError);
+    expect(calls).toBe(2);
+    expect(new YouTubeClient({ apiKey: 'k', referer: 'x', fetch: fetchFn, maxCalls: 0 }).remainingVideos()).toBe(0);
   });
 });

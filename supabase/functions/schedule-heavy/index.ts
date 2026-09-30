@@ -7,13 +7,15 @@
 //
 // 每次呼叫：
 // 1. 游標在 0（新的一圈）時重算名冊分級（T1/T2/T3，排除 graduate）
-// 2. 這一片頻道走 RSS 找新影片，送 videos.list 分類、寫 streams
-// 3. 重查 scheduled/live 場次（tombstone / expired）、共享表、last_live_at
+// 2. 這一片頻道走 RSS 找新影片（整批限流時停手、不懲罰頻道），新影片送 videos.list 分類、寫 streams
+// 3. 游標歸零那一片用 videos.list 重查待處理場次（改期、tombstone、常駐框）；直播狀態由 Light 的 live-og 負責
+//    API 有每輪與每日上限（rules.ts），資料來源優先序 live-og > RSS > API
+// 並寫共享表、last_live_at
 // 4. 發布 snapshot
 //
 // 本地測試：POST http://127.0.0.1:57321/functions/v1/schedule-heavy
 //   header: Authorization: Bearer <本地 service_role>（或 x-schedule-secret）
-//   ?shard_size=400&budget_ms=60000&concurrency=25&tiers=1 可調
+//   ?shard_size=400&budget_ms=60000&concurrency=8&tiers=1 可調
 
 import { loadRoster, recomputeTiers } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
@@ -34,7 +36,7 @@ import {
 } from '../_shared/sweep.ts';
 import { loadShard, runJob, saveShard } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
-import { RSS_FAIL_STREAK_DEAD, RSS_FAIL_STREAK_FOR_FALLBACK } from '../_shared/rules.ts';
+import { RSS_FAIL_STREAK_DEAD } from '../_shared/rules.ts';
 
 const JOB = 'schedule_heavy_rss';
 const TWITCH_JOB = 'schedule_twitch';
@@ -43,7 +45,8 @@ const TWITCH_CONCURRENCY = 8;
 const TWITCH_BUDGET_MS = 40_000;
 /** 牆鐘預算（RSS 抓取不再開始新頻道的時間點）；真正的限制是 CPU 時間，見檔頭 */
 const DEFAULT_BUDGET_MS = 60_000;
-const DEFAULT_CONCURRENCY = 25;
+/** RSS 並行：25 會讓 YouTube 很快開始限流（2026-09-30 實測），降到 8 */
+const DEFAULT_CONCURRENCY = 8;
 
 Deno.serve((req) => {
   const stats = emptyStats('heavy', Date.now());
@@ -61,8 +64,8 @@ Deno.serve((req) => {
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
     const start = roster.length ? shard.cursor_position % roster.length : 0;
     if (start === 0 || params.get('tiers') === '1') {
-      // 死頻道每圈再試一次：streak 降回備援門檻（3），這一圈若還是失敗會再累積回 10
-      await db.update('schedule_channel_state', `rss_fail_streak=gte.${RSS_FAIL_STREAK_DEAD}`, { rss_fail_streak: RSS_FAIL_STREAK_FOR_FALLBACK });
+      // 死頻道每圈再試一次：streak 歸零，這一圈若還是失敗（非限流輪次）會再累積
+      await db.update('schedule_channel_state', `rss_fail_streak=gte.${RSS_FAIL_STREAK_DEAD}`, { rss_fail_streak: 0 });
       const tiers = await recomputeTiers(db, roster, now);
       (stats as Record<string, unknown>).tiers = tiers.counts;
       (stats as Record<string, unknown>).metric_date = tiers.latestMetricDate;
@@ -70,7 +73,7 @@ Deno.serve((req) => {
 
     // 2. 這一片頻道走 RSS
     const slice = [...roster.slice(start), ...roster.slice(0, start)].slice(0, shardSize);
-    const sweep = await rssSweep(slice, yt, { concurrency, deadline, stats, now });
+    const sweep = await rssSweep(slice, { concurrency, deadline, stats, now });
     stats.channels_processed = sweep.processed.length;
     stats.budget_exhausted = exhausted(deadline);
     await writeChannelStates(db, sweep.stateUpdates);
@@ -79,10 +82,9 @@ Deno.serve((req) => {
     // 3. 新影片分類
     await classifyNewVideos(db, yt, sweep.candidates, stats, now);
 
-    // 4. 重查待處理 + 規則
-    // 每一片：所有非常駐框的待處理場次；游標歸零那一片再把常駐框也查一次
-    const pending = await loadPendingYouTube(db, now, 'all');
-    if (start === 0) pending.push(...(await loadPendingYouTube(db, now, 'frames')));
+    // 4. 重查待處理 + 規則（API，只在游標歸零那一片：改期、tombstone、常駐框、沒有排定時間的待機室）。
+    //    直播中與 2 小時內的待機室由 Light 的 live-og 負責；API 有每輪與每日上限，超過的留到下一圈
+    const pending = start === 0 ? [...(await loadPendingYouTube(db, now, 'all')), ...(await loadPendingYouTube(db, now, 'frames'))] : [];
     const refreshed = await refreshPending(db, yt, pending, stats, now);
     const liveVtubers = refreshed.filter((s) => s.status === 'live').map((s) => s.vtuber_id);
     await touchLastLiveAt(db, liveVtubers, stats, now);

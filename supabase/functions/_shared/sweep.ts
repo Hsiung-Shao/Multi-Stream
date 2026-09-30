@@ -1,19 +1,21 @@
-// Heavy / Light 共用的核心流程：
-//   1. RSS 掃描（並行、有時間預算），找出資料庫沒看過的影片
-//   2. 新影片送 videos.list 分類 → 寫 streams / schedule_seen_videos
-//   3. 重查 scheduled / live 的場次（live / ended / hidden）＋ 套用過期規則
-//   4. Twitch /helix/streams → twitch_live 場次
-//   5. youtube_live_status 共享表、vtubers.last_live_at
+// Heavy / Light 共用的核心流程（資料來源優先序：live-og > RSS > API，見 rules.ts）：
+//   1. RSS 掃描（並行、有時間預算），找出資料庫沒看過的影片；整批限流時停手、不懲罰頻道
+//   2. live-og：直播中與最近一場待機室（Light；不耗配額）
+//   3. 新影片送 videos.list 分類 → 寫 streams / schedule_seen_videos（有呼叫上限，超過的下一輪再查）
+//   4. Heavy 游標歸零時用 videos.list 重查其餘待處理場次（改期、tombstone、常駐框）＋ 套用過期規則
+//   5. Twitch /helix/streams → twitch_live 場次
+//   6. youtube_live_status 共享表、vtubers.last_live_at
 
 import type { Db } from './db.ts';
 import { inList } from './db.ts';
 import { fetchChannelRss, type RssEntry } from './rss.ts';
+import { applyLiveOg, detectLiveOg, type LiveOgResult } from './live_og.ts';
 import {
   classifyYouTubeVideo,
   EXPIRE_AFTER_HOURS,
   isExpired,
+  isRssThrottled,
   shouldSkipChannel,
-  shouldUseApiFallback,
   TIER1_DAYS,
   UPCOMING_WINDOW_DAYS as UPCOMING_DAYS,
   type StreamStatus,
@@ -65,80 +67,65 @@ const STREAMS_COLS =
   'id,vtuber_id,channel_id,platform,external_id,source,status,scheduled_start,scheduled_end,actual_start,actual_end,title,category,thumbnail_url,viewer_count,is_schedule_frame,fetched_at';
 
 /**
- * RSS 掃描。連續失敗達門檻的頻道改走 playlistItems.list（1 單位／頻道）。
+ * RSS 掃描：只負責找新影片 ID（0 配額），沒有 API 備援。
  * 回傳的 candidates 還沒過濾「看過的影片」，由 classifyNewVideos 處理。
+ *
+ * 整批限流：YouTube 對大量 RSS 請求回快速的 404／500（或 429）。同一輪失敗率過半（isRssThrottled）→
+ * 停止開始新頻道，而且**這一輪的失敗都不累加 rss_fail_streak、不算已處理**（游標不越過，下一輪再試）。
+ * 只有非限流輪次的失敗才算在頻道頭上；達 RSS_FAIL_STREAK_DEAD 次視為死頻道跳過。
  */
 export async function rssSweep(
   channels: RosterChannel[],
-  yt: YouTubeClient,
-  opts: { concurrency: number; deadline: Deadline; fetch?: typeof fetch; stats: RunStats; now: number },
+  opts: { concurrency: number; deadline: Deadline; fetch?: typeof fetch; stats: RunStats; now: number; jitterMs?: number },
 ): Promise<SweepResult> {
   const candidates = new Map<string, Candidate>();
   const processed: RosterChannel[] = [];
+  const failures: { ch: RosterChannel; error: string | null }[] = [];
   const stateUpdates: Record<string, unknown>[] = [];
   const nowIso = new Date(opts.now).toISOString();
+  const jitter = opts.jitterMs ?? 150;
+  let attempts = 0;
+  let failed = 0;
 
   await mapLimit(channels, opts.concurrency, opts.deadline, async (ch) => {
-    // 連續失敗太多次（RSS 與 API 備援都失敗，通常是已刪除／停用的頻道）：跳過，不再花配額；
-    // Heavy 每一圈開頭會把這些 streak 降回備援門檻再試一次
     if (shouldSkipChannel(ch.rssFailStreak)) {
       opts.stats.rss_skipped_dead += 1;
       processed.push(ch); // 跳過也算「這一片處理過」，游標才會前進
       return;
     }
-    let entries: RssEntry[] = [];
-    let ok = false;
-    let error: string | null = null;
-    if (shouldUseApiFallback(ch.rssFailStreak)) {
-      try {
-        const ids = await yt.listRecentUploads(ch.externalId);
-        entries = ids.map((videoId) => ({ videoId, title: '', publishedAt: null, updatedAt: null }));
-        ok = true;
-        opts.stats.rss_fallback_used += 1;
-      } catch (e) {
-        error = e instanceof Error ? e.message.slice(0, 200) : 'fallback failed';
-      }
-    } else {
-      const r = await fetchChannelRss(ch.externalId, { fetch: opts.fetch });
-      ok = r.ok;
-      error = r.error;
-      entries = r.entries;
-      if (r.status === 429) {
-        // YouTube 對單一 IP 的 RSS 限速（本地實測：90 秒內連打 2 萬次會開始回 429）。
-        // 這不是頻道的問題：不算 fail streak、不算已處理（游標不越過它），而且這一輪不再開始新的頻道
-        opts.stats.rss_rate_limited += 1;
-        opts.deadline.at = Date.now();
-        stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: ch.rssFailStreak, rss_last_error: 'http 429', last_checked_at: nowIso });
-        return;
-      }
-    }
-    processed.push(ch);
-    if (ok) {
+    // 小幅隨機間隔，避免同一瞬間湧出大量請求
+    if (jitter > 0) await new Promise((r) => setTimeout(r, Math.random() * jitter));
+    const r = await fetchChannelRss(ch.externalId, { fetch: opts.fetch });
+    attempts += 1;
+    if (r.ok) {
+      processed.push(ch);
       opts.stats.rss_ok += 1;
-      opts.stats.rss_entries += entries.length;
-      for (const entry of entries) {
+      opts.stats.rss_entries += r.entries.length;
+      for (const entry of r.entries) {
         if (!candidates.has(entry.videoId)) candidates.set(entry.videoId, { channel: ch, entry });
       }
-      stateUpdates.push({
-        channel_id: ch.channelId,
-        rss_fail_streak: 0,
-        rss_last_ok_at: nowIso,
-        rss_last_error: null,
-        last_checked_at: nowIso,
-      });
-    } else {
-      opts.stats.rss_failed += 1;
-      // 走備援也失敗：計數繼續加，但不會因此永遠不回 RSS —— Heavy 重算分級時只看 tier，
-      // 這裡的 streak 只決定下次走不走備援；若備援也失敗，維持走備援（下次再試）
-      stateUpdates.push({
-        channel_id: ch.channelId,
-        rss_fail_streak: ch.rssFailStreak + 1,
-        rss_last_error: error,
-        last_checked_at: nowIso,
-      });
+      stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: 0, rss_last_ok_at: nowIso, rss_last_error: null, last_checked_at: nowIso });
+      return;
+    }
+    failed += 1;
+    opts.stats.rss_failed += 1;
+    if (r.status === 429) opts.stats.rss_rate_limited += 1;
+    failures.push({ ch, error: r.error });
+    if (r.status === 429 || isRssThrottled(attempts, failed)) {
+      opts.stats.rss_throttled = true;
+      opts.deadline.at = Date.now();
     }
   });
 
+  for (const { ch, error } of failures) {
+    if (opts.stats.rss_throttled) {
+      // 限流輪次：只記錯誤，不累加、不算已處理（下一輪從附近再試）
+      stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: ch.rssFailStreak, rss_last_error: `throttled: ${error ?? ''}`.slice(0, 200), last_checked_at: nowIso });
+    } else {
+      processed.push(ch);
+      stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: ch.rssFailStreak + 1, rss_last_error: error, last_checked_at: nowIso });
+    }
+  }
   return { candidates, processed, stateUpdates };
 }
 
@@ -195,8 +182,11 @@ export async function classifyNewVideos(
   // 比逐 100 個 videoId 查便宜得多：一輪 RSS 會有上萬個候選 id
   const channelIds = [...new Set([...candidates.values()].map((c) => c.channel.channelId))];
   const known = await loadKnownVideoIds(db, channelIds);
-  const fresh = ids.filter((id) => !known.has(id));
-  stats.new_video_candidates += fresh.length;
+  const allFresh = ids.filter((id) => !known.has(id));
+  stats.new_video_candidates += allFresh.length;
+  // API 最後：每輪呼叫次數有上限，超過的不寫 seen，下一輪 RSS 會再帶出來
+  const fresh = allFresh.slice(0, yt.remainingVideos());
+  stats.api_deferred += allFresh.length - fresh.length;
   if (fresh.length === 0) return { promoted: [], upserted: [] };
 
   const videos = await yt.listVideos(fresh);
@@ -217,7 +207,7 @@ export async function classifyNewVideos(
     seenRows.push({ video_id: id, channel_id: cand.channel.channelId, kind: cls.kind, published_at: cand.entry.publishedAt });
     // 30 天內發布的新影片（含一般上傳）才算活動：T2/T3 升 T1。
     // 第一次掃描時 RSS 回的是頻道最新 15 支，可能是幾年前的舊片，不能一律當活動
-    // 備援路徑沒有 publishedAt，用 actualStart / scheduledStart 代替；未來的時間（常駐框在幾年後）
+    // RSS 偶爾沒有 publishedAt，用 actualStart / scheduledStart 代替；未來的時間（常駐框在幾年後）
     // 夾到 now，否則 last_new_video_at 會是未來、頻道永遠 T1
     const publishedAt = cand.entry.publishedAt ?? v.facts.actualStartTime ?? v.facts.scheduledStartTime ?? null;
     const publishedMs = publishedAt ? Math.min(Date.parse(publishedAt), now) : NaN;
@@ -282,7 +272,7 @@ function toStreamRow(ch: RosterChannel, v: YouTubeVideo, status: StreamStatus, f
     title: v.title,
     category: null,
     thumbnail_url: v.thumbnailUrl,
-    viewer_count: v.concurrentViewers,
+    viewer_count: null,
     is_schedule_frame: frame,
     fetched_at: nowIso,
   };
@@ -339,20 +329,95 @@ export async function loadCurrentByChannel(db: Db, channelIds: readonly string[]
   return out;
 }
 
-/** Light 重查的時間窗：排定時間在 2 小時內的才每 5 分鐘查 */
+/** Light 用 live-og 查的時間窗：直播中、或排定時間在 2 小時內 */
 export const NEAR_WINDOW_MS = 2 * 3_600_000;
 
+export interface OgSweepResult {
+  /** 判定直播中的實況主（更新 last_live_at） */
+  liveVtuberIds: string[];
+  /** 成功查到的頻道（寫共享表） */
+  checked: RosterChannel[];
+}
+
 /**
- * 重查待處理場次：API 查不到 → hidden（tombstone）；其餘依 liveStreamingDetails 更新；
- * 排定時間過後 3 小時仍未開始 → expired。
+ * live-og 掃描：對指定頻道抓 /live 頁，依結果更新場次（applyLiveOg）。不耗 API 配額。
+ * 頻道數受 maxChannels 與時間預算限制（/live 頁解析吃 CPU）；直播中的頻道優先。
+ */
+export async function ogSweep(
+  db: Db,
+  channels: RosterChannel[],
+  stats: RunStats,
+  now: number,
+  opts: { concurrency: number; deadline: Deadline; maxChannels: number; fetch?: typeof fetch; liveFirst?: ReadonlySet<string> },
+): Promise<OgSweepResult> {
+  const liveFirst = opts.liveFirst ?? new Set<string>();
+  const targets = [...channels]
+    .filter((c) => c.platform === 'youtube')
+    .sort((a, b) => Number(liveFirst.has(b.channelId)) - Number(liveFirst.has(a.channelId)))
+    .slice(0, opts.maxChannels);
+  if (!targets.length) return { liveVtuberIds: [], checked: [] };
+
+  const results = new Map<string, LiveOgResult>();
+  await mapLimit(targets, opts.concurrency, opts.deadline, async (ch) => {
+    const r = await detectLiveOg(ch.externalId, { fetch: opts.fetch });
+    stats.og_checked += 1;
+    if (!r.ok) stats.og_failed += 1;
+    results.set(ch.channelId, r);
+  });
+
+  const checked = targets.filter((c) => results.get(c.channelId)?.ok);
+  const current = await loadCurrentByChannel(db, checked.map((c) => c.channelId));
+  // 直播中／待機的影片若不在這個頻道目前的場次裡，查資料庫有沒有這支（可能是 ended、expired 或別的狀態）
+  const unknownIds = new Set<string>();
+  for (const c of checked) {
+    const r = results.get(c.channelId)!;
+    if (r.videoId && (r.isLive || r.isUpcoming) && !(current.get(c.channelId) ?? []).some((s) => s.external_id === r.videoId)) unknownIds.add(r.videoId);
+  }
+  const known = new Map<string, StreamRecord>();
+  const ids = [...unknownIds];
+  for (let i = 0; i < ids.length; i += 100) {
+    const rows = await db.selectAll<StreamRecord>('streams', `select=${STREAMS_COLS}&platform=eq.youtube&external_id=${inList(ids.slice(i, i + 100))}`);
+    for (const r of rows) known.set(r.external_id, r);
+  }
+
+  const changed: StreamRecord[] = [];
+  const created: StreamRow[] = [];
+  const liveVtuberIds: string[] = [];
+  for (const c of checked) {
+    const r = results.get(c.channelId)!;
+    const res = applyLiveOg(c, r, current.get(c.channelId) ?? [], r.videoId ? known.get(r.videoId) : undefined, now);
+    changed.push(...res.changed);
+    created.push(...res.created);
+    stats.og_live += res.live;
+    stats.og_upcoming += res.upcoming;
+    stats.og_ended += res.ended;
+    stats.streams_expired += res.expired;
+    if (res.live) liveVtuberIds.push(c.vtuberId);
+  }
+  // 既有列帶 id、新列不帶：欄位集不同，分兩批 upsert
+  if (changed.length) await db.upsert('streams', changed, 'platform,external_id');
+  if (created.length) {
+    await db.upsert('streams', created, 'platform,external_id');
+    stats.streams_upserted += created.length;
+  }
+  return { liveVtuberIds, checked };
+}
+
+/**
+ * 重查待處理場次（只在 Heavy 游標歸零時用；直播狀態改由 live-og 判斷）：API 查不到 → hidden（tombstone）；
+ * 其餘依 liveStreamingDetails 更新；排定時間過後 3 小時仍未開始 → expired。超過呼叫上限的留到下一圈。
  */
 export async function refreshPending(
   db: Db,
   yt: YouTubeClient,
-  pending: StreamRecord[],
+  pendingAll: StreamRecord[],
   stats: RunStats,
   now: number,
 ): Promise<StreamRecord[]> {
+  let pending = pendingAll;
+  const allowed = yt.remainingVideos();
+  stats.api_deferred += Math.max(0, pending.length - allowed);
+  pending = pending.slice(0, allowed);
   if (pending.length === 0) return [];
   const videos = await yt.listVideos(pending.map((p) => p.external_id));
   const nowIso = new Date(now).toISOString();
@@ -377,7 +442,8 @@ export async function refreshPending(
       next.scheduled_start = v.facts.scheduledStartTime ?? p.scheduled_start;
       next.actual_start = v.facts.actualStartTime ?? p.actual_start;
       next.actual_end = v.facts.actualEndTime ?? p.actual_end;
-      next.viewer_count = next.status === 'live' ? v.concurrentViewers : null;
+      // 不顯示觀看人數（2026-09-30 使用者裁定）：不存
+      next.viewer_count = null;
       if (isExpired(next, now)) {
         next.status = 'expired';
         stats.streams_expired += 1;

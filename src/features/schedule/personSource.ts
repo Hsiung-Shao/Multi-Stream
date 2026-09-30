@@ -54,20 +54,18 @@ export interface PersonStreamRow {
     status: string;
     title: string | null;
     category: string | null;
-    viewer_count: number | null;
     scheduled_start: string | null;
     actual_start: string | null;
     actual_end: string | null;
     merged_with: string | null;
 }
 
-const STREAM_COLS = 'id,platform,external_id,source,status,title,category,viewer_count,scheduled_start,actual_start,actual_end,merged_with';
+const STREAM_COLS = 'id,platform,external_id,source,status,title,category,scheduled_start,actual_start,actual_end,merged_with';
 
 function toStream(vtuberId: string, r: PersonStreamRow): ScheduleStream {
     const s: ScheduleStream = { vtuber_id: vtuberId, platform: r.platform, external_id: r.external_id, source: r.source, status: r.status };
     if (r.title) s.title = r.title;
     if (r.category) s.category = r.category;
-    if (r.viewer_count != null) s.viewer_count = r.viewer_count;
     if (r.scheduled_start) s.scheduled_start = r.scheduled_start;
     if (r.actual_start) s.actual_start = r.actual_start;
     if (r.actual_end) s.actual_end = r.actual_end;

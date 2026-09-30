@@ -99,7 +99,6 @@ export interface SnapshotStream {
   status: string;
   title?: string;
   category?: string;
-  viewer_count?: number;
   scheduled_start?: string;
   actual_start?: string;
   actual_end?: string;
@@ -178,7 +177,6 @@ export function buildSnapshot(
       status: s.status,
       title: s.title ? s.title.slice(0, TITLE_MAX) : null,
       category: s.category,
-      viewer_count: s.viewer_count,
       scheduled_start: s.scheduled_start,
       actual_start: s.actual_start,
       actual_end: s.actual_end,
@@ -195,7 +193,8 @@ export function buildSnapshot(
   }
   const byStart = (a: SnapshotStream, b: SnapshotStream) =>
     Date.parse(a.scheduled_start ?? a.actual_start ?? '') - Date.parse(b.scheduled_start ?? b.actual_start ?? '');
-  live.sort((a, b) => (b.viewer_count ?? 0) - (a.viewer_count ?? 0));
+  // 不顯示觀看人數（2026-09-30 使用者裁定；live-og 拿不到人數）：直播中依開播時間，新開播的在前
+  live.sort((a, b) => Date.parse(b.actual_start ?? '') - Date.parse(a.actual_start ?? '') || 0);
   upcoming.sort(byStart);
   recent.sort((a, b) => Date.parse(b.actual_end ?? '') - Date.parse(a.actual_end ?? ''));
 

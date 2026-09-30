@@ -275,7 +275,11 @@ export function sameHourKeys(streams: readonly ScheduleStream[], anchor: Schedul
     return streams.filter((s) => s.scheduled_start && hourOf(s.scheduled_start) === target);
 }
 
-/** 直播中依觀看數排序（snapshot 已排，這裡保險再排一次；過濾後順序不變） */
+/**
+ * 直播中依開播時間排序，新開播的在前（snapshot 已排，這裡保險再排一次）。
+ * 不顯示觀看人數（2026-09-30 使用者裁定：直播狀態改由 live-og 判斷，拿不到人數，也不為人數用 API）
+ */
 export function sortLive(streams: readonly ScheduleStream[]): ScheduleStream[] {
-    return [...streams].sort((a, b) => (b.viewer_count ?? 0) - (a.viewer_count ?? 0));
+    const t = (s: ScheduleStream) => (s.actual_start ? Date.parse(s.actual_start) : 0);
+    return [...streams].sort((a, b) => t(b) - t(a));
 }

@@ -15,9 +15,9 @@ export function makeSnapshot(): ScheduleSnapshot {
             v4: { name: '馬四', nationality: 'MY', twitch: 'mafour' },
         },
         live: [
-            { vtuber_id: 'v1', platform: 'twitch', external_id: '111', source: 'twitch_live', status: 'live', title: '台一 Twitch', viewer_count: 50, actual_start: '2026-09-29T03:00:00Z' },
-            { vtuber_id: 'v3', platform: 'youtube', external_id: 'JpLiveVideo', source: 'yt_waiting_room', status: 'live', title: '日三直播', viewer_count: 900, actual_start: '2026-09-29T02:00:00Z' },
-            { vtuber_id: 'v4', platform: 'twitch', external_id: '222', source: 'twitch_live', status: 'live', title: '馬四', viewer_count: 10 },
+            { vtuber_id: 'v1', platform: 'twitch', external_id: '111', source: 'twitch_live', status: 'live', title: '台一 Twitch', actual_start: '2026-09-29T03:00:00Z' },
+            { vtuber_id: 'v3', platform: 'youtube', external_id: 'JpLiveVideo', source: 'yt_waiting_room', status: 'live', title: '日三直播', actual_start: '2026-09-29T02:00:00Z' },
+            { vtuber_id: 'v4', platform: 'twitch', external_id: '222', source: 'twitch_live', status: 'live', title: '馬四' },
         ],
         upcoming: [
             // 台北 20:00、20:30 同一個小時；隔天 09:00

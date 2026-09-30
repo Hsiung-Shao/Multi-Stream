@@ -7,7 +7,8 @@ import {
   isScheduleFrame,
   isUpcomingForSnapshot,
   SCHEDULE_FRAME_DAYS,
-  shouldUseApiFallback,
+  isRssThrottled,
+  quotaDay,
 } from '../../supabase/functions/_shared/rules.ts';
 import { buildLiveStatusRow } from '../../supabase/functions/_shared/live_status.ts';
 import { buildSnapshot } from '../../supabase/functions/_shared/snapshot.ts';
@@ -59,9 +60,15 @@ describe('分級', () => {
     expect(computeTier({ activity: 'active', videoCountNow: null, videoCount30: null, videoCount90: null }, NOW)).toEqual({ tier: 2, reason: 'no_metrics' });
     expect(computeTier({ activity: 'preparing', videoCountNow: 3, videoCount30: null, videoCount90: null }, NOW)?.tier).toBe(2);
   });
-  it('RSS 連續失敗 3 次改走 API 備援', () => {
-    expect(shouldUseApiFallback(2)).toBe(false);
-    expect(shouldUseApiFallback(3)).toBe(true);
+  it('RSS 整批限流：嘗試達 20 次且失敗過半才算；次數不夠不判定', () => {
+    expect(isRssThrottled(19, 19)).toBe(false);
+    expect(isRssThrottled(20, 9)).toBe(false);
+    expect(isRssThrottled(20, 10)).toBe(true);
+  });
+  it('配額日依太平洋時間（YouTube 在太平洋時間午夜重置）', () => {
+    // 2026-09-30 06:59 UTC ＝ 太平洋時間 9/29 23:59（夏令）；07:00 UTC 起算 9/30
+    expect(quotaDay(Date.parse('2026-09-30T06:59:00Z'))).toBe('2026-09-29');
+    expect(quotaDay(Date.parse('2026-09-30T07:00:00Z'))).toBe('2026-09-30');
   });
 });
 
@@ -99,7 +106,7 @@ describe('snapshot 視窗', () => {
 
   it('buildSnapshot：分三桶、null 時間欄位省略、hidden 與常駐框不進、channels 只含有場次的實況主', () => {
     const streams = [
-      stream({ id: 'a', status: 'live', actual_start: new Date(NOW - HOUR).toISOString(), viewer_count: 10 }),
+      stream({ id: 'a', status: 'live', actual_start: new Date(NOW - HOUR).toISOString(), viewer_count: 10 }), // 資料庫有人數也不輸出
       stream({ id: 'b', status: 'scheduled', scheduled_start: new Date(NOW + 2 * HOUR).toISOString(), vtuber_id: 'v2', external_id: 'BbBbBbBbBbB' }),
       stream({ id: 'c', status: 'ended', actual_end: new Date(NOW - HOUR).toISOString(), external_id: 'CcCcCcCcCcC' }),
       stream({ id: 'd', status: 'hidden', external_id: 'DdDdDdDdDdD' }),
@@ -129,9 +136,10 @@ describe('snapshot 視窗', () => {
       external_id: 'AbCdEfGhIjK',
       source: 'yt_waiting_room',
       status: 'live',
-      viewer_count: 10,
       actual_start: new Date(NOW - HOUR).toISOString(),
     });
+    // 不輸出觀看人數（2026-09-30 使用者裁定）
+    expect('viewer_count' in live).toBe(false);
     expect('title' in snap.upcoming[0]).toBe(false);
   });
 });

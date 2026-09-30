@@ -124,8 +124,8 @@ describe('sameHourKeys / sortLive', () => {
         expect(hour).toEqual(['TaiOneWait1', 'TaiTwoWait1']);
     });
 
-    it('直播中依觀看數由多到少', () => {
+    it('直播中依開播時間，新開播的在前；沒有開播時間的排最後', () => {
         const snap = makeSnapshot();
-        expect(sortLive(snap.live).map((s) => s.viewer_count)).toEqual([900, 50, 10]);
+        expect(sortLive(snap.live).map((s) => s.external_id)).toEqual(['111', 'JpLiveVideo', '222']);
     });
 });

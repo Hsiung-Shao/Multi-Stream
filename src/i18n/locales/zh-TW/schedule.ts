@@ -40,7 +40,6 @@ export default {
     'platform.youtube': 'YouTube',
     'platform.twitch': 'Twitch',
 
-    'card.viewers': '{{count}} 人觀看',
     'card.startedAt': '{{time}} 開台',
     'card.select': '選取 {{name}}',
     'card.openOriginal': '在 {{platform}} 開啟',

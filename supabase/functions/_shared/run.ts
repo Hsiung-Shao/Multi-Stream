@@ -5,6 +5,7 @@ import { Db, DbError } from './db.ts';
 import { readScheduleEnv, type ScheduleEnv } from './env.ts';
 import { TwitchClient } from './twitch.ts';
 import { YouTubeClient } from './youtube.ts';
+import { DAILY_QUOTA_CAP, MAX_VIDEOS_LIST_CALLS_PER_RUN, quotaDay } from './rules.ts';
 import type { RunStats } from './types.ts';
 
 export interface RunContext {
@@ -46,6 +47,32 @@ export async function saveShard(
   });
 }
 
+/** 每日 YouTube 配額用量：cron_shard_state 的 youtube_quota_daily 列（cursor_position＝已用單位、last_run_stats.day＝配額日） */
+export const QUOTA_JOB = 'youtube_quota_daily';
+
+export async function loadDailyQuota(db: Db, now: number): Promise<number | null> {
+  const rows = await db.select<{ cursor_position: number; last_run_stats: { day?: string } | null }>(
+    'cron_shard_state',
+    `select=cursor_position,last_run_stats&job_name=eq.${QUOTA_JOB}&limit=1`,
+  );
+  if (!rows[0]) return null; // 還沒有這一列（migration 未套）：只套每輪上限
+  return rows[0].last_run_stats?.day === quotaDay(now) ? rows[0].cursor_position : 0;
+}
+
+/** 讀出後加上本輪用量寫回（Light 與 Heavy 同時跑時可能少算一輪，誤差可接受） */
+export async function addDailyQuota(db: Db, now: number, units: number): Promise<number | null> {
+  const used = await loadDailyQuota(db, now);
+  if (used == null) return null;
+  const total = used + units;
+  await db.update('cron_shard_state', `job_name=eq.${QUOTA_JOB}`, {
+    cursor_position: total,
+    last_run_at: new Date().toISOString(),
+    last_run_stats: { day: quotaDay(now), units: total },
+    updated_at: new Date().toISOString(),
+  });
+  return total;
+}
+
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
@@ -71,9 +98,18 @@ export async function runJob(
   if (!isAuthorized(req, env)) return jsonResponse({ error: 'unauthorized' }, 401);
 
   const db = new Db({ url: env.supabaseUrl, serviceRoleKey: env.serviceRoleKey });
-  const yt = new YouTubeClient({ apiKey: env.youtubeApiKey, referer: env.youtubeReferer });
+  const startedAt = Date.now();
+  // API 最後：每輪上限與每日剩餘額度取小的；讀不到每日用量時只套每輪上限
+  let usedToday: number | null = null;
+  try {
+    usedToday = await loadDailyQuota(db, startedAt);
+  } catch {
+    usedToday = null;
+  }
+  const maxCalls = Math.min(MAX_VIDEOS_LIST_CALLS_PER_RUN, usedToday == null ? Infinity : Math.max(0, DAILY_QUOTA_CAP - usedToday));
+  const yt = new YouTubeClient({ apiKey: env.youtubeApiKey, referer: env.youtubeReferer, maxCalls });
   const twitch = new TwitchClient({ clientId: env.twitchClientId, clientSecret: env.twitchClientSecret, db });
-  const ctx: RunContext = { env, db, yt, twitch, now: Date.now(), stats, params: new URL(req.url).searchParams };
+  const ctx: RunContext = { env, db, yt, twitch, now: startedAt, stats, params: new URL(req.url).searchParams };
 
   let cursor: { cursor_position?: number; total_items?: number } = {};
   let status = 200;
@@ -86,8 +122,12 @@ export async function runJob(
     console.error(`[schedule-${job}]`, e);
   }
   stats.videos_list_calls = yt.quota.videosList;
-  stats.playlist_items_calls = yt.quota.playlistItemsList;
   stats.quota_units = yt.quota.units();
+  try {
+    stats.quota_daily_used = (await addDailyQuota(db, ctx.now, stats.quota_units)) ?? stats.quota_units;
+  } catch (e) {
+    stats.errors.push(`quota daily: ${e instanceof Error ? e.message : String(e)}`);
+  }
   stats.finished_at = new Date().toISOString();
   stats.duration_ms = Date.now() - ctx.now;
   try {

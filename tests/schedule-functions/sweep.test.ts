@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadPendingYouTube, rssSweep, writeChannelStates } from '../../supabase/functions/_shared/sweep.ts';
 import { Db } from '../../supabase/functions/_shared/db.ts';
-import { YouTubeClient } from '../../supabase/functions/_shared/youtube.ts';
 import { emptyStats, type RosterChannel } from '../../supabase/functions/_shared/types.ts';
 
 const NOW = Date.parse('2026-09-28T12:00:00Z');
@@ -59,22 +58,21 @@ describe('writeChannelStates：依欄位集分組 upsert', () => {
   });
 });
 
-describe('rssSweep：429 與死頻道', () => {
-  const yt = new YouTubeClient({ apiKey: 'k', referer: 'r', fetch: (async () => new Response('{}', { status: 200 })) as unknown as typeof fetch });
+describe('rssSweep：限流、死頻道、沒有 API 備援', () => {
 
-  it('429 的頻道不算已處理、不加 fail streak，且本輪停止開始新頻道', async () => {
+  it('429 的頻道不算已處理、不加 fail streak，且本輪停止開始新頻道（判定整批限流）', async () => {
     let n = 0;
     const fetchFn = (async () => {
       n += 1;
       return new Response('slow down', { status: 429 });
     }) as unknown as typeof fetch;
     const stats = emptyStats('light', NOW);
-    const r = await rssSweep([channel(1, 2), channel(2), channel(3)], yt, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, fetch: fetchFn, stats, now: NOW });
+    const r = await rssSweep([channel(1, 2), channel(2), channel(3)], { concurrency: 1, deadline: { at: Date.now() + 60_000 }, fetch: fetchFn, stats, now: NOW, jitterMs: 0 });
     expect(n).toBe(1);
     expect(r.processed).toHaveLength(0);
     expect(stats.rss_rate_limited).toBe(1);
-    expect(stats.rss_failed).toBe(0);
-    expect(r.stateUpdates).toEqual([{ channel_id: 'c1', rss_fail_streak: 2, rss_last_error: 'http 429', last_checked_at: new Date(NOW).toISOString() }]);
+    expect(stats.rss_throttled).toBe(true);
+    expect(r.stateUpdates).toEqual([{ channel_id: 'c1', rss_fail_streak: 2, rss_last_error: 'throttled: http 429', last_checked_at: new Date(NOW).toISOString() }]);
   });
 
   it('連續失敗達 10 次的死頻道跳過不打 RSS，但算已處理讓游標前進', async () => {
@@ -84,11 +82,43 @@ describe('rssSweep：429 與死頻道', () => {
       return new Response('<feed></feed>', { status: 200 });
     }) as unknown as typeof fetch;
     const stats = emptyStats('light', NOW);
-    const r = await rssSweep([channel(1, 10), channel(2)], yt, { concurrency: 2, deadline: { at: Date.now() + 60_000 }, fetch: fetchFn, stats, now: NOW });
+    const r = await rssSweep([channel(1, 10), channel(2)], { concurrency: 2, deadline: { at: Date.now() + 60_000 }, fetch: fetchFn, stats, now: NOW, jitterMs: 0 });
     expect(n).toBe(1);
     expect(r.processed.map((c) => c.channelId).sort()).toEqual(['c1', 'c2']);
     expect(stats.rss_skipped_dead).toBe(1);
     expect(stats.rss_ok).toBe(1);
+  });
+
+  it('假 404 大量出現：失敗率過半判定整批限流，停止開新請求，失敗不算在頻道頭上、也不打 API', async () => {
+    let n = 0;
+    const urls: string[] = [];
+    const fetchFn = (async (input: string | URL | Request) => {
+      n += 1;
+      urls.push(String(input));
+      return new Response('', { status: 404 });
+    }) as unknown as typeof fetch;
+    const stats = emptyStats('light', NOW);
+    const chans = Array.from({ length: 60 }, (_, i) => channel(i + 1, 1));
+    const r = await rssSweep(chans, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, fetch: fetchFn, stats, now: NOW, jitterMs: 0 });
+    expect(n).toBe(20); // 第 20 次時判定限流，之後不再開始
+    expect(urls.every((u) => u.includes('feeds/videos.xml'))).toBe(true); // 沒有 API 備援
+    expect(stats.rss_throttled).toBe(true);
+    expect(r.processed).toHaveLength(0);
+    expect(r.stateUpdates.every((u) => u.rss_fail_streak === 1)).toBe(true);
+  });
+
+  it('非限流輪次的零星失敗才累加 fail streak', async () => {
+    let n = 0;
+    const fetchFn = (async () => {
+      n += 1;
+      return n === 3 ? new Response('', { status: 404 }) : new Response('<feed></feed>', { status: 200 });
+    }) as unknown as typeof fetch;
+    const stats = emptyStats('light', NOW);
+    const chans = Array.from({ length: 30 }, (_, i) => channel(i + 1, 0));
+    const r = await rssSweep(chans, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, fetch: fetchFn, stats, now: NOW, jitterMs: 0 });
+    expect(stats.rss_throttled).toBe(false);
+    expect(r.processed).toHaveLength(30);
+    expect(r.stateUpdates.filter((u) => u.rss_fail_streak === 1)).toHaveLength(1);
   });
 });
 

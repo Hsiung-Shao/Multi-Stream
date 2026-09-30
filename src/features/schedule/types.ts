@@ -39,7 +39,6 @@ export interface ScheduleStream {
     status: 'scheduled' | 'live' | 'ended' | string;
     title?: string;
     category?: string;
-    viewer_count?: number;
     scheduled_start?: string;
     actual_start?: string;
     actual_end?: string;

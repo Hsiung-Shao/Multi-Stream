@@ -40,7 +40,6 @@ export default {
     'platform.youtube': 'YouTube',
     'platform.twitch': 'Twitch',
 
-    'card.viewers': '{{count}} watching',
     'card.startedAt': 'started {{time}}',
     'card.select': 'Select {{name}}',
     'card.openOriginal': 'Open on {{platform}}',

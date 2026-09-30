@@ -46,14 +46,24 @@ export interface RunStats extends Record<string, unknown> {
   channels_processed: number;
   rss_ok: number;
   rss_failed: number;
-  rss_fallback_used: number;
   rss_rate_limited: number;
+  /** 這一輪 RSS 失敗率過半，判定為 YouTube 整批限流（停止開新請求、失敗不算頻道） */
+  rss_throttled: boolean;
   rss_skipped_dead: number;
   rss_entries: number;
   new_video_candidates: number;
   videos_list_calls: number;
-  playlist_items_calls: number;
   quota_units: number;
+  /** 配額日（太平洋時間）累計用量，含本輪 */
+  quota_daily_used: number;
+  /** 因 API 上限延到下一輪再查的影片數 */
+  api_deferred: number;
+  /** live-og（/live 頁）：查了幾個頻道、失敗、判定直播中、待機、判定結束的場次 */
+  og_checked: number;
+  og_failed: number;
+  og_live: number;
+  og_upcoming: number;
+  og_ended: number;
   streams_upserted: number;
   streams_hidden: number;
   streams_expired: number;
@@ -86,14 +96,20 @@ export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats 
     channels_processed: 0,
     rss_ok: 0,
     rss_failed: 0,
-    rss_fallback_used: 0,
     rss_rate_limited: 0,
+    rss_throttled: false,
     rss_skipped_dead: 0,
     rss_entries: 0,
     new_video_candidates: 0,
     videos_list_calls: 0,
-    playlist_items_calls: 0,
     quota_units: 0,
+    quota_daily_used: 0,
+    api_deferred: 0,
+    og_checked: 0,
+    og_failed: 0,
+    og_live: 0,
+    og_upcoming: 0,
+    og_ended: 0,
     streams_upserted: 0,
     streams_hidden: 0,
     streams_expired: 0,

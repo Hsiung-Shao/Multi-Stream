@@ -1,4 +1,5 @@
-// YouTube Data API v3：videos.list（每次呼叫 1 單位，最多 50 支）與 playlistItems.list 備援（1 單位）。
+// YouTube Data API v3：只剩 videos.list（每次呼叫 1 單位，最多 50 支）。資料來源優先序是 live-og > RSS > API（見 rules.ts），
+// 所以 API 只查 RSS 新發現影片的待機室時間；呼叫次數有上限（maxCalls，由 run.ts 依每輪上限與每日剩餘額度決定）。
 // 伺服器端呼叫一律帶 Referer（金鑰有 HTTP referer 限制，缺了回 403）。
 
 import type { YouTubeVideoFacts } from './rules.ts';
@@ -8,6 +9,16 @@ export interface YouTubeClientOptions {
   referer: string;
   fetch?: typeof fetch;
   timeoutMs?: number;
+  /** 這次執行最多可呼叫幾次（預設不限；run.ts 會依每輪上限與每日剩餘額度設定） */
+  maxCalls?: number;
+}
+
+/** 超過呼叫上限：呼叫端應先用 remainingVideos() 切好，這個錯誤只是保險 */
+export class QuotaBudgetError extends Error {
+  constructor() {
+    super('youtube quota budget exhausted');
+    this.name = 'QuotaBudgetError';
+  }
 }
 
 export interface YouTubeVideo {
@@ -21,16 +32,14 @@ export interface YouTubeVideo {
 
 export interface QuotaCounter {
   videosList: number;
-  playlistItemsList: number;
   units(): number;
 }
 
 export function createQuotaCounter(): QuotaCounter {
   return {
     videosList: 0,
-    playlistItemsList: 0,
     units() {
-      return this.videosList + this.playlistItemsList;
+      return this.videosList;
     },
   };
 }
@@ -85,6 +94,12 @@ export class YouTubeClient {
     this.timeoutMs = opts.timeoutMs ?? 10000;
   }
 
+  /** 這次執行還能查幾支影片（剩餘呼叫次數 × 50） */
+  remainingVideos(): number {
+    const max = this.opts.maxCalls ?? Infinity;
+    return Math.max(0, max - this.quota.videosList) * 50;
+  }
+
   private async get(path: string, params: Record<string, string>): Promise<unknown> {
     const qs = new URLSearchParams({ ...params, key: this.opts.apiKey });
     const controller = new AbortController();
@@ -110,6 +125,7 @@ export class YouTubeClient {
     const unique = [...new Set(ids)];
     for (let i = 0; i < unique.length; i += 50) {
       const batch = unique.slice(i, i + 50);
+      if (this.quota.videosList >= (this.opts.maxCalls ?? Infinity)) throw new QuotaBudgetError();
       // fields 只留用得到的欄位：預設回應含 description 與五種縮圖，50 支可達數百 KB，
       // JSON.parse 的 CPU 時間在 Edge Function 是硬上限（本地 hard 2s）
       const data = (await this.get('videos', {
@@ -122,17 +138,5 @@ export class YouTubeClient {
       for (const item of data.items ?? []) out.set(item.id, toYouTubeVideo(item));
     }
     return out;
-  }
-
-  /** RSS 失敗頻道的備援：上傳清單（UU + channelId 去掉 UC）最新 15 支的 videoId */
-  async listRecentUploads(channelId: string, max = 15): Promise<string[]> {
-    const playlistId = 'UU' + channelId.slice(2);
-    const data = (await this.get('playlistItems', {
-      part: 'contentDetails',
-      playlistId,
-      maxResults: String(max),
-    })) as { items?: { contentDetails?: { videoId?: string } }[] };
-    this.quota.playlistItemsList += 1;
-    return (data.items ?? []).map((i) => i.contentDetails?.videoId).filter((v): v is string => !!v);
   }
 }

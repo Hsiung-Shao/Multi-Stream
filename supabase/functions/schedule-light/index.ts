@@ -1,25 +1,31 @@
-// schedule-light：每 5 分鐘。
+// schedule-light：每 5 分鐘。資料來源優先序 live-og > RSS > API（2026-09-30 使用者裁定，見 rules.ts）。
 //
-// 1. T1 頻道分片走 RSS（游標存 cron_shard_state.schedule_light_rss），新影片送 videos.list
-// 2. 重查所有 scheduled/live 的 YouTube 場次（live / ended / hidden / expired）
-// 3. Twitch /helix/streams（100 個 user_id／次）：直播中寫 twitch_live，消失的標 ended
-// 4. vtubers.last_live_at、youtube_live_status 共享表
-// 5. 發布 snapshot
+// 1. T1 頻道分片走 RSS 找新影片（游標存 cron_shard_state.schedule_light_rss）；整批限流時停手、不懲罰頻道
+// 2. live-og：直播中或 2 小時內待機室的頻道抓 /live 頁 → 開播、結束、改期（不耗 API 配額）
+// 3. RSS 新發現的影片送 videos.list 分類（有呼叫上限，超過的下一輪再查）
+// 4. Twitch /helix/streams（100 個 user_id／次）：直播中寫 twitch_live，消失的標 ended
+// 5. vtubers.last_live_at、youtube_live_status 共享表
+// 6. 發布 snapshot
 //
 // 本地測試：POST http://127.0.0.1:57321/functions/v1/schedule-light（header 同 heavy）
-//   ?shard_size=500&concurrency=25&budget_ms=60000 可調
+//   ?shard_size=500&concurrency=8&budget_ms=60000&og_max=60 可調
 
 import { loadRoster } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, refreshPending, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, ogSweep, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
 const JOB = 'schedule_light_rss';
 const HEAVY_JOB = 'schedule_heavy_rss';
 const DEFAULT_BUDGET_MS = 60_000;
-const DEFAULT_CONCURRENCY = 25;
+/** RSS 並行：25 會讓 YouTube 很快開始限流（2026-09-30 實測），降到 8 */
+const DEFAULT_CONCURRENCY = 8;
+/** live-og：/live 頁每頁約 1.5MB、解析吃 CPU（Edge Function 上限 2 秒）→ 並行 6、每輪最多 60 個頻道（2026-09-30 本地實測：RSS 500 片＋live-og 81 個頻道撞到 WORKER_LIMIT） */
+const OG_CONCURRENCY = 6;
+const OG_MAX_CHANNELS = 60;
+const OG_BUDGET_MS = 40_000;
 
 Deno.serve((req) => {
   const stats = emptyStats('light', Date.now());
@@ -40,35 +46,43 @@ Deno.serve((req) => {
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
     const start = tier1.length ? shard.cursor_position % tier1.length : 0;
     const slice = [...tier1.slice(start), ...tier1.slice(0, start)].slice(0, shardSize);
-    const sweep = await rssSweep(slice, yt, { concurrency, deadline, stats, now });
+    const sweep = await rssSweep(slice, { concurrency, deadline, stats, now });
     stats.channels_processed = sweep.processed.length;
     stats.budget_exhausted = exhausted(deadline);
     await writeChannelStates(db, sweep.stateUpdates);
     const nextCursor = (start + sweep.processed.length) % Math.max(tier1.length, 1);
+
+    // 2. live-og：直播中或 2 小時內待機室的頻道（直播中的優先）。先於新影片分類：
+    //    這裡寫入的直播／待機室場次，下一步就不用再花 API 查
+    const near = await loadPendingYouTube(db, now, 'near');
+    const nearChannels = new Set(near.map((s) => s.channel_id));
+    const liveFirst = new Set(near.filter((s) => s.status === 'live').map((s) => s.channel_id));
+    const og = await ogSweep(db, youtube.filter((c) => nearChannels.has(c.channelId)), stats, now, {
+      concurrency: OG_CONCURRENCY,
+      deadline: { at: Date.now() + OG_BUDGET_MS },
+      maxChannels: Number(params.get('og_max')) || OG_MAX_CHANNELS,
+      liveFirst,
+    });
+
+    // 3. RSS 新發現的影片（API，有上限）
     await classifyNewVideos(db, yt, sweep.candidates, stats, now);
 
-    // 2. 待處理場次
-    const pending = await loadPendingYouTube(db, now, 'near');
-    const refreshed = await refreshPending(db, yt, pending, stats, now);
-
-    // 3. Twitch 直播中
+    // 4. Twitch 直播中
     const twitchResult = await syncTwitchLive(db, twitch, twitchChannels, stats, now);
     // 直播狀態每 5 分鐘變一次，合併也要跟著重算（例如 Twitch 預告剛開台、YouTube 待機室同時開）
     // 合併是附加功能：失敗只記錯誤，不能擋住後面的共享表與 snapshot
     await softStep(stats, 'merge', () => applyMerges(db, stats, now));
 
-    // 4. last_live_at + 共享表
-    const liveVtubers = [...refreshed.filter((s) => s.status === 'live').map((s) => s.vtuber_id), ...twitchResult.liveVtuberIds];
+    // 5. last_live_at + 共享表
+    const liveVtubers = [...og.liveVtuberIds, ...twitchResult.liveVtuberIds];
     await touchLastLiveAt(db, liveVtubers, stats, now);
-    // 共享表：這輪 RSS 掃到的頻道 + 有重查場次的頻道；場次狀態從資料庫讀「目前所有 scheduled/live」，
-    // 不能只用 refreshed（near 範圍與本輪剛寫入的場次都不在裡面，會寫出假的「無直播」）
+    // 共享表：這輪 RSS 掃到的頻道 + live-og 查到的頻道；場次狀態從資料庫讀「目前所有 scheduled/live」
     const touched = new Map(sweep.processed.map((c) => [c.channelId, c]));
-    const refreshedChannels = new Set(refreshed.map((s) => s.channel_id));
-    for (const c of youtube) if (refreshedChannels.has(c.channelId)) touched.set(c.channelId, c);
+    for (const c of og.checked) touched.set(c.channelId, c);
     const byChannel = await loadCurrentByChannel(db, [...touched.keys()]);
     stats.live_status_rows = await writeLiveStatus(db, [...touched.values()], byChannel, now);
 
-    // 5. snapshot（heavy_refreshed_at 取 Heavy 最後成功時間）
+    // 6. snapshot（heavy_refreshed_at 取 Heavy 最後成功時間）
     const heavy = await loadShard(db, HEAVY_JOB);
     stats.snapshot_bytes = await publishSnapshot(db, now, heavy.last_run_at);
 

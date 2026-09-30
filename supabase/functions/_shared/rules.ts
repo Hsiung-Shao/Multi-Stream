@@ -6,7 +6,6 @@
 
 export const SCHEDULE_FRAME_DAYS = 14;
 export const EXPIRE_AFTER_HOURS = 3;
-export const RSS_FAIL_STREAK_FOR_FALLBACK = 3;
 export const TIER1_DAYS = 30;
 export const TIER2_DAYS = 90;
 /** 本週表只看未來 7 天 + 過去 12 小時（本地實測 24 小時的 recent 有 430 場、佔 snapshot 三分之一） */
@@ -98,12 +97,30 @@ export function computeTier(input: TierInput, now: number): { tier: Tier; reason
   return { tier: 3, reason: 'inactive_90d' };
 }
 
-/** RSS 連續失敗達門檻 → 這個頻道改走 playlistItems.list */
-export function shouldUseApiFallback(rssFailStreak: number): boolean {
-  return rssFailStreak >= RSS_FAIL_STREAK_FOR_FALLBACK;
+/**
+ * 資料來源優先序（2026-09-30 使用者裁定）：直播狀態以 live-og（/live 頁）為主、RSS 為輔（只發現新影片）、
+ * YouTube Data API 最後（只查 RSS 新發現影片的待機室時間），不再有 RSS 失敗後的 API 備援。
+ *
+ * RSS 整批限流：YouTube 對同一 IP 大量抓 RSS 時會回快速的 404／500（不是 429），實測連續兩天
+ * UTC 01:00–07:00 失敗率 70–99%，事後重測同一批頻道全部正常。同一輪累計嘗試達門檻、失敗率過半 → 整批限流：
+ * 停止開新請求，而且這一輪的失敗不算在頻道頭上。
+ */
+export const RSS_THROTTLE_MIN_ATTEMPTS = 20;
+export const RSS_THROTTLE_FAIL_RATIO = 0.5;
+export function isRssThrottled(attempts: number, failures: number): boolean {
+  return attempts >= RSS_THROTTLE_MIN_ATTEMPTS && failures / attempts >= RSS_THROTTLE_FAIL_RATIO;
 }
 
-/** RSS 與 API 備援都連續失敗達此數 → 視為死頻道，掃描時跳過（Heavy 每圈開頭降回門檻再試一次） */
+/** YouTube Data API 上限：每次執行最多幾次 videos.list（每次 1 單位、50 支），以及每日總額（依太平洋時間的日期歸零） */
+export const MAX_VIDEOS_LIST_CALLS_PER_RUN = 4;
+export const DAILY_QUOTA_CAP = 2_000;
+
+/** 配額日（YouTube 在太平洋時間午夜重置）：YYYY-MM-DD */
+export function quotaDay(now: number): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));
+}
+
+/** 非限流輪次裡 RSS 連續失敗達此數 → 視為死頻道，掃描時跳過（Heavy 每圈開頭歸零再試一次） */
 export const RSS_FAIL_STREAK_DEAD = 10;
 export function shouldSkipChannel(rssFailStreak: number): boolean {
   return rssFailStreak >= RSS_FAIL_STREAK_DEAD;
