@@ -1,6 +1,6 @@
 // 企業勢名冊：把調查結果的頻道解析成可寫入資料庫的形式，並和資料庫比對。
 //
-// 用法：node scripts/resolve-roster-channels.mjs --roster <名冊.json> --db <vtubers.json> --out <resolved.json>
+// 用法：node scripts/resolve-roster-channels.mjs --roster <名冊.json> --db <vtubers.json> --out <resolved.json> [--youtube-offline]
 //   名冊：scripts/data/tw-agency-rosters-2026-09.json（研究代理彙整，含出處）
 //   db：本地匯出的 vtubers（id,name,activity,youtube_channel_id,twitch_channel_id,group_id,debut_date）
 //
@@ -84,11 +84,18 @@ async function main() {
     const db = indexDb(JSON.parse(readFileSync(dbPath, 'utf8')));
     const members = roster.flatMap((a) => a.members.map((m) => ({ agency: a.agency, m })));
 
+    // --youtube-offline：YouTube API 配額用完時使用。只收格式正確的頻道 ID（研究時已從頻道頁 externalId 核對），
+    // 不解析 handle、不驗證存在、不補頭像（頭像之後另外補）
+    const ytOffline = process.argv.includes('--youtube-offline');
     // 1. YouTube handle → 頻道 ID
     let ytCalls = 0;
     for (const { m } of members) {
         if (m.youtube_channel_id && !UC_RE.test(m.youtube_channel_id)) m.youtube_channel_id = null;
         const handle = normalizeHandle(m.youtube_handle);
+        if (ytOffline) {
+            if (!m.youtube_channel_id && handle) m._unresolved = `youtube 離線模式：handle 未解析 ${handle}`;
+            continue;
+        }
         if (!m.youtube_channel_id && handle) {
             try {
                 const j = await ytGet(env, `channels?part=id,snippet&forHandle=${encodeURIComponent(handle)}`);
@@ -105,7 +112,7 @@ async function main() {
         }
     }
     // 2. 已有頻道 ID 的補頭像（只補資料庫沒有的人，批 50）
-    const needAvatar = members.filter(({ m }) => m.youtube_channel_id && !m._avatar && !matchDb(m, db));
+    const needAvatar = ytOffline ? [] : members.filter(({ m }) => m.youtube_channel_id && !m._avatar && !matchDb(m, db));
     for (let i = 0; i < needAvatar.length; i += 50) {
         const batch = needAvatar.slice(i, i + 50);
         const j = await ytGet(env, `channels?part=snippet&id=${batch.map(({ m }) => m.youtube_channel_id).join(',')}`);

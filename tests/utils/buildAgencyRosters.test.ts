@@ -2,7 +2,7 @@
 // 新成員（同名跳過）、合作藝人、官方頻道、left_continues、status-unverified、date-approx、reclassify、以名字認人、重複
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error scripts 目錄的 ESM JS 無型別宣告
-import { planRosters, buildRosterSql, toActivity, matchCond, looksLikeSamePerson, CONTRIBUTED_BY, ROSTER_HEADER } from '../../scripts/build-agency-rosters.mjs';
+import { planRosters, buildRosterSql, toActivity, matchCond, looksLikeSamePerson, CONTRIBUTED_BY, ROSTER_HEADER, rosterHeader } from '../../scripts/build-agency-rosters.mjs';
 // @ts-expect-error 同上
 import { indexDb, matchDb, normalizeHandle } from '../../scripts/resolve-roster-channels.mjs';
 // @ts-expect-error 同上
@@ -79,9 +79,9 @@ describe('planRosters', () => {
     it('子團只為有成員的建；撞到別家的團名加公司前綴；沒有的公司列 missingAgency', () => {
         expect(plan.subgroups.map((x: { name: string }) => x.name)).not.toContain('只有沒頻道成員的子團');
         expect(plan.subgroups).toEqual([
-            { name: 'NEO(n)', agency: '子午計畫' },
-            { name: '沉珀 Aetris', agency: '子午計畫' },
-            { name: '預見娛樂 SUPER', agency: '預見娛樂' },
+            { name: 'NEO(n)', agency: '子午計畫', nationality: 'TW' },
+            { name: '沉珀 Aetris', agency: '子午計畫', nationality: 'TW' },
+            { name: '預見娛樂 SUPER', agency: '預見娛樂', nationality: 'TW' },
         ]);
         expect(plan.report.subgroupRenamed).toEqual(['SUPER → 預見娛樂 SUPER']);
         expect(planRosters([{ agency: '不存在', members: [] }], groups).report.missingAgency).toEqual(['不存在']);
@@ -193,6 +193,35 @@ describe('buildRosterSql', () => {
 
     it('合作藝人只從這家或其子團解除', () => {
         expect(sql).toContain("update public.vtubers v set group_id = null where v.id = 'v3' and v.group_id in (select id from public.vtuber_groups where id = (select id");
+    });
+});
+
+describe('其他名冊（例：hololive）：地區與備份標記可指定', () => {
+    const g = [{ id: 'h', name: 'hololive production', parent_id: null, kind: 'agency' }];
+    const res = [{ agency: 'hololive production', agency_nationality: 'JP', subgroups: ['秘密結社holoX'], members: [
+        member({ name: 'ラプラス・ダークネス', subgroup: '秘密結社holoX', nationality: 'JP', youtube_channel_id: 'UClaplus0000000000000000' }),
+        member({ name: 'Gawr Gura', nationality: 'OTHER', status: 'graduated', graduation_date: '2025-05-01', youtube_channel_id: 'UCgura000000000000000000' }),
+    ] }];
+    const plan = planRosters(res, g, []);
+    const sql: string = buildRosterSql(plan, rosterHeader({ tag: 'hololive_20260930', contributedBy: 'research:hololive-2026-09', title: 'hololive' }), { tag: 'hololive_20260930', verifiedAt: '2026-09-30', contributedBy: 'research:hololive-2026-09' });
+
+    it('子團取公司地區、成員取自己的地區；畢業成員照寫', () => {
+        expect(sql).toContain("select '秘密結社holoX', 'JP', 'agency'");
+        expect(sql).toContain("'ラプラス・ダークネス', 'JP', 'active'");
+        expect(sql).toContain("'Gawr Gura', 'OTHER', 'graduate'");
+        expect(sql).toContain("'2026-09-30' where");
+    });
+
+    it('備份表、contributed_by、檔頭回滾都用指定的標記（不會撞到 120100 的備份表）', () => {
+        expect(sql).toContain("to_regclass('backup.rosters_meta_hololive_20260930')");
+        expect(sql).not.toContain('_20260929');
+        expect(sql).toContain("'research:hololive-2026-09'");
+        expect(sql).toContain('-- hololive。由');
+    });
+
+    it('預設值與 120100 相同', () => {
+        expect(ROSTER_HEADER).toBe(rosterHeader());
+        expect(ROSTER_HEADER).toContain('backup.rosters_meta_20260929');
     });
 });
 

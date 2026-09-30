@@ -164,3 +164,12 @@
   - Stardust Live：馬來西亞與台灣成員共創的團體頻道，無法歸成單一地區。
   - 哈比HaBE：簡介寫來自澳洲，有一支 short 標 #台灣vtuber（目前 OTHER）。
 - 沒有逐筆查證的：沒有任何訊號、且 2026-07 以後沒有直播紀錄的現役者約 400 人，以及已畢業者；這些維持原值。
+
+## hololive production（2026-09-30 加入）後仍待處理
+來源：`scripts/data/hololive-roster-2026-09.json`；migration `20260930130000_hololive_agency.sql`、`20260930130100_hololive_roster.sql`。
+- 維持現役、沒有標已畢業：Watson Amelia（官方「配信活動終了」，官網仍列為 Affiliate）、沙花叉クロヱ（官方「配信活動終了」，仍屬旗下）。要改成已畢業請告知。
+- FUWAMOCO：Fuwawa Abyssgard 與 Mococo Abyssgard 共用一個頻道，合成一筆（名稱用官方組合名）。
+- 出道日空白：AZKi（官網沒列初配信日）、夜空メル、潤羽るしあ、魔乃アロエ（官網個人頁已下架）。
+- Twitch 只有官網連結的 3 位（さくらみこ、兎田ぺこら、博衣こより）有填。
+- 官方頻道（hololive ホロライブ、English、Indonesia、DEV_IS、FLOW GLOW、アソビ★まわり隊！）沒有新增成藝人；holostars 不在這次範圍。
+- 頭像取自頻道頁（當日 YouTube API 配額用完，改用頁面 og:image，並核對頁面 externalId 與頻道 ID 一致）。

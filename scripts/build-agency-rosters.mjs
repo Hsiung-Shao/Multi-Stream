@@ -156,38 +156,43 @@ export function planRosters(resolved, existingGroups = [], dbRows = []) {
                 }
             }
             subName.set(m.subgroup, name);
-            subgroups.push({ name, agency: a.agency });
+            subgroups.push({ name, agency: a.agency, nationality: a.agency_nationality ?? 'TW' });
         }
 
         for (const { m, kind } of accepted) {
             const target = (!nonAgency && m.subgroup && subName.get(m.subgroup)) || a.agency;
-            (kind === 'update' ? updates : inserts).push({ m, target, agency: a.agency });
+            (kind === 'update' ? updates : inserts).push({ m, target, agency: a.agency, nationality: m.nationality ?? a.agency_nationality ?? 'TW' });
         }
     }
     return { subgroups, updates, inserts, collaborators, officials, reclassify, report };
 }
 
-export function buildRosterSql(plan, header) {
+/**
+ * opts：tag＝備份表名稱後綴、verifiedAt＝寫入子團的查證日期、contributedBy＝新成員的 contributed_by。
+ * 預設值就是 20260929120100 用的值（重產結果與現檔相同）；其他名冊（例：hololive）要給不同的 tag，否則第 0 段會撞到既有備份表
+ */
+export function buildRosterSql(plan, header, opts = {}) {
+    const { tag = '20260929', verifiedAt = '2026-09-29', contributedBy = CONTRIBUTED_BY } = opts;
     const out = [header.trimEnd(), ''];
     out.push('-- ===== 0. 套用前備份（回滾用；backup schema 不經 PostgREST 對外）=====');
     // 上次套用的備份還在就停：沿用舊快照會讓回滾還原到錯的狀態
-    out.push("do $$ begin if to_regclass('backup.rosters_meta_20260929') is not null then raise exception '已有 backup.rosters_meta_20260929：確認後 drop 第 0 段的 backup 表再重新套用'; end if; end $$;");
+    out.push(`do $$ begin if to_regclass('backup.rosters_meta_${tag}') is not null then raise exception '已有 backup.rosters_meta_${tag}：確認後 drop 第 0 段的 backup 表再重新套用'; end if; end $$;`);
     out.push('create schema if not exists backup;');
     out.push('revoke all on schema backup from public, anon, authenticated;');
-    out.push('create table if not exists backup.vtubers_rosters_20260929 as select id, group_id, former_group_id, is_official, activity, graduated_at, debut_date, youtube_channel_id, twitch_channel_id from public.vtubers;');
-    out.push('create table if not exists backup.vtuber_groups_rosters_20260929 as select * from public.vtuber_groups;');
-    out.push('create table if not exists backup.vtuber_channels_ids_20260929 as select id from public.vtuber_channels;');
-    out.push('create table if not exists backup.rosters_meta_20260929 as select now() as applied_at;');
+    out.push(`create table if not exists backup.vtubers_rosters_${tag} as select id, group_id, former_group_id, is_official, activity, graduated_at, debut_date, youtube_channel_id, twitch_channel_id from public.vtubers;`);
+    out.push(`create table if not exists backup.vtuber_groups_rosters_${tag} as select * from public.vtuber_groups;`);
+    out.push(`create table if not exists backup.vtuber_channels_ids_${tag} as select id from public.vtuber_channels;`);
+    out.push(`create table if not exists backup.rosters_meta_${tag} as select now() as applied_at;`);
     out.push('');
 
     out.push('-- ===== 1a. 重新分類（查證後不是企業勢）=====');
     for (const r of plan.reclassify ?? []) {
-        out.push(`update public.vtuber_groups set kind = ${q(r.kind)}, note = ${qn(r.note)}, verified_at = '2026-09-29' where name = ${q(r.name)} and (kind is distinct from ${q(r.kind)} or note is distinct from ${qn(r.note)});`);
+        out.push(`update public.vtuber_groups set kind = ${q(r.kind)}, note = ${qn(r.note)}, verified_at = '${verifiedAt}' where name = ${q(r.name)} and (kind is distinct from ${q(r.kind)} or note is distinct from ${qn(r.note)});`);
     }
     out.push('');
     out.push('-- ===== 1. 子團（parent＝所屬公司）：同名已存在就不動（不搶別家的團）=====');
     for (const s of plan.subgroups) {
-        out.push(`insert into public.vtuber_groups (name, nationality, kind, parent_id, verified_at) select ${q(s.name)}, 'TW', 'agency', ${topId(s.agency)}, '2026-09-29' where ${topId(s.agency)} is not null on conflict (name) do nothing;`);
+        out.push(`insert into public.vtuber_groups (name, nationality, kind, parent_id, verified_at) select ${q(s.name)}, ${q(s.nationality ?? 'TW')}, 'agency', ${topId(s.agency)}, '${verifiedAt}' where ${topId(s.agency)} is not null on conflict (name) do nothing;`);
     }
     out.push('');
 
@@ -238,13 +243,13 @@ export function buildRosterSql(plan, header) {
     }
     out.push('');
 
-    out.push(`-- ===== 3. 新成員（contributed_by='${CONTRIBUTED_BY}'；slug 由 trigger 產生；頻道或名字已存在就跳過）=====`);
-    for (const { m, target, agency } of plan.inserts) {
+    out.push(`-- ===== 3. 新成員（contributed_by='${contributedBy}'；slug 由 trigger 產生；頻道或名字已存在就跳過）=====`);
+    for (const { m, target, agency, nationality } of plan.inserts) {
         const left = m.left_continues === true;
         const act = left ? 'active' : toActivity(m.status);
         const cols = `(name, nationality, activity, debut_date, graduated_at, youtube_channel_id, twitch_channel_id, img_url, group_id, former_group_id, contributed_by)`;
         const groupCols = left ? `null, ${topId(agency)}` : 'g.id, null';
-        const vals = `select ${q(m.name)}, 'TW', ${q(act)}, ${qn(exactDate(m, m.debut_date))}::date, ${qn(exactDate(m, m.graduation_date))}::date, ${qn(m.youtube_channel_id)}, ${qn(m.twitch_login)}, ${qn(m._avatar)}, ${groupCols}, ${q(CONTRIBUTED_BY)} from public.vtuber_groups g where g.name = ${q(target)} and g.id in ${treeSql(agency)}`;
+        const vals = `select ${q(m.name)}, ${q(nationality ?? 'TW')}, ${q(act)}, ${qn(exactDate(m, m.debut_date))}::date, ${qn(exactDate(m, m.graduation_date))}::date, ${qn(m.youtube_channel_id)}, ${qn(m.twitch_login)}, ${qn(m._avatar)}, ${groupCols}, ${q(contributedBy)} from public.vtuber_groups g where g.name = ${q(target)} and g.id in ${treeSql(agency)}`;
         const guard = `and not exists (select 1 from public.vtubers x where ${matchCond(m, 'x')} or x.name = ${q(m.name)})`;
         out.push(`-- ${m.name}（${target}）`);
         out.push(`insert into public.vtubers ${cols} ${vals} ${guard};`);
@@ -280,21 +285,31 @@ export function buildRosterSql(plan, header) {
 }
 
 /** migration 檔頭：依賴、套用前提與回滾步驟（測試會檢查回滾 SQL） */
-export const ROSTER_HEADER = `-- 企業勢逐家名冊（含畢業）。由 scripts/build-agency-rosters.mjs 產生，不要手改。
--- 來源：scripts/data/tw-agency-rosters-2026-09.json（2026-09-29 逐家查證，每位成員附出處）
--- 依賴：20260929110000（kind／parent_id）、20260929120000（graduated_at／former_group_id／is_official）
+export function rosterHeader({
+    tag = '20260929',
+    contributedBy = CONTRIBUTED_BY,
+    title = '企業勢逐家名冊（含畢業）',
+    source = 'scripts/data/tw-agency-rosters-2026-09.json（2026-09-29 逐家查證，每位成員附出處）',
+    deps = '20260929110000（kind／parent_id）、20260929120000（graduated_at／former_group_id／is_official）',
+} = {}) {
+    return `-- ${title}。由 scripts/build-agency-rosters.mjs 產生，不要手改。
+-- 來源：${source}
+-- 依賴：${deps}
 -- 部署順序：本檔 → Edge Function → 前端；避開排程時段。
 -- **須單一交易套用**（apply_migration 或 psql -1）：回滾靠 created_at＝交易開始時間辨識本檔新增的頻道。
 -- 重新套用前先 drop 第 0 段的 backup 表（第 0 段偵測到舊備份會直接中止）。
 -- 正式站套用前先確認既有成員 id 都在：本檔第 2 段的 v.id 清單 select count(*) 應等於第 2 段筆數（id 取自本地匯出的正式站資料）。
 -- 回滾（依第 0 段備份）：
---   delete from public.vtubers where contributed_by = '${CONTRIBUTED_BY}';
---   delete from public.vtuber_channels c where c.created_at = (select applied_at from backup.rosters_meta_20260929) and not exists (select 1 from backup.vtuber_channels_ids_20260929 b where b.id = c.id);
+--   delete from public.vtubers where contributed_by = '${contributedBy}';
+--   delete from public.vtuber_channels c where c.created_at = (select applied_at from backup.rosters_meta_${tag}) and not exists (select 1 from backup.vtuber_channels_ids_${tag} b where b.id = c.id);
 --   update public.vtubers v set group_id = b.group_id, former_group_id = b.former_group_id, is_official = b.is_official, activity = b.activity, graduated_at = b.graduated_at,
---     debut_date = b.debut_date, youtube_channel_id = b.youtube_channel_id, twitch_channel_id = b.twitch_channel_id from backup.vtubers_rosters_20260929 b where b.id = v.id;
---   delete from public.vtuber_groups g where not exists (select 1 from backup.vtuber_groups_rosters_20260929 b where b.id = g.id);
+--     debut_date = b.debut_date, youtube_channel_id = b.youtube_channel_id, twitch_channel_id = b.twitch_channel_id from backup.vtubers_rosters_${tag} b where b.id = v.id;
+--   delete from public.vtuber_groups g where not exists (select 1 from backup.vtuber_groups_rosters_${tag} b where b.id = g.id);
 --   update public.vtuber_groups g set kind = b.kind, parent_id = b.parent_id, verified_at = b.verified_at, note = b.note, member_count = b.member_count
---     from backup.vtuber_groups_rosters_20260929 b where b.id = g.id;`;
+--     from backup.vtuber_groups_rosters_${tag} b where b.id = g.id;`;
+}
+
+export const ROSTER_HEADER = rosterHeader();
 
 function main() {
     const arg = (n) => {
@@ -305,8 +320,14 @@ function main() {
     const groups = arg('--groups') ? JSON.parse(readFileSync(resolve(arg('--groups')), 'utf8')) : [];
     const db = arg('--db') ? JSON.parse(readFileSync(resolve(arg('--db')), 'utf8')) : [];
     const plan = planRosters(resolved, groups, db);
-    const header = ROSTER_HEADER;
-    const sql = buildRosterSql(plan, header);
+    // 其他名冊（例：hololive）：--tag、--contributed-by、--verified-at、--title、--source、--deps
+    const opts = {
+        tag: arg('--tag') ?? undefined,
+        contributedBy: arg('--contributed-by') ?? undefined,
+        verifiedAt: arg('--verified-at') ?? undefined,
+    };
+    const header = rosterHeader({ ...opts, title: arg('--title') ?? undefined, source: arg('--source') ?? undefined, deps: arg('--deps') ?? undefined });
+    const sql = buildRosterSql(plan, header, opts);
     const r = plan.report;
     console.log(JSON.stringify({
         agencies: r.agencies,

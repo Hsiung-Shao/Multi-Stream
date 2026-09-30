@@ -1,0 +1,1902 @@
+{
+  "_說明": "hololive production（日本 COVER）全分部成員名冊（含畢業）。2026-09-30 由研究代理逐分部查證（官網成員頁、COVER 官方公告），每位成員附出處；名字只用官方名；人工判斷見 _overrides。",
+  "verified_at": "2026-09-30",
+  "_overrides": {
+    "subgroup_rename": {
+      "hololive 0期生": "ホロライブ0期生",
+      "hololive 1期生": "ホロライブ1期生",
+      "hololive 2期生": "ホロライブ2期生",
+      "hololive 3期生": "ホロライブ3期生",
+      "hololive 4期生": "ホロライブ4期生",
+      "hololive 5期生": "ホロライブ5期生",
+      "hololive GAMERS": "ホロライブゲーマーズ"
+    },
+    "keep_active": [
+      "Watson Amelia",
+      "沙花叉クロヱ"
+    ],
+    "merge_shared_channel": {
+      "UCt9H_RpQzhxzlyBxFqrdHqA": "FUWAMOCO"
+    },
+    "exclude_official": [
+      "UCWsfcksUUpoEvhia0_ut0bA",
+      "UCJxZpzx4wHzEYD-eCiZPikg"
+    ]
+  },
+  "agencies": [
+    {
+      "agency": "hololive production",
+      "agency_nationality": "JP",
+      "subgroups": [
+        "ホロライブ0期生",
+        "ホロライブ1期生",
+        "ホロライブ2期生",
+        "ホロライブ3期生",
+        "ホロライブ4期生",
+        "ホロライブ5期生",
+        "ホロライブゲーマーズ",
+        "秘密結社holoX",
+        "hololive -Myth-",
+        "hololive -Promise-",
+        "hololive English -Council-",
+        "hololive -Advent-",
+        "hololive -Justice-",
+        "ReGLOSS",
+        "FLOW GLOW",
+        "hololive AREA15",
+        "hololive holoro",
+        "hololive holoh3ro",
+        "アソビ★まわり隊！"
+      ],
+      "members": [
+        {
+          "name": "ときのそら",
+          "aliases": [
+            "Tokino Sora"
+          ],
+          "status": "active",
+          "debut_date": "2017-09-07",
+          "graduation_date": null,
+          "subgroup": "ホロライブ0期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCp6993wxpyDPHUpavwDFqgg",
+          "youtube_handle": "@TokinoSora",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/tokino-sora/",
+            "https://www.youtube.com/channel/UCp6993wxpyDPHUpavwDFqgg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "ロボ子さん",
+          "aliases": [
+            "Robocosan"
+          ],
+          "status": "active",
+          "debut_date": "2018-03-09",
+          "graduation_date": null,
+          "subgroup": "ホロライブ0期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCDqI2jOz0weumE8s7paEk6g",
+          "youtube_handle": "@Robocosan",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/roboco-san/",
+            "https://www.youtube.com/channel/UCDqI2jOz0weumE8s7paEk6g"
+          ],
+          "notes": null
+        },
+        {
+          "name": "さくらみこ",
+          "aliases": [
+            "Sakura Miko"
+          ],
+          "status": "active",
+          "debut_date": "2018-08-01",
+          "graduation_date": null,
+          "subgroup": "ホロライブ0期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC-hM6YJuNYVAmUWxeIr9FeA",
+          "youtube_handle": "@SakuraMiko",
+          "twitch_login": "sakuramiko_hololive",
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/sakuramiko/",
+            "https://www.youtube.com/channel/UC-hM6YJuNYVAmUWxeIr9FeA"
+          ],
+          "notes": null
+        },
+        {
+          "name": "星街すいせい",
+          "aliases": [
+            "Hoshimachi Suisei"
+          ],
+          "status": "active",
+          "debut_date": "2018-03-22",
+          "graduation_date": null,
+          "subgroup": "ホロライブ0期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC5CwaMl1eIgY8h02uZw7u8A",
+          "youtube_handle": "@HoshimachiSuisei",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/hoshimachi-suisei/",
+            "https://www.youtube.com/channel/UC5CwaMl1eIgY8h02uZw7u8A"
+          ],
+          "notes": null
+        },
+        {
+          "name": "AZKi",
+          "aliases": [
+            "AZKi"
+          ],
+          "status": "active",
+          "debut_date": null,
+          "graduation_date": null,
+          "subgroup": "ホロライブ0期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC0TXe_LYZ4scaW2XMyi5_kw",
+          "youtube_handle": "@AZKi",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/azki/",
+            "https://www.youtube.com/channel/UC0TXe_LYZ4scaW2XMyi5_kw"
+          ],
+          "notes": "官網個人頁未列初配信日，故 debut_date 為 null。ユニット欄另列 SorAZ、Shotgun Rose。"
+        },
+        {
+          "name": "白上フブキ",
+          "aliases": [
+            "Shirakami Fubuki"
+          ],
+          "status": "active",
+          "debut_date": "2018-06-01",
+          "graduation_date": null,
+          "subgroup": "ホロライブ1期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCdn5BQ06XqgXoAxIhbqw5Rg",
+          "youtube_handle": "@ShirakamiFubuki",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/shirakami-fubuki/",
+            "https://www.youtube.com/channel/UCdn5BQ06XqgXoAxIhbqw5Rg"
+          ],
+          "notes": "官網ユニット：ホロライブ1期生/ホロライブゲーマーズ。同時屬 hololive GAMERS，依規則 subgroup 填期別。"
+        },
+        {
+          "name": "夏色まつり",
+          "aliases": [
+            "Natsuiro Matsuri"
+          ],
+          "status": "active",
+          "debut_date": "2018-06-01",
+          "graduation_date": null,
+          "subgroup": "ホロライブ1期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCQ0UDLQCjY0rmuxCDE38FGg",
+          "youtube_handle": "@NatsuiroMatsuri",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/natsuiro-matsuri/",
+            "https://www.youtube.com/channel/UCQ0UDLQCjY0rmuxCDE38FGg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "アキ・ローゼンタール",
+          "aliases": [
+            "Aki Rosenthal",
+            "アキロゼ"
+          ],
+          "status": "active",
+          "debut_date": "2018-06-01",
+          "graduation_date": null,
+          "subgroup": "ホロライブ1期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCFTLzh12_nrtzqBPsTCqenA",
+          "youtube_handle": "@AkiRosenthal",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/aki-rosenthal/",
+            "https://www.youtube.com/channel/UCFTLzh12_nrtzqBPsTCqenA"
+          ],
+          "notes": null
+        },
+        {
+          "name": "赤井はあと",
+          "aliases": [
+            "Akai Haato",
+            "HAACHAMA",
+            "はあちゃま"
+          ],
+          "status": "active",
+          "debut_date": "2018-06-02",
+          "graduation_date": null,
+          "subgroup": "ホロライブ1期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC1CfXB_kRs3C-zaeTG3oGyg",
+          "youtube_handle": "@AkaiHaato",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/akai-haato/",
+            "https://www.youtube.com/channel/UC1CfXB_kRs3C-zaeTG3oGyg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "湊あくあ",
+          "aliases": [
+            "Minato Aqua"
+          ],
+          "status": "graduated",
+          "debut_date": "2018-08-08",
+          "graduation_date": "2024-08-28",
+          "subgroup": "ホロライブ2期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC1opHUrw8rvnsadT-iGp7Cg",
+          "youtube_handle": "@MinatoAqua",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/minato-aqua/",
+            "https://www.youtube.com/channel/UC1opHUrw8rvnsadT-iGp7Cg",
+            "https://cover-corp.com/news/detail/20240806-01"
+          ],
+          "notes": "官網個人頁名稱前標示【卒業生】。"
+        },
+        {
+          "name": "紫咲シオン",
+          "aliases": [
+            "Murasaki Shion"
+          ],
+          "status": "graduated",
+          "debut_date": "2018-08-17",
+          "graduation_date": "2025-04-26",
+          "subgroup": "ホロライブ2期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCXTpFs_3PqI41qX2d9tL2Rw",
+          "youtube_handle": "@MurasakiShion",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/murasaki-shion/",
+            "https://www.youtube.com/channel/UCXTpFs_3PqI41qX2d9tL2Rw",
+            "https://cover-corp.com/news/detail/20250306-01"
+          ],
+          "notes": "官網個人頁名稱前標示【卒業生】。"
+        },
+        {
+          "name": "百鬼あやめ",
+          "aliases": [
+            "Nakiri Ayame"
+          ],
+          "status": "active",
+          "debut_date": "2018-09-03",
+          "graduation_date": null,
+          "subgroup": "ホロライブ2期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC7fk0CB07ly8oSl0aqKkqFg",
+          "youtube_handle": "@NakiriAyame",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/nakiri-ayame/",
+            "https://www.youtube.com/channel/UC7fk0CB07ly8oSl0aqKkqFg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "癒月ちょこ",
+          "aliases": [
+            "Yuzuki Choco"
+          ],
+          "status": "active",
+          "debut_date": "2018-09-04",
+          "graduation_date": null,
+          "subgroup": "ホロライブ2期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC1suqwovbL1kzsoaZgFZLKg",
+          "youtube_handle": "@YuzukiChoco",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/yuzuki-choco/",
+            "https://www.youtube.com/channel/UC1suqwovbL1kzsoaZgFZLKg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "大空スバル",
+          "aliases": [
+            "Oozora Subaru"
+          ],
+          "status": "active",
+          "debut_date": "2018-09-16",
+          "graduation_date": null,
+          "subgroup": "ホロライブ2期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCvzGlP9oQwU--Y0r9id_jnA",
+          "youtube_handle": "@OozoraSubaru",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/oozora-subaru/",
+            "https://www.youtube.com/channel/UCvzGlP9oQwU--Y0r9id_jnA"
+          ],
+          "notes": null
+        },
+        {
+          "name": "大神ミオ",
+          "aliases": [
+            "Ookami Mio"
+          ],
+          "status": "active",
+          "debut_date": "2018-12-07",
+          "graduation_date": null,
+          "subgroup": "ホロライブゲーマーズ",
+          "nationality": "JP",
+          "youtube_channel_id": "UCp-5t9SrOQwXMU7iIjQfARg",
+          "youtube_handle": "@OokamiMio",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/ookami-mio/",
+            "https://www.youtube.com/channel/UCp-5t9SrOQwXMU7iIjQfARg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "猫又おかゆ",
+          "aliases": [
+            "Nekomata Okayu"
+          ],
+          "status": "active",
+          "debut_date": "2019-04-06",
+          "graduation_date": null,
+          "subgroup": "ホロライブゲーマーズ",
+          "nationality": "JP",
+          "youtube_channel_id": "UCvaTdHTWBGv3MKj3KVqJVCw",
+          "youtube_handle": "@NekomataOkayu",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/nekomata-okayu/",
+            "https://www.youtube.com/channel/UCvaTdHTWBGv3MKj3KVqJVCw"
+          ],
+          "notes": null
+        },
+        {
+          "name": "戌神ころね",
+          "aliases": [
+            "Inugami Korone"
+          ],
+          "status": "active",
+          "debut_date": "2019-04-13",
+          "graduation_date": null,
+          "subgroup": "ホロライブゲーマーズ",
+          "nationality": "JP",
+          "youtube_channel_id": "UChAnqc_AY5_I3Px5dig3X1Q",
+          "youtube_handle": "@InugamiKorone",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/inugami-korone/",
+            "https://www.youtube.com/channel/UChAnqc_AY5_I3Px5dig3X1Q"
+          ],
+          "notes": null
+        },
+        {
+          "name": "兎田ぺこら",
+          "aliases": [
+            "Usada Pekora"
+          ],
+          "status": "active",
+          "debut_date": "2019-07-17",
+          "graduation_date": null,
+          "subgroup": "ホロライブ3期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC1DCedRgGHBdm81E1llLhOQ",
+          "youtube_handle": "@usadapekora",
+          "twitch_login": "usadapekora_hololive",
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/usada-pekora/",
+            "https://www.youtube.com/channel/UC1DCedRgGHBdm81E1llLhOQ"
+          ],
+          "notes": null
+        },
+        {
+          "name": "不知火フレア",
+          "aliases": [
+            "Shiranui Flare"
+          ],
+          "status": "active",
+          "debut_date": "2019-08-07",
+          "graduation_date": null,
+          "subgroup": "ホロライブ3期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCvInZx9h3jC2JzsIzoOebWg",
+          "youtube_handle": "@ShiranuiFlare",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/shiranui-flare/",
+            "https://www.youtube.com/channel/UCvInZx9h3jC2JzsIzoOebWg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "白銀ノエル",
+          "aliases": [
+            "Shirogane Noel"
+          ],
+          "status": "active",
+          "debut_date": "2019-08-08",
+          "graduation_date": null,
+          "subgroup": "ホロライブ3期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCdyqAaZDKHXg4Ahi7VENThQ",
+          "youtube_handle": "@ShiroganeNoel",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/shirogane-noel/",
+            "https://www.youtube.com/channel/UCdyqAaZDKHXg4Ahi7VENThQ"
+          ],
+          "notes": null
+        },
+        {
+          "name": "宝鐘マリン",
+          "aliases": [
+            "Houshou Marine"
+          ],
+          "status": "active",
+          "debut_date": "2019-08-11",
+          "graduation_date": null,
+          "subgroup": "ホロライブ3期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCCzUftO8KOVkV4wQG1vkUvg",
+          "youtube_handle": "@HoushouMarine",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/houshou-marine/",
+            "https://www.youtube.com/channel/UCCzUftO8KOVkV4wQG1vkUvg"
+          ],
+          "notes": null
+        },
+        {
+          "name": "天音かなた",
+          "aliases": [
+            "Amane Kanata"
+          ],
+          "status": "graduated",
+          "debut_date": "2019-12-27",
+          "graduation_date": "2025-12-27",
+          "subgroup": "ホロライブ4期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCZlDXzGoo7d44bwdNObFacg",
+          "youtube_handle": "@AmaneKanata",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/amane-kanata/",
+            "https://www.youtube.com/channel/UCZlDXzGoo7d44bwdNObFacg",
+            "https://cover-corp.com/news/detail/c2025120201"
+          ],
+          "notes": "官網個人頁名稱前標示【卒業生】。"
+        },
+        {
+          "name": "桐生ココ",
+          "aliases": [
+            "Kiryu Coco"
+          ],
+          "status": "graduated",
+          "debut_date": "2019-12-28",
+          "graduation_date": "2021-07-01",
+          "subgroup": "ホロライブ4期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCS9uQI-jC3DE0L4IpXyvr6w",
+          "youtube_handle": "@KiryuCoco",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/kiryu-coco/",
+            "https://www.youtube.com/channel/UCS9uQI-jC3DE0L4IpXyvr6w",
+            "https://cover-corp.com/news/detail/20210609a"
+          ],
+          "notes": "官網個人頁名稱前標示【卒業生】。"
+        },
+        {
+          "name": "角巻わため",
+          "aliases": [
+            "Tsunomaki Watame"
+          ],
+          "status": "active",
+          "debut_date": "2019-12-29",
+          "graduation_date": null,
+          "subgroup": "ホロライブ4期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCqm3BQLlJfvkTsX_hvm0UmA",
+          "youtube_handle": "@TsunomakiWatame",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/tsunomaki-watame/",
+            "https://www.youtube.com/channel/UCqm3BQLlJfvkTsX_hvm0UmA"
+          ],
+          "notes": null
+        },
+        {
+          "name": "常闇トワ",
+          "aliases": [
+            "Tokoyami Towa"
+          ],
+          "status": "active",
+          "debut_date": "2020-01-03",
+          "graduation_date": null,
+          "subgroup": "ホロライブ4期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UC1uv2Oq6kNxgATlCiez59hw",
+          "youtube_handle": "@TokoyamiTowa",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/tokoyami-towa/",
+            "https://www.youtube.com/channel/UC1uv2Oq6kNxgATlCiez59hw"
+          ],
+          "notes": null
+        },
+        {
+          "name": "姫森ルーナ",
+          "aliases": [
+            "Himemori Luna"
+          ],
+          "status": "active",
+          "debut_date": "2020-01-04",
+          "graduation_date": null,
+          "subgroup": "ホロライブ4期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCa9Y57gfeY0Zro_noHRVrnw",
+          "youtube_handle": "@HimemoriLuna",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/himemori-luna/",
+            "https://www.youtube.com/channel/UCa9Y57gfeY0Zro_noHRVrnw"
+          ],
+          "notes": null
+        },
+        {
+          "name": "雪花ラミィ",
+          "aliases": [
+            "Yukihana Lamy"
+          ],
+          "status": "active",
+          "debut_date": "2020-08-12",
+          "graduation_date": null,
+          "subgroup": "ホロライブ5期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCFKOVgVbGmX65RxO3EtH3iw",
+          "youtube_handle": "@YukihanaLamy",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/yukihana-lamy/",
+            "https://www.youtube.com/channel/UCFKOVgVbGmX65RxO3EtH3iw"
+          ],
+          "notes": null
+        },
+        {
+          "name": "桃鈴ねね",
+          "aliases": [
+            "Momosuzu Nene"
+          ],
+          "status": "active",
+          "debut_date": "2020-08-13",
+          "graduation_date": null,
+          "subgroup": "ホロライブ5期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCAWSyEs_Io8MtpY3m-zqILA",
+          "youtube_handle": "@MomosuzuNene",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/momosuzu-nene/",
+            "https://www.youtube.com/channel/UCAWSyEs_Io8MtpY3m-zqILA"
+          ],
+          "notes": null
+        },
+        {
+          "name": "獅白ぼたん",
+          "aliases": [
+            "Shishiro Botan"
+          ],
+          "status": "active",
+          "debut_date": "2020-08-14",
+          "graduation_date": null,
+          "subgroup": "ホロライブ5期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCUKD-uaobj9jiqB-VXt71mA",
+          "youtube_handle": "@ShishiroBotan",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/shishiro-botan/",
+            "https://www.youtube.com/channel/UCUKD-uaobj9jiqB-VXt71mA"
+          ],
+          "notes": null
+        },
+        {
+          "name": "尾丸ポルカ",
+          "aliases": [
+            "Omaru Polka"
+          ],
+          "status": "active",
+          "debut_date": "2020-08-16",
+          "graduation_date": null,
+          "subgroup": "ホロライブ5期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCK9V2B22uJYu3N7eR_BT9QA",
+          "youtube_handle": "@OmaruPolka",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/omaru-polka/",
+            "https://www.youtube.com/channel/UCK9V2B22uJYu3N7eR_BT9QA"
+          ],
+          "notes": null
+        },
+        {
+          "name": "ラプラス・ダークネス",
+          "aliases": [
+            "La+ Darknesss",
+            "Laplus Darknesss"
+          ],
+          "status": "active",
+          "debut_date": "2021-11-26",
+          "graduation_date": null,
+          "subgroup": "秘密結社holoX",
+          "nationality": "JP",
+          "youtube_channel_id": "UCENwRMx5Yh42zWpzURebzTw",
+          "youtube_handle": "@LaplusDarknesss",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/la-darknesss/",
+            "https://www.youtube.com/channel/UCENwRMx5Yh42zWpzURebzTw"
+          ],
+          "notes": null
+        },
+        {
+          "name": "鷹嶺ルイ",
+          "aliases": [
+            "Takane Lui"
+          ],
+          "status": "active",
+          "debut_date": "2021-11-27",
+          "graduation_date": null,
+          "subgroup": "秘密結社holoX",
+          "nationality": "JP",
+          "youtube_channel_id": "UCs9_O1tRPMQTHQ-N_L6FU2g",
+          "youtube_handle": "@TakaneLui",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/takane-lui/",
+            "https://www.youtube.com/channel/UCs9_O1tRPMQTHQ-N_L6FU2g"
+          ],
+          "notes": null
+        },
+        {
+          "name": "博衣こより",
+          "aliases": [
+            "Hakui Koyori"
+          ],
+          "status": "active",
+          "debut_date": "2021-11-28",
+          "graduation_date": null,
+          "subgroup": "秘密結社holoX",
+          "nationality": "JP",
+          "youtube_channel_id": "UC6eWCld0KwmyHFbAqK3V-Rw",
+          "youtube_handle": "@HakuiKoyori",
+          "twitch_login": "hakuikoyori_hololive",
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/hakui-koyori/",
+            "https://www.youtube.com/channel/UC6eWCld0KwmyHFbAqK3V-Rw"
+          ],
+          "notes": null
+        },
+        {
+          "name": "沙花叉クロヱ",
+          "aliases": [
+            "Sakamata Chloe"
+          ],
+          "status": "active",
+          "debut_date": "2021-11-29",
+          "graduation_date": null,
+          "subgroup": "秘密結社holoX",
+          "nationality": "JP",
+          "youtube_channel_id": "UCIBY1ollUsauvVi4hW4cumw",
+          "youtube_handle": "@SakamataChloe",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/sakamata-chloe/",
+            "https://www.youtube.com/channel/UCIBY1ollUsauvVi4hW4cumw",
+            "https://hololivepro.com/news/20241129-01-200/",
+            "override:keep_active（配信活動終了但仍屬旗下）"
+          ],
+          "notes": "正式用語為「配信活動終了」而非卒業：2025-01-26 起結束配信等定常活動，但公告寫明今後仍以ホロライブプロダクション旗下タレント身分繼續所屬。官網個人頁標示【配信活動終了】。依任務規則（引退類算 graduated）標 graduated，graduation_date 填配信活動終了日；如需嚴格區分請改判。"
+        },
+        {
+          "name": "風真いろは",
+          "aliases": [
+            "Kazama Iroha"
+          ],
+          "status": "active",
+          "debut_date": "2021-11-30",
+          "graduation_date": null,
+          "subgroup": "秘密結社holoX",
+          "nationality": "JP",
+          "youtube_channel_id": "UC_vMYWcDjmfdpH6r4TTn1MQ",
+          "youtube_handle": "@kazamairoha",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/kazama-iroha/",
+            "https://www.youtube.com/channel/UC_vMYWcDjmfdpH6r4TTn1MQ"
+          ],
+          "notes": null
+        },
+        {
+          "name": "夜空メル",
+          "aliases": [
+            "Yozora Mel"
+          ],
+          "status": "graduated",
+          "debut_date": null,
+          "graduation_date": "2024-01-16",
+          "subgroup": "ホロライブ1期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCD8HOxPs4Xvsm8H0ZxXGiBw",
+          "youtube_handle": "@YozoraMel",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://cover-corp.com/news/detail/20240116",
+            "https://www.youtube.com/channel/UCD8HOxPs4Xvsm8H0ZxXGiBw"
+          ],
+          "notes": "契約解除（2024-01-16）。公告稱「ホロライブ」一期生，並稱頻道預計 2024 年 2 月末關閉，但 2026-09-30 抓取頻道頁仍回傳此 externalId 與標題「Mel Channel 夜空メルチャンネル」。官網已無個人頁，debut_date 無官方出處填 null。"
+        },
+        {
+          "name": "潤羽るしあ",
+          "aliases": [
+            "Uruha Rushia"
+          ],
+          "status": "graduated",
+          "debut_date": null,
+          "graduation_date": "2022-02-24",
+          "subgroup": "ホロライブ3期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCl_gCybOJRIgOXw6Qb4qJzQ",
+          "youtube_handle": "@UruhaRushia",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://cover-corp.com/news/detail/20220224a",
+            "https://www.youtube.com/channel/UCl_gCybOJRIgOXw6Qb4qJzQ"
+          ],
+          "notes": "契約解除（2022-02-24）。公告稱「ホロライブ」三期生，並稱頻道預計 3 月末關閉，但 2026-09-30 抓取頻道頁仍回傳此 externalId 與標題「Rushia Ch. 潤羽るしあ」。官網已無個人頁，debut_date 無官方出處填 null。"
+        },
+        {
+          "name": "魔乃アロエ",
+          "aliases": [
+            "Mano Aloe"
+          ],
+          "status": "graduated",
+          "debut_date": null,
+          "graduation_date": "2020-08-31",
+          "subgroup": "ホロライブ5期生",
+          "nationality": "JP",
+          "youtube_channel_id": "UCgZuwn-O7Szh9cAgHqJ6vjw",
+          "youtube_handle": "@ManoAloe",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://cover-corp.com/news/detail/2570",
+            "https://www.youtube.com/channel/UCgZuwn-O7Szh9cAgHqJ6vjw"
+          ],
+          "notes": "卒業（2020-08-31，公告稱「ホロライブ5期生」所屬）。頻道 ID 經頻道頁 externalId 核對，標題「Aloe Ch.魔乃アロエ」。官網已無個人頁，debut_date 無官方出處填 null。"
+        },
+        {
+          "name": "hololive ホロライブ - VTuber Group",
+          "aliases": [
+            "hololive",
+            "ホロライブ"
+          ],
+          "status": "active",
+          "debut_date": null,
+          "graduation_date": null,
+          "subgroup": null,
+          "nationality": "JP",
+          "youtube_channel_id": "UCJFZiqLMntJufDCHc6bQixg",
+          "youtube_handle": "@hololive",
+          "twitch_login": null,
+          "is_official_channel": true,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/shirakami-fubuki/",
+            "https://www.youtube.com/channel/UCJFZiqLMntJufDCHc6bQixg"
+          ],
+          "notes": "ホロライブ官方 YouTube 頻道（各成員官網頁皆連結此頻道）。名稱取自頻道頁 og:title。"
+        },
+        {
+          "name": "Mori Calliope",
+          "aliases": [
+            "森カリオペ"
+          ],
+          "status": "active",
+          "debut_date": "2020-09-12",
+          "graduation_date": null,
+          "subgroup": "hololive -Myth-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCL_qhgtOy0dy1Agp8vkySQg",
+          "youtube_handle": "@MoriCalliope",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/mori-calliope/",
+            "https://hololive.hololivepro.com/en/talents/mori-calliope/",
+            "https://www.youtube.com/channel/UCL_qhgtOy0dy1Agp8vkySQg"
+          ]
+        },
+        {
+          "name": "Takanashi Kiara",
+          "aliases": [
+            "小鳥遊キアラ"
+          ],
+          "status": "active",
+          "debut_date": "2020-09-12",
+          "graduation_date": null,
+          "subgroup": "hololive -Myth-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCHsx4Hqa-1ORjQTh9TYDhww",
+          "youtube_handle": "@TakanashiKiara",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/takanashi-kiara/",
+            "https://hololive.hololivepro.com/en/talents/takanashi-kiara/",
+            "https://www.youtube.com/channel/UCHsx4Hqa-1ORjQTh9TYDhww"
+          ]
+        },
+        {
+          "name": "Ninomae Ina'nis",
+          "aliases": [
+            "一伊那尓栖",
+            "Ninomae Inanis"
+          ],
+          "status": "active",
+          "debut_date": "2020-09-13",
+          "graduation_date": null,
+          "subgroup": "hololive -Myth-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCMwGHR0BTZuLsmjY_NT5Pwg",
+          "youtube_handle": "@NinomaeInanis",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/ninomae-inanis/",
+            "https://hololive.hololivepro.com/en/talents/ninomae-inanis/",
+            "https://www.youtube.com/channel/UCMwGHR0BTZuLsmjY_NT5Pwg"
+          ]
+        },
+        {
+          "name": "Watson Amelia",
+          "aliases": [
+            "ワトソン・アメリア"
+          ],
+          "status": "active",
+          "debut_date": "2020-09-13",
+          "graduation_date": null,
+          "subgroup": "hololive -Myth-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCyl1z3jo3XHR1riLFKG5UAg",
+          "youtube_handle": "@WatsonAmelia",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "COVER 公告為「配信活動終了」（2024-10-01 起結束定常活動），非名義上的畢業；官網仍列為 [Affiliate]（日文頁標【配信活動終了】）。依「引退也算」規則標 graduated。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/watson-amelia/",
+            "https://hololive.hololivepro.com/en/talents/watson-amelia/",
+            "https://www.youtube.com/channel/UCyl1z3jo3XHR1riLFKG5UAg",
+            "https://cover-corp.com/news/detail/20240920-01",
+            "override:keep_active（配信活動終了但仍屬旗下）"
+          ]
+        },
+        {
+          "name": "Gawr Gura",
+          "aliases": [
+            "がうる・ぐら"
+          ],
+          "status": "graduated",
+          "debut_date": "2020-09-13",
+          "graduation_date": "2025-05-01",
+          "subgroup": "hololive -Myth-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCoSrY_IQQVpmIRZ9Xf-y93g",
+          "youtube_handle": "@GawrGura",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "官網畢業生頁 Unit 仍寫舊名 hololive English -Myth-。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/gawr-gura/",
+            "https://hololive.hololivepro.com/en/talents/gawr-gura/",
+            "https://www.youtube.com/channel/UCoSrY_IQQVpmIRZ9Xf-y93g",
+            "https://cover-corp.com/news/detail/20250416-01"
+          ]
+        },
+        {
+          "name": "IRyS",
+          "aliases": [],
+          "status": "active",
+          "debut_date": "2021-07-11",
+          "graduation_date": null,
+          "subgroup": "hololive -Promise-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UC8rcEBzJSleTkf_-agPM20g",
+          "youtube_handle": "@IRyS",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "原屬 Project: HOPE，現併入 Promise；官網欄位為「Debut」而非「Debut Stream」。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/irys/",
+            "https://hololive.hololivepro.com/en/talents/irys/",
+            "https://www.youtube.com/channel/UC8rcEBzJSleTkf_-agPM20g"
+          ]
+        },
+        {
+          "name": "Ouro Kronii",
+          "aliases": [
+            "オーロ・クロニー"
+          ],
+          "status": "active",
+          "debut_date": "2021-08-23",
+          "graduation_date": null,
+          "subgroup": "hololive -Promise-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCmbs8T6MWqUHP1tIQvSgKrg",
+          "youtube_handle": "@OuroKronii",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "原屬 Council，現併入 Promise。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/ouro-kronii/",
+            "https://hololive.hololivepro.com/en/talents/ouro-kronii/",
+            "https://www.youtube.com/channel/UCmbs8T6MWqUHP1tIQvSgKrg"
+          ]
+        },
+        {
+          "name": "Hakos Baelz",
+          "aliases": [
+            "ハコス・ベールズ"
+          ],
+          "status": "active",
+          "debut_date": "2021-08-23",
+          "graduation_date": null,
+          "subgroup": "hololive -Promise-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCgmPnx-EEeOrZSg5Tiw7ZRQ",
+          "youtube_handle": "@HakosBaelz",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "原屬 Council，現併入 Promise。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/hakos-baelz/",
+            "https://hololive.hololivepro.com/en/talents/hakos-baelz/",
+            "https://www.youtube.com/channel/UCgmPnx-EEeOrZSg5Tiw7ZRQ"
+          ]
+        },
+        {
+          "name": "Tsukumo Sana",
+          "aliases": [
+            "九十九佐命"
+          ],
+          "status": "graduated",
+          "debut_date": "2021-08-23",
+          "graduation_date": "2022-07-31",
+          "subgroup": "hololive English -Council-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCsUj0dszADCGbF3gNrQEuSQ",
+          "youtube_handle": "@TsukumoSana",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "於 Council 併入 Promise 前畢業；官網畢業生頁 Unit 為 hololive English -Council-，官網 Promise 篩選不含 Tsukumo Sana，故保留 Council。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/tsukumo-sana/",
+            "https://hololive.hololivepro.com/en/talents/tsukumo-sana/",
+            "https://www.youtube.com/channel/UCsUj0dszADCGbF3gNrQEuSQ",
+            "https://cover-corp.com/news/detail/20220712a"
+          ]
+        },
+        {
+          "name": "Ceres Fauna",
+          "aliases": [
+            "セレス・ファウナ"
+          ],
+          "status": "graduated",
+          "debut_date": "2021-08-23",
+          "graduation_date": "2025-01-04",
+          "subgroup": "hololive -Promise-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCO_aKKYxn4tvrqPjcTzZ6EQ",
+          "youtube_handle": "@CeresFauna",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "原屬 Council；官網畢業生頁 Unit 寫 hololive English -Promise-。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/ceres-fauna/",
+            "https://hololive.hololivepro.com/en/talents/ceres-fauna/",
+            "https://www.youtube.com/channel/UCO_aKKYxn4tvrqPjcTzZ6EQ",
+            "https://cover-corp.com/news/detail/20241201-01"
+          ]
+        },
+        {
+          "name": "Nanashi Mumei",
+          "aliases": [
+            "七詩ムメイ"
+          ],
+          "status": "graduated",
+          "debut_date": "2021-08-23",
+          "graduation_date": "2025-04-28",
+          "subgroup": "hololive -Promise-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UC3n5uGu18FoCy23ggWWp8tA",
+          "youtube_handle": "@NanashiMumei",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "原屬 Council；官網畢業生頁 Unit 寫 hololive English -Promise-；COVER 公告畢業日為 2025-04-28。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/nanashi-mumei/",
+            "https://hololive.hololivepro.com/en/talents/nanashi-mumei/",
+            "https://www.youtube.com/channel/UC3n5uGu18FoCy23ggWWp8tA",
+            "https://cover-corp.com/news/detail/20250328-01"
+          ]
+        },
+        {
+          "name": "Shiori Novella",
+          "aliases": [
+            "シオリ・ノヴェラ"
+          ],
+          "status": "active",
+          "debut_date": "2023-07-30",
+          "graduation_date": null,
+          "subgroup": "hololive -Advent-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCgnfPPb9JI3e9A4cXHnWbyg",
+          "youtube_handle": "@ShioriNovella",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/shiori-novella/",
+            "https://hololive.hololivepro.com/en/talents/shiori-novella/",
+            "https://www.youtube.com/channel/UCgnfPPb9JI3e9A4cXHnWbyg"
+          ]
+        },
+        {
+          "name": "Koseki Bijou",
+          "aliases": [
+            "古石ビジュー"
+          ],
+          "status": "active",
+          "debut_date": "2023-07-30",
+          "graduation_date": null,
+          "subgroup": "hololive -Advent-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UC9p_lqQ0FEDz327Vgf5JwqA",
+          "youtube_handle": "@KosekiBijou",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/koseki-bijou/",
+            "https://hololive.hololivepro.com/en/talents/koseki-bijou/",
+            "https://www.youtube.com/channel/UC9p_lqQ0FEDz327Vgf5JwqA"
+          ]
+        },
+        {
+          "name": "Nerissa Ravencroft",
+          "aliases": [
+            "ネリッサ・レイヴンクロフト"
+          ],
+          "status": "active",
+          "debut_date": "2023-07-31",
+          "graduation_date": null,
+          "subgroup": "hololive -Advent-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UC_sFNM0z0MWm9A6WlKPuMMg",
+          "youtube_handle": "@NerissaRavencroft",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/nerissa-ravencroft/",
+            "https://hololive.hololivepro.com/en/talents/nerissa-ravencroft/",
+            "https://www.youtube.com/channel/UC_sFNM0z0MWm9A6WlKPuMMg"
+          ]
+        },
+        {
+          "name": "FUWAMOCO",
+          "aliases": [
+            "Fuwawa Abyssgard",
+            "フワワ・アビスガード",
+            "Mococo Abyssgard",
+            "モココ・アビスガード"
+          ],
+          "status": "active",
+          "debut_date": "2023-07-31",
+          "graduation_date": null,
+          "subgroup": "hololive -Advent-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCt9H_RpQzhxzlyBxFqrdHqA",
+          "youtube_handle": "@FUWAMOCOch",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "notes": "與 Mococo Abyssgard 共用 FUWAMOCO 頻道（官網兩人頁連同一頻道）。",
+          "sources": [
+            "https://hololive.hololivepro.com/talents/fuwawa-abyssgard/",
+            "https://hololive.hololivepro.com/en/talents/fuwawa-abyssgard/",
+            "https://www.youtube.com/channel/UCt9H_RpQzhxzlyBxFqrdHqA"
+          ]
+        },
+        {
+          "name": "Elizabeth Rose Bloodflame",
+          "aliases": [
+            "エリザベス・ローズ・ブラッドフレイム"
+          ],
+          "status": "active",
+          "debut_date": "2024-06-22",
+          "graduation_date": null,
+          "subgroup": "hololive -Justice-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCW5uhrG1eCBYditmhL0Ykjw",
+          "youtube_handle": "@holoen_erbloodflame",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/elizabeth-rose-bloodflame/",
+            "https://hololive.hololivepro.com/en/talents/elizabeth-rose-bloodflame/",
+            "https://www.youtube.com/channel/UCW5uhrG1eCBYditmhL0Ykjw"
+          ]
+        },
+        {
+          "name": "Gigi Murin",
+          "aliases": [
+            "ジジ・ムリン"
+          ],
+          "status": "active",
+          "debut_date": "2024-06-22",
+          "graduation_date": null,
+          "subgroup": "hololive -Justice-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCDHABijvPBnJm7F-KlNME3w",
+          "youtube_handle": "@holoen_gigimurin",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/gigi-murin/",
+            "https://hololive.hololivepro.com/en/talents/gigi-murin/",
+            "https://www.youtube.com/channel/UCDHABijvPBnJm7F-KlNME3w"
+          ]
+        },
+        {
+          "name": "Cecilia Immergreen",
+          "aliases": [
+            "セシリア・イマーグリーン"
+          ],
+          "status": "active",
+          "debut_date": "2024-06-23",
+          "graduation_date": null,
+          "subgroup": "hololive -Justice-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCvN5h1ShZtc7nly3pezRayg",
+          "youtube_handle": "@holoen_ceciliaimmergreen",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/cecilia-immergreen/",
+            "https://hololive.hololivepro.com/en/talents/cecilia-immergreen/",
+            "https://www.youtube.com/channel/UCvN5h1ShZtc7nly3pezRayg"
+          ]
+        },
+        {
+          "name": "Raora Panthera",
+          "aliases": [
+            "ラオーラ・パンテーラ"
+          ],
+          "status": "active",
+          "debut_date": "2024-06-23",
+          "graduation_date": null,
+          "subgroup": "hololive -Justice-",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCl69AEx4MdqMZH7Jtsm7Tig",
+          "youtube_handle": "@holoen_raorapanthera",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/raora-panthera/",
+            "https://hololive.hololivepro.com/en/talents/raora-panthera/",
+            "https://www.youtube.com/channel/UCl69AEx4MdqMZH7Jtsm7Tig"
+          ]
+        },
+        {
+          "name": "音乃瀬奏",
+          "aliases": [
+            "Otonose Kanade"
+          ],
+          "status": "active",
+          "debut_date": "2023-09-09",
+          "graduation_date": null,
+          "subgroup": "ReGLOSS",
+          "nationality": "JP",
+          "youtube_channel_id": "UCWQtYtq9EOB4-I5P-3fh8lA",
+          "youtube_handle": "@OtonoseKanade",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/otonose-kanade/",
+            "https://hololive.hololivepro.com/en/talents/otonose-kanade/",
+            "https://www.youtube.com/channel/UCWQtYtq9EOB4-I5P-3fh8lA"
+          ]
+        },
+        {
+          "name": "一条莉々華",
+          "aliases": [
+            "Ichijou Ririka"
+          ],
+          "status": "active",
+          "debut_date": "2023-09-09",
+          "graduation_date": null,
+          "subgroup": "ReGLOSS",
+          "nationality": "JP",
+          "youtube_channel_id": "UCtyWhCj3AqKh2dXctLkDtng",
+          "youtube_handle": "@IchijouRirika",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/ichijou-ririka/",
+            "https://hololive.hololivepro.com/en/talents/ichijou-ririka/",
+            "https://www.youtube.com/channel/UCtyWhCj3AqKh2dXctLkDtng"
+          ]
+        },
+        {
+          "name": "儒烏風亭らでん",
+          "aliases": [
+            "Juufuutei Raden"
+          ],
+          "status": "active",
+          "debut_date": "2023-09-10",
+          "graduation_date": null,
+          "subgroup": "ReGLOSS",
+          "nationality": "JP",
+          "youtube_channel_id": "UCdXAk5MpyLD8594lm_OvtGQ",
+          "youtube_handle": "@JuufuuteiRaden",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/juufuutei-raden/",
+            "https://hololive.hololivepro.com/en/talents/juufuutei-raden/",
+            "https://www.youtube.com/channel/UCdXAk5MpyLD8594lm_OvtGQ"
+          ]
+        },
+        {
+          "name": "轟はじめ",
+          "aliases": [
+            "Todoroki Hajime"
+          ],
+          "status": "active",
+          "debut_date": "2023-09-10",
+          "graduation_date": null,
+          "subgroup": "ReGLOSS",
+          "nationality": "JP",
+          "youtube_channel_id": "UC1iA6_NT4mtAcIII6ygrvCw",
+          "youtube_handle": "@TodorokiHajime",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/todoroki-hajime/",
+            "https://hololive.hololivepro.com/en/talents/todoroki-hajime/",
+            "https://www.youtube.com/channel/UC1iA6_NT4mtAcIII6ygrvCw"
+          ]
+        },
+        {
+          "name": "火威青",
+          "aliases": [
+            "Hiodoshi Ao"
+          ],
+          "status": "graduated",
+          "debut_date": "2023-09-09",
+          "graduation_date": "2025-10-03",
+          "subgroup": "ReGLOSS",
+          "nationality": "JP",
+          "youtube_channel_id": "UCMGfV7TVTmHhEErVJg1oHBQ",
+          "youtube_handle": "@HiodoshiAo",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/hiodoshi-ao/",
+            "https://hololive.hololivepro.com/en/talents/hiodoshi-ao/",
+            "https://www.youtube.com/channel/UCMGfV7TVTmHhEErVJg1oHBQ",
+            "https://cover-corp.com/news/detail/20251003-01"
+          ]
+        },
+        {
+          "name": "響咲リオナ",
+          "aliases": [
+            "Isaki Riona"
+          ],
+          "status": "active",
+          "debut_date": "2024-11-09",
+          "graduation_date": null,
+          "subgroup": "FLOW GLOW",
+          "nationality": "JP",
+          "youtube_channel_id": "UC9LSiN9hXI55svYEBrrK-tw",
+          "youtube_handle": "@IsakiRiona",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/isaki-riona/",
+            "https://hololive.hololivepro.com/en/talents/isaki-riona/",
+            "https://www.youtube.com/channel/UC9LSiN9hXI55svYEBrrK-tw"
+          ]
+        },
+        {
+          "name": "虎金妃笑虎",
+          "aliases": [
+            "Koganei Niko"
+          ],
+          "status": "active",
+          "debut_date": "2024-11-09",
+          "graduation_date": null,
+          "subgroup": "FLOW GLOW",
+          "nationality": "JP",
+          "youtube_channel_id": "UCuI_opAVX6qbxZY-a-AxFuQ",
+          "youtube_handle": "@KoganeiNiko",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/koganei-niko/",
+            "https://hololive.hololivepro.com/en/talents/koganei-niko/",
+            "https://www.youtube.com/channel/UCuI_opAVX6qbxZY-a-AxFuQ"
+          ]
+        },
+        {
+          "name": "水宮枢",
+          "aliases": [
+            "Mizumiya Su"
+          ],
+          "status": "active",
+          "debut_date": "2024-11-09",
+          "graduation_date": null,
+          "subgroup": "FLOW GLOW",
+          "nationality": "JP",
+          "youtube_channel_id": "UCjk2nKmHzgH5Xy-C5qYRd5A",
+          "youtube_handle": "@MizumiyaSu",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/mizumiya-su/",
+            "https://hololive.hololivepro.com/en/talents/mizumiya-su/",
+            "https://www.youtube.com/channel/UCjk2nKmHzgH5Xy-C5qYRd5A"
+          ]
+        },
+        {
+          "name": "輪堂千速",
+          "aliases": [
+            "Rindo Chihaya",
+            "輪堂 千速"
+          ],
+          "status": "active",
+          "debut_date": "2024-11-09",
+          "graduation_date": null,
+          "subgroup": "FLOW GLOW",
+          "nationality": "JP",
+          "youtube_channel_id": "UCKMWFR6lAstLa7Vbf5dH7ig",
+          "youtube_handle": "@RindoChihaya",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/rindo-chihaya/",
+            "https://hololive.hololivepro.com/en/talents/rindo-chihaya/",
+            "https://www.youtube.com/channel/UCKMWFR6lAstLa7Vbf5dH7ig"
+          ]
+        },
+        {
+          "name": "綺々羅々ヴィヴィ",
+          "aliases": [
+            "Kikirara Vivi"
+          ],
+          "status": "active",
+          "debut_date": "2024-11-09",
+          "graduation_date": null,
+          "subgroup": "FLOW GLOW",
+          "nationality": "JP",
+          "youtube_channel_id": "UCGzTVXqMQHa4AgJVJIVvtDQ",
+          "youtube_handle": "@KikiraraVivi",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/kikirara-vivi/",
+            "https://hololive.hololivepro.com/en/talents/kikirara-vivi/",
+            "https://www.youtube.com/channel/UCGzTVXqMQHa4AgJVJIVvtDQ"
+          ]
+        },
+        {
+          "name": "hololive English",
+          "aliases": [
+            "hololive EN",
+            "ホロライブEnglish"
+          ],
+          "status": "active",
+          "debut_date": null,
+          "graduation_date": null,
+          "subgroup": null,
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCotXwY6s8pWmuWd_snKYjhg",
+          "youtube_handle": "@hololiveEnglish",
+          "twitch_login": null,
+          "is_official_channel": true,
+          "collaborator": false,
+          "notes": "官網/COVER 新聞未直接連結此頻道，以 handle 解析取得（頻道名稱 hololive English）。",
+          "sources": [
+            "https://www.youtube.com/@hololiveEnglish"
+          ]
+        },
+        {
+          "name": "hololive DEV_IS",
+          "aliases": [
+            "hololive ReGLOSS"
+          ],
+          "status": "active",
+          "debut_date": null,
+          "graduation_date": null,
+          "subgroup": null,
+          "nationality": "JP",
+          "youtube_channel_id": "UC10wVt6hoQiwySRhz7RdOUA",
+          "youtube_handle": "@hololiveDEV_IS",
+          "twitch_login": null,
+          "is_official_channel": true,
+          "collaborator": false,
+          "notes": "handle 為 @hololiveDEV_IS，但 2026-09-30 抓取時頻道顯示名稱為「hololive ReGLOSS」；官網/COVER 新聞未直接連結此頻道，以 handle 解析取得。FLOW GLOW 查無獨立官方頻道。",
+          "sources": [
+            "https://www.youtube.com/@hololiveDEV_IS"
+          ]
+        },
+        {
+          "name": "Ayunda Risu",
+          "aliases": [
+            "アユンダ・リス",
+            "Risu"
+          ],
+          "status": "active",
+          "debut_date": "2020-04-10",
+          "graduation_date": null,
+          "subgroup": "hololive AREA15",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCOyYb1c43VlX9rc_lT6NKQw",
+          "youtube_handle": "@ayundarisu",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/ayunda-risu",
+            "https://hololive.hololivepro.com/talents/ayunda-risu",
+            "https://hololive.hololivepro.com/en/talents?gp=area15",
+            "https://www.youtube.com/channel/UCOyYb1c43VlX9rc_lT6NKQw"
+          ]
+        },
+        {
+          "name": "Moona Hoshinova",
+          "aliases": [
+            "ムーナ・ホシノヴァ",
+            "Moona"
+          ],
+          "status": "active",
+          "debut_date": "2020-04-11",
+          "graduation_date": null,
+          "subgroup": "hololive AREA15",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCP0BspO_AMEe3aQqqpo89Dg",
+          "youtube_handle": "@MoonaHoshinova",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/moona-hoshinova",
+            "https://hololive.hololivepro.com/talents/moona-hoshinova",
+            "https://hololive.hololivepro.com/en/talents?gp=area15",
+            "https://www.youtube.com/channel/UCP0BspO_AMEe3aQqqpo89Dg"
+          ]
+        },
+        {
+          "name": "Airani Iofifteen",
+          "aliases": [
+            "アイラニ・イオフィフティーン",
+            "Iofi",
+            "Iofifteen"
+          ],
+          "status": "active",
+          "debut_date": "2020-04-12",
+          "graduation_date": null,
+          "subgroup": "hololive AREA15",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCAoy6rzhSf4ydcYjJw3WoVg",
+          "youtube_handle": "@AiraniIofifteen",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/airani-iofifteen",
+            "https://hololive.hololivepro.com/talents/airani-iofifteen",
+            "https://hololive.hololivepro.com/en/talents?gp=area15",
+            "https://www.youtube.com/channel/UCAoy6rzhSf4ydcYjJw3WoVg"
+          ]
+        },
+        {
+          "name": "Kureiji Ollie",
+          "aliases": [
+            "クレイジー・オリー",
+            "Ollie"
+          ],
+          "status": "active",
+          "debut_date": "2020-12-04",
+          "graduation_date": null,
+          "subgroup": "hololive holoro",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCYz_5n-uDuChHtLo7My1HnQ",
+          "youtube_handle": "@KureijiOllie",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/kureiji-ollie",
+            "https://hololive.hololivepro.com/talents/kureiji-ollie",
+            "https://hololive.hololivepro.com/en/talents?gp=holoro",
+            "https://www.youtube.com/channel/UCYz_5n-uDuChHtLo7My1HnQ"
+          ]
+        },
+        {
+          "name": "Anya Melfissa",
+          "aliases": [
+            "アーニャ・メルフィッサ",
+            "Anya"
+          ],
+          "status": "active",
+          "debut_date": "2020-12-05",
+          "graduation_date": null,
+          "subgroup": "hololive holoro",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UC727SQYUvx5pDDGQpTICNWg",
+          "youtube_handle": "@AnyaMelfissa",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/anya-melfissa",
+            "https://hololive.hololivepro.com/talents/anya-melfissa",
+            "https://hololive.hololivepro.com/en/talents?gp=holoro",
+            "https://www.youtube.com/channel/UC727SQYUvx5pDDGQpTICNWg"
+          ]
+        },
+        {
+          "name": "Pavolia Reine",
+          "aliases": [
+            "パヴォリア・レイネ",
+            "Reine"
+          ],
+          "status": "active",
+          "debut_date": "2020-12-06",
+          "graduation_date": null,
+          "subgroup": "hololive holoro",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UChgTyjG-pdNvxxhdsXfHQ5Q",
+          "youtube_handle": "@PavoliaReine",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/pavolia-reine",
+            "https://hololive.hololivepro.com/talents/pavolia-reine",
+            "https://hololive.hololivepro.com/en/talents?gp=holoro",
+            "https://www.youtube.com/channel/UChgTyjG-pdNvxxhdsXfHQ5Q"
+          ]
+        },
+        {
+          "name": "Vestia Zeta",
+          "aliases": [
+            "ベスティア・ゼータ",
+            "Zeta"
+          ],
+          "status": "active",
+          "debut_date": "2022-03-25",
+          "graduation_date": null,
+          "subgroup": "hololive holoh3ro",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCTvHWSfBZgtxE4sILOaurIQ",
+          "youtube_handle": "@VestiaZeta",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/vestia-zeta",
+            "https://hololive.hololivepro.com/talents/vestia-zeta",
+            "https://hololive.hololivepro.com/en/talents?gp=holoh3ro",
+            "https://www.youtube.com/channel/UCTvHWSfBZgtxE4sILOaurIQ"
+          ]
+        },
+        {
+          "name": "Kaela Kovalskia",
+          "aliases": [
+            "カエラ・コヴァルスキア",
+            "Kaela"
+          ],
+          "status": "active",
+          "debut_date": "2022-03-26",
+          "graduation_date": null,
+          "subgroup": "hololive holoh3ro",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCZLZ8Jjx_RN2CXloOmgTHVg",
+          "youtube_handle": "@KaelaKovalskia",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/kaela-kovalskia",
+            "https://hololive.hololivepro.com/talents/kaela-kovalskia",
+            "https://hololive.hololivepro.com/en/talents?gp=holoh3ro",
+            "https://www.youtube.com/channel/UCZLZ8Jjx_RN2CXloOmgTHVg"
+          ]
+        },
+        {
+          "name": "Kobo Kanaeru",
+          "aliases": [
+            "こぼ・かなえる",
+            "Kobo"
+          ],
+          "status": "active",
+          "debut_date": "2022-03-27",
+          "graduation_date": null,
+          "subgroup": "hololive holoh3ro",
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCjLEmnpCNeisMxy134KPwWw",
+          "youtube_handle": "@KoboKanaeru",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/en/talents/kobo-kanaeru",
+            "https://hololive.hololivepro.com/talents/kobo-kanaeru",
+            "https://hololive.hololivepro.com/en/talents?gp=holoh3ro",
+            "https://www.youtube.com/channel/UCjLEmnpCNeisMxy134KPwWw"
+          ]
+        },
+        {
+          "name": "hololive Indonesia",
+          "aliases": [],
+          "status": "active",
+          "debut_date": null,
+          "graduation_date": null,
+          "subgroup": null,
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCfrWoRGlawPQDQxxeIDRP0Q",
+          "youtube_handle": "@hololiveIndonesia",
+          "twitch_login": null,
+          "is_official_channel": true,
+          "collaborator": false,
+          "sources": [
+            "https://hololivepro.com/en/",
+            "https://hololive.hololivepro.com/en/about",
+            "https://www.youtube.com/channel/UCfrWoRGlawPQDQxxeIDRP0Q"
+          ]
+        },
+        {
+          "name": "hololive FLOW GLOW",
+          "aliases": [
+            "DEV_IS FLOW GLOW"
+          ],
+          "status": "active",
+          "debut_date": null,
+          "graduation_date": null,
+          "subgroup": null,
+          "nationality": "OTHER",
+          "youtube_channel_id": "UCu2n3qHuOuQIygREMnWeQWg",
+          "youtube_handle": "@DEV_IS_FLOWGLOW",
+          "twitch_login": null,
+          "is_official_channel": true,
+          "collaborator": false,
+          "sources": [
+            "https://hololivepro.com/en/",
+            "https://hololive.hololivepro.com/en/about",
+            "https://www.youtube.com/channel/UCu2n3qHuOuQIygREMnWeQWg"
+          ]
+        },
+        {
+          "name": "百灯キョーコ",
+          "aliases": [
+            "Hyakuto Kyoko"
+          ],
+          "status": "active",
+          "debut_date": "2026-09-25",
+          "subgroup": "アソビ★まわり隊！",
+          "nationality": "JP",
+          "youtube_channel_id": "UCSjQDxud2HkAO2DVD3lwxmw",
+          "youtube_handle": "HyakutoKyoko",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/hyakuto-kyoko/",
+            "https://hololive.hololivepro.com/news/20260918-01-411/",
+            "https://www.youtube.com/@HyakutoKyoko"
+          ]
+        },
+        {
+          "name": "熱千めら",
+          "aliases": [
+            "Achichi Mela"
+          ],
+          "status": "active",
+          "debut_date": "2026-09-24",
+          "subgroup": "アソビ★まわり隊！",
+          "nationality": "JP",
+          "youtube_channel_id": "UC8eitCE9Z6EwUCs-VUi1blg",
+          "youtube_handle": "AchichiMela",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/achichi-mela/",
+            "https://hololive.hololivepro.com/news/20260918-01-411/",
+            "https://www.youtube.com/@AchichiMela"
+          ]
+        },
+        {
+          "name": "鈴鳴つづり",
+          "aliases": [
+            "Suzuna Tsuzuri"
+          ],
+          "status": "active",
+          "debut_date": "2026-09-25",
+          "subgroup": "アソビ★まわり隊！",
+          "nationality": "JP",
+          "youtube_channel_id": "UCy9mgxB8pn2C4aNK_MPthDQ",
+          "youtube_handle": "SuzunaTsuzuri",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/suzuna-tsuzuri/",
+            "https://hololive.hololivepro.com/news/20260918-01-411/",
+            "https://www.youtube.com/@SuzunaTsuzuri"
+          ]
+        },
+        {
+          "name": "宙科そぴあ",
+          "aliases": [
+            "Sorashina Sopia"
+          ],
+          "status": "active",
+          "debut_date": "2026-09-24",
+          "subgroup": "アソビ★まわり隊！",
+          "nationality": "JP",
+          "youtube_channel_id": "UCROQtXcp2loQEmvpe5rhJzQ",
+          "youtube_handle": "SorashinaSopia",
+          "twitch_login": null,
+          "is_official_channel": false,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/talents/sorashina-sopia/",
+            "https://hololive.hololivepro.com/news/20260918-01-411/",
+            "https://www.youtube.com/@SorashinaSopia"
+          ]
+        },
+        {
+          "name": "アソビ★まわり隊！",
+          "aliases": [
+            "ASOBI★MAWARI-TAI!",
+            "アソビ★まわり隊!"
+          ],
+          "status": "active",
+          "debut_date": "2026-09-25",
+          "subgroup": "アソビ★まわり隊！",
+          "nationality": "JP",
+          "youtube_channel_id": "UCAHwWUotyS3l2qBetFDsjgQ",
+          "youtube_handle": "hololive_ASOBIMAWARITAI",
+          "twitch_login": null,
+          "is_official_channel": true,
+          "collaborator": false,
+          "sources": [
+            "https://hololive.hololivepro.com/news/20260918-01-411/",
+            "https://www.youtube.com/@hololive_ASOBIMAWARITAI"
+          ]
+        }
+      ]
+    }
+  ]
+}
