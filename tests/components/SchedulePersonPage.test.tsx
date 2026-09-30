@@ -31,7 +31,7 @@ function person(overrides: Partial<SchedulePerson> = {}): SchedulePerson {
         channel: { name: '台一', nationality: 'TW', group: '子午計畫', slug: 'taione', youtube: 'UC0000000000000000000001', twitch: 'taione' },
         live: [{
             vtuber_id: 'v1', platform: 'youtube', external_id: 'TaiOneLive01', source: 'yt_waiting_room', status: 'live', title: '同步雜談',
-            actual_start: '2026-09-29T03:00:00Z', viewer_count: 120,
+            actual_start: '2026-09-29T03:00:00Z',
             // 同時併入 Twitch 直播與 Twitch 週表：標籤只出現一次
             also: [{ platform: 'twitch', external_id: '999', source: 'twitch_live' }, { platform: 'twitch', external_id: 'seg-0', source: 'twitch_schedule' }],
         }],

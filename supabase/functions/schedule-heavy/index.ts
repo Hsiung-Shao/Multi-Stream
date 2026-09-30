@@ -25,6 +25,7 @@ import {
   cancelOrphanTwitchSchedule,
   classifyNewVideos,
   exhausted,
+  expireOverdue,
   loadCurrentByChannel,
   loadPendingYouTube,
   refreshPending,
@@ -77,15 +78,26 @@ Deno.serve((req) => {
     stats.channels_processed = sweep.processed.length;
     stats.budget_exhausted = exhausted(deadline);
     await writeChannelStates(db, sweep.stateUpdates);
-    const nextCursor = (start + sweep.processed.length) % Math.max(roster.length, 1);
+    // 游標只前進到「從頭連續處理完」的位置（限流時失敗的頻道下一輪再試）
+    const nextCursor = (start + sweep.advance) % Math.max(roster.length, 1);
 
-    // 3. 新影片分類
-    await classifyNewVideos(db, yt, sweep.candidates, stats, now);
+    // 3. 新影片分類（API 有上限；出錯只記錯誤，游標照樣前進、snapshot 照樣發布）
+    await softStep(stats, 'classify', async () => {
+      await classifyNewVideos(db, yt, sweep.candidates, stats, now);
+    });
 
     // 4. 重查待處理 + 規則（API，只在游標歸零那一片：改期、tombstone、常駐框、沒有排定時間的待機室）。
     //    直播中與 2 小時內的待機室由 Light 的 live-og 負責；API 有每輪與每日上限，超過的留到下一圈
-    const pending = start === 0 ? [...(await loadPendingYouTube(db, now, 'all')), ...(await loadPendingYouTube(db, now, 'frames'))] : [];
-    const refreshed = await refreshPending(db, yt, pending, stats, now);
+    await expireOverdue(db, stats, now);
+    // all 與 frames 合併後依 fetched_at 由舊到新：最久沒查的先查，常駐框也輪得到
+    const pending =
+      start === 0
+        ? [...(await loadPendingYouTube(db, now, 'all')), ...(await loadPendingYouTube(db, now, 'frames'))].sort((a, b) => a.fetched_at.localeCompare(b.fetched_at))
+        : [];
+    let refreshed: Awaited<ReturnType<typeof refreshPending>> = [];
+    await softStep(stats, 'refresh', async () => {
+      refreshed = await refreshPending(db, yt, pending, stats, now);
+    });
     const liveVtubers = refreshed.filter((s) => s.status === 'live').map((s) => s.vtuber_id);
     await touchLastLiveAt(db, liveVtubers, stats, now);
 

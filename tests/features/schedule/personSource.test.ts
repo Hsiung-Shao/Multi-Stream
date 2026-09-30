@@ -5,7 +5,7 @@ import { agencyOf, fetchPerson, resetPersonSourceCache, splitPersonStreams, type
 const NOW = Date.parse('2026-09-29T04:00:00Z');
 
 const row = (o: Partial<PersonStreamRow> & Pick<PersonStreamRow, 'id' | 'status'>): PersonStreamRow => ({
-    platform: 'youtube', external_id: o.id, source: 'yt_waiting_room', title: null, category: null, viewer_count: null,
+    platform: 'youtube', external_id: o.id, source: 'yt_waiting_room', title: null, category: null,
     scheduled_start: null, actual_start: null, actual_end: null, merged_with: null, ...o,
 });
 

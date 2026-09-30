@@ -1,15 +1,17 @@
 // live-og：抓頻道 /live 頁判斷「直播中／最近一場待機室」，不耗 YouTube Data API 配額。
 // 2026-09-30 使用者裁定：直播狀態以 live-og 為主、RSS 為輔、API 最後（見 rules.ts）。
 //
-// 偵測規則移植自 functions/lib/youtube-live-og.js（前端端點與 sync-livestreams 共用的那一套），差異：
-//   - 回傳 ok：抓取失敗（非 200、逾時、例外）與「確實沒有直播」分開，失敗時不改任何場次
-//   - scheduledStart 轉成 ISO 字串
+// 偵測規則移植自 functions/lib/youtube-live-og.js（前端端點與 sync-livestreams 共用的那一套），差異（code review 後）：
+//   - 回傳 ok：抓取失敗與「確實沒有直播」分開，失敗時不改任何場次
+//   - 頁面必須是這個頻道自己的（網址在 youtube.com、內容含自己的頻道 ID），否則當抓取失敗（同意頁、sorry 頁、限流頁）
+//   - 確認直播的 HEAD 只有明確 404 才算沒在直播；其他狀態與例外當抓取失敗
+//   - 不用「頁面上任何 _live.jpg」找 videoId（頻道頁會混到別人的直播）
+//   - 標題正確處理引號與 HTML entity
 // 只用 Web API（fetch、AbortController、regex），Deno Edge Function 與 vitest 都能直接跑。
 //
-// 已知成本：/live 頁每頁約 1.5MB，解析是 CPU 大宗（Cloudflare 上單次 8–11ms）；Edge Function 的 CPU 上限 2 秒，
-// 所以每輪只查「有直播中或 2 小時內待機室」的頻道，並限制頻道數（見 schedule-light）。
+// 已知成本：/live 頁每頁約 1.5MB，解析是 CPU 大宗；Edge Function 的 CPU 上限 2 秒，所以每輪限制頻道數（見 schedule-light）。
 
-import { isExpired, isScheduleFrame } from './rules.ts';
+import { isScheduleFrame } from './rules.ts';
 import type { RosterChannel, StreamRecord, StreamRow } from './types.ts';
 
 const UC_RE = /^UC[a-zA-Z0-9_-]{22}$/;
@@ -27,7 +29,7 @@ const SOCIAL_BOT_HEADERS: Record<string, string> = {
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 
 export interface LiveOgResult {
-  /** false＝抓取失敗（不能據此判斷下播） */
+  /** false＝抓取失敗或頁面不可信（不能據此判斷下播） */
   ok: boolean;
   isLive: boolean;
   isUpcoming: boolean;
@@ -40,34 +42,43 @@ export interface LiveOgResult {
 const FAILED: LiveOgResult = { ok: false, isLive: false, isUpcoming: false, videoId: null, title: null, scheduledStart: null };
 const OFFLINE: LiveOgResult = { ok: true, isLive: false, isUpcoming: false, videoId: null, title: null, scheduledStart: null };
 
-/** videoId 四來源依序：og:image／twitter:image → canonical → og:url → 任何 _live.jpg */
+/** 屬性值：支援單雙引號（雙引號內可以有 '，反之亦然） */
+const attr = (html: string, re: RegExp): string | null => {
+  const m = html.match(re);
+  return m ? (m[2] ?? null) : null;
+};
+
+/** videoId 三來源依序：og:image／twitter:image → canonical → og:url */
 export function extractVideoId(html: string): string | null {
-  const metaOg =
-    html.match(/<meta\s+(?:property|name|itemprop)=["'](?:og:image|twitter:image|image)["']\s+content=["'](.*?)["']/i) ||
-    html.match(/<meta\s+content=["'](.*?)["']\s+(?:property|name|itemprop)=["'](?:og:image|twitter:image|image)["']/i);
-  const fromOg = metaOg?.[1].match(/\/vi\/([a-zA-Z0-9_-]{11})\//)?.[1];
+  const img =
+    attr(html, /<meta\s+(?:property|name|itemprop)=["'](?:og:image|twitter:image|image)["']\s+content=(["'])(.*?)\1/i) ??
+    attr(html, /<meta\s+content=(["'])(.*?)\1\s+(?:property|name|itemprop)=["'](?:og:image|twitter:image|image)["']/i);
+  const fromOg = img?.match(/\/vi\/([a-zA-Z0-9_-]{11})\//)?.[1];
   if (fromOg) return fromOg;
-  const canonical = html.match(/<link\s+rel=["']canonical["']\s+href=["'](.*?)["']/i)?.[1].match(/\/watch\?v=([a-zA-Z0-9_-]{11})/)?.[1];
+  const canonical = attr(html, /<link\s+rel=["']canonical["']\s+href=(["'])(.*?)\1/i)?.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/)?.[1];
   if (canonical) return canonical;
-  const ogUrl = html.match(/<meta\s+property=["']og:url["']\s+content=["'](.*?)["']/i)?.[1];
-  const fromUrl = ogUrl?.includes('watch?v=') ? ogUrl.match(/v=([a-zA-Z0-9_-]{11})/)?.[1] : undefined;
-  if (fromUrl) return fromUrl;
-  return html.match(/https:\/\/i\.ytimg\.com\/vi\/([a-zA-Z0-9_-]{11})\/(?:maxres|hq)default_live\.jpg/)?.[1] ?? null;
+  const ogUrl = attr(html, /<meta\s+property=["']og:url["']\s+content=(["'])(.*?)\1/i);
+  return ogUrl?.includes('watch?v=') ? (ogUrl.match(/v=([a-zA-Z0-9_-]{11})/)?.[1] ?? null) : null;
+}
+
+/** 常見 HTML entity；&amp; 放最後避免二次解碼 */
+export function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 }
 
 export function extractTitle(html: string): string | null {
-  const og = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
-  if (og) return og[1].slice(0, 200);
-  const t = html.match(/<title>(.*?)<\/title>/);
-  if (t && t[1] && !/^YouTube$/i.test(t[1].trim())) return t[1].replace(/\s*-\s*YouTube\s*$/i, '').slice(0, 200);
-  const j = html.match(/"title":"((?:[^"\\]|\\.)+)"/);
-  if (j) {
-    try {
-      return (JSON.parse(`"${j[1]}"`) as string).slice(0, 200);
-    } catch {
-      return j[1].slice(0, 200);
-    }
-  }
+  const og =
+    attr(html, /<meta\s+property=["']og:title["']\s+content=(["'])(.*?)\1/i) ?? attr(html, /<meta\s+content=(["'])(.*?)\1\s+property=["']og:title["']/i);
+  if (og) return decodeHtmlEntities(og).slice(0, 200) || null;
+  const t = html.match(/<title>(.*?)<\/title>/)?.[1];
+  if (t && !/^YouTube$/i.test(t.trim())) return decodeHtmlEntities(t.replace(/\s*-\s*YouTube\s*$/i, '')).slice(0, 200);
   return null;
 }
 
@@ -92,7 +103,7 @@ async function fetchWithTimeout(fetchFn: typeof fetch, url: string, init: Reques
   }
 }
 
-/** 偵測一個頻道；抓取失敗回 ok=false */
+/** 偵測一個頻道；抓取失敗、頁面不是這個頻道的、縮圖確認失敗都回 ok=false */
 export async function detectLiveOg(channelId: string, opts: { fetch?: typeof fetch; timeoutMs?: number } = {}): Promise<LiveOgResult> {
   if (!UC_RE.test(channelId)) return FAILED;
   const fetchFn = opts.fetch ?? fetch;
@@ -108,22 +119,30 @@ export async function detectLiveOg(channelId: string, opts: { fetch?: typeof fet
       await res.text().catch(() => '');
       return FAILED;
     }
-    const parsed = parseLiveOgHtml(await res.text());
+    // 被導到同意頁（consent.youtube.com）等別的網域：不可信
+    if (res.url && !/^https:\/\/(?:www\.|m\.)?youtube\.com\//.test(res.url)) {
+      await res.text().catch(() => '');
+      return FAILED;
+    }
+    const html = await res.text();
+    // 頁面要提到自己的頻道 ID（直播頁的 videoDetails、頻道頁的 externalId／canonical 都會有）；
+    // 限流頁、sorry 頁回 200 但沒有，不能當成「沒有直播」
+    if (!html.includes(channelId)) return FAILED;
+    const parsed = parseLiveOgHtml(html);
     if (!parsed.videoId) return OFFLINE;
     if (parsed.isUpcoming) {
       return { ok: true, isLive: false, isUpcoming: true, videoId: parsed.videoId, title: parsed.title, scheduledStart: parsed.scheduledStart };
     }
-    // _live.jpg 只有正在直播時才存在：200＝直播中；HEAD 失敗視同非直播（頁面已成功抓到，不算抓取失敗）
-    let live = false;
-    try {
-      const img = await fetchWithTimeout(fetchFn, `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault_live.jpg`, { method: 'HEAD', headers: { 'User-Agent': BROWSER_UA } }, timeoutMs);
-      live = img.status === 200;
-    } catch {
-      live = false;
-    }
-    return live
-      ? { ok: true, isLive: true, isUpcoming: false, videoId: parsed.videoId, title: parsed.title, scheduledStart: null }
-      : OFFLINE;
+    // _live.jpg 只有正在直播時才存在：200＝直播中、404＝沒在直播；其他狀態或例外不可判斷
+    const img = await fetchWithTimeout(
+      fetchFn,
+      `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault_live.jpg`,
+      { method: 'HEAD', headers: { 'User-Agent': BROWSER_UA } },
+      timeoutMs,
+    );
+    if (img.status === 200) return { ok: true, isLive: true, isUpcoming: false, videoId: parsed.videoId, title: parsed.title, scheduledStart: null };
+    if (img.status === 404) return OFFLINE;
+    return FAILED;
   } catch {
     return FAILED;
   }
@@ -137,19 +156,22 @@ export interface LiveOgApply {
   live: number;
   upcoming: number;
   ended: number;
-  expired: number;
+  /** 需要結束、但呼叫端還不允許（下播要連續兩輪確認）的直播場次數 */
+  endPending: number;
+  /** 頁面指向別的頻道的影片：整個頻道這輪不動 */
+  foreign: boolean;
 }
-
-const ACTIVE = new Set(['scheduled', 'live']);
 
 /**
  * 一個頻道的 live-og 結果 → 場次變化（純函式）。
  *   - 抓取失敗：不動。
- *   - 直播中 V：V 設為 live（沒有就新增）；同頻道其他 live 場次 → ended。
- *   - 待機 V：V 設為 scheduled 並更新預定時間（改期）；同頻道 live 的 → ended。
- *   - 沒有直播也沒有待機：同頻道 live 的 → ended。
- *   - 同頻道其他 scheduled 場次照既有規則過期（排定時間過後 3 小時）。
- * current：這個頻道目前 scheduled／live 的場次；known：V 在資料庫裡的列（任何狀態），沒有就 undefined。
+ *   - 影片在資料庫屬於別的頻道：不動（foreign）。
+ *   - 直播中 V：V 設為 live（沒有就新增）；同頻道其他 live 場次視為下播。
+ *   - 待機 V：V 設為 scheduled 並更新預定時間（改期）；已經開播或結束過的影片不改回待機；
+ *     資料庫沒有、又沒有預定時間的不新增（交給 API 分類）。同頻道 live 的視為下播。
+ *   - 沒有直播也沒有待機：同頻道 live 的視為下播。
+ *   - 下播只有 allowEnd 時才改成 ended（呼叫端要求連續兩輪確認），否則記在 endPending。
+ *   過期（排定時間過後 3 小時）改由資料庫端每輪統一處理（expireOverdue），不在這裡。
  */
 export function applyLiveOg(
   channel: Pick<RosterChannel, 'channelId' | 'vtuberId'>,
@@ -157,9 +179,14 @@ export function applyLiveOg(
   current: readonly StreamRecord[],
   known: StreamRecord | undefined,
   now: number,
+  opts: { allowEnd: boolean } = { allowEnd: true },
 ): LiveOgApply {
-  const out: LiveOgApply = { changed: [], created: [], live: 0, upcoming: 0, ended: 0, expired: 0 };
+  const out: LiveOgApply = { changed: [], created: [], live: 0, upcoming: 0, ended: 0, endPending: 0, foreign: false };
   if (!result.ok) return out;
+  if (known && known.channel_id !== channel.channelId) {
+    out.foreign = true;
+    return out;
+  }
   const nowIso = new Date(now).toISOString();
   const target = result.videoId && VIDEO_ID_RE.test(result.videoId) ? result.videoId : null;
   const isLive = !!target && result.isLive;
@@ -167,22 +194,28 @@ export function applyLiveOg(
 
   if (target && (isLive || isUpcoming)) {
     const row = current.find((s) => s.external_id === target) ?? known;
-    const frame = isUpcoming ? isScheduleFrame(result.scheduledStart, now) : false;
     const thumb = isLive ? `https://i.ytimg.com/vi/${target}/hqdefault_live.jpg` : `https://i.ytimg.com/vi/${target}/hqdefault.jpg`;
     if (row) {
-      out.changed.push({
-        ...row,
-        status: isLive ? 'live' : 'scheduled',
-        scheduled_start: isUpcoming ? (result.scheduledStart ?? row.scheduled_start) : row.scheduled_start,
-        actual_start: isLive ? (row.actual_start ?? nowIso) : row.actual_start,
-        actual_end: null,
-        title: result.title ?? row.title,
-        thumbnail_url: row.thumbnail_url ?? thumb,
-        viewer_count: null,
-        is_schedule_frame: frame,
-        fetched_at: nowIso,
-      });
-    } else {
+      const revertToUpcoming = isUpcoming && (row.actual_start || row.actual_end);
+      if (!revertToUpcoming) {
+        const scheduled = isUpcoming ? (result.scheduledStart ?? row.scheduled_start) : row.scheduled_start;
+        out.changed.push({
+          ...row,
+          status: isLive ? 'live' : 'scheduled',
+          scheduled_start: scheduled,
+          actual_start: isLive ? (row.actual_start ?? nowIso) : row.actual_start,
+          actual_end: null,
+          // API 的標題為準，live-og 只補空值
+          title: row.title ?? result.title,
+          thumbnail_url: row.thumbnail_url ?? thumb,
+          viewer_count: null,
+          is_schedule_frame: isUpcoming ? isScheduleFrame(scheduled, now) : false,
+          fetched_at: nowIso,
+        });
+        if (isLive) out.live += 1;
+        else out.upcoming += 1;
+      }
+    } else if (isLive || result.scheduledStart) {
       out.created.push({
         vtuber_id: channel.vtuberId,
         channel_id: channel.channelId,
@@ -198,23 +231,22 @@ export function applyLiveOg(
         category: null,
         thumbnail_url: thumb,
         viewer_count: null,
-        is_schedule_frame: frame,
+        is_schedule_frame: isUpcoming ? isScheduleFrame(result.scheduledStart, now) : false,
         fetched_at: nowIso,
       });
+      if (isLive) out.live += 1;
+      else out.upcoming += 1;
     }
-    if (isLive) out.live += 1;
-    else out.upcoming += 1;
   }
 
   for (const s of current) {
-    if (s.external_id === target || !ACTIVE.has(s.status)) continue;
-    if (s.status === 'live') {
-      out.changed.push({ ...s, status: 'ended', actual_end: nowIso, viewer_count: null, fetched_at: nowIso });
-      out.ended += 1;
-    } else if (isExpired(s, now)) {
-      out.changed.push({ ...s, status: 'expired', fetched_at: nowIso });
-      out.expired += 1;
+    if (s.external_id === target || s.status !== 'live') continue;
+    if (!opts.allowEnd) {
+      out.endPending += 1;
+      continue;
     }
+    out.changed.push({ ...s, status: 'ended', actual_end: nowIso, viewer_count: null, fetched_at: nowIso });
+    out.ended += 1;
   }
   return out;
 }

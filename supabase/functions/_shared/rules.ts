@@ -11,6 +11,8 @@ export const TIER2_DAYS = 90;
 /** 本週表只看未來 7 天 + 過去 12 小時（本地實測 24 小時的 recent 有 430 場、佔 snapshot 三分之一） */
 export const UPCOMING_WINDOW_DAYS = 7;
 export const RECENT_WINDOW_HOURS = 12;
+/** 直播中的場次超過這麼久沒被確認（live-og／Twitch 每輪會更新 fetched_at）就不進 snapshot：保險，避免卡住的場次一直掛在直播中 */
+export const LIVE_STALE_HOURS = 2;
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;

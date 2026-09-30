@@ -61,7 +61,7 @@ if (mode === 'heavy-loop') {
     const r = await invoke(fn);
     const s = await shard('schedule_heavy_rss');
     runs.push({ ...r, cursor_after: s.cursor_position });
-    console.log(`#${i + 1} http=${r.http} wall=${r.wall_ms}ms processed=${r.channels_processed} rss_fail=${r.rss_failed} quota=${r.quota_units} upserted=${r.streams_upserted} pending=${r.pending_refreshed} cursor→${s.cursor_position} errors=${JSON.stringify(r.errors ?? [])}`);
+    console.log(`#${i + 1} http=${r.http} wall=${r.wall_ms}ms processed=${r.channels_processed} rss_fail=${r.rss_failed}${r.rss_throttled ? "(throttled)" : ""} og=${r.og_checked}/live${r.og_live}/fail${r.og_failed} quota=${r.quota_units}(day ${r.quota_daily_used}) upserted=${r.streams_upserted} pending=${r.pending_refreshed} cursor→${s.cursor_position} errors=${JSON.stringify(r.errors ?? [])}`);
     if (r.http !== 200 || s.cursor_position <= prev) break;
     prev = s.cursor_position;
   }
@@ -70,7 +70,7 @@ if (mode === 'heavy-loop') {
   for (let i = 0; i < n; i++) {
     const r = await invoke(fn);
     runs.push(r);
-    console.log(`#${i + 1} http=${r.http} wall=${r.wall_ms}ms processed=${r.channels_processed}/${r.channels_total} rss_fail=${r.rss_failed} quota=${r.quota_units} pending=${r.pending_refreshed} twitch_live=${r.twitch_live} live_status=${r.live_status_rows} snapshot=${r.snapshot_bytes}B errors=${JSON.stringify(r.errors ?? [])}`);
+    console.log(`#${i + 1} http=${r.http} wall=${r.wall_ms}ms processed=${r.channels_processed}/${r.channels_total} rss_fail=${r.rss_failed}${r.rss_throttled ? "(throttled)" : ""} og=${r.og_checked}/live${r.og_live}/fail${r.og_failed} quota=${r.quota_units}(day ${r.quota_daily_used}) pending=${r.pending_refreshed} twitch_live=${r.twitch_live} live_status=${r.live_status_rows} snapshot=${r.snapshot_bytes}B errors=${JSON.stringify(r.errors ?? [])}`);
     if (i < n - 1) await new Promise((r) => setTimeout(r, 3000));
   }
 }
@@ -83,11 +83,21 @@ const summary = {
   channels_processed: sum('channels_processed'),
   rss_ok: sum('rss_ok'),
   rss_failed: sum('rss_failed'),
-  rss_fallback_used: sum('rss_fallback_used'),
+  rss_rate_limited: sum('rss_rate_limited'),
+  rss_throttled_runs: runs.filter((r) => r.rss_throttled).length,
   rss_entries: sum('rss_entries'),
   new_video_candidates: sum('new_video_candidates'),
   videos_list_calls: sum('videos_list_calls'),
-  playlist_items_calls: sum('playlist_items_calls'),
+  api_deferred: sum('api_deferred'),
+  quota_daily_used_last: runs.at(-1)?.quota_daily_used ?? null,
+  quota_exceeded_runs: runs.filter((r) => r.quota_exceeded).length,
+  og_checked: sum('og_checked'),
+  og_failed: sum('og_failed'),
+  og_live: sum('og_live'),
+  og_upcoming: sum('og_upcoming'),
+  og_ended: sum('og_ended'),
+  og_foreign: sum('og_foreign'),
+  og_end_suppressed_runs: runs.filter((r) => r.og_end_suppressed).length,
   quota_units: sum('quota_units'),
   streams_upserted: sum('streams_upserted'),
   streams_hidden: sum('streams_hidden'),

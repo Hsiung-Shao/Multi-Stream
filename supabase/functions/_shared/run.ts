@@ -59,18 +59,15 @@ export async function loadDailyQuota(db: Db, now: number): Promise<number | null
   return rows[0].last_run_stats?.day === quotaDay(now) ? rows[0].cursor_position : 0;
 }
 
-/** 讀出後加上本輪用量寫回（Light 與 Heavy 同時跑時可能少算一輪，誤差可接受） */
-export async function addDailyQuota(db: Db, now: number, units: number): Promise<number | null> {
-  const used = await loadDailyQuota(db, now);
-  if (used == null) return null;
-  const total = used + units;
-  await db.update('cron_shard_state', `job_name=eq.${QUOTA_JOB}`, {
-    cursor_position: total,
-    last_run_at: new Date().toISOString(),
-    last_run_stats: { day: quotaDay(now), units: total },
-    updated_at: new Date().toISOString(),
-  });
-  return total;
+/**
+ * 本輪用量原子累加（schedule_add_quota，20260930140100）：Light 與 Heavy 同時跑時先讀再寫會漏算。
+ * 用量為 0 時不寫，只讀；YouTube 回 quotaExceeded 時直接記到上限，整天不再打。
+ */
+export async function addDailyQuota(db: Db, now: number, units: number, exceeded = false): Promise<number | null> {
+  const add = exceeded ? Math.max(units, DAILY_QUOTA_CAP) : units;
+  if (add <= 0) return loadDailyQuota(db, now);
+  const total = await db.rpc<number>('schedule_add_quota', { p_day: quotaDay(now), p_units: add });
+  return typeof total === 'number' ? total : null;
 }
 
 export function jsonResponse(body: unknown, status = 200): Response {
@@ -124,7 +121,8 @@ export async function runJob(
   stats.videos_list_calls = yt.quota.videosList;
   stats.quota_units = yt.quota.units();
   try {
-    stats.quota_daily_used = (await addDailyQuota(db, ctx.now, stats.quota_units)) ?? stats.quota_units;
+    stats.quota_exceeded = yt.quotaExceeded;
+    stats.quota_daily_used = (await addDailyQuota(db, ctx.now, stats.quota_units, yt.quotaExceeded)) ?? stats.quota_units;
   } catch (e) {
     stats.errors.push(`quota daily: ${e instanceof Error ? e.message : String(e)}`);
   }

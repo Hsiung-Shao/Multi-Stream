@@ -305,6 +305,23 @@ describe('snapshot 合併與 slug', () => {
     expect(snap.channels.v1.slug).toBe('one');
   });
 
+  it('直播中超過 2 小時沒被確認（fetched_at 太舊）不輸出；直播中依開播時間新的在前、沒有開播時間的排最後', () => {
+    const snap = buildSnapshot(
+      [
+        srow({ id: 'old', status: 'live', external_id: 'Stale000001', actual_start: iso(T0 - 5 * 3600_000), fetched_at: iso(T0 - 3 * 3600_000) }),
+        srow({ id: 'a', status: 'live', external_id: 'Early000001', actual_start: iso(T0 - 2 * 3600_000), fetched_at: iso(T0) }),
+        srow({ id: 'b', status: 'live', external_id: 'Late0000001', actual_start: iso(T0 - 600_000), fetched_at: iso(T0) }),
+        srow({ id: 'c', status: 'live', external_id: 'NoStart0001', actual_start: null, fetched_at: iso(T0) }),
+      ],
+      vt,
+      new Map(),
+      T0,
+      null,
+    );
+    expect(snap.live.map((s) => s.external_id)).toEqual(['Late0000001', 'Early000001', 'NoStart0001']);
+    expect(JSON.stringify(snap)).not.toContain('viewer');
+  });
+
   it('主場次不在輸出裡（例如被隱藏）時，次要場次照常輸出', () => {
     const snap = buildSnapshot(
       [srow({ id: 'yt', status: 'hidden' }), srow({ id: 'tw', platform: 'twitch', external_id: 'seg1', source: 'twitch_schedule', merged_with: 'yt' })],

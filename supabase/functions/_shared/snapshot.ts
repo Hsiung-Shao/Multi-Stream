@@ -4,7 +4,7 @@
 
 import type { Db } from './db.ts';
 import { DbError, inList } from './db.ts';
-import { isRecentForSnapshot, isUpcomingForSnapshot, RECENT_WINDOW_HOURS } from './rules.ts';
+import { isRecentForSnapshot, isUpcomingForSnapshot, LIVE_STALE_HOURS, RECENT_WINDOW_HOURS } from './rules.ts';
 import type { StreamRecord } from './types.ts';
 
 export const SNAPSHOT_BUCKET = 'streams';
@@ -185,7 +185,10 @@ export function buildSnapshot(
 
   for (const s of streams) {
     if (!visible(s) || merged.has(s.id)) continue;
-    if (s.status === 'live') live.push(toItem(s));
+    if (s.status === 'live') {
+      if (now - Date.parse(s.fetched_at) > LIVE_STALE_HOURS * 3_600_000) continue;
+      live.push(toItem(s));
+    }
     else if (isUpcomingForSnapshot(s, now)) upcoming.push(toItem(s));
     else if (isRecentForSnapshot(s, now)) recent.push(toItem(s));
     else continue;
@@ -194,7 +197,8 @@ export function buildSnapshot(
   const byStart = (a: SnapshotStream, b: SnapshotStream) =>
     Date.parse(a.scheduled_start ?? a.actual_start ?? '') - Date.parse(b.scheduled_start ?? b.actual_start ?? '');
   // 不顯示觀看人數（2026-09-30 使用者裁定；live-og 拿不到人數）：直播中依開播時間，新開播的在前
-  live.sort((a, b) => Date.parse(b.actual_start ?? '') - Date.parse(a.actual_start ?? '') || 0);
+  const startOf = (s: SnapshotStream) => (s.actual_start ? Date.parse(s.actual_start) : 0);
+  live.sort((a, b) => startOf(b) - startOf(a));
   upcoming.sort(byStart);
   recent.sort((a, b) => Date.parse(b.actual_end ?? '') - Date.parse(a.actual_end ?? ''));
 
@@ -232,7 +236,7 @@ export function buildSnapshot(
 /** 從資料庫組 snapshot 並上傳；回傳位元組數 */
 export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: string | null): Promise<number> {
   const cols =
-    'id,vtuber_id,channel_id,platform,external_id,source,status,scheduled_start,scheduled_end,actual_start,actual_end,title,category,thumbnail_url,viewer_count,is_schedule_frame,fetched_at,merged_with';
+    'id,vtuber_id,channel_id,platform,external_id,source,status,scheduled_start,scheduled_end,actual_start,actual_end,title,category,thumbnail_url,is_schedule_frame,fetched_at,merged_with';
   const sinceIso = new Date(now - RECENT_WINDOW_HOURS * 3_600_000).toISOString();
   const active = await db.selectAll<SnapshotSourceRow>(
     'streams',

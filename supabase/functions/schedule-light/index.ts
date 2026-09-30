@@ -13,7 +13,7 @@
 import { loadRoster } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannel, loadPendingYouTube, ogSweep, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { applyMerges, classifyNewVideos, exhausted, expireOverdue, loadCurrentByChannel, loadPendingYouTube, ogSweep, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
@@ -50,10 +50,12 @@ Deno.serve((req) => {
     stats.channels_processed = sweep.processed.length;
     stats.budget_exhausted = exhausted(deadline);
     await writeChannelStates(db, sweep.stateUpdates);
-    const nextCursor = (start + sweep.processed.length) % Math.max(tier1.length, 1);
+    // 游標只前進到「從頭連續處理完」的位置（限流時失敗的頻道下一輪再試）
+    const nextCursor = (start + sweep.advance) % Math.max(tier1.length, 1);
 
-    // 2. live-og：直播中或 2 小時內待機室的頻道（直播中的優先）。先於新影片分類：
-    //    這裡寫入的直播／待機室場次，下一步就不用再花 API 查
+    // 2. 過期（資料庫端，每輪都跑），再用 live-og 查直播中或 2 小時內待機室的頻道（直播中的優先、最久沒查的先查）。
+    //    先於新影片分類：這裡寫入的直播／待機室場次，下一步就不用再花 API 查
+    await expireOverdue(db, stats, now);
     const near = await loadPendingYouTube(db, now, 'near');
     const nearChannels = new Set(near.map((s) => s.channel_id));
     const liveFirst = new Set(near.filter((s) => s.status === 'live').map((s) => s.channel_id));
@@ -64,8 +66,10 @@ Deno.serve((req) => {
       liveFirst,
     });
 
-    // 3. RSS 新發現的影片（API，有上限）
-    await classifyNewVideos(db, yt, sweep.candidates, stats, now);
+    // 3. RSS 新發現的影片（API，有上限）；API 出錯（配額用完、5xx）只記錯誤，不擋住 snapshot
+    await softStep(stats, 'classify', async () => {
+      await classifyNewVideos(db, yt, sweep.candidates, stats, now);
+    });
 
     // 4. Twitch 直播中
     const twitchResult = await syncTwitchLive(db, twitch, twitchChannels, stats, now);

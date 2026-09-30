@@ -60,6 +60,8 @@ export interface Candidate {
 export interface SweepResult {
   candidates: Map<string, Candidate>; // videoId → 來源
   processed: RosterChannel[];
+  /** 游標可以前進的數量：從切片開頭連續「處理完」的頻道數（限流時失敗的頻道不算，下一輪從它開始） */
+  advance: number;
   stateUpdates: Record<string, unknown>[]; // schedule_channel_state 的 RSS 健康度
 }
 
@@ -79,18 +81,20 @@ export async function rssSweep(
   opts: { concurrency: number; deadline: Deadline; fetch?: typeof fetch; stats: RunStats; now: number; jitterMs?: number },
 ): Promise<SweepResult> {
   const candidates = new Map<string, Candidate>();
-  const processed: RosterChannel[] = [];
-  const failures: { ch: RosterChannel; error: string | null }[] = [];
+  const done = new Array<boolean>(channels.length).fill(false);
+  const failures: { i: number; ch: RosterChannel; error: string | null }[] = [];
   const stateUpdates: Record<string, unknown>[] = [];
   const nowIso = new Date(opts.now).toISOString();
   const jitter = opts.jitterMs ?? 150;
+  // 自己的時間預算：限流時提早停手，不改呼叫端的 deadline（stats.budget_exhausted 才不會被誤判）
+  const deadline: Deadline = { at: opts.deadline.at };
   let attempts = 0;
   let failed = 0;
 
-  await mapLimit(channels, opts.concurrency, opts.deadline, async (ch) => {
+  await mapLimit(channels.map((ch, i) => ({ ch, i })), opts.concurrency, deadline, async ({ ch, i }) => {
     if (shouldSkipChannel(ch.rssFailStreak)) {
       opts.stats.rss_skipped_dead += 1;
-      processed.push(ch); // 跳過也算「這一片處理過」，游標才會前進
+      done[i] = true; // 跳過也算處理完，游標才會前進
       return;
     }
     // 小幅隨機間隔，避免同一瞬間湧出大量請求
@@ -98,7 +102,7 @@ export async function rssSweep(
     const r = await fetchChannelRss(ch.externalId, { fetch: opts.fetch });
     attempts += 1;
     if (r.ok) {
-      processed.push(ch);
+      done[i] = true;
       opts.stats.rss_ok += 1;
       opts.stats.rss_entries += r.entries.length;
       for (const entry of r.entries) {
@@ -110,23 +114,26 @@ export async function rssSweep(
     failed += 1;
     opts.stats.rss_failed += 1;
     if (r.status === 429) opts.stats.rss_rate_limited += 1;
-    failures.push({ ch, error: r.error });
+    failures.push({ i, ch, error: r.error });
     if (r.status === 429 || isRssThrottled(attempts, failed)) {
       opts.stats.rss_throttled = true;
-      opts.deadline.at = Date.now();
+      deadline.at = Date.now();
     }
   });
 
-  for (const { ch, error } of failures) {
+  for (const { i, ch, error } of failures) {
     if (opts.stats.rss_throttled) {
-      // 限流輪次：只記錯誤，不累加、不算已處理（下一輪從附近再試）
+      // 限流輪次：只記錯誤，不累加、不算處理完（下一輪游標停在它這裡再試）
       stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: ch.rssFailStreak, rss_last_error: `throttled: ${error ?? ''}`.slice(0, 200), last_checked_at: nowIso });
     } else {
-      processed.push(ch);
+      done[i] = true;
       stateUpdates.push({ channel_id: ch.channelId, rss_fail_streak: ch.rssFailStreak + 1, rss_last_error: error, last_checked_at: nowIso });
     }
   }
-  return { candidates, processed, stateUpdates };
+  const processed = channels.filter((_, i) => done[i]);
+  let advance = 0;
+  while (advance < done.length && done[advance]) advance += 1;
+  return { candidates, processed, advance, stateUpdates };
 }
 
 /**
@@ -297,19 +304,38 @@ export async function loadPendingYouTube(db: Db, now: number, scope: PendingScop
     return db.selectAll<StreamRecord>(
       'streams',
       `${base}&status=eq.scheduled&or=(is_schedule_frame.eq.true,scheduled_start.is.null)`,
+      'fetched_at,id', // 最久沒查的先查：API 有上限，固定排序會讓同一批永遠輪不到
     );
   }
   if (scope === 'near') {
     const soon = encodeURIComponent(new Date(now + NEAR_WINDOW_MS).toISOString());
+    // 下限：排定時間超過 3 小時還沒開始的會被 expireOverdue 改成 expired，不必再查
+    const late = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
     return db.selectAll<StreamRecord>(
       'streams',
-      `${base}&is_schedule_frame=eq.false&or=(status.eq.live,and(status.eq.scheduled,scheduled_start.lte.${soon}))`,
+      `${base}&is_schedule_frame=eq.false&or=(status.eq.live,and(status.eq.scheduled,scheduled_start.lte.${soon},scheduled_start.gte.${late}))`,
     );
   }
   return db.selectAll<StreamRecord>(
     'streams',
     `${base}&is_schedule_frame=eq.false&or=(status.eq.live,and(status.eq.scheduled,scheduled_start.not.is.null))`,
+    'fetched_at,id',
   );
+}
+
+/**
+ * 過期：排定時間過後 3 小時仍未開始的待機室 → expired。資料庫端一條 update，每輪都跑，
+ * 不依賴這個頻道這輪有沒有被 live-og 或 API 查到（不然查不到的舊列會一直留在 near，越積越多）。
+ */
+export async function expireOverdue(db: Db, stats: RunStats, now: number): Promise<number> {
+  const cutoff = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
+  const n = await db.update(
+    'streams',
+    `platform=eq.youtube&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.${cutoff}`,
+    { status: 'expired', fetched_at: new Date(now).toISOString() },
+  );
+  stats.streams_expired += n;
+  return n;
 }
 
 /** 共享表要看的「目前狀態」：這些頻道所有 scheduled / live 的場次（含常駐框、含本輪剛寫入的） */
@@ -351,9 +377,11 @@ export async function ogSweep(
   opts: { concurrency: number; deadline: Deadline; maxChannels: number; fetch?: typeof fetch; liveFirst?: ReadonlySet<string> },
 ): Promise<OgSweepResult> {
   const liveFirst = opts.liveFirst ?? new Set<string>();
+  const checkedAt = (c: RosterChannel) => (c.ogCheckedAt ? Date.parse(c.ogCheckedAt) : 0);
+  // 直播中的頻道優先；同組內最久沒查的先查（輪替），每輪名額才不會永遠被同一批佔走
   const targets = [...channels]
     .filter((c) => c.platform === 'youtube')
-    .sort((a, b) => Number(liveFirst.has(b.channelId)) - Number(liveFirst.has(a.channelId)))
+    .sort((a, b) => Number(liveFirst.has(b.channelId)) - Number(liveFirst.has(a.channelId)) || checkedAt(a) - checkedAt(b))
     .slice(0, opts.maxChannels);
   if (!targets.length) return { liveVtuberIds: [], checked: [] };
 
@@ -365,9 +393,10 @@ export async function ogSweep(
     results.set(ch.channelId, r);
   });
 
-  const checked = targets.filter((c) => results.get(c.channelId)?.ok);
+  const attempted = targets.filter((c) => results.has(c.channelId));
+  const checked = attempted.filter((c) => results.get(c.channelId)!.ok);
   const current = await loadCurrentByChannel(db, checked.map((c) => c.channelId));
-  // 直播中／待機的影片若不在這個頻道目前的場次裡，查資料庫有沒有這支（可能是 ended、expired 或別的狀態）
+  // 直播中／待機的影片若不在這個頻道目前的場次裡，查資料庫有沒有這支（可能是 ended、expired，或屬於別的頻道）
   const unknownIds = new Set<string>();
   for (const c of checked) {
     const r = results.get(c.channelId)!;
@@ -380,26 +409,58 @@ export async function ogSweep(
     for (const r of rows) known.set(r.external_id, r);
   }
 
-  const changed: StreamRecord[] = [];
-  const created: StreamRow[] = [];
+  // 下播要連續兩輪確認：頁面抓到了、但這個頻道還有直播中的場次卻沒看到直播 → miss +1，達 2 才結束
+  const plan = (allowEnd: (c: RosterChannel) => boolean) =>
+    checked.map((c) => {
+      const r = results.get(c.channelId)!;
+      return { c, res: applyLiveOg(c, r, current.get(c.channelId) ?? [], r.videoId ? known.get(r.videoId) : undefined, now, { allowEnd: allowEnd(c) }) };
+    });
+  const miss = (c: RosterChannel) => (c.ogMissStreak ?? 0) + 1;
+  let planned = plan((c) => miss(c) >= 2);
+  // 斷路器：同一輪大量「直播 → 結束」通常是 YouTube 回了異常頁面，這輪先不結束任何直播
+  const channelsWithLive = planned.filter(({ c }) => (current.get(c.channelId) ?? []).some((s) => s.status === 'live')).length;
+  const ending = planned.filter(({ res }) => res.ended > 0).length;
+  if (ending >= 5 && ending > channelsWithLive / 2) {
+    stats.og_end_suppressed = true;
+    planned = plan(() => false);
+  }
+
+  // 同一支影片只寫一次（兩個頻道指到同一支、或 changed 與 created 重複時，Postgres 會拒絕整批）：live 優先
+  const rank = (st: string) => (st === 'live' ? 3 : st === 'scheduled' ? 2 : 1);
+  const changedBy = new Map<string, StreamRecord>();
+  const createdBy = new Map<string, StreamRow>();
   const liveVtuberIds: string[] = [];
-  for (const c of checked) {
-    const r = results.get(c.channelId)!;
-    const res = applyLiveOg(c, r, current.get(c.channelId) ?? [], r.videoId ? known.get(r.videoId) : undefined, now);
-    changed.push(...res.changed);
-    created.push(...res.created);
+  const stateRows: Record<string, unknown>[] = [];
+  const nowIso = new Date(now).toISOString();
+  for (const { c, res } of planned) {
+    for (const row of res.changed) {
+      const prev = changedBy.get(row.external_id);
+      if (!prev || rank(row.status) > rank(prev.status)) changedBy.set(row.external_id, row);
+    }
+    for (const row of res.created) {
+      const prev = createdBy.get(row.external_id);
+      if (!prev || rank(row.status) > rank(prev.status)) createdBy.set(row.external_id, row);
+    }
     stats.og_live += res.live;
     stats.og_upcoming += res.upcoming;
     stats.og_ended += res.ended;
-    stats.streams_expired += res.expired;
+    if (res.foreign) stats.og_foreign += 1;
     if (res.live) liveVtuberIds.push(c.vtuberId);
+    // 看到直播或本來就沒有直播中的場次 → miss 歸零；還在等確認 → miss +1；已結束 → 歸零
+    const streak = res.endPending > 0 ? miss(c) : 0;
+    stateRows.push({ channel_id: c.channelId, og_checked_at: nowIso, og_miss_streak: streak });
   }
+  // 抓取失敗的頻道也更新查詢時間（輪替往下走），miss 不動
+  for (const c of attempted) if (!results.get(c.channelId)!.ok) stateRows.push({ channel_id: c.channelId, og_checked_at: nowIso, og_miss_streak: c.ogMissStreak ?? 0 });
+  for (const id of createdBy.keys()) changedBy.delete(id);
+
   // 既有列帶 id、新列不帶：欄位集不同，分兩批 upsert
-  if (changed.length) await db.upsert('streams', changed, 'platform,external_id');
-  if (created.length) {
-    await db.upsert('streams', created, 'platform,external_id');
-    stats.streams_upserted += created.length;
+  if (changedBy.size) await db.upsert('streams', [...changedBy.values()], 'platform,external_id');
+  if (createdBy.size) {
+    await db.upsert('streams', [...createdBy.values()], 'platform,external_id');
+    stats.streams_upserted += createdBy.size;
   }
+  await writeChannelStates(db, stateRows);
   return { liveVtuberIds, checked };
 }
 

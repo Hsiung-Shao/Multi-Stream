@@ -19,6 +19,8 @@ interface StateRow {
   tier: number;
   rss_fail_streak: number;
   last_new_video_at: string | null;
+  og_checked_at?: string | null;
+  og_miss_streak?: number;
 }
 
 interface MetricRow {
@@ -37,7 +39,7 @@ export async function loadRoster(db: Db, platform?: 'youtube' | 'twitch'): Promi
   const rows = await db.selectAll<ChannelRow>('vtuber_channels', q);
   const states = await db.selectAll<StateRow>(
     'schedule_channel_state',
-    'select=channel_id,tier,rss_fail_streak,last_new_video_at',
+    'select=channel_id,tier,rss_fail_streak,last_new_video_at,og_checked_at,og_miss_streak',
     'channel_id',
   );
   const stateMap = new Map(states.map((s) => [s.channel_id, s]));
@@ -51,6 +53,8 @@ export async function loadRoster(db: Db, platform?: 'youtube' | 'twitch'): Promi
       displayName: r.display_name,
       tier: s ? (s.tier as Tier) : null,
       rssFailStreak: s?.rss_fail_streak ?? 0,
+      ogCheckedAt: s?.og_checked_at ?? null,
+      ogMissStreak: s?.og_miss_streak ?? 0,
     };
   });
 }
@@ -87,7 +91,7 @@ export async function recomputeTiers(
   const activityMap = new Map(activity.map((v) => [v.id, v.activity]));
   const states = await db.selectAll<StateRow>(
     'schedule_channel_state',
-    'select=channel_id,tier,rss_fail_streak,last_new_video_at',
+    'select=channel_id,tier,rss_fail_streak,last_new_video_at,og_checked_at,og_miss_streak',
     'channel_id',
   );
   const lastNew = new Map(states.map((s) => [s.channel_id, s.last_new_video_at]));

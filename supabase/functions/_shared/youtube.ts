@@ -86,6 +86,8 @@ export class YouTubeClient {
   private readonly fetchFn: typeof fetch;
   private readonly timeoutMs: number;
   readonly quota = createQuotaCounter();
+  /** YouTube 回了 quotaExceeded：當日配額已用完（run.ts 會把每日用量記成上限，整天不再打） */
+  quotaExceeded = false;
   private readonly opts: YouTubeClientOptions;
 
   constructor(opts: YouTubeClientOptions) {
@@ -110,6 +112,7 @@ export class YouTubeClient {
         signal: controller.signal,
       });
       const text = await res.text();
+      if (!res.ok && text.includes('quotaExceeded')) this.quotaExceeded = true;
       if (!res.ok) throw new Error(`youtube ${path} HTTP ${res.status}: ${text.slice(0, 300)}`);
       return JSON.parse(text);
     } finally {
@@ -126,6 +129,8 @@ export class YouTubeClient {
     for (let i = 0; i < unique.length; i += 50) {
       const batch = unique.slice(i, i + 50);
       if (this.quota.videosList >= (this.opts.maxCalls ?? Infinity)) throw new QuotaBudgetError();
+      // 先計數：失敗的請求 YouTube 一樣扣配額
+      this.quota.videosList += 1;
       // fields 只留用得到的欄位：預設回應含 description 與五種縮圖，50 支可達數百 KB，
       // JSON.parse 的 CPU 時間在 Edge Function 是硬上限（本地 hard 2s）
       const data = (await this.get('videos', {
@@ -134,7 +139,6 @@ export class YouTubeClient {
         maxResults: '50',
         fields: 'items(id,snippet(channelId,title,liveBroadcastContent,thumbnails(high(url),default(url))),liveStreamingDetails)',
       })) as { items?: RawVideo[] };
-      this.quota.videosList += 1;
       for (const item of data.items ?? []) out.set(item.id, toYouTubeVideo(item));
     }
     return out;

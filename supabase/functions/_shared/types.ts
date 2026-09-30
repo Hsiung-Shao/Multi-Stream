@@ -9,6 +9,9 @@ export interface RosterChannel {
   displayName: string | null;
   tier: Tier | null;
   rssFailStreak: number;
+  /** live-og 最後查詢時間（輪替用）與連續「沒看到直播」次數（下播確認用）；舊測試資料可省略 */
+  ogCheckedAt?: string | null;
+  ogMissStreak?: number;
 }
 
 /** public.streams 的一列（寫入時的完整欄位集；批次 upsert 要求每筆欄位一致） */
@@ -64,6 +67,12 @@ export interface RunStats extends Record<string, unknown> {
   og_live: number;
   og_upcoming: number;
   og_ended: number;
+  /** 頁面指向別的頻道的影片而略過的頻道數 */
+  og_foreign: number;
+  /** 同一輪大量「直播 → 結束」觸發斷路器，這輪沒有結束任何直播 */
+  og_end_suppressed: boolean;
+  /** YouTube 回 quotaExceeded（當日配額已用完） */
+  quota_exceeded: boolean;
   streams_upserted: number;
   streams_hidden: number;
   streams_expired: number;
@@ -110,6 +119,9 @@ export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats 
     og_live: 0,
     og_upcoming: 0,
     og_ended: 0,
+    og_foreign: 0,
+    og_end_suppressed: false,
+    quota_exceeded: false,
     streams_upserted: 0,
     streams_hidden: 0,
     streams_expired: 0,
