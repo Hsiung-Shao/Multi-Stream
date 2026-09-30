@@ -15,6 +15,7 @@ import {
   EXPIRE_AFTER_HOURS,
   isExpired,
   isRssThrottled,
+  SCHEDULE_FRAME_DAYS,
   shouldSkipChannel,
   TIER1_DAYS,
   UPCOMING_WINDOW_DAYS as UPCOMING_DAYS,
@@ -327,7 +328,20 @@ export async function loadPendingYouTube(db: Db, now: number, scope: PendingScop
  * 過期：排定時間過後 3 小時仍未開始的待機室 → expired。資料庫端一條 update，每輪都跑，
  * 不依賴這個頻道這輪有沒有被 live-og 或 API 查到（不然查不到的舊列會一直留在 near，越積越多）。
  */
+/** 常駐框的旗標是寫入當下算的：排定時間進到 SCHEDULE_FRAME_DAYS 內就轉成一般待機室（才會進週表、會過期） */
+export async function unflagNearFrames(db: Db, stats: RunStats, now: number): Promise<number> {
+  const edge = encodeURIComponent(new Date(now + SCHEDULE_FRAME_DAYS * 86_400_000).toISOString());
+  const n = await db.update(
+    'streams',
+    `platform=eq.youtube&status=eq.scheduled&is_schedule_frame=eq.true&scheduled_start=lte.${edge}`,
+    { is_schedule_frame: false },
+  );
+  stats.frames_unflagged += n;
+  return n;
+}
+
 export async function expireOverdue(db: Db, stats: RunStats, now: number): Promise<number> {
+  await unflagNearFrames(db, stats, now);
   const cutoff = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
   const n = await db.update(
     'streams',
@@ -357,6 +371,8 @@ export async function loadCurrentByChannel(db: Db, channelIds: readonly string[]
 
 /** Light 用 live-og 查的時間窗：直播中、或排定時間在 2 小時內 */
 export const NEAR_WINDOW_MS = 2 * 3_600_000;
+/** live-og 每輪保留給待機室（沒有直播中場次的頻道）的名額：直播中頻道多時開播偵測仍輪得到 */
+export const OG_RESERVE_OTHERS = 20;
 
 export interface OgSweepResult {
   /** 判定直播中的實況主（更新 last_live_at） */
@@ -374,15 +390,25 @@ export async function ogSweep(
   channels: RosterChannel[],
   stats: RunStats,
   now: number,
-  opts: { concurrency: number; deadline: Deadline; maxChannels: number; fetch?: typeof fetch; liveFirst?: ReadonlySet<string> },
+  opts: {
+    concurrency: number;
+    deadline: Deadline;
+    maxChannels: number;
+    fetch?: typeof fetch;
+    liveFirst?: ReadonlySet<string>;
+    /** 保留給「沒有直播中場次」的頻道（待機室開播偵測）的名額；直播中頻道太多時待機室才輪得到 */
+    reserveOthers?: number;
+  },
 ): Promise<OgSweepResult> {
   const liveFirst = opts.liveFirst ?? new Set<string>();
   const checkedAt = (c: RosterChannel) => (c.ogCheckedAt ? Date.parse(c.ogCheckedAt) : 0);
-  // 直播中的頻道優先；同組內最久沒查的先查（輪替），每輪名額才不會永遠被同一批佔走
-  const targets = [...channels]
-    .filter((c) => c.platform === 'youtube')
-    .sort((a, b) => Number(liveFirst.has(b.channelId)) - Number(liveFirst.has(a.channelId)) || checkedAt(a) - checkedAt(b))
-    .slice(0, opts.maxChannels);
+  // 直播中的頻道優先，但保留 reserveOthers 個名額給待機室；各組內最久沒查的先查（輪替）
+  const yt = channels.filter((c) => c.platform === 'youtube').sort((a, b) => checkedAt(a) - checkedAt(b));
+  const liveCh = yt.filter((c) => liveFirst.has(c.channelId));
+  const others = yt.filter((c) => !liveFirst.has(c.channelId));
+  const reserve = Math.min(others.length, opts.reserveOthers ?? OG_RESERVE_OTHERS, Math.floor(opts.maxChannels / 2));
+  const liveTake = liveCh.slice(0, opts.maxChannels - reserve);
+  const targets = [...liveTake, ...others.slice(0, opts.maxChannels - liveTake.length)];
   if (!targets.length) return { liveVtuberIds: [], checked: [] };
 
   const results = new Map<string, LiveOgResult>();
@@ -421,8 +447,9 @@ export async function ogSweep(
   const channelsWithLive = planned.filter(({ c }) => (current.get(c.channelId) ?? []).some((s) => s.status === 'live')).length;
   const ending = planned.filter(({ res }) => res.ended > 0).length;
   if (ending >= 5 && ending > channelsWithLive / 2) {
+    // 已經連續 3 輪沒看到直播的不擋（斷路器要有出口：多人同時下播時最多晚一輪）
     stats.og_end_suppressed = true;
-    planned = plan(() => false);
+    planned = plan((c) => miss(c) >= 3);
   }
 
   // 同一支影片只寫一次（兩個頻道指到同一支、或 changed 與 created 重複時，Postgres 會拒絕整批）：live 優先

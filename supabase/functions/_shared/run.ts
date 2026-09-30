@@ -25,10 +25,11 @@ interface ShardRow {
   shard_size: number;
   total_items: number | null;
   last_run_at: string | null;
+  last_run_stats: { cursor_start?: number; cursor_advance?: number } | null;
 }
 
 export async function loadShard(db: Db, job: string): Promise<ShardRow> {
-  const rows = await db.select<ShardRow>('cron_shard_state', `select=job_name,cursor_position,shard_size,total_items,last_run_at&job_name=eq.${job}&limit=1`);
+  const rows = await db.select<ShardRow>('cron_shard_state', `select=job_name,cursor_position,shard_size,total_items,last_run_at,last_run_stats&job_name=eq.${job}&limit=1`);
   if (!rows[0]) throw new Error(`cron_shard_state 缺 ${job}`);
   return rows[0];
 }

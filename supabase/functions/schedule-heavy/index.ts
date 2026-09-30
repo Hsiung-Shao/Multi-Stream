@@ -64,7 +64,12 @@ Deno.serve((req) => {
     const shard = await loadShard(db, JOB);
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
     const start = roster.length ? shard.cursor_position % roster.length : 0;
-    if (start === 0 || params.get('tiers') === '1') {
+    // 新的一圈＝游標轉回 0。上一輪也從 0 開始卻沒前進（RSS 限流、第一個頻道就失敗）是卡在 0，不是新一圈：
+    // 不重算分級、不復活死頻道、不重查待處理（否則限流時段每輪都重做，還會吃掉 API 每日額度）
+    const prev = shard.last_run_stats;
+    const newLap = start === 0 && !(prev?.cursor_start === 0 && prev?.cursor_advance === 0);
+    stats.cursor_start = start;
+    if (newLap || params.get('tiers') === '1') {
       // 死頻道每圈再試一次：streak 歸零，這一圈若還是失敗（非限流輪次）會再累積
       await db.update('schedule_channel_state', `rss_fail_streak=gte.${RSS_FAIL_STREAK_DEAD}`, { rss_fail_streak: 0 });
       const tiers = await recomputeTiers(db, roster, now);
@@ -80,6 +85,7 @@ Deno.serve((req) => {
     await writeChannelStates(db, sweep.stateUpdates);
     // 游標只前進到「從頭連續處理完」的位置（限流時失敗的頻道下一輪再試）
     const nextCursor = (start + sweep.advance) % Math.max(roster.length, 1);
+    stats.cursor_advance = sweep.advance;
 
     // 3. 新影片分類（API 有上限；出錯只記錯誤，游標照樣前進、snapshot 照樣發布）
     await softStep(stats, 'classify', async () => {
@@ -91,7 +97,7 @@ Deno.serve((req) => {
     await expireOverdue(db, stats, now);
     // all 與 frames 合併後依 fetched_at 由舊到新：最久沒查的先查，常駐框也輪得到
     const pending =
-      start === 0
+      newLap
         ? [...(await loadPendingYouTube(db, now, 'all')), ...(await loadPendingYouTube(db, now, 'frames'))].sort((a, b) => a.fetched_at.localeCompare(b.fetched_at))
         : [];
     let refreshed: Awaited<ReturnType<typeof refreshPending>> = [];
@@ -133,7 +139,7 @@ Deno.serve((req) => {
 
     // 4d. 雙平台合併；游標歸零那一片更新個人頁的可索引旗標
     await softStep(stats, 'merge', () => applyMerges(db, stats, now));
-    if (start === 0) {
+    if (newLap) {
       await softStep(stats, 'indexable', async () => {
         stats.indexable_changed = (await db.rpc<number>('refresh_schedule_indexable')) ?? 0;
       });

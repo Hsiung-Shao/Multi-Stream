@@ -4,6 +4,7 @@
 // 前端 liveStatusRepository.ts 讀這張表，checked_at 3 分鐘內就直接採用。
 
 import type { Db } from './db.ts';
+import { LIVE_STALE_HOURS } from './rules.ts';
 import type { RosterChannel, StreamRecord, StreamRow } from './types.ts';
 
 export interface LiveStatusRow extends Record<string, unknown> {
@@ -37,7 +38,8 @@ export function buildLiveStatusRow(
     scheduled_start_at: null,
     checked_at: checkedAt,
   };
-  const live = streams.find((s) => s.status === 'live');
+  // 與 snapshot 一致：超過 LIVE_STALE_HOURS 沒被確認的直播不算（避免卡住的場次讓主站一直顯示直播中）
+  const live = streams.find((s) => s.status === 'live' && !(s.fetched_at && now - Date.parse(s.fetched_at) > LIVE_STALE_HOURS * 3_600_000));
   if (live) return { ...base, is_live: true, video_id: live.external_id, scheduled_start_at: live.scheduled_start };
 
   const upcoming = streams

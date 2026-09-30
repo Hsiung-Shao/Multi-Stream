@@ -73,9 +73,14 @@ export interface RunStats extends Record<string, unknown> {
   og_end_suppressed: boolean;
   /** YouTube 回 quotaExceeded（當日配額已用完） */
   quota_exceeded: boolean;
+  /** Heavy：本輪游標起點與前進數（判斷「新的一圈」用，見 schedule-heavy） */
+  cursor_start?: number;
+  cursor_advance?: number;
   streams_upserted: number;
   streams_hidden: number;
   streams_expired: number;
+  /** 排定時間進到 14 天內、由常駐框轉成一般待機室的場次數 */
+  frames_unflagged: number;
   pending_refreshed: number;
   twitch_streams_calls: number;
   twitch_live: number;
@@ -125,6 +130,7 @@ export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats 
     streams_upserted: 0,
     streams_hidden: 0,
     streams_expired: 0,
+    frames_unflagged: 0,
     pending_refreshed: 0,
     twitch_streams_calls: 0,
     twitch_live: 0,

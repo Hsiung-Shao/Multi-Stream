@@ -145,10 +145,15 @@ describe('expireOverdue：資料庫端統一過期', () => {
     const stats = emptyStats('light', NOW);
     expect(await expireOverdue(db, stats, NOW)).toBe(7);
     expect(stats.streams_expired).toBe(7);
-    const u = decodeURIComponent(calls[0].url);
-    expect(calls[0].method).toBe('PATCH');
+    // 先把排定時間進到 14 天內的常駐框轉成一般待機室（旗標是寫入當下算的），再過期
+    expect(calls).toHaveLength(2);
+    expect(decodeURIComponent(calls[0].url)).toContain('platform=eq.youtube&status=eq.scheduled&is_schedule_frame=eq.true&scheduled_start=lte.2026-10-12T12:00:00.000Z');
+    expect(calls[0].body).toEqual({ is_schedule_frame: false });
+    expect(stats.frames_unflagged).toBe(7);
+    const u = decodeURIComponent(calls[1].url);
+    expect(calls[1].method).toBe('PATCH');
     expect(u).toContain('platform=eq.youtube&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.2026-09-28T09:00:00.000Z');
-    expect(calls[0].body).toMatchObject({ status: 'expired' });
+    expect(calls[1].body).toMatchObject({ status: 'expired' });
   });
 });
 

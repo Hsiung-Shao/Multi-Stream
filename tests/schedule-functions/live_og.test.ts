@@ -251,3 +251,67 @@ describe('API 最後：重查待處理場次有呼叫上限，超過的留到下
         expect(quota.quotaExceeded).toBe(true);
     });
 });
+
+describe('code review 第二輪修正', () => {
+    it('待機標記只看 ytInitialPlayerResponse：推薦影片區段的 isUpcoming／scheduledStartTime 不算', () => {
+        const html = `${page(V)}<script>var ytInitialPlayerResponse = {"videoDetails":{"isLive":true}};</script><script>var ytInitialData = {"x":{"isUpcoming":true,"scheduledStartTime":"1790776800"}};</script>`;
+        expect(parseLiveOgHtml(html).isUpcoming).toBe(false);
+        const up = `${page(V)}<script>var ytInitialPlayerResponse = {"videoDetails":{"isUpcoming":true},"scheduledStartTime":"1790776800"};</script>`;
+        expect(parseLiveOgHtml(up)).toMatchObject({ isUpcoming: true, scheduledStart: new Date(1790776800 * 1000).toISOString() });
+    });
+
+    it('頁面內容傳到一半卡住：逾時後當抓取失敗（不會讓整輪等到牆鐘上限）', async () => {
+        const hang = (async (_input: string | URL | Request, init?: RequestInit) => {
+            const body = new ReadableStream({
+                start(controller) {
+                    controller.enqueue(new TextEncoder().encode('<html>'));
+                    init?.signal?.addEventListener('abort', () => controller.error(new Error('aborted')));
+                },
+            });
+            return new Response(body, { status: 200 });
+        }) as unknown as typeof fetch;
+        expect((await detectLiveOg(UC, { fetch: hang, timeoutMs: 50 })).ok).toBe(false);
+    });
+
+    it('已過期的待機室：頁面沒給新時間或時間已過 3 小時 → 不改回 scheduled；給了未來時間 → 改回', () => {
+        const expired = stream({ id: 'z', external_id: V, status: 'expired', scheduled_start: new Date(NOW - 10 * HOUR).toISOString() });
+        expect(applyLiveOg(ch, ok({ isUpcoming: true, videoId: V }), [], expired, NOW).changed).toEqual([]);
+        expect(applyLiveOg(ch, ok({ isUpcoming: true, videoId: V, scheduledStart: new Date(NOW - 5 * HOUR).toISOString() }), [], expired, NOW).changed).toEqual([]);
+        expect(applyLiveOg(ch, ok({ isUpcoming: true, videoId: V, scheduledStart: new Date(NOW + HOUR).toISOString() }), [], expired, NOW).changed[0]).toMatchObject({ status: 'scheduled' });
+    });
+
+    it('直播中頻道很多時，保留名額給待機室（最多一半）', async () => {
+        const { db } = fakeDb();
+        const hit: string[] = [];
+        const f = ogFetch(new Set());
+        const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
+            if (!String(input).includes('i.ytimg.com')) hit.push(String(input).match(/UC\d{22}/)![0]);
+            return f(input, init);
+        }) as unknown as typeof fetch;
+        const chans = Array.from({ length: 10 }, (_, i) => chan(i + 1));
+        const liveFirst = new Set(chans.slice(0, 8).map((c) => c.channelId));
+        const r = await ogSweep(db, chans, emptyStats('light', NOW), NOW, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, maxChannels: 6, reserveOthers: 20, fetch: fetchFn, liveFirst });
+        expect(r.checked.map((c) => c.channelId)).toEqual(['c1', 'c2', 'c3', 'c4', 'c9', 'c10']);
+    });
+
+    it('斷路器有出口：已連續 3 輪沒看到直播的頻道照常結束', async () => {
+        const rows = Array.from({ length: 6 }, (_, i) => stream({ id: `s${i + 1}`, channel_id: `c${i + 1}`, external_id: `Vid0000000${i + 1}`, status: 'live' }));
+        const { db, calls } = fakeDb((url) => (url.includes('status=in.(scheduled,live)') ? rows : []));
+        const stats = emptyStats('light', NOW);
+        const chans = Array.from({ length: 6 }, (_, i) => chan(i + 1, { ogMissStreak: i < 2 ? 2 : 1 }));
+        await ogSweep(db, chans, stats, NOW, { concurrency: 2, deadline: { at: Date.now() + 60_000 }, maxChannels: 10, fetch: ogFetch(new Set()) });
+        expect(stats.og_end_suppressed).toBe(true);
+        const ended = calls.filter((c) => c.method === 'POST' && c.url.includes('/streams?')).flatMap((c) => c.body as { id: string; status: string }[]).filter((s) => s.status === 'ended');
+        expect(ended.map((s) => s.id).sort()).toEqual(['s1', 's2']);
+    });
+});
+
+describe('共享表：過時的直播不算直播中', () => {
+    it('fetched_at 超過 2 小時的 live 場次 → is_live=false，改看待機室', async () => {
+        const { buildLiveStatusRow } = await import('../../supabase/functions/_shared/live_status.ts');
+        const stale = stream({ id: 'a', status: 'live', fetched_at: new Date(NOW - 3 * HOUR).toISOString() });
+        const fresh = stream({ id: 'b', status: 'live', external_id: 'Fresh000001', fetched_at: new Date(NOW - HOUR).toISOString() });
+        expect(buildLiveStatusRow({ externalId: UC }, [stale], NOW).is_live).toBe(false);
+        expect(buildLiveStatusRow({ externalId: UC }, [stale, fresh], NOW)).toMatchObject({ is_live: true, video_id: 'Fresh000001' });
+    });
+});

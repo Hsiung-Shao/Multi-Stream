@@ -112,7 +112,7 @@ export class YouTubeClient {
         signal: controller.signal,
       });
       const text = await res.text();
-      if (!res.ok && text.includes('quotaExceeded')) this.quotaExceeded = true;
+      if (!res.ok && (text.includes('quotaExceeded') || text.includes('dailyLimitExceeded'))) this.quotaExceeded = true;
       if (!res.ok) throw new Error(`youtube ${path} HTTP ${res.status}: ${text.slice(0, 300)}`);
       return JSON.parse(text);
     } finally {

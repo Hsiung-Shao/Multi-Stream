@@ -11,7 +11,7 @@
 //
 // 已知成本：/live 頁每頁約 1.5MB，解析是 CPU 大宗；Edge Function 的 CPU 上限 2 秒，所以每輪限制頻道數（見 schedule-light）。
 
-import { isScheduleFrame } from './rules.ts';
+import { EXPIRE_AFTER_HOURS, isScheduleFrame } from './rules.ts';
 import type { RosterChannel, StreamRecord, StreamRow } from './types.ts';
 
 const UC_RE = /^UC[a-zA-Z0-9_-]{22}$/;
@@ -86,11 +86,33 @@ export function extractTitle(html: string): string | null {
 export function parseLiveOgHtml(html: string): { videoId: string | null; isUpcoming: boolean; scheduledStart: string | null; title: string | null } {
   const videoId = extractVideoId(html);
   if (!videoId) return { videoId: null, isUpcoming: false, scheduledStart: null, title: null };
-  // 排程也會有 _live.jpg 縮圖：HTML 標記為 UPCOMING 就不當直播
-  const isUpcoming = html.includes('"status":"UPCOMING"') || html.includes('"isUpcoming":true') || /"scheduledStartTime"\s*:\s*"\d+"/.test(html);
-  const epoch = html.match(/"scheduledStartTime"\s*:\s*"(\d+)"/)?.[1];
+  // 排程也會有 _live.jpg 縮圖：HTML 標記為 UPCOMING 就不當直播。
+  // 只看這支影片的 ytInitialPlayerResponse（實測在頁面約 1.1MB 處、長約 10KB），推薦影片等其他區段的標記不算
+  const player = playerResponseOf(html);
+  const isUpcoming = player.includes('"status":"UPCOMING"') || player.includes('"isUpcoming":true') || /"scheduledStartTime"\s*:\s*"\d+"/.test(player);
+  const epoch = player.match(/"scheduledStartTime"\s*:\s*"(\d+)"/)?.[1];
   const scheduledStart = isUpcoming && epoch ? new Date(Number(epoch) * 1000).toISOString() : null;
   return { videoId, isUpcoming, scheduledStart, title: extractTitle(html) };
+}
+
+/** ytInitialPlayerResponse 所在的 <script> 區段；找不到（測試片段、改版）就用整頁 */
+export function playerResponseOf(html: string): string {
+  const start = html.indexOf('ytInitialPlayerResponse');
+  if (start < 0) return html;
+  const end = html.indexOf('</script>', start);
+  return html.slice(start, end < 0 ? undefined : end);
+}
+
+/** GET 並讀完內容，整段都在逾時內（只等到標頭的話，內容傳到一半卡住會讓整輪等到牆鐘上限） */
+async function fetchTextWithTimeout(fetchFn: typeof fetch, url: string, init: RequestInit, timeoutMs: number): Promise<{ res: Response; text: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetchFn(url, { ...init, signal: controller.signal });
+    return { res, text: await res.text() };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function fetchWithTimeout(fetchFn: typeof fetch, url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
@@ -109,22 +131,15 @@ export async function detectLiveOg(channelId: string, opts: { fetch?: typeof fet
   const fetchFn = opts.fetch ?? fetch;
   const timeoutMs = opts.timeoutMs ?? 8000;
   try {
-    const res = await fetchWithTimeout(
+    const { res, text: html } = await fetchTextWithTimeout(
       fetchFn,
       `https://www.youtube.com/channel/${channelId}/live?ucbcb=1&hl=en&gl=US`,
       { method: 'GET', headers: SOCIAL_BOT_HEADERS, redirect: 'follow' },
       timeoutMs,
     );
-    if (!res.ok) {
-      await res.text().catch(() => '');
-      return FAILED;
-    }
+    if (!res.ok) return FAILED;
     // 被導到同意頁（consent.youtube.com）等別的網域：不可信
-    if (res.url && !/^https:\/\/(?:www\.|m\.)?youtube\.com\//.test(res.url)) {
-      await res.text().catch(() => '');
-      return FAILED;
-    }
-    const html = await res.text();
+    if (res.url && !/^https:\/\/(?:www\.|m\.)?youtube\.com\//.test(res.url)) return FAILED;
     // 頁面要提到自己的頻道 ID（直播頁的 videoDetails、頻道頁的 externalId／canonical 都會有）；
     // 限流頁、sorry 頁回 200 但沒有，不能當成「沒有直播」
     if (!html.includes(channelId)) return FAILED;
@@ -196,7 +211,12 @@ export function applyLiveOg(
     const row = current.find((s) => s.external_id === target) ?? known;
     const thumb = isLive ? `https://i.ytimg.com/vi/${target}/hqdefault_live.jpg` : `https://i.ytimg.com/vi/${target}/hqdefault.jpg`;
     if (row) {
-      const revertToUpcoming = isUpcoming && (row.actual_start || row.actual_end);
+      // 已開播或結束過的不改回待機；已過期／取消的，除非頁面給了還沒過期的新時間（否則每輪會在 expired 與 scheduled 之間來回）
+      const staleRevive =
+        isUpcoming &&
+        (row.status === 'expired' || row.status === 'canceled') &&
+        !(result.scheduledStart && Date.parse(result.scheduledStart) >= now - EXPIRE_AFTER_HOURS * 3_600_000);
+      const revertToUpcoming = (isUpcoming && (row.actual_start || row.actual_end)) || staleRevive;
       if (!revertToUpcoming) {
         const scheduled = isUpcoming ? (result.scheduledStart ?? row.scheduled_start) : row.scheduled_start;
         out.changed.push({
