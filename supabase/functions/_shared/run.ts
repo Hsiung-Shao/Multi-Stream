@@ -101,8 +101,10 @@ export async function runJob(
   let usedToday: number | null = null;
   try {
     usedToday = await loadDailyQuota(db, startedAt);
-  } catch {
+  } catch (e) {
+    // 讀不到仍照跑（只套每輪上限），但要留紀錄，配額表異常時才看得到
     usedToday = null;
+    stats.errors.push(`quota: ${e instanceof Error ? e.message : String(e)}`.slice(0, 200));
   }
   const maxCalls = Math.min(MAX_VIDEOS_LIST_CALLS_PER_RUN, usedToday == null ? Infinity : Math.max(0, DAILY_QUOTA_CAP - usedToday));
   const yt = new YouTubeClient({ apiKey: env.youtubeApiKey, referer: env.youtubeReferer, maxCalls });
