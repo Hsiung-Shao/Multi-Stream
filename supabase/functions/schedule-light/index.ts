@@ -22,7 +22,11 @@ const HEAVY_JOB = 'schedule_heavy_rss';
 const DEFAULT_BUDGET_MS = 60_000;
 /** RSS 並行：25 會讓 YouTube 很快開始限流（2026-09-30 實測），降到 8 */
 const DEFAULT_CONCURRENCY = 8;
-/** live-og：/live 頁每頁約 1.5MB、解析吃 CPU（Edge Function 上限 2 秒）→ 並行 6、每輪最多 60 個頻道（2026-09-30 本地實測：RSS 500 片＋live-og 81 個頻道撞到 WORKER_LIMIT） */
+/**
+ * live-og：/live 頁每頁約 1.5MB、解析吃 CPU（Edge Function 上限 2 秒）→ 並行 6、每輪最多 60 個頻道。
+ * 2026-09-30 本地實測（真實 edge runtime）：RSS 500＋og 60 一輪約 1.0～1.2 秒 CPU（越過 1 秒 soft limit、未達 2 秒 hard limit）；
+ * og 141 仍未撞 hard limit，每頁估計 <12ms。先前 og 81 撞 WORKER_LIMIT 是標題切片留住整頁 HTML 的記憶體問題（strings.ts），已修。
+ */
 const OG_CONCURRENCY = 6;
 const OG_MAX_CHANNELS = 60;
 const OG_BUDGET_MS = 40_000;

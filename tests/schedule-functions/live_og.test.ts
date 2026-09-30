@@ -315,3 +315,22 @@ describe('共享表：過時的直播不算直播中', () => {
         expect(buildLiveStatusRow({ externalId: UC }, [stale, fresh], NOW)).toMatchObject({ is_live: true, video_id: 'Fresh000001' });
     });
 });
+
+describe('記憶體：擷取的字串不留住整頁', () => {
+    it('detachString 內容不變；短字串原樣回傳', async () => {
+        const { detachString } = await import('../../supabase/functions/_shared/strings.ts');
+        const long = '【雜談】今晚一起聊聊最近玩的遊戲與生活近況 "quoted" \ back';
+        expect(detachString(long)).toBe(long);
+        expect(detachString('short')).toBe('short');
+        expect(detachString(null)).toBeNull();
+        expect(detachString(undefined)).toBeUndefined();
+    });
+
+    it('parseLiveOgHtml 的長標題與 RSS 欄位內容正確（複製後仍相同）', async () => {
+        const title = '【雜談】今晚一起聊聊最近玩的遊戲與生活近況';
+        expect(parseLiveOgHtml(`<meta property="og:image" content="https://i.ytimg.com/vi/${V}/hqdefault.jpg"><meta property="og:title" content="${title}">`).title).toBe(title);
+        const { parseYouTubeRss } = await import('../../supabase/functions/_shared/rss.ts');
+        const [e] = parseYouTubeRss(`<feed><entry><yt:videoId>${V}</yt:videoId><title>${title}</title><published>2026-09-30T10:00:00+00:00</published><updated>2026-09-30T10:05:00+00:00</updated></entry></feed>`);
+        expect(e).toEqual({ videoId: V, title, publishedAt: '2026-09-30T10:00:00+00:00', updatedAt: '2026-09-30T10:05:00+00:00' });
+    });
+});

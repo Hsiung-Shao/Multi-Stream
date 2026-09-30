@@ -12,6 +12,7 @@
 // 已知成本：/live 頁每頁約 1.5MB，解析是 CPU 大宗；Edge Function 的 CPU 上限 2 秒，所以每輪限制頻道數（見 schedule-light）。
 
 import { EXPIRE_AFTER_HOURS, isScheduleFrame } from './rules.ts';
+import { detachString } from './strings.ts';
 import type { RosterChannel, StreamRecord, StreamRow } from './types.ts';
 
 const UC_RE = /^UC[a-zA-Z0-9_-]{22}$/;
@@ -92,7 +93,8 @@ export function parseLiveOgHtml(html: string): { videoId: string | null; isUpcom
   const isUpcoming = player.includes('"status":"UPCOMING"') || player.includes('"isUpcoming":true') || /"scheduledStartTime"\s*:\s*"\d+"/.test(player);
   const epoch = player.match(/"scheduledStartTime"\s*:\s*"(\d+)"/)?.[1];
   const scheduledStart = isUpcoming && epoch ? new Date(Number(epoch) * 1000).toISOString() : null;
-  return { videoId, isUpcoming, scheduledStart, title: extractTitle(html) };
+  // 標題是整頁 HTML 的切片，不複製會把整頁留在記憶體到這輪結束（strings.ts）
+  return { videoId, isUpcoming, scheduledStart, title: detachString(extractTitle(html)) };
 }
 
 /** ytInitialPlayerResponse 所在的 <script> 區段；找不到（測試片段、改版）就用整頁 */

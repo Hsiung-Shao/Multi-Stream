@@ -5,6 +5,8 @@
 //   - Edge Function 有 CPU 時間上限（本地 soft 1s / hard 2s，正式 2s），一次要解析上百份 20～30KB 的 feed，
 //     每一毫秒都算；只取 yt:videoId / title / published / updated 四個欄位
 
+import { detachString } from './strings.ts';
+
 export interface RssEntry {
   videoId: string;
   title: string;
@@ -59,11 +61,12 @@ export function parseYouTubeRss(xml: string): RssEntry[] {
     pos = end + 8;
     const videoId = tag(block, 'yt:videoId');
     if (!videoId || !VIDEO_ID_RE.test(videoId)) continue;
+    // 13 字元以上的切片會把整份 feed 留在記憶體（strings.ts），留下來的欄位都複製成獨立字串
     out.push({
       videoId,
-      title: (tag(block, 'title') ?? '').slice(0, 300),
-      publishedAt: tag(block, 'published'),
-      updatedAt: tag(block, 'updated'),
+      title: detachString((tag(block, 'title') ?? '').slice(0, 300)),
+      publishedAt: detachString(tag(block, 'published')),
+      updatedAt: detachString(tag(block, 'updated')),
     });
   }
   return out;
