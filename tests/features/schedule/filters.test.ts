@@ -137,7 +137,8 @@ describe('groupByHour / pickDefaultDay / nowDividerIndex', () => {
         expect(nowDividerIndex(hours, Date.parse('2026-09-29T11:30:00Z'))).toBe(0); // 台北 19:30
         expect(nowDividerIndex(hours, Date.parse('2026-09-29T12:10:00Z'))).toBe(0); // 20:10 → 20 點那組仍算「現在」
         expect(nowDividerIndex(hours, Date.parse('2026-09-29T13:05:00Z'))).toBe(1);
-        expect(nowDividerIndex(hours, Date.parse('2026-09-29T15:00:00Z'))).toBe(-1);
+        // 全部都在現在之前（只剩寬限內的場次）：線畫在最後
+        expect(nowDividerIndex(hours, Date.parse('2026-09-29T15:00:00Z'))).toBe(hours.length);
     });
 });
 

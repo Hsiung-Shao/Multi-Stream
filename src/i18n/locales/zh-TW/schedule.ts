@@ -12,6 +12,7 @@ export default {
 
     'day.today': '今天',
     'day.tomorrow': '明天',
+    'day.yesterday': '昨天',
     'day.count': '{{count}} 場',
     'day.none': '這天還沒有人開待機室',
 

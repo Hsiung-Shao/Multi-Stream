@@ -12,6 +12,7 @@ export default {
 
     'day.today': '今日',
     'day.tomorrow': '明日',
+    'day.yesterday': '昨日',
     'day.count': '{{count}} 件',
     'day.none': 'この日の待機所はまだありません',
 

@@ -45,7 +45,18 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
 
     const current = days.find((d) => d.dayKey === day) ?? days[0];
     const hours = useMemo(() => groupByHour(current?.streams ?? []), [current]);
-    const divider = current?.dayKey === today ? nowDividerIndex(hours, now) : -2;
+    // 今天才畫「現在」線（-1＝不畫）；hours.length＝全部都在現在之前，線畫在最後
+    const divider = current?.dayKey === today ? nowDividerIndex(hours, now) : -1;
+
+    const nowLine = (
+        <div className="my-2 flex items-center gap-3" aria-label={t('timeline.now')}>
+            <span className="w-14 shrink-0 text-right text-xs font-bold tabular-nums text-[#ff4d6a] sm:w-16">{formatClock(new Date(now).toISOString(), locale)}</span>
+            <span className="relative h-px flex-1 bg-[#ff4d6a]/70" aria-hidden="true">
+                <span className="absolute -left-1 -top-1 size-2 rounded-full bg-[#ff4d6a]" />
+            </span>
+            <span className="shrink-0 text-xs font-bold text-[#ff4d6a]">{t('timeline.now')}</span>
+        </div>
+    );
 
     const selectDay = (key: string) => {
         setDay(key);
@@ -88,22 +99,16 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
                     {hours.map((h, i) => {
                         const keys = h.streams.map(streamKey);
                         const allSelected = keys.every((k) => selected.has(k));
-                        const past = divider >= 0 ? i < divider : divider === -1;
+                        const past = divider >= 0 && i < divider;
+                        // 寬限內跨午夜留下的昨天場次：整點標「昨天」，免得「23:00」被看成今晚
+                        // （只看「早於這一天」：超過 7 天併進最後一天的場次不是昨天）
+                        const otherDay = current ? localDayKey(h.hourIso) < current.dayKey : false;
                         return (
                             <li key={h.hourIso}>
-                                {i === divider && (
-                                    <div className="my-2 flex items-center gap-3" aria-label={t('timeline.now')}>
-                                        <span className="w-14 shrink-0 text-right text-xs font-bold tabular-nums text-[#ff4d6a] sm:w-16">
-                                            {formatClock(new Date(now).toISOString(), locale)}
-                                        </span>
-                                        <span className="relative h-px flex-1 bg-[#ff4d6a]/70" aria-hidden="true">
-                                            <span className="absolute -left-1 -top-1 size-2 rounded-full bg-[#ff4d6a]" />
-                                        </span>
-                                        <span className="shrink-0 text-xs font-bold text-[#ff4d6a]">{t('timeline.now')}</span>
-                                    </div>
-                                )}
+                                {i === divider && nowLine}
                                 <div className={cn('flex gap-3 border-t border-border/60 py-2', past && 'opacity-60')}>
                                     <div className="w-14 shrink-0 pt-2.5 text-right sm:w-16">
+                                        {otherDay && <div className="mb-1 text-[11px] font-medium leading-none text-muted-foreground">{t('day.yesterday')}</div>}
                                         <div className="text-base font-bold tabular-nums leading-none text-foreground">{formatClock(h.hourIso, locale)}</div>
                                         {h.streams.length > 1 && !allSelected && (
                                             <button
@@ -132,6 +137,7 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
                             </li>
                         );
                     })}
+                    {divider === hours.length && <li>{nowLine}</li>}
                 </ol>
             )}
         </div>

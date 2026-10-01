@@ -12,6 +12,7 @@ export default {
 
     'day.today': '오늘',
     'day.tomorrow': '내일',
+    'day.yesterday': '어제',
     'day.count': '{{count}}개',
     'day.none': '이 날에는 아직 대기실이 없습니다',
 

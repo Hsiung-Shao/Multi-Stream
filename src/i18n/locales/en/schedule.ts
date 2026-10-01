@@ -12,6 +12,7 @@ export default {
 
     'day.today': 'Today',
     'day.tomorrow': 'Tomorrow',
+    'day.yesterday': 'Yesterday',
     'day.count': '{{count}} streams',
     'day.none': 'No waiting rooms on this day yet',
 

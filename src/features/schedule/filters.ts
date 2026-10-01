@@ -237,7 +237,7 @@ export function groupByDay(streams: readonly ScheduleStream[], now: number, time
     for (const s of streams) {
         if (!s.scheduled_start) continue;
         let key = localDayKey(s.scheduled_start, timeZone);
-        if (key < first) key = first; // 保險：呼叫端沒先濾掉過去的場次時放今天（週表與個人頁都已濾掉預定時間已過的）
+        if (key < first) key = first; // 寬限內的昨天場次（跨午夜，見 UPCOMING_GRACE_MS）放今天；時間軸上標「昨天」
         if (key > last) key = last;
         buckets.get(key)?.push(s);
     }
@@ -274,12 +274,13 @@ export function pickDefaultDay(days: readonly DayBucket[]): string | null {
 
 /**
  * 今天的時間軸上「現在」線要插在哪個整點組之前：第一個整點 ≥ 目前整點的組。
- * 回傳 -1 表示全部都在現在之前（例如只剩過了預定時間還沒開的場次）。
+ * 全部都在現在之前（只剩寬限內、過了預定時間還沒開的場次，含跨午夜的昨天場次）→ 回傳 hours.length：線畫在最後。
  */
 export function nowDividerIndex(hours: readonly HourBucket[], now: number): number {
     const current = new Date(now);
     current.setMinutes(0, 0, 0);
-    return hours.findIndex((h) => Date.parse(h.hourIso) >= current.getTime());
+    const i = hours.findIndex((h) => Date.parse(h.hourIso) >= current.getTime());
+    return i === -1 ? hours.length : i;
 }
 
 /** 同一個小時（本地時區）開始的場次：「選取這個時段」用 */
