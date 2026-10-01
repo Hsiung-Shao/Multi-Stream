@@ -69,15 +69,17 @@ describe('useLiveStatusCheck × 每頻道節流', () => {
         expect(checkChannelLiveStatus).not.toHaveBeenCalled();
     });
 
-    it('使用者手動重新整理（force）→ 無視節流照查', async () => {
-        recordChannelCheck(CH, false);
+    it('使用者手動重新整理（force）→ 無視 15 分鐘節流照查；1 分鐘內連點不重查', async () => {
+        recordChannelCheck(CH, false, Date.now() - 2 * 60_000);
+        await runCheck({ force: true });
+        expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
         await runCheck({ force: true });
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
     });
 
     it('直播中的收藏剛查過：自動輪詢 10 分鐘內跳過，手動重新整理照查（下播不再卡 1 小時）', async () => {
         favorites[0] = { ...favorites[0], isLive: true, lastChecked: new Date().toISOString() };
-        recordChannelCheck(CH, true);
+        recordChannelCheck(CH, true, Date.now() - 2 * 60_000);
         await runCheck();
         expect(checkChannelLiveStatus).not.toHaveBeenCalled();
         await runCheck({ force: true });
@@ -120,6 +122,13 @@ describe('useLiveStatusCheck × 共享表 youtube_live_status', () => {
         expect(saved[0]).toMatchObject({ isLive: true, liveVideoId: 'abcdefghijk', liveUrl: 'https://www.youtube.com/watch?v=abcdefghijk' });
         // 讀共享表也算查過，節流照樣生效
         expect(JSON.parse(localStorage.getItem(LIVE_CHECK_STORAGE_KEY)!)[CH].live).toBe(true);
+    });
+
+    it('用共享表的結果時，記錄的是它實際被查的時間（舊結果不會被當成剛查過、延後下一次檢查）', async () => {
+        const checkedAt = Date.now() - 2 * 60_000;
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(checkedAt).toISOString() })]]));
+        await runCheck();
+        expect(JSON.parse(localStorage.getItem(LIVE_CHECK_STORAGE_KEY)!)[CH].t).toBe(checkedAt);
     });
 
     it('資料已過期 → 退回打端點', async () => {

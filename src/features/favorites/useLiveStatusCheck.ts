@@ -91,7 +91,9 @@ export const useLiveStatusCheck = () => {
                         const status = fromShared && sharedRow
                             ? toLiveStatusResult(sharedRow)
                             : await youtubeApi.checkChannelLiveStatus(channelId);
-                        recordChannelCheck(channelId, !!status.isLive);
+                        // 用共享表的結果時，記它實際被查的時間（不是現在），否則舊結果會被當成剛查過、延後下一次檢查
+                        const sharedAt = fromShared && sharedRow ? Date.parse(sharedRow.checked_at) : NaN;
+                        recordChannelCheck(channelId, !!status.isLive, Number.isFinite(sharedAt) ? Math.min(sharedAt, Date.now()) : Date.now());
 
                         // 順手蒐集到離線頻道資料庫:寫官方頻道名、查 DB 去重、不更動使用者收藏資料。
                         // fire-and-forget,失敗不影響直播狀態檢查。只在真的打了端點時做——

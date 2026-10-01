@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
     shouldCheckChannel,
     recordChannelCheck,
-    MIN_RECHECK_MS,
+    FORCE_MIN_RECHECK_MS,
     OFFLINE_RECHECK_MS,
     LIVE_RECHECK_MS,
     LIVE_CHECK_STORAGE_KEY,
@@ -23,27 +23,28 @@ describe('shouldCheckChannel', () => {
 
     it('離線頻道 15 分鐘內不重查，滿 15 分鐘才查', () => {
         recordChannelCheck(CH, false, T0);
-        expect(shouldCheckChannel(CH, T0 + MIN_RECHECK_MS + 1)).toBe(false);
+        expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS - 1)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS)).toBe(true);
     });
 
     it('直播中頻道 10 分鐘內不重查，滿 10 分鐘就查（下播最多延遲約 10～15 分鐘，不再是 1 小時）', () => {
         recordChannelCheck(CH, true, T0);
-        expect(shouldCheckChannel(CH, T0 + MIN_RECHECK_MS)).toBe(false);
+        expect(shouldCheckChannel(CH, T0 + 5 * 60_000)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS - 1)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS)).toBe(true);
         expect(LIVE_RECHECK_MS).toBeLessThan(OFFLINE_RECHECK_MS);
     });
 
-    it('force：直播中頻道剛查過也照查（手動重新整理要能看到下播）', () => {
+    it('force：直播中頻道 1 分鐘後就照查（手動重新整理要能看到下播）', () => {
         recordChannelCheck(CH, true, T0);
-        expect(shouldCheckChannel(CH, T0 + 1, true)).toBe(true);
+        expect(shouldCheckChannel(CH, T0 + FORCE_MIN_RECHECK_MS, true)).toBe(true);
     });
 
-    it('force（使用者手動重新整理）永遠查', () => {
+    it('force（使用者手動重新整理）只受 1 分鐘下限：擋連點', () => {
         recordChannelCheck(CH, false, T0);
-        expect(shouldCheckChannel(CH, T0 + 1, true)).toBe(true);
+        expect(shouldCheckChannel(CH, T0 + FORCE_MIN_RECHECK_MS - 1, true)).toBe(false);
+        expect(shouldCheckChannel(CH, T0 + FORCE_MIN_RECHECK_MS, true)).toBe(true);
     });
 
     it('時鐘被往回調時視為可查，不會永久卡住', () => {
