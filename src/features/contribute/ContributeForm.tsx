@@ -138,6 +138,7 @@ export function ContributeForm({ initialName = '' }: { initialName?: string }) {
             }
         }
         if (lookup.status === 'found') setExisting(lookup.result.exists);
+        // 只在查詢結果改變時跑；getValues／setValue 是 react-hook-form 的穩定函式，autoFilled 是 ref
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [lookup]);
 

@@ -18,6 +18,7 @@ function LoadFailed({ onClose }: DialogProps) {
         // 固定 id：StrictMode 的 effect 跑兩次也只顯示一則
         toast.error(t('report.loadFailed'), { id: 'report-load-failed' });
         onClose();
+        // 掛載時只做一次：t 與 onClose 換參照不該再跳一次提示
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     return null;
