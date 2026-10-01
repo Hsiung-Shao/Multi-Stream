@@ -23,6 +23,7 @@ import { AgencyRoster } from './AgencyRoster';
 import { DayTimeline } from './DayTimeline';
 import { SelectionBar } from './SelectionBar';
 import { DEFAULT_FILTERS, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
+import { setContributePrefill } from '../contribute/prefill';
 
 const FILTERS_STORAGE_KEY = 'schedule-filters-v1';
 /** 直播中預設先顯示幾位（約兩列），其餘收合 */
@@ -186,6 +187,17 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                     )}
                     {/* 全站搜尋框跟著頂部搜尋字（頂部是主要輸入）；週表一有結果就收起 */}
                     <StreamSearchBox size="md" navigateToCanvas initialQuery={deferredQuery.trim()} initialPlatform="youtube" className="mt-2 text-left" />
+                    {/* 週表上沒有這個人：引導推薦（預填搜尋字當顯示名稱） */}
+                    <p className="mt-3 text-sm text-muted-foreground">
+                        {t('search.notListed')}{' '}
+                        <RouteLink
+                            to="scheduleSubmit"
+                            onClick={() => setContributePrefill(deferredQuery)}
+                            className="font-medium text-foreground underline underline-offset-4 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            {t('search.addVtuber', { query: deferredQuery.trim() })}
+                        </RouteLink>
+                    </p>
                 </div>
             ) : nothingInFavorites ? (
                 <div className="mt-8 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-14 text-center">

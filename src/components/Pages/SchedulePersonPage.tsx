@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronRight, ExternalLink, Heart, MonitorPlay, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, MonitorPlay, RefreshCw, SearchX } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -28,6 +28,7 @@ import { PAGE_PATHS } from '../../config/routes';
 import { SEO_SITE_URL } from '../../seo/defaults';
 import { breadcrumb, graph, webPage } from '../../seo/jsonld';
 import { toHtmlLang } from '../../i18n/i18n';
+import { ReportDialogProvider, useReportDialog } from '../../features/report/ReportDialogProvider';
 
 const RECENT_PREVIEW = 10;
 
@@ -49,6 +50,36 @@ function channelLinks(person: SchedulePerson): { platform: 'youtube' | 'twitch';
     return out;
 }
 
+function XLogo({ size = 15 }: { size?: number }) {
+    return (
+        <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="currentColor">
+            <path d="M18.9 2H22l-7.5 8.6L23.3 22h-6.9l-5.4-7-6.2 7H1.7l8-9.2L1.3 2h7l4.9 6.4L18.9 2Zm-1.2 18h1.9L7.4 3.9H5.4L17.7 20Z" />
+        </svg>
+    );
+}
+
+/** 投稿表單收的社群連結（網址在資料庫已正規化、限定網域） */
+function socialLinks(person: SchedulePerson): { key: 'x' | 'facebook' | 'instagram'; href: string; label: string }[] {
+    const p = person.profile ?? {};
+    const out: { key: 'x' | 'facebook' | 'instagram'; href: string; label: string }[] = [];
+    if (p.x) out.push({ key: 'x', href: p.x, label: 'X' });
+    if (p.facebook) out.push({ key: 'facebook', href: p.facebook, label: 'Facebook' });
+    if (p.instagram) out.push({ key: 'instagram', href: p.instagram, label: 'Instagram' });
+    return out;
+}
+
+function ReportPersonButton({ person }: { person: SchedulePerson }) {
+    const { t } = useTranslation('schedule');
+    const report = useReportDialog();
+    if (!report) return null;
+    return (
+        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => report.openReport({ kind: 'vtuber_info', vtuberId: person.id, name: person.channel.name })}>
+            <Flag size={14} aria-hidden="true" />
+            {t('report.button')}
+        </Button>
+    );
+}
+
 function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     const { t, i18n } = useTranslation('schedule');
     const inLanguage = toHtmlLang(i18n.language);
@@ -57,7 +88,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     const name = person.channel.name;
     const title = t('person.seo.title', { name });
     const description = t('person.seo.description', { name });
-    const sameAs = channelLinks(person).map((l) => l.href);
+    const sameAs = [...channelLinks(person).map((l) => l.href), ...socialLinks(person).map((l) => l.href)];
     // 只列有確切時間的場次；BroadcastEvent 讓搜尋引擎知道哪一場正在直播／何時開始
     const events = [...person.live, ...person.upcoming].slice(0, 10).map((s) => ({
         '@type': 'BroadcastEvent',
@@ -123,6 +154,7 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
                     {/* 企業勢子團：公司 · 子團 · 地區（公司與團名相同時只寫一次） */}
                     {[ch.agency && ch.agency !== ch.group ? ch.agency : null, ch.group, t(`nationality.${ch.nationality}`, { defaultValue: ch.nationality })].filter(Boolean).join(' · ')}
                 </p>
+                {person.profile?.bio && <p className="mt-2 max-w-[65ch] whitespace-pre-line break-words text-sm leading-relaxed text-foreground/90">{person.profile.bio}</p>}
                 {/* 合作藝人：不是正式所屬，另起一行 */}
                 {ch.collabs && ch.collabs.length > 0 && (
                     <p className="mt-0.5 text-sm text-muted-foreground">{t('person.collabs', { agencies: ch.collabs.join(t('person.listSeparator')) })}</p>
@@ -140,6 +172,20 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
                             {t(favorite ? 'favorite.saved' : 'favorite.save')}
                         </Button>
                     )}
+                    {socialLinks(person).map((l) => (
+                        <a
+                            key={l.key}
+                            href={l.href}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow ugc"
+                            aria-label={l.label}
+                            title={l.label}
+                            className="inline-grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            {l.key === 'x' ? <XLogo /> : l.key === 'facebook' ? <Facebook size={15} aria-hidden="true" /> : <Instagram size={15} aria-hidden="true" />}
+                        </a>
+                    ))}
+                    <ReportPersonButton person={person} />
                     {channelLinks(person).map((l) => (
                         <a
                             key={l.platform}
@@ -314,10 +360,10 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                 </nav>
 
                 {person ? (
-                    <>
+                    <ReportDialogProvider>
                         <PersonSeo person={person} slug={slug} />
                         <PersonBody person={person} />
-                    </>
+                    </ReportDialogProvider>
                 ) : person === null ? (
                     <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
                         <SEO noindex title={`${t('person.notFound.title')} - MultiStream Hub`} />

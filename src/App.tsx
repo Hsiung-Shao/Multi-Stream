@@ -49,6 +49,7 @@ const CreatorPage = lazyWithPreload(() => import('./components/Pages/CreatorPage
 const ComparisonPage = lazyWithPreload(() => import('./components/Pages/ComparisonPage').then(module => ({ 'default': module.ComparisonPage })));
 const SchedulePage = lazyWithPreload(() => import('./components/Pages/SchedulePage').then(module => ({ 'default': module.SchedulePage })));
 const SchedulePersonPage = lazyWithPreload(() => import('./components/Pages/SchedulePersonPage').then(module => ({ 'default': module.SchedulePersonPage })));
+const ScheduleSubmitPage = lazyWithPreload(() => import('./components/Pages/ScheduleSubmitPage').then(module => ({ 'default': module.ScheduleSubmitPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
 const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
@@ -66,6 +67,7 @@ const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> =
   creator: CreatorPage,
   compare: ComparisonPage,
   schedule: SchedulePage,
+  scheduleSubmit: ScheduleSubmitPage,
   canvas: CanvasPage,
   instructions: InstructionsPage,
   faq: FAQPage,
@@ -201,7 +203,7 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
     || isGuidePage(currentPage) || isSchedulePersonPage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
@@ -354,6 +356,27 @@ export default function App() {
             />
             <ChunkSuspense chunk={SchedulePage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <SchedulePage />
+            </ChunkSuspense>
+          </>
+        );
+      case 'scheduleSubmit':
+        return (
+          <>
+            <SEO
+              title={tx('seo:scheduleSubmit.title')}
+              description={tx('seo:scheduleSubmit.description')}
+              url={`${SEO_SITE_URL}${PAGE_PATHS.scheduleSubmit}`}
+              jsonLd={graph(
+                webPage({ type: 'WebPage', path: PAGE_PATHS.scheduleSubmit, name: tx('seo:scheduleSubmit.title'), description: tx('seo:scheduleSubmit.description'), inLanguage }),
+                breadcrumb([
+                  { name: 'MultiStream Hub', path: '/' },
+                  { name: tx('schedule:title'), path: PAGE_PATHS.schedule },
+                  { name: tx('schedule:contribute.title'), path: PAGE_PATHS.scheduleSubmit },
+                ]),
+              )}
+            />
+            <ChunkSuspense chunk={ScheduleSubmitPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <ScheduleSubmitPage />
             </ChunkSuspense>
           </>
         );

@@ -43,4 +43,6 @@ export default {
     'compare.description': '4 つのマルチ配信同時視聴ツールを比較：対応プラットフォーム、同時視聴数、レイアウト、複数チャット、共有リンク、モバイル対応、料金。',
     'schedule.title': '台湾 VTuber 配信スケジュール：今だれが配信中か、7 日間の配信予定 - MultiStream Hub',
     'schedule.description': '台湾 VTuber の YouTube 待機所と Twitch の配信中チャンネルをひとつのスケジュールに。今の配信と 7 日間の予定を確認し、ワンクリックで同時視聴できます。',
+    'scheduleSubmit.title': '配信スケジュールにVTuberを追加 - MultiStream Hub',
+    'scheduleSubmit.description': 'まだスケジュールにないVTuberを推薦：YouTubeチャンネルのURLを貼ると名前とアイコンが自動入力され、審査後に台湾VTuber配信スケジュールに掲載されます。',
 };

@@ -5,7 +5,7 @@
 // SEO（CollectionPage + Breadcrumb）由 App.tsx 統一處理。設計脈絡見 PRODUCT.md。
 
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, RefreshCw, AlertTriangle } from 'lucide-react';
+import { ChevronRight, RefreshCw, AlertTriangle, UserPlus } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -14,6 +14,7 @@ import { Skeleton } from '../ui/skeleton';
 import { useScheduleSnapshot } from '../../features/schedule/useScheduleSnapshot';
 import { ScheduleBoard } from '../../features/schedule/ScheduleBoard';
 import { formatRelative } from '../../features/schedule/formatTime';
+import { ReportDialogProvider } from '../../features/report/ReportDialogProvider';
 
 function LoadingState({ label }: { label: string }) {
     return (
@@ -63,11 +64,20 @@ export function SchedulePage() {
                 <header className="pb-5 pt-4">
                     <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-[2.125rem]">{t('hero.title')}</h1>
                     <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground [text-wrap:pretty]">{t('hero.subtitle')}</p>
-                    {snapshot && (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                            {t('state.updatedAt', { time: formatRelative(snapshot.generated_at, Date.now(), locale) })}
-                        </p>
-                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
+                        {snapshot && (
+                            <p className="text-xs text-muted-foreground">
+                                {t('state.updatedAt', { time: formatRelative(snapshot.generated_at, Date.now(), locale) })}
+                            </p>
+                        )}
+                        <RouteLink
+                            to="scheduleSubmit"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[13px] font-medium transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <UserPlus size={14} aria-hidden="true" />
+                            {t('contribute.entry')}
+                        </RouteLink>
+                    </div>
                 </header>
 
                 {snapshot && query.isError && (
@@ -82,7 +92,9 @@ export function SchedulePage() {
                 )}
 
                 {snapshot ? (
-                    <ScheduleBoard snapshot={snapshot} />
+                    <ReportDialogProvider>
+                        <ScheduleBoard snapshot={snapshot} />
+                    </ReportDialogProvider>
                 ) : query.isError ? (
                     <div role="alert" className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
                         <AlertTriangle className="text-amber-500" aria-hidden="true" />

@@ -17,9 +17,18 @@ export const PERSON_UPCOMING_DAYS = 7;
 const ACTIVE_LIMIT = 100;
 const RECENT_LIMIT = 200;
 
+/** 投稿表單收的個人資料（vtubers.bio／x_url／facebook_url／instagram_url；資料庫網址已正規化並以 CHECK 限定網域） */
+export interface PersonProfile {
+    bio?: string;
+    x?: string;
+    facebook?: string;
+    instagram?: string;
+}
+
 export interface SchedulePerson {
     id: string;
     channel: ScheduleChannel;
+    profile: PersonProfile;
     /** 近 90 天有開台或有排程：可索引（sitemap／robots 同一個欄位） */
     indexable: boolean;
     live: ScheduleStream[];
@@ -43,6 +52,10 @@ interface VtuberRow {
     twitch_channel_id: string | null;
     slug: string;
     schedule_indexable: boolean;
+    bio?: string | null;
+    x_url?: string | null;
+    facebook_url?: string | null;
+    instagram_url?: string | null;
     vtuber_groups: { name: string; kind?: string; parent?: { name: string; kind: string } | null } | null;
 }
 
@@ -142,15 +155,27 @@ async function fetchCollabAgencies(cfg: RestConfig, vtuberId: string, today: str
 export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): Promise<SchedulePerson | null> {
     if (!SCHEDULE_SLUG_RE.test(slug)) return null;
     const cfg = await resolveRestConfig(opts);
-    const vtuberCols = 'id,name,img_url,nationality,youtube_channel_id,twitch_channel_id,slug,schedule_indexable';
+    const baseCols = 'id,name,img_url,nationality,youtube_channel_id,twitch_channel_id,slug,schedule_indexable';
+    const profileCols = 'bio,x_url,facebook_url,instagram_url';
     const bySlug = `&slug=eq.${encodeURIComponent(slug)}&limit=1`;
-    let vtubers: VtuberRow[];
-    try {
-        vtubers = await restGet<VtuberRow[]>(cfg, `vtubers?select=${encodeURIComponent(`${vtuberCols},vtuber_groups(name,kind,parent:parent_id(name,kind))`)}${bySlug}`, opts);
-    } catch (e) {
-        // vtuber_groups 的 kind／parent_id 還沒上線（migration 未套）時 PostgREST 回 400：退回只查團名
-        if (!(e instanceof SnapshotError && e.message.includes('HTTP 400'))) throw e;
-        vtubers = await restGet<VtuberRow[]>(cfg, `vtubers?select=${encodeURIComponent(`${vtuberCols},vtuber_groups(name)`)}${bySlug}`, opts);
+    const is400 = (e: unknown) => e instanceof SnapshotError && e.message.includes('HTTP 400');
+    // vtubers 到 vtuber_groups 有三條關聯（group_id、former_group_id、vtuber_group_links），
+    // 不指名外鍵時 PostgREST 回 300（PGRST201），所以一律寫明 group_id 那條
+    const grp = 'vtuber_groups!vtubers_group_id_fkey';
+    // 新欄位逐步退回：資料庫還沒套對應 migration 時 PostgREST 回 400
+    //   1. 個人資料＋團體 kind／parent  2. 不含個人資料（20261001110000 未套）  3. 只有團名（團體分類未套）
+    const attempts = [
+        `${baseCols},${profileCols},${grp}(name,kind,parent:parent_id(name,kind))`,
+        `${baseCols},${grp}(name,kind,parent:parent_id(name,kind))`,
+        `${baseCols},${grp}(name)`,
+    ];
+    let vtubers: VtuberRow[] | null = null;
+    for (let i = 0; vtubers === null; i++) {
+        try {
+            vtubers = await restGet<VtuberRow[]>(cfg, `vtubers?select=${encodeURIComponent(attempts[i])}${bySlug}`, opts);
+        } catch (e) {
+            if (!is400(e) || i === attempts.length - 1) throw e;
+        }
     }
     const v = vtubers[0];
     if (!v) return null;
@@ -177,5 +202,11 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     if (v.youtube_channel_id) channel.youtube = v.youtube_channel_id;
     if (v.twitch_channel_id) channel.twitch = v.twitch_channel_id;
 
-    return { id: v.id, channel, indexable: v.schedule_indexable, ...splitPersonStreams(v.id, rows, now) };
+    const profile: PersonProfile = {};
+    if (v.bio?.trim()) profile.bio = v.bio.trim();
+    if (v.x_url) profile.x = v.x_url;
+    if (v.facebook_url) profile.facebook = v.facebook_url;
+    if (v.instagram_url) profile.instagram = v.instagram_url;
+
+    return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...splitPersonStreams(v.id, rows, now) };
 }

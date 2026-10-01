@@ -44,4 +44,6 @@ export default {
     'compare.description': 'Compare four multi-stream viewers on platforms, stream limits, layouts, multi-chat, share links, mobile support and price.',
     'schedule.title': 'Taiwanese VTuber Stream Schedule: Who Is Live and Who Streams Next - MultiStream Hub',
     'schedule.description': 'Taiwanese VTuber YouTube waiting rooms and live Twitch channels in one schedule: see who is live now and the next 7 days, then watch several together in one click.',
+    'scheduleSubmit.title': 'Add a VTuber to the Stream Schedule - MultiStream Hub',
+    'scheduleSubmit.description': 'Suggest a VTuber who is not on the schedule yet: paste a YouTube channel link, the name and avatar fill in automatically, and after review they join the Taiwanese VTuber stream schedule.',
 };

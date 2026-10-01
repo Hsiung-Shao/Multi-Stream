@@ -6,13 +6,14 @@
 import { useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, RefreshCw } from 'lucide-react';
+import { ChevronDown, RefreshCw, Flag } from 'lucide-react';
 import { cn } from '../../components/ui/utils';
 import { Skeleton } from '../../components/ui/skeleton';
 import { RouteLink } from '../../components/Navigation/RouteLink';
 import { schedulePersonPage } from '../../config/schedulePerson';
 import { useAgencyRoster } from './useAgencyRoster';
 import type { RosterMember, RosterSection } from './rosterSource';
+import { useReportDialog } from '../report/ReportDialogProvider';
 
 const COLLAPSE_KEY = 'schedule-roster-collapsed';
 
@@ -159,6 +160,7 @@ export function AgencyRoster({ agency, liveIds }: { agency: string; liveIds: Rea
     const query = useAgencyRoster(agency);
     const [collapsed, setCollapsed] = useState(readCollapsed);
     const roster = query.data;
+    const report = useReportDialog();
     const liveCount = roster
         ? [...roster.sections.flatMap((s) => s.members).filter((m) => m.activity !== 'graduate'), ...roster.collaborators.filter((m) => m.collab === 'active')].filter((m) =>
               liveIds.has(m.id),
@@ -177,7 +179,8 @@ export function AgencyRoster({ agency, liveIds }: { agency: string; liveIds: Rea
 
     return (
         <section aria-labelledby="sch-roster" className="mt-4 rounded-2xl border border-border bg-foreground/[0.02] px-2 py-2 sm:px-3">
-            <h2 id="sch-roster" className="px-1">
+            <div className="flex items-start gap-1">
+            <h2 id="sch-roster" className="min-w-0 flex-1 px-1">
                 <button
                     type="button"
                     onClick={toggle}
@@ -196,6 +199,17 @@ export function AgencyRoster({ agency, liveIds }: { agency: string; liveIds: Rea
                     <ChevronDown size={16} aria-hidden="true" className={cn('ml-auto text-muted-foreground transition-transform duration-200', !collapsed && 'rotate-180')} />
                 </button>
             </h2>
+            {report && roster?.groupId && (
+                <button
+                    type="button"
+                    onClick={() => report.openReport({ kind: 'roster', groupId: roster.groupId!, groupName: agency })}
+                    className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <Flag size={12} aria-hidden="true" />
+                    {t('report.rosterButton')}
+                </button>
+            )}
+            </div>
 
             {!collapsed && (
                 <div className="mt-1 space-y-3">

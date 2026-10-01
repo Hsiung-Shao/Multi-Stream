@@ -30,6 +30,8 @@ export interface RosterSection {
 
 export interface AgencyRoster {
     agency: string;
+    /** 公司（最上層團體）的 id：回報名冊錯誤時當對象；測試資料沒有時為 null */
+    groupId: string | null;
     sections: RosterSection[];
     activeCount: number;
     graduatedCount: number;
@@ -138,6 +140,7 @@ export function buildRoster(
     collaborators.sort((a, b) => Number(a.collab === 'past') - Number(b.collab === 'past') || a.name.localeCompare(b.name));
     return {
         agency,
+        groupId: top?.id ?? null,
         sections,
         activeCount: all.filter((m) => m.activity !== 'graduate').length,
         graduatedCount: all.filter((m) => m.activity === 'graduate').length,

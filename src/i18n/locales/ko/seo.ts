@@ -43,4 +43,6 @@ export default {
     'compare.description': '멀티 스트리밍 동시 시청 도구 4종 비교: 지원 플랫폼, 동시 시청 수, 레이아웃, 다중 채팅, 공유 링크, 모바일 지원, 가격.',
     'schedule.title': '대만 VTuber 방송 스케줄: 지금 누가 방송 중이고 7일 동안 누가 방송하나 - MultiStream Hub',
     'schedule.description': '대만 VTuber의 YouTube 대기실과 Twitch 방송 채널을 하나의 스케줄로. 지금 방송과 7일간의 예정을 보고 한 번에 함께 시청하세요.',
+    'scheduleSubmit.title': '방송 일정표에 VTuber 추가 - MultiStream Hub',
+    'scheduleSubmit.description': '아직 일정표에 없는 VTuber를 추천하세요. YouTube 채널 링크를 붙여 넣으면 이름과 프로필 사진이 자동으로 입력되고, 검토 후 대만 VTuber 방송 일정표에 추가됩니다.',
 };

@@ -43,4 +43,6 @@ export default {
     'compare.description': '四款多直播同时观看工具比较：支持平台、同时路数、布局、多聊天室、分享链接、手机版与价格，帮你挑最合适的。',
     'schedule.title': '台湾 VTuber 开播周表：谁正在直播、接下来 7 天谁会开播 - MultiStream Hub',
     'schedule.description': '整理台湾 VTuber 的 YouTube 待机室与 Twitch 直播中频道，看谁正在开播、未来 7 天的开播时间，勾选几位一键同时观看。',
+    'scheduleSubmit.title': '添加 VTuber 到开播周表 - MultiStream Hub',
+    'scheduleSubmit.description': '推荐还不在周表上的 VTuber：粘贴 YouTube 频道网址，自动带入名称与头像，审核通过后加入台湾 VTuber 开播周表。',
 };

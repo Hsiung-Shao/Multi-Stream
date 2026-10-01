@@ -10,13 +10,14 @@
 
 import { createContext, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, ExternalLink, Heart, Loader2 } from 'lucide-react';
+import { Check, ExternalLink, Flag, Heart, Loader2 } from 'lucide-react';
 import { cn } from '../../components/ui/utils';
 import { RouteLink } from '../../components/Navigation/RouteLink';
 import { schedulePersonPage } from '../../config/schedulePerson';
 import { formatClock, formatRelative } from './formatTime';
 import { streamKey, type ScheduleChannel, type ScheduleStream } from './types';
 import { thumbnailUrl, watchUrl } from './streamLinks';
+import { useReportDialog } from '../report/ReportDialogProvider';
 
 /** 卡片上的動作：由 ScheduleBoard／個人頁提供（useWatchOnCanvas＋useFavoriteChannel） */
 export interface ScheduleCardActions {
@@ -236,6 +237,32 @@ function OriginalLink({ href, platformLabel, className }: { href: string | null;
     );
 }
 
+/** 回報這場直播（時間不對、已取消、重複）；頁面沒有 ReportDialogProvider 時不顯示 */
+function ReportStreamButton({ stream, className }: { stream: ScheduleStream; className?: string }) {
+    const { t } = useTranslation('schedule');
+    const report = useReportDialog();
+    if (!report) return null;
+    const label = t('report.streamButton');
+    return (
+        <button
+            type="button"
+            aria-label={label}
+            title={label}
+            onClick={(e) => {
+                e.stopPropagation();
+                report.openReport({ kind: 'stream', vtuberId: stream.vtuber_id, platform: stream.platform, externalId: stream.external_id, title: stream.title });
+            }}
+            className={cn(
+                'relative z-10 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground/70 transition-colors duration-150',
+                'hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                className,
+            )}
+        >
+            <Flag size={13} aria-hidden="true" />
+        </button>
+    );
+}
+
 export function LiveTile({ stream, channel, now, selected, onToggle, personLinks = true }: SelectableProps) {
     const { t, i18n } = useTranslation('schedule');
     const actions = useCardActions();
@@ -305,6 +332,7 @@ export function LiveTile({ stream, channel, now, selected, onToggle, personLinks
                     <div className="-mr-1 flex shrink-0 flex-col items-center">
                         <FavoriteButton channel={channel} />
                         <OriginalLink href={href} platformLabel={platformLabel} />
+                        <ReportStreamButton stream={stream} />
                     </div>
                 )}
             </div>
@@ -398,6 +426,7 @@ export function SlotRow({ stream, channel, now, selected, onToggle, personLinks 
                     {personLinks && <FavoriteButton channel={channel} size="sm" />}
                     {/* 手機列寬有限，原平台圖示收起（直播中卡片與個人頁頭部仍有） */}
                     <OriginalLink href={href} platformLabel={platformLabel} className="hidden sm:grid" />
+                    <ReportStreamButton stream={stream} className="hidden sm:grid" />
                 </span>
             )}
         </li>

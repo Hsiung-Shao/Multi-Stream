@@ -146,6 +146,10 @@ export const ROUTE_META = {
         'zh-TW': { title: '台灣 VTuber 開台週表：誰正在直播、接下來 7 天誰會開台 - MultiStream Hub', description: '整理台灣 VTuber 的 YouTube 待機室與 Twitch 直播中頻道，看誰正在開台、未來 7 天的開台時間，勾選幾位一鍵同時觀看。' },
         en: { title: 'Taiwanese VTuber Stream Schedule: Who Is Live and Who Streams Next - MultiStream Hub', description: 'Taiwanese VTuber YouTube waiting rooms and live Twitch channels in one schedule: see who is live now and the next 7 days, then watch several together in one click.' },
     },
+    '/schedule/submit': {
+        'zh-TW': { title: '新增 VTuber 到開台週表 - MultiStream Hub', description: '推薦還沒在週表上的 VTuber：貼上 YouTube 頻道網址，自動帶入名稱與頭像，審核通過後加進台灣 VTuber 開台週表。' },
+        en: { title: 'Add a VTuber to the Stream Schedule - MultiStream Hub', description: 'Suggest a VTuber who is not on the schedule yet: paste a YouTube channel link, the name and avatar fill in automatically, and after review they join the Taiwanese VTuber stream schedule.' },
+    },
     '/admin': {
         noindex: true,
         'zh-TW': { title: 'Admin - MultiStream Hub', description: '' },

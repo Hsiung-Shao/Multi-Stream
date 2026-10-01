@@ -12,7 +12,7 @@ interface ModalState {
 }
 
 // 'instructions:<slug>' 為教學文章頁（見 src/config/guides.ts），slug 內嵌在 page 字串
-export type PageType = 'home' | 'about' | 'creator' | 'compare' | 'schedule' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'support' | 'admin' | 'not-found' | GuidePage | SchedulePersonPage;
+export type PageType = 'home' | 'about' | 'creator' | 'compare' | 'schedule' | 'scheduleSubmit' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'support' | 'admin' | 'not-found' | GuidePage | SchedulePersonPage;
 
 interface UIState {
     theme: 'light' | 'dark' | 'system';
