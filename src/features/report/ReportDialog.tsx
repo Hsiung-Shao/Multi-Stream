@@ -13,8 +13,10 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
+import { ScrollArea } from '../../components/ui/scroll-area';
 import { TurnstileWidget, type TurnstileHandle } from '../../components/turnstile/TurnstileWidget';
 import { REPORT_REASONS, submitReport, SubmitError, type ReportInput } from '../contribute/api';
+import { isHttpUrl } from '../contribute/urlValidation';
 import type { ReportTarget } from './reportTarget';
 
 interface FormValues {
@@ -80,12 +82,17 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
 
     return (
         <Dialog open onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>{titleOf(target, t)}</DialogTitle>
-                    {target.kind === 'stream' && target.title && <DialogDescription className="line-clamp-2">{target.title}</DialogDescription>}
+                    <DialogDescription>
+                        {target.kind === 'stream' && target.title && <span className="mb-1 line-clamp-2 block text-foreground/80">{target.title}</span>}
+                        {t('report.dialogHint')}
+                    </DialogDescription>
                 </DialogHeader>
-                <form id="report-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+                {/* 內容較長時只捲動表單本體，標題與按鈕固定 */}
+                <ScrollArea className="-mx-6 [&>[data-radix-scroll-area-viewport]]:max-h-[60vh]">
+                <form id="report-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4 px-6">
                     <fieldset>
                         <legend className="mb-2 text-sm font-medium">{t('report.reasonsLabel')}</legend>
                         <Controller
@@ -120,26 +127,46 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
                         <Textarea
                             id="report-desc"
                             rows={3}
+                            maxLength={1000}
                             placeholder={t('report.descriptionPlaceholder')}
                             aria-invalid={!!errors.description}
+                            aria-describedby={errors.description ? 'report-desc-err' : undefined}
                             {...register('description', {
                                 maxLength: { value: 1000, message: t('contribute.tooLong', { max: 1000 }) },
                                 validate: (v) => !chosen.includes('other') || !!v.trim() || t('report.descriptionRequired'),
                             })}
                         />
-                        {errors.description && <p role="alert" className="text-xs text-destructive">{errors.description.message}</p>}
+                        {errors.description && <p id="report-desc-err" role="alert" className="text-xs text-destructive">{errors.description.message}</p>}
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="report-source">{t('report.source')}</Label>
-                        <Input id="report-source" inputMode="url" placeholder="https://" {...register('source', { maxLength: 2048 })} />
+                        <Input
+                            id="report-source"
+                            inputMode="url"
+                            maxLength={2048}
+                            placeholder="https://"
+                            aria-invalid={!!errors.source}
+                            aria-describedby={errors.source ? 'report-source-err' : undefined}
+                            {...register('source', { validate: (v) => !v.trim() || isHttpUrl(v) || t('contribute.error.invalid_source_urls') })}
+                        />
+                        {errors.source && <p id="report-source-err" role="alert" className="text-xs text-destructive">{errors.source.message}</p>}
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="report-contact">{t('report.contact')}</Label>
-                        <Input id="report-contact" autoComplete="email" {...register('contact', { maxLength: 200 })} />
+                        <Input
+                            id="report-contact"
+                            autoComplete="email"
+                            maxLength={200}
+                            aria-invalid={!!errors.contact}
+                            aria-describedby={errors.contact ? 'report-contact-err' : undefined}
+                            {...register('contact', { maxLength: { value: 200, message: t('contribute.tooLong', { max: 200 }) } })}
+                        />
+                        {errors.contact && <p id="report-contact-err" role="alert" className="text-xs text-destructive">{errors.contact.message}</p>}
                     </div>
                     <TurnstileWidget ref={turnstile} onToken={setToken} />
                     {serverError && <p role="alert" className="text-sm text-destructive">{serverError}</p>}
                 </form>
+                </ScrollArea>
                 <DialogFooter>
                     <Button type="button" variant="ghost" onClick={onClose}>
                         {t('report.cancel')}

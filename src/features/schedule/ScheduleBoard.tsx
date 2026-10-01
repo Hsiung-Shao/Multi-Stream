@@ -192,7 +192,10 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                         {t('search.notListed')}{' '}
                         <RouteLink
                             to="scheduleSubmit"
-                            onClick={() => setContributePrefill(deferredQuery)}
+                            onClick={(e) => {
+                                // 只有一般左鍵（同分頁）才會被下一頁讀走；新分頁／新視窗不存，免得之後打開投稿頁被舊字預填
+                                if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) setContributePrefill(deferredQuery);
+                            }}
                             className="font-medium text-foreground underline underline-offset-4 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             {t('search.addVtuber', { query: deferredQuery.trim() })}

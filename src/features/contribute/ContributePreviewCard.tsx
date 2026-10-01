@@ -61,10 +61,11 @@ export function ContributePreviewCard({ data }: { data: PreviewData }) {
                     </div>
                 </div>
                 {data.bio && <p className="mt-4 whitespace-pre-line break-words text-sm leading-relaxed text-foreground/90">{data.bio}</p>}
-                <ul className="mt-4 flex gap-2" aria-label="links">
+                <ul className="mt-4 flex gap-2" aria-label={t('contribute.previewLinks')}>
                     {icons.map(({ on, label, Icon }) => (
                         <li key={label} title={label} className={`inline-flex size-8 items-center justify-center rounded-full border border-border ${on ? 'text-foreground' : 'text-muted-foreground/40'}`}>
                             <Icon className="size-4" />
+                            <span className="sr-only">{t(on ? 'contribute.previewLinkOn' : 'contribute.previewLinkOff', { name: label })}</span>
                         </li>
                     ))}
                 </ul>

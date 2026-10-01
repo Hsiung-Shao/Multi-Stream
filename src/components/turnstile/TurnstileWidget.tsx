@@ -2,8 +2,10 @@
 // 不用第三方套件：表單出現時才載入官方 api.js（render=explicit），渲染一個 widget；
 // token 只能用一次、300 秒過期，所以送出後（不論成敗）由父層呼叫 reset。
 // 伺服器端沒強制（enforced=false：本地、尚未設定）時不顯示 widget，onToken('') 讓表單可送出。
+// 失敗分兩種：腳本被擋（blocked，多半是廣告阻擋器）與設定或驗證出錯（error，可能只是暫時的）；兩者都能按「重試」。
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Button } from '../ui/button';
 import { useTranslation } from 'react-i18next';
 import { fetchTurnstileConfig } from '../../features/contribute/api';
 
@@ -31,7 +33,10 @@ function loadTurnstile(): Promise<TurnstileApi> {
             s.src = SCRIPT_SRC;
             s.async = true;
             s.onload = () => (window.turnstile ? resolve(window.turnstile) : reject(new Error('turnstile_missing')));
-            s.onerror = () => reject(new Error('turnstile_blocked'));
+            s.onerror = () => {
+                s.remove(); // 重試時重新插入
+                reject(new Error('turnstile_blocked'));
+            };
             document.head.appendChild(s);
         }).catch((e) => {
             scriptPromise = null; // 下次再試（例如使用者關掉阻擋器後）
@@ -51,7 +56,7 @@ interface Props {
     className?: string;
 }
 
-type Status = 'loading' | 'ready' | 'blocked' | 'expired' | 'off';
+type Status = 'loading' | 'ready' | 'blocked' | 'error' | 'expired' | 'off';
 
 export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function TurnstileWidget({ onToken, className }, ref) {
     const { t, i18n } = useTranslation('schedule');
@@ -61,6 +66,8 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function Turns
     const onTokenRef = useRef(onToken);
     onTokenRef.current = onToken;
     const [status, setStatus] = useState<Status>('loading');
+    // 遞增就重跑初始化（設定或腳本載入失敗後重試）
+    const [attempt, setAttempt] = useState(0);
 
     useImperativeHandle(ref, () => ({
         reset: () => {
@@ -73,10 +80,17 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function Turns
 
     useEffect(() => {
         let cancelled = false;
+        setStatus('loading');
         (async () => {
+            let cfg;
             try {
-                const cfg = await fetchTurnstileConfig();
-                if (cancelled) return;
+                cfg = await fetchTurnstileConfig();
+            } catch {
+                if (!cancelled) setStatus('error');
+                return;
+            }
+            if (cancelled) return;
+            try {
                 if (!cfg.enforced || !cfg.siteKey) {
                     setStatus('off');
                     onTokenRef.current('');
@@ -98,6 +112,7 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function Turns
                         onTokenRef.current(null);
                     },
                     'error-callback': () => {
+                        setStatus('error');
                         onTokenRef.current(null);
                     },
                 });
@@ -111,8 +126,19 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function Turns
             if (api.current && widgetId.current) api.current.remove(widgetId.current);
             widgetId.current = null;
         };
-        // 只在掛載時初始化；語言切換不重建 widget
+        // 只在掛載與重試時初始化；語言切換不重建 widget
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [attempt]);
+
+    const retry = useCallback(() => {
+        onTokenRef.current(null);
+        if (api.current && widgetId.current) {
+            // widget 已在：只要重新挑戰
+            setStatus('loading');
+            api.current.reset(widgetId.current);
+        } else {
+            setAttempt((n) => n + 1);
+        }
     }, []);
 
     if (status === 'off') return null;
@@ -120,7 +146,14 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function Turns
         <div className={className}>
             <div ref={holder} />
             {status === 'loading' && <p className="text-xs text-muted-foreground">{t('turnstile.loading')}</p>}
-            {status === 'blocked' && <p role="alert" className="text-xs text-amber-600 dark:text-amber-400">{t('turnstile.blocked')}</p>}
+            {(status === 'blocked' || status === 'error') && (
+                <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                    <span>{t(status === 'blocked' ? 'turnstile.blocked' : 'turnstile.error')}</span>
+                    <Button type="button" variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={retry}>
+                        {t('turnstile.retry')}
+                    </Button>
+                </div>
+            )}
             {status === 'expired' && <p className="text-xs text-muted-foreground">{t('turnstile.expired')}</p>}
         </div>
     );

@@ -238,16 +238,17 @@ function OriginalLink({ href, platformLabel, className }: { href: string | null;
 }
 
 /** 回報這場直播（時間不對、已取消、重複）；頁面沒有 ReportDialogProvider 時不顯示 */
-function ReportStreamButton({ stream, className }: { stream: ScheduleStream; className?: string }) {
+function ReportStreamButton({ stream, name, className }: { stream: ScheduleStream; name: string; className?: string }) {
     const { t } = useTranslation('schedule');
     const report = useReportDialog();
     if (!report) return null;
-    const label = t('report.streamButton');
+    // 一頁有很多張卡：螢幕閱讀器要聽得出是哪一場
+    const label = t('report.streamButtonFor', { name });
     return (
         <button
             type="button"
             aria-label={label}
-            title={label}
+            title={t('report.streamButton')}
             onClick={(e) => {
                 e.stopPropagation();
                 report.openReport({ kind: 'stream', vtuberId: stream.vtuber_id, platform: stream.platform, externalId: stream.external_id, title: stream.title });
@@ -332,7 +333,7 @@ export function LiveTile({ stream, channel, now, selected, onToggle, personLinks
                     <div className="-mr-1 flex shrink-0 flex-col items-center">
                         <FavoriteButton channel={channel} />
                         <OriginalLink href={href} platformLabel={platformLabel} />
-                        <ReportStreamButton stream={stream} />
+                        <ReportStreamButton stream={stream} name={name} />
                     </div>
                 )}
             </div>
@@ -426,7 +427,7 @@ export function SlotRow({ stream, channel, now, selected, onToggle, personLinks 
                     {personLinks && <FavoriteButton channel={channel} size="sm" />}
                     {/* 手機列寬有限，原平台圖示收起（直播中卡片與個人頁頭部仍有） */}
                     <OriginalLink href={href} platformLabel={platformLabel} className="hidden sm:grid" />
-                    <ReportStreamButton stream={stream} className="hidden sm:grid" />
+                    <ReportStreamButton stream={stream} name={name} className="hidden sm:grid" />
                 </span>
             )}
         </li>

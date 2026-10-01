@@ -9,7 +9,6 @@ import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
 import { ContributeForm } from '../../features/contribute/ContributeForm';
-import { useScheduleSnapshot } from '../../features/schedule/useScheduleSnapshot';
 import { consumeContributePrefill } from '../../features/contribute/prefill';
 
 export function ScheduleSubmitPage() {
@@ -19,8 +18,6 @@ export function ScheduleSubmitPage() {
     useEffect(() => {
         setInitialName(consumeContributePrefill() ?? (new URLSearchParams(window.location.search).get('name') || '').trim().slice(0, 100));
     }, []);
-    // 公司名稱的輸入建議：沿用週表 snapshot 的公司清單（已快取就不重抓）
-    const agencies = useScheduleSnapshot().data?.agencies ?? [];
 
     return (
         <div className="relative min-h-screen bg-background text-foreground">
@@ -42,7 +39,7 @@ export function ScheduleSubmitPage() {
                 </header>
 
                 {/* initialName 讀到之前（預渲染、hydrate 的第一個畫面）先用空白表單；key 讓預填值在讀到後套用一次 */}
-                <ContributeForm key={initialName ?? ''} initialName={initialName ?? ''} agencies={agencies} />
+                <ContributeForm key={initialName ?? ''} initialName={initialName ?? ''} />
 
                 <SiteFooter analyticsCategory="ScheduleSubmitPage" />
             </main>
