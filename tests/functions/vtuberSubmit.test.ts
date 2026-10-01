@@ -363,6 +363,9 @@ describe('後台 API', () => {
         expect(validateOverrides({ nationality: 'US' }).error).toBe('invalid_nationality');
         expect(validateOverrides({ group_id: 'nope' }).error).toBe('invalid_group');
         expect(validateOverrides({ unknown: 1, bio: ' 簡介 ' }).value).toEqual({ bio: '簡介' });
+        expect(validateOverrides({ group_name: ' 某公司 ', affiliation_type: 'agency' }).value).toEqual({ group_name: '某公司', affiliation_type: 'agency' });
+        expect(validateOverrides({ group_name: 'x'.repeat(101) }).error).toBe('invalid_group');
+        expect(validateOverrides({ affiliation_type: 'vtuber' }).error).toBe('invalid_group');
     });
 
     it('駁回只改待審的；回報狀態更新寫入 resolved_at', async () => {

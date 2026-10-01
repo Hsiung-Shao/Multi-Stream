@@ -140,6 +140,12 @@ export function validateOverrides(raw) {
         if (!['personal', 'agency', 'circle'].includes(raw.affiliation_type)) return { error: 'invalid_group' };
         out.affiliation_type = raw.affiliation_type;
     }
+    if ('group_name' in raw) {
+        // 審核者改寫的團體名稱：核准函式只自動對到名稱相同的既有團體（對不到 group_unresolved）
+        const name = text(raw.group_name);
+        if (name.length > LIMITS.groupName) return { error: 'invalid_group' };
+        out.group_name = name;
+    }
     if ('group_id' in raw) {
         if (raw.group_id !== null && raw.group_id !== '' && !isUuid(raw.group_id)) return { error: 'invalid_group' };
         out.group_id = raw.group_id || '';

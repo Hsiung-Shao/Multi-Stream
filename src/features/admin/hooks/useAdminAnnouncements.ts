@@ -62,7 +62,7 @@ export interface AnnouncementResponsesPayload {
 
 // ---------- 共用 fetch helper ----------
 
-class ApiError extends Error {
+export class ApiError extends Error {
     constructor(public status: number, public payload: any) {
         super(payload?.error || `HTTP ${status}`);
         this.name = 'ApiError';
@@ -106,7 +106,8 @@ function getAuthHeader(): Record<string, string> {
     return token ? { 'X-Admin-Token': token } : {};
 }
 
-async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** 後台 API 共用（X-Admin-Token、15 秒逾時）；投稿審核與資料回報分頁也用這支 */
+export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     const auth = getAuthHeader();
     const controller = new AbortController();
     const abortTimer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
