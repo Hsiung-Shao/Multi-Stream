@@ -40,7 +40,7 @@ export interface StreamRecord extends StreamRow {
 }
 
 export interface RunStats extends Record<string, unknown> {
-  job: 'heavy' | 'light';
+  job: 'heavy' | 'light' | 'live';
   started_at: string;
   finished_at: string;
   duration_ms: number;
@@ -80,6 +80,8 @@ export interface RunStats extends Record<string, unknown> {
   /** Heavy：本輪游標起點與前進數（判斷「新的一圈」用，見 schedule-heavy） */
   cursor_start?: number;
   cursor_advance?: number;
+  /** 這一輪是否是新一圈的開頭（isLapStart；下一輪判斷要用） */
+  new_lap?: boolean;
   streams_upserted: number;
   streams_hidden: number;
   streams_expired: number;
@@ -103,7 +105,7 @@ export interface RunStats extends Record<string, unknown> {
   errors: string[];
 }
 
-export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats {
+export function emptyStats(job: 'heavy' | 'light' | 'live', startedAt: number): RunStats {
   return {
     job,
     started_at: new Date(startedAt).toISOString(),

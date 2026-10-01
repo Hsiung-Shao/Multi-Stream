@@ -2,7 +2,8 @@
 //
 // 用法（先 `supabase functions serve --env-file supabase/functions/.env --no-verify-jwt`）：
 //   node scripts/local/run-schedule.mjs heavy-loop          # Heavy 呼叫到游標繞回 0（一次全量）
-//   node scripts/local/run-schedule.mjs light 3             # Light 跑 3 輪
+//   node scripts/local/run-schedule.mjs light 3             # Light 跑 3 輪（RSS、Twitch）
+//   node scripts/local/run-schedule.mjs live 3              # Live 跑 3 輪（YouTube 直播狀態 live-og）
 //   node scripts/local/run-schedule.mjs heavy 1 shard_size=400
 // 輸出：scripts/local/reports/<timestamp>-<mode>.json（已 gitignore 的目錄外；報告不含金鑰）
 
@@ -53,7 +54,7 @@ async function shard(job) {
 }
 
 const runs = [];
-const fn = mode.startsWith('heavy') ? 'schedule-heavy' : 'schedule-light';
+const fn = mode.startsWith('heavy') ? 'schedule-heavy' : mode === 'live' ? 'schedule-live' : 'schedule-light';
 if (mode === 'heavy-loop') {
   // 游標繞回（變小或歸零）就是一圈；總數不一定被 shard_size 整除，所以不能只看 === 0
   let prev = (await shard('schedule_heavy_rss')).cursor_position;

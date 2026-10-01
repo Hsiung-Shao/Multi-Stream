@@ -37,7 +37,7 @@ import {
 } from '../_shared/sweep.ts';
 import { loadShard, runJob, saveShard } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
-import { RSS_FAIL_STREAK_DEAD } from '../_shared/rules.ts';
+import { isLapStart, RSS_FAIL_STREAK_DEAD } from '../_shared/rules.ts';
 
 const JOB = 'schedule_heavy_rss';
 const TWITCH_JOB = 'schedule_twitch';
@@ -57,18 +57,19 @@ Deno.serve((req) => {
     const concurrency = Number(params.get('concurrency')) || DEFAULT_CONCURRENCY;
     const deadline = { at: now + budgetMs };
 
-    // 1. 名冊；游標在 0（新的一圈）或 ?tiers=1 時重算分級
+    // 1. 名冊；新的一圈或 ?tiers=1 時重算分級
     const roster = await loadRoster(db, 'youtube');
     roster.sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
     stats.channels_total = roster.length;
     const shard = await loadShard(db, JOB);
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
     const start = roster.length ? shard.cursor_position % roster.length : 0;
-    // 新的一圈＝游標轉回 0。上一輪也從 0 開始卻沒前進（RSS 限流、第一個頻道就失敗）是卡在 0，不是新一圈：
-    // 不重算分級、不復活死頻道、不重查待處理（否則限流時段每輪都重做，還會吃掉 API 每日額度）
+    // 新的一圈＝這一片跨過名冊開頭（isLapStart；游標繞回時通常不是 0）。上一輪已經是新一圈、這輪還在同一片
+    // （RSS 限流沒前進、或跨界那片只做了一部分）就不是：不重算分級、不復活死頻道、不重查待處理（否則每輪重做、吃掉 API 額度）
     const prev = shard.last_run_stats;
-    const newLap = start === 0 && !(prev?.cursor_start === 0 && prev?.cursor_advance === 0);
+    const newLap = isLapStart(start, shardSize, roster.length, prev);
     stats.cursor_start = start;
+    stats.new_lap = newLap;
     if (newLap || params.get('tiers') === '1') {
       // 死頻道每圈再試一次：streak 歸零，這一圈若還是失敗（非限流輪次）會再累積
       await db.update('schedule_channel_state', `rss_fail_streak=gte.${RSS_FAIL_STREAK_DEAD}`, { rss_fail_streak: 0 });
@@ -121,7 +122,8 @@ Deno.serve((req) => {
       const tShard = await loadShard(db, TWITCH_JOB);
       const tSize = Number(params.get('twitch_size')) || tShard.shard_size;
       const tStart = twitchRoster.length ? tShard.cursor_position % twitchRoster.length : 0;
-      if (tStart === 0) await cancelOrphanTwitchSchedule(db, new Set(twitchRoster.map((c) => c.channelId)), stats, now);
+      // 跨過名冊開頭的那一片清離開名冊的預告（游標繞回時通常不是 0；清除可重複執行，同一圈做兩次也無妨）
+      if (tStart === 0 || tStart + tSize > twitchRoster.length) await cancelOrphanTwitchSchedule(db, new Set(twitchRoster.map((c) => c.channelId)), stats, now);
       const tSlice = [...twitchRoster.slice(tStart), ...twitchRoster.slice(0, tStart)].slice(0, tSize);
       const tResult = await syncTwitchSchedule(db, ctx.twitch, tSlice, {
         concurrency: TWITCH_CONCURRENCY,

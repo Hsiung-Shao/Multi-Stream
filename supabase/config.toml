@@ -380,3 +380,14 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# 週表排程函式（20261002100000_schedule_cron.sql）：由 pg_cron＋pg_net 帶 x-schedule-secret 呼叫，
+# 閘道不驗 JWT，改由函式自己比對密鑰（supabase/functions/_shared/auth.ts）
+[functions.schedule-live]
+verify_jwt = false
+
+[functions.schedule-light]
+verify_jwt = false
+
+[functions.schedule-heavy]
+verify_jwt = false

@@ -25,7 +25,7 @@ interface ShardRow {
   shard_size: number;
   total_items: number | null;
   last_run_at: string | null;
-  last_run_stats: { cursor_start?: number; cursor_advance?: number } | null;
+  last_run_stats: { cursor_start?: number; cursor_advance?: number; new_lap?: boolean } | null;
 }
 
 export async function loadShard(db: Db, job: string): Promise<ShardRow> {
@@ -81,7 +81,7 @@ export function jsonResponse(body: unknown, status = 200): Response {
  */
 export async function runJob(
   req: Request,
-  job: 'heavy' | 'light',
+  job: 'heavy' | 'light' | 'live',
   shardJobName: string,
   body: (ctx: RunContext) => Promise<{ cursor_position?: number; total_items?: number }>,
   stats: RunStats,

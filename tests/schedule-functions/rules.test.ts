@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeTier,
+  isLapStart,
   EXPIRE_AFTER_HOURS,
   isExpired,
   isRecentForSnapshot,
@@ -171,4 +172,26 @@ describe('youtube_live_status 列', () => {
     expect(row).toMatchObject({ is_live: false, is_upcoming: false, is_schedule_frame: false, video_id: null, scheduled_start_at: null });
     expect(row.checked_at).toBe(new Date(NOW).toISOString());
   });
+});
+
+describe('新的一圈（isLapStart）', () => {
+    it('游標繞回時不是 0 也算新一圈（2,602 個頻道、每片 400：2400 那片跨過開頭）', () => {
+        expect(isLapStart(0, 400, 2602, null)).toBe(true);
+        expect(isLapStart(2400, 400, 2602, { cursor_start: 2000, new_lap: false })).toBe(true);
+        expect(isLapStart(2000, 400, 2602, { cursor_start: 1600 })).toBe(false); // 2000+400 = 2400 < 2602：沒跨界
+        expect(isLapStart(2202, 400, 2602, { cursor_start: 1802 })).toBe(false); // 剛好到結尾，下一片從 0 開始才算
+    });
+
+    it('上一輪已是新一圈、這輪起點沒有往回繞（限流沒前進、跨界那片只做一部分）→ 不重做', () => {
+        expect(isLapStart(2400, 400, 2602, { cursor_start: 2400, new_lap: true })).toBe(false);
+        expect(isLapStart(2500, 400, 2602, { cursor_start: 2400, new_lap: true })).toBe(false);
+        expect(isLapStart(0, 400, 2602, { cursor_start: 0, new_lap: true })).toBe(false);
+        // 跨界之後已往回繞，下一次跨界（約 7 片後）才再算
+        expect(isLapStart(198, 400, 2602, { cursor_start: 2400, new_lap: true })).toBe(false);
+    });
+
+    it('名冊不超過一片：每輪都是新一圈；空名冊不是', () => {
+        expect(isLapStart(0, 400, 300, { cursor_start: 0, new_lap: true })).toBe(true);
+        expect(isLapStart(0, 400, 0, null)).toBe(false);
+    });
 });
