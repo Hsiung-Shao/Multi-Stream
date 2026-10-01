@@ -59,35 +59,37 @@ describe('isHttpUrl', () => {
 });
 
 describe('投稿表單', () => {
+    // 真實的 600ms debounce：全套平行跑時機器忙，等待上限放寬（單獨跑約 1 秒內完成）
+    const WAIT = { timeout: 8000 };
     const typeChannel = (v: string) => fireEvent.change(screen.getByLabelText(/YouTube 頻道網址/), { target: { value: v } });
     const nameInput = () => screen.getByLabelText(/顯示名稱/) as HTMLInputElement;
     const avatarInput = () => screen.getByLabelText(/頭像圖片網址/) as HTMLInputElement;
 
-    it('自動帶入的名稱與頭像跟著頻道換；使用者改過的名稱不被覆蓋', async () => {
+    it('自動帶入的名稱與頭像跟著頻道換；使用者改過的名稱不被覆蓋', { timeout: 30_000 }, async () => {
         render(<ContributeForm />);
         typeChannel('@alpha_ch');
-        await waitFor(() => expect(nameInput().value).toBe('Alpha'), { timeout: 3000 });
+        await waitFor(() => expect(nameInput().value).toBe('Alpha'), WAIT);
         expect(avatarInput().value).toBe(CHANNELS['@alpha_ch'].avatarUrl);
 
         typeChannel('@beta_ch');
-        await waitFor(() => expect(nameInput().value).toBe('Beta'), { timeout: 3000 });
+        await waitFor(() => expect(nameInput().value).toBe('Beta'), WAIT);
         expect(avatarInput().value).toBe(CHANNELS['@beta_ch'].avatarUrl);
 
         fireEvent.change(nameInput(), { target: { value: '自訂名稱' } });
         typeChannel('@gamma_ch');
-        await waitFor(() => expect(avatarInput().value).toBe(CHANNELS['@gamma_ch'].avatarUrl), { timeout: 3000 });
+        await waitFor(() => expect(avatarInput().value).toBe(CHANNELS['@gamma_ch'].avatarUrl), WAIT);
         expect(nameInput().value).toBe('自訂名稱');
 
         // 查不到的頻道：自動帶入的頭像清掉，不留上一個頻道的
         typeChannel('@nobody_here');
-        await waitFor(() => expect(avatarInput().value).toBe(''), { timeout: 3000 });
+        await waitFor(() => expect(avatarInput().value).toBe(''), WAIT);
         expect(nameInput().value).toBe('自訂名稱');
     });
 
-    it('送出時不送自動帶入的頭像；台灣不送地區證據', async () => {
+    it('送出時不送自動帶入的頭像；台灣不送地區證據', { timeout: 20_000 }, async () => {
         render(<ContributeForm />);
         typeChannel('@alpha_ch');
-        await waitFor(() => expect(nameInput().value).toBe('Alpha'), { timeout: 3000 });
+        await waitFor(() => expect(nameInput().value).toBe('Alpha'), WAIT);
         const submit = screen.getByRole('button', { name: '送出推薦' });
         await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
         fireEvent.click(submit);
@@ -99,15 +101,15 @@ describe('投稿表單', () => {
         expect(body.nationalityEvidenceUrl).toBeUndefined();
     });
 
-    it('換頻道後查詢完成前不能送出（避免舊頻道名稱配新網址）', async () => {
+    it('換頻道後查詢完成前不能送出（避免舊頻道名稱配新網址）', { timeout: 20_000 }, async () => {
         render(<ContributeForm />);
         typeChannel('@alpha_ch');
-        await waitFor(() => expect(nameInput().value).toBe('Alpha'), { timeout: 3000 });
+        await waitFor(() => expect(nameInput().value).toBe('Alpha'), WAIT);
         const submit = screen.getByRole('button', { name: '送出推薦' }) as HTMLButtonElement;
         await waitFor(() => expect(submit.disabled).toBe(false));
         typeChannel('@beta_ch');
         expect(submit.disabled).toBe(true);
-        await waitFor(() => expect(nameInput().value).toBe('Beta'), { timeout: 3000 });
+        await waitFor(() => expect(nameInput().value).toBe('Beta'), WAIT);
         await waitFor(() => expect(submit.disabled).toBe(false));
     });
 
