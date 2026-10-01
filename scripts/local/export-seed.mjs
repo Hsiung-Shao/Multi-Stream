@@ -107,6 +107,50 @@ function insertStatements(table, rows, batch = 200) {
   return out.join('\n') + '\n';
 }
 
+/** 本檔停用 trigger，slug（NOT NULL、trigger 配號）要先放寬、資料進來後回填；正式站還沒有 slug 欄位時兩段都略過 */
+const SLUG_RELAX = `-- slug（20260929100000_schedule_stage2）是 NOT NULL、由 trigger 配號；本檔停用了 trigger，先放寬，
+-- 等 youtube_channels 進來後依 stage2 同一套規則回填（handle 優先）再改回 NOT NULL
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'vtubers' AND column_name = 'slug') THEN
+    ALTER TABLE public.vtubers ALTER COLUMN slug DROP NOT NULL;
+  END IF;
+END $$;
+`;
+const SLUG_BACKFILL = `-- slug 回填（與 20260929100000_schedule_stage2 相同的兩階段；只補空值，避開已被 migration 資料占用的與保留字）
+DO $$
+DECLARE
+  r record;
+  v_base text;
+  candidate text;
+  n int;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'vtubers' AND column_name = 'slug') THEN
+    RETURN;
+  END IF;
+  WITH c AS (
+    SELECT id, public.schedule_slug_candidate(id, youtube_channel_id, twitch_channel_id) AS base, created_at
+    FROM public.vtubers WHERE slug IS NULL
+  ), ranked AS (
+    SELECT id, base, row_number() OVER (PARTITION BY base ORDER BY created_at, id) AS rn FROM c
+  )
+  UPDATE public.vtubers v SET slug = rk.base
+  FROM ranked rk
+  WHERE rk.id = v.id AND rk.rn = 1 AND rk.base NOT IN ('submit', 'report')
+    AND NOT EXISTS (SELECT 1 FROM public.vtubers x WHERE x.slug = rk.base);
+  FOR r IN SELECT id, youtube_channel_id, twitch_channel_id FROM public.vtubers WHERE slug IS NULL ORDER BY created_at, id LOOP
+    v_base := public.schedule_slug_candidate(r.id, r.youtube_channel_id, r.twitch_channel_id);
+    n := 1;
+    LOOP
+      n := n + 1;
+      candidate := left(v_base, 36) || '-' || n;
+      EXIT WHEN NOT EXISTS (SELECT 1 FROM public.vtubers WHERE slug = candidate);
+    END LOOP;
+    UPDATE public.vtubers SET slug = candidate WHERE id = r.id;
+  END LOOP;
+  ALTER TABLE public.vtubers ALTER COLUMN slug SET NOT NULL;
+END $$;
+`;
+
 const daysAgo = (n) => new Date(Date.now() - n * 86400_000).toISOString().slice(0, 10);
 
 const main = async () => {
@@ -131,9 +175,11 @@ const main = async () => {
 
   const body =
     insertStatements('vtuber_groups', groups) +
+    SLUG_RELAX +
     insertStatements('vtubers', vtubers) +
     insertStatements('vtuber_channels', channels) +
     insertStatements('youtube_channels', yt) +
+    SLUG_BACKFILL +
     insertStatements('vtuber_channel_metrics_daily', metrics) +
     '\n-- 讓 member_count 與實際資料一致\nUPDATE public.vtuber_groups vg SET member_count = (SELECT count(*) FROM public.vtubers v WHERE v.group_id = vg.id);\nCOMMIT;\n';
 

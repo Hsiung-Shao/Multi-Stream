@@ -13,10 +13,11 @@ const EXCLUDED = new Set(['/admin']);
 
 describe('sitemap.xml 覆蓋 PAGE_PATHS', () => {
     let xml = '';
+    // 產生器是同步子行程：全套平行跑、機器忙時偶爾超過預設 10 秒的 hook 逾時（兩條測試會一起被略過）
     beforeAll(() => {
         execSync('node scripts/generate-sitemap.js', { cwd: rootDir, stdio: 'ignore' });
         xml = readFileSync(resolve(rootDir, 'sitemap.xml'), 'utf8');
-    });
+    }, 60_000);
 
     it('每條可索引路由都在 sitemap 裡，且 /admin 不在', () => {
         const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
