@@ -97,6 +97,38 @@ describe('readLiveOgPage', () => {
         expect(await readLiveOgPage(fake)).toEqual(pageFromText(html));
     });
 
+    it('先出現引用（不是定義）的 ytInitialPlayerResponse 不會被當成區段', async () => {
+        const html = watchPage({ upcoming: true }).replace('<title>', '<script>if(window.ytInitialPlayerResponse){}</script><title>');
+        const page = await readLiveOgPage(streamed(html).response);
+        expect(page.player.startsWith('ytInitialPlayerResponse = {')).toBe(true);
+        expect(page.player).toContain('"isUpcoming":true');
+    });
+
+    it('區段裡沒有 videoDetails（不是真正的定義）：讀完整頁、退回整頁比對', async () => {
+        const html = watchPage({ upcoming: true }).replace('{"videoDetails":', '{"other":');
+        const { response, stat } = streamed(html);
+        const page = await readLiveOgPage(response);
+        expect(page.complete).toBe(true);
+        expect(stat.canceled).toBe(false);
+        expect(page.player).toBe(html);
+        expect(page).toEqual(pageFromText(html));
+    });
+
+    it('前 64KB 沒有 canonical（不能確定是頻道頁）：繼續讀，在整頁找影片', async () => {
+        const html = `<html><head><title>x</title>${filler(200_000)}<link rel="canonical" href="https://www.youtube.com/watch?v=${V}">` +
+            `<script>var ytInitialPlayerResponse = {"videoDetails":{"author":"A"},"isUpcoming":true};</script></body></html>`;
+        const page = await readLiveOgPage(streamed(html).response);
+        expect(page.videoId).toBe(V);
+        expect(page.player).toContain('"isUpcoming":true');
+        expect(page).toEqual(pageFromText(html));
+    });
+
+    it('小於 64KB 的頻道頁：串流與整頁切法結果相同（player 都是空字串）', async () => {
+        const html = channelPage().slice(0, 3000) + '</html>';
+        expect(await readLiveOgPage(streamed(html).response)).toEqual(pageFromText(html));
+        expect(pageFromText(html).player).toBe('');
+    });
+
     it('videoIdFromHead：og:image → canonical → og:url；頻道網址與頭像不算', () => {
         expect(videoIdFromHead(`<meta property="og:image" content="https://i.ytimg.com/vi/${V}/hqdefault_live.jpg">`)).toEqual({ videoId: V, source: 'meta-image' });
         expect(videoIdFromHead(`<link rel="canonical" href="https://www.youtube.com/watch?v=${V}">`)).toEqual({ videoId: V, source: 'canonical-link' });
@@ -131,6 +163,35 @@ describe('youtube-channel-live-og 端點（串流解析）', () => {
         const { body } = await run(watchPage({ recommendedUpcoming: true }), 200);
         expect(body).toMatchObject({ isLive: true, videoId: V, channelTitle: '官方頻道名' });
         expect(body.isUpcoming).toBeUndefined();
+    });
+
+    it('watch 頁找不到 author：頻道名回 null，不拿 og:title（影片標題）充當', async () => {
+        const html = watchPage().replace('"author":"官方頻道名"', '"x":"y"').replace('<title>', '<meta property="og:title" content="影片標題"><title>');
+        const { body } = await run(html, 200);
+        expect(body).toMatchObject({ isLive: true, videoId: V });
+        expect(body.channelTitle).toBeNull();
+    });
+
+    it('YouTube 一直不送完頁面：逾時後回 500（不快取、不寫庫），不會卡住', async () => {
+        vi.useFakeTimers();
+        try {
+            vi.stubGlobal('caches', undefined);
+            vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+                const body = new ReadableStream<Uint8Array>({
+                    start(controller) {
+                        controller.enqueue(new TextEncoder().encode('<html><head>'));
+                        init?.signal?.addEventListener('abort', () => controller.error(new Error('aborted')));
+                    },
+                });
+                return new Response(body);
+            }));
+            const request = new Request(`https://multistreaming.org/api/youtube-channel-live-og?channelId=${CHANNEL}`, { headers: { 'Sec-Fetch-Site': 'same-origin' } });
+            const pending = onRequestGet({ request, env: undefined, waitUntil: () => {} });
+            await vi.advanceTimersByTimeAsync(8_000);
+            expect((await pending).status).toBe(500);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('離線頻道頁：沒有影片，頻道名取 og:title（解 entity）', async () => {
