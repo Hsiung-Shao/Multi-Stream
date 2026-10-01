@@ -107,8 +107,11 @@ alter table public.admin_actions add constraint admin_actions_action_type_check 
 -- 5. 核准投稿（單一交易）
 -- p_overrides：後台審核時修改過的欄位，覆蓋投稿 payload。可用的 key：
 --   name, nationality, avatar_url, bio, x_url, facebook_url, instagram_url, twitch_login,
---   group_id（既有團體）或 new_group {name, kind, nationality}，以及 reviewer_notes。
--- 回傳 {vtuber_id, slug}。錯誤以 exception 回報（not_found／not_pending／unsupported_action／exists／group_not_found／invalid_name）。
+--   affiliation_type（personal 會清掉所屬）、group_id（既有團體）或 new_group {name, kind, nationality}，以及 reviewer_notes。
+-- 所屬的決定順序：overrides 的 group_id → new_group → 投稿填的 group_name（只自動對到名稱相同的既有團體；
+--   對不到就 group_unresolved，要審核者明確選既有團體或新建，不默默當成個人勢）→ 個人勢。
+-- 回傳 {vtuber_id, slug}。錯誤以 exception 回報：not_found／not_pending／unsupported_action／exists（YouTube 頻道已在站上）／
+--   twitch_exists（Twitch 帳號已屬於別人）／group_not_found／group_unresolved／group_exists（新建的團體名稱已存在）／invalid_name。
 create or replace function public.approve_vtuber_contribution(p_id uuid, p_overrides jsonb default '{}'::jsonb)
 returns jsonb
 language plpgsql
@@ -151,21 +154,42 @@ begin
         raise exception 'exists' using errcode = '23505';
     end if;
 
-    -- 所屬：既有團體、新建團體，或個人勢（null）
-    if nullif(p ->> 'group_id', '') is not null then
+    v_twitch := nullif(lower(btrim(p ->> 'twitch_login')), '');
+    -- Twitch 帳號已屬於別人：不能再掛一次（否則會搶走對方的 slug，日後補 Twitch ID 也會撞唯一索引）
+    if v_twitch is not null and (
+        exists (select 1 from public.vtubers where lower(twitch_channel_id) = v_twitch)
+        or exists (select 1 from public.vtuber_channels where platform = 'twitch' and lower(handle) = v_twitch and status = 'active')
+    ) then
+        raise exception 'twitch_exists' using errcode = '23505';
+    end if;
+
+    -- 所屬：既有團體、新建團體、投稿填的名稱（只對既有團體），或個人勢（null）
+    if coalesce(p ->> 'affiliation_type', '') = 'personal' and coalesce(p_overrides, '{}'::jsonb) ? 'affiliation_type' then
+        v_group := null; -- 審核者明確改成個人勢
+    elsif nullif(p ->> 'group_id', '') is not null then
         select id into v_group from public.vtuber_groups where id = (p ->> 'group_id')::uuid;
         if v_group is null then
             raise exception 'group_not_found' using errcode = 'P0002';
         end if;
     elsif nullif(btrim(p -> 'new_group' ->> 'name'), '') is not null then
+        if exists (select 1 from public.vtuber_groups where lower(btrim(name)) = lower(btrim(p -> 'new_group' ->> 'name'))) then
+            raise exception 'group_exists' using errcode = '23505';
+        end if;
         insert into public.vtuber_groups (name, kind, nationality)
         values (
             btrim(p -> 'new_group' ->> 'name'),
             coalesce(nullif(p -> 'new_group' ->> 'kind', ''), 'unverified'),
             nullif(p -> 'new_group' ->> 'nationality', '')
         )
-        on conflict (name) do update set name = excluded.name
         returning id into v_group;
+    elsif nullif(btrim(p ->> 'group_name'), '') is not null and coalesce(p ->> 'affiliation_type', 'personal') <> 'personal' then
+        select id into v_group from public.vtuber_groups
+        where lower(btrim(name)) = lower(btrim(p ->> 'group_name'))
+        order by (parent_id is null) desc
+        limit 1;
+        if v_group is null then
+            raise exception 'group_unresolved' using errcode = 'P0001';
+        end if;
     end if;
 
     -- YouTube 頻道快取：讓 slug 能用頻道 handle（schedule_slug_candidate 讀這張表）
@@ -177,8 +201,6 @@ begin
             set custom_url = coalesce(public.youtube_channels.custom_url, excluded.custom_url),
                 thumbnail_url = coalesce(public.youtube_channels.thumbnail_url, excluded.thumbnail_url);
     end if;
-
-    v_twitch := nullif(lower(btrim(p ->> 'twitch_login')), '');
 
     insert into public.vtubers (
         name, img_url, nationality, group_id, youtube_channel_id, twitch_channel_id,

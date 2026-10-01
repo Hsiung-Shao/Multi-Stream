@@ -23,11 +23,13 @@ export async function onRequestPost(context) {
         disabledFlag: 'REPORTS_DISABLED',
         maxBytes: MAX_BODY_BYTES,
         validate: validateReport,
-        quotas: (ipHash, w) => [
-            { key: `report:h:${ipHash}:${w.hour}`, limit: 10, ttl: 3700 },
-            { key: `report:d:${ipHash}:${w.day}`, limit: 30, ttl: 90000 },
-            { key: `report:g:${w.hour}`, limit: 300, ttl: 3700 },
-        ],
+        quotas: (ipHash, w) => ({
+            personal: [
+                { key: `report:h:${ipHash}:${w.hour}`, limit: 10, ttl: 3700 },
+                { key: `report:d:${ipHash}:${w.day}`, limit: 30, ttl: 90000 },
+            ],
+            global: [{ key: `report:g:${w.hour}`, limit: 300, ttl: 3700 }],
+        }),
     });
     if (!g.ok) return g.response;
     const v = g.value;

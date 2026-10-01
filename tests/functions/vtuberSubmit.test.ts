@@ -14,7 +14,7 @@ import {
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { verifyTurnstile } from '../../functions/lib/turnstile.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { checkKvQuota, hashIp } from '../../functions/lib/rate-limit.js';
+import { checkKvQuota, hashIp, ipKey, isIpBanned } from '../../functions/lib/rate-limit.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { onRequestGet as lookupGet } from '../../functions/api/vtuber/channel-lookup.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
@@ -99,6 +99,10 @@ describe('validateContribution', () => {
         [{ affiliation: { type: 'agency', groupId: 'not-uuid' } }, 'invalid_affiliation'],
         [{ bio: 'x'.repeat(501) }, 'invalid_bio'],
         [{ avatarUrl: 'http://insecure.com/a.png' }, 'invalid_avatar'],
+        [{ avatarUrl: 'https://evil.example/tracker.png' }, 'invalid_avatar'],
+        [{ youtubeUrl: '@bad%handle' }, 'youtube_invalid_url'],
+        [{ youtubeUrl: '@has(paren)' }, 'youtube_invalid_url'],
+        [{ youtubeUrl: '@a&b;c' }, 'youtube_invalid_url'],
         [{ sourceUrls: Array(6).fill('https://a.com') }, 'invalid_source_urls'],
         [{ youtubeUrl: 'https://www.youtube.com/c/x' }, 'youtube_unsupported_url'],
         [{ socials: { instagram: 'https://evil.com/a' } }, 'invalid_instagram'],
@@ -123,9 +127,12 @@ describe('validateReport', () => {
 });
 
 describe('頻道頁前段解析與查詢', () => {
-    it('og:url 取 channelId、og:title 解 entity、頭像只收 YouTube 圖床；handle 優先用輸入值', () => {
+    it('og:url 取 channelId、og:title 解 entity、頭像只收 YouTube 圖床；handle 以頁面上的正式值優先', () => {
         expect(parseChannelHead(channelPage(), 'newbie')).toEqual({ channelId: UC, title: '新人 & 測試', avatarUrl: 'https://yt3.googleusercontent.com/avatar=s900', handle: 'newbie' });
-        expect(parseChannelHead(channelPage(UC, '"vanityChannelUrl":"http://www.youtube.com/@%E5%AD%90%E7%87%92"'), null)?.handle).toBe('子燒');
+        const vanity = '"vanityChannelUrl":"http://www.youtube.com/@%E5%AD%90%E7%87%92zishaow"';
+        expect(parseChannelHead(channelPage(UC, vanity), null)?.handle).toBe('子燒zishaow');
+        expect(parseChannelHead(channelPage(UC, vanity), 'TypedByUser')?.handle).toBe('子燒zishaow');
+        expect(parseChannelHead(channelPage(UC, '"vanityChannelUrl":"http://www.youtube.com/@bad%3Cx%3E"'), 'fallback_ok')?.handle).toBe('fallback_ok');
         expect(parseChannelHead('<html>沒有 og:url</html>')).toBeNull();
         expect(parseChannelHead(channelPage().replace('yt3.googleusercontent.com', 'evil.com'))?.avatarUrl).toBeNull();
     });
@@ -142,8 +149,9 @@ describe('頻道頁前段解析與查詢', () => {
 
 describe('Turnstile 與 KV 配額', () => {
     const ok = (success: boolean) => (async () => new Response(JSON.stringify({ success }))) as unknown as typeof fetch;
-    it('不強制時跳過；強制但沒有 secret → 503；缺 token → 400；驗證失敗或逾時 → 403', async () => {
-        expect(await verifyTurnstile({}, null)).toEqual({ ok: true, skipped: true });
+    it('只有明確設成 false 才跳過；沒設或沒有 secret → 503；缺 token → 400；驗證失敗或逾時 → 403', async () => {
+        expect(await verifyTurnstile({ ENFORCE_TURNSTILE: 'false' }, null)).toEqual({ ok: true, skipped: true });
+        expect(await verifyTurnstile({}, 't')).toMatchObject({ ok: false, status: 503 });
         expect(await verifyTurnstile({ ENFORCE_TURNSTILE: 'true' }, 't')).toMatchObject({ ok: false, status: 503 });
         const env = { ENFORCE_TURNSTILE: 'true', TURNSTILE_SECRET_KEY: 's' };
         expect(await verifyTurnstile(env, '')).toMatchObject({ ok: false, status: 400 });
@@ -162,6 +170,21 @@ describe('Turnstile 與 KV 配額', () => {
         const h = await hashIp({ IP_HASH_SALT: 's' }, '203.0.113.9');
         expect(h).toMatch(/^[0-9a-f]{64}$/);
         expect(h).not.toContain('203');
+    });
+
+    it('IPv6 以 /64 計：同一段的不同位址是同一個身分（限流與封鎖都是）', async () => {
+        expect(ipKey('2407:4d00:2c09:7a1b:c9bd:2518:9470:487')).toBe('2407:4d00:2c09:7a1b::/64');
+        expect(ipKey('2001:db8::1')).toBe('2001:db8:0:0::/64');
+        expect(ipKey('203.0.113.9')).toBe('203.0.113.9');
+        const env = { IP_HASH_SALT: 's' };
+        expect(await hashIp(env, '2407:4d00:2c09:7a1b::1')).toBe(await hashIp(env, '2407:4d00:2c09:7a1b:ffff:1:2:3'));
+        expect(isIpBanned({ BANNED_IPS: '2407:4d00:2c09:7a1b::/64' }, '2407:4d00:2c09:7a1b:c9bd:2518:9470:487')).toBe(true);
+        expect(isIpBanned({ BANNED_IPS: '2407:4d00:2c09:7a1b::/64' }, '2407:4d00:2c09:7a1c::1')).toBe(false);
+    });
+
+    it('KV 讀寫失敗時放行（不讓請求變成 500）', async () => {
+        const broken = { get: async () => { throw new Error('kv'); }, put: async () => { throw new Error('kv'); } };
+        expect(await checkKvQuota(broken, 'k', 1, 60)).toBe(true);
     });
 });
 
@@ -260,6 +283,23 @@ describe('POST /api/vtuber/contribute', () => {
 
         expect((await run(goodContribution(), { ...ENV(), SUBMISSIONS_DISABLED: 'true' })).status).toBe(503);
         expect((await run(goodContribution(), { ...ENV(), BANNED_IPS: '203.0.113.9' })).status).toBe(403);
+        // 設定缺漏：不能在沒有限流、沒有鹽的狀態下默默收件
+        expect((await (await run(goodContribution(), { ...ENV(), IP_HASH_SALT: '' })).json()).error).toBe('not_configured');
+        expect((await run(goodContribution(), { ...ENV(), RATE_LIMIT_KV: undefined })).status).toBe(503);
+    });
+
+    it('假 token 不會吃掉全站配額（全站配額在 Turnstile 之後才扣）', async () => {
+        turnstileOk = false;
+        const env = ENV();
+        for (let i = 0; i < 3; i++) await run(goodContribution(), env);
+        expect([...env.RATE_LIMIT_KV._m.keys()].some((k) => k.startsWith('contrib:g:'))).toBe(false);
+    });
+
+    it('Twitch 帳號已屬於別人 → 409 twitch_exists；第二個頻道只登記在 vtuber_channels 也算已在站上', async () => {
+        sb = (method, path) => (method === 'GET' && path.includes('twitch_channel_id=ilike.newbie') ? new Response('[{"id":"x"}]') : new Response('[]'));
+        expect((await (await run(goodContribution())).json()).error).toBe('twitch_exists');
+        sb = (method, path) => (method === 'GET' && path.startsWith('vtuber_channels?platform=eq.youtube') ? new Response('[{"vtubers":{"name":"主","slug":"main"}}]') : new Response('[]'));
+        expect(await (await run(goodContribution())).json()).toMatchObject({ error: 'exists', vtuber: { slug: 'main' } });
     });
 
     it('資料庫唯一索引衝突（同時送出）→ 409 pending_exists', async () => {
@@ -272,7 +312,7 @@ describe('GET /api/vtuber/channel-lookup', () => {
     const get = (q: string, headers: Record<string, string> = { 'Sec-Fetch-Site': 'same-origin' }) =>
         lookupGet({ request: new Request(`https://multistreaming.org/api/vtuber/channel-lookup?url=${encodeURIComponent(q)}`, { headers }), env: ENV() });
 
-    it('回傳頻道資料與是否已在站上；外站請求 403；不支援的網址 400', async () => {
+    it('回傳頻道資料與是否已在站上；外站請求 403；不支援的網址 400；查詢不寫 KV', async () => {
         const res = await get('@newbie_vt');
         expect(await res.json()).toMatchObject({ ok: true, channel: { channelId: UC, title: '新人 & 測試' }, exists: null, pending: false });
         expect((await get('@newbie_vt', {})).status).toBe(403);
@@ -331,12 +371,20 @@ describe('後台 API', () => {
         expect(r.status).toBe(409);
         expect(calls.find((c) => c.method === 'PATCH')!.url).toContain('status=eq.pending');
 
-        sb = (method) => new Response(method === 'PATCH' ? `[{"id":"${VID}","status":"resolved"}]` : '[]');
+        sb = (method) =>
+            new Response(method === 'PATCH' ? `[{"id":"${VID}","status":"resolved"}]` : method === 'GET' ? '[{"status":"open"}]' : '[]', { status: method === 'POST' ? 201 : 200 });
         calls = [];
         const u = await adminReportPut({ request: admin(`/api/admin/reports?id=${VID}`, { method: 'PUT', body: '{"status":"resolved","admin_notes":"已修正"}' }), env: ENV() });
         expect(u.status).toBe(200);
         const patch = calls.find((c) => c.method === 'PATCH')!.body as Record<string, unknown>;
         expect(patch.status).toBe('resolved');
         expect(typeof patch.resolved_at).toBe('string');
+        // 稽核紀錄記下原狀態
+        const audit = calls.find((c) => c.method === 'POST' && c.url.includes('admin_actions'))!.body as Record<string, unknown>;
+        expect(audit).toMatchObject({ action_type: 'review_vtuber_report', before_status: 'open', after_status: 'resolved' });
+
+        // 回報不存在 → 404（先查原狀態）
+        sb = () => new Response('[]');
+        expect((await adminReportPut({ request: admin(`/api/admin/reports?id=${VID}`, { method: 'PUT', body: '{"status":"spam"}' }), env: ENV() })).status).toBe(404);
     });
 });

@@ -21,7 +21,17 @@ const LIST_COLUMNS =
 const GROUP_KINDS = ['agency', 'circle', 'personal', 'unverified'];
 
 // approve_vtuber_contribution 的錯誤碼 → HTTP 狀態
-const RPC_ERRORS = { not_found: 404, not_pending: 409, exists: 409, unsupported_action: 400, group_not_found: 400, invalid_name: 400 };
+const RPC_ERRORS = {
+    not_found: 404,
+    not_pending: 409,
+    exists: 409,
+    twitch_exists: 409,
+    group_exists: 409,
+    group_unresolved: 400,
+    unsupported_action: 400,
+    group_not_found: 400,
+    invalid_name: 400,
+};
 
 export async function onRequestGet(context) {
     const { request, env } = context;
@@ -78,7 +88,7 @@ export async function onRequestPost(context) {
             return jsonResponse({ ok: false, error: 'reject_failed' }, 500, request);
         }
         if (!res.data?.length) return jsonResponse({ ok: false, error: 'not_pending' }, 409, request);
-        await insert(env, 'admin_actions', {
+        const audit = await insert(env, 'admin_actions', {
             actor: 'admin_token',
             action_type: 'review_vtuber_contribution',
             target_id: id,
@@ -87,6 +97,7 @@ export async function onRequestPost(context) {
             after_status: 'rejected',
             notes: notes || null,
         });
+        if (!audit.ok) await logError(env, 'admin-contributions', 'audit insert failed', { metadata: { status: audit.status, error: audit.error?.slice(0, 300) } });
         return jsonResponse({ ok: true }, 200, request, NO_STORE);
     }
 
@@ -124,6 +135,10 @@ export function validateOverrides(raw) {
         const r = normalizeSocial(kind, raw[key]);
         if (r.error) return { error: r.error };
         out[key] = r.value ?? '';
+    }
+    if ('affiliation_type' in raw) {
+        if (!['personal', 'agency', 'circle'].includes(raw.affiliation_type)) return { error: 'invalid_group' };
+        out.affiliation_type = raw.affiliation_type;
     }
     if ('group_id' in raw) {
         if (raw.group_id !== null && raw.group_id !== '' && !isUuid(raw.group_id)) return { error: 'invalid_group' };

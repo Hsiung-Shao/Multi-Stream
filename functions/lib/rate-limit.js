@@ -9,23 +9,38 @@ export function getVisitorIp(request) {
 }
 
 /**
- * 檢查 IP 是否在 banlist(env.BANNED_IPS 逗號分隔)
+ * 限流與封鎖用的 IP 鍵:IPv4 原樣;IPv6 取前 64 位元(一般用戶分到整段 /64,只看完整位址等於每個請求換一個身分)。
+ * @param {string} ip
+ * @returns {string}
  */
-export function isIpBanned(env, ip) {
-    if (!ip || !env.BANNED_IPS) return false;
-    return env.BANNED_IPS.split(',').map(s => s.trim()).filter(Boolean).includes(ip);
+export function ipKey(ip) {
+    if (!ip || !ip.includes(':')) return ip || '';
+    const [head, tail = ''] = ip.toLowerCase().split('::');
+    const left = head ? head.split(':') : [];
+    const right = tail ? tail.split(':') : [];
+    const full = ip.includes('::') ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right] : left;
+    return full.slice(0, 4).map((h) => h.replace(/^0+(?=.)/, '')).join(':') + '::/64';
 }
 
 /**
- * IP 加鹽雜湊(sha256 hex):限流 key 與資料表都只存這個,不存原始 IP。
- * 沒設 IP_HASH_SALT 時仍可運作(本地開發),只是雜湊可被字典反推。
+ * 檢查 IP 是否在 banlist(env.BANNED_IPS 逗號分隔;IPv6 以 /64 比對,清單裡寫完整位址或 /64 都可以)
+ */
+export function isIpBanned(env, ip) {
+    if (!ip || !env.BANNED_IPS) return false;
+    const key = ipKey(ip);
+    return env.BANNED_IPS.split(',').map(s => s.trim()).filter(Boolean).some((b) => b === ip || ipKey(b.replace(/\/64$/, '')) === key);
+}
+
+/**
+ * IP 加鹽雜湊(sha256 hex):限流 key 與資料表都只存這個,不存原始 IP。IPv6 以 /64 計(見 ipKey)。
+ * 呼叫端要先確認 IP_HASH_SALT 有設(沒鹽的 IPv4 雜湊可被暴力還原)。
  * @param {Object} env
  * @param {string} ip
  * @returns {Promise<string>} 64 字元 hex;沒有 IP 時回 'unknown'
  */
 export async function hashIp(env, ip) {
     if (!ip) return 'unknown';
-    const data = new TextEncoder().encode(`${env?.IP_HASH_SALT || ''}:${ip}`);
+    const data = new TextEncoder().encode(`${env?.IP_HASH_SALT || ''}:${ipKey(ip)}`);
     const digest = await crypto.subtle.digest('SHA-256', data);
     return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -33,6 +48,7 @@ export async function hashIp(env, ip) {
 /**
  * KV 計數型配額:未達上限就 +1 並回 true;達上限回 false。
  * KV 是最終一致,並發下上限只是大約值(主要防線是 Turnstile);沒有 KV 時放行(與 feedback 一致)。
+ * KV 讀寫失敗(同一 key 寫入太頻繁、每日寫入額度用完)時放行,不讓整個請求變成 500。
  * @param {KVNamespace|undefined} kv
  * @param {string} key
  * @param {number} limit
@@ -41,9 +57,13 @@ export async function hashIp(env, ip) {
  */
 export async function checkKvQuota(kv, key, limit, ttlSeconds) {
     if (!kv) return true;
-    const count = parseInt((await kv.get(key)) || '0', 10);
-    if (count >= limit) return false;
-    await kv.put(key, String(count + 1), { expirationTtl: Math.max(60, ttlSeconds) });
+    try {
+        const count = parseInt((await kv.get(key)) || '0', 10);
+        if (count >= limit) return false;
+        await kv.put(key, String(count + 1), { expirationTtl: Math.max(60, ttlSeconds) });
+    } catch {
+        // 配額暫時無法判斷:放行(Turnstile 仍會擋)
+    }
     return true;
 }
 

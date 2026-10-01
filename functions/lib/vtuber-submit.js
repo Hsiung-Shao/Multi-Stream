@@ -81,9 +81,12 @@ export function parseYoutubeChannelInput(raw) {
     return { error: 'invalid_url' };
 }
 
+// YouTube handle 的字元：各語言的字母與數字、底線、連字號、句點（日後會拼進網址與 HTML，不收其他符號）
+const HANDLE_RE = /^[\p{L}\p{M}\p{N}._-]{3,100}$/u;
+
 function handleResult(h) {
     const handle = h.trim();
-    if (handle.length < 3 || handle.length > 100 || /[\s/?#<>"']/.test(handle)) return { error: 'invalid_url' };
+    if (!HANDLE_RE.test(handle)) return { error: 'invalid_url' };
     return { kind: 'handle', handle };
 }
 
@@ -127,6 +130,9 @@ function pathHandle(s, hostRe) {
     return u.pathname.split('/').filter(Boolean)[0] ?? null;
 }
 
+/** 頭像只收 YouTube 圖床（投稿者不能指定任意圖片；要換其他來源只能經後台 override） */
+export const isYoutubeAvatar = (url) => typeof url === 'string' && /^https:\/\/yt3\.(ggpht|googleusercontent)\.com\/[^\s"'<>]+$/.test(url);
+
 // ---------- 頻道查詢（零配額：只讀頻道頁前段） ----------
 
 const SOCIAL_BOT_HEADERS = {
@@ -169,20 +175,20 @@ export function parseChannelHead(html, inputHandle = null) {
     const ogUrl = metaContent(html, 'og:url') || '';
     const channelId = ogUrl.match(/\/channel\/(UC[A-Za-z0-9_-]{22})/)?.[1];
     if (!channelId) return null;
-    let handle = inputHandle;
-    if (!handle) {
-        const vanity = html.match(/"vanityChannelUrl":"https?:\/\/(?:www\.)?youtube\.com\/@([^"]+)"/)?.[1];
-        if (vanity) {
-            try {
-                handle = decodeURIComponent(vanity);
-            } catch {
-                handle = null;
-            }
+    // 頁面上的正式 handle（vanityChannelUrl）優先；沒有時才用輸入值（已過 HANDLE_RE）
+    let handle = null;
+    const vanity = html.match(/"vanityChannelUrl":"https?:\/\/(?:www\.)?youtube\.com\/@([^"]+)"/)?.[1];
+    if (vanity) {
+        try {
+            handle = decodeURIComponent(vanity);
+        } catch {
+            handle = null;
         }
     }
+    if (!handle || !HANDLE_RE.test(handle)) handle = inputHandle && HANDLE_RE.test(inputHandle) ? inputHandle : null;
     const title = (metaContent(html, 'og:title') || '').trim().slice(0, LIMITS.name) || null;
     const image = metaContent(html, 'og:image');
-    const avatarUrl = image && /^https:\/\/yt3\.(ggpht|googleusercontent)\.com\//.test(image) ? image.slice(0, LIMITS.url) : null;
+    const avatarUrl = image && isYoutubeAvatar(image) ? image.slice(0, LIMITS.url) : null;
     return { channelId, title, avatarUrl, handle: handle ? handle.slice(0, 100) : null };
 }
 
@@ -285,8 +291,8 @@ export function validateContribution(body) {
     if (bio.length > LIMITS.bio) return { error: 'invalid_bio' };
 
     const avatarRaw = str(body.avatarUrl);
-    const avatarUrl = avatarRaw ? normalizeHttpUrl(avatarRaw) : null;
-    if (avatarRaw && (!avatarUrl || !avatarUrl.startsWith('https://'))) return { error: 'invalid_avatar' };
+    if (avatarRaw && (avatarRaw.length > LIMITS.url || !isYoutubeAvatar(avatarRaw))) return { error: 'invalid_avatar' };
+    const avatarUrl = avatarRaw || null;
 
     const subscriberClaim = str(String(body.subscriberCount ?? ''));
     if (subscriberClaim.length > LIMITS.subscriberClaim) return { error: 'invalid_subscriber_count' };

@@ -25,11 +25,13 @@ export async function onRequestPost(context) {
         disabledFlag: 'SUBMISSIONS_DISABLED',
         maxBytes: MAX_BODY_BYTES,
         validate: validateContribution,
-        quotas: (ipHash, w) => [
-            { key: `contrib:h:${ipHash}:${w.hour}`, limit: 3, ttl: 3700 },
-            { key: `contrib:d:${ipHash}:${w.day}`, limit: 10, ttl: 90000 },
-            { key: `contrib:g:${w.hour}`, limit: 100, ttl: 3700 },
-        ],
+        quotas: (ipHash, w) => ({
+            personal: [
+                { key: `contrib:h:${ipHash}:${w.hour}`, limit: 3, ttl: 3700 },
+                { key: `contrib:d:${ipHash}:${w.day}`, limit: 10, ttl: 90000 },
+            ],
+            global: [{ key: `contrib:g:${w.hour}`, limit: 100, ttl: 3700 }],
+        }),
     });
     if (!g.ok) return g.response;
     const v = g.value;
@@ -40,9 +42,10 @@ export async function onRequestPost(context) {
     }
     const ch = found.channel;
 
-    const { exists, pending } = await findExisting(env, ch.channelId);
+    const { exists, pending, twitchTaken } = await findExisting(env, ch.channelId, v.socials.twitch);
     if (exists) return reply({ ok: false, error: 'exists', vtuber: exists }, 409);
     if (pending) return reply({ ok: false, error: 'pending_exists' }, 409);
+    if (twitchTaken) return reply({ ok: false, error: 'twitch_exists' }, 409);
 
     const payload = {
         name: v.name,
@@ -76,6 +79,7 @@ export async function onRequestPost(context) {
             channel_title: ch.title,
             avatar_fetched: ch.avatarUrl,
             name_matches_title: !!ch.title && ch.title.toLowerCase().includes(v.name.toLowerCase()),
+            avatar_is_channel_avatar: !v.avatarUrl || v.avatarUrl === ch.avatarUrl,
             checked_at: new Date().toISOString(),
         },
     };

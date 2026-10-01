@@ -52,6 +52,10 @@ export async function onRequestPut(context) {
     if (!STATUSES.includes(status)) return jsonResponse({ ok: false, error: 'invalid_status' }, 400, request);
     const notes = typeof parsed.body?.admin_notes === 'string' ? parsed.body.admin_notes.trim().slice(0, 1000) : null;
 
+    const before = await select(env, `vtuber_reports?id=eq.${id}&select=status&limit=1`);
+    if (before.ok && !before.data?.length) return jsonResponse({ ok: false, error: 'not_found' }, 404, request);
+    const beforeStatus = before.ok ? before.data[0].status : null;
+
     const res = await update(env, 'vtuber_reports', `id=eq.${id}`, {
         status,
         admin_notes: notes || null,
@@ -62,13 +66,15 @@ export async function onRequestPut(context) {
         return jsonResponse({ ok: false, error: 'update_failed' }, 500, request);
     }
     if (!res.data?.length) return jsonResponse({ ok: false, error: 'not_found' }, 404, request);
-    await insert(env, 'admin_actions', {
+    const audit = await insert(env, 'admin_actions', {
         actor: 'admin_token',
         action_type: 'review_vtuber_report',
         target_id: id,
+        before_status: beforeStatus,
         after_status: status,
         notes: notes ? notes.slice(0, 500) : null,
     });
+    if (!audit.ok) await logError(env, 'admin-reports', 'audit insert failed', { metadata: { status: audit.status, error: audit.error?.slice(0, 300) } });
     return jsonResponse({ ok: true, report: res.data[0] }, 200, request, NO_STORE);
 }
 

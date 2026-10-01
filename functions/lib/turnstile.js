@@ -2,8 +2,8 @@
 //
 // 環境變數：
 //   TURNSTILE_SECRET_KEY  Secret（Pages 專案 → Variables and Secrets）
-//   ENFORCE_TURNSTILE     'true' 才強制驗證；其他值（本地開發、尚未設定 widget）直接放行
-// 強制模式下沒設 secret → 回 503（設定錯誤要讓人看得到，不能默默放行）。
+//   ENFORCE_TURNSTILE     只有明確設成 'false' 才跳過（本地開發）；沒設或其他值一律要驗證
+// 要驗證卻沒設 secret → 回 503（設定漏掉要讓人看得到，不能默默放行）。
 // token 只能驗一次、有效 300 秒；前端送出後（不論成敗）都要 reset widget 取新 token。
 
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
@@ -18,7 +18,7 @@ const MAX_TOKEN_LENGTH = 2048;
  * @returns {Promise<{ ok: true, skipped?: boolean } | { ok: false, status: 400|403|503, error: string }>}
  */
 export async function verifyTurnstile(env, token, ip, opts = {}) {
-    if (env?.ENFORCE_TURNSTILE !== 'true') return { ok: true, skipped: true };
+    if (env?.ENFORCE_TURNSTILE === 'false') return { ok: true, skipped: true };
     if (!env.TURNSTILE_SECRET_KEY) return { ok: false, status: 503, error: 'turnstile_not_configured' };
     if (typeof token !== 'string' || !token || token.length > MAX_TOKEN_LENGTH) {
         return { ok: false, status: 400, error: 'turnstile_missing' };
