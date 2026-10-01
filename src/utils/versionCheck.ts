@@ -43,6 +43,8 @@ export const PRESERVED_KEYS = [
     'canvas_tour_done',                      // 畫布導覽已看過／略過（補）
     'canvas_tour_intro_done',
     'ms_admin_api_token',                    // 後台登入（補）
+    'schedule-filters-v1',                   // 週表篩選條件（v3.6.0）
+    'schedule-roster-collapsed',             // 週表名冊收合（v3.6.0）
     'ControlPanelManager_isCollapsed',       // Control panel state
     'controlPanelCollapsed',
 ];
