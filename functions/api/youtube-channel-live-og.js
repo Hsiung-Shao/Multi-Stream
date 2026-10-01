@@ -1,6 +1,6 @@
 import { getCorsHeaders, isRequestFromAllowedSite } from '../lib/cors.js';
 import { upsert } from '../lib/supabase-server.js';
-import { readLiveOgPage, videoIdFromHead } from '../lib/live-og-page.js';
+import { readLiveOgPage } from '../lib/live-og-page.js';
 
 // ── Edge 快取 ──────────────────────────────────────────────────────────────
 // 2026-09 CPU 超限事件：本端點單月 1.32M 次（全站 78%），每次抓約 1.6MB 的 YouTube 頁面再解析，
@@ -16,6 +16,8 @@ const CHANNEL_ID_RE = /^UC[a-zA-Z0-9_-]{22}$/;
 const VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 // 排程在這之後的「即將直播」視為週表框（頻道擺一個很遠未來的排程直播放週表圖），不算真的要開播
 const SCHEDULE_FRAME_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+// 抓 YouTube 頁面＋串流讀取＋HEAD 的總逾時（與 functions/lib/youtube-live-og.js 的 8 秒一致）
+const YOUTUBE_TIMEOUT_MS = 8000;
 
 export async function onRequestGet(context) {
     const { request } = context;
@@ -149,9 +151,14 @@ async function detectLiveOg(context) {
     fetchUrl.searchParams.set('hl', 'en');
     fetchUrl.searchParams.set('gl', 'US');
 
+    // YouTube 頁面（含串流讀取）與 HEAD 共用一個逾時：上游慢慢送資料時不能一直等
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), YOUTUBE_TIMEOUT_MS);
+
     try {
         const htmlResp = await fetch(fetchUrl.toString(), {
             method: 'GET',
+            signal: controller.signal,
             headers: {
                 // Use a Social Bot UA to encourage YouTube to serve static meta tags
                 'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
@@ -175,18 +182,17 @@ async function detectLiveOg(context) {
         // 串流讀取：只讀頁面前 64KB 與 ytInitialPlayerResponse 區段，其餘取消下載（functions/lib/live-og-page.js）
         const page = await readLiveOgPage(htmlResp);
 
-        // 順手解析「官方頻道名」供離線頻道資料庫蒐集用(零額外請求，HTML 已在手上）。
-        // 在 videoId 瀑布前先取，確保所有 return 分支（含 offline / 找不到 videoId）都帶得出。
-        const channelTitle = extractChannelTitle(page);
+        // --- 3. Video ID ---
+        // og:image → canonical → og:url，都在頁面前 5KB（readLiveOgPage 已找好）；watch 頁沒有 og:image，canonical 就是 watch 網址。
+        // 原本的第 4 個來源（整頁找任意 _live.jpg）實測從未出現，而且會比對到推薦區塊的別支影片，已移除。
+        const { videoId, source: extractionSource } = page;
+
+        // 順手解析「官方頻道名」供離線頻道資料庫蒐集用(零額外請求，HTML 已在手上），所有 return 分支都帶得出。
+        const channelTitle = extractChannelTitle(page, !!videoId);
 
         // Debug: Try to find page title to see if we hit Consent page
         const titleMatch = page.head.match(/<title>(.*?)<\/title>/);
         const pageTitle = titleMatch ? titleMatch[1] : 'Unknown Title';
-
-        // --- 3. Extract Video ID (Method Waterfall) ---
-        // og:image → canonical → og:url，都在頁面前 5KB；watch 頁沒有 og:image，canonical 就是 watch 網址。
-        // 原本的第 4 個來源（整頁找任意 _live.jpg）實測從未出現，而且會比對到推薦區塊的別支影片，已移除。
-        const { videoId, source: extractionSource } = videoIdFromHead(page.head);
 
         if (!videoId) {
             return new Response(JSON.stringify({
@@ -231,6 +237,7 @@ async function detectLiveOg(context) {
         // _live.jpg 只有正在直播時才存在：200 ＝ 直播中
         const imgResp = await fetch(verifyUrl, {
             method: 'HEAD',
+            signal: controller.signal,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
             }
@@ -277,6 +284,8 @@ async function detectLiveOg(context) {
             error: 'Internal Error',
             message: err.message
         }), { status: 500, headers: jsonHeaders() });
+    } finally {
+        clearTimeout(timer);
     }
 }
 
@@ -289,10 +298,11 @@ function jsonHeaders() {
 }
 
 // 從頻道 /live 頁解析「官方頻道名」(涵蓋直播中與離線兩態)。
-// 直播 watch 頁:og:title 可能是影片標題,故 "author"(videoDetails，在 playerResponse 區段)排第一;
+// 直播 watch 頁:只認 "author"(videoDetails，在 playerResponse 區段)。watch 頁的 og:title 是影片標題，
+//   找不到 author 時寧可回 null，不要把影片標題當頻道名寫進共享表。
 // 離線頻道頁:og:title / itemprop=name(頁面前 5KB)/ channelMetadataRenderer.title 才是頻道名。
-// page 是 readLiveOgPage 的結果：head＝前 64KB，player＝playerResponse 區段（離線頁提早停止時是空字串）
-function extractChannelTitle(page) {
+// page 是 readLiveOgPage 的結果：head＝前 64KB，player＝playerResponse 區段（頻道頁是空字串）
+function extractChannelTitle(page, isWatchPage) {
     if (!page) return null;
     const { head, player } = page;
 
@@ -302,6 +312,7 @@ function extractChannelTitle(page) {
         const v = decodeJsonString(author[1]);
         if (v) return v;
     }
+    if (isWatchPage) return null;
 
     // 2. og:title(離線頻道頁 → 頻道名;支援 property/content 兩種屬性順序)
     const og = head.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["']/i)
@@ -319,7 +330,7 @@ function extractChannelTitle(page) {
     }
 
     // 4. channelMetadataRenderer.title(JSON)
-    // 離線頁提早停止讀取時 player 是空字串，這一步只在讀完整頁（player 退回整頁）時有作用
+    // 頻道頁 player 是空字串；只在頁面結構和預期不同、退回整頁比對時（player＝整頁）才有作用
     const meta = player.match(/"channelMetadataRenderer":\{"title":"((?:[^"\\]|\\.)*)"/);
     if (meta) {
         const v = decodeJsonString(meta[1]);
