@@ -95,7 +95,7 @@ export function matchesQuery(ch: ScheduleChannel | undefined, s: ScheduleStream,
  * - 收藏範圍時不套國籍篩選：使用者自己挑的頻道，不該因為預設 TW 被藏起來。
  * - 有搜尋字時不套國籍與所屬篩選：使用者在找特定的人（例如日本的實況主），不該被預設 TW 藏起來；平台與收藏範圍照套。
  * - 選了特定企業勢時不套國籍篩選（2026-09-30 使用者裁定）：要看的是這家的所有人（含非台灣成員與合作藝人），與成員名冊一致。
- * - 給了 now 時，「接下來」不列預定時間已過的場次（2026-10-01 使用者裁定）：還沒開台就不算接下來，開台後會出現在直播中。
+ * - 給了 now 時，「接下來」不列預定時間已過 15 分鐘的場次（2026-10-01 使用者裁定，寬限見 UPCOMING_GRACE_MS）。
  */
 export function filterStreams(
     snapshot: ScheduleSnapshot,
@@ -183,10 +183,16 @@ export function isValidGroup(group: string, groups: readonly AgencyOption[]): bo
     return !isSpecificAgency(group) || groups.some((g) => g.name === group);
 }
 
-/** 預定開台時間已過（還沒開台的場次就不再算「接下來」） */
+/**
+ * 預定時間過後還留在「接下來」多久：晚開台很常見，而且開台要等下一輪偵測與 snapshot 才會出現在直播中，
+ * 一過時間就拿掉會有一段「哪裡都找不到」的空窗（2026-10-01 使用者裁定 15 分鐘）
+ */
+export const UPCOMING_GRACE_MS = 15 * 60_000;
+
+/** 預定開台時間已過寬限（還沒開台的場次就不再算「接下來」） */
 export function isPastScheduled(s: Pick<ScheduleStream, 'scheduled_start'>, now: number): boolean {
     const t = s.scheduled_start ? Date.parse(s.scheduled_start) : NaN;
-    return Number.isFinite(t) && t < now;
+    return Number.isFinite(t) && t + UPCOMING_GRACE_MS < now;
 }
 
 /** 各分頁在目前篩選下的筆數（分頁標籤上的數字） */

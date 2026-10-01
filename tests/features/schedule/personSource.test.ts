@@ -45,12 +45,13 @@ describe('splitPersonStreams', () => {
         expect(out.recent.map((s) => s.external_id)).toEqual(['new', 'old']);
     });
 
-    it('預定時間已過還沒開台的不列入接下來', () => {
+    it('預定時間已過 15 分鐘還沒開台的不列入接下來；寬限內的保留', () => {
         const out = splitPersonStreams('v1', [
-            row({ id: 'past', status: 'scheduled', scheduled_start: '2026-09-29T03:59:00Z' }),
+            row({ id: 'past', status: 'scheduled', scheduled_start: '2026-09-29T03:44:00Z' }),
+            row({ id: 'grace', status: 'scheduled', scheduled_start: '2026-09-29T03:50:00Z' }),
             row({ id: 'soon', status: 'scheduled', scheduled_start: '2026-09-29T04:01:00Z' }),
         ], NOW);
-        expect(out.upcoming.map((s) => s.external_id)).toEqual(['soon']);
+        expect(out.upcoming.map((s) => s.external_id)).toEqual(['grace', 'soon']);
     });
 
     it('null 欄位不輸出（與 snapshot 形狀一致）', () => {

@@ -13,16 +13,17 @@ const s = (id: string, start: string, status: ScheduleStream['status'] = 'schedu
 describe('useScheduleSelection.prune', () => {
     it('拿掉預定時間已過的勾選；已開台（同 key 出現在直播中）與還沒到的保留；沒有變動時不換 state', () => {
         const { result } = renderHook(() => useScheduleSelection({}, 'test'));
-        const past = s('past', '2026-10-01T11:59:00Z');
-        const wentLive = s('golive', '2026-10-01T11:50:00Z');
+        const past = s('past', '2026-10-01T11:40:00Z'); // 過了 15 分鐘寬限
+        const grace = s('grace', '2026-10-01T11:50:00Z'); // 寬限內：保留
+        const wentLive = s('golive', '2026-10-01T11:30:00Z');
         const future = s('future', '2026-10-01T12:30:00Z');
-        act(() => result.current.selectMany([past, wentLive, future]));
-        expect(result.current.selected.size).toBe(3);
+        act(() => result.current.selectMany([past, grace, wentLive, future]));
+        expect(result.current.selected.size).toBe(4);
 
         const liveKeys = new Set([streamKey({ ...wentLive, status: 'live' })]);
         const keep = (x: ScheduleStream) => liveKeys.has(streamKey(x)) || !isPastScheduled(x, NOW);
         act(() => result.current.prune(keep));
-        expect([...result.current.selected.keys()].sort()).toEqual([streamKey(wentLive), streamKey(future)].sort());
+        expect([...result.current.selected.keys()].sort()).toEqual([streamKey(grace), streamKey(wentLive), streamKey(future)].sort());
 
         const before = result.current.selected;
         act(() => result.current.prune(keep));

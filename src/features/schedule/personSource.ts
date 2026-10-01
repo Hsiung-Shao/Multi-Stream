@@ -8,6 +8,7 @@ import { SCHEDULE_SLUG_RE } from '../../config/schedulePerson';
 import { SnapshotError } from './snapshotSource';
 import { isCollabActive, resetRestConfigCache, resolveRestConfig, restGet, taipeiDate, type RestConfig, type RestOptions } from './restClient';
 import type { ScheduleAlso, ScheduleChannel, ScheduleStream } from './types';
+import { UPCOMING_GRACE_MS } from './filters';
 
 /** 最近幾天的直播紀錄 */
 export const PERSON_RECENT_DAYS = 30;
@@ -113,8 +114,8 @@ export function splitPersonStreams(vtuberId: string, rows: readonly PersonStream
         if (r.status === 'live') live.push(s);
         else if (r.status === 'scheduled') {
             const t = r.scheduled_start ? Date.parse(r.scheduled_start) : NaN;
-            // 預定時間已過還沒開台的不列（與週表「接下來」一致）
-            if (Number.isFinite(t) && t >= now && t <= until) upcoming.push(s);
+            // 預定時間已過寬限還沒開台的不列（與週表「接下來」一致，見 isPastScheduled）
+            if (Number.isFinite(t) && t + UPCOMING_GRACE_MS >= now && t <= until) upcoming.push(s);
         } else if (r.status === 'ended' && r.actual_end) recent.push(s);
     }
     upcoming.sort((a, b) => (a.scheduled_start ?? '').localeCompare(b.scheduled_start ?? ''));

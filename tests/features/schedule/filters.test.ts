@@ -3,6 +3,7 @@ import {
     countByTab,
     filterStreams,
     isPastScheduled,
+    UPCOMING_GRACE_MS,
     groupByDay,
     groupByHour,
     nowDividerIndex,
@@ -20,21 +21,25 @@ const noFav = toFavoriteKeys([]);
 const TZ = 'Asia/Taipei';
 
 describe('filterStreams', () => {
-    it('給了 now：接下來不列預定時間已過的場次，筆數一致；直播中不受影響', () => {
+    it('給了 now：接下來不列預定時間已過寬限的場次，筆數一致；直播中不受影響', () => {
         const snap = makeSnapshot();
         const all = snap.upcoming.map((s) => Date.parse(s.scheduled_start!)).sort((x, y) => x - y);
-        const cut = all[0] + 1; // 最早那場剛過
+        // 最早那場剛過時間但還在寬限內 → 仍在；過了寬限 → 移除
+        expect(filterStreams(snap, 'upcoming', DEFAULT_FILTERS, noFav, '', all[0] + 1).length).toBe(filterStreams(snap, 'upcoming', DEFAULT_FILTERS, noFav).length);
+        const cut = all[0] + UPCOMING_GRACE_MS + 1; // 最早那場過了寬限
         const before = filterStreams(snap, 'upcoming', DEFAULT_FILTERS, noFav);
         const after = filterStreams(snap, 'upcoming', DEFAULT_FILTERS, noFav, '', cut);
-        expect(after.every((s) => Date.parse(s.scheduled_start!) >= cut)).toBe(true);
+        expect(after.every((s) => Date.parse(s.scheduled_start!) + UPCOMING_GRACE_MS >= cut)).toBe(true);
         expect(after.length).toBeLessThan(before.length);
         expect(countByTab(snap, DEFAULT_FILTERS, noFav, '', cut).upcoming).toBe(after.length);
         expect(filterStreams(snap, 'live', DEFAULT_FILTERS, noFav, '', cut)).toEqual(filterStreams(snap, 'live', DEFAULT_FILTERS, noFav));
     });
 
-    it('isPastScheduled：沒有預定時間的不算已過', () => {
-        expect(isPastScheduled({ scheduled_start: '2026-09-29T04:00:00Z' }, Date.parse('2026-09-29T04:00:01Z'))).toBe(true);
-        expect(isPastScheduled({ scheduled_start: '2026-09-29T04:00:00Z' }, Date.parse('2026-09-29T04:00:00Z'))).toBe(false);
+    it('isPastScheduled：過了預定時間 15 分鐘才算已過；沒有預定時間的不算', () => {
+        expect(UPCOMING_GRACE_MS).toBe(15 * 60_000);
+        expect(isPastScheduled({ scheduled_start: '2026-09-29T04:00:00Z' }, Date.parse('2026-09-29T04:00:01Z'))).toBe(false);
+        expect(isPastScheduled({ scheduled_start: '2026-09-29T04:00:00Z' }, Date.parse('2026-09-29T04:15:00Z'))).toBe(false);
+        expect(isPastScheduled({ scheduled_start: '2026-09-29T04:00:00Z' }, Date.parse('2026-09-29T04:15:01Z'))).toBe(true);
         expect(isPastScheduled({ scheduled_start: undefined }, 0)).toBe(false);
     });
 

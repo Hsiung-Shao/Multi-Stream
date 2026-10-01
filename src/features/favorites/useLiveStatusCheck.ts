@@ -64,12 +64,7 @@ export const useLiveStatusCheck = () => {
                 // 先決定這一輪要處理哪些頻道
                 const candidates = youtubeFavorites.filter(fav => {
                     if (!fav.channelId) return false;
-                    // Optimization: Skip if live and checked recently (< 1 hour)
-                    if (fav.isLive && fav.lastChecked
-                        && Date.now() - new Date(fav.lastChecked).getTime() < 60 * 60 * 1000) {
-                        return false;
-                    }
-                    // 每頻道節流：離線頻道 15 分鐘、其餘 4 分鐘內查過就跳過（跨分頁、跨重新整理共用）
+                    // 每頻道節流：離線 15 分鐘、直播中 10 分鐘內查過就跳過（跨分頁、跨重新整理共用）；手動重新整理（force）一律查
                     return shouldCheckChannel(fav.channelId, Date.now(), force);
                 });
 

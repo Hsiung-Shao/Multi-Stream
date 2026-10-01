@@ -171,7 +171,8 @@ export const IslandFavoritesMenu = ({
 
     // Handlers
     const handleRefresh = async () => {
-        await checkNow();
+        // 使用者手動按下 → 略過每頻道節流（與收藏管理頁的「檢查直播狀態」一致）
+        await checkNow({ force: true });
         refresh();
     };
 

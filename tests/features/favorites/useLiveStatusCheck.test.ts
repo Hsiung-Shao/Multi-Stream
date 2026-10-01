@@ -75,6 +75,22 @@ describe('useLiveStatusCheck × 每頻道節流', () => {
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
     });
 
+    it('直播中的收藏剛查過：自動輪詢 10 分鐘內跳過，手動重新整理照查（下播不再卡 1 小時）', async () => {
+        favorites[0] = { ...favorites[0], isLive: true, lastChecked: new Date().toISOString() };
+        recordChannelCheck(CH, true);
+        await runCheck();
+        expect(checkChannelLiveStatus).not.toHaveBeenCalled();
+        await runCheck({ force: true });
+        expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
+    });
+
+    it('直播中的收藏超過 10 分鐘沒查：自動輪詢就會查（原本 1 小時內一律跳過）', async () => {
+        favorites[0] = { ...favorites[0], isLive: true, lastChecked: new Date().toISOString() };
+        recordChannelCheck(CH, true, Date.now() - 11 * 60_000);
+        await runCheck();
+        expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
+    });
+
     it('查詢失敗（例如端點 5xx）→ 不寫紀錄，下一輪會重試', async () => {
         checkChannelLiveStatus.mockRejectedValueOnce(new Error('live-og HTTP 503'));
         vi.spyOn(console, 'warn').mockImplementation(() => {});
