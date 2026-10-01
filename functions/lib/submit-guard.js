@@ -1,9 +1,10 @@
 // 公開寫入端點（投稿 VTuber、資料回報）共用的前置檢查：
-//   緊急開關 → 設定檢查 → JSON／大小 → 封鎖 IP → 欄位驗證 → 個人配額 → Turnstile → 全站配額
+//   緊急開關 → 設定檢查 → 來源（本站頁面） → JSON／大小 → 封鎖 IP → 欄位驗證 → 個人配額 → Turnstile → 全站配額
+// 來源檢查擋得住別的網站與裸 curl（header 可偽造，真正的防線是 Turnstile 與配額），與頻道查詢一致。
 // 欄位驗證放在配額之前（格式錯的請求不耗配額）；全站配額放在 Turnstile 之後（不然拿假 token 就能把全站額度用光）。
 // 設定缺漏（IP_HASH_SALT、RATE_LIMIT_KV）回 503：漏設時不能在沒有限流、個資可還原的狀態下默默上線。
 
-import { jsonResponse, readJsonBody } from './cors.js';
+import { isRequestFromAllowedSite, jsonResponse, readJsonBody } from './cors.js';
 import { getVisitorIp, isIpBanned, hashIp, checkQuotas, quotaWindow } from './rate-limit.js';
 import { verifyTurnstile } from './turnstile.js';
 import { select } from './supabase-server.js';
@@ -20,6 +21,7 @@ export async function guardSubmission(context, cfg) {
 
     if (env[cfg.disabledFlag] === 'true') return fail(503, 'disabled');
     if (!env.IP_HASH_SALT || !env.RATE_LIMIT_KV) return fail(503, 'not_configured');
+    if (!isRequestFromAllowedSite(request)) return fail(403, 'forbidden');
 
     const parsed = await readJsonBody(request, cfg.maxBytes);
     if (!parsed.ok) return { ok: false, response: parsed.response };

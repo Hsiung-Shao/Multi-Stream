@@ -323,6 +323,18 @@ describe('GET /api/vtuber/channel-lookup', () => {
 describe('POST /api/report', () => {
     const run = (body: unknown) => reportPost({ request: post('/api/report', body), env: ENV() });
 
+    it('別的網站或沒有來源資訊（裸 curl）→ 403，不讀 body、不耗配額', async () => {
+        const body = { kind: 'missing_vtuber', reasons: ['other'], description: 'x', turnstileToken: 't' };
+        const cross = await reportPost({ request: post('/api/report', body, { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' }), env: ENV() });
+        expect(cross.status).toBe(403);
+        expect((await cross.json()).error).toBe('forbidden');
+        const bare = new Request('https://multistreaming.org/api/report', { method: 'POST', headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.9' }, body: JSON.stringify(body) });
+        expect((await reportPost({ request: bare, env: ENV() })).status).toBe(403);
+        expect(calls.some((c) => c.url.includes('vtuber_reports'))).toBe(false);
+        const contrib = await contributePost({ request: post('/api/vtuber/contribute', goodContribution(), { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' }), env: ENV() });
+        expect(contrib.status).toBe(403);
+    });
+
     it('成功寫入；被回報的 VTuber 不存在 → 400', async () => {
         sb = (method, path) => (method === 'GET' && path.startsWith('vtubers') ? new Response(`[{"id":"${VID}"}]`) : new Response('[]', { status: method === 'GET' ? 200 : 201 }));
         const ok = await run({ kind: 'vtuber_info', vtuberId: VID, reasons: ['nationality'], description: '其實是港V', turnstileToken: 't', pageUrl: '/schedule/abc' });
