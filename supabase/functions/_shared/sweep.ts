@@ -373,6 +373,8 @@ export async function loadCurrentByChannel(db: Db, channelIds: readonly string[]
 export const NEAR_WINDOW_MS = 2 * 3_600_000;
 /** live-og 每輪保留給待機室（沒有直播中場次的頻道）的名額：直播中頻道多時開播偵測仍輪得到 */
 export const OG_RESERVE_OTHERS = 20;
+/** 一輪 live-og 最多幾頁退回整頁比對，超過就停止（見 ogSweep） */
+export const OG_FULL_PAGE_MAX = 10;
 
 export interface OgSweepResult {
   /** 判定直播中的實況主（更新 last_live_at） */
@@ -415,6 +417,12 @@ export async function ogSweep(
   await mapLimit(targets, opts.concurrency, opts.deadline, async (ch) => {
     const r = await detectLiveOg(ch.externalId, { fetch: opts.fetch });
     stats.og_checked += 1;
+    if (r.fullPage) {
+      stats.og_full_page += 1;
+      // 退回整頁比對（多半是 YouTube 改版）每頁 CPU 回到改版前約 3 倍：超過上限就停止開始新的頁面，
+      // 免得整輪撞 2 秒 hard limit、連 snapshot 都發不出去
+      if (stats.og_full_page >= OG_FULL_PAGE_MAX) opts.deadline.at = 0;
+    }
     if (!r.ok) {
       stats.og_failed += 1;
       const why = r.failReason ?? 'unknown';

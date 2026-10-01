@@ -35,6 +35,8 @@ export interface LiveOgResult {
   ok: boolean;
   /** ok=false 的原因（統計用）：bad_id／http_<狀態碼>／foreign_url／no_channel_id／thumb_<狀態碼>／error_<例外名稱>（AbortError＝逾時） */
   failReason?: string;
+  /** 這次是退回整頁比對（YouTube 改版的徵兆；ogSweep 用來限制整輪成本） */
+  fullPage?: boolean;
   isLive: boolean;
   isUpcoming: boolean;
   videoId: string | null;
@@ -45,6 +47,8 @@ export interface LiveOgResult {
 
 const FAILED: LiveOgResult = { ok: false, isLive: false, isUpcoming: false, videoId: null, title: null, scheduledStart: null };
 const failed = (failReason: string): LiveOgResult => ({ ...FAILED, failReason });
+/** 例外名稱：逾時的 DOMException 在部分環境不是 Error 的實例，直接讀 name */
+const errorName = (e: unknown): string => (typeof (e as { name?: unknown })?.name === 'string' ? (e as { name: string }).name : 'unknown');
 const OFFLINE: LiveOgResult = { ok: true, isLive: false, isUpcoming: false, videoId: null, title: null, scheduledStart: null };
 
 /** 屬性值：支援單雙引號（雙引號內可以有 '，反之亦然） */
@@ -112,23 +116,39 @@ export interface LiveOgPage {
   videoId: string | null;
   /** 是否讀完整頁（提早取消為 false） */
   complete: boolean;
+  /** 結構不符、退回整頁比對（讀完整頁）：呼叫端用來限制這一輪的成本 */
+  fullPage: boolean;
 }
 
 /** 前段沒有影片、而且有 canonical（頻道網址）＝可以確定是頻道頁 */
 const isChannelPage = (head: string, videoId: string | null) => !videoId && /<link\s+rel=["']canonical["']/i.test(head);
 
-/** 已有完整 HTML 時切出同樣的區段；規則與 readLiveOgPage 相同 */
-export function pageFromText(html: string, complete = true): LiveOgPage {
+/**
+ * 已有完整 HTML 時切出同樣的區段；規則與 readLiveOgPage 相同。
+ * channelId 有給時，頻道頁的頁首要含這個 ID 才算（不然整頁比對：YouTube 若把 canonical 改成 @handle，ID 只在後段）。
+ */
+export function pageFromText(html: string, complete = true, channelId?: string): LiveOgPage {
   const head = html.slice(0, HEAD_CHARS);
   const headId = extractVideoId(head);
-  if (isChannelPage(head, headId)) return { head, player: '', videoId: null, complete };
+  if (isChannelPage(head, headId) && (!channelId || head.includes(channelId))) return { head, player: '', videoId: null, complete, fullPage: false };
   // 前段沒有 canonical 時（結構和預期不同）videoId 改在整頁找
   const videoId = headId ?? extractVideoId(html);
   const at = html.indexOf(PLAYER_MARK);
   const end = at >= 0 ? html.indexOf(SCRIPT_END, at) : -1;
   const player = at >= 0 ? html.slice(at, end >= 0 ? end : undefined) : '';
-  if (!videoId || at < 0 || !player.includes(PLAYER_CHECK)) return { head, player: html, videoId, complete };
-  return { head, player, videoId, complete };
+  if (videoId && at >= 0 && player.includes(PLAYER_CHECK)) return { head, player, videoId, complete, fullPage: false };
+  return { head, player: looseSection(html), videoId, complete, fullPage: true };
+}
+
+/**
+ * 結構不符時的區段：沿用改版前的寬鬆找法（任何 ytInitialPlayerResponse 到 </script>），找不到才用整頁。
+ * 直接用整頁的話，推薦影片的待機標記會讓直播被判成待機（週表會漏記開播）。
+ */
+function looseSection(html: string): string {
+  const start = html.indexOf('ytInitialPlayerResponse');
+  if (start < 0) return html;
+  const end = html.indexOf(SCRIPT_END, start);
+  return html.slice(start, end < 0 ? undefined : end);
 }
 
 /** 從分段字串取 [from, to)：只接起涵蓋的那幾段 */
@@ -140,10 +160,10 @@ function sliceParts(parts: string[], starts: number[], from: number, to: number)
   return parts.slice(k, last + 1).join('').slice(from - starts[k], to - starts[k]);
 }
 
-/** 串流讀取 /live 頁（逾時由呼叫端的 AbortSignal 控制） */
-export async function readLiveOgPage(response: Response): Promise<LiveOgPage> {
+/** 串流讀取 /live 頁（逾時由呼叫端的 AbortSignal 控制）；channelId 見 pageFromText */
+export async function readLiveOgPage(response: Response, channelId?: string): Promise<LiveOgPage> {
   const body = response.body;
-  if (!body) return pageFromText(await response.text(), true);
+  if (!body) return pageFromText(await response.text(), true, channelId);
   const reader = body.getReader();
   const decoder = new TextDecoder();
   const parts: string[] = [];
@@ -184,7 +204,7 @@ export async function readLiveOgPage(response: Response): Promise<LiveOgPage> {
       if (head === null && (length >= HEAD_CHARS || done)) {
         head = parts.join('').slice(0, HEAD_CHARS);
         videoId = extractVideoId(head);
-        channelPage = isChannelPage(head, videoId);
+        channelPage = isChannelPage(head, videoId) && (!channelId || head.includes(channelId));
       }
       if (done) {
         complete = true;
@@ -197,12 +217,12 @@ export async function readLiveOgPage(response: Response): Promise<LiveOgPage> {
   } finally {
     if (!complete) reader.cancel().catch(() => {});
   }
-  if (channelPage) return { head: head!, player: '', videoId: null, complete };
+  if (channelPage) return { head: head!, player: '', videoId: null, complete, fullPage: false };
   if (!videoId || playerAt < 0 || playerBad) {
-    const page = pageFromText(parts.join(''), complete);
+    const page = pageFromText(parts.join(''), complete, channelId);
     return head === null ? page : { ...page, head };
   }
-  return { head: head!, player: sliceParts(parts, starts, playerAt, playerEnd >= 0 ? playerEnd : length), videoId, complete };
+  return { head: head!, player: sliceParts(parts, starts, playerAt, playerEnd >= 0 ? playerEnd : length), videoId, complete, fullPage: false };
 }
 
 /** 讀到的頁面 → videoId、是否待機、預定時間、標題（HEAD 縮圖確認直播由 detectLiveOg 做） */
@@ -254,7 +274,7 @@ export async function detectLiveOg(channelId: string, opts: { fetch?: typeof fet
         return failed(res.ok ? 'foreign_url' : `http_${res.status}`);
       }
       // 讀取也在逾時內：只等到標頭的話，內容傳到一半卡住會讓整輪等到牆鐘上限
-      return readLiveOgPage(res);
+      return readLiveOgPage(res, channelId);
     };
     let loaded: LiveOgPage | LiveOgResult;
     try {
@@ -273,25 +293,32 @@ export async function detectLiveOg(channelId: string, opts: { fetch?: typeof fet
     const page = loaded;
     // 頁面要提到自己的頻道 ID（頻道頁的 canonical／externalId 在頁首，直播頁在 playerResponse 的 videoDetails）；
     // 限流頁、sorry 頁回 200 但沒有，不能當成「沒有直播」
-    if (!page.head.includes(channelId) && !page.player.includes(channelId)) return failed('no_channel_id');
+    const fullPage = page.fullPage || undefined;
+    // 退回整頁時 player 可能只是寬鬆區段：頻道 ID 再看整頁沒有意義（已經讀完），只看頁首＋區段即可
+    if (!page.head.includes(channelId) && !page.player.includes(channelId)) return { ...failed('no_channel_id'), fullPage };
     const parsed = parseLiveOgPage(page);
-    if (!parsed.videoId) return OFFLINE;
+    if (!parsed.videoId) return { ...OFFLINE, fullPage };
     if (parsed.isUpcoming) {
-      return { ok: true, isLive: false, isUpcoming: true, videoId: parsed.videoId, title: parsed.title, scheduledStart: parsed.scheduledStart };
+      return { ok: true, isLive: false, isUpcoming: true, videoId: parsed.videoId, title: parsed.title, scheduledStart: parsed.scheduledStart, fullPage };
     }
     // _live.jpg 只有正在直播時才存在：200＝直播中、404＝沒在直播；其他狀態或例外不可判斷
-    const img = await fetchWithTimeout(
-      fetchFn,
-      `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault_live.jpg`,
-      { method: 'HEAD', headers: { 'User-Agent': BROWSER_UA } },
-      timeoutMs,
-    );
-    if (img.status === 200) return { ok: true, isLive: true, isUpcoming: false, videoId: parsed.videoId, title: parsed.title, scheduledStart: null };
-    if (img.status === 404) return OFFLINE;
-    return failed(`thumb_${img.status}`);
+    let img: Response;
+    try {
+      img = await fetchWithTimeout(
+        fetchFn,
+        `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault_live.jpg`,
+        { method: 'HEAD', headers: { 'User-Agent': BROWSER_UA } },
+        timeoutMs,
+      );
+    } catch (e) {
+      return { ...failed(`thumb_error_${errorName(e)}`), fullPage };
+    }
+    if (img.status === 200) return { ok: true, isLive: true, isUpcoming: false, videoId: parsed.videoId, title: parsed.title, scheduledStart: null, fullPage };
+    if (img.status === 404) return { ...OFFLINE, fullPage };
+    return { ...failed(`thumb_${img.status}`), fullPage };
   } catch (e) {
     // AbortError＝逾時；TypeError 多半是連線中斷
-    return failed(`error_${e instanceof Error ? e.name : 'unknown'}`);
+    return failed(`error_${errorName(e)}`);
   }
 }
 

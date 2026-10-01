@@ -2,7 +2,7 @@
 // 以及 ogSweep 的輪替、下播兩輪確認、斷路器、去重，和 API 有上限的重查
 import { describe, expect, it } from 'vitest';
 import { applyLiveOg, decodeHtmlEntities, detectLiveOg, extractTitle, extractVideoId, parseLiveOgHtml, type LiveOgResult } from '../../supabase/functions/_shared/live_og.ts';
-import { ogSweep, refreshPending } from '../../supabase/functions/_shared/sweep.ts';
+import { OG_FULL_PAGE_MAX, ogSweep, refreshPending } from '../../supabase/functions/_shared/sweep.ts';
 import { Db } from '../../supabase/functions/_shared/db.ts';
 import { YouTubeClient } from '../../supabase/functions/_shared/youtube.ts';
 import { emptyStats, type RosterChannel, type StreamRecord } from '../../supabase/functions/_shared/types.ts';
@@ -224,6 +224,16 @@ describe('ogSweep：輪替、下播兩輪確認、斷路器、去重', () => {
         await ogSweep(db, [chan(1), chan(2)], stats, NOW, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, maxChannels: 10, fetch: shared });
         const created = calls.filter((c) => c.method === 'POST' && c.url.includes('/streams?')).flatMap((c) => c.body as { external_id: string }[]);
         expect(created.map((r) => r.external_id)).toEqual(['SharedLive1']);
+    });
+
+    it('退回整頁比對（YouTube 改版徵兆）超過 OG_FULL_PAGE_MAX 頁就停止開始新的頁面', async () => {
+        const { db } = fakeDb();
+        // 測試頁沒有 canonical 也沒有 playerResponse 定義 → 每頁都退回整頁
+        const stats = emptyStats('light', NOW);
+        const chans = Array.from({ length: 15 }, (_, i) => chan(i + 1));
+        await ogSweep(db, chans, stats, NOW, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, maxChannels: 15, fetch: ogFetch(new Set()) });
+        expect(stats.og_full_page).toBe(OG_FULL_PAGE_MAX);
+        expect(stats.og_checked).toBe(OG_FULL_PAGE_MAX);
     });
 });
 

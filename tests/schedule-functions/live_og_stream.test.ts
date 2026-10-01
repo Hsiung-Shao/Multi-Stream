@@ -92,6 +92,24 @@ describe('readLiveOgPage（週表）', () => {
     expect(page.player).toBe(html);
   });
 
+  it('退回時先用舊版寬鬆區段：定義寫法改了（沒有「 = {」），推薦區塊的待機標記不會讓直播被當成待機', async () => {
+    const html = watchPage().replace('ytInitialPlayerResponse = {', 'ytInitialPlayerResponse={') +
+      '<script>var ytInitialData = {"x":{"isUpcoming":true,"scheduledStartTime":"1790776800"}};</script>';
+    const page = await readLiveOgPage(streamed(html).response);
+    expect(page.fullPage).toBe(true);
+    expect(page.player.startsWith('ytInitialPlayerResponse={')).toBe(true);
+    expect(parseLiveOgHtml(html).isUpcoming).toBe(false);
+  });
+
+  it('頻道頁頁首沒有這個頻道的 ID（例如 canonical 改成 @handle）：不提早結束，讀完整頁再判斷', async () => {
+    const html = channelPage().replace(`/channel/${UC}`, '/@somehandle') + `<script>{"externalId":"${UC}"}</script>`;
+    const { response, stat } = streamed(html);
+    const page = await readLiveOgPage(response, UC);
+    expect(stat.canceled).toBe(false);
+    expect(page).toMatchObject({ complete: true, fullPage: true, videoId: null });
+    expect(page.player).toContain(UC);
+  });
+
   it('parseLiveOgHtml（整頁版）與串流版規則相同：待機時間、標題取頁首', () => {
     const r = parseLiveOgHtml(watchPage({ upcoming: true }));
     expect(r).toEqual({ videoId: V, isUpcoming: true, scheduledStart: new Date(1790776800 * 1000).toISOString(), title: '直播標題' });
@@ -132,5 +150,19 @@ describe('detectLiveOg（週表，串流）', () => {
     expect(await detectLiveOg(UC, { fetch: f })).toMatchObject({ ok: false, failReason: 'error_TypeError' });
     expect(f.mock.calls.filter(([u]) => String(u).includes('/live?')).length).toBe(1);
     expect(await detectLiveOg(UC, { fetch: fakeFetch(watchPage(), 503) })).toMatchObject({ ok: false, failReason: 'thumb_503' });
+  });
+
+  it('縮圖 HEAD 逾時或例外：thumb_error_<例外>（和頁面讀取的錯誤分開）', async () => {
+    const base = fakeFetch(watchPage());
+    const f = (async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).includes('i.ytimg.com')) throw new DOMException('aborted', 'AbortError');
+      return base(url, init);
+    }) as unknown as typeof fetch;
+    expect(await detectLiveOg(UC, { fetch: f })).toMatchObject({ ok: false, failReason: 'thumb_error_AbortError' });
+  });
+
+  it('頻道頁頁首沒有自己的 ID 但後段有：讀完整頁仍判定為離線（ok）', async () => {
+    const html = channelPage().replace(`/channel/${UC}`, '/@somehandle') + `<script>{"externalId":"${UC}"}</script>`;
+    expect(await detectLiveOg(UC, { fetch: fakeFetch(html) })).toMatchObject({ ok: true, isLive: false, videoId: null, fullPage: true });
   });
 });

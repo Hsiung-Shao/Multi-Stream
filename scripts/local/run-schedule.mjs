@@ -93,6 +93,11 @@ const summary = {
   quota_exceeded_runs: runs.filter((r) => r.quota_exceeded).length,
   og_checked: sum('og_checked'),
   og_failed: sum('og_failed'),
+  og_fail_reasons: runs.reduce((acc, r) => {
+    for (const [k, n] of Object.entries(r.og_fail_reasons ?? {})) acc[k] = (acc[k] ?? 0) + n;
+    return acc;
+  }, {}),
+  og_full_page: sum('og_full_page'),
   og_live: sum('og_live'),
   og_upcoming: sum('og_upcoming'),
   og_ended: sum('og_ended'),

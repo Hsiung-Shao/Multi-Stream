@@ -66,6 +66,8 @@ export interface RunStats extends Record<string, unknown> {
   og_failed: number;
   /** og 失敗原因分布（見 LiveOgResult.failReason） */
   og_fail_reasons: Record<string, number>;
+  /** 退回整頁比對的頁數（YouTube 改版徵兆） */
+  og_full_page: number;
   og_live: number;
   og_upcoming: number;
   og_ended: number;
@@ -124,6 +126,7 @@ export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats 
     og_checked: 0,
     og_failed: 0,
     og_fail_reasons: {},
+    og_full_page: 0,
     og_live: 0,
     og_upcoming: 0,
     og_ended: 0,
