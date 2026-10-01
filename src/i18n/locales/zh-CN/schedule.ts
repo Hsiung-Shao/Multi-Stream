@@ -16,7 +16,6 @@ export default {
     'day.none': '这天还没有人开待机室',
 
     'timeline.now': '现在',
-    'timeline.overdue': '已过预定时间',
 
     'scope.label': '范围',
     'scope.all': '全部',

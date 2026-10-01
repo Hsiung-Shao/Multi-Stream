@@ -16,7 +16,6 @@ export default {
     'day.none': '이 날에는 아직 대기실이 없습니다',
 
     'timeline.now': '지금',
-    'timeline.overdue': '예정 시각 지남',
 
     'scope.label': '범위',
     'scope.all': '전체',

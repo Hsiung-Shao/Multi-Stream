@@ -45,6 +45,14 @@ describe('splitPersonStreams', () => {
         expect(out.recent.map((s) => s.external_id)).toEqual(['new', 'old']);
     });
 
+    it('預定時間已過還沒開台的不列入接下來', () => {
+        const out = splitPersonStreams('v1', [
+            row({ id: 'past', status: 'scheduled', scheduled_start: '2026-09-29T03:59:00Z' }),
+            row({ id: 'soon', status: 'scheduled', scheduled_start: '2026-09-29T04:01:00Z' }),
+        ], NOW);
+        expect(out.upcoming.map((s) => s.external_id)).toEqual(['soon']);
+    });
+
     it('null 欄位不輸出（與 snapshot 形狀一致）', () => {
         const out = splitPersonStreams('v1', [row({ id: 'a', status: 'scheduled', scheduled_start: '2026-09-29T10:00:00Z' })], NOW);
         expect(out.upcoming[0]).toEqual({

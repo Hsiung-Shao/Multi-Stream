@@ -22,6 +22,7 @@ import { DayTimeline } from '../../features/schedule/DayTimeline';
 import { SelectionBar } from '../../features/schedule/SelectionBar';
 import type { SchedulePerson } from '../../features/schedule/personSource';
 import { streamKey } from '../../features/schedule/types';
+import { isPastScheduled } from '../../features/schedule/filters';
 import { largerAvatar } from '../../features/schedule/streamLinks';
 import { schedulePersonPath } from '../../config/schedulePerson';
 import { PAGE_PATHS } from '../../config/routes';
@@ -229,8 +230,10 @@ function PersonBody({ person }: { person: SchedulePerson }) {
         if (person.live.length === 1) void watch(person.live[0], person.channel);
         else void sel.open(person.live);
     };
+    // 停留在頁面上時，預定時間一過就從「接下來」移除（資料是載入當下切分的）
+    const upcoming = useMemo(() => person.upcoming.filter((s) => !isPastScheduled(s, now)), [person.upcoming, now]);
     const recentShown = recentExpanded ? person.recent : person.recent.slice(0, RECENT_PREVIEW);
-    const nothing = person.live.length + person.upcoming.length + person.recent.length === 0;
+    const nothing = person.live.length + upcoming.length + person.recent.length === 0;
 
     return (
         <ScheduleCardActionsContext.Provider value={cardActions}>
@@ -269,12 +272,12 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                     )}
 
                     <section aria-labelledby="person-upcoming">
-                        <SectionTitle id="person-upcoming" count={person.upcoming.length}>{t('person.upcoming')}</SectionTitle>
-                        {person.upcoming.length === 0 ? (
+                        <SectionTitle id="person-upcoming" count={upcoming.length}>{t('person.upcoming')}</SectionTitle>
+                        {upcoming.length === 0 ? (
                             <p className="text-sm text-muted-foreground">{t('person.noneUpcoming')}</p>
                         ) : (
                             <DayTimeline
-                                streams={person.upcoming}
+                                streams={upcoming}
                                 channels={channels}
                                 now={now}
                                 selected={sel.selectedKeys}

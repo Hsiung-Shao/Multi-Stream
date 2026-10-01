@@ -369,14 +369,13 @@ function RowMain({ stream, channel, className, rounded, children }: { stream: Sc
     );
 }
 
-export function SlotRow({ stream, channel, now, selected, onToggle, personLinks = true }: SelectableProps) {
+export function SlotRow({ stream, channel, selected, onToggle, personLinks = true }: SelectableProps) {
     const { t, i18n } = useTranslation('schedule');
     const actions = useCardActions();
     const locale = i18n.language || 'zh-TW';
     const name = channel?.name ?? stream.vtuber_id;
     const href = watchUrl(stream, channel);
     const platformLabel = t(stream.platform === 'youtube' ? 'platform.youtube' : 'platform.twitch');
-    const overdue = !!stream.scheduled_start && Date.parse(stream.scheduled_start) < now;
     const busy = actions?.busyKey === streamKey(stream);
 
     return (
@@ -421,7 +420,6 @@ export function SlotRow({ stream, channel, now, selected, onToggle, personLinks 
                 )}
             </span>
             {busy && <Loader2 size={16} className="shrink-0 animate-spin text-muted-foreground" aria-hidden="true" />}
-            {overdue && <span className="hidden shrink-0 text-xs font-medium text-amber-500 md:inline">{t('timeline.overdue')}</span>}
             {actions && (
                 <span className="flex shrink-0 items-center">
                     {personLinks && <FavoriteButton channel={channel} size="sm" />}

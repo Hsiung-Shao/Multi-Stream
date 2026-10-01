@@ -16,7 +16,6 @@ export default {
     'day.none': 'No waiting rooms on this day yet',
 
     'timeline.now': 'Now',
-    'timeline.overdue': 'Past start time',
 
     'scope.label': 'Scope',
     'scope.all': 'Everyone',

@@ -113,7 +113,8 @@ export function splitPersonStreams(vtuberId: string, rows: readonly PersonStream
         if (r.status === 'live') live.push(s);
         else if (r.status === 'scheduled') {
             const t = r.scheduled_start ? Date.parse(r.scheduled_start) : NaN;
-            if (Number.isFinite(t) && t <= until) upcoming.push(s);
+            // 預定時間已過還沒開台的不列（與週表「接下來」一致）
+            if (Number.isFinite(t) && t >= now && t <= until) upcoming.push(s);
         } else if (r.status === 'ended' && r.actual_end) recent.push(s);
     }
     upcoming.sort((a, b) => (a.scheduled_start ?? '').localeCompare(b.scheduled_start ?? ''));

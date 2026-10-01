@@ -16,7 +16,6 @@ export default {
     'day.none': 'この日の待機所はまだありません',
 
     'timeline.now': '現在',
-    'timeline.overdue': '予定時刻を過ぎています',
 
     'scope.label': '範囲',
     'scope.all': 'すべて',

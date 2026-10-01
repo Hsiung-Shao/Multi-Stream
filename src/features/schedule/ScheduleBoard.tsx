@@ -103,9 +103,10 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
         if (!isValidGroup(filters.group, groups)) setFilters((f) => ({ ...f, group: 'all' }));
     }, [groups, filters.group]);
 
-    const counts = useMemo(() => countByTab(snapshot, filters, favoriteKeys, deferredQuery), [snapshot, filters, favoriteKeys, deferredQuery]);
+    const counts = useMemo(() => countByTab(snapshot, filters, favoriteKeys, deferredQuery, now), [snapshot, filters, favoriteKeys, deferredQuery, now]);
     const live = useMemo(() => sortLive(filterStreams(snapshot, 'live', filters, favoriteKeys, deferredQuery)), [snapshot, filters, favoriteKeys, deferredQuery]);
-    const upcoming = useMemo(() => filterStreams(snapshot, 'upcoming', filters, favoriteKeys, deferredQuery), [snapshot, filters, favoriteKeys, deferredQuery]);
+    // now 每分鐘更新：預定時間一過，該場就從「接下來」移除
+    const upcoming = useMemo(() => filterStreams(snapshot, 'upcoming', filters, favoriteKeys, deferredQuery, now), [snapshot, filters, favoriteKeys, deferredQuery, now]);
     const recent = useMemo(() => filterStreams(snapshot, 'recent', filters, favoriteKeys, deferredQuery), [snapshot, filters, favoriteKeys, deferredQuery]);
     // 捷徑只列有個人頁的人（沒有 slug 的點了沒地方去）
     const matchedPeople = useMemo(() => listMatchingChannels(snapshot, deferredQuery).filter((p) => p.channel.slug), [snapshot, deferredQuery]);

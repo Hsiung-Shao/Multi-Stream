@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     countByTab,
     filterStreams,
+    isPastScheduled,
     groupByDay,
     groupByHour,
     nowDividerIndex,
@@ -19,6 +20,24 @@ const noFav = toFavoriteKeys([]);
 const TZ = 'Asia/Taipei';
 
 describe('filterStreams', () => {
+    it('給了 now：接下來不列預定時間已過的場次，筆數一致；直播中不受影響', () => {
+        const snap = makeSnapshot();
+        const all = snap.upcoming.map((s) => Date.parse(s.scheduled_start!)).sort((x, y) => x - y);
+        const cut = all[0] + 1; // 最早那場剛過
+        const before = filterStreams(snap, 'upcoming', DEFAULT_FILTERS, noFav);
+        const after = filterStreams(snap, 'upcoming', DEFAULT_FILTERS, noFav, '', cut);
+        expect(after.every((s) => Date.parse(s.scheduled_start!) >= cut)).toBe(true);
+        expect(after.length).toBeLessThan(before.length);
+        expect(countByTab(snap, DEFAULT_FILTERS, noFav, '', cut).upcoming).toBe(after.length);
+        expect(filterStreams(snap, 'live', DEFAULT_FILTERS, noFav, '', cut)).toEqual(filterStreams(snap, 'live', DEFAULT_FILTERS, noFav));
+    });
+
+    it('isPastScheduled：沒有預定時間的不算已過', () => {
+        expect(isPastScheduled({ scheduled_start: '2026-09-29T04:00:00Z' }, Date.parse('2026-09-29T04:00:01Z'))).toBe(true);
+        expect(isPastScheduled({ scheduled_start: '2026-09-29T04:00:00Z' }, Date.parse('2026-09-29T04:00:00Z'))).toBe(false);
+        expect(isPastScheduled({ scheduled_start: undefined }, 0)).toBe(false);
+    });
+
     it('預設只顯示 TW', () => {
         const snap = makeSnapshot();
         expect(DEFAULT_FILTERS.nationality).toBe('TW');
