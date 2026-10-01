@@ -49,6 +49,8 @@ export interface ReportRecord {
     stream_platform: 'youtube' | 'twitch' | null;
     stream_external_id: string | null;
     description: string | null;
+    /** 「補充資料」：後端正規化後的值（youtube 是 UC… 或 @handle，twitch 是 login） */
+    suggested: Partial<Record<ApplyField, string>> | null;
     source_urls: string[] | null;
     contact: string | null;
     page_url: string | null;
@@ -56,9 +58,21 @@ export interface ReportRecord {
     admin_notes: string | null;
     resolved_at: string | null;
     created_at: string;
-    vtuber: { name: string; slug: string } | null;
+    vtuber: {
+        name: string;
+        slug: string;
+        x_url?: string | null;
+        facebook_url?: string | null;
+        instagram_url?: string | null;
+        bio?: string | null;
+        youtube_channel_id?: string | null;
+        twitch_channel_id?: string | null;
+    } | null;
     group: { name: string } | null;
 }
+
+/** 補充資料可套用的欄位（與後端 SUGGESTED_KEYS 一致） */
+export type ApplyField = 'x' | 'facebook' | 'instagram' | 'youtube' | 'twitch' | 'bio';
 
 /** 核准時的覆蓋欄位（與後端 validateOverrides 白名單一致） */
 export interface ApproveOverrides {
@@ -155,6 +169,19 @@ export function useUpdateReport() {
     });
 }
 
+/** 套用補充資料（apply_vtuber_report_info）；成功後回報會變成已修正 */
+export function useApplyReport() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, fields, admin_notes }: { id: string; fields: Partial<Record<ApplyField, string>>; admin_notes: string }) =>
+            apiFetch<{ result: { slug: string; applied: string[] } }>(`/api/admin/reports?id=${id}&action=apply`, {
+                method: 'POST',
+                body: JSON.stringify({ fields, admin_notes }),
+            }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: [REPORT_KEY] }),
+    });
+}
+
 const ERRORS: Record<string, string> = {
     request_timeout: '請求逾時（15 秒），請稍後再試',
     unauthorized: 'Admin API Token 無效，請重新設定',
@@ -179,6 +206,23 @@ const ERRORS: Record<string, string> = {
     reject_failed: '駁回失敗（伺服器錯誤）',
     update_failed: '更新失敗（伺服器錯誤）',
     fetch_failed: '讀取失敗',
+    not_open: '這筆回報已經處理過了',
+    no_target: '這筆回報沒有對應的 VTuber',
+    no_fields: '沒有要套用的欄位',
+    invalid_field: '欄位格式不正確',
+    invalid_bio: '簡介最多 500 字',
+    youtube_already_set: '這位 VTuber 已經有 YouTube 頻道（只能補缺，要換頻道請手動處理）',
+    twitch_already_set: '這位 VTuber 已經有 Twitch 帳號（只能補缺，要換帳號請手動處理）',
+    youtube_not_found: '找不到這個 YouTube 頻道',
+    youtube_fetch_failed: '暫時查不到 YouTube 頻道資料，請稍後再試',
+    youtube_invalid_url: 'YouTube 頻道網址格式不正確',
+    youtube_unsupported_url: '不支援 /c/ 或 /user/ 舊式網址，請改用 @handle 或 /channel/ 網址',
+    twitch_not_found: '找不到這個 Twitch 帳號',
+    twitch_fetch_failed: '暫時查不到 Twitch 帳號資料，請稍後再試',
+    apply_failed: '套用失敗（伺服器錯誤）',
+    invalid_suggested: '補充資料太長',
+    invalid_id: '回報 ID 格式不正確',
+    invalid_action: '不支援的操作',
 };
 
 export function formatSubmissionError(err: unknown): string {

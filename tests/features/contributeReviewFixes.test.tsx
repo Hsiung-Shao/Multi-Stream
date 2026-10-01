@@ -166,3 +166,41 @@ describe('回報對話框', () => {
         await waitFor(() => expect(screen.queryByText(required)).toBeNull());
     });
 });
+
+describe('回報對話框：補充資料', () => {
+    const reportCall = () => fetchMock.mock.calls.find(([u]) => String(u).startsWith('/api/report'));
+
+    it('勾選後展開欄位；全空擋下不送出；有填的欄位才送出', async () => {
+        render(<ReportDialog target={{ kind: 'vtuber_info', vtuberId: 'v1', name: '台一' }} onClose={() => {}} />);
+        expect(screen.queryByLabelText('X（Twitter）')).toBeNull();
+        fireEvent.click(screen.getByText('補充資料（社群、頻道、簡介）'));
+        expect(screen.getByText('要補充的資料')).toBeTruthy();
+        const submit = screen.getByRole('button', { name: '送出回報' });
+        await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
+        fireEvent.click(submit);
+        expect(await screen.findByText('請至少填一項要補充的資料')).toBeTruthy();
+        expect(reportCall()).toBeUndefined();
+
+        fireEvent.change(screen.getByLabelText('X（Twitter）'), { target: { value: ' @ksp ' } });
+        fireEvent.change(screen.getByLabelText('Twitch'), { target: { value: 'twitch.tv/ksp' } });
+        await waitFor(() => expect(screen.queryByText('請至少填一項要補充的資料')).toBeNull());
+        fireEvent.click(submit);
+        await waitFor(() => expect(reportCall()).toBeTruthy());
+        const body = JSON.parse(String(reportCall()![1]!.body));
+        expect(body).toMatchObject({ kind: 'vtuber_info', vtuberId: 'v1', reasons: ['add_info'], suggested: { x: '@ksp', twitch: 'twitch.tv/ksp' } });
+        expect(Object.keys(body.suggested)).toEqual(['x', 'twitch']);
+    });
+
+    it('沒勾補充資料時不送 suggested（填過再取消也一樣）', async () => {
+        render(<ReportDialog target={{ kind: 'vtuber_info', vtuberId: 'v1', name: '台一' }} onClose={() => {}} />);
+        fireEvent.click(screen.getByText('補充資料（社群、頻道、簡介）'));
+        fireEvent.change(screen.getByLabelText('X（Twitter）'), { target: { value: '@ksp' } });
+        fireEvent.click(screen.getByText('補充資料（社群、頻道、簡介）'));
+        fireEvent.click(screen.getByText('地區錯誤'));
+        const submit = screen.getByRole('button', { name: '送出回報' });
+        await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
+        fireEvent.click(submit);
+        await waitFor(() => expect(reportCall()).toBeTruthy());
+        expect(JSON.parse(String(reportCall()![1]!.body)).suggested).toBeUndefined();
+    });
+});

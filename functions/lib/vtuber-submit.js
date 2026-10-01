@@ -25,7 +25,7 @@ export const LIMITS = {
 
 /** 回報類型與各自可選的原因（與 vtuber_reports.reasons 的 CHECK 白名單一致） */
 export const REPORT_REASONS_BY_KIND = {
-    vtuber_info: ['name', 'group', 'nationality', 'graduated', 'channel_link', 'not_vtuber', 'other'],
+    vtuber_info: ['name', 'group', 'nationality', 'graduated', 'channel_link', 'not_vtuber', 'add_info', 'other'],
     stream: ['wrong_time', 'cancelled', 'duplicate', 'other'],
     roster: ['missing_member', 'wrong_member', 'graduated', 'other'],
     missing_vtuber: ['other'],
@@ -103,7 +103,11 @@ export function normalizeSocial(kind, raw) {
         return /^[A-Za-z0-9_]{1,15}$/.test(h ?? '') ? { value: `https://x.com/${h}` } : { error: 'invalid_x' };
     }
     if (kind === 'instagram') {
-        const h = s.startsWith('@') ? s.slice(1) : pathHandle(s, /^(www\.)?instagram\.com$/i);
+        // Instagram 帳號可以含句點（例如 abc.def），只填帳號時不能當成網址解析
+        const bare = /^[A-Za-z0-9_.]{1,30}$/.test(s) && !/instagram\.com/i.test(s);
+        // 只填帳號卻像網域（twitter.com、abc.tv…）多半是貼錯欄位
+        if (bare && /\.(com|net|org|tv|io|me|gg|tw|jp|hk)$/i.test(s)) return { error: 'invalid_instagram' };
+        const h = s.startsWith('@') ? s.slice(1) : bare ? s : pathHandle(s, /^(www\.)?instagram\.com$/i);
         return /^[A-Za-z0-9_.]{1,30}$/.test(h ?? '') ? { value: `https://www.instagram.com/${h}` } : { error: 'invalid_instagram' };
     }
     if (kind === 'facebook') {
@@ -332,6 +336,43 @@ export function validateContribution(body) {
     };
 }
 
+/** 「補充資料」可填的欄位（回報與後台套用共用） */
+export const SUGGESTED_KEYS = ['x', 'facebook', 'instagram', 'youtube', 'twitch', 'bio'];
+// vtuber_reports.suggested 的 CHECK 是 octet_length(suggested::text) <= 4096；jsonb 輸出會在 : 與 , 後加空白，預留餘量
+const SUGGESTED_MAX_BYTES = 3900;
+// 控制字元（保留換行）：寫進 jsonb 會膨脹成 \u0001，之後也會顯示在公開個人頁
+const CONTROL_CHARS = /[\u0000-\u0009\u000B-\u001F\u007F-\u009F]/g;
+
+/**
+ * 「補充資料」驗證與正規化：社群沿用 normalizeSocial，YouTube 只解析格式（UC… 或 @handle，實際查詢在後台套用時），
+ * 簡介 ≤ LIMITS.bio。只回傳有填的欄位；全部空白回 suggested_required。
+ * 產出：{ x?, facebook?, instagram?, twitch?（login）, youtube?（'UC…' 或 '@handle'）, bio? }
+ */
+export function validateSuggested(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { error: 'suggested_required' };
+    const out = {};
+    for (const kind of ['x', 'facebook', 'instagram', 'twitch']) {
+        if (raw[kind] != null && typeof raw[kind] !== 'string') return { error: `invalid_${kind}` };
+        const r = normalizeSocial(kind, raw[kind]);
+        if (r.error) return { error: r.error };
+        if (r.value) out[kind] = r.value;
+    }
+    if (raw.youtube != null && typeof raw.youtube !== 'string') return { error: 'youtube_invalid_url' };
+    if (str(raw.youtube)) {
+        const yt = parseYoutubeChannelInput(raw.youtube);
+        if (yt.error) return { error: `youtube_${yt.error}` };
+        out.youtube = yt.kind === 'id' ? yt.channelId : `@${yt.handle}`;
+    }
+    if (raw.bio != null && typeof raw.bio !== 'string') return { error: 'invalid_bio' };
+    const bio = str(raw.bio).replace(CONTROL_CHARS, '');
+    if (bio.length > LIMITS.bio) return { error: 'invalid_bio' };
+    if (bio) out.bio = bio;
+    if (!Object.keys(out).length) return { error: 'suggested_required' };
+    // 各欄個別限長，但總和仍可能超過資料庫上限（例如中文 Facebook 路徑被編碼成每字 9 bytes）
+    if (new TextEncoder().encode(JSON.stringify(out)).length > SUGGESTED_MAX_BYTES) return { error: 'invalid_suggested' };
+    return { value: out };
+}
+
 /**
  * 回報表單驗證。對象是否存在由端點查資料庫確認。
  * @returns {{ value: object } | { error: string }}
@@ -349,10 +390,19 @@ export function validateReport(body) {
     if (description.length > LIMITS.reportDescription) return { error: 'invalid_description' };
     if (reasons.includes('other') && !description) return { error: 'description_required' };
 
+    // 補充資料：只有勾了 add_info 才收（其他情況帶來的 suggested 一律忽略）
+    let suggested = null;
+    if (reasons.includes('add_info')) {
+        const s = validateSuggested(body.suggested);
+        if (s.error) return s;
+        suggested = s.value;
+    }
+
     const value = {
         kind: body.kind,
         reasons,
         description: description || null,
+        suggested,
         vtuberId: null,
         groupId: null,
         streamPlatform: null,

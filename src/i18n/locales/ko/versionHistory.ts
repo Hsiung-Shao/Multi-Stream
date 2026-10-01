@@ -3,6 +3,8 @@ const versionHistory = {
   'subtitle': 'MultiStream Hub 업데이트 기록',
   'description': '모든 기능 업데이트와 수정 기록',
   'latest': '최신',
+  'v3.6.1.date': '2026-10-02',
+  'v3.6.1.addInfo': 'VTuber 개별 페이지의 「정보 오류 신고」에 「정보 추가」가 생겼습니다. 빠진 X, Facebook, Instagram, YouTube／Twitch 채널과 소개를 보내 주시면 운영진 확인 후 페이지에 반영합니다',
   'v3.6.0.date': '2026-10-02',
   'v3.6.0.schedule': '「방송 스케줄」 페이지를 추가했습니다. 대만 VTuber의 방송 중, 앞으로 7일간의 대기실, 방금 끝난 방송을 한 페이지에서 확인하고 지역·소속사·플랫폼·즐겨찾기로 필터링한 뒤, 몇 명을 골라 한 번에 캔버스에서 동시에 시청할 수 있습니다',
   'v3.6.0.personPage': 'VTuber마다 개별 스케줄 페이지가 생겼으며, YouTube와 Twitch 방송 및 예정 시간을 합쳐서 보여줍니다',

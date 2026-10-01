@@ -82,9 +82,16 @@ export function submitContribution(input: ContributionInput): Promise<{ ok: true
 
 export type ReportKind = 'vtuber_info' | 'stream' | 'roster' | 'missing_vtuber';
 
+/** 「補充資料」可填的欄位（與後端 SUGGESTED_KEYS 一致，functions/lib/vtuber-submit.js） */
+export const SUGGESTED_FIELDS = ['x', 'facebook', 'instagram', 'youtube', 'twitch', 'bio'] as const;
+export type SuggestedField = (typeof SUGGESTED_FIELDS)[number];
+export type ReportSuggested = Partial<Record<SuggestedField, string>>;
+
 export interface ReportInput {
     kind: ReportKind;
     reasons: string[];
+    /** 只有勾「補充資料」（add_info）時送出 */
+    suggested?: ReportSuggested;
     vtuberId?: string;
     groupId?: string;
     stream?: { platform: 'youtube' | 'twitch'; externalId: string };
@@ -101,7 +108,7 @@ export function submitReport(input: ReportInput): Promise<{ ok: true }> {
 
 /** 與後端 REPORT_REASONS_BY_KIND 相同（functions/lib/vtuber-submit.js） */
 export const REPORT_REASONS: Record<ReportKind, string[]> = {
-    vtuber_info: ['name', 'group', 'nationality', 'graduated', 'channel_link', 'not_vtuber', 'other'],
+    vtuber_info: ['name', 'group', 'nationality', 'graduated', 'channel_link', 'not_vtuber', 'add_info', 'other'],
     stream: ['wrong_time', 'cancelled', 'duplicate', 'other'],
     roster: ['missing_member', 'wrong_member', 'graduated', 'other'],
     missing_vtuber: ['other'],

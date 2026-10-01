@@ -3,6 +3,8 @@ const versionHistory = {
   'subtitle': 'MultiStream Hub更新履歴',
   'description': 'すべての機能追加と修正の記録',
   'latest': '最新',
+  'v3.6.1.date': '2026-10-02',
+  'v3.6.1.addInfo': 'VTuber 個別ページの「情報の誤りを報告」に「情報を追加」を追加しました。不足している X・Facebook・Instagram・YouTube／Twitch チャンネル・紹介文を送ると、運営が確認後ページに反映します',
   'v3.6.0.date': '2026-10-02',
   'v3.6.0.schedule': '「配信スケジュール」ページを追加しました。台湾 VTuber の配信中・今後 7 日間の待機所・直近に終了した配信を 1 ページで確認でき、地域・所属事務所・プラットフォーム・お気に入りで絞り込み、数人を選んでワンクリックでキャンバスで同時視聴できます',
   'v3.6.0.personPage': 'VTuber ごとに個別のスケジュールページを用意し、YouTube と Twitch の配信・予定をまとめて表示します',

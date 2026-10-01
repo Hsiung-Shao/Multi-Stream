@@ -7,6 +7,7 @@ import {
     normalizeSocial,
     validateContribution,
     validateReport,
+    validateSuggested,
     parseChannelHead,
     lookupYoutubeChannel,
     // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
@@ -24,7 +25,7 @@ import { onRequestPost as reportPost } from '../../functions/api/report.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { onRequestGet as adminContribGet, onRequestPost as adminContribPost, validateOverrides } from '../../functions/api/admin/contributions.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { onRequestPut as adminReportPut } from '../../functions/api/admin/reports.js';
+import { onRequestPut as adminReportPut, onRequestPost as adminReportPost, buildApplyFields } from '../../functions/api/admin/reports.js';
 
 const UC = 'UC' + 'a'.repeat(22);
 const VID = '11111111-1111-4111-8111-111111111111';
@@ -59,6 +60,9 @@ describe('normalizeSocial', () => {
         expect(normalizeSocial('x', '@abc_1')).toEqual({ value: 'https://x.com/abc_1' });
         expect(normalizeSocial('x', 'https://twitter.com/abc_1/status/1')).toEqual({ value: 'https://x.com/abc_1' });
         expect(normalizeSocial('instagram', 'instagram.com/a.b_c/')).toEqual({ value: 'https://www.instagram.com/a.b_c' });
+        // 只填帳號、帳號含句點：不能當成網址（2026-10-02 修正前會被判格式錯誤）
+        expect(normalizeSocial('instagram', 'akumu.test')).toEqual({ value: 'https://www.instagram.com/akumu.test' });
+        expect(normalizeSocial('instagram', 'https://www.instagram.com/akumu.test')).toEqual({ value: 'https://www.instagram.com/akumu.test' });
         expect(normalizeSocial('facebook', 'https://m.facebook.com/page.name?ref=1')).toEqual({ value: 'https://www.facebook.com/page.name' });
         expect(normalizeSocial('facebook', 'https://www.facebook.com/profile.php?id=123')).toEqual({ value: 'https://www.facebook.com/profile.php?id=123' });
         expect(normalizeSocial('twitch', 'https://www.twitch.tv/SomeOne')).toEqual({ value: 'someone' });
@@ -401,5 +405,94 @@ describe('後台 API', () => {
         // 回報不存在 → 404（先查原狀態）
         sb = () => new Response('[]');
         expect((await adminReportPut({ request: admin(`/api/admin/reports?id=${VID}`, { method: 'PUT', body: '{"status":"spam"}' }), env: ENV() })).status).toBe(404);
+    });
+});
+
+describe('補充資料（add_info）', () => {
+    const base = { kind: 'vtuber_info', vtuberId: VID, reasons: ['add_info'] };
+
+    it('validateSuggested：正規化有填的欄位、全空要求至少一項、格式錯回對應錯誤碼', () => {
+        expect(validateSuggested({ x: '@abc', youtube: 'https://www.youtube.com/@newbie_vt', twitch: 'twitch.tv/FooBar', bio: ' 簡介 ', instagram: '  ' }).value)
+            .toEqual({ x: 'https://x.com/abc', youtube: '@newbie_vt', twitch: 'foobar', bio: '簡介' });
+        expect(validateSuggested({ youtube: UC }).value).toEqual({ youtube: UC });
+        expect(validateSuggested({}).error).toBe('suggested_required');
+        expect(validateSuggested(null).error).toBe('suggested_required');
+        expect(validateSuggested({ x: 'https://evil.com/abc' }).error).toBe('invalid_x');
+        expect(validateSuggested({ youtube: 'https://www.youtube.com/c/old' }).error).toBe('youtube_unsupported_url');
+        expect(validateSuggested({ bio: 'x'.repeat(501) }).error).toBe('invalid_bio');
+        expect(validateSuggested({ x: 123 }).error).toBe('invalid_x');
+    });
+
+    it('validateSuggested：簡介去掉控制字元；總大小超過資料庫上限回 invalid_suggested（不讓 insert 撞 CHECK 變 500）', () => {
+        expect(validateSuggested({ bio: 'a\u0001b\nc\u007f' }).value).toEqual({ bio: 'ab\nc' });
+        expect(validateSuggested({ bio: '\u0001'.repeat(10) }).error).toBe('suggested_required');
+        const fb = `https://www.facebook.com/${'中'.repeat(224)}`;
+        // 4 bytes 的擴充漢字組成 100 字的 handle（約 400 bytes）＋中文 Facebook 路徑＋500 字簡介 → 超過上限
+        expect(validateSuggested({ facebook: fb, bio: '字'.repeat(500), x: '@abc', instagram: '@abc', twitch: 'abcdef', youtube: '@' + '𠀀'.repeat(100) }).error).toBe('invalid_suggested');
+        expect(validateSuggested({ bio: '字'.repeat(500), x: '@abc', twitch: 'abcdef', youtube: UC }).value.bio).toHaveLength(500);
+    });
+
+    it('Instagram 只填帳號卻像網域（貼錯欄位）→ 拒絕', () => {
+        expect(validateSuggested({ instagram: 'twitter.com' }).error).toBe('invalid_instagram');
+        expect(validateSuggested({ instagram: 'akumu.test' }).value).toEqual({ instagram: 'https://www.instagram.com/akumu.test' });
+    });
+
+    it('validateReport：勾 add_info 才收 suggested；只有 vtuber_info 能勾', () => {
+        expect(validateReport({ ...base }).error).toBe('suggested_required');
+        expect(validateReport({ ...base, suggested: { x: '@abc' } }).value.suggested).toEqual({ x: 'https://x.com/abc' });
+        expect(validateReport({ ...base, reasons: ['name'], suggested: { x: '@abc' } }).value.suggested).toBeNull();
+        expect(validateReport({ kind: 'stream', reasons: ['add_info'], stream: { platform: 'youtube', externalId: 'abc' }, suggested: { x: '@a' } }).error).toBe('invalid_reasons');
+    });
+
+    it('POST /api/report 寫入 suggested', async () => {
+        sb = (method, path) => (method === 'GET' && path.startsWith('vtubers') ? new Response(`[{"id":"${VID}"}]`) : new Response('[]', { status: method === 'GET' ? 200 : 201 }));
+        const res = await reportPost({ request: post('/api/report', { ...base, suggested: { twitch: 'Foo_Bar', bio: '你好' }, turnstileToken: 't' }), env: ENV() });
+        expect(res.status).toBe(201);
+        const row = calls.find((c) => c.method === 'POST' && c.url.includes('vtuber_reports'))!.body as Record<string, unknown>;
+        expect(row).toMatchObject({ reasons: ['add_info'], suggested: { twitch: 'foo_bar', bio: '你好' } });
+    });
+
+    it('buildApplyFields：社群空字串＝清空、YouTube／Twitch 先查詢換成 id、查不到回錯誤', async () => {
+        const deps = {
+            lookupYoutube: async () => ({ ok: true, channel: { channelId: UC, title: '新人', avatarUrl: 'https://yt3.googleusercontent.com/a', handle: 'newbie_vt' } }),
+            lookupTwitch: async (login: string) => ({ ok: true, id: '123', login, displayName: 'Foo' }),
+        };
+        expect((await buildApplyFields({ x: '@abc', facebook: '', youtube: '@newbie_vt', twitch: 'twitch.tv/Foo' }, {}, deps)).value).toEqual({
+            x_url: 'https://x.com/abc',
+            facebook_url: '',
+            youtube: { channel_id: UC, title: '新人', avatar_url: 'https://yt3.googleusercontent.com/a', handle: 'newbie_vt' },
+            twitch: { login: 'foo', id: '123', display_name: 'Foo' },
+        });
+        // YouTube／Twitch 留空＝不處理（只補缺，不能清）
+        expect((await buildApplyFields({ youtube: '', twitch: '' }, {}, deps)).error).toBe('no_fields');
+        expect((await buildApplyFields({}, {}, deps)).error).toBe('no_fields');
+        expect((await buildApplyFields({ x: 'https://evil.com/a' }, {}, deps)).error).toBe('invalid_x');
+        // 非字串不能被當成「清空」
+        expect((await buildApplyFields({ x: 123 }, {}, deps)).error).toBe('invalid_field');
+        expect(await buildApplyFields({ youtube: '@gone' }, {}, { ...deps, lookupYoutube: async () => ({ ok: false, error: 'not_found' }) })).toEqual({ error: 'youtube_not_found', status: 400 });
+        expect(await buildApplyFields({ twitch: 'gone_user' }, {}, { ...deps, lookupTwitch: async () => ({ ok: false, error: 'twitch_not_found' }) })).toEqual({ error: 'twitch_not_found', status: 400 });
+    });
+
+    it('POST /api/admin/reports?action=apply：呼叫 RPC；RPC 錯誤碼轉成 HTTP 狀態', async () => {
+        const admin = (path: string, body: unknown) =>
+            new Request(`https://multistreaming.org${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': 'admintoken' }, body: JSON.stringify(body) });
+        sb = (_m, path) => (path.startsWith('rpc/') ? new Response('{"vtuber_id":"v","slug":"s","applied":["x_url","bio"]}') : new Response('[]'));
+        const ok = await adminReportPost({ request: admin(`/api/admin/reports?id=${VID}&action=apply`, { fields: { x: '@abc', bio: '' }, admin_notes: ' 已補 ' }), env: ENV() });
+        expect(ok.status).toBe(200);
+        expect(calls.find((c) => c.url.includes('rpc/apply_vtuber_report_info'))!.body).toEqual({ p_id: VID, p_fields: { x_url: 'https://x.com/abc', bio: '' }, p_notes: '已補' });
+
+        sb = () => new Response('{"code":"P0001","message":"twitch_already_set"}', { status: 400 });
+        const dup = await adminReportPost({ request: admin(`/api/admin/reports?id=${VID}&action=apply`, { fields: { instagram: '@abc' } }), env: ENV() });
+        expect(dup.status).toBe(409);
+        expect((await dup.json()).error).toBe('twitch_already_set');
+
+        // 並發撞唯一索引（RPC 先查後寫之間）→ 409 exists，不是 500
+        sb = () => new Response('{"code":"23505","message":"duplicate key value violates unique constraint"}', { status: 409 });
+        const race = await adminReportPost({ request: admin(`/api/admin/reports?id=${VID}&action=apply`, { fields: { instagram: '@abc' } }), env: ENV() });
+        expect(race.status).toBe(409);
+        expect((await race.json()).error).toBe('exists');
+
+        expect((await adminReportPost({ request: admin(`/api/admin/reports?id=${VID}&action=nope`, {}), env: ENV() })).status).toBe(400);
+        expect((await adminReportPost({ request: admin(`/api/admin/reports?id=${VID}&action=apply`, { fields: {} }), env: ENV() })).status).toBe(400);
     });
 });

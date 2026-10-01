@@ -3,6 +3,8 @@ const versionHistory = {
   'subtitle': 'MultiStream Hub 更新历史',
   'description': '查看所有功能更新与修正记录',
   'latest': '最新',
+  'v3.6.1.date': '2026-10-02',
+  'v3.6.1.addInfo': 'VTuber 个人页的「回报资料错误」新增「补充资料」：可以补上缺少的 X、Facebook、Instagram、YouTube／Twitch 频道与简介，站方确认后会加到页面上',
   'v3.6.0.date': '2026-10-02',
   'v3.6.0.schedule': '新增「开播周表」页：台湾 VTuber 正在直播、接下来 7 天的待机室与刚结束的直播一页看完，可按地区、所属公司、平台与「我的收藏」筛选，勾选几位即可一键到画布同时观看',
   'v3.6.0.personPage': '每位 VTuber 都有自己的周表页，YouTube 与 Twitch 的直播和预定时间合并显示',

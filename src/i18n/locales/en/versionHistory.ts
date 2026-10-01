@@ -3,6 +3,8 @@ const versionHistory = {
   'subtitle': 'MultiStream Hub Update History',
   'description': 'All feature updates and fixes',
   'latest': 'Latest',
+  'v3.6.1.date': '2026-10-02',
+  'v3.6.1.addInfo': 'Reporting on a VTuber page now has "Add missing info": suggest their X, Facebook, Instagram, YouTube or Twitch channel and bio, and we will add it after checking',
   'v3.6.0.date': '2026-10-02',
   'v3.6.0.schedule': 'New Stream Schedule page: see which Taiwanese VTubers are live, upcoming waiting rooms for the next 7 days, and streams that just ended. Filter by region, agency, platform or your favorites, then pick a few and watch them together on the canvas in one click',
   'v3.6.0.personPage': 'Every VTuber now has their own schedule page, with YouTube and Twitch streams and scheduled times merged together',

@@ -1,6 +1,7 @@
 // POST /api/report：匿名回報資料錯誤 → vtuber_reports（open），後台處理。
 //
 // 類型：vtuber_info（某位 VTuber 的資料）、stream（週表上的單場）、roster（公司名冊）、missing_vtuber（找不到某人）。
+// vtuber_info 勾「補充資料」（add_info）時，正規化後的社群／頻道／簡介存在 suggested，後台可一鍵套用（admin/reports.js）。
 // 檢查順序見 functions/lib/submit-guard.js；之後確認被回報的 VTuber／團體存在（避免灌假 ID）。
 // 緊急開關：REPORTS_DISABLED=true → 503。
 //
@@ -45,6 +46,7 @@ export async function onRequestPost(context) {
         stream_platform: v.streamPlatform,
         stream_external_id: v.streamExternalId,
         description: v.description,
+        suggested: v.suggested,
         source_urls: v.sourceUrls,
         contact: v.contact,
         page_url: v.pageUrl,

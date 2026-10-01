@@ -157,3 +157,60 @@ describe('Admin API Token', () => {
         await waitFor(() => expect(screen.queryAllByLabelText('Admin API Token')).toHaveLength(0));
     });
 });
+
+describe('資料回報：補充資料套用', () => {
+    const infoReport = {
+        ...report,
+        id: '33333333-3333-4333-8333-333333333333',
+        reasons: ['add_info'],
+        description: null,
+        suggested: { x: 'https://x.com/ksp', youtube: '@ksp_ch', twitch: 'ksp' },
+        vtuber: { name: 'KSP', slug: 'ksp', x_url: null, facebook_url: null, instagram_url: null, bio: null, youtube_channel_id: 'UC' + 'b'.repeat(22), twitch_channel_id: null },
+    };
+
+    it('列出目前值與建議值；已有 YouTube 預設不勾；套用只送勾選的欄位（含修改後的值）', async () => {
+        respond = (url, method) => {
+            if (url.startsWith('/api/admin/reports') && method === 'GET') return new Response(JSON.stringify({ ok: true, reports: [infoReport] }));
+            return new Response(JSON.stringify({ ok: true, result: { slug: 'ksp', applied: ['x_url', 'twitch'] } }));
+        };
+        wrap(<ReportsTab />);
+        expect(await screen.findByText('補充資料', { selector: 'h3' })).toBeTruthy();
+        expect(screen.getByText('已有，只能補缺')).toBeTruthy();
+        expect(screen.getByRole('checkbox', { name: '套用 YouTube' }).getAttribute('aria-checked')).toBe('false');
+        expect(screen.getByRole('checkbox', { name: '套用 X' }).getAttribute('aria-checked')).toBe('true');
+        fireEvent.change(screen.getByLabelText('Twitch 建議值'), { target: { value: 'ksp_tw' } });
+        fireEvent.change(screen.getByPlaceholderText('處理備註'), { target: { value: '已補' } });
+        fireEvent.click(screen.getByRole('button', { name: /套用並標記已修正/ }));
+        await waitFor(() => expect(calls.find((c) => c.method === 'POST')).toBeTruthy());
+        const call = calls.find((c) => c.method === 'POST')!;
+        expect(call.url).toBe(`/api/admin/reports?id=${infoReport.id}&action=apply`);
+        expect(call.body).toEqual({ fields: { x: 'https://x.com/ksp', twitch: 'ksp_tw' }, admin_notes: '已補' });
+    });
+
+    it('套用後回報變已修正：卡片重新掛載，狀態選單跟著變，不能誤按儲存改回未處理', async () => {
+        let resolved = false;
+        respond = (url, method) => {
+            if (url.startsWith('/api/admin/reports') && method === 'GET') {
+                return new Response(JSON.stringify({ ok: true, reports: [{ ...infoReport, status: resolved ? 'resolved' : 'open' }] }));
+            }
+            resolved = true;
+            return new Response(JSON.stringify({ ok: true, result: { slug: 'ksp', applied: ['x_url'] } }));
+        };
+        wrap(<ReportsTab />);
+        fireEvent.click(await screen.findByRole('button', { name: /套用並標記已修正/ }));
+        await waitFor(() => expect(screen.queryByRole('button', { name: /套用並標記已修正/ })).toBeNull());
+        expect((screen.getByRole('button', { name: /儲存/ }) as HTMLButtonElement).disabled).toBe(true);
+        // 最後一個下拉是卡片上的狀態（前兩個是列表篩選）
+        expect(screen.getAllByRole('combobox').at(-1)!.textContent).toContain('已修正');
+    });
+
+    it('套用失敗顯示錯誤碼的中文說明', async () => {
+        respond = (url, method) => {
+            if (url.startsWith('/api/admin/reports') && method === 'GET') return new Response(JSON.stringify({ ok: true, reports: [infoReport] }));
+            return new Response(JSON.stringify({ ok: false, error: 'twitch_exists' }), { status: 409 });
+        };
+        wrap(<ReportsTab />);
+        fireEvent.click(await screen.findByRole('button', { name: /套用並標記已修正/ }));
+        expect(await screen.findByText('這個 Twitch 帳號已經屬於站上另一位 VTuber')).toBeTruthy();
+    });
+});

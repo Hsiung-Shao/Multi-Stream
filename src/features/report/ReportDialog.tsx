@@ -1,4 +1,5 @@
 // 資料回報對話框（/api/report）：依回報對象顯示對應的原因（可複選）、說明、來源、聯絡方式與 Turnstile。
+// VTuber 資料勾「補充資料」時，展開社群／頻道／簡介欄位（格式由後端正規化，錯誤碼沿用投稿的 contribute.error.*）。
 // 由 ReportDialogProvider 以 lazy 載入、全頁只有一個實例（卡片上的按鈕只呼叫 openReport）。
 
 import { useRef, useState } from 'react';
@@ -15,7 +16,7 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { TurnstileWidget, type TurnstileHandle } from '../../components/turnstile/TurnstileWidget';
-import { REPORT_REASONS, submitReport, SubmitError, type ReportInput } from '../contribute/api';
+import { REPORT_REASONS, SUGGESTED_FIELDS, submitReport, SubmitError, type ReportInput, type ReportSuggested, type SuggestedField } from '../contribute/api';
 import { isHttpUrl } from '../contribute/urlValidation';
 import type { ReportTarget } from './reportTarget';
 
@@ -24,7 +25,24 @@ interface FormValues {
     description: string;
     source: string;
     contact: string;
+    info: Record<SuggestedField, string>;
 }
+
+const EMPTY_INFO: Record<SuggestedField, string> = { x: '', facebook: '', instagram: '', youtube: '', twitch: '', bio: '' };
+
+/** 只留有填的欄位；全空回 null */
+export function filledSuggested(info: Record<SuggestedField, string>): ReportSuggested | null {
+    const out: ReportSuggested = {};
+    for (const k of SUGGESTED_FIELDS) if (info[k]?.trim()) out[k] = info[k].trim();
+    return Object.keys(out).length ? out : null;
+}
+
+const INFO_PLACEHOLDER: Record<Exclude<SuggestedField, 'bio' | 'youtube'>, string> = {
+    x: '@…',
+    facebook: 'https://www.facebook.com/…',
+    instagram: '@…',
+    twitch: 'twitch.tv/…',
+};
 
 function titleOf(target: ReportTarget, t: TFunction<'schedule'>): string {
     if (target.kind === 'vtuber_info') return t('report.title.vtuber_info', { name: target.name });
@@ -50,9 +68,10 @@ export function targetFields(target: ReportTarget): Pick<ReportInput, 'kind' | '
 export default function ReportDialog({ target, onClose }: { target: ReportTarget; onClose: () => void }) {
     const { t } = useTranslation('schedule');
     const reasons = REPORT_REASONS[target.kind];
-    const { control, register, handleSubmit, getValues, trigger, formState } = useForm<FormValues>({
-        defaultValues: { reasons: [], description: '', source: '', contact: '' },
+    const { control, register, handleSubmit, getValues, trigger, watch, formState } = useForm<FormValues>({
+        defaultValues: { reasons: [], description: '', source: '', contact: '', info: EMPTY_INFO },
     });
+    const addInfo = watch('reasons').includes('add_info');
     const { errors, isSubmitting } = formState;
     const turnstile = useRef<TurnstileHandle>(null);
     const [token, setToken] = useState<string | null>(null);
@@ -60,10 +79,12 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
 
     const onSubmit = async (v: FormValues) => {
         setServerError(null);
+        const suggested = v.reasons.includes('add_info') ? filledSuggested(v.info) : null;
         try {
             await submitReport({
                 ...targetFields(target),
                 reasons: v.reasons,
+                ...(suggested ? { suggested } : {}),
                 description: v.description.trim() || undefined,
                 sourceUrls: v.source.trim() ? [v.source.trim()] : undefined,
                 contact: v.contact.trim() || undefined,
@@ -97,7 +118,12 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
                         <Controller
                             control={control}
                             name="reasons"
-                            rules={{ validate: (v) => v.length > 0 || t('report.reasonsRequired') }}
+                            rules={{
+                                validate: (v) =>
+                                    v.length === 0
+                                        ? t('report.reasonsRequired')
+                                        : !v.includes('add_info') || !!filledSuggested(getValues('info')) || t('report.infoRequired'),
+                            }}
                             render={({ field }) => (
                                 <div className="flex flex-wrap gap-2">
                                     {reasons.map((r) => {
@@ -124,6 +150,48 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
                         />
                         {errors.reasons && <p role="alert" className="mt-1.5 text-xs text-destructive">{errors.reasons.message}</p>}
                     </fieldset>
+
+                    {addInfo && (
+                        <fieldset className="space-y-3 rounded-lg border border-border p-3">
+                            <legend className="px-1 text-sm font-medium">{t('report.infoLabel')}</legend>
+                            <p className="text-xs text-muted-foreground">{t('report.infoHint')}</p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {(['x', 'facebook', 'instagram', 'twitch'] as const).map((k) => (
+                                    <div key={k} className="space-y-1.5">
+                                        <Label htmlFor={`report-info-${k}`}>{t(`contribute.social.${k}`)}</Label>
+                                        <Input
+                                            id={`report-info-${k}`}
+                                            autoComplete="off"
+                                            maxLength={300}
+                                            placeholder={INFO_PLACEHOLDER[k]}
+                                            {...register(`info.${k}`, { onChange: () => formState.isSubmitted && void trigger('reasons') })}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="report-info-youtube">{t('contribute.youtubeUrl')}</Label>
+                                <Input
+                                    id="report-info-youtube"
+                                    inputMode="url"
+                                    autoComplete="off"
+                                    maxLength={300}
+                                    placeholder={t('contribute.youtubeUrlPlaceholder')}
+                                    {...register('info.youtube', { onChange: () => formState.isSubmitted && void trigger('reasons') })}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label htmlFor="report-info-bio">{t('contribute.bio')}</Label>
+                                <Textarea
+                                    id="report-info-bio"
+                                    rows={3}
+                                    maxLength={500}
+                                    placeholder={t('contribute.bioPlaceholder')}
+                                    {...register('info.bio', { onChange: () => formState.isSubmitted && void trigger('reasons') })}
+                                />
+                            </div>
+                        </fieldset>
+                    )}
 
                     <div className="space-y-1.5">
                         <Label htmlFor="report-desc">{t('report.description')}</Label>
