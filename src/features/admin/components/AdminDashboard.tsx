@@ -16,9 +16,11 @@ import { RatingsTab } from './RatingsTab';
 import { AnnouncementsTab } from './AnnouncementsTab';
 import { ContributionsTab } from './ContributionsTab';
 import { ReportsTab } from './ReportsTab';
+import { useRefetchOnAdminTokenChange } from '../hooks/useAdminSubmissions';
 
 export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const queryClient = useQueryClient();
+    useRefetchOnAdminTokenChange();
 
     const handleRefresh = () => {
         queryClient.invalidateQueries();

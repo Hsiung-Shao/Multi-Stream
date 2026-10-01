@@ -14,6 +14,7 @@ import { RouteLink } from '../../../components/Navigation/RouteLink';
 import { schedulePersonPage } from '../../../config/schedulePerson';
 import {
     formatSubmissionError,
+    isUnauthorized,
     useApproveContribution,
     useContributions,
     useRejectContribution,
@@ -218,8 +219,10 @@ function ContributionCard({ c }: { c: ContributionRecord }) {
 
 export function ContributionsTab() {
     const [status, setStatus] = useState('pending');
-    const [hasToken, recheck] = useAdminTokenPresent();
+    const hasToken = useAdminTokenPresent();
     const query = useContributions(status);
+    // 沒存 token，或存了但後端回 401（token 錯）：都顯示輸入列
+    const needToken = !hasToken || isUnauthorized(query.error);
 
     return (
         <div className="space-y-4">
@@ -237,7 +240,7 @@ export function ContributionsTab() {
                 </Select>
                 {query.data && <span className="text-[12px] text-muted-foreground">{query.data.length} 筆</span>}
             </div>
-            {!hasToken && <AdminTokenInline onSaved={() => { recheck(); query.refetch(); }} />}
+            {needToken && <AdminTokenInline />}
             {query.isLoading ? (
                 <p className="text-sm text-muted-foreground">載入中…</p>
             ) : query.isError ? (

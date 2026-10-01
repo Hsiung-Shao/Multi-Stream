@@ -8,7 +8,7 @@ import { Button } from '../../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { RouteLink } from '../../../components/Navigation/RouteLink';
 import { schedulePersonPage } from '../../../config/schedulePerson';
-import { formatSubmissionError, useReports, useUpdateReport, type ReportRecord } from '../hooks/useAdminSubmissions';
+import { formatSubmissionError, isUnauthorized, useReports, useUpdateReport, type ReportRecord } from '../hooks/useAdminSubmissions';
 import { AdminTokenInline, useAdminTokenPresent } from './AdminTokenInline';
 
 const STATUS: Record<ReportRecord['status'] | 'all', string> = { open: '未處理', resolved: '已修正', wontfix: '不處理', duplicate: '重複', spam: '垃圾', all: '全部' };
@@ -86,8 +86,10 @@ function ReportCard({ r }: { r: ReportRecord }) {
 export function ReportsTab() {
     const [status, setStatus] = useState<string>('open');
     const [kind, setKind] = useState<string>('all');
-    const [hasToken, recheck] = useAdminTokenPresent();
+    const hasToken = useAdminTokenPresent();
     const query = useReports(status, kind);
+    // 沒存 token，或存了但後端回 401（token 錯）：都顯示輸入列
+    const needToken = !hasToken || isUnauthorized(query.error);
 
     return (
         <div className="space-y-4">
@@ -111,7 +113,7 @@ export function ReportsTab() {
                 </Select>
                 {query.data && <span className="text-[12px] text-muted-foreground">{query.data.length} 筆</span>}
             </div>
-            {!hasToken && <AdminTokenInline onSaved={() => { recheck(); query.refetch(); }} />}
+            {needToken && <AdminTokenInline />}
             {query.isLoading ? (
                 <p className="text-sm text-muted-foreground">載入中…</p>
             ) : query.isError ? (

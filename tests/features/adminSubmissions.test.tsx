@@ -4,6 +4,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ContributionsTab } from '../../src/features/admin/components/ContributionsTab';
 import { ReportsTab } from '../../src/features/admin/components/ReportsTab';
+import { useRefetchOnAdminTokenChange } from '../../src/features/admin/hooks/useAdminSubmissions';
+
+/** 後台頁（AdminDashboard）掛的 token 監聽 */
+function TokenListener() {
+    useRefetchOnAdminTokenChange();
+    return null;
+}
 
 type Call = { url: string; method: string; body: unknown };
 let calls: Call[] = [];
@@ -124,5 +131,29 @@ describe('資料回報', () => {
         fireEvent.change(screen.getByPlaceholderText('處理備註'), { target: { value: '已改成 HK' } });
         fireEvent.click(screen.getByRole('button', { name: /儲存/ }));
         await waitFor(() => expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ status: 'open', admin_notes: '已改成 HK' }));
+    });
+});
+
+describe('Admin API Token', () => {
+    it('token 錯（401）時兩個分頁都顯示輸入列；在其中一個存好後，兩個分頁都重新讀取', async () => {
+        localStorage.setItem('ms_admin_api_token', 'bad');
+        vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+            const token = (init?.headers as Record<string, string> | undefined)?.['X-Admin-Token'];
+            if (token !== 'good') return new Response(JSON.stringify({ ok: false, error: 'unauthorized' }), { status: 401 });
+            return respond(url, init?.method ?? 'GET');
+        }));
+        wrap(
+            <>
+                <TokenListener />
+                <ContributionsTab />
+                <ReportsTab />
+            </>,
+        );
+        await waitFor(() => expect(screen.getAllByLabelText('Admin API Token')).toHaveLength(2));
+        fireEvent.change(screen.getAllByLabelText('Admin API Token')[0], { target: { value: 'good' } });
+        fireEvent.click(screen.getAllByRole('button', { name: '儲存' })[0]);
+        expect(await screen.findByText('新人')).toBeTruthy();
+        expect(await screen.findByText(/台一/)).toBeTruthy();
+        await waitFor(() => expect(screen.queryAllByLabelText('Admin API Token')).toHaveLength(0));
     });
 });

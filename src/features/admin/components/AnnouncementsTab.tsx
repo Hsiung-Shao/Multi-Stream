@@ -33,11 +33,11 @@ import {
     useAdminAnnouncements,
     useDeleteAnnouncement,
     formatAdminAnnouncementError,
-    getAdminToken,
     setAdminToken,
     clearAdminToken,
     type AnnouncementRecord,
 } from '../hooks/useAdminAnnouncements';
+import { useAdminTokenPresent } from './AdminTokenInline';
 import { AnnouncementEditDialog } from './AnnouncementEditDialog';
 import { AnnouncementResultsDialog } from './AnnouncementResultsDialog';
 
@@ -94,20 +94,18 @@ export function AnnouncementsTab() {
 
     // 公告 API Token(後端 ADMIN_API_TOKEN 簡易保護;admin 輸入一次,存 localStorage)
     const [tokenInput, setTokenInput] = useState('');
-    const [hasToken, setHasToken] = useState(() => getAdminToken().length > 0);
+    // 與投稿、回報分頁共用：任一分頁設定或清除 token 都會同步；重新讀取由 AdminDashboard 統一處理
+    const hasToken = useAdminTokenPresent();
 
     const handleSaveToken = () => {
         const t = tokenInput.trim();
         if (!t) return;
         setAdminToken(t);
-        setHasToken(true);
         setTokenInput('');
-        refetch();
     };
 
     const handleResetToken = () => {
         clearAdminToken();
-        setHasToken(false);
     };
 
     const handleCreate = () => {

@@ -76,6 +76,17 @@ const FETCH_TIMEOUT_MS = 15_000;
 // admin 在公告分頁輸入一次,存 localStorage 記住。
 
 const ADMIN_TOKEN_KEY = 'ms_admin_api_token';
+export const ADMIN_TOKEN_STORAGE_KEY = ADMIN_TOKEN_KEY;
+/** token 設定或清除時在 window 上發出的事件：後台各分頁都 forceMount，要靠它同步「有沒有 token」 */
+export const ADMIN_TOKEN_EVENT = 'ms-admin-token-change';
+
+function notifyTokenChange(): void {
+    try {
+        window.dispatchEvent(new Event(ADMIN_TOKEN_EVENT));
+    } catch {
+        /* 非瀏覽器環境 */
+    }
+}
 
 export function getAdminToken(): string {
     try {
@@ -91,6 +102,7 @@ export function setAdminToken(token: string): void {
     } catch {
         /* localStorage 不可用就放棄持久化 */
     }
+    notifyTokenChange();
 }
 
 export function clearAdminToken(): void {
@@ -99,6 +111,7 @@ export function clearAdminToken(): void {
     } catch {
         /* ignore */
     }
+    notifyTokenChange();
 }
 
 function getAuthHeader(): Record<string, string> {
@@ -183,7 +196,7 @@ export function formatAdminAnnouncementError(err: unknown): string {
 
 // ---------- Query keys ----------
 
-const LIST_KEY = 'admin-announcements';
+export const LIST_KEY = 'admin-announcements';
 const RESPONSES_KEY = 'admin-announcement-responses';
 
 // ---------- Hooks ----------

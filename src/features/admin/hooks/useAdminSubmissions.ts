@@ -1,7 +1,8 @@
 // 後台：VTuber 投稿審核與資料回報（/api/admin/contributions、/api/admin/reports，X-Admin-Token）
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch, ApiError } from './useAdminAnnouncements';
+import { useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { ADMIN_TOKEN_EVENT, ADMIN_TOKEN_STORAGE_KEY, apiFetch, ApiError, LIST_KEY as ANNOUNCEMENTS_KEY } from './useAdminAnnouncements';
 
 export interface ContributionPayload {
     name?: string;
@@ -77,6 +78,34 @@ export interface ApproveOverrides {
 
 const CONTRIB_KEY = 'admin-contributions';
 const REPORT_KEY = 'admin-reports';
+
+/** 換了 token 之後：用 X-Admin-Token 的分頁（公告、投稿、回報）都重新讀（分頁都 forceMount，舊的 401 結果會一直留著） */
+export function invalidateAdminTokenQueries(qc: QueryClient): Promise<void> {
+    return Promise.all([CONTRIB_KEY, REPORT_KEY, ANNOUNCEMENTS_KEY].map((k) => qc.invalidateQueries({ queryKey: [k] }))).then(() => undefined);
+}
+
+/** 後台頁掛一次：任一分頁設定或清除 token 時重新讀取（單一來源，避免每個分頁各自重抓） */
+export function useRefetchOnAdminTokenChange(): void {
+    const qc = useQueryClient();
+    useEffect(() => {
+        const onChange = () => void invalidateAdminTokenQueries(qc);
+        // 其他瀏覽器分頁改了 token：storage 事件（只看 token 這個 key）
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === null || e.key === ADMIN_TOKEN_STORAGE_KEY) onChange();
+        };
+        window.addEventListener(ADMIN_TOKEN_EVENT, onChange);
+        window.addEventListener('storage', onStorage);
+        return () => {
+            window.removeEventListener(ADMIN_TOKEN_EVENT, onChange);
+            window.removeEventListener('storage', onStorage);
+        };
+    }, [qc]);
+}
+
+/** 401：token 沒設或錯了，要顯示輸入列 */
+export function isUnauthorized(err: unknown): boolean {
+    return err instanceof ApiError && err.status === 401;
+}
 
 export function useContributions(status: string) {
     return useQuery({
