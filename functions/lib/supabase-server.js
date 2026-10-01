@@ -86,6 +86,18 @@ export function remove(env, table, filter) {
 }
 
 /**
+ * 用 service_role 呼叫 Postgres 函式(PostgREST /rpc)
+ * 函式丟出的 exception 會以 ok=false 回傳,error 是 PostgREST 的 JSON 文字(含 message、code)
+ * @param {Object} env
+ * @param {string} fn - 函式名稱
+ * @param {Object} args - 具名參數
+ * @returns {Promise<{ ok, status, data, error }>}
+ */
+export function rpc(env, fn, args = {}) {
+    return sbFetch(env, `rpc/${fn}`, { method: 'POST', body: args });
+}
+
+/**
  * 用 service_role 批次 upsert(on_conflict),取代逐筆 insert/update 的 N 次呼叫
  * @param {Object} env
  * @param {string} table
