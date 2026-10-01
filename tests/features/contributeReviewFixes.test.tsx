@@ -99,6 +99,18 @@ describe('投稿表單', () => {
         expect(body.nationalityEvidenceUrl).toBeUndefined();
     });
 
+    it('換頻道後查詢完成前不能送出（避免舊頻道名稱配新網址）', async () => {
+        render(<ContributeForm />);
+        typeChannel('@alpha_ch');
+        await waitFor(() => expect(nameInput().value).toBe('Alpha'), { timeout: 3000 });
+        const submit = screen.getByRole('button', { name: '送出推薦' }) as HTMLButtonElement;
+        await waitFor(() => expect(submit.disabled).toBe(false));
+        typeChannel('@beta_ch');
+        expect(submit.disabled).toBe(true);
+        await waitFor(() => expect(nameInput().value).toBe('Beta'), { timeout: 3000 });
+        await waitFor(() => expect(submit.disabled).toBe(false));
+    });
+
     it('欄位用 aria-describedby 連到提示，必填欄位有 aria-required；預覽卡只有一份', () => {
         render(<ContributeForm />);
         const yt = screen.getByLabelText(/YouTube 頻道網址/);
@@ -138,5 +150,17 @@ describe('回報對話框', () => {
         fireEvent.click(submit);
         expect(await screen.findByText('來源連結格式不正確（需以 http 或 https 開頭）')).toBeTruthy();
         expect(fetchMock.mock.calls.some(([u]) => String(u).startsWith('/api/report'))).toBe(false);
+    });
+
+    it('取消勾選「其他」後，「請填寫說明」的錯誤消失', async () => {
+        render(<ReportDialog target={{ kind: 'vtuber_info', vtuberId: 'v1', name: '台一' }} onClose={() => {}} />);
+        fireEvent.click(screen.getByText('其他'));
+        const submit = screen.getByRole('button', { name: '送出回報' });
+        await waitFor(() => expect((submit as HTMLButtonElement).disabled).toBe(false));
+        fireEvent.click(submit);
+        const required = i18n.t('report.descriptionRequired', { ns: 'schedule' });
+        expect(await screen.findByText(required)).toBeTruthy();
+        fireEvent.click(screen.getByText('其他'));
+        await waitFor(() => expect(screen.queryByText(required)).toBeNull());
     });
 });

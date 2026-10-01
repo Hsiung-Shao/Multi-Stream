@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { fetchTurnstileConfig } from '../../features/contribute/api';
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+// 封包被防火牆直接丟掉時 onerror 要等 TCP 逾時（可能好幾分鐘），自己設上限才出得了重試鈕
+const SCRIPT_TIMEOUT_MS = 15_000;
 
 interface TurnstileApi {
     render: (el: HTMLElement, opts: Record<string, unknown>) => string;
@@ -30,10 +32,19 @@ function loadTurnstile(): Promise<TurnstileApi> {
     if (!scriptPromise) {
         scriptPromise = new Promise<TurnstileApi>((resolve, reject) => {
             const s = document.createElement('script');
+            const timer = setTimeout(() => {
+                s.remove();
+                reject(new Error('turnstile_timeout'));
+            }, SCRIPT_TIMEOUT_MS);
             s.src = SCRIPT_SRC;
             s.async = true;
-            s.onload = () => (window.turnstile ? resolve(window.turnstile) : reject(new Error('turnstile_missing')));
+            s.onload = () => {
+                clearTimeout(timer);
+                if (window.turnstile) resolve(window.turnstile);
+                else reject(new Error('turnstile_missing'));
+            };
             s.onerror = () => {
+                clearTimeout(timer);
                 s.remove(); // 重試時重新插入
                 reject(new Error('turnstile_blocked'));
             };
@@ -102,6 +113,8 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function Turns
                 widgetId.current = ts.render(holder.current, {
                     sitekey: cfg.siteKey,
                     theme: 'auto',
+                    // 一般尺寸固定 300px 寬；很窄的螢幕（對話框內容不到 300px）改 compact，免得被裁掉
+                    size: window.innerWidth < 380 ? 'compact' : 'normal',
                     language: i18n.language || 'auto',
                     callback: (token: string) => {
                         setStatus('ready');
@@ -133,8 +146,8 @@ export const TurnstileWidget = forwardRef<TurnstileHandle, Props>(function Turns
     const retry = useCallback(() => {
         onTokenRef.current(null);
         if (api.current && widgetId.current) {
-            // widget 已在：只要重新挑戰
-            setStatus('loading');
+            // widget 已在：只要重新挑戰（和初次渲染一樣直接顯示 widget，互動式挑戰要等使用者點）
+            setStatus('ready');
             api.current.reset(widgetId.current);
         } else {
             setAttempt((n) => n + 1);

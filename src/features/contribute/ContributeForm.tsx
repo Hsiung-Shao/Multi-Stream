@@ -129,7 +129,10 @@ export function ContributeForm({ initialName = '' }: { initialName?: string }) {
             const current = getValues(key);
             if (current === '' || current === autoFilled.current[key]) {
                 // 使用者沒改過：跟著新頻道（新頻道沒有值就清空，不留上一個頻道的）
-                if (key === 'name' && current === '' && !next.name) continue;
+                if (key === 'name' && current === '' && !next.name) {
+                    autoFilled.current.name = '';
+                    continue;
+                }
                 setValue(key, next[key], { shouldValidate: key === 'name' && !!next.name });
                 autoFilled.current[key] = next[key];
             }
@@ -388,7 +391,7 @@ export function ContributeForm({ initialName = '' }: { initialName?: string }) {
 
                 <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-end sm:justify-between">
                     <TurnstileWidget ref={turnstile} onToken={setToken} />
-                    <Button type="submit" size="lg" disabled={isSubmitting || token === null || !!existing} className="gap-2 sm:ml-auto">
+                    <Button type="submit" size="lg" disabled={isSubmitting || token === null || !!existing || lookup.status === 'loading'} className="gap-2 sm:ml-auto">
                         {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Send className="size-4" aria-hidden="true" />}
                         {t(isSubmitting ? 'contribute.submitting' : 'contribute.submit')}
                     </Button>

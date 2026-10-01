@@ -1,5 +1,6 @@
 // 投稿表單的 YouTube 頻道自動帶入：網址停止輸入 600ms 後查詢（/api/vtuber/channel-lookup），
 // 新的輸入會取消上一個查詢；結果包含「已在週表上」與「已有人推薦待審」，讓表單提早導引。
+// 輸入一改就進 loading（不等 debounce）：舊頻道的結果不能留著，否則表單會把舊頻道的名稱配新網址送出。
 
 import { useEffect, useState } from 'react';
 import { lookupChannel, SubmitError, type ChannelLookupResult } from './api';
@@ -28,8 +29,8 @@ export function useChannelLookup(input: string): LookupState {
             return;
         }
         const controller = new AbortController();
+        setState({ status: 'loading' });
         const timer = setTimeout(async () => {
-            setState({ status: 'loading' });
             try {
                 const result = await lookupChannel(value, controller.signal);
                 if (!controller.signal.aborted) setState({ status: 'found', result });

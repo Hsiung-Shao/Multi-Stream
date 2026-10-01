@@ -31,7 +31,7 @@ describe('ReportDialogProvider', () => {
             </ReportDialogProvider>,
         );
         fireEvent.click(screen.getByText('open'));
-        await waitFor(() => expect(toastError).toHaveBeenCalledWith('回報表單載入失敗，請重新整理頁面後再試'));
+        await waitFor(() => expect(toastError).toHaveBeenCalledWith('回報表單載入失敗，請重新整理頁面後再試', expect.anything()));
         expect(loads).toBeGreaterThan(0);
         expect(screen.queryByRole('dialog')).toBeNull();
     });

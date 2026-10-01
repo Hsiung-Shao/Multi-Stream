@@ -50,14 +50,13 @@ export function targetFields(target: ReportTarget): Pick<ReportInput, 'kind' | '
 export default function ReportDialog({ target, onClose }: { target: ReportTarget; onClose: () => void }) {
     const { t } = useTranslation('schedule');
     const reasons = REPORT_REASONS[target.kind];
-    const { control, register, handleSubmit, watch, formState } = useForm<FormValues>({
+    const { control, register, handleSubmit, getValues, trigger, formState } = useForm<FormValues>({
         defaultValues: { reasons: [], description: '', source: '', contact: '' },
     });
     const { errors, isSubmitting } = formState;
     const turnstile = useRef<TurnstileHandle>(null);
     const [token, setToken] = useState<string | null>(null);
     const [serverError, setServerError] = useState<string | null>(null);
-    const chosen = watch('reasons');
 
     const onSubmit = async (v: FormValues) => {
         setServerError(null);
@@ -91,7 +90,7 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
                     </DialogDescription>
                 </DialogHeader>
                 {/* 內容較長時只捲動表單本體，標題與按鈕固定 */}
-                <ScrollArea className="-mx-6 [&>[data-radix-scroll-area-viewport]]:max-h-[60vh]">
+                <ScrollArea className="-mx-6 [&>[data-radix-scroll-area-viewport]]:max-h-[60vh] [&>div>div]:!block">
                 <form id="report-form" onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4 px-6">
                     <fieldset>
                         <legend className="mb-2 text-sm font-medium">{t('report.reasonsLabel')}</legend>
@@ -110,7 +109,11 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
                                             >
                                                 <Checkbox
                                                     checked={on}
-                                                    onCheckedChange={(c: boolean | 'indeterminate') => field.onChange(c ? [...field.value, r] : field.value.filter((x) => x !== r))}
+                                                    onCheckedChange={(c: boolean | 'indeterminate') => {
+                                                        field.onChange(c ? [...field.value, r] : field.value.filter((x) => x !== r));
+                                                        // 「其他」需要說明：勾選改變時重新檢查說明，取消勾選就清掉錯誤
+                                                        if (r === 'other' && formState.isSubmitted) void trigger('description');
+                                                    }}
                                                 />
                                                 {t(`report.reason.${r}` as 'report.reason.other')}
                                             </label>
@@ -133,7 +136,8 @@ export default function ReportDialog({ target, onClose }: { target: ReportTarget
                             aria-describedby={errors.description ? 'report-desc-err' : undefined}
                             {...register('description', {
                                 maxLength: { value: 1000, message: t('contribute.tooLong', { max: 1000 }) },
-                                validate: (v) => !chosen.includes('other') || !!v.trim() || t('report.descriptionRequired'),
+                                // 讀當下的值（不用 render 時的 watch 快照）：勾選改變後立刻 trigger 才會用到新值
+                                validate: (v) => !getValues('reasons').includes('other') || !!v.trim() || t('report.descriptionRequired'),
                             })}
                         />
                         {errors.description && <p id="report-desc-err" role="alert" className="text-xs text-destructive">{errors.description.message}</p>}

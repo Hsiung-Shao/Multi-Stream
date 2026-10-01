@@ -11,11 +11,12 @@ interface DialogProps {
     onClose: () => void;
 }
 
-/** chunk 載不到（離線、發版後舊 chunk 已刪）：提示後關閉，不讓按鈕看起來沒反應 */
+/** chunk 載不到（離線、發版後舊 chunk 已刪）：提示「重新整理」後關閉，不讓按鈕看起來沒反應 */
 function LoadFailed({ onClose }: DialogProps) {
     const { t } = useTranslation('schedule');
     useEffect(() => {
-        toast.error(t('report.loadFailed'));
+        // 固定 id：StrictMode 的 effect 跑兩次也只顯示一則
+        toast.error(t('report.loadFailed'), { id: 'report-load-failed' });
         onClose();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -25,7 +26,8 @@ function LoadFailed({ onClose }: DialogProps) {
 function makeLazyDialog() {
     return lazy<ComponentType<DialogProps>>(() =>
         import('./ReportDialog').catch(() => {
-            // React.lazy 會記住結果：換一個新的 lazy，下次打開重新下載
+            // React.lazy 會記住結果：換一個新的 lazy，下次打開會再試一次 import（瀏覽器可能沿用失敗的 module，
+            // 所以文案請使用者重新整理；這裡只保證每次打開都有回應、不會一直轉圈）
             ReportDialog = makeLazyDialog();
             return { default: LoadFailed as ComponentType<DialogProps> };
         }),
