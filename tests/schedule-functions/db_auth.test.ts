@@ -42,6 +42,18 @@ describe('Db（PostgREST 包裝）', () => {
     expect(await db.update('t', 'id=eq.1', { a: 1 })).toBe(5);
   });
 
+  it('上傳 Storage 物件時 cache-control 送完整的 max-age（Storage 會原樣當回應標頭）', async () => {
+    let headers: Record<string, string> = {};
+    const fetchFn = (async (_url: string | URL | Request, init?: RequestInit) => {
+      headers = init?.headers as Record<string, string>;
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+    const db = new Db({ url: 'http://db', serviceRoleKey: 'k', fetch: fetchFn });
+    await db.putStorageObject('streams', 'v1/snapshot.json', '{}', 'application/json', '60');
+    expect(headers['cache-control']).toBe('max-age=60');
+    expect(headers['x-upsert']).toBe('true');
+  });
+
   it('inList 用雙引號包值並跳脫', () => {
     expect(inList(['a', 'b"c'])).toBe('in.("a","b\\"c")');
   });

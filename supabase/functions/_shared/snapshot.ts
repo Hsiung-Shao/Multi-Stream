@@ -9,7 +9,7 @@ import type { StreamRecord } from './types.ts';
 
 export const SNAPSHOT_BUCKET = 'streams';
 export const SNAPSHOT_PATH = 'v1/snapshot.json';
-/** Storage cache-control 秒數；Docs：snapshot 有效 1 分鐘、頁面每 5 分鐘檢查 */
+/** snapshot 的快取秒數（回應標頭 Cache-Control: max-age=60）；Docs：snapshot 有效 1 分鐘、頁面每 5 分鐘檢查 */
 export const SNAPSHOT_CACHE_SECONDS = '60';
 
 export interface SnapshotChannel {

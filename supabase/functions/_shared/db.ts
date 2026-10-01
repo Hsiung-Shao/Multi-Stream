@@ -122,13 +122,13 @@ export class Db {
     return this.parse<T>(res, `rpc ${fn}`);
   }
 
-  /** 上傳 Storage 物件（x-upsert）。 */
+  /** 上傳 Storage 物件（x-upsert）。cacheSeconds：讀取時回給瀏覽器／CDN 的 max-age 秒數 */
   async putStorageObject(
     bucket: string,
     path: string,
     body: string,
     contentType: string,
-    cacheControl: string,
+    cacheSeconds: string,
   ): Promise<void> {
     const res = await this.fetchFn(`${this.url}/storage/v1/object/${bucket}/${path}`, {
       method: 'POST',
@@ -137,8 +137,9 @@ export class Db {
         Authorization: `Bearer ${this.key}`,
         'Content-Type': contentType,
         'x-upsert': 'true',
-        // Storage 的 cache-control 只吃秒數（例如 "60"），不是完整的 Cache-Control 標頭
-        'cache-control': cacheControl,
+        // Storage 會把這個值原樣存起來、讀取時當 Cache-Control 回應標頭，所以要送完整的 max-age=N
+        // （supabase-js 也是這樣送）。只送 "60" 會變成無效標頭，瀏覽器與 CDN 改用啟發式快取（2026-10-01 本地實測快取了數小時）
+        'cache-control': `max-age=${cacheSeconds}`,
       },
       body,
     });
