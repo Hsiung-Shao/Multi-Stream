@@ -415,7 +415,11 @@ export async function ogSweep(
   await mapLimit(targets, opts.concurrency, opts.deadline, async (ch) => {
     const r = await detectLiveOg(ch.externalId, { fetch: opts.fetch });
     stats.og_checked += 1;
-    if (!r.ok) stats.og_failed += 1;
+    if (!r.ok) {
+      stats.og_failed += 1;
+      const why = r.failReason ?? 'unknown';
+      stats.og_fail_reasons[why] = (stats.og_fail_reasons[why] ?? 0) + 1;
+    }
     results.set(ch.channelId, r);
   });
 

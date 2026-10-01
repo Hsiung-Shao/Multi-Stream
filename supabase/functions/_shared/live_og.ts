@@ -9,7 +9,8 @@
 //   - 標題正確處理引號與 HTML entity
 // 只用 Web API（fetch、AbortController、regex），Deno Edge Function 與 vitest 都能直接跑。
 //
-// 已知成本：/live 頁每頁約 1.5MB，解析是 CPU 大宗；Edge Function 的 CPU 上限 2 秒，所以每輪限制頻道數（見 schedule-light）。
+// 已知成本：/live 頁每頁約 1.5MB。2026-10-01 起串流讀取、只解析需要的兩小段（readLiveOgPage）；
+// Edge Function 的 CPU 上限 2 秒，每輪仍限制頻道數（見 schedule-light）。
 
 import { EXPIRE_AFTER_HOURS, isScheduleFrame } from './rules.ts';
 import { detachString } from './strings.ts';
@@ -32,6 +33,8 @@ const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 export interface LiveOgResult {
   /** false＝抓取失敗或頁面不可信（不能據此判斷下播） */
   ok: boolean;
+  /** ok=false 的原因（統計用）：bad_id／http_<狀態碼>／foreign_url／no_channel_id／thumb_<狀態碼>／error_<例外名稱>（AbortError＝逾時） */
+  failReason?: string;
   isLive: boolean;
   isUpcoming: boolean;
   videoId: string | null;
@@ -41,6 +44,7 @@ export interface LiveOgResult {
 }
 
 const FAILED: LiveOgResult = { ok: false, isLive: false, isUpcoming: false, videoId: null, title: null, scheduledStart: null };
+const failed = (failReason: string): LiveOgResult => ({ ...FAILED, failReason });
 const OFFLINE: LiveOgResult = { ok: true, isLive: false, isUpcoming: false, videoId: null, title: null, scheduledStart: null };
 
 /** 屬性值：支援單雙引號（雙引號內可以有 '，反之亦然） */
@@ -83,38 +87,139 @@ export function extractTitle(html: string): string | null {
   return null;
 }
 
-/** /live 頁 HTML → videoId、是否待機、預定時間、標題（HEAD 縮圖確認直播由 detectLiveOg 做） */
-export function parseLiveOgHtml(html: string): { videoId: string | null; isUpcoming: boolean; scheduledStart: string | null; title: string | null } {
-  const videoId = extractVideoId(html);
+// ── 頁面讀取：只讀需要的部分（移植自 functions/lib/live-og-page.js，2026-10-01） ──────────────────────
+// /live 頁約 1.5～1.8MB，需要的資料位置固定：
+//   - 頭 5KB：<title>、canonical、og:image／og:title／og:url
+//   - 直播／待機（watch 頁）：`ytInitialPlayerResponse = {` 在約 1.1MB 處，"videoDetails"、"isUpcoming"、
+//     "scheduledStartTime"、頻道 ID 都在同一個 <script> 內（長約 13～18KB）
+//   - 離線（頻道頁）：頭 5KB 就決定了，後面用不到
+// 串流讀取：頻道頁讀完頭 64KB 就取消下載；watch 頁讀到 playerResponse 的 </script> 就取消；regex 只在這兩段跑。
+// 原本整頁讀完再整頁比對，CPU 與記憶體都花在用不到的 1MB 上（每輪 og 頻道數因此卡在 60）。
+// 結構和預期不同時一律保守退回「讀完整頁、整頁比對」：前 64KB 沒有 canonical，或找到的區段沒有 "videoDetails"。
+
+export const HEAD_CHARS = 64 * 1024;
+// 只認「定義」的寫法；頁面後段還有 ytInitialPlayerResponse'] 之類的引用
+const PLAYER_MARK = 'ytInitialPlayerResponse = {';
+const PLAYER_CHECK = '"videoDetails"';
+const SCRIPT_END = '</script>';
+const CARRY = Math.max(PLAYER_MARK.length, SCRIPT_END.length) - 1;
+
+export interface LiveOgPage {
+  /** 頁面前 HEAD_CHARS 字元 */
+  head: string;
+  /** playerResponse 所在的 <script> 區段；頻道頁是空字串；結構不符時是整頁 */
+  player: string;
+  videoId: string | null;
+  /** 是否讀完整頁（提早取消為 false） */
+  complete: boolean;
+}
+
+/** 前段沒有影片、而且有 canonical（頻道網址）＝可以確定是頻道頁 */
+const isChannelPage = (head: string, videoId: string | null) => !videoId && /<link\s+rel=["']canonical["']/i.test(head);
+
+/** 已有完整 HTML 時切出同樣的區段；規則與 readLiveOgPage 相同 */
+export function pageFromText(html: string, complete = true): LiveOgPage {
+  const head = html.slice(0, HEAD_CHARS);
+  const headId = extractVideoId(head);
+  if (isChannelPage(head, headId)) return { head, player: '', videoId: null, complete };
+  // 前段沒有 canonical 時（結構和預期不同）videoId 改在整頁找
+  const videoId = headId ?? extractVideoId(html);
+  const at = html.indexOf(PLAYER_MARK);
+  const end = at >= 0 ? html.indexOf(SCRIPT_END, at) : -1;
+  const player = at >= 0 ? html.slice(at, end >= 0 ? end : undefined) : '';
+  if (!videoId || at < 0 || !player.includes(PLAYER_CHECK)) return { head, player: html, videoId, complete };
+  return { head, player, videoId, complete };
+}
+
+/** 從分段字串取 [from, to)：只接起涵蓋的那幾段 */
+function sliceParts(parts: string[], starts: number[], from: number, to: number): string {
+  let k = starts.length - 1;
+  while (k > 0 && starts[k] > from) k -= 1;
+  let last = k;
+  while (last < starts.length - 1 && starts[last + 1] < to) last += 1;
+  return parts.slice(k, last + 1).join('').slice(from - starts[k], to - starts[k]);
+}
+
+/** 串流讀取 /live 頁（逾時由呼叫端的 AbortSignal 控制） */
+export async function readLiveOgPage(response: Response): Promise<LiveOgPage> {
+  const body = response.body;
+  if (!body) return pageFromText(await response.text(), true);
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  const parts: string[] = [];
+  const starts: number[] = [];
+  let length = 0;
+  let head: string | null = null;
+  let videoId: string | null = null;
+  let channelPage = false;
+  let playerAt = -1;
+  let playerEnd = -1;
+  let playerBad = false; // 找到的區段不是真正的定義 → 讀完整頁、整頁比對
+  let carry = '';
+  let complete = false;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      const piece = done ? decoder.decode() : decoder.decode(value, { stream: true });
+      if (piece) {
+        const windowStart = length - carry.length;
+        starts.push(length);
+        parts.push(piece);
+        length += piece.length;
+        // 只在「上一段尾巴＋這一段」裡找標記，避免對越來越長的字串反覆 indexOf
+        const win = carry + piece;
+        if (playerAt < 0) {
+          const i = win.indexOf(PLAYER_MARK);
+          if (i >= 0) playerAt = windowStart + i;
+        }
+        if (playerAt >= 0 && playerEnd < 0) {
+          const j = win.indexOf(SCRIPT_END, Math.max(0, playerAt - windowStart));
+          if (j >= 0) {
+            playerEnd = windowStart + j;
+            if (!sliceParts(parts, starts, playerAt, playerEnd).includes(PLAYER_CHECK)) playerBad = true;
+          }
+        }
+        carry = win.slice(-CARRY);
+      }
+      if (head === null && (length >= HEAD_CHARS || done)) {
+        head = parts.join('').slice(0, HEAD_CHARS);
+        videoId = extractVideoId(head);
+        channelPage = isChannelPage(head, videoId);
+      }
+      if (done) {
+        complete = true;
+        break;
+      }
+      if (head === null || playerBad) continue;
+      // 頻道頁：後面用不到；watch 頁：讀到 playerResponse 區段結尾就夠了
+      if (channelPage || (videoId && playerEnd >= 0)) break;
+    }
+  } finally {
+    if (!complete) reader.cancel().catch(() => {});
+  }
+  if (channelPage) return { head: head!, player: '', videoId: null, complete };
+  if (!videoId || playerAt < 0 || playerBad) {
+    const page = pageFromText(parts.join(''), complete);
+    return head === null ? page : { ...page, head };
+  }
+  return { head: head!, player: sliceParts(parts, starts, playerAt, playerEnd >= 0 ? playerEnd : length), videoId, complete };
+}
+
+/** 讀到的頁面 → videoId、是否待機、預定時間、標題（HEAD 縮圖確認直播由 detectLiveOg 做） */
+export function parseLiveOgPage(page: LiveOgPage): { videoId: string | null; isUpcoming: boolean; scheduledStart: string | null; title: string | null } {
+  const { videoId, player } = page;
   if (!videoId) return { videoId: null, isUpcoming: false, scheduledStart: null, title: null };
-  // 排程也會有 _live.jpg 縮圖：HTML 標記為 UPCOMING 就不當直播。
-  // 只看這支影片的 ytInitialPlayerResponse（實測在頁面約 1.1MB 處、長約 10KB），推薦影片等其他區段的標記不算
-  const player = playerResponseOf(html);
+  // 排程也會有 _live.jpg 縮圖：這支影片的 playerResponse 標記為 UPCOMING 就不當直播（推薦影片等其他區段的標記不算）
   const isUpcoming = player.includes('"status":"UPCOMING"') || player.includes('"isUpcoming":true') || /"scheduledStartTime"\s*:\s*"\d+"/.test(player);
   const epoch = player.match(/"scheduledStartTime"\s*:\s*"(\d+)"/)?.[1];
   const scheduledStart = isUpcoming && epoch ? new Date(Number(epoch) * 1000).toISOString() : null;
-  // 標題是整頁 HTML 的切片，不複製會把整頁留在記憶體到這輪結束（strings.ts）
-  return { videoId, isUpcoming, scheduledStart, title: detachString(extractTitle(html)) };
+  // 標題在頁首（結構不符退回整頁時 player 才是整頁）。切片不複製會留住來源字串（strings.ts）
+  return { videoId, isUpcoming, scheduledStart, title: detachString(extractTitle(page.head) ?? extractTitle(player)) };
 }
 
-/** ytInitialPlayerResponse 所在的 <script> 區段；找不到（測試片段、改版）就用整頁 */
-export function playerResponseOf(html: string): string {
-  const start = html.indexOf('ytInitialPlayerResponse');
-  if (start < 0) return html;
-  const end = html.indexOf('</script>', start);
-  return html.slice(start, end < 0 ? undefined : end);
-}
-
-/** GET 並讀完內容，整段都在逾時內（只等到標頭的話，內容傳到一半卡住會讓整輪等到牆鐘上限） */
-async function fetchTextWithTimeout(fetchFn: typeof fetch, url: string, init: RequestInit, timeoutMs: number): Promise<{ res: Response; text: string }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetchFn(url, { ...init, signal: controller.signal });
-    return { res, text: await res.text() };
-  } finally {
-    clearTimeout(timer);
-  }
+/** 整頁 HTML 版（測試、沒有串流的情境）；規則與串流版相同 */
+export function parseLiveOgHtml(html: string): { videoId: string | null; isUpcoming: boolean; scheduledStart: string | null; title: string | null } {
+  return parseLiveOgPage(pageFromText(html));
 }
 
 async function fetchWithTimeout(fetchFn: typeof fetch, url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
@@ -129,23 +234,47 @@ async function fetchWithTimeout(fetchFn: typeof fetch, url: string, init: Reques
 
 /** 偵測一個頻道；抓取失敗、頁面不是這個頻道的、縮圖確認失敗都回 ok=false */
 export async function detectLiveOg(channelId: string, opts: { fetch?: typeof fetch; timeoutMs?: number } = {}): Promise<LiveOgResult> {
-  if (!UC_RE.test(channelId)) return FAILED;
+  if (!UC_RE.test(channelId)) return failed('bad_id');
   const fetchFn = opts.fetch ?? fetch;
   const timeoutMs = opts.timeoutMs ?? 8000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const { res, text: html } = await fetchTextWithTimeout(
-      fetchFn,
-      `https://www.youtube.com/channel/${channelId}/live?ucbcb=1&hl=en&gl=US`,
-      { method: 'GET', headers: SOCIAL_BOT_HEADERS, redirect: 'follow' },
-      timeoutMs,
-    );
-    if (!res.ok) return FAILED;
-    // 被導到同意頁（consent.youtube.com）等別的網域：不可信
-    if (res.url && !/^https:\/\/(?:www\.|m\.)?youtube\.com\//.test(res.url)) return FAILED;
-    // 頁面要提到自己的頻道 ID（直播頁的 videoDetails、頻道頁的 externalId／canonical 都會有）；
+    // 抓頁面並串流讀取；回傳頁面，或失敗結果（狀態碼、被導到別的網域）
+    const load = async (): Promise<LiveOgPage | LiveOgResult> => {
+      const res = await fetchFn(`https://www.youtube.com/channel/${channelId}/live?ucbcb=1&hl=en&gl=US`, {
+        method: 'GET',
+        headers: SOCIAL_BOT_HEADERS,
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      // 失敗或被導到同意頁（consent.youtube.com）等別的網域：不可信，也不必讀內容
+      if (!res.ok || (res.url && !/^https:\/\/(?:www\.|m\.)?youtube\.com\//.test(res.url))) {
+        res.body?.cancel().catch(() => {});
+        return failed(res.ok ? 'foreign_url' : `http_${res.status}`);
+      }
+      // 讀取也在逾時內：只等到標頭的話，內容傳到一半卡住會讓整輪等到牆鐘上限
+      return readLiveOgPage(res);
+    };
+    let loaded: LiveOgPage | LiveOgResult;
+    try {
+      try {
+        loaded = await load();
+      } catch (e) {
+        // 串流讀取會提早取消下載；Deno 重用到這種連線時偶爾回「error sending request」（2026-10-01 本地實測 og 150 個約 4%）。
+        // 連線層的錯誤重試一次（新連線），逾時與其他錯誤不重試
+        if (!(e instanceof TypeError) || !/error sending request/i.test(e.message) || controller.signal.aborted) throw e;
+        loaded = await load();
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!('head' in loaded)) return loaded;
+    const page = loaded;
+    // 頁面要提到自己的頻道 ID（頻道頁的 canonical／externalId 在頁首，直播頁在 playerResponse 的 videoDetails）；
     // 限流頁、sorry 頁回 200 但沒有，不能當成「沒有直播」
-    if (!html.includes(channelId)) return FAILED;
-    const parsed = parseLiveOgHtml(html);
+    if (!page.head.includes(channelId) && !page.player.includes(channelId)) return failed('no_channel_id');
+    const parsed = parseLiveOgPage(page);
     if (!parsed.videoId) return OFFLINE;
     if (parsed.isUpcoming) {
       return { ok: true, isLive: false, isUpcoming: true, videoId: parsed.videoId, title: parsed.title, scheduledStart: parsed.scheduledStart };
@@ -159,9 +288,10 @@ export async function detectLiveOg(channelId: string, opts: { fetch?: typeof fet
     );
     if (img.status === 200) return { ok: true, isLive: true, isUpcoming: false, videoId: parsed.videoId, title: parsed.title, scheduledStart: null };
     if (img.status === 404) return OFFLINE;
-    return FAILED;
-  } catch {
-    return FAILED;
+    return failed(`thumb_${img.status}`);
+  } catch (e) {
+    // AbortError＝逾時；TypeError 多半是連線中斷
+    return failed(`error_${e instanceof Error ? e.name : 'unknown'}`);
   }
 }
 

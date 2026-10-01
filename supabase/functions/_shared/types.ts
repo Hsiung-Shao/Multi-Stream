@@ -64,6 +64,8 @@ export interface RunStats extends Record<string, unknown> {
   /** live-og（/live 頁）：查了幾個頻道、失敗、判定直播中、待機、判定結束的場次 */
   og_checked: number;
   og_failed: number;
+  /** og 失敗原因分布（見 LiveOgResult.failReason） */
+  og_fail_reasons: Record<string, number>;
   og_live: number;
   og_upcoming: number;
   og_ended: number;
@@ -121,6 +123,7 @@ export function emptyStats(job: 'heavy' | 'light', startedAt: number): RunStats 
     api_deferred: 0,
     og_checked: 0,
     og_failed: 0,
+    og_fail_reasons: {},
     og_live: 0,
     og_upcoming: 0,
     og_ended: 0,

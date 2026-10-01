@@ -26,9 +26,12 @@ const DEFAULT_CONCURRENCY = 8;
  * live-og：/live 頁每頁約 1.5MB、解析吃 CPU（Edge Function 上限 2 秒）→ 並行 6、每輪最多 60 個頻道。
  * 2026-09-30 本地實測（真實 edge runtime）：RSS 500＋og 60 一輪約 1.0～1.2 秒 CPU（越過 1 秒 soft limit、未達 2 秒 hard limit）；
  * og 141 仍未撞 hard limit，每頁估計 <12ms。先前 og 81 撞 WORKER_LIMIT 是標題切片留住整頁 HTML 的記憶體問題（strings.ts），已修。
+ * 2026-10-01 改串流讀取（live_og.ts readLiveOgPage）：每頁 CPU 約 3.4ms → 1.1ms（Node 量 13 個真實頁面）。
+ * 本地 edge runtime 實測 RSS 500＋og：100 與 120 各兩輪都只到 soft limit；150 有兩輪撞 2 秒 hard limit（546）。
+ * 正式環境 CPU 速度不同，取 100 留餘裕（直播高峰 YouTube 直播中約 220 個，每輪 80 個直播中名額，約 15 分鐘輪一次）。
  */
 const OG_CONCURRENCY = 6;
-const OG_MAX_CHANNELS = 60;
+const OG_MAX_CHANNELS = 100;
 const OG_BUDGET_MS = 40_000;
 
 Deno.serve((req) => {
