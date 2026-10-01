@@ -15,7 +15,7 @@
 -- 頻率依使用者裁定（Light 每 10 分、Heavy 每 20 分）；兩支會抓 RSS 的（light、heavy）錯開，snapshot 約每 5 分更新。
 -- 同一支不會重疊：Edge Function 執行上限 150 秒（免費方案），遠小於間隔。
 --
--- 需要的 Vault 金鑰（沒有時 schedule_invoke 只記 notice、不發請求；本地預設就是這樣，所以本地 job 是 no-op）：
+-- 需要的 Vault 金鑰（沒有時 schedule_invoke 只記 warning、不發請求；本地預設就是這樣，所以本地 job 是 no-op）：
 --   select vault.create_secret('https://<project-ref>.supabase.co', 'schedule_project_url');
 --   select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'schedule_cron_secret');
 --
@@ -33,6 +33,9 @@
 --   select cron.unschedule('schedule_heavy');
 --   drop function if exists private.schedule_invoke(text);
 --   delete from public.cron_shard_state where job_name = 'schedule_live_og';
+
+-- pg_net：先前只在本地專用 migration 建立；正式站沒有時函式本體執行才會報錯，這裡確保存在
+create extension if not exists pg_net;
 
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
@@ -53,7 +56,8 @@ begin
     select decrypted_secret into project_url from vault.decrypted_secrets where name = 'schedule_project_url';
     select decrypted_secret into cron_secret from vault.decrypted_secrets where name = 'schedule_cron_secret';
     if project_url is null or cron_secret is null then
-        raise notice 'schedule_invoke: vault 缺 schedule_project_url 或 schedule_cron_secret，略過 %', fn;
+        -- warning 會進資料庫日誌；cron 仍顯示成功，健康與否以 cron_shard_state.last_run_at 是否更新為準
+        raise warning 'schedule_invoke: vault 缺 schedule_project_url 或 schedule_cron_secret，略過 %', fn;
         return null;
     end if;
     return net.http_post(

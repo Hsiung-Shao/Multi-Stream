@@ -2,11 +2,16 @@
 --
 -- 週表的 Twitch 直播中（/helix/streams）與週表（/helix/schedule）都靠 vtuber_channels.external_id（broadcaster id）；
 -- 正式站的 Twitch 帳號多半只有 handle。本地已用 /helix/users?login= 查過（backfill-twitch-ids.mjs），這裡寫回正式站。
--- 只補 external_id 為空的列（依 handle 不分大小寫對應），不覆蓋既有值；同一個 id 已被別列占用就跳過（部分唯一索引）。
+-- 只補 status = 'active'、external_id 為空的列（依 handle 不分大小寫對應），不覆蓋既有值；
+-- 同一個 id 已被別列占用就跳過（部分唯一索引）。已移除（removed）的列不補，免得日後恢復時撞唯一索引。
 --
--- 回滾：本檔只補空值，回滾＝把這些 id 清回 null：
---   update public.vtuber_channels c set external_id = null
---   from (values ...同下...) v(handle, id) where c.platform = 'twitch' and c.external_id = v.id;
+-- 回滾（用套用前的備份，只還原本檔改過的列）：
+--   update public.vtuber_channels c set external_id = b.external_id
+--   from backup.twitch_ids_before_20261002 b where b.id = c.id and c.external_id is distinct from b.external_id;
+
+create schema if not exists backup;
+create table if not exists backup.twitch_ids_before_20261002 as
+    select id, external_id from public.vtuber_channels where platform = 'twitch';
 
 update public.vtuber_channels c
 set external_id = v.id,
@@ -1416,6 +1421,7 @@ from (values
     ('zxm_tw', '69537608')
 ) as v(handle, id)
 where c.platform = 'twitch'
+  and c.status = 'active'
   and c.external_id is null
   and lower(c.handle) = v.handle
   and not exists (

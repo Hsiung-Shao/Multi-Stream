@@ -126,15 +126,18 @@ export function quotaDay(now: number): string {
  * 分片游標的這一片是否跨過名冊開頭（＝新的一圈：重算分級、重查待處理、復活死頻道…）。
  * 總數通常不被分片大小整除，游標繞回時多半不是 0（例：2,602 個頻道、每片 400 → 2400 的下一片從 198 開始），
  * 只看「起點 == 0」會讓新一圈的工作幾乎永遠不跑（2026-10-02 實測 pending_refreshed 一直是 0）。
- * prev（上一輪的統計）：上一輪已經是新一圈、這輪起點沒有往回繞（重試同一片、或跨界那片只做了一部分）→ 同一圈，不重做。
+ * prev（上一輪的 cursor_start）：上一片也跨界、而這輪起點沒有往回繞（RSS 限流沒前進、或跨界那片只做了一部分）→
+ * 同一次跨界，不重做（否則限流時每隔一輪就重算分級、重查待處理、吃掉 API 額度）。
+ * 只看「上一片是否跨界」而不看上一輪是否算新一圈：後者在第二輪記成 false，第三輪又會被判成新一圈。
  * 名冊不超過一片時每輪都算新一圈。
  */
-export function isLapStart(start: number, shardSize: number, total: number, prev?: { cursor_start?: number; new_lap?: boolean } | null): boolean {
+export function isLapStart(start: number, shardSize: number, total: number, prev?: { cursor_start?: number } | null): boolean {
   if (total <= 0) return false;
   if (total <= shardSize) return true;
-  const wraps = start === 0 || start + shardSize > total;
-  if (!wraps) return false;
-  return !(prev?.new_lap && typeof prev.cursor_start === 'number' && start >= prev.cursor_start);
+  const wraps = (s: number) => s === 0 || s + shardSize > total;
+  if (!wraps(start)) return false;
+  const p = prev?.cursor_start;
+  return !(typeof p === 'number' && wraps(p) && start >= p);
 }
 
 /** 非限流輪次裡 RSS 連續失敗達此數 → 視為死頻道，掃描時跳過（Heavy 每圈開頭歸零再試一次） */

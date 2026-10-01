@@ -177,21 +177,35 @@ describe('youtube_live_status 列', () => {
 describe('新的一圈（isLapStart）', () => {
     it('游標繞回時不是 0 也算新一圈（2,602 個頻道、每片 400：2400 那片跨過開頭）', () => {
         expect(isLapStart(0, 400, 2602, null)).toBe(true);
-        expect(isLapStart(2400, 400, 2602, { cursor_start: 2000, new_lap: false })).toBe(true);
+        expect(isLapStart(2400, 400, 2602, { cursor_start: 2000 })).toBe(true);
         expect(isLapStart(2000, 400, 2602, { cursor_start: 1600 })).toBe(false); // 2000+400 = 2400 < 2602：沒跨界
         expect(isLapStart(2202, 400, 2602, { cursor_start: 1802 })).toBe(false); // 剛好到結尾，下一片從 0 開始才算
     });
 
-    it('上一輪已是新一圈、這輪起點沒有往回繞（限流沒前進、跨界那片只做一部分）→ 不重做', () => {
-        expect(isLapStart(2400, 400, 2602, { cursor_start: 2400, new_lap: true })).toBe(false);
-        expect(isLapStart(2500, 400, 2602, { cursor_start: 2400, new_lap: true })).toBe(false);
-        expect(isLapStart(0, 400, 2602, { cursor_start: 0, new_lap: true })).toBe(false);
+    it('上一片也跨界、這輪起點沒有往回繞（限流沒前進、跨界那片只做一部分）→ 不重做', () => {
+        expect(isLapStart(2400, 400, 2602, { cursor_start: 2400 })).toBe(false);
+        expect(isLapStart(2500, 400, 2602, { cursor_start: 2400 })).toBe(false);
+        expect(isLapStart(0, 400, 2602, { cursor_start: 0 })).toBe(false);
         // 跨界之後已往回繞，下一次跨界（約 7 片後）才再算
-        expect(isLapStart(198, 400, 2602, { cursor_start: 2400, new_lap: true })).toBe(false);
+        expect(isLapStart(198, 400, 2602, { cursor_start: 2400 })).toBe(false);
+    });
+
+    it('連續多輪模擬：卡住或部分前進時整段只算一次新一圈；下一圈跨界時再算', () => {
+        const run = (starts: number[]) => {
+            let prev: { cursor_start: number } | null = { cursor_start: 2000 };
+            return starts.map((s) => {
+                const r = isLapStart(s, 400, 2602, prev);
+                prev = { cursor_start: s };
+                return r;
+            });
+        };
+        expect(run([2400, 2400, 2400, 2400])).toEqual([true, false, false, false]); // 限流卡住
+        expect(run([2400, 2500, 2550, 2600, 196])).toEqual([true, false, false, false, false]); // 部分前進
+        expect(run([2400, 198, 598, 998, 1398, 1798, 2198, 2598])).toEqual([true, false, false, false, false, false, false, true]); // 下一圈
     });
 
     it('名冊不超過一片：每輪都是新一圈；空名冊不是', () => {
-        expect(isLapStart(0, 400, 300, { cursor_start: 0, new_lap: true })).toBe(true);
+        expect(isLapStart(0, 400, 300, { cursor_start: 0 })).toBe(true);
         expect(isLapStart(0, 400, 0, null)).toBe(false);
     });
 });
