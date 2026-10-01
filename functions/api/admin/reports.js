@@ -14,7 +14,7 @@ import { select, update, insert, rpc } from '../../lib/supabase-server.js';
 import { gateAdmin } from '../../lib/auth-helper.js';
 import { logError } from '../../lib/logger.js';
 import { isUniqueViolation, postgrestErrorMessage } from '../../lib/submit-guard.js';
-import { getTwitchAppToken } from '../../lib/twitch-token.js';
+import { lookupTwitchUser, twitchLookupStatus } from '../../lib/twitch-users.js';
 import {
     REPORT_REASONS_BY_KIND,
     SUGGESTED_KEYS,
@@ -161,28 +161,10 @@ export async function buildApplyFields(raw, env, deps = {}) {
     }
     if (s.twitch) {
         const user = await (deps.lookupTwitch ?? lookupTwitchUser)(s.twitch, env);
-        if (!user.ok) return { error: user.error, status: user.error === 'twitch_not_found' ? 400 : 502 };
+        if (!user.ok) return { error: user.error, status: twitchLookupStatus(user.error) };
         out.twitch = { login: user.login, id: user.id, display_name: user.displayName };
     }
     return Object.keys(out).length ? { value: out } : { error: 'no_fields' };
-}
-
-/** Twitch login → { id, login, displayName }（helix/users，app token） */
-async function lookupTwitchUser(login, env) {
-    if (!env.TWITCH_CLIENT_ID || !env.TWITCH_CLIENT_SECRET) return { ok: false, error: 'twitch_fetch_failed' };
-    try {
-        const token = await getTwitchAppToken(env);
-        const res = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`, {
-            headers: { 'Client-Id': env.TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
-            signal: AbortSignal.timeout(8000),
-        });
-        if (!res.ok) return { ok: false, error: 'twitch_fetch_failed' };
-        const u = (await res.json())?.data?.[0];
-        if (!u?.id) return { ok: false, error: 'twitch_not_found' };
-        return { ok: true, id: String(u.id), login: String(u.login).toLowerCase(), displayName: u.display_name ?? null };
-    } catch {
-        return { ok: false, error: 'twitch_fetch_failed' };
-    }
 }
 
 export async function onRequestOptions(context) {

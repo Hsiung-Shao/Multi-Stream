@@ -201,6 +201,7 @@ const ERRORS: Record<string, string> = {
     invalid_instagram: 'Instagram 帳號格式不正確',
     invalid_facebook: 'Facebook 網址不正確',
     invalid_twitch: 'Twitch 帳號格式不正確',
+    invalid_twitch_id: 'Twitch 帳號 ID 無效（請重新核准）',
     invalid_status: '狀態無效',
     approve_failed: '核准失敗（伺服器錯誤）',
     reject_failed: '駁回失敗（伺服器錯誤）',

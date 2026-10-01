@@ -23,7 +23,7 @@ import { onRequestPost as contributePost } from '../../functions/api/vtuber/cont
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { onRequestPost as reportPost } from '../../functions/api/report.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { onRequestGet as adminContribGet, onRequestPost as adminContribPost, validateOverrides } from '../../functions/api/admin/contributions.js';
+import { onRequestGet as adminContribGet, onRequestPost as adminContribPost, validateOverrides, resolveTwitchId } from '../../functions/api/admin/contributions.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { onRequestPut as adminReportPut, onRequestPost as adminReportPost, buildApplyFields } from '../../functions/api/admin/reports.js';
 
@@ -369,10 +369,59 @@ describe('後台 API', () => {
         const rpcCall = calls.find((c) => c.url.includes('rpc/approve_vtuber_contribution'))!;
         expect(rpcCall.body).toEqual({ p_id: VID, p_overrides: { name: '新名', x_url: 'https://x.com/abc', new_group: { name: '新團', kind: 'circle', nationality: null }, group_id: '' } });
 
-        sb = () => new Response('{"code":"23505","message":"exists"}', { status: 409 });
+        sb = (method) => (method === 'GET' ? new Response('[]') : new Response('{"code":"23505","message":"exists"}', { status: 409 }));
         const dup = await adminContribPost({ request: admin(`/api/admin/contributions?id=${VID}&action=approve`, { method: 'POST', body: '{}' }), env: ENV() });
         expect(dup.status).toBe(409);
         expect((await dup.json()).error).toBe('exists');
+    });
+
+    it('核准：投稿有 Twitch 時先查 broadcaster id，以 overrides.twitch_id 傳給 RPC', async () => {
+        sb = (method, path) =>
+            path.startsWith('rpc/') ? new Response('{"vtuber_id":"v","slug":"newbie"}') : new Response('[{"twitch_login":"newbie_tw"}]');
+        const lookupTwitch = vi.fn(async (login: string) => ({ ok: true, id: '987', login, displayName: 'Newbie' }));
+        const res = await adminContribPost(
+            { request: admin(`/api/admin/contributions?id=${VID}&action=approve`, { method: 'POST', body: '{"overrides":{"bio":"x"}}' }), env: ENV() },
+            { lookupTwitch },
+        );
+        expect(res.status).toBe(200);
+        expect(lookupTwitch).toHaveBeenCalledWith('newbie_tw', expect.anything());
+        expect(calls.find((c) => c.method === 'GET')!.url).toContain('select=twitch_login:payload->>twitch_login');
+        expect(calls.find((c) => c.url.includes('rpc/approve_vtuber_contribution'))!.body).toEqual({ p_id: VID, p_overrides: { bio: 'x', twitch_id: '987' } });
+
+        // 查好 id 後被別筆搶先寫入：唯一索引衝突 → twitch_exists
+        sb = (method) => (method === 'GET' ? new Response('[{"twitch_login":"newbie_tw"}]') : new Response('{"code":"23505","message":"duplicate key value violates unique constraint \\"vtuber_channels_platform_external_uq\\""}', { status: 409 }));
+        const race = await adminContribPost({ request: admin(`/api/admin/contributions?id=${VID}&action=approve`, { method: 'POST', body: '{}' }), env: ENV() }, { lookupTwitch });
+        expect(race.status).toBe(409);
+        expect((await race.json()).error).toBe('twitch_exists');
+    });
+
+    it('核准：Twitch 查不到或上游失敗就不呼叫 RPC', async () => {
+        sb = (method, path) => (path.startsWith('rpc/') ? new Response('{}') : new Response('[{"twitch_login":"gone"}]'));
+        const notFound = await adminContribPost(
+            { request: admin(`/api/admin/contributions?id=${VID}&action=approve`, { method: 'POST', body: '{}' }), env: ENV() },
+            { lookupTwitch: async () => ({ ok: false, error: 'twitch_not_found' }) },
+        );
+        expect(notFound.status).toBe(400);
+        expect((await notFound.json()).error).toBe('twitch_not_found');
+        // 沒設 Twitch 憑證（ENV 無 TWITCH_CLIENT_ID）走真的 lookupTwitchUser → 502
+        const down = await adminContribPost({ request: admin(`/api/admin/contributions?id=${VID}&action=approve`, { method: 'POST', body: '{}' }), env: ENV() });
+        expect(down.status).toBe(502);
+        expect(calls.some((c) => c.url.includes('rpc/'))).toBe(false);
+    });
+
+    it('resolveTwitchId：overrides 優先（不查投稿）、清空就不查、login 不符擋下', async () => {
+        const lookupTwitch = vi.fn(async (login: string) => ({ ok: true, id: '1', login, displayName: null }));
+        expect(await resolveTwitchId(ENV(), VID, { twitch_login: 'abc' }, { lookupTwitch })).toEqual({ id: '1' });
+        expect(await resolveTwitchId(ENV(), VID, { twitch_login: '' }, { lookupTwitch })).toEqual({ id: null });
+        expect(calls.length).toBe(0);
+        expect(lookupTwitch).toHaveBeenCalledTimes(1);
+        // 投稿不存在：交給 RPC 回 not_found
+        sb = () => new Response('[]');
+        expect(await resolveTwitchId(ENV(), VID, {}, { lookupTwitch })).toEqual({ id: null });
+        const other = async () => ({ ok: true, id: '2', login: 'someone_else', displayName: null });
+        expect(await resolveTwitchId(ENV(), VID, { twitch_login: 'abc' }, { lookupTwitch: other })).toEqual({ error: 'twitch_not_found', status: 400 });
+        sb = () => new Response('oops', { status: 500 });
+        expect(await resolveTwitchId(ENV(), VID, {}, { lookupTwitch })).toEqual({ error: 'approve_failed', status: 500 });
     });
 
     it('overrides 白名單與格式', () => {
