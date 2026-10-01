@@ -212,6 +212,12 @@ function PersonBody({ person }: { person: SchedulePerson }) {
     const [recentExpanded, setRecentExpanded] = useState(false);
     const channels = useMemo(() => ({ [person.id]: person.channel }), [person.id, person.channel]);
     const sel = useScheduleSelection(channels, 'person');
+    // 預定時間已過的場次會從「接下來」消失：也從勾選拿掉；已開台的照留
+    const { prune } = sel;
+    useEffect(() => {
+        const liveKeys = new Set(person.live.map(streamKey));
+        prune((s) => liveKeys.has(streamKey(s)) || !isPastScheduled(s, now));
+    }, [now, person.live, prune]);
     const { watch, busyKey } = useWatchOnCanvas('person');
     const fav = useFavoriteChannel();
     const cardActions = useMemo<ScheduleCardActions>(

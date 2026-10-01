@@ -13,7 +13,7 @@ import { StreamSearchBox } from '../../components/StreamSearchBox';
 import { schedulePersonPage } from '../../config/schedulePerson';
 import { track } from '../../utils/analytics';
 import { cn } from '../../components/ui/utils';
-import { countByTab, filterStreams, isSpecificAgency, isValidGroup, listGroups, listMatchingChannels, sortLive } from './filters';
+import { countByTab, filterStreams, isPastScheduled, isSpecificAgency, isValidGroup, listGroups, listMatchingChannels, sortLive } from './filters';
 import { useScheduleSelection } from './useScheduleSelection';
 import { useWatchOnCanvas } from './useWatchOnCanvas';
 import { useFavoriteChannel } from './useFavoriteChannel';
@@ -136,6 +136,12 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     };
 
     const sel = useScheduleSelection(snapshot.channels, filters.scope);
+    // 預定時間已過的場次會從「接下來」消失：也從勾選拿掉（畫面上已沒有卡片可取消）；已開台的照留
+    const { prune } = sel;
+    useEffect(() => {
+        const liveKeys = new Set(snapshot.live.map(streamKey));
+        prune((s) => liveKeys.has(streamKey(s)) || !isPastScheduled(s, now));
+    }, [now, snapshot.live, prune]);
 
     const nothingInFavorites = !searching && filters.scope === 'favorites' && counts.live + counts.upcoming + counts.recent === 0;
     const liveShown = liveExpanded ? live : live.slice(0, LIVE_PREVIEW);

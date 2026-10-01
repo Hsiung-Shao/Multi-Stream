@@ -212,6 +212,8 @@ export function useAdminAnnouncements() {
         },
         // admin 後台不需要 background polling
         staleTime: 30_000,
+        // token 錯（401）重試也不會好，反而卡在重試中、換 token 後的重新讀取要等重試結束
+        retry: (count, err) => !(err instanceof ApiError && err.status === 401) && count < 3,
     });
 }
 

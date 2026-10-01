@@ -36,6 +36,13 @@ export function useScheduleSelection(channels: Record<string, ScheduleChannel>, 
     }, []);
 
     const clear = useCallback(() => setSelected(new Map()), []);
+    /** 只保留 keep 回傳 true 的勾選（例如預定時間已過、卡片已從畫面消失的場次）；沒有變動時不換 state */
+    const prune = useCallback((keep: (s: ScheduleStream) => boolean) => {
+        setSelected((prev) => {
+            const next = new Map([...prev].filter(([, s]) => keep(s)));
+            return next.size === prev.size ? prev : next;
+        });
+    }, []);
     const selectedKeys = useMemo(() => new Set(selected.keys()), [selected]);
 
     const open = useCallback(
@@ -62,5 +69,5 @@ export function useScheduleSelection(channels: Record<string, ScheduleChannel>, 
         [channels, scope, selected, t],
     );
 
-    return { selected, selectedKeys, toggle, selectMany, clear, open, busy, room };
+    return { selected, selectedKeys, toggle, selectMany, clear, prune, open, busy, room };
 }

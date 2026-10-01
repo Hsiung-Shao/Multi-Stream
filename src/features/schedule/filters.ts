@@ -231,7 +231,7 @@ export function groupByDay(streams: readonly ScheduleStream[], now: number, time
     for (const s of streams) {
         if (!s.scheduled_start) continue;
         let key = localDayKey(s.scheduled_start, timeZone);
-        if (key < first) key = first; // 已過排定時間但還沒開（3 小時內）：放今天
+        if (key < first) key = first; // 保險：呼叫端沒先濾掉過去的場次時放今天（週表與個人頁都已濾掉預定時間已過的）
         if (key > last) key = last;
         buckets.get(key)?.push(s);
     }
