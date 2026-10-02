@@ -1,8 +1,8 @@
 export default {
   // Island favorites chooser
-  select_category: '카테고리 선택',
-  all_categories: '모든 카테고리',
-  no_categories: '카테고리 없음',
+  select_category: '리스트 선택',
+  all_categories: '모든 리스트',
+  no_categories: '리스트 없음',
   select_tags_multi: '태그 선택 (다중)',
   // FM Settings — 외관/재생 카드
   theme_light: '라이트',
@@ -38,7 +38,7 @@ export default {
   // Sidebar section labels (對齊設計 FMSidebar 分區)
   sidebarFilter: '필터',
   sidebarLiveNow: '라이브 중',
-  sidebarCategoryGroup: '카테고리',
+  sidebarCategoryGroup: '리스트',
 
   // Quick Filters
   all: '전체',
@@ -56,7 +56,7 @@ export default {
   streamUrl: '방송 URL',
   streamName: '이름 (선택)',
   category: '리스트',
-  categories: '카테고리',
+  categories: '리스트',
   'navigation': '내비게이션',
   'confirmDeleteTagDesc': '태그를 삭제하면 모든 즐겨찾기에서 제거됩니다.',
   uncategorized: '미분류',
@@ -78,7 +78,7 @@ export default {
 
   // Empty States
   noFavorites: '즐겨찾기가 없습니다. 오른쪽 위에서 추가하세요',
-  noCategories: '카테고리가 없습니다',
+  noCategories: '리스트가 없습니다',
 
   // Backup
   backup: '백업 및 복원',
@@ -94,7 +94,7 @@ export default {
   'backup.import_success': '가져오기 성공, 데이터 새로고침 중...',
   'backup.import_error': '가져오기 실패: {{error}}',
   'backup.unknown_error': '알 수 없는 오류',
-  'backup.export_desc': '모든 즐겨찾기, 카테고리, 사용자 레이아웃 및 설정을 JSON 파일로 다운로드합니다.',
+  'backup.export_desc': '모든 즐겨찾기, 리스트, 사용자 레이아웃 및 설정을 JSON 파일로 다운로드합니다.',
   'backup.export_helper': '가장 안전한 백업 방법입니다. 이 파일을 외장 드라이브나 클라우드에 저장하여 다른 컴퓨터에서 구성을 복원할 수 있습니다.',
   'backup.export_btn': '백업 파일 다운로드 (.json)',
   'backup.import_desc': '이전 백업 JSON 파일에서 데이터를 복원합니다.',
@@ -117,7 +117,7 @@ export default {
   'settings.clear_all_data_desc': '이 브라우저에 저장된 즐겨찾기, 레이아웃, 설정 및 자동 백업을 삭제합니다',
   'settings.clear_all_data_button': '삭제',
   'settings.clear_all_data_confirm_title': '모든 데이터를 삭제할까요?',
-  'settings.clear_all_data_confirm_desc': '즐겨찾기, 카테고리, 태그, 사용자 레이아웃, 설정 및 자동 백업(localStorage 및 IndexedDB)을 삭제한 뒤 페이지를 다시 불러옵니다. 되돌릴 수 없으니 먼저 「백업 및 복원」에서 파일을 내보내는 것을 권장합니다. 열려 있는 이 사이트의 다른 탭도 닫아 주세요.',
+  'settings.clear_all_data_confirm_desc': '즐겨찾기, 리스트, 태그, 사용자 레이아웃, 설정 및 자동 백업(localStorage 및 IndexedDB)을 삭제한 뒤 페이지를 다시 불러옵니다. 되돌릴 수 없으니 먼저 「백업 및 복원」에서 파일을 내보내는 것을 권장합니다. 열려 있는 이 사이트의 다른 탭도 닫아 주세요.',
   'group.ungrouped': '미분류',
 
   // Placeholders
@@ -175,7 +175,7 @@ export default {
 
   // Add/Edit Favorite Dialog (Phase 3 redesign)
   addFavoriteDesc: '채널 URL을 붙여넣으면 플랫폼이 자동으로 인식됩니다',
-  editFavoriteDesc: '이름, 목록, 태그를 업데이트',
+  editFavoriteDesc: '이름, 리스트, 태그를 업데이트',
   channelUrlOrName: '채널 URL 또는 이름',
   paste: '붙여넣기',
   pasteFromClipboard: '클립보드에서 붙여넣기',
@@ -205,14 +205,14 @@ export default {
   load: '열기',
   loadSuccess: '불러왔습니다',
   loadError: '불러오지 못했습니다',
-  confirmDeleteCategoryDesc: '카테고리를 삭제하면 해당 카테고리의 즐겨찾기는 미분류로 변경됩니다.',
+  confirmDeleteCategoryDesc: '리스트를 삭제하면 해당 리스트의 즐겨찾기는 미분류로 변경됩니다.',
   favorites_menu: '즐겨찾기 라이브',
   online_only: '라이브 중만 표시',
   added_count: '채널 {{count}}개를 불러왔습니다',
-  no_streams_in_category: '카테고리에 채널이 없습니다',
+  no_streams_in_category: '리스트에 채널이 없습니다',
   confirm_load_large: '채널 {{count}}개를 불러오시겠습니까? 끊김이 발생할 수 있습니다',
   load_selected_count: '채널 {{count}}개 열기',
-  load_category_all: '이 카테고리 전체 열기',
+  load_category_all: '이 리스트 전체 열기',
   no_streams_to_save: '저장할 스트림이 없습니다',
   save_entire_canvas: '현재 캔버스 저장',
   batch_save_success_simple: '스트림 {{count}}개를 저장했습니다',

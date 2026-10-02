@@ -25,7 +25,7 @@ const about = {
   'feature4.title': '볼륨 제어',
   'feature4.description': '각 스트림의 독립적인 볼륨 제어 및 마스터 볼륨 제어 기능',
   'feature5.title': '즐겨찾기 시스템',
-  'feature5.description': '즐겨찾기 스트림 저장, 카테고리 관리, Twitch 채널 검색, 라이브 상태 감지, JSON 내보내기/가져오기 지원',
+  'feature5.description': '즐겨찾기 스트림 저장, 리스트 관리, Twitch 채널 검색, 라이브 상태 감지, JSON 내보내기/가져오기 지원',
   'feature6.title': '반응형 디자인',
   'feature6.description': '다양한 화면 크기에 적응하여 부드러운 사용자 경험 제공',
   'feature7.title': '다국어 지원',

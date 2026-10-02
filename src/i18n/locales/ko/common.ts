@@ -379,7 +379,7 @@ const common = {
   'mobile.watch.empty_title': '추가된 스트림이 없습니다',
   'mobile.watch.empty_desc': '아래 + 버튼을 눌러 Twitch 또는 YouTube 스트림을 추가하세요',
   'common.refresh': '새로고침',
-  'common.category': '카테고리',
+  'common.category': '리스트',
   'common.done': '완료',
   'common.no_data': '일치하는 데이터가 없습니다',
   'landing.aria.toggle_theme': '다크/라이트 모드 전환',

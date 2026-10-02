@@ -50,28 +50,29 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
     { value: 'ko' as const, label: tx('common:korean') },
   ];
 
-  // hero pills(design 新增,defaultValue 帶 design 中文)
+  // hero pills(design 新增)
   const pills: { icon: LucideIcon; label: string }[] = [
-    { icon: HardDrive, label: tx('privacy:pillLocalFirst', { defaultValue: '本地優先' }) },
-    { icon: CodeXml, label: tx('privacy:pillFrontend', { defaultValue: '純前端' }) },
-    { icon: BadgeDollarSign, label: tx('privacy:pillNoSell', { defaultValue: '不賣資料' }) },
-    { icon: BarChart3, label: tx('privacy:pillAnonStats', { defaultValue: '僅匿名統計' }) },
+    { icon: HardDrive, label: tx('privacy:pillLocalFirst') },
+    { icon: CodeXml, label: tx('privacy:pillFrontend') },
+    { icon: BadgeDollarSign, label: tx('privacy:pillNoSell') },
+    { icon: BarChart3, label: tx('privacy:pillAnonStats') },
   ];
 
-  // 我們收集什麼(design 新增,defaultValue 帶 design 中文)
+  // 我們收集什麼(design 新增)
   const collect: { icon: LucideIcon; text: string }[] = [
-    { icon: Users, text: tx('privacy:collect1', { defaultValue: '匿名訪客數量（透過 Google Analytics 4）' }) },
-    { icon: MousePointerClick, text: tx('privacy:collect2', { defaultValue: '頁面瀏覽事件（不含個人識別資訊）' }) },
-    { icon: Clock, text: tx('privacy:collect3', { defaultValue: '串流播放時間總計（聚合資料，無法回溯到個人）' }) },
-    { icon: BarChart3, text: tx('privacy:collect4', { defaultValue: '被加入的 YouTube 頻道 ID（僅匿名聚合計數，不含任何使用者識別碼）' }) },
+    { icon: Users, text: tx('privacy:collect1') },
+    { icon: MousePointerClick, text: tx('privacy:collect2') },
+    { icon: Clock, text: tx('privacy:collect3') },
+    { icon: BarChart3, text: tx('privacy:collect4') },
+    { icon: FileText, text: tx('privacy:collect5') },
   ];
 
   // 我們不收集什麼(design 新增)
   const never: string[] = [
-    tx('privacy:never1', { defaultValue: '「哪個使用者」收藏了哪些頻道（頻道統計是匿名聚合的，無法回溯到你）' }),
-    tx('privacy:never2', { defaultValue: '你看了什麼直播、看了多久' }),
-    tx('privacy:never3', { defaultValue: '你的 Twitch / YouTube 帳號內容' }),
-    tx('privacy:never4', { defaultValue: '任何能識別你個人的資訊' }),
+    tx('privacy:never1'),
+    tx('privacy:never2'),
+    tx('privacy:never3'),
+    tx('privacy:never4'),
   ];
 
   // 完整法律條文(沿用 next 既有 section1~9 多語系 key),用同套 editorial 卡片排版。
@@ -118,9 +119,26 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
       body: (
         <>
           <p className="pv-p">{tx('privacy:section2.intro')}</p>
-          <PvList items={[tx('privacy:section2.item1'), tx('privacy:section2.item2'), tx('privacy:section2.item3')]} />
+          <PvList items={[tx('privacy:section2.item1'), tx('privacy:section2.item2'), tx('privacy:section2.item3'), tx('privacy:section2.item6')]} />
           <p className="pv-p" style={{ marginTop: 12, fontWeight: 600, color: 'var(--foreground)' }}>{tx('privacy:section2.youCan')}</p>
           <PvList items={[tx('privacy:section2.item4'), tx('privacy:section2.item5')]} />
+        </>
+      ),
+    },
+    {
+      // 2026-10-03：條款原本寫「不使用後端伺服器儲存任何使用者資料」，與實作不符（頻道快取、開台查詢、回饋與回報）
+      icon: Database, hue: '#38bdf8', title: tx('privacy:section2_5.title'),
+      body: (
+        <>
+          <p className="pv-p">{tx('privacy:section2_5.intro')}</p>
+          <PvList
+            items={[
+              tx('privacy:section2_5.item1'), tx('privacy:section2_5.item2'),
+              tx('privacy:section2_5.item3'), tx('privacy:section2_5.item4'),
+              tx('privacy:section2_5.item5'), tx('privacy:section2_5.item6'),
+              tx('privacy:section2_5.item7'),
+            ]}
+          />
         </>
       ),
     },
@@ -128,7 +146,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
       icon: FileText, hue: '#f87171', title: tx('privacy:section3.title'),
       body: (
         <>
-          <PvList items={[tx('privacy:section3.item1'), tx('privacy:section3.item2'), tx('privacy:section3.item3')]} />
+          <PvList items={[tx('privacy:section3.item1'), tx('privacy:section3.item2'), tx('privacy:section3.item6'), tx('privacy:section3.item3')]} />
           <div style={{ marginTop: 10, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p className="pv-p">
               {tx('privacy:section3.item4')}{' '}
@@ -333,7 +351,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
           <div className="pv-hero-badge"><ShieldCheck size={42} color="white" /></div>
           <h1 className="pv-hero-title">{tx('privacy:title')}</h1>
           <p className="pv-hero-sub">
-            {tx('privacy:heroSub', { defaultValue: 'MultiStream Hub 是純前端工具。你的個人資料留在你自己的瀏覽器裡，我們的伺服器看不到。' })}
+            {tx('privacy:heroSub')}
           </p>
           <div className="pv-hero-dates">
             <span>{tx('privacy:effectiveDate')}{tx('privacy:effectiveDateValue')}</span>
@@ -356,10 +374,10 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
           <div className="pv-highlight">
             <div className="pv-highlight-chip"><Lock size={24} /></div>
             <div className="flex-1">
-              <div className="pv-highlight-eyebrow">{tx('privacy:localFirstEyebrow', { defaultValue: 'Local first' })}</div>
-              <h3 className="pv-highlight-title">{tx('privacy:localFirstTitle', { defaultValue: '你的資料留在你這裡' })}</h3>
+              <div className="pv-highlight-eyebrow">{tx('privacy:localFirstEyebrow')}</div>
+              <h3 className="pv-highlight-title">{tx('privacy:localFirstTitle')}</h3>
               <p className="pv-highlight-desc">
-                {tx('privacy:localFirstDesc', { defaultValue: '你的收藏、分類、標籤、設定與布局全部儲存在你自己的 LocalStorage 與 IndexedDB，伺服器看不到。唯一的例外是被加入的 YouTube 頻道 ID 會以匿名、聚合的方式回報，用來統計熱門頻道 —— 這筆資料不會綁定到你或你的裝置。' })}
+                {tx('privacy:localFirstDesc')}
               </p>
             </div>
           </div>
@@ -368,16 +386,16 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
         {/* ---------- Collect vs never ---------- */}
         <section className="pv-section">
           <SectionHead color="#10b981"
-            eyebrow={tx('privacy:transparencyEyebrow', { defaultValue: 'Transparency' })}
-            title={tx('privacy:collectTitle', { defaultValue: '我們收集 / 不收集什麼' })}
-            sub={tx('privacy:collectSub', { defaultValue: '把界線講清楚：我們只看匿名聚合數字，看不到任何指向你個人的東西。' })}
+            eyebrow={tx('privacy:transparencyEyebrow')}
+            title={tx('privacy:collectTitle')}
+            sub={tx('privacy:collectSub')}
           />
           <div className="pv-grid2">
             {/* collect */}
             <div className="pv-card">
               <div className="pv-card-head">
                 <IconChip icon={CheckCircle2} hue={GREEN_LIGHT} size={42} />
-                <h3 className="pv-card-title">{tx('privacy:collectHeading', { defaultValue: '我們收集什麼' })}</h3>
+                <h3 className="pv-card-title">{tx('privacy:collectHeading')}</h3>
               </div>
               <div className="pv-rows">
                 {collect.map((it) => {
@@ -395,7 +413,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
             <div className="pv-card">
               <div className="pv-card-head">
                 <IconChip icon={ShieldOff} hue="#f87171" size={42} />
-                <h3 className="pv-card-title">{tx('privacy:neverHeading', { defaultValue: '我們不收集什麼' })}</h3>
+                <h3 className="pv-card-title">{tx('privacy:neverHeading')}</h3>
               </div>
               <div className="pv-rows">
                 {never.map((text) => (
@@ -412,13 +430,13 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
         {/* ---------- Anonymous channel stats ---------- */}
         <section className="pv-section">
           <SectionHead color="#10b981"
-            eyebrow={tx('privacy:howEyebrow', { defaultValue: 'How it works' })}
-            title={tx('privacy:anonStatsTitle', { defaultValue: '匿名頻道統計' })}
+            eyebrow={tx('privacy:howEyebrow')}
+            title={tx('privacy:anonStatsTitle')}
           />
           <div className="pv-stat">
             <IconChip icon={BarChart3} hue="#60a5fa" size={50} />
             <p className="pv-stat-text">
-              {tx('privacy:anonStatsDesc', { defaultValue: '當你把一個 YouTube 頻道加入收藏時，我們只會把該頻道的 ID 傳給伺服器做計數，用來了解哪些頻道最受歡迎、改善推薦。我們不會記錄「是誰」或「哪台裝置」加入，不附帶 IP、帳號或任何識別碼，因此這份統計無法回溯到你個人。你個人的收藏清單本身仍然只留在你的瀏覽器本地。' })}
+              {tx('privacy:anonStatsDesc')}
             </p>
           </div>
         </section>
@@ -426,8 +444,8 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
         {/* ---------- Full policy(保留 next 既有 9 段法律條文) ---------- */}
         <section className="pv-section">
           <SectionHead color="#10b981"
-            eyebrow={tx('privacy:detailsEyebrow', { defaultValue: 'Full policy' })}
-            title={tx('privacy:detailsTitle', { defaultValue: '完整隱私權條款' })}
+            eyebrow={tx('privacy:detailsEyebrow')}
+            title={tx('privacy:detailsTitle')}
             sub={tx('privacy:intro')}
           />
           <div className="pv-policy">
