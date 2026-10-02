@@ -15,9 +15,9 @@ export const ROUTE_META = {
                 'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。',
         },
         en: {
-            title: 'MultiStream Hub | Free Twitch & YouTube Multi-Stream Viewer',
+            title: 'Free Multistream Viewer: Watch Multiple Twitch & YouTube Streams | MultiStream Hub',
             description:
-                'MultiStream Hub is a completely free multi-stream viewer for watching multiple Twitch and YouTube live streams at once. Multiple layouts, integrated chat, volume control and favorites — no account required.',
+                'Free multistream viewer: watch up to 16 Twitch and YouTube live streams at once on one screen, with multi-chat, per-stream volume and shareable layouts. No sign-up.',
         },
     },
     '/canvas': {
@@ -45,13 +45,13 @@ export const ROUTE_META = {
     },
     '/instructions': {
         'zh-TW': {
-            title: '使用教學 - MultiStream Hub | How to Multistream',
-            description: 'MultiStream Hub 完整功能指南。了解如何新增串流、管理收藏、使用動態島 (Dynamic Island) 與聊天室整合功能。',
+            title: '使用教學：多直播排版、聊天室、音量與分享 - MultiStream Hub',
+            description: '一步步學會 MultiStream Hub：新增 Twitch 與 YouTube 直播、多直播排版、聊天室與音量、收藏與分享連結，完整功能指南。',
         },
         en: {
-            title: 'How to Use - MultiStream Hub | How to Multistream',
+            title: 'MultiStream Hub Guides: Multi-Stream Layouts, Chat, Volume & Sharing',
             description:
-                'The complete MultiStream Hub guide: adding streams, managing favorites, the dynamic-island control center and integrated chat.',
+                'Step-by-step MultiStream Hub guides: add Twitch and YouTube streams, arrange multi-stream layouts, manage chat and volume, save favorites and share your line-up.',
         },
     },
     '/faq': {
@@ -134,13 +134,18 @@ export const ROUTE_META = {
         'zh-TW': { title: '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub', description: 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Alt + 數字切布局，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。' },
         en: { title: 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub', description: 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Alt + number to switch layouts, plus R / M / Delete / F / T on whichever window you hover — including theater mode.' },
     },
+    '/instructions/watch-multiple-twitch-streams': {
+        type: 'article',
+        'zh-TW': { title: '如何同時觀看多個 Twitch 直播（免費 MultiTwitch 替代方案） - MultiStream Hub', description: '免費把多個 Twitch 直播並排同時觀看：輸入頻道名、選佈局、聊天室一起看，再把整組直播分享成一條連結。' },
+        en: { title: 'How to Watch Multiple Twitch Streams at Once (Free MultiTwitch Alternative) - MultiStream Hub', description: 'Watch several Twitch streams side by side for free: paste channel names, pick a layout, keep chat on screen, and share the whole line-up as one link.' },
+    },
     '/about/creator': {
         'zh-TW': { title: '開發者 Hsiung-Shao - MultiStream Hub', description: '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。' },
         en: { title: 'Hsiung-Shao, Creator of MultiStream Hub', description: 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.' },
     },
     '/compare': {
-        'zh-TW': { title: 'MultiTwitch 替代方案比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am', description: '四款多直播同時觀看工具比較：支援平台、同時路數、佈局、多聊天室、分享連結、手機版與價格，幫你挑最適合的。' },
-        en: { title: 'MultiTwitch Alternatives Compared: MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am', description: 'Compare four multi-stream viewers on platforms, stream limits, layouts, multi-chat, share links, mobile support and price.' },
+        'zh-TW': { title: 'MultiTwitch 替代方案比較：4 款多直播同時觀看工具', description: 'MultiStream Hub、MultiTwitch、TwitchTheater、Multistre.am 四款多直播工具比較：支援平台、同時路數、佈局、多聊天室、分享連結、手機版與價格。' },
+        en: { title: 'MultiTwitch Alternatives: 4 Multi-Stream Viewers Compared', description: 'MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am: platforms, stream limits, layouts, multi-chat, share links, mobile support and price, side by side.' },
     },
     '/schedule': {
         'zh-TW': { title: '台灣 VTuber 開台週表：誰正在直播、接下來 7 天誰會開台 - MultiStream Hub', description: '整理台灣 VTuber 的 YouTube 待機室與 Twitch 直播中頻道，看誰正在開台、未來 7 天的開台時間，勾選幾位一鍵同時觀看。' },

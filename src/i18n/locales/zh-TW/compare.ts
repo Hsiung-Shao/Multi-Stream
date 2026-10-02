@@ -72,6 +72,8 @@ export default {
     'pick.multistream': '需要 8 路以內的固定編號佈局與社群精選清單：Multistre.am。',
     'pick.twitchtheater': '想要欄數自訂的網格、偶爾看 YouTube：TwitchTheater。',
     'pick.msh': 'Twitch 與 YouTube 一起看、要自由拖曳佈局、獨立音量、收藏與開台提醒、手機也能用：MultiStream Hub。',
+    'guide.text': '第一次同時看多個 Twitch 直播？',
+    'guide.link': '看一步步的教學',
     'faq.title': '常見問題',
     'faq.q1': 'MultiStream Hub 可以取代 MultiTwitch 嗎？',
     'faq.a1': '可以。MultiTwitch 能做的（多路 Twitch、URL 分享、切換聊天）本站都支援，另外加上 YouTube、自由佈局、獨立音量與收藏。',

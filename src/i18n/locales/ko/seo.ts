@@ -12,9 +12,8 @@ export default {
     'privacy.title': '개인정보 처리방침 - MultiStream Hub',
     'privacy.description':
         'MultiStream Hub 개인정보 처리방침. 본 사이트는 클라이언트 사이드 도구로, 대부분의 데이터는 사용자의 브라우저에만 저장됩니다.',
-    'instructions.title': '사용 가이드 - MultiStream Hub | How to Multistream',
-    'instructions.description':
-        'MultiStream Hub 완전 가이드: 방송 추가, 즐겨찾기 관리, 다이내믹 아일랜드 조작, 채팅 통합 사용법을 안내합니다.',
+    'instructions.title': '사용 가이드: 다중 방송 레이아웃, 채팅, 볼륨, 공유 - MultiStream Hub',
+    'instructions.description': 'MultiStream Hub를 단계별로 안내합니다: Twitch와 YouTube 방송 추가, 다중 방송 레이아웃, 채팅과 볼륨, 즐겨찾기, 공유 링크까지.',
     'support.title': '후원하기 - MultiStream Hub',
     'support.description':
         'MultiStream Hub는 완전 무료 멀티 스트림 뷰어입니다. Buy Me a Coffee 후원이나 제휴 링크를 통해 사이트 운영을 지원할 수 있습니다.',
@@ -37,10 +36,12 @@ export default {
     'instructions.share.description': '지금 보고 있는 다중 방송을 링크 하나로 만들어 친구에게 보내는 방법. /canvas?streams= 형식, 16개 제한, YouTube 링크가 방송 종료 후 열리지 않는 이유를 설명합니다.',
     'instructions.shortcuts.title': '단축키와 시어터 모드: 키보드로 다중 방송 캔버스 조작 - MultiStream Hub',
     'instructions.shortcuts.description': 'MultiStream Hub의 모든 단축키: Ctrl + / 목록, Ctrl + K 검색, Alt + 숫자 레이아웃 전환, 커서를 올린 창에 적용되는 R / M / Delete / F / T와 시어터 모드.',
+    'instructions.watch-multiple-twitch-streams.title': '여러 Twitch 방송을 동시에 보는 방법 (무료 MultiTwitch 대안) - MultiStream Hub',
+    'instructions.watch-multiple-twitch-streams.description': '여러 Twitch 방송을 무료로 나란히 동시 시청: 채널 이름을 입력하고 레이아웃을 고르고 채팅도 함께 보며, 방송 조합 전체를 링크 하나로 공유하세요.',
     'creator.title': '개발자 Hsiung-Shao - MultiStream Hub',
     'creator.description': 'MultiStream Hub의 1인 개발자 Hsiung-Shao를 소개합니다: 이 무료 멀티 스트리밍 시청 도구를 만든 이유와 연락·후원 방법.',
-    'compare.title': 'MultiTwitch 대안 비교: MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
-    'compare.description': '멀티 스트리밍 동시 시청 도구 4종 비교: 지원 플랫폼, 동시 시청 수, 레이아웃, 다중 채팅, 공유 링크, 모바일 지원, 가격.',
+    'compare.title': 'MultiTwitch 대안 비교: 멀티 스트림 시청 도구 4종',
+    'compare.description': 'MultiStream Hub, MultiTwitch, TwitchTheater, Multistre.am 비교: 지원 플랫폼, 동시 시청 수, 레이아웃, 다중 채팅, 공유 링크, 모바일 지원, 가격.',
     'schedule.title': '대만 VTuber 방송 스케줄: 지금 누가 방송 중이고 7일 동안 누가 방송하나 - MultiStream Hub',
     'schedule.description': '대만 VTuber의 YouTube 대기실과 Twitch 방송 채널을 하나의 스케줄로. 지금 방송과 7일간의 예정을 보고 한 번에 함께 시청하세요.',
     'scheduleSubmit.title': '방송 일정표에 VTuber 추가 - MultiStream Hub',

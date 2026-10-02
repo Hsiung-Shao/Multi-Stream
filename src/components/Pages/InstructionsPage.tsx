@@ -14,22 +14,27 @@ import { useUIStore } from '../../store/useUIStore';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
 import { guidePage, guideSlugOf, isGuidePage, type GuideSlug } from '../../config/guides';
+import type { RoutePage } from '../../config/routes';
 import { StaticPageHeader } from '../StaticPageHeader';
 import {
     Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
     Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
-    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard,
+    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard, MonitorPlay,
     type LucideIcon,
 } from 'lucide-react';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-// ---- 內容模型(p / steps / callout / img 四種區塊)----------------------------
+// ---- 內容模型(p / steps / callout / img / link 五種區塊)-----------------------
 type Block =
     | { type: 'p'; text: string }
     | { type: 'steps'; items: string[] }
     | { type: 'callout'; title: string; text: string }
-    | { type: 'img'; src: string; alt: string; caption?: string; w: number; h: number };
+    | { type: 'img'; src: string; alt: string; caption?: string; w: number; h: number }
+    // 段落尾端接一條連結:to = 站內頁(RouteLink,SPA 導頁);href = 帶 query 的站內網址(分享連結要整頁載入才會套用,
+    // 且套用時會清空畫布 → 一律開新分頁,不動讀者現有的組合)。href 限站內路徑,只放常數。
+    | { type: 'link'; text: string; label: string; to: RoutePage; href?: never }
+    | { type: 'link'; text: string; label: string; href: `/${string}`; to?: never };
 
 // 教學截圖(由 scripts/convert-tutorial-images.mjs 轉出);w/h 為實際像素,防 CLS
 const TUT_IMG_DIR = '/docs/tutorial/';
@@ -37,6 +42,10 @@ const img = (file: string, w: number, h: number, alt: string, caption?: string):
     ({ type: 'img', src: TUT_IMG_DIR + file, w, h, alt, caption });
 
 interface Section { id: string; heading: string; blocks: Block[]; }
+
+// Twitch 多開文章的示範分享連結(格式見 src/utils/shareLink.ts;頻道名不翻譯)
+// lofigirl 是 24/7 頻道:讀者點開時至少有一路在播(其餘兩路沒開台就顯示離線畫面)
+const TWITCH_EXAMPLE_LINK = '/canvas?streams=tw:lofigirl,tw:shroud,tw:summit1g';
 
 interface Article {
     slug: GuideSlug;
@@ -103,6 +112,16 @@ function Block({ block, accent }: { block: Block; accent: string }) {
                 />
                 {block.caption && <figcaption className="tut-fig-cap">{block.caption}</figcaption>}
             </figure>
+        );
+    }
+    if (block.type === 'link') {
+        return (
+            <p className="tut-p">
+                {block.text}{' '}
+                {block.to
+                    ? <RouteLink to={block.to} className="tut-link">{block.label}</RouteLink>
+                    : <a href={block.href} target="_blank" rel="noopener" className="tut-link">{block.label}</a>}
+            </p>
         );
     }
     // callout
@@ -650,6 +669,41 @@ export function InstructionsPage() {
                 },
             ],
         },
+        {
+            slug: 'watch-multiple-twitch-streams',
+            title: tx('twitchGuide.title'),
+            excerpt: tx('twitchGuide.excerpt'),
+            category: 'basics',
+            catLabel: tx('tabs.basics'),
+            readLabel: readLabel(3),
+            accent: '#9146ff', accent2: '#5b21b6', icon: MonitorPlay,
+            sections: [
+                { id: 'why', heading: tx('twitchGuide.why'), blocks: [{ type: 'p', text: tx('twitchGuide.why.desc') }] },
+                {
+                    id: 'steps', heading: tx('twitchGuide.steps'), blocks: [
+                        { type: 'steps', items: [tx('twitchGuide.steps.1'), tx('twitchGuide.steps.2'), tx('twitchGuide.steps.3')] },
+                        img('island-search-bar.webp', 1403, 994, tx('img.islandSearchBar.alt'), tx('img.islandSearchBar.cap')),
+                    ],
+                },
+                {
+                    id: 'example', heading: tx('twitchGuide.example'), blocks: [
+                        { type: 'link', text: tx('twitchGuide.example.desc'), label: TWITCH_EXAMPLE_LINK, href: TWITCH_EXAMPLE_LINK },
+                        { type: 'link', text: tx('twitchGuide.example.share'), label: tx('twitchGuide.example.shareLink'), to: guidePage('share') },
+                    ],
+                },
+                {
+                    id: 'multitwitch', heading: tx('twitchGuide.multitwitch'), blocks: [
+                        { type: 'p', text: tx('twitchGuide.multitwitch.desc') },
+                        { type: 'link', text: tx('twitchGuide.multitwitch.more'), label: tx('twitchGuide.multitwitch.moreLink'), to: 'compare' },
+                    ],
+                },
+                {
+                    id: 'faq', heading: tx('twitchGuide.faq'), blocks: ([1, 2, 3, 4] as const).map((n): Block => (
+                        { type: 'callout', title: tx(`twitchGuide.faq.q${n}`), text: tx(`twitchGuide.faq.a${n}`) }
+                    )),
+                },
+            ],
+        },
     ], [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const cats = useMemo(() => ([
@@ -769,6 +823,7 @@ export function InstructionsPage() {
                 .tut-section-h { font-size: 26px; font-weight: 700; letter-spacing: -0.015em; margin: 0 0 18px; color: var(--foreground); }
 
                 .tut-p { font-size: 16.5px; color: var(--foreground); opacity: 0.92; line-height: 1.78; margin: 0 0 18px; }
+                .tut-link { color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
                 .tut-steps { margin: 0 0 20px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
                 .tut-step { display: flex; gap: 14px; align-items: flex-start; }
                 .tut-step-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }

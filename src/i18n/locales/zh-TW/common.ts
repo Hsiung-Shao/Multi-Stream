@@ -173,7 +173,7 @@ const common = {
   'empty_state.favorites_live': '直播中',
   'landing.hero_title': '您的專屬直播儀表板',
   'landing.hero_subtitle': '電競多視角、VTuber 聯動，Twitch 與 YouTube 直播一個畫面看完。',
-  'landing.hero_definition': 'MultiStream Hub 是一個免費、免註冊、免下載的網頁版多直播觀看工具，讓您在單一畫面同時觀看最多 16 個 Twitch 與 YouTube 直播。支援貼上網址或搜尋頻道快速新增串流，提供自動網格排版與自由拖曳縮放的畫布模式，並整合多個聊天室與獨立音量控制；內建收藏清單與開台偵測，支援繁中、英、日、韓、簡中五種語言，是電競賽事多視角觀戰與 VTuber 聯動企劃的理想直播儀表板。',
+  'landing.hero_definition': 'MultiStream Hub 是一個免費、免註冊、免下載的網頁版多直播（multistream）觀看工具，讓您在單一畫面同時觀看最多 16 個 Twitch 與 YouTube 直播。支援貼上網址或搜尋頻道快速新增串流，提供自動網格排版與自由拖曳縮放的畫布模式，並整合多個聊天室與獨立音量控制；內建收藏清單與開台偵測，支援繁中、英、日、韓、簡中五種語言，是電競賽事多視角觀戰與 VTuber 聯動企劃的理想直播儀表板。',
   'landing.hero_brief': '免費・免註冊・最多同時 16 個直播・獨立音量與多聊天室',
   'landing.what_title': '什麼是 MultiStream Hub？',
   'landing.start_button': '開始使用',

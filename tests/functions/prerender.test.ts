@@ -42,7 +42,7 @@ describe('entry-server：實際渲染（Node，無 DOM）', () => {
         expect(h1Of(en)).toMatch(/FAQ/);
         expect(h1Of(zh)).toMatch(/常見問題/);
         expect(en).toContain('data-seo-jsonld');
-        expect(en).not.toContain('Your Exclusive Streaming Dashboard');
+        expect(en).not.toContain('A free multistream viewer for Twitch and YouTube');
         // Suspense fallback 文案不該留在產物裡（onAllReady 才輸出）
         expect(en).not.toMatch(/Loading\.\.\./);
         expect(zh).not.toMatch(/載入中/);

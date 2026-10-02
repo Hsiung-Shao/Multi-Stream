@@ -3,6 +3,18 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 
+/* Inter 是 font-display: swap 且未預載：預渲染頁先用後備字畫出文字，Inter 到了換字會改變寬度與斷行（真實使用者 CLS）。
+   後備字用 Arial 套 Inter 的字距度量（數值同 next/font 對 Inter 的 Arial fallback），讓換字前後幾乎同寬同高。
+   只涵蓋 Arial 有的字（拉丁等）；CJK 照舊落到系統字型。實測（字型延遲 1.5s）：/schedule 0.0144→0、/compare 0.0094→0.0007。 */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 107.06%;
+  ascent-override: 90.49%;
+  descent-override: 22.56%;
+  line-gap-override: 0%;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -77,7 +89,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Inter Variable', sans-serif;
+  --font-sans: 'Inter Variable', 'Inter Fallback', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

@@ -368,6 +368,8 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                     </ol>
                 </nav>
 
+                {/* 預留一屏高：骨架比內容矮，資料到了會把頁尾往下推；先把頁尾放到首屏外（同 SchedulePage）。找不到／錯誤狀態內容短，不預留 */}
+                <div className={person === null || (query.isError && !person) ? undefined : 'min-h-svh'}>
                 {person ? (
                     <ReportDialogProvider>
                         <PersonSeo person={person} slug={slug} />
@@ -398,6 +400,7 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                 ) : (
                     <LoadingState label={t('state.loading')} />
                 )}
+                </div>
 
                 <SiteFooter analyticsCategory="SchedulePersonPage" />
             </main>

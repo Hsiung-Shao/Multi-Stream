@@ -71,6 +71,8 @@ export default {
     'pick.multistream': '8 配信までの固定番号レイアウトとコミュニティの厳選リストが欲しい：Multistre.am。',
     'pick.twitchtheater': '列数を調整できるグリッドで、たまに YouTube も見る：TwitchTheater。',
     'pick.msh': 'Twitch と YouTube を一緒に、自由ドラッグ配置、配信ごとの音量、お気に入りと配信開始通知、スマホ対応：MultiStream Hub。',
+    'guide.text': '複数の Twitch 配信を同時に見るのは初めてですか？',
+    'guide.link': 'ステップごとのガイドを読む',
     'faq.title': 'よくある質問',
     'faq.q1': 'MultiStream Hub は MultiTwitch の代わりになりますか？',
     'faq.a1': 'なります。MultiTwitch でできること（複数の Twitch 配信、URL 共有、チャット切替）はすべて対応し、さらに YouTube、自由レイアウト、配信ごとの音量、お気に入りが加わります。',

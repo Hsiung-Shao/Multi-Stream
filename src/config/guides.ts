@@ -16,6 +16,7 @@ export const GUIDE_SLUGS = [
     'settings',
     'share',
     'shortcuts',
+    'watch-multiple-twitch-streams',
 ] as const;
 
 export type GuideSlug = typeof GUIDE_SLUGS[number];
@@ -53,4 +54,6 @@ export const GUIDE_META: Record<GuideSlug, { category: 'basics' | 'advanced'; da
     // 2026-08-27 新增。image 先借用既有截圖，待補拍後換掉（清單見 TODO-tutorial-screenshots.md）
     'share': { category: 'advanced', datePublished: '2026-08-27', image: '/docs/tutorial/island-home.webp' },
     'shortcuts': { category: 'advanced', datePublished: '2026-08-27', image: '/docs/tutorial/island-fullscreen.webp' },
+    // 2026-10-02 新增（GSC：Twitch 多開類查詢有曝光沒點擊）。image 借用搜尋框截圖
+    'watch-multiple-twitch-streams': { category: 'basics', datePublished: '2026-10-02', image: '/docs/tutorial/island-search-bar.webp' },
 };

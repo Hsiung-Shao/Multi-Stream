@@ -71,6 +71,8 @@ export default {
     'pick.multistream': '8개 이하의 고정 번호 레이아웃과 커뮤니티 추천 목록이 필요하다면: Multistre.am.',
     'pick.twitchtheater': '열 수를 조절하는 그리드에 가끔 YouTube도 본다면: TwitchTheater.',
     'pick.msh': 'Twitch와 YouTube를 함께, 자유 드래그 레이아웃, 방송별 음량, 즐겨찾기와 방송 시작 알림, 모바일 지원까지: MultiStream Hub.',
+    'guide.text': '여러 Twitch 방송을 동시에 보는 게 처음인가요?',
+    'guide.link': '단계별 가이드 읽기',
     'faq.title': '자주 묻는 질문',
     'faq.q1': 'MultiStream Hub가 MultiTwitch를 대체할 수 있나요?',
     'faq.a1': '네. MultiTwitch가 하는 일(여러 Twitch 방송, URL 공유, 채팅 전환)은 모두 지원하며, 여기에 YouTube, 자유 레이아웃, 방송별 음량, 즐겨찾기가 더해집니다.',

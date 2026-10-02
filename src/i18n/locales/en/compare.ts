@@ -71,6 +71,8 @@ export default {
     'pick.multistream': 'Fixed numbered layouts up to 8 streams and curated community lists: Multistre.am.',
     'pick.twitchtheater': 'Custom column grids with occasional YouTube: TwitchTheater.',
     'pick.msh': 'Twitch and YouTube together, free-drag layouts, per-stream volume, favorites with live alerts, and mobile support: MultiStream Hub.',
+    'guide.text': 'New to watching several Twitch streams at once?',
+    'guide.link': 'Read the step-by-step guide',
     'faq.title': 'Frequently asked questions',
     'faq.q1': 'Can MultiStream Hub replace MultiTwitch?',
     'faq.a1': 'Yes. Everything MultiTwitch does (multiple Twitch streams, URL sharing, chat toggle) is supported, plus YouTube, free layouts, per-stream volume and favorites.',

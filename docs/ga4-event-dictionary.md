@@ -30,8 +30,9 @@
 | `view_search_results` | 站內搜尋結果出現 | `search_term`, `result_count` | ✓ | [IslandSearch.tsx:78](../src/components/Navigation/IslandSearch.tsx#L78), [Navbar.tsx:115](../src/components/Navbar.tsx#L115) |
 | `stream_start` | 加入新直播視窗 | `platform`, `is_first_stream` | — | [useStreamStore.ts addStream](../src/store/useStreamStore.ts) |
 | `stream_milestone` | 觀看時間達到里程碑 | `milestone_minutes` (5/15/30/60) | — | [useStreamHeartbeat.ts](../src/hooks/useStreamHeartbeat.ts) |
-| `schedule_open_multi` | 開台週表勾選後按「在畫布同時觀看」 | `selected_count`, `added_count`, `tab` (live/upcoming), `scope` (all/favorites) | ✓ | [SchedulePage.tsx](../src/components/Pages/SchedulePage.tsx) |
-| `schedule_filter_change` | 開台週表切換分頁或篩選 | `filter` (tab/scope/nationality/group/platform), `value` | — | [SchedulePage.tsx](../src/components/Pages/SchedulePage.tsx) |
+| `schedule_open_multi` | 開台週表勾選後按「在畫布同時觀看」 | `selected_count`, `added_count`, `tab` (live/upcoming/mixed), `scope` (all/favorites) | ✓ | [useScheduleSelection.ts](../src/features/schedule/useScheduleSelection.ts) |
+| `schedule_filter_change` | 開台週表切換篩選或日期 | `filter` (scope/nationality/group/platform/day), `value` | — | [ScheduleBoard.tsx](../src/features/schedule/ScheduleBoard.tsx) |
+| `schedule_watch` | 週表卡片按「觀看」單開一路 | `platform`, `status`, `source` (board/person), `result` (added/switched/full/failed) | — | [useWatchOnCanvas.ts](../src/features/schedule/useWatchOnCanvas.ts) |
 | `login` | Twitch OAuth 登入成功 | `method` (固定 `Twitch`) | ✓ | **dev only** — 經 `setUserIdFromTwitchId` 自動觸發 |
 
 ## Heartbeat / Session（觀看時長系統）

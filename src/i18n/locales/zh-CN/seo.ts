@@ -12,9 +12,8 @@ export default {
     'privacy.title': '隐私政策 - MultiStream Hub',
     'privacy.description':
         'MultiStream Hub 隐私政策。了解我们如何保护您的隐私——本网站为纯前端工具，绝大多数数据仅存储在您的浏览器本地。',
-    'instructions.title': '使用教程 - MultiStream Hub | How to Multistream',
-    'instructions.description':
-        'MultiStream Hub 完整功能指南。了解如何添加直播、管理收藏、使用动态岛 (Dynamic Island) 与聊天室整合功能。',
+    'instructions.title': '使用教程：多直播排版、聊天室、音量与分享 - MultiStream Hub',
+    'instructions.description': '一步步学会 MultiStream Hub：添加 Twitch 与 YouTube 直播、多直播排版、聊天室与音量、收藏与分享链接，完整功能指南。',
     'support.title': '支持我们 - MultiStream Hub',
     'support.description':
         'MultiStream Hub 是完全免费的多直播观看工具。通过 Buy Me a Coffee 赞助或联盟链接支持网站运营，让服务持续免费。',
@@ -37,10 +36,12 @@ export default {
     'instructions.share.description': '一键把目前正在看的多个直播组成链接贴给朋友。认识 /canvas?streams= 的格式、16 路上限，以及为什么 YouTube 链接会在直播结束后失效。',
     'instructions.shortcuts.title': '快捷键与剧场模式：键盘操作多直播画布 - MultiStream Hub',
     'instructions.shortcuts.description': 'MultiStream Hub 的完整快捷键：Ctrl + / 速查表、Ctrl + K 搜索、Alt + 数字切布局，以及光标停在窗口上的 R / M / Delete / F / T 与剧场模式。',
+    'instructions.watch-multiple-twitch-streams.title': '如何同时观看多个 Twitch 直播（免费 MultiTwitch 替代方案） - MultiStream Hub',
+    'instructions.watch-multiple-twitch-streams.description': '免费把多个 Twitch 直播并排同时观看：输入频道名、选布局、聊天室一起看，再把整组直播分享成一条链接。',
     'creator.title': '开发者 Hsiung-Shao - MultiStream Hub',
     'creator.description': '认识 MultiStream Hub 的独立开发者 Hsiung-Shao：为什么做这个免费的多直播观看工具，以及如何联系与支持。',
-    'compare.title': 'MultiTwitch 替代方案比较：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
-    'compare.description': '四款多直播同时观看工具比较：支持平台、同时路数、布局、多聊天室、分享链接、手机版与价格，帮你挑最合适的。',
+    'compare.title': 'MultiTwitch 替代方案比较：4 款多直播同时观看工具',
+    'compare.description': 'MultiStream Hub、MultiTwitch、TwitchTheater、Multistre.am 四款多直播工具比较：支持平台、同时路数、布局、多聊天室、分享链接、手机版与价格。',
     'schedule.title': '台湾 VTuber 开播周表：谁正在直播、接下来 7 天谁会开播 - MultiStream Hub',
     'schedule.description': '整理台湾 VTuber 的 YouTube 待机室与 Twitch 直播中频道，看谁正在开播、未来 7 天的开播时间，勾选几位一键同时观看。',
     'scheduleSubmit.title': '添加 VTuber 到开播周表 - MultiStream Hub',

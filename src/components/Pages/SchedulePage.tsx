@@ -65,11 +65,6 @@ export function SchedulePage() {
                     <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-[2.125rem]">{t('hero.title')}</h1>
                     <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground [text-wrap:pretty]">{t('hero.subtitle')}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-                        {snapshot && (
-                            <p className="text-xs text-muted-foreground">
-                                {t('state.updatedAt', { time: formatRelative(snapshot.generated_at, Date.now(), locale) })}
-                            </p>
-                        )}
                         <RouteLink
                             to="scheduleSubmit"
                             className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-[13px] font-medium transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -77,9 +72,17 @@ export function SchedulePage() {
                             <UserPlus size={14} aria-hidden="true" />
                             {t('contribute.entry')}
                         </RouteLink>
+                        {/* 放在連結後面：資料到了才出現，不把連結往右推（CLS） */}
+                        {snapshot && (
+                            <p className="text-xs text-muted-foreground">
+                                {t('state.updatedAt', { time: formatRelative(snapshot.generated_at, Date.now(), locale) })}
+                            </p>
+                        )}
                     </div>
                 </header>
 
+                {/* 預留一屏高：骨架比看板矮，資料到了會把「關於」與頁尾往下推；先把它們放到首屏外（首屏外的位移不計 CLS） */}
+                <div className={query.isError && !snapshot ? undefined : 'min-h-svh'}>
                 {snapshot && query.isError && (
                     <div role="status" className="mb-3 flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm">
                         <AlertTriangle size={16} className="shrink-0 text-amber-500" aria-hidden="true" />
@@ -107,6 +110,7 @@ export function SchedulePage() {
                 ) : (
                     <LoadingState label={t('state.loading')} />
                 )}
+                </div>
 
                 <section aria-labelledby="schedule-about-h" className="mt-16 max-w-[65ch] border-t border-border pt-6 text-sm leading-relaxed text-muted-foreground">
                     <h2 id="schedule-about-h" className="mb-2 text-sm font-semibold text-foreground">{t('about.title')}</h2>

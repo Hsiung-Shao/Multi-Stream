@@ -12,9 +12,8 @@ export default {
     'privacy.title': 'プライバシーポリシー - MultiStream Hub',
     'privacy.description':
         'MultiStream Hub のプライバシーポリシー。本サイトはクライアントサイドのみで動作し、ほとんどのデータはお使いのブラウザ内に保存されます。',
-    'instructions.title': '使い方ガイド - MultiStream Hub | How to Multistream',
-    'instructions.description':
-        'MultiStream Hub の完全ガイド。配信の追加、お気に入り管理、ダイナミックアイランド操作、チャット統合の使い方を解説します。',
+    'instructions.title': '使い方ガイド：マルチ配信のレイアウト・チャット・音量・共有 - MultiStream Hub',
+    'instructions.description': 'MultiStream Hub の使い方をステップごとに解説：Twitch と YouTube の配信追加、マルチ配信のレイアウト、チャットと音量、お気に入り、共有リンクまで。',
     'support.title': 'サポートする - MultiStream Hub',
     'support.description':
         'MultiStream Hub は完全無料のマルチ配信ビューアです。Buy Me a Coffee やアフィリエイトリンクを通じてサイト運営を支援できます。',
@@ -37,10 +36,12 @@ export default {
     'instructions.share.description': 'いま見ているマルチ配信を 1 本のリンクにして友だちに送る方法。/canvas?streams= の形式、最大 16 本の上限、YouTube のリンクが配信終了後に無効になる理由を解説。',
     'instructions.shortcuts.title': 'ショートカットとシアターモード：キーボードでマルチ配信を操作 - MultiStream Hub',
     'instructions.shortcuts.description': 'MultiStream Hub のショートカット一覧：Ctrl + / の早見表、Ctrl + K の検索、Alt + 数字のレイアウト切り替え、カーソルを重ねたウィンドウに効く R / M / Delete / F / T とシアターモード。',
+    'instructions.watch-multiple-twitch-streams.title': '複数の Twitch 配信を同時に見る方法（無料の MultiTwitch 代替） - MultiStream Hub',
+    'instructions.watch-multiple-twitch-streams.description': '複数の Twitch 配信を無料で並べて同時視聴：チャンネル名を入れてレイアウトを選び、チャットも表示、配信の組み合わせはリンク 1 本で共有。',
     'creator.title': '開発者 Hsiung-Shao - MultiStream Hub',
     'creator.description': 'MultiStream Hub の個人開発者 Hsiung-Shao の紹介：この無料マルチ配信視聴ツールを作った理由と、連絡・サポートの方法。',
-    'compare.title': 'MultiTwitch 代替ツール比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',
-    'compare.description': '4 つのマルチ配信同時視聴ツールを比較：対応プラットフォーム、同時視聴数、レイアウト、複数チャット、共有リンク、モバイル対応、料金。',
+    'compare.title': 'MultiTwitch 代替ツール比較：マルチ配信視聴ツール 4 選',
+    'compare.description': 'MultiStream Hub・MultiTwitch・TwitchTheater・Multistre.am を比較：対応プラットフォーム、同時視聴数、レイアウト、複数チャット、共有リンク、モバイル対応、料金。',
     'schedule.title': '台湾 VTuber 配信スケジュール：今だれが配信中か、7 日間の配信予定 - MultiStream Hub',
     'schedule.description': '台湾 VTuber の YouTube 待機所と Twitch の配信中チャンネルをひとつのスケジュールに。今の配信と 7 日間の予定を確認し、ワンクリックで同時視聴できます。',
     'scheduleSubmit.title': '配信スケジュールにVTuberを追加 - MultiStream Hub',

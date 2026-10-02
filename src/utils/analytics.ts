@@ -297,7 +297,7 @@ export const track = {
     scheduleWatch: (platform: string, status: string, source: string, result: string) =>
         sendEvent('schedule_watch', { platform, status, source, result }),
 
-    /** 週表篩選變更（filter：scope/nationality/group/platform/tab） */
+    /** 週表篩選變更（filter：scope/nationality/group/platform/day） */
     scheduleFilterChange: (filter: string, value: string) =>
         sendEvent('schedule_filter_change', { filter, value }),
 
