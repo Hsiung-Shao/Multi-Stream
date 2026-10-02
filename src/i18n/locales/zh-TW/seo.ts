@@ -34,6 +34,8 @@ export default {
     'instructions.share.description': '一鍵把目前正在看的多個直播組成連結貼給朋友。認識 /canvas?streams= 的格式、16 路上限，以及為什麼 YouTube 連結會在直播結束後失效。',
     'instructions.shortcuts.title': '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub',
     'instructions.shortcuts.description': 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Alt + 數字切布局，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。',
+    'instructions.schedule.title': '開台週表使用指南：直播狀態、資料來源與限制 - MultiStream Hub',
+    'instructions.schedule.description': '台灣 VTuber 開台週表怎麼用：一鍵多開的實際流程、卡片狀態與 YouTube／Twitch 合併規則、資料多久更新一次，以及哪些直播不會出現。',
     'creator.title': '開發者 Hsiung-Shao - MultiStream Hub',
     'creator.description': '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。',
     'compare.title': 'MultiTwitch 替代方案比較：MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am',

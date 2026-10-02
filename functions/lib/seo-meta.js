@@ -134,6 +134,11 @@ export const ROUTE_META = {
         'zh-TW': { title: '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub', description: 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Alt + 數字切布局，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。' },
         en: { title: 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub', description: 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Alt + number to switch layouts, plus R / M / Delete / F / T on whichever window you hover — including theater mode.' },
     },
+    '/instructions/schedule': {
+        type: 'article',
+        'zh-TW': { title: '開台週表使用指南：直播狀態、資料來源與限制 - MultiStream Hub', description: '台灣 VTuber 開台週表怎麼用：一鍵多開的實際流程、卡片狀態與 YouTube／Twitch 合併規則、資料多久更新一次，以及哪些直播不會出現。' },
+        en: { title: 'Stream Schedule Guide: Live Status, Data Sources and Limits - MultiStream Hub', description: 'How to use the Taiwanese VTuber stream schedule: open several streams in one click, read card statuses and YouTube/Twitch merging, see how often data updates, and learn which streams will not appear.' },
+    },
     '/about/creator': {
         'zh-TW': { title: '開發者 Hsiung-Shao - MultiStream Hub', description: '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。' },
         en: { title: 'Hsiung-Shao, Creator of MultiStream Hub', description: 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.' },

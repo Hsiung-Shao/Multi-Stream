@@ -73,6 +73,7 @@ export default {
     'about.title': '데이터 출처',
     'about.body': '일정표에는 플랫폼에 실제로 등록된 일정만 표시합니다: YouTube 대기실, Twitch 방송 일정, 방송 중인 채널. 일정 이미지로만 공지된 방송은 나타나지 않습니다. YouTube와 Twitch 동시 방송은 카드 하나로 합치고, 캔버스에는 YouTube를 우선 추가합니다. 14일 넘게 남은 "상시 대기실"은 제외하고, 예정 시각 3시간이 지나도 시작하지 않은 방송은 자동으로 사라집니다.',
     'about.tz': '시간은 기기의 시간대로 표시됩니다.',
+    'about.guide': '자세한 설명: 방송 일정표 사용 가이드',
 
     'person.backToSchedule': '방송 일정표로 돌아가기',
     'person.live': '방송 중',

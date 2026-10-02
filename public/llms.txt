@@ -44,6 +44,9 @@ control, a unified chat panel for multiple channels at once, and a local
   - [Shortcuts & theater mode](https://multistreaming.org/instructions/shortcuts):
     Ctrl+/ cheat sheet, Ctrl+K search, Alt+number layouts, and R / M / Delete /
     F / T on the window under the cursor.
+  - [Stream schedule guide](https://multistreaming.org/instructions/schedule):
+    reading the schedule, YouTube/Twitch merging, data sources and update
+    intervals, known gaps, and how to report errors.
 
 - [Stream schedule](https://multistreaming.org/schedule): Taiwanese VTuber
   schedule built from YouTube waiting rooms and live Twitch channels (live now,

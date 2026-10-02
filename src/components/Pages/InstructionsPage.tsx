@@ -18,7 +18,7 @@ import { StaticPageHeader } from '../StaticPageHeader';
 import {
     Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
     Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
-    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard,
+    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard, CalendarClock,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -400,7 +400,7 @@ export function InstructionsPage() {
 
     const readLabel = (n: number) => tx('blog.minRead', { defaultValue: '{{n}} 分鐘', n });
 
-    // next 既有 tutorial i18n → 8 篇文章(內容皆既有 key,多語系完整保留)
+    // next 既有 tutorial i18n → 文章清單（slug 順序見 src/config/guides.ts）(內容皆既有 key,多語系完整保留)
     const articles: Article[] = useMemo(() => [
         {
             slug: 'quick-start',
@@ -648,6 +648,87 @@ export function InstructionsPage() {
                         img('theater-mode.webp', 1440, 900, tx('img.theaterMode.alt'), tx('img.theaterMode.cap')),
                     ],
                 },
+            ],
+        },
+        {
+            slug: 'schedule',
+            title: tx('article.schedule.title'),
+            excerpt: tx('article.schedule.excerpt'),
+            category: 'basics',
+            catLabel: tx('tabs.basics'),
+            readLabel: readLabel(7),
+            accent: '#f472b6', accent2: '#db2777', icon: CalendarClock,
+            sections: [
+                {
+                    id: 'what', heading: tx('guide.schedule.what'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.what.p1') },
+                        { type: 'p', text: tx('guide.schedule.what.p2') },
+                    ],
+                },
+                {
+                    id: 'example', heading: tx('guide.schedule.example'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.example.p1') },
+                        {
+                            type: 'steps', items: [
+                                tx('guide.schedule.example.s1'), tx('guide.schedule.example.s2'), tx('guide.schedule.example.s3'),
+                                tx('guide.schedule.example.s4'), tx('guide.schedule.example.s5'),
+                            ],
+                        },
+                        img('schedule-selected.webp', 1440, 900, tx('img.scheduleSelected.alt'), tx('img.scheduleSelected.cap')),
+                        { type: 'callout', title: tx('guide.schedule.example.limitTitle'), text: tx('guide.schedule.example.limit') },
+                    ],
+                },
+                {
+                    id: 'read', heading: tx('guide.schedule.read'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.read.live') },
+                        img('schedule-overview.webp', 1440, 900, tx('img.scheduleOverview.alt'), tx('img.scheduleOverview.cap')),
+                        { type: 'p', text: tx('guide.schedule.read.upcoming') },
+                        img('schedule-timeline.webp', 1440, 900, tx('img.scheduleTimeline.alt'), tx('img.scheduleTimeline.cap')),
+                        { type: 'p', text: tx('guide.schedule.read.ended') },
+                        { type: 'callout', title: tx('guide.schedule.read.mergeTitle'), text: tx('guide.schedule.read.merge') },
+                        { type: 'p', text: tx('guide.schedule.read.badge') },
+                    ],
+                },
+                {
+                    id: 'person', heading: tx('guide.schedule.person'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.person.p1') },
+                        img('schedule-person.webp', 1440, 900, tx('img.schedulePerson.alt'), tx('img.schedulePerson.cap')),
+                        { type: 'p', text: tx('guide.schedule.person.p2') },
+                    ],
+                },
+                {
+                    id: 'data', heading: tx('guide.schedule.data'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.data.p1') },
+                        { type: 'p', text: tx('guide.schedule.data.p2') },
+                        {
+                            type: 'steps', items: [
+                                tx('guide.schedule.data.s1'), tx('guide.schedule.data.s2'),
+                                tx('guide.schedule.data.s3'), tx('guide.schedule.data.s4'),
+                            ],
+                        },
+                        { type: 'p', text: tx('guide.schedule.data.p3') },
+                    ],
+                },
+                {
+                    id: 'limits', heading: tx('guide.schedule.limits'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('guide.schedule.limits.s1'), tx('guide.schedule.limits.s2'), tx('guide.schedule.limits.s3'),
+                                tx('guide.schedule.limits.s4'), tx('guide.schedule.limits.s5'), tx('guide.schedule.limits.s6'),
+                                tx('guide.schedule.limits.s7'), tx('guide.schedule.limits.s8'),
+                            ],
+                        },
+                    ],
+                },
+                {
+                    id: 'fix', heading: tx('guide.schedule.fix'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.fix.p1') },
+                        img('schedule-report.webp', 1440, 900, tx('img.scheduleReport.alt'), tx('img.scheduleReport.cap')),
+                        { type: 'p', text: tx('guide.schedule.fix.p2') },
+                        { type: 'p', text: tx('guide.schedule.fix.p3') },
+                    ],
+                },
+                { id: 'verify', heading: tx('guide.schedule.verify'), blocks: [{ type: 'p', text: tx('guide.schedule.verify.p1') }] },
             ],
         },
     ], [i18n.language]); // eslint-disable-line react-hooks/exhaustive-deps

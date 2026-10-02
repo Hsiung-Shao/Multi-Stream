@@ -16,6 +16,7 @@ export const GUIDE_SLUGS = [
     'settings',
     'share',
     'shortcuts',
+    'schedule',
 ] as const;
 
 export type GuideSlug = typeof GUIDE_SLUGS[number];
@@ -53,4 +54,6 @@ export const GUIDE_META: Record<GuideSlug, { category: 'basics' | 'advanced'; da
     // 2026-08-27 新增。image 先借用既有截圖，待補拍後換掉（清單見 TODO-tutorial-screenshots.md）
     'share': { category: 'advanced', datePublished: '2026-08-27', image: '/docs/tutorial/island-home.webp' },
     'shortcuts': { category: 'advanced', datePublished: '2026-08-27', image: '/docs/tutorial/island-fullscreen.webp' },
+    // 2026-10-02 新增（AdSense 價值內容 B）：截圖為正式站真實週表
+    'schedule': { category: 'basics', datePublished: '2026-10-02', image: '/docs/tutorial/schedule-selected.webp' },
 };
