@@ -5,7 +5,7 @@
 --    booking_closed_dates / booking_time_slots）；20260428065522 只 drop 了 products/orders/gallery。
 -- 2. 正式站 vtubers.youtube_channel_id 有手動加的 UNIQUE constraint vtubers_youtube_channel_id_key。
 -- 3. 正式站 vtubers.youtube_channel_id 也有手動加的外鍵 vtubers_youtube_channel_id_fkey → youtube_channels(channel_id)
---    （2026-10-02 套正式站時 20260929120100 撞 23503 才發現本地缺這條；補頻道見 20260929120050）。
+--    → 不在這裡加，移到 20261002120100_local_only_youtube_channel_fk.sql（理由見該檔）。
 --
 -- 不對齊的部分（刻意）：正式站 cron.job 裡兩支已停用、會打 multistreaming.org 的 HTTP 排程
 -- （sync_vtuber_livestreams、snapshot_vtuber_subscribers）本地不建，本地不能打正式網域。
@@ -16,7 +16,3 @@ DROP TABLE IF EXISTS public.courses CASCADE;
 
 ALTER TABLE public.vtubers
   ADD CONSTRAINT vtubers_youtube_channel_id_key UNIQUE (youtube_channel_id);
-
-ALTER TABLE public.vtubers
-  ADD CONSTRAINT vtubers_youtube_channel_id_fkey FOREIGN KEY (youtube_channel_id)
-  REFERENCES public.youtube_channels(channel_id) ON UPDATE CASCADE ON DELETE SET NULL;
