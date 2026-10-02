@@ -26,19 +26,19 @@ const faq = {
     'items.platform_support.content': '目前主要支援 Twitch 和 YouTube 直播。未來可能會增加更多平台的支援。',
 
     'items.live_detection.title': '開台檢測方式',
-    'items.live_detection.content': '系統會定期於背景檢查您收藏的 Twitch 頻道是否在線 (Live)。當偵測到開台時，收藏列表會顯示綠色燈號與觀眾人數。',
+    'items.live_detection.content': '系統會在進站、進入畫布以及之後每 25 分鐘，自動檢查你收藏的 Twitch 與 YouTube 頻道是否正在直播；在設定裡打開「背景自動偵測直播狀態」則改成每 5 分鐘一次。偵測到開台時，收藏清單會顯示綠點（不顯示觀看人數）。YouTube 頻道有節流，開台後最慢可能 15 分鐘以上才會亮起。',
 
     'items.performance.title': '如何改善效能問題？',
-    'items.performance.content': '同時播放多個高畫質串流會消耗大量 CPU 和網路頻寬。建議在設定中降低個別串流的畫質，或減少同時播放的數量。',
+    'items.performance.content': '同時播放多個高畫質直播會消耗大量 CPU 與網路頻寬。本站沒有統一的畫質設定，請用各播放器自己的齒輪選單降低畫質，或減少同時播放的數量；同時播放 2 路以上 YouTube 時，可以按提醒上的「暫停其他 YouTube 串流」。分頁在背景超過 30 秒時，Twitch 會自動降到最低畫質。按 F3 可以開啟效能面板觀察幀數與記憶體。',
 
     'items.data_saved.title': '我的設定會被保存嗎？',
-    'items.data_saved.content': '是的，您的布局、收藏和設定會自動儲存在您的瀏覽器中，下次訪問時會自動還原。',
+    'items.data_saved.content': '收藏、收藏清單、標籤、設定與自訂布局會儲存在你的瀏覽器裡，下次訪問時仍在。正在觀看的畫布則不會永久保存：重新整理後畫布會清空，10 分鐘內回來會詢問是否恢復上次的觀看畫面。要換裝置，請用「收藏管理 → 備份與還原」（備份檔不含自訂布局）。',
 
     'items.empty_window.title': '空白視窗的用法',
-    'items.empty_window.content': '您可以透過「新增組合 -> 新增空白群組」加入一個空白視窗框。此視窗可用於占位，方便您先規劃佈局，之後再將收藏的頻道拖曳進去播放。',
+    'items.empty_window.content': '在動態島按「+」，選「新增組合」（串流＋聊天室）、「新增串流視窗」或「新增聊天室視窗」，畫布上會多出空白視窗，可以先佔位規劃排版。空白的串流視窗裡有搜尋框，也能從下拉選單挑一個正在直播的收藏頻道；空白的聊天室視窗則從畫布上的直播挑一路顯示聊天室。',
 
     'items.youtube_search.title': '為什麼有些 YouTube 頻道搜尋不到？',
-    'items.youtube_search.content': '動態島搜尋框的 YouTube 頻道搜尋，是從本站已收錄的頻道名單中比對，並不是即時搜尋整個 YouTube。若搜尋不到，通常代表該頻道尚未被本站收錄。此外，搜尋到的 YouTube 頻道會加入收藏，而不像 Twitch 頻道那樣可即時預覽並直接播放——因為名單中沒有該頻道當前的直播網址；待頻道開台後，再從收藏清單載入即可觀看。',
+    'items.youtube_search.content': '動態島搜尋框的 YouTube 頻道搜尋，是從本站已收錄的頻道名單中比對，並不是即時搜尋整個 YouTube。若搜尋不到，通常代表該頻道尚未被本站收錄，可以到開台週表推薦新增。選了搜尋結果後，系統會先檢查該頻道是否正在直播：正在直播就直接加入畫布，沒有直播則加入收藏，等開台後再從收藏清單載入。',
     'items.youtube_search.tip': '若想看的頻道一直搜尋不到，歡迎到 Discord 回報，我們會將它補進收錄名單。',
   // —— i18n 修補：design 改版新增 key，各語言在地化 ——
   'cat_all': '全部',

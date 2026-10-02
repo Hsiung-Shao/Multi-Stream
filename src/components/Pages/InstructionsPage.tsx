@@ -561,7 +561,7 @@ export function InstructionsPage() {
             excerpt: tx('features.island.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(6),
             accent: '#a78bfa', accent2: '#6d28d9', icon: Tv,
             sections: [
                 {
@@ -586,6 +586,16 @@ export function InstructionsPage() {
                         img('island-edge-dock-open.webp', 1440, 900, tx('img.islandEdgeDockOpen.alt'), tx('img.islandEdgeDockOpen.cap')),
                     ],
                 },
+                {
+                    id: 'rules', heading: tx('features.island.rules'), blocks: [
+                        { type: 'p', text: tx('features.island.rules.desc') },
+                    ],
+                },
+                {
+                    id: 'troubleshoot', heading: tx('features.island.troubleshoot'), blocks: [
+                        { type: 'steps', items: [tx('features.island.troubleshoot.s1'), tx('features.island.troubleshoot.s2'), tx('features.island.troubleshoot.s3'), tx('features.island.troubleshoot.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -594,7 +604,7 @@ export function InstructionsPage() {
             excerpt: tx('features.favorites.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(6),
+            readLabel: readLabel(8),
             accent: '#facc15', accent2: '#ca8a04', icon: Star,
             sections: [
                 {
@@ -620,6 +630,21 @@ export function InstructionsPage() {
                         img('favorites-manager.webp', 1031, 798, tx('img.favoritesManager.alt'), tx('img.favoritesManager.cap')),
                     ],
                 },
+                {
+                    id: 'detect', heading: tx('features.favorites.detect'), blocks: [
+                        { type: 'p', text: tx('features.favorites.detect.desc') },
+                    ],
+                },
+                {
+                    id: 'example', heading: tx('features.favorites.example'), blocks: [
+                        { type: 'steps', items: [tx('features.favorites.example.s1'), tx('features.favorites.example.s2'), tx('features.favorites.example.s3'), tx('features.favorites.example.s4')] },
+                    ],
+                },
+                {
+                    id: 'limits', heading: tx('features.favorites.limits'), blocks: [
+                        { type: 'steps', items: [tx('features.favorites.limits.s1'), tx('features.favorites.limits.s2'), tx('features.favorites.limits.s3'), tx('features.favorites.limits.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -628,7 +653,7 @@ export function InstructionsPage() {
             excerpt: tx('features.media.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(5),
             accent: '#f472b6', accent2: '#db2777', icon: Volume2,
             sections: [
                 {
@@ -644,6 +669,16 @@ export function InstructionsPage() {
                         img('window-toolbar.webp', 1440, 900, tx('img.windowToolbar.alt'), tx('img.windowToolbar.cap')),
                     ],
                 },
+                {
+                    id: 'example', heading: tx('features.media.example'), blocks: [
+                        { type: 'p', text: tx('features.media.example.p1') },
+                    ],
+                },
+                {
+                    id: 'notes', heading: tx('features.media.notes'), blocks: [
+                        { type: 'steps', items: [tx('features.media.notes.s1'), tx('features.media.notes.s2'), tx('features.media.notes.s3'), tx('features.media.notes.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -652,7 +687,7 @@ export function InstructionsPage() {
             excerpt: tx('features.settings.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(5),
+            readLabel: readLabel(6),
             accent: '#94a3b8', accent2: '#475569', icon: SettingsIcon,
             sections: [
                 {
@@ -665,6 +700,11 @@ export function InstructionsPage() {
                 { id: 'playback', heading: tx('features.settings.playback'), blocks: [{ type: 'p', text: tx('features.settings.playback.desc') }] },
                 { id: 'data', heading: tx('features.settings.data'), blocks: [{ type: 'p', text: tx('features.settings.data.desc') }] },
                 { id: 'twitch', heading: tx('features.settings.twitch'), blocks: [{ type: 'p', text: tx('features.settings.twitch.desc') }] },
+                {
+                    id: 'mobile', heading: tx('features.settings.mobile'), blocks: [
+                        { type: 'p', text: tx('features.settings.mobile.desc') },
+                    ],
+                },
             ],
         },
         {
@@ -673,7 +713,7 @@ export function InstructionsPage() {
             excerpt: tx('features.share.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(5),
             accent: '#38bdf8', accent2: '#0284c7', icon: Share2,
             sections: [
                 {
@@ -684,6 +724,16 @@ export function InstructionsPage() {
                 },
                 { id: 'format', heading: tx('features.share.format'), blocks: [{ type: 'p', text: tx('features.share.format.desc') }] },
                 { id: 'limits', heading: tx('features.share.limits'), blocks: [{ type: 'callout', title: tx('features.favorites.proTip'), text: tx('features.share.limits.desc') }] },
+                {
+                    id: 'example', heading: tx('features.share.example'), blocks: [
+                        { type: 'p', text: tx('features.share.example.p1') },
+                    ],
+                },
+                {
+                    id: 'notes', heading: tx('features.share.notes'), blocks: [
+                        { type: 'steps', items: [tx('features.share.notes.s1'), tx('features.share.notes.s2'), tx('features.share.notes.s3'), tx('features.share.notes.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -692,7 +742,7 @@ export function InstructionsPage() {
             excerpt: tx('features.shortcuts.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(4),
             accent: '#fb923c', accent2: '#ea580c', icon: Keyboard,
             sections: [
                 {
@@ -706,6 +756,11 @@ export function InstructionsPage() {
                     id: 'theater', heading: tx('features.shortcuts.theater'), blocks: [
                         { type: 'p', text: tx('features.shortcuts.theater.desc') },
                         img('theater-mode.webp', 1440, 900, tx('img.theaterMode.alt'), tx('img.theaterMode.cap')),
+                    ],
+                },
+                {
+                    id: 'troubleshoot', heading: tx('features.shortcuts.troubleshoot'), blocks: [
+                        { type: 'steps', items: [tx('features.shortcuts.troubleshoot.s1'), tx('features.shortcuts.troubleshoot.s2'), tx('features.shortcuts.troubleshoot.s3'), tx('features.shortcuts.troubleshoot.s4')] },
                     ],
                 },
             ],
