@@ -35,8 +35,11 @@ export const useLiveStatusCheck = () => {
                     const liveStatuses = await twitchService.checkMultipleChannelsLiveStatus(channelIds);
 
                     updatedFavorites = updatedFavorites.map(fav => {
-                        if (fav.platform === 'twitch' && fav.channelId && liveStatuses[fav.channelId]) {
-                            const status = liveStatuses[fav.channelId];
+                        // 結果 key 為小寫 login;舊收藏的 channelId 可能含大寫(如 twitch.tv/Shroud)
+                        const status = fav.platform === 'twitch' && fav.channelId
+                            ? liveStatuses[fav.channelId.toLowerCase()]
+                            : undefined;
+                        if (status) {
 
                             // Check if status actually changed to avoid unnecessary updates
                             if (fav.isLive !== status.isLive ||

@@ -62,6 +62,13 @@ const MAP = {
     'g-edge-dock-open.png': 'island-edge-dock-open',
     'g-favorites-panel.png': 'favorites-panel',
     'g-empty-window-picker.png': 'empty-window-picker',
+
+    // 2026-10-02 開台週表指南(正式站 multistreaming.org/schedule 真實資料,1440x900 深色,Cookie 已拒絕)
+    'g-schedule-overview.png': 'schedule-overview',
+    'g-schedule-selected.png': 'schedule-selected',
+    'g-schedule-timeline.png': 'schedule-timeline',
+    'g-schedule-person.png': 'schedule-person',
+    'g-schedule-report.png': 'schedule-report',
 };
 
 // 刻意不轉的來源(過小 / 內容重複)

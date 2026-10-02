@@ -163,6 +163,10 @@ export class TwitchService implements TwitchApiContract {
         if (!channelLogins?.length) return {};
         await this.ensureConfig();
 
+        // Twitch login 不分大小寫,API 回傳的 user_login 一律小寫;
+        // 輸入統一正規化成小寫(並去重),結果 key 也一律是小寫,呼叫端請用小寫查
+        channelLogins = [...new Set(channelLogins.map(login => login.toLowerCase()))];
+
         const BATCH_SIZE = 100;
         const results: Record<string, LiveStatusResult> = {};
 

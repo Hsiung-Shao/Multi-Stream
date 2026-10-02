@@ -5,12 +5,15 @@
 // POST /api/admin/contributions?id=<uuid>&action=reject   body: { notes }      → 只改 pending 的；寫 admin_actions
 //
 // overrides 是審核時修改過的欄位（白名單、與投稿同樣的格式檢查），覆蓋投稿 payload。
+// 有 Twitch 帳號時先用 helix/users 查 broadcaster id，以 overrides.twitch_id 傳給 RPC 寫入 vtuber_channels.external_id，
+// 週表下一輪就會追蹤（twitch_id 不在白名單裡，只能由這裡設定）。
 
 import { jsonResponse, handleOptions, readJsonBody } from '../../lib/cors.js';
 import { select, update, insert, rpc } from '../../lib/supabase-server.js';
 import { gateAdmin } from '../../lib/auth-helper.js';
 import { logError } from '../../lib/logger.js';
-import { postgrestErrorMessage } from '../../lib/submit-guard.js';
+import { isUniqueViolation, postgrestErrorMessage } from '../../lib/submit-guard.js';
+import { lookupTwitchUser, twitchLookupStatus } from '../../lib/twitch-users.js';
 import { NATIONALITIES, LIMITS, normalizeSocial, normalizeHttpUrl, isUuid } from '../../lib/vtuber-submit.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
@@ -31,6 +34,7 @@ const RPC_ERRORS = {
     unsupported_action: 400,
     group_not_found: 400,
     invalid_name: 400,
+    invalid_twitch_id: 400,
 };
 
 export async function onRequestGet(context) {
@@ -50,7 +54,7 @@ export async function onRequestGet(context) {
     return jsonResponse({ ok: true, contributions: res.data || [] }, 200, request, NO_STORE);
 }
 
-export async function onRequestPost(context) {
+export async function onRequestPost(context, deps = {}) {
     const { request, env } = context;
     const gate = gateAdmin(request, env);
     if (!gate.ok) return gate.response;
@@ -66,10 +70,15 @@ export async function onRequestPost(context) {
     if (action === 'approve') {
         const ov = validateOverrides(parsed.body?.overrides ?? {});
         if (ov.error) return jsonResponse({ ok: false, error: ov.error }, 400, request);
-        const res = await rpc(env, 'approve_vtuber_contribution', { p_id: id, p_overrides: ov.value });
+        const tw = await resolveTwitchId(env, id, ov.value, deps);
+        if (tw.error) return jsonResponse({ ok: false, error: tw.error }, tw.status, request);
+        const overrides = tw.id ? { ...ov.value, twitch_id: tw.id } : ov.value;
+        const res = await rpc(env, 'approve_vtuber_contribution', { p_id: id, p_overrides: overrides });
         if (!res.ok) {
             const code = postgrestErrorMessage(res.error);
             if (code && RPC_ERRORS[code]) return jsonResponse({ ok: false, error: code }, RPC_ERRORS[code], request);
+            // 查好 id 之後、寫入之前，同一個 Twitch 帳號被別筆核准／回報搶先寫入（部分唯一索引）
+            if (isUniqueViolation(res.error)) return jsonResponse({ ok: false, error: tw.id ? 'twitch_exists' : 'exists' }, 409, request);
             await logError(env, 'admin-contributions', 'approve failed', { metadata: { status: res.status, error: res.error?.slice(0, 300) } });
             return jsonResponse({ ok: false, error: 'approve_failed' }, 500, request);
         }
@@ -102,6 +111,30 @@ export async function onRequestPost(context) {
     }
 
     return jsonResponse({ ok: false, error: 'invalid_action' }, 400, request);
+}
+
+/**
+ * 核准時實際要掛的 Twitch login（overrides 優先，否則投稿 payload）→ broadcaster id。
+ * 沒有 Twitch、或投稿不存在（交給 RPC 回 not_found）時回 { id: null }。
+ * @returns {Promise<{ id: string|null } | { error: string, status: number }>}
+ */
+export async function resolveTwitchId(env, id, overrides, deps = {}) {
+    let login = overrides.twitch_login;
+    if (login === undefined) {
+        const res = await select(env, `vtuber_contributions?id=eq.${id}&select=twitch_login:payload->>twitch_login&limit=1`);
+        if (!res.ok) {
+            await logError(env, 'admin-contributions', 'payload fetch failed', { metadata: { status: res.status, error: res.error?.slice(0, 300) } });
+            return { error: 'approve_failed', status: 500 };
+        }
+        login = res.data?.[0]?.twitch_login;
+    }
+    login = typeof login === 'string' ? login.trim().toLowerCase() : '';
+    if (!login) return { id: null };
+    const user = await (deps.lookupTwitch ?? lookupTwitchUser)(login, env);
+    if (!user.ok) return { error: user.error, status: twitchLookupStatus(user.error) };
+    // helix 依 login 查（不分大小寫）；回來的 login 不同代表查錯人，寧可擋下
+    if (user.login !== login) return { error: 'twitch_not_found', status: 400 };
+    return { id: user.id };
 }
 
 /** 審核時可覆蓋的欄位（白名單＋格式檢查，與投稿端點一致） */

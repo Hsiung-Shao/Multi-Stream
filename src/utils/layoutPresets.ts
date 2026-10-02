@@ -1,3 +1,5 @@
+import type { LayoutType } from './layoutUtils';
+
 
 
 /**
@@ -214,6 +216,12 @@ export const getStandardLayout = (count: number, mode: LayoutMode = 'video_only'
         h: spec.h
     }));
 };
+
+/**
+ * 快捷鍵 Alt+1～6、Alt+9 對應的版型：與動態島布局清單「僅串流」分頁裡同路數的那一格相同。
+ */
+export const templateIdForLayoutType = (layout: LayoutType): string =>
+    layout === 9 ? 'template-9-grid' : `template-${layout}-landscape`;
 
 /**
  * Generates a Layout Spec (CanvasItems) based on a template ID and provided stream IDs.
@@ -467,6 +475,16 @@ export const layoutTemplates: LayoutTemplate[] = [
         count: 8,
         type: 'video_only',
         generate: (streamIds) => calculateAutoGridLayout(8).map((spec, i) => ({
+            type: 'stream', ...spec, contentId: streamIds[i] ?? null
+        }))
+    },
+    {
+        id: 'template-9-grid',
+        nameKey: 'layout.t_9_grid',
+        icon: 'Grid3x3',
+        count: 9,
+        type: 'video_only',
+        generate: (streamIds) => calculateAutoGridLayout(9).map((spec, i) => ({
             type: 'stream', ...spec, contentId: streamIds[i] ?? null
         }))
     },

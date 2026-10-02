@@ -29,6 +29,7 @@ const controlPanel = {
   'uncategorized': '未分類',
   'mediaControl': '媒體控制',
   'masterVolume': '總音量',
+  'masterVolumeDoubleClickHint': '雙擊此處可解除所有串流的個別靜音',
   'muteAll': '全部靜音',
   'unmuteAll': '解除靜音',
   'streamOrder': '串流順序',

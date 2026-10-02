@@ -112,7 +112,7 @@ export function TwitchIntegrationSection({
                     </div>
                     <h3 className="text-lg font-bold font-normal text-foreground">{t('twitchIntegration')}</h3>
                 </div>
-                {isLoggedIn && <Badge className="bg-green-500">Connected</Badge>}
+                {isLoggedIn && <Badge className="bg-green-500">{t('twitchConnected')}</Badge>}
             </div>
 
             <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
@@ -156,7 +156,7 @@ export function TwitchIntegrationSection({
                             variant="outline"
                             className={`w-full h-12 rounded-xl border-border ${showChannelList ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : ''}`}
                         >
-                            {showChannelList ? 'Hide Channels' : t('importFollowedChannels')}
+                            {showChannelList ? t('hideFollowedChannels') : t('importFollowedChannels')}
                         </Button>
 
                         {showChannelList && (

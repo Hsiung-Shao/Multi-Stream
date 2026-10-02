@@ -8,8 +8,7 @@ import { upsertChannel } from '../features/youtube/YouTubeChannelRepository';
 import { ChatLayoutType } from '../utils/chatLayoutUtils';
 import { LayoutType, autoSelectLayout, isLayoutOverCapacity } from '../utils/layoutUtils';
 import { CanvasItem, CanvasItemType, LayoutPreset } from '../types/canvas';
-import { generateStandardLayout } from '../utils/canvasUtils';
-import { LayoutMode, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout } from '../utils/layoutPresets';
+import { LayoutMode, LayoutTemplate, layoutTemplates, generateLayoutFromTemplate, calculateAutoGridLayout, getCanvasAspect, generateSharedChatLayout, templateIdForLayoutType } from '../utils/layoutPresets';
 import { isSharedChatLayout, retargetChatsOf, swapItemLayouts, selectMainStreamItemId, withSharedFlag, relayoutItems } from '../utils/canvasItemOps';
 import { findAvailablePosition } from '../utils/layoutEngine';
 // import { calculateDualDirectionLayout } from '../utils/layoutPresets'; // Removed old import
@@ -74,7 +73,6 @@ interface StreamStoreState {
     lastActiveAt: number;
     touchLastActive: () => void;
     restoreSession: (data: { streams: StreamData[]; canvasItems: CanvasItem[]; layoutMode: 'auto' | 'canvas' }) => void;
-    applyStandardLayoutToCanvas: (type: 'grid' | 'focus' | 'flow') => void;
     updateCanvasItem: (itemId: string, updates: Partial<CanvasItem>) => void;
     /** 兩個視窗互換位置與尺寸（i 不變，播放器不重建） */
     swapCanvasItems: (aId: string, bId: string) => void;
@@ -103,6 +101,65 @@ const normalizeCanvasItems = (items: CanvasItem[]): CanvasItem[] => {
             h: item.layout.h || 6
         }
     }));
+};
+
+/** 畫布同時最多幾路直播（空視窗與聊天室不算） */
+export const MAX_STREAMS = 16;
+/** addStream 因已達上限而失敗時回傳的 message（錯誤代碼；顯示文字由呼叫端用 i18n 的 quick_add.max_streams） */
+export const MAX_STREAMS_REACHED = 'maxStreamsReached';
+
+/**
+ * 依版型重建畫布 item（動態島布局清單與 Alt+數字共用）。
+ * 直播少於版型路數時補空視窗；多於路數時只排前 N 路，其餘這次不放上畫布。
+ */
+const buildTemplateCanvasItems = (
+    state: Pick<StreamStoreState, 'streams' | 'canvasItems'>,
+    template: LayoutTemplate,
+): CanvasItem[] => {
+    const needed = template.count;
+    const processingIds: (number | null)[] = state.streams.map(s => s.id);
+    while (processingIds.length < needed) {
+        processingIds.push(null);
+    }
+
+    let newItemsSpecs: any[];
+    if (template.type === 'shared_chat') {
+        // 共用聊天室沿用「現有聊天室正在顯示、且仍在新版面上」的那一路，
+        // 這樣聊天室 item 也能被下面的 ID 池配對到、沿用原本的 i
+        const onLayout = processingIds.slice(0, needed);
+        const keep = state.canvasItems.find(i => i.type === 'chat' && i.contentId != null && onLayout.includes(i.contentId));
+        newItemsSpecs = generateSharedChatLayout(onLayout, getCanvasAspect(), keep?.contentId ?? onLayout[0] ?? null);
+    } else {
+        newItemsSpecs = template.generate(processingIds, getCanvasAspect());
+    }
+
+    const availableItems = [...state.canvasItems];
+
+    return newItemsSpecs.map(spec => {
+        let existingId: string | null = null;
+
+        // 只重用有內容的 item：空槽的 ID 帶著舊版面的配對語意（empty-stream-X ↔ empty-chat-X），
+        // 沿用到新位置會讓之後的「新增串流填空槽」把聊天室配到不相鄰的槽（applyCustomLayout 同理）
+        if (spec.contentId != null) {
+            const matchIndex = availableItems.findIndex(item =>
+                item.type === spec.type && item.contentId === spec.contentId
+            );
+
+            if (matchIndex !== -1) {
+                existingId = availableItems[matchIndex].i;
+                availableItems.splice(matchIndex, 1);
+            }
+        }
+
+        return {
+            i: existingId || `${spec.type}-${uuidv4()}-${spec.contentId || 'empty'}`,
+            type: spec.type,
+            contentId: spec.contentId || null,
+            layout: { x: spec.x, y: spec.y, w: spec.w, h: spec.h },
+            // 共用聊天室標記只跟著版型走：換成其他版型時重建的 item 不帶，沿用 ID 也不會殘留
+            ...(spec.sharedChat ? { sharedChat: true } : {}),
+        };
+    });
 };
 
 export const useStreamStore = create<StreamStoreState>()(
@@ -139,8 +196,8 @@ export const useStreamStore = create<StreamStoreState>()(
                     const state = get();
 
                     // Check limits
-                    if (state.streams.length >= 16) {
-                        return { success: false, message: 'Max streams reached' };
+                    if (state.streams.length >= MAX_STREAMS) {
+                        return { success: false, message: MAX_STREAMS_REACHED };
                     }
                     const trimmedUrl = url.trim();
                     let finalUrl = trimmedUrl;
@@ -473,27 +530,6 @@ export const useStreamStore = create<StreamStoreState>()(
                 layoutMode: data.layoutMode,
             }),
 
-            applyStandardLayoutToCanvas: (type) => set(state => {
-                // If user invokes this, maybe we should respect it?
-                // Or does Auto-Reflow override?
-                // Let's assume this manual tool re-applies reflow if grid?
-                // For now, let's just trigger reflow if type is grid.
-                if (type === 'grid') {
-                    // Simplify: Just ensure they are valid. RGL will pack them.
-                    return { canvasItems: normalizeCanvasItems(state.canvasItems) };
-                }
-
-                // Existing logic for others...
-                const newCanvasItems = generateStandardLayout(
-                    state.canvasItems,
-                    type,
-                    state.streams.length,
-                    window.innerWidth,
-                    window.innerHeight
-                );
-                return { canvasItems: newCanvasItems };
-            }),
-
             updateCanvasItem: (itemId, updates) => set(state => ({
                 canvasItems: state.canvasItems.map(item =>
                     item.i === itemId ? { ...item, ...updates } : item
@@ -713,34 +749,11 @@ export const useStreamStore = create<StreamStoreState>()(
                 set((state) => {
                     const changes: Partial<StreamStoreState> = isUserAction ? { layout, userLayout: layout } : { layout };
 
-                    // If in Canvas Mode, apply standard layout transformations immediately
+                    // 畫布模式：Alt+數字與動態島布局清單走同一條路——套用「僅串流」分頁裡對應路數的版型。
+                    // 版型產生的是 24×24 網格單位；別再用像素算寬高（舊 generateStandardLayout 曾把 2×2 算成 720 格寬）
                     if (state.layoutMode === 'canvas') {
-                        let standardType: 'grid' | 'focus' | 'flow' = 'grid';
-
-                        // Map legacy ID to standard types
-                        if (layout === 5) {
-                            standardType = 'focus';
-                        }
-                        // Layout 1, 2, 3, 4, 6, 9 are all variations of 'grid' in the new engine
-                        // passed with different parameters?
-                        // Actually generateStandardLayout (Focus) is hardcoded for 1 Main + Side.
-                        // generateStandardLayout (Grid) is generic N x M.
-                        // So for 1, 2, 3, 4, 6, 9 -> 'grid' is correct, as it auto-calculates NxM based on count.
-                        // However, user might expect Alt+2 to force 2 columns?
-                        // generateStandardLayout logic currently auto-calculates colCount based on sqrt(count).
-                        // It doesn't take "target columns" as input.
-                        // We might need to enhance generateStandardLayout if we want strict "Split Horizontal" vs "Split Vertical" behavior for N=2.
-                        // BUT, for now, just applying 'grid' or 'focus' is a huge improvement over "doing nothing".
-
-                        // We can reuse the logic from applyStandardLayoutToCanvas but inside here to be atomic
-                        const newCanvasItems = generateStandardLayout(
-                            state.canvasItems,
-                            standardType,
-                            state.streams.length,
-                            window.innerWidth,
-                            window.innerHeight
-                        );
-                        changes.canvasItems = newCanvasItems;
+                        const template = layoutTemplates.find(t => t.id === templateIdForLayoutType(layout));
+                        if (template) changes.canvasItems = buildTemplateCanvasItems(state, template);
                     }
 
                     return changes;
@@ -974,68 +987,7 @@ export const useStreamStore = create<StreamStoreState>()(
                     userSegmentationManager.recordFeatureUsage(FEATURE_FLAGS.LAYOUT_SWITCH);
                 }
 
-                // 1. Prepare Stream IDs
-                // We need at least template.count IDs. 
-                // If we have fewer streams, we pad with null (creating empty windows).
-                // If we have more, we only use the first N (others are hidden from canvas).
-                const currentStreamIds = state.streams.map(s => s.id);
-                const needed = template.count;
-
-                const processingIds: (number | null)[] = [...currentStreamIds];
-
-                // Pad with nulls if needed
-                while (processingIds.length < needed) {
-                    processingIds.push(null);
-                }
-
-                // 2. Generate Items
-                // The template generator uses the IDs provided (including nulls)
-                // Note: The generator assumes input array covers indices 0..N-1
-                // We pass the full array, it slices inside.
-                let newItemsSpecs: any[];
-                if (template.type === 'shared_chat') {
-                    // 共用聊天室沿用「現有聊天室正在顯示、且仍在新版面上」的那一路，
-                    // 這樣聊天室 item 也能被下面的 ID 池配對到、沿用原本的 i
-                    const onLayout = processingIds.slice(0, needed);
-                    const keep = state.canvasItems.find(i => i.type === 'chat' && i.contentId != null && onLayout.includes(i.contentId));
-                    newItemsSpecs = generateSharedChatLayout(onLayout, getCanvasAspect(), keep?.contentId ?? onLayout[0] ?? null);
-                } else {
-                    newItemsSpecs = template.generate(processingIds, getCanvasAspect());
-                }
-
-                // 3. Convert Specs to CanvasItems
-                const availableItems = [...state.canvasItems];
-
-                const newCanvasItems: CanvasItem[] = newItemsSpecs.map(spec => {
-                    // Optimization: Reuse ID if matching content exists
-                    let existingId: string | null = null;
-                    let existingItem: CanvasItem | null = null;
-
-                    // 只重用有內容的 item：空槽的 ID 帶著舊版面的配對語意（empty-stream-X ↔ empty-chat-X），
-                    // 沿用到新位置會讓之後的「新增串流填空槽」把聊天室配到不相鄰的槽（applyCustomLayout 同理）
-                    if (spec.contentId != null) {
-                        const matchIndex = availableItems.findIndex(item =>
-                            item.type === spec.type && item.contentId === spec.contentId
-                        );
-
-                        if (matchIndex !== -1) {
-                            existingItem = availableItems[matchIndex];
-                            availableItems.splice(matchIndex, 1);
-                            existingId = existingItem.i;
-                        }
-                    }
-
-                    return {
-                        i: existingId || `${spec.type}-${uuidv4()}-${spec.contentId || 'empty'}`,
-                        type: spec.type,
-                        contentId: spec.contentId || null,
-                        layout: { x: spec.x, y: spec.y, w: spec.w, h: spec.h },
-                        // 共用聊天室標記只跟著版型走：換成其他版型時重建的 item 不帶，沿用 ID 也不會殘留
-                        ...(spec.sharedChat ? { sharedChat: true } : {}),
-                    };
-                });
-
-                return { canvasItems: newCanvasItems };
+                return { canvasItems: buildTemplateCanvasItems(state, template) };
             }),
 
             saveCustomLayout: async (name: string) => {

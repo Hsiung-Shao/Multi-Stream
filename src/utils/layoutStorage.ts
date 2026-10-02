@@ -9,7 +9,9 @@ interface StreamDB extends DBSchema {
     };
 }
 
-const DB_NAME = 'multi-stream-db';
+/** 自訂版面備份資料庫名稱(「清除所有資料」也要刪這個,見 utils/clearAllData.ts) */
+export const LAYOUT_DB_NAME = 'multi-stream-db';
+const DB_NAME = LAYOUT_DB_NAME;
 const STORE_NAME = 'custom-layouts';
 
 // 延遲到第一次用到才開 DB：模組頂層就 openDB 會讓 SSG 預渲染（Node 無 indexedDB）在 import 時直接炸
@@ -25,6 +27,14 @@ const getDb = () => {
 };
 
 export const layoutStorage = {
+    /** 關閉連線(刪除資料庫前呼叫,否則刪除會被自己的連線擋住) */
+    async close() {
+        if (!dbPromise) return;
+        const pending = dbPromise;
+        dbPromise = null;
+        try { (await pending).close(); } catch { /* 沒開成功就沒有連線要關 */ }
+    },
+
     async saveToBackup(layouts: CustomLayout[]) {
         try {
             const db = await getDb();

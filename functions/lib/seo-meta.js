@@ -121,8 +121,8 @@ export const ROUTE_META = {
     },
     '/instructions/settings': {
         type: 'article',
-        'zh-TW': { title: '設定與播放行為：主題、動態島樣式、資料備份 - MultiStream Hub', description: '調整 MultiStream Hub 的主題與語言、動態島樣式、新串流自動靜音與背景開台偵測，並把收藏與布局備份到檔案。' },
-        en: { title: 'Settings & Playback: Themes, Island Style, Data Backup - MultiStream Hub', description: 'Set MultiStream Hub\'s theme and language, dynamic island style, auto-mute for new streams and background live detection, then back up favourites and layouts to a file.' },
+        'zh-TW': { title: '設定與播放行為：主題、動態島樣式、資料備份 - MultiStream Hub', description: '調整 MultiStream Hub 的主題與語言、動態島樣式、新串流自動靜音與背景開台偵測，並把收藏與設定備份到檔案。' },
+        en: { title: 'Settings & Playback: Themes, Island Style, Data Backup - MultiStream Hub', description: 'Set MultiStream Hub\'s theme and language, dynamic island style, auto-mute for new streams and background live detection, then back up favourites and settings to a file.' },
     },
     '/instructions/share': {
         type: 'article',
@@ -131,8 +131,13 @@ export const ROUTE_META = {
     },
     '/instructions/shortcuts': {
         type: 'article',
-        'zh-TW': { title: '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub', description: 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Alt + 數字切布局，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。' },
-        en: { title: 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub', description: 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Alt + number to switch layouts, plus R / M / Delete / F / T on whichever window you hover — including theater mode.' },
+        'zh-TW': { title: '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub', description: 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Ctrl + M 全部靜音，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。' },
+        en: { title: 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub', description: 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Ctrl + M to mute all, plus R / M / Delete / F / T on whichever window you hover — including theater mode.' },
+    },
+    '/instructions/schedule': {
+        type: 'article',
+        'zh-TW': { title: '開台週表使用指南：直播狀態、資料來源與限制 - MultiStream Hub', description: '台灣 VTuber 開台週表怎麼用：一鍵多開的實際流程、卡片狀態與 YouTube／Twitch 合併規則、資料多久更新一次，以及哪些直播不會出現。' },
+        en: { title: 'Stream Schedule Guide: Live Status, Data Sources and Limits - MultiStream Hub', description: 'How to use the Taiwanese VTuber stream schedule: open several streams in one click, read card statuses and YouTube/Twitch merging, see how often data updates, and learn which streams will not appear.' },
     },
     '/instructions/watch-multiple-twitch-streams': {
         type: 'article',

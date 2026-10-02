@@ -205,7 +205,7 @@ export const IslandLayoutPicker = ({ isExpanded, onMouseLeave, onOpenSettings, o
                                     {(!customLayouts || customLayouts.length === 0) ? (
                                         <div className="py-8 text-center text-xs text-gray-500 border border-dashed border-white/10 rounded-lg bg-white/5 flex flex-col items-center justify-center gap-2">
                                             <LayoutGrid className="size-6 opacity-20" />
-                                            <p>尚無自定布局</p>
+                                            <p>{t('favorites:layout_manager.no_layouts')}</p>
                                         </div>
                                     ) : (
                                         <ScrollArea className="h-[180px] -mr-3 pr-3">

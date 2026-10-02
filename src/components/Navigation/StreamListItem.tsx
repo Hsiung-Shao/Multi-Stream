@@ -142,7 +142,7 @@ export const StreamListItem = ({
                         🔊 {t('controlPanel:volume') || '音量'}
                     </span>
                     <Slider
-                        value={[stream.volume || 100]}
+                        value={[stream.volume ?? 100]}
                         onValueChange={(vals) => onVolumeChange(stream.id, vals[0])}
                         min={0}
                         max={100}
@@ -150,7 +150,7 @@ export const StreamListItem = ({
                         className="flex-1 [&_[data-slot=slider-range]]:bg-cyan-400 [&_[data-slot=slider-thumb]]:border-cyan-400"
                     />
                     <span className="text-xs min-w-[40px] text-right text-cyan-400">
-                        {masterMuted ? `0% (${stream.volume || 100}%)` : `${stream.volume || 100}%`}
+                        {masterMuted ? `0% (${stream.volume ?? 100}%)` : `${stream.volume ?? 100}%`}
                     </span>
                 </div>
             </div>

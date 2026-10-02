@@ -26,19 +26,19 @@ const faq = {
     'items.platform_support.content': 'Currently supports Twitch and YouTube Live. More platforms may be added in the future.',
 
     'items.live_detection.title': 'Live Detection',
-    'items.live_detection.content': 'The system periodically checks the live status of your favorite Twitch channels in the background. Online channels show a green indicator and viewer count.',
+    'items.live_detection.content': 'Your favorite Twitch and YouTube channels are checked automatically when you open the site, when you enter the canvas and every 25 minutes after that; turning on “Auto-detect live status in background” in settings checks every 5 minutes instead. Live channels show a green dot in your favorites (viewer counts are not shown). YouTube channels are throttled, so one can take 15 minutes or more to turn green after going live.',
 
     'items.performance.title': 'How to improve performance?',
-    'items.performance.content': 'Simultaneously playing multiple high-quality streams consumes significant CPU and bandwidth. Try lowering the quality of individual streams or reducing the number of active streams.',
+    'items.performance.content': 'Playing several high-quality streams at once uses a lot of CPU and bandwidth. There is no site-wide quality setting — lower the quality from each player’s own gear menu, or play fewer streams at once; when 2 or more YouTube streams are playing, use “Pause Others” on the warning. Twitch drops to the lowest quality automatically after the tab has been in the background for 30 seconds. Press F3 for a performance panel showing frame rate and memory.',
 
     'items.data_saved.title': 'Are my settings saved?',
-    'items.data_saved.content': 'Yes, your layout, favorites, and settings are automatically saved in your browser and restored on your next visit.',
+    'items.data_saved.content': 'Your favorites, lists, tags, settings and custom layouts are saved in your browser and are still there next time. The canvas you are watching is not saved permanently: reloading clears it, and if you come back within 10 minutes you are asked whether to restore your last session. To move to another device, use Favorites Manager → Backup & Restore (the backup includes your custom layouts).',
 
     'items.empty_window.title': 'Empty Window Usage',
-    'items.empty_window.content': 'Add an empty window group via "Add Group -> Add Empty Group". Use this as a placeholder to plan your layout before dragging channels into it.',
+    'items.empty_window.content': 'Press + on the dynamic island and choose a combo (stream + chat), a stream window or a chat window to add an empty window to the canvas — handy as a placeholder while you plan the layout. An empty stream window has its own search box and a drop-down of live favorites; an empty chat window lets you pick which stream on the canvas to show the chat for.',
 
     'items.youtube_search.title': 'Why can\'t I find some YouTube channels?',
-    'items.youtube_search.content': 'The Dynamic Island\'s YouTube channel search matches names against the channels already indexed on our site — it does not search all of YouTube in real time. If a channel doesn\'t show up, it usually means we haven\'t added it to our catalog yet. Also, a matched YouTube channel is added to your favorites rather than previewed and played instantly like a Twitch channel, because the catalog doesn\'t hold that channel\'s current live URL. Once the channel goes live, load it from your favorites to watch.',
+    'items.youtube_search.content': 'The Dynamic Island’s YouTube channel search matches names against the channels already indexed on our site — it does not search all of YouTube in real time. If a channel does not show up, it has usually not been added yet; you can suggest it on the Stream Schedule. When you pick a result, the site first checks whether the channel is live: if it is, it is added to the canvas; if not, it is added to your favorites so you can load it once it goes live.',
     'items.youtube_search.tip': 'If a channel you want never appears, let us know on Discord and we\'ll add it to the catalog.',
   // —— i18n 修補：design 改版新增 key，各語言在地化 ——
   'cat_all': 'All',

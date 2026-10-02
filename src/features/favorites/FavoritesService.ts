@@ -98,12 +98,13 @@ export class FavoritesService {
 
             // Twitch logic
             if (item.platform === 'twitch') {
-                const itemChannelId = item.channelId || (item.url ? item.url.match(/twitch\.tv\/([^\/\?]+)/)?.[1] : null);
+                // Twitch login 不分大小寫(twitch.tv/Shroud 與 twitch.tv/shroud 是同一台)
+                const itemChannelId = (item.channelId || (item.url ? item.url.match(/twitch\.tv\/([^\/\?]+)/)?.[1] : null))?.toLowerCase();
 
-                if (targetChannelId && itemChannelId === targetChannelId) return true;
+                if (targetChannelId && itemChannelId === targetChannelId.toLowerCase()) return true;
 
                 const urlMatch = url.match(/twitch\.tv\/([^\/\?]+)/);
-                if (urlMatch && itemChannelId === urlMatch[1]) return true;
+                if (urlMatch && itemChannelId === urlMatch[1].toLowerCase()) return true;
             }
 
             return false;
@@ -144,7 +145,9 @@ export class FavoritesService {
                 tagIds = [...tagIds, DEFAULT_TAG_TWITCH_ID];
             }
             const match = url.match(/twitch\.tv\/([^\/\?]+)/);
-            if (match) channelId = match[1];
+            // 統一存小寫:Twitch API 回傳的 user_login 是小寫,開台偵測以小寫 login 對應
+            if (match) channelId = match[1].toLowerCase();
+            else if (channelId) channelId = channelId.toLowerCase();
 
             // Try to get displayName from URL if name is empty
             if (!name) {

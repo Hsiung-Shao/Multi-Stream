@@ -19,7 +19,7 @@ import { StaticPageHeader } from '../StaticPageHeader';
 import {
     Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
     Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
-    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard, MonitorPlay,
+    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard, CalendarClock, MonitorPlay,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -419,7 +419,7 @@ export function InstructionsPage() {
 
     const readLabel = (n: number) => tx('blog.minRead', { defaultValue: '{{n}} 分鐘', n });
 
-    // next 既有 tutorial i18n → 8 篇文章(內容皆既有 key,多語系完整保留)
+    // next 既有 tutorial i18n → 文章清單（slug 順序見 src/config/guides.ts）(內容皆既有 key,多語系完整保留)
     const articles: Article[] = useMemo(() => [
         {
             slug: 'quick-start',
@@ -428,7 +428,7 @@ export function InstructionsPage() {
             excerpt: tx('article.quickStart.excerpt'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(6),
             accent: '#c084fc', accent2: '#7c3aed', icon: Rocket, featured: true,
             sections: [
                 { id: 'intro', heading: tx('intro.title'), blocks: [{ type: 'p', text: tx('intro.content') }] },
@@ -446,6 +446,16 @@ export function InstructionsPage() {
                         img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
                     ],
                 },
+                {
+                    id: 'stuck', heading: tx('gettingStarted.stuck'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('gettingStarted.stuck.s1'), tx('gettingStarted.stuck.s2'), tx('gettingStarted.stuck.s3'),
+                                tx('gettingStarted.stuck.s4'), tx('gettingStarted.stuck.s5'),
+                            ],
+                        },
+                    ],
+                },
             ],
         },
         {
@@ -454,7 +464,7 @@ export function InstructionsPage() {
             excerpt: tx('features.canvas.description'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
-            readLabel: readLabel(6),
+            readLabel: readLabel(9),
             accent: '#60a5fa', accent2: '#2563eb', icon: LayoutGrid,
             sections: [
                 {
@@ -492,6 +502,38 @@ export function InstructionsPage() {
                     ],
                 },
                 { id: 'layout-rules', heading: tx('features.canvas.layoutRules'), blocks: [{ type: 'p', text: tx('features.canvas.layoutRules.desc') }] },
+                {
+                    id: 'example', heading: tx('features.canvas.example'), blocks: [
+                        { type: 'p', text: tx('features.canvas.example.p1') },
+                        {
+                            type: 'steps', items: [
+                                tx('features.canvas.example.s1'), tx('features.canvas.example.s2'), tx('features.canvas.example.s3'),
+                                tx('features.canvas.example.s4'), tx('features.canvas.example.s5'), tx('features.canvas.example.s6'),
+                            ],
+                        },
+                        { type: 'p', text: tx('features.canvas.example.p2') },
+                    ],
+                },
+                {
+                    id: 'limits', heading: tx('features.canvas.limits'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('features.canvas.limits.s1'), tx('features.canvas.limits.s2'), tx('features.canvas.limits.s3'),
+                                tx('features.canvas.limits.s4'), tx('features.canvas.limits.s5'), tx('features.canvas.limits.s6'),
+                            ],
+                        },
+                    ],
+                },
+                {
+                    id: 'troubleshoot', heading: tx('features.canvas.troubleshoot'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('features.canvas.troubleshoot.s1'), tx('features.canvas.troubleshoot.s2'), tx('features.canvas.troubleshoot.s3'),
+                                tx('features.canvas.troubleshoot.s4'), tx('features.canvas.troubleshoot.s5'), tx('features.canvas.troubleshoot.s6'),
+                            ],
+                        },
+                    ],
+                },
             ],
         },
         {
@@ -500,7 +542,7 @@ export function InstructionsPage() {
             excerpt: tx('features.search.description'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(6),
             accent: '#4ade80', accent2: '#16a34a', icon: Search,
             sections: [
                 {
@@ -512,6 +554,24 @@ export function InstructionsPage() {
                 },
                 { id: 'youtube', heading: tx('features.search.youtube'), blocks: [{ type: 'p', text: tx('features.search.youtube.desc') }] },
                 { id: 'url', heading: tx('features.search.url'), blocks: [{ type: 'p', text: tx('features.search.url.desc') }] },
+                {
+                    id: 'formats', heading: tx('features.search.formats'), blocks: [
+                        { type: 'p', text: tx('features.search.formats.p1') },
+                        { type: 'steps', items: [tx('features.search.formats.s1'), tx('features.search.formats.s2')] },
+                        { type: 'p', text: tx('features.search.formats.p2') },
+                    ],
+                },
+                { id: 'enter', heading: tx('features.search.enter'), blocks: [{ type: 'p', text: tx('features.search.enter.p1') }] },
+                {
+                    id: 'troubleshoot', heading: tx('features.search.troubleshoot'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('features.search.troubleshoot.s1'), tx('features.search.troubleshoot.s2'), tx('features.search.troubleshoot.s3'),
+                                tx('features.search.troubleshoot.s4'), tx('features.search.troubleshoot.s5'),
+                            ],
+                        },
+                    ],
+                },
             ],
         },
         {
@@ -520,7 +580,7 @@ export function InstructionsPage() {
             excerpt: tx('features.island.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(6),
             accent: '#a78bfa', accent2: '#6d28d9', icon: Tv,
             sections: [
                 {
@@ -545,6 +605,16 @@ export function InstructionsPage() {
                         img('island-edge-dock-open.webp', 1440, 900, tx('img.islandEdgeDockOpen.alt'), tx('img.islandEdgeDockOpen.cap')),
                     ],
                 },
+                {
+                    id: 'rules', heading: tx('features.island.rules'), blocks: [
+                        { type: 'p', text: tx('features.island.rules.desc') },
+                    ],
+                },
+                {
+                    id: 'troubleshoot', heading: tx('features.island.troubleshoot'), blocks: [
+                        { type: 'steps', items: [tx('features.island.troubleshoot.s1'), tx('features.island.troubleshoot.s2'), tx('features.island.troubleshoot.s3'), tx('features.island.troubleshoot.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -553,7 +623,7 @@ export function InstructionsPage() {
             excerpt: tx('features.favorites.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(6),
+            readLabel: readLabel(8),
             accent: '#facc15', accent2: '#ca8a04', icon: Star,
             sections: [
                 {
@@ -579,6 +649,21 @@ export function InstructionsPage() {
                         img('favorites-manager.webp', 1031, 798, tx('img.favoritesManager.alt'), tx('img.favoritesManager.cap')),
                     ],
                 },
+                {
+                    id: 'detect', heading: tx('features.favorites.detect'), blocks: [
+                        { type: 'p', text: tx('features.favorites.detect.desc') },
+                    ],
+                },
+                {
+                    id: 'example', heading: tx('features.favorites.example'), blocks: [
+                        { type: 'steps', items: [tx('features.favorites.example.s1'), tx('features.favorites.example.s2'), tx('features.favorites.example.s3'), tx('features.favorites.example.s4')] },
+                    ],
+                },
+                {
+                    id: 'limits', heading: tx('features.favorites.limits'), blocks: [
+                        { type: 'steps', items: [tx('features.favorites.limits.s1'), tx('features.favorites.limits.s2'), tx('features.favorites.limits.s3'), tx('features.favorites.limits.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -587,7 +672,7 @@ export function InstructionsPage() {
             excerpt: tx('features.media.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(5),
             accent: '#f472b6', accent2: '#db2777', icon: Volume2,
             sections: [
                 {
@@ -603,6 +688,16 @@ export function InstructionsPage() {
                         img('window-toolbar.webp', 1440, 900, tx('img.windowToolbar.alt'), tx('img.windowToolbar.cap')),
                     ],
                 },
+                {
+                    id: 'example', heading: tx('features.media.example'), blocks: [
+                        { type: 'p', text: tx('features.media.example.p1') },
+                    ],
+                },
+                {
+                    id: 'notes', heading: tx('features.media.notes'), blocks: [
+                        { type: 'steps', items: [tx('features.media.notes.s1'), tx('features.media.notes.s2'), tx('features.media.notes.s3'), tx('features.media.notes.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -611,7 +706,7 @@ export function InstructionsPage() {
             excerpt: tx('features.settings.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(5),
+            readLabel: readLabel(6),
             accent: '#94a3b8', accent2: '#475569', icon: SettingsIcon,
             sections: [
                 {
@@ -624,6 +719,11 @@ export function InstructionsPage() {
                 { id: 'playback', heading: tx('features.settings.playback'), blocks: [{ type: 'p', text: tx('features.settings.playback.desc') }] },
                 { id: 'data', heading: tx('features.settings.data'), blocks: [{ type: 'p', text: tx('features.settings.data.desc') }] },
                 { id: 'twitch', heading: tx('features.settings.twitch'), blocks: [{ type: 'p', text: tx('features.settings.twitch.desc') }] },
+                {
+                    id: 'mobile', heading: tx('features.settings.mobile'), blocks: [
+                        { type: 'p', text: tx('features.settings.mobile.desc') },
+                    ],
+                },
             ],
         },
         {
@@ -632,7 +732,7 @@ export function InstructionsPage() {
             excerpt: tx('features.share.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(5),
             accent: '#38bdf8', accent2: '#0284c7', icon: Share2,
             sections: [
                 {
@@ -643,6 +743,16 @@ export function InstructionsPage() {
                 },
                 { id: 'format', heading: tx('features.share.format'), blocks: [{ type: 'p', text: tx('features.share.format.desc') }] },
                 { id: 'limits', heading: tx('features.share.limits'), blocks: [{ type: 'callout', title: tx('features.favorites.proTip'), text: tx('features.share.limits.desc') }] },
+                {
+                    id: 'example', heading: tx('features.share.example'), blocks: [
+                        { type: 'p', text: tx('features.share.example.p1') },
+                    ],
+                },
+                {
+                    id: 'notes', heading: tx('features.share.notes'), blocks: [
+                        { type: 'steps', items: [tx('features.share.notes.s1'), tx('features.share.notes.s2'), tx('features.share.notes.s3'), tx('features.share.notes.s4')] },
+                    ],
+                },
             ],
         },
         {
@@ -651,7 +761,7 @@ export function InstructionsPage() {
             excerpt: tx('features.shortcuts.description'),
             category: 'advanced',
             catLabel: tx('tabs.advanced'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(4),
             accent: '#fb923c', accent2: '#ea580c', icon: Keyboard,
             sections: [
                 {
@@ -667,6 +777,92 @@ export function InstructionsPage() {
                         img('theater-mode.webp', 1440, 900, tx('img.theaterMode.alt'), tx('img.theaterMode.cap')),
                     ],
                 },
+                {
+                    id: 'troubleshoot', heading: tx('features.shortcuts.troubleshoot'), blocks: [
+                        { type: 'steps', items: [tx('features.shortcuts.troubleshoot.s1'), tx('features.shortcuts.troubleshoot.s2'), tx('features.shortcuts.troubleshoot.s3'), tx('features.shortcuts.troubleshoot.s4')] },
+                    ],
+                },
+            ],
+        },
+        {
+            slug: 'schedule',
+            title: tx('article.schedule.title'),
+            excerpt: tx('article.schedule.excerpt'),
+            category: 'basics',
+            catLabel: tx('tabs.basics'),
+            readLabel: readLabel(7),
+            accent: '#f472b6', accent2: '#db2777', icon: CalendarClock,
+            sections: [
+                {
+                    id: 'what', heading: tx('guide.schedule.what'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.what.p1') },
+                        { type: 'p', text: tx('guide.schedule.what.p2') },
+                    ],
+                },
+                {
+                    id: 'example', heading: tx('guide.schedule.example'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.example.p1') },
+                        {
+                            type: 'steps', items: [
+                                tx('guide.schedule.example.s1'), tx('guide.schedule.example.s2'), tx('guide.schedule.example.s3'),
+                                tx('guide.schedule.example.s4'), tx('guide.schedule.example.s5'),
+                            ],
+                        },
+                        img('schedule-selected.webp', 1440, 900, tx('img.scheduleSelected.alt'), tx('img.scheduleSelected.cap')),
+                        { type: 'callout', title: tx('guide.schedule.example.limitTitle'), text: tx('guide.schedule.example.limit') },
+                    ],
+                },
+                {
+                    id: 'read', heading: tx('guide.schedule.read'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.read.live') },
+                        img('schedule-overview.webp', 1440, 900, tx('img.scheduleOverview.alt'), tx('img.scheduleOverview.cap')),
+                        { type: 'p', text: tx('guide.schedule.read.upcoming') },
+                        img('schedule-timeline.webp', 1440, 900, tx('img.scheduleTimeline.alt'), tx('img.scheduleTimeline.cap')),
+                        { type: 'p', text: tx('guide.schedule.read.ended') },
+                        { type: 'callout', title: tx('guide.schedule.read.mergeTitle'), text: tx('guide.schedule.read.merge') },
+                        { type: 'p', text: tx('guide.schedule.read.badge') },
+                    ],
+                },
+                {
+                    id: 'person', heading: tx('guide.schedule.person'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.person.p1') },
+                        img('schedule-person.webp', 1440, 900, tx('img.schedulePerson.alt'), tx('img.schedulePerson.cap')),
+                        { type: 'p', text: tx('guide.schedule.person.p2') },
+                    ],
+                },
+                {
+                    id: 'data', heading: tx('guide.schedule.data'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.data.p1') },
+                        { type: 'p', text: tx('guide.schedule.data.p2') },
+                        {
+                            type: 'steps', items: [
+                                tx('guide.schedule.data.s1'), tx('guide.schedule.data.s2'),
+                                tx('guide.schedule.data.s3'), tx('guide.schedule.data.s4'),
+                            ],
+                        },
+                        { type: 'p', text: tx('guide.schedule.data.p3') },
+                    ],
+                },
+                {
+                    id: 'limits', heading: tx('guide.schedule.limits'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('guide.schedule.limits.s1'), tx('guide.schedule.limits.s2'), tx('guide.schedule.limits.s3'),
+                                tx('guide.schedule.limits.s4'), tx('guide.schedule.limits.s5'), tx('guide.schedule.limits.s6'),
+                                tx('guide.schedule.limits.s7'), tx('guide.schedule.limits.s8'),
+                            ],
+                        },
+                    ],
+                },
+                {
+                    id: 'fix', heading: tx('guide.schedule.fix'), blocks: [
+                        { type: 'p', text: tx('guide.schedule.fix.p1') },
+                        img('schedule-report.webp', 1440, 900, tx('img.scheduleReport.alt'), tx('img.scheduleReport.cap')),
+                        { type: 'p', text: tx('guide.schedule.fix.p2') },
+                        { type: 'p', text: tx('guide.schedule.fix.p3') },
+                    ],
+                },
+                { id: 'verify', heading: tx('guide.schedule.verify'), blocks: [{ type: 'p', text: tx('guide.schedule.verify.p1') }] },
             ],
         },
         {

@@ -29,6 +29,7 @@ const controlPanel = {
   'uncategorized': '未分類',
   'mediaControl': 'メディア制御',
   'masterVolume': 'マスターボリューム',
+  'masterVolumeDoubleClickHint': 'ダブルクリックで個別ミュートをすべて解除',
   'muteAll': 'すべてミュート',
   'unmuteAll': 'ミュート解除',
   'streamOrder': 'ストリーム順序',

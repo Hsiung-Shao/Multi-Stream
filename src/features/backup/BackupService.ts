@@ -1,3 +1,4 @@
+import type { CustomLayout } from '../../types/canvas';
 
 export interface BackupData {
     version: string;
@@ -10,6 +11,8 @@ export interface BackupData {
     controlPanelCollapsed: string | null;
     multiStreamLayout: any;
     adConfig: any;
+    /** 自訂布局（匯出檔才有；IndexedDB 自動備份不含，自訂布局另由 layoutStorage 備援） */
+    customLayouts?: CustomLayout[];
 }
 
 export interface RestoreResult {
@@ -19,8 +22,11 @@ export interface RestoreResult {
     skipped?: boolean;
 }
 
+/** IndexedDB 備份資料庫名稱(「清除所有資料」也要刪這個,見 utils/clearAllData.ts) */
+export const BACKUP_DB_NAME = 'MultiStreamBackup';
+
 export class BackupService {
-    private dbName = 'MultiStreamBackup';
+    private dbName = BACKUP_DB_NAME;
     private dbVersion = 1;
     private storeName = 'backup';
     private db: IDBDatabase | null = null;
@@ -133,6 +139,16 @@ export class BackupService {
             await this.backup();
             this.backupTimeout = null;
         }, this.DEBOUNCE_MS);
+    }
+
+    /** 取消排程中的備份並關閉連線(刪除資料庫前呼叫,否則刪除會被自己的連線擋住、或被延遲備份寫回) */
+    closeForDeletion(): void {
+        if (this.backupTimeout) {
+            window.clearTimeout(this.backupTimeout);
+            this.backupTimeout = null;
+        }
+        this.db?.close();
+        this.db = null;
     }
 
     // Check if we have meaningful data in local storage

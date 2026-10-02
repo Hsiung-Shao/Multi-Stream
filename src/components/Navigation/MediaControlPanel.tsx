@@ -230,7 +230,7 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave, variant = 'popover
                         <Label
                             className="text-white text-sm font-medium cursor-pointer select-none flex items-center gap-2"
                             onDoubleClick={handleMasterMuteDoubleClick}
-                            title="雙擊此處可切換全部靜音/解除全部靜音"
+                            title={t('controlPanel:masterVolumeDoubleClickHint')}
                         >
                             <Volume2 size={15} style={{ color: MEDIA_ACCENT }} />
                             {t('controlPanel:masterVolume') || '總音量'}

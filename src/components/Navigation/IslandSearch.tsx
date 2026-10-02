@@ -28,8 +28,10 @@ interface IslandSearchProps {
 /** 動態島上的小搜尋框；邏輯與首頁／空畫布的大搜尋框共用 useStreamSearch */
 export function IslandSearch({ onSearch, onActiveChange, resultsPlacement = 'overlay', targetWindowId, respondToGlobalFocus = false }: IslandSearchProps) {
     const { t } = useTranslation(['common', 'navbar']);
-    // 島上空間小，失敗訊息沿用原本的 alert
-    const onError = useCallback((message: string) => alert(message), []);
+    // 島上空間小，失敗訊息用 toast（sonner 動態載入，理由同 useStreamSearch 檔頭）
+    const onError = useCallback((message: string) => {
+        import('sonner').then(m => m.toast.error(message)).catch(() => { /* 模組載入失敗就不提示 */ });
+    }, []);
     const s = useStreamSearch({ targetWindowId, onSearch, onError, respondToGlobalFocus });
 
     const platformColor = s.platform === 'twitch' ? TWITCH_COLOR : YOUTUBE_COLOR;

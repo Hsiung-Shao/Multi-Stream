@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, RefreshCw, AlertTriangle, UserPlus } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
+import { guidePage } from '../../config/guides';
 import { SiteFooter } from '../SiteFooter';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
@@ -116,6 +117,11 @@ export function SchedulePage() {
                     <h2 id="schedule-about-h" className="mb-2 text-sm font-semibold text-foreground">{t('about.title')}</h2>
                     <p>{t('about.body')}</p>
                     <p className="mt-2">{t('about.tz')}</p>
+                    <p className="mt-2">
+                        <RouteLink to={guidePage('schedule')} className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+                            {t('about.guide')}
+                        </RouteLink>
+                    </p>
                 </section>
 
                 <SiteFooter analyticsCategory="SchedulePage" />

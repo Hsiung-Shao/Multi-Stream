@@ -7,7 +7,7 @@ import {
 } from "../ui/dialog";
 import { useUIStore } from "../../store/useUIStore";
 import { useTranslation } from "react-i18next";
-import { Keyboard, Search, Grid, Save, VolumeX, Monitor, RefreshCw, Trash2, Maximize, AppWindow, Compass } from "lucide-react";
+import { Keyboard, Search, Grid, Save, VolumeX, RefreshCw, Trash2, Maximize, AppWindow, Compass } from "lucide-react";
 
 export const HotkeyHelpDialog = () => {
     const { t } = useTranslation('common'); // We will add keys to common.ts later
@@ -26,7 +26,6 @@ export const HotkeyHelpDialog = () => {
         { keys: ["Alt", "1-6, 9"], description: t('hotkeys.layouts', "Switch Layouts"), icon: Grid },
         { keys: ["Ctrl", "S"], description: t('hotkeys.quick_save', "Quick Save Layout"), icon: Save },
         { keys: ["Ctrl", "M"], description: t('hotkeys.master_mute', "Master Mute Toggle"), icon: VolumeX },
-        { keys: ["Shift", "F"], description: t('hotkeys.focus_mode', "Toggle Focus Mode"), icon: Monitor },
     ];
 
     const windowHotkeys = [

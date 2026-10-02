@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useStreamStore } from '../../store/useStreamStore';
+import { useStreamStore, MAX_STREAMS, MAX_STREAMS_REACHED } from '../../store/useStreamStore';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import {
     Select,
@@ -98,7 +98,9 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
                 toast.success(t('common.success') || '成功載入');
             } else {
                 console.warn('[EmptyWindowContent] addStream failed:', result);
-                toast.error(result.message || t('common.error') || '發生錯誤');
+                toast.error(result.message === MAX_STREAMS_REACHED
+                    ? t('quick_add.max_streams', { max: MAX_STREAMS })
+                    : result.message || t('common.error') || '發生錯誤');
             }
 
         } catch (error: any) {
