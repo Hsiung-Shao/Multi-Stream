@@ -8,10 +8,14 @@
  *
  * 清完到重新載入之間,記憶體中的 store(zustand persist、beforeunload 的 touchLastActive)
  * 仍可能把舊狀態寫回 localStorage,所以清除後封住 Storage 寫入,直到頁面重新載入。
+ *
+ * 其他分頁:先廣播(clearAllDataSignal.ts),讓它們封住寫入並重新載入;Storage 先清、DB 後刪,
+ * 重新載入的分頁才不會在刪除完成前讀到舊的 localStorage 又寫回去。
  */
 import { backupService } from '../features/backup';
 import { BACKUP_DB_NAME } from '../features/backup/BackupService';
 import { layoutStorage, LAYOUT_DB_NAME } from './layoutStorage';
+import { broadcastClearAllData, freezeStorageWrites } from './clearAllDataSignal';
 
 export const SITE_INDEXED_DBS = [BACKUP_DB_NAME, LAYOUT_DB_NAME] as const;
 
@@ -34,19 +38,15 @@ function deleteDatabase(name: string): Promise<void> {
     });
 }
 
-function freezeStorageWrites(): void {
-    const noop = () => {};
-    Storage.prototype.setItem = noop;
-    Storage.prototype.removeItem = noop;
-}
-
 /** 清除本站所有本機資料(不含重新載入,方便測試;UI 端呼叫完再 reload) */
 export async function clearAllSiteData(): Promise<void> {
-    backupService.closeForDeletion();
-    await layoutStorage.close();
-    await Promise.all(SITE_INDEXED_DBS.map(deleteDatabase));
+    broadcastClearAllData();
 
     try { localStorage.clear(); } catch { /* 被瀏覽器封鎖時無可清 */ }
     try { sessionStorage.clear(); } catch { /* 同上 */ }
     freezeStorageWrites();
+
+    backupService.closeForDeletion();
+    await layoutStorage.close();
+    await Promise.all(SITE_INDEXED_DBS.map(deleteDatabase));
 }

@@ -243,6 +243,63 @@ describe('useStreamStore', () => {
             }
         });
 
+        // 2026-10 合併後檢查：Alt+數字一律套「僅串流」版型，會把畫布上的聊天室整個拿掉
+        const addWithChat = async (channels: string[]) => {
+            useStreamStore.setState({ layoutMode: 'canvas' });
+            let now = Date.now();
+            const spy = vi.spyOn(Date, 'now').mockImplementation(() => ++now);
+            try {
+                for (const ch of channels) {
+                    const res = await useStreamStore.getState().addStream(`https://www.twitch.tv/${ch}`, { withChat: true, withStream: true });
+                    expect(res.success).toBe(true);
+                }
+            } finally {
+                spy.mockRestore();
+            }
+        };
+
+        it('畫布上有逐路聊天室時，Alt+數字保留聊天室（套含聊天室版型）且視窗 ID 不變', async () => {
+            await addWithChat(['lofigirl', 'shroud']);
+            const chatsBefore = useStreamStore.getState().canvasItems.filter(i => i.type === 'chat');
+            expect(chatsBefore).toHaveLength(2);
+
+            useStreamStore.getState().setLayout(2);
+
+            const items = useStreamStore.getState().canvasItems;
+            const chats = items.filter(i => i.type === 'chat');
+            expect(chats).toHaveLength(2);
+            expect(new Set(chats.map(c => c.i))).toEqual(new Set(chatsBefore.map(c => c.i)));
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(2);
+        });
+
+        it('共用聊天室版面下 Alt+數字維持一個共用聊天室', async () => {
+            await addWithChat(['lofigirl', 'shroud']);
+            useStreamStore.getState().applyTemplateLayout('template-2-sharedchat');
+
+            useStreamStore.getState().setLayout(3);
+
+            const items = useStreamStore.getState().canvasItems;
+            const chats = items.filter(i => i.type === 'chat');
+            expect(chats).toHaveLength(1);
+            expect(chats[0].sharedChat).toBe(true);
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(3);
+        });
+
+        it('沒有對應含聊天室版型的路數（Alt+5）退回僅串流', async () => {
+            await addWithChat(['lofigirl', 'shroud']);
+            useStreamStore.getState().setLayout(5);
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.filter(i => i.type === 'chat')).toHaveLength(0);
+            expect(items).toHaveLength(5);
+        });
+
+        it('共用聊天室版面按 Alt+6 不會改成每路各一個聊天室', async () => {
+            await addWithChat(['lofigirl', 'shroud']);
+            useStreamStore.getState().applyTemplateLayout('template-2-sharedchat');
+            useStreamStore.getState().setLayout(6);
+            expect(useStreamStore.getState().canvasItems.filter(i => i.type === 'chat')).toHaveLength(0);
+        });
+
         it('畫布掛載前（layoutMode = auto）只記錄版型編號、不動畫布', async () => {
             await addFour();
             useStreamStore.setState({ layoutMode: 'auto' });

@@ -22,6 +22,12 @@ const getDb = () => {
             const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
             store.createIndex('by-date', 'createdAt');
         },
+        // 其他分頁要刪除這個 DB(「清除所有資料」)時讓出連線,否則對方的 deleteDatabase 會卡在 blocked。
+        // 同步關掉收到事件的那條連線(close() 要等 promise,可能晚於瀏覽器檢查,也可能關到新開的那條)
+        blocking(_currentVersion, _blockedVersion, event) {
+            (event.target as IDBDatabase).close();
+            dbPromise = null;
+        },
     });
     return dbPromise;
 };

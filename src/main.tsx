@@ -7,9 +7,13 @@ import i18n, { ensureLanguageLoaded, toHtmlLang } from "./i18n/i18n"; // Import 
 import { useUIStore } from "./store/useUIStore";
 import { checkAppVersion } from "./utils/versionCheck.ts";
 import { tagsService } from "./features/favorites/TagsService";
+import { listenForClearAllData } from "./utils/clearAllDataSignal";
 
 // Perform version check and cleanup BEFORE anything else
 checkAppVersion();
+
+// 其他分頁按「清除所有資料」時,本分頁封住寫入並重新載入(否則記憶體中的舊資料會被寫回)
+listenForClearAllData();
 
 // Initialize Tags (Defaults + Migration)
 tagsService.initializeDefaults();

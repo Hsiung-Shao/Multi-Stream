@@ -48,6 +48,17 @@ describe('entry-server：實際渲染（Node，無 DOM）', () => {
         expect(zh).not.toMatch(/載入中/);
     }, 30_000);
 
+    // 2026-10 合併後檢查：正式站預渲染頁的中文字之間夾著 NUL（React 18 串流輸出），屬性值裡會變成 �
+    it('預渲染輸出不含 NUL 字元', async () => {
+        const pages = await Promise.all([
+            render(guidePath('canvas'), 'zh-TW'),
+            render(guidePath('dynamic-island'), 'zh-TW'),
+            render('/privacy', 'en'),
+            render('/about', 'zh-TW'),
+        ]);
+        for (const html of pages) expect(html.includes('\0')).toBe(false);
+    }, 60_000);
+
     it('教學文章與首頁、比較頁、開發者頁各自有不同的 H1', async () => {
         const [home, share, compare, creator] = await Promise.all([
             render('/', 'en'),

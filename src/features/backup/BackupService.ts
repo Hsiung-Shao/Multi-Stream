@@ -48,7 +48,18 @@ export class BackupService {
             };
 
             request.onsuccess = () => {
-                this.db = request.result;
+                const db = request.result;
+                // 其他分頁要刪除這個 DB(「清除所有資料」)時讓出連線,否則對方的 deleteDatabase 會卡在 blocked
+                db.onversionchange = () => {
+                    db.close();
+                    if (this.db === db) this.db = null;
+                    // 排定中的備份會 init() 把剛刪掉的 DB 重開、寫回舊資料(收不到廣播的舊瀏覽器分頁)
+                    if (this.backupTimeout) {
+                        window.clearTimeout(this.backupTimeout);
+                        this.backupTimeout = null;
+                    }
+                };
+                this.db = db;
                 resolve(true);
             };
 

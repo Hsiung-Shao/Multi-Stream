@@ -78,7 +78,7 @@ export const useHotkeys = () => {
         }
 
         // Layout Switching: Alt + 1-6, 9
-        // 套用動態島布局清單「僅串流」分頁裡同路數的版型（對應見 templateIdForLayoutType）；7、8 沒有對應快捷鍵
+        // 套用動態島布局清單裡同路數的版型（有聊天室時保留聊天室，選法見 useStreamStore.setLayout）；7、8 沒有對應快捷鍵
         if (e.altKey && !e.ctrlKey && !e.shiftKey) {
             // 先看實體鍵位：Mac 的 Option+數字 e.key 是特殊符號（Option+2 = ™），只靠 e.key 收不到數字
             const digit = /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];

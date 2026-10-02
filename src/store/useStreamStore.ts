@@ -749,10 +749,22 @@ export const useStreamStore = create<StreamStoreState>()(
                 set((state) => {
                     const changes: Partial<StreamStoreState> = isUserAction ? { layout, userLayout: layout } : { layout };
 
-                    // 畫布模式：Alt+數字與動態島布局清單走同一條路——套用「僅串流」分頁裡對應路數的版型。
+                    // 畫布模式：Alt+數字與動態島布局清單走同一條路——套用對應路數的版型。
                     // 版型產生的是 24×24 網格單位；別再用像素算寬高（舊 generateStandardLayout 曾把 2×2 算成 720 格寬）
+                    // 畫布上有聊天室時沿用同類版型（共用聊天室 → N-sharedchat、逐路聊天室 → N-chat），
+                    // 否則一律套「僅串流」會把聊天室整個拿掉。沒有對應版型才退回僅串流：
+                    // 逐路聊天室沒有 5、9 路；共用聊天室只有 2～4 路（1 路用 1-chat，其他路數不改成逐路，免得一次冒出 6 個聊天室）
                     if (state.layoutMode === 'canvas') {
-                        const template = layoutTemplates.find(t => t.id === templateIdForLayoutType(layout));
+                        const candidates: string[] = [];
+                        if (state.canvasItems.some(i => i.type === 'chat')) {
+                            if (!isSharedChatLayout(state.canvasItems)) candidates.push(`template-${layout}-chat`);
+                            else if (layout === 1) candidates.push('template-1-chat');
+                            else candidates.push(`template-${layout}-sharedchat`);
+                        }
+                        candidates.push(templateIdForLayoutType(layout));
+                        const template = candidates
+                            .map(id => layoutTemplates.find(t => t.id === id))
+                            .find((t): t is LayoutTemplate => !!t);
                         if (template) changes.canvasItems = buildTemplateCanvasItems(state, template);
                     }
 

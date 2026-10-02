@@ -82,7 +82,9 @@ async function renderNow(route: string, lang: PrerenderLang): Promise<string> {
             if (errors.length > 0) {
                 reject(errors[0] instanceof Error ? errors[0] : new Error(String(errors[0])));
             } else {
-                resolve(html);
+                // React 18 Fizz 的串流輸出會在多位元組字元附近夾帶 U+0000（文字本身完整、只是多插了 NUL）；
+                // 落在屬性值裡（如 title）瀏覽器會顯示成 �，爬蟲也會讀到。本站文字不會有合法的 NUL，直接移除
+                resolve(html.replace(/\0/g, ''));
             }
         });
 
