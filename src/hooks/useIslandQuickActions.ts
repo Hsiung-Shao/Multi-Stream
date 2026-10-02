@@ -28,7 +28,7 @@ export function useIslandQuickActions() {
     const toggleFullscreen = () => {
         if (!getFullscreenElement()) {
             requestFullscreen(document.documentElement).catch(() => {
-                toast.error('無法進入全螢幕');
+                toast.error(t('common.fullscreen_failed'));
             });
         } else {
             exitFullscreen().catch(() => {
@@ -68,7 +68,7 @@ export function useIslandQuickActions() {
                 }
             }
 
-            toast.success(t('favorites:batch_save_success_simple', { count: successCount }) || `已收藏 ${successCount} 個串流`);
+            toast.success(t('favorites:batch_save_success_simple', { count: successCount }));
 
         } catch {
             console.error('Quick save failed');

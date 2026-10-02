@@ -49,7 +49,7 @@ const tutorial = {
   'features.search.enter.p1': '検索ボックスで Enter を押すと、次の順に判定します：矢印キーで結果を選択していればその結果を追加、URL を入力していればその URL を追加、文字を入力していれば今回の検索結果の 1 件目を追加します。Twitch モードで今回の検索結果がまだない場合（検索が終わる前に Enter を押した、または該当なし）は、入力した文字をチャンネル名としてそのまま追加します。YouTube モードで結果がない場合は、Enter を押しても再検索するだけです。↑ ↓ で結果を移動し、Esc で一覧を閉じます。',
   'features.search.troubleshoot': 'トラブルシューティング',
   'features.search.troubleshoot.s1': '名前を入力しても結果が出ない：結果がない場合、一覧は「見つかりません」などを表示せずにそのまま閉じます。検索先（Twitch／YouTube）が正しいか確認してください。YouTube モードでは、サイトに収録済みのチャンネルしか見つかりません。',
-  'features.search.troubleshoot.s2': '右上に「⚠️ Twitch API 速率限制」（Twitch API のレート制限）という黄色の通知が出る：短時間に Twitch への問い合わせが多すぎます（検索とお気に入りの配信確認を合わせて 60 秒あたり最大 30 回）。通知に表示された秒数が過ぎてから検索し直してください。同じキーワードは 60 秒以内なら前回の結果をそのまま使います。',
+  'features.search.troubleshoot.s2': '右上に「⚠️ Twitch API のレート制限」という黄色の通知が出る：短時間に Twitch への問い合わせが多すぎます（検索とお気に入りの配信確認を合わせて 60 秒あたり最大 30 回）。通知に表示された秒数が過ぎてから検索し直してください。同じキーワードは 60 秒以内なら前回の結果をそのまま使います。',
   'features.search.troubleshoot.s3': 'URL を貼ると「YouTubeのURLを解析できません」と表示される：たいていはチャンネルページかショートを貼っています。配信動画そのものの URL（watch?v= または youtu.be）を貼り直してください。',
   'features.search.troubleshoot.s4': '同じ配信が 2 回追加された：URL は文字列全体で比較されるため、twitch.tv/x と https://www.twitch.tv/x は別の入力として扱われます。余分なウィンドウはカーソルを重ねて Delete を押すと削除できます。',
   'features.search.troubleshoot.s5': 'すでに 16 件ある：キャンバスで同時に再生できる配信は最大 16 件です。追加する前にいくつか削除してください。',

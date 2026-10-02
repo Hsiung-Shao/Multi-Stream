@@ -80,7 +80,9 @@ const FavChooser = ({
     onClose: () => void;
     footer?: React.ReactNode;
     children: React.ReactNode;
-}) => (
+}) => {
+    const { t } = useTranslation('common');
+    return (
     <div>
         <div className="flex items-center justify-between" style={{ padding: '10px 12px 6px' }}>
             <span
@@ -92,8 +94,8 @@ const FavChooser = ({
             <button
                 type="button"
                 onClick={onClose}
-                title="返回"
-                aria-label="返回"
+                title={t('common.back')}
+                aria-label={t('common.back')}
                 className="inline-flex items-center justify-center"
                 style={{ width: 24, height: 24, borderRadius: 7, border: 0, background: 'transparent', color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}
             >
@@ -108,7 +110,8 @@ const FavChooser = ({
         </div>
         {footer && <div style={{ padding: 10, borderTop: '1px solid rgba(255,255,255,0.08)' }}>{footer}</div>}
     </div>
-);
+    );
+};
 
 export const IslandFavoritesMenu = ({
     children,
@@ -187,7 +190,7 @@ export const IslandFavoritesMenu = ({
 
         const addedCount = await loadFavoritesToCanvas(favorites.filter(f => selectedStreams.includes(f.id)));
 
-        toast.success(t('favorites:added_count', { count: addedCount }) || `已載入 ${addedCount} 個頻道`);
+        toast.success(t('favorites:added_count', { count: addedCount }));
         setSelectedStreams([]);
         setIsOpen(false);
     };
@@ -201,13 +204,13 @@ export const IslandFavoritesMenu = ({
 
         // Limit to avoid overload?
         if (catStreams.length > 9) {
-            if (!confirm(t('favorites:confirm_load_large', { count: catStreams.length }) || `確定要載入 ${catStreams.length} 個頻道嗎？可能會造成卡頓`)) {
+            if (!confirm(t('favorites:confirm_load_large', { count: catStreams.length }))) {
                 return;
             }
         }
 
         const addedCount = await loadFavoritesToCanvas(catStreams);
-        toast.success(t('favorites:added_count', { count: addedCount }) || `已載入 ${addedCount} 個頻道`);
+        toast.success(t('favorites:added_count', { count: addedCount }));
         setIsOpen(false);
     };
 
@@ -462,7 +465,7 @@ export const IslandFavoritesMenu = ({
                             size="sm"
                         >
                             <Play size={14} className="fill-current" />
-                            {t('favorites:load_selected_count', { count: selectedStreams.length }) || `載入 ${selectedStreams.length} 個頻道`}
+                            {t('favorites:load_selected_count', { count: selectedStreams.length })}
                         </Button>
                     </div>
                 )}

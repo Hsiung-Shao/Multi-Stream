@@ -54,6 +54,7 @@ const faq = {
   'foot_home': 'Home',
   'foot_about': 'About',
   'foot_privacy': 'Privacy Policy',
+    'search_clear': 'Clear search',
 };
 
 export default faq;

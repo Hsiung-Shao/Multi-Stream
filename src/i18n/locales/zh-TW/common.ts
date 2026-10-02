@@ -12,7 +12,7 @@ const common = {
   'restore_session.desc': '偵測到你剛剛還有 {{count}} 個正在觀看的串流(含布局與頻道位置)。要恢復嗎?',
   'restore_session.restart': '重新開始',
   'restore_session.restore': '恢復',
-  'common.save': '保存',
+  'common.save': '儲存',
   'common.play': '觀看',
   'common.edit': '編輯',
   'common.delete': '刪除',
@@ -382,6 +382,17 @@ const common = {
   'common.no_data': '沒有符合的資料',
   'landing.aria.toggle_theme': '切換深色／淺色模式',
   'landing.aria.language': '選擇語言',
+  'common.retry': '重試',
+  'common.fullscreen_failed': '無法進入全螢幕',
+  'chat.load_failed': '無法載入聊天室',
+  'layout.save_dialog_desc': '將目前的視窗排列方式儲存為模板，以便日後快速套用。',
+  'layout.save_dialog_name': '名稱',
+  'layout.save_dialog_placeholder': '例如：FPS 觀戰模式',
+  'media.mute_stream': '靜音',
+  'media.unmute_stream': '取消靜音',
+  'media.stream_fallback_name': '串流 #{{id}}',
+  'chat.not_configured': '這個視窗沒有設定聊天室',
+  'common.got_it': '我知道了',
 };
 
 export default common;

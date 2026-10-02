@@ -384,6 +384,17 @@ const common = {
   'common.no_data': '該当するデータがありません',
   'landing.aria.toggle_theme': 'ダーク／ライトモードを切り替え',
   'landing.aria.language': '言語を選択',
+  'common.retry': '再試行',
+  'common.fullscreen_failed': '全画面にできませんでした',
+  'chat.load_failed': 'チャットを読み込めませんでした',
+  'layout.save_dialog_desc': '現在のウィンドウ配置をテンプレートとして保存し、あとですばやく適用できます。',
+  'layout.save_dialog_name': '名前',
+  'layout.save_dialog_placeholder': '例：FPS 観戦モード',
+  'media.mute_stream': 'ミュート',
+  'media.unmute_stream': 'ミュート解除',
+  'media.stream_fallback_name': '配信 #{{id}}',
+  'chat.not_configured': 'このウィンドウにはチャットが設定されていません',
+  'common.got_it': 'わかりました',
 };
 
 export default common;

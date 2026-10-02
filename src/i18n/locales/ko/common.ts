@@ -384,6 +384,17 @@ const common = {
   'common.no_data': '일치하는 데이터가 없습니다',
   'landing.aria.toggle_theme': '다크/라이트 모드 전환',
   'landing.aria.language': '언어 선택',
+  'common.retry': '다시 시도',
+  'common.fullscreen_failed': '전체 화면으로 전환할 수 없습니다',
+  'chat.load_failed': '채팅을 불러올 수 없습니다',
+  'layout.save_dialog_desc': '현재 창 배치를 템플릿으로 저장해 나중에 빠르게 적용할 수 있습니다.',
+  'layout.save_dialog_name': '이름',
+  'layout.save_dialog_placeholder': '예: FPS 관전 모드',
+  'media.mute_stream': '음소거',
+  'media.unmute_stream': '음소거 해제',
+  'media.stream_fallback_name': '스트림 #{{id}}',
+  'chat.not_configured': '이 창에는 채팅이 설정되어 있지 않습니다',
+  'common.got_it': '확인',
 };
 
 export default common;

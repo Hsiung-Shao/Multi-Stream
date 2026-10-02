@@ -220,5 +220,19 @@ export default {
   autoLoadDesc: '儲存收藏的同時,把這台開到多視窗',
   addAndLoad: '新增並載入',
   'tagWellPlaceholder': '選擇或搜尋標籤…',
+
+  // Manager toasts / bulk load
+  categoryDeleted: '分類已刪除',
+  tagAdded: '標籤已新增',
+  tagUpdated: '標籤已更新',
+  tagDeleted: '標籤已刪除',
+  refreshLiveStatus: '重新整理直播狀態',
+  batchImportDone: '批量匯入完成',
+  loadMultipleSuccess: '成功載入 {{count}} 個收藏',
+  loadMultipleSuccessWithFail: '成功載入 {{success}} 個收藏，失敗 {{fail}} 個',
+  'failedToAddStream': '無法新增串流。',
+  'invalidFavoriteItem': '這筆收藏沒有可載入的頻道或連結。',
+  'noFavoritesToLoad': '沒有可載入的收藏。',
+  'batchAddTagsDesc': '為 {{count}} 個項目加入以下標籤（附加模式，保留原有標籤）：',
 };
 

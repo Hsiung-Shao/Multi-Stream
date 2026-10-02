@@ -382,6 +382,17 @@ const common = {
   'common.no_data': 'No matching results',
   'landing.aria.toggle_theme': 'Toggle dark/light mode',
   'landing.aria.language': 'Select language',
+  'common.retry': 'Retry',
+  'common.fullscreen_failed': 'Couldn\'t enter fullscreen',
+  'chat.load_failed': 'Couldn\'t load chat',
+  'layout.save_dialog_desc': 'Save the current window arrangement as a template so you can apply it quickly later.',
+  'layout.save_dialog_name': 'Name',
+  'layout.save_dialog_placeholder': 'e.g. FPS spectator mode',
+  'media.mute_stream': 'Mute',
+  'media.unmute_stream': 'Unmute',
+  'media.stream_fallback_name': 'Stream #{{id}}',
+  'chat.not_configured': 'No chat for this window',
+  'common.got_it': 'Got it',
 };
 
 export default common;

@@ -13,7 +13,15 @@ const stream = {
     'fetch_video_error': '동영상 정보를 가져올 수 없습니다',
     'channel_id_invalid': '유효하지 않은 channelId',
     'channel_not_found': '채널을 찾을 수 없습니다',
-    'fetch_channel_error': '채널 제목을 가져올 수 없습니다'
+    'fetch_channel_error': '채널 제목을 가져올 수 없습니다',
+    'already_exists': '이미 추가된 스트림입니다',
+    'twitch_api_timeout': 'Twitch API 요청 시간이 초과되었습니다(10초). 네트워크 상태를 확인해 주세요',
+    'twitch_api_network': 'Twitch API에 연결할 수 없습니다. 네트워크 연결을 확인해 주세요',
+    'twitch_api_rate_limited': 'Twitch API 요청 한도: {{seconds}}초 후에 다시 시도해 주세요',
+    'twitch_api_too_many_requests': 'API 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요',
+    'twitch_api_request_failed': 'API 요청 실패: {{status}} {{statusText}}',
+    'twitch_rate_limit_title': 'Twitch API 요청 한도',
+    'twitch_rate_limit_body': 'Twitch API 분당 요청 한도에 도달했습니다. {{seconds}}초 후에 다시 시도해 주세요.'
 };
 
 export default stream;

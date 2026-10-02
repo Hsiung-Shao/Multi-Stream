@@ -38,7 +38,7 @@ interface FavoritesManagerMainProps {
 }
 
 export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainProps) {
-    const { t } = useTranslation(['favorites', 'common', 'tags']);
+    const { t } = useTranslation(['favorites', 'common', 'tags', 'navbar']);
 
     // --- State ---
     const initialTab = useUIStore.getState().favoritesTab || 'favorites';
@@ -158,7 +158,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     };
 
     const handleBatchDelete = () => {
-        if (confirm(t('confirmDeleteCount', { count: selectedIds.size }) || `確定要刪除選定的 ${selectedIds.size} 項嗎？`)) {
+        if (confirm(t('confirmDeleteCount', { count: selectedIds.size }))) {
             selectedIds.forEach(id => favoritesService.removeFavorite(id));
             setSelectedIds(new Set());
             loadData();
@@ -258,7 +258,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
             favoritesService.removeCategory(categoryToDelete);
             loadData();
             if (activeFilter === categoryToDelete) setActiveFilter('all');
-            toast.info('分類已刪除');
+            toast.info(t('categoryDeleted'));
         }
         setDeleteCategoryConfirmOpen(false);
         setCategoryToDelete(null);
@@ -284,11 +284,11 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                 name: newTagName.trim(),
                 color: newTagColor
             });
-            toast.success('標籤已更新');
+            toast.success(t('tagUpdated'));
             setEditingTagId(null);
         } else {
             tagsService.addTag(newTagName.trim(), newTagColor);
-            toast.success('標籤已新增');
+            toast.success(t('tagAdded'));
         }
 
         setNewTagName('');
@@ -319,7 +319,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
             tagsService.removeTag(tagToDelete);
             loadData();
             if (activeFilter === `tag:${tagToDelete}`) setActiveFilter('all');
-            toast.info('標籤已刪除');
+            toast.info(t('tagDeleted'));
         }
         setDeleteTagConfirmOpen(false);
         setTagToDelete(null);
@@ -337,7 +337,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
         clearToken();
         setActiveTab('favorites');
         logEvent('Favorites', 'twitch_import', 'count', imported);
-        toast.success(`成功匯入 ${imported} 個頻道`);
+        toast.success(t('importSuccess', { count: imported }));
     };
 
     return (
@@ -392,7 +392,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                             className="gap-2"
                                         >
                                             <RotateCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                            {isRefreshing ? '檢查中...' : '重新整理直播狀態'}
+                                            {isRefreshing ? t('navbar:resolvingLive') : t('refreshLiveStatus')}
                                         </Button>
                                     </div>
                                 )}
@@ -439,7 +439,7 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
                                 onSuccess={() => {
                                     loadData();
                                     setActiveTab('favorites');
-                                    toast.success('批量匯入完成');
+                                    toast.success(t('batchImportDone'));
                                 }}
                             />
                         )}

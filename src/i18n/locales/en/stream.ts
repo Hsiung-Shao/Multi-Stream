@@ -13,7 +13,15 @@ const stream = {
     'fetch_video_error': 'Unable to retrieve video information',
     'channel_id_invalid': 'Invalid channelId',
     'channel_not_found': 'Channel not found',
-    'fetch_channel_error': 'Unable to retrieve channel title'
+    'fetch_channel_error': 'Unable to retrieve channel title',
+    'already_exists': 'This stream has already been added',
+    'twitch_api_timeout': 'Twitch API request timed out (10s). Please check your network',
+    'twitch_api_network': 'Unable to connect to the Twitch API. Please check your internet connection',
+    'twitch_api_rate_limited': 'Twitch API rate limit: please wait {{seconds}} seconds and try again',
+    'twitch_api_too_many_requests': 'Too many API requests. Please try again later',
+    'twitch_api_request_failed': 'API request failed: {{status}} {{statusText}}',
+    'twitch_rate_limit_title': 'Twitch API rate limit',
+    'twitch_rate_limit_body': 'The Twitch API per-minute request limit has been reached. Please wait {{seconds}} seconds and try again.'
 };
 
 export default stream;

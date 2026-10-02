@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogContent,
@@ -18,6 +19,7 @@ interface SaveLayoutDialogProps {
 }
 
 export const SaveLayoutDialog: React.FC<SaveLayoutDialogProps> = ({ open, onOpenChange }) => {
+    const { t } = useTranslation('common');
     const [name, setName] = useState('');
     const saveCustomLayout = useStreamStore(state => state.saveCustomLayout);
 
@@ -32,28 +34,28 @@ export const SaveLayoutDialog: React.FC<SaveLayoutDialogProps> = ({ open, onOpen
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>儲存目前布局</DialogTitle>
+                    <DialogTitle>{t('common.save_layout')}</DialogTitle>
                     <DialogDescription>
-                        將目前的視窗排列方式儲存為模板，以便日後快速套用。
+                        {t('layout.save_dialog_desc')}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right">
-                            名稱
+                            {t('layout.save_dialog_name')}
                         </Label>
                         <Input
                             id="name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="col-span-3"
-                            placeholder="例如：FPS 觀戰模式"
+                            placeholder={t('layout.save_dialog_placeholder')}
                         />
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
-                    <Button onClick={handleSave} disabled={!name.trim()}>儲存</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
+                    <Button onClick={handleSave} disabled={!name.trim()}>{t('common.save')}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

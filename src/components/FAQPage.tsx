@@ -202,7 +202,7 @@ export function FAQPage() {
                             placeholder={tx('faq:search_placeholder', { defaultValue: '搜尋問題,例如「Brave」、「效能」、「YouTube」…' })}
                         />
                         {query && (
-                            <button className="faq-search-clear" onClick={() => setQuery('')} aria-label="清除搜尋">
+                            <button className="faq-search-clear" onClick={() => setQuery('')} aria-label={tx('faq:search_clear')}>
                                 <X size={15} />
                             </button>
                         )}
@@ -231,8 +231,8 @@ export function FAQPage() {
                 {q && (
                     <div className="faq-meta">
                         {matchCount > 0
-                            ? tx('faq:search_found', { defaultValue: `找到 ${matchCount} 則符合「${query}」的問題`, count: matchCount, query })
-                            : tx('faq:search_none', { defaultValue: `沒有符合「${query}」的問題`, query })}
+                            ? tx('faq:search_found', { count: matchCount, query })
+                            : tx('faq:search_none', { query })}
                     </div>
                 )}
 

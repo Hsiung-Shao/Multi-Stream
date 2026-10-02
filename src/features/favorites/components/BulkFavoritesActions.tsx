@@ -219,7 +219,7 @@ export function BulkFavoritesActions({
                     </DialogHeader>
                     <div className="py-4">
                         <p className="text-sm text-gray-500 mb-4">
-                            {t('batchAddTagsConfirm', { count: selectedIds.length }) || `為 ${selectedIds.length} 個項目加入以下標籤（附加模式）：`}
+                            {t('batchAddTagsDesc', { count: selectedIds.length })}
                         </p>
 
                         {/* Tag Selector */}

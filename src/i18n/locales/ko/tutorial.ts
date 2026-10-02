@@ -49,7 +49,7 @@ const tutorial = {
   'features.search.enter.p1': '검색창에서 Enter를 누르면 다음 순서로 판단합니다. 방향키로 결과 하나를 선택했다면 그 결과를 추가하고, URL을 입력했다면 그 URL을 바로 추가하며, 글자를 입력했다면 이번 검색의 첫 번째 결과를 추가합니다. Twitch 모드에서 이번 검색에 아직 결과가 없으면(검색이 끝나기 전에 Enter를 눌렀거나 결과가 없을 때) 입력한 글자를 채널 이름으로 바로 추가합니다. YouTube 모드에서 결과가 없으면 Enter는 다시 검색만 합니다. ↑ ↓로 결과 사이를 이동하고 Esc로 목록을 닫습니다.',
   'features.search.troubleshoot': '문제 해결',
   'features.search.troubleshoot.s1': '이름을 입력했는데 결과가 나오지 않음: 결과가 없으면 목록이 그냥 닫히며 "찾을 수 없음" 같은 메시지는 표시되지 않습니다. 검색 대상(Twitch／YouTube)이 맞게 선택되었는지 확인하세요. YouTube 모드는 사이트에 수록된 채널만 찾습니다.',
-  'features.search.troubleshoot.s2': '오른쪽 위에 제목이 "⚠️ Twitch API 速率限制"(Twitch API 요청 한도)인 노란 알림이 뜸: 짧은 시간에 Twitch 조회가 너무 많았습니다(검색과 즐겨찾기 방송 확인을 합쳐 60초에 최대 30회). 알림에 표시된 초가 지난 뒤 다시 검색하세요. 같은 검색어는 60초 안에는 이전 결과를 그대로 사용합니다.',
+  'features.search.troubleshoot.s2': '오른쪽 위에 제목이 "⚠️ Twitch API 요청 한도"인 노란 알림이 뜸: 짧은 시간에 Twitch 조회가 너무 많았습니다(검색과 즐겨찾기 방송 확인을 합쳐 60초에 최대 30회). 알림에 표시된 초가 지난 뒤 다시 검색하세요. 같은 검색어는 60초 안에는 이전 결과를 그대로 사용합니다.',
   'features.search.troubleshoot.s3': 'URL을 붙여 넣은 뒤 "YouTube URL을 분석할 수 없습니다"가 표시됨: 대개 채널 페이지나 Shorts를 붙여 넣은 경우입니다. 방송 영상 자체의 주소(watch?v= 또는 youtu.be)를 붙여 넣으세요.',
   'features.search.troubleshoot.s4': '같은 방송이 두 번 추가됨: 시스템은 전체 URL을 비교하므로 twitch.tv/x와 https://www.twitch.tv/x는 서로 다른 입력으로 취급됩니다. 남는 창에 커서를 올리고 Delete를 눌러 제거하세요.',
   'features.search.troubleshoot.s5': '이미 16개: 캔버스는 동시에 최대 16개 방송까지 재생하므로, 먼저 몇 개를 제거해야 더 추가할 수 있습니다.',

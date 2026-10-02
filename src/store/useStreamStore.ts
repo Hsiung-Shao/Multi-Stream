@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { useUIStore } from './useUIStore';
 import { StreamData, parseStreamUrl, validateUrl } from '../utils/streamUtils';
+import i18n from '../i18n/i18n';
 import { youtubeApi } from '../utils/youtubeApi';
 import { upsertChannel } from '../features/youtube/YouTubeChannelRepository';
 import { ChatLayoutType } from '../utils/chatLayoutUtils';
@@ -207,20 +208,20 @@ export const useStreamStore = create<StreamStoreState>()(
                         if (!finalUrl.includes('.') && !finalUrl.includes('/')) {
                             finalUrl = `https://twitch.tv/${finalUrl}`;
                         } else {
-                            return { success: false, message: '不支援的網址格式' };
+                            return { success: false, message: i18n.t('stream:url_invalid_format') };
                         }
                     }
 
                     const streamData = parseStreamUrl(finalUrl);
 
                     if (!streamData || !streamData.platform) {
-                        return { success: false, message: streamData?.error || '無法解析網址' };
+                        return { success: false, message: streamData?.error || i18n.t('stream:url_invalid_format') };
                     }
 
                     // 2. Check Duplicates
                     const existing = state.streams.find(s => s.originalUrl === finalUrl);
                     if (existing) {
-                        return { success: false, message: '此串流已存在', streamId: existing.id };
+                        return { success: false, message: i18n.t('stream:already_exists'), streamId: existing.id };
                     }
 
                     // Create new Stream Object

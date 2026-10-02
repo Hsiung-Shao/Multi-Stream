@@ -217,5 +217,19 @@ export default {
   save_entire_canvas: '現在のキャンバスを保存',
   batch_save_success_simple: '{{count}} 個のストリームを保存しました',
   'tagWellPlaceholder': 'タグを選択または検索…',
+
+  // Manager toasts / bulk load
+  categoryDeleted: 'カテゴリを削除しました',
+  tagAdded: 'タグを追加しました',
+  tagUpdated: 'タグを更新しました',
+  tagDeleted: 'タグを削除しました',
+  refreshLiveStatus: '配信状態を更新',
+  batchImportDone: '一括インポートが完了しました',
+  loadMultipleSuccess: '{{count}} 件のお気に入りを読み込みました',
+  loadMultipleSuccessWithFail: '{{success}} 件のお気に入りを読み込みました（{{fail}} 件失敗）',
+  'failedToAddStream': '配信を追加できませんでした。',
+  'invalidFavoriteItem': 'このお気に入りには読み込めるチャンネルやリンクがありません。',
+  'noFavoritesToLoad': '読み込めるお気に入りがありません。',
+  'batchAddTagsDesc': '{{count}} 件に次のタグを追加します（既存のタグは残ります）：',
 };
 

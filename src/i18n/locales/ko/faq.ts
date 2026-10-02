@@ -54,6 +54,7 @@ const faq = {
   'foot_home': '홈',
   'foot_about': '소개',
   'foot_privacy': '개인정보 처리방침',
+    'search_clear': '검색 지우기',
 };
 
 export default faq;

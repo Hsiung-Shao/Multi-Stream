@@ -217,5 +217,19 @@ export default {
   save_entire_canvas: '一键收藏当前画布',
   batch_save_success_simple: '已收藏 {{count}} 个直播流',
   'tagWellPlaceholder': '选择或搜索标签…',
+
+  // Manager toasts / bulk load
+  categoryDeleted: '分类已删除',
+  tagAdded: '标签已添加',
+  tagUpdated: '标签已更新',
+  tagDeleted: '标签已删除',
+  refreshLiveStatus: '刷新直播状态',
+  batchImportDone: '批量导入完成',
+  loadMultipleSuccess: '成功加载 {{count}} 个收藏',
+  loadMultipleSuccessWithFail: '成功加载 {{success}} 个收藏，失败 {{fail}} 个',
+  'failedToAddStream': '无法添加串流。',
+  'invalidFavoriteItem': '这条收藏没有可加载的频道或链接。',
+  'noFavoritesToLoad': '没有可加载的收藏。',
+  'batchAddTagsDesc': '为 {{count}} 个项目添加以下标签（追加模式，保留原有标签）：',
 };
 

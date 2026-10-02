@@ -13,7 +13,15 @@ const stream = {
     'fetch_video_error': '無法獲取影片資訊',
     'channel_id_invalid': '無效的 channelId',
     'channel_not_found': '找不到該頻道',
-    'fetch_channel_error': '無法獲取頻道標題'
+    'fetch_channel_error': '無法獲取頻道標題',
+    'already_exists': '此串流已存在',
+    'twitch_api_timeout': 'Twitch API 請求逾時 (10s)，請檢查網路狀況',
+    'twitch_api_network': '無法連接到 Twitch API，請檢查網路連線',
+    'twitch_api_rate_limited': 'Twitch API 速率限制：請等待 {{seconds}} 秒後再試',
+    'twitch_api_too_many_requests': 'API 請求過於頻繁，請稍後再試',
+    'twitch_api_request_failed': 'API 請求失敗：{{status}} {{statusText}}',
+    'twitch_rate_limit_title': 'Twitch API 速率限制',
+    'twitch_rate_limit_body': 'Twitch API 每分鐘請求次數已達上限，請等待 {{seconds}} 秒後再試。'
 };
 
 export default stream;

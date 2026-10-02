@@ -1,4 +1,5 @@
 import { TwitchApiConfig, TwitchClientContract, TokenProviderContract, RateLimitNotifierContract } from './types.ts';
+import i18n from '../../i18n/i18n';
 
 export class TwitchClient implements TwitchClientContract {
     private requestHistory: number[] = [];
@@ -93,11 +94,11 @@ export class TwitchClient implements TwitchClientContract {
 
             // Check for AbortError (Timeout)
             if ((error as Error).name === 'AbortError') {
-                throw new Error('Twitch API 請求逾時 (10s)，請檢查網路狀況');
+                throw new Error(i18n.t('stream:twitch_api_timeout'));
             }
 
             if ((error as Error).name === 'TypeError' && (error as Error).message.includes('fetch')) {
-                throw new Error('無法連接到 Twitch API，請檢查網路連線');
+                throw new Error(i18n.t('stream:twitch_api_network'));
             }
             throw error;
         }
@@ -117,7 +118,7 @@ export class TwitchClient implements TwitchClientContract {
             const waitSeconds = Math.ceil((resetTime - now) / 1000);
 
             this.rateLimitNotifier.notify(waitSeconds);
-            throw new Error(`Twitch API 速率限制：請等待 ${waitSeconds} 秒後再試`);
+            throw new Error(i18n.t('stream:twitch_api_rate_limited', { seconds: waitSeconds }));
         }
 
         this.requestHistory.push(now);
@@ -151,10 +152,10 @@ export class TwitchClient implements TwitchClientContract {
             throw new Error('Twitch API 認證失敗，請檢查 Client ID 和 Client Secret 設定');
         }
 
-        if (res.status === 429) throw new Error('API 請求過於頻繁，請稍後再試');
+        if (res.status === 429) throw new Error(i18n.t('stream:twitch_api_too_many_requests'));
         if (res.status === 404) return null;
 
-        throw new Error(`API 請求失敗：${res.status} ${res.statusText}`);
+        throw new Error(i18n.t('stream:twitch_api_request_failed', { status: res.status, statusText: res.statusText }));
     }
 
     private buildUrl(baseUrl: string, endpoint: string, params: Record<string, any>): string {

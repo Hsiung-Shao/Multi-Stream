@@ -218,4 +218,18 @@ export default {
   autoLoadDesc: 'Open this channel into the multi-view as you save it',
   addAndLoad: 'Add & Load',
   'tagWellPlaceholder': 'Select or search tags…',
+
+  // Manager toasts / bulk load
+  categoryDeleted: 'Category deleted',
+  tagAdded: 'Tag added',
+  tagUpdated: 'Tag updated',
+  tagDeleted: 'Tag deleted',
+  refreshLiveStatus: 'Refresh live status',
+  batchImportDone: 'Batch import complete',
+  loadMultipleSuccess: 'Loaded {{count}} favorite(s)',
+  loadMultipleSuccessWithFail: 'Loaded {{success}} favorite(s), {{fail}} failed',
+  'failedToAddStream': 'Could not add the stream.',
+  'invalidFavoriteItem': 'This favorite has no channel or link to load.',
+  'noFavoritesToLoad': 'There are no favorites to load.',
+  'batchAddTagsDesc': 'Add the tags below to {{count}} item(s) (existing tags are kept):',
 };

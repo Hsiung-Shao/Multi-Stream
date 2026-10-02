@@ -249,7 +249,7 @@ const common = {
   'hotkeys.layouts': '切换布局 (Alt + 1-6、9)',
   'hotkeys.quick_save': '快速保存布局',
   'hotkeys.master_mute': '全局静音切换',
-  'hotkeys.window_reload': '重新整理串流',
+  'hotkeys.window_reload': '重新加载串流',
   'hotkeys.window_mute': '静音/取消静音',
   'hotkeys.window_remove': '移除视窗',
   'hotkeys.window_fullscreen': '视窗全屏幕',
@@ -384,6 +384,17 @@ const common = {
   'common.no_data': '没有符合的数据',
   'landing.aria.toggle_theme': '切换深色／浅色模式',
   'landing.aria.language': '选择语言',
+  'common.retry': '重试',
+  'common.fullscreen_failed': '无法进入全屏',
+  'chat.load_failed': '无法加载聊天室',
+  'layout.save_dialog_desc': '将当前的窗口排列方式保存为模板，以便日后快速套用。',
+  'layout.save_dialog_name': '名称',
+  'layout.save_dialog_placeholder': '例如：FPS 观战模式',
+  'media.mute_stream': '静音',
+  'media.unmute_stream': '取消静音',
+  'media.stream_fallback_name': '串流 #{{id}}',
+  'chat.not_configured': '这个窗口没有设置聊天室',
+  'common.got_it': '我知道了',
 };
 
 export default common;

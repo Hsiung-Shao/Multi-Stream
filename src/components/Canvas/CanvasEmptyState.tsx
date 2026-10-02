@@ -7,7 +7,7 @@ import { useFavorites } from '../../hooks/useFavorites';
 import { EmptyStateFavorites, isLiveFavorite } from './EmptyStateFavorites';
 
 export const CanvasEmptyState = () => {
-    const { t } = useTranslation('common');
+    const { t } = useTranslation(['common', 'favorites']);
     const [isVisible, setIsVisible] = useState(false);
     // 有收藏正在直播：輸入框下方改顯示「你的收藏」（只列直播中的）取代功能介紹；沒有就維持新手畫面
     const hasFavorites = useFavorites().favorites.some(isLiveFavorite);
@@ -19,53 +19,43 @@ export const CanvasEmptyState = () => {
     const tips = [
         {
             icon: <Search className="w-5 h-5 text-teal-400" />,
-            text: t('empty_state.tip_search') || "搜尋並快速加入直播頻道或是影片",
-            highlight: "搜尋"
+            text: t('empty_state.tip_search') || "搜尋並快速加入直播頻道或是影片"
         },
         {
             icon: <Plus className="w-5 h-5 text-blue-400" />,
-            text: t('empty_state.tip_add') || "點擊新增按鈕來加入直播、聊天室或預設組合",
-            highlight: "新增視窗"
+            text: t('empty_state.tip_add') || "點擊新增按鈕來加入直播、聊天室或預設組合"
         },
         {
             icon: <Layout className="w-5 h-5 text-green-400" />,
-            text: t('empty_state.tip_layout') || "使用佈局選單來選擇特定佈局模式",
-            highlight: "佈局設定"
+            text: t('empty_state.tip_layout') || "使用佈局選單來選擇特定佈局模式"
         },
         {
             icon: <Tv className="w-5 h-5 text-purple-400" />,
-            text: t('empty_state.tip_control') || "透過媒體控制面板統一管理音量與靜音狀態",
-            highlight: "媒體控制"
+            text: t('empty_state.tip_control') || "透過媒體控制面板統一管理音量與靜音狀態"
         },
         {
             icon: <Star className="w-5 h-5 text-yellow-400" />,
-            text: t('empty_state.tip_favorites_list') || "查看與管理您的收藏清單及群組",
-            highlight: "收藏清單"
+            text: t('empty_state.tip_favorites_list') || "查看與管理您的收藏清單及群組"
         },
         {
             icon: <FolderHeart className="w-5 h-5 text-pink-400" />,
-            text: t('empty_state.tip_save') || "將當前畫布配置一鍵儲存至收藏清單",
-            highlight: "一鍵收藏"
+            text: t('empty_state.tip_save') || "將當前畫布配置一鍵儲存至收藏清單"
         },
         {
             icon: <Maximize className="w-5 h-5 text-orange-400" />,
-            text: t('empty_state.tip_fullscreen') || "切換全螢幕模式以獲得最佳觀看體驗",
-            highlight: "全螢幕"
+            text: t('empty_state.tip_fullscreen') || "切換全螢幕模式以獲得最佳觀看體驗"
         },
         {
             icon: <Trash2 className="w-5 h-5 text-red-400" />,
-            text: t('empty_state.tip_clear') || "一鍵清空畫布上所有的視窗",
-            highlight: "清空畫布"
+            text: t('empty_state.tip_clear') || "一鍵清空畫布上所有的視窗"
         },
         {
             icon: <Home className="w-5 h-5 text-cyan-400" />,
-            text: t('empty_state.tip_home') || "返回首頁",
-            highlight: "回首頁"
+            text: t('empty_state.tip_home') || "返回首頁"
         },
         {
             icon: <Settings className="w-5 h-5 text-gray-400" />,
-            text: t('empty_state.tip_settings') || "調整全域設定與偏好選項",
-            highlight: "設定"
+            text: t('empty_state.tip_settings') || "調整全域設定與偏好選項"
         }
     ];
 

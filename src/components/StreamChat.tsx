@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getTwitchChatUrl, getYouTubeChatUrl } from '../utils/chatUtils';
 import { Button } from './ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -17,6 +18,7 @@ interface StreamChatProps {
 }
 
 export function StreamChat({ platform, channelId, videoId, className, theme, showToolbar = true }: StreamChatProps) {
+    const { t } = useTranslation('common');
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [retryCount, setRetryCount] = useState(0);
     const [isError, setIsError] = useState(false);
@@ -84,19 +86,19 @@ export function StreamChat({ platform, channelId, videoId, className, theme, sho
         src = getYouTubeChatUrl(videoId, theme);
     } else {
         // If missing IDs
-        return <div className="flex items-center justify-center h-full text-gray-400 text-xs">No Chat Configured</div>;
+        return <div className="flex items-center justify-center h-full text-gray-400 text-xs">{t('chat.not_configured')}</div>;
     }
 
     if (isError) {
         return (
             <div className="flex flex-col items-center justify-center h-full bg-gray-900 text-white p-4 text-center">
-                <span className="text-sm mb-2">無法載入聊天室</span>
+                <span className="text-sm mb-2">{t('chat.load_failed')}</span>
                 <Button size="sm" variant="outline" onClick={() => {
                     setRetryCount(0);
                     setIsError(false);
                     setLoadKey(prev => prev + 1);
                 }}>
-                    <RefreshCw className="w-3 h-3 mr-1" /> 重試
+                    <RefreshCw className="w-3 h-3 mr-1" /> {t('common.retry')}
                 </Button>
             </div>
         );

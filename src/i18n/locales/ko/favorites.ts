@@ -217,5 +217,19 @@ export default {
   save_entire_canvas: '현재 캔버스 저장',
   batch_save_success_simple: '스트림 {{count}}개를 저장했습니다',
   'tagWellPlaceholder': '태그 선택 또는 검색…',
+
+  // Manager toasts / bulk load
+  categoryDeleted: '리스트가 삭제되었습니다',
+  tagAdded: '태그가 추가되었습니다',
+  tagUpdated: '태그가 업데이트되었습니다',
+  tagDeleted: '태그가 삭제되었습니다',
+  refreshLiveStatus: '방송 상태 새로고침',
+  batchImportDone: '일괄 가져오기가 완료되었습니다',
+  loadMultipleSuccess: '즐겨찾기 {{count}}개를 불러왔습니다',
+  loadMultipleSuccessWithFail: '즐겨찾기 {{success}}개를 불러왔습니다. {{fail}}개는 실패했습니다',
+  'failedToAddStream': '스트림을 추가할 수 없습니다.',
+  'invalidFavoriteItem': '이 즐겨찾기에는 불러올 채널이나 링크가 없습니다.',
+  'noFavoritesToLoad': '불러올 즐겨찾기가 없습니다.',
+  'batchAddTagsDesc': '{{count}}개 항목에 아래 태그를 추가합니다(기존 태그는 유지):',
 };
 

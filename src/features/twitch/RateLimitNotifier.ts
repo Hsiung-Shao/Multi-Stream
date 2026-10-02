@@ -1,4 +1,7 @@
 import { RateLimitNotifierContract } from './types.ts';
+import i18n from '../../i18n/i18n';
+
+const SECONDS_PLACEHOLDER = '__SECONDS__';
 
 /**
  * Creates a RateLimitNotifier that mimics the legacy DOM behavior.
@@ -30,17 +33,21 @@ export class DomRateLimitNotifier implements RateLimitNotifierContract {
 
         const title = document.createElement('div');
         title.style.cssText = 'font-weight: bold; margin-bottom: 8px; font-size: 16px;';
-        title.textContent = '⚠️ Twitch API 速率限制';
+        title.textContent = `⚠️ ${i18n.t('stream:twitch_rate_limit_title')}`;
 
         const message = document.createElement('div');
         message.style.cssText = 'margin-bottom: 10px;';
 
-        const textPre = document.createTextNode('Twitch API 每分鐘請求次數已達上限，請等待 ');
+        // 倒數秒數要放在獨立 span 裡每秒更新：先用佔位字串取出翻譯，再從佔位處切成前後兩段文字
+        const [pre, post = ''] = i18n
+            .t('stream:twitch_rate_limit_body', { seconds: SECONDS_PLACEHOLDER })
+            .split(SECONDS_PLACEHOLDER);
+        const textPre = document.createTextNode(pre);
         const countdownSpan = document.createElement('span');
         countdownSpan.id = 'twitch-rate-limit-countdown';
         countdownSpan.style.cssText = 'font-weight: bold; font-size: 18px;';
         countdownSpan.textContent = waitSeconds.toString();
-        const textPost = document.createTextNode(' 秒後再試。');
+        const textPost = document.createTextNode(post);
 
         message.appendChild(textPre);
         message.appendChild(countdownSpan);
@@ -57,7 +64,7 @@ export class DomRateLimitNotifier implements RateLimitNotifierContract {
             font-size: 12px;
             margin-top: 8px;
         `;
-        closeBtn.textContent = '我知道了';
+        closeBtn.textContent = i18n.t('common:common.got_it');
 
         let interval: any = null;
 

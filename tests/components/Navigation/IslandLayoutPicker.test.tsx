@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { IslandLayoutPicker } from '../../../src/components/Navigation/IslandLayoutPicker';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useStreamStore } from '../../../src/store/useStreamStore';
@@ -143,8 +143,8 @@ describe('IslandLayoutPicker', () => {
         fireEvent.click(screen.getByText('layout.tab_custom'));
         fireEvent.click(screen.getByText('common.save_layout'));
 
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByText('儲存目前布局')).toBeInTheDocument();
+        const dialog = screen.getByRole('dialog');
+        expect(within(dialog).getByText('common.save_layout')).toBeInTheDocument();
         // 動態島靠這個訊號在 dialog 開啟期間維持釘住
         expect(onSaveDialogOpenChange).toHaveBeenCalledWith(true);
     });

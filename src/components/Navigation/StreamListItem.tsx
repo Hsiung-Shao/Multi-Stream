@@ -39,7 +39,7 @@ export const StreamListItem = ({
 
     // 獲取串流顯示名稱
     const getStreamDisplayName = (stream: any) => {
-        return stream.displayName || stream.name || stream.videoId || `串流 #${stream.id}`;
+        return stream.displayName || stream.name || stream.videoId || t('media.stream_fallback_name', { id: stream.id });
     };
 
     return (
@@ -78,7 +78,7 @@ export const StreamListItem = ({
                                 : "text-gray-400 hover:bg-gray-700"
                         )}
                         onClick={() => onToggleMute(stream.id)}
-                        title={stream.isMuted ? '取消靜音' : '靜音'}
+                        title={stream.isMuted ? t('media.unmute_stream') : t('media.mute_stream')}
                     >
                         {stream.isMuted ? (
                             <VolumeX className="size-3" />
@@ -117,7 +117,7 @@ export const StreamListItem = ({
                         size="icon"
                         className="h-6 w-6 p-0 text-gray-400 hover:bg-gray-700"
                         onClick={() => onRefresh(stream.id)}
-                        title={'重整'}
+                        title={t('common.refresh')}
                     >
                         <RefreshCw className="size-3" />
                     </Button>

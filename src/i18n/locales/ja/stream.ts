@@ -13,7 +13,15 @@ const stream = {
     'fetch_video_error': '動画情報を取得できません',
     'channel_id_invalid': '無効なchannelIdです',
     'channel_not_found': 'チャンネルが見つかりません',
-    'fetch_channel_error': 'チャンネルタイトルを取得できません'
+    'fetch_channel_error': 'チャンネルタイトルを取得できません',
+    'already_exists': 'この配信はすでに追加されています',
+    'twitch_api_timeout': 'Twitch API のリクエストがタイムアウトしました（10 秒）。ネットワーク状況を確認してください',
+    'twitch_api_network': 'Twitch API に接続できません。ネットワーク接続を確認してください',
+    'twitch_api_rate_limited': 'Twitch API のレート制限：{{seconds}} 秒待ってから再試行してください',
+    'twitch_api_too_many_requests': 'API リクエストが多すぎます。しばらくしてから再試行してください',
+    'twitch_api_request_failed': 'API リクエストに失敗しました：{{status}} {{statusText}}',
+    'twitch_rate_limit_title': 'Twitch API のレート制限',
+    'twitch_rate_limit_body': 'Twitch API の 1 分あたりのリクエスト上限に達しました。{{seconds}} 秒待ってから再試行してください。'
 };
 
 export default stream;

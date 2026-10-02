@@ -2,13 +2,8 @@ import { favoritesService } from './FavoritesService';
 import { apiLoader } from '../../utils/apiLoader';
 import { FavoriteStream } from './types';
 import { useStreamStore } from '../../store/useStreamStore';
+import i18n from '../../i18n/i18n';
 
-// Define window interface extension for this file
-declare global {
-    interface Window {
-        i18n: any;
-    }
-}
 
 export class FavoritesLoaderService {
     // Helper to safely add stream with retries
@@ -25,17 +20,14 @@ export class FavoritesLoaderService {
                 return this.safeAddStream(url, platform, displayName, retries - 1);
             }
             console.error('Failed to add stream after multiple retries:', e);
-            const i18n = (window as any).i18n || { t: (key: string) => key };
-            const errorMsg = i18n.t('failedToAddStream') || 'Failed to add stream.';
+            const errorMsg = i18n.t('favorites:failedToAddStream');
             throw new Error(errorMsg);
         }
     }
 
     async load(item: FavoriteStream): Promise<{ success: boolean; message?: string }> {
-        const i18n = (window as any).i18n || { t: (key: string) => key };
-
         if (!item || (!item.url && !item.channelId && !item.videoId)) {
-            return { success: false, message: i18n.t('invalidFavoriteItem') };
+            return { success: false, message: i18n.t('favorites:invalidFavoriteItem') };
         }
 
         const displayName = item.name; // Use favorite name as displayName
@@ -90,14 +82,12 @@ export class FavoritesLoaderService {
             }
         }
 
-        return { success: false, message: i18n.t('invalidFavoriteItem') };
+        return { success: false, message: i18n.t('favorites:invalidFavoriteItem') };
     }
 
     async loadMultiple(items: FavoriteStream[]): Promise<{ success: boolean; message: string; successCount: number; failCount: number }> {
-        const i18n = (window as any).i18n || { t: (key: string) => key };
-
         if (!items || items.length === 0) {
-            return { success: false, message: i18n.t('noFavoritesToLoad'), successCount: 0, failCount: 0 };
+            return { success: false, message: i18n.t('favorites:noFavoritesToLoad'), successCount: 0, failCount: 0 };
         }
 
         const twitchItems = items.filter(item =>
@@ -140,11 +130,9 @@ export class FavoritesLoaderService {
 
         let message = '';
         if (failCount === 0) {
-            message = i18n.t('loadMultipleSuccess')?.replace('{count}', successCount.toString()) ||
-                `成功載入 ${successCount} 個收藏`;
+            message = i18n.t('favorites:loadMultipleSuccess', { count: successCount });
         } else {
-            message = i18n.t('loadMultipleSuccessWithFail')?.replace('{success}', successCount.toString()).replace('{fail}', failCount.toString()) ||
-                `成功載入 ${successCount} 個收藏，失敗 ${failCount} 個`;
+            message = i18n.t('favorites:loadMultipleSuccessWithFail', { success: successCount, fail: failCount });
         }
 
         return {

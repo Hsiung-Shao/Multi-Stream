@@ -73,7 +73,7 @@ export function validateUrl(url: string): UrlValidation {
   );
 
   if (!isAllowed) {
-    return { valid: false, error: '不支援的域名，目前只支援 Twitch 和 YouTube' };
+    return { valid: false, error: i18n.t('stream:unsupported_platform') };
   }
 
   return { valid: true, urlObj };

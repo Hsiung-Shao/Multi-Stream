@@ -54,6 +54,7 @@ const faq = {
   'foot_home': 'ホーム',
   'foot_about': '概要',
   'foot_privacy': 'プライバシーポリシー',
+    'search_clear': '検索をクリア',
 };
 
 export default faq;
