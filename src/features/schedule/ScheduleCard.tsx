@@ -358,7 +358,8 @@ function RowMain({ stream, channel, className, rounded, children }: { stream: Sc
                 className={cn('min-w-0 text-left', className, stretchClasses(rounded))}
             >
                 {children}
-                <span className="sr-only"> · {t('card.watch', { name })}</span>
+                {/* sr-only 沒有 top/left 時會落在長標題後面的 static position，撐出橫向捲軸；釘到定位祖先左上角（button 不能設 relative，否則 after:inset-0 整列點擊範圍會縮回 button） */}
+                <span className="sr-only left-0 top-0"> · {t('card.watch', { name })}</span>
             </button>
         );
     }
