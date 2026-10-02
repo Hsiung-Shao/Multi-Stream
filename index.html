@@ -146,6 +146,9 @@
 
   <!-- Google AdSense 腳本：改為「使用者接受 Cookie 後」才由 src/utils/adsense.ts 動態注入 -->
   <!-- （與 GA4/Umami 同意機制一致；未同意時不載入 → 不設第三方 cookie、不拖累首屏、符合 GDPR） -->
+  <!-- 審核爬蟲不會按同意，看不到腳本 → 用 meta 驗證網站所有權（不載入任何東西）。
+       publisher id 須與 src/utils/adsense.ts、ads.txt 一致（tests/functions/adsenseAccount.test.ts 鎖） -->
+  <meta name="google-adsense-account" content="ca-pub-8415424787944153" />
 
   <!-- GA4 boot stub：dataLayer 與 gtag 預先建立，正式初始化由 src/utils/analytics.ts 在環境檢查後接管 -->
   <script>

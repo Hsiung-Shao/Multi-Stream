@@ -22,7 +22,6 @@ const GUIDE_SLUGS = (() => {
 // 刻意不含 zh-TW/common.ts（混雜 cookie/mobile 等非頁面文案，會造成假性更新）。
 const ROUTE_SOURCES = {
   '/': ['src/components/Pages/LandingPage.tsx', 'src/seo/defaults.ts', 'index.html'],
-  '/canvas': ['src/components/Pages/NewCanvasPage.tsx', 'src/components/Canvas/CanvasEmptyState.tsx'],
   '/instructions': ['src/components/Pages/InstructionsPage.tsx', 'src/i18n/locales/zh-TW/tutorial.ts'],
   '/about': ['src/components/AboutPage.tsx', 'src/i18n/locales/zh-TW/about.ts'],
   '/privacy': ['src/components/PrivacyPage.tsx', 'src/i18n/locales/zh-TW/privacy.ts'],
@@ -31,7 +30,6 @@ const ROUTE_SOURCES = {
   '/about/creator': ['src/components/Pages/CreatorPage.tsx', 'src/i18n/locales/zh-TW/about.ts'],
   '/compare': ['src/components/Pages/ComparisonPage.tsx', 'src/i18n/locales/zh-TW/compare.ts'],
   '/schedule': ['src/components/Pages/SchedulePage.tsx', 'src/i18n/locales/zh-TW/schedule.ts'],
-  '/schedule/submit': ['src/components/Pages/ScheduleSubmitPage.tsx', 'src/features/contribute/ContributeForm.tsx'],
   // 教學文章（slug 清單解析自 src/config/guides.ts；tests/functions/sitemap.test.ts 鎖覆蓋率）
   ...Object.fromEntries(
     GUIDE_SLUGS.map((s) => [
@@ -55,9 +53,10 @@ function gitLastMod(files) {
 }
 
 // 定義網站的所有路由
+// 刻意不列：/canvas（CSR-only 互動工具，爬蟲拿到空殼；工具說明由教學頁承擔）、
+// /schedule/submit（表單頁，本身 noindex）、/admin。tests/functions/sitemap.test.ts 鎖這份排除清單。
 const urls = [
   { url: '/', changefreq: 'daily', priority: 1.0 },
-  { url: '/canvas', changefreq: 'weekly', priority: 0.9 },
   { url: '/instructions', changefreq: 'monthly', priority: 0.8 },
   { url: '/about', changefreq: 'monthly', priority: 0.7 },
   { url: '/privacy', changefreq: 'monthly', priority: 0.6 },
@@ -66,7 +65,6 @@ const urls = [
   { url: '/about/creator', changefreq: 'yearly', priority: 0.4 },
   { url: '/compare', changefreq: 'monthly', priority: 0.7 },
   { url: '/schedule', changefreq: 'hourly', priority: 0.8 },
-  { url: '/schedule/submit', changefreq: 'monthly', priority: 0.4 },
   ...GUIDE_SLUGS.map((s) => ({
     url: `/instructions/${s}`, changefreq: 'monthly', priority: 0.6,
   })),
