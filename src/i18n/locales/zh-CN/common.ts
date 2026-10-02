@@ -151,6 +151,7 @@ const common = {
   'quick_add.label': '添加直播',
   'quick_add.button': '开始观看',
   'quick_add.error_generic': '无法添加直播，请确认网址或频道名称',
+  'quick_add.max_streams': '画布最多同时 {{max}} 路直播，请先移除一些再添加。',
   'quick_add.placeholder_twitch': '粘贴网址，或搜索 Twitch 频道',
   'quick_add.placeholder_youtube': '粘贴网址，或搜索 VTuber／YouTube 频道',
   'empty_state.tip_add': '点击新增按钮来加入直播、聊天室或预设组合',
@@ -244,7 +245,6 @@ const common = {
   'hotkeys.layouts': '切换布局 (Alt + 1-6、9)',
   'hotkeys.quick_save': '快速保存布局',
   'hotkeys.master_mute': '全局静音切换',
-  'hotkeys.focus_mode': '切换专注模式 (隐藏界面)',
   'hotkeys.window_reload': '重新整理串流',
   'hotkeys.window_mute': '静音/取消静音',
   'hotkeys.window_remove': '移除视窗',
@@ -309,6 +309,7 @@ const common = {
   'layout.t_5_cinema': '5人 (剧院)',
   'layout.t_7_cinema': '7人 (剧院)',
   'layout.t_8_grid': '8人 (网格)',
+  'layout.t_9_grid': '9人 (网格)',
   'layout.t_12_grid': '12人 (网格)',
   'layout.t_16_grid': '16人 (网格)',
 

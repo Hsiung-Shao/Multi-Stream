@@ -9,7 +9,6 @@ export const useHotkeys = () => {
         toggleHotkeyHelp,
         setSearchFocused,
         setMasterMuted,
-        togglePanelCollapsed,
         hoveredWindowId,
         hoveredCanvasItemId,
         setHoveredWindowId,
@@ -78,28 +77,13 @@ export const useHotkeys = () => {
             return;
         }
 
-        // Focus Mode / Toggle UI: Shift + F
-        if (e.shiftKey && key === 'f') {
-            e.preventDefault();
-            togglePanelCollapsed();
-            return;
-        }
-
-        // Layout Switching: Alt + 1-9
+        // Layout Switching: Alt + 1-6, 9
+        // 套用動態島布局清單「僅串流」分頁裡同路數的版型（對應見 templateIdForLayoutType）；7、8 沒有對應快捷鍵
         if (e.altKey && !e.ctrlKey && !e.shiftKey) {
-            const num = parseInt(e.key);
+            // 先看實體鍵位：Mac 的 Option+數字 e.key 是特殊符號（Option+2 = ™），只靠 e.key 收不到數字
+            const digit = /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];
+            const num = parseInt(digit ?? e.key);
             if (!isNaN(num)) {
-                // Map keys 1-9 to specific LayoutTypes
-                // Valid types: 1, 2, 3, 4, 5, 6, 9
-                // Key 1 -> Type 1
-                // Key 2 -> Type 2
-                // Key 3 -> Type 3
-                // Key 4 -> Type 4
-                // Key 5 -> Type 5
-                // Key 6 -> Type 6
-                // Key 9 -> Type 9
-                // Key 7, 8 -> Ignore or map to something else? Ignoring for now.
-
                 let targetLayout: LayoutType | null = null;
 
                 if ([1, 2, 3, 4, 5, 6, 9].includes(num)) {
@@ -177,7 +161,7 @@ export const useHotkeys = () => {
         }
 
     }, [
-        toggleHotkeyHelp, setSearchFocused, setMasterMuted, togglePanelCollapsed,
+        toggleHotkeyHelp, setSearchFocused, setMasterMuted,
         setLayout, streams, updateStream, removeStream, hoveredWindowId, hoveredCanvasItemId, setHoveredWindowId,
         theaterWindowId, setTheaterWindowId
     ]);

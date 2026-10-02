@@ -84,9 +84,9 @@ const tutorial = {
   'features.settings.general': '一般設定',
   'features.settings.general.desc': '點動態島的齒輪會開啟「收藏管理 → 設定」。外觀區可以切換「亮色／深色／系統」主題（預設深色）、選擇動態島樣式（原本或邊緣停靠），以及介面語言（繁中、簡中、English、日本語、한국어）。語言沒設定過時，會依瀏覽器語言決定，都不符合就用英文。',
   'features.settings.playback': '播放行為',
-  'features.settings.playback.desc': '「開啟新串流時自動靜音」預設開著，避免一次加好幾台時聲音疊在一起；新加入的直播音量預設是 50。「YouTube 多直播風險提示」對應同時播放 2 路以上 YouTube 時的提醒（目前關掉這個開關仍會提醒，屬已知問題）。「背景自動偵測直播狀態」預設關閉，打開後每 5 分鐘檢查一次收藏頻道；關著的時候，進站、進入畫布與每 25 分鐘仍會各自動檢查一次。「視窗關閉模式」決定按下關閉時是移除視窗，還是保留一個空白視窗方便馬上換台。',
+  'features.settings.playback.desc': '「開啟新串流時自動靜音」預設開著，避免一次加好幾台時聲音疊在一起；新加入的直播音量預設是 50。「YouTube 多直播風險提示」對應同時播放 2 路以上 YouTube 時的提醒，關掉就不會再跳出。「背景自動偵測直播狀態」預設關閉，打開後每 5 分鐘檢查一次收藏頻道；關著的時候，進站、進入畫布與每 25 分鐘仍會各自動檢查一次。「視窗關閉模式」決定按下關閉時是移除視窗，還是保留一個空白視窗方便馬上換台。',
   'features.settings.data': '資料管理',
-  'features.settings.data.desc': '收藏、收藏清單、標籤與設定都存在這台裝置的瀏覽器裡（另外會自動複製一份到瀏覽器的 IndexedDB 當備援），本站沒有雲端同步。到「收藏管理 → 備份與還原」可以下載一個 JSON 備份檔；在另一台裝置匯入時會「全數覆蓋」那邊的現有資料，完成後頁面自動重新整理。備份檔不包含自訂布局與介面語言。想完全清除資料，請用瀏覽器的「清除網站資料」，只清 localStorage 的話，收藏會在下次進站時從 IndexedDB 還原回來。',
+  'features.settings.data.desc': '收藏、收藏清單、標籤與設定都存在這台裝置的瀏覽器裡（另外會自動複製一份到瀏覽器的 IndexedDB 當備援），本站沒有雲端同步。到「收藏管理 → 備份與還原」可以下載一個 JSON 備份檔；在另一台裝置匯入時會「全數覆蓋」那邊的現有資料，完成後頁面自動重新整理。備份檔也包含自訂布局（匯入時一併覆蓋；舊的備份檔沒有這一項，匯入時會保留現有的自訂布局），但不含介面語言。想完全清除資料，請用瀏覽器的「清除網站資料」，只清 localStorage 的話，收藏會在下次進站時從 IndexedDB 還原回來。',
   'features.settings.twitch': 'Twitch 整合',
   'features.settings.twitch.desc': 'Twitch 追隨清單的匯入在「收藏管理 → Twitch 匯入」，是一次性的匯入，不會持續同步；開台偵測使用本站自己的 Twitch 查詢，不需要你登入 Twitch。步驟見〈收藏管理〉。',
   'features.settings.mobile': '手機版的設定',
@@ -120,7 +120,7 @@ const tutorial = {
   'features.shortcuts.title': '⌨️ 快捷鍵與劇場模式',
   'features.shortcuts.description': '手不離鍵盤就能搜尋、靜音、放大單一視窗。按 Ctrl + / 隨時叫出速查表，也可以按動態島上的「?」。',
   'features.shortcuts.global': '全域快捷鍵',
-  'features.shortcuts.global.desc': 'Ctrl + / 開關快捷鍵速查表；Ctrl + K（或 Alt + S）聚焦動態島的搜尋框；Ctrl + M 切換全部靜音；Ctrl + S 開啟「收藏管理 → 布局管理」（速查表上寫「快速儲存佈局」，但實際是開啟管理頁，存版面請用布局清單的「儲存目前布局」）。游標在輸入框裡時所有快捷鍵都會讓路，先按 Esc 離開輸入框即可。',
+  'features.shortcuts.global.desc': 'Ctrl + / 開關快捷鍵速查表；Ctrl + K（或 Alt + S）聚焦動態島的搜尋框；Ctrl + M 切換全部靜音；Ctrl + S 開啟「收藏管理 → 布局管理」（速查表上寫「快速儲存佈局」，但實際是開啟管理頁，存版面請用布局清單的「儲存目前布局」）；Alt + 1～6、Alt + 9 直接套用布局清單「僅串流」分頁裡同路數的版型，例如 4 路直播按 Alt + 4 排成田字。直播比版型路數多時，只有前幾路會留在畫布上，換回路數夠的版型就會回來；路數不夠則補上空視窗。游標在輸入框裡時所有快捷鍵都會讓路，先按 Esc 離開輸入框即可。',
   'features.shortcuts.window': '單一視窗快捷鍵',
   'features.shortcuts.window.desc': '把游標停在某個視窗上，不必點擊就能操作那一路：R 重新載入、M 切換靜音、F 讓那一路的直播進入瀏覽器全螢幕（再按一次離開）、Delete 或 Backspace 移除。要注意：移除的是整路直播，連同它的聊天室；游標停在聊天室上按 F，全螢幕的也是那一路的直播畫面。',
   'features.shortcuts.theater': '劇場模式',
@@ -129,7 +129,7 @@ const tutorial = {
   'features.shortcuts.troubleshoot.s1': '剛點進播放器：鍵盤事件會被播放器接走，在畫布空白處點一下再按。',
   'features.shortcuts.troubleshoot.s2': '游標在輸入框裡：所有快捷鍵都會停用，按 Esc 離開輸入框。',
   'features.shortcuts.troubleshoot.s3': '單鍵（R、M、F、T、Delete）要先把游標停在某個視窗上才有對象；而且它們不看 Ctrl 等修飾鍵，例如停在視窗上按 Ctrl + F，會同時讓該視窗全螢幕並打開瀏覽器的尋找。',
-  'features.shortcuts.troubleshoot.s4': '速查表上的「Alt + 1-6, 9 切換佈局」與「Shift + F 專注模式」目前沒有正常作用，請改用動態島的佈局設定。',
+  'features.shortcuts.troubleshoot.s4': 'Alt + 數字只有 1～6 與 9 有對應版型，Alt + 7、Alt + 8 不會有反應；5 路劇院、12 路、16 路等其他版型請從動態島的布局清單套用。',
 
   'gettingStarted.title': '🚀 快速上手',
   'gettingStarted.content': '第一次用的話，照這六步走一遍就會了。整個過程不需要登入。',
@@ -155,7 +155,7 @@ const tutorial = {
   'features.canvas.addWindow.desc': '點擊動態島的「+」按鈕，可選擇「新增組合」（串流＋聊天室）、「新增串流視窗」或「新增聊天室視窗」。空視窗出現在畫布後，上方可切換「串流／聊天室」，再從下拉選單挑一個正在直播的收藏頻道就會開始播放。',
   'features.canvas.customLayout': '自訂布局',
   'features.canvas.customLayout.desc': '把視窗排成喜歡的樣子後，開啟布局清單切換到「自定義清單」，按「儲存目前布局」命名保存。之後可以在同一個分頁或「收藏管理 → 布局管理」隨時套用或刪除。注意動態島上的「一鍵收藏當前畫布」是把每一路頻道存進收藏，不會存版面。',
-  // 畫布：實例／限制／疑難排解（2026-10-02，對照程式碼與正式站實測；Alt+數字切版型實測會壞版，暫不寫入）
+  // 畫布：實例／限制／疑難排解（2026-10-02，對照程式碼與正式站實測）
   'features.canvas.example': '實際例子：比賽轉播的四個視角加一個聊天室',
   'features.canvas.example.p1': '假設你在看一場電競比賽，想同時看官方轉播和三位選手的第一人稱視角，聊天室只要留官方台的。可以這樣排：',
   'features.canvas.example.s1': '用搜尋框或貼網址，把官方台與三位選手的直播都加進畫布。',

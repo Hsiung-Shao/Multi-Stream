@@ -94,7 +94,7 @@ export default {
   'backup.import_success': '読み込み成功。データを更新しています...',
   'backup.import_error': '読み込み失敗: {{error}}',
   'backup.unknown_error': '不明なエラー',
-  'backup.export_desc': 'すべてのお気に入り、カテゴリ、カスタム設定をJSONファイルとしてダウンロードします。',
+  'backup.export_desc': 'すべてのお気に入り、カテゴリ、カスタムレイアウト、設定をJSONファイルとしてダウンロードします。',
   'backup.export_helper': 'これは最も安全なバックアップ方法です。このファイルを外部ドライブやクラウドに保存して、他のPCで設定を復元できます。',
   'backup.export_btn': 'バックアップをダウンロード (.json)',
   'backup.import_desc': '以前にバックアップしたJSONファイルからデータを復元します。',

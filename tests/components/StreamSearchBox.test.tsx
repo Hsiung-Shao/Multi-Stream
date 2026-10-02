@@ -14,6 +14,8 @@ const { mockAddStream, mockSetPage, mockSearchTwitch, mockSearchYoutube } = vi.h
 vi.mock('../../src/store/useStreamStore', () => ({
     useStreamStore: (selector: (s: { addStream: typeof mockAddStream }) => unknown) =>
         selector({ addStream: mockAddStream }),
+    MAX_STREAMS: 16,
+    MAX_STREAMS_REACHED: 'maxStreamsReached',
 }));
 vi.mock('../../src/store/useUIStore', () => ({
     useUIStore: (selector: (s: object) => unknown) =>
@@ -78,6 +80,16 @@ describe('StreamSearchBox', () => {
         expect(screen.getByRole('alert')).toHaveTextContent('找不到頻道');
         expect(mockSetPage).not.toHaveBeenCalled();
         expect(input()).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    // 已達 16 路時 store 回傳錯誤代碼；曾經直接把英文「Max streams reached」丟給使用者（動態島還是用 alert）
+    it('已達上限：顯示 i18n 文案而非錯誤代碼', async () => {
+        mockAddStream.mockResolvedValue({ success: false, message: 'maxStreamsReached' });
+        render(<StreamSearchBox />);
+        type('https://twitch.tv/one_more');
+        await submit();
+        expect(screen.getByRole('alert')).toHaveTextContent('畫布最多同時 16 路直播');
+        expect(screen.getByRole('alert')).not.toHaveTextContent('maxStreamsReached');
     });
 
     it('空輸入：送出不呼叫 addStream', async () => {

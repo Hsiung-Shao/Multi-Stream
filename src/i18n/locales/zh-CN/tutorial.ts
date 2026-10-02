@@ -78,7 +78,7 @@ const tutorial = {
   'features.shortcuts.title': '⌨️ 快捷键与剧场模式',
   'features.shortcuts.description': '手不离键盘就能切布局、静音、放大单一窗口。按 Ctrl + / 随时叫出速查表。',
   'features.shortcuts.global': '全局快捷键',
-  'features.shortcuts.global.desc': 'Ctrl + / 叫出快捷键速查表；Ctrl + K（或 Alt + S）聚焦搜索框；Ctrl + S 开启布局管理；Ctrl + M 切换全部静音；Shift + F 收合或展开界面；Alt + 1～6 与 Alt + 9 切换自动布局。光标在输入框里时所有快捷键都会让路，先按 Esc 离开输入框即可。',
+  'features.shortcuts.global.desc': 'Ctrl + / 叫出快捷键速查表；Ctrl + K（或 Alt + S）聚焦搜索框；Ctrl + S 开启布局管理；Ctrl + M 切换全部静音；Alt + 1～6 与 Alt + 9 切换自动布局。光标在输入框里时所有快捷键都会让路，先按 Esc 离开输入框即可。',
   'features.shortcuts.window': '单一窗口快捷键',
   'features.shortcuts.window.desc': '把光标停在某个窗口上，不必点击就能操作那一路：R 重新载入、M 切换静音、Delete 或 Backspace 移除窗口、F 让这个窗口进入浏览器全屏。',
   'features.shortcuts.theater': '剧场模式',

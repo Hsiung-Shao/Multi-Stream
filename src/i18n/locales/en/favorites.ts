@@ -106,7 +106,7 @@ export default {
   'backup.import_success': 'Import successful, refreshing data...',
   'backup.import_error': 'Import failed: {{error}}',
   'backup.unknown_error': 'Unknown error',
-  'backup.export_desc': 'Download all your favorites, categories, and custom settings as a JSON file.',
+  'backup.export_desc': 'Download all your favorites, categories, custom layouts, and settings as a JSON file.',
   'backup.export_helper': 'This is the safest way to backup. You can save this file to an external drive or cloud storage to restore your configuration on other computers.',
   'backup.export_btn': 'Download Backup (.json)',
   'backup.import_desc': 'Restore data from a previously backed up JSON file.',

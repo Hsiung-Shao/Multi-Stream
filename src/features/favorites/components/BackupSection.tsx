@@ -2,6 +2,9 @@ import { Download, Upload, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { backupService } from '../../backup/index';
+import { sanitizeCustomLayouts } from '../../backup/customLayoutsBackup';
+import { useStreamStore } from '../../../store/useStreamStore';
+import { layoutStorage } from '../../../utils/layoutStorage';
 import { favoritesService } from '../FavoritesService';
 import { tagsService } from '../TagsService';
 import { logEvent } from '../../../utils/analytics';
@@ -18,7 +21,8 @@ export function BackupSection({ onSuccess, onError }: BackupSectionProps) {
 
     const handleExportJSON = () => {
         try {
-            const data = backupService.getAllData();
+            // 自訂布局存在 zustand 的 stream-storage（不在 getAllData 讀的那幾個 localStorage key），另外補進檔案
+            const data = { ...backupService.getAllData(), customLayouts: useStreamStore.getState().customLayouts };
             const jsonStr = JSON.stringify(data, null, 2);
             const blob = new Blob([jsonStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -60,6 +64,12 @@ export function BackupSection({ onSuccess, onError }: BackupSectionProps) {
                     if (data.favoriteCategories) favoritesService.saveCategories(data.favoriteCategories);
                     if (data.preference_tags) tagsService.saveTags(data.preference_tags);
                     if (data.multiStreamLayout) localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
+                    // 舊版備份檔沒有 customLayouts：保留目前的自訂布局，不清空
+                    const customLayouts = sanitizeCustomLayouts(data.customLayouts);
+                    if (customLayouts) {
+                        useStreamStore.setState({ customLayouts });
+                        await layoutStorage.saveToBackup(customLayouts);
+                    }
                 }
 
                 tagsService.initializeDefaults();

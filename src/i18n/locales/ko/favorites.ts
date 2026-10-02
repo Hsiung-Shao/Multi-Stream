@@ -94,7 +94,7 @@ export default {
   'backup.import_success': '가져오기 성공, 데이터 새로고침 중...',
   'backup.import_error': '가져오기 실패: {{error}}',
   'backup.unknown_error': '알 수 없는 오류',
-  'backup.export_desc': '모든 즐겨찾기, 카테고리 및 사용자 설정을 JSON 파일로 다운로드합니다.',
+  'backup.export_desc': '모든 즐겨찾기, 카테고리, 사용자 레이아웃 및 설정을 JSON 파일로 다운로드합니다.',
   'backup.export_helper': '가장 안전한 백업 방법입니다. 이 파일을 외장 드라이브나 클라우드에 저장하여 다른 컴퓨터에서 구성을 복원할 수 있습니다.',
   'backup.export_btn': '백업 파일 다운로드 (.json)',
   'backup.import_desc': '이전 백업 JSON 파일에서 데이터를 복원합니다.',

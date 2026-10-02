@@ -94,7 +94,7 @@ export default {
   'backup.import_success': '导入成功，正在刷新数据...',
   'backup.import_error': '导入失败: {{error}}',
   'backup.unknown_error': '未知错误',
-  'backup.export_desc': '将您的所有收藏、分类与自定义设置下载为 JSON 文件。',
+  'backup.export_desc': '将您的所有收藏、分类、自定义布局与设置下载为 JSON 文件。',
   'backup.export_helper': '这是最安全的备份方式。您可以将此文件保存在外部硬盘或云端，以便在其他电脑上恢复您的个性化配置。',
   'backup.export_btn': '立即下载备份文件 (.json)',
   'backup.import_desc': '从之前备份的 JSON 文件中恢复数据。',

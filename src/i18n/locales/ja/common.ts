@@ -151,6 +151,7 @@ const common = {
   'quick_add.label': 'ライブ配信を追加',
   'quick_add.button': '視聴する',
   'quick_add.error_generic': '配信を追加できませんでした。URL かチャンネル名を確認してください。',
+  'quick_add.max_streams': 'キャンバスに同時に置ける配信は最大 {{max}} 件です。いくつか削除してから追加してください。',
   'quick_add.placeholder_twitch': 'URL を貼り付けるか、Twitch チャンネルを検索',
   'quick_add.placeholder_youtube': 'URL を貼り付けるか、VTuber／YouTube チャンネルを検索',
   'empty_state.tip_add': '追加ボタンをクリックして、配信、チャット、またはプリセットを追加',
@@ -244,7 +245,6 @@ const common = {
   'hotkeys.layouts': 'レイアウト切替 (Alt + 1-6, 9)',
   'hotkeys.quick_save': 'レイアウトをクイック保存',
   'hotkeys.master_mute': 'マスターミュート切替',
-  'hotkeys.focus_mode': '集中モード切替 (UI非表示)',
   'hotkeys.window_reload': 'ストリームをリロード',
   'hotkeys.window_mute': 'ミュート/ミュート解除',
   'hotkeys.window_remove': 'ウィンドウを削除',
@@ -309,6 +309,7 @@ const common = {
   'layout.t_5_cinema': '5人 (シアター)',
   'layout.t_7_cinema': '7人 (シアター)',
   'layout.t_8_grid': '8人 (グリッド)',
+  'layout.t_9_grid': '9人 (グリッド)',
   'layout.t_12_grid': '12人 (グリッド)',
   'layout.t_16_grid': '16人 (グリッド)',
 

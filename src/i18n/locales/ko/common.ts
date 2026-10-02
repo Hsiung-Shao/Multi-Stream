@@ -151,6 +151,7 @@ const common = {
   'quick_add.label': '라이브 방송 추가',
   'quick_add.button': '시청하기',
   'quick_add.error_generic': '방송을 추가할 수 없습니다. URL이나 채널명을 확인해 주세요.',
+  'quick_add.max_streams': '캔버스에는 최대 {{max}}개의 방송을 동시에 띄울 수 있습니다. 일부를 제거한 뒤 추가해 주세요.',
   'quick_add.placeholder_twitch': '주소를 붙여 넣거나 Twitch 채널 검색',
   'quick_add.placeholder_youtube': '주소를 붙여 넣거나 VTuber／YouTube 채널 검색',
   'empty_state.tip_add': '스트림, 채팅 또는 프리셋을 추가하려면 추가 버튼을 클릭하세요',
@@ -244,7 +245,6 @@ const common = {
   'hotkeys.layouts': '레이아웃 전환 (Alt + 1-6, 9)',
   'hotkeys.quick_save': '레이아웃 빠른 저장',
   'hotkeys.master_mute': '전체 음소거 전환',
-  'hotkeys.focus_mode': '집중 모드 전환 (UI 숨기기)',
   'hotkeys.window_reload': '스트림 새로고침',
   'hotkeys.window_mute': '음소거/해제',
   'hotkeys.window_remove': '창 제거',
@@ -309,6 +309,7 @@ const common = {
   'layout.t_5_cinema': '5인 (극장)',
   'layout.t_7_cinema': '7인 (극장)',
   'layout.t_8_grid': '8인 (그리드)',
+  'layout.t_9_grid': '9인 (그리드)',
   'layout.t_12_grid': '12인 (그리드)',
   'layout.t_16_grid': '16인 (그리드)',
 

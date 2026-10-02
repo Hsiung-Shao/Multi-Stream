@@ -78,7 +78,7 @@ const tutorial = {
   'features.shortcuts.title': '⌨️ ショートカットとシアターモード',
   'features.shortcuts.description': 'キーボードから手を離さずにレイアウト切り替え・ミュート・1 つのウィンドウの拡大ができます。Ctrl + / でいつでも早見表を呼び出せます。',
   'features.shortcuts.global': '全体のショートカット',
-  'features.shortcuts.global.desc': 'Ctrl + / でショートカットの早見表、Ctrl + K（または Alt + S）で検索ボックスにフォーカス、Ctrl + S でレイアウト管理、Ctrl + M で全体ミュートの切り替え、Shift + F で UI の折りたたみ／展開、Alt + 1〜6 と Alt + 9 で自動レイアウトの切り替えができます。入力欄にカーソルがある間はすべてのショートカットが無効になるので、まず Esc で入力欄から離れてください。',
+  'features.shortcuts.global.desc': 'Ctrl + / でショートカットの早見表、Ctrl + K（または Alt + S）で検索ボックスにフォーカス、Ctrl + S でレイアウト管理、Ctrl + M で全体ミュートの切り替え、Alt + 1〜6 と Alt + 9 で自動レイアウトの切り替えができます。入力欄にカーソルがある間はすべてのショートカットが無効になるので、まず Esc で入力欄から離れてください。',
   'features.shortcuts.window': 'ウィンドウごとのショートカット',
   'features.shortcuts.window.desc': 'ウィンドウにカーソルを重ねるだけで（クリック不要）その配信を操作できます。R で再読み込み、M でミュート切り替え、Delete または Backspace でウィンドウを削除、F でそのウィンドウをブラウザーの全画面表示にします。',
   'features.shortcuts.theater': 'シアターモード',

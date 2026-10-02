@@ -1,3 +1,4 @@
+import type { CustomLayout } from '../../types/canvas';
 
 export interface BackupData {
     version: string;
@@ -10,6 +11,8 @@ export interface BackupData {
     controlPanelCollapsed: string | null;
     multiStreamLayout: any;
     adConfig: any;
+    /** 自訂布局（匯出檔才有；IndexedDB 自動備份不含，自訂布局另由 layoutStorage 備援） */
+    customLayouts?: CustomLayout[];
 }
 
 export interface RestoreResult {

@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStreamStore } from '../store/useStreamStore';
 import { usePlayerStore } from '../store/playerStore';
+import { useUIStore } from '../store/useUIStore';
 
 export function useYouTubeRisk() {
     const streams = useStreamStore(s => s.streams);
     const getPlayer = usePlayerStore(s => s.getPlayer);
+    // 設定頁「YouTube 多直播風險提示」：關掉就不偵測、也不彈提示
+    const riskWarningEnabled = useUIStore(s => s.youtubeRiskWarning);
 
     const [showYTRiskDialog, setShowYTRiskDialog] = useState(false);
     const [currentYTRiskCount, setCurrentYTRiskCount] = useState(0);
@@ -21,8 +24,15 @@ export function useYouTubeRisk() {
         }
     }, []);
 
+    // 提示開著時使用者到設定頁關掉開關，順手把提示收起來
+    useEffect(() => {
+        if (!riskWarningEnabled) setShowYTRiskDialog(false);
+    }, [riskWarningEnabled]);
+
     // Monitor Active YouTube Streams
     useEffect(() => {
+        if (!riskWarningEnabled) return;
+
         const checkInterval = setInterval(() => {
             // If user dismissed for session, do nothing
             if (ytRiskSessionDismissedRaw.current) return;
@@ -79,7 +89,7 @@ export function useYouTubeRisk() {
         }, 3000); // Check every 3 seconds
 
         return () => clearInterval(checkInterval);
-    }, [streams, getPlayer]);
+    }, [streams, getPlayer, riskWarningEnabled]);
 
     const handlePauseOtherYouTubeStreams = useCallback(() => {
         const youtubeStreams = streams.filter(s => s.platform === 'youtube');

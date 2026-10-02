@@ -78,7 +78,7 @@ const tutorial = {
   'features.shortcuts.title': '⌨️ 단축키와 시어터 모드',
   'features.shortcuts.description': '키보드에서 손을 떼지 않고도 레이아웃 전환, 음소거, 창 하나 확대를 할 수 있습니다. Ctrl + /를 누르면 언제든 단축키 목록이 나옵니다.',
   'features.shortcuts.global': '전역 단축키',
-  'features.shortcuts.global.desc': 'Ctrl + /는 단축키 목록, Ctrl + K(또는 Alt + S)는 검색창 포커스, Ctrl + S는 레이아웃 관리, Ctrl + M은 전체 음소거 전환, Shift + F는 인터페이스 접기/펼치기, Alt + 1~6과 Alt + 9는 자동 레이아웃 전환입니다. 입력란에 커서가 있는 동안에는 모든 단축키가 동작하지 않으니 먼저 Esc로 입력란에서 빠져나오세요.',
+  'features.shortcuts.global.desc': 'Ctrl + /는 단축키 목록, Ctrl + K(또는 Alt + S)는 검색창 포커스, Ctrl + S는 레이아웃 관리, Ctrl + M은 전체 음소거 전환, Alt + 1~6과 Alt + 9는 자동 레이아웃 전환입니다. 입력란에 커서가 있는 동안에는 모든 단축키가 동작하지 않으니 먼저 Esc로 입력란에서 빠져나오세요.',
   'features.shortcuts.window': '창별 단축키',
   'features.shortcuts.window.desc': '창 위에 커서를 올리기만 하면(클릭할 필요 없이) 그 방송을 바로 조작할 수 있습니다. R은 새로 고침, M은 음소거 전환, Delete 또는 Backspace는 창 제거, F는 그 창을 브라우저 전체 화면으로 전환합니다.',
   'features.shortcuts.theater': '시어터 모드',

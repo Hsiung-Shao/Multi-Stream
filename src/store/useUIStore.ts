@@ -17,7 +17,6 @@ export type PageType = 'home' | 'about' | 'creator' | 'compare' | 'schedule' | '
 interface UIState {
     theme: 'light' | 'dark' | 'system';
     page: PageType;
-    isPanelCollapsed: boolean;
     isSearchFocused: boolean;
     modals: ModalState;
     favoritesTab: string; // 'favorites' | 'layouts' | 'twitch_import' etc.
@@ -27,8 +26,6 @@ interface UIState {
     // Actions
     setTheme: (theme: 'light' | 'dark' | 'system') => void;
     toggleTheme: () => void;
-    setPanelCollapsed: (collapsed: boolean) => void;
-    togglePanelCollapsed: () => void;
     openModal: (name: keyof ModalState, tab?: string) => void;
     closeModal: (name: keyof ModalState) => void;
     toggleModal: (name: keyof ModalState) => void;
@@ -105,7 +102,6 @@ export const useUIStore = create<UIState>((set, get) => ({
     // 初值直接由 URL 推導：避免首次 mount 時 page='home' 與 URL 不符而 pushState('/')，
     // 把 deep-link 的 query 砍掉、多塞一筆 history（routes.ts 對本檔只有 type import，無執行期循環）
     page: typeof window !== 'undefined' ? pathToPage(window.location.pathname) : 'home',
-    isPanelCollapsed: false,
     isSearchFocused: false,
     modals: {
         history: false,
@@ -128,9 +124,6 @@ export const useUIStore = create<UIState>((set, get) => ({
         persistUserSetting('theme', newTheme);
         return { theme: newTheme };
     }),
-
-    setPanelCollapsed: (collapsed) => set({ isPanelCollapsed: collapsed }),
-    togglePanelCollapsed: () => set((state) => ({ isPanelCollapsed: !state.isPanelCollapsed })),
 
     openModal: (name, tab) => set((state) => ({
         modals: { ...state.modals, [name]: true },
