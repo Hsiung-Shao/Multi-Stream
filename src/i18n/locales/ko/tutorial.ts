@@ -19,7 +19,7 @@ const tutorial = {
   'features.canvas.title': '🎨 캔버스 (Canvas)',
   'features.canvas.description': '캔버스는 모든 방송과 채팅이 표시되는 주요 작업 공간입니다. 유연한 그리드 시스템을 통해 창을 자유롭게 배치할 수 있습니다.',
   'features.canvas.autoLayout': '자동 레이아웃',
-  'features.canvas.autoLayout.desc': '어떻게 배치할지 모르겠다면 다이내믹 아일랜드의 레이아웃 버튼으로 레이아웃 목록을 여세요. "영상만", "채팅 포함", "사용자 지정" 세 개의 탭이 있고, 하나를 고르면 캔버스의 창이 한 번에 정렬됩니다. Alt + 1~6과 Alt + 9로도 바로 전환할 수 있습니다.',
+  'features.canvas.autoLayout.desc': '어떻게 배치할지 모르겠다면 다이내믹 아일랜드의 레이아웃 버튼으로 레이아웃 목록을 여세요. "영상만", "채팅 포함", "사용자 지정" 세 개의 탭이 있고, 하나를 고르면 캔버스의 창이 한 번에 정렬됩니다.',
   'features.canvas.dragDrop': '드래그 앤 드롭',
   'features.canvas.dragDrop.desc': '창 위에 커서를 올리면 위쪽에 캡슐 모양 툴바가 나타납니다. 맨 왼쪽 손잡이를 누른 채 끌면 창을 옮길 수 있고, 놓았을 때의 위치는 보라색 점선으로 미리 보입니다. 크기는 창 네 모서리의 핸들을 끌어 조절하며, 끄는 동안 가운데에 현재 차지하는 칸 수가 표시됩니다.',
   'features.canvas.layoutRules': '배치 규칙: 교체, 밀어내기, 빈칸 채우기',

@@ -409,7 +409,7 @@ export function InstructionsPage() {
             excerpt: tx('article.quickStart.excerpt'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
-            readLabel: readLabel(4),
+            readLabel: readLabel(6),
             accent: '#c084fc', accent2: '#7c3aed', icon: Rocket, featured: true,
             sections: [
                 { id: 'intro', heading: tx('intro.title'), blocks: [{ type: 'p', text: tx('intro.content') }] },
@@ -427,6 +427,16 @@ export function InstructionsPage() {
                         img('search-twitch-results.webp', 743, 320, tx('img.searchTwitchResults.alt'), tx('img.searchTwitchResults.cap')),
                     ],
                 },
+                {
+                    id: 'stuck', heading: tx('gettingStarted.stuck'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('gettingStarted.stuck.s1'), tx('gettingStarted.stuck.s2'), tx('gettingStarted.stuck.s3'),
+                                tx('gettingStarted.stuck.s4'), tx('gettingStarted.stuck.s5'),
+                            ],
+                        },
+                    ],
+                },
             ],
         },
         {
@@ -435,7 +445,7 @@ export function InstructionsPage() {
             excerpt: tx('features.canvas.description'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
-            readLabel: readLabel(6),
+            readLabel: readLabel(9),
             accent: '#60a5fa', accent2: '#2563eb', icon: LayoutGrid,
             sections: [
                 {
@@ -473,6 +483,38 @@ export function InstructionsPage() {
                     ],
                 },
                 { id: 'layout-rules', heading: tx('features.canvas.layoutRules'), blocks: [{ type: 'p', text: tx('features.canvas.layoutRules.desc') }] },
+                {
+                    id: 'example', heading: tx('features.canvas.example'), blocks: [
+                        { type: 'p', text: tx('features.canvas.example.p1') },
+                        {
+                            type: 'steps', items: [
+                                tx('features.canvas.example.s1'), tx('features.canvas.example.s2'), tx('features.canvas.example.s3'),
+                                tx('features.canvas.example.s4'), tx('features.canvas.example.s5'), tx('features.canvas.example.s6'),
+                            ],
+                        },
+                        { type: 'p', text: tx('features.canvas.example.p2') },
+                    ],
+                },
+                {
+                    id: 'limits', heading: tx('features.canvas.limits'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('features.canvas.limits.s1'), tx('features.canvas.limits.s2'), tx('features.canvas.limits.s3'),
+                                tx('features.canvas.limits.s4'), tx('features.canvas.limits.s5'), tx('features.canvas.limits.s6'),
+                            ],
+                        },
+                    ],
+                },
+                {
+                    id: 'troubleshoot', heading: tx('features.canvas.troubleshoot'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('features.canvas.troubleshoot.s1'), tx('features.canvas.troubleshoot.s2'), tx('features.canvas.troubleshoot.s3'),
+                                tx('features.canvas.troubleshoot.s4'), tx('features.canvas.troubleshoot.s5'), tx('features.canvas.troubleshoot.s6'),
+                            ],
+                        },
+                    ],
+                },
             ],
         },
         {
@@ -481,7 +523,7 @@ export function InstructionsPage() {
             excerpt: tx('features.search.description'),
             category: 'basics',
             catLabel: tx('tabs.basics'),
-            readLabel: readLabel(3),
+            readLabel: readLabel(6),
             accent: '#4ade80', accent2: '#16a34a', icon: Search,
             sections: [
                 {
@@ -493,6 +535,24 @@ export function InstructionsPage() {
                 },
                 { id: 'youtube', heading: tx('features.search.youtube'), blocks: [{ type: 'p', text: tx('features.search.youtube.desc') }] },
                 { id: 'url', heading: tx('features.search.url'), blocks: [{ type: 'p', text: tx('features.search.url.desc') }] },
+                {
+                    id: 'formats', heading: tx('features.search.formats'), blocks: [
+                        { type: 'p', text: tx('features.search.formats.p1') },
+                        { type: 'steps', items: [tx('features.search.formats.s1'), tx('features.search.formats.s2')] },
+                        { type: 'p', text: tx('features.search.formats.p2') },
+                    ],
+                },
+                { id: 'enter', heading: tx('features.search.enter'), blocks: [{ type: 'p', text: tx('features.search.enter.p1') }] },
+                {
+                    id: 'troubleshoot', heading: tx('features.search.troubleshoot'), blocks: [
+                        {
+                            type: 'steps', items: [
+                                tx('features.search.troubleshoot.s1'), tx('features.search.troubleshoot.s2'), tx('features.search.troubleshoot.s3'),
+                                tx('features.search.troubleshoot.s4'), tx('features.search.troubleshoot.s5'),
+                            ],
+                        },
+                    ],
+                },
             ],
         },
         {

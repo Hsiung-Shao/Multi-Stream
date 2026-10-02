@@ -19,7 +19,7 @@ const tutorial = {
   'features.canvas.title': '🎨 画布 (Canvas)',
   'features.canvas.description': '画布是您的主要工作区域，所有直播与聊天窗口都在此呈现。我们设计了极具弹性的网格系统，让您能自由配置窗口。',
   'features.canvas.autoLayout': '自动排版',
-  'features.canvas.autoLayout.desc': '不知道怎么摆？点动态岛的布局按钮开启布局清单，里面分成「仅串流」「含聊天室」与「自定义」三个分页，挑一个就会把画布上的窗口一次排好。也可以用 Alt + 1～6 或 Alt + 9 直接切换。',
+  'features.canvas.autoLayout.desc': '不知道怎么摆？点动态岛的布局按钮开启布局清单，里面分成「仅串流」「含聊天室」与「自定义」三个分页，挑一个就会把画布上的窗口一次排好。',
   'features.canvas.dragDrop': '拖放调整',
   'features.canvas.dragDrop.desc': '把光标移到窗口上，上方会浮出一条胶囊工具栏；按住最左边的把手就能拖曳窗口，拖曳时会有紫色虚线框显示松开后的落点。要改大小则抓窗口四个角落的缩放把手，拖曳过程中央会显示目前占几格。',
   'features.canvas.layoutRules': '排版规则：互换、让位与填补',
