@@ -165,6 +165,7 @@ const common = {
   'quick_add.label': 'Add a live stream',
   'quick_add.button': 'Watch Now',
   'quick_add.error_generic': 'Could not add the stream. Check the URL or channel name.',
+  'quick_add.max_streams': 'The canvas holds up to {{max}} streams at once. Remove some before adding more.',
   'quick_add.placeholder_twitch': 'Paste a URL, or search Twitch channels',
   'quick_add.placeholder_youtube': 'Paste a URL, or search VTuber / YouTube channels',
   'empty_state.click_menu_hint': 'Click the Dynamic Island buttons below to get started',
@@ -246,7 +247,6 @@ const common = {
   'hotkeys.layouts': 'Switch Layout (Alt + 1-6, 9)',
   'hotkeys.quick_save': 'Quick Save Layout',
   'hotkeys.master_mute': 'Toggle Master Mute',
-  'hotkeys.focus_mode': 'Toggle Focus Mode (Hide UI)',
   'hotkeys.window_reload': 'Reload Stream',
   'hotkeys.window_mute': 'Mute / Unmute',
   'hotkeys.window_remove': 'Remove Window',
@@ -311,6 +311,7 @@ const common = {
   'layout.t_5_cinema': '5 People (Cinema)',
   'layout.t_7_cinema': '7 People (Cinema)',
   'layout.t_8_grid': '8 People (Grid)',
+  'layout.t_9_grid': '9 People (Grid)',
   'layout.t_12_grid': '12 People (Grid)',
   'layout.t_16_grid': '16 People (Grid)',
 

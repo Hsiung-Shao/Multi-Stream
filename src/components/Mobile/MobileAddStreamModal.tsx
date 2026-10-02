@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Plus, Link as LinkIcon } from 'lucide-react';
 import { Button } from '../ui/button';
-import { useStreamStore } from '../../store/useStreamStore';
+import { useStreamStore, MAX_STREAMS, MAX_STREAMS_REACHED } from '../../store/useStreamStore';
 
 interface MobileAddStreamModalProps {
     open: boolean;
@@ -27,7 +27,9 @@ export function MobileAddStreamModal({ open, onClose }: MobileAddStreamModalProp
                 setUrl('');
                 onClose();
             } else {
-                setError(result.message || t('mobile.add_stream.error', '無法新增串流'));
+                setError(result.message === MAX_STREAMS_REACHED
+                    ? t('quick_add.max_streams', { max: MAX_STREAMS })
+                    : result.message || t('mobile.add_stream.error', '無法新增串流'));
             }
         } catch {
             setError(t('mobile.add_stream.error', '無法新增串流'));

@@ -11,7 +11,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useStreamStore } from '../../store/useStreamStore';
+import { useStreamStore, MAX_STREAMS, MAX_STREAMS_REACHED } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 
 const loadTwitch = () => import('../../features/twitch/TwitchService').then(m => m.twitchService);
@@ -209,7 +209,9 @@ export function useStreamSearch({ targetWindowId, onSearch, onAdded, onError, re
                 onAdded?.();
                 return true;
             }
-            onError(res.message || t('quick_add.error_generic', '無法新增串流，請確認網址或頻道名稱'));
+            onError(res.message === MAX_STREAMS_REACHED
+                ? t('quick_add.max_streams', { max: MAX_STREAMS })
+                : res.message || t('quick_add.error_generic', '無法新增串流，請確認網址或頻道名稱'));
             return false;
         } catch {
             onError(t('quick_add.error_generic', '無法新增串流，請確認網址或頻道名稱'));

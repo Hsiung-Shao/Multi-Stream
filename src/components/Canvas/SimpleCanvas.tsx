@@ -43,7 +43,7 @@ const toLayoutItems = (windows: CanvasWindow[]) => windows.map(w => ({
 
 /**
  * 視窗的 DOM 順序一律依 id 排，不跟 windows 陣列順序走。
- * 切版面（模板、自訂佈局、Alt+數字的 generateStandardLayout 會依位置重排）只要改變陣列順序，
+ * 切版面（模板、自訂佈局、Alt+數字切版型）只要改變陣列順序，
  * React 就會用 insertBefore 搬動既有節點；瀏覽器搬動含 iframe 的節點會讓 iframe 整個重載，
  * Twitch 播放器回到網址上的 muted=true，而 StreamIframe 手上的 player 物件從此失聯——
  * UI 顯示未靜音、按鈕也救不回來（2026-09 production 以直播中頻道實測重現）。

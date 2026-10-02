@@ -175,6 +175,84 @@ describe('useStreamStore', () => {
         });
     });
 
+    // Alt+數字切版型壞版（2026-10 正式站實測）：setLayout 用像素算寬高（screenWidth / colCount），
+    // 2×2、每格 720×450 按 Alt+2 後 rect 變成 x/y 0/43200、寬 43200——720 被當成 720 格。
+    describe('Alt+數字切版型（setLayout，畫布模式）', () => {
+        const overlaps = (a: { x: number; y: number; w: number; h: number }, b: typeof a) =>
+            a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+        const addFour = async () => {
+            useStreamStore.setState({ layoutMode: 'canvas' });
+            // 串流 ID 取自 Date.now()：測試裡同一毫秒連加四路會撞號，逐路推進時間
+            let now = Date.now();
+            const spy = vi.spyOn(Date, 'now').mockImplementation(() => ++now);
+            try {
+                for (const ch of ['lofigirl', 'shroud', 'pokimane', 'xqc']) {
+                    const res = await useStreamStore.getState().addStream(`https://www.twitch.tv/${ch}`, { withChat: false, withStream: true });
+                    expect(res.success).toBe(true);
+                }
+            } finally {
+                spy.mockRestore();
+            }
+            expect(new Set(useStreamStore.getState().streams.map(s => s.id)).size).toBe(4);
+        };
+
+        it.each([1, 2, 3, 4, 5, 6, 9] as const)('Alt+%i 後所有 item 都在 24×24 網格內且不重疊', async (n) => {
+            await addFour();
+            useStreamStore.getState().setLayout(n);
+
+            const items = useStreamStore.getState().canvasItems;
+            expect(items).toHaveLength(n);
+            for (const { layout } of items) {
+                expect(layout.x).toBeGreaterThanOrEqual(0);
+                expect(layout.y).toBeGreaterThanOrEqual(0);
+                expect(layout.w).toBeGreaterThan(0);
+                expect(layout.h).toBeGreaterThan(0);
+                expect(layout.x + layout.w).toBeLessThanOrEqual(24);
+                expect(layout.y + layout.h).toBeLessThanOrEqual(24);
+            }
+            for (let a = 0; a < items.length; a++) {
+                for (let b = a + 1; b < items.length; b++) {
+                    expect(overlaps(items[a].layout, items[b].layout)).toBe(false);
+                }
+            }
+        });
+
+        it('與動態島布局清單套用同路數版型的結果相同', async () => {
+            await addFour();
+            useStreamStore.getState().setLayout(4);
+            const fromHotkey = useStreamStore.getState().canvasItems.map(i => ({ contentId: i.contentId, layout: i.layout }));
+
+            useStreamStore.getState().applyTemplateLayout('template-4-landscape');
+            const fromPicker = useStreamStore.getState().canvasItems.map(i => ({ contentId: i.contentId, layout: i.layout }));
+
+            expect(fromHotkey).toEqual(fromPicker);
+            // 4 路田字：每格 12×12
+            expect(fromHotkey.map(i => i.layout)).toEqual([
+                { x: 0, y: 0, w: 12, h: 12 }, { x: 12, y: 0, w: 12, h: 12 },
+                { x: 0, y: 12, w: 12, h: 12 }, { x: 12, y: 12, w: 12, h: 12 },
+            ]);
+        });
+
+        it('既有串流的視窗 ID 保持不變（播放器不重建）', async () => {
+            await addFour();
+            const before = new Map(useStreamStore.getState().canvasItems.map(i => [i.contentId, i.i]));
+            useStreamStore.getState().setLayout(4);
+            for (const item of useStreamStore.getState().canvasItems) {
+                expect(item.i).toBe(before.get(item.contentId));
+            }
+        });
+
+        it('畫布掛載前（layoutMode = auto）只記錄版型編號、不動畫布', async () => {
+            await addFour();
+            useStreamStore.setState({ layoutMode: 'auto' });
+            const before = useStreamStore.getState().canvasItems;
+            useStreamStore.getState().setLayout(2);
+            expect(useStreamStore.getState().layout).toBe(2);
+            expect(useStreamStore.getState().canvasItems).toBe(before);
+        });
+    });
+
     // 首頁「貼上網址馬上看」黑畫面（2026-09）：畫布掛載前 layoutMode 仍是預設 'auto'，
     // 舊分支寫死 pixel 座標 w:480/300 且同在 x:0,y:0，在 24 格網格下被放大約 20 倍並互相重疊。
     describe('畫布掛載前（layoutMode = auto）新增串流', () => {
