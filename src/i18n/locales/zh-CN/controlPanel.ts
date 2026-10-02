@@ -29,6 +29,7 @@ const controlPanel = {
   'uncategorized': '未分类',
   'mediaControl': '媒体控制',
   'masterVolume': '总音量',
+  'masterVolumeDoubleClickHint': '双击此处可解除所有直播的单独静音',
   'muteAll': '全部静音',
   'unmuteAll': '解除静音',
   'streamOrder': '串流顺序',

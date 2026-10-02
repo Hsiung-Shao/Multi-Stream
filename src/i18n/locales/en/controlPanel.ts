@@ -29,6 +29,7 @@ const controlPanel = {
   'uncategorized': 'Uncategorized',
   'mediaControl': 'Media Control',
   'masterVolume': 'Master Volume',
+  'masterVolumeDoubleClickHint': 'Double-click to unmute all individually muted streams',
   'muteAll': 'Mute All',
   'unmuteAll': 'Unmute All',
   'streamOrder': 'Stream Order',

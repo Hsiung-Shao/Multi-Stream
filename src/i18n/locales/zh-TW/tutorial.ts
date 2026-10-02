@@ -72,12 +72,12 @@ const tutorial = {
   'features.favorites.limits.s1': '收藏只存在這個瀏覽器，沒有雲端同步；要搬到另一台裝置請用「備份與還原」。',
   'features.favorites.limits.s2': 'YouTube 頻道只有在正在直播時才能從收藏載入到畫布；沒開台的 YouTube 收藏載入不了。Twitch 頻道沒開台也能載入，畫面會停在離線狀態。',
   'features.favorites.limits.s3': '動態島的「一鍵收藏當前畫布」是把畫布上每一路各存成一筆收藏（不分類、不存版面）；要存版面請用布局清單的「儲存目前布局」。',
-  'features.favorites.limits.s4': '新增收藏時只輸入頻道名稱、沒有貼網址，系統可能無法判斷平台，也就無法偵測開台；請盡量貼完整的頻道網址。',
+  'features.favorites.limits.s4': '新增收藏時只輸入頻道名稱、沒有貼網址，會先請你選擇是 Twitch 還是 YouTube，選好才能新增。YouTube 名稱會當成 @handle 去找頻道，名稱打錯或找不到時就無法偵測開台；最保險的做法還是貼完整的頻道網址。',
 
   'features.media.title': '🎛️ 媒體控制 (Media)',
   'features.media.description': '除了個別視窗的音量，您還可以進行全域控制。',
   'features.media.global': '主音量控制',
-  'features.media.global.desc': '動態島的媒體控制面板最上方是「總音量」：每一路的實際音量＝自己的音量 × 總音量，所以拉總音量會依比例一起調整。右上角的「全部靜音」會記住每一路原本是否靜音，解除時照原樣還原；總音量拉到 0 也等於全部靜音。接電話時按一下就能瞬間安靜。',
+  'features.media.global.desc': '動態島的媒體控制面板最上方是「總音量」：每一路的實際音量＝自己的音量 × 總音量，所以拉總音量會依比例一起調整。右上角的「全部靜音」會記住每一路原本是否靜音，解除時照原樣還原；總音量拉到 0 也等於全部靜音。接電話時按一下就能瞬間安靜。想一次把每一路的個別靜音都解除，可以雙擊「總音量」這幾個字。',
 
   'features.settings.title': '⚙️ 設定 (Settings)',
   'features.settings.description': '深入自訂您的使用體驗，將 MultiStream Hub 調整為最適合您的狀態。',
@@ -86,7 +86,7 @@ const tutorial = {
   'features.settings.playback': '播放行為',
   'features.settings.playback.desc': '「開啟新串流時自動靜音」預設開著，避免一次加好幾台時聲音疊在一起；新加入的直播音量預設是 50。「YouTube 多直播風險提示」對應同時播放 2 路以上 YouTube 時的提醒（目前關掉這個開關仍會提醒，屬已知問題）。「背景自動偵測直播狀態」預設關閉，打開後每 5 分鐘檢查一次收藏頻道；關著的時候，進站、進入畫布與每 25 分鐘仍會各自動檢查一次。「視窗關閉模式」決定按下關閉時是移除視窗，還是保留一個空白視窗方便馬上換台。',
   'features.settings.data': '資料管理',
-  'features.settings.data.desc': '收藏、收藏清單、標籤與設定都存在這台裝置的瀏覽器裡（另外會自動複製一份到瀏覽器的 IndexedDB 當備援），本站沒有雲端同步。到「收藏管理 → 備份與還原」可以下載一個 JSON 備份檔；在另一台裝置匯入時會「全數覆蓋」那邊的現有資料，完成後頁面自動重新整理。備份檔不包含自訂布局與介面語言。想完全清除資料，請用瀏覽器的「清除網站資料」，只清 localStorage 的話，收藏會在下次進站時從 IndexedDB 還原回來。',
+  'features.settings.data.desc': '收藏、收藏清單、標籤與設定都存在這台裝置的瀏覽器裡（另外會自動複製一份到瀏覽器的 IndexedDB 當備援），本站沒有雲端同步。到「收藏管理 → 備份與還原」可以下載一個 JSON 備份檔；在另一台裝置匯入時會「全數覆蓋」那邊的現有資料，完成後頁面自動重新整理。備份檔不包含自訂布局與介面語言。想完全清除資料，請到「收藏管理 → 設定 → 資料」按「清除」，會同時刪掉 localStorage 與 IndexedDB 備份並重新載入；只用瀏覽器清 localStorage 的話，收藏會在下次進站時從 IndexedDB 還原回來。',
   'features.settings.twitch': 'Twitch 整合',
   'features.settings.twitch.desc': 'Twitch 追隨清單的匯入在「收藏管理 → Twitch 匯入」，是一次性的匯入，不會持續同步；開台偵測使用本站自己的 Twitch 查詢，不需要你登入 Twitch。步驟見〈收藏管理〉。',
   'features.settings.mobile': '手機版的設定',

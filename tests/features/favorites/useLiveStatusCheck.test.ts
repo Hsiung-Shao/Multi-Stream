@@ -36,6 +36,7 @@ vi.mock('../../../src/features/youtube/YouTubeChannelRepository', () => ({
 
 import { useLiveStatusCheck } from '../../../src/features/favorites/useLiveStatusCheck';
 import { recordChannelCheck, LIVE_CHECK_STORAGE_KEY } from '../../../src/features/favorites/liveCheckThrottle';
+import { twitchService } from '../../../src/features/twitch/TwitchService';
 
 async function runCheck(options?: { force?: boolean }) {
     const { result } = renderHook(() => useLiveStatusCheck());
@@ -147,5 +148,19 @@ describe('useLiveStatusCheck × 共享表 youtube_live_status', () => {
         recordChannelCheck(CH, false);
         await runCheck();
         expect(fetchLiveStatuses).not.toHaveBeenCalled();
+    });
+});
+
+describe('useLiveStatusCheck × Twitch login 大小寫', () => {
+    it('舊收藏 channelId 含大寫（twitch.tv/Shroud）→ 仍能對上小寫 key 的直播結果', async () => {
+        favorites.length = 0;
+        favorites.push({ id: 't1', url: 'https://www.twitch.tv/Shroud', name: 'Shroud', platform: 'twitch', channelId: 'Shroud', addedAt: '', isLive: false });
+        vi.mocked(twitchService.checkMultipleChannelsLiveStatus).mockResolvedValueOnce({
+            shroud: { isLive: true, channelLogin: 'shroud', viewerCount: 123, gameName: 'Valorant' },
+        });
+        await runCheck();
+        expect(saveFavorites).toHaveBeenCalledTimes(1);
+        const saved = saveFavorites.mock.calls[0][0];
+        expect(saved[0]).toMatchObject({ id: 't1', isLive: true, viewerCount: 123 });
     });
 });

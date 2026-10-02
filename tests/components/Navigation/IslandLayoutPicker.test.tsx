@@ -132,7 +132,7 @@ describe('IslandLayoutPicker', () => {
         mockStore([]);
         render(<IslandLayoutPicker isExpanded={true} onOpenSettings={vi.fn()} />);
         fireEvent.click(screen.getByText('layout.tab_custom'));
-        expect(screen.getByText('尚無自定布局')).toBeInTheDocument();
+        expect(screen.getByText('favorites:layout_manager.no_layouts')).toBeInTheDocument();
     });
 
     it('opens the save dialog and reports it upward', () => {

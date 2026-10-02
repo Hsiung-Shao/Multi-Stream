@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { FavoriteStream, FavoriteCategory as Category, Tag } from '../types';
 import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from '../constants';
+import { buildFavoriteUrl, detectFavoritePlatform, type FavoriteInputPlatform } from '../favoriteInput';
 
 interface AddFavoriteDialogProps {
     open: boolean;
@@ -32,21 +33,10 @@ export interface AddFavoriteFormValues {
     autoLoad?: boolean;
 }
 
-// ---- Presentational platform detection -------------------------------------
-// 純展示用:只驅動 input icon 顏色、預覽卡、何時顯示平台選擇器。
-// 不改變實際送出的 url —— 真實平台解析仍在 favoritesService.addFavorite 內進行。
-type AfPlatform = 'twitch' | 'youtube';
-function detectPlatform(input: string): { platform: AfPlatform | null; handle: string } {
-    const s = (input || '').trim();
-    if (!s) return { platform: null, handle: '' };
-    let m: RegExpMatchArray | null;
-    if ((m = s.match(/twitch\.tv\/([A-Za-z0-9_]{2,40})/i))) return { platform: 'twitch', handle: m[1] };
-    if ((m = s.match(/youtube\.com\/@([A-Za-z0-9_.\-]{2,40})/i))) return { platform: 'youtube', handle: m[1] };
-    if ((m = s.match(/youtube\.com\/channel\/([A-Za-z0-9_\-]{4,40})/i))) return { platform: 'youtube', handle: m[1] };
-    if ((m = s.match(/youtu\.be\/([A-Za-z0-9_\-]{4,40})/i))) return { platform: 'youtube', handle: m[1] };
-    if (/^@?[A-Za-z0-9_.\-]{2,40}$/.test(s)) return { platform: null, handle: s.replace(/^@/, '') };
-    return { platform: null, handle: '' };
-}
+// ---- Platform detection -----------------------------------------------------
+// 驅動 input icon 顏色、預覽卡、何時顯示平台選擇器;只輸入名稱時送出前由 buildFavoriteUrl
+// 依選擇的平台補成完整網址(否則 addFavorite 判不出平台,會存成 'other')。
+type AfPlatform = FavoriteInputPlatform;
 
 // 平台主色(僅用於 input icon / 預覽 / badge 的品牌色點綴,非主題 token)
 function platformColor(p: AfPlatform | null): string {
@@ -79,7 +69,7 @@ export function AddFavoriteDialog({
 
     const url = watch('url');
 
-    // 純視覺狀態(不影響送出 payload)
+    // 只輸入名稱時使用者選的平台(送出時用來組完整網址)
     const [manualPlatform, setManualPlatform] = useState<AfPlatform | null>(null);
     // autoLoad 預設 off;開啟時新增成功後由 onSubmit 端(canvas FM)以 favoritesLoader 載入該頻道
     const [autoLoad, setAutoLoad] = useState(false);
@@ -108,12 +98,14 @@ export function AddFavoriteDialog({
     }, [initialData, reset, open]);
 
     // ---- presentational derived values ----
-    const det = detectPlatform(url || '');
+    const det = detectFavoritePlatform(url || '');
     const platform: AfPlatform | null = isEdit
         ? ((initialData?.platform === 'twitch' || initialData?.platform === 'youtube') ? initialData.platform : null)
         : (det.platform || manualPlatform);
     const accent = platformColor(platform);
     const showPlatformPicker = !isEdit && !!det.handle && !det.platform;
+    // 只輸入名稱時必須先選平台才能送出
+    const blockSubmitForPlatform = showPlatformPicker && !manualPlatform;
 
     // add 模式:依偵測到的平台自動預選平台 tag(Twitch/YouTube),讓平台 tag 在 tag well 內預先選好
     // (使用者反映「新增時沒自動帶平台標籤」)。平台切換時移除舊的、加入新的;
@@ -174,7 +166,11 @@ export function AddFavoriteDialog({
                 </div>
 
                 <form
-                    onSubmit={handleSubmit((data) => onSubmit({ ...data, autoLoad: showAutoLoad && autoLoad }))}
+                    onSubmit={handleSubmit((data) => onSubmit({
+                        ...data,
+                        url: isEdit ? data.url : buildFavoriteUrl(data.url, manualPlatform),
+                        autoLoad: showAutoLoad && autoLoad,
+                    }))}
                     className="flex flex-col min-h-0 flex-1"
                 >
                     {/* Body */}
@@ -244,6 +240,11 @@ export function AddFavoriteDialog({
                                         );
                                     })}
                                 </div>
+                                {blockSubmitForPlatform && (
+                                    <p className="text-[11.5px] text-muted-foreground mt-2 leading-relaxed">
+                                        {t('favorites:pickPlatformHint')}
+                                    </p>
+                                )}
                             </div>
                         )}
 
@@ -378,6 +379,7 @@ export function AddFavoriteDialog({
                             </Button>
                             <Button
                                 type="submit"
+                                disabled={blockSubmitForPlatform}
                                 className="h-10 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
                             >
                                 {isEdit

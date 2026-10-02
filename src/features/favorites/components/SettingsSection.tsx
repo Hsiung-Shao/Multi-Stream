@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import { useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../../store/useUIStore';
 import { Label } from '../../../components/ui/label';
@@ -10,9 +10,20 @@ import {
     SelectValue,
 } from '../../../components/ui/select';
 import { Switch } from '../../../components/ui/switch';
+import { Button } from '../../../components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '../../../components/ui/alert-dialog';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { cn } from '../../../components/ui/utils';
-import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare } from 'lucide-react';
+import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare, Trash2 } from 'lucide-react';
 import { logEvent } from '../../../utils/analytics';
 
 import { GITHUB_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
@@ -84,6 +95,59 @@ function SettingRow({ label, desc, children }: { label: string; desc?: string; c
             </div>
             <div className="shrink-0">{children}</div>
         </div>
+    );
+}
+
+// 「清除所有資料」(隱私權政策承諾的一鍵刪除):確認後清 localStorage + IndexedDB 備份,重新載入
+function ClearAllDataRow() {
+    const { t } = useTranslation(['common', 'favorites']);
+    const [open, setOpen] = useState(false);
+    const [clearing, setClearing] = useState(false);
+
+    const handleConfirm = async (e: React.MouseEvent) => {
+        e.preventDefault(); // 清除完成前不要讓 AlertDialogAction 關閉對話框
+        setClearing(true);
+        logEvent('FavoritesSettings', 'clear_all_data');
+        try {
+            const { clearAllSiteData } = await import('../../../utils/clearAllData');
+            await clearAllSiteData();
+        } finally {
+            window.location.reload();
+        }
+    };
+
+    return (
+        <SettingRow label={t('favorites:settings.clear_all_data')} desc={t('favorites:settings.clear_all_data_desc')}>
+            <AlertDialog open={open} onOpenChange={(v) => { if (!clearing) setOpen(v); }}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setOpen(true)}
+                    className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                    <Trash2 className="size-4" />
+                    {t('favorites:settings.clear_all_data_button')}
+                </Button>
+                <AlertDialogContent className="bg-card border-border text-foreground">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t('favorites:settings.clear_all_data_confirm_title')}</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                            {t('favorites:settings.clear_all_data_confirm_desc')}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={clearing}>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirm}
+                            disabled={clearing}
+                            className="bg-destructive hover:bg-destructive/90 text-white"
+                        >
+                            {t('favorites:settings.clear_all_data_button')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </SettingRow>
     );
 }
 
@@ -238,6 +302,11 @@ export function SettingsSection() {
                         </SelectContent>
                     </Select>
                 </SettingRow>
+            </FMCard>
+
+            {/* 資料 */}
+            <FMCard title={t('favorites:settings.data')}>
+                <ClearAllDataRow />
             </FMCard>
 
             {/* 關於(重建被移除的關於卡:敘述 + 社群外連,對齊現行 token 風格) */}

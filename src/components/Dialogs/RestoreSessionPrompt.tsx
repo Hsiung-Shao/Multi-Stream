@@ -6,6 +6,7 @@
 //
 // 由 App.tsx 控制 open 與待恢復資料,本元件只負責 UI 與回呼。
 
+import { useTranslation } from 'react-i18next';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -25,19 +26,20 @@ interface RestoreSessionPromptProps {
 }
 
 export function RestoreSessionPrompt({ open, streamCount, onRestore, onDiscard }: RestoreSessionPromptProps) {
+    const { t } = useTranslation('common');
     return (
         <AlertDialog open={open} onOpenChange={(v) => { if (!v) onDiscard(); }}>
             <AlertDialogContent className="bg-card border-border text-foreground">
                 <AlertDialogHeader>
-                    <AlertDialogTitle>恢復上次的觀看畫面?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('restore_session.title')}</AlertDialogTitle>
                     <AlertDialogDescription className="text-muted-foreground">
-                        偵測到你剛剛還有 {streamCount} 個正在觀看的串流(含布局與頻道位置)。要恢復嗎?
+                        {t('restore_session.desc', { count: streamCount })}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={onDiscard}>重新開始</AlertDialogCancel>
+                    <AlertDialogCancel onClick={onDiscard}>{t('restore_session.restart')}</AlertDialogCancel>
                     <AlertDialogAction onClick={onRestore} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                        恢復
+                        {t('restore_session.restore')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

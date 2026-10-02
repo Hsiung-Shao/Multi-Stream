@@ -29,6 +29,7 @@ const controlPanel = {
   'uncategorized': '미분류',
   'mediaControl': '미디어 제어',
   'masterVolume': '마스터 볼륨',
+  'masterVolumeDoubleClickHint': '더블클릭하면 모든 스트림의 개별 음소거가 해제됩니다',
   'muteAll': '모두 음소거',
   'unmuteAll': '음소거 해제',
   'streamOrder': '스트림 순서',
