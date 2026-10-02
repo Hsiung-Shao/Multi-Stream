@@ -54,7 +54,7 @@ function gitLastMod(files) {
 
 // 定義網站的所有路由
 // 刻意不列：/canvas（CSR-only 互動工具，爬蟲拿到空殼；工具說明由教學頁承擔）、
-// /schedule/submit（表單頁，本身 noindex）、/admin。tests/functions/sitemap.test.ts 鎖這份排除清單。
+// /schedule/submit（表單頁，內容少；仍可索引、可經站內連結爬到，只是不主動提交）、/admin。tests/functions/sitemap.test.ts 鎖這份排除清單。
 const urls = [
   { url: '/', changefreq: 'daily', priority: 1.0 },
   { url: '/instructions', changefreq: 'monthly', priority: 0.8 },
