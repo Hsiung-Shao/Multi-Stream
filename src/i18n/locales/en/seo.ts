@@ -36,7 +36,7 @@ export default {
     'instructions.share.title': 'Share Your Canvas: Turn a Multi-Stream Line-Up Into One Link - MultiStream Hub',
     'instructions.share.description': 'Copy the multi-stream line-up you are watching into a single link for a friend. Learn the /canvas?streams= format, the 16-stream limit, and why YouTube links stop working once a broadcast ends.',
     'instructions.shortcuts.title': 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub',
-    'instructions.shortcuts.description': 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Ctrl + M to mute all, plus R / M / Delete / F / T on whichever window you hover — including theater mode.',
+    'instructions.shortcuts.description': 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Ctrl + M to mute all, Alt + number to switch layouts, plus R / M / Delete / F / T on whichever window you hover — including theater mode.',
     'instructions.schedule.title': 'Stream Schedule Guide: Live Status, Data Sources and Limits - MultiStream Hub',
     'instructions.schedule.description': 'How to use the Taiwanese VTuber stream schedule: open several streams in one click, read card statuses and YouTube/Twitch merging, see how often data updates, and learn which streams will not appear.',
     'instructions.watch-multiple-twitch-streams.title': 'How to Watch Multiple Twitch Streams at Once (Free MultiTwitch Alternative) - MultiStream Hub',

@@ -13,6 +13,8 @@ const tags = {
   'isLive': '방송 중',
   'noTagsSelected': '태그가 선택되지 않음',
   'editTagMode': '편집 모드 (위의 표를 수정하고 업데이트 클릭)',
+  'tags': '태그',
+  'noTags': '태그가 없습니다. "태그 추가"에서 만들 수 있습니다',
 };
 
 export default tags;

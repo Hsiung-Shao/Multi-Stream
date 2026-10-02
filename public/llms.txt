@@ -42,8 +42,8 @@ control, a unified chat panel for multiple channels at once, and a local
     the current line-up as /canvas?streams=tw:<channel>,yt:<videoId> (up to 16
     streams, chat=1 when a chat window is present).
   - [Shortcuts & theater mode](https://multistreaming.org/instructions/shortcuts):
-    Ctrl+/ cheat sheet, Ctrl+K search, Ctrl+M mute all, and R / M / Delete /
-    F / T on the window under the cursor.
+    Ctrl+/ cheat sheet, Ctrl+K search, Ctrl+M mute all, Alt+number layouts,
+    and R / M / Delete / F / T on the window under the cursor.
   - [Stream schedule guide](https://multistreaming.org/instructions/schedule):
     reading the schedule, YouTube/Twitch merging, data sources and update
     intervals, known gaps, and how to report errors.

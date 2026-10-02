@@ -13,6 +13,8 @@ const tags = {
   'isLive': 'Live',
   'noTagsSelected': 'No tags selected',
   'editTagMode': 'Edit Mode (Modify table above and click Update)',
+  'tags': 'Tags',
+  'noTags': 'No tags yet. Create one under "Add Tag".',
 };
 
 export default tags;

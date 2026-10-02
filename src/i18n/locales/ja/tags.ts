@@ -13,6 +13,8 @@ const tags = {
   'isLive': '配信中',
   'noTagsSelected': 'タグ未選択',
   'editTagMode': '編集モード (上の表を変更して更新をクリック)',
+  'tags': 'タグ',
+  'noTags': 'タグはまだありません。「タグを追加」から作成できます',
 };
 
 export default tags;

@@ -35,7 +35,9 @@ export default {
     'instructions.share.title': '캔버스 공유: 다중 방송 조합을 링크 하나로 - MultiStream Hub',
     'instructions.share.description': '지금 보고 있는 다중 방송을 링크 하나로 만들어 친구에게 보내는 방법. /canvas?streams= 형식, 16개 제한, YouTube 링크가 방송 종료 후 열리지 않는 이유를 설명합니다.',
     'instructions.shortcuts.title': '단축키와 시어터 모드: 키보드로 다중 방송 캔버스 조작 - MultiStream Hub',
-    'instructions.shortcuts.description': 'MultiStream Hub의 모든 단축키: Ctrl + / 목록, Ctrl + K 검색, Ctrl + M 전체 음소거, 커서를 올린 창에 적용되는 R / M / Delete / F / T와 시어터 모드.',
+    'instructions.shortcuts.description': 'MultiStream Hub 단축키 전체: Ctrl + / 목록, Ctrl + K 검색, Ctrl + M 전체 음소거, Alt + 숫자 레이아웃 전환, 커서를 올린 창의 R / M / Delete / F / T와 시어터 모드.',
+    'instructions.schedule.title': '방송 스케줄 가이드: 방송 상태, 데이터 출처와 한계 - MultiStream Hub',
+    'instructions.schedule.description': '대만 VTuber 방송 스케줄 사용법: 여러 방송을 한 번에 열기, 카드 상태와 YouTube/Twitch 합치기, 데이터 업데이트 주기, 표시되지 않는 방송까지 알아보세요.',
     'instructions.watch-multiple-twitch-streams.title': '여러 Twitch 방송을 동시에 보는 방법 (무료 MultiTwitch 대안) - MultiStream Hub',
     'instructions.watch-multiple-twitch-streams.description': '여러 Twitch 방송을 무료로 나란히 동시 시청: 채널 이름을 입력하고 레이아웃을 고르고 채팅도 함께 보며, 방송 조합 전체를 링크 하나로 공유하세요.',
     'creator.title': '개발자 Hsiung-Shao - MultiStream Hub',
@@ -44,6 +46,6 @@ export default {
     'compare.description': 'MultiStream Hub, MultiTwitch, TwitchTheater, Multistre.am 비교: 지원 플랫폼, 동시 시청 수, 레이아웃, 다중 채팅, 공유 링크, 모바일 지원, 가격.',
     'schedule.title': '대만 VTuber 방송 스케줄: 지금 누가 방송 중이고 7일 동안 누가 방송하나 - MultiStream Hub',
     'schedule.description': '대만 VTuber의 YouTube 대기실과 Twitch 방송 채널을 하나의 스케줄로. 지금 방송과 7일간의 예정을 보고 한 번에 함께 시청하세요.',
-    'scheduleSubmit.title': '방송 일정표에 VTuber 추가 - MultiStream Hub',
+    'scheduleSubmit.title': '방송 스케줄에 VTuber 추가 - MultiStream Hub',
     'scheduleSubmit.description': '아직 일정표에 없는 VTuber를 추천하세요. YouTube 채널 링크를 붙여 넣으면 이름과 프로필 사진이 자동으로 입력되고, 검토 후 대만 VTuber 방송 일정표에 추가됩니다.',
 };

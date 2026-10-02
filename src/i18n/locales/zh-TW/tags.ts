@@ -13,6 +13,8 @@ const tags = {
   'isLive': '直播中',
   'noTagsSelected': '未選擇標籤',
   'editTagMode': '正在編輯標籤 (修改上方表格並點擊更新)',
+  'tags': '標籤',
+  'noTags': '尚無標籤，可到「加入標籤」新增',
 };
 
 export default tags;

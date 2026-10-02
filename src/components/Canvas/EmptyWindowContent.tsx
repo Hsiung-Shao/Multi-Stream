@@ -228,7 +228,7 @@ export const EmptyWindowContent = memo(function EmptyWindowContent({ windowId, t
                 </label>
                 <Select onValueChange={handleStreamSelect}>
                     <SelectTrigger className="w-full bg-black/40 border-white/10 text-white">
-                        <SelectValue placeholder={t('favorites.select_live_stream', '選擇直播频道...')} />
+                        <SelectValue placeholder={t('favorites.select_live_stream', '選擇直播頻道...')} />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-white/10 text-white">
                         {liveFavorites.length > 0 ? (

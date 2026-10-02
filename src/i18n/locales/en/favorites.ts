@@ -24,7 +24,7 @@ export default {
   auto_mute_new: 'Mute new streams on open',
   auto_mute_new_desc: 'Avoid sudden loud volume when opening many at once.',
   yt_risk_warn: 'YouTube multi-stream warning',
-  yt_risk_warn_desc: 'Warns when more than 3 YouTube streams are playing.',
+  yt_risk_warn_desc: 'Warns when 2 or more YouTube streams are playing.',
   bg_live_detect: 'Auto-detect live status in background',
   bg_live_detect_desc: 'Checks your favorite channels every 5 minutes.',
   // Navigation
@@ -217,4 +217,5 @@ export default {
   autoLoadTitle: 'Load to screen right after adding',
   autoLoadDesc: 'Open this channel into the multi-view as you save it',
   addAndLoad: 'Add & Load',
+  'tagWellPlaceholder': 'Select or search tags…',
 };

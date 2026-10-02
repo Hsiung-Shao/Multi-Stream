@@ -196,7 +196,7 @@ export const DynamicIsland = () => {
                                     {t('common.add_stream_window') || "新增串流視窗"}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="focus:bg-white/20 focus:text-white cursor-pointer" onClick={() => addCanvasItem('chat', null)}>
-                                    {t('common.add_chat_window') || "新增聊天室窗"}
+                                    {t('common.add_chat_window') || "新增聊天室視窗"}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>

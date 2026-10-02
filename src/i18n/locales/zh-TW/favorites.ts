@@ -24,7 +24,7 @@ export default {
   auto_mute_new: '開啟新串流時自動靜音',
   auto_mute_new_desc: '避免一次開很多台時音量爆掉。',
   yt_risk_warn: 'YouTube 多直播風險提示',
-  yt_risk_warn_desc: '超過 3 個 YouTube 直播會跳警告。',
+  yt_risk_warn_desc: '同時播放 2 個以上 YouTube 直播會跳警告。',
   bg_live_detect: '背景自動偵測直播狀態',
   bg_live_detect_desc: '每 5 分鐘檢查一次收藏頻道。',
   // Navigation
@@ -160,7 +160,6 @@ export default {
   loading: '載入中...',
   confirmDelete: '確定要刪除嗎？',
   confirmDeleteCategoryDesc: '刪除分類後，該分類下的收藏將會變為未分類。',
-  loginRequiredForStatus: '請先登入 Twitch 以檢查狀態',
   confirmDeleteCount: '確定要刪除選定的 {{count}} 項嗎？',
   addCategory: '新增清單',
   categoryName: '清單名稱',
@@ -220,5 +219,6 @@ export default {
   autoLoadTitle: '新增後立即載入畫面',
   autoLoadDesc: '儲存收藏的同時,把這台開到多視窗',
   addAndLoad: '新增並載入',
+  'tagWellPlaceholder': '選擇或搜尋標籤…',
 };
 

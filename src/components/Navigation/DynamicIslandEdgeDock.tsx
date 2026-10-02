@@ -363,7 +363,7 @@ export const DynamicIslandEdgeDock = () => {
                                 <FunctionRow
                                     icon={MessageSquare}
                                     color={FN.add.c}
-                                    label={t('common.add_chat_window') || '新增聊天室窗'}
+                                    label={t('common.add_chat_window') || '新增聊天室視窗'}
                                     onClick={() => { addCanvasItem('chat', null); setOpen(false); }}
                                 />
                             </div>

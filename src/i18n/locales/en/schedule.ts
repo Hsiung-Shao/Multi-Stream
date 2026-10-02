@@ -71,7 +71,7 @@ export default {
     'state.updatedAt': 'Data updated {{time}}',
 
     'about.title': 'Where the data comes from',
-    'about.body': 'The schedule only lists streams that exist on the platforms: YouTube waiting rooms, Twitch schedules, and channels that are live. Streams announced only in a schedule image do not appear. When the same stream runs on YouTube and Twitch at once, it shows as one card and opens the YouTube stream on the canvas. Placeholder rooms scheduled more than 14 days out are skipped, and streams that have not started 3 hours after their scheduled time are removed.',
+    'about.body': 'The schedule only lists streams that exist on the platforms: YouTube waiting rooms, Twitch schedules, and channels that are live. Streams announced only in a schedule image do not appear. When the same stream runs on YouTube and Twitch at once, it shows as one card: whichever side is live wins, and when both have the same status the YouTube stream opens on the canvas. Placeholder rooms scheduled more than 14 days out are skipped, and streams that have not started 3 hours after their scheduled time are removed.',
     'about.tz': 'Times are shown in your device time zone.',
     'about.guide': 'Full guide: how the stream schedule works',
 

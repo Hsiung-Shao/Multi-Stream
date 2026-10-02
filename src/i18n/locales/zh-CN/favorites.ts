@@ -24,7 +24,7 @@ export default {
   auto_mute_new: '打开新串流时自动静音',
   auto_mute_new_desc: '避免一次打开很多台时音量爆掉。',
   yt_risk_warn: 'YouTube 多直播风险提示',
-  yt_risk_warn_desc: '超过 3 个 YouTube 直播会跳警告。',
+  yt_risk_warn_desc: '同时播放 2 个以上 YouTube 直播会弹出警告。',
   bg_live_detect: '后台自动检测直播状态',
   bg_live_detect_desc: '每 5 分钟检查一次收藏频道。',
   // Navigation
@@ -83,7 +83,7 @@ export default {
   // Backup
   backup: '备份与还原',
   backupTitle: '备份与还原',
-  backupDesc: '导出 or 导入您的收藏数据',
+  backupDesc: '导出或导入您的收藏数据',
   export: '导出备份',
   import: '导入备份',
   importWarning: '警告：导入将会覆盖现有的所有收藏数据，此操作无法恢复。',
@@ -216,5 +216,6 @@ export default {
   no_streams_to_save: '没有可收藏的直播流',
   save_entire_canvas: '一键收藏当前画布',
   batch_save_success_simple: '已收藏 {{count}} 个直播流',
+  'tagWellPlaceholder': '选择或搜索标签…',
 };
 

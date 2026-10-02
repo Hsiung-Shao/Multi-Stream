@@ -8,7 +8,7 @@ export default {
   theme_light: '라이트',
   theme_dark: '다크',
   theme_system: '시스템',
-  island_style: '다이나믹 아일랜드 스타일',
+  island_style: '다이내믹 아일랜드 스타일',
   island_style_desc: '데스크톱 전용, 모바일에서는 제공되지 않습니다.',
   island_style_original: '기본형',
   island_style_edge_dock: '가장자리 도킹',
@@ -24,7 +24,7 @@ export default {
   auto_mute_new: '새 스트림 열 때 자동 음소거',
   auto_mute_new_desc: '한꺼번에 많이 열 때 음량 폭발을 방지합니다.',
   yt_risk_warn: 'YouTube 다중 방송 경고',
-  yt_risk_warn_desc: 'YouTube 방송이 3개를 초과하면 경고합니다.',
+  yt_risk_warn_desc: 'YouTube 방송을 2개 이상 동시에 재생하면 경고합니다.',
   bg_live_detect: '백그라운드에서 라이브 상태 자동 감지',
   bg_live_detect_desc: '5분마다 즐겨찾기 채널을 확인합니다.',
   // Navigation
@@ -77,7 +77,7 @@ export default {
   importSuccess: '{{count}} 개 가져오기 성공',
 
   // Empty States
-  noFavorites: '즐겨찾기가 없습니다',
+  noFavorites: '즐겨찾기가 없습니다. 오른쪽 위에서 추가하세요',
   noCategories: '카테고리가 없습니다',
 
   // Backup
@@ -216,5 +216,6 @@ export default {
   no_streams_to_save: '저장할 스트림이 없습니다',
   save_entire_canvas: '현재 캔버스 저장',
   batch_save_success_simple: '스트림 {{count}}개를 저장했습니다',
+  'tagWellPlaceholder': '태그 선택 또는 검색…',
 };
 

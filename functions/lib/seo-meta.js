@@ -131,8 +131,8 @@ export const ROUTE_META = {
     },
     '/instructions/shortcuts': {
         type: 'article',
-        'zh-TW': { title: '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub', description: 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Ctrl + M 全部靜音，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。' },
-        en: { title: 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub', description: 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Ctrl + M to mute all, plus R / M / Delete / F / T on whichever window you hover — including theater mode.' },
+        'zh-TW': { title: '快捷鍵與劇場模式：鍵盤操作多直播畫布 - MultiStream Hub', description: 'MultiStream Hub 的完整快捷鍵：Ctrl + / 速查表、Ctrl + K 搜尋、Ctrl + M 全部靜音、Alt + 數字切布局，以及游標停在視窗上的 R / M / Delete / F / T 與劇場模式。' },
+        en: { title: 'Keyboard Shortcuts & Theater Mode: Drive the Canvas From the Keyboard - MultiStream Hub', description: 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Ctrl + M to mute all, Alt + number to switch layouts, plus R / M / Delete / F / T on whichever window you hover — including theater mode.' },
     },
     '/instructions/schedule': {
         type: 'article',

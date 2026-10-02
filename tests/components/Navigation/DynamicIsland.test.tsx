@@ -90,7 +90,7 @@ describe('DynamicIsland', () => {
         expect(mockAddCanvasItem).toHaveBeenCalledWith('stream', null);
 
         fireEvent.keyDown(screen.getByTitle('新增視窗'), { key: 'Enter' });
-        fireEvent.click(await screen.findByText('新增聊天室窗'));
+        fireEvent.click(await screen.findByText('新增聊天室視窗'));
         expect(mockAddCanvasItem).toHaveBeenCalledWith('chat', null);
     });
 

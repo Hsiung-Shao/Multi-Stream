@@ -71,9 +71,9 @@ export default {
     'state.updatedAt': '数据更新于 {{time}}',
 
     'about.title': '数据来源',
-    'about.body': '周表只收录平台上已建立的排程：YouTube 的直播待机室、Twitch 的周表设置，以及正在直播的频道。主播只发周表图、没有建立排程的场次不会出现。同一场在 YouTube 与 Twitch 同步开播时合并成一张卡，加入画布时优先 YouTube。排定时间超过 14 天的“常驻框”不列入，排定时间过后 3 小时仍未开播的场次会自动移除。',
+    'about.body': '周表只收录平台上已建立的排程：YouTube 的直播待机室、Twitch 的周表设置，以及正在直播的频道。主播只发周表图、没有建立排程的场次不会出现。同一场在 YouTube 与 Twitch 同步开播时合并成一张卡，以正在直播的那一边为准，状态相同时加入画布优先 YouTube。排定时间超过 14 天的“常驻框”不列入，排定时间过后 3 小时仍未开播的场次会自动移除。',
     'about.tz': '时间按你的设备时区显示。',
-    'about.guide': '完整说明：开台周表使用指南',
+    'about.guide': '完整说明：开播周表使用指南',
 
     'person.backToSchedule': '回到开播周表',
     'person.live': '正在直播',

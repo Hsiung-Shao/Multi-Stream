@@ -24,7 +24,7 @@ export default {
   auto_mute_new: '新規ストリームを開いたら自動ミュート',
   auto_mute_new_desc: '一度に多数開いたときの音量爆発を防ぎます。',
   yt_risk_warn: 'YouTube 複数配信の警告',
-  yt_risk_warn_desc: 'YouTube 配信が 3 つを超えると警告します。',
+  yt_risk_warn_desc: 'YouTube の配信を 2 つ以上同時に再生すると警告を表示します。',
   bg_live_detect: 'バックグラウンドで配信状態を自動検出',
   bg_live_detect_desc: '5 分ごとにお気に入りチャンネルを確認します。',
   // Navigation
@@ -216,5 +216,6 @@ export default {
   no_streams_to_save: '保存できるストリームがありません',
   save_entire_canvas: '現在のキャンバスを保存',
   batch_save_success_simple: '{{count}} 個のストリームを保存しました',
+  'tagWellPlaceholder': 'タグを選択または検索…',
 };
 
