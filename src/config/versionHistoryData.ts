@@ -6,6 +6,20 @@ export interface VersionData {
 
 export const versionHistoryData: VersionData[] = [
     {
+        version: 'v3.7.0',
+        dateKey: 'versionHistory:v3.7.0.date',
+        changeKeys: [
+            'versionHistory:v3.7.0.guides',
+            'versionHistory:v3.7.0.clearData',
+            'versionHistory:v3.7.0.backup',
+            'versionHistory:v3.7.0.hotkeys',
+            'versionHistory:v3.7.0.favorites',
+            'versionHistory:v3.7.0.languages',
+            'versionHistory:v3.7.0.privacy',
+            'versionHistory:v3.7.0.schedule',
+        ],
+    },
+    {
         version: 'v3.6.1',
         dateKey: 'versionHistory:v3.6.1.date',
         changeKeys: [
