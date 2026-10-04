@@ -168,7 +168,7 @@ async function runRound(force: boolean): Promise<void> {
                     .sort((a, b) => lastAttemptAt(a.channelId as string, checkMap) - lastAttemptAt(b.channelId as string, checkMap));
 
                 // 共享表：週表排程或別的使用者查過、夠新的頻道直接用資料庫的結果，不打端點（整輪只讀一次）。
-                // 自動輪詢接受 12 分鐘內的資料；手動重新整理只接受 3 分鐘內的（使用者要的是最新狀態）
+                // 自動輪詢接受 22 分鐘內的資料；手動重新整理只接受 3 分鐘內的（使用者要的是最新狀態）
                 const shared = candidates.length > 0
                     ? await fetchLiveStatuses(candidates.map(fav => fav.channelId as string))
                     : new Map<string, LiveStatusRow>();
@@ -178,7 +178,7 @@ async function runRound(force: boolean): Promise<void> {
                     const channelId = fav.channelId as string;
                     const sharedRow = shared.get(channelId);
                     const overBudget = endpointCalls >= MAX_ENDPOINT_CALLS_PER_ROUND;
-                    // 手動重新整理只接受 3 分鐘內的共享資料；但額度用完時，12 分鐘內的也比完全不更新好
+                    // 手動重新整理只接受 3 分鐘內的共享資料；但額度用完時，22 分鐘內的也比完全不更新好
                     const fromShared = !!sharedRow && (force && !overBudget
                         ? isLiveStatusFresh(sharedRow, Date.now(), LIVE_STATUS_FRESH_FORCE_MS)
                         : isLiveStatusFresh(sharedRow));

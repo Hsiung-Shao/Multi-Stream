@@ -187,14 +187,14 @@ describe('useLiveStatusCheck × 共享表 youtube_live_status', () => {
         expect(JSON.parse(localStorage.getItem(LIVE_CHECK_STORAGE_KEY)!)[CH].t).toBe(checkedAt);
     });
 
-    it('週表排程 10 分鐘前查過 → 仍算新鮮，用資料庫結果、不打端點', async () => {
-        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 10 * 60 * 1000).toISOString() })]]));
+    it('週表排程 20 分鐘前查過 → 仍算新鮮，用資料庫結果、不打端點', async () => {
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 20 * 60 * 1000).toISOString() })]]));
         await runCheck();
         expect(checkChannelLiveStatus).not.toHaveBeenCalled();
     });
 
-    it('資料已過期（超過 12 分鐘）→ 退回打端點', async () => {
-        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 13 * 60 * 1000).toISOString() })]]));
+    it('資料已過期（超過 22 分鐘）→ 退回打端點', async () => {
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 23 * 60 * 1000).toISOString() })]]));
         await runCheck();
         expect(checkChannelLiveStatus).toHaveBeenCalledWith(CH);
     });
@@ -268,7 +268,7 @@ describe('useLiveStatusCheck × 每輪打端點上限', () => {
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(7);
     });
 
-    it('手動重新整理：共享資料 3～12 分鐘前 → 額度內打端點，額度用完才退用共享資料', async () => {
+    it('手動重新整理：共享資料 3～22 分鐘前 → 額度內打端點，額度用完才退用共享資料', async () => {
         fetchLiveStatuses.mockResolvedValue(new Map(favorites.map(f => [f.channelId, sharedRow(f.channelId, 5 * 60_000)])));
         await runCheck({ force: true });
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(MAX_ENDPOINT_CALLS_PER_ROUND);

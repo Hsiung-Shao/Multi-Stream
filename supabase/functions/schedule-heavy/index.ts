@@ -3,7 +3,7 @@
 // Edge Function 的限制不是牆鐘而是 CPU 時間（本地 soft 1s / hard 2s，正式 2s）：
 // 2,525 個頻道的 RSS 用 25 並行 9 秒就抓完，但解析 35,000 個 entry 加上 videos.list 的 JSON 就撞硬上限。
 // 所以每次呼叫只處理 cron_shard_state.schedule_heavy_rss.shard_size 個頻道（預設 400），游標繞一圈＝一次全量；
-// 正式環境用 pg_cron 每隔幾分鐘呼叫一次即可（一圈約 7 次呼叫）。
+// 正式環境 pg_cron 每小時 :02 呼叫一次（2026-10-04 從每 20 分鐘降頻，20261004120000）；一圈約 7 次呼叫 ≈ 7 小時。
 //
 // 每次呼叫：
 // 1. 游標在 0（新的一圈）時重算名冊分級（T1/T2/T3，排除 graduate）

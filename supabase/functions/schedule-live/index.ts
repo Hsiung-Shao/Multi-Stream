@@ -1,4 +1,4 @@
-// schedule-live：每 10 分鐘（:00、:10…）。YouTube 直播狀態（live-og，不耗 API 配額）。
+// schedule-live：每 20 分鐘（:00、:20、:40；2026-10-04 從每 10 分鐘降頻，20261004120000）。YouTube 直播狀態（live-og，不耗 API 配額）。
 // 2026-10-02 從 schedule-light 拆出來：RSS 與 live-og 在同一次呼叫時 CPU 會超過 Edge Function 的 2 秒上限（546）。
 //
 // 1. 過期：排定時間過後 3 小時仍未開始的待機室 → expired（資料庫端）
@@ -23,7 +23,7 @@ const HEAVY_JOB = 'schedule_heavy_rss';
  * live-og：/live 頁串流讀取（live_og.ts），並行 6。
  * 2026-10-02 本地 edge runtime 實測（只跑 live-og＋固定成本）：60、80、100 各兩輪都越過 1 秒 soft limit、
  * 未達 2 秒 hard limit；固定成本（名冊、合併、snapshot）單獨跑不到 1 秒。取 80 留餘裕（正式環境 CPU 速度不同）。
- * 直播高峰（YouTube 直播中約 220 個）每輪 60 個直播中名額，每個直播中頻道約 40 分鐘重新確認一次。
+ * 直播高峰（YouTube 直播中約 220 個）每輪 60 個直播中名額，每個直播中頻道約 80 分鐘重新確認一次（每 20 分鐘一輪）。
  */
 const OG_CONCURRENCY = 6;
 const OG_MAX_CHANNELS = 80;
