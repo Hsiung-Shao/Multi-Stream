@@ -269,8 +269,11 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const { checkNow, isRefreshing } = useLiveStatusCheck();
 
     const handleCheckLiveStatus = async () => {
-        // 使用者手動按下 → 略過每頻道節流，全部重查
-        await checkNow({ force: true });
+        // 使用者手動按下 → 略過每頻道節流（3 分鐘內只能用一次、每輪最多查 10 個頻道）
+        const res = await checkNow({ force: true });
+        if (res.cooldownRemainingMs > 0) {
+            toast.info(t('refreshCooldown', { seconds: Math.ceil(res.cooldownRemainingMs / 1000) }));
+        }
         // Hook internal logic updates data, loadData() ensures UI sync via re-reading
         loadData();
     };

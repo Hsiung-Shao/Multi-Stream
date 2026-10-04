@@ -231,5 +231,6 @@ export default {
   'invalidFavoriteItem': '这条收藏没有可加载的频道或链接。',
   'noFavoritesToLoad': '没有可加载的收藏。',
   'batchAddTagsDesc': '为 {{count}} 个项目添加以下标签（追加模式，保留原有标签）：',
+  'refreshCooldown': '刚刚已刷新过直播状态，{{seconds}} 秒后才能再次手动刷新。',
 };
 

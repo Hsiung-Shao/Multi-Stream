@@ -6,6 +6,7 @@
     "/docs/*",
     "/screenshots/*",
     "/icon.png",
+    "/favicon.ico",
     "/logo.png",
     "/og-image.png",
     "/config.js",

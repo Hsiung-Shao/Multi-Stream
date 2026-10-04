@@ -232,4 +232,5 @@ export default {
   'invalidFavoriteItem': 'This favorite has no channel or link to load.',
   'noFavoritesToLoad': 'There are no favorites to load.',
   'batchAddTagsDesc': 'Add the tags below to {{count}} item(s) (existing tags are kept):',
+  'refreshCooldown': 'Live status was just refreshed. You can refresh again in {{seconds}} seconds.',
 };

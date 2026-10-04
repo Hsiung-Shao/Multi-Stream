@@ -234,5 +234,6 @@ export default {
   'invalidFavoriteItem': '這筆收藏沒有可載入的頻道或連結。',
   'noFavoritesToLoad': '沒有可載入的收藏。',
   'batchAddTagsDesc': '為 {{count}} 個項目加入以下標籤（附加模式，保留原有標籤）：',
+  'refreshCooldown': '剛剛已重新整理過直播狀態，{{seconds}} 秒後才能再次手動重新整理。',
 };
 

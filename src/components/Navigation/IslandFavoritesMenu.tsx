@@ -174,8 +174,11 @@ export const IslandFavoritesMenu = ({
 
     // Handlers
     const handleRefresh = async () => {
-        // 使用者手動按下 → 略過每頻道節流（與收藏管理頁的「檢查直播狀態」一致）
-        await checkNow({ force: true });
+        // 使用者手動按下 → 略過每頻道節流（與收藏管理頁的「檢查直播狀態」一致）；3 分鐘內只能用一次
+        const res = await checkNow({ force: true });
+        if (res.cooldownRemainingMs > 0) {
+            toast.info(t('favorites:refreshCooldown', { seconds: Math.ceil(res.cooldownRemainingMs / 1000) }));
+        }
         refresh();
     };
 

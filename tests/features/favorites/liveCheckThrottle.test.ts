@@ -7,6 +7,10 @@ import {
     OFFLINE_RECHECK_MS,
     LIVE_RECHECK_MS,
     LIVE_CHECK_STORAGE_KEY,
+    FAIL_BACKOFF_MS,
+    recordChannelFailure,
+    lastAttemptAt,
+    readCheckMap,
 } from '../../../src/features/favorites/liveCheckThrottle';
 
 const CH = 'UC' + 'b'.repeat(22);
@@ -72,5 +76,55 @@ describe('recordChannelCheck', () => {
         const map = JSON.parse(localStorage.getItem(LIVE_CHECK_STORAGE_KEY)!);
         expect(map[OLD]).toBeUndefined();
         expect(map[CH]).toBeDefined();
+    });
+});
+
+// 2026-10-04：失敗也要留紀錄，否則持續失敗的頻道永遠排在最前面、每輪佔住打端點的額度
+describe('查詢失敗的退避', () => {
+    it('失敗只記失敗時間，保留上次成功的結果', () => {
+        recordChannelCheck(CH, true, T0);
+        recordChannelFailure(CH, T0 + 60_000);
+        const rec = readCheckMap()[CH];
+        expect(rec).toMatchObject({ t: T0, live: true, a: T0 + 60_000 });
+    });
+
+    it(`失敗後 ${FAIL_BACKOFF_MS / 60_000} 分鐘內自動輪詢不重試，之後照節流規則；手動重新整理不受退避`, () => {
+        recordChannelFailure(CH, T0);
+        expect(shouldCheckChannel(CH, T0 + FAIL_BACKOFF_MS - 1)).toBe(false);
+        expect(shouldCheckChannel(CH, T0 + FAIL_BACKOFF_MS)).toBe(true);
+        expect(shouldCheckChannel(CH, T0 + 1000, true)).toBe(true);
+    });
+
+    it('失敗之後又成功（t 比 a 新）→ 不再退避', () => {
+        recordChannelFailure(CH, T0);
+        recordChannelCheck(CH, false, T0 + 1000);
+        expect(readCheckMap()[CH].a).toBeUndefined();
+        expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS + 1000)).toBe(true);
+    });
+
+    it('舊格式紀錄（只有 t、live）照舊運作', () => {
+        localStorage.setItem(LIVE_CHECK_STORAGE_KEY, JSON.stringify({ [CH]: { t: T0, live: false } }));
+        expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS - 1)).toBe(false);
+        expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS)).toBe(true);
+    });
+
+    it('lastAttemptAt 取成功與失敗較新者；沒查過回 0', () => {
+        expect(lastAttemptAt(CH)).toBe(0);
+        recordChannelCheck(CH, false, T0);
+        recordChannelFailure(CH, T0 + 5000);
+        expect(lastAttemptAt(CH)).toBe(T0 + 5000);
+    });
+
+    it('清理舊紀錄依成功與失敗較新者判斷：只失敗過的頻道一天後也會被清掉', () => {
+        const OLD = 'UC' + 'z'.repeat(22);
+        recordChannelFailure(OLD, T0);
+        recordChannelCheck(CH, false, T0 + 25 * 60 * 60 * 1000);
+        expect(readCheckMap()[OLD]).toBeUndefined();
+    });
+
+    it('紀錄裡有壞掉的值（null、非物件）→ 丟掉，不讓寫入丟錯', () => {
+        localStorage.setItem(LIVE_CHECK_STORAGE_KEY, JSON.stringify({ bad: null, worse: 3, [CH]: { t: T0, live: false } }));
+        expect(() => recordChannelFailure(CH, T0 + 1000)).not.toThrow();
+        expect(Object.keys(readCheckMap())).toEqual([CH]);
     });
 });

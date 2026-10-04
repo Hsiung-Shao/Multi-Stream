@@ -44,11 +44,11 @@ describe('youtubeApi.checkChannelLiveStatus fallback', () => {
         expect(legacyCalls()).toHaveLength(0);
     });
 
-    it('OG 端點網路錯誤 → 仍保留舊版 fallback', async () => {
+    // 2026-10-04：網路錯誤（含逾時）也不再退到舊版。YouTube 回應慢時這條退路會被大量觸發，
+    // 而舊版整頁掃描必定超過 10ms CPU（Pages 24 小時 8,028 次超限）
+    it('OG 端點網路錯誤或逾時 → 丟錯，不打舊版端點', async () => {
         fetchMock.mockRejectedValueOnce(new TypeError('network'));
-        fetchMock.mockResolvedValueOnce(json({ isLive: false }));
-        const r = await youtubeApi.checkChannelLiveStatus(CH);
-        expect(r.isLive).toBe(false);
-        expect(legacyCalls()).toHaveLength(1);
+        await expect(youtubeApi.checkChannelLiveStatus(CH)).rejects.toThrow();
+        expect(legacyCalls()).toHaveLength(0);
     });
 });

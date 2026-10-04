@@ -34,7 +34,7 @@ export const NewCanvasPage = () => {
     }, [setLayoutMode]);
 
     // 進入 canvas 時觸發一次本地收藏直播查詢:交給常駐的 GlobalLiveStatusChecker 處理
-    // (checkNow 內有 isRefreshing 去重,不會與 5 分鐘背景輪詢重複,也不額外打未快取的 API)
+    // (checkNow 以模組層級的 inflight 去重,整個分頁同時只跑一輪,不會與 5 分鐘背景輪詢重複)
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('refreshFavoritesStatus'));
     }, []);

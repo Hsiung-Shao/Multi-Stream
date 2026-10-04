@@ -6,8 +6,15 @@
 
 import { getSupabase } from '../../lib/supabase';
 
-/** 與 live-og 端點的 edge 快取 TTL 相同：比這更新的資料，打端點也只會拿到同一份 */
-export const LIVE_STATUS_FRESH_MS = 3 * 60 * 1000;
+/**
+ * 共享表的資料多新可以直接用。2026-10-04 從 3 分鐘放寬到 12 分鐘：共享表主要由週表排程（schedule-live，約每 10 分鐘）
+ * 寫入，3 分鐘的門檻讓多數頻道被判「太舊」而改打端點，收藏多的使用者每 2 秒打一次，Pages 24 小時 8,028 次 CPU 超限。
+ * 12 分鐘仍短於離線頻道的節流（15 分鐘），開台偵測的延遲上限不變。
+ */
+export const LIVE_STATUS_FRESH_MS = 12 * 60 * 1000;
+
+/** 使用者手動重新整理時的門檻：與 live-og 端點的 edge 快取 TTL 相同，比這更新的資料打端點也只會拿到同一份 */
+export const LIVE_STATUS_FRESH_FORCE_MS = 3 * 60 * 1000;
 
 // `in.(...)` 的值放在 URL 裡；每個 channelId 24 字元，100 個約 2.5KB，留足 URL 長度餘裕
 const CHUNK_SIZE = 100;
@@ -41,11 +48,11 @@ export interface LiveStatusResult {
  * 資料是否夠新。使用者電腦時鐘可能有偏差：比伺服器慢時 checked_at 會落在「未來」，
  * 在同一個視窗內也視為新鮮；偏差超過視窗就當作過期，退回打端點（edge 快取會接住）。
  */
-export function isLiveStatusFresh(row: Pick<LiveStatusRow, 'checked_at'>, now = Date.now()): boolean {
+export function isLiveStatusFresh(row: Pick<LiveStatusRow, 'checked_at'>, now = Date.now(), maxAgeMs = LIVE_STATUS_FRESH_MS): boolean {
     const checkedAt = Date.parse(row.checked_at);
     if (!Number.isFinite(checkedAt)) return false;
     const age = now - checkedAt;
-    return age < LIVE_STATUS_FRESH_MS && age > -LIVE_STATUS_FRESH_MS;
+    return age < maxAgeMs && age > -maxAgeMs;
 }
 
 /** 共享表的一列 → 與端點回應同形的結果（對齊 youtubeApi 對端點 JSON 的轉換） */

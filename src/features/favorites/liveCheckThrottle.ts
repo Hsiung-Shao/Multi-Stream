@@ -8,29 +8,40 @@
 //     連手動重新整理也不查」，下播後收藏可能還掛著直播中將近 1 小時，使用者要求修正
 // 紀錄放 localStorage（分頁間共用、重新整理後保留），與收藏資料分開存：
 // 收藏的 lastChecked 只在狀態改變時才寫，不能拿來判斷「上次查詢時間」，而每輪都寫收藏會觸發備份與雲端同步。
-// 使用者手動按「重新整理」走 force：只受 1 分鐘下限（擋連點；端點與共享表本來就有 3 分鐘快取，再快也拿不到更新的結果）。
+// 使用者手動按「重新整理」走 force：只受 1 分鐘下限（擋連點；端點本來就有 3 分鐘快取，再快也拿不到更新的結果）。
+// 每輪打端點的次數另有上限（useLiveStatusCheck 的 MAX_ENDPOINT_CALLS_PER_ROUND），收藏很多時分幾輪輪流查完。
 
 const STORAGE_KEY = 'ms_yt_live_checked_at';
 
 export const FORCE_MIN_RECHECK_MS = 60 * 1000;
 export const OFFLINE_RECHECK_MS = 15 * 60 * 1000;
 export const LIVE_RECHECK_MS = 10 * 60 * 1000;
+// 查詢失敗（逾時、403、5xx）後多久內不重試。沒有這段退避，持續失敗的頻道因為「從沒成功查過」永遠排在最前面，
+// 每輪都把打端點的額度用在同樣幾個頻道上，其他收藏永遠輪不到
+export const FAIL_BACKOFF_MS = 5 * 60 * 1000;
 // 超過一天的紀錄已不影響任何判斷，寫入時順手清掉，避免退訂的頻道永久殘留
 const PRUNE_AFTER_MS = 24 * 60 * 60 * 1000;
 
 interface CheckRecord {
-    t: number; // 上次查詢的 epoch ms
-    live: boolean; // 當次查詢結果
+    t?: number; // 上次成功查詢的 epoch ms（只失敗過的頻道沒有）
+    live?: boolean; // 當次查詢結果
+    a?: number; // 上次查詢失敗的 epoch ms
 }
 
-type CheckMap = Record<string, CheckRecord>;
+export type CheckMap = Record<string, CheckRecord>;
 
 function readMap(): CheckMap {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return {};
         const parsed = JSON.parse(raw);
-        return parsed && typeof parsed === 'object' ? (parsed as CheckMap) : {};
+        if (!parsed || typeof parsed !== 'object') return {};
+        // 個別紀錄壞掉（null、非物件）就丟掉，否則 prune 會丟錯、之後每一輪都中斷
+        const map: CheckMap = {};
+        for (const [id, r] of Object.entries(parsed as Record<string, unknown>)) {
+            if (r && typeof r === 'object') map[id] = r as CheckRecord;
+        }
+        return map;
     } catch {
         return {};
     }
@@ -44,10 +55,16 @@ function writeMap(map: CheckMap): void {
     }
 }
 
-/** 此頻道現在是否該查（force 為使用者手動觸發，只受 1 分鐘下限） */
-export function shouldCheckChannel(channelId: string, now = Date.now(), force = false): boolean {
-    const record = readMap()[channelId];
-    if (!record || typeof record.t !== 'number') return true;
+/** 此頻道現在是否該查（force 為使用者手動觸發，只受 1 分鐘下限）。map 可傳入整輪共用的快照，省去重複讀 localStorage */
+export function shouldCheckChannel(channelId: string, now = Date.now(), force = false, map: CheckMap = readMap()): boolean {
+    const record = map[channelId];
+    if (!record) return true;
+    // 最近失敗過、而且之後沒有成功：自動輪詢先退避，手動重新整理照樣可以重試
+    if (!force && typeof record.a === 'number' && record.a > (record.t ?? 0)) {
+        const sinceFail = now - record.a;
+        if (sinceFail >= 0 && sinceFail < FAIL_BACKOFF_MS) return false;
+    }
+    if (typeof record.t !== 'number') return true;
     const elapsed = now - record.t;
     // 時鐘被往回調（elapsed < 0）時視為可查，避免永久卡住
     if (elapsed < 0) return true;
@@ -55,14 +72,38 @@ export function shouldCheckChannel(channelId: string, now = Date.now(), force = 
     return elapsed >= (record.live ? LIVE_RECHECK_MS : OFFLINE_RECHECK_MS);
 }
 
-/** 記錄一次成功的查詢結果（失敗不記，下一輪會重試） */
+function prune(map: CheckMap, now: number): void {
+    for (const id of Object.keys(map)) {
+        const last = Math.max(map[id].t ?? 0, map[id].a ?? 0);
+        if (now - last > PRUNE_AFTER_MS) delete map[id];
+    }
+}
+
+/** 記錄一次成功的查詢結果 */
 export function recordChannelCheck(channelId: string, live: boolean, now = Date.now()): void {
     const map = readMap();
-    for (const id of Object.keys(map)) {
-        if (now - map[id].t > PRUNE_AFTER_MS) delete map[id];
-    }
+    prune(map, now);
     map[channelId] = { t: now, live };
     writeMap(map);
+}
+
+/** 記錄一次失敗的查詢：保留上次成功的結果，只標記失敗時間（FAIL_BACKOFF_MS 內自動輪詢不重試、排序排到後面） */
+export function recordChannelFailure(channelId: string, now = Date.now()): void {
+    const map = readMap();
+    prune(map, now);
+    map[channelId] = { ...map[channelId], a: now };
+    writeMap(map);
+}
+
+/** 整輪共用的紀錄快照（排序與節流判斷時不必每個頻道都重讀、重新解析 localStorage） */
+export function readCheckMap(): CheckMap {
+    return readMap();
+}
+
+/** 排序用的「上次處理時間」：成功或失敗取較新者，沒查過回 0；最久沒處理的先查 */
+export function lastAttemptAt(channelId: string, map: CheckMap = readMap()): number {
+    const r = map[channelId];
+    return r ? Math.max(r.t ?? 0, r.a ?? 0) : 0;
 }
 
 export const LIVE_CHECK_STORAGE_KEY = STORAGE_KEY;

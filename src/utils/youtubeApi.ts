@@ -176,101 +176,32 @@ export const youtubeApi = {
     },
 
     async checkChannelLiveStatus(channelId: string): Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string; isUpcoming?: boolean; scheduledStartTime?: string; channelTitle?: string }> {
-        // Strategy: Try the new lightweight "OG Image" API first. 
-        // If it fails or implies uncertainty (which it theoretically shouldn't given the robust updates), 
-        // fall back to the legacy full-scan API.
-
-        const fetchWithTimeout = async (url: string, options: RequestInit = {}) => {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), 10000); // 10s timeout
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    signal: controller.signal
-                });
-                clearTimeout(id);
-                return response;
-            } catch (error) {
-                clearTimeout(id);
-                throw error;
-            }
-        };
-
-        // OG 端點回任何 HTTP 錯誤都不可退到舊版全頁掃描,只有網路層例外才退:
-        // - 5xx(多半是 Cloudflare CPU 超限):舊版更重,超載時 fallback 等於把負載加倍(2026-09 CPU 超限事件的放大器)
-        // - 403(來源檢查不通過,例如擋 Referer 的擴充套件):退到舊版等於繞過限制又更耗資源
-        // - 400(channelId 格式錯):舊版一樣回 400
-        // 改為直接丟錯,呼叫端保留原本狀態、下一輪再查。
-        let ogErrorStatus = 0;
-
+        // 只走輕量的 live-og 端點。任何失敗都直接丟錯，呼叫端保留原本狀態、不記錄，下一輪再查。
+        // 2026-10-04 拿掉舊版整頁掃描（/api/youtube-channel-live）的退路：原本網路錯誤或逾時會改打舊版，
+        // 但舊版把約 1.6MB 的頁面整頁讀進來掃描，必定超過免費方案 10ms CPU；YouTube 回應慢時這條退路
+        // 會被大量觸發，等於在最忙的時候把負載加倍（HTTP 錯誤時本來就不退，見 tests/utils/youtubeLiveFallback.test.ts）。
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
         try {
-            // 1. Try New API (Low Cost, High Speed)
-            const ogUrl = `/api/youtube-channel-live-og?channelId=${encodeURIComponent(channelId)}`;
-            const ogResp = await fetchWithTimeout(ogUrl, {
+            const resp = await fetch(`/api/youtube-channel-live-og?channelId=${encodeURIComponent(channelId)}`, {
                 method: 'GET',
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal,
             });
-
-            if (ogResp.ok) {
-                const data = await ogResp.json();
-
-                // If api returns explicit status (Live, Upcoming, or Offline)
-                // We trust it.
-                return {
-                    isLive: !!data.isLive,
-                    liveVideoId: data.videoId || data.liveVideoId,
-                    finalUrl: data.finalUrl,
-                    isUpcoming: !!data.isUpcoming,
-                    scheduledStartTime: data.scheduledStartTime,
-                    channelTitle: data.channelTitle || undefined
-                };
+            if (!resp.ok) {
+                throw new Error(`[YouTubeAPI] live-og HTTP ${resp.status}`);
             }
-            ogErrorStatus = ogResp.status;
-        } catch (e) {
-            console.warn("[YouTubeAPI] Lightweight check failed, falling back to legacy", e);
-        }
-
-        if (ogErrorStatus) {
-            throw new Error(`[YouTubeAPI] live-og HTTP ${ogErrorStatus}, skip legacy fallback`);
-        }
-
-        // 2. Fallback: Legacy API (Higher Cost, Full Scan)
-        try {
-            const url = `/api/youtube-channel-live?channelId=${encodeURIComponent(channelId)}`;
-            const response = await fetchWithTimeout(url, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                return { isLive: false };
-            }
-
-            const data = await response.json();
-
-            if (data.isLive) {
-                return {
-                    isLive: true,
-                    liveVideoId: data.liveVideoId,
-                    finalUrl: data.finalUrl
-                };
-            }
-
-            // Check for isUpcoming in legacy response if available
-            if (data.isUpcoming) {
-                return {
-                    isLive: false,
-                    isUpcoming: true,
-                    scheduledStartTime: data.scheduledVideoId ? undefined : undefined // Legacy might not return time
-                };
-            }
-
-            return { isLive: false };
-        } catch (e) {
-            console.error("Check live status failed (Legacy)", e);
-            return { isLive: false };
+            const data = await resp.json();
+            return {
+                isLive: !!data.isLive,
+                liveVideoId: data.videoId || data.liveVideoId,
+                finalUrl: data.finalUrl,
+                isUpcoming: !!data.isUpcoming,
+                scheduledStartTime: data.scheduledStartTime,
+                channelTitle: data.channelTitle || undefined,
+            };
+        } finally {
+            clearTimeout(timer);
         }
     }
 };

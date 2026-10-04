@@ -48,7 +48,8 @@ beforeEach(() => {
 });
 
 describe('isLiveStatusFresh', () => {
-    it('3 分鐘內 → 新鮮；超過 → 過期', () => {
+    it('12 分鐘內 → 新鮮；超過 → 過期（配合週表排程約每 10 分鐘更新）', () => {
+        expect(LIVE_STATUS_FRESH_MS).toBe(12 * 60_000);
         expect(isLiveStatusFresh(row(), NOW + LIVE_STATUS_FRESH_MS - 1)).toBe(true);
         expect(isLiveStatusFresh(row(), NOW + LIVE_STATUS_FRESH_MS)).toBe(false);
     });

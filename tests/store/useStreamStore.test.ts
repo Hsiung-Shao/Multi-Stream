@@ -36,9 +36,6 @@ describe('useStreamStore', () => {
         (window as any).twitchApi = {
             searchChannels: vi.fn(),
         };
-        (window as any).youtubeApiUtils = {
-            getChannelIdFromVideoId: vi.fn(),
-        };
     });
 
     describe('Stream Management', () => {

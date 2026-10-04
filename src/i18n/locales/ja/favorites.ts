@@ -231,5 +231,6 @@ export default {
   'invalidFavoriteItem': 'このお気に入りには読み込めるチャンネルやリンクがありません。',
   'noFavoritesToLoad': '読み込めるお気に入りがありません。',
   'batchAddTagsDesc': '{{count}} 件に次のタグを追加します（既存のタグは残ります）：',
+  'refreshCooldown': '配信状況はさきほど更新しました。{{seconds}} 秒後にもう一度更新できます。',
 };
 

@@ -24,13 +24,6 @@ declare global {
             remove?: (id: string) => void;
             saveList?: (list: FavoriteCategory[]) => void;
         };
-        youtubeApiUtils?: {
-            getApiKey: () => Promise<string | null>;
-            getChannelIdFromVideoId: (videoId: string) => Promise<string>;
-            getChannelIdFromHandle: (handle: string) => Promise<string>;
-            getChannelTitleFromChannelId: (channelId: string) => Promise<string | null>;
-            checkChannelLiveStatus: (channelId: string) => Promise<{ isLive: boolean; liveVideoId?: string; finalUrl?: string }>;
-        };
         twitchApi?: {
             searchChannels: (query: string, limit: number) => Promise<any[]>;
             checkChannelLiveStatus: (channelId: string) => Promise<any>;

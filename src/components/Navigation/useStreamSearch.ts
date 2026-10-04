@@ -230,7 +230,9 @@ export function useStreamSearch({ targetWindowId, onSearch, onAdded, onError, re
         if (!toast) return;
         const loadingId = toast.loading(t('navbar:resolvingLive'));
         try {
-            const live = await (await loadYoutubeApi()).checkChannelLiveStatus(channelId);
+            // 查不到開台狀態（端點逾時或忙碌）就當作沒開台、改加入收藏，不讓整個操作失敗
+            const live = await (await loadYoutubeApi()).checkChannelLiveStatus(channelId)
+                .catch(() => ({ isLive: false, finalUrl: undefined, liveVideoId: undefined }));
             if (live.isLive) {
                 const watchUrl = live.finalUrl
                     || (live.liveVideoId ? `https://www.youtube.com/watch?v=${live.liveVideoId}` : '');
