@@ -16,6 +16,7 @@ const STORAGE_KEY = 'ms_yt_live_checked_at';
 
 export const FORCE_MIN_RECHECK_MS = 60 * 1000;
 export const OFFLINE_RECHECK_MS = 15 * 60 * 1000;
+// 與週表排程 OG_LIVE_RECHECK_MS（supabase/functions/_shared/sweep.ts）、共享表 LIVE_STATUS_FRESH_LIVE_MS 連動，改一處要同步
 export const LIVE_RECHECK_MS = 60 * 60 * 1000;
 // 查詢失敗（逾時、403、5xx）後多久內不重試。沒有這段退避，持續失敗的頻道因為「從沒成功查過」永遠排在最前面，
 // 每輪都把打端點的額度用在同樣幾個頻道上，其他收藏永遠輪不到

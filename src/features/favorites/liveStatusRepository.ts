@@ -10,7 +10,8 @@ import { getSupabase } from '../../lib/supabase';
  * 共享表的資料多新可以直接用。2026-10-04 從 3 分鐘放寬：共享表主要由週表排程寫入，3 分鐘的門檻讓多數頻道被判「太舊」
  * 而改打端點，收藏多的使用者每 2 秒打一次，Pages 24 小時 8,028 次 CPU 超限。
  * 同日 schedule-live 從每 10 分鐘降為每 20 分鐘（20261004120000），門檻跟著從 12 分鐘調為 22 分鐘（一輪間隔＋2 分鐘執行餘裕）。
- * 代價：自動輪詢時，YouTube 收藏的開台／下播最多可能晚約 22 分鐘才反映；手動重新整理不受影響（只接受 3 分鐘內的資料）。
+ * 代價：自動輪詢時，YouTube 收藏的開台最多可能晚約 22 分鐘才反映（直播中的列另見 LIVE_STATUS_FRESH_LIVE_MS）；
+ * 手動重新整理不受影響（只接受 3 分鐘內的資料）。
  */
 export const LIVE_STATUS_FRESH_MS = 22 * 60 * 1000;
 
@@ -18,6 +19,7 @@ export const LIVE_STATUS_FRESH_MS = 22 * 60 * 1000;
  * 「直播中」那一列可以用多久：週表排程（schedule-live）對直播中頻道每 60 分鐘才重查一次（2026-10-04 使用者指定），
  * 用 22 分鐘門檻的話直播中的收藏幾乎都會被判太舊而改打端點，等於把排程省下的查詢轉嫁到 Workers。
  * 62 分鐘＝重查間隔＋2 分鐘執行餘裕；下播由排程補查確認（見 ogSweep），手動重新整理仍只接受 3 分鐘內的資料。
+ * 三值連動，改一處要同步另外兩處：supabase/functions/_shared/sweep.ts 的 OG_LIVE_RECHECK_MS、liveCheckThrottle.ts 的 LIVE_RECHECK_MS。
  */
 export const LIVE_STATUS_FRESH_LIVE_MS = 62 * 60 * 1000;
 
