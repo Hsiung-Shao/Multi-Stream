@@ -8,7 +8,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { readLiveOgPage, pageFromText, videoIdFromHead, HEAD_CHARS } from '../../functions/lib/live-og-page.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { onRequestGet } from '../../functions/api/youtube-channel-live-og.js';
+import { onRequestGet, LIVE_OG_CLIENT_HEADER, LIVE_OG_CLIENT_VERSION } from '../../functions/api/youtube-channel-live-og.js';
 
 const V = 'LiveVideo01';
 const CHANNEL = 'UC' + 'b'.repeat(22);
@@ -148,7 +148,7 @@ describe('youtube-channel-live-og 端點（串流解析）', () => {
             if (String(url).includes('i.ytimg.com')) return new Response(null, { status: headStatus });
             return streamed(html).response;
         }));
-        const request = new Request(`https://multistreaming.org/api/youtube-channel-live-og?channelId=${CHANNEL}`, { headers: { 'Sec-Fetch-Site': 'same-origin' } });
+        const request = new Request(`https://multistreaming.org/api/youtube-channel-live-og?channelId=${CHANNEL}`, { headers: { 'Sec-Fetch-Site': 'same-origin', [LIVE_OG_CLIENT_HEADER]: LIVE_OG_CLIENT_VERSION } });
         const res = await onRequestGet({ request, env: undefined, waitUntil: () => {} });
         return { body: await res.json(), calls };
     }
@@ -185,7 +185,7 @@ describe('youtube-channel-live-og 端點（串流解析）', () => {
                 });
                 return new Response(body);
             }));
-            const request = new Request(`https://multistreaming.org/api/youtube-channel-live-og?channelId=${CHANNEL}`, { headers: { 'Sec-Fetch-Site': 'same-origin' } });
+            const request = new Request(`https://multistreaming.org/api/youtube-channel-live-og?channelId=${CHANNEL}`, { headers: { 'Sec-Fetch-Site': 'same-origin', [LIVE_OG_CLIENT_HEADER]: LIVE_OG_CLIENT_VERSION } });
             const pending = onRequestGet({ request, env: undefined, waitUntil: () => {} });
             await vi.advanceTimersByTimeAsync(8_000);
             expect((await pending).status).toBe(500);

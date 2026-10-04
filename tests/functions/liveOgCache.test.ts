@@ -6,7 +6,8 @@
 //   5. 回給瀏覽器的永遠是 no-store（快取只在 edge 層）
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { onRequestGet, toLiveStatusRow } from '../../functions/api/youtube-channel-live-og.js';
+import { onRequestGet, toLiveStatusRow, LIVE_OG_CLIENT_HEADER, LIVE_OG_CLIENT_VERSION } from '../../functions/api/youtube-channel-live-og.js';
+import { LIVE_OG_CLIENT_HEADER as CLIENT_HEADER_FE, LIVE_OG_CLIENT_VERSION as CLIENT_VERSION_FE } from '../../src/utils/youtubeApi';
 
 const CHANNEL = 'UC' + 'a'.repeat(22);
 const store = new Map<string, Response>();
@@ -17,8 +18,10 @@ const fetchMock = vi.fn(async () => new Response('<html><head></head><body>offli
 // 預設模擬本站頁面發出的同源請求（瀏覽器會帶 Sec-Fetch-Site: same-origin）
 const SAME_ORIGIN = { 'Sec-Fetch-Site': 'same-origin' };
 
-function call(query: string, headers: Record<string, string> = SAME_ORIGIN, env?: Record<string, string>) {
-    const request = new Request(`https://multistreaming.org/api/youtube-channel-live-og?${query}`, { headers });
+// 預設帶新版用戶端標頭；client=false 模擬修正前就開著的舊分頁
+function call(query: string, headers: Record<string, string> = SAME_ORIGIN, env?: Record<string, string>, client = true) {
+    const all = client ? { [LIVE_OG_CLIENT_HEADER]: LIVE_OG_CLIENT_VERSION, ...headers } : headers;
+    const request = new Request(`https://multistreaming.org/api/youtube-channel-live-og?${query}`, { headers: all });
     return onRequestGet({ request, env, waitUntil: (p: Promise<unknown>) => pending.push(p) });
 }
 
@@ -102,6 +105,29 @@ describe('youtube-channel-live-og edge 快取', () => {
         const res = await call(`channelId=${CHANNEL}`);
         expect(res.status).toBe(200);
         expect(res.headers.get('X-Edge-Cache')).toBe('MISS');
+    });
+});
+
+describe('youtube-channel-live-og 用戶端版本', () => {
+    it('沒帶版本標頭（修正前開著的舊分頁）→ 426，不抓 YouTube、不寫快取', async () => {
+        const res = await call(`channelId=${CHANNEL}`, SAME_ORIGIN, undefined, false);
+        await flush();
+        expect(res.status).toBe(426);
+        expect(res.headers.get('Cache-Control')).toBe('no-store');
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(store.size).toBe(0);
+    });
+
+    it('版本號不符 → 426；edge 快取裡已有資料也一樣（不回快取）', async () => {
+        await call(`channelId=${CHANNEL}`);
+        await flush();
+        const res = await call(`channelId=${CHANNEL}`, { ...SAME_ORIGIN, [LIVE_OG_CLIENT_HEADER]: '1' }, undefined, false);
+        expect(res.status).toBe(426);
+    });
+
+    it('前端送的標頭與端點要求的一致', () => {
+        expect(CLIENT_HEADER_FE).toBe(LIVE_OG_CLIENT_HEADER);
+        expect(CLIENT_VERSION_FE).toBe(LIVE_OG_CLIENT_VERSION);
     });
 });
 

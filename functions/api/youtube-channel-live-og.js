@@ -18,6 +18,14 @@ const VIDEO_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
 const SCHEDULE_FRAME_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 // 抓 YouTube 頁面＋串流讀取＋HEAD 的總逾時（與 functions/lib/youtube-live-og.js 的 8 秒一致）
 const YOUTUBE_TIMEOUT_MS = 8000;
+// ── 用戶端版本 ─────────────────────────────────────────────────────────────
+// 2026-10-05：降載修正（每輪上限、共享表）10-04 上線後，有一個分頁從修正前開著沒重新整理，舊程式沒有每輪上限，
+// 每 5 分鐘連打 40～60 次，單一 IP 一晚 4 千多次、約一半 CPU 超限。舊程式的請求跟新程式完全一樣，只能靠新程式多帶一個標頭分辨：
+// 沒帶的直接回 426、不抓 YouTube（幾乎不耗 CPU）；舊程式遇到 HTTP 錯誤會丟錯、不改打其他端點，使用者重新整理就恢復。
+// 之後若用戶端節流邏輯又有不相容的修正，把版本號加一，就能讓還開著的舊分頁停止打端點。
+// 前端對應常數在 src/utils/youtubeApi.ts（tests/functions/liveOgCache.test.ts 鎖定兩邊一致）。
+export const LIVE_OG_CLIENT_HEADER = 'X-MS-Live-Client';
+export const LIVE_OG_CLIENT_VERSION = '2';
 
 export async function onRequestGet(context) {
     const { request } = context;
@@ -25,6 +33,13 @@ export async function onRequestGet(context) {
     if (!isRequestFromAllowedSite(request)) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
             status: 403,
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        });
+    }
+
+    if (request.headers.get(LIVE_OG_CLIENT_HEADER) !== LIVE_OG_CLIENT_VERSION) {
+        return new Response(JSON.stringify({ error: 'Client outdated', message: 'Please reload the page' }), {
+            status: 426,
             headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
         });
     }

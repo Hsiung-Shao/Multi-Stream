@@ -5,6 +5,11 @@ import i18n from '../i18n/i18n';
 
 let youtubeConfigApiKeyPromise: Promise<string | null> | null = null;
 
+// live-og 端點只接受帶這個標頭的請求：讓修正前就開著、沒重新整理的舊分頁停止打端點（2026-10-05，見端點檔頭）。
+// 用戶端節流邏輯有不相容的修正時版本號加一，並同步 functions/api/youtube-channel-live-og.js
+export const LIVE_OG_CLIENT_HEADER = 'X-MS-Live-Client';
+export const LIVE_OG_CLIENT_VERSION = '2';
+
 export const youtubeApi = {
     // 從 Cloudflare Pages Function 取得 API Key（異步）
     async getApiKeyFromPagesFunction(): Promise<string | null> {
@@ -185,7 +190,7 @@ export const youtubeApi = {
         try {
             const resp = await fetch(`/api/youtube-channel-live-og?channelId=${encodeURIComponent(channelId)}`, {
                 method: 'GET',
-                headers: { 'Accept': 'application/json' },
+                headers: { 'Accept': 'application/json', [LIVE_OG_CLIENT_HEADER]: LIVE_OG_CLIENT_VERSION },
                 signal: controller.signal,
             });
             if (!resp.ok) {
