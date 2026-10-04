@@ -9,6 +9,8 @@ import {
     isLiveStatusFresh,
     toLiveStatusResult,
     LIVE_STATUS_FRESH_MS,
+    LIVE_STATUS_FRESH_LIVE_MS,
+    autoFreshMaxAge,
     type LiveStatusRow,
 } from '../../../src/features/favorites/liveStatusRepository';
 
@@ -52,6 +54,12 @@ describe('isLiveStatusFresh', () => {
         expect(LIVE_STATUS_FRESH_MS).toBe(22 * 60_000);
         expect(isLiveStatusFresh(row(), NOW + LIVE_STATUS_FRESH_MS - 1)).toBe(true);
         expect(isLiveStatusFresh(row(), NOW + LIVE_STATUS_FRESH_MS)).toBe(false);
+    });
+
+    it('自動輪詢門檻：直播中的列 62 分鐘（排程每小時重查直播中頻道），其他 22 分鐘', () => {
+        expect(LIVE_STATUS_FRESH_LIVE_MS).toBe(62 * 60_000);
+        expect(autoFreshMaxAge(row({ is_live: true }))).toBe(LIVE_STATUS_FRESH_LIVE_MS);
+        expect(autoFreshMaxAge(row({ is_live: false, is_upcoming: true }))).toBe(LIVE_STATUS_FRESH_MS);
     });
 
     it('使用者時鐘比伺服器慢（checked_at 在未來）→ 視窗內仍算新鮮，超出視窗算過期', () => {

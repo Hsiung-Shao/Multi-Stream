@@ -14,6 +14,18 @@ import { getSupabase } from '../../lib/supabase';
  */
 export const LIVE_STATUS_FRESH_MS = 22 * 60 * 1000;
 
+/**
+ * 「直播中」那一列可以用多久：週表排程（schedule-live）對直播中頻道每 60 分鐘才重查一次（2026-10-04 使用者指定），
+ * 用 22 分鐘門檻的話直播中的收藏幾乎都會被判太舊而改打端點，等於把排程省下的查詢轉嫁到 Workers。
+ * 62 分鐘＝重查間隔＋2 分鐘執行餘裕；下播由排程補查確認（見 ogSweep），手動重新整理仍只接受 3 分鐘內的資料。
+ */
+export const LIVE_STATUS_FRESH_LIVE_MS = 62 * 60 * 1000;
+
+/** 自動輪詢時這一列的新鮮度門檻：直播中的列較寬鬆 */
+export function autoFreshMaxAge(row: Pick<LiveStatusRow, 'is_live'>): number {
+    return row.is_live ? LIVE_STATUS_FRESH_LIVE_MS : LIVE_STATUS_FRESH_MS;
+}
+
 /** 使用者手動重新整理時的門檻：與 live-og 端點的 edge 快取 TTL 相同，比這更新的資料打端點也只會拿到同一份 */
 export const LIVE_STATUS_FRESH_FORCE_MS = 3 * 60 * 1000;
 

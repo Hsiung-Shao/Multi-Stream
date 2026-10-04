@@ -126,18 +126,18 @@ describe('useLiveStatusCheck × 每頻道節流', () => {
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(2);
     });
 
-    it('直播中的收藏剛查過：自動輪詢 10 分鐘內跳過，手動重新整理照查（下播不再卡 1 小時）', async () => {
+    it('直播中的收藏 60 分鐘內查過：自動輪詢跳過，手動重新整理照查（要看下播按重新整理）', async () => {
         favorites[0] = { ...favorites[0], isLive: true, lastChecked: new Date().toISOString() };
-        recordChannelCheck(CH, true, Date.now() - 2 * 60_000);
+        recordChannelCheck(CH, true, Date.now() - 50 * 60_000);
         await runCheck();
         expect(checkChannelLiveStatus).not.toHaveBeenCalled();
         await runCheck({ force: true });
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
     });
 
-    it('直播中的收藏超過 10 分鐘沒查：自動輪詢就會查（原本 1 小時內一律跳過）', async () => {
+    it('直播中的收藏超過 60 分鐘沒查：自動輪詢就會查', async () => {
         favorites[0] = { ...favorites[0], isLive: true, lastChecked: new Date().toISOString() };
-        recordChannelCheck(CH, true, Date.now() - 11 * 60_000);
+        recordChannelCheck(CH, true, Date.now() - 61 * 60_000);
         await runCheck();
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
     });
@@ -188,13 +188,24 @@ describe('useLiveStatusCheck × 共享表 youtube_live_status', () => {
     });
 
     it('週表排程 20 分鐘前查過 → 仍算新鮮，用資料庫結果、不打端點', async () => {
-        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 20 * 60 * 1000).toISOString() })]]));
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ is_live: false, checked_at: new Date(Date.now() - 20 * 60 * 1000).toISOString() })]]));
         await runCheck();
         expect(checkChannelLiveStatus).not.toHaveBeenCalled();
     });
 
-    it('資料已過期（超過 22 分鐘）→ 退回打端點', async () => {
-        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 23 * 60 * 1000).toISOString() })]]));
+    it('沒在直播的資料已過期（超過 22 分鐘）→ 退回打端點', async () => {
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ is_live: false, checked_at: new Date(Date.now() - 23 * 60 * 1000).toISOString() })]]));
+        await runCheck();
+        expect(checkChannelLiveStatus).toHaveBeenCalledWith(CH);
+    });
+
+    it('直播中的資料 62 分鐘內都算新鮮（排程每小時才重查直播中頻道），超過才打端點', async () => {
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 50 * 60 * 1000).toISOString() })]]));
+        await runCheck();
+        expect(checkChannelLiveStatus).not.toHaveBeenCalled();
+
+        localStorage.clear();
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 63 * 60 * 1000).toISOString() })]]));
         await runCheck();
         expect(checkChannelLiveStatus).toHaveBeenCalledWith(CH);
     });

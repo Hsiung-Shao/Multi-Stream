@@ -5,7 +5,7 @@ import { youtubeApi } from '../../utils/youtubeApi';
 import { cacheChannelIfAbsent } from '../youtube/YouTubeChannelRepository';
 import { FavoriteStream } from './types';
 import { shouldCheckChannel, recordChannelCheck, recordChannelFailure, readCheckMap, lastAttemptAt } from './liveCheckThrottle';
-import { fetchLiveStatuses, isLiveStatusFresh, toLiveStatusResult, LIVE_STATUS_FRESH_FORCE_MS, type LiveStatusRow } from './liveStatusRepository';
+import { fetchLiveStatuses, isLiveStatusFresh, toLiveStatusResult, autoFreshMaxAge, LIVE_STATUS_FRESH_FORCE_MS, type LiveStatusRow } from './liveStatusRepository';
 
 /**
  * 每輪（每個分頁）最多打幾次 live-og 端點；共享表讀到的不算。
@@ -160,7 +160,7 @@ async function runRound(force: boolean): Promise<void> {
                 const candidates = youtubeFavorites
                     .filter(fav => {
                         if (!fav.channelId) return false;
-                        // 每頻道節流：離線 15 分鐘、直播中 10 分鐘內查過、或 5 分鐘內失敗過就跳過（跨分頁、跨重新整理共用）；
+                        // 每頻道節流：離線 15 分鐘、直播中 60 分鐘內查過、或 5 分鐘內失敗過就跳過（跨分頁、跨重新整理共用）；
                         // 手動重新整理（force）只受 1 分鐘下限
                         return shouldCheckChannel(fav.channelId, Date.now(), force, checkMap);
                     })
@@ -168,7 +168,7 @@ async function runRound(force: boolean): Promise<void> {
                     .sort((a, b) => lastAttemptAt(a.channelId as string, checkMap) - lastAttemptAt(b.channelId as string, checkMap));
 
                 // 共享表：週表排程或別的使用者查過、夠新的頻道直接用資料庫的結果，不打端點（整輪只讀一次）。
-                // 自動輪詢接受 22 分鐘內的資料；手動重新整理只接受 3 分鐘內的（使用者要的是最新狀態）
+                // 自動輪詢接受 22 分鐘內的資料（直播中的列 62 分鐘，配合排程每小時重查直播中頻道）；手動重新整理只接受 3 分鐘內的（使用者要的是最新狀態）
                 const shared = candidates.length > 0
                     ? await fetchLiveStatuses(candidates.map(fav => fav.channelId as string))
                     : new Map<string, LiveStatusRow>();
@@ -178,10 +178,10 @@ async function runRound(force: boolean): Promise<void> {
                     const channelId = fav.channelId as string;
                     const sharedRow = shared.get(channelId);
                     const overBudget = endpointCalls >= MAX_ENDPOINT_CALLS_PER_ROUND;
-                    // 手動重新整理只接受 3 分鐘內的共享資料；但額度用完時，22 分鐘內的也比完全不更新好
+                    // 手動重新整理只接受 3 分鐘內的共享資料；但額度用完時，自動輪詢門檻內的也比完全不更新好
                     const fromShared = !!sharedRow && (force && !overBudget
                         ? isLiveStatusFresh(sharedRow, Date.now(), LIVE_STATUS_FRESH_FORCE_MS)
-                        : isLiveStatusFresh(sharedRow));
+                        : isLiveStatusFresh(sharedRow, Date.now(), autoFreshMaxAge(sharedRow)));
 
                     if (!fromShared) {
                         // 這輪打端點的額度用完：不記錄，留到下一輪（排序會讓它排在前面）

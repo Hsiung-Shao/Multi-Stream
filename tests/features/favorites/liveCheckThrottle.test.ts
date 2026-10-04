@@ -27,17 +27,17 @@ describe('shouldCheckChannel', () => {
 
     it('離線頻道 15 分鐘內不重查，滿 15 分鐘才查', () => {
         recordChannelCheck(CH, false, T0);
-        expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS)).toBe(false);
+        expect(shouldCheckChannel(CH, T0 + 10 * 60_000)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS - 1)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS)).toBe(true);
     });
 
-    it('直播中頻道 10 分鐘內不重查，滿 10 分鐘就查（下播最多延遲約 10～15 分鐘，不再是 1 小時）', () => {
+    it('直播中頻道 60 分鐘內不重查，滿 60 分鐘就查（直播多半 1～1.5 小時，2026-10-04 使用者指定）', () => {
         recordChannelCheck(CH, true, T0);
-        expect(shouldCheckChannel(CH, T0 + 5 * 60_000)).toBe(false);
+        expect(LIVE_RECHECK_MS).toBe(60 * 60_000);
+        expect(shouldCheckChannel(CH, T0 + 30 * 60_000)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS - 1)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS)).toBe(true);
-        expect(LIVE_RECHECK_MS).toBeLessThan(OFFLINE_RECHECK_MS);
     });
 
     it('force：直播中頻道 1 分鐘後就照查（手動重新整理要能看到下播）', () => {
