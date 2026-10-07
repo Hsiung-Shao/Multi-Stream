@@ -25,7 +25,11 @@ export interface MergeInput {
 
 const STATUS_RANK: Record<string, number> = { live: 0, ended: 1, scheduled: 2 };
 
+/** 沒有影片 ID 的來源：社群週表圖解析、使用者投稿。永遠是最低優先序，任何平台的真實場次出現就把它併掉 */
+const NON_VIDEO = new Set(['community_post', 'user_submission']);
+
 function platformRank(s: MergeInput): number {
+  if (NON_VIDEO.has(s.source)) return 4;
   if (s.platform === 'youtube') return 0;
   if (s.source === 'twitch_live') return 1;
   if (s.source === 'twitch_schedule') return 2;
@@ -44,6 +48,9 @@ function startOf(s: MergeInput): number {
 /** 兩場能不能合併（不看時間） */
 export function canMerge(primary: MergeInput, secondary: MergeInput): boolean {
   if (primary.vtuber_id !== secondary.vtuber_id) return false;
+  // 社群週表／投稿併入任何真實場次（同平台也可）；兩個沒有影片 ID 的場次彼此不合併（取代由寫入端處理）
+  if (NON_VIDEO.has(secondary.source)) return !NON_VIDEO.has(primary.source);
+  if (NON_VIDEO.has(primary.source)) return false;
   if (primary.platform !== secondary.platform) return true; // YouTube × Twitch
   // 同為 Twitch：只有「週表預告」併入「直播（進行中或剛結束）」
   return primary.source === 'twitch_live' && secondary.source === 'twitch_schedule';

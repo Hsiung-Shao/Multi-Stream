@@ -77,16 +77,18 @@ function PersonName({ channel, name, personLinks, className }: { channel: Schedu
 /** 「週表預告」與「也在 Twitch」等小標籤：文字表達，不只靠顏色 */
 function StreamBadges({ stream }: { stream: ScheduleStream }) {
     const { t } = useTranslation('schedule');
-    const fromSchedule = stream.source === 'twitch_schedule';
+    // 來源標籤：Twitch 週表預告／社群貼文週表圖解析／使用者投稿（都是「預告」性質，可能臨時更動）
+    const origin =
+        stream.source === 'twitch_schedule' ? 'fromSchedule' : stream.source === 'community_post' ? 'fromCommunity' : stream.source === 'user_submission' ? 'fromSubmission' : null;
     // 同平台的併入（Twitch 週表預告已變成 Twitch 直播）不是「另一個平台」，不顯示；
     // 同一個平台併入兩筆（Twitch 直播＋Twitch 週表）只顯示一個標籤
     const also = [...new Map((stream.also ?? []).filter((a) => a.platform !== stream.platform).map((a) => [a.platform, a])).values()];
-    if (!fromSchedule && also.length === 0) return null;
+    if (!origin && also.length === 0) return null;
     return (
         <>
-            {fromSchedule && (
-                <span title={t('card.fromScheduleHint')} className="relative z-10 shrink-0 rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted-foreground">
-                    {t('card.fromSchedule')}
+            {origin && (
+                <span title={t(`card.${origin}Hint`)} className="relative z-10 shrink-0 rounded border border-border px-1.5 text-[11px] font-medium leading-[18px] text-muted-foreground">
+                    {t(`card.${origin}`)}
                 </span>
             )}
             {also.map((a) => (

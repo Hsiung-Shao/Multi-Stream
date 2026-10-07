@@ -33,9 +33,9 @@ export interface ScheduleAlso {
 export interface ScheduleStream {
     vtuber_id: string;
     platform: SchedulePlatform;
-    /** YouTube: videoId；Twitch: stream id */
+    /** YouTube: videoId；Twitch: stream id；community_post／user_submission 沒有影片：post:<postId>:<n>／sub:<id>:<n>（見 streamLinks.isNonVideoStream） */
     external_id: string;
-    source: 'yt_waiting_room' | 'twitch_schedule' | 'twitch_live' | 'manual' | string;
+    source: 'yt_waiting_room' | 'twitch_schedule' | 'twitch_live' | 'manual' | 'community_post' | 'user_submission' | string;
     status: 'scheduled' | 'live' | 'ended' | string;
     title?: string;
     category?: string;

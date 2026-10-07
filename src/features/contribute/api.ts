@@ -80,6 +80,31 @@ export function submitContribution(input: ContributionInput): Promise<{ ok: true
     return requestJson('/api/vtuber/contribute', { method: 'POST', body: JSON.stringify(input) });
 }
 
+export type SchedulePlatform = 'youtube' | 'twitch';
+
+/** 週表投稿的一列：日期與時間以台北時間解讀（與後端 functions/lib/schedule-submit.js 一致） */
+export interface ScheduleEntryInput {
+    /** YYYY-MM-DD */
+    date: string;
+    /** HH:MM */
+    time: string;
+    title: string;
+    platform: SchedulePlatform;
+}
+
+export interface ScheduleEntriesInput {
+    vtuberId: string;
+    entries: ScheduleEntryInput[];
+    note?: string;
+    contact?: string;
+    turnstileToken: string | null;
+}
+
+/** 投稿某位 VTuber 的本週週表（/api/schedule/entries；後台核准後才出現在週表） */
+export function submitScheduleEntries(input: ScheduleEntriesInput): Promise<{ ok: true; id: string | null }> {
+    return requestJson('/api/schedule/entries', { method: 'POST', body: JSON.stringify(input) });
+}
+
 export type ReportKind = 'vtuber_info' | 'stream' | 'roster' | 'missing_vtuber';
 
 /** 「補充資料」可填的欄位（與後端 SUGGESTED_KEYS 一致，functions/lib/vtuber-submit.js） */

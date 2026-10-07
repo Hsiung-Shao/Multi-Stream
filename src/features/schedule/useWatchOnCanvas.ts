@@ -10,17 +10,19 @@ import { useUIStore } from '../../store/useUIStore';
 import { track } from '../../utils/analytics';
 import type { StreamData } from '../../utils/streamUtils';
 import { CANVAS_MAX_STREAMS } from './openOnCanvas';
-import { canvasInput } from './streamLinks';
+import { canvasInput, isNonVideoStream } from './streamLinks';
 import type { ScheduleChannel, ScheduleStream } from './types';
 
 /**
  * 這一場是不是已經在畫布上（YouTube 比影片 ID、Twitch 比 login；不靠網址字串）。
  * YouTube 直播中另外比頻道：從收藏或頻道網址（/channel/UC…/live）加入的項目可能沒有 videoId。
+ * 沒有影片 ID 的場次（社群週表／投稿）只能比頻道。
  */
-export function isOnCanvas(stream: Pick<ScheduleStream, 'platform' | 'external_id' | 'status'>, channel: ScheduleChannel | undefined, canvas: readonly Pick<StreamData, 'platform' | 'channelId' | 'videoId'>[]): boolean {
+export function isOnCanvas(stream: Pick<ScheduleStream, 'platform' | 'external_id' | 'status' | 'source'>, channel: ScheduleChannel | undefined, canvas: readonly Pick<StreamData, 'platform' | 'channelId' | 'videoId'>[]): boolean {
     if (stream.platform === 'youtube') {
+        const byChannel = stream.status === 'live' || isNonVideoStream(stream);
         return canvas.some(
-            (s) => s.platform === 'youtube' && (s.videoId === stream.external_id || (stream.status === 'live' && !!channel?.youtube && s.channelId === channel.youtube)),
+            (s) => s.platform === 'youtube' && (s.videoId === stream.external_id || (byChannel && !!channel?.youtube && s.channelId === channel.youtube)),
         );
     }
     const login = channel?.twitch?.toLowerCase();

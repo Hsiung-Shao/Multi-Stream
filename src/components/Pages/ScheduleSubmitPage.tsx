@@ -36,6 +36,7 @@ export function ScheduleSubmitPage() {
                 <header className="pb-6 pt-4">
                     <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-[2.125rem]">{t('contribute.heading')}</h1>
                     <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground [text-wrap:pretty]">{t('contribute.subtitle')}</p>
+                    <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-muted-foreground [text-wrap:pretty]">{t('contribute.scheduleHint')}</p>
                 </header>
 
                 {/* initialName 讀到之前（預渲染、hydrate 的第一個畫面）先用空白表單；key 讓預填值在讀到後套用一次 */}

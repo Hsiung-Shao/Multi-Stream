@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, MonitorPlay, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, MonitorPlay, RefreshCw, SearchX } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -30,6 +30,7 @@ import { SEO_SITE_URL } from '../../seo/defaults';
 import { breadcrumb, graph, webPage } from '../../seo/jsonld';
 import { toHtmlLang } from '../../i18n/i18n';
 import { ReportDialogProvider, useReportDialog } from '../../features/report/ReportDialogProvider';
+import { ScheduleEntriesDialogProvider, useScheduleEntriesDialog } from '../../features/contribute/ScheduleEntriesDialogProvider';
 
 const RECENT_PREVIEW = 10;
 
@@ -77,6 +78,28 @@ function ReportPersonButton({ person }: { person: SchedulePerson }) {
         <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => report.openReport({ kind: 'vtuber_info', vtuberId: person.id, name: person.channel.name })}>
             <Flag size={14} aria-hidden="true" />
             {t('report.button')}
+        </Button>
+    );
+}
+
+/** 「提供週表」：使用者手動填這位 VTuber 接下來的開台，後台審核後才上週表。variant=link 用在「接下來」的空狀態 */
+function SubmitScheduleButton({ person, variant = 'button' }: { person: SchedulePerson; variant?: 'button' | 'link' }) {
+    const { t } = useTranslation('schedule');
+    const dialog = useScheduleEntriesDialog();
+    if (!dialog) return null;
+    const open = () => dialog.openScheduleEntries({ vtuberId: person.id, name: person.channel.name, hasTwitch: !!person.channel.twitch });
+    if (variant === 'link') {
+        return (
+            <Button variant="link" size="sm" className="h-auto gap-1.5 px-0 text-sm" onClick={open}>
+                <CalendarPlus size={14} aria-hidden="true" />
+                {t('scheduleEntries.emptyCta')}
+            </Button>
+        );
+    }
+    return (
+        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={open}>
+            <CalendarPlus size={14} aria-hidden="true" />
+            {t('scheduleEntries.button')}
         </Button>
     );
 }
@@ -187,6 +210,7 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
                         </a>
                     ))}
                     <ReportPersonButton person={person} />
+                    <SubmitScheduleButton person={person} />
                     {channelLinks(person).map((l) => (
                         <a
                             key={l.platform}
@@ -280,7 +304,10 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                     <section aria-labelledby="person-upcoming">
                         <SectionTitle id="person-upcoming" count={upcoming.length}>{t('person.upcoming')}</SectionTitle>
                         {upcoming.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">{t('person.noneUpcoming')}</p>
+                            <div className="space-y-1">
+                                <p className="text-sm text-muted-foreground">{t('person.noneUpcoming')}</p>
+                                <SubmitScheduleButton person={person} variant="link" />
+                            </div>
                         ) : (
                             <DayTimeline
                                 streams={upcoming}
@@ -372,8 +399,10 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                 <div className={person === null || (query.isError && !person) ? undefined : 'min-h-svh'}>
                 {person ? (
                     <ReportDialogProvider>
-                        <PersonSeo person={person} slug={slug} />
-                        <PersonBody person={person} />
+                        <ScheduleEntriesDialogProvider>
+                            <PersonSeo person={person} slug={slug} />
+                            <PersonBody person={person} />
+                        </ScheduleEntriesDialogProvider>
                     </ReportDialogProvider>
                 ) : person === null ? (
                     <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">

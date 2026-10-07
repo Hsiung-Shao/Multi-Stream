@@ -152,7 +152,8 @@ describe('expireOverdue：資料庫端統一過期', () => {
     expect(stats.frames_unflagged).toBe(7);
     const u = decodeURIComponent(calls[1].url);
     expect(calls[1].method).toBe('PATCH');
-    expect(u).toContain('platform=eq.youtube&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.2026-09-28T09:00:00.000Z');
+    // YouTube 待機室＋任何平台的社群週表／投稿場次（2026-10-05）
+    expect(u).toContain('or=(platform.eq.youtube,source.in.(community_post,user_submission))&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.2026-09-28T09:00:00.000Z');
     expect(calls[1].body).toMatchObject({ status: 'expired' });
   });
 });

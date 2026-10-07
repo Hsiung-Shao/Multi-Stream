@@ -300,7 +300,8 @@ export type PendingScope = 'near' | 'all' | 'frames';
 
 export async function loadPendingYouTube(db: Db, now: number, scope: PendingScope = 'all'): Promise<StreamRecord[]> {
   const nowIso = encodeURIComponent(new Date(now).toISOString());
-  const base = `select=${STREAMS_COLS}&platform=eq.youtube&fetched_at=lt.${nowIso}`;
+  // 只重查待機室：社群週表／使用者投稿的 external_id 不是影片 ID，送 videos.list 會被當 tombstone 刪掉
+  const base = `select=${STREAMS_COLS}&platform=eq.youtube&source=eq.yt_waiting_room&fetched_at=lt.${nowIso}`;
   if (scope === 'frames') {
     return db.selectAll<StreamRecord>(
       'streams',
@@ -343,22 +344,26 @@ export async function unflagNearFrames(db: Db, stats: RunStats, now: number): Pr
 export async function expireOverdue(db: Db, stats: RunStats, now: number): Promise<number> {
   await unflagNearFrames(db, stats, now);
   const cutoff = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
+  // YouTube 待機室，加上任何平台的社群週表／投稿場次（Twitch 平台的這兩種來源沒有別的路徑會讓它過期）
   const n = await db.update(
     'streams',
-    `platform=eq.youtube&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.${cutoff}`,
+    `or=(platform.eq.youtube,source.in.(${NON_VIDEO_SOURCES.join(',')}))&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.${cutoff}`,
     { status: 'expired', fetched_at: new Date(now).toISOString() },
   );
   stats.streams_expired += n;
   return n;
 }
 
-/** 共享表要看的「目前狀態」：這些頻道所有 scheduled / live 的場次（含常駐框、含本輪剛寫入的） */
+/** 沒有影片 ID 的來源（external_id 為 post:…／sub:…）：共享表與 live-og 比對都不能拿它當 videoId */
+export const NON_VIDEO_SOURCES = ['community_post', 'user_submission'] as const;
+
+/** 共享表要看的「目前狀態」：這些頻道所有 scheduled / live 的場次（含常駐框、含本輪剛寫入的；不含社群週表／投稿） */
 export async function loadCurrentByChannel(db: Db, channelIds: readonly string[]): Promise<Map<string, StreamRecord[]>> {
   const out = new Map<string, StreamRecord[]>();
   for (let i = 0; i < channelIds.length; i += 100) {
     const rows = await db.selectAll<StreamRecord>(
       'streams',
-      `select=${STREAMS_COLS}&platform=eq.youtube&status=in.(scheduled,live)&channel_id=${inList(channelIds.slice(i, i + 100))}`,
+      `select=${STREAMS_COLS}&platform=eq.youtube&status=in.(scheduled,live)&source=not.in.(${NON_VIDEO_SOURCES.join(',')})&channel_id=${inList(channelIds.slice(i, i + 100))}`,
     );
     for (const r of rows) {
       const list = out.get(r.channel_id) ?? [];

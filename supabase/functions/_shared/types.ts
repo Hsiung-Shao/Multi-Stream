@@ -20,7 +20,8 @@ export interface StreamRow extends Record<string, unknown> {
   channel_id: string;
   platform: 'youtube' | 'twitch';
   external_id: string;
-  source: 'yt_waiting_room' | 'twitch_schedule' | 'twitch_live' | 'manual';
+  /** community_post／user_submission 沒有影片 ID（external_id 為 post:…／sub:…），不能送 videos.list、不能當 videoId 給收藏輪詢 */
+  source: 'yt_waiting_room' | 'twitch_schedule' | 'twitch_live' | 'manual' | 'community_post' | 'user_submission';
   status: StreamStatus;
   scheduled_start: string | null;
   scheduled_end: string | null;

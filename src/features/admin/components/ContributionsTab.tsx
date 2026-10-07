@@ -1,4 +1,4 @@
-// 後台「投稿審核」：使用者推薦的新 VTuber（vtuber_contributions）。
+// 後台「投稿審核」：使用者推薦的新 VTuber（vtuber_contributions）；週表投稿（action='schedule'）見 ScheduleContributionCard。
 // 每筆可修改欄位後核准（approve_vtuber_contribution 單一交易：建團體→vtubers→vtuber_channels→稽核）或駁回。
 // 地區只收本人自稱或所屬公司證據（見 Obsidian 決策紀錄 2026-09-30 地區檢查）：證據連結放在地區旁邊提醒人工判斷。
 
@@ -22,6 +22,7 @@ import {
     type ContributionRecord,
 } from '../hooks/useAdminSubmissions';
 import { AdminTokenInline, useAdminTokenPresent } from './AdminTokenInline';
+import { ScheduleContributionCard } from './ScheduleContributionCard';
 
 const NATIONALITIES = ['TW', 'HK', 'MY', 'JP', 'KR', 'OTHER'];
 const YT_AVATAR = /^https:\/\/yt3\.(ggpht|googleusercontent)\.com\//;
@@ -247,7 +248,8 @@ export function ContributionsTab() {
                 <p role="alert" className="text-sm text-destructive">{formatSubmissionError(query.error)}</p>
             ) : query.data?.length ? (
                 <div className="space-y-3">
-                    {query.data.map((c) => <ContributionCard key={c.id} c={c} />)}
+                    {/* 週表投稿（使用者投稿／低信心自動解析）的欄位與核准函式都不同，另用一張卡片 */}
+                    {query.data.map((c) => (c.action === 'schedule' ? <ScheduleContributionCard key={c.id} c={c} /> : <ContributionCard key={c.id} c={c} />))}
                 </div>
             ) : (
                 <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">沒有{STATUS_LABEL[status]}的投稿</p>

@@ -21,11 +21,32 @@ export interface ContributionPayload {
     instagram_url?: string | null;
     twitch_login?: string | null;
     subscriber_count_claimed?: string | null;
+    // ---- 週表投稿（action='schedule'）----
+    vtuber_id?: string;
+    vtuber_name?: string | null;
+    vtuber_slug?: string | null;
+    entries?: ScheduleEntry[];
+    /** user＝使用者投稿；vision＝低信心的社群貼文週表圖自動解析 */
+    source?: 'user' | 'vision';
+    /** 自動解析的信心（0～1） */
+    confidence?: number | null;
+    post_id?: string | null;
+    post_url?: string | null;
+    image_url?: string | null;
+    note?: string | null;
+}
+
+/** 週表投稿的一列（台北時間；與後端 functions/lib/schedule-submit.js 一致） */
+export interface ScheduleEntry {
+    date: string;
+    time: string;
+    title: string;
+    platform: 'youtube' | 'twitch';
 }
 
 export interface ContributionRecord {
     id: string;
-    action: 'add' | 'edit' | 'delete';
+    action: 'add' | 'edit' | 'delete' | 'schedule';
     payload: ContributionPayload;
     status: 'pending' | 'approved' | 'rejected';
     submitted_by: string | null;
@@ -142,6 +163,19 @@ export function useApproveContribution() {
     });
 }
 
+/** 核准週表投稿（approve_schedule_contribution）：entries＝審核後的表格內容，notes 由後端併入 payload.reviewer_notes */
+export function useApproveScheduleContribution() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, entries, notes }: { id: string; entries: ScheduleEntry[]; notes: string }) =>
+            apiFetch<{ result: { vtuber_id: string; slug: string; written: number; canceled: number } }>(`/api/admin/contributions?id=${id}&action=approve`, {
+                method: 'POST',
+                body: JSON.stringify({ entries, notes }),
+            }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: [CONTRIB_KEY] }),
+    });
+}
+
 export function useRejectContribution() {
     const qc = useQueryClient();
     return useMutation({
@@ -224,6 +258,15 @@ const ERRORS: Record<string, string> = {
     invalid_suggested: '補充資料太長',
     invalid_id: '回報 ID 格式不正確',
     invalid_action: '不支援的操作',
+    no_entries: '沒有可寫入的場次（至少要一列，最多 14 列）',
+    invalid_entry: '有一列的日期或時間格式不正確',
+    invalid_entries: '場次列表不正確（1～14 列、同一天同一時間不能重複、平台只能是 YouTube／Twitch）',
+    invalid_entry_date: '日期超出範圍（7 天前～未來 10 天，台北時間）',
+    invalid_entry_time: '時間格式不正確（HH:MM）',
+    invalid_entry_title: '標題必填，最多 80 字',
+    channel_not_found: '這位 VTuber 沒有可用的 YouTube／Twitch 頻道，無法寫入週表',
+    vtuber_not_found: '找不到這位 VTuber（可能已畢業或被刪除）',
+    invalid_vtuber: 'VTuber ID 格式不正確',
 };
 
 export function formatSubmissionError(err: unknown): string {
