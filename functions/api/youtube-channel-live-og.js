@@ -24,6 +24,8 @@ const YOUTUBE_TIMEOUT_MS = 8000;
 // 沒帶的直接回 426、不抓 YouTube（幾乎不耗 CPU）；舊程式遇到 HTTP 錯誤會丟錯、不改打其他端點，使用者重新整理就恢復。
 // 之後若用戶端節流邏輯又有不相容的修正，把版本號加一，就能讓還開著的舊分頁停止打端點。
 // 前端對應常數在 src/utils/youtubeApi.ts（tests/functions/liveOgCache.test.ts 鎖定兩邊一致）。
+// 另有 Cloudflare WAF 自訂規則「live-og 擋舊版用戶端」在 edge 先擋（403，Worker 不執行）：
+// 版本號加一時，要先把該規則的比對值改成同時接受新舊版，前端上線後再拿掉舊版，否則新前端會被擋。
 export const LIVE_OG_CLIENT_HEADER = 'X-MS-Live-Client';
 export const LIVE_OG_CLIENT_VERSION = '2';
 
