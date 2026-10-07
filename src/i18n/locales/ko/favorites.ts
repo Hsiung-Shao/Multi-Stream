@@ -231,6 +231,9 @@ export default {
   'invalidFavoriteItem': '이 즐겨찾기에는 불러올 채널이나 링크가 없습니다.',
   'noFavoritesToLoad': '불러올 즐겨찾기가 없습니다.',
   'batchAddTagsDesc': '{{count}}개 항목에 아래 태그를 추가합니다(기존 태그는 유지):',
-  'refreshCooldown': '방금 방송 상태를 새로고침했습니다. {{seconds}}초 후에 다시 새로고침할 수 있습니다.',
+  'refreshCooldown': 'Twitch는 갱신했습니다. YouTube 채널은 방금 확인했으므로 {{seconds}}초 후에 다시 바로 확인할 수 있습니다.',
+  'refreshDoneChanged': '방송 상태를 갱신했습니다. {{count}}개 채널이 바뀌었습니다.',
+  'refreshDoneNoChange': '방송 상태가 최신입니다.',
+  'refreshDeferred': 'YouTube 채널 {{count}}개는 다음 차례에 확인합니다.',
 };
 

@@ -56,8 +56,8 @@ describe('isLiveStatusFresh', () => {
         expect(isLiveStatusFresh(row(), NOW + LIVE_STATUS_FRESH_MS)).toBe(false);
     });
 
-    it('自動輪詢門檻：直播中的列 62 分鐘（排程每小時重查直播中頻道），其他 22 分鐘', () => {
-        expect(LIVE_STATUS_FRESH_LIVE_MS).toBe(62 * 60_000);
+    it('自動輪詢門檻：直播中的列 32 分鐘（直播中頻道 30 分鐘重查），其他 22 分鐘', () => {
+        expect(LIVE_STATUS_FRESH_LIVE_MS).toBe(32 * 60_000);
         expect(autoFreshMaxAge(row({ is_live: true }))).toBe(LIVE_STATUS_FRESH_LIVE_MS);
         expect(autoFreshMaxAge(row({ is_live: false, is_upcoming: true }))).toBe(LIVE_STATUS_FRESH_MS);
     });

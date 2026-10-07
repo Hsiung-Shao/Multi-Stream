@@ -2,7 +2,7 @@
 // 2026-10-02 從 schedule-light 拆出來：RSS 與 live-og 在同一次呼叫時 CPU 會超過 Edge Function 的 2 秒上限（546）。
 //
 // 1. 過期：排定時間過後 3 小時仍未開始的待機室 → expired（資料庫端）
-// 2. live-og：直播中（1 小時內查過的跳過）或 2 小時內待機室的頻道抓 /live 頁 → 開播、結束（連續兩輪確認）、改期
+// 2. live-og：直播中（30 分鐘內查過的跳過）或 2 小時內待機室的頻道抓 /live 頁 → 開播、結束（連續兩輪確認）、改期
 // 3. 雙平台合併、vtubers.last_live_at、youtube_live_status 共享表（這輪查到的頻道）
 // 4. 發布 snapshot
 //
@@ -23,8 +23,8 @@ const HEAVY_JOB = 'schedule_heavy_rss';
  * live-og：/live 頁串流讀取（live_og.ts），並行 6。
  * 2026-10-02 本地 edge runtime 實測（只跑 live-og＋固定成本）：60、80、100 各兩輪都越過 1 秒 soft limit、
  * 未達 2 秒 hard limit；固定成本（名冊、合併、snapshot）單獨跑不到 1 秒。取 80 留餘裕（正式環境 CPU 速度不同）。
- * 直播中的頻道 1 小時內查過就跳過（OG_LIVE_RECHECK_MS，2026-10-04；等下播確認的例外），每輪約 220/3 ≈ 73 個到期，
- * 加上保留給待機室的 20 個名額，高峰時可能略超過 80 → 少數頻道順延一輪（最久沒查的先查）。
+ * 直播中的頻道 30 分鐘內查過就跳過（OG_LIVE_RECHECK_MS，2026-10-08 從 1 小時縮短；等下播確認的例外），約隔一輪查一次，
+ * 高峰（約 220 個直播中）每輪約 110 個到期，加上保留給待機室的 20 個名額會超過 80 → 部分頻道順延一輪（最久沒查的先查）。
  */
 const OG_CONCURRENCY = 6;
 const OG_MAX_CHANNELS = 80;

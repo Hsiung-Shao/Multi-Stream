@@ -29,6 +29,7 @@ import { Input } from '../../../components/ui/input';
 import { Edit2, Trash2, Star, Plus, Folder, RotateCw } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../../../components/ui/alert-dialog';
 import { useLiveStatusCheck } from '../useLiveStatusCheck';
+import { showLiveRefreshToast } from '../liveRefreshToast';
 
 import type { FavoriteStream, Tag } from '../types';
 
@@ -269,11 +270,9 @@ export function FavoritesManagerMain({ theme, onClose }: FavoritesManagerMainPro
     const { checkNow, isRefreshing } = useLiveStatusCheck();
 
     const handleCheckLiveStatus = async () => {
-        // 使用者手動按下 → 略過每頻道節流（3 分鐘內只能用一次、每輪最多查 10 個頻道）
+        // 使用者手動按下 → YouTube 略過每頻道節流（3 分鐘內只能用一次、每輪最多查 20 個頻道）；Twitch 每次都查
         const res = await checkNow({ force: true });
-        if (res.cooldownRemainingMs > 0) {
-            toast.info(t('refreshCooldown', { seconds: Math.ceil(res.cooldownRemainingMs / 1000) }));
-        }
+        showLiveRefreshToast(res);
         // Hook internal logic updates data, loadData() ensures UI sync via re-reading
         loadData();
     };

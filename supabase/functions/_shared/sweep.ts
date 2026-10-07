@@ -379,11 +379,12 @@ export const NEAR_WINDOW_MS = 2 * 3_600_000;
 /** live-og 每輪保留給待機室（沒有直播中場次的頻道）的名額：直播中頻道多時開播偵測仍輪得到 */
 export const OG_RESERVE_OTHERS = 20;
 /**
- * 直播中的頻道多久重查一次（2026-10-04 使用者指定 1 小時：直播多半 1～1.5 小時，每輪都查多半白查）。
- * 例外：上一輪沒看到直播（og_miss_streak ≥ 1，等下播確認）的下一輪照查，下播不會因此多拖一小時。
+ * 直播中的頻道多久重查一次（2026-10-04 使用者指定 1 小時；2026-10-08 使用者回報下播反映太慢，改為 30 分鐘）。
+ * schedule-live 每 20 分鐘一輪，所以實際約隔一輪（約 40 分鐘）重查一次；高峰時名額不足會再順延。
+ * 例外：上一輪沒看到直播（og_miss_streak ≥ 1，等下播確認）的下一輪照查，下播不會因此多拖一輪。
  * 省下的名額讓給待機室開播偵測。前端共享表「直播中」列的新鮮度（LIVE_STATUS_FRESH_LIVE_MS）跟著這個值。
  */
-export const OG_LIVE_RECHECK_MS = 60 * 60_000;
+export const OG_LIVE_RECHECK_MS = 30 * 60_000;
 /** 一輪 live-og 最多幾頁退回整頁比對，超過就停止（見 ogSweep） */
 export const OG_FULL_PAGE_MAX = 10;
 

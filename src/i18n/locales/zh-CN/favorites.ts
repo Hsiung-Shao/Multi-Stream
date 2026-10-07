@@ -231,6 +231,9 @@ export default {
   'invalidFavoriteItem': '这条收藏没有可加载的频道或链接。',
   'noFavoritesToLoad': '没有可加载的收藏。',
   'batchAddTagsDesc': '为 {{count}} 个项目添加以下标签（追加模式，保留原有标签）：',
-  'refreshCooldown': '刚刚已刷新过直播状态，{{seconds}} 秒后才能再次手动刷新。',
+  'refreshCooldown': 'Twitch 已更新；YouTube 频道刚刚已重新查过，{{seconds}} 秒后才能再次立即重查。',
+  'refreshDoneChanged': '直播状态已更新，{{count}} 个频道有变化。',
+  'refreshDoneNoChange': '直播状态已是最新。',
+  'refreshDeferred': '另有 {{count}} 个 YouTube 频道会在下一轮检查。',
 };
 

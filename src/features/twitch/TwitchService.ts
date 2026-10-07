@@ -186,27 +186,29 @@ export class TwitchService implements TwitchApiContract {
 
                 const data = await this.client.get<any>(endpointWithQuery);
 
-                if (data?.data) {
-                    data.data.forEach((stream: any) => {
-                        const login = stream.user_login.toLowerCase();
-                        results[login] = {
-                            isLive: true,
-                            channelLogin: login,
-                            title: stream.title,
-                            gameName: stream.game_name,
-                            viewerCount: stream.viewer_count,
-                            startedAt: stream.started_at,
-                            thumbnailUrl: stream.thumbnail_url
-                        };
-                    });
-                }
+                // 回應沒有 data 陣列（例如 404 回 null）視同失敗，不能當成「全部離線」
+                if (!Array.isArray(data?.data)) throw new Error('Twitch /streams: unexpected response');
+                data.data.forEach((stream: any) => {
+                    const login = stream.user_login.toLowerCase();
+                    results[login] = {
+                        isLive: true,
+                        channelLogin: login,
+                        title: stream.title,
+                        gameName: stream.game_name,
+                        viewerCount: stream.viewer_count,
+                        startedAt: stream.started_at,
+                        thumbnailUrl: stream.thumbnail_url
+                    };
+                });
 
                 if (i + BATCH_SIZE < channelLogins.length) {
                     await new Promise(r => setTimeout(r, 200));
                 }
 
             } catch (e) {
-                // Batch failed? Legacy swallows the error for the batch.
+                // 這批查詢失敗：拿掉預設的「離線」結果，呼叫端保留原本狀態。
+                // 否則 Twitch API 失敗一次，整批收藏都會被標成離線、下一輪再跳回直播中
+                batch.forEach(login => { delete results[login]; });
             }
         }
 
@@ -229,7 +231,9 @@ export class TwitchService implements TwitchApiContract {
                 batch.forEach(login => qs.append('login', login));
                 const data = await this.client.get<any>(`/users?${qs.toString()}`);
 
-                if (data?.data) {
+                // 回應沒有 data 陣列（例如 404 回 null）視同失敗，不能當成「全部離線」
+                if (!Array.isArray(data?.data)) throw new Error('Twitch /streams: unexpected response');
+                {
                     data.data.forEach((user: any) => {
                         const login = (user.login || '').toLowerCase();
                         if (login && user.display_name) {

@@ -185,7 +185,7 @@ describe('ogSweep：輪替、下播兩輪確認、斷路器、去重', () => {
         expect(stats.og_failed).toBe(0);
     });
 
-    it('直播中的頻道 1 小時內查過就跳過，名額讓給待機室；等下播確認（miss ≥ 1）的照查', async () => {
+    it('直播中的頻道 30 分鐘內查過就跳過，名額讓給待機室；等下播確認（miss ≥ 1）的照查', async () => {
         const { db } = fakeDb();
         const hit: string[] = [];
         const f = ogFetch(new Set());
@@ -195,9 +195,9 @@ describe('ogSweep：輪替、下播兩輪確認、斷路器、去重', () => {
         }) as unknown as typeof fetch;
         const stats = emptyStats('live', NOW);
         const chans = [
-            chan(1, { ogCheckedAt: '2026-09-30T11:30:00Z' }), // 直播中、30 分鐘前查過 → 跳過
+            chan(1, { ogCheckedAt: '2026-09-30T11:40:00Z' }), // 直播中、20 分鐘前查過（上一輪）→ 跳過
             chan(2, { ogCheckedAt: '2026-09-30T11:50:00Z', ogMissStreak: 1 }), // 直播中、等下播確認 → 照查
-            chan(3, { ogCheckedAt: '2026-09-30T10:59:00Z' }), // 直播中、超過 1 小時 → 查
+            chan(3, { ogCheckedAt: '2026-09-30T11:20:00Z' }), // 直播中、40 分鐘前（隔一輪）→ 查
             chan(4, { ogCheckedAt: '2026-09-30T11:55:00Z' }), // 待機室 → 查
         ];
         await ogSweep(db, chans, stats, NOW, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, maxChannels: 10, fetch: fetchFn, liveFirst: new Set(['c1', 'c2', 'c3']) });

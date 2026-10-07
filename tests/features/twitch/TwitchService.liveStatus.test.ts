@@ -32,3 +32,28 @@ describe('TwitchService.checkMultipleChannelsLiveStatus 大小寫', () => {
         expect(qs.getAll('user_login')).toEqual(['shroud']);
     });
 });
+
+describe('TwitchService.checkMultipleChannelsLiveStatus 失敗', () => {
+    it('查詢失敗的批次沒有結果（呼叫端保留原狀態），不會被當成全部離線', async () => {
+        const get = vi.fn(async () => { throw new Error('Twitch API 429'); });
+        const service = new TwitchService(
+            { resolve: () => ({ clientId: 'test-client' }) } as any,
+            {} as any,
+            { get } as any,
+            {} as any,
+        );
+        const res = await service.checkMultipleChannelsLiveStatus(['shroud']);
+        expect(res).toEqual({});
+    });
+
+    it('回應沒有 data 陣列（例如 404 回 null）也視同失敗', async () => {
+        const get = vi.fn(async () => null);
+        const service = new TwitchService(
+            { resolve: () => ({ clientId: 'test-client' }) } as any,
+            {} as any,
+            { get } as any,
+            {} as any,
+        );
+        expect(await service.checkMultipleChannelsLiveStatus(['shroud'])).toEqual({});
+    });
+});

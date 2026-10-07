@@ -231,6 +231,9 @@ export default {
   'invalidFavoriteItem': 'このお気に入りには読み込めるチャンネルやリンクがありません。',
   'noFavoritesToLoad': '読み込めるお気に入りがありません。',
   'batchAddTagsDesc': '{{count}} 件に次のタグを追加します（既存のタグは残ります）：',
-  'refreshCooldown': '配信状況はさきほど更新しました。{{seconds}} 秒後にもう一度更新できます。',
+  'refreshCooldown': 'Twitch は更新しました。YouTube チャンネルはさきほど確認したばかりのため、{{seconds}} 秒後にもう一度すぐ確認できます。',
+  'refreshDoneChanged': '配信状況を更新しました。{{count}} 件のチャンネルに変化がありました。',
+  'refreshDoneNoChange': '配信状況は最新です。',
+  'refreshDeferred': 'ほかに {{count}} 件の YouTube チャンネルは次の回に確認します。',
 };
 

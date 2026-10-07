@@ -232,5 +232,8 @@ export default {
   'invalidFavoriteItem': 'This favorite has no channel or link to load.',
   'noFavoritesToLoad': 'There are no favorites to load.',
   'batchAddTagsDesc': 'Add the tags below to {{count}} item(s) (existing tags are kept):',
-  'refreshCooldown': 'Live status was just refreshed. You can refresh again in {{seconds}} seconds.',
+  'refreshCooldown': 'Twitch is up to date. YouTube channels were just re-checked; you can re-check them again in {{seconds}} seconds.',
+  'refreshDoneChanged': 'Live status updated: {{count}} channel(s) changed.',
+  'refreshDoneNoChange': 'Live status is up to date.',
+  'refreshDeferred': '{{count}} more YouTube channel(s) will be checked in the next round.',
 };

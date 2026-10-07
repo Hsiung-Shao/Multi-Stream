@@ -32,10 +32,10 @@ describe('shouldCheckChannel', () => {
         expect(shouldCheckChannel(CH, T0 + OFFLINE_RECHECK_MS)).toBe(true);
     });
 
-    it('直播中頻道 60 分鐘內不重查，滿 60 分鐘就查（直播多半 1～1.5 小時，2026-10-04 使用者指定）', () => {
+    it('直播中頻道 30 分鐘內不重查，滿 30 分鐘就查（2026-10-08 使用者指定，原 60 分鐘下播反映太慢）', () => {
         recordChannelCheck(CH, true, T0);
-        expect(LIVE_RECHECK_MS).toBe(60 * 60_000);
-        expect(shouldCheckChannel(CH, T0 + 30 * 60_000)).toBe(false);
+        expect(LIVE_RECHECK_MS).toBe(30 * 60_000);
+        expect(shouldCheckChannel(CH, T0 + 20 * 60_000)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS - 1)).toBe(false);
         expect(shouldCheckChannel(CH, T0 + LIVE_RECHECK_MS)).toBe(true);
     });

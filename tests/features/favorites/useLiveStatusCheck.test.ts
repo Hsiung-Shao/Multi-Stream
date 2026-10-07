@@ -34,7 +34,7 @@ vi.mock('../../../src/features/youtube/YouTubeChannelRepository', () => ({
     cacheChannelIfAbsent: vi.fn(async () => {}),
 }));
 
-import { useLiveStatusCheck, MAX_ENDPOINT_CALLS_PER_ROUND, FORCE_COOLDOWN_MS, __setLiveCheckSleepForTests } from '../../../src/features/favorites/useLiveStatusCheck';
+import { useLiveStatusCheck, MAX_ENDPOINT_CALLS_PER_ROUND, MAX_ENDPOINT_CALLS_FORCE, FORCE_COOLDOWN_MS, __setLiveCheckSleepForTests } from '../../../src/features/favorites/useLiveStatusCheck';
 import { recordChannelCheck, LIVE_CHECK_STORAGE_KEY } from '../../../src/features/favorites/liveCheckThrottle';
 import { twitchService } from '../../../src/features/twitch/TwitchService';
 
@@ -126,18 +126,18 @@ describe('useLiveStatusCheck × 每頻道節流', () => {
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(2);
     });
 
-    it('直播中的收藏 60 分鐘內查過：自動輪詢跳過，手動重新整理照查（要看下播按重新整理）', async () => {
+    it('直播中的收藏 30 分鐘內查過：自動輪詢跳過，手動重新整理照查（要看下播按重新整理）', async () => {
         favorites[0] = { ...favorites[0], isLive: true, lastChecked: new Date().toISOString() };
-        recordChannelCheck(CH, true, Date.now() - 50 * 60_000);
+        recordChannelCheck(CH, true, Date.now() - 25 * 60_000);
         await runCheck();
         expect(checkChannelLiveStatus).not.toHaveBeenCalled();
         await runCheck({ force: true });
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
     });
 
-    it('直播中的收藏超過 60 分鐘沒查：自動輪詢就會查', async () => {
+    it('直播中的收藏超過 30 分鐘沒查：自動輪詢就會查', async () => {
         favorites[0] = { ...favorites[0], isLive: true, lastChecked: new Date().toISOString() };
-        recordChannelCheck(CH, true, Date.now() - 61 * 60_000);
+        recordChannelCheck(CH, true, Date.now() - 31 * 60_000);
         await runCheck();
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
     });
@@ -199,13 +199,13 @@ describe('useLiveStatusCheck × 共享表 youtube_live_status', () => {
         expect(checkChannelLiveStatus).toHaveBeenCalledWith(CH);
     });
 
-    it('直播中的資料 62 分鐘內都算新鮮（排程每小時才重查直播中頻道），超過才打端點', async () => {
-        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 50 * 60 * 1000).toISOString() })]]));
+    it('直播中的資料 32 分鐘內都算新鮮（直播中頻道 30 分鐘重查），超過才打端點', async () => {
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 25 * 60 * 1000).toISOString() })]]));
         await runCheck();
         expect(checkChannelLiveStatus).not.toHaveBeenCalled();
 
         localStorage.clear();
-        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 63 * 60 * 1000).toISOString() })]]));
+        fetchLiveStatuses.mockResolvedValue(new Map([[CH, sharedRow({ checked_at: new Date(Date.now() - 33 * 60 * 1000).toISOString() })]]));
         await runCheck();
         expect(checkChannelLiveStatus).toHaveBeenCalledWith(CH);
     });
@@ -280,12 +280,37 @@ describe('useLiveStatusCheck × 每輪打端點上限', () => {
     });
 
     it('手動重新整理：共享資料 3～22 分鐘前 → 額度內打端點，額度用完才退用共享資料', async () => {
+        for (let i = 15; i < MAX_ENDPOINT_CALLS_FORCE + 5; i++) {
+            favorites.push({ id: `f${i}`, url: `https://www.youtube.com/channel/${chId(i)}`, name: `c${i}`, platform: 'youtube', channelId: chId(i), addedAt: '' });
+        }
         fetchLiveStatuses.mockResolvedValue(new Map(favorites.map(f => [f.channelId, sharedRow(f.channelId, 5 * 60_000)])));
-        await runCheck({ force: true });
-        expect(checkChannelLiveStatus).toHaveBeenCalledTimes(MAX_ENDPOINT_CALLS_PER_ROUND);
-        // 其餘 5 個用共享資料記錄，沒有被晾著
+        const res = await runCheck({ force: true });
+        expect(checkChannelLiveStatus).toHaveBeenCalledTimes(MAX_ENDPOINT_CALLS_FORCE);
+        // 其餘 5 個用共享資料記錄，沒有被晾著，也不算「留到下一輪」
         const map = JSON.parse(localStorage.getItem(LIVE_CHECK_STORAGE_KEY)!);
-        expect(Object.keys(map)).toHaveLength(15);
+        expect(Object.keys(map)).toHaveLength(MAX_ENDPOINT_CALLS_FORCE + 5);
+        expect(res.deferred).toBe(0);
+    });
+
+    it(`手動重新整理一輪最多打 ${MAX_ENDPOINT_CALLS_FORCE} 次端點（自動輪詢 ${MAX_ENDPOINT_CALLS_PER_ROUND} 次）；沒共享資料可退用的回報為留到下一輪`, async () => {
+        for (let i = 15; i < MAX_ENDPOINT_CALLS_FORCE + 5; i++) {
+            favorites.push({ id: `f${i}`, url: `https://www.youtube.com/channel/${chId(i)}`, name: `c${i}`, platform: 'youtube', channelId: chId(i), addedAt: '' });
+        }
+        const res = await runCheck({ force: true });
+        expect(checkChannelLiveStatus).toHaveBeenCalledTimes(MAX_ENDPOINT_CALLS_FORCE);
+        expect(res.deferred).toBe(5);
+    });
+
+    it('手動重新整理：畫面上顯示直播中的頻道優先查（要確認誰下播了）', async () => {
+        for (let i = 15; i < MAX_ENDPOINT_CALLS_FORCE + 5; i++) {
+            favorites.push({ id: `f${i}`, url: `https://www.youtube.com/channel/${chId(i)}`, name: `c${i}`, platform: 'youtube', channelId: chId(i), addedAt: '' });
+        }
+        // 最後 3 個顯示直播中，且是最近才查過的（依舊排序會排到最後、超出額度）
+        const liveIds = favorites.slice(-3).map(f => f.channelId as string);
+        for (const f of favorites.slice(-3)) f.isLive = true;
+        for (const id of liveIds) recordChannelCheck(id, true, Date.now() - 2 * 60_000);
+        await runCheck({ force: true });
+        expect(calledIds().slice(0, 3).sort()).toEqual([...liveIds].sort());
     });
 
     it('自動輪詢進行中按手動重新整理 → 等這輪跑完後再跑一次手動', async () => {
@@ -298,7 +323,7 @@ describe('useLiveStatusCheck × 每輪打端點上限', () => {
             await Promise.all([a, m]);
         });
         expect(manualRes?.forced).toBe(true);
-        // 自動 10 次＋手動 10 次（手動略過節流，但同一頻道 1 分鐘內查過的不重查 → 只查前一輪沒查到的 5 個）
+        // 自動 10 次＋手動（手動略過節流，但同一頻道 1 分鐘內查過的不重查 → 只查前一輪沒查到的 5 個）
         expect(checkChannelLiveStatus).toHaveBeenCalledTimes(MAX_ENDPOINT_CALLS_PER_ROUND + 5);
     });
 
@@ -333,5 +358,55 @@ describe('useLiveStatusCheck × Twitch login 大小寫', () => {
         expect(saveFavorites).toHaveBeenCalledTimes(1);
         const saved = saveFavorites.mock.calls[0][0];
         expect(saved[0]).toMatchObject({ id: 't1', isLive: true, viewerCount: 123 });
+    });
+});
+
+describe('useLiveStatusCheck × Twitch 不受 YouTube 限制', () => {
+    const TW = { id: 't1', url: 'https://www.twitch.tv/shroud', name: 'Shroud', platform: 'twitch', channelId: 'shroud', addedAt: '', isLive: false };
+
+    beforeEach(() => {
+        vi.mocked(twitchService.checkMultipleChannelsLiveStatus).mockReset();
+        vi.mocked(twitchService.checkMultipleChannelsLiveStatus).mockResolvedValue({
+            shroud: { isLive: true, channelLogin: 'shroud', viewerCount: 1, gameName: 'g' },
+        });
+    });
+
+    it('YouTube 冷卻中按手動重新整理：Twitch 照查，回傳的變化數含 Twitch', async () => {
+        await runCheck({ force: true }); // 用掉冷卻
+        favorites.push({ ...TW });
+        const res = await runCheck({ force: true });
+        expect(res.cooldownRemainingMs).toBeGreaterThan(0);
+        expect(twitchService.checkMultipleChannelsLiveStatus).toHaveBeenCalledTimes(1);
+        expect(res.changed).toBe(1);
+    });
+
+    it('YouTube 輪次進行中的自動輪詢：YouTube 略過，Twitch 照查', async () => {
+        favorites.push({ ...TW });
+        let release!: () => void;
+        checkChannelLiveStatus.mockImplementationOnce(() => new Promise(r => { release = () => r({ isLive: false }); }));
+        const a = renderHook(() => useLiveStatusCheck());
+        const b = renderHook(() => useLiveStatusCheck());
+        let first!: Promise<unknown>;
+        await act(async () => {
+            first = a.result.current.checkNow();
+            await Promise.resolve();
+        });
+        // 第一輪的 Twitch 已結束、YouTube 卡在端點：第二次觸發仍會再查 Twitch
+        await act(async () => { await new Promise(r => setTimeout(r, 0)); });
+        await act(async () => { await b.result.current.checkNow(); });
+        expect(twitchService.checkMultipleChannelsLiveStatus).toHaveBeenCalledTimes(2);
+        expect(checkChannelLiveStatus).toHaveBeenCalledTimes(1);
+        await act(async () => { release(); await first; });
+    });
+
+    it('Twitch 與 YouTube 各自存檔時套在最新清單上，不會互相蓋掉', async () => {
+        favorites.push({ ...TW });
+        checkChannelLiveStatus.mockResolvedValue({ isLive: true, liveVideoId: 'abcdefghijk', finalUrl: 'https://www.youtube.com/watch?v=abcdefghijk' });
+        // 模擬真的寫回：saveFavorites 會更新 getFavorites 讀到的清單
+        saveFavorites.mockImplementation((list: any[]) => { favorites.splice(0, favorites.length, ...list); });
+        const res = await runCheck();
+        expect(favorites.find(f => f.id === 't1')?.isLive).toBe(true);
+        expect(favorites.find(f => f.id === 'f1')?.isLive).toBe(true);
+        expect(res.changed).toBe(2);
     });
 });

@@ -18,6 +18,7 @@ import {
     PopoverTrigger,
 } from '../ui/popover';
 import { useLiveStatusCheck } from '../../features/favorites/useLiveStatusCheck';
+import { showLiveRefreshToast } from '../../features/favorites/liveRefreshToast';
 import { FN, ISLAND_PANEL_STYLE, islandHeaderChipStyle } from './islandTokens';
 
 // Favorites 面板主題色(對齊設計 FN.fav = gold)
@@ -174,11 +175,9 @@ export const IslandFavoritesMenu = ({
 
     // Handlers
     const handleRefresh = async () => {
-        // 使用者手動按下 → 略過每頻道節流（與收藏管理頁的「檢查直播狀態」一致）；3 分鐘內只能用一次
+        // 使用者手動按下 → YouTube 略過每頻道節流（與收藏管理頁的「檢查直播狀態」一致，3 分鐘內只能用一次）；Twitch 每次都查
         const res = await checkNow({ force: true });
-        if (res.cooldownRemainingMs > 0) {
-            toast.info(t('favorites:refreshCooldown', { seconds: Math.ceil(res.cooldownRemainingMs / 1000) }));
-        }
+        showLiveRefreshToast(res);
         refresh();
     };
 
