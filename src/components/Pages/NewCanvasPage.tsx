@@ -149,8 +149,9 @@ export const NewCanvasPage = () => {
                 />
             </div>
 
-            {/* 聊天室收合時，右緣的展開標籤 */}
-            {showCollapsedTab && <ChatCollapsedTab />}
+            {/* 聊天室收合時，右緣的展開標籤。畫布只剩收合的聊天室時視為空畫布：只顯示空畫布引導，
+                不同時冒出一個展開後也只會看到空聊天室的標籤 */}
+            {showCollapsedTab && windows.length > 0 && <ChatCollapsedTab />}
 
             {/* UI Layer (Dynamic Island) */}
             <div className="pointer-events-none absolute inset-0 z-50">

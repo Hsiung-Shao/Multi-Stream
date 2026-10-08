@@ -1,5 +1,7 @@
-// 公開狀態頁（/status）：服務狀態、已知問題、公告、最近更新。視覺依 Claude Design 設計稿（2026-10-08）。
-// 資料由 /api/status 一次取得（edge 快取 60 秒）；任一區塊可能是 null（該來源暫時取不到），逐區顯示「暫時無法取得」。
+// 公開狀態頁（/status）：服務狀態、已知問題、使用者回報、公告、最近更新。視覺依 Claude Design 設計稿（2026-10-08）。
+// 服務狀態／已知問題／使用者回報（feedbacks）／公告由 /api/status 一次取得（edge 快取 60 秒）；最近更新是前端內建資料。
+// 任一 API 區塊可能是 null（該來源暫時取不到），逐區顯示「暫時無法取得」。
+// 使用者回報的 created_at 只到日期（'YYYY-MM-DD'，隱私：條款只說「送出日期」），要當本地日期解析。
 // SEO（WebPage + Breadcrumb）由 App.tsx 統一處理；預渲染只輸出殼層（SSR 的 QueryClient 不抓資料），所以殼層要有 h1 與各區標題。
 // 燈號一律「形狀＋文字」並用（✓ ▲ ✕ －），不只靠顏色區分。
 
@@ -82,6 +84,14 @@ function formatList(items: string[], locale: string): string {
     return items.join(/^(zh|ja)/.test(locale) ? '、' : ', ');
 }
 
+/** 'YYYY-MM-DD' → 依 locale 的日期；當本地日期用正午建立，避免時區把日期推到前一天。格式不符回空字串 */
+function formatPublicDate(day: string | null | undefined, locale: string): string {
+    const m = day ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(day) : null;
+    if (!m) return '';
+    const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
+    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'numeric', day: 'numeric' }).format(date);
+}
+
 /** 出問題的項目名稱（給總燈號標題點名用） */
 function problemNames(data: StatusResponse, tx: TFn): { names: string[]; worst: Health } {
     const names: string[] = [];
@@ -143,7 +153,7 @@ function Hero({ data, locale, openIssues }: { data: StatusResponse; locale: stri
                 </span>
                 {openIssues > 0 && (
                     <a
-                        href="#status-issues-h"
+                        href="#status-issues"
                         className="inline-flex min-h-10 items-center rounded-xl border border-border px-3.5 text-sm font-medium transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         {t('viewIssues', { count: openIssues })}
@@ -154,8 +164,10 @@ function Hero({ data, locale, openIssues }: { data: StatusResponse; locale: stri
     );
 }
 
-function ServiceCard({ icon, iconTint, title, note, status, children, summary }: {
+function ServiceCard({ icon, iconTint, title, note, status, children, summary, footer }: {
     icon: ReactNode; iconTint: string; title: string; note: string; status: Health; children: ReactNode; summary: ReactNode;
+    /** 手機與桌機都顯示（事件連結、配額提示、官方狀態頁連結等不能只在桌機看到的資訊） */
+    footer?: ReactNode;
 }) {
     const { t } = useTranslation('status');
     return (
@@ -171,6 +183,7 @@ function ServiceCard({ icon, iconTint, title, note, status, children, summary }:
             {/* 手機只顯示一行摘要（設計稿：精簡列表），桌機顯示完整明細 */}
             <div className="-mt-2 text-[13px] text-muted-foreground md:hidden">{summary}</div>
             <div className="hidden flex-1 flex-col gap-4 md:flex">{children}</div>
+            {footer && <div className="flex flex-col gap-4">{footer}</div>}
         </article>
     );
 }
@@ -185,7 +198,14 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
     const latestJob = site?.jobs.map((j) => j.lastRunAt).filter((x): x is string => !!x).sort().pop() ?? null;
     const yt = data.youtube;
     const tw = data.twitch;
-    const twBad = tw?.components.filter((c) => c.status !== 'operational') ?? [];
+    // 手機摘要的「受影響」只算確定有狀況的；unknown（官方沒給燈號）不算
+    const twBad = tw?.components.filter((c) => c.status === 'degraded' || c.status === 'down') ?? [];
+    // 最近一輪整輪失敗：og 數字不可信，不顯示成功數，也不說「沒有要查的頻道」
+    const ytRunFailed = yt?.runFailed === true;
+    const ytSummary = !yt ? t('unavailable')
+        : ytRunFailed ? t('services.youtube.runFailed')
+            : yt.checked > 0 ? t('services.youtube.summary', { ok: yt.checked - yt.failed, checked: yt.checked })
+                : t('services.youtube.noChecks');
 
     return (
         <div className="grid gap-3 md:grid-cols-3 md:gap-4">
@@ -219,11 +239,19 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                 title={t('services.youtube.title')}
                 note={t('services.youtube.note')}
                 status={yt?.status ?? 'unknown'}
-                summary={!yt ? t('unavailable') : yt.checked > 0 ? t('services.youtube.summary', { ok: yt.checked - yt.failed, checked: yt.checked }) : t('services.youtube.noChecks')}
+                summary={ytSummary}
+                footer={yt && (
+                    <>
+                        {yt.quotaExceeded && <p className="text-sm text-amber-700 dark:text-amber-300">{t('services.youtube.quota')}</p>}
+                        <p className="hidden text-[12.5px] text-muted-foreground md:block">{ago(yt.lastRunAt)}・{t('services.youtube.threshold')}</p>
+                    </>
+                )}
             >
                 {yt ? (
                     <>
-                        {yt.checked > 0 ? (
+                        {ytRunFailed ? (
+                            <p className="text-sm">{t('services.youtube.runFailed')}</p>
+                        ) : yt.checked > 0 ? (
                             <div>
                                 <p className="text-[13px] text-muted-foreground">{t('services.youtube.lastRound')}</p>
                                 <p className="mt-1 font-mono text-[28px] font-black tabular-nums tracking-tight">
@@ -241,8 +269,6 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                         ) : (
                             <p className="text-sm">{t('services.youtube.noChecks')}</p>
                         )}
-                        {yt.quotaExceeded && <p className="text-sm text-amber-700 dark:text-amber-300">{t('services.youtube.quota')}</p>}
-                        <p className="mt-auto text-[12.5px] text-muted-foreground">{ago(yt.lastRunAt)}・{t('services.youtube.threshold')}</p>
                     </>
                 ) : unavailable}
             </ServiceCard>
@@ -257,23 +283,13 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                     ? t('unavailable')
                     : twBad.length === 0
                         ? t('services.twitch.summaryOk', { count: tw.components.length })
-                        : t('services.twitch.summaryIssues', { names: twBad.map((c) => c.name).join('、'), rest: tw.components.length - twBad.length })}
-            >
-                {tw ? (
+                        : t('services.twitch.summaryIssues', { names: formatList(twBad.map((c) => c.name), locale), rest: tw.components.length - twBad.length })}
+                footer={(
                     <>
-                        <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                            {tw.components.map((c) => (
-                                <li key={c.name} className="flex min-w-0 items-center gap-2">
-                                    <HealthMark status={c.status} size={13} />
-                                    <span className="truncate">{c.name}</span>
-                                    <span className="sr-only">{t(`health.${c.status}`)}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        {tw.incidents.map((i) => (
+                        {tw?.incidents.map((i, idx) => (
                             i.url ? (
                                 <a
-                                    key={i.name}
+                                    key={`${idx}-${i.name}`}
                                     href={i.url}
                                     target="_blank"
                                     rel="noopener noreferrer nofollow"
@@ -282,20 +298,32 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                                     {i.name} <ArrowUpRight size={12} className="inline" aria-hidden="true" />
                                 </a>
                             ) : (
-                                <p key={i.name} className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-[13px] text-amber-800 dark:text-amber-200">{i.name}</p>
+                                <p key={`${idx}-${i.name}`} className="rounded-xl bg-amber-500/10 px-3 py-2.5 text-[13px] text-amber-800 dark:text-amber-200">{i.name}</p>
                             )
                         ))}
+                        <a
+                            href="https://status.twitch.com/"
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="inline-flex items-center gap-1 self-start text-[12.5px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                        >
+                            {t('services.twitch.official')}
+                            <ArrowUpRight size={12} aria-hidden="true" />
+                        </a>
                     </>
+                )}
+            >
+                {tw ? (
+                    <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        {tw.components.map((c, idx) => (
+                            <li key={`${idx}-${c.name}`} className="flex min-w-0 items-center gap-2">
+                                <HealthMark status={c.status} size={13} />
+                                <span className="truncate">{c.name}</span>
+                                <span className="sr-only">{t(`health.${c.status}`)}</span>
+                            </li>
+                        ))}
+                    </ul>
                 ) : unavailable}
-                <a
-                    href="https://status.twitch.com/"
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="mt-auto inline-flex items-center gap-1 text-[12.5px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                >
-                    {t('services.twitch.official')}
-                    <ArrowUpRight size={12} aria-hidden="true" />
-                </a>
             </ServiceCard>
         </div>
     );
@@ -374,6 +402,7 @@ function FeedbackList({ items, locale }: { items: PublicFeedback[]; locale: stri
             {items.map((f) => {
                 const badge = FEEDBACK_BADGE[f.status] ?? FEEDBACK_BADGE.read;
                 const Icon = badge.icon;
+                const day = formatPublicDate(f.created_at, locale);
                 return (
                     <li key={f.id} className="flex flex-col gap-2 px-[18px] py-4 sm:px-6">
                         <div className="flex flex-wrap items-center gap-2">
@@ -381,7 +410,7 @@ function FeedbackList({ items, locale }: { items: PublicFeedback[]; locale: stri
                                 <Icon size={12} strokeWidth={2.75} aria-hidden="true" />
                                 {t(`feedback.status.${f.status}`)}
                             </span>
-                            <span className="text-[12.5px] text-muted-foreground">{formatDayTime(f.created_at, locale)}</span>
+                            {day && <span className="text-[12.5px] text-muted-foreground">{day}</span>}
                         </div>
                         <p className="whitespace-pre-line break-words text-sm leading-relaxed">{f.content}</p>
                     </li>
@@ -449,7 +478,8 @@ export function StatusPage() {
                     {data ? <Services data={data} locale={locale} /> : query.isError ? unavailable : <LoadingBlock tall />}
                 </section>
 
-                <section aria-labelledby="status-issues-h" className="mt-10 scroll-mt-20 sm:mt-14">
+                {/* 錨點指向 section 本身，scroll-mt 讓區塊標題落在 sticky header 下方 */}
+                <section id="status-issues" aria-labelledby="status-issues-h" className="mt-10 scroll-mt-20 sm:mt-14">
                     <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mb-5">
                         <h2 id="status-issues-h" className={h2}>{t('status:issues.title')}</h2>
                         <span className="hidden text-[13px] text-muted-foreground md:inline">{t('status:issues.subtitle')}</span>

@@ -58,9 +58,11 @@ export function KnownIssuesTab() {
 
     const handleConfirmDelete = async () => {
         if (!deleteTarget) return;
+        const id = deleteTarget.id;
         try {
-            await del.mutateAsync(deleteTarget.id);
-            setDeleteTarget(null);
+            await del.mutateAsync(id);
+            // 只關掉「還是這一筆」的確認框：A 的刪除卡住、取消後改刪 B，A 晚到成功時不能把 B 的確認框關掉
+            setDeleteTarget((cur) => (cur?.id === id ? null : cur));
         } catch {
             // 錯誤顯示在 del.error
         }

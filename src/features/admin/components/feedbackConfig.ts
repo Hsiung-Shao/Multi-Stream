@@ -7,6 +7,7 @@
  */
 
 import { Bug, Lightbulb, Palette, HelpCircle } from 'lucide-react';
+import type { FeedbackStatus, SelectableFeedbackStatus } from '../types';
 
 export const TYPE_CONFIG: Record<string, { label: string; icon: typeof Bug; color: string; dotColor: string }> = {
     bug: { label: 'Bug', icon: Bug, color: 'text-red-400', dotColor: 'bg-red-400' },
@@ -15,13 +16,26 @@ export const TYPE_CONFIG: Record<string, { label: string; icon: typeof Bug; colo
     other: { label: '其他', icon: HelpCircle, color: 'text-muted-foreground', dotColor: 'bg-muted-foreground' },
 };
 
-export const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+type StatusConf = { label: string; bg: string; text: string; dot: string };
+const FIXED_CONF: StatusConf = { label: '已修正', bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' };
+
+/** 所有可能出現在資料庫的狀態（含舊值 processed，顯示同「已修正」） */
+export const STATUS_CONFIG: Record<FeedbackStatus, StatusConf> = {
     unread: { label: '未讀', bg: 'bg-orange-500/10', text: 'text-orange-400', dot: 'bg-orange-400' },
     read: { label: '已讀', bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
     processing: { label: '處理中', bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
-    fixed: { label: '已修正', bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+    fixed: FIXED_CONF,
+    processed: FIXED_CONF,
     archived: { label: '封存', bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
 };
+
+/** 下拉選單可選的狀態（不提供舊值 processed） */
+export const STATUS_OPTIONS: SelectableFeedbackStatus[] = ['unread', 'read', 'processing', 'fixed', 'archived'];
+
+/** 舊值 processed 視同 fixed（下拉選單與「是否有變更」都用這個比較） */
+export function normalizeFeedbackStatus(s: FeedbackStatus): SelectableFeedbackStatus {
+    return s === 'processed' ? 'fixed' : s;
+}
 
 export function timeAgo(dateStr: string): string {
     const now = Date.now();

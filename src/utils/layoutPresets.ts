@@ -1,4 +1,5 @@
 import type { LayoutType } from './layoutUtils';
+import { MIN_STREAM_CELLS, MIN_CHAT_ROWS, MIN_CHAT_COLS, MAX_CHAT_COLS } from '../components/Canvas/sizeLimits';
 
 
 
@@ -71,12 +72,10 @@ export interface LayoutTemplate {
 // 也不要畫布上有空白。螢幕比例（aspect）用在「選排法」：同樣 N 路，挑每路實際 16:9 畫面最大的那種。
 
 const DEFAULT_ASPECT = 16 / 9;
-/** 與 SimpleCanvas 的 SIZE_LIMITS.stream 一致：推擠與縮放都不會讓串流小於 6×6 */
-const MIN_STREAM_CELLS = 6;
-/** 聊天室欄的預設寬度與可調範圍（與 SimpleCanvas 的 SIZE_LIMITS.chat 一致）；聊天室滿高 */
+// 串流最小邊長、聊天室欄寬範圍只有 Canvas/sizeLimits.ts 一份（縮放、推擠、版型共用）
+export { MIN_CHAT_COLS, MAX_CHAT_COLS };
+/** 聊天室欄的預設寬度；聊天室滿高 */
 export const DEFAULT_CHAT_COLS = 4;
-export const MIN_CHAT_COLS = 3;
-export const MAX_CHAT_COLS = 8;
 /** 工具列寬度選單的三段：窄／標準／寬 */
 export const CHAT_WIDTH_STEPS = [3, 4, 6] as const;
 
@@ -96,10 +95,13 @@ export interface GridRect { x: number; y: number; w: number; h: number }
 
 const FULL_AREA: FitArea = { x0: 0, cols: 24, rows: 24 };
 
-/** K×R 格線在 area 內每格的欄寬、列高（可為小數）；列高低於最小尺寸時夾到 6，畫布往下長 */
-function cellSize(K: number, R: number, area: FitArea) {
+/**
+ * K×R 格線在 area 內每格的欄寬、列高（可為小數）。
+ * 預設列高低於最小尺寸時夾到 6、畫布往下長；minRows = 0 表示不夾，一律留在 area 的高度內。
+ */
+function cellSize(K: number, R: number, area: FitArea, minRows: number = MIN_STREAM_CELLS) {
     const cw = area.cols / K;
-    const rh = Math.max(MIN_STREAM_CELLS, area.rows / R);
+    const rh = Math.max(minRows, area.rows / R);
     return { cw, rh, fits: area.rows / R >= MIN_STREAM_CELLS };
 }
 
@@ -112,10 +114,14 @@ const pictureSize = (cw: number, rh: number, aspect: number) => Math.min(cw * as
  * 除不盡的格數分散到各欄。tile 座標可以是小數（最後一列撐滿整列時會用到）。
  */
 export function fitTiles(tiles: Tile[], _aspect: number = DEFAULT_ASPECT, area: FitArea = FULL_AREA): GridRect[] {
+    return placeTiles(tiles, area, MIN_STREAM_CELLS);
+}
+
+function placeTiles(tiles: Tile[], area: FitArea, minRows: number): GridRect[] {
     if (tiles.length === 0) return [];
     const K = Math.max(...tiles.map(t => t.x + t.w));
     const R = Math.max(...tiles.map(t => t.y + t.h));
-    const { cw, rh } = cellSize(K, R, area);
+    const { cw, rh } = cellSize(K, R, area, minRows);
     const colEdge = (i: number) => area.x0 + Math.round(i * cw);
     const rowEdge = (j: number) => Math.round(j * rh);
     return tiles.map(t => {
@@ -141,17 +147,30 @@ function gridTiles(count: number, k: number): Tile[] {
     return tiles;
 }
 
-/** 在 area 內挑每路實際畫面最大的 k 欄格線，填滿 area 並回傳各路的格子 */
+/**
+ * 在 area 內挑每路實際畫面最大的 k 欄格線，填滿 area 並回傳各路的格子。
+ * 先找每格都不小於 6×6 的排法；怎麼排都塞不下時（例如 13 路以上加右側聊天室欄、或聊天室調寬後
+ * 串流區只剩 16 欄），改成「每格可以小於下限、但整個留在 area 高度內」的多欄網格。
+ * 舊版這時所有 k 的畫面大小都被夾成同一個值，平手取 k = 1，結果所有直播疊成一欄、往下長到 78～96 列。
+ */
 function bestGridRects(n: number, aspect: number, area: FitArea): GridRect[] {
     const maxK = Math.max(1, Math.min(n, Math.floor(area.cols / MIN_STREAM_CELLS)));
-    let best = { k: 1, score: -1 };
+    let best: { k: number; score: number } | null = null;
     for (let k = 1; k <= maxK; k++) {
         const { cw, rh, fits } = cellSize(k, Math.ceil(n / k), area);
-        // 不必往下長的解永遠優先；同級比每路實際畫面大小（以一般格計，最後一列撐寬的格只會更大）
-        const score = (fits ? 1e6 : 0) + pictureSize(cw, rh, aspect);
-        if (score > best.score) best = { k, score };
+        if (!fits) continue;
+        // 同級比每路實際畫面大小（以一般格計，最後一列撐寬的格只會更大）
+        const score = pictureSize(cw, rh, aspect);
+        if (!best || score > best.score) best = { k, score };
     }
-    return fitTiles(gridTiles(n, best.k), aspect, area);
+    if (best) return placeTiles(gridTiles(n, best.k), area, MIN_STREAM_CELLS);
+
+    for (let k = 1; k <= n; k++) {
+        const { cw, rh } = cellSize(k, Math.ceil(n / k), area, 0);
+        const score = pictureSize(cw, rh, aspect);
+        if (!best || score > best.score) best = { k, score };
+    }
+    return placeTiles(gridTiles(n, best!.k), area, 0);
 }
 
 /**
@@ -171,7 +190,7 @@ export function generateColumnLayout(
     const streams = nStreams > 0 ? bestGridRects(nStreams, aspect, streamArea) : [];
     const chats: GridRect[] = [];
     if (nChats > 0) {
-        const rh = Math.max(MIN_STREAM_CELLS, 24 / nChats);
+        const rh = Math.max(MIN_CHAT_ROWS, 24 / nChats);
         for (let i = 0; i < nChats; i++) {
             const y = Math.round(i * rh);
             chats.push({ x: streamArea.cols, y, w: chatCols, h: Math.round((i + 1) * rh) - y });

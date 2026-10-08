@@ -64,6 +64,10 @@ control, a unified chat panel for multiple channels at once, and a local
 - [FAQ](https://multistreaming.org/faq): troubleshooting (e.g. Twitch not
   loading on Brave browser), performance tuning, and data-storage
   questions.
+- [Service status](https://multistreaming.org/status): live health of the
+  site's background jobs, YouTube live detection and the official Twitch
+  status, plus known issues, user reports being handled, announcements and
+  recent updates.
 - [Privacy Policy](https://multistreaming.org/privacy): what is / isn't
   collected — local-first, no account required.
 

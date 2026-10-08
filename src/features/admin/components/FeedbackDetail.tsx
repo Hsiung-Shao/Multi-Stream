@@ -12,10 +12,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../../components/ui/alert-dialog';
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { Trash2, Save, Loader2, Monitor, Globe, Maximize2, Moon, Tag, Activity } from 'lucide-react';
-import type { FeedbackRecord, FeedbackStatus } from '../types';
+import type { FeedbackRecord, SelectableFeedbackStatus } from '../types';
 import { useUpdateFeedback, useDeleteFeedback } from '../hooks/useFeedbacks';
-import { TYPE_CONFIG, STATUS_CONFIG } from './feedbackConfig';
+import { TYPE_CONFIG, STATUS_CONFIG, STATUS_OPTIONS, normalizeFeedbackStatus } from './feedbackConfig';
 import { KnownIssueEditDialog } from './KnownIssueEditDialog';
+
+/** 與 functions/lib/feedback-public.js 的 FEEDBACK_PUBLIC_DAYS 對齊：超過這個天數就不在公開頁 */
+const FEEDBACK_PUBLIC_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 這筆回報目前在 /status 的公開狀態（以「已儲存」的 status 判斷，不看下拉選單尚未儲存的值）
+ * 規則見 functions/lib/feedback-public.js：public_notice、已讀以上且未封存、近 30 天
+ */
+function publicHint(record: FeedbackRecord, now: number): string {
+    if (!record.public_notice) return '送出時尚未告知會公開，這筆不會出現在 /status。';
+    const saved = normalizeFeedbackStatus(record.status);
+    if (saved === 'archived') return '已封存：不會出現在公開的 /status。';
+    const created = Date.parse(record.created_at);
+    if (Number.isFinite(created) && now - created > FEEDBACK_PUBLIC_DAYS * DAY_MS) return `超過 ${FEEDBACK_PUBLIC_DAYS} 天，已不在公開頁 /status。`;
+    if (saved === 'unread') return '未讀不會公開。改成「已讀」以上並儲存後，內容、狀態與日期會出現在 /status（聯絡資訊會盡量自動隱藏，但不保證全部擋下）；不適合公開請改成「封存」。';
+    return '內容、狀態與日期已公開在 /status（聯絡資訊會盡量自動隱藏，但不保證全部擋下）。不適合公開請改成「封存」。';
+}
 
 const SOURCE_LABELS: Record<string, string> = {
     discord: 'Discord', google: 'Google', friends: '朋友推薦',
@@ -37,7 +55,8 @@ interface FeedbackDetailProps {
 }
 
 export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
-    const [status, setStatus] = useState<FeedbackStatus>('unread');
+    // 下拉選單用的狀態；舊值 processed 正規化成 fixed（選單不提供 processed）
+    const [status, setStatus] = useState<SelectableFeedbackStatus>('unread');
     const [notes, setNotes] = useState('');
     const updateMutation = useUpdateFeedback();
     const deleteMutation = useDeleteFeedback();
@@ -47,9 +66,11 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
     // Sync local state when record changes
     useEffect(() => {
         if (record && open) {
-            setStatus(record.status);
+            setStatus(normalizeFeedbackStatus(record.status));
             setNotes(record.admin_notes ?? '');
         }
+        // 換記錄或 Sheet 開關時，關掉上一筆開著的「建立已知問題」對話框
+        setIssueOpen(false);
         // record 物件每次查詢是新 reference,以 id 判斷是否換了記錄
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [record?.id, open]);
@@ -71,7 +92,8 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
 
     const typeConf = TYPE_CONFIG[record.feedback_type] || TYPE_CONFIG.other;
     const TypeIcon = typeConf.icon;
-    const hasChanged = status !== record.status || (notes || '') !== (record.admin_notes || '');
+    const statusChanged = status !== normalizeFeedbackStatus(record.status);
+    const hasChanged = statusChanged || (notes || '') !== (record.admin_notes || '');
 
     return (
         <Sheet open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onClose(); }}>
@@ -149,25 +171,20 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
 
                             <div className="space-y-1.5">
                                 <label className="text-[12px] text-muted-foreground">狀態</label>
-                                <Select value={status} onValueChange={(v: string) => setStatus(v as FeedbackStatus)}>
+                                <Select value={status} onValueChange={(v: string) => setStatus(v as SelectableFeedbackStatus)}>
                                     <SelectTrigger className="h-9 text-[13px] rounded-lg w-full">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Object.entries(STATUS_CONFIG).map(([value, conf]) => (
-                                            <SelectItem key={value} value={value} className="text-[13px]">{conf.label}</SelectItem>
+                                        {STATUS_OPTIONS.map((value) => (
+                                            <SelectItem key={value} value={value} className="text-[13px]">{STATUS_CONFIG[value].label}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {/* 公開規則見 functions/lib/feedback-public.js：public_notice 且未封存、近 30 天 */}
-                                <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-                                    {!record.public_notice
-                                        ? '送出時尚未告知會公開，這筆不會出現在 /status。'
-                                        : status === 'archived'
-                                            ? '封存：不會出現在公開的 /status。'
-                                            : status === 'unread'
-                                                ? '未讀不會公開。改成「已讀」以上後，內容、狀態與日期會出現在 /status（聯絡資訊自動隱藏）；不適合公開請改成「封存」。'
-                                                : '內容、狀態與日期已公開在 /status（聯絡資訊自動隱藏）。不適合公開請改成「封存」。'}
+                                {/* 公開提示以已儲存的狀態判斷；下拉改了但還沒存時註明儲存後才生效 */}
+                                <p data-testid="feedback-public-hint" className="text-[11.5px] leading-relaxed text-muted-foreground">
+                                    {publicHint(record, Date.now())}
+                                    {statusChanged && ' 狀態變更要按「儲存變更」後才生效。'}
                                 </p>
                             </div>
 

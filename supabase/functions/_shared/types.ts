@@ -80,6 +80,8 @@ export interface RunStats extends Record<string, unknown> {
   quota_exceeded: boolean;
   /** 整輪失敗（runJob 的 body 丟出例外）；公開狀態頁用它判燈 */
   failed?: boolean;
+  /** 連續整輪失敗的輪數（成功即歸零）；公開狀態頁連續 3 輪以上判「異常」 */
+  failed_streak?: number;
   /** Heavy：本輪游標起點與前進數（判斷「新的一圈」用，見 schedule-heavy） */
   cursor_start?: number;
   cursor_advance?: number;

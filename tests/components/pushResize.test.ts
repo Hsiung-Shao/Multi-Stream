@@ -10,7 +10,7 @@ interface W extends PushableWindow {
 const win = (id: string, x: number, y: number, w: number, h: number, type: 'stream' | 'chat' = 'stream'): W =>
     ({ id, gridX: x, gridY: y, gridW: w, gridH: h, type });
 
-// 對齊 SimpleCanvas 的 SIZE_LIMITS：stream 最小 6×6;chat 寬 3~4、高最小 6
+// 最小尺寸對齊 Canvas/sizeLimits.ts（stream 6×6、chat 寬 3 高 6）；chat 最大寬這裡固定 4，方便驗證推擠碰到上限的行為（正式上限是 8）
 const minSize = (w: W) => (w.type === 'chat' ? { minW: 3, minH: 6, maxW: 4 } : { minW: 6, minH: 6 });
 
 const push = (windows: W[], id: string, desired: { x: number; y: number; w: number; h: number }, maxRows?: number) =>

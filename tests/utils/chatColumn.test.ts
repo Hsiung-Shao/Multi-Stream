@@ -153,3 +153,66 @@ describe('調寬／收合保留使用者排好的串流', () => {
         expect(collapseChats(items, ASPECT)).toBe(items);
     });
 });
+
+// code review 2026-10-08：多路直播＋右側聊天室欄放不下 6×6 時，舊版疊成單一欄、往下長到 78～96 列
+describe('多路直播＋聊天室欄：維持多欄網格、不超出畫布高度', () => {
+    const cases: [number, number][] = [];
+    for (let n = 9; n <= 16; n++) for (const cols of [3, 4, 6, 8]) cases.push([n, cols]);
+
+    it.each(cases)('%i 路、聊天室寬 %i：串流都在 24 列內、多於一欄、與聊天室一起無縫填滿', (n, cols) => {
+        const { streams, chats } = generateColumnLayout(n, 1, ASPECT, cols);
+        expect(streams).toHaveLength(n);
+        expect(Math.max(...streams.map(s => s.y + s.h))).toBeLessThanOrEqual(24);
+        expect(new Set(streams.map(s => s.x)).size).toBeGreaterThan(1);
+        expect(streams.every(s => s.w > 0 && s.h > 0)).toBe(true);
+        expect(coverage([...streams, ...chats]).every(c => c === 1)).toBe(true);
+    });
+
+    it('放得下 6×6 時仍守住最小尺寸（行為不變）', () => {
+        const { streams } = generateColumnLayout(12, 1, ASPECT, 4);
+        expect(streams.every(s => s.w >= 6 && s.h >= 6)).toBe(true);
+    });
+
+    it('relayoutItems：14 路加 1 聊（新增視窗後的重排）也留在畫布內', () => {
+        const items: CanvasItem[] = [
+            ...Array.from({ length: 14 }, (_, k) => item(`s${k}`, 'stream', k + 1, 0, k * 6, 6, 6)),
+            item('c', 'chat', 1, 20, 0, 4, 24, { sharedChat: true }),
+        ];
+        const next = relayoutItems(items, ASPECT, [], 4);
+        expect(Math.max(...next.map(i => i.layout.y + i.layout.h))).toBe(24);
+        expect(coverage(next.map(i => i.layout)).every(c => c === 1)).toBe(true);
+    });
+
+    it('調寬聊天室到 8（串流區只剩 16 欄）：13 路仍在畫布內', () => {
+        const items = relayoutItems([
+            ...Array.from({ length: 13 }, (_, k) => item(`s${k}`, 'stream', k + 1, 0, 0, 6, 6)),
+            item('c', 'chat', 1, 20, 0, 4, 24),
+        ], ASPECT, [], 4);
+        const wide = expandChats(items, ASPECT, 8);
+        expect(wide.find(i => i.i === 'c')!.layout).toMatchObject({ x: 16, w: 8, h: 24 });
+        expect(Math.max(...wide.map(i => i.layout.y + i.layout.h))).toBe(24);
+        expect(coverage(wide.map(i => i.layout)).every(c => c === 1)).toBe(true);
+    });
+});
+
+describe('調寬結果與原本相同時回傳原陣列（不觸發整畫布重繪）', () => {
+    it('右側一欄：選目前已是的寬度 → 同一個陣列', () => {
+        const items = shared();
+        expect(expandChats(items, ASPECT, 4)).toBe(items);
+    });
+
+    it('重排路徑（每路一聊已重排成一欄後再選同寬）→ 同一個陣列', () => {
+        const perStream = [
+            item('w1', 'stream', 1, 0, 0, 8, 24), item('c1', 'chat', 1, 8, 0, 4, 24),
+            item('w2', 'stream', 2, 12, 0, 8, 24), item('c2', 'chat', 2, 20, 0, 4, 24),
+        ];
+        const once = expandChats(perStream, ASPECT, 6);
+        expect(once).not.toBe(perStream);
+        expect(expandChats(once, ASPECT, 6)).toBe(once);
+    });
+
+    it('已收合再收合 → 同一個陣列', () => {
+        const collapsed = collapseChats(shared(), ASPECT);
+        expect(collapseChats(collapsed, ASPECT)).toBe(collapsed);
+    });
+});

@@ -131,8 +131,21 @@ export async function runJob(
   }
   stats.finished_at = new Date().toISOString();
   stats.duration_ms = Date.now() - ctx.now;
-  // 整輪失敗的旗標：公開狀態頁（functions/lib/status-health.js）只認這個，不看混了單一頻道錯誤的 errors
+  // 整輪失敗的旗標與連續失敗輪數：公開狀態頁（functions/lib/status-health.js）只認這兩個，不看混了單一頻道錯誤的 errors。
+  // 連續失敗輪數要讀上一輪的值；讀不到（第一次、DB 暫時失敗）就從 1 算起。成功的這輪歸零，不必讀。
+  // 注意：要重新部署三支排程 Edge Function，正式站才會寫入這兩個欄位。
   stats.failed = status === 500;
+  stats.failed_streak = 0;
+  if (stats.failed) {
+    let prev = 0;
+    try {
+      const rows = await db.select<{ streak: number | null }>('cron_shard_state', `select=streak:last_run_stats->failed_streak&job_name=eq.${shardJobName}&limit=1`);
+      prev = Number(rows[0]?.streak) || 0;
+    } catch {
+      prev = 0;
+    }
+    stats.failed_streak = prev + 1;
+  }
   try {
     await saveShard(db, shardJobName, { ...cursor, stats });
   } catch (e) {

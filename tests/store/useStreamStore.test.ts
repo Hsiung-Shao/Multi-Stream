@@ -819,4 +819,111 @@ describe('useStreamStore', () => {
             expect(slots.every(s => s.w > 0)).toBe(true);
         });
     });
+    // code review 2026-10-08：聊天室欄寬／收合的邊角
+    describe('聊天室欄寬與收合：code review 修正', () => {
+        const mk = (id: number, ch: string) => ({ id, platform: 'twitch' as const, channelId: ch, videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false });
+        const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+        const base = () => [
+            { i: 'w1', type: 'stream' as const, contentId: 1, layout: L(0, 0, 20, 12) },
+            { i: 'w2', type: 'stream' as const, contentId: 2, layout: L(0, 12, 20, 12) },
+            { i: 'chat', type: 'chat' as const, contentId: 1, layout: L(20, 0, 4, 24), sharedChat: true },
+        ];
+        const chatOf = () => useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!;
+
+        beforeEach(() => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: [mk(1, 'a'), mk(2, 'b')], canvasItems: base(), chatColumnWidth: 4, presets: [] });
+        });
+
+        it('共用聊天室按 Alt+1：聊天室沿用欄寬偏好、保留 sharedChat', () => {
+            useStreamStore.getState().setChatColumnWidth(6);
+            useStreamStore.getState().setLayout(1);
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(1);
+            expect(chatOf()).toMatchObject({ sharedChat: true, layout: L(18, 0, 6, 24) });
+            expect(items.find(i => i.type === 'stream')!.layout).toEqual(L(0, 0, 18, 24));
+        });
+
+        it('每路一聊的版面按 Alt+1：維持原本的 1-chat 版型（不帶 sharedChat）', () => {
+            useStreamStore.setState({
+                canvasItems: [
+                    { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 8, 24) },
+                    { i: 'c1', type: 'chat', contentId: 1, layout: L(8, 0, 4, 24) },
+                    { i: 'w2', type: 'stream', contentId: 2, layout: L(12, 0, 8, 24) },
+                    { i: 'c2', type: 'chat', contentId: 2, layout: L(20, 0, 4, 24) },
+                ],
+            });
+            useStreamStore.getState().setLayout(1);
+            expect(chatOf().sharedChat).toBeUndefined();
+            expect(chatOf().layout).toEqual(L(20, 0, 4, 24));
+        });
+
+        it('setChatColumnWidth 選到目前已是的寬度：state 與 canvasItems 都不換新（不重繪、不寫 localStorage）', () => {
+            const before = useStreamStore.getState();
+            const listener = vi.fn();
+            const unsub = useStreamStore.subscribe(listener);
+            useStreamStore.getState().setChatColumnWidth(4);
+            unsub();
+            expect(useStreamStore.getState()).toBe(before);
+            expect(useStreamStore.getState().canvasItems).toBe(before.canvasItems);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('已展開時 expandChats、已收合時 collapseChats：不換新 state', () => {
+            const before = useStreamStore.getState();
+            useStreamStore.getState().expandChats();
+            expect(useStreamStore.getState()).toBe(before);
+            useStreamStore.getState().collapseChats();
+            const collapsed = useStreamStore.getState();
+            useStreamStore.getState().collapseChats();
+            expect(useStreamStore.getState()).toBe(collapsed);
+        });
+
+        it('收合中存舊式 preset（saveCurrentLayout）：先以偏好寬度展開再存，不存出寬 0 的聊天室', () => {
+            useStreamStore.getState().setChatColumnWidth(6);
+            useStreamStore.getState().collapseChats();
+            useStreamStore.getState().saveCurrentLayout('p');
+            const preset = useStreamStore.getState().presets.at(-1)!;
+            expect(preset.items.find(i => i.type === 'chat')!.layout).toEqual(L(18, 0, 6, 24));
+            expect(preset.items.every(i => i.layout.w > 0)).toBe(true);
+            // 存的是複本：之後畫布再變動不會改到 preset
+            expect(preset.items.find(i => i.type === 'chat')!.layout).not.toBe(chatOf().layout);
+        });
+
+        it.each([
+            [0, 3],
+            ['abc', 4],
+            [12, 8],
+            [5, 5],
+        ])('persist 讀回 chatColumnWidth = %j → 正規化成 %i', async (raw, expected) => {
+            localStorage.setItem('stream-storage', JSON.stringify({ state: { chatColumnWidth: raw }, version: 0 }));
+            await useStreamStore.persist.rehydrate();
+            expect(useStreamStore.getState().chatColumnWidth).toBe(expected);
+            localStorage.removeItem('stream-storage');
+        });
+
+        it('persist 讀回沒有 chatColumnWidth（舊資料）：沿用目前值', async () => {
+            useStreamStore.setState({ chatColumnWidth: 6 });
+            localStorage.setItem('stream-storage', JSON.stringify({ state: { layoutMode: 'canvas' }, version: 0 }));
+            await useStreamStore.persist.rehydrate();
+            expect(useStreamStore.getState().chatColumnWidth).toBe(6);
+            localStorage.removeItem('stream-storage');
+        });
+
+        it('本機聊天室收合時開分享連結（chat=1）：套用後聊天室展開', async () => {
+            const { applyShareLink } = await import('../../src/utils/applyShareLink');
+            useStreamStore.getState().collapseChats();
+            const res = await applyShareLink({ streams: [{ platform: 'twitch', id: 'shroud' }], chat: true });
+            expect(res.added).toBe(1);
+            const chats = useStreamStore.getState().canvasItems.filter(i => i.type === 'chat');
+            expect(chats.length).toBeGreaterThan(0);
+            expect(chats.every(c => c.layout.w > 0)).toBe(true);
+        });
+
+        it('分享連結 chat=0：不動本機的收合狀態', async () => {
+            const { applyShareLink } = await import('../../src/utils/applyShareLink');
+            useStreamStore.getState().collapseChats();
+            await applyShareLink({ streams: [{ platform: 'twitch', id: 'shroud' }], chat: false });
+            expect(useStreamStore.getState().canvasItems.filter(i => i.type === 'chat').every(c => c.layout.w === 0)).toBe(true);
+        });
+    });
 });

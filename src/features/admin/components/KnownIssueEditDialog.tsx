@@ -3,7 +3,7 @@
 // - 站方回應是公開內容：不要貼使用者回報原文（可能含個資）；從回饋開啟時也只開空白表單
 // - Mutation Dialog 慣例：取消鍵永遠可按、開關兩端都 reset mutation（卡住時才能脫困）
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { Button } from '../../../components/ui/button';
@@ -38,10 +38,14 @@ interface Props {
 export function KnownIssueEditDialog({ open, onOpenChange, target }: Props) {
     const save = useSaveKnownIssue();
     const [form, setForm] = useState<KnownIssueWriteInput>(EMPTY);
+    // 開啟序號：每次開啟（或換對象）＋1。卡住的儲存在取消後才完成時，只能關掉「送出當下那一次」的對話框，
+    // 不能把之後重新打開的對話框關掉。
+    const openSeq = useRef(0);
 
     // 開與關都重設：關閉時清掉卡住的 isPending／錯誤，開啟時載入對象
     useEffect(() => {
         save.reset();
+        openSeq.current += 1;
         if (!open) return;
         setForm(target
             ? { title: target.title, body: target.body ?? '', status: target.status, severity: target.severity, areas: target.areas, is_public: target.is_public }
@@ -57,9 +61,10 @@ export function KnownIssueEditDialog({ open, onOpenChange, target }: Props) {
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
+        const seq = openSeq.current;
         try {
             await save.mutateAsync({ id: target?.id ?? null, input: { ...form, title, body: form.body?.trim() ? form.body : null } });
-            onOpenChange(false);
+            if (seq === openSeq.current) onOpenChange(false);
         } catch {
             // 錯誤顯示在 save.error
         }

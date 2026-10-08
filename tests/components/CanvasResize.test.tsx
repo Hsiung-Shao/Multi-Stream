@@ -136,3 +136,92 @@ describe('右側聊天室欄：拖左緣調整欄寬', () => {
         expect(isChatColumnResize(twoCols, 'chat', 18, 0, 6, 24)).toBe(false); // 聊天室不在同一欄
     });
 });
+
+// code review 2026-10-08：只有「串流全在左、聊天室是右側滿高一欄」才走欄寬調整，其餘走一般縮放
+describe('isChatColumnResize：只認真正的右側滿高聊天室欄', () => {
+    it('右側也有直播的自訂排法：拉聊天室左緣走一般縮放（不整頁重排）', () => {
+        const ws = [
+            win('s1', 'stream', 0, 0, 20, 12),
+            win('chat', 'chat', 20, 0, 4, 12),
+            win('s2', 'stream', 0, 12, 24, 12), // 直播延伸到聊天室底下、右緣
+        ];
+        expect(isChatColumnResize(ws, 'chat', 18, 0, 6, 12)).toBe(false);
+    });
+
+    it('貼右緣的半高聊天室：走一般縮放', () => {
+        const ws = [
+            win('s1', 'stream', 0, 0, 20, 24),
+            win('chat', 'chat', 20, 0, 4, 12),
+            win('s2', 'stream', 20, 12, 4, 12),
+        ];
+        expect(isChatColumnResize(ws, 'chat', 18, 0, 6, 12)).toBe(false);
+    });
+
+    it('多個聊天室上下接滿整欄（每路一聊重排後的樣子）：仍算欄寬調整', () => {
+        const ws = [
+            win('s1', 'stream', 0, 0, 20, 12),
+            win('s2', 'stream', 0, 12, 20, 12),
+            win('c1', 'chat', 20, 0, 4, 12),
+            win('c2', 'chat', 20, 12, 4, 12),
+        ];
+        expect(isChatColumnResize(ws, 'c1', 18, 0, 6, 12)).toBe(true);
+    });
+
+    it('同一欄但中間有縫：不算滿高', () => {
+        const ws = [
+            win('s1', 'stream', 0, 0, 20, 24),
+            win('c1', 'chat', 20, 0, 4, 8),
+            win('c2', 'chat', 20, 16, 4, 8),
+        ];
+        expect(isChatColumnResize(ws, 'c1', 18, 0, 6, 8)).toBe(false);
+    });
+
+    it('實際拖曳：右側有直播時拉聊天室左緣不呼叫欄寬調整，改走推擠落地', () => {
+        const onChatColumnResize = vi.fn();
+        const { handle, onWindowUpdate } = mount([
+            win('s1', 'stream', 0, 0, 20, 12),
+            win('chat', 'chat', 20, 0, 4, 12),
+            win('s2', 'stream', 0, 12, 24, 12),
+        ], onChatColumnResize);
+        drag(handle('chat', 'w'), -CELL_W * 2, 0);
+        expect(onChatColumnResize).not.toHaveBeenCalled();
+        expect(onWindowUpdate).toHaveBeenCalled();
+    });
+});
+
+describe('比上限寬的聊天室：預覽與落地同一個上限（不彈回）', () => {
+    const wide = () => [
+        win('s1', 'stream', 0, 0, 14, 24),
+        win('chat', 'chat', 14, 0, 10, 24),
+    ];
+
+    it('寬 10 縮到 9：超出欄寬範圍，走推擠、落地就是預覽的 9 欄', () => {
+        const onChatColumnResize = vi.fn();
+        const { handle, onWindowUpdate } = mount(wide(), onChatColumnResize);
+        drag(handle('chat', 'w'), CELL_W, 0);
+        expect(onChatColumnResize).not.toHaveBeenCalled();
+        const chat = onWindowUpdate.mock.calls.at(-1)![0].find((w: CanvasWindow) => w.id === 'chat');
+        expect(chat).toMatchObject({ gridX: 15, gridW: 9 });
+    });
+
+    it('寬 10 縮到 8 以內：落入欄寬範圍，交給欄寬調整（setChatColumnWidth 不會再夾）', () => {
+        const onChatColumnResize = vi.fn();
+        const { handle } = mount(wide(), onChatColumnResize);
+        drag(handle('chat', 'w'), CELL_W * 3, 0);
+        expect(onChatColumnResize).toHaveBeenCalledWith(7);
+    });
+
+    it('isChatColumnResize：新寬度超出 3～8 一律 false', () => {
+        expect(isChatColumnResize(wide(), 'chat', 15, 0, 9, 24)).toBe(false);
+        expect(isChatColumnResize(wide(), 'chat', 16, 0, 8, 24)).toBe(true);
+    });
+});
+
+describe('縮放把手只佔視窗外框', () => {
+    it('四條邊的把手都是 4px（h-1／w-1），不再是 6px 蓋住聊天室捲軸與播放器下緣', () => {
+        const { handle } = mount(layout());
+        for (const d of ['n', 's']) expect(handle('s1', d).className.split(/\s+/)).toContain('h-1');
+        for (const d of ['w', 'e']) expect(handle('s1', d).className.split(/\s+/)).toContain('w-1');
+        for (const d of ['n', 's', 'w', 'e']) expect(handle('s1', d).className).not.toMatch(/(^|\s)[hw]-1\.5(\s|$)/);
+    });
+});

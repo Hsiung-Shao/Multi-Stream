@@ -10,7 +10,7 @@ import {
 } from 'recharts';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { useFeedbackStats } from '../hooks/useFeedbacks';
-import { TYPE_CONFIG, STATUS_CONFIG } from './feedbackConfig';
+import { TYPE_CONFIG, STATUS_CONFIG, STATUS_OPTIONS } from './feedbackConfig';
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from './chartTheme';
 
 export function OverviewTab() {
@@ -23,9 +23,13 @@ export function OverviewTab() {
         }))
         : [];
 
+    // 只列可選的五種狀態；舊值 processed（等同已修正）併進 fixed，避免出現兩列「已修正」
     const statusRows = stats
-        ? Object.entries(STATUS_CONFIG)
-            .map(([key, conf]) => ({ key, conf, count: stats.byStatus[key] || 0 }))
+        ? STATUS_OPTIONS.map((key) => ({
+            key,
+            conf: STATUS_CONFIG[key],
+            count: (stats.byStatus[key] || 0) + (key === 'fixed' ? stats.byStatus.processed || 0 : 0),
+        }))
         : [];
 
     const lastUpdated = dataUpdatedAt

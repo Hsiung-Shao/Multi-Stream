@@ -27,13 +27,15 @@ export interface KnownIssue {
     resolved_at: string | null;
 }
 
-/** 使用者回報（只公開內容、狀態、日期；聯絡資訊已由伺服器遮蔽；未讀的不公開） */
+/** 使用者回報（只公開內容、狀態、日期；伺服器會盡量遮蔽聯絡資訊；未讀的不公開） */
 export type PublicFeedbackStatus = 'read' | 'processing' | 'fixed';
 export interface PublicFeedback {
     id: string;
     content: string;
+    /** 資料庫舊值 processed 由伺服器轉成 fixed 輸出 */
     status: PublicFeedbackStatus;
-    created_at: string;
+    /** 只到日期（'YYYY-MM-DD'，站方時區），不含時分；要當本地日期解析。解析失敗時伺服器回 null */
+    created_at: string | null;
 }
 
 export interface StatusAnnouncement {
@@ -49,7 +51,15 @@ export interface StatusResponse {
     checkedAt: string;
     overall: Health;
     site: { status: Health; jobs: JobHealth[] } | null;
-    youtube: { status: Health; checked: number; failed: number; quotaExceeded: boolean; lastRunAt: string | null } | null;
+    youtube: {
+        status: Health;
+        checked: number;
+        failed: number;
+        quotaExceeded: boolean;
+        /** live 排程最後一輪整輪失敗：checked／failed 不可信 */
+        runFailed: boolean;
+        lastRunAt: string | null;
+    } | null;
     twitch: {
         status: Health;
         components: Array<{ name: string; status: Health }>;

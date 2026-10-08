@@ -1,13 +1,16 @@
 /**
  * 聊天室工具列的「寬度與收合」選單：窄／標準／寬三段，加上收合。作用在畫面上所有聊天室。
- * 合成一顆按鈕而不是兩顆：聊天室只有 3～4 欄寬，多一顆按鈕就會把「顯示哪一路」的下拉選單擠到看不出名字。
+ * 合成一顆按鈕而不是兩顆：聊天室只有 3～8 欄寬（窄的時候很窄），多一顆按鈕就會把「顯示哪一路」的下拉選單擠到看不出名字。
  * 也可以直接拖聊天室左緣調寬（見 SimpleCanvas.isChatColumnResize），拖出來的中間值不對應任何一段，三段都不打勾。
+ * 收合後焦點交給右緣的展開標籤；從標籤展開回來時焦點回到這顆按鈕（見 chatFocusIntent）。
  */
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { ArrowLeftRight, PanelRightClose } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStreamStore } from '../../store/useStreamStore';
 import { CHAT_WIDTH_STEPS } from '../../utils/layoutPresets';
+import { chatsCollapsed } from '../../utils/canvasItemOps';
+import { requestChatFocus, consumeChatFocus } from './chatFocusIntent';
 import { Button } from '../ui/button';
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem,
@@ -27,13 +30,26 @@ export const ChatLayoutMenu = memo(function ChatLayoutMenu() {
     const { t } = useTranslation('common');
     const width = useStreamStore(s => s.chatColumnWidth);
 
+    const triggerRef = useRef<HTMLButtonElement>(null);
+
     const setWidth = useCallback((value: string) => useStreamStore.getState().setChatColumnWidth(Number(value)), []);
-    const collapse = useCallback(() => useStreamStore.getState().collapseChats(), []);
+    const collapse = useCallback(() => {
+        const store = useStreamStore.getState();
+        store.collapseChats();
+        // 真的收合了才登記：這顆按鈕會跟著聊天室卸載，焦點交給接著掛載的展開標籤
+        if (chatsCollapsed(useStreamStore.getState().canvasItems)) requestChatFocus('expand-tab');
+    }, []);
+
+    // 從展開標籤展開回來：焦點接回這顆按鈕（多個聊天室時由第一個掛載的領走）
+    useEffect(() => {
+        if (consumeChatFocus('layout-menu')) triggerRef.current?.focus();
+    }, []);
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
+                    ref={triggerRef}
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"

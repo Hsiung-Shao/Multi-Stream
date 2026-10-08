@@ -40,9 +40,15 @@ export const ISSUE_AREA_LABEL: Record<IssueArea, string> = {
     other: '其他',
 };
 
+// 對齊 functions/lib/known-issues.js buildKnownIssueWritePayload 會回的全部錯誤碼；
+// endpoint 層的共通錯誤（id_required、not_found、create_failed…）由 formatAdminAnnouncementError 處理
 const ISSUE_ERRORS: Record<string, string> = {
+    invalid_body: '請求內容格式錯誤',
+    title_required: '請填寫標題',
     title_too_long: '標題最多 120 字',
     body_too_long: '站方回應最多 4000 字',
+    invalid_body_field: '站方回應格式錯誤',
+    invalid_status: '無效的處理狀態',
     invalid_severity: '無效的影響程度',
     invalid_areas: '無效的影響範圍',
     invalid_is_public: '無效的公開設定',

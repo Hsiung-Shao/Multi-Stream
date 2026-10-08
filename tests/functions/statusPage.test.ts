@@ -15,7 +15,7 @@ import { buildKnownIssueWritePayload, publicIssuesQuery } from '../../functions/
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { maskContact, toPublicFeedback, publicFeedbackQuery, MASK, FEEDBACK_PUBLIC_MAX_LEN } from '../../functions/lib/feedback-public.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { onRequestGet as statusGet, buildStatus } from '../../functions/api/status.js';
+import { onRequestGet as statusGet, buildStatus, resetStatusMemo } from '../../functions/api/status.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { onRequestPost as feedbackSubmit } from '../../functions/api/feedback/submit.js';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
@@ -80,9 +80,11 @@ describe('youtubeHealth', () => {
         expect(youtubeHealth(live({ og_checked: 50, og_failed: 0, quota_exceeded: true }), NOW).status).toBe('degraded');
     });
 
-    it('偵測停擺時失敗率再好也不算正常；排程失敗旗標不算進 YouTube', () => {
+    it('偵測停擺時失敗率再好也不算正常；這輪整個失敗時 og 數字不可信 → 未知，並標 runFailed', () => {
         expect(youtubeHealth(live({ og_checked: 50, og_failed: 0 }, 120), NOW).status).toBe('down');
-        expect(youtubeHealth(live({ og_checked: 50, og_failed: 0, failed: true }), NOW).status).toBe('operational');
+        const failedRun = youtubeHealth(live({ og_checked: 0, og_failed: 0, failed: true }), NOW);
+        expect(failedRun).toMatchObject({ status: 'unknown', runFailed: true });
+        expect(youtubeHealth(live({ og_checked: 50, og_failed: 0 }), NOW).runFailed).toBe(false);
     });
 });
 
@@ -185,10 +187,10 @@ describe('使用者回報公開規則', () => {
     it('轉公開格式：只留 id／content／status／created_at，先遮蔽再截斷', () => {
         const long = 'x'.repeat(FEEDBACK_PUBLIC_MAX_LEN + 50);
         const [a, b] = toPublicFeedback([
-            { id: '1', content: ' 聯絡 me@a.io ', status: 'read', created_at: 't', rating: 5, user_agent: 'UA' },
+            { id: '1', content: ' 聯絡 me@a.io ', status: 'read', created_at: '2026-10-08T03:00:00Z', rating: 5, user_agent: 'UA' },
             { id: '2', content: long, status: 'fixed', created_at: 't' },
         ]);
-        expect(a).toEqual({ id: '1', content: `聯絡 ${MASK}`, status: 'read', created_at: 't' });
+        expect(a).toEqual({ id: '1', content: `聯絡 ${MASK}`, status: 'read', created_at: '2026-10-08' });
         expect(b.content).toHaveLength(FEEDBACK_PUBLIC_MAX_LEN + 1);
         expect(b.content.endsWith('…')).toBe(true);
     });
@@ -197,7 +199,8 @@ describe('使用者回報公開規則', () => {
         const q = publicFeedbackQuery(NOW);
         expect(q).toContain('select=id,content,status,created_at');
         expect(q).toContain('public_notice=eq.true');
-        expect(q).toContain('status=in.(read,processing,fixed)');
+        // processed 是舊後台的值（等同已修正），migration 為相容舊後台保留它
+        expect(q).toContain('status=in.(read,processing,fixed,processed)');
         expect(q).not.toContain('archived');
         expect(q).not.toContain('unread');
         expect(q).toContain(encodeURIComponent('2026-09-08T12:00:00.000Z'));
@@ -214,6 +217,7 @@ let calls: Array<{ method: string; url: string; body: unknown }>;
 const ENV = () => ({ SUPABASE_URL: 'http://sb', SUPABASE_SERVICE_ROLE_KEY: 'srk', ADMIN_API_TOKEN: 'admintoken' });
 
 beforeEach(() => {
+    resetStatusMemo();
     calls = [];
     sb = () => new Response('[]');
     twitch = async () => new Response(JSON.stringify({ status: { indicator: 'none' }, components: [{ name: 'Chat', status: 'operational' }], incidents: [] }));
@@ -231,7 +235,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('/api/status', () => {
     const jobs = [
-        { job_name: 'schedule_live_og', last_run_at: new Date(Date.now() - 5 * MIN).toISOString(), last_run_stats: { errors: ['internal boom'], og_checked: 10, og_failed: 1 } },
+        { job_name: 'schedule_live_og', last_run_at: new Date(Date.now() - 5 * MIN).toISOString(), failed: false, og_checked: 10, og_failed: 1, errors: ['internal boom'] },
     ];
 
     it('四區都有資料；不回 errors 字串', async () => {
@@ -239,7 +243,7 @@ describe('/api/status', () => {
             if (path.startsWith('cron_shard_state')) return new Response(JSON.stringify(jobs));
             if (path.startsWith('known_issues')) return new Response(JSON.stringify([{ id: 'i1', title: '已知問題' }]));
             if (path.startsWith('announcements')) return new Response(JSON.stringify([{ id: 'a1', title: '公告' }]));
-            if (path.startsWith('feedbacks')) return new Response(JSON.stringify([{ id: 'f1', content: '聊天室空白 寄 x@y.io', status: 'processing', created_at: 't' }]));
+            if (path.startsWith('feedbacks')) return new Response(JSON.stringify([{ id: 'f1', content: '聊天室空白 寄 x@y.io', status: 'processing', created_at: '2026-10-08T16:30:00Z' }]));
             return new Response('[]');
         };
         const res = await statusGet({ request: new Request('https://multistreaming.org/api/status'), env: ENV() });
@@ -253,7 +257,7 @@ describe('/api/status', () => {
         expect(data.twitch.status).toBe('operational');
         expect(data.issues).toEqual([{ id: 'i1', title: '已知問題' }]);
         expect(data.announcements).toEqual([{ id: 'a1', title: '公告' }]);
-        expect(data.feedbacks).toEqual([{ id: 'f1', content: `聊天室空白 寄 ${MASK}`, status: 'processing', created_at: 't' }]);
+        expect(data.feedbacks).toEqual([{ id: 'f1', content: `聊天室空白 寄 ${MASK}`, status: 'processing', created_at: '2026-10-09' }]);
         expect(text).not.toContain('x@y.io');
 
         const annQuery = calls.find((c) => c.url.includes('/announcements?'))!.url;

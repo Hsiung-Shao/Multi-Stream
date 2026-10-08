@@ -9,7 +9,7 @@ import { NewCanvasPage } from '../../src/components/Pages/NewCanvasPage';
 vi.mock('../../src/components/Navigation/DynamicIsland', () => ({ DynamicIsland: () => null }));
 vi.mock('../../src/components/Navigation/DynamicIslandEdgeDock', () => ({ DynamicIslandEdgeDock: () => null }));
 vi.mock('../../src/components/Canvas/CanvasTour', () => ({ CanvasTour: () => null }));
-vi.mock('../../src/components/Canvas/CanvasEmptyState', () => ({ CanvasEmptyState: () => null }));
+vi.mock('../../src/components/Canvas/CanvasEmptyState', () => ({ CanvasEmptyState: () => <div data-testid="canvas-empty" /> }));
 vi.mock('../../src/components/SEO', () => ({ SEO: () => null }));
 vi.mock('../../src/components/Pages/CanvasWindowBody', () => ({
     CanvasWindowBody: ({ windowId }: { windowId: string }) => <div data-body={windowId} />,
@@ -43,5 +43,21 @@ describe('NewCanvasPage：聊天室收合', () => {
         fireEvent.click(screen.getByRole('button', { name: '展開聊天室' }));
         expect(windowIds()).toEqual(['chat', 'w1', 'w2']);
         expect(screen.queryByRole('button', { name: '展開聊天室' })).toBeNull();
+    });
+
+    it('畫布只剩收合的空聊天室：只顯示空畫布引導，不同時出現展開標籤', () => {
+        useStreamStore.setState({
+            canvasItems: [{ i: 'chat', type: 'chat', contentId: null, layout: L(24, 0, 0, 24), sharedChat: true }],
+        });
+        render(<NewCanvasPage />);
+        expect(screen.getByTestId('canvas-empty')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: '展開聊天室' })).toBeNull();
+    });
+
+    it('有直播時收合：沒有空畫布引導、有展開標籤', () => {
+        render(<NewCanvasPage />);
+        act(() => useStreamStore.getState().collapseChats());
+        expect(screen.queryByTestId('canvas-empty')).toBeNull();
+        expect(screen.getByRole('button', { name: '展開聊天室' })).toBeTruthy();
     });
 });

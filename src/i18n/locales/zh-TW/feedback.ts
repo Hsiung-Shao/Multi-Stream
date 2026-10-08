@@ -11,7 +11,7 @@ const feedback = {
   'feedbackTypeLabel': '回饋類型',
   'contentLabel': '詳細內容',
   'contentPlaceholder': '請詳細描述您的問題或建議...',
-  'publicNotice': '站方看過後，回報內容與處理進度會公開顯示在「服務狀態」頁（email、網址、電話會自動隱藏），請勿填寫帳號等個人資料。',
+  'publicNotice': '站方看過後，回報內容與處理進度會公開顯示在「服務狀態」頁（會盡量自動隱藏 email、網址、電話，但無法保證全部擋下），請勿填寫帳號等個人資料。',
   'part3': 'Part 3',
   'promotion': '推廣意願 (選填)',
   'npsLabel': '您願意向朋友推薦本工具嗎? (選填)',

@@ -6,6 +6,7 @@
  */
 import type { CanvasItem } from '../types/canvas';
 import { generateColumnLayout, DEFAULT_CHAT_COLS } from './layoutPresets';
+import { MIN_STREAM_CELLS } from '../components/Canvas/sizeLimits';
 
 type StreamId = number;
 
@@ -134,15 +135,14 @@ export function collapseChats(items: readonly CanvasItem[], aspect: number): Can
     return resizeChatColumn(items, aspect, 0);
 }
 
-/** 與 SimpleCanvas 的 SIZE_LIMITS.stream 一致 */
-const MIN_STREAM_W = 6;
-
 /**
  * 把右側聊天室欄改成 toCols 欄（0 = 收合），用於調寬、收合、展開。
  * 聊天室本來就是右側一欄、串流都在它左邊時，只把串流的欄線依比例縮放：使用者自己排的大小與位置
  * （例如一大三小的主畫面）都保留，高度與上下位置完全不動。以「邊」取整，相鄰視窗不會有縫或重疊。
- * 聊天室不是一欄（每路一聊、被拖到中間），或縮放後有串流窄於下限時，才退回整個重排（layoutColumns）。
- * 沒有聊天室時什麼都不做。
+ * 聊天室不是一欄（每路一聊、被拖到中間），或縮放後有串流窄於下限（sizeLimits 的 MIN_STREAM_CELLS）時，
+ * 才退回整個重排（layoutColumns）。
+ * 沒有聊天室、或結果與原本一模一樣（例如選了目前已是的寬度）時回傳原陣列：
+ * canvasItems 換新陣列就是整張畫布重繪加一次 localStorage 寫入，store 靠 `next === state.canvasItems` 略過。
  */
 function resizeChatColumn(items: readonly CanvasItem[], aspect: number, toCols: number): CanvasItem[] {
     const chats = items.filter(it => it.type === 'chat');
@@ -151,7 +151,7 @@ function resizeChatColumn(items: readonly CanvasItem[], aspect: number, toCols: 
     const isColumn = colX + fromCols === 24 && chats.every(c => c.layout.x === colX && c.layout.w === fromCols);
     const streams = items.filter(it => it.type === 'stream');
     if (!isColumn || streams.length === 0 || streams.some(s => s.layout.x + s.layout.w > colX)) {
-        return layoutColumns(items, aspect, [], toCols);
+        return unchangedOr(items, layoutColumns(items, aspect, [], toCols));
     }
 
     const toX = 24 - toCols;
@@ -161,8 +161,18 @@ function resizeChatColumn(items: readonly CanvasItem[], aspect: number, toCols: 
         const x = edge(it.layout.x);
         return { ...it, layout: { ...it.layout, x, w: edge(it.layout.x + it.layout.w) - x } };
     });
-    return next.some(it => it.type === 'stream' && it.layout.w < MIN_STREAM_W)
+    return unchangedOr(items, next.some(it => it.type === 'stream' && it.layout.w < MIN_STREAM_CELLS)
         ? layoutColumns(items, aspect, [], toCols)
+        : next);
+}
+
+const sameLayout = (a: CanvasItem['layout'], b: CanvasItem['layout']) =>
+    a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+
+/** next 與 items 逐項只差在 layout 物件身分（數值都相同）時回傳原陣列 */
+function unchangedOr(items: readonly CanvasItem[], next: CanvasItem[]): CanvasItem[] {
+    return next.length === items.length && next.every((it, i) => sameLayout(it.layout, items[i].layout))
+        ? items as CanvasItem[]
         : next;
 }
 

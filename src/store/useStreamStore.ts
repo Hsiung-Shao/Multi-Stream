@@ -126,6 +126,9 @@ export const MAX_STREAMS_REACHED = 'maxStreamsReached';
 const buildTemplateCanvasItems = (
     state: Pick<StreamStoreState, 'streams' | 'canvasItems' | 'chatColumnWidth'>,
     template: LayoutTemplate,
+    /** 以共用聊天室版型產生（N 路串流 + 1 個聊天室欄，帶 sharedChat、寬度沿用 chatColumnWidth）。
+     *  共用聊天室狀態按 Alt+1 套 template-1-chat 時用：不然聊天室會固定 4 欄、sharedChat 標記也會掉 */
+    asSharedChat: boolean = template.type === 'shared_chat',
 ): CanvasItem[] => {
     const needed = template.count;
     const processingIds: (number | null)[] = state.streams.map(s => s.id);
@@ -134,7 +137,7 @@ const buildTemplateCanvasItems = (
     }
 
     let newItemsSpecs: any[];
-    if (template.type === 'shared_chat') {
+    if (asSharedChat) {
         // 共用聊天室沿用「現有聊天室正在顯示、且仍在新版面上」的那一路，
         // 這樣聊天室 item 也能被下面的 ID 池配對到、沿用原本的 i
         const onLayout = processingIds.slice(0, needed);
@@ -796,7 +799,11 @@ export const useStreamStore = create<StreamStoreState>()(
                         const template = candidates
                             .map(id => layoutTemplates.find(t => t.id === id))
                             .find((t): t is LayoutTemplate => !!t);
-                        if (template) changes.canvasItems = buildTemplateCanvasItems(state, template);
+                        if (template) {
+                            // 共用聊天室剩 1 路（Alt+1）：版型雖是 1-chat，仍以共用聊天室產生，保留欄寬偏好與 sharedChat
+                            const keepShared = template.id === 'template-1-chat' && isSharedChatLayout(state.canvasItems);
+                            changes.canvasItems = buildTemplateCanvasItems(state, template, keepShared || template.type === 'shared_chat');
+                        }
                     }
 
                     return changes;
@@ -874,17 +881,21 @@ export const useStreamStore = create<StreamStoreState>()(
 
             setChatColumnWidth: (cols) => set(state => {
                 const chatColumnWidth = clampChatCols(cols);
-                return { chatColumnWidth, canvasItems: expandChats(state.canvasItems, getCanvasAspect(), chatColumnWidth) };
+                const canvasItems = expandChats(state.canvasItems, getCanvasAspect(), chatColumnWidth);
+                // 選到目前已是的寬度：回傳原 state，zustand 不通知訂閱者、persist 也不寫 localStorage
+                if (chatColumnWidth === state.chatColumnWidth && canvasItems === state.canvasItems) return state;
+                return { chatColumnWidth, canvasItems };
             }),
 
             collapseChats: () => set(state => {
                 const next = collapseChats(state.canvasItems, getCanvasAspect());
-                return next === state.canvasItems ? {} : { canvasItems: next };
+                return next === state.canvasItems ? state : { canvasItems: next };
             }),
 
-            expandChats: () => set(state => ({
-                canvasItems: expandChats(state.canvasItems, getCanvasAspect(), state.chatColumnWidth),
-            })),
+            expandChats: () => set(state => {
+                const next = expandChats(state.canvasItems, getCanvasAspect(), state.chatColumnWidth);
+                return next === state.canvasItems ? state : { canvasItems: next };
+            }),
 
             removeCanvasItem: (id) => {
                 const { closeWindowMode } = useUIStore.getState();
@@ -969,7 +980,12 @@ export const useStreamStore = create<StreamStoreState>()(
                     id: uuidv4(),
                     name,
                     type: 'user',
-                    items: state.canvasItems.map(item => ({ ...item }))
+                    // 聊天室收合時先以偏好寬度展開再存（與自訂版面的 slotsOf 一致）：套用 preset 是原樣還原，
+                    // 存成寬 0 的聊天室會讓套用後聊天室看不到
+                    items: (chatsCollapsed(state.canvasItems)
+                        ? expandChats(state.canvasItems, getCanvasAspect(), state.chatColumnWidth)
+                        : state.canvasItems
+                    ).map(item => ({ ...item, layout: { ...item.layout } }))
                 };
                 return { presets: [...state.presets, newPreset] };
             }),
@@ -1227,6 +1243,16 @@ export const useStreamStore = create<StreamStoreState>()(
 
         {
             name: 'stream-storage',
+            // 讀回的聊天室欄寬要正規化：舊資料或被改過的 localStorage 可能是 0／非數字，
+            // 0 會被 generateColumnLayout 當成「收合」。其餘欄位沿用 persist 預設的淺層合併
+            merge: (persisted, current) => {
+                const saved: Partial<StreamStoreState> = persisted && typeof persisted === 'object' ? persisted : {};
+                return {
+                    ...current,
+                    ...saved,
+                    chatColumnWidth: 'chatColumnWidth' in saved ? clampChatCols(Number(saved.chatColumnWidth)) : current.chatColumnWidth,
+                };
+            },
             partialize: (state) => ({
                 streams: state.streams,
                 layoutMode: state.layoutMode,

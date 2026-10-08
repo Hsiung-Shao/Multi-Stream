@@ -8,9 +8,10 @@
 --   後台寫入走 /api/admin/known-issues（gateAdmin）
 --   與 cron_shard_state 相同做法，不開新的 anon 存取面。
 --
+-- 這支可以重跑（if not exists／drop trigger if exists）。
 -- 回滾：drop table public.known_issues;（無其他物件依賴）
 
-create table public.known_issues (
+create table if not exists public.known_issues (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(title) between 1 and 120),
   body text check (body is null or char_length(body) <= 4000),
@@ -33,9 +34,10 @@ comment on column public.known_issues.body is
 comment on column public.known_issues.resolved_at is
   'status 改為 resolved 時由後台端點填入；改回其他狀態時清空。公開頁只顯示 14 天內解決的條目。';
 
-create index known_issues_public_idx
+create index if not exists known_issues_public_idx
   on public.known_issues (is_public, status, updated_at desc);
 
+drop trigger if exists known_issues_touch_updated_at on public.known_issues;
 create trigger known_issues_touch_updated_at
   before update on public.known_issues
   for each row execute function public.touch_updated_at();

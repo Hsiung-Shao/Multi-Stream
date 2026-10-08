@@ -20,7 +20,10 @@ export function useFeedbacks(filter: FeedbackFilter) {
             if (filter.feedbackType) {
                 query = query.eq('feedback_type', filter.feedbackType);
             }
-            if (filter.status) {
+            if (filter.status === 'fixed') {
+                // 舊後台的 processed 等同已修正（migration 20261008110000 為相容保留這個值）
+                query = query.in('status', ['fixed', 'processed']);
+            } else if (filter.status) {
                 query = query.eq('status', filter.status);
             }
             if (filter.dateFrom) {

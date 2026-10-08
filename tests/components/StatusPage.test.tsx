@@ -27,7 +27,7 @@ const payload = (over: Partial<StatusResponse> = {}): StatusResponse => ({
             { key: 'twitchSchedule', status: 'operational', lastRunAt: ago(30) },
         ],
     },
-    youtube: { status: 'operational', checked: 120, failed: 4, quotaExceeded: false, lastRunAt: ago(5) },
+    youtube: { status: 'operational', checked: 120, failed: 4, quotaExceeded: false, runFailed: false, lastRunAt: ago(5) },
     twitch: { status: 'degraded', components: [{ name: 'Chat', status: 'degraded' }], incidents: [{ name: 'Chat delays', status: 'identified', url: 'https://stspg.io/x', updatedAt: null }], updatedAt: null },
     issues: [
         { id: 'r1', title: '已修好的問題', body: null, status: 'resolved', severity: 'minor', areas: ['chat'], created_at: ago(3000), updated_at: ago(60), resolved_at: ago(60) },
@@ -35,9 +35,10 @@ const payload = (over: Partial<StatusResponse> = {}): StatusResponse => ({
     ],
     announcements: [{ id: 'a1', title: '週末維護通知', body: '週六凌晨維護 30 分鐘', starts_at: ago(1000), ends_at: null }],
     feedbacks: [
-        { id: 'f1', content: '切換版型後聲音不見', status: 'processing', created_at: ago(30) },
-        { id: 'f3', content: '手機上聊天室太窄', status: 'fixed', created_at: ago(2000) },
-        { id: 'f4', content: 'YouTube 有時偵測不到開台', status: 'read', created_at: ago(3000) },
+        // 後端只回日期（'YYYY-MM-DD'），不含時分
+        { id: 'f1', content: '切換版型後聲音不見', status: 'processing', created_at: '2026-10-08' },
+        { id: 'f3', content: '手機上聊天室太窄', status: 'fixed', created_at: '2026-10-07' },
+        { id: 'f4', content: 'YouTube 有時偵測不到開台', status: 'read', created_at: '2026-10-01' },
     ],
     ...over,
 });
@@ -79,8 +80,12 @@ describe('StatusPage', () => {
 
         // 總燈號標題直接點名出問題的服務，內文帶出未解決的已知問題數
         expect(await screen.findByText('Twitch Chat目前有延遲')).toBeInTheDocument();
-        expect(screen.getByText('其他服務運作正常；站方也在處理 1 個已知問題。')).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: '查看已知問題（1）' })).toHaveAttribute('href', '#status-issues-h');
+        expect(screen.getByText('其他服務運作正常。站方處理中的已知問題：1 個。')).toBeInTheDocument();
+        // 錨點指向 section（scroll-mt 加在 section 上，標題才不會被 sticky header 蓋住）
+        expect(screen.getByRole('link', { name: '查看已知問題（1）' })).toHaveAttribute('href', '#status-issues');
+        const issuesSection = document.getElementById('status-issues');
+        expect(issuesSection?.tagName).toBe('SECTION');
+        expect(issuesSection?.className).toContain('scroll-mt-');
         expect(fetchMock).toHaveBeenCalledWith('/api/status', expect.objectContaining({ credentials: 'same-origin' }));
 
         const services = section('服務狀態');
@@ -88,7 +93,7 @@ describe('StatusPage', () => {
         expect(within(services).getByText('116')).toBeInTheDocument();
         expect(within(services).getByRole('img', { name: '120 個頻道中 4 個讀取失敗' })).toBeInTheDocument();
         expect(within(services).getByText('116 / 120 個頻道讀取成功')).toBeInTheDocument();
-        expect(within(services).getByText('Chat 有狀況・其餘 0 項正常')).toBeInTheDocument();
+        expect(within(services).getByText('Chat 有狀況・其他元件正常：0 項')).toBeInTheDocument();
         expect(within(services).getByRole('link', { name: /Chat delays/ })).toHaveAttribute('href', 'https://stspg.io/x');
         // 燈號圖例：形狀＋文字
         expect(within(services).getByRole('list', { name: '燈號說明' })).toBeInTheDocument();
@@ -165,5 +170,83 @@ describe('StatusPage', () => {
         expect(useUIStore.getState().modals.history).toBe(true);
         fireEvent.click(screen.getByRole('button', { name: '回報問題' }));
         expect(useUIStore.getState().modals.feedback).toBe(true);
+    });
+
+    it('使用者回報只顯示日期（依 locale、當本地日期解析，不被時區推前一天），不顯示時分', async () => {
+        renderPage();
+        const list = await waitFor(() => {
+            const s = section('使用者回報');
+            expect(within(s).getAllByRole('listitem')).toHaveLength(3);
+            return s;
+        });
+        const expected = new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(2026, 9, 8, 12));
+        expect(within(list).getByText(expected)).toBeInTheDocument();
+        expect(expected).toContain('10');
+        expect(expected).toContain('8');
+        expect(within(list).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
+    });
+
+    it('YouTube 最後一輪整輪失敗：顯示「狀態暫時無法確認」，不說「沒有要查的頻道」', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            youtube: { status: 'unknown', checked: 0, failed: 0, quotaExceeded: false, runFailed: true, lastRunAt: ago(5) },
+        })));
+        renderPage();
+        const services = await waitFor(() => {
+            const s = section('服務狀態');
+            expect(within(s).getAllByText('最近一輪偵測失敗，狀態暫時無法確認').length).toBeGreaterThan(0);
+            return s;
+        });
+        expect(within(services).queryByText('最近一輪沒有需要檢查的頻道')).not.toBeInTheDocument();
+    });
+
+    it('Twitch 摘要：unknown 元件不算受影響、多個受影響名稱依 locale 串接、同名元件不撞 key', async () => {
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            twitch: {
+                status: 'degraded',
+                components: [
+                    { name: 'Chat', status: 'degraded' },
+                    { name: 'Video', status: 'down' },
+                    { name: 'API', status: 'unknown' },
+                    { name: 'API', status: 'operational' },
+                ],
+                incidents: [
+                    { name: 'Same incident', status: 'identified', url: null, updatedAt: null },
+                    { name: 'Same incident', status: 'monitoring', url: null, updatedAt: null },
+                ],
+                updatedAt: null,
+            },
+        })));
+        renderPage();
+        const LF = (Intl as unknown as { ListFormat: new (l: string, o: { type: string }) => { format: (x: string[]) => string } }).ListFormat;
+        const names = new LF('zh-TW', { type: 'conjunction' }).format(['Chat', 'Video']);
+        // 受影響＝degraded＋down 共 2 個；unknown 不算，其餘 2 個
+        expect(await within(section('服務狀態')).findByText(`${names} 有狀況・其他元件正常：2 項`)).toBeInTheDocument();
+        expect(names).not.toContain('、');
+        const keyWarnings = errSpy.mock.calls.filter((c) => String(c[0]).includes('same key'));
+        expect(keyWarnings).toHaveLength(0);
+        errSpy.mockRestore();
+    });
+
+    it('Twitch 只有 unknown 元件、沒有確定有狀況的：摘要不說「受影響」', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            twitch: { status: 'operational', components: [{ name: 'Chat', status: 'operational' }, { name: 'API', status: 'unknown' }], incidents: [], updatedAt: null },
+        })));
+        renderPage();
+        expect(await within(section('服務狀態')).findByText('全部項目正常（2 項）')).toBeInTheDocument();
+        expect(within(section('服務狀態')).queryByText(/有狀況/)).not.toBeInTheDocument();
+    });
+
+    it('手機也看得到：Twitch 事件連結、官方狀態頁連結、YouTube 配額提示不在桌機限定的明細區塊內', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            youtube: { status: 'degraded', checked: 120, failed: 4, quotaExceeded: true, runFailed: false, lastRunAt: ago(5) },
+        })));
+        renderPage();
+        const services = section('服務狀態');
+        const incident = await within(services).findByRole('link', { name: /Chat delays/ });
+        const official = within(services).getByRole('link', { name: /前往 Twitch 官方狀態頁/ });
+        const quota = within(services).getByText('今日 YouTube API 配額已用完，部分資料會延後更新');
+        // 桌機限定的明細容器是 `hidden md:flex`；這三樣不能在它裡面
+        for (const el of [incident, official, quota]) expect(el.closest('.hidden')).toBeNull();
     });
 });

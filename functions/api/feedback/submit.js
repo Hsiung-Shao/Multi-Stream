@@ -93,13 +93,19 @@ export async function onRequestPost(context) {
         theme: trimStr(body.theme, 20) || null,
         app_version: trimStr(body.version, 50) || null,
         // 表單已告知「內容會公開在 /status」才標 true；舊版或快取的頁面不會送這個欄位 → 永遠不公開
-        // （欄位由 migration 20261008110000 新增：必須先套 migration 再部署，否則 PostgREST 會拒絕寫入）
+        // （欄位由 migration 20261008110000 新增；還沒套時下方會去掉這個欄位重送）
         public_notice: body.publicNotice === true,
         // 若 feedbacks 表有 user_id 欄位則 service_role 可以直接寫；沒有就被忽略（PostgREST 會 400）
         // 為相容，先不傳；如要記錄 userId，未來在 schema 確認後加
     };
 
-    const result = await insert(env, 'feedbacks', row);
+    let result = await insert(env, 'feedbacks', row);
+    // 正式站還沒套 migration 20261008110000（沒有 public_notice 欄位）時 PostgREST 回 PGRST204：
+    // 去掉這個欄位重送一次，回饋照樣送得出去（只是這筆不會被公開），不讓部署順序錯誤變成全站回饋失敗
+    if (!result.ok && /PGRST204|public_notice/.test(result.error || '')) {
+        const { public_notice: _omit, ...legacyRow } = row;
+        result = await insert(env, 'feedbacks', legacyRow);
+    }
     if (!result.ok) {
         await logError(env, 'feedback-submit', 'insert feedbacks failed', {
             metadata: { status: result.status, error: result.error?.slice(0, 500) },

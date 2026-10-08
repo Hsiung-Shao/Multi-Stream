@@ -4,6 +4,7 @@
  */
 import { useStreamStore } from '../store/useStreamStore';
 import { entryToUrl, type SharePayload } from './shareLink';
+import { chatsCollapsed } from './canvasItemOps';
 
 export async function applyShareLink(payload: SharePayload): Promise<{ added: number; failed: number }> {
     // 先確定畫布模式，再開始加入。分享連結一定指向 /canvas，但把 layoutMode 設成 'canvas' 的是
@@ -27,6 +28,12 @@ export async function applyShareLink(payload: SharePayload): Promise<{ added: nu
         } catch {
             failed++;
         }
+    }
+    // 分享者要對方看到聊天室（chat=1），但本機畫布的聊天室是收合狀態：共用聊天室版面新增一路時會維持收合
+    // （keepChatsCollapsed），開了連結也看不到聊天室——這裡明確展開
+    if (payload.chat) {
+        const after = useStreamStore.getState();
+        if (chatsCollapsed(after.canvasItems)) after.expandChats();
     }
     return { added, failed };
 }

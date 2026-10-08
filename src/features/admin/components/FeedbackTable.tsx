@@ -10,7 +10,7 @@ import { Input } from '../../../components/ui/input';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { ChevronLeft, ChevronRight, Clock, Star, MessageSquare, Search } from 'lucide-react';
 import type { FeedbackRecord, FeedbackFilter } from '../types';
-import { TYPE_CONFIG, STATUS_CONFIG, timeAgo } from './feedbackConfig';
+import { TYPE_CONFIG, STATUS_CONFIG, STATUS_OPTIONS, timeAgo } from './feedbackConfig';
 
 interface FeedbackTableProps {
     data: FeedbackRecord[];
@@ -83,8 +83,9 @@ export function FeedbackTable({ data, count, filter, isLoading, onFilterChange, 
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all" className="text-[12px]">全部狀態</SelectItem>
-                        {Object.entries(STATUS_CONFIG).map(([value, conf]) => (
-                            <SelectItem key={value} value={value} className="text-[12px]">{conf.label}</SelectItem>
+                        {/* 只列可選狀態（舊值 processed 不另列，避免出現兩個「已修正」） */}
+                        {STATUS_OPTIONS.map((value) => (
+                            <SelectItem key={value} value={value} className="text-[12px]">{STATUS_CONFIG[value].label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

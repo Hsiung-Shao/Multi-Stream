@@ -10,6 +10,27 @@ export interface FeedbackPayload extends FeedbackFormData {
     publicNotice: true;
 }
 
+/** 取 session 的上限：supabase auth lock 卡住時 getSession 可能永遠不回，逾時就當匿名送出 */
+const SESSION_TIMEOUT_MS = 2_000;
+const SUBMIT_TIMEOUT_MS = 15_000;
+
+async function getAccessToken(): Promise<string | null> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), SESSION_TIMEOUT_MS); });
+    const lookup = (async (): Promise<string | null> => {
+        const { getSupabase } = await import('../../lib/supabase');
+        const supabase = await getSupabase();
+        if (!supabase) return null;
+        const { data: sd } = await supabase.auth.getSession();
+        return sd?.session?.access_token ?? null;
+    })().catch(() => null); // 取不到 session 視同匿名
+    try {
+        return await Promise.race([lookup, timeout]);
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 export const FeedbackService = {
     /**
      * 送意見回饋到 Cloudflare Function /api/feedback/submit
@@ -17,24 +38,17 @@ export const FeedbackService = {
      * 與先前直連 supabase.from('feedbacks').insert() 不同
      */
     sendFeedback: async (data: FeedbackPayload): Promise<void> => {
-        let session: { access_token?: string } | null = null;
-        try {
-            const { getSupabase } = await import('../../lib/supabase');
-            const supabase = await getSupabase();
-            if (supabase) {
-                const { data: sd } = await supabase.auth.getSession();
-                session = sd?.session ?? null;
-            }
-        } catch { /* 取不到 session 視同匿名 */ }
+        // getSession 另有 2 秒上限（整段取 token 含動態載入），之後的 fetch 再有 15 秒上限
+        const accessToken = await getAccessToken();
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (session?.access_token) {
-            headers.Authorization = `Bearer ${session.access_token}`;
+        if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`;
         }
 
         // client fetch 一律要有逾時：卡住時送出鍵才不會永遠轉圈
         const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 15_000);
+        const timer = setTimeout(() => ctrl.abort(), SUBMIT_TIMEOUT_MS);
         let res: Response;
         try {
             res = await fetch('/api/feedback/submit', {

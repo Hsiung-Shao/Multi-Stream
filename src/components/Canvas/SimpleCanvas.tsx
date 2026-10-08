@@ -14,14 +14,14 @@
 
 import { memo, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import { DraggableWindow, CanvasWindow, WindowRenderProps } from './DraggableWindow';
-import { calculateGridConfig, GridConfig, GRID_COLS, PixelPosition } from './gridConfig';
+import { calculateGridConfig, GridConfig, GRID_COLS, GRID_ROWS, PixelPosition } from './gridConfig';
 import { checkCollision, checkPointCollision, Rect } from './collision';
 import { resolvePushResize } from './pushResize';
 import { cn } from '../ui/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { calculateRequiredRows } from '../../utils/layoutEngine';
 import { useUIStore } from '../../store/useUIStore';
-import { limitsOf, effectiveMaxW } from './sizeLimits';
+import { limitsOf, effectiveMaxW, MIN_CHAT_COLS, MAX_CHAT_COLS } from './sizeLimits';
 
 // 尺寸限制與縮放預覽共用同一份（見 sizeLimits.ts）；NewCanvasPage 從這裡取用
 export { limitsOf } from './sizeLimits';
@@ -47,9 +47,15 @@ export const stableRenderOrder = (windows: CanvasWindow[]): CanvasWindow[] =>
     [...windows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 /**
- * 這次縮放是不是「調整右側聊天室欄寬」：聊天室貼齊右緣、所有聊天室同一欄，且只有左緣移動
- * （右緣前後都貼齊畫布、上下不變、寬度有變）。這種情況改由上層重排整個畫布（串流重新填滿左側），
- * 不走推擠——推擠只會讓緊鄰的串流讓位，排不出整齊的版面。
+ * 這次縮放是不是「調整右側聊天室欄寬」。必須同時滿足：
+ *   - 畫面是「串流在左、聊天室在右側滿高一欄」：所有聊天室同一欄（x、寬相同）、貼齊右緣、
+ *     由上到下無縫接滿整個畫布高度，而且每一路串流都完全在聊天室欄左邊
+ *   - 只有左緣移動（右緣前後都貼齊畫布、上下不變、寬度有變）
+ *   - 新寬度在聊天室欄寬範圍（3～8）內：落地交給 setChatColumnWidth，它會夾進這個範圍，
+ *     範圍外的寬度走這裡就會「預覽 9 欄、放開彈回 8 欄」
+ * 這種情況改由上層重排（串流依比例重新填滿左側），不走推擠——推擠只會讓緊鄰的串流讓位，排不出整齊的版面。
+ * 其餘情況（右側也有直播的自訂排法、貼右緣的半高聊天室、比上限寬的舊聊天室）都走一般縮放，
+ * 否則拉一下聊天室左緣就會把使用者排好的整頁重排掉。
  */
 export function isChatColumnResize(
     windows: readonly CanvasWindow[], id: string, gridX: number, gridY: number, gridW: number, gridH: number,
@@ -58,7 +64,20 @@ export function isChatColumnResize(
     if (!before || before.type !== 'chat') return false;
     if (before.gridX + before.gridW !== GRID_COLS || gridX + gridW !== GRID_COLS) return false;
     if (before.gridY !== gridY || before.gridH !== gridH || before.gridW === gridW) return false;
-    return windows.every(w => w.type !== 'chat' || (w.gridX === before.gridX && w.gridW === before.gridW));
+    if (gridW < MIN_CHAT_COLS || gridW > MAX_CHAT_COLS) return false;
+
+    const chats = windows.filter(w => w.type === 'chat');
+    if (!chats.every(w => w.gridX === before.gridX && w.gridW === before.gridW)) return false;
+    if (!windows.every(w => w.type === 'chat' || w.gridX + w.gridW <= before.gridX)) return false;
+
+    // 滿高：聊天室由上到下首尾相接，從第 0 列接到畫布最下緣（畫布可能往下長超過 24 列）
+    const bottom = Math.max(GRID_ROWS, ...windows.map(w => w.gridY + w.gridH));
+    let edge = 0;
+    for (const c of [...chats].sort((a, b) => a.gridY - b.gridY)) {
+        if (c.gridY !== edge) return false;
+        edge += c.gridH;
+    }
+    return edge === bottom;
 }
 
 /** 值相同就沿用舊物件：GridConfig 是每個視窗的 prop，換一次身分就等於全畫布重繪 */
