@@ -232,7 +232,7 @@ describe('個人頁內文（edge 放進 #root）', () => {
         expect(EDGE_RECENT_DAYS).toBe(PERSON_RECENT_DAYS);
         expect(EDGE_UPCOMING_DAYS).toBe(PERSON_UPCOMING_DAYS);
         expect(EDGE_GRACE_MS).toBe(UPCOMING_GRACE_MS);
-        const sql = readFileSync(resolve(__dirname, '../../supabase/migrations/20261008130000_schedule_indexable_align.sql'), 'utf8');
+        const sql = readFileSync(resolve(__dirname, '../../supabase/migrations/20261008135719_schedule_indexable_align.sql'), 'utf8');
         expect(sql).toContain(`actual_end >= now() - interval '${PERSON_RECENT_DAYS} days'`);
         expect(sql).toContain(`scheduled_start <= now() + interval '${PERSON_UPCOMING_DAYS} days'`);
         expect(sql).toContain(`scheduled_start >= now() - interval '${UPCOMING_GRACE_MS / 60_000} minutes'`);
