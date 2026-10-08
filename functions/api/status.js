@@ -6,7 +6,8 @@
 //   issues：known_issues 公開中的條目（未解決，或 14 天內解決）
 //   feedbacks：使用者回報（只限送出時已告知會公開、站方標為已讀以上、近 30 天；只回內容／狀態／日期，聯絡資訊已遮蔽）
 //   announcements：一般公告（type=announcement、target=all、status=published）含已過期的歷史公告；封存的不公開
-// 任一來源失敗就回 null，其他區塊照常回（前端顯示「暫時無法取得」）；總燈號忽略拿不到資料的來源。
+// 任一來源失敗就回 null，其他區塊照常回（前端顯示「暫時無法取得」）；總燈號只忽略外部 Twitch 拿不到的情況，
+// 本站自己的資料拿不到時總燈號是 unknown。
 //
 // 快取（這支任何人都能打，必須擋住放大到 DB 的流量）：
 //   1. edge Cache API 60 秒（只在自訂網域生效）
@@ -34,14 +35,24 @@ const TWITCH_CACHE_KEY = 'https://status.invalid/twitch/v1';
 
 // 同一個 isolate 內的記憶體快取與進行中的請求（見檔頭第 2 點）
 let pageMemo = null; // { at: number, text: string }
-let pageInflight = null; // Promise<string>
+let pageInflight = null; // { at: number, promise: Promise<string> }
 let twitchMemo = null; // { at: number, ttlMs: number, value: object|null }
+
+/** DB 查詢逾時：卡住的查詢不能拖住整個 isolate 的請求 */
+const DB_TIMEOUT_MS = 5000;
+/** 進行中的共用查詢超過這麼久就視為失效、重新建立（發起的請求被取消時 promise 可能永遠不會 settle） */
+const INFLIGHT_STALE_MS = 15000;
 
 /** 測試用：清掉記憶體快取（每個測試要從乾淨狀態開始） */
 export function resetStatusMemo() {
     pageMemo = null;
     pageInflight = null;
     twitchMemo = null;
+}
+
+/** 每次查詢一個新的逾時訊號（AbortSignal.timeout 不能重複用） */
+function dbOpts() {
+    return typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? { signal: AbortSignal.timeout(DB_TIMEOUT_MS) } : {};
 }
 
 function getCache() {
@@ -73,10 +84,11 @@ export async function onRequestGet(context) {
     if (pageMemo && now - pageMemo.at < PAGE_TTL_SECONDS * 1000) return reply(request, pageMemo.text, 'MEMO');
 
     let source = 'MISS';
-    if (pageInflight) {
+    if (pageInflight && now - pageInflight.at < INFLIGHT_STALE_MS) {
         source = 'SHARED';
     } else {
-        pageInflight = buildStatus(context, now)
+        const entry = { at: now, promise: null };
+        entry.promise = buildStatus(context, now)
             .then((body) => {
                 const text = JSON.stringify(body);
                 pageMemo = { at: now, text };
@@ -88,9 +100,12 @@ export async function onRequestGet(context) {
                 }
                 return text;
             })
-            .finally(() => { pageInflight = null; });
+            .finally(() => { if (pageInflight === entry) pageInflight = null; });
+        pageInflight = entry;
+        // 讓發起的請求撐到查詢完成：它的用戶端中途斷線時，共用這份結果的其他請求才不會等到一個被取消的 promise
+        context.waitUntil?.(entry.promise.catch(() => {}));
     }
-    const text = await pageInflight;
+    const text = await pageInflight.promise;
     return reply(request, text, cache ? source : `${source}-NOCACHE`);
 }
 
@@ -122,7 +137,7 @@ export async function buildStatus(context, now) {
     return {
         success: true,
         checkedAt: new Date(now).toISOString(),
-        overall: overallHealth([site?.status, youtube?.status, twitchSummary?.status]),
+        overall: overallHealth([site?.status, youtube?.status], [twitchSummary?.status]),
         site,
         youtube,
         twitch: twitchSummary,
@@ -138,7 +153,7 @@ const JOB_STAT_FIELDS = ['failed', 'failed_streak', 'og_checked', 'og_failed', '
 async function fetchJobs(env, report) {
     const names = Object.keys(JOB_THRESHOLDS).join(',');
     const cols = ['job_name', 'last_run_at', ...JOB_STAT_FIELDS.map((f) => `${f}:last_run_stats->${f}`)].join(',');
-    const res = await select(env, `cron_shard_state?select=${cols}&job_name=in.(${names})`);
+    const res = await select(env, `cron_shard_state?select=${cols}&job_name=in.(${names})`, dbOpts());
     if (!res.ok || !Array.isArray(res.data)) {
         report('cron_shard_state fetch failed', res);
         throw new Error('jobs_failed');
@@ -151,7 +166,7 @@ async function fetchJobs(env, report) {
 }
 
 async function fetchIssues(env, now, report) {
-    const res = await select(env, publicIssuesQuery(now));
+    const res = await select(env, publicIssuesQuery(now), dbOpts());
     if (!res.ok || !Array.isArray(res.data)) {
         report('known_issues fetch failed', res);
         throw new Error('issues_failed');
@@ -170,7 +185,7 @@ async function fetchAnnouncements(env, now, report) {
         'order=starts_at.desc',
         `limit=${ANNOUNCEMENT_LIMIT}`,
     ].join('&');
-    const res = await select(env, `announcements?${query}`);
+    const res = await select(env, `announcements?${query}`, dbOpts());
     if (!res.ok || !Array.isArray(res.data)) {
         report('announcements fetch failed', res);
         throw new Error('announcements_failed');
@@ -179,7 +194,7 @@ async function fetchAnnouncements(env, now, report) {
 }
 
 async function fetchFeedbacks(env, now, report) {
-    const res = await select(env, publicFeedbackQuery(now));
+    const res = await select(env, publicFeedbackQuery(now), dbOpts());
     if (!res.ok || !Array.isArray(res.data)) {
         report('feedbacks fetch failed', res);
         throw new Error('feedbacks_failed');

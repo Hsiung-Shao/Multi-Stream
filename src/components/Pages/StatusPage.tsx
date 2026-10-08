@@ -16,6 +16,7 @@ import { Skeleton } from '../ui/skeleton';
 import { cn } from '../ui/utils';
 import { useStatus, type Health, type IssueStatus, type KnownIssue, type PublicFeedback, type PublicFeedbackStatus, type StatusResponse } from '../../features/status/api';
 import { formatRelative, formatDayTime } from '../../features/schedule/formatTime';
+import { formatPublicDate } from '../../features/status/formatPublicDate';
 import { versionHistoryData } from '../../config/versionHistoryData';
 import { useUIStore } from '../../store/useUIStore';
 
@@ -82,14 +83,6 @@ function formatList(items: string[], locale: string): string {
     const LF = (Intl as unknown as { ListFormat?: new (l: string, o: { type: string }) => { format: (x: string[]) => string } }).ListFormat;
     if (LF) return new LF(locale, { type: 'conjunction' }).format(items);
     return items.join(/^(zh|ja)/.test(locale) ? '、' : ', ');
-}
-
-/** 'YYYY-MM-DD' → 依 locale 的日期；當本地日期用正午建立，避免時區把日期推到前一天。格式不符回空字串 */
-function formatPublicDate(day: string | null | undefined, locale: string): string {
-    const m = day ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(day) : null;
-    if (!m) return '';
-    const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
-    return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'numeric', day: 'numeric' }).format(date);
 }
 
 /** 出問題的項目名稱（給總燈號標題點名用） */
@@ -200,6 +193,19 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
     const tw = data.twitch;
     // 手機摘要的「受影響」只算確定有狀況的；unknown（官方沒給燈號）不算
     const twBad = tw?.components.filter((c) => c.status === 'degraded' || c.status === 'down') ?? [];
+    // 「正常」只算 operational；unknown 另外列出，不混進正常數
+    const twOk = tw?.components.filter((c) => c.status === 'operational').length ?? 0;
+    const twUnknown = tw?.components.filter((c) => c.status === 'unknown').length ?? 0;
+    const twNames = formatList(twBad.map((c) => c.name), locale);
+    const twSummary = !tw ? t('unavailable')
+        : tw.components.length === 0 ? t('services.twitch.noComponents')
+            : twBad.length > 0
+                ? (twUnknown > 0
+                    ? t('services.twitch.summaryIssuesUnknown', { names: twNames, rest: twOk, unknown: twUnknown })
+                    : t('services.twitch.summaryIssues', { names: twNames, rest: twOk }))
+                : twUnknown > 0
+                    ? t('services.twitch.summaryOkUnknown', { ok: twOk, unknown: twUnknown })
+                    : t('services.twitch.summaryOk', { count: twOk });
     // 最近一輪整輪失敗：og 數字不可信，不顯示成功數，也不說「沒有要查的頻道」
     const ytRunFailed = yt?.runFailed === true;
     const ytSummary = !yt ? t('unavailable')
@@ -240,12 +246,8 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                 note={t('services.youtube.note')}
                 status={yt?.status ?? 'unknown'}
                 summary={ytSummary}
-                footer={yt && (
-                    <>
-                        {yt.quotaExceeded && <p className="text-sm text-amber-700 dark:text-amber-300">{t('services.youtube.quota')}</p>}
-                        <p className="hidden text-[12.5px] text-muted-foreground md:block">{ago(yt.lastRunAt)}・{t('services.youtube.threshold')}</p>
-                    </>
-                )}
+                // 沒有配額提示時不給 footer（空容器在手機會多出一段 gap）
+                footer={yt?.quotaExceeded ? <p className="text-sm text-amber-700 dark:text-amber-300">{t('services.youtube.quota')}</p> : null}
             >
                 {yt ? (
                     <>
@@ -269,6 +271,7 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                         ) : (
                             <p className="text-sm">{t('services.youtube.noChecks')}</p>
                         )}
+                        <p className="mt-auto text-[12.5px] text-muted-foreground">{ago(yt.lastRunAt)}・{t('services.youtube.threshold')}</p>
                     </>
                 ) : unavailable}
             </ServiceCard>
@@ -279,11 +282,7 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                 title={t('services.twitch.title')}
                 note={t('services.twitch.note')}
                 status={tw?.status ?? 'unknown'}
-                summary={!tw
-                    ? t('unavailable')
-                    : twBad.length === 0
-                        ? t('services.twitch.summaryOk', { count: tw.components.length })
-                        : t('services.twitch.summaryIssues', { names: formatList(twBad.map((c) => c.name), locale), rest: tw.components.length - twBad.length })}
+                summary={twSummary}
                 footer={(
                     <>
                         {tw?.incidents.map((i, idx) => (
@@ -313,7 +312,9 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                     </>
                 )}
             >
-                {tw ? (
+                {!tw ? unavailable : tw.components.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t('services.twitch.noComponents')}</p>
+                ) : (
                     <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                         {tw.components.map((c, idx) => (
                             <li key={`${idx}-${c.name}`} className="flex min-w-0 items-center gap-2">
@@ -323,7 +324,7 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                             </li>
                         ))}
                     </ul>
-                ) : unavailable}
+                )}
             </ServiceCard>
         </div>
     );

@@ -23,7 +23,7 @@ import { useResize } from './useResize';
 import { GridConfig, PixelPosition } from './gridConfig';
 import { cn } from '../ui/utils';
 import { SwapHint } from './SwapHint';
-import { limitsOf, effectiveMaxW } from './sizeLimits';
+import { resizeLimitsOf } from './sizeLimits';
 
 export interface CanvasWindow {
     id: string;
@@ -190,9 +190,8 @@ export const DraggableWindow = memo(function DraggableWindow({
         return () => onDragStateChange(window.id, false);
     }, [isDragging, window.id, onDragStateChange]);
 
-    // 尺寸限制以原始值傳入：縮放預覽與落地（SimpleCanvas.clampDesired）用同一組值，放開才不會彈回
-    const { minW: minGridW, minH: minGridH } = limitsOf(window);
-    const maxGridW = effectiveMaxW(window);
+    // 尺寸限制：縮放預覽與落地（SimpleCanvas.clampDesired／推擠）用同一組值（resizeLimitsOf），放開才不會彈回
+    const { minW: minGridW, minH: minGridH, maxW: maxGridW } = resizeLimitsOf(window);
 
     // Resize hook - 四角＋四邊把手；幾何同樣直接寫 DOM
     const { isResizing, cornerHandlers } = useResize({

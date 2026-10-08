@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act, fireEvent } from '@testing-library/react';
 import { SimpleCanvas, isChatColumnResize } from '../../src/components/Canvas/SimpleCanvas';
 import type { CanvasWindow } from '../../src/components/Canvas/DraggableWindow';
+import { generateColumnLayout } from '../../src/utils/layoutPresets';
 
 // jsdom 沒有 PointerEvent（fireEvent 會退回 Event，clientX 就不見了）與 pointer capture
 class FakePointerEvent extends MouseEvent {
@@ -223,5 +224,59 @@ describe('縮放把手只佔視窗外框', () => {
         for (const d of ['n', 's']) expect(handle('s1', d).className.split(/\s+/)).toContain('h-1');
         for (const d of ['w', 'e']) expect(handle('s1', d).className.split(/\s+/)).toContain('w-1');
         for (const d of ['n', 's', 'w', 'e']) expect(handle('s1', d).className).not.toMatch(/(^|\s)[hw]-1\.5(\s|$)/);
+    });
+});
+
+// 第二輪審查：退回策略排出的小格子（例如 13 路＋聊天室欄的 5×6）輕拖不能被撐成 6×6、推動整張畫布
+describe('比 6×6 小的格子縮放', () => {
+    const crowded = (): CanvasWindow[] => {
+        const { streams, chats } = generateColumnLayout(13, 1, 16 / 9, 4);
+        return [
+            ...streams.map((r, k) => win(`s${k}`, 'stream', r.x, r.y, r.w, r.h)),
+            win('chat', 'chat', chats[0].x, chats[0].y, chats[0].w, chats[0].h),
+        ];
+    };
+
+    it('右緣輕拖（不到半格）：預覽寬度維持 5 格，放開什麼都不變', () => {
+        const { handle, node, onWindowUpdate } = mount(crowded(), () => {});
+        const h = handle('s0', 'e');
+        act(() => { fireEvent.pointerDown(h, { clientX: 500, clientY: 500, pointerId: 1 }); });
+        act(() => { fireEvent.pointerMove(h, { clientX: 500 + CELL_W * 0.3, clientY: 500, pointerId: 1 }); });
+        expect(parseFloat(node('s0').style.width)).toBe(5 * CELL_W);
+        act(() => { fireEvent.pointerUp(h, { clientX: 500 + CELL_W * 0.3, clientY: 500, pointerId: 1 }); });
+        expect(onWindowUpdate).not.toHaveBeenCalled();
+    });
+
+    it('右緣往內拖想縮得更小：停在目前 5 格（下限＝自身，舊版會反向撐成 6 格），不推任何視窗', () => {
+        const { handle, onWindowUpdate } = mount(crowded(), () => {});
+        drag(handle('s0', 'e'), -CELL_W * 2, 0);
+        expect(onWindowUpdate).not.toHaveBeenCalled();
+    });
+});
+
+describe('isChatColumnResize：畫布往下長之後', () => {
+    it('串流排到 30 列、聊天室欄 0～24 列：仍算欄寬調整', () => {
+        const ws = [
+            win('s1', 'stream', 0, 0, 20, 15),
+            win('s2', 'stream', 0, 15, 20, 15),
+            win('chat', 'chat', 20, 0, 4, 24),
+        ];
+        expect(isChatColumnResize(ws, 'chat', 18, 0, 6, 24)).toBe(true);
+    });
+
+    it('5 個聊天室各 6 列接到 30 列：仍算欄寬調整', () => {
+        const ws = [
+            win('s1', 'stream', 0, 0, 20, 30),
+            ...[0, 1, 2, 3, 4].map(k => win(`c${k}`, 'chat', 20, k * 6, 4, 6)),
+        ];
+        expect(isChatColumnResize(ws, 'c0', 18, 0, 6, 6)).toBe(true);
+    });
+
+    it('聊天室欄不滿一個畫面高（0～18 列）：不算', () => {
+        const ws = [
+            win('s1', 'stream', 0, 0, 20, 30),
+            win('chat', 'chat', 20, 0, 4, 18),
+        ];
+        expect(isChatColumnResize(ws, 'chat', 18, 0, 6, 18)).toBe(false);
     });
 });

@@ -46,10 +46,12 @@ describe('燈號判斷（review 修正）', () => {
         expect(summarizeTwitch({ status: { indicator: 'none' } })?.status).toBe('operational');
     });
 
-    it('總燈號忽略拿不到資料的來源', () => {
-        expect(overallHealth(['operational', 'operational', 'unknown'])).toBe('operational');
-        expect(overallHealth(['operational', undefined, 'degraded'])).toBe('degraded');
-        expect(overallHealth(['unknown', undefined, null])).toBe('unknown');
+    it('總燈號：只忽略外部 Twitch 拿不到；本站自己的資料拿不到時不能顯示正常', () => {
+        expect(overallHealth(['operational', 'operational'], ['unknown'])).toBe('operational');
+        expect(overallHealth(['operational', 'operational'], [undefined])).toBe('operational');
+        expect(overallHealth([undefined, undefined], ['operational'])).toBe('unknown');
+        expect(overallHealth(['unknown', 'operational'], ['operational'])).toBe('unknown');
+        expect(overallHealth(['operational', 'degraded'], ['operational'])).toBe('degraded');
     });
 });
 
@@ -65,9 +67,31 @@ describe('遮蔽（review 修正）', () => {
         expect(out.split(MASK).join('')).not.toMatch(/gmail|jerry|foo|abc123|\d{4}/);
     });
 
-    it.each(['問題x：畫面黑屏', 'Threads：好用', 'x: 很棒', 'line: 很卡', '影片ID 012345678', 'VOD 0234567890', '👨‍👩‍👧 家族'])(
+    it.each([
+        '問題x：畫面黑屏', 'Threads：好用', 'x: 很棒', 'line: 很卡', '影片ID 012345678', 'VOD 0234567890', '👨‍👩‍👧 家族',
+        // 英文句子提到平台名稱不能被當成帳號（第二輪 review：拿掉冒號要求後的回歸）
+        'The second line is cut off in chat', 'I use discord daily and facebook login fails', 'Instagram embeds do not load',
+        'Twitter player shows black screen', 'the threads view breaks', 'Please add Telegram support soon',
+    ])(
         '不誤遮：%s', (input) => expect(maskContact(input)).toBe(input),
     );
+
+    it('中文緊鄰 email 時只遮 email，前後中文保留；超長帳號整段遮；點前後多空白、開頭多一個點也遮', () => {
+        expect(maskContact('請寄到我的信箱jerry@gmail.com謝謝你們的幫忙')).toBe(`請寄到我的信箱${MASK}謝謝你們的幫忙`);
+        expect(maskContact('王小明@例子.台灣')).toBe(MASK);
+        expect(maskContact(`${'a'.repeat(100)}@gmail.com`)).toBe(MASK);
+        expect(maskContact('寄 jerry@gmail   .com')).toBe(`寄 ${MASK}`);
+        expect(maskContact('寄 jerry@.gmail.com')).toBe(`寄 ${MASK}`);
+    });
+
+    it('英文長回報截斷後仍保留大部分內容（第二輪 review：清尾段沒上限時整段被吃光）', () => {
+        const sentence = 'The chat panel disappears when I open three streams and resize the window quickly. ';
+        for (const content of [sentence.repeat(6), `${'中'.repeat(200)}${sentence.repeat(4)}`, sentence.replace(/ /g, ', ').repeat(5)]) {
+            const [r] = toPublicFeedback([{ id: '1', content, status: 'read', created_at: '2026-10-08T00:00:00Z' }]);
+            expect(r.content.length).toBeGreaterThanOrEqual(240);
+            expect(content.startsWith(r.content.replace(/…$/, '').trimEnd())).toBe(true);
+        }
+    });
 
     it('截斷點落在 email／電話中間時不外露被切半的片段', () => {
         for (const tail of ['jerry@gmail.com', '0912345678']) {
@@ -172,7 +196,47 @@ describe('/api/status：沒有 Cache API（*.pages.dev）時仍不放大到 DB',
     });
 });
 
+describe('/api/status：排程子欄位 → 燈號；共用查詢失效後重建', () => {
+    const ctx = () => ({ request: new Request('https://x.pages.dev/api/status'), env: ENV() });
+
+    it('排程連續失敗達門檻 → 本站異常；DB 查不到時總燈號不是正常', async () => {
+        sb = (_m, path) => (path.startsWith('cron_shard_state')
+            ? new Response(JSON.stringify([{ job_name: 'schedule_heavy_rss', last_run_at: new Date().toISOString(), failed: true, failed_streak: FAILED_STREAK_DOWN }]))
+            : new Response('[]'));
+        const data = await (await statusGet(ctx())).json();
+        expect(data.site.jobs.find((j: { key: string }) => j.key === 'heavy').status).toBe('down');
+
+        resetStatusMemo();
+        sb = (_m, path) => (path.startsWith('cron_shard_state') ? new Response('boom', { status: 500 }) : new Response('[]'));
+        const failed = await (await statusGet(ctx())).json();
+        expect(failed.site).toBeNull();
+        expect(failed.overall).not.toBe('operational');
+    });
+});
+
 describe('/api/feedback/submit：還沒套 migration（沒有 public_notice 欄位）時去掉欄位重送', () => {
+    const submit = (content: string) => feedbackSubmit({
+        request: new Request('https://multistreaming.org/api/feedback/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.9' },
+            body: JSON.stringify({ feedbackType: 'bug', content, publicNotice: true }),
+        }),
+        env: ENV(),
+    });
+    const posts = () => calls.filter((c) => c.method === 'POST' && c.url.includes('/feedbacks'));
+
+    it('其他錯誤不重送（CHECK 違規、500），內容含 public_notice 字樣也不重送', async () => {
+        sb = (method) => (method === 'POST'
+            ? new Response(JSON.stringify({ code: '23514', message: 'new row violates check constraint', details: 'Failing row contains (public_notice PGRST204)' }), { status: 400 })
+            : new Response('[]'));
+        expect((await submit('提到 public_notice 與 PGRST204 的回報')).status).toBe(500);
+        expect(posts()).toHaveLength(1);
+        calls = [];
+        sb = (method) => (method === 'POST' ? new Response('boom', { status: 500 }) : new Response('[]'));
+        expect((await submit('x')).status).toBe(500);
+        expect(posts()).toHaveLength(1);
+    });
+
     it('第一次 PGRST204 → 去掉 public_notice 重送成功', async () => {
         let n = 0;
         sb = (method) => {

@@ -843,6 +843,19 @@ describe('useStreamStore', () => {
             expect(items.find(i => i.type === 'stream')!.layout).toEqual(L(0, 0, 18, 24));
         });
 
+        it('共用聊天室狀態下，動態島布局清單套「1 路＋聊天室」與 Alt+1 結果相同（沿用共用聊天室與欄寬）', () => {
+            useStreamStore.getState().setChatColumnWidth(6);
+            const start = useStreamStore.getState().canvasItems;
+            useStreamStore.getState().applyTemplateLayout('template-1-chat');
+            const viaList = useStreamStore.getState().canvasItems;
+            useStreamStore.setState({ canvasItems: start });
+            useStreamStore.getState().setLayout(1);
+            const viaHotkey = useStreamStore.getState().canvasItems;
+            const shape = (items: typeof viaList) => items.map(({ type, contentId, layout, sharedChat }) => ({ type, contentId, layout, sharedChat }));
+            expect(shape(viaList)).toEqual(shape(viaHotkey));
+            expect(viaList.find(i => i.type === 'chat')).toMatchObject({ sharedChat: true, layout: L(18, 0, 6, 24) });
+        });
+
         it('每路一聊的版面按 Alt+1：維持原本的 1-chat 版型（不帶 sharedChat）', () => {
             useStreamStore.setState({
                 canvasItems: [
@@ -917,6 +930,20 @@ describe('useStreamStore', () => {
             const chats = useStreamStore.getState().canvasItems.filter(i => i.type === 'chat');
             expect(chats.length).toBeGreaterThan(0);
             expect(chats.every(c => c.layout.w > 0)).toBe(true);
+        });
+
+        it('分享連結 chat=1 但一路都沒加成功：不動本機的收合狀態', async () => {
+            const { applyShareLink } = await import('../../src/utils/applyShareLink');
+            useStreamStore.getState().collapseChats();
+            const realAdd = useStreamStore.getState().addStream;
+            useStreamStore.setState({ addStream: vi.fn(async () => ({ success: false, message: 'x' })) as unknown as typeof realAdd });
+            try {
+                const res = await applyShareLink({ streams: [{ platform: 'twitch', id: 'shroud' }], chat: true });
+                expect(res).toEqual({ added: 0, failed: 1 });
+            } finally {
+                useStreamStore.setState({ addStream: realAdd });
+            }
+            expect(useStreamStore.getState().canvasItems.filter(i => i.type === 'chat').every(c => c.layout.w === 0)).toBe(true);
         });
 
         it('分享連結 chat=0：不動本機的收合狀態', async () => {

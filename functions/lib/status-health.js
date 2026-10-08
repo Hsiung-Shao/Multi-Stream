@@ -63,14 +63,19 @@ export function worstHealth(list) {
 }
 
 /**
- * 總燈號：忽略拿不到資料（unknown）的來源，只在全部都拿不到時才回 unknown。
- * 例如 Twitch Statuspage 暫時抓不到時，本站與 YouTube 都正常就仍顯示正常（Twitch 卡片自己會顯示「暫時無法取得」）。
- * @param {Health[]} list
+ * 總燈號。
+ * - 本站自己的來源（排程、YouTube 偵測）拿不到資料時算 unknown：本站 DB 查不到正是使用者最該知道的時候，不能顯示正常
+ * - 外部來源（Twitch Statuspage）拿不到時忽略：本站與 YouTube 都正常就仍顯示正常（Twitch 卡片自己會顯示「暫時無法取得」）
+ * @param {Array<Health|null|undefined>} own
+ * @param {Array<Health|null|undefined>} [external]
  * @returns {Health}
  */
-export function overallHealth(list) {
-    const known = list.filter((h) => h && h !== 'unknown');
-    return known.length ? worstHealth(known) : 'unknown';
+export function overallHealth(own, external = []) {
+    const list = [
+        ...own.map((h) => h ?? 'unknown'),
+        ...external.filter((h) => h && h !== 'unknown'),
+    ];
+    return list.length ? worstHealth(list) : 'unknown';
 }
 
 /**

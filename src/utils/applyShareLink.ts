@@ -30,8 +30,9 @@ export async function applyShareLink(payload: SharePayload): Promise<{ added: nu
         }
     }
     // 分享者要對方看到聊天室（chat=1），但本機畫布的聊天室是收合狀態：共用聊天室版面新增一路時會維持收合
-    // （keepChatsCollapsed），開了連結也看不到聊天室——這裡明確展開
-    if (payload.chat) {
+    // （keepChatsCollapsed），開了連結也看不到聊天室——這裡明確展開。
+    // 一路都沒加成功時不動本機畫布：分享內容沒套上，不該順手改掉使用者自己的收合狀態
+    if (payload.chat && added > 0) {
         const after = useStreamStore.getState();
         if (chatsCollapsed(after.canvasItems)) after.expandChats();
     }

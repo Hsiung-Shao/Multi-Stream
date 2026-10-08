@@ -19,6 +19,8 @@ import { KnownIssueEditDialog } from './KnownIssueEditDialog';
 
 /** 與 functions/lib/feedback-public.js 的 FEEDBACK_PUBLIC_DAYS 對齊：超過這個天數就不在公開頁 */
 const FEEDBACK_PUBLIC_DAYS = 30;
+/** 與 FEEDBACK_PUBLIC_LIMIT 對齊：公開頁最多列幾筆（不精算這筆排第幾，只提醒） */
+const FEEDBACK_PUBLIC_LIMIT = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -32,7 +34,7 @@ function publicHint(record: FeedbackRecord, now: number): string {
     const created = Date.parse(record.created_at);
     if (Number.isFinite(created) && now - created > FEEDBACK_PUBLIC_DAYS * DAY_MS) return `超過 ${FEEDBACK_PUBLIC_DAYS} 天，已不在公開頁 /status。`;
     if (saved === 'unread') return '未讀不會公開。改成「已讀」以上並儲存後，內容、狀態與日期會出現在 /status（聯絡資訊會盡量自動隱藏，但不保證全部擋下）；不適合公開請改成「封存」。';
-    return '內容、狀態與日期已公開在 /status（聯絡資訊會盡量自動隱藏，但不保證全部擋下）。不適合公開請改成「封存」。';
+    return `內容、狀態與日期已公開在 /status（聯絡資訊會盡量自動隱藏，但不保證全部擋下）。公開頁只顯示最近 ${FEEDBACK_PUBLIC_LIMIT} 筆，較舊的可能被擠出。不適合公開請改成「封存」。`;
 }
 
 const SOURCE_LABELS: Record<string, string> = {

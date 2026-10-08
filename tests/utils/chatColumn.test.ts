@@ -7,6 +7,7 @@ import {
     relayoutItems, collapseChats, expandChats, chatsCollapsed, isCollapsedChat, keepChatsCollapsed, sharedChatContentIdOf,
 } from '../../src/utils/canvasItemOps';
 import type { CanvasItem } from '../../src/types/canvas';
+import { resizeLimitsOf } from '../../src/components/Canvas/sizeLimits';
 
 const ASPECT = 16 / 9;
 
@@ -214,5 +215,46 @@ describe('調寬結果與原本相同時回傳原陣列（不觸發整畫布重�
     it('已收合再收合 → 同一個陣列', () => {
         const collapsed = collapseChats(shared(), ASPECT);
         expect(collapseChats(collapsed, ASPECT)).toBe(collapsed);
+    });
+});
+
+// 第二輪審查：退回策略的格子尺寸下限語意（與縮放的 resizeLimitsOf 一起看）
+describe('退回策略（放不下 6×6）的格子尺寸語意', () => {
+    /** 串流區 cols 欄 × 24 列能不能用 6×6 以上的格子排下 n 路 */
+    const fits6 = (n: number, cols: number) => Math.floor(cols / 6) * 4 >= n;
+
+    it('只有確實放不下 6×6 時才退回；放得下就每格都 ≥ 6×6', () => {
+        for (let n = 1; n <= 16; n++) for (const cols of [0, 3, 4, 6, 8]) {
+            const { streams } = generateColumnLayout(n, cols === 0 ? 0 : 1, ASPECT, cols || 4);
+            const area = cols === 0 ? 24 : 24 - cols;
+            if (fits6(n, area)) expect(streams.every(s => s.w >= 6 && s.h >= 6)).toBe(true);
+            else expect(streams.some(s => s.w < 6 || s.h < 6)).toBe(true);
+        }
+    });
+
+    it.each([3, 4, 6, 8])('聊天室寬 %i、13～16 路退回時：每格至少 4×4，且全部留在 24 列內', cols => {
+        for (let n = 13; n <= 16; n++) {
+            const { streams } = generateColumnLayout(n, 1, ASPECT, cols);
+            expect(streams.every(s => s.w >= 4 && s.h >= 4)).toBe(true);
+            expect(Math.max(...streams.map(s => s.y + s.h))).toBeLessThanOrEqual(24);
+        }
+    });
+
+    it('退回的小格子縮放時以自身尺寸為下限（resizeLimitsOf），不會被撐成 6×6', () => {
+        const small = generateColumnLayout(13, 1, ASPECT, 4).streams[0];
+        expect(small).toMatchObject({ w: 5, h: 6 });
+        expect(resizeLimitsOf({ type: 'stream', gridW: small.w, gridH: small.h })).toMatchObject({ minW: 5, minH: 6 });
+    });
+});
+
+describe('resizeLimitsOf：縮放用的限制', () => {
+    it('一般尺寸的視窗：下限就是類型下限', () => {
+        expect(resizeLimitsOf({ type: 'stream', gridW: 12, gridH: 12 })).toEqual({ minW: 6, minH: 6, maxW: Infinity });
+        expect(resizeLimitsOf({ type: 'chat', gridW: 4, gridH: 24 })).toEqual({ minW: 3, minH: 6, maxW: 8 });
+    });
+
+    it('已比下限小：下限降到目前尺寸；比上限寬：上限升到目前寬度', () => {
+        expect(resizeLimitsOf({ type: 'stream', gridW: 5, gridH: 4 })).toMatchObject({ minW: 5, minH: 4 });
+        expect(resizeLimitsOf({ type: 'chat', gridW: 10, gridH: 24 }).maxW).toBe(10);
     });
 });

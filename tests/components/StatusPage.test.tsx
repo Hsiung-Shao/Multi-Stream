@@ -199,7 +199,7 @@ describe('StatusPage', () => {
         expect(within(services).queryByText('最近一輪沒有需要檢查的頻道')).not.toBeInTheDocument();
     });
 
-    it('Twitch 摘要：unknown 元件不算受影響、多個受影響名稱依 locale 串接、同名元件不撞 key', async () => {
+    it('Twitch 摘要：unknown 不算受影響也不算正常（另列狀態未知）、多個受影響名稱依 locale 串接、同名元件不撞 key', async () => {
         const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         fetchMock.mockImplementation(async () => jsonRes(payload({
             twitch: {
@@ -220,21 +220,58 @@ describe('StatusPage', () => {
         renderPage();
         const LF = (Intl as unknown as { ListFormat: new (l: string, o: { type: string }) => { format: (x: string[]) => string } }).ListFormat;
         const names = new LF('zh-TW', { type: 'conjunction' }).format(['Chat', 'Video']);
-        // 受影響＝degraded＋down 共 2 個；unknown 不算，其餘 2 個
-        expect(await within(section('服務狀態')).findByText(`${names} 有狀況・其他元件正常：2 項`)).toBeInTheDocument();
+        // 受影響＝degraded＋down 共 2 個；正常只算 operational 1 個；unknown 1 個另外列
+        expect(await within(section('服務狀態')).findByText(`${names} 有狀況・其他元件正常：1 項・狀態未知：1 項`)).toBeInTheDocument();
         expect(names).not.toContain('、');
         const keyWarnings = errSpy.mock.calls.filter((c) => String(c[0]).includes('same key'));
         expect(keyWarnings).toHaveLength(0);
         errSpy.mockRestore();
     });
 
-    it('Twitch 只有 unknown 元件、沒有確定有狀況的：摘要不說「受影響」', async () => {
+    it('Twitch 有 unknown、沒有確定有狀況的：摘要不說「受影響」也不說「全部正常」，正常數只算 operational', async () => {
         fetchMock.mockImplementation(async () => jsonRes(payload({
             twitch: { status: 'operational', components: [{ name: 'Chat', status: 'operational' }, { name: 'API', status: 'unknown' }], incidents: [], updatedAt: null },
         })));
         renderPage();
-        expect(await within(section('服務狀態')).findByText('全部項目正常（2 項）')).toBeInTheDocument();
+        expect(await within(section('服務狀態')).findByText('其他元件正常：1 項・狀態未知：1 項')).toBeInTheDocument();
         expect(within(section('服務狀態')).queryByText(/有狀況/)).not.toBeInTheDocument();
+        expect(within(section('服務狀態')).queryByText(/全部項目正常/)).not.toBeInTheDocument();
+    });
+
+    it('Twitch 元件全部 operational：全部項目正常（N 項）', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            twitch: { status: 'operational', components: [{ name: 'Chat', status: 'operational' }, { name: 'API', status: 'operational' }], incidents: [], updatedAt: null },
+        })));
+        renderPage();
+        expect(await within(section('服務狀態')).findByText('全部項目正常（2 項）')).toBeInTheDocument();
+    });
+
+    it('Twitch 元件清單是空的：顯示「暫時無法取得元件狀態」，不說「全部項目正常（0 項）」', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            twitch: { status: 'operational', components: [], incidents: [], updatedAt: null },
+        })));
+        renderPage();
+        const services = section('服務狀態');
+        await waitFor(() => expect(within(services).getAllByText('暫時無法取得元件狀態').length).toBeGreaterThan(0));
+        expect(within(services).queryByText(/全部項目正常/)).not.toBeInTheDocument();
+    });
+
+    it('YouTube 沒有配額提示時不渲染 footer 容器（手機不會多一段空白）；有配額提示時才有', async () => {
+        const ytCard = () => within(section('服務狀態')).getByRole('heading', { level: 3, name: 'YouTube' }).closest('article') as HTMLElement;
+        const { unmount } = renderPage();
+        await within(section('服務狀態')).findByText('116 / 120 個頻道讀取成功');
+        // 最後一個子元素是桌機限定的明細（hidden md:flex），後面沒有 footer
+        expect(ytCard().lastElementChild?.className).toContain('hidden');
+        unmount();
+
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            youtube: { status: 'degraded', checked: 120, failed: 4, quotaExceeded: true, runFailed: false, lastRunAt: ago(5) },
+        })));
+        renderPage();
+        await within(section('服務狀態')).findByText('今日 YouTube API 配額已用完，部分資料會延後更新');
+        const last = ytCard().lastElementChild as HTMLElement;
+        expect(last.className).not.toContain('hidden');
+        expect(last.textContent).toContain('今日 YouTube API 配額已用完');
     });
 
     it('手機也看得到：Twitch 事件連結、官方狀態頁連結、YouTube 配額提示不在桌機限定的明細區塊內', async () => {

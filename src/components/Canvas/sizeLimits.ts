@@ -34,3 +34,19 @@ export const limitsOf = (w: Pick<CanvasWindow, 'type'>): WindowSizeLimits => SIZ
  * 預覽與落地都以這個值為上限，不會預覽 9 欄、落地被聊天室欄寬偏好夾回 8 而彈回。
  */
 export const effectiveMaxW = (w: Pick<CanvasWindow, 'type' | 'gridW'>): number => Math.max(limitsOf(w).maxW, w.gridW);
+
+/**
+ * 縮放（跟手預覽、落地夾限、推擠鄰居）實際使用的限制，三處都從這裡取，預覽與落地同源。
+ * 下限取「類型下限」與「視窗目前尺寸」的較小者：版型在塞不下 6×6 時會排出比下限小的格子
+ * （layoutPresets.bestGridRects 的退回策略，例如 13 路＋聊天室欄的 5×6），這種視窗輕拖一下
+ * 不能被強制放大到 6×6——那會推動整張畫布、讓畫布長出 24 列。它可以放大，只是不會被硬撐。
+ * 上限同 effectiveMaxW。
+ */
+export const resizeLimitsOf = (w: Pick<CanvasWindow, 'type' | 'gridW' | 'gridH'>): WindowSizeLimits => {
+    const { minW, minH } = limitsOf(w);
+    return {
+        minW: Math.max(1, Math.min(minW, w.gridW)),
+        minH: Math.max(1, Math.min(minH, w.gridH)),
+        maxW: effectiveMaxW(w),
+    };
+};

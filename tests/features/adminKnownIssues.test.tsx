@@ -180,6 +180,8 @@ describe('FeedbackDetail 公開提示', () => {
         const { unmount } = wrap(<FeedbackDetail record={record()} open onClose={() => {}} />);
         expect(hint()).toContain('已公開在 /status');
         expect(hint()).not.toContain('自動隱藏）');
+        // 公開清單有筆數上限，提醒可能被擠出
+        expect(hint()).toContain('公開頁只顯示最近 30 筆');
         unmount();
         wrap(<FeedbackDetail record={record({ status: 'unread' })} open onClose={() => {}} />);
         expect(hint()).toContain('未讀不會公開');

@@ -8,11 +8,11 @@
  *
  * @param {Object} env
  * @param {string} path - `rest/v1/` 之後的路徑(可含 query string)
- * @param {{ method?: string, body?: any, prefer?: string }} [opts]
+ * @param {{ method?: string, body?: any, prefer?: string, signal?: AbortSignal }} [opts]
  * @returns {Promise<{ ok: boolean, status: number, data: any, error: string|null, headers?: Headers }>}
  */
 async function sbFetch(env, path, opts = {}) {
-    const { method = 'GET', body, prefer } = opts;
+    const { method = 'GET', body, prefer, signal } = opts;
     const url = `${env.SUPABASE_URL}/rest/v1/${path}`;
     const headers = {
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
@@ -25,6 +25,8 @@ async function sbFetch(env, path, opts = {}) {
             method,
             headers,
             body: body !== undefined ? JSON.stringify(body) : undefined,
+            // 選用的逾時／取消訊號（例如 /api/status 用 AbortSignal.timeout，避免 DB 卡住拖住整個 isolate）
+            ...(signal ? { signal } : {}),
         });
         // Prefer: return=minimal 的成功回應是空 body，無條件 res.json() 會丟 SyntaxError，
         // 讓「其實已寫入」的 upsert 被回報成失敗（memory error_postgrest_upsert_not_null_and_empty_body；
@@ -71,7 +73,7 @@ export function update(env, table, filter, patch) {
  * @returns {Promise<{ ok, status, data, error, headers? }>}
  */
 export function select(env, tableWithQuery, opts = {}) {
-    return sbFetch(env, tableWithQuery, { prefer: opts.prefer });
+    return sbFetch(env, tableWithQuery, { prefer: opts.prefer, signal: opts.signal });
 }
 
 /**

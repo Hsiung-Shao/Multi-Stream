@@ -27,6 +27,20 @@ function validate(body) {
     return null;
 }
 
+/**
+ * PostgREST 回「找不到 public_notice 欄位」（PGRST204）。只看錯誤物件的 code 與 message，
+ * 不用整段字串比對：使用者內容剛好含「public_notice」字樣時也不能誤觸重送。
+ * @param {string|null} errorText
+ */
+function isMissingPublicNoticeColumn(errorText) {
+    try {
+        const err = JSON.parse(errorText || '');
+        return err?.code === 'PGRST204' && typeof err.message === 'string' && err.message.includes('public_notice');
+    } catch {
+        return false;
+    }
+}
+
 async function checkFeedbackRateLimit(kv, ip) {
     if (!ip || !kv) return true; // 沒 IP 或沒 KV 不擋（fail-open，因為 feedback 不是高風險）
     const hour = new Date().toISOString().slice(0, 13).replace(/[-T]/g, '');
@@ -102,7 +116,7 @@ export async function onRequestPost(context) {
     let result = await insert(env, 'feedbacks', row);
     // 正式站還沒套 migration 20261008110000（沒有 public_notice 欄位）時 PostgREST 回 PGRST204：
     // 去掉這個欄位重送一次，回饋照樣送得出去（只是這筆不會被公開），不讓部署順序錯誤變成全站回饋失敗
-    if (!result.ok && /PGRST204|public_notice/.test(result.error || '')) {
+    if (!result.ok && isMissingPublicNoticeColumn(result.error)) {
         const { public_notice: _omit, ...legacyRow } = row;
         result = await insert(env, 'feedbacks', legacyRow);
     }

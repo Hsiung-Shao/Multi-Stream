@@ -10,25 +10,31 @@ export interface FeedbackPayload extends FeedbackFormData {
     publicNotice: true;
 }
 
-/** 取 session 的上限：supabase auth lock 卡住時 getSession 可能永遠不回，逾時就當匿名送出 */
+/**
+ * 兩段逾時分開：
+ * - 載入 supabase chunk＋取得 client：網路慢時可能要幾秒，給 10 秒，避免已登入使用者被靜默當匿名
+ * - getSession 本身：supabase auth lock 卡住時可能永遠不回，2 秒就放棄、當匿名送出
+ */
+const CLIENT_TIMEOUT_MS = 10_000;
 const SESSION_TIMEOUT_MS = 2_000;
 const SUBMIT_TIMEOUT_MS = 15_000;
 
-async function getAccessToken(): Promise<string | null> {
+/** 逾時或失敗都回 null（取不到 session 視同匿名） */
+async function withTimeout<T>(task: Promise<T>, ms: number): Promise<T | null> {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), SESSION_TIMEOUT_MS); });
-    const lookup = (async (): Promise<string | null> => {
-        const { getSupabase } = await import('../../lib/supabase');
-        const supabase = await getSupabase();
-        if (!supabase) return null;
-        const { data: sd } = await supabase.auth.getSession();
-        return sd?.session?.access_token ?? null;
-    })().catch(() => null); // 取不到 session 視同匿名
+    const timeout = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), ms); });
     try {
-        return await Promise.race([lookup, timeout]);
+        return await Promise.race([task.catch(() => null), timeout]);
     } finally {
         clearTimeout(timer);
     }
+}
+
+async function getAccessToken(): Promise<string | null> {
+    const supabase = await withTimeout(import('../../lib/supabase').then((m) => m.getSupabase()), CLIENT_TIMEOUT_MS);
+    if (!supabase) return null;
+    const session = await withTimeout(supabase.auth.getSession(), SESSION_TIMEOUT_MS);
+    return session?.data?.session?.access_token ?? null;
 }
 
 export const FeedbackService = {
@@ -38,7 +44,7 @@ export const FeedbackService = {
      * 與先前直連 supabase.from('feedbacks').insert() 不同
      */
     sendFeedback: async (data: FeedbackPayload): Promise<void> => {
-        // getSession 另有 2 秒上限（整段取 token 含動態載入），之後的 fetch 再有 15 秒上限
+        // 取 token：載入 client 最多 10 秒、getSession 最多 2 秒；之後的 fetch 再有 15 秒上限
         const accessToken = await getAccessToken();
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };

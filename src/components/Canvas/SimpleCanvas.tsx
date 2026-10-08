@@ -21,7 +21,7 @@ import { cn } from '../ui/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { calculateRequiredRows } from '../../utils/layoutEngine';
 import { useUIStore } from '../../store/useUIStore';
-import { limitsOf, effectiveMaxW, MIN_CHAT_COLS, MAX_CHAT_COLS } from './sizeLimits';
+import { resizeLimitsOf, MIN_CHAT_COLS, MAX_CHAT_COLS } from './sizeLimits';
 
 // 尺寸限制與縮放預覽共用同一份（見 sizeLimits.ts）；NewCanvasPage 從這裡取用
 export { limitsOf } from './sizeLimits';
@@ -49,7 +49,7 @@ export const stableRenderOrder = (windows: CanvasWindow[]): CanvasWindow[] =>
 /**
  * 這次縮放是不是「調整右側聊天室欄寬」。必須同時滿足：
  *   - 畫面是「串流在左、聊天室在右側滿高一欄」：所有聊天室同一欄（x、寬相同）、貼齊右緣、
- *     由上到下無縫接滿整個畫布高度，而且每一路串流都完全在聊天室欄左邊
+ *     從第 0 列起無縫接滿至少一個畫面高（24 列），而且每一路串流都完全在聊天室欄左邊
  *   - 只有左緣移動（右緣前後都貼齊畫布、上下不變、寬度有變）
  *   - 新寬度在聊天室欄寬範圍（3～8）內：落地交給 setChatColumnWidth，它會夾進這個範圍，
  *     範圍外的寬度走這裡就會「預覽 9 欄、放開彈回 8 欄」
@@ -70,14 +70,16 @@ export function isChatColumnResize(
     if (!chats.every(w => w.gridX === before.gridX && w.gridW === before.gridW)) return false;
     if (!windows.every(w => w.type === 'chat' || w.gridX + w.gridW <= before.gridX)) return false;
 
-    // 滿高：聊天室由上到下首尾相接，從第 0 列接到畫布最下緣（畫布可能往下長超過 24 列）
-    const bottom = Math.max(GRID_ROWS, ...windows.map(w => w.gridY + w.gridH));
+    // 滿高：聊天室由上到下首尾相接、從第 0 列起至少接滿一整個畫面高（24 列）。
+    // 不要求接到「所有視窗的最下緣」：畫布往下長（串流超過 24 列，例如舊版排出的長版面）時，
+    // generateColumnLayout 產生的聊天室欄仍是 0～24 列，那樣比會把真正的欄寬調整誤判成一般縮放。
+    // 聊天室多到自己超過 24 列（每個至少 6 列）時，首尾相接的條件照樣成立。
     let edge = 0;
     for (const c of [...chats].sort((a, b) => a.gridY - b.gridY)) {
         if (c.gridY !== edge) return false;
         edge += c.gridH;
     }
-    return edge === bottom;
+    return edge >= GRID_ROWS;
 }
 
 /** 值相同就沿用舊物件：GridConfig 是每個視窗的 prop，換一次身分就等於全畫布重繪 */
@@ -204,8 +206,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
 
     // 把使用者拖出來的尺寸夾進該類型視窗的合法範圍
     const clampDesired = useCallback((w: CanvasWindow, gridW: number, gridH: number) => {
-        const { minW, minH } = limitsOf(w);
-        return { w: Math.max(minW, Math.min(effectiveMaxW(w), gridW)), h: Math.max(minH, gridH) };
+        const { minW, minH, maxW } = resizeLimitsOf(w);
+        return { w: Math.max(minW, Math.min(maxW, gridW)), h: Math.max(minH, gridH) };
     }, []);
 
     const solveResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
@@ -219,7 +221,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
             { x: gridX, y: gridY, w: size.w, h: size.h },
             {
                 gridCols: GRID_COLS,
-                minSize: limitsOf,
+                // 鄰居被壓縮的下限同樣取 resizeLimitsOf：已比 6×6 小的格子不會因為被推而先被撐大
+                minSize: resizeLimitsOf,
                 // 縮小留下的空白由連鎖填補消化時，優先把空間讓給直播畫面
                 prefer: w => (w.type === 'stream' ? 1 : 0),
             },

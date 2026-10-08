@@ -126,10 +126,12 @@ export const MAX_STREAMS_REACHED = 'maxStreamsReached';
 const buildTemplateCanvasItems = (
     state: Pick<StreamStoreState, 'streams' | 'canvasItems' | 'chatColumnWidth'>,
     template: LayoutTemplate,
-    /** 以共用聊天室版型產生（N 路串流 + 1 個聊天室欄，帶 sharedChat、寬度沿用 chatColumnWidth）。
-     *  共用聊天室狀態按 Alt+1 套 template-1-chat 時用：不然聊天室會固定 4 欄、sharedChat 標記也會掉 */
-    asSharedChat: boolean = template.type === 'shared_chat',
 ): CanvasItem[] => {
+    // 以共用聊天室版型產生（N 路串流 + 1 個聊天室欄，帶 sharedChat、寬度沿用 chatColumnWidth）：
+    // 共用聊天室版型本身，以及「共用聊天室狀態下套 1 路＋聊天室」——Alt+1（setLayout）與動態島布局清單
+    // （applyTemplateLayout）都走這裡，兩條路結果一致；不然聊天室會固定 4 欄、sharedChat 標記也會掉
+    const asSharedChat = template.type === 'shared_chat'
+        || (template.id === 'template-1-chat' && isSharedChatLayout(state.canvasItems));
     const needed = template.count;
     const processingIds: (number | null)[] = state.streams.map(s => s.id);
     while (processingIds.length < needed) {
@@ -799,11 +801,8 @@ export const useStreamStore = create<StreamStoreState>()(
                         const template = candidates
                             .map(id => layoutTemplates.find(t => t.id === id))
                             .find((t): t is LayoutTemplate => !!t);
-                        if (template) {
-                            // 共用聊天室剩 1 路（Alt+1）：版型雖是 1-chat，仍以共用聊天室產生，保留欄寬偏好與 sharedChat
-                            const keepShared = template.id === 'template-1-chat' && isSharedChatLayout(state.canvasItems);
-                            changes.canvasItems = buildTemplateCanvasItems(state, template, keepShared || template.type === 'shared_chat');
-                        }
+                        // 共用聊天室剩 1 路（Alt+1 → 1-chat）由 buildTemplateCanvasItems 以共用聊天室產生
+                        if (template) changes.canvasItems = buildTemplateCanvasItems(state, template);
                     }
 
                     return changes;
@@ -882,7 +881,8 @@ export const useStreamStore = create<StreamStoreState>()(
             setChatColumnWidth: (cols) => set(state => {
                 const chatColumnWidth = clampChatCols(cols);
                 const canvasItems = expandChats(state.canvasItems, getCanvasAspect(), chatColumnWidth);
-                // 選到目前已是的寬度：回傳原 state，zustand 不通知訂閱者、persist 也不寫 localStorage
+                // 選到目前已是的寬度：回傳原 state，zustand 不通知訂閱者、畫布不重繪。
+                // （persist middleware 每次 set 都會寫一次 localStorage，回傳原 state 也一樣；那是同值覆寫，成本可忽略）
                 if (chatColumnWidth === state.chatColumnWidth && canvasItems === state.canvasItems) return state;
                 return { chatColumnWidth, canvasItems };
             }),
