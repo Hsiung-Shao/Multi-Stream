@@ -115,7 +115,7 @@ describe('fetchPerson', () => {
         }
         expect(activeUrl).toContain('status=in.(scheduled,live)');
         expect(activeUrl).toContain('nullsfirst');
-        expect(endedUrl).toContain('actual_end=gte.2026-08-30T04:00:00.000Z');
+        expect(endedUrl).toContain('actual_end=gte.2026-07-01T04:00:00.000Z'); // 近 90 天（PERSON_RECENT_DAYS）
         expect(endedUrl).toContain('order=actual_end.desc');
     });
 

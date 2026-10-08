@@ -98,7 +98,7 @@ describe('SchedulePersonPage', () => {
         expect(within(upcoming).getByText('週表預告')).toBeInTheDocument();
         expect(within(upcoming).getByText('Just Chatting')).toBeInTheDocument();
         expect(document.querySelector('main a[href="/schedule/taione"]')).toBeNull();
-        expect(within(screen.getByRole('region', { name: /最近 30 天/ })).getByText('昨晚歌回')).toBeInTheDocument();
+        expect(within(screen.getByRole('region', { name: /最近 90 天/ })).getByText('昨晚歌回')).toBeInTheDocument();
     });
 
     it('不活躍：noindex，沒有場次時顯示說明', async () => {

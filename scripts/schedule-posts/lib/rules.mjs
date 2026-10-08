@@ -108,12 +108,31 @@ export function validateScheduleEntries(parsed, { postDate, now }) {
  */
 export function decide(parsed, { accepted, rejected }) {
   if (!parsed || parsed.is_schedule !== true) return 'none';
+  // 有通過的列時，沒寫時間的列仍算可疑：大量沒時間可能代表讀錯圖，送審讓人確認（審核者可以只核准通過的那幾列）
   const suspicious = rejected.filter((r) => !['rest', 'past'].includes(r.reason)).length;
-  if (accepted.length === 0) return suspicious > 0 ? 'review' : 'none';
+  // 一列都沒通過時，只有「還有日期＋時間完整、可以核准的列」才送審：沒時間／沒日期的列審核者補不出來，
+  // 0 列的待審核准時會失敗（RPC no_entries），還會佔住這個人的待審名額、擋掉之後的貼文 → 當成沒有可寫的列（記 parsed／0 列）
+  if (accepted.length === 0) return reviewEntries({ accepted, rejected }).length > 0 ? 'review' : 'none';
   const overall = typeof parsed.confidence === 'number' ? parsed.confidence : 0;
   const minEntry = Math.min(...accepted.map((e) => e.confidence));
   if (overall >= VISION_AUTO_MIN_CONFIDENCE && minEntry >= ENTRY_MIN_CONFIDENCE && suspicious <= accepted.length) return 'write';
   return 'review';
+}
+
+/** 審核者無法讓它變成可核准的剔除原因（休息、已過、缺日期／時間、不存在的日期） */
+const UNREVIEWABLE_REASONS = ['rest', 'past', 'no_date', 'no_time', 'bad_datetime'];
+
+/**
+ * 送審時放進 payload 的列：有通過的列就只送通過的；一列都沒通過時，送「被剔除但日期與時間完整（日曆上存在）、
+ * 不是休息日」的列（實際上就是超出日期範圍的），讓審核者判斷。decide 用同一個條件決定要不要送審。
+ * 日期超出範圍的檢查排在日曆檢查之前，所以這裡要再用 taipeiToIso 擋掉 2026-02-30 這類（核准 RPC 轉 ::date 會直接報錯）。
+ */
+export function reviewEntries({ accepted, rejected }) {
+  if (accepted.length) return accepted;
+  return rejected
+    .filter((r) => !UNREVIEWABLE_REASONS.includes(r.reason))
+    .map((r) => ({ ...r.entry, date: String(r.entry?.date ?? '').trim(), time: String(r.entry?.time ?? '').trim() }))
+    .filter((e) => !e.is_rest && taipeiToIso(e.date, e.time) !== null);
 }
 
 /** 寫入 streams 的 external_id */

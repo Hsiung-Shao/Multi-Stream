@@ -11,10 +11,10 @@ import type { ScheduleAlso, ScheduleChannel, ScheduleStream } from './types';
 import { UPCOMING_GRACE_MS } from './filters';
 
 /** 最近幾天的直播紀錄 */
-export const PERSON_RECENT_DAYS = 30;
+export const PERSON_RECENT_DAYS = 90;
 /** 接下來幾天（與公共週表一致） */
 export const PERSON_UPCOMING_DAYS = 7;
-/** 排定中／直播中的上限（7 天內一個人不會超過）與最近紀錄的上限（30 天、新到舊） */
+/** 排定中／直播中的上限（7 天內一個人不會超過）與最近紀錄的上限（90 天、新到舊） */
 const ACTIVE_LIMIT = 100;
 const RECENT_LIMIT = 200;
 
@@ -30,7 +30,7 @@ export interface SchedulePerson {
     id: string;
     channel: ScheduleChannel;
     profile: PersonProfile;
-    /** 近 90 天有開台或有排程：可索引（sitemap／robots 同一個欄位） */
+    /** 頁面有內容（直播中、未來 7 天排程、近 90 天結束的場次）：可索引（sitemap／robots 同一個欄位；規則見 refresh_schedule_indexable） */
     indexable: boolean;
     live: ScheduleStream[];
     upcoming: ScheduleStream[];

@@ -3,13 +3,18 @@
 // 解析順序：
 //   1. VITE_SCHEDULE_SNAPSHOT_URL（本地開發指向本地 Supabase：
 //      http://127.0.0.1:57321/storage/v1/object/public/streams/v1/snapshot.json）
-//   2. /api/supabase-config 的 url ＋ 固定路徑（正式站；與 getSupabase 同一個設定來源，但不載入 supabase-js）
+//   2. 同源快取代理 /api/schedule/snapshot（正式站主要路徑）
+//   3. 代理失敗才用 /api/supabase-config 的 url ＋ 固定路徑直連 Storage（與 getSupabase 同一個設定來源，但不載入 supabase-js）
 // client fetch 一律加逾時（memory error_client_fetch_needs_timeout）。
 
 import type { ScheduleSnapshot } from './types';
 
 export const SNAPSHOT_OBJECT_PATH = '/storage/v1/object/public/streams/v1/snapshot.json';
 export const SNAPSHOT_TIMEOUT_MS = 10_000;
+/** 同源快取代理（要和 functions/[[path]].js 預載的網址一致，預載才會被這次請求用上） */
+export const SNAPSHOT_PROXY_PATH = '/api/schedule/snapshot';
+/** 代理的逾時比直連短：代理卡住時還留時間退回直連 */
+export const SNAPSHOT_PROXY_TIMEOUT_MS = 6_000;
 
 export class SnapshotError extends Error {
     readonly reason: 'timeout' | 'http' | 'config' | 'format' | 'network';
@@ -72,11 +77,27 @@ function isSnapshot(v: unknown): v is ScheduleSnapshot {
         && Array.isArray(o.live) && Array.isArray(o.upcoming) && Array.isArray(o.recent);
 }
 
-export async function fetchSnapshot(opts: ResolveOptions = {}): Promise<ScheduleSnapshot> {
-    const url = await resolveSnapshotUrl(opts);
-    const res = await fetchWithTimeout(url, opts.timeoutMs ?? SNAPSHOT_TIMEOUT_MS, opts.signal, opts.fetchFn);
+async function fetchSnapshotFrom(url: string, opts: ResolveOptions, timeoutMs: number): Promise<ScheduleSnapshot> {
+    const res = await fetchWithTimeout(url, timeoutMs, opts.signal, opts.fetchFn);
     if (!res.ok) throw new SnapshotError('http', `snapshot HTTP ${res.status}`);
     const data: unknown = await res.json().catch(() => null);
     if (!isSnapshot(data)) throw new SnapshotError('format', 'unexpected snapshot format');
     return data;
+}
+
+/**
+ * 正式站先走同源快取代理（functions/api/schedule/snapshot.js；/schedule 的 HTML 已預載這支），
+ * 代理失敗（未部署、502、回成 HTML、逾時）才退回直連 Storage。呼叫端自己取消時不重試。
+ */
+export async function fetchSnapshot(opts: ResolveOptions = {}): Promise<ScheduleSnapshot> {
+    const timeoutMs = opts.timeoutMs ?? SNAPSHOT_TIMEOUT_MS;
+    const envUrl = opts.envUrl ?? (import.meta.env.VITE_SCHEDULE_SNAPSHOT_URL as string | undefined);
+    if (envUrl) return fetchSnapshotFrom(envUrl, opts, timeoutMs);
+    try {
+        return await fetchSnapshotFrom(SNAPSHOT_PROXY_PATH, opts, Math.min(timeoutMs, SNAPSHOT_PROXY_TIMEOUT_MS));
+    } catch (e) {
+        if (opts.signal?.aborted) throw e;
+    }
+    const url = await resolveSnapshotUrl({ ...opts, envUrl: '' });
+    return fetchSnapshotFrom(url, opts, timeoutMs);
 }

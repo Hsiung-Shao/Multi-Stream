@@ -4,6 +4,7 @@ import {
     resetSnapshotSourceCache,
     resolveSnapshotUrl,
     SNAPSHOT_OBJECT_PATH,
+    SNAPSHOT_PROXY_PATH,
 } from '../../../src/features/schedule/snapshotSource';
 import { makeSnapshot } from './fixtures';
 
@@ -60,6 +61,44 @@ describe('fetchSnapshot', () => {
         await expect(fetchSnapshot({ envUrl: URL_, fetchFn: e404.fn })).rejects.toMatchObject({ reason: 'http' });
         const wrong = mockFetch({ [URL_]: () => new Response(JSON.stringify({ version: 2 }), { status: 200 }) });
         await expect(fetchSnapshot({ envUrl: URL_, fetchFn: wrong.fn })).rejects.toMatchObject({ reason: 'format' });
+    });
+
+    it('沒有 env：先走同源代理，成功就不查 supabase-config', async () => {
+        const snap = makeSnapshot();
+        const { fn, calls } = mockFetch({ [SNAPSHOT_PROXY_PATH]: () => new Response(JSON.stringify(snap), { status: 200 }) });
+        await expect(fetchSnapshot({ envUrl: '', fetchFn: fn })).resolves.toEqual(snap);
+        expect(calls).toEqual([SNAPSHOT_PROXY_PATH]);
+    });
+
+    it('代理失敗（502、回成 HTML、網路錯誤）→ 退回直連 Storage', async () => {
+        const snap = makeSnapshot();
+        const direct = `https://abc.supabase.co${SNAPSHOT_OBJECT_PATH}`;
+        for (const proxy of [
+            () => new Response('{}', { status: 502 }),
+            () => new Response('<!doctype html>', { status: 200 }),
+            () => { throw new TypeError('Failed to fetch'); },
+        ]) {
+            resetSnapshotSourceCache();
+            const { fn, calls } = mockFetch({
+                [SNAPSHOT_PROXY_PATH]: proxy,
+                '/api/supabase-config': () => new Response(JSON.stringify({ url: 'https://abc.supabase.co' }), { status: 200 }),
+                [direct]: () => new Response(JSON.stringify(snap), { status: 200 }),
+            });
+            await expect(fetchSnapshot({ envUrl: '', fetchFn: fn })).resolves.toEqual(snap);
+            expect(calls).toEqual([SNAPSHOT_PROXY_PATH, '/api/supabase-config', direct]);
+        }
+    });
+
+    it('呼叫端取消時不退回直連', async () => {
+        const ac = new AbortController();
+        const { fn, calls } = mockFetch({
+            [SNAPSHOT_PROXY_PATH]: () => {
+                ac.abort();
+                throw new DOMException('aborted', 'AbortError');
+            },
+        });
+        await expect(fetchSnapshot({ envUrl: '', fetchFn: fn, signal: ac.signal })).rejects.toMatchObject({ reason: 'network' });
+        expect(calls).toEqual([SNAPSHOT_PROXY_PATH]);
     });
 
     it('逾時會中止請求並回 timeout', async () => {

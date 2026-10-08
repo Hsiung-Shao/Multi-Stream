@@ -9,9 +9,14 @@
 // ⚠ _headers 不套用到 Function 回應 → 安全標頭由 functions/lib/security-headers.js 帶（測試鎖同步）。
 import { ROUTE_META, NOT_FOUND_META, OG_LOCALE, ROBOTS_INDEX, ROBOTS_NOINDEX, WEBAPP_JSONLD_ROUTES } from './lib/seo-meta.js';
 import { HTML_SECURITY_HEADERS } from './lib/security-headers.js';
-import { resolveSchedulePerson, schedulePersonMeta } from './lib/schedule-person.js';
+import { resolveSchedulePerson, schedulePersonMeta, renderPersonBodyHtml } from './lib/schedule-person.js';
 
 const ORIGIN = 'https://multistreaming.org';
+
+// 週表 snapshot 預載：href 要和 src/features/schedule/snapshotSource.ts 的 SNAPSHOT_PROXY_PATH 一致；
+// as=fetch 必須帶 crossorigin（anonymous＝credentials same-origin，對上前端預設的 fetch），否則預載不會被重用
+export const SCHEDULE_SNAPSHOT_PRELOAD_ROUTE = '/schedule';
+export const SCHEDULE_SNAPSHOT_PRELOAD_TAG = '<link rel="preload" href="/api/schedule/snapshot" as="fetch" crossorigin="anonymous">';
 
 // 舊路徑 → 新路徑（301）。對應 src/config/routes.ts 的 LEGACY_HTML_ALIASES + 已下線的 /tools。
 const REDIRECTS = {
@@ -75,7 +80,7 @@ export async function onRequest(context) {
     let noindex;
     let image = null;
     if (person.kind === 'found') {
-        meta = schedulePersonMeta(lang, person.name);
+        meta = schedulePersonMeta(lang, person.name, person.streams);
         status = 200;
         noindex = !person.indexable;
         image = person.image;
@@ -151,6 +156,24 @@ export async function onRequest(context) {
             .on('meta[property="og:image:height"]', drop)
             .on('meta[property="og:image:alt"]', setContent(meta.title))
             .on('meta[name="twitter:image:alt"]', setContent(meta.title));
+    }
+    if (person.kind === 'found') {
+        // 個人頁 shell 是空的 index.html：把這一頁獨有的內文（名字、場次摘要、場次清單、頻道連結）放進 #root，
+        // 不跑 JS 的爬蟲與第一波索引才看得到內容（GSC「已檢索 - 目前尚未建立索引」）。React 掛載時會整個換掉。
+        const bodyHtml = renderPersonBodyHtml(lang, person, rawPath.slice('/schedule/'.length));
+        rewriter.on('div#root', {
+            element(el) {
+                el.setInnerContent(bodyHtml, { html: true });
+            },
+        });
+    }
+    if (rawPath === SCHEDULE_SNAPSHOT_PRELOAD_ROUTE) {
+        // 週表頁一進來就要 snapshot：讓它和 JS 同時下載，不必等 SchedulePage chunk 跑起來才開始抓
+        rewriter.on('head', {
+            element(el) {
+                el.append(SCHEDULE_SNAPSHOT_PRELOAD_TAG, { html: true });
+            },
+        });
     }
     if (!keepWebAppJsonLd) {
         rewriter.on('script#ld-webapp', {

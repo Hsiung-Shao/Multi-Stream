@@ -25,7 +25,7 @@ import { join } from 'node:path';
 import { loadEnv, SCRIPT_DIR } from './lib/env.mjs';
 import { Rest, inList } from './lib/db.mjs';
 import { BROWSER_UA, fetchPostsPage, imageFullUrl, isScheduleCandidate, parsePostsHtml, relativeToDate } from './lib/posts.mjs';
-import { COMMUNITY_POST_MAX_AGE_DAYS, decide, postExternalId, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
+import { COMMUNITY_POST_MAX_AGE_DAYS, decide, postExternalId, reviewEntries, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
 import { buildInstructions } from './lib/instructions.mjs';
 
 const STATE_FILE = join(SCRIPT_DIR, 'state.json');
@@ -336,7 +336,7 @@ async function apply(args, db, now) {
           log(`    （${c.name} 已有待審的週表投稿，這篇下一輪再送）`);
           continue;
         }
-        const entries = v.accepted.length ? v.accepted : (parsed.entries ?? []).filter((e) => e && !e.is_rest && e.date && e.time);
+        const entries = reviewEntries(v); // 與 decide 同一個條件：送審時一定至少一列可核准
         try {
           await db.insert('vtuber_contributions', {
             action: 'schedule',

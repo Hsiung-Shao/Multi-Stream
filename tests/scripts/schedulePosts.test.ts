@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { extractInitialData, imageBaseUrl, imageFullUrl, isScheduleCandidate, parsePostsHtml, POST_ID_RE, relativeToDate, SCHEDULE_KEYWORD_RE } from '../../scripts/schedule-posts/lib/posts.mjs';
-import { decide, postExternalId, taipeiDate, taipeiToIso, validateScheduleEntries } from '../../scripts/schedule-posts/lib/rules.mjs';
+import { decide, postExternalId, reviewEntries, taipeiDate, taipeiToIso, validateScheduleEntries } from '../../scripts/schedule-posts/lib/rules.mjs';
 import { buildInstructions, candidateSection, RESULT_SCHEMA } from '../../scripts/schedule-posts/lib/instructions.mjs';
 import { isLocalUrl, loadEnv, parseEnvText } from '../../scripts/schedule-posts/lib/env.mjs';
 
@@ -112,6 +112,38 @@ describe('rules：台北時間與列檢查', () => {
     expect(decide(onlyBad, validateScheduleEntries(onlyBad, { postDate, now: NOW }))).toBe('review');
     const onlyRest = { is_schedule: true, confidence: 0.9, entries: [{ ...ok, is_rest: true }] };
     expect(decide(onlyRest, validateScheduleEntries(onlyRest, { postDate, now: NOW }))).toBe('none');
+    // 圖上只有日期與標題、沒有時間：送審也補不出時間，不進待審（2026-10-08 兩筆 0 列待審擋住後續貼文）
+    const noTime = { is_schedule: true, confidence: 0.5, entries: [{ ...ok, time: null }, { ...ok, date: '2026-10-07', time: null }, { ...ok, is_rest: true }] };
+    const vNoTime = validateScheduleEntries(noTime, { postDate, now: NOW });
+    expect(vNoTime.rejected.map((r) => r.reason).sort()).toEqual(['no_time', 'no_time', 'rest']);
+    expect(decide(noTime, vNoTime)).toBe('none');
+    // 沒時間的列混著真正可疑的列（日期超出範圍）仍送審，而且送審的只有那一列可核准的
+    const noTimeAndFar = { is_schedule: true, confidence: 0.9, entries: [{ ...ok, time: null }, far] };
+    const vFar = validateScheduleEntries(noTimeAndFar, { postDate, now: NOW });
+    expect(decide(noTimeAndFar, vFar)).toBe('review');
+    expect(reviewEntries(vFar).map((e) => `${e.date} ${e.time}`)).toEqual(['2026-11-06 20:00']);
+    // 沒日期（模型給 null 或非 ISO 字串）＋沒時間：也不送審（review 修正：原本會建出 0 列待審）
+    const noDate = { is_schedule: true, confidence: 0.5, entries: [{ ...ok, date: null, time: null }, { ...ok, date: '10/7' }] };
+    const vNoDate = validateScheduleEntries(noDate, { postDate, now: NOW });
+    expect(vNoDate.rejected.map((r) => r.reason).sort()).toEqual(['no_date', 'no_date']);
+    expect(decide(noDate, vNoDate)).toBe('none');
+    expect(reviewEntries(vNoDate)).toEqual([]);
+    // 日曆上不存在、又超出範圍的日期（先被判 date_out_of_window）：不送審（核准 RPC 的 ::date 會報錯）
+    const badCal = { is_schedule: true, confidence: 0.9, entries: [{ ...ok, date: '2027-02-30' }] };
+    const vBadCal = validateScheduleEntries(badCal, { postDate, now: NOW });
+    expect(vBadCal.rejected.map((r) => r.reason)).toEqual(['date_out_of_window']);
+    expect(reviewEntries(vBadCal)).toEqual([]);
+    expect(decide(badCal, vBadCal)).toBe('none');
+    // 全部已過時間：不送審（審核者也無法讓過去的場次變成可寫）
+    const allPast = { is_schedule: true, confidence: 0.9, entries: [{ ...ok, date: '2026-10-04' }] };
+    expect(validateScheduleEntries(allPast, { postDate, now: NOW }).rejected.map((r) => r.reason)).toEqual(['past']);
+    const vPast = validateScheduleEntries(allPast, { postDate, now: NOW });
+    expect(decide(allPast, vPast)).toBe('none');
+    // 有通過的列時，沒時間的列仍算可疑（大量沒時間可能是讀錯圖）→ 送審，且只送通過的列
+    const mixed = { is_schedule: true, confidence: 0.9, entries: [ok, { ...ok, date: '2026-10-07', time: null }, { ...ok, date: '2026-10-08', time: null }] };
+    const vMixed = validateScheduleEntries(mixed, { postDate, now: NOW });
+    expect(decide(mixed, vMixed)).toBe('review');
+    expect(reviewEntries(vMixed)).toEqual(vMixed.accepted);
   });
 
   it('external_id 形狀', () => {

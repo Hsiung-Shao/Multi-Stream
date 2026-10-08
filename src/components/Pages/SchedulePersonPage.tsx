@@ -1,4 +1,4 @@
-// 個人週表頁（/schedule/<slug>）：一位實況主的直播中、接下來 7 天、最近 30 天。
+// 個人週表頁（/schedule/<slug>）：一位實況主的直播中、接下來 7 天、最近 90 天。
 // 資料在 client 端由 TanStack Query 以 anon 身分查 PostgREST（features/schedule/personSource.ts）；
 // 不預渲染（內容依人不同），edge（functions/[[path]].js）先把 title／description／canonical／robots 注入 index.html 殼，
 // 這裡的 <SEO> 在資料到了之後再斷言一次（同一套文案），並補 ProfilePage＋BroadcastEvent JSON-LD。
@@ -111,7 +111,9 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     const url = `${SEO_SITE_URL}${path}`;
     const name = person.channel.name;
     const title = t('person.seo.title', { name });
-    const description = t('person.seo.description', { name });
+    // 最前面放場次摘要，讓每一頁的 description 都不同、且不會被搜尋結果截掉（與 edge 的 functions/lib/schedule-person.js schedulePersonMeta 同一句）。
+    // 數字和 edge 可能差一點（edge 以 count 算、排除被合併的列；這裡是載入後切分的結果），可以接受
+    const description = `${t('person.seo.summary', { name, recent: person.recent.length, upcoming: person.upcoming.length })} ${t('person.seo.description', { name })}`;
     const sameAs = [...channelLinks(person).map((l) => l.href), ...socialLinks(person).map((l) => l.href)];
     // 只列有確切時間的場次；BroadcastEvent 讓搜尋引擎知道哪一場正在直播／何時開始
     const events = [...person.live, ...person.upcoming].slice(0, 10).map((s) => ({

@@ -1,4 +1,4 @@
-// 動態 sitemap：列出可索引（近 90 天有開台或排程，vtubers.schedule_indexable）的個人週表頁。
+// 動態 sitemap：列出可索引（頁面有內容：直播中、未來 7 天排程或近 90 天結束的場次；vtubers.schedule_indexable）的個人週表頁。
 // 靜態 sitemap.xml 維持一比一對照 PAGE_PATHS（tests/functions/sitemap.test.ts），個人頁另外走這支；robots.txt 兩個都列。
 // schedule_indexable 由排程 Heavy 每圈更新（refresh_schedule_indexable），這裡只讀。
 import { select } from './lib/supabase-server.js';
