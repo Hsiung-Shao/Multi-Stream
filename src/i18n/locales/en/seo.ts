@@ -49,4 +49,6 @@ export default {
     'schedule.description': 'Taiwanese VTuber YouTube waiting rooms and live Twitch channels in one schedule: see who is live now and the next 7 days, then watch several together in one click.',
     'scheduleSubmit.title': 'Add a VTuber to the Stream Schedule - MultiStream Hub',
     'scheduleSubmit.description': 'Suggest a VTuber who is not on the schedule yet: paste a YouTube channel link, the name and avatar fill in automatically, and after review they join the Taiwanese VTuber stream schedule.',
+    'status.title': 'Service Status and Known Issues - MultiStream Hub',
+    'status.description': 'Is MultiStream Hub, Twitch or YouTube having problems? See live service status, known issues we are working on, announcements and recent updates.',
 };

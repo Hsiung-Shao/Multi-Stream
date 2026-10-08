@@ -160,6 +160,10 @@ export const ROUTE_META = {
         'zh-TW': { title: '新增 VTuber 到開台週表 - MultiStream Hub', description: '推薦還沒在週表上的 VTuber：貼上 YouTube 頻道網址，自動帶入名稱與頭像，審核通過後加進台灣 VTuber 開台週表。' },
         en: { title: 'Add a VTuber to the Stream Schedule - MultiStream Hub', description: 'Suggest a VTuber who is not on the schedule yet: paste a YouTube channel link, the name and avatar fill in automatically, and after review they join the Taiwanese VTuber stream schedule.' },
     },
+    '/status': {
+        'zh-TW': { title: '服務狀態與已知問題 - MultiStream Hub', description: 'MultiStream Hub、Twitch 與 YouTube 目前是否正常？查看即時服務狀態、站方正在處理的已知問題、公告與最近更新。' },
+        en: { title: 'Service Status and Known Issues - MultiStream Hub', description: 'Is MultiStream Hub, Twitch or YouTube having problems? See live service status, known issues we are working on, announcements and recent updates.' },
+    },
     '/admin': {
         noindex: true,
         'zh-TW': { title: 'Admin - MultiStream Hub', description: '' },

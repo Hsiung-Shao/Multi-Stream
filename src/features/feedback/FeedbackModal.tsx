@@ -55,7 +55,9 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
 
         const finalData: FeedbackPayload = {
             ...data,
-            ...systemInfo
+            ...systemInfo,
+            // 內容欄下方已顯示公開告知（publicNotice 文案），送出即代表知情
+            publicNotice: true,
         };
 
         try {
@@ -175,6 +177,7 @@ export function FeedbackModal({ theme, onClose }: FeedbackModalProps) {
                                         )}
                                     />
                                     {errors.content && <span className="text-red-500 text-xs mt-1">{errors.content.message}</span>}
+                                    <p className={`mt-1.5 text-xs leading-relaxed ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{t('publicNotice')}</p>
                                 </div>
                             </div>
                         </div>

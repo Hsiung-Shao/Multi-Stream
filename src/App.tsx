@@ -50,6 +50,7 @@ const ComparisonPage = lazyWithPreload(() => import('./components/Pages/Comparis
 const SchedulePage = lazyWithPreload(() => import('./components/Pages/SchedulePage').then(module => ({ 'default': module.SchedulePage })));
 const SchedulePersonPage = lazyWithPreload(() => import('./components/Pages/SchedulePersonPage').then(module => ({ 'default': module.SchedulePersonPage })));
 const ScheduleSubmitPage = lazyWithPreload(() => import('./components/Pages/ScheduleSubmitPage').then(module => ({ 'default': module.ScheduleSubmitPage })));
+const StatusPage = lazyWithPreload(() => import('./components/Pages/StatusPage').then(module => ({ 'default': module.StatusPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
 const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
@@ -68,6 +69,7 @@ const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> =
   compare: ComparisonPage,
   schedule: SchedulePage,
   scheduleSubmit: ScheduleSubmitPage,
+  status: StatusPage,
   canvas: CanvasPage,
   instructions: InstructionsPage,
   faq: FAQPage,
@@ -203,7 +205,7 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'status', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
     || isGuidePage(currentPage) || isSchedulePersonPage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
@@ -226,7 +228,7 @@ export default function App() {
   const inLanguage = toHtmlLang(i18n.language);
   // 靜態頁共用：頁面節點（WebPage 子型別）+ 首頁 › 本頁 麵包屑
   const staticPageJsonLd = (
-    page: 'about' | 'privacy' | 'support',
+    page: 'about' | 'privacy' | 'support' | 'status',
     type: WebPageType,
     crumbName: string,
     extra?: Record<string, unknown>,
@@ -356,6 +358,20 @@ export default function App() {
             />
             <ChunkSuspense chunk={SchedulePage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <SchedulePage />
+            </ChunkSuspense>
+          </>
+        );
+      case 'status':
+        return (
+          <>
+            <SEO
+              title={tx('seo:status.title')}
+              description={tx('seo:status.description')}
+              url={`${SEO_SITE_URL}${PAGE_PATHS.status}`}
+              jsonLd={staticPageJsonLd('status', 'WebPage', tx('status:title'))}
+            />
+            <ChunkSuspense chunk={StatusPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <StatusPage />
             </ChunkSuspense>
           </>
         );

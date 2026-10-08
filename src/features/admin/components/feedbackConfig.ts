@@ -18,7 +18,8 @@ export const TYPE_CONFIG: Record<string, { label: string; icon: typeof Bug; colo
 export const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
     unread: { label: '未讀', bg: 'bg-orange-500/10', text: 'text-orange-400', dot: 'bg-orange-400' },
     read: { label: '已讀', bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
-    processed: { label: '已處理', bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+    processing: { label: '處理中', bg: 'bg-amber-500/10', text: 'text-amber-400', dot: 'bg-amber-400' },
+    fixed: { label: '已修正', bg: 'bg-emerald-500/10', text: 'text-emerald-400', dot: 'bg-emerald-400' },
     archived: { label: '封存', bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
 };
 

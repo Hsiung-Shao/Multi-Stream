@@ -11,6 +11,7 @@ const feedback = {
   'feedbackTypeLabel': '反馈类型 (单选)',
   'contentLabel': '详细内容 (必填)',
   'contentPlaceholder': '请详细描述您的问题或建议...',
+  'publicNotice': '站方看过后，反馈内容与处理进度会公开显示在“服务状态”页（email、网址、电话会自动隐藏），请勿填写账号等个人资料。',
   'part3': 'Part 3',
   'promotion': '推广意愿',
   'npsLabel': '您愿意向朋友推荐本工具吗? (0-10分)',

@@ -35,6 +35,7 @@ const SEO_NS_ROUTES: Record<string, string> = {
     '/compare': 'compare',
     '/schedule': 'schedule',
     '/schedule/submit': 'scheduleSubmit',
+    '/status': 'status',
     ...Object.fromEntries(GUIDE_SLUGS.map((s) => [guidePath(s), `instructions.${s}`])),
 };
 

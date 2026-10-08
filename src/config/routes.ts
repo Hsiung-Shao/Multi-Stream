@@ -33,6 +33,7 @@ export const PAGE_PATHS: Record<RoutePage, string> = {
     schedule: '/schedule',
     // 新增 VTuber：比個人頁 /schedule/<slug> 先比對（PAGE_PATHS 精確比對在前；資料庫也把 submit 列為 slug 保留字）
     scheduleSubmit: '/schedule/submit',
+    status: '/status',
     ...GUIDE_PATHS,
 };
 
