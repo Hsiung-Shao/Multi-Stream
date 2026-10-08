@@ -11,6 +11,7 @@ const feedback = {
   'feedbackTypeLabel': 'Feedback Type (Single)',
   'contentLabel': 'Details (Required)',
   'contentPlaceholder': 'Please describe your issue or suggestion in detail...',
+  'publicNotice': 'Once we have read it, your report and its progress will be shown publicly on the Service Status page (emails, links and phone numbers are hidden automatically). Please do not include account names or other personal details.',
   'part3': 'Part 3',
   'promotion': 'Promotion',
   'npsLabel': 'How likely are you to recommend us to a friend? (0-10)',

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { SiteFooter } from '../../src/components/SiteFooter';
 import { useUIStore } from '../../src/store/useUIStore';
@@ -52,6 +52,15 @@ describe('SiteFooter', () => {
         expect(discord).toHaveAttribute('rel', 'noopener noreferrer');
 
         expect(screen.queryByRole('link', { name: 'GitHub' })).toBeNull();
+    });
+
+    it('groups links into 使用／說明／關於 lists', () => {
+        render(<SiteFooter />);
+        const names = (group: string) => within(screen.getByRole('list', { name: group }))
+            .getAllByRole('link').map((a) => a.textContent);
+        expect(names('使用')).toEqual(['使用教學', '開台週表', '多直播觀看工具比較']);
+        expect(names('說明')).toEqual(['常見問題', '服務狀態', '隱私權政策']);
+        expect(names('關於')).toEqual(['關於我們', '支持我們', 'Discord']);
     });
 
     it('does not duplicate the global feedback FAB', () => {

@@ -131,6 +131,8 @@ export async function runJob(
   }
   stats.finished_at = new Date().toISOString();
   stats.duration_ms = Date.now() - ctx.now;
+  // 整輪失敗的旗標：公開狀態頁（functions/lib/status-health.js）只認這個，不看混了單一頻道錯誤的 errors
+  stats.failed = status === 500;
   try {
     await saveShard(db, shardJobName, { ...cursor, stats });
   } catch (e) {

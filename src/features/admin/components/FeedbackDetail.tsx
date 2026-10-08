@@ -11,10 +11,11 @@ import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../../../components/ui/alert-dialog';
 import { ScrollArea } from '../../../components/ui/scroll-area';
-import { Trash2, Save, Loader2, Monitor, Globe, Maximize2, Moon, Tag } from 'lucide-react';
+import { Trash2, Save, Loader2, Monitor, Globe, Maximize2, Moon, Tag, Activity } from 'lucide-react';
 import type { FeedbackRecord, FeedbackStatus } from '../types';
 import { useUpdateFeedback, useDeleteFeedback } from '../hooks/useFeedbacks';
-import { TYPE_CONFIG } from './feedbackConfig';
+import { TYPE_CONFIG, STATUS_CONFIG } from './feedbackConfig';
+import { KnownIssueEditDialog } from './KnownIssueEditDialog';
 
 const SOURCE_LABELS: Record<string, string> = {
     discord: 'Discord', google: 'Google', friends: '朋友推薦',
@@ -40,6 +41,8 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
     const [notes, setNotes] = useState('');
     const updateMutation = useUpdateFeedback();
     const deleteMutation = useDeleteFeedback();
+    // 從回饋建立公開的已知問題：只開空白表單，不帶入使用者原文（可能含個資）
+    const [issueOpen, setIssueOpen] = useState(false);
 
     // Sync local state when record changes
     useEffect(() => {
@@ -151,12 +154,21 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="unread" className="text-[13px]">未讀</SelectItem>
-                                        <SelectItem value="read" className="text-[13px]">已讀</SelectItem>
-                                        <SelectItem value="processed" className="text-[13px]">已處理</SelectItem>
-                                        <SelectItem value="archived" className="text-[13px]">封存</SelectItem>
+                                        {Object.entries(STATUS_CONFIG).map(([value, conf]) => (
+                                            <SelectItem key={value} value={value} className="text-[13px]">{conf.label}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
+                                {/* 公開規則見 functions/lib/feedback-public.js：public_notice 且未封存、近 30 天 */}
+                                <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+                                    {!record.public_notice
+                                        ? '送出時尚未告知會公開，這筆不會出現在 /status。'
+                                        : status === 'archived'
+                                            ? '封存：不會出現在公開的 /status。'
+                                            : status === 'unread'
+                                                ? '未讀不會公開。改成「已讀」以上後，內容、狀態與日期會出現在 /status（聯絡資訊自動隱藏）；不適合公開請改成「封存」。'
+                                                : '內容、狀態與日期已公開在 /status（聯絡資訊自動隱藏）。不適合公開請改成「封存」。'}
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">
@@ -187,6 +199,16 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
                         儲存變更
                     </Button>
 
+                    <button
+                        type="button"
+                        title="建立公開的已知問題"
+                        aria-label="建立公開的已知問題"
+                        onClick={() => setIssueOpen(true)}
+                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                    >
+                        <Activity className="w-3.5 h-3.5" />
+                    </button>
+
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-all">
@@ -215,6 +237,7 @@ export function FeedbackDetail({ record, open, onClose }: FeedbackDetailProps) {
                     </AlertDialog>
                 </div>
             </SheetContent>
+            <KnownIssueEditDialog open={issueOpen} onOpenChange={setIssueOpen} target={null} />
         </Sheet>
     );
 }

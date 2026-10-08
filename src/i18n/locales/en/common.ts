@@ -235,6 +235,9 @@ const common = {
   'landing.footer.privacy': 'Privacy Policy',
   'landing.footer.support': 'Support Us',
   'landing.footer.nav': 'Site navigation',
+  'landing.footer.group.use': 'Use',
+  'landing.footer.group.help': 'Help',
+  'landing.footer.group.about': 'About',
   'landing.hero_screenshot_alt': 'MultiStream Hub canvas playing three live streams with chat panels side by side',
   // Hotkeys
   'hotkeys.title': 'Keyboard Shortcuts',

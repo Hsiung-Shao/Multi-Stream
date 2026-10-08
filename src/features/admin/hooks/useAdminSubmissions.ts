@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { ADMIN_TOKEN_EVENT, ADMIN_TOKEN_STORAGE_KEY, apiFetch, ApiError, LIST_KEY as ANNOUNCEMENTS_KEY } from './useAdminAnnouncements';
+import { KNOWN_ISSUES_KEY } from './useAdminKnownIssues';
 
 export interface ContributionPayload {
     name?: string;
@@ -116,7 +117,7 @@ const REPORT_KEY = 'admin-reports';
 
 /** 換了 token 之後：用 X-Admin-Token 的分頁（公告、投稿、回報）都重新讀（分頁都 forceMount，舊的 401 結果會一直留著） */
 export function invalidateAdminTokenQueries(qc: QueryClient): Promise<void> {
-    return Promise.all([CONTRIB_KEY, REPORT_KEY, ANNOUNCEMENTS_KEY].map((k) => qc.invalidateQueries({ queryKey: [k] }))).then(() => undefined);
+    return Promise.all([CONTRIB_KEY, REPORT_KEY, ANNOUNCEMENTS_KEY, KNOWN_ISSUES_KEY].map((k) => qc.invalidateQueries({ queryKey: [k] }))).then(() => undefined);
 }
 
 /** 後台頁掛一次：任一分頁設定或清除 token 時重新讀取（單一來源，避免每個分頁各自重抓） */

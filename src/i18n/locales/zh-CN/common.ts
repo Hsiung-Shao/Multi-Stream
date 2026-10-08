@@ -236,6 +236,9 @@ const common = {
   'landing.footer.privacy': '隐私权政策',
   'landing.footer.support': '支持我们',
   'landing.footer.nav': '网站导览',
+  'landing.footer.group.use': '使用',
+  'landing.footer.group.help': '帮助',
+  'landing.footer.group.about': '关于',
   'landing.hero_screenshot_alt': 'MultiStream Hub 画布同时播放三个直播窗口与聊天室',
 
   // Hotkeys

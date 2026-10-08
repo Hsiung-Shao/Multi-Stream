@@ -83,10 +83,9 @@ export function FeedbackTable({ data, count, filter, isLoading, onFilterChange, 
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all" className="text-[12px]">全部狀態</SelectItem>
-                        <SelectItem value="unread" className="text-[12px]">未讀</SelectItem>
-                        <SelectItem value="read" className="text-[12px]">已讀</SelectItem>
-                        <SelectItem value="processed" className="text-[12px]">已處理</SelectItem>
-                        <SelectItem value="archived" className="text-[12px]">封存</SelectItem>
+                        {Object.entries(STATUS_CONFIG).map(([value, conf]) => (
+                            <SelectItem key={value} value={value} className="text-[12px]">{conf.label}</SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
 

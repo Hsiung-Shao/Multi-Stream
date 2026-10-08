@@ -48,4 +48,6 @@ export default {
     'schedule.description': '대만 VTuber의 YouTube 대기실과 Twitch 방송 채널을 하나의 스케줄로. 지금 방송과 7일간의 예정을 보고 한 번에 함께 시청하세요.',
     'scheduleSubmit.title': '방송 스케줄에 VTuber 추가 - MultiStream Hub',
     'scheduleSubmit.description': '아직 일정표에 없는 VTuber를 추천하세요. YouTube 채널 링크를 붙여 넣으면 이름과 프로필 사진이 자동으로 입력되고, 검토 후 대만 VTuber 방송 일정표에 추가됩니다.',
+    'status.title': '서비스 상태와 알려진 문제 - MultiStream Hub',
+    'status.description': 'MultiStream Hub, Twitch, YouTube에 문제가 있나요? 실시간 서비스 상태, 처리 중인 알려진 문제, 공지와 최근 업데이트를 확인하세요.',
 };

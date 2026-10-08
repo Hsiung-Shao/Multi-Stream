@@ -48,4 +48,6 @@ export default {
     'schedule.description': '台湾 VTuber の YouTube 待機所と Twitch の配信中チャンネルをひとつのスケジュールに。今の配信と 7 日間の予定を確認し、ワンクリックで同時視聴できます。',
     'scheduleSubmit.title': '配信スケジュールにVTuberを追加 - MultiStream Hub',
     'scheduleSubmit.description': 'まだスケジュールにないVTuberを推薦：YouTubeチャンネルのURLを貼ると名前とアイコンが自動入力され、審査後に台湾VTuber配信スケジュールに掲載されます。',
+    'status.title': 'サービス状況と既知の問題 - MultiStream Hub',
+    'status.description': 'MultiStream Hub・Twitch・YouTube は正常に動いていますか？現在のサービス状況、対応中の既知の問題、お知らせと最近の更新を確認できます。',
 };

@@ -78,6 +78,8 @@ export interface RunStats extends Record<string, unknown> {
   og_end_suppressed: boolean;
   /** YouTube 回 quotaExceeded（當日配額已用完） */
   quota_exceeded: boolean;
+  /** 整輪失敗（runJob 的 body 丟出例外）；公開狀態頁用它判燈 */
+  failed?: boolean;
   /** Heavy：本輪游標起點與前進數（判斷「新的一圈」用，見 schedule-heavy） */
   cursor_start?: number;
   cursor_advance?: number;

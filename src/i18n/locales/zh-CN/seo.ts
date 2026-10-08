@@ -48,4 +48,6 @@ export default {
     'schedule.description': '整理台湾 VTuber 的 YouTube 待机室与 Twitch 直播中频道，看谁正在开播、未来 7 天的开播时间，勾选几位一键同时观看。',
     'scheduleSubmit.title': '添加 VTuber 到开播周表 - MultiStream Hub',
     'scheduleSubmit.description': '推荐还不在周表上的 VTuber：粘贴 YouTube 频道网址，自动带入名称与头像，审核通过后加入台湾 VTuber 开播周表。',
+    'status.title': '服务状态与已知问题 - MultiStream Hub',
+    'status.description': 'MultiStream Hub、Twitch 与 YouTube 目前是否正常？查看实时服务状态、站方正在处理的已知问题、公告与最近更新。',
 };

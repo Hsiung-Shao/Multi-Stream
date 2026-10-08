@@ -1,4 +1,5 @@
-export type FeedbackStatus = 'unread' | 'read' | 'processed' | 'archived';
+// read／processing／fixed 會公開在 /status（僅限 public_notice）；unread（站方未看過）與 archived 不公開（migration 20261008110000）
+export type FeedbackStatus = 'unread' | 'read' | 'processing' | 'fixed' | 'archived';
 
 export interface FeedbackRecord {
     id: string;
@@ -17,6 +18,8 @@ export interface FeedbackRecord {
     app_version: string | null;
     status: FeedbackStatus;
     admin_notes: string | null;
+    /** 送出時表單已告知會公開：true 且未封存的回報會出現在 /status */
+    public_notice?: boolean;
 }
 
 export interface FeedbackFilter {

@@ -1,12 +1,12 @@
 /**
- * Admin 後台主框架:頂部 header(標題 + Tabs + 動作鈕)+ 六個分頁。
+ * Admin 後台主框架:頂部 header(標題 + Tabs + 動作鈕)+ 七個分頁。
  *
  * 分頁:總覽(統計儀表板)/ 回饋(列表+篩選)/ 評分(rating/NPS 分布)/ 公告(CRUD+預覽)/
- * 投稿(使用者推薦的新 VTuber 審核)/ 回報(VTuber、場次、名冊資料錯誤)。
+ * 投稿(使用者推薦的新 VTuber 審核)/ 回報(VTuber、場次、名冊資料錯誤)/ 已知問題(公開狀態頁 /status 的條目)。
  * 各分頁自行管理自己的資料與篩選 state;這裡只負責佈局與全域動作(重新整理/登出)。
  */
 
-import { LayoutDashboard, MessagesSquare, Star, Megaphone, LogOut, RefreshCw, UserPlus, Flag } from 'lucide-react';
+import { LayoutDashboard, MessagesSquare, Star, Megaphone, LogOut, RefreshCw, UserPlus, Flag, Activity } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/ui/tabs';
 import { Button } from '../../../components/ui/button';
@@ -16,6 +16,7 @@ import { RatingsTab } from './RatingsTab';
 import { AnnouncementsTab } from './AnnouncementsTab';
 import { ContributionsTab } from './ContributionsTab';
 import { ReportsTab } from './ReportsTab';
+import { KnownIssuesTab } from './KnownIssuesTab';
 import { useRefetchOnAdminTokenChange } from '../hooks/useAdminSubmissions';
 
 export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
@@ -59,6 +60,10 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <TabsTrigger value="reports" className="px-2.5 text-[13px]">
                                 <Flag className="size-3.5" />
                                 <span className="hidden sm:inline">回報</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="issues" className="px-2.5 text-[13px]">
+                                <Activity className="size-3.5" />
+                                <span className="hidden sm:inline">已知問題</span>
                             </TabsTrigger>
                         </TabsList>
                         <div className="ml-auto flex items-center gap-1">
@@ -104,6 +109,9 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </TabsContent>
                     <TabsContent value="reports" forceMount className="data-[state=inactive]:hidden">
                         <ReportsTab />
+                    </TabsContent>
+                    <TabsContent value="issues" forceMount className="data-[state=inactive]:hidden">
+                        <KnownIssuesTab />
                     </TabsContent>
                 </main>
             </Tabs>

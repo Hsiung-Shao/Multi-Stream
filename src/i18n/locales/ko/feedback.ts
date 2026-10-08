@@ -11,6 +11,7 @@ const feedback = {
   'feedbackTypeLabel': '피드백 유형 (단일 선택)',
   'contentLabel': '상세 내용 (필수)',
   'contentPlaceholder': '문제나 제안 사항을 자세히 설명해 주세요...',
+  'publicNotice': '운영자가 확인한 뒤 신고 내용과 처리 상태는 \'서비스 상태\' 페이지에 공개됩니다(이메일, 링크, 전화번호는 자동으로 가려집니다). 계정 이름 등 개인 정보는 적지 마세요.',
   'part3': 'Part 3',
   'promotion': '추천 의향',
   'npsLabel': '친구에게 이 도구를 추천하시겠습니까? (0-10점)',
