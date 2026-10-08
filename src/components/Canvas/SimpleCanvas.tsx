@@ -23,7 +23,6 @@ import { calculateRequiredRows } from '../../utils/layoutEngine';
 import { useUIStore } from '../../store/useUIStore';
 import { resizeLimitsOf, MIN_CHAT_COLS, MAX_CHAT_COLS } from './sizeLimits';
 import { chatColumnResizeKeepsLayout } from '../../utils/canvasItemOps';
-import { getCanvasAspect } from '../../utils/layoutPresets';
 import type { CanvasItem } from '../../types/canvas';
 
 // 尺寸限制與縮放預覽共用同一份（見 sizeLimits.ts）；NewCanvasPage 從這裡取用
@@ -63,7 +62,6 @@ export const stableRenderOrder = (windows: CanvasWindow[]): CanvasWindow[] =>
  */
 export function isChatColumnResize(
     windows: readonly CanvasWindow[], id: string, gridX: number, gridY: number, gridW: number, gridH: number,
-    aspect: number = getCanvasAspect(),
 ): boolean {
     const before = windows.find(w => w.id === id);
     if (!before || before.type !== 'chat') return false;
@@ -88,7 +86,7 @@ export function isChatColumnResize(
 
     // 落地交給 setChatColumnWidth：它依比例縮放，做不到時整個重排。整個重排會毀掉自訂排法
     // （例如超過 24 列的長版面），所以只有「依比例縮放做得到」或「本來就是標準欄式排法」才走欄寬調整
-    return chatColumnResizeKeepsLayout(windows.map(toCanvasItem), aspect, gridW);
+    return chatColumnResizeKeepsLayout(windows.map(toCanvasItem), gridW);
 }
 
 /** isChatColumnResize 借用 canvasItemOps 的判斷：只需要 i、type、layout */

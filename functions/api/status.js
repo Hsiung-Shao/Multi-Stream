@@ -95,8 +95,10 @@ export async function onRequestGet(context) {
                 const text = JSON.stringify(body);
                 // 已被視為失效、晚完成的舊查詢不能覆蓋較新的結果
                 if (pageInflight !== entry) return text;
-                // 有區塊拿不到資料（DB 逾時、Twitch 失敗…）時只在記憶體快取短時間、不寫 edge：恢復後很快會重查
-                const partial = ['site', 'youtube', 'twitch', 'issues', 'announcements', 'feedbacks'].some((k) => body[k] == null);
+                // 本站資料有區塊拿不到（DB 逾時…）時只在記憶體快取短時間、不寫 edge：恢復後很快會重查。
+                // Twitch 不算：它有自己的失敗快取（2 分鐘），總燈號也忽略它；算進來的話 Twitch 故障期間
+                //（正是狀態頁流量最高的時候）edge 快取會整個停用、DB 查詢變 6 倍
+                const partial = ['site', 'youtube', 'issues', 'announcements', 'feedbacks'].some((k) => body[k] == null);
                 pageMemo = { at: now, text, ttlMs: (partial ? PARTIAL_TTL_SECONDS : PAGE_TTL_SECONDS) * 1000 };
                 if (cache && !partial) {
                     context.waitUntil?.(

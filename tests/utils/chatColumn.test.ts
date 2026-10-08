@@ -1,7 +1,7 @@
 // 聊天室欄寬與收合（階段 3 後半）：版面純函式
 import { describe, it, expect } from 'vitest';
 import {
-    generateColumnLayout, clampChatCols, generateSharedChatLayout,
+    generateColumnLayout, clampChatCols, generateSharedChatLayout, columnLayoutVariants,
 } from '../../src/utils/layoutPresets';
 import {
     relayoutItems, collapseChats, expandChats, chatsCollapsed, isCollapsedChat, keepChatsCollapsed, sharedChatContentIdOf,
@@ -262,7 +262,7 @@ describe('resizeLimitsOf：縮放用的限制', () => {
 
 describe('chatColumnResizeKeepsLayout：欄寬調整會不會破壞使用者排法', () => {
     it('依比例縮放做得到 → true', () => {
-        expect(chatColumnResizeKeepsLayout(shared(), ASPECT, 6)).toBe(true);
+        expect(chatColumnResizeKeepsLayout(shared(), 6)).toBe(true);
     });
 
     it('自訂排法、縮放後有串流窄於 6 → false', () => {
@@ -270,7 +270,7 @@ describe('chatColumnResizeKeepsLayout：欄寬調整會不會破壞使用者排�
             item('a', 'stream', 1, 0, 0, 14, 20), item('b', 'stream', 2, 14, 0, 6, 20),
             item('d', 'stream', 3, 0, 20, 20, 10), item('c', 'chat', 1, 20, 0, 4, 24),
         ];
-        expect(chatColumnResizeKeepsLayout(custom, ASPECT, 6)).toBe(false);
+        expect(chatColumnResizeKeepsLayout(custom, 6)).toBe(false);
     });
 
     it('標準欄式排法（重排結果就是現況）→ true，即使依比例縮放做不到', () => {
@@ -278,10 +278,53 @@ describe('chatColumnResizeKeepsLayout：欄寬調整會不會破壞使用者排�
             ...Array.from({ length: 13 }, (_, k) => item(`s${k}`, 'stream', k + 1, 0, 0, 6, 6)),
             item('c', 'chat', 1, 20, 0, 4, 24),
         ], ASPECT, [], 4);
-        expect(chatColumnResizeKeepsLayout(std, ASPECT, 6)).toBe(true);
+        expect(chatColumnResizeKeepsLayout(std, 6)).toBe(true);
     });
 
     it('沒有聊天室 → false', () => {
-        expect(chatColumnResizeKeepsLayout([item('a', 'stream', 1, 0, 0, 24, 24)], ASPECT, 6)).toBe(false);
+        expect(chatColumnResizeKeepsLayout([item('a', 'stream', 1, 0, 0, 24, 24)], 6)).toBe(false);
+    });
+});
+
+// 第四輪審查：「是否為標準欄式排法」不受視窗比例變動影響
+describe('標準欄式排法的判斷與螢幕比例無關', () => {
+    const ASPECTS = { '16:9': 16 / 9, '4:3': 4 / 3, '21:9': 21 / 9, '9:16 直立': 9 / 16 };
+    const toItems = (n: number, aspect: number, cols: number) => {
+        const { streams, chats } = generateColumnLayout(n, 1, aspect, cols);
+        return [
+            ...streams.map((r, k) => item(`s${k}`, 'stream', k + 1, r.x, r.y, r.w, r.h)),
+            item('c', 'chat', 1, chats[0].x, chats[0].y, chats[0].w, chats[0].h),
+        ];
+    };
+
+    it('任一比例產生的標準版面都在 columnLayoutVariants 裡', () => {
+        for (const a of Object.values(ASPECTS)) for (let n = 1; n <= 16; n++) for (const cols of [3, 4, 8]) {
+            const { streams, chats } = generateColumnLayout(n, 1, a, cols);
+            const variants = columnLayoutVariants(n, 1, cols);
+            expect(variants.some(v => JSON.stringify(v.streams) === JSON.stringify(streams) && JSON.stringify(v.chats) === JSON.stringify(chats))).toBe(true);
+        }
+    });
+
+    it('以比例 A 產生、比例 B 下重排結果不同的標準版面：仍判定為標準（欄寬調整不破壞排法）', () => {
+        let checked = 0;
+        for (const [na, a] of Object.entries(ASPECTS)) for (const [nb, b] of Object.entries(ASPECTS)) {
+            if (na === nb) continue;
+            for (let n = 2; n <= 16; n++) {
+                const items = toItems(n, a, 4);
+                const relaid = relayoutItems(items, b, [], 4);
+                if (relaid.every((it, i) => JSON.stringify(it.layout) === JSON.stringify(items[i].layout))) continue;
+                checked++;
+                expect(chatColumnResizeKeepsLayout(items, 8)).toBe(true);
+            }
+        }
+        expect(checked).toBeGreaterThan(0); // 確實有比例不同、重排會不一樣的案例被檢查到
+    });
+
+    it('自訂排法（一大兩小＋超過 24 列）在任何比例下都不是標準版面', () => {
+        const custom = [
+            item('a', 'stream', 1, 0, 0, 14, 20), item('b', 'stream', 2, 14, 0, 6, 20),
+            item('d', 'stream', 3, 0, 20, 20, 10), item('c', 'chat', 1, 20, 0, 4, 24),
+        ];
+        expect(chatColumnResizeKeepsLayout(custom, 6)).toBe(false);
     });
 });

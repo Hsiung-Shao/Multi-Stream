@@ -185,6 +185,8 @@ describe('FeedbackDetail 公開提示', () => {
         unmount();
         wrap(<FeedbackDetail record={record({ status: 'unread' })} open onClose={() => {}} />);
         expect(hint()).toContain('未讀不會公開');
+        // 人工把關是主要防線：提示要明講標已讀前自己確認沒有個資
+        expect(hint()).toContain('請自己確認內容沒有個資');
         expect(hint()).toContain('儲存後');
     });
 

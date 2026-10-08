@@ -5,7 +5,7 @@
  * 一改就會卸載重建播放器 iframe（回到 muted=true 且 player 失聯，見切版面靜音事故）。
  */
 import type { CanvasItem } from '../types/canvas';
-import { generateColumnLayout, DEFAULT_CHAT_COLS } from './layoutPresets';
+import { generateColumnLayout, columnLayoutVariants, DEFAULT_CHAT_COLS, type GridRect } from './layoutPresets';
 import { MIN_STREAM_CELLS } from '../components/Canvas/sizeLimits';
 
 type StreamId = number;
@@ -173,18 +173,21 @@ function scaleChatColumn(items: readonly CanvasItem[], toCols: number): CanvasIt
 
 /**
  * 把聊天室欄改成 toCols 欄「不會破壞使用者自己的排法」：依比例縮放做得到（排法保留），
- * 或者畫布本來就是標準欄式排法（整個重排的結果與現況相同，重排等於沒動到使用者的排法）。
+ * 或者畫布本來就是標準欄式排法（generateColumnLayout 在某個螢幕比例下會產生的版面；
+ * 整個重排只是換成目前比例下的標準版面，沒有使用者的排法可破壞）。
+ * 標準與否用 columnLayoutVariants 比對，不受「產生版面時」與「拖曳當下」的視窗比例不同影響。
  * 拖聊天室左緣時（SimpleCanvas.isChatColumnResize）用它決定要走欄寬調整還是一般推擠縮放：
  * 自訂排法（例如超過 24 列的長版面）縮放後有串流過窄、需要整個重排時，改走推擠，不整頁重排。
  */
-export function chatColumnResizeKeepsLayout(items: readonly CanvasItem[], aspect: number, toCols: number): boolean {
-    const chats = items.filter(it => it.type === 'chat');
+export function chatColumnResizeKeepsLayout(items: readonly CanvasItem[], toCols: number): boolean {
+    const chats = items.filter(it => it.type === 'chat').sort(byPosition);
     if (chats.length === 0) return false;
     if (scaleChatColumn(items, toCols)) return true;
-    return layoutColumns(items, aspect, [], chats[0].layout.w).every((it, i) => {
-        const a = it.layout, b = items[i].layout;
-        return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
-    });
+    const streams = items.filter(it => it.type === 'stream').sort(byPosition);
+    const matches = (its: CanvasItem[], rects: GridRect[]) =>
+        its.length === rects.length && its.every((it, i) => sameLayout(it.layout, rects[i]));
+    return columnLayoutVariants(streams.length, chats.length, chats[0].layout.w)
+        .some(v => matches(chats, v.chats) && matches(streams, v.streams));
 }
 
 const sameLayout = (a: CanvasItem['layout'], b: CanvasItem['layout']) =>

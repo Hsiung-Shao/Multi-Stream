@@ -185,18 +185,42 @@ export function generateColumnLayout(
     aspect: number = DEFAULT_ASPECT,
     chatWidth: number = DEFAULT_CHAT_COLS,
 ): { streams: GridRect[]; chats: GridRect[] } {
-    const chatCols = nChats > 0 ? (chatWidth === 0 ? 0 : clampChatCols(chatWidth)) : 0;
+    const chatCols = columnChatCols(nChats, chatWidth);
     const streamArea: FitArea = { x0: 0, cols: 24 - chatCols, rows: 24 };
     const streams = nStreams > 0 ? bestGridRects(nStreams, aspect, streamArea) : [];
+    return { streams, chats: columnChatRects(nChats, chatCols) };
+}
+
+const columnChatCols = (nChats: number, chatWidth: number) =>
+    nChats > 0 ? (chatWidth === 0 ? 0 : clampChatCols(chatWidth)) : 0;
+
+/** 右側聊天室欄：寬 chatCols、多個時上下平分（每個至少 MIN_CHAT_ROWS 列） */
+function columnChatRects(nChats: number, chatCols: number): GridRect[] {
     const chats: GridRect[] = [];
-    if (nChats > 0) {
-        const rh = Math.max(MIN_CHAT_ROWS, 24 / nChats);
-        for (let i = 0; i < nChats; i++) {
-            const y = Math.round(i * rh);
-            chats.push({ x: streamArea.cols, y, w: chatCols, h: Math.round((i + 1) * rh) - y });
-        }
+    const rh = Math.max(MIN_CHAT_ROWS, 24 / nChats);
+    for (let i = 0; i < nChats; i++) {
+        const y = Math.round(i * rh);
+        chats.push({ x: 24 - chatCols, y, w: chatCols, h: Math.round((i + 1) * rh) - y });
     }
-    return { streams, chats };
+    return chats;
+}
+
+/**
+ * generateColumnLayout 在「任何」螢幕比例下可能產生的所有版面（依欄數 k 列舉，兩種列高規則都列）。
+ * 比例只用來挑 k；選定 k 之後的擺法與比例無關。所以「現況是不是標準欄式排法」要拿這份清單比對，
+ * 不能拿目前比例重排一次來比——使用者縮放瀏覽器後比例變了，挑出的 k 不同，會把標準版面誤判成自訂排法。
+ * 串流依位置（上→下、左→右）排序後與 streams 逐一對應（與 layoutColumns 的配對順序相同）。
+ */
+export function columnLayoutVariants(nStreams: number, nChats: number, chatWidth: number): { streams: GridRect[]; chats: GridRect[] }[] {
+    const chatCols = columnChatCols(nChats, chatWidth);
+    const chats = columnChatRects(nChats, chatCols);
+    if (nStreams === 0) return [{ streams: [], chats }];
+    const area: FitArea = { x0: 0, cols: 24 - chatCols, rows: 24 };
+    const variants: { streams: GridRect[]; chats: GridRect[] }[] = [];
+    for (let k = 1; k <= nStreams; k++) {
+        for (const minRows of [MIN_STREAM_CELLS, 0]) variants.push({ streams: placeTiles(gridTiles(nStreams, k), area, minRows), chats });
+    }
+    return variants;
 }
 
 /**

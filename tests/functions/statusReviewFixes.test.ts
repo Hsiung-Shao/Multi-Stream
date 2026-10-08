@@ -59,8 +59,11 @@ describe('遮蔽（review 修正）', () => {
     const ZW = '​';
     it.each([
         `jerry@gmail${ZW}.com`, `0912${ZW}345678`, `j${ZW}e${ZW}rry@gmail.com`, 'jerry­@gmail.com', 'jerry⁠@gmail.com',
-        'IG@foo_bar', '加我 ig foo.bar', '我的line是 abc123', 'discord 用戶名 foo_bar', 'jerry＠gmail。com', 'jerry @ gmail . com',
+        'IG@foo_bar', '我的line是 abc123', 'discord 用戶名 foo_bar', 'jerry＠gmail。com', 'jerry @ gmail . com',
         '02-2345-6789',
+        // 第四輪 review：提示詞後面接「是／is」也要遮；中文緊接 @handle 也要遮；更多隱形字元
+        'Line ID 是 abc123', 'line帳號是jerry123', 'my line id is jerry99', '我的discord是Jerry', '請加我@jerry_wang',
+        'jerry\u034F@gmail.com', '0912\uFE0F345678', 'jerry@gmail .com', 'jerry@gmail. com',
     ])('遮蔽變形寫法：%s', (input) => {
         const out = maskContact(input);
         expect(out).toContain(MASK);
@@ -79,18 +82,25 @@ describe('遮蔽（review 修正）', () => {
         '不誤遮：%s', (input) => expect(maskContact(input)).toBe(input),
     );
 
-    it('中文緊鄰 email 時只遮 email，前後中文保留；超長帳號整段遮；點前後多空白、開頭多一個點也遮', () => {
-        // email 左邊緊鄰的中文最多一起遮 4 字（「王小明abc@」的姓名不外露），右邊的中文完整保留
-        expect(maskContact('請寄到我的信箱jerry@gmail.com謝謝你們的幫忙')).toBe(`請寄到${MASK}謝謝你們的幫忙`);
-        expect(maskContact('王小明abc@gmail.com')).toBe(MASK);
+    it('保守遮蔽：只遮 email 本身，前後的中文（含姓名）一律保留；網域後的句號與下一句不被吞', () => {
+        // 第四輪 review 後撤掉「連帶遮 email 旁的中文」：它讓「升級到react@18.2.0」「錯誤訊息是user@host」大量誤遮。
+        // 只有姓名、沒有聯絡方式時不算可聯絡到人的資訊；人工把關是主要防線
+        expect(maskContact('請寄到我的信箱jerry@gmail.com謝謝你們的幫忙')).toBe(`請寄到我的信箱${MASK}謝謝你們的幫忙`);
+        expect(maskContact('升級到react@18.2.0就壞了')).toBe(`升級到${MASK}就壞了`);
+        expect(maskContact('錯誤訊息是user@host.local')).toBe(`錯誤訊息是${MASK}`);
+        expect(maskContact('王小明abc@gmail.com')).toBe(`王小明${MASK}`);
+        expect(maskContact('メールはabc@gmail.comです')).toBe(`メールは${MASK}です`);
+        expect(maskContact('我在直播聊天室標記了@user.name但沒反應')).toBe(`我在直播聊天室標記了${MASK}但沒反應`);
         expect(maskContact('jerry@gmail.com.我等你回覆')).toBe(`${MASK}.我等你回覆`);
         expect(maskContact('mail jerry@gmail.com. Thanks a lot')).toBe(`mail ${MASK}. Thanks a lot`);
         expect(maskContact('jerry@gmail.com+bob@yahoo.com').split(MASK).join('')).not.toMatch(/bob|jerry/);
         expect(maskContact('王小明@例子.台灣')).toBe(MASK);
-        expect(maskContact(`${'a'.repeat(100)}@gmail.com`)).toBe(MASK);
-        expect(maskContact('寄 jerry@gmail   .com')).toBe(`寄 ${MASK}`);
-        expect(maskContact('寄 jerry@.gmail.com')).toBe(`寄 ${MASK}`);
+        expect(maskContact('寄 jerry @ gmail . com 謝謝')).toBe(`寄 ${MASK} 謝謝`);
     });
+
+    it.each(['加我 ig foo.bar', '加我 line jerry', '我用 Line app 分享連結會壞', 'Line 是 1.2.3 版'])(
+        '刻意不猜（沒有提示詞的寫法交給人工把關）：%s', (input) => expect(maskContact(input)).toBe(input),
+    );
 
     it('英文長回報截斷後仍保留大部分內容（第二輪 review：清尾段沒上限時整段被吃光）', () => {
         const sentence = 'The chat panel disappears when I open three streams and resize the window quickly. ';
@@ -125,8 +135,12 @@ describe('遮蔽（review 修正）', () => {
     });
 
     it('大量零寬字元不能讓截斷點位移、把被切半的聯絡資訊拉進公開範圍', () => {
-        const [r] = toPublicFeedback([{ id: '1', content: `${'\u200B'.repeat(4000)}${'字'.repeat(320)}jerry@gmail.com`, status: 'read', created_at: '2026-10-08T00:00:00Z' }]);
+        // email 放在第 290 字附近（跨過公開範圍邊界），不遮就會外露；同時鎖住「整篇被清空」的回歸
+        const [r] = toPublicFeedback([{ id: '1', content: `${'\u200B'.repeat(4000)}${'字'.repeat(290)}jerry@gmail.com${'字'.repeat(50)}`, status: 'read', created_at: '2026-10-08T00:00:00Z' }]);
         expect(r.content).not.toMatch(/jerry|gmail/);
+        expect(Array.from(r.content)).toHaveLength(Array.from(r.content.replace(/…$/, '')).length + 1);
+        expect(r.content.startsWith('字'.repeat(20))).toBe(true);
+        expect(r.content.endsWith('…')).toBe(true);
     });
 
     it('截斷點落在 email／電話中間時不外露被切半的片段', () => {
@@ -315,6 +329,36 @@ describe('/api/status：共用查詢與快取的邊界', () => {
         } finally {
             vi.useRealTimers();
         }
+    });
+
+    it('Twitch 拿不到時不算部分失敗：仍走一般 60 秒快取（Twitch 故障期間不放大 DB 查詢）', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            vi.setSystemTime(Date.parse('2026-10-08T12:00:00Z'));
+            sb = okSb;
+            // 在原本的 fetch 替身外再包一層：只讓 Twitch 失敗
+            const orig = (globalThis.fetch as unknown as (u: string, i?: RequestInit) => Promise<Response>);
+            vi.stubGlobal('fetch', vi.fn(async (u: string | URL | Request, init?: RequestInit) => {
+                if (String(u).startsWith('https://status.twitch.com/')) throw new Error('twitch down');
+                return orig(String(u), init);
+            }));
+            const ctx = () => ({ request: new Request('https://x.pages.dev/api/status'), env: ENV() });
+            expect((await (await statusGet(ctx())).json()).twitch).toBeNull();
+            vi.setSystemTime(Date.parse('2026-10-08T12:00:30Z'));
+            expect((await statusGet(ctx())).headers.get('X-Edge-Cache')).toBe('MEMO');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('YouTube 偵測（live 排程）從沒跑過時，總燈號是未知（預期行為：YouTube 卡片無法判斷）', async () => {
+        sb = (_m, path) => (path.startsWith('cron_shard_state')
+            ? new Response(JSON.stringify([{ job_name: 'schedule_heavy_rss', last_run_at: new Date().toISOString() }]))
+            : new Response('[]'));
+        const data = await (await statusGet({ request: new Request('https://x.pages.dev/api/status'), env: ENV() })).json();
+        expect(data.youtube.status).toBe('unknown');
+        expect(data.site.status).toBe('operational');
+        expect(data.overall).toBe('unknown');
     });
 
     it('從沒跑過的排程顯示未知，但不讓本站燈號與總燈號永遠是未知', async () => {

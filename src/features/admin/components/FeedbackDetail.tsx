@@ -33,7 +33,7 @@ function publicHint(record: FeedbackRecord, now: number): string {
     if (saved === 'archived') return '已封存：不會出現在公開的 /status。';
     const created = Date.parse(record.created_at);
     if (Number.isFinite(created) && now - created > FEEDBACK_PUBLIC_DAYS * DAY_MS) return `超過 ${FEEDBACK_PUBLIC_DAYS} 天，已不在公開頁 /status。`;
-    if (saved === 'unread') return '未讀不會公開。改成「已讀」以上並儲存後，內容、狀態與日期會出現在 /status（聯絡資訊會盡量自動隱藏，但不保證全部擋下）；不適合公開請改成「封存」。';
+    if (saved === 'unread') return '未讀不會公開。改成「已讀」以上並儲存後，內容、狀態與日期會出現在 /status。自動遮蔽只擋明確的 email、網址、電話與帳號格式，標「已讀」前請自己確認內容沒有個資（姓名、帳號、地址）、廣告或辱罵；不適合公開請改成「封存」。';
     return `內容、狀態與日期已公開在 /status（聯絡資訊會盡量自動隱藏，但不保證全部擋下）。公開頁只顯示最近 ${FEEDBACK_PUBLIC_LIMIT} 筆，較舊的可能被擠出。不適合公開請改成「封存」。`;
 }
 

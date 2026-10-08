@@ -294,7 +294,7 @@ describe('長版面＋自訂排法拖聊天室左緣', () => {
     it('isChatColumnResize：依比例縮放會讓串流過窄、又不是標準欄式排法 → false（走推擠）', () => {
         expect(isChatColumnResize(longCustom(), 'chat', 18, 0, 6, 24)).toBe(false);
         // 依比例縮放做得到的寬度（5 欄）照樣算欄寬調整
-        expect(isChatColumnResize(longCustom(), 'chat', 19, 0, 5, 24, 16 / 9)).toBe(true);
+        expect(isChatColumnResize(longCustom(), 'chat', 19, 0, 5, 24)).toBe(true);
     });
 
     it('實際拖曳：不呼叫欄寬調整，走推擠；串流的高度與上下位置不被整頁重排', () => {
@@ -356,5 +356,42 @@ describe('比 6 列矮的格子縮放', () => {
         const { handle, onWindowUpdate } = mount(ws, () => {});
         drag(handle(t.id, 's'), 0, -CELL_H * 2);
         expect(onWindowUpdate).not.toHaveBeenCalled();
+    });
+});
+
+// 第四輪審查：版面在比例 A 產生、拖曳當下是比例 B（使用者縮放過瀏覽器）
+describe('比例改變後拖聊天室左緣', () => {
+    // 測試視窗是 1200×960（比例 1.25）；版面用 16:9 產生
+    const fromWide = (n: number): CanvasWindow[] => {
+        const { streams, chats } = generateColumnLayout(n, 1, 16 / 9, 4);
+        return [
+            ...streams.map((r, k) => win(`s${k}`, 'stream', r.x, r.y, r.w, r.h)),
+            win('chat', 'chat', chats[0].x, chats[0].y, chats[0].w, chats[0].h),
+        ];
+    };
+
+    it('16:9 產生的 13 路標準版面（依比例縮放做不到、目前比例重排也不同）：仍走欄寬調整', () => {
+        const ws = fromWide(13);
+        const now = generateColumnLayout(13, 1, 1200 / 960, 4).streams;
+        const was = ws.filter(w => w.type === 'stream').map(w => ({ x: w.gridX, y: w.gridY, w: w.gridW, h: w.gridH }));
+        expect(was).not.toEqual(now); // 前提：兩種比例的標準版面確實不同
+        const onChatColumnResize = vi.fn();
+        const { handle, onWindowUpdate } = mount(ws, onChatColumnResize);
+        drag(handle('chat', 'w'), -CELL_W * 2, 0);
+        expect(onChatColumnResize).toHaveBeenCalledWith(6);
+        expect(onWindowUpdate).not.toHaveBeenCalled();
+    });
+
+    it('自訂排法在同樣的比例下仍走推擠', () => {
+        const onChatColumnResize = vi.fn();
+        const { handle, onWindowUpdate } = mount([
+            win('s1', 'stream', 0, 0, 14, 20),
+            win('s2', 'stream', 14, 0, 6, 20),
+            win('s3', 'stream', 0, 20, 20, 10),
+            win('chat', 'chat', 20, 0, 4, 24),
+        ], onChatColumnResize);
+        drag(handle('chat', 'w'), -CELL_W * 2, 0);
+        expect(onChatColumnResize).not.toHaveBeenCalled();
+        expect(onWindowUpdate).toHaveBeenCalled();
     });
 });
