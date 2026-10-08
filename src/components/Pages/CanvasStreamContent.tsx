@@ -17,6 +17,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { mainStreamItemIdOf, sharedChatContentIdOf } from '../../utils/canvasItemOps';
 import { ChatStreamSelect } from '../Canvas/ChatStreamSelect';
+import { ChatLayoutMenu } from '../Canvas/ChatLayoutMenu';
 
 interface CanvasStreamContentProps {
     stream: StreamData;
@@ -161,6 +162,9 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                 )}
 
                 <Divider />
+
+                {/* 聊天室欄寬（窄／標準／寬，也可以直接拖聊天室左緣）與收合。作用在畫面上所有聊天室 */}
+                {isChatWindow && <ChatLayoutMenu />}
 
                 {/* 另開原生聊天室：第三方 cookie 被封鎖時 iframe 內無法發言的逃生口 */}
                 {isChatWindow && (

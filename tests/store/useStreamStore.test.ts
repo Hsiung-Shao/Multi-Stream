@@ -745,4 +745,78 @@ describe('useStreamStore', () => {
             expect(area(items)).toBe(24 * 24);
         });
     });
+    describe('聊天室欄寬與收合', () => {
+        const mk = (id: number, ch: string) => ({ id, platform: 'twitch' as const, channelId: ch, videoId: '', originalUrl: '', volume: 100, chatVisible: false, isMuted: false });
+        const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+        const base = () => [
+            { i: 'w1', type: 'stream' as const, contentId: 1, layout: L(0, 0, 20, 12) },
+            { i: 'w2', type: 'stream' as const, contentId: 2, layout: L(0, 12, 20, 12) },
+            { i: 'chat', type: 'chat' as const, contentId: 1, layout: L(20, 0, 4, 24), sharedChat: true },
+        ];
+        const chatOf = () => useStreamStore.getState().canvasItems.find(i => i.type === 'chat')!;
+        const ids = () => useStreamStore.getState().canvasItems.map(i => i.i).sort();
+
+        beforeEach(() => {
+            useStreamStore.setState({ layoutMode: 'canvas', streams: [mk(1, 'a'), mk(2, 'b')], canvasItems: base(), chatColumnWidth: 4 });
+        });
+
+        it('setChatColumnWidth：夾在 3～8、寫入偏好、重排且 i 不變', () => {
+            useStreamStore.getState().setChatColumnWidth(12);
+            expect(useStreamStore.getState().chatColumnWidth).toBe(8);
+            expect(chatOf().layout).toEqual(L(16, 0, 8, 24));
+            expect(ids()).toEqual(['chat', 'w1', 'w2']);
+            useStreamStore.getState().setChatColumnWidth(1);
+            expect(chatOf().layout.w).toBe(3);
+        });
+
+        it('每路一聊的版面調寬：聊天室集中到右側一欄', () => {
+            useStreamStore.setState({
+                canvasItems: [
+                    { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 8, 24) },
+                    { i: 'c1', type: 'chat', contentId: 1, layout: L(8, 0, 4, 24) },
+                    { i: 'w2', type: 'stream', contentId: 2, layout: L(12, 0, 8, 24) },
+                    { i: 'c2', type: 'chat', contentId: 2, layout: L(20, 0, 4, 24) },
+                ],
+            });
+            useStreamStore.getState().setChatColumnWidth(6);
+            const chats = useStreamStore.getState().canvasItems.filter(i => i.type === 'chat');
+            expect(chats.map(c => [c.layout.x, c.layout.w])).toEqual([[18, 6], [18, 6]]);
+            expect(chats.reduce((a, c) => a + c.layout.h, 0)).toBe(24);
+        });
+
+        it('收合 → 展開：恢復偏好寬度，i 與內容不變', () => {
+            useStreamStore.getState().setChatColumnWidth(6);
+            useStreamStore.getState().collapseChats();
+            expect(chatOf().layout.w).toBe(0);
+            expect(useStreamStore.getState().canvasItems.filter(i => i.type === 'stream').every(i => i.layout.w === 24)).toBe(true);
+            useStreamStore.getState().expandChats();
+            expect(chatOf().layout).toEqual(L(18, 0, 6, 24));
+            expect(chatOf().contentId).toBe(1);
+            expect(ids()).toEqual(['chat', 'w1', 'w2']);
+        });
+
+        it('收合中加一路（共用聊天室 Strategy B 重產版型）：維持收合', async () => {
+            useStreamStore.getState().collapseChats();
+            await useStreamStore.getState().addStream('https://www.twitch.tv/assentw');
+            const items = useStreamStore.getState().canvasItems;
+            expect(items.filter(i => i.type === 'stream')).toHaveLength(3);
+            expect(items.filter(i => i.type === 'chat').every(c => c.layout.w === 0)).toBe(true);
+            expect(items.find(i => i.type === 'chat')!.i).toBe('chat');
+        });
+
+        it('收合中套用版型：聊天室展開（使用者明確選了版型）', () => {
+            useStreamStore.getState().collapseChats();
+            useStreamStore.getState().applyTemplateLayout('template-2-sharedchat');
+            expect(chatOf().layout.w).toBeGreaterThan(0);
+        });
+
+        it('收合中存自訂版面：以偏好寬度存成展開的版面（不會存出寬 0 的 slot）', async () => {
+            useStreamStore.getState().setChatColumnWidth(6);
+            useStreamStore.getState().collapseChats();
+            await useStreamStore.getState().saveCustomLayout('t');
+            const slots = useStreamStore.getState().customLayouts.at(-1)!.slots;
+            expect(slots.find(s => s.type === 'chat')).toMatchObject({ x: 18, w: 6, sharedChat: true });
+            expect(slots.every(s => s.w > 0)).toBe(true);
+        });
+    });
 });

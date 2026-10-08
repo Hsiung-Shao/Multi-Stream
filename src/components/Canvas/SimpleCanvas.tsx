@@ -21,17 +21,10 @@ import { cn } from '../ui/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { calculateRequiredRows } from '../../utils/layoutEngine';
 import { useUIStore } from '../../store/useUIStore';
+import { limitsOf, effectiveMaxW } from './sizeLimits';
 
-/**
- * 各類型視窗的格線尺寸限制。使用者拖出來的尺寸與推擠時能壓縮到的下限都以此為準——
- * 兩者若各寫一份會逐漸漂移，導致推擠算出的佈局在落地時又被夾成另一個值。
- */
-const SIZE_LIMITS = {
-    stream: { minW: 6, minH: 6, maxW: Infinity },
-    chat: { minW: 3, minH: 6, maxW: 4 },
-} as const;
-
-export const limitsOf = (w: CanvasWindow) => SIZE_LIMITS[w.type] ?? SIZE_LIMITS.stream;
+// 尺寸限制與縮放預覽共用同一份（見 sizeLimits.ts）；NewCanvasPage 從這裡取用
+export { limitsOf } from './sizeLimits';
 
 /** calculateRequiredRows 只看 layout，其餘欄位純粹是型別佔位 */
 const toLayoutItems = (windows: CanvasWindow[]) => windows.map(w => ({
@@ -53,6 +46,21 @@ const toLayoutItems = (windows: CanvasWindow[]) => windows.map(w => ({
 export const stableRenderOrder = (windows: CanvasWindow[]): CanvasWindow[] =>
     [...windows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
+/**
+ * 這次縮放是不是「調整右側聊天室欄寬」：聊天室貼齊右緣、所有聊天室同一欄，且只有左緣移動
+ * （右緣前後都貼齊畫布、上下不變、寬度有變）。這種情況改由上層重排整個畫布（串流重新填滿左側），
+ * 不走推擠——推擠只會讓緊鄰的串流讓位，排不出整齊的版面。
+ */
+export function isChatColumnResize(
+    windows: readonly CanvasWindow[], id: string, gridX: number, gridY: number, gridW: number, gridH: number,
+): boolean {
+    const before = windows.find(w => w.id === id);
+    if (!before || before.type !== 'chat') return false;
+    if (before.gridX + before.gridW !== GRID_COLS || gridX + gridW !== GRID_COLS) return false;
+    if (before.gridY !== gridY || before.gridH !== gridH || before.gridW === gridW) return false;
+    return windows.every(w => w.type !== 'chat' || (w.gridX === before.gridX && w.gridW === before.gridW));
+}
+
 /** 值相同就沿用舊物件：GridConfig 是每個視窗的 prop，換一次身分就等於全畫布重繪 */
 const sameGrid = (a: GridConfig, b: GridConfig) =>
     a.cols === b.cols && a.rows === b.rows
@@ -64,6 +72,8 @@ interface SimpleCanvasProps {
     onWindowUpdate: (windows: CanvasWindow[]) => void;
     onWindowRemove: (id: string) => void;
     renderContent: (window: CanvasWindow, renderProps: WindowRenderProps) => ReactNode;
+    /** 拖曳右側聊天室欄的左緣：回報新的欄寬（格數），由上層重排。不必是穩定身分（從 ref 讀） */
+    onChatColumnResize?: (cols: number) => void;
     className?: string;
 }
 
@@ -72,6 +82,7 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     onWindowUpdate,
     onWindowRemove,
     renderContent,
+    onChatColumnResize,
     className
 }: SimpleCanvasProps) {
     // Grid configuration - recalculates on resize
@@ -97,6 +108,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
     windowsRef.current = windows;
     const onWindowUpdateRef = useRef(onWindowUpdate);
     onWindowUpdateRef.current = onWindowUpdate;
+    const onChatColumnResizeRef = useRef(onChatColumnResize);
+    onChatColumnResizeRef.current = onChatColumnResize;
 
     // Handle window resize（監聽只掛一次；視窗清單從 ref 讀）
     useEffect(() => {
@@ -172,11 +185,8 @@ export const SimpleCanvas = memo(function SimpleCanvas({
 
     // 把使用者拖出來的尺寸夾進該類型視窗的合法範圍
     const clampDesired = useCallback((w: CanvasWindow, gridW: number, gridH: number) => {
-        const { minW, minH, maxW } = limitsOf(w);
-        // 上限只擋「放大超過上限」：本來就比上限寬的視窗（舊版型、連鎖填補留下的）不在縮放時被硬夾回去，
-        // 否則點一下縮放角聊天室就自己變窄（2026-09-24 使用者錄影回報）
-        const effectiveMaxW = Math.max(maxW, w.gridW);
-        return { w: Math.max(minW, Math.min(effectiveMaxW, gridW)), h: Math.max(minH, gridH) };
+        const { minW, minH } = limitsOf(w);
+        return { w: Math.max(minW, Math.min(effectiveMaxW(w), gridW)), h: Math.max(minH, gridH) };
     }, []);
 
     const solveResize = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
@@ -263,6 +273,11 @@ export const SimpleCanvas = memo(function SimpleCanvas({
 
     // resize 拖曳中：算出鄰居讓位後的位置，但只拿來畫 ghost
     const handleSizePreview = useCallback((id: string, gridX: number, gridY: number, gridW: number, gridH: number) => {
+        // 調整聊天室欄寬：放開後整個重排，推擠算出的讓位輪廓不代表最終結果，不畫
+        if (onChatColumnResizeRef.current && isChatColumnResize(windowsRef.current, id, gridX, gridY, gridW, gridH)) {
+            setResizeGhosts(null);
+            return;
+        }
         const solved = solveResize(id, gridX, gridY, gridW, gridH);
         if (!solved) return;
 
@@ -294,6 +309,12 @@ export const SimpleCanvas = memo(function SimpleCanvas({
         // 只是點了一下縮放角（位置尺寸都沒變）：什麼都不做，不跑推擠／連鎖填補，也不夾尺寸。
         // 縮放角與工具列的拖曳把手相鄰，使用者常常只是想點工具列。
         if (before && before.gridX === gridX && before.gridY === gridY && before.gridW === gridW && before.gridH === gridH) return;
+        const onChatColumn = onChatColumnResizeRef.current;
+        if (onChatColumn && isChatColumnResize(windowsRef.current, id, gridX, gridY, gridW, gridH)) {
+            onChatColumn(gridW);
+            useUIStore.getState().recordCanvasManipulation();
+            return;
+        }
         const solved = solveResize(id, gridX, gridY, gridW, gridH);
         if (!solved) return;
         onWindowUpdateRef.current(solved.windows);

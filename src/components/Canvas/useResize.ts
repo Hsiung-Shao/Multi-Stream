@@ -10,7 +10,9 @@
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react';
 import { snapToGrid, GRID_COLS, GRID_ROWS } from './gridConfig';
 
-export type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
+/** 四個角加四條邊；字母代表會移動的那一側（n 上、s 下、w 左、e 右） */
+export type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'w' | 'e';
+export const RESIZE_DIRECTIONS: readonly ResizeCorner[] = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
 
 interface ResizeState {
     isResizing: boolean;
@@ -33,8 +35,10 @@ interface UseResizeOptions {
     currentHeight: number;
     currentX: number;
     currentY: number;
+    /** 尺寸限制（格數）。預覽與落地用同一組值，放開時才不會彈回（見 sizeLimits.ts） */
     minGridW?: number;
     minGridH?: number;
+    maxGridW?: number;
     onResizeEnd: (x: number, y: number, width: number, height: number) => void;
     /** 拖曳過程中回報目前尺寸，供上層預覽鄰居讓位後的位置 */
     onResizePreview?: (x: number, y: number, width: number, height: number) => void;
@@ -54,6 +58,7 @@ export function useResize(options: UseResizeOptions) {
         currentY,
         minGridW = 4,
         minGridH = 3,
+        maxGridW = Infinity,
         onResizeEnd,
         onResizePreview,
         nodeRef,
@@ -79,11 +84,11 @@ export function useResize(options: UseResizeOptions) {
     // 幾何與回呼放 ref，讓 cornerHandlers 維持穩定身分
     const latestRef = useRef({
         cellWidth, cellHeight, currentWidth, currentHeight, currentX, currentY,
-        minGridW, minGridH, onResizeEnd, onResizePreview,
+        minGridW, minGridH, maxGridW, onResizeEnd, onResizePreview,
     });
     latestRef.current = {
         cellWidth, cellHeight, currentWidth, currentHeight, currentX, currentY,
-        minGridW, minGridH, onResizeEnd, onResizePreview,
+        minGridW, minGridH, maxGridW, onResizeEnd, onResizePreview,
     };
 
     // Create handler for specific corner
@@ -124,72 +129,36 @@ export function useResize(options: UseResizeOptions) {
 
             rafRef.current = requestAnimationFrame(() => {
                 const g = latestRef.current;
-                const deltaX = clientX - resizeState.current.startX;
-                const deltaY = clientY - resizeState.current.startY;
-                const corner = resizeState.current.corner;
+                const st = resizeState.current;
+                const corner = st.corner;
+                const movesW = corner.includes('w'), movesE = corner.includes('e');
+                const movesN = corner.includes('n'), movesS = corner.includes('s');
 
-                let newWidth = resizeState.current.startWidth;
-                let newHeight = resizeState.current.startHeight;
-                let newX = resizeState.current.startPosX;
-                let newY = resizeState.current.startPosY;
+                // 以「邊」為單位計算與對齊：只有被拖的那一側會動，另一側固定不動。
+                // （舊版分別對齊 x 與寬度，拖左側時右緣會跟著四捨五入漂移一格）
+                const axis = (
+                    start: number, size: number, delta: number, movesStart: boolean, movesEnd: boolean,
+                    cell: number, minCells: number, maxCells: number, boundCells: number,
+                ) => {
+                    // 畫布會往下長（超過 24 列）：原本就在界外的視窗以它自己的邊為界，不會被算成負尺寸
+                    const bound = Math.max(boundCells * cell, start + size);
+                    let lo = start, hi = start + size;
+                    if (movesStart) lo = Math.max(0, snapToGrid(lo + delta, cell));
+                    if (movesEnd) hi = Math.min(bound, snapToGrid(hi + delta, cell));
+                    // 尺寸限制在跟手預覽時就套用（與落地時一致），被拖的那一側停在極限上
+                    const minPx = minCells * cell;
+                    const maxPx = Math.min(maxCells * cell, bound);
+                    const len = Math.max(minPx, Math.min(maxPx, hi - lo));
+                    if (movesStart) lo = Math.max(0, hi - len);
+                    else if (movesEnd) hi = Math.min(bound, lo + len);
+                    return { pos: lo, size: movesStart || movesEnd ? hi - lo : size };
+                };
 
-                // Calculate new dimensions based on corner
-                if (corner === 'se') {
-                    newWidth += deltaX;
-                    newHeight += deltaY;
-                } else if (corner === 'sw') {
-                    newWidth -= deltaX;
-                    newX += deltaX;
-                    newHeight += deltaY;
-                } else if (corner === 'ne') {
-                    newWidth += deltaX;
-                    newHeight -= deltaY;
-                    newY += deltaY;
-                } else if (corner === 'nw') {
-                    newWidth -= deltaX;
-                    newX += deltaX;
-                    newHeight -= deltaY;
-                    newY += deltaY;
-                }
-
-                // Snap to grid
-                newWidth = snapToGrid(newWidth, g.cellWidth);
-                newHeight = snapToGrid(newHeight, g.cellHeight);
-                newX = snapToGrid(newX, g.cellWidth);
-                newY = snapToGrid(newY, g.cellHeight);
-
-                // Enforce minimums
-                const minWidth = g.minGridW * g.cellWidth;
-                const minHeight = g.minGridH * g.cellHeight;
-
-                // For corners that move position, prevent going below minimum
-                if (corner === 'nw' || corner === 'sw') {
-                    const maxX = resizeState.current.startPosX + resizeState.current.startWidth - minWidth;
-                    if (newX > maxX) {
-                        newX = maxX;
-                        newWidth = minWidth;
-                    }
-                }
-                if (corner === 'nw' || corner === 'ne') {
-                    const maxY = resizeState.current.startPosY + resizeState.current.startHeight - minHeight;
-                    if (newY > maxY) {
-                        newY = maxY;
-                        newHeight = minHeight;
-                    }
-                }
-
-                newWidth = Math.max(minWidth, newWidth);
-                newHeight = Math.max(minHeight, newHeight);
-
-                // Clamp position to grid bounds
-                newX = Math.max(0, newX);
-                newY = Math.max(0, newY);
-
-                // Clamp size to not exceed grid bounds
-                const maxWidth = (GRID_COLS * g.cellWidth) - newX;
-                const maxHeight = (GRID_ROWS * g.cellHeight) - newY;
-                newWidth = Math.min(newWidth, maxWidth);
-                newHeight = Math.min(newHeight, maxHeight);
+                const h = axis(st.startPosX, st.startWidth, clientX - st.startX, movesW, movesE,
+                    g.cellWidth, g.minGridW, g.maxGridW, GRID_COLS);
+                const v = axis(st.startPosY, st.startHeight, clientY - st.startY, movesN, movesS,
+                    g.cellHeight, g.minGridH, Infinity, GRID_ROWS);
+                const newX = h.pos, newWidth = h.size, newY = v.pos, newHeight = v.size;
 
                 // 這裡刻意不再偵測與鄰居的碰撞。舊版一碰到就整個 return，視窗完全不動也沒有
                 // 任何回饋；在滿版格線佈局下所有格子彼此緊貼，等於永遠拉不大。
@@ -215,7 +184,8 @@ export function useResize(options: UseResizeOptions) {
 
             e.preventDefault();
 
-            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+            // 由 lostpointercapture 進來時 capture 已經沒了
+            try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* 已釋放 */ }
 
             resizeState.current.isResizing = false;
 
@@ -244,16 +214,17 @@ export function useResize(options: UseResizeOptions) {
             onPointerDown: handlePointerDown,
             onPointerMove: handlePointerMove,
             onPointerUp: handlePointerUp,
-            onPointerCancel: handlePointerUp
+            onPointerCancel: handlePointerUp,
+            // capture 意外遺失（例如在跨網域 iframe 上放開滑鼠）時也要收尾，否則會卡在縮放狀態、
+            // 內容層維持 pointer-events:none。正常放開時 isResizing 已是 false，這裡直接略過。
+            onLostPointerCapture: handlePointerUp,
         };
     }, [nodeRef, sizeLabelRef]);
 
-    const cornerHandlers = useMemo(() => ({
-        nw: createCornerHandlers('nw'),
-        ne: createCornerHandlers('ne'),
-        sw: createCornerHandlers('sw'),
-        se: createCornerHandlers('se')
-    }), [createCornerHandlers]);
+    const cornerHandlers = useMemo(
+        () => Object.fromEntries(RESIZE_DIRECTIONS.map(d => [d, createCornerHandlers(d)])) as Record<ResizeCorner, ReturnType<typeof createCornerHandlers>>,
+        [createCornerHandlers],
+    );
 
     return {
         isResizing,

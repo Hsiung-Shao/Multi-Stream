@@ -73,8 +73,16 @@ export interface LayoutTemplate {
 const DEFAULT_ASPECT = 16 / 9;
 /** 與 SimpleCanvas 的 SIZE_LIMITS.stream 一致：推擠與縮放都不會讓串流小於 6×6 */
 const MIN_STREAM_CELLS = 6;
-/** 共用聊天室的寬度（SIZE_LIMITS.chat.maxW）；聊天室滿高 */
-const SHARED_CHAT_W = 4;
+/** 聊天室欄的預設寬度與可調範圍（與 SimpleCanvas 的 SIZE_LIMITS.chat 一致）；聊天室滿高 */
+export const DEFAULT_CHAT_COLS = 4;
+export const MIN_CHAT_COLS = 3;
+export const MAX_CHAT_COLS = 8;
+/** 工具列寬度選單的三段：窄／標準／寬 */
+export const CHAT_WIDTH_STEPS = [3, 4, 6] as const;
+
+/** 聊天室欄寬夾進合法範圍（0 = 收合，見 canvasItemOps.collapseChats，不經過這裡） */
+export const clampChatCols = (cols: number): number =>
+    Math.max(MIN_CHAT_COLS, Math.min(MAX_CHAT_COLS, Math.round(Number.isFinite(cols) ? cols : DEFAULT_CHAT_COLS)));
 
 /** 畫布寬高比，與 gridConfig 同源（SimpleCanvas 以 window.innerWidth/innerHeight 切格） */
 export const getCanvasAspect = (): number => {
@@ -147,16 +155,18 @@ function bestGridRects(n: number, aspect: number, area: FitArea): GridRect[] {
 }
 
 /**
- * 通用版面：串流填滿左側、聊天室在最右側一欄（寬 4、多個時上下平分）。
- * 手動新增視窗後的自動重排、共用聊天室版型都走這裡；沒有聊天室時串流填滿整個畫布。
+ * 通用版面：串流填滿左側、聊天室在最右側一欄（寬 chatCols、多個時上下平分）。
+ * 手動新增視窗後的自動重排、共用聊天室版型、聊天室調寬／收合都走這裡；沒有聊天室時串流填滿整個畫布。
+ * chatCols = 0 表示聊天室收合：串流填滿全寬，聊天室格子寬 0、貼在最右緣（x = 24）。
  * 回傳 streams 與 chats 兩組格子（依序對應呼叫端的視窗順序）。
  */
 export function generateColumnLayout(
     nStreams: number,
     nChats: number,
     aspect: number = DEFAULT_ASPECT,
+    chatWidth: number = DEFAULT_CHAT_COLS,
 ): { streams: GridRect[]; chats: GridRect[] } {
-    const chatCols = nChats > 0 ? SHARED_CHAT_W : 0;
+    const chatCols = nChats > 0 ? (chatWidth === 0 ? 0 : clampChatCols(chatWidth)) : 0;
     const streamArea: FitArea = { x0: 0, cols: 24 - chatCols, rows: 24 };
     const streams = nStreams > 0 ? bestGridRects(nStreams, aspect, streamArea) : [];
     const chats: GridRect[] = [];
@@ -164,7 +174,7 @@ export function generateColumnLayout(
         const rh = Math.max(MIN_STREAM_CELLS, 24 / nChats);
         for (let i = 0; i < nChats; i++) {
             const y = Math.round(i * rh);
-            chats.push({ x: streamArea.cols, y, w: SHARED_CHAT_W, h: Math.round((i + 1) * rh) - y });
+            chats.push({ x: streamArea.cols, y, w: chatCols, h: Math.round((i + 1) * rh) - y });
         }
     }
     return { streams, chats };
@@ -179,9 +189,10 @@ export function generateSharedChatLayout(
     streamIds: (number | string | null)[],
     aspect: number = DEFAULT_ASPECT,
     chatContentId: number | string | null = streamIds[0] ?? null,
+    chatCols: number = DEFAULT_CHAT_COLS,
 ): any[] {
     const n = Math.max(1, streamIds.length);
-    const { streams, chats } = generateColumnLayout(n, 1, aspect);
+    const { streams, chats } = generateColumnLayout(n, 1, aspect, chatCols);
     const items: any[] = streams.map((r, i) => ({ type: 'stream', ...r, contentId: streamIds[i] ?? null }));
     items.push({ type: 'chat', ...chats[0], contentId: chatContentId, sharedChat: true });
     return items;

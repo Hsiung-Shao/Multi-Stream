@@ -22,7 +22,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
-import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
+import { mainStreamItemIdOf, isCollapsedChat } from '../../utils/canvasItemOps';
 import { hasConsentRecord, CONSENT_CHANGE_EVENT } from '../../utils/analytics';
 import { useFavorites } from '../../hooks/useFavorites';
 import { isLiveFavorite } from './EmptyStateFavorites';
@@ -177,8 +177,9 @@ export function CanvasTour() {
         return s.canvasItems.find(i => i.type === 'stream' && i.contentId != null && i.i !== main)?.i ?? null;
     });
     // 有聊天室／空視窗時才介紹對應的操作（沒有可以框的東西）
-    const hasChat = useStreamStore(s => s.canvasItems.some(i => i.type === 'chat' && i.contentId != null));
-    const hasEmpty = useStreamStore(s => s.canvasItems.some(i => i.contentId == null));
+    // 收合的聊天室不在畫面上，框不到
+    const hasChat = useStreamStore(s => s.canvasItems.some(i => i.type === 'chat' && i.contentId != null && !isCollapsedChat(i)));
+    const hasEmpty = useStreamStore(s => s.canvasItems.some(i => i.contentId == null && !isCollapsedChat(i)));
     // 空畫布有收藏時會顯示「你的收藏」，第一段多介紹這一區
     // 條件與 CanvasEmptyState 顯示收藏區一致：至少一個收藏正在直播
     const hasFavorites = useFavorites().favorites.some(isLiveFavorite);
