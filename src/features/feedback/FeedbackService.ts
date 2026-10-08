@@ -1,4 +1,5 @@
 import { FeedbackFormData } from './FeedbackTypes';
+import { hasStoredSession } from '../../lib/hasStoredSession';
 
 export interface FeedbackPayload extends FeedbackFormData {
     userAgent: string;
@@ -11,12 +12,12 @@ export interface FeedbackPayload extends FeedbackFormData {
 }
 
 /**
- * 兩段逾時分開：
- * - 載入 supabase chunk＋取得 client：網路慢時可能要幾秒，給 10 秒，避免已登入使用者被靜默當匿名
- * - getSession 本身：supabase auth lock 卡住時可能永遠不回，2 秒就放棄、當匿名送出
+ * 取 token 的逾時：
+ * - 本機沒有 Supabase session（匿名，目前幾乎所有人）：直接匿名送出，不載入 SDK、不打 config（hasStoredSession）
+ * - 有 session：載入 SDK、取 client、getSession 整段合計最多 5 秒，逾時就當匿名送出（supabase auth lock 可能卡住）
+ * 之後的送出 fetch 另有 15 秒上限，最壞等待 5＋15 秒。
  */
-const CLIENT_TIMEOUT_MS = 10_000;
-const SESSION_TIMEOUT_MS = 2_000;
+const TOKEN_TIMEOUT_MS = 5_000;
 const SUBMIT_TIMEOUT_MS = 15_000;
 
 /** 逾時或失敗都回 null（取不到 session 視同匿名） */
@@ -31,10 +32,14 @@ async function withTimeout<T>(task: Promise<T>, ms: number): Promise<T | null> {
 }
 
 async function getAccessToken(): Promise<string | null> {
-    const supabase = await withTimeout(import('../../lib/supabase').then((m) => m.getSupabase()), CLIENT_TIMEOUT_MS);
-    if (!supabase) return null;
-    const session = await withTimeout(supabase.auth.getSession(), SESSION_TIMEOUT_MS);
-    return session?.data?.session?.access_token ?? null;
+    if (typeof window === 'undefined' || !hasStoredSession()) return null;
+    return withTimeout((async () => {
+        const { getSupabase } = await import('../../lib/supabase');
+        const supabase = await getSupabase();
+        if (!supabase) return null;
+        const { data } = await supabase.auth.getSession();
+        return data?.session?.access_token ?? null;
+    })(), TOKEN_TIMEOUT_MS);
 }
 
 export const FeedbackService = {
@@ -44,7 +49,7 @@ export const FeedbackService = {
      * 與先前直連 supabase.from('feedbacks').insert() 不同
      */
     sendFeedback: async (data: FeedbackPayload): Promise<void> => {
-        // 取 token：載入 client 最多 10 秒、getSession 最多 2 秒；之後的 fetch 再有 15 秒上限
+        // 取 token：沒登入直接匿名；有 session 時整段最多 5 秒。之後的 fetch 再有 15 秒上限
         const accessToken = await getAccessToken();
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };

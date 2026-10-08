@@ -109,7 +109,10 @@ export function jobHealth(jobName, row, now) {
 export function siteHealth(rows, now) {
     const byName = new Map((rows || []).map((r) => [r.job_name, r]));
     const jobs = Object.keys(JOB_THRESHOLDS).map((name) => jobHealth(name, byName.get(name), now));
-    return { status: worstHealth(jobs.map((j) => j.status)), jobs };
+    // 從沒跑過（沒有 last_run_at）的排程在卡片上顯示「未知」，但不拉低本站燈號：否則只要有一支排程沒有資料，
+    // 總燈號就永遠是未知。全部都沒資料時才是未知（DB 整個查不到的情況由呼叫端以 site=null 表示）。
+    const known = jobs.map((j) => j.status).filter((s) => s !== 'unknown');
+    return { status: known.length ? worstHealth(known) : 'unknown', jobs };
 }
 
 /**

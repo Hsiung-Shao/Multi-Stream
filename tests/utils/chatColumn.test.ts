@@ -5,6 +5,7 @@ import {
 } from '../../src/utils/layoutPresets';
 import {
     relayoutItems, collapseChats, expandChats, chatsCollapsed, isCollapsedChat, keepChatsCollapsed, sharedChatContentIdOf,
+    chatColumnResizeKeepsLayout,
 } from '../../src/utils/canvasItemOps';
 import type { CanvasItem } from '../../src/types/canvas';
 import { resizeLimitsOf } from '../../src/components/Canvas/sizeLimits';
@@ -256,5 +257,31 @@ describe('resizeLimitsOf：縮放用的限制', () => {
     it('已比下限小：下限降到目前尺寸；比上限寬：上限升到目前寬度', () => {
         expect(resizeLimitsOf({ type: 'stream', gridW: 5, gridH: 4 })).toMatchObject({ minW: 5, minH: 4 });
         expect(resizeLimitsOf({ type: 'chat', gridW: 10, gridH: 24 }).maxW).toBe(10);
+    });
+});
+
+describe('chatColumnResizeKeepsLayout：欄寬調整會不會破壞使用者排法', () => {
+    it('依比例縮放做得到 → true', () => {
+        expect(chatColumnResizeKeepsLayout(shared(), ASPECT, 6)).toBe(true);
+    });
+
+    it('自訂排法、縮放後有串流窄於 6 → false', () => {
+        const custom = [
+            item('a', 'stream', 1, 0, 0, 14, 20), item('b', 'stream', 2, 14, 0, 6, 20),
+            item('d', 'stream', 3, 0, 20, 20, 10), item('c', 'chat', 1, 20, 0, 4, 24),
+        ];
+        expect(chatColumnResizeKeepsLayout(custom, ASPECT, 6)).toBe(false);
+    });
+
+    it('標準欄式排法（重排結果就是現況）→ true，即使依比例縮放做不到', () => {
+        const std = relayoutItems([
+            ...Array.from({ length: 13 }, (_, k) => item(`s${k}`, 'stream', k + 1, 0, 0, 6, 6)),
+            item('c', 'chat', 1, 20, 0, 4, 24),
+        ], ASPECT, [], 4);
+        expect(chatColumnResizeKeepsLayout(std, ASPECT, 6)).toBe(true);
+    });
+
+    it('沒有聊天室 → false', () => {
+        expect(chatColumnResizeKeepsLayout([item('a', 'stream', 1, 0, 0, 24, 24)], ASPECT, 6)).toBe(false);
     });
 });

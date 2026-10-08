@@ -45,45 +45,68 @@ describe('FeedbackModal', () => {
 
 describe('FeedbackService.sendFeedback', () => {
     const payload = { feedbackType: 'bug', content: 'x', userAgent: 'ua', screenResolution: '1x1', windowSize: '1x1', theme: 'dark', version: '0', publicNotice: true } as FeedbackPayload;
+    const SESSION_KEY = 'sb-testref-auth-token';
+    const headersOf = (i = 0) => (fetchMock.mock.calls[i][1] as RequestInit).headers;
 
-    it('有 session 時帶 Authorization', async () => {
-        getSupabase.mockResolvedValue({ auth: { getSession: async () => ({ data: { session: { access_token: 'tok123' } } }) } });
-        await FeedbackService.sendFeedback(payload);
-        expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toMatchObject({ Authorization: 'Bearer tok123' });
+    // tests/setup.ts 的 localStorage mock 沒有 length／key（無法列舉），這裡補上模擬「存了一個 Supabase session」
+    const ls = window.localStorage as unknown as Record<string, unknown>;
+    const setStoredSession = () => Object.assign(ls, { length: 1, key: (i: number) => (i === 0 ? SESSION_KEY : null) });
+    afterEach(() => { delete ls.length; delete ls.key; });
+
+    it('匿名（本機沒有 Supabase session）：不載入 SDK、立即送出、不帶 Authorization', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        // 就算 SDK 會卡住也不該被碰到
+        getSupabase.mockImplementation(() => new Promise(() => {}));
+        await FeedbackService.sendFeedback(payload); // 不推進任何計時器也能完成＝沒有等待
+        expect(getSupabase).not.toHaveBeenCalled();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(headersOf()).not.toHaveProperty('Authorization');
     });
 
-    it('supabase client 載入慢（5 秒）但 getSession 正常：仍帶 Authorization，不被 2 秒逾時當成匿名', async () => {
+    it('有 session 時帶 Authorization', async () => {
+        setStoredSession();
+        getSupabase.mockResolvedValue({ auth: { getSession: async () => ({ data: { session: { access_token: 'tok123' } } }) } });
+        await FeedbackService.sendFeedback(payload);
+        expect(headersOf()).toMatchObject({ Authorization: 'Bearer tok123' });
+    });
+
+    it('有 session、SDK 載入慢但在 5 秒內（4 秒）：仍帶 Authorization', async () => {
         vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        setStoredSession();
         const client = { auth: { getSession: async () => ({ data: { session: { access_token: 'slowtok' } } }) } };
-        getSupabase.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(client), 5_000)));
+        getSupabase.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(client), 4_000)));
+        const done = FeedbackService.sendFeedback(payload);
+        await vi.advanceTimersByTimeAsync(3_999);
+        expect(fetchMock).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        await done;
+        expect(headersOf()).toMatchObject({ Authorization: 'Bearer slowtok' });
+    });
+
+    it('有 session 但 SDK 載入卡住：5 秒後當匿名送出', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        setStoredSession();
+        getSupabase.mockImplementation(() => new Promise(() => {}));
         const done = FeedbackService.sendFeedback(payload);
         await vi.advanceTimersByTimeAsync(4_999);
         expect(fetchMock).not.toHaveBeenCalled();
         await vi.advanceTimersByTimeAsync(1);
         await done;
-        expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toMatchObject({ Authorization: 'Bearer slowtok' });
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(headersOf()).not.toHaveProperty('Authorization');
     });
 
-    it('supabase client 載入超過 10 秒：當匿名送出，不會永遠卡住', async () => {
+    it('有 session、SDK 載入 3 秒後 getSession 卡住：總上限仍是 5 秒（不是 3＋2 以上分段累加）', async () => {
         vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-        getSupabase.mockImplementation(() => new Promise(() => {}));
+        setStoredSession();
+        const client = { auth: { getSession: () => new Promise(() => {}) } };
+        getSupabase.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(client), 3_000)));
         const done = FeedbackService.sendFeedback(payload);
-        await vi.advanceTimersByTimeAsync(9_999);
-        expect(fetchMock).not.toHaveBeenCalled();
-        await vi.advanceTimersByTimeAsync(1);
-        await done;
-        expect((fetchMock.mock.calls[0][1] as RequestInit).headers).not.toHaveProperty('Authorization');
-    });
-
-    it('getSession 卡住：2 秒後當匿名送出，不會永遠卡在送出中', async () => {
-        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-        getSupabase.mockResolvedValue({ auth: { getSession: () => new Promise(() => {}) } });
-        const done = FeedbackService.sendFeedback(payload);
-        await vi.advanceTimersByTimeAsync(1_999);
+        await vi.advanceTimersByTimeAsync(4_999);
         expect(fetchMock).not.toHaveBeenCalled();
         await vi.advanceTimersByTimeAsync(1);
         await done;
         expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect((fetchMock.mock.calls[0][1] as RequestInit).headers).not.toHaveProperty('Authorization');
+        expect(headersOf()).not.toHaveProperty('Authorization');
     });
 });

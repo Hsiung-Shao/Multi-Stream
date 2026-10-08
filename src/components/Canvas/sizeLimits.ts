@@ -41,6 +41,9 @@ export const effectiveMaxW = (w: Pick<CanvasWindow, 'type' | 'gridW'>): number =
  * （layoutPresets.bestGridRects 的退回策略，例如 13 路＋聊天室欄的 5×6），這種視窗輕拖一下
  * 不能被強制放大到 6×6——那會推動整張畫布、讓畫布長出 24 列。它可以放大，只是不會被硬撐。
  * 上限同 effectiveMaxW。
+ * 刻意接受的取捨（單向棘輪）：下限跟著「目前尺寸」走，小格子放大到 6 以上之後，下限回到 6，
+ * 就縮不回原本的 5。這是正常尺寸的視窗本來就有的限制；要回到小格子就重新套版型或新增視窗讓它重排。
+ * 若改成記住「最小曾經多小」，得把歷史尺寸存進 canvasItems，不值得。
  */
 export const resizeLimitsOf = (w: Pick<CanvasWindow, 'type' | 'gridW' | 'gridH'>): WindowSizeLimits => {
     const { minW, minH } = limitsOf(w);

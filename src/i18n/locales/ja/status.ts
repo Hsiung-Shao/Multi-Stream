@@ -53,7 +53,7 @@ export default {
     'services.twitch.official': 'Twitch 公式ステータスページを開く',
     'services.twitch.summaryOk': 'すべての項目が正常（{{count}} 件）',
     'services.twitch.summaryIssues': '{{names}} に問題あり・その他の正常な項目：{{rest}}',
-    'services.twitch.summaryOkUnknown': '正常な項目：{{ok}}・状況不明：{{unknown}}',
+    'services.twitch.summaryOkUnknown': '正常：{{ok}}・状況不明：{{unknown}}',
     'services.twitch.summaryIssuesUnknown': '{{names}} に問題あり・その他の正常な項目：{{rest}}・状況不明：{{unknown}}',
     'services.twitch.noComponents': '項目ごとの状況を一時的に取得できません',
     'issues.title': '既知の問題',

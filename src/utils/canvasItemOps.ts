@@ -145,14 +145,21 @@ export function collapseChats(items: readonly CanvasItem[], aspect: number): Can
  * canvasItems 換新陣列就是整張畫布重繪加一次 localStorage 寫入，store 靠 `next === state.canvasItems` 略過。
  */
 function resizeChatColumn(items: readonly CanvasItem[], aspect: number, toCols: number): CanvasItem[] {
+    if (!items.some(it => it.type === 'chat')) return items as CanvasItem[];
+    return unchangedOr(items, scaleChatColumn(items, toCols) ?? layoutColumns(items, aspect, [], toCols));
+}
+
+/**
+ * 依比例縮放：聊天室是右側一欄、串流都在它左邊，且縮放後每路串流都不窄於下限時，
+ * 只移動欄線（高度、上下位置不動）；任一條件不成立回 null（呼叫端改走整個重排）。
+ */
+function scaleChatColumn(items: readonly CanvasItem[], toCols: number): CanvasItem[] | null {
     const chats = items.filter(it => it.type === 'chat');
-    if (chats.length === 0) return items as CanvasItem[];
+    if (chats.length === 0) return null;
     const { x: colX, w: fromCols } = chats[0].layout;
     const isColumn = colX + fromCols === 24 && chats.every(c => c.layout.x === colX && c.layout.w === fromCols);
     const streams = items.filter(it => it.type === 'stream');
-    if (!isColumn || streams.length === 0 || streams.some(s => s.layout.x + s.layout.w > colX)) {
-        return unchangedOr(items, layoutColumns(items, aspect, [], toCols));
-    }
+    if (!isColumn || streams.length === 0 || streams.some(s => s.layout.x + s.layout.w > colX)) return null;
 
     const toX = 24 - toCols;
     const edge = (e: number) => Math.round((e * toX) / colX);
@@ -161,9 +168,23 @@ function resizeChatColumn(items: readonly CanvasItem[], aspect: number, toCols: 
         const x = edge(it.layout.x);
         return { ...it, layout: { ...it.layout, x, w: edge(it.layout.x + it.layout.w) - x } };
     });
-    return unchangedOr(items, next.some(it => it.type === 'stream' && it.layout.w < MIN_STREAM_CELLS)
-        ? layoutColumns(items, aspect, [], toCols)
-        : next);
+    return next.some(it => it.type === 'stream' && it.layout.w < MIN_STREAM_CELLS) ? null : next;
+}
+
+/**
+ * 把聊天室欄改成 toCols 欄「不會破壞使用者自己的排法」：依比例縮放做得到（排法保留），
+ * 或者畫布本來就是標準欄式排法（整個重排的結果與現況相同，重排等於沒動到使用者的排法）。
+ * 拖聊天室左緣時（SimpleCanvas.isChatColumnResize）用它決定要走欄寬調整還是一般推擠縮放：
+ * 自訂排法（例如超過 24 列的長版面）縮放後有串流過窄、需要整個重排時，改走推擠，不整頁重排。
+ */
+export function chatColumnResizeKeepsLayout(items: readonly CanvasItem[], aspect: number, toCols: number): boolean {
+    const chats = items.filter(it => it.type === 'chat');
+    if (chats.length === 0) return false;
+    if (scaleChatColumn(items, toCols)) return true;
+    return layoutColumns(items, aspect, [], chats[0].layout.w).every((it, i) => {
+        const a = it.layout, b = items[i].layout;
+        return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+    });
 }
 
 const sameLayout = (a: CanvasItem['layout'], b: CanvasItem['layout']) =>

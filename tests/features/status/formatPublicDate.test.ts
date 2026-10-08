@@ -45,4 +45,13 @@ describe('formatPublicDate', () => {
         expect(formatPublicDate('2026-10-08T12:00:00Z', 'en-US')).toBe('');
         expect(formatPublicDate('not-a-date', 'en-US')).toBe('');
     });
+
+    it('不存在的日期回空字串，不會被自動進位成別天', () => {
+        expect(formatPublicDate('2026-02-31', 'en-US')).toBe('');
+        expect(formatPublicDate('2026-02-29', 'en-US')).toBe(''); // 2026 不是閏年
+        expect(formatPublicDate('2026-13-01', 'en-US')).toBe('');
+        expect(formatPublicDate('2026-00-10', 'en-US')).toBe('');
+        expect(formatPublicDate('2026-10-00', 'en-US')).toBe('');
+        expect(formatPublicDate('2028-02-29', 'en-US')).toBe('2/29/2028'); // 閏年照常
+    });
 });

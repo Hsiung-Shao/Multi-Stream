@@ -24,6 +24,8 @@ import { publicIssuesQuery } from '../lib/known-issues.js';
 import { publicFeedbackQuery, toPublicFeedback } from '../lib/feedback-public.js';
 
 const PAGE_TTL_SECONDS = 60;
+/** 有區塊拿不到資料時的記憶體快取時間（不寫 edge 快取） */
+const PARTIAL_TTL_SECONDS = 10;
 const TWITCH_TTL_SECONDS = 300;
 const TWITCH_FAIL_TTL_SECONDS = 120;
 const TWITCH_TIMEOUT_MS = 4000;
@@ -34,7 +36,7 @@ const PAGE_CACHE_KEY = 'https://status.invalid/page/v1';
 const TWITCH_CACHE_KEY = 'https://status.invalid/twitch/v1';
 
 // 同一個 isolate 內的記憶體快取與進行中的請求（見檔頭第 2 點）
-let pageMemo = null; // { at: number, text: string }
+let pageMemo = null; // { at: number, text: string, ttlMs: number }
 let pageInflight = null; // { at: number, promise: Promise<string> }
 let twitchMemo = null; // { at: number, ttlMs: number, value: object|null }
 
@@ -81,7 +83,7 @@ export async function onRequestGet(context) {
     }
 
     const now = Date.now();
-    if (pageMemo && now - pageMemo.at < PAGE_TTL_SECONDS * 1000) return reply(request, pageMemo.text, 'MEMO');
+    if (pageMemo && now - pageMemo.at < pageMemo.ttlMs) return reply(request, pageMemo.text, 'MEMO');
 
     let source = 'MISS';
     if (pageInflight && now - pageInflight.at < INFLIGHT_STALE_MS) {
@@ -91,8 +93,12 @@ export async function onRequestGet(context) {
         entry.promise = buildStatus(context, now)
             .then((body) => {
                 const text = JSON.stringify(body);
-                pageMemo = { at: now, text };
-                if (cache) {
+                // 已被視為失效、晚完成的舊查詢不能覆蓋較新的結果
+                if (pageInflight !== entry) return text;
+                // 有區塊拿不到資料（DB 逾時、Twitch 失敗…）時只在記憶體快取短時間、不寫 edge：恢復後很快會重查
+                const partial = ['site', 'youtube', 'twitch', 'issues', 'announcements', 'feedbacks'].some((k) => body[k] == null);
+                pageMemo = { at: now, text, ttlMs: (partial ? PARTIAL_TTL_SECONDS : PAGE_TTL_SECONDS) * 1000 };
+                if (cache && !partial) {
                     context.waitUntil?.(
                         cache.put(key, new Response(text, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${PAGE_TTL_SECONDS}` } }))
                             .catch(() => {}),

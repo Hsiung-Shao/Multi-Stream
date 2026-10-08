@@ -6,20 +6,8 @@
  */
 
 import { getSupabase } from '../../lib/supabase';
+import { hasStoredSession } from '../../lib/hasStoredSession';
 import type { Announcement, PollResults, SurveyResults } from './types';
-
-/** localStorage 是否有 Supabase session(預設 storage key:sb-<ref>-auth-token) */
-function hasStoredSession(): boolean {
-    try {
-        for (let i = 0; i < window.localStorage.length; i++) {
-            const key = window.localStorage.key(i);
-            if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) return true;
-        }
-    } catch {
-        // localStorage 不可用 → 視為無 session
-    }
-    return false;
-}
 
 async function authHeader(): Promise<Record<string, string>> {
     // 匿名訪客直接回空 header,避免只為了「確認沒 token」就初始化整個 Supabase client

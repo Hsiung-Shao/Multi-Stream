@@ -72,12 +72,20 @@ describe('遮蔽（review 修正）', () => {
         // 英文句子提到平台名稱不能被當成帳號（第二輪 review：拿掉冒號要求後的回歸）
         'The second line is cut off in chat', 'I use discord daily and facebook login fails', 'Instagram embeds do not load',
         'Twitter player shows black screen', 'the threads view breaks', 'Please add Telegram support soon',
+        // 第三輪 review：提示詞 id 要有字尾邊界、冒號後要有字母、中英混寫的一般字不是帳號
+        'Each line identifies a stream', 'discord idle status wrong', 'Error on line: 42',
+        '我用 Line app 分享連結會壞', '在 twitter app 裡看不到', '打開 ig reels 會當', 'Discord 是 OK 的',
     ])(
         '不誤遮：%s', (input) => expect(maskContact(input)).toBe(input),
     );
 
     it('中文緊鄰 email 時只遮 email，前後中文保留；超長帳號整段遮；點前後多空白、開頭多一個點也遮', () => {
-        expect(maskContact('請寄到我的信箱jerry@gmail.com謝謝你們的幫忙')).toBe(`請寄到我的信箱${MASK}謝謝你們的幫忙`);
+        // email 左邊緊鄰的中文最多一起遮 4 字（「王小明abc@」的姓名不外露），右邊的中文完整保留
+        expect(maskContact('請寄到我的信箱jerry@gmail.com謝謝你們的幫忙')).toBe(`請寄到${MASK}謝謝你們的幫忙`);
+        expect(maskContact('王小明abc@gmail.com')).toBe(MASK);
+        expect(maskContact('jerry@gmail.com.我等你回覆')).toBe(`${MASK}.我等你回覆`);
+        expect(maskContact('mail jerry@gmail.com. Thanks a lot')).toBe(`mail ${MASK}. Thanks a lot`);
+        expect(maskContact('jerry@gmail.com+bob@yahoo.com').split(MASK).join('')).not.toMatch(/bob|jerry/);
         expect(maskContact('王小明@例子.台灣')).toBe(MASK);
         expect(maskContact(`${'a'.repeat(100)}@gmail.com`)).toBe(MASK);
         expect(maskContact('寄 jerry@gmail   .com')).toBe(`寄 ${MASK}`);
@@ -91,6 +99,34 @@ describe('遮蔽（review 修正）', () => {
             expect(r.content.length).toBeGreaterThanOrEqual(240);
             expect(content.startsWith(r.content.replace(/…$/, '').trimEnd())).toBe(true);
         }
+    });
+
+    it('截斷點切在帶空白的 email／電話中間也不外露（等長佔位後在原位置截斷）', () => {
+        const tails = ['jerry@gmail .com', 'jerry @ gmail . com', 'jerry@gmail. com', 'jerry @gmail.com', '0912 345 678', '(02) 2345-6789'];
+        for (const tail of tails) {
+            for (const fill of ['字', 'x', 'ab ']) {
+                for (let n = 100; n <= 420; n += 7) {
+                    const content = `https://${'a'.repeat(140)} ${fill.repeat(n).slice(0, n)} ${tail} 後面還有`;
+                    const [r] = toPublicFeedback([{ id: '1', content, status: 'read', created_at: '2026-10-08T00:00:00Z' }]);
+                    expect(r.content.split(MASK).join('')).not.toMatch(/jerry|gmail|gma|091|234|345/);
+                }
+            }
+        }
+    });
+
+    it('純中文長回報：公開 300 字並以「…」結尾；剛好 300 字不加', () => {
+        for (const len of [301, 361, 1000]) {
+            const [r] = toPublicFeedback([{ id: '1', content: '中'.repeat(len), status: 'read', created_at: '2026-10-08T00:00:00Z' }]);
+            expect(Array.from(r.content)).toHaveLength(301);
+            expect(r.content.endsWith('…')).toBe(true);
+        }
+        const [exact] = toPublicFeedback([{ id: '1', content: '中'.repeat(300), status: 'read', created_at: '2026-10-08T00:00:00Z' }]);
+        expect(exact.content).toBe('中'.repeat(300));
+    });
+
+    it('大量零寬字元不能讓截斷點位移、把被切半的聯絡資訊拉進公開範圍', () => {
+        const [r] = toPublicFeedback([{ id: '1', content: `${'\u200B'.repeat(4000)}${'字'.repeat(320)}jerry@gmail.com`, status: 'read', created_at: '2026-10-08T00:00:00Z' }]);
+        expect(r.content).not.toMatch(/jerry|gmail/);
     });
 
     it('截斷點落在 email／電話中間時不外露被切半的片段', () => {
@@ -210,7 +246,83 @@ describe('/api/status：排程子欄位 → 燈號；共用查詢失效後重建
         sb = (_m, path) => (path.startsWith('cron_shard_state') ? new Response('boom', { status: 500 }) : new Response('[]'));
         const failed = await (await statusGet(ctx())).json();
         expect(failed.site).toBeNull();
-        expect(failed.overall).not.toBe('operational');
+        expect(failed.overall).toBe('unknown');
+    });
+});
+
+describe('/api/status：共用查詢與快取的邊界', () => {
+    const okSb: SbHandler = (_m, path) => (path.startsWith('cron_shard_state')
+        ? new Response(JSON.stringify([{ job_name: 'schedule_live_og', last_run_at: new Date().toISOString(), og_checked: 20, og_failed: 0 }]))
+        : new Response('[]'));
+
+    it('發起的請求以 waitUntil 撐到查詢完成；每支 DB 查詢都帶逾時訊號', async () => {
+        sb = okSb;
+        const waited: Promise<unknown>[] = [];
+        await statusGet({ request: new Request('https://x.pages.dev/api/status'), env: ENV(), waitUntil: (p: Promise<unknown>) => waited.push(p) });
+        expect(waited.length).toBeGreaterThan(0);
+        const fetchMock = globalThis.fetch as unknown as { mock: { calls: Array<[string, RequestInit | undefined]> } };
+        const dbInits = fetchMock.mock.calls.filter(([u]) => String(u).startsWith('http://sb/')).map(([, init]) => init);
+        expect(dbInits).toHaveLength(4);
+        for (const init of dbInits) expect(init?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it('共用查詢卡住超過 15 秒就重建；舊查詢晚完成時不覆蓋較新的結果', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            vi.setSystemTime(Date.parse('2026-10-08T12:00:00Z'));
+            let release: (r: Response) => void = () => {};
+            let first = true;
+            sb = (_m, path) => {
+                if (path.startsWith('cron_shard_state') && first) {
+                    first = false;
+                    // 第一次查詢卡住，直到手動放行（回傳「舊」資料）
+                    return new Promise<Response>((res) => { release = res; }) as unknown as Response;
+                }
+                return okSb('GET', path, null);
+            };
+            const ctx = () => ({ request: new Request('https://x.pages.dev/api/status'), env: ENV() });
+            const stuck = statusGet(ctx());
+            await new Promise((r) => setTimeout(r, 0));
+            vi.setSystemTime(Date.parse('2026-10-08T12:00:16Z'));
+            const fresh = await statusGet(ctx());
+            expect(fresh.headers.get('X-Edge-Cache')).toBe('MISS-NOCACHE');
+            const freshBody = await fresh.json();
+            // 舊查詢現在才完成，回傳「舊」排程時間
+            release(new Response(JSON.stringify([{ job_name: 'schedule_live_og', last_run_at: '2026-10-01T00:00:00Z' }])));
+            await stuck;
+            const after = await statusGet(ctx());
+            expect(after.headers.get('X-Edge-Cache')).toBe('MEMO');
+            expect((await after.json()).checkedAt).toBe(freshBody.checkedAt);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('有區塊拿不到資料時只短暫快取（10 秒後重查）', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            vi.setSystemTime(Date.parse('2026-10-08T12:00:00Z'));
+            sb = (_m, path) => (path.startsWith('known_issues') ? new Response('boom', { status: 500 }) : okSb('GET', path, null));
+            const ctx = () => ({ request: new Request('https://x.pages.dev/api/status'), env: ENV() });
+            expect((await (await statusGet(ctx())).json()).issues).toBeNull();
+            vi.setSystemTime(Date.parse('2026-10-08T12:00:05Z'));
+            expect((await statusGet(ctx())).headers.get('X-Edge-Cache')).toBe('MEMO');
+            sb = okSb;
+            vi.setSystemTime(Date.parse('2026-10-08T12:00:11Z'));
+            const recovered = await statusGet(ctx());
+            expect(recovered.headers.get('X-Edge-Cache')).toBe('MISS-NOCACHE');
+            expect((await recovered.json()).issues).toEqual([]);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('從沒跑過的排程顯示未知，但不讓本站燈號與總燈號永遠是未知', async () => {
+        sb = okSb; // 只有 live 一支有資料
+        const data = await (await statusGet({ request: new Request('https://x.pages.dev/api/status'), env: ENV() })).json();
+        expect(data.site.jobs.find((j: { key: string }) => j.key === 'heavy').status).toBe('unknown');
+        expect(data.site.status).toBe('operational');
+        expect(data.overall).toBe('operational');
     });
 });
 

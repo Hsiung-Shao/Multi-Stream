@@ -22,6 +22,9 @@ import { ScrollArea } from '../ui/scroll-area';
 import { calculateRequiredRows } from '../../utils/layoutEngine';
 import { useUIStore } from '../../store/useUIStore';
 import { resizeLimitsOf, MIN_CHAT_COLS, MAX_CHAT_COLS } from './sizeLimits';
+import { chatColumnResizeKeepsLayout } from '../../utils/canvasItemOps';
+import { getCanvasAspect } from '../../utils/layoutPresets';
+import type { CanvasItem } from '../../types/canvas';
 
 // 尺寸限制與縮放預覽共用同一份（見 sizeLimits.ts）；NewCanvasPage 從這裡取用
 export { limitsOf } from './sizeLimits';
@@ -53,12 +56,14 @@ export const stableRenderOrder = (windows: CanvasWindow[]): CanvasWindow[] =>
  *   - 只有左緣移動（右緣前後都貼齊畫布、上下不變、寬度有變）
  *   - 新寬度在聊天室欄寬範圍（3～8）內：落地交給 setChatColumnWidth，它會夾進這個範圍，
  *     範圍外的寬度走這裡就會「預覽 9 欄、放開彈回 8 欄」
+ *   - 落地結果不會破壞使用者的排法：依比例縮放做得到，或畫布本來就是標準欄式排法（見 chatColumnResizeKeepsLayout）
  * 這種情況改由上層重排（串流依比例重新填滿左側），不走推擠——推擠只會讓緊鄰的串流讓位，排不出整齊的版面。
  * 其餘情況（右側也有直播的自訂排法、貼右緣的半高聊天室、比上限寬的舊聊天室）都走一般縮放，
  * 否則拉一下聊天室左緣就會把使用者排好的整頁重排掉。
  */
 export function isChatColumnResize(
     windows: readonly CanvasWindow[], id: string, gridX: number, gridY: number, gridW: number, gridH: number,
+    aspect: number = getCanvasAspect(),
 ): boolean {
     const before = windows.find(w => w.id === id);
     if (!before || before.type !== 'chat') return false;
@@ -79,8 +84,18 @@ export function isChatColumnResize(
         if (c.gridY !== edge) return false;
         edge += c.gridH;
     }
-    return edge >= GRID_ROWS;
+    if (edge < GRID_ROWS) return false;
+
+    // 落地交給 setChatColumnWidth：它依比例縮放，做不到時整個重排。整個重排會毀掉自訂排法
+    // （例如超過 24 列的長版面），所以只有「依比例縮放做得到」或「本來就是標準欄式排法」才走欄寬調整
+    return chatColumnResizeKeepsLayout(windows.map(toCanvasItem), aspect, gridW);
 }
+
+/** isChatColumnResize 借用 canvasItemOps 的判斷：只需要 i、type、layout */
+const toCanvasItem = (w: CanvasWindow): CanvasItem => ({
+    i: w.id, type: w.type, contentId: w.contentId ?? null,
+    layout: { x: w.gridX, y: w.gridY, w: w.gridW, h: w.gridH },
+});
 
 /** 值相同就沿用舊物件：GridConfig 是每個視窗的 prop，換一次身分就等於全畫布重繪 */
 const sameGrid = (a: GridConfig, b: GridConfig) =>

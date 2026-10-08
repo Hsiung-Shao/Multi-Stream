@@ -7,6 +7,9 @@
 export function formatPublicDate(day: string | null | undefined, locale: string): string {
     const m = day ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(day) : null;
     if (!m) return '';
-    const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
+    const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    const date = new Date(y, mo - 1, d, 12);
+    // 不存在的日期（2026-02-31、2026-13-01）會被 Date 自動進位成別天：回推不一致就不顯示
+    if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) return '';
     return new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'numeric', day: 'numeric' }).format(date);
 }

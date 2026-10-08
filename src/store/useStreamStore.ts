@@ -126,12 +126,16 @@ export const MAX_STREAMS_REACHED = 'maxStreamsReached';
 const buildTemplateCanvasItems = (
     state: Pick<StreamStoreState, 'streams' | 'canvasItems' | 'chatColumnWidth'>,
     template: LayoutTemplate,
+    /**
+     * 以共用聊天室版型產生（N 路串流 + 1 個聊天室欄，帶 sharedChat、寬度沿用 chatColumnWidth）。
+     * 預設只有共用聊天室版型本身才這樣產生。兩條呼叫路徑對「共用聊天室狀態下套 1 路＋聊天室」刻意不同：
+     *   - 動態島布局清單（applyTemplateLayout）：使用者明確點了某一格版型，照字面套用——
+     *     1-chat 就是「1 路＋自己的聊天室」，離開共用聊天室模式、不帶 sharedChat、聊天室 4 欄
+     *   - Alt+數字（setLayout）：使用者只指定路數，版面類型沿用目前的（既有規則「Alt+數字保留聊天室」），
+     *     所以 Alt+1 傳 true：保留共用聊天室與欄寬偏好
+     */
+    asSharedChat: boolean = template.type === 'shared_chat',
 ): CanvasItem[] => {
-    // 以共用聊天室版型產生（N 路串流 + 1 個聊天室欄，帶 sharedChat、寬度沿用 chatColumnWidth）：
-    // 共用聊天室版型本身，以及「共用聊天室狀態下套 1 路＋聊天室」——Alt+1（setLayout）與動態島布局清單
-    // （applyTemplateLayout）都走這裡，兩條路結果一致；不然聊天室會固定 4 欄、sharedChat 標記也會掉
-    const asSharedChat = template.type === 'shared_chat'
-        || (template.id === 'template-1-chat' && isSharedChatLayout(state.canvasItems));
     const needed = template.count;
     const processingIds: (number | null)[] = state.streams.map(s => s.id);
     while (processingIds.length < needed) {
@@ -801,8 +805,12 @@ export const useStreamStore = create<StreamStoreState>()(
                         const template = candidates
                             .map(id => layoutTemplates.find(t => t.id === id))
                             .find((t): t is LayoutTemplate => !!t);
-                        // 共用聊天室剩 1 路（Alt+1 → 1-chat）由 buildTemplateCanvasItems 以共用聊天室產生
-                        if (template) changes.canvasItems = buildTemplateCanvasItems(state, template);
+                        if (template) {
+                            // 共用聊天室狀態按 Alt+1：版型雖是 1-chat，仍以共用聊天室產生，保留欄寬偏好與 sharedChat
+                            // （布局清單明確選 1-chat 則照字面套用，見 buildTemplateCanvasItems 的 asSharedChat）
+                            const keepShared = template.id === 'template-1-chat' && isSharedChatLayout(state.canvasItems);
+                            changes.canvasItems = buildTemplateCanvasItems(state, template, keepShared || template.type === 'shared_chat');
+                        }
                     }
 
                     return changes;

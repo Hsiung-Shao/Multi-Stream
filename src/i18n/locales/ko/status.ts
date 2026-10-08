@@ -53,7 +53,7 @@ export default {
     'services.twitch.official': 'Twitch 공식 상태 페이지 열기',
     'services.twitch.summaryOk': '모든 항목 정상 ({{count}}개)',
     'services.twitch.summaryIssues': '{{names}} 문제 있음 · 정상인 다른 항목: {{rest}}개',
-    'services.twitch.summaryOkUnknown': '정상 항목: {{ok}}개 · 상태 알 수 없음: {{unknown}}개',
+    'services.twitch.summaryOkUnknown': '정상: {{ok}}개 · 상태 알 수 없음: {{unknown}}개',
     'services.twitch.summaryIssuesUnknown': '{{names}} 문제 있음 · 정상인 다른 항목: {{rest}}개 · 상태 알 수 없음: {{unknown}}개',
     'services.twitch.noComponents': '항목별 상태를 일시적으로 가져올 수 없습니다',
     'issues.title': '알려진 문제',

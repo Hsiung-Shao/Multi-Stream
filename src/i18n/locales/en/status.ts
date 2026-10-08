@@ -53,7 +53,7 @@ export default {
     'services.twitch.official': 'Open the official Twitch status page',
     'services.twitch.summaryOk': 'All components operational ({{count}})',
     'services.twitch.summaryIssues': '{{names}} affected · other components operational: {{rest}}',
-    'services.twitch.summaryOkUnknown': 'Components operational: {{ok}} · status unknown: {{unknown}}',
+    'services.twitch.summaryOkUnknown': 'Operational: {{ok}} · status unknown: {{unknown}}',
     'services.twitch.summaryIssuesUnknown': '{{names}} affected · other components operational: {{rest}} · status unknown: {{unknown}}',
     'services.twitch.noComponents': 'Component status is temporarily unavailable',
     'issues.title': 'Known issues',

@@ -208,6 +208,12 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                     : t('services.twitch.summaryOk', { count: twOk });
     // 最近一輪整輪失敗：og 數字不可信，不顯示成功數，也不說「沒有要查的頻道」
     const ytRunFailed = yt?.runFailed === true;
+    // YouTube「上次執行・門檻」行（桌機明細最下面）
+    const ytMeta = (className: string) => (
+        <p data-testid="yt-meta" className={cn('text-[12.5px] text-muted-foreground', className)}>
+            {yt ? ago(yt.lastRunAt) : ''}・{t('services.youtube.threshold')}
+        </p>
+    );
     const ytSummary = !yt ? t('unavailable')
         : ytRunFailed ? t('services.youtube.runFailed')
             : yt.checked > 0 ? t('services.youtube.summary', { ok: yt.checked - yt.failed, checked: yt.checked })
@@ -246,8 +252,14 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                 note={t('services.youtube.note')}
                 status={yt?.status ?? 'unknown'}
                 summary={ytSummary}
-                // 沒有配額提示時不給 footer（空容器在手機會多出一段 gap）
-                footer={yt?.quotaExceeded ? <p className="text-sm text-amber-700 dark:text-amber-300">{t('services.youtube.quota')}</p> : null}
+                // 沒有配額提示時不給 footer（空容器在手機會多出一段 gap）。
+                // 有提示時 footer＝配額提示（手機桌機都顯示）＋時間門檻（只桌機），維持「提示在上、時間門檻在最下」
+                footer={yt?.quotaExceeded ? (
+                    <>
+                        <p className="text-sm text-amber-700 dark:text-amber-300">{t('services.youtube.quota')}</p>
+                        {ytMeta('hidden md:block')}
+                    </>
+                ) : null}
             >
                 {yt ? (
                     <>
@@ -271,7 +283,8 @@ function Services({ data, locale }: { data: StatusResponse; locale: string }) {
                         ) : (
                             <p className="text-sm">{t('services.youtube.noChecks')}</p>
                         )}
-                        <p className="mt-auto text-[12.5px] text-muted-foreground">{ago(yt.lastRunAt)}・{t('services.youtube.threshold')}</p>
+                        {/* 有配額提示時這行改放 footer（排在提示下方），這裡不重複 */}
+                        {!yt.quotaExceeded && ytMeta('mt-auto')}
                     </>
                 ) : unavailable}
             </ServiceCard>

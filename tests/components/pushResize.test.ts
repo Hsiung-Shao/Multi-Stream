@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolvePushResize, resolveChainFill, findEmptyRects, type PushableWindow } from '../../src/components/Canvas/pushResize';
+import { resizeLimitsOf } from '../../src/components/Canvas/sizeLimits';
 
 const GRID_COLS = 24;
 
@@ -536,5 +537,15 @@ describe('resolvePushResize', () => {
                 }
             }
         });
+    });
+});
+
+// 第三輪審查：推擠時，已比下限矮的鄰居以自身高度為下限（resizeLimitsOf），被推開而不是被撐成 6 列
+describe('推擠矮於下限的鄰居（resizeLimitsOf）', () => {
+    it('上方格子往下長 1 列：下方 4 列高的鄰居平移下去，高度仍是 4', () => {
+        const ws = [win('a', 0, 0, 5, 4), win('b', 0, 4, 5, 4)];
+        const out = resolvePushResize(ws, 'a', { x: 0, y: 0, w: 5, h: 5 }, { gridCols: GRID_COLS, minSize: resizeLimitsOf });
+        expect(rect(out.windows, 'a')).toMatchObject({ y: 0, h: 5 });
+        expect(rect(out.windows, 'b')).toMatchObject({ y: 5, h: 4 });
     });
 });

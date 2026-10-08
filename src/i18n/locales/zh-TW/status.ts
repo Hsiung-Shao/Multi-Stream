@@ -53,7 +53,7 @@ export default {
     'services.twitch.official': '前往 Twitch 官方狀態頁',
     'services.twitch.summaryOk': '全部項目正常（{{count}} 項）',
     'services.twitch.summaryIssues': '{{names}} 有狀況・其他元件正常：{{rest}} 項',
-    'services.twitch.summaryOkUnknown': '其他元件正常：{{ok}} 項・狀態未知：{{unknown}} 項',
+    'services.twitch.summaryOkUnknown': '正常：{{ok}} 項・狀態未知：{{unknown}} 項',
     'services.twitch.summaryIssuesUnknown': '{{names}} 有狀況・其他元件正常：{{rest}} 項・狀態未知：{{unknown}} 項',
     'services.twitch.noComponents': '暫時無法取得元件狀態',
     'issues.title': '已知問題',

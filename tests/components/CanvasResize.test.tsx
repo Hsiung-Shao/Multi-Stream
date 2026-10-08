@@ -280,3 +280,81 @@ describe('isChatColumnResize：畫布往下長之後', () => {
         expect(isChatColumnResize(ws, 'chat', 18, 0, 6, 18)).toBe(false);
     });
 });
+
+// 第三輪審查：長版面＋自訂排法拖聊天室左緣，依比例縮放做不到時不能整頁重排
+describe('長版面＋自訂排法拖聊天室左緣', () => {
+    /** 超過 24 列的自訂排法：右上那路只有 6 欄，聊天室調到 6 欄會讓它窄於 6 */
+    const longCustom = () => [
+        win('s1', 'stream', 0, 0, 14, 20),
+        win('s2', 'stream', 14, 0, 6, 20),
+        win('s3', 'stream', 0, 20, 20, 10),
+        win('chat', 'chat', 20, 0, 4, 24),
+    ];
+
+    it('isChatColumnResize：依比例縮放會讓串流過窄、又不是標準欄式排法 → false（走推擠）', () => {
+        expect(isChatColumnResize(longCustom(), 'chat', 18, 0, 6, 24)).toBe(false);
+        // 依比例縮放做得到的寬度（5 欄）照樣算欄寬調整
+        expect(isChatColumnResize(longCustom(), 'chat', 19, 0, 5, 24, 16 / 9)).toBe(true);
+    });
+
+    it('實際拖曳：不呼叫欄寬調整，走推擠；串流的高度與上下位置不被整頁重排', () => {
+        const onChatColumnResize = vi.fn();
+        const { handle, onWindowUpdate } = mount(longCustom(), onChatColumnResize);
+        drag(handle('chat', 'w'), -CELL_W * 2, 0);
+        expect(onChatColumnResize).not.toHaveBeenCalled();
+        const out: CanvasWindow[] = onWindowUpdate.mock.calls.at(-1)![0];
+        expect(out.find(w => w.id === 's1')).toMatchObject({ gridY: 0, gridH: 20 });
+        expect(out.find(w => w.id === 's2')).toMatchObject({ gridY: 0, gridH: 20 });
+        expect(out.find(w => w.id === 'chat')).toMatchObject({ gridW: 6 });
+    });
+
+    it('標準欄式排法（13 路退回成小格子）：依比例縮放做不到，但重排結果就是現況 → 仍走欄寬調整', () => {
+        const aspect = 1200 / 960; // 與測試裡的視窗尺寸一致（isChatColumnResize 預設取視窗比例）
+        const { streams, chats } = generateColumnLayout(13, 1, aspect, 4);
+        const ws = [
+            ...streams.map((r, k) => win(`s${k}`, 'stream', r.x, r.y, r.w, r.h)),
+            win('chat', 'chat', chats[0].x, chats[0].y, chats[0].w, chats[0].h),
+        ];
+        expect(isChatColumnResize(ws, 'chat', 18, 0, 6, 24)).toBe(true);
+        const onChatColumnResize = vi.fn();
+        const { handle } = mount(ws, onChatColumnResize);
+        drag(handle('chat', 'w'), -CELL_W * 2, 0);
+        expect(onChatColumnResize).toHaveBeenCalledWith(6);
+    });
+});
+
+// 第三輪審查：高度低於 6 的小格子（16 路＋寬 8 聊天室退回成 4 列高）
+describe('比 6 列矮的格子縮放', () => {
+    const crowdedTall = (): CanvasWindow[] => {
+        const { streams, chats } = generateColumnLayout(16, 1, 1200 / 960, 8);
+        return [
+            ...streams.map((r, k) => win(`s${k}`, 'stream', r.x, r.y, r.w, r.h)),
+            win('chat', 'chat', chats[0].x, chats[0].y, chats[0].w, chats[0].h),
+        ];
+    };
+    const shortOne = (ws: CanvasWindow[]) => ws.find(w => w.type === 'stream' && w.gridH < 6)!;
+
+    it('退回版面裡確實有矮於 6 列的格子（前提）', () => {
+        expect(shortOne(crowdedTall())).toBeTruthy();
+    });
+
+    it('下緣輕拖（不到半格）：預覽高度維持原本列數，放開什麼都不變', () => {
+        const ws = crowdedTall();
+        const t = shortOne(ws);
+        const { handle, node, onWindowUpdate } = mount(ws, () => {});
+        const h = handle(t.id, 's');
+        act(() => { fireEvent.pointerDown(h, { clientX: 500, clientY: 500, pointerId: 1 }); });
+        act(() => { fireEvent.pointerMove(h, { clientX: 500, clientY: 500 + CELL_H * 0.3, pointerId: 1 }); });
+        expect(parseFloat(node(t.id).style.height)).toBe(t.gridH * CELL_H);
+        act(() => { fireEvent.pointerUp(h, { clientX: 500, clientY: 500 + CELL_H * 0.3, pointerId: 1 }); });
+        expect(onWindowUpdate).not.toHaveBeenCalled();
+    });
+
+    it('下緣往上拖想縮得更矮：停在目前列數（舊版會反向撐成 6 列），不推任何視窗', () => {
+        const ws = crowdedTall();
+        const t = shortOne(ws);
+        const { handle, onWindowUpdate } = mount(ws, () => {});
+        drag(handle(t.id, 's'), 0, -CELL_H * 2);
+        expect(onWindowUpdate).not.toHaveBeenCalled();
+    });
+});

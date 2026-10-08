@@ -233,7 +233,9 @@ describe('StatusPage', () => {
             twitch: { status: 'operational', components: [{ name: 'Chat', status: 'operational' }, { name: 'API', status: 'unknown' }], incidents: [], updatedAt: null },
         })));
         renderPage();
-        expect(await within(section('服務狀態')).findByText('其他元件正常：1 項・狀態未知：1 項')).toBeInTheDocument();
+        expect(await within(section('服務狀態')).findByText('正常：1 項・狀態未知：1 項')).toBeInTheDocument();
+        // 沒有受影響元件，不能說「其他」元件正常
+        expect(within(section('服務狀態')).queryByText(/其他元件/)).not.toBeInTheDocument();
         expect(within(section('服務狀態')).queryByText(/有狀況/)).not.toBeInTheDocument();
         expect(within(section('服務狀態')).queryByText(/全部項目正常/)).not.toBeInTheDocument();
     });
@@ -272,6 +274,34 @@ describe('StatusPage', () => {
         const last = ytCard().lastElementChild as HTMLElement;
         expect(last.className).not.toContain('hidden');
         expect(last.textContent).toContain('今日 YouTube API 配額已用完');
+    });
+
+    it('YouTube 卡片桌機順序：配額提示在上、「上次執行・門檻」在最下，且門檻行只有一份', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(payload({
+            youtube: { status: 'degraded', checked: 120, failed: 4, quotaExceeded: true, runFailed: false, lastRunAt: ago(5) },
+        })));
+        renderPage();
+        const services = section('服務狀態');
+        const quota = await within(services).findByText('今日 YouTube API 配額已用完，部分資料會延後更新');
+        const metas = within(services).getAllByTestId('yt-meta');
+        expect(metas).toHaveLength(1);
+        // 門檻行在配額提示之後（DOM 順序），且是卡片裡最後一個元素
+        expect(quota.compareDocumentPosition(metas[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const card = quota.closest('article') as HTMLElement;
+        expect(card.querySelectorAll('*')[card.querySelectorAll('*').length - 1].closest('[data-testid="yt-meta"]')).toBe(metas[0]);
+        // 門檻行只在桌機顯示，配額提示手機也看得到
+        expect(metas[0].className).toContain('md:block');
+        expect(quota.closest('.hidden')).toBeNull();
+    });
+
+    it('YouTube 沒有配額提示：門檻行留在桌機明細最下面（mt-auto）', async () => {
+        renderPage();
+        const services = section('服務狀態');
+        await within(services).findByText('116 / 120 個頻道讀取成功');
+        const metas = within(services).getAllByTestId('yt-meta');
+        expect(metas).toHaveLength(1);
+        expect(metas[0].className).toContain('mt-auto');
+        expect(metas[0].parentElement?.className).toContain('md:flex');
     });
 
     it('手機也看得到：Twitch 事件連結、官方狀態頁連結、YouTube 配額提示不在桌機限定的明細區塊內', async () => {
