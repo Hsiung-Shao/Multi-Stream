@@ -32,38 +32,74 @@ export function SiteFooter({ children, className, analyticsCategory = 'SiteFoote
     const tx = t as unknown as TFn;
     const track = (label: string) => logEvent(analyticsCategory, 'footer_click', label);
 
-    const routes: { to: RoutePage; label: string }[] = [
-        { to: 'about', label: tx('common:landing.footer.about') },
-        { to: 'instructions', label: tx('common:landing.footer.tutorial') },
-        { to: 'faq', label: tx('common:landing.footer.faq') },
-        { to: 'schedule', label: tx('schedule:title') },
-        { to: 'compare', label: tx('compare:title') },
-        { to: 'support', label: tx('common:landing.footer.support') },
-        { to: 'status', label: tx('status:title') },
-        { to: 'privacy', label: tx('common:landing.footer.privacy') },
+    // 連結分三組（使用／說明／關於），一列排九個太長；Discord 是外部連結，放在「關於」最後
+    const groups: { id: string; title: string; routes: { to: RoutePage; label: string }[]; discord?: boolean }[] = [
+        {
+            id: 'use',
+            title: tx('common:landing.footer.group.use'),
+            routes: [
+                { to: 'instructions', label: tx('common:landing.footer.tutorial') },
+                { to: 'schedule', label: tx('schedule:title') },
+                { to: 'compare', label: tx('compare:title') },
+            ],
+        },
+        {
+            id: 'help',
+            title: tx('common:landing.footer.group.help'),
+            routes: [
+                { to: 'faq', label: tx('common:landing.footer.faq') },
+                { to: 'status', label: tx('status:title') },
+                { to: 'privacy', label: tx('common:landing.footer.privacy') },
+            ],
+        },
+        {
+            id: 'about',
+            title: tx('common:landing.footer.group.about'),
+            routes: [
+                { to: 'about', label: tx('common:landing.footer.about') },
+                { to: 'support', label: tx('common:landing.footer.support') },
+            ],
+            discord: true,
+        },
     ];
 
     return (
         <footer className={cn('mt-16 border-t border-white/10 py-8 text-center text-sm text-muted-foreground', className)}>
-            <div className="container mx-auto flex flex-col gap-5 px-4">
+            <div className="container mx-auto flex flex-col gap-6 px-4">
                 <nav
                     aria-label={tx('common:landing.footer.nav')}
-                    className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
+                    className="mx-auto grid w-full max-w-2xl grid-cols-3 gap-x-4 gap-y-6 text-left sm:gap-x-10"
                 >
-                    {routes.map((r) => (
-                        <RouteLink key={r.to} to={r.to} className={LINK_CLS} onClick={() => track(r.to)}>
-                            {r.label}
-                        </RouteLink>
+                    {groups.map((g) => (
+                        <div key={g.id} className="min-w-0">
+                            {/* 用 <p> 不用 <h2>：頁尾分組標題不該進頁面的標題大綱（影響 SEO 的 H2 結構） */}
+                            <p id={`footer-group-${g.id}`} className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 sm:text-xs">
+                                {g.title}
+                            </p>
+                            <ul aria-labelledby={`footer-group-${g.id}`} className="flex flex-col gap-2">
+                                {g.routes.map((r) => (
+                                    <li key={r.to}>
+                                        <RouteLink to={r.to} className={LINK_CLS} onClick={() => track(r.to)}>
+                                            {r.label}
+                                        </RouteLink>
+                                    </li>
+                                ))}
+                                {g.discord && (
+                                    <li>
+                                        <a
+                                            href={DISCORD_URL}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={LINK_CLS}
+                                            onClick={() => track('discord')}
+                                        >
+                                            Discord
+                                        </a>
+                                    </li>
+                                )}
+                            </ul>
+                        </div>
                     ))}
-                    <a
-                        href={DISCORD_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={LINK_CLS}
-                        onClick={() => track('discord')}
-                    >
-                        Discord
-                    </a>
                 </nav>
 
                 <div className="flex flex-col gap-2">
