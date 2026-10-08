@@ -1,4 +1,4 @@
-// read／processing／fixed 會公開在 /status（僅限 public_notice）；unread（站方未看過）與 archived 不公開（migration 20261008110000）
+// read／processing／fixed 會公開在 /status（僅限 public_notice）；unread（站方未看過）與 archived 不公開（migration 20261008062610）
 // processed 是舊後台寫入的值（migration 相容、不轉換資料），等同 fixed：顯示成「已修正」、公開頁輸出成 fixed，但不再提供選擇
 export type SelectableFeedbackStatus = 'unread' | 'read' | 'processing' | 'fixed' | 'archived';
 export type FeedbackStatus = SelectableFeedbackStatus | 'processed';

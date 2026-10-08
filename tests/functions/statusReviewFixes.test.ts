@@ -180,7 +180,7 @@ describe('一致性：常數 ↔ 文案 ↔ SQL', () => {
     });
 
     it('已知問題的狀態與影響範圍：後端常數 = migration CHECK，五語都有文案', () => {
-        const sql = read('supabase/migrations/20261008100000_known_issues.sql');
+        const sql = read('supabase/migrations/20261008062601_known_issues.sql');
         for (const s of ISSUE_STATUSES) expect(sql).toContain(`'${s}'`);
         for (const a of ISSUE_AREAS) expect(sql).toContain(`'${a}'`);
         for (const lang of LANGS) {

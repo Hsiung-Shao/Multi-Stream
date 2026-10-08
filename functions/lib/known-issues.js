@@ -1,6 +1,6 @@
 // 已知問題（known_issues）共用工具：常數、後台寫入驗證、公開欄位
 //
-// 表結構與 CHECK 見 supabase/migrations/20261008100000_known_issues.sql，常數要與 CHECK 對齊。
+// 表結構與 CHECK 見 supabase/migrations/20261008062601_known_issues.sql，常數要與 CHECK 對齊。
 
 export const ISSUE_STATUSES = new Set(['investigating', 'identified', 'fixing', 'monitoring', 'resolved']);
 export const ISSUE_SEVERITIES = new Set(['minor', 'major']);
