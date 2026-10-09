@@ -17,7 +17,8 @@
 //   header: Authorization: Bearer <本地 service_role>（或 x-schedule-secret）
 //   ?shard_size=400&budget_ms=60000&concurrency=8&tiers=1 可調
 
-import { loadRoster, recomputeTiers } from '../_shared/roster.ts';
+import { loadRosterSlice, recomputeTiers } from '../_shared/roster.ts';
+import type { RosterChannel } from '../_shared/types.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
 import {
@@ -26,7 +27,7 @@ import {
   classifyNewVideos,
   exhausted,
   expireOverdue,
-  loadCurrentByChannel,
+  loadCurrentByChannelRpc,
   loadPendingYouTube,
   refreshPending,
   rssSweep,
@@ -57,21 +58,25 @@ Deno.serve((req) => {
     const concurrency = Number(params.get('concurrency')) || DEFAULT_CONCURRENCY;
     const deadline = { at: now + budgetMs };
 
-    // 1. 名冊（YouTube＋Twitch 一次取回，4c 的 Twitch 週表共用）；新的一圈或 ?tiers=1 時重算分級
-    const fullRoster = await loadRoster(db);
-    const roster = fullRoster.filter((c) => c.platform === 'youtube').sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
-    const twitchRoster = fullRoster.filter((c) => c.platform === 'twitch').sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
-    stats.channels_total = roster.length;
+    // 1. 名冊：只取這一片（schedule_roster_v2 依 id 排序、從游標繞回取 shard_size 筆，回傳總數）；
+    //    新的一圈或 ?tiers=1 時才讀全部 YouTube 名冊（重算分級、重查待處理要用）
     const shard = await loadShard(db, JOB);
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
-    const start = roster.length ? shard.cursor_position % roster.length : 0;
+    const ytSlice = await loadRosterSlice(db, { platform: 'youtube', offset: shard.cursor_position, limit: shardSize });
+    const total = ytSlice.total;
+    stats.channels_total = total;
+    const start = ytSlice.start;
     // 新的一圈＝這一片跨過名冊開頭（isLapStart；游標繞回時通常不是 0）。上一輪已經是新一圈、這輪還在同一片
     // （RSS 限流沒前進、或跨界那片只做了一部分）就不是：不重算分級、不復活死頻道、不重查待處理（否則每輪重做、吃掉 API 額度）
     const prev = shard.last_run_stats;
-    const newLap = isLapStart(start, shardSize, roster.length, prev);
+    const newLap = isLapStart(start, shardSize, total, prev);
     stats.cursor_start = start;
     stats.new_lap = newLap;
+    // 全名冊（依 id 排序）：只在需要時讀。讀取時機與原本相同（在 streak 歸零之前），切片從同一批物件取，
+    // 重算分級寫回的 tier 會帶到這一片
+    let roster: RosterChannel[] | null = null;
     if (newLap || params.get('tiers') === '1') {
+      roster = (await loadRosterSlice(db, { platform: 'youtube' })).channels;
       // 死頻道每圈再試一次：streak 歸零，這一圈若還是失敗（非限流輪次）會再累積
       await db.update('schedule_channel_state', `rss_fail_streak=gte.${RSS_FAIL_STREAK_DEAD}`, { rss_fail_streak: 0 });
       const tiers = await recomputeTiers(db, roster, now);
@@ -80,13 +85,13 @@ Deno.serve((req) => {
     }
 
     // 2. 這一片頻道走 RSS
-    const slice = [...roster.slice(start), ...roster.slice(0, start)].slice(0, shardSize);
+    const slice = roster ? [...roster.slice(start), ...roster.slice(0, start)].slice(0, shardSize) : ytSlice.channels;
     const sweep = await rssSweep(slice, { concurrency, deadline, stats, now });
     stats.channels_processed = sweep.processed.length;
     stats.budget_exhausted = exhausted(deadline);
     await writeChannelStates(db, sweep.stateUpdates);
     // 游標只前進到「從頭連續處理完」的位置（限流時失敗的頻道下一輪再試）
-    const nextCursor = (start + sweep.advance) % Math.max(roster.length, 1);
+    const nextCursor = (start + sweep.advance) % Math.max(total, 1);
     stats.cursor_advance = sweep.advance;
 
     // 3. 新影片分類（API 有上限；出錯只記錯誤，游標照樣前進、snapshot 照樣發布）
@@ -112,8 +117,9 @@ Deno.serve((req) => {
     // 4b. 共享表：這輪 RSS 掃到的頻道 + 有重查場次的頻道；場次狀態從資料庫讀目前所有 scheduled/live
     const touched = new Map(sweep.processed.map((c) => [c.channelId, c]));
     const refreshedChannels = new Set(refreshed.map((s) => s.channel_id));
-    for (const c of roster) if (refreshedChannels.has(c.channelId)) touched.set(c.channelId, c);
-    const byChannel = await loadCurrentByChannel(db, [...touched.keys()]);
+    // 重查只在新的一圈（roster 已讀全名冊）；其餘輪次 refreshed 為空
+    for (const c of roster ?? slice) if (refreshedChannels.has(c.channelId)) touched.set(c.channelId, c);
+    const byChannel = await loadCurrentByChannelRpc(db, [...touched.keys()]);
     stats.live_status_rows = await writeLiveStatus(db, [...touched.values()], byChannel, now);
 
     // 4c～4d 是附加功能：任何一步失敗只記進 stats.errors，不能擋住 RSS 游標前進與 snapshot 發布
@@ -121,10 +127,17 @@ Deno.serve((req) => {
     await softStep(stats, 'twitch schedule', async () => {
       const tShard = await loadShard(db, TWITCH_JOB);
       const tSize = Number(params.get('twitch_size')) || tShard.shard_size;
-      const tStart = twitchRoster.length ? tShard.cursor_position % twitchRoster.length : 0;
-      // 跨過名冊開頭的那一片清離開名冊的預告（游標繞回時通常不是 0；清除可重複執行，同一圈做兩次也無妨）
-      if (tStart === 0 || tStart + tSize > twitchRoster.length) await cancelOrphanTwitchSchedule(db, new Set(twitchRoster.map((c) => c.channelId)), stats, now);
-      const tSlice = [...twitchRoster.slice(tStart), ...twitchRoster.slice(0, tStart)].slice(0, tSize);
+      // Twitch 名冊也只取這一片（同上，資料庫端分片）
+      const tw = await loadRosterSlice(db, { platform: 'twitch', offset: tShard.cursor_position, limit: tSize });
+      const tTotal = tw.total;
+      const tStart = tw.start;
+      // 跨過名冊開頭的那一片清離開名冊的預告（游標繞回時通常不是 0；清除可重複執行，同一圈做兩次也無妨）；
+      // 這時才讀全部 Twitch 頻道 id
+      if (tStart === 0 || tStart + tSize > tTotal) {
+        const all = tTotal <= tSize ? tw.channels : (await loadRosterSlice(db, { platform: 'twitch' })).channels;
+        await cancelOrphanTwitchSchedule(db, new Set(all.map((c) => c.channelId)), stats, now);
+      }
+      const tSlice = tw.channels;
       const tResult = await syncTwitchSchedule(db, ctx.twitch, tSlice, {
         concurrency: TWITCH_CONCURRENCY,
         deadline: { at: Date.now() + TWITCH_BUDGET_MS },
@@ -133,8 +146,8 @@ Deno.serve((req) => {
       });
       stats.twitch_schedule_channels = tResult.processed;
       await saveShard(db, TWITCH_JOB, {
-        cursor_position: (tStart + tResult.advance) % Math.max(twitchRoster.length, 1),
-        total_items: twitchRoster.length,
+        cursor_position: (tStart + tResult.advance) % Math.max(tTotal, 1),
+        total_items: tTotal,
         stats: { ...stats, finished_at: new Date().toISOString() },
       });
     });
@@ -152,6 +165,6 @@ Deno.serve((req) => {
     // 0＝指紋沒變、這輪沒有重組上傳（schedule_snapshot_check）
     stats.snapshot_skipped = stats.snapshot_bytes === 0;
 
-    return { cursor_position: nextCursor, total_items: roster.length };
+    return { cursor_position: nextCursor, total_items: total };
   }, stats);
 });

@@ -9,7 +9,7 @@
 // 本地測試：POST http://127.0.0.1:57321/functions/v1/schedule-live（header 同 heavy）
 //   ?og_max=80&budget_ms=40000 可調
 
-import { loadRoster } from '../_shared/roster.ts';
+import { loadRosterSlice } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
 import { applyMerges, expireOverdue, loadPendingYouTube, ogSweep, softStep, touchLastLiveAt } from '../_shared/sweep.ts';
@@ -34,15 +34,15 @@ Deno.serve((req) => {
   const stats = emptyStats('live', Date.now());
   return runJob(req, 'live', JOB, async (ctx) => {
     const { db, params, now } = ctx;
-    const youtube = await loadRoster(db, 'youtube');
-
     // 1. 過期（資料庫端，每輪都跑），再用 live-og 查直播中或 2 小時內待機室的頻道（直播中的優先、最久沒查的先查）
     await expireOverdue(db, stats, now);
     const near = await loadPendingYouTube(db, now, 'near');
     const nearChannels = new Set(near.map((s) => s.channel_id));
     const liveFirst = new Set(near.filter((s) => s.status === 'live').map((s) => s.channel_id));
     stats.channels_total = nearChannels.size;
-    const og = await ogSweep(db, youtube.filter((c) => nearChannels.has(c.channelId)), stats, now, {
+    // 名冊只取這些頻道（schedule_roster_v2；原本每輪讀全部 YouTube 名冊再過濾）
+    const youtube = nearChannels.size ? (await loadRosterSlice(db, { platform: 'youtube', channelIds: [...nearChannels] })).channels : [];
+    const og = await ogSweep(db, youtube, stats, now, {
       concurrency: OG_CONCURRENCY,
       deadline: { at: Date.now() + (Number(params.get('budget_ms')) || OG_BUDGET_MS) },
       maxChannels: Number(params.get('og_max')) || OG_MAX_CHANNELS,

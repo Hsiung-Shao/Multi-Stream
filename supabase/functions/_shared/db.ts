@@ -147,6 +147,29 @@ export class Db {
   }
 }
 
+/** RPC 的欄式輸出 {cols, rows} */
+export interface Columnar {
+  cols: string[];
+  rows: unknown[][];
+}
+
+/**
+ * 欄式輸出（{cols, rows}）轉回物件陣列；已經是物件陣列就原樣回傳（相容舊格式與測試假資料）。
+ * 欄式比 json_agg 物件陣列小很多：每列不重複 key（出口流量瘦身，migration 20261009130000）。
+ */
+export function rowsFromColumnar<T>(v: unknown): T[] {
+  if (v == null) return [];
+  if (Array.isArray(v)) return v as T[];
+  const c = v as Partial<Columnar>;
+  if (!Array.isArray(c.cols) || !Array.isArray(c.rows)) throw new Error('rowsFromColumnar: 不是欄式輸出');
+  const cols = c.cols;
+  return c.rows.map((r) => {
+    const o: Record<string, unknown> = {};
+    for (let i = 0; i < cols.length; i++) o[cols[i]] = r[i];
+    return o as T;
+  });
+}
+
 /** PostgREST `in.(...)` 的值：字串要用雙引號包起來，內含雙引號要跳脫 */
 export function inList(values: readonly string[]): string {
   return `in.(${values.map((v) => `"${v.replace(/"/g, '\\"')}"`).join(',')})`;

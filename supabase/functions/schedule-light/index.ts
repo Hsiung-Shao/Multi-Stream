@@ -13,10 +13,10 @@
 // 本地測試：POST http://127.0.0.1:57321/functions/v1/schedule-light（header 同 heavy）
 //   ?shard_size=500&concurrency=8&budget_ms=60000 可調
 
-import { loadRoster } from '../_shared/roster.ts';
+import { loadRosterSlice } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannel, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannelRpc, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
@@ -34,23 +34,20 @@ Deno.serve((req) => {
     const concurrency = Number(params.get('concurrency')) || DEFAULT_CONCURRENCY;
     const deadline = { at: now + budgetMs };
 
-    const roster = await loadRoster(db);
-    const youtube = roster.filter((c) => c.platform === 'youtube');
-    const twitchChannels = roster.filter((c) => c.platform === 'twitch');
-    const tier1 = youtube.filter((c) => c.tier === 1).sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
-    stats.channels_total = tier1.length;
-
-    // 1. T1 分片 RSS
+    // 1. T1 分片 RSS：名冊只取這一片 T1（schedule_roster_v2 在資料庫端依 id 排序、從游標繞回取 shard_size 筆，回傳 T1 總數）
     const shard = await loadShard(db, JOB);
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
-    const start = tier1.length ? shard.cursor_position % tier1.length : 0;
-    const slice = [...tier1.slice(start), ...tier1.slice(0, start)].slice(0, shardSize);
+    const t1 = await loadRosterSlice(db, { platform: 'youtube', tier: 1, offset: shard.cursor_position, limit: shardSize });
+    const tier1Total = t1.total;
+    stats.channels_total = tier1Total;
+    const start = t1.start;
+    const slice = t1.channels;
     const sweep = await rssSweep(slice, { concurrency, deadline, stats, now });
     stats.channels_processed = sweep.processed.length;
     stats.budget_exhausted = exhausted(deadline);
     await writeChannelStates(db, sweep.stateUpdates);
     // 游標只前進到「從頭連續處理完」的位置（限流時失敗的頻道下一輪再試）
-    const nextCursor = (start + sweep.advance) % Math.max(tier1.length, 1);
+    const nextCursor = (start + sweep.advance) % Math.max(tier1Total, 1);
 
     // 2. RSS 新發現的影片（API，有上限）；API 出錯（配額用完、5xx）只記錯誤，不擋住 snapshot。
     //    schedule-live 已寫入的直播／待機室場次在 streams 裡，schedule_unseen_video_ids 會排除，不重花 API
@@ -58,14 +55,15 @@ Deno.serve((req) => {
       await classifyNewVideos(db, yt, sweep.candidates, stats, now);
     });
 
-    // 3. Twitch 直播中
+    // 3. Twitch 直播中（全部 Twitch 頻道；名冊只帶 id、vtuber_id、external_id）
+    const twitchChannels = (await loadRosterSlice(db, { platform: 'twitch' })).channels;
     const twitchResult = await syncTwitchLive(db, twitch, twitchChannels, stats, now);
     // 合併是附加功能：失敗只記錯誤，不能擋住後面的共享表與 snapshot
     await softStep(stats, 'merge', () => applyMerges(db, stats, now));
 
     // 4. last_live_at + 共享表（這輪 RSS 掃到的頻道；場次狀態從資料庫讀「目前所有 scheduled/live」）
     await touchLastLiveAt(db, twitchResult.liveVtuberIds, stats, now);
-    const byChannel = await loadCurrentByChannel(db, sweep.processed.map((c) => c.channelId));
+    const byChannel = await loadCurrentByChannelRpc(db, sweep.processed.map((c) => c.channelId));
     stats.live_status_rows = await writeLiveStatus(db, sweep.processed, byChannel, now);
 
     // 5. snapshot（heavy_refreshed_at 取 Heavy 最後成功時間）
@@ -74,6 +72,6 @@ Deno.serve((req) => {
     // 0＝指紋沒變、這輪沒有重組上傳（schedule_snapshot_check），記在 stats.snapshot_skipped
     stats.snapshot_skipped = stats.snapshot_bytes === 0;
 
-    return { cursor_position: nextCursor, total_items: tier1.length };
+    return { cursor_position: nextCursor, total_items: tier1Total };
   }, stats);
 });

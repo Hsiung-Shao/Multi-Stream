@@ -3,6 +3,7 @@
 // 時間欄位為 null 時直接省略。
 
 import type { Db } from './db.ts';
+import { rowsFromColumnar } from './db.ts';
 import { isRecentForSnapshot, isUpcomingForSnapshot, LIVE_STALE_HOURS, RECENT_WINDOW_HOURS } from './rules.ts';
 import type { StreamRecord } from './types.ts';
 
@@ -245,20 +246,21 @@ interface CollabLinkRow extends GroupLinkRow {
   until: string | null;
 }
 
-/** schedule_snapshot_source 的回傳：與原本五支查詢同範圍、同欄位 */
+/** schedule_snapshot_source 的回傳：與原本五支查詢同範圍；每段是欄式 {cols, rows}（舊格式物件陣列也接受） */
 interface SnapshotSource {
-  active: SnapshotSourceRow[];
-  ended: SnapshotSourceRow[];
-  vtubers: VtuberRow[];
-  groups: GroupRow[];
-  links: CollabLinkRow[];
+  active: unknown;
+  ended: unknown;
+  vtubers: unknown;
+  groups: unknown;
+  links: unknown;
 }
 
 /**
  * 從資料庫組 snapshot 並上傳；回傳位元組數，資料沒變（跳過上傳）時回 0。
  *
  * 出口流量（2026-10-09）：一天約 240 輪，原本每輪都把全部場次、實況主、團體讀回來重組上傳。改成：
- *   1. schedule_snapshot_check：資料庫端算 buildSnapshot 輸入的指紋（範圍與欄位見 migration 20261009120000）。
+ *   1. schedule_snapshot_check：資料庫端算 buildSnapshot 輸入的指紋（範圍與欄位見 migration 20261009120000、20261009130000）。
+ *      時間邊界量化到 30 分鐘：越界項目（直播過期、recent 滑出、upcoming 進出視窗）最多晚 30 分鐘才反映到輸出
  *      指紋沒變、且距上次上傳未達 SNAPSHOT_FORCE_MINUTES → 回 0，什麼都不讀
  *   2. schedule_snapshot_source：一次取回來源（場次、用到的實況主、團體、合作）
  *   3. buildSnapshot → 上傳 Storage
@@ -276,13 +278,13 @@ export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: str
 
   const src = await db.rpc<SnapshotSource>('schedule_snapshot_source', { p_since: sinceIso });
   if (!src) throw new Error('schedule_snapshot_source 回傳空值');
-  const streams = [...(src.active ?? []), ...(src.ended ?? [])];
-  const groupRows = src.groups ?? [];
+  const streams = [...rowsFromColumnar<SnapshotSourceRow>(src.active), ...rowsFromColumnar<SnapshotSourceRow>(src.ended)];
+  const groupRows = rowsFromColumnar<GroupRow>(src.groups);
   const groups = resolveGroups(groupRows);
   // since／until 是已公告的起訖日（台北日期）：開始當天起、結束當天以前算合作中（資料庫只篩用到的實況主）
   const today = taipeiDate(now);
   const used = new Set(streams.map((s) => s.vtuber_id));
-  const links = (src.links ?? []).filter(
+  const links = rowsFromColumnar<CollabLinkRow>(src.links).filter(
     (l) => used.has(l.vtuber_id) && (l.since == null || l.since <= today) && (l.until == null || l.until >= today),
   );
   const collabs = resolveCollabs(links, groups);
@@ -291,7 +293,7 @@ export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: str
     .filter((g) => g.kind === 'agency' && !g.parent_id)
     .map((g) => g.name)
     .sort((a, b) => a.localeCompare(b));
-  const snapshot = buildSnapshot(streams, src.vtubers ?? [], groups, now, heavyRefreshedAt, collabs, agencies);
+  const snapshot = buildSnapshot(streams, rowsFromColumnar<VtuberRow>(src.vtubers), groups, now, heavyRefreshedAt, collabs, agencies);
   const body = JSON.stringify(snapshot);
   await db.putStorageObject(SNAPSHOT_BUCKET, SNAPSHOT_PATH, body, 'application/json', SNAPSHOT_CACHE_SECONDS);
   if (check?.fingerprint) {

@@ -7,7 +7,7 @@
 //   6. youtube_live_status 共享表、vtubers.last_live_at
 
 import type { Db } from './db.ts';
-import { inList } from './db.ts';
+import { inList, rowsFromColumnar } from './db.ts';
 import { fetchChannelRss, type RssEntry } from './rss.ts';
 import { applyLiveOg, detectLiveOg, type LiveOgResult } from './live_og.ts';
 import {
@@ -338,6 +338,22 @@ export async function loadCurrentByChannel(db: Db, channelIds: readonly string[]
       list.push(r);
       out.set(r.channel_id, list);
     }
+  }
+  return out;
+}
+
+/**
+ * 同 loadCurrentByChannel，改走 RPC（schedule_current_streams，POST、欄式輸出）：不再發 `channel_id=in.(100 個 uuid)` 的長網址 GET。
+ * Light／Heavy 寫共享表用（Live 的 ogSweep 仍用 loadCurrentByChannel）。
+ */
+export async function loadCurrentByChannelRpc(db: Db, channelIds: readonly string[]): Promise<Map<string, StreamRecord[]>> {
+  const out = new Map<string, StreamRecord[]>();
+  if (channelIds.length === 0) return out;
+  const res = await db.rpc<unknown>('schedule_current_streams', { p_channel_ids: [...channelIds] });
+  for (const r of rowsFromColumnar<StreamRecord>(res)) {
+    const list = out.get(r.channel_id) ?? [];
+    list.push(r);
+    out.set(r.channel_id, list);
   }
   return out;
 }
@@ -808,8 +824,8 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
 /** vtubers.last_live_at：這輪偵測到直播中的實況主 */
 export async function touchLastLiveAt(db: Db, vtuberIds: Iterable<string>, stats: RunStats, now: number): Promise<void> {
   const ids = [...new Set(vtuberIds)];
-  const nowIso = new Date(now).toISOString();
-  for (let i = 0; i < ids.length; i += 100) {
-    stats.last_live_at_updated += await db.update('vtubers', `id=${inList(ids.slice(i, i + 100))}`, { last_live_at: nowIso });
-  }
+  if (ids.length === 0) return;
+  // RPC（POST）：原本是 id=in.(100 個 uuid) 的長網址 PATCH
+  const n = await db.rpc<number>('schedule_touch_last_live', { p_ids: ids, p_now: new Date(now).toISOString() });
+  stats.last_live_at_updated += typeof n === 'number' ? n : 0;
 }
