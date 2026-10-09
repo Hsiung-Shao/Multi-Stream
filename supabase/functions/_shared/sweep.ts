@@ -138,43 +138,21 @@ export async function rssSweep(
 }
 
 /**
- * 寫回 schedule_channel_state 的 RSS 健康度。
- * PostgREST upsert 是 INSERT … ON CONFLICT DO UPDATE：NOT NULL 又沒 DEFAULT 的欄位（tier）即使走 UPDATE 分支
- * 也要出現在 payload 裡（memory error_postgrest_upsert_not_null_and_empty_body），所以先把現有 tier 讀回來一起送；
- * 沒有列的新頻道先當 T2。
+ * 寫回 schedule_channel_state 的 RSS 健康度／live-og 狀態：資料庫端 RPC 一次寫完（schedule_upsert_channel_states）。
+ * 語意沿用原本「依欄位集分組 upsert」：payload 有的 key 才更新（失敗列沒有 rss_last_ok_at，不能清掉既有的最後成功時間）；
+ * tier 不在 payload 時保留原值，沒有狀態列的新頻道建列時 tier＝2、tier_reason＝'first_seen'。
+ * 原本要先 GET 現有 tier（`in.(100 個 uuid)` 長網址）再分組 upsert。
  */
 export async function writeChannelStates(db: Db, updates: Record<string, unknown>[]): Promise<void> {
   if (updates.length === 0) return;
-  const ids = updates.map((u) => String(u.channel_id));
-  const tiers = new Map<string, number>();
-  for (let i = 0; i < ids.length; i += 100) {
-    const rows = await db.select<{ channel_id: string; tier: number }>(
-      'schedule_channel_state',
-      `select=channel_id,tier&channel_id=${inList(ids.slice(i, i + 100))}&limit=100`,
-    );
-    for (const r of rows) tiers.set(r.channel_id, r.tier);
+  for (let i = 0; i < updates.length; i += 1000) {
+    await db.rpc('schedule_upsert_channel_states', { p_rows: updates.slice(i, i + 1000) });
   }
-  const rows = updates.map((u) => {
-    const id = String(u.channel_id);
-    const known = tiers.get(id);
-    const base: Record<string, unknown> = { ...u, tier: known ?? 2 };
-    if (known == null) base.tier_reason = 'first_seen';
-    return base;
-  });
-  // 批次 upsert 要求每筆欄位集一致，但不能用「缺的補 null」湊齊：失敗列沒有 rss_last_ok_at，
-  // 補 null 會把既有的最後成功時間覆寫掉。改成依欄位集分組，各組各自 upsert。
-  const groups = new Map<string, Record<string, unknown>[]>();
-  for (const r of rows) {
-    const sig = Object.keys(r).sort().join(',');
-    const list = groups.get(sig) ?? [];
-    list.push(r);
-    groups.set(sig, list);
-  }
-  for (const list of groups.values()) await db.upsert('schedule_channel_state', list, 'channel_id');
 }
 
 /**
- * 新影片分類：排除 streams 與 schedule_seen_videos 已有的，其餘送 videos.list。
+ * 新影片分類：排除 streams（YouTube）與 schedule_seen_videos 已有的（資料庫端 schedule_unseen_video_ids，只回沒看過的 id），
+ * 其餘送 videos.list。
  * 有 liveStreamingDetails 的寫進 streams；全部寫進 seen（stream / video / missing）。
  * 回傳升級名單（T2/T3 頻道有新影片 → T1）。
  */
@@ -186,11 +164,9 @@ export async function classifyNewVideos(
   now: number,
 ): Promise<{ promoted: RosterChannel[]; upserted: StreamRow[] }> {
   const ids = [...candidates.keys()];
-  // 「看過的影片」以頻道為單位一次撈（每 100 個頻道一次查詢，自動分頁），
-  // 比逐 100 個 videoId 查便宜得多：一輪 RSS 會有上萬個候選 id
-  const channelIds = [...new Set([...candidates.values()].map((c) => c.channel.channelId))];
-  const known = await loadKnownVideoIds(db, channelIds);
-  const allFresh = ids.filter((id) => !known.has(id));
+  // 候選 id 全部送資料庫比對、只回沒看過的（一輪 RSS 會有上萬個候選 id，原本要把這些頻道看過的影片全部讀回來）
+  const unseen = ids.length ? new Set((await db.rpc<string[]>('schedule_unseen_video_ids', { p_ids: ids })) ?? []) : new Set<string>();
+  const allFresh = ids.filter((id) => unseen.has(id));
   stats.new_video_candidates += allFresh.length;
   // API 最後：每輪呼叫次數有上限，超過的不寫 seen，下一輪 RSS 會再帶出來
   const fresh = allFresh.slice(0, yt.remainingVideos());
@@ -249,20 +225,12 @@ export async function classifyNewVideos(
   }
   const promoted = [...promotedSet.values()];
   for (const c of promoted) c.tier = 1;
-  return { promoted, upserted: streamRows };
-}
-
-/** 這些頻道已經分類過（schedule_seen_videos）或已在 streams 的 YouTube videoId */
-export async function loadKnownVideoIds(db: Db, channelIds: readonly string[]): Promise<Set<string>> {
-  const known = new Set<string>();
-  for (let i = 0; i < channelIds.length; i += 100) {
-    const list = inList(channelIds.slice(i, i + 100));
-    const seen = await db.selectAll<{ video_id: string }>('schedule_seen_videos', `select=video_id&channel_id=${list}`, 'video_id');
-    for (const r of seen) known.add(r.video_id);
-    const inStreams = await db.selectAll<{ external_id: string }>('streams', `select=external_id&platform=eq.youtube&channel_id=${list}`, 'external_id');
-    for (const r of inStreams) known.add(r.external_id);
+  // 名冊物件同步（同一輪後續若用到 lastNewVideoAt 才不會是舊值）
+  for (const cand of candidates.values()) {
+    const ms = latestNew.get(cand.channel.channelId);
+    if (ms != null) cand.channel.lastNewVideoAt = new Date(ms).toISOString();
   }
-  return known;
+  return { promoted, upserted: streamRows };
 }
 
 function toStreamRow(ch: RosterChannel, v: YouTubeVideo, status: StreamStatus, frame: boolean, nowIso: string): StreamRow {
@@ -393,6 +361,11 @@ export interface OgSweepResult {
   liveVtuberIds: string[];
   /** 成功查到的頻道（寫共享表） */
   checked: RosterChannel[];
+  /**
+   * checked 頻道寫入後的「目前狀態」：與寫完再 loadCurrentByChannel 同範圍（YouTube、scheduled／live、不含社群週表／投稿），
+   * 由寫入前讀到的現況套上本輪 upsert 的列推得。呼叫端寫共享表直接用，不再重查一次。
+   */
+  current: Map<string, (StreamRecord | StreamRow)[]>;
 }
 
 /**
@@ -428,7 +401,7 @@ export async function ogSweep(
   const reserve = Math.min(others.length, opts.reserveOthers ?? OG_RESERVE_OTHERS, Math.floor(opts.maxChannels / 2));
   const liveTake = liveCh.slice(0, opts.maxChannels - reserve);
   const targets = [...liveTake, ...others.slice(0, opts.maxChannels - liveTake.length)];
-  if (!targets.length) return { liveVtuberIds: [], checked: [] };
+  if (!targets.length) return { liveVtuberIds: [], checked: [], current: new Map() };
 
   const results = new Map<string, LiveOgResult>();
   await mapLimit(targets, opts.concurrency, opts.deadline, async (ch) => {
@@ -517,7 +490,29 @@ export async function ogSweep(
     stats.streams_upserted += createdBy.size;
   }
   await writeChannelStates(db, stateRows);
-  return { liveVtuberIds, checked };
+  return { liveVtuberIds, checked, current: currentAfterWrites(checked, current, [...changedBy.values(), ...createdBy.values()]) };
+}
+
+/** 寫入前的現況套上本輪寫入的列（以 external_id 對應；YouTube 的 (platform, external_id) 唯一） → 寫入後的現況 */
+function currentAfterWrites(
+  checked: readonly RosterChannel[],
+  before: ReadonlyMap<string, StreamRecord[]>,
+  written: readonly (StreamRecord | StreamRow)[],
+): Map<string, (StreamRecord | StreamRow)[]> {
+  const ids = new Set(checked.map((c) => c.channelId));
+  const byExt = new Map<string, StreamRecord | StreamRow>();
+  for (const id of ids) for (const r of before.get(id) ?? []) byExt.set(r.external_id, r);
+  for (const r of written) byExt.set(r.external_id, r);
+  const nonVideo = new Set<string>(NON_VIDEO_SOURCES);
+  const out = new Map<string, (StreamRecord | StreamRow)[]>();
+  for (const r of byExt.values()) {
+    if (!ids.has(r.channel_id) || r.platform !== 'youtube' || nonVideo.has(r.source)) continue;
+    if (r.status !== 'scheduled' && r.status !== 'live') continue;
+    const list = out.get(r.channel_id) ?? [];
+    list.push(r);
+    out.set(r.channel_id, list);
+  }
+  return out;
 }
 
 /**
@@ -676,7 +671,8 @@ export function scheduleRowsFor(
 
 /**
  * Twitch 週表：一個頻道一次 /helix/schedule（沒有批次端點）。
- * 回來的段 upsert；這個頻道未來、之前有但這次沒回來的段標 canceled（含整個週表被刪＝404）。
+ * 回來的段 upsert；這個頻道未來、之前有但這次沒回來的段標 canceled（含整個週表被刪＝404）——
+ * 取消改成整輪結束後資料庫端一次處理（schedule_twitch_reconcile），只放這輪成功查到週表的頻道（限速、失敗的不放）。
  * 預告過了開始時間 3 小時仍是 scheduled 的，標 expired。
  */
 export async function syncTwitchSchedule(
@@ -691,6 +687,7 @@ export async function syncTwitchSchedule(
   // 每個頻道的結果：true＝完成、false＝這輪沒處理到（被限速或還沒輪到）
   const done = new Array<boolean>(channels.length).fill(false);
   const indexed = channels.map((ch, i) => ({ ch, i }));
+  const reconcile: { channel_id: string; keep: string[]; covered_until: string | null }[] = [];
 
   await mapLimit(indexed, opts.concurrency, opts.deadline, async ({ ch, i }) => {
     let schedule: TwitchSchedule | null;
@@ -716,19 +713,17 @@ export async function syncTwitchSchedule(
       stats.twitch_schedule_segments += rows.length;
     }
     // tombstone：未來的預告這次沒回來 → 取消；翻頁沒走完時只作用到最後拿到的那一段（之後的沒被看到，不是取消）
-    const keep = new Set(rows.map((r) => r.external_id));
-    const coveredFilter = schedule?.coveredUntil ? `&scheduled_start=lte.${encodeURIComponent(schedule.coveredUntil)}` : '';
-    const existing = await db.select<{ id: string; external_id: string }>(
-      'streams',
-      `select=id,external_id&channel_id=eq.${ch.channelId}&source=eq.twitch_schedule&status=eq.scheduled&scheduled_start=gt.${encodeURIComponent(nowIso)}${coveredFilter}&limit=200`,
-    );
-    const gone = existing.filter((r) => !keep.has(r.external_id)).map((r) => r.id);
-    if (gone.length) {
-      await db.update('streams', `id=${inList(gone)}`, { status: 'canceled', fetched_at: nowIso });
-      stats.twitch_schedule_canceled += gone.length;
-    }
+    reconcile.push({
+      channel_id: ch.channelId,
+      keep: [...new Set(rows.map((r) => r.external_id))],
+      covered_until: schedule?.coveredUntil ?? null,
+    });
   });
   stats.twitch_schedule_calls = twitch.calls.schedule;
+  if (reconcile.length) {
+    const canceled = await db.rpc<number>('schedule_twitch_reconcile', { p_now: nowIso, p_items: reconcile });
+    stats.twitch_schedule_canceled += typeof canceled === 'number' ? canceled : 0;
+  }
   const processed = done.filter(Boolean).length;
   // 游標只前進到「從頭連續完成」的位置，被限速或沒輪到的頻道下一輪重來
   const firstMissing = done.indexOf(false);
@@ -775,10 +770,20 @@ export async function softStep(stats: RunStats, label: string, fn: () => Promise
 /**
  * 雙平台合併（見 merge.ts）：讀所有 scheduled／live 場次，加上最近 EXPIRE_AFTER_HOURS 內結束的場次（只當主場次），
  * 只寫 merged_with 有變的列。
+ *
+ * 出口流量：先問資料庫這些輸入列的指紋（schedule_merge_check）。mergeChanges 是輸入的純函式，指紋與上次
+ * 「算完沒有要改的列」時相同 → 結果一定還是沒有要改的列，整個讀取跳過。算完沒有要改的列才記指紋（schedule_merge_mark）；
+ * 這輪有改寫 merged_with 的，下一輪會重讀一次確認穩定後再記。
  */
 export async function applyMerges(db: Db, stats: RunStats, now: number): Promise<void> {
+  const endedSinceIso = new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString();
+  const check = await db.rpc<{ changed?: boolean; fingerprint?: string }>('schedule_merge_check', { p_ended_since: endedSinceIso });
+  if (check && check.changed === false) {
+    stats.merges_skipped = true;
+    return;
+  }
   const cols = 'select=id,vtuber_id,platform,source,status,scheduled_start,actual_start,is_schedule_frame,merged_with';
-  const endedSince = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
+  const endedSince = encodeURIComponent(endedSinceIso);
   const rows = [
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)`)),
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=eq.ended&actual_end=gte.${endedSince}`)),
@@ -797,6 +802,7 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
     }
   }
   stats.merges_changed += changes.length;
+  if (changes.length === 0 && check?.fingerprint) await db.rpc('schedule_merge_mark', { p_fingerprint: check.fingerprint });
 }
 
 /** vtubers.last_live_at：這輪偵測到直播中的實況主 */

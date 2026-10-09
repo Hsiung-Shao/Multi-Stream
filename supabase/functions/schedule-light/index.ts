@@ -53,7 +53,7 @@ Deno.serve((req) => {
     const nextCursor = (start + sweep.advance) % Math.max(tier1.length, 1);
 
     // 2. RSS 新發現的影片（API，有上限）；API 出錯（配額用完、5xx）只記錯誤，不擋住 snapshot。
-    //    schedule-live 已寫入的直播／待機室場次在 streams 裡，loadKnownVideoIds 會排除，不重花 API
+    //    schedule-live 已寫入的直播／待機室場次在 streams 裡，schedule_unseen_video_ids 會排除，不重花 API
     await softStep(stats, 'classify', async () => {
       await classifyNewVideos(db, yt, sweep.candidates, stats, now);
     });
@@ -71,6 +71,8 @@ Deno.serve((req) => {
     // 5. snapshot（heavy_refreshed_at 取 Heavy 最後成功時間）
     const heavy = await loadShard(db, HEAVY_JOB);
     stats.snapshot_bytes = await publishSnapshot(db, now, heavy.last_run_at);
+    // 0＝指紋沒變、這輪沒有重組上傳（schedule_snapshot_check），記在 stats.snapshot_skipped
+    stats.snapshot_skipped = stats.snapshot_bytes === 0;
 
     return { cursor_position: nextCursor, total_items: tier1.length };
   }, stats);

@@ -28,33 +28,24 @@ function fakeDb(respond: (url: string, init?: RequestInit) => Response) {
   return { db: new Db({ url: 'http://db', serviceRoleKey: 'k', fetch: fetchFn }), calls };
 }
 
-describe('writeChannelStates：依欄位集分組 upsert', () => {
-  it('失敗列不帶 rss_last_ok_at，不會被補 null 覆寫；每批欄位集一致且都含 tier', async () => {
-    const { db, calls } = fakeDb((url) => {
-      if (url.includes('schedule_channel_state?select=channel_id,tier')) {
-        return new Response(JSON.stringify([{ channel_id: 'c1', tier: 3 }, { channel_id: 'c2', tier: 1 }]), { status: 200 });
-      }
-      return new Response('', { status: 201 });
-    });
-    await writeChannelStates(db, [
+describe('writeChannelStates：一次 RPC、payload 原樣送出', () => {
+  // 2026-10-09 出口流量瘦身：「payload 有的 key 才更新、tier 保留、新頻道 tier 2／first_seen」改由資料庫端
+  // schedule_upsert_channel_states 處理（行為鎖在 supabase/tests/schedule_rpc_egress.sql T5）。這裡只鎖 TS 端：
+  // 不先 GET tier、每列的 key 原樣送出（失敗列沒有 rss_last_ok_at，不能被補成 null）。
+  it('失敗列不帶 rss_last_ok_at，不會被補 null；不 GET schedule_channel_state、不直接 upsert 表', async () => {
+    const { db, calls } = fakeDb(() => new Response('', { status: 200 }));
+    const rows = [
       { channel_id: 'c1', rss_fail_streak: 0, rss_last_ok_at: 'T', rss_last_error: null, last_checked_at: 'T' },
       { channel_id: 'c2', rss_fail_streak: 2, rss_last_error: 'timeout', last_checked_at: 'T' },
       { channel_id: 'c3', rss_fail_streak: 0, rss_last_ok_at: 'T', rss_last_error: null, last_checked_at: 'T' },
-    ]);
-    const upserts = calls.filter((c) => c.method === 'POST').map((c) => c.body as Record<string, unknown>[]);
-    expect(upserts).toHaveLength(3); // 成功列（既有）、失敗列、新列（帶 tier_reason）三種欄位集
-    for (const batch of upserts) {
-      const sig = Object.keys(batch[0]).sort().join(',');
-      for (const row of batch) {
-        expect(Object.keys(row).sort().join(',')).toBe(sig);
-        expect(typeof row.tier).toBe('number');
-      }
-    }
-    const failed = upserts.flat().find((r) => r.channel_id === 'c2')!;
-    expect('rss_last_ok_at' in failed).toBe(false);
-    expect(failed.tier).toBe(1);
-    const fresh = upserts.flat().find((r) => r.channel_id === 'c3')!;
-    expect(fresh).toMatchObject({ tier: 2, tier_reason: 'first_seen' });
+    ];
+    await writeChannelStates(db, rows);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('POST');
+    expect(calls[0].url).toContain('/rest/v1/rpc/schedule_upsert_channel_states');
+    const sent = (calls[0].body as { p_rows: Record<string, unknown>[] }).p_rows;
+    expect(sent).toEqual(rows);
+    expect('rss_last_ok_at' in sent.find((r) => r.channel_id === 'c2')!).toBe(false);
   });
 });
 

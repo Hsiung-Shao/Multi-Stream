@@ -57,9 +57,10 @@ Deno.serve((req) => {
     const concurrency = Number(params.get('concurrency')) || DEFAULT_CONCURRENCY;
     const deadline = { at: now + budgetMs };
 
-    // 1. 名冊；新的一圈或 ?tiers=1 時重算分級
-    const roster = await loadRoster(db, 'youtube');
-    roster.sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
+    // 1. 名冊（YouTube＋Twitch 一次取回，4c 的 Twitch 週表共用）；新的一圈或 ?tiers=1 時重算分級
+    const fullRoster = await loadRoster(db);
+    const roster = fullRoster.filter((c) => c.platform === 'youtube').sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
+    const twitchRoster = fullRoster.filter((c) => c.platform === 'twitch').sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
     stats.channels_total = roster.length;
     const shard = await loadShard(db, JOB);
     const shardSize = Number(params.get('shard_size')) || shard.shard_size;
@@ -118,7 +119,6 @@ Deno.serve((req) => {
     // 4c～4d 是附加功能：任何一步失敗只記進 stats.errors，不能擋住 RSS 游標前進與 snapshot 發布
     // 4c. Twitch 週表（階段 2）：另一個游標，每片一批頻道；/helix/schedule 一次只能查一個頻道
     await softStep(stats, 'twitch schedule', async () => {
-      const twitchRoster = (await loadRoster(db, 'twitch')).sort((a, b) => (a.channelId < b.channelId ? -1 : 1));
       const tShard = await loadShard(db, TWITCH_JOB);
       const tSize = Number(params.get('twitch_size')) || tShard.shard_size;
       const tStart = twitchRoster.length ? tShard.cursor_position % twitchRoster.length : 0;
@@ -149,6 +149,8 @@ Deno.serve((req) => {
 
     // 5. snapshot
     stats.snapshot_bytes = await publishSnapshot(db, now, new Date(now).toISOString());
+    // 0＝指紋沒變、這輪沒有重組上傳（schedule_snapshot_check）
+    stats.snapshot_skipped = stats.snapshot_bytes === 0;
 
     return { cursor_position: nextCursor, total_items: roster.length };
   }, stats);

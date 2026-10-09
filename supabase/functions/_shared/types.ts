@@ -12,6 +12,8 @@ export interface RosterChannel {
   /** live-og 最後查詢時間（輪替用）與連續「沒看到直播」次數（下播確認用）；舊測試資料可省略 */
   ogCheckedAt?: string | null;
   ogMissStreak?: number;
+  /** RSS 觀察到的最近新影片發布時間（schedule_channel_state.last_new_video_at；Heavy 重算分級用）；舊測試資料可省略 */
+  lastNewVideoAt?: string | null;
 }
 
 /** public.streams 的一列（寫入時的完整欄位集；批次 upsert 要求每筆欄位一致） */
@@ -107,6 +109,10 @@ export interface RunStats extends Record<string, unknown> {
   live_status_rows: number;
   last_live_at_updated: number;
   snapshot_bytes: number;
+  /** snapshot 指紋沒變（資料庫端 schedule_snapshot_check）→ 這輪沒有重組、沒有上傳；snapshot_bytes 為 0 */
+  snapshot_skipped?: boolean;
+  /** 雙平台合併的輸入指紋沒變（schedule_merge_check）→ 這輪沒有讀場次 */
+  merges_skipped?: boolean;
   errors: string[];
 }
 

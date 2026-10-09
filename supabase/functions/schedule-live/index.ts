@@ -12,7 +12,7 @@
 import { loadRoster } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
-import { applyMerges, expireOverdue, loadCurrentByChannel, loadPendingYouTube, ogSweep, softStep, touchLastLiveAt } from '../_shared/sweep.ts';
+import { applyMerges, expireOverdue, loadPendingYouTube, ogSweep, softStep, touchLastLiveAt } from '../_shared/sweep.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
@@ -53,12 +53,14 @@ Deno.serve((req) => {
     // 2. 合併（直播狀態剛變）、last_live_at、共享表（這輪查到的頻道）
     await softStep(stats, 'merge', () => applyMerges(db, stats, now));
     await touchLastLiveAt(db, og.liveVtuberIds, stats, now);
-    const byChannel = await loadCurrentByChannel(db, og.checked.map((c) => c.channelId));
-    stats.live_status_rows = await writeLiveStatus(db, og.checked, byChannel, now);
+    // 這輪查到的頻道寫入後的現況由 ogSweep 帶回（寫入前已讀過一次，不再重查 streams）
+    stats.live_status_rows = await writeLiveStatus(db, og.checked, og.current, now);
 
     // 3. snapshot（heavy_refreshed_at 取 Heavy 最後成功時間）
     const heavy = await loadShard(db, HEAVY_JOB);
     stats.snapshot_bytes = await publishSnapshot(db, now, heavy.last_run_at);
+    // 0＝指紋沒變、這輪沒有重組上傳（schedule_snapshot_check），記在 stats.snapshot_skipped
+    stats.snapshot_skipped = stats.snapshot_bytes === 0;
 
     return {};
   }, stats);

@@ -3,7 +3,6 @@
 // 時間欄位為 null 時直接省略。
 
 import type { Db } from './db.ts';
-import { DbError, inList } from './db.ts';
 import { isRecentForSnapshot, isUpcomingForSnapshot, LIVE_STALE_HOURS, RECENT_WINDOW_HOURS } from './rules.ts';
 import type { StreamRecord } from './types.ts';
 
@@ -233,65 +232,75 @@ export function buildSnapshot(
   }) as Snapshot;
 }
 
-/** 從資料庫組 snapshot 並上傳；回傳位元組數 */
+/** 距上次上傳達這麼多分鐘就算資料沒變也重傳一次（generated_at 至多這麼舊；指紋不含 generated_at） */
+export const SNAPSHOT_FORCE_MINUTES = 60;
+
+interface SnapshotCheck {
+  changed: boolean;
+  fingerprint: string;
+}
+
+interface CollabLinkRow extends GroupLinkRow {
+  since: string | null;
+  until: string | null;
+}
+
+/** schedule_snapshot_source 的回傳：與原本五支查詢同範圍、同欄位 */
+interface SnapshotSource {
+  active: SnapshotSourceRow[];
+  ended: SnapshotSourceRow[];
+  vtubers: VtuberRow[];
+  groups: GroupRow[];
+  links: CollabLinkRow[];
+}
+
+/**
+ * 從資料庫組 snapshot 並上傳；回傳位元組數，資料沒變（跳過上傳）時回 0。
+ *
+ * 出口流量（2026-10-09）：一天約 240 輪，原本每輪都把全部場次、實況主、團體讀回來重組上傳。改成：
+ *   1. schedule_snapshot_check：資料庫端算 buildSnapshot 輸入的指紋（範圍與欄位見 migration 20261009120000）。
+ *      指紋沒變、且距上次上傳未達 SNAPSHOT_FORCE_MINUTES → 回 0，什麼都不讀
+ *   2. schedule_snapshot_source：一次取回來源（場次、用到的實況主、團體、合作）
+ *   3. buildSnapshot → 上傳 Storage
+ *   4. schedule_snapshot_mark：上傳成功才記指紋（上傳失敗的話下一輪指紋仍視為變動，會重傳）
+ * 改 buildSnapshot 用到的欄位或時間窗，要同步改 migration 裡 schedule_snapshot_check 的指紋範圍。
+ */
 export async function publishSnapshot(db: Db, now: number, heavyRefreshedAt: string | null): Promise<number> {
-  const cols =
-    'id,vtuber_id,channel_id,platform,external_id,source,status,scheduled_start,scheduled_end,actual_start,actual_end,title,category,thumbnail_url,is_schedule_frame,fetched_at,merged_with';
   const sinceIso = new Date(now - RECENT_WINDOW_HOURS * 3_600_000).toISOString();
-  const active = await db.selectAll<SnapshotSourceRow>(
-    'streams',
-    `select=${cols}&status=in.(scheduled,live)&is_schedule_frame=eq.false`,
-  );
-  const ended = await db.selectAll<SnapshotSourceRow>(
-    'streams',
-    `select=${cols}&status=eq.ended&actual_end=gte.${encodeURIComponent(sinceIso)}`,
-  );
-  const streams = [...active, ...ended];
-  const vtuberIds = [...new Set(streams.map((s) => s.vtuber_id))];
-  const vtubers: VtuberRow[] = [];
-  for (let i = 0; i < vtuberIds.length; i += 100) {
-    vtubers.push(
-      ...(await db.select<VtuberRow>(
-        'vtubers',
-        `select=id,name,img_url,nationality,group_id,youtube_channel_id,twitch_channel_id,slug&id=${inList(vtuberIds.slice(i, i + 100))}&limit=100`,
-      )),
-    );
-  }
-  // kind／parent_id 由 20260929110000 migration 新增；migration 還沒套的環境退回只讀團名（沒有所屬企業勢），snapshot 照常發布
-  let groupRows: GroupRow[];
-  try {
-    groupRows = await db.selectAll<GroupRow>('vtuber_groups', 'select=id,name,kind,parent_id');
-  } catch {
-    const legacy = await db.selectAll<{ id: string; name: string }>('vtuber_groups', 'select=id,name');
-    groupRows = legacy.map((g) => ({ ...g, kind: 'unverified', parent_id: null }));
-  }
+  const check = await db.rpc<SnapshotCheck>('schedule_snapshot_check', {
+    p_now: new Date(now).toISOString(),
+    p_since: sinceIso,
+    p_force_minutes: SNAPSHOT_FORCE_MINUTES,
+  });
+  if (check && check.changed === false) return 0;
+
+  const src = await db.rpc<SnapshotSource>('schedule_snapshot_source', { p_since: sinceIso });
+  if (!src) throw new Error('schedule_snapshot_source 回傳空值');
+  const streams = [...(src.active ?? []), ...(src.ended ?? [])];
+  const groupRows = src.groups ?? [];
   const groups = resolveGroups(groupRows);
-  // vtuber_group_links 由 20260930100000 新增；表還沒建（404／400）的環境視為沒有合作。
-  // 其他錯誤也不擋 snapshot 發布（合作是附屬資訊），但留 log，下一輪發布會補回
-  let links: GroupLinkRow[] = [];
-  try {
-    // since／until 是已公告的起訖日（台北日期）：開始當天起、結束當天以前算合作中
-    const today = taipeiDate(now);
-    links = await db.selectAll<GroupLinkRow>(
-      'vtuber_group_links',
-      `select=vtuber_id,group_id&role=eq.collaborator&or=(since.is.null,since.lte.${today})&and=(or(until.is.null,until.gte.${today}))`,
-      'vtuber_id,group_id', // 這張表沒有 id 欄，分頁排序用主鍵
-    );
-  } catch (e) {
-    if (!(e instanceof DbError && (e.status === 404 || e.status === 400))) {
-      console.warn(`vtuber_group_links: ${e instanceof Error ? e.message : 'error'}`);
-    }
-    links = [];
-  }
-  const used = new Set(vtuberIds);
-  const collabs = resolveCollabs(links.filter((l) => used.has(l.vtuber_id)), groups);
+  // since／until 是已公告的起訖日（台北日期）：開始當天起、結束當天以前算合作中（資料庫只篩用到的實況主）
+  const today = taipeiDate(now);
+  const used = new Set(streams.map((s) => s.vtuber_id));
+  const links = (src.links ?? []).filter(
+    (l) => used.has(l.vtuber_id) && (l.since == null || l.since <= today) && (l.until == null || l.until >= today),
+  );
+  const collabs = resolveCollabs(links, groups);
 
   const agencies = groupRows
     .filter((g) => g.kind === 'agency' && !g.parent_id)
     .map((g) => g.name)
     .sort((a, b) => a.localeCompare(b));
-  const snapshot = buildSnapshot(streams, vtubers, groups, now, heavyRefreshedAt, collabs, agencies);
+  const snapshot = buildSnapshot(streams, src.vtubers ?? [], groups, now, heavyRefreshedAt, collabs, agencies);
   const body = JSON.stringify(snapshot);
   await db.putStorageObject(SNAPSHOT_BUCKET, SNAPSHOT_PATH, body, 'application/json', SNAPSHOT_CACHE_SECONDS);
+  if (check?.fingerprint) {
+    try {
+      await db.rpc('schedule_snapshot_mark', { p_fingerprint: check.fingerprint });
+    } catch (e) {
+      // 記不下指紋只會讓下一輪多傳一次，不擋這一輪（上傳已成功）
+      console.warn(`schedule_snapshot_mark: ${e instanceof Error ? e.message : 'error'}`);
+    }
+  }
   return new TextEncoder().encode(body).length;
 }

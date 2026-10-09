@@ -5,22 +5,18 @@ import { inList } from './db.ts';
 import { computeTier, type Tier } from './rules.ts';
 import type { RosterChannel } from './types.ts';
 
-interface ChannelRow {
+/** schedule_roster RPC 的一列（頻道＋狀態；沒有狀態列的新頻道 state 欄位為 null） */
+interface RosterRow {
   id: string;
   vtuber_id: string;
   platform: 'youtube' | 'twitch';
   external_id: string;
   display_name: string | null;
-  vtubers: { activity: string } | null;
-}
-
-interface StateRow {
-  channel_id: string;
-  tier: number;
-  rss_fail_streak: number;
+  tier: number | null;
+  rss_fail_streak: number | null;
   last_new_video_at: string | null;
-  og_checked_at?: string | null;
-  og_miss_streak?: number;
+  og_checked_at: string | null;
+  og_miss_streak: number | null;
 }
 
 interface MetricRow {
@@ -29,38 +25,30 @@ interface MetricRow {
   video_count: number | null;
 }
 
-const ROSTER_QUERY =
-  'select=id,vtuber_id,platform,external_id,display_name,vtubers!inner(activity)' +
-  '&status=eq.active&external_id=not.is.null&vtubers.activity=neq.graduate';
-
-/** 全部 active、非 graduate、有 external_id 的頻道 */
+/**
+ * 全部 active、非 graduate、有 external_id 的頻道（依 id 排序）。
+ * 資料庫端 RPC 一次回傳名冊＋頻道狀態（json_agg 單一值，不受 PostgREST max-rows 截斷）：
+ * 原本是 vtuber_channels 與 schedule_channel_state 兩次全表分頁讀，一天約 240 輪，出口流量大宗。
+ */
 export async function loadRoster(db: Db, platform?: 'youtube' | 'twitch'): Promise<RosterChannel[]> {
-  const q = platform ? `${ROSTER_QUERY}&platform=eq.${platform}` : ROSTER_QUERY;
-  const rows = await db.selectAll<ChannelRow>('vtuber_channels', q);
-  const states = await db.selectAll<StateRow>(
-    'schedule_channel_state',
-    'select=channel_id,tier,rss_fail_streak,last_new_video_at,og_checked_at,og_miss_streak',
-    'channel_id',
-  );
-  const stateMap = new Map(states.map((s) => [s.channel_id, s]));
-  return rows.map((r) => {
-    const s = stateMap.get(r.id);
-    return {
-      channelId: r.id,
-      vtuberId: r.vtuber_id,
-      platform: r.platform,
-      externalId: r.external_id,
-      displayName: r.display_name,
-      tier: s ? (s.tier as Tier) : null,
-      rssFailStreak: s?.rss_fail_streak ?? 0,
-      ogCheckedAt: s?.og_checked_at ?? null,
-      ogMissStreak: s?.og_miss_streak ?? 0,
-    };
-  });
+  const rows = (await db.rpc<RosterRow[]>('schedule_roster', { p_platform: platform ?? null })) ?? [];
+  return rows.map((r) => ({
+    channelId: r.id,
+    vtuberId: r.vtuber_id,
+    platform: r.platform,
+    externalId: r.external_id,
+    displayName: r.display_name,
+    tier: r.tier == null ? null : (r.tier as Tier),
+    rssFailStreak: r.rss_fail_streak ?? 0,
+    ogCheckedAt: r.og_checked_at ?? null,
+    ogMissStreak: r.og_miss_streak ?? 0,
+    lastNewVideoAt: r.last_new_video_at ?? null,
+  }));
 }
 
 /**
  * 重算 YouTube 頻道分級並寫回 schedule_channel_state（只寫 tier 相關欄位，RSS 健康度欄位不動）。
+ * last_new_video_at 取自名冊（loadRoster 同一次 RPC 帶回）。
  * 切面：metrics 最新一天、不晚於 30 天前的最近一天、不晚於 90 天前的最近一天。
  */
 export async function recomputeTiers(
@@ -89,12 +77,6 @@ export async function recomputeTiers(
 
   const activity = await db.selectAll<{ id: string; activity: string }>('vtubers', 'select=id,activity');
   const activityMap = new Map(activity.map((v) => [v.id, v.activity]));
-  const states = await db.selectAll<StateRow>(
-    'schedule_channel_state',
-    'select=channel_id,tier,rss_fail_streak,last_new_video_at,og_checked_at,og_miss_streak',
-    'channel_id',
-  );
-  const lastNew = new Map(states.map((s) => [s.channel_id, s.last_new_video_at]));
 
   const upserts: Record<string, unknown>[] = [];
   const nowIso = new Date(now).toISOString();
@@ -106,7 +88,7 @@ export async function recomputeTiers(
         videoCountNow: dNow ? (m?.get(dNow) ?? null) : null,
         videoCount30: d30 ? (m?.get(d30) ?? null) : null,
         videoCount90: d90 ? (m?.get(d90) ?? null) : null,
-        lastNewVideoAt: lastNew.get(c.channelId) ?? null,
+        lastNewVideoAt: c.lastNewVideoAt ?? null, // 名冊已帶回（loadRoster），不再重讀 schedule_channel_state
       },
       now,
     );

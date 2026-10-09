@@ -180,7 +180,8 @@ describe('ogSweep：輪替、下播兩輪確認、斷路器、去重', () => {
         const r = await ogSweep(db, chans, stats, NOW, { concurrency: 1, deadline: { at: Date.now() + 60_000 }, maxChannels: 3, fetch: fetchFn, liveFirst: new Set(['c1']) });
         expect(hit).toEqual(['UC0000000000000000000001', 'UC0000000000000000000003', 'UC0000000000000000000004']);
         expect(r.checked.map((c) => c.channelId)).toEqual(['c1', 'c3', 'c4']);
-        const state = calls.find((c) => c.method === 'POST' && c.url.includes('schedule_channel_state'))!.body as { channel_id: string; og_checked_at: string }[];
+        // 頻道狀態改由 RPC schedule_upsert_channel_states 寫入（body.p_rows）
+        const state = (calls.find((c) => c.method === 'POST' && c.url.includes('/rpc/schedule_upsert_channel_states'))!.body as { p_rows: { channel_id: string; og_checked_at: string }[] }).p_rows;
         expect(state.map((s) => s.channel_id).sort()).toEqual(['c1', 'c3', 'c4']);
         expect(stats.og_failed).toBe(0);
     });
@@ -213,7 +214,7 @@ describe('ogSweep：輪替、下播兩輪確認、斷路器、去重', () => {
             const writes = calls.filter((c) => c.method === 'POST');
             return {
                 ended: writes.some((c) => c.url.includes('/streams?') && (c.body as { status: string }[]).some((s) => s.status === 'ended')),
-                miss: (writes.find((c) => c.url.includes('schedule_channel_state'))!.body as { og_miss_streak: number }[])[0].og_miss_streak,
+                miss: (writes.find((c) => c.url.includes('/rpc/schedule_upsert_channel_states'))!.body as { p_rows: { og_miss_streak: number }[] }).p_rows[0].og_miss_streak,
             };
         };
         expect(await run(0)).toEqual({ ended: false, miss: 1 });
