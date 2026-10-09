@@ -498,7 +498,10 @@ grant execute on function public.schedule_snapshot_source(timestamptz) to servic
 grant execute on function public.schedule_merge_check(timestamptz) to service_role;
 grant execute on function public.schedule_merge_mark(text) to service_role;
 
--- 回滾（Edge Functions 要先退回 c7bf0209 版）：
+-- 部署限制：snapshot_source 改成欄式輸出，c7bf0209 版的函式讀不懂（每輪 500）。
+--   上線時本檔與 20261009120000 一起套，三支函式直接部署本版；不可讓 c7bf0209 版函式與本檔並存。
+--   最簡單的整體回滾是把三支函式退回 47925331（不呼叫任何新 RPC），migration 可以留著。
+-- 回滾到 c7bf0209（Edge Functions 要先退回 c7bf0209 版，且下面步驟必須做完）：
 --   重新套 20261009120000_schedule_rpc_egress.sql（create or replace 會把 upsert_channel_states、snapshot_check／mark／source、
 --   merge_check／mark 換回第一版），再：
 --   drop function if exists public.schedule_roster_v2(text, smallint, uuid[], integer, integer);
