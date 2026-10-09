@@ -1,4 +1,4 @@
-// 出口流量瘦身第二輪（migration 20261009130000）：名冊依用途縮小＋欄式、共享表現況與 last_live_at 改 POST、
+// 出口流量瘦身第二輪（migration 20261009010554）：名冊依用途縮小＋欄式、共享表現況與 last_live_at 改 POST、
 // snapshot 來源欄式。只攔 fetch（PostgREST、Storage），不 mock 自家模組。
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Db, rowsFromColumnar } from '../../supabase/functions/_shared/db.ts';

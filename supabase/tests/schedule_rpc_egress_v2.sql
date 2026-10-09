@@ -1,4 +1,4 @@
--- 排程 RPC 出口流量瘦身第二輪（migration 20261009130000）的行為與權限測試。
+-- 排程 RPC 出口流量瘦身第二輪（migration 20261009010554）的行為與權限測試。
 -- 執行：docker exec -i supabase_db_multi-stream psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/schedule_rpc_egress_v2.sql
 -- 整檔在一個交易內，結尾 ROLLBACK。斷言失敗一律 RAISE EXCEPTION。
 

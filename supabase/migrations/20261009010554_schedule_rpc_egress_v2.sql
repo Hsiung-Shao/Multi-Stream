@@ -1,4 +1,4 @@
--- 排程 RPC 出口流量瘦身第二輪（2026-10-09 code review）：接續 20261009120000_schedule_rpc_egress.sql（該檔不改）。
+-- 排程 RPC 出口流量瘦身第二輪（2026-10-09 code review）：接續 20261009010442_schedule_rpc_egress.sql（該檔不改）。
 --
 -- 第一輪實測兩個熱點：
 --   A. 名冊太大：schedule_roster(null) 約 1.08MB、('youtube') 約 730KB，light 每天 144 輪讀全名冊、live 72 輪讀全部 YouTube。
@@ -499,10 +499,10 @@ grant execute on function public.schedule_merge_check(timestamptz) to service_ro
 grant execute on function public.schedule_merge_mark(text) to service_role;
 
 -- 部署限制：snapshot_source 改成欄式輸出，c7bf0209 版的函式讀不懂（每輪 500）。
---   上線時本檔與 20261009120000 一起套，三支函式直接部署本版；不可讓 c7bf0209 版函式與本檔並存。
+--   上線時本檔與 20261009010442 一起套，三支函式直接部署本版；不可讓 c7bf0209 版函式與本檔並存。
 --   最簡單的整體回滾是把三支函式退回 47925331（不呼叫任何新 RPC），migration 可以留著。
 -- 回滾到 c7bf0209（Edge Functions 要先退回 c7bf0209 版，且下面步驟必須做完）：
---   重新套 20261009120000_schedule_rpc_egress.sql（create or replace 會把 upsert_channel_states、snapshot_check／mark／source、
+--   重新套 20261009010442_schedule_rpc_egress.sql（create or replace 會把 upsert_channel_states、snapshot_check／mark／source、
 --   merge_check／mark 換回第一版），再：
 --   drop function if exists public.schedule_roster_v2(text, smallint, uuid[], integer, integer);
 --   drop function if exists public.schedule_current_streams(uuid[]);
