@@ -148,7 +148,17 @@ Multi-Stream/
 - 想聊天或回報問題，歡迎加入 [Discord](https://discord.gg/47kauArepY)
 - 也歡迎在 GitHub 開 Issue 或送 Pull Request
 
-覺得好用的話，給個星星或分享給一起追直播的朋友，就是最大的支持 ❤️
+## ☕ 支持贊助
+
+MultiStream Hub 完全免費、不用註冊，但伺服器、網域和 API 配額每個月都有固定開銷。如果這個工具讓你追直播更輕鬆，歡迎用下面的方式支持網站繼續營運：
+
+- **[Patreon](https://www.patreon.com/HsiungShao)**：每月小額贊助，幫忙撐住伺服器、網域這些長期成本，隨時可以取消
+- **[Buy Me a Coffee](https://buymeacoffee.com/hsiung)**：一次性贊助，請開發者喝杯咖啡，金額不拘，心意最重要
+- **[ExitLag 聯盟連結](https://www.exitlag.com/refer/10318098)**：想降低直播或遊戲延遲的話，透過這個連結訂閱，價格對你完全一樣，本站會拿到一點分潤（聯盟揭露：這是聯盟行銷連結）
+
+不方便贊助也沒關係，給 repo 一顆星星、加入 [Discord](https://discord.gg/47kauArepY)，或把網站分享給一起追直播的朋友，都是很大的支持 ❤️
+
+更多說明請看網站上的[支持我們](https://multistreaming.org/support)頁面。
 
 ## 📚 版本紀錄
 
