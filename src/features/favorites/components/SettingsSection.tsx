@@ -26,7 +26,7 @@ import { cn } from '../../../components/ui/utils';
 import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare, Trash2 } from 'lucide-react';
 import { logEvent } from '../../../utils/analytics';
 
-import { GITHUB_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
+import { GITHUB_REPO_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
 
 // 品牌 icon(lucide 無 Discord / X 品牌標誌,沿用收藏管理舊版自繪 SVG)
 const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -202,7 +202,7 @@ export function SettingsSection() {
         event: string;
         iconClass: string;
     }[] = [
-        { key: 'github', url: GITHUB_URL, Icon: Github, label: 'GitHub', event: 'github', iconClass: 'size-4' },
+        { key: 'github', url: GITHUB_REPO_URL, Icon: Github, label: 'GitHub', event: 'github', iconClass: 'size-4' },
         { key: 'discord', url: DISCORD_URL, Icon: DiscordIcon, label: 'Discord', event: 'discord', iconClass: 'size-4' },
         { key: 'x', url: X_URL, Icon: XIcon, label: 'X (Twitter)', event: 'twitter', iconClass: 'size-4' },
         { key: 'coffee', url: COFFEE_URL, Icon: Coffee, label: t('favorites:settings.sponsor'), event: 'coffee', iconClass: 'size-4 text-amber-500' },

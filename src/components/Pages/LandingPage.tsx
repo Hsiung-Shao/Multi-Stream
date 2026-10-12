@@ -15,7 +15,7 @@ import {
 } from '../ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { SEO } from '../SEO';
-import { DISCORD_URL, GITHUB_URL } from '../../config/links';
+import { DISCORD_URL, GITHUB_REPO_URL } from '../../config/links';
 
 export function LandingPage() {
     const { t, i18n } = useTranslation();
@@ -69,7 +69,7 @@ export function LandingPage() {
                             </a>
                         </Button>
                         <a
-                            href={GITHUB_URL}
+                            href={GITHUB_REPO_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="GitHub"

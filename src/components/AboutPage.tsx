@@ -20,7 +20,7 @@ import { StaticPageHeader } from './StaticPageHeader';
 import { RouteLink } from './Navigation/RouteLink';
 import { SiteFooter } from './SiteFooter';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
-import { GITHUB_URL, DISCORD_URL, COFFEE_URL, PATREON_URL, X_URL } from '../config/links';
+import { GITHUB_REPO_URL, DISCORD_URL, COFFEE_URL, PATREON_URL, X_URL } from '../config/links';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -285,7 +285,7 @@ export function AboutPage() {
               <div className="ab-social-row">
                 <a
                   className="ab-social primary"
-                  href={GITHUB_URL}
+                  href={GITHUB_REPO_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => logEvent('AboutPage', 'click_social', 'github')}
