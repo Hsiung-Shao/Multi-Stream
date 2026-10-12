@@ -170,10 +170,13 @@ multi-stream/
 
 ## 📄 授權
 
-**© 2025 Hsiung-Shao. All rights reserved.**
+本專案以 [PolyForm Noncommercial License 1.0.0](LICENSE.md) 授權，© 2025-2026 Hsiung-Shao。
 
-本專案供學習與個人使用。**專案不得複製經修改營利**。
-歡迎分享連結給朋友！只要保留本專案連結即可，其餘隨意改、隨意用（非營利前提下）。
+- ✅ 可以：閱讀、學習、個人使用、修改，以及非營利目的的再散布
+- ❌ 不可以：任何商業用途（含架設營利網站、付費服務、嵌入商業產品）
+- 再散布時須附上授權條文與 `Required Notice` 著作權聲明
+
+商業授權請透過[意見回饋表單](https://forms.gle/AjG922YrXFbyAdBa6)聯繫。
 
 ## 🤝 貢獻
 
