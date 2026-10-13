@@ -33,7 +33,7 @@ import { join } from 'node:path';
 import { loadEnv, SCRIPT_DIR } from './lib/env.mjs';
 import { Rest, inList } from './lib/db.mjs';
 import { BROWSER_UA, fetchPostsPage, imageFullUrl, isScheduleCandidate, parsePostsHtml, relativeToDate } from './lib/posts.mjs';
-import { COMMUNITY_POST_MAX_AGE_DAYS, decide, postExternalId, postKeyFromExternalId, reviewEntries, supersede, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
+import { buildStreamRows, COMMUNITY_POST_MAX_AGE_DAYS, decide, postKeyFromExternalId, reviewEntries, supersede, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
 import { buildInstructions } from './lib/instructions.mjs';
 import { agencyVtuberIds, resumeIndex, resumeXIndex, rosterKey, sortCandidates, sortRoster, sortXPeople, xKey } from './lib/priority.mjs';
 import { csvCell, decideHandle, extractXHandles, fetchAboutPage, fetchXProfile, parseAboutLinks, xUrlOf } from './lib/xhandles.mjs';
@@ -596,29 +596,7 @@ async function apply(args, db, now) {
             );
           }
           const fetchedAt = new Date().toISOString();
-          const rows = toWrite.map(({ e, n }) => {
-            const twitch = e.platform === 'twitch' ? twitchOf.get(c.vtuberId) : null;
-            return {
-              vtuber_id: c.vtuberId,
-              channel_id: twitch ?? c.channelId,
-              platform: twitch ? 'twitch' : 'youtube',
-              external_id: postExternalId(c.postId, n),
-              source: 'community_post',
-              status: 'scheduled',
-              scheduled_start: e.scheduledStart,
-              scheduled_end: null,
-              actual_start: null,
-              actual_end: null,
-              title: e.title || null,
-              category: null,
-              thumbnail_url: null,
-              viewer_count: null,
-              is_schedule_frame: false,
-              time_tbd: e.timeTbd === true,
-              merged_with: null,
-              fetched_at: fetchedAt,
-            };
-          });
+          const rows = buildStreamRows(c, toWrite, { twitchChannelId: twitchOf.get(c.vtuberId), fetchedAt });
           await db.upsert('streams', rows, 'platform,external_id');
           stats.written += rows.length;
         }

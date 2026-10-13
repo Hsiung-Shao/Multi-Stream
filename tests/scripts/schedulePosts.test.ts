@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { extractInitialData, imageBaseUrl, imageFullUrl, isScheduleCandidate, parsePostsHtml, POST_ID_RE, relativeToDate, SCHEDULE_KEYWORD_RE } from '../../scripts/schedule-posts/lib/posts.mjs';
-import { decide, postExternalId, reviewEntries, taipeiDate, taipeiToIso, validateScheduleEntries } from '../../scripts/schedule-posts/lib/rules.mjs';
+import { buildStreamRows, decide, postExternalId, reviewEntries, taipeiDate, taipeiToIso, validateScheduleEntries } from '../../scripts/schedule-posts/lib/rules.mjs';
 import { buildInstructions, candidateSection, RESULT_SCHEMA } from '../../scripts/schedule-posts/lib/instructions.mjs';
 import { isLocalUrl, loadEnv, parseEnvText } from '../../scripts/schedule-posts/lib/env.mjs';
 
@@ -288,6 +288,45 @@ describe('rules：時間未定過半就送審（2026-10-14）', () => {
 
   it('T20 時間未定剛好一半時照舊寫入', () => {
     expect(run([e('2026-10-15', '20:00'), e('2026-10-16', '20:00'), e('2026-10-17', null), e('2026-10-18', null)])).toBe('write');
+  });
+});
+
+describe('rules：讀圖結果組成 streams 列（2026-10-14）', () => {
+  const c = { vtuberId: 'v1', channelId: 'ytCh', postId: 'UgkxPost', postDate: Date.parse('2026-10-14T00:00:00.000Z') };
+  const FETCHED = '2026-10-14T14:00:00.000Z';
+  const entry = (date: string, time: string | null, platform = 'youtube') => ({
+    date, time, timeTbd: time === null, title: `${date} ${time}`, platform, confidence: 0.9,
+    scheduledStart: time === null ? `${date}T00:00:00+08:00` : `${date}T${time}:00+08:00`,
+  });
+  const items = [
+    { e: entry('2026-10-15', '20:00'), n: 1 },
+    { e: entry('2026-10-16', null), n: 3 },
+    { e: entry('2026-10-17', '21:00', 'twitch'), n: 4 },
+  ];
+
+  it('每列的 announced_at 都是發文時間', () => {
+    const rows = buildStreamRows(c, items, { twitchChannelId: 'twCh', fetchedAt: FETCHED });
+    expect(rows.map((r) => r.announced_at)).toEqual(Array(3).fill('2026-10-14T00:00:00.000Z'));
+  });
+
+  it('time_tbd 依 timeTbd、external_id 保留原序號', () => {
+    const rows = buildStreamRows(c, items, { twitchChannelId: 'twCh', fetchedAt: FETCHED });
+    expect(rows.map((r) => r.time_tbd)).toEqual([false, true, false]);
+    expect(rows.map((r) => r.external_id)).toEqual([postExternalId('UgkxPost', 1), postExternalId('UgkxPost', 3), postExternalId('UgkxPost', 4)]);
+  });
+
+  it('Twitch 列有 Twitch 頻道時寫 Twitch、沒有時退回 YouTube 頻道', () => {
+    const withTw = buildStreamRows(c, items, { twitchChannelId: 'twCh', fetchedAt: FETCHED });
+    expect(withTw.map((r) => [r.platform, r.channel_id])).toEqual([['youtube', 'ytCh'], ['youtube', 'ytCh'], ['twitch', 'twCh']]);
+    const noTw = buildStreamRows(c, items, { twitchChannelId: null, fetchedAt: FETCHED });
+    expect(noTw.map((r) => [r.platform, r.channel_id])).toEqual([['youtube', 'ytCh'], ['youtube', 'ytCh'], ['youtube', 'ytCh']]);
+  });
+
+  it('每列欄位集一致（PostgREST bulk upsert 欄位不一致會抹成 null）', () => {
+    const rows = buildStreamRows(c, items, { twitchChannelId: 'twCh', fetchedAt: FETCHED });
+    const keys = Object.keys(rows[0]).sort();
+    for (const r of rows) expect(Object.keys(r).sort()).toEqual(keys);
+    expect(rows[0]).toMatchObject({ vtuber_id: 'v1', source: 'community_post', status: 'scheduled', scheduled_start: items[0].e.scheduledStart, fetched_at: FETCHED, merged_with: null, is_schedule_frame: false });
   });
 });
 

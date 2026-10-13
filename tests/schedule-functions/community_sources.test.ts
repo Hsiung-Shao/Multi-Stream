@@ -128,6 +128,13 @@ describe('時間未定場次只由寫入之後才開始的場次兌現（2026-10
     expect(computeMerges([tbd('2026-10-14T05:00:00.000Z'), waiting]).get('t')).toBeNull();
   });
 
+  it('T25 announced_at 為 null 時退回 created_at 判斷兌現', () => {
+    // announced_at null、created_at 台北 13:00；待機室 10:00 開播、已結束
+    const rows = [{ ...tbd('2026-10-14T05:00:00.000Z'), announced_at: null }, endedAt('2026-10-14T02:00:00.000Z')];
+    expect(computeMerges(rows).get('t')).toBeNull();
+    expect(mergePlan(rows).expire).not.toContain('t');
+  });
+
   it('T21 沒有 created_at 的時間未定列維持原本的合併與過期', () => {
     const rows = [tbd(), endedAt('2026-10-14T02:00:00.000Z')];
     expect(computeMerges(rows).get('t')).toBe('w');
@@ -150,6 +157,33 @@ describe('時間未定場次只由寫入之後才開始的場次兌現（2026-10
   it('T22 開始時間剛好等於寫入時間也算兌現', () => {
     const live = row('l', { status: 'live', external_id: 'Live0000001', actual_start: '2026-10-14T05:00:00.000Z' });
     expect(computeMerges([tbd('2026-10-14T05:00:00.000Z'), live]).get('t')).toBe('l');
+  });
+});
+
+describe('時間未定列以發文時間 announced_at 判斷兌現（2026-10-14）', () => {
+  const TBD_1014 = '2026-10-13T16:00:00.000Z'; // 台北 10/14 00:00
+  /** 發文 10/14 08:00、寫入 10/14 22:00（讀圖排程晚了才寫入） */
+  const tbd = (announced_at = '2026-10-14T00:00:00.000Z') =>
+    row('t', { source: 'community_post', external_id: 'post:P:1', scheduled_start: TBD_1014, time_tbd: true, announced_at, created_at: '2026-10-14T14:00:00.000Z' });
+
+  it('T24 發文後開播、寫入前已結束的場次讓時間未定列過期', () => {
+    const ended = row('w', { status: 'ended', external_id: 'Wait0000001', actual_start: '2026-10-14T12:00:00.000Z' }); // 20:00
+    expect(mergePlan([tbd(), ended]).expire).toContain('t');
+  });
+
+  it('T24 發文後開播、寫入時仍在直播的場次讓時間未定列合併', () => {
+    const live = row('l', { status: 'live', external_id: 'Live0000001', actual_start: '2026-10-14T12:00:00.000Z' });
+    const rows = [tbd(), live];
+    expect(computeMerges(rows).get('t')).toBe('l');
+    expect(mergePlan(rows).expire).not.toContain('t');
+  });
+
+  it('T25 發文前就已開始的場次不讓時間未定列兌現', () => {
+    // 主場次 07:00 開播、已結束；發文 08:00
+    const ended = row('w', { status: 'ended', external_id: 'Wait0000001', actual_start: '2026-10-13T23:00:00.000Z' });
+    const rows = [tbd(), ended];
+    expect(computeMerges(rows).get('t')).toBeNull();
+    expect(mergePlan(rows).expire).not.toContain('t');
   });
 });
 
@@ -274,14 +308,14 @@ describe('時間未定場次併入的主場次結束後', () => {
     expect(stats.streams_expired).toBe(0);
   });
 
-  it('合併讀取的欄位含 created_at 與 external_id', async () => {
+  it('T26 合併讀取的欄位含 announced_at、created_at 與 external_id', async () => {
     const { db, calls } = mergeDb([], []);
     await applyMerges(db, emptyStats('live', NOW), NOW);
     const reads = calls.filter((c) => c.method === 'GET' && c.url.includes('/rest/v1/streams?'));
     expect(reads.length).toBeGreaterThan(0);
     for (const c of reads) {
       const cols = c.url.match(/select=([^&]*)/)?.[1].split(',') ?? [];
-      expect(cols).toEqual(expect.arrayContaining(['created_at', 'external_id']));
+      expect(cols).toEqual(expect.arrayContaining(['announced_at', 'created_at', 'external_id']));
     }
   });
 

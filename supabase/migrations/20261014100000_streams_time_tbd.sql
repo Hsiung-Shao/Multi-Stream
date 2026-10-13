@@ -5,11 +5,14 @@
 -- 改成：
 --   - streams.time_tbd boolean（預設 false）；true 時 scheduled_start 存該台北日期 00:00。
 --     「還沒過」＝ now < scheduled_start + 24h（台北當天結束）。只有非影片來源（community_post／user_submission）可以是 true（CHECK）。
---   - approve_schedule_contribution：entry 的 time 空白／null → time_tbd=true、scheduled_start＝台北當天 00:00；
+--   - approve_schedule_contribution：entry 的 time 空白／null → time_tbd=true、scheduled_start＝台北當天 00:00；寫入 announced_at＝投稿時間；
 --     「早於 now−3h 就跳過」對時間未定改成「台北當天結束已過才跳過」；INSERT 與 ON CONFLICT DO UPDATE 都帶 time_tbd。
 --   - schedule_snapshot_source：場次欄位加 time_tbd（只在 true 時輸出 true，其餘 null；snapshot.ts toItem 只在 true 時輸出）。
 --   - schedule_snapshot_check：upcoming 下限遇時間未定改成 scheduled_start + 24h > 量化 now；指紋加 time_tbd。
---   - schedule_merge_fp：ended 主場次候選的 30 分鐘窗，對時間未定的非影片場次改成「同台北日期」（與 merge.ts 一致）；指紋加 time_tbd、created_at、external_id。
+--   - schedule_merge_fp：ended 主場次候選的 30 分鐘窗，對時間未定的非影片場次改成「同台北日期」（與 merge.ts 一致）；指紋加 time_tbd、announced_at、created_at、external_id。
+--   - streams.announced_at timestamptz null：發文時間（社群週表＝貼文發文時間，由 schedule-posts 腳本寫入；投稿＝vtuber_contributions.created_at，
+--     由 approve_schedule_contribution 寫入）。時間未定列只由開始時間不早於它的場次兌現（merge.ts fulfills；沒有才用 created_at 寫入時間）。
+--   - 部分索引 streams_expired_nonvideo_idx：applyMerges 讀「昨天起已過期的社群週表／投稿具體時間列」用。
 --   - refresh_schedule_indexable：「接下來」的 15 分鐘寬限對時間未定改成台北當天結束未過（與 personSource.ts 一致）。
 -- Edge Function 端（_shared/rules.ts、merge.ts、sweep.ts、snapshot.ts）同步支援；sweep.expireOverdue 時間未定場次以 now−24h 過期。
 -- 函式本體複製自：
@@ -30,6 +33,9 @@
 --   update public.cron_shard_state set last_run_stats = last_run_stats - 'fingerprint' where job_name in ('snapshot', 'merge');
 --   drop column 前，前端（Cloudflare Pages）也要先退回不含 time_tbd 的版本：src/features/schedule/personSource.ts 與
 --   functions/lib/schedule-person.js 的 select 帶 time_tbd，欄位不存在時 PostgREST 會回 400、個人週表頁整頁讀不到。
+--   drop column 前，Edge Functions（sweep.ts applyMerges 的 select 帶 announced_at）與 scripts/schedule-posts（寫 announced_at）也要先退回。
+--   drop index if exists public.streams_expired_nonvideo_idx;
+--   alter table public.streams drop column if exists announced_at;
 --   alter table public.streams drop constraint if exists streams_time_tbd_source_check;
 --   alter table public.streams drop column if exists time_tbd;
 
@@ -39,6 +45,15 @@ alter table public.streams add column if not exists time_tbd boolean not null de
 alter table public.streams drop constraint if exists streams_time_tbd_source_check;
 alter table public.streams add constraint streams_time_tbd_source_check
     check (not time_tbd or source in ('community_post', 'user_submission'));
+
+alter table public.streams add column if not exists announced_at timestamptz;
+
+comment on column public.streams.announced_at is
+  '發文時間（社群週表＝貼文發文時間、投稿＝投稿時間）；時間未定列只由開始時間不早於它的場次兌現（合併或過期），null 時改用 created_at。';
+
+-- applyMerges 每輪讀「昨天起已過期的社群週表／投稿具體時間列」（同來源同日已有具體時間 → 時間未定列不合併）
+create index if not exists streams_expired_nonvideo_idx on public.streams (scheduled_start)
+    where status = 'expired' and source in ('community_post', 'user_submission') and not time_tbd;
 
 comment on column public.streams.time_tbd is
   '時間未定（只有 community_post／user_submission）：scheduled_start 存該台北日期 00:00，台北當天結束（scheduled_start + 24h）前都算還沒過；snapshot 排在當天最後。';
@@ -161,12 +176,14 @@ begin
             raise exception 'channel_not_found' using errcode = 'P0002';
         end if;
 
-        insert into public.streams (vtuber_id, channel_id, platform, external_id, source, status, scheduled_start, time_tbd, title, is_schedule_frame, fetched_at)
-        values (v_vt, v_channel, v_platform, v_prefix || v_n::text, v_source, 'scheduled', v_start, v_tbd, v_title, false, now())
+        -- announced_at＝投稿時間（vtuber_contributions.created_at）：時間未定列只由這之後才開始的場次兌現
+        insert into public.streams (vtuber_id, channel_id, platform, external_id, source, status, scheduled_start, time_tbd, announced_at, title, is_schedule_frame, fetched_at)
+        values (v_vt, v_channel, v_platform, v_prefix || v_n::text, v_source, 'scheduled', v_start, v_tbd, c.created_at, v_title, false, now())
         on conflict (platform, external_id) do update
             set status = 'scheduled',
                 scheduled_start = excluded.scheduled_start,
                 time_tbd = excluded.time_tbd,
+                announced_at = excluded.announced_at,
                 title = excluded.title,
                 vtuber_id = excluded.vtuber_id,
                 channel_id = excluded.channel_id,
@@ -333,7 +350,7 @@ $$;
 -- ===== 5. 雙平台合併指紋：時間未定的非影片場次用「同台北日期」 =====
 -- 其餘同 20261009010554：ended 只在同一實況主有 scheduled／live、且開始時間相差 30 分鐘內時才算；
 -- 新增：該 scheduled／live 是時間未定的社群週表／投稿時，改成「同一台北日期」（merge.ts mergeGap）。
--- 指紋另加 time_tbd、created_at（時間未定列只由開始時間不早於它的場次兌現）、external_id（同來源鍵）。
+-- 指紋另加 time_tbd、announced_at／created_at（時間未定列只由開始時間不早於發文時間的場次兌現，沒有發文時間才用寫入時間）、external_id（同來源鍵）。
 -- applyMerges 另讀的「昨天起已過期的社群週表／投稿具體時間列」（同來源同日已有具體時間 → 時間未定列不合併）不進指紋：
 -- 那些列只會由 scheduled 變 expired 加入（離開 act → 指紋已變），移出讀取範圍時對應的時間未定列早已過期。
 create or replace function public.schedule_merge_fp(p_ended_since timestamptz)
@@ -344,13 +361,13 @@ security definer
 set search_path = ''
 as $$
     with act as (
-        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, s.merged_with, s.time_tbd, s.created_at, s.external_id
+        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, s.merged_with, s.time_tbd, s.announced_at, s.created_at, s.external_id
         from public.streams s
         where s.status in ('scheduled', 'live')
           and not s.is_schedule_frame
           and coalesce(s.actual_start, s.scheduled_start) is not null
     ), ended as (
-        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, null::uuid as merged_with, s.time_tbd, s.created_at, s.external_id
+        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, null::uuid as merged_with, s.time_tbd, s.announced_at, s.created_at, s.external_id
         from public.streams s
         where s.status = 'ended'
           and s.actual_end >= p_ended_since
@@ -373,7 +390,7 @@ as $$
     )
     select md5(coalesce(json_agg(json_build_array(
                a.id, a.vtuber_id, a.platform, a.source, a.status, a.scheduled_start, a.actual_start, a.merged_with, a.time_tbd,
-               a.created_at, a.external_id)
+               a.announced_at, a.created_at, a.external_id)
                order by a.id)::text, ''))
     from allr a;
 $$;

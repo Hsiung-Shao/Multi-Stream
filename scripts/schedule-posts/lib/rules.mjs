@@ -164,6 +164,40 @@ export function reviewEntries({ accepted, rejected }) {
 /** 寫入 streams 的 external_id（postId 可能是 YouTube 的 Ugkx…，或 X 的 x:<tweetId>） */
 export const postExternalId = (postId, n) => `post:${postId}:${n}`;
 
+/**
+ * 讀圖通過的列 → streams 列（upsert 用；每列欄位集一致，PostgREST bulk upsert 欄位不一致會把缺的欄位抹成 null）。
+ * @param {{ vtuberId: string, channelId: string, postId: string, postDate: number }} c 候選貼文
+ * @param {Array<{ e: { scheduledStart: string, title?: string, platform?: string, timeTbd?: boolean }, n: number }>} items 要寫的列與它在週表裡的序號（external_id 用）
+ * @param {{ twitchChannelId: string | null | undefined, fetchedAt: string }} opts Twitch 列沒有 Twitch 頻道時退回 YouTube 頻道
+ */
+export function buildStreamRows(c, items, { twitchChannelId, fetchedAt }) {
+  return items.map(({ e, n }) => {
+    const twitch = e.platform === 'twitch' ? twitchChannelId ?? null : null;
+    return {
+      vtuber_id: c.vtuberId,
+      channel_id: twitch ?? c.channelId,
+      platform: twitch ? 'twitch' : 'youtube',
+      external_id: postExternalId(c.postId, n),
+      source: 'community_post',
+      status: 'scheduled',
+      scheduled_start: e.scheduledStart,
+      scheduled_end: null,
+      actual_start: null,
+      actual_end: null,
+      title: e.title || null,
+      category: null,
+      thumbnail_url: null,
+      viewer_count: null,
+      is_schedule_frame: false,
+      time_tbd: e.timeTbd === true,
+      // 發文時間：時間未定列只由這之後才開始的場次兌現（merge.ts；讀圖一天兩輪，寫入時間會晚於發文）
+      announced_at: new Date(c.postDate).toISOString(),
+      merged_with: null,
+      fetched_at: fetchedAt,
+    };
+  });
+}
+
 /** external_id → 貼文鍵（post:x:123:2 → x:123；post:Ugkx…:1 → Ugkx…）；不是社群場次回 null */
 export function postKeyFromExternalId(externalId) {
   return String(externalId ?? '').match(/^post:(.+):\d+$/)?.[1] ?? null;

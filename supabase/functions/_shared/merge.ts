@@ -10,7 +10,7 @@
 // 不會在過期前以「已過預定時間」的卡片重新冒出來（呼叫端讀最近 EXPIRE_AFTER_HOURS 內結束的場次）。
 // 時間未定（time_tbd，2026-10-14）的社群週表／投稿場次：scheduled_start 是台北當天 00:00，
 // 改成併入同一人、同一台北日期的真實場次（不受 30 分鐘限制，選同日離 00:00 最近的一場）；不同台北日期不併。
-// 時間未定列只由開始時間不早於它寫入時間（created_at）的場次兌現；同一篇貼文／投稿同一台北日期已有具體時間的列
+// 時間未定列只由開始時間不早於它發文時間（announced_at；沒有才用寫入時間 created_at）的場次兌現；同一篇貼文／投稿同一台北日期已有具體時間的列
 // （不論狀態）時，時間未定列不參與合併。
 // 資料庫端 schedule_merge_fp 的判斷要與這裡一致（migration 20261014100000）。
 
@@ -28,7 +28,9 @@ export interface MergeInput {
   merged_with?: string | null;
   /** 時間未定場次（只有社群週表／投稿會是 true）：scheduled_start 存台北當天 00:00 */
   time_tbd?: boolean | null;
-  /** 寫入時間：時間未定列只由「開始時間不早於它」的主場次兌現（合併或過期）；沒給維持舊行為 */
+  /** 發文時間（社群週表＝貼文發文時間、投稿＝投稿時間）：時間未定列只由「開始時間不早於它」的主場次兌現（合併或過期） */
+  announced_at?: string | null;
+  /** 寫入時間：沒有可解析的 announced_at 時才當兌現基準；兩者都沒有維持舊行為 */
   created_at?: string | null;
   /** 社群週表 post:<貼文鍵>:<n>／投稿 sub:<投稿 id>:<n>：去掉最後的 :<n> 就是同一來源 */
   external_id?: string | null;
@@ -68,10 +70,11 @@ function sourceKey(s: MergeInput): string | null {
   return /^((?:post|sub):.+):\d+$/.exec(s.external_id ?? '')?.[1] ?? null;
 }
 
-/** 時間未定列 s 能不能由主場次 p 兌現：p 的開始時間不早於 s 的寫入時間（沒有 created_at → 可以） */
+/** 時間未定列 s 能不能由主場次 p 兌現：p 的開始時間不早於 s 的發文時間（沒有才用寫入時間；都沒有 → 可以） */
 function fulfills(p: MergeInput, s: MergeInput): boolean {
-  const created = Date.parse(s.created_at ?? '');
-  return !Number.isFinite(created) || startOf(p) >= created;
+  const announced = Date.parse(s.announced_at ?? '');
+  const since = Number.isFinite(announced) ? announced : Date.parse(s.created_at ?? '');
+  return !Number.isFinite(since) || startOf(p) >= since;
 }
 
 /** 主場次 p 與場次 s 的時間是否落在可合併範圍；可合併時回傳距離（ms），否則 Infinity */
