@@ -1,6 +1,7 @@
 // 使用者投稿「本週週表」（後端）：
 //   lib：functions/lib/schedule-submit.js（列驗證、台北日期範圍）
 //   端點：/api/schedule/entries（投稿）、/api/admin/contributions?action=approve（週表投稿走 approve_schedule_contribution）
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { validateScheduleEntries, validateEntries, taipeiDate } from '../../functions/lib/schedule-submit.js';
@@ -172,7 +173,8 @@ const tomorrow = () => new Date(Date.parse(`${taipeiDate(Date.now())}T12:00:00Z`
 const liveBody = (over: Record<string, unknown> = {}) => body({ entries: [entry({ date: tomorrow() })], note: '來源：社群', contact: 'a@b.c', ...over });
 
 describe('validateEntries：allowNoTime（時間未定列，2026-10-14）', () => {
-    it('T18 allowNoTime=true 時 time 為空字串或 null 的列通過、回傳 time: null', () => {
+    it('T18 allowNoTime 時沒時間的列通過、time 為 null', () => {
+        // 空字串與 null 都算沒時間
         const r = validateEntries([entry({ time: '' }), entry({ date: '2026-10-07', time: null }), entry({ date: '2026-10-08' })], NOW, { allowNoTime: true });
         expect(r.error).toBeUndefined();
         expect(r.value.map((e: { date: string; time: string | null }) => [e.date, e.time])).toEqual([
@@ -182,7 +184,8 @@ describe('validateEntries：allowNoTime（時間未定列，2026-10-14）', () =
         ]);
     });
 
-    it('T18 預設（不給 opts 或 allowNoTime=false）沒時間照舊回 invalid_entry_time', () => {
+    it('T18 預設不允許沒時間的列', () => {
+        // 不給 opts 或 allowNoTime=false 都回 invalid_entry_time
         expect(validateEntries([entry({ time: '' })], NOW)).toEqual({ error: 'invalid_entry_time' });
         expect(validateEntries([entry({ time: null })], NOW, { allowNoTime: false })).toEqual({ error: 'invalid_entry_time' });
     });

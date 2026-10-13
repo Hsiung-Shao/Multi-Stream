@@ -1,12 +1,7 @@
 // scripts/schedule-posts/lib/priority.mjs：企業勢優先的名冊排序、游標續掃、候選排序。
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { describe, expect, it } from 'vitest';
-
-// 新模組（尚未實作）：用動態 import，模組不存在時每條測試以「不是函式」失敗，而不是整個檔案載入失敗
-const PRIORITY_PATH = '../../scripts/schedule-posts/lib/priority.mjs';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const priority: any = await import(/* @vite-ignore */ PRIORITY_PATH).catch(() => ({}));
-
-const { agencyVtuberIds, resumeIndex, rosterKey, sortCandidates, sortRoster } = priority;
+import { agencyVtuberIds, resumeIndex, resumeXIndex, rosterKey, sortCandidates, sortRoster, sortXPeople, xKey } from '../../scripts/schedule-posts/lib/priority.mjs';
 
 const TODAY = '2026-10-14';
 
@@ -16,7 +11,8 @@ describe('rosterKey／sortRoster', () => {
     expect(rosterKey({ isAgency: false, externalId: 'UCa' })).toBe('1:UCa');
   });
 
-  it('T1 企業勢頻道排在名冊前面，同組依 externalId；回傳新陣列不改原陣列', () => {
+  it('T1 企業勢頻道排在名冊前面、同組依 externalId', () => {
+    // 也確認回傳新陣列、不改原陣列、保留其他欄位
     const input = [
       { isAgency: false, externalId: 'UCd', name: '個人D' },
       { isAgency: true, externalId: 'UCc', name: '企業C' },
@@ -33,7 +29,8 @@ describe('rosterKey／sortRoster', () => {
 });
 
 describe('agencyVtuberIds', () => {
-  it('T2 子團成員與有效合作藝人算企業勢；過期合作、尚未開始的合作、社團成員、沒有團體的人不算', () => {
+  it('T2 子團成員與有效合作藝人算企業勢、其餘不算', () => {
+    // 不算：過期合作、尚未開始的合作、社團成員、沒有團體的人
     const groups = [
       { id: 'gA', kind: 'agency', parent_id: null },
       { id: 'gSub', kind: 'circle', parent_id: 'gA' }, // 企業勢子團（kind 不是 agency 也算）
@@ -77,20 +74,23 @@ describe('resumeIndex', () => {
     { isAgency: false, externalId: 'UCd' },
   ]); // 0:UCa、0:UCc、1:UCb、1:UCd
 
-  it('T3 游標在企業勢中段或個人勢中段 → 從下一個開始', () => {
+  it('T3 游標在名冊中段 → 從下一個開始', () => {
+    // 企業勢中段與個人勢中段各一
     const roster = makeRoster();
     expect(resumeIndex(roster, '0:UCa')).toBe(1);
     expect(resumeIndex(roster, '1:UCb')).toBe(3);
   });
 
-  it('T3 游標頻道已不在名冊 → 從下一個更大的鍵開始（不重複不漏）', () => {
+  it('T3 游標頻道已不在名冊 → 從下一個更大的鍵開始', () => {
+    // 不重複也不漏
     const roster = makeRoster();
     expect(resumeIndex(roster, '0:UCb')).toBe(1); // 下一個是 0:UCc
     expect(resumeIndex(roster, '0:UCz')).toBe(2); // 企業勢都掃完，接個人勢第一個
     expect(resumeIndex(roster, '1:UCc')).toBe(3);
   });
 
-  it('T3 null、舊格式游標、超過最後一個 → 0（重新一圈）', () => {
+  it('T3 游標無效或已過最後一個 → 從頭開始', () => {
+    // null、舊格式（沒有 0:／1: 前綴）、超過最後一個都回 0
     const roster = makeRoster();
     expect(resumeIndex(roster, null)).toBe(0);
     expect(resumeIndex(roster, 'UCb')).toBe(0); // 舊格式沒有 0:／1: 前綴
@@ -100,7 +100,8 @@ describe('resumeIndex', () => {
 });
 
 describe('sortCandidates', () => {
-  it('T4 候選企業勢在前，同組依發文時間由舊到新；回傳新陣列', () => {
+  it('T4 候選企業勢在前、同組依發文時間由舊到新', () => {
+    // 也確認回傳新陣列、不改原陣列
     const input = [
       { id: 'indieNew', isAgency: false, postDate: 4000 },
       { id: 'agencyNew', isAgency: true, postDate: 3000 },
@@ -111,5 +112,27 @@ describe('sortCandidates', () => {
     expect(out.map((c) => c.id)).toEqual(['agencyOld', 'agencyNew', 'indieOld', 'indieNew']);
     expect(out).not.toBe(input);
     expect(input[0].id).toBe('indieNew');
+  });
+});
+
+describe('X 名單排序與續掃', () => {
+  it('handle 含底線與數字時排序與續掃一致', () => {
+    // localeCompare 排成 a_b、a1b、ab，續掃卻用 code unit 比較（a1b < a_b < ab）：兩者不一致會漏人
+    const people = sortXPeople([
+      { isAgency: false, handle: 'ab' },
+      { isAgency: false, handle: 'a_b' },
+      { isAgency: false, handle: 'a1b' },
+      { isAgency: true, handle: 'Z9' },
+    ]);
+    expect(people.map((p) => p.handle)).toEqual(['Z9', 'a1b', 'a_b', 'ab']);
+    people.forEach((p, i) => {
+      expect(resumeXIndex(people, xKey(p))).toBe(i + 1 === people.length ? 0 : i + 1);
+    });
+  });
+
+  it('X 游標無效 → 從頭開始', () => {
+    const people = sortXPeople([{ isAgency: false, handle: 'ab' }]);
+    expect(resumeXIndex(people, null)).toBe(0);
+    expect(resumeXIndex(people, 'ab')).toBe(0);
   });
 });

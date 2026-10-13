@@ -1,3 +1,4 @@
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { describe, expect, it } from 'vitest';
 import {
     countByTab,
@@ -164,14 +165,16 @@ describe('時間未定場次（time_tbd，2026-10-14）', () => {
     const timed = (id: string, start: string): ScheduleStream => ({ ...base, external_id: id, scheduled_start: start });
     const NOW14 = Date.parse('2026-10-14T10:00:00+08:00');
 
-    it('T9 isPastScheduled：時間未定場次到台北當天結束前都不算過去，一般場次照舊 15 分鐘', () => {
+    it('T9 isPastScheduled：時間未定場次到台北當天結束前不算過去', () => {
+        // 一般場次照舊 15 分鐘寬限
         const late = Date.parse('2026-10-15T23:00:00+08:00');
         expect(isPastScheduled(tbd('a'), late)).toBe(false);
         expect(isPastScheduled(tbd('a'), Date.parse('2026-10-16T00:01:00+08:00'))).toBe(true);
         expect(isPastScheduled(timed('b', TBD_1015), late)).toBe(true);
     });
 
-    it('T14 groupByDay：時間未定場次以台北日期分天（即使 timeZone 是 UTC），同一天排最後', () => {
+    it('T14 groupByDay：時間未定場次依台北日期分天、排在當天最後', () => {
+        // timeZone 是 UTC 也照台北日期分天
         // UTC 下 10/14 16:00Z 是 10/14，但時間未定場次屬於台北 10/15
         const morning = timed('morning', '2026-10-15T01:00:00Z'); // UTC 10/15 01:00
         const days = groupByDay([tbd('t'), morning], NOW14, 'UTC');
@@ -179,7 +182,8 @@ describe('時間未定場次（time_tbd，2026-10-14）', () => {
         expect(days.find((d) => d.dayKey === '2026-10-15')?.streams.map((s) => s.external_id)).toEqual(['morning', 't']);
     });
 
-    it('T14 groupByDay（台北）：同一天 09:00、20:00 都排在時間未定之前，隔天 00:30 不在同一天', () => {
+    it('T14 groupByDay：同一天有時間的場次排在時間未定之前', () => {
+        // 09:00、20:00 在前；隔天 00:30 不算同一天
         const days = groupByDay(
             [timed('eve', '2026-10-15T12:00:00Z'), tbd('t'), timed('next0030', '2026-10-15T16:30:00Z'), timed('nine', '2026-10-15T01:00:00Z')],
             NOW14,
@@ -189,7 +193,8 @@ describe('時間未定場次（time_tbd，2026-10-14）', () => {
         expect(days.find((d) => d.dayKey === '2026-10-16')?.streams.map((s) => s.external_id)).toEqual(['next0030']);
     });
 
-    it('T15 groupByHour：時間未定場次另成一組 { hourIso: \'\', tbd: true } 放最後，不和 00:00 場次混在一起', () => {
+    it('T15 groupByHour：時間未定場次另成一組放最後', () => {
+        // { hourIso: '', tbd: true }，不和 00:00 場次混在一起
         const midnight = timed('midnight', TBD_1015);
         const nine = timed('nine', '2026-10-15T01:00:00Z');
         const t1 = tbd('t1');

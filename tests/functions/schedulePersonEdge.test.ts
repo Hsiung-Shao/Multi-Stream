@@ -1,4 +1,5 @@
 // 個人週表頁的 edge 端：/schedule/<slug> 解析、文案與前端同步、catch-all 的 200／301／404、動態 sitemap
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -251,7 +252,8 @@ describe('個人頁內文：時間未定場次（time_tbd，2026-10-14）', () =
         { status: 'scheduled', title: '晚上雜談', platform: 'youtube', scheduled_start: '2026-10-15T12:00:00.000Z' }, // 台北 10/15 20:00
     ];
 
-    it('T9 今天的時間未定場次在台北 23:00 仍留在 upcoming，一般午夜場次照舊被 15 分鐘寬限排除', () => {
+    it('T9 台北 23:00 時今天的時間未定場次仍在 upcoming', () => {
+        // 一般午夜場次照舊被 15 分鐘寬限排除
         const s = personStreamsFromRow(row(active), Date.parse('2026-10-14T23:00:00+08:00'));
         expect(s?.upcoming.map((x: { title: string }) => x.title)).toEqual(['今天未定', '晚上雜談']);
         expect(s?.upcomingTotal).toBe(2);
@@ -262,12 +264,14 @@ describe('個人頁內文：時間未定場次（time_tbd，2026-10-14）', () =
         expect(s?.upcoming.map((x: { title: string }) => x.title)).toEqual(['晚上雜談']);
     });
 
-    it('T9 查詢有帶 time_tbd 欄位（否則 edge 端拿不到旗標）', () => {
+    it('T9 查詢帶 time_tbd 欄位', () => {
+        // 否則 edge 端拿不到旗標
         const q = personQuery('taione', Date.parse('2026-10-14T10:00:00+08:00'));
         expect(q).toMatch(/active:streams\([^)]*time_tbd[^)]*\)/);
     });
 
-    it('T17 內文的時間未定場次寫「時間未定」、不出現 00:00；一般場次照常有時分', () => {
+    it('T17 內文的時間未定場次寫「時間未定」、不寫 00:00', () => {
+        // 一般場次照常有時分
         const streams = personStreamsFromRow(row(active), Date.parse('2026-10-14T10:00:00+08:00'));
         const html = renderPersonBodyHtml('zh-TW', { name: '台一', youtube: null, twitch: null, streams }, 'taione');
         expect(html).toContain('時間未定');

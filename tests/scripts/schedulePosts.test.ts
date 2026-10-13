@@ -1,5 +1,6 @@
 // scripts/schedule-posts：貼文頁解析、相對時間、候選判定、規則檢查、模型輸出 → 決策、給排程 Claude 的讀圖說明、環境設定。
 // fixture 由 2026-10-05 真實頁面（懶貓子 /posts）精簡而成：週表貼文（12 小時前、1 圖）、會員桌布（9 天前、1 圖）、沒圖的貼文。
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { extractInitialData, imageBaseUrl, imageFullUrl, isScheduleCandidate, parsePostsHtml, POST_ID_RE, relativeToDate, SCHEDULE_KEYWORD_RE } from '../../scripts/schedule-posts/lib/posts.mjs';
@@ -75,7 +76,8 @@ describe('rules：台北時間與列檢查', () => {
     expect(taipeiToIso('2026-10-06', '24:00')).toBeNull();
   });
 
-  it('剔除休息日、超出視窗、今天以前、重複；沒時間的列標成時間未定；通過的依時間排序', () => {
+  it('剔除不合規的列、其餘依時間排序', () => {
+    // 剔除休息日、超出視窗、今天以前、重複；沒時間的列標成時間未定
     const postDate = NOW - 12 * 3600e3; // 10/05
     const parsed = {
       is_schedule: true,
@@ -169,28 +171,32 @@ describe('rules：今天以前剔除與時間未定場次（2026-10-14）', () =
   const e = (date: string, time: string | null, over: Record<string, unknown> = {}) => ({ date, time, title: `${date} ${time}`, platform: 'youtube', is_rest: false, confidence: 0.9, ...over });
   const week = ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'];
 
-  it('T5 早於今天（台北）的日期一律 past_day，今天起通過', () => {
+  it('T5 早於今天（台北）的日期剔除為 past_day', () => {
+    // 今天起通過
     const parsed = { is_schedule: true, confidence: 0.9, entries: week.map((d) => e(d, '20:00')) };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now: NOW14 });
     expect(v.rejected.map((r) => [r.entry.date, r.reason])).toEqual([['2026-10-12', 'past_day'], ['2026-10-13', 'past_day']]);
     expect(v.accepted.map((x) => x.date)).toEqual(week.slice(2));
   });
 
-  it('T5 past_day 在日期格式之後、時間檢查之前：昨天沒時間或時間格式壞掉也是 past_day', () => {
+  it('T5 昨天的列不論時間是否有效都是 past_day', () => {
+    // past_day 在日期格式檢查之後、時間檢查之前
     const parsed = { is_schedule: true, confidence: 0.9, entries: [e('2026-10-13', null), e('2026-10-13', '25:00'), e('10/13', '20:00')] };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now: NOW14 });
     expect(v.rejected.map((r) => r.reason)).toEqual(['past_day', 'past_day', 'no_date']);
     expect(v.accepted).toEqual([]);
   });
 
-  it('T6 過去日期不讓整張週表變可疑：2 列 past_day＋5 列高信心 → write', () => {
+  it('T6 少量過去日期不讓週表變可疑、直接寫入', () => {
+    // 2 列 past_day＋5 列高信心 → write
     const parsed = { is_schedule: true, confidence: 0.9, entries: week.map((d) => e(d, '20:00')) };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now: NOW14 });
     expect(v.accepted).toHaveLength(5);
     expect(decide(parsed, v)).toBe('write');
   });
 
-  it('T6 past_day 比通過的列多也不算可疑（週末才讀到上週發的週表）→ write', () => {
+  it('T6 past_day 比通過的列多仍直接寫入', () => {
+    // 週末才讀到上週發的週表
     const now = Date.parse('2026-10-17T10:00:00+08:00');
     // 10/12～10/16 早於今天（其中三列沒時間）、10/17、10/18 通過
     const entries = week.map((d, i) => e(d, i < 5 && i % 2 === 0 ? null : '20:00'));
@@ -201,7 +207,8 @@ describe('rules：今天以前剔除與時間未定場次（2026-10-14）', () =
     expect(decide(parsed, v)).toBe('write');
   });
 
-  it('T7 沒時間的列以時間未定通過：time=null、timeTbd=true、scheduledStart＝台北當天 00:00', () => {
+  it('T7 沒時間的列以時間未定通過', () => {
+    // time=null、timeTbd=true、scheduledStart＝台北當天 00:00
     const parsed = { is_schedule: true, confidence: 0.9, entries: [e('2026-10-15', null, { title: '雜談', confidence: 0.8 })] };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now: NOW14 });
     expect(v.rejected).toEqual([]);
@@ -210,7 +217,8 @@ describe('rules：今天以前剔除與時間未定場次（2026-10-14）', () =
     ]);
   });
 
-  it('T7 time 為空字串或缺欄位也算時間未定；有時間的列 timeTbd=false', () => {
+  it('T7 time 空字串或缺欄位也算時間未定', () => {
+    // 有時間的列 timeTbd=false
     const { time: _drop, ...noKey } = e('2026-10-17', null);
     const parsed = { is_schedule: true, confidence: 0.9, entries: [e('2026-10-15', '20:00'), e('2026-10-16', ''), noKey] };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now: NOW14 });
@@ -222,7 +230,8 @@ describe('rules：今天以前剔除與時間未定場次（2026-10-14）', () =
     ]);
   });
 
-  it('T7 今天的時間未定列在 23:00 仍通過（不被 3 小時寬限剔除）', () => {
+  it('T7 今天的時間未定列在 23:00 仍通過', () => {
+    // 不被 3 小時寬限剔除
     const now = Date.parse('2026-10-14T23:00:00+08:00');
     const parsed = { is_schedule: true, confidence: 0.9, entries: [e('2026-10-14', null)] };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now });
@@ -230,20 +239,23 @@ describe('rules：今天以前剔除與時間未定場次（2026-10-14）', () =
     expect(v.accepted.map((x) => [x.date, x.timeTbd, x.scheduledStart])).toEqual([['2026-10-14', true, '2026-10-13T16:00:00.000Z']]);
   });
 
-  it('T7 休息日沒時間仍是 rest，不變成時間未定', () => {
+  it('T7 沒時間的休息日仍是 rest', () => {
     const parsed = { is_schedule: true, confidence: 0.9, entries: [e('2026-10-15', null, { is_rest: true })] };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now: NOW14 });
     expect(v.rejected.map((r) => r.reason)).toEqual(['rest']);
     expect(v.accepted).toEqual([]);
   });
 
-  it('T8 同一天有時間的列就丟時間未定列（不論先後），同一天兩個時間未定列第二個是 duplicate', () => {
+  it('T8 同一天有時間的列時丟掉時間未定列', () => {
+    // 時間未定列排在前面也一樣丟掉
     const parsed = { is_schedule: true, confidence: 0.9, entries: [e('2026-10-15', null, { title: '未定' }), e('2026-10-15', '20:00', { title: '晚上' })] };
     const v = validateScheduleEntries(parsed, { postDate: POST12, now: NOW14 });
     expect(v.accepted.map((x) => `${x.date} ${x.time}`)).toEqual(['2026-10-15 20:00']);
     expect(v.rejected).toHaveLength(1);
     expect(v.rejected[0]).toMatchObject({ reason: 'duplicate', entry: { title: '未定' } });
+  });
 
+  it('T8 同一天兩個時間未定列時第二個是 duplicate', () => {
     const twoTbd = { is_schedule: true, confidence: 0.9, entries: [e('2026-10-16', null, { title: '第一' }), e('2026-10-16', null, { title: '第二' })] };
     const v2 = validateScheduleEntries(twoTbd, { postDate: POST12, now: NOW14 });
     expect(v2.accepted.map((x) => x.title)).toEqual(['第一']);

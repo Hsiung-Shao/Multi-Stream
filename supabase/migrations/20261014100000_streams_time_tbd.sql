@@ -28,6 +28,8 @@
 --     20261008135719_schedule_indexable_align.sql 的 refresh_schedule_indexable（含 revoke／grant），再 select public.refresh_schedule_indexable();
 --   然後：
 --   update public.cron_shard_state set last_run_stats = last_run_stats - 'fingerprint' where job_name in ('snapshot', 'merge');
+--   drop column 前，前端（Cloudflare Pages）也要先退回不含 time_tbd 的版本：src/features/schedule/personSource.ts 與
+--   functions/lib/schedule-person.js 的 select 帶 time_tbd，欄位不存在時 PostgREST 會回 400、個人週表頁整頁讀不到。
 --   alter table public.streams drop constraint if exists streams_time_tbd_source_check;
 --   alter table public.streams drop column if exists time_tbd;
 

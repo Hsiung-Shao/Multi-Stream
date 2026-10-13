@@ -1,3 +1,4 @@
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { describe, expect, it } from 'vitest';
 import { expireOverdue, loadPendingYouTube, rssSweep, writeChannelStates } from '../../supabase/functions/_shared/sweep.ts';
 import { Db } from '../../supabase/functions/_shared/db.ts';
@@ -154,7 +155,8 @@ describe('expireOverdue：資料庫端統一過期', () => {
 });
 
 describe('expireOverdue：時間未定場次另一段過期（time_tbd，2026-10-14）', () => {
-  it('T12 一般場次 time_tbd=eq.false 用 now−3h、時間未定場次 time_tbd=eq.true 用 now−24h，兩段都是 PATCH 成 expired', async () => {
+  it('T12 一般場次 3 小時、時間未定場次 24 小時後過期', async () => {
+    // time_tbd=eq.false 用 now−3h、eq.true 用 now−24h，兩段都 PATCH 成 expired
     const { db, calls } = fakeDb(() => new Response(null, { status: 204, headers: { 'content-range': '*/0' } }));
     await expireOverdue(db, emptyStats('light', NOW), NOW);
     const patches = calls.filter((c) => c.method === 'PATCH' && decodeURIComponent(c.url).includes('status=eq.scheduled&actual_start=is.null'));

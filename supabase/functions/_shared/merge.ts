@@ -128,14 +128,29 @@ export function computeMerges(streams: readonly MergeInput[]): Map<string, strin
   return out;
 }
 
-/** 只回傳 merged_with 和資料庫現況不同的列（減少寫入） */
-export function mergeChanges(streams: readonly MergeInput[]): { id: string; merged_with: string | null }[] {
+/**
+ * 合併計畫：
+ *   - changes：merged_with 和資料庫現況不同的列（減少寫入）
+ *   - expire：時間未定的非影片場次、選到的主場次已經結束 → 直接過期。
+ *     時間未定場次要到台北當天結束才過期，但 ended 主場次只在結束後 EXPIRE_AFTER_HOURS 內被讀進來；
+ *     只設 merged_with 的話，主場次一移出視窗，tbd 就被解除合併、以「時間未定・接下來」重新冒出來。
+ *     主場次還在 scheduled／live 時照舊只設 merged_with；它變 ended 後的下一輪（一定在視窗內）就會把 tbd 過期。
+ */
+export function mergePlan(streams: readonly MergeInput[]): { changes: { id: string; merged_with: string | null }[]; expire: string[] } {
   const next = computeMerges(streams);
+  const byId = new Map(streams.map((s) => [s.id, s]));
   const changes: { id: string; merged_with: string | null }[] = [];
+  const expire: string[] = [];
   for (const s of streams) {
     if (!next.has(s.id)) continue;
     const want = next.get(s.id) ?? null;
     if ((s.merged_with ?? null) !== want) changes.push({ id: s.id, merged_with: want });
+    if (want && isTbd(s) && s.status === 'scheduled' && byId.get(want)?.status === 'ended') expire.push(s.id);
   }
-  return changes;
+  return { changes, expire };
+}
+
+/** 只回傳 merged_with 和資料庫現況不同的列（減少寫入） */
+export function mergeChanges(streams: readonly MergeInput[]): { id: string; merged_with: string | null }[] {
+  return mergePlan(streams).changes;
 }

@@ -24,7 +24,7 @@ import {
 } from './rules.ts';
 import type { YouTubeClient, YouTubeVideo } from './youtube.ts';
 import { HelixError, type TwitchClient, type TwitchSchedule } from './twitch.ts';
-import { mergeChanges, type MergeInput } from './merge.ts';
+import { mergePlan, type MergeInput } from './merge.ts';
 import type { RosterChannel, RunStats, StreamRecord, StreamRow } from './types.ts';
 
 export interface Deadline {
@@ -787,7 +787,7 @@ export async function softStep(stats: RunStats, label: string, fn: () => Promise
 
 /**
  * 雙平台合併（見 merge.ts）：讀所有 scheduled／live 場次，加上最近 EXPIRE_AFTER_HOURS 內結束的場次（只當主場次），
- * 只寫 merged_with 有變的列。
+ * 只寫 merged_with 有變的列；時間未定場次併入的主場次已結束時直接過期（mergePlan.expire）。
  *
  * 出口流量：先問資料庫這些輸入列的指紋（schedule_merge_check）。mergeChanges 是輸入的純函式，指紋與上次
  * 「算完沒有要改的列」時相同 → 結果一定還是沒有要改的列，整個讀取跳過。算完沒有要改的列才記指紋（schedule_merge_mark）；
@@ -806,7 +806,7 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)`)),
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=eq.ended&actual_end=gte.${endedSince}`)),
   ];
-  const changes = mergeChanges(rows);
+  const { changes, expire } = mergePlan(rows);
   const byTarget = new Map<string, string[]>();
   for (const c of changes) {
     const key = c.merged_with ?? '';
@@ -820,7 +820,16 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
     }
   }
   stats.merges_changed += changes.length;
-  if (changes.length === 0 && check?.fingerprint) await db.rpc('schedule_merge_mark', { p_fingerprint: check.fingerprint });
+  // 時間未定場次併入的主場次已結束 → 過期（見 mergePlan）；過期會讓它離開 scheduled，指紋跟著變，下一輪重讀確認穩定
+  const nowIso = new Date(now).toISOString();
+  for (let i = 0; i < expire.length; i += 100) {
+    stats.streams_expired += await db.update(
+      'streams',
+      `id=${inList(expire.slice(i, i + 100))}&status=eq.scheduled`,
+      { status: 'expired', fetched_at: nowIso },
+    );
+  }
+  if (changes.length === 0 && expire.length === 0 && check?.fingerprint) await db.rpc('schedule_merge_mark', { p_fingerprint: check.fingerprint });
 }
 
 /** vtubers.last_live_at：這輪偵測到直播中的實況主 */

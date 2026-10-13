@@ -16,14 +16,16 @@ const NOW = Date.parse('2026-10-07T21:00:00Z');
 const DAY = 86400e3;
 
 describe('關於頁外部連結 → X 帳號', () => {
-  it('取出本人填的連結（含標題），X 帳號依頁面順序、排除 intent 等保留路徑', () => {
+  it('關於頁連結依頁面順序取出 X 帳號', () => {
+    // 含連結標題；排除 intent 等保留路徑
     const links = parseAboutLinks(aboutHtml)!;
     expect(links[0]).toEqual({ title: 'Twitter', link: 'twitter.com/Rumi__0813' });
     expect(links.some((l) => l.link.startsWith('x.com/intent'))).toBe(true);
     expect(extractXHandles(links)).toEqual(['Rumi__0813', 'Rumi_sub']);
   });
 
-  it('各種寫法都認得；重複（大小寫不同）只留一個；不是 X 的不收', () => {
+  it('X 網址各種寫法都認得並去重', () => {
+    // 大小寫不同的重複只留一個；不是 X 的不收
     expect(
       extractXHandles([
         { title: '', link: 'https://x.com/abc_1' },
@@ -39,7 +41,8 @@ describe('關於頁外部連結 → X 帳號', () => {
 });
 
 describe('X 帳號是不是本人', () => {
-  it('名稱互相包含（正規化後）、或簡介提到名稱', () => {
+  it('名稱互相包含或簡介提到名稱就算本人', () => {
+    // 名稱先正規化再比
     expect(normalizeName('Rumi / 懶貓子')).toBe('rumi懶貓子');
     expect(nameMatches('懶貓子', profile.user.name, profile.user.description)).toBe(true); // 「Rumi / 懶貓子」
     expect(nameMatches('夜紫悠YeZi', '夜紫悠🌙', '')).toBe(true);
@@ -50,7 +53,8 @@ describe('X 帳號是不是本人', () => {
     expect(nameMatches('喵', '喵', '')).toBe(true);
   });
 
-  it('日文「姫」與中文「姬」比不出來時，X 帳號與 YouTube handle（slug）相同也算本人；太短的帳號不算', () => {
+  it('X 帳號與 YouTube handle 相同也算本人', () => {
+    // 例：日文「姫」與中文「姬」比不出來；太短的帳號不算
     expect(nameMatches('姫川璃音', '姬川璃音🐾個人勢VTuber🐾', '')).toBe(true); // 異體字對照（姫→姬）後也對得上
     expect(nameMatches('姫川璃音', '姬川璃音🐾個人勢VTuber🐾', '', { xHandle: 'himekawa_rino', ytHandle: 'himekawa_rino' })).toBe(true);
     expect(nameMatches('甲', '乙', '', { xHandle: 'Hime_Kawa', ytHandle: 'himekawa' })).toBe(true); // 只差底線與大小寫
@@ -73,12 +77,16 @@ describe('X 帳號是不是本人', () => {
     expect(decideHandle('姫川璃音', ['himekawa_rino'], [{ handle: 'himekawa_rino', profile: { ok: true, user: { screen_name: 'himekawa_rino', name: '姬川璃音', description: '' } } }], 'himekawa_rino')).toMatchObject({ action: 'write' });
   });
 
-  it('decideHandle：沒有 X → none；第一個對不上但第二個對上 → 寫第二個；都對不上 → review 附 X 名稱；查無 → review', () => {
+  it('decideHandle 依比對結果決定不寫、寫入或送審', () => {
+    // 沒有 X → none；第一個對不上但第二個對上 → 寫第二個；都對不上 → review 附 X 名稱；查無 → review
     const ok = (name: string) => ({ ok: true, user: { screen_name: 'x', name, description: '' } });
     expect(decideHandle('懶貓子', [], [])).toMatchObject({ action: 'none' });
     expect(decideHandle('懶貓子', ['a', 'b'], [{ handle: 'a', profile: ok('別人') }, { handle: 'b', profile: ok('懶貓子') }])).toMatchObject({ action: 'write', handle: 'b', reason: 'matched_of_many' });
     expect(decideHandle('懶貓子', ['a'], [{ handle: 'a', profile: ok('公司') }])).toMatchObject({ action: 'review', reason: 'name_mismatch', xName: '公司' });
     expect(decideHandle('懶貓子', ['a'], [{ handle: 'a', profile: { ok: false, reason: 'not_found' } }])).toMatchObject({ action: 'review', reason: 'profile_not_found' });
+  });
+
+  it('X 網址與 CSV 欄位的格式安全', () => {
     expect(xUrlOf('Rumi__0813')).toBe('https://x.com/Rumi__0813');
     // 待人工清單的 CSV：外部來的顯示名稱不能被 Excel 當公式
     expect(csvCell('=HYPERLINK("http://evil","x")')).toBe('"\'=HYPERLINK(""http://evil"",""x"")"');
@@ -93,7 +101,8 @@ describe('X 帳號是不是本人', () => {
 });
 
 describe('fxtwitter 時間軸', () => {
-  it('只收本人的原創與自我串文；排除轉推、回覆別人；時間是絕對時間；圖片取 large 尺寸（orig 常有數 MB）', () => {
+  it('時間軸只收本人原創與自我串文', () => {
+    // 排除轉推、回覆別人；時間是絕對時間；圖片取 large 尺寸（orig 常有數 MB）
     const posts = parseXTimeline(timeline, 'rumi__0813'); // 大小寫不敏感
     expect(posts.map((p) => p.id)).toEqual(['2106797345765736545', '2107652569233547507', '2104479960081825825']);
     const sched = posts[0];
@@ -125,7 +134,8 @@ describe('依發文時間取代舊週表', () => {
     expect(postKeyFromExternalId('dQw4w9WgXcQ')).toBeNull();
   });
 
-  it('差距超過 36 小時：舊的取消、新的讓這篇不寫；自己的列不取消；查不到發文時間視為較舊', () => {
+  it('發文時間差超過 36 小時時以較新的為準', () => {
+    // 舊的取消、新的讓這篇不寫；自己的列不取消；查不到發文時間視為較舊
     const t0 = Date.parse('2026-10-04T00:00:00Z');
     const pub = new Map([['UgkxOLD000000000000', t0]]);
     expect(supersede([yt(1), yt(2), x(1)], pub, 'x:2106797345765736545', t0 + 2 * DAY)).toMatchObject({ superseded: false, cancel: [yt(1).external_id, yt(2).external_id] });
@@ -134,7 +144,8 @@ describe('依發文時間取代舊週表', () => {
     expect(supersede([], pub, 'x:1', t0)).toEqual({ superseded: false, cancel: [], skipDates: new Set() });
   });
 
-  it('36 小時內且有一邊是 YouTube（時間是推估）→ 視為同一版本：不取代、只跳過對方已寫的日期（515 的案例）', () => {
+  it('36 小時內且有一邊是 YouTube 時不互相取代', () => {
+    // YouTube 時間是推估，視為同一版本，只跳過對方已寫的日期（515 的案例）
     const ytAt = Date.parse('2026-10-05T20:38:00Z'); // YouTube「2 天前」推回的時間
     const xAt = Date.parse('2026-10-05T15:35:00Z'); // X 的精確時間，看起來比較舊
     const pub = new Map([['UgkxOLD000000000000', ytAt]]);
@@ -144,7 +155,8 @@ describe('依發文時間取代舊週表', () => {
     expect([...r.skipDates].sort()).toEqual(['2026-10-09', '2026-10-10']); // 10/08 沒被寫過 → X 那篇會補上
   });
 
-  it('兩篇都是 X（時間精確）時不套用 36 小時寬限：較新的照樣取代', () => {
+  it('兩篇都是 X 時較新的照樣取代', () => {
+    // X 時間精確，不套用 36 小時寬限
     const t0 = Date.parse('2026-10-05T00:00:00Z');
     const pub = new Map([['x:2100000000000000000', t0]]);
     expect(supersede([xOther(1)], pub, 'x:2106797345765736545', t0 + 3600e3)).toMatchObject({ superseded: false, cancel: [xOther(1).external_id] });
@@ -153,7 +165,8 @@ describe('依發文時間取代舊週表', () => {
 });
 
 describe('讀圖說明的來源欄', () => {
-  it('X 的候選寫出帳號與貼文網址、發文日期不標「推算」；YouTube 照舊', () => {
+  it('X 候選寫出帳號與貼文網址、發文日期不標推算', () => {
+    // YouTube 照舊
     const base = { name: '懶貓子', externalId: 'UCswRX8mNNdn1fjRctZqzjgA', postDate: Date.parse('2026-10-04T17:23:24Z'), imageUrl: 'u', localImage: 'l', text: '今週のschedule' };
     const xs = candidateSection({ ...base, site: 'x', handle: 'Rumi__0813', postId: 'x:2106797345765736545', postUrl: 'https://x.com/Rumi__0813/status/2106797345765736545' });
     expect(xs).toContain('來源：X @Rumi__0813（https://x.com/Rumi__0813/status/2106797345765736545）');

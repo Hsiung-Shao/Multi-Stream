@@ -35,7 +35,7 @@ import { Rest, inList } from './lib/db.mjs';
 import { BROWSER_UA, fetchPostsPage, imageFullUrl, isScheduleCandidate, parsePostsHtml, relativeToDate } from './lib/posts.mjs';
 import { COMMUNITY_POST_MAX_AGE_DAYS, decide, postExternalId, postKeyFromExternalId, reviewEntries, supersede, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
 import { buildInstructions } from './lib/instructions.mjs';
-import { agencyVtuberIds, resumeIndex, rosterKey, sortCandidates, sortRoster } from './lib/priority.mjs';
+import { agencyVtuberIds, resumeIndex, resumeXIndex, rosterKey, sortCandidates, sortRoster, sortXPeople, xKey } from './lib/priority.mjs';
 import { csvCell, decideHandle, extractXHandles, fetchAboutPage, fetchXProfile, parseAboutLinks, xUrlOf } from './lib/xhandles.mjs';
 import { fetchXTimeline, handleFromXUrl, isXScheduleCandidate, parseXTimeline, xPostKey, xPostUrl } from './lib/xposts.mjs';
 
@@ -304,22 +304,17 @@ async function collectX({ args, db, now, state, roster, seen, out, getBudget, us
   const byVtuber = new Map();
   for (const ch of roster) if (!byVtuber.has(ch.vtuberId)) byVtuber.set(ch.vtuberId, ch);
   const ids = [...byVtuber.keys()];
-  const people = [];
+  const found = [];
   for (let i = 0; i < ids.length; i += 100) {
     const rows = await db.get(`vtubers?select=id,x_url&x_url=not.is.null&id=${inList(ids.slice(i, i + 100))}`);
     for (const r of rows) {
       const handle = handleFromXUrl(r.x_url);
-      if (handle) people.push({ ...byVtuber.get(r.id), handle });
+      if (handle) found.push({ ...byVtuber.get(r.id), handle });
     }
   }
-  people.sort((a, b) => Number(b.isAgency === true) - Number(a.isAgency === true) || a.handle.toLowerCase().localeCompare(b.handle.toLowerCase()));
-  // 游標鍵：企業勢 0:、個人勢 1: 加小寫 handle（舊格式游標沒有前綴 → 從頭開始）
-  const xKey = (p) => `${p.isAgency ? 0 : 1}:${p.handle.toLowerCase()}`;
-  let start = 0;
-  if (!args.channel && /^[01]:/.test(state.xCursor ?? '')) {
-    const idx = people.findIndex((p) => xKey(p) > state.xCursor);
-    start = idx < 0 ? 0 : idx;
-  }
+  // 游標鍵 xKey：企業勢 0:、個人勢 1: 加小寫 handle；排序與續掃同一套 code unit 比較（舊格式游標沒有前綴 → 從頭開始）
+  const people = sortXPeople(found);
+  const start = args.channel ? 0 : resumeXIndex(people, state.xCursor);
   const slice = people.slice(start, start + Math.min(args.xLimit ?? Infinity, people.length - start));
   log(`X：${people.length} 個帳號，從第 ${start + 1} 個開始，這輪 ${slice.length} 個`);
 

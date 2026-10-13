@@ -50,6 +50,21 @@ export function resumeIndex(roster, cursor) {
   return i === -1 ? 0 : i;
 }
 
+/** X 名單游標鍵：企業勢 0:、個人勢 1: 加小寫 handle */
+export const xKey = (p) => `${p.isAgency ? 0 : 1}:${p.handle.toLowerCase()}`;
+
+/** X 名單：企業勢在前，同組依小寫 handle（與 xKey 同一套 code unit 比較，續掃才不會漏人）；回傳新陣列 */
+export function sortXPeople(people) {
+  return [...people].sort((a, b) => cmp(xKey(a), xKey(b)));
+}
+
+/** X 名單從游標之後的第一個位置；null、舊格式、已過最後一個 → 0 */
+export function resumeXIndex(people, cursor) {
+  if (typeof cursor !== 'string' || !/^[01]:/.test(cursor)) return 0;
+  const i = people.findIndex((p) => cmp(xKey(p), cursor) > 0);
+  return i === -1 ? 0 : i;
+}
+
 /** 候選：企業勢在前，同組依發文時間由舊到新；回傳新陣列 */
 export function sortCandidates(candidates) {
   return [...candidates].sort((a, b) => Number(!!b.isAgency) - Number(!!a.isAgency) || a.postDate - b.postDate);

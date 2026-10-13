@@ -1,3 +1,4 @@
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { describe, expect, it } from 'vitest';
 import {
   computeTier,
@@ -150,17 +151,22 @@ describe('時間未定場次（time_tbd，2026-10-14）', () => {
   const TBD_1014 = '2026-10-13T16:00:00.000Z';
   const at = (s: string) => Date.parse(s);
 
-  it('T9 今天的時間未定場次在台北當天 23:00 仍算 upcoming、未過期；隔天 00:01 起不算 upcoming、已過期', () => {
-    const tbd = { ...stream({ scheduled_start: TBD_1014, source: 'community_post' }), time_tbd: true };
+  const tbd = { ...stream({ scheduled_start: TBD_1014, source: 'community_post' }), time_tbd: true };
+
+  it('T9 時間未定場次在台北當天 23:00 仍算 upcoming、未過期', () => {
     const late = at('2026-10-14T23:00:00+08:00');
-    const next = at('2026-10-15T00:01:00+08:00');
     expect(isUpcomingForSnapshot(tbd, late)).toBe(true);
     expect(isExpired(tbd, late)).toBe(false);
+  });
+
+  it('T9 時間未定場次隔天 00:01 起不算 upcoming、已過期', () => {
+    const next = at('2026-10-15T00:01:00+08:00');
     expect(isUpcomingForSnapshot(tbd, next)).toBe(false);
     expect(isExpired(tbd, next)).toBe(true);
   });
 
-  it('T9 一般場次（time_tbd 為 false 或沒給）照舊 3 小時過期', () => {
+  it('T9 一般場次照舊 3 小時過期', () => {
+    // time_tbd 為 false 或沒給
     const late = at('2026-10-14T23:00:00+08:00');
     const normal = stream({ scheduled_start: TBD_1014 });
     expect(isUpcomingForSnapshot(normal, late)).toBe(false);
@@ -168,7 +174,8 @@ describe('時間未定場次（time_tbd，2026-10-14）', () => {
     expect(isExpired({ ...normal, time_tbd: false }, late)).toBe(true);
   });
 
-  it('T13 buildSnapshot：時間未定場次帶 time_tbd: true、排在當天最後；一般場次不輸出 time_tbd', () => {
+  it('T13 buildSnapshot：時間未定場次帶 time_tbd、排在當天最後', () => {
+    // 一般場次不輸出 time_tbd
     const now = at('2026-10-14T10:00:00+08:00');
     const streams = [
       { ...stream({ id: 'next', vtuber_id: 'v3', external_id: 'NextDay0030', scheduled_start: '2026-10-14T16:30:00.000Z' }), time_tbd: false }, // 10/15 00:30

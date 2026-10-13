@@ -1,4 +1,5 @@
 // 時間未定場次（time_tbd）在時間軸列 SlotRow 顯示「時間未定」，不顯示存放用的 00:00
+// T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import i18n from '../../../src/i18n/i18n';
