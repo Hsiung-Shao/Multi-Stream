@@ -132,11 +132,13 @@ export function validateScheduleEntries(parsed, { postDate, now }) {
 export function decide(parsed, { accepted, rejected }) {
   if (!parsed || parsed.is_schedule !== true) return 'none';
   // 可疑＝休息日與已過時間以外的剔除列（缺日期、時間格式不對、超出日期範圍、重複等）；超過通過的列數就送審。
-  // 沒寫時間的列不在這裡：它們已收成時間未定（timeTbd）算在 accepted（同一天有具體時間時才以 duplicate 剔除）
+  // 沒寫時間的列不在這裡：它們已收成時間未定（timeTbd）算在 accepted（同一天有具體時間時才以 duplicate 剔除）；
+  // 但通過的列中時間未定超過一半就送審（大量沒時間可能代表讀錯圖），剛好一半或更少照舊依信心決定
   const suspicious = rejected.filter((r) => !['rest', 'past', 'past_day'].includes(r.reason)).length;
   // 一列都沒通過時，只有「還有日期＋時間完整、可以核准的列」才送審：時間格式不對／沒日期的列審核者補不出來，
   // 0 列的待審核准時會失敗（RPC no_entries），還會佔住這個人的待審名額、擋掉之後的貼文 → 當成沒有可寫的列（記 parsed／0 列）
   if (accepted.length === 0) return reviewEntries({ accepted, rejected }).length > 0 ? 'review' : 'none';
+  if (accepted.filter((e) => e.timeTbd).length * 2 > accepted.length) return 'review';
   const overall = typeof parsed.confidence === 'number' ? parsed.confidence : 0;
   const minEntry = Math.min(...accepted.map((e) => e.confidence));
   if (overall >= VISION_AUTO_MIN_CONFIDENCE && minEntry >= ENTRY_MIN_CONFIDENCE && suspicious <= accepted.length) return 'write';

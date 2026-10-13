@@ -10,6 +10,8 @@
 // 不會在過期前以「已過預定時間」的卡片重新冒出來（呼叫端讀最近 EXPIRE_AFTER_HOURS 內結束的場次）。
 // 時間未定（time_tbd，2026-10-14）的社群週表／投稿場次：scheduled_start 是台北當天 00:00，
 // 改成併入同一人、同一台北日期的真實場次（不受 30 分鐘限制，選同日離 00:00 最近的一場）；不同台北日期不併。
+// 時間未定列只由開始時間不早於它寫入時間（created_at）的場次兌現；同一篇貼文／投稿同一台北日期已有具體時間的列
+// （不論狀態）時，時間未定列不參與合併。
 // 資料庫端 schedule_merge_fp 的判斷要與這裡一致（migration 20261014100000）。
 
 export const MERGE_WINDOW_MS = 30 * 60_000;
@@ -26,6 +28,10 @@ export interface MergeInput {
   merged_with?: string | null;
   /** 時間未定場次（只有社群週表／投稿會是 true）：scheduled_start 存台北當天 00:00 */
   time_tbd?: boolean | null;
+  /** 寫入時間：時間未定列只由「開始時間不早於它」的主場次兌現（合併或過期）；沒給維持舊行為 */
+  created_at?: string | null;
+  /** 社群週表 post:<貼文鍵>:<n>／投稿 sub:<投稿 id>:<n>：去掉最後的 :<n> 就是同一來源 */
+  external_id?: string | null;
 }
 
 const STATUS_RANK: Record<string, number> = { live: 0, ended: 1, scheduled: 2 };
@@ -55,6 +61,17 @@ function taipeiDay(t: number): number {
 /** 時間未定的非影片場次 */
 function isTbd(s: MergeInput): boolean {
   return !!s.time_tbd && NON_VIDEO.has(s.source);
+}
+
+/** 同一篇貼文／同一筆投稿的來源鍵（external_id 去掉最後的 :<n>）；不是 post:／sub: 開頭回 null */
+function sourceKey(s: MergeInput): string | null {
+  return /^((?:post|sub):.+):\d+$/.exec(s.external_id ?? '')?.[1] ?? null;
+}
+
+/** 時間未定列 s 能不能由主場次 p 兌現：p 的開始時間不早於 s 的寫入時間（沒有 created_at → 可以） */
+function fulfills(p: MergeInput, s: MergeInput): boolean {
+  const created = Date.parse(s.created_at ?? '');
+  return !Number.isFinite(created) || startOf(p) >= created;
 }
 
 /** 主場次 p 與場次 s 的時間是否落在可合併範圍；可合併時回傳距離（ms），否則 Infinity */
@@ -88,6 +105,17 @@ export function canMerge(primary: MergeInput, secondary: MergeInput): boolean {
  */
 export function computeMerges(streams: readonly MergeInput[]): Map<string, string | null> {
   const out = new Map<string, string | null>();
+  // 同一來源同一台北日期已有具體時間的列（不論狀態，所以在狀態過濾前從完整輸入建）：
+  // 那一天的開台由具體時間列代表，時間未定列不參與合併（也就不會被 mergePlan 過期）
+  const timedDays = new Set<string>();
+  for (const s of streams) {
+    const key = sourceKey(s);
+    if (key && !s.time_tbd && Number.isFinite(startOf(s))) timedDays.add(`${key}@${taipeiDay(startOf(s))}`);
+  }
+  const blocked = (s: MergeInput): boolean => {
+    const key = isTbd(s) ? sourceKey(s) : null;
+    return key !== null && timedDays.has(`${key}@${taipeiDay(startOf(s))}`);
+  };
   const byVtuber = new Map<string, MergeInput[]>();
   for (const s of streams) {
     if (!(s.status in STATUS_RANK) || s.is_schedule_frame) continue;
@@ -106,11 +134,16 @@ export function computeMerges(streams: readonly MergeInput[]): Map<string, strin
         primaries.push(s);
         continue;
       }
-      // 找時間最近、可合併、優先序更高的主場次
+      if (blocked(s)) {
+        out.set(s.id, null);
+        continue;
+      }
+      // 找時間最近、可合併、優先序更高的主場次（時間未定列只找寫入之後才開始的）
       let best: MergeInput | null = null;
       let bestGap = Infinity;
       for (const p of primaries) {
         if (rank(p) >= rank(s) || !canMerge(p, s)) continue;
+        if (isTbd(s) && !fulfills(p, s)) continue;
         const gap = mergeGap(p, s);
         if (gap < bestGap) {
           best = p;

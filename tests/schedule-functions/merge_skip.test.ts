@@ -48,11 +48,15 @@ describe('applyMerges 輸入指紋', () => {
     expect(stats.merges_changed).toBe(0);
   });
 
-  it('指紋變了、算完有要改的列：照舊讀兩支查詢並寫 merged_with，這輪不 mark（下一輪確認穩定才記）', async () => {
+  it('指紋變了、有要改的列：讀場次並寫 merged_with，這輪不 mark', async () => {
     const { db, calls } = fakeDb({ changed: true, fingerprint: 'fp2' }, [yt, tw]);
     const stats = emptyStats('live', NOW);
     await applyMerges(db, stats, NOW);
-    expect(calls.filter((c) => c.method === 'GET' && c.url.includes('/rest/v1/streams?'))).toHaveLength(2);
+    // 三支讀取：scheduled／live、近期 ended、同來源已過期的具體時間列（只用來擋時間未定列合併）
+    const reads = calls.filter((c) => c.method === 'GET' && c.url.includes('/rest/v1/streams?'));
+    expect(reads).toHaveLength(3);
+    expect(reads.some((c) => c.url.includes('status=eq.ended'))).toBe(true);
+    expect(reads.some((c) => c.url.includes('status=eq.expired') && c.url.includes('time_tbd=eq.false'))).toBe(true);
     const patch = calls.find((c) => c.method === 'PATCH' && c.url.includes('/rest/v1/streams?'));
     expect(patch?.url).toContain('id=in.("b")');
     expect(patch?.body).toEqual({ merged_with: 'a' });

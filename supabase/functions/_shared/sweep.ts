@@ -800,11 +800,19 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
     stats.merges_skipped = true;
     return;
   }
-  const cols = 'select=id,vtuber_id,platform,source,status,scheduled_start,actual_start,is_schedule_frame,merged_with,time_tbd';
+  const cols = 'select=id,vtuber_id,platform,source,status,scheduled_start,actual_start,is_schedule_frame,merged_with,time_tbd,created_at,external_id';
   const endedSince = encodeURIComponent(endedSinceIso);
+  // 昨天（台北）起已過期的社群週表／投稿具體時間列：只用來建「同來源同日已有具體時間」的集合（expired 不會當主場次）。
+  // 同一篇的 08:00 列 11:00 就過期，不讀的話同篇的時間未定列晚上會被併掉。從昨天 00:00 起讀：
+  // 跨午夜到 expireOverdue 把昨天的時間未定列過期之前，它們仍是 scheduled，同日的具體時間列也要在集合裡
+  const sinceIso = new Date(Math.floor((now + 8 * 3_600_000) / 86_400_000) * 86_400_000 - 8 * 3_600_000 - 86_400_000).toISOString();
   const rows = [
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)`)),
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=eq.ended&actual_end=gte.${endedSince}`)),
+    ...(await db.selectAll<MergeInput>(
+      'streams',
+      `${cols}&status=eq.expired&source=in.(community_post,user_submission)&time_tbd=eq.false&scheduled_start=gte.${encodeURIComponent(sinceIso)}`,
+    )),
   ];
   const { changes, expire } = mergePlan(rows);
   const byTarget = new Map<string, string[]>();

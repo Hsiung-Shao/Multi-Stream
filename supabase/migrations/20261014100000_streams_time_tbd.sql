@@ -9,7 +9,7 @@
 --     「早於 now−3h 就跳過」對時間未定改成「台北當天結束已過才跳過」；INSERT 與 ON CONFLICT DO UPDATE 都帶 time_tbd。
 --   - schedule_snapshot_source：場次欄位加 time_tbd（只在 true 時輸出 true，其餘 null；snapshot.ts toItem 只在 true 時輸出）。
 --   - schedule_snapshot_check：upcoming 下限遇時間未定改成 scheduled_start + 24h > 量化 now；指紋加 time_tbd。
---   - schedule_merge_fp：ended 主場次候選的 30 分鐘窗，對時間未定的非影片場次改成「同台北日期」（與 merge.ts 一致）；指紋加 time_tbd。
+--   - schedule_merge_fp：ended 主場次候選的 30 分鐘窗，對時間未定的非影片場次改成「同台北日期」（與 merge.ts 一致）；指紋加 time_tbd、created_at、external_id。
 --   - refresh_schedule_indexable：「接下來」的 15 分鐘寬限對時間未定改成台北當天結束未過（與 personSource.ts 一致）。
 -- Edge Function 端（_shared/rules.ts、merge.ts、sweep.ts、snapshot.ts）同步支援；sweep.expireOverdue 時間未定場次以 now−24h 過期。
 -- 函式本體複製自：
@@ -333,6 +333,9 @@ $$;
 -- ===== 5. 雙平台合併指紋：時間未定的非影片場次用「同台北日期」 =====
 -- 其餘同 20261009010554：ended 只在同一實況主有 scheduled／live、且開始時間相差 30 分鐘內時才算；
 -- 新增：該 scheduled／live 是時間未定的社群週表／投稿時，改成「同一台北日期」（merge.ts mergeGap）。
+-- 指紋另加 time_tbd、created_at（時間未定列只由開始時間不早於它的場次兌現）、external_id（同來源鍵）。
+-- applyMerges 另讀的「昨天起已過期的社群週表／投稿具體時間列」（同來源同日已有具體時間 → 時間未定列不合併）不進指紋：
+-- 那些列只會由 scheduled 變 expired 加入（離開 act → 指紋已變），移出讀取範圍時對應的時間未定列早已過期。
 create or replace function public.schedule_merge_fp(p_ended_since timestamptz)
 returns text
 language sql
@@ -341,13 +344,13 @@ security definer
 set search_path = ''
 as $$
     with act as (
-        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, s.merged_with, s.time_tbd
+        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, s.merged_with, s.time_tbd, s.created_at, s.external_id
         from public.streams s
         where s.status in ('scheduled', 'live')
           and not s.is_schedule_frame
           and coalesce(s.actual_start, s.scheduled_start) is not null
     ), ended as (
-        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, null::uuid as merged_with, s.time_tbd
+        select s.id, s.vtuber_id, s.platform, s.source, s.status, s.scheduled_start, s.actual_start, null::uuid as merged_with, s.time_tbd, s.created_at, s.external_id
         from public.streams s
         where s.status = 'ended'
           and s.actual_end >= p_ended_since
@@ -369,7 +372,8 @@ as $$
         select * from act union all select * from ended
     )
     select md5(coalesce(json_agg(json_build_array(
-               a.id, a.vtuber_id, a.platform, a.source, a.status, a.scheduled_start, a.actual_start, a.merged_with, a.time_tbd)
+               a.id, a.vtuber_id, a.platform, a.source, a.status, a.scheduled_start, a.actual_start, a.merged_with, a.time_tbd,
+               a.created_at, a.external_id)
                order by a.id)::text, ''))
     from allr a;
 $$;
