@@ -44,6 +44,7 @@ export default {
     'card.select': 'Select {{name}}',
     'card.openOriginal': 'Open on {{platform}}',
     'card.untitled': '(untitled)',
+    'card.timeTbd': 'Time TBD',
     'card.alsoOn': 'Also on {{platform}}',
     'card.collab': '{{agency}} · Collab',
     'card.fromSchedule': 'Twitch schedule',

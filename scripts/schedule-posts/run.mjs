@@ -35,6 +35,7 @@ import { Rest, inList } from './lib/db.mjs';
 import { BROWSER_UA, fetchPostsPage, imageFullUrl, isScheduleCandidate, parsePostsHtml, relativeToDate } from './lib/posts.mjs';
 import { COMMUNITY_POST_MAX_AGE_DAYS, decide, postExternalId, postKeyFromExternalId, reviewEntries, supersede, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
 import { buildInstructions } from './lib/instructions.mjs';
+import { agencyVtuberIds, resumeIndex, rosterKey, sortCandidates, sortRoster } from './lib/priority.mjs';
 import { csvCell, decideHandle, extractXHandles, fetchAboutPage, fetchXProfile, parseAboutLinks, xUrlOf } from './lib/xhandles.mjs';
 import { fetchXTimeline, handleFromXUrl, isXScheduleCandidate, parseXTimeline, xPostKey, xPostUrl } from './lib/xposts.mjs';
 
@@ -106,7 +107,7 @@ const log = (...args) => console.log(new Date().toISOString().slice(11, 19), ...
 
 /** 名冊：T1 的 YouTube 頻道（active、非 graduate、有 UC…），依頻道 ID 排序 */
 async function loadRoster(db, onlyChannel) {
-  const cols = 'id,vtuber_id,external_id,vtubers!inner(name,slug,activity)';
+  const cols = 'id,vtuber_id,external_id,vtubers!inner(name,slug,activity,group_id)';
   let rows;
   if (onlyChannel) {
     rows = await db.get(`vtuber_channels?select=${cols}&platform=eq.youtube&external_id=eq.${onlyChannel}&limit=1`);
@@ -117,10 +118,20 @@ async function loadRoster(db, onlyChannel) {
     );
     rows = states.map((s) => s.vtuber_channels).filter(Boolean);
   }
-  return rows
-    .filter((r) => r.external_id && /^UC[a-zA-Z0-9_-]{22}$/.test(r.external_id))
-    .map((r) => ({ channelId: r.id, vtuberId: r.vtuber_id, externalId: r.external_id, name: r.vtubers?.name ?? r.external_id, slug: r.vtubers?.slug ?? null }))
-    .sort((a, b) => (a.externalId < b.externalId ? -1 : 1));
+  const agency = await loadAgencyVtuberIds(db, taipeiDate(Date.now()), rows);
+  return sortRoster(
+    rows
+      .filter((r) => r.external_id && /^UC[a-zA-Z0-9_-]{22}$/.test(r.external_id))
+      .map((r) => ({ channelId: r.id, vtuberId: r.vtuber_id, externalId: r.external_id, name: r.vtubers?.name ?? r.external_id, slug: r.vtubers?.slug ?? null, isAgency: agency.has(r.vtuber_id) })),
+  );
+}
+
+/** 企業勢 vtuber id 集合：團體階層＋名冊成員的 group_id＋合作藝人關係（有效期間含今天） */
+async function loadAgencyVtuberIds(db, today, rosterRows) {
+  const groups = await db.getAll('vtuber_groups?select=id,kind,parent_id', 'id');
+  const links = await db.getAll('vtuber_group_links?select=vtuber_id,group_id,role,since,until', 'vtuber_id,group_id');
+  const vtubers = rosterRows.map((r) => ({ id: r.vtuber_id, group_id: r.vtubers?.group_id ?? null }));
+  return agencyVtuberIds({ groups, vtubers, links, today });
 }
 
 /** 每位 VTuber 的 Twitch 頻道（寫 twitch 平台的列要掛對 channel_id） */
@@ -168,11 +179,10 @@ async function collect(args, db, now) {
   if (args.reset) Object.assign(state, { cursor: null, lapStartedAt: null, xCursor: null });
   let start = 0;
   if (!args.channel && state.cursor) {
-    const idx = roster.findIndex((c) => c.externalId > state.cursor);
-    start = idx < 0 ? 0 : idx;
+    start = resumeIndex(roster, state.cursor); // 舊格式游標（沒有 0:／1: 前綴）會從頭開始
   }
   const slice = roster.slice(start, start + Math.min(args.limit, roster.length - start));
-  log(`名冊 ${roster.length} 個頻道，從第 ${start + 1} 個開始，這輪 ${slice.length} 個`);
+  log(`名冊 ${roster.length} 個頻道（企業勢 ${roster.filter((c) => c.isAgency).length}），從第 ${start + 1} 個開始，這輪 ${slice.length} 個`);
 
   const seen = new Set((await db.getAll(`schedule_community_posts?select=post_id&created_at=gte.${new Date(now - 30 * 86400e3).toISOString()}`, 'post_id')).map((r) => r.post_id));
   // 上一輪 collect 還沒 apply 的候選也算看過（避免同一篇出現兩次）
@@ -231,6 +241,7 @@ async function collect(args, db, now) {
         externalId: ch.externalId,
         name: ch.name,
         slug: ch.slug,
+        isAgency: ch.isAgency === true,
         text: p.text,
         publishedText: p.publishedText,
         postDate: relativeToDate(p.publishedText, now) ?? now,
@@ -256,7 +267,7 @@ async function collect(args, db, now) {
       state.lapStartedAt = null;
       log(`繞完一圈（第 ${state.laps} 圈）`);
     } else {
-      state.cursor = roster[endIdx - 1]?.externalId ?? state.cursor;
+      state.cursor = endIdx > 0 ? rosterKey(roster[endIdx - 1]) : state.cursor;
     }
     state.lastRunAt = new Date().toISOString();
     saveState(state);
@@ -272,8 +283,12 @@ async function collect(args, db, now) {
     log(`X：這輪不掃（上次掃完 ${state.xLapAt ?? '從未'}；--x 可強制）`);
   }
 
-  writeFileSync(CANDIDATES_FILE, JSON.stringify(out, null, 2));
-  writeFileSync(INSTRUCTIONS_FILE, buildInstructions(out, { now, resultsPath: RESULTS_FILE }));
+  // 舊候選（pendingPrev）可能沒有 isAgency 欄位：以 vtuberId 是否在名冊的企業勢內補上
+  const agencyIds = new Set(roster.filter((c) => c.isAgency).map((c) => c.vtuberId));
+  for (const c of out) if (typeof c.isAgency !== 'boolean') c.isAgency = agencyIds.has(c.vtuberId);
+  const sorted = sortCandidates(out);
+  writeFileSync(CANDIDATES_FILE, JSON.stringify(sorted, null, 2));
+  writeFileSync(INSTRUCTIONS_FILE, buildInstructions(sorted, { now, resultsPath: RESULTS_FILE }));
   log('統計', JSON.stringify(stats));
   log(`候選 ${out.length} 篇 → ${CANDIDATES_FILE}；讀圖說明 → ${INSTRUCTIONS_FILE}`);
   console.log(`CANDIDATES=${out.length}`);
@@ -297,10 +312,12 @@ async function collectX({ args, db, now, state, roster, seen, out, getBudget, us
       if (handle) people.push({ ...byVtuber.get(r.id), handle });
     }
   }
-  people.sort((a, b) => a.handle.toLowerCase().localeCompare(b.handle.toLowerCase()));
+  people.sort((a, b) => Number(b.isAgency === true) - Number(a.isAgency === true) || a.handle.toLowerCase().localeCompare(b.handle.toLowerCase()));
+  // 游標鍵：企業勢 0:、個人勢 1: 加小寫 handle（舊格式游標沒有前綴 → 從頭開始）
+  const xKey = (p) => `${p.isAgency ? 0 : 1}:${p.handle.toLowerCase()}`;
   let start = 0;
-  if (!args.channel && state.xCursor) {
-    const idx = people.findIndex((p) => p.handle.toLowerCase() > state.xCursor.toLowerCase());
+  if (!args.channel && /^[01]:/.test(state.xCursor ?? '')) {
+    const idx = people.findIndex((p) => xKey(p) > state.xCursor);
     start = idx < 0 ? 0 : idx;
   }
   const slice = people.slice(start, start + Math.min(args.xLimit ?? Infinity, people.length - start));
@@ -361,6 +378,7 @@ async function collectX({ args, db, now, state, roster, seen, out, getBudget, us
         externalId: p.externalId,
         name: p.name,
         slug: p.slug,
+        isAgency: p.isAgency === true,
         text: t.text,
         publishedText: new Date(t.createdAt).toISOString(),
         postDate: t.createdAt,
@@ -381,7 +399,7 @@ async function collectX({ args, db, now, state, roster, seen, out, getBudget, us
     } else {
       // 被停下：退回最後一個成功的位置；--x-limit 正常用完則停在最後處理的位置
       const upto = xs.stoppedBy ? lastOk : done;
-      if (upto > 0) state.xCursor = slice[upto - 1].handle;
+      if (upto > 0) state.xCursor = xKey(slice[upto - 1]);
     }
   }
   return xs;
@@ -573,7 +591,7 @@ async function apply(args, db, now) {
         stats.parsed++;
         base.entries_written = toWrite.length;
         const skipped = v.accepted.length - toWrite.length;
-        log(`  ✓ ${c.name} ${c.postId} 信心 ${base.confidence} 寫入 ${toWrite.length} 場${skipped ? `（${skipped} 場已由同一份週表的另一篇寫入）` : ''}${sup.cancel.length ? `、取代 ${sup.cancel.length} 場舊的` : ''}：${toWrite.map(({ e }) => `${e.date.slice(5)} ${e.time} ${e.title}`).join('；')}`);
+        log(`  ✓ ${c.name} ${c.postId} 信心 ${base.confidence} 寫入 ${toWrite.length} 場${skipped ? `（${skipped} 場已由同一份週表的另一篇寫入）` : ''}${sup.cancel.length ? `、取代 ${sup.cancel.length} 場舊的` : ''}：${toWrite.map(({ e }) => `${e.date.slice(5)} ${e.timeTbd ? '時間未定' : e.time} ${e.title}`).join('；')}`);
         if (!args.dryRun) {
           if (sup.cancel.length) {
             stats.canceled += await db.patch(
@@ -601,6 +619,7 @@ async function apply(args, db, now) {
               thumbnail_url: null,
               viewer_count: null,
               is_schedule_frame: false,
+              time_tbd: e.timeTbd === true,
               merged_with: null,
               fetched_at: fetchedAt,
             };
@@ -635,7 +654,7 @@ async function apply(args, db, now) {
               vtuber_slug: c.slug,
               channel_id: c.channelId,
               platform: 'youtube',
-              entries: entries.map((e) => ({ date: e.date, time: e.time, title: e.title ?? '', platform: e.platform === 'twitch' ? 'twitch' : 'youtube' })),
+              entries: entries.map((e) => ({ date: e.date, time: e.time ?? null, title: e.title ?? '', platform: e.platform === 'twitch' ? 'twitch' : 'youtube' })),
               source: 'vision',
               post_id: c.postId,
               post_url: c.postUrl ?? `https://www.youtube.com/post/${c.postId}`,

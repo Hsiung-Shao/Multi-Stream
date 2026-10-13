@@ -40,7 +40,8 @@ export interface ContributionPayload {
 /** 週表投稿的一列（台北時間；與後端 functions/lib/schedule-submit.js 一致） */
 export interface ScheduleEntry {
     date: string;
-    time: string;
+    /** HH:MM（台北）；null＝時間未定（只有後台核准可送，使用者投稿必填） */
+    time: string | null;
     title: string;
     platform: 'youtube' | 'twitch';
 }

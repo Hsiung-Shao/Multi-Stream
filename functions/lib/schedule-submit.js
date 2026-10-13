@@ -41,8 +41,12 @@ function isRealDate(s) {
  * 週表列驗證與正規化。
  * @param {unknown} raw
  * @param {number} now
- * @param {{ max?: number, pastDays?: number, futureDays?: number }} [opts]
- * @returns {{ value: {date:string,time:string,title:string,platform:'youtube'|'twitch'}[] } | { error: string }}
+ * allowNoTime：只有後台核准路徑會開（時間未定場次）；time 空白／null 的列通過、回 time: null。使用者投稿端點不開（時間照舊必填）。
+ * 去重：有時間的列以「日期＋時間」為鍵（同上）；時間未定的列以「日期＋標題」為鍵——同一天可以有具體時間的場次與另一場時間未定的場次
+ * （審核者明確填了兩列，不替他判斷是不是同一場），但同一天同標題的時間未定列視為重複。
+ * 排序：日期 → 有時間的依時間 → 時間未定的排在當天最後。
+ * @param {{ max?: number, pastDays?: number, futureDays?: number, allowNoTime?: boolean }} [opts]
+ * @returns {{ value: {date:string,time:string|null,title:string,platform:'youtube'|'twitch'}[] } | { error: string }}
  */
 export function validateEntries(raw, now = Date.now(), opts = {}) {
     const max = opts.max ?? SCHEDULE_LIMITS.entries;
@@ -57,18 +61,24 @@ export function validateEntries(raw, now = Date.now(), opts = {}) {
         const date = typeof e.date === 'string' ? e.date.trim() : '';
         // YYYY-MM-DD 字串可直接比大小
         if (!isRealDate(date) || date < minDate || date > maxDate) return { error: 'invalid_entry_date' };
-        const time = typeof e.time === 'string' ? e.time.trim() : '';
-        if (!TIME_RE.test(time)) return { error: 'invalid_entry_time' };
+        const rawTime = typeof e.time === 'string' ? e.time.trim() : '';
+        const noTime = opts.allowNoTime === true && (e.time == null || rawTime === '');
+        if (!noTime && !TIME_RE.test(rawTime)) return { error: 'invalid_entry_time' };
+        const time = noTime ? null : rawTime;
         const title = typeof e.title === 'string' ? e.title.replace(CONTROL_CHARS, '').trim() : '';
         if (!title || title.length > SCHEDULE_LIMITS.title) return { error: 'invalid_entry_title' };
         const platform = e.platform == null || e.platform === '' ? 'youtube' : e.platform;
         if (!SCHEDULE_PLATFORMS.includes(platform)) return { error: 'invalid_entries' };
-        const key = `${date} ${time}`;
+        const key = time === null ? `${date} tbd ${title}` : `${date} ${time}`;
         if (seen.has(key)) return { error: 'invalid_entries' };
         seen.add(key);
         out.push({ date, time, title, platform });
     }
-    out.sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)));
+    out.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        if (a.time === null || b.time === null) return Number(a.time === null) - Number(b.time === null);
+        return a.time.localeCompare(b.time);
+    });
     return { value: out };
 }
 

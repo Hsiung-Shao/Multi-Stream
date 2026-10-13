@@ -132,20 +132,55 @@ describe('rssSweep：限流、死頻道、沒有 API 備援', () => {
 
 describe('expireOverdue：資料庫端統一過期', () => {
   it('排定時間過後 3 小時仍未開始的 YouTube 待機室 → expired（常駐框與已開始的不動）', async () => {
-    const { db, calls } = fakeDb(() => new Response(null, { status: 204, headers: { 'content-range': '*/7' } }));
+    // 2026-10-14：過期分成一般場次與時間未定場次兩段（見下方 T12），這裡只看常駐框轉換與一般那段
+    const { db, calls } = fakeDb((url) => new Response(null, { status: 204, headers: { 'content-range': decodeURIComponent(url).includes('time_tbd=eq.true') ? '*/0' : '*/7' } }));
     const stats = emptyStats('light', NOW);
-    expect(await expireOverdue(db, stats, NOW)).toBe(7);
+    await expireOverdue(db, stats, NOW);
     expect(stats.streams_expired).toBe(7);
     // 先把排定時間進到 14 天內的常駐框轉成一般待機室（旗標是寫入當下算的），再過期
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(3);
     expect(decodeURIComponent(calls[0].url)).toContain('platform=eq.youtube&status=eq.scheduled&is_schedule_frame=eq.true&scheduled_start=lte.2026-10-12T12:00:00.000Z');
     expect(calls[0].body).toEqual({ is_schedule_frame: false });
     expect(stats.frames_unflagged).toBe(7);
-    const u = decodeURIComponent(calls[1].url);
-    expect(calls[1].method).toBe('PATCH');
+    const normal = calls.find((c) => decodeURIComponent(c.url).includes('time_tbd=eq.false'));
+    expect(normal).toBeDefined();
+    const u = decodeURIComponent(normal!.url);
+    expect(normal!.method).toBe('PATCH');
     // YouTube 待機室＋任何平台的社群週表／投稿場次（2026-10-05）
-    expect(u).toContain('or=(platform.eq.youtube,source.in.(community_post,user_submission))&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.2026-09-28T09:00:00.000Z');
-    expect(calls[1].body).toMatchObject({ status: 'expired' });
+    expect(u).toContain('or=(platform.eq.youtube,source.in.(community_post,user_submission))');
+    for (const part of ['status=eq.scheduled', 'actual_start=is.null', 'is_schedule_frame=eq.false', 'scheduled_start=lt.2026-09-28T09:00:00.000Z']) expect(u).toContain(part);
+    expect(normal!.body).toMatchObject({ status: 'expired' });
+  });
+});
+
+describe('expireOverdue：時間未定場次另一段過期（time_tbd，2026-10-14）', () => {
+  it('T12 一般場次 time_tbd=eq.false 用 now−3h、時間未定場次 time_tbd=eq.true 用 now−24h，兩段都是 PATCH 成 expired', async () => {
+    const { db, calls } = fakeDb(() => new Response(null, { status: 204, headers: { 'content-range': '*/0' } }));
+    await expireOverdue(db, emptyStats('light', NOW), NOW);
+    const patches = calls.filter((c) => c.method === 'PATCH' && decodeURIComponent(c.url).includes('status=eq.scheduled&actual_start=is.null'));
+    expect(patches).toHaveLength(2);
+    const normal = patches.find((c) => decodeURIComponent(c.url).includes('time_tbd=eq.false'));
+    const tbd = patches.find((c) => decodeURIComponent(c.url).includes('time_tbd=eq.true'));
+    expect(normal).toBeDefined();
+    expect(tbd).toBeDefined();
+    const cut3h = encodeURIComponent('2026-09-28T09:00:00.000Z');
+    const cut24h = encodeURIComponent('2026-09-27T12:00:00.000Z');
+    expect(normal!.url).toContain(`scheduled_start=lt.${cut3h}`);
+    expect(normal!.url).not.toContain(`scheduled_start=lt.${cut24h}`);
+    expect(tbd!.url).toContain(`scheduled_start=lt.${cut24h}`);
+    expect(tbd!.url).not.toContain(`scheduled_start=lt.${cut3h}`);
+    expect(decodeURIComponent(tbd!.url)).not.toContain('time_tbd=eq.false');
+    expect(normal!.body).toMatchObject({ status: 'expired' });
+    expect(tbd!.body).toMatchObject({ status: 'expired' });
+  });
+
+  it('T12 兩段過期的筆數都算進 streams_expired', async () => {
+    const { db } = fakeDb((url) =>
+      new Response(null, { status: 204, headers: { 'content-range': decodeURIComponent(url).includes('time_tbd=eq.true') ? '*/2' : '*/7' } }),
+    );
+    const stats = emptyStats('light', NOW);
+    await expireOverdue(db, stats, NOW);
+    expect(stats.streams_expired).toBe(9);
   });
 });
 

@@ -36,6 +36,7 @@ export const READING_RULES = [
   '- 休息日、お休み、休息、REST 之類標 is_rest=true、time=null。',
   '- 平台依圖示判斷：YouTube 播放鍵／紅色圖示＝youtube，Twitch 紫色圖示＝twitch；沒有圖示給 unknown。',
   '- 「未定」「TBA」「時間另行公告」沒有確定時間 → time=null、confidence 低。',
+  '- 有標明當天要開台、但沒寫時間 → 照列出，time=null、is_rest=false（不要當休息日，也不要因此大幅降低信心）。',
   '- 不是週表（例如單場直播預告、周邊、會員桌布、公告）→ is_schedule=false、entries 空陣列。',
   '- 貼文文字若已寫出日期時間，與圖對照；兩者衝突以圖為準但 confidence 降低。',
 ];
@@ -48,6 +49,7 @@ export function candidateSection(c) {
   return [
     `### ${c.postId}`,
     `- VTuber：${c.name}（YouTube ${c.externalId}）`,
+    ...(c.isAgency ? ['- 企業勢：是'] : []),
     `- 來源：${source}`,
     `- 發文日期（${c.site === 'x' ? '' : '推算，'}台北）：${postDay}（星期${weekday}）`,
     `- 圖片：${c.localImage}（原網址 ${c.imageUrl}）`,

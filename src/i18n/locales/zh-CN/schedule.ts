@@ -44,6 +44,7 @@ export default {
     'card.select': '选择 {{name}}',
     'card.openOriginal': '在 {{platform}} 打开',
     'card.untitled': '（未命名）',
+    'card.timeTbd': '时间未定',
     'card.alsoOn': '也在 {{platform}}',
     'card.collab': '{{agency}}・合作',
     'card.fromSchedule': '周表预告',

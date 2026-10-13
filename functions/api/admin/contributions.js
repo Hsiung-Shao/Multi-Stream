@@ -135,12 +135,13 @@ export async function onRequestPost(context, deps = {}) {
 /**
  * 核准週表投稿：驗證審核者改過的列 → （有備註時）把備註合併進 payload → approve_schedule_contribution。
  * 核准端的列數上限與 RPC 一致（14），日期下限放寬到 7 天前（投稿可能放了幾天才審；已過的列 RPC 會略過不寫）。
+ * 只有這裡允許時間空白（allowNoTime）：審核者可把列改成時間未定，寫入 time: null（使用者投稿端點照舊必填）。
  */
 async function approveSchedule(env, request, id, body, deps = {}) {
     const now = deps.now ?? Date.now();
     let entries = null;
     if (body.entries != null) {
-        const r = validateEntries(body.entries, now, { max: SCHEDULE_LIMITS.adminEntries, pastDays: 7 });
+        const r = validateEntries(body.entries, now, { max: SCHEDULE_LIMITS.adminEntries, pastDays: 7, allowNoTime: true });
         if (r.error) return jsonResponse({ ok: false, error: r.error }, 400, request);
         entries = r.value;
     }

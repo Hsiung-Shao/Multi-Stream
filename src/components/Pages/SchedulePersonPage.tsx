@@ -116,7 +116,8 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     const description = `${t('person.seo.summary', { name, recent: person.recent.length, upcoming: person.upcoming.length })} ${t('person.seo.description', { name })}`;
     const sameAs = [...channelLinks(person).map((l) => l.href), ...socialLinks(person).map((l) => l.href)];
     // 只列有確切時間的場次；BroadcastEvent 讓搜尋引擎知道哪一場正在直播／何時開始
-    const events = [...person.live, ...person.upcoming].slice(0, 10).map((s) => ({
+    // 時間未定場次的 scheduled_start 只是存放用的當天 00:00，輸出會變成不實的開始時間：沒有實際開台時間就不列
+    const events = [...person.live, ...person.upcoming].filter((s) => s.actual_start || !s.time_tbd).slice(0, 10).map((s) => ({
         '@type': 'BroadcastEvent',
         name: s.title || name,
         isLiveBroadcast: true,

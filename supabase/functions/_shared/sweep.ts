@@ -17,6 +17,7 @@ import {
   isRssThrottled,
   SCHEDULE_FRAME_DAYS,
   shouldSkipChannel,
+  TBD_DAY_MS,
   TIER1_DAYS,
   UPCOMING_WINDOW_DAYS as UPCOMING_DAYS,
   type StreamStatus,
@@ -311,15 +312,16 @@ export async function unflagNearFrames(db: Db, stats: RunStats, now: number): Pr
 
 export async function expireOverdue(db: Db, stats: RunStats, now: number): Promise<number> {
   await unflagNearFrames(db, stats, now);
-  const cutoff = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
+  const base = `or=(platform.eq.youtube,source.in.(${NON_VIDEO_SOURCES.join(',')}))&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false`;
+  const patch = { status: 'expired', fetched_at: new Date(now).toISOString() };
   // YouTube 待機室，加上任何平台的社群週表／投稿場次（Twitch 平台的這兩種來源沒有別的路徑會讓它過期）
-  const n = await db.update(
-    'streams',
-    `or=(platform.eq.youtube,source.in.(${NON_VIDEO_SOURCES.join(',')}))&status=eq.scheduled&actual_start=is.null&is_schedule_frame=eq.false&scheduled_start=lt.${cutoff}`,
-    { status: 'expired', fetched_at: new Date(now).toISOString() },
-  );
-  stats.streams_expired += n;
-  return n;
+  const cutoff = encodeURIComponent(new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString());
+  const n = await db.update('streams', `${base}&time_tbd=eq.false&scheduled_start=lt.${cutoff}`, patch);
+  // 時間未定場次（2026-10-14）：scheduled_start 是台北當天 00:00，當天結束（+24h）才過期
+  const tbdCutoff = encodeURIComponent(new Date(now - TBD_DAY_MS).toISOString());
+  const m = await db.update('streams', `${base}&time_tbd=eq.true&scheduled_start=lt.${tbdCutoff}`, patch);
+  stats.streams_expired += n + m;
+  return n + m;
 }
 
 /** 沒有影片 ID 的來源（external_id 為 post:…／sub:…）：共享表與 live-og 比對都不能拿它當 videoId */
@@ -798,7 +800,7 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
     stats.merges_skipped = true;
     return;
   }
-  const cols = 'select=id,vtuber_id,platform,source,status,scheduled_start,actual_start,is_schedule_frame,merged_with';
+  const cols = 'select=id,vtuber_id,platform,source,status,scheduled_start,actual_start,is_schedule_frame,merged_with,time_tbd';
   const endedSince = encodeURIComponent(endedSinceIso);
   const rows = [
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)`)),

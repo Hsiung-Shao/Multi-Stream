@@ -102,14 +102,19 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
                         const past = divider >= 0 && i < divider;
                         // 寬限內跨午夜留下的昨天場次：整點標「昨天」，免得「23:00」被看成今晚
                         // （只看「早於這一天」：超過 7 天併進最後一天的場次不是昨天）
-                        const otherDay = current ? localDayKey(h.hourIso) < current.dayKey : false;
+                        // 時間未定組沒有整點（hourIso 為空），也不會是昨天
+                        const otherDay = current && !h.tbd ? localDayKey(h.hourIso) < current.dayKey : false;
                         return (
-                            <li key={h.hourIso}>
+                            <li key={h.tbd ? 'tbd' : h.hourIso}>
                                 {i === divider && nowLine}
                                 <div className={cn('flex gap-3 border-t border-border/60 py-2', past && 'opacity-60')}>
                                     <div className="w-14 shrink-0 pt-2.5 text-right sm:w-16">
                                         {otherDay && <div className="mb-1 text-[11px] font-medium leading-none text-muted-foreground">{t('day.yesterday')}</div>}
-                                        <div className="text-base font-bold tabular-nums leading-none text-foreground">{formatClock(h.hourIso, locale)}</div>
+                                        {h.tbd ? (
+                                            <div className="text-sm font-bold leading-tight text-foreground">{t('card.timeTbd')}</div>
+                                        ) : (
+                                            <div className="text-base font-bold tabular-nums leading-none text-foreground">{formatClock(h.hourIso, locale)}</div>
+                                        )}
                                         {h.streams.length > 1 && !allSelected && (
                                             <button
                                                 type="button"

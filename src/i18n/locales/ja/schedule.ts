@@ -44,6 +44,7 @@ export default {
     'card.select': '{{name}} を選択',
     'card.openOriginal': '{{platform}} で開く',
     'card.untitled': '（タイトルなし）',
+    'card.timeTbd': '時間未定',
     'card.alsoOn': '{{platform}} でも配信',
     'card.collab': '{{agency}}・コラボ',
     'card.fromSchedule': 'Twitch 予定',

@@ -63,6 +63,42 @@ describe('社群週表場次的合併', () => {
   });
 });
 
+describe('時間未定社群場次的合併（time_tbd，2026-10-14）', () => {
+  /** 台北 10/14 00:00（時間未定場次存當天 00:00）、10/15 00:00 */
+  const TBD_1014 = '2026-10-13T16:00:00.000Z';
+  const TBD_1015 = '2026-10-14T16:00:00.000Z';
+
+  it('T10 時間未定的社群場次併入同一人同一台北日期的待機室（不受 30 分鐘限制）', () => {
+    const post = row('p', { source: 'community_post', scheduled_start: TBD_1014, time_tbd: true });
+    const waiting = row('w', { scheduled_start: '2026-10-14T13:00:00.000Z' }); // 台北 10/14 21:00
+    const m = computeMerges([post, waiting]);
+    expect(m.get('p')).toBe('w');
+    expect(m.get('w')).toBeNull();
+  });
+
+  it('T10 投稿來源同樣適用；不是時間未定的 00:00 場次仍受 30 分鐘限制、不同人不併', () => {
+    const sub = row('s', { source: 'user_submission', scheduled_start: TBD_1014, time_tbd: true });
+    const waiting = row('w', { scheduled_start: '2026-10-14T13:00:00.000Z' });
+    expect(computeMerges([sub, waiting]).get('s')).toBe('w');
+    const midnight = row('m', { source: 'community_post', scheduled_start: TBD_1014, time_tbd: false });
+    expect(computeMerges([midnight, waiting]).get('m')).toBeNull();
+    const other = row('o', { source: 'community_post', scheduled_start: TBD_1014, time_tbd: true, vtuber_id: 'v2' });
+    expect(computeMerges([other, waiting]).get('o')).toBeNull();
+  });
+
+  it('T11 時間未定場次不併入隔天的場次', () => {
+    const post = row('p', { source: 'community_post', scheduled_start: TBD_1014, time_tbd: true });
+    const nextDay = row('w', { scheduled_start: '2026-10-14T16:10:00.000Z' }); // 台北 10/15 00:10
+    expect(computeMerges([post, nextDay]).get('p')).toBeNull();
+  });
+
+  it('T11 前一天深夜的待機室離 00:00 只差 10 分鐘也不併（不同台北日期）', () => {
+    const post = row('p', { source: 'community_post', scheduled_start: TBD_1015, time_tbd: true }); // 10/15 時間未定
+    const lateNight = row('w', { scheduled_start: '2026-10-14T15:50:00.000Z' }); // 台北 10/14 23:50
+    expect(computeMerges([post, lateNight]).get('p')).toBeNull();
+  });
+});
+
 function fakeDb() {
   const urls: string[] = [];
   const fetchFn = (async (input: string | URL | Request) => {
@@ -91,7 +127,7 @@ describe('沒有影片 ID 的來源不進重查與共享表', () => {
   it('expireOverdue 也讓 Twitch 平台的社群週表／投稿場次過期（它們沒有別的過期路徑）', async () => {
     const { db, urls } = fakeDb();
     await expireOverdue(db, emptyStats('light', T0), T0);
-    const expire = urls.find((u) => u.includes('status=eq.scheduled&actual_start=is.null'));
+    const expire = urls.find((u) => u.includes('status=eq.scheduled&actual_start=is.null') && !decodeURIComponent(u).includes('time_tbd=eq.true'));
     expect(expire).toBeDefined();
     expect(expire).toContain('or=(platform.eq.youtube,source.in.(community_post,user_submission))');
   });

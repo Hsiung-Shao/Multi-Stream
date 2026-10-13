@@ -240,6 +240,46 @@ describe('個人頁內文（edge 放進 #root）', () => {
     });
 });
 
+describe('個人頁內文：時間未定場次（time_tbd，2026-10-14）', () => {
+    /** 時間未定場次存台北當天 00:00：10/14 → 10/13 16:00Z */
+    const TBD_1014 = '2026-10-13T16:00:00.000Z';
+    const vt = { name: '台一', img_url: null, schedule_indexable: true, youtube_channel_id: null, twitch_channel_id: null };
+    const row = (active: unknown[]) => ({ ...vt, active, recent: [], recent_count: [{ count: 0 }] });
+    const active = [
+        { status: 'scheduled', title: '今天未定', platform: 'youtube', scheduled_start: TBD_1014, time_tbd: true },
+        { status: 'scheduled', title: '一般午夜', platform: 'youtube', scheduled_start: TBD_1014, time_tbd: false },
+        { status: 'scheduled', title: '晚上雜談', platform: 'youtube', scheduled_start: '2026-10-15T12:00:00.000Z' }, // 台北 10/15 20:00
+    ];
+
+    it('T9 今天的時間未定場次在台北 23:00 仍留在 upcoming，一般午夜場次照舊被 15 分鐘寬限排除', () => {
+        const s = personStreamsFromRow(row(active), Date.parse('2026-10-14T23:00:00+08:00'));
+        expect(s?.upcoming.map((x: { title: string }) => x.title)).toEqual(['今天未定', '晚上雜談']);
+        expect(s?.upcomingTotal).toBe(2);
+    });
+
+    it('T9 隔天 00:01 起時間未定場次不再算 upcoming', () => {
+        const s = personStreamsFromRow(row(active), Date.parse('2026-10-15T00:01:00+08:00'));
+        expect(s?.upcoming.map((x: { title: string }) => x.title)).toEqual(['晚上雜談']);
+    });
+
+    it('T9 查詢有帶 time_tbd 欄位（否則 edge 端拿不到旗標）', () => {
+        const q = personQuery('taione', Date.parse('2026-10-14T10:00:00+08:00'));
+        expect(q).toMatch(/active:streams\([^)]*time_tbd[^)]*\)/);
+    });
+
+    it('T17 內文的時間未定場次寫「時間未定」、不出現 00:00；一般場次照常有時分', () => {
+        const streams = personStreamsFromRow(row(active), Date.parse('2026-10-14T10:00:00+08:00'));
+        const html = renderPersonBodyHtml('zh-TW', { name: '台一', youtube: null, twitch: null, streams }, 'taione');
+        expect(html).toContain('時間未定');
+        expect(html).toContain('今天未定');
+        // 只看時間未定那列（一般場次的 ISO datetime 本身含 00:00）
+        const tbdLi = html.match(/<li>[^<]*<time[^>]*>[^<]*<\/time>[^<]*今天未定[^<]*<\/li>/)?.[0] ?? '';
+        expect(tbdLi).toContain('時間未定');
+        expect(tbdLi).not.toContain('00:00');
+        expect(html).toMatch(/20:00<\/time> 晚上雜談/);
+    });
+});
+
 describe('catch-all 接線', () => {
     it('個人頁把內文放進 #root（含不可索引頁的 h1），description 帶場次摘要', () => {
         const src = readFileSync(resolve(__dirname, '../../functions/[[path]].js'), 'utf8');

@@ -40,6 +40,8 @@ export interface ScheduleStream {
     title?: string;
     category?: string;
     scheduled_start?: string;
+    /** 時間未定（只有 community_post／user_submission 會是）：scheduled_start 存該台北日期 00:00，當天結束前都算還沒過 */
+    time_tbd?: boolean;
     actual_start?: string;
     actual_end?: string;
     /** 併進這一場的其他平台場次（例：YouTube 待機室＋同時段的 Twitch 週表） */

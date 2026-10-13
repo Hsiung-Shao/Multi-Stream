@@ -28,15 +28,31 @@ export function isScheduleFrame(scheduledStart: string | Date | null | undefined
   return t - now > SCHEDULE_FRAME_DAYS * DAY_MS;
 }
 
-/** scheduled 狀態、排定時間過後 EXPIRE_AFTER_HOURS 仍未開始 → expired */
+/**
+ * 時間未定場次（streams.time_tbd，2026-10-14）：scheduled_start 存該台北日期 00:00，
+ * 「還沒過」＝ now < scheduled_start + 24h（台北當天結束）。只有社群週表／投稿會是時間未定。
+ */
+export const TBD_DAY_MS = DAY_MS;
+
+/** 時間未定場次的台北當天結束（ms）；一般場次回傳 scheduled_start 本身 */
+export function tbdDayEnd(scheduledStartMs: number, timeTbd: boolean | null | undefined): number {
+  return timeTbd ? scheduledStartMs + TBD_DAY_MS : scheduledStartMs;
+}
+
+/**
+ * scheduled 狀態、排定時間過後 EXPIRE_AFTER_HOURS 仍未開始 → expired。
+ * 時間未定場次：台北當天結束（scheduled_start + 24h）已過 → expired（與 sweep.expireOverdue 的 now−24h 一致）。
+ */
 export function isExpired(
-  stream: { status: StreamStatus; scheduled_start: string | null; actual_start: string | null },
+  stream: { status: StreamStatus; scheduled_start: string | null; actual_start: string | null; time_tbd?: boolean | null },
   now: number,
 ): boolean {
   if (stream.status !== 'scheduled' || stream.actual_start) return false;
   if (!stream.scheduled_start) return false;
   const t = Date.parse(stream.scheduled_start);
-  return Number.isFinite(t) && now - t > EXPIRE_AFTER_HOURS * HOUR_MS;
+  if (!Number.isFinite(t)) return false;
+  if (stream.time_tbd) return now >= t + TBD_DAY_MS;
+  return now - t > EXPIRE_AFTER_HOURS * HOUR_MS;
 }
 
 /** videos.list 的 liveStreamingDetails + liveBroadcastContent → 場次狀態 */
@@ -146,15 +162,17 @@ export function shouldSkipChannel(rssFailStreak: number): boolean {
   return rssFailStreak >= RSS_FAIL_STREAK_DEAD;
 }
 
-/** 進 snapshot 的 upcoming：未來 7 天內、非常駐框、狀態 scheduled */
+/** 進 snapshot 的 upcoming：未來 7 天內、非常駐框、狀態 scheduled；時間未定場次下限改成台北當天結束未過 */
 export function isUpcomingForSnapshot(
-  s: { status: StreamStatus; scheduled_start: string | null; is_schedule_frame: boolean },
+  s: { status: StreamStatus; scheduled_start: string | null; is_schedule_frame: boolean; time_tbd?: boolean | null },
   now: number,
 ): boolean {
   if (s.status !== 'scheduled' || s.is_schedule_frame || !s.scheduled_start) return false;
   const t = Date.parse(s.scheduled_start);
   if (!Number.isFinite(t)) return false;
-  return t <= now + UPCOMING_WINDOW_DAYS * DAY_MS && t >= now - EXPIRE_AFTER_HOURS * HOUR_MS;
+  if (t > now + UPCOMING_WINDOW_DAYS * DAY_MS) return false;
+  if (s.time_tbd) return t + TBD_DAY_MS > now;
+  return t >= now - EXPIRE_AFTER_HOURS * HOUR_MS;
 }
 
 /** 進 snapshot 的 recent：過去 24 小時內結束 */

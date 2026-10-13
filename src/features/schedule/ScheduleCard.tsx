@@ -390,7 +390,12 @@ export function SlotRow({ stream, channel, selected, onToggle, personLinks = tru
         >
             <SelectToggle selected={selected} label={t('card.select', { name })} onToggle={() => onToggle(stream)} className="relative z-10" />
             <Avatar channel={channel} size="md" platform={stream.platform} />
-            <span className="w-12 shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatClock(stream.scheduled_start, locale)}</span>
+            {/* 時間未定場次的 scheduled_start 只是存放用的當天 00:00，不能顯示成時刻 */}
+            {stream.time_tbd ? (
+                <span className="w-12 shrink-0 text-xs font-semibold leading-tight text-muted-foreground">{t('card.timeTbd')}</span>
+            ) : (
+                <span className="w-12 shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatClock(stream.scheduled_start, locale)}</span>
+            )}
             <span className="min-w-0 flex-1">
                 {personLinks ? (
                     <>

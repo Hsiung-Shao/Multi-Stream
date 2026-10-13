@@ -35,6 +35,8 @@ export interface StreamRow extends Record<string, unknown> {
   viewer_count: number | null;
   is_schedule_frame: boolean;
   fetched_at: string;
+  /** 時間未定（2026-10-14）：scheduled_start 存台北當天 00:00；只有 community_post／user_submission 會是 true。舊資料／寫入端可省略（資料庫預設 false） */
+  time_tbd?: boolean;
 }
 
 /** 從資料庫讀出來的 streams 列（含 id） */

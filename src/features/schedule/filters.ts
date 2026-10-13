@@ -189,10 +189,18 @@ export function isValidGroup(group: string, groups: readonly AgencyOption[]): bo
  */
 export const UPCOMING_GRACE_MS = 15 * 60_000;
 
-/** 預定開台時間已過寬限（還沒開台的場次就不再算「接下來」） */
-export function isPastScheduled(s: Pick<ScheduleStream, 'scheduled_start'>, now: number): boolean {
+/** 時間未定場次的日期一律以台北為準（scheduled_start 存該台北日期 00:00） */
+export const TBD_TIME_ZONE = 'Asia/Taipei';
+const DAY_MS = 86_400_000;
+
+/**
+ * 預定開台時間已過寬限（還沒開台的場次就不再算「接下來」）。
+ * 時間未定場次（time_tbd）沒有開台時刻：到台北當天結束（scheduled_start + 24 小時）前都不算過去。
+ */
+export function isPastScheduled(s: Pick<ScheduleStream, 'scheduled_start' | 'time_tbd'>, now: number): boolean {
     const t = s.scheduled_start ? Date.parse(s.scheduled_start) : NaN;
-    return Number.isFinite(t) && t + UPCOMING_GRACE_MS < now;
+    if (!Number.isFinite(t)) return false;
+    return s.time_tbd ? t + DAY_MS <= now : t + UPCOMING_GRACE_MS < now;
 }
 
 /** 各分頁在目前篩選下的筆數（分頁標籤上的數字） */
@@ -236,26 +244,36 @@ export function groupByDay(streams: readonly ScheduleStream[], now: number, time
     const last = uniqueKeys[uniqueKeys.length - 1];
     for (const s of streams) {
         if (!s.scheduled_start) continue;
-        let key = localDayKey(s.scheduled_start, timeZone);
+        // 時間未定場次存台北 00:00，換到其他時區會跑到前一天：一律以台北日期分天
+        let key = localDayKey(s.scheduled_start, s.time_tbd ? TBD_TIME_ZONE : timeZone);
         if (key < first) key = first; // 寬限內的昨天場次（跨午夜，見 UPCOMING_GRACE_MS）放今天；時間軸上標「昨天」
         if (key > last) key = last;
         buckets.get(key)?.push(s);
     }
-    const byStart = (a: ScheduleStream, b: ScheduleStream) => Date.parse(a.scheduled_start ?? '') - Date.parse(b.scheduled_start ?? '');
+    // 同一天內時間未定場次排最後（不和真正 00:00 開台的場次混在一起）
+    const byStart = (a: ScheduleStream, b: ScheduleStream) =>
+        Number(!!a.time_tbd) - Number(!!b.time_tbd) || Date.parse(a.scheduled_start ?? '') - Date.parse(b.scheduled_start ?? '');
     return uniqueKeys.map((dayKey) => ({ dayKey, streams: (buckets.get(dayKey) ?? []).sort(byStart) }));
 }
 
 export interface HourBucket {
-    /** 該整點（本地時區）的 ISO 時間 */
+    /** 該整點（本地時區）的 ISO 時間；時間未定組為空字串 */
     hourIso: string;
+    /** 時間未定組（一天最多一組、放最後） */
+    tbd?: true;
     streams: ScheduleStream[];
 }
 
-/** 一天內依本地整點分組（輸入需已依排定時間排序） */
+/** 一天內依本地整點分組（輸入需已依排定時間排序）；時間未定場次另成一組 { hourIso: '', tbd: true } 放最後 */
 export function groupByHour(streams: readonly ScheduleStream[]): HourBucket[] {
     const out: HourBucket[] = [];
+    const tbd: ScheduleStream[] = [];
     for (const s of streams) {
         if (!s.scheduled_start) continue;
+        if (s.time_tbd) {
+            tbd.push(s);
+            continue;
+        }
         const d = new Date(s.scheduled_start);
         d.setMinutes(0, 0, 0);
         const hourIso = d.toISOString();
@@ -263,6 +281,7 @@ export function groupByHour(streams: readonly ScheduleStream[]): HourBucket[] {
         if (last && last.hourIso === hourIso) last.streams.push(s);
         else out.push({ hourIso, streams: [s] });
     }
+    if (tbd.length) out.push({ hourIso: '', tbd: true, streams: tbd });
     return out;
 }
 
@@ -275,21 +294,28 @@ export function pickDefaultDay(days: readonly DayBucket[]): string | null {
 /**
  * 今天的時間軸上「現在」線要插在哪個整點組之前：第一個整點 ≥ 目前整點的組。
  * 全部都在現在之前（只剩寬限內、過了預定時間還沒開的場次，含跨午夜的昨天場次）→ 回傳 hours.length：線畫在最後。
+ * 時間未定組不參與比較（沒有時刻、當天都還沒過）：整點組都在現在之前時，線畫在時間未定組之前（回傳它的 index）。
  */
 export function nowDividerIndex(hours: readonly HourBucket[], now: number): number {
     const current = new Date(now);
     current.setMinutes(0, 0, 0);
-    const i = hours.findIndex((h) => Date.parse(h.hourIso) >= current.getTime());
-    return i === -1 ? hours.length : i;
+    const i = hours.findIndex((h) => !h.tbd && Date.parse(h.hourIso) >= current.getTime());
+    if (i !== -1) return i;
+    const tbd = hours.findIndex((h) => h.tbd);
+    return tbd === -1 ? hours.length : tbd;
 }
 
-/** 同一個小時（本地時區）開始的場次：「選取這個時段」用 */
+/** 同一個小時（本地時區）開始的場次：「選取這個時段」用；anchor 是時間未定場次時，回同一天（台北）的時間未定場次 */
 export function sameHourKeys(streams: readonly ScheduleStream[], anchor: ScheduleStream, timeZone?: string): ScheduleStream[] {
     if (!anchor.scheduled_start) return [anchor];
+    if (anchor.time_tbd) {
+        const day = localDayKey(anchor.scheduled_start, TBD_TIME_ZONE);
+        return streams.filter((s) => s.time_tbd && s.scheduled_start && localDayKey(s.scheduled_start, TBD_TIME_ZONE) === day);
+    }
     const hourOf = (iso: string) =>
         new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false }).format(new Date(iso));
     const target = hourOf(anchor.scheduled_start);
-    return streams.filter((s) => s.scheduled_start && hourOf(s.scheduled_start) === target);
+    return streams.filter((s) => !s.time_tbd && s.scheduled_start && hourOf(s.scheduled_start) === target);
 }
 
 /**

@@ -15,6 +15,7 @@ import {
     toFavoriteKeys,
 } from '../../../src/features/schedule/filters';
 import { DEFAULT_FILTERS, GROUP_ANY_AGENCY, GROUP_NO_AGENCY } from '../../../src/features/schedule/types';
+import type { ScheduleStream } from '../../../src/features/schedule/types';
 import { makeSnapshot, NOW } from './fixtures';
 
 const noFav = toFavoriteKeys([]);
@@ -152,5 +153,53 @@ describe('sameHourKeys / sortLive', () => {
     it('直播中依開播時間，新開播的在前；沒有開播時間的排最後', () => {
         const snap = makeSnapshot();
         expect(sortLive(snap.live).map((s) => s.external_id)).toEqual(['111', 'JpLiveVideo', '222']);
+    });
+});
+
+describe('時間未定場次（time_tbd，2026-10-14）', () => {
+    /** 時間未定場次存台北當天 00:00：10/15 → 10/14 16:00Z */
+    const TBD_1015 = '2026-10-14T16:00:00.000Z';
+    const base: ScheduleStream = { vtuber_id: 'v1', platform: 'youtube', external_id: 'x', source: 'yt_waiting_room', status: 'scheduled' };
+    const tbd = (id: string, start = TBD_1015): ScheduleStream => ({ ...base, external_id: id, source: 'community_post', scheduled_start: start, time_tbd: true });
+    const timed = (id: string, start: string): ScheduleStream => ({ ...base, external_id: id, scheduled_start: start });
+    const NOW14 = Date.parse('2026-10-14T10:00:00+08:00');
+
+    it('T9 isPastScheduled：時間未定場次到台北當天結束前都不算過去，一般場次照舊 15 分鐘', () => {
+        const late = Date.parse('2026-10-15T23:00:00+08:00');
+        expect(isPastScheduled(tbd('a'), late)).toBe(false);
+        expect(isPastScheduled(tbd('a'), Date.parse('2026-10-16T00:01:00+08:00'))).toBe(true);
+        expect(isPastScheduled(timed('b', TBD_1015), late)).toBe(true);
+    });
+
+    it('T14 groupByDay：時間未定場次以台北日期分天（即使 timeZone 是 UTC），同一天排最後', () => {
+        // UTC 下 10/14 16:00Z 是 10/14，但時間未定場次屬於台北 10/15
+        const morning = timed('morning', '2026-10-15T01:00:00Z'); // UTC 10/15 01:00
+        const days = groupByDay([tbd('t'), morning], NOW14, 'UTC');
+        expect(days.find((d) => d.dayKey === '2026-10-14')?.streams.map((s) => s.external_id)).toEqual([]);
+        expect(days.find((d) => d.dayKey === '2026-10-15')?.streams.map((s) => s.external_id)).toEqual(['morning', 't']);
+    });
+
+    it('T14 groupByDay（台北）：同一天 09:00、20:00 都排在時間未定之前，隔天 00:30 不在同一天', () => {
+        const days = groupByDay(
+            [timed('eve', '2026-10-15T12:00:00Z'), tbd('t'), timed('next0030', '2026-10-15T16:30:00Z'), timed('nine', '2026-10-15T01:00:00Z')],
+            NOW14,
+            TZ,
+        );
+        expect(days.find((d) => d.dayKey === '2026-10-15')?.streams.map((s) => s.external_id)).toEqual(['nine', 'eve', 't']);
+        expect(days.find((d) => d.dayKey === '2026-10-16')?.streams.map((s) => s.external_id)).toEqual(['next0030']);
+    });
+
+    it('T15 groupByHour：時間未定場次另成一組 { hourIso: \'\', tbd: true } 放最後，不和 00:00 場次混在一起', () => {
+        const midnight = timed('midnight', TBD_1015);
+        const nine = timed('nine', '2026-10-15T01:00:00Z');
+        const t1 = tbd('t1');
+        const t2 = tbd('t2');
+        const hours = groupByHour([t1, midnight, t2, nine]);
+        expect(hours).toHaveLength(3);
+        expect(hours[0].streams.map((s) => s.external_id)).toEqual(['midnight']);
+        expect(hours[1].streams.map((s) => s.external_id)).toEqual(['nine']);
+        expect(hours[2]).toEqual({ hourIso: '', tbd: true, streams: [t1, t2] });
+        expect('tbd' in hours[0]).toBe(false);
+        expect(hours[0].hourIso).not.toBe('');
     });
 });

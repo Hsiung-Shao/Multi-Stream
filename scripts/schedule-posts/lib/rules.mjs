@@ -50,7 +50,9 @@ export function validateScheduleEntries(parsed, { postDate, now }) {
   const accepted = [];
   const rejected = [];
   const postDay = taipeiDate(postDate);
+  const today = taipeiDate(now);
   const seen = new Set();
+  const tbdCandidates = []; // 沒時間的列：第二趟才決定（同一天有具體時間的列就丟掉）
   for (const raw of parsed?.entries ?? []) {
     const e = raw ?? {};
     const reject = (reason) => rejected.push({ entry: e, reason });
@@ -64,7 +66,13 @@ export function validateScheduleEntries(parsed, { postDate, now }) {
       reject('no_date');
       continue;
     }
-    if (!TIME_RE.test(time)) {
+    // 早於今天（台北）的日期一律不收，不論有沒有時間
+    if (date < today) {
+      reject('past_day');
+      continue;
+    }
+    const isTbd = time === '';
+    if (!isTbd && !TIME_RE.test(time)) {
       reject('no_time');
       continue;
     }
@@ -73,13 +81,27 @@ export function validateScheduleEntries(parsed, { postDate, now }) {
       reject('date_out_of_window');
       continue;
     }
-    const iso = taipeiToIso(date, time);
+    const iso = taipeiToIso(date, isTbd ? '00:00' : time);
     if (!iso) {
       reject('bad_datetime');
       continue;
     }
-    if (Date.parse(iso) < now - EXPIRE_GRACE_MS) {
+    if (!isTbd && Date.parse(iso) < now - EXPIRE_GRACE_MS) {
       reject('past');
+      continue;
+    }
+    const title = typeof e.title === 'string' ? e.title.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+    const row = {
+      date,
+      time: isTbd ? null : time,
+      timeTbd: isTbd,
+      title,
+      platform: e.platform === 'twitch' ? 'twitch' : 'youtube',
+      confidence: typeof e.confidence === 'number' ? Math.max(0, Math.min(1, e.confidence)) : 0,
+      scheduledStart: iso,
+    };
+    if (isTbd) {
+      tbdCandidates.push({ entry: e, row });
       continue;
     }
     const key = `${date} ${time}`;
@@ -88,15 +110,16 @@ export function validateScheduleEntries(parsed, { postDate, now }) {
       continue;
     }
     seen.add(key);
-    const title = typeof e.title === 'string' ? e.title.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) : '';
-    accepted.push({
-      date,
-      time,
-      title,
-      platform: e.platform === 'twitch' ? 'twitch' : 'youtube',
-      confidence: typeof e.confidence === 'number' ? Math.max(0, Math.min(1, e.confidence)) : 0,
-      scheduledStart: iso,
-    });
+    accepted.push(row);
+  }
+  const datedDays = new Set(accepted.map((r) => r.date));
+  for (const { entry, row } of tbdCandidates) {
+    if (datedDays.has(row.date)) {
+      rejected.push({ entry, reason: 'duplicate' });
+      continue;
+    }
+    datedDays.add(row.date);
+    accepted.push(row);
   }
   accepted.sort((a, b) => a.scheduledStart.localeCompare(b.scheduledStart));
   return { accepted, rejected };
@@ -109,7 +132,7 @@ export function validateScheduleEntries(parsed, { postDate, now }) {
 export function decide(parsed, { accepted, rejected }) {
   if (!parsed || parsed.is_schedule !== true) return 'none';
   // 有通過的列時，沒寫時間的列仍算可疑：大量沒時間可能代表讀錯圖，送審讓人確認（審核者可以只核准通過的那幾列）
-  const suspicious = rejected.filter((r) => !['rest', 'past'].includes(r.reason)).length;
+  const suspicious = rejected.filter((r) => !['rest', 'past', 'past_day'].includes(r.reason)).length;
   // 一列都沒通過時，只有「還有日期＋時間完整、可以核准的列」才送審：沒時間／沒日期的列審核者補不出來，
   // 0 列的待審核准時會失敗（RPC no_entries），還會佔住這個人的待審名額、擋掉之後的貼文 → 當成沒有可寫的列（記 parsed／0 列）
   if (accepted.length === 0) return reviewEntries({ accepted, rejected }).length > 0 ? 'review' : 'none';
@@ -120,7 +143,7 @@ export function decide(parsed, { accepted, rejected }) {
 }
 
 /** 審核者無法讓它變成可核准的剔除原因（休息、已過、缺日期／時間、不存在的日期） */
-const UNREVIEWABLE_REASONS = ['rest', 'past', 'no_date', 'no_time', 'bad_datetime'];
+const UNREVIEWABLE_REASONS = ['rest', 'past', 'past_day', 'no_date', 'no_time', 'bad_datetime'];
 
 /**
  * 送審時放進 payload 的列：有通過的列就只送通過的；一列都沒通過時，送「被剔除但日期與時間完整（日曆上存在）、

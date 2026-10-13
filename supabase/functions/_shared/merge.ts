@@ -8,6 +8,9 @@
 // 非主場次的 merged_with 指向主場次；snapshot 不單獨輸出它，改掛在主場次的 also。
 // 剛結束（ended）的場次只當主場次、不會被寫入：直播結束後，對應的預告仍併在它底下，
 // 不會在過期前以「已過預定時間」的卡片重新冒出來（呼叫端讀最近 EXPIRE_AFTER_HOURS 內結束的場次）。
+// 時間未定（time_tbd，2026-10-14）的社群週表／投稿場次：scheduled_start 是台北當天 00:00，
+// 改成併入同一人、同一台北日期的真實場次（不受 30 分鐘限制，選同日離 00:00 最近的一場）；不同台北日期不併。
+// 資料庫端 schedule_merge_fp 的判斷要與這裡一致（migration 20261014100000）。
 
 export const MERGE_WINDOW_MS = 30 * 60_000;
 
@@ -21,6 +24,8 @@ export interface MergeInput {
   actual_start: string | null;
   is_schedule_frame: boolean;
   merged_with?: string | null;
+  /** 時間未定場次（只有社群週表／投稿會是 true）：scheduled_start 存台北當天 00:00 */
+  time_tbd?: boolean | null;
 }
 
 const STATUS_RANK: Record<string, number> = { live: 0, ended: 1, scheduled: 2 };
@@ -38,6 +43,27 @@ function platformRank(s: MergeInput): number {
 
 function rank(s: MergeInput): number {
   return (STATUS_RANK[s.status] ?? 9) * 10 + platformRank(s);
+}
+
+const TAIPEI_OFFSET_MS = 8 * 3_600_000;
+
+/** 台北日期序號（台灣沒有日光節約，固定 +8） */
+function taipeiDay(t: number): number {
+  return Math.floor((t + TAIPEI_OFFSET_MS) / 86_400_000);
+}
+
+/** 時間未定的非影片場次 */
+function isTbd(s: MergeInput): boolean {
+  return !!s.time_tbd && NON_VIDEO.has(s.source);
+}
+
+/** 主場次 p 與場次 s 的時間是否落在可合併範圍；可合併時回傳距離（ms），否則 Infinity */
+function mergeGap(p: MergeInput, s: MergeInput): number {
+  const ps = startOf(p);
+  const ss = startOf(s);
+  const gap = Math.abs(ps - ss);
+  if (isTbd(s)) return taipeiDay(ps) === taipeiDay(ss) ? gap : Infinity;
+  return gap <= MERGE_WINDOW_MS ? gap : Infinity;
 }
 
 function startOf(s: MergeInput): number {
@@ -85,8 +111,8 @@ export function computeMerges(streams: readonly MergeInput[]): Map<string, strin
       let bestGap = Infinity;
       for (const p of primaries) {
         if (rank(p) >= rank(s) || !canMerge(p, s)) continue;
-        const gap = Math.abs(startOf(p) - startOf(s));
-        if (gap <= MERGE_WINDOW_MS && gap < bestGap) {
+        const gap = mergeGap(p, s);
+        if (gap < bestGap) {
           best = p;
           bestGap = gap;
         }

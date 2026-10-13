@@ -4,7 +4,7 @@
 
 import type { Db } from './db.ts';
 import { rowsFromColumnar } from './db.ts';
-import { isRecentForSnapshot, isUpcomingForSnapshot, LIVE_STALE_HOURS, RECENT_WINDOW_HOURS } from './rules.ts';
+import { isRecentForSnapshot, isUpcomingForSnapshot, LIVE_STALE_HOURS, RECENT_WINDOW_HOURS, TBD_DAY_MS } from './rules.ts';
 import type { StreamRecord } from './types.ts';
 
 export const SNAPSHOT_BUCKET = 'streams';
@@ -102,6 +102,8 @@ export interface SnapshotStream {
   scheduled_start?: string;
   actual_start?: string;
   actual_end?: string;
+  /** 時間未定（只在 true 時輸出）：scheduled_start 是台北當天 00:00，前端顯示「時間未定」、排在當天最後 */
+  time_tbd?: true;
   also?: SnapshotAlso[];
 }
 
@@ -180,6 +182,7 @@ export function buildSnapshot(
       scheduled_start: s.scheduled_start,
       actual_start: s.actual_start,
       actual_end: s.actual_end,
+      time_tbd: s.time_tbd === true ? true : null,
       also: alsoOf.get(s.id) ?? null,
     }) as SnapshotStream;
 
@@ -194,8 +197,10 @@ export function buildSnapshot(
     else continue;
     usedVtubers.add(s.vtuber_id);
   }
-  const byStart = (a: SnapshotStream, b: SnapshotStream) =>
-    Date.parse(a.scheduled_start ?? a.actual_start ?? '') - Date.parse(b.scheduled_start ?? b.actual_start ?? '');
+  // 時間未定場次排在當天最後：排序鍵＝台北當天 00:00 + 24h − 1ms
+  const sortKey = (s: SnapshotStream) =>
+    Date.parse(s.scheduled_start ?? s.actual_start ?? '') + (s.time_tbd ? TBD_DAY_MS - 1 : 0);
+  const byStart = (a: SnapshotStream, b: SnapshotStream) => sortKey(a) - sortKey(b);
   // 不顯示觀看人數（2026-09-30 使用者裁定；live-og 拿不到人數）：直播中依開播時間，新開播的在前
   const startOf = (s: SnapshotStream) => (s.actual_start ? Date.parse(s.actual_start) : 0);
   live.sort((a, b) => startOf(b) - startOf(a));

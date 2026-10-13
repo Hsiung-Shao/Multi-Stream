@@ -171,6 +171,27 @@ const post = (path: string, b: unknown, headers: Record<string, string> = {}) =>
 const tomorrow = () => new Date(Date.parse(`${taipeiDate(Date.now())}T12:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 const liveBody = (over: Record<string, unknown> = {}) => body({ entries: [entry({ date: tomorrow() })], note: '來源：社群', contact: 'a@b.c', ...over });
 
+describe('validateEntries：allowNoTime（時間未定列，2026-10-14）', () => {
+    it('T18 allowNoTime=true 時 time 為空字串或 null 的列通過、回傳 time: null', () => {
+        const r = validateEntries([entry({ time: '' }), entry({ date: '2026-10-07', time: null }), entry({ date: '2026-10-08' })], NOW, { allowNoTime: true });
+        expect(r.error).toBeUndefined();
+        expect(r.value.map((e: { date: string; time: string | null }) => [e.date, e.time])).toEqual([
+            ['2026-10-06', null],
+            ['2026-10-07', null],
+            ['2026-10-08', '20:00'],
+        ]);
+    });
+
+    it('T18 預設（不給 opts 或 allowNoTime=false）沒時間照舊回 invalid_entry_time', () => {
+        expect(validateEntries([entry({ time: '' })], NOW)).toEqual({ error: 'invalid_entry_time' });
+        expect(validateEntries([entry({ time: null })], NOW, { allowNoTime: false })).toEqual({ error: 'invalid_entry_time' });
+    });
+
+    it('T18 allowNoTime 不放寬格式錯誤的時間', () => {
+        expect(validateEntries([entry({ time: '25:00' })], NOW, { allowNoTime: true })).toEqual({ error: 'invalid_entry_time' });
+    });
+});
+
 describe('POST /api/schedule/entries', () => {
     const run = (b: unknown, env = ENV()) => entriesPost({ request: post('/api/schedule/entries', b), env });
 

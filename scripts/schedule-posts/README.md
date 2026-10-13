@@ -19,6 +19,12 @@ X 來源靠第三方免費服務 fxtwitter（`api.fxtwitter.com`）。X 服務�
 Light 排程每 10 分鐘會把這些場次與待機室合併（待機室出現就併掉）並發布 snapshot；腳本本身不碰 snapshot。
 決策與資料用法：Obsidian `multi-stream/10 決策紀錄/.../2026-10-05-multi-stream-社群週表圖片解析與投稿`。
 
+## 企業勢優先、今天以前、時間未定（2026-10-14）
+
+- 企業勢優先：名冊與候選都把企業勢（本人或父團屬 agency，或有效中的合作藝人關係）排在前面。游標改存 `0:<頻道ID>`（企業勢）／`1:<頻道ID>`（個人勢），X 游標同理（`0:|1:` 加小寫 handle）；舊格式游標會從頭開始，屬預期。`candidates.json` 排序為企業勢在前、同組依發文時間由舊到新。
+- `past_day`：日期早於今天（台北）的列一律剔除，不論有沒有時間，也不算可疑列；今天的列仍適用「已過 3 小時」的 `past`。
+- 時間未定（`streams.time_tbd`）：有日期、不是休息日、沒寫時間的列照收，`time=null`、`scheduled_start`＝台北當天 00:00，寫入時 `time_tbd=true`。同一天已有具體時間的列時，時間未定列剔除為 `duplicate`；同日兩個時間未定列只留第一個。
+
 ## 設定
 
 1. 複製 `.env.example` 為 `.env`（已 gitignore），填入正式站 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`（Supabase 後台 Project Settings → API）。

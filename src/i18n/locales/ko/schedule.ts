@@ -44,6 +44,7 @@ export default {
     'card.select': '{{name}} 선택',
     'card.openOriginal': '{{platform}}에서 열기',
     'card.untitled': '(제목 없음)',
+    'card.timeTbd': '시간 미정',
     'card.alsoOn': '{{platform}}에서도 방송',
     'card.collab': '{{agency}} · 협업',
     'card.fromSchedule': 'Twitch 일정',

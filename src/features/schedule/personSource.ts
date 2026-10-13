@@ -8,7 +8,7 @@ import { SCHEDULE_SLUG_RE } from '../../config/schedulePerson';
 import { SnapshotError } from './snapshotSource';
 import { isCollabActive, resetRestConfigCache, resolveRestConfig, restGet, taipeiDate, type RestConfig, type RestOptions } from './restClient';
 import type { ScheduleAlso, ScheduleChannel, ScheduleStream } from './types';
-import { UPCOMING_GRACE_MS } from './filters';
+import { isPastScheduled } from './filters';
 
 /** 最近幾天的直播紀錄 */
 export const PERSON_RECENT_DAYS = 90;
@@ -69,18 +69,21 @@ export interface PersonStreamRow {
     title: string | null;
     category: string | null;
     scheduled_start: string | null;
+    /** 時間未定（scheduled_start 存該台北日期 00:00）；舊資料／測試可能沒有 */
+    time_tbd?: boolean | null;
     actual_start: string | null;
     actual_end: string | null;
     merged_with: string | null;
 }
 
-const STREAM_COLS = 'id,platform,external_id,source,status,title,category,scheduled_start,actual_start,actual_end,merged_with';
+const STREAM_COLS = 'id,platform,external_id,source,status,title,category,scheduled_start,time_tbd,actual_start,actual_end,merged_with';
 
 function toStream(vtuberId: string, r: PersonStreamRow): ScheduleStream {
     const s: ScheduleStream = { vtuber_id: vtuberId, platform: r.platform, external_id: r.external_id, source: r.source, status: r.status };
     if (r.title) s.title = r.title;
     if (r.category) s.category = r.category;
     if (r.scheduled_start) s.scheduled_start = r.scheduled_start;
+    if (r.time_tbd === true) s.time_tbd = true;
     if (r.actual_start) s.actual_start = r.actual_start;
     if (r.actual_end) s.actual_end = r.actual_end;
     return s;
@@ -114,11 +117,13 @@ export function splitPersonStreams(vtuberId: string, rows: readonly PersonStream
         if (r.status === 'live') live.push(s);
         else if (r.status === 'scheduled') {
             const t = r.scheduled_start ? Date.parse(r.scheduled_start) : NaN;
-            // 預定時間已過寬限還沒開台的不列（與週表「接下來」一致，見 isPastScheduled）
-            if (Number.isFinite(t) && t + UPCOMING_GRACE_MS >= now && t <= until) upcoming.push(s);
+            // 預定時間已過寬限還沒開台的不列（與週表「接下來」一致；時間未定場次到台北當天結束，見 isPastScheduled）
+            if (Number.isFinite(t) && !isPastScheduled(s, now) && t <= until) upcoming.push(s);
         } else if (r.status === 'ended' && r.actual_end) recent.push(s);
     }
-    upcoming.sort((a, b) => (a.scheduled_start ?? '').localeCompare(b.scheduled_start ?? ''));
+    // 時間未定場次存當天 00:00：排序時當成當天最後（00:00 + 24 小時前一刻），不排在當天第一個
+    const upcomingKey = (s: ScheduleStream) => Date.parse(s.scheduled_start ?? '') + (s.time_tbd ? 86_400_000 - 1 : 0);
+    upcoming.sort((a, b) => upcomingKey(a) - upcomingKey(b));
     recent.sort((a, b) => (b.actual_end ?? '').localeCompare(a.actual_end ?? ''));
     return { live, upcoming, recent };
 }

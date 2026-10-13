@@ -24,7 +24,7 @@ export const PERSON_DEGRADED_CACHE_TTL_S = 30;
 const DAY_MS = 86_400_000;
 const YT_CHANNEL_RE = /^UC[A-Za-z0-9_-]{22}$/;
 const TWITCH_LOGIN_RE = /^[A-Za-z0-9_]{3,25}$/;
-const STREAM_COLS = 'title,status,platform,scheduled_start,actual_start,actual_end';
+const STREAM_COLS = 'title,status,platform,scheduled_start,time_tbd,actual_start,actual_end';
 
 /**
  * 預設查詢：anon key 走 PostgREST（vtubers 與 streams 本來就公開可讀，不需要 service_role）＋逾時。
@@ -75,9 +75,14 @@ export function personStreamsFromRow(row, now) {
         if (s.status === 'live') live.push(pickStream(s));
         else if (s.status === 'scheduled') {
             const t = Date.parse(s.scheduled_start);
-            if (Number.isFinite(t) && t + UPCOMING_GRACE_MS >= now && t <= until) upcoming.push(pickStream(s));
+            // 時間未定場次（scheduled_start 存台北當天 00:00）到當天結束前都算接下來；一般場次照舊 15 分鐘寬限（與 src/features/schedule/filters.ts isPastScheduled 一致）
+            const notPast = s.time_tbd === true ? t + DAY_MS > now : t + UPCOMING_GRACE_MS >= now;
+            if (Number.isFinite(t) && notPast && t <= until) upcoming.push(pickStream(s));
         }
     }
+    // 查詢依 scheduled_start 排序，時間未定場次會排在當天最前面：改排到當天最後（與頁面 personSource.ts 一致）
+    const sortKey = (x) => Date.parse(x.start) + (x.tbd ? DAY_MS - 1 : 0);
+    upcoming.sort((a, b) => sortKey(a) - sortKey(b));
     const recent = row.recent.filter((s) => s && typeof s === 'object' && s.actual_end).map(pickStream);
     const total = Number(row.recent_count?.[0]?.count);
     return {
@@ -90,11 +95,14 @@ export function personStreamsFromRow(row, now) {
 }
 
 function pickStream(s) {
-    return {
+    const out = {
         title: typeof s.title === 'string' ? s.title.slice(0, 300) : '',
         platform: s.platform === 'twitch' ? 'twitch' : 'youtube',
         start: s.actual_start ?? s.scheduled_start ?? null,
     };
+    // 時間未定：還沒開台（沒有 actual_start）時 start 只是存放用的台北 00:00，內文只寫日期
+    if (s.time_tbd === true && !s.actual_start) out.tbd = true;
+    return out;
 }
 
 export const SCHEDULE_PERSON_SEO = {
@@ -119,7 +127,7 @@ export function largerAvatar(url) {
 /**
  * 個人頁 body 內文的文案。與 src/i18n/locales/{zh-TW,en}/schedule.ts 同 key 的值一致（測試鎖）：
  * schedule＝title、live＝person.live、upcoming＝person.upcoming、recent＝person.recent、
- * youtube／twitch＝person.openYouTube／person.openTwitch、summary＝person.seo.summary。
+ * youtube／twitch＝person.openYouTube／person.openTwitch、summary＝person.seo.summary、timeTbd＝card.timeTbd。
  * tz 只有 edge 用（前端依裝置時區顯示，不需要標）。
  */
 export const SCHEDULE_PERSON_BODY = {
@@ -131,6 +139,7 @@ export const SCHEDULE_PERSON_BODY = {
         youtube: 'YouTube 頻道',
         twitch: 'Twitch 頻道',
         summary: '{{name}}：近 90 天開台 {{recent}} 次，接下來 7 天有 {{upcoming}} 場排程。',
+        timeTbd: '時間未定',
         tz: '時間為台北時間（UTC+8）',
         locale: 'zh-TW',
     },
@@ -142,6 +151,7 @@ export const SCHEDULE_PERSON_BODY = {
         youtube: 'YouTube channel',
         twitch: 'Twitch channel',
         summary: '{{name}} — streams in the last 90 days: {{recent}}; scheduled in the next 7 days: {{upcoming}}.',
+        timeTbd: 'Time TBD',
         tz: 'Times are in Taipei time (UTC+8)',
         locale: 'en-US',
     },
@@ -173,11 +183,23 @@ const TIME_FMT = {
     'zh-TW': new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }),
     en: new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }),
 };
+// 時間未定場次只寫日期（台北）
+const DATE_FMT = {
+    'zh-TW': new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', weekday: 'short' }),
+    en: new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', month: 'short', day: 'numeric', weekday: 'short' }),
+};
+const TAIPEI_DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 function streamItem(lang, s) {
-    const fmt = TIME_FMT[lang] ?? TIME_FMT.en;
     const t = s.start ? Date.parse(s.start) : NaN;
-    const when = Number.isFinite(t) ? `<time datetime="${escapeHtml(new Date(t).toISOString())}">${escapeHtml(fmt.format(t))}</time> ` : '';
+    let when = '';
+    if (Number.isFinite(t) && s.tbd) {
+        // datetime 只放日期（YYYY-MM-DD）：放完整 ISO 會變成不實的 00:00 開始時間
+        const label = (SCHEDULE_PERSON_BODY[lang] ?? SCHEDULE_PERSON_BODY.en).timeTbd;
+        when = `<time datetime="${escapeHtml(TAIPEI_DAY_FMT.format(t))}">${escapeHtml((DATE_FMT[lang] ?? DATE_FMT.en).format(t))}</time> ${escapeHtml(label)} `;
+    } else if (Number.isFinite(t)) {
+        when = `<time datetime="${escapeHtml(new Date(t).toISOString())}">${escapeHtml((TIME_FMT[lang] ?? TIME_FMT.en).format(t))}</time> `;
+    }
     const platform = s.platform === 'twitch' ? 'Twitch' : 'YouTube';
     return `<li>${when}${escapeHtml(s.title || platform)}（${platform}）</li>`;
 }
