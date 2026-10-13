@@ -135,5 +135,41 @@ export function reviewEntries({ accepted, rejected }) {
     .filter((e) => !e.is_rest && taipeiToIso(e.date, e.time) !== null);
 }
 
-/** 寫入 streams 的 external_id */
+/** 寫入 streams 的 external_id（postId 可能是 YouTube 的 Ugkx…，或 X 的 x:<tweetId>） */
 export const postExternalId = (postId, n) => `post:${postId}:${n}`;
+
+/** external_id → 貼文鍵（post:x:123:2 → x:123；post:Ugkx…:1 → Ugkx…）；不是社群場次回 null */
+export function postKeyFromExternalId(externalId) {
+  return String(externalId ?? '').match(/^post:(.+):\d+$/)?.[1] ?? null;
+}
+
+/**
+ * 新週表取代舊週表，依「發文時間」而不是處理順序（同一份週表 YouTube 與 X 都貼、兩邊在不同輪處理）：
+ *   - existing：這位 VTuber 日期重疊、community_post、scheduled 的舊列 [{ external_id }]
+ *   - publishedAt：貼文鍵 → 發文時間（ms），查不到的視為較舊
+ *   - 已有別篇「較新」的貼文涵蓋同一段日期 → superseded（這篇不寫、什麼都不取消）
+ *   - 否則取消別篇的列（這篇自己的列由 upsert 覆蓋）
+ * @returns {{ superseded: boolean, cancel: string[] }} cancel＝要改 canceled 的 external_id
+ */
+export function supersede(existing, publishedAt, thisKey, thisPublishedAt, { nearMs = NEAR_POST_MS } = {}) {
+  const others = existing.filter((r) => postKeyFromExternalId(r.external_id) !== thisKey);
+  const near = [];
+  const cancel = [];
+  let newer = false;
+  for (const r of others) {
+    const key = postKeyFromExternalId(r.external_id);
+    const t = publishedAt.get(key);
+    // YouTube 貼文只有相對時間（「2 天前」），推回的時間誤差可達一天：只要有一邊是 YouTube、差距在 nearMs 內，
+    // 就當成同一版本（多半是同一份週表兩邊各貼一次），不取代、只補對方沒有的日期（2026-10-08 515 的 10/08 被整篇略過）
+    const approximate = !String(key).startsWith('x:') || !String(thisKey).startsWith('x:');
+    if (typeof t === 'number' && approximate && Math.abs(t - thisPublishedAt) <= nearMs) near.push(r);
+    else if (typeof t === 'number' && t > thisPublishedAt) newer = true;
+    else cancel.push(r.external_id);
+  }
+  if (newer) return { superseded: true, cancel: [], skipDates: new Set() };
+  const skipDates = new Set(near.map((r) => (r.scheduled_start ? taipeiDate(Date.parse(r.scheduled_start)) : null)).filter(Boolean));
+  return { superseded: false, cancel, skipDates };
+}
+
+/** 兩篇貼文發文時間差在這之內、且有一邊是 YouTube（時間是推估）→ 視為同一版本 */
+export const NEAR_POST_MS = 36 * 3600e3;

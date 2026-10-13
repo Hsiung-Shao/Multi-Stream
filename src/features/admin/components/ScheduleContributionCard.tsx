@@ -84,7 +84,7 @@ export function ScheduleContributionCard({ c }: { c: ContributionRecord }) {
                     <p className="text-[12px] text-muted-foreground">
                         {new Date(c.created_at).toLocaleString('zh-TW')} · {STATUS_LABEL[c.status] ?? c.status} · {sourceLabel(c)} · {c.submitted_by}
                     </p>
-                    {postUrl && <Ext href={postUrl}>社群貼文</Ext>}
+                    {postUrl && <Ext href={postUrl}>{/^https:\/\/(www\.)?(x|twitter)\.com\//.test(postUrl) ? 'X 貼文' : 'YouTube 貼文'}</Ext>}
                 </div>
                 {imageUrl && (
                     <button

@@ -44,10 +44,12 @@ export const READING_RULES = [
 export function candidateSection(c) {
   const postDay = taipeiDate(c.postDate);
   const weekday = ['日', '一', '二', '三', '四', '五', '六'][new Date(c.postDate + 8 * 3600e3).getUTCDay()];
+  const source = c.site === 'x' ? `X @${c.handle}（${c.postUrl}）` : `YouTube 社群貼文（https://www.youtube.com/post/${c.postId}）`;
   return [
     `### ${c.postId}`,
     `- VTuber：${c.name}（YouTube ${c.externalId}）`,
-    `- 發文日期（推算，台北）：${postDay}（星期${weekday}）`,
+    `- 來源：${source}`,
+    `- 發文日期（${c.site === 'x' ? '' : '推算，'}台北）：${postDay}（星期${weekday}）`,
     `- 圖片：${c.localImage}（原網址 ${c.imageUrl}）`,
     `- 貼文文字：${(c.text ?? '').trim().replace(/\s+/g, ' ').slice(0, 600) || '（無）'}`,
   ].join('\n');

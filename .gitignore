@@ -57,3 +57,5 @@ scripts/local/reports/
 scripts/schedule-posts/state.json
 scripts/schedule-posts/run.log
 scripts/schedule-posts/work/
+scripts/schedule-posts/state.local.json
+scripts/schedule-posts/work-local/
