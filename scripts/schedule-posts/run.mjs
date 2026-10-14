@@ -33,7 +33,7 @@ import { join } from 'node:path';
 import { loadEnv, SCRIPT_DIR } from './lib/env.mjs';
 import { Rest, inList } from './lib/db.mjs';
 import { BROWSER_UA, fetchPostsPage, imageFullUrl, isScheduleCandidate, parsePostsHtml, relativeToDate } from './lib/posts.mjs';
-import { buildStreamRows, COMMUNITY_POST_MAX_AGE_DAYS, decide, postKeyFromExternalId, reviewEntries, supersede, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
+import { buildReviewPayload, buildStreamRows, COMMUNITY_POST_MAX_AGE_DAYS, decide, postKeyFromExternalId, supersede, taipeiDate, validateScheduleEntries, VISION_DAILY_CAP, VISION_PER_CHANNEL_CAP } from './lib/rules.mjs';
 import { buildInstructions } from './lib/instructions.mjs';
 import { agencyVtuberIds, resumeIndex, resumeXIndex, rosterKey, sortCandidates, sortRoster, sortXPeople, xKey } from './lib/priority.mjs';
 import { csvCell, decideHandle, extractXHandles, fetchAboutPage, fetchXProfile, parseAboutLinks, xUrlOf } from './lib/xhandles.mjs';
@@ -615,27 +615,12 @@ async function apply(args, db, now) {
           log(`    （${c.name} 已有待審的週表投稿，這篇下一輪再送）`);
           continue;
         }
-        const entries = reviewEntries(v); // 與 decide 同一個條件：送審時一定至少一列可核准
         try {
           await db.insert('vtuber_contributions', {
             action: 'schedule',
             status: 'pending',
             target_vtuber_id: c.vtuberId,
-            payload: {
-              vtuber_id: c.vtuberId,
-              vtuber_name: c.name,
-              vtuber_slug: c.slug,
-              channel_id: c.channelId,
-              platform: 'youtube',
-              entries: entries.map((e) => ({ date: e.date, time: e.time ?? null, title: e.title ?? '', platform: e.platform === 'twitch' ? 'twitch' : 'youtube' })),
-              source: 'vision',
-              post_id: c.postId,
-              post_url: c.postUrl ?? `https://www.youtube.com/post/${c.postId}`,
-              image_url: c.imageUrl,
-              confidence: base.confidence,
-              model: MODEL_LABEL,
-              rejected: v.rejected.map((x) => ({ reason: x.reason, entry: x.entry })),
-            },
+            payload: buildReviewPayload(c, v, { confidence: base.confidence, model: MODEL_LABEL }), // 送審列＝reviewEntries（與 decide 同一個條件）
             submitted_by: 'system:vision',
             source_urls: [c.postUrl ?? `https://www.youtube.com/post/${c.postId}`],
             source_note: `讀圖信心 ${base.confidence ?? '?'}；通過 ${v.accepted.length} 列、剔除 ${v.rejected.length} 列`,

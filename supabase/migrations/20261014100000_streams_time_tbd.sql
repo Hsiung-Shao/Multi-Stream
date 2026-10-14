@@ -5,13 +5,13 @@
 -- 改成：
 --   - streams.time_tbd boolean（預設 false）；true 時 scheduled_start 存該台北日期 00:00。
 --     「還沒過」＝ now < scheduled_start + 24h（台北當天結束）。只有非影片來源（community_post／user_submission）可以是 true（CHECK）。
---   - approve_schedule_contribution：entry 的 time 空白／null → time_tbd=true、scheduled_start＝台北當天 00:00；寫入 announced_at＝投稿時間；
+--   - approve_schedule_contribution：entry 的 time 空白／null → time_tbd=true、scheduled_start＝台北當天 00:00；寫入 announced_at＝發文時間（讀圖送審取 payload.published_at，否則投稿時間）；
 --     「早於 now−3h 就跳過」對時間未定改成「台北當天結束已過才跳過」；INSERT 與 ON CONFLICT DO UPDATE 都帶 time_tbd。
 --   - schedule_snapshot_source：場次欄位加 time_tbd（只在 true 時輸出 true，其餘 null；snapshot.ts toItem 只在 true 時輸出）。
 --   - schedule_snapshot_check：upcoming 下限遇時間未定改成 scheduled_start + 24h > 量化 now；指紋加 time_tbd。
 --   - schedule_merge_fp：ended 主場次候選的 30 分鐘窗，對時間未定的非影片場次改成「同台北日期」（與 merge.ts 一致）；指紋加 time_tbd、announced_at、created_at、external_id。
---   - streams.announced_at timestamptz null：發文時間（社群週表＝貼文發文時間，由 schedule-posts 腳本寫入；投稿＝vtuber_contributions.created_at，
---     由 approve_schedule_contribution 寫入）。時間未定列只由開始時間不早於它的場次兌現（merge.ts fulfills；沒有才用 created_at 寫入時間）。
+--   - streams.announced_at timestamptz null：發文時間（社群週表＝貼文發文時間，由 schedule-posts 腳本直接寫入、或送審時放 payload.published_at
+--     由 approve_schedule_contribution 寫入；使用者投稿＝vtuber_contributions.created_at）。時間未定列只由開始時間不早於它的場次兌現（merge.ts fulfills；沒有才用 created_at 寫入時間）。
 --   - 部分索引 streams_expired_nonvideo_idx：applyMerges 讀「昨天起已過期的社群週表／投稿具體時間列」用。
 --   - refresh_schedule_indexable：「接下來」的 15 分鐘寬限對時間未定改成台北當天結束未過（與 personSource.ts 一致）。
 -- Edge Function 端（_shared/rules.ts、merge.ts、sweep.ts、snapshot.ts）同步支援；sweep.expireOverdue 時間未定場次以 now−24h 過期。
@@ -86,6 +86,7 @@ declare
     v_start timestamptz;
     v_time text;
     v_tbd boolean;
+    v_announced timestamptz;
     v_title text;
     v_n int := 0;
     v_written int := 0;
@@ -119,6 +120,15 @@ begin
     if coalesce(p ->> 'source', 'user') = 'vision' and nullif(p ->> 'post_id', '') is not null then
         v_source := 'community_post';
         v_prefix := 'post:' || (p ->> 'post_id') || ':';
+        -- 讀圖送審：payload.published_at（貼文發文時間，schedule-posts 腳本寫入）是 ISO 8601 才採用；
+        -- 先 regex 再轉型，日曆上不存在的值（2026-02-30）轉型失敗也只退回 created_at、不讓核准失敗
+        if coalesce(p ->> 'published_at', '') ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$' then
+            begin
+                v_announced := (p ->> 'published_at')::timestamptz;
+            exception when others then
+                v_announced := null;
+            end;
+        end if;
     else
         v_source := 'user_submission';
         v_prefix := 'sub:' || p_id::text || ':';
@@ -176,9 +186,10 @@ begin
             raise exception 'channel_not_found' using errcode = 'P0002';
         end if;
 
-        -- announced_at＝投稿時間（vtuber_contributions.created_at）：時間未定列只由這之後才開始的場次兌現
+        -- announced_at＝發文時間（讀圖送審＝payload.published_at；使用者投稿或格式不對＝投稿時間 vtuber_contributions.created_at）：
+        -- 時間未定列只由這之後才開始的場次兌現。使用者投稿端點（functions/api/schedule/entries.js）固定寫 source='user'，不會走到 published_at
         insert into public.streams (vtuber_id, channel_id, platform, external_id, source, status, scheduled_start, time_tbd, announced_at, title, is_schedule_frame, fetched_at)
-        values (v_vt, v_channel, v_platform, v_prefix || v_n::text, v_source, 'scheduled', v_start, v_tbd, c.created_at, v_title, false, now())
+        values (v_vt, v_channel, v_platform, v_prefix || v_n::text, v_source, 'scheduled', v_start, v_tbd, coalesce(v_announced, c.created_at), v_title, false, now())
         on conflict (platform, external_id) do update
             set status = 'scheduled',
                 scheduled_start = excluded.scheduled_start,

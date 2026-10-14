@@ -198,6 +198,32 @@ export function buildStreamRows(c, items, { twitchChannelId, fetchedAt }) {
   });
 }
 
+/**
+ * 送審（vtuber_contributions.payload）：送審列＝reviewEntries（與 decide 同一個條件，一定至少一列可核准）。
+ * published_at＝發文時間：approve_schedule_contribution 只對 source='vision' 採用，寫成 streams.announced_at。
+ * @param {{ vtuberId: string, name: string, slug: string, channelId: string, postId: string, postUrl?: string, imageUrl?: string, postDate: number }} c 候選貼文
+ * @param {{ accepted: any[], rejected: Array<{ reason: string, entry: any }> }} v validateScheduleEntries 的結果
+ * @param {{ confidence: number | null, model: string }} opts
+ */
+export function buildReviewPayload(c, v, { confidence, model }) {
+  return {
+    vtuber_id: c.vtuberId,
+    vtuber_name: c.name,
+    vtuber_slug: c.slug,
+    channel_id: c.channelId,
+    platform: 'youtube',
+    entries: reviewEntries(v).map((e) => ({ date: e.date, time: e.time ?? null, title: e.title ?? '', platform: e.platform === 'twitch' ? 'twitch' : 'youtube' })),
+    source: 'vision',
+    post_id: c.postId,
+    post_url: c.postUrl ?? `https://www.youtube.com/post/${c.postId}`,
+    published_at: new Date(c.postDate).toISOString(),
+    image_url: c.imageUrl,
+    confidence,
+    model,
+    rejected: v.rejected.map((x) => ({ reason: x.reason, entry: x.entry })),
+  };
+}
+
 /** external_id → 貼文鍵（post:x:123:2 → x:123；post:Ugkx…:1 → Ugkx…）；不是社群場次回 null */
 export function postKeyFromExternalId(externalId) {
   return String(externalId ?? '').match(/^post:(.+):\d+$/)?.[1] ?? null;

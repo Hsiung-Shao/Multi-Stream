@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { extractInitialData, imageBaseUrl, imageFullUrl, isScheduleCandidate, parsePostsHtml, POST_ID_RE, relativeToDate, SCHEDULE_KEYWORD_RE } from '../../scripts/schedule-posts/lib/posts.mjs';
 import { buildStreamRows, decide, postExternalId, reviewEntries, taipeiDate, taipeiToIso, validateScheduleEntries } from '../../scripts/schedule-posts/lib/rules.mjs';
 import { buildInstructions, candidateSection, RESULT_SCHEMA } from '../../scripts/schedule-posts/lib/instructions.mjs';
+// buildReviewPayload 尚未實作：用命名空間呼叫，函式不存在時只讓 T27 以「不是函式」失敗
+import * as rules from '../../scripts/schedule-posts/lib/rules.mjs';
 import { isLocalUrl, loadEnv, parseEnvText } from '../../scripts/schedule-posts/lib/env.mjs';
 
 // jsdom 環境下 import.meta.url 不是 file:，用相對於 repo 根目錄的路徑
@@ -327,6 +329,71 @@ describe('rules：讀圖結果組成 streams 列（2026-10-14）', () => {
     const keys = Object.keys(rows[0]).sort();
     for (const r of rows) expect(Object.keys(r).sort()).toEqual(keys);
     expect(rows[0]).toMatchObject({ vtuber_id: 'v1', source: 'community_post', status: 'scheduled', scheduled_start: items[0].e.scheduledStart, fetched_at: FETCHED, merged_with: null, is_schedule_frame: false });
+  });
+});
+
+describe('buildReviewPayload：送審 payload（2026-10-14）', () => {
+  const NOW14 = Date.parse('2026-10-14T10:00:00+08:00');
+  const POSTED = Date.parse('2026-10-13T21:30:00+08:00');
+  const base = {
+    vtuberId: '11111111-1111-4111-8111-111111111111',
+    name: '懶貓子',
+    slug: 'lazycat',
+    channelId: '22222222-2222-4222-8222-222222222222',
+    externalId: 'UCswRX8mNNdn1fjRctZqzjgA',
+    postId: 'UgkxArOhmT2c-kJTMe353hLottirT7KGGe4N',
+    postDate: POSTED,
+    imageUrl: 'https://yt3.ggpht.com/x=s1600',
+    text: '本週行程',
+  };
+  const parsed = {
+    is_schedule: true,
+    confidence: 0.6,
+    entries: [
+      { date: '2026-10-15', time: '20:00', title: '雜談', platform: 'twitch', is_rest: false, confidence: 0.9 },
+      { date: '2026-10-16', time: null, title: '歌回', platform: 'unknown', is_rest: false, confidence: 0.8 },
+      { date: '2026-10-17', time: null, title: '', platform: 'youtube', is_rest: true, confidence: 1 },
+    ],
+  };
+  const v = validateScheduleEntries(parsed, { postDate: POSTED, now: NOW14 });
+  const build = (c: Record<string, unknown>) => rules.buildReviewPayload(c, v, { confidence: 0.6, model: 'claude-test' });
+
+  it('T27 YouTube 候選的送審 payload 與現行欄位一致並多了發文時間', () => {
+    expect(build(base)).toEqual({
+      vtuber_id: base.vtuberId,
+      vtuber_name: '懶貓子',
+      vtuber_slug: 'lazycat',
+      channel_id: base.channelId,
+      platform: 'youtube',
+      entries: [
+        { date: '2026-10-15', time: '20:00', title: '雜談', platform: 'twitch' },
+        { date: '2026-10-16', time: null, title: '歌回', platform: 'youtube' },
+      ],
+      source: 'vision',
+      post_id: base.postId,
+      post_url: `https://www.youtube.com/post/${base.postId}`,
+      published_at: '2026-10-13T13:30:00.000Z',
+      image_url: base.imageUrl,
+      confidence: 0.6,
+      model: 'claude-test',
+      rejected: [{ reason: 'rest', entry: parsed.entries[2] }],
+    });
+  });
+
+  it('T27 X 候選的 post_url 沿用候選自帶的網址', () => {
+    const xUrl = 'https://x.com/lazycat/status/1845000000000000000';
+    const p = build({ ...base, postId: 'x:1845000000000000000', postUrl: xUrl });
+    expect(p.post_id).toBe('x:1845000000000000000');
+    expect(p.post_url).toBe(xUrl);
+    expect(p.published_at).toBe('2026-10-13T13:30:00.000Z');
+  });
+
+  it('T27 送審列就是 reviewEntries 的結果（一列都沒通過時送超出範圍的列）', () => {
+    const far = { is_schedule: true, confidence: 0.9, entries: [{ date: '2026-11-20', time: '21:00', title: '遠', platform: 'youtube', is_rest: false, confidence: 0.9 }] };
+    const vFar = validateScheduleEntries(far, { postDate: POSTED, now: NOW14 });
+    const p = rules.buildReviewPayload(base, vFar, { confidence: 0.9, model: 'm' });
+    expect(p.entries).toEqual([{ date: '2026-11-20', time: '21:00', title: '遠', platform: 'youtube' }]);
+    expect(p.rejected.map((r: { reason: string }) => r.reason)).toEqual(['date_out_of_window']);
   });
 });
 
