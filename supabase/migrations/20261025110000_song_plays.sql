@@ -4,9 +4,12 @@
 -- 寫入只經 functions/api/songs/plays.js（service_role）→ record_song_plays：一個請求一次 RPC。
 -- 限流放 DB 不用 KV：KV 每日寫入有額度上限，每次播放都寫會很快用完。
 --   每個雜湊 IP 每小時最多 120 首；一批最多 20 首；只計已發布歌回的 code。
+--   同一個雜湊 IP、同一首歌、同一小時只算 1 次（伺服器端去重；前端 30 分鐘去重只是省請求，可被繞過）。
+--   額度檢查與累加是同一條 upsert（衝突列被鎖住），併發請求不能一起繞過上限。
 --
 -- 回滾：
 --   drop function if exists public.record_song_plays(text, text[]);
+--   drop table if exists public.song_play_seen;
 --   drop table if exists public.song_play_rate;
 --   drop table if exists public.song_play_counts;
 --   （get_song_catalog 退回 20261025100000 的版本：s 陣列少第 6 欄）
@@ -28,12 +31,28 @@ create table public.song_play_rate (
 );
 
 comment on table public.song_play_rate is
-  '播放計次的每小時額度桶（雜湊 IP，不存明文）。record_song_plays 會順手清掉 2 小時前的桶。';
+  '播放計次的每小時額度桶（雜湊 IP，不存明文）。record_song_plays 偶爾順手清掉 2 小時前的桶。';
+
+create index song_play_rate_window_idx on public.song_play_rate (window_start);
+
+create table public.song_play_seen (
+    ip_hash      text not null check (char_length(ip_hash) between 16 and 128),
+    code         text not null,
+    window_start timestamptz not null,
+    primary key (ip_hash, code, window_start)
+);
+
+comment on table public.song_play_seen is
+  '同一雜湊 IP 同一首歌每小時只計一次的去重紀錄。record_song_plays 偶爾順手清掉 2 小時前的列。';
+
+create index song_play_seen_window_idx on public.song_play_seen (window_start);
 
 alter table public.song_play_counts enable row level security;
 alter table public.song_play_rate enable row level security;
+alter table public.song_play_seen enable row level security;
 revoke all on table public.song_play_counts from anon, authenticated;
 revoke all on table public.song_play_rate from anon, authenticated;
+revoke all on table public.song_play_seen from anon, authenticated;
 
 -- ───────────── 記錄播放 ─────────────
 create or replace function public.record_song_plays(p_ip_hash text, p_codes text[])
@@ -46,8 +65,8 @@ as $$
 declare
     v_codes text[];
     v_window timestamptz := date_trunc('hour', now());
-    v_used integer;
     v_n integer;
+    v_counted integer;
 begin
     select coalesce(array_agg(distinct c), '{}'::text[]) into v_codes
     from unnest(coalesce(p_codes, '{}'::text[])) as c
@@ -61,25 +80,37 @@ begin
         return json_build_object('ok', false, 'reason', 'too_many');
     end if;
 
-    select n into v_used from public.song_play_rate where ip_hash = p_ip_hash and window_start = v_window;
-    if coalesce(v_used, 0) + v_n > 120 then
+    -- 額度：檢查與累加同一條語句；超過上限時 do update 的 where 不成立 → 沒有回傳列
+    insert into public.song_play_rate as r (ip_hash, window_start, n)
+    values (p_ip_hash, v_window, v_n)
+    on conflict (ip_hash, window_start) do update set n = r.n + excluded.n
+        where r.n + excluded.n <= 120;
+    if not found then
         return json_build_object('ok', false, 'reason', 'rate_limited');
     end if;
 
-    insert into public.song_play_rate as r (ip_hash, window_start, n)
-    values (p_ip_hash, v_window, v_n)
-    on conflict (ip_hash, window_start) do update set n = r.n + excluded.n;
-
+    -- 同 IP 同首同小時只計一次：只有這次新插入去重紀錄的 code 才累加
+    with fresh as (
+        insert into public.song_play_seen (ip_hash, code, window_start)
+        select p_ip_hash, s.code, v_window
+        from public.song_segments s
+        join public.song_videos v on v.id = s.video_ref and v.status = 'published'
+        where s.code = any (v_codes)
+        on conflict do nothing
+        returning code
+    )
     insert into public.song_play_counts as pc (code, plays, updated_at)
-    select s.code, 1, now()
-    from public.song_segments s
-    join public.song_videos v on v.id = s.video_ref and v.status = 'published'
-    where s.code = any (v_codes)
+    select code, 1, now() from fresh
     on conflict (code) do update set plays = pc.plays + 1, updated_at = now();
+    get diagnostics v_counted = row_count;
 
-    delete from public.song_play_rate where window_start < v_window - interval '2 hours';
+    -- 清理舊資料不必每次做（約 2% 的請求順手清）
+    if random() < 0.02 then
+        delete from public.song_play_rate where window_start < v_window - interval '2 hours';
+        delete from public.song_play_seen where window_start < v_window - interval '2 hours';
+    end if;
 
-    return json_build_object('ok', true, 'counted', v_n);
+    return json_build_object('ok', true, 'counted', v_counted);
 end;
 $$;
 

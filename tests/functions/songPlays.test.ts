@@ -13,12 +13,21 @@ const ENV = (extra: Record<string, unknown> = {}) => ({
     ...extra,
 });
 const gen = (n: number) => Array.from({ length: n }, (_, i) => `c${String(i).padStart(7, '0')}`);
-const req = (body: unknown, raw = false) =>
-    new Request('https://multistreaming.org/api/songs/plays', {
+// 預設：本站同源、有訪客 IP；headers 可覆寫（值為 null 代表移除該 header）
+const req = (body: unknown, raw = false, headers: Record<string, string | null> = {}) => {
+    const h: Record<string, string | null> = {
+        'Content-Type': 'application/json',
+        'CF-Connecting-IP': IP,
+        'Sec-Fetch-Site': 'same-origin',
+        ...headers,
+    };
+    const clean = Object.fromEntries(Object.entries(h).filter(([, v]) => v !== null)) as Record<string, string>;
+    return new Request('https://multistreaming.org/api/songs/plays', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': IP },
+        headers: clean,
         body: raw ? (body as string) : JSON.stringify(body),
     });
+};
 const rpcReply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
 
 let fetchSpy: ReturnType<typeof vi.fn>;
@@ -95,5 +104,39 @@ describe('POST /api/songs/plays', () => {
         const res = await playsPost({ request: req({ codes: ['aaaaaaaa'] }), env: ENV({ BANNED_IPS: IP }) });
         expect(res.status).toBe(403);
         expect(fetchSpy).not.toHaveBeenCalled();
+    });
+});
+
+describe('POST /api/songs/plays 來源與 IP 檢查', () => {
+    const body = { codes: ['aaaaaaaa'] };
+
+    it('沒有訪客 IP 時回 204 且不打 DB', async () => {
+        const res = await playsPost({ request: req(body, false, { 'CF-Connecting-IP': null }), env: ENV() });
+        expect(res.status).toBe(204);
+        expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('跨站來源回 403 且不打 DB', async () => {
+        const res = await playsPost({
+            request: req(body, false, { 'Sec-Fetch-Site': 'cross-site', Origin: 'https://evil.example' }),
+            env: ENV(),
+        });
+        expect(res.status).toBe(403);
+        expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('完全沒有 Sec-Fetch-Site / Origin / Referer 回 403 且不打 DB', async () => {
+        const res = await playsPost({ request: req(body, false, { 'Sec-Fetch-Site': null }), env: ENV() });
+        expect(res.status).toBe(403);
+        expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('Origin 為本站且沒有 Sec-Fetch-Site 時通過', async () => {
+        const res = await playsPost({
+            request: req(body, false, { 'Sec-Fetch-Site': null, Origin: 'https://multistreaming.org' }),
+            env: ENV(),
+        });
+        expect(res.status).toBe(204);
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 });
