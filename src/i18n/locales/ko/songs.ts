@@ -89,4 +89,7 @@ export default {
     'catalog.sort.label': '정렬',
     'catalog.sort.latest': '최신순',
     'catalog.sort.popular': '많이 들은 순',
+    'controls.volume': '볼륨',
+    'controls.mute': '음소거',
+    'controls.unmute': '음소거 해제',
 };

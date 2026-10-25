@@ -89,4 +89,7 @@ export default {
     'catalog.sort.label': '排序',
     'catalog.sort.latest': '最新',
     'catalog.sort.popular': '最多人聽',
+    'controls.volume': '音量',
+    'controls.mute': '靜音',
+    'controls.unmute': '取消靜音',
 };

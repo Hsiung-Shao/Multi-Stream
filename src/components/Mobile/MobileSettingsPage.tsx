@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { RouteLink } from '../Navigation/RouteLink';
 import type { RoutePage } from '../../config/routes';
-import { Sun, Moon, Globe, Info, FileText, HelpCircle, MessageSquareHeart, History, Heart, CalendarDays, Activity } from 'lucide-react';
+import { Sun, Moon, Globe, Info, FileText, HelpCircle, MessageSquareHeart, History, Heart, CalendarDays, Activity, Music } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -15,6 +15,7 @@ export function MobileSettingsPage() {
     const { t, i18n } = useTranslation();
     const { t: tSchedule } = useTranslation('schedule');
     const { t: tStatus } = useTranslation('status');
+    const { t: tSongs } = useTranslation('songs');
     const theme = useUIStore(s => s.theme);
     const toggleTheme = useUIStore(s => s.toggleTheme);
     const openModal = useUIStore(s => s.openModal);
@@ -83,6 +84,7 @@ export function MobileSettingsPage() {
                 </h2>
                 <div className="rounded-xl bg-gray-900/50 border border-white/5 overflow-hidden divide-y divide-white/5">
                     <SettingsLink icon={CalendarDays} label={tSchedule('title')} to="schedule" />
+                    <SettingsLink icon={Music} label={tSongs('title')} to="songs" />
                     <SettingsLink icon={Activity} label={tStatus('title')} to="status" />
                     <SettingsLink icon={Info} label={t('landing.footer.about', '關於')} to="about" />
                     <SettingsLink icon={HelpCircle} label={t('landing.footer.faq', '常見問題')} to="faq" />

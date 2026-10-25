@@ -46,6 +46,7 @@ export const PRESERVED_KEYS = [
     'schedule-filters-v1',                   // 週表篩選條件（v3.6.0）
     'schedule-roster-collapsed',             // 週表名冊收合（v3.6.0）
     'song-playlists',                        // 歌曲播放清單的自訂歌單（zustand persist；刪掉使用者整理的歌單就沒了）
+    'song-player-volume',                    // 歌曲播放器的音量與靜音偏好（發版後不該被重設成 100）
     'ControlPanelManager_isCollapsed',       // Control panel state
     'controlPanelCollapsed',
 ];

@@ -89,4 +89,7 @@ export default {
     'catalog.sort.label': 'Sort',
     'catalog.sort.latest': 'Newest',
     'catalog.sort.popular': 'Most played',
+    'controls.volume': 'Volume',
+    'controls.mute': 'Mute',
+    'controls.unmute': 'Unmute',
 };

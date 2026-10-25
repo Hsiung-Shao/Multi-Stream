@@ -89,4 +89,7 @@ export default {
     'catalog.sort.label': '並び替え',
     'catalog.sort.latest': '新しい順',
     'catalog.sort.popular': '人気順',
+    'controls.volume': '音量',
+    'controls.mute': 'ミュート',
+    'controls.unmute': 'ミュート解除',
 };

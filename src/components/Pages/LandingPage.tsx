@@ -52,6 +52,9 @@ export function LandingPage() {
                             <RouteLink to="schedule">{tx('schedule:title')}</RouteLink>
                         </Button>
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                            <RouteLink to="songs">{tx('songs:title')}</RouteLink>
+                        </Button>
+                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
                         </Button>
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">

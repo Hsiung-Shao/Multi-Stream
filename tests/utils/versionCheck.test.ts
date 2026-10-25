@@ -52,7 +52,7 @@ describe('checkAppVersion', () => {
     });
 
     it('一定要保留的關鍵資料都在清單裡', () => {
-        for (const k of ['stream-storage', 'favoriteStreams', 'preference_tags', 'userSettings', 'i18nextLng', 'cookie_consent', 'twitchAccessToken', 'song-playlists']) {
+        for (const k of ['stream-storage', 'favoriteStreams', 'preference_tags', 'userSettings', 'i18nextLng', 'cookie_consent', 'twitchAccessToken', 'song-playlists', 'song-player-volume']) {
             expect(PRESERVED_KEYS).toContain(k);
         }
     });

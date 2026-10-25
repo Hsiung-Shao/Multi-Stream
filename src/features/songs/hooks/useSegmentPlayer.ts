@@ -13,6 +13,8 @@
  * - 上一首帶 elapsed = currentTime - start（播超過 3 秒回本首開頭，交給 reducer 判斷）。
  * - 播放計次（v1.1）：同一個輪詢裡以 accumulate 累計本首（code＋playToken）實際播放秒數，
  *   首次達 playThreshold 呼叫一次 onPlayCredited；換首或重播（playToken 變）歸零。暫停不累計（輪詢只在 PLAYING 時跑）。
+ * - 音量／靜音：記在 localStorage['song-player-volume']；mount 後的 effect 才讀（SSR 首輪為 100／未靜音），
+ *   播放器就緒時套用；靜音中把音量調到大於 0 會自動解除靜音。
  * - 卸載：停輪詢、清計時器、下一個 tick 才 destroy（同 StreamIframe 的 safeDestroy，避開 React render 期衝突）。
  *
  * 只在瀏覽器 effect 內碰 window / YT：預渲染（SSR）時這個 hook 只回傳初始狀態。
@@ -22,6 +24,7 @@ import { apiLoader } from '../../../utils/apiLoader';
 import { createQueue, currentItem, queueReducer, type QueueAction, type QueueItem, type QueueState, type RepeatMode } from '../lib/queue';
 import { planLoad, shouldAdvance, END_EPSILON } from '../lib/advance';
 import { accumulate, playThreshold } from '../lib/playCredit';
+import { clampVolume, parseStoredVolume, serializeVolume, DEFAULT_VOLUME, VOLUME_STORAGE_KEY, type VolumeState } from '../lib/volume';
 
 // ---------- YouTube IFrame API 最小型別（只宣告用到的部分） ----------
 
@@ -35,6 +38,9 @@ export interface YTPlayerLike {
     getDuration(): number;
     getPlayerState(): number;
     destroy(): void;
+    setVolume(volume: number): void;
+    mute(): void;
+    unMute(): void;
 }
 
 interface YTEvent<T = unknown> {
@@ -170,6 +176,11 @@ export interface SegmentPlayer {
     jump(pos: number): void;
     setRepeat(mode: RepeatMode): void;
     setShuffle(on: boolean): void;
+    /** 0..100 */
+    volume: number;
+    muted: boolean;
+    setVolume(volume: number): void;
+    toggleMute(): void;
 }
 
 export interface UseSegmentPlayerOptions {
@@ -272,6 +283,22 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
         if (shouldAdvance(t, item.end)) fireEnded();
     }, [fireEnded]);
 
+    // 音量偏好：mount 後才讀 localStorage（render 不碰 window）；ref 給 onReady 與事件用
+    const [volumeState, setVolumeState] = useState<VolumeState>({ volume: DEFAULT_VOLUME, muted: false });
+    const volumeRef = useRef<VolumeState>(volumeState);
+    useEffect(() => {
+        let saved: VolumeState;
+        try {
+            saved = parseStoredVolume(window.localStorage.getItem(VOLUME_STORAGE_KEY));
+        } catch {
+            return;
+        }
+        volumeRef.current = saved;
+        setVolumeState(saved);
+        // 播放器若已就緒（極少見：API 已快取且比這個 effect 早 ready），補套一次
+        applyVolume(playerRef.current, saved);
+    }, []);
+
     // 建立／銷毀播放器（只在 mount 時一次）
     useEffect(() => {
         let cancelled = false;
@@ -306,6 +333,7 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
                                 return;
                             }
                             playerRef.current = e.target;
+                            applyVolume(e.target, volumeRef.current);
                             setPlayerStatus('ready');
                         },
                         onStateChange: (e) => {
@@ -468,6 +496,36 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
     const setRepeat = useCallback((mode: RepeatMode) => dispatch({ type: 'setRepeat', mode }), []);
     const setShuffle = useCallback((on: boolean) => dispatch({ type: 'setShuffle', on }), []);
 
+    const commitVolume = useCallback((next: VolumeState) => {
+        volumeRef.current = next;
+        setVolumeState(next);
+        try {
+            window.localStorage.setItem(VOLUME_STORAGE_KEY, serializeVolume(next));
+        } catch { /* 隱私模式或配額滿：只是不記住 */ }
+    }, []);
+
+    const setVolume = useCallback((v: number) => {
+        const volume = clampVolume(v);
+        const prev = volumeRef.current;
+        const unmute = prev.muted && volume > 0;
+        const player = playerRef.current;
+        try {
+            player?.setVolume(volume);
+            if (unmute) player?.unMute();
+        } catch { /* 尚未就緒：就緒時 onReady 會套用 */ }
+        commitVolume({ volume, muted: unmute ? false : prev.muted });
+    }, [commitVolume]);
+
+    const toggleMute = useCallback(() => {
+        const prev = volumeRef.current;
+        const muted = !prev.muted;
+        try {
+            if (muted) playerRef.current?.mute();
+            else playerRef.current?.unMute();
+        } catch { /* 尚未就緒 */ }
+        commitVolume({ volume: prev.volume, muted });
+    }, [commitVolume]);
+
     return {
         containerRef,
         queue,
@@ -487,5 +545,18 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
         jump,
         setRepeat,
         setShuffle,
+        volume: volumeState.volume,
+        muted: volumeState.muted,
+        setVolume,
+        toggleMute,
     };
+}
+
+/** 把音量偏好套到播放器（沒有預設值以外的設定時不多呼叫 mute） */
+function applyVolume(player: YTPlayerLike | null, state: VolumeState): void {
+    if (!player) return;
+    try {
+        player.setVolume(state.volume);
+        if (state.muted) player.mute();
+    } catch { /* 舊版 API 或已銷毀 */ }
 }

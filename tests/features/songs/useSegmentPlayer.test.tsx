@@ -9,6 +9,7 @@ vi.mock('../../../src/utils/apiLoader', () => ({
 
 import { useSegmentPlayer, playerQueueReducer, type SegmentPlayer, type YTPlayerOptions } from '../../../src/features/songs/hooks/useSegmentPlayer';
 import { createQueue, currentItem } from '../../../src/features/songs/lib/queue';
+import { VOLUME_STORAGE_KEY } from '../../../src/features/songs/lib/volume';
 
 type EventName = keyof NonNullable<YTPlayerOptions['events']>;
 
@@ -24,6 +25,10 @@ class FakePlayer {
     playVideo = vi.fn();
     pauseVideo = vi.fn();
     destroy = vi.fn();
+    setVolume = vi.fn();
+    mute = vi.fn();
+    unMute = vi.fn();
+    isMuted = vi.fn(() => false);
     getCurrentTime = () => this.currentTime;
     getDuration = () => this.duration;
     getPlayerState = () => this.state;
@@ -303,5 +308,72 @@ describe('useSegmentPlayer 播放計次', () => {
         player.emit('onStateChange', 1);
         await listen(player, 5);
         expect(credited).not.toHaveBeenCalled();
+    });
+});
+
+// ---------- 音量與靜音（記在 localStorage['song-player-volume']）----------
+describe('useSegmentPlayer 音量', () => {
+    const stored = () => JSON.parse(localStorage.getItem(VOLUME_STORAGE_KEY) ?? 'null');
+
+    beforeEach(() => {
+        localStorage.clear();
+    });
+    afterEach(() => {
+        localStorage.clear();
+    });
+
+    it('調音量會套用到播放器、夾在 0..100 並記住', async () => {
+        const { player } = await mountReady();
+        act(() => api.setVolume(40));
+        expect(player.setVolume).toHaveBeenLastCalledWith(40);
+        expect(api.volume).toBe(40);
+        expect(stored().volume).toBe(40);
+
+        act(() => api.setVolume(140));
+        expect(player.setVolume).toHaveBeenLastCalledWith(100);
+        expect(api.volume).toBe(100);
+
+        act(() => api.setVolume(-10));
+        expect(player.setVolume).toHaveBeenLastCalledWith(0);
+    });
+
+    it('toggleMute 兩次：mute 一次、unMute 一次，狀態記住', async () => {
+        const { player } = await mountReady();
+        act(() => api.toggleMute());
+        expect(player.mute).toHaveBeenCalledTimes(1);
+        expect(api.muted).toBe(true);
+        expect(stored().muted).toBe(true);
+        act(() => api.toggleMute());
+        expect(player.unMute).toHaveBeenCalledTimes(1);
+        expect(api.muted).toBe(false);
+        expect(stored().muted).toBe(false);
+    });
+
+    it('靜音中把音量調大會自動解除靜音，調到 0 則不解除', async () => {
+        const { player } = await mountReady();
+        act(() => api.toggleMute());
+        act(() => api.setVolume(0));
+        expect(player.unMute).not.toHaveBeenCalled();
+        expect(api.muted).toBe(true);
+        act(() => api.setVolume(30));
+        expect(player.unMute).toHaveBeenCalledTimes(1);
+        expect(api.muted).toBe(false);
+        expect(player.setVolume).toHaveBeenLastCalledWith(30);
+    });
+
+    it('播放器就緒時套用上次的音量與靜音', async () => {
+        localStorage.setItem(VOLUME_STORAGE_KEY, JSON.stringify({ volume: 25, muted: true }));
+        const { player } = await mountReady();
+        expect(player.setVolume).toHaveBeenCalledWith(25);
+        expect(player.mute).toHaveBeenCalled();
+        expect(api.volume).toBe(25);
+        expect(api.muted).toBe(true);
+    });
+
+    it('沒有儲存值時預設音量 100、不靜音，就緒時不呼叫 mute', async () => {
+        const { player } = await mountReady();
+        expect(api.volume).toBe(100);
+        expect(api.muted).toBe(false);
+        expect(player.mute).not.toHaveBeenCalled();
     });
 });
