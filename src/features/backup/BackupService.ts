@@ -13,6 +13,8 @@ export interface BackupData {
     adConfig: any;
     /** 自訂布局（匯出檔才有；IndexedDB 自動備份不含，自訂布局另由 layoutStorage 備援） */
     customLayouts?: CustomLayout[];
+    /** 歌曲播放清單（localStorage['song-playlists'] 原字串；沒建立過歌單則不帶） */
+    songPlaylists?: string;
 }
 
 export interface RestoreResult {
@@ -110,7 +112,8 @@ export class BackupService {
             preference_tags: safeParse('preference_tags', []),
             controlPanelCollapsed: localStorage.getItem('controlPanelCollapsed'),
             multiStreamLayout: safeParse('multiStreamLayout', null),
-            adConfig: safeParse('adConfig', null)
+            adConfig: safeParse('adConfig', null),
+            songPlaylists: localStorage.getItem('song-playlists') ?? undefined
         };
     }
 
@@ -246,6 +249,8 @@ export class BackupService {
                 localStorage.setItem('controlPanelCollapsed', data.controlPanelCollapsed);
             if (data.multiStreamLayout) localStorage.setItem('multiStreamLayout', JSON.stringify(data.multiStreamLayout));
             if (data.adConfig) localStorage.setItem('adConfig', JSON.stringify(data.adConfig));
+            // 歌單是 zustand persist 的原字串，直接寫回，不再 stringify
+            if (typeof data.songPlaylists === 'string' && data.songPlaylists) localStorage.setItem('song-playlists', data.songPlaylists);
             // Should we restore UID? Usually yes for continuity
             if (data.uid) localStorage.setItem('ms_user_uuid', data.uid);
 
