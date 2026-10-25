@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTimeline } from '../../../src/features/songs/lib/timelineParser';
+import { parseTimeline, parseTimelineDetailed } from '../../../src/features/songs/lib/timelineParser';
 
 describe('parseTimeline', () => {
     it('時間軸文字拆成多首', () => {
@@ -50,5 +50,34 @@ describe('parseTimeline', () => {
         expect(rows).toHaveLength(2);
         expect(rows.map((r) => r.line)).toEqual([2, 4]);
         expect(rows.map((r) => r.title)).toEqual(['A', 'B']);
+    });
+
+    it('時間後接 - 歌名時去掉前導破折號', () => {
+        expect(parseTimeline('00:00 - Opening')[0]).toMatchObject({ title: 'Opening', artist: null });
+        expect(parseTimeline('12:34 - Song / Artist')[0]).toMatchObject({ title: 'Song', artist: 'Artist' });
+        expect(parseTimeline('12:34 – Song')[0]).toMatchObject({ title: 'Song', artist: null });
+    });
+
+    it('支援〜區間與括號包住的時間', () => {
+        expect(parseTimeline('17:00〜18:00 歌')[0]).toMatchObject({ start: 1020, end: 1080, title: '歌' });
+        for (const line of ['[19:00] 歌2', '(19:00) 歌2', '【19:00】歌2']) {
+            expect(parseTimeline(line)[0], line).toMatchObject({ start: 1140, title: '歌2' });
+        }
+    });
+
+    it('看似時間卻解析失敗的行回報在 unparsed', () => {
+        const text = '00:10 A\n中間 12:34 不在行首\n12:34-12:75 壞區間\n20:00 B';
+        const { rows, unparsed } = parseTimelineDetailed(text);
+        expect(rows.map((r) => r.title)).toEqual(['A', 'B']);
+        expect(rows[0].end).toBe(1200);
+        expect(unparsed).toEqual([1, 2]);
+        // parseTimeline 仍等於 .rows
+        expect(parseTimeline(text)).toEqual(rows);
+    });
+
+    it('純文字標題行與空行不進 unparsed', () => {
+        const { rows, unparsed } = parseTimelineDetailed('【歌單】\n\n00:10 A\n感謝收看');
+        expect(rows).toHaveLength(1);
+        expect(unparsed).toEqual([]);
     });
 });

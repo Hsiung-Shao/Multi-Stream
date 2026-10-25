@@ -41,4 +41,13 @@ describe('validateSegments', () => {
         expect(validateSegments(rows, { duration: null })).toEqual([]);
         expect(validateSegments([{ start: 200, end: 300, title: 'A' }], { duration: 300 })).toEqual([]);
     });
+
+    it('歌名或原唱超過 200 字報錯，剛好 200 字不報', () => {
+        const long = 'x'.repeat(201);
+        const ok = 'x'.repeat(200);
+        expect(codes(validateSegments([{ start: 0, end: 10, title: long }]))).toEqual(['0:title_too_long']);
+        expect(codes(validateSegments([{ start: 0, end: 10, title: 'A', artist: long }]))).toEqual(['0:artist_too_long']);
+        expect(validateSegments([{ start: 0, end: 10, title: ok, artist: ok }])).toEqual([]);
+        expect(validateSegments([{ start: 0, end: 10, title: 'A', artist: null }])).toEqual([]);
+    });
 });

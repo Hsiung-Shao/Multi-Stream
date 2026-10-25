@@ -5,7 +5,8 @@
  * - order 是播放順序（items 索引），cursor 是 order 內的位置；未隨機時 order 為 0..n-1。
  * - playToken 每次「目前項目要從頭開始播」就 +1（換首、重播同首都算），播放器靠它偵測要重新載入／seek。
  * - 不可播處理以 videoId 為單位：同一支影片出錯，其餘片段一併跳過；next/error 都會略過 unplayable。
- * - 隨機 + 全部循環繞回時重洗 order，且新的第一首不得等於剛播完那首（除非只有一首）。
+ * - 隨機 + 全部循環繞回時重洗 order：剛播完那首放在新 order 的尾端，所以新的第一首不會是它（除非只有一首），
+ *   且在第一首按「上一首」（repeat all 繞到最後）會回到剛播完那首。
  * - setShuffle 不動 playToken：切換隨機不該讓目前這首重播。
  */
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -40,7 +41,7 @@ export type QueueAction =
     | { type: 'ended'; random?: Random }
     | { type: 'next'; random?: Random }
     | { type: 'prev'; elapsed: number }
-    | { type: 'error' }
+    | { type: 'error'; random?: Random }
     | { type: 'jump'; index: number } // index 為 order 中的位置
     | { type: 'setRepeat'; mode: RepeatMode }
     | { type: 'setShuffle'; on: boolean; random?: Random };
@@ -90,7 +91,7 @@ function playAt(state: QueueState, cursor: number, order: number[] = state.order
 
 /**
  * 找下一個可播項目並開始播放；找不到回 status 'stopped'（cursor 不變）。
- * repeat='all' 到尾端會繞回開頭（隨機時重洗，新第一首不等於剛播完那首）。
+ * repeat='all' 到尾端會繞回開頭（隨機時重洗，剛播完那首放新 order 尾端）。
  */
 function advance(state: QueueState, random: Random): QueueState {
     for (let pos = state.cursor + 1; pos < state.order.length; pos++) {
@@ -101,11 +102,8 @@ function advance(state: QueueState, random: Random): QueueState {
         let order = state.order;
         if (state.shuffle) {
             const lastIdx = state.order[state.cursor];
-            order = shuffled(state.items.map((_, i) => i), random);
-            if (order.length > 1 && order[0] === lastIdx) {
-                const j = 1 + Math.floor(random() * (order.length - 1));
-                [order[0], order[j]] = [order[j], order[0]];
-            }
+            // 剛播完那首固定放尾端：新第一首必不是它，「上一首」也能回到它
+            order = [...shuffled(state.items.map((_, i) => i).filter((i) => i !== lastIdx), random), lastIdx];
         }
         const wrapped = { ...state, order };
         for (let pos = 0; pos < order.length; pos++) {
@@ -165,7 +163,7 @@ export function queueReducer(state: QueueState, action: QueueAction): QueueState
             if (state.items.every((it) => unplayable.includes(it.videoId))) {
                 return { ...marked, status: 'stopped', allFailed: true };
             }
-            return advance(marked, Math.random);
+            return advance(marked, action.random ?? Math.random);
         }
         case 'jump':
             return playAt(state, Math.min(Math.max(action.index, 0), Math.max(state.order.length - 1, 0)));

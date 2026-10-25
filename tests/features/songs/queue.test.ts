@@ -216,3 +216,37 @@ describe('queueReducer 其他動作', () => {
         expect(s1.status).toBe(s0.status);
     });
 });
+
+describe('queueReducer 隨機循環重洗（review 修正）', () => {
+    it('隨機全部循環重洗後上一首回到剛播完那首', () => {
+        for (let seed = 1; seed <= 20; seed++) {
+            let s: QueueState = queueReducer(createQueue(mk(3), { repeat: 'all' }), {
+                type: 'setShuffle',
+                on: true,
+                random: seeded(seed),
+            });
+            s = queueReducer(s, { type: 'next' });
+            s = queueReducer(s, { type: 'next' });
+            const lastPlayed = currentItem(s)!;
+            const wrapped = queueReducer(s, { type: 'ended', random: seeded(seed + 50) });
+            expect(wrapped.cursor).toBe(0);
+            const back = queueReducer(wrapped, { type: 'prev', elapsed: 0 });
+            expect(currentItem(back)?.code, `seed ${seed}`).toBe(lastPlayed.code);
+        }
+    });
+
+    it('error 繞回重洗時使用注入的 random（同一 seed 結果相同）', () => {
+        const run = (seed: number) => {
+            let s: QueueState = queueReducer(createQueue(mk(6), { repeat: 'all' }), {
+                type: 'setShuffle',
+                on: true,
+                random: seeded(99),
+            });
+            for (let i = 0; i < 5; i++) s = queueReducer(s, { type: 'next' });
+            return queueReducer(s, { type: 'error', random: seeded(seed) }).order;
+        };
+        for (let seed = 1; seed <= 5; seed++) {
+            expect(run(seed), `seed ${seed}`).toEqual(run(seed));
+        }
+    });
+});

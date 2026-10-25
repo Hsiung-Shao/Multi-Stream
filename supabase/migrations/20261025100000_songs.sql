@@ -8,6 +8,7 @@
 -- 所以只在資料庫產生（gen_song_code，[0-9a-z]），Function 端不產 ID。
 --
 -- 回滾：
+--   drop function if exists public.admin_save_song_video(uuid, jsonb, jsonb);
 --   drop function if exists public.get_song_catalog();
 --   drop table if exists public.song_segments;
 --   drop table if exists public.song_videos;
@@ -119,7 +120,7 @@ create policy "song_segments_admin_write"
 -- 一次回傳全部已發布歌回（短 key 省流量）：
 --   [{v: videoId, t: 標題, d: 開台時間, vt: {i: vtuber_id, n: 名稱, img: 頭像} | null,
 --     s: [[code, start, end, 歌名, 原唱|null], ...]}]
--- 只含 published，所以 anon 可呼叫；functions/api/songs/catalog.js 另做 edge 快取。
+-- 只給 service_role：一律經 functions/api/songs/catalog.js（edge 快取），不開放 anon 直打繞過快取。
 create or replace function public.get_song_catalog()
 returns json
 language sql
@@ -149,5 +150,99 @@ as $$
     ) r;
 $$;
 
-revoke all on function public.get_song_catalog() from public;
-grant execute on function public.get_song_catalog() to anon, authenticated, service_role;
+-- ───────────── 後台寫入（單一交易） ─────────────
+-- functions/api/admin/songs.js 的 POST／PUT 只打這一支：一次 subrequest 完成整支歌回
+-- （逐筆打 PostgREST 在長歌回會超過 Cloudflare 每次請求的 subrequest 上限，且中途失敗會留下半套）。
+--   p_id 為 null → 新增影片；否則先檢查（影片存在、帶 id 的片段都屬於這支影片）才開始寫。
+--   片段：帶 id 的依 id 原地更新（保住 code，只改有變的列）、不帶 id 的新增、DB 有但沒傳的刪除。
+--   p_video、p_segments 已由 functions/lib/songs.js 驗證；這裡的 CHECK 是最後防線。
+-- 錯誤：unknown_segment_id（P0001）、video_not_found（P0002）、video_id 重複（23505）。
+create or replace function public.admin_save_song_video(p_id uuid, p_video jsonb, p_segments jsonb)
+returns json
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+    v_id uuid;
+    v_seg jsonb;
+begin
+    if p_id is null then
+        insert into public.song_videos (video_id, title, vtuber_id, streamed_at, duration_seconds, status)
+        values (p_video->>'video_id', p_video->>'title', (p_video->>'vtuber_id')::uuid,
+                (p_video->>'streamed_at')::timestamptz, (p_video->>'duration_seconds')::integer, p_video->>'status')
+        returning id into v_id;
+    else
+        if not exists (select 1 from public.song_videos where id = p_id) then
+            raise exception 'video_not_found' using errcode = 'P0002';
+        end if;
+        if exists (
+            select 1 from jsonb_array_elements(p_segments) e
+            where e->>'id' is not null
+              and not exists (select 1 from public.song_segments s
+                              where s.id = (e->>'id')::uuid and s.video_ref = p_id)
+        ) then
+            raise exception 'unknown_segment_id' using errcode = 'P0001';
+        end if;
+
+        update public.song_videos
+        set video_id = p_video->>'video_id',
+            title = p_video->>'title',
+            vtuber_id = (p_video->>'vtuber_id')::uuid,
+            streamed_at = (p_video->>'streamed_at')::timestamptz,
+            duration_seconds = (p_video->>'duration_seconds')::integer,
+            status = p_video->>'status'
+        where id = p_id;
+        v_id := p_id;
+
+        delete from public.song_segments s
+        where s.video_ref = p_id
+          and s.id not in (select (e->>'id')::uuid from jsonb_array_elements(p_segments) e where e->>'id' is not null);
+
+        update public.song_segments s
+        set start_seconds = (e->>'start_seconds')::integer,
+            end_seconds = (e->>'end_seconds')::integer,
+            title = e->>'title',
+            original_artist = e->>'original_artist',
+            position = (e->>'position')::smallint
+        from jsonb_array_elements(p_segments) e
+        where e->>'id' is not null
+          and s.id = (e->>'id')::uuid
+          and (s.start_seconds, s.end_seconds, s.title, s.original_artist, s.position)
+              is distinct from ((e->>'start_seconds')::integer, (e->>'end_seconds')::integer, e->>'title',
+                                e->>'original_artist', (e->>'position')::smallint);
+    end if;
+
+    -- 新片段：code 由 default 產生，撞號（極少見）就重抽，最多 5 次
+    for v_seg in select e from jsonb_array_elements(p_segments) e where e->>'id' is null loop
+        for attempt in 1..5 loop
+            begin
+                insert into public.song_segments (video_ref, start_seconds, end_seconds, title, original_artist, position)
+                values (v_id, (v_seg->>'start_seconds')::integer, (v_seg->>'end_seconds')::integer,
+                        v_seg->>'title', v_seg->>'original_artist', (v_seg->>'position')::smallint);
+                exit;
+            exception when unique_violation then
+                if attempt = 5 then raise; end if;
+            end;
+        end loop;
+    end loop;
+
+    return json_build_object(
+        'id', v_id,
+        'segments', coalesce((
+            select json_agg(json_build_object(
+                       'id', s.id, 'code', s.code, 'start_seconds', s.start_seconds, 'end_seconds', s.end_seconds,
+                       'title', s.title, 'original_artist', s.original_artist, 'position', s.position)
+                   order by s.start_seconds)
+            from public.song_segments s
+            where s.video_ref = v_id
+        ), '[]'::json)
+    );
+end;
+$$;
+
+revoke all on function public.get_song_catalog() from public, anon, authenticated;
+revoke all on function public.admin_save_song_video(uuid, jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.get_song_catalog() to service_role;
+grant execute on function public.admin_save_song_video(uuid, jsonb, jsonb) to service_role;

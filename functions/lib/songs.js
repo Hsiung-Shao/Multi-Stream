@@ -1,13 +1,14 @@
 // 歌曲播放清單：後台寫入 payload 的驗證與組裝
 //
 // 片段規則與前端 src/features/songs/lib/segmentValidation.ts 一致（code 名稱相同）：
-//   missing_end / end_before_start / overlap / exceeds_duration / empty_title
+//   missing_end / end_before_start / overlap / exceeds_duration / empty_title /
+//   title_too_long / artist_too_long
 // 短 ID（song_segments.code）由資料庫 default 產生，這裡不產生也不接受 body 帶入。
 
 export const SEGMENTS_MAX = 200;
 export const TITLE_MAX = 200;
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
-const UUID_RE = /^[0-9a-fA-F-]{36}$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INT_MAX = 2147483647; // Postgres integer 上限
 const STATUSES = ['draft', 'published'];
 
@@ -23,7 +24,7 @@ function invalid(error, issues) {
 
 /**
  * 驗證片段，回傳 [{ index, code }]（index 為 body 中的原始順序）
- * @param {{ start: number, end: number|null, title: string }[]} rows
+ * @param {{ start: number, end: number|null, title: string, artist?: string|null }[]} rows
  * @param {{ duration?: number|null }} [opts]
  */
 export function validateSegments(rows, opts = {}) {
@@ -33,6 +34,8 @@ export function validateSegments(rows, opts = {}) {
         if (r.end === null) issues.push({ index, code: 'missing_end' });
         else if (r.end <= r.start) issues.push({ index, code: 'end_before_start' });
         if (r.title.trim() === '') issues.push({ index, code: 'empty_title' });
+        if (r.title.trim().length > TITLE_MAX) issues.push({ index, code: 'title_too_long' });
+        if (r.artist && r.artist.length > TITLE_MAX) issues.push({ index, code: 'artist_too_long' });
         if (duration != null && r.end !== null && r.end > duration) issues.push({ index, code: 'exceeds_duration' });
     });
     // 重疊：[s1,e1) 與 [s2,e2) 若 s1 < e2 且 s2 < e1；首尾相接不算。只比對起訖合法的列
@@ -72,7 +75,7 @@ export function buildSongVideoPayload(body) {
     let vtuberId = null;
     if (body.vtuber_id != null && body.vtuber_id !== '') {
         if (!isUuid(body.vtuber_id)) return invalid('invalid_payload');
-        vtuberId = body.vtuber_id;
+        vtuberId = body.vtuber_id.toLowerCase();
     }
 
     let streamedAt = null;
@@ -95,17 +98,16 @@ export function buildSongVideoPayload(body) {
         if (!isInt(s.start_seconds) || s.start_seconds < 0 || s.start_seconds > INT_MAX) return invalid('invalid_payload');
         const hasEnd = s.end_seconds !== null && s.end_seconds !== undefined;
         if (hasEnd && (!isInt(s.end_seconds) || s.end_seconds > INT_MAX)) return invalid('invalid_payload');
-        if (typeof s.title !== 'string' || s.title.trim().length > TITLE_MAX) return invalid('invalid_payload');
+        if (typeof s.title !== 'string') return invalid('invalid_payload');
         if (s.id != null && !isUuid(s.id)) return invalid('invalid_payload');
         let artist = null;
         if (s.original_artist != null) {
             if (typeof s.original_artist !== 'string') return invalid('invalid_payload');
             artist = s.original_artist.trim();
-            if (artist.length > TITLE_MAX) return invalid('invalid_payload');
             if (artist === '') artist = null;
         }
         rows.push({
-            id: s.id ?? undefined,
+            id: s.id ? s.id.toLowerCase() : undefined,
             start: s.start_seconds,
             end: hasEnd ? s.end_seconds : null,
             title: s.title.trim(),

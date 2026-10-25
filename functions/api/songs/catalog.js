@@ -63,6 +63,7 @@ async function loadCatalog(context) {
         const p = logError(env, 'songs-catalog', 'get_song_catalog failed', {
             metadata: { status: res.status, error: res.error?.slice(0, 300) },
         });
+        // 記 log 失敗不影響回應（logError 本身已盡力而為），忽略即可
         if (context.waitUntil) context.waitUntil(p); else p.catch(() => {});
         return null;
     }
@@ -96,6 +97,7 @@ export async function onRequestGet(context) {
                         context.waitUntil?.(
                             cache
                                 .put(key, new Response(text, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${CATALOG_TTL_SECONDS}` } }))
+                                // edge 快取寫入失敗只會讓下次多查一次 DB，不影響本次回應
                                 .catch(() => {}),
                         );
                     }
