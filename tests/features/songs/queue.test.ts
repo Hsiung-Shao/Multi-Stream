@@ -256,6 +256,21 @@ describe('queueReducer 隨機循環重洗（review 修正）', () => {
         }
     });
 
+    it('重播本首後再按上一首仍回到剛播完那首', () => {
+        for (let seed = 1; seed <= 10; seed++) {
+            const random = seeded(seed);
+            let s: QueueState = queueReducer(createQueue(mk(5), { repeat: 'all' }), { type: 'setShuffle', on: true, random });
+            for (let i = 0; i < 4; i++) s = queueReducer(s, { type: 'next' });
+            const lastPlayed = currentItem(s)!;
+            s = queueReducer(s, { type: 'ended', random });
+            expect(s.cursor).toBe(0);
+            s = queueReducer(s, { type: 'prev', elapsed: 10 });
+            expect(s.cursor).toBe(0);
+            s = queueReducer(s, { type: 'prev', elapsed: 0 });
+            expect(currentItem(s)?.code, `seed ${seed}`).toBe(lastPlayed.code);
+        }
+    });
+
     it('error 繞回重洗時使用注入的 random（同一 seed 結果相同）', () => {
         const run = (seed: number) => {
             let s: QueueState = queueReducer(createQueue(mk(6), { repeat: 'all' }), {

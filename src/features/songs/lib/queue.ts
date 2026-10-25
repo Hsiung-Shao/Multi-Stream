@@ -6,7 +6,7 @@
  * - playToken 每次「目前項目要從頭開始播」就 +1（換首、重播同首都算），播放器靠它偵測要重新載入／seek。
  * - 不可播處理以 videoId 為單位：同一支影片出錯，其餘片段一併跳過；next/error 都會略過 unplayable。
  * - 隨機 + 全部循環繞回時整批重洗 order，新的第一首不得等於剛播完那首（除非只有一首）；
- *   剛播完那首記在 wrapFrom，繞回後第一首按「上一首」會回到它，任何其他轉換都把 wrapFrom 清掉。
+ *   剛播完那首記在 wrapFrom，繞回後第一首按「上一首」會回到它；除了「播超過 3 秒重播本首」，其他轉換都把 wrapFrom 清掉。
  * - setShuffle 不動 playToken：切換隨機不該讓目前這首重播。
  */
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -127,7 +127,8 @@ function advance(state: QueueState, random: Random): QueueState {
 }
 
 function previous(state: QueueState, elapsed: number): QueueState {
-    if (elapsed > PREV_RESTART_SECONDS) return playAt(state, state.cursor);
+    // 重播本首不算離開繞回點：保留 wrapFrom，接著再按「上一首」仍回到繞回前最後播的那首
+    if (elapsed > PREV_RESTART_SECONDS) return playAt(state, state.cursor, state.order, state.wrapFrom);
 
     // 隨機循環剛繞回：第一首按「上一首」回到繞回前最後播的那首
     if (state.cursor === 0 && state.wrapFrom !== null) {

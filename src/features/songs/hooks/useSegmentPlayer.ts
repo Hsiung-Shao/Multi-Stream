@@ -4,8 +4,9 @@
  * 播放規則（計畫「播放引擎規則」）：
  * - 建立播放器時不自動播；第一首由使用者按播放。瀏覽器擋自動播放（onAutoplayBlocked）時 needsGesture=true，
  *   畫面要在播放器「外面」顯示「點此播放」（播放器本體不能被任何元素覆蓋）。
- * - 換影片 loadVideoById({videoId,startSeconds,endSeconds})；同一支影片的下一首只 seekTo（planLoad）。
- * - seek 之後 endSeconds 不可靠，片段結束一律靠 PLAYING 時每 250ms 輪詢 shouldAdvance；ENDED 也推進。
+ * - 換影片 loadVideoById({videoId,startSeconds})；同一支影片的下一首只 seekTo（planLoad）。
+ * - 刻意不帶 endSeconds：seek 之後舊的 endSeconds 仍會觸發 ENDED，造成每首都重新緩衝閃一下（實測）。
+ *   片段結束一律靠 PLAYING 時每 250ms 輪詢 shouldAdvance；ENDED 只會在整支影片播完時發生，直接推進。
  *   兩條路以「code＋playToken」防重複觸發；換首後要先看到 currentTime < end 才「上膛」，避免讀到舊時間連跳。
  * - onError 100/101/150/2/5：顯示「即將跳過」，1.5 秒後 dispatch error（整支影片標為不可播）。
  *   期間使用者自己換首就作廢，不能把新的那首誤標。
@@ -109,11 +110,13 @@ export function playerQueueReducer(state: QueueState, action: PlayerQueueAction)
             });
             if (added.length === 0) return state;
             const base = state.items.length;
+            // 佇列已播完（或整輪都不可播）才加歌：目前這首指向第一首新歌，按播放就從它開始
+            const resume = state.status === 'stopped' || state.allFailed;
             return {
                 ...state,
                 items: [...state.items, ...added],
                 order: [...state.order, ...added.map((_, i) => base + i)],
-                // 整輪都不可播後又加新歌：解除停止旗標
+                cursor: resume ? state.order.length : state.cursor,
                 allFailed: false,
             };
         }
@@ -298,27 +301,8 @@ export function useSegmentPlayer(): SegmentPlayer {
             }
         };
 
-        /** ENDED：真的播到片段結尾（或影片結尾）才推進；否則是 seek 後殘留的舊 endSeconds，重新載入本首 */
-        const handleEnded = () => {
-            const player = playerRef.current;
-            const state = queueRef.current;
-            const item = currentItem(state);
-            if (!player || !item || state.status !== 'playing') return;
-            let t = 0;
-            let duration = 0;
-            try {
-                t = player.getCurrentTime();
-                duration = player.getDuration();
-            } catch { /* 讀不到就當作播完 */ }
-            const reachedEnd = t >= item.end - 1.5 || (duration > 0 && t >= duration - 1.5) || !Number.isFinite(t);
-            if (reachedEnd) {
-                fireEnded();
-            } else {
-                loadedItemRef.current = item;
-                armedRef.current = false;
-                player.loadVideoById({ videoId: item.videoId, startSeconds: item.start, endSeconds: item.end });
-            }
-        };
+        /** ENDED：沒帶 endSeconds，只有整支影片播完才會發生（片段結尾超過影片長度的資料）→ 直接推進 */
+        const handleEnded = () => fireEnded();
 
         const scheduleSkip = () => {
             // 只處理「播放中」的錯誤：預覽（cue）階段出錯不自動開播，等使用者按播放再判斷
@@ -373,7 +357,7 @@ export function useSegmentPlayer(): SegmentPlayer {
             player.seekTo(item.start, true);
             player.playVideo();
         } else {
-            player.loadVideoById({ videoId: item.videoId, startSeconds: item.start, endSeconds: item.end });
+            player.loadVideoById({ videoId: item.videoId, startSeconds: item.start });
         }
         loadedItemRef.current = item;
     }, [playerStatus, queue, cancelPendingError]);
@@ -388,7 +372,7 @@ export function useSegmentPlayer(): SegmentPlayer {
         cuedCodeRef.current = item.code;
         loadedItemRef.current = null;
         try {
-            player.cueVideoById({ videoId: item.videoId, startSeconds: item.start, endSeconds: item.end });
+            player.cueVideoById({ videoId: item.videoId, startSeconds: item.start });
         } catch { /* 尚未就緒 */ }
     }, [playerStatus, queue]);
 

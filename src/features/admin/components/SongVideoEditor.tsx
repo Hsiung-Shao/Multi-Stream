@@ -13,11 +13,22 @@ import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Textarea } from '../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '../../../components/ui/alert-dialog';
 import { cn } from '../../../components/ui/utils';
 import { extractVideoId } from '../../songs/lib/youtubeUrl';
 import { formatTimecode, parseTimecode } from '../../songs/lib/timecode';
 import { parseTimelineDetailed, type ParsedRow } from '../../songs/lib/timelineParser';
 import { validateSegments } from '../../songs/lib/segmentValidation';
+import { mergeReplaceRows, type MergedRow } from '../../songs/lib/timelineMerge';
 import { ensureYT, type YTPlayerLike } from '../../songs/hooks/useSegmentPlayer';
 import {
     SEGMENT_ISSUE_LABEL,
@@ -58,8 +69,10 @@ const fromRecord = (s: SongSegmentRecord): RowDraft => ({
     artist: s.original_artist ?? '',
 });
 
-const fromParsed = (r: ParsedRow): RowDraft => ({
-    key: newKey(),
+const fromParsed = (r: ParsedRow | MergedRow): RowDraft => ({
+    key: ('id' in r && r.id) || newKey(),
+    ...('id' in r && r.id ? { id: r.id } : {}),
+    ...('code' in r && r.code ? { code: r.code } : {}),
     start: formatTimecode(r.start),
     end: r.end === null ? '' : formatTimecode(r.end),
     title: r.title,
@@ -327,7 +340,15 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
         setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
         if (save.error) save.reset();
     };
-    const removeRow = (key: string) => setRows((rs) => rs.filter((r) => r.key !== key));
+    /** 會讓已存檔片段的 code 失效的操作，先確認（分享連結與使用者歌單裡的這些歌會變成「已下架」） */
+    const [pendingLoss, setPendingLoss] = useState<{ count: number; apply: () => void } | null>(null);
+
+    const removeRow = (key: string) => {
+        const target = rows.find((r) => r.key === key);
+        const apply = () => setRows((rs) => rs.filter((r) => r.key !== key));
+        if (target?.code) setPendingLoss({ count: 1, apply });
+        else apply();
+    };
     const addRow = () => {
         setRows((rs) => {
             const last = rs[rs.length - 1];
@@ -338,9 +359,20 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
     const currentTimecode = () => formatTimecode(Math.floor(apiRef.current?.getCurrentTime() ?? 0));
 
     const applyTimeline = (mode: 'replace' | 'append') => {
-        const imported = parsedTimeline.map(fromParsed);
-        setRows((rs) => (mode === 'replace' ? imported : [...rs, ...imported]));
-        setTimelineText('');
+        if (mode === 'append') {
+            setRows((rs) => [...rs, ...parsedTimeline.map(fromParsed)]);
+            setTimelineText('');
+            return;
+        }
+        // 取代：開始時間相同的列對回舊片段的 id／code（原地更新，分享連結不失效）
+        const existing = rows.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1 }));
+        const { rows: merged, lostCodes } = mergeReplaceRows(existing, parsedTimeline);
+        const apply = () => {
+            setRows(merged.map(fromParsed));
+            setTimelineText('');
+        };
+        if (lostCodes.length > 0) setPendingLoss({ count: lostCodes.length, apply });
+        else apply();
     };
 
     const handleSave = async () => {
@@ -588,6 +620,29 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
             </div>
             {save.error && <p role="alert" className="text-sm text-destructive">{formatSongError(save.error)}</p>}
             {savedNote && <p role="status" className="text-sm text-emerald-500">{savedNote}</p>}
+
+            <AlertDialog open={!!pendingLoss} onOpenChange={(o) => { if (!o) setPendingLoss(null); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>確定要移除已存檔的片段？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {pendingLoss?.count ?? 0} 首歌的分享連結與使用者歌單會失效（儲存後這些歌會變成「已下架」）。開始時間沒變的片段會保留原本的 code。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                            onClick={() => {
+                                pendingLoss?.apply();
+                                setPendingLoss(null);
+                            }}
+                        >
+                            確定移除
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

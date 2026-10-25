@@ -76,7 +76,7 @@ describe('useSegmentPlayer', () => {
         act(() => api.load([item('a0000001', V1, 10, 20)], { play: false }));
         expect(player.loadVideoById).not.toHaveBeenCalled();
         expect(player.playVideo).not.toHaveBeenCalled();
-        expect(player.cueVideoById).toHaveBeenCalledWith({ videoId: V1, startSeconds: 10, endSeconds: 20 });
+        expect(player.cueVideoById).toHaveBeenCalledWith({ videoId: V1, startSeconds: 10 });
     });
 
     it('按播放才以 loadVideoById 帶起訖載入', async () => {
@@ -84,7 +84,7 @@ describe('useSegmentPlayer', () => {
         act(() => api.load([item('a0000001', V1, 10, 20)], { play: false }));
         act(() => api.togglePlay());
         expect(player.loadVideoById).toHaveBeenCalledTimes(1);
-        expect(player.loadVideoById).toHaveBeenCalledWith({ videoId: V1, startSeconds: 10, endSeconds: 20 });
+        expect(player.loadVideoById).toHaveBeenCalledWith({ videoId: V1, startSeconds: 10 });
     });
 
     it('同影片的下一首呼叫 seekTo、不呼叫 loadVideoById', async () => {
@@ -97,6 +97,24 @@ describe('useSegmentPlayer', () => {
         expect(api.current?.code).toBe('b0000002');
     });
 
+    it('載入片段時不帶 endSeconds，同影片下一首輪詢到結束點只 seekTo', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 10, 20), item('b0000002', V1, 30, 40)]));
+        expect(player.loadVideoById).toHaveBeenCalledTimes(1);
+        const arg = player.loadVideoById.mock.calls[0][0] as Record<string, unknown>;
+        expect(arg).toMatchObject({ videoId: V1, startSeconds: 10 });
+        expect('endSeconds' in arg).toBe(false);
+
+        player.emit('onStateChange', 1);
+        player.currentTime = 12;
+        await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+        player.currentTime = 19.9;
+        await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+        expect(api.current?.code).toBe('b0000002');
+        expect(player.seekTo).toHaveBeenLastCalledWith(30, true);
+        expect(player.loadVideoById).toHaveBeenCalledTimes(1);
+    });
+
     it('輪詢到結束點切下一首只觸發一次', async () => {
         const { player } = await mountReady();
         act(() => api.load([item('a0000001', V1, 10, 20), item('b0000002', V2, 0, 50), item('c0000003', V2, 60, 90)]));
@@ -106,7 +124,7 @@ describe('useSegmentPlayer', () => {
         player.currentTime = 19.9;
         await act(async () => { await vi.advanceTimersByTimeAsync(250); });
         expect(api.current?.code).toBe('b0000002');
-        expect(player.loadVideoById).toHaveBeenLastCalledWith({ videoId: V2, startSeconds: 0, endSeconds: 50 });
+        expect(player.loadVideoById).toHaveBeenLastCalledWith({ videoId: V2, startSeconds: 0 });
         // 播放器還沒回報新時間：同一個舊時間不能再推進一次
         await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
         expect(api.current?.code).toBe('b0000002');
@@ -146,7 +164,7 @@ describe('useSegmentPlayer', () => {
         expect(api.current?.code).toBe('c0000003');
         expect(api.queue.unplayable).toEqual([V1]);
         expect(api.skipping).toBe(false);
-        expect(player.loadVideoById).toHaveBeenLastCalledWith({ videoId: V2, startSeconds: 0, endSeconds: 50 });
+        expect(player.loadVideoById).toHaveBeenLastCalledWith({ videoId: V2, startSeconds: 0 });
     });
 
     it('等待跳過期間使用者自己換首就不標記錯誤', async () => {
@@ -200,6 +218,15 @@ describe('playerQueueReducer', () => {
         expect(s1.items.map((i) => i.code)).toEqual(['b0000002', 'c0000003']);
         expect(currentItem(s1)?.code).toBe('c0000003');
         expect(playerQueueReducer(s1, { type: 'remove', pos: s1.cursor })).toBe(s1);
+    });
+
+    it('佇列播完後加入新歌，目前這首指向新歌', () => {
+        let s = createQueue([item('a0000001', V1, 0, 10), item('b0000002', V2, 0, 10)], { repeat: 'off' });
+        s = playerQueueReducer(s, { type: 'ended' });
+        s = playerQueueReducer(s, { type: 'ended' });
+        expect(s.status).toBe('stopped');
+        s = playerQueueReducer(s, { type: 'append', items: [item('c0000003', V2, 20, 30)] });
+        expect(currentItem(s)?.code).toBe('c0000003');
     });
 
     it('重新載入佇列時 playToken 一定變大', () => {
