@@ -58,6 +58,13 @@ describe('parseTimeline', () => {
         expect(parseTimeline('12:34 – Song')[0]).toMatchObject({ title: 'Song', artist: null });
     });
 
+    it('歌名本身以 - 開頭時保留，分隔符後有空白才剝掉', () => {
+        expect(parseTimeline('00:00 -ERROR-')[0]).toMatchObject({ title: '-ERROR-', artist: null });
+        expect(parseTimeline('00:00 - Opening')[0]).toMatchObject({ title: 'Opening', artist: null });
+        expect(parseTimeline('00:00 | Song')[0]).toMatchObject({ title: 'Song', artist: null });
+        expect(parseTimeline('00:00 —Song')[0]).toMatchObject({ title: '—Song', artist: null });
+    });
+
     it('支援〜區間與括號包住的時間', () => {
         expect(parseTimeline('17:00〜18:00 歌')[0]).toMatchObject({ start: 1020, end: 1080, title: '歌' });
         for (const line of ['[19:00] 歌2', '(19:00) 歌2', '【19:00】歌2']) {

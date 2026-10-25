@@ -138,7 +138,7 @@ export async function onRequestPost(context) {
     const parsed = await readJsonBody(request, MAX_BODY_BYTES);
     if (!parsed.ok) return parsed.response;
 
-    const built = buildSongVideoPayload(parsed.body);
+    const built = buildSongVideoPayload(parsed.body, { mode: 'create' });
     if (!built.ok) {
         return jsonResponse({ ok: false, error: built.error, issues: built.issues }, 400, request);
     }

@@ -59,9 +59,11 @@ export function validateSegments(rows, opts = {}) {
 /**
  * 把後台 body 驗證並組成可寫入資料庫的 payload
  * @param {any} body
+ * @param {{ mode?: 'create'|'update' }} [opts] create 模式不允許片段帶 id(新影片沒有既有片段);預設 update
  * @returns {{ ok: true, video: object, segments: object[] } | { ok: false, error: string, issues?: {index:number, code:string}[] }}
  */
-export function buildSongVideoPayload(body) {
+export function buildSongVideoPayload(body, opts = {}) {
+    const mode = opts.mode === 'create' ? 'create' : 'update';
     if (!body || typeof body !== 'object' || Array.isArray(body)) return invalid('invalid_payload');
 
     if (typeof body.video_id !== 'string' || !VIDEO_ID_RE.test(body.video_id)) return invalid('invalid_video_id');
@@ -99,7 +101,7 @@ export function buildSongVideoPayload(body) {
         const hasEnd = s.end_seconds !== null && s.end_seconds !== undefined;
         if (hasEnd && (!isInt(s.end_seconds) || s.end_seconds > INT_MAX)) return invalid('invalid_payload');
         if (typeof s.title !== 'string') return invalid('invalid_payload');
-        if (s.id != null && !isUuid(s.id)) return invalid('invalid_payload');
+        if (s.id != null && (mode === 'create' || !isUuid(s.id))) return invalid('invalid_payload');
         let artist = null;
         if (s.original_artist != null) {
             if (typeof s.original_artist !== 'string') return invalid('invalid_payload');

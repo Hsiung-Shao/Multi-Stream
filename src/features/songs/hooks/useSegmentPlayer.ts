@@ -127,7 +127,7 @@ export function playerQueueReducer(state: QueueState, action: PlayerQueueAction)
                 .filter((_, p) => p !== action.pos)
                 .map((i) => (i > removedIdx ? i - 1 : i));
             const cursor = action.pos < state.cursor ? state.cursor - 1 : state.cursor;
-            return { ...state, items, order, cursor };
+            return { ...state, items, order, cursor, wrapFrom: null };
         }
         case 'clear':
             return { ...createQueue([], { repeat: state.repeat }), shuffle: state.shuffle, playToken: state.playToken };

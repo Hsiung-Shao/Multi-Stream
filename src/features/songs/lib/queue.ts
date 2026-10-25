@@ -5,8 +5,8 @@
  * - order 是播放順序（items 索引），cursor 是 order 內的位置；未隨機時 order 為 0..n-1。
  * - playToken 每次「目前項目要從頭開始播」就 +1（換首、重播同首都算），播放器靠它偵測要重新載入／seek。
  * - 不可播處理以 videoId 為單位：同一支影片出錯，其餘片段一併跳過；next/error 都會略過 unplayable。
- * - 隨機 + 全部循環繞回時重洗 order：剛播完那首放在新 order 的尾端，所以新的第一首不會是它（除非只有一首），
- *   且在第一首按「上一首」（repeat all 繞到最後）會回到剛播完那首。
+ * - 隨機 + 全部循環繞回時整批重洗 order，新的第一首不得等於剛播完那首（除非只有一首）；
+ *   剛播完那首記在 wrapFrom，繞回後第一首按「上一首」會回到它，任何其他轉換都把 wrapFrom 清掉。
  * - setShuffle 不動 playToken：切換隨機不該讓目前這首重播。
  */
 export type RepeatMode = 'off' | 'all' | 'one';
@@ -33,6 +33,8 @@ export interface QueueState {
     allFailed: boolean;
     /** 每次「目前項目要從頭開始播」就 +1 */
     playToken: number;
+    /** 隨機循環剛繞回時，繞回前最後播的那首（items 索引）；「上一首」從 cursor 0 回到它。其餘轉換清為 null */
+    wrapFrom: number | null;
 }
 
 type Random = () => number;
@@ -61,6 +63,7 @@ export function createQueue(items: QueueItem[], opts?: { startIndex?: number; re
         unplayable: [],
         allFailed: false,
         playToken: 0,
+        wrapFrom: null,
     };
 }
 
@@ -85,8 +88,13 @@ function shuffled(values: number[], random: Random): number[] {
 }
 
 /** 開始播放 order 中第 cursor 個項目（playToken+1） */
-function playAt(state: QueueState, cursor: number, order: number[] = state.order): QueueState {
-    return { ...state, order, cursor, status: 'playing', playToken: state.playToken + 1 };
+function playAt(
+    state: QueueState,
+    cursor: number,
+    order: number[] = state.order,
+    wrapFrom: number | null = null,
+): QueueState {
+    return { ...state, order, cursor, status: 'playing', playToken: state.playToken + 1, wrapFrom };
 }
 
 /**
@@ -100,14 +108,18 @@ function advance(state: QueueState, random: Random): QueueState {
 
     if (state.repeat === 'all' && state.items.length > 0) {
         let order = state.order;
+        const lastIdx = state.order[state.cursor];
         if (state.shuffle) {
-            const lastIdx = state.order[state.cursor];
-            // 剛播完那首固定放尾端：新第一首必不是它，「上一首」也能回到它
-            order = [...shuffled(state.items.map((_, i) => i).filter((i) => i !== lastIdx), random), lastIdx];
+            order = shuffled(state.items.map((_, i) => i), random);
+            // 新第一首不得是剛播完那首：和隨機一個非 0 的位置互換
+            if (order.length > 1 && order[0] === lastIdx) {
+                const j = 1 + Math.floor(random() * (order.length - 1));
+                [order[0], order[j]] = [order[j], order[0]];
+            }
         }
         const wrapped = { ...state, order };
         for (let pos = 0; pos < order.length; pos++) {
-            if (isPlayableAt(wrapped, pos)) return playAt(state, pos, order);
+            if (isPlayableAt(wrapped, pos)) return playAt(state, pos, order, state.shuffle ? lastIdx : null);
         }
     }
 
@@ -116,6 +128,12 @@ function advance(state: QueueState, random: Random): QueueState {
 
 function previous(state: QueueState, elapsed: number): QueueState {
     if (elapsed > PREV_RESTART_SECONDS) return playAt(state, state.cursor);
+
+    // 隨機循環剛繞回：第一首按「上一首」回到繞回前最後播的那首
+    if (state.cursor === 0 && state.wrapFrom !== null) {
+        const pos = state.order.indexOf(state.wrapFrom);
+        if (pos >= 0 && isPlayableAt(state, pos)) return playAt(state, pos);
+    }
 
     for (let pos = state.cursor - 1; pos >= 0; pos--) {
         if (isPlayableAt(state, pos)) return playAt(state, pos);
@@ -131,7 +149,7 @@ function previous(state: QueueState, elapsed: number): QueueState {
 
 function setShuffle(state: QueueState, on: boolean, random: Random): QueueState {
     const n = state.items.length;
-    if (n === 0) return { ...state, shuffle: on };
+    if (n === 0) return { ...state, shuffle: on, wrapFrom: null };
 
     const currentIdx = state.order[state.cursor] ?? 0;
     if (on) {
@@ -139,9 +157,9 @@ function setShuffle(state: QueueState, on: boolean, random: Random): QueueState 
             state.items.map((_, i) => i).filter((i) => i !== currentIdx),
             random,
         );
-        return { ...state, shuffle: true, order: [currentIdx, ...rest], cursor: 0 };
+        return { ...state, shuffle: true, order: [currentIdx, ...rest], cursor: 0, wrapFrom: null };
     }
-    return { ...state, shuffle: false, order: state.items.map((_, i) => i), cursor: currentIdx };
+    return { ...state, shuffle: false, order: state.items.map((_, i) => i), cursor: currentIdx, wrapFrom: null };
 }
 
 export function queueReducer(state: QueueState, action: QueueAction): QueueState {
@@ -161,7 +179,7 @@ export function queueReducer(state: QueueState, action: QueueAction): QueueState
                 : [...state.unplayable, item.videoId];
             const marked = { ...state, unplayable };
             if (state.items.every((it) => unplayable.includes(it.videoId))) {
-                return { ...marked, status: 'stopped', allFailed: true };
+                return { ...marked, status: 'stopped', allFailed: true, wrapFrom: null };
             }
             return advance(marked, action.random ?? Math.random);
         }

@@ -4,7 +4,7 @@
  * - 純函式、零 DOM；只負責「拆行」，不判斷對錯（缺結束、重疊等交給 segmentValidation）。
  * - 每行先 NFKC 正規化（全形數字、冒號、斜線、句點轉半形），再去掉行首編號（01.、1)、#1、1、）。
  * - 去編號後行首必須是 colon 格式時間（可被 []、()、【】 包住），否則整行略過（標題行、空行）；`start-end`、`start~end`、`start〜end` 取兩端。
- * - 時間後開頭的分隔字元（空白、- – — : |）先剝掉，所以「00:00 - Opening」的標題是 Opening。
+ * - 時間後開頭的「分隔符＋空白」（- – — : |）或純空白先剝掉（-ERROR- 這類緊貼的標題保留），所以「00:00 - Opening」的標題是 Opening。
  * - 行內「看起來有時間」卻沒能解析成列（時間不在行首、區間結束時間不合法）→ 行號記入 unparsed，讓 UI 提示使用者；純文字與空行不算。
  * - 時間後的文字依「第一個」分隔符切成 歌名 / 原唱：`/`、` - `（前後要有空白，Spider-Man 不會被切）、` by `（不分大小寫）。
  * - 沒有明確結束的列，結束取下一列開始；最後一列為 null。結果維持原始順序，不排序。
@@ -23,7 +23,7 @@ export interface ParsedRow {
 const TIME = String.raw`\d{1,3}(?::\d{2}){1,2}(?!\d)`;
 const NUMBERING_RE = /^\s*(?:#\d+|\d+[.)、])\s*/;
 const TIME_RE = new RegExp(`^[\\[(【]?\\s*(${TIME})(?:\\s*[-~–—〜]\\s*(${TIME}))?\\s*[\\])】]?`);
-const LEADING_SEPARATORS_RE = /^[\s\-–—:|｜]+/;
+const LEADING_SEPARATORS_RE = /^\s*(?:[-–—:|｜]\s+|\s+)/;
 /** 行內任何看起來像時間的字樣（用來判斷「這行應該是歌卻沒解析成功」） */
 const TIME_LIKE_RE = /\d{1,2}:\d{2}/;
 const SEPARATOR_RE = /\/|\s-\s|\sby\s/i;

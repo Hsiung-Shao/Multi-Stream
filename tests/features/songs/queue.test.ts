@@ -235,6 +235,27 @@ describe('queueReducer 隨機循環重洗（review 修正）', () => {
         }
     });
 
+    it('隨機全部循環多輪不會把同一首固定在尾端', () => {
+        for (let seed = 1; seed <= 10; seed++) {
+            const random = seeded(seed);
+            let s: QueueState = queueReducer(createQueue(mk(4), { repeat: 'all' }), { type: 'setShuffle', on: true, random });
+            const lastOfRound: number[] = [];
+            for (let round = 0; round < 6; round++) {
+                lastOfRound.push(s.order[3]);
+                for (let i = 0; i < 4; i++) {
+                    const before = s;
+                    s = queueReducer(s, { type: 'ended', random });
+                    if (i === 3) {
+                        // 繞回：新第一首不得等於剛播完那首
+                        expect(s.cursor).toBe(0);
+                        expect(s.order[0], `seed ${seed} round ${round}`).not.toBe(before.order[before.cursor]);
+                    }
+                }
+            }
+            expect(new Set(lastOfRound).size, `seed ${seed}: ${lastOfRound}`).toBeGreaterThan(1);
+        }
+    });
+
     it('error 繞回重洗時使用注入的 random（同一 seed 結果相同）', () => {
         const run = (seed: number) => {
             let s: QueueState = queueReducer(createQueue(mk(6), { repeat: 'all' }), {

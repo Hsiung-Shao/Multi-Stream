@@ -169,6 +169,10 @@ declare
     v_seg jsonb;
 begin
     if p_id is null then
+        -- 新影片不可能有既有片段；帶 id 的片段若放行會在下面的新增迴圈被略過而遺失
+        if exists (select 1 from jsonb_array_elements(p_segments) e where e->>'id' is not null) then
+            raise exception 'unknown_segment_id' using errcode = 'P0001';
+        end if;
         insert into public.song_videos (video_id, title, vtuber_id, streamed_at, duration_seconds, status)
         values (p_video->>'video_id', p_video->>'title', (p_video->>'vtuber_id')::uuid,
                 (p_video->>'streamed_at')::timestamptz, (p_video->>'duration_seconds')::integer, p_video->>'status')

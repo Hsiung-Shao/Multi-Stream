@@ -182,6 +182,25 @@ describe('POST 重複與錯誤對應', () => {
     });
 });
 
+describe('建立時片段不得帶 id', () => {
+    const withId = () => body([{ id: SEG_ID, start_seconds: 0, end_seconds: 10, title: 'A' }]);
+
+    it('POST 片段帶合法 uuid id → 400 invalid_payload，且不發請求', async () => {
+        const res = await songsPost({ request: req(withId()), env: ENV() });
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toBe('invalid_payload');
+        expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("buildSongVideoPayload mode 'create' 帶 id 拒絕，預設 update 保留 id", () => {
+        const created = buildSongVideoPayload(withId(), { mode: 'create' });
+        expect(created).toMatchObject({ ok: false, error: 'invalid_payload' });
+        const updated = buildSongVideoPayload(withId());
+        expect(updated.ok).toBe(true);
+        expect(updated.segments[0].id).toBe(SEG_ID);
+    });
+});
+
 describe('buildSongVideoPayload（UUID 與長度，review 修正）', () => {
     const seg = (extra: Record<string, unknown> = {}) => ({ start_seconds: 0, end_seconds: 10, title: 'A', ...extra });
 
