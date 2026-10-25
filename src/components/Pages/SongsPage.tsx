@@ -115,8 +115,9 @@ function PlayerPanel({ player, catalog }: { player: SegmentPlayer; catalog: Song
         <section aria-labelledby="songs-player-h" className="min-w-0">
             <h2 id="songs-player-h" className="sr-only">{t('player.label')}</h2>
             {/* 16:9 播放器：桌機寬至少 480、任何寬度高至少 200（YouTube 嵌入政策 200×200，窄手機高度會大於 16:9）；
+                最小值多 2px 是扣掉上下／左右 1px 邊框（border-box），量的是裡面的 iframe。
                 容器內只有播放器本身，任何提示都放在下方，不覆蓋播放器 */}
-            <div className="relative aspect-video min-h-[200px] w-full overflow-hidden rounded-2xl border border-border bg-black md:min-w-[480px]">
+            <div className="relative aspect-video min-h-[202px] w-full overflow-hidden rounded-2xl border border-border bg-black md:min-w-[482px]">
                 <div ref={player.containerRef} className="absolute inset-0" data-testid="songs-player" />
             </div>
             {!hasQueue && player.playerStatus !== 'error' && (
