@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore, type PageType } from './store/useUIStore';
@@ -20,6 +20,7 @@ import { RETURN_PAGE_KEY } from './hooks/useTwitchAuth';
 import { initGA, logPageView, logEvent } from './utils/analytics';
 import { parseShare } from './utils/shareLink';
 import { applyShareLink } from './utils/applyShareLink';
+import { parseSongShare, SONG_SHARE_PARAM } from './features/songs/lib/songShareLink';
 import { userSegmentationManager } from './utils/userSegmentation';
 import { useCanvasRetention } from './hooks/useCanvasRetention';
 import { useAppliedTheme } from './hooks/useAppliedTheme';
@@ -51,6 +52,7 @@ const SchedulePage = lazyWithPreload(() => import('./components/Pages/SchedulePa
 const SchedulePersonPage = lazyWithPreload(() => import('./components/Pages/SchedulePersonPage').then(module => ({ 'default': module.SchedulePersonPage })));
 const ScheduleSubmitPage = lazyWithPreload(() => import('./components/Pages/ScheduleSubmitPage').then(module => ({ 'default': module.ScheduleSubmitPage })));
 const StatusPage = lazyWithPreload(() => import('./components/Pages/StatusPage').then(module => ({ 'default': module.StatusPage })));
+const SongsPage = lazyWithPreload(() => import('./components/Pages/SongsPage').then(module => ({ 'default': module.SongsPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
 const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
@@ -70,6 +72,7 @@ const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> =
   schedule: SchedulePage,
   scheduleSubmit: ScheduleSubmitPage,
   status: StatusPage,
+  songs: SongsPage,
   canvas: CanvasPage,
   instructions: InstructionsPage,
   faq: FAQPage,
@@ -108,6 +111,16 @@ const INITIAL_SHARE = (() => {
   return path === PAGE_PATHS.canvas ? parseShare(window.location.search) : null;
 })();
 
+// 歌單分享連結：同樣在模組載入時快照 ?list=（只在 /songs 生效），App mount 後立刻換回乾淨的 /songs
+const INITIAL_SONG_SHARE = (() => {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path !== PAGE_PATHS.songs) return null;
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has(SONG_SHARE_PARAM)) return null;
+  return parseSongShare(params.get(SONG_SHARE_PARAM));
+})();
+
 export default function App() {
   const isMobile = useIsMobile();
   const { t, i18n } = useTranslation();
@@ -130,6 +143,10 @@ export default function App() {
   };
   const handleDiscardSession = () => setPendingRestore(null);
 
+  // 歌單分享連結的 code：SongsPage 等目錄載入後解析成佇列，處理完呼叫 onShareConsumed 清掉（切頁回來不重複載入）
+  const [songShareCodes, setSongShareCodes] = useState<string[] | null>(INITIAL_SONG_SHARE);
+  const handleSongShareConsumed = useCallback(() => setSongShareCodes(null), []);
+
   // 初始化 GA4
   useEffect(() => {
     // initGA 為 async(需動態載入 gtag.js):必須等初始化完成(進 live/mock)
@@ -138,6 +155,11 @@ export default function App() {
       userSegmentationManager.init();
       logPageView();
     });
+
+    if (INITIAL_SONG_SHARE) {
+      // 已快照進 state；URL 換回乾淨的 /songs（reload 不會重載、canonical 不帶 query）
+      window.history.replaceState(null, '', PAGE_PATHS.songs);
+    }
 
     if (INITIAL_SHARE) {
       // 可分享連結（/canvas?streams=…）優先於短暫播放回復：分享連結是明確意圖，session 回復只是猜測。
@@ -205,7 +227,7 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'status', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'status', 'songs', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
     || isGuidePage(currentPage) || isSchedulePersonPage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
@@ -228,7 +250,7 @@ export default function App() {
   const inLanguage = toHtmlLang(i18n.language);
   // 靜態頁共用：頁面節點（WebPage 子型別）+ 首頁 › 本頁 麵包屑
   const staticPageJsonLd = (
-    page: 'about' | 'privacy' | 'support' | 'status',
+    page: 'about' | 'privacy' | 'support' | 'status' | 'songs',
     type: WebPageType,
     crumbName: string,
     extra?: Record<string, unknown>,
@@ -372,6 +394,20 @@ export default function App() {
             />
             <ChunkSuspense chunk={StatusPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <StatusPage />
+            </ChunkSuspense>
+          </>
+        );
+      case 'songs':
+        return (
+          <>
+            <SEO
+              title={tx('seo:songs.title')}
+              description={tx('seo:songs.description')}
+              url={`${SEO_SITE_URL}${PAGE_PATHS.songs}`}
+              jsonLd={staticPageJsonLd('songs', 'CollectionPage', tx('songs:title'))}
+            />
+            <ChunkSuspense chunk={SongsPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <SongsPage shareCodes={songShareCodes} onShareConsumed={handleSongShareConsumed} />
             </ChunkSuspense>
           </>
         );

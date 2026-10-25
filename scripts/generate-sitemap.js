@@ -31,6 +31,7 @@ const ROUTE_SOURCES = {
   '/compare': ['src/components/Pages/ComparisonPage.tsx', 'src/i18n/locales/zh-TW/compare.ts'],
   '/schedule': ['src/components/Pages/SchedulePage.tsx', 'src/i18n/locales/zh-TW/schedule.ts'],
   '/status': ['src/components/Pages/StatusPage.tsx', 'src/i18n/locales/zh-TW/status.ts'],
+  '/songs': ['src/components/Pages/SongsPage.tsx', 'src/i18n/locales/zh-TW/songs.ts'],
   // 教學文章（slug 清單解析自 src/config/guides.ts；tests/functions/sitemap.test.ts 鎖覆蓋率）
   ...Object.fromEntries(
     GUIDE_SLUGS.map((s) => [
@@ -67,6 +68,7 @@ const urls = [
   { url: '/compare', changefreq: 'monthly', priority: 0.7 },
   { url: '/schedule', changefreq: 'hourly', priority: 0.8 },
   { url: '/status', changefreq: 'daily', priority: 0.4 },
+  { url: '/songs', changefreq: 'weekly', priority: 0.6 },
   ...GUIDE_SLUGS.map((s) => ({
     url: `/instructions/${s}`, changefreq: 'monthly', priority: 0.6,
   })),

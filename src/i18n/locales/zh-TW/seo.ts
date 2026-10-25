@@ -48,4 +48,6 @@ export default {
     'scheduleSubmit.description': '推薦還沒在週表上的 VTuber：貼上 YouTube 頻道網址，自動帶入名稱與頭像，審核通過後加進台灣 VTuber 開台週表。',
     'status.title': '服務狀態與已知問題 - MultiStream Hub',
     'status.description': 'MultiStream Hub、Twitch 與 YouTube 目前是否正常？查看即時服務狀態、站方正在處理的已知問題、公告與最近更新。',
+    'songs.title': 'VTuber 歌回播放清單：連續播放歌回裡的每一首歌 - MultiStream Hub',
+    'songs.description': '把台灣 VTuber 歌回拆成一首一首的歌：連續播放、隨機與循環、建立自己的歌單，再用一條連結分享給朋友。',
 };

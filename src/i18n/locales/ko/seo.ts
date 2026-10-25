@@ -50,4 +50,6 @@ export default {
     'scheduleSubmit.description': '아직 일정표에 없는 VTuber를 추천하세요. YouTube 채널 링크를 붙여 넣으면 이름과 프로필 사진이 자동으로 입력되고, 검토 후 대만 VTuber 방송 일정표에 추가됩니다.',
     'status.title': '서비스 상태와 알려진 문제 - MultiStream Hub',
     'status.description': 'MultiStream Hub, Twitch, YouTube에 문제가 있나요? 실시간 서비스 상태, 처리 중인 알려진 문제, 공지와 최근 업데이트를 확인하세요.',
+    'songs.title': 'VTuber 노래 방송 플레이리스트: 노래 방송의 곡을 한 곡씩 연속 재생 - MultiStream Hub',
+    'songs.description': '대만 VTuber 노래 방송을 한 곡씩 나눠 연속 재생하세요. 셔플과 반복, 나만의 플레이리스트 만들기, 링크 하나로 공유까지 할 수 있습니다.',
 };

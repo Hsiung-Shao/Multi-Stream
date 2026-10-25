@@ -1,12 +1,14 @@
 /**
- * Admin 後台主框架:頂部 header(標題 + Tabs + 動作鈕)+ 七個分頁。
+ * Admin 後台主框架:頂部 header(標題 + Tabs + 動作鈕)+ 八個分頁。
  *
  * 分頁:總覽(統計儀表板)/ 回饋(列表+篩選)/ 評分(rating/NPS 分布)/ 公告(CRUD+預覽)/
- * 投稿(使用者推薦的新 VTuber 審核)/ 回報(VTuber、場次、名冊資料錯誤)/ 已知問題(公開狀態頁 /status 的條目)。
+ * 投稿(使用者推薦的新 VTuber 審核)/ 回報(VTuber、場次、名冊資料錯誤)/ 已知問題(公開狀態頁 /status 的條目)/
+ * 歌回(公開頁 /songs 的歌回影片與時間軸)。
  * 各分頁自行管理自己的資料與篩選 state;這裡只負責佈局與全域動作(重新整理/登出)。
  */
 
-import { LayoutDashboard, MessagesSquare, Star, Megaphone, LogOut, RefreshCw, UserPlus, Flag, Activity } from 'lucide-react';
+import { useState } from 'react';
+import { LayoutDashboard, MessagesSquare, Star, Megaphone, LogOut, RefreshCw, UserPlus, Flag, Activity, Music } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../components/ui/tabs';
 import { Button } from '../../../components/ui/button';
@@ -17,11 +19,14 @@ import { AnnouncementsTab } from './AnnouncementsTab';
 import { ContributionsTab } from './ContributionsTab';
 import { ReportsTab } from './ReportsTab';
 import { KnownIssuesTab } from './KnownIssuesTab';
+import { AdminSongsTab } from './AdminSongsTab';
 import { useRefetchOnAdminTokenChange } from '../hooks/useAdminSubmissions';
 
 export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const queryClient = useQueryClient();
     useRefetchOnAdminTokenChange();
+    // 受控：歌回分頁要知道自己是否顯示中（forceMount 下 YouTube 播放器只能在顯示時掛載）
+    const [tab, setTab] = useState('overview');
 
     const handleRefresh = () => {
         queryClient.invalidateQueries();
@@ -29,7 +34,7 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Tabs defaultValue="overview" className="gap-0">
+            <Tabs value={tab} onValueChange={setTab} className="gap-0">
                 {/* Header */}
                 <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-xl">
                     <div className="max-w-6xl mx-auto px-4 sm:px-5 h-14 flex items-center gap-3">
@@ -64,6 +69,10 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             <TabsTrigger value="issues" className="px-2.5 text-[13px]">
                                 <Activity className="size-3.5" />
                                 <span className="hidden sm:inline">已知問題</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="songs" className="px-2.5 text-[13px]">
+                                <Music className="size-3.5" />
+                                <span className="hidden sm:inline">歌回</span>
                             </TabsTrigger>
                         </TabsList>
                         <div className="ml-auto flex items-center gap-1">
@@ -112,6 +121,9 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </TabsContent>
                     <TabsContent value="issues" forceMount className="data-[state=inactive]:hidden">
                         <KnownIssuesTab />
+                    </TabsContent>
+                    <TabsContent value="songs" forceMount className="data-[state=inactive]:hidden">
+                        <AdminSongsTab active={tab === 'songs'} />
                     </TabsContent>
                 </main>
             </Tabs>
