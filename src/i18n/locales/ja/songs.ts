@@ -83,4 +83,10 @@ export default {
     'catalog.showMore': 'もっと見る',
     'about.title': '歌枠プレイリストについて',
     'about.body': '動画はすべて YouTube 公式の埋め込みプレーヤーで再生され、再生回数と広告収益は元のチャンネルに入ります。歌枠のタイムスタンプはサイト側で整理しており、新しく公開した歌枠は約 10 分以内に曲リストに表示されます。埋め込み再生できない動画は自動でスキップされます。',
+    'catalog.plays': '再生 {{count}} 回',
+    'catalog.playsUnit': ' 回再生',
+    'catalog.totalPlays': '合計 {{count}} 回再生',
+    'catalog.sort.label': '並び替え',
+    'catalog.sort.latest': '新しい順',
+    'catalog.sort.popular': '人気順',
 };

@@ -11,6 +11,8 @@
  * - onError 100/101/150/2/5：顯示「即將跳過」，1.5 秒後 dispatch error（整支影片標為不可播）。
  *   期間使用者自己換首就作廢，不能把新的那首誤標。
  * - 上一首帶 elapsed = currentTime - start（播超過 3 秒回本首開頭，交給 reducer 判斷）。
+ * - 播放計次（v1.1）：同一個輪詢裡以 accumulate 累計本首（code＋playToken）實際播放秒數，
+ *   首次達 playThreshold 呼叫一次 onPlayCredited；換首或重播（playToken 變）歸零。暫停不累計（輪詢只在 PLAYING 時跑）。
  * - 卸載：停輪詢、清計時器、下一個 tick 才 destroy（同 StreamIframe 的 safeDestroy，避開 React render 期衝突）。
  *
  * 只在瀏覽器 effect 內碰 window / YT：預渲染（SSR）時這個 hook 只回傳初始狀態。
@@ -19,6 +21,7 @@ import { useCallback, useEffect, useReducer, useRef, useState, type RefObject } 
 import { apiLoader } from '../../../utils/apiLoader';
 import { createQueue, currentItem, queueReducer, type QueueAction, type QueueItem, type QueueState, type RepeatMode } from '../lib/queue';
 import { planLoad, shouldAdvance, END_EPSILON } from '../lib/advance';
+import { accumulate, playThreshold } from '../lib/playCredit';
 
 // ---------- YouTube IFrame API 最小型別（只宣告用到的部分） ----------
 
@@ -169,7 +172,12 @@ export interface SegmentPlayer {
     setShuffle(on: boolean): void;
 }
 
-export function useSegmentPlayer(): SegmentPlayer {
+export interface UseSegmentPlayerOptions {
+    /** 本首聽滿門檻（playThreshold）時呼叫一次，用來回報播放次數 */
+    onPlayCredited?: (code: string) => void;
+}
+
+export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer {
     const containerRef = useRef<HTMLDivElement>(null);
     const playerRef = useRef<YTPlayerLike | null>(null);
     const [queue, dispatch] = useReducer(playerQueueReducer, undefined, () => createQueue([]));
@@ -180,6 +188,14 @@ export function useSegmentPlayer(): SegmentPlayer {
 
     // 事件 callback 與輪詢讀的是 ref（YT 事件 closure 只建立一次）
     const queueRef = useRef(queue);
+    const onCreditRef = useRef(opts?.onPlayCredited);
+    useEffect(() => {
+        onCreditRef.current = opts?.onPlayCredited;
+    }, [opts?.onPlayCredited]);
+    /** 播放計次：目前累計的是哪一首（code:playToken）、聽了幾秒、是否已計過、上一次輪詢的時間 */
+    const creditRef = useRef<{ key: string; listened: number; credited: boolean; lastTickAt: number | null }>({
+        key: '', listened: 0, credited: false, lastTickAt: null,
+    });
     /** 播放器上目前載入的項目（planLoad 用） */
     const loadedItemRef = useRef<QueueItem | null>(null);
     /** 已送進播放器的 playToken：同一個 token 只載入一次 */
@@ -233,6 +249,22 @@ export function useSegmentPlayer(): SegmentPlayer {
             return;
         }
         if (!Number.isFinite(t)) return;
+
+        const credit = creditRef.current;
+        const key = `${item.code}:${state.playToken}`;
+        const nowMs = Date.now();
+        if (credit.key !== key) {
+            creditRef.current = { key, listened: 0, credited: false, lastTickAt: nowMs };
+        } else {
+            const delta = credit.lastTickAt === null ? 0 : nowMs - credit.lastTickAt;
+            credit.listened = accumulate(credit.listened, delta, true);
+            credit.lastTickAt = nowMs;
+            if (!credit.credited && credit.listened >= playThreshold(item.start, item.end)) {
+                credit.credited = true;
+                onCreditRef.current?.(item.code);
+            }
+        }
+
         if (!armedRef.current) {
             if (t < item.end - END_EPSILON) armedRef.current = true;
             return;
@@ -281,6 +313,8 @@ export function useSegmentPlayer(): SegmentPlayer {
                             setYtState(e.data);
                             if (e.data === YT_STATE.PLAYING) {
                                 setNeedsGesture(false);
+                                // 暫停／緩衝的空檔不算聆聽時間：從這次開始播放重新計時
+                                creditRef.current.lastTickAt = Date.now();
                                 if (!pollRef.current) pollRef.current = setInterval(tick, POLL_INTERVAL_MS);
                             } else {
                                 stopPolling();

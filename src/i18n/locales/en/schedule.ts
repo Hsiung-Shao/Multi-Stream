@@ -307,4 +307,11 @@ export default {
     'scheduleEntries.success': 'Schedule received. It will show up after review. Thank you!',
     'scheduleEntries.pendingExists': 'A schedule for this VTuber is already waiting for review. Please try again later',
     'scheduleEntries.loadFailed': 'Couldn\'t load the schedule form. Please refresh the page and try again',
+    'songsBadge': 'Songs',
+    'songsBadgeTitle': 'This karaoke stream has timestamps for {{count}} songs. Open to play them back to back',
+    'person.songs.title': 'Karaoke streams',
+    'person.songs.count': 'Songs: {{count}}',
+    'person.songs.plays': 'Plays: {{count}}',
+    'person.songs.playAll': 'Play all',
+    'person.songs.showSongs': 'Show songs',
 };

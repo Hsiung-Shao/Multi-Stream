@@ -24,6 +24,8 @@ import { DayTimeline } from './DayTimeline';
 import { SelectionBar } from './SelectionBar';
 import { DEFAULT_FILTERS, streamKey, type ScheduleFilterState, type ScheduleSnapshot } from './types';
 import { setContributePrefill } from '../contribute/prefill';
+import { useSongCatalog } from '../songs/songsSource';
+import { buildVideoIndex } from '../songs/lib/catalogIndex';
 
 const FILTERS_STORAGE_KEY = 'schedule-filters-v1';
 /** 直播中預設先顯示幾位（約兩列），其餘收合 */
@@ -97,6 +99,9 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     }, [snapshot.generated_at]);
 
     const groups = useMemo(() => listGroups(snapshot), [snapshot]);
+    // 歌回目錄：這個元件只在 snapshot 到了之後才掛上，所以目錄不會跟週表首屏搶頻寬（edge 快取 10 分鐘）
+    const songCatalog = useSongCatalog();
+    const songsByVideo = useMemo(() => (songCatalog.data ? buildVideoIndex(songCatalog.data.videos) : undefined), [songCatalog.data]);
     useEffect(() => {
         // 企業勢名稱不在這份 snapshot 裡（改名、刪除，或舊版 snapshot 沒有 agencies 且本週沒場次）時回到「全部」，避免整片空白。
         // 刻意不存檔：CDN 還是舊 snapshot 的過渡期被重設，換到新 snapshot 後會自動回到使用者存的公司
@@ -255,6 +260,7 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                                 onToggle={sel.toggle}
                                 onSelectMany={sel.selectMany}
                                 onDayChange={(d) => track.scheduleFilterChange('day', d)}
+                                songsByVideo={songsByVideo}
                             />
                         )}
                     </section>
@@ -268,7 +274,13 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                             </SectionHeading>
                             <ul className="grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {recentShown.map((s) => (
-                                    <RecentRow key={streamKey(s)} stream={s} channel={snapshot.channels[s.vtuber_id]} now={now} />
+                                    <RecentRow
+                                        key={streamKey(s)}
+                                        stream={s}
+                                        channel={snapshot.channels[s.vtuber_id]}
+                                        now={now}
+                                        songs={s.platform === 'youtube' ? songsByVideo?.get(s.external_id) ?? null : null}
+                                    />
                                 ))}
                             </ul>
                         </section>

@@ -307,4 +307,11 @@ export default {
     'scheduleEntries.success': '予定を受け付けました。確認後に掲載されます。ありがとうございます！',
     'scheduleEntries.pendingExists': 'この VTuber の予定はすでに確認待ちです。しばらくしてからお試しください',
     'scheduleEntries.loadFailed': '予定フォームを読み込めませんでした。ページを再読み込みしてからお試しください',
+    'songsBadge': '歌リスト',
+    'songsBadgeTitle': 'この歌枠は {{count}} 曲分のタイムスタンプがあります。開くと連続再生できます',
+    'person.songs.title': '歌枠',
+    'person.songs.count': '{{count}} 曲',
+    'person.songs.plays': '再生 {{count}} 回',
+    'person.songs.playAll': 'すべて再生',
+    'person.songs.showSongs': '曲を表示',
 };

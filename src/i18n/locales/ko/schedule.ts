@@ -307,4 +307,11 @@ export default {
     'scheduleEntries.success': '일정을 받았습니다. 검토 후 표시됩니다. 감사합니다!',
     'scheduleEntries.pendingExists': '이 VTuber의 일정이 이미 검토 대기 중입니다. 잠시 후 다시 시도해 주세요',
     'scheduleEntries.loadFailed': '일정 양식을 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요',
+    'songsBadge': '곡 목록',
+    'songsBadgeTitle': '이 노래 방송에는 {{count}}곡의 타임스탬프가 있습니다. 열면 연속 재생됩니다',
+    'person.songs.title': '노래 방송',
+    'person.songs.count': '{{count}}곡',
+    'person.songs.plays': '재생 {{count}}회',
+    'person.songs.playAll': '전체 재생',
+    'person.songs.showSongs': '곡 보기',
 };

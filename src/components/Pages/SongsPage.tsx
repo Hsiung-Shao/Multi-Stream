@@ -7,7 +7,7 @@
 // - 分享連結 ?list=code.code… 由 App 在啟動時快照、清掉 query 後以 shareCodes 傳進來；目錄到了才解析成佇列。
 // - SEO（WebPage + Breadcrumb）由 App.tsx 統一處理；預渲染只輸出殼層（SSR 的 QueryClient 不抓資料），殼層要有 h1 與各區標題。
 
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -38,11 +38,49 @@ import { serializeSongShare, SONG_SHARE_MAX, SONG_SHARE_PARAM } from '../../feat
 import { formatTimecode } from '../../features/songs/lib/timecode';
 import type { RepeatMode } from '../../features/songs/lib/queue';
 import { PAGE_PATHS } from '../../config/routes';
+import { createPlayReporter } from '../../features/songs/playReporter';
 
 /** 目錄一次先顯示幾支歌回（其餘按「顯示更多」），避免上千首歌一次渲染 */
 const CATALOG_PAGE_SIZE = 20;
 const EMPTY_PLAYLISTS: Playlist[] = [];
 const REPEAT_NEXT: Record<RepeatMode, RepeatMode> = { off: 'all', all: 'one', one: 'off' };
+const PLAYS_ENDPOINT = '/api/songs/plays';
+/** 播放次數批次回報間隔（另在 pagehide 時送出） */
+const PLAYS_FLUSH_MS = 60_000;
+
+type CatalogSort = 'latest' | 'popular';
+const CATALOG_SORTS: CatalogSort[] = ['latest', 'popular'];
+
+export const videoPlays = (video: SongVideo): number => video.segments.reduce((sum, s) => sum + s.plays, 0);
+
+/** 目錄排序：latest 維持伺服器順序（開台時間新到舊）；popular 依整支歌回總播放次數多到少（同分維持原順序） */
+export function sortCatalog(videos: SongVideo[], sort: CatalogSort): SongVideo[] {
+    if (sort === 'latest') return videos;
+    return videos
+        .map((video, i) => ({ video, i, plays: videoPlays(video) }))
+        .sort((a, b) => b.plays - a.plays || a.i - b.i)
+        .map((x) => x.video);
+}
+
+/** 送出播放次數：優先 sendBeacon（關頁也送得出去），不支援或被拒時退回 fetch keepalive */
+function sendPlays(codes: string[]): void {
+    const body = JSON.stringify({ codes });
+    try {
+        if (typeof navigator.sendBeacon === 'function' && navigator.sendBeacon(PLAYS_ENDPOINT, new Blob([body], { type: 'application/json' }))) return;
+    } catch { /* 改走 fetch */ }
+    void fetch(PLAYS_ENDPOINT, { method: 'POST', body, keepalive: true, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } })
+        .catch(() => { /* 計次失敗不影響播放 */ });
+}
+
+/** localStorage 包一層：隱私模式或配額滿時不丟例外 */
+const safeStorage: Pick<Storage, 'getItem' | 'setItem'> = {
+    getItem: (key) => {
+        try { return window.localStorage.getItem(key); } catch { return null; }
+    },
+    setItem: (key, value) => {
+        try { window.localStorage.setItem(key, value); } catch { /* 放棄持久化 */ }
+    },
+};
 
 interface SongsPageProps {
     /** 分享連結帶進來的歌曲 code（App 啟動時快照）；null = 沒有分享連結 */
@@ -504,6 +542,7 @@ const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong
 }) {
     const { t } = useTranslation('songs');
     const date = video.streamedAt ? new Date(video.streamedAt) : null;
+    const totalPlays = videoPlays(video);
     return (
         <li className="rounded-2xl border border-border bg-card/50 p-3 sm:p-4">
             <div className="flex items-start gap-3">
@@ -520,6 +559,7 @@ const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong
                             .join(' · ')}
                         {' · '}
                         {t('catalog.songCount', { count: video.segments.length })}
+                        {totalPlays > 0 && <>{' · '}{t('catalog.totalPlays', { count: totalPlays.toLocaleString(locale) })}</>}
                     </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
@@ -547,6 +587,13 @@ const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong
                             <span className="block truncate text-sm">{seg.title}</span>
                             {seg.artist && <span className="block truncate text-[12px] text-muted-foreground">{seg.artist}</span>}
                         </span>
+                        {/* 固定寬度欄：0 次留白，版面不因有無次數而跳動 */}
+                        <span
+                            className="w-12 shrink-0 text-right text-[11.5px] tabular-nums text-muted-foreground"
+                            title={seg.plays > 0 ? t('catalog.plays', { count: seg.plays.toLocaleString(locale) }) : undefined}
+                        >
+                            {seg.plays > 0 ? <><span aria-hidden="true">▶ </span>{seg.plays.toLocaleString(locale)}<span className="sr-only left-0 top-0">{t('catalog.playsUnit')}</span></> : null}
+                        </span>
                         <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => onPlaySong(video, seg)} aria-label={`${t('catalog.play')}：${seg.title}`} title={t('catalog.play')}>
                             <Play className="size-3.5" aria-hidden="true" />
                         </Button>
@@ -569,7 +616,24 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const mounted = useMounted();
     const catalogQuery = useSongCatalog();
     const catalog = catalogQuery.data;
-    const player = useSegmentPlayer();
+    // 播放次數：聽滿門檻 → reporter.record（30 分鐘內同首不重複）→ 每 60 秒與關頁時批次送出。
+    // reporter 在 mount 後才建立（render 本體不碰 window／localStorage，預渲染安全）
+    const reporterRef = useRef<ReturnType<typeof createPlayReporter> | null>(null);
+    useEffect(() => {
+        const reporter = createPlayReporter({ send: sendPlays, now: () => Date.now(), storage: safeStorage });
+        reporterRef.current = reporter;
+        const flush = () => reporter.flush();
+        const timer = setInterval(flush, PLAYS_FLUSH_MS);
+        window.addEventListener('pagehide', flush);
+        return () => {
+            clearInterval(timer);
+            window.removeEventListener('pagehide', flush);
+            flush();
+            reporterRef.current = null;
+        };
+    }, []);
+    const handlePlayCredited = useCallback((code: string) => reporterRef.current?.record(code), []);
+    const player = useSegmentPlayer({ onPlayCredited: handlePlayCredited });
     const storePlaylists = usePlaylistStore((s) => s.playlists);
     const createPlaylist = usePlaylistStore((s) => s.createPlaylist);
     // 歌單在 localStorage：預渲染與 hydration 首輪一律當空，mount 後才顯示
@@ -580,8 +644,12 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const [visible, setVisible] = useState(CATALOG_PAGE_SIZE);
     const [tab, setTab] = useState('queue');
     const [shareNotice, setShareNotice] = useState<ShareNotice | null>(null);
+    const [sort, setSort] = useState<CatalogSort>('latest');
 
-    const filtered = useMemo(() => (catalog ? filterCatalog(catalog.videos, deferredQuery) : []), [catalog, deferredQuery]);
+    const filtered = useMemo(
+        () => (catalog ? sortCatalog(filterCatalog(catalog.videos, deferredQuery), sort) : []),
+        [catalog, deferredQuery, sort],
+    );
     useEffect(() => setVisible(CATALOG_PAGE_SIZE), [deferredQuery]);
 
     const { load, append } = player;
@@ -700,6 +768,21 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 <section aria-labelledby="songs-catalog-h" className="mt-10 sm:mt-12">
                     <div className="mb-4 flex flex-wrap items-center gap-3">
                         <h2 id="songs-catalog-h" className={h2}>{t('catalog.title')}</h2>
+                        <div role="group" aria-label={t('catalog.sort.label')} className="inline-flex rounded-lg border border-border p-0.5">
+                            {CATALOG_SORTS.map((key) => (
+                                <Button
+                                    key={key}
+                                    type="button"
+                                    size="sm"
+                                    variant={sort === key ? 'secondary' : 'ghost'}
+                                    className="h-8 px-3"
+                                    aria-pressed={sort === key}
+                                    onClick={() => setSort(key)}
+                                >
+                                    {t(`catalog.sort.${key}`)}
+                                </Button>
+                            ))}
+                        </div>
                         <div className="relative w-full sm:ml-auto sm:w-80">
                             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                             <Input

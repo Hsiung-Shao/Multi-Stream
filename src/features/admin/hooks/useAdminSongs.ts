@@ -205,3 +205,36 @@ export function useVtuberNames(ids: string[]) {
         retry: 1,
     });
 }
+
+// ---------- 週表場次帶入（新增歌回時，用影片 ID 找週表裡的同一場，補 VTuber／標題／開台時間） ----------
+
+export interface StreamPrefill {
+    title: string | null;
+    vtuberId: string | null;
+    streamedAt: string | null;
+}
+
+interface StreamRow {
+    vtuber_id: string | null;
+    title: string | null;
+    actual_start: string | null;
+    scheduled_start: string | null;
+}
+
+/** 週表 streams 公開可讀；找不到回 null。開台時間取實際開台，沒有就用預定時間 */
+export async function fetchStreamByVideoId(videoId: string, signal?: AbortSignal): Promise<StreamPrefill | null> {
+    if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return null;
+    const cfg = await resolveRestConfig({ signal });
+    const rows = await restGet<StreamRow[]>(
+        cfg,
+        `streams?select=vtuber_id,title,actual_start,scheduled_start&platform=eq.youtube&external_id=eq.${encodeURIComponent(videoId)}&limit=1`,
+        { signal },
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+        title: row.title || null,
+        vtuberId: row.vtuber_id || null,
+        streamedAt: row.actual_start ?? row.scheduled_start ?? null,
+    };
+}

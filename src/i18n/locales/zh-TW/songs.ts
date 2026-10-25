@@ -83,4 +83,10 @@ export default {
     'catalog.showMore': '顯示更多',
     'about.title': '關於歌回播放清單',
     'about.body': '影片一律由 YouTube 官方嵌入播放器播放，觀看次數與廣告收益都歸原頻道。歌回的時間軸由站方整理，新發布的歌回最晚約 10 分鐘後出現在目錄；無法嵌入播放的影片會自動跳過。',
+    'catalog.plays': '{{count}} 次播放',
+    'catalog.playsUnit': ' 次播放',
+    'catalog.totalPlays': '共 {{count}} 次播放',
+    'catalog.sort.label': '排序',
+    'catalog.sort.latest': '最新',
+    'catalog.sort.popular': '最多人聽',
 };

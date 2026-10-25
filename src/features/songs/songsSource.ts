@@ -1,7 +1,8 @@
 /**
  * 歌曲目錄來源：GET /api/songs/catalog（edge 快取 10 分鐘）→ 前端型別。
  *
- * - 回應是 RPC get_song_catalog 的短 key 結構：[{ v, t, d, vt:{i,n,img}|null, s:[[code,start,end,title,artist|null]] }]。
+ * - 回應是 RPC get_song_catalog 的短 key 結構：[{ v, t, d, vt:{i,n,img}|null, s:[[code,start,end,title,artist|null,plays]] }]。
+ *   plays（v1.1 第 6 欄）缺欄或不是非負數一律當 0，舊快取格式也能讀。
  * - 轉換時逐筆防呆：格式不對的影片或片段直接丟棄，不讓一筆壞資料拖垮整個目錄。
  * - client fetch 一律 15 秒逾時（memory error_client_fetch_needs_timeout），並跟 TanStack Query 的取消訊號連動。
  * - SSR（entry-server）的 QueryClient 是 enabled:false，預渲染只會輸出載入中的殼層。
@@ -22,6 +23,8 @@ export interface SongSegment {
     end: number;
     title: string;
     artist: string | null;
+    /** 累計播放次數（聽滿門檻才算一次） */
+    plays: number;
 }
 
 export interface SongVideo {
@@ -63,7 +66,7 @@ function toVtuber(raw: unknown): SongVtuber | null {
 
 function toSegment(raw: unknown, videoId: string): SongSegment | null {
     if (!Array.isArray(raw)) return null;
-    const [code, start, end, title, artist] = raw as unknown[];
+    const [code, start, end, title, artist, plays] = raw as unknown[];
     if (typeof code !== 'string' || !CODE_RE.test(code)) return null;
     if (!isSec(start) || !isSec(end) || end <= start) return null;
     if (typeof title !== 'string' || !title.trim()) return null;
@@ -74,6 +77,7 @@ function toSegment(raw: unknown, videoId: string): SongSegment | null {
         end,
         title,
         artist: typeof artist === 'string' && artist.trim() ? artist : null,
+        plays: isSec(plays) ? Math.floor(plays) : 0,
     };
 }
 

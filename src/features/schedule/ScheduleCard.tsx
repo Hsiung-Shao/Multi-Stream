@@ -10,7 +10,7 @@
 
 import { createContext, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, ExternalLink, Flag, Heart, Loader2 } from 'lucide-react';
+import { Check, ExternalLink, Flag, Heart, Loader2, Music2 } from 'lucide-react';
 import { cn } from '../../components/ui/utils';
 import { RouteLink } from '../../components/Navigation/RouteLink';
 import { schedulePersonPage } from '../../config/schedulePerson';
@@ -18,6 +18,7 @@ import { formatClock, formatRelative } from './formatTime';
 import { streamKey, type ScheduleChannel, type ScheduleStream } from './types';
 import { thumbnailUrl, watchUrl } from './streamLinks';
 import { useReportDialog } from '../report/ReportDialogProvider';
+import { serializeSongShare } from '../songs/lib/songShareLink';
 
 /** 卡片上的動作：由 ScheduleBoard／個人頁提供（useWatchOnCanvas＋useFavoriteChannel） */
 export interface ScheduleCardActions {
@@ -44,6 +45,30 @@ interface SelectableProps {
     onToggle: (stream: ScheduleStream) => void;
     /** 名字是否連到個人週表頁（個人頁本身關掉） */
     personLinks?: boolean;
+    /** 這場（YouTube）有歌回時間軸時的歌曲 code（上層用 buildVideoIndex 查出）；有值就顯示歌單徽章 */
+    songs?: { codes: string[] } | null;
+}
+
+/** 歌單徽章：連到 /songs?list=…（整頁導覽，由 App 啟動時讀分享參數載入佇列）；只給 YouTube 場次 */
+function SongsBadge({ stream, songs }: { stream: ScheduleStream; songs?: { codes: string[] } | null }) {
+    const { t } = useTranslation('schedule');
+    if (!songs || stream.platform !== 'youtube') return null;
+    const list = serializeSongShare(songs.codes);
+    if (!list) return null;
+    return (
+        <a
+            href={`/songs?list=${list}`}
+            onClick={(e) => e.stopPropagation()}
+            title={t('songsBadgeTitle', { count: songs.codes.length })}
+            className={cn(
+                'relative z-10 inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 text-[11px] font-medium text-violet-700 dark:text-violet-300',
+                'hover:bg-violet-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            )}
+        >
+            <Music2 size={11} aria-hidden="true" />
+            {t('songsBadge')}
+        </a>
+    );
 }
 
 /** stretched button：按鈕的 ::after 蓋滿整列（列本身要 relative），focus ring 畫在 ::after 上 */
@@ -372,7 +397,7 @@ function RowMain({ stream, channel, className, rounded, children }: { stream: Sc
     );
 }
 
-export function SlotRow({ stream, channel, selected, onToggle, personLinks = true }: SelectableProps) {
+export function SlotRow({ stream, channel, selected, onToggle, personLinks = true, songs }: SelectableProps) {
     const { t, i18n } = useTranslation('schedule');
     const actions = useCardActions();
     const locale = i18n.language || 'zh-TW';
@@ -427,6 +452,7 @@ export function SlotRow({ stream, channel, selected, onToggle, personLinks = tru
                     </>
                 )}
             </span>
+            <SongsBadge stream={stream} songs={songs} />
             {busy && <Loader2 size={16} className="shrink-0 animate-spin text-muted-foreground" aria-hidden="true" />}
             {actions && (
                 <span className="flex shrink-0 items-center">
@@ -440,7 +466,7 @@ export function SlotRow({ stream, channel, selected, onToggle, personLinks = tru
     );
 }
 
-export function RecentRow({ stream, channel, now, personLinks = true }: Omit<SelectableProps, 'selected' | 'onToggle'>) {
+export function RecentRow({ stream, channel, now, personLinks = true, songs }: Omit<SelectableProps, 'selected' | 'onToggle'>) {
     const { t, i18n } = useTranslation('schedule');
     const actions = useCardActions();
     const locale = i18n.language || 'zh-TW';
@@ -462,6 +488,7 @@ export function RecentRow({ stream, channel, now, personLinks = true }: Omit<Sel
                     {displayTitle(stream, t('card.untitled'))}
                 </RowMain>
             </span>
+            <SongsBadge stream={stream} songs={songs} />
             <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatRelative(stream.actual_end, now, locale)}</span>
             {actions && (
                 <span className="flex shrink-0 items-center">

@@ -307,4 +307,11 @@ export default {
     'scheduleEntries.success': '已收到周表，审核通过后会出现在周表上，谢谢！',
     'scheduleEntries.pendingExists': '这位 VTuber 已经有一份周表在等待审核，请稍后再试',
     'scheduleEntries.loadFailed': '周表表单加载失败，请刷新页面后再试',
+    'songsBadge': '歌单',
+    'songsBadgeTitle': '这场歌回有 {{count}} 首歌的时间轴，点开连续播放',
+    'person.songs.title': '歌回',
+    'person.songs.count': '{{count}} 首',
+    'person.songs.plays': '{{count}} 次播放',
+    'person.songs.playAll': '全部播放',
+    'person.songs.showSongs': '查看歌曲',
 };

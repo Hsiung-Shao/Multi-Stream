@@ -19,6 +19,8 @@ interface DayTimelineProps {
     onDayChange?: (dayKey: string) => void;
     /** 名字是否連到個人週表頁（個人頁本身關掉） */
     personLinks?: boolean;
+    /** videoId → 歌回歌曲 code（buildVideoIndex）；有時間軸的 YouTube 場次顯示歌單徽章 */
+    songsByVideo?: ReadonlyMap<string, { codes: string[] }>;
 }
 
 function dayLabel(dayKey: string, locale: string): { weekday: string; date: string } {
@@ -30,7 +32,7 @@ function dayLabel(dayKey: string, locale: string): { weekday: string; date: stri
     };
 }
 
-export function DayTimeline({ streams, channels, now, selected, onToggle, onSelectMany, onDayChange, personLinks = true }: DayTimelineProps) {
+export function DayTimeline({ streams, channels, now, selected, onToggle, onSelectMany, onDayChange, personLinks = true, songsByVideo }: DayTimelineProps) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
     const days = useMemo(() => groupByDay(streams, now), [streams, now]);
@@ -135,6 +137,7 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
                                                 selected={selected.has(streamKey(s))}
                                                 onToggle={onToggle}
                                                 personLinks={personLinks}
+                                                songs={s.platform === 'youtube' ? songsByVideo?.get(s.external_id) ?? null : null}
                                             />
                                         ))}
                                     </ul>

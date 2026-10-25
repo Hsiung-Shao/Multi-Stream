@@ -25,6 +25,7 @@ import {
 } from '../../../components/ui/alert-dialog';
 import { cn } from '../../../components/ui/utils';
 import { extractVideoId } from '../../songs/lib/youtubeUrl';
+import { mergePrefill } from '../../songs/lib/streamPrefill';
 import { formatTimecode, parseTimecode } from '../../songs/lib/timecode';
 import { parseTimelineDetailed, type ParsedRow } from '../../songs/lib/timelineParser';
 import { validateSegments } from '../../songs/lib/segmentValidation';
@@ -33,6 +34,7 @@ import { ensureYT, type YTPlayerLike } from '../../songs/hooks/useSegmentPlayer'
 import {
     SEGMENT_ISSUE_LABEL,
     SONG_STATUS_LABEL,
+    fetchStreamByVideoId,
     formatSongError,
     searchVtubers,
     segmentIssuesFromError,
@@ -319,6 +321,36 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
     }, [id, detail.data]);
 
     const videoId = extractVideoId(url);
+
+    // 新增模式貼上網址：到週表找同一場直播，只補還空著的 VTuber／標題／開台時間（不覆蓋已填的）
+    const [prefillNote, setPrefillNote] = useState<string | null>(null);
+    const latestFieldsRef = useRef({ title, vtuberId, streamedAt });
+    useEffect(() => {
+        latestFieldsRef.current = { title, vtuberId, streamedAt };
+    }, [title, vtuberId, streamedAt]);
+    useEffect(() => {
+        setPrefillNote(null);
+        if (id || !videoId) return;
+        const ctrl = new AbortController();
+        fetchStreamByVideoId(videoId, ctrl.signal)
+            .then((found) => {
+                if (ctrl.signal.aborted || !found) return;
+                const cur = latestFieldsRef.current;
+                const current = { title: cur.title, vtuberId: cur.vtuberId, streamedAt: cur.streamedAt || null };
+                const merged = mergePrefill(current, found);
+                const filled: string[] = [];
+                if (merged.title !== current.title) { setTitle(merged.title); filled.push('標題'); }
+                if (merged.vtuberId !== current.vtuberId) { setVtuberId(merged.vtuberId); filled.push('VTuber'); }
+                if (merged.streamedAt !== current.streamedAt && merged.streamedAt) {
+                    setStreamedAt(toLocalInput(merged.streamedAt));
+                    filled.push('開台時間');
+                }
+                if (filled.length > 0) setPrefillNote(`已從週表帶入：${filled.join('、')}（請確認）`);
+            })
+            .catch(() => { /* 找不到或查詢失敗：手動填即可 */ });
+        return () => ctrl.abort();
+    }, [id, videoId]);
+
     const duration = durationText.trim() ? parseTimecode(durationText) : null;
     const durationInvalid = durationText.trim() !== '' && (duration === null || duration <= 0);
     const rowIssues = useMemo(() => computeRowIssues(rows, durationInvalid ? null : duration), [rows, duration, durationInvalid]);
@@ -448,6 +480,7 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
                     />
                     {url.trim() !== '' && !videoId && <p className="text-[12px] text-destructive">看不出影片 ID，支援 watch、youtu.be、live、shorts 網址</p>}
                     {id && <p className="text-[12px] text-muted-foreground">已建立的歌回不能改影片；要換影片請刪除後重建。</p>}
+                    {prefillNote && <p role="status" className="text-[12px] text-emerald-500">{prefillNote}</p>}
                     {videoId && playerEnabled ? (
                         <PreviewPlayer
                             key={videoId}

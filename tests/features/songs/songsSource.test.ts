@@ -32,7 +32,7 @@ describe('parseSongCatalog', () => {
             streamedAt: '2026-10-01T12:00:00Z',
             vtuber: { id: 'vt-1', name: '測試 VTuber', img: 'https://example.com/a.png' },
         });
-        expect(videos[0].segments[0]).toEqual({ code: 'abcd1234', videoId: 'aaaaaaaaaaa', start: 10, end: 200, title: '第一首', artist: '原唱 A' });
+        expect(videos[0].segments[0]).toEqual({ code: 'abcd1234', videoId: 'aaaaaaaaaaa', start: 10, end: 200, title: '第一首', artist: '原唱 A', plays: 0 });
         expect(videos[1].vtuber).toBeNull();
         expect(videos[1].segments[0].artist).toBeNull();
     });
@@ -115,5 +115,17 @@ describe('fetchSongCatalog', () => {
         outer.abort();
         await expect(pending).rejects.toThrow('aborted');
         expect(seenSignal?.aborted).toBe(true);
+    });
+});
+
+describe('parseSongCatalog 播放次數（v1.1）', () => {
+    it('目錄舊格式缺播放次數視為 0，有第 6 欄就帶入', () => {
+        const [video] = parseSongCatalog([
+            {
+                v: 'ddddddddddd', t: '播放次數', vt: null,
+                s: [['play0001', 0, 60, '舊格式', null], ['play0002', 60, 120, '有次數', null, 12], ['play0003', 120, 180, '壞值', null, 'many']],
+            },
+        ]);
+        expect(video.segments.map((s) => s.plays)).toEqual([0, 12, 0]);
     });
 });

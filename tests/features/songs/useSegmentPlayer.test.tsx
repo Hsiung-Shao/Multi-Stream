@@ -236,3 +236,72 @@ describe('playerQueueReducer', () => {
         expect(s1.status).toBe('playing');
     });
 });
+
+// ---------- v1.1：聽滿門檻才記一次播放（以 useSegmentPlayer({ onPlayCredited }) 傳入）----------
+function CreditHarness({ onPlayCredited }: { onPlayCredited: (code: string) => void }) {
+    const p = useSegmentPlayer({ onPlayCredited } as never);
+    api = p;
+    return <div ref={p.containerRef} />;
+}
+
+async function mountCredit(onPlayCredited: (code: string) => void) {
+    render(<CreditHarness onPlayCredited={onPlayCredited} />);
+    await act(async () => { await Promise.resolve(); });
+    const player = FakePlayer.instances[0];
+    player.emit('onReady');
+    return player;
+}
+
+/** 每 250ms 前進播放時間 0.25 秒，共 seconds 秒 */
+async function listen(player: FakePlayer, seconds: number) {
+    for (let i = 0; i < seconds * 4; i++) {
+        player.currentTime += 0.25;
+        await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+    }
+}
+
+describe('useSegmentPlayer 播放計次', () => {
+    it('聽滿門檻（30 秒）才呼叫一次 onPlayCredited，之後繼續聽不重複', async () => {
+        const credited = vi.fn();
+        const player = await mountCredit(credited);
+        act(() => api.load([item('a0000001', V1, 0, 100), item('b0000002', V2, 0, 100)]));
+        player.currentTime = 0;
+        player.emit('onStateChange', 1);
+        await listen(player, 25);
+        expect(credited).not.toHaveBeenCalled();
+        await listen(player, 10);
+        expect(credited).toHaveBeenCalledTimes(1);
+        expect(credited).toHaveBeenCalledWith('a0000001');
+        await listen(player, 10);
+        expect(credited).toHaveBeenCalledTimes(1);
+    });
+
+    it('換首後聆聽秒數歸零：兩首各聽 20 秒都不到門檻', async () => {
+        const credited = vi.fn();
+        const player = await mountCredit(credited);
+        act(() => api.load([item('a0000001', V1, 0, 100), item('b0000002', V2, 0, 100)]));
+        player.currentTime = 0;
+        player.emit('onStateChange', 1);
+        await listen(player, 20);
+        act(() => api.next());
+        player.currentTime = 0;
+        player.emit('onStateChange', 1);
+        await listen(player, 20);
+        expect(api.current?.code).toBe('b0000002');
+        expect(credited).not.toHaveBeenCalled();
+    });
+
+    it('暫停期間不累計', async () => {
+        const credited = vi.fn();
+        const player = await mountCredit(credited);
+        act(() => api.load([item('a0000001', V1, 0, 100)]));
+        player.currentTime = 0;
+        player.emit('onStateChange', 1);
+        await listen(player, 20);
+        player.emit('onStateChange', 2);
+        await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+        player.emit('onStateChange', 1);
+        await listen(player, 5);
+        expect(credited).not.toHaveBeenCalled();
+    });
+});

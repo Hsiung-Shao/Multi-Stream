@@ -83,4 +83,10 @@ export default {
     'catalog.showMore': 'Show more',
     'about.title': 'About the song playlist',
     'about.body': 'Every video plays in the official YouTube embedded player, so views and ad revenue go to the original channel. Timestamps are curated by the site; newly published streams appear in the catalog within about 10 minutes, and videos that cannot be embedded are skipped automatically.',
+    'catalog.plays': 'Plays: {{count}}',
+    'catalog.playsUnit': ' plays',
+    'catalog.totalPlays': 'Plays: {{count}}',
+    'catalog.sort.label': 'Sort',
+    'catalog.sort.latest': 'Newest',
+    'catalog.sort.popular': 'Most played',
 };

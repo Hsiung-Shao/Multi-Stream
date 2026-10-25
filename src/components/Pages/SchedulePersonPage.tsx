@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CalendarPlus, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, MonitorPlay, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, MonitorPlay, Music2, Play, RefreshCw, SearchX } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -31,6 +31,10 @@ import { breadcrumb, graph, webPage } from '../../seo/jsonld';
 import { toHtmlLang } from '../../i18n/i18n';
 import { ReportDialogProvider, useReportDialog } from '../../features/report/ReportDialogProvider';
 import { ScheduleEntriesDialogProvider, useScheduleEntriesDialog } from '../../features/contribute/ScheduleEntriesDialogProvider';
+import { useSongCatalog, type SongVideo } from '../../features/songs/songsSource';
+import { buildVideoIndex, songsForVtuber } from '../../features/songs/lib/catalogIndex';
+import { serializeSongShare } from '../../features/songs/lib/songShareLink';
+import { formatTimecode } from '../../features/songs/lib/timecode';
 
 const RECENT_PREVIEW = 10;
 
@@ -233,11 +237,74 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
     );
 }
 
+/** 這位實況主的歌回（已發布、有時間軸）：沒有就整段不渲染。「全部播放」整頁導到 /songs?list=… */
+function PersonSongs({ videos }: { videos: SongVideo[] }) {
+    const { t, i18n } = useTranslation('schedule');
+    const locale = i18n.language || 'zh-TW';
+    if (videos.length === 0) return null;
+    return (
+        <section aria-labelledby="person-songs">
+            <SectionTitle id="person-songs" count={videos.length}>{t('person.songs.title')}</SectionTitle>
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {videos.map((video) => {
+                    const plays = video.segments.reduce((sum, seg) => sum + seg.plays, 0);
+                    const date = video.streamedAt ? new Date(video.streamedAt) : null;
+                    const list = serializeSongShare(video.segments.map((seg) => seg.code));
+                    return (
+                        <li key={video.videoId} className="rounded-xl border border-border bg-card/50 p-3">
+                            <div className="flex items-start gap-2.5">
+                                <Music2 size={16} className="mt-0.5 shrink-0 text-violet-500" aria-hidden="true" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">{video.title}</p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {[
+                                            date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(locale) : null,
+                                            t('person.songs.count', { count: video.segments.length }),
+                                            plays > 0 ? t('person.songs.plays', { count: plays.toLocaleString(locale) }) : null,
+                                        ].filter(Boolean).join(' · ')}
+                                    </p>
+                                </div>
+                                {list && (
+                                    <a
+                                        href={`/songs?list=${list}`}
+                                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                        <Play size={12} aria-hidden="true" />
+                                        {t('person.songs.playAll')}
+                                    </a>
+                                )}
+                            </div>
+                            <details className="group mt-2">
+                                <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+                                    {t('person.songs.showSongs')}
+                                </summary>
+                                <ol className="mt-1.5 space-y-0.5">
+                                    {video.segments.map((seg) => (
+                                        <li key={seg.code} className="flex items-baseline gap-2 text-[13px]">
+                                            <span className="w-12 shrink-0 text-xs tabular-nums text-muted-foreground">{formatTimecode(seg.start)}</span>
+                                            <span className="min-w-0 flex-1 truncate">{seg.title}{seg.artist ? <span className="text-muted-foreground"> / {seg.artist}</span> : null}</span>
+                                            {seg.plays > 0 && <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{t('person.songs.plays', { count: seg.plays.toLocaleString(locale) })}</span>}
+                                        </li>
+                                    ))}
+                                </ol>
+                            </details>
+                        </li>
+                    );
+                })}
+            </ul>
+        </section>
+    );
+}
+
 function PersonBody({ person }: { person: SchedulePerson }) {
     const { t } = useTranslation('schedule');
     const [now, setNow] = useState(() => Date.now());
     const [recentExpanded, setRecentExpanded] = useState(false);
     const channels = useMemo(() => ({ [person.id]: person.channel }), [person.id, person.channel]);
+    // 歌回目錄（edge 快取 10 分鐘）：本人的歌回清單＋場次列的歌單徽章；person 資料到了這裡才掛上
+    const songCatalog = useSongCatalog();
+    const songVideos = useMemo(() => (songCatalog.data ? songsForVtuber(songCatalog.data.videos, person.id) : []), [songCatalog.data, person.id]);
+    const songsByVideo = useMemo(() => (songCatalog.data ? buildVideoIndex(songCatalog.data.videos) : undefined), [songCatalog.data]);
     const sel = useScheduleSelection(channels, 'person');
     // 預定時間已過的場次會從「接下來」消失：也從勾選拿掉；已開台的照留
     const { prune } = sel;
@@ -320,6 +387,7 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                                 onToggle={sel.toggle}
                                 onSelectMany={sel.selectMany}
                                 personLinks={false}
+                                songsByVideo={songsByVideo}
                             />
                         )}
                     </section>
@@ -332,7 +400,14 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                             <>
                                 <ul className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
                                     {recentShown.map((s) => (
-                                        <RecentRow key={streamKey(s)} stream={s} channel={person.channel} now={now} personLinks={false} />
+                                        <RecentRow
+                                            key={streamKey(s)}
+                                            stream={s}
+                                            channel={person.channel}
+                                            now={now}
+                                            personLinks={false}
+                                            songs={s.platform === 'youtube' ? songsByVideo?.get(s.external_id) ?? null : null}
+                                        />
                                     ))}
                                 </ul>
                                 {person.recent.length > RECENT_PREVIEW && (
@@ -348,6 +423,8 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                             </>
                         )}
                     </section>
+
+                    <PersonSongs videos={songVideos} />
                 </div>
             )}
 

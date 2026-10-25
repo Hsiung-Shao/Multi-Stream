@@ -83,4 +83,10 @@ export default {
     'catalog.showMore': '더 보기',
     'about.title': '노래 방송 플레이리스트 안내',
     'about.body': '모든 영상은 YouTube 공식 임베드 플레이어로 재생되어 조회수와 광고 수익은 원래 채널에 돌아갑니다. 노래 방송의 타임스탬프는 사이트에서 정리하며, 새로 공개한 노래 방송은 약 10분 안에 곡 목록에 나타납니다. 임베드 재생이 불가능한 영상은 자동으로 건너뜁니다.',
+    'catalog.plays': '재생 {{count}}회',
+    'catalog.playsUnit': '회 재생',
+    'catalog.totalPlays': '총 {{count}}회 재생',
+    'catalog.sort.label': '정렬',
+    'catalog.sort.latest': '최신순',
+    'catalog.sort.popular': '많이 들은 순',
 };
