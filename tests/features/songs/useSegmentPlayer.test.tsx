@@ -426,3 +426,13 @@ describe('useSegmentPlayer 音量同步與就緒套用', () => {
         expect(writes()).toBe(synced);
     });
 });
+
+describe('useSegmentPlayer 第一次來的使用者', () => {
+    it('沒有音量偏好時就緒不改動播放器音量、也不呼叫 mute／unMute', async () => {
+        localStorage.clear();
+        const { player } = await mountReady();
+        expect(player.setVolume).not.toHaveBeenCalled();
+        expect(player.mute).not.toHaveBeenCalled();
+        expect(player.unMute).not.toHaveBeenCalled();
+    });
+});

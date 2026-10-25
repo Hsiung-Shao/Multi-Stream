@@ -594,12 +594,15 @@ function writeVolume(state: VolumeState): void {
     } catch { /* 隱私模式或配額滿：只是不記住 */ }
 }
 
-/** 把音量偏好套到播放器；enforceUnmute（有存過偏好）時未靜音也明確 unMute，避免沿用 YouTube 記住的舊靜音狀態 */
-function applyVolume(player: YTPlayerLike | null, state: VolumeState, enforceUnmute: boolean): void {
-    if (!player) return;
+/**
+ * 把音量偏好套到播放器。沒有偏好（第一次來、沒調過）時完全不動：沿用 YouTube 記住的音量與靜音，交給輪詢讀回，
+ * 否則會把使用者平常調低的音量強制拉到預設 100。有偏好時未靜音也明確 unMute，避免沿用 YouTube 記住的舊靜音狀態。
+ */
+function applyVolume(player: YTPlayerLike | null, state: VolumeState, hasPreference: boolean): void {
+    if (!player || !hasPreference) return;
     try {
         player.setVolume(state.volume);
         if (state.muted) player.mute();
-        else if (enforceUnmute) player.unMute();
+        else player.unMute();
     } catch { /* 舊版 API 或已銷毀 */ }
 }
