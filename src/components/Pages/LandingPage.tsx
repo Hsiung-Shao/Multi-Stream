@@ -5,7 +5,8 @@ import { Button } from '../ui/button';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
 import { StreamSearchBox } from '../StreamSearchBox';
-import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe } from 'lucide-react';
+import { MonitorPlay, MessageSquare, Layout, Zap, ArrowRight, Github, Twitch, Youtube, HelpCircle, BookOpen, Check, Trophy, Users, Laptop, Sun, Moon, Globe, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import {
     Select,
     SelectContent,
@@ -38,45 +39,83 @@ export function LandingPage() {
             <SEO title={tx('seo:home.title')} description={tx('seo:home.description')} />
             <FaqJsonLd />
 
-            {/* Header */}
+            {/* Header（寬度分段；容器內寬 = 斷點寬 − 32，依各語系文字寬度估算）
+                - <sm：Logo 文字（可換行）＋ GitHub／主題／開始使用（與原本相同）
+                - sm～lg（容器 608～736）：Logo 只留圖，平放「開台週表」「歌回」，其餘收進「更多」（含 GitHub）
+                - lg～xl（容器 992）：Logo 文字與 GitHub 圖示回來，次要連結仍在「更多」
+                - ≥xl（容器 1248）：全部平放；在 lg 就全平放，中、英文都會超出 992 */}
             <header className="fixed top-0 w-full z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
-                <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <img src="/logo.png" alt="MultiStream Hub" width="40" height="40" className="w-10 h-10 rounded-lg shadow-lg" />
-                        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                        <img src="/logo.png" alt="MultiStream Hub" width="40" height="40" className="w-10 h-10 shrink-0 rounded-lg shadow-lg" />
+                        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 sm:hidden lg:inline lg:whitespace-nowrap">
                             MultiStream Hub
                         </span>
                     </div>
-                    <nav className="flex items-center gap-1 sm:gap-2">
+                    <nav className="flex shrink-0 items-center gap-1 lg:gap-2">
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="schedule">{tx('schedule:title')}</RouteLink>
                         </Button>
                         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="songs">{tx('songs:title')}</RouteLink>
                         </Button>
-                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                        <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
                         </Button>
-                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                        <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="instructions">{t('landing.footer.tutorial')}</RouteLink>
                         </Button>
-                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                        <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="faq">{t('landing.footer.faq')}</RouteLink>
                         </Button>
-                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                        <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <RouteLink to="support">{t('landing.footer.support', '支持我們')}</RouteLink>
                         </Button>
-                        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground text-sm">
+                        <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex text-muted-foreground hover:text-foreground text-sm">
                             <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
                                 Discord
                             </a>
                         </Button>
+                        {/* 窄寬度的次要連結：Radix trigger 自帶 aria-haspopup="menu"；選項用 asChild 讓連結本身就是 menuitem */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="hidden sm:inline-flex xl:hidden text-muted-foreground hover:text-foreground text-sm">
+                                    {t('mobile.settings.more')}
+                                    <ChevronDown className="size-3.5" aria-hidden="true" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-40">
+                                <DropdownMenuItem asChild>
+                                    <RouteLink to="about">{t('landing.footer.about')}</RouteLink>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <RouteLink to="instructions">{t('landing.footer.tutorial')}</RouteLink>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <RouteLink to="faq">{t('landing.footer.faq')}</RouteLink>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <RouteLink to="support">{t('landing.footer.support', '支持我們')}</RouteLink>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">Discord</a>
+                                </DropdownMenuItem>
+                                {/* sm～lg 頂列的 GitHub 圖示收起，改放這裡 */}
+                                <DropdownMenuItem asChild className="lg:hidden">
+                                    <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer">
+                                        <Github className="size-4" aria-hidden="true" />
+                                        GitHub
+                                    </a>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <a
                             href={GITHUB_REPO_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="GitHub"
-                            className="text-muted-foreground hover:text-foreground transition-colors p-2"
+                            className="text-muted-foreground hover:text-foreground transition-colors p-2 sm:hidden lg:inline-flex"
                         >
                             <Github className="w-5 h-5" />
                         </a>

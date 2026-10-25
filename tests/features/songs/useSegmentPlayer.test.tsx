@@ -28,7 +28,11 @@ class FakePlayer {
     setVolume = vi.fn();
     mute = vi.fn();
     unMute = vi.fn();
-    isMuted = vi.fn(() => false);
+    /** 測試可控：模擬使用者在 YouTube 播放器自己的控制列調整後的實際狀態 */
+    playerMuted = false;
+    playerVolume = 100;
+    isMuted = vi.fn(() => this.playerMuted);
+    getVolume = vi.fn(() => this.playerVolume);
     getCurrentTime = () => this.currentTime;
     getDuration = () => this.duration;
     getPlayerState = () => this.state;
@@ -375,5 +379,50 @@ describe('useSegmentPlayer 音量', () => {
         expect(api.volume).toBe(100);
         expect(api.muted).toBe(false);
         expect(player.mute).not.toHaveBeenCalled();
+    });
+});
+
+describe('useSegmentPlayer 音量同步與就緒套用', () => {
+    const writes = () => (localStorage.setItem as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => c[0] === VOLUME_STORAGE_KEY).length;
+    const stored = () => JSON.parse(localStorage.getItem(VOLUME_STORAGE_KEY) ?? 'null');
+
+    beforeEach(() => {
+        localStorage.clear();
+    });
+    afterEach(() => {
+        localStorage.clear();
+    });
+
+    it('就緒時未靜音也明確解除靜音', async () => {
+        localStorage.setItem(VOLUME_STORAGE_KEY, JSON.stringify({ volume: 40, muted: false }));
+        const { player } = await mountReady();
+        expect(player.setVolume).toHaveBeenCalledWith(40);
+        expect(player.unMute).toHaveBeenCalled();
+        expect(player.mute).not.toHaveBeenCalled();
+    });
+
+    it('播放中讀回播放器實際靜音與音量並同步，值相同不重複寫入', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 0, 1000)]));
+        player.emit('onStateChange', 1);
+        const base = writes();
+        // 值沒變：輪詢不寫入
+        await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+        expect(writes()).toBe(base);
+
+        player.playerMuted = true;
+        await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+        expect(api.muted).toBe(true);
+        expect(stored().muted).toBe(true);
+
+        player.playerVolume = 55;
+        await act(async () => { await vi.advanceTimersByTimeAsync(250); });
+        expect(api.volume).toBe(55);
+        expect(stored()).toEqual({ volume: 55, muted: true });
+
+        // 已同步：再輪詢不重複寫入
+        const synced = writes();
+        await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+        expect(writes()).toBe(synced);
     });
 });

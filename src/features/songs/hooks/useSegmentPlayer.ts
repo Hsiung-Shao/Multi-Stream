@@ -14,7 +14,10 @@
  * - 播放計次（v1.1）：同一個輪詢裡以 accumulate 累計本首（code＋playToken）實際播放秒數，
  *   首次達 playThreshold 呼叫一次 onPlayCredited；換首或重播（playToken 變）歸零。暫停不累計（輪詢只在 PLAYING 時跑）。
  * - 音量／靜音：記在 localStorage['song-player-volume']；mount 後的 effect 才讀（SSR 首輪為 100／未靜音），
- *   播放器就緒時套用；靜音中把音量調到大於 0 會自動解除靜音。
+ *   播放器就緒時套用；有存過偏好時未靜音也明確 unMute（YouTube 可能記得使用者在別處按過的靜音）。
+ *   從沒存過偏好則不動播放器的靜音狀態，交給下方輪詢讀回，畫面與播放器一樣會一致。靜音中把音量調到大於 0 會自動解除靜音。
+ *   使用者也可能直接按 iframe 內建的靜音／音量：播放中的輪詢讀回 isMuted／getVolume，與 state 不同才同步並寫回。
+ *   本頁剛改過或剛套用音量的 1 秒內不讀回（iframe 回報的值有延遲，會把剛調的值蓋回舊值）。
  * - 卸載：停輪詢、清計時器、下一個 tick 才 destroy（同 StreamIframe 的 safeDestroy，避開 React render 期衝突）。
  *
  * 只在瀏覽器 effect 內碰 window / YT：預渲染（SSR）時這個 hook 只回傳初始狀態。
@@ -41,6 +44,8 @@ export interface YTPlayerLike {
     setVolume(volume: number): void;
     mute(): void;
     unMute(): void;
+    isMuted(): boolean;
+    getVolume(): number;
 }
 
 interface YTEvent<T = unknown> {
@@ -248,8 +253,33 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
         dispatch({ type: 'ended' });
     }, []);
 
+    // 音量偏好 state（讀取儲存值的 effect 在下方，mount 後才跑）
+    const [volumeState, setVolumeState] = useState<VolumeState>({ volume: DEFAULT_VOLUME, muted: false });
+    const volumeRef = useRef<VolumeState>(volumeState);
+    /** 最近一次由本頁改音量的時間（輪詢讀回要避開 iframe 回報延遲） */
+    const localVolumeAtRef = useRef(0);
+    /** 使用者是否有音量偏好（localStorage 有值或本頁調過）：有才在就緒時強制套用未靜音 */
+    const hasVolumePrefRef = useRef(false);
+    /** 讀回播放器實際的靜音／音量（使用者可能按了 iframe 內建控制），不同才更新並寫入 localStorage */
+    const syncVolumeFromPlayer = useCallback((player: YTPlayerLike) => {
+        if (Date.now() - localVolumeAtRef.current < VOLUME_SYNC_GRACE_MS) return;
+        let actual: VolumeState;
+        try {
+            actual = { volume: clampVolume(player.getVolume()), muted: player.isMuted() === true };
+        } catch {
+            return;
+        }
+        const cur = volumeRef.current;
+        if (actual.volume === cur.volume && actual.muted === cur.muted) return;
+        hasVolumePrefRef.current = true;
+        volumeRef.current = actual;
+        setVolumeState(actual);
+        writeVolume(actual);
+    }, []);
+
     const tick = useCallback(() => {
         const player = playerRef.current;
+        if (player) syncVolumeFromPlayer(player);
         const state = queueRef.current;
         const item = currentItem(state);
         if (!player || !item || state.status !== 'playing') return;
@@ -281,22 +311,25 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
             return;
         }
         if (shouldAdvance(t, item.end)) fireEnded();
-    }, [fireEnded]);
+    }, [fireEnded, syncVolumeFromPlayer]);
 
     // 音量偏好：mount 後才讀 localStorage（render 不碰 window）；ref 給 onReady 與事件用
-    const [volumeState, setVolumeState] = useState<VolumeState>({ volume: DEFAULT_VOLUME, muted: false });
-    const volumeRef = useRef<VolumeState>(volumeState);
     useEffect(() => {
         let saved: VolumeState;
         try {
-            saved = parseStoredVolume(window.localStorage.getItem(VOLUME_STORAGE_KEY));
+            const raw = window.localStorage.getItem(VOLUME_STORAGE_KEY);
+            hasVolumePrefRef.current = raw !== null;
+            saved = parseStoredVolume(raw);
         } catch {
             return;
         }
         volumeRef.current = saved;
         setVolumeState(saved);
         // 播放器若已就緒（極少見：API 已快取且比這個 effect 早 ready），補套一次
-        applyVolume(playerRef.current, saved);
+        if (playerRef.current) {
+            localVolumeAtRef.current = Date.now();
+            applyVolume(playerRef.current, saved, hasVolumePrefRef.current);
+        }
     }, []);
 
     // 建立／銷毀播放器（只在 mount 時一次）
@@ -333,7 +366,8 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
                                 return;
                             }
                             playerRef.current = e.target;
-                            applyVolume(e.target, volumeRef.current);
+                            localVolumeAtRef.current = Date.now();
+                            applyVolume(e.target, volumeRef.current, hasVolumePrefRef.current);
                             setPlayerStatus('ready');
                         },
                         onStateChange: (e) => {
@@ -497,11 +531,11 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
     const setShuffle = useCallback((on: boolean) => dispatch({ type: 'setShuffle', on }), []);
 
     const commitVolume = useCallback((next: VolumeState) => {
+        localVolumeAtRef.current = Date.now();
+        hasVolumePrefRef.current = true;
         volumeRef.current = next;
         setVolumeState(next);
-        try {
-            window.localStorage.setItem(VOLUME_STORAGE_KEY, serializeVolume(next));
-        } catch { /* 隱私模式或配額滿：只是不記住 */ }
+        writeVolume(next);
     }, []);
 
     const setVolume = useCallback((v: number) => {
@@ -552,11 +586,20 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
     };
 }
 
-/** 把音量偏好套到播放器（沒有預設值以外的設定時不多呼叫 mute） */
-function applyVolume(player: YTPlayerLike | null, state: VolumeState): void {
+const VOLUME_SYNC_GRACE_MS = 1000;
+
+function writeVolume(state: VolumeState): void {
+    try {
+        window.localStorage.setItem(VOLUME_STORAGE_KEY, serializeVolume(state));
+    } catch { /* 隱私模式或配額滿：只是不記住 */ }
+}
+
+/** 把音量偏好套到播放器；enforceUnmute（有存過偏好）時未靜音也明確 unMute，避免沿用 YouTube 記住的舊靜音狀態 */
+function applyVolume(player: YTPlayerLike | null, state: VolumeState, enforceUnmute: boolean): void {
     if (!player) return;
     try {
         player.setVolume(state.volume);
         if (state.muted) player.mute();
+        else if (enforceUnmute) player.unMute();
     } catch { /* 舊版 API 或已銷毀 */ }
 }
