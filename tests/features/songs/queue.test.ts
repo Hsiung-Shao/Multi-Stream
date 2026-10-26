@@ -3,6 +3,7 @@ import {
     createQueue,
     queueReducer,
     currentItem,
+    queuePosition,
     type QueueItem,
     type QueueState,
 } from '../../../src/features/songs/lib/queue';
@@ -284,5 +285,25 @@ describe('queueReducer 隨機循環重洗（review 修正）', () => {
         for (let seed = 1; seed <= 5; seed++) {
             expect(run(seed), `seed ${seed}`).toEqual(run(seed));
         }
+    });
+});
+
+describe('queuePosition', () => {
+    it('一般模式回傳 cursor+1 與總首數', () => {
+        const s = createQueue(mk(5), { startIndex: 2 });
+        expect(queuePosition(s)).toEqual({ n: 3, m: 5 });
+    });
+
+    it('隨機模式的 n 是在隨機順序中的位置，m 仍是總首數', () => {
+        let s = createQueue(mk(4), { startIndex: 2 });
+        s = queueReducer(s, { type: 'setShuffle', on: true, random: seeded(7) });
+        // 開隨機後目前這首排在順序第一個
+        expect(queuePosition(s)).toEqual({ n: 1, m: 4 });
+        s = queueReducer(s, { type: 'jump', index: 3 });
+        expect(queuePosition(s)).toEqual({ n: 4, m: 4 });
+    });
+
+    it('空佇列回 null', () => {
+        expect(queuePosition(createQueue([]))).toBeNull();
     });
 });

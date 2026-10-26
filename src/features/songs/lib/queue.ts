@@ -72,6 +72,12 @@ export function currentItem(state: QueueState): QueueItem | null {
     return idx === undefined ? null : (state.items[idx] ?? null);
 }
 
+/** 右欄標題「第 N / M 首」：n 是 cursor 在播放順序中的位置（隨機時就是隨機順序），m 是總首數；空佇列回 null */
+export function queuePosition(state: QueueState): { n: number; m: number } | null {
+    if (state.items.length === 0) return null;
+    return { n: state.cursor + 1, m: state.items.length };
+}
+
 function isPlayableAt(state: QueueState, pos: number): boolean {
     const item = state.items[state.order[pos]];
     return item !== undefined && !state.unplayable.includes(item.videoId);
