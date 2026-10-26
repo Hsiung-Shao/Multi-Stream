@@ -105,7 +105,7 @@ export function NowPlayingDetails({ player, catalog, onSaveQueue, fill = false }
             </div>
             {entry && <MiniTimeline video={entry.video} currentCode={entry.segment.code} />}
             <section aria-labelledby="songs-next-h" className={cn('flex min-w-0 flex-col gap-1.5', fill && 'min-h-0 flex-1')}>
-                <h3 id="songs-next-h" className="text-xs font-bold text-[#C9CEDE]">{t('now.upNext')}</h3>
+                <h3 id="songs-next-h" className="text-xs font-bold text-foreground/80">{t('now.upNext')}</h3>
                 <QueuePanel player={player} catalog={catalog} onSaveQueue={onSaveQueue} fill={fill} />
             </section>
         </div>

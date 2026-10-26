@@ -52,6 +52,18 @@ const NARROW_QUERY = '(max-width: 1023px)';
 const COMPACT_QUERY = '(max-width: 1279px)';
 /** 手機播放器高度（與 NowPlayingPanel 的 PlayerFrame 同一個算式）：抽屜的遮罩與內容從這裡往下，不蓋到影片 */
 const SHEET_BELOW_PLAYER = 'top-[max(202px,min(56.25vw,50dvh))]';
+/** 各畫面的 h2（tabIndex=-1）：使用者切換畫面後把焦點移過去，螢幕閱讀器會念出新畫面 */
+const VIEW_HEADING_IDS = ['songs-video-h', 'songs-playlists-h', 'songs-catalog-h'];
+
+function focusViewHeading(): void {
+    for (const id of VIEW_HEADING_IDS) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.focus({ preventScroll: true });
+            return;
+        }
+    }
+}
 
 interface SongsPageProps {
     /** 分享連結帶進來的歌曲 code（App 啟動時快照）；null = 沒有分享連結 */
@@ -86,6 +98,10 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const compact = useMediaQuery(COMPACT_QUERY) || narrow;
     const [sheetOpen, setSheetOpen] = useState(false);
     const [mobileTab, setMobileTab] = useState<MobileTab>('browse');
+    /** 使用者切換了畫面、等新畫面畫好後要移焦點（popstate 與展開歌單不移） */
+    const pendingFocusRef = useRef(false);
+    /** 這次切換是從抽屜點的：等抽屜關閉時再移焦點，否則會被抽屜的焦點鎖拉回去或被還給「選單」鈕 */
+    const viaSheetRef = useRef(false);
 
     // 網址 → 畫面：mount 時讀一次（?list= 已由 App 清掉），之後跟著瀏覽器上一頁／下一頁
     useEffect(() => {
@@ -101,15 +117,25 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         setMobileTab('browse');
         const url = PAGE_PATHS.songs + serializeSongsView(next);
         if (window.location.pathname + window.location.search === url) return;
-        if (opts?.replace) window.history.replaceState(null, '', url);
-        else window.history.pushState(null, '', url);
+        if (opts?.replace) {
+            window.history.replaceState(null, '', url);
+        } else {
+            window.history.pushState(null, '', url);
+            pendingFocusRef.current = true;
+        }
     }, []);
 
-    // 換畫面時中欄捲回頂端
+    // 換畫面時中欄捲回頂端（展開／收合歌單不算換畫面）
     const viewKey = serializeSongsView(view);
+    const scrollKey = view.kind === 'playlists' ? 'playlists' : viewKey;
     useEffect(() => {
         const viewport = scrollRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
         if (viewport) viewport.scrollTop = 0;
+    }, [scrollKey]);
+    useEffect(() => {
+        if (!pendingFocusRef.current || viaSheetRef.current) return;
+        pendingFocusRef.current = false;
+        focusViewHeading();
     }, [viewKey]);
 
     const vtuberFilter = view.kind === 'list' ? view.vtuber : null;
@@ -170,7 +196,10 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     }, [createPlaylist, navigate, playlistCount, t]);
     // 抽屜裡的導覽：點任何項目先收起抽屜
     const sheetHandlers = useMemo(() => {
-        const close = () => setSheetOpen(false);
+        const close = () => {
+            viaSheetRef.current = true;
+            setSheetOpen(false);
+        };
         return {
             onGoList: () => { close(); handleGoList(); },
             onSelectVtuber: (key: string) => { close(); handleSelectVtuber(key); },
@@ -334,6 +363,14 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                     <SheetContent
                         side="left"
                         aria-describedby={undefined}
+                        onCloseAutoFocus={(e: Event) => {
+                            if (!viaSheetRef.current) return;
+                            viaSheetRef.current = false;
+                            if (!pendingFocusRef.current) return;
+                            e.preventDefault();
+                            pendingFocusRef.current = false;
+                            focusViewHeading();
+                        }}
                         // 遮罩不可蓋到播放器：手機從播放器下緣開始；1024–1279 右欄（含 8px 外距）不罩
                         overlayClassName={narrow ? SHEET_BELOW_PLAYER : 'right-[408px]'}
                         className={cn('songs-console gap-0 bg-card px-3.5 py-5', narrow && cn(SHEET_BELOW_PLAYER, 'h-auto'))}

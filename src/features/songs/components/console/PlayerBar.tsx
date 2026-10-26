@@ -57,7 +57,7 @@ export function PlayerBar({ player, catalog, playlists, narrow }: {
         <Button
             variant="ghost"
             size="icon"
-            className={cn('size-9 rounded-full', queue.shuffle ? 'text-primary' : 'text-muted-foreground')}
+            className={cn('size-9 shrink-0 rounded-full', queue.shuffle ? 'text-primary' : 'text-muted-foreground')}
             onClick={() => player.setShuffle(!queue.shuffle)}
             aria-pressed={queue.shuffle}
             aria-label={t('controls.shuffle')}
@@ -70,7 +70,7 @@ export function PlayerBar({ player, catalog, playlists, narrow }: {
         <Button
             variant="ghost"
             size="icon"
-            className={cn('size-9 rounded-full', queue.repeat !== 'off' ? 'text-primary' : 'text-muted-foreground')}
+            className={cn('size-9 shrink-0 rounded-full', queue.repeat !== 'off' ? 'text-primary' : 'text-muted-foreground')}
             onClick={() => player.setRepeat(REPEAT_NEXT[queue.repeat])}
             aria-label={repeatLabel}
             title={repeatLabel}
