@@ -29,8 +29,9 @@ create table public.song_submissions (
     reviewer_notes    text check (reviewer_notes is null or char_length(reviewer_notes) <= 500),
     result_video_ref  uuid references public.song_videos(id) on delete set null,
     created_at        timestamptz not null default now(),
-    reviewed_at       timestamptz,
-    check (kind = 'new' or target_video_ref is not null or status <> 'pending')
+    reviewed_at       timestamptz
+    -- 不加「修正型必須有 target_video_ref」的 CHECK：影片被刪時 FK 的 set null 會觸發它而擋下整個刪除；
+    -- 目標被刪的修正型投稿在核准時以 p_video_ref null 新建即可，由投稿端點保證寫入時有 target
 );
 
 comment on table public.song_submissions is

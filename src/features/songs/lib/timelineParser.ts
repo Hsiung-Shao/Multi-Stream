@@ -10,8 +10,9 @@
  * - 行內「看起來有時間」卻沒能解析成列（時間不在行首、區間結束時間不合法）→ 行號記入 unparsed，讓 UI 提示使用者；純文字與空行不算。
  * - 時間後的文字依「第一個」分隔符切成 歌名 / 原唱：`/`（含全形／）、` - `（前後要有空白，Spider-Man 不會被切）、` by `（不分大小寫）。
  * - 行首（去前導空白）是 └ ├ │ 的行是「同首歌的其他版本」：行號進 variants，不產生列、不進 unparsed。
- * - 已有至少 1 列後，遇到不含時間樣式、但含「時間軸」「timestamp」「タイムスタンプ」的行 → 視為留言後半的聊天精華段落，
- *   停止解析（stoppedAt 為該行號），之後的行全部忽略。尚未有列時只當一般標題行略過。
+ * - 已有至少 1 列後，遇到不含時間樣式、但含「時間軸」「timestamp」「タイムスタンプ」的標題行：往後找下一個能解析出開始時間的行，
+ *   若其開始秒數 ≤ 已解析最後一首的開始（時間重新起算 = 另一份清單，如聊天精華）→ 停止解析（stoppedAt 為該標題行號），之後全部忽略；
+ *   否則只略過標題行繼續解析。找不到後續時間行時也停止。尚未有列時只當一般標題行略過。
  * - 沒有明確結束的列，結束取下一列開始；最後一列為 null。結果維持原始順序，不排序。
  */
 import { parseTimecode } from './timecode';
@@ -28,7 +29,7 @@ export interface ParsedRow {
 const TIME = String.raw`\d{1,3}(?::\d{2}){1,2}(?!\d)`;
 const NUMBERING_RE = /^\s*(?:#\d+|\d+[.)、])\s*/;
 const TIME_RE = new RegExp(`^[\\[(【]?\\s*(${TIME})(?:\\s*[-~–—〜]\\s*(${TIME}))?\\s*[\\])】]?`);
-const LEADING_SEPARATORS_RE = /^\s*(?:[-–—:|｜]\s+|\s+)/;
+const LEADING_SEPARATORS_RE = /^\s*(?:[-－–—:：|｜]\s+|\s+)/;
 /** 行內任何看起來像時間的字樣（用來判斷「這行應該是歌卻沒解析成功」） */
 const TIME_LIKE_RE = /\d{1,2}:\d{2}/;
 const SEPARATOR_RE = /[/／]|\s[-－]\s|\sby\s/i;
@@ -67,6 +68,15 @@ function normalizeWithOffsets(raw: string): { norm: string; offsets: number[] } 
     return { norm, offsets };
 }
 
+/** 該行（去編號後）行首若是合法時間，回傳開始秒數；否則 null。用來往後偷看下一個時間行 */
+function leadingStart(raw: string): number | null {
+    const { norm } = normalizeWithOffsets(raw);
+    let pos = NUMBERING_RE.exec(norm)?.[0].length ?? 0;
+    pos += /^\s*/.exec(norm.slice(pos))![0].length;
+    const match = TIME_RE.exec(norm.slice(pos));
+    return match ? parseTimecode(match[1]) : null;
+}
+
 export function parseTimelineDetailed(text: string): ParseResult {
     const rows: ParsedRow[] = [];
     const unparsed: number[] = [];
@@ -92,8 +102,15 @@ export function parseTimelineDetailed(text: string): ParseResult {
         if (!match) {
             const timeLike = TIME_LIKE_RE.test(norm);
             if (!timeLike && rows.length > 0 && STOP_RE.test(norm)) {
-                stoppedAt = line;
-                break;
+                // 只有「後面的時間重新起算」才是另一份清單（聊天精華）；否則只是歌單中間的標題行，略過繼續
+                let nextStart: number | null = null;
+                for (let j = line + 1; j < lines.length && nextStart === null; j++) {
+                    if (!VARIANT_RE.test(lines[j])) nextStart = leadingStart(lines[j]);
+                }
+                if (nextStart === null || nextStart <= rows[rows.length - 1].start) {
+                    stoppedAt = line;
+                    break;
+                }
             }
             if (timeLike) unparsed.push(line);
             continue;

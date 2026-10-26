@@ -178,14 +178,35 @@ describe('parseTimelineDetailed 重唱子行與停止（v1.2）', () => {
         expect(b.unparsed).toEqual([]);
     });
 
-    it('timestamp 不分大小寫、タイムスタンプ 也停止', () => {
-        expect(parseTimelineDetailed('0:10 A\nTIMESTAMP\n1:00 B').stoppedAt).toBe(1);
-        expect(parseTimelineDetailed('0:10 A\nタイムスタンプ\n1:00 B').rows).toHaveLength(1);
+    it('timestamp 不分大小寫、タイムスタンプ 也停止（後續時間重新起算時）', () => {
+        expect(parseTimelineDetailed('0:10 A\nTIMESTAMP\n0:05 B').stoppedAt).toBe(1);
+        expect(parseTimelineDetailed('0:10 A\nタイムスタンプ\n0:05 B').rows).toHaveLength(1);
     });
 
     it('含時間樣式的行即使有「時間軸」字樣也不當成停止標題', () => {
         const r = parseTimelineDetailed('0:10 A\n1:00 時間軸的歌\n2:00 C');
         expect(r.stoppedAt).toBeNull();
         expect(r.rows.map((x) => x.title)).toEqual(['A', '時間軸的歌', 'C']);
+    });
+
+    it('時間後的全形分隔符也會剝掉，分隔符後沒空白則保留', () => {
+        expect(parseTimeline('00:00 － Opening')[0]).toMatchObject({ title: 'Opening', artist: null });
+        expect(parseTimeline('00:00 ： 歌名')[0]).toMatchObject({ title: '歌名', artist: null });
+        expect(parseTimeline('00:00 －ERROR－')[0]).toMatchObject({ title: '－ERROR－', artist: null });
+    });
+
+    it('中段「後半時間軸」標題不會讓解析停止（後面時間比已解析的更晚）', () => {
+        const r = parseTimelineDetailed('前半時間軸\n0:10:00 歌1\n後半時間軸\n1:30:00 歌2');
+        expect(r.rows.map((x) => x.title)).toEqual(['歌1', '歌2']);
+        expect(r.stoppedAt).toBeNull();
+        expect(r.unparsed).toEqual([]);
+    });
+
+    it('標題後的時間重新起算（≤ 已解析最後一首的開始）才停止', () => {
+        const r = parseTimelineDetailed('1:00 A\n2:00 B\n時間軸\n0:05 聊天\n3:00 C');
+        expect(r.rows.map((x) => x.title)).toEqual(['A', 'B']);
+        expect(r.stoppedAt).toBe(2);
+        // 剛好等於最後一首的開始也算重新起算
+        expect(parseTimelineDetailed('1:00 A\n2:00 B\nTimestamp\n2:00 聊天').stoppedAt).toBe(2);
     });
 });
