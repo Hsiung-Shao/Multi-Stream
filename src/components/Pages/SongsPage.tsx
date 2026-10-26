@@ -52,8 +52,6 @@ const EMPTY_PLAYLISTS: Playlist[] = [];
  */
 /** 手機版（播放器置頂＋分頁＋精簡底部列） */
 const NARROW_QUERY = '(width < 64rem)';
-/** 舊寫法：在任何寬度都是 NARROW_QUERY 的子集，只為了讓既有測試的 matchMedia mock（比對這個字串）命中 */
-const NARROW_QUERY_LEGACY = '(max-width: 1023px)';
 /** 左欄收進「選單」抽屜（1024–1279 中欄與右欄維持） */
 const COMPACT_QUERY = '(width < 80rem)';
 /** 橫向手機這類矮螢幕：頁首與分頁列改跟著內容捲動、底部列壓成一列，內容區才有高度 */
@@ -108,8 +106,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const [sort, setSort] = useState<CatalogSort>('latest');
     const scrollRef = useRef<HTMLDivElement>(null);
     // matchMedia 只在 effect 裡讀（useMediaQuery 初值 false）
-    const narrowLegacy = useMediaQuery(NARROW_QUERY_LEGACY);
-    const narrow = useMediaQuery(NARROW_QUERY) || narrowLegacy;
+    const narrow = useMediaQuery(NARROW_QUERY);
     const short = useMediaQuery(SHORT_QUERY) && narrow;
     // 窄螢幕一定也收左欄（不依賴兩個查詢同時更新）
     const compact = useMediaQuery(COMPACT_QUERY) || narrow;

@@ -373,7 +373,7 @@ describe('SongsPage 手機版', () => {
     beforeEach(() => {
         resetUrl();
         window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-            matches: query === '(max-width: 1023px)',
+            matches: query === '(width < 64rem)',
             media: query,
             onchange: null,
             addListener: vi.fn(),
