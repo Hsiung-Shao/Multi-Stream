@@ -41,6 +41,7 @@ import { formatTimecode } from '../../features/songs/lib/timecode';
 import type { RepeatMode } from '../../features/songs/lib/queue';
 import { PAGE_PATHS } from '../../config/routes';
 import { createPlayReporter } from '../../features/songs/playReporter';
+import { filterCatalog, sortCatalog, videoPlays, type CatalogSort } from '../../features/songs/lib/catalogView';
 
 /** 目錄一次先顯示幾支歌回（其餘按「顯示更多」），避免上千首歌一次渲染 */
 const CATALOG_PAGE_SIZE = 20;
@@ -50,19 +51,7 @@ const PLAYS_ENDPOINT = '/api/songs/plays';
 /** 播放次數批次回報間隔（另在 pagehide 時送出） */
 const PLAYS_FLUSH_MS = 60_000;
 
-type CatalogSort = 'latest' | 'popular';
 const CATALOG_SORTS: CatalogSort[] = ['latest', 'popular'];
-
-export const videoPlays = (video: SongVideo): number => video.segments.reduce((sum, s) => sum + s.plays, 0);
-
-/** 目錄排序：latest 維持伺服器順序（開台時間新到舊）；popular 依整支歌回總播放次數多到少（同分維持原順序） */
-export function sortCatalog(videos: SongVideo[], sort: CatalogSort): SongVideo[] {
-    if (sort === 'latest') return videos;
-    return videos
-        .map((video, i) => ({ video, i, plays: videoPlays(video) }))
-        .sort((a, b) => b.plays - a.plays || a.i - b.i)
-        .map((x) => x.video);
-}
 
 /** 送出播放次數：優先 sendBeacon（關頁也送得出去），不支援或被拒時退回 fetch keepalive */
 function sendPlays(codes: string[]): void {
@@ -95,26 +84,6 @@ interface ShareNotice {
     found: string[];
     missing: number;
     saved: boolean;
-}
-
-const normalize = (s: string) => s.normalize('NFKC').toLowerCase();
-
-/** client 端搜尋：VTuber 名稱或歌回標題命中 → 整支歌回；否則只留歌名／原唱命中的歌 */
-export function filterCatalog(videos: SongVideo[], query: string): SongVideo[] {
-    const q = normalize(query.trim());
-    if (!q) return videos;
-    const out: SongVideo[] = [];
-    for (const video of videos) {
-        if (normalize(video.vtuber?.name ?? '').includes(q) || normalize(video.title).includes(q)) {
-            out.push(video);
-            continue;
-        }
-        const segments = video.segments.filter(
-            (s) => normalize(s.title).includes(q) || normalize(s.artist ?? '').includes(q),
-        );
-        if (segments.length > 0) out.push({ ...video, segments });
-    }
-    return out;
 }
 
 function useMounted(): boolean {
