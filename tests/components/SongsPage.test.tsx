@@ -435,3 +435,174 @@ describe('SongsPage 手機版', () => {
         expect(holder.isConnected).toBe(true);
     });
 });
+
+// ---------- v1.3 回歸：返回鍵、載入失敗直開單場、顯示筆數還原 ----------
+// 30 支歌回：偶數編號屬於星川測試(v1)、奇數屬於月見測試(v2)，每頁顯示 20 筆時需要「顯示更多」
+const BIG_CATALOG = Array.from({ length: 30 }, (_, i) => ({
+    v: `video${String(i).padStart(6, '0')}`,
+    t: `歌回${i}`,
+    d: `2026-10-${String((i % 28) + 1).padStart(2, '0')}T12:00:00Z`,
+    vt: i % 2 === 0 ? { i: 'v1', n: '星川測試', img: null } : { i: 'v2', n: '月見測試', img: null },
+    s: [[`seg${String(i).padStart(5, '0')}`, 0, 100, `歌${i}`, '原唱']],
+}));
+const cardCount = () => screen.queryAllByRole('button', { name: '全部播放' }).length;
+
+describe('SongsPage 返回與載入回歸', () => {
+    beforeEach(resetUrl);
+    afterEach(resetUrl);
+
+    it('T111 從列表進單場後按「返回歌回列表」呼叫 history.back，不再多推一筆', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        fireEvent.click(within(screen.getByRole('region', { name: '歌曲目錄' })).getByRole('button', { name: '十月歌回' }));
+        const back = await screen.findByRole('button', { name: '返回歌回列表' });
+
+        // jsdom 的 back 不一定觸發 popstate，這裡只驗證有呼叫
+        const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+        const pushSpy = vi.spyOn(window.history, 'pushState');
+        try {
+            fireEvent.click(back);
+            expect(backSpy).toHaveBeenCalledTimes(1);
+            expect(pushSpy).not.toHaveBeenCalled();
+        } finally {
+            backSpy.mockRestore();
+            pushSpy.mockRestore();
+        }
+    });
+
+    it('T111 用 ?v= 直接開單場（頁內沒有上一筆列表）時，返回不呼叫 back，改推 /songs 並回到列表', async () => {
+        window.history.replaceState(null, '', '/songs?v=bbbbbbbbbbb');
+        renderPage();
+        expect(await screen.findByRole('heading', { level: 2, name: '耐久歌枠' })).toBeInTheDocument();
+
+        const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+        const pushSpy = vi.spyOn(window.history, 'pushState');
+        try {
+            fireEvent.click(screen.getByRole('button', { name: '返回歌回列表' }));
+            expect(backSpy).not.toHaveBeenCalled();
+            expect(pushSpy).toHaveBeenCalledTimes(1);
+            expect(pushSpy.mock.calls[0][2]).toBe('/songs');
+            expect(await screen.findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: '返回歌回列表' })).toBeNull();
+        } finally {
+            backSpy.mockRestore();
+            pushSpy.mockRestore();
+        }
+    });
+
+    it('T113 目錄載入失敗時直接開單場，顯示錯誤與重試而不是找不到歌回，重試成功後顯示該場', async () => {
+        window.history.replaceState(null, '', '/songs?v=aaaaaaaaaaa');
+        // useSongCatalog 自帶重試 1 次：前兩次都失敗才會顯示錯誤
+        fetchMock.mockImplementationOnce(async () => jsonRes({ ok: false }, 500)).mockImplementationOnce(async () => jsonRes({ ok: false }, 500));
+        renderPage();
+
+        expect(await screen.findByRole('alert', {}, { timeout: 4000 })).toHaveTextContent('暫時無法載入歌曲目錄');
+        expect(screen.queryByText(/找不到/)).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: '重試' }));
+        expect(await screen.findByRole('heading', { level: 2, name: '十月歌回' })).toBeInTheDocument();
+    });
+
+    describe('T114 篩選切換與返回鍵', () => {
+        // 30 支歌回約 1600 個節點，jsdom 在全套平行時單次角色查詢可達數百 ms：放寬等待上限，不改斷言
+        const SLOW = { timeout: 5000 };
+        beforeEach(() => {
+            fetchMock.mockImplementation(async () => jsonRes(BIG_CATALOG));
+        });
+
+        const loadMoreAndCount = async () => {
+            await screen.findByRole('button', { name: /^顯示更多/ }, SLOW);
+            expect(cardCount()).toBe(20);
+            fireEvent.click(screen.getByRole('button', { name: /^顯示更多/ }));
+            await waitFor(() => expect(cardCount()).toBeGreaterThan(20), SLOW);
+            return cardCount();
+        };
+
+        const pickVtuber = async () => {
+            const nav = screen.getByRole('navigation', { name: '歌單導覽' });
+            const group = within(nav).getByRole('group', { name: 'VTuber' });
+            fireEvent.click(await within(group).findByRole('button', { name: '星川測試' }, SLOW));
+            await waitFor(() => expect(cardCount()).toBe(15), SLOW);
+            return nav;
+        };
+
+        it('切換篩選後用返回鍵回到原列表，顯示筆數一起還原', async () => {
+            renderPage();
+            const expanded = await loadMoreAndCount();
+            expect(expanded).toBe(30);
+
+            await pickVtuber();
+            window.history.replaceState(null, '', '/songs');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+
+            await waitFor(() => expect(cardCount()).toBe(expanded), SLOW);
+        }, 15000);
+
+        it('點左欄「歌回」連結這種明確切換，回到未篩選列表時從頭開始只顯示 20 筆', async () => {
+            renderPage();
+            await loadMoreAndCount();
+            const nav = await pickVtuber();
+
+            fireEvent.click(within(nav).getByRole('link', { name: '歌回' }));
+            await waitFor(() => expect(cardCount()).toBe(20), SLOW);
+        }, 15000);
+    });
+});
+
+describe('SongsPage 手機分頁捲動位置', () => {
+    const originalMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+        resetUrl();
+        window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+            matches: query === '(width < 64rem)',
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+        })) as unknown as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+        window.matchMedia = originalMatchMedia;
+        resetUrl();
+    });
+
+    // 目前看得到、屬於作用中分頁的捲動區：優先在 tabpanel 內找，沒有 tabpanel 就挑不在隱藏祖先內的第一個
+    const activeViewport = (): HTMLElement => {
+        const panels = screen.queryAllByRole('tabpanel');
+        for (const p of panels) {
+            const vp = p.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
+            if (vp) return vp;
+        }
+        const visible = Array.from(document.querySelectorAll<HTMLElement>('[data-radix-scroll-area-viewport]')).filter(
+            (el) => !el.closest('[hidden],[aria-hidden="true"],[data-state="inactive"]'),
+        );
+        if (!visible.length) throw new Error('找不到作用中分頁的捲動區');
+        return visible[0];
+    };
+
+    it('T112 手機「瀏覽」與「正在播放」兩個分頁各自記住捲動位置', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        const tablist = screen.getByRole('tablist');
+        const browseTab = within(tablist).getByRole('tab', { name: '瀏覽' });
+        const nowTab = within(tablist).getByRole('tab', { name: '正在播放' });
+
+        const vp = activeViewport();
+        vp.scrollTop = 500;
+        fireEvent.scroll(vp);
+        // 守門：jsdom 真的把值記住了，否則後面的斷言沒有意義
+        expect(vp.scrollTop).toBe(500);
+
+        activate(nowTab);
+        await waitFor(() => expect(screen.getByRole('heading', { name: '接下來' })).toBeInTheDocument());
+        await waitFor(() => expect(activeViewport().scrollTop).toBe(0));
+
+        activate(browseTab);
+        await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument());
+        await waitFor(() => expect(activeViewport().scrollTop).toBe(500));
+    });
+});
