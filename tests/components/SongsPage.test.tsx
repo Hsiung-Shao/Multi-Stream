@@ -320,6 +320,24 @@ describe('SongsPage 三欄控制台', () => {
         });
     });
 
+    it('T110 篩選 VTuber 後進單場再按返回歌回列表，篩選仍保留', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        const nav = screen.getByRole('navigation', { name: '歌單導覽' });
+        const group = within(nav).getByRole('group', { name: 'VTuber' });
+        fireEvent.click(await within(group).findByRole('button', { name: '星川測試' }));
+        const main = screen.getByRole('main');
+        await waitFor(() => expect(within(main).queryByText('耐久歌枠')).toBeNull());
+
+        fireEvent.click(within(screen.getByRole('region', { name: '歌曲目錄' })).getByRole('button', { name: '十月歌回' }));
+        fireEvent.click(await screen.findByRole('button', { name: '返回歌回列表' }));
+
+        expect(await within(main).findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
+        expect(within(main).getByText('十月歌回')).toBeInTheDocument();
+        expect(within(main).queryByText('耐久歌枠')).toBeNull();
+        expect(within(main).getByRole('button', { name: '清除篩選' })).toBeInTheDocument();
+    });
+
     it('T107 播放／暫停按鈕與播放進度滑桿全頁只出現在底部播放列', async () => {
         renderPage();
         await screen.findByText('十月歌回');
@@ -369,6 +387,17 @@ describe('SongsPage 手機版', () => {
     afterEach(() => {
         window.matchMedia = originalMatchMedia;
         resetUrl();
+    });
+
+    it('T109 用 Esc 關閉選單抽屜後焦點回到選單鈕', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        const menuButton = screen.getByRole('button', { name: '選單' });
+        fireEvent.click(menuButton);
+        const sheet = await screen.findByRole('dialog');
+        fireEvent.keyDown(sheet, { key: 'Escape' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '選單' })));
     });
 
     it('T106 窄螢幕有選單鈕與瀏覽／正在播放兩個分頁，播放器只有一個且不重掛，佇列只在正在播放分頁', async () => {

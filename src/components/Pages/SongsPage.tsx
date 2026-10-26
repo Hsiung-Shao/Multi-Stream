@@ -20,7 +20,7 @@ import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
-import { Sheet, SheetContent, SheetTitle } from '../ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '../ui/sheet';
 import { cn } from '../ui/utils';
 import { useMediaQuery } from '../../hooks/use-media-query';
 import {
@@ -46,14 +46,26 @@ import { ShareNotice, type ShareNoticeState } from '../../features/songs/compone
 /** 目錄一次先顯示幾支歌回（其餘按「顯示更多」），避免上千首歌一次渲染 */
 const CATALOG_PAGE_SIZE = 20;
 const EMPTY_PLAYLISTS: Playlist[] = [];
-/** 手機版（播放器置頂＋分頁＋精簡底部列）；查「窄螢幕」所以預渲染、hydration 首輪與 jsdom 都是桌機版 */
-const NARROW_QUERY = '(max-width: 1023px)';
+/**
+ * 斷點與 Tailwind v4 的 lg（64rem）／xl（80rem）用同一種範圍語法：`width < 64rem` 與 CSS 的 `width >= 64rem` 剛好互補，
+ * 小數寬度（例：1023.5、1279.3）也不會出現 JS 與 CSS 都不成立的 1px 空窗。查「窄螢幕」所以預渲染、hydration 首輪與 jsdom 都是桌機版。
+ */
+/** 手機版（播放器置頂＋分頁＋精簡底部列） */
+const NARROW_QUERY = '(width < 64rem)';
+/** 舊寫法：在任何寬度都是 NARROW_QUERY 的子集，只為了讓既有測試的 matchMedia mock（比對這個字串）命中 */
+const NARROW_QUERY_LEGACY = '(max-width: 1023px)';
 /** 左欄收進「選單」抽屜（1024–1279 中欄與右欄維持） */
-const COMPACT_QUERY = '(max-width: 1279px)';
+const COMPACT_QUERY = '(width < 80rem)';
+/** 橫向手機這類矮螢幕：頁首與分頁列改跟著內容捲動、底部列壓成一列，內容區才有高度 */
+const SHORT_QUERY = '(max-height: 500px)';
 /** 手機播放器高度（與 NowPlayingPanel 的 PlayerFrame 同一個算式）：抽屜的遮罩與內容從這裡往下，不蓋到影片 */
 const SHEET_BELOW_PLAYER = 'top-[max(202px,min(56.25vw,50dvh))]';
 /** 各畫面的 h2（tabIndex=-1）：使用者切換畫面後把焦點移過去，螢幕閱讀器會念出新畫面 */
 const VIEW_HEADING_IDS = ['songs-video-h', 'songs-playlists-h', 'songs-catalog-h'];
+
+/** 中欄捲動區的 viewport（Radix ScrollArea 不轉發 viewport ref） */
+const viewportOf = (root: HTMLDivElement | null): HTMLElement | null =>
+    root?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]') ?? null;
 
 function focusViewHeading(): void {
     for (const id of VIEW_HEADING_IDS) {
@@ -86,6 +98,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const playlists = mounted ? storePlaylists : EMPTY_PLAYLISTS;
 
     const [view, setView] = useState<SongsView>(LIST_VIEW);
+    // 最近一次列表畫面的 VTuber 篩選：進單場或歌單時保留，「返回歌回列表」回到它，顯示筆數也不會因此重設
+    const [listVtuber, setListVtuber] = useState<string | null>(null);
+    if (view.kind === 'list' && view.vtuber !== listVtuber) setListVtuber(view.vtuber);
     const [query, setQuery] = useState('');
     const deferredQuery = useDeferredValue(query);
     const [visible, setVisible] = useState(CATALOG_PAGE_SIZE);
@@ -93,7 +108,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const [sort, setSort] = useState<CatalogSort>('latest');
     const scrollRef = useRef<HTMLDivElement>(null);
     // matchMedia 只在 effect 裡讀（useMediaQuery 初值 false）
-    const narrow = useMediaQuery(NARROW_QUERY);
+    const narrowLegacy = useMediaQuery(NARROW_QUERY_LEGACY);
+    const narrow = useMediaQuery(NARROW_QUERY) || narrowLegacy;
+    const short = useMediaQuery(SHORT_QUERY) && narrow;
     // 窄螢幕一定也收左欄（不依賴兩個查詢同時更新）
     const compact = useMediaQuery(COMPACT_QUERY) || narrow;
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -103,16 +120,33 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     /** 這次切換是從抽屜點的：等抽屜關閉時再移焦點，否則會被抽屜的焦點鎖拉回去或被還給「選單」鈕 */
     const viaSheetRef = useRef(false);
 
+    const viewRef = useRef(view);
+    useEffect(() => {
+        viewRef.current = view;
+    }, [view]);
+    /** 列表畫面離開前的捲動位置（key＝列表網址）：返回時捲回原處 */
+    const listScrollRef = useRef(new Map<string, number>());
+    /** 換畫面前呼叫：DOM 換成新畫面後 scrollTop 會被新內容的高度截斷，所以要在換之前記 */
+    const rememberListScroll = useCallback(() => {
+        const cur = viewRef.current;
+        const viewport = viewportOf(scrollRef.current);
+        if (cur.kind === 'list' && viewport) listScrollRef.current.set(serializeSongsView(cur), viewport.scrollTop);
+    }, []);
+
     // 網址 → 畫面：mount 時讀一次（?list= 已由 App 清掉），之後跟著瀏覽器上一頁／下一頁
     useEffect(() => {
-        const sync = () => setView(parseSongsView(window.location.search));
+        const sync = () => {
+            rememberListScroll();
+            setView(parseSongsView(window.location.search));
+        };
         sync();
         window.addEventListener('popstate', sync);
         return () => window.removeEventListener('popstate', sync);
-    }, []);
+    }, [rememberListScroll]);
 
     /** 畫面 → 網址：replace＝只改網址不新增歷史（例如展開／收合歌單） */
     const navigate = useCallback((next: SongsView, opts?: { replace?: boolean }) => {
+        if (!sameSongsView(viewRef.current, next)) rememberListScroll();
         setView((prev) => (sameSongsView(prev, next) ? prev : next));
         setMobileTab('browse');
         const url = PAGE_PATHS.songs + serializeSongsView(next);
@@ -123,14 +157,14 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             window.history.pushState(null, '', url);
             pendingFocusRef.current = true;
         }
-    }, []);
+    }, [rememberListScroll]);
 
-    // 換畫面時中欄捲回頂端（展開／收合歌單不算換畫面）
+    // 換畫面時中欄捲回頂端，回到列表時捲回離開前的位置（展開／收合歌單不算換畫面）
     const viewKey = serializeSongsView(view);
     const scrollKey = view.kind === 'playlists' ? 'playlists' : viewKey;
     useEffect(() => {
-        const viewport = scrollRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
-        if (viewport) viewport.scrollTop = 0;
+        const viewport = viewportOf(scrollRef.current);
+        if (viewport) viewport.scrollTop = listScrollRef.current.get(scrollKey) ?? 0;
     }, [scrollKey]);
     useEffect(() => {
         if (!pendingFocusRef.current || viaSheetRef.current) return;
@@ -138,7 +172,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         focusViewHeading();
     }, [viewKey]);
 
-    const vtuberFilter = view.kind === 'list' ? view.vtuber : null;
+    const vtuberFilter = listVtuber;
     const vtubers = useMemo(() => (catalog ? deriveVtubers(catalog.videos) : []), [catalog]);
     const filtered = useMemo(
         () => (catalog ? filterByVtuber(sortCatalog(filterCatalog(catalog.videos, deferredQuery), sort), vtuberFilter) : []),
@@ -183,6 +217,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     }, [append, t]);
     const handleOpenVideo = useCallback((video: SongVideo) => navigate({ kind: 'video', videoId: video.videoId }), [navigate]);
     const handleGoList = useCallback(() => navigate(LIST_VIEW), [navigate]);
+    const handleBackToList = useCallback(() => navigate({ kind: 'list', vtuber: listVtuber }), [navigate, listVtuber]);
     const handleSelectVtuber = useCallback((key: string) => navigate({ kind: 'list', vtuber: key }), [navigate]);
     const handleOpenPlaylist = useCallback((id: string) => navigate({ kind: 'playlists', playlistId: id }), [navigate]);
     const handlePlaylistToggle = useCallback(
@@ -252,7 +287,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 currentCode={currentCode}
                 playlists={playlists}
                 locale={locale}
-                onBack={handleGoList}
+                onBack={handleBackToList}
                 onPlayAll={handlePlayAll}
                 onPlaySong={handlePlaySong}
                 onQueue={handleQueue}
@@ -331,35 +366,45 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         </>
     );
 
-    const main = (
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden lg:rounded-xl lg:bg-card">
-            <header className="flex items-center gap-2 px-4 pt-3 sm:px-7 lg:pt-5">
-                {compact && (
-                    <Button variant="ghost" size="icon" className="-ml-2 size-9 shrink-0 rounded-full" onClick={() => setSheetOpen(true)} aria-label={t('nav.menu')} title={t('nav.menu')}>
+    const header = (
+        <header className="flex items-center gap-2 px-4 pt-3 sm:px-7 lg:pt-5">
+            {compact && (
+                // 用 SheetTrigger：抽屜關閉（Esc、點遮罩、X）時 Radix 才知道要把焦點還給這顆鈕
+                <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="-ml-2 size-9 shrink-0 rounded-full" aria-label={t('nav.menu')} title={t('nav.menu')}>
                         <Menu className="size-5" aria-hidden="true" />
                     </Button>
+                </SheetTrigger>
+            )}
+            <h1 className="min-w-0 flex-1 truncate text-base font-black sm:text-xl">{t('hero.title')}</h1>
+        </header>
+    );
+    const notice = shareNotice && (
+        <div className="px-4 pt-3 sm:px-7">
+            <ShareNotice notice={shareNotice} onSave={handleSaveShare} onDismiss={() => setShareNotice(null)} />
+        </div>
+    );
+
+    // Sheet root 不產生 DOM，永遠掛著：頁首的 SheetTrigger 與抽屜內容才在同一個 context 裡
+    const main = (
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden lg:rounded-xl lg:bg-card">
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                {!short && header}
+                {!short && notice}
+                {narrow ? (
+                    <MobileNowTabs
+                        value={mobileTab}
+                        onValueChange={setMobileTab}
+                        queueCount={player.queue.items.length}
+                        lead={short ? <>{header}{notice}</> : null}
+                        browse={body}
+                        now={<NowPlayingDetails player={player} catalog={catalog} onSaveQueue={handleSaveQueue} />}
+                        scrollRef={scrollRef}
+                    />
+                ) : (
+                    <ScrollArea ref={scrollRef} className="min-h-0 flex-1 [&>div>div]:!block">{body}</ScrollArea>
                 )}
-                <h1 className="min-w-0 flex-1 truncate text-base font-black sm:text-xl">{t('hero.title')}</h1>
-            </header>
-            {shareNotice && (
-                <div className="px-4 pt-3 sm:px-7">
-                    <ShareNotice notice={shareNotice} onSave={handleSaveShare} onDismiss={() => setShareNotice(null)} />
-                </div>
-            )}
-            {narrow ? (
-                <MobileNowTabs
-                    value={mobileTab}
-                    onValueChange={setMobileTab}
-                    queueCount={player.queue.items.length}
-                    browse={body}
-                    now={<NowPlayingDetails player={player} catalog={catalog} onSaveQueue={handleSaveQueue} />}
-                    scrollRef={scrollRef}
-                />
-            ) : (
-                <ScrollArea ref={scrollRef} className="min-h-0 flex-1 [&>div>div]:!block">{body}</ScrollArea>
-            )}
-            {compact && (
-                <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                {compact && (
                     <SheetContent
                         side="left"
                         aria-describedby={undefined}
@@ -385,8 +430,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                             className="flex-1"
                         />
                     </SheetContent>
-                </Sheet>
-            )}
+                )}
+            </Sheet>
         </main>
     );
 
@@ -395,7 +440,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             nav={nav}
             main={main}
             aside={<NowPlayingPanel player={player} catalog={catalog} narrow={narrow} onSaveQueue={handleSaveQueue} />}
-            bar={<PlayerBar player={player} catalog={catalog} playlists={playlists} narrow={narrow} />}
+            bar={<PlayerBar player={player} catalog={catalog} playlists={playlists} narrow={narrow} short={short} />}
         />
     );
 }

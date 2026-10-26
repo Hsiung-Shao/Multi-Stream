@@ -1,6 +1,7 @@
 /**
  * 底部播放列：全頁唯一的播放／暫停、上一首、下一首、循環、隨機、播放進度與音量。
- * 桌機 88px 三段（目前歌曲｜控制＋進度｜音量）；手機約 72px（進度條一行＋歌名與五顆控制鈕，音量交給系統音量鍵）。
+ * 桌機 88px 三段（目前歌曲｜控制＋進度｜音量）；手機約 72px（進度條一行＋歌名與五顆控制鈕，音量交給系統音量鍵）；
+ * 矮螢幕（橫向手機）壓成一列約 52px：歌名｜進度條｜控制鈕，把高度留給內容區。
  * 右欄與中欄都不放第二份播放鍵或進度條，避免兩份狀態不同步。
  */
 import { useTranslation } from 'react-i18next';
@@ -17,11 +18,13 @@ import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 
 const REPEAT_NEXT: Record<RepeatMode, RepeatMode> = { off: 'all', all: 'one', one: 'off' };
 
-export function PlayerBar({ player, catalog, playlists, narrow }: {
+export function PlayerBar({ player, catalog, playlists, narrow, short = false }: {
     player: SegmentPlayer;
     catalog: SongCatalog | undefined;
     playlists: Playlist[];
     narrow: boolean;
+    /** 矮螢幕：手機版壓成單列（只在 narrow 時有效） */
+    short?: boolean;
 }) {
     const { t } = useTranslation('songs');
     const { queue, current } = player;
@@ -99,11 +102,21 @@ export function PlayerBar({ player, catalog, playlists, narrow }: {
             className={cn(
                 'shrink-0 bg-background pb-[env(safe-area-inset-bottom)]',
                 narrow
-                    ? 'flex flex-col gap-1 border-t border-border px-3 pt-1.5'
+                    ? cn('flex flex-col gap-1 border-t border-border px-3', short ? 'pt-0.5' : 'pt-1.5')
                     : 'grid h-[88px] grid-cols-[minmax(0,340px)_minmax(0,1fr)_minmax(0,340px)] items-center gap-6 px-3 xl:px-5',
             )}
         >
-            {narrow ? (
+            {narrow && short ? (
+                <div className="flex h-12 items-center gap-2">
+                    <div className="w-36 min-w-0 shrink-0">{nowText}</div>
+                    <SeekBar player={player} className="min-w-0 flex-1" />
+                    {shuffleButton}
+                    {prevButton}
+                    {playButton}
+                    {nextButton}
+                    {repeatButton}
+                </div>
+            ) : narrow ? (
                 <>
                     <SeekBar player={player} />
                     <div className="flex h-12 items-center gap-1">

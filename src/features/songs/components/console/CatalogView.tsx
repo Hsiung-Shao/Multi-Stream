@@ -100,7 +100,7 @@ export function CatalogView({
                     <p className={emptyBox}>{t('catalog.noResults', { query: deferredQuery.trim() })}</p>
                 ) : (
                     <>
-                        <ul className="grid gap-3 @2xl:grid-cols-2">
+                        <ul className="flex flex-col gap-3">
                             {videos.slice(0, visible).map((video) => (
                                 <VideoCard
                                     key={video.videoId}

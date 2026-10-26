@@ -9,7 +9,10 @@ import { videoPlays } from '../../lib/catalogView';
 import { PAGE_PATHS } from '../../../../config/routes';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 
-/** 目錄卡片：標題是按鈕，點了進單場詳細畫面（曲目表）；handler 由頁面以 useCallback 穩定傳入（memo） */
+/**
+ * 目錄卡片：標題是按鈕，點了進單場詳細畫面（曲目表）；handler 由頁面以 useCallback 穩定傳入（memo）。
+ * 列表一律單欄：頁首是頭像＋標題（佔滿寬度、最多兩行），下一行是 meta 與動作鈕；卡片夠寬時（@container）歌曲列排兩欄。
+ */
 export const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong, onPlayAll, onQueue, onOpen }: {
     video: SongVideo;
     playlists: Playlist[];
@@ -23,7 +26,7 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
     const date = video.streamedAt ? new Date(video.streamedAt) : null;
     const totalPlays = videoPlays(video);
     return (
-        <li className="rounded-xl bg-popover p-3 sm:p-4">
+        <li className="@container rounded-xl bg-popover p-3 sm:p-4">
             <div className="flex items-start gap-3">
                 {video.vtuber?.img ? (
                     <img src={video.vtuber.img} alt="" width={40} height={40} loading="lazy" className="size-10 shrink-0 rounded-full object-cover" />
@@ -40,44 +43,46 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
                             {video.title}
                         </button>
                     </h3>
-                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-                        {[video.vtuber?.name ?? t('catalog.unknownVtuber'), date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(locale) : null]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        {' · '}
-                        {t('catalog.songCount', { count: video.segments.length })}
-                        {totalPlays > 0 && <>{' · '}{t('catalog.totalPlays', { count: totalPlays.toLocaleString(locale) })}</>}
-                    </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                    <Button size="sm" className="h-8" onClick={() => onPlayAll(video)} disabled={video.segments.length === 0} aria-label={t('catalog.playAll')}>
-                        <Play className="size-3.5" aria-hidden="true" />
-                        <span className="hidden sm:inline">{t('catalog.playAll')}</span>
-                    </Button>
-                    <a
-                        href={`https://www.youtube.com/watch?v=${video.videoId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={t('catalog.openOnYoutube')}
-                        title={t('catalog.openOnYoutube')}
-                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                        <ExternalLink className="size-3.5" aria-hidden="true" />
-                    </a>
-                    {/* 整頁導覽：投稿頁 mount 後才讀 ?v=（站內切頁會被路由同步把 query 清掉） */}
-                    <a
-                        href={`${PAGE_PATHS.songsSubmit}?v=${video.videoId}`}
-                        aria-label={t('catalog.fixTimeline')}
-                        title={t('catalog.fixTimeline')}
-                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                        <Pencil className="size-3.5" aria-hidden="true" />
-                    </a>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <p className="min-w-0 flex-1 text-[12.5px] text-muted-foreground">
+                            {[video.vtuber?.name ?? t('catalog.unknownVtuber'), date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(locale) : null]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            {' · '}
+                            {t('catalog.songCount', { count: video.segments.length })}
+                            {totalPlays > 0 && <>{' · '}{t('catalog.totalPlays', { count: totalPlays.toLocaleString(locale) })}</>}
+                        </p>
+                        <div className="flex shrink-0 items-center gap-1">
+                            <Button size="sm" className="h-8" onClick={() => onPlayAll(video)} disabled={video.segments.length === 0} aria-label={t('catalog.playAll')}>
+                                <Play className="size-3.5" aria-hidden="true" />
+                                <span className="hidden sm:inline">{t('catalog.playAll')}</span>
+                            </Button>
+                            <a
+                                href={`https://www.youtube.com/watch?v=${video.videoId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={t('catalog.openOnYoutube')}
+                                title={t('catalog.openOnYoutube')}
+                                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
+                                <ExternalLink className="size-3.5" aria-hidden="true" />
+                            </a>
+                            {/* 整頁導覽：投稿頁 mount 後才讀 ?v=（站內切頁會被路由同步把 query 清掉） */}
+                            <a
+                                href={`${PAGE_PATHS.songsSubmit}?v=${video.videoId}`}
+                                aria-label={t('catalog.fixTimeline')}
+                                title={t('catalog.fixTimeline')}
+                                className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
+                                <Pencil className="size-3.5" aria-hidden="true" />
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <ol className="mt-2 flex flex-col">
+            <ol className="mt-2 grid @2xl:grid-cols-2 @2xl:gap-x-6">
                 {video.segments.map((seg) => (
-                    <li key={seg.code} className="flex items-center gap-1 border-t border-border/60 py-1 first:border-t-0">
+                    <li key={seg.code} className="flex min-w-0 items-center gap-1 border-t border-border/60 py-1 first:border-t-0 @2xl:[&:nth-child(2)]:border-t-0">
                         <span className="w-14 shrink-0 text-[12px] tabular-nums text-muted-foreground">{formatTimecode(seg.start)}</span>
                         <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm">{seg.title}</span>
