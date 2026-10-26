@@ -213,6 +213,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     /**
      * 手機分頁的捲動還原要等「分頁內容真的掛上 DOM」才做：Radix TabsContent 包在 Presence 裡，切分頁的那次 commit
      * 新分頁的 Presence 還是 unmounted（只在 layout effect 裡 send('MOUNT')，下一次 commit 才渲染內容），舊分頁內容還在。
+     * 注意 TabsContent 的 tabpanel 外框一直都在（Presence 用 render prop 時強制渲染外框，只以 hidden 與是否渲染 children 區分），
+     * 所以「內容掛上了沒」要看外框有沒有 hidden，不能只看外框存不存在。
      * 若在 useEffect 裡設 scrollTop，點擊是離散事件，React 會在下一次 commit 之前同步跑完 passive effect，
      * 這時捲動區裡只有另一個分頁的短內容，瀏覽器把 scrollTop 夾成 0。所以改由分頁內容掛上時的 layout effect（onPanelMount）還原。
      */
@@ -232,8 +234,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         const target = restoreScrollRef.current ?? 0;
         restoreScrollRef.current = null;
         const root = scrollRef.current;
-        // 手機分頁存在、但「瀏覽」內容還沒掛上：交給 handlePanelMount，現在設會被短內容夾掉
-        if (root?.querySelector('[data-songs-panel]') && !root.querySelector('[data-songs-panel="browse"]')) {
+        // 手機分頁的「瀏覽」內容還沒掛上（外框仍 hidden、children 下一次 commit 才渲染）：交給 handlePanelMount，現在設會被空內容夾成 0
+        if (root?.querySelector('[data-songs-panel="browse"]')?.hasAttribute('hidden')) {
             pendingBrowseScrollRef.current = target;
             return;
         }
