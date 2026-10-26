@@ -7,71 +7,37 @@
 // - 分享連結 ?list=code.code… 由 App 在啟動時快照、清掉 query 後以 shareCodes 傳進來；目錄到了才解析成佇列。
 // - SEO（WebPage + Breadcrumb）由 App.tsx 統一處理；預渲染只輸出殼層（SSR 的 QueryClient 不抓資料），殼層要有 h1 與各區標題。
 
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import {
-    ChevronRight, ChevronUp, ChevronDown, ListPlus, ListMusic, Loader2, MoreHorizontal, Music2, Pause, Play, Plus,
-    RefreshCw, Repeat, Repeat1, Search, Share2, Shuffle, SkipBack, SkipForward, Trash2, X, ExternalLink, Pencil,
-    Volume1, Volume2, VolumeX,
-} from 'lucide-react';
+import { ChevronRight, ListPlus, Loader2, Pause, Play, RefreshCw, Repeat, Repeat1, Search, Shuffle, SkipBack, SkipForward, X } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { ScrollArea } from '../ui/scroll-area';
-import { Slider } from '../ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
-import {
-    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-    AlertDialogHeader, AlertDialogTitle,
-} from '../ui/alert-dialog';
 import { cn } from '../ui/utils';
 import {
     resolveCodes, toQueueItem, useSongCatalog, type SongCatalog, type SongEntry, type SongSegment, type SongVideo,
 } from '../../features/songs/songsSource';
 import { useSegmentPlayer, type SegmentPlayer } from '../../features/songs/hooks/useSegmentPlayer';
+import { useMounted } from '../../features/songs/hooks/useMounted';
+import { usePlayReporter } from '../../features/songs/hooks/usePlayReporter';
 import { usePlaylistStore, type Playlist } from '../../features/songs/store/usePlaylistStore';
-import { serializeSongShare, SONG_SHARE_MAX, SONG_SHARE_PARAM } from '../../features/songs/lib/songShareLink';
-import { formatTimecode } from '../../features/songs/lib/timecode';
 import type { RepeatMode } from '../../features/songs/lib/queue';
-import { PAGE_PATHS } from '../../config/routes';
-import { createPlayReporter } from '../../features/songs/playReporter';
-import { filterCatalog, sortCatalog, videoPlays, type CatalogSort } from '../../features/songs/lib/catalogView';
+import { filterCatalog, sortCatalog, type CatalogSort } from '../../features/songs/lib/catalogView';
+import { SeekBar } from '../../features/songs/components/console/SeekBar';
+import { VolumeControl } from '../../features/songs/components/console/VolumeControl';
+import { QueuePanel } from '../../features/songs/components/console/QueuePanel';
+import { PlaylistsPanel } from '../../features/songs/components/console/PlaylistsView';
+import { VideoCard } from '../../features/songs/components/console/VideoCard';
 
 /** 目錄一次先顯示幾支歌回（其餘按「顯示更多」），避免上千首歌一次渲染 */
 const CATALOG_PAGE_SIZE = 20;
 const EMPTY_PLAYLISTS: Playlist[] = [];
 const REPEAT_NEXT: Record<RepeatMode, RepeatMode> = { off: 'all', all: 'one', one: 'off' };
-const PLAYS_ENDPOINT = '/api/songs/plays';
-/** 播放次數批次回報間隔（另在 pagehide 時送出） */
-const PLAYS_FLUSH_MS = 60_000;
-
 const CATALOG_SORTS: CatalogSort[] = ['latest', 'popular'];
-
-/** 送出播放次數：優先 sendBeacon（關頁也送得出去），不支援或被拒時退回 fetch keepalive */
-function sendPlays(codes: string[]): void {
-    const body = JSON.stringify({ codes });
-    try {
-        if (typeof navigator.sendBeacon === 'function' && navigator.sendBeacon(PLAYS_ENDPOINT, new Blob([body], { type: 'application/json' }))) return;
-    } catch { /* 改走 fetch */ }
-    void fetch(PLAYS_ENDPOINT, { method: 'POST', body, keepalive: true, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } })
-        .catch(() => { /* 計次失敗不影響播放 */ });
-}
-
-/** localStorage 包一層：隱私模式或配額滿時不丟例外 */
-const safeStorage: Pick<Storage, 'getItem' | 'setItem'> = {
-    getItem: (key) => {
-        try { return window.localStorage.getItem(key); } catch { return null; }
-    },
-    setItem: (key, value) => {
-        try { window.localStorage.setItem(key, value); } catch { /* 放棄持久化 */ }
-    },
-};
 
 interface SongsPageProps {
     /** 分享連結帶進來的歌曲 code（App 啟動時快照）；null = 沒有分享連結 */
@@ -84,25 +50,6 @@ interface ShareNotice {
     found: string[];
     missing: number;
     saved: boolean;
-}
-
-function useMounted(): boolean {
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-    return mounted;
-}
-
-async function copyText(text: string): Promise<boolean> {
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function shareUrl(codes: string[]): string {
-    return `${window.location.origin}${PAGE_PATHS.songs}?${SONG_SHARE_PARAM}=${serializeSongShare(codes)}`;
 }
 
 // ---------- 播放器區 ----------
@@ -200,458 +147,6 @@ function PlayerPanel({ player, catalog }: { player: SegmentPlayer; catalog: Song
     );
 }
 
-// ---------- 進度條 ----------
-
-/** 本首進度：拖曳中顯示拖曳位置，放開（或鍵盤調整）才 seek，免得輪詢更新和手指互搶 */
-function SeekBar({ player }: { player: SegmentPlayer }) {
-    const { t } = useTranslation('songs');
-    const { elapsed, total } = player.progress;
-    const [dragging, setDragging] = useState<number | null>(null);
-    const shown = dragging ?? elapsed;
-    // 還沒開始播（分享連結只 cue）時停用：cued 狀態 seekTo 會讓 YouTube 直接開播，佇列卻不會追蹤、播到結尾也不切歌
-    const disabled = !player.current || total <= 0 || player.queue.status !== 'playing';
-    return (
-        <div className="mt-3 flex items-center gap-3 text-[12px] tabular-nums text-muted-foreground">
-            <span className="w-12 shrink-0 text-right">{formatTimecode(shown)}</span>
-            <div role="group" aria-label={t('controls.seek')} className="min-w-0 flex-1">
-                <Slider
-                    min={0}
-                    max={Math.max(total, 1)}
-                    step={1}
-                    value={[Math.min(shown, total)]}
-                    disabled={disabled}
-                    onValueChange={(v) => setDragging(v[0] ?? 0)}
-                    onValueCommit={(v) => {
-                        setDragging(null);
-                        player.seek(v[0] ?? 0);
-                    }}
-                    thumbLabel={t('controls.seek')}
-                />
-            </div>
-            <span className="w-12 shrink-0">{formatTimecode(total)}</span>
-        </div>
-    );
-}
-
-// ---------- 音量 ----------
-
-/** 靜音鈕＋音量滑桿：手機寬度只留靜音鈕（滑桿佔位會擠掉歌名，系統音量鍵也能調） */
-function VolumeControl({ player }: { player: SegmentPlayer }) {
-    const { t } = useTranslation('songs');
-    const { volume, muted } = player;
-    const silent = muted || volume === 0;
-    const Icon = silent ? VolumeX : volume < 50 ? Volume1 : Volume2;
-    const muteLabel = muted ? t('controls.unmute') : t('controls.mute');
-    return (
-        <div className="flex items-center gap-1.5 sm:ml-1">
-            <Button variant="ghost" size="icon" className="size-10" onClick={player.toggleMute} aria-pressed={muted} aria-label={muteLabel} title={muteLabel}>
-                <Icon className="size-5" aria-hidden="true" />
-            </Button>
-            <div role="group" aria-label={t('controls.volume')} title={`${t('controls.volume')} ${muted ? 0 : volume}`} className="hidden w-24 sm:block">
-                <Slider
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={[muted ? 0 : volume]}
-                    onValueChange={(v) => player.setVolume(v[0] ?? 0)}
-                    thumbLabel={t('controls.volume')}
-                />
-            </div>
-        </div>
-    );
-}
-
-// ---------- 佇列 ----------
-
-function QueuePanel({ player, catalog, onSaveQueue }: { player: SegmentPlayer; catalog: SongCatalog | undefined; onSaveQueue: () => void }) {
-    const { t } = useTranslation('songs');
-    const { queue } = player;
-    if (queue.items.length === 0) {
-        return <p className="px-1 py-8 text-center text-sm text-muted-foreground">{t('queue.empty')}</p>;
-    }
-    return (
-        <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 px-1">
-                <span className="text-[13px] text-muted-foreground">{t('queue.count', { count: queue.items.length })}</span>
-                <Button variant="ghost" size="sm" className="ml-auto h-8" onClick={onSaveQueue}>
-                    <ListPlus className="size-3.5" aria-hidden="true" />
-                    {t('queue.saveAs')}
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 text-muted-foreground" onClick={player.clear}>
-                    {t('queue.clear')}
-                </Button>
-            </div>
-            <ScrollArea className="h-[340px] lg:h-[420px] [&>div>div]:!block">
-                <ol className="flex flex-col gap-0.5 pr-3">
-                    {queue.order.map((idx, pos) => {
-                        const item = queue.items[idx];
-                        if (!item) return null;
-                        const entry = catalog?.byCode.get(item.code);
-                        const isCurrent = pos === queue.cursor;
-                        const unplayable = queue.unplayable.includes(item.videoId);
-                        return (
-                            <li key={item.code} className={cn('group flex items-center gap-1 rounded-lg', isCurrent && 'bg-violet-500/10')}>
-                                <button
-                                    type="button"
-                                    onClick={() => player.jump(pos)}
-                                    aria-current={isCurrent ? 'true' : undefined}
-                                    className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                >
-                                    <span className="w-5 shrink-0 text-right text-[12px] tabular-nums text-muted-foreground">
-                                        {isCurrent && player.isPlaying ? <Music2 className="ml-auto size-3.5 text-violet-500" aria-hidden="true" /> : pos + 1}
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className={cn('block truncate text-sm', isCurrent && 'font-semibold', unplayable && 'text-muted-foreground line-through')}>
-                                            {entry?.segment.title ?? item.code}
-                                        </span>
-                                        <span className="block truncate text-[12px] text-muted-foreground">
-                                            {unplayable ? t('queue.unplayable') : [entry?.segment.artist, entry?.video.vtuber?.name].filter(Boolean).join(' · ')}
-                                        </span>
-                                    </span>
-                                </button>
-                                {!isCurrent && (
-                                    <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground" onClick={() => player.remove(pos)} aria-label={t('queue.remove')} title={t('queue.remove')}>
-                                        <X className="size-3.5" aria-hidden="true" />
-                                    </Button>
-                                )}
-                            </li>
-                        );
-                    })}
-                </ol>
-            </ScrollArea>
-        </div>
-    );
-}
-
-// ---------- 我的歌單 ----------
-
-function PlaylistsPanel({ playlists, catalog, onPlay }: {
-    playlists: Playlist[];
-    catalog: SongCatalog | undefined;
-    onPlay: (playlist: Playlist, startCode?: string) => void;
-}) {
-    const { t } = useTranslation('songs');
-    const createPlaylist = usePlaylistStore((s) => s.createPlaylist);
-    const renamePlaylist = usePlaylistStore((s) => s.renamePlaylist);
-    const deletePlaylist = usePlaylistStore((s) => s.deletePlaylist);
-    const removeFromPlaylist = usePlaylistStore((s) => s.removeFromPlaylist);
-    const moveInPlaylist = usePlaylistStore((s) => s.moveInPlaylist);
-
-    const [newName, setNewName] = useState('');
-    const [openId, setOpenId] = useState<string | null>(null);
-    const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
-    const [deleteTarget, setDeleteTarget] = useState<Playlist | null>(null);
-
-    const handleCreate = (e: FormEvent) => {
-        e.preventDefault();
-        const id = createPlaylist(newName || t('playlists.defaultName', { n: playlists.length + 1 }));
-        setNewName('');
-        setOpenId(id);
-    };
-
-    const handleShare = async (playlist: Playlist) => {
-        if (playlist.codes.length === 0) {
-            toast(t('playlists.emptyList'));
-            return;
-        }
-        const ok = await copyText(shareUrl(playlist.codes));
-        if (!ok) {
-            toast.error(t('playlists.copyFailed'));
-            return;
-        }
-        toast.success(t('playlists.copied'), {
-            description: playlist.codes.length > SONG_SHARE_MAX ? t('playlists.shareTruncated', { max: SONG_SHARE_MAX }) : undefined,
-        });
-    };
-
-    const handleRename = (e: FormEvent) => {
-        e.preventDefault();
-        if (renaming) renamePlaylist(renaming.id, renaming.name);
-        setRenaming(null);
-    };
-
-    return (
-        <div className="flex flex-col gap-3">
-            <form onSubmit={handleCreate} className="flex gap-2 px-1">
-                <Input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder={t('playlists.newPlaceholder')}
-                    aria-label={t('playlists.newPlaceholder')}
-                    maxLength={100}
-                    className="h-9"
-                />
-                <Button type="submit" size="sm" className="h-9 shrink-0">
-                    <Plus className="size-3.5" aria-hidden="true" />
-                    {t('playlists.create')}
-                </Button>
-            </form>
-
-            {playlists.length === 0 ? (
-                <p className="px-1 py-6 text-center text-sm text-muted-foreground">{t('playlists.empty')}</p>
-            ) : (
-                <ScrollArea className="h-[300px] lg:h-[380px] [&>div>div]:!block">
-                    <ul className="flex flex-col gap-2 pr-3">
-                        {playlists.map((pl) => {
-                            const open = openId === pl.id;
-                            return (
-                                <li key={pl.id} className="rounded-xl border border-border bg-card/50">
-                                    <div className="flex items-center gap-1 p-1.5">
-                                        {renaming?.id === pl.id ? (
-                                            <form onSubmit={handleRename} className="flex min-w-0 flex-1 gap-1">
-                                                <Input
-                                                    autoFocus
-                                                    value={renaming.name}
-                                                    onChange={(e) => setRenaming({ id: pl.id, name: e.target.value })}
-                                                    aria-label={t('playlists.rename')}
-                                                    maxLength={100}
-                                                    className="h-8"
-                                                />
-                                                <Button type="submit" size="sm" className="h-8">{t('playlists.renameSave')}</Button>
-                                                <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setRenaming(null)}>{t('playlists.cancel')}</Button>
-                                            </form>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                onClick={() => setOpenId(open ? null : pl.id)}
-                                                aria-expanded={open}
-                                                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                            >
-                                                <ListMusic className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                                                <span className="min-w-0 flex-1 truncate text-sm font-medium">{pl.name}</span>
-                                                <span className="shrink-0 text-[12px] text-muted-foreground">{t('playlists.count', { count: pl.codes.length })}</span>
-                                                <ChevronDown className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} aria-hidden="true" />
-                                            </button>
-                                        )}
-                                        <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => onPlay(pl)} disabled={pl.codes.length === 0} aria-label={t('playlists.play')} title={t('playlists.play')}>
-                                            <Play className="size-3.5" aria-hidden="true" />
-                                        </Button>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label={t('playlists.actions')} title={t('playlists.actions')}>
-                                                    <MoreHorizontal className="size-3.5" aria-hidden="true" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => void handleShare(pl)}>
-                                                    <Share2 className="size-3.5" aria-hidden="true" />
-                                                    {t('playlists.share')}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => setRenaming({ id: pl.id, name: pl.name })}>
-                                                    <Pencil className="size-3.5" aria-hidden="true" />
-                                                    {t('playlists.rename')}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onSelect={() => setDeleteTarget(pl)} className="text-destructive focus:text-destructive">
-                                                    <Trash2 className="size-3.5" aria-hidden="true" />
-                                                    {t('playlists.delete')}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                    {open && (
-                                        pl.codes.length === 0 ? (
-                                            <p className="px-3 pb-3 text-[13px] text-muted-foreground">{t('playlists.emptyList')}</p>
-                                        ) : (
-                                            <ol className="flex flex-col gap-0.5 px-1.5 pb-1.5">
-                                                {pl.codes.map((code, i) => {
-                                                    const entry = catalog?.byCode.get(code);
-                                                    return (
-                                                        <li key={code} className="flex items-center gap-0.5">
-                                                            <button
-                                                                type="button"
-                                                                disabled={!entry}
-                                                                onClick={() => onPlay(pl, code)}
-                                                                className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1 text-left hover:bg-muted/60 disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                            >
-                                                                <span className="w-5 shrink-0 text-right text-[12px] tabular-nums text-muted-foreground">{i + 1}</span>
-                                                                <span className="min-w-0 flex-1">
-                                                                    <span className={cn('block truncate text-[13px]', !entry && 'text-muted-foreground')}>
-                                                                        {entry ? entry.segment.title : catalog ? t('playlists.missingSong') : code}
-                                                                    </span>
-                                                                    {entry && (
-                                                                        <span className="block truncate text-[11.5px] text-muted-foreground">
-                                                                            {[entry.segment.artist, entry.video.vtuber?.name].filter(Boolean).join(' · ')}
-                                                                        </span>
-                                                                    )}
-                                                                </span>
-                                                            </button>
-                                                            <Button variant="ghost" size="icon" className="size-7 shrink-0" disabled={i === 0} onClick={() => moveInPlaylist(pl.id, i, i - 1)} aria-label={t('playlists.moveUp')} title={t('playlists.moveUp')}>
-                                                                <ChevronUp className="size-3.5" aria-hidden="true" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="size-7 shrink-0" disabled={i === pl.codes.length - 1} onClick={() => moveInPlaylist(pl.id, i, i + 1)} aria-label={t('playlists.moveDown')} title={t('playlists.moveDown')}>
-                                                                <ChevronDown className="size-3.5" aria-hidden="true" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="size-7 shrink-0 text-muted-foreground" onClick={() => removeFromPlaylist(pl.id, code)} aria-label={t('playlists.removeItem')} title={t('playlists.removeItem')}>
-                                                                <X className="size-3.5" aria-hidden="true" />
-                                                            </Button>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ol>
-                                        )
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                </ScrollArea>
-            )}
-            <p className="px-1 text-[12px] text-muted-foreground">{t('playlists.localNote')}</p>
-
-            <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>{t('playlists.deleteConfirmTitle', { name: deleteTarget?.name ?? '' })}</AlertDialogTitle>
-                        <AlertDialogDescription>{t('playlists.deleteConfirmBody')}</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>{t('playlists.cancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                            className="bg-destructive text-white hover:bg-destructive/90"
-                            onClick={() => {
-                                if (deleteTarget) deletePlaylist(deleteTarget.id);
-                                if (openId === deleteTarget?.id) setOpenId(null);
-                                setDeleteTarget(null);
-                            }}
-                        >
-                            {t('playlists.delete')}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
-    );
-}
-
-// ---------- 目錄 ----------
-
-function AddToPlaylistMenu({ code, playlists }: { code: string; playlists: Playlist[] }) {
-    const { t } = useTranslation('songs');
-    const createPlaylist = usePlaylistStore((s) => s.createPlaylist);
-    const addToPlaylist = usePlaylistStore((s) => s.addToPlaylist);
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label={t('catalog.addToPlaylist')} title={t('catalog.addToPlaylist')}>
-                    <ListMusic className="size-3.5" aria-hidden="true" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-w-[260px]">
-                <DropdownMenuLabel>{t('catalog.addToPlaylist')}</DropdownMenuLabel>
-                {playlists.map((pl) => (
-                    <DropdownMenuItem
-                        key={pl.id}
-                        onSelect={() => {
-                            addToPlaylist(pl.id, [code]);
-                            toast.success(t('catalog.added', { name: pl.name }));
-                        }}
-                    >
-                        <ListMusic className="size-3.5" aria-hidden="true" />
-                        <span className="truncate">{pl.name}</span>
-                    </DropdownMenuItem>
-                ))}
-                {playlists.length > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuItem
-                    onSelect={() => {
-                        const name = t('playlists.defaultName', { n: playlists.length + 1 });
-                        createPlaylist(name, [code]);
-                        toast.success(t('catalog.added', { name }));
-                    }}
-                >
-                    <Plus className="size-3.5" aria-hidden="true" />
-                    {t('catalog.newPlaylist')}
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-}
-
-const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong, onPlayAll, onQueue }: {
-    video: SongVideo;
-    playlists: Playlist[];
-    locale: string;
-    onPlaySong: (video: SongVideo, segment: SongSegment) => void;
-    onPlayAll: (video: SongVideo) => void;
-    onQueue: (segment: SongSegment) => void;
-}) {
-    const { t } = useTranslation('songs');
-    const date = video.streamedAt ? new Date(video.streamedAt) : null;
-    const totalPlays = videoPlays(video);
-    return (
-        <li className="rounded-2xl border border-border bg-card/50 p-3 sm:p-4">
-            <div className="flex items-start gap-3">
-                {video.vtuber?.img ? (
-                    <img src={video.vtuber.img} alt="" width={40} height={40} loading="lazy" className="size-10 shrink-0 rounded-full object-cover" />
-                ) : (
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted" aria-hidden="true"><Music2 className="size-4 text-muted-foreground" /></span>
-                )}
-                <div className="min-w-0 flex-1">
-                    <h3 className="line-clamp-2 text-[15px] font-bold leading-snug">{video.title}</h3>
-                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-                        {[video.vtuber?.name ?? t('catalog.unknownVtuber'), date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(locale) : null]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        {' · '}
-                        {t('catalog.songCount', { count: video.segments.length })}
-                        {totalPlays > 0 && <>{' · '}{t('catalog.totalPlays', { count: totalPlays.toLocaleString(locale) })}</>}
-                    </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                    <Button size="sm" className="h-8" onClick={() => onPlayAll(video)} disabled={video.segments.length === 0} aria-label={t('catalog.playAll')}>
-                        <Play className="size-3.5" aria-hidden="true" />
-                        <span className="hidden sm:inline">{t('catalog.playAll')}</span>
-                    </Button>
-                    <a
-                        href={`https://www.youtube.com/watch?v=${video.videoId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={t('catalog.openOnYoutube')}
-                        title={t('catalog.openOnYoutube')}
-                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                        <ExternalLink className="size-3.5" aria-hidden="true" />
-                    </a>
-                    {/* 整頁導覽：投稿頁 mount 後才讀 ?v=（站內切頁會被路由同步把 query 清掉） */}
-                    <a
-                        href={`${PAGE_PATHS.songsSubmit}?v=${video.videoId}`}
-                        aria-label={t('catalog.fixTimeline')}
-                        title={t('catalog.fixTimeline')}
-                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                    >
-                        <Pencil className="size-3.5" aria-hidden="true" />
-                    </a>
-                </div>
-            </div>
-            <ol className="mt-2 flex flex-col">
-                {video.segments.map((seg) => (
-                    <li key={seg.code} className="flex items-center gap-1 border-t border-border/60 py-1 first:border-t-0">
-                        <span className="w-14 shrink-0 text-[12px] tabular-nums text-muted-foreground">{formatTimecode(seg.start)}</span>
-                        <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm">{seg.title}</span>
-                            {seg.artist && <span className="block truncate text-[12px] text-muted-foreground">{seg.artist}</span>}
-                        </span>
-                        {/* 固定寬度欄：0 次留白，版面不因有無次數而跳動 */}
-                        <span
-                            className="w-12 shrink-0 text-right text-[11.5px] tabular-nums text-muted-foreground"
-                            title={seg.plays > 0 ? t('catalog.plays', { count: seg.plays.toLocaleString(locale) }) : undefined}
-                        >
-                            {seg.plays > 0 ? <><span aria-hidden="true">▶ </span>{seg.plays.toLocaleString(locale)}<span className="sr-only left-0 top-0">{t('catalog.playsUnit')}</span></> : null}
-                        </span>
-                        <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => onPlaySong(video, seg)} aria-label={`${t('catalog.play')}：${seg.title}`} title={t('catalog.play')}>
-                            <Play className="size-3.5" aria-hidden="true" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => onQueue(seg)} aria-label={`${t('catalog.addToQueue')}：${seg.title}`} title={t('catalog.addToQueue')}>
-                            <ListPlus className="size-3.5" aria-hidden="true" />
-                        </Button>
-                        <AddToPlaylistMenu code={seg.code} playlists={playlists} />
-                    </li>
-                ))}
-            </ol>
-        </li>
-    );
-});
-
 // ---------- 頁面 ----------
 
 export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps) {
@@ -660,23 +155,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const mounted = useMounted();
     const catalogQuery = useSongCatalog();
     const catalog = catalogQuery.data;
-    // 播放次數：聽滿門檻 → reporter.record（30 分鐘內同首不重複）→ 每 60 秒與關頁時批次送出。
-    // reporter 在 mount 後才建立（render 本體不碰 window／localStorage，預渲染安全）
-    const reporterRef = useRef<ReturnType<typeof createPlayReporter> | null>(null);
-    useEffect(() => {
-        const reporter = createPlayReporter({ send: sendPlays, now: () => Date.now(), storage: safeStorage });
-        reporterRef.current = reporter;
-        const flush = () => reporter.flush();
-        const timer = setInterval(flush, PLAYS_FLUSH_MS);
-        window.addEventListener('pagehide', flush);
-        return () => {
-            clearInterval(timer);
-            window.removeEventListener('pagehide', flush);
-            flush();
-            reporterRef.current = null;
-        };
-    }, []);
-    const handlePlayCredited = useCallback((code: string) => reporterRef.current?.record(code), []);
+    const handlePlayCredited = usePlayReporter();
     const player = useSegmentPlayer({ onPlayCredited: handlePlayCredited });
     const storePlaylists = usePlaylistStore((s) => s.playlists);
     const createPlaylist = usePlaylistStore((s) => s.createPlaylist);
