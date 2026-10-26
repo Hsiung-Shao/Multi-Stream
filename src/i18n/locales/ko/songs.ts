@@ -92,6 +92,7 @@ export default {
     'controls.volume': '볼륨',
     'controls.mute': '음소거',
     'controls.unmute': '음소거 해제',
+    'controls.seek': '재생 위치',
     'catalog.fixTimeline': '타임스탬프 수정',
     'catalog.submitPrompt': '듣고 싶은 노래 방송이 없나요?',
     'catalog.submitLink': '노래 방송 타임스탬프 제보',

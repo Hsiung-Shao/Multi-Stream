@@ -436,3 +436,119 @@ describe('useSegmentPlayer 第一次來的使用者', () => {
         expect(player.unMute).not.toHaveBeenCalled();
     });
 });
+
+// ---------- v1.2.1：歌曲進度條（progress／seek）----------
+describe('useSegmentPlayer 進度條', () => {
+    const tick = () => act(async () => { await vi.advanceTimersByTimeAsync(250); });
+
+    it('沒有目前歌曲時 progress 為 0／0', async () => {
+        await mountReady();
+        expect(api.progress).toEqual({ elapsed: 0, total: 0 });
+    });
+
+    it('載入一首後 total 為這首的長度、elapsed 為 0', async () => {
+        await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200)], { play: false }));
+        expect(api.progress).toEqual({ elapsed: 0, total: 100 });
+    });
+
+    it('播放中輪詢更新已播秒數，向下取整', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200)]));
+        player.emit('onStateChange', 1);
+        player.currentTime = 130.9;
+        await tick();
+        expect(api.progress).toEqual({ elapsed: 30, total: 100 });
+    });
+
+    it('同一整數秒內輪詢不更新 state，跨到下一秒才更新', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200)]));
+        player.emit('onStateChange', 1);
+        player.currentTime = 130.1;
+        await tick();
+        const before = api.progress;
+        expect(before.elapsed).toBe(30);
+        player.currentTime = 130.6;
+        await tick();
+        player.currentTime = 130.9;
+        await tick();
+        // 物件身分不變：代表沒有為了小數秒重設 state
+        expect(api.progress).toBe(before);
+        player.currentTime = 131.1;
+        await tick();
+        expect(api.progress.elapsed).toBe(31);
+    });
+
+    it('換首後 elapsed 回 0、total 換成新那首的長度', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200), item('b0000002', V1, 300, 350)]));
+        player.emit('onStateChange', 1);
+        player.currentTime = 130;
+        await tick();
+        expect(api.progress.elapsed).toBe(30);
+        act(() => api.next());
+        expect(api.current?.code).toBe('b0000002');
+        expect(api.progress).toEqual({ elapsed: 0, total: 50 });
+    });
+
+    it('重新載入同一首（playToken 變）時 elapsed 回 0', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200)]));
+        player.emit('onStateChange', 1);
+        player.currentTime = 150;
+        await tick();
+        expect(api.progress.elapsed).toBe(50);
+        act(() => api.load([item('a0000001', V1, 100, 200)]));
+        expect(api.progress).toEqual({ elapsed: 0, total: 100 });
+    });
+
+    it('seek 對目前這首呼叫 seekTo(start + elapsed, true) 並立即更新 elapsed', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200)]));
+        player.seekTo.mockClear();
+        act(() => api.seek(45));
+        expect(player.seekTo).toHaveBeenCalledTimes(1);
+        expect(player.seekTo).toHaveBeenCalledWith(145, true);
+        expect(api.progress).toEqual({ elapsed: 45, total: 100 });
+    });
+
+    it('seek 帶小數時 progress.elapsed 向下取整', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200)]));
+        player.seekTo.mockClear();
+        act(() => api.seek(45.7));
+        expect(player.seekTo).toHaveBeenCalledWith(145.7, true);
+        expect(api.progress.elapsed).toBe(45);
+    });
+
+    it('seek 超過總長時停在結束前 1 秒，elapsed 夾在可 seek 的最大值', async () => {
+        const { player } = await mountReady();
+        act(() => api.load([item('a0000001', V1, 100, 200)]));
+        player.seekTo.mockClear();
+        act(() => api.seek(9999));
+        expect(player.seekTo).toHaveBeenCalledWith(199, true);
+        expect(api.progress.elapsed).toBe(99);
+        act(() => api.seek(-20));
+        expect(player.seekTo).toHaveBeenLastCalledWith(100, true);
+        expect(api.progress.elapsed).toBe(0);
+    });
+
+    it('沒有目前歌曲時 seek 不做事', async () => {
+        const { player } = await mountReady();
+        player.seekTo.mockClear();
+        act(() => api.seek(30));
+        expect(player.seekTo).not.toHaveBeenCalled();
+        expect(api.progress).toEqual({ elapsed: 0, total: 0 });
+    });
+
+    it('播放器尚未就緒時 seek 不做事', async () => {
+        render(<Harness />);
+        await act(async () => { await Promise.resolve(); });
+        const player = FakePlayer.instances[0];
+        act(() => api.load([item('a0000001', V1, 100, 200)], { play: false }));
+        act(() => api.seek(30));
+        expect(player.seekTo).not.toHaveBeenCalled();
+        expect(api.progress.elapsed).toBe(0);
+    });
+});

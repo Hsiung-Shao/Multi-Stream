@@ -92,6 +92,7 @@ export default {
     'controls.volume': '音量',
     'controls.mute': '静音',
     'controls.unmute': '取消静音',
+    'controls.seek': '播放进度',
     'catalog.fixTimeline': '修正时间轴',
     'catalog.submitPrompt': '没找到想听的歌回？',
     'catalog.submitLink': '投稿歌回时间轴',

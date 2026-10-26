@@ -4,6 +4,7 @@
 //
 // GET  /api/admin/song-submissions?status=pending   → 列表(預設只列待審,新到舊,最多 100;不含 segments 與 ip_hash)
 // GET  /api/admin/song-submissions?id=xxx           → 單筆(含 segments);有 target_video_ref 時另附 existing(該影片既有片段)
+//                                                      與 existing_video(該影片目前的欄位)
 // POST /api/admin/song-submissions?id=xxx&action=approve
 //        body { video_ref, video, segments }(管理員微調後的版本;video_ref 為修正對象,新增為 null)
 //        只打一次 rpc approve_song_submission:鎖投稿列、寫入影片＋片段、標記 approved,同一交易
@@ -26,6 +27,7 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 const LIST_COLUMNS = 'id,kind,video_id,target_video_ref,title,vtuber_id,streamed_at,source_note,submitter_contact,status,reviewer_notes,result_video_ref,created_at,reviewed_at';
 const DETAIL_COLUMNS = `${LIST_COLUMNS},segments`;
 const SEGMENT_COLUMNS = 'id,code,start_seconds,end_seconds,title,original_artist,position';
+const VIDEO_COLUMNS = 'id,video_id,title,vtuber_id,streamed_at,duration_seconds,status';
 
 function idFromQuery(url) {
     const id = url.searchParams.get('id');
@@ -62,7 +64,19 @@ export async function onRequestGet(context) {
         if (!submission) return jsonResponse({ ok: false, error: 'not_found' }, 404, request);
 
         let existing = null;
+        let existingVideo = null;
         if (submission.target_video_ref) {
+            // 修正型：審核畫面以原歌回的影片欄位預填，核准時才不會被投稿內容覆寫（長度、草稿狀態）
+            const vid = await select(
+                env,
+                `song_videos?id=eq.${encodeURIComponent(submission.target_video_ref)}&select=${VIDEO_COLUMNS}&limit=1`,
+            );
+            if (!vid.ok) {
+                await logError(env, 'admin-song-submissions', 'fetch existing video failed', { metadata: { status: vid.status, error: vid.error?.slice(0, 500) } });
+                return jsonResponse({ ok: false, error: 'fetch_failed' }, 500, request);
+            }
+            existingVideo = vid.data?.[0] ?? null;
+
             const seg = await select(
                 env,
                 `song_segments?video_ref=eq.${encodeURIComponent(submission.target_video_ref)}&select=${SEGMENT_COLUMNS}&order=start_seconds.asc`,
@@ -73,7 +87,7 @@ export async function onRequestGet(context) {
             }
             existing = seg.data || [];
         }
-        return jsonResponse({ ok: true, submission, existing }, 200, request, NO_STORE);
+        return jsonResponse({ ok: true, submission, existing, existing_video: existingVideo }, 200, request, NO_STORE);
     }
 
     const status = url.searchParams.get('status') || 'pending';

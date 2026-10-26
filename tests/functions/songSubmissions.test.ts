@@ -349,3 +349,64 @@ describe('/api/admin/song-submissions', () => {
         expect(sbCalls().some((c) => c.url.includes('song_segments') && c.url.includes(REF))).toBe(true);
     });
 });
+
+// ---------- v1.2.1：修正型單筆查詢附上原歌回欄位（核准時沿用，不被投稿內容覆寫） ----------
+describe('GET /api/admin/song-submissions?id= 的 existing_video', () => {
+    const VIDEO_ROW = { id: REF, video_id: VIDEO, title: '原歌回標題', vtuber_id: null, streamed_at: '2026-10-01T12:00:00Z', duration_seconds: 5400, status: 'draft' };
+    const getOne = () => adminGet({ request: adminReq(`?id=${SUB_ID}`, undefined, 'admintoken', 'GET'), env: ENV() });
+    const videoQueries = () => sbCalls().filter((c) => c.url.includes('song_videos'));
+    const mockSb = (target: string | null, videoReply: () => Response) => {
+        sb = (_method, path) => {
+            if (path.startsWith('song_submissions?id=')) return new Response(JSON.stringify([{ id: SUB_ID, target_video_ref: target, segments: [] }]));
+            if (path.startsWith('song_videos')) return videoReply();
+            return new Response('[]');
+        };
+    };
+
+    it('修正型：回傳原歌回那一列，並以 id=eq.<target> 查含 duration_seconds 與 status 的欄位', async () => {
+        mockSb(REF, () => new Response(JSON.stringify([VIDEO_ROW])));
+        const res = await getOne();
+        expect(res.status).toBe(200);
+        expect((await res.json()).existing_video).toEqual(VIDEO_ROW);
+        const q = videoQueries();
+        expect(q).toHaveLength(1);
+        expect(q[0].url).toContain(`id=eq.${REF}`);
+        expect(q[0].url).toContain('duration_seconds');
+        expect(q[0].url).toContain('status');
+    });
+
+    it('新歌回（target 為 null）：existing_video 為 null，且完全不查 song_videos', async () => {
+        mockSb(null, () => new Response(JSON.stringify([VIDEO_ROW])));
+        const res = await getOne();
+        expect(res.status).toBe(200);
+        const json = await res.json();
+        expect(json.existing_video).toBeNull();
+        expect(videoQueries()).toHaveLength(0);
+    });
+
+    it('修正型但原歌回查不到：existing_video 為 null、仍回 200', async () => {
+        mockSb(REF, () => new Response('[]'));
+        const res = await getOne();
+        expect(res.status).toBe(200);
+        expect((await res.json()).existing_video).toBeNull();
+    });
+
+    it('查原歌回失敗（非 2xx）→ 500 fetch_failed', async () => {
+        mockSb(REF, () => new Response('boom', { status: 500 }));
+        const res = await getOne();
+        expect(res.status).toBe(500);
+        expect((await res.json()).error).toBe('fetch_failed');
+    });
+
+    it('既有欄位 submission 與 existing 維持不變', async () => {
+        sb = (_method, path) => {
+            if (path.startsWith('song_submissions?id=')) return new Response(JSON.stringify([{ id: SUB_ID, target_video_ref: REF, segments: [] }]));
+            if (path.startsWith('song_segments')) return new Response(JSON.stringify([{ id: 's1', start_seconds: 0 }]));
+            if (path.startsWith('song_videos')) return new Response(JSON.stringify([VIDEO_ROW]));
+            return new Response('[]');
+        };
+        const json = await (await getOne()).json();
+        expect(json.submission).toMatchObject({ id: SUB_ID, target_video_ref: REF });
+        expect(json.existing).toEqual([{ id: 's1', start_seconds: 0 }]);
+    });
+});

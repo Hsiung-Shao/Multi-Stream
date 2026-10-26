@@ -92,6 +92,7 @@ export default {
     'controls.volume': '音量',
     'controls.mute': 'ミュート',
     'controls.unmute': 'ミュート解除',
+    'controls.seek': '再生位置',
     'catalog.fixTimeline': 'タイムスタンプを修正',
     'catalog.submitPrompt': '聴きたい歌枠が見つからない？',
     'catalog.submitLink': '歌枠のタイムスタンプを投稿',

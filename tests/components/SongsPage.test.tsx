@@ -16,6 +16,7 @@ beforeAll(async () => {
 });
 
 class FakePlayer {
+    static instances: FakePlayer[] = [];
     loadVideoById = vi.fn();
     cueVideoById = vi.fn();
     seekTo = vi.fn();
@@ -26,6 +27,7 @@ class FakePlayer {
     getDuration = () => 0;
     getPlayerState = () => -1;
     constructor(_t: HTMLElement, opts: { events?: { onReady?: (e: { target: FakePlayer }) => void } }) {
+        FakePlayer.instances.push(this);
         setTimeout(() => opts.events?.onReady?.({ target: this }), 0);
     }
 }
@@ -54,6 +56,7 @@ function renderPage(props: Parameters<typeof SongsPage>[0] = {}) {
 }
 
 beforeEach(() => {
+    FakePlayer.instances = [];
     fetchMock = vi.fn(async () => jsonRes(CATALOG));
     vi.stubGlobal('fetch', fetchMock);
     (window as unknown as { YT: unknown }).YT = { Player: FakePlayer };
@@ -137,5 +140,42 @@ describe('SongsPage', () => {
         const holder = screen.getByTestId('songs-player');
         // 外框只包住播放器掛載點本身
         expect(holder.parentElement?.children).toHaveLength(1);
+    });
+});
+
+// ---------- v1.2.1：歌曲進度條 ----------
+describe('SongsPage 進度條', () => {
+    const seekThumb = () => screen.getByRole('slider', { name: '播放進度' });
+
+    it('沒有目前歌曲時進度滑桿停用', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        expect(seekThumb()).toHaveAttribute('data-disabled');
+    });
+
+    it('播放第一首後滑桿啟用，範圍是這首的長度（10～200 秒＝190）', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        fireEvent.click(screen.getAllByRole('button', { name: '全部播放' })[0]);
+        await screen.findByText('共 2 首');
+        expect(seekThumb()).not.toHaveAttribute('data-disabled');
+        expect(seekThumb()).toHaveAttribute('aria-valuemin', '0');
+        expect(seekThumb()).toHaveAttribute('aria-valuemax', '190');
+        expect(seekThumb()).toHaveAttribute('aria-valuenow', '0');
+    });
+
+    it('鍵盤調整進度會對播放器 seekTo(start + 秒數)，滑桿隨即顯示新位置', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        fireEvent.click(screen.getAllByRole('button', { name: '全部播放' })[0]);
+        await screen.findByText('共 2 首');
+        await waitFor(() => expect(FakePlayer.instances[0]?.loadVideoById).toHaveBeenCalled());
+        const player = FakePlayer.instances[0];
+        player.seekTo.mockClear();
+
+        seekThumb().focus();
+        fireEvent.keyDown(seekThumb(), { key: 'ArrowRight' });
+        await waitFor(() => expect(player.seekTo).toHaveBeenCalledWith(11, true));
+        await waitFor(() => expect(seekThumb()).toHaveAttribute('aria-valuenow', '1'));
     });
 });

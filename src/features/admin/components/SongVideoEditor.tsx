@@ -137,17 +137,20 @@ export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, o
         setRows(segments.map(fromRecord));
     }, [reviewing, id, detail.data]);
 
-    // 審核：以投稿內容預填；修正型先對回既有片段的 id／code
+    // 審核：以投稿內容預填；修正型先對回既有片段的 id／code，影片欄位沿用原歌回（不被投稿覆寫長度、草稿狀態）
     const existing = submission.data?.existing ?? null;
+    const existingVideo = submission.data?.existingVideo ?? null;
     useEffect(() => {
         if (!reviewId || !submission.data || loadedIdRef.current === `review:${reviewId}`) return;
         loadedIdRef.current = `review:${reviewId}`;
         const s = submission.data.submission;
+        const ev = submission.data.existingVideo;
         setUrl(s.video_id);
-        setTitle(s.title);
-        setVtuberId(s.vtuber_id);
-        setStreamedAt(toLocalInput(s.streamed_at));
-        setStatus('published');
+        setTitle(ev ? ev.title : s.title);
+        setVtuberId(ev ? ev.vtuber_id : s.vtuber_id);
+        setStreamedAt(toLocalInput(ev ? ev.streamed_at : s.streamed_at));
+        setDurationText(ev?.duration_seconds ? formatTimecode(ev.duration_seconds) : '');
+        setStatus(ev ? ev.status : 'published');
         const imported: ImportedRow[] = (s.segments ?? []).map((seg, line) => ({ ...seg, line }));
         const base = (submission.data.existing ?? []).map(fromRecord);
         setRows(base.length > 0 ? mergeWithExisting(base, imported).rows : imported.map(fromImported));
@@ -254,7 +257,7 @@ export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, o
             vtuber_id: vtuberId,
             streamed_at: streamedAt ? new Date(streamedAt).toISOString() : null,
             duration_seconds: duration,
-            status: reviewing ? 'published' : status,
+            status,
         };
     };
 
@@ -346,6 +349,10 @@ export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, o
                     {/* 使用者輸入：純文字節點，不轉連結 */}
                     <p className="mt-1.5"><span className="text-muted-foreground">來源說明：</span><span className="whitespace-pre-wrap break-words">{sub.source_note || '（未填）'}</span></p>
                     <p className="mt-0.5"><span className="text-muted-foreground">聯絡方式：</span><span className="break-all">{sub.submitter_contact || '（未填）'}</span></p>
+                    {existingVideo && sub.title !== existingVideo.title && (
+                        <p className="mt-0.5"><span className="text-muted-foreground">投稿者填的標題：</span><span className="break-words">{sub.title}</span></p>
+                    )}
+                    {existingVideo?.status === 'draft' && <p className="mt-1.5 text-muted-foreground">原歌回是草稿，核准後仍維持草稿。</p>}
                     {orphanRevision && <p className="mt-1.5 text-amber-600 dark:text-amber-400">原歌回已刪除，核准會新建一支歌回。</p>}
                     {removedExisting.length > 0 && (
                         <p className="mt-1.5 text-destructive">

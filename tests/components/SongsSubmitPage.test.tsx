@@ -1,6 +1,6 @@
 // 投稿歌回時間軸頁：貼網址自動帶標題、貼時間軸匯入後送出成功；同影片已有待審時顯示 409 文案
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../src/i18n/i18n';
 
@@ -108,5 +108,86 @@ describe('SongsSubmitPage', () => {
         fireEvent.change(screen.getByRole('textbox', { name: 'YouTube 網址' }), { target: { value: VIDEO } });
         await waitFor(() => expect(screen.getByRole('textbox', { name: '歌回標題' })).toHaveValue('測試歌回 #1'));
         expect(screen.getByRole('button', { name: '送出投稿' })).toBeDisabled();
+    });
+});
+
+// ---------- v1.2.1：換影片時清掉上一支的自動預填 ----------
+describe('SongsSubmitPage 換影片', () => {
+    const A = 'AAAAAAAAAAA';
+    const B = 'BBBBBBBBBBB';
+    const urlOf = (id: string) => `https://youtu.be/${id}`;
+    const CATALOG_A = [{ v: A, t: '已上架歌回A', d: null, vt: null, s: [['abcd1234', 10, 200, '歌A', '原唱A']] }];
+
+    /** A 已上架（目錄有片段）、B 未上架（只有 oEmbed 標題）；可另指定 B 也已上架 */
+    function mockCatalog(extra: unknown[] = []) {
+        fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.startsWith('/api/songs/catalog')) return json([...CATALOG_A, ...extra]);
+            if (url.startsWith('https://www.youtube.com/oembed')) return json({ title: url.includes(A) ? '已上架歌回A' : 'B 的 oEmbed 標題' });
+            if (url.startsWith('/api/supabase-config')) return json({ url: 'https://db.example.co', anonKey: 'anon' });
+            if (url.includes('/rest/v1/streams')) return json([]);
+            return json({}, 404);
+        });
+    }
+    const urlBox = () => screen.getByRole('textbox', { name: 'YouTube 網址' });
+    const titleBox = () => screen.getByRole('textbox', { name: '歌回標題' });
+    const firstSong = () => screen.queryByRole('textbox', { name: '第 1 首歌名' });
+    const oembedCalls = (id: string) => fetchMock.mock.calls.filter(([u]) => String(u).startsWith('https://www.youtube.com/oembed') && String(u).includes(id));
+    const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+
+    async function pasteA() {
+        renderPage();
+        fireEvent.change(urlBox(), { target: { value: urlOf(A) } });
+        await waitFor(() => expect(titleBox()).toHaveValue('已上架歌回A'));
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌A'));
+    }
+
+    it('貼 A（已上架）帶入 A 的標題與片段；換成未上架的 B 後標題改為 B、不殘留 A 的片段', async () => {
+        mockCatalog();
+        await pasteA();
+        fireEvent.change(urlBox(), { target: { value: urlOf(B) } });
+        await waitFor(() => expect(titleBox()).toHaveValue('B 的 oEmbed 標題'));
+        await settle();
+        expect(firstSong()).toBeNull();
+        expect(screen.getByRole('button', { name: '送出投稿' })).toBeDisabled();
+    });
+
+    it('換成同樣已上架的 B：標題與片段都改成 B 的，不混入 A 的', async () => {
+        mockCatalog([{ v: B, t: 'B 已上架歌回', d: null, vt: null, s: [['wxyz9876', 30, 90, '歌B', null]] }]);
+        await pasteA();
+        fireEvent.change(urlBox(), { target: { value: urlOf(B) } });
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌B'));
+        expect(screen.queryByRole('textbox', { name: '第 2 首歌名' })).toBeNull();
+        expect(titleBox()).not.toHaveValue('已上架歌回A');
+    });
+
+    it('使用者手動改過標題後換影片，自訂標題保留不被覆蓋', async () => {
+        mockCatalog();
+        await pasteA();
+        fireEvent.change(titleBox(), { target: { value: '自訂' } });
+        fireEvent.change(urlBox(), { target: { value: urlOf(B) } });
+        await waitFor(() => expect(oembedCalls(B).length).toBeGreaterThan(0));
+        await settle();
+        expect(titleBox()).toHaveValue('自訂');
+    });
+
+    it('使用者自己貼的片段列換影片後保留，只清掉從目錄預填的那份', async () => {
+        mockCatalog();
+        await pasteA();
+        fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: '0:10-3:00 歌X / 原唱X' } });
+        fireEvent.click(screen.getByRole('button', { name: /取代現有片段/ }));
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌X'));
+        fireEvent.change(urlBox(), { target: { value: urlOf(B) } });
+        await waitFor(() => expect(titleBox()).toHaveValue('B 的 oEmbed 標題'));
+        await settle();
+        expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌X');
+    });
+
+    it('把網址清空：A 自動帶入的標題與片段跟著清掉', async () => {
+        mockCatalog();
+        await pasteA();
+        fireEvent.change(urlBox(), { target: { value: '' } });
+        await waitFor(() => expect(titleBox()).toHaveValue(''));
+        expect(firstSong()).toBeNull();
     });
 });

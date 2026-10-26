@@ -92,6 +92,7 @@ export default {
     'controls.volume': 'Volume',
     'controls.mute': 'Mute',
     'controls.unmute': 'Unmute',
+    'controls.seek': 'Seek',
     'catalog.fixTimeline': 'Fix timestamps',
     'catalog.submitPrompt': 'Missing a karaoke stream?',
     'catalog.submitLink': 'Submit its timestamps',

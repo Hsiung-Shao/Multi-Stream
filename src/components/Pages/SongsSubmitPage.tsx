@@ -84,21 +84,49 @@ export function SongsSubmitPage() {
     );
     const isRevision = !!existing;
 
-    // 自動帶入：只補還空著的欄位（不覆蓋使用者已填的）
+    // 自動帶入：只補還空著的欄位（不覆蓋使用者已填的）；記下帶入的值，換影片時才分得出哪些是上一支的預填
     const latestRef = useRef({ title, vtuberId, streamedAt });
     useEffect(() => {
         latestRef.current = { title, vtuberId, streamedAt };
     }, [title, vtuberId, streamedAt]);
+    const autoRef = useRef<{ title?: string; vtuberId?: string | null; streamedAt?: string; rows?: SegmentRowDraft[] }>({});
     const fillEmpty = (found: { title: string | null; vtuberId: string | null; streamedAt: string | null }) => {
         const cur = latestRef.current;
         const current = { title: cur.title, vtuberId: cur.vtuberId, streamedAt: cur.streamedAt || null };
         const merged = mergePrefill(current, found);
-        if (merged.title !== current.title) setTitle(merged.title.slice(0, TITLE_MAX));
-        if (merged.vtuberId !== current.vtuberId) setVtuberId(merged.vtuberId);
-        if (merged.streamedAt !== current.streamedAt && merged.streamedAt) setStreamedAt(toLocalInput(merged.streamedAt));
+        if (merged.title !== current.title) {
+            const v = merged.title.slice(0, TITLE_MAX);
+            setTitle(v);
+            autoRef.current.title = v;
+        }
+        if (merged.vtuberId !== current.vtuberId) {
+            setVtuberId(merged.vtuberId);
+            autoRef.current.vtuberId = merged.vtuberId;
+        }
+        if (merged.streamedAt !== current.streamedAt && merged.streamedAt) {
+            const v = toLocalInput(merged.streamedAt);
+            setStreamedAt(v);
+            autoRef.current.streamedAt = v;
+        }
+    };
+
+    // 換影片：清掉上一支自動帶入、使用者還沒改過的欄位與片段列（改過的保留）
+    const prevVideoRef = useRef<string | null>(null);
+    const prefilledRef = useRef<string | null>(null);
+    const clearAutoFilled = () => {
+        const auto = autoRef.current;
+        const cur = latestRef.current;
+        if (auto.title !== undefined && cur.title === auto.title) { setTitle(''); cur.title = ''; }
+        if (auto.vtuberId !== undefined && cur.vtuberId === auto.vtuberId) { setVtuberId(null); cur.vtuberId = null; }
+        if (auto.streamedAt !== undefined && cur.streamedAt === auto.streamedAt) { setStreamedAt(''); cur.streamedAt = ''; }
+        if (auto.rows) setRows((r) => (r === auto.rows ? [] : r));
+        autoRef.current = {};
+        prefilledRef.current = null;
     };
 
     useEffect(() => {
+        if (prevVideoRef.current !== null && prevVideoRef.current !== videoId) clearAutoFilled();
+        prevVideoRef.current = videoId;
         setDuration(null);
         if (!videoId) return;
         const ctrl = new AbortController();
@@ -109,23 +137,24 @@ export function SongsSubmitPage() {
             .then((found) => { if (!ctrl.signal.aborted && found) fillEmpty(found); })
             .catch(() => { /* 不在週表：手填即可 */ });
         return () => ctrl.abort();
-        // fillEmpty 只讀 ref 與 setter
+        // fillEmpty、clearAutoFilled 只讀 ref 與 setter
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [videoId]);
 
     // 修正既有時間軸：每支影片只預填一次現有片段（之後以使用者編輯為準）
-    const prefilledRef = useRef<string | null>(null);
     useEffect(() => {
         if (!existing || prefilledRef.current === existing.videoId) return;
         prefilledRef.current = existing.videoId;
         fillEmpty({ title: existing.title, vtuberId: existing.vtuber?.id || null, streamedAt: existing.streamedAt });
-        setRows((cur) => (cur.length > 0 ? cur : existing.segments.map((s) => ({
+        const prefill: SegmentRowDraft[] = existing.segments.map((s) => ({
             key: newRowKey(),
             start: formatTimecode(s.start),
             end: formatTimecode(s.end),
             title: s.title,
             artist: s.artist ?? '',
-        }))));
+        }));
+        autoRef.current.rows = prefill;
+        setRows((cur) => (cur.length > 0 ? cur : prefill));
         // 只在目錄資料變動時預填；fillEmpty 只讀 ref 與 setter
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [existing]);

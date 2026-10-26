@@ -174,7 +174,9 @@ function PlayerPanel({ player, catalog }: { player: SegmentPlayer; catalog: Song
             )}
             {notice && <p role="status" className="mt-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">{notice}</p>}
 
-            <div className="mt-3 flex flex-wrap items-center gap-3 sm:gap-4">
+            <SeekBar player={player} />
+
+            <div className="mt-2 flex flex-wrap items-center gap-3 sm:gap-4">
                 <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon" className="size-10" onClick={player.prev} disabled={!hasQueue} aria-label={t('controls.prev')} title={t('controls.prev')}>
                         <SkipBack className="size-5" aria-hidden="true" />
@@ -226,6 +228,38 @@ function PlayerPanel({ player, catalog }: { player: SegmentPlayer; catalog: Song
                 </div>
             </div>
         </section>
+    );
+}
+
+// ---------- 進度條 ----------
+
+/** 本首進度：拖曳中顯示拖曳位置，放開（或鍵盤調整）才 seek，免得輪詢更新和手指互搶 */
+function SeekBar({ player }: { player: SegmentPlayer }) {
+    const { t } = useTranslation('songs');
+    const { elapsed, total } = player.progress;
+    const [dragging, setDragging] = useState<number | null>(null);
+    const shown = dragging ?? elapsed;
+    const disabled = !player.current || total <= 0;
+    return (
+        <div className="mt-3 flex items-center gap-3 text-[12px] tabular-nums text-muted-foreground">
+            <span className="w-12 shrink-0 text-right">{formatTimecode(shown)}</span>
+            <div role="group" aria-label={t('controls.seek')} className="min-w-0 flex-1">
+                <Slider
+                    min={0}
+                    max={Math.max(total, 1)}
+                    step={1}
+                    value={[Math.min(shown, total)]}
+                    disabled={disabled}
+                    onValueChange={(v) => setDragging(v[0] ?? 0)}
+                    onValueCommit={(v) => {
+                        setDragging(null);
+                        player.seek(v[0] ?? 0);
+                    }}
+                    thumbLabel={t('controls.seek')}
+                />
+            </div>
+            <span className="w-12 shrink-0">{formatTimecode(total)}</span>
+        </div>
     );
 }
 

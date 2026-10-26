@@ -18,6 +18,8 @@
  *   從沒存過偏好則不動播放器的靜音狀態，交給下方輪詢讀回，畫面與播放器一樣會一致。靜音中把音量調到大於 0 會自動解除靜音。
  *   使用者也可能直接按 iframe 內建的靜音／音量：播放中的輪詢讀回 isMuted／getVolume，與 state 不同才同步並寫回。
  *   本頁剛改過或剛套用音量的 1 秒內不讀回（iframe 回報的值有延遲，會把剛調的值蓋回舊值）。
+ * - 進度條：同一個輪詢換算本首已播秒數（segmentProgress），只在整數秒變動時更新 state；以 code:playToken 標記，
+ *   換首後舊值自動作廢（回 0）。上膛前讀到的可能是上一首的時間，不更新。seek 停在結束前 1 秒（seekTarget）。
  * - 卸載：停輪詢、清計時器、下一個 tick 才 destroy（同 StreamIframe 的 safeDestroy，避開 React render 期衝突）。
  *
  * 只在瀏覽器 effect 內碰 window / YT：預渲染（SSR）時這個 hook 只回傳初始狀態。
@@ -27,6 +29,7 @@ import { apiLoader } from '../../../utils/apiLoader';
 import { createQueue, currentItem, queueReducer, type QueueAction, type QueueItem, type QueueState, type RepeatMode } from '../lib/queue';
 import { planLoad, shouldAdvance, END_EPSILON } from '../lib/advance';
 import { accumulate, playThreshold } from '../lib/playCredit';
+import { segmentProgress, seekTarget } from '../lib/segmentProgress';
 import { clampVolume, parseStoredVolume, serializeVolume, DEFAULT_VOLUME, VOLUME_STORAGE_KEY, type VolumeState } from '../lib/volume';
 
 // ---------- YouTube IFrame API 最小型別（只宣告用到的部分） ----------
@@ -186,6 +189,10 @@ export interface SegmentPlayer {
     muted: boolean;
     setVolume(volume: number): void;
     toggleMute(): void;
+    /** 目前這首已播秒數（整數）與總長（end - start）；沒有目前歌曲時都是 0 */
+    progress: { elapsed: number; total: number };
+    /** 跳到目前這首的第 elapsed 秒（最多到結束前 1 秒） */
+    seek(elapsed: number): void;
 }
 
 export interface UseSegmentPlayerOptions {
@@ -201,6 +208,15 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
     const [ytState, setYtState] = useState<number>(YT_STATE.UNSTARTED);
     const [needsGesture, setNeedsGesture] = useState(false);
     const [skipping, setSkipping] = useState(false);
+    /** 進度條：key = code:playToken，換首後 key 對不上就當 0 */
+    const [progressState, setProgressState] = useState<{ key: string; elapsed: number }>({ key: '', elapsed: 0 });
+    const progressRef = useRef(progressState);
+    const updateElapsed = useCallback((key: string, elapsed: number) => {
+        const cur = progressRef.current;
+        if (cur.key === key && cur.elapsed === elapsed) return;
+        progressRef.current = { key, elapsed };
+        setProgressState(progressRef.current);
+    }, []);
 
     // 事件 callback 與輪詢讀的是 ref（YT 事件 closure 只建立一次）
     const queueRef = useRef(queue);
@@ -306,12 +322,15 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
             }
         }
 
+        if (armedRef.current || t < item.end - END_EPSILON) {
+            updateElapsed(key, Math.floor(segmentProgress(t, item.start, item.end).elapsed));
+        }
         if (!armedRef.current) {
             if (t < item.end - END_EPSILON) armedRef.current = true;
             return;
         }
         if (shouldAdvance(t, item.end)) fireEnded();
-    }, [fireEnded, syncVolumeFromPlayer]);
+    }, [fireEnded, syncVolumeFromPlayer, updateElapsed]);
 
     // 音量偏好：mount 後才讀 localStorage（render 不碰 window）；ref 給 onReady 與事件用
     useEffect(() => {
@@ -503,6 +522,21 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
         dispatch({ type: 'prev', elapsed });
     }, []);
 
+    const seek = useCallback((elapsed: number) => {
+        const state = queueRef.current;
+        const item = currentItem(state);
+        const player = playerRef.current;
+        // 物件建立後到 onReady 之前呼叫 seekTo 會被 YouTube 丟掉
+        if (!item || !player || playerStatus !== 'ready') return;
+        const target = seekTarget(item.start, item.end, elapsed);
+        try {
+            player.seekTo(target, true);
+        } catch {
+            return;
+        }
+        updateElapsed(`${item.code}:${state.playToken}`, Math.floor(target - item.start));
+    }, [playerStatus, updateElapsed]);
+
     const resume = useCallback(() => {
         setNeedsGesture(false);
         try { playerRef.current?.playVideo(); } catch { /* 尚未就緒 */ }
@@ -560,10 +594,17 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
         commitVolume({ volume: prev.volume, muted });
     }, [commitVolume]);
 
+    const current = currentItem(queue);
+    const progressKey = current ? `${current.code}:${queue.playToken}` : '';
+    const progress = {
+        elapsed: current && progressState.key === progressKey ? progressState.elapsed : 0,
+        total: current ? Math.max(0, current.end - current.start) : 0,
+    };
+
     return {
         containerRef,
         queue,
-        current: currentItem(queue),
+        current,
         playerStatus,
         isPlaying: ytState === YT_STATE.PLAYING && queue.status === 'playing',
         needsGesture,
@@ -583,6 +624,8 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
         muted: volumeState.muted,
         setVolume,
         toggleMute,
+        progress,
+        seek,
     };
 }
 

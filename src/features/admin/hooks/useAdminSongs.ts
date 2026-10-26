@@ -206,6 +206,8 @@ export interface SongSubmissionDetail {
     submission: SongSubmissionRecord;
     /** 修正型：該影片目前的片段（依 start） */
     existing: SongSegmentRecord[] | null;
+    /** 修正型：該影片目前的欄位（核准時沿用，不被投稿內容覆寫） */
+    existingVideo: Pick<SongVideoRecord, 'id' | 'video_id' | 'title' | 'vtuber_id' | 'streamed_at' | 'duration_seconds' | 'status'> | null;
 }
 
 export interface ApproveSubmissionInput {
@@ -242,8 +244,10 @@ export function useAdminSongSubmission(id: string | null) {
         queryKey: [SONG_SUBMISSION_KEY, id],
         enabled: !!id,
         queryFn: async (): Promise<SongSubmissionDetail> => {
-            const data = await apiFetch<{ ok: true } & SongSubmissionDetail>(`/api/admin/song-submissions?id=${encodeURIComponent(id!)}`);
-            return { submission: data.submission, existing: data.existing ?? null };
+            const data = await apiFetch<{ ok: true; existing_video?: SongSubmissionDetail['existingVideo'] } & Omit<SongSubmissionDetail, 'existingVideo'>>(
+                `/api/admin/song-submissions?id=${encodeURIComponent(id!)}`,
+            );
+            return { submission: data.submission, existing: data.existing ?? null, existingVideo: data.existing_video ?? null };
         },
         staleTime: 0,
         retry: noRetryOn401,
