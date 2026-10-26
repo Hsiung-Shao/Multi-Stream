@@ -33,7 +33,7 @@ export function MobileNowTabs({ value, onValueChange, onPanelMount, queueCount, 
     const { t } = useTranslation('songs');
     const scrollsHeader = lead !== null;
     const tabsList = (
-        <TabsList aria-label={t('mobile.tabs')} className="mx-4 mt-2 h-10 w-auto shrink-0 rounded-full p-1">
+        <TabsList aria-label={t('mobile.tabs')} className="mx-4 mt-2 h-10 w-auto shrink-0 rounded-full p-1 sm:mx-7">
             <TabsTrigger value="browse" className="rounded-full">{t('mobile.browse')}</TabsTrigger>
             <TabsTrigger value="now" className="rounded-full">
                 {t('now.label')}
