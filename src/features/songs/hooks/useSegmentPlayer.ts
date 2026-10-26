@@ -526,8 +526,8 @@ export function useSegmentPlayer(opts?: UseSegmentPlayerOptions): SegmentPlayer 
         const state = queueRef.current;
         const item = currentItem(state);
         const player = playerRef.current;
-        // 物件建立後到 onReady 之前呼叫 seekTo 會被 YouTube 丟掉
-        if (!item || !player || playerStatus !== 'ready') return;
+        // 物件建立後到 onReady 之前呼叫 seekTo 會被 YouTube 丟掉；佇列沒在播時 seekTo 會讓 cued 的影片自己開播
+        if (!item || !player || playerStatus !== 'ready' || state.status !== 'playing') return;
         const target = seekTarget(item.start, item.end, elapsed);
         try {
             player.seekTo(target, true);

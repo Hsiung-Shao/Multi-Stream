@@ -239,7 +239,8 @@ function SeekBar({ player }: { player: SegmentPlayer }) {
     const { elapsed, total } = player.progress;
     const [dragging, setDragging] = useState<number | null>(null);
     const shown = dragging ?? elapsed;
-    const disabled = !player.current || total <= 0;
+    // 還沒開始播（分享連結只 cue）時停用：cued 狀態 seekTo 會讓 YouTube 直接開播，佇列卻不會追蹤、播到結尾也不切歌
+    const disabled = !player.current || total <= 0 || player.queue.status !== 'playing';
     return (
         <div className="mt-3 flex items-center gap-3 text-[12px] tabular-nums text-muted-foreground">
             <span className="w-12 shrink-0 text-right">{formatTimecode(shown)}</span>

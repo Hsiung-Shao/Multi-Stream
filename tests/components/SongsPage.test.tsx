@@ -178,4 +178,15 @@ describe('SongsPage 進度條', () => {
         await waitFor(() => expect(player.seekTo).toHaveBeenCalledWith(11, true));
         await waitFor(() => expect(seekThumb()).toHaveAttribute('aria-valuenow', '1'));
     });
+
+    it('分享連結載入後尚未按播放：有目前歌曲但進度滑桿仍停用，按播放後才啟用', async () => {
+        renderPage({ shareCodes: ['abcd1234', 'efgh5678'], onShareConsumed: vi.fn() });
+        await screen.findByText(/已載入分享的歌單（2 首）/);
+        expect(screen.getByText('共 2 首')).toBeInTheDocument();
+        expect(seekThumb()).toHaveAttribute('data-disabled');
+
+        fireEvent.click(screen.getByRole('button', { name: '播放', exact: true }));
+        await waitFor(() => expect(seekThumb()).not.toHaveAttribute('data-disabled'));
+        expect(seekThumb()).toHaveAttribute('aria-valuemax', '190');
+    });
 });
