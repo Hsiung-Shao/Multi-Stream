@@ -53,6 +53,7 @@ const SchedulePersonPage = lazyWithPreload(() => import('./components/Pages/Sche
 const ScheduleSubmitPage = lazyWithPreload(() => import('./components/Pages/ScheduleSubmitPage').then(module => ({ 'default': module.ScheduleSubmitPage })));
 const StatusPage = lazyWithPreload(() => import('./components/Pages/StatusPage').then(module => ({ 'default': module.StatusPage })));
 const SongsPage = lazyWithPreload(() => import('./components/Pages/SongsPage').then(module => ({ 'default': module.SongsPage })));
+const SongsSubmitPage = lazyWithPreload(() => import('./components/Pages/SongsSubmitPage').then(module => ({ 'default': module.SongsSubmitPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
 const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
@@ -73,6 +74,7 @@ const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> =
   scheduleSubmit: ScheduleSubmitPage,
   status: StatusPage,
   songs: SongsPage,
+  songsSubmit: SongsSubmitPage,
   canvas: CanvasPage,
   instructions: InstructionsPage,
   faq: FAQPage,
@@ -227,7 +229,7 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'status', 'songs', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'status', 'songs', 'songsSubmit', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
     || isGuidePage(currentPage) || isSchedulePersonPage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
@@ -408,6 +410,27 @@ export default function App() {
             />
             <ChunkSuspense chunk={SongsPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <SongsPage shareCodes={songShareCodes} onShareConsumed={handleSongShareConsumed} />
+            </ChunkSuspense>
+          </>
+        );
+      case 'songsSubmit':
+        return (
+          <>
+            <SEO
+              title={tx('seo:songsSubmit.title')}
+              description={tx('seo:songsSubmit.description')}
+              url={`${SEO_SITE_URL}${PAGE_PATHS.songsSubmit}`}
+              jsonLd={graph(
+                webPage({ type: 'WebPage', path: PAGE_PATHS.songsSubmit, name: tx('seo:songsSubmit.title'), description: tx('seo:songsSubmit.description'), inLanguage }),
+                breadcrumb([
+                  { name: 'MultiStream Hub', path: '/' },
+                  { name: tx('songs:title'), path: PAGE_PATHS.songs },
+                  { name: tx('songs:submit.title'), path: PAGE_PATHS.songsSubmit },
+                ]),
+              )}
+            />
+            <ChunkSuspense chunk={SongsSubmitPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <SongsSubmitPage />
             </ChunkSuspense>
           </>
         );

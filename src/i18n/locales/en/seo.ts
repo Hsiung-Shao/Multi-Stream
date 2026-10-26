@@ -53,4 +53,6 @@ export default {
     'status.description': 'Is MultiStream Hub, Twitch or YouTube having problems? See live service status, known issues we are working on, announcements and recent updates.',
     'songs.title': 'VTuber Karaoke Song Playlist: Play Every Song From Karaoke Streams - MultiStream Hub',
     'songs.description': 'Taiwanese VTuber karaoke streams split into individual songs: play them back to back, shuffle or repeat, build your own playlists and share them in one link.',
+    'songsSubmit.title': 'Submit Karaoke Stream Timestamps - MultiStream Hub',
+    'songsSubmit.description': 'Add song timestamps for a VTuber karaoke stream to the song playlist: paste the video link and the timestamp comment, it splits into songs automatically and appears after review.',
 };

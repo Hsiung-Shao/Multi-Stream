@@ -52,4 +52,6 @@ export default {
     'status.description': 'MultiStream Hub・Twitch・YouTube は正常に動いていますか？現在のサービス状況、対応中の既知の問題、お知らせと最近の更新を確認できます。',
     'songs.title': 'VTuber 歌枠プレイリスト：歌枠の曲を 1 曲ずつ連続再生 - MultiStream Hub',
     'songs.description': '台湾 VTuber の歌枠を 1 曲ずつに分けて連続再生。シャッフルやリピート、自分だけのプレイリスト作成、リンクひとつで共有もできます。',
+    'songsSubmit.title': '歌枠タイムスタンプを投稿 - MultiStream Hub',
+    'songsSubmit.description': 'VTuber 歌枠の曲タイムスタンプを歌枠プレイリストに投稿できます。動画リンクとコメントのタイムスタンプを貼ると自動で曲ごとに分かれ、審査後に連続再生できるようになります。',
 };

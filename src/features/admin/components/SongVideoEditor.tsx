@@ -1,13 +1,17 @@
 // 歌回編輯器：貼 YouTube 網址 → 嵌入播放器 → 逐首「設為目前時間」或貼時間軸文字匯入 → 即時驗證 → 存草稿或發布。
+// 也用來審核社群投稿（reviewId）：以投稿內容預填，修正型先對回既有片段的 id／code 並標出新增／改動／刪除，
+// 按「核准並發布」或「駁回」。
 //
 // - 播放器只在 playerEnabled（歌回分頁啟用中）時掛載：AdminDashboard 的分頁都 forceMount，切走仍會留著，
 //   隱藏的播放器繼續播違反 YouTube 嵌入政策，所以切走一定要卸載。
-// - 片段時間以文字輸入（12:34、1:02:03、754），parseTimecode 解析；驗證規則與伺服器同一套（validateSegments）。
+// - 片段表格與時間軸匯入是共用元件 SegmentEditor（投稿頁也用）；驗證規則與伺服器同一套（validateSegments）。
 // - 既有片段帶 id 送出，伺服器依 id 原地更新、保住分享用的 code；新列不帶 id，code 由資料庫產生。
+// - 會讓 code 失效的操作（取代、刪除已存檔片段、核准會刪掉舊片段的修正）先確認。
 // - 存檔中可隨時返回列表（不 disable），卡住時不會被困住（memory error_dialog_mutation_reset）。
+// - 投稿者填的標題、來源說明、聯絡方式一律以純文字節點顯示，不轉成連結（javascript: URL 會變 XSS）。
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Clock, Crosshair, ExternalLink, Play, Plus, Search, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -23,45 +27,34 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '../../../components/ui/alert-dialog';
-import { cn } from '../../../components/ui/utils';
 import { extractVideoId } from '../../songs/lib/youtubeUrl';
 import { mergePrefill } from '../../songs/lib/streamPrefill';
 import { formatTimecode, parseTimecode } from '../../songs/lib/timecode';
-import { parseTimelineDetailed, type ParsedRow } from '../../songs/lib/timelineParser';
-import { validateSegments } from '../../songs/lib/segmentValidation';
-import { mergeReplaceRows, type MergedRow } from '../../songs/lib/timelineMerge';
-import { ensureYT, type YTPlayerLike } from '../../songs/hooks/useSegmentPlayer';
+import { mergeReplaceRows } from '../../songs/lib/timelineMerge';
+import { fetchStreamByVideoId } from '../../songs/streamLookup';
+import { PreviewPlayer, type PreviewApi } from '../../songs/components/PreviewPlayer';
+import { VtuberPicker } from '../../songs/components/VtuberPicker';
+import { SegmentEditor, type RowDiff } from '../../songs/components/SegmentEditor';
 import {
-    SEGMENT_ISSUE_LABEL,
+    computeRowIssues, fromImported, rowSeconds, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
+} from '../../songs/components/segmentRows';
+import {
     SONG_STATUS_LABEL,
-    fetchStreamByVideoId,
     formatSongError,
-    searchVtubers,
+    formatSubmissionError,
     segmentIssuesFromError,
+    useAdminSongSubmission,
     useAdminSongVideo,
+    useApproveSongSubmission,
+    useRejectSongSubmission,
     useSaveSongVideo,
-    useVtuberNames,
+    type SongSegmentInput,
     type SongSegmentRecord,
     type SongVideoStatus,
     type SongVideoWriteInput,
-    type VtuberOption,
 } from '../hooks/useAdminSongs';
 
-/** 編輯中的片段列（時間保留使用者輸入的文字，存檔時才轉秒數） */
-interface RowDraft {
-    key: string;
-    id?: string;
-    code?: string;
-    start: string;
-    end: string;
-    title: string;
-    artist: string;
-}
-
-let rowSeq = 0;
-const newKey = () => `row-${++rowSeq}`;
-
-const fromRecord = (s: SongSegmentRecord): RowDraft => ({
+const fromRecord = (s: SongSegmentRecord): SegmentRowDraft => ({
     key: s.id,
     id: s.id,
     code: s.code,
@@ -69,16 +62,6 @@ const fromRecord = (s: SongSegmentRecord): RowDraft => ({
     end: formatTimecode(s.end_seconds),
     title: s.title,
     artist: s.original_artist ?? '',
-});
-
-const fromParsed = (r: ParsedRow | MergedRow): RowDraft => ({
-    key: ('id' in r && r.id) || newKey(),
-    ...('id' in r && r.id ? { id: r.id } : {}),
-    ...('code' in r && r.code ? { code: r.code } : {}),
-    start: formatTimecode(r.start),
-    end: r.end === null ? '' : formatTimecode(r.end),
-    title: r.title,
-    artist: r.artist ?? '',
 });
 
 /** ISO → <input type="datetime-local"> 的本地時間字串 */
@@ -90,208 +73,43 @@ function toLocalInput(iso: string | null): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** 逐列問題（index → 中文訊息）；時間格式錯的列不參與 validateSegments，避免連帶誤判重疊 */
-export function computeRowIssues(rows: RowDraft[], duration: number | null): Map<number, string[]> {
-    const issues = new Map<number, string[]>();
-    const push = (i: number, msg: string) => issues.set(i, [...(issues.get(i) ?? []), msg]);
-    const valid: { index: number; start: number; end: number | null; title: string; artist: string }[] = [];
-    rows.forEach((r, i) => {
-        const start = parseTimecode(r.start);
-        const end = r.end.trim() ? parseTimecode(r.end) : null;
-        if (start === null) push(i, '開始時間格式錯誤');
-        if (r.end.trim() && end === null) push(i, '結束時間格式錯誤');
-        if (start !== null && !(r.end.trim() && end === null)) valid.push({ index: i, start, end, title: r.title, artist: r.artist });
-    });
-    for (const issue of validateSegments(valid, { duration })) {
-        push(valid[issue.index].index, SEGMENT_ISSUE_LABEL[issue.code]);
-    }
-    return issues;
-}
-
-// ---------- 嵌入播放器（只在分頁啟用時掛載） ----------
-
-interface PreviewApi {
-    getCurrentTime(): number;
-    seekTo(sec: number): void;
-}
-
-function PreviewPlayer({ videoId, onApi, onDuration }: {
-    videoId: string;
-    onApi: (api: PreviewApi | null) => void;
-    onDuration: (sec: number) => void;
-}) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [failed, setFailed] = useState(false);
-    // callback 用 ref 取最新值：播放器只依 videoId 重建
-    const cbRef = useRef({ onApi, onDuration });
-    useEffect(() => { cbRef.current = { onApi, onDuration }; }, [onApi, onDuration]);
-
-    useEffect(() => {
-        let cancelled = false;
-        let player: YTPlayerLike | null = null;
-        const container = containerRef.current;
-        setFailed(false);
-        void (async () => {
-            if (!container) return;
-            try {
-                const YT = await ensureYT();
-                if (cancelled) return;
-                container.innerHTML = '';
-                const target = document.createElement('div');
-                target.style.width = '100%';
-                target.style.height = '100%';
-                container.appendChild(target);
-                player = new YT.Player(target, {
-                    width: '100%',
-                    height: '100%',
-                    videoId,
-                    playerVars: { autoplay: 0, rel: 0, playsinline: 1, modestbranding: 1, enablejsapi: 1, origin: window.location.origin },
-                    events: {
-                        onReady: (e) => {
-                            if (cancelled) return;
-                            player = e.target;
-                            const p = e.target;
-                            cbRef.current.onApi({
-                                getCurrentTime: () => { try { return p.getCurrentTime(); } catch { return 0; } },
-                                seekTo: (sec) => { try { p.seekTo(sec, true); p.playVideo(); } catch { /* 已銷毀 */ } },
-                            });
-                            try {
-                                const d = p.getDuration();
-                                if (d > 0) cbRef.current.onDuration(d);
-                            } catch { /* 直播中或尚未取得 */ }
-                        },
-                        onStateChange: (e) => {
-                            // 部分影片 onReady 時還拿不到長度，開始播放後再補一次
-                            if (cancelled || e.data !== 1) return;
-                            try {
-                                const d = e.target.getDuration();
-                                if (d > 0) cbRef.current.onDuration(d);
-                            } catch { /* ignore */ }
-                        },
-                        onError: () => { if (!cancelled) setFailed(true); },
-                    },
-                });
-            } catch {
-                if (!cancelled) setFailed(true);
-            }
-        })();
-        return () => {
-            cancelled = true;
-            cbRef.current.onApi(null);
-            const p = player;
-            player = null;
-            if (p) setTimeout(() => { try { p.destroy(); } catch { /* 已銷毀 */ } }, 0);
-            if (container) container.innerHTML = '';
+const toSegmentInputs = (rows: SegmentRowDraft[]): SongSegmentInput[] =>
+    rows.map((r) => {
+        const { start, end } = rowSeconds(r);
+        return {
+            ...(r.id ? { id: r.id } : {}),
+            start_seconds: start,
+            end_seconds: end,
+            title: r.title.trim(),
+            original_artist: r.artist.trim() || null,
         };
-    }, [videoId]);
+    });
 
-    return (
-        <div>
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black">
-                <div ref={containerRef} className="absolute inset-0" />
-            </div>
-            {failed && <p role="alert" className="mt-1.5 text-[12px] text-destructive">播放器無法載入這支影片（可能禁止嵌入）。仍可手動輸入時間。</p>}
-        </div>
-    );
+/** 取代時對回舊片段的 id／code（開始時間相同才算同一首） */
+function mergeWithExisting(current: SegmentRowDraft[], imported: ImportedRow[]): { rows: SegmentRowDraft[]; lostCodes: string[] } {
+    const existing = current.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1 }));
+    const { rows: merged, lostCodes } = mergeReplaceRows(existing, imported);
+    return {
+        rows: merged.map((m, i) => fromImported({ ...m, end: imported[i].end, endEstimated: imported[i].endEstimated })),
+        lostCodes,
+    };
 }
 
-// ---------- VTuber 選擇 ----------
-
-function VtuberPicker({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
-    const names = useVtuberNames(value ? [value] : []);
-    const selected = value ? names.data?.get(value) : undefined;
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState<VtuberOption[]>([]);
-    const [searching, setSearching] = useState(false);
-    const [error, setError] = useState(false);
-
-    useEffect(() => {
-        const q = query.trim();
-        if (!q) {
-            setResults([]);
-            setError(false);
-            return;
-        }
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => {
-            setSearching(true);
-            searchVtubers(q, ctrl.signal)
-                .then((rows) => { setResults(rows); setError(false); })
-                .catch(() => { if (!ctrl.signal.aborted) setError(true); })
-                .finally(() => { if (!ctrl.signal.aborted) setSearching(false); });
-        }, 300);
-        return () => { clearTimeout(timer); ctrl.abort(); };
-    }, [query]);
-
-    if (value) {
-        return (
-            <div className="flex h-9 items-center gap-2 rounded-md border border-border px-2.5">
-                {selected?.img_url && <img src={selected.img_url} alt="" className="size-6 rounded-full object-cover" />}
-                <span className="min-w-0 flex-1 truncate text-sm">{selected?.name ?? (names.isLoading ? '載入中…' : value)}</span>
-                <Button type="button" variant="ghost" size="icon" className="size-7" onClick={() => onChange(null)} aria-label="清除 VTuber" title="清除">
-                    <X className="size-3.5" />
-                </Button>
-            </div>
-        );
-    }
-
-    return (
-        <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input
-                value={query}
-                onChange={(e) => {
-                    const v = e.target.value;
-                    // 直接貼 VTuber 的 uuid 也可以
-                    if (/^[0-9a-fA-F-]{36}$/.test(v.trim())) {
-                        onChange(v.trim());
-                        setQuery('');
-                        return;
-                    }
-                    setQuery(v);
-                }}
-                placeholder="搜尋 VTuber 名稱（或貼 id）"
-                aria-label="搜尋 VTuber"
-                className="h-9 pl-8"
-            />
-            {query.trim() && (
-                <div className="absolute inset-x-0 top-full z-20 mt-1 rounded-md border border-border bg-popover p-1 shadow-md">
-                    {searching && results.length === 0 ? (
-                        <p className="px-2 py-1.5 text-[12px] text-muted-foreground">搜尋中…</p>
-                    ) : error ? (
-                        <p className="px-2 py-1.5 text-[12px] text-destructive">搜尋失敗</p>
-                    ) : results.length === 0 ? (
-                        <p className="px-2 py-1.5 text-[12px] text-muted-foreground">找不到</p>
-                    ) : (
-                        results.map((r) => (
-                            <button
-                                key={r.id}
-                                type="button"
-                                onClick={() => { onChange(r.id); setQuery(''); }}
-                                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
-                            >
-                                {r.img_url ? <img src={r.img_url} alt="" className="size-6 rounded-full object-cover" /> : <span className="size-6 rounded-full bg-muted" />}
-                                <span className="truncate">{r.name}</span>
-                            </button>
-                        ))
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ---------- 編輯器 ----------
-
-export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
-    /** null = 新增 */
+export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, onSaved }: {
+    /** null = 新增（或審核投稿） */
     id: string | null;
+    /** 審核中的投稿 id */
+    reviewId?: string | null;
     playerEnabled: boolean;
     onClose: () => void;
     onSaved: (id: string) => void;
 }) {
-    const detail = useAdminSongVideo(id);
+    const reviewing = !!reviewId;
+    const detail = useAdminSongVideo(reviewing ? null : id);
+    const submission = useAdminSongSubmission(reviewId);
     const save = useSaveSongVideo();
+    const approve = useApproveSongSubmission();
+    const reject = useRejectSongSubmission();
 
     const [url, setUrl] = useState('');
     const [title, setTitle] = useState('');
@@ -299,16 +117,15 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
     const [streamedAt, setStreamedAt] = useState('');
     const [durationText, setDurationText] = useState('');
     const [status, setStatus] = useState<SongVideoStatus>('draft');
-    const [rows, setRows] = useState<RowDraft[]>([]);
-    const [timelineText, setTimelineText] = useState('');
+    const [rows, setRows] = useState<SegmentRowDraft[]>([]);
     const [savedNote, setSavedNote] = useState<string | null>(null);
+    const [rejectNotes, setRejectNotes] = useState('');
     const loadedIdRef = useRef<string | null>(null);
-    const apiRef = useRef<PreviewApi | null>(null);
-    const [hasApi, setHasApi] = useState(false);
+    const [player, setPlayer] = useState<PreviewApi | null>(null);
 
     // 載入既有資料（每個 id 只灌一次，之後以編輯中的內容為準）
     useEffect(() => {
-        if (!id || !detail.data || loadedIdRef.current === id) return;
+        if (reviewing || !id || !detail.data || loadedIdRef.current === id) return;
         loadedIdRef.current = id;
         const { video, segments } = detail.data;
         setUrl(video.video_id);
@@ -318,7 +135,23 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
         setDurationText(video.duration_seconds ? formatTimecode(video.duration_seconds) : '');
         setStatus(video.status);
         setRows(segments.map(fromRecord));
-    }, [id, detail.data]);
+    }, [reviewing, id, detail.data]);
+
+    // 審核：以投稿內容預填；修正型先對回既有片段的 id／code
+    const existing = submission.data?.existing ?? null;
+    useEffect(() => {
+        if (!reviewId || !submission.data || loadedIdRef.current === `review:${reviewId}`) return;
+        loadedIdRef.current = `review:${reviewId}`;
+        const s = submission.data.submission;
+        setUrl(s.video_id);
+        setTitle(s.title);
+        setVtuberId(s.vtuber_id);
+        setStreamedAt(toLocalInput(s.streamed_at));
+        setStatus('published');
+        const imported: ImportedRow[] = (s.segments ?? []).map((seg, line) => ({ ...seg, line }));
+        const base = (submission.data.existing ?? []).map(fromRecord);
+        setRows(base.length > 0 ? mergeWithExisting(base, imported).rows : imported.map(fromImported));
+    }, [reviewId, submission.data]);
 
     const videoId = extractVideoId(url);
 
@@ -330,7 +163,7 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
     }, [title, vtuberId, streamedAt]);
     useEffect(() => {
         setPrefillNote(null);
-        if (id || !videoId) return;
+        if (id || reviewing || !videoId) return;
         const ctrl = new AbortController();
         fetchStreamByVideoId(videoId, ctrl.signal)
             .then((found) => {
@@ -349,29 +182,53 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
             })
             .catch(() => { /* 找不到或查詢失敗：手動填即可 */ });
         return () => ctrl.abort();
-    }, [id, videoId]);
+    }, [id, reviewing, videoId]);
 
     const duration = durationText.trim() ? parseTimecode(durationText) : null;
     const durationInvalid = durationText.trim() !== '' && (duration === null || duration <= 0);
     const rowIssues = useMemo(() => computeRowIssues(rows, durationInvalid ? null : duration), [rows, duration, durationInvalid]);
 
-    // 伺服器回的 invalid_segments 問題（index 為送出順序 = rows 順序）；表格一改就以前端即時驗證為準
-    const serverIssues = useMemo(() => {
-        const map = new Map<number, string[]>();
-        for (const i of segmentIssuesFromError(save.error)) map.set(i.index, [...(map.get(i.index) ?? []), SEGMENT_ISSUE_LABEL[i.code]]);
+    // 伺服器回的 invalid_segments 問題（index 為送出順序 = rows 順序）；前端即時驗證有問題的列以前端為準
+    const mutationError = save.error ?? approve.error;
+    const displayIssues = useMemo(() => {
+        const map = new Map<number, RowIssueCode[]>(rowIssues);
+        for (const i of segmentIssuesFromError(mutationError)) {
+            if (!rowIssues.has(i.index)) map.set(i.index, [...(map.get(i.index) ?? []), i.code]);
+        }
         return map;
-    }, [save.error]);
+    }, [rowIssues, mutationError]);
 
-    const timeline = useMemo(() => (timelineText.trim() ? parseTimelineDetailed(timelineText) : { rows: [], unparsed: [] }), [timelineText]);
-    const parsedTimeline = timeline.rows;
+    // 審核修正型：每列對既有片段的差異（新增／改動），以及會被刪掉的既有片段
+    const existingById = useMemo(() => new Map((existing ?? []).map((e) => [e.id, e])), [existing]);
+    const diff = useMemo(() => {
+        if (!reviewing || !existing) return undefined;
+        const map = new Map<string, RowDiff>();
+        for (const r of rows) {
+            const old = r.id ? existingById.get(r.id) : undefined;
+            if (!old) { map.set(r.key, 'new'); continue; }
+            const { start, end } = rowSeconds(r);
+            if (start !== old.start_seconds || end !== old.end_seconds || r.title.trim() !== old.title || (r.artist.trim() || null) !== old.original_artist) {
+                map.set(r.key, 'changed');
+            }
+        }
+        return map;
+    }, [reviewing, existing, existingById, rows]);
+    const removedExisting = useMemo(() => {
+        if (!reviewing || !existing) return [];
+        const kept = new Set(rows.map((r) => r.id).filter(Boolean));
+        return existing.filter((e) => !kept.has(e.id));
+    }, [reviewing, existing, rows]);
 
     const titleOk = title.trim().length >= 1 && title.trim().length <= 200;
-    const canSave = !!videoId && titleOk && !durationInvalid && rowIssues.size === 0 && !save.isPending;
+    const busy = save.isPending || approve.isPending || reject.isPending;
+    // 審核核准至少要有一首（投稿本身就至少一首；管理員刪光就改用駁回）
+    const canSave = !!videoId && titleOk && !durationInvalid && rowIssues.size === 0 && !busy && (!reviewing || rows.length > 0);
 
-    const updateRow = (key: string, patch: Partial<RowDraft>) => {
-        setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+    const clearMutationErrors = () => {
         if (save.error) save.reset();
+        if (approve.error) approve.reset();
     };
+
     /** 會讓已存檔片段的 code 失效的操作，先確認（分享連結與使用者歌單裡的這些歌會變成「已下架」） */
     const [pendingLoss, setPendingLoss] = useState<{ count: number; apply: () => void } | null>(null);
 
@@ -381,52 +238,32 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
         if (target?.code) setPendingLoss({ count: 1, apply });
         else apply();
     };
-    const addRow = () => {
-        setRows((rs) => {
-            const last = rs[rs.length - 1];
-            // 新列的開始預設接上一列的結束
-            return [...rs, { key: newKey(), start: last?.end ?? '', end: '', title: '', artist: '' }];
-        });
-    };
-    const currentTimecode = () => formatTimecode(Math.floor(apiRef.current?.getCurrentTime() ?? 0));
 
-    const applyTimeline = (mode: 'replace' | 'append') => {
-        if (mode === 'append') {
-            setRows((rs) => [...rs, ...parsedTimeline.map(fromParsed)]);
-            setTimelineText('');
-            return;
-        }
-        // 取代：開始時間相同的列對回舊片段的 id／code（原地更新，分享連結不失效）
-        const existing = rows.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1 }));
-        const { rows: merged, lostCodes } = mergeReplaceRows(existing, parsedTimeline);
-        const apply = () => {
-            setRows(merged.map(fromParsed));
-            setTimelineText('');
-        };
+    const replaceRows = (imported: ImportedRow[]) => {
+        const { rows: merged, lostCodes } = mergeWithExisting(rows, imported);
+        const apply = () => setRows(merged);
         if (lostCodes.length > 0) setPendingLoss({ count: lostCodes.length, apply });
         else apply();
     };
 
-    const handleSave = async () => {
-        if (!videoId || !canSave) return;
-        const input: SongVideoWriteInput = {
+    const videoFields = (): Omit<SongVideoWriteInput, 'segments'> | null => {
+        if (!videoId) return null;
+        return {
             video_id: videoId,
             title: title.trim(),
             vtuber_id: vtuberId,
             streamed_at: streamedAt ? new Date(streamedAt).toISOString() : null,
             duration_seconds: duration,
-            status,
-            segments: rows.map((r) => ({
-                ...(r.id ? { id: r.id } : {}),
-                start_seconds: parseTimecode(r.start) ?? 0,
-                end_seconds: r.end.trim() ? parseTimecode(r.end) : null,
-                title: r.title.trim(),
-                original_artist: r.artist.trim() || null,
-            })),
+            status: reviewing ? 'published' : status,
         };
+    };
+
+    const handleSave = async () => {
+        const video = videoFields();
+        if (!video || !canSave) return;
         setSavedNote(null);
         try {
-            const result = await save.mutateAsync({ id, input });
+            const result = await save.mutateAsync({ id, input: { ...video, segments: toSegmentInputs(rows) } });
             loadedIdRef.current = result.video.id;
             setRows(result.segments.map(fromRecord));
             setStatus(result.video.status);
@@ -441,15 +278,50 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
         }
     };
 
-    if (id && detail.isLoading) return <p className="text-sm text-muted-foreground">載入中…</p>;
-    if (id && detail.isError) {
+    const doApprove = async () => {
+        const video = videoFields();
+        if (!reviewId || !video) return;
+        try {
+            const result = await approve.mutateAsync({
+                id: reviewId,
+                input: { video_ref: submission.data?.submission.target_video_ref ?? null, video, segments: toSegmentInputs(rows) },
+            });
+            onSaved(result.video_ref);
+            onClose();
+        } catch {
+            // 錯誤顯示在 approve.error
+        }
+    };
+    const handleApprove = () => {
+        if (!canSave) return;
+        if (removedExisting.length > 0) setPendingLoss({ count: removedExisting.length, apply: () => void doApprove() });
+        else void doApprove();
+    };
+    const handleReject = async () => {
+        if (!reviewId) return;
+        try {
+            await reject.mutateAsync({ id: reviewId, notes: rejectNotes.trim() || null });
+            onClose();
+        } catch {
+            // 錯誤顯示在 reject.error
+        }
+    };
+
+    const loading = reviewing ? submission.isLoading : !!id && detail.isLoading;
+    const loadError = reviewing ? (submission.isError ? submission.error : null) : (id && detail.isError ? detail.error : null);
+    if (loading) return <p className="text-sm text-muted-foreground">載入中…</p>;
+    if (loadError) {
         return (
             <div className="space-y-3">
                 <Button variant="ghost" size="sm" onClick={onClose}><ArrowLeft className="size-3.5" />返回列表</Button>
-                <p role="alert" className="text-sm text-destructive">{formatSongError(detail.error)}</p>
+                <p role="alert" className="text-sm text-destructive">{reviewing ? formatSubmissionError(loadError) : formatSongError(loadError)}</p>
             </div>
         );
     }
+
+    const sub = submission.data?.submission;
+    // 修正型但原歌回已被刪除（target_video_ref、existing 都是 null）：當新增處理
+    const orphanRevision = sub?.kind === 'revision' && !sub.target_video_ref;
 
     return (
         <div className="space-y-5">
@@ -458,13 +330,30 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
                     <ArrowLeft className="size-3.5" />
                     返回列表
                 </Button>
-                <h2 className="text-[15px] font-semibold">{id ? '編輯歌回' : '新增歌回'}</h2>
+                <h2 className="text-[15px] font-semibold">
+                    {reviewing ? (sub?.kind === 'revision' && !orphanRevision ? '審核投稿（修正既有時間軸）' : '審核投稿（新歌回）') : id ? '編輯歌回' : '新增歌回'}
+                </h2>
                 {videoId && (
                     <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
                         在 YouTube 開啟 <ExternalLink className="size-3" aria-hidden="true" />
                     </a>
                 )}
             </div>
+
+            {reviewing && sub && (
+                <div className="rounded-lg border border-violet-500/30 bg-violet-500/[0.06] p-3 text-[13px]">
+                    <p className="text-muted-foreground">投稿時間 {new Date(sub.created_at).toLocaleString('zh-TW')}・{sub.segments?.length ?? 0} 首（以下表格已預填，可微調後核准）</p>
+                    {/* 使用者輸入：純文字節點，不轉連結 */}
+                    <p className="mt-1.5"><span className="text-muted-foreground">來源說明：</span><span className="whitespace-pre-wrap break-words">{sub.source_note || '（未填）'}</span></p>
+                    <p className="mt-0.5"><span className="text-muted-foreground">聯絡方式：</span><span className="break-all">{sub.submitter_contact || '（未填）'}</span></p>
+                    {orphanRevision && <p className="mt-1.5 text-amber-600 dark:text-amber-400">原歌回已刪除，核准會新建一支歌回。</p>}
+                    {removedExisting.length > 0 && (
+                        <p className="mt-1.5 text-destructive">
+                            核准後會刪除 {removedExisting.length} 首既有片段（分享連結會失效）：{removedExisting.map((e) => `${e.title}（${e.code}）`).join('、')}
+                        </p>
+                    )}
+                </div>
+            )}
 
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 {/* 左：網址＋播放器 */}
@@ -475,7 +364,7 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         placeholder="https://www.youtube.com/watch?v=..."
-                        disabled={!!id}
+                        disabled={!!id || reviewing}
                         aria-invalid={url.trim() !== '' && !videoId}
                     />
                     {url.trim() !== '' && !videoId && <p className="text-[12px] text-destructive">看不出影片 ID，支援 watch、youtu.be、live、shorts 網址</p>}
@@ -485,7 +374,7 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
                         <PreviewPlayer
                             key={videoId}
                             videoId={videoId}
-                            onApi={(api) => { apiRef.current = api; setHasApi(!!api); }}
+                            onApi={setPlayer}
                             onDuration={(d) => setDurationText((cur) => (cur.trim() ? cur : formatTimecode(Math.ceil(d))))}
                         />
                     ) : (
@@ -516,143 +405,67 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
                             {durationInvalid && <p className="text-[12px] text-destructive">時間格式錯誤</p>}
                         </div>
                     </div>
-                    <div className="space-y-1.5">
-                        <Label>狀態</Label>
-                        <Select value={status} onValueChange={(v: string) => setStatus(v as SongVideoStatus)}>
-                            <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                {(Object.keys(SONG_STATUS_LABEL) as SongVideoStatus[]).map((s) => <SelectItem key={s} value={s}>{SONG_STATUS_LABEL[s]}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-            </div>
-
-            {/* 貼上時間軸 */}
-            <details className="rounded-lg border border-border bg-card p-3">
-                <summary className="cursor-pointer text-sm font-medium">貼上時間軸文字匯入</summary>
-                <div className="mt-3 space-y-2">
-                    <Textarea
-                        value={timelineText}
-                        onChange={(e) => setTimelineText(e.target.value)}
-                        rows={6}
-                        placeholder={'01. 0:12:34 歌名 / 原唱\n02. 0:16:20 歌名 - 原唱\n（沒有結束時間時取下一首的開始）'}
-                        aria-label="時間軸文字"
-                    />
-                    {timeline.unparsed.length > 0 && (
-                        <p role="alert" className="text-[12px] text-amber-500">
-                            {timeline.unparsed.slice(0, 10).map((l) => `第 ${l + 1} 行`).join('、')}
-                            {timeline.unparsed.length > 10 ? ` 等 ${timeline.unparsed.length} 行` : ''}
-                            未解析（有時間但格式看不懂，請手動補上或改寫成「12:34 歌名 / 原唱」）
-                        </p>
-                    )}
-                    {timelineText.trim() && (
-                        parsedTimeline.length === 0 ? (
-                            <p className="text-[12px] text-muted-foreground">沒有找到帶時間的行。</p>
-                        ) : (
-                            <>
-                                <p className="text-[12px] text-muted-foreground">解析出 {parsedTimeline.length} 首（預覽）：</p>
-                                <ol className="max-h-48 overflow-hidden rounded border border-border text-[12.5px]">
-                                    {parsedTimeline.slice(0, 8).map((r) => (
-                                        <li key={r.line} className="flex gap-2 border-t border-border/60 px-2 py-1 first:border-t-0">
-                                            <span className="w-28 shrink-0 tabular-nums text-muted-foreground">{formatTimecode(r.start)} – {r.end === null ? '?' : formatTimecode(r.end)}</span>
-                                            <span className="min-w-0 flex-1 truncate">{r.title || '（無歌名）'}{r.artist ? ` / ${r.artist}` : ''}</span>
-                                        </li>
-                                    ))}
-                                </ol>
-                                {parsedTimeline.length > 8 && <p className="text-[12px] text-muted-foreground">…另有 {parsedTimeline.length - 8} 首</p>}
-                                <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => applyTimeline('replace')}><Upload className="size-3.5" />取代現有片段</Button>
-                                    <Button size="sm" variant="outline" onClick={() => applyTimeline('append')}><Plus className="size-3.5" />附加到最後</Button>
-                                </div>
-                            </>
-                        )
+                    {!reviewing && (
+                        <div className="space-y-1.5">
+                            <Label>狀態</Label>
+                            <Select value={status} onValueChange={(v: string) => setStatus(v as SongVideoStatus)}>
+                                <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {(Object.keys(SONG_STATUS_LABEL) as SongVideoStatus[]).map((s) => <SelectItem key={s} value={s}>{SONG_STATUS_LABEL[s]}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     )}
                 </div>
-            </details>
+            </div>
 
-            {/* 片段表格 */}
-            <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold">片段（{rows.length} 首）</h3>
-                    {rowIssues.size > 0 && <span className="text-[12px] text-destructive">{rowIssues.size} 列有錯誤，修正後才能儲存</span>}
-                    <Button size="sm" variant="outline" className="ml-auto" onClick={addRow}><Plus className="size-3.5" />新增一列</Button>
-                </div>
-                {rows.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-[13px] text-muted-foreground">還沒有片段。按「新增一列」或貼上時間軸。</p>
-                ) : (
-                    <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className="w-full min-w-[860px] text-sm">
-                            <thead className="bg-muted/40 text-[12px] text-muted-foreground">
-                                <tr>
-                                    <th className="w-8 px-2 py-1.5 text-left font-medium">#</th>
-                                    <th className="w-40 px-2 py-1.5 text-left font-medium">開始</th>
-                                    <th className="w-40 px-2 py-1.5 text-left font-medium">結束</th>
-                                    <th className="px-2 py-1.5 text-left font-medium">歌名</th>
-                                    <th className="px-2 py-1.5 text-left font-medium">原唱</th>
-                                    <th className="w-24 px-2 py-1.5 text-left font-medium">code</th>
-                                    <th className="w-20 px-2 py-1.5" />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows.map((r, i) => {
-                                    const issues = rowIssues.get(i) ?? serverIssues.get(i);
-                                    const startSec = parseTimecode(r.start);
-                                    return (
-                                        <tr key={r.key} className={cn('border-t border-border align-top', issues && 'bg-destructive/5')}>
-                                            <td className="px-2 py-1.5 text-[12px] tabular-nums text-muted-foreground">{i + 1}</td>
-                                            <td className="px-2 py-1.5">
-                                                <div className="flex gap-1">
-                                                    <Input value={r.start} onChange={(e) => updateRow(r.key, { start: e.target.value })} className="h-8 w-20 tabular-nums" aria-label={`第 ${i + 1} 首開始時間`} />
-                                                    <Button variant="ghost" size="icon" className="size-8" disabled={!hasApi} onClick={() => updateRow(r.key, { start: currentTimecode() })} title="設為目前時間" aria-label={`第 ${i + 1} 首開始設為目前時間`}>
-                                                        <Crosshair className="size-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                            <td className="px-2 py-1.5">
-                                                <div className="flex gap-1">
-                                                    <Input value={r.end} onChange={(e) => updateRow(r.key, { end: e.target.value })} className="h-8 w-20 tabular-nums" aria-label={`第 ${i + 1} 首結束時間`} />
-                                                    <Button variant="ghost" size="icon" className="size-8" disabled={!hasApi} onClick={() => updateRow(r.key, { end: currentTimecode() })} title="設為目前時間" aria-label={`第 ${i + 1} 首結束設為目前時間`}>
-                                                        <Clock className="size-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                            <td className="px-2 py-1.5">
-                                                <Input value={r.title} onChange={(e) => updateRow(r.key, { title: e.target.value })} maxLength={200} className="h-8" aria-label={`第 ${i + 1} 首歌名`} />
-                                                {issues && <p className="mt-1 text-[11.5px] text-destructive">{issues.join('、')}</p>}
-                                            </td>
-                                            <td className="px-2 py-1.5">
-                                                <Input value={r.artist} onChange={(e) => updateRow(r.key, { artist: e.target.value })} maxLength={200} className="h-8" aria-label={`第 ${i + 1} 首原唱`} />
-                                            </td>
-                                            <td className="px-2 py-1.5 font-mono text-[11.5px] text-muted-foreground">{r.code ?? '（新）'}</td>
-                                            <td className="px-2 py-1.5">
-                                                <div className="flex justify-end gap-0.5">
-                                                    <Button variant="ghost" size="icon" className="size-8" disabled={!hasApi || startSec === null} onClick={() => startSec !== null && apiRef.current?.seekTo(startSec)} title="從這裡播" aria-label={`從第 ${i + 1} 首開始播`}>
-                                                        <Play className="size-3.5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => removeRow(r.key)} title="刪除這列" aria-label={`刪除第 ${i + 1} 首`}>
-                                                        <Trash2 className="size-3.5" />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+            <SegmentEditor
+                rows={rows}
+                onRowsChange={setRows}
+                issues={displayIssues}
+                player={player}
+                duration={durationInvalid ? null : duration}
+                onReplace={replaceRows}
+                onRemoveRow={removeRow}
+                onEdit={clearMutationErrors}
+                showCode
+                diff={diff}
+            />
+
+            {reviewing ? (
+                <div className="space-y-3 border-t border-border pt-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <Button onClick={handleApprove} disabled={!canSave}>
+                            {approve.isPending ? '核准中…' : '核准並發布'}
+                        </Button>
+                        <Button variant="ghost" onClick={onClose}>返回列表</Button>
+                        <p className="text-[12px] text-muted-foreground">公開目錄有 10 分鐘快取，核准後最晚 10 分鐘出現。</p>
                     </div>
-                )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                <Button onClick={() => void handleSave()} disabled={!canSave}>
-                    {save.isPending ? '儲存中…' : status === 'published' ? '儲存並發布' : '存成草稿'}
-                </Button>
-                <Button variant="ghost" onClick={onClose}>返回列表</Button>
-                <p className="text-[12px] text-muted-foreground">公開目錄有 10 分鐘快取，發布後最晚 10 分鐘出現。</p>
-            </div>
-            {save.error && <p role="alert" className="text-sm text-destructive">{formatSongError(save.error)}</p>}
-            {savedNote && <p role="status" className="text-sm text-emerald-500">{savedNote}</p>}
+                    <div className="flex flex-wrap items-end gap-2">
+                        <div className="min-w-[260px] flex-1 space-y-1.5">
+                            <Label htmlFor="song-reject-notes">駁回理由（選填，最多 500 字，只存在後台）</Label>
+                            <Textarea id="song-reject-notes" rows={2} maxLength={500} value={rejectNotes} onChange={(e) => setRejectNotes(e.target.value)} />
+                        </div>
+                        <Button variant="outline" className="text-destructive" onClick={() => void handleReject()} disabled={busy}>
+                            {reject.isPending ? '駁回中…' : '駁回'}
+                        </Button>
+                    </div>
+                    {approve.error && <p role="alert" className="text-sm text-destructive">{formatSubmissionError(approve.error)}</p>}
+                    {reject.error && <p role="alert" className="text-sm text-destructive">{formatSubmissionError(reject.error)}</p>}
+                </div>
+            ) : (
+                <>
+                    <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+                        <Button onClick={() => void handleSave()} disabled={!canSave}>
+                            {save.isPending ? '儲存中…' : status === 'published' ? '儲存並發布' : '存成草稿'}
+                        </Button>
+                        <Button variant="ghost" onClick={onClose}>返回列表</Button>
+                        <p className="text-[12px] text-muted-foreground">公開目錄有 10 分鐘快取，發布後最晚 10 分鐘出現。</p>
+                    </div>
+                    {save.error && <p role="alert" className="text-sm text-destructive">{formatSongError(save.error)}</p>}
+                    {savedNote && <p role="status" className="text-sm text-emerald-500">{savedNote}</p>}
+                </>
+            )}
 
             <AlertDialog open={!!pendingLoss} onOpenChange={(o) => { if (!o) setPendingLoss(null); }}>
                 <AlertDialogContent>

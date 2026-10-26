@@ -52,4 +52,6 @@ export default {
     'status.description': 'MultiStream Hub、Twitch 与 YouTube 目前是否正常？查看实时服务状态、站方正在处理的已知问题、公告与最近更新。',
     'songs.title': 'VTuber 歌回播放列表：连续播放歌回里的每一首歌 - MultiStream Hub',
     'songs.description': '把台湾 VTuber 歌回拆成一首一首的歌：连续播放、随机与循环、建立自己的歌单，再用一条链接分享给朋友。',
+    'songsSubmit.title': '投稿歌回时间轴 - MultiStream Hub',
+    'songsSubmit.description': '把 VTuber 歌回的歌曲时间轴投稿到歌回播放列表：贴上视频网址与留言里的时间轴，自动拆成一首一首，审核通过后就能连续播放。',
 };

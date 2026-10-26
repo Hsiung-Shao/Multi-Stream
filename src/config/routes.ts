@@ -35,6 +35,8 @@ export const PAGE_PATHS: Record<RoutePage, string> = {
     scheduleSubmit: '/schedule/submit',
     status: '/status',
     songs: '/songs',
+    // 投稿歌回時間軸（精確比對，與 /songs 不衝突）
+    songsSubmit: '/songs/submit',
     ...GUIDE_PATHS,
 };
 

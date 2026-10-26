@@ -9,8 +9,8 @@ import { PAGE_PATHS } from '../../src/config/routes';
 
 const rootDir = resolve(__dirname, '../..');
 const SITE = 'https://multistreaming.org';
-// /admin：後台；/canvas：CSR-only 空殼工具頁；/schedule/submit：表單頁、內容少（sitemap 只主動提交有實質內容的頁）
-const EXCLUDED = new Set(['/admin', '/canvas', '/schedule/submit']);
+// /admin：後台；/canvas：CSR-only 空殼工具頁；/schedule/submit、/songs/submit：表單頁、內容少（sitemap 只主動提交有實質內容的頁）
+const EXCLUDED = new Set(['/admin', '/canvas', '/schedule/submit', '/songs/submit']);
 
 describe('sitemap.xml 覆蓋 PAGE_PATHS', () => {
     let xml = '';

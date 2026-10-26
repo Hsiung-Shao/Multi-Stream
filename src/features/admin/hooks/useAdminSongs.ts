@@ -7,7 +7,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError, formatAdminAnnouncementError } from './useAdminAnnouncements';
 import type { SegmentIssueCode } from '../../songs/lib/segmentValidation';
-import { resolveRestConfig, restGet } from '../../schedule/restClient';
 
 export const SONG_VIDEOS_KEY = 'admin-song-videos';
 const SONG_VIDEO_KEY = 'admin-song-video';
@@ -165,76 +164,122 @@ export function useDeleteSongVideo() {
     });
 }
 
-// ---------- VTuber 查詢（vtubers 公開可讀；沿用週表的 anon PostgREST 連線，不載 supabase-js） ----------
+// ---------- 社群投稿的歌回時間軸（functions/api/admin/song-submissions.js） ----------
 
-export interface VtuberOption {
+export const SONG_SUBMISSIONS_KEY = 'admin-song-submissions';
+const SONG_SUBMISSION_KEY = 'admin-song-submission';
+
+export type SongSubmissionKind = 'new' | 'revision';
+export type SongSubmissionStatus = 'pending' | 'approved' | 'rejected';
+
+/** 投稿者送來的片段（functions/lib/song-submissions.js 正規化後的格式） */
+export interface SubmittedSegment {
+    start: number;
+    end: number;
+    title: string;
+    artist: string | null;
+    endEstimated: boolean;
+}
+
+export interface SongSubmissionRecord {
     id: string;
-    name: string;
-    img_url: string | null;
+    kind: SongSubmissionKind;
+    video_id: string;
+    target_video_ref: string | null;
+    title: string;
+    vtuber_id: string | null;
+    streamed_at: string | null;
+    /** 使用者輸入，畫面上只能當純文字顯示（不轉連結） */
+    source_note: string | null;
+    /** 使用者輸入，畫面上只能當純文字顯示（不轉連結） */
+    submitter_contact: string | null;
+    status: SongSubmissionStatus;
+    reviewer_notes: string | null;
+    result_video_ref: string | null;
+    created_at: string;
+    reviewed_at: string | null;
+    /** 單筆查詢才有 */
+    segments?: SubmittedSegment[];
 }
 
-const UUID_RE = /^[0-9a-fA-F-]{36}$/;
-const VTUBER_COLS = 'id,name,img_url';
-
-/** 依名稱模糊搜尋（PostgREST 的萬用字元與分隔符先拿掉，避免使用者輸入改到查詢語法） */
-export async function searchVtubers(query: string, signal?: AbortSignal): Promise<VtuberOption[]> {
-    const q = query.replace(/[*%,()"\\]/g, ' ').trim();
-    if (!q) return [];
-    const cfg = await resolveRestConfig({ signal });
-    return restGet<VtuberOption[]>(cfg, `vtubers?select=${VTUBER_COLS}&name=ilike.*${encodeURIComponent(q)}*&order=name.asc&limit=8`, { signal });
+export interface SongSubmissionDetail {
+    submission: SongSubmissionRecord;
+    /** 修正型：該影片目前的片段（依 start） */
+    existing: SongSegmentRecord[] | null;
 }
 
-/** 依 id 批次取名稱（列表與編輯器顯示用）；不合法的 id 略過 */
-export async function fetchVtubersByIds(ids: string[], signal?: AbortSignal): Promise<VtuberOption[]> {
-    const valid = [...new Set(ids.filter((id) => UUID_RE.test(id)))];
-    if (valid.length === 0) return [];
-    const cfg = await resolveRestConfig({ signal });
-    return restGet<VtuberOption[]>(cfg, `vtubers?select=${VTUBER_COLS}&id=in.(${valid.join(',')})`, { signal });
+export interface ApproveSubmissionInput {
+    video_ref: string | null;
+    video: Omit<SongVideoWriteInput, 'segments'>;
+    segments: SongSegmentInput[];
 }
 
-export function useVtuberNames(ids: string[]) {
-    const key = [...new Set(ids)].sort();
+const SUBMISSION_ERRORS: Record<string, string> = {
+    not_pending: '這筆投稿已經處理過了（可能有其他管理員同時審核），請重新整理',
+    invalid_id: '無效的投稿 ID',
+};
+
+export function formatSubmissionError(err: unknown): string {
+    const code = err instanceof ApiError ? err.payload?.error : undefined;
+    if (typeof code === 'string' && SUBMISSION_ERRORS[code]) return SUBMISSION_ERRORS[code];
+    return formatSongError(err);
+}
+
+export function useAdminSongSubmissions(status: SongSubmissionStatus = 'pending') {
     return useQuery({
-        queryKey: ['admin-song-vtuber-names', key],
-        enabled: key.length > 0,
-        queryFn: async ({ signal }) => {
-            const rows = await fetchVtubersByIds(key, signal);
-            return new Map(rows.map((r) => [r.id, r]));
+        queryKey: [SONG_SUBMISSIONS_KEY, status],
+        queryFn: async (): Promise<SongSubmissionRecord[]> => {
+            const data = await apiFetch<{ ok: true; submissions: SongSubmissionRecord[] }>(`/api/admin/song-submissions?status=${status}`);
+            return data.submissions ?? [];
         },
-        staleTime: 5 * 60_000,
-        retry: 1,
+        staleTime: 30_000,
+        retry: noRetryOn401,
     });
 }
 
-// ---------- 週表場次帶入（新增歌回時，用影片 ID 找週表裡的同一場，補 VTuber／標題／開台時間） ----------
-
-export interface StreamPrefill {
-    title: string | null;
-    vtuberId: string | null;
-    streamedAt: string | null;
+export function useAdminSongSubmission(id: string | null) {
+    return useQuery({
+        queryKey: [SONG_SUBMISSION_KEY, id],
+        enabled: !!id,
+        queryFn: async (): Promise<SongSubmissionDetail> => {
+            const data = await apiFetch<{ ok: true } & SongSubmissionDetail>(`/api/admin/song-submissions?id=${encodeURIComponent(id!)}`);
+            return { submission: data.submission, existing: data.existing ?? null };
+        },
+        staleTime: 0,
+        retry: noRetryOn401,
+    });
 }
 
-interface StreamRow {
-    vtuber_id: string | null;
-    title: string | null;
-    actual_start: string | null;
-    scheduled_start: string | null;
+export function useApproveSongSubmission() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, input }: { id: string; input: ApproveSubmissionInput }): Promise<{ video_ref: string }> => {
+            const data = await apiFetch<{ ok: true; video_ref: string }>(
+                `/api/admin/song-submissions?id=${encodeURIComponent(id)}&action=approve`,
+                { method: 'POST', body: JSON.stringify(input) },
+            );
+            return { video_ref: data.video_ref };
+        },
+        onSuccess: (_d, { id }) => {
+            qc.invalidateQueries({ queryKey: [SONG_SUBMISSIONS_KEY] });
+            qc.invalidateQueries({ queryKey: [SONG_VIDEOS_KEY] });
+            qc.removeQueries({ queryKey: [SONG_SUBMISSION_KEY, id] });
+        },
+    });
 }
 
-/** 週表 streams 公開可讀；找不到回 null。開台時間取實際開台，沒有就用預定時間 */
-export async function fetchStreamByVideoId(videoId: string, signal?: AbortSignal): Promise<StreamPrefill | null> {
-    if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return null;
-    const cfg = await resolveRestConfig({ signal });
-    const rows = await restGet<StreamRow[]>(
-        cfg,
-        `streams?select=vtuber_id,title,actual_start,scheduled_start&platform=eq.youtube&external_id=eq.${encodeURIComponent(videoId)}&limit=1`,
-        { signal },
-    );
-    const row = rows[0];
-    if (!row) return null;
-    return {
-        title: row.title || null,
-        vtuberId: row.vtuber_id || null,
-        streamedAt: row.actual_start ?? row.scheduled_start ?? null,
-    };
+export function useRejectSongSubmission() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, notes }: { id: string; notes: string | null }) => {
+            await apiFetch<{ ok: true }>(
+                `/api/admin/song-submissions?id=${encodeURIComponent(id)}&action=reject`,
+                { method: 'POST', body: JSON.stringify({ notes }) },
+            );
+        },
+        onSuccess: (_d, { id }) => {
+            qc.invalidateQueries({ queryKey: [SONG_SUBMISSIONS_KEY] });
+            qc.removeQueries({ queryKey: [SONG_SUBMISSION_KEY, id] });
+        },
+    });
 }

@@ -1,10 +1,10 @@
-// 歌回 Tab — 歌回影片列表 + 新增／編輯（SongVideoEditor）／刪除（公開頁 /songs 的資料來源）
+// 歌回 Tab — 待審投稿清單＋歌回影片列表 + 新增／編輯／審核（SongVideoEditor）／刪除（公開頁 /songs 的資料來源）
 //
 // 由後端 ADMIN_API_TOKEN（X-Admin-Token）把關，token 與其他後台分頁共用。
 // active：這個分頁目前是否顯示。AdminDashboard 的分頁都 forceMount，編輯器裡的 YouTube 播放器只能在 active 時掛載。
 
 import { useState } from 'react';
-import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ClipboardCheck, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
     AlertDialog,
@@ -22,11 +22,13 @@ import { SongVideoEditor } from './SongVideoEditor';
 import {
     SONG_STATUS_LABEL,
     formatSongError,
+    formatSubmissionError,
+    useAdminSongSubmissions,
     useAdminSongVideos,
     useDeleteSongVideo,
-    useVtuberNames,
     type SongVideoListItem,
 } from '../hooks/useAdminSongs';
+import { useVtuberNames } from '../../songs/streamLookup';
 import { isUnauthorized } from '../hooks/useAdminSubmissions';
 
 function formatDate(s: string | null | undefined): string {
@@ -40,13 +42,16 @@ export function AdminSongsTab({ active }: { active: boolean }) {
     const del = useDeleteSongVideo();
     const needToken = !hasToken || isUnauthorized(query.error);
     const videos = query.data ?? [];
-    const names = useVtuberNames(videos.map((v) => v.vtuber_id).filter((id): id is string => !!id));
+    const pending = useAdminSongSubmissions('pending');
+    const submissions = pending.data ?? [];
+    const names = useVtuberNames([...videos, ...submissions].map((v) => v.vtuber_id).filter((id): id is string => !!id));
 
-    /** null = 列表；{ id: null } = 新增；session 讓每次開編輯器都是全新 state */
-    const [editing, setEditing] = useState<{ id: string | null; session: number } | null>(null);
+    /** null = 列表；{ id: null } = 新增；reviewId = 審核投稿；session 讓每次開編輯器都是全新 state */
+    const [editing, setEditing] = useState<{ id: string | null; reviewId?: string; session: number } | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<SongVideoListItem | null>(null);
 
     const openEditor = (id: string | null) => setEditing((cur) => ({ id, session: (cur?.session ?? 0) + 1 }));
+    const openReview = (reviewId: string) => setEditing((cur) => ({ id: null, reviewId, session: (cur?.session ?? 0) + 1 }));
 
     const handleConfirmDelete = async () => {
         if (!deleteTarget) return;
@@ -64,6 +69,7 @@ export function AdminSongsTab({ active }: { active: boolean }) {
             <SongVideoEditor
                 key={editing.session}
                 id={editing.id}
+                reviewId={editing.reviewId ?? null}
                 playerEnabled={active}
                 onClose={() => setEditing(null)}
                 onSaved={(id) => setEditing((cur) => (cur ? { ...cur, id } : cur))}
@@ -87,6 +93,38 @@ export function AdminSongsTab({ active }: { active: boolean }) {
             </div>
 
             {needToken && <AdminTokenInline />}
+
+            {/* 待審投稿：標題由投稿者填寫，只以純文字顯示 */}
+            {!needToken && (
+                <section aria-labelledby="song-submissions-h" className="rounded-lg border border-border bg-card p-3">
+                    <h3 id="song-submissions-h" className="text-[13px] font-semibold">待審投稿（{pending.data ? submissions.length : '…'}）</h3>
+                    {pending.isError ? (
+                        <p role="alert" className="mt-1 text-[12px] text-destructive">{formatSubmissionError(pending.error)}</p>
+                    ) : submissions.length === 0 ? (
+                        pending.data && <p className="mt-1 text-[12px] text-muted-foreground">目前沒有待審投稿</p>
+                    ) : (
+                        <ul className="mt-2 divide-y divide-border">
+                            {submissions.map((sub) => (
+                                <li key={sub.id} className="flex items-center gap-2 py-1.5 text-[13px]">
+                                    <span className={cn(
+                                        'shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-medium',
+                                        sub.kind === 'revision' ? 'border-sky-500/25 bg-sky-500/10 text-sky-400' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400',
+                                    )}>
+                                        {sub.kind === 'revision' ? '修正' : '新歌回'}
+                                    </span>
+                                    <span className="min-w-0 flex-1 truncate">{sub.title}</span>
+                                    <span className="hidden shrink-0 text-[12px] text-muted-foreground sm:inline">{sub.vtuber_id ? (names.data?.get(sub.vtuber_id)?.name ?? '…') : '—'}</span>
+                                    <span className="shrink-0 text-[12px] text-muted-foreground">{formatDate(sub.created_at)}</span>
+                                    <Button size="sm" variant="outline" className="h-7" onClick={() => openReview(sub.id)} aria-label={`審核「${sub.title}」`}>
+                                        <ClipboardCheck className="size-3.5" />
+                                        審核
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+            )}
 
             {query.isLoading ? (
                 <p className="text-sm text-muted-foreground">載入中…</p>

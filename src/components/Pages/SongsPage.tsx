@@ -608,6 +608,15 @@ const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong
                     >
                         <ExternalLink className="size-3.5" aria-hidden="true" />
                     </a>
+                    {/* 整頁導覽：投稿頁 mount 後才讀 ?v=（站內切頁會被路由同步把 query 清掉） */}
+                    <a
+                        href={`${PAGE_PATHS.songsSubmit}?v=${video.videoId}`}
+                        aria-label={t('catalog.fixTimeline')}
+                        title={t('catalog.fixTimeline')}
+                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                        <Pencil className="size-3.5" aria-hidden="true" />
+                    </a>
                 </div>
             </div>
             <ol className="mt-2 flex flex-col">
@@ -797,6 +806,12 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 </div>
 
                 <section aria-labelledby="songs-catalog-h" className="mt-10 sm:mt-12">
+                    <p className="mb-3 text-[13px] text-muted-foreground">
+                        {t('catalog.submitPrompt')}{' '}
+                        <RouteLink to="songsSubmit" className="font-medium text-violet-700 underline-offset-2 hover:underline dark:text-violet-300">
+                            {t('catalog.submitLink')}
+                        </RouteLink>
+                    </p>
                     <div className="mb-4 flex flex-wrap items-center gap-3">
                         <h2 id="songs-catalog-h" className={h2}>{t('catalog.title')}</h2>
                         <div role="group" aria-label={t('catalog.sort.label')} className="inline-flex rounded-lg border border-border p-0.5">
