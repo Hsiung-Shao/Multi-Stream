@@ -31,13 +31,17 @@ import { useMounted } from '../../features/songs/hooks/useMounted';
 import { usePlayReporter } from '../../features/songs/hooks/usePlayReporter';
 import { usePlaylistStore, type Playlist } from '../../features/songs/store/usePlaylistStore';
 import { deriveVtubers, filterByVtuber, filterCatalog, sortCatalog, type CatalogSort } from '../../features/songs/lib/catalogView';
-import { LIST_VIEW, parseSongsView, sameSongsView, serializeSongsView, type SongsView } from '../../features/songs/lib/songsView';
+import {
+    LIST_VIEW, isBrowseView, parseSongsView, sameSongsView, serializeSongsView, type BrowseView, type SongsView, type VtuberTab,
+} from '../../features/songs/lib/songsView';
 import { PAGE_PATHS } from '../../config/routes';
 import { ConsoleShell } from '../../features/songs/components/console/ConsoleShell';
 import { LeftNav } from '../../features/songs/components/console/LeftNav';
 import { CatalogView, type CatalogStatus } from '../../features/songs/components/console/CatalogView';
 import { VideoDetailView } from '../../features/songs/components/console/VideoDetailView';
 import { PlaylistsView } from '../../features/songs/components/console/PlaylistsView';
+import { VtuberView } from '../../features/songs/components/console/VtuberView';
+import { SongView } from '../../features/songs/components/console/SongView';
 import { NowPlayingDetails, NowPlayingPanel } from '../../features/songs/components/console/NowPlayingPanel';
 import { MobileNowTabs, type MobileTab } from '../../features/songs/components/console/MobileNowTabs';
 import { PlayerBar } from '../../features/songs/components/console/PlayerBar';
@@ -59,20 +63,20 @@ const SHORT_QUERY = '(max-height: 500px)';
 /** 手機播放器高度（與 NowPlayingPanel 的 PlayerFrame 同一個算式）：抽屜的遮罩與內容從這裡往下，不蓋到影片 */
 const SHEET_BELOW_PLAYER = 'top-[max(202px,min(56.25vw,50dvh))]';
 /** 各畫面的 h2（tabIndex=-1）：使用者切換畫面後把焦點移過去，螢幕閱讀器會念出新畫面 */
-const VIEW_HEADING_IDS = ['songs-video-h', 'songs-playlists-h', 'songs-catalog-h'];
+const VIEW_HEADING_IDS = ['songs-video-h', 'songs-song-h', 'songs-vtuber-h', 'songs-playlists-h', 'songs-catalog-h'];
 
 /** 中欄捲動區的 viewport（Radix ScrollArea 不轉發 viewport ref） */
 const viewportOf = (root: HTMLDivElement | null): HTMLElement | null =>
     root?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]') ?? null;
 
-/** 從列表推進單場時 pushState 帶的標記：上一筆歷史是頁內列表，「返回歌回列表」改用 history.back() */
+/** 從瀏覽型畫面（列表、個人頁、單曲頁）推進單場或單曲頁時 pushState 帶的標記：上一筆歷史就是頁內畫面，返回鈕改用 history.back() */
 interface SongsHistoryState {
     songsFrom: string;
 }
 const isSongsHistoryState = (state: unknown): state is SongsHistoryState =>
     typeof state === 'object' && state !== null && typeof (state as { songsFrom?: unknown }).songsFrom === 'string';
 
-/** 離開列表時保存的狀態（key＝列表網址）：瀏覽器返回或 history.back() 回到同一個列表時一起還原 */
+/** 離開瀏覽型畫面時保存的狀態（key＝該畫面網址）：瀏覽器返回或 history.back() 回到同一個畫面時一起還原 */
 interface ListSnapshot {
     visible: number;
     scrollTop: number;
@@ -109,9 +113,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const playlists = mounted ? storePlaylists : EMPTY_PLAYLISTS;
 
     const [view, setView] = useState<SongsView>(LIST_VIEW);
-    // 最近一次列表畫面的 VTuber 篩選：進單場或歌單時保留，「返回歌回列表」回到它，顯示筆數也不會因此重設
-    const [listVtuber, setListVtuber] = useState<string | null>(null);
-    if (view.kind === 'list' && view.vtuber !== listVtuber) setListVtuber(view.vtuber);
+    // 最近一次的瀏覽型畫面（列表、個人頁、單曲頁）：直接開單場網址時，「返回歌回列表」導回它
+    const [lastBrowse, setLastBrowse] = useState<BrowseView>(LIST_VIEW);
+    if (isBrowseView(view) && !sameSongsView(view, lastBrowse)) setLastBrowse(view);
     const [query, setQuery] = useState('');
     const deferredQuery = useDeferredValue(query);
     const [visible, setVisible] = useState(CATALOG_PAGE_SIZE);
@@ -155,11 +159,11 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         setMobileTab(next);
     }, []);
 
-    /** 離開列表前呼叫：DOM 換成新畫面後 scrollTop 會被新內容的高度截斷，所以要在換之前記。
-        手機在「正在播放」分頁時，捲動區顯示的不是列表，改記「瀏覽」分頁存下的位置 */
+    /** 離開瀏覽型畫面前呼叫：DOM 換成新畫面後 scrollTop 會被新內容的高度截斷，所以要在換之前記。
+        手機在「正在播放」分頁時，捲動區顯示的不是這個畫面，改記「瀏覽」分頁存下的位置 */
     const rememberList = useCallback(() => {
         const cur = viewRef.current;
-        if (cur.kind !== 'list') return;
+        if (!isBrowseView(cur)) return;
         const viewport = viewportOf(scrollRef.current);
         const scrollTop = mobileTabRef.current === 'browse' ? (viewport?.scrollTop ?? 0) : tabScrollRef.current.browse;
         listSnapshotsRef.current.set(serializeSongsView(cur), { visible: visibleRef.current, scrollTop });
@@ -172,7 +176,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             rememberList();
             switchTab('browse');
             const next = parseSongsView(window.location.search);
-            const snapshot = next.kind === 'list' ? listSnapshotsRef.current.get(serializeSongsView(next)) : undefined;
+            const snapshot = isBrowseView(next) ? listSnapshotsRef.current.get(serializeSongsView(next)) : undefined;
             restoreScrollRef.current = snapshot?.scrollTop ?? null;
             if (snapshot) setVisible(snapshot.visible);
             setView(next);
@@ -182,12 +186,12 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         return () => window.removeEventListener('popstate', sync);
     }, [rememberList, switchTab]);
 
-    /** 畫面 → 網址（明確切換：列表從頭開始顯示、回到頂端）；replace＝只改網址不新增歷史（例如展開／收合歌單） */
+    /** 畫面 → 網址（明確切換：瀏覽型畫面從頭開始顯示、回到頂端）；replace＝只改網址不新增歷史（展開／收合歌單、個人頁切分頁） */
     const navigate = useCallback((next: SongsView, opts?: { replace?: boolean }) => {
         const prev = viewRef.current;
         if (!sameSongsView(prev, next)) {
             rememberList();
-            if (next.kind === 'list') setVisible(CATALOG_PAGE_SIZE);
+            if (isBrowseView(next)) setVisible(CATALOG_PAGE_SIZE);
         }
         restoreScrollRef.current = null;
         setView((cur) => (sameSongsView(cur, next) ? cur : next));
@@ -197,7 +201,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         if (opts?.replace) {
             window.history.replaceState(null, '', url);
         } else {
-            const state: SongsHistoryState | null = prev.kind === 'list' && next.kind === 'video'
+            const state: SongsHistoryState | null = isBrowseView(prev) && (next.kind === 'video' || next.kind === 'song')
                 ? { songsFrom: PAGE_PATHS.songs + serializeSongsView(prev) }
                 : null;
             window.history.pushState(state, '', url);
@@ -250,17 +254,20 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         focusViewHeading();
     }, [viewKey]);
 
-    const vtuberFilter = listVtuber;
     const vtubers = useMemo(() => (catalog ? deriveVtubers(catalog.videos) : []), [catalog]);
     const filtered = useMemo(
-        () => (catalog ? filterByVtuber(sortCatalog(filterCatalog(catalog.videos, deferredQuery), sort), vtuberFilter) : []),
-        [catalog, deferredQuery, sort, vtuberFilter],
+        () => (catalog ? sortCatalog(filterCatalog(catalog.videos, deferredQuery), sort) : []),
+        [catalog, deferredQuery, sort],
     );
-    // 改搜尋字從頭顯示；換篩選由 navigate／popstate 決定（明確切換從頭、返回還原）
+    // 改搜尋字從頭顯示；換畫面由 navigate／popstate 決定（明確切換從頭、返回還原）
     useEffect(() => setVisible(CATALOG_PAGE_SIZE), [deferredQuery]);
-    const filterName = vtuberFilter === null
-        ? null
-        : (vtubers.find((v) => v.key === vtuberFilter)?.name ?? vtuberFilter.replace(/^name:/, ''));
+    // 個人頁：這位的歌回（目錄排序，不套列表的搜尋字）與左欄清單裡的摘要
+    const profileKey = view.kind === 'vtuber' ? view.vtuber : null;
+    const profileVideos = useMemo(
+        () => (catalog && profileKey !== null ? filterByVtuber(sortCatalog(catalog.videos, sort), profileKey) : []),
+        [catalog, profileKey, sort],
+    );
+    const profileSummary = profileKey === null ? undefined : vtubers.find((v) => v.key === profileKey);
     const detailVideo = useMemo(
         () => (view.kind === 'video' ? catalog?.videos.find((v) => v.videoId === view.videoId) : undefined),
         [catalog, view],
@@ -277,11 +284,12 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         onShareConsumed?.();
     }, [shareCodes, catalog, load, onShareConsumed]);
 
-    const playEntries = (entries: SongEntry[], startCode?: string) => {
+    /** 播放一組歌曲（歌單、個人頁歌單、單曲頁版本），從 startCode 那首開始 */
+    const playEntries = useCallback((entries: SongEntry[], startCode?: string) => {
         if (entries.length === 0) return;
         const start = startCode ? Math.max(0, entries.findIndex((e) => e.segment.code === startCode)) : 0;
         load(entries.map((e) => toQueueItem(e.segment)), { startIndex: start });
-    };
+    }, [load]);
 
     // 目錄卡片、曲目表、左欄都是 memo：handler 要穩定，否則每次播放狀態更新都會重畫整個目錄
     const handlePlaySong = useCallback((video: SongVideo, segment: SongSegment) => {
@@ -296,19 +304,32 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     }, [append, t]);
     const handleOpenVideo = useCallback((video: SongVideo) => navigate({ kind: 'video', videoId: video.videoId }), [navigate]);
     const handleGoList = useCallback(() => navigate(LIST_VIEW), [navigate]);
-    // 上一筆歷史就是頁內列表：history.back()，畫面由 popstate 的 sync 還原（篩選、筆數、捲動）；
-    // 直接開 ?v= 進來（沒有頁內上一筆）時推一筆列表
+    /** 上一筆歷史就是頁內的瀏覽型畫面：history.back()，畫面由 popstate 的 sync 還原（分頁、筆數、捲動）；回傳是否已處理 */
+    const backInPage = useCallback((): boolean => {
+        if (!isSongsHistoryState(window.history.state)) return false;
+        pendingFocusRef.current = true;
+        window.history.back();
+        return true;
+    }, []);
+    // 單場：直接開 ?v= 進來（沒有頁內上一筆）時推一筆最近的瀏覽型畫面（預設列表）
     const handleBackToList = useCallback(() => {
-        if (isSongsHistoryState(window.history.state)) {
-            pendingFocusRef.current = true;
-            window.history.back();
-            return;
-        }
-        navigate({ kind: 'list', vtuber: listVtuber });
-    }, [navigate, listVtuber]);
+        if (!backInPage()) navigate(lastBrowse);
+    }, [backInPage, navigate, lastBrowse]);
+    // 單曲頁：直接開網址時，有 from 回該位的個人頁，否則回列表
+    const songFrom = view.kind === 'song' ? view.from : null;
+    const handleBackFromSong = useCallback(() => {
+        if (backInPage()) return;
+        navigate(songFrom ? { kind: 'vtuber', vtuber: songFrom, tab: 'songs' } : LIST_VIEW);
+    }, [backInPage, navigate, songFrom]);
+    const handleOpenSong = useCallback((songId: number, from: string | null) => navigate({ kind: 'song', songId, from }), [navigate]);
+    const handleVtuberTab = useCallback((tab: VtuberTab) => {
+        const cur = viewRef.current;
+        if (cur.kind === 'vtuber') navigate({ kind: 'vtuber', vtuber: cur.vtuber, tab }, { replace: true });
+    }, [navigate]);
+    const handleShowMore = useCallback(() => setVisible((v) => v + CATALOG_PAGE_SIZE), []);
     const { refetch: refetchCatalog } = catalogQuery;
     const handleRetryCatalog = useCallback(() => void refetchCatalog(), [refetchCatalog]);
-    const handleSelectVtuber = useCallback((key: string) => navigate({ kind: 'list', vtuber: key }), [navigate]);
+    const handleSelectVtuber = useCallback((key: string) => navigate({ kind: 'vtuber', vtuber: key, tab: 'songs' }), [navigate]);
     const handleOpenPlaylist = useCallback((id: string) => navigate({ kind: 'playlists', playlistId: id }), [navigate]);
     const handlePlaylistToggle = useCallback(
         (id: string | null) => navigate({ kind: 'playlists', playlistId: id }, { replace: true }),
@@ -359,13 +380,18 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         toast.success(t('share.saved'));
     };
 
-    const catalogStatus: CatalogStatus = {
-        loaded: !!catalog,
-        totalCount: catalog?.videos.length ?? 0,
-        isError: catalogQuery.isError,
-        isFetching: catalogQuery.isFetching,
+    const catalogLoaded = !!catalog;
+    const catalogTotal = catalog?.videos.length ?? 0;
+    const { isError: catalogError, isFetching: catalogFetching } = catalogQuery;
+    // 個人頁、單曲頁是 memo：狀態物件要穩定，否則播放進度每秒更新都會重畫
+    const catalogStatus = useMemo<CatalogStatus>(() => ({
+        loaded: catalogLoaded,
+        totalCount: catalogTotal,
+        isError: catalogError,
+        isFetching: catalogFetching,
         refetch: handleRetryCatalog,
-    };
+    }), [catalogLoaded, catalogTotal, catalogError, catalogFetching, handleRetryCatalog]);
+    const songIndex = catalog?.songs ?? null;
     const currentCode = player.current?.code ?? null;
 
     let centerView;
@@ -380,10 +406,55 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 currentCode={currentCode}
                 playlists={playlists}
                 locale={locale}
+                songIndex={songIndex}
                 onBack={handleBackToList}
                 onPlayAll={handlePlayAll}
                 onPlaySong={handlePlaySong}
                 onQueue={handleQueue}
+                onOpenSong={handleOpenSong}
+            />
+        );
+    } else if (view.kind === 'vtuber') {
+        centerView = (
+            <VtuberView
+                vtuberKey={view.vtuber}
+                tab={view.tab}
+                summary={profileSummary}
+                songIndex={songIndex}
+                status={catalogStatus}
+                videos={profileVideos}
+                visible={visible}
+                onShowMore={handleShowMore}
+                sort={sort}
+                onSortChange={setSort}
+                playlists={playlists}
+                locale={locale}
+                currentCode={currentCode}
+                onTabChange={handleVtuberTab}
+                onGoList={handleGoList}
+                onPlayEntries={playEntries}
+                onQueue={handleQueue}
+                onOpenSong={handleOpenSong}
+                onPlaySong={handlePlaySong}
+                onPlayAll={handlePlayAll}
+                onOpenVideo={handleOpenVideo}
+            />
+        );
+    } else if (view.kind === 'song') {
+        centerView = (
+            <SongView
+                songId={view.songId}
+                from={view.from}
+                songIndex={songIndex}
+                status={catalogStatus}
+                playlists={playlists}
+                locale={locale}
+                currentCode={currentCode}
+                onBack={handleBackFromSong}
+                onGoList={handleGoList}
+                onPlayEntries={playEntries}
+                onQueue={handleQueue}
+                onOpenVideo={handleOpenVideo}
             />
         );
     } else if (view.kind === 'playlists') {
@@ -410,14 +481,10 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                     status={catalogStatus}
                     videos={filtered}
                     visible={visible}
-                    onShowMore={() => setVisible((v) => v + CATALOG_PAGE_SIZE)}
-                    query={query}
-                    onQueryChange={setQuery}
-                    deferredQuery={deferredQuery}
+                    onShowMore={handleShowMore}
+                    search={{ query, onQueryChange: setQuery, deferredQuery }}
                     sort={sort}
                     onSortChange={setSort}
-                    filterName={filterName}
-                    onClearFilter={handleGoList}
                     playlists={playlists}
                     locale={locale}
                     onPlaySong={handlePlaySong}

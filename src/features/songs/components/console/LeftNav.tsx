@@ -34,7 +34,8 @@ export const LeftNav = memo(function LeftNav({
     className?: string;
 }) {
     const { t, i18n } = useTranslation('songs');
-    const activeVtuber = view.kind === 'list' ? view.vtuber : null;
+    // 個人頁就是這位，或單曲頁是從這位的歌單點進來的（from）
+    const activeVtuber = view.kind === 'vtuber' ? view.vtuber : view.kind === 'song' ? view.from : null;
     const activePlaylist = view.kind === 'playlists' ? view.playlistId : null;
 
     const handleSongs = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -54,7 +55,7 @@ export const LeftNav = memo(function LeftNav({
                     <a
                         href={PAGE_PATHS.songs}
                         onClick={handleSongs}
-                        aria-current={view.kind === 'list' && !activeVtuber ? 'page' : undefined}
+                        aria-current={view.kind === 'list' ? 'page' : undefined}
                         className={cn(itemClass, 'gap-3 py-2.5 text-sm aria-[current=page]:bg-muted aria-[current=page]:font-bold')}
                     >
                         <Music className="size-[18px] shrink-0" aria-hidden="true" />
@@ -112,7 +113,7 @@ export const LeftNav = memo(function LeftNav({
                                         key={v.key}
                                         type="button"
                                         onClick={() => onSelectVtuber(v.key)}
-                                        aria-pressed={active}
+                                        aria-current={active ? 'page' : undefined}
                                         className={cn(itemClass, active && 'text-primary')}
                                     >
                                         {v.img ? (

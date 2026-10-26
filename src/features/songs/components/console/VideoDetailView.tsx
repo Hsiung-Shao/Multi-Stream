@@ -4,10 +4,10 @@
  */
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ExternalLink, Info, Loader2, Music2, Pencil, Play, RefreshCw, Share2 } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Info, Music2, Pencil, Play, Share2 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
-import { cn } from '../../../../components/ui/utils';
 import type { SongSegment, SongVideo } from '../../songsSource';
+import type { SongIndex } from '../../lib/songIndex';
 import type { Playlist } from '../../store/usePlaylistStore';
 import { videoPlays } from '../../lib/catalogView';
 import { songsDuration, videoSpan } from '../../lib/videoTimeline';
@@ -16,11 +16,12 @@ import { PAGE_PATHS } from '../../../../config/routes';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 import { TrackTable } from './TrackTable';
 import { shareSongCodes } from './shareLink';
+import { CatalogPending } from './CatalogPending';
 
 const pillClass = 'inline-flex h-[34px] items-center gap-1.5 rounded-full border border-input px-3.5 text-[13px] text-foreground/80 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export const VideoDetailView = memo(function VideoDetailView({
-    video, loading, loadError, retrying, onRetry, currentCode, playlists, locale, onBack, onPlayAll, onPlaySong, onQueue,
+    video, loading, loadError, retrying, onRetry, currentCode, playlists, locale, songIndex, onBack, onPlayAll, onPlaySong, onQueue, onOpenSong,
 }: {
     /** undefined＝目錄還在載入、載入失敗或找不到這場 */
     video: SongVideo | undefined;
@@ -32,10 +33,13 @@ export const VideoDetailView = memo(function VideoDetailView({
     currentCode: string | null;
     playlists: Playlist[];
     locale: string;
+    /** 歌曲索引（舊格式目錄為 null）：曲目表顯示「N 個版本」用 */
+    songIndex: SongIndex | null;
     onBack: () => void;
     onPlayAll: (video: SongVideo) => void;
     onPlaySong: (video: SongVideo, segment: SongSegment) => void;
     onQueue: (segment: SongSegment) => void;
+    onOpenSong: (songId: number, from: string | null) => void;
 }) {
     const { t } = useTranslation('songs');
 
@@ -50,19 +54,8 @@ export const VideoDetailView = memo(function VideoDetailView({
         return (
             <article className="flex flex-col gap-4">
                 {back}
-                {loadError ? (
-                    <div className="flex flex-wrap items-center gap-4 rounded-xl bg-popover p-6">
-                        <p role="alert" className="flex-1 font-bold">{t('catalog.loadError')}</p>
-                        <Button variant="outline" onClick={onRetry} disabled={retrying}>
-                            <RefreshCw className={cn('size-3.5', retrying && 'animate-spin')} aria-hidden="true" />
-                            {t('catalog.retry')}
-                        </Button>
-                    </div>
-                ) : loading ? (
-                    <p role="status" className="flex min-h-[160px] items-center justify-center gap-2 rounded-xl bg-popover text-sm text-muted-foreground">
-                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                        {t('catalog.loading')}
-                    </p>
+                {loadError || loading ? (
+                    <CatalogPending isError={loadError} retrying={retrying} onRetry={onRetry} />
                 ) : (
                     <p className="rounded-xl border border-dashed border-input px-4 py-12 text-center text-sm text-muted-foreground">{t('video.notFound')}</p>
                 )}
@@ -138,7 +131,15 @@ export const VideoDetailView = memo(function VideoDetailView({
                 <span>{t('video.chatNote')}</span>
             </div>
 
-            <TrackTable video={video} currentCode={currentCode} playlists={playlists} onPlaySong={onPlaySong} onQueue={onQueue} />
+            <TrackTable
+                video={video}
+                currentCode={currentCode}
+                playlists={playlists}
+                songIndex={songIndex}
+                onPlaySong={onPlaySong}
+                onQueue={onQueue}
+                onOpenSong={onOpenSong}
+            />
         </article>
     );
 });
