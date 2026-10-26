@@ -233,6 +233,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     useEffect(() => {
         const target = restoreScrollRef.current ?? 0;
         restoreScrollRef.current = null;
+        // 換畫面一律回到「瀏覽」分頁：它記住的位置跟著換成新畫面的，日後重掛（旋轉跨斷點）才不會套到過期的位置
+        tabScrollRef.current.browse = target;
         const root = scrollRef.current;
         // 手機分頁的「瀏覽」內容還沒掛上（外框仍 hidden、children 下一次 commit 才渲染）：交給 handlePanelMount，現在設會被空內容夾成 0
         if (root?.querySelector('[data-songs-panel="browse"]')?.hasAttribute('hidden')) {

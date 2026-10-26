@@ -1,6 +1,6 @@
 // 歌曲播放清單頁：殼層標題、目錄載入／空目錄／失敗重試、client 搜尋、播放進佇列、分享連結載入與另存歌單
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../src/i18n/i18n';
 
@@ -710,5 +710,124 @@ describe('SongsPage 手機分頁捲動還原（模擬瀏覽器夾值）', () => 
         await waitFor(() => expect(tabs().browse).toHaveAttribute('aria-selected', 'true'));
         await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument());
         await waitFor(() => expect(activeViewport().scrollTop).toBe(300));
+    });
+});
+
+// ---------- v1.3 回歸：旋轉跨斷點後，手機版不可套用過期的瀏覽位置 ----------
+describe('SongsPage 跨斷點捲動', () => {
+    const originalMatchMedia = window.matchMedia;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    const stored = new WeakMap<Element, number>();
+    const isViewport = (el: Element) => el.hasAttribute('data-radix-scroll-area-viewport');
+    const NARROW = '(width < 64rem)';
+    let narrow = true;
+    const listeners = new Map<string, Set<(e: { matches: boolean }) => void>>();
+
+    // 可切換的 matchMedia：訂閱 change（addEventListener 與舊式 addListener 都記錄），切換時呼叫所有 listener
+    const setNarrow = async (next: boolean) => {
+        narrow = next;
+        await act(async () => {
+            for (const fn of listeners.get(NARROW) ?? []) fn({ matches: next });
+        });
+    };
+
+    beforeEach(() => {
+        resetUrl();
+        narrow = true;
+        listeners.clear();
+        // 歌回27 有 8 首歌：單場曲目表夠長，過期的 300 在單場畫面不會被內容高度夾掉（真實長歌回的情況）
+        const catalog = BIG_CATALOG.map((v) =>
+            v.v === 'video000027'
+                ? { ...v, s: Array.from({ length: 8 }, (_, k) => [`sg27000${k}`, k * 100, k * 100 + 90, `長歌回第${k}首`, '原唱']) }
+                : v,
+        );
+        fetchMock.mockImplementation(async () => jsonRes(catalog));
+        window.matchMedia = vi.fn().mockImplementation((query: string) => {
+            const set = listeners.get(query) ?? new Set();
+            listeners.set(query, set);
+            const add = (_t: string, fn: (e: { matches: boolean }) => void) => set.add(fn);
+            const remove = (_t: string, fn: (e: { matches: boolean }) => void) => set.delete(fn);
+            return {
+                get matches() {
+                    return query === NARROW ? narrow : false;
+                },
+                media: query,
+                onchange: null,
+                addEventListener: add,
+                removeEventListener: remove,
+                addListener: (fn: (e: { matches: boolean }) => void) => set.add(fn),
+                removeListener: (fn: (e: { matches: boolean }) => void) => set.delete(fn),
+                dispatchEvent: vi.fn(),
+            };
+        }) as unknown as typeof window.matchMedia;
+        Object.defineProperty(Element.prototype, 'scrollTop', {
+            configurable: true,
+            get(this: Element) {
+                return isViewport(this) ? (stored.get(this) ?? 0) : (originalDescriptor?.get?.call(this) ?? 0);
+            },
+            set(this: Element, value: number) {
+                if (!isViewport(this)) {
+                    originalDescriptor?.set?.call(this, value);
+                    return;
+                }
+                const max = Math.max(0, this.querySelectorAll('li, tr').length * 100 - 100);
+                stored.set(this, Math.min(max, Math.max(0, value)));
+            },
+        });
+    });
+
+    afterEach(() => {
+        if (originalDescriptor) Object.defineProperty(Element.prototype, 'scrollTop', originalDescriptor);
+        window.matchMedia = originalMatchMedia;
+        resetUrl();
+    });
+
+    const currentViewport = (): HTMLElement => {
+        for (const p of screen.queryAllByRole('tabpanel')) {
+            const vp = p.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
+            if (vp) return vp;
+        }
+        const visible = Array.from(document.querySelectorAll<HTMLElement>('[data-radix-scroll-area-viewport]')).filter(
+            (el) => !el.closest('[hidden],[aria-hidden="true"],[data-state="inactive"]'),
+        );
+        if (!visible.length) throw new Error('找不到目前的捲動區');
+        return visible[0];
+    };
+
+    it('T116 進單場後旋轉跨過斷點再回手機版，不套用過期的瀏覽位置', async () => {
+        renderPage();
+        await waitFor(() => expect(cardCount()).toBe(20));
+
+        // 1. 在「瀏覽」把列表捲到 300
+        const listViewport = currentViewport();
+        listViewport.scrollTop = 300;
+        fireEvent.scroll(listViewport);
+        expect(currentViewport().scrollTop).toBe(300);
+
+        // 2. 切到「正在播放」再切回「瀏覽」，瀏覽位置 300 被記下來
+        const tablist = screen.getByRole('tablist');
+        activate(within(tablist).getByRole('tab', { name: '正在播放' }));
+        await waitFor(() => expect(screen.getByRole('heading', { name: '接下來' })).toBeInTheDocument());
+        activate(within(tablist).getByRole('tab', { name: '瀏覽' }));
+        await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument());
+        await waitFor(() => expect(currentViewport().scrollTop).toBe(300));
+
+        // 3. 點歌回進單場（換畫面捲回頂端）
+        fireEvent.click(within(screen.getByRole('region', { name: '歌曲目錄' })).getByRole('button', { name: '歌回27' }));
+        await screen.findByRole('button', { name: '返回歌回列表' });
+        await waitFor(() => expect(currentViewport().scrollTop).toBe(0));
+
+        // 4. 旋轉：先變桌機版（沒有分頁），再回手機版
+        await setNarrow(false);
+        await waitFor(() => expect(screen.queryByRole('tablist')).toBeNull());
+        await setNarrow(true);
+        await waitFor(() => expect(screen.getByRole('tablist')).toBeInTheDocument());
+        await act(async () => {
+            await new Promise((r) => setTimeout(r, 50));
+        });
+
+        // 5. 現在顯示的是單場，不該回到列表的 300
+        expect(screen.getByRole('button', { name: '返回歌回列表' })).toBeInTheDocument();
+        expect(currentViewport().scrollTop).toBe(0);
     });
 });
