@@ -606,3 +606,109 @@ describe('SongsPage 手機分頁捲動位置', () => {
         await waitFor(() => expect(activeViewport().scrollTop).toBe(500));
     });
 });
+
+// ---------- v1.3 回歸：真實瀏覽器會依內容高度夾 scrollTop，jsdom 不會 ----------
+// 在測試裡模擬夾值：只對 Radix 捲動區生效，設值當下依區內 li 數量決定上限（每個 li 當 100px，可捲 li 數×100−100）
+describe('SongsPage 手機分頁捲動還原（模擬瀏覽器夾值）', () => {
+    const originalMatchMedia = window.matchMedia;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    const stored = new WeakMap<Element, number>();
+    const isViewport = (el: Element) => el.hasAttribute('data-radix-scroll-area-viewport');
+
+    beforeEach(() => {
+        resetUrl();
+        fetchMock.mockImplementation(async () => jsonRes(BIG_CATALOG));
+        window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+            matches: query === '(width < 64rem)',
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+        })) as unknown as typeof window.matchMedia;
+        Object.defineProperty(Element.prototype, 'scrollTop', {
+            configurable: true,
+            get(this: Element) {
+                return isViewport(this) ? (stored.get(this) ?? 0) : (originalDescriptor?.get?.call(this) ?? 0);
+            },
+            set(this: Element, value: number) {
+                if (!isViewport(this)) {
+                    originalDescriptor?.set?.call(this, value);
+                    return;
+                }
+                const max = Math.max(0, this.querySelectorAll('li').length * 100 - 100);
+                stored.set(this, Math.min(max, Math.max(0, value)));
+            },
+        });
+    });
+
+    afterEach(() => {
+        if (originalDescriptor) Object.defineProperty(Element.prototype, 'scrollTop', originalDescriptor);
+        window.matchMedia = originalMatchMedia;
+        resetUrl();
+    });
+
+    const activeViewport = (): HTMLElement => {
+        for (const p of screen.queryAllByRole('tabpanel')) {
+            const vp = p.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
+            if (vp) return vp;
+        }
+        const visible = Array.from(document.querySelectorAll<HTMLElement>('[data-radix-scroll-area-viewport]')).filter(
+            (el) => !el.closest('[hidden],[aria-hidden="true"],[data-state="inactive"]'),
+        );
+        if (!visible.length) throw new Error('找不到作用中分頁的捲動區');
+        return visible[0];
+    };
+
+    const tabs = () => {
+        const tablist = screen.getByRole('tablist');
+        return {
+            browse: within(tablist).getByRole('tab', { name: '瀏覽' }),
+            now: within(tablist).getByRole('tab', { name: '正在播放' }),
+        };
+    };
+
+    it('T115-a 切回「瀏覽」時，捲動位置在內容掛上後還原', async () => {
+        renderPage();
+        await waitFor(() => expect(cardCount()).toBe(20));
+        const { browse, now } = tabs();
+
+        activeViewport().scrollTop = 300;
+        // 守門：夾值模擬下，列表內容夠長，300 讀得回來
+        expect(activeViewport().scrollTop).toBe(300);
+
+        activate(now);
+        await waitFor(() => expect(screen.getByRole('heading', { name: '接下來' })).toBeInTheDocument());
+        await waitFor(() => expect(activeViewport().scrollTop).toBe(0));
+
+        activate(browse);
+        await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument());
+        await waitFor(() => expect(activeViewport().scrollTop).toBe(300));
+    });
+
+    it('T115-b 停在「正在播放」時按返回到記過的列表，切回「瀏覽」並捲回原處', async () => {
+        renderPage();
+        await waitFor(() => expect(cardCount()).toBe(20));
+        const { now } = tabs();
+
+        const listViewport = activeViewport();
+        listViewport.scrollTop = 300;
+        fireEvent.scroll(listViewport); // 真實瀏覽器捲動時會觸發 scroll 事件
+        expect(activeViewport().scrollTop).toBe(300);
+
+        // 進單場（會記下列表位置），再切到「正在播放」
+        fireEvent.click(within(screen.getByRole('region', { name: '歌曲目錄' })).getByRole('button', { name: '歌回27' }));
+        await screen.findByRole('button', { name: '返回歌回列表' });
+        activate(now);
+        await waitFor(() => expect(screen.getByRole('heading', { name: '接下來' })).toBeInTheDocument());
+
+        window.history.replaceState(null, '', '/songs');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+
+        await waitFor(() => expect(tabs().browse).toHaveAttribute('aria-selected', 'true'));
+        await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument());
+        await waitFor(() => expect(activeViewport().scrollTop).toBe(300));
+    });
+});
