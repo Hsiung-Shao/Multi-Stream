@@ -9,19 +9,21 @@ import { videoPlays } from '../../lib/catalogView';
 import { PAGE_PATHS } from '../../../../config/routes';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 
-export const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong, onPlayAll, onQueue }: {
+/** 目錄卡片：標題是按鈕，點了進單場詳細畫面（曲目表）；handler 由頁面以 useCallback 穩定傳入（memo） */
+export const VideoCard = memo(function VideoCard({ video, playlists, locale, onPlaySong, onPlayAll, onQueue, onOpen }: {
     video: SongVideo;
     playlists: Playlist[];
     locale: string;
     onPlaySong: (video: SongVideo, segment: SongSegment) => void;
     onPlayAll: (video: SongVideo) => void;
     onQueue: (segment: SongSegment) => void;
+    onOpen: (video: SongVideo) => void;
 }) {
     const { t } = useTranslation('songs');
     const date = video.streamedAt ? new Date(video.streamedAt) : null;
     const totalPlays = videoPlays(video);
     return (
-        <li className="rounded-2xl border border-border bg-card/50 p-3 sm:p-4">
+        <li className="rounded-xl bg-popover p-3 sm:p-4">
             <div className="flex items-start gap-3">
                 {video.vtuber?.img ? (
                     <img src={video.vtuber.img} alt="" width={40} height={40} loading="lazy" className="size-10 shrink-0 rounded-full object-cover" />
@@ -29,7 +31,15 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted" aria-hidden="true"><Music2 className="size-4 text-muted-foreground" /></span>
                 )}
                 <div className="min-w-0 flex-1">
-                    <h3 className="line-clamp-2 text-[15px] font-bold leading-snug">{video.title}</h3>
+                    <h3 className="line-clamp-2 text-[15px] font-bold leading-snug">
+                        <button
+                            type="button"
+                            onClick={() => onOpen(video)}
+                            className="rounded-sm text-left hover:text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            {video.title}
+                        </button>
+                    </h3>
                     <p className="mt-0.5 text-[12.5px] text-muted-foreground">
                         {[video.vtuber?.name ?? t('catalog.unknownVtuber'), date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString(locale) : null]
                             .filter(Boolean)
@@ -86,7 +96,7 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
                         <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => onQueue(seg)} aria-label={`${t('catalog.addToQueue')}：${seg.title}`} title={t('catalog.addToQueue')}>
                             <ListPlus className="size-3.5" aria-hidden="true" />
                         </Button>
-                        <AddToPlaylistMenu code={seg.code} playlists={playlists} />
+                        <AddToPlaylistMenu codes={[seg.code]} playlists={playlists} />
                     </li>
                 ))}
             </ol>

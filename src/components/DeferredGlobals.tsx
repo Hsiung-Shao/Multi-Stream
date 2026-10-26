@@ -25,8 +25,8 @@ export default function DeferredGlobals() {
     // 放在這個延後 chunk：observer 是 buffered，晚一點啟動也拿得到載入期間的資料
     useEffect(() => { startWebVitalsReporting(); }, []);
     const currentPage = useUIStore(s => s.page);
-    // 全站浮動意見回饋按鈕 — admin / canvas 沉浸頁略過避免擋畫面
-    const showFeedbackFab = currentPage !== 'admin' && currentPage !== 'canvas';
+    // 全站浮動意見回饋按鈕 — admin / canvas 沉浸頁略過避免擋畫面；songs 有常駐底部播放列，FAB 會蓋住它
+    const showFeedbackFab = currentPage !== 'admin' && currentPage !== 'canvas' && currentPage !== 'songs';
 
     return (
         <>

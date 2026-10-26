@@ -88,6 +88,28 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* /songs 三欄控制台（A2）：只在 .songs-console 外框內覆寫色彩變數（#06070B 底、#0F121C 面板、#7CF2C8 薄荷強調）。
+   portal 出去的 Dropdown／Dialog／toast 不在外框內，改吃 .dark（useAppliedTheme 在 /songs 強制深色）。 */
+.songs-console {
+  --background: #06070B;
+  --foreground: #EDEFF7;
+  --card: #0F121C;
+  --card-foreground: #EDEFF7;
+  --popover: #141A28;
+  --popover-foreground: #EDEFF7;
+  --primary: #7CF2C8;
+  --primary-foreground: #0B0D14;
+  --secondary: #1A2030;
+  --secondary-foreground: #EDEFF7;
+  --muted: #1A2030;
+  --muted-foreground: #8D95AD;
+  --accent: #1A2030;
+  --accent-foreground: #EDEFF7;
+  --border: #1C2233;
+  --input: #2A3147;
+  --ring: #7CF2C8;
+}
+
 @theme inline {
   --font-sans: 'Inter Variable', 'Inter Fallback', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
