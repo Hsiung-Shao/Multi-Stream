@@ -4,8 +4,9 @@
  */
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ExternalLink, Info, Loader2, Music2, Pencil, Play, Share2 } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Info, Loader2, Music2, Pencil, Play, RefreshCw, Share2 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
+import { cn } from '../../../../components/ui/utils';
 import type { SongSegment, SongVideo } from '../../songsSource';
 import type { Playlist } from '../../store/usePlaylistStore';
 import { videoPlays } from '../../lib/catalogView';
@@ -19,11 +20,15 @@ import { shareSongCodes } from './shareLink';
 const pillClass = 'inline-flex h-[34px] items-center gap-1.5 rounded-full border border-input px-3.5 text-[13px] text-foreground/80 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export const VideoDetailView = memo(function VideoDetailView({
-    video, loading, currentCode, playlists, locale, onBack, onPlayAll, onPlaySong, onQueue,
+    video, loading, loadError, retrying, onRetry, currentCode, playlists, locale, onBack, onPlayAll, onPlaySong, onQueue,
 }: {
-    /** undefined＝目錄還在載入或找不到這場 */
+    /** undefined＝目錄還在載入、載入失敗或找不到這場 */
     video: SongVideo | undefined;
     loading: boolean;
+    /** 目錄載入失敗：顯示與列表相同的錯誤與重試，不說「找不到」 */
+    loadError: boolean;
+    retrying: boolean;
+    onRetry: () => void;
     currentCode: string | null;
     playlists: Playlist[];
     locale: string;
@@ -45,7 +50,15 @@ export const VideoDetailView = memo(function VideoDetailView({
         return (
             <article className="flex flex-col gap-4">
                 {back}
-                {loading ? (
+                {loadError ? (
+                    <div className="flex flex-wrap items-center gap-4 rounded-xl bg-popover p-6">
+                        <p role="alert" className="flex-1 font-bold">{t('catalog.loadError')}</p>
+                        <Button variant="outline" onClick={onRetry} disabled={retrying}>
+                            <RefreshCw className={cn('size-3.5', retrying && 'animate-spin')} aria-hidden="true" />
+                            {t('catalog.retry')}
+                        </Button>
+                    </div>
+                ) : loading ? (
                     <p role="status" className="flex min-h-[160px] items-center justify-center gap-2 rounded-xl bg-popover text-sm text-muted-foreground">
                         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                         {t('catalog.loading')}

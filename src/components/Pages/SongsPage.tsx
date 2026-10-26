@@ -65,6 +65,19 @@ const VIEW_HEADING_IDS = ['songs-video-h', 'songs-playlists-h', 'songs-catalog-h
 const viewportOf = (root: HTMLDivElement | null): HTMLElement | null =>
     root?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]') ?? null;
 
+/** 從列表推進單場時 pushState 帶的標記：上一筆歷史是頁內列表，「返回歌回列表」改用 history.back() */
+interface SongsHistoryState {
+    songsFrom: string;
+}
+const isSongsHistoryState = (state: unknown): state is SongsHistoryState =>
+    typeof state === 'object' && state !== null && typeof (state as { songsFrom?: unknown }).songsFrom === 'string';
+
+/** 離開列表時保存的狀態（key＝列表網址）：瀏覽器返回或 history.back() 回到同一個列表時一起還原 */
+interface ListSnapshot {
+    visible: number;
+    scrollTop: number;
+}
+
 function focusViewHeading(): void {
     for (const id of VIEW_HEADING_IDS) {
         const el = document.getElementById(id);
@@ -112,6 +125,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const compact = useMediaQuery(COMPACT_QUERY) || narrow;
     const [sheetOpen, setSheetOpen] = useState(false);
     const [mobileTab, setMobileTab] = useState<MobileTab>('browse');
+    const mobileTabRef = useRef<MobileTab>('browse');
+    /** 手機兩個分頁共用一個捲動區：各自記住 scrollTop，切回來時還原（第一次進「正在播放」從頂端開始） */
+    const tabScrollRef = useRef<Record<MobileTab, number>>({ browse: 0, now: 0 });
     /** 使用者切換了畫面、等新畫面畫好後要移焦點（popstate 與展開歌單不移） */
     const pendingFocusRef = useRef(false);
     /** 這次切換是從抽屜點的：等抽屜關閉時再移焦點，否則會被抽屜的焦點鎖拉回去或被還給「選單」鈕 */
@@ -121,47 +137,92 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     useEffect(() => {
         viewRef.current = view;
     }, [view]);
-    /** 列表畫面離開前的捲動位置（key＝列表網址）：返回時捲回原處 */
-    const listScrollRef = useRef(new Map<string, number>());
-    /** 換畫面前呼叫：DOM 換成新畫面後 scrollTop 會被新內容的高度截斷，所以要在換之前記 */
-    const rememberListScroll = useCallback(() => {
-        const cur = viewRef.current;
+    const visibleRef = useRef(visible);
+    useEffect(() => {
+        visibleRef.current = visible;
+    }, [visible]);
+    const listSnapshotsRef = useRef(new Map<string, ListSnapshot>());
+    /** 這次換畫面要還原的捲動位置；null＝明確切換，回到頂端 */
+    const restoreScrollRef = useRef<number | null>(null);
+
+    /** 換分頁前先記住目前分頁的捲動位置（DOM 還是舊分頁時才讀得到） */
+    const switchTab = useCallback((next: MobileTab) => {
+        const cur = mobileTabRef.current;
+        if (cur === next) return;
         const viewport = viewportOf(scrollRef.current);
-        if (cur.kind === 'list' && viewport) listScrollRef.current.set(serializeSongsView(cur), viewport.scrollTop);
+        if (viewport) tabScrollRef.current[cur] = viewport.scrollTop;
+        mobileTabRef.current = next;
+        setMobileTab(next);
     }, []);
 
-    // 網址 → 畫面：mount 時讀一次（?list= 已由 App 清掉），之後跟著瀏覽器上一頁／下一頁
+    /** 離開列表前呼叫：DOM 換成新畫面後 scrollTop 會被新內容的高度截斷，所以要在換之前記。
+        手機在「正在播放」分頁時，捲動區顯示的不是列表，改記「瀏覽」分頁存下的位置 */
+    const rememberList = useCallback(() => {
+        const cur = viewRef.current;
+        if (cur.kind !== 'list') return;
+        const viewport = viewportOf(scrollRef.current);
+        const scrollTop = mobileTabRef.current === 'browse' ? (viewport?.scrollTop ?? 0) : tabScrollRef.current.browse;
+        listSnapshotsRef.current.set(serializeSongsView(cur), { visible: visibleRef.current, scrollTop });
+    }, []);
+
+    // 網址 → 畫面：mount 時讀一次（?list= 已由 App 清掉），之後跟著瀏覽器上一頁／下一頁。
+    // 回到記過的列表時，顯示筆數與捲動位置一起還原；分頁切回「瀏覽」
     useEffect(() => {
         const sync = () => {
-            rememberListScroll();
-            setView(parseSongsView(window.location.search));
+            rememberList();
+            switchTab('browse');
+            const next = parseSongsView(window.location.search);
+            const snapshot = next.kind === 'list' ? listSnapshotsRef.current.get(serializeSongsView(next)) : undefined;
+            restoreScrollRef.current = snapshot?.scrollTop ?? null;
+            if (snapshot) setVisible(snapshot.visible);
+            setView(next);
         };
         sync();
         window.addEventListener('popstate', sync);
         return () => window.removeEventListener('popstate', sync);
-    }, [rememberListScroll]);
+    }, [rememberList, switchTab]);
 
-    /** 畫面 → 網址：replace＝只改網址不新增歷史（例如展開／收合歌單） */
+    /** 畫面 → 網址（明確切換：列表從頭開始顯示、回到頂端）；replace＝只改網址不新增歷史（例如展開／收合歌單） */
     const navigate = useCallback((next: SongsView, opts?: { replace?: boolean }) => {
-        if (!sameSongsView(viewRef.current, next)) rememberListScroll();
-        setView((prev) => (sameSongsView(prev, next) ? prev : next));
-        setMobileTab('browse');
+        const prev = viewRef.current;
+        if (!sameSongsView(prev, next)) {
+            rememberList();
+            if (next.kind === 'list') setVisible(CATALOG_PAGE_SIZE);
+        }
+        restoreScrollRef.current = null;
+        setView((cur) => (sameSongsView(cur, next) ? cur : next));
+        switchTab('browse');
         const url = PAGE_PATHS.songs + serializeSongsView(next);
         if (window.location.pathname + window.location.search === url) return;
         if (opts?.replace) {
             window.history.replaceState(null, '', url);
         } else {
-            window.history.pushState(null, '', url);
+            const state: SongsHistoryState | null = prev.kind === 'list' && next.kind === 'video'
+                ? { songsFrom: PAGE_PATHS.songs + serializeSongsView(prev) }
+                : null;
+            window.history.pushState(state, '', url);
             pendingFocusRef.current = true;
         }
-    }, [rememberListScroll]);
+    }, [rememberList, switchTab]);
 
-    // 換畫面時中欄捲回頂端，回到列表時捲回離開前的位置（展開／收合歌單不算換畫面）
+    // 變寬成桌機版時沒有分頁：回到「瀏覽」，列表捲動位置才不會去讀「正在播放」分頁存的值
+    useEffect(() => {
+        if (!narrow) switchTab('browse');
+    }, [narrow, switchTab]);
+
+    // 手機切分頁：還原該分頁的捲動位置（要宣告在下面換畫面的 effect 之前，同一次 commit 換畫面時以換畫面為準）
+    useEffect(() => {
+        const viewport = viewportOf(scrollRef.current);
+        if (viewport) viewport.scrollTop = tabScrollRef.current[mobileTab];
+    }, [mobileTab]);
+
+    // 換畫面時中欄捲回頂端；瀏覽器返回到記過的列表時捲回原處（展開／收合歌單不算換畫面）
     const viewKey = serializeSongsView(view);
     const scrollKey = view.kind === 'playlists' ? 'playlists' : viewKey;
     useEffect(() => {
         const viewport = viewportOf(scrollRef.current);
-        if (viewport) viewport.scrollTop = listScrollRef.current.get(scrollKey) ?? 0;
+        if (viewport) viewport.scrollTop = restoreScrollRef.current ?? 0;
+        restoreScrollRef.current = null;
     }, [scrollKey]);
     useEffect(() => {
         if (!pendingFocusRef.current || viaSheetRef.current) return;
@@ -175,7 +236,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         () => (catalog ? filterByVtuber(sortCatalog(filterCatalog(catalog.videos, deferredQuery), sort), vtuberFilter) : []),
         [catalog, deferredQuery, sort, vtuberFilter],
     );
-    useEffect(() => setVisible(CATALOG_PAGE_SIZE), [deferredQuery, vtuberFilter]);
+    // 改搜尋字從頭顯示；換篩選由 navigate／popstate 決定（明確切換從頭、返回還原）
+    useEffect(() => setVisible(CATALOG_PAGE_SIZE), [deferredQuery]);
     const filterName = vtuberFilter === null
         ? null
         : (vtubers.find((v) => v.key === vtuberFilter)?.name ?? vtuberFilter.replace(/^name:/, ''));
@@ -214,7 +276,18 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     }, [append, t]);
     const handleOpenVideo = useCallback((video: SongVideo) => navigate({ kind: 'video', videoId: video.videoId }), [navigate]);
     const handleGoList = useCallback(() => navigate(LIST_VIEW), [navigate]);
-    const handleBackToList = useCallback(() => navigate({ kind: 'list', vtuber: listVtuber }), [navigate, listVtuber]);
+    // 上一筆歷史就是頁內列表：history.back()，畫面由 popstate 的 sync 還原（篩選、筆數、捲動）；
+    // 直接開 ?v= 進來（沒有頁內上一筆）時推一筆列表
+    const handleBackToList = useCallback(() => {
+        if (isSongsHistoryState(window.history.state)) {
+            pendingFocusRef.current = true;
+            window.history.back();
+            return;
+        }
+        navigate({ kind: 'list', vtuber: listVtuber });
+    }, [navigate, listVtuber]);
+    const { refetch: refetchCatalog } = catalogQuery;
+    const handleRetryCatalog = useCallback(() => void refetchCatalog(), [refetchCatalog]);
     const handleSelectVtuber = useCallback((key: string) => navigate({ kind: 'list', vtuber: key }), [navigate]);
     const handleOpenPlaylist = useCallback((id: string) => navigate({ kind: 'playlists', playlistId: id }), [navigate]);
     const handlePlaylistToggle = useCallback(
@@ -271,7 +344,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         totalCount: catalog?.videos.length ?? 0,
         isError: catalogQuery.isError,
         isFetching: catalogQuery.isFetching,
-        refetch: () => void catalogQuery.refetch(),
+        refetch: handleRetryCatalog,
     };
     const currentCode = player.current?.code ?? null;
 
@@ -281,6 +354,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             <VideoDetailView
                 video={detailVideo}
                 loading={!catalog && !catalogQuery.isError}
+                loadError={!catalog && catalogQuery.isError}
+                retrying={catalogQuery.isFetching}
+                onRetry={handleRetryCatalog}
                 currentCode={currentCode}
                 playlists={playlists}
                 locale={locale}
@@ -391,7 +467,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 {narrow ? (
                     <MobileNowTabs
                         value={mobileTab}
-                        onValueChange={setMobileTab}
+                        onValueChange={switchTab}
                         queueCount={player.queue.items.length}
                         lead={short ? <>{header}{notice}</> : null}
                         browse={body}
