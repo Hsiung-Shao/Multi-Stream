@@ -50,4 +50,19 @@ describe('validateSegments', () => {
         expect(validateSegments([{ start: 0, end: 10, title: ok, artist: ok }])).toEqual([]);
         expect(validateSegments([{ start: 0, end: 10, title: 'A', artist: null }])).toEqual([]);
     });
+
+    it('備註超過 30 字報 note_too_long，剛好 30 字、空白與 null 不報', () => {
+        const row = (note: string | null | undefined) => [{ start: 0, end: 10, title: 'A', note }];
+        expect(codes(validateSegments(row('x'.repeat(31))))).toEqual(['0:note_too_long']);
+        expect(validateSegments(row('x'.repeat(30)))).toEqual([]);
+        expect(validateSegments(row('練歌版'))).toEqual([]);
+        expect(validateSegments(row(null))).toEqual([]);
+        expect(validateSegments(row(undefined))).toEqual([]);
+        expect(validateSegments(row(''))).toEqual([]);
+    });
+
+    it('備註以 trim 後的長度計算（前後空白不算）', () => {
+        expect(validateSegments([{ start: 0, end: 10, title: 'A', note: `  ${'x'.repeat(30)}  ` }])).toEqual([]);
+        expect(codes(validateSegments([{ start: 0, end: 10, title: 'A', note: `  ${'x'.repeat(31)}  ` }]))).toEqual(['0:note_too_long']);
+    });
 });
