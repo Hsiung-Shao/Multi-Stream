@@ -126,6 +126,7 @@ export function SongsSubmitPage() {
             title: s.title,
             artist: s.artist ?? '',
         }))));
+        // 只在目錄資料變動時預填；fillEmpty 只讀 ref 與 setter
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [existing]);
 
@@ -177,6 +178,8 @@ export function SongsSubmitPage() {
         setContact('');
         setError(null);
         setDone(null);
+        // 成功畫面卸載了 widget（卸載時不會回呼 onToken），用過的 token 要手動清掉，等新 widget 重新給
+        setToken(null);
         prefilledRef.current = null;
     };
 
