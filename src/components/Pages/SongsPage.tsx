@@ -210,19 +210,35 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         if (!narrow) switchTab('browse');
     }, [narrow, switchTab]);
 
-    // 手機切分頁：還原該分頁的捲動位置（要宣告在下面換畫面的 effect 之前，同一次 commit 換畫面時以換畫面為準）
-    useEffect(() => {
+    /**
+     * 手機分頁的捲動還原要等「分頁內容真的掛上 DOM」才做：Radix TabsContent 包在 Presence 裡，切分頁的那次 commit
+     * 新分頁的 Presence 還是 unmounted（只在 layout effect 裡 send('MOUNT')，下一次 commit 才渲染內容），舊分頁內容還在。
+     * 若在 useEffect 裡設 scrollTop，點擊是離散事件，React 會在下一次 commit 之前同步跑完 passive effect，
+     * 這時捲動區裡只有另一個分頁的短內容，瀏覽器把 scrollTop 夾成 0。所以改由分頁內容掛上時的 layout effect（onPanelMount）還原。
+     */
+    /** 換畫面時「瀏覽」分頁內容還沒掛上（手機從「正在播放」切回來的同一次更新）：先記著，掛上時套用 */
+    const pendingBrowseScrollRef = useRef<number | null>(null);
+    const handlePanelMount = useCallback((tab: MobileTab) => {
         const viewport = viewportOf(scrollRef.current);
-        if (viewport) viewport.scrollTop = tabScrollRef.current[mobileTab];
-    }, [mobileTab]);
+        const pending = tab === 'browse' ? pendingBrowseScrollRef.current : null;
+        if (tab === 'browse') pendingBrowseScrollRef.current = null;
+        if (viewport) viewport.scrollTop = pending ?? tabScrollRef.current[tab];
+    }, []);
 
     // 換畫面時中欄捲回頂端；瀏覽器返回到記過的列表時捲回原處（展開／收合歌單不算換畫面）
     const viewKey = serializeSongsView(view);
     const scrollKey = view.kind === 'playlists' ? 'playlists' : viewKey;
     useEffect(() => {
-        const viewport = viewportOf(scrollRef.current);
-        if (viewport) viewport.scrollTop = restoreScrollRef.current ?? 0;
+        const target = restoreScrollRef.current ?? 0;
         restoreScrollRef.current = null;
+        const root = scrollRef.current;
+        // 手機分頁存在、但「瀏覽」內容還沒掛上：交給 handlePanelMount，現在設會被短內容夾掉
+        if (root?.querySelector('[data-songs-panel]') && !root.querySelector('[data-songs-panel="browse"]')) {
+            pendingBrowseScrollRef.current = target;
+            return;
+        }
+        const viewport = viewportOf(root);
+        if (viewport) viewport.scrollTop = target;
     }, [scrollKey]);
     useEffect(() => {
         if (!pendingFocusRef.current || viaSheetRef.current) return;
@@ -468,6 +484,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                     <MobileNowTabs
                         value={mobileTab}
                         onValueChange={switchTab}
+                    onPanelMount={handlePanelMount}
                         queueCount={player.queue.items.length}
                         lead={short ? <>{header}{notice}</> : null}
                         browse={body}
