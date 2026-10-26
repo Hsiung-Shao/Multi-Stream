@@ -1,6 +1,6 @@
-// 歌曲播放清單頁：殼層標題、目錄載入／空目錄／失敗重試、client 搜尋、播放進佇列、分享連結載入與另存歌單
+﻿// 歌曲播放清單頁：殼層標題、目錄載入／空目錄／失敗重試、client 搜尋、播放進佇列、分享連結載入與另存歌單
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../src/i18n/i18n';
 
@@ -41,6 +41,24 @@ const CATALOG = [
         v: 'bbbbbbbbbbb', t: '耐久歌枠', d: null, vt: { i: 'v2', n: '月見測試', img: null },
         s: [['ijkl9012', 0, 180, '小幸運', '田馥甄']],
     },
+];
+
+// v1.3 新格式目錄：片段 8 欄 [code,start,end,歌名,原唱,plays,song_id,version_note]，尾端帶歌曲字典 { songs }
+// 歌 1「夜に駆ける」有 3 個版本（星川 2 個、月見 1 個且帶備註「練歌版」），歌 2、歌 3 各 1 個版本
+const CATALOG2 = [
+    {
+        v: 'aaaaaaaaaaa', t: '十月歌回', d: '2026-10-01T12:00:00Z', vt: { i: 'v1', n: '星川測試', img: null },
+        s: [['abcd1234', 10, 200, '夜に駆ける', 'YOASOBI', 0, 1, null], ['efgh5678', 200, 400, '紅蓮華', 'LiSA', 0, 2, null]],
+    },
+    {
+        v: 'bbbbbbbbbbb', t: '耐久歌枠', d: '2026-09-15T12:00:00Z', vt: { i: 'v2', n: '月見測試', img: null },
+        s: [['ijkl9012', 0, 180, '小幸運', '田馥甄', 0, 3, null], ['mnop3456', 200, 380, '夜に駆ける', 'YOASOBI', 0, 1, '練歌版']],
+    },
+    {
+        v: 'ccccccccccc', t: '九月歌回', d: '2026-09-01T12:00:00Z', vt: { i: 'v1', n: '星川測試', img: null },
+        s: [['qrst7890', 0, 150, '夜に駆ける', 'YOASOBI', 0, 1, null]],
+    },
+    { songs: [[1, '夜に駆ける', 'YOASOBI'], [2, '紅蓮華', 'LiSA'], [3, '小幸運', '田馥甄']] },
 ];
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -208,24 +226,32 @@ describe('SongsPage 三欄控制台', () => {
     beforeEach(resetUrl);
     afterEach(resetUrl);
 
-    it('T102 點左欄 VTuber 後中欄只剩該位的歌回，可清除篩選', async () => {
+    // v1.3 改規格：點左欄 VTuber 進該位的個人頁（歌單／歌回兩個分頁），不再就地篩選
+    it('T102 點左欄 VTuber 進個人頁：歌單分頁預設選取，切到歌回分頁只剩該位，點「歌回」回完整列表', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(CATALOG2));
         renderPage();
         await screen.findByText('十月歌回');
         const nav = screen.getByRole('navigation', { name: '歌單導覽' });
         const group = within(nav).getByRole('group', { name: 'VTuber' });
-        const tsuki = await within(group).findByRole('button', { name: '月見測試' });
-        expect(within(group).getByRole('button', { name: '星川測試' })).toBeInTheDocument();
+        expect(await within(group).findByRole('button', { name: '月見測試' })).toBeInTheDocument();
 
-        fireEvent.click(tsuki);
+        fireEvent.click(within(group).getByRole('button', { name: '星川測試' }));
         const main = screen.getByRole('main');
-        await waitFor(() => expect(within(main).queryByText('十月歌回')).toBeNull());
-        expect(within(main).getByText('耐久歌枠')).toBeInTheDocument();
-        expect(within(group).getByRole('button', { name: '月見測試' })).toHaveAttribute('aria-pressed', 'true');
-        expect(within(group).getByRole('button', { name: '星川測試' })).not.toHaveAttribute('aria-pressed', 'true');
+        expect(await within(main).findByRole('heading', { level: 2, name: '星川測試' })).toBeInTheDocument();
+        const tablist = within(main).getByRole('tablist', { name: 'VTuber 分頁' });
+        expect(within(tablist).getByRole('tab', { name: '歌單' })).toHaveAttribute('aria-selected', 'true');
+        expect(within(group).getByRole('button', { name: '星川測試' })).toHaveAttribute('aria-current', 'page');
+        expect(within(group).getByRole('button', { name: '月見測試' })).not.toHaveAttribute('aria-current');
 
-        fireEvent.click(within(main).getByRole('button', { name: '清除篩選' }));
+        activate(within(tablist).getByRole('tab', { name: '歌回' }));
         expect(await within(main).findByText('十月歌回')).toBeInTheDocument();
-        expect(within(main).getByText('耐久歌枠')).toBeInTheDocument();
+        expect(within(main).getByText('九月歌回')).toBeInTheDocument();
+        expect(within(main).queryByText('耐久歌枠')).toBeNull();
+
+        fireEvent.click(within(nav).getByRole('link', { name: '歌回' }));
+        expect(await within(main).findByText('耐久歌枠')).toBeInTheDocument();
+        expect(within(main).getByText('十月歌回')).toBeInTheDocument();
+        expect(within(main).getByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
     });
 
     it('T103 點歌回標題進入詳細畫面：曲目表、聊天提醒，播放後目前那首帶 aria-current', async () => {
@@ -320,22 +346,27 @@ describe('SongsPage 三欄控制台', () => {
         });
     });
 
-    it('T110 篩選 VTuber 後進單場再按返回歌回列表，篩選仍保留', async () => {
+    // v1.3 改規格：篩選改為個人頁的「歌回」分頁；返回單場後回到該分頁而且仍只有這位的歌回
+    it('T110 個人頁歌回分頁進單場再按返回歌回列表，回到該位的歌回分頁', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(CATALOG2));
         renderPage();
         await screen.findByText('十月歌回');
         const nav = screen.getByRole('navigation', { name: '歌單導覽' });
-        const group = within(nav).getByRole('group', { name: 'VTuber' });
-        fireEvent.click(await within(group).findByRole('button', { name: '星川測試' }));
+        fireEvent.click(within(within(nav).getByRole('group', { name: 'VTuber' })).getByRole('button', { name: '星川測試' }));
         const main = screen.getByRole('main');
-        await waitFor(() => expect(within(main).queryByText('耐久歌枠')).toBeNull());
+        const tablist = await within(main).findByRole('tablist', { name: 'VTuber 分頁' });
+        activate(within(tablist).getByRole('tab', { name: '歌回' }));
+        await waitFor(() => expect(within(main).getByText('九月歌回')).toBeInTheDocument());
+        expect(within(main).queryByText('耐久歌枠')).toBeNull();
 
-        fireEvent.click(within(screen.getByRole('region', { name: '歌曲目錄' })).getByRole('button', { name: '十月歌回' }));
+        fireEvent.click(within(main).getByRole('button', { name: '十月歌回' }));
         fireEvent.click(await screen.findByRole('button', { name: '返回歌回列表' }));
 
-        expect(await within(main).findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
+        expect(await within(main).findByRole('heading', { level: 2, name: '星川測試' })).toBeInTheDocument();
+        await waitFor(() => expect(within(screen.getByRole('tablist', { name: 'VTuber 分頁' })).getByRole('tab', { name: '歌回' })).toHaveAttribute('aria-selected', 'true'));
         expect(within(main).getByText('十月歌回')).toBeInTheDocument();
+        expect(within(main).getByText('九月歌回')).toBeInTheDocument();
         expect(within(main).queryByText('耐久歌枠')).toBeNull();
-        expect(within(main).getByRole('button', { name: '清除篩選' })).toBeInTheDocument();
     });
 
     it('T107 播放／暫停按鈕與播放進度滑桿全頁只出現在底部播放列', async () => {
@@ -446,6 +477,11 @@ const BIG_CATALOG = Array.from({ length: 30 }, (_, i) => ({
     s: [[`seg${String(i).padStart(5, '0')}`, 0, 100, `歌${i}`, '原唱']],
 }));
 const cardCount = () => screen.queryAllByRole('button', { name: '全部播放' }).length;
+// 同一份 30 支歌回的新格式版本（每首歌各自一個 song_id），VTuber 個人頁才有「歌回」分頁可切
+const BIG_CATALOG_V2 = [
+    ...BIG_CATALOG.map((v, i) => ({ ...v, s: v.s.map((row) => [...row, 0, i + 1, null]) })),
+    { songs: BIG_CATALOG.map((v, i) => [i + 1, `歌${i}`, '原唱']) },
+];
 
 describe('SongsPage 返回與載入回歸', () => {
     beforeEach(resetUrl);
@@ -506,7 +542,7 @@ describe('SongsPage 返回與載入回歸', () => {
         // 30 支歌回約 1600 個節點，jsdom 在全套平行時單次角色查詢可達數百 ms：放寬等待上限，不改斷言
         const SLOW = { timeout: 5000 };
         beforeEach(() => {
-            fetchMock.mockImplementation(async () => jsonRes(BIG_CATALOG));
+            fetchMock.mockImplementation(async () => jsonRes(BIG_CATALOG_V2));
         });
 
         const loadMoreAndCount = async () => {
@@ -521,6 +557,8 @@ describe('SongsPage 返回與載入回歸', () => {
             const nav = screen.getByRole('navigation', { name: '歌單導覽' });
             const group = within(nav).getByRole('group', { name: 'VTuber' });
             fireEvent.click(await within(group).findByRole('button', { name: '星川測試' }, SLOW));
+            // v1.3 改規格：點 VTuber 進個人頁，再切到「歌回」分頁才看得到歌回卡片
+            activate(await screen.findByRole('tab', { name: '歌回' }, SLOW));
             await waitFor(() => expect(cardCount()).toBe(15), SLOW);
             return nav;
         };
@@ -829,5 +867,198 @@ describe('SongsPage 跨斷點捲動', () => {
         // 5. 現在顯示的是單場，不該回到列表的 300
         expect(screen.getByRole('button', { name: '返回歌回列表' })).toBeInTheDocument();
         expect(currentViewport().scrollTop).toBe(0);
+    });
+});
+
+// ---------- v1.3：VTuber 個人頁、單曲頁、單場曲目表的版本入口 ----------
+describe('SongsPage 個人頁與單曲頁', () => {
+    beforeEach(() => {
+        resetUrl();
+        fetchMock.mockImplementation(async () => jsonRes(CATALOG2));
+    });
+    afterEach(resetUrl);
+
+    const mainEl = () => screen.getByRole('main');
+    // 點左欄 VTuber 進個人頁（歌單分頁）
+    const openProfile = async (name: string) => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        const nav = screen.getByRole('navigation', { name: '歌單導覽' });
+        fireEvent.click(within(within(nav).getByRole('group', { name: 'VTuber' })).getByRole('button', { name }));
+        await within(mainEl()).findByRole('heading', { level: 2, name });
+    };
+    const rowOf = (title: string): HTMLElement => {
+        const li = within(mainEl()).getByRole('button', { name: title }).closest('li');
+        if (!li) throw new Error(`找不到「${title}」所在的 li`);
+        return li;
+    };
+
+    it('T117 歌單分頁每首一列並顯示版本數，點歌名進單曲頁且網址帶 song 與 from', async () => {
+        await openProfile('星川測試');
+        // 星川唱過夜に駆ける 2 次、紅蓮華 1 次；小幸運是月見的歌不在這裡
+        expect(rowOf('夜に駆ける')).toHaveTextContent('2 個版本');
+        expect(rowOf('紅蓮華')).toHaveTextContent('1 個版本');
+        expect(rowOf('夜に駆ける')).toHaveTextContent('YOASOBI');
+        expect(within(mainEl()).queryByRole('button', { name: '小幸運' })).toBeNull();
+        expect(within(mainEl()).getAllByRole('listitem').filter((li) => li.querySelector('button'))).toHaveLength(2);
+
+        fireEvent.click(within(mainEl()).getByRole('button', { name: '夜に駆ける' }));
+        expect(await within(mainEl()).findByRole('heading', { level: 2, name: '夜に駆ける' })).toBeInTheDocument();
+        expect(window.location.search).toBe('?song=1&from=v1');
+    });
+
+    it('T118 單曲頁依 VTuber 分組，from 那位排第一；沒有 from 時版本多的在前', async () => {
+        window.history.replaceState(null, '', '/songs?song=1&from=v2');
+        renderPage();
+        expect(await screen.findByRole('heading', { level: 2, name: '夜に駆ける' })).toBeInTheDocument();
+        expect(screen.getByRole('main')).toHaveTextContent('3 個版本・2 位 VTuber');
+        const h3 = () => within(screen.getByRole('main')).getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
+        expect(h3()).toEqual(['月見測試', '星川測試']);
+        const hoshi = within(screen.getByRole('main')).getByRole('region', { name: '星川測試' });
+        expect(within(hoshi).getAllByRole('listitem')).toHaveLength(2);
+        expect(within(within(screen.getByRole('main')).getByRole('region', { name: '月見測試' })).getAllByRole('listitem')).toHaveLength(1);
+
+        // 沒有 from：星川 2 個版本排在月見 1 個版本前面
+        cleanup();
+        window.history.replaceState(null, '', '/songs?song=1');
+        renderPage();
+        await screen.findByRole('heading', { level: 2, name: '夜に駆ける' });
+        expect(h3()).toEqual(['星川測試', '月見測試']);
+    });
+
+    it('T119 每個版本顯示來源歌回、日期、備註標籤；點來源進單場；播放這個版本後該列帶 aria-current', async () => {
+        window.history.replaceState(null, '', '/songs?song=1&from=v1');
+        renderPage();
+        await screen.findByRole('heading', { level: 2, name: '夜に駆ける' });
+        const main = screen.getByRole('main');
+        const hoshi = within(main).getByRole('region', { name: '星川測試' });
+        const tsuki = within(main).getByRole('region', { name: '月見測試' });
+
+        const oct = within(hoshi).getByRole('button', { name: '十月歌回' }).closest('li') as HTMLElement;
+        expect(oct).toHaveTextContent('2026/10/01');
+        expect(oct).not.toHaveTextContent('練歌版');
+        const endurance = within(tsuki).getByRole('button', { name: '耐久歌枠' }).closest('li') as HTMLElement;
+        expect(endurance).toHaveTextContent('2026/09/15');
+        expect(endurance).toHaveTextContent('練歌版');
+
+        fireEvent.click(within(oct).getByRole('button', { name: '播放這個版本' }));
+        await waitFor(() => expect(oct).toHaveAttribute('aria-current', 'true'));
+        expect(endurance).not.toHaveAttribute('aria-current', 'true');
+
+        fireEvent.click(within(endurance).getByRole('button', { name: '耐久歌枠' }));
+        expect(await screen.findByRole('heading', { level: 2, name: '耐久歌枠' })).toBeInTheDocument();
+        expect(window.location.search).toBe('?v=bbbbbbbbbbb');
+    });
+
+    it('T120 從個人頁進單曲頁按「返回」呼叫 history.back', async () => {
+        await openProfile('星川測試');
+        fireEvent.click(within(mainEl()).getByRole('button', { name: '夜に駆ける' }));
+        const back = await screen.findByRole('button', { name: '返回' });
+
+        const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+        try {
+            fireEvent.click(back);
+            expect(backSpy).toHaveBeenCalledTimes(1);
+        } finally {
+            backSpy.mockRestore();
+        }
+    });
+
+    it('T120 直接開 ?song=&from= 時按「返回」導到 from 的個人頁', async () => {
+        window.history.replaceState(null, '', '/songs?song=1&from=v1');
+        renderPage();
+        const back = await screen.findByRole('button', { name: '返回' });
+
+        const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+        try {
+            fireEvent.click(back);
+            expect(backSpy).not.toHaveBeenCalled();
+            expect(await screen.findByRole('heading', { level: 2, name: '星川測試' })).toBeInTheDocument();
+            expect(window.location.search).toBe('?vtuber=v1');
+        } finally {
+            backSpy.mockRestore();
+        }
+    });
+
+    it('T121 舊格式目錄沒有字典：個人頁沒有歌單分頁、只有歌回；?song= 顯示找不到這首歌', async () => {
+        fetchMock.mockImplementation(async () => jsonRes(CATALOG));
+        await openProfile('星川測試');
+        expect(within(mainEl()).queryByRole('tab', { name: '歌單' })).toBeNull();
+        expect(within(mainEl()).getByText('十月歌回')).toBeInTheDocument();
+        expect(within(mainEl()).queryByText('耐久歌枠')).toBeNull();
+
+        cleanup();
+        window.history.replaceState(null, '', '/songs?song=1');
+        renderPage();
+        expect(await screen.findByText('找不到這首歌')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '返回歌回列表' })).toBeInTheDocument();
+    });
+
+    it('T122 不存在的 VTuber 與歌曲顯示找不到，並可返回歌回列表', async () => {
+        window.history.replaceState(null, '', '/songs?vtuber=' + encodeURIComponent('不存在'));
+        renderPage();
+        expect(await screen.findByText('找不到這位 VTuber')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: '返回歌回列表' }));
+        expect(await screen.findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
+
+        cleanup();
+        window.history.replaceState(null, '', '/songs?song=99999');
+        renderPage();
+        expect(await screen.findByText('找不到這首歌')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: '返回歌回列表' }));
+        expect(await screen.findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
+    });
+
+    it('T123 單場曲目表顯示備註標籤；版本數 ≥2 的歌有「N 個版本」按鈕可進單曲頁，只有 1 個版本的沒有', async () => {
+        window.history.replaceState(null, '', '/songs?v=bbbbbbbbbbb');
+        renderPage();
+        await screen.findByRole('heading', { level: 2, name: '耐久歌枠' });
+        const table = within(screen.getByRole('main')).getByRole('table');
+        const yoru = within(table).getByRole('row', { name: /夜に駆ける/ });
+        const koukou = within(table).getByRole('row', { name: /小幸運/ });
+        expect(yoru).toHaveTextContent('練歌版');
+        expect(koukou).not.toHaveTextContent('練歌版');
+        expect(within(koukou).queryByRole('button', { name: /個版本/ })).toBeNull();
+
+        fireEvent.click(within(yoru).getByRole('button', { name: '3 個版本' }));
+        expect(await screen.findByRole('heading', { level: 2, name: '夜に駆ける' })).toBeInTheDocument();
+        expect(window.location.search).toBe('?song=1&from=v2');
+    });
+});
+
+describe('SongsPage 手機版個人頁', () => {
+    const originalMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+        resetUrl();
+        fetchMock.mockImplementation(async () => jsonRes(CATALOG2));
+        window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+            matches: query === '(width < 64rem)',
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+        })) as unknown as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+        window.matchMedia = originalMatchMedia;
+        resetUrl();
+    });
+
+    it('T124 在抽屜點 VTuber 進個人頁、抽屜關閉、焦點落在個人頁 h2', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        fireEvent.click(screen.getByRole('button', { name: '選單' }));
+        const sheet = await screen.findByRole('dialog');
+        const group = within(sheet).getByRole('group', { name: 'VTuber' });
+        fireEvent.click(await within(group).findByRole('button', { name: '星川測試' }));
+
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        const h2 = await screen.findByRole('heading', { level: 2, name: '星川測試' });
+        await waitFor(() => expect(document.activeElement).toBe(h2));
     });
 });
