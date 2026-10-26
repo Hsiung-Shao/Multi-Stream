@@ -15,9 +15,14 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { Menu } from 'lucide-react';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
+import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
+import { Sheet, SheetContent, SheetTitle } from '../ui/sheet';
+import { cn } from '../ui/utils';
+import { useMediaQuery } from '../../hooks/use-media-query';
 import {
     resolveCodes, toQueueItem, useSongCatalog, type SongEntry, type SongSegment, type SongVideo,
 } from '../../features/songs/songsSource';
@@ -33,13 +38,20 @@ import { LeftNav } from '../../features/songs/components/console/LeftNav';
 import { CatalogView, type CatalogStatus } from '../../features/songs/components/console/CatalogView';
 import { VideoDetailView } from '../../features/songs/components/console/VideoDetailView';
 import { PlaylistsView } from '../../features/songs/components/console/PlaylistsView';
-import { NowPlayingPanel } from '../../features/songs/components/console/NowPlayingPanel';
+import { NowPlayingDetails, NowPlayingPanel } from '../../features/songs/components/console/NowPlayingPanel';
+import { MobileNowTabs, type MobileTab } from '../../features/songs/components/console/MobileNowTabs';
 import { PlayerBar } from '../../features/songs/components/console/PlayerBar';
 import { ShareNotice, type ShareNoticeState } from '../../features/songs/components/console/ShareNotice';
 
 /** 目錄一次先顯示幾支歌回（其餘按「顯示更多」），避免上千首歌一次渲染 */
 const CATALOG_PAGE_SIZE = 20;
 const EMPTY_PLAYLISTS: Playlist[] = [];
+/** 手機版（播放器置頂＋分頁＋精簡底部列）；查「窄螢幕」所以預渲染、hydration 首輪與 jsdom 都是桌機版 */
+const NARROW_QUERY = '(max-width: 1023px)';
+/** 左欄收進「選單」抽屜（1024–1279 中欄與右欄維持） */
+const COMPACT_QUERY = '(max-width: 1279px)';
+/** 手機播放器高度（與 NowPlayingPanel 的 PlayerFrame 同一個算式）：抽屜的遮罩與內容從這裡往下，不蓋到影片 */
+const SHEET_BELOW_PLAYER = 'top-[max(202px,min(56.25vw,50dvh))]';
 
 interface SongsPageProps {
     /** 分享連結帶進來的歌曲 code（App 啟動時快照）；null = 沒有分享連結 */
@@ -68,6 +80,12 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const [shareNotice, setShareNotice] = useState<ShareNoticeState | null>(null);
     const [sort, setSort] = useState<CatalogSort>('latest');
     const scrollRef = useRef<HTMLDivElement>(null);
+    // matchMedia 只在 effect 裡讀（useMediaQuery 初值 false）
+    const narrow = useMediaQuery(NARROW_QUERY);
+    // 窄螢幕一定也收左欄（不依賴兩個查詢同時更新）
+    const compact = useMediaQuery(COMPACT_QUERY) || narrow;
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const [mobileTab, setMobileTab] = useState<MobileTab>('browse');
 
     // 網址 → 畫面：mount 時讀一次（?list= 已由 App 清掉），之後跟著瀏覽器上一頁／下一頁
     useEffect(() => {
@@ -80,6 +98,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     /** 畫面 → 網址：replace＝只改網址不新增歷史（例如展開／收合歌單） */
     const navigate = useCallback((next: SongsView, opts?: { replace?: boolean }) => {
         setView((prev) => (sameSongsView(prev, next) ? prev : next));
+        setMobileTab('browse');
         const url = PAGE_PATHS.songs + serializeSongsView(next);
         if (window.location.pathname + window.location.search === url) return;
         if (opts?.replace) window.history.replaceState(null, '', url);
@@ -149,6 +168,16 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         const id = createPlaylist(t('playlists.defaultName', { n: playlistCount + 1 }));
         navigate({ kind: 'playlists', playlistId: id });
     }, [createPlaylist, navigate, playlistCount, t]);
+    // 抽屜裡的導覽：點任何項目先收起抽屜
+    const sheetHandlers = useMemo(() => {
+        const close = () => setSheetOpen(false);
+        return {
+            onGoList: () => { close(); handleGoList(); },
+            onSelectVtuber: (key: string) => { close(); handleSelectVtuber(key); },
+            onOpenPlaylist: (id: string) => { close(); handleOpenPlaylist(id); },
+            onNewPlaylist: () => { close(); handleNewPlaylist(); },
+        };
+    }, [handleGoList, handleSelectVtuber, handleOpenPlaylist, handleNewPlaylist]);
 
     const handlePlayPlaylist = (playlist: Playlist, startCode?: string) => {
         if (!catalog) return;
@@ -247,7 +276,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         );
     }
 
-    const nav = (
+    // 左欄：≥1280 放在左欄（預渲染首輪也是，較窄的寬度由 CSS 先藏起來）；較窄時改放「選單」抽屜
+    const nav = !compact && (
         <aside className="hidden min-h-0 overflow-hidden rounded-xl bg-card px-3.5 py-5 xl:flex">
             <LeftNav
                 view={view}
@@ -263,22 +293,63 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         </aside>
     );
 
+    const body = (
+        <>
+            <div className="flex flex-col gap-6 px-4 py-5 sm:px-7">
+                {centerView}
+            </div>
+            {view.kind === 'list' && <SiteFooter />}
+        </>
+    );
+
     const main = (
         <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden lg:rounded-xl lg:bg-card">
-            <header className="flex items-center gap-3 px-4 pt-4 sm:px-7 sm:pt-5">
-                <h1 className="min-w-0 flex-1 truncate text-lg font-black sm:text-xl">{t('hero.title')}</h1>
+            <header className="flex items-center gap-2 px-4 pt-3 sm:px-7 lg:pt-5">
+                {compact && (
+                    <Button variant="ghost" size="icon" className="-ml-2 size-9 shrink-0 rounded-full" onClick={() => setSheetOpen(true)} aria-label={t('nav.menu')} title={t('nav.menu')}>
+                        <Menu className="size-5" aria-hidden="true" />
+                    </Button>
+                )}
+                <h1 className="min-w-0 flex-1 truncate text-base font-black sm:text-xl">{t('hero.title')}</h1>
             </header>
             {shareNotice && (
                 <div className="px-4 pt-3 sm:px-7">
                     <ShareNotice notice={shareNotice} onSave={handleSaveShare} onDismiss={() => setShareNotice(null)} />
                 </div>
             )}
-            <ScrollArea ref={scrollRef} className="min-h-0 flex-1 [&>div>div]:!block">
-                <div className="flex flex-col gap-6 px-4 py-5 sm:px-7">
-                    {centerView}
-                </div>
-                {view.kind === 'list' && <SiteFooter />}
-            </ScrollArea>
+            {narrow ? (
+                <MobileNowTabs
+                    value={mobileTab}
+                    onValueChange={setMobileTab}
+                    queueCount={player.queue.items.length}
+                    browse={body}
+                    now={<NowPlayingDetails player={player} catalog={catalog} onSaveQueue={handleSaveQueue} />}
+                    scrollRef={scrollRef}
+                />
+            ) : (
+                <ScrollArea ref={scrollRef} className="min-h-0 flex-1 [&>div>div]:!block">{body}</ScrollArea>
+            )}
+            {compact && (
+                <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+                    <SheetContent
+                        side="left"
+                        aria-describedby={undefined}
+                        // 遮罩不可蓋到播放器：手機從播放器下緣開始；1024–1279 右欄（含 8px 外距）不罩
+                        overlayClassName={narrow ? SHEET_BELOW_PLAYER : 'right-[408px]'}
+                        className={cn('songs-console gap-0 bg-card px-3.5 py-5', narrow && cn(SHEET_BELOW_PLAYER, 'h-auto'))}
+                    >
+                        <SheetTitle className="sr-only">{t('nav.menu')}</SheetTitle>
+                        <LeftNav
+                            view={view}
+                            playlists={playlists}
+                            vtubers={vtubers}
+                            {...sheetHandlers}
+                            idPrefix="songs-sheet-nav"
+                            className="flex-1"
+                        />
+                    </SheetContent>
+                </Sheet>
+            )}
         </main>
     );
 
@@ -286,8 +357,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         <ConsoleShell
             nav={nav}
             main={main}
-            aside={<NowPlayingPanel player={player} catalog={catalog} narrow={false} onSaveQueue={handleSaveQueue} />}
-            bar={<PlayerBar player={player} catalog={catalog} playlists={playlists} narrow={false} />}
+            aside={<NowPlayingPanel player={player} catalog={catalog} narrow={narrow} onSaveQueue={handleSaveQueue} />}
+            bar={<PlayerBar player={player} catalog={catalog} playlists={playlists} narrow={narrow} />}
         />
     );
 }

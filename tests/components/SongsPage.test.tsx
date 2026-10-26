@@ -116,8 +116,11 @@ describe('SongsPage', () => {
         await screen.findByText('十月歌回');
         fireEvent.click(screen.getAllByRole('button', { name: '全部播放' })[0]);
         expect(await screen.findByText('共 2 首')).toBeInTheDocument();
-        // 目錄、佇列、正在播放各一份
-        expect(screen.getAllByText('夜に駆ける')).toHaveLength(3);
+        // 目錄、接下來、播放控制底部列各一份；總數 4 是因為右欄「正在播放」與底部播放列都顯示目前歌名
+        expect(within(screen.getByRole('region', { name: '歌曲目錄' })).getByText('夜に駆ける')).toBeInTheDocument();
+        expect(within(screen.getByRole('region', { name: '接下來' })).getByText('夜に駆ける')).toBeInTheDocument();
+        expect(within(screen.getByRole('region', { name: '播放控制' })).getByText('夜に駆ける')).toBeInTheDocument();
+        expect(screen.getAllByText('夜に駆ける')).toHaveLength(4);
     });
 
     it('分享連結載入成佇列、提示找不到的數量並可另存為歌單', async () => {
@@ -188,5 +191,218 @@ describe('SongsPage 進度條', () => {
         fireEvent.click(screen.getByRole('button', { name: '播放', exact: true }));
         await waitFor(() => expect(seekThumb()).not.toHaveAttribute('data-disabled'));
         expect(seekThumb()).toHaveAttribute('aria-valuemax', '190');
+    });
+});
+
+// ---------- v1.3：A2 三欄控制台（左導覽／中欄三畫面／右欄正在播放／底部播放列） ----------
+// 畫面切換會 pushState，每個測試前後都把網址還原成 /songs，避免互相污染
+const resetUrl = () => window.history.replaceState(null, '', '/songs');
+
+// Radix Tabs 用 mouseDown 啟動、一般按鈕用 click：兩個都送，兩種實作都能切換
+const activate = (el: HTMLElement) => {
+    fireEvent.mouseDown(el);
+    fireEvent.click(el);
+};
+
+describe('SongsPage 三欄控制台', () => {
+    beforeEach(resetUrl);
+    afterEach(resetUrl);
+
+    it('T102 點左欄 VTuber 後中欄只剩該位的歌回，可清除篩選', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        const nav = screen.getByRole('navigation', { name: '歌單導覽' });
+        const group = within(nav).getByRole('group', { name: 'VTuber' });
+        const tsuki = await within(group).findByRole('button', { name: '月見測試' });
+        expect(within(group).getByRole('button', { name: '星川測試' })).toBeInTheDocument();
+
+        fireEvent.click(tsuki);
+        const main = screen.getByRole('main');
+        await waitFor(() => expect(within(main).queryByText('十月歌回')).toBeNull());
+        expect(within(main).getByText('耐久歌枠')).toBeInTheDocument();
+        expect(within(group).getByRole('button', { name: '月見測試' })).toHaveAttribute('aria-pressed', 'true');
+        expect(within(group).getByRole('button', { name: '星川測試' })).not.toHaveAttribute('aria-pressed', 'true');
+
+        fireEvent.click(within(main).getByRole('button', { name: '清除篩選' }));
+        expect(await within(main).findByText('十月歌回')).toBeInTheDocument();
+        expect(within(main).getByText('耐久歌枠')).toBeInTheDocument();
+    });
+
+    it('T103 點歌回標題進入詳細畫面：曲目表、聊天提醒，播放後目前那首帶 aria-current', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        const catalog = screen.getByRole('region', { name: '歌曲目錄' });
+        fireEvent.click(within(catalog).getByRole('button', { name: '十月歌回' }));
+
+        const main = screen.getByRole('main');
+        expect(await within(main).findByRole('heading', { level: 2, name: '十月歌回' })).toBeInTheDocument();
+        expect(within(main).getByRole('button', { name: '返回歌回列表' })).toBeInTheDocument();
+        expect(within(main).getByRole('note')).toHaveTextContent('直播聊天');
+
+        const table = within(main).getByRole('table');
+        const row1 = within(table).getByRole('row', { name: /夜に駆ける/ });
+        const row2 = within(table).getByRole('row', { name: /紅蓮華/ });
+        expect(row1).toHaveTextContent('YOASOBI');
+        expect(row2).toHaveTextContent('LiSA');
+        expect(row1).not.toHaveAttribute('aria-current');
+
+        fireEvent.click(within(main).getByRole('button', { name: '播放這場歌回' }));
+        await waitFor(() => expect(within(table).getByRole('row', { name: /夜に駆ける/ })).toHaveAttribute('aria-current', 'true'));
+        expect(within(table).getByRole('row', { name: /紅蓮華/ })).not.toHaveAttribute('aria-current', 'true');
+        expect(await screen.findByText('共 2 首')).toBeInTheDocument();
+    });
+
+    it('T104 進詳細畫面後觸發 popstate 回到列表，網址同步為 ?v=', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        const catalog = screen.getByRole('region', { name: '歌曲目錄' });
+        fireEvent.click(within(catalog).getByRole('button', { name: '十月歌回' }));
+        await screen.findByRole('button', { name: '返回歌回列表' });
+        expect(window.location.pathname).toBe('/songs');
+        expect(window.location.search).toBe('?v=aaaaaaaaaaa');
+
+        window.history.replaceState(null, '', '/songs');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+
+        expect(await screen.findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
+        expect(screen.queryByRole('table')).toBeNull();
+        expect(screen.queryByRole('button', { name: '返回歌回列表' })).toBeNull();
+    });
+
+    describe('T105 我的歌單畫面', () => {
+        const seedPlaylist = () =>
+            usePlaylistStore.setState({
+                playlists: [{ id: 'p1', name: '我的收藏', codes: ['abcd1234', 'efgh5678'], createdAt: 1, updatedAt: 1 }],
+            });
+
+        const openPlaylists = async () => {
+            renderPage();
+            await screen.findByText('十月歌回');
+            const nav = screen.getByRole('navigation', { name: '歌單導覽' });
+            fireEvent.click(within(within(nav).getByRole('group', { name: '我的歌單' })).getByRole('button', { name: '我的收藏' }));
+            const main = screen.getByRole('main');
+            await within(main).findByRole('heading', { level: 2, name: '我的歌單' });
+            return main;
+        };
+
+        const openMenu = (main: HTMLElement) => {
+            const trigger = within(main).getByRole('button', { name: '歌單選項' });
+            trigger.focus();
+            fireEvent.keyDown(trigger, { key: 'Enter' });
+        };
+
+        it('點左欄歌單進入歌單畫面並可播放歌單', async () => {
+            seedPlaylist();
+            const main = await openPlaylists();
+            fireEvent.click(within(main).getByRole('button', { name: '播放歌單' }));
+            expect(await screen.findByText('共 2 首')).toBeInTheDocument();
+        });
+
+        it('改名後歌單名稱更新', async () => {
+            seedPlaylist();
+            const main = await openPlaylists();
+            openMenu(main);
+            fireEvent.click(await screen.findByRole('menuitem', { name: '改名' }));
+            fireEvent.change(within(main).getByRole('textbox', { name: '改名' }), { target: { value: '新名稱' } });
+            fireEvent.click(within(main).getByRole('button', { name: '儲存' }));
+            expect(usePlaylistStore.getState().playlists[0].name).toBe('新名稱');
+        });
+
+        it('刪除要經過確認對話框，確認後歌單被移除', async () => {
+            seedPlaylist();
+            const main = await openPlaylists();
+            openMenu(main);
+            fireEvent.click(await screen.findByRole('menuitem', { name: '刪除歌單' }));
+            const dialog = await screen.findByRole('alertdialog');
+            expect(usePlaylistStore.getState().playlists).toHaveLength(1);
+            fireEvent.click(within(dialog).getByRole('button', { name: /刪除/ }));
+            await waitFor(() => expect(usePlaylistStore.getState().playlists).toHaveLength(0));
+        });
+    });
+
+    it('T107 播放／暫停按鈕與播放進度滑桿全頁只出現在底部播放列', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        fireEvent.click(screen.getAllByRole('button', { name: '全部播放' })[0]);
+        await screen.findByText('共 2 首');
+
+        const controls = screen.getByRole('region', { name: '播放控制' });
+        const assertOnlyInControls = () => {
+            const transport = screen.queryAllByRole('button', { name: /^(播放|暫停)$/ });
+            expect(transport.length).toBeGreaterThan(0);
+            for (const b of transport) expect(controls.contains(b)).toBe(true);
+            const sliders = screen.getAllByRole('slider', { name: '播放進度' });
+            expect(sliders).toHaveLength(1);
+            expect(controls.contains(sliders[0])).toBe(true);
+            const aside = screen.getByRole('complementary', { name: '正在播放' });
+            expect(within(aside).queryByRole('button', { name: /^(播放|暫停)$/ })).toBeNull();
+            expect(within(aside).queryByRole('slider', { name: '播放進度' })).toBeNull();
+        };
+        assertOnlyInControls();
+
+        // 進入詳細畫面後也一樣
+        const catalog = screen.getByRole('region', { name: '歌曲目錄' });
+        fireEvent.click(within(catalog).getByRole('button', { name: '十月歌回' }));
+        await screen.findByRole('button', { name: '返回歌回列表' });
+        assertOnlyInControls();
+        expect(within(screen.getByRole('main')).queryByRole('button', { name: /^(播放|暫停)$/ })).toBeNull();
+    });
+});
+
+describe('SongsPage 手機版', () => {
+    const originalMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+        resetUrl();
+        window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+            matches: query === '(max-width: 1023px)',
+            media: query,
+            onchange: null,
+            addListener: vi.fn(),
+            removeListener: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            dispatchEvent: vi.fn(),
+        })) as unknown as typeof window.matchMedia;
+    });
+
+    afterEach(() => {
+        window.matchMedia = originalMatchMedia;
+        resetUrl();
+    });
+
+    it('T106 窄螢幕有選單鈕與瀏覽／正在播放兩個分頁，播放器只有一個且不重掛，佇列只在正在播放分頁', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+
+        // 左欄收進 Sheet
+        fireEvent.click(screen.getByRole('button', { name: '選單' }));
+        const sheet = await screen.findByRole('dialog');
+        expect(within(sheet).getByRole('navigation', { name: '歌單導覽' })).toBeInTheDocument();
+        fireEvent.keyDown(sheet, { key: 'Escape' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+        const tablist = screen.getByRole('tablist');
+        const browseTab = within(tablist).getByRole('tab', { name: '瀏覽' });
+        const nowTab = within(tablist).getByRole('tab', { name: '正在播放' });
+
+        const holders = screen.getAllByTestId('songs-player');
+        expect(holders).toHaveLength(1);
+        const holder = holders[0];
+
+        fireEvent.click(screen.getAllByRole('button', { name: '全部播放' })[0]);
+        await waitFor(() => expect(FakePlayer.instances.length).toBeGreaterThan(0));
+
+        activate(nowTab);
+        expect(await screen.findByRole('heading', { name: '接下來' })).toBeInTheDocument();
+        expect(await screen.findByText('共 2 首')).toBeInTheDocument();
+        expect(screen.getAllByTestId('songs-player')).toHaveLength(1);
+        expect(screen.getByTestId('songs-player')).toBe(holder);
+
+        activate(browseTab);
+        await waitFor(() => expect(screen.queryByRole('heading', { name: '接下來' })).toBeNull());
+        expect(screen.getAllByTestId('songs-player')).toHaveLength(1);
+        expect(screen.getByTestId('songs-player')).toBe(holder);
+        expect(holder.isConnected).toBe(true);
     });
 });
