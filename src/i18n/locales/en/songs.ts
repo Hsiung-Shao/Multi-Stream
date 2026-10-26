@@ -148,6 +148,7 @@ export default {
     'editor.issue.empty_title': 'Enter a song title',
     'editor.issue.title_too_long': 'Song title is limited to 200 characters',
     'editor.issue.artist_too_long': 'Original artist is limited to 200 characters',
+    'editor.issue.note_too_long': 'Version note is limited to 30 characters',
     'submit.title': 'Submit timestamps',
     'submit.heading': 'Submit karaoke stream timestamps',
     'submit.subtitle': 'Paste a YouTube karaoke stream link and the timestamp comment; it is split into songs automatically. After review it appears in the song playlist. You can also fix the timestamps of streams already listed.',

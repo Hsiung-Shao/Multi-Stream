@@ -148,6 +148,7 @@ export default {
     'editor.issue.empty_title': '곡명을 입력하세요',
     'editor.issue.title_too_long': '곡명은 200자까지입니다',
     'editor.issue.artist_too_long': '원곡 가수는 200자까지입니다',
+    'editor.issue.note_too_long': '버전 메모는 30자까지입니다',
     'submit.title': '타임스탬프 제보',
     'submit.heading': '노래 방송 타임스탬프 제보',
     'submit.subtitle': 'YouTube 노래 방송 링크와 댓글의 타임스탬프를 붙여 넣으면 곡별로 자동으로 나뉩니다. 검토 후 노래 방송 플레이리스트에 표시되며, 이미 등록된 노래 방송의 타임스탬프도 수정할 수 있습니다.',

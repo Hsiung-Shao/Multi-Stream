@@ -148,6 +148,7 @@ export default {
     'editor.issue.empty_title': '请填歌名',
     'editor.issue.title_too_long': '歌名最多 200 字',
     'editor.issue.artist_too_long': '原唱最多 200 字',
+    'editor.issue.note_too_long': '备注最多 30 字',
     'submit.title': '投稿歌回时间轴',
     'submit.heading': '投稿歌回时间轴',
     'submit.subtitle': '粘贴 YouTube 歌回网址与留言里的时间轴，会自动拆成一首一首。审核通过后就会出现在歌回播放列表；已上架的歌回也可以修正时间。',

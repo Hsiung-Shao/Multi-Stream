@@ -148,6 +148,7 @@ export default {
     'editor.issue.empty_title': '曲名を入力してください',
     'editor.issue.title_too_long': '曲名は 200 文字までです',
     'editor.issue.artist_too_long': '原曲アーティストは 200 文字までです',
+    'editor.issue.note_too_long': 'バージョンメモは 30 文字までです',
     'submit.title': 'タイムスタンプを投稿',
     'submit.heading': '歌枠のタイムスタンプを投稿',
     'submit.subtitle': 'YouTube の歌枠リンクとコメントのタイムスタンプを貼り付けると、自動で曲ごとに分かれます。審査後に歌枠プレイリストに表示されます。掲載済みの歌枠のタイムスタンプも修正できます。',

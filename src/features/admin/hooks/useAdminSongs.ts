@@ -76,6 +76,7 @@ export const SEGMENT_ISSUE_LABEL: Record<SegmentIssueCode, string> = {
     empty_title: '請填歌名',
     title_too_long: '歌名最多 200 字',
     artist_too_long: '原唱最多 200 字',
+    note_too_long: '備註最多 30 字',
 };
 
 // 對齊 functions/api/admin/songs.js 與 functions/lib/songs.js 會回的錯誤碼；
