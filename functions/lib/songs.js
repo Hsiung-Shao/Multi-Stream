@@ -2,11 +2,12 @@
 //
 // 片段規則與前端 src/features/songs/lib/segmentValidation.ts 一致（code 名稱相同）：
 //   missing_end / end_before_start / overlap / exceeds_duration / empty_title /
-//   title_too_long / artist_too_long
+//   title_too_long / artist_too_long / note_too_long
 // 短 ID（song_segments.code）由資料庫 default 產生，這裡不產生也不接受 body 帶入。
 
 export const SEGMENTS_MAX = 200;
 export const TITLE_MAX = 200;
+export const VERSION_NOTE_MAX = 30;
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INT_MAX = 2147483647; // Postgres integer 上限
@@ -24,7 +25,7 @@ function invalid(error, issues) {
 
 /**
  * 驗證片段，回傳 [{ index, code }]（index 為 body 中的原始順序）
- * @param {{ start: number, end: number|null, title: string, artist?: string|null }[]} rows
+ * @param {{ start: number, end: number|null, title: string, artist?: string|null, versionNote?: string|null }[]} rows
  * @param {{ duration?: number|null }} [opts]
  */
 export function validateSegments(rows, opts = {}) {
@@ -36,6 +37,7 @@ export function validateSegments(rows, opts = {}) {
         if (r.title.trim() === '') issues.push({ index, code: 'empty_title' });
         if (r.title.trim().length > TITLE_MAX) issues.push({ index, code: 'title_too_long' });
         if (r.artist && r.artist.length > TITLE_MAX) issues.push({ index, code: 'artist_too_long' });
+        if (r.versionNote && r.versionNote.length > VERSION_NOTE_MAX) issues.push({ index, code: 'note_too_long' });
         if (duration != null && r.end !== null && r.end > duration) issues.push({ index, code: 'exceeds_duration' });
     });
     // 重疊：[s1,e1) 與 [s2,e2) 若 s1 < e2 且 s2 < e1；首尾相接不算。只比對起訖合法的列
@@ -108,12 +110,20 @@ export function buildSongVideoPayload(body, opts = {}) {
             artist = s.original_artist.trim();
             if (artist === '') artist = null;
         }
+        // 版本備註:沒帶（undefined）= 保留舊值，輸出不含此 key；帶了則 trim，空白轉 null（清除）
+        let versionNote;
+        if (s.version_note !== undefined) {
+            if (s.version_note === null) versionNote = null;
+            else if (typeof s.version_note !== 'string') return invalid('invalid_payload');
+            else versionNote = s.version_note.trim() || null;
+        }
         rows.push({
             id: s.id ? s.id.toLowerCase() : undefined,
             start: s.start_seconds,
             end: hasEnd ? s.end_seconds : null,
             title: s.title.trim(),
             artist,
+            versionNote,
         });
     }
 
@@ -129,6 +139,7 @@ export function buildSongVideoPayload(body, opts = {}) {
         .map((r, position) => {
             const seg = { start_seconds: r.start, end_seconds: r.end, title: r.title, original_artist: r.artist, position };
             if (r.id) seg.id = r.id;
+            if (r.versionNote !== undefined) seg.version_note = r.versionNote;
             return seg;
         });
 

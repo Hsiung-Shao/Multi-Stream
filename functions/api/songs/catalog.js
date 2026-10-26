@@ -1,7 +1,8 @@
 // GET /api/songs/catalog — 歌曲播放清單的公開目錄（全部已發布歌回，一次回傳）
 //
 // 回應（短 key，見 migration get_song_catalog）：
-//   [{ v: videoId, t: 標題, d: 開台時間, vt: {i, n, img} | null, s: [[code, start, end, 歌名, 原唱|null], ...] }]
+//   [{ v: videoId, t: 標題, d: 開台時間, vt: {i, n, img} | null, s: [[code, start, end, 歌名, 原唱|null, song_id, 版本備註|null, ...], ...] }, ..., { songs: [...] }]
+//   v2 起片段多帶歌曲本體欄位、陣列尾端多一筆歌曲字典；快取鍵升版避免舊格式被當新格式回傳。
 //
 // 快取（任何人都能打，必須擋住放大到 DB 的流量）：
 //   1. edge Cache API 600 秒（只在自訂網域生效）
@@ -17,7 +18,7 @@ const CATALOG_TTL_SECONDS = 600;
 const DB_TIMEOUT_MS = 5000;
 /** 進行中的共用查詢超過這麼久就視為失效、重新建立 */
 const INFLIGHT_STALE_MS = 15000;
-const CACHE_KEY = 'https://songs.invalid/catalog/v1';
+const CACHE_KEY = 'https://songs.invalid/catalog/v2';
 
 let memo = null; // { at: number, text: string }
 let inflight = null; // { at: number, promise: Promise<string|null> }

@@ -1,6 +1,6 @@
 // 歌回社群投稿：body 驗證（純函式，供 functions/api/songs/submissions.js 的 guardSubmission 使用）
 //
-// body：{ videoId, title, vtuberId?, streamedAt?, segments: [{ start, end, title, artist?, endEstimated? }], note?, contact?, turnstileToken }
+// body：{ videoId, title, vtuberId?, streamedAt?, segments: [{ start, end, title, artist?, versionNote?, endEstimated? }], note?, contact?, turnstileToken }
 // 片段規則沿用 lib/songs.js 的 validateSegments（同名 issue code）；投稿不可帶片段 id（id 只屬於已上架的片段，由管理員核准時決定）。
 // 回傳 { value } 或 { error, issues? }（error 為 invalid_payload | invalid_video_id | invalid_segments）。
 
@@ -27,7 +27,7 @@ function optionalText(v, max) {
 /**
  * @param {any} body
  * @returns {{ value: { videoId: string, title: string, vtuberId: string|null, streamedAt: string|null,
- *                      segments: { start: number, end: number, title: string, artist: string|null, endEstimated: boolean }[],
+ *                      segments: { start: number, end: number, title: string, artist: string|null, versionNote: string|null, endEstimated: boolean }[],
  *                      note: string|null, contact: string|null } }
  *          | { error: 'invalid_payload'|'invalid_video_id'|'invalid_segments', issues?: {index:number, code:string}[] }}
  */
@@ -67,7 +67,10 @@ export function parseSubmissionBody(body) {
         if (typeof s.title !== 'string') return bad('invalid_payload');
         const artist = optionalText(s.artist, Number.MAX_SAFE_INTEGER);
         if (artist === undefined) return bad('invalid_payload');
-        rows.push({ start: s.start, end: s.end, title: s.title.trim(), artist, endEstimated: s.endEstimated === true });
+        // 版本備註長度由 validateSegments 檢查（note_too_long）；非字串在此擋下
+        const versionNote = optionalText(s.versionNote, Number.MAX_SAFE_INTEGER);
+        if (versionNote === undefined) return bad('invalid_payload');
+        rows.push({ start: s.start, end: s.end, title: s.title.trim(), artist, versionNote, endEstimated: s.endEstimated === true });
     }
 
     const issues = validateSegments(rows);
