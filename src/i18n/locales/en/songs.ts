@@ -129,7 +129,7 @@ export default {
     'editor.diff.changed': 'Changed',
     'editor.jumpTo': 'Jump to this time',
     'editor.legend.setNow': 'Set to the player’s current time',
-    'editor.legend.needPlayer': 'Paste a video URL to load the player first',
+    'editor.legend.needPlayer': 'Available once the player has loaded',
     'editor.setNow': 'Set to current time',
     'editor.removeRow': 'Delete row',
     'editor.newCode': '(new)',

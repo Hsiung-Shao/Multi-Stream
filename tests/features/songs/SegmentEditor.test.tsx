@@ -246,12 +246,12 @@ describe('SegmentEditor 時間欄按鈕', () => {
         expect(btn('跳到第 1 首開始時間')).toBeEnabled();
     });
 
-    it('沒有播放器時四顆按鈕都停用並提示先載入播放器', () => {
+    it('沒有播放器時四顆按鈕都停用並提示播放器載入後才能使用', () => {
         render(<TimeHarness initial={[mkTimed('歌A', '0:00', '3:00')]} player={null} />);
         for (const name of ['跳到第 1 首開始時間', '第 1 首開始設為目前時間', '跳到第 1 首結束時間', '第 1 首結束設為目前時間']) {
             expect(btn(name)).toBeDisabled();
         }
-        expect(screen.getByText('貼上影片網址載入播放器後才能使用')).toBeInTheDocument();
+        expect(screen.getByText('播放器載入後才能使用')).toBeInTheDocument();
     });
 
     it('有片段時標題列顯示按鈕說明，沒有片段時不顯示', () => {
@@ -259,7 +259,7 @@ describe('SegmentEditor 時間欄按鈕', () => {
         const { unmount } = render(<TimeHarness initial={[mkTimed('歌A', '0:00', '3:00')]} player={p} />);
         expect(screen.getByText('跳到這個時間')).toBeInTheDocument();
         expect(screen.getByText('設為播放器目前時間')).toBeInTheDocument();
-        expect(screen.queryByText('貼上影片網址載入播放器後才能使用')).toBeNull();
+        expect(screen.queryByText('播放器載入後才能使用')).toBeNull();
         unmount();
 
         render(<TimeHarness initial={[]} player={p} />);

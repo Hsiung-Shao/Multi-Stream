@@ -129,7 +129,7 @@ export default {
     'editor.diff.changed': '변경',
     'editor.jumpTo': '이 시간으로 이동',
     'editor.legend.setNow': '플레이어의 현재 시간으로',
-    'editor.legend.needPlayer': '영상 URL을 붙여 넣어 플레이어를 불러온 뒤 사용할 수 있습니다',
+    'editor.legend.needPlayer': '플레이어를 불러온 뒤 사용할 수 있습니다',
     'editor.setNow': '현재 시간으로',
     'editor.removeRow': '이 줄 삭제',
     'editor.newCode': '(신규)',

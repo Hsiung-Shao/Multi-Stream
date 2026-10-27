@@ -129,7 +129,7 @@ export default {
     'editor.diff.changed': '改動',
     'editor.jumpTo': '跳到這個時間',
     'editor.legend.setNow': '設為播放器目前時間',
-    'editor.legend.needPlayer': '貼上影片網址載入播放器後才能使用',
+    'editor.legend.needPlayer': '播放器載入後才能使用',
     'editor.setNow': '設為目前時間',
     'editor.removeRow': '刪除這列',
     'editor.newCode': '（新）',

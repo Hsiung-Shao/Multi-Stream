@@ -129,7 +129,7 @@ export default {
     'editor.diff.changed': '改动',
     'editor.jumpTo': '跳到这个时间',
     'editor.legend.setNow': '设为播放器当前时间',
-    'editor.legend.needPlayer': '粘贴视频网址载入播放器后才能使用',
+    'editor.legend.needPlayer': '播放器载入后才能使用',
     'editor.setNow': '设为当前时间',
     'editor.removeRow': '删除这行',
     'editor.newCode': '（新）',

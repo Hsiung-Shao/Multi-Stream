@@ -129,7 +129,7 @@ export default {
     'editor.diff.changed': '変更',
     'editor.jumpTo': 'この時間へ移動',
     'editor.legend.setNow': 'プレーヤーの現在の時間にする',
-    'editor.legend.needPlayer': '動画の URL を貼り付けてプレーヤーを読み込むと使えます',
+    'editor.legend.needPlayer': 'プレーヤーの読み込み後に使えます',
     'editor.setNow': '現在の時間にする',
     'editor.removeRow': 'この行を削除',
     'editor.newCode': '（新規）',
