@@ -1,29 +1,32 @@
-// POST /api/songs/submissions：匿名投稿歌回時間軸（新歌回，或修正已上架的歌回）→ song_submissions（pending）
-// 後台核准（approve_song_submission）才寫進 song_videos / song_segments。
+// POST /api/songs/submissions：匿名直接編輯歌回時間軸（新歌回，或修正已上架的歌回），送出即生效
+// 整個寫入由 RPC community_save_song_video 在同一個交易完成（版本比對、鎖定、不可刪片段、留修改前快照），
+// 每個請求只打一次 RPC；管理員事後可在後台「社群修改紀錄」一鍵還原（admin_revert_song_edit）。
 //
 // 檢查順序見 functions/lib/submit-guard.js（緊急開關 → 來源 → 大小 → 封鎖 IP → 欄位驗證 → 個人配額 → Turnstile → 全站配額）。
-// 之後查影片是否已上架：有 → kind='revision'、target_video_ref 為該影片 id；無 → kind='new'。
-// 同一個雜湊 IP 對同一支影片同時只能有一筆待審（唯一索引 song_submissions_pending_ip_video_uq，撞到回 409 already_pending）。
+// 修正既有歌回要帶 rev（載入時的版本），DB 發現已被別人更新會回 stale_edit；新歌回 rev 為 null 且必須指定 VTuber。
 // 只存雜湊 IP，不存原始 IP。緊急開關：SUBMISSIONS_DISABLED=true → 503（與其他投稿共用）。
+// 成功後刪除本機房的目錄 edge 快取（其他機房與 isolate 記憶體最慢約 10 分鐘後同步）。
 //
 // 回應：201 { ok: true, id, kind } 或 { ok: false, error }
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
-import { insert, select } from '../../lib/supabase-server.js';
+import { rpc } from '../../lib/supabase-server.js';
 import { logError } from '../../lib/logger.js';
-import { guardSubmission, isUniqueViolation } from '../../lib/submit-guard.js';
+import { guardSubmission, postgrestErrorMessage } from '../../lib/submit-guard.js';
 import { parseSubmissionBody } from '../../lib/song-submissions.js';
+import { purgeCatalogCache } from '../../lib/song-catalog-cache.js';
 
 const MAX_BODY_BYTES = 32768;
 const NO_STORE = { 'Cache-Control': 'no-store' };
-
-function pgCode(errorText) {
-    try {
-        return JSON.parse(errorText)?.code ?? null;
-    } catch {
-        return null;
-    }
-}
+// RPC 以 exception message 當錯誤碼 → HTTP 狀態；不在表內的一律 500 save_failed
+const RPC_ERRORS = {
+    stale_edit: 409,
+    video_exists: 409,
+    cannot_delete: 400,
+    unknown_segment: 400,
+    vtuber_required: 400,
+    video_locked: 403,
+};
 
 export async function onRequestPost(context) {
     const { request, env } = context;
@@ -44,35 +47,34 @@ export async function onRequestPost(context) {
     if (!g.ok) return g.response;
     const v = g.value;
 
-    const found = await select(env, `song_videos?video_id=eq.${encodeURIComponent(v.videoId)}&select=id&limit=1`);
-    if (!found.ok) {
-        await logError(env, 'songs-submissions', 'video lookup failed', { metadata: { status: found.status, error: found.error?.slice(0, 300) } });
-        return reply({ ok: false, error: 'insert_failed' }, 500);
-    }
-    const targetRef = found.data?.[0]?.id ?? null;
-    const kind = targetRef ? 'revision' : 'new';
+    // parseSubmissionBody 已依 start 排序；有 code 才帶（沒有 = 新增片段）
+    const segments = v.segments.map((s, position) => ({
+        ...(s.code ? { code: s.code } : {}),
+        start_seconds: s.start,
+        end_seconds: s.end,
+        title: s.title,
+        original_artist: s.artist,
+        version_note: s.versionNote,
+        position,
+    }));
 
-    const res = await insert(env, 'song_submissions', {
-        kind,
-        video_id: v.videoId,
-        target_video_ref: targetRef,
-        title: v.title,
-        vtuber_id: v.vtuberId,
-        streamed_at: v.streamedAt,
-        segments: v.segments,
-        source_note: v.note,
-        submitter_contact: v.contact,
-        ip_hash: g.ipHash,
-        status: 'pending',
+    const res = await rpc(env, 'community_save_song_video', {
+        p_video_id: v.videoId,
+        p_rev: v.rev,
+        p_video: { title: v.title, vtuber_id: v.vtuberId, streamed_at: v.streamedAt, duration_seconds: v.durationSeconds },
+        p_segments: segments,
+        p_meta: { source_note: v.note, submitter_contact: v.contact, ip_hash: g.ipHash },
     });
     if (!res.ok) {
-        if (isUniqueViolation(res.error)) return reply({ ok: false, error: 'already_pending' }, 409);
-        // 外鍵錯誤（vtuberId 指到不存在的 VTuber）是請求內容的問題，不是伺服器壞了
-        if (pgCode(res.error) === '23503') return reply({ ok: false, error: 'invalid_payload' }, 400);
-        await logError(env, 'songs-submissions', 'insert failed', { metadata: { status: res.status, error: res.error?.slice(0, 300) } });
-        return reply({ ok: false, error: 'insert_failed' }, 500);
+        const message = postgrestErrorMessage(res.error);
+        const status = Object.hasOwn(RPC_ERRORS, message) ? RPC_ERRORS[message] : null;
+        if (status) return reply({ ok: false, error: message }, status);
+        await logError(env, 'songs-submissions', 'save failed', { metadata: { status: res.status, error: res.error?.slice(0, 300) } });
+        return reply({ ok: false, error: 'save_failed' }, 500);
     }
-    return reply({ ok: true, id: res.data?.[0]?.id ?? null, kind }, 201);
+
+    purgeCatalogCache(context);
+    return reply({ ok: true, id: res.data?.submission_id ?? null, kind: res.data?.kind ?? (v.rev ? 'revision' : 'new') }, 201);
 }
 
 export async function onRequestOptions(context) {

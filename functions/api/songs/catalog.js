@@ -13,12 +13,12 @@
 import { handleOptions, getCorsHeaders } from '../../lib/cors.js';
 import { rpc } from '../../lib/supabase-server.js';
 import { logError } from '../../lib/logger.js';
+import { CATALOG_CACHE_KEY } from '../../lib/song-catalog-cache.js';
 
 const CATALOG_TTL_SECONDS = 600;
 const DB_TIMEOUT_MS = 5000;
 /** 進行中的共用查詢超過這麼久就視為失效、重新建立 */
 const INFLIGHT_STALE_MS = 15000;
-const CACHE_KEY = 'https://songs.invalid/catalog/v2';
 
 let memo = null; // { at: number, text: string }
 let inflight = null; // { at: number, promise: Promise<string|null> }
@@ -74,7 +74,7 @@ async function loadCatalog(context) {
 export async function onRequestGet(context) {
     const { request } = context;
     const cache = getCache();
-    const key = new Request(CACHE_KEY);
+    const key = new Request(CATALOG_CACHE_KEY);
 
     if (cache) {
         const hit = await cache.match(key).catch(() => null);

@@ -1,4 +1,4 @@
-// 歌回社群投稿（後端）：投稿驗證、POST /api/songs/submissions、管理端 /api/admin/song-submissions
+// 歌回社群直接編輯（後端）：投稿驗證、POST /api/songs/submissions（呼叫 RPC 立即生效）、管理端修改紀錄／還原／鎖定
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
 import { parseSubmissionBody, SUBMISSION_SEGMENTS_MAX } from '../../functions/lib/song-submissions.js';
@@ -11,13 +11,16 @@ const VIDEO = 'dQw4w9WgXcQ';
 const IP = '203.0.113.9';
 const SUB_ID = '44444444-4444-4444-8444-444444444444';
 const REF = '55555555-5555-4555-8555-555555555555';
+const REV = '2026-10-28T01:02:03.456+00:00';
 
 const seg = (start: number, end: number | null, title = `歌${start}`, extra: Record<string, unknown> = {}) => ({ start, end, title, ...extra });
 const sub = (over: Record<string, unknown> = {}) => ({
     videoId: VIDEO,
     title: '歌回 #1',
-    vtuberId: null,
+    vtuberId: REF,
     streamedAt: null,
+    rev: null,
+    durationSeconds: null,
     segments: [seg(0, 100, 'A', { artist: '原唱' }), seg(100, 200, 'B')],
     note: '來源：置頂留言',
     contact: 'a@b.c',
@@ -76,6 +79,41 @@ describe('parseSubmissionBody', () => {
         expect(parseSubmissionBody(sub({ vtuberId: REF.toUpperCase() })).value.vtuberId).toBe(REF);
         expect(parseSubmissionBody(sub({ streamedAt: 'not a date' })).error).toBe('invalid_payload');
     });
+
+    it('片段可帶合法 code（8 碼 [0-9a-z]）並保留；沒帶 code 的片段不會憑空多出 code', () => {
+        const r = parseSubmissionBody(sub({ segments: [seg(0, 100, 'A', { code: 'abcd1234' }), seg(100, 200, 'B')] }));
+        expect(r.error).toBeUndefined();
+        expect(r.value.segments[0].code).toBe('abcd1234');
+        expect(r.value.segments[1].code ?? null).toBeNull();
+    });
+
+    it('片段 code 不合法（大寫、長度錯、含符號）→ invalid_payload；有 code 仍不可再帶 id', () => {
+        for (const code of ['ABCD1234', 'abcd123', 'abcd12345', 'abcd-123']) {
+            expect(parseSubmissionBody(sub({ segments: [seg(0, 100, 'A', { code })] })).error, code).toBe('invalid_payload');
+        }
+        expect(parseSubmissionBody(sub({ segments: [seg(0, 100, 'A', { code: 'abcd1234', id: REF })] })).error).toBe('invalid_payload');
+    });
+
+    it('rev 為字串時原樣保留、沒給則為 null；修正（有 rev）時 vtuberId 可為 null', () => {
+        const withRev = parseSubmissionBody(sub({ rev: REV, vtuberId: null }));
+        expect(withRev.error).toBeUndefined();
+        expect(withRev.value.rev).toBe(REV);
+        expect(withRev.value.vtuberId).toBeNull();
+        expect(parseSubmissionBody(sub()).value.rev).toBeNull();
+    });
+
+    it('durationSeconds 整數 1～86400 保留；超出、小數、非數字 → invalid_payload；null 保留 null', () => {
+        expect(parseSubmissionBody(sub({ durationSeconds: 1 })).value.durationSeconds).toBe(1);
+        expect(parseSubmissionBody(sub({ durationSeconds: 86400 })).value.durationSeconds).toBe(86400);
+        expect(parseSubmissionBody(sub({ durationSeconds: null })).value.durationSeconds).toBeNull();
+        for (const bad of [0, -5, 86401, 1.5, '600']) {
+            expect(parseSubmissionBody(sub({ durationSeconds: bad })).error, String(bad)).toBe('invalid_payload');
+        }
+    });
+
+    it('新歌回（rev 為 null）且沒選 VTuber → vtuber_required', () => {
+        expect(parseSubmissionBody(sub({ rev: null, vtuberId: null })).error).toBe('vtuber_required');
+    });
 });
 
 // ---------- 端點共用 mock ----------
@@ -99,9 +137,15 @@ const ENV = (extra: Record<string, unknown> = {}) => ({
     ...extra,
 });
 
+// PostgREST 的 RPC 成功回應（community_save_song_video 回 json 物件）
+const saveOk = (kind: 'new' | 'revision' = 'new') =>
+    new Response(JSON.stringify({ kind, video_ref: REF, rev: REV, submission_id: SUB_ID }), { status: 200 });
+// PostgREST 的 RPC 錯誤格式：raise exception 'xxx' using errcode = 'P0001' → HTTP 400 {code, message}
+const rpcErr = (message: string, code = 'P0001', status = 400) => new Response(JSON.stringify({ code, message }), { status });
+
 beforeEach(() => {
     calls = [];
-    sb = (method) => (method === 'GET' ? new Response('[]') : new Response(JSON.stringify([{ id: SUB_ID }]), { status: 201 }));
+    sb = (method) => (method === 'GET' ? new Response('[]') : saveOk());
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
         const url = String(input);
         const method = init?.method ?? 'GET';
@@ -126,15 +170,22 @@ const submitReq = (b: unknown, headers: Record<string, string | null> = {}) => {
     const clean = Object.fromEntries(Object.entries(h).filter(([, v]) => v !== null)) as Record<string, string>;
     return new Request('https://multistreaming.org/api/songs/submissions', { method: 'POST', headers: clean, body: JSON.stringify(b) });
 };
-const submit = (b: unknown, env = ENV(), headers: Record<string, string | null> = {}) => submitPost({ request: submitReq(b, headers), env });
+const pending: Promise<unknown>[] = [];
+const submit = (b: unknown, env = ENV(), headers: Record<string, string | null> = {}) =>
+    submitPost({ request: submitReq(b, headers), env, waitUntil: (p: Promise<unknown>) => void pending.push(p) });
+const flush = async () => {
+    await Promise.allSettled(pending.splice(0));
+};
+const rpcCalls = () => sbCalls().filter((c) => c.url.includes('rpc/community_save_song_video'));
 
 describe('POST /api/songs/submissions', () => {
-    it('擋非法片段不寫 DB：重疊、缺 end、片段帶 id、影片 ID 錯 → 400', async () => {
+    it('擋非法投稿不寫 DB：重疊、缺 end、片段帶 id、影片 ID 錯、新歌回沒選 VTuber → 400', async () => {
         const cases: Array<[unknown, string[]]> = [
             [sub({ segments: [seg(0, 100), seg(50, 150)] }), ['invalid_segments']],
             [sub({ segments: [seg(0, null)] }), ['invalid_segments', 'invalid_payload']],
             [sub({ segments: [seg(0, 10, 'A', { id: REF })] }), ['invalid_payload']],
             [sub({ videoId: 'bad' }), ['invalid_video_id']],
+            [sub({ rev: null, vtuberId: null }), ['vtuber_required']],
         ];
         for (const [b, errors] of cases) {
             const res = await submit(b);
@@ -144,52 +195,121 @@ describe('POST /api/songs/submissions', () => {
         expect(sbCalls()).toHaveLength(0);
     });
 
-    it('影片還沒上架 → 新增（kind new、target_video_ref null），寫入待審並只存雜湊 IP', async () => {
-        const res = await submit(sub());
+    it('F1 新歌回成功：只打一次 RPC community_save_song_video，帶完整 p_* 參數，不再寫 song_submissions 表', async () => {
+        const res = await submit(sub({
+            streamedAt: '2026-10-01T12:00:00Z',
+            durationSeconds: 5400,
+            segments: [seg(100, 200, 'B', { versionNote: '現場版' }), seg(0, 100, 'A', { artist: '原唱', code: 'abcd1234' })],
+        }));
         expect(res.status).toBe(201);
         expect(await res.json()).toMatchObject({ ok: true, id: SUB_ID, kind: 'new' });
-        const write = calls.find((c) => c.method === 'POST' && c.url.includes('song_submissions'))!;
-        expect(write.body).toMatchObject({
-            kind: 'new',
-            target_video_ref: null,
-            video_id: VIDEO,
+
+        // 只有一次 DB 請求，且是 RPC；不查影片是否存在、不 POST song_submissions
+        expect(sbCalls()).toHaveLength(1);
+        expect(rpcCalls()).toHaveLength(1);
+        expect(sbCalls().some((c) => c.url.includes('song_submissions'))).toBe(false);
+
+        const body = rpcCalls()[0].body;
+        expect(rpcCalls()[0].method).toBe('POST');
+        expect(body.p_video_id).toBe(VIDEO);
+        expect(body.p_rev).toBeNull();
+        expect(body.p_video).toEqual({
             title: '歌回 #1',
-            status: 'pending',
-            source_note: '來源：置頂留言',
-            submitter_contact: 'a@b.c',
+            vtuber_id: REF,
+            streamed_at: '2026-10-01T12:00:00.000Z',
+            duration_seconds: 5400,
         });
-        expect(write.body.segments).toHaveLength(2);
-        expect(write.body.ip_hash).toBeTruthy();
-        expect(JSON.stringify(write.body)).not.toContain(IP);
-        // 查過影片是否已上架
-        expect(calls.some((c) => c.method === 'GET' && c.url.includes(`song_videos?video_id=eq.${VIDEO}`))).toBe(true);
+        // 片段依 start 排序、position 從 0 起算；有 code 才帶 code
+        expect(body.p_segments).toHaveLength(2);
+        expect(body.p_segments[0]).toMatchObject({
+            code: 'abcd1234', start_seconds: 0, end_seconds: 100, title: 'A', original_artist: '原唱', version_note: null, position: 0,
+        });
+        expect(body.p_segments[1]).toMatchObject({
+            start_seconds: 100, end_seconds: 200, title: 'B', original_artist: null, version_note: '現場版', position: 1,
+        });
+        expect('code' in body.p_segments[1] && body.p_segments[1].code != null).toBe(false);
+        // meta：只存雜湊 IP，不存原始 IP
+        expect(body.p_meta).toMatchObject({ source_note: '來源：置頂留言', submitter_contact: 'a@b.c' });
+        expect(body.p_meta.ip_hash).toBeTruthy();
+        expect(body.p_meta.ip_hash).not.toBe(IP);
+        expect(JSON.stringify(body)).not.toContain(IP);
     });
 
-    it('已上架影片自動判為修正（kind revision、target_video_ref 為該影片 id）', async () => {
-        sb = (method, path) => {
-            if (method === 'GET' && path.startsWith('song_videos')) return new Response(JSON.stringify([{ id: REF }]));
-            if (method === 'GET') return new Response('[]');
-            return new Response(JSON.stringify([{ id: SUB_ID }]), { status: 201 });
-        };
-        const res = await submit(sub());
+    it('F1 修正既有歌回：p_rev 帶使用者載入時的 rev，成功回 kind revision', async () => {
+        sb = () => saveOk('revision');
+        const res = await submit(sub({ rev: REV, vtuberId: null }));
         expect(res.status).toBe(201);
-        expect((await res.json()).kind).toBe('revision');
-        const write = calls.find((c) => c.method === 'POST' && c.url.includes('song_submissions'))!;
-        expect(write.body).toMatchObject({ kind: 'revision', target_video_ref: REF });
+        expect(await res.json()).toMatchObject({ ok: true, id: SUB_ID, kind: 'revision' });
+        expect(rpcCalls()).toHaveLength(1);
+        expect(rpcCalls()[0].body.p_rev).toBe(REV);
+        expect(rpcCalls()[0].body.p_video.vtuber_id).toBeNull();
     });
 
-    it('同 IP 同影片已有待審（23505）→ 409 already_pending', async () => {
-        sb = (method) => (method === 'GET' ? new Response('[]') : new Response('{"code":"23505","message":"duplicate"}', { status: 409 }));
+    it('F2 RPC 錯誤對應：stale_edit／video_exists → 409', async () => {
+        for (const message of ['stale_edit', 'video_exists']) {
+            sb = () => rpcErr(message);
+            const res = await submit(sub());
+            expect(res.status, message).toBe(409);
+            expect((await res.json()).error, message).toBe(message);
+        }
+    });
+
+    it('F2 RPC 錯誤對應：cannot_delete／unknown_segment／vtuber_required → 400', async () => {
+        for (const message of ['cannot_delete', 'unknown_segment', 'vtuber_required']) {
+            sb = () => rpcErr(message);
+            const res = await submit(sub());
+            expect(res.status, message).toBe(400);
+            expect((await res.json()).error, message).toBe(message);
+        }
+    });
+
+    it('F2 RPC 錯誤對應：video_locked → 403', async () => {
+        sb = () => rpcErr('video_locked');
+        const res = await submit(sub({ rev: REV }));
+        expect(res.status).toBe(403);
+        expect((await res.json()).error).toBe('video_locked');
+    });
+
+    it('F2 其他 RPC 失敗（未知訊息、DB 掛掉）→ 500 save_failed，且只打過一次 RPC', async () => {
+        sb = () => rpcErr('something_else');
+        const unknown = await submit(sub());
+        expect(unknown.status).toBe(500);
+        expect((await unknown.json()).error).toBe('save_failed');
+
+        calls = [];
+        sb = () => new Response('boom', { status: 500 });
+        const down = await submit(sub());
+        expect(down.status).toBe(500);
+        expect((await down.json()).error).toBe('save_failed');
+        expect(rpcCalls()).toHaveLength(1);
+    });
+
+    it('F3 成功時刪除本機房的 catalog v2 邊緣快取', async () => {
+        const del = vi.fn(async () => true);
+        vi.stubGlobal('caches', { default: { delete: del } });
         const res = await submit(sub());
+        await flush();
+        expect(res.status).toBe(201);
+        expect(del).toHaveBeenCalled();
+        const key = (a: unknown) => (a instanceof Request ? a.url : String(a));
+        expect(key(del.mock.calls[0][0])).toContain('catalog/v2');
+    });
+
+    it('F3 寫入失敗（RPC 錯誤）時不刪目錄快取', async () => {
+        const del = vi.fn(async () => true);
+        vi.stubGlobal('caches', { default: { delete: del } });
+        sb = () => rpcErr('stale_edit');
+        const res = await submit(sub());
+        await flush();
         expect(res.status).toBe(409);
-        expect((await res.json()).error).toBe('already_pending');
+        expect(del).not.toHaveBeenCalled();
     });
 
-    it('其他寫入失敗 → 500 insert_failed', async () => {
-        sb = (method) => (method === 'GET' ? new Response('[]') : new Response('boom', { status: 500 }));
+    it('F3 刪快取本身失敗不影響投稿成功', async () => {
+        vi.stubGlobal('caches', { default: { delete: vi.fn(async () => { throw new Error('cache down'); }) } });
         const res = await submit(sub());
-        expect(res.status).toBe(500);
-        expect((await res.json()).error).toBe('insert_failed');
+        await flush();
+        expect(res.status).toBe(201);
     });
 
     it('走 guardSubmission：無來源標頭 403、未設 IP_HASH_SALT 503，皆不寫 DB', async () => {
@@ -214,7 +334,7 @@ describe('POST /api/songs/submissions', () => {
     });
 });
 
-// ---------- /api/admin/song-submissions ----------
+// ---------- /api/admin/song-submissions（修改紀錄／還原／鎖定） ----------
 const adminReq = (query: string, b?: unknown, token: string | null = 'admintoken', method = 'POST') => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['X-Admin-Token'] = token;
@@ -224,189 +344,190 @@ const adminReq = (query: string, b?: unknown, token: string | null = 'admintoken
         body: b === undefined ? undefined : JSON.stringify(b),
     });
 };
-// 管理員微調後的版本：video 欄位沿用 buildSongVideoPayload；video_ref 為修正對象（新增為 null）
-const approveBody = (over: Record<string, unknown> = {}) => ({
-    video_ref: null,
-    video: { video_id: VIDEO, title: '歌回 #1', status: 'published', vtuber_id: null, streamed_at: null, duration_seconds: null },
-    segments: [
-        { start_seconds: 0, end_seconds: 100, title: 'A', original_artist: '原唱' },
-        { start_seconds: 100, end_seconds: 200, title: 'B' },
-    ],
+const adminList = () => adminGet({ request: adminReq('', undefined, 'admintoken', 'GET'), env: ENV() });
+
+const segRow = (code: string, start: number, end: number, title: string) => ({
+    code, start_seconds: start, end_seconds: end, title, original_artist: null, version_note: null,
+});
+const beforeSnap = (segs: ReturnType<typeof segRow>[]) => ({
+    video: { title: '歌回 #1', vtuber_id: REF, streamed_at: null, duration_seconds: 5400 },
+    segments: segs.map((s, i) => ({ id: `s${i}`, position: i, ...s })),
+});
+const logRow = (over: Record<string, unknown>) => ({
+    id: SUB_ID,
+    kind: 'revision',
+    video_id: VIDEO,
+    title: '歌回 #1',
+    status: 'applied',
+    created_at: '2026-10-28T02:00:00Z',
+    reverted_at: null,
+    target_video_ref: REF,
+    before: null,
+    segments: [],
     ...over,
 });
 
-describe('/api/admin/song-submissions', () => {
-    it('未帶管理 token 一律 401，且不碰 DB', async () => {
-        const post = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=approve`, approveBody(), null), env: ENV() });
-        expect(post.status).toBe(401);
+describe('GET /api/admin/song-submissions（社群修改紀錄）', () => {
+    it('F5 未帶或帶錯管理 token 一律 401，且不碰 DB', async () => {
         const get = await adminGet({ request: adminReq('', undefined, null, 'GET'), env: ENV() });
         expect(get.status).toBe(401);
-        const wrong = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=reject`, { notes: 'x' }, 'bad'), env: ENV() });
+        const wrong = await adminGet({ request: adminReq('', undefined, 'bad', 'GET'), env: ENV() });
         expect(wrong.status).toBe(401);
         expect(sbCalls()).toHaveLength(0);
     });
 
-    it('核准只打一次 RPC approve_song_submission，帶 p_id/p_video_ref/p_video/p_segments', async () => {
-        sb = () => new Response(JSON.stringify(REF), { status: 200 });
-        const res = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=approve`, approveBody()), env: ENV() });
-        expect(res.status).toBe(200);
-        expect((await res.json()).ok).toBe(true);
-        expect(sbCalls()).toHaveLength(1);
-        const call = sbCalls()[0];
-        expect(call.url).toContain('rpc/approve_song_submission');
-        expect(call.body.p_id).toBe(SUB_ID);
-        expect('p_video_ref' in call.body).toBe(true);
-        expect(call.body.p_video).toMatchObject({ video_id: VIDEO });
-        expect(call.body.p_segments).toHaveLength(2);
+    it('F5 查最近 50 筆 applied／reverted 紀錄（新到舊），不再列待審', async () => {
+        await adminList();
+        const url = sbCalls()[0].url;
+        expect(url).toContain('song_submissions');
+        expect(url).toContain('applied');
+        expect(url).toContain('reverted');
+        expect(url).not.toContain('status=eq.pending');
+        expect(url).toContain('order=created_at.desc');
+        expect(url).toContain('limit=50');
     });
 
-    it('核准修正（revision）：p_video_ref 帶修正對象，片段可帶既有 id', async () => {
-        sb = () => new Response(JSON.stringify(REF), { status: 200 });
-        const SEG_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-        const body = approveBody({
-            video_ref: REF,
-            segments: [{ id: SEG_ID, start_seconds: 0, end_seconds: 100, title: 'A' }],
-        });
-        const res = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=approve`, body), env: ENV() });
-        expect(res.status).toBe(200);
-        expect(sbCalls()[0].body.p_video_ref).toBe(REF);
-        expect(sbCalls()[0].body.p_segments[0].id).toBe(SEG_ID);
-    });
-
-    it('RPC 錯誤對應：not_pending 409、unknown_segment_id 400、23505 409 video_exists、其他 500', async () => {
-        const run = async (reply: Response) => {
-            sb = () => reply;
-            const res = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=approve`, approveBody()), env: ENV() });
-            return { status: res.status, error: (await res.json()).error };
-        };
-        expect(await run(new Response('{"code":"P0001","message":"not_pending"}', { status: 400 }))).toEqual({ status: 409, error: 'not_pending' });
-        expect(await run(new Response('{"code":"P0001","message":"unknown_segment_id"}', { status: 400 }))).toEqual({ status: 400, error: 'unknown_segment_id' });
-        expect(await run(new Response('{"code":"23505","message":"duplicate"}', { status: 409 }))).toEqual({ status: 409, error: 'video_exists' });
-        expect((await run(new Response('boom', { status: 500 }))).status).toBe(500);
-    });
-
-    it('核准時片段驗證失敗（重疊）400，不打 RPC', async () => {
-        const body = approveBody({
-            segments: [
-                { start_seconds: 0, end_seconds: 100, title: 'A' },
-                { start_seconds: 50, end_seconds: 150, title: 'B' },
-            ],
-        });
-        const res = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=approve`, body), env: ENV() });
-        expect(res.status).toBe(400);
-        expect(sbCalls()).toHaveLength(0);
-    });
-
-    it('駁回：PATCH song_submissions 帶 status rejected 與 reviewer_notes，只動待審那筆', async () => {
-        sb = () => new Response(JSON.stringify([{ id: SUB_ID }]), { status: 200 });
-        const res = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=reject`, { notes: '時間軸對不上' }), env: ENV() });
-        expect(res.status).toBe(200);
-        expect(sbCalls()).toHaveLength(1);
-        const call = sbCalls()[0];
-        expect(call.method).toBe('PATCH');
-        expect(call.url).toContain('song_submissions');
-        expect(call.url).toContain(`id=eq.${SUB_ID}`);
-        expect(call.url).toContain('status=eq.pending');
-        expect(call.body).toMatchObject({ status: 'rejected', reviewer_notes: '時間軸對不上' });
-        expect(call.body.reviewed_at).toBeTruthy();
-    });
-
-    it('駁回更新 0 列 → 409 not_pending；理由超過 500 字 → 400', async () => {
-        sb = () => new Response('[]', { status: 200 });
-        const none = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=reject`, { notes: 'x' }), env: ENV() });
-        expect(none.status).toBe(409);
-        expect((await none.json()).error).toBe('not_pending');
-
-        calls = [];
-        const long = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=reject`, { notes: 'x'.repeat(501) }), env: ENV() });
-        expect(long.status).toBe(400);
-        expect(sbCalls()).toHaveLength(0);
-    });
-
-    it('非法 id、未知 action → 400，不碰 DB', async () => {
-        const badId = await adminPost({ request: adminReq(`?id=${'-'.repeat(36)}&action=approve`, approveBody()), env: ENV() });
-        expect(badId.status).toBe(400);
-        const badAction = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=explode`, {}), env: ENV() });
-        expect(badAction.status).toBe(400);
-        expect(sbCalls()).toHaveLength(0);
-    });
-
-    it('GET 列表預設只列待審；單筆若有 target_video_ref 另附 existing 片段', async () => {
-        sb = (_method, path) => {
-            if (path.startsWith('song_submissions?id=')) return new Response(JSON.stringify([{ id: SUB_ID, target_video_ref: REF, segments: [] }]));
-            if (path.startsWith('song_segments')) return new Response(JSON.stringify([{ id: 's1', start_seconds: 0 }]));
-            return new Response('[]');
-        };
-        await adminGet({ request: adminReq('', undefined, 'admintoken', 'GET'), env: ENV() });
-        expect(sbCalls()[0].url).toContain('song_submissions?status=eq.pending');
-        expect(sbCalls()[0].url).toContain('order=created_at.desc');
-
-        calls = [];
-        const res = await adminGet({ request: adminReq(`?id=${SUB_ID}`, undefined, 'admintoken', 'GET'), env: ENV() });
+    it('F5 summary 依 before 與送出的片段計算：before 兩段、送出三段且其中一段時間有改 → added 1、changed 1', async () => {
+        const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A'), segRow('bbbbbbbb', 100, 200, 'B')]);
+        sb = (_m, path) =>
+            path.startsWith('song_submissions')
+                ? new Response(JSON.stringify([
+                    logRow({
+                        before,
+                        segments: [
+                            segRow('aaaaaaaa', 0, 100, 'A'), // 沒變
+                            segRow('bbbbbbbb', 100, 250, 'B'), // 結束時間改了
+                            { start_seconds: 250, end_seconds: 300, title: 'C', original_artist: null, version_note: null }, // 新增（沒有 code）
+                        ],
+                    }),
+                ]))
+                : new Response('[]');
+        const res = await adminList();
         expect(res.status).toBe(200);
         const json = await res.json();
-        expect(json.existing).toBeTruthy();
-        expect(sbCalls().some((c) => c.url.includes('song_segments') && c.url.includes(REF))).toBe(true);
+        expect(json.ok).toBe(true);
+        expect(json.submissions).toHaveLength(1);
+        const row = json.submissions[0];
+        expect(row).toMatchObject({
+            id: SUB_ID, kind: 'revision', video_id: VIDEO, title: '歌回 #1', status: 'applied', target_video_ref: REF, reverted_at: null,
+        });
+        expect(row.summary.added).toBe(1);
+        expect(row.summary.changed).toBe(1);
+        expect(Array.isArray(row.summary.fields)).toBe(true);
+    });
+
+    it('F5 新歌回（before 為 null）：added = 送出的片段數、changed 為 0', async () => {
+        sb = (_m, path) =>
+            path.startsWith('song_submissions')
+                ? new Response(JSON.stringify([
+                    logRow({
+                        kind: 'new',
+                        target_video_ref: null,
+                        before: null,
+                        segments: [segRow('aaaaaaaa', 0, 100, 'A'), segRow('bbbbbbbb', 100, 200, 'B'), segRow('cccccccc', 200, 300, 'C')],
+                    }),
+                ]))
+                : new Response('[]');
+        const json = await (await adminList()).json();
+        expect(json.submissions[0].kind).toBe('new');
+        expect(json.submissions[0].summary.added).toBe(3);
+        expect(json.submissions[0].summary.changed).toBe(0);
+    });
+
+    it('F5 片段完全沒變（只是改了標題等影片欄位）：added、changed 皆為 0；已還原的紀錄保留 reverted_at', async () => {
+        const segs = [segRow('aaaaaaaa', 0, 100, 'A')];
+        sb = (_m, path) =>
+            path.startsWith('song_submissions')
+                ? new Response(JSON.stringify([
+                    logRow({ before: beforeSnap(segs), segments: segs, status: 'reverted', reverted_at: '2026-10-28T03:00:00Z' }),
+                ]))
+                : new Response('[]');
+        const row = (await (await adminList()).json()).submissions[0];
+        expect(row.summary.added).toBe(0);
+        expect(row.summary.changed).toBe(0);
+        expect(row.status).toBe('reverted');
+        expect(row.reverted_at).toBe('2026-10-28T03:00:00Z');
+    });
+
+    it('F5 回應不含原始 IP 雜湊（ip_hash 不外洩）', async () => {
+        sb = (_m, path) =>
+            path.startsWith('song_submissions')
+                ? new Response(JSON.stringify([logRow({ ip_hash: 'secret-hash-value' })]))
+                : new Response('[]');
+        const text = JSON.stringify(await (await adminList()).json());
+        expect(text).not.toContain('secret-hash-value');
     });
 });
 
-// ---------- v1.2.1：修正型單筆查詢附上原歌回欄位（核准時沿用，不被投稿內容覆寫） ----------
-describe('GET /api/admin/song-submissions?id= 的 existing_video', () => {
-    const VIDEO_ROW = { id: REF, video_id: VIDEO, title: '原歌回標題', vtuber_id: null, streamed_at: '2026-10-01T12:00:00Z', duration_seconds: 5400, status: 'draft' };
-    const getOne = () => adminGet({ request: adminReq(`?id=${SUB_ID}`, undefined, 'admintoken', 'GET'), env: ENV() });
-    const videoQueries = () => sbCalls().filter((c) => c.url.includes('song_videos'));
-    const mockSb = (target: string | null, videoReply: () => Response) => {
-        sb = (_method, path) => {
-            if (path.startsWith('song_submissions?id=')) return new Response(JSON.stringify([{ id: SUB_ID, target_video_ref: target, segments: [] }]));
-            if (path.startsWith('song_videos')) return videoReply();
-            return new Response('[]');
+describe('POST /api/admin/song-submissions（還原／鎖定）', () => {
+    it('F6 未帶管理 token 一律 401，且不碰 DB', async () => {
+        const revert = await adminPost({ request: adminReq('?action=revert', { id: SUB_ID }, null), env: ENV() });
+        expect(revert.status).toBe(401);
+        const lock = await adminPost({ request: adminReq('?action=lock', { videoRef: REF, locked: true }, null), env: ENV() });
+        expect(lock.status).toBe(401);
+        expect(sbCalls()).toHaveLength(0);
+    });
+
+    it('F6 還原只打一次 RPC admin_revert_song_edit，帶 p_submission，成功回 200', async () => {
+        sb = () => new Response(JSON.stringify({ video_ref: REF, kind: 'revision', reverted: 2 }), { status: 200 });
+        const res = await adminPost({ request: adminReq('?action=revert', { id: SUB_ID }), env: ENV() });
+        expect(res.status).toBe(200);
+        expect((await res.json()).ok).toBe(true);
+        expect(sbCalls()).toHaveLength(1);
+        expect(sbCalls()[0].method).toBe('POST');
+        expect(sbCalls()[0].url).toContain('rpc/admin_revert_song_edit');
+        expect(sbCalls()[0].body).toEqual({ p_submission: SUB_ID });
+    });
+
+    it('F6 還原錯誤對應：not_applied → 409、submission_not_found → 404、其他 → 500', async () => {
+        const run = async (reply: Response) => {
+            sb = () => reply;
+            const res = await adminPost({ request: adminReq('?action=revert', { id: SUB_ID }), env: ENV() });
+            return { status: res.status, error: (await res.json()).error };
         };
-    };
-
-    it('修正型：回傳原歌回那一列，並以 id=eq.<target> 查含 duration_seconds 與 status 的欄位', async () => {
-        mockSb(REF, () => new Response(JSON.stringify([VIDEO_ROW])));
-        const res = await getOne();
-        expect(res.status).toBe(200);
-        expect((await res.json()).existing_video).toEqual(VIDEO_ROW);
-        const q = videoQueries();
-        expect(q).toHaveLength(1);
-        expect(q[0].url).toContain(`id=eq.${REF}`);
-        expect(q[0].url).toContain('duration_seconds');
-        expect(q[0].url).toContain('status');
+        expect(await run(rpcErr('not_applied'))).toEqual({ status: 409, error: 'not_applied' });
+        expect(await run(rpcErr('submission_not_found', 'P0002', 404))).toEqual({ status: 404, error: 'submission_not_found' });
+        expect((await run(new Response('boom', { status: 500 }))).status).toBe(500);
     });
 
-    it('新歌回（target 為 null）：existing_video 為 null，且完全不查 song_videos', async () => {
-        mockSb(null, () => new Response(JSON.stringify([VIDEO_ROW])));
-        const res = await getOne();
-        expect(res.status).toBe(200);
-        const json = await res.json();
-        expect(json.existing_video).toBeNull();
-        expect(videoQueries()).toHaveLength(0);
+    it('F6 還原的 id 不是 uuid 或沒帶 → 400，不碰 DB', async () => {
+        const bad = await adminPost({ request: adminReq('?action=revert', { id: '-'.repeat(36) }), env: ENV() });
+        expect(bad.status).toBe(400);
+        const missing = await adminPost({ request: adminReq('?action=revert', {}), env: ENV() });
+        expect(missing.status).toBe(400);
+        expect(sbCalls()).toHaveLength(0);
     });
 
-    it('修正型但原歌回查不到：existing_video 為 null、仍回 200', async () => {
-        mockSb(REF, () => new Response('[]'));
-        const res = await getOne();
-        expect(res.status).toBe(200);
-        expect((await res.json()).existing_video).toBeNull();
+    it('F6 鎖定：PATCH song_videos?id=eq.<videoRef> 帶 community_locked:true；解鎖帶 false', async () => {
+        sb = () => new Response(JSON.stringify([{ id: REF }]), { status: 200 });
+        const lock = await adminPost({ request: adminReq('?action=lock', { videoRef: REF, locked: true }), env: ENV() });
+        expect(lock.status).toBe(200);
+        expect(sbCalls()).toHaveLength(1);
+        expect(sbCalls()[0].method).toBe('PATCH');
+        expect(sbCalls()[0].url).toContain(`song_videos?id=eq.${REF}`);
+        expect(sbCalls()[0].body).toEqual({ community_locked: true });
+
+        calls = [];
+        const unlock = await adminPost({ request: adminReq('?action=lock', { videoRef: REF, locked: false }), env: ENV() });
+        expect(unlock.status).toBe(200);
+        expect(sbCalls()[0].body).toEqual({ community_locked: false });
     });
 
-    it('查原歌回失敗（非 2xx）→ 500 fetch_failed', async () => {
-        mockSb(REF, () => new Response('boom', { status: 500 }));
-        const res = await getOne();
-        expect(res.status).toBe(500);
-        expect((await res.json()).error).toBe('fetch_failed');
+    it('F6 鎖定的 videoRef 不是 uuid、locked 不是 boolean → 400，不碰 DB', async () => {
+        const badRef = await adminPost({ request: adminReq('?action=lock', { videoRef: 'not-a-uuid', locked: true }), env: ENV() });
+        expect(badRef.status).toBe(400);
+        const badLocked = await adminPost({ request: adminReq('?action=lock', { videoRef: REF, locked: 'yes' }), env: ENV() });
+        expect(badLocked.status).toBe(400);
+        expect(sbCalls()).toHaveLength(0);
     });
 
-    it('既有欄位 submission 與 existing 維持不變', async () => {
-        sb = (_method, path) => {
-            if (path.startsWith('song_submissions?id=')) return new Response(JSON.stringify([{ id: SUB_ID, target_video_ref: REF, segments: [] }]));
-            if (path.startsWith('song_segments')) return new Response(JSON.stringify([{ id: 's1', start_seconds: 0 }]));
-            if (path.startsWith('song_videos')) return new Response(JSON.stringify([VIDEO_ROW]));
-            return new Response('[]');
-        };
-        const json = await (await getOne()).json();
-        expect(json.submission).toMatchObject({ id: SUB_ID, target_video_ref: REF });
-        expect(json.existing).toEqual([{ id: 's1', start_seconds: 0 }]);
+    it('F6 舊的 approve／reject 動作已移除 → 一律 400（invalid_action），不碰 DB', async () => {
+        const approve = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=approve`, { video_ref: null, video: {}, segments: [] }), env: ENV() });
+        expect(approve.status).toBe(400);
+        const reject = await adminPost({ request: adminReq(`?id=${SUB_ID}&action=reject`, { notes: 'x' }), env: ENV() });
+        expect(reject.status).toBe(400);
+        const unknown = await adminPost({ request: adminReq('?action=explode', {}), env: ENV() });
+        expect(unknown.status).toBe(400);
+        expect(sbCalls()).toHaveLength(0);
     });
 });

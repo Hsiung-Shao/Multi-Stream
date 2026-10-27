@@ -113,7 +113,7 @@ describe('F2 parseSubmissionBody 的 versionNote', () => {
     const sub = (segments: unknown[]) => ({
         videoId: VIDEO_ID,
         title: '歌回 #1',
-        vtuberId: null,
+        vtuberId: '55555555-5555-4555-8555-555555555555',
         streamedAt: null,
         segments,
         note: null,
