@@ -480,6 +480,62 @@ BEGIN
   RAISE NOTICE 'S13 ok';
 END $$;
 
+-- ───────────── S13c 一邊原唱空白時，合併不需要 allow_artist_mismatch ─────────────
+-- 規則：只有兩邊原唱都有填、且正規化後不同，才算 artist_mismatch。
+INSERT INTO public.song_segments (id, video_ref, start_seconds, end_seconds, title, original_artist, position) VALUES
+  ('00000000-0000-4000-8000-00000000b01d', '00000000-0000-4000-8000-00000000a001', 6000, 6100, 'zzS13c甲', 'zz歌手壬', 12);
+INSERT INTO public.song_segments (id, video_ref, start_seconds, end_seconds, title, original_artist, position) VALUES
+  ('00000000-0000-4000-8000-00000000b01e', '00000000-0000-4000-8000-00000000a002', 6000, 6100, 'zzS13c甲', NULL, 12);
+INSERT INTO public.song_segments (id, video_ref, start_seconds, end_seconds, title, original_artist, position) VALUES
+  ('00000000-0000-4000-8000-00000000b01f', '00000000-0000-4000-8000-00000000a001', 6100, 6200, 'zzS13c乙', 'zz歌手癸', 13);
+INSERT INTO public.song_segments (id, video_ref, start_seconds, end_seconds, title, original_artist, position) VALUES
+  ('00000000-0000-4000-8000-00000000b020', '00000000-0000-4000-8000-00000000a002', 6100, 6200, 'zzS13c乙', NULL, 13);
+
+-- S13c
+DO $$
+DECLARE tgt bigint; src bigint;
+BEGIN
+  -- 方向一：來源無原唱、目標有原唱
+  tgt := pg_temp.song_of('00000000-0000-4000-8000-00000000b01d');
+  src := pg_temp.song_of('00000000-0000-4000-8000-00000000b01e');
+  IF tgt IS NULL OR src IS NULL OR tgt = src THEN
+    RAISE EXCEPTION 'S13c 失敗：前置條件不成立（有原唱與無原唱應是兩首歌）';
+  END IF;
+  PERFORM public.admin_merge_songs(src, tgt, false);
+  PERFORM pg_temp.flush();
+  IF pg_temp.song_of('00000000-0000-4000-8000-00000000b01e') IS DISTINCT FROM tgt THEN
+    RAISE EXCEPTION 'S13c 失敗：來源無原唱時不帶旗標也應合併成功（片段應搬到目標）';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.songs WHERE id = src) THEN
+    RAISE EXCEPTION 'S13c 失敗：合併後來源歌應消失';
+  END IF;
+  IF (SELECT original_artist FROM public.songs WHERE id = tgt) IS DISTINCT FROM 'zz歌手壬' THEN
+    RAISE EXCEPTION 'S13c 失敗：應保留目標的原唱 zz歌手壬，得 %', (SELECT original_artist FROM public.songs WHERE id = tgt);
+  END IF;
+
+  -- 方向二：來源有原唱、目標無原唱
+  src := pg_temp.song_of('00000000-0000-4000-8000-00000000b01f');
+  tgt := pg_temp.song_of('00000000-0000-4000-8000-00000000b020');
+  IF tgt IS NULL OR src IS NULL OR tgt = src THEN
+    RAISE EXCEPTION 'S13c 失敗：前置條件不成立（方向二應是兩首歌）';
+  END IF;
+  PERFORM public.admin_merge_songs(src, tgt, false);
+  PERFORM pg_temp.flush();
+  IF pg_temp.song_of('00000000-0000-4000-8000-00000000b01f') IS DISTINCT FROM tgt THEN
+    RAISE EXCEPTION 'S13c 失敗：目標無原唱時不帶旗標也應合併成功（片段應搬到目標）';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.songs WHERE id = src) THEN
+    RAISE EXCEPTION 'S13c 失敗：方向二合併後來源歌應消失';
+  END IF;
+  IF (SELECT title FROM public.songs WHERE id = tgt) IS DISTINCT FROM 'zzS13c乙' THEN
+    RAISE EXCEPTION 'S13c 失敗：應保留目標的名稱 zzS13c乙';
+  END IF;
+  IF (SELECT original_artist FROM public.songs WHERE id = tgt) IS NOT NULL THEN
+    RAISE EXCEPTION 'S13c 失敗：目標原唱應維持 null，得 %', (SELECT original_artist FROM public.songs WHERE id = tgt);
+  END IF;
+  RAISE NOTICE 'S13c ok';
+END $$;
+
 -- ───────────── S14 拆開：歸屬保留、不加鍵 ─────────────
 INSERT INTO public.song_segments (id, video_ref, start_seconds, end_seconds, title, original_artist, position) VALUES
   ('00000000-0000-4000-8000-00000000b012', '00000000-0000-4000-8000-00000000a001', 600, 700, 'zzS14歌', 'zz歌手己', 6);
