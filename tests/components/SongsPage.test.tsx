@@ -1024,6 +1024,28 @@ describe('SongsPage 個人頁與單曲頁', () => {
         expect(await screen.findByRole('heading', { level: 2, name: '夜に駆ける' })).toBeInTheDocument();
         expect(window.location.search).toBe('?song=1&from=v2');
     });
+
+    it('T125 從列表進單場、再從曲目表「N 個版本」進單曲頁，按「返回」呼叫 history.back 回到那一場', async () => {
+        renderPage();
+        await screen.findByText('十月歌回');
+        fireEvent.click(within(screen.getByRole('region', { name: '歌曲目錄' })).getByRole('button', { name: '十月歌回' }));
+        await screen.findByRole('heading', { level: 2, name: '十月歌回' });
+        const table = within(screen.getByRole('main')).getByRole('table');
+        fireEvent.click(within(within(table).getByRole('row', { name: /夜に駆ける/ })).getByRole('button', { name: '3 個版本' }));
+        const back = await screen.findByRole('button', { name: '返回' });
+
+        // 兩筆歷史都是頁內推入的：返回要用 back，不能再多推一筆
+        const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+        const pushSpy = vi.spyOn(window.history, 'pushState');
+        try {
+            fireEvent.click(back);
+            expect(backSpy).toHaveBeenCalledTimes(1);
+            expect(pushSpy).not.toHaveBeenCalled();
+        } finally {
+            backSpy.mockRestore();
+            pushSpy.mockRestore();
+        }
+    });
 });
 
 describe('SongsPage 手機版個人頁', () => {
