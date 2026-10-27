@@ -191,3 +191,70 @@ describe('SongsSubmitPage 換影片', () => {
         expect(firstSong()).toBeNull();
     });
 });
+
+// ---------- v1.3 C3：投稿帶版本備註 ----------
+describe('SongsSubmitPage 版本備註（C3）', () => {
+    const noteBoxes = () => screen.getAllByRole('textbox').filter((el) => (el.getAttribute('aria-label') ?? '').includes('備註'));
+
+    async function importOne() {
+        renderPage();
+        fireEvent.change(screen.getByRole('textbox', { name: 'YouTube 網址' }), { target: { value: `https://youtu.be/${VIDEO}` } });
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '歌回標題' })).toHaveValue('測試歌回 #1'));
+        fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: '0:10-3:00 歌A / 原唱A' } });
+        fireEvent.click(screen.getByRole('button', { name: /取代現有片段/ }));
+        await waitFor(() => expect(noteBoxes()).toHaveLength(1));
+    }
+    async function send() {
+        const btn = screen.getByRole('button', { name: /^送出(投稿|修正)$/ });
+        await waitFor(() => expect(btn).toBeEnabled());
+        fireEvent.click(btn);
+        await waitFor(() => expect(submitCalls()).toHaveLength(1));
+        const [, init] = submitCalls()[0] as [string, RequestInit];
+        return JSON.parse(String(init.body)).segments as { versionNote: string | null }[];
+    }
+
+    it('填了備註：送出的片段帶 versionNote（trim 後）', async () => {
+        await importOne();
+        fireEvent.change(noteBoxes()[0], { target: { value: '  清唱 ' } });
+        expect((await send())[0].versionNote).toBe('清唱');
+    });
+
+    it('沒填備註：versionNote 是 null，不是空字串', async () => {
+        await importOne();
+        expect((await send())[0].versionNote).toBeNull();
+    });
+
+    it('備註只有空白：versionNote 是 null', async () => {
+        await importOne();
+        fireEvent.change(noteBoxes()[0], { target: { value: '   ' } });
+        expect((await send())[0].versionNote).toBeNull();
+    });
+
+    it('備註超過 30 字：顯示錯誤、送出鍵停用', async () => {
+        await importOne();
+        fireEvent.change(noteBoxes()[0], { target: { value: '字'.repeat(31) } });
+        expect(screen.getByText(/備註最多 30 字/)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '送出投稿' })).toBeDisabled();
+    });
+
+    it('用目錄預填既有片段時，片段的 versionNote 帶進備註欄，原樣送出', async () => {
+        const catalog = [{
+            v: VIDEO, t: '已上架歌回', d: null, vt: null,
+            s: [['abcd1234', 10, 200, '歌A', '原唱A', 3, 12, '清唱'], ['efgh5678', 300, 400, '歌B', null, 0, 13, null]],
+        }, { songs: [[12, '歌A', '原唱A'], [13, '歌B', null]] }];
+        fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.startsWith('/api/songs/catalog')) return json(catalog);
+            if (url.startsWith('https://www.youtube.com/oembed')) return json({ title: '已上架歌回' });
+            if (url.startsWith('/api/supabase-config')) return json({ url: 'https://db.example.co', anonKey: 'anon' });
+            if (url.includes('/rest/v1/streams')) return json([]);
+            if (url.startsWith('/api/songs/submissions')) return submitResponse();
+            return json({}, 404);
+        });
+        renderPage();
+        fireEvent.change(screen.getByRole('textbox', { name: 'YouTube 網址' }), { target: { value: `https://youtu.be/${VIDEO}` } });
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '第 2 首歌名' })).toHaveValue('歌B'));
+        await waitFor(() => expect(noteBoxes().map((b) => (b as HTMLInputElement).value)).toEqual(['清唱', '']));
+        expect((await send()).map((s) => s.versionNote)).toEqual(['清唱', null]);
+    });
+});

@@ -1,10 +1,11 @@
 // 共用片段編輯器：匯入預覽可勾選排除、沒寫結束的列標「估計」、改過結束時間後標記消失
 import { describe, it, expect, beforeAll } from 'vitest';
+import type React from 'react';
 import { useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import i18n from '../../../src/i18n/i18n';
 import { SegmentEditor } from '../../../src/features/songs/components/SegmentEditor';
-import { computeRowIssues, prepareImport, lineHasExplicitEnd, type SegmentRowDraft } from '../../../src/features/songs/components/segmentRows';
+import { computeRowIssues, emptyRow, prepareImport, lineHasExplicitEnd, type SegmentRowDraft } from '../../../src/features/songs/components/segmentRows';
 import { parseTimelineDetailed } from '../../../src/features/songs/lib/timelineParser';
 
 beforeAll(async () => {
@@ -69,5 +70,96 @@ describe('SegmentEditor', () => {
         fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: text } });
         expect(screen.getByText('已略過 1 行其他版本（└ ├ 開頭）')).toBeInTheDocument();
         expect(screen.getByText('第 4 行起是「時間軸」段落，之後未解析')).toBeInTheDocument();
+    });
+});
+
+// ---------- v1.3 C1：備註欄與配對標籤 ----------
+type MatchInfoMap = NonNullable<React.ComponentProps<typeof SegmentEditor>['matchInfo']>;
+
+const mkRow = (title: string, artist = ''): SegmentRowDraft => ({ ...emptyRow('0:00'), end: '3:00', title, artist });
+
+function NoteHarness({ initial, matchInfo, onRows }: { initial: SegmentRowDraft[]; matchInfo?: MatchInfoMap; onRows?: (rows: SegmentRowDraft[]) => void }) {
+    const [rows, setRows] = useState<SegmentRowDraft[]>(initial);
+    onRows?.(rows);
+    return (
+        <SegmentEditor
+            rows={rows}
+            onRowsChange={setRows}
+            issues={computeRowIssues(rows, 1000)}
+            player={null}
+            duration={1000}
+            matchInfo={matchInfo}
+        />
+    );
+}
+
+const noteBoxes = () => screen.getAllByRole('textbox').filter((el) => (el.getAttribute('aria-label') ?? '').includes('備註'));
+
+describe('SegmentEditor 備註欄（C1）', () => {
+    it('每列有一個備註輸入框，上限 30 字', () => {
+        render(<NoteHarness initial={[mkRow('歌A'), mkRow('歌B')]} />);
+        const boxes = noteBoxes();
+        expect(boxes).toHaveLength(2);
+        boxes.forEach((b) => expect(b).toHaveAttribute('maxlength', '30'));
+    });
+
+    it('輸入備註後，列資料的 note 變成新值，其他列不受影響', () => {
+        let latest: SegmentRowDraft[] = [];
+        render(<NoteHarness initial={[mkRow('歌A'), mkRow('歌B')]} onRows={(r) => { latest = r; }} />);
+        fireEvent.change(noteBoxes()[1], { target: { value: '清唱' } });
+        expect(latest.map((r) => r.note)).toEqual(['', '清唱']);
+        expect(noteBoxes()[1]).toHaveValue('清唱');
+    });
+
+    it('備註超過 30 字時，該列顯示「備註最多 30 字」', () => {
+        render(<NoteHarness initial={[mkRow('歌A')]} />);
+        expect(screen.queryByText(/備註最多 30 字/)).toBeNull();
+        fireEvent.change(noteBoxes()[0], { target: { value: '字'.repeat(31) } });
+        expect(screen.getByText(/備註最多 30 字/)).toBeInTheDocument();
+    });
+});
+
+describe('SegmentEditor 配對標籤 matchInfo（C1）', () => {
+    const song = (title: string, artist: string | null, versions: number) => ({ id: 1, title, artist, versions });
+
+    it('existing 顯示「已配對：歌名（N 個版本）」', () => {
+        const rows = [mkRow('想你時風起', '原唱A')];
+        const info: MatchInfoMap = new Map([[rows[0].key, { status: 'existing', song: song('想你時風起', '原唱A', 4) }]]);
+        render(<NoteHarness initial={rows} matchInfo={info} />);
+        expect(screen.getByText('已配對：想你時風起（4 個版本）')).toBeInTheDocument();
+    });
+
+    it('new 顯示「新歌曲」', () => {
+        const rows = [mkRow('全新的歌')];
+        const info: MatchInfoMap = new Map([[rows[0].key, { status: 'new' }]]);
+        render(<NoteHarness initial={rows} matchInfo={info} />);
+        expect(screen.getByText('新歌曲')).toBeInTheDocument();
+    });
+
+    it('similar 顯示同名歌的歌名／原唱與版本數；同名歌沒填原唱時顯示「未填原唱」', () => {
+        const rows = [mkRow('同名歌', '原唱B'), mkRow('同名歌', '原唱C')];
+        const info: MatchInfoMap = new Map([
+            [rows[0].key, { status: 'similar', similar: [song('同名歌', '原唱A', 2)] }],
+            [rows[1].key, { status: 'similar', similar: [song('同名歌', null, 3)] }],
+        ]);
+        render(<NoteHarness initial={rows} matchInfo={info} />);
+        expect(screen.getByText('新歌曲・同名：同名歌／原唱A（2）')).toBeInTheDocument();
+        expect(screen.getByText('新歌曲・同名：同名歌／未填原唱（3）')).toBeInTheDocument();
+    });
+
+    it('只在對應的列顯示：matchInfo 沒有的列不出現標籤', () => {
+        const rows = [mkRow('歌A'), mkRow('歌B')];
+        const info: MatchInfoMap = new Map([[rows[1].key, { status: 'new' }]]);
+        render(<NoteHarness initial={rows} matchInfo={info} />);
+        const bodyRows = within(table()).getAllByRole('row').slice(1);
+        expect(within(bodyRows[0]).queryByText('新歌曲')).toBeNull();
+        expect(within(bodyRows[1]).getByText('新歌曲')).toBeInTheDocument();
+    });
+
+    it('沒傳 matchInfo 時三種標籤都不出現', () => {
+        render(<NoteHarness initial={[mkRow('歌A')]} />);
+        expect(screen.queryByText(/已配對：/)).toBeNull();
+        expect(screen.queryByText('新歌曲')).toBeNull();
+        expect(screen.queryByText(/新歌曲・同名/)).toBeNull();
     });
 });

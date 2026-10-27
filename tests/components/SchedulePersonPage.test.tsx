@@ -1,6 +1,6 @@
 // 個人週表頁：頭部資訊、直播中一鍵在畫布觀看（YouTube 優先）、合併標籤、週表預告、noindex、404
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../src/i18n/i18n';
 import type { SchedulePerson } from '../../src/features/schedule/personSource';
@@ -115,5 +115,65 @@ describe('SchedulePersonPage', () => {
         expect(await screen.findByRole('heading', { level: 1, name: '找不到這位實況主' })).toBeInTheDocument();
         expect(robots()).toMatch(/^noindex/);
         expect(screen.getByRole('link', { name: '回到開台週表' })).toHaveAttribute('href', '/schedule');
+    });
+});
+
+// ---------- v1.3 C5：歌回區的「完整歌單」連結 ----------
+describe('SchedulePersonPage 完整歌單連結（C5）', () => {
+    const catalogVideo = (vtuberId: string) => ({
+        v: 'songvideo01', t: '歌回一', d: '2026-09-20T12:00:00Z', vt: { i: vtuberId, n: '某人', img: null },
+        s: [['abcd1234', 10, 200, '歌A', '原唱A', 0, null, null]],
+    });
+    let catalog: unknown[];
+    let catalogFetched: () => boolean;
+
+    beforeEach(async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(NOW);
+        await i18n.changeLanguage('zh-TW');
+        vi.clearAllMocks();
+        useUIStore.setState({ page: 'schedule:taione' });
+        h.fetchPerson.mockResolvedValue(person());
+        catalog = [];
+        const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.startsWith('/api/songs/catalog')) return new Response(JSON.stringify(catalog), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            return new Response('{}', { status: 404 });
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        catalogFetched = () => fetchMock.mock.calls.some(([u]) => String(u).startsWith('/api/songs/catalog'));
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.useRealTimers();
+    });
+
+    const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+
+    it('這位有歌回時，歌回區有「完整歌單」連結，指向 /songs?vtuber=<person.id>', async () => {
+        catalog = [catalogVideo('v1')];
+        renderPage();
+        expect(await screen.findByText('歌回一')).toBeInTheDocument();
+        const link = await screen.findByRole('link', { name: /完整歌單/ });
+        expect(link).toHaveAttribute('href', '/songs?vtuber=v1');
+        expect(within(screen.getByRole('region', { name: /歌回/ })).getByRole('link', { name: /完整歌單/ })).toBe(link);
+    });
+
+    it('目錄是空的時不顯示連結', async () => {
+        renderPage();
+        await screen.findByRole('heading', { level: 1, name: '台一' });
+        await waitFor(() => expect(catalogFetched()).toBe(true));
+        await settle();
+        expect(screen.queryByRole('link', { name: /完整歌單/ })).toBeNull();
+    });
+
+    it('目錄只有別人的歌回時不顯示連結', async () => {
+        catalog = [catalogVideo('someone-else')];
+        renderPage();
+        await screen.findByRole('heading', { level: 1, name: '台一' });
+        await waitFor(() => expect(catalogFetched()).toBe(true));
+        await settle();
+        expect(screen.queryByRole('link', { name: /完整歌單/ })).toBeNull();
     });
 });
