@@ -1084,3 +1084,164 @@ describe('SongsPage 手機版個人頁', () => {
         await waitFor(() => expect(document.activeElement).toBe(h2));
     });
 });
+
+// ---------- v1.3 回歸：個人頁排序記憶、跨 VTuber 返回的捲動還原、直開單場後的返回 ----------
+describe('SongsPage 個人頁與單曲頁回歸（排序、捲動、返回）', () => {
+    const SLOW = { timeout: 5000 };
+    const originalDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    const stored = new WeakMap<Element, number>();
+    const isViewport = (el: Element) => el.hasAttribute('data-radix-scroll-area-viewport');
+
+    beforeEach(() => {
+        resetUrl();
+        fetchMock.mockImplementation(async () => jsonRes(CATALOG2));
+    });
+    afterEach(() => {
+        if (originalDescriptor) Object.defineProperty(Element.prototype, 'scrollTop', originalDescriptor);
+        resetUrl();
+    });
+
+    const openVtuber = async (name: string) => {
+        const nav = screen.getByRole('navigation', { name: '歌單導覽' });
+        fireEvent.click(await within(within(nav).getByRole('group', { name: 'VTuber' })).findByRole('button', { name }, SLOW));
+        return screen.findByRole('heading', { level: 2, name }, SLOW);
+    };
+
+    it('T126 個人頁歌單選「最常唱」後進單曲頁再返回，排序仍是最常唱', async () => {
+        // 星川：「新歌」只唱過 1 次但最新，「多版本歌」唱過 2 次但較舊 → 最新與最常唱的順序相反
+        const catalog = [
+            {
+                v: 'aaaaaaaaaaa', t: '新歌回', d: '2026-10-20T12:00:00Z', vt: { i: 'v1', n: '星川測試', img: null },
+                s: [['aaaaaaa1', 0, 100, '新歌', null, 0, 11, null]],
+            },
+            {
+                v: 'bbbbbbbbbbb', t: '舊歌回一', d: '2026-09-01T12:00:00Z', vt: { i: 'v1', n: '星川測試', img: null },
+                s: [['bbbbbbb1', 0, 100, '多版本歌', null, 0, 12, null]],
+            },
+            {
+                v: 'ccccccccccc', t: '舊歌回二', d: '2026-08-01T12:00:00Z', vt: { i: 'v1', n: '星川測試', img: null },
+                s: [['ccccccc1', 0, 100, '多版本歌', null, 0, 12, null]],
+            },
+            { songs: [[11, '新歌', null], [12, '多版本歌', null]] },
+        ];
+        fetchMock.mockImplementation(async () => jsonRes(catalog));
+        renderPage();
+        await screen.findByText('新歌回');
+        await openVtuber('星川測試');
+        const main = screen.getByRole('main');
+        const order = () =>
+            within(main).getAllByRole('button', { name: /^(新歌|多版本歌)$/ }).map((b) => b.textContent);
+
+        fireEvent.click(within(main).getByRole('button', { name: '最常唱' }));
+        await waitFor(() => expect(within(main).getByRole('button', { name: '最常唱' })).toHaveAttribute('aria-pressed', 'true'));
+        expect(order()).toEqual(['多版本歌', '新歌']);
+
+        fireEvent.click(within(main).getByRole('button', { name: '多版本歌' }));
+        await screen.findByRole('heading', { level: 2, name: '多版本歌' });
+
+        // 模擬瀏覽器返回到個人頁
+        window.history.replaceState(null, '', '/songs?vtuber=v1');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+
+        await screen.findByRole('heading', { level: 2, name: '星川測試' });
+        expect(within(screen.getByRole('main')).getByRole('button', { name: '最常唱' })).toHaveAttribute('aria-pressed', 'true');
+        expect(order()).toEqual(['多版本歌', '新歌']);
+    }, 15000);
+
+    it.each([['桌機', false], ['手機', true]])('T127 %s版：從 A 的歌回分頁換到 B 再返回，A 歌回分頁的捲動位置還原', async (_label, narrow) => {
+        const originalMatchMedia = window.matchMedia;
+        if (narrow) {
+            window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+                matches: query === '(width < 64rem)',
+                media: query,
+                onchange: null,
+                addListener: vi.fn(),
+                removeListener: vi.fn(),
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+                dispatchEvent: vi.fn(),
+            })) as unknown as typeof window.matchMedia;
+        }
+        try {
+        fetchMock.mockImplementation(async () => jsonRes(BIG_CATALOG_V2));
+        // 夾值：只對 Radix 捲動區生效，依區內 li／tr 數量決定上限（每個當 100px，可捲 數量×100−100）
+        Object.defineProperty(Element.prototype, 'scrollTop', {
+            configurable: true,
+            get(this: Element) {
+                return isViewport(this) ? (stored.get(this) ?? 0) : (originalDescriptor?.get?.call(this) ?? 0);
+            },
+            set(this: Element, value: number) {
+                if (!isViewport(this)) {
+                    originalDescriptor?.set?.call(this, value);
+                    return;
+                }
+                const max = Math.max(0, this.querySelectorAll('li, tr').length * 100 - 100);
+                stored.set(this, Math.min(max, Math.max(0, value)));
+            },
+        });
+        // 目前個人頁 h2 所在的捲動區
+        const viewportOf = (h2: HTMLElement): HTMLElement => {
+            const vp = Array.from(document.querySelectorAll<HTMLElement>('[data-radix-scroll-area-viewport]')).find((v) => v.contains(h2));
+            if (!vp) throw new Error('找不到中欄捲動區');
+            return vp;
+        };
+
+        const pick = async (name: string) => {
+            if (!narrow) return openVtuber(name);
+            fireEvent.click(screen.getByRole('button', { name: '選單' }));
+            const sheet = await screen.findByRole('dialog');
+            fireEvent.click(await within(within(sheet).getByRole('group', { name: 'VTuber' })).findByRole('button', { name }, SLOW));
+            return screen.findByRole('heading', { level: 2, name }, SLOW);
+        };
+        renderPage();
+        await screen.findByRole('button', { name: /^顯示更多/ }, SLOW);
+        const h2A = await pick('星川測試');
+        activate(await screen.findByRole('tab', { name: '歌回' }, SLOW));
+        await waitFor(() => expect(cardCount()).toBe(15), SLOW);
+
+        const vp = viewportOf(h2A);
+        vp.scrollTop = 300;
+        fireEvent.scroll(vp);
+        // 守門：15 場歌回夠高，夾值模擬下 300 讀得回來
+        expect(vp.scrollTop).toBe(300);
+
+        // 換到 B（歌單分頁），再模擬瀏覽器返回到 A 的歌回分頁
+        await pick('月見測試');
+        window.history.replaceState(null, '', '/songs?vtuber=v1&tab=videos');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+
+        const h2Back = await screen.findByRole('heading', { level: 2, name: '星川測試' }, SLOW);
+        await waitFor(() => expect(cardCount()).toBe(15), SLOW);
+        await waitFor(() => expect(viewportOf(h2Back).scrollTop).toBe(300), SLOW);
+            } finally {
+            window.matchMedia = originalMatchMedia;
+        }
+    }, 20000);
+
+    it('T128 直接開單場、進單曲頁再返回後，按「返回歌回列表」回到列表', async () => {
+        window.history.replaceState(null, '', '/songs?v=aaaaaaaaaaa');
+        renderPage();
+        await screen.findByRole('heading', { level: 2, name: '十月歌回' });
+        const table = within(screen.getByRole('main')).getByRole('table');
+        fireEvent.click(within(within(table).getByRole('row', { name: /夜に駆ける/ })).getByRole('button', { name: '3 個版本' }));
+        const back = await screen.findByRole('button', { name: '返回' });
+
+        // jsdom 的 back 不一定觸發 popstate：自己把網址退回 ?v= 並送出 popstate
+        const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {
+            window.history.replaceState(null, '', '/songs?v=aaaaaaaaaaa');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        });
+        try {
+            fireEvent.click(back);
+            expect(backSpy).toHaveBeenCalledTimes(1);
+            await screen.findByRole('heading', { level: 2, name: '十月歌回' });
+            // 之後的返回不該再去呼叫 back（頁內已經沒有上一筆列表）
+            backSpy.mockImplementation(() => {});
+            fireEvent.click(screen.getByRole('button', { name: '返回歌回列表' }));
+            expect(await screen.findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
+            expect(window.location.search).not.toContain('song=');
+        } finally {
+            backSpy.mockRestore();
+        }
+    });
+});
