@@ -1148,7 +1148,17 @@ describe('SongsPage 個人頁與單曲頁回歸（排序、捲動、返回）', 
         expect(order()).toEqual(['多版本歌', '新歌']);
     }, 15000);
 
-    it.each([['桌機', false], ['手機', true]])('T127 %s版：從 A 的歌回分頁換到 B 再返回，A 歌回分頁的捲動位置還原', async (_label, narrow) => {
+    // T127b：A 的 15 場歌回都唱同一首歌 → A 歌單只有 1 列（很矮）、歌回分頁有 15 張卡（很高）
+    const SHORT_PLAYLIST_CATALOG = [
+        ...BIG_CATALOG.map((v, i) => ({ ...v, s: v.s.map((row) => [...row, 0, i % 2 === 0 ? 1000 : i + 1, null]) })),
+        { songs: [[1000, '共同曲', '原唱'], ...BIG_CATALOG.filter((_, i) => i % 2 === 1).map((v) => [BIG_CATALOG.indexOf(v) + 1, `歌${BIG_CATALOG.indexOf(v)}`, '原唱'])] },
+    ];
+    it.each([
+        ['T127 桌機版', false, BIG_CATALOG_V2],
+        ['T127 手機版', true, BIG_CATALOG_V2],
+        ['T127b 桌機版（A 歌單只有 1 列）', false, SHORT_PLAYLIST_CATALOG],
+        ['T127b 手機版（A 歌單只有 1 列）', true, SHORT_PLAYLIST_CATALOG],
+    ])('%s：從 A 的歌回分頁換到 B 再返回，A 歌回分頁的捲動位置還原', async (_label, narrow, catalogData) => {
         const originalMatchMedia = window.matchMedia;
         if (narrow) {
             window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -1163,7 +1173,7 @@ describe('SongsPage 個人頁與單曲頁回歸（排序、捲動、返回）', 
             })) as unknown as typeof window.matchMedia;
         }
         try {
-        fetchMock.mockImplementation(async () => jsonRes(BIG_CATALOG_V2));
+        fetchMock.mockImplementation(async () => jsonRes(catalogData));
         // 夾值：只對 Radix 捲動區生效，依區內 li／tr 數量決定上限（每個當 100px，可捲 數量×100−100）
         Object.defineProperty(Element.prototype, 'scrollTop', {
             configurable: true,
