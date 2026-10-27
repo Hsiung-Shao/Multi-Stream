@@ -1,7 +1,7 @@
 -- 歌回播放清單 v1.3：後台「歌曲整理」RPC（合併、拆開、改名、配對預覽、搜尋、疑似重複、單曲明細）
 --
 -- 使用者裁定（2026-10-27）與主對話裁定：
---   - 合併：來源歌的鍵和片段搬到目標歌，名稱與原唱保留目標的；兩邊原唱鍵不同時，沒帶 allow 旗標就拒絕（artist_mismatch）。
+--   - 合併：來源歌的鍵和片段搬到目標歌，名稱與原唱保留目標的；兩邊原唱都有填且鍵不同時，沒帶 allow 旗標就拒絕（artist_mismatch）。
 --   - 拆開：把某個版本拆成一首新歌（沿用該版本的歌名與原唱），不加鍵；之後同名新片段仍配到持有鍵的原歌。
 --     只剩一個版本時回 already_single。
 --   - 改名：改歌名與原唱（第三參數 null＝清空原唱），加上新鍵、舊鍵保留；新鍵已屬於別首歌時回 key_taken。
@@ -69,9 +69,11 @@ begin
         raise exception 'song_not_found' using errcode = 'P0002';
     end if;
 
+    -- 只有兩邊原唱都有填、而且正規化後不同才算不一致；一邊空白（未填）直接併入目標
     if not coalesce(p_allow_artist_mismatch, false)
-       and coalesce(public.song_norm_text(v_src.original_artist), '')
-           is distinct from coalesce(public.song_norm_text(v_tgt.original_artist), '') then
+       and nullif(btrim(v_src.original_artist), '') is not null
+       and nullif(btrim(v_tgt.original_artist), '') is not null
+       and public.song_norm_text(v_src.original_artist) <> public.song_norm_text(v_tgt.original_artist) then
         raise exception 'artist_mismatch' using errcode = 'P0001';
     end if;
 
