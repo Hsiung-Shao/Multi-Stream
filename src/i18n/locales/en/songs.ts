@@ -114,7 +114,7 @@ export default {
     'editor.import.replace': 'Replace current songs',
     'editor.import.append': 'Append to the end',
     'editor.estimated': 'est.',
-    'editor.estimatedHint': 'No end time was given; this is an estimate (the earliest of the next song, 6 minutes after the start, or the end of the video). Please check it with the player',
+    'editor.estimatedHint': 'No end time was given; this is an estimate (the earliest of the next song, 4 minutes 30 seconds after the start, or the end of the video). Please check it with the player',
     'editor.estimatedCount': 'End times estimated for {{count}} songs; please check them',
     'editor.segments': 'Songs ({{count}})',
     'editor.issueCount': 'Rows with errors: {{count}}. Fix them before saving',

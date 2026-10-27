@@ -114,7 +114,7 @@ export default {
     'editor.import.replace': '현재 곡 대체',
     'editor.import.append': '끝에 추가',
     'editor.estimated': '추정',
-    'editor.estimatedHint': '종료 시간이 적혀 있지 않아 추정한 값입니다(다음 곡 시작, 시작 후 6분, 영상 끝 중 가장 이른 시점). 플레이어로 확인해 주세요',
+    'editor.estimatedHint': '종료 시간이 적혀 있지 않아 추정한 값입니다(다음 곡 시작, 시작 후 4분 30초, 영상 끝 중 가장 이른 시점). 플레이어로 확인해 주세요',
     'editor.estimatedCount': '{{count}}곡의 종료 시간은 추정값입니다. 확인해 주세요',
     'editor.segments': '곡({{count}}곡)',
     'editor.issueCount': '오류가 있는 줄 {{count}}개. 고친 뒤 저장할 수 있습니다',

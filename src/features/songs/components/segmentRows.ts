@@ -5,12 +5,12 @@
  * - endEstimated：結束時間是估計值（estimateEnds 補的），使用者改過該列結束時間就清掉。
  * - 時間軸匯入：解析器會把「沒寫結束」的列補成下一首開始；粉絲時間軸幾乎都沒寫結束，
  *   直接採用會把歌與歌之間的聊天也包進片段。所以匯入時先看原文那一行有沒有寫區間：
- *   沒寫就當成沒有結束時間，交給 estimateEnds（下一首開始、開始＋6 分鐘、影片長度取最早）。
+ *   沒寫就當成沒有結束時間，交給 estimateEnds（下一首開始、開始＋4 分 30 秒、影片長度取最早）；短影片只有一首（單曲）時結束直接用影片長度。
  * - note：版本備註（練歌版、清唱…），保留輸入文字，送出時才 trim、空白轉 null。
  */
 import { formatTimecode, parseTimecode } from '../lib/timecode';
 import { validateSegments, type SegmentIssueCode } from '../lib/segmentValidation';
-import { estimateEnds } from '../lib/endEstimate';
+import { estimateEnds, isSingleSongVideo } from '../lib/endEstimate';
 import type { ParsedRow } from '../lib/timelineParser';
 
 export interface SegmentRowDraft {
@@ -78,7 +78,9 @@ export function prepareImport(rows: ParsedRow[], lines: string[], duration: numb
         ...r,
         end: r.end !== null && lineHasExplicitEnd(lines[r.line] ?? '') ? r.end : null,
     }));
-    return estimateEnds(withExplicit, { duration }).map((r) => ({
+    // 單曲影片（短影片只有一首）：整支就是這首歌，結束用影片長度，不套 4:30 上限
+    const maxSeconds = isSingleSongVideo(duration, withExplicit.length) ? duration! : undefined;
+    return estimateEnds(withExplicit, { duration, maxSeconds }).map((r) => ({
         start: r.start,
         end: r.end,
         title: r.title,

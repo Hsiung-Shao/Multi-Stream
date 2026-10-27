@@ -25,12 +25,53 @@ describe('prepareImport', () => {
     it('原文沒寫區間的列改用估計結束，有區間的保留原值', () => {
         const lines = TEXT.split('\n');
         const rows = prepareImport(parseTimelineDetailed(TEXT).rows, lines, 1000);
-        expect(rows.map((r) => [r.end, r.endEstimated])).toEqual([[360, true], [720, true], [840, false]]);
+        expect(rows.map((r) => [r.end, r.endEstimated])).toEqual([[270, true], [720, true], [840, false]]);
     });
 
     it('全形與數學粗體數字的區間也認得', () => {
         expect(lineHasExplicitEnd('𝟏𝟏. １２：００－１４：００ 歌')).toBe(true);
         expect(lineHasExplicitEnd('11. 12:00 歌 - 原唱')).toBe(false);
+    });
+});
+
+const parse = (text: string) => parseTimelineDetailed(text).rows;
+
+describe('prepareImport 結束估計新規格', () => {
+    it('E1 多首且影片很長時，沒寫結束的列以開始後 4 分 30 秒封頂', () => {
+        const text = '0:00 歌A\n10:00 歌B';
+        const rows = prepareImport(parse(text), text.split('\n'), 1000);
+        expect(rows[0]).toMatchObject({ end: 270, endEstimated: true });
+    });
+
+    it('E2 短影片只有一首時結束用影片長度而不是 4:30', () => {
+        const text = '0:00 歌A';
+        const rows = prepareImport(parse(text), text.split('\n'), 400);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ end: 400, endEstimated: true });
+    });
+
+    it('E3 長影片單列仍套 4:30 上限', () => {
+        const text = '1:00 歌A';
+        const rows = prepareImport(parse(text), text.split('\n'), 7200);
+        expect(rows[0]).toMatchObject({ end: 60 + 270, endEstimated: true });
+    });
+
+    it('E3 短影片但有兩首時仍套 4:30，第二首收在影片長度', () => {
+        const text = '0:00 歌A\n2:00 歌B';
+        const rows = prepareImport(parse(text), text.split('\n'), 300);
+        expect(rows.map((r) => r.end)).toEqual([120, 300]);
+    });
+
+    it('E3 影片剛好 600 秒的單列結束用影片長度；601 秒則套 4:30', () => {
+        const text = '0:00 歌A';
+        expect(prepareImport(parse(text), text.split('\n'), 600)[0].end).toBe(600);
+        expect(prepareImport(parse(text), text.split('\n'), 601)[0].end).toBe(270);
+    });
+
+    it('E2 單列且已寫明結束時，保留原文結束不被影片長度蓋過', () => {
+        const text = '0:00-2:00 歌A';
+        const rows = prepareImport(parse(text), text.split('\n'), 310);
+        expect(rows[0]).toMatchObject({ end: 120, endEstimated: false });
     });
 });
 
@@ -45,8 +86,8 @@ describe('SegmentEditor', () => {
         expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌A');
         expect(screen.getByRole('textbox', { name: '第 2 首歌名' })).toHaveValue('歌C');
         expect(screen.queryByRole('textbox', { name: '第 3 首歌名' })).toBeNull();
-        // 歌B 被排除：歌A 的結束取「開始＋6 分鐘」而不是歌B 的開始
-        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('6:00');
+        // 歌B 被排除：歌A 的結束取「開始＋4 分 30 秒」而不是歌B 的開始
+        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('4:30');
     });
 
     it('估計的結束時間顯示標記，改過結束時間後標記消失', () => {
@@ -59,9 +100,39 @@ describe('SegmentEditor', () => {
         expect(within(rows[1]).getByText('估計')).toBeInTheDocument();
         expect(within(rows[2]).queryByText('估計')).toBeNull();
 
-        fireEvent.change(screen.getByRole('textbox', { name: '第 1 首結束時間' }), { target: { value: '4:30' } });
+        fireEvent.change(screen.getByRole('textbox', { name: '第 1 首結束時間' }), { target: { value: '4:00' } });
         expect(within(within(table()).getAllByRole('row')[1]).queryByText('估計')).toBeNull();
         expect(within(within(table()).getAllByRole('row')[2]).getByText('估計')).toBeInTheDocument();
+    });
+
+    it('E2 兩行時間軸取消勾選一行後只剩一列，短影片結束用影片長度 6:40', () => {
+        render(<Harness duration={400} />);
+        fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: '1. 0:00 歌A / 原唱A\n2. 2:00 歌B / 原唱B' } });
+        fireEvent.click(screen.getByRole('checkbox', { name: '匯入「歌B」' }));
+        fireEvent.click(screen.getByRole('button', { name: /取代現有片段/ }));
+        expect(screen.queryByRole('textbox', { name: '第 2 首歌名' })).toBeNull();
+        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('6:40');
+    });
+
+    it('E4 空白表格新增一列，短影片（240 秒）自動帶整支 0:00～4:00', () => {
+        render(<Harness duration={240} />);
+        fireEvent.click(screen.getByRole('button', { name: '新增一列' }));
+        expect(screen.getByRole('textbox', { name: '第 1 首開始時間' })).toHaveValue('0:00');
+        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('4:00');
+    });
+
+    it('E4 空白表格新增一列，長影片（1000 秒）結束維持空白', () => {
+        render(<Harness duration={1000} />);
+        fireEvent.click(screen.getByRole('button', { name: '新增一列' }));
+        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('');
+    });
+
+    it('E4 已有一列時再新增，短影片也不自動帶整支（開始接上一列結束、結束空白）', () => {
+        render(<Harness duration={240} />);
+        fireEvent.click(screen.getByRole('button', { name: '新增一列' }));
+        fireEvent.click(screen.getByRole('button', { name: '新增一列' }));
+        expect(screen.getByRole('textbox', { name: '第 2 首開始時間' })).toHaveValue('4:00');
+        expect(screen.getByRole('textbox', { name: '第 2 首結束時間' })).toHaveValue('');
     });
 
     it('顯示略過其他版本行數與停止解析的行號', () => {

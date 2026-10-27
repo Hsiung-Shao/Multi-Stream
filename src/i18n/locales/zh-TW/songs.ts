@@ -114,7 +114,7 @@ export default {
     'editor.import.replace': '取代現有片段',
     'editor.import.append': '附加到最後',
     'editor.estimated': '估計',
-    'editor.estimatedHint': '原文沒寫結束時間，這是估計值（下一首開始、開始後 6 分鐘、影片結尾取最早），請用播放器確認',
+    'editor.estimatedHint': '原文沒寫結束時間，這是估計值（下一首開始、開始後 4 分 30 秒、影片結尾取最早），請用播放器確認',
     'editor.estimatedCount': '{{count}} 首的結束時間是估計值，請確認',
     'editor.segments': '片段（{{count}} 首）',
     'editor.issueCount': '{{count}} 列有錯誤，修正後才能儲存',

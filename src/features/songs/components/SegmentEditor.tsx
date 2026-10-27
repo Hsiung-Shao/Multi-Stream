@@ -20,6 +20,7 @@ import { ScrollArea } from '../../../components/ui/scroll-area';
 import { cn } from '../../../components/ui/utils';
 import { formatTimecode, parseTimecode } from '../lib/timecode';
 import { parseTimelineDetailed } from '../lib/timelineParser';
+import { isSingleSongVideo } from '../lib/endEstimate';
 import {
     emptyRow, fromImported, prepareImport, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
 } from './segmentRows';
@@ -132,8 +133,11 @@ export function SegmentEditor({
         else onRowsChange((rs) => rs.filter((r) => r.key !== key));
         onEdit?.();
     };
-    // 新列的開始預設接上一列的結束
-    const addRow = () => onRowsChange((rs) => [...rs, emptyRow(rs[rs.length - 1]?.end ?? '')]);
+    // 新列的開始預設接上一列的結束；空表格＋短影片（單曲）直接帶整支 0:00～影片長度
+    const addRow = () => onRowsChange((rs) => {
+        if (rs.length === 0 && isSingleSongVideo(duration, 1)) return [{ ...emptyRow(formatTimecode(0)), end: formatTimecode(duration!) }];
+        return [...rs, emptyRow(rs[rs.length - 1]?.end ?? '')];
+    });
     const currentTimecode = () => formatTimecode(Math.floor(player?.getCurrentTime() ?? 0));
 
     const hasPlayer = !!player;
