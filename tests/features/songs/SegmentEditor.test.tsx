@@ -1,5 +1,5 @@
 // 共用片段編輯器：匯入預覽可勾選排除、沒寫結束的列標「估計」、改過結束時間後標記消失
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import type React from 'react';
 import { useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
@@ -161,5 +161,109 @@ describe('SegmentEditor 配對標籤 matchInfo（C1）', () => {
         expect(screen.queryByText(/已配對：/)).toBeNull();
         expect(screen.queryByText('新歌曲')).toBeNull();
         expect(screen.queryByText(/新歌曲・同名/)).toBeNull();
+    });
+});
+
+// ---------- 時間欄按鈕：跳到／設為目前時間 ----------
+type PlayerProp = React.ComponentProps<typeof SegmentEditor>['player'];
+
+const mkTimed = (title: string, start: string, end: string, extra: Partial<SegmentRowDraft> = {}): SegmentRowDraft => ({
+    ...emptyRow(start),
+    end,
+    title,
+    ...extra,
+});
+
+function fakePlayer(currentTime = 0) {
+    return { getCurrentTime: vi.fn(() => currentTime), seekTo: vi.fn() };
+}
+
+function TimeHarness({ initial, player }: { initial: SegmentRowDraft[]; player: PlayerProp }) {
+    const [rows, setRows] = useState<SegmentRowDraft[]>(initial);
+    return (
+        <SegmentEditor
+            rows={rows}
+            onRowsChange={setRows}
+            issues={computeRowIssues(rows, 1000)}
+            player={player}
+            duration={1000}
+        />
+    );
+}
+
+const btn = (name: string) => screen.getByRole('button', { name });
+
+describe('SegmentEditor 時間欄按鈕', () => {
+    it('有播放器時每列開始與結束各有跳到與設為目前時間按鈕', () => {
+        const p = fakePlayer();
+        render(<TimeHarness initial={[mkTimed('歌A', '0:00', '3:00'), mkTimed('歌B', '4:00', '7:00')]} player={p} />);
+        for (const n of [1, 2]) {
+            for (const name of [`跳到第 ${n} 首開始時間`, `第 ${n} 首開始設為目前時間`, `跳到第 ${n} 首結束時間`, `第 ${n} 首結束設為目前時間`]) {
+                expect(btn(name)).toBeEnabled();
+            }
+        }
+        expect(screen.queryByRole('button', { name: '從第 1 首開始播' })).toBeNull();
+    });
+
+    it('按跳到開始時間會從開始秒數播放', () => {
+        const p = fakePlayer();
+        render(<TimeHarness initial={[mkTimed('歌A', '1:15', '4:00')]} player={p} />);
+        fireEvent.click(btn('跳到第 1 首開始時間'));
+        expect(p.seekTo).toHaveBeenCalledTimes(1);
+        expect(p.seekTo).toHaveBeenCalledWith(75);
+    });
+
+    it('按跳到結束時間會跳到結束秒數', () => {
+        const p = fakePlayer();
+        render(<TimeHarness initial={[mkTimed('歌A', '1:15', '4:30')]} player={p} />);
+        fireEvent.click(btn('跳到第 1 首結束時間'));
+        expect(p.seekTo).toHaveBeenCalledTimes(1);
+        expect(p.seekTo).toHaveBeenCalledWith(270);
+    });
+
+    it('按設為目前時間會填入播放器目前時間', () => {
+        const p = fakePlayer(125.7);
+        render(<TimeHarness initial={[mkTimed('歌A', '0:10', '0:20')]} player={p} />);
+        fireEvent.click(btn('第 1 首開始設為目前時間'));
+        expect(screen.getByRole('textbox', { name: '第 1 首開始時間' })).toHaveValue('2:05');
+        fireEvent.click(btn('第 1 首結束設為目前時間'));
+        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('2:05');
+    });
+
+    it('結束設為目前時間後估計標記消失', () => {
+        const p = fakePlayer(125.7);
+        render(<TimeHarness initial={[mkTimed('歌A', '0:00', '6:00', { endEstimated: true })]} player={p} />);
+        const row = () => within(table()).getAllByRole('row')[1];
+        expect(within(row()).getByText('估計')).toBeInTheDocument();
+        fireEvent.click(btn('第 1 首結束設為目前時間'));
+        expect(within(row()).queryByText('估計')).toBeNull();
+    });
+
+    it('時間格式錯誤時該欄跳轉按鈕停用', () => {
+        const p = fakePlayer();
+        render(<TimeHarness initial={[mkTimed('歌A', '1:00', 'abc')]} player={p} />);
+        expect(btn('跳到第 1 首結束時間')).toBeDisabled();
+        expect(btn('跳到第 1 首開始時間')).toBeEnabled();
+    });
+
+    it('沒有播放器時四顆按鈕都停用並提示先載入播放器', () => {
+        render(<TimeHarness initial={[mkTimed('歌A', '0:00', '3:00')]} player={null} />);
+        for (const name of ['跳到第 1 首開始時間', '第 1 首開始設為目前時間', '跳到第 1 首結束時間', '第 1 首結束設為目前時間']) {
+            expect(btn(name)).toBeDisabled();
+        }
+        expect(screen.getByText('貼上影片網址載入播放器後才能使用')).toBeInTheDocument();
+    });
+
+    it('有片段時標題列顯示按鈕說明，沒有片段時不顯示', () => {
+        const p = fakePlayer();
+        const { unmount } = render(<TimeHarness initial={[mkTimed('歌A', '0:00', '3:00')]} player={p} />);
+        expect(screen.getByText('跳到這個時間')).toBeInTheDocument();
+        expect(screen.getByText('設為播放器目前時間')).toBeInTheDocument();
+        expect(screen.queryByText('貼上影片網址載入播放器後才能使用')).toBeNull();
+        unmount();
+
+        render(<TimeHarness initial={[]} player={p} />);
+        expect(screen.queryByText('跳到這個時間')).toBeNull();
+        expect(screen.queryByText('設為播放器目前時間')).toBeNull();
     });
 });

@@ -3,14 +3,15 @@
 // - 匯入預覽：每列可勾選排除；顯示「已略過 N 行其他版本（└├）」「第 N 行起是『時間軸』段落，之後未解析」「第 N 行未解析」。
 // - 匯入時原文沒寫區間的列，結束時間改為估計（prepareImport → estimateEnds，影片長度取播放器），
 //   表格顯示「估計」標記；使用者改過該列結束時間後標記消失。
-// - 「設為目前時間」「從這裡播」透過 player（PreviewPlayer 的 API）；沒有播放器時按鈕停用。
+// - 開始、結束欄各有「跳到這個時間」「設為目前時間」，透過 player（PreviewPlayer 的 API）；沒有播放器時按鈕停用，
+//   標題列顯示兩個圖示的說明。跳到開始＝從這首開始播，所以不另設「從這裡播」。
 // - 取代／刪除的確認（會讓分享連結失效）由呼叫端透過 onReplace／onRemoveRow 處理；沒給就直接套用。
 // - 文字一律 i18n（songs:editor.*）：投稿頁是公開頁，後台也共用同一份。
 // - 備註欄：上限 30 字，datalist 提供常用值（仍可自由輸入）；matchInfo（只有後台會給）在歌名下顯示配對結果。
 
 import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Crosshair, Play, Plus, Trash2, Upload } from 'lucide-react';
+import { LocateFixed, Plus, Timer, Trash2, Upload } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
@@ -138,6 +139,20 @@ export function SegmentEditor({
     const hasPlayer = !!player;
     const estimatedCount = rows.filter((r) => r.endEstimated).length;
 
+    const timeButtons = (r: SegmentRowDraft, field: 'start' | 'end', n: number) => {
+        const sec = parseTimecode(r[field]);
+        return (
+            <>
+                <Button type="button" variant="ghost" size="icon" className="size-8" disabled={!hasPlayer || sec === null} onClick={() => sec !== null && player?.seekTo(sec)} title={t('editor.jumpTo')} aria-label={t(field === 'start' ? 'editor.aria.startJump' : 'editor.aria.endJump', { n })}>
+                    <LocateFixed className="size-3.5" aria-hidden="true" />
+                </Button>
+                <Button type="button" variant="ghost" size="icon" className="size-8" disabled={!hasPlayer} onClick={() => updateRow(r.key, { [field]: currentTimecode() })} title={t('editor.setNow')} aria-label={t(field === 'start' ? 'editor.aria.startNow' : 'editor.aria.endNow', { n })}>
+                    <Timer className="size-3.5" aria-hidden="true" />
+                </Button>
+            </>
+        );
+    };
+
     return (
         <div className="space-y-4">
             {/* 貼上時間軸 */}
@@ -218,6 +233,13 @@ export function SegmentEditor({
                     <h3 className="text-sm font-semibold">{t('editor.segments', { count: rows.length })}</h3>
                     {issues.size > 0 && <span className="text-[12px] text-destructive">{t('editor.issueCount', { count: issues.size })}</span>}
                     {estimatedCount > 0 && <span className="text-[12px] text-amber-600 dark:text-amber-400">{t('editor.estimatedCount', { count: estimatedCount })}</span>}
+                    {rows.length > 0 && (
+                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+                            <span className="inline-flex items-center gap-1"><LocateFixed className="size-3.5" aria-hidden="true" />{t('editor.jumpTo')}</span>
+                            <span className="inline-flex items-center gap-1"><Timer className="size-3.5" aria-hidden="true" />{t('editor.legend.setNow')}</span>
+                            {!hasPlayer && <span>{t('editor.legend.needPlayer')}</span>}
+                        </span>
+                    )}
                     <Button type="button" size="sm" variant="outline" className="ml-auto" onClick={addRow}>
                         <Plus className="size-3.5" aria-hidden="true" />{t('editor.addRow')}
                     </Button>
@@ -226,23 +248,22 @@ export function SegmentEditor({
                     <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-[13px] text-muted-foreground">{t('editor.empty')}</p>
                 ) : (
                     <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className={cn('w-full text-sm', showCode ? 'min-w-[980px]' : 'min-w-[880px]')}>
+                        <table className={cn('w-full text-sm', showCode ? 'min-w-[1000px]' : 'min-w-[900px]')}>
                             <thead className="bg-muted/40 text-[12px] text-muted-foreground">
                                 <tr>
                                     <th className="w-10 px-2 py-1.5 text-left font-medium">#</th>
-                                    <th className="w-36 px-2 py-1.5 text-left font-medium">{t('editor.col.start')}</th>
-                                    <th className="w-44 px-2 py-1.5 text-left font-medium">{t('editor.col.end')}</th>
+                                    <th className="w-44 px-2 py-1.5 text-left font-medium">{t('editor.col.start')}</th>
+                                    <th className="w-56 px-2 py-1.5 text-left font-medium">{t('editor.col.end')}</th>
                                     <th className="px-2 py-1.5 text-left font-medium">{t('editor.col.title')}</th>
                                     <th className="px-2 py-1.5 text-left font-medium">{t('editor.col.artist')}</th>
                                     <th className="w-32 px-2 py-1.5 text-left font-medium">{t('editor.col.note')}</th>
                                     {showCode && <th className="w-24 px-2 py-1.5 text-left font-medium">code</th>}
-                                    <th className="w-20 px-2 py-1.5"><span className="sr-only left-0 top-0">{t('editor.col.actions')}</span></th>
+                                    <th className="w-12 px-2 py-1.5"><span className="sr-only left-0 top-0">{t('editor.col.actions')}</span></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {rows.map((r, i) => {
                                     const rowIssues = issues.get(i);
-                                    const startSec = parseTimecode(r.start);
                                     const n = i + 1;
                                     const mark = diff?.get(r.key);
                                     const match = matchInfo?.get(r.key);
@@ -257,19 +278,15 @@ export function SegmentEditor({
                                                 )}
                                             </td>
                                             <td className="px-2 py-1.5">
-                                                <div className="flex gap-1">
+                                                <div className="flex items-center gap-1">
                                                     <Input value={r.start} onChange={(e) => updateRow(r.key, { start: e.target.value })} className="h-8 w-20 tabular-nums" aria-label={t('editor.aria.start', { n })} />
-                                                    <Button type="button" variant="ghost" size="icon" className="size-8" disabled={!hasPlayer} onClick={() => updateRow(r.key, { start: currentTimecode() })} title={t('editor.setNow')} aria-label={t('editor.aria.startNow', { n })}>
-                                                        <Crosshair className="size-3.5" aria-hidden="true" />
-                                                    </Button>
+                                                    {timeButtons(r, 'start', n)}
                                                 </div>
                                             </td>
                                             <td className="px-2 py-1.5">
                                                 <div className="flex items-center gap-1">
                                                     <Input value={r.end} onChange={(e) => updateRow(r.key, { end: e.target.value })} className="h-8 w-20 tabular-nums" aria-label={t('editor.aria.end', { n })} />
-                                                    <Button type="button" variant="ghost" size="icon" className="size-8" disabled={!hasPlayer} onClick={() => updateRow(r.key, { end: currentTimecode() })} title={t('editor.setNow')} aria-label={t('editor.aria.endNow', { n })}>
-                                                        <Clock className="size-3.5" aria-hidden="true" />
-                                                    </Button>
+                                                    {timeButtons(r, 'end', n)}
                                                     {r.endEstimated && (
                                                         <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1 text-[10.5px] font-semibold text-amber-700 dark:text-amber-300" title={t('editor.estimatedHint')}>
                                                             {t('editor.estimated')}
@@ -305,9 +322,6 @@ export function SegmentEditor({
                                             {showCode && <td className="px-2 py-1.5 font-mono text-[11.5px] text-muted-foreground">{r.code ?? t('editor.newCode')}</td>}
                                             <td className="px-2 py-1.5">
                                                 <div className="flex justify-end gap-0.5">
-                                                    <Button type="button" variant="ghost" size="icon" className="size-8" disabled={!hasPlayer || startSec === null} onClick={() => startSec !== null && player?.seekTo(startSec)} title={t('editor.playFrom')} aria-label={t('editor.aria.playFrom', { n })}>
-                                                        <Play className="size-3.5" aria-hidden="true" />
-                                                    </Button>
                                                     <Button type="button" variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => removeRow(r.key)} title={t('editor.removeRow')} aria-label={t('editor.aria.remove', { n })}>
                                                         <Trash2 className="size-3.5" aria-hidden="true" />
                                                     </Button>
