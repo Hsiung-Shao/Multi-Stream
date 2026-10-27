@@ -7,7 +7,7 @@
  * - 舊格式目錄（沒有歌曲字典）沒有歌單，只顯示歌回、不輸出分頁列。
  * - 這組 Tabs 和手機版「瀏覽／正在播放」是兩組獨立的 Radix Tabs，播放器不在任何一組裡。
  */
-import { memo, useMemo, useState } from 'react';
+import { memo, useLayoutEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListPlus, Music2, Play } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
@@ -25,9 +25,18 @@ import { formatYmd } from './dateText';
 
 const SONG_SORTS: SongListSort[] = ['latest', 'count'];
 
+/** 放在分頁內容最後：內容真的掛上 DOM 時通知頁面（Radix 分頁內容比 value 晚一次 commit 才渲染，捲動還原要等它）。只在掛上時通知一次 */
+function PanelMounted({ onMount }: { onMount: () => void }) {
+    useLayoutEffect(() => {
+        onMount();
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- 只關心掛上的那一刻；onMount 由頁面以 useCallback 穩定傳入
+    }, []);
+    return null;
+}
+
 export const VtuberView = memo(function VtuberView({
     vtuberKey, tab, summary, songIndex, status, videos, visible, onShowMore, sort, onSortChange, playlists, locale, currentCode,
-    onTabChange, onGoList, onPlayEntries, onQueue, onOpenSong, onPlaySong, onPlayAll, onOpenVideo,
+    songSort, onSongSortChange, onPanelMount, onTabChange, onGoList, onPlayEntries, onQueue, onOpenSong, onPlaySong, onPlayAll, onOpenVideo,
 }: {
     vtuberKey: string;
     tab: VtuberTab;
@@ -45,6 +54,11 @@ export const VtuberView = memo(function VtuberView({
     playlists: Playlist[];
     locale: string;
     currentCode: string | null;
+    /** 歌單排序（由頁面保存，返回時跟著捲動快照還原） */
+    songSort: SongListSort;
+    onSongSortChange: (sort: SongListSort) => void;
+    /** 分頁內容掛上時呼叫（換分頁的捲動還原） */
+    onPanelMount: () => void;
     onTabChange: (tab: VtuberTab) => void;
     onGoList: () => void;
     onPlayEntries: (entries: SongEntry[], startCode?: string) => void;
@@ -55,7 +69,6 @@ export const VtuberView = memo(function VtuberView({
     onOpenVideo: (video: SongVideo) => void;
 }) {
     const { t } = useTranslation('songs');
-    const [songSort, setSongSort] = useState<SongListSort>('latest');
     const rows = useMemo(
         () => (songIndex ? songsOfVtuber(songIndex, vtuberKey, songSort) : []),
         [songIndex, vtuberKey, songSort],
@@ -106,7 +119,7 @@ export const VtuberView = memo(function VtuberView({
                             variant="ghost"
                             className={cn('h-8 rounded-full px-3.5', songSort === key ? 'bg-foreground text-background hover:bg-foreground/90 hover:text-background' : 'text-foreground/80')}
                             aria-pressed={songSort === key}
-                            onClick={() => setSongSort(key)}
+                            onClick={() => onSongSortChange(key)}
                         >
                             {key === 'latest' ? t('catalog.sort.latest') : t('vtuber.sort.count')}
                         </Button>
@@ -182,8 +195,14 @@ export const VtuberView = memo(function VtuberView({
                         <TabsTrigger value="songs" className="rounded-full px-4">{t('vtuber.tab.songs')}</TabsTrigger>
                         <TabsTrigger value="videos" className="rounded-full px-4">{t('vtuber.tab.videos')}</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="songs">{songsContent}</TabsContent>
-                    <TabsContent value="videos">{videosContent}</TabsContent>
+                    <TabsContent value="songs" data-profile-panel="songs">
+                        {songsContent}
+                        <PanelMounted onMount={onPanelMount} />
+                    </TabsContent>
+                    <TabsContent value="videos" data-profile-panel="videos">
+                        {videosContent}
+                        <PanelMounted onMount={onPanelMount} />
+                    </TabsContent>
                 </Tabs>
             ) : (
                 videosContent

@@ -32,8 +32,9 @@ import { usePlayReporter } from '../../features/songs/hooks/usePlayReporter';
 import { usePlaylistStore, type Playlist } from '../../features/songs/store/usePlaylistStore';
 import { deriveVtubers, filterByVtuber, filterCatalog, sortCatalog, type CatalogSort } from '../../features/songs/lib/catalogView';
 import {
-    LIST_VIEW, isBrowseView, parseSongsView, sameSongsView, serializeSongsView, type BrowseView, type SongsView, type VtuberTab,
+    LIST_VIEW, isBrowseView, parseSongsView, sameSongsView, serializeSongsView, type SongsView, type VtuberTab,
 } from '../../features/songs/lib/songsView';
+import type { SongListSort } from '../../features/songs/lib/songIndex';
 import { PAGE_PATHS } from '../../config/routes';
 import { ConsoleShell } from '../../features/songs/components/console/ConsoleShell';
 import { LeftNav } from '../../features/songs/components/console/LeftNav';
@@ -80,7 +81,13 @@ const isSongsHistoryState = (state: unknown): state is SongsHistoryState =>
 interface ListSnapshot {
     visible: number;
     scrollTop: number;
+    /** 個人頁歌單的排序（其他畫面也照記，不影響） */
+    songSort: SongListSort;
 }
+
+/** 「返回歌回列表」可以回去的畫面：列表或個人頁（單曲頁不算，按鈕文字是「歌回列表」） */
+type ListLikeView = Extract<SongsView, { kind: 'list' | 'vtuber' }>;
+const isListLike = (view: SongsView): view is ListLikeView => view.kind === 'list' || view.kind === 'vtuber';
 
 function focusViewHeading(): void {
     for (const id of VIEW_HEADING_IDS) {
@@ -113,9 +120,11 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const playlists = mounted ? storePlaylists : EMPTY_PLAYLISTS;
 
     const [view, setView] = useState<SongsView>(LIST_VIEW);
-    // 最近一次的瀏覽型畫面（列表、個人頁、單曲頁）：直接開單場網址時，「返回歌回列表」導回它
-    const [lastBrowse, setLastBrowse] = useState<BrowseView>(LIST_VIEW);
-    if (isBrowseView(view) && !sameSongsView(view, lastBrowse)) setLastBrowse(view);
+    // 最近一次的列表或個人頁：單場的上一筆不是它們時，「返回歌回列表」導回它（不記單曲頁，否則會被導回單曲頁）
+    const [lastBrowse, setLastBrowse] = useState<ListLikeView>({ kind: 'list' });
+    if (isListLike(view) && !sameSongsView(view, lastBrowse)) setLastBrowse(view);
+    /** 個人頁歌單的排序：放在頁面才能跟著捲動快照還原（VtuberView 進單曲頁會卸載） */
+    const [songSort, setSongSort] = useState<SongListSort>('latest');
     const [query, setQuery] = useState('');
     const deferredQuery = useDeferredValue(query);
     const [visible, setVisible] = useState(CATALOG_PAGE_SIZE);
@@ -145,6 +154,10 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     useEffect(() => {
         visibleRef.current = visible;
     }, [visible]);
+    const songSortRef = useRef(songSort);
+    useEffect(() => {
+        songSortRef.current = songSort;
+    }, [songSort]);
     const listSnapshotsRef = useRef(new Map<string, ListSnapshot>());
     /** 這次換畫面要還原的捲動位置；null＝明確切換，回到頂端 */
     const restoreScrollRef = useRef<number | null>(null);
@@ -166,7 +179,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         if (!isBrowseView(cur)) return;
         const viewport = viewportOf(scrollRef.current);
         const scrollTop = mobileTabRef.current === 'browse' ? (viewport?.scrollTop ?? 0) : tabScrollRef.current.browse;
-        listSnapshotsRef.current.set(serializeSongsView(cur), { visible: visibleRef.current, scrollTop });
+        listSnapshotsRef.current.set(serializeSongsView(cur), { visible: visibleRef.current, scrollTop, songSort: songSortRef.current });
     }, []);
 
     // 網址 → 畫面：mount 時讀一次（?list= 已由 App 清掉），之後跟著瀏覽器上一頁／下一頁。
@@ -178,7 +191,10 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             const next = parseSongsView(window.location.search);
             const snapshot = isBrowseView(next) ? listSnapshotsRef.current.get(serializeSongsView(next)) : undefined;
             restoreScrollRef.current = snapshot?.scrollTop ?? null;
-            if (snapshot) setVisible(snapshot.visible);
+            if (snapshot) {
+                setVisible(snapshot.visible);
+                setSongSort(snapshot.songSort);
+            }
             setView(next);
         };
         sync();
@@ -192,6 +208,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         if (!sameSongsView(prev, next)) {
             rememberList();
             if (isBrowseView(next)) setVisible(CATALOG_PAGE_SIZE);
+            // 明確切換到別的畫面時歌單排序回到「最新」；同一位的個人頁切分頁不算
+            const sameProfile = prev.kind === 'vtuber' && next.kind === 'vtuber' && prev.vtuber === next.vtuber;
+            if (!sameProfile) setSongSort('latest');
         }
         restoreScrollRef.current = null;
         setView((cur) => (sameSongsView(cur, next) ? cur : next));
@@ -226,6 +245,15 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
      */
     /** 換畫面時「瀏覽」分頁內容還沒掛上（手機從「正在播放」切回來的同一次更新）：先記著，掛上時套用 */
     const pendingBrowseScrollRef = useRef<number | null>(null);
+    /** 同理：個人頁內層「歌單／歌回」分頁換了（例如瀏覽器返回到另一位的歌回分頁），新分頁內容晚一次 commit 才掛上 */
+    const pendingProfileScrollRef = useRef<number | null>(null);
+    const handleProfilePanelMount = useCallback(() => {
+        const pending = pendingProfileScrollRef.current;
+        if (pending === null) return;
+        pendingProfileScrollRef.current = null;
+        const viewport = viewportOf(scrollRef.current);
+        if (viewport) viewport.scrollTop = pending;
+    }, []);
     const handlePanelMount = useCallback((tab: MobileTab) => {
         const viewport = viewportOf(scrollRef.current);
         const pending = tab === 'browse' ? pendingBrowseScrollRef.current : null;
@@ -245,6 +273,11 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         // 手機分頁的「瀏覽」內容還沒掛上（外框仍 hidden、children 下一次 commit 才渲染）：交給 handlePanelMount，現在設會被空內容夾成 0
         if (root?.querySelector('[data-songs-panel="browse"]')?.hasAttribute('hidden')) {
             pendingBrowseScrollRef.current = target;
+            return;
+        }
+        // 個人頁內層分頁：選中的那頁外框還是 hidden，交給它的哨兵（handleProfilePanelMount）
+        if (root?.querySelector('[data-profile-panel][data-state="active"][hidden]')) {
+            pendingProfileScrollRef.current = target;
             return;
         }
         const viewport = viewportOf(root);
@@ -313,9 +346,15 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         window.history.back();
         return true;
     }, []);
-    // 單場：直接開 ?v= 進來（沒有頁內上一筆）時推一筆最近的瀏覽型畫面（預設列表）
+    // 單場：上一筆是頁內的列表或個人頁才 history.back()；上一筆是單曲頁（或直接開 ?v=）時推一筆最近的列表／個人頁，
+    // 個人頁一律開「歌回」分頁，對得上按鈕文字
     const handleBackToList = useCallback(() => {
-        if (!backInPage()) navigate(lastBrowse);
+        const state: unknown = window.history.state;
+        if (isSongsHistoryState(state) && isListLike(parseSongsView(new URL(state.songsFrom, 'https://x').search))) {
+            backInPage();
+            return;
+        }
+        navigate(lastBrowse.kind === 'vtuber' ? { ...lastBrowse, tab: 'videos' } : lastBrowse);
     }, [backInPage, navigate, lastBrowse]);
     // 單曲頁：直接開網址時，有 from 回該位的個人頁，否則回列表
     const songFrom = view.kind === 'song' ? view.from : null;
@@ -432,6 +471,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 playlists={playlists}
                 locale={locale}
                 currentCode={currentCode}
+                songSort={songSort}
+                onSongSortChange={setSongSort}
+                onPanelMount={handleProfilePanelMount}
                 onTabChange={handleVtuberTab}
                 onGoList={handleGoList}
                 onPlayEntries={playEntries}
