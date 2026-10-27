@@ -216,7 +216,7 @@ describe('F4 GET song-library', () => {
         expect(carries(await res.json(), result)).toBe(true);
     });
 
-    // 規格寫 {p_id:12}，但 DB 函式實際參數名是 p_song_id（見 migration 20261027100100），以 DB 為準
+    // 規格寫 {p_id:12}，但 DB 函式實際參數名是 p_song_id（見 migration 20261027014449），以 DB 為準
     it('F4 ?id=12 打 admin_get_song，參數名與 DB 函式一致（p_song_id: 12）', async () => {
         const result = { song: { id: 12 }, keys: [], versions: [] };
         route = () => json(result);

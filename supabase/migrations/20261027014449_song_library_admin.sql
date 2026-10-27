@@ -24,7 +24,7 @@
 --   drop function if exists public.admin_split_segment(uuid);
 --   drop function if exists public.admin_merge_songs(bigint, bigint, boolean);
 --   drop function if exists public._song_brief(bigint);
---   delete from supabase_migrations.schema_migrations where version = '20261027100100';
+--   delete from supabase_migrations.schema_migrations where version = '20261027014449';
 
 -- ───────────── 共用：歌曲摘要 ─────────────
 create or replace function public._song_brief(p_song_id bigint)

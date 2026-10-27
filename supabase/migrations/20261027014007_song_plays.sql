@@ -12,7 +12,7 @@
 --   drop table if exists public.song_play_seen;
 --   drop table if exists public.song_play_rate;
 --   drop table if exists public.song_play_counts;
---   （get_song_catalog 退回 20261025100000 的版本：s 陣列少第 6 欄）
+--   （get_song_catalog 退回 20261027013923 的版本：s 陣列少第 6 欄）
 
 create table public.song_play_counts (
     code       text primary key references public.song_segments(code) on delete cascade on update cascade,

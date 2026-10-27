@@ -8,7 +8,7 @@
 -- 回滾：
 --   drop function if exists public.approve_song_submission(uuid, uuid, jsonb, jsonb);
 --   drop table if exists public.song_submissions;
---   admin_save_song_video 退回 20261025100000 的版本（本檔把本體搬到 _save_song_video，外層只轉呼叫）；
+--   admin_save_song_video 退回 20261027013923 的版本（本檔把本體搬到 _save_song_video，外層只轉呼叫）；
 --   drop function if exists public._save_song_video(uuid, jsonb, jsonb);
 
 -- ───────────── 投稿表 ─────────────

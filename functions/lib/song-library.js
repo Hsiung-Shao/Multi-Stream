@@ -1,7 +1,7 @@
 // 歌曲整理（合併／拆開／改名／配對）：請求參數驗證（純函式，供 functions/api/admin/song-library.js 使用）
 //
 // 各函式回傳 { value } 或 { error }；error 一律是 invalid_payload，驗證失敗不會發出任何 DB 請求。
-// 長度上限與 migration 20261027100100 的 admin_rename_song／admin_match_songs 一致。
+// 長度上限與 migration 20261027014449 的 admin_rename_song／admin_match_songs 一致。
 
 import { isUuid, TITLE_MAX } from './songs.js';
 

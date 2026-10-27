@@ -1,7 +1,7 @@
 -- 歌回播放清單 v1.3：歌曲本體（songs）、比對鍵（song_keys）、片段自動配對、版本備註
 --
 -- 使用者裁定（2026-10-27）：
---   - 新增歌曲表 songs；存檔時依正規化後的「歌名＋原唱」自動配對，後台可合併、拆開（見 20261027100100）。
+--   - 新增歌曲表 songs；存檔時依正規化後的「歌名＋原唱」自動配對，後台可合併、拆開（見 20261027014449）。
 --   - 一首歌可有多組鍵：合併後來源歌的鍵留下當別名，之後同樣寫法的片段自動配到合併後那首。
 --   - 片段可填選填的版本備註 version_note（1～30 字或 null），例如練歌版、清唱、合唱。
 --   - 正規化規則只在 SQL 實作一份（song_norm_text），TS 端不實作。
@@ -14,7 +14,7 @@
 -- 不能因為讀不到 songs／song_keys 而失敗。
 -- 孤兒歌（沒有任何片段引用）由 deferrable 的 constraint trigger 在 commit 時清掉，鍵隨歌 cascade。
 --
--- 回滾（先退 20261027100100，再退本檔；會失去合併、拆開結果與版本備註，所以第 1 步先備份）：
+-- 回滾（先退 20261027014449，再退本檔；會失去合併、拆開結果與版本備註，所以第 1 步先備份）：
 --   -- 1) 備份（放 public 要立刻關掉公開權限）
 --   create table public._song_library_backup_20261027 as
 --     select g.id as segment_id, g.code, g.song_id, g.version_note, s.title as song_title, s.original_artist as song_artist
@@ -25,7 +25,7 @@
 --   revoke all on table public._song_library_backup_20261027 from anon, authenticated;
 --   revoke all on table public._song_keys_backup_20261027 from anon, authenticated;
 --   -- 2) 先把引用新欄位的函式退回舊版（SQL 函式本體不記依賴，直接 drop 欄位不會報錯但函式會壞）
---   --    重跑 20261026100000 的 _save_song_video、20261025110000 的 get_song_catalog（create or replace 那兩段）
+--   --    重跑 20261027014100 的 _save_song_video、20261027014007 的 get_song_catalog（create or replace 那兩段）
 --   -- 3) 拆掉本檔物件
 --   drop trigger if exists song_segments_gc_delete on public.song_segments;
 --   drop trigger if exists song_segments_gc_update on public.song_segments;
@@ -38,7 +38,7 @@
 --   drop table if exists public.song_keys;
 --   drop table if exists public.songs;
 --   drop function if exists public.song_norm_text(text);
---   delete from supabase_migrations.schema_migrations where version = '20261027100000';
+--   delete from supabase_migrations.schema_migrations where version = '20261027014344';
 
 -- ───────────── 正規化 ─────────────
 -- 1. NFKC 後轉小寫（全形→半形、相容字元統一）。
@@ -276,7 +276,7 @@ create constraint trigger song_segments_gc_delete
     execute function public._song_segments_gc();
 
 -- ───────────── 存檔本體：多讀寫 version_note，回傳帶歌 ─────────────
--- 以 20261026100000 的版本為基礎。version_note：更新時片段物件沒帶這個 key 就保留原值
+-- 以 20261027014100 的版本為基礎。version_note：更新時片段物件沒帶這個 key 就保留原值
 -- （舊版 Function 或沒填備註欄的投稿不會把既有備註清掉）；帶了 null 就清空。新增時沒帶＝null。
 -- 回傳的 segments[i] 多 song_id、version_note、song{id,title,artist,versions}（versions＝該歌目前的片段總數）。
 create or replace function public._save_song_video(p_id uuid, p_video jsonb, p_segments jsonb)
@@ -378,7 +378,7 @@ end;
 $$;
 
 -- ───────────── 公開目錄：片段 8 欄＋尾端歌曲字典 ─────────────
---   影片元素同 20261025110000，s 每列：[code, start, end, 歌名, 原唱|null, 播放次數, song_id, 版本備註|null]
+--   影片元素同 20261027014007，s 每列：[code, start, end, 歌名, 原唱|null, 播放次數, song_id, 版本備註|null]
 --   陣列最後一個元素：{"songs": [[song_id, 歌名, 原唱|null], ...]}，只列有已發布片段的歌（目錄為空時仍有這個元素）。
 --   舊前端只讀前 6 欄、只認帶 v 的元素，多出來的欄位與字典元素會被忽略。
 create or replace function public.get_song_catalog()
