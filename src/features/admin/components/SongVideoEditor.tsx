@@ -9,6 +9,8 @@
 // - 會讓 code 失效的操作（取代、刪除已存檔片段、核准會刪掉舊片段的修正）先確認。
 // - 存檔中可隨時返回列表（不 disable），卡住時不會被困住（memory error_dialog_mutation_reset）。
 // - 投稿者填的標題、來源說明、聯絡方式一律以純文字節點顯示，不轉成連結（javascript: URL 會變 XSS）。
+// - 版本備註（version_note）存檔／核准都帶；歌名或原唱變動後 600ms 呼叫配對預覽（admin_match_songs），
+//   在每列顯示「已配對／新歌曲／新歌曲・同名」，提醒管理員存檔後會配到哪首歌。
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
@@ -53,6 +55,13 @@ import {
     type SongVideoStatus,
     type SongVideoWriteInput,
 } from '../hooks/useAdminSongs';
+import { toSegmentMatch, useSongMatch, type SongMatchItem } from '../hooks/useAdminSongLibrary';
+import type { SegmentMatch } from '../../songs/components/SegmentEditor';
+
+/** 配對預覽的 debounce（ms） */
+const MATCH_DEBOUNCE_MS = 600;
+/** admin_match_songs 一次最多 200 項 */
+const MATCH_ITEMS_MAX = 200;
 
 const fromRecord = (s: SongSegmentRecord): SegmentRowDraft => ({
     key: s.id,
@@ -62,6 +71,7 @@ const fromRecord = (s: SongSegmentRecord): SegmentRowDraft => ({
     end: formatTimecode(s.end_seconds),
     title: s.title,
     artist: s.original_artist ?? '',
+    note: s.version_note ?? '',
 });
 
 /** ISO → <input type="datetime-local"> 的本地時間字串 */
@@ -82,12 +92,27 @@ const toSegmentInputs = (rows: SegmentRowDraft[]): SongSegmentInput[] =>
             end_seconds: end,
             title: r.title.trim(),
             original_artist: r.artist.trim() || null,
+            version_note: r.note.trim() || null,
         };
     });
 
+/** 配對預覽的請求內容：沒填歌名的列不送；keys 與 items 一一對應（回應依 items 順序） */
+function matchRequest(rows: SegmentRowDraft[]): { keys: string[]; items: SongMatchItem[] } {
+    const keys: string[] = [];
+    const items: SongMatchItem[] = [];
+    for (const r of rows) {
+        const title = r.title.trim();
+        if (!title) continue;
+        if (items.length >= MATCH_ITEMS_MAX) break;
+        keys.push(r.key);
+        items.push({ ...(r.id ? { segment_id: r.id } : {}), title, original_artist: r.artist.trim() || null });
+    }
+    return { keys, items };
+}
+
 /** 取代時對回舊片段的 id／code（開始時間相同才算同一首） */
 function mergeWithExisting(current: SegmentRowDraft[], imported: ImportedRow[]): { rows: SegmentRowDraft[]; lostCodes: string[] } {
-    const existing = current.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1 }));
+    const existing = current.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note }));
     const { rows: merged, lostCodes } = mergeReplaceRows(existing, imported);
     return {
         rows: merged.map((m, i) => fromImported({ ...m, end: imported[i].end, endEstimated: imported[i].endEstimated })),
@@ -151,7 +176,9 @@ export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, o
         setStreamedAt(toLocalInput(ev ? ev.streamed_at : s.streamed_at));
         setDurationText(ev?.duration_seconds ? formatTimecode(ev.duration_seconds) : '');
         setStatus(ev ? ev.status : 'published');
-        const imported: ImportedRow[] = (s.segments ?? []).map((seg, line) => ({ ...seg, line }));
+        const imported: ImportedRow[] = (s.segments ?? []).map((seg, line) => ({
+            start: seg.start, end: seg.end, title: seg.title, artist: seg.artist, endEstimated: seg.endEstimated, note: seg.versionNote ?? null, line,
+        }));
         const base = (submission.data.existing ?? []).map(fromRecord);
         setRows(base.length > 0 ? mergeWithExisting(base, imported).rows : imported.map(fromImported));
     }, [reviewId, submission.data]);
@@ -210,7 +237,10 @@ export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, o
             const old = r.id ? existingById.get(r.id) : undefined;
             if (!old) { map.set(r.key, 'new'); continue; }
             const { start, end } = rowSeconds(r);
-            if (start !== old.start_seconds || end !== old.end_seconds || r.title.trim() !== old.title || (r.artist.trim() || null) !== old.original_artist) {
+            if (
+                start !== old.start_seconds || end !== old.end_seconds || r.title.trim() !== old.title
+                || (r.artist.trim() || null) !== old.original_artist || (r.note.trim() || null) !== (old.version_note ?? null)
+            ) {
                 map.set(r.key, 'changed');
             }
         }
@@ -221,6 +251,28 @@ export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, o
         const kept = new Set(rows.map((r) => r.id).filter(Boolean));
         return existing.filter((e) => !kept.has(e.id));
     }, [reviewing, existing, rows]);
+
+    // 配對預覽：歌名／原唱停止變動 600ms 後才查（簽章字串不含備註，改備註不會重查）
+    const matchSig = useMemo(() => JSON.stringify(matchRequest(rows)), [rows]);
+    const [debouncedMatchSig, setDebouncedMatchSig] = useState<string | null>(null);
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedMatchSig(matchSig), MATCH_DEBOUNCE_MS);
+        return () => clearTimeout(timer);
+    }, [matchSig]);
+    const matchReq = useMemo(
+        () => (debouncedMatchSig ? (JSON.parse(debouncedMatchSig) as ReturnType<typeof matchRequest>) : null),
+        [debouncedMatchSig],
+    );
+    const match = useSongMatch(matchReq?.items ?? null);
+    const matchInfo = useMemo(() => {
+        if (!matchReq || !match.data) return undefined;
+        const map = new Map<string, SegmentMatch>();
+        matchReq.keys.forEach((key, i) => {
+            const r = match.data[i];
+            if (r) map.set(key, toSegmentMatch(r));
+        });
+        return map;
+    }, [matchReq, match.data]);
 
     const titleOk = title.trim().length >= 1 && title.trim().length <= 200;
     const busy = save.isPending || approve.isPending || reject.isPending;
@@ -437,6 +489,7 @@ export function SongVideoEditor({ id, reviewId = null, playerEnabled, onClose, o
                 onEdit={clearMutationErrors}
                 showCode
                 diff={diff}
+                matchInfo={matchInfo}
             />
 
             {reviewing ? (

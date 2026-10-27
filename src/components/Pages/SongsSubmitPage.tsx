@@ -152,6 +152,7 @@ export function SongsSubmitPage() {
             end: formatTimecode(s.end),
             title: s.title,
             artist: s.artist ?? '',
+            note: s.versionNote ?? '',
         }));
         autoRef.current.rows = prefill;
         setRows((cur) => (cur.length > 0 ? cur : prefill));
@@ -178,7 +179,10 @@ export function SongsSubmitPage() {
                 streamedAt: streamedAt ? new Date(streamedAt).toISOString() : null,
                 segments: rows.map((r) => {
                     const { start, end } = rowSeconds(r);
-                    return { start, end: end ?? start, title: r.title.trim(), artist: r.artist.trim() || null, endEstimated: !!r.endEstimated };
+                    return {
+                        start, end: end ?? start, title: r.title.trim(), artist: r.artist.trim() || null,
+                        versionNote: r.note.trim() || null, endEstimated: !!r.endEstimated,
+                    };
                 }),
                 note: note.trim() || null,
                 contact: contact.trim() || null,

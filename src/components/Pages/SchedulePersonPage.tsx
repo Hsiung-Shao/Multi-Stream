@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CalendarPlus, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, MonitorPlay, Music2, Play, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, ListMusic, MonitorPlay, Music2, Play, RefreshCw, SearchX } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -237,14 +237,26 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
     );
 }
 
-/** 這位實況主的歌回（已發布、有時間軸）：沒有就整段不渲染。「全部播放」整頁導到 /songs?list=… */
-function PersonSongs({ videos }: { videos: SongVideo[] }) {
+/**
+ * 這位實況主的歌回（已發布、有時間軸）：沒有就整段不渲染。「全部播放」整頁導到 /songs?list=…；
+ * 「完整歌單」整頁導到 /songs?vtuber=<id>（歌回播放清單的 VTuber 個人頁）。
+ */
+function PersonSongs({ videos, vtuberId }: { videos: SongVideo[]; vtuberId: string }) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
     if (videos.length === 0) return null;
     return (
         <section aria-labelledby="person-songs">
-            <SectionTitle id="person-songs" count={videos.length}>{t('person.songs.title')}</SectionTitle>
+            <div className="flex flex-wrap items-start justify-between gap-x-3">
+                <SectionTitle id="person-songs" count={videos.length}>{t('person.songs.title')}</SectionTitle>
+                <a
+                    href={`/songs?vtuber=${encodeURIComponent(vtuberId)}`}
+                    className="mb-3 inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                    <ListMusic size={13} aria-hidden="true" />
+                    {t('person.songs.fullList')}
+                </a>
+            </div>
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {videos.map((video) => {
                     const plays = video.segments.reduce((sum, seg) => sum + seg.plays, 0);
@@ -424,7 +436,7 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                         )}
                     </section>
 
-                    <PersonSongs videos={songVideos} />
+                    <PersonSongs videos={songVideos} vtuberId={person.id} />
                 </div>
             )}
 

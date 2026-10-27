@@ -314,4 +314,5 @@ export default {
     'person.songs.plays': '재생 {{count}}회',
     'person.songs.playAll': '전체 재생',
     'person.songs.showSongs': '곡 보기',
+    'person.songs.fullList': '전체 곡 목록',
 };

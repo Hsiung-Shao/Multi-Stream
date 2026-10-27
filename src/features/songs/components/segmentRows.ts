@@ -6,6 +6,7 @@
  * - 時間軸匯入：解析器會把「沒寫結束」的列補成下一首開始；粉絲時間軸幾乎都沒寫結束，
  *   直接採用會把歌與歌之間的聊天也包進片段。所以匯入時先看原文那一行有沒有寫區間：
  *   沒寫就當成沒有結束時間，交給 estimateEnds（下一首開始、開始＋6 分鐘、影片長度取最早）。
+ * - note：版本備註（練歌版、清唱…），保留輸入文字，送出時才 trim、空白轉 null。
  */
 import { formatTimecode, parseTimecode } from '../lib/timecode';
 import { validateSegments, type SegmentIssueCode } from '../lib/segmentValidation';
@@ -21,6 +22,8 @@ export interface SegmentRowDraft {
     end: string;
     title: string;
     artist: string;
+    /** 版本備註（選填，trim 後最多 30 字） */
+    note: string;
     endEstimated?: boolean;
 }
 
@@ -30,7 +33,7 @@ export type RowIssueCode = SegmentIssueCode | 'start_format' | 'end_format';
 let rowSeq = 0;
 export const newRowKey = (): string => `row-${++rowSeq}`;
 
-export const emptyRow = (start = ''): SegmentRowDraft => ({ key: newRowKey(), start, end: '', title: '', artist: '' });
+export const emptyRow = (start = ''): SegmentRowDraft => ({ key: newRowKey(), start, end: '', title: '', artist: '', note: '' });
 
 export interface ImportedRow {
     start: number;
@@ -41,6 +44,8 @@ export interface ImportedRow {
     endEstimated: boolean;
     id?: string;
     code?: string;
+    /** 版本備註（取代時對回的舊片段備註、投稿的 versionNote） */
+    note?: string | null;
 }
 
 export function fromImported(r: ImportedRow): SegmentRowDraft {
@@ -52,6 +57,7 @@ export function fromImported(r: ImportedRow): SegmentRowDraft {
         end: formatTimecode(r.end),
         title: r.title,
         artist: r.artist ?? '',
+        note: r.note ?? '',
         endEstimated: r.endEstimated,
     };
 }
@@ -86,13 +92,13 @@ export function prepareImport(rows: ParsedRow[], lines: string[], duration: numb
 export function computeRowIssues(rows: SegmentRowDraft[], duration: number | null): Map<number, RowIssueCode[]> {
     const issues = new Map<number, RowIssueCode[]>();
     const push = (i: number, code: RowIssueCode) => issues.set(i, [...(issues.get(i) ?? []), code]);
-    const valid: { index: number; start: number; end: number | null; title: string; artist: string }[] = [];
+    const valid: { index: number; start: number; end: number | null; title: string; artist: string; note: string }[] = [];
     rows.forEach((r, i) => {
         const start = parseTimecode(r.start);
         const end = r.end.trim() ? parseTimecode(r.end) : null;
         if (start === null) push(i, 'start_format');
         if (r.end.trim() && end === null) push(i, 'end_format');
-        if (start !== null && !(r.end.trim() && end === null)) valid.push({ index: i, start, end, title: r.title, artist: r.artist });
+        if (start !== null && !(r.end.trim() && end === null)) valid.push({ index: i, start, end, title: r.title, artist: r.artist, note: r.note });
     });
     for (const issue of validateSegments(valid, { duration })) {
         push(valid[issue.index].index, issue.code);

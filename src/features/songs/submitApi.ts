@@ -13,7 +13,7 @@ export interface SongSubmissionInput {
     title: string;
     vtuberId: string | null;
     streamedAt: string | null;
-    segments: { start: number; end: number; title: string; artist: string | null; endEstimated: boolean }[];
+    segments: { start: number; end: number; title: string; artist: string | null; versionNote: string | null; endEstimated: boolean }[];
     note: string | null;
     contact: string | null;
     turnstileToken: string | null;

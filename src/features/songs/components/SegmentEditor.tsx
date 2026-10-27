@@ -6,8 +6,9 @@
 // - 「設為目前時間」「從這裡播」透過 player（PreviewPlayer 的 API）；沒有播放器時按鈕停用。
 // - 取代／刪除的確認（會讓分享連結失效）由呼叫端透過 onReplace／onRemoveRow 處理；沒給就直接套用。
 // - 文字一律 i18n（songs:editor.*）：投稿頁是公開頁，後台也共用同一份。
+// - 備註欄：上限 30 字，datalist 提供常用值（仍可自由輸入）；matchInfo（只有後台會給）在歌名下顯示配對結果。
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, Crosshair, Play, Plus, Trash2, Upload } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
@@ -24,6 +25,24 @@ import {
 import type { PreviewApi } from './PreviewPlayer';
 
 export type RowDiff = 'new' | 'changed';
+
+/** 歌曲摘要（admin_match_songs／_song_brief 的格式） */
+export interface SongBrief {
+    id: number;
+    title: string;
+    artist: string | null;
+    versions: number;
+}
+
+/** 一列的配對預覽：已配對既有歌曲／新歌曲／新歌曲但有同名（原唱不同）的歌 */
+export type SegmentMatch =
+    | { status: 'existing'; song: SongBrief }
+    | { status: 'new' }
+    | { status: 'similar'; similar: SongBrief[] };
+
+/** 備註欄的建議值（資料值，存進資料庫後原樣公開顯示，不翻譯） */
+const NOTE_PRESETS = ['練歌版', '清唱', '合唱', '重唱', '弾き語り', 'Short'];
+const NOTE_MAX = 30;
 
 export interface SegmentEditorProps {
     rows: SegmentRowDraft[];
@@ -43,6 +62,8 @@ export interface SegmentEditorProps {
     showCode?: boolean;
     /** 差異標記（後台審核修正型投稿） */
     diff?: ReadonlyMap<string, RowDiff>;
+    /** 配對預覽（列 key → 結果，後台用）；沒有的列不顯示 */
+    matchInfo?: ReadonlyMap<string, SegmentMatch>;
 }
 
 /** 行號清單 → 「第 1、3 行」；超過 10 筆加「等 N 行」 */
@@ -52,12 +73,22 @@ function lineList(lines: number[], t: (k: string, o?: Record<string, unknown>) =
 }
 
 export function SegmentEditor({
-    rows, onRowsChange, issues, player, duration, onReplace, onRemoveRow, onEdit, showCode = false, diff,
+    rows, onRowsChange, issues, player, duration, onReplace, onRemoveRow, onEdit, showCode = false, diff, matchInfo,
 }: SegmentEditorProps) {
     const { t } = useTranslation('songs');
     const tf = t as unknown as (k: string, o?: Record<string, unknown>) => string;
     const [text, setText] = useState('');
     const [excluded, setExcluded] = useState<ReadonlySet<number>>(new Set());
+    const notePresetsId = useId();
+
+    const matchLabel = (m: SegmentMatch): string => {
+        if (m.status === 'existing') return t('editor.match.existing', { title: m.song.title, versions: m.song.versions });
+        if (m.status === 'new') return t('editor.match.new');
+        const list = m.similar
+            .map((x) => t('editor.match.similarItem', { title: x.title, artist: x.artist || t('editor.match.noArtist'), versions: x.versions }))
+            .join('、');
+        return t('editor.match.similar', { list });
+    };
 
     const parsed = useMemo(
         () => (text.trim() ? parseTimelineDetailed(text) : { rows: [], unparsed: [], variants: [], stoppedAt: null }),
@@ -195,7 +226,7 @@ export function SegmentEditor({
                     <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-[13px] text-muted-foreground">{t('editor.empty')}</p>
                 ) : (
                     <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className={cn('w-full text-sm', showCode ? 'min-w-[860px]' : 'min-w-[760px]')}>
+                        <table className={cn('w-full text-sm', showCode ? 'min-w-[980px]' : 'min-w-[880px]')}>
                             <thead className="bg-muted/40 text-[12px] text-muted-foreground">
                                 <tr>
                                     <th className="w-10 px-2 py-1.5 text-left font-medium">#</th>
@@ -203,6 +234,7 @@ export function SegmentEditor({
                                     <th className="w-44 px-2 py-1.5 text-left font-medium">{t('editor.col.end')}</th>
                                     <th className="px-2 py-1.5 text-left font-medium">{t('editor.col.title')}</th>
                                     <th className="px-2 py-1.5 text-left font-medium">{t('editor.col.artist')}</th>
+                                    <th className="w-32 px-2 py-1.5 text-left font-medium">{t('editor.col.note')}</th>
                                     {showCode && <th className="w-24 px-2 py-1.5 text-left font-medium">code</th>}
                                     <th className="w-20 px-2 py-1.5"><span className="sr-only left-0 top-0">{t('editor.col.actions')}</span></th>
                                 </tr>
@@ -213,6 +245,7 @@ export function SegmentEditor({
                                     const startSec = parseTimecode(r.start);
                                     const n = i + 1;
                                     const mark = diff?.get(r.key);
+                                    const match = matchInfo?.get(r.key);
                                     return (
                                         <tr key={r.key} className={cn('border-t border-border align-top', rowIssues && 'bg-destructive/5')}>
                                             <td className="px-2 py-1.5 text-[12px] tabular-nums text-muted-foreground">
@@ -247,9 +280,27 @@ export function SegmentEditor({
                                             <td className="px-2 py-1.5">
                                                 <Input value={r.title} onChange={(e) => updateRow(r.key, { title: e.target.value })} maxLength={200} className="h-8" aria-label={t('editor.aria.title', { n })} />
                                                 {rowIssues && <p className="mt-1 text-[11.5px] text-destructive">{rowIssues.map((c) => t(`editor.issue.${c}`)).join('、')}</p>}
+                                                {match && (
+                                                    <p className={cn('mt-1 text-[11.5px]', match.status === 'existing' ? 'text-emerald-600 dark:text-emerald-400' : match.status === 'similar' ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
+                                                        {matchLabel(match)}
+                                                    </p>
+                                                )}
                                             </td>
                                             <td className="px-2 py-1.5">
                                                 <Input value={r.artist} onChange={(e) => updateRow(r.key, { artist: e.target.value })} maxLength={200} className="h-8" aria-label={t('editor.aria.artist', { n })} />
+                                            </td>
+                                            <td className="px-2 py-1.5">
+                                                <Input
+                                                    value={r.note}
+                                                    onChange={(e) => updateRow(r.key, { note: e.target.value })}
+                                                    maxLength={NOTE_MAX}
+                                                    list={notePresetsId}
+                                                    // 帶 list 的 input 隱含角色是 combobox；建議值只是輔助、仍是自由輸入，維持 textbox 語意
+                                                    role="textbox"
+                                                    placeholder={t('editor.notePlaceholder')}
+                                                    className="h-8"
+                                                    aria-label={t('editor.aria.note', { n })}
+                                                />
                                             </td>
                                             {showCode && <td className="px-2 py-1.5 font-mono text-[11.5px] text-muted-foreground">{r.code ?? t('editor.newCode')}</td>}
                                             <td className="px-2 py-1.5">
@@ -267,6 +318,9 @@ export function SegmentEditor({
                                 })}
                             </tbody>
                         </table>
+                        <datalist id={notePresetsId}>
+                            {NOTE_PRESETS.map((v) => <option key={v} value={v} />)}
+                        </datalist>
                     </div>
                 )}
             </div>

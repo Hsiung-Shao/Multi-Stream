@@ -26,7 +26,7 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 // 不回 ip_hash(審核用不到)
 const LIST_COLUMNS = 'id,kind,video_id,target_video_ref,title,vtuber_id,streamed_at,source_note,submitter_contact,status,reviewer_notes,result_video_ref,created_at,reviewed_at';
 const DETAIL_COLUMNS = `${LIST_COLUMNS},segments`;
-const SEGMENT_COLUMNS = 'id,code,start_seconds,end_seconds,title,original_artist,position';
+const SEGMENT_COLUMNS = 'id,code,start_seconds,end_seconds,title,original_artist,version_note,position';
 const VIDEO_COLUMNS = 'id,video_id,title,vtuber_id,streamed_at,duration_seconds,status';
 
 function idFromQuery(url) {

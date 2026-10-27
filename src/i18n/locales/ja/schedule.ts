@@ -314,4 +314,5 @@ export default {
     'person.songs.plays': '再生 {{count}} 回',
     'person.songs.playAll': 'すべて再生',
     'person.songs.showSongs': '曲を表示',
+    'person.songs.fullList': '全曲リスト',
 };

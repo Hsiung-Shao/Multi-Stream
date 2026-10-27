@@ -314,4 +314,5 @@ export default {
     'person.songs.plays': '{{count}} 次播放',
     'person.songs.playAll': '全部播放',
     'person.songs.showSongs': '查看歌曲',
+    'person.songs.fullList': '完整歌单',
 };

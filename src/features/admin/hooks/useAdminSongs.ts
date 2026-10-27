@@ -37,6 +37,10 @@ export interface SongSegmentRecord {
     end_seconds: number;
     title: string;
     original_artist: string | null;
+    /** 版本備註；舊後端沒有這個欄位 */
+    version_note?: string | null;
+    /** 所屬歌曲（songs.id）；舊後端沒有這個欄位 */
+    song_id?: number;
     position: number;
 }
 
@@ -46,6 +50,8 @@ export interface SongSegmentInput {
     end_seconds: number | null;
     title: string;
     original_artist: string | null;
+    /** 版本備註（trim 後，空白為 null） */
+    version_note: string | null;
 }
 
 export interface SongVideoWriteInput {
@@ -107,7 +113,7 @@ export function segmentIssuesFromError(err: unknown): { index: number; code: Seg
     );
 }
 
-const noRetryOn401 = (count: number, err: unknown) => !(err instanceof ApiError && err.status === 401) && count < 3;
+export const noRetryOn401 = (count: number, err: unknown) => !(err instanceof ApiError && err.status === 401) && count < 3;
 
 export function useAdminSongVideos() {
     return useQuery({
@@ -179,6 +185,8 @@ export interface SubmittedSegment {
     end: number;
     title: string;
     artist: string | null;
+    /** 版本備註；舊投稿沒有這個欄位 */
+    versionNote?: string | null;
     endEstimated: boolean;
 }
 

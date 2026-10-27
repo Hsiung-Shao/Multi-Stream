@@ -314,4 +314,5 @@ export default {
     'person.songs.plays': 'Plays: {{count}}',
     'person.songs.playAll': 'Play all',
     'person.songs.showSongs': 'Show songs',
+    'person.songs.fullList': 'Full song list',
 };

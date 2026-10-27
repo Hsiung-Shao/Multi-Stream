@@ -1,4 +1,5 @@
 // 歌回 Tab — 待審投稿清單＋歌回影片列表 + 新增／編輯／審核（SongVideoEditor）／刪除（公開頁 /songs 的資料來源）
+// 列表下方是「歌曲整理」（AdminSongLibrary）：合併／拆開／改名歌曲本體。
 //
 // 由後端 ADMIN_API_TOKEN（X-Admin-Token）把關，token 與其他後台分頁共用。
 // active：這個分頁目前是否顯示。AdminDashboard 的分頁都 forceMount，編輯器裡的 YouTube 播放器只能在 active 時掛載。
@@ -19,6 +20,7 @@ import {
 import { cn } from '../../../components/ui/utils';
 import { AdminTokenInline, useAdminTokenPresent } from './AdminTokenInline';
 import { SongVideoEditor } from './SongVideoEditor';
+import { AdminSongLibrary } from './AdminSongLibrary';
 import {
     SONG_STATUS_LABEL,
     formatSongError,
@@ -179,6 +181,8 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                     </table>
                 </div>
             )}
+
+            {!needToken && <AdminSongLibrary />}
 
             <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); del.reset(); } }}>
                 <AlertDialogContent>

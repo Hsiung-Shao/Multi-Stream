@@ -6,14 +6,15 @@
  * - 舊列有 code 卻沒配到 → 該 code 進 lostCodes（依舊列順序），讓 UI 警告「這些分享連結會失效」。
  *   沒有 id／code 的舊列（尚未存檔）不影響 lostCodes。
  * - 保留 incoming 的其他欄位與順序。
+ * - 版本備註：incoming 沒有備註（缺欄、null、空白）時沿用配到的舊列備註；有就用新的。
  */
 import type { ParsedRow } from './timelineParser';
 
-export type MergedRow = ParsedRow & { id?: string; code?: string };
+export type MergedRow = ParsedRow & { id?: string; code?: string; note?: string | null };
 
 export function mergeReplaceRows(
-    existing: { id?: string; code?: string; start: number }[],
-    incoming: ParsedRow[],
+    existing: { id?: string; code?: string; start: number; note?: string | null }[],
+    incoming: (ParsedRow & { note?: string | null })[],
 ): { rows: MergedRow[]; lostCodes: string[] } {
     const matched = new Set<number>();
 
@@ -22,7 +23,8 @@ export function mergeReplaceRows(
         if (i < 0) return row;
         matched.add(i);
         const old = existing[i];
-        return { ...row, id: old.id, ...(old.code !== undefined ? { code: old.code } : {}) };
+        const keepNote = !row.note?.trim() && !!old.note;
+        return { ...row, id: old.id, ...(old.code !== undefined ? { code: old.code } : {}), ...(keepNote ? { note: old.note } : {}) };
     });
 
     const lostCodes: string[] = [];
