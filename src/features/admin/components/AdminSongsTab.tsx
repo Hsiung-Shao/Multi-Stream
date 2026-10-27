@@ -1,11 +1,12 @@
-// 歌回 Tab — 待審投稿清單＋歌回影片列表 + 新增／編輯／審核（SongVideoEditor）／刪除（公開頁 /songs 的資料來源）
+// 歌回 Tab — 社群修改紀錄（可還原）＋歌回影片列表 + 新增／編輯（SongVideoEditor）／刪除（公開頁 /songs 的資料來源）
+// 社群投稿立即生效，不經審核；管理員事後從修改紀錄還原，或在編輯器鎖定單支歌回的社群編輯。
 // 列表下方是「歌曲整理」（AdminSongLibrary）：合併／拆開／改名歌曲本體。
 //
 // 由後端 ADMIN_API_TOKEN（X-Admin-Token）把關，token 與其他後台分頁共用。
 // active：這個分頁目前是否顯示。AdminDashboard 的分頁都 forceMount，編輯器裡的 YouTube 播放器只能在 active 時掛載。
 
 import { useState } from 'react';
-import { ClipboardCheck, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ExternalLink, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import {
     AlertDialog,
@@ -28,6 +29,8 @@ import {
     useAdminSongSubmissions,
     useAdminSongVideos,
     useDeleteSongVideo,
+    useRevertSongEdit,
+    type SongEditRecord,
     type SongVideoListItem,
 } from '../hooks/useAdminSongs';
 import { useVtuberNames } from '../../songs/streamLookup';
@@ -38,22 +41,47 @@ function formatDate(s: string | null | undefined): string {
     return new Date(s).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+const EDIT_FIELD_LABEL: Record<string, string> = { title: '標題', vtuber_id: 'VTuber', streamed_at: '開台時間' };
+
+/** 「新增 N 首」「修改 M 首」＋「改了標題／VTuber／開台時間」 */
+function summarizeEdit(sub: SongEditRecord): string {
+    const { added, changed, fields } = sub.summary;
+    const parts: string[] = [];
+    if (added > 0) parts.push(`新增 ${added} 首`);
+    if (changed > 0) parts.push(`修改 ${changed} 首`);
+    const labels = fields.map((f) => EDIT_FIELD_LABEL[f]).filter((l): l is string => !!l);
+    if (labels.length > 0) parts.push(`改了${labels.join('／')}`);
+    return parts.length > 0 ? parts.join('、') : '片段沒有變動';
+}
+
 export function AdminSongsTab({ active }: { active: boolean }) {
     const hasToken = useAdminTokenPresent();
     const query = useAdminSongVideos();
     const del = useDeleteSongVideo();
     const needToken = !hasToken || isUnauthorized(query.error);
     const videos = query.data ?? [];
-    const pending = useAdminSongSubmissions('pending');
-    const submissions = pending.data ?? [];
-    const names = useVtuberNames([...videos, ...submissions].map((v) => v.vtuber_id).filter((id): id is string => !!id));
+    const editLog = useAdminSongSubmissions();
+    const edits = editLog.data ?? [];
+    const revert = useRevertSongEdit();
+    const names = useVtuberNames(videos.map((v) => v.vtuber_id).filter((id): id is string => !!id));
 
-    /** null = 列表；{ id: null } = 新增；reviewId = 審核投稿；session 讓每次開編輯器都是全新 state */
-    const [editing, setEditing] = useState<{ id: string | null; reviewId?: string; session: number } | null>(null);
+    /** null = 列表；{ id: null } = 新增；session 讓每次開編輯器都是全新 state */
+    const [editing, setEditing] = useState<{ id: string | null; session: number } | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<SongVideoListItem | null>(null);
+    const [revertTarget, setRevertTarget] = useState<SongEditRecord | null>(null);
 
     const openEditor = (id: string | null) => setEditing((cur) => ({ id, session: (cur?.session ?? 0) + 1 }));
-    const openReview = (reviewId: string) => setEditing((cur) => ({ id: null, reviewId, session: (cur?.session ?? 0) + 1 }));
+
+    const handleConfirmRevert = async () => {
+        if (!revertTarget) return;
+        const id = revertTarget.id;
+        try {
+            await revert.mutateAsync(id);
+            setRevertTarget((cur) => (cur?.id === id ? null : cur));
+        } catch {
+            // 錯誤顯示在 revert.error
+        }
+    };
 
     const handleConfirmDelete = async () => {
         if (!deleteTarget) return;
@@ -71,7 +99,6 @@ export function AdminSongsTab({ active }: { active: boolean }) {
             <SongVideoEditor
                 key={editing.session}
                 id={editing.id}
-                reviewId={editing.reviewId ?? null}
                 playerEnabled={active}
                 onClose={() => setEditing(null)}
                 onSaved={(id) => setEditing((cur) => (cur ? { ...cur, id } : cur))}
@@ -96,18 +123,18 @@ export function AdminSongsTab({ active }: { active: boolean }) {
 
             {needToken && <AdminTokenInline />}
 
-            {/* 待審投稿：標題由投稿者填寫，只以純文字顯示 */}
+            {/* 社群修改紀錄：標題由使用者輸入，只以純文字顯示 */}
             {!needToken && (
                 <section aria-labelledby="song-submissions-h" className="rounded-lg border border-border bg-card p-3">
-                    <h3 id="song-submissions-h" className="text-[13px] font-semibold">待審投稿（{pending.data ? submissions.length : '…'}）</h3>
-                    {pending.isError ? (
-                        <p role="alert" className="mt-1 text-[12px] text-destructive">{formatSubmissionError(pending.error)}</p>
-                    ) : submissions.length === 0 ? (
-                        pending.data && <p className="mt-1 text-[12px] text-muted-foreground">目前沒有待審投稿</p>
+                    <h3 id="song-submissions-h" className="text-[13px] font-semibold">社群修改紀錄{editLog.data ? `（最近 ${edits.length} 筆）` : ''}</h3>
+                    {editLog.isError ? (
+                        <p role="alert" className="mt-1 text-[12px] text-destructive">{formatSubmissionError(editLog.error)}</p>
+                    ) : edits.length === 0 ? (
+                        editLog.data && <p className="mt-1 text-[12px] text-muted-foreground">目前沒有社群修改紀錄</p>
                     ) : (
                         <ul className="mt-2 divide-y divide-border">
-                            {submissions.map((sub) => (
-                                <li key={sub.id} className="flex items-center gap-2 py-1.5 text-[13px]">
+                            {edits.map((sub) => (
+                                <li key={sub.id} className="flex flex-wrap items-center gap-2 py-1.5 text-[13px]">
                                     <span className={cn(
                                         'shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-medium',
                                         sub.kind === 'revision' ? 'border-sky-500/25 bg-sky-500/10 text-sky-400' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-400',
@@ -115,12 +142,21 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                                         {sub.kind === 'revision' ? '修正' : '新歌回'}
                                     </span>
                                     <span className="min-w-0 flex-1 truncate">{sub.title}</span>
-                                    <span className="hidden shrink-0 text-[12px] text-muted-foreground sm:inline">{sub.vtuber_id ? (names.data?.get(sub.vtuber_id)?.name ?? '…') : '—'}</span>
+                                    <span className="shrink-0 text-[12px] text-muted-foreground">{summarizeEdit(sub)}</span>
                                     <span className="shrink-0 text-[12px] text-muted-foreground">{formatDate(sub.created_at)}</span>
-                                    <Button size="sm" variant="outline" className="h-7" onClick={() => openReview(sub.id)} aria-label={`審核「${sub.title}」`}>
-                                        <ClipboardCheck className="size-3.5" />
-                                        審核
-                                    </Button>
+                                    {sub.status === 'reverted' ? (
+                                        <span className="shrink-0 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                            已還原{sub.reverted_at ? `・${formatDate(sub.reverted_at)}` : ''}
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span className="shrink-0 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[11px] font-medium text-emerald-400">已套用</span>
+                                            <Button size="sm" variant="outline" className="h-7" onClick={() => setRevertTarget(sub)}>
+                                                <RotateCcw className="size-3.5" />
+                                                還原到這次之前
+                                            </Button>
+                                        </>
+                                    )}
                                 </li>
                             ))}
                         </ul>
@@ -183,6 +219,28 @@ export function AdminSongsTab({ active }: { active: boolean }) {
             )}
 
             {!needToken && <AdminSongLibrary />}
+
+            <AlertDialog open={!!revertTarget} onOpenChange={(o) => { if (!o) { setRevertTarget(null); revert.reset(); } }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>還原到這次修改之前？</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            「{revertTarget?.title}」會回到這次修改之前的內容；這次之後對這支歌回的修改也會一併還原，無法復原。
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    {revert.error && <p role="alert" className="text-[13px] text-destructive">{formatSubmissionError(revert.error)}</p>}
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>取消</AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={revert.isPending}
+                            onClick={(e) => { e.preventDefault(); void handleConfirmRevert(); }}
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                        >
+                            {revert.isPending ? '還原中…' : '確定還原'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <AlertDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) { setDeleteTarget(null); del.reset(); } }}>
                 <AlertDialogContent>

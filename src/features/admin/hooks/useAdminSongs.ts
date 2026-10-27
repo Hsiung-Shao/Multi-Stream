@@ -21,6 +21,8 @@ export interface SongVideoRecord {
     streamed_at: string | null;
     duration_seconds: number | null;
     status: SongVideoStatus;
+    /** 是否鎖定社群編輯；舊後端沒有這個欄位 */
+    community_locked?: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -171,63 +173,38 @@ export function useDeleteSongVideo() {
     });
 }
 
-// ---------- 社群投稿的歌回時間軸（functions/api/admin/song-submissions.js） ----------
+// ---------- 社群修改紀錄（functions/api/admin/song-submissions.js） ----------
+// 社群投稿改為立即生效（community_save_song_video）；這裡是事後的修改紀錄、還原與鎖定。
 
 export const SONG_SUBMISSIONS_KEY = 'admin-song-submissions';
-const SONG_SUBMISSION_KEY = 'admin-song-submission';
 
-export type SongSubmissionKind = 'new' | 'revision';
-export type SongSubmissionStatus = 'pending' | 'approved' | 'rejected';
+export type SongEditKind = 'new' | 'revision';
+export type SongEditStatus = 'applied' | 'reverted';
 
-/** 投稿者送來的片段（functions/lib/song-submissions.js 正規化後的格式） */
-export interface SubmittedSegment {
-    start: number;
-    end: number;
-    title: string;
-    artist: string | null;
-    /** 版本備註；舊投稿沒有這個欄位 */
-    versionNote?: string | null;
-    endEstimated: boolean;
+export interface SongEditSummary {
+    added: number;
+    changed: number;
+    /** 影片欄位的改動：title／vtuber_id／streamed_at */
+    fields: string[];
 }
 
-export interface SongSubmissionRecord {
+export interface SongEditRecord {
     id: string;
-    kind: SongSubmissionKind;
+    kind: SongEditKind;
     video_id: string;
-    target_video_ref: string | null;
+    /** 使用者輸入，畫面上只能當純文字顯示（不轉連結） */
     title: string;
-    vtuber_id: string | null;
-    streamed_at: string | null;
-    /** 使用者輸入，畫面上只能當純文字顯示（不轉連結） */
-    source_note: string | null;
-    /** 使用者輸入，畫面上只能當純文字顯示（不轉連結） */
-    submitter_contact: string | null;
-    status: SongSubmissionStatus;
-    reviewer_notes: string | null;
-    result_video_ref: string | null;
+    status: SongEditStatus;
     created_at: string;
-    reviewed_at: string | null;
-    /** 單筆查詢才有 */
-    segments?: SubmittedSegment[];
-}
-
-export interface SongSubmissionDetail {
-    submission: SongSubmissionRecord;
-    /** 修正型：該影片目前的片段（依 start） */
-    existing: SongSegmentRecord[] | null;
-    /** 修正型：該影片目前的欄位（核准時沿用，不被投稿內容覆寫） */
-    existingVideo: Pick<SongVideoRecord, 'id' | 'video_id' | 'title' | 'vtuber_id' | 'streamed_at' | 'duration_seconds' | 'status'> | null;
-}
-
-export interface ApproveSubmissionInput {
-    video_ref: string | null;
-    video: Omit<SongVideoWriteInput, 'segments'>;
-    segments: SongSegmentInput[];
+    reverted_at: string | null;
+    target_video_ref: string | null;
+    summary: SongEditSummary;
 }
 
 const SUBMISSION_ERRORS: Record<string, string> = {
-    not_pending: '這筆投稿已經處理過了（可能有其他管理員同時審核），請重新整理',
-    invalid_id: '無效的投稿 ID',
+    not_applied: '這筆修改已經還原過了，請重新整理列表',
+    submission_not_found: '找不到這筆修改紀錄，請重新整理列表',
+    invalid_id: '無效的紀錄 ID',
 };
 
 export function formatSubmissionError(err: unknown): string {
@@ -236,11 +213,12 @@ export function formatSubmissionError(err: unknown): string {
     return formatSongError(err);
 }
 
-export function useAdminSongSubmissions(status: SongSubmissionStatus = 'pending') {
+/** 最近 50 筆社群修改紀錄 */
+export function useAdminSongSubmissions() {
     return useQuery({
-        queryKey: [SONG_SUBMISSIONS_KEY, status],
-        queryFn: async (): Promise<SongSubmissionRecord[]> => {
-            const data = await apiFetch<{ ok: true; submissions: SongSubmissionRecord[] }>(`/api/admin/song-submissions?status=${status}`);
+        queryKey: [SONG_SUBMISSIONS_KEY],
+        queryFn: async (): Promise<SongEditRecord[]> => {
+            const data = await apiFetch<{ ok: true; submissions: SongEditRecord[] }>('/api/admin/song-submissions');
             return data.submissions ?? [];
         },
         staleTime: 30_000,
@@ -248,51 +226,26 @@ export function useAdminSongSubmissions(status: SongSubmissionStatus = 'pending'
     });
 }
 
-export function useAdminSongSubmission(id: string | null) {
-    return useQuery({
-        queryKey: [SONG_SUBMISSION_KEY, id],
-        enabled: !!id,
-        queryFn: async (): Promise<SongSubmissionDetail> => {
-            const data = await apiFetch<{ ok: true; existing_video?: SongSubmissionDetail['existingVideo'] } & Omit<SongSubmissionDetail, 'existingVideo'>>(
-                `/api/admin/song-submissions?id=${encodeURIComponent(id!)}`,
-            );
-            return { submission: data.submission, existing: data.existing ?? null, existingVideo: data.existing_video ?? null };
-        },
-        staleTime: 0,
-        retry: noRetryOn401,
-    });
-}
-
-export function useApproveSongSubmission() {
+/** 還原到這次修改之前（之後的修改一併還原） */
+export function useRevertSongEdit() {
     const qc = useQueryClient();
     return useMutation({
-        mutationFn: async ({ id, input }: { id: string; input: ApproveSubmissionInput }): Promise<{ video_ref: string }> => {
-            const data = await apiFetch<{ ok: true; video_ref: string }>(
-                `/api/admin/song-submissions?id=${encodeURIComponent(id)}&action=approve`,
-                { method: 'POST', body: JSON.stringify(input) },
-            );
-            return { video_ref: data.video_ref };
+        mutationFn: async (id: string) => {
+            await apiFetch<{ ok: true }>('/api/admin/song-submissions?action=revert', { method: 'POST', body: JSON.stringify({ id }) });
         },
-        onSuccess: (_d, { id }) => {
+        onSuccess: () => {
             qc.invalidateQueries({ queryKey: [SONG_SUBMISSIONS_KEY] });
             qc.invalidateQueries({ queryKey: [SONG_VIDEOS_KEY] });
-            qc.removeQueries({ queryKey: [SONG_SUBMISSION_KEY, id] });
+            qc.invalidateQueries({ queryKey: [SONG_VIDEO_KEY] });
         },
     });
 }
 
-export function useRejectSongSubmission() {
-    const qc = useQueryClient();
+/** 鎖定／解鎖歌回的社群編輯 */
+export function useLockSongVideo() {
     return useMutation({
-        mutationFn: async ({ id, notes }: { id: string; notes: string | null }) => {
-            await apiFetch<{ ok: true }>(
-                `/api/admin/song-submissions?id=${encodeURIComponent(id)}&action=reject`,
-                { method: 'POST', body: JSON.stringify({ notes }) },
-            );
-        },
-        onSuccess: (_d, { id }) => {
-            qc.invalidateQueries({ queryKey: [SONG_SUBMISSIONS_KEY] });
-            qc.removeQueries({ queryKey: [SONG_SUBMISSION_KEY, id] });
+        mutationFn: async ({ videoRef, locked }: { videoRef: string; locked: boolean }) => {
+            await apiFetch<{ ok: true }>('/api/admin/song-submissions?action=lock', { method: 'POST', body: JSON.stringify({ videoRef, locked }) });
         },
     });
 }

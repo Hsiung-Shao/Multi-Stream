@@ -12,7 +12,6 @@ const VIDEO = 'dQw4w9WgXcQ';
 const SEG1 = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const SEG2 = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const SEG3 = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
-const SUB_ID = '44444444-4444-4444-8444-444444444444';
 
 const seg = (id: string, code: string, start: number, title: string, artist: string | null, note: string | null) => ({
     id, code, video_ref: VID, song_id: 1, start_seconds: start, end_seconds: start + 100, title, original_artist: artist, version_note: note, position: 0,
@@ -29,7 +28,6 @@ let matchResponse: (items: any[]) => unknown[];
 
 const matchCalls = () => calls.filter((c) => c.url.includes('/api/admin/song-library') && c.url.includes('action=match'));
 const saveCalls = () => calls.filter((c) => c.method === 'PUT' && c.url.startsWith('/api/admin/songs'));
-const approveCalls = () => calls.filter((c) => c.url.includes('action=approve'));
 
 function stubFetch(extra?: (url: string, method: string) => Response | null) {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -70,11 +68,11 @@ afterEach(() => {
     localStorage.clear();
 });
 
-function renderEditor(props: { id?: string | null; reviewId?: string | null } = { id: VID }) {
+function renderEditor(props: { id?: string | null } = { id: VID }) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
         <QueryClientProvider client={client}>
-            <SongVideoEditor id={props.id ?? null} reviewId={props.reviewId ?? null} playerEnabled={false} onClose={vi.fn()} onSaved={vi.fn()} />
+            <SongVideoEditor id={props.id ?? null} playerEnabled={false} onClose={vi.fn()} onSaved={vi.fn()} />
         </QueryClientProvider>,
     );
 }
@@ -194,50 +192,5 @@ describe('SongVideoEditor 配對預覽（C2）', () => {
         expect(await screen.findByText('已配對：甲（3 個版本）')).toBeInTheDocument();
         expect(screen.getByText('新歌曲')).toBeInTheDocument();
         expect(screen.getByText('新歌曲・同名：丙／未填原唱（2）')).toBeInTheDocument();
-    });
-});
-
-describe('SongVideoEditor 審核投稿核准帶備註（C2）', () => {
-    const submission = (segs: unknown[]) => ({
-        id: SUB_ID, kind: 'new', video_id: VIDEO, target_video_ref: null, title: '新歌回', vtuber_id: null, streamed_at: '2026-09-01T12:00:00Z',
-        source_note: null, submitter_contact: null, status: 'pending', reviewer_notes: null, result_video_ref: null,
-        created_at: '2026-10-20T00:00:00Z', reviewed_at: null, segments: segs,
-    });
-
-    function stubReview(segs: unknown[]) {
-        stubFetch((url, method) => {
-            if (url.startsWith('/api/admin/song-submissions') && method === 'GET') {
-                return new Response(JSON.stringify({ ok: true, submission: submission(segs), existing: null, existing_video: null }));
-            }
-            if (url.includes('action=approve')) return new Response(JSON.stringify({ ok: true, video_ref: VID }));
-            return null;
-        });
-    }
-    async function approve() {
-        const btn = await screen.findByRole('button', { name: '核准並發布' });
-        await waitFor(() => expect(btn).toBeEnabled());
-        fireEvent.click(btn);
-        await waitFor(() => expect(approveCalls()).toHaveLength(1));
-        return approveCalls()[0].body as { segments: { version_note: string | null }[] };
-    }
-
-    it('投稿者填的 versionNote 預填到備註欄，核准時以 version_note 送出；沒填的為 null', async () => {
-        stubReview([
-            { start: 10, end: 180, title: '歌A', artist: '原唱A', versionNote: '清唱', endEstimated: false },
-            { start: 200, end: 300, title: '歌B', artist: null, versionNote: null, endEstimated: false },
-        ]);
-        renderEditor({ reviewId: SUB_ID });
-        await waitFor(() => expect(noteValues()).toEqual(['清唱', '']));
-        const body = await approve();
-        expect(body.segments.map((s) => s.version_note)).toEqual(['清唱', null]);
-    });
-
-    it('管理員在審核時改備註，以改過的值（trim 後）送出', async () => {
-        stubReview([{ start: 10, end: 180, title: '歌A', artist: '原唱A', versionNote: '清唱', endEstimated: false }]);
-        renderEditor({ reviewId: SUB_ID });
-        await waitFor(() => expect(noteBoxes()).toHaveLength(1));
-        fireEvent.change(noteBoxes()[0], { target: { value: ' 合唱 ' } });
-        const body = await approve();
-        expect(body.segments[0].version_note).toBe('合唱');
     });
 });
