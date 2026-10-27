@@ -201,7 +201,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         if (opts?.replace) {
             window.history.replaceState(null, '', url);
         } else {
-            const state: SongsHistoryState | null = isBrowseView(prev) && (next.kind === 'video' || next.kind === 'song')
+            // 單場曲目表的「N 個版本」進單曲頁也算頁內上一筆：單曲頁的「返回」要回到那一場
+            const fromPage = isBrowseView(prev) || (prev.kind === 'video' && next.kind === 'song');
+            const state: SongsHistoryState | null = fromPage && (next.kind === 'video' || next.kind === 'song')
                 ? { songsFrom: PAGE_PATHS.songs + serializeSongsView(prev) }
                 : null;
             window.history.pushState(state, '', url);
