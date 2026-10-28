@@ -4,20 +4,23 @@
 //
 // 檢查順序見 functions/lib/submit-guard.js（緊急開關 → 來源 → 大小 → 封鎖 IP → 欄位驗證 → 個人配額 → Turnstile → 全站配額）。
 // 修正既有歌回要帶 rev（載入時的版本），DB 發現已被別人更新會回 stale_edit；新歌回 rev 為 null 且必須指定 VTuber。
+// 新歌回另有全站配額（每小時 20 支，限制被灌垃圾歌回的規模）：以伺服器查到的影片是否存在為準，不信任前端送的 rev。
 // 只存雜湊 IP，不存原始 IP。緊急開關：SUBMISSIONS_DISABLED=true → 503（與其他投稿共用）。
 // 成功後刪除本機房的目錄 edge 快取（其他機房與 isolate 記憶體最慢約 10 分鐘後同步）。
 //
 // 回應：201 { ok: true, id, kind } 或 { ok: false, error }
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
-import { rpc } from '../../lib/supabase-server.js';
+import { rpc, select } from '../../lib/supabase-server.js';
 import { logError } from '../../lib/logger.js';
 import { guardSubmission, postgrestErrorMessage } from '../../lib/submit-guard.js';
 import { parseSubmissionBody } from '../../lib/song-submissions.js';
 import { purgeCatalogCache } from '../../lib/song-catalog-cache.js';
+import { checkKvQuota, quotaWindow } from '../../lib/rate-limit.js';
 
 const MAX_BODY_BYTES = 32768;
 const NO_STORE = { 'Cache-Control': 'no-store' };
+const NEW_VIDEO_HOURLY_LIMIT = 20;
 // RPC 以 exception message 當錯誤碼 → HTTP 狀態；不在表內的一律 500 save_failed
 const RPC_ERRORS = {
     stale_edit: 409,
@@ -46,6 +49,16 @@ export async function onRequestPost(context) {
     });
     if (!g.ok) return g.response;
     const v = g.value;
+
+    const found = await select(env, `song_videos?video_id=eq.${encodeURIComponent(v.videoId)}&select=id&limit=1`);
+    if (!found.ok) {
+        await logError(env, 'songs-submissions', 'video lookup failed', { metadata: { status: found.status } });
+        return reply({ ok: false, error: 'save_failed' }, 500);
+    }
+    const isNew = !(Array.isArray(found.data) && found.data.length > 0);
+    if (isNew && !(await checkKvQuota(env.RATE_LIMIT_KV, `songs:new:g:${quotaWindow().hour}`, NEW_VIDEO_HOURLY_LIMIT, 3700))) {
+        return reply({ ok: false, error: 'rate_limited' }, 429);
+    }
 
     // parseSubmissionBody 已依 start 排序；有 code 才帶（沒有 = 新增片段）
     const segments = v.segments.map((s, position) => ({

@@ -51,6 +51,12 @@ describe('edge seo-meta ↔ i18n locale 同步', () => {
         expect(routeMeta[route].en.description).toBe(en[`${prefix}.description`]);
     });
 
+    it('/songs 英文標題不超過 60 字元（locale 與 edge 複本一致）', () => {
+        const title = (enSeo as Record<string, string>)['songs.title'];
+        expect(title.length).toBeLessThanOrEqual(60);
+        expect(routeMeta['/songs'].en.title).toBe(title);
+    });
+
     it('/faq 與 faq ns 的 title/header_subtitle 一致', () => {
         const zh = zhTWFaq as Record<string, string>;
         const en = enFaq as Record<string, string>;

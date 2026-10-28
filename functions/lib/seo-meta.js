@@ -166,7 +166,7 @@ export const ROUTE_META = {
     },
     '/songs': {
         'zh-TW': { title: 'VTuber 歌回播放清單：連續播放歌回裡的每一首歌 - MultiStream Hub', description: '把台灣 VTuber 歌回拆成一首一首的歌：連續播放、隨機與循環、建立自己的歌單，再用一條連結分享給朋友。' },
-        en: { title: 'VTuber Karaoke Song Playlist: Play Every Song From Karaoke Streams - MultiStream Hub', description: 'Taiwanese VTuber karaoke streams split into individual songs: play them back to back, shuffle or repeat, build your own playlists and share them in one link.' },
+        en: { title: 'VTuber Karaoke Song Playlist - MultiStream Hub', description: 'Taiwanese VTuber karaoke streams split into individual songs: play them back to back, shuffle or repeat, build your own playlists and share them in one link.' },
     },
     '/songs/submit': {
         'zh-TW': { title: '投稿歌回時間軸 - MultiStream Hub', description: '把 VTuber 歌回的歌曲時間軸投稿到歌回播放清單：貼上影片網址與留言裡的時間軸，自動拆成一首一首，送出就會更新，馬上能連續播放。' },

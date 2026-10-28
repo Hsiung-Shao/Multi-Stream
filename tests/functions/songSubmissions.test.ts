@@ -177,6 +177,9 @@ const flush = async () => {
     await Promise.allSettled(pending.splice(0));
 };
 const rpcCalls = () => sbCalls().filter((c) => c.url.includes('rpc/community_save_song_video'));
+// 查影片是否存在（新歌回配額）回「不存在」，其餘照 r：讓只關心 RPC 回應的測試不受這次查詢影響
+const afterLookup = (r: () => Response) => (method: string, path: string) =>
+    method === 'GET' && path.startsWith('song_videos') ? new Response('[]') : r();
 
 describe('POST /api/songs/submissions', () => {
     it('擋非法投稿不寫 DB：重疊、缺 end、片段帶 id、影片 ID 錯、新歌回沒選 VTuber → 400', async () => {
@@ -204,8 +207,8 @@ describe('POST /api/songs/submissions', () => {
         expect(res.status).toBe(201);
         expect(await res.json()).toMatchObject({ ok: true, id: SUB_ID, kind: 'new' });
 
-        // 只有一次 DB 請求，且是 RPC；不查影片是否存在、不 POST song_submissions
-        expect(sbCalls()).toHaveLength(1);
+        // 寫入只有一次 RPC（影片是否存在的 song_videos 查詢另計，見「新歌回全站配額」）；不 POST song_submissions
+        expect(sbCalls().filter((c) => !c.url.includes('song_videos'))).toHaveLength(1);
         expect(rpcCalls()).toHaveLength(1);
         expect(sbCalls().some((c) => c.url.includes('song_submissions'))).toBe(false);
 
@@ -247,7 +250,7 @@ describe('POST /api/songs/submissions', () => {
 
     it('F2 RPC 錯誤對應：stale_edit／video_exists → 409', async () => {
         for (const message of ['stale_edit', 'video_exists']) {
-            sb = () => rpcErr(message);
+            sb = afterLookup(() => rpcErr(message));
             const res = await submit(sub());
             expect(res.status, message).toBe(409);
             expect((await res.json()).error, message).toBe(message);
@@ -256,7 +259,7 @@ describe('POST /api/songs/submissions', () => {
 
     it('F2 RPC 錯誤對應：cannot_delete／unknown_segment／vtuber_required → 400', async () => {
         for (const message of ['cannot_delete', 'unknown_segment', 'vtuber_required']) {
-            sb = () => rpcErr(message);
+            sb = afterLookup(() => rpcErr(message));
             const res = await submit(sub());
             expect(res.status, message).toBe(400);
             expect((await res.json()).error, message).toBe(message);
@@ -264,20 +267,20 @@ describe('POST /api/songs/submissions', () => {
     });
 
     it('F2 RPC 錯誤對應：video_locked → 403', async () => {
-        sb = () => rpcErr('video_locked');
+        sb = afterLookup(() => rpcErr('video_locked'));
         const res = await submit(sub({ rev: REV }));
         expect(res.status).toBe(403);
         expect((await res.json()).error).toBe('video_locked');
     });
 
     it('F2 其他 RPC 失敗（未知訊息、DB 掛掉）→ 500 save_failed，且只打過一次 RPC', async () => {
-        sb = () => rpcErr('something_else');
+        sb = afterLookup(() => rpcErr('something_else'));
         const unknown = await submit(sub());
         expect(unknown.status).toBe(500);
         expect((await unknown.json()).error).toBe('save_failed');
 
         calls = [];
-        sb = () => new Response('boom', { status: 500 });
+        sb = afterLookup(() => new Response('boom', { status: 500 }));
         const down = await submit(sub());
         expect(down.status).toBe(500);
         expect((await down.json()).error).toBe('save_failed');
@@ -298,7 +301,7 @@ describe('POST /api/songs/submissions', () => {
     it('F3 寫入失敗（RPC 錯誤）時不刪目錄快取', async () => {
         const del = vi.fn(async () => true);
         vi.stubGlobal('caches', { default: { delete: del } });
-        sb = () => rpcErr('stale_edit');
+        sb = afterLookup(() => rpcErr('stale_edit'));
         const res = await submit(sub());
         await flush();
         expect(res.status).toBe(409);
@@ -331,6 +334,101 @@ describe('POST /api/songs/submissions', () => {
         const env = ENV();
         for (let i = 0; i < 3; i++) expect((await submit(sub(), env)).status).toBe(201);
         expect((await submit(sub(), env)).status).toBe(429);
+    });
+});
+
+// ---------- 新歌回全站配額 ----------
+describe('POST /api/songs/submissions：新歌回全站每小時配額', () => {
+    const NOW = new Date('2026-10-28T05:30:00Z');
+    const NEW_KEY = 'songs:new:g:2026102805';
+    const videoLookups = () => sbCalls().filter((c) => c.method === 'GET' && c.url.includes('song_videos'));
+    const videoExists = () => {
+        sb = (method, path) => {
+            if (method === 'GET' && path.startsWith('song_videos')) return new Response(JSON.stringify([{ id: REF }]));
+            return method === 'GET' ? new Response('[]') : saveOk('revision');
+        };
+    };
+
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(NOW);
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('A1 新歌回且本小時新歌回已滿 20 → 429 rate_limited，不呼叫 RPC', async () => {
+        const env = ENV();
+        env.RATE_LIMIT_KV._m.set(NEW_KEY, '20');
+        const res = await submit(sub(), env);
+        expect(res.status).toBe(429);
+        expect(await res.json()).toEqual({ ok: false, error: 'rate_limited' });
+        expect(rpcCalls()).toHaveLength(0);
+    });
+
+    it('A2 既有影片的修正即使新歌回配額已滿 → 仍 201 並呼叫 RPC，且不增加新歌回計數', async () => {
+        videoExists();
+        const env = ENV();
+        env.RATE_LIMIT_KV._m.set(NEW_KEY, '20');
+        const res = await submit(sub({ rev: REV, vtuberId: null }), env);
+        expect(res.status).toBe(201);
+        expect(rpcCalls()).toHaveLength(1);
+        expect(env.RATE_LIMIT_KV._m.get(NEW_KEY)).toBe('20');
+    });
+
+    it('A2 既有影片的修正不會在新歌回 key 上建立計數', async () => {
+        videoExists();
+        const env = ENV();
+        expect((await submit(sub({ rev: REV, vtuberId: null }), env)).status).toBe(201);
+        expect(env.RATE_LIMIT_KV._m.has(NEW_KEY)).toBe(false);
+    });
+
+    it('A3 body 帶 rev 但影片其實不存在（冒充修正）→ 仍算新歌回，配額已滿時 429 且不呼叫 RPC', async () => {
+        const env = ENV();
+        env.RATE_LIMIT_KV._m.set(NEW_KEY, '20');
+        const res = await submit(sub({ rev: REV, vtuberId: null }), env);
+        expect(res.status).toBe(429);
+        expect((await res.json()).error).toBe('rate_limited');
+        expect(rpcCalls()).toHaveLength(0);
+    });
+
+    it('A4 新歌回成功 → 本小時新歌回計數 +1，且以 ttl 3700 秒寫入', async () => {
+        const env = ENV();
+        const put = vi.spyOn(env.RATE_LIMIT_KV, 'put');
+        env.RATE_LIMIT_KV._m.set(NEW_KEY, '7');
+        const res = await submit(sub(), env);
+        expect(res.status).toBe(201);
+        expect(env.RATE_LIMIT_KV._m.get(NEW_KEY)).toBe('8');
+        expect(put).toHaveBeenCalledWith(NEW_KEY, '8', { expirationTtl: 3700 });
+    });
+
+    it('A4 新歌回計數是整站共用：不同 IP 的新歌回都累加到同一個 key', async () => {
+        const env = ENV();
+        expect((await submit(sub(), env, { 'CF-Connecting-IP': '203.0.113.1' })).status).toBe(201);
+        expect((await submit(sub(), env, { 'CF-Connecting-IP': '203.0.113.2' })).status).toBe(201);
+        expect(env.RATE_LIMIT_KV._m.get(NEW_KEY)).toBe('2');
+    });
+
+    it('A5 通過 guard 後才查影片：用 song_videos?video_id=eq.<id> 只 select id', async () => {
+        await submit(sub(), ENV());
+        expect(videoLookups()).toHaveLength(1);
+        const url = videoLookups()[0].url;
+        expect(url).toContain(`video_id=eq.${VIDEO}`);
+        expect(url).toMatch(/select=id(&|$)/);
+    });
+
+    it('A5 驗證失敗（400）時不查影片、不碰新歌回配額', async () => {
+        const env = ENV();
+        expect((await submit(sub({ videoId: 'bad' }), env)).status).toBe(400);
+        expect(videoLookups()).toHaveLength(0);
+        expect(env.RATE_LIMIT_KV._m.has(NEW_KEY)).toBe(false);
+    });
+
+    it('A6 查影片是否存在失敗（PostgREST 500）→ 500 save_failed 且不呼叫 RPC', async () => {
+        sb = (method, path) =>
+            method === 'GET' && path.startsWith('song_videos') ? new Response('boom', { status: 500 }) : saveOk();
+        const res = await submit(sub(), ENV());
+        expect(res.status).toBe(500);
+        expect((await res.json()).error).toBe('save_failed');
+        expect(rpcCalls()).toHaveLength(0);
     });
 });
 
