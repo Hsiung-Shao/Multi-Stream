@@ -53,5 +53,5 @@ export default {
     'songs.title': 'VTuber 노래 방송 플레이리스트: 노래 방송의 곡을 한 곡씩 연속 재생 - MultiStream Hub',
     'songs.description': '대만 VTuber 노래 방송을 한 곡씩 나눠 연속 재생하세요. 셔플과 반복, 나만의 플레이리스트 만들기, 링크 하나로 공유까지 할 수 있습니다.',
     'songsSubmit.title': '노래 방송 타임스탬프 제보 - MultiStream Hub',
-    'songsSubmit.description': 'VTuber 노래 방송의 곡 타임스탬프를 노래 방송 플레이리스트에 제보하세요. 영상 링크와 댓글 타임스탬프를 붙여 넣으면 곡별로 자동으로 나뉘고, 검토 후 연속 재생할 수 있습니다.',
+    'songsSubmit.description': 'VTuber 노래 방송의 곡 타임스탬프를 노래 방송 플레이리스트에 제보하세요. 영상 링크와 댓글 타임스탬프를 붙여 넣으면 곡별로 자동으로 나뉘고, 제보하면 바로 반영되어 연속 재생할 수 있습니다.',
 };

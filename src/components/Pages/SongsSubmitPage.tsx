@@ -1,8 +1,10 @@
-// 投稿歌回時間軸（/songs/submit）：任何人都能投新歌回或修正既有時間軸，送出後進後台待審。
+// 投稿歌回時間軸（/songs/submit）：任何人都能投新歌回或修正既有時間軸，送出立即生效（社群共同編輯，站方可在後台還原）。
 //
 // 流程：貼網址 → 播放器（≥200×200、不遮擋）→ 標題用 YouTube oEmbed、VTuber／開台時間用週表資料自動帶入（只補空欄位）
-//      → 目錄裡已有這支歌回就切到「修正既有時間軸」並預填現有片段 → 貼時間軸或手動調整（SegmentEditor）
-//      → 來源說明、聯絡方式（選填）→ Turnstile → 送出。
+//      → 讀 /api/songs/timeline（即時資料，不走目錄快取）：已發布就切到「修正既有時間軸」並預填現有片段（每列帶 code）、記下 rev，
+//        404 當新歌回 → 貼時間軸或手動調整（SegmentEditor）→ 來源說明、聯絡方式（選填）→ Turnstile → 送出。
+// - 修正模式：既有片段不能刪除（protectExisting；「取代現有片段」用 code 對回舊片段，沒對到的保留）；
+//   已鎖定的歌回送出鍵停用；送出帶 rev，版本已被別人更新時後端回 stale_edit。新歌回 VTuber 必選。
 // - ?v=<videoId> 直接進修正模式：mount 後才讀 query 並 replaceState（render 本體不碰 window，可預渲染殼層）。
 // - 送出 15 秒逾時；送出中「取消」鍵不 disable，可隨時中止。
 // - SEO（WebPage + Breadcrumb）由 App.tsx 統一處理。
@@ -21,18 +23,21 @@ import { TurnstileWidget, type TurnstileHandle } from '../turnstile/TurnstileWid
 import { PAGE_PATHS } from '../../config/routes';
 import { extractVideoId } from '../../features/songs/lib/youtubeUrl';
 import { mergePrefill } from '../../features/songs/lib/streamPrefill';
-import { formatTimecode } from '../../features/songs/lib/timecode';
-import { useSongCatalog } from '../../features/songs/songsSource';
+import { formatTimecode, parseTimecode } from '../../features/songs/lib/timecode';
+import { mergeReplaceRows } from '../../features/songs/lib/timelineMerge';
+import { fetchSongTimeline, type SongTimeline } from '../../features/songs/timelineApi';
 import { fetchOEmbedTitle, fetchStreamByVideoId } from '../../features/songs/streamLookup';
 import { PreviewPlayer, type PreviewApi } from '../../features/songs/components/PreviewPlayer';
 import { VtuberPicker } from '../../features/songs/components/VtuberPicker';
 import { SegmentEditor } from '../../features/songs/components/SegmentEditor';
-import { computeRowIssues, newRowKey, rowSeconds, type SegmentRowDraft } from '../../features/songs/components/segmentRows';
+import { computeRowIssues, fromImported, newRowKey, rowSeconds, type ImportedRow, type SegmentRowDraft } from '../../features/songs/components/segmentRows';
 import { SongSubmitError, submitSongTimeline } from '../../features/songs/submitApi';
 
 const NOTE_MAX = 300;
 const CONTACT_MAX = 200;
 const TITLE_MAX = 200;
+/** 後端接受的影片長度範圍（秒） */
+const DURATION_MAX = 86_400;
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -45,10 +50,24 @@ function toLocalInput(iso: string | null): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/**
+ * 「取代現有片段」：新解析的列依開始時間對回既有片段（保住 code）；沒對到的既有片段不能刪，
+ * 併回列表並依開始時間排序（時間格式有誤的排最後），回傳保留的首數讓畫面提示使用者手動調整。
+ * 沒有 code 的列（使用者新增的）照一般取代處理，不保留。
+ */
+function replaceKeepingExisting(current: SegmentRowDraft[], imported: ImportedRow[]): { rows: SegmentRowDraft[]; kept: number } {
+    const existing = current.map((r) => ({ code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note }));
+    const { rows: merged, lostCodes } = mergeReplaceRows(existing, imported);
+    const replaced = merged.map((m, i) => fromImported({ ...m, end: imported[i].end, endEstimated: imported[i].endEstimated }));
+    const lost = new Set(lostCodes);
+    const keptRows = current.filter((r) => r.code !== undefined && lost.has(r.code));
+    const startOf = (r: SegmentRowDraft) => parseTimecode(r.start) ?? Number.POSITIVE_INFINITY;
+    return { rows: [...replaced, ...keptRows].sort((a, b) => startOf(a) - startOf(b)), kept: keptRows.length };
+}
+
 export function SongsSubmitPage() {
     const { t } = useTranslation('songs');
     const tf = t as unknown as TFn;
-    const catalog = useSongCatalog();
 
     const [url, setUrl] = useState('');
     const [title, setTitle] = useState('');
@@ -64,6 +83,10 @@ export function SongsSubmitPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [done, setDone] = useState<'new' | 'revision' | null>(null);
+    // 即時時間軸（timeline 端點）：data 為 null＝404（新歌回）；status error＝讀取失敗，擋住送出避免把已存在的歌回當新歌回
+    const [timeline, setTimeline] = useState<{ videoId: string; status: 'ready' | 'error'; data: SongTimeline | null } | null>(null);
+    // 「取代現有片段」保留下來的既有片段數（提示手動調整）
+    const [keptCount, setKeptCount] = useState(0);
     const abortRef = useRef<AbortController | null>(null);
 
     // ?v=<videoId>：直接進修正模式；讀完把網址換回乾淨的 /songs/submit
@@ -78,11 +101,13 @@ export function SongsSubmitPage() {
     useEffect(() => () => abortRef.current?.abort(), []);
 
     const videoId = extractVideoId(url);
-    const existing = useMemo(
-        () => (videoId ? catalog.data?.videos.find((v) => v.videoId === videoId) ?? null : null),
-        [catalog.data, videoId],
-    );
+    // 換影片後舊的 timeline 結果不算數（videoId 對不上就當載入中）
+    const tl = timeline && timeline.videoId === videoId ? timeline : null;
+    const timelineLoading = !!videoId && !tl;
+    const timelineFailed = tl?.status === 'error';
+    const existing = tl?.data ?? null;
     const isRevision = !!existing;
+    const locked = existing?.locked === true;
 
     // 自動帶入：只補還空著的欄位（不覆蓋使用者已填的）；記下帶入的值，換影片時才分得出哪些是上一支的預填
     const latestRef = useRef({ title, vtuberId, streamedAt });
@@ -90,20 +115,27 @@ export function SongsSubmitPage() {
         latestRef.current = { title, vtuberId, streamedAt };
     }, [title, vtuberId, streamedAt]);
     const autoRef = useRef<{ title?: string; vtuberId?: string | null; streamedAt?: string; rows?: SegmentRowDraft[] }>({});
-    const fillEmpty = (found: { title: string | null; vtuberId: string | null; streamedAt: string | null }) => {
+    // replaceAuto：修正既有歌回時，即時資料優先於 oEmbed／週表先帶入的值（使用者沒改過才蓋）
+    const fillEmpty = (found: { title: string | null; vtuberId: string | null; streamedAt: string | null }, replaceAuto = false) => {
         const cur = latestRef.current;
-        const current = { title: cur.title, vtuberId: cur.vtuberId, streamedAt: cur.streamedAt || null };
+        const auto = autoRef.current;
+        // 只有即時資料真的有值才蓋掉自動帶入的值；沒值就留著原本帶入的
+        const current = {
+            title: replaceAuto && found.title && cur.title === auto.title ? '' : cur.title,
+            vtuberId: replaceAuto && found.vtuberId && cur.vtuberId === auto.vtuberId ? null : cur.vtuberId,
+            streamedAt: (replaceAuto && found.streamedAt && cur.streamedAt === auto.streamedAt ? '' : cur.streamedAt) || null,
+        };
         const merged = mergePrefill(current, found);
-        if (merged.title !== current.title) {
+        if (merged.title !== cur.title) {
             const v = merged.title.slice(0, TITLE_MAX);
             setTitle(v);
             autoRef.current.title = v;
         }
-        if (merged.vtuberId !== current.vtuberId) {
+        if (merged.vtuberId !== cur.vtuberId) {
             setVtuberId(merged.vtuberId);
             autoRef.current.vtuberId = merged.vtuberId;
         }
-        if (merged.streamedAt !== current.streamedAt && merged.streamedAt) {
+        if (merged.streamedAt !== (cur.streamedAt || null) && merged.streamedAt) {
             const v = toLocalInput(merged.streamedAt);
             setStreamedAt(v);
             autoRef.current.streamedAt = v;
@@ -119,9 +151,11 @@ export function SongsSubmitPage() {
         if (auto.title !== undefined && cur.title === auto.title) { setTitle(''); cur.title = ''; }
         if (auto.vtuberId !== undefined && cur.vtuberId === auto.vtuberId) { setVtuberId(null); cur.vtuberId = null; }
         if (auto.streamedAt !== undefined && cur.streamedAt === auto.streamedAt) { setStreamedAt(''); cur.streamedAt = ''; }
-        if (auto.rows) setRows((r) => (r === auto.rows ? [] : r));
+        // 使用者改過而保留的列，帶著上一支影片的 code 送出會被後端擋（unknown_segment），所以一併拿掉
+        if (auto.rows) setRows((r) => (r === auto.rows ? [] : r.some((x) => x.code) ? r.map((x) => (x.code ? { ...x, code: undefined } : x)) : r));
         autoRef.current = {};
         prefilledRef.current = null;
+        setKeptCount(0);
     };
 
     useEffect(() => {
@@ -141,29 +175,43 @@ export function SongsSubmitPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [videoId]);
 
-    // 修正既有時間軸：每支影片只預填一次現有片段（之後以使用者編輯為準）
+    // 讀這支影片的即時時間軸（no-store、15 秒逾時）；404 當新歌回，其他失敗擋住送出
+    useEffect(() => {
+        if (!videoId) return;
+        const ctrl = new AbortController();
+        fetchSongTimeline(videoId, ctrl.signal)
+            .then((data) => { if (!ctrl.signal.aborted) setTimeline({ videoId, status: 'ready', data }); })
+            .catch(() => { if (!ctrl.signal.aborted) setTimeline({ videoId, status: 'error', data: null }); });
+        return () => ctrl.abort();
+    }, [videoId]);
+
+    // 修正既有時間軸：每支影片只預填一次現有片段（之後以使用者編輯為準）；每列帶 code，送出時後端靠它原地更新
     useEffect(() => {
         if (!existing || prefilledRef.current === existing.videoId) return;
         prefilledRef.current = existing.videoId;
-        fillEmpty({ title: existing.title, vtuberId: existing.vtuber?.id || null, streamedAt: existing.streamedAt });
+        fillEmpty({ title: existing.title, vtuberId: existing.vtuber?.id || null, streamedAt: existing.streamedAt }, true);
         const prefill: SegmentRowDraft[] = existing.segments.map((s) => ({
             key: newRowKey(),
+            code: s.code,
             start: formatTimecode(s.start),
             end: formatTimecode(s.end),
             title: s.title,
             artist: s.artist ?? '',
-            note: s.versionNote ?? '',
+            note: s.note ?? '',
         }));
         autoRef.current.rows = prefill;
         setRows((cur) => (cur.length > 0 ? cur : prefill));
-        // 只在目錄資料變動時預填；fillEmpty 只讀 ref 與 setter
+        // 只在時間軸資料變動時預填；fillEmpty 只讀 ref 與 setter
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [existing]);
 
     const durationForCheck = duration !== null ? Math.ceil(duration) : null;
     const issues = useMemo(() => computeRowIssues(rows, durationForCheck), [rows, durationForCheck]);
     const titleOk = title.trim().length >= 1 && title.trim().length <= TITLE_MAX;
-    const canSubmit = !!videoId && titleOk && rows.length > 0 && issues.size === 0 && note.length <= NOTE_MAX && contact.length <= CONTACT_MAX;
+    // 新歌回一定要選 VTuber（修正既有歌回沿用原本的）；時間軸還在讀、讀取失敗、已鎖定都不能送
+    const needVtuber = !!videoId && !!tl && !timelineFailed && !existing && !vtuberId;
+    const canSubmit = !!videoId && !timelineLoading && !timelineFailed && !locked && !needVtuber
+        && titleOk && rows.length > 0 && issues.size === 0 && note.length <= NOTE_MAX && contact.length <= CONTACT_MAX;
 
     const handleSubmit = async () => {
         if (!videoId || !canSubmit || submitting) return;
@@ -177,9 +225,12 @@ export function SongsSubmitPage() {
                 title: title.trim(),
                 vtuberId,
                 streamedAt: streamedAt ? new Date(streamedAt).toISOString() : null,
+                rev: existing?.rev ?? null,
+                durationSeconds: durationForCheck !== null && durationForCheck >= 1 && durationForCheck <= DURATION_MAX ? durationForCheck : null,
                 segments: rows.map((r) => {
                     const { start, end } = rowSeconds(r);
                     return {
+                        ...(r.code ? { code: r.code } : {}),
                         start, end: end ?? start, title: r.title.trim(), artist: r.artist.trim() || null,
                         versionNote: r.note.trim() || null, endEstimated: !!r.endEstimated,
                     };
@@ -201,6 +252,13 @@ export function SongsSubmitPage() {
         }
     };
 
+    // 取代：用 code 對回既有片段，沒對到的保留（不能刪除），提示使用者手動調整
+    const handleReplace = (imported: ImportedRow[]) => {
+        const result = replaceKeepingExisting(rows, imported);
+        setRows(() => result.rows);
+        setKeptCount(result.kept);
+    };
+
     const reset = () => {
         setUrl('');
         setTitle('');
@@ -211,6 +269,7 @@ export function SongsSubmitPage() {
         setContact('');
         setError(null);
         setDone(null);
+        setKeptCount(0);
         // 成功畫面卸載了 widget（卸載時不會回呼 onToken），用過的 token 要手動清掉，等新 widget 重新給
         setToken(null);
         prefilledRef.current = null;
@@ -261,7 +320,12 @@ export function SongsSubmitPage() {
                                     aria-invalid={url.trim() !== '' && !videoId}
                                 />
                                 {url.trim() !== '' && !videoId && <p className="text-[12px] text-destructive">{t('submit.urlInvalid')}</p>}
-                                {isRevision && <p role="status" className="text-[13px] text-sky-700 dark:text-sky-300">{t('submit.revisionMode')}</p>}
+                                {locked ? (
+                                    <p className="text-[13px] font-medium text-destructive">{t('submit.locked')}</p>
+                                ) : isRevision && (
+                                    <p className="text-[13px] text-sky-700 dark:text-sky-300">{t('submit.revisionMode')}</p>
+                                )}
+                                {timelineFailed && <p className="text-[13px] text-destructive">{t('submit.timelineFailed')}</p>}
                                 {videoId ? (
                                     <PreviewPlayer key={videoId} videoId={videoId} onApi={setPlayer} onDuration={setDuration} />
                                 ) : (
@@ -279,6 +343,7 @@ export function SongsSubmitPage() {
                                 <div className="space-y-1.5">
                                     <Label htmlFor="songs-submit-vtuber">{t('submit.vtuber')}</Label>
                                     <VtuberPicker id="songs-submit-vtuber" value={vtuberId} onChange={setVtuberId} />
+                                    {needVtuber && <p className="text-[12px] text-destructive">{t('submit.vtuberRequired')}</p>}
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="songs-submit-streamed">{t('submit.streamedAt')}</Label>
@@ -290,7 +355,16 @@ export function SongsSubmitPage() {
                         <section aria-labelledby="songs-submit-segments-h">
                             <h2 id="songs-submit-segments-h" className="mb-2 text-lg font-bold">{t('submit.segmentsSection')}</h2>
                             <p className="mb-3 text-[13px] text-muted-foreground">{t('submit.segmentsHint')}</p>
-                            <SegmentEditor rows={rows} onRowsChange={setRows} issues={issues} player={player} duration={durationForCheck} />
+                            {keptCount > 0 && <p className="mb-3 text-[13px] text-amber-600 dark:text-amber-400">{t('submit.kept', { count: keptCount })}</p>}
+                            <SegmentEditor
+                                rows={rows}
+                                onRowsChange={setRows}
+                                issues={issues}
+                                player={player}
+                                duration={durationForCheck}
+                                onReplace={handleReplace}
+                                protectExisting
+                            />
                         </section>
 
                         <section aria-labelledby="songs-submit-extra-h" className="space-y-3">
@@ -316,7 +390,7 @@ export function SongsSubmitPage() {
                                 {submitting && (
                                     <Button variant="ghost" onClick={() => abortRef.current?.abort()}>{t('submit.cancel')}</Button>
                                 )}
-                                <p className="text-[12px] text-muted-foreground">{t('submit.reviewHint')}</p>
+                                <p className="text-[12px] text-muted-foreground">{t('submit.instantHint')}</p>
                             </div>
                         </section>
                     </div>

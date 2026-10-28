@@ -42,6 +42,9 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
                         >
                             {video.title}
                         </button>
+                        {video.kind === 'single' && (
+                            <span className="ml-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 align-middle text-[11px] font-semibold leading-none text-primary">{t('catalog.kind.single')}</span>
+                        )}
                     </h3>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                         <p className="min-w-0 flex-1 text-[12.5px] text-muted-foreground">

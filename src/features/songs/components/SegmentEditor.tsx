@@ -7,6 +7,7 @@
 //   標題列顯示兩個圖示的說明。跳到開始＝從這首開始播，所以不另設「從這裡播」。
 // - 取代／刪除的確認（會讓分享連結失效）由呼叫端透過 onReplace／onRemoveRow 處理；沒給就直接套用。
 // - 文字一律 i18n（songs:editor.*）：投稿頁是公開頁，後台也共用同一份。
+// - protectExisting（社群投稿頁）：帶 code 的既有片段不能刪除（刪除鈕停用並說明），只能改時間或歌名；新增的列仍可刪。
 // - 備註欄：上限 30 字，datalist 提供常用值（仍可自由輸入）；matchInfo（只有後台會給）在歌名下顯示配對結果。
 
 import { useId, useMemo, useState } from 'react';
@@ -66,6 +67,8 @@ export interface SegmentEditorProps {
     diff?: ReadonlyMap<string, RowDiff>;
     /** 配對預覽（列 key → 結果，後台用）；沒有的列不顯示 */
     matchInfo?: ReadonlyMap<string, SegmentMatch>;
+    /** 帶 code 的既有片段不能刪除（社群投稿頁；後台不開） */
+    protectExisting?: boolean;
 }
 
 /** 行號清單 → 「第 1、3 行」；超過 10 筆加「等 N 行」 */
@@ -75,7 +78,7 @@ function lineList(lines: number[], t: (k: string, o?: Record<string, unknown>) =
 }
 
 export function SegmentEditor({
-    rows, onRowsChange, issues, player, duration, onReplace, onRemoveRow, onEdit, showCode = false, diff, matchInfo,
+    rows, onRowsChange, issues, player, duration, onReplace, onRemoveRow, onEdit, showCode = false, diff, matchInfo, protectExisting = false,
 }: SegmentEditorProps) {
     const { t } = useTranslation('songs');
     const tf = t as unknown as (k: string, o?: Record<string, unknown>) => string;
@@ -326,7 +329,7 @@ export function SegmentEditor({
                                             {showCode && <td className="px-2 py-1.5 font-mono text-[11.5px] text-muted-foreground">{r.code ?? t('editor.newCode')}</td>}
                                             <td className="px-2 py-1.5">
                                                 <div className="flex justify-end gap-0.5">
-                                                    <Button type="button" variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" onClick={() => removeRow(r.key)} title={t('editor.removeRow')} aria-label={t('editor.aria.remove', { n })}>
+                                                    <Button type="button" variant="ghost" size="icon" className="size-8 text-muted-foreground hover:text-destructive" disabled={protectExisting && !!r.code} onClick={() => removeRow(r.key)} title={protectExisting && r.code ? t('editor.removeProtected') : t('editor.removeRow')} aria-label={t('editor.aria.remove', { n })}>
                                                         <Trash2 className="size-3.5" aria-hidden="true" />
                                                     </Button>
                                                 </div>

@@ -247,3 +247,33 @@ describe('fetchSongCatalog 帶 songs（L3）', () => {
         expect(catalog.songs!.versions.size).toBe(0);
     });
 });
+
+describe('parseSongCatalog 影片類型 k（L2）', () => {
+    const seg = [['abcd1234', 0, 180, '小幸運', '田馥甄']];
+    const kindOf = (item: Record<string, unknown>) =>
+        (parseSongCatalog([{ t: '影片', d: null, vt: null, s: seg, ...item }])[0] as unknown as { kind: string }).kind;
+
+    it("k 為 'single' 的影片解析成 kind 'single'", () => {
+        expect(kindOf({ v: 'aaaaaaaaaaa', k: 'single' })).toBe('single');
+    });
+
+    it("k 為 'stream' 的影片解析成 kind 'stream'", () => {
+        expect(kindOf({ v: 'bbbbbbbbbbb', k: 'stream' })).toBe('stream');
+    });
+
+    it('缺 k（舊快取格式）當歌回 stream', () => {
+        expect(kindOf({ v: 'ccccccccccc' })).toBe('stream');
+    });
+
+    it("k 是不認得的值時當歌回 stream", () => {
+        expect(kindOf({ v: 'ddddddddddd', k: 'weird' })).toBe('stream');
+    });
+
+    it('同一份目錄裡各影片各自帶自己的 kind', () => {
+        const videos = parseSongCatalog([
+            { v: 'aaaaaaaaaaa', t: 'A', d: null, vt: null, k: 'single', s: seg },
+            { v: 'bbbbbbbbbbb', t: 'B', d: null, vt: null, k: 'stream', s: seg },
+        ]) as unknown as { videoId: string; kind: string }[];
+        expect(videos.map((v) => [v.videoId, v.kind])).toEqual([['aaaaaaaaaaa', 'single'], ['bbbbbbbbbbb', 'stream']]);
+    });
+});

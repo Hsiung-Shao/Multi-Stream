@@ -1,7 +1,7 @@
 /**
  * 歌曲目錄來源：GET /api/songs/catalog（edge 快取 10 分鐘）→ 前端型別。
  *
- * - 回應是 RPC get_song_catalog 的短 key 結構：[{ v, t, d, vt:{i,n,img}|null, s:[[code,start,end,title,artist|null,plays,song_id,version_note|null]] }, { songs:[[id,title,artist|null]] }]。
+ * - 回應是 RPC get_song_catalog 的短 key 結構：[{ v, t, d, vt:{i,n,img}|null, k:'single'|'stream'（缺欄＝stream）, s:[[code,start,end,title,artist|null,plays,song_id,version_note|null]] }, { songs:[[id,title,artist|null]] }]。
  *   plays（v1.1 第 6 欄）缺欄或不是非負數一律當 0；song_id、version_note（v1.3 第 7、8 欄）缺欄或不合法一律當 null，6／7 欄舊快取格式也能讀。
  *   陣列尾端多一個歌曲字典元素 `{ songs }`；沒有它（舊後端）時 SongCatalog.songs 為 null，前端只顯示歌回分頁。
  * - 轉換時逐筆防呆：格式不對的影片或片段直接丟棄，不讓一筆壞資料拖垮整個目錄。
@@ -40,9 +40,13 @@ export interface SongInfo {
     artist: string | null;
 }
 
+/** 影片類型：single＝短影片只有一首（單曲）；stream＝一般歌回。缺欄或不認得的值一律 stream */
+export type SongVideoKind = 'single' | 'stream';
+
 export interface SongVideo {
     videoId: string;
     title: string;
+    kind: SongVideoKind;
     streamedAt: string | null;
     vtuber: SongVtuber | null;
     segments: SongSegment[];
@@ -146,6 +150,7 @@ export function parseSongCatalog(raw: unknown): SongVideo[] {
         videos.push({
             videoId,
             title: typeof item.t === 'string' ? item.t : '',
+            kind: item.k === 'single' ? 'single' : 'stream',
             streamedAt: typeof item.d === 'string' && item.d ? item.d : null,
             vtuber: toVtuber(item.vt),
             segments,

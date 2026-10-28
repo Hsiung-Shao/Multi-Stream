@@ -169,8 +169,8 @@ export const ROUTE_META = {
         en: { title: 'VTuber Karaoke Song Playlist: Play Every Song From Karaoke Streams - MultiStream Hub', description: 'Taiwanese VTuber karaoke streams split into individual songs: play them back to back, shuffle or repeat, build your own playlists and share them in one link.' },
     },
     '/songs/submit': {
-        'zh-TW': { title: '投稿歌回時間軸 - MultiStream Hub', description: '把 VTuber 歌回的歌曲時間軸投稿到歌回播放清單：貼上影片網址與留言裡的時間軸，自動拆成一首一首，審核通過後就能連續播放。' },
-        en: { title: 'Submit Karaoke Stream Timestamps - MultiStream Hub', description: 'Add song timestamps for a VTuber karaoke stream to the song playlist: paste the video link and the timestamp comment, it splits into songs automatically and appears after review.' },
+        'zh-TW': { title: '投稿歌回時間軸 - MultiStream Hub', description: '把 VTuber 歌回的歌曲時間軸投稿到歌回播放清單：貼上影片網址與留言裡的時間軸，自動拆成一首一首，送出就會更新，馬上能連續播放。' },
+        en: { title: 'Submit Karaoke Stream Timestamps - MultiStream Hub', description: 'Add song timestamps for a VTuber karaoke stream to the song playlist: paste the video link and the timestamp comment, it splits into songs automatically and goes live as soon as you submit.' },
     },
     '/admin': {
         noindex: true,

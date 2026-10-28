@@ -3,7 +3,10 @@
  *
  * - 15 秒逾時，並與呼叫端的取消訊號連動（使用者按「取消」就中止）。
  * - 錯誤轉成 SongSubmitError（code 為後端的 error 字串；逾時 timeout、網路 network、取消 aborted）。
- * - 201 { ok, id, kind }；409 already_pending；400 invalid_*；429 rate_limited。
+ * - 201 { ok, id, kind }（送出即生效）；錯誤碼：
+ *   409 stale_edit（版本已被別人更新）／video_exists（影片已存在卻沒帶 rev）；
+ *   400 cannot_delete（少了既有片段）／unknown_segment／vtuber_required／invalid_*；
+ *   403 video_locked（已鎖定）；429 rate_limited。
  */
 export const SONG_SUBMIT_URL = '/api/songs/submissions';
 export const SONG_SUBMIT_TIMEOUT_MS = 15_000;
@@ -13,7 +16,12 @@ export interface SongSubmissionInput {
     title: string;
     vtuberId: string | null;
     streamedAt: string | null;
-    segments: { start: number; end: number; title: string; artist: string | null; versionNote: string | null; endEstimated: boolean }[];
+    /** 修正既有歌回時帶 GET /api/songs/timeline 回的 rev（版本比對用）；新歌回 null */
+    rev: string | null;
+    /** 播放器取得的影片長度（整數秒，1～86400）；取不到 null */
+    durationSeconds: number | null;
+    /** code：既有片段的分享碼（原地更新用）；新增的片段不帶 */
+    segments: { code?: string; start: number; end: number; title: string; artist: string | null; versionNote: string | null; endEstimated: boolean }[];
     note: string | null;
     contact: string | null;
     turnstileToken: string | null;

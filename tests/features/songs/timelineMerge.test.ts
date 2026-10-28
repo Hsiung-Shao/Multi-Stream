@@ -65,3 +65,33 @@ describe('mergeReplaceRows', () => {
         expect(rows[1]).toMatchObject({ title: 'A', line: 1, id: 'i1', code: 'c1' });
     });
 });
+
+describe('mergeReplaceRows 只有 code 沒有 id 的舊列（社群編輯）', () => {
+    it('舊列只有 code：依開始秒數配對並帶上 code，lostCodes 為空', () => {
+        const existing = [
+            { code: 'c1', start: 0 },
+            { code: 'c2', start: 100 },
+        ];
+        const { rows, lostCodes } = mergeReplaceRows(existing, [row(0), row(100), row(200)]);
+        expect(rows.map((r) => r.code)).toEqual(['c1', 'c2', undefined]);
+        expect(rows.every((r) => r.id === undefined)).toBe(true);
+        expect(lostCodes).toEqual([]);
+    });
+
+    it('只有 code 的舊列沒配到：該 code 進 lostCodes（依舊列順序）', () => {
+        const existing = [
+            { code: 'c1', start: 0 },
+            { code: 'c2', start: 100 },
+            { code: 'c3', start: 200 },
+        ];
+        const { rows, lostCodes } = mergeReplaceRows(existing, [row(0), row(150)]);
+        expect(rows[0].code).toBe('c1');
+        expect(rows[1].code).toBeUndefined();
+        expect(lostCodes).toEqual(['c2', 'c3']);
+    });
+
+    it('只有 code 的舊列備註：新列沒寫備註時沿用', () => {
+        const { rows } = mergeReplaceRows([{ code: 'c1', start: 0, note: '清唱' }], [row(0)]);
+        expect(rows[0]).toMatchObject({ code: 'c1', note: '清唱' });
+    });
+});
