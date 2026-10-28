@@ -3,6 +3,7 @@
 // body：{ videoId, title, vtuberId?, streamedAt?, rev?, durationSeconds?,
 //         segments: [{ code?, start, end, title, artist?, versionNote?, endEstimated? }], note?, contact?, turnstileToken }
 // rev＝使用者載入時的影片版本（updated_at 原字串），修正既有歌回時由 DB 比對；新歌回為 null，此時必須指定 vtuberId。
+// 修正時 vtuberId 為 null＝沿用既有的 VTuber（不能清空），給別的 VTuber 則換人（DB 以 coalesce 處理）。
 // 片段規則沿用 lib/songs.js 的 validateSegments（同名 issue code）；片段可帶 code（既有片段的短 ID，供 DB 原地更新），
 // 但不可帶 id（id 是 DB 內部主鍵，不開放給匿名使用者）。
 // 回傳 { value } 或 { error, issues? }（error 為 invalid_payload | invalid_video_id | invalid_segments | vtuber_required）。
@@ -64,7 +65,7 @@ export function parseSubmissionBody(body) {
         if (typeof body.rev !== 'string' || body.rev === '' || body.rev.length > REV_MAX) return bad('invalid_payload');
         rev = body.rev;
     }
-    // 新歌回（沒有 rev）一定要指定 VTuber；修正時沿用既有的，可不帶
+    // 新歌回（沒有 rev）一定要指定 VTuber；修正時不帶＝沿用既有的（不能清空），帶別人＝換人
     if (rev === null && vtuberId === null) return bad('vtuber_required');
 
     let durationSeconds = null;

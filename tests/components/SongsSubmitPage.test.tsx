@@ -284,6 +284,58 @@ describe('SongsSubmitPage 修正既有歌回（C1／C2／C4）', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent('不能刪除既有片段；需要刪除請用意見回饋告訴站方');
     });
 
+    it('開台時間沒改過：送出原始 ISO（保留秒與毫秒），不被 datetime-local 截到分鐘', async () => {
+        const ISO = '2026-10-23T09:39:07.679176+00:00';
+        timelineResponse = () => json(timelineBody({ streamedAt: ISO }));
+        submitResponse = () => json({ ok: true, id: 's2', kind: 'revision' }, 201);
+        await openRevision();
+        const send = screen.getByRole('button', { name: SEND });
+        await waitFor(() => expect(send).toBeEnabled());
+        fireEvent.click(send);
+        await waitFor(() => expect(submitCalls()).toHaveLength(1));
+        expect(lastBody().streamedAt).toBe(ISO);
+    });
+
+    it('開台時間使用者改過：送出新輸入值（不是原始 ISO）', async () => {
+        timelineResponse = () => json(timelineBody({ streamedAt: '2026-10-23T09:39:07.679176+00:00' }));
+        submitResponse = () => json({ ok: true, id: 's2', kind: 'revision' }, 201);
+        await openRevision();
+        fireEvent.change(screen.getByLabelText('開台時間（選填）'), { target: { value: '2026-10-24T10:15' } });
+        const send = screen.getByRole('button', { name: SEND });
+        await waitFor(() => expect(send).toBeEnabled());
+        fireEvent.click(send);
+        await waitFor(() => expect(submitCalls()).toHaveLength(1));
+        expect(lastBody().streamedAt).toBe(new Date('2026-10-24T10:15').toISOString());
+    });
+
+    it('送出成功後按「再投一支」再貼同一支：用新讀到的 timeline 預填，rev 與片段都是新的', async () => {
+        let n = 0;
+        timelineResponse = () => json(n++ === 0
+            ? timelineBody()
+            : timelineBody({
+                rev: '2026-10-28T09:09:09.999999Z',
+                segments: [
+                    { code: 'abcd1234', start: 10, end: 200, title: '歌A改', artist: '原唱A', note: null },
+                    { code: 'efgh5678', start: 200, end: 400, title: '歌B', artist: null, note: '清唱' },
+                ],
+            }));
+        submitResponse = () => json({ ok: true, id: 's2', kind: 'revision' }, 201);
+        await openRevision();
+        const send1 = screen.getByRole('button', { name: SEND });
+        await waitFor(() => expect(send1).toBeEnabled());
+        fireEvent.click(send1);
+        fireEvent.click(await screen.findByRole('button', { name: '再投一支' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'YouTube 網址' }), { target: { value: `https://youtu.be/${VIDEO}` } });
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌A改'));
+        const send2 = screen.getByRole('button', { name: SEND });
+        await waitFor(() => expect(send2).toBeEnabled());
+        fireEvent.click(send2);
+        await waitFor(() => expect(submitCalls()).toHaveLength(2));
+        const body = JSON.parse(String((submitCalls()[1] as [string, RequestInit])[1].body));
+        expect(body.rev).toBe('2026-10-28T09:09:09.999999Z');
+        expect(body.segments[0]).toMatchObject({ code: 'abcd1234', title: '歌A改' });
+    });
+
     it('timeline 是 404（不存在或未發布）時當新歌回，按鈕是送出投稿', async () => {
         window.history.replaceState(null, '', `/songs/submit?v=${VIDEO}`);
         renderPage();

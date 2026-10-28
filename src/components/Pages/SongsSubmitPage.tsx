@@ -88,6 +88,8 @@ export function SongsSubmitPage() {
     // 「取代現有片段」保留下來的既有片段數（提示手動調整）
     const [keptCount, setKeptCount] = useState(0);
     const abortRef = useRef<AbortController | null>(null);
+    // 開台時間自動帶入的原始 ISO（datetime-local 只到分鐘，使用者沒改時送原始值，不截掉秒與毫秒）
+    const streamedPrefillRef = useRef<{ local: string; iso: string } | null>(null);
 
     // ?v=<videoId>：直接進修正模式；讀完把網址換回乾淨的 /songs/submit
     useEffect(() => {
@@ -139,12 +141,14 @@ export function SongsSubmitPage() {
             const v = toLocalInput(merged.streamedAt);
             setStreamedAt(v);
             autoRef.current.streamedAt = v;
+            streamedPrefillRef.current = { local: v, iso: merged.streamedAt };
         }
     };
 
     // 換影片：清掉上一支自動帶入、使用者還沒改過的欄位與片段列（改過的保留）
     const prevVideoRef = useRef<string | null>(null);
-    const prefilledRef = useRef<string | null>(null);
+    // 記「已預填過的那份 timeline 物件」：同一支影片重新讀到的新資料（再投一支後重貼）才會重新預填
+    const prefilledRef = useRef<SongTimeline | null>(null);
     const clearAutoFilled = () => {
         const auto = autoRef.current;
         const cur = latestRef.current;
@@ -185,10 +189,10 @@ export function SongsSubmitPage() {
         return () => ctrl.abort();
     }, [videoId]);
 
-    // 修正既有時間軸：每支影片只預填一次現有片段（之後以使用者編輯為準）；每列帶 code，送出時後端靠它原地更新
+    // 修正既有時間軸：每份讀到的 timeline 只預填一次現有片段（之後以使用者編輯為準）；每列帶 code，送出時後端靠它原地更新
     useEffect(() => {
-        if (!existing || prefilledRef.current === existing.videoId) return;
-        prefilledRef.current = existing.videoId;
+        if (!existing || prefilledRef.current === existing) return;
+        prefilledRef.current = existing;
         fillEmpty({ title: existing.title, vtuberId: existing.vtuber?.id || null, streamedAt: existing.streamedAt }, true);
         const prefill: SegmentRowDraft[] = existing.segments.map((s) => ({
             key: newRowKey(),
@@ -224,7 +228,9 @@ export function SongsSubmitPage() {
                 videoId,
                 title: title.trim(),
                 vtuberId,
-                streamedAt: streamedAt ? new Date(streamedAt).toISOString() : null,
+                streamedAt: !streamedAt ? null
+                    : streamedPrefillRef.current?.local === streamedAt ? streamedPrefillRef.current.iso
+                    : new Date(streamedAt).toISOString(),
                 rev: existing?.rev ?? null,
                 durationSeconds: durationForCheck !== null && durationForCheck >= 1 && durationForCheck <= DURATION_MAX ? durationForCheck : null,
                 segments: rows.map((r) => {
@@ -272,7 +278,10 @@ export function SongsSubmitPage() {
         setKeptCount(0);
         // 成功畫面卸載了 widget（卸載時不會回呼 onToken），用過的 token 要手動清掉，等新 widget 重新給
         setToken(null);
+        // 清掉舊 timeline：再貼同一支影片時，不能先拿舊的 rev／片段預填
+        setTimeline(null);
         prefilledRef.current = null;
+        streamedPrefillRef.current = null;
     };
 
     return (

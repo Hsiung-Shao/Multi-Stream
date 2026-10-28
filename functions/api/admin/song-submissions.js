@@ -25,10 +25,14 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 // 刻意不選 ip_hash、source_note、submitter_contact(列表用不到);before／segments 只用來算 summary,不回給前端
 const LIST_COLUMNS = 'id,kind,video_id,title,vtuber_id,streamed_at,status,created_at,reverted_at,target_video_ref,before,segments';
 
+const SEGMENT_FIELDS = ['start_seconds', 'end_seconds', 'title', 'original_artist', 'version_note'];
+const segmentChanged = (prev, next) => SEGMENT_FIELDS.some((k) => (prev[k] ?? null) !== (next[k] ?? null));
+
 /**
  * 以 code 對 before 的片段算變更摘要:
- *   沒 code 或找不到 → added;start 或 end 不同 → changed。新歌回(before 為 null)全部算 added。
- * fields:影片欄位有變的名稱(title、vtuber_id、streamed_at),片段有增減時另加 'segments'。
+ *   沒 code 或找不到 → added;start、end、title、original_artist、version_note 任一不同 → changed。
+ *   新歌回(before 為 null)全部算 added。
+ * fields:影片欄位有變的名稱(title、vtuber_id、streamed_at),片段有新增或變動時另加 'segments'。
  */
 function summarize(row) {
     const segs = Array.isArray(row.segments) ? row.segments : [];
@@ -41,14 +45,15 @@ function summarize(row) {
     for (const s of segs) {
         const prev = s.code ? old.get(s.code) : undefined;
         if (!prev) added++;
-        else if (prev.start_seconds !== s.start_seconds || prev.end_seconds !== s.end_seconds) changed++;
+        else if (segmentChanged(prev, s)) changed++;
     }
 
     const bv = before.video || {};
     const fields = [];
     if (bv.title !== row.title) fields.push('title');
     if ((bv.vtuber_id ?? null) !== (row.vtuber_id ?? null)) fields.push('vtuber_id');
-    const ts = (t) => (t ? Date.parse(t) : null);
+    // 毫秒精度比較（Date.parse 只留到毫秒）：.679176 與 .679 是同一瞬間，不算改了開台時間
+    const ts = (t) => (t ? Math.floor(Date.parse(t)) : null);
     if (ts(bv.streamed_at) !== ts(row.streamed_at)) fields.push('streamed_at');
     if (added > 0 || changed > 0) fields.push('segments');
     return { added, changed, fields };

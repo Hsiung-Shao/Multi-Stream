@@ -156,7 +156,8 @@ END $$;
 
 -- ───────────── 測資（直接寫表，不依賴本地既有資料） ─────────────
 INSERT INTO public.vtubers (id, name, nationality, slug) VALUES
-  ('00000000-0000-4000-8000-0000000000e1', 'zz社群編輯測試主', 'TW', 'zz-community-edit-test');
+  ('00000000-0000-4000-8000-0000000000e1', 'zz社群編輯測試主', 'TW', 'zz-community-edit-test'),
+  ('00000000-0000-4000-8000-0000000000e2', 'zz社群編輯測試乙', 'TW', 'zz-community-edit-test-2');
 
 -- 已發布、2 小時、兩首：SQL1
 SELECT pg_temp.mkvideo('zzCeVid0001', 'zz歌回一', 7200);
@@ -182,6 +183,12 @@ SELECT pg_temp.mkseg('zzCeVid0006', 0, 100, 'zz甲', 0);
 SELECT pg_temp.mkvideo('zzCeVid0007', 'zz歌回七', 7200);
 SELECT pg_temp.mkseg('zzCeVid0007', 0, 100, 'zz甲', 0);
 SELECT pg_temp.mkseg('zzCeVid0007', 100, 200, 'zz乙', 1);
+-- SQL4c 修正時 vtuber_id 送 null
+SELECT pg_temp.mkvideo('zzCeVid0008', 'zz歌回八', 7200);
+SELECT pg_temp.mkseg('zzCeVid0008', 0, 100, 'zz甲', 0);
+-- SQL4d 開台時間毫秒相同就保留原值（微秒不被截掉）
+SELECT pg_temp.mkvideo('zzCeVid0009', 'zz歌回九', 7200);
+SELECT pg_temp.mkseg('zzCeVid0009', 0, 100, 'zz甲', 0);
 -- SQL10 單曲判定
 SELECT pg_temp.mkvideo('zzCeSingle1', 'zz單曲 5 分鐘', 300);
 SELECT pg_temp.mkseg('zzCeSingle1', 0, 300, 'zz單曲', 0);
@@ -343,6 +350,93 @@ BEGIN
   IF pg_temp.full_state(v_locked) IS DISTINCT FROM s_locked THEN RAISE EXCEPTION 'SQL4 失敗：鎖定的歌回資料不該變'; END IF;
   IF pg_temp.full_state(v_draft) IS DISTINCT FROM s_draft THEN RAISE EXCEPTION 'SQL4 失敗：草稿歌回資料不該變'; END IF;
   RAISE NOTICE 'ok SQL4 鎖定或草稿的歌回不能改（video_locked）';
+END $$;
+
+-- ───────────── SQL4b 草稿或鎖定的歌回，p_rev 為 null 也回 video_locked（先判鎖定，再判 video_exists） ─────────────
+-- SQL4b
+DO $$
+DECLARE
+  v_locked text := 'zzCeVid0004';
+  v_draft text := 'zzCeVid0005';
+  c_draft text; c_locked text; s_draft jsonb; s_locked jsonb;
+BEGIN
+  SELECT s.code INTO c_draft FROM public.song_segments s WHERE s.video_ref = pg_temp.ref_of(v_draft) AND s.position = 0;
+  SELECT s.code INTO c_locked FROM public.song_segments s WHERE s.video_ref = pg_temp.ref_of(v_locked) AND s.position = 0;
+  s_draft := pg_temp.full_state(v_draft);
+  s_locked := pg_temp.full_state(v_locked);
+
+  PERFORM pg_temp.expect_save('SQL4b', v_draft, NULL,
+            pg_temp.vj('zz草稿被改', '00000000-0000-4000-8000-0000000000e1', 7200),
+            jsonb_build_array(pg_temp.sj(c_draft, 0, 80, 'zz甲被改', 0)),
+            'video_locked');
+  PERFORM pg_temp.expect_save('SQL4b', v_locked, NULL,
+            pg_temp.vj('zz鎖定被改', '00000000-0000-4000-8000-0000000000e1', 7200),
+            jsonb_build_array(pg_temp.sj(c_locked, 0, 80, 'zz甲被改', 0)),
+            'video_locked');
+
+  IF pg_temp.full_state(v_draft) IS DISTINCT FROM s_draft THEN RAISE EXCEPTION 'SQL4b 失敗：草稿歌回資料不該變'; END IF;
+  IF pg_temp.full_state(v_locked) IS DISTINCT FROM s_locked THEN RAISE EXCEPTION 'SQL4b 失敗：鎖定歌回資料不該變'; END IF;
+  RAISE NOTICE 'ok SQL4b 草稿或鎖定的歌回 p_rev 為 null 也回 video_locked';
+END $$;
+
+-- ───────────── SQL4c 修正時 vtuber_id 送 null 不清空、送別人則換人 ─────────────
+-- SQL4c
+DO $$
+DECLARE
+  vid text := 'zzCeVid0008';
+  ref uuid := pg_temp.ref_of('zzCeVid0008');
+  other constant uuid := '00000000-0000-4000-8000-0000000000e2';
+  orig constant uuid := '00000000-0000-4000-8000-0000000000e1';
+  c1 text; r jsonb;
+BEGIN
+  SELECT code INTO c1 FROM public.song_segments WHERE video_ref = ref AND position = 0;
+
+  -- 送 null：沿用原本的 VTuber
+  r := pg_temp.save(vid, pg_temp.rev_of(vid),
+         pg_temp.vj('zz歌回八', NULL, 7200),
+         jsonb_build_array(pg_temp.sj(c1, 0, 100, 'zz甲', 0)));
+  IF (SELECT vtuber_id FROM public.song_videos WHERE id = ref) IS DISTINCT FROM orig THEN
+    RAISE EXCEPTION 'SQL4c 失敗：修正送 vtuber_id null 不可清空，預期 %，得 %', orig, (SELECT vtuber_id FROM public.song_videos WHERE id = ref);
+  END IF;
+
+  -- 送別的 VTuber：換成新的
+  r := pg_temp.save(vid, (r->>'rev')::timestamptz,
+         pg_temp.vj('zz歌回八', other, 7200),
+         jsonb_build_array(pg_temp.sj(c1, 0, 100, 'zz甲', 0)));
+  IF (SELECT vtuber_id FROM public.song_videos WHERE id = ref) IS DISTINCT FROM other THEN
+    RAISE EXCEPTION 'SQL4c 失敗：修正送別的 VTuber 應換人，預期 %，得 %', other, (SELECT vtuber_id FROM public.song_videos WHERE id = ref);
+  END IF;
+  RAISE NOTICE 'ok SQL4c 修正時 vtuber_id null 不清空、送別人則換人';
+END $$;
+
+-- ───────────── SQL4d 開台時間：毫秒相同保留原值（含微秒），不同才換 ─────────────
+-- SQL4d
+DO $$
+DECLARE
+  vid text := 'zzCeVid0009';
+  ref uuid := pg_temp.ref_of('zzCeVid0009');
+  orig constant timestamptz := '2026-10-23T09:39:07.679176+00';
+  c1 text; r jsonb;
+BEGIN
+  UPDATE public.song_videos SET streamed_at = orig WHERE id = ref;
+  SELECT code INTO c1 FROM public.song_segments WHERE video_ref = ref AND position = 0;
+
+  -- 送來的值只有毫秒精度（前端 ISO 經後端正規化）→ 視為沒改
+  r := pg_temp.save(vid, pg_temp.rev_of(vid),
+         pg_temp.vj('zz歌回九', '00000000-0000-4000-8000-0000000000e1', 7200) || jsonb_build_object('streamed_at', '2026-10-23T09:39:07.679Z'),
+         jsonb_build_array(pg_temp.sj(c1, 0, 100, 'zz甲', 0)));
+  IF (SELECT streamed_at FROM public.song_videos WHERE id = ref) IS DISTINCT FROM orig THEN
+    RAISE EXCEPTION 'SQL4d 失敗：毫秒相同應保留原值 %，得 %', orig, (SELECT streamed_at FROM public.song_videos WHERE id = ref);
+  END IF;
+
+  -- 真的改了就換成新的
+  r := pg_temp.save(vid, (r->>'rev')::timestamptz,
+         pg_temp.vj('zz歌回九', '00000000-0000-4000-8000-0000000000e1', 7200) || jsonb_build_object('streamed_at', '2026-10-24T10:15:00Z'),
+         jsonb_build_array(pg_temp.sj(c1, 0, 100, 'zz甲', 0)));
+  IF (SELECT streamed_at FROM public.song_videos WHERE id = ref) IS DISTINCT FROM '2026-10-24T10:15:00Z'::timestamptz THEN
+    RAISE EXCEPTION 'SQL4d 失敗：開台時間改了應採用新值，得 %', (SELECT streamed_at FROM public.song_videos WHERE id = ref);
+  END IF;
+  RAISE NOTICE 'ok SQL4d 開台時間毫秒相同保留原值、不同才換';
 END $$;
 
 -- ───────────── SQL5 新歌回：沒 VTuber 擋下、有則直接發布 ─────────────

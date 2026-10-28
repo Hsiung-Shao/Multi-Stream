@@ -144,6 +144,15 @@ describe('後台社群修改紀錄列表（C6a）', () => {
         expect(row.textContent).toMatch(/修改 2 首/);
     });
 
+    it('只改歌名的修正紀錄（changed 1、fields 含 segments）顯示「修改 1 首」，不顯示「片段沒有變動」', async () => {
+        listRows = [record({ id: SUB_REV, kind: 'revision', title: TITLE_REV, target_video_ref: VID, summary: { added: 0, changed: 1, fields: ['segments'] } })];
+        renderTab();
+        await screen.findByText(TITLE_REV);
+        const row = rowOf(TITLE_REV);
+        expect(row.textContent).toMatch(/修改 1 首/);
+        expect(row.textContent).not.toMatch(/片段沒有變動/);
+    });
+
     it('已套用的紀錄有「還原到這次之前」鈕；已還原的標示「已還原」且沒有還原鈕', async () => {
         renderTab();
         await screen.findByText(TITLE_OLD);

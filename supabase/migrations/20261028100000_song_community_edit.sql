@@ -67,12 +67,13 @@ begin
 
     if found then
         v_kind := 'revision';
+        -- 草稿或鎖定的歌回先擋（不論有沒有帶 p_rev），這樣被擋的人看到的是「已鎖定」而不是誤導的「重新整理」
+        if v.status <> 'published' or v.community_locked then
+            raise exception 'video_locked' using errcode = 'P0001';
+        end if;
         -- 呼叫端以為是新歌回，其實已有人建立 → 請對方重新整理
         if p_rev is null then
             raise exception 'video_exists' using errcode = 'P0001';
-        end if;
-        if v.status <> 'published' or v.community_locked then
-            raise exception 'video_locked' using errcode = 'P0001';
         end if;
         if v.updated_at <> p_rev then
             raise exception 'stale_edit' using errcode = 'P0001';
@@ -119,8 +120,12 @@ begin
         v_result := public._save_song_video(v.id, jsonb_build_object(
             'video_id', v.video_id,
             'title', p_video->>'title',
-            'vtuber_id', p_video->>'vtuber_id',
-            'streamed_at', p_video->>'streamed_at',
+            -- 可換人、不能清空：送 null 或空字串就沿用原本的 VTuber
+            'vtuber_id', coalesce(nullif(p_video->>'vtuber_id', ''), v.vtuber_id::text),
+            -- 送來的值只有毫秒精度（後端正規化）：毫秒相同視為沒改，保留原值（含微秒），避免每次修正都被截尾
+            'streamed_at', case when nullif(p_video->>'streamed_at', '')::timestamptz
+                                     is not distinct from date_trunc('milliseconds', v.streamed_at)
+                                then v.streamed_at::text else p_video->>'streamed_at' end,
             'duration_seconds', coalesce(v.duration_seconds::text, p_video->>'duration_seconds'),
             'status', v.status), v_segs);
     else

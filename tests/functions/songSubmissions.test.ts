@@ -416,6 +416,53 @@ describe('GET /api/admin/song-submissions（社群修改紀錄）', () => {
         expect(Array.isArray(row.summary.fields)).toBe(true);
     });
 
+    it('F5 只改歌名（時間沒動）也算 changed 1，fields 含 segments', async () => {
+        const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A'), segRow('bbbbbbbb', 100, 200, 'B')]);
+        sb = (_m, path) =>
+            path.startsWith('song_submissions')
+                ? new Response(JSON.stringify([
+                    logRow({ before, segments: [segRow('aaaaaaaa', 0, 100, 'A改名'), segRow('bbbbbbbb', 100, 200, 'B')] }),
+                ]))
+                : new Response('[]');
+        const row = (await (await adminList()).json()).submissions[0];
+        expect(row.summary.added).toBe(0);
+        expect(row.summary.changed).toBe(1);
+        expect(row.summary.fields).toContain('segments');
+    });
+
+    it('F5 開台時間只差在毫秒以下（.679176 vs .679）不算改了 streamed_at；真的改了才算', async () => {
+        const segs = [segRow('aaaaaaaa', 0, 100, 'A')];
+        const before = { ...beforeSnap(segs), video: { title: '歌回 #1', vtuber_id: REF, streamed_at: '2026-10-23T09:39:07.679176+00:00', duration_seconds: 5400 } };
+        const run = async (streamed_at: string) => {
+            sb = (_m, path) =>
+                path.startsWith('song_submissions')
+                    ? new Response(JSON.stringify([logRow({ before, segments: segs, vtuber_id: REF, streamed_at })]))
+                    : new Response('[]');
+            return (await (await adminList()).json()).submissions[0].summary.fields as string[];
+        };
+        expect(await run('2026-10-23T09:39:07.679Z')).not.toContain('streamed_at');
+        expect(await run('2026-10-23T09:39:08.679Z')).toContain('streamed_at');
+    });
+
+    it('F5 只改原唱或版本備註也算 changed', async () => {
+        const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A'), segRow('bbbbbbbb', 100, 200, 'B')]);
+        sb = (_m, path) =>
+            path.startsWith('song_submissions')
+                ? new Response(JSON.stringify([
+                    logRow({
+                        before,
+                        segments: [
+                            { ...segRow('aaaaaaaa', 0, 100, 'A'), original_artist: '新原唱' },
+                            { ...segRow('bbbbbbbb', 100, 200, 'B'), version_note: '清唱' },
+                        ],
+                    }),
+                ]))
+                : new Response('[]');
+        const row = (await (await adminList()).json()).submissions[0];
+        expect(row.summary.changed).toBe(2);
+        expect(row.summary.fields).toContain('segments');
+    });
+
     it('F5 新歌回（before 為 null）：added = 送出的片段數、changed 為 0', async () => {
         sb = (_m, path) =>
             path.startsWith('song_submissions')
