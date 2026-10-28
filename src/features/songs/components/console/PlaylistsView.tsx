@@ -15,6 +15,7 @@ import { cn } from '../../../../components/ui/utils';
 import type { SongCatalog } from '../../songsSource';
 import { usePlaylistStore, type Playlist } from '../../store/usePlaylistStore';
 import { shareSongCodes } from './shareLink';
+import { track } from '../../../../utils/analytics';
 
 /** 我的歌單：建立、展開、播放、改名、刪除、分享、排序。展開哪個歌單由頁面控制（左欄點歌單會直接展開它） */
 export function PlaylistsPanel({ playlists, catalog, onPlay, openId, onOpenIdChange }: {
@@ -38,6 +39,7 @@ export function PlaylistsPanel({ playlists, catalog, onPlay, openId, onOpenIdCha
     const handleCreate = (e: FormEvent) => {
         e.preventDefault();
         const id = createPlaylist(newName || t('playlists.defaultName', { n: playlists.length + 1 }));
+        track.songPlaylistCreate('blank', 0);
         setNewName('');
         onOpenIdChange(id);
     };

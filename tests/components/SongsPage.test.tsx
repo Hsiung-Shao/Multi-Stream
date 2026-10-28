@@ -4,7 +4,8 @@ import { render, screen, fireEvent, waitFor, within, act, cleanup } from '@testi
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../src/i18n/i18n';
 
-vi.mock('../../src/utils/analytics', () => ({ logEvent: vi.fn(), track: {} }));
+const track = vi.hoisted(() => ({ songPlaylistCreate: vi.fn(), songPlaylistAdd: vi.fn(), songPlaylistPlay: vi.fn() }));
+vi.mock('../../src/utils/analytics', () => ({ logEvent: vi.fn(), track }));
 vi.mock('../../src/utils/apiLoader', () => ({ apiLoader: { loadYouTubePlayerApi: vi.fn(async () => undefined) } }));
 
 import { SongsPage } from '../../src/components/Pages/SongsPage';
@@ -79,6 +80,7 @@ beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock);
     (window as unknown as { YT: unknown }).YT = { Player: FakePlayer };
     usePlaylistStore.setState({ playlists: [] });
+    Object.values(track).forEach((f) => f.mockClear());
 });
 
 afterEach(() => {
@@ -153,6 +155,7 @@ describe('SongsPage', () => {
         const [saved] = usePlaylistStore.getState().playlists;
         expect(saved.name).toBe('朋友分享的歌單');
         expect(saved.codes).toEqual(['ijkl9012', 'abcd1234']);
+        expect(track.songPlaylistCreate).toHaveBeenCalledWith('share', 2);
     });
 
     it('播放器容器裡沒有其他元素覆蓋', async () => {
@@ -322,6 +325,32 @@ describe('SongsPage 三欄控制台', () => {
             const main = await openPlaylists();
             fireEvent.click(within(main).getByRole('button', { name: '播放歌單' }));
             expect(await screen.findByText('共 2 首')).toBeInTheDocument();
+            expect(track.songPlaylistPlay).toHaveBeenCalledWith(2);
+        });
+
+        it('左欄新增空白歌單送建立事件，來源 blank、0 首', async () => {
+            renderPage();
+            await screen.findByText('十月歌回');
+            const nav = screen.getByRole('navigation', { name: '歌單導覽' });
+            fireEvent.click(within(nav).getByRole('button', { name: '新增歌單' }));
+            expect(usePlaylistStore.getState().playlists).toHaveLength(1);
+            expect(track.songPlaylistCreate).toHaveBeenCalledWith('blank', 0);
+        });
+
+        it('目錄的加入歌單選單：加入既有歌單送 add 事件、建立新歌單送 create 事件', async () => {
+            seedPlaylist();
+            renderPage();
+            await screen.findByText('十月歌回');
+            const openAdd = async () => {
+                const trigger = within(screen.getByRole('main')).getAllByRole('button', { name: '加入歌單' })[0];
+                trigger.focus();
+                fireEvent.keyDown(trigger, { key: 'Enter' });
+                return screen.findByRole('menu');
+            };
+            fireEvent.click(within(await openAdd()).getByRole('menuitem', { name: '我的收藏' }));
+            expect(track.songPlaylistAdd).toHaveBeenCalledWith(1);
+            fireEvent.click(within(await openAdd()).getByRole('menuitem', { name: '建立新歌單並加入' }));
+            expect(track.songPlaylistCreate).toHaveBeenCalledWith('add_menu', 1);
         });
 
         it('改名後歌單名稱更新', async () => {

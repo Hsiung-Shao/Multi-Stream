@@ -15,6 +15,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { track } from '../../utils/analytics';
 import { Menu } from 'lucide-react';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -379,6 +380,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const playlistCount = playlists.length;
     const handleNewPlaylist = useCallback(() => {
         const id = createPlaylist(t('playlists.defaultName', { n: playlistCount + 1 }));
+        track.songPlaylistCreate('blank', 0);
         navigate({ kind: 'playlists', playlistId: id });
     }, [createPlaylist, navigate, playlistCount, t]);
     // 抽屜裡的導覽：點任何項目先收起抽屜
@@ -403,6 +405,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             return;
         }
         playEntries(found, startCode);
+        track.songPlaylistPlay(found.length);
         if (missing > 0) toast(t('share.missing', { count: missing }));
     };
 
@@ -411,12 +414,14 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         if (codes.length === 0) return;
         const name = t('playlists.defaultName', { n: playlists.length + 1 });
         createPlaylist(name, codes);
+        track.songPlaylistCreate('queue', codes.length);
         toast.success(t('queue.saved', { name }));
     };
 
     const handleSaveShare = () => {
         if (!shareNotice || shareNotice.found.length === 0) return;
         createPlaylist(t('share.defaultName'), shareNotice.found);
+        track.songPlaylistCreate('share', shareNotice.found.length);
         setShareNotice({ ...shareNotice, saved: true });
         toast.success(t('share.saved'));
     };

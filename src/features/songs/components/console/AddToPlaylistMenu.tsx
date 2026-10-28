@@ -7,6 +7,7 @@ import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '../../../../components/ui/dropdown-menu';
 import { usePlaylistStore, type Playlist } from '../../store/usePlaylistStore';
+import { track } from '../../../../utils/analytics';
 
 /** 加入歌單選單：codes 可以是一首（目錄、曲目表、底部列）或整場（詳細畫面）；pill＝顯示文字的外框鈕 */
 export function AddToPlaylistMenu({ codes, playlists, pill = false, className }: {
@@ -39,6 +40,7 @@ export function AddToPlaylistMenu({ codes, playlists, pill = false, className }:
                         key={pl.id}
                         onSelect={() => {
                             addToPlaylist(pl.id, codes);
+                            track.songPlaylistAdd(codes.length);
                             toast.success(t('catalog.added', { name: pl.name }));
                         }}
                     >
@@ -51,6 +53,7 @@ export function AddToPlaylistMenu({ codes, playlists, pill = false, className }:
                     onSelect={() => {
                         const name = t('playlists.defaultName', { n: playlists.length + 1 });
                         createPlaylist(name, codes);
+                        track.songPlaylistCreate('add_menu', codes.length);
                         toast.success(t('catalog.added', { name }));
                     }}
                 >

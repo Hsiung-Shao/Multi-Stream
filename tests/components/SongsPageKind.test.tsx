@@ -4,7 +4,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../src/i18n/i18n';
 
-vi.mock('../../src/utils/analytics', () => ({ logEvent: vi.fn(), track: {} }));
+vi.mock('../../src/utils/analytics', () => ({ logEvent: vi.fn(), track: { songPlaylistCreate: vi.fn(), songPlaylistAdd: vi.fn(), songPlaylistPlay: vi.fn() } }));
 vi.mock('../../src/utils/apiLoader', () => ({ apiLoader: { loadYouTubePlayerApi: vi.fn(async () => undefined) } }));
 
 import { SongsPage } from '../../src/components/Pages/SongsPage';

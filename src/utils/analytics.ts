@@ -304,6 +304,19 @@ export const track = {
     /** 觀看里程碑（5/15/30/60 分鐘） */
     streamMilestone: (milestoneMinutes: number) =>
         sendEvent('stream_milestone', { milestone_minutes: milestoneMinutes }),
+
+    // 歌單事件不送歌單名稱：名稱是使用者自填，可能含個資
+    /** 建立歌單（source：blank/queue/share/add_menu） */
+    songPlaylistCreate: (source: string, songCount: number) =>
+        sendEvent('song_playlist_create', { source, song_count: songCount }),
+
+    /** 加入既有歌單 */
+    songPlaylistAdd: (addedCount: number) =>
+        sendEvent('song_playlist_add', { added_count: addedCount }),
+
+    /** 播放歌單（song_count：目錄裡還找得到的首數） */
+    songPlaylistPlay: (songCount: number) =>
+        sendEvent('song_playlist_play', { song_count: songCount }),
 } as const;
 
 // ===== Web Vitals（真實使用者量測，見 utils/webVitals.ts） =====
