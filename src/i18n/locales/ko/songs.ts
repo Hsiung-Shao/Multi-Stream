@@ -175,6 +175,7 @@ export default {
     'submit.revisionMode': '이 노래 방송은 이미 등록되어 있습니다. 아래에 현재 타임스탬프를 채워 두었으니 고친 뒤 제출하면 "기존 타임스탬프 수정"이 되며 바로 반영됩니다. 기존 곡은 삭제할 수 없지만 시간이나 곡명은 바꿀 수 있습니다.',
     'submit.locked': '이 노래 방송은 잠겨 있어 지금은 편집할 수 없습니다',
     'submit.vtuberRequired': 'VTuber를 선택해 주세요',
+    'submit.vtuberCannotClear': '수정할 때는 VTuber를 비울 수 없습니다. 다른 VTuber로 바꿀 수 있습니다',
     'submit.kept': '기존 곡 {{count}}개는 삭제할 수 없어 그대로 남겨 두었습니다. 직접 조정해 주세요',
     'submit.timelineFailed': '이 노래 방송의 현재 타임스탬프를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요',
     'submit.playerPlaceholder': '링크를 붙여 넣으면 플레이어가 나타나 시간을 확인할 수 있습니다',

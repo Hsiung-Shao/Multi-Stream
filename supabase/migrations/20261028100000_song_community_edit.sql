@@ -61,6 +61,7 @@ declare
     v_result json;
     v_ref uuid;
     v_rev timestamptz;
+    v_vtuber uuid;
     v_sub uuid;
 begin
     select * into v from public.song_videos where video_id = p_video_id for update;
@@ -151,14 +152,15 @@ begin
     end if;
 
     v_ref := (v_result->>'id')::uuid;
-    select updated_at into v_rev from public.song_videos where id = v_ref;
+    -- 紀錄存「實際生效」的 VTuber（修正送 null 時是沿用的原值），後台摘要才不會誤判成改了 VTuber
+    select updated_at, vtuber_id into v_rev, v_vtuber from public.song_videos where id = v_ref;
 
     insert into public.song_submissions (
         kind, video_id, target_video_ref, title, vtuber_id, streamed_at, segments,
         source_note, submitter_contact, ip_hash, status, before, result_video_ref)
     values (
         v_kind, p_video_id, case when v_kind = 'revision' then v_ref end, p_video->>'title',
-        (p_video->>'vtuber_id')::uuid, (p_video->>'streamed_at')::timestamptz, p_segments,
+        v_vtuber, (p_video->>'streamed_at')::timestamptz, p_segments,
         p_meta->>'source_note', p_meta->>'submitter_contact', p_meta->>'ip_hash', 'applied', v_before, v_ref)
     returning id into v_sub;
 

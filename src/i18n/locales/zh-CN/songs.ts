@@ -175,6 +175,7 @@ export default {
     'submit.revisionMode': '这支歌回已经在歌单里：下方预填了目前的时间轴，改好后送出就是「修正既有时间轴」，送出即生效。既有片段不能删除，可以修改时间或歌名。',
     'submit.locked': '这场歌回已锁定，暂不开放编辑',
     'submit.vtuberRequired': '请选择 VTuber',
+    'submit.vtuberCannotClear': '修正时不能清空 VTuber，可以改选别人',
     'submit.kept': '{{count}} 首既有片段已保留（不能删除），请手动调整',
     'submit.timelineFailed': '无法读取这场歌回目前的时间轴，请刷新页面再试',
     'submit.playerPlaceholder': '粘贴网址后会出现播放器，可用来对时间',

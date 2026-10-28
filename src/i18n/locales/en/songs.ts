@@ -175,6 +175,7 @@ export default {
     'submit.revisionMode': 'This stream is already in the playlist: the current timestamps are filled in below. Edit and submit to fix them; changes take effect immediately. Existing songs cannot be deleted, but you can change their times or titles.',
     'submit.locked': 'This stream is locked and cannot be edited for now',
     'submit.vtuberRequired': 'Please choose a VTuber',
+    'submit.vtuberCannotClear': 'A VTuber cannot be cleared when editing; you can choose a different one',
     'submit.kept': '{{count}} existing song(s) were kept because they cannot be deleted. Please adjust them manually',
     'submit.timelineFailed': 'Could not load the current timestamps of this stream. Please reload the page and try again',
     'submit.playerPlaceholder': 'A player appears after you paste a link, so you can check the times',

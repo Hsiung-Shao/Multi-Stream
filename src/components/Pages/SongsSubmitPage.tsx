@@ -214,7 +214,9 @@ export function SongsSubmitPage() {
     const titleOk = title.trim().length >= 1 && title.trim().length <= TITLE_MAX;
     // 新歌回一定要選 VTuber（修正既有歌回沿用原本的）；時間軸還在讀、讀取失敗、已鎖定都不能送
     const needVtuber = !!videoId && !!tl && !timelineFailed && !existing && !vtuberId;
-    const canSubmit = !!videoId && !timelineLoading && !timelineFailed && !locked && !needVtuber
+    // 修正時不能把原本有的 VTuber 清空（後端也會沿用原值），清掉了就要求改選別人
+    const vtuberCleared = !!existing?.vtuber?.id && !vtuberId;
+    const canSubmit = !!videoId && !timelineLoading && !timelineFailed && !locked && !needVtuber && !vtuberCleared
         && titleOk && rows.length > 0 && issues.size === 0 && note.length <= NOTE_MAX && contact.length <= CONTACT_MAX;
 
     const handleSubmit = async () => {
@@ -353,6 +355,7 @@ export function SongsSubmitPage() {
                                     <Label htmlFor="songs-submit-vtuber">{t('submit.vtuber')}</Label>
                                     <VtuberPicker id="songs-submit-vtuber" value={vtuberId} onChange={setVtuberId} />
                                     {needVtuber && <p className="text-[12px] text-destructive">{t('submit.vtuberRequired')}</p>}
+                                    {vtuberCleared && <p className="text-[12px] text-destructive">{t('submit.vtuberCannotClear')}</p>}
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label htmlFor="songs-submit-streamed">{t('submit.streamedAt')}</Label>

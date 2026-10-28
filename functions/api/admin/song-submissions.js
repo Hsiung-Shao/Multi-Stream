@@ -52,8 +52,8 @@ function summarize(row) {
     const fields = [];
     if (bv.title !== row.title) fields.push('title');
     if ((bv.vtuber_id ?? null) !== (row.vtuber_id ?? null)) fields.push('vtuber_id');
-    // 毫秒精度比較（Date.parse 只留到毫秒）：.679176 與 .679 是同一瞬間，不算改了開台時間
-    const ts = (t) => (t ? Math.floor(Date.parse(t)) : null);
+    // Date.parse 本身只到毫秒：.679176 與 .679 是同一瞬間，不算改了開台時間
+    const ts = (t) => (t ? Date.parse(t) : null);
     if (ts(bv.streamed_at) !== ts(row.streamed_at)) fields.push('streamed_at');
     if (added > 0 || changed > 0) fields.push('segments');
     return { added, changed, fields };

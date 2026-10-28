@@ -444,6 +444,20 @@ describe('GET /api/admin/song-submissions（社群修改紀錄）', () => {
         expect(await run('2026-10-23T09:39:08.679Z')).toContain('streamed_at');
     });
 
+    it('F5 VTuber 沒換（before 與紀錄的 vtuber_id 相同）時 fields 不含 vtuber_id；換人才含', async () => {
+        const segs = [segRow('aaaaaaaa', 0, 100, 'A')];
+        const OTHER = '66666666-6666-4666-8666-666666666666';
+        const run = async (vtuber_id: string | null) => {
+            sb = (_m, path) =>
+                path.startsWith('song_submissions')
+                    ? new Response(JSON.stringify([logRow({ before: beforeSnap(segs), segments: segs, vtuber_id })]))
+                    : new Response('[]');
+            return (await (await adminList()).json()).submissions[0].summary.fields as string[];
+        };
+        expect(await run(REF)).not.toContain('vtuber_id');
+        expect(await run(OTHER)).toContain('vtuber_id');
+    });
+
     it('F5 只改原唱或版本備註也算 changed', async () => {
         const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A'), segRow('bbbbbbbb', 100, 200, 'B')]);
         sb = (_m, path) =>

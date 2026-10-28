@@ -175,6 +175,7 @@ export default {
     'submit.revisionMode': 'この歌枠は掲載済みです。下に現在のタイムスタンプを入れてあります。直して送信すると「既存タイムスタンプの修正」になり、すぐ反映されます。既存の曲は削除できませんが、時間や曲名は変更できます。',
     'submit.locked': 'この歌枠はロックされており、現在は編集できません',
     'submit.vtuberRequired': 'VTuber を選択してください',
+    'submit.vtuberCannotClear': '修正時は VTuber を空にできません。別の VTuber に変更できます',
     'submit.kept': '既存の曲 {{count}} 件は削除できないため残してあります。手動で調整してください',
     'submit.timelineFailed': 'この歌枠の現在のタイムスタンプを読み込めませんでした。ページを再読み込みしてもう一度お試しください',
     'submit.playerPlaceholder': 'リンクを貼り付けるとプレーヤーが表示され、時間を確認できます',

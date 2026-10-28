@@ -398,6 +398,11 @@ BEGIN
   IF (SELECT vtuber_id FROM public.song_videos WHERE id = ref) IS DISTINCT FROM orig THEN
     RAISE EXCEPTION 'SQL4c 失敗：修正送 vtuber_id null 不可清空，預期 %，得 %', orig, (SELECT vtuber_id FROM public.song_videos WHERE id = ref);
   END IF;
+  -- 投稿紀錄存實際生效的 VTuber（不是送來的 null），後台摘要才不會誤判成改了 VTuber
+  IF (SELECT vtuber_id FROM public.song_submissions WHERE id = (r->>'submission_id')::uuid) IS DISTINCT FROM orig THEN
+    RAISE EXCEPTION 'SQL4c 失敗：投稿紀錄的 vtuber_id 應為實際生效的 %，得 %', orig,
+      (SELECT vtuber_id FROM public.song_submissions WHERE id = (r->>'submission_id')::uuid);
+  END IF;
 
   -- 送別的 VTuber：換成新的
   r := pg_temp.save(vid, (r->>'rev')::timestamptz,
@@ -405,6 +410,9 @@ BEGIN
          jsonb_build_array(pg_temp.sj(c1, 0, 100, 'zz甲', 0)));
   IF (SELECT vtuber_id FROM public.song_videos WHERE id = ref) IS DISTINCT FROM other THEN
     RAISE EXCEPTION 'SQL4c 失敗：修正送別的 VTuber 應換人，預期 %，得 %', other, (SELECT vtuber_id FROM public.song_videos WHERE id = ref);
+  END IF;
+  IF (SELECT vtuber_id FROM public.song_submissions WHERE id = (r->>'submission_id')::uuid) IS DISTINCT FROM other THEN
+    RAISE EXCEPTION 'SQL4c 失敗：換人時投稿紀錄的 vtuber_id 應為新的 %', other;
   END IF;
   RAISE NOTICE 'ok SQL4c 修正時 vtuber_id null 不清空、送別人則換人';
 END $$;

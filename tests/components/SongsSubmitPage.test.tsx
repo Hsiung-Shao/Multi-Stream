@@ -284,6 +284,27 @@ describe('SongsSubmitPage 修正既有歌回（C1／C2／C4）', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent('不能刪除既有片段；需要刪除請用意見回饋告訴站方');
     });
 
+    it('既有歌回原本有 VTuber：清空後出現「修正時不能清空」提示且送出鍵停用；重選一位後提示消失可送出', async () => {
+        const HINT = '修正時不能清空 VTuber，可以改選別人';
+        timelineResponse = () => json(timelineBody());
+        await openRevision();
+        await waitFor(() => expect(screen.getByRole('button', { name: SEND })).toBeEnabled());
+        expect(screen.queryByText(HINT)).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: '清除 VTuber' }));
+        expect(await screen.findByText(HINT)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: SEND })).toBeDisabled();
+        pickVtuber();
+        await waitFor(() => expect(screen.queryByText(HINT)).toBeNull());
+        expect(screen.getByRole('button', { name: SEND })).toBeEnabled();
+    });
+
+    it('既有歌回原本就沒有 VTuber：不顯示清空提示、仍可送出', async () => {
+        timelineResponse = () => json(timelineBody({ vtuber: null }));
+        await openRevision();
+        await waitFor(() => expect(screen.getByRole('button', { name: SEND })).toBeEnabled());
+        expect(screen.queryByText('修正時不能清空 VTuber，可以改選別人')).toBeNull();
+    });
+
     it('開台時間沒改過：送出原始 ISO（保留秒與毫秒），不被 datetime-local 截到分鐘', async () => {
         const ISO = '2026-10-23T09:39:07.679176+00:00';
         timelineResponse = () => json(timelineBody({ streamedAt: ISO }));
