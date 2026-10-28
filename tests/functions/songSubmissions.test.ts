@@ -387,6 +387,13 @@ describe('POST /api/songs/submissions：新歌回全站每小時配額', () => {
         expect(rpcCalls()).toHaveLength(0);
     });
 
+    it('A9 新歌回帶了 rev（甚至是壞值）→ 送給 RPC 的 p_rev 一律為 null，不會因 rev 轉換失敗而白扣配額', async () => {
+        const res = await submit(sub({ rev: 'x' }));
+        expect(res.status).toBe(201);
+        expect(rpcCalls()).toHaveLength(1);
+        expect(rpcCalls()[0].body.p_rev).toBeNull();
+    });
+
     it('A2 既有影片的修正即使新歌回配額已滿 → 仍 201 並呼叫 RPC，且不增加新歌回計數', async () => {
         videoExists();
         const env = ENV();
