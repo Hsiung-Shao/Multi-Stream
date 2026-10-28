@@ -119,14 +119,8 @@ export default {
     'editor.import.replace': '替换现有片段',
     'editor.import.append': '附加到最后',
     'editor.estimated': '估计',
-    'editor.estimatedHint': '原文没写结束时间，这是估计值（有歌曲长度时为开始＋长度＋10 秒，否则取下一首开始、开始后 4 分 30 秒；都不超过视频结尾），请用播放器确认',
+    'editor.estimatedHint': '原文没写结束时间，这是估计值（下一首开始、开始后 4 分 30 秒、视频结尾取最早），请用播放器确认',
     'editor.estimatedCount': '{{count}} 首的结束时间是估计值，请确认',
-
-    'editor.estimatedLength': '估计（按歌曲长度）',
-
-    'editor.lengthLoading': '正在查歌曲长度…',
-
-    'editor.lengthHint': '结束时间按歌曲长度估计；主播唱短版或只唱一段时请自行调整',
     'editor.segments': '片段（{{count}} 首）',
     'editor.issueCount': '{{count}} 行有错误，修正后才能保存',
     'editor.addRow': '新增一行',

@@ -22,9 +22,8 @@ import { cn } from '../../../components/ui/utils';
 import { formatTimecode, parseTimecode } from '../lib/timecode';
 import { parseTimelineDetailed } from '../lib/timelineParser';
 import { isSingleSongVideo } from '../lib/endEstimate';
-import { useSongLengths } from '../hooks/useSongLengths';
 import {
-    emptyRow, fromImported, lineHasExplicitEnd, prepareImport, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
+    emptyRow, fromImported, prepareImport, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
 } from './segmentRows';
 import type { PreviewApi } from './PreviewPlayer';
 
@@ -101,28 +100,10 @@ export function SegmentEditor({
         [text],
     );
     const lines = useMemo(() => text.split(/\r\n|\r|\n/), [text]);
-    // 歌曲長度（站內確認長度或 iTunes 原曲長度）：有就用「開始＋長度＋10 秒」估計結束，查不到照舊。
-    // 只查「會被估計結束」的列：排除的、原文已寫「開始-結束」的、單曲影片（結束用影片長度）都不查，省 iTunes 額度
-    const lengthQueries = useMemo(() => {
-        const kept = parsed.rows.filter((_, i) => !excluded.has(i));
-        if (isSingleSongVideo(duration, kept.length)) return [];
-        return kept
-            .filter((r) => !lineHasExplicitEnd(lines[r.line] ?? ''))
-            .map((r) => ({ title: r.title, artist: r.artist }));
-    }, [parsed.rows, excluded, lines, duration]);
-    const { lengthOf, loading: lengthLoading } = useSongLengths(lengthQueries);
-    const lengthsByLine = useMemo(() => {
-        const m = new Map<number, number>();
-        for (const r of parsed.rows) {
-            const sec = lengthOf({ title: r.title, artist: r.artist });
-            if (sec !== undefined) m.set(r.line, sec);
-        }
-        return m;
-    }, [parsed.rows, lengthOf]);
     // 估計只看「要匯入」的列：排除的列不該成為上一首的「下一首開始」
     const prepared = useMemo(
-        () => prepareImport(parsed.rows.filter((_, i) => !excluded.has(i)), lines, duration, lengthsByLine),
-        [parsed.rows, excluded, lines, duration, lengthsByLine],
+        () => prepareImport(parsed.rows.filter((_, i) => !excluded.has(i)), lines, duration),
+        [parsed.rows, excluded, lines, duration],
     );
     const preparedByLine = useMemo(() => new Map(prepared.map((r) => [r.line, r])), [prepared]);
 
@@ -147,7 +128,7 @@ export function SegmentEditor({
     };
 
     const updateRow = (key: string, patch: Partial<SegmentRowDraft>) => {
-        onRowsChange((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch, ...('end' in patch ? { endEstimated: false, endFromLength: false } : {}) } : r)));
+        onRowsChange((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch, ...('end' in patch ? { endEstimated: false } : {}) } : r)));
         onEdit?.();
     };
     const removeRow = (key: string) => {
@@ -210,9 +191,7 @@ export function SegmentEditor({
                             <>
                                 <p className="text-[12px] text-muted-foreground">
                                     {t('editor.import.summary', { count: parsed.rows.length, selected: prepared.length })}
-                                    {lengthLoading && <span className="ml-2">{t('editor.lengthLoading')}</span>}
                                 </p>
-                                <p className="text-[12px] text-muted-foreground">{t('editor.lengthHint')}</p>
                                 <ScrollArea className="rounded border border-border [&>[data-radix-scroll-area-viewport]]:max-h-64 [&>div>div]:!block">
                                     <ol className="text-[12.5px]">
                                         {parsed.rows.map((r, i) => {
@@ -230,11 +209,7 @@ export function SegmentEditor({
                                                     <label htmlFor={checkboxId} className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
                                                         <span className="w-32 shrink-0 tabular-nums text-muted-foreground">
                                                             {formatTimecode(r.start)} – {prep ? formatTimecode(prep.end) : '—'}
-                                                            {prep?.endEstimated && (
-                                                                <span className="ml-1 text-amber-600 dark:text-amber-400">
-                                                                    {t(prep.endFromLength ? 'editor.estimatedLength' : 'editor.estimated')}
-                                                                </span>
-                                                            )}
+                                                            {prep?.endEstimated && <span className="ml-1 text-amber-600 dark:text-amber-400">{t('editor.estimated')}</span>}
                                                         </span>
                                                         <span className={cn('min-w-0 flex-1 truncate', !on && 'line-through')}>
                                                             {r.title || t('editor.import.untitled')}{r.artist ? ` / ${r.artist}` : ''}
@@ -321,7 +296,7 @@ export function SegmentEditor({
                                                     {timeButtons(r, 'end', n)}
                                                     {r.endEstimated && (
                                                         <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1 text-[10.5px] font-semibold text-amber-700 dark:text-amber-300" title={t('editor.estimatedHint')}>
-                                                            {t(r.endFromLength ? 'editor.estimatedLength' : 'editor.estimated')}
+                                                            {t('editor.estimated')}
                                                         </span>
                                                     )}
                                                 </div>

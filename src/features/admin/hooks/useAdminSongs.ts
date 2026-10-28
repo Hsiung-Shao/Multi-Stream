@@ -43,8 +43,6 @@ export interface SongSegmentRecord {
     version_note?: string | null;
     /** 所屬歌曲（songs.id）；舊後端沒有這個欄位 */
     song_id?: number;
-    /** 結束時間是估計值；舊後端沒有這個欄位 */
-    end_estimated?: boolean;
     position: number;
 }
 
@@ -56,8 +54,6 @@ export interface SongSegmentInput {
     original_artist: string | null;
     /** 版本備註（trim 後，空白為 null） */
     version_note: string | null;
-    /** 結束時間是估計值（只有人工確認的長度才會被當成站內歌曲長度） */
-    end_estimated?: boolean;
 }
 
 export interface SongVideoWriteInput {

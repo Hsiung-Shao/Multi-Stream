@@ -25,8 +25,6 @@ export interface SegmentRowDraft {
     /** 版本備註（選填，trim 後最多 30 字） */
     note: string;
     endEstimated?: boolean;
-    /** 估計的結束是依歌曲長度算的（顯示「依歌曲長度」）；使用者改過結束時間就清掉 */
-    endFromLength?: boolean;
 }
 
 /** 列的問題代碼：segmentValidation 的代碼＋時間格式錯 */
@@ -44,8 +42,6 @@ export interface ImportedRow {
     artist: string | null;
     line: number;
     endEstimated: boolean;
-    /** 結束是依歌曲長度估的（站內確認長度或 iTunes 原曲長度） */
-    endFromLength?: boolean;
     id?: string;
     code?: string;
     /** 版本備註（取代時對回的舊片段備註、投稿的 versionNote） */
@@ -63,7 +59,6 @@ export function fromImported(r: ImportedRow): SegmentRowDraft {
         artist: r.artist ?? '',
         note: r.note ?? '',
         endEstimated: r.endEstimated,
-        endFromLength: r.endEstimated && !!r.endFromLength,
     };
 }
 
@@ -78,25 +73,20 @@ export function lineHasExplicitEnd(line: string): boolean {
  * 把解析結果轉成可匯入的列：原文沒寫區間的列結束時間改為估計（estimateEnds），保留原順序。
  * @param lines 原始時間軸文字的每一行（ParsedRow.line 對應這裡的索引）
  */
-export function prepareImport(
-    rows: ParsedRow[], lines: string[], duration: number | null, lengths?: ReadonlyMap<number, number>,
-): ImportedRow[] {
+export function prepareImport(rows: ParsedRow[], lines: string[], duration: number | null): ImportedRow[] {
     const withExplicit = rows.map((r) => ({
         ...r,
         end: r.end !== null && lineHasExplicitEnd(lines[r.line] ?? '') ? r.end : null,
     }));
-    // 單曲影片（短影片只有一首）：整支就是這首歌，結束用影片長度，不套 4:30 上限，也不用歌曲長度
-    const single = isSingleSongVideo(duration, withExplicit.length);
-    const maxSeconds = single ? duration! : undefined;
-    const lengthFor = !single && lengths ? (r: ParsedRow) => lengths.get(r.line) : undefined;
-    return estimateEnds(withExplicit, { duration, maxSeconds, lengthFor }).map((r) => ({
+    // 單曲影片（短影片只有一首）：整支就是這首歌，結束用影片長度，不套 4:30 上限
+    const maxSeconds = isSingleSongVideo(duration, withExplicit.length) ? duration! : undefined;
+    return estimateEnds(withExplicit, { duration, maxSeconds }).map((r) => ({
         start: r.start,
         end: r.end,
         title: r.title,
         artist: r.artist,
         line: r.line,
         endEstimated: r.endEstimated,
-        endFromLength: r.endSource === 'length',
     }));
 }
 

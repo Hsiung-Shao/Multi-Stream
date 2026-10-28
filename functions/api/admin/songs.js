@@ -27,7 +27,7 @@ import { buildSongVideoPayload, isUuid } from '../../lib/songs.js';
 const MAX_BODY_BYTES = 128 * 1024; // 200 片段 × 約 300 bytes 仍遠低於此
 const LIST_LIMIT = 200;
 const NO_STORE = { 'Cache-Control': 'no-store' };
-const SEGMENT_COLUMNS = 'id,code,video_ref,song_id,start_seconds,end_seconds,title,original_artist,version_note,end_estimated,position';
+const SEGMENT_COLUMNS = 'id,code,video_ref,song_id,start_seconds,end_seconds,title,original_artist,version_note,position';
 
 function parseIdFromQuery(url) {
     const id = url.searchParams.get('id');

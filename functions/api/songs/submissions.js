@@ -71,8 +71,6 @@ export async function onRequestPost(context) {
         title: s.title,
         original_artist: s.artist,
         version_note: s.versionNote,
-        // 估計出來的結束時間不當成站內歌曲長度（song_ref_lengths 只取 false）
-        end_estimated: s.endEstimated === true,
         position,
     }));
 

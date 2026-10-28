@@ -119,14 +119,8 @@ export default {
     'editor.import.replace': '今の曲と置き換える',
     'editor.import.append': '末尾に追加',
     'editor.estimated': '推定',
-    'editor.estimatedHint': '終了時間の記載がないため推定値です（曲の長さがわかる場合は開始＋長さ＋10 秒、それ以外は次の曲の開始・開始から 4 分 30 秒後の早いほう。動画の終わりは超えません）。プレーヤーで確認してください',
+    'editor.estimatedHint': '終了時間の記載がないため推定値です（次の曲の開始・開始から 4 分 30 秒後・動画の終わりのうち最も早い時点）。プレーヤーで確認してください',
     'editor.estimatedCount': '{{count}} 曲の終了時間は推定値です。確認してください',
-
-    'editor.estimatedLength': '推定（曲の長さ）',
-
-    'editor.lengthLoading': '曲の長さを確認中…',
-
-    'editor.lengthHint': '終了時間は曲の長さから推定しています。ショートバージョンや一部だけ歌った場合は調整してください',
     'editor.segments': '曲（{{count}} 曲）',
     'editor.issueCount': '{{count}} 行にエラーがあります。修正してから保存してください',
     'editor.addRow': '行を追加',

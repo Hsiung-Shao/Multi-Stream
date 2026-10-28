@@ -17,7 +17,7 @@ let vtuberRows: unknown[] = [];
 
 const VT = { id: VT_UUID, name: '某某', img_url: 'https://img.example/a.png' };
 const SEGS_UNSORTED = [
-    { id: 's2', code: 'bbbbbbbb', start_seconds: 200, end_seconds: 300, title: '第二首', original_artist: null, version_note: '現場版', end_estimated: true, position: 1 },
+    { id: 's2', code: 'bbbbbbbb', start_seconds: 200, end_seconds: 300, title: '第二首', original_artist: null, version_note: '現場版', position: 1 },
     { id: 's1', code: 'aaaaaaaa', start_seconds: 0, end_seconds: 100, title: '第一首', original_artist: '原唱', version_note: null, position: 0 },
 ];
 const videoRow = (over: Record<string, unknown> = {}) => ({
@@ -102,8 +102,8 @@ describe('GET /api/songs/timeline', () => {
                 rev: REV,
                 locked: false,
                 segments: [
-                    { code: 'aaaaaaaa', start: 0, end: 100, title: '第一首', artist: '原唱', note: null, estimated: false },
-                    { code: 'bbbbbbbb', start: 200, end: 300, title: '第二首', artist: null, note: '現場版', estimated: true },
+                    { code: 'aaaaaaaa', start: 0, end: 100, title: '第一首', artist: '原唱', note: null },
+                    { code: 'bbbbbbbb', start: 200, end: 300, title: '第二首', artist: null, note: '現場版' },
                 ],
             },
         });

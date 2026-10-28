@@ -58,9 +58,7 @@ function toLocalInput(iso: string | null): string {
 function replaceKeepingExisting(current: SegmentRowDraft[], imported: ImportedRow[]): { rows: SegmentRowDraft[]; kept: number } {
     const existing = current.map((r) => ({ code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note }));
     const { rows: merged, lostCodes } = mergeReplaceRows(existing, imported);
-    const replaced = merged.map((m, i) => fromImported({
-        ...m, end: imported[i].end, endEstimated: imported[i].endEstimated, endFromLength: imported[i].endFromLength,
-    }));
+    const replaced = merged.map((m, i) => fromImported({ ...m, end: imported[i].end, endEstimated: imported[i].endEstimated }));
     const lost = new Set(lostCodes);
     const keptRows = current.filter((r) => r.code !== undefined && lost.has(r.code));
     const startOf = (r: SegmentRowDraft) => parseTimecode(r.start) ?? Number.POSITIVE_INFINITY;
@@ -204,7 +202,6 @@ export function SongsSubmitPage() {
             title: s.title,
             artist: s.artist ?? '',
             note: s.note ?? '',
-            endEstimated: s.estimated === true,
         }));
         autoRef.current.rows = prefill;
         setRows((cur) => (cur.length > 0 ? cur : prefill));

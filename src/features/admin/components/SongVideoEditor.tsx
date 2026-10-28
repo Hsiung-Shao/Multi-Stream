@@ -67,7 +67,6 @@ const fromRecord = (s: SongSegmentRecord): SegmentRowDraft => ({
     title: s.title,
     artist: s.original_artist ?? '',
     note: s.version_note ?? '',
-    endEstimated: s.end_estimated === true,
 });
 
 /** ISO → <input type="datetime-local"> 的本地時間字串 */
@@ -89,7 +88,6 @@ const toSegmentInputs = (rows: SegmentRowDraft[]): SongSegmentInput[] =>
             title: r.title.trim(),
             original_artist: r.artist.trim() || null,
             version_note: r.note.trim() || null,
-            end_estimated: !!r.endEstimated,
         };
     });
 
@@ -112,9 +110,7 @@ function mergeWithExisting(current: SegmentRowDraft[], imported: ImportedRow[]):
     const existing = current.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note }));
     const { rows: merged, lostCodes } = mergeReplaceRows(existing, imported);
     return {
-        rows: merged.map((m, i) => fromImported({
-            ...m, end: imported[i].end, endEstimated: imported[i].endEstimated, endFromLength: imported[i].endFromLength,
-        })),
+        rows: merged.map((m, i) => fromImported({ ...m, end: imported[i].end, endEstimated: imported[i].endEstimated })),
         lostCodes,
     };
 }
