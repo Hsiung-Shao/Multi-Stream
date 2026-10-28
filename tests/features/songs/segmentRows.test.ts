@@ -78,3 +78,35 @@ describe('mergeReplaceRows 保留舊備註', () => {
         expect(lostCodes).toEqual(['c2']);
     });
 });
+
+// ---- prepareImport 依歌曲長度估計結束 ----
+import { prepareImport } from '../../../src/features/songs/components/segmentRows';
+import { parseTimelineDetailed } from '../../../src/features/songs/lib/timelineParser';
+
+describe('prepareImport 依歌曲長度', () => {
+    const parse = (text: string) => parseTimelineDetailed(text).rows;
+
+    it('E8 單曲影片仍以片長為結束，即使有長度也不用', () => {
+        const text = '0:00 歌A';
+        const parsed = parse(text);
+        const lengths = new Map([[parsed[0].line, 200]]);
+        const rows = prepareImport(parsed, text.split('\n'), 300, lengths);
+        expect(rows).toHaveLength(1);
+        expect(rows[0]).toMatchObject({ end: 300, endFromLength: false });
+    });
+
+    it('E8b 依行號套用長度並標示 endFromLength', () => {
+        const text = '0:00 歌A\n3:00 歌B';
+        const parsed = parse(text);
+        const lengths = new Map([[parsed[0].line, 100]]);
+        const rows = prepareImport(parsed, text.split('\n'), 10000, lengths);
+        expect(rows[0]).toMatchObject({ end: 110, endEstimated: true, endFromLength: true });
+        expect(rows[1]).toMatchObject({ end: 450, endFromLength: false });
+    });
+
+    it('E8c 不傳 lengths 時行為不變且 endFromLength 為 false', () => {
+        const text = '0:00 歌A\n10:00 歌B';
+        const rows = prepareImport(parse(text), text.split('\n'), 10000);
+        expect(rows[0]).toMatchObject({ end: 270, endFromLength: false });
+    });
+});
