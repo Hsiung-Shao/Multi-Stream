@@ -8,16 +8,24 @@
 // 外部查詢的保護：全站每天 300 次「需要查外部」的請求（只用一個 KV key，KV 寫入額度與投稿共用）；
 // 每個請求最多查 8 首（每首最多 3 個國家＝24 次子請求）；iTunes 回 403／429 就整批停下、不記查無。
 // pending＝這次沒查（配額、上限、iTunes 暫時失敗），前端稍後再問。回應不快取。
+// retryAfter（秒，頂層）：只有「暫時失敗」才帶——iTunes 403／429 為 60、全站配額用完為 3600、iTunes 5xx／逾時／網路錯誤為 10；
+//   單純因每請求上限 8 首沒輪到的 pending 不帶，前端可以馬上接著送下一批。
+// 查 iTunes 用去掉結尾版本括號的歌名（「Lemon (Short ver.)」→「Lemon」），同批同一首（去括號後）只查一次；每次 iTunes 請求 4 秒逾時。
 
 import { handleOptions, getCorsHeaders, isRequestFromAllowedSite } from '../../lib/cors.js';
 import { rpc } from '../../lib/supabase-server.js';
 import { checkKvQuota, quotaWindow } from '../../lib/rate-limit.js';
 import { logError } from '../../lib/logger.js';
-import { parseLengthsBody, itunesUrl, pickItunesMatch, ITUNES_COUNTRIES } from '../../lib/song-lengths.js';
+import { parseLengthsBody, itunesUrl, pickItunesMatch, stripVersionSuffix, ITUNES_COUNTRIES } from '../../lib/song-lengths.js';
 
 const MAX_BODY_BYTES = 32 * 1024;
 const LOOKUPS_PER_REQUEST = 8;
 const DAILY_LOOKUP_REQUESTS = 300;
+const ITUNES_TIMEOUT_MS = 4000;
+// 前端建議多久後再問（秒）：被限流 1 分鐘、全站配額用完 1 小時、iTunes 暫時失敗 10 秒
+const RETRY_THROTTLED = 60;
+const RETRY_QUOTA = 3600;
+const RETRY_TRANSIENT = 10;
 
 function reply(request, status, data) {
     return new Response(JSON.stringify(data), {
@@ -38,17 +46,18 @@ async function readBody(request) {
     }
 }
 
-const sameSongKey = (it) => `${it.title.toLowerCase()}\u0001${(it.artist ?? '').toLowerCase()}`;
+const sameSongKey = (it) => `${stripVersionSuffix(it.title).toLowerCase()}\u0001${(it.artist ?? '').toLowerCase()}`;
 
 /**
- * 依序試各國 iTunes；回 { seconds, matched, country } 或 { seconds: null }（三國都沒配到），
- * 暫時失敗回 'retry'，被限流回 'throttled'。
+ * 依序試各國 iTunes（歌名去掉結尾的版本括號）；回 { seconds, matched, country } 或 { seconds: null }（三國都沒配到），
+ * 暫時失敗（含逾時）回 'retry'，被限流回 'throttled'。
  */
 async function lookupItunes(it) {
+    const title = stripVersionSuffix(it.title);
     for (const country of ITUNES_COUNTRIES) {
         let res;
         try {
-            res = await fetch(itunesUrl(it.title, it.artist, country));
+            res = await fetch(itunesUrl(title, it.artist, country), { signal: AbortSignal.timeout(ITUNES_TIMEOUT_MS) });
         } catch {
             return 'retry';
         }
@@ -60,7 +69,7 @@ async function lookupItunes(it) {
         } catch {
             return 'retry';
         }
-        const hit = pickItunesMatch(json?.results, it.title, it.artist);
+        const hit = pickItunesMatch(json?.results, title, it.artist);
         if (hit) return { seconds: hit.seconds, matched: hit.matched, country };
     }
     return { seconds: null };
@@ -105,19 +114,28 @@ export async function onRequestPost(context) {
         byKey.get(key).indexes.push(i);
     });
 
+    let retryAfter = 0;
     if (unknownKeys.length > 0
-        && await checkKvQuota(env.RATE_LIMIT_KV, `songlen:day:${quotaWindow().day}`, DAILY_LOOKUP_REQUESTS, 172800)) {
+        && !(await checkKvQuota(env.RATE_LIMIT_KV, `songlen:day:${quotaWindow().day}`, DAILY_LOOKUP_REQUESTS, 172800))) {
+        retryAfter = RETRY_QUOTA;
+    } else if (unknownKeys.length > 0) {
         const puts = [];
         for (const key of unknownKeys.slice(0, LOOKUPS_PER_REQUEST)) {
             const { item, indexes } = byKey.get(key);
             const found = await lookupItunes(item);
-            if (found === 'throttled') break;
-            if (found === 'retry') continue;
+            if (found === 'throttled') {
+                retryAfter = Math.max(retryAfter, RETRY_THROTTLED);
+                break;
+            }
+            if (found === 'retry') {
+                retryAfter = Math.max(retryAfter, RETRY_TRANSIENT);
+                continue;
+            }
             for (const i of indexes) {
                 out[i] = found.seconds === null ? { seconds: null, source: 'miss' } : { seconds: found.seconds, source: 'itunes' };
             }
             puts.push({
-                title: item.title, artist: item.artist, seconds: found.seconds,
+                title: stripVersionSuffix(item.title), artist: item.artist, seconds: found.seconds,
                 matched: found.matched ?? null, country: found.country ?? null,
             });
         }
@@ -133,7 +151,7 @@ export async function onRequestPost(context) {
         }
     }
 
-    return reply(request, 200, { ok: true, items: out });
+    return reply(request, 200, retryAfter > 0 ? { ok: true, items: out, retryAfter } : { ok: true, items: out });
 }
 
 export async function onRequestOptions(context) {

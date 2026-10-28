@@ -24,7 +24,7 @@ import { parseTimelineDetailed } from '../lib/timelineParser';
 import { isSingleSongVideo } from '../lib/endEstimate';
 import { useSongLengths } from '../hooks/useSongLengths';
 import {
-    emptyRow, fromImported, prepareImport, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
+    emptyRow, fromImported, lineHasExplicitEnd, prepareImport, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
 } from './segmentRows';
 import type { PreviewApi } from './PreviewPlayer';
 
@@ -101,8 +101,15 @@ export function SegmentEditor({
         [text],
     );
     const lines = useMemo(() => text.split(/\r\n|\r|\n/), [text]);
-    // 歌曲長度（站內確認長度或 iTunes 原曲長度）：有就用「開始＋長度＋10 秒」估計結束，查不到照舊
-    const lengthQueries = useMemo(() => parsed.rows.map((r) => ({ title: r.title, artist: r.artist })), [parsed.rows]);
+    // 歌曲長度（站內確認長度或 iTunes 原曲長度）：有就用「開始＋長度＋10 秒」估計結束，查不到照舊。
+    // 只查「會被估計結束」的列：排除的、原文已寫「開始-結束」的、單曲影片（結束用影片長度）都不查，省 iTunes 額度
+    const lengthQueries = useMemo(() => {
+        const kept = parsed.rows.filter((_, i) => !excluded.has(i));
+        if (isSingleSongVideo(duration, kept.length)) return [];
+        return kept
+            .filter((r) => !lineHasExplicitEnd(lines[r.line] ?? ''))
+            .map((r) => ({ title: r.title, artist: r.artist }));
+    }, [parsed.rows, excluded, lines, duration]);
     const { lengthOf, loading: lengthLoading } = useSongLengths(lengthQueries);
     const lengthsByLine = useMemo(() => {
         const m = new Map<number, number>();

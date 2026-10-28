@@ -335,3 +335,93 @@ describe('POST /api/songs/lengths：請求驗證', () => {
         expect(putCalls()).toHaveLength(0);
     });
 });
+
+describe('POST /api/songs/lengths：重試提示 retryAfter 與 iTunes 逾時', () => {
+    it('R1 只是每請求上限 8 首沒輪到的 pending，不帶 retryAfter', async () => {
+        lookupResponse = () => json(Array.from({ length: 12 }, () => UNKNOWN));
+        itunes = matchByTerm;
+        const body = await (await call(songs(12))).json();
+        expect(body.items.slice(8).every((x: { source: string }) => x.source === 'pending')).toBe(true);
+        // 沒輪到的不是失敗；帶了 retryAfter 前端會把它當失敗退避，12 首要等很久才查完
+        expect(body.retryAfter).toBeUndefined();
+    });
+
+    it('R2 iTunes 403／429：整批 pending 並帶 retryAfter 60', async () => {
+        for (const status of [429, 403]) {
+            lookupResponse = () => json([UNKNOWN, UNKNOWN]);
+            itunes = () => new Response('limited', { status });
+            const body = await (await call(songs(2))).json();
+            expect(body.items.map((x: { source: string }) => x.source), String(status)).toEqual(['pending', 'pending']);
+            expect(body.retryAfter, String(status)).toBe(60);
+        }
+    });
+
+    it('R3 全站配額用完：pending 並帶 retryAfter 3600', async () => {
+        lookupResponse = () => json([UNKNOWN]);
+        const kv = memKv({ [`songlen:day:${quotaWindow().day}`]: '300' });
+        const body = await (await call(songs(1), ENV({ RATE_LIMIT_KV: kv }))).json();
+        expect(body.items).toEqual([{ seconds: null, source: 'pending' }]);
+        expect(body.retryAfter).toBe(3600);
+    });
+
+    it('R4 iTunes 暫時失敗（5xx／逾時）的 pending 也帶 retryAfter，避免前端立刻重送', async () => {
+        lookupResponse = () => json([UNKNOWN, UNKNOWN]);
+        itunes = ({ term }) => (term.startsWith('歌0 ') ? new Response('boom', { status: 500 }) : matchByTerm({ term }));
+        const body = await (await call(songs(2))).json();
+        expect(body.items[0]).toEqual({ seconds: null, source: 'pending' });
+        expect(body.items[1]).toEqual({ seconds: 200, source: 'itunes' });
+        expect(typeof body.retryAfter).toBe('number');
+        expect(body.retryAfter).toBeGreaterThan(0);
+    });
+
+    it('R5 每次呼叫 iTunes 都帶逾時 signal', async () => {
+        lookupResponse = () => json([UNKNOWN, UNKNOWN]);
+        itunes = matchByTerm;
+        await call(songs(2));
+        const inits = (fetch as unknown as { mock: { calls: [string, RequestInit | undefined][] } }).mock.calls
+            .filter(([u]) => String(u).startsWith('https://itunes.apple.com/'));
+        expect(inits).toHaveLength(2);
+        // 沒設逾時時 iTunes 卡住會讓整個請求（與 Workers 時限）一起卡死
+        for (const [, init] of inits) expect(init?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it('R6 iTunes 逾時（AbortError／TimeoutError）：該首 pending 不寫快取，下一首照常有結果', async () => {
+        for (const name of ['AbortError', 'TimeoutError']) {
+            calls = [];
+            lookupResponse = () => json([UNKNOWN, UNKNOWN]);
+            itunes = ({ term }) => {
+                if (term.startsWith('歌0 ')) throw new DOMException('timed out', name);
+                return matchByTerm({ term });
+            };
+            const body = await (await call(songs(2))).json();
+            expect(body.items, name).toEqual([{ seconds: null, source: 'pending' }, { seconds: 200, source: 'itunes' }]);
+            const rows = putCalls()[0].body.p_rows;
+            expect(rows, name).toHaveLength(1);
+            expect(rows[0].title, name).toBe('歌1');
+        }
+    });
+});
+
+describe('POST /api/songs/lengths：帶版本括號的歌名', () => {
+    it('V1 「Lemon (Short ver.)」以「Lemon」查 iTunes 並配到', async () => {
+        lookupResponse = () => json([UNKNOWN]);
+        itunes = ({ term }) => (term === 'Lemon 米津玄師' ? hit('Lemon', '米津玄師', 255000) : json({ results: [] }));
+        const body = await (await call([{ title: 'Lemon (Short ver.)', artist: '米津玄師' }])).json();
+        // 沒去版本括號，term 會帶「(Short ver.)」且曲名比對不到
+        expect(itunesCalls().map(termOf)[0]).toBe('Lemon 米津玄師');
+        expect(body.items).toEqual([{ seconds: 255, source: 'itunes' }]);
+        expect(putCalls()[0].body.p_rows[0]).toMatchObject({ title: 'Lemon', artist: '米津玄師', seconds: 255 });
+    });
+
+    it('V2 同批「Lemon」與「Lemon (Short ver.)」只打一次 iTunes，兩項結果相同', async () => {
+        lookupResponse = () => json([UNKNOWN, UNKNOWN]);
+        itunes = ({ term }) => (term === 'Lemon 米津玄師' ? hit('Lemon', '米津玄師', 255000) : json({ results: [] }));
+        const body = await (await call([
+            { title: 'Lemon', artist: '米津玄師' },
+            { title: 'Lemon (Short ver.)', artist: '米津玄師' },
+        ])).json();
+        expect(itunesCalls()).toHaveLength(1);
+        expect(body.items).toEqual([{ seconds: 255, source: 'itunes' }, { seconds: 255, source: 'itunes' }]);
+        expect(putCalls()[0].body.p_rows).toHaveLength(1);
+    });
+});

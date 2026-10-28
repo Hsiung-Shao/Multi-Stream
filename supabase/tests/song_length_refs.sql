@@ -78,6 +78,17 @@ BEGIN
            p_segs)::jsonb;
 END $$;
 
+-- 同 save，但可指定影片代號（同一交易內不同測項用不同影片）
+CREATE FUNCTION pg_temp.save_as(p_vid text, p_id uuid, p_segs jsonb) RETURNS jsonb LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN public._save_song_video(
+           p_id,
+           jsonb_build_object('video_id', p_vid, 'title', 'zz存檔歌回', 'status', 'published',
+                              'vtuber_id', '00000000-0000-4000-8000-0000000000f1',
+                              'streamed_at', '2026-01-01T12:00:00Z', 'duration_seconds', 7200),
+           p_segs)::jsonb;
+END $$;
+
 -- ───────────── 測資（直接寫表，不依賴本地既有資料） ─────────────
 INSERT INTO public.vtubers (id, name, nationality, slug) VALUES
   ('00000000-0000-4000-8000-0000000000f1', 'zz長度參考測試主', 'TW', 'zz-length-refs-test');
@@ -185,6 +196,35 @@ BEGIN
   RAISE NOTICE 'ok SQL12b put 寫入快取並以正規化鍵存放，沒原唱的列忽略';
 END $$;
 
+-- ───────────── SQL12c put：查無不蓋掉 180 天內的查到值，查到可蓋掉查無 ─────────────
+-- SQL12c
+DO $$
+BEGIN
+  -- 查到 100 天前 → 新的「查無」不可覆蓋
+  PERFORM pg_temp.mkcache('zzPutKeep', 'zzPutArt2', 210, 100);
+  PERFORM public.song_length_refs_put(jsonb_build_array(
+    jsonb_build_object('title', 'zzPutKeep', 'artist', 'zzPutArt2', 'seconds', NULL, 'matched', NULL, 'country', NULL)));
+  PERFORM pg_temp.expect_item('SQL12c 查無不蓋查到', pg_temp.len1('zzPutKeep', 'zzPutArt2'), 'itunes', 210);
+
+  -- 查到 200 天前（已過期）→ 查無可以覆蓋
+  PERFORM pg_temp.mkcache('zzPutStale', 'zzPutArt2', 210, 200);
+  PERFORM public.song_length_refs_put(jsonb_build_array(
+    jsonb_build_object('title', 'zzPutStale', 'artist', 'zzPutArt2', 'seconds', NULL, 'matched', NULL, 'country', NULL)));
+  PERFORM pg_temp.expect_item('SQL12c 過期的查到可被查無覆蓋', pg_temp.len1('zzPutStale', 'zzPutArt2'), 'miss', NULL);
+
+  -- 查無 → 查到可覆蓋
+  PERFORM pg_temp.mkcache('zzPutMiss', 'zzPutArt2', NULL, 5);
+  PERFORM public.song_length_refs_put(jsonb_build_array(
+    jsonb_build_object('title', 'zzPutMiss', 'artist', 'zzPutArt2', 'seconds', 233, 'matched', 'zz匹配', 'country', 'TW')));
+  PERFORM pg_temp.expect_item('SQL12c 查到蓋掉查無', pg_temp.len1('zzPutMiss', 'zzPutArt2'), 'itunes', 233);
+
+  -- 查到 → 查到（新值）仍覆蓋
+  PERFORM public.song_length_refs_put(jsonb_build_array(
+    jsonb_build_object('title', 'zzPutKeep', 'artist', 'zzPutArt2', 'seconds', 215, 'matched', 'zz匹配', 'country', 'TW')));
+  PERFORM pg_temp.expect_item('SQL12c 查到蓋掉查到', pg_temp.len1('zzPutKeep', 'zzPutArt2'), 'itunes', 215);
+  RAISE NOTICE 'ok SQL12c put 查無不蓋掉 180 天內的查到值';
+END $$;
+
 -- ───────────── SQL13 存檔保留 end_estimated ─────────────
 -- SQL13
 DO $$
@@ -242,6 +282,72 @@ BEGIN
     RAISE EXCEPTION 'SQL13 失敗：不帶 key 應保留（a=true, b=false），得 a=%, b=%', pg_temp.est_of(a_id), pg_temp.est_of(b_id);
   END IF;
   RAISE NOTICE 'ok SQL13 存檔保留 end_estimated';
+END $$;
+
+-- ───────────── SQL13b 存檔回傳的片段帶 end_estimated ─────────────
+-- SQL13b
+DO $$
+DECLARE
+  r jsonb; r2 jsonb; a jsonb; b jsonb;
+BEGIN
+  r := pg_temp.save_as('zzLenVid13b', NULL, jsonb_build_array(
+         jsonb_build_object('start_seconds', 0,   'end_seconds', 100, 'title', 'zz回傳甲', 'original_artist', 'zz原唱', 'position', 0),
+         jsonb_build_object('start_seconds', 100, 'end_seconds', 200, 'title', 'zz回傳乙', 'original_artist', 'zz原唱', 'position', 1,
+                            'end_estimated', true)));
+  SELECT e INTO a FROM jsonb_array_elements(r->'segments') e WHERE e->>'title' = 'zz回傳甲';
+  SELECT e INTO b FROM jsonb_array_elements(r->'segments') e WHERE e->>'title' = 'zz回傳乙';
+  IF NOT (a ? 'end_estimated') OR NOT (b ? 'end_estimated') THEN
+    RAISE EXCEPTION 'SQL13b 失敗：回傳的片段缺 end_estimated key，得 % ／ %', a, b;
+  END IF;
+  IF (a->>'end_estimated')::boolean IS DISTINCT FROM false OR (b->>'end_estimated')::boolean IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'SQL13b 失敗：新增回傳 end_estimated 應為 甲=false／乙=true，得 % ／ %', a, b;
+  END IF;
+
+  -- 更新（沿用 id、不帶 key）：回傳的是保留後的值
+  r2 := pg_temp.save_as('zzLenVid13b', (r->>'id')::uuid, jsonb_build_array(
+          jsonb_build_object('id', a->>'id', 'start_seconds', 0,   'end_seconds', 100, 'title', 'zz回傳甲', 'original_artist', 'zz原唱', 'position', 0),
+          jsonb_build_object('id', b->>'id', 'start_seconds', 100, 'end_seconds', 200, 'title', 'zz回傳乙', 'original_artist', 'zz原唱', 'position', 1)));
+  SELECT e INTO b FROM jsonb_array_elements(r2->'segments') e WHERE e->>'title' = 'zz回傳乙';
+  IF (b->>'end_estimated')::boolean IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'SQL13b 失敗：更新後回傳應保留 end_estimated=true，得 %', b;
+  END IF;
+  RAISE NOTICE 'ok SQL13b 存檔回傳的片段帶 end_estimated';
+END $$;
+
+-- ───────────── SQL15 社群修正快照帶 end_estimated，後台還原寫回 ─────────────
+-- SQL15
+DO $$
+DECLARE
+  v_vref uuid; v_code text; v_sub uuid; v_seg uuid; v_rev timestamptz;
+BEGIN
+  PERFORM pg_temp.mkvideo('zzLenVid015', 'zz還原歌回');
+  PERFORM pg_temp.mkseg('zzLenVid015', 0, 240, 'zz還原曲', 'zz原唱', true, NULL);
+  SELECT v.id, v.updated_at INTO v_vref, v_rev FROM public.song_videos v WHERE v.video_id = 'zzLenVid015';
+  SELECT s.id, s.code INTO v_seg, v_code FROM public.song_segments s WHERE s.video_ref = v_vref;
+
+  -- 社群修正：結束改成人工確認的 200（end_estimated=false）
+  PERFORM public.community_save_song_video(
+    'zzLenVid015', v_rev,
+    jsonb_build_object('title', 'zz還原歌回', 'vtuber_id', '00000000-0000-4000-8000-0000000000f1',
+                       'streamed_at', '2026-01-01T12:00:00Z', 'duration_seconds', 7200),
+    jsonb_build_array(jsonb_build_object('code', v_code, 'start_seconds', 0, 'end_seconds', 200, 'title', 'zz還原曲',
+                                         'original_artist', 'zz原唱', 'position', 0, 'end_estimated', false)),
+    jsonb_build_object('source_note', 'zz', 'submitter_contact', 'zz@example.com', 'ip_hash', 'zzzzzzzzzzzzzzzz'));
+  IF (SELECT end_seconds FROM public.song_segments WHERE id = v_seg) <> 200
+     OR pg_temp.est_of(v_seg::text) IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'SQL15 失敗：前置條件不成立（社群修正應把結束改成 200、end_estimated=false）';
+  END IF;
+
+  SELECT id INTO v_sub FROM public.song_submissions WHERE result_video_ref = v_vref AND status = 'applied';
+  PERFORM public.admin_revert_song_edit(v_sub);
+
+  IF (SELECT end_seconds FROM public.song_segments WHERE id = v_seg) <> 240 THEN
+    RAISE EXCEPTION 'SQL15 失敗：還原後結束秒數應回到 240，得 %', (SELECT end_seconds FROM public.song_segments WHERE id = v_seg);
+  END IF;
+  IF pg_temp.est_of(v_seg::text) IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'SQL15 失敗：還原後 end_estimated 應回到 true，得 %', pg_temp.est_of(v_seg::text);
+  END IF;
+  RAISE NOTICE 'ok SQL15 社群修正快照帶 end_estimated，後台還原寫回';
 END $$;
 
 -- ───────────── SQL14 anon 與 authenticated 不能執行新函式也不能讀快取表 ─────────────

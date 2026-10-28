@@ -1,7 +1,7 @@
 // 歌曲長度查詢：請求驗證、iTunes 網址、結果配對（純函式）
 import { describe, it, expect } from 'vitest';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { parseLengthsBody, LENGTHS_ITEMS_MAX, ITUNES_COUNTRIES, itunesUrl, pickItunesMatch } from '../../functions/lib/song-lengths.js';
+import { parseLengthsBody, LENGTHS_ITEMS_MAX, ITUNES_COUNTRIES, itunesUrl, pickItunesMatch, stripVersionSuffix } from '../../functions/lib/song-lengths.js';
 
 const item = (trackName: string, artistName: string, ms: number) => ({ trackName, artistName, trackTimeMillis: ms });
 const mk = (n: number) => Array.from({ length: n }, (_, i) => ({ title: `歌${i}` }));
@@ -108,5 +108,35 @@ describe('pickItunesMatch', () => {
         expect(pickItunesMatch([item('別首', '手', 180000)], '歌', '手')).toBeNull();
         expect(pickItunesMatch([item('歌', '另一人', 180000)], '歌', '手')).toBeNull();
         expect(pickItunesMatch([], '歌', '手')).toBeNull();
+    });
+});
+
+describe('stripVersionSuffix', () => {
+    it('V3 去掉結尾含版本關鍵字的括號（() [] 【】、半形全形）', () => {
+        const cases: [string, string][] = [
+            ['Lemon (Short ver.)', 'Lemon'],
+            ['Lemon（Short ver.）', 'Lemon'],
+            ['Lemon【清唱】', 'Lemon'],
+            ['Lemon [Acoustic Version]', 'Lemon'],
+            ['夜に駆ける (歌ってみた)', '夜に駆ける'],
+            ['Song (Live) (Piano ver.)', 'Song'],
+        ];
+        for (const [input, want] of cases) expect(stripVersionSuffix(input), input).toBe(want);
+    });
+
+    it('V3 含 feat./ft. 的括號保留；沒有版本關鍵字的括號保留', () => {
+        for (const t of ['Song (feat. Miku)', 'Song (cover) (ft. X)', 'Song (Original)', 'Song (2020)', '歌名']) {
+            expect(stripVersionSuffix(t), t).toBe(t);
+        }
+    });
+
+    it('V3 最多去 3 組；去完變空就退回原字串', () => {
+        expect(stripVersionSuffix('A (live) (live) (live) (live)')).toBe('A (live)');
+        expect(stripVersionSuffix('(Live)')).toBe('(Live)');
+        expect(stripVersionSuffix('【清唱】')).toBe('【清唱】');
+    });
+
+    it('V3 只看結尾：中間的括號保留', () => {
+        expect(stripVersionSuffix('Song (Live) Part 2')).toBe('Song (Live) Part 2');
     });
 });

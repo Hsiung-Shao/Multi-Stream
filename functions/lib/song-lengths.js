@@ -44,6 +44,28 @@ export function parseLengthsBody(body) {
     return { ok: true, items: out };
 }
 
+// 結尾的括號：半形與全形的 () [] 以及【】；內容不可再含括號
+const TRAILING_BRACKET_RE = /\s*[(（[［【]([^()（）[\]［］【】]*)[)）\]］】]\s*$/;
+const VERSION_BRACKET_RE = /\b(?:ver|version|cover|acoustic|live|short|full|remix|karaoke|piano|guitar|unplugged|instrumental|arrange)\b|清唱|練歌|练歌|合唱|重唱|歌ってみた|弾き語り|カバー|翻唱|現場|现场/;
+const FEAT_RE = /\b(?:feat|ft)\b/;
+
+/**
+ * 去掉歌名結尾含版本關鍵字的括號（最多 3 組），查 iTunes 要用原曲名；規則對齊資料庫的 song_norm_text。
+ * 含 feat./ft. 的括號保留；去完變空就用原字串。
+ */
+export function stripVersionSuffix(title) {
+    let v = String(title ?? '');
+    for (let i = 0; i < 3; i++) {
+        const m = TRAILING_BRACKET_RE.exec(v);
+        if (!m) break;
+        const inner = m[1].normalize('NFKC').toLowerCase();
+        if (FEAT_RE.test(inner) || !VERSION_BRACKET_RE.test(inner)) break;
+        v = v.slice(0, m.index);
+    }
+    v = v.trim();
+    return v === '' ? String(title ?? '') : v;
+}
+
 export function itunesUrl(title, artist, country) {
     const params = new URLSearchParams({
         entity: 'song',

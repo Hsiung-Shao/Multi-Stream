@@ -218,3 +218,42 @@ describe('SongVideoEditor 存檔帶 end_estimated（C11）', () => {
         expect(sent.map((s) => [s.title, s.end_estimated])).toEqual([['歌X', true], ['歌Y', false], ['歌Z', true]]);
     });
 });
+
+describe('SongVideoEditor 存檔後保留估計旗標（B1）', () => {
+    it('C12 存兩次：第一次回應帶 end_estimated，第二次送出的估計列仍為 true', async () => {
+        // 模擬修好的伺服器：存檔回應把 end_estimated 原樣帶回
+        stubFetch((url, method) => {
+            if (url.includes('/api/songs/lengths')) {
+                return new Response(JSON.stringify({ ok: true, items: [{ seconds: null, source: 'miss' }, { seconds: null, source: 'miss' }, { seconds: null, source: 'miss' }] }));
+            }
+            if (method === 'PUT' && url.startsWith('/api/admin/songs')) {
+                const sent = saveCalls()[saveCalls().length - 1].body.segments as { id?: string; start_seconds: number; end_seconds: number; title: string; end_estimated: boolean }[];
+                const echoed = sent.map((s, i) => ({
+                    id: s.id ?? `dddddddd-dddd-4ddd-8ddd-00000000000${i}`, code: `code000${i}`, video_ref: VID, song_id: 1,
+                    start_seconds: s.start_seconds, end_seconds: s.end_seconds, title: s.title, original_artist: null,
+                    version_note: null, position: i, end_estimated: s.end_estimated,
+                }));
+                return new Response(JSON.stringify({ ok: true, video: videoRecord, segments: echoed }));
+            }
+            return null;
+        });
+        renderEditor();
+        await loaded();
+        fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: '0:10 歌X / 手X\n3:20 歌Y / 手Y\n6:40 歌Z / 手Z' } });
+        fireEvent.click(screen.getByRole('button', { name: /取代現有片段/ }));
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌X'));
+
+        const save = () => screen.getByRole('button', { name: '存成草稿' });
+        await waitFor(() => expect(save()).toBeEnabled());
+        fireEvent.click(save());
+        await waitFor(() => expect(saveCalls()).toHaveLength(1));
+        expect((saveCalls()[0].body.segments as { end_estimated: boolean }[]).map((s) => s.end_estimated)).toEqual([true, true, true]);
+
+        // 存檔後列由回應重灌；旗標若沒帶回就會變 false 並被當成「人工確認」長度送回
+        await waitFor(() => expect(screen.getAllByText('估計').length).toBeGreaterThan(0));
+        await waitFor(() => expect(save()).toBeEnabled());
+        fireEvent.click(save());
+        await waitFor(() => expect(saveCalls()).toHaveLength(2));
+        expect((saveCalls()[1].body.segments as { end_estimated: boolean }[]).map((s) => s.end_estimated)).toEqual([true, true, true]);
+    });
+});

@@ -1,8 +1,8 @@
 // 共用片段編輯器：匯入預覽可勾選排除、沒寫結束的列標「估計」、改過結束時間後標記消失
-import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import type React from 'react';
 import { useState } from 'react';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor, act } from '@testing-library/react';
 import i18n from '../../../src/i18n/i18n';
 import { SegmentEditor } from '../../../src/features/songs/components/SegmentEditor';
 import { computeRowIssues, emptyRow, prepareImport, lineHasExplicitEnd, type SegmentRowDraft } from '../../../src/features/songs/components/segmentRows';
@@ -423,5 +423,62 @@ describe('SegmentEditor 依歌曲長度估計結束', () => {
         const rows = within(table()).getAllByRole('row').slice(1);
         expect(within(rows[0]).getByText(LABEL)).toBeInTheDocument();
         expect(within(rows[1]).getByText('估計')).toBeInTheDocument();
+    });
+});
+
+describe('SegmentEditor 只查沒寫結束的列', () => {
+    type LenCall = { body: { items: { title: string; artist: string | null }[] } };
+    let lenCalls: LenCall[] = [];
+
+    beforeEach(() => {
+        lenCalls = [];
+        vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+            const body = JSON.parse(String(init?.body));
+            lenCalls.push({ body });
+            return new Response(JSON.stringify({ ok: true, items: body.items.map(() => ({ seconds: null, source: 'miss' })) }));
+        }));
+    });
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    const typeTimeline = (v: string) => fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: v } });
+    const settle = (ms = 1000) => act(async () => { await new Promise((r) => setTimeout(r, ms)); });
+
+    it('Q1 貼兩首、一首寫了區間：請求只有沒寫區間的那一首', async () => {
+        render(<Harness duration={3600} />);
+        typeTimeline('0:10-3:00 歌A / 手A\n20:00 歌B / 手B');
+        await waitFor(() => expect(lenCalls).toHaveLength(1), { timeout: 3000 });
+        // 寫了區間的列不會用到長度，查它只是白白消耗 iTunes 額度
+        expect(lenCalls[0].body.items).toEqual([{ title: '歌B', artist: '手B' }]);
+    });
+
+    it('Q2 全部都寫區間時不發請求', async () => {
+        render(<Harness duration={3600} />);
+        typeTimeline('0:10-3:00 歌A / 手A\n20:00-24:00 歌B / 手B');
+        await settle(1200);
+        expect(lenCalls).toHaveLength(0);
+    });
+
+    it('Q3 被勾掉排除的列不送', async () => {
+        render(<Harness duration={3600} />);
+        typeTimeline('0:10 歌A / 手A\n20:00 歌B / 手B');
+        fireEvent.click(screen.getByRole('checkbox', { name: '匯入「歌B」' }));
+        await waitFor(() => expect(lenCalls).toHaveLength(1), { timeout: 3000 });
+        expect(lenCalls[0].body.items).toEqual([{ title: '歌A', artist: '手A' }]);
+    });
+
+    it('Q4 單曲影片（短影片只有一首）不送', async () => {
+        render(<Harness duration={400} />);
+        typeTimeline('0:00 歌A / 手A');
+        await settle(1200);
+        expect(lenCalls).toHaveLength(0);
+    });
+
+    it('Q4b 短影片但有兩首仍會送', async () => {
+        render(<Harness duration={400} />);
+        typeTimeline('0:00 歌A / 手A\n2:00 歌B / 手B');
+        await waitFor(() => expect(lenCalls).toHaveLength(1), { timeout: 3000 });
+        expect(lenCalls[0].body.items.map((x) => x.title)).toEqual(['歌A', '歌B']);
     });
 });
