@@ -56,6 +56,9 @@ export async function onRequestPost(context) {
         return reply({ ok: false, error: 'save_failed' }, 500);
     }
     const isNew = !(Array.isArray(found.data) && found.data.length > 0);
+    // 新歌回必然會被 RPC 擋下的請求先回 400：不扣新歌回配額（否則用失敗請求就能把全站額度耗光，且不留紀錄）
+    if (isNew && !v.vtuberId) return reply({ ok: false, error: 'vtuber_required' }, 400);
+    if (isNew && v.segments.some((s) => s.code)) return reply({ ok: false, error: 'unknown_segment' }, 400);
     if (isNew && !(await checkKvQuota(env.RATE_LIMIT_KV, `songs:new:g:${quotaWindow().hour}`, NEW_VIDEO_HOURLY_LIMIT, 3700))) {
         return reply({ ok: false, error: 'rate_limited' }, 429);
     }

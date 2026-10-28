@@ -33,12 +33,14 @@ describe('PrivacyPage 歌回播放計次告知（zh-TW）', () => {
         expect(item.textContent).toContain('歌');
     });
 
-    it('B1 item8 的文案說明不記錄是誰、暫存 IP 加鹽雜湊、約 2 小時後刪除', () => {
+    it('B1 item8 說明播放次數不含身分、暫存雜湊 IP 與所聽歌曲的對應、約 2 小時後陸續刪除', () => {
         const text = (zhTW as Record<string, string>)['section2_5.item8'];
         expect(text).toBeTruthy();
         expect(text).toContain('播放次數');
         expect(text).toContain('雜湊');
-        expect(text).toMatch(/不記錄/);
+        expect(text).not.toMatch(/不記錄是誰/);
+        expect(text).toMatch(/不含任何身分/);
+        expect(text).toMatch(/歌曲編號的對應/);
         expect(text).toMatch(/2 小時|兩小時/);
     });
 

@@ -202,7 +202,7 @@ describe('POST /api/songs/submissions', () => {
         const res = await submit(sub({
             streamedAt: '2026-10-01T12:00:00Z',
             durationSeconds: 5400,
-            segments: [seg(100, 200, 'B', { versionNote: '現場版' }), seg(0, 100, 'A', { artist: '原唱', code: 'abcd1234' })],
+            segments: [seg(100, 200, 'B', { versionNote: '現場版' }), seg(0, 100, 'A', { artist: '原唱' })],
         }));
         expect(res.status).toBe(201);
         expect(await res.json()).toMatchObject({ ok: true, id: SUB_ID, kind: 'new' });
@@ -225,12 +225,12 @@ describe('POST /api/songs/submissions', () => {
         // 片段依 start 排序、position 從 0 起算；有 code 才帶 code
         expect(body.p_segments).toHaveLength(2);
         expect(body.p_segments[0]).toMatchObject({
-            code: 'abcd1234', start_seconds: 0, end_seconds: 100, title: 'A', original_artist: '原唱', version_note: null, position: 0,
+            start_seconds: 0, end_seconds: 100, title: 'A', original_artist: '原唱', version_note: null, position: 0,
         });
         expect(body.p_segments[1]).toMatchObject({
             start_seconds: 100, end_seconds: 200, title: 'B', original_artist: null, version_note: '現場版', position: 1,
         });
-        expect('code' in body.p_segments[1] && body.p_segments[1].code != null).toBe(false);
+        expect(body.p_segments.some((x: Record<string, unknown>) => x.code != null)).toBe(false);
         // meta：只存雜湊 IP，不存原始 IP
         expect(body.p_meta).toMatchObject({ source_note: '來源：置頂留言', submitter_contact: 'a@b.c' });
         expect(body.p_meta.ip_hash).toBeTruthy();
@@ -239,13 +239,16 @@ describe('POST /api/songs/submissions', () => {
     });
 
     it('F1 修正既有歌回：p_rev 帶使用者載入時的 rev，成功回 kind revision', async () => {
-        sb = () => saveOk('revision');
-        const res = await submit(sub({ rev: REV, vtuberId: null }));
+        sb = (method, path) => (method === 'GET' && path.startsWith('song_videos') ? new Response(JSON.stringify([{ id: REF }])) : saveOk('revision'));
+        const res = await submit(sub({ rev: REV, vtuberId: null, segments: [seg(0, 100, 'A', { code: 'abcd1234' }), seg(100, 200, 'B')] }));
         expect(res.status).toBe(201);
         expect(await res.json()).toMatchObject({ ok: true, id: SUB_ID, kind: 'revision' });
         expect(rpcCalls()).toHaveLength(1);
         expect(rpcCalls()[0].body.p_rev).toBe(REV);
         expect(rpcCalls()[0].body.p_video.vtuber_id).toBeNull();
+        // 既有片段帶 code 原樣送給 RPC（後端靠它原地更新），新增片段不帶
+        expect(rpcCalls()[0].body.p_segments[0].code).toBe('abcd1234');
+        expect(rpcCalls()[0].body.p_segments[1].code ?? null).toBeNull();
     });
 
     it('F2 RPC 錯誤對應：stale_edit／video_exists → 409', async () => {
@@ -364,6 +367,26 @@ describe('POST /api/songs/submissions：新歌回全站每小時配額', () => {
         expect(rpcCalls()).toHaveLength(0);
     });
 
+    it('A7 冒充修正（帶 rev）但影片不存在且沒選 VTuber → 400 vtuber_required，不扣新歌回配額、不呼叫 RPC', async () => {
+        const env = ENV();
+        env.RATE_LIMIT_KV._m.set(NEW_KEY, '5');
+        const res = await submit(sub({ rev: REV, vtuberId: null }), env);
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toBe('vtuber_required');
+        expect(env.RATE_LIMIT_KV._m.get(NEW_KEY)).toBe('5');
+        expect(rpcCalls()).toHaveLength(0);
+    });
+
+    it('A8 新歌回的片段帶 code → 400 unknown_segment，不扣新歌回配額、不呼叫 RPC', async () => {
+        const env = ENV();
+        env.RATE_LIMIT_KV._m.set(NEW_KEY, '5');
+        const res = await submit(sub({ segments: [seg(0, 100, 'A', { code: 'abcd1234' })] }), env);
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toBe('unknown_segment');
+        expect(env.RATE_LIMIT_KV._m.get(NEW_KEY)).toBe('5');
+        expect(rpcCalls()).toHaveLength(0);
+    });
+
     it('A2 既有影片的修正即使新歌回配額已滿 → 仍 201 並呼叫 RPC，且不增加新歌回計數', async () => {
         videoExists();
         const env = ENV();
@@ -384,7 +407,7 @@ describe('POST /api/songs/submissions：新歌回全站每小時配額', () => {
     it('A3 body 帶 rev 但影片其實不存在（冒充修正）→ 仍算新歌回，配額已滿時 429 且不呼叫 RPC', async () => {
         const env = ENV();
         env.RATE_LIMIT_KV._m.set(NEW_KEY, '20');
-        const res = await submit(sub({ rev: REV, vtuberId: null }), env);
+        const res = await submit(sub({ rev: REV }), env);
         expect(res.status).toBe(429);
         expect((await res.json()).error).toBe('rate_limited');
         expect(rpcCalls()).toHaveLength(0);
