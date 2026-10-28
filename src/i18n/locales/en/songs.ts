@@ -119,8 +119,14 @@ export default {
     'editor.import.replace': 'Replace current songs',
     'editor.import.append': 'Append to the end',
     'editor.estimated': 'est.',
-    'editor.estimatedHint': 'No end time was given; this is an estimate (the earliest of the next song, 4 minutes 30 seconds after the start, or the end of the video). Please check it with the player',
+    'editor.estimatedHint': 'No end time was given; this is an estimate (start + song length + 10 seconds when the song length is known, otherwise the earlier of the next song or 4 minutes 30 seconds after the start; never past the end of the video). Please check it with the player',
     'editor.estimatedCount': 'End times estimated for {{count}} songs; please check them',
+
+    'editor.estimatedLength': 'est. (song length)',
+
+    'editor.lengthLoading': 'Looking up song lengths…',
+
+    'editor.lengthHint': 'End times are estimated from the song length; adjust them if the streamer sang a short version or only part of the song',
     'editor.segments': 'Songs ({{count}})',
     'editor.issueCount': 'Rows with errors: {{count}}. Fix them before saving',
     'editor.addRow': 'Add row',

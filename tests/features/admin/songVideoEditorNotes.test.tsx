@@ -194,3 +194,27 @@ describe('SongVideoEditor 配對預覽（C2）', () => {
         expect(screen.getByText('新歌曲・同名：丙／未填原唱（2）')).toBeInTheDocument();
     });
 });
+
+describe('SongVideoEditor 存檔帶 end_estimated（C11）', () => {
+    it('C11 估計列存 true、使用者改過結束時間的列存 false', async () => {
+        stubFetch((url) =>
+            url.includes('/api/songs/lengths')
+                ? new Response(JSON.stringify({ ok: true, items: [{ seconds: null, source: 'miss' }, { seconds: null, source: 'miss' }, { seconds: null, source: 'miss' }] }))
+                : null,
+        );
+        renderEditor();
+        await loaded();
+        // 開始時間對回舊片段，取代時不會跳出「移除已存檔片段」確認
+        fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: '0:10 歌X / 手X\n3:20 歌Y / 手Y\n6:40 歌Z / 手Z' } });
+        fireEvent.click(screen.getByRole('button', { name: /取代現有片段/ }));
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '第 1 首歌名' })).toHaveValue('歌X'));
+        fireEvent.change(screen.getByRole('textbox', { name: '第 2 首結束時間' }), { target: { value: '5:00' } });
+
+        const save = screen.getByRole('button', { name: '存成草稿' });
+        await waitFor(() => expect(save).toBeEnabled());
+        fireEvent.click(save);
+        await waitFor(() => expect(saveCalls()).toHaveLength(1));
+        const sent = saveCalls()[0].body.segments as { title: string; end_estimated: boolean }[];
+        expect(sent.map((s) => [s.title, s.end_estimated])).toEqual([['歌X', true], ['歌Y', false], ['歌Z', true]]);
+    });
+});

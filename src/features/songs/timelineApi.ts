@@ -16,6 +16,8 @@ export interface TimelineSegment {
     title: string;
     artist: string | null;
     note: string | null;
+    /** 結束時間是估計值；舊後端沒有這個欄位 */
+    estimated?: boolean;
 }
 
 export interface SongTimeline {

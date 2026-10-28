@@ -1,8 +1,8 @@
 // 共用片段編輯器：匯入預覽可勾選排除、沒寫結束的列標「估計」、改過結束時間後標記消失
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import type React from 'react';
 import { useState } from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import i18n from '../../../src/i18n/i18n';
 import { SegmentEditor } from '../../../src/features/songs/components/SegmentEditor';
 import { computeRowIssues, emptyRow, prepareImport, lineHasExplicitEnd, type SegmentRowDraft } from '../../../src/features/songs/components/segmentRows';
@@ -336,5 +336,92 @@ describe('SegmentEditor 時間欄按鈕', () => {
         render(<TimeHarness initial={[]} player={p} />);
         expect(screen.queryByText('跳到這個時間')).toBeNull();
         expect(screen.queryByText('設為播放器目前時間')).toBeNull();
+    });
+});
+
+// ---------- 匯入預覽依歌曲長度估計結束（C9～C10b） ----------
+describe('SegmentEditor 依歌曲長度估計結束', () => {
+    const LEN_TEXT = ['0:10 歌A / 手A', '20:00 歌B / 手B'].join('\n');
+    const LABEL = '估計（依歌曲長度）';
+
+    type LenCall = { url: string; method: string; body: any };
+    let lenCalls: LenCall[] = [];
+
+    function stubLengths(handler: () => Promise<Response>) {
+        lenCalls = [];
+        vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+            lenCalls.push({ url: String(input), method: init?.method ?? 'GET', body: init?.body ? JSON.parse(String(init.body)) : null });
+            return handler();
+        }));
+    }
+    const okLengths = () => new Response(JSON.stringify({
+        ok: true,
+        items: [{ seconds: 200, source: 'itunes' }, { seconds: null, source: 'miss' }],
+    }));
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    const typeTimeline = () =>
+        fireEvent.change(screen.getByRole('textbox', { name: '時間軸文字' }), { target: { value: LEN_TEXT } });
+    const previewItem = (title: string) => screen.getByRole('checkbox', { name: `匯入「${title}」` }).closest('li') as HTMLElement;
+
+    it('C9 匯入預覽套用歌曲長度並標示來源', async () => {
+        stubLengths(async () => okLengths());
+        render(<Harness duration={3600} />);
+        typeTimeline();
+
+        await waitFor(() => expect(lenCalls).toHaveLength(1), { timeout: 3000 });
+        expect(lenCalls[0].url).toContain('/api/songs/lengths');
+        expect(lenCalls[0].method).toBe('POST');
+        expect(lenCalls[0].body).toEqual({ items: [{ title: '歌A', artist: '手A' }, { title: '歌B', artist: '手B' }] });
+
+        // 10 + 200 + 10 = 220 秒 → 3:40
+        await waitFor(() => expect(within(previewItem('歌A')).getByText(LABEL)).toBeInTheDocument(), { timeout: 3000 });
+        expect(previewItem('歌A').textContent).toContain('3:40');
+        expect(within(previewItem('歌B')).getByText('估計')).toBeInTheDocument();
+        expect(within(previewItem('歌B')).queryByText(LABEL)).toBeNull();
+        expect(screen.getByText('結束時間依歌曲長度估計；主播唱短版或只唱一段時請自行調整')).toBeInTheDocument();
+    });
+
+    it('C9b 查詢中顯示提示', async () => {
+        stubLengths(() => new Promise<Response>(() => {}));
+        render(<Harness duration={3600} />);
+        typeTimeline();
+        expect(await screen.findByText('正在查歌曲長度…', {}, { timeout: 3000 })).toBeInTheDocument();
+    });
+
+    it('C10 查詢失敗時照舊估計且可套用，不顯示錯誤', async () => {
+        stubLengths(async () => { throw new Error('network down'); });
+        render(<Harness duration={3600} />);
+        typeTimeline();
+
+        await waitFor(() => expect(lenCalls.length).toBeGreaterThan(0), { timeout: 3000 });
+        // 失敗後提示消失，預覽維持 10 + 270 = 4:40
+        await waitFor(() => expect(screen.queryByText('正在查歌曲長度…')).toBeNull(), { timeout: 3000 });
+        expect(previewItem('歌A').textContent).toContain('4:40');
+        expect(within(previewItem('歌A')).getByText('估計')).toBeInTheDocument();
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByText(/失敗|錯誤/)).toBeNull();
+
+        const replace = screen.getByRole('button', { name: /取代現有片段/ });
+        expect(replace).toBeEnabled();
+        fireEvent.click(replace);
+        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('4:40');
+    });
+
+    it('C10b 套用後表格保留「依歌曲長度」標記', async () => {
+        stubLengths(async () => okLengths());
+        render(<Harness duration={3600} />);
+        typeTimeline();
+        await waitFor(() => expect(within(previewItem('歌A')).getByText(LABEL)).toBeInTheDocument(), { timeout: 3000 });
+
+        fireEvent.click(screen.getByRole('button', { name: /附加到最後/ }));
+
+        expect(screen.getByRole('textbox', { name: '第 1 首結束時間' })).toHaveValue('3:40');
+        const rows = within(table()).getAllByRole('row').slice(1);
+        expect(within(rows[0]).getByText(LABEL)).toBeInTheDocument();
+        expect(within(rows[1]).getByText('估計')).toBeInTheDocument();
     });
 });

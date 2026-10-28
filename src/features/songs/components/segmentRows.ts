@@ -25,6 +25,8 @@ export interface SegmentRowDraft {
     /** 版本備註（選填，trim 後最多 30 字） */
     note: string;
     endEstimated?: boolean;
+    /** 估計的結束是依歌曲長度算的（顯示「依歌曲長度」）；使用者改過結束時間就清掉 */
+    endFromLength?: boolean;
 }
 
 /** 列的問題代碼：segmentValidation 的代碼＋時間格式錯 */
@@ -61,6 +63,7 @@ export function fromImported(r: ImportedRow): SegmentRowDraft {
         artist: r.artist ?? '',
         note: r.note ?? '',
         endEstimated: r.endEstimated,
+        endFromLength: r.endEstimated && !!r.endFromLength,
     };
 }
 
