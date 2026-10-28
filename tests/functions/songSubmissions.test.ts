@@ -720,3 +720,21 @@ describe('POST /api/admin/song-submissions（還原／鎖定）', () => {
         expect(sbCalls()).toHaveLength(0);
     });
 });
+
+describe('POST /api/songs/submissions：end_estimated', () => {
+    it('F11 投稿把 endEstimated 存成 end_estimated（true／false 各對應其片段，沒帶視為 false）', async () => {
+        const res = await submit(sub({
+            segments: [
+                seg(0, 100, 'A', { endEstimated: true }),
+                seg(100, 200, 'B', { endEstimated: false }),
+                seg(200, 300, 'C'),
+            ],
+        }));
+        expect(res.status).toBe(201);
+        expect(rpcCalls()).toHaveLength(1);
+        const segs = rpcCalls()[0].body.p_segments;
+        // 欄位沒送給 RPC，或每段都被寫成同一個值，都會讓下面其中一個斷言失敗
+        expect(segs.map((x: { title: string }) => x.title)).toEqual(['A', 'B', 'C']);
+        expect(segs.map((x: { end_estimated: unknown }) => x.end_estimated)).toEqual([true, false, false]);
+    });
+});

@@ -225,3 +225,28 @@ describe('buildSongVideoPayload（UUID 與長度，review 修正）', () => {
         expect(r.issues).toContainEqual({ index: 1, code: 'title_too_long' });
     });
 });
+
+describe('buildSongVideoPayload：end_estimated', () => {
+    const seg = (extra: Record<string, unknown> = {}) => ({ start_seconds: 0, end_seconds: 10, title: 'A', ...extra });
+
+    it('F11b 片段帶 end_estimated 時原樣送出、沒帶就不出現這個 key、型別錯誤擋下', () => {
+        const withTrue = buildSongVideoPayload(body([seg({ end_estimated: true })]));
+        expect(withTrue.ok).toBe(true);
+        expect(withTrue.segments[0].end_estimated).toBe(true);
+
+        const withFalse = buildSongVideoPayload(body([seg({ end_estimated: false })]));
+        expect(withFalse.ok).toBe(true);
+        // false 被當成「沒帶」丟掉，會讓後台無法把估計結束改回確定結束
+        expect(withFalse.segments[0].end_estimated).toBe(false);
+
+        const without = buildSongVideoPayload(body([seg()]));
+        expect(without.ok).toBe(true);
+        // 沒帶卻預設成 false，更新時會悄悄覆蓋 DB 原有的 true
+        expect('end_estimated' in without.segments[0]).toBe(false);
+
+        for (const bad of ['true', 1, 0, null]) {
+            const r = buildSongVideoPayload(body([seg({ end_estimated: bad })]));
+            expect(r, String(bad)).toMatchObject({ ok: false, error: 'invalid_payload' });
+        }
+    });
+});

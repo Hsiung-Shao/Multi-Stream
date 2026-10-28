@@ -117,6 +117,8 @@ export function buildSongVideoPayload(body, opts = {}) {
             else if (typeof s.version_note !== 'string') return invalid('invalid_payload');
             else versionNote = s.version_note.trim() || null;
         }
+        // 結束是否為估計值：沒帶 = 保留舊值（輸出不含此 key）；帶了必須是 boolean
+        if (s.end_estimated !== undefined && typeof s.end_estimated !== 'boolean') return invalid('invalid_payload');
         rows.push({
             id: s.id ? s.id.toLowerCase() : undefined,
             start: s.start_seconds,
@@ -124,6 +126,7 @@ export function buildSongVideoPayload(body, opts = {}) {
             title: s.title.trim(),
             artist,
             versionNote,
+            endEstimated: s.end_estimated,
         });
     }
 
@@ -140,6 +143,7 @@ export function buildSongVideoPayload(body, opts = {}) {
             const seg = { start_seconds: r.start, end_seconds: r.end, title: r.title, original_artist: r.artist, position };
             if (r.id) seg.id = r.id;
             if (r.versionNote !== undefined) seg.version_note = r.versionNote;
+            if (r.endEstimated !== undefined) seg.end_estimated = r.endEstimated;
             return seg;
         });
 
