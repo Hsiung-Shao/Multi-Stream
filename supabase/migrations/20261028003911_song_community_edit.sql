@@ -20,7 +20,7 @@
 --   alter table public.song_submissions add constraint song_submissions_status_check
 --       check (status in ('pending', 'approved', 'rejected'));
 --   alter table public.song_videos drop column if exists community_locked;
---   delete from supabase_migrations.schema_migrations where version = '20261028100000';
+--   delete from supabase_migrations.schema_migrations where version = '20261028003911';
 
 -- ───────────── 欄位 ─────────────
 alter table public.song_videos
