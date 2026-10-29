@@ -79,7 +79,7 @@ beforeEach(() => {
         }
         if (url.startsWith('/api/admin/songs')) {
             if (method === 'GET' && params.has('id')) return json({ ok: true, video, segments: [segment] });
-            if (method === 'GET') return json({ ok: true, videos: [] });
+            if (method === 'GET') return json({ ok: true, videos: [], total: 0 });
             return json({ ok: true, video, segments: [segment] });
         }
         if (url.startsWith('/api/admin/song-library')) return json({ ok: true, data: [] });

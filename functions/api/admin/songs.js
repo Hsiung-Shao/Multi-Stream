@@ -25,7 +25,20 @@ import { logError, logWarn } from '../../lib/logger.js';
 import { buildSongVideoPayload, isUuid } from '../../lib/songs.js';
 
 const MAX_BODY_BYTES = 128 * 1024; // 200 片段 × 約 300 bytes 仍遠低於此
-const LIST_LIMIT = 200;
+/** 列表每頁筆數只接受這幾種（後台選單同一份） */
+const PAGE_SIZES = [15, 25, 50, 100];
+
+/** 列表 query：page（≥1）、page_size、created_from／created_to（ISO，選填）；不合法回 null */
+function parseListQuery(url) {
+    const p = url.searchParams;
+    const page = p.has('page') ? Number(p.get('page')) : 1;
+    const pageSize = p.has('page_size') ? Number(p.get('page_size')) : PAGE_SIZES[0];
+    if (!Number.isInteger(page) || page < 1 || !PAGE_SIZES.includes(pageSize)) return null;
+    const from = p.get('created_from') || null;
+    const to = p.get('created_to') || null;
+    if ((from && Number.isNaN(Date.parse(from))) || (to && Number.isNaN(Date.parse(to)))) return null;
+    return { page, pageSize, from, to };
+}
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const SEGMENT_COLUMNS = 'id,code,video_ref,song_id,start_seconds,end_seconds,title,original_artist,version_note,position';
 
@@ -113,9 +126,16 @@ export async function onRequestGet(context) {
         return jsonResponse({ ok: true, video: vres.data[0], segments: sres.data || [] }, 200, request, NO_STORE);
     }
 
+    const q = parseListQuery(url);
+    if (!q) return jsonResponse({ ok: false, error: 'invalid_query' }, 400, request);
+    const range = [
+        q.from ? `&created_at=gte.${encodeURIComponent(q.from)}` : '',
+        q.to ? `&created_at=lt.${encodeURIComponent(q.to)}` : '',
+    ].join('');
     const res = await select(
         env,
-        `song_videos?select=*,song_segments(count)&order=created_at.desc&limit=${LIST_LIMIT}`,
+        `song_videos?select=*,song_segments(count)${range}&order=created_at.desc,id.desc&offset=${(q.page - 1) * q.pageSize}&limit=${q.pageSize}`,
+        { prefer: 'count=exact' },
     );
     if (!res.ok) {
         await logFail(env, 'list failed', res);
@@ -125,7 +145,9 @@ export async function onRequestGet(context) {
         ...v,
         segment_count: song_segments?.[0]?.count ?? 0,
     }));
-    return jsonResponse({ ok: true, videos }, 200, request, NO_STORE);
+    // Content-Range：`0-14/40`、沒有資料時 `*/0`
+    const total = Number(res.headers?.get('Content-Range')?.split('/')[1]);
+    return jsonResponse({ ok: true, videos, total: Number.isFinite(total) ? total : videos.length }, 200, request, NO_STORE);
 }
 
 // ---------- POST ----------

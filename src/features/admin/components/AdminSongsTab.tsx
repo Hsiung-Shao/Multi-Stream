@@ -5,9 +5,10 @@
 // 由後端 ADMIN_API_TOKEN（X-Admin-Token）把關，token 與其他後台分頁共用。
 // active：這個分頁目前是否顯示。AdminDashboard 的分頁都 forceMount，編輯器裡的 YouTube 播放器只能在 active 時掛載。
 
-import { useState } from 'react';
-import { ExternalLink, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,7 +24,9 @@ import { AdminTokenInline, useAdminTokenPresent } from './AdminTokenInline';
 import { SongVideoEditor } from './SongVideoEditor';
 import { AdminSongLibrary } from './AdminSongLibrary';
 import {
+    SONG_PAGE_SIZES,
     SONG_STATUS_LABEL,
+    type SongPageSize,
     formatSongError,
     formatSubmissionError,
     useAdminSongSubmissions,
@@ -41,6 +44,16 @@ function formatDate(s: string | null | undefined): string {
     return new Date(s).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+/** `YYYY-MM-DD`（瀏覽器本地日期）→ 當天 00:00 本地時間的 ISO；nextDay 取隔天，當作「不含」的上限讓迄日整天都算進去 */
+function localDayToIso(day: string, nextDay = false): string {
+    const d = new Date(`${day}T00:00:00`);
+    if (nextDay) d.setDate(d.getDate() + 1);
+    return d.toISOString();
+}
+
+const DATE_INPUT_CLASS = 'h-8 rounded-md border border-input bg-transparent dark:bg-input/30 px-2.5 text-[12px] text-foreground hover:bg-accent/40 transition-colors';
+const PAGE_BUTTON_CLASS = 'w-7 h-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent/40 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors';
+
 const EDIT_FIELD_LABEL: Record<string, string> = { title: '標題', vtuber_id: 'VTuber', streamed_at: '開台時間' };
 
 /** 「新增 N 首」「修改 M 首」＋「改了標題／VTuber／開台時間」 */
@@ -56,10 +69,24 @@ function summarizeEdit(sub: SongEditRecord): string {
 
 export function AdminSongsTab({ active }: { active: boolean }) {
     const hasToken = useAdminTokenPresent();
-    const query = useAdminSongVideos();
+    // 列表分頁與建立時間篩選（日期是 <input type="date"> 的 YYYY-MM-DD；改篩選或每頁筆數都回第 1 頁）
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<SongPageSize>(SONG_PAGE_SIZES[0]);
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const listParams = useMemo(() => ({
+        page,
+        pageSize,
+        ...(dateFrom ? { createdFrom: localDayToIso(dateFrom) } : {}),
+        ...(dateTo ? { createdTo: localDayToIso(dateTo, true) } : {}),
+    }), [page, pageSize, dateFrom, dateTo]);
+    const query = useAdminSongVideos(listParams);
     const del = useDeleteSongVideo();
     const needToken = !hasToken || isUnauthorized(query.error);
-    const videos = query.data ?? [];
+    const videos = query.data?.videos ?? [];
+    const total = query.data?.total ?? 0;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const filtered = !!(dateFrom || dateTo);
     const editLog = useAdminSongSubmissions();
     const edits = editLog.data ?? [];
     const revert = useRevertSongEdit();
@@ -89,6 +116,8 @@ export function AdminSongsTab({ active }: { active: boolean }) {
         try {
             await del.mutateAsync(id);
             setDeleteTarget((cur) => (cur?.id === id ? null : cur));
+            // 刪掉的是這頁最後一筆：退回上一頁，免得停在空白頁
+            if (videos.length === 1 && page > 1) setPage(page - 1);
         } catch {
             // 錯誤顯示在 del.error
         }
@@ -110,7 +139,7 @@ export function AdminSongsTab({ active }: { active: boolean }) {
         <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-[15px] font-semibold">歌回</h2>
-                {query.data && <span className="text-[12px] text-muted-foreground">{videos.length} 支</span>}
+                {query.data && <span className="text-[12px] text-muted-foreground">{total} 支</span>}
                 <a href="/songs" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
                     查看公開頁 <ExternalLink className="size-3" aria-hidden="true" />
                 </a>
@@ -164,15 +193,57 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                 </section>
             )}
 
+            {!needToken && (
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[12px] text-muted-foreground">建立時間</span>
+                    <div className="flex items-center gap-1.5">
+                        <input
+                            type="date"
+                            aria-label="建立時間起"
+                            value={dateFrom}
+                            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                            className={DATE_INPUT_CLASS}
+                        />
+                        <span className="text-muted-foreground text-[11px]">—</span>
+                        <input
+                            type="date"
+                            aria-label="建立時間迄"
+                            value={dateTo}
+                            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                            className={DATE_INPUT_CLASS}
+                        />
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-8" disabled={!filtered} onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}>
+                        清除
+                    </Button>
+                    <div className="ml-auto flex items-center gap-1.5">
+                        <span className="text-[12px] text-muted-foreground">每頁</span>
+                        <Select value={String(pageSize)} onValueChange={(v: string) => { setPageSize(Number(v) as SongPageSize); setPage(1); }}>
+                            <SelectTrigger aria-label="每頁筆數" className="h-8 w-[84px] rounded-md text-[12px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {SONG_PAGE_SIZES.map((n) => (
+                                    <SelectItem key={n} value={String(n)} className="text-[12px]">{n} 筆</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            )}
+
             {query.isLoading ? (
                 <p className="text-sm text-muted-foreground">載入中…</p>
             ) : query.isError ? (
                 needToken ? null : <p role="alert" className="text-sm text-destructive">{formatSongError(query.error)}</p>
             ) : videos.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">還沒有歌回，按「新增歌回」開始</p>
+                <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+                    {filtered ? '這個時間範圍內沒有歌回' : '還沒有歌回，按「新增歌回」開始'}
+                </p>
             ) : (
+                <>
                 <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full min-w-[720px] text-sm">
+                    <table className="w-full min-w-[840px] text-sm">
                         <thead className="bg-muted/40 text-[12px] text-muted-foreground">
                             <tr>
                                 <th className="px-3 py-2 text-left font-medium">影片標題</th>
@@ -180,6 +251,7 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                                 <th className="px-3 py-2 text-left font-medium">狀態</th>
                                 <th className="px-3 py-2 text-right font-medium">片段</th>
                                 <th className="px-3 py-2 text-left font-medium">開台時間</th>
+                                <th className="px-3 py-2 text-left font-medium">建立時間</th>
                                 <th className="w-24 px-3 py-2" />
                             </tr>
                         </thead>
@@ -201,6 +273,7 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                                     </td>
                                     <td className="px-3 py-2 text-right tabular-nums">{v.segment_count}</td>
                                     <td className="px-3 py-2 text-[12px] text-muted-foreground">{formatDate(v.streamed_at)}</td>
+                                    <td className="px-3 py-2 text-[12px] text-muted-foreground">{formatDate(v.created_at)}</td>
                                     <td className="px-3 py-2">
                                         <div className="flex justify-end gap-0.5">
                                             <Button variant="ghost" size="icon" className="size-8" title="編輯" aria-label={`編輯「${v.title}」`} onClick={() => openEditor(v.id)}>
@@ -216,6 +289,18 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                         </tbody>
                     </table>
                 </div>
+                <div className="flex items-center justify-between">
+                    <p className="text-[11px] text-muted-foreground tabular-nums">共 {total} 支・第 {page} / {totalPages} 頁</p>
+                    <div className="flex gap-1">
+                        <button type="button" aria-label="上一頁" title="上一頁" disabled={page <= 1} onClick={() => setPage(page - 1)} className={PAGE_BUTTON_CLASS}>
+                            <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                        <button type="button" aria-label="下一頁" title="下一頁" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className={PAGE_BUTTON_CLASS}>
+                            <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                    </div>
+                </div>
+                </>
             )}
 
             {!needToken && <AdminSongLibrary />}

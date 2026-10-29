@@ -4,7 +4,7 @@
  * 與公告分頁共用 apiFetch（X-Admin-Token、15 秒逾時）。公開目錄 /api/songs/catalog 有 10 分鐘 edge 快取，
  * 發布後最晚約 10 分鐘才出現在 /songs。
  */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError, formatAdminAnnouncementError } from './useAdminAnnouncements';
 import type { SegmentIssueCode } from '../../songs/lib/segmentValidation';
 
@@ -117,13 +117,32 @@ export function segmentIssuesFromError(err: unknown): { index: number; code: Seg
 
 export const noRetryOn401 = (count: number, err: unknown) => !(err instanceof ApiError && err.status === 401) && count < 3;
 
-export function useAdminSongVideos() {
+/** 列表每頁筆數（後端只接受這幾種，見 functions/api/admin/songs.js 的 PAGE_SIZES） */
+export const SONG_PAGE_SIZES = [15, 25, 50, 100] as const;
+export type SongPageSize = (typeof SONG_PAGE_SIZES)[number];
+
+export interface SongVideoListParams {
+    page: number;
+    pageSize: SongPageSize;
+    /** 建立時間下限（含，ISO） */
+    createdFrom?: string;
+    /** 建立時間上限（不含，ISO） */
+    createdTo?: string;
+}
+
+export function useAdminSongVideos(params: SongVideoListParams) {
     return useQuery({
-        queryKey: [SONG_VIDEOS_KEY],
-        queryFn: async (): Promise<SongVideoListItem[]> => {
-            const data = await apiFetch<{ ok: true; videos: SongVideoListItem[] }>('/api/admin/songs');
-            return data.videos ?? [];
+        queryKey: [SONG_VIDEOS_KEY, params],
+        queryFn: async (): Promise<{ videos: SongVideoListItem[]; total: number }> => {
+            const qs = new URLSearchParams({ page: String(params.page), page_size: String(params.pageSize) });
+            if (params.createdFrom) qs.set('created_from', params.createdFrom);
+            if (params.createdTo) qs.set('created_to', params.createdTo);
+            const data = await apiFetch<{ ok: true; videos: SongVideoListItem[]; total?: number }>(`/api/admin/songs?${qs}`);
+            const videos = data.videos ?? [];
+            return { videos, total: data.total ?? videos.length };
         },
+        // 換頁時先留著上一頁，避免表格閃成「載入中」
+        placeholderData: keepPreviousData,
         staleTime: 30_000,
         retry: noRetryOn401,
     });
