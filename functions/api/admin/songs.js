@@ -137,6 +137,11 @@ export async function onRequestGet(context) {
         `song_videos?select=*,song_segments(count)${range}&order=created_at.desc,id.desc&offset=${(q.page - 1) * q.pageSize}&limit=${q.pageSize}`,
         { prefer: 'count=exact' },
     );
+    // 頁碼超過總數時 PostgREST 回 416（Content-Range 為 `*/總數`）：視為空頁，不是錯誤
+    if (!res.ok && res.status === 416) {
+        const rangeTotal = Number(res.headers?.get('Content-Range')?.split('/')[1]);
+        return jsonResponse({ ok: true, videos: [], total: Number.isFinite(rangeTotal) ? rangeTotal : 0 }, 200, request, NO_STORE);
+    }
     if (!res.ok) {
         await logFail(env, 'list failed', res);
         return jsonResponse({ ok: false, error: 'fetch_failed' }, 500, request);

@@ -96,4 +96,19 @@ describe('GET /api/admin/songs 列表分頁', () => {
         expect(await bad.json()).toMatchObject({ ok: false, error: 'invalid_query' });
         expect(calls).toHaveLength(0);
     });
+    it('P5 頁碼超過總頁數（PostgREST 416）視為空頁並回總數，不當成錯誤', async () => {
+        (fetch as ReturnType<typeof vi.fn>).mockImplementation(async (input: string | URL | Request, init?: RequestInit) => {
+            const url = String(input instanceof Request ? input.url : input);
+            calls.push({ url, headers: new Headers(input instanceof Request ? input.headers : init?.headers) });
+            return new Response(JSON.stringify({ code: 'PGRST103', message: 'Requested range not satisfiable' }), {
+                status: 416,
+                headers: { 'Content-Range': '*/40' },
+            });
+        });
+        const res = await list('?page=4');
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ ok: true, videos: [], total: 40 });
+        // 只打了列表那一次，沒有為了寫 error log 再發請求
+        expect(calls.filter((c) => !c.url.includes('song_videos'))).toHaveLength(0);
+    });
 });

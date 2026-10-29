@@ -5,7 +5,7 @@
 // 由後端 ADMIN_API_TOKEN（X-Admin-Token）把關，token 與其他後台分頁共用。
 // active：這個分頁目前是否顯示。AdminDashboard 的分頁都 forceMount，編輯器裡的 YouTube 播放器只能在 active 時掛載。
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
@@ -44,11 +44,12 @@ function formatDate(s: string | null | undefined): string {
     return new Date(s).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
-/** `YYYY-MM-DD`（瀏覽器本地日期）→ 當天 00:00 本地時間的 ISO；nextDay 取隔天，當作「不含」的上限讓迄日整天都算進去 */
-function localDayToIso(day: string, nextDay = false): string {
+/** `YYYY-MM-DD`（瀏覽器本地日期）→ 當天 00:00 本地時間的 ISO；nextDay 取隔天，當作「不含」的上限讓迄日整天都算進去。日期不合法（例如五位數年份）回 undefined */
+function localDayToIso(day: string, nextDay = false): string | undefined {
     const d = new Date(`${day}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return undefined;
     if (nextDay) d.setDate(d.getDate() + 1);
-    return d.toISOString();
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
 const DATE_INPUT_CLASS = 'h-8 rounded-md border border-input bg-transparent dark:bg-input/30 px-2.5 text-[12px] text-foreground hover:bg-accent/40 transition-colors';
@@ -74,12 +75,16 @@ export function AdminSongsTab({ active }: { active: boolean }) {
     const [pageSize, setPageSize] = useState<SongPageSize>(SONG_PAGE_SIZES[0]);
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
-    const listParams = useMemo(() => ({
-        page,
-        pageSize,
-        ...(dateFrom ? { createdFrom: localDayToIso(dateFrom) } : {}),
-        ...(dateTo ? { createdTo: localDayToIso(dateTo, true) } : {}),
-    }), [page, pageSize, dateFrom, dateTo]);
+    const listParams = useMemo(() => {
+        const createdFrom = dateFrom ? localDayToIso(dateFrom) : undefined;
+        const createdTo = dateTo ? localDayToIso(dateTo, true) : undefined;
+        return {
+            page,
+            pageSize,
+            ...(createdFrom ? { createdFrom } : {}),
+            ...(createdTo ? { createdTo } : {}),
+        };
+    }, [page, pageSize, dateFrom, dateTo]);
     const query = useAdminSongVideos(listParams);
     const del = useDeleteSongVideo();
     const needToken = !hasToken || isUnauthorized(query.error);
@@ -87,6 +92,15 @@ export function AdminSongsTab({ active }: { active: boolean }) {
     const total = query.data?.total ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const filtered = !!(dateFrom || dateTo);
+    // 換頁／換篩選的新資料還沒回來，畫面上仍是上一份（keepPreviousData）
+    const switching = query.isPlaceholderData;
+    // 頁碼標示跟著畫面上的資料走，新一頁回來前不先跳到新頁碼
+    const shownPage = query.data?.page ?? page;
+
+    // 別處刪掉資料後頁碼可能超過總頁數：夾回最後一頁（placeholder 的總數是舊的，不能據以判斷）
+    useEffect(() => {
+        if (!switching && query.data && page > totalPages) setPage(totalPages);
+    }, [switching, query.data, page, totalPages]);
     const editLog = useAdminSongSubmissions();
     const edits = editLog.data ?? [];
     const revert = useRevertSongEdit();
@@ -236,13 +250,13 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                 <p className="text-sm text-muted-foreground">載入中…</p>
             ) : query.isError ? (
                 needToken ? null : <p role="alert" className="text-sm text-destructive">{formatSongError(query.error)}</p>
-            ) : videos.length === 0 ? (
+            ) : videos.length === 0 && total === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
                     {filtered ? '這個時間範圍內沒有歌回' : '還沒有歌回，按「新增歌回」開始'}
                 </p>
             ) : (
                 <>
-                <div className="overflow-x-auto rounded-lg border border-border">
+                <div aria-busy={switching} className={cn('overflow-x-auto rounded-lg border border-border transition-opacity', switching && 'opacity-60')}>
                     <table className="w-full min-w-[840px] text-sm">
                         <thead className="bg-muted/40 text-[12px] text-muted-foreground">
                             <tr>
@@ -290,12 +304,12 @@ export function AdminSongsTab({ active }: { active: boolean }) {
                     </table>
                 </div>
                 <div className="flex items-center justify-between">
-                    <p className="text-[11px] text-muted-foreground tabular-nums">共 {total} 支・第 {page} / {totalPages} 頁</p>
+                    <p className="text-[11px] text-muted-foreground tabular-nums">共 {total} 支・第 {shownPage} / {totalPages} 頁</p>
                     <div className="flex gap-1">
-                        <button type="button" aria-label="上一頁" title="上一頁" disabled={page <= 1} onClick={() => setPage(page - 1)} className={PAGE_BUTTON_CLASS}>
+                        <button type="button" aria-label="上一頁" title="上一頁" disabled={switching || page <= 1} onClick={() => setPage(page - 1)} className={PAGE_BUTTON_CLASS}>
                             <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
-                        <button type="button" aria-label="下一頁" title="下一頁" disabled={page >= totalPages} onClick={() => setPage(page + 1)} className={PAGE_BUTTON_CLASS}>
+                        <button type="button" aria-label="下一頁" title="下一頁" disabled={switching || page >= totalPages} onClick={() => setPage(page + 1)} className={PAGE_BUTTON_CLASS}>
                             <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
                     </div>

@@ -133,13 +133,13 @@ export interface SongVideoListParams {
 export function useAdminSongVideos(params: SongVideoListParams) {
     return useQuery({
         queryKey: [SONG_VIDEOS_KEY, params],
-        queryFn: async (): Promise<{ videos: SongVideoListItem[]; total: number }> => {
+        queryFn: async (): Promise<{ videos: SongVideoListItem[]; total: number; page: number }> => {
             const qs = new URLSearchParams({ page: String(params.page), page_size: String(params.pageSize) });
             if (params.createdFrom) qs.set('created_from', params.createdFrom);
             if (params.createdTo) qs.set('created_to', params.createdTo);
             const data = await apiFetch<{ ok: true; videos: SongVideoListItem[]; total?: number }>(`/api/admin/songs?${qs}`);
             const videos = data.videos ?? [];
-            return { videos, total: data.total ?? videos.length };
+            return { videos, total: data.total ?? videos.length, page: params.page };
         },
         // 換頁時先留著上一頁，避免表格閃成「載入中」
         placeholderData: keepPreviousData,

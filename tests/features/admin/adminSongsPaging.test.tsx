@@ -64,7 +64,8 @@ afterEach(() => {
 
 function renderTab() {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    return render(<QueryClientProvider client={client}><AdminSongsTab active={false} /></QueryClientProvider>);
+    render(<QueryClientProvider client={client}><AdminSongsTab active={false} /></QueryClientProvider>);
+    return client;
 }
 const nextBtn = () => screen.getByRole('button', { name: '下一頁' });
 const prevBtn = () => screen.getByRole('button', { name: '上一頁' });
@@ -136,12 +137,14 @@ describe('後台歌回列表分頁與篩選', () => {
         expect(lastList().params.get('page_size')).toBe('15');
     });
 
-    it('C3b 按「清除」後不再帶起訖參數', async () => {
+    it('C3b 按「清除」後回到未篩選的結果', async () => {
+        filteredTotal = 5;
         renderTab();
         await screen.findByText(/共 40 支・第 1 \/ 3 頁/);
         fireEvent.change(screen.getByLabelText('建立時間起'), { target: { value: '2026-10-01' } });
         fireEvent.change(screen.getByLabelText('建立時間迄'), { target: { value: '2026-10-08' } });
         await waitFor(() => expect(lastList().params.has('created_from')).toBe(true));
+        await screen.findByText(/共 5 支・第 1 \/ 1 頁/);
         fireEvent.click(screen.getByRole('button', { name: '清除' }));
         // 未篩選的第 1 頁 30 秒內查過會直接用快取（不一定再發請求），所以驗畫面回到未篩選的結果
         expect(screen.getByLabelText('建立時間起')).toHaveValue('');
@@ -157,5 +160,72 @@ describe('後台歌回列表分頁與篩選', () => {
         fireEvent.change(screen.getByLabelText('建立時間迄'), { target: { value: '2026-10-08' } });
         expect(await screen.findByText('這個時間範圍內沒有歌回')).toBeInTheDocument();
         expect(screen.queryByText(/還沒有歌回/)).toBeNull();
+    });
+    it('C5 建立時間輸入五位數年份時畫面不崩潰且不帶該條件', async () => {
+        renderTab();
+        await screen.findByText(/共 40 支・第 1 \/ 3 頁/);
+        fireEvent.change(screen.getByLabelText('建立時間起'), { target: { value: '20255-01-01' } });
+        expect(screen.getByLabelText('建立時間起')).toBeInTheDocument();
+        await screen.findByText(/共 40 支/);
+        expect(lastList().params.has('created_from')).toBe(false);
+    });
+
+    it('C6 停在已不存在的頁碼時自動回到最後一頁', async () => {
+        const client = renderTab();
+        await screen.findByText(/共 40 支・第 1 \/ 3 頁/);
+        fireEvent.click(nextBtn());
+        await screen.findByText(/第 2 \/ 3 頁/);
+        fireEvent.click(nextBtn());
+        await screen.findByText(/第 3 \/ 3 頁/);
+        // 別處刪掉資料：總數降到 20（共 2 頁），第 3 頁已經沒有了
+        vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+            const url = String(input);
+            const params = new URL(url, 'http://localhost').searchParams;
+            if (url.startsWith('/api/admin/songs') && (init?.method ?? 'GET') === 'GET' && !params.has('id')) {
+                calls.push({ url, method: 'GET', params });
+                const page = Number(params.get('page'));
+                return json({ ok: true, videos: page === 3 ? [] : [videoRow(page)], total: 20 });
+            }
+            return new Response('[]');
+        }));
+        const before = listGets().length;
+        await client.invalidateQueries();
+        await waitFor(() => expect(listGets().slice(before).some((c) => c.params.get('page') === '2')).toBe(true));
+        await screen.findByText(/共 20 支・第 2 \/ 2 頁/);
+        expect(screen.queryByText(/還沒有歌回/)).toBeNull();
+    });
+
+    it('C6b 目前頁沒資料但總數大於 0 時不顯示「還沒有歌回」', async () => {
+        renderTab();
+        await screen.findByText(/共 40 支・第 1 \/ 3 頁/);
+        vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+            const url = String(input);
+            if (url.startsWith('/api/admin/songs')) return json({ ok: true, videos: [], total: 40 });
+            return new Response('[]');
+        }));
+        fireEvent.click(nextBtn());
+        await waitFor(() => expect(screen.queryByText('歌回1')).toBeNull());
+        expect(screen.queryByText(/還沒有歌回/)).toBeNull();
+    });
+
+    it('C7 換頁讀取期間表格標示忙碌且上一頁／下一頁停用', async () => {
+        renderTab();
+        await screen.findByText(/共 40 支・第 1 \/ 3 頁/);
+        fireEvent.click(nextBtn());
+        await screen.findByText(/第 2 \/ 3 頁/);
+        const base = (fetch as unknown as ReturnType<typeof vi.fn>).getMockImplementation()!;
+        vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+            const params = new URL(String(input), 'http://localhost').searchParams;
+            if (String(input).startsWith('/api/admin/songs') && !params.has('id') && params.get('page') === '3') {
+                return new Promise<Response>(() => {});
+            }
+            return base(input, init);
+        }));
+        fireEvent.click(nextBtn());
+        const table = screen.getByRole('table').parentElement!;
+        await waitFor(() => expect(table).toHaveAttribute('aria-busy', 'true'));
+        expect(table.className).toContain('opacity-60');
+        expect(nextBtn()).toBeDisabled();
+        expect(prevBtn()).toBeDisabled();
     });
 });
