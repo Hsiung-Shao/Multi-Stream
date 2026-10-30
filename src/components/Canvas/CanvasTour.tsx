@@ -114,7 +114,8 @@ function cornerStyle(c: typeof CORNERS[number], r: Rect): React.CSSProperties {
     const top = c[0] === 'n' ? r.top : r.top + r.height - S;
     const left = c[1] === 'w' ? r.left : r.left + r.width - S;
     return {
-        top, left,
+        top: 0, left: 0,
+        transform: `translate(${left}px, ${top}px)`,
         borderTopWidth: c[0] === 'n' ? B : 0,
         borderBottomWidth: c[0] === 's' ? B : 0,
         borderLeftWidth: c[1] === 'w' ? B : 0,
@@ -367,12 +368,18 @@ export function CanvasTour() {
 
     return createPortal(
         <div className="fixed inset-0 z-[200]" data-canvas-tour>
-            {/* 聚光燈：大範圍陰影挖出目標；沒有目標就整片半透明 */}
+            {/* 聚光燈：大範圍陰影挖出目標；沒有目標就整片半透明
+                卡片、聚光框、角框一律 top/left 0＋transform 移動：點擊 0.5 秒後才重量（搜尋結果展開、
+                動態島動畫結束）時改 top/left 會被算成 layout shift，GA4 量到 CLS 0.3；transform 不計入 */}
             {rect ? (
                 <div
                     aria-hidden
-                    className="pointer-events-none fixed rounded-lg border-2 border-indigo-300 transition-all duration-200"
-                    style={{ ...rect, boxShadow: '0 0 0 9999px rgba(2,6,23,0.62)' }}
+                    className="pointer-events-none fixed rounded-lg border-2 border-indigo-300 transition-[transform,width,height] duration-200"
+                    style={{
+                        top: 0, left: 0, width: rect.width, height: rect.height,
+                        transform: `translate(${rect.left}px, ${rect.top}px)`,
+                        boxShadow: '0 0 0 9999px rgba(2,6,23,0.62)',
+                    }}
                 />
             ) : (
                 <div aria-hidden className="fixed inset-0 bg-slate-950/60" />
@@ -382,7 +389,7 @@ export function CanvasTour() {
                     key={c}
                     aria-hidden
                     data-tour-corner={c}
-                    className="pointer-events-none fixed h-7 w-7 border-amber-300 transition-all duration-200"
+                    className="pointer-events-none fixed h-7 w-7 border-amber-300 transition-transform duration-200"
                     style={cornerStyle(c, rect)}
                 />
             ))}
@@ -393,7 +400,7 @@ export function CanvasTour() {
                 aria-labelledby="canvas-tour-title"
                 aria-describedby="canvas-tour-body"
                 className="fixed rounded-xl border border-indigo-400/60 bg-indigo-950/95 p-4 text-white shadow-2xl"
-                style={{ top: Math.max(12, cardTop), left: Math.max(12, cardLeft), width: CARD_W, maxWidth: 'calc(100vw - 24px)' }}
+                style={{ top: 0, left: 0, transform: `translate(${Math.max(12, cardLeft)}px, ${Math.max(12, cardTop)}px)`, width: CARD_W, maxWidth: 'calc(100vw - 24px)' }}
             >
                 <h2 id="canvas-tour-title" className={cn('mb-1.5 font-semibold', isPage ? 'text-base' : 'text-sm')}>{t(`canvas.tour_${step}_title` as any)}</h2>
                 <p id="canvas-tour-body" className="mb-4 whitespace-pre-line text-xs leading-relaxed text-indigo-100/90">{t(bodyKey(step, mode) as any)}</p>

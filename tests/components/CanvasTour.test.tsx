@@ -469,3 +469,93 @@ describe('CanvasTour', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 });
+
+// CLS 修正：導覽的卡片／聚光框／四角框都是 position:fixed，改用 transform 移動，
+// 避免位置重量時被瀏覽器算成 layout shift（top/left 變動會算、transform 不算）。
+describe('CanvasTour 以 transform 定位（避免 CLS）', () => {
+    const ZERO = ['0px', '0'];
+    const ZERO_OR_UNSET = ['0px', '0', ''];
+    const TRANSLATE = /translate(3d)?\(/;
+    let rectSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(async () => {
+        await i18n.changeLanguage('zh-TW');
+        vi.useFakeTimers();
+        localStorage.clear();
+        localStorage.setItem('cookie_consent', 'rejected');
+        resetCanvasTourSessionForTest();
+        useUIStore.setState({ isCanvasTourOpen: false, canvasTourAvailable: false, islandStyle: 'original' });
+        useStreamStore.setState({ canvasItems: [] });
+        document.body.innerHTML = '';
+        // jsdom 的 getBoundingClientRect 全為 0：改成固定的非零矩形，讓目標位置可被斷言
+        rectSpy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+            x: 200, y: 150, left: 200, top: 150, right: 300, bottom: 200, width: 100, height: 50,
+            toJSON: () => ({}),
+        } as DOMRect);
+    });
+    afterEach(() => {
+        rectSpy.mockRestore();
+        vi.useRealTimers();
+    });
+
+    const settle = () => act(() => { vi.advanceTimersByTime(600); });
+    const card = () => screen.getByRole('dialog') as HTMLElement;
+
+    it('導覽卡片以 transform 定位，top/left 固定為 0（置中說明頁與有目標的步驟都一樣）', () => {
+        setStreams(1);
+        render(<CanvasTour />);
+        start();
+        settle();
+        expect(title()).toBe('歡迎使用多直播畫布');
+        // 退回 top/left 定位會讓置中頁的 top/left 變成非 0
+        expect(ZERO).toContain(card().style.top);
+        expect(ZERO).toContain(card().style.left);
+        expect(card().style.transform).toMatch(TRANSLATE);
+
+        clickNext();
+        settle();
+        expect(title()).toBe('拖曳工具列移動視窗');
+        // 有目標時卡片要貼著目標：退回 top/left 會讓這裡變成 '150px' 之類
+        expect(ZERO).toContain(card().style.top);
+        expect(ZERO).toContain(card().style.left);
+        expect(card().style.transform).toMatch(TRANSLATE);
+    });
+
+    it('聚光框以 transform 定位且 transition 不含 top/left，數值反映目標位置', () => {
+        setStreams(1);
+        render(<CanvasTour />);
+        start();
+        clickNext();
+        settle();
+        expect(title()).toBe('拖曳工具列移動視窗');
+        const box = spotlight() as HTMLElement | null;
+        expect(box).not.toBeNull();
+        // 目標 left=200、top=150，PAD=6 → 框在 194,144
+        expect(ZERO_OR_UNSET).toContain(box!.style.top);
+        expect(ZERO_OR_UNSET).toContain(box!.style.left);
+        expect(box!.style.transform).toMatch(TRANSLATE);
+        // 數字沒進 transform（例如寫死 0、或根本沒量目標）就會失敗
+        expect(box!.style.transform).toContain('194');
+        expect(box!.style.transform).toContain('144');
+        // transition-all 會連 top/left 一起動畫，位置重量時仍算 layout shift
+        expect(box!.className).not.toContain('transition-all');
+    });
+
+    it('縮放步驟的四個角框以 transform 定位', () => {
+        setStreams(1);
+        render(<CanvasTour />);
+        start();
+        clickNext();
+        clickNext();
+        settle();
+        expect(title()).toBe('拖曳四個角或邊緣調整大小');
+        const corners = [...document.querySelectorAll<HTMLElement>('[data-tour-corner]')];
+        expect(corners).toHaveLength(4);
+        for (const c of corners) {
+            // 任一角框退回 top/left 就會失敗
+            expect(ZERO_OR_UNSET).toContain(c.style.top);
+            expect(ZERO_OR_UNSET).toContain(c.style.left);
+            expect(c.style.transform).toMatch(TRANSLATE);
+        }
+    });
+});
