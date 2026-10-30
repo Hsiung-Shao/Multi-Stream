@@ -132,7 +132,6 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
     const [shareNotice, setShareNotice] = useState<ShareNoticeState | null>(null);
     const [sort, setSort] = useState<CatalogSort>('latest');
     const scrollRef = useRef<HTMLDivElement>(null);
-    // matchMedia 只在 effect 裡讀（useMediaQuery 初值 false）
     const narrow = useMediaQuery(NARROW_QUERY);
     const short = useMediaQuery(SHORT_QUERY) && narrow;
     // 窄螢幕一定也收左欄（不依賴兩個查詢同時更新）
