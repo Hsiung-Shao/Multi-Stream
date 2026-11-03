@@ -27,8 +27,7 @@ import { largerAvatar } from '../../features/schedule/streamLinks';
 import { schedulePersonPath } from '../../config/schedulePerson';
 import { PAGE_PATHS } from '../../config/routes';
 import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
-import { SEO_SITE_URL } from '../../seo/defaults';
-import { breadcrumb, graph, webPage } from '../../seo/jsonld';
+import { breadcrumb, graph, pageUrl, webPage } from '../../seo/jsonld';
 import { toHtmlLang } from '../../i18n/i18n';
 import { ReportDialogProvider, useReportDialog } from '../../features/report/ReportDialogProvider';
 import { ScheduleEntriesDialogProvider, useScheduleEntriesDialog } from '../../features/contribute/ScheduleEntriesDialogProvider';
@@ -113,7 +112,8 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     const { t, i18n } = useTranslation('schedule');
     const inLanguage = toHtmlLang(i18n.language);
     const path = schedulePersonPath(slug);
-    const url = `${SEO_SITE_URL}${path}`;
+    // 與 canonical 同語言版（/zh-TW/schedule/<slug>），Person／ProfilePage 的 @id 才不會和頁面網址矛盾
+    const url = pageUrl(path);
     const name = person.channel.name;
     const title = t('person.seo.title', { name });
     // 最前面放場次摘要，讓每一頁的 description 都不同、且不會被搜尋結果截掉（與 edge 的 functions/lib/schedule-person.js schedulePersonMeta 同一句）。

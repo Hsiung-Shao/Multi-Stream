@@ -15,8 +15,7 @@ import { SiteFooter } from './SiteFooter';
 import { BlurOrb, IconChip } from './ui/ds-primitives';
 import { DISCORD_URL } from '../config/links';
 import { PAGE_PATHS } from '../config/routes';
-import { SEO_SITE_URL } from '../seo/defaults';
-import { graph, breadcrumb, SITE_ID, APP_ID } from '../seo/jsonld';
+import { graph, breadcrumb, pageUrl, SITE_ID, APP_ID } from '../seo/jsonld';
 
 const MODHEADER_URL = 'https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj';
 const PROFILE_DOWNLOAD_PATH = '/docs/brave-fix/twitch.json';
@@ -164,8 +163,8 @@ export function FAQPage() {
                 jsonLd={graph(
                     {
                         '@type': 'FAQPage',
-                        '@id': `${SEO_SITE_URL}${PAGE_PATHS.faq}#webpage`,
-                        url: `${SEO_SITE_URL}${PAGE_PATHS.faq}`,
+                        '@id': `${pageUrl(PAGE_PATHS.faq)}#webpage`,
+                        url: pageUrl(PAGE_PATHS.faq),
                         name: `${tx('faq:title')} - MultiStream Hub`,
                         isPartOf: { '@id': SITE_ID },
                         about: { '@id': APP_ID },

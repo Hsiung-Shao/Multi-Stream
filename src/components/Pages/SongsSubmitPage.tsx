@@ -20,7 +20,8 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { TurnstileWidget, type TurnstileHandle } from '../turnstile/TurnstileWidget';
-import { PAGE_PATHS } from '../../config/routes';
+import { PAGE_PATHS, pageToPath } from '../../config/routes';
+import { urlLangOf } from '../../../functions/lib/locale.js';
 import { extractVideoId } from '../../features/songs/lib/youtubeUrl';
 import { mergePrefill } from '../../features/songs/lib/streamPrefill';
 import { formatTimecode, parseTimecode } from '../../features/songs/lib/timecode';
@@ -66,7 +67,7 @@ function replaceKeepingExisting(current: SegmentRowDraft[], imported: ImportedRo
 }
 
 export function SongsSubmitPage() {
-    const { t } = useTranslation('songs');
+    const { t, i18n } = useTranslation('songs');
     const tf = t as unknown as TFn;
 
     const [url, setUrl] = useState('');
@@ -97,7 +98,7 @@ export function SongsSubmitPage() {
         if (v === null) return;
         const id = extractVideoId(v);
         if (id) setUrl(id);
-        window.history.replaceState(null, '', PAGE_PATHS.songsSubmit);
+        window.history.replaceState(null, '', pageToPath('songsSubmit', urlLangOf(i18n.language)) ?? PAGE_PATHS.songsSubmit); // 留在同一語言版
     }, []);
     // 離開頁面時中止送出中的請求
     useEffect(() => () => abortRef.current?.abort(), []);

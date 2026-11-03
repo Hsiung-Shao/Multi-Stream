@@ -13,6 +13,7 @@ import { videoPlays } from '../../lib/catalogView';
 import { songsDuration, videoSpan } from '../../lib/videoTimeline';
 import { formatTimecode } from '../../lib/timecode';
 import { PAGE_PATHS } from '../../../../config/routes';
+import { urlLangOf, withLang } from '../../../../../functions/lib/locale.js';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 import { TrackTable } from './TrackTable';
 import { shareSongCodes } from './shareLink';
@@ -41,7 +42,7 @@ export const VideoDetailView = memo(function VideoDetailView({
     onQueue: (segment: SongSegment) => void;
     onOpenSong: (songId: number, from: string | null) => void;
 }) {
-    const { t } = useTranslation('songs');
+    const { t, i18n } = useTranslation('songs');
 
     const back = (
         <Button variant="ghost" size="sm" className="-ml-2 h-8 self-start text-foreground/80" onClick={onBack}>
@@ -110,7 +111,7 @@ export const VideoDetailView = memo(function VideoDetailView({
                     {t('playlists.share')}
                 </button>
                 {/* 整頁導覽：投稿頁 mount 後才讀 ?v=（站內切頁會被路由同步把 query 清掉） */}
-                <a href={`${PAGE_PATHS.songsSubmit}?v=${video.videoId}`} className={pillClass}>
+                <a href={`${withLang(urlLangOf(i18n.language), PAGE_PATHS.songsSubmit)}?v=${video.videoId}`} className={pillClass}>
                     <Pencil className="size-3.5" aria-hidden="true" />
                     {t('catalog.fixTimeline')}
                 </a>

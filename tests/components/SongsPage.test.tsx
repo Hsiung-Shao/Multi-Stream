@@ -287,7 +287,7 @@ describe('SongsPage 三欄控制台', () => {
         const catalog = screen.getByRole('region', { name: '歌曲目錄' });
         fireEvent.click(within(catalog).getByRole('button', { name: '十月歌回' }));
         await screen.findByRole('button', { name: '返回歌回列表' });
-        expect(window.location.pathname).toBe('/songs');
+        expect(window.location.pathname).toBe('/zh-TW/songs'); // 繁中介面：頁內導覽留在 /zh-TW
         expect(window.location.search).toBe('?v=aaaaaaaaaaa');
 
         window.history.replaceState(null, '', '/songs');
@@ -546,7 +546,7 @@ describe('SongsPage 返回與載入回歸', () => {
             fireEvent.click(screen.getByRole('button', { name: '返回歌回列表' }));
             expect(backSpy).not.toHaveBeenCalled();
             expect(pushSpy).toHaveBeenCalledTimes(1);
-            expect(pushSpy.mock.calls[0][2]).toBe('/songs');
+            expect(pushSpy.mock.calls[0][2]).toBe('/zh-TW/songs');
             expect(await screen.findByRole('heading', { level: 2, name: '歌曲目錄' })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: '返回歌回列表' })).toBeNull();
         } finally {

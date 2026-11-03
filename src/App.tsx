@@ -8,7 +8,7 @@ import { splitLangPath, urlLangOf } from '../functions/lib/locale.js';
 import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
 import { isSchedulePersonPage, schedulePersonSlugOf } from './config/schedulePerson';
 import { SEO_SITE_URL } from './seo/defaults';
-import { graph, breadcrumb, webPage, techArticle, ORG_ID, PERSON_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
+import { graph, breadcrumb, webPage, techArticle, pageUrl, ORG_ID, PERSON_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
 import { GITHUB_URL, X_URL, PATREON_URL, COFFEE_URL } from './config/links';
 import { toHtmlLang } from './i18n/i18n';
 import { useStreamStore } from './store/useStreamStore';
@@ -300,7 +300,7 @@ export default function App() {
         : graph(
           webPage({
             type: 'CollectionPage', path, name: title, description, inLanguage,
-            extra: { hasPart: GUIDE_SLUGS.map((s) => ({ '@id': `${SEO_SITE_URL}${guidePath(s)}#article` })) },
+            extra: { hasPart: GUIDE_SLUGS.map((s) => ({ '@id': `${pageUrl(guidePath(s))}#article` })) },
           }),
           breadcrumb(hubCrumbs),
         );
@@ -356,7 +356,7 @@ export default function App() {
                 webPage({ type: 'WebPage', path: PAGE_PATHS.compare, name: tx('seo:compare.title'), description: tx('seo:compare.description'), inLanguage }),
                 {
                   '@type': 'FAQPage',
-                  '@id': `${SEO_SITE_URL}${PAGE_PATHS.compare}#faq`,
+                  '@id': `${pageUrl(PAGE_PATHS.compare)}#faq`,
                   mainEntity: Array.from({ length: COMPARE_FAQ_COUNT }, (_, i) => i + 1).map((n) => ({
                     '@type': 'Question',
                     name: tx(`compare:faq.q${n}`),
@@ -477,7 +477,7 @@ export default function App() {
                   '@id': PERSON_ID,
                   name: 'Hsiung-Shao',
                   alternateName: tx('about:creator.nickname'),
-                  url: `${SEO_SITE_URL}${PAGE_PATHS.creator}`,
+                  url: pageUrl(PAGE_PATHS.creator),
                   image: `${SEO_SITE_URL}/icon.png`,
                   jobTitle: tx('about:creatorRole'),
                   description: tx('about:creatorDesc'),

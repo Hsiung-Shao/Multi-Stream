@@ -5,6 +5,7 @@ import "./index.css";
 import { apiLoader } from "./utils/apiLoader.ts";
 import i18n, { ensureLanguageLoaded, toHtmlLang } from "./i18n/i18n"; // Import i18n configuration
 import { useUIStore } from "./store/useUIStore";
+import { splitLangPath } from "../functions/lib/locale.js";
 import { checkAppVersion } from "./utils/versionCheck.ts";
 import { tagsService } from "./features/favorites/TagsService";
 import { listenForClearAllData } from "./utils/clearAllDataSignal";
@@ -31,7 +32,8 @@ const schedulePrewarm = (cb: () => void) => {
   }
 };
 
-if (window.location.pathname !== '/') {
+// 首頁判斷要看穿語言前綴：/zh-TW 也是首頁，同樣不預熱播放器
+if (splitLangPath(window.location.pathname).path !== '/') {
   // preconnect 從 index.html 移到這裡：首頁不需要播放器，靜態 preconnect 是純浪費。
   // 這行要立刻執行（不進 idle），連線才來得及在真正載播放器之前握手完成。
   const preconnect = document.createElement('link');

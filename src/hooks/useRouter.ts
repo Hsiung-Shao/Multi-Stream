@@ -3,8 +3,8 @@ import { useUIStore } from '../store/useUIStore';
 import { logPageView, isTrackingEnabled } from '../utils/analytics';
 import { useTranslation } from 'react-i18next';
 import i18nInstance from '../i18n/i18n';
-import { pathToPage, pageToPath, langFromPath } from '../config/routes';
-import { urlLangOf } from '../../functions/lib/locale.js';
+import { pathToPage, pageToPath } from '../config/routes';
+import { splitLangPath, urlLangOf, withLang } from '../../functions/lib/locale.js';
 
 export function useRouter() {
     const page = useUIStore(s => s.page);
@@ -20,12 +20,14 @@ export function useRouter() {
     // 這裡首次 setPage 是同值 no-op，不會觸發下方 URL 同步去 pushState。
     useEffect(() => {
         const handlePopState = () => {
-            // 上一頁／下一頁跨語言（/about ⇄ /zh-TW/about）時介面語言要跟著網址（網址優先）。
-            // 只在真正的 popstate 做，不在掛載時做：掛載時 i18n detector 已依網址解析過，
-            // 再比對一次會和下方「語言→網址」effect 互相追著改而無限循環。用全域實例，不依賴 hook 回傳的物件。
-            const lang = langFromPath(window.location.pathname);
-            if (lang && urlLangOf(i18nInstance.language) !== lang) void i18nInstance.changeLanguage(lang);
-            else if (!lang && urlLangOf(i18nInstance.language) !== 'en') void i18nInstance.changeLanguage('en');
+            // 上一頁／下一頁回到切語言前留下的歷史（例如 /about ⇄ /zh-TW/about）：
+            // 不改介面語言（那是使用者明確選的，也不能悄悄改寫 i18nextLng），改把網址換成目前語言版，
+            // 下方的 URL 同步 effect 看到網址已一致就不會再 pushState。用全域實例，不依賴 hook 回傳的物件。
+            const { lang, path } = splitLangPath(window.location.pathname);
+            const current = urlLangOf(i18nInstance.language);
+            if ((lang ?? 'en') !== current) {
+                window.history.replaceState(window.history.state, '', withLang(current, path) + window.location.search + window.location.hash);
+            }
             setPage(pathToPage(window.location.pathname));
         };
 
@@ -59,7 +61,10 @@ export function useRouter() {
         if (currentPathNormalized !== targetPathNormalized) {
             // .html 舊連結 → replaceState 換成乾淨網址；只是切語言（同一頁換前綴）也用 replaceState，不塞歷史；
             // 真正換頁才 pushState
-            if (path.endsWith('.html') || !pageChanged) {
+            if (!pageChanged) {
+                // 只是切語言：保留 query／hash 與 history.state（歌回頁的 ?v=、教學的 #段落、songsFrom）
+                window.history.replaceState(window.history.state, '', targetPath + window.location.search + window.location.hash);
+            } else if (path.endsWith('.html')) {
                 window.history.replaceState(null, '', targetPath);
             } else {
                 window.history.pushState(null, '', targetPath);

@@ -102,12 +102,26 @@ export const resources = {
 } as const;
 
 // 網址語言優先：/zh-TW/... 一律繁中（functions/lib/locale.js 的 splitLangPath），沒有前綴才看 localStorage／navigator。
-// 命中時 i18next 既有的 caches 會把 zh-TW 寫進 i18nextLng（與使用者手動切語言的寫法相同，不新增 key）。
+// 網址命中只決定「這一頁」的語言，不改使用者的長期偏好：i18next 的 caches 會在 init 時把偵測結果寫進 i18nextLng，
+// 所以先記下原值，init 後還原（原本沒有就刪掉剛寫入的那筆）。使用者手動切語言仍照常寫入。
 const detector = new LanguageDetector();
+const readStoredLng = () => {
+    try {
+        return typeof window !== 'undefined' ? window.localStorage.getItem('i18nextLng') : null;
+    } catch {
+        return null;
+    }
+};
+let urlLangHit = false;
 detector.addDetector({
     name: 'urlPath',
-    lookup: () => (typeof window !== 'undefined' ? splitLangPath(window.location.pathname).lang ?? undefined : undefined),
+    lookup: () => {
+        const lang = typeof window !== 'undefined' ? splitLangPath(window.location.pathname).lang : null;
+        urlLangHit = !!lang;
+        return lang ?? undefined;
+    },
 });
+const storedLngBeforeInit = readStoredLng();
 
 i18n
     .use(detector)
@@ -130,6 +144,16 @@ i18n
             useSuspense: false, // Set to true if you want to use Suspense
         },
     });
+
+// init 為同步流程（zh-TW/en 已打包）：網址命中時還原偏好（見上方說明）
+if (urlLangHit && typeof window !== 'undefined') {
+    try {
+        if (storedLngBeforeInit) window.localStorage.setItem('i18nextLng', storedLngBeforeInit);
+        else window.localStorage.removeItem('i18nextLng');
+    } catch {
+        // 儲存被封鎖：偏好本來就存不了，略過
+    }
+}
 
 // ===== 其餘語言的 lazy load =====
 // zh-TW / en 已打包進首屏 entry；zh-CN / ja / ko 在需要時才動態載入，避免拖累 landing 首屏體積。

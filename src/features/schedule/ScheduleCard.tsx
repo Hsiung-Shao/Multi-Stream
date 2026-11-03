@@ -14,6 +14,7 @@ import { Check, ExternalLink, Flag, Heart, Loader2, Music2 } from 'lucide-react'
 import { cn } from '../../components/ui/utils';
 import { RouteLink } from '../../components/Navigation/RouteLink';
 import { schedulePersonPage } from '../../config/schedulePerson';
+import { PAGE_PATHS } from '../../config/routes';
 import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { formatClock, formatRelative } from './formatTime';
 import { streamKey, type ScheduleChannel, type ScheduleStream } from './types';
@@ -58,7 +59,7 @@ function SongsBadge({ stream, songs }: { stream: ScheduleStream; songs?: { codes
     if (!list) return null;
     return (
         <a
-            href={`${withLang(urlLangOf(i18n.language), '/songs')}?list=${list}`}
+            href={`${withLang(urlLangOf(i18n.language), PAGE_PATHS.songs)}?list=${list}`}
             onClick={(e) => e.stopPropagation()}
             title={t('songsBadgeTitle', { count: songs.codes.length })}
             className={cn(

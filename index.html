@@ -57,7 +57,7 @@
   <!-- 繁中使用者開到無前綴網址 → 轉去 /zh-TW 同路徑（與 src/i18n/rootRedirect.ts 同一邏輯；tests/i18n/langRouting.test.tsx 鎖）。
        只讀 localStorage 不寫；Googlebot（en-US、無 localStorage）不會被轉。 -->
   <script>
-    (function(){try{var p=location.pathname;if(/^\/zh-TW(\/|$)/.test(p))return;var s=localStorage.getItem('i18nextLng');var z=s?s==='zh-TW':/^zh-(TW|Hant|HK|MO)/i.test(navigator.language||'');if(z)location.replace('/zh-TW'+(p==='/'?'':p)+location.search+location.hash);}catch(e){}})();
+    (function(){try{var p=location.pathname;if(/^\/zh-TW(\/|$)/.test(p))return;var s=null;try{s=localStorage.getItem('i18nextLng');}catch(e){}var z=s?s==='zh-TW':/^zh-(TW|Hant|HK|MO)/i.test(navigator.language||'');if(z)location.replace('/zh-TW'+(p==='/'?'':p)+location.search+location.hash);}catch(e){}})();
   </script>
 
   <!-- Structured Data (JSON-LD)

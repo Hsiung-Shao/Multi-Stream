@@ -4,11 +4,20 @@
  * 以 @id 互相引用，頁面專屬 schema 只描述「這一頁」，不重複整個實體。
  */
 import { SEO_SITE_URL } from './defaults';
+import i18n from '../i18n/i18n';
+import { urlLangOf, withLang } from '../../functions/lib/locale.js';
 
+// 站級實體（Organization／WebSite／WebApplication／開發者 Person）不分語言，維持英文網址
 export const ORG_ID = `${SEO_SITE_URL}/#organization`;
 export const SITE_ID = `${SEO_SITE_URL}/#website`;
 export const APP_ID = `${SEO_SITE_URL}/#webapp`;
 export const PERSON_ID = `${SEO_SITE_URL}/about/creator#person`;
+
+/**
+ * 頁面層級的網址：依目前介面語言加前綴（/zh-TW/about），與同頁 canonical／og:url 一致。
+ * 呼叫端都在 render 內、且訂閱了 useTranslation，語言切換時會重算。
+ */
+export const pageUrl = (path: string): string => `${SEO_SITE_URL}${withLang(urlLangOf(i18n.language), path)}`;
 
 export type JsonLdNode = Record<string, unknown>;
 
@@ -27,7 +36,7 @@ export const breadcrumb = (items: BreadcrumbItem[]): JsonLdNode => ({
         '@type': 'ListItem',
         position: i + 1,
         name: it.name,
-        item: `${SEO_SITE_URL}${it.path}`,
+        item: pageUrl(it.path),
     })),
 });
 
@@ -43,8 +52,8 @@ export const webPage = (opts: {
     extra?: JsonLdNode;
 }): JsonLdNode => ({
     '@type': opts.type ?? 'WebPage',
-    '@id': `${SEO_SITE_URL}${opts.path}#webpage`,
-    url: `${SEO_SITE_URL}${opts.path}`,
+    '@id': `${pageUrl(opts.path)}#webpage`,
+    url: pageUrl(opts.path),
     name: opts.name,
     description: opts.description,
     inLanguage: opts.inLanguage,
@@ -64,12 +73,12 @@ export const techArticle = (opts: {
     dateModified: string;
 }): JsonLdNode => ({
     '@type': 'TechArticle',
-    '@id': `${SEO_SITE_URL}${opts.path}#article`,
+    '@id': `${pageUrl(opts.path)}#article`,
     headline: opts.headline,
     description: opts.description,
     image: opts.image,
     inLanguage: opts.inLanguage,
-    mainEntityOfPage: { '@id': `${SEO_SITE_URL}${opts.path}` },
+    mainEntityOfPage: { '@id': pageUrl(opts.path) },
     author: { '@id': ORG_ID },
     publisher: { '@id': ORG_ID },
     datePublished: opts.datePublished,

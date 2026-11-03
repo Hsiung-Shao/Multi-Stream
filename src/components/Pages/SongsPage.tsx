@@ -36,7 +36,8 @@ import {
     LIST_VIEW, isBrowseView, parseSongsView, sameSongsView, serializeSongsView, type SongsView, type VtuberTab,
 } from '../../features/songs/lib/songsView';
 import type { SongListSort } from '../../features/songs/lib/songIndex';
-import { PAGE_PATHS } from '../../config/routes';
+import { PAGE_PATHS, pageToPath } from '../../config/routes';
+import { urlLangOf } from '../../../functions/lib/locale.js';
 import { ConsoleShell } from '../../features/songs/components/console/ConsoleShell';
 import { LeftNav } from '../../features/songs/components/console/LeftNav';
 import { CatalogView, type CatalogStatus } from '../../features/songs/components/console/CatalogView';
@@ -215,7 +216,9 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         restoreScrollRef.current = null;
         setView((cur) => (sameSongsView(cur, next) ? cur : next));
         switchTab('browse');
-        const url = PAGE_PATHS.songs + serializeSongsView(next);
+        // 網址留在同一語言版（/zh-TW/songs?…）：丟了前綴，之後上一頁會被 useRouter 當成另一語言版
+        const songsPath = pageToPath('songs', urlLangOf(i18n.language)) ?? PAGE_PATHS.songs;
+        const url = songsPath + serializeSongsView(next);
         if (window.location.pathname + window.location.search === url) return;
         if (opts?.replace) {
             window.history.replaceState(null, '', url);
@@ -223,7 +226,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             // 單場曲目表的「N 個版本」進單曲頁也算頁內上一筆：單曲頁的「返回」要回到那一場
             const fromPage = isBrowseView(prev) || (prev.kind === 'video' && next.kind === 'song');
             const state: SongsHistoryState | null = fromPage && (next.kind === 'video' || next.kind === 'song')
-                ? { songsFrom: PAGE_PATHS.songs + serializeSongsView(prev) }
+                ? { songsFrom: songsPath + serializeSongsView(prev) }
                 : null;
             window.history.pushState(state, '', url);
             pendingFocusRef.current = true;

@@ -157,8 +157,9 @@ export async function onRequest(context) {
             },
         });
     if (!noindex) {
+        // href 來自 URL.pathname（已百分比編碼），仍跳脫引號以防日後改動
         const links = alternates(ORIGIN, rawPath)
-            .map(({ hreflang, href }) => `<link rel="alternate" hreflang="${hreflang}" href="${href}">`)
+            .map(({ hreflang, href }) => `<link rel="alternate" hreflang="${hreflang}" href="${href.replace(/"/g, '&quot;')}">`)
             .join('');
         rewriter.on('head', {
             element(el) {

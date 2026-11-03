@@ -7,6 +7,7 @@ import type { Playlist } from '../../store/usePlaylistStore';
 import { formatTimecode } from '../../lib/timecode';
 import { videoPlays } from '../../lib/catalogView';
 import { PAGE_PATHS } from '../../../../config/routes';
+import { urlLangOf, withLang } from '../../../../../functions/lib/locale.js';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 
 /**
@@ -22,7 +23,7 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
     onQueue: (segment: SongSegment) => void;
     onOpen: (video: SongVideo) => void;
 }) {
-    const { t } = useTranslation('songs');
+    const { t, i18n } = useTranslation('songs');
     const date = video.streamedAt ? new Date(video.streamedAt) : null;
     const totalPlays = videoPlays(video);
     return (
@@ -72,7 +73,7 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
                             </a>
                             {/* 整頁導覽：投稿頁 mount 後才讀 ?v=（站內切頁會被路由同步把 query 清掉） */}
                             <a
-                                href={`${PAGE_PATHS.songsSubmit}?v=${video.videoId}`}
+                                href={`${withLang(urlLangOf(i18n.language), PAGE_PATHS.songsSubmit)}?v=${video.videoId}`}
                                 aria-label={t('catalog.fixTimeline')}
                                 title={t('catalog.fixTimeline')}
                                 className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"

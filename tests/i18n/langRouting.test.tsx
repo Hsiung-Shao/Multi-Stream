@@ -179,3 +179,61 @@ describe('切語言與轉址不動其他 localStorage', () => {
         expect(keysBefore()).toEqual(before);
     });
 });
+
+// ── review 第 1 輪補的重現測試（兩位審查者都抓到的 bug） ────────────────────────
+describe('useRouter 切語言與歷史（review 修正）', () => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+    afterEach(async () => {
+        vi.restoreAllMocks();
+        await i18n.changeLanguage('en');
+        window.history.replaceState(null, '', '/');
+    });
+
+    it('L19 切語言保留 query、hash 與 history.state', async () => {
+        window.history.replaceState({ songsFrom: '/songs' }, '', '/songs?v=abc#x');
+        act(() => useUIStore.getState().setPage('songs'));
+        renderHook(() => useRouter());
+        await act(async () => {
+            await i18n.changeLanguage('zh-TW');
+        });
+        expect(window.location.pathname + window.location.search + window.location.hash).toBe('/zh-TW/songs?v=abc#x');
+        expect(window.history.state).toEqual({ songsFrom: '/songs' });
+    });
+
+    it('L20 上一頁回到另一語言前綴的歷史：介面語言不變，網址改成目前語言版', async () => {
+        window.history.replaceState(null, '', '/zh-TW/about');
+        act(() => useUIStore.getState().setPage('about'));
+        await i18n.changeLanguage('zh-TW');
+        renderHook(() => useRouter());
+        // 模擬歷史裡一筆切語言前留下的英文網址
+        window.history.replaceState(null, '', '/about?q=1');
+        await act(async () => {
+            window.dispatchEvent(new PopStateEvent('popstate'));
+        });
+        expect(i18n.language).toBe('zh-TW');
+        expect(localStorage.getItem('i18nextLng')).toBe('zh-TW');
+        expect(window.location.pathname + window.location.search).toBe('/zh-TW/about?q=1');
+        expect(useUIStore.getState().page).toBe('about');
+    });
+});
+
+describe('JSON-LD 頁面網址跟著語言', () => {
+    afterEach(async () => {
+        await i18n.changeLanguage('en');
+    });
+
+    it('L21 繁中時 webPage／breadcrumb 的網址帶 /zh-TW，英文不帶', async () => {
+        const { webPage, breadcrumb } = await import('../../src/seo/jsonld');
+        await i18n.changeLanguage('zh-TW');
+        const zh = webPage({ path: '/about', name: 'x', description: 'y', inLanguage: 'zh-TW' }) as { url: string; '@id': string };
+        expect(zh.url).toBe(`${SITE}/zh-TW/about`);
+        expect(zh['@id']).toBe(`${SITE}/zh-TW/about#webpage`);
+        const crumbs = breadcrumb([{ name: 'a', path: '/' }, { name: 'b', path: '/about' }]) as { itemListElement: Array<{ item: string }> };
+        expect(crumbs.itemListElement.map((c) => c.item)).toEqual([`${SITE}/zh-TW`, `${SITE}/zh-TW/about`]);
+        await i18n.changeLanguage('en');
+        const en = webPage({ path: '/about', name: 'x', description: 'y', inLanguage: 'en' }) as { url: string };
+        expect(en.url).toBe(`${SITE}/about`);
+    });
+});

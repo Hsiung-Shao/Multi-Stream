@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '../../../../components/ui/utils';
 import { SUPPORTED_LANGUAGES } from '../../../../i18n/languages';
 import { PAGE_PATHS } from '../../../../config/routes';
+import { urlLangOf, withLang } from '../../../../../functions/lib/locale.js';
 import type { Playlist } from '../../store/usePlaylistStore';
 import type { VtuberSummary } from '../../lib/catalogView';
 import type { SongsView } from '../../lib/songsView';
@@ -53,7 +54,7 @@ export const LeftNav = memo(function LeftNav({
             <ul className="flex flex-col gap-0.5">
                 <li>
                     <a
-                        href={PAGE_PATHS.songs}
+                        href={withLang(urlLangOf(i18n.language), PAGE_PATHS.songs)}
                         onClick={handleSongs}
                         aria-current={view.kind === 'list' ? 'page' : undefined}
                         className={cn(itemClass, 'gap-3 py-2.5 text-sm aria-[current=page]:bg-muted aria-[current=page]:font-bold')}
