@@ -26,6 +26,7 @@ import { isPastScheduled } from '../../features/schedule/filters';
 import { largerAvatar } from '../../features/schedule/streamLinks';
 import { schedulePersonPath } from '../../config/schedulePerson';
 import { PAGE_PATHS } from '../../config/routes';
+import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { SEO_SITE_URL } from '../../seo/defaults';
 import { breadcrumb, graph, webPage } from '../../seo/jsonld';
 import { toHtmlLang } from '../../i18n/i18n';
@@ -135,7 +136,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
         <SEO
             title={title}
             description={description}
-            url={url}
+            path={path}
             image={person.channel.avatar ? largerAvatar(person.channel.avatar) : undefined}
             noindex={!person.indexable}
             jsonLd={graph(
@@ -244,13 +245,15 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
 function PersonSongs({ videos, vtuberId }: { videos: SongVideo[]; vtuberId: string }) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
+    // 整頁導向也要留在同一語言版（/zh-TW/songs），不然中文使用者會先落到英文版再被轉址
+    const songsPath = withLang(urlLangOf(i18n.language), PAGE_PATHS.songs);
     if (videos.length === 0) return null;
     return (
         <section aria-labelledby="person-songs">
             <div className="flex flex-wrap items-start justify-between gap-x-3">
                 <SectionTitle id="person-songs" count={videos.length}>{t('person.songs.title')}</SectionTitle>
                 <a
-                    href={`/songs?vtuber=${encodeURIComponent(vtuberId)}`}
+                    href={`${songsPath}?vtuber=${encodeURIComponent(vtuberId)}`}
                     className="mb-3 inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                     <ListMusic size={13} aria-hidden="true" />
@@ -278,7 +281,7 @@ function PersonSongs({ videos, vtuberId }: { videos: SongVideo[]; vtuberId: stri
                                 </div>
                                 {list && (
                                     <a
-                                        href={`/songs?list=${list}`}
+                                        href={`${songsPath}?list=${list}`}
                                         className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     >
                                         <Play size={12} aria-hidden="true" />

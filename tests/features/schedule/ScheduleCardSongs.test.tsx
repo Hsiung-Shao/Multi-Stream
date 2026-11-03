@@ -11,7 +11,7 @@ const yt: ScheduleStream = { vtuber_id: 'v1', platform: 'youtube', external_id: 
 const tw: ScheduleStream = { ...yt, platform: 'twitch', external_id: '111', source: 'twitch_live' };
 const ended: ScheduleStream = { ...yt, status: 'ended', actual_end: '2026-10-14T01:00:00.000Z' };
 const SONGS = { codes: ['aaaaaaaa', 'bbbbbbbb'] };
-const SONG_LINK = 'a[href="/songs?list=aaaaaaaa.bbbbbbbb"]';
+const SONG_LINK = 'a[href="/zh-TW/songs?list=aaaaaaaa.bbbbbbbb"]';
 
 function renderSlot(stream: ScheduleStream, songs?: { codes: string[] } | null) {
     return render(

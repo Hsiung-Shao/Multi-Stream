@@ -43,7 +43,7 @@ describe('SEO', () => {
         expect(robots()).toBe(SEO_ROBOTS_NOINDEX);
         expect(canonical()).toBeNull();
 
-        rerender(<SEO title="關於我們 - MultiStream Hub" url={`${SEO_SITE_URL}/about`} />);
+        rerender(<SEO title="關於我們 - MultiStream Hub" path="/about" />);
         expect(robots()).toBe(SEO_ROBOTS_INDEX);
         expect(canonical()).toBe(`${SEO_SITE_URL}/about`);
         expect(document.querySelector('meta[property="og:url"]')?.getAttribute('content')).toBe(`${SEO_SITE_URL}/about`);

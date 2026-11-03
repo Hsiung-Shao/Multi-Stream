@@ -2,8 +2,11 @@ const { SitemapStream, streamToPromise } = require('sitemap');
 const { createWriteStream, readFileSync } = require('fs');
 const { execSync } = require('child_process');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 const rootDir = path.resolve(__dirname, '..');
+// 語言網址單一來源（ESM）：本檔是 CJS，用 dynamic import 載入
+const localeModule = import(pathToFileURL(path.resolve(rootDir, 'functions/lib/locale.js')).href);
 
 // 獲取當前日期（ISO 格式：YYYY-MM-DD）——僅作 git 失敗時的 fallback
 const today = new Date().toISOString().split('T')[0];
@@ -80,23 +83,29 @@ const hostname = 'https://multistreaming.org';
 // 輸出文件路徑
 const outputPath = path.resolve(__dirname, '..', 'sitemap.xml');
 
-// 創建 sitemap stream
-const sitemap = new SitemapStream({ hostname });
-const writeStream = createWriteStream(outputPath);
+localeModule
+  .then(({ HREFLANGS, withLang, alternates }) => {
+    // 創建 sitemap stream
+    const sitemap = new SitemapStream({ hostname });
+    const writeStream = createWriteStream(outputPath);
 
-// 將 sitemap stream 連接到寫入流
-sitemap.pipe(writeStream);
+    // 將 sitemap stream 連接到寫入流
+    sitemap.pipe(writeStream);
 
-// 添加所有 URL
-urls.forEach(url => {
-  sitemap.write(url);
-});
+    // 每條路由輸出英文與繁中兩筆，各帶 en／zh-TW／x-default 的 xhtml:link（Google 用它配對語言版本）
+    urls.forEach((u) => {
+      const links = alternates(hostname, u.url).map(({ hreflang, href }) => ({ lang: hreflang, url: href }));
+      for (const lang of HREFLANGS) {
+        sitemap.write({ ...u, url: withLang(lang, u.url), links });
+      }
+    });
 
-// 結束 stream
-sitemap.end();
+    // 結束 stream
+    sitemap.end();
 
-// 等待 sitemap stream 完成（而不是 writeStream）
-streamToPromise(sitemap)
+    // 等待 sitemap stream 完成（而不是 writeStream）
+    return streamToPromise(sitemap);
+  })
   .then(() => {
     console.log(`✅ Sitemap 已成功生成: ${outputPath}`);
   })

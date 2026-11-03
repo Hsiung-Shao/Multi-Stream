@@ -111,7 +111,8 @@ describe('prerender.mjs applyHead', () => {
         expect(out).toContain('id="ld-webapp"');
         expect(out).toContain('property="og:type" content="website"');
         expect(out).toContain('property="og:locale" content="zh_TW"');
-        expect(out).toContain('<link rel="canonical" href="https://multistreaming.org/"');
+        // 繁中首頁住在 /zh-TW：canonical 指向自己的語言版
+        expect(out).toContain('<link rel="canonical" href="https://multistreaming.org/zh-TW"');
     });
 });
 

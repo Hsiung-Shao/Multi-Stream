@@ -28,11 +28,11 @@ describe('歌回入口', () => {
     it('首頁導覽列有 /songs 連結，且排在 /schedule 之後', () => {
         const { container } = render(<LandingPage />);
         const links = hrefs(container);
-        const schedule = links.indexOf('/schedule');
-        const songs = links.indexOf('/songs');
+        const schedule = links.indexOf('/zh-TW/schedule');
+        const songs = links.indexOf('/zh-TW/songs');
         expect(schedule).toBeGreaterThanOrEqual(0);
         expect(songs).toBeGreaterThan(schedule);
-        const songsLink = container.querySelector('a[href="/songs"]');
+        const songsLink = container.querySelector('a[href="/zh-TW/songs"]');
         expect(songsLink?.textContent?.trim()).toBeTruthy();
         // 文字是翻譯過的頁面標題，不是 i18n key
         expect(songsLink?.textContent).not.toMatch(/^songs:|\.title$/);
@@ -40,8 +40,8 @@ describe('歌回入口', () => {
 
     it('手機設定頁有指向 /songs 的連結', () => {
         const { container } = render(<MobileSettingsPage />);
-        expect(hrefs(container)).toContain('/songs');
-        expect(container.querySelector('a[href="/songs"]')?.textContent?.trim()).toBeTruthy();
+        expect(hrefs(container)).toContain('/zh-TW/songs');
+        expect(container.querySelector('a[href="/zh-TW/songs"]')?.textContent?.trim()).toBeTruthy();
     });
 });
 
@@ -49,8 +49,8 @@ describe('首頁導覽列「更多」選單', () => {
     it('開台週表與歌回仍直接在 nav 內，「更多」選單內含次要連結', async () => {
         const { container } = render(<LandingPage />);
         const nav = container.querySelector('header nav') as HTMLElement;
-        expect(nav.querySelector('a[href="/schedule"]')).not.toBeNull();
-        expect(nav.querySelector('a[href="/songs"]')).not.toBeNull();
+        expect(nav.querySelector('a[href="/zh-TW/schedule"]')).not.toBeNull();
+        expect(nav.querySelector('a[href="/zh-TW/songs"]')).not.toBeNull();
 
         const more = within(nav).getByRole('button', { name: '更多' });
         expect(more).toHaveAttribute('aria-haspopup', 'menu');
@@ -59,7 +59,7 @@ describe('首頁導覽列「更多」選單', () => {
 
         const menu = await screen.findByRole('menu');
         const hrefs = Array.from(menu.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-        for (const href of ['/about', '/instructions', '/faq', '/support', DISCORD_URL]) {
+        for (const href of ['/zh-TW/about', '/zh-TW/instructions', '/zh-TW/faq', '/zh-TW/support', DISCORD_URL]) {
             expect(hrefs, href).toContain(href);
         }
     });

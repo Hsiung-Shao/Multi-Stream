@@ -14,6 +14,7 @@ import { Check, ExternalLink, Flag, Heart, Loader2, Music2 } from 'lucide-react'
 import { cn } from '../../components/ui/utils';
 import { RouteLink } from '../../components/Navigation/RouteLink';
 import { schedulePersonPage } from '../../config/schedulePerson';
+import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { formatClock, formatRelative } from './formatTime';
 import { streamKey, type ScheduleChannel, type ScheduleStream } from './types';
 import { thumbnailUrl, watchUrl } from './streamLinks';
@@ -51,13 +52,13 @@ interface SelectableProps {
 
 /** 歌單徽章：連到 /songs?list=…（整頁導覽，由 App 啟動時讀分享參數載入佇列）；只給 YouTube 場次 */
 function SongsBadge({ stream, songs }: { stream: ScheduleStream; songs?: { codes: string[] } | null }) {
-    const { t } = useTranslation('schedule');
+    const { t, i18n } = useTranslation('schedule');
     if (!songs || stream.platform !== 'youtube') return null;
     const list = serializeSongShare(songs.codes);
     if (!list) return null;
     return (
         <a
-            href={`/songs?list=${list}`}
+            href={`${withLang(urlLangOf(i18n.language), '/songs')}?list=${list}`}
             onClick={(e) => e.stopPropagation()}
             title={t('songsBadgeTitle', { count: songs.codes.length })}
             className={cn(

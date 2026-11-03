@@ -1,7 +1,9 @@
 // 歌曲分享：組出 /songs?list= 完整網址、複製到剪貼簿並用 toast 回報。只在事件處理裡呼叫（會碰 window／navigator）
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
+import i18n from '../../../../i18n/i18n';
 import { PAGE_PATHS } from '../../../../config/routes';
+import { urlLangOf, withLang } from '../../../../../functions/lib/locale.js';
 import { serializeSongShare, SONG_SHARE_MAX, SONG_SHARE_PARAM } from '../../lib/songShareLink';
 
 export async function copyText(text: string): Promise<boolean> {
@@ -14,7 +16,8 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 export function shareUrl(codes: string[]): string {
-    return `${window.location.origin}${PAGE_PATHS.songs}?${SONG_SHARE_PARAM}=${serializeSongShare(codes)}`;
+    // 帶目前語言前綴：中文介面分享出去的連結開在中文版
+    return `${window.location.origin}${withLang(urlLangOf(i18n.language), PAGE_PATHS.songs)}?${SONG_SHARE_PARAM}=${serializeSongShare(codes)}`;
 }
 
 /** 複製分享連結並提示結果（歌單、單場歌回共用）；超過上限只會分享前 SONG_SHARE_MAX 首 */

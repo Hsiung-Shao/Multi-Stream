@@ -10,6 +10,7 @@
 import { ROUTE_META, NOT_FOUND_META, OG_LOCALE, ROBOTS_INDEX, ROBOTS_NOINDEX, WEBAPP_JSONLD_ROUTES } from './lib/seo-meta.js';
 import { HTML_SECURITY_HEADERS } from './lib/security-headers.js';
 import { resolveSchedulePerson, schedulePersonMeta, renderPersonBodyHtml } from './lib/schedule-person.js';
+import { DEFAULT_LANG, splitLangPath, withLang, alternates } from './lib/locale.js';
 
 const ORIGIN = 'https://multistreaming.org';
 
@@ -26,11 +27,8 @@ const REDIRECTS = {
     '/privacy.html': '/privacy',
 };
 
-// Accept-Language 含任何 zh 變體 → zh-TW；其餘（含沒帶 header 的 Googlebot / OG scraper）→ en。
-// 與前端 i18next 的 navigator 偵測方向一致（zh 系使用者看中文、其他看英文）。
-function pickLang(acceptLanguage) {
-    return acceptLanguage && /(^|[,;\s])zh\b/i.test(acceptLanguage) ? 'zh-TW' : 'en';
-}
+// 語言只由網址決定（functions/lib/locale.js）：/zh-TW/... → 繁中、其他 → 英文。不看瀏覽器語言標頭，
+// 同一網址對所有人（含 Googlebot）內容相同；繁中使用者開到無前綴網址由 index.html 的 head 腳本轉去 /zh-TW。
 
 /**
  * 預渲染檔的 ASSETS 取檔路徑（不帶 .html：Pages 對 x.html 在 /x 提供服務，帶 .html 反而會 308）。
@@ -52,28 +50,34 @@ export async function onRequest(context) {
     if (request.method !== 'GET' && request.method !== 'HEAD') return next();
 
     const url = new URL(request.url);
-    const rawPath = url.pathname;
+    const fullPath = url.pathname;
 
-    // 統一去尾斜線（/canvas/ → /canvas），保留查詢字串
-    if (rawPath.length > 1 && rawPath.endsWith('/')) {
-        const clean = rawPath.replace(/\/+$/, '') || '/';
+    // 統一去尾斜線（/canvas/ → /canvas、/zh-TW/ → /zh-TW），保留查詢字串
+    if (fullPath.length > 1 && fullPath.endsWith('/')) {
+        const clean = fullPath.replace(/\/+$/, '') || '/';
         return Response.redirect(url.origin + clean + url.search, 301);
     }
+    // 語言前綴：/zh-TW/about → lang zh-TW、rawPath /about；/zh-tw/about（大小寫不對）→ 301 到正規寫法
+    const split = splitLangPath(fullPath);
+    if (split.redirect) {
+        return Response.redirect(url.origin + split.redirect + url.search, 301);
+    }
+    const lang = split.lang ?? DEFAULT_LANG;
+    const rawPath = split.path;
     // Object.hasOwn：避免 /constructor、/toString 這類原型鏈 key 被當成已知路由
     if (Object.hasOwn(REDIRECTS, rawPath)) {
-        return Response.redirect(url.origin + REDIRECTS[rawPath], 301);
+        return Response.redirect(url.origin + withLang(lang, REDIRECTS[rawPath]), 301);
     }
 
     const entry = Object.hasOwn(ROUTE_META, rawPath) ? ROUTE_META[rawPath] : undefined;
-    const lang = pickLang(request.headers.get('accept-language'));
-    const pageUrl = ORIGIN + rawPath;
+    const pageUrl = ORIGIN + withLang(lang, rawPath);
 
     // 個人週表頁 /schedule/<slug>：slug 是資料庫任意值，不在 ROUTE_META 白名單裡，查一次資料庫決定
     // 200（注入該實況主的 title/description/og:image，不活躍 → noindex）、301（大小寫）或真 404。
     // 查詢失敗時照常回 SPA 殼＋週表通用 meta：暫時性錯誤不能讓頁面被當成 404 或 noindex。
     const person = entry ? { kind: 'none' } : await resolveSchedulePerson(env, rawPath);
     if (person.kind === 'redirect') {
-        return Response.redirect(url.origin + person.location + url.search, 301);
+        return Response.redirect(url.origin + withLang(lang, person.location) + url.search, 301);
     }
     let meta;
     let status;
@@ -145,7 +149,23 @@ export async function onRequest(context) {
                           el.setAttribute('href', pageUrl);
                       },
                   },
-        );
+        )
+        // hreflang：殼裡既有的先拿掉（冪等），可索引頁再於 head 末端補上 en／zh-TW／x-default；noindex 頁不給語言訊號
+        .on('link[rel="alternate"][hreflang]', {
+            element(el) {
+                el.remove();
+            },
+        });
+    if (!noindex) {
+        const links = alternates(ORIGIN, rawPath)
+            .map(({ hreflang, href }) => `<link rel="alternate" hreflang="${hreflang}" href="${href}">`)
+            .join('');
+        rewriter.on('head', {
+            element(el) {
+                el.append(links, { html: true });
+            },
+        });
+    }
     if (image) {
         // 頭像不是 1200×630：拿掉寬高宣告，alt 改成實況主名字所在的標題
         const drop = { element(el) { el.remove(); } };
@@ -186,8 +206,6 @@ export async function onRequest(context) {
 
     const headers = new Headers(transformed.headers);
     for (const [key, value] of Object.entries(HTML_SECURITY_HEADERS)) headers.set(key, value);
-    // 回應內容依 Accept-Language 而異，告知中間層快取
-    headers.set('Vary', 'Accept-Language');
     if (rawPath === '/admin') headers.set('X-Robots-Tag', 'noindex, follow');
 
     if (request.method === 'HEAD') return new Response(null, { status, headers });

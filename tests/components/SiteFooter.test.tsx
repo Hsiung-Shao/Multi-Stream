@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { SiteFooter } from '../../src/components/SiteFooter';
 import { useUIStore } from '../../src/store/useUIStore';
 import { PAGE_PATHS } from '../../src/config/routes';
+import { withLang } from '../../functions/lib/locale.js';
 import { DISCORD_URL } from '../../src/config/links';
 import i18n from '../../src/i18n/i18n';
 
@@ -36,12 +37,12 @@ describe('SiteFooter', () => {
             ['隱私權政策', 'privacy'],
         ];
         for (const [label, page] of expected) {
-            expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', PAGE_PATHS[page]);
+            expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', withLang('zh-TW', PAGE_PATHS[page]));
         }
         // 比較頁文案來自 compare namespace,用 href 反查;開發者頁刻意不放(About 內文已連)
         const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
-        expect(hrefs).toContain(PAGE_PATHS.compare);
-        expect(hrefs).not.toContain(PAGE_PATHS.creator);
+        expect(hrefs).toContain(withLang('zh-TW', PAGE_PATHS.compare));
+        expect(hrefs).not.toContain(withLang('zh-TW', PAGE_PATHS.creator));
     });
 
     it('links Discord in a new tab with noopener, and nothing else external', () => {

@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, existsSync
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ROUTE_META, OG_LOCALE, ROBOTS_INDEX, WEBAPP_JSONLD_ROUTES } from '../functions/lib/seo-meta.js';
+import { withLang } from '../functions/lib/locale.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const buildDir = path.join(rootDir, 'build');
@@ -54,7 +55,8 @@ export function applyHead(shell, route, lang, theme, appHtml) {
     const entry = ROUTE_META[route];
     if (!entry) fail(`ROUTE_META 沒有 ${route}`);
     const meta = entry[lang];
-    const pageUrl = ORIGIN + route;
+    // 繁中版住在 /zh-TW/...：canonical／og:url 指向自己的語言版；hreflang 由 edge 注入（這裡不寫，避免兩處各一份）
+    const pageUrl = ORIGIN + withLang(lang, route);
     const ogType = entry.type === 'article' ? 'article' : 'website';
 
     let out = shell;

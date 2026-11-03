@@ -136,7 +136,7 @@ export const NewCanvasPage = () => {
 
     return (
         <div className="w-full h-screen bg-black overflow-hidden relative">
-            <SEO title={tx('seo:canvas.title')} description={tx('seo:canvas.description')} url={SEO_CANVAS.url} />
+            <SEO title={tx('seo:canvas.title')} description={tx('seo:canvas.description')} path={SEO_CANVAS.path} />
             {/* Canvas Layer */}
             <div className="absolute inset-0 z-0">
                 {windows.length === 0 && <CanvasEmptyState />}

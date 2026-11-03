@@ -29,5 +29,6 @@ export const SEO_ROBOTS_NOINDEX = 'noindex, follow';
 export const SEO_CANVAS = {
   title: '開始觀看直播 - MultiStream Hub | Multistream Viewer',
   description: '立即開始使用 MultiStream Hub。自定義您的多視窗直播布局，同時欣賞 Twitch 與 YouTube 的精彩內容。',
-  url: `${SEO_SITE_URL}/canvas`,
+  /** 站內路徑（<SEO path>），canonical 依語言前綴由 SEO.tsx 組出 */
+  path: '/canvas',
 } as const;

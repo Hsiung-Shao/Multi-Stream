@@ -95,7 +95,7 @@ describe('SchedulePage', () => {
         await screen.findByText('台一 Twitch');
         const upcoming = section(/接下來/);
         const nameLink = within(section(/直播中/)).getByRole('link', { name: '台一' });
-        expect(nameLink).toHaveAttribute('href', '/schedule/taione');
+        expect(nameLink).toHaveAttribute('href', '/zh-TW/schedule/taione');
         expect(within(upcoming).getByText('也在 Twitch')).toBeInTheDocument();
         expect(within(upcoming).queryByRole('link', { name: '台二' })).not.toBeInTheDocument();
         fireEvent.click(nameLink);
@@ -124,7 +124,7 @@ describe('SchedulePage', () => {
         const roster = await screen.findByRole('region', { name: /子午計畫 成員/ });
         expect(h.fetchAgencyRoster).toHaveBeenCalledWith('子午計畫');
         expect(within(roster).getByText('現役 1 位 · 已畢業 1 位')).toBeInTheDocument();
-        expect(within(roster).getByRole('link', { name: /台一/ })).toHaveAttribute('href', '/schedule/taione');
+        expect(within(roster).getByRole('link', { name: /台一/ })).toHaveAttribute('href', '/zh-TW/schedule/taione');
         expect(within(roster).getByText('直播中')).toBeInTheDocument(); // 台一正在 Twitch 直播
         expect(within(roster).queryByText('已畢業的人')).not.toBeInTheDocument();
         fireEvent.click(within(roster).getByRole('button', { name: '顯示已畢業 1 位' }));
@@ -196,7 +196,7 @@ describe('SchedulePage', () => {
         expect(screen.queryByRole('navigation', { name: '實況主' })).not.toBeInTheDocument();
         fireEvent.change(screen.getByRole('searchbox', { name: '搜尋週表' }), { target: { value: '台一' } });
         const people = await screen.findByRole('navigation', { name: '實況主' });
-        expect(within(people).getByRole('link', { name: '台一' })).toHaveAttribute('href', '/schedule/taione');
+        expect(within(people).getByRole('link', { name: '台一' })).toHaveAttribute('href', '/zh-TW/schedule/taione');
     });
 
     it('搜尋標題也會命中；週表上找不到時改用全站搜尋（預設搜 YouTube）', async () => {

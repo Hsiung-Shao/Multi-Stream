@@ -51,8 +51,14 @@
   <link rel="shortcut icon" type="image/png" href="/logo.png">
   <link rel="apple-touch-icon" href="/logo.png">
 
-  <!-- Hreflang 已移除：本站多語系為 client-side 切換、沒有語言專屬 URL，
-       全部 alternate 指向同一網址屬無效標記；待導入 URL-based locale 後再依各語言 URL 重加。 -->
+  <!-- hreflang（en／zh-TW／x-default）由 functions/[[path]].js 依網址注入、前端 src/components/SEO.tsx 換頁時維護；
+       這裡不放靜態值（單一來源 functions/lib/locale.js）。 -->
+
+  <!-- 繁中使用者開到無前綴網址 → 轉去 /zh-TW 同路徑（與 src/i18n/rootRedirect.ts 同一邏輯；tests/i18n/langRouting.test.tsx 鎖）。
+       只讀 localStorage 不寫；Googlebot（en-US、無 localStorage）不會被轉。 -->
+  <script>
+    (function(){try{var p=location.pathname;if(/^\/zh-TW(\/|$)/.test(p))return;var s=localStorage.getItem('i18nextLng');var z=s?s==='zh-TW':/^zh-(TW|Hant|HK|MO)/i.test(navigator.language||'');if(z)location.replace('/zh-TW'+(p==='/'?'':p)+location.search+location.hash);}catch(e){}})();
+  </script>
 
   <!-- Structured Data (JSON-LD)
        softwareVersion / dateModified 由 seoHtmlPlugin 於 build 時注入（package.json version / 建置日期） -->

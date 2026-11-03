@@ -114,7 +114,7 @@ describe('SchedulePersonPage', () => {
         renderPage('nobody');
         expect(await screen.findByRole('heading', { level: 1, name: '找不到這位實況主' })).toBeInTheDocument();
         expect(robots()).toMatch(/^noindex/);
-        expect(screen.getByRole('link', { name: '回到開台週表' })).toHaveAttribute('href', '/schedule');
+        expect(screen.getByRole('link', { name: '回到開台週表' })).toHaveAttribute('href', '/zh-TW/schedule');
     });
 });
 
@@ -156,7 +156,7 @@ describe('SchedulePersonPage 完整歌單連結（C5）', () => {
         renderPage();
         expect(await screen.findByText('歌回一')).toBeInTheDocument();
         const link = await screen.findByRole('link', { name: /完整歌單/ });
-        expect(link).toHaveAttribute('href', '/songs?vtuber=v1');
+        expect(link).toHaveAttribute('href', '/zh-TW/songs?vtuber=v1');
         expect(within(screen.getByRole('region', { name: /歌回/ })).getByRole('link', { name: /完整歌單/ })).toBe(link);
     });
 

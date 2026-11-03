@@ -3,7 +3,8 @@ import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore, type PageType } from './store/useUIStore';
 import { lazyWithPreload } from './utils/lazyWithPreload';
-import { PAGE_PATHS, pathToPage } from './config/routes';
+import { PAGE_PATHS, pathToPage, pageToPath } from './config/routes';
+import { splitLangPath, urlLangOf } from '../functions/lib/locale.js';
 import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
 import { isSchedulePersonPage, schedulePersonSlugOf } from './config/schedulePerson';
 import { SEO_SITE_URL } from './seo/defaults';
@@ -106,17 +107,17 @@ export function preloadPageChunks(page: PageType): Promise<boolean> {
     .catch(() => false);
 }
 
-// 可分享連結：模組載入時就快照 ?streams=（只在 /canvas 生效），之後 URL 會被換回乾淨路徑
+// 可分享連結：模組載入時就快照 ?streams=（只在 /canvas 或 /zh-TW/canvas 生效），之後 URL 會被換回乾淨路徑
 const INITIAL_SHARE = (() => {
   if (typeof window === 'undefined') return null;
-  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const path = splitLangPath(window.location.pathname.replace(/\/+$/, '') || '/').path;
   return path === PAGE_PATHS.canvas ? parseShare(window.location.search) : null;
 })();
 
 // 歌單分享連結：同樣在模組載入時快照 ?list=（只在 /songs 生效），App mount 後立刻換回乾淨的 /songs
 const INITIAL_SONG_SHARE = (() => {
   if (typeof window === 'undefined') return null;
-  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const path = splitLangPath(window.location.pathname.replace(/\/+$/, '') || '/').path;
   if (path !== PAGE_PATHS.songs) return null;
   const params = new URLSearchParams(window.location.search);
   if (!params.has(SONG_SHARE_PARAM)) return null;
@@ -158,9 +159,11 @@ export default function App() {
       logPageView();
     });
 
+    // 分享連結處理完要把網址換回乾淨路徑：保留語言前綴（/zh-TW/songs 不能被換成 /songs）
+    const cleanPath = (page: 'songs' | 'canvas') => pageToPath(page, urlLangOf(i18n.language)) ?? PAGE_PATHS[page];
     if (INITIAL_SONG_SHARE) {
       // 已快照進 state；URL 換回乾淨的 /songs（reload 不會重載、canonical 不帶 query）
-      window.history.replaceState(null, '', PAGE_PATHS.songs);
+      window.history.replaceState(null, '', cleanPath('songs'));
     }
 
     if (INITIAL_SHARE) {
@@ -169,7 +172,7 @@ export default function App() {
       useStreamStore.getState().clearCanvasItems();
       logEvent('Share', 'open_link', undefined, INITIAL_SHARE.streams.length);
       applyShareLink(INITIAL_SHARE).finally(() => {
-        window.history.replaceState(null, '', PAGE_PATHS.canvas);
+        window.history.replaceState(null, '', cleanPath('canvas'));
       });
     } else {
       // 短暫播放回復:啟動時若「10 分鐘內」上次有未關閉的串流,暫存並彈提示詢問是否恢復;
@@ -306,7 +309,7 @@ export default function App() {
           <SEO
             title={title}
             description={description}
-            url={`${SEO_SITE_URL}${path}`}
+            path={path}
             type={slug ? 'article' : 'website'}
             image={slug ? `${SEO_SITE_URL}${GUIDE_META[slug].image}` : undefined}
             jsonLd={jsonLd}
@@ -332,7 +335,7 @@ export default function App() {
             <SEO
               title={tx('seo:about.title')}
               description={tx('seo:about.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.about}`}
+              path={PAGE_PATHS.about}
               jsonLd={staticPageJsonLd('about', 'AboutPage', tx('about:title'), {
                 mainEntity: { '@id': ORG_ID },
               })}
@@ -348,7 +351,7 @@ export default function App() {
             <SEO
               title={tx('seo:compare.title')}
               description={tx('seo:compare.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.compare}`}
+              path={PAGE_PATHS.compare}
               jsonLd={graph(
                 webPage({ type: 'WebPage', path: PAGE_PATHS.compare, name: tx('seo:compare.title'), description: tx('seo:compare.description'), inLanguage }),
                 {
@@ -374,7 +377,7 @@ export default function App() {
             <SEO
               title={tx('seo:schedule.title')}
               description={tx('seo:schedule.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.schedule}`}
+              path={PAGE_PATHS.schedule}
               jsonLd={graph(
                 webPage({ type: 'CollectionPage', path: PAGE_PATHS.schedule, name: tx('seo:schedule.title'), description: tx('seo:schedule.description'), inLanguage }),
                 breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: tx('schedule:title'), path: PAGE_PATHS.schedule }]),
@@ -391,7 +394,7 @@ export default function App() {
             <SEO
               title={tx('seo:status.title')}
               description={tx('seo:status.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.status}`}
+              path={PAGE_PATHS.status}
               jsonLd={staticPageJsonLd('status', 'WebPage', tx('status:title'))}
             />
             <ChunkSuspense chunk={StatusPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
@@ -405,7 +408,7 @@ export default function App() {
             <SEO
               title={tx('seo:songs.title')}
               description={tx('seo:songs.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.songs}`}
+              path={PAGE_PATHS.songs}
               jsonLd={staticPageJsonLd('songs', 'CollectionPage', tx('songs:title'))}
             />
             <ChunkSuspense chunk={SongsPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
@@ -419,7 +422,7 @@ export default function App() {
             <SEO
               title={tx('seo:songsSubmit.title')}
               description={tx('seo:songsSubmit.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.songsSubmit}`}
+              path={PAGE_PATHS.songsSubmit}
               jsonLd={graph(
                 webPage({ type: 'WebPage', path: PAGE_PATHS.songsSubmit, name: tx('seo:songsSubmit.title'), description: tx('seo:songsSubmit.description'), inLanguage }),
                 breadcrumb([
@@ -440,7 +443,7 @@ export default function App() {
             <SEO
               title={tx('seo:scheduleSubmit.title')}
               description={tx('seo:scheduleSubmit.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.scheduleSubmit}`}
+              path={PAGE_PATHS.scheduleSubmit}
               jsonLd={graph(
                 webPage({ type: 'WebPage', path: PAGE_PATHS.scheduleSubmit, name: tx('seo:scheduleSubmit.title'), description: tx('seo:scheduleSubmit.description'), inLanguage }),
                 breadcrumb([
@@ -461,7 +464,7 @@ export default function App() {
             <SEO
               title={tx('seo:creator.title')}
               description={tx('seo:creator.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.creator}`}
+              path={PAGE_PATHS.creator}
               image={`${SEO_SITE_URL}/icon.png`}
               jsonLd={graph(
                 webPage({
@@ -500,7 +503,7 @@ export default function App() {
             <SEO
               title={tx('seo:privacy.title')}
               description={tx('seo:privacy.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.privacy}`}
+              path={PAGE_PATHS.privacy}
               jsonLd={staticPageJsonLd('privacy', 'WebPage', tx('privacy:title'))}
             />
             <ChunkSuspense chunk={PrivacyPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
@@ -523,7 +526,7 @@ export default function App() {
             <SEO
               title={tx('seo:support.title')}
               description={tx('seo:support.description')}
-              url={`${SEO_SITE_URL}${PAGE_PATHS.support}`}
+              path={PAGE_PATHS.support}
               jsonLd={staticPageJsonLd('support', 'WebPage', tx('support:title'))}
             />
             <ChunkSuspense chunk={SupportPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>

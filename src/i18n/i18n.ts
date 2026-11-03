@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { splitLangPath } from '../../functions/lib/locale.js';
 
 // Import namespaced translations for zh-TW as default/fallback
 import zhTWCommon from './locales/zh-TW/common';
@@ -100,8 +101,16 @@ export const resources = {
     },
 } as const;
 
+// 網址語言優先：/zh-TW/... 一律繁中（functions/lib/locale.js 的 splitLangPath），沒有前綴才看 localStorage／navigator。
+// 命中時 i18next 既有的 caches 會把 zh-TW 寫進 i18nextLng（與使用者手動切語言的寫法相同，不新增 key）。
+const detector = new LanguageDetector();
+detector.addDetector({
+    name: 'urlPath',
+    lookup: () => (typeof window !== 'undefined' ? splitLangPath(window.location.pathname).lang ?? undefined : undefined),
+});
+
 i18n
-    .use(LanguageDetector)
+    .use(detector)
     .use(initReactI18next)
     .init({
         resources,
@@ -113,7 +122,7 @@ i18n
             escapeValue: false, // react already safes from xss
         },
         detection: {
-            order: ['localStorage', 'navigator'],
+            order: ['urlPath', 'localStorage', 'navigator'],
             caches: ['localStorage'],
             lookupLocalStorage: 'i18nextLng',
         },

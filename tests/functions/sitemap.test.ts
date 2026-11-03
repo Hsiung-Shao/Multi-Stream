@@ -6,6 +6,7 @@ import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PAGE_PATHS } from '../../src/config/routes';
+import { withLang } from '../../functions/lib/locale.js';
 
 const rootDir = resolve(__dirname, '../..');
 const SITE = 'https://multistreaming.org';
@@ -20,14 +21,17 @@ describe('sitemap.xml 覆蓋 PAGE_PATHS', () => {
         xml = readFileSync(resolve(rootDir, 'sitemap.xml'), 'utf8');
     }, 60_000);
 
-    it('每條可索引路由都在 sitemap 裡，排除清單都不在', () => {
+    it('每條可索引路由的英文與 /zh-TW 版都在 sitemap 裡，排除清單都不在', () => {
         const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+        const both = (p: string) => [`${SITE}${p}`, `${SITE}${withLang('zh-TW', p)}`];
         for (const p of Object.values(PAGE_PATHS)) {
-            if (EXCLUDED.has(p)) expect(locs).not.toContain(`${SITE}${p}`);
-            else expect(locs).toContain(`${SITE}${p}`);
+            for (const loc of both(p)) {
+                if (EXCLUDED.has(p)) expect(locs).not.toContain(loc);
+                else expect(locs).toContain(loc);
+            }
         }
-        // 不多：sitemap 裡沒有 PAGE_PATHS 以外的路徑
-        const known = new Set(Object.values(PAGE_PATHS).map((p) => `${SITE}${p}`));
+        // 不多：sitemap 裡沒有 PAGE_PATHS（兩語言）以外的路徑
+        const known = new Set(Object.values(PAGE_PATHS).flatMap(both));
         for (const loc of locs) expect(known.has(loc)).toBe(true);
     });
 

@@ -3,6 +3,7 @@
 // 與 src/config/schedulePerson.ts 同一套規則（slug 字元集＝資料庫 CHECK vtubers_slug_format），
 // 文案與 src/i18n/locales/{zh-TW,en}/schedule.ts 的 person.seo.* 同步；tests/functions/schedulePersonEdge.test.ts 鎖住兩邊。
 // functions 無法 import src/ 的 TS，所以這裡是複本。
+import { withLang } from './locale.js';
 export const SCHEDULE_SLUG_RE = /^[a-z0-9][a-z0-9_-]{1,39}$/;
 const PERSON_PATH_RE = /^\/schedule\/([^/]+)$/;
 /** DB 查詢逾時：超過就當暫時錯誤回 SPA 殼，不讓 HTML 首位元組跟著卡住 */
@@ -219,7 +220,8 @@ export function renderPersonBodyHtml(lang, person, slug) {
     const t = SCHEDULE_PERSON_BODY[lang] ?? SCHEDULE_PERSON_BODY.en;
     const name = escapeHtml(person.name);
     const parts = [
-        `<nav aria-label="breadcrumb" class="text-sm text-muted-foreground"><a href="/">MultiStream Hub</a> › <a href="/schedule">${escapeHtml(t.schedule)}</a> › <a href="/schedule/${escapeHtml(slug)}" aria-current="page">${name}</a></nav>`,
+        // 麵包屑連結留在同一語言版（/zh-TW/...），爬蟲在中文頁的內鏈才不會跳回英文版
+        `<nav aria-label="breadcrumb" class="text-sm text-muted-foreground"><a href="${withLang(lang, '/')}">MultiStream Hub</a> › <a href="${withLang(lang, '/schedule')}">${escapeHtml(t.schedule)}</a> › <a href="${withLang(lang, `/schedule/${escapeHtml(slug)}`)}" aria-current="page">${name}</a></nav>`,
         `<h1 class="mt-4 text-3xl font-bold">${name}</h1>`,
     ];
     const s = person.streams;

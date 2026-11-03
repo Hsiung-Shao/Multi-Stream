@@ -117,6 +117,12 @@ describe('edge JSON-LD 處理（WebApplication 只留 / 與 /canvas）', () => {
         expect(edgeSrc).toContain('WEBAPP_JSONLD_ROUTES.includes(rawPath)');
         expect(edgeSrc).toContain(`meta[property="og:type"]`);
     });
+
+    it('[[path]].js 語言只由網址決定：用 splitLangPath、注入 alternates，不再看 Accept-Language（文字層鎖）', () => {
+        expect(edgeSrc).toContain('splitLangPath(fullPath)');
+        expect(edgeSrc).toContain('alternates(ORIGIN, rawPath)');
+        expect(edgeSrc.toLowerCase()).not.toContain('accept-language');
+    });
 });
 
 describe('edge security-headers ↔ _headers /* 區塊同步', () => {

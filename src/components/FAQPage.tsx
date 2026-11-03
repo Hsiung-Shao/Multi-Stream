@@ -160,7 +160,7 @@ export function FAQPage() {
             <SEO
                 title={`${tx('faq:title')} - MultiStream Hub`}
                 description={tx('faq:header_subtitle')}
-                url={`${SEO_SITE_URL}${PAGE_PATHS.faq}`}
+                path={PAGE_PATHS.faq}
                 jsonLd={graph(
                     {
                         '@type': 'FAQPage',

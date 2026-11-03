@@ -203,7 +203,8 @@ describe('個人頁內文（edge 放進 #root）', () => {
         const r = await resolveSchedulePerson(env, '/schedule/taione', ok([row(upcoming, recent, 12)]), null);
         const html = renderPersonBodyHtml('zh-TW', r, 'taione');
         expect(html).toMatch(/^<div class="min-h-svh">/);
-        expect(html).toContain('<a href="/schedule">開台週表</a>');
+        // 繁中版內鏈留在 /zh-TW
+        expect(html).toContain('<a href="/zh-TW/schedule">開台週表</a>');
         expect(html).toContain('台一：近 90 天開台 12 次，接下來 7 天有 1 場排程。');
         expect(html).toContain('>接下來 7 天</h2>');
         expect(html).toContain('雜談（Twitch）');
@@ -312,8 +313,10 @@ describe('buildScheduleSitemap', () => {
             { slug: 'nolive', last_live_at: null },
             { slug: 'Bad<slug>', last_live_at: null },
         ]);
-        expect(xml).toContain('<url><loc>https://multistreaming.org/schedule/taione</loc><lastmod>2026-09-28</lastmod></url>');
-        expect(xml).toContain('<url><loc>https://multistreaming.org/schedule/nolive</loc></url>');
+        // 每人兩筆（英文、/zh-TW），lastmod 跟著每一筆；hreflang 由 langUrls.test.ts L14 鎖
+        expect(xml).toContain('<url><loc>https://multistreaming.org/schedule/taione</loc><lastmod>2026-09-28</lastmod>');
+        expect(xml).toContain('<url><loc>https://multistreaming.org/zh-TW/schedule/taione</loc><lastmod>2026-09-28</lastmod>');
+        expect(xml).toContain('<url><loc>https://multistreaming.org/schedule/nolive</loc><xhtml:link');
         expect(xml).not.toContain('Bad');
         expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
     });

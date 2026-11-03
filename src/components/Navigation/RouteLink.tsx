@@ -1,5 +1,7 @@
 import { forwardRef, type AnchorHTMLAttributes, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
+import { urlLangOf } from '../../../functions/lib/locale.js';
 import { pageToPath, type RoutePage } from '../../config/routes';
 import type { SchedulePersonPage } from '../../config/schedulePerson';
 
@@ -24,11 +26,13 @@ export const RouteLink = forwardRef<HTMLAnchorElement, RouteLinkProps>(function 
     ref,
 ) {
     const setPage = useUIStore(s => s.setPage);
+    // 訂閱語言：切到中文時 href 要跟著變成 /zh-TW/...（爬蟲在中文頁看到的內鏈才會留在中文版）
+    const { i18n } = useTranslation();
 
     return (
         <a
             ref={ref}
-            href={pageToPath(to) ?? '/'}
+            href={pageToPath(to, urlLangOf(i18n.language)) ?? '/'}
             target={target}
             onClick={(e) => {
                 onClick?.(e);

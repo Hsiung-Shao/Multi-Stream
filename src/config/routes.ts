@@ -1,6 +1,7 @@
 import type { PageType } from '../store/useUIStore';
 import { GUIDE_SLUGS, guidePage, guidePath, type GuidePage } from './guides';
 import { isSchedulePersonPage, schedulePersonFromPath, schedulePersonPath, schedulePersonSlugOf, type SchedulePersonPage } from './schedulePerson';
+import { splitLangPath, withLang, type UrlLang } from '../../functions/lib/locale.js';
 
 /**
  * 頁面 ↔ URL 的單一對照表。
@@ -47,17 +48,25 @@ const LEGACY_HTML_ALIASES: Record<string, RoutePage> = {
     '/privacy.html': 'privacy',
 };
 
-/** URL pathname → 頁面；未知路徑回 'not-found' */
+/** URL pathname → 頁面；看穿語言前綴（/zh-TW/about → about）；未知路徑回 'not-found' */
 export function pathToPage(pathname: string): PageType {
-    const legacy = LEGACY_HTML_ALIASES[pathname];
+    const { path } = splitLangPath(pathname);
+    const legacy = LEGACY_HTML_ALIASES[path];
     if (legacy) return legacy;
-    const hit = (Object.keys(PAGE_PATHS) as RoutePage[]).find((p) => PAGE_PATHS[p] === pathname);
-    return hit ?? schedulePersonFromPath(pathname) ?? 'not-found';
+    const hit = (Object.keys(PAGE_PATHS) as RoutePage[]).find((p) => PAGE_PATHS[p] === path);
+    return hit ?? schedulePersonFromPath(path) ?? 'not-found';
 }
 
-/** 頁面 → 應同步的 URL；'not-found' 回 null 表示「不要動 URL」 */
-export function pageToPath(page: PageType): string | null {
+/** URL pathname 帶的語言前綴；沒有（英文或其他介面語言）回 null */
+export function langFromPath(pathname: string): 'zh-TW' | null {
+    return splitLangPath(pathname).lang;
+}
+
+/** 頁面 → 應同步的 URL（依語言加前綴，見 functions/lib/locale.js）；'not-found' 回 null 表示「不要動 URL」 */
+export function pageToPath(page: PageType, urlLang: UrlLang = 'en'): string | null {
     if (page === 'not-found') return null;
-    if (isSchedulePersonPage(page)) return schedulePersonPath(schedulePersonSlugOf(page));
-    return (PAGE_PATHS as Partial<Record<PageType, string>>)[page] ?? '/';
+    const path = isSchedulePersonPage(page)
+        ? schedulePersonPath(schedulePersonSlugOf(page))
+        : (PAGE_PATHS as Partial<Record<PageType, string>>)[page] ?? '/';
+    return withLang(urlLang, path);
 }

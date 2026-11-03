@@ -9,12 +9,14 @@ import {
   SEO_ROBOTS_NOINDEX,
 } from '../seo/defaults';
 import { toHtmlLang } from '../i18n/i18n';
+import { alternates, urlLangOf, withLang } from '../../functions/lib/locale.js';
 
 interface SEOProps {
   title?: string;
   description?: string;
   image?: string;
-  url?: string;
+  /** 站內路徑（'/about'）：canonical／og:url 依目前語言加前綴，hreflang 由 functions/lib/locale.js 推導 */
+  path?: string;
   type?: 'website' | 'article';
   /** 覆寫 og:locale；未提供時依當前 i18n 語言自動對應（zh_TW / zh_CN / en_US / ja_JP / ko_KR） */
   locale?: string;
@@ -39,15 +41,17 @@ export function SEO({
   title = SEO_DEFAULT_TITLE,
   description = SEO_DEFAULT_DESCRIPTION,
   image = SEO_DEFAULT_IMAGE,
-  url = `${SEO_SITE_URL}/`,
+  path = '/',
   type = 'website',
   locale,
   jsonLd,
   noindex = false,
 }: SEOProps) {
-  // useTranslation 讓本元件訂閱 languageChanged：語言切換時 effect 會以新的 og:locale 重跑
+  // useTranslation 讓本元件訂閱 languageChanged：語言切換時 effect 會以新的 og:locale 與網址前綴重跑
   const { i18n } = useTranslation();
   const ogLocale = locale ?? OG_LOCALE[toHtmlLang(i18n.language)] ?? 'zh_TW';
+  // 中文介面的頁面網址住在 /zh-TW/...（與 edge functions/[[path]].js 輸出的 canonical 一致）
+  const url = `${SEO_SITE_URL}${withLang(urlLangOf(i18n.language), path)}`;
   // 以序列化字串當依賴,避免呼叫端每次 render 傳新物件導致 effect 重跑
   // 跳脫 <：避免 jsonLd 內容含 </script> 時提前關閉 script 標籤（textContent 注入雖不解析 HTML，
   // 但 JSON-LD 會被抓取器原樣讀取，跳脫是 schema.org 建議做法，與 LandingPage FaqJsonLd 一致）
@@ -112,7 +116,26 @@ export function SEO({
       canonical.setAttribute('href', url);
     }
 
-  }, [title, description, image, url, type, ogLocale, noindex]);
+    // hreflang：en／zh-TW／x-default 三個 <link rel="alternate">，以 hreflang 屬性定位更新；noindex 頁面不給語言訊號
+    const existing = Array.from(document.querySelectorAll('link[rel="alternate"][hreflang]'));
+    if (noindex) {
+      existing.forEach((el) => el.remove());
+    } else {
+      const wanted = alternates(SEO_SITE_URL, path);
+      existing.filter((el) => !wanted.some((w) => w.hreflang === el.getAttribute('hreflang'))).forEach((el) => el.remove());
+      for (const { hreflang, href } of wanted) {
+        let el = document.querySelector(`link[rel="alternate"][hreflang="${hreflang}"]`) as HTMLLinkElement | null;
+        if (!el) {
+          el = document.createElement('link');
+          el.setAttribute('rel', 'alternate');
+          el.setAttribute('hreflang', hreflang);
+          document.head.appendChild(el);
+        }
+        el.setAttribute('href', href);
+      }
+    }
+
+  }, [title, description, image, url, path, type, ogLocale, noindex]);
 
   // JSON-LD 直接 render 進 tree（而非 effect 寫 document.head）：
   // SSG 預渲染（entry-server.tsx）在 Node 不執行 effect，寫進 tree 才會出現在靜態 HTML；
