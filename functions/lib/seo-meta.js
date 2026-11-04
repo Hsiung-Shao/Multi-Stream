@@ -136,8 +136,8 @@ export const ROUTE_META = {
     },
     '/instructions/schedule': {
         type: 'article',
-        'zh-TW': { title: '開台週表使用指南：直播狀態、資料來源與限制 - MultiStream Hub', description: '台灣 VTuber 開台週表怎麼用：一鍵多開的實際流程、卡片狀態與 YouTube／Twitch 合併規則、資料多久更新一次，以及哪些直播不會出現。' },
-        en: { title: 'Stream Schedule Guide: Live Status, Data Sources and Limits - MultiStream Hub', description: 'How to use the Taiwanese VTuber stream schedule: open several streams in one click, read card statuses and YouTube/Twitch merging, see how often data updates, and learn which streams will not appear.' },
+        'zh-TW': { title: '開台週表使用指南：直播狀態、資料來源與限制 - MultiStream Hub', description: '實況主開台週表怎麼用：一鍵多開的實際流程、卡片狀態與 YouTube／Twitch 合併規則、資料多久更新一次，以及哪些直播不會出現。' },
+        en: { title: 'Stream Schedule Guide: Live Status, Data Sources and Limits - MultiStream Hub', description: 'How to use the streamer schedule: open several streams in one click, read card statuses and YouTube/Twitch merging, see how often data updates, and learn which streams will not appear.' },
     },
     '/instructions/watch-multiple-twitch-streams': {
         type: 'article',
@@ -162,8 +162,8 @@ export const ROUTE_META = {
         en: { title: 'Streamer Schedule: Who Is Live and Who Streams Next - MultiStream Hub', description: 'YouTube waiting rooms and live Twitch channels in one streamer schedule: see who is live now and the next 7 days, then watch several together in one click.' },
     },
     '/schedule/submit': {
-        'zh-TW': { title: '新增 VTuber 到開台週表 - MultiStream Hub', description: '推薦還沒在週表上的 VTuber：貼上 YouTube 頻道網址，自動帶入名稱與頭像，審核通過後加進台灣 VTuber 開台週表。' },
-        en: { title: 'Add a VTuber to the Stream Schedule - MultiStream Hub', description: 'Suggest a VTuber who is not on the schedule yet: paste a YouTube channel link, the name and avatar fill in automatically, and after review they join the Taiwanese VTuber stream schedule.' },
+        'zh-TW': { title: '新增 VTuber 到開台週表 - MultiStream Hub', description: '推薦還沒在週表上的 VTuber：貼上 YouTube 頻道網址，自動帶入名稱與頭像，審核通過後加進實況主開台週表。' },
+        en: { title: 'Add a VTuber to the Stream Schedule - MultiStream Hub', description: 'Suggest a VTuber who is not on the schedule yet: paste a YouTube channel link, the name and avatar fill in automatically, and after review they join the streamer schedule.' },
     },
     '/status': {
         'zh-TW': { title: '服務狀態與已知問題 - MultiStream Hub', description: 'MultiStream Hub、Twitch 與 YouTube 目前是否正常？查看即時服務狀態、站方正在處理的已知問題、公告與最近更新。' },

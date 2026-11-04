@@ -144,7 +144,7 @@ const tutorial = {
   'gettingStarted.stuck.s1': 'You pasted a link and nothing happened: for YouTube, paste the link of the stream itself (watch?v=, youtu.be or /live/VIDEO_ID), not the channel page. See “Supported link formats” in the Smart search guide.',
   'gettingStarted.stuck.s2': 'The picture is there but there is no sound: new streams start muted by default. Raise that stream’s volume in media controls on the dynamic island, or turn off “Mute new streams on open” in settings.',
   'gettingStarted.stuck.s3': 'Your streams vanished after a reload: the canvas is not saved permanently. Come back within 10 minutes and you will be asked whether to restore your last session; to keep channels for the long term, add them to your favorites or copy a share link.',
-  'gettingStarted.stuck.s4': 'You do not know who is live: open the Stream Schedule to see which Taiwanese VTubers are live now and who streams in the next 7 days, then tick a few to add them to the canvas in one go.',
+  'gettingStarted.stuck.s4': 'You do not know who is live: open the Stream Schedule to see which YouTube and Twitch streamers are live now and who streams in the next 7 days, then tick a few to add them to the canvas in one go.',
   'gettingStarted.stuck.s5': 'You are on a phone: the mobile version has no free-form canvas. Instead there are four tabs — Watch, Chat, Favorites and Settings — and streams are added the same way.',
 
   'hero.badge': 'v2.0 New Design',
@@ -360,9 +360,9 @@ const tutorial = {
   // ── Stream schedule guide (/instructions/schedule, 2026-10-02) ──
   // UI labels quoted below must match en/schedule.ts.
   'article.schedule.title': 'Stream Schedule Guide: See Who Is Live, Who Is Next, and Watch Them Together',
-  'article.schedule.excerpt': 'How to use the Taiwanese VTuber stream schedule, what each card means, where the data comes from and how often it updates, and which streams can be missing or late.',
+  'article.schedule.excerpt': 'How to use the streamer schedule, what each card means, where the data comes from and how often it updates, and which streams can be missing or late.',
   'guide.schedule.what': 'What the schedule answers',
-  'guide.schedule.what.p1': 'The stream schedule puts Taiwanese VTubers’ YouTube and Twitch streams on one page and answers three questions: who is live right now, who goes live in the next 7 days and at what time, and who just ended. When you spot someone you want to watch, click their card to open them on the MultiStream Hub canvas, or tick several and open them together. No account is needed — just open the Stream Schedule page.',
+  'guide.schedule.what.p1': 'The stream schedule puts streamers’ YouTube and Twitch streams on one page and answers three questions: who is live right now, who goes live in the next 7 days and at what time, and who just ended. When you spot someone you want to watch, click their card to open them on the MultiStream Hub canvas, or tick several and open them together. No account is needed — just open the Stream Schedule page.',
   'guide.schedule.what.p2': 'By default the schedule shows streamers from Taiwan only. Use the toolbar to switch to Hong Kong, Malaysia, Japan or Other, or pick All regions.',
   'guide.schedule.example': 'Worked example: catching a group collab on Friday night',
   'guide.schedule.example.p1': 'Say the group you follow has a collab tonight and every member streams on their own channel. Here is the whole flow from the schedule to a multi-stream canvas:',
