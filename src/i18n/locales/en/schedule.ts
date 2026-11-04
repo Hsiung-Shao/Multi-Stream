@@ -315,4 +315,13 @@ export default {
     'person.songs.playAll': 'Play all',
     'person.songs.showSongs': 'Show songs',
     'person.songs.fullList': 'Full song list',
+    'person.related.agency': 'More from {{name}}',
+    'person.related.neighbors': 'VTubers who often stream at the same time',
+    'person.breadcrumb.directory': 'VTuber directory',
+    'directory.title': 'Taiwanese VTuber Directory',
+    'directory.intro': 'Browse the VTubers on the stream schedule by agency and group; open a name for live times and recent streams. Only channels that streamed in the last three months are listed.',
+    'directory.independent': 'Independent',
+    'directory.count': '{{count}} VTubers',
+    'directory.loading': 'Loading the directory…',
+    'directory.error': 'Could not load the directory. Please try again later.',
 };

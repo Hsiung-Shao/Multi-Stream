@@ -11,6 +11,7 @@ import { ChevronRight, ChevronDown, RefreshCw, ArrowUpRight, MessageSquareWarnin
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
+import { RelatedLinks } from '../RelatedLinks';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { cn } from '../ui/utils';
@@ -581,6 +582,14 @@ export function StatusPage() {
                     <p>{t('status:about.body')}</p>
                     <p className="mt-2">{t('status:about.youtube')}</p>
                 </section>
+
+                <RelatedLinks
+                    links={[
+                        { to: 'schedule', label: tx('schedule:title') },
+                        { to: 'faq', label: tx('common:landing.footer.faq') },
+                        { to: 'support', label: tx('common:landing.footer.support') },
+                    ]}
+                />
             </main>
 
             <SiteFooter />

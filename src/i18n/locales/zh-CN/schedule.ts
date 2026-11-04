@@ -315,4 +315,13 @@ export default {
     'person.songs.playAll': '全部播放',
     'person.songs.showSongs': '查看歌曲',
     'person.songs.fullList': '完整歌单',
+    'person.related.agency': '{{name}} 的其他成员',
+    'person.related.neighbors': '同时段常开播的 VTuber',
+    'person.breadcrumb.directory': 'VTuber 名录',
+    'directory.title': '台湾 VTuber 名录',
+    'directory.intro': '按公司与团体浏览开播周表上的 VTuber，点名字查看开播时间与最近的直播记录。只列出最近三个月有开播的频道。',
+    'directory.independent': '个人势',
+    'directory.count': '{{count}} 位',
+    'directory.loading': '名录加载中…',
+    'directory.error': '名录加载失败，请稍后再试。',
 };

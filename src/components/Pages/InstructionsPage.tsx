@@ -14,6 +14,7 @@ import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { useUIStore } from '../../store/useUIStore';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
+import { RelatedLinks, type RelatedLink } from '../RelatedLinks';
 import { guidePage, guideSlugOf, isGuidePage, type GuideSlug } from '../../config/guides';
 import type { RoutePage } from '../../config/routes';
 import { StaticPageHeader } from '../StaticPageHeader';
@@ -204,10 +205,12 @@ function ListRow({ article, first }: { article: Article; first: boolean }) {
 // =============================================================================
 // 文章閱讀頁(目錄 scrollspy + 內容區塊 + 相關文章)
 // =============================================================================
-function BlogArticle({ article, allArticles, labels }: {
+function BlogArticle({ article, allArticles, labels, featureLinks }: {
     article: Article;
     allArticles: Article[];
     labels: { allArticles: string; toc: string; related: string; team: string; crumbHome: string; crumbHub: string };
+    /** 文章底部「相關頁面」：連到文章介紹的功能頁 */
+    featureLinks: RelatedLink[];
 }) {
     const [activeId, setActiveId] = useState<string | undefined>(article.sections[0]?.id);
 
@@ -300,8 +303,21 @@ function BlogArticle({ article, allArticles, labels }: {
                     </div>
                 </div>
             )}
+
+            <RelatedLinks links={featureLinks} className="mt-10" />
         </div>
     );
+}
+
+/** 文章介紹的功能頁：週表文章→週表＋名錄；分享文章→畫布；其餘→週表＋歌回（每篇補到 3 條） */
+function featureLinksFor(slug: GuideSlug, tx: TFn): RelatedLink[] {
+    const schedule: RelatedLink = { to: 'schedule', label: tx('schedule:title') };
+    const directory: RelatedLink = { to: 'vtubers', label: tx('schedule:directory.title') };
+    const songs: RelatedLink = { to: 'songs', label: tx('songs:title') };
+    const canvas: RelatedLink = { to: 'canvas', label: tx('navbar:canvas') };
+    if (slug === 'schedule') return [schedule, directory, songs];
+    if (slug === 'share') return [canvas, schedule, songs];
+    return [schedule, songs, directory];
 }
 
 // =============================================================================
@@ -1067,6 +1083,7 @@ export function InstructionsPage() {
                         crumbHome: 'MultiStream Hub',
                         crumbHub: tx('title'),
                     }}
+                    featureLinks={featureLinksFor(article.slug, tx)}
                 />
                 : <BlogList
                     articles={articles}

@@ -63,3 +63,24 @@ export async function restGet<T>(cfg: RestConfig, path: string, opts: RestOption
     if (!Array.isArray(data)) throw new SnapshotError('format', 'unexpected rest response');
     return data as T;
 }
+
+/** POST /rest/v1/rpc/<fn>（JSON body），回傳物件（RPC 回 json）；非 2xx 或不是物件丟 SnapshotError */
+export async function restRpc<T extends object>(cfg: RestConfig, fn: string, body: Record<string, unknown>, opts: RestOptions): Promise<T> {
+    const res = await fetchWithTimeout(
+        `${cfg.url}/rest/v1/rpc/${fn}`,
+        opts.timeoutMs ?? SNAPSHOT_TIMEOUT_MS,
+        opts.signal,
+        opts.fetchFn,
+        {
+            apikey: cfg.anonKey,
+            Authorization: `Bearer ${cfg.anonKey}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+        },
+        { method: 'POST', body: JSON.stringify(body) },
+    );
+    if (!res.ok) throw new SnapshotError('http', `rpc HTTP ${res.status}`);
+    const data: unknown = await res.json().catch(() => null);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new SnapshotError('format', 'unexpected rpc response');
+    return data as T;
+}

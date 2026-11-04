@@ -122,6 +122,11 @@ export function SchedulePage() {
                             {t('about.guide')}
                         </RouteLink>
                     </p>
+                    <p className="mt-2">
+                        <RouteLink to="vtubers" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+                            {t('directory.title')}
+                        </RouteLink>
+                    </p>
                 </section>
 
                 <SiteFooter analyticsCategory="SchedulePage" />

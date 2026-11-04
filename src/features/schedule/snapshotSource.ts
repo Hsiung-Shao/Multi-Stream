@@ -25,13 +25,14 @@ export class SnapshotError extends Error {
     }
 }
 
-export async function fetchWithTimeout(url: string, timeoutMs: number, signal?: AbortSignal, fetchFn: typeof fetch = fetch, headers?: Record<string, string>): Promise<Response> {
+/** init：POST 類請求（PostgREST rpc）才需要的 method／body；GET 不用帶 */
+export async function fetchWithTimeout(url: string, timeoutMs: number, signal?: AbortSignal, fetchFn: typeof fetch = fetch, headers?: Record<string, string>, init?: Pick<RequestInit, 'method' | 'body'>): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const onOuterAbort = () => controller.abort();
     signal?.addEventListener('abort', onOuterAbort);
     try {
-        return await fetchFn(url, { signal: controller.signal, headers });
+        return await fetchFn(url, { ...init, signal: controller.signal, headers });
     } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') {
             throw new SnapshotError(signal?.aborted ? 'network' : 'timeout', 'snapshot request aborted');

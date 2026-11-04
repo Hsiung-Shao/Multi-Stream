@@ -51,6 +51,8 @@ export default {
     'scheduleSubmit.description': 'Suggest a VTuber who is not on the schedule yet: paste a YouTube channel link, the name and avatar fill in automatically, and after review they join the Taiwanese VTuber stream schedule.',
     'status.title': 'Service Status and Known Issues - MultiStream Hub',
     'status.description': 'Is MultiStream Hub, Twitch or YouTube having problems? See live service status, known issues we are working on, announcements and recent updates.',
+    'vtubers.title': 'Taiwanese VTuber Directory: Browse the Stream Schedule by Agency - MultiStream Hub',
+    'vtubers.description': 'A directory of Taiwanese VTubers who streamed in the last three months, grouped by agency, group and independents; open a name for live times, the stream schedule and recent streams.',
     'songs.title': 'VTuber Karaoke Song Playlist - MultiStream Hub',
     'songs.description': 'Taiwanese VTuber karaoke streams split into individual songs: play them back to back, shuffle or repeat, build your own playlists and share them in one link.',
     'songsSubmit.title': 'Submit Karaoke Stream Timestamps - MultiStream Hub',

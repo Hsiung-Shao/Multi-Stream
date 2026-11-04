@@ -27,7 +27,8 @@ export type PrerenderLang = (typeof PRERENDER_LANGS)[number];
 /** 預渲染一律以站方預設主題烘（useUIStore 的 theme 初值）；main.tsx 的 hydrate 閘門會比對 */
 export const PRERENDER_THEME = 'dark' as const;
 
-const CSR_ONLY = new Set<string>([PAGE_PATHS.canvas, PAGE_PATHS.admin]);
+// /vtubers 的內文由 edge 注入（functions/lib/vtuber-directory.js），和個人頁同模式，不預渲染
+const CSR_ONLY = new Set<string>([PAGE_PATHS.canvas, PAGE_PATHS.admin, PAGE_PATHS.vtubers]);
 export const PRERENDER_ROUTES: readonly string[] = Object.values(PAGE_PATHS).filter((p) => !CSR_ONLY.has(p));
 
 /** 單一路由若 lazy chunk 永遠不 resolve，onAllReady 不會觸發；用逾時讓 build 明確失敗 */

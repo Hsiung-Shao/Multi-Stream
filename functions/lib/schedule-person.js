@@ -8,10 +8,12 @@ export const SCHEDULE_SLUG_RE = /^[a-z0-9][a-z0-9_-]{1,39}$/;
 const PERSON_PATH_RE = /^\/schedule\/([^/]+)$/;
 /** DB 查詢逾時：超過就當暫時錯誤回 SPA 殼，不讓 HTML 首位元組跟著卡住 */
 export const PERSON_QUERY_TIMEOUT_MS = 2000;
+/** 相關／名錄 RPC 的逾時：名錄一次拿 1600 多人、相關要掃 90 天場次，比單人查詢寬 */
+export const RPC_TIMEOUT_MS = 6000;
 /** 查詢結果（含查無此人）在 edge 快取的秒數：擋住重複請求與隨機 slug 掃描放大成 DB 負載 */
 export const PERSON_CACHE_TTL_S = 300;
-// v2：found 多了 youtube／twitch／streams（舊格式的快取不會被讀到，最多 300 秒後自然過期）
-const CACHE_ORIGIN = 'https://multistreaming.org/__edge-cache/schedule-person/v2/';
+// v3：found 多了 related（同團／同時段內鏈）；舊格式的快取不會被讀到，最多 300 秒後自然過期
+const CACHE_ORIGIN = 'https://multistreaming.org/__edge-cache/schedule-person/v3/';
 /** 與頁面一致的時間範圍（src/features/schedule/personSource.ts、filters.ts；migration refresh_schedule_indexable 也用同一組） */
 export const PERSON_RECENT_DAYS = 90;
 export const PERSON_UPCOMING_DAYS = 7;
@@ -143,6 +145,8 @@ export const SCHEDULE_PERSON_BODY = {
         timeTbd: '時間未定',
         tz: '時間為台北時間（UTC+8）',
         locale: 'zh-TW',
+        related: { agency: '{{name}} 的其他成員', neighbors: '同時段常開台的 VTuber' },
+        directory: 'VTuber 名錄',
     },
     en: {
         schedule: 'Stream Schedule',
@@ -155,8 +159,39 @@ export const SCHEDULE_PERSON_BODY = {
         timeTbd: 'Time TBD',
         tz: 'Times are in Taipei time (UTC+8)',
         locale: 'en-US',
+        related: { agency: 'More from {{name}}', neighbors: 'VTubers who often stream at the same time' },
+        directory: 'VTuber directory',
     },
 };
+
+/** 與 supabase-server.js 的 rpc 同介面，但用 anon key（相關／名錄 RPC 已 grant 給 anon；edge 不需要 service_role） */
+export async function anonRpc(env, fn, args = {}) {
+    if (!env || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) return { ok: false, data: null };
+    try {
+        const res = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+            method: 'POST',
+            headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(args),
+            signal: AbortSignal.timeout(RPC_TIMEOUT_MS),
+        });
+        if (!res.ok) return { ok: false, data: null };
+        return { ok: true, data: await res.json() };
+    } catch {
+        return { ok: false, data: null };
+    }
+}
+
+const isPersonRef = (p) => p && typeof p === 'object' && typeof p.slug === 'string' && SCHEDULE_SLUG_RE.test(p.slug) && typeof p.name === 'string';
+
+/** 把 schedule_person_related 的回傳整理成內文要的形狀；不是物件或兩個清單都空就回 null（整段不輸出） */
+export function personRelatedFromRpc(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+    const siblings = Array.isArray(data.siblings) ? data.siblings.filter(isPersonRef).map((p) => ({ slug: p.slug, name: String(p.name).slice(0, 120), img_url: typeof p.img_url === 'string' ? p.img_url : null, group: typeof p.group === 'string' ? p.group : null })) : [];
+    const neighbors = Array.isArray(data.neighbors) ? data.neighbors.filter(isPersonRef).map((p) => ({ slug: p.slug, name: String(p.name).slice(0, 120), img_url: typeof p.img_url === 'string' ? p.img_url : null, last_live_at: typeof p.last_live_at === 'string' ? p.last_live_at : null })) : [];
+    const agency = data.agency && typeof data.agency === 'object' && typeof data.agency.name === 'string' ? { name: data.agency.name.slice(0, 120) } : null;
+    if (!siblings.length && !neighbors.length) return null;
+    return { agency, siblings, neighbors };
+}
 
 const fillVars = (tpl, vars) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (k in vars ? String(vars[k]) : ''));
 
@@ -220,8 +255,8 @@ export function renderPersonBodyHtml(lang, person, slug) {
     const t = SCHEDULE_PERSON_BODY[lang] ?? SCHEDULE_PERSON_BODY.en;
     const name = escapeHtml(person.name);
     const parts = [
-        // 麵包屑連結留在同一語言版（/zh-TW/...），爬蟲在中文頁的內鏈才不會跳回英文版
-        `<nav aria-label="breadcrumb" class="text-sm text-muted-foreground"><a href="${withLang(lang, '/')}">MultiStream Hub</a> › <a href="${withLang(lang, '/schedule')}">${escapeHtml(t.schedule)}</a> › <a href="${withLang(lang, `/schedule/${escapeHtml(slug)}`)}" aria-current="page">${name}</a></nav>`,
+        // 麵包屑連結留在同一語言版（/zh-TW/...），爬蟲在中文頁的內鏈才不會跳回英文版；名錄是個人頁之間的樞紐
+        `<nav aria-label="breadcrumb" class="text-sm text-muted-foreground"><a href="${withLang(lang, '/')}">MultiStream Hub</a> › <a href="${withLang(lang, '/schedule')}">${escapeHtml(t.schedule)}</a> › <a href="${withLang(lang, '/vtubers')}">${escapeHtml(t.directory)}</a> › <a href="${withLang(lang, `/schedule/${escapeHtml(slug)}`)}" aria-current="page">${name}</a></nav>`,
         `<h1 class="mt-4 text-3xl font-bold">${name}</h1>`,
     ];
     const s = person.streams;
@@ -231,6 +266,18 @@ export function renderPersonBodyHtml(lang, person, slug) {
         parts.push(streamSection(t.upcoming, s.upcoming.map((x) => streamItem(lang, x))));
         parts.push(streamSection(t.recent, s.recent.map((x) => streamItem(lang, x))));
         if (s.live.length || s.upcoming.length || s.recent.length) parts.push(`<p><small>${escapeHtml(t.tz)}</small></p>`);
+    }
+    // 內鏈區塊：同公司／同團、同時段常開台（資料來自 schedule_person_related；沒有就整段不出）
+    const r = person.related;
+    if (r) {
+        const personItem = (p, extra) => `<li><a href="${withLang(lang, `/schedule/${escapeHtml(p.slug)}`)}">${escapeHtml(p.name)}</a>${extra ? ` <small class="text-muted-foreground">${escapeHtml(extra)}</small>` : ''}</li>`;
+        if (r.siblings.length) {
+            const heading = fillVars(t.related.agency, { name: r.agency?.name ?? '' }).trim();
+            parts.push(`<section class="mt-8"><h2 class="text-lg font-semibold">${escapeHtml(heading)}</h2><ul class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">${r.siblings.map((p) => personItem(p, p.group)).join('')}</ul></section>`);
+        }
+        if (r.neighbors.length) {
+            parts.push(`<section class="mt-8"><h2 class="text-lg font-semibold">${escapeHtml(t.related.neighbors)}</h2><ul class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">${r.neighbors.map((p) => personItem(p, null)).join('')}</ul></section>`);
+        }
     }
     const links = [];
     if (person.youtube) links.push(`<a href="https://www.youtube.com/channel/${escapeHtml(person.youtube)}" rel="noopener" target="_blank">${escapeHtml(t.youtube)}</a>`);
@@ -248,7 +295,7 @@ export function renderPersonBodyHtml(lang, person, slug) {
  *   - { kind: 'error' }：查詢失敗或逾時 → 呼叫端照常回 SPA 殼（不能因暫時性錯誤回 404 或 noindex）
  * found／notfound 會放進 edge 快取（cache 為 caches.default；測試或沒有 Cache API 時傳 null）。
  */
-export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, cache = globalThis.caches?.default ?? null) {
+export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, cache = globalThis.caches?.default ?? null, relatedFn = anonRpc) {
     const m = PERSON_PATH_RE.exec(rawPath);
     if (!m) return { kind: 'none' };
     let slug;
@@ -285,7 +332,13 @@ export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, 
             twitch: typeof row.twitch_channel_id === 'string' && TWITCH_LOGIN_RE.test(row.twitch_channel_id) ? row.twitch_channel_id.toLowerCase() : null,
             // 內文是給搜尋引擎的：noindex 頁不放場次
             streams: indexable ? personStreamsFromRow(row, now) : null,
+            related: null,
         };
+        // 內鏈區塊（同團／同時段）：第二支 subrequest，只給可索引頁；失敗就不出這段，不影響本頁狀態
+        if (indexable) {
+            const rel = await relatedFn(env, 'schedule_person_related', { p_slug: slug });
+            result.related = rel && rel.ok ? personRelatedFromRpc(rel.data) : null;
+        }
     }
     if (cache) {
         // 可索引卻沒拿到場次（嵌入資料異常）時短暫快取，別讓暫時的薄內容掛滿 5 分鐘

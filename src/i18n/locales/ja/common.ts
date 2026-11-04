@@ -404,6 +404,7 @@ const common = {
   'media.stream_fallback_name': '配信 #{{id}}',
   'chat.not_configured': 'このウィンドウにはチャットが設定されていません',
   'common.got_it': 'わかりました',
+  'related.title': '関連ページ',
 };
 
 export default common;

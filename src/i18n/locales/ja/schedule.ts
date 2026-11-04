@@ -315,4 +315,13 @@ export default {
     'person.songs.playAll': 'すべて再生',
     'person.songs.showSongs': '曲を表示',
     'person.songs.fullList': '全曲リスト',
+    'person.related.agency': '{{name}} のほかのメンバー',
+    'person.related.neighbors': '同じ時間帯によく配信する VTuber',
+    'person.breadcrumb.directory': 'VTuber 名鑑',
+    'directory.title': '台湾 VTuber 名鑑',
+    'directory.intro': '配信スケジュールに載っている VTuber を事務所・グループ別に一覧できます。名前を開くと配信時間と最近の配信履歴を確認できます。直近 3 か月に配信したチャンネルのみ掲載しています。',
+    'directory.independent': '個人勢',
+    'directory.count': '{{count}} 人',
+    'directory.loading': '名鑑を読み込み中…',
+    'directory.error': '名鑑を読み込めませんでした。しばらくしてからもう一度お試しください。',
 };

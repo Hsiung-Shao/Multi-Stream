@@ -11,6 +11,10 @@ import { ROUTE_META, NOT_FOUND_META, OG_LOCALE, ROBOTS_INDEX, ROBOTS_NOINDEX, WE
 import { HTML_SECURITY_HEADERS } from './lib/security-headers.js';
 import { resolveSchedulePerson, schedulePersonMeta, renderPersonBodyHtml } from './lib/schedule-person.js';
 import { DEFAULT_LANG, splitLangPath, withLang, alternates } from './lib/locale.js';
+import { resolveDirectory, renderDirectoryBodyHtml } from './lib/vtuber-directory.js';
+
+/** 名錄頁：在 ROUTE_META 白名單裡（200、一般 meta），內文由 edge 注入（不預渲染；src/entry-server.tsx CSR_ONLY） */
+const DIRECTORY_ROUTE = '/vtubers';
 
 const ORIGIN = 'https://multistreaming.org';
 
@@ -177,6 +181,18 @@ export async function onRequest(context) {
             .on('meta[property="og:image:height"]', drop)
             .on('meta[property="og:image:alt"]', setContent(meta.title))
             .on('meta[name="twitter:image:alt"]', setContent(meta.title));
+    }
+    if (rawPath === DIRECTORY_ROUTE) {
+        // 名錄頁：和個人頁同模式（空殼＋edge 內文）；RPC 失敗就只回空殼，仍是 200 可索引（暫時性錯誤不毀收錄）
+        const dir = await resolveDirectory(env);
+        if (dir.ok) {
+            const bodyHtml = renderDirectoryBodyHtml(lang, dir.data);
+            rewriter.on('div#root', {
+                element(el) {
+                    el.setInnerContent(bodyHtml, { html: true });
+                },
+            });
+        }
     }
     if (person.kind === 'found') {
         // 個人頁 shell 是空的 index.html：把這一頁獨有的內文（名字、場次摘要、場次清單、頻道連結）放進 #root，

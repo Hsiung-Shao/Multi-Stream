@@ -404,6 +404,7 @@ const common = {
   'media.stream_fallback_name': '스트림 #{{id}}',
   'chat.not_configured': '이 창에는 채팅이 설정되어 있지 않습니다',
   'common.got_it': '확인',
+  'related.title': '관련 페이지',
 };
 
 export default common;

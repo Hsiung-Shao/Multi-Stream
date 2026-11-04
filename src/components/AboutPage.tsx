@@ -19,6 +19,7 @@ import { useUIStore } from '../store/useUIStore';
 import { StaticPageHeader } from './StaticPageHeader';
 import { RouteLink } from './Navigation/RouteLink';
 import { SiteFooter } from './SiteFooter';
+import { RelatedLinks } from './RelatedLinks';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 import { GITHUB_REPO_URL, DISCORD_URL, COFFEE_URL, PATREON_URL, X_URL } from '../config/links';
 
@@ -417,6 +418,15 @@ export function AboutPage() {
             </div>
           </div>
         </section>
+
+        <RelatedLinks
+          links={[
+            { to: 'instructions', label: tx('common:landing.footer.tutorial') },
+            { to: 'schedule', label: tx('schedule:title') },
+            { to: 'songs', label: tx('songs:title') },
+            { to: 'creator', label: tx('about:creator.pageTitle') },
+          ]}
+        />
 
         {/* ---------- Footer ---------- */}
         <SiteFooter analyticsCategory="AboutPage" />

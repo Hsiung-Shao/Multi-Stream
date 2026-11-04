@@ -20,15 +20,19 @@ const rootDir = resolve(__dirname, '../..');
 const h1Of = (html: string) => (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? '').replace(/<[^>]+>/g, '').trim();
 
 describe('entry-server：路由清單', () => {
-    it('= PAGE_PATHS 減去 /canvas 與 /admin（含全部教學文章）', () => {
-        const expected = Object.values(PAGE_PATHS).filter((p) => p !== '/canvas' && p !== '/admin').sort();
+    it('= PAGE_PATHS 減去 /canvas、/admin 與 /vtubers（含全部教學文章）', () => {
+        // /vtubers 名錄頁資料量大、由 edge 即時注入內文，不預渲染（CSR_ONLY）
+        expect(PAGE_PATHS.vtubers).toBe('/vtubers');
+        const expected = Object.values(PAGE_PATHS).filter((p) => p !== '/canvas' && p !== '/admin' && p !== '/vtubers').sort();
         expect([...PRERENDER_ROUTES].sort()).toEqual(expected);
+        expect(PRERENDER_ROUTES).not.toContain('/vtubers');
         for (const s of GUIDE_SLUGS) expect(PRERENDER_ROUTES).toContain(guidePath(s));
         expect(PRERENDER_LANGS).toEqual(['zh-TW', 'en']);
         expect(PRERENDER_THEME).toBe('dark');
     });
 
-    it('/canvas、/admin、未知路徑一律拒絕', async () => {
+    it('/canvas、/admin、/vtubers、未知路徑一律拒絕', async () => {
+        await expect(render('/vtubers', 'en')).rejects.toThrow();
         await expect(render('/canvas', 'en')).rejects.toThrow();
         await expect(render('/admin', 'en')).rejects.toThrow();
         await expect(render('/nope', 'en')).rejects.toThrow();

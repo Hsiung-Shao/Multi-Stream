@@ -6,7 +6,7 @@
 
 import { SCHEDULE_SLUG_RE } from '../../config/schedulePerson';
 import { SnapshotError } from './snapshotSource';
-import { isCollabActive, resetRestConfigCache, resolveRestConfig, restGet, taipeiDate, type RestConfig, type RestOptions } from './restClient';
+import { isCollabActive, resetRestConfigCache, resolveRestConfig, restGet, restRpc, taipeiDate, type RestConfig, type RestOptions } from './restClient';
 import type { ScheduleAlso, ScheduleChannel, ScheduleStream } from './types';
 import { isPastScheduled } from './filters';
 
@@ -26,6 +26,13 @@ export interface PersonProfile {
     instagram?: string;
 }
 
+/** 個人頁的內部連結（schedule_person_related RPC）：同公司／同團的其他成員、同時段常開台的 VTuber */
+export interface PersonRelated {
+    agency: { name: string } | null;
+    siblings: Array<{ slug: string; name: string; img_url: string | null; group: string }>;
+    neighbors: Array<{ slug: string; name: string; img_url: string | null; last_live_at: string | null }>;
+}
+
 export interface SchedulePerson {
     id: string;
     channel: ScheduleChannel;
@@ -35,6 +42,8 @@ export interface SchedulePerson {
     live: ScheduleStream[];
     upcoming: ScheduleStream[];
     recent: ScheduleStream[];
+    /** 相關推薦；RPC 還沒上線或查詢失敗為 null（不渲染那兩個區塊） */
+    related?: PersonRelated | null;
 }
 
 export interface PersonFetchOptions extends RestOptions {
@@ -158,6 +167,20 @@ async function fetchCollabAgencies(cfg: RestConfig, vtuberId: string, today: str
     return [...new Set(names.filter((n): n is string => !!n))].sort();
 }
 
+/** 相關推薦是附屬資訊：查詢失敗（RPC 還沒上線、逾時、5xx）或格式不對回 null，不讓個人頁整頁出錯 */
+async function fetchRelated(cfg: RestConfig, slug: string, opts: PersonFetchOptions): Promise<PersonRelated | null> {
+    let data: Partial<PersonRelated>;
+    try {
+        data = await restRpc<Partial<PersonRelated>>(cfg, 'schedule_person_related', { p_slug: slug }, opts);
+    } catch (e) {
+        if (opts.signal?.aborted) throw e;
+        return null;
+    }
+    if (!Array.isArray(data.siblings) || !Array.isArray(data.neighbors)) return null;
+    const agency = data.agency && typeof data.agency.name === 'string' ? { name: data.agency.name } : null;
+    return { agency, siblings: data.siblings, neighbors: data.neighbors };
+}
+
 /** 依 slug 查個人週表；slug 不合規則或查無此人回 null（頁面顯示 404） */
 export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): Promise<SchedulePerson | null> {
     if (!SCHEDULE_SLUG_RE.test(slug)) return null;
@@ -192,10 +215,11 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     // 拆成兩支查詢：合在一起用 scheduled_start 排序＋limit 時，Twitch 直播（scheduled_start 為 null）
     // 與最新的紀錄會最先被截掉。兩支並行，合併邏輯需要看到所有列才能把次要場次掛到主場次。
     const base = `streams?select=${STREAM_COLS}&vtuber_id=eq.${v.id}&is_schedule_frame=eq.false`;
-    const [active, ended, collabs] = await Promise.all([
+    const [active, ended, collabs, related] = await Promise.all([
         restGet<PersonStreamRow[]>(cfg, `${base}&status=in.(scheduled,live)&order=scheduled_start.asc.nullsfirst&limit=${ACTIVE_LIMIT}`, opts),
         restGet<PersonStreamRow[]>(cfg, `${base}&status=eq.ended&actual_end=gte.${since}&order=actual_end.desc&limit=${RECENT_LIMIT}`, opts),
         fetchCollabAgencies(cfg, v.id, taipeiDate(now), opts),
+        fetchRelated(cfg, v.slug, opts),
     ]);
     const rows = [...active, ...ended];
 
@@ -215,5 +239,5 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     if (v.facebook_url) profile.facebook = v.facebook_url;
     if (v.instagram_url) profile.instagram = v.instagram_url;
 
-    return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...splitPersonStreams(v.id, rows, now) };
+    return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...splitPersonStreams(v.id, rows, now), related };
 }

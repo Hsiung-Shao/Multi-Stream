@@ -54,4 +54,6 @@ export default {
     'songs.description': '把台湾 VTuber 歌回拆成一首一首的歌：连续播放、随机与循环、建立自己的歌单，再用一条链接分享给朋友。',
     'songsSubmit.title': '投稿歌回时间轴 - MultiStream Hub',
     'songsSubmit.description': '把 VTuber 歌回的歌曲时间轴投稿到歌回播放列表：贴上视频网址与留言里的时间轴，自动拆成一首一首，提交后立即更新，马上就能连续播放。',
+    'vtubers.title': '台湾 VTuber 名录：按公司与个人势浏览开播周表 - MultiStream Hub',
+    'vtubers.description': '台湾 VTuber 名录：按公司、团体与个人势列出最近三个月有开播的 VTuber，点名字查看开播时间、直播周表与最近的直播记录。',
 };

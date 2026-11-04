@@ -8,6 +8,7 @@ import { Scale, ExternalLink, ArrowRight, ChevronRight, Check, Minus } from 'luc
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
+import { RelatedLinks } from '../RelatedLinks';
 import { BlurOrb } from '../ui/ds-primitives';
 import { Button } from '../ui/button';
 import { logEvent } from '../../utils/analytics';
@@ -198,6 +199,15 @@ export function ComparisonPage() {
                 </section>
 
                 <p className="cmp-disclaimer">{tx('compare:disclaimer')}</p>
+
+                <RelatedLinks
+                    links={[
+                        { to: guidePage('quick-start'), label: tx('tutorial:article.quickStart.title') },
+                        { to: guidePage('watch-multiple-twitch-streams'), label: tx('tutorial:twitchGuide.title') },
+                        { to: guidePage('canvas'), label: tx('tutorial:features.canvas.title') },
+                        { to: 'faq', label: tx('common:landing.footer.faq') },
+                    ]}
+                />
 
                 <SiteFooter analyticsCategory="ComparisonPage" />
             </main>

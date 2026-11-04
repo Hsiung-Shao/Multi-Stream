@@ -315,4 +315,13 @@ export default {
     'person.songs.playAll': '全部播放',
     'person.songs.showSongs': '查看歌曲',
     'person.songs.fullList': '完整歌單',
+    'person.related.agency': '{{name}} 的其他成員',
+    'person.related.neighbors': '同時段常開台的 VTuber',
+    'person.breadcrumb.directory': 'VTuber 名錄',
+    'directory.title': '台灣 VTuber 名錄',
+    'directory.intro': '依公司與團體瀏覽開台週表上的 VTuber，點名字看開台時間與最近的直播紀錄。只列最近三個月有開台的頻道。',
+    'directory.independent': '個人勢',
+    'directory.count': '{{count}} 位',
+    'directory.loading': '載入名錄中…',
+    'directory.error': '名錄載入失敗，請稍後再試。',
 };

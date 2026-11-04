@@ -402,6 +402,7 @@ const common = {
   'media.stream_fallback_name': 'Stream #{{id}}',
   'chat.not_configured': 'No chat for this window',
   'common.got_it': 'Got it',
+  'related.title': 'Related pages',
 };
 
 export default common;

@@ -53,6 +53,7 @@ const SchedulePage = lazyWithPreload(() => import('./components/Pages/SchedulePa
 const SchedulePersonPage = lazyWithPreload(() => import('./components/Pages/SchedulePersonPage').then(module => ({ 'default': module.SchedulePersonPage })));
 const ScheduleSubmitPage = lazyWithPreload(() => import('./components/Pages/ScheduleSubmitPage').then(module => ({ 'default': module.ScheduleSubmitPage })));
 const StatusPage = lazyWithPreload(() => import('./components/Pages/StatusPage').then(module => ({ 'default': module.StatusPage })));
+const VtuberDirectoryPage = lazyWithPreload(() => import('./components/Pages/VtuberDirectoryPage'));
 const SongsPage = lazyWithPreload(() => import('./components/Pages/SongsPage').then(module => ({ 'default': module.SongsPage })));
 const SongsSubmitPage = lazyWithPreload(() => import('./components/Pages/SongsSubmitPage').then(module => ({ 'default': module.SongsSubmitPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
@@ -74,6 +75,7 @@ const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> =
   schedule: SchedulePage,
   scheduleSubmit: ScheduleSubmitPage,
   status: StatusPage,
+  vtubers: VtuberDirectoryPage,
   songs: SongsPage,
   songsSubmit: SongsSubmitPage,
   canvas: CanvasPage,
@@ -385,6 +387,24 @@ export default function App() {
             />
             <ChunkSuspense chunk={SchedulePage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
               <SchedulePage />
+            </ChunkSuspense>
+          </>
+        );
+      case 'vtubers':
+        // 名錄頁：edge 先把名單內文放進殼（functions/lib/vtuber-directory.js），React 掛載後用同一支 RPC 重畫
+        return (
+          <>
+            <SEO
+              title={tx('seo:vtubers.title')}
+              description={tx('seo:vtubers.description')}
+              path={PAGE_PATHS.vtubers}
+              jsonLd={graph(
+                webPage({ type: 'CollectionPage', path: PAGE_PATHS.vtubers, name: tx('schedule:directory.title'), description: tx('seo:vtubers.description'), inLanguage }),
+                breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: tx('schedule:title'), path: PAGE_PATHS.schedule }, { name: tx('schedule:directory.title'), path: PAGE_PATHS.vtubers }]),
+              )}
+            />
+            <ChunkSuspense chunk={VtuberDirectoryPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <VtuberDirectoryPage />
             </ChunkSuspense>
           </>
         );

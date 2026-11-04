@@ -54,4 +54,6 @@ export default {
     'songs.description': '台湾 VTuber の歌枠を 1 曲ずつに分けて連続再生。シャッフルやリピート、自分だけのプレイリスト作成、リンクひとつで共有もできます。',
     'songsSubmit.title': '歌枠タイムスタンプを投稿 - MultiStream Hub',
     'songsSubmit.description': 'VTuber 歌枠の曲タイムスタンプを歌枠プレイリストに投稿できます。動画リンクとコメントのタイムスタンプを貼ると自動で曲ごとに分かれ、投稿するとすぐに反映され、連続再生できます。',
+    'vtubers.title': '台湾 VTuber 名鑑：事務所・個人勢別に配信スケジュールを探す - MultiStream Hub',
+    'vtubers.description': '直近 3 か月に配信した台湾 VTuber を事務所・グループ・個人勢別に掲載した名鑑。名前を開くと配信時間、配信スケジュール、最近の配信履歴を確認できます。',
 };

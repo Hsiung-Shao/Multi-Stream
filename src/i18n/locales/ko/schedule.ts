@@ -315,4 +315,13 @@ export default {
     'person.songs.playAll': '전체 재생',
     'person.songs.showSongs': '곡 보기',
     'person.songs.fullList': '전체 곡 목록',
+    'person.related.agency': '{{name}}의 다른 멤버',
+    'person.related.neighbors': '같은 시간대에 자주 방송하는 VTuber',
+    'person.breadcrumb.directory': 'VTuber 명부',
+    'directory.title': '대만 VTuber 명부',
+    'directory.intro': '방송 스케줄에 있는 VTuber를 소속사와 그룹별로 살펴보세요. 이름을 누르면 방송 시간과 최근 방송 기록을 볼 수 있습니다. 최근 3개월 안에 방송한 채널만 표시합니다.',
+    'directory.independent': '개인세',
+    'directory.count': '{{count}}명',
+    'directory.loading': '명부를 불러오는 중…',
+    'directory.error': '명부를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
 };

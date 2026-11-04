@@ -80,7 +80,8 @@ describe('resolveSchedulePerson', () => {
 
     it('查到 → found（只收 https 頭像）；查無 → notfound', async () => {
         const found = ok([{ name: '台一', img_url: 'https://yt3.ggpht.com/a=s88-c', schedule_indexable: false, youtube_channel_id: 'UCabcdefghijklmnopqrstuv', twitch_channel_id: 'TaiOne' }]);
-        expect(await resolveSchedulePerson(env, '/schedule/taione', found)).toEqual({ kind: 'found', name: '台一', image: 'https://yt3.ggpht.com/a=s400-c', indexable: false, youtube: 'UCabcdefghijklmnopqrstuv', twitch: 'taione', streams: null });
+        // 不可索引：不查相關 RPC，related 為 null
+        expect(await resolveSchedulePerson(env, '/schedule/taione', found)).toEqual({ kind: 'found', name: '台一', image: 'https://yt3.ggpht.com/a=s400-c', indexable: false, youtube: 'UCabcdefghijklmnopqrstuv', twitch: 'taione', streams: null, related: null });
         expect(found.mock.calls[0][1]).toMatch(/^vtubers\?select=name,img_url,schedule_indexable,youtube_channel_id,twitch_channel_id,active:streams\(.*&slug=eq\.taione&limit=1&/);
         // 一支查詢拿齊；不可索引的頁不放場次
         expect(found).toHaveBeenCalledTimes(1);

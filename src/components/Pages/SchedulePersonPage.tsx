@@ -20,11 +20,11 @@ import { useWatchOnCanvas } from '../../features/schedule/useWatchOnCanvas';
 import { useFavoriteChannel } from '../../features/schedule/useFavoriteChannel';
 import { DayTimeline } from '../../features/schedule/DayTimeline';
 import { SelectionBar } from '../../features/schedule/SelectionBar';
-import type { SchedulePerson } from '../../features/schedule/personSource';
+import type { PersonRelated, SchedulePerson } from '../../features/schedule/personSource';
 import { streamKey } from '../../features/schedule/types';
 import { isPastScheduled } from '../../features/schedule/filters';
 import { largerAvatar } from '../../features/schedule/streamLinks';
-import { schedulePersonPath } from '../../config/schedulePerson';
+import { schedulePersonPage, schedulePersonPath } from '../../config/schedulePerson';
 import { PAGE_PATHS } from '../../config/routes';
 import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { breadcrumb, graph, webPage } from '../../seo/jsonld';
@@ -154,6 +154,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
                 breadcrumb([
                     { name: 'MultiStream Hub', path: '/' },
                     { name: t('title'), path: PAGE_PATHS.schedule },
+                    { name: t('person.breadcrumb.directory'), path: PAGE_PATHS.vtubers },
                     { name, path },
                 ]),
             )}
@@ -313,6 +314,55 @@ function PersonSongs({ videos, vtuberId }: { videos: SongVideo[]; vtuberId: stri
     );
 }
 
+/** 相關推薦裡的一個人：頭像小圖＋名字（同公司區塊在名字後加小字團名） */
+function RelatedPersonLink({ slug, name, imgUrl, sub }: { slug: string; name: string; imgUrl: string | null; sub?: string }) {
+    return (
+        <li>
+            <RouteLink
+                to={schedulePersonPage(slug)}
+                className="flex min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                {imgUrl ? (
+                    <img src={imgUrl} alt="" loading="lazy" referrerPolicy="no-referrer" width={32} height={32} className="size-8 shrink-0 rounded-full bg-muted object-cover" />
+                ) : (
+                    <span className="block size-8 shrink-0 rounded-full bg-muted" aria-hidden="true" />
+                )}
+                <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground">{name}</span>
+                    {sub && <span className="block truncate text-xs text-muted-foreground">{sub}</span>}
+                </span>
+            </RouteLink>
+        </li>
+    );
+}
+
+/** 同公司／同團、同時段常開台兩個區塊；related 為空、或某一組沒有人時不渲染該區塊 */
+function PersonRelatedSections({ related }: { related: PersonRelated | null | undefined }) {
+    const { t } = useTranslation('schedule');
+    if (!related) return null;
+    const gridCls = 'grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3';
+    return (
+        <>
+            {related.siblings.length > 0 && (
+                <section aria-labelledby="person-related-agency">
+                    <SectionTitle id="person-related-agency">{t('person.related.agency', { name: related.agency?.name ?? '' })}</SectionTitle>
+                    <ul className={gridCls}>
+                        {related.siblings.map((p) => <RelatedPersonLink key={p.slug} slug={p.slug} name={p.name} imgUrl={p.img_url} sub={p.group} />)}
+                    </ul>
+                </section>
+            )}
+            {related.neighbors.length > 0 && (
+                <section aria-labelledby="person-related-neighbors">
+                    <SectionTitle id="person-related-neighbors">{t('person.related.neighbors')}</SectionTitle>
+                    <ul className={gridCls}>
+                        {related.neighbors.map((p) => <RelatedPersonLink key={p.slug} slug={p.slug} name={p.name} imgUrl={p.img_url} />)}
+                    </ul>
+                </section>
+            )}
+        </>
+    );
+}
+
 function PersonBody({ person }: { person: SchedulePerson }) {
     const { t } = useTranslation('schedule');
     const [now, setNow] = useState(() => Date.now());
@@ -363,7 +413,10 @@ function PersonBody({ person }: { person: SchedulePerson }) {
             />
 
             {nothing ? (
-                <p className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">{t('person.inactive')}</p>
+                <div className="space-y-12">
+                    <p className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">{t('person.inactive')}</p>
+                    <PersonRelatedSections related={person.related} />
+                </div>
             ) : (
                 <div className="space-y-12">
                     {person.live.length > 0 && (
@@ -441,6 +494,8 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                         )}
                     </section>
 
+                    <PersonRelatedSections related={person.related} />
+
                     <PersonSongs videos={songVideos} vtuberId={person.id} />
                 </div>
             )}
@@ -483,6 +538,8 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                         <li><RouteLink to="home" className="hover:text-foreground">MultiStream Hub</RouteLink></li>
                         <li aria-hidden="true" className="inline-flex opacity-50"><ChevronRight size={13} /></li>
                         <li><RouteLink to="schedule" className="hover:text-foreground">{t('title')}</RouteLink></li>
+                        <li aria-hidden="true" className="inline-flex opacity-50"><ChevronRight size={13} /></li>
+                        <li><RouteLink to="vtubers" className="hover:text-foreground">{t('person.breadcrumb.directory')}</RouteLink></li>
                         {person && (
                             <>
                                 <li aria-hidden="true" className="inline-flex opacity-50"><ChevronRight size={13} /></li>

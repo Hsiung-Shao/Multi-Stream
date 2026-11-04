@@ -54,4 +54,6 @@ export default {
     'songs.description': '대만 VTuber 노래 방송을 한 곡씩 나눠 연속 재생하세요. 셔플과 반복, 나만의 플레이리스트 만들기, 링크 하나로 공유까지 할 수 있습니다.',
     'songsSubmit.title': '노래 방송 타임스탬프 제보 - MultiStream Hub',
     'songsSubmit.description': 'VTuber 노래 방송의 곡 타임스탬프를 노래 방송 플레이리스트에 제보하세요. 영상 링크와 댓글 타임스탬프를 붙여 넣으면 곡별로 자동으로 나뉘고, 제보하면 바로 반영되어 연속 재생할 수 있습니다.',
+    'vtubers.title': '대만 VTuber 명부: 소속사·개인세별 방송 스케줄 - MultiStream Hub',
+    'vtubers.description': '최근 3개월 안에 방송한 대만 VTuber를 소속사, 그룹, 개인세별로 정리한 명부입니다. 이름을 누르면 방송 시간, 방송 스케줄, 최근 방송 기록을 볼 수 있습니다.',
 };

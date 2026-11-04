@@ -164,6 +164,10 @@ export const ROUTE_META = {
         'zh-TW': { title: '服務狀態與已知問題 - MultiStream Hub', description: 'MultiStream Hub、Twitch 與 YouTube 目前是否正常？查看即時服務狀態、站方正在處理的已知問題、公告與最近更新。' },
         en: { title: 'Service Status and Known Issues - MultiStream Hub', description: 'Is MultiStream Hub, Twitch or YouTube having problems? See live service status, known issues we are working on, announcements and recent updates.' },
     },
+    '/vtubers': {
+        'zh-TW': { title: '台灣 VTuber 名錄：依公司與個人勢瀏覽開台週表 - MultiStream Hub', description: '台灣 VTuber 名錄：依公司、團體與個人勢列出最近三個月有開台的 VTuber，點名字看開台時間、直播週表與最近的直播紀錄。' },
+        en: { title: 'Taiwanese VTuber Directory: Browse the Stream Schedule by Agency - MultiStream Hub', description: 'A directory of Taiwanese VTubers who streamed in the last three months, grouped by agency, group and independents; open a name for live times, the stream schedule and recent streams.' },
+    },
     '/songs': {
         'zh-TW': { title: 'VTuber 歌回播放清單：連續播放歌回裡的每一首歌 - MultiStream Hub', description: '把台灣 VTuber 歌回拆成一首一首的歌：連續播放、隨機與循環、建立自己的歌單，再用一條連結分享給朋友。' },
         en: { title: 'VTuber Karaoke Song Playlist - MultiStream Hub', description: 'Taiwanese VTuber karaoke streams split into individual songs: play them back to back, shuffle or repeat, build your own playlists and share them in one link.' },

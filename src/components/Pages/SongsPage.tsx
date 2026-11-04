@@ -19,6 +19,8 @@ import { track } from '../../utils/analytics';
 import { Menu } from 'lucide-react';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
+import { RelatedLinks } from '../RelatedLinks';
+import { guidePage } from '../../config/guides';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '../ui/sheet';
@@ -99,6 +101,26 @@ function focusViewHeading(): void {
             return;
         }
     }
+}
+
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+/** 列表頁頁尾前的相關頁面（週表、名錄、週表教學、投稿歌回） */
+function SongsRelatedLinks() {
+    const { t } = useTranslation(['songs', 'schedule', 'tutorial']);
+    // i18next 此版型別不接受跨 namespace 的 'ns:key' 字串，沿用專案慣例以 cast 繞過
+    const tx = t as unknown as TFn;
+    return (
+        <RelatedLinks
+            className="px-4 sm:px-7"
+            links={[
+                { to: 'schedule', label: tx('schedule:title') },
+                { to: 'vtubers', label: tx('schedule:directory.title') },
+                { to: guidePage('schedule'), label: tx('tutorial:article.schedule.title') },
+                { to: 'songsSubmit', label: tx('songs:submit.title') },
+            ]}
+        />
+    );
 }
 
 interface SongsPageProps {
@@ -573,7 +595,12 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
             <div className="flex flex-col gap-6 px-4 py-5 sm:px-7">
                 {centerView}
             </div>
-            {view.kind === 'list' && <SiteFooter />}
+            {view.kind === 'list' && (
+                <>
+                    <SongsRelatedLinks />
+                    <SiteFooter />
+                </>
+            )}
         </>
     );
 

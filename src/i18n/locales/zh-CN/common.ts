@@ -404,6 +404,7 @@ const common = {
   'media.stream_fallback_name': '串流 #{{id}}',
   'chat.not_configured': '这个窗口没有设置聊天室',
   'common.got_it': '我知道了',
+  'related.title': '相关页面',
 };
 
 export default common;
