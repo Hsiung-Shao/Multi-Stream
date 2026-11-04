@@ -18,6 +18,7 @@ import { RouteLink } from './Navigation/RouteLink';
 import { SiteFooter } from './SiteFooter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
+import { switchLanguage } from '../i18n/switchLanguage';
 import { logEvent } from '../utils/analytics';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 
@@ -313,14 +314,14 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
           </Button>
 
           <div className="flex items-center gap-2">
-            <Select value={locale} onValueChange={(value: string) => i18n.changeLanguage(value)}>
+            <Select value={locale} onValueChange={switchLanguage}>
               <SelectTrigger className="min-w-[140px] bg-card border-border text-foreground">
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {languages.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
+                  <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>
                     {lang.label}
                   </SelectItem>
                 ))}

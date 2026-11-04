@@ -5,6 +5,7 @@
 
 import { Home, Globe, Sun, Moon, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { switchLanguage } from '../i18n/switchLanguage';
 import { useUIStore } from '../store/useUIStore';
 import { useEffectiveTheme } from '../hooks/useEffectiveTheme';
 import { Button } from './ui/button';
@@ -43,7 +44,7 @@ export function StaticPageHeader({ title, analyticsCategory = 'StaticPageHeader'
 
             {/* 右:語言 / 主題 / Canvas CTA */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <Select value={i18n.language} onValueChange={(v: string) => i18n.changeLanguage(v)}>
+                <Select value={i18n.language} onValueChange={switchLanguage}>
                     <SelectTrigger
                         aria-label={t('header.language')}
                         className="h-9 w-9 justify-center px-0 sm:w-auto sm:min-w-[130px] sm:justify-between sm:px-3 bg-card border-border text-foreground [&>svg:last-child]:hidden sm:[&>svg:last-child]:block"
@@ -53,7 +54,7 @@ export function StaticPageHeader({ title, analyticsCategory = 'StaticPageHeader'
                     </SelectTrigger>
                     <SelectContent>
                         {SUPPORTED_LANGUAGES.map((lang) => (
-                            <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+                            <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>{lang.label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

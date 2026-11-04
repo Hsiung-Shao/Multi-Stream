@@ -1,5 +1,6 @@
 import { useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
+import { switchLanguage } from '../../../i18n/switchLanguage';
 import { useUIStore } from '../../../store/useUIStore';
 import { Label } from '../../../components/ui/label';
 import {
@@ -261,11 +262,11 @@ export function SettingsSection() {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="zh-TW">繁體中文</SelectItem>
-                            <SelectItem value="zh-CN">简体中文</SelectItem>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="ja">日本語</SelectItem>
-                            <SelectItem value="ko">한국어</SelectItem>
+                            <SelectItem value="zh-TW" onPointerUp={() => switchLanguage('zh-TW')}>繁體中文</SelectItem>
+                            <SelectItem value="zh-CN" onPointerUp={() => switchLanguage('zh-CN')}>简体中文</SelectItem>
+                            <SelectItem value="en" onPointerUp={() => switchLanguage('en')}>English</SelectItem>
+                            <SelectItem value="ja" onPointerUp={() => switchLanguage('ja')}>日本語</SelectItem>
+                            <SelectItem value="ko" onPointerUp={() => switchLanguage('ko')}>한국어</SelectItem>
                         </SelectContent>
                     </Select>
                 </SettingRow>
@@ -297,8 +298,8 @@ export function SettingsSection() {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="remove">{t('favorites:settings.mode_remove')}</SelectItem>
-                            <SelectItem value="empty">{t('favorites:settings.mode_empty')}</SelectItem>
+                            <SelectItem value="remove" onPointerUp={() => switchLanguage('remove')}>{t('favorites:settings.mode_remove')}</SelectItem>
+                            <SelectItem value="empty" onPointerUp={() => switchLanguage('empty')}>{t('favorites:settings.mode_empty')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </SettingRow>

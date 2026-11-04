@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { switchLanguage } from '../../i18n/switchLanguage';
 import { useUIStore } from '../../store/useUIStore';
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme';
 import { Button } from '../ui/button';
@@ -448,7 +449,7 @@ export function LandingPage() {
 
             <SiteFooter className="mt-0" analyticsCategory="LandingPage">
                 {/* 語言切換:首頁沒有 StaticPageHeader,切換器放頁尾 */}
-                <Select value={i18n.language} onValueChange={(value: string) => i18n.changeLanguage(value)}>
+                <Select value={i18n.language} onValueChange={switchLanguage}>
                     <SelectTrigger aria-label={t('landing.aria.language', '選擇語言')} className="w-[140px] h-9 bg-background/50 border-white/10">
                         <div className="flex items-center gap-2">
                             <Globe className="w-4 h-4" />
@@ -457,7 +458,7 @@ export function LandingPage() {
                     </SelectTrigger>
                     <SelectContent>
                         {languages.map((lang) => (
-                            <SelectItem key={lang.value} value={lang.value}>
+                            <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>
                                 {lang.label}
                             </SelectItem>
                         ))}

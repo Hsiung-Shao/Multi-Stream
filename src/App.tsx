@@ -477,7 +477,7 @@ export default function App() {
                   '@id': PERSON_ID,
                   name: 'Hsiung-Shao',
                   alternateName: tx('about:creator.nickname'),
-                  url: pageUrl(PAGE_PATHS.creator),
+                  url: `${SEO_SITE_URL}${PAGE_PATHS.creator}`, // 與 PERSON_ID 同：實體不分語言
                   image: `${SEO_SITE_URL}/icon.png`,
                   jobTitle: tx('about:creatorRole'),
                   description: tx('about:creatorDesc'),

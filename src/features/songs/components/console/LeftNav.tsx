@@ -5,6 +5,7 @@
  */
 import { memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { switchLanguage } from '../../../../i18n/switchLanguage';
 import { CalendarDays, Globe, Music, Plus } from 'lucide-react';
 import { RouteLink } from '../../../../components/Navigation/RouteLink';
 import { ScrollArea } from '../../../../components/ui/scroll-area';
@@ -137,14 +138,14 @@ export const LeftNav = memo(function LeftNav({
                 <RouteLink to="songsSubmit" className="rounded-[10px] border border-dashed border-input p-3 text-[13px] font-bold text-primary hover:bg-muted">
                     <span aria-hidden="true">＋ </span>{t('catalog.submitLink')}
                 </RouteLink>
-                <Select value={i18n.language} onValueChange={(v: string) => void i18n.changeLanguage(v)}>
+                <Select value={i18n.language} onValueChange={switchLanguage}>
                     <SelectTrigger aria-label={t('nav.language')} className="h-9 w-full border-input bg-transparent text-[13px] text-foreground/80">
                         <Globe className="size-4 shrink-0" aria-hidden="true" />
                         <span className="min-w-0 flex-1 truncate text-left"><SelectValue /></span>
                     </SelectTrigger>
                     <SelectContent>
                         {SUPPORTED_LANGUAGES.map((lang) => (
-                            <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+                            <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>{lang.label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

@@ -17,6 +17,9 @@ import {
     AlertDialogTitle,
 } from '../../../components/ui/alert-dialog';
 import { cn } from '../../../components/ui/utils';
+import i18n from '../../../i18n/i18n';
+import { PAGE_PATHS } from '../../../config/routes';
+import { urlLangOf, withLang } from '../../../../functions/lib/locale.js';
 import { AdminTokenInline, useAdminTokenPresent } from './AdminTokenInline';
 import { KnownIssueEditDialog } from './KnownIssueEditDialog';
 import {
@@ -79,7 +82,7 @@ export function KnownIssuesTab() {
                     </SelectContent>
                 </Select>
                 {query.data && <span className="text-[12px] text-muted-foreground">{issues.length} 筆</span>}
-                <a href="/status" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
+                <a href={withLang(urlLangOf(i18n.language), PAGE_PATHS.status)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
                     查看公開頁 <ExternalLink className="size-3" aria-hidden="true" />
                 </a>
                 <Button size="sm" className="ml-auto" onClick={() => openEditor(null)} disabled={needToken}>

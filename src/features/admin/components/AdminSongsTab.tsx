@@ -20,6 +20,9 @@ import {
     AlertDialogTitle,
 } from '../../../components/ui/alert-dialog';
 import { cn } from '../../../components/ui/utils';
+import i18n from '../../../i18n/i18n';
+import { PAGE_PATHS } from '../../../config/routes';
+import { urlLangOf, withLang } from '../../../../functions/lib/locale.js';
 import { AdminTokenInline, useAdminTokenPresent } from './AdminTokenInline';
 import { SongVideoEditor } from './SongVideoEditor';
 import { AdminSongLibrary } from './AdminSongLibrary';
@@ -154,7 +157,7 @@ export function AdminSongsTab({ active }: { active: boolean }) {
             <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-[15px] font-semibold">歌回</h2>
                 {query.data && <span className="text-[12px] text-muted-foreground">{total} 支</span>}
-                <a href="/songs" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
+                <a href={withLang(urlLangOf(i18n.language), PAGE_PATHS.songs)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground">
                     查看公開頁 <ExternalLink className="size-3" aria-hidden="true" />
                 </a>
                 <span className="text-[12px] text-muted-foreground">公開目錄有 10 分鐘快取，發布後最晚 10 分鐘出現。</span>

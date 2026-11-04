@@ -38,3 +38,20 @@ describe('urlPath 偵測不改 i18nextLng', () => {
         expect(localStorage.getItem('i18nextLng')).toBe('zh-TW');
     });
 });
+
+describe('switchLanguage：選單明確選擇才寫偏好', () => {
+    afterEach(async () => {
+        localStorage.clear();
+        window.history.replaceState(null, '', '/');
+    });
+
+    it('L23 偏好 en 的人在 /zh-TW 頁選「繁體中文」（值相同）：偏好改成 zh-TW', async () => {
+        localStorage.setItem('i18nextLng', 'en');
+        const i18n = await loadI18nAt('/zh-TW/about');
+        expect(i18n.language).toBe('zh-TW');
+        expect(localStorage.getItem('i18nextLng')).toBe('en');
+        const { switchLanguage } = await import('../../src/i18n/switchLanguage');
+        switchLanguage('zh-TW');
+        expect(localStorage.getItem('i18nextLng')).toBe('zh-TW');
+    });
+});

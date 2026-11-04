@@ -27,7 +27,8 @@ import { largerAvatar } from '../../features/schedule/streamLinks';
 import { schedulePersonPath } from '../../config/schedulePerson';
 import { PAGE_PATHS } from '../../config/routes';
 import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
-import { breadcrumb, graph, pageUrl, webPage } from '../../seo/jsonld';
+import { breadcrumb, graph, webPage } from '../../seo/jsonld';
+import { SEO_SITE_URL } from '../../seo/defaults';
 import { toHtmlLang } from '../../i18n/i18n';
 import { ReportDialogProvider, useReportDialog } from '../../features/report/ReportDialogProvider';
 import { ScheduleEntriesDialogProvider, useScheduleEntriesDialog } from '../../features/contribute/ScheduleEntriesDialogProvider';
@@ -113,7 +114,8 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     const inLanguage = toHtmlLang(i18n.language);
     const path = schedulePersonPath(slug);
     // 與 canonical 同語言版（/zh-TW/schedule/<slug>），Person／ProfilePage 的 @id 才不會和頁面網址矛盾
-    const url = pageUrl(path);
+    // Person 實體不分語言（與站級實體同原則）： 固定英文網址；頁面節點（ProfilePage／Breadcrumb）才帶語言
+    const entityUrl = `${SEO_SITE_URL}${path}`;
     const name = person.channel.name;
     const title = t('person.seo.title', { name });
     // 最前面放場次摘要，讓每一頁的 description 都不同、且不會被搜尋結果截掉（與 edge 的 functions/lib/schedule-person.js schedulePersonMeta 同一句）。
@@ -129,7 +131,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
         startDate: s.actual_start ?? s.scheduled_start,
         url: s.platform === 'youtube' ? `https://www.youtube.com/watch?v=${s.external_id}` : person.channel.twitch ? `https://www.twitch.tv/${person.channel.twitch}` : undefined,
         eventStatus: 'https://schema.org/EventScheduled',
-        performer: { '@id': `${url}#person` },
+        performer: { '@id': `${entityUrl}#person` },
     })).filter((e) => e.startDate);
 
     return (
@@ -140,10 +142,10 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
             image={person.channel.avatar ? largerAvatar(person.channel.avatar) : undefined}
             noindex={!person.indexable}
             jsonLd={graph(
-                webPage({ type: 'ProfilePage', path, name: title, description, inLanguage, extra: { mainEntity: { '@id': `${url}#person` } } }),
+                webPage({ type: 'ProfilePage', path, name: title, description, inLanguage, extra: { mainEntity: { '@id': `${entityUrl}#person` } } }),
                 {
                     '@type': 'Person',
-                    '@id': `${url}#person`,
+                    '@id': `${entityUrl}#person`,
                     name,
                     ...(person.channel.avatar ? { image: person.channel.avatar } : {}),
                     ...(sameAs.length ? { sameAs } : {}),

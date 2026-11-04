@@ -10,6 +10,7 @@
 
 import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { useUIStore } from '../../store/useUIStore';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -883,7 +884,7 @@ export function InstructionsPage() {
                 },
                 {
                     id: 'example', heading: tx('twitchGuide.example'), blocks: [
-                        { type: 'link', text: tx('twitchGuide.example.desc'), label: TWITCH_EXAMPLE_LINK, href: TWITCH_EXAMPLE_LINK },
+                        { type: 'link', text: tx('twitchGuide.example.desc'), label: TWITCH_EXAMPLE_LINK, href: withLang(urlLangOf(i18n.language), TWITCH_EXAMPLE_LINK) as `/${string}` },
                         { type: 'link', text: tx('twitchGuide.example.share'), label: tx('twitchGuide.example.shareLink'), to: guidePage('share') },
                     ],
                 },
