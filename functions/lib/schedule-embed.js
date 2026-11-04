@@ -47,6 +47,9 @@ export const EMBED_TEXT = {
         error: '週表暫時無法載入',
         moreRows: '…還有 {{n}} 場',
         liveLabel: '直播中',
+        updated: '每 5 分鐘更新',
+        liveForH: '已開播 {{n}} 小時',
+        liveForM: '已開播 {{n}} 分鐘',
     },
     en: {
         schedule: 'Stream schedule',
@@ -61,6 +64,9 @@ export const EMBED_TEXT = {
         error: 'Schedule temporarily unavailable',
         moreRows: '…and {{n}} more',
         liveLabel: 'LIVE',
+        updated: 'updates every 5 min',
+        liveForH: 'live for {{n}}h',
+        liveForM: 'live for {{n}} min',
     },
 };
 const fill = (tpl, vars) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (k in vars ? String(vars[k]) : ''));
@@ -134,8 +140,8 @@ const TIME_FMT = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Taipei', hou
 const TAIPEI_DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' });
 
 const HTML_THEMES = {
-    light: { bg: '#ffffff', fg: '#111827', muted: '#6b7280', line: '#e5e7eb', card: '#f9fafb', live: '#e5173f', link: '#2563eb' },
-    dark: { bg: '#0b0f17', fg: '#f3f4f6', muted: '#9ca3af', line: '#1f2937', card: '#111827', live: '#ff3b5c', link: '#7dd3fc' },
+    light: { bg: '#ffffff', fg: '#111827', muted: '#6b7280', line: '#e5e7eb', card: '#f9fafb', live: '#e5173f', liveTint: 'rgba(229,23,63,0.08)', link: '#2563eb', yt: '#d92d20', tw: '#7c3aed' },
+    dark: { bg: '#0e1118', fg: '#f4f5f7', muted: '#8d93a1', line: '#262b36', card: '#151925', live: '#e5173f', liveTint: 'rgba(229,23,63,0.12)', link: '#c4b5fd', yt: '#ff3b3b', tw: '#a970ff' },
 };
 
 function htmlCss(theme) {
@@ -151,16 +157,21 @@ a{color:${c.link};text-decoration:none}a:hover{text-decoration:underline}
 .name a{color:inherit}
 .badge{display:inline-block;margin-left:8px;padding:1px 6px;border-radius:4px;background:${c.live};color:#fff;font-size:11px;font-weight:700;letter-spacing:.04em;vertical-align:middle}
 .sub{color:${c.muted};font-size:12px;margin-top:2px}
-h2{font-size:12px;font-weight:600;color:${c.muted};text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+h2{font-size:11px;font-weight:700;color:${c.muted};text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+section.live h2{color:${c.live}}
 ul{list-style:none;display:flex;flex-direction:column;gap:6px}
-li{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:baseline;padding:8px 10px;border:1px solid ${c.line};border-radius:8px;background:${c.card}}
-li.live{border-color:${c.live}}
+li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:start;padding:10px 12px;border:1px solid ${c.line};border-radius:10px;background:${c.card}}
+li.live{border-color:${c.live};background:linear-gradient(90deg,${c.liveTint},${c.card})}
+li.tbd{border-style:dashed;background:transparent}
+li.tbd .title{color:${c.muted}}
 .when{font-variant-numeric:tabular-nums;white-space:nowrap}
-.when b{display:block;font-size:15px}
+.when b{display:block;font-size:16px;font-weight:700}
 .when span{color:${c.muted};font-size:11px}
 .member{display:block;font-size:12px;color:${c.muted}}
 .title{min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .pf{color:${c.muted};font-size:11px;margin-left:6px;white-space:nowrap}
+.pf.yt{color:${c.yt};font-weight:600}.pf.tw{color:${c.tw};font-weight:600}
+.since{display:block;font-size:11px;color:${c.live};font-weight:600;margin-top:2px}
 .empty{color:${c.muted};padding:10px;border:1px dashed ${c.line};border-radius:8px;text-align:center}
 .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid ${c.line};padding-top:10px;font-size:12px;color:${c.muted}}
 .foot .more{font-weight:600}`;
@@ -177,11 +188,22 @@ function whenCell(lang, s, tz) {
     return `<div class="when"><b><time datetime="${escapeHtml(new Date(t).toISOString())}">${escapeHtml(TIME_FMT.format(t))}</time></b><span>${escapeHtml(`${date} ${wd}`)}</span></div>`;
 }
 
-function htmlItem(lang, s, t, live) {
+/** 直播列的「已開播 N 小時／分鐘」；start 不可解析或在未來就不寫 */
+function liveSince(s, t, now) {
+    const start = s.start ? Date.parse(s.start) : NaN;
+    if (!Number.isFinite(start) || start > now) return '';
+    const mins = Math.floor((now - start) / 60_000);
+    const label = mins >= 60 ? fill(t.liveForH, { n: Math.floor(mins / 60) }) : fill(t.liveForM, { n: mins });
+    return `<span class="since">${escapeHtml(label)}</span>`;
+}
+
+function htmlItem(lang, s, t, live, now) {
     const platform = s.platform === 'twitch' ? 'Twitch' : 'YouTube';
+    const pfClass = s.platform === 'twitch' ? 'pf tw' : 'pf yt';
     const member = s.member ? `<span class="member">${escapeHtml(s.member)}</span>` : '';
     const tbd = s.tbd ? ` <span class="pf">${escapeHtml(t.timeTbd)}</span>` : '';
-    return `<li${live ? ' class="live"' : ''}>${whenCell(lang, s, t.tz)}<div>${member}<span class="title">${escapeHtml(s.title || platform)}</span>${tbd}<span class="pf">${platform}</span></div></li>`;
+    const cls = live ? ' class="live"' : s.tbd ? ' class="tbd"' : '';
+    return `<li${cls}>${whenCell(lang, s, t.tz)}<div>${member}<span class="title">${escapeHtml(s.title || platform)}</span>${tbd}<span class="${pfClass}">${platform}</span>${live ? liveSince(s, t, now) : ''}</div></li>`;
 }
 
 /** 整份嵌入 HTML */
@@ -191,8 +213,8 @@ export function renderEmbedHtml(subject, { lang, theme, days }, now = Date.now()
     const name = escapeHtml(subject.name);
     const { live, upcoming } = pickStreams(subject.streams, days, now);
     const sections = [];
-    if (live.length) sections.push(`<section><h2>${escapeHtml(t.live)}</h2><ul>${live.map((x) => htmlItem(lang, x, t, true)).join('')}</ul></section>`);
-    if (upcoming.length) sections.push(`<section><h2>${escapeHtml(fill(t.upcoming, { days }))}</h2><ul>${upcoming.map((x) => htmlItem(lang, x, t, false)).join('')}</ul></section>`);
+    if (live.length) sections.push(`<section class="live"><h2>${escapeHtml(t.live)}</h2><ul>${live.map((x) => htmlItem(lang, x, t, true, now)).join('')}</ul></section>`);
+    if (upcoming.length) sections.push(`<section><h2>${escapeHtml(fill(t.upcoming, { days }))}</h2><ul>${upcoming.map((x) => htmlItem(lang, x, t, false, now)).join('')}</ul></section>`);
     if (!live.length && !upcoming.length) sections.push(`<p class="empty">${escapeHtml(fill(t.none, { days }))}</p>`);
     // 資料層有上限（團體 RPC 100 列、個人 upcoming 10 列）：超過的只能寫「還有 N 場」；truncated 是以 7 天算的，選較少天數時不標（數字會偏大）
     if (days === EMBED_MAX_DAYS && Number(subject.truncated) > 0) sections.push(`<p class="empty">${escapeHtml(fill(t.moreRows, { n: Number(subject.truncated) }))}</p>`);
@@ -200,7 +222,7 @@ export function renderEmbedHtml(subject, { lang, theme, days }, now = Date.now()
         ? `<img class="avatar${live.length ? ' live' : ''}" src="${escapeHtml(largerAvatar(subject.image))}" alt="" referrerpolicy="no-referrer" width="48" height="48">`
         : '<span class="avatar" aria-hidden="true"></span>';
     return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${name}</title><style>${htmlCss(theme)}</style></head><body><div class="wrap">
-<header class="head">${avatar}<div><div class="name"><a href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">${name}</a>${live.length ? '<span class="badge">LIVE</span>' : ''}</div><div class="sub">${escapeHtml(t.tz)} · UTC+8</div></div></header>
+<header class="head">${avatar}<div><div class="name"><a href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">${name}</a>${live.length ? '<span class="badge">LIVE</span>' : ''}</div><div class="sub">${escapeHtml(t.tz)} · UTC+8 · ${escapeHtml(t.updated)}</div></div></header>
 ${sections.join('\n')}
 <footer class="foot"><a class="more" href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">${escapeHtml(t.more)} →</a><a href="${escapeHtml(ORIGIN + withLang(lang, '/schedule'))}" target="_blank" rel="noopener">${escapeHtml(t.powered)}</a></footer>
 </div></body></html>`;
