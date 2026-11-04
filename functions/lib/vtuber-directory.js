@@ -7,6 +7,8 @@ import { anonRpc, escapeHtml } from './schedule-person.js';
 import { groupDirectory, splitBySubgroup } from './directory-group.js';
 
 export const DIRECTORY_CACHE_TTL_S = 3600;
+/** RPC 失敗時的負快取：Supabase 故障期間不讓每個 /vtubers 請求都等滿逾時 */
+export const DIRECTORY_FAIL_TTL_S = 30;
 const CACHE_KEY = 'https://multistreaming.org/__edge-cache/vtuber-directory/v1';
 
 export const DIRECTORY_BODY = {
@@ -37,11 +39,20 @@ export async function resolveDirectory(env, rpcFn = anonRpc, cache = globalThis.
         if (hit) {
             const cached = await hit.json().catch(() => null);
             if (cached && Array.isArray(cached.groups) && Array.isArray(cached.people)) return { ok: true, data: cached };
+            if (cached && cached.failed === true) return { ok: false };
         }
     }
     const res = await rpcFn(env, 'schedule_directory', {});
     const data = res && res.ok ? res.data : null;
-    if (!data || !Array.isArray(data.groups) || !Array.isArray(data.people)) return { ok: false };
+    if (!data || !Array.isArray(data.groups) || !Array.isArray(data.people)) {
+        if (cache) {
+            const body = new Response(JSON.stringify({ failed: true }), {
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${DIRECTORY_FAIL_TTL_S}` },
+            });
+            await cache.put(cacheKey, body).catch(() => {});
+        }
+        return { ok: false };
+    }
     if (cache) {
         const body = new Response(JSON.stringify(data), {
             headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${DIRECTORY_CACHE_TTL_S}` },
@@ -55,10 +66,8 @@ const fill = (tpl, vars) => tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (k in vars ?
 
 function personItem(lang, p) {
     const href = withLang(lang, `/schedule/${encodeURIComponent(p.slug)}`);
-    const img = typeof p.img_url === 'string' && /^https:\/\//.test(p.img_url)
-        ? `<img src="${escapeHtml(p.img_url)}" alt="" width="40" height="40" loading="lazy" class="size-10 rounded-full object-cover" />`
-        : '';
-    return `<li class="flex items-center gap-2"><a href="${href}" class="flex items-center gap-2 hover:underline">${img}<span>${escapeHtml(p.name)}</span></a></li>`;
+    // 名錄不帶頭像（RPC 已不回 img_url，省 220 KB）；頭像在個人頁
+    return `<li><a href="${href}" class="hover:underline">${escapeHtml(p.name)}</a></li>`;
 }
 
 function sectionHtml(lang, t, heading, count, listHtml) {

@@ -29,6 +29,8 @@ import zhTWSchedule from '../../src/i18n/locales/zh-TW/schedule';
 import enSchedule from '../../src/i18n/locales/en/schedule';
 
 const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon-test' };
+// 相關 RPC 的替身：可索引案例若不傳，預設的 anonRpc 會真的打網路（review 第 1 輪提醒）
+const noRelated = vi.fn(async () => ({ ok: true, data: { agency: null, siblings: [], neighbors: [] } }));
 const ok = (data: unknown) => vi.fn(async () => ({ ok: true, status: 200, data, error: null }));
 
 describe('schedule-person：與前端同一套規則', () => {
@@ -86,7 +88,7 @@ describe('resolveSchedulePerson', () => {
         // 一支查詢拿齊；不可索引的頁不放場次
         expect(found).toHaveBeenCalledTimes(1);
         const insecure = ok([{ name: 'B', img_url: 'http://x/a.png', schedule_indexable: true }]);
-        expect(await resolveSchedulePerson(env, '/schedule/bbb', insecure)).toMatchObject({ image: null, indexable: true });
+        expect(await resolveSchedulePerson(env, '/schedule/bbb', insecure, null, noRelated)).toMatchObject({ image: null, indexable: true });
         expect(await resolveSchedulePerson(env, '/schedule/nobody', ok([]))).toEqual({ kind: 'notfound' });
     });
 
@@ -109,12 +111,12 @@ describe('resolveSchedulePerson', () => {
             put: async (req: Request, res: Response) => { store.set(req.url, res); },
         };
         const found = ok([{ name: '台一', img_url: null, schedule_indexable: true }]);
-        const first = await resolveSchedulePerson(env, '/schedule/taione', found, cache);
-        const second = await resolveSchedulePerson(env, '/schedule/taione', found, cache);
+        const first = await resolveSchedulePerson(env, '/schedule/taione', found, cache, noRelated);
+        const second = await resolveSchedulePerson(env, '/schedule/taione', found, cache, noRelated);
         expect(second).toEqual(first);
         expect(found).toHaveBeenCalledTimes(1); // 第二次走快取
         const failing = vi.fn(async () => ({ ok: false, data: null }));
-        await resolveSchedulePerson(env, '/schedule/other', failing, cache);
+        await resolveSchedulePerson(env, '/schedule/other', failing, cache, noRelated);
         expect([...store.keys()].some((k) => k.endsWith('/other'))).toBe(false);
     });
 });
@@ -172,13 +174,13 @@ describe('個人頁內文（edge 放進 #root）', () => {
         expect(await resolveSchedulePerson(env, '/schedule/nobody', none, cache)).toEqual({ kind: 'notfound' });
         expect(none).toHaveBeenCalledTimes(1);
         const degraded = ok([{ ...vt }]); // 嵌入資料缺漏
-        const r = await resolveSchedulePerson(env, '/schedule/taione', degraded, cache);
+        const r = await resolveSchedulePerson(env, '/schedule/taione', degraded, cache, noRelated);
         expect(r).toMatchObject({ kind: 'found', indexable: true, streams: null });
         expect(degraded).toHaveBeenCalledTimes(1);
         const cached = [...store.entries()].find(([k]) => k.endsWith('/taione'))?.[1];
         expect(cached?.headers.get('Cache-Control')).toBe('public, max-age=30');
         const full = ok([row([], [])]);
-        await resolveSchedulePerson(env, '/schedule/full1', full, cache);
+        await resolveSchedulePerson(env, '/schedule/full1', full, cache, noRelated);
         expect([...store.entries()].find(([k]) => k.endsWith('/full1'))?.[1].headers.get('Cache-Control')).toBe('public, max-age=300');
         const html = renderPersonBodyHtml('zh-TW', r, 'taione');
         expect(html).toContain('台一</h1>');

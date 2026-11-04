@@ -4,7 +4,7 @@
 
 /**
  * @typedef {{ id: string, name: string, parent_id: string | null, kind: string | null }} DirectoryGroup
- * @typedef {{ slug: string, name: string, img_url: string | null, group_id: string | null, last_live_at: string | null }} DirectoryPerson
+ * @typedef {{ slug: string, name: string, group_id: string | null, last_live_at: string | null }} DirectoryPerson
  * @typedef {{ group: DirectoryGroup, members: Array<{ person: DirectoryPerson, subgroup: string | null }> }} DirectorySection
  */
 

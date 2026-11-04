@@ -19,21 +19,15 @@ const DIRECTORY_STALE_MS = 10 * 60_000;
 
 const LIST_CLS = 'mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
 
+/** 純名字連結：RPC 不回頭像（省一半傳輸量），一千多人的名單也不載圖 */
 function PersonItem({ person }: { person: DirectoryPerson }) {
-    // 與 edge 同規則：只顯示 https 頭像
-    const img = person.img_url && /^https:\/\//.test(person.img_url) ? person.img_url : null;
     return (
-        <li>
+        <li className="min-w-0">
             <RouteLink
                 to={schedulePersonPage(person.slug)}
-                className="flex min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="block truncate rounded-lg px-2 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-                {img ? (
-                    <img src={img} alt="" width={32} height={32} loading="lazy" referrerPolicy="no-referrer" className="size-8 shrink-0 rounded-full bg-muted object-cover" />
-                ) : (
-                    <span className="block size-8 shrink-0 rounded-full bg-muted" aria-hidden="true" />
-                )}
-                <span className="truncate font-medium text-foreground">{person.name}</span>
+                {person.name}
             </RouteLink>
         </li>
     );

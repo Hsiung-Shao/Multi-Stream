@@ -5,6 +5,7 @@
 // 版面沿用公共週表的元件（LiveTile／DayTimeline／RecentRow），名字不再連到自己。
 
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CalendarPlus, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, ListMusic, MonitorPlay, Music2, Play, RefreshCw, SearchX } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
@@ -20,7 +21,7 @@ import { useWatchOnCanvas } from '../../features/schedule/useWatchOnCanvas';
 import { useFavoriteChannel } from '../../features/schedule/useFavoriteChannel';
 import { DayTimeline } from '../../features/schedule/DayTimeline';
 import { SelectionBar } from '../../features/schedule/SelectionBar';
-import type { PersonRelated, SchedulePerson } from '../../features/schedule/personSource';
+import { fetchPersonRelated, type PersonRelated, type SchedulePerson } from '../../features/schedule/personSource';
 import { streamKey } from '../../features/schedule/types';
 import { isPastScheduled } from '../../features/schedule/filters';
 import { largerAvatar } from '../../features/schedule/streamLinks';
@@ -314,7 +315,7 @@ function PersonSongs({ videos, vtuberId }: { videos: SongVideo[]; vtuberId: stri
     );
 }
 
-/** 相關推薦裡的一個人：頭像小圖＋名字（同公司區塊在名字後加小字團名） */
+/** 相關推薦裡的一個人：頭像小圖＋名字（同公司區塊在名字後加小字團名，團名與公司同名時不重複寫） */
 function RelatedPersonLink({ slug, name, imgUrl, sub }: { slug: string; name: string; imgUrl: string | null; sub?: string }) {
     return (
         <li>
@@ -347,7 +348,9 @@ function PersonRelatedSections({ related }: { related: PersonRelated | null | un
                 <section aria-labelledby="person-related-agency">
                     <SectionTitle id="person-related-agency">{t('person.related.agency', { name: related.agency?.name ?? '' })}</SectionTitle>
                     <ul className={gridCls}>
-                        {related.siblings.map((p) => <RelatedPersonLink key={p.slug} slug={p.slug} name={p.name} imgUrl={p.img_url} sub={p.group} />)}
+                        {related.siblings.map((p) => (
+                            <RelatedPersonLink key={p.slug} slug={p.slug} name={p.name} imgUrl={p.img_url} sub={p.group && p.group !== related.agency?.name ? p.group : undefined} />
+                        ))}
                     </ul>
                 </section>
             )}
@@ -363,7 +366,7 @@ function PersonRelatedSections({ related }: { related: PersonRelated | null | un
     );
 }
 
-function PersonBody({ person }: { person: SchedulePerson }) {
+function PersonBody({ person, related }: { person: SchedulePerson; related: PersonRelated | null | undefined }) {
     const { t } = useTranslation('schedule');
     const [now, setNow] = useState(() => Date.now());
     const [recentExpanded, setRecentExpanded] = useState(false);
@@ -415,7 +418,7 @@ function PersonBody({ person }: { person: SchedulePerson }) {
             {nothing ? (
                 <div className="space-y-12">
                     <p className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">{t('person.inactive')}</p>
-                    <PersonRelatedSections related={person.related} />
+                    <PersonRelatedSections related={related} />
                 </div>
             ) : (
                 <div className="space-y-12">
@@ -494,7 +497,7 @@ function PersonBody({ person }: { person: SchedulePerson }) {
                         )}
                     </section>
 
-                    <PersonRelatedSections related={person.related} />
+                    <PersonRelatedSections related={related} />
 
                     <PersonSongs videos={songVideos} vtuberId={person.id} />
                 </div>
@@ -527,6 +530,14 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
     const { t } = useTranslation('schedule');
     const query = usePersonSchedule(slug);
     const person = query.data;
+    // 相關推薦另外查：主內容先畫，兩個區塊等它到了再出現；只有可索引的頁面才查（內鏈是給爬蟲與讀者的，空頁不需要）
+    const relatedQuery = useQuery({
+        queryKey: ['schedule-person-related', slug],
+        queryFn: ({ signal }) => fetchPersonRelated(slug, { signal }),
+        staleTime: 30 * 60_000,
+        refetchInterval: false,
+        enabled: !!person?.indexable,
+    });
 
     return (
         <div className="relative min-h-screen bg-background text-foreground">
@@ -555,7 +566,7 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                     <ReportDialogProvider>
                         <ScheduleEntriesDialogProvider>
                             <PersonSeo person={person} slug={slug} />
-                            <PersonBody person={person} />
+                            <PersonBody person={person} related={relatedQuery.data} />
                         </ScheduleEntriesDialogProvider>
                     </ReportDialogProvider>
                 ) : person === null ? (

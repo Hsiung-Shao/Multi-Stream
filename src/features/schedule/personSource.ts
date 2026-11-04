@@ -42,8 +42,6 @@ export interface SchedulePerson {
     live: ScheduleStream[];
     upcoming: ScheduleStream[];
     recent: ScheduleStream[];
-    /** 相關推薦；RPC 還沒上線或查詢失敗為 null（不渲染那兩個區塊） */
-    related?: PersonRelated | null;
 }
 
 export interface PersonFetchOptions extends RestOptions {
@@ -167,11 +165,21 @@ async function fetchCollabAgencies(cfg: RestConfig, vtuberId: string, today: str
     return [...new Set(names.filter((n): n is string => !!n))].sort();
 }
 
-/** 相關推薦是附屬資訊：查詢失敗（RPC 還沒上線、逾時、5xx）或格式不對回 null，不讓個人頁整頁出錯 */
-async function fetchRelated(cfg: RestConfig, slug: string, opts: PersonFetchOptions): Promise<PersonRelated | null> {
+/** 相關推薦的逾時：可有可無的區塊，查不到就不顯示 */
+export const RELATED_TIMEOUT_MS = 3_000;
+
+/**
+ * 個人頁的相關推薦（schedule_person_related RPC），與 fetchPerson 分開查：主內容先畫，不被它拖慢。
+ * 附屬資訊：slug 不合規則、查詢失敗（RPC 還沒上線、逾時、5xx）或格式不對都回 null；只有外部取消（abort）照常拋出。
+ */
+export async function fetchPersonRelated(slug: string, opts: PersonFetchOptions = {}): Promise<PersonRelated | null> {
+    if (!SCHEDULE_SLUG_RE.test(slug)) return null;
+    // 呼叫端給了更短的逾時就用它，否則最多 RELATED_TIMEOUT_MS
+    const timeoutMs = Math.min(opts.timeoutMs ?? RELATED_TIMEOUT_MS, RELATED_TIMEOUT_MS);
     let data: Partial<PersonRelated>;
     try {
-        data = await restRpc<Partial<PersonRelated>>(cfg, 'schedule_person_related', { p_slug: slug }, opts);
+        const cfg = await resolveRestConfig({ ...opts, timeoutMs });
+        data = await restRpc<Partial<PersonRelated>>(cfg, 'schedule_person_related', { p_slug: slug }, { ...opts, timeoutMs });
     } catch (e) {
         if (opts.signal?.aborted) throw e;
         return null;
@@ -215,11 +223,10 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     // 拆成兩支查詢：合在一起用 scheduled_start 排序＋limit 時，Twitch 直播（scheduled_start 為 null）
     // 與最新的紀錄會最先被截掉。兩支並行，合併邏輯需要看到所有列才能把次要場次掛到主場次。
     const base = `streams?select=${STREAM_COLS}&vtuber_id=eq.${v.id}&is_schedule_frame=eq.false`;
-    const [active, ended, collabs, related] = await Promise.all([
+    const [active, ended, collabs] = await Promise.all([
         restGet<PersonStreamRow[]>(cfg, `${base}&status=in.(scheduled,live)&order=scheduled_start.asc.nullsfirst&limit=${ACTIVE_LIMIT}`, opts),
         restGet<PersonStreamRow[]>(cfg, `${base}&status=eq.ended&actual_end=gte.${since}&order=actual_end.desc&limit=${RECENT_LIMIT}`, opts),
         fetchCollabAgencies(cfg, v.id, taipeiDate(now), opts),
-        fetchRelated(cfg, v.slug, opts),
     ]);
     const rows = [...active, ...ended];
 
@@ -239,5 +246,5 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     if (v.facebook_url) profile.facebook = v.facebook_url;
     if (v.instagram_url) profile.instagram = v.instagram_url;
 
-    return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...splitPersonStreams(v.id, rows, now), related };
+    return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...splitPersonStreams(v.id, rows, now) };
 }

@@ -125,8 +125,8 @@ describe('M6 resolveDirectory 與 renderDirectoryBodyHtml', () => {
         expect(rpcFn).toHaveBeenCalledTimes(1);
     });
 
-    it('M6 RPC 失敗 → { ok: false }，且不進快取（下次還會重打）', async () => {
-        const { resolveDirectory } = await loadDir();
+    it('M6 RPC 失敗 → { ok: false }，只負快取 DIRECTORY_FAIL_TTL_S 秒（故障期間不讓每個請求都等滿逾時），快取內不留假資料', async () => {
+        const { resolveDirectory, DIRECTORY_FAIL_TTL_S, DIRECTORY_CACHE_TTL_S } = await loadDir();
         const store = new Map<string, Response>();
         const cache = {
             match: async (req: Request) => store.get(req.url)?.clone() ?? undefined,
@@ -134,9 +134,13 @@ describe('M6 resolveDirectory 與 renderDirectoryBodyHtml', () => {
         };
         const failing = vi.fn(async () => ({ ok: false, status: 500, data: null, error: 'x' }));
         expect(await resolveDirectory(env, failing, cache)).toEqual({ ok: false });
-        expect(store.size).toBe(0);
-        await resolveDirectory(env, failing, cache);
-        expect(failing).toHaveBeenCalledTimes(2);
+        expect(store.size).toBe(1);
+        const cached = [...store.values()][0];
+        expect(cached.headers.get('Cache-Control')).toBe(`public, max-age=${DIRECTORY_FAIL_TTL_S}`);
+        expect(DIRECTORY_FAIL_TTL_S).toBeLessThan(DIRECTORY_CACHE_TTL_S);
+        // 負快取命中：第二次仍 ok:false，但不再打 RPC
+        expect(await resolveDirectory(env, failing, cache)).toEqual({ ok: false });
+        expect(failing).toHaveBeenCalledTimes(1);
     });
 
     it('M6 renderDirectoryBodyHtml：h1、公司各一個 section、子團成員歸頂層公司並以子團名分隔、個人勢區、每人連結帶前綴', async () => {

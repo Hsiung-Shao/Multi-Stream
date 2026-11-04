@@ -8,8 +8,8 @@ export const SCHEDULE_SLUG_RE = /^[a-z0-9][a-z0-9_-]{1,39}$/;
 const PERSON_PATH_RE = /^\/schedule\/([^/]+)$/;
 /** DB 查詢逾時：超過就當暫時錯誤回 SPA 殼，不讓 HTML 首位元組跟著卡住 */
 export const PERSON_QUERY_TIMEOUT_MS = 2000;
-/** 相關／名錄 RPC 的逾時：名錄一次拿 1600 多人、相關要掃 90 天場次，比單人查詢寬 */
-export const RPC_TIMEOUT_MS = 6000;
+/** 相關 RPC 的逾時：和主查詢並行，但不讓 HTML 首位元組等太久（相關區塊可有可無） */
+export const RPC_TIMEOUT_MS = 2500;
 /** 查詢結果（含查無此人）在 edge 快取的秒數：擋住重複請求與隨機 slug 掃描放大成 DB 負載 */
 export const PERSON_CACHE_TTL_S = 300;
 // v3：found 多了 related（同團／同時段內鏈）；舊格式的快取不會被讀到，最多 300 秒後自然過期
@@ -317,10 +317,13 @@ export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, 
     }
 
     const now = Date.now();
+    // 主查詢與相關 RPC 並行（相關只在可索引時採用；首位元組不等第二支，最壞也只多等 RPC 逾時與主查詢的差）
+    const relatedPromise = relatedFn(env, 'schedule_person_related', { p_slug: slug }).catch(() => null);
     const res = await queryFn(env, personQuery(slug, now));
     if (!res.ok || !Array.isArray(res.data)) return { kind: 'error' };
     const row = res.data[0];
     let result = { kind: 'notfound' };
+    let relatedFailed = false;
     if (row) {
         const indexable = row.schedule_indexable === true;
         result = {
@@ -334,15 +337,17 @@ export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, 
             streams: indexable ? personStreamsFromRow(row, now) : null,
             related: null,
         };
-        // 內鏈區塊（同團／同時段）：第二支 subrequest，只給可索引頁；失敗就不出這段，不影響本頁狀態
+        // 內鏈區塊（同團／同時段）：只給可索引頁；失敗就不出這段，不影響本頁狀態
         if (indexable) {
-            const rel = await relatedFn(env, 'schedule_person_related', { p_slug: slug });
-            result.related = rel && rel.ok ? personRelatedFromRpc(rel.data) : null;
+            const rel = await relatedPromise;
+            relatedFailed = !(rel && rel.ok);
+            result.related = relatedFailed ? null : personRelatedFromRpc(rel.data);
         }
     }
     if (cache) {
-        // 可索引卻沒拿到場次（嵌入資料異常）時短暫快取，別讓暫時的薄內容掛滿 5 分鐘
-        const ttl = result.kind === 'found' && result.indexable && !result.streams ? PERSON_DEGRADED_CACHE_TTL_S : PERSON_CACHE_TTL_S;
+        // 可索引卻沒拿到場次（嵌入資料異常）或相關 RPC 失敗時短暫快取，別讓暫時的薄內容掛滿 5 分鐘
+        const degraded = result.kind === 'found' && result.indexable && (!result.streams || relatedFailed);
+        const ttl = degraded ? PERSON_DEGRADED_CACHE_TTL_S : PERSON_CACHE_TTL_S;
         const body = new Response(JSON.stringify(result), {
             headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${ttl}` },
         });

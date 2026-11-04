@@ -14,7 +14,6 @@ export interface DirectoryGroup {
 export interface DirectoryPerson {
     slug: string;
     name: string;
-    img_url: string | null;
     group_id: string | null;
     last_live_at: string | null;
 }

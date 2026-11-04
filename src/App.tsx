@@ -3,7 +3,7 @@ import { useIsMobile } from './hooks/useIsMobile';
 import { useTranslation } from 'react-i18next';
 import { useUIStore, type PageType } from './store/useUIStore';
 import { lazyWithPreload } from './utils/lazyWithPreload';
-import { PAGE_PATHS, pathToPage, pageToPath } from './config/routes';
+import { PAGE_PATHS, pathToPage, pageToPath, type RoutePage } from './config/routes';
 import { splitLangPath, urlLangOf } from '../functions/lib/locale.js';
 import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
 import { isSchedulePersonPage, schedulePersonSlugOf } from './config/schedulePerson';
@@ -108,6 +108,12 @@ export function preloadPageChunks(page: PageType): Promise<boolean> {
     .then(() => true)
     .catch(() => false);
 }
+
+/** 手機寬度也用整頁版面的頁面＝所有有固定網址的頁面，扣掉首頁與畫布（兩者走 MobileApp） */
+export const MOBILE_FULL_PAGES: PageType[] = [
+  ...(Object.keys(PAGE_PATHS) as RoutePage[]).filter((p) => p !== 'home' && p !== 'canvas'),
+  'not-found',
+];
 
 // 可分享連結：模組載入時就快照 ?streams=（只在 /canvas 或 /zh-TW/canvas 生效），之後 URL 會被換回乾淨路徑
 const INITIAL_SHARE = (() => {
@@ -234,7 +240,8 @@ export default function App() {
 
   // Mobile: Render MobileApp for core tabs, but fall through for full pages
   // （教學文章頁 instructions:<slug> 也走桌機版 InstructionsPage，靠其 CSS media query 收斂）
-  const isFullPage = ['about', 'creator', 'compare', 'schedule', 'scheduleSubmit', 'status', 'songs', 'songsSubmit', 'privacy', 'faq', 'instructions', 'support', 'admin', 'not-found'].includes(currentPage)
+  // 手機寬度下除了首頁與畫布，其餘頁面都走整頁版面；新增 PageType 要加進來（tests/components/mobileFullPage.test.tsx 鎖）
+  const isFullPage = MOBILE_FULL_PAGES.includes(currentPage)
     || isGuidePage(currentPage) || isSchedulePersonPage(currentPage);
   if (isMobile && !isFullPage && currentPage !== 'home') {
     return (
