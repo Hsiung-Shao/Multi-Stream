@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   VOD_MISSING_AFTER_MS,
+  VOD_TWITCH_FIRST,
   VOD_TWITCH_USERS_PER_RUN,
   VOD_YT_PER_RUN,
   reconcileTwitchVods,
@@ -109,6 +110,38 @@ describe('reconcileTwitchVods', () => {
     expect(r.deferred).toBe(5);
   });
 
+  it('V3 helix 回滿 100 筆且對不到 → 維持 unknown（更舊的封存可能在下一頁，不能當 missing）', async () => {
+    expect(VOD_TWITCH_FIRST).toBe(100);
+    const full = { data: Array.from({ length: 100 }, (_, i) => ({ id: `v${i}`, stream_id: `other-${i}` })) };
+    const r = await reconcileTwitchVods([tw('s1', { actual_end: iso(NOW - 48 * HOUR) })], async () => full, NOW);
+    expect(r.results[0]).toMatchObject({ id: 's1', vod_status: 'unknown', vod_checked_at: iso(NOW) });
+    expect(r.results[0].vod_id ?? null).toBeNull();
+  });
+
+  it('V3 helix 回 99 筆且對不到 → 清單完整，結束超過 24 小時就是 missing', async () => {
+    const almost = { data: Array.from({ length: 99 }, (_, i) => ({ id: `v${i}`, stream_id: `other-${i}` })) };
+    const r = await reconcileTwitchVods([tw('s1', { actual_end: iso(NOW - 48 * HOUR) })], async () => almost, NOW);
+    expect(r.results[0].vod_status).toBe('missing');
+  });
+
+  it('V3 helix 拋錯 → 該組當查不到（deferred），不中斷其他組', async () => {
+    const helix = async (url: string) => {
+      if (url.includes('user_id=b1&')) throw new Error('boom');
+      return { data: [{ id: 'vZ', stream_id: 'stream-s2' }] };
+    };
+    const r = await reconcileTwitchVods([tw('s1'), tw('s2', { broadcaster_id: 'b2' })], helix, NOW);
+    expect(r.results.map((x) => x.id)).toEqual(['s2']);
+    expect(r.deferred).toBe(1);
+  });
+
+  it('V3 deadline 已過 → 全部 deferred、不呼叫 helix', async () => {
+    const helix = vi.fn(async (_url: string) => ({ data: [] }));
+    const r = await reconcileTwitchVods([tw('s1'), tw('s2', { broadcaster_id: 'b2' })], helix, NOW, Date.now() - 1);
+    expect(helix).not.toHaveBeenCalled();
+    expect(r.results).toEqual([]);
+    expect(r.deferred).toBe(2);
+  });
+
   it('V3 broadcaster_id 為 null 的場次直接 deferred、不呼叫 helix', async () => {
     const helix = vi.fn(async (_url: string) => ({ data: [] }));
     const r = await reconcileTwitchVods([tw('s1', { broadcaster_id: null })], helix, NOW);
@@ -146,9 +179,30 @@ describe('reconcileYouTubeVods', () => {
     expect(r.results[0].vod_id ?? null).toBeNull();
   });
 
-  it.each([401, 403])('V5 HTTP %i → 只更新 checked_at 維持 unknown（停用嵌入／會員限定的影片其實看得到，不能當 missing）', async (code) => {
-    const r = await reconcileYouTubeVods([yt('1', { actual_end: iso(NOW - 30 * HOUR) })], asFetch(async () => res(code)), NOW);
+  it('V5 HTTP 403 且結束超過 24 小時 → missing（正式庫被隱藏的影片 oEmbed 實測回 403／404）', async () => {
+    const r = await reconcileYouTubeVods([yt('1', { actual_end: iso(NOW - 30 * HOUR) })], asFetch(async () => res(403)), NOW);
+    expect(r.results[0]).toMatchObject({ id: '1', vod_status: 'missing' });
+    expect(r.throttled).toBe(false);
+  });
+
+  it('V5 HTTP 401 → 只更新 checked_at 維持 unknown（停用嵌入的影片其實看得到，不能當 missing）', async () => {
+    const r = await reconcileYouTubeVods([yt('1', { actual_end: iso(NOW - 30 * HOUR) })], asFetch(async () => res(401)), NOW);
     expect(r.results[0]).toMatchObject({ id: '1', vod_status: 'unknown', vod_checked_at: iso(NOW) });
+    expect(r.throttled).toBe(false);
+  });
+
+  it('V5 HTTP 3xx → 維持 unknown 且不算限速（下輪再查）', async () => {
+    const r = await reconcileYouTubeVods([yt('1')], asFetch(async () => res(302)), NOW);
+    expect(r.results[0]).toMatchObject({ id: '1', vod_status: 'unknown' });
+    expect(r.throttled).toBe(false);
+  });
+
+  it('V6 deadline 已過 → 全部 deferred、不打 oEmbed', async () => {
+    const fetchFn = vi.fn(async (_url: string) => res(200));
+    const r = await reconcileYouTubeVods([yt('1'), yt('2')], asFetch(fetchFn), NOW, Date.now() - 1);
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(r.results).toEqual([]);
+    expect(r.deferred).toBe(2);
     expect(r.throttled).toBe(false);
   });
 

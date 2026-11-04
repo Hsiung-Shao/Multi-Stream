@@ -479,9 +479,10 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
     return (
         <ScheduleCardActionsContext.Provider value={cardActions}>
             <EmbedPromoBanner show={person.live.length > 0 || person.upcoming.length > 0} onOpen={() => setEmbedOpen(true)} />
-            {/* 設計稿「個人頁 A」：lg 以上兩欄 grid（左 340px 資料卡、右內容）；lg 以下單欄，統計與推薦移到主內容後面（手機先看場次） */}
-            <div className="grid grid-cols-1 gap-7 pt-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
-            <aside className="flex flex-col gap-4">
+            {/* 設計稿「個人頁 A」：lg 以上兩欄 grid（左 340px 資料卡＋其下統計與推薦、右內容跨兩列）；
+                lg 以下單欄依 DOM 順序：資料卡 → 場次 → 統計與推薦（手機先看場次）。統計與推薦只渲染一份，靠 grid 位置搬，不複製節點（id 不能重複） */}
+            <div className="grid grid-cols-1 gap-7 pt-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start">
+            <aside className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
             <PersonHeader
                 slug={slug}
                 person={person}
@@ -492,12 +493,8 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                 favorite={fav.isFavorite(person.channel)}
                 onToggleFavorite={() => void fav.toggle(person.channel)}
             />
-            <div className="hidden flex-col gap-4 lg:flex">
-                {!nothing && <PersonStats person={person} upcoming={upcoming.length} live={person.live.length} />}
-                <div className="space-y-6"><PersonRelatedSections related={related} /></div>
-            </div>
             </aside>
-            <div className="min-w-0">
+            <div className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
 
             {nothing ? (
                 <div className="space-y-12">
@@ -583,10 +580,10 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                     <PersonSongs videos={songVideos} vtuberId={person.id} />
                 </div>
             )}
-            <div className="mt-10 flex flex-col gap-4 lg:hidden">
+            </div>
+            <div className="mt-3 flex flex-col gap-4 lg:col-start-1 lg:row-start-2 lg:mt-0">
                 {!nothing && <PersonStats person={person} upcoming={upcoming.length} live={person.live.length} />}
                 <div className="space-y-6"><PersonRelatedSections related={related} /></div>
-            </div>
             </div>
             </div>
 

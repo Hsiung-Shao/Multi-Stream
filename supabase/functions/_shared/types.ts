@@ -39,7 +39,7 @@ export interface StreamRow extends Record<string, unknown> {
   time_tbd?: boolean;
   /** VOD（2026-11-04）：ended 後由 _shared/vod.ts 補；寫入端可省略（資料庫預設 unknown） */
   vod_id?: string | null;
-  vod_status?: 'unknown' | 'ok' | 'missing';
+  vod_status?: 'unknown' | 'ok' | 'missing' | 'expired';
   vod_checked_at?: string | null;
 }
 

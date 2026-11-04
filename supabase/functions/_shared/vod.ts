@@ -1,8 +1,9 @@
 // 歷史紀錄連 VOD：場次結束後補 vod_id／vod_status（migration 20261104 streams_vod）。
 //   - Twitch：external_id 是直播 id，對不到 VOD；用 Helix /videos?user_id=<broadcaster>&type=archive 的 stream_id 對回來。
 //     每個 broadcaster 一次呼叫，每輪最多 VOD_TWITCH_USERS_PER_RUN 個（subrequest 上限，見 memory digest_edge_limits）。
-//   - YouTube：不用 Data API（專案規則：非必要不用 YouTube API）；打 oEmbed，200＝影片還在，404／400＝刪除／私人／id 壞。
-//     401／403 可能只是「停用嵌入」或會員限定（影片其實看得到）：維持 unknown 之後再查，不當 missing。
+//   - YouTube：不用 Data API（專案規則：非必要不用 YouTube API）；打 oEmbed，200＝影片還在，404／400／403＝刪除／私人／id 壞
+//     （2026-11-04 拿正式庫三支已被隱藏的影片實測：回 404、403、404）。
+//     401 是「停用嵌入」（影片其實看得到）：維持 unknown 之後再查，不當 missing。
 //     剛結束的存檔可能還在處理，所以結束不到 24 小時的「找不到」只更新 checked_at，維持 unknown 之後再查。
 //   - 429／5xx／0（逾時、連線錯）= 上游限速或故障：本輪停、不改狀態（memory error_youtube_rss_429_burst：停本輪不算失敗）。
 // 純函式（reconcile*）與 I/O（runVodStep）分開，測試直接餵假的 helix／fetch。
@@ -128,8 +129,8 @@ export async function reconcileYouTubeVods(
         status = 0;
       }
       if (status === 200) results.push({ id: p.id, vod_id: p.external_id, vod_status: 'ok', vod_checked_at: nowIso });
-      else if (status === 404 || status === 400) results.push(notFound(p, now, nowIso));
-      else if (status === 401 || status === 403) results.push({ id: p.id, vod_id: null, vod_status: 'unknown', vod_checked_at: nowIso });
+      else if (status === 404 || status === 400 || status === 403) results.push(notFound(p, now, nowIso));
+      else if (status === 401) results.push({ id: p.id, vod_id: null, vod_status: 'unknown', vod_checked_at: nowIso });
       else if (status === 429 || status >= 500 || status === 0) {
         throttled = true;
         deferred += 1;
@@ -147,6 +148,9 @@ export async function reconcileYouTubeVods(
 
 /** 排程步驟：拿待查清單 → 兩個平台各自對 → 寫回；統計進 stats.vod_* */
 export async function runVodStep(db: Db, twitch: TwitchClient, stats: RunStats, now: number, fetchFn: typeof fetch = fetch, deadlineAt: number = Number.POSITIVE_INFINITY): Promise<void> {
+  // 超過 14 天仍 unknown 的改成終態 expired（不再查，也離開部分索引；前端把它當「還沒查到」）。放在最前：沒有待查也要跑
+  const expired = await db.rpc<number>('schedule_vod_expire').catch(() => null);
+  if (typeof expired === 'number') stats.vod_expired = (stats.vod_expired as number ?? 0) + expired;
   const pending = (await db.rpc<VodPending[]>('schedule_vod_pending', { p_limit: VOD_PENDING_LIMIT })) ?? [];
   if (pending.length === 0) return;
   // 整個步驟不超過 light 輪的預算，最多再給自己一個時間盒
@@ -155,9 +159,6 @@ export async function runVodStep(db: Db, twitch: TwitchClient, stats: RunStats, 
   const yt = await reconcileYouTubeVods(pending, fetchFn, now, stepDeadline);
   const results = [...tw.results, ...yt.results];
   if (results.length) await db.rpc('schedule_vod_write', { p_rows: results });
-  // 超過 14 天仍 unknown 的改成終態 expired（不再查，也離開部分索引；前端把它當「還沒查到」）
-  const expired = await db.rpc<number>('schedule_vod_expire').catch(() => null);
-  if (typeof expired === 'number') stats.vod_expired = (stats.vod_expired as number ?? 0) + expired;
   stats.vod_checked = (stats.vod_checked as number ?? 0) + results.length;
   stats.vod_ok = (stats.vod_ok as number ?? 0) + results.filter((r) => r.vod_status === 'ok').length;
   stats.vod_missing = (stats.vod_missing as number ?? 0) + results.filter((r) => r.vod_status === 'missing').length;

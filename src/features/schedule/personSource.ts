@@ -84,7 +84,7 @@ export interface PersonStreamRow {
     time_tbd?: boolean | null;
     /** VOD（2026-11-04）：ended 後由排程補；舊資料可能沒有 */
     vod_id?: string | null;
-    vod_status?: 'unknown' | 'ok' | 'missing' | null;
+    vod_status?: 'unknown' | 'ok' | 'missing' | 'expired' | null;
     actual_start: string | null;
     actual_end: string | null;
     merged_with: string | null;
