@@ -5,7 +5,7 @@
  */
 import { memo, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { switchLanguage } from '../../../../i18n/switchLanguage';
+import { switchLanguage, languageItemHandlers } from '../../../../i18n/switchLanguage';
 import { CalendarDays, Globe, Music, Plus } from 'lucide-react';
 import { RouteLink } from '../../../../components/Navigation/RouteLink';
 import { ScrollArea } from '../../../../components/ui/scroll-area';
@@ -145,7 +145,7 @@ export const LeftNav = memo(function LeftNav({
                     </SelectTrigger>
                     <SelectContent>
                         {SUPPORTED_LANGUAGES.map((lang) => (
-                            <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>{lang.label}</SelectItem>
+                            <SelectItem key={lang.value} value={lang.value} {...languageItemHandlers(lang.value)}>{lang.label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

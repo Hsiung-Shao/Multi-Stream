@@ -5,7 +5,7 @@
 
 import { Home, Globe, Sun, Moon, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { switchLanguage } from '../i18n/switchLanguage';
+import { switchLanguage, languageItemHandlers } from '../i18n/switchLanguage';
 import { useUIStore } from '../store/useUIStore';
 import { useEffectiveTheme } from '../hooks/useEffectiveTheme';
 import { Button } from './ui/button';
@@ -54,7 +54,7 @@ export function StaticPageHeader({ title, analyticsCategory = 'StaticPageHeader'
                     </SelectTrigger>
                     <SelectContent>
                         {SUPPORTED_LANGUAGES.map((lang) => (
-                            <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>{lang.label}</SelectItem>
+                            <SelectItem key={lang.value} value={lang.value} {...languageItemHandlers(lang.value)}>{lang.label}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

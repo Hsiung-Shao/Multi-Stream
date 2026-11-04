@@ -1,6 +1,6 @@
 import { useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { switchLanguage } from '../../../i18n/switchLanguage';
+import { switchLanguage, languageItemHandlers } from '../../../i18n/switchLanguage';
 import { useUIStore } from '../../../store/useUIStore';
 import { Label } from '../../../components/ui/label';
 import {
@@ -186,10 +186,7 @@ export function SettingsSection() {
         openModal('feedback');
     };
 
-    const changeLanguage = (lang: string) => {
-        i18n.changeLanguage(lang);
-        localStorage.setItem('i18nextLng', lang);
-    };
+    const changeLanguage = switchLanguage;
 
     // 社群外連按鈕共用樣式(對齊現行 token,非舊版硬編 gray)
     const linkBtnClass = 'flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background hover:bg-foreground/[0.04] transition-colors text-sm font-medium text-foreground';
@@ -262,11 +259,11 @@ export function SettingsSection() {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="zh-TW" onPointerUp={() => switchLanguage('zh-TW')}>繁體中文</SelectItem>
-                            <SelectItem value="zh-CN" onPointerUp={() => switchLanguage('zh-CN')}>简体中文</SelectItem>
-                            <SelectItem value="en" onPointerUp={() => switchLanguage('en')}>English</SelectItem>
-                            <SelectItem value="ja" onPointerUp={() => switchLanguage('ja')}>日本語</SelectItem>
-                            <SelectItem value="ko" onPointerUp={() => switchLanguage('ko')}>한국어</SelectItem>
+                            <SelectItem value="zh-TW" {...languageItemHandlers('zh-TW')}>繁體中文</SelectItem>
+                            <SelectItem value="zh-CN" {...languageItemHandlers('zh-CN')}>简体中文</SelectItem>
+                            <SelectItem value="en" {...languageItemHandlers('en')}>English</SelectItem>
+                            <SelectItem value="ja" {...languageItemHandlers('ja')}>日本語</SelectItem>
+                            <SelectItem value="ko" {...languageItemHandlers('ko')}>한국어</SelectItem>
                         </SelectContent>
                     </Select>
                 </SettingRow>
@@ -298,8 +295,8 @@ export function SettingsSection() {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="remove" onPointerUp={() => switchLanguage('remove')}>{t('favorites:settings.mode_remove')}</SelectItem>
-                            <SelectItem value="empty" onPointerUp={() => switchLanguage('empty')}>{t('favorites:settings.mode_empty')}</SelectItem>
+                            <SelectItem value="remove">{t('favorites:settings.mode_remove')}</SelectItem>
+                            <SelectItem value="empty">{t('favorites:settings.mode_empty')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </SettingRow>

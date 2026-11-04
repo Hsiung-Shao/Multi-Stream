@@ -18,7 +18,7 @@ import { RouteLink } from './Navigation/RouteLink';
 import { SiteFooter } from './SiteFooter';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useTranslation } from 'react-i18next';
-import { switchLanguage } from '../i18n/switchLanguage';
+import { switchLanguage, languageItemHandlers } from '../i18n/switchLanguage';
 import { logEvent } from '../utils/analytics';
 import { IconChip, BlurOrb, SectionHead } from './ui/ds-primitives';
 
@@ -321,7 +321,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
               </SelectTrigger>
               <SelectContent>
                 {languages.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>
+                  <SelectItem key={lang.value} value={lang.value} {...languageItemHandlers(lang.value)}>
                     {lang.label}
                   </SelectItem>
                 ))}

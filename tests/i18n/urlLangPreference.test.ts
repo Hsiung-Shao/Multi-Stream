@@ -55,3 +55,25 @@ describe('switchLanguage：選單明確選擇才寫偏好', () => {
         expect(localStorage.getItem('i18nextLng')).toBe('zh-TW');
     });
 });
+
+describe('SettingsSection 非語言選單不碰語言（review 第 3 輪 bug）', () => {
+    it('L24 原始碼鎖：只有語言 SelectItem 掛 languageItemHandlers，關閉視窗模式的選項沒有', async () => {
+        const { readFileSync } = await import('node:fs');
+        const { resolve } = await import('node:path');
+        const src = readFileSync(resolve(__dirname, '../../src/features/favorites/components/SettingsSection.tsx'), 'utf8');
+        expect(src).toContain("<SelectItem value=\"zh-TW\" {...languageItemHandlers('zh-TW')}>");
+        expect(src).toMatch(/<SelectItem value="remove">/);
+        expect(src).toMatch(/<SelectItem value="empty">/);
+        expect(src).not.toMatch(/switchLanguage\('(remove|empty)'\)/);
+    });
+
+    it('L25 languageItemHandlers：Radix 擋下的 pointerup 不切語言，鍵盤 Enter 會切', async () => {
+        const { languageItemHandlers } = await import('../../src/i18n/switchLanguage');
+        localStorage.setItem('i18nextLng', 'en');
+        const h = languageItemHandlers('zh-TW');
+        h.onPointerUp({ defaultPrevented: true } as unknown as React.PointerEvent);
+        expect(localStorage.getItem('i18nextLng')).toBe('en');
+        h.onKeyDown({ key: 'Enter', defaultPrevented: false } as unknown as React.KeyboardEvent);
+        expect(localStorage.getItem('i18nextLng')).toBe('zh-TW');
+    });
+});

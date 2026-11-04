@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { switchLanguage } from '../../i18n/switchLanguage';
+import { switchLanguage, languageItemHandlers } from '../../i18n/switchLanguage';
 import { useUIStore } from '../../store/useUIStore';
 import { RouteLink } from '../Navigation/RouteLink';
 import type { RoutePage } from '../../config/routes';
@@ -68,7 +68,7 @@ export function MobileSettingsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 {languages.map((lang) => (
-                                    <SelectItem key={lang.value} value={lang.value} onPointerUp={() => switchLanguage(lang.value)}>
+                                    <SelectItem key={lang.value} value={lang.value} {...languageItemHandlers(lang.value)}>
                                         {lang.label}
                                     </SelectItem>
                                 ))}

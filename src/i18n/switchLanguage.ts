@@ -1,3 +1,4 @@
+import type React from 'react';
 import i18n from './i18n';
 
 /**
@@ -13,4 +14,24 @@ export function switchLanguage(lang: string): void {
     } catch {
         // 儲存被封鎖：介面仍切換，只是偏好存不下來
     }
+}
+
+/**
+ * 語言選單 SelectItem 的共用事件：補上 Radix 不會回報的「選到同一個值」。
+ * - pointerup：Radix 在 trigger 按下後游標移動不到 10px 就放開時會 preventDefault 故意不選，這裡跟著跳過。
+ * - 鍵盤 Enter／Space：鍵盤選取不經過 pointerup，另外處理。
+ * 值不同時 Radix 自己的 onValueChange 也會呼叫 switchLanguage，重複一次是同語言的 no-op。
+ */
+export function languageItemHandlers(lang: string): {
+    onPointerUp: (e: React.PointerEvent) => void;
+    onKeyDown: (e: React.KeyboardEvent) => void;
+} {
+    return {
+        onPointerUp: (e) => {
+            if (!e.defaultPrevented) switchLanguage(lang);
+        },
+        onKeyDown: (e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !e.defaultPrevented) switchLanguage(lang);
+        },
+    };
 }
