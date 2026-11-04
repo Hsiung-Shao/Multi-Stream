@@ -376,7 +376,8 @@ function RowMain({ stream, channel, className, rounded, children }: { stream: Sc
     const actions = useCardActions();
     const href = watchUrl(stream, channel);
     const name = channel?.name ?? stream.vtuber_id;
-    if (actions) {
+    // 已結束的場次一律連 VOD（新分頁），不進畫布：畫布是看直播用的，歷史紀錄點下去要到對應影片
+    if (actions && stream.status !== 'ended') {
         const busy = actions.busyKey === streamKey(stream);
         return (
             <button
@@ -490,6 +491,9 @@ export function RecentRow({ stream, channel, now, personLinks = true, songs }: O
                     {displayTitle(stream, t('card.untitled'))}
                 </RowMain>
             </span>
+            {stream.vod_status === 'missing' && (
+                <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground" title={t('card.vodUnavailableHint')}>{t('card.vodUnavailable')}</span>
+            )}
             <SongsBadge stream={stream} songs={songs} />
             <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatRelative(stream.actual_end, now, locale)}</span>
             {actions && (

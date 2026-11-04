@@ -42,6 +42,8 @@ export default {
 
     'card.startedAt': '{{time}} 开播',
     'card.select': '选择 {{name}}',
+    'card.vodUnavailable': 'VOD 不可用',
+    'card.vodUnavailableHint': '这场的存档已移除或未保留，点标题会到频道的视频列表',
     'card.openOriginal': '在 {{platform}} 打开',
     'card.untitled': '（未命名）',
     'card.timeTbd': '时间未定',

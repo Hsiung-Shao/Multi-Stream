@@ -42,6 +42,8 @@ export default {
 
     'card.startedAt': 'started {{time}}',
     'card.select': 'Select {{name}}',
+    'card.vodUnavailable': 'No VOD',
+    'card.vodUnavailableHint': 'The archive was removed or not kept; the title links to the channel’s videos',
     'card.openOriginal': 'Open on {{platform}}',
     'card.untitled': '(untitled)',
     'card.timeTbd': 'Time TBD',

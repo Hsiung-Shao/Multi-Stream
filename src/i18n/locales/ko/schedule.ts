@@ -42,6 +42,8 @@ export default {
 
     'card.startedAt': '{{time}} 시작',
     'card.select': '{{name}} 선택',
+    'card.vodUnavailable': 'VOD 없음',
+    'card.vodUnavailableHint': '이 방송의 다시보기는 삭제되었거나 보관되지 않았습니다. 제목을 누르면 채널 영상 목록으로 이동합니다',
     'card.openOriginal': '{{platform}}에서 열기',
     'card.untitled': '(제목 없음)',
     'card.timeTbd': '시간 미정',

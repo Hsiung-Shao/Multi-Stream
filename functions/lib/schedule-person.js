@@ -30,7 +30,7 @@ export const PERSON_DEGRADED_CACHE_TTL_S = 30;
 const DAY_MS = 86_400_000;
 const YT_CHANNEL_RE = /^UC[A-Za-z0-9_-]{22}$/;
 const TWITCH_LOGIN_RE = /^[A-Za-z0-9_]{3,25}$/;
-const STREAM_COLS = 'title,status,platform,scheduled_start,time_tbd,actual_start,actual_end';
+const STREAM_COLS = 'title,status,platform,external_id,scheduled_start,time_tbd,actual_start,actual_end,vod_id,vod_status';
 
 /**
  * 預設查詢：anon key 走 PostgREST（vtubers 與 streams 本來就公開可讀，不需要 service_role）＋逾時。
@@ -106,8 +106,15 @@ function pickStream(s) {
         platform: s.platform === 'twitch' ? 'twitch' : 'youtube',
         start: s.actual_start ?? s.scheduled_start ?? null,
     };
+    // YouTube 的 VOD 就是 external_id（post:／sub: 來源沒有影片）
+    if (s.platform !== 'twitch' && typeof s.external_id === 'string' && !/^(post|sub):/.test(s.external_id)) out.video_id = s.external_id;
     // 時間未定：還沒開台（沒有 actual_start）時 start 只是存放用的台北 00:00，內文只寫日期
     if (s.time_tbd === true && !s.actual_start) out.tbd = true;
+    // VOD（只有 ended 且已查到）：內文的最近場次連到對應影片
+    if (s.status === 'ended' && (s.vod_status === 'ok' || s.vod_status === 'missing')) {
+        out.vod_status = s.vod_status;
+        if (s.vod_status === 'ok' && typeof s.vod_id === 'string') out.vod_id = s.vod_id;
+    }
     return out;
 }
 
@@ -229,7 +236,17 @@ const DATE_FMT = {
 };
 const TAIPEI_DAY_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' });
 
-function streamItem(lang, s) {
+/** 已結束場次的 VOD 網址（與 src/features/schedule/streamLinks.ts vodUrl 同規則；person 帶 youtube／twitch 頻道 id） */
+export function vodUrlFor(s, person) {
+    if (s.platform === 'twitch') {
+        if (s.vod_id) return `https://www.twitch.tv/videos/${encodeURIComponent(s.vod_id)}`;
+        return person.twitch ? `https://www.twitch.tv/${person.twitch}/videos` : null;
+    }
+    if (s.vod_status === 'missing') return person.youtube ? `https://www.youtube.com/channel/${person.youtube}/streams` : null;
+    return s.video_id ? `https://www.youtube.com/watch?v=${encodeURIComponent(s.video_id)}` : null;
+}
+
+function streamItem(lang, s, person = null) {
     const t = s.start ? Date.parse(s.start) : NaN;
     let when = '';
     if (Number.isFinite(t) && s.tbd) {
@@ -240,7 +257,9 @@ function streamItem(lang, s) {
         when = `<time datetime="${escapeHtml(new Date(t).toISOString())}">${escapeHtml((TIME_FMT[lang] ?? TIME_FMT.en).format(t))}</time> `;
     }
     const platform = s.platform === 'twitch' ? 'Twitch' : 'YouTube';
-    return `<li>${when}${escapeHtml(s.title || platform)}（${platform}）</li>`;
+    const title = escapeHtml(s.title || platform);
+    const href = person ? vodUrlFor(s, person) : null;
+    return `<li>${when}${href ? `<a href="${escapeHtml(href)}" rel="noopener" target="_blank">${title}</a>` : title}（${platform}）</li>`;
 }
 
 function streamSection(heading, items) {
@@ -268,7 +287,7 @@ export function renderPersonBodyHtml(lang, person, slug) {
         parts.push(`<p class="mt-2 text-muted-foreground">${escapeHtml(personSummary(lang, person.name, s))}</p>`);
         parts.push(streamSection(t.live, s.live.map((x) => streamItem(lang, x))));
         parts.push(streamSection(t.upcoming, s.upcoming.map((x) => streamItem(lang, x))));
-        parts.push(streamSection(t.recent, s.recent.map((x) => streamItem(lang, x))));
+        parts.push(streamSection(t.recent, s.recent.map((x) => streamItem(lang, x, person))));
         if (s.live.length || s.upcoming.length || s.recent.length) parts.push(`<p><small>${escapeHtml(t.tz)}</small></p>`);
     }
     // 內鏈區塊：同公司／同團、同時段常開台（資料來自 schedule_person_related；沒有就整段不出）

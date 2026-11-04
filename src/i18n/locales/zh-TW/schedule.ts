@@ -42,6 +42,8 @@ export default {
 
     'card.startedAt': '{{time}} 開台',
     'card.select': '選取 {{name}}',
+    'card.vodUnavailable': 'VOD 不可用',
+    'card.vodUnavailableHint': '這場的存檔已移除或未保留，點標題會到頻道的影片列表',
     'card.openOriginal': '在 {{platform}} 開啟',
     'card.untitled': '（未命名）',
     'card.timeTbd': '時間未定',

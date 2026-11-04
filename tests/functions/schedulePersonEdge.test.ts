@@ -327,3 +327,59 @@ describe('buildScheduleSitemap', () => {
         expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
     });
 });
+
+describe('V8 個人頁內文：已結束場次連到回放', () => {
+    const NOW = Date.parse('2026-10-08T12:00:00Z');
+    const H = 3_600_000;
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const yid = 'UCabcdefghijklmnopqrstuv';
+    const recentOf = (items: Record<string, unknown>[], extra: Record<string, unknown> = {}) => ({
+        name: '台一',
+        youtube: null,
+        twitch: null,
+        streams: { live: [], upcoming: [], recent: items, recentTotal: items.length, upcomingTotal: 0 },
+        ...extra,
+    });
+    const start = iso(NOW - 26 * H);
+    /** personQuery 那一列：recent 是資料庫欄位（含 external_id、vod_id、vod_status） */
+    const rowOf = (recent: Record<string, unknown>[]) => ({
+        name: '台一',
+        img_url: null,
+        schedule_indexable: true,
+        youtube_channel_id: yid,
+        twitch_channel_id: 'taione',
+        active: [],
+        recent,
+        recent_count: [{ count: recent.length }],
+    });
+    const fromRow = (recent: Record<string, unknown>[]) =>
+        renderPersonBodyHtml('zh-TW', { name: '台一', youtube: yid, twitch: 'taione', streams: personStreamsFromRow(rowOf(recent), NOW) }, 'taione');
+
+    it('Twitch 帶 vod_id → 連到 twitch.tv/videos/<id>', () => {
+        const html = renderPersonBodyHtml('zh-TW', recentOf([{ title: '昨晚雜談', platform: 'twitch', start, vod_id: '123' }], { twitch: 'taione' }), 'taione');
+        expect(html).toContain('href="https://www.twitch.tv/videos/123"');
+    });
+
+    it('YouTube vod_status 為 missing → 連到頻道影片列表', () => {
+        const html = renderPersonBodyHtml('zh-TW', recentOf([{ title: '被刪的歌回', platform: 'youtube', start, vod_status: 'missing' }], { youtube: yid }), 'taione');
+        expect(html).toContain(`href="https://www.youtube.com/channel/${yid}/streams"`);
+    });
+
+    it('從資料庫列走完整條路：Twitch vod_id、YouTube 正常、YouTube missing 各連到對的地方', () => {
+        const html = fromRow([
+            { status: 'ended', title: 'TW雜談', platform: 'twitch', external_id: '999', actual_start: start, actual_end: iso(NOW - 24 * H), vod_id: '123', vod_status: 'ok' },
+            { status: 'ended', title: 'YT正常', platform: 'youtube', external_id: 'AbCdEfGhIjK', actual_start: start, actual_end: iso(NOW - 25 * H), vod_id: null, vod_status: 'ok' },
+            { status: 'ended', title: 'YT被刪', platform: 'youtube', external_id: 'GoneVideo01', actual_start: start, actual_end: iso(NOW - 26 * H), vod_id: null, vod_status: 'missing' },
+        ]);
+        expect(html).toContain('href="https://www.twitch.tv/videos/123"');
+        expect(html).toContain('href="https://www.youtube.com/watch?v=AbCdEfGhIjK"');
+        expect(html).toContain(`href="https://www.youtube.com/channel/${yid}/streams"`);
+        // 已消失的影片不能再連過去
+        expect(html).not.toContain('GoneVideo01');
+    });
+
+    it('回放連結的屬性與標題一律跳脫', () => {
+        const html = renderPersonBodyHtml('en', recentOf([{ title: '"><script>x</script>', platform: 'twitch', start, vod_id: '1"><script>y</script>' }], { twitch: 'taione' }), 'abc');
+        expect(html).not.toMatch(/<script/i);
+    });
+});

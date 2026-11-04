@@ -574,3 +574,17 @@ describe('T9b card 頭像抓失敗只短暫快取', () => {
         expect(res.headers.get('Cache-Control')).toBe('public, max-age=300');
     });
 });
+
+describe('U1 嵌入頁：已開播時長與更新頻率', () => {
+    it('直播中場次顯示已開播時間（zh-TW「已開播 2 小時」、en「live for 2h」）', () => {
+        const live = subject([yt('歌回', NOW - 2 * H)], []);
+        expect(renderEmbedHtml(live, { lang: 'zh-TW', theme: 'light', days: 7 }, NOW)).toContain('已開播 2 小時');
+        expect(renderEmbedHtml(live, { lang: 'en', theme: 'light', days: 7 }, NOW)).toContain('live for 2h');
+    });
+
+    it('副標寫明更新頻率（zh-TW「每 5 分鐘更新」、en「updates every 5 min」）', () => {
+        const html: string = renderEmbedHtml(subject([], [yt('雜談', NOW + H)]), { lang: 'zh-TW', theme: 'light', days: 7 }, NOW);
+        expect(html).toContain('每 5 分鐘更新');
+        expect(renderEmbedHtml(subject([], []), { lang: 'en', theme: 'light', days: 7 }, NOW)).toContain('updates every 5 min');
+    });
+});

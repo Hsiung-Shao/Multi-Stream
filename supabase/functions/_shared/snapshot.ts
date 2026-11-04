@@ -104,6 +104,9 @@ export interface SnapshotStream {
   actual_end?: string;
   /** 時間未定（只在 true 時輸出）：scheduled_start 是台北當天 00:00，前端顯示「時間未定」、排在當天最後 */
   time_tbd?: true;
+  /** VOD（只在 ended 列、且已查到結果時輸出）：ok 帶 vod_id（Twitch 為 Helix videos id）、missing 前端退回頻道影片列表 */
+  vod_id?: string;
+  vod_status?: 'ok' | 'missing';
   also?: SnapshotAlso[];
 }
 
@@ -183,6 +186,8 @@ export function buildSnapshot(
       actual_start: s.actual_start,
       actual_end: s.actual_end,
       time_tbd: s.time_tbd === true ? true : null,
+      vod_id: s.status === 'ended' && s.vod_status === 'ok' && s.vod_id ? s.vod_id : null,
+      vod_status: s.status === 'ended' && (s.vod_status === 'ok' || s.vod_status === 'missing') ? s.vod_status : null,
       also: alsoOf.get(s.id) ?? null,
     }) as SnapshotStream;
 

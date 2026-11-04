@@ -78,12 +78,15 @@ export interface PersonStreamRow {
     scheduled_start: string | null;
     /** 時間未定（scheduled_start 存該台北日期 00:00）；舊資料／測試可能沒有 */
     time_tbd?: boolean | null;
+    /** VOD（2026-11-04）：ended 後由排程補；舊資料可能沒有 */
+    vod_id?: string | null;
+    vod_status?: 'unknown' | 'ok' | 'missing' | null;
     actual_start: string | null;
     actual_end: string | null;
     merged_with: string | null;
 }
 
-const STREAM_COLS = 'id,platform,external_id,source,status,title,category,scheduled_start,time_tbd,actual_start,actual_end,merged_with';
+const STREAM_COLS = 'id,platform,external_id,source,status,title,category,scheduled_start,time_tbd,actual_start,actual_end,merged_with,vod_id,vod_status';
 
 function toStream(vtuberId: string, r: PersonStreamRow): ScheduleStream {
     const s: ScheduleStream = { vtuber_id: vtuberId, platform: r.platform, external_id: r.external_id, source: r.source, status: r.status };
@@ -93,6 +96,10 @@ function toStream(vtuberId: string, r: PersonStreamRow): ScheduleStream {
     if (r.time_tbd === true) s.time_tbd = true;
     if (r.actual_start) s.actual_start = r.actual_start;
     if (r.actual_end) s.actual_end = r.actual_end;
+    if (r.status === 'ended' && (r.vod_status === 'ok' || r.vod_status === 'missing')) {
+        s.vod_status = r.vod_status;
+        if (r.vod_status === 'ok' && r.vod_id) s.vod_id = r.vod_id;
+    }
     return s;
 }
 

@@ -14,8 +14,24 @@ function youtubeChannelLive(ch: ScheduleChannel | undefined): string | null {
     return ch?.youtube ? `https://www.youtube.com/channel/${ch.youtube}/live` : null;
 }
 
-/** 在原平台觀看的網址 */
+/**
+ * 已結束場次的 VOD 網址（2026-11-04：歷史紀錄點下去要到對應 VOD，壞掉退回頻道影片列表）。
+ *   YouTube：VOD 就是 watch 網址；vod_status missing → /channel/<id>/streams
+ *   Twitch：vod_id（Helix videos id）→ /videos/<id>；沒有（missing 或還沒查到）→ /<login>/videos
+ */
+export function vodUrl(s: ScheduleStream, ch: ScheduleChannel | undefined): string | null {
+    if (s.platform === 'youtube') {
+        if (isNonVideoStream(s)) return youtubeChannelLive(ch);
+        if (s.vod_status === 'missing') return ch?.youtube ? `https://www.youtube.com/channel/${ch.youtube}/streams` : null;
+        return `https://www.youtube.com/watch?v=${s.external_id}`;
+    }
+    if (s.vod_id) return `https://www.twitch.tv/videos/${s.vod_id}`;
+    return ch?.twitch ? `https://www.twitch.tv/${ch.twitch}/videos` : null;
+}
+
+/** 在原平台觀看的網址（已結束的場次改為 VOD 規則） */
 export function watchUrl(s: ScheduleStream, ch: ScheduleChannel | undefined): string | null {
+    if (s.status === 'ended') return vodUrl(s, ch);
     if (s.platform === 'youtube') return isNonVideoStream(s) ? youtubeChannelLive(ch) : `https://www.youtube.com/watch?v=${s.external_id}`;
     return ch?.twitch ? `https://www.twitch.tv/${ch.twitch}` : null;
 }

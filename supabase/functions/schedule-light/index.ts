@@ -17,6 +17,7 @@ import { loadRosterSlice } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
 import { publishSnapshot } from '../_shared/snapshot.ts';
 import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannelRpc, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { runVodStep } from '../_shared/vod.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
@@ -60,6 +61,8 @@ Deno.serve((req) => {
     const twitchResult = await syncTwitchLive(db, twitch, twitchChannels, stats, now);
     // 合併是附加功能：失敗只記錯誤，不能擋住後面的共享表與 snapshot
     await softStep(stats, 'merge', () => applyMerges(db, stats, now));
+    // 歷史紀錄連 VOD：補 ended 場次的 vod_id／vod_status（附加功能，失敗不擋後面）
+    await softStep(stats, 'vod', () => runVodStep(db, twitch, stats, now));
 
     // 4. last_live_at + 共享表（這輪 RSS 掃到的頻道；場次狀態從資料庫讀「目前所有 scheduled/live」）
     await touchLastLiveAt(db, twitchResult.liveVtuberIds, stats, now);

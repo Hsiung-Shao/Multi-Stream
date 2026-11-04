@@ -44,6 +44,9 @@ export interface ScheduleStream {
     time_tbd?: boolean;
     actual_start?: string;
     actual_end?: string;
+    /** VOD（只有 ended 且後端已查到才有）：ok 時 Twitch 帶 vod_id（Helix videos id）、YouTube 的 VOD 就是 external_id；missing＝已刪除／未存檔，連結退回頻道影片列表 */
+    vod_id?: string;
+    vod_status?: 'ok' | 'missing';
     /** 併進這一場的其他平台場次（例：YouTube 待機室＋同時段的 Twitch 週表） */
     also?: ScheduleAlso[];
 }

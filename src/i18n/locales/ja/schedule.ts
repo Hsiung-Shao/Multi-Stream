@@ -42,6 +42,8 @@ export default {
 
     'card.startedAt': '{{time}} 開始',
     'card.select': '{{name}} を選択',
+    'card.vodUnavailable': 'アーカイブなし',
+    'card.vodUnavailableHint': 'この配信のアーカイブは削除または未保存です。タイトルはチャンネルの動画一覧に移動します',
     'card.openOriginal': '{{platform}} で開く',
     'card.untitled': '（タイトルなし）',
     'card.timeTbd': '時間未定',

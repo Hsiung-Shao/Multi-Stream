@@ -37,6 +37,10 @@ export interface StreamRow extends Record<string, unknown> {
   fetched_at: string;
   /** 時間未定（2026-10-14）：scheduled_start 存台北當天 00:00；只有 community_post／user_submission 會是 true。舊資料／寫入端可省略（資料庫預設 false） */
   time_tbd?: boolean;
+  /** VOD（2026-11-04）：ended 後由 _shared/vod.ts 補；寫入端可省略（資料庫預設 unknown） */
+  vod_id?: string | null;
+  vod_status?: 'unknown' | 'ok' | 'missing';
+  vod_checked_at?: string | null;
 }
 
 /** 從資料庫讀出來的 streams 列（含 id） */
@@ -67,6 +71,13 @@ export interface RunStats extends Record<string, unknown> {
   /** 因 API 上限延到下一輪再查的影片數 */
   api_deferred: number;
   /** live-og（/live 頁）：查了幾個頻道、失敗、判定直播中、待機、判定結束的場次 */
+  /** VOD 補查（_shared/vod.ts）：這輪寫回幾筆、其中 ok／missing、延後、Twitch videos 呼叫數、YouTube oEmbed 是否被限速 */
+  vod_checked?: number;
+  vod_ok?: number;
+  vod_missing?: number;
+  vod_deferred?: number;
+  vod_twitch_calls?: number;
+  vod_yt_throttled?: boolean;
   og_checked: number;
   og_failed: number;
   /** og 失敗原因分布（見 LiveOgResult.failReason） */
