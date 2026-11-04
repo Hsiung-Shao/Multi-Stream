@@ -297,6 +297,14 @@ export const track = {
     scheduleWatch: (platform: string, status: string, source: string, result: string) =>
         sendEvent('schedule_watch', { platform, status, source, result }),
 
+    /** 嵌入產生器：複製網址或嵌入碼 */
+    embedCopy: (type: 'url' | 'code', o: { kind: string; theme: string; days: number; lang: string }) =>
+        sendEvent('embed_copy', { type, kind: o.kind, theme: o.theme, days: o.days, lang: o.lang }),
+
+    /** 嵌入產生器：下載週表圖（PNG） */
+    embedDownload: (o: { kind: string; theme: string; days: number; lang: string }) =>
+        sendEvent('embed_download', { kind: o.kind, theme: o.theme, days: o.days, lang: o.lang }),
+
     /** 週表篩選變更（filter：scope/nationality/group/platform/day） */
     scheduleFilterChange: (filter: string, value: string) =>
         sendEvent('schedule_filter_change', { filter, value }),

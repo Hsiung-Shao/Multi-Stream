@@ -88,7 +88,7 @@ export async function onRequest(context) {
     let noindex;
     let image = null;
     if (person.kind === 'found') {
-        meta = schedulePersonMeta(lang, person.name, person.streams);
+        meta = schedulePersonMeta(lang, person.name, person.indexable ? person.streams : null);
         status = 200;
         noindex = !person.indexable;
         image = person.image;

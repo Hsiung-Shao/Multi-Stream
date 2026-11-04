@@ -33,6 +33,8 @@
 | `schedule_open_multi` | 開台週表勾選後按「在畫布同時觀看」 | `selected_count`, `added_count`, `tab` (live/upcoming/mixed), `scope` (all/favorites) | ✓ | [useScheduleSelection.ts](../src/features/schedule/useScheduleSelection.ts) |
 | `schedule_filter_change` | 開台週表切換篩選或日期 | `filter` (scope/nationality/group/platform/day), `value` | — | [ScheduleBoard.tsx](../src/features/schedule/ScheduleBoard.tsx) |
 | `schedule_watch` | 週表卡片按「觀看」單開一路 | `platform`, `status`, `source` (board/person), `result` (added/switched/full/failed) | — | [useWatchOnCanvas.ts](../src/features/schedule/useWatchOnCanvas.ts) |
+| `embed_copy` | 嵌入產生器按「複製網址」或「複製嵌入碼」 | `type` (url/code), `kind` (person/group), `theme`, `days`, `lang` | — | [EmbedScheduleDialog.tsx](../src/features/schedule/EmbedScheduleDialog.tsx) |
+| `embed_download` | 嵌入產生器下載週表圖 PNG | `kind` (person/group), `theme`, `days`, `lang` | — | [EmbedScheduleDialog.tsx](../src/features/schedule/EmbedScheduleDialog.tsx) |
 | `login` | Twitch OAuth 登入成功 | `method` (固定 `Twitch`) | ✓ | **dev only** — 經 `setUserIdFromTwitchId` 自動觸發 |
 
 ## Heartbeat / Session（觀看時長系統）

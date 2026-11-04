@@ -294,7 +294,7 @@ describe('個人頁內文：時間未定場次（time_tbd，2026-10-14）', () =
 describe('catch-all 接線', () => {
     it('個人頁把內文放進 #root（含不可索引頁的 h1），description 帶場次摘要', () => {
         const src = readFileSync(resolve(__dirname, '../../functions/[[path]].js'), 'utf8');
-        expect(src).toContain('meta = schedulePersonMeta(lang, person.name, person.streams);');
+        expect(src).toContain('meta = schedulePersonMeta(lang, person.name, person.indexable ? person.streams : null);');
         expect(src).toMatch(/if \(person\.kind === 'found'\) \{\s*\/\/[^\n]*\n[^\n]*\n\s*const bodyHtml = renderPersonBodyHtml\(lang, person,/);
         expect(src).toContain("rewriter.on('div#root'");
     });

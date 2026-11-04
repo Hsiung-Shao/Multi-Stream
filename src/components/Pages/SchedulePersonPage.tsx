@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CalendarPlus, ChevronRight, ExternalLink, Facebook, Flag, Heart, Instagram, ListMusic, MonitorPlay, Music2, Play, RefreshCw, SearchX } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, ChevronRight, Code2, ExternalLink, Facebook, Flag, Heart, Instagram, ListMusic, MonitorPlay, Music2, Play, RefreshCw, SearchX } from 'lucide-react';
 import { StaticPageHeader } from '../StaticPageHeader';
 import { RouteLink } from '../Navigation/RouteLink';
 import { SiteFooter } from '../SiteFooter';
@@ -37,6 +37,7 @@ import { useSongCatalog, type SongVideo } from '../../features/songs/songsSource
 import { buildVideoIndex, songsForVtuber } from '../../features/songs/lib/catalogIndex';
 import { serializeSongShare } from '../../features/songs/lib/songShareLink';
 import { formatTimecode } from '../../features/songs/lib/timecode';
+import { EmbedScheduleDialog } from '../../features/schedule/EmbedScheduleDialog';
 
 const RECENT_PREVIEW = 10;
 
@@ -110,6 +111,21 @@ function SubmitScheduleButton({ person, variant = 'button' }: { person: Schedule
     );
 }
 
+/** 「嵌入到我的網站」：開產生器對話框（features/schedule/EmbedScheduleDialog） */
+function EmbedScheduleButton({ slug, name }: { slug: string; name: string }) {
+    const { t } = useTranslation('schedule');
+    const [open, setOpen] = useState(false);
+    return (
+        <>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+                <Code2 size={14} aria-hidden="true" />
+                {t('embed.button')}
+            </Button>
+            {open && <EmbedScheduleDialog open={open} onOpenChange={setOpen} target={{ kind: 'person', slug, name }} />}
+        </>
+    );
+}
+
 function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     const { t, i18n } = useTranslation('schedule');
     const inLanguage = toHtmlLang(i18n.language);
@@ -163,7 +179,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     );
 }
 
-function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }: { person: SchedulePerson; onWatchLive: () => void; busy: boolean; favorite: boolean; onToggleFavorite: () => void }) {
+function PersonHeader({ person, slug, onWatchLive, busy, favorite, onToggleFavorite }: { person: SchedulePerson; slug: string; onWatchLive: () => void; busy: boolean; favorite: boolean; onToggleFavorite: () => void }) {
     const { t } = useTranslation('schedule');
     const ch = person.channel;
     const live = person.live.length > 0;
@@ -221,6 +237,7 @@ function PersonHeader({ person, onWatchLive, busy, favorite, onToggleFavorite }:
                             {l.key === 'x' ? <XLogo /> : l.key === 'facebook' ? <Facebook size={15} aria-hidden="true" /> : <Instagram size={15} aria-hidden="true" />}
                         </a>
                     ))}
+                    <EmbedScheduleButton slug={slug} name={ch.name} />
                     <ReportPersonButton person={person} />
                     <SubmitScheduleButton person={person} />
                     {channelLinks(person).map((l) => (
@@ -366,7 +383,7 @@ function PersonRelatedSections({ related }: { related: PersonRelated | null | un
     );
 }
 
-function PersonBody({ person, related }: { person: SchedulePerson; related: PersonRelated | null | undefined }) {
+function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: string; related: PersonRelated | null | undefined }) {
     const { t } = useTranslation('schedule');
     const [now, setNow] = useState(() => Date.now());
     const [recentExpanded, setRecentExpanded] = useState(false);
@@ -408,6 +425,7 @@ function PersonBody({ person, related }: { person: SchedulePerson; related: Pers
     return (
         <ScheduleCardActionsContext.Provider value={cardActions}>
             <PersonHeader
+                slug={slug}
                 person={person}
                 onWatchLive={watchLive}
                 busy={sel.busy || busyKey !== null}
@@ -566,7 +584,7 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                     <ReportDialogProvider>
                         <ScheduleEntriesDialogProvider>
                             <PersonSeo person={person} slug={slug} />
-                            <PersonBody person={person} related={relatedQuery.data} />
+                            <PersonBody person={person} slug={slug} related={relatedQuery.data} />
                         </ScheduleEntriesDialogProvider>
                     </ReportDialogProvider>
                 ) : person === null ? (

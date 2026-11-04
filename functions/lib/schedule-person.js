@@ -15,8 +15,8 @@ export const PERSON_QUERY_TIMEOUT_MS = 2000;
 export const RPC_TIMEOUT_MS = 2500;
 /** 查詢結果（含查無此人）在 edge 快取的秒數：擋住重複請求與隨機 slug 掃描放大成 DB 負載 */
 export const PERSON_CACHE_TTL_S = 300;
-// v3：found 多了 related（同團／同時段內鏈）；舊格式的快取不會被讀到，最多 300 秒後自然過期
-const CACHE_ORIGIN = 'https://multistreaming.org/__edge-cache/schedule-person/v3/';
+// v4：streams 不再依 indexable 為 null（嵌入小工具要用）；舊格式的快取不會被讀到，最多 300 秒後自然過期
+const CACHE_ORIGIN = 'https://multistreaming.org/__edge-cache/schedule-person/v4/';
 /** 與頁面一致的時間範圍（src/features/schedule/personSource.ts、filters.ts；migration refresh_schedule_indexable 也用同一組） */
 export const PERSON_RECENT_DAYS = 90;
 export const PERSON_UPCOMING_DAYS = 7;
@@ -262,7 +262,8 @@ export function renderPersonBodyHtml(lang, person, slug) {
         `<nav aria-label="breadcrumb" class="text-sm text-muted-foreground"><a href="${withLang(lang, '/')}">MultiStream Hub</a> › <a href="${withLang(lang, '/schedule')}">${escapeHtml(t.schedule)}</a> › <a href="${withLang(lang, '/vtubers')}">${escapeHtml(t.directory)}</a> › <a href="${withLang(lang, `/schedule/${escapeHtml(slug)}`)}" aria-current="page">${name}</a></nav>`,
         `<h1 class="mt-4 text-3xl font-bold">${name}</h1>`,
     ];
-    const s = person.streams;
+    // 內文是給搜尋引擎的：noindex 頁不放場次（streams 本身仍會算，嵌入小工具 functions/embed/ 要用）
+    const s = person.indexable === false ? null : person.streams;
     if (s) {
         parts.push(`<p class="mt-2 text-muted-foreground">${escapeHtml(personSummary(lang, person.name, s))}</p>`);
         parts.push(streamSection(t.live, s.live.map((x) => streamItem(lang, x))));
@@ -294,7 +295,7 @@ export function renderPersonBodyHtml(lang, person, slug) {
  *   - { kind: 'none' }：不是個人頁網址（交回原本的白名單流程）
  *   - { kind: 'redirect', location }：大小寫或百分比編碼和正規網址不同 → 301（canonical 只有一個）
  *   - { kind: 'notfound' }：slug 不合規則或查無此人 → 真 404
- *   - { kind: 'found', name, image, indexable, youtube, twitch, streams }（streams 見 personStreamsFromRow；不可索引或嵌入資料異常為 null；查詢失敗整個回 error）
+ *   - { kind: 'found', name, image, indexable, youtube, twitch, streams }（streams 見 personStreamsFromRow；嵌入資料異常為 null；不可索引者也有，但個人頁內文不列）
  *   - { kind: 'error' }：查詢失敗或逾時 → 呼叫端照常回 SPA 殼（不能因暫時性錯誤回 404 或 noindex）
  * found／notfound 會放進 edge 快取（cache 為 caches.default；測試或沒有 Cache API 時傳 null）。
  */
@@ -334,8 +335,7 @@ export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, 
             indexable,
             youtube: typeof row.youtube_channel_id === 'string' && YT_CHANNEL_RE.test(row.youtube_channel_id) ? row.youtube_channel_id : null,
             twitch: typeof row.twitch_channel_id === 'string' && TWITCH_LOGIN_RE.test(row.twitch_channel_id) ? row.twitch_channel_id.toLowerCase() : null,
-            // 內文是給搜尋引擎的：noindex 頁不放場次
-            streams: indexable ? personStreamsFromRow(row, now) : null,
+            streams: personStreamsFromRow(row, now),
             related: null,
         };
         // 內鏈區塊（同團／同時段）：主查詢先回、確定可索引才發第二支（查無此人／不可索引的掃描路徑維持 1 支 subrequest）；
