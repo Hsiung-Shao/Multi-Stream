@@ -150,7 +150,8 @@ function EmbedPromoBanner({ show, onOpen }: { show: boolean; onOpen: () => void 
     return (
         <div role="note" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
             <Code2 size={16} aria-hidden="true" className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1">{t('embed.banner.text')}</span>
+            {/* 手機：文字整行、按鈕換到下一行（否則文字被擠成窄欄） */}
+            <span className="min-w-0 basis-full sm:flex-1 sm:basis-auto">{t('embed.banner.text')}</span>
             <Button variant="secondary" size="sm" onClick={onOpen}>{t('embed.banner.cta')}</Button>
             <Button variant="ghost" size="sm" onClick={dismiss} aria-label={t('embed.banner.dismiss')}>{t('embed.banner.dismiss')}</Button>
         </div>
