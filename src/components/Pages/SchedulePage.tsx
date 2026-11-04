@@ -14,6 +14,8 @@ import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { useScheduleSnapshot } from '../../features/schedule/useScheduleSnapshot';
 import { ScheduleBoard } from '../../features/schedule/ScheduleBoard';
+import { localDayKey } from '../../features/schedule/filters';
+import type { ScheduleSnapshot } from '../../features/schedule/types';
 import { formatRelative } from '../../features/schedule/formatTime';
 import { ReportDialogProvider } from '../../features/report/ReportDialogProvider';
 
@@ -43,6 +45,29 @@ function LoadingState({ label }: { label: string }) {
     );
 }
 
+/** 標題右側三格：直播中、今天（含直播中）、本週（直播中＋7 天內排程） */
+function HeroStats({ snapshot }: { snapshot: ScheduleSnapshot }) {
+    const { t } = useTranslation('schedule');
+    const now = Date.now();
+    const today = localDayKey(new Date(now).toISOString());
+    const live = snapshot.live.length;
+    const todayCount = live + snapshot.upcoming.filter((s) => localDayKey(s.scheduled_start ?? s.actual_start ?? '') === today).length;
+    const week = live + snapshot.upcoming.length;
+    const cell = (value: number, label: string, hot: boolean) => (
+        <div key={label} className={`min-w-[4.5rem] rounded-xl border px-3 py-2 text-center ${hot ? 'border-[#e5173f]/70' : 'border-border'}`}>
+            <div className={`text-xl font-extrabold tabular-nums leading-tight ${hot ? 'text-[#ff4d6a]' : ''}`}>{value}</div>
+            <div className="text-[11px] text-muted-foreground">{label}</div>
+        </div>
+    );
+    return (
+        <div className="flex gap-2" aria-label={t('hero.stats.label')}>
+            {cell(live, t('hero.stats.live'), live > 0)}
+            {cell(todayCount, t('hero.stats.today'), false)}
+            {cell(week, t('hero.stats.week'), false)}
+        </div>
+    );
+}
+
 export function SchedulePage() {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
@@ -62,7 +87,8 @@ export function SchedulePage() {
                     </ol>
                 </nav>
 
-                <header className="pb-5 pt-4">
+                <header className="flex flex-wrap items-end justify-between gap-4 pb-5 pt-4">
+                    <div className="min-w-0">
                     <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-[2.125rem]">{t('hero.title')}</h1>
                     <p className="mt-2 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground [text-wrap:pretty]">{t('hero.subtitle')}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -80,6 +106,9 @@ export function SchedulePage() {
                             </p>
                         )}
                     </div>
+                    </div>
+                    {/* 設計稿 /schedule A：直播中／今天／本週 三格（資料到了才出現，放在標題列右側不推擠內文） */}
+                    {snapshot && <HeroStats snapshot={snapshot} />}
                 </header>
 
                 {/* 預留一屏高：骨架比看板矮，資料到了會把「關於」與頁尾往下推；先把它們放到首屏外（首屏外的位移不計 CLS） */}

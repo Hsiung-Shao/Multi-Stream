@@ -54,8 +54,8 @@ control, a unified chat panel for multiple channels at once, and a local
     put an auto-updating VTuber schedule on Notion, blogs or your own site,
     or post the downloadable schedule image on Linktree, Threads and X.
 
-- [Stream schedule](https://multistreaming.org/schedule): Taiwanese VTuber
-  schedule built from YouTube waiting rooms and live Twitch channels (live now,
+- [Stream schedule](https://multistreaming.org/schedule): streamer schedule
+  built from YouTube waiting rooms and live Twitch channels (live now,
   next 7 days, just ended); tick several streamers to open them together on
   the canvas.
 

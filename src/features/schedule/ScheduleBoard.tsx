@@ -13,7 +13,7 @@ import { StreamSearchBox } from '../../components/StreamSearchBox';
 import { schedulePersonPage } from '../../config/schedulePerson';
 import { track } from '../../utils/analytics';
 import { cn } from '../../components/ui/utils';
-import { countByTab, filterStreams, isPastScheduled, isSpecificAgency, isValidGroup, listGroups, listMatchingChannels, sortLive } from './filters';
+import { countByTab, filterStreams, isFavoriteChannel, isPastScheduled, isSpecificAgency, isValidGroup, listGroups, listMatchingChannels, sortLive } from './filters';
 import { useScheduleSelection } from './useScheduleSelection';
 import { useWatchOnCanvas } from './useWatchOnCanvas';
 import { useFavoriteChannel } from './useFavoriteChannel';
@@ -63,6 +63,36 @@ function SectionHeading({ id, title, count, live, children }: { id: string; titl
     );
 }
 
+/** 「接下來」的密度：簡潔＝時段分帶頭像密排（預設）、詳細＝小時列；記 localStorage（versionCheck PRESERVED_KEYS 有列） */
+type Density = 'compact' | 'detailed';
+const DENSITY_KEY = 'schedule_density';
+function loadDensity(): Density {
+    try {
+        return localStorage.getItem(DENSITY_KEY) === 'detailed' ? 'detailed' : 'compact';
+    } catch {
+        return 'compact';
+    }
+}
+function DensityToggle({ value, onChange }: { value: Density; onChange: (d: Density) => void }) {
+    const { t } = useTranslation('schedule');
+    return (
+        <div role="radiogroup" aria-label={t('density.label')} className="inline-flex rounded-lg border border-border p-0.5">
+            {(['compact', 'detailed'] as const).map((d) => (
+                <button
+                    key={d}
+                    type="button"
+                    role="radio"
+                    aria-checked={value === d}
+                    onClick={() => onChange(d)}
+                    className={cn('rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', value === d ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}
+                >
+                    {t(`density.${d}`)}
+                </button>
+            ))}
+        </div>
+    );
+}
+
 function ExpandButton({ expanded, total, onClick }: { expanded: boolean; total: number; onClick: () => void }) {
     const { t } = useTranslation('schedule');
     return (
@@ -90,6 +120,18 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
     const [now, setNow] = useState(() => Date.now());
     const [liveExpanded, setLiveExpanded] = useState(false);
     const [recentExpanded, setRecentExpanded] = useState(false);
+    const [density, setDensity] = useState<Density>(loadDensity);
+    const changeDensity = (d: Density) => {
+        setDensity(d);
+        try {
+            localStorage.setItem(DENSITY_KEY, d);
+        } catch {
+            /* 無痕或配額滿：這次有效就好 */
+        }
+        track.scheduleFilterChange('density', d);
+    };
+    // 簡潔模式把收藏的人排各時段最前：收藏鍵是頻道 id，先換成 vtuber_id
+    const favoriteVtuberIds = useMemo(() => new Set(Object.keys(snapshot.channels).filter((id) => isFavoriteChannel(snapshot.channels[id], favoriteKeys))), [snapshot.channels, favoriteKeys]);
 
     // 相對時間（「3 分鐘前」）與「現在」線每分鐘刷新；snapshot 更新時也對齊
     useEffect(() => {
@@ -248,7 +290,9 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                     </section>
 
                     <section aria-labelledby="sch-upcoming">
-                        <SectionHeading id="sch-upcoming" title={t('section.upcoming')} count={upcoming.length} />
+                        <SectionHeading id="sch-upcoming" title={t('section.upcoming')} count={upcoming.length}>
+                            <DensityToggle value={density} onChange={changeDensity} />
+                        </SectionHeading>
                         {upcoming.length === 0 ? (
                             <p className="text-sm text-muted-foreground">{t('state.noneUpcoming')}</p>
                         ) : (
@@ -261,6 +305,8 @@ export function ScheduleBoard({ snapshot }: { snapshot: ScheduleSnapshot }) {
                                 onSelectMany={sel.selectMany}
                                 onDayChange={(d) => track.scheduleFilterChange('day', d)}
                                 songsByVideo={songsByVideo}
+                                variant={density === 'compact' ? 'bands' : 'timeline'}
+                                favorites={favoriteVtuberIds}
                             />
                         )}
                     </section>

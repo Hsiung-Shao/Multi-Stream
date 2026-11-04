@@ -7,6 +7,7 @@ import { cn } from '../../components/ui/utils';
 import { groupByDay, groupByHour, localDayKey, nowDividerIndex, pickDefaultDay } from './filters';
 import { formatClock } from './formatTime';
 import { SlotRow } from './ScheduleCard';
+import { DayBands } from './DayBands';
 import { streamKey, type ScheduleChannel, type ScheduleStream } from './types';
 
 interface DayTimelineProps {
@@ -21,6 +22,10 @@ interface DayTimelineProps {
     personLinks?: boolean;
     /** videoId → 歌回歌曲 code（buildVideoIndex）；有時間軸的 YouTube 場次顯示歌單徽章 */
     songsByVideo?: ReadonlyMap<string, { codes: string[] }>;
+    /** 'bands'＝簡潔模式：時段分帶頭像密排（DayBands）；預設 'timeline'＝小時列 */
+    variant?: 'timeline' | 'bands';
+    /** 簡潔模式用：收藏的 vtuber_id 排各時段最前 */
+    favorites?: ReadonlySet<string>;
 }
 
 function dayLabel(dayKey: string, locale: string): { weekday: string; date: string } {
@@ -32,7 +37,7 @@ function dayLabel(dayKey: string, locale: string): { weekday: string; date: stri
     };
 }
 
-export function DayTimeline({ streams, channels, now, selected, onToggle, onSelectMany, onDayChange, personLinks = true, songsByVideo }: DayTimelineProps) {
+export function DayTimeline({ streams, channels, now, selected, onToggle, onSelectMany, onDayChange, personLinks = true, songsByVideo, variant = 'timeline', favorites }: DayTimelineProps) {
     const { t, i18n } = useTranslation('schedule');
     const locale = i18n.language || 'zh-TW';
     const days = useMemo(() => groupByDay(streams, now), [streams, now]);
@@ -96,6 +101,8 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
 
             {hours.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">{t('day.none')}</p>
+            ) : variant === 'bands' ? (
+                <DayBands streams={current?.streams ?? []} channels={channels} now={now} selected={selected} onToggle={onToggle} favorites={favorites} />
             ) : (
                 <ol className="relative">
                     {hours.map((h, i) => {
