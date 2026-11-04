@@ -144,6 +144,11 @@ export const ROUTE_META = {
         'zh-TW': { title: '如何同時觀看多個 Twitch 直播（免費 MultiTwitch 替代方案） - MultiStream Hub', description: '免費把多個 Twitch 直播並排同時觀看：輸入頻道名、選佈局、聊天室一起看，再把整組直播分享成一條連結。' },
         en: { title: 'How to Watch Multiple Twitch Streams at Once (Free MultiTwitch Alternative) - MultiStream Hub', description: 'Watch several Twitch streams side by side for free: paste channel names, pick a layout, keep chat on screen, and share the whole line-up as one link.' },
     },
+    '/instructions/embed-schedule': {
+        type: 'article',
+        'zh-TW': { title: '把開台週表嵌進你的網站：Linktree、Notion、部落格教學 - MultiStream Hub', description: '教你把會自動更新的開台週表嵌進 Notion、部落格或自架網站，以及 Linktree、Threads 這類不能嵌入的地方改貼下載的週表圖。' },
+        en: { title: 'Embed a VTuber Stream Schedule on Your Site: Linktree, Notion, Blogs - MultiStream Hub', description: 'Embed an auto-updating VTuber stream schedule in Notion, a blog or your own site, and post a downloadable schedule image where embeds are not allowed, like Linktree and Threads.' },
+    },
     '/about/creator': {
         'zh-TW': { title: '開發者 Hsiung-Shao - MultiStream Hub', description: '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。' },
         en: { title: 'Hsiung-Shao, Creator of MultiStream Hub', description: 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.' },

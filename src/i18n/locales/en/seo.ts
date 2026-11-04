@@ -41,6 +41,8 @@ export default {
     'instructions.schedule.description': 'How to use the Taiwanese VTuber stream schedule: open several streams in one click, read card statuses and YouTube/Twitch merging, see how often data updates, and learn which streams will not appear.',
     'instructions.watch-multiple-twitch-streams.title': 'How to Watch Multiple Twitch Streams at Once (Free MultiTwitch Alternative) - MultiStream Hub',
     'instructions.watch-multiple-twitch-streams.description': 'Watch several Twitch streams side by side for free: paste channel names, pick a layout, keep chat on screen, and share the whole line-up as one link.',
+    'instructions.embed-schedule.title': 'Embed a VTuber Stream Schedule on Your Site: Linktree, Notion, Blogs - MultiStream Hub',
+    'instructions.embed-schedule.description': 'Embed an auto-updating VTuber stream schedule in Notion, a blog or your own site, and post a downloadable schedule image where embeds are not allowed, like Linktree and Threads.',
     'creator.title': 'Hsiung-Shao, Creator of MultiStream Hub',
     'creator.description': 'Meet Hsiung-Shao, the independent developer behind MultiStream Hub: why it was built, and how to reach or support him.',
     'compare.title': 'MultiTwitch Alternatives: 4 Multi-Stream Viewers Compared',

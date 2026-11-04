@@ -38,6 +38,8 @@ export default {
     'instructions.schedule.description': '台灣 VTuber 開台週表怎麼用：一鍵多開的實際流程、卡片狀態與 YouTube／Twitch 合併規則、資料多久更新一次，以及哪些直播不會出現。',
     'instructions.watch-multiple-twitch-streams.title': '如何同時觀看多個 Twitch 直播（免費 MultiTwitch 替代方案） - MultiStream Hub',
     'instructions.watch-multiple-twitch-streams.description': '免費把多個 Twitch 直播並排同時觀看：輸入頻道名、選佈局、聊天室一起看，再把整組直播分享成一條連結。',
+    'instructions.embed-schedule.title': '把開台週表嵌進你的網站：Linktree、Notion、部落格教學 - MultiStream Hub',
+    'instructions.embed-schedule.description': '教你把會自動更新的開台週表嵌進 Notion、部落格或自架網站，以及 Linktree、Threads 這類不能嵌入的地方改貼下載的週表圖。',
     'creator.title': '開發者 Hsiung-Shao - MultiStream Hub',
     'creator.description': '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。',
     'compare.title': 'MultiTwitch 替代方案比較：4 款多直播同時觀看工具',

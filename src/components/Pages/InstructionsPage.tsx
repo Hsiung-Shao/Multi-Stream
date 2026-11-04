@@ -21,7 +21,7 @@ import { StaticPageHeader } from '../StaticPageHeader';
 import {
     Search, SearchX, LayoutTemplate, LayoutGrid, List as ListIcon,
     Sparkles, Clock, ArrowRight, ArrowLeft, ChevronRight, ShieldCheck,
-    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard, CalendarClock, MonitorPlay,
+    Rocket, Volume2, Star, Settings as SettingsIcon, Tv, Share2, Keyboard, CalendarClock, MonitorPlay, CodeXml,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -914,6 +914,57 @@ export function InstructionsPage() {
                     id: 'faq', heading: tx('twitchGuide.faq'), blocks: ([1, 2, 3, 4] as const).map((n): Block => (
                         { type: 'callout', title: tx(`twitchGuide.faq.q${n}`), text: tx(`twitchGuide.faq.a${n}`) }
                     )),
+                },
+            ],
+        },
+        {
+            slug: 'embed-schedule',
+            title: tx('embedGuide.title'),
+            excerpt: tx('embedGuide.excerpt'),
+            category: 'advanced',
+            catLabel: tx('tabs.advanced'),
+            readLabel: readLabel(4),
+            accent: '#0d9488', accent2: '#0f766e', icon: CodeXml,
+            sections: [
+                {
+                    id: 'what', heading: tx('embedGuide.what'), blocks: [
+                        { type: 'p', text: tx('embedGuide.what.p1') },
+                        { type: 'p', text: tx('embedGuide.what.p2') },
+                    ],
+                },
+                {
+                    id: 'how', heading: tx('embedGuide.how'), blocks: [
+                        { type: 'steps', items: [tx('embedGuide.how.1'), tx('embedGuide.how.2'), tx('embedGuide.how.3'), tx('embedGuide.how.4')] },
+                    ],
+                },
+                {
+                    id: 'notion', heading: tx('embedGuide.notion'), blocks: [
+                        { type: 'steps', items: [tx('embedGuide.notion.1'), tx('embedGuide.notion.2'), tx('embedGuide.notion.3')] },
+                    ],
+                },
+                {
+                    id: 'blog', heading: tx('embedGuide.blog'), blocks: [
+                        { type: 'steps', items: [tx('embedGuide.blog.1'), tx('embedGuide.blog.2'), tx('embedGuide.blog.3'), tx('embedGuide.blog.4')] },
+                        { type: 'p', text: tx('embedGuide.blog.note') },
+                    ],
+                },
+                {
+                    id: 'linktree', heading: tx('embedGuide.linktree'), blocks: [
+                        { type: 'p', text: tx('embedGuide.linktree.p1') },
+                        { type: 'steps', items: [tx('embedGuide.linktree.1'), tx('embedGuide.linktree.2'), tx('embedGuide.linktree.3')] },
+                        { type: 'callout', title: tx('embedGuide.linktree.noteTitle'), text: tx('embedGuide.linktree.note') },
+                    ],
+                },
+                {
+                    id: 'social', heading: tx('embedGuide.social'), blocks: [{ type: 'p', text: tx('embedGuide.social.p1') }],
+                },
+                {
+                    id: 'faq', heading: tx('embedGuide.faq'), blocks: ([1, 2, 3, 4, 5] as const).map((n): Block => (
+                        { type: 'callout', title: tx(`embedGuide.faq.q${n}`), text: tx(`embedGuide.faq.a${n}`) }
+                    )),
+                },
+                {
+                    id: 'stats', heading: tx('embedGuide.stats'), blocks: [{ type: 'p', text: tx('embedGuide.stats.p1') }],
                 },
             ],
         },

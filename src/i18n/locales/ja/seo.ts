@@ -40,6 +40,8 @@ export default {
     'instructions.schedule.description': '台湾 VTuber 配信スケジュールの使い方：ワンクリックで複数の配信を開く流れ、カードの状態と YouTube／Twitch の統合ルール、データの更新頻度、表示されない配信を解説。',
     'instructions.watch-multiple-twitch-streams.title': '複数の Twitch 配信を同時に見る方法（無料の MultiTwitch 代替） - MultiStream Hub',
     'instructions.watch-multiple-twitch-streams.description': '複数の Twitch 配信を無料で並べて同時視聴：チャンネル名を入れてレイアウトを選び、チャットも表示、配信の組み合わせはリンク 1 本で共有。',
+    'instructions.embed-schedule.title': '配信スケジュールを自分のサイトに埋め込む方法：Linktree・Notion・ブログ - MultiStream Hub',
+    'instructions.embed-schedule.description': '自動更新される VTuber の配信スケジュールを Notion・ブログ・自分のサイトに埋め込む方法と、Linktree や Threads など埋め込めない場所でスケジュール画像を使う方法。',
     'creator.title': '開発者 Hsiung-Shao - MultiStream Hub',
     'creator.description': 'MultiStream Hub の個人開発者 Hsiung-Shao の紹介：この無料マルチ配信視聴ツールを作った理由と、連絡・サポートの方法。',
     'compare.title': 'MultiTwitch 代替ツール比較：マルチ配信視聴ツール 4 選',

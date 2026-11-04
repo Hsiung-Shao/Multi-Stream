@@ -50,6 +50,9 @@ control, a unified chat panel for multiple channels at once, and a local
   - [Watch multiple Twitch streams](https://multistreaming.org/instructions/watch-multiple-twitch-streams):
     put several Twitch channels side by side in three steps, an example
     ?streams= link, and how it compares with MultiTwitch.
+  - [Embed your stream schedule](https://multistreaming.org/instructions/embed-schedule):
+    put an auto-updating VTuber schedule on Notion, blogs or your own site,
+    or post the downloadable schedule image on Linktree, Threads and X.
 
 - [Stream schedule](https://multistreaming.org/schedule): Taiwanese VTuber
   schedule built from YouTube waiting rooms and live Twitch channels (live now,

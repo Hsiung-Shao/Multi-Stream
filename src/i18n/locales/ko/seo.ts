@@ -40,6 +40,8 @@ export default {
     'instructions.schedule.description': '대만 VTuber 방송 스케줄 사용법: 여러 방송을 한 번에 열기, 카드 상태와 YouTube/Twitch 합치기, 데이터 업데이트 주기, 표시되지 않는 방송까지 알아보세요.',
     'instructions.watch-multiple-twitch-streams.title': '여러 Twitch 방송을 동시에 보는 방법 (무료 MultiTwitch 대안) - MultiStream Hub',
     'instructions.watch-multiple-twitch-streams.description': '여러 Twitch 방송을 무료로 나란히 동시 시청: 채널 이름을 입력하고 레이아웃을 고르고 채팅도 함께 보며, 방송 조합 전체를 링크 하나로 공유하세요.',
+    'instructions.embed-schedule.title': '방송 일정표를 내 사이트에 삽입하기: Linktree, Notion, 블로그 - MultiStream Hub',
+    'instructions.embed-schedule.description': '자동으로 업데이트되는 VTuber 방송 일정표를 Notion, 블로그, 내 사이트에 삽입하는 방법과, Linktree·Threads처럼 삽입이 안 되는 곳에서 일정표 이미지를 쓰는 방법.',
     'creator.title': '개발자 Hsiung-Shao - MultiStream Hub',
     'creator.description': 'MultiStream Hub의 1인 개발자 Hsiung-Shao를 소개합니다: 이 무료 멀티 스트리밍 시청 도구를 만든 이유와 연락·후원 방법.',
     'compare.title': 'MultiTwitch 대안 비교: 멀티 스트림 시청 도구 4종',
