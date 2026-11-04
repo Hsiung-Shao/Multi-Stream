@@ -90,7 +90,8 @@ export interface PersonStreamRow {
     merged_with: string | null;
 }
 
-const STREAM_COLS = 'id,platform,external_id,source,status,title,category,scheduled_start,time_tbd,actual_start,actual_end,merged_with,vod_id,vod_status';
+const STREAM_COLS_LEGACY = 'id,platform,external_id,source,status,title,category,scheduled_start,time_tbd,actual_start,actual_end,merged_with';
+const STREAM_COLS = `${STREAM_COLS_LEGACY},vod_id,vod_status`;
 
 function toStream(vtuberId: string, r: PersonStreamRow): ScheduleStream {
     const s: ScheduleStream = { vtuber_id: vtuberId, platform: r.platform, external_id: r.external_id, source: r.source, status: r.status };
@@ -235,12 +236,21 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     const since = new Date(now - PERSON_RECENT_DAYS * 86_400_000).toISOString();
     // 拆成兩支查詢：合在一起用 scheduled_start 排序＋limit 時，Twitch 直播（scheduled_start 為 null）
     // 與最新的紀錄會最先被截掉。兩支並行，合併邏輯需要看到所有列才能把次要場次掛到主場次。
-    const base = `streams?select=${STREAM_COLS}&vtuber_id=eq.${v.id}&is_schedule_frame=eq.false`;
-    const [active, ended, collabs] = await Promise.all([
-        restGet<PersonStreamRow[]>(cfg, `${base}&status=in.(scheduled,live)&order=scheduled_start.asc.nullsfirst&limit=${ACTIVE_LIMIT}`, opts),
-        restGet<PersonStreamRow[]>(cfg, `${base}&status=eq.ended&actual_end=gte.${since}&order=actual_end.desc&limit=${RECENT_LIMIT}`, opts),
-        fetchCollabAgencies(cfg, v.id, taipeiDate(now), opts),
-    ]);
+    // vod_id／vod_status（migration 20261104 streams_vod）還沒套到目標庫時 PostgREST 回 400：退回舊欄位集，頁面照常
+    const streamsWith = async (cols: string) => {
+        const base = `streams?select=${cols}&vtuber_id=eq.${v.id}&is_schedule_frame=eq.false`;
+        return Promise.all([
+            restGet<PersonStreamRow[]>(cfg, `${base}&status=in.(scheduled,live)&order=scheduled_start.asc.nullsfirst&limit=${ACTIVE_LIMIT}`, opts),
+            restGet<PersonStreamRow[]>(cfg, `${base}&status=eq.ended&actual_end=gte.${since}&order=actual_end.desc&limit=${RECENT_LIMIT}`, opts),
+        ]);
+    };
+    // 場次兩支先發，合作關係接著發（三支並行；順序固定讓測試能對 URL）
+    const streamsP = streamsWith(STREAM_COLS).catch((e) => {
+        if (!is400(e)) throw e;
+        return streamsWith(STREAM_COLS_LEGACY);
+    });
+    const collabsP = fetchCollabAgencies(cfg, v.id, taipeiDate(now), opts);
+    const [[active, ended], collabs] = await Promise.all([streamsP, collabsP]);
     const rows = [...active, ...ended];
 
     const channel: ScheduleChannel = { name: v.name, nationality: v.nationality, slug: v.slug };

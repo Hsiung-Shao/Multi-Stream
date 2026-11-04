@@ -13,6 +13,7 @@ export default {
     'bands.afternoon': '오후',
     'bands.evening': '저녁',
     'bands.night': '심야',
+    'bands.tbd': '시간 미정',
     'bands.pick': '{{name}} 선택',
     'bands.expand': '나머지 {{count}}개 보기',
     'bands.expandShort': '더 보기',

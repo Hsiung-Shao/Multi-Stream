@@ -13,6 +13,7 @@ export default {
     'bands.afternoon': '下午',
     'bands.evening': '晚上',
     'bands.night': '深夜',
+    'bands.tbd': '时间未定',
     'bands.pick': '勾选 {{name}}',
     'bands.expand': '展开其余 {{count}} 场',
     'bands.expandShort': '展开',

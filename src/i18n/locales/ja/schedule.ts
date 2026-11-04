@@ -13,6 +13,7 @@ export default {
     'bands.afternoon': '午後',
     'bands.evening': '夜',
     'bands.night': '深夜',
+    'bands.tbd': '時間未定',
     'bands.pick': '{{name}} を選択',
     'bands.expand': '残り {{count}} 件を表示',
     'bands.expandShort': 'もっと',

@@ -13,6 +13,7 @@ export default {
     'bands.afternoon': 'Afternoon',
     'bands.evening': 'Evening',
     'bands.night': 'Late night',
+    'bands.tbd': 'Time TBD',
     'bands.pick': 'Select {{name}}',
     'bands.expand': 'Show {{count}} more',
     'bands.expandShort': 'more',
