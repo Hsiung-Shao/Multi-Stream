@@ -194,8 +194,8 @@ export function renderEmbedHtml(subject, { lang, theme, days }, now = Date.now()
     if (live.length) sections.push(`<section><h2>${escapeHtml(t.live)}</h2><ul>${live.map((x) => htmlItem(lang, x, t, true)).join('')}</ul></section>`);
     if (upcoming.length) sections.push(`<section><h2>${escapeHtml(fill(t.upcoming, { days }))}</h2><ul>${upcoming.map((x) => htmlItem(lang, x, t, false)).join('')}</ul></section>`);
     if (!live.length && !upcoming.length) sections.push(`<p class="empty">${escapeHtml(fill(t.none, { days }))}</p>`);
-    // 團體 RPC 有上限：超過的場次只能寫「還有 N 場」
-    if (Number(subject.truncated) > 0) sections.push(`<p class="empty">${escapeHtml(fill(t.moreRows, { n: Number(subject.truncated) }))}</p>`);
+    // 資料層有上限（團體 RPC 100 列、個人 upcoming 10 列）：超過的只能寫「還有 N 場」；truncated 是以 7 天算的，選較少天數時不標（數字會偏大）
+    if (days === EMBED_MAX_DAYS && Number(subject.truncated) > 0) sections.push(`<p class="empty">${escapeHtml(fill(t.moreRows, { n: Number(subject.truncated) }))}</p>`);
     const avatar = subject.image
         ? `<img class="avatar${live.length ? ' live' : ''}" src="${escapeHtml(largerAvatar(subject.image))}" alt="" referrerpolicy="no-referrer" width="48" height="48">`
         : '<span class="avatar" aria-hidden="true"></span>';
@@ -249,7 +249,7 @@ export function renderCardSvg(subject, { lang, theme, days }, avatar, now = Date
     const { live, upcoming } = pickStreams(subject.streams, days, now);
     const rows = [...live.map((x) => ({ ...x, live: true })), ...upcoming];
     const shown = rows.slice(0, CARD_MAX_ROWS);
-    const more = rows.length - shown.length + (Number(subject.truncated) > 0 ? Number(subject.truncated) : 0);
+    const more = rows.length - shown.length + (days === EMBED_MAX_DAYS && Number(subject.truncated) > 0 ? Number(subject.truncated) : 0);
     // 頁尾只寫人看得懂的網址：去掉錨點（團體回連結帶 #directory-group-<uuid>）、太長就截斷，別壓到右側品牌字
     const pageUrl = clip(`multistreaming.org${withLang(lang, String(subject.pagePath).split('#')[0])}`, CARD_URL_UNITS);
     const nameShown = clip(subject.name, 36);
@@ -301,5 +301,8 @@ export function renderMessageSvg(theme, message) {
 
 /** 把 resolveSchedulePerson 的 found 結果轉成 subject */
 export function personSubject(person, slug) {
-    return { name: person.name, image: person.image, streams: person.streams ? { live: person.streams.live, upcoming: person.streams.upcoming } : null, pagePath: `/schedule/${slug}` };
+    const s = person.streams;
+    // upcoming 在資料層只取 PERSON_BODY_LIST_LIMIT 筆（schedule-person.js），總數在 upcomingTotal：超過的寫「還有 N 場」
+    const truncated = s && Number.isFinite(Number(s.upcomingTotal)) ? Math.max(0, Number(s.upcomingTotal) - s.upcoming.length) : 0;
+    return { name: person.name, image: person.image, streams: s ? { live: s.live, upcoming: s.upcoming } : null, pagePath: `/schedule/${slug}`, truncated };
 }
