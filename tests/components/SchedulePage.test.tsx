@@ -56,6 +56,8 @@ describe('SchedulePage', () => {
         vi.setSystemTime(NOW);
         await i18n.changeLanguage('zh-TW');
         localStorage.clear();
+        // 「接下來」預設是簡潔（時段分帶頭像密排，tests/features/schedule/bands.test.tsx 測）；這裡測的是詳細時間軸
+        localStorage.setItem('schedule_density', 'detailed');
         vi.clearAllMocks();
         h.canvas.streams = [];
         fetchSnapshot.mockResolvedValue(makeSnapshot());
@@ -68,7 +70,7 @@ describe('SchedulePage', () => {
 
     it('先顯示載入中，snapshot 回來後三段都出現，預設只列 TW', async () => {
         renderPage();
-        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('台灣 VTuber 開台週表');
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('實況主開台週表');
         expect(screen.getByLabelText('載入週表中…')).toBeInTheDocument();
         await screen.findByText('台一 Twitch');
         expect(screen.queryByText('日三直播')).not.toBeInTheDocument(); // JP 被預設篩掉
