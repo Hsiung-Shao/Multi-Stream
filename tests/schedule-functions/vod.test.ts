@@ -40,7 +40,7 @@ describe('reconcileTwitchVods', () => {
     expect(r.results[0]).toMatchObject({ id: 's1', vod_id: 'v123', vod_status: 'ok', vod_checked_at: iso(NOW) });
     expect(r.calls).toBe(1);
     expect(r.deferred).toBe(0);
-    expect(helix.mock.calls[0][0]).toContain('helix/videos?user_id=b1&type=archive&first=20');
+    expect(helix.mock.calls[0][0]).toContain('helix/videos?user_id=b1&type=archive&first=100');
   });
 
   it('V1 同一位實況主多場只呼叫一次 helix，各場各自對上自己的 video', async () => {
@@ -133,17 +133,23 @@ describe('reconcileYouTubeVods', () => {
     expect(url).toContain('format=json');
   });
 
-  it.each([401, 403, 404])('V5 HTTP %i 且結束超過 24 小時 → missing', async (code) => {
+  it.each([404, 400])('V5 HTTP %i 且結束超過 24 小時 → missing（刪除／私人／id 壞）', async (code) => {
     const r = await reconcileYouTubeVods([yt('1', { actual_end: iso(NOW - 30 * HOUR) })], asFetch(async () => res(code)), NOW);
     expect(r.results[0]).toMatchObject({ id: '1', vod_status: 'missing' });
     expect(r.results[0].vod_id ?? null).toBeNull();
     expect(r.throttled).toBe(false);
   });
 
-  it.each([401, 403, 404])('V5 HTTP %i 但結束不到 24 小時 → unknown（YouTube 還在處理）', async (code) => {
+  it.each([404, 400])('V5 HTTP %i 但結束不到 24 小時 → unknown（YouTube 還在處理）', async (code) => {
     const r = await reconcileYouTubeVods([yt('1', { actual_end: iso(NOW - 3 * HOUR) })], asFetch(async () => res(code)), NOW);
     expect(r.results[0]).toMatchObject({ id: '1', vod_status: 'unknown', vod_checked_at: iso(NOW) });
     expect(r.results[0].vod_id ?? null).toBeNull();
+  });
+
+  it.each([401, 403])('V5 HTTP %i → 只更新 checked_at 維持 unknown（停用嵌入／會員限定的影片其實看得到，不能當 missing）', async (code) => {
+    const r = await reconcileYouTubeVods([yt('1', { actual_end: iso(NOW - 30 * HOUR) })], asFetch(async () => res(code)), NOW);
+    expect(r.results[0]).toMatchObject({ id: '1', vod_status: 'unknown', vod_checked_at: iso(NOW) });
+    expect(r.throttled).toBe(false);
   });
 
   it.each([429, 500, 503])('V6 HTTP %i → throttled，全部 deferred 不寫結果', async (code) => {

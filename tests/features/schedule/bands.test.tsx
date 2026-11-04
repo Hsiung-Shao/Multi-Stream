@@ -64,10 +64,11 @@ describe('U3 groupByBand', () => {
     type S = { scheduled_start?: string; actual_start?: string; tag: string };
     const s = (tag: string, startMs: number): S => ({ tag, scheduled_start: iso(startMs) });
 
-    it('只回有場次的分帶，順序 now → morning → afternoon → evening → night', () => {
+    it('只回有場次的分帶，順序 now → night → morning → afternoon → evening', () => {
         const now = local(14, 42);
         const groups = groupByBand<S>([s('night', local(1)), s('eve', local(19)), s('now', local(14, 30)), s('morn', local(9, 30))], now);
-        expect(groups.map((g) => g.band)).toEqual(['now', 'morning', 'evening', 'night']);
+        // 分天是日曆日：01:00（night）是這一天的開頭，排在 morning 前面
+        expect(groups.map((g) => g.band)).toEqual(['now', 'night', 'morning', 'evening']);
     });
 
     it('分帶內依時間升冪，與輸入順序無關', () => {
@@ -115,7 +116,7 @@ describe('U4 DayBands', () => {
         expect(screen.getByText('上午')).toBeTruthy();
         expect(screen.getByText('下午')).toBeTruthy();
         expect(screen.getByText('晚上')).toBeTruthy();
-        expect(screen.getByText('深夜')).toBeTruthy();
+        expect(screen.getByText('凌晨')).toBeTruthy();
         expect(boxes()).toHaveLength(5);
     });
 
@@ -123,7 +124,7 @@ describe('U4 DayBands', () => {
         render(<DayBands {...base} streams={[mk(1, local(9, 30))]} />);
         expect(screen.getByText('上午')).toBeTruthy();
         expect(screen.queryByText('下午')).toBeNull();
-        expect(screen.queryByText('深夜')).toBeNull();
+        expect(screen.queryByText('凌晨')).toBeNull();
     });
 
     it('每場是 label＋checkbox：aria-label「勾選 名字」、title「名字 · HH:MM」', () => {

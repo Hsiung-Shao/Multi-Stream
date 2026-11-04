@@ -78,6 +78,7 @@ export interface RunStats extends Record<string, unknown> {
   vod_deferred?: number;
   vod_twitch_calls?: number;
   vod_yt_throttled?: boolean;
+  vod_expired?: number;
   og_checked: number;
   og_failed: number;
   /** og 失敗原因分布（見 LiveOgResult.failReason） */

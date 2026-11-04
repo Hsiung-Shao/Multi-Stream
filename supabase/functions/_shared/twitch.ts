@@ -176,9 +176,13 @@ export class TwitchClient {
   }
 
   /** 同 helix，但 404 回 null（例如 /schedule：頻道沒有設定週表時 Twitch 回 404） */
-  /** 任意 Helix GET（vod.ts 查 /videos 用）：錯誤／限速回 null，不拋 */
+  /** 任意 Helix GET（vod.ts 查 /videos 用）：404、429／5xx、逾時都回 null，不拋（呼叫端把 null 當這輪查不到） */
   async helixGet(url: string): Promise<unknown | null> {
-    return this.helixOrNull(url);
+    try {
+      return await this.helixOrNull(url);
+    } catch {
+      return null;
+    }
   }
 
   private async helixOrNull(url: string): Promise<unknown | null> {

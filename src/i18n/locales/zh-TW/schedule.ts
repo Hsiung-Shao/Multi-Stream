@@ -12,7 +12,7 @@ export default {
     'bands.morning': '上午',
     'bands.afternoon': '下午',
     'bands.evening': '晚上',
-    'bands.night': '深夜',
+    'bands.night': '凌晨',
     'bands.tbd': '時間未定',
     'bands.pick': '勾選 {{name}}',
     'bands.expand': '展開其餘 {{count}} 場',

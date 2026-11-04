@@ -3,8 +3,12 @@
 
 export type Band = 'now' | 'morning' | 'afternoon' | 'evening' | 'night' | 'tbd';
 
-/** tbd＝時間未定（scheduled_start 存台北當天 00:00，不能當真的開始時間分帶）：固定排最後 */
-export const BAND_ORDER: readonly Band[] = ['now', 'morning', 'afternoon', 'evening', 'night', 'tbd'];
+/**
+ * 分帶順序：now 永遠最前；接著依一天內的時間順序 night（0–6，凌晨）→ morning → afternoon → evening；
+ * tbd＝時間未定（scheduled_start 存台北當天 00:00，不能當真的開始時間）固定排最後。
+ * 分天是日曆日（filters.groupByDay），所以 01:00 是這一天的開頭，不是前一晚的續集。
+ */
+export const BAND_ORDER: readonly Band[] = ['now', 'night', 'morning', 'afternoon', 'evening', 'tbd'];
 /** 「進行中／即將」：開始時間在 [now − 15 分鐘, 下一整點] 之內（剛開台的＋這個整點前要開的；13:50 看到 14:00 算即將） */
 export const NOW_GRACE_MS = 15 * 60_000;
 

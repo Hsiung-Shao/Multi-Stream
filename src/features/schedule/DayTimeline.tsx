@@ -102,7 +102,8 @@ export function DayTimeline({ streams, channels, now, selected, onToggle, onSele
             {hours.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">{t('day.none')}</p>
             ) : variant === 'bands' ? (
-                <DayBands streams={current?.streams ?? []} channels={channels} now={now} selected={selected} onToggle={onToggle} favorites={favorites} />
+                // key＝日期：切換日期時重新掛載，各段的「+N」展開狀態不會沿用到另一天
+                <DayBands key={current?.dayKey ?? 'none'} streams={current?.streams ?? []} channels={channels} now={now} selected={selected} onToggle={onToggle} favorites={favorites} />
             ) : (
                 <ol className="relative">
                     {hours.map((h, i) => {

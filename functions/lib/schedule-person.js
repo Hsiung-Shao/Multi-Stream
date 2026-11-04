@@ -242,8 +242,9 @@ export function vodUrlFor(s, person) {
         if (s.vod_id) return `https://www.twitch.tv/videos/${encodeURIComponent(s.vod_id)}`;
         return person.twitch ? `https://www.twitch.tv/${person.twitch}/videos` : null;
     }
-    if (s.vod_status === 'missing') return person.youtube ? `https://www.youtube.com/channel/${person.youtube}/streams` : null;
-    return s.video_id ? `https://www.youtube.com/watch?v=${encodeURIComponent(s.video_id)}` : null;
+    // 沒有影片 id（社群週表／投稿）或存檔已消失：連頻道的直播列表
+    if (s.vod_status === 'missing' || !s.video_id) return person.youtube ? `https://www.youtube.com/channel/${person.youtube}/streams` : null;
+    return `https://www.youtube.com/watch?v=${encodeURIComponent(s.video_id)}`;
 }
 
 function streamItem(lang, s, person = null) {

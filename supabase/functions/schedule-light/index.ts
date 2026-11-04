@@ -62,7 +62,7 @@ Deno.serve((req) => {
     // 合併是附加功能：失敗只記錯誤，不能擋住後面的共享表與 snapshot
     await softStep(stats, 'merge', () => applyMerges(db, stats, now));
     // 歷史紀錄連 VOD：補 ended 場次的 vod_id／vod_status（附加功能，失敗不擋後面）
-    await softStep(stats, 'vod', () => runVodStep(db, twitch, stats, now));
+    await softStep(stats, 'vod', () => runVodStep(db, twitch, stats, now, fetch, deadline.at));
 
     // 4. last_live_at + 共享表（這輪 RSS 掃到的頻道；場次狀態從資料庫讀「目前所有 scheduled/live」）
     await touchLastLiveAt(db, twitchResult.liveVtuberIds, stats, now);

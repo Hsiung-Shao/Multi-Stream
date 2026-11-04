@@ -291,19 +291,21 @@ function PersonHeader({ person, slug, onWatchLive, busy, favorite, onToggleFavor
 }
 
 /** 左欄三格統計：本週場次、近 90 天、常見開台時段（台北；沒資料就不顯示那格） */
-function PersonStats({ person, upcoming }: { person: SchedulePerson; upcoming: number }) {
+function PersonStats({ person, upcoming, live }: { person: SchedulePerson; upcoming: number; live: number }) {
     const { t } = useTranslation('schedule');
     const cells = [
-        { label: t('person.stats.week'), value: String(upcoming) },
+        // 本週場次＝直播中＋未來 7 天排程
+        { label: t('person.stats.week'), value: String(live + upcoming) },
         { label: t('person.stats.recent'), value: String(person.recent.length) },
         ...(typeof person.typicalHour === 'number' ? [{ label: t('person.stats.typicalHour'), value: `${String(person.typicalHour).padStart(2, '0')}:00` }] : []),
     ];
     return (
         <dl className={`grid gap-2 rounded-2xl border border-border bg-card px-4 py-4 text-center ${cells.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {cells.map((c) => (
-                <div key={c.label}>
-                    <dd className="text-[1.375rem] font-extrabold tabular-nums leading-tight">{c.value}</dd>
+                // DOM 先 dt 再 dd（螢幕閱讀器先念標籤）；視覺上數字在上
+                <div key={c.label} className="flex flex-col-reverse">
                     <dt className="mt-0.5 text-[11px] text-muted-foreground">{c.label}</dt>
+                    <dd className="text-[1.375rem] font-extrabold tabular-nums leading-tight">{c.value}</dd>
                 </div>
             ))}
         </dl>
@@ -477,9 +479,9 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
     return (
         <ScheduleCardActionsContext.Provider value={cardActions}>
             <EmbedPromoBanner show={person.live.length > 0 || person.upcoming.length > 0} onOpen={() => setEmbedOpen(true)} />
-            {/* 設計稿「個人頁 A」：桌機兩欄（左資料卡 340px、右內容），手機自然堆疊 */}
-            <div className="flex flex-wrap items-start gap-7 pt-5">
-            <aside className="flex w-full flex-col gap-4 md:w-auto md:flex-[1_1_300px] md:max-w-[340px]">
+            {/* 設計稿「個人頁 A」：lg 以上兩欄 grid（左 340px 資料卡、右內容）；lg 以下單欄，統計與推薦移到主內容後面（手機先看場次） */}
+            <div className="grid grid-cols-1 gap-7 pt-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
+            <aside className="flex flex-col gap-4">
             <PersonHeader
                 slug={slug}
                 person={person}
@@ -490,10 +492,12 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                 favorite={fav.isFavorite(person.channel)}
                 onToggleFavorite={() => void fav.toggle(person.channel)}
             />
-            {!nothing && <PersonStats person={person} upcoming={upcoming.length} />}
-            <div className="space-y-6"><PersonRelatedSections related={related} /></div>
+            <div className="hidden flex-col gap-4 lg:flex">
+                {!nothing && <PersonStats person={person} upcoming={upcoming.length} live={person.live.length} />}
+                <div className="space-y-6"><PersonRelatedSections related={related} /></div>
+            </div>
             </aside>
-            <div className="min-w-0 flex-[999_1_560px]">
+            <div className="min-w-0">
 
             {nothing ? (
                 <div className="space-y-12">
@@ -579,6 +583,10 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                     <PersonSongs videos={songVideos} vtuberId={person.id} />
                 </div>
             )}
+            <div className="mt-10 flex flex-col gap-4 lg:hidden">
+                {!nothing && <PersonStats person={person} upcoming={upcoming.length} live={person.live.length} />}
+                <div className="space-y-6"><PersonRelatedSections related={related} /></div>
+            </div>
             </div>
             </div>
 

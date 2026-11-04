@@ -21,11 +21,11 @@ function youtubeChannelLive(ch: ScheduleChannel | undefined): string | null {
  */
 export function vodUrl(s: ScheduleStream, ch: ScheduleChannel | undefined): string | null {
     if (s.platform === 'youtube') {
-        if (isNonVideoStream(s)) return youtubeChannelLive(ch);
-        if (s.vod_status === 'missing') return ch?.youtube ? `https://www.youtube.com/channel/${ch.youtube}/streams` : null;
+        // 沒有影片 id 的場次（社群週表／投稿）結束後只能連頻道的直播列表
+        if (isNonVideoStream(s) || s.vod_status === 'missing') return ch?.youtube ? `https://www.youtube.com/channel/${ch.youtube}/streams` : null;
         return `https://www.youtube.com/watch?v=${s.external_id}`;
     }
-    if (s.vod_id) return `https://www.twitch.tv/videos/${s.vod_id}`;
+    if (s.vod_id) return `https://www.twitch.tv/videos/${encodeURIComponent(s.vod_id)}`;
     return ch?.twitch ? `https://www.twitch.tv/${ch.twitch}/videos` : null;
 }
 

@@ -37,9 +37,9 @@ describe('vodUrl：YouTube', () => {
         expect(vodUrl({ ...ytEnded, vod_status: 'missing' }, undefined)).toBeNull();
     });
 
-    it('沒有影片 ID 的來源（社群週表圖）沿用 watchUrl：頻道 /live', () => {
+    it('沒有影片 ID 的來源（社群週表圖）結束後連頻道的直播列表 /streams', () => {
         const post: ScheduleStream = { ...ytEnded, external_id: 'post:UgkxArOhmT2c:1', source: 'community_post' };
-        expect(vodUrl(post, ch)).toBe('https://www.youtube.com/channel/UCswRX8mNNdn1fjRctZqzjgA/live');
+        expect(vodUrl(post, ch)).toBe('https://www.youtube.com/channel/UCswRX8mNNdn1fjRctZqzjgA/streams');
     });
 });
 
