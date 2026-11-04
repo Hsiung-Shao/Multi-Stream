@@ -94,6 +94,9 @@ export default {
     'person.seo.title': '{{name}} 방송 일정 - MultiStream Hub',
     'person.seo.description': '{{name}}의 방송 일정: 지금 방송 중, 앞으로 7일간의 대기실과 Twitch 일정, 최근 90일 방송 기록.',
     'person.seo.summary': '{{name}}: 최근 90일 방송 {{recent}}회, 앞으로 7일 예정 {{upcoming}}건.',
+    'person.stats.week': '이번 주',
+    'person.stats.recent': '최근 90일',
+    'person.stats.typicalHour': '자주 시작하는 시각 (타이베이)',
     'person.collabs': '협업: {{agencies}}',
     'person.listSeparator': ', ',
 

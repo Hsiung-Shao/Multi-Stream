@@ -214,79 +214,98 @@ function PersonHeader({ person, slug, onWatchLive, busy, favorite, onToggleFavor
     const { t } = useTranslation('schedule');
     const ch = person.channel;
     const live = person.live.length > 0;
+    const iconBtn = 'inline-grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+    // 設計稿「個人頁 A」：左欄資料卡——頭像、名字、所屬、簡介、主按鈕、收藏＋嵌入、社群、頻道、回報／投稿
     return (
-        <header className="flex flex-col gap-5 pb-8 pt-5 sm:flex-row sm:items-center">
-            <div className="relative shrink-0 self-start">
+        <header className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
+            <div className="relative w-fit">
                 {ch.avatar ? (
                     <img
                         src={largerAvatar(ch.avatar)}
                         alt=""
                         referrerPolicy="no-referrer"
-                        className={`size-20 rounded-full bg-muted object-cover sm:size-24 ${live ? 'ring-[3px] ring-[#e5173f] ring-offset-2 ring-offset-background' : 'ring-1 ring-border'}`}
+                        className={`size-28 rounded-full bg-muted object-cover ${live ? 'ring-[3px] ring-[#e5173f] ring-offset-[3px] ring-offset-card' : 'ring-1 ring-border'}`}
                     />
                 ) : (
-                    <span className="block size-20 rounded-full bg-muted sm:size-24" aria-hidden="true" />
+                    <span className="block size-28 rounded-full bg-muted" aria-hidden="true" />
                 )}
                 {live && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-[#e5173f] px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-white">LIVE</span>
+                    <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded bg-[#e5173f] px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-white">LIVE</span>
                 )}
             </div>
-            <div className="min-w-0 flex-1">
-                <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight [text-wrap:balance] sm:text-[2.125rem]">{ch.name}</h1>
-                <p className="mt-1 text-[15px] text-muted-foreground">
+            <div className="min-w-0">
+                <h1 className="text-[1.625rem] font-extrabold leading-tight tracking-tight [text-wrap:balance]">{ch.name}</h1>
+                <p className="mt-1 text-[13px] text-muted-foreground">
                     {/* 企業勢子團：公司 · 子團 · 地區（公司與團名相同時只寫一次） */}
                     {[ch.agency && ch.agency !== ch.group ? ch.agency : null, ch.group, t(`nationality.${ch.nationality}`, { defaultValue: ch.nationality })].filter(Boolean).join(' · ')}
                 </p>
-                {person.profile?.bio && <p className="mt-2 max-w-[65ch] whitespace-pre-line break-words text-sm leading-relaxed text-foreground/90">{person.profile.bio}</p>}
-                {/* 合作藝人：不是正式所屬，另起一行 */}
+                {person.profile?.bio && <p className="mt-2 whitespace-pre-line break-words text-[13px] leading-relaxed text-foreground/90">{person.profile.bio}</p>}
                 {ch.collabs && ch.collabs.length > 0 && (
-                    <p className="mt-0.5 text-sm text-muted-foreground">{t('person.collabs', { agencies: ch.collabs.join(t('person.listSeparator')) })}</p>
+                    <p className="mt-1 text-[13px] text-muted-foreground">{t('person.collabs', { agencies: ch.collabs.join(t('person.listSeparator')) })}</p>
                 )}
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {live && (
-                        <Button onClick={onWatchLive} disabled={busy} className="gap-1.5">
-                            <MonitorPlay size={16} aria-hidden="true" />
-                            {t('person.watchOnCanvas')}
-                        </Button>
-                    )}
-                    {(ch.youtube || ch.twitch) && (
+            </div>
+            <div className="flex flex-col gap-2">
+                {live && (
+                    <Button onClick={onWatchLive} disabled={busy} className="w-full gap-1.5">
+                        <MonitorPlay size={16} aria-hidden="true" />
+                        {t('person.watchOnCanvas')}
+                    </Button>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                    {(ch.youtube || ch.twitch) ? (
                         <Button variant={favorite ? 'secondary' : 'outline'} onClick={onToggleFavorite} aria-pressed={favorite} className="gap-1.5">
                             <Heart size={16} aria-hidden="true" className={favorite ? 'fill-[#e5173f] text-[#e5173f]' : undefined} />
                             {t(favorite ? 'favorite.saved' : 'favorite.save')}
                         </Button>
-                    )}
-                    {socialLinks(person).map((l) => (
-                        <a
-                            key={l.key}
-                            href={l.href}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow ugc"
-                            aria-label={l.label}
-                            title={l.label}
-                            className="inline-grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                            {l.key === 'x' ? <XLogo /> : l.key === 'facebook' ? <Facebook size={15} aria-hidden="true" /> : <Instagram size={15} aria-hidden="true" />}
-                        </a>
-                    ))}
+                    ) : <span aria-hidden="true" />}
                     <EmbedScheduleButton slug={slug} name={ch.name} open={embedOpen} onOpenChange={onEmbedOpenChange} />
-                    <ReportPersonButton person={person} />
-                    <SubmitScheduleButton person={person} />
-                    {channelLinks(person).map((l) => (
-                        <a
-                            key={l.platform}
-                            href={l.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                            <span className={`size-2 rounded-full ${l.platform === 'youtube' ? 'bg-[#ff3b3b]' : 'bg-[#a970ff]'}`} aria-hidden="true" />
-                            {t(l.platform === 'youtube' ? 'person.openYouTube' : 'person.openTwitch')}
-                            <ExternalLink size={13} className="opacity-60" aria-hidden="true" />
-                        </a>
-                    ))}
                 </div>
             </div>
+            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                {channelLinks(person).map((l) => (
+                    <a
+                        key={l.platform}
+                        href={l.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-[13px] font-medium transition-colors hover:bg-foreground/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <span className={`size-2 rounded-full ${l.platform === 'youtube' ? 'bg-[#ff3b3b]' : 'bg-[#a970ff]'}`} aria-hidden="true" />
+                        {t(l.platform === 'youtube' ? 'person.openYouTube' : 'person.openTwitch')}
+                        <ExternalLink size={13} className="opacity-60" aria-hidden="true" />
+                    </a>
+                ))}
+                {socialLinks(person).map((l) => (
+                    <a key={l.key} href={l.href} target="_blank" rel="noopener noreferrer nofollow ugc" aria-label={l.label} title={l.label} className={iconBtn}>
+                        {l.key === 'x' ? <XLogo /> : l.key === 'facebook' ? <Facebook size={15} aria-hidden="true" /> : <Instagram size={15} aria-hidden="true" />}
+                    </a>
+                ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1 border-t border-border pt-3">
+                <ReportPersonButton person={person} />
+                <SubmitScheduleButton person={person} />
+            </div>
         </header>
+    );
+}
+
+/** 左欄三格統計：本週場次、近 90 天、常見開台時段（台北；沒資料就不顯示那格） */
+function PersonStats({ person, upcoming }: { person: SchedulePerson; upcoming: number }) {
+    const { t } = useTranslation('schedule');
+    const cells = [
+        { label: t('person.stats.week'), value: String(upcoming) },
+        { label: t('person.stats.recent'), value: String(person.recent.length) },
+        ...(typeof person.typicalHour === 'number' ? [{ label: t('person.stats.typicalHour'), value: `${String(person.typicalHour).padStart(2, '0')}:00` }] : []),
+    ];
+    return (
+        <dl className={`grid gap-2 rounded-2xl border border-border bg-card px-4 py-4 text-center ${cells.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {cells.map((c) => (
+                <div key={c.label}>
+                    <dd className="text-[1.375rem] font-extrabold tabular-nums leading-tight">{c.value}</dd>
+                    <dt className="mt-0.5 text-[11px] text-muted-foreground">{c.label}</dt>
+                </div>
+            ))}
+        </dl>
     );
 }
 
@@ -389,7 +408,7 @@ function RelatedPersonLink({ slug, name, imgUrl, sub }: { slug: string; name: st
 function PersonRelatedSections({ related }: { related: PersonRelated | null | undefined }) {
     const { t } = useTranslation('schedule');
     if (!related) return null;
-    const gridCls = 'grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3';
+    const gridCls = 'grid grid-cols-1 gap-1';
     return (
         <>
             {related.siblings.length > 0 && (
@@ -457,6 +476,9 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
     return (
         <ScheduleCardActionsContext.Provider value={cardActions}>
             <EmbedPromoBanner show={person.live.length > 0 || person.upcoming.length > 0} onOpen={() => setEmbedOpen(true)} />
+            {/* 設計稿「個人頁 A」：桌機兩欄（左資料卡 340px、右內容），手機自然堆疊 */}
+            <div className="flex flex-wrap items-start gap-7 pt-5">
+            <aside className="flex w-full flex-col gap-4 md:w-auto md:flex-[1_1_300px] md:max-w-[340px]">
             <PersonHeader
                 slug={slug}
                 person={person}
@@ -467,11 +489,14 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                 favorite={fav.isFavorite(person.channel)}
                 onToggleFavorite={() => void fav.toggle(person.channel)}
             />
+            {!nothing && <PersonStats person={person} upcoming={upcoming.length} />}
+            <div className="space-y-6"><PersonRelatedSections related={related} /></div>
+            </aside>
+            <div className="min-w-0 flex-[999_1_560px]">
 
             {nothing ? (
                 <div className="space-y-12">
                     <p className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">{t('person.inactive')}</p>
-                    <PersonRelatedSections related={related} />
                 </div>
             ) : (
                 <div className="space-y-12">
@@ -481,7 +506,7 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                                 <span className="live-pulse size-2.5 rounded-full bg-[#e5173f]" aria-hidden="true" />
                                 {t('person.live')}
                             </SectionTitle>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                                 {person.live.map((s) => (
                                     <LiveTile
                                         key={streamKey(s)}
@@ -524,7 +549,7 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                             <p className="text-sm text-muted-foreground">{t('person.noneRecent')}</p>
                         ) : (
                             <>
-                                <ul className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+                                <ul className="grid grid-cols-1 gap-x-4 2xl:grid-cols-2">
                                     {recentShown.map((s) => (
                                         <RecentRow
                                             key={streamKey(s)}
@@ -550,11 +575,11 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
                         )}
                     </section>
 
-                    <PersonRelatedSections related={related} />
-
                     <PersonSongs videos={songVideos} vtuberId={person.id} />
                 </div>
             )}
+            </div>
+            </div>
 
             <SelectionBar count={sel.selected.size} room={sel.room} busy={sel.busy} onOpen={() => sel.open()} onClear={sel.clear} />
         </ScheduleCardActionsContext.Provider>

@@ -39,6 +39,8 @@ export interface SchedulePerson {
     profile: PersonProfile;
     /** 頁面有內容（直播中、未來 7 天排程、近 90 天結束的場次）：可索引（sitemap／robots 同一個欄位；規則見 refresh_schedule_indexable） */
     indexable: boolean;
+    /** 近 90 天最常開台的台北小時（0–23）；沒有場次時無 */
+    typicalHour?: number;
     live: ScheduleStream[];
     upcoming: ScheduleStream[];
     recent: ScheduleStream[];
@@ -60,6 +62,8 @@ interface VtuberRow {
     twitch_channel_id: string | null;
     slug: string;
     schedule_indexable: boolean;
+    /** 近 90 天最常開台的台北小時（migration 20261104022507）；舊資料庫可能沒有 */
+    typical_hour?: number | null;
     bio?: string | null;
     x_url?: string | null;
     facebook_url?: string | null;
@@ -202,7 +206,7 @@ export async function fetchPersonRelated(slug: string, opts: PersonFetchOptions 
 export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): Promise<SchedulePerson | null> {
     if (!SCHEDULE_SLUG_RE.test(slug)) return null;
     const cfg = await resolveRestConfig(opts);
-    const baseCols = 'id,name,img_url,nationality,youtube_channel_id,twitch_channel_id,slug,schedule_indexable';
+    const baseCols = 'id,name,img_url,nationality,youtube_channel_id,twitch_channel_id,slug,schedule_indexable,typical_hour';
     const profileCols = 'bio,x_url,facebook_url,instagram_url';
     const bySlug = `&slug=eq.${encodeURIComponent(slug)}&limit=1`;
     const is400 = (e: unknown) => e instanceof SnapshotError && e.message.includes('HTTP 400');
@@ -255,5 +259,6 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     if (v.facebook_url) profile.facebook = v.facebook_url;
     if (v.instagram_url) profile.instagram = v.instagram_url;
 
-    return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...splitPersonStreams(v.id, rows, now) };
+    const typicalHour = typeof v.typical_hour === 'number' && v.typical_hour >= 0 && v.typical_hour <= 23 ? v.typical_hour : undefined;
+    return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...(typicalHour === undefined ? {} : { typicalHour }), ...splitPersonStreams(v.id, rows, now) };
 }

@@ -94,6 +94,9 @@ export default {
     'person.seo.title': '{{name}} stream schedule and live times - MultiStream Hub',
     'person.seo.description': '{{name}}’s stream schedule: live now, YouTube waiting rooms and Twitch schedule for the next 7 days, and streams from the last 90 days.',
     'person.seo.summary': '{{name}} — streams in the last 90 days: {{recent}}; scheduled in the next 7 days: {{upcoming}}.',
+    'person.stats.week': 'This week',
+    'person.stats.recent': 'Last 90 days',
+    'person.stats.typicalHour': 'Usual start (Taipei)',
     'person.collabs': 'Collaborates with {{agencies}}',
     'person.listSeparator': ', ',
 

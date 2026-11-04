@@ -94,6 +94,9 @@ export default {
     'person.seo.title': '{{name}} の配信スケジュール - MultiStream Hub',
     'person.seo.description': '{{name}} の配信スケジュール：配信中、これから 7 日間の待機所と Twitch スケジュール、直近 90 日の配信履歴。',
     'person.seo.summary': '{{name}}：直近 90 日の配信 {{recent}} 回、これから 7 日間の予定 {{upcoming}} 件。',
+    'person.stats.week': '今週',
+    'person.stats.recent': '直近 90 日',
+    'person.stats.typicalHour': 'よく始まる時刻（台北）',
     'person.collabs': 'コラボ：{{agencies}}',
     'person.listSeparator': '、',
 

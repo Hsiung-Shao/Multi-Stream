@@ -94,6 +94,9 @@ export default {
     'person.seo.title': '{{name}} 開台時間與直播週表 - MultiStream Hub',
     'person.seo.description': '{{name}} 的開台週表：正在直播、接下來 7 天的待機室與 Twitch 週表，以及最近 90 天的直播紀錄。',
     'person.seo.summary': '{{name}}：近 90 天開台 {{recent}} 次，接下來 7 天有 {{upcoming}} 場排程。',
+    'person.stats.week': '本週場次',
+    'person.stats.recent': '近 90 天',
+    'person.stats.typicalHour': '常見開台（台北）',
     'person.collabs': '合作：{{agencies}}',
     'person.listSeparator': '、',
 
