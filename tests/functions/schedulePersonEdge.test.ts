@@ -1,6 +1,6 @@
 // 個人週表頁的 edge 端：/schedule/<slug> 解析、文案與前端同步、catch-all 的 200／301／404、動態 sitemap
 // T 編號對應計畫〈社群週表讀圖排程調整〉的測試規格表
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
@@ -31,6 +31,9 @@ import enSchedule from '../../src/i18n/locales/en/schedule';
 const env = { SUPABASE_URL: 'https://x.supabase.co', SUPABASE_ANON_KEY: 'anon-test' };
 // 相關 RPC 的替身：可索引案例若不傳，預設的 anonRpc 會真的打網路（review 第 1 輪提醒）
 const noRelated = vi.fn(async () => ({ ok: true, data: { agency: null, siblings: [], neighbors: [] } }));
+// 整檔擋掉對外網路：沒傳 relatedFn 的可索引案例會走預設 anonRpc，不能讓它真的連到 x.supabase.co
+beforeAll(() => vi.stubGlobal('fetch', vi.fn(async () => new Response('[]', { status: 404 }))));
+afterAll(() => vi.unstubAllGlobals());
 const ok = (data: unknown) => vi.fn(async () => ({ ok: true, status: 200, data, error: null }));
 
 describe('schedule-person：與前端同一套規則', () => {

@@ -176,15 +176,17 @@ export async function fetchPersonRelated(slug: string, opts: PersonFetchOptions 
     if (!SCHEDULE_SLUG_RE.test(slug)) return null;
     // 呼叫端給了更短的逾時就用它，否則最多 RELATED_TIMEOUT_MS
     const timeoutMs = Math.min(opts.timeoutMs ?? RELATED_TIMEOUT_MS, RELATED_TIMEOUT_MS);
-    let data: Partial<PersonRelated>;
+    // 逾時／HTTP 錯誤照常拋出：交給 useQuery 的 retry／refetchOnWindowFocus，不把暫時失敗當成「沒有相關」快取 30 分鐘；
+    // 只有回傳格式不對（查無此人回 null、欄位缺）才回 null
+    const cfg = await resolveRestConfig({ ...opts, timeoutMs });
+    let data: Partial<PersonRelated> | null;
     try {
-        const cfg = await resolveRestConfig({ ...opts, timeoutMs });
         data = await restRpc<Partial<PersonRelated>>(cfg, 'schedule_person_related', { p_slug: slug }, { ...opts, timeoutMs });
     } catch (e) {
-        if (opts.signal?.aborted) throw e;
-        return null;
+        if (e instanceof SnapshotError && e.reason === 'format') return null;
+        throw e;
     }
-    if (!Array.isArray(data.siblings) || !Array.isArray(data.neighbors)) return null;
+    if (!data || !Array.isArray(data.siblings) || !Array.isArray(data.neighbors)) return null;
     const agency = data.agency && typeof data.agency.name === 'string' ? { name: data.agency.name } : null;
     return { agency, siblings: data.siblings, neighbors: data.neighbors };
 }

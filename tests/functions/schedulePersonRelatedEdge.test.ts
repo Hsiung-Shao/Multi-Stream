@@ -29,9 +29,18 @@ describe('resolveSchedulePerson 的相關推薦', () => {
         expect(r.related).toEqual({ agency: { name: '子午計畫' }, siblings: RELATED.siblings, neighbors: [] });
     });
 
-    it('不可索引：RPC 結果不採用，related 為 null', async () => {
-        const r = await resolveSchedulePerson(env, '/schedule/taione', ok([row(false)]), null, ok(RELATED));
+    it('不可索引：不呼叫 RPC（掃描路徑維持 1 支 subrequest），related 為 null', async () => {
+        const relatedFn = ok(RELATED);
+        const r = await resolveSchedulePerson(env, '/schedule/taione', ok([row(false)]), null, relatedFn);
         expect(r.related).toBeNull();
+        expect(relatedFn).not.toHaveBeenCalled();
+    });
+
+    it('查無此人、主查詢失敗：都不呼叫 RPC', async () => {
+        const relatedFn = ok(RELATED);
+        await resolveSchedulePerson(env, '/schedule/nobody', ok([]), null, relatedFn);
+        await resolveSchedulePerson(env, '/schedule/taione', vi.fn(async () => ({ ok: false, data: null })), null, relatedFn);
+        expect(relatedFn).not.toHaveBeenCalled();
     });
 
     it('RPC 失敗：related 為 null，且快取只放 PERSON_DEGRADED_CACHE_TTL_S（不是 5 分鐘）', async () => {
