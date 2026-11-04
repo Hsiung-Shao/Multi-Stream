@@ -70,8 +70,9 @@ function personItem(lang, p) {
     return `<li><a href="${href}" class="hover:underline">${escapeHtml(p.name)}</a></li>`;
 }
 
-function sectionHtml(lang, t, heading, count, listHtml) {
-    return `<section class="mt-8"><h2 class="text-lg font-semibold">${escapeHtml(heading)}</h2><p class="text-sm text-muted-foreground">${escapeHtml(fill(t.count, { count }))}</p>${listHtml}</section>`;
+function sectionHtml(lang, t, heading, count, listHtml, id = null) {
+    const idAttr = id ? ` id="${escapeHtml(id)}"` : '';
+    return `<section class="mt-8"><h2${idAttr} class="text-lg font-semibold">${escapeHtml(heading)}</h2><p class="text-sm text-muted-foreground">${escapeHtml(fill(t.count, { count }))}</p>${listHtml}</section>`;
 }
 
 /** 名錄內文：h1、說明、每個頂層團體一個 section（子團用小標分段）、個人勢一個 section。所有資料庫字串都經 escapeHtml。 */
@@ -88,7 +89,7 @@ export function renderDirectoryBodyHtml(lang, data) {
             const list = `<ul class="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm">${people.map((p) => personItem(lang, p)).join('')}</ul>`;
             return subgroup ? `<h3 class="mt-3 text-sm font-semibold text-muted-foreground">${escapeHtml(subgroup)}</h3>${list}` : list;
         });
-        parts.push(sectionHtml(lang, t, group.name, members.length, blocks.join('')));
+        parts.push(sectionHtml(lang, t, group.name, members.length, blocks.join(''), `directory-group-${group.id}`));
     }
     if (independent.length) {
         parts.push(sectionHtml(lang, t, t.independent, independent.length, `<ul class="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm">${independent.map((p) => personItem(lang, p)).join('')}</ul>`));

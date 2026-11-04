@@ -30,7 +30,7 @@ function embedPath(target: EmbedTarget): string {
 
 /** 這份嵌入指回本站的頁面（個人週表頁或名錄）；lang 前綴由 withLang 加 */
 export function targetPagePath(target: EmbedTarget): string {
-    return target.kind === 'group' ? '/vtubers' : `/schedule/${encodeURIComponent(target.slug)}`;
+    return target.kind === 'group' ? `/vtubers#directory-group-${encodeURIComponent(target.id)}` : `/schedule/${encodeURIComponent(target.slug)}`;
 }
 
 function query(lang: EmbedLang, theme: EmbedTheme, days: number): string {

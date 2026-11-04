@@ -38,6 +38,7 @@ import { buildVideoIndex, songsForVtuber } from '../../features/songs/lib/catalo
 import { serializeSongShare } from '../../features/songs/lib/songShareLink';
 import { formatTimecode } from '../../features/songs/lib/timecode';
 import { EmbedScheduleDialog } from '../../features/schedule/EmbedScheduleDialog';
+import { EMBED_BANNER_DISMISSED_KEY, fetchEmbedUsage } from '../../features/schedule/embedUsage';
 
 const RECENT_PREVIEW = 10;
 
@@ -112,17 +113,53 @@ function SubmitScheduleButton({ person, variant = 'button' }: { person: Schedule
 }
 
 /** 「嵌入到我的網站」：開產生器對話框（features/schedule/EmbedScheduleDialog） */
-function EmbedScheduleButton({ slug, name }: { slug: string; name: string }) {
+function EmbedScheduleButton({ slug, name, sites, open, onOpenChange }: { slug: string; name: string; sites?: number; open: boolean; onOpenChange: (o: boolean) => void }) {
     const { t } = useTranslation('schedule');
-    const [open, setOpen] = useState(false);
     return (
         <>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onOpenChange(true)}>
                 <Code2 size={14} aria-hidden="true" />
                 {t('embed.button')}
             </Button>
-            {open && <EmbedScheduleDialog open={open} onOpenChange={setOpen} target={{ kind: 'person', slug, name }} />}
+            {open && <EmbedScheduleDialog open={open} onOpenChange={onOpenChange} target={{ kind: 'person', slug, name }} sites={sites} />}
         </>
+    );
+}
+
+/** 嵌入統計（embed_usage）：讀不到當作沒有統計（undefined） */
+function useEmbedSites(slug: string): number | undefined {
+    const q = useQuery({ queryKey: ['embed-usage', 'person', slug], queryFn: ({ signal }) => fetchEmbedUsage('person', slug, { signal }), staleTime: 10 * 60_000, retry: 1 });
+    return q.data?.sites;
+}
+
+function readDismissed(): boolean {
+    try {
+        return localStorage.getItem(EMBED_BANNER_DISMISSED_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
+
+/** 一次性提示：有場次但還沒有任何網站嵌入 → 邀請把週表放到自己的網站；關掉就記在 localStorage（PRESERVED_KEYS 有列） */
+function EmbedPromoBanner({ show, onOpen }: { show: boolean; onOpen: () => void }) {
+    const { t } = useTranslation('schedule');
+    const [dismissed, setDismissed] = useState(readDismissed);
+    if (!show || dismissed) return null;
+    const dismiss = () => {
+        setDismissed(true);
+        try {
+            localStorage.setItem(EMBED_BANNER_DISMISSED_KEY, '1');
+        } catch {
+            /* 無痕或配額滿：這次關掉就好 */
+        }
+    };
+    return (
+        <div role="note" className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
+            <Code2 size={16} aria-hidden="true" className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1">{t('embed.banner.text')}</span>
+            <Button variant="secondary" size="sm" onClick={onOpen}>{t('embed.banner.cta')}</Button>
+            <Button variant="ghost" size="sm" onClick={dismiss} aria-label={t('embed.banner.dismiss')}>{t('embed.banner.dismiss')}</Button>
+        </div>
     );
 }
 
@@ -179,7 +216,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
     );
 }
 
-function PersonHeader({ person, slug, onWatchLive, busy, favorite, onToggleFavorite }: { person: SchedulePerson; slug: string; onWatchLive: () => void; busy: boolean; favorite: boolean; onToggleFavorite: () => void }) {
+function PersonHeader({ person, slug, onWatchLive, busy, favorite, onToggleFavorite, embedSites, embedOpen, onEmbedOpenChange }: { person: SchedulePerson; slug: string; onWatchLive: () => void; busy: boolean; favorite: boolean; onToggleFavorite: () => void; embedSites?: number; embedOpen: boolean; onEmbedOpenChange: (o: boolean) => void }) {
     const { t } = useTranslation('schedule');
     const ch = person.channel;
     const live = person.live.length > 0;
@@ -237,7 +274,7 @@ function PersonHeader({ person, slug, onWatchLive, busy, favorite, onToggleFavor
                             {l.key === 'x' ? <XLogo /> : l.key === 'facebook' ? <Facebook size={15} aria-hidden="true" /> : <Instagram size={15} aria-hidden="true" />}
                         </a>
                     ))}
-                    <EmbedScheduleButton slug={slug} name={ch.name} />
+                    <EmbedScheduleButton slug={slug} name={ch.name} sites={embedSites} open={embedOpen} onOpenChange={onEmbedOpenChange} />
                     <ReportPersonButton person={person} />
                     <SubmitScheduleButton person={person} />
                     {channelLinks(person).map((l) => (
@@ -387,6 +424,8 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
     const { t } = useTranslation('schedule');
     const [now, setNow] = useState(() => Date.now());
     const [recentExpanded, setRecentExpanded] = useState(false);
+    const [embedOpen, setEmbedOpen] = useState(false);
+    const embedSites = useEmbedSites(slug);
     const channels = useMemo(() => ({ [person.id]: person.channel }), [person.id, person.channel]);
     // 歌回目錄（edge 快取 10 分鐘）：本人的歌回清單＋場次列的歌單徽章；person 資料到了這裡才掛上
     const songCatalog = useSongCatalog();
@@ -424,9 +463,13 @@ function PersonBody({ person, slug, related }: { person: SchedulePerson; slug: s
 
     return (
         <ScheduleCardActionsContext.Provider value={cardActions}>
+            <EmbedPromoBanner show={embedSites === 0 && (person.live.length > 0 || person.upcoming.length > 0)} onOpen={() => setEmbedOpen(true)} />
             <PersonHeader
                 slug={slug}
                 person={person}
+                embedSites={embedSites}
+                embedOpen={embedOpen}
+                onEmbedOpenChange={setEmbedOpen}
                 onWatchLive={watchLive}
                 busy={sel.busy || busyKey !== null}
                 favorite={fav.isFavorite(person.channel)}

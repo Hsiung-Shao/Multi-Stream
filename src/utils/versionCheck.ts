@@ -30,6 +30,7 @@ export const PRESERVED_KEYS = [
     'indexedDBBackupEnabled',// Backup setting
     'ms_user_uuid',          // User Identity (UID)
     'ms_internal_user',      // 內部人員旗標（補；不送 GA）
+    'embed_banner_dismissed',// 個人週表頁「把週表放到你的網站」提示已關閉（2026-11）
     'announcement:device_id',// 公告投票的裝置 ID（補；刪掉可重複投票）
     'twitchAccessToken',     // Twitch 連結（補；刪掉要重新授權匯入）
     'twitchAccessTokenExpiresAt',

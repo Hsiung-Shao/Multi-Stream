@@ -45,7 +45,7 @@ export function groupSubjectFromRpc(data, now = Date.now()) {
         name: parent && parent !== data.group.name ? `${parent} · ${data.group.name}` : data.group.name,
         image: null,
         streams: { live: live.slice(0, GROUP_MAX_ITEMS), upcoming: upcoming.slice(0, GROUP_MAX_ITEMS) },
-        pagePath: '/vtubers',
+        pagePath: `/vtubers#directory-group-${String(data.group.id ?? '')}`,
     };
 }
 

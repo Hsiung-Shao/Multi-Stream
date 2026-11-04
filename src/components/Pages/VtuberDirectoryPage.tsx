@@ -3,6 +3,7 @@
 // 分組規則與 edge 共用 functions/lib/directory-group.js；不預渲染（entry-server CSR_ONLY）。SEO／JSON-LD 由 App.tsx 處理。
 
 import { useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronRight, RefreshCw } from 'lucide-react';
@@ -12,6 +13,8 @@ import { SiteFooter } from '../SiteFooter';
 import { Button } from '../ui/button';
 import { fetchDirectory, type DirectoryPerson } from '../../features/schedule/directorySource';
 import { groupDirectory, splitBySubgroup } from '../../../functions/lib/directory-group.js';
+import { EmbedScheduleDialog } from '../../features/schedule/EmbedScheduleDialog';
+import { Code2 } from 'lucide-react';
 import { schedulePersonPage } from '../../config/schedulePerson';
 
 /** 名錄一小時才變一次（edge 也快取 1 小時）：client 端 10 分鐘內不重抓 */
@@ -33,12 +36,32 @@ function PersonItem({ person }: { person: DirectoryPerson }) {
     );
 }
 
-function SectionHeading({ id, title, count }: { id: string; title: string; count: string }) {
+function SectionHeading({ id, title, count, action }: { id: string; title: string; count: string; action?: React.ReactNode }) {
     return (
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 id={id} className="text-lg font-bold tracking-tight text-foreground">{title}</h2>
             <p className="text-xs text-muted-foreground">{count}</p>
+            {action}
         </div>
+    );
+}
+
+/** 「嵌入這個團的週表」：開共用的產生器（target 為團體 uuid；嵌入端點 /embed/schedule/group/<uuid>） */
+function EmbedGroupButton({ id, name }: { id: string; name: string }) {
+    const { t } = useTranslation('schedule');
+    const [open, setOpen] = useState(false);
+    return (
+        <>
+            <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+                <Code2 size={12} aria-hidden="true" />
+                {t('embed.groupButton')}
+            </button>
+            {open && <EmbedScheduleDialog open={open} onOpenChange={setOpen} target={{ kind: 'group', id, name }} />}
+        </>
     );
 }
 
@@ -81,7 +104,7 @@ export default function VtuberDirectoryPage() {
                                 const headingId = `directory-group-${group.id}`;
                                 return (
                                     <section key={group.id} aria-labelledby={headingId}>
-                                        <SectionHeading id={headingId} title={group.name} count={t('directory.count', { count: members.length })} />
+                                        <SectionHeading id={headingId} title={group.name} count={t('directory.count', { count: members.length })} action={<EmbedGroupButton id={group.id} name={group.name} />} />
                                         {splitBySubgroup(members).map(({ subgroup, people }) => (
                                             <div key={subgroup ?? ''}>
                                                 {subgroup && <h3 className="mt-4 text-sm font-semibold text-muted-foreground">{subgroup}</h3>}
