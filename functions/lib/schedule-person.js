@@ -348,7 +348,8 @@ export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, 
     }
     if (cache) {
         // 可索引卻沒拿到場次（嵌入資料異常）或相關 RPC 失敗時短暫快取，別讓暫時的薄內容掛滿 5 分鐘
-        const degraded = result.kind === 'found' && result.indexable && (!result.streams || relatedFailed);
+        // 不可索引者現在也會被嵌入小工具用到：場次資料拿不到一律短快取
+        const degraded = result.kind === 'found' && (!result.streams || (result.indexable && relatedFailed));
         const ttl = degraded ? PERSON_DEGRADED_CACHE_TTL_S : PERSON_CACHE_TTL_S;
         const body = new Response(JSON.stringify(result), {
             headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${ttl}` },

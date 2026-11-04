@@ -136,3 +136,49 @@ describe('T10 recordReferrer：去重與排除本站', () => {
         expect(rpcFn).toHaveBeenCalledTimes(2);
     });
 });
+
+describe('T11b refererHost：內網、無點主機、pages.dev', () => {
+    it('私有 IP 與沒有點的主機 → null', () => {
+        expect(refererHost(req('https://192.168.1.5/'))).toBeNull();
+        expect(refererHost(req('https://10.0.0.1/'))).toBeNull();
+        expect(refererHost(req('https://intranet/'))).toBeNull();
+    });
+
+    it('別人的 *.pages.dev 要算外站；本專案預覽站與本站不算', () => {
+        // 整個 .pages.dev 都排除會漏掉所有用 Cloudflare Pages 的外部站台
+        expect(refererHost(req('https://myfan.pages.dev/'))).toBe('myfan.pages.dev');
+        expect(refererHost(req('https://abc.mutli-stream.pages.dev/'))).toBeNull();
+        expect(refererHost(req('https://multistreaming.org/x'))).toBeNull();
+    });
+});
+
+describe('T10b recordReferrer：站數已滿旗標', () => {
+    const base = (referer: string, over: Record<string, unknown> = {}) => ({
+        request: req(referer), env, kind: 'person', slug: 'taione', now: NOW, ...over,
+    });
+
+    it('rpc 回 data:false（已達上限）→ false；之後同 slug 換 host 不再呼叫 rpc', async () => {
+        const cache = fakeCache();
+        const rpcFn = vi.fn(async () => ({ ok: true, data: false }));
+        expect(await recordReferrer(base('https://a.example.com/', { cache, rpcFn }))).toBe(false);
+        expect(rpcFn).toHaveBeenCalledTimes(1);
+        expect(await recordReferrer(base('https://b.example.com/', { cache, rpcFn }))).toBe(false);
+        expect(rpcFn).toHaveBeenCalledTimes(1);
+    });
+
+    it('已滿旗標只管那一份週表，別的 slug 照常寫', async () => {
+        const cache = fakeCache();
+        const full = vi.fn(async () => ({ ok: true, data: false }));
+        await recordReferrer(base('https://a.example.com/', { cache, rpcFn: full }));
+        const ok = vi.fn(async () => ({ ok: true, data: true }));
+        expect(await recordReferrer(base('https://b.example.com/', { cache, rpcFn: ok, slug: 'other' }))).toBe(true);
+        expect(ok).toHaveBeenCalledTimes(1);
+    });
+
+    it('cache 為 null：已滿也沒處記，每次都呼叫 rpc', async () => {
+        const rpcFn = vi.fn(async () => ({ ok: true, data: false }));
+        await recordReferrer(base('https://a.example.com/', { cache: null, rpcFn }));
+        await recordReferrer(base('https://b.example.com/', { cache: null, rpcFn }));
+        expect(rpcFn).toHaveBeenCalledTimes(2);
+    });
+});

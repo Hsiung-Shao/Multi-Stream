@@ -9,6 +9,13 @@
 // 資料形狀 subject：{ name, image: string|null, streams: { live: Stream[], upcoming: Stream[] } | null, pagePath }
 //   Stream = { title, platform: 'youtube'|'twitch', start: ISO|null, tbd?: true, member?: string }（member：團體嵌入列成員名）
 import { escapeHtml, largerAvatar } from './schedule-person.js';
+
+/** SVG 是嚴格 XML：先去掉 XML 不允許的控制字元（一個標題就能讓整張圖解析失敗、PNG 下載 onerror），再做 HTML 逃脫 */
+export function escapeXml(s) {
+    return escapeHtml(String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, ''));
+}
+/** 週表圖頁尾網址最長寬度（全形 2、半形 1） */
+export const CARD_URL_UNITS = 60;
 import { withLang } from './locale.js';
 
 export const ORIGIN = 'https://multistreaming.org';
@@ -80,10 +87,10 @@ export function clip(s, maxUnits) {
     }
     return out;
 }
-function units(s) {
-    let u = 0;
-    for (const ch of String(s)) u += ch.codePointAt(0) > 0x2e7f ? 2 : 1;
-    return u;
+function textWidth(s, half, full) {
+    let w = 0;
+    for (const ch of String(s)) w += ch.codePointAt(0) > 0x2e7f ? full : half;
+    return w;
 }
 
 /** 嵌入回應共用標頭：noindex、公開快取、最小 CSP（刻意沒有 frame-ancestors／X-Frame-Options） */
@@ -187,6 +194,8 @@ export function renderEmbedHtml(subject, { lang, theme, days }, now = Date.now()
     if (live.length) sections.push(`<section><h2>${escapeHtml(t.live)}</h2><ul>${live.map((x) => htmlItem(lang, x, t, true)).join('')}</ul></section>`);
     if (upcoming.length) sections.push(`<section><h2>${escapeHtml(fill(t.upcoming, { days }))}</h2><ul>${upcoming.map((x) => htmlItem(lang, x, t, false)).join('')}</ul></section>`);
     if (!live.length && !upcoming.length) sections.push(`<p class="empty">${escapeHtml(fill(t.none, { days }))}</p>`);
+    // 團體 RPC 有上限：超過的場次只能寫「還有 N 場」
+    if (Number(subject.truncated) > 0) sections.push(`<p class="empty">${escapeHtml(fill(t.moreRows, { n: Number(subject.truncated) }))}</p>`);
     const avatar = subject.image
         ? `<img class="avatar${live.length ? ' live' : ''}" src="${escapeHtml(largerAvatar(subject.image))}" alt="" referrerpolicy="no-referrer" width="48" height="48">`
         : '<span class="avatar" aria-hidden="true"></span>';
@@ -219,6 +228,9 @@ export async function avatarDataUri(url, fetchFn = fetch) {
         if (!res.ok) return null;
         const type = (res.headers.get('content-type') || '').split(';')[0].trim();
         if (!/^image\/(png|jpeg|webp)$/.test(type)) return null;
+        // 先看標頭：太大的就不讀 body（省記憶體與 CPU）
+        const declared = Number(res.headers.get('content-length'));
+        if (Number.isFinite(declared) && declared > AVATAR_MAX_BYTES) return null;
         const buf = await res.arrayBuffer();
         if (buf.byteLength > AVATAR_MAX_BYTES) return null;
         let bin = '';
@@ -237,10 +249,12 @@ export function renderCardSvg(subject, { lang, theme, days }, avatar, now = Date
     const { live, upcoming } = pickStreams(subject.streams, days, now);
     const rows = [...live.map((x) => ({ ...x, live: true })), ...upcoming];
     const shown = rows.slice(0, CARD_MAX_ROWS);
-    const more = rows.length - shown.length;
-    const pageUrl = `multistreaming.org${withLang(lang, subject.pagePath)}`;
+    const more = rows.length - shown.length + (Number(subject.truncated) > 0 ? Number(subject.truncated) : 0);
+    // 頁尾只寫人看得懂的網址：去掉錨點（團體回連結帶 #directory-group-<uuid>）、太長就截斷，別壓到右側品牌字
+    const pageUrl = clip(`multistreaming.org${withLang(lang, String(subject.pagePath).split('#')[0])}`, CARD_URL_UNITS);
     const nameShown = clip(subject.name, 36);
-    const nameEnd = 180 + units(nameShown) * 20;
+    // 40px 粗體：半形約 24px、全形約 40px（之前用 20 會讓 LIVE 徽章蓋到英文長名）
+    const nameEnd = 180 + textWidth(nameShown, 24, 40);
 
     const p = [];
     p.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}" font-family="${SVG_FONT}">`);
@@ -249,14 +263,14 @@ export function renderCardSvg(subject, { lang, theme, days }, avatar, now = Date
     if (avatar) p.push(`<image href="${avatar}" x="48" y="44" width="104" height="104" clip-path="url(#av)" preserveAspectRatio="xMidYMid slice"/>`);
     else p.push(`<circle cx="100" cy="96" r="52" fill="${c.row}"/>`);
     p.push(`<circle cx="100" cy="96" r="52" fill="none" stroke="${c.line}" stroke-width="2"/>`);
-    p.push(`<text x="180" y="92" font-size="40" font-weight="700" fill="${c.fg}">${escapeHtml(nameShown)}</text>`);
+    p.push(`<text x="180" y="92" font-size="40" font-weight="700" fill="${c.fg}">${escapeXml(nameShown)}</text>`);
     if (live.length) p.push(`<rect x="${nameEnd + 16}" y="60" width="78" height="36" rx="8" fill="${c.live}"/><text x="${nameEnd + 55}" y="86" font-size="22" font-weight="800" fill="#fff" text-anchor="middle">LIVE</text>`);
-    p.push(`<text x="180" y="128" font-size="22" fill="${c.muted}">${escapeHtml(`${t.schedule} · ${fill(t.upcoming, { days })} · ${t.tz} (UTC+8)`)}</text>`);
+    p.push(`<text x="180" y="128" font-size="22" fill="${c.muted}">${escapeXml(`${t.schedule} · ${fill(t.upcoming, { days })} · ${t.tz} (UTC+8)`)}</text>`);
     let y = 184;
     const rowH = 76;
     if (!shown.length) {
         p.push(`<rect x="48" y="${y}" width="1104" height="${rowH}" rx="16" fill="none" stroke="${c.line}" stroke-dasharray="8 8"/>`);
-        p.push(`<text x="600" y="${y + 47}" font-size="24" fill="${c.muted}" text-anchor="middle">${escapeHtml(fill(t.none, { days }))}</text>`);
+        p.push(`<text x="600" y="${y + 47}" font-size="24" fill="${c.muted}" text-anchor="middle">${escapeXml(fill(t.none, { days }))}</text>`);
     }
     for (const x of shown) {
         const ts = x.start ? Date.parse(x.start) : NaN;
@@ -265,15 +279,15 @@ export function renderCardSvg(subject, { lang, theme, days }, avatar, now = Date
         const platform = x.platform === 'twitch' ? 'Twitch' : 'YouTube';
         const title = x.member ? `${x.member}：${x.title || platform}` : x.title || platform;
         p.push(`<rect x="48" y="${y}" width="1104" height="${rowH - 10}" rx="16" fill="${c.row}" stroke="${x.live ? c.live : c.line}" stroke-width="${x.live ? 3 : 1}"/>`);
-        p.push(`<text x="72" y="${y + 36}" font-size="${x.tbd || x.live ? 22 : 30}" font-weight="700" fill="${x.live ? c.live : c.fg}">${escapeHtml(x.live ? t.liveLabel : time)}</text>`);
-        p.push(`<text x="72" y="${y + 58}" font-size="17" fill="${c.muted}">${escapeHtml(date)}</text>`);
-        p.push(`<text x="260" y="${y + 41}" font-size="26" fill="${c.fg}">${escapeHtml(clip(title, CARD_TITLE_UNITS))}</text>`);
+        p.push(`<text x="72" y="${y + 36}" font-size="${x.tbd || x.live ? 22 : 30}" font-weight="700" fill="${x.live ? c.live : c.fg}">${escapeXml(x.live ? t.liveLabel : time)}</text>`);
+        p.push(`<text x="72" y="${y + 58}" font-size="17" fill="${c.muted}">${escapeXml(date)}</text>`);
+        p.push(`<text x="260" y="${y + 41}" font-size="26" fill="${c.fg}">${escapeXml(clip(title, CARD_TITLE_UNITS))}</text>`);
         p.push(`<text x="1128" y="${y + 41}" font-size="18" fill="${c.muted}" text-anchor="end">${platform}</text>`);
         y += rowH;
     }
-    if (more > 0) p.push(`<text x="72" y="${y + 24}" font-size="20" fill="${c.muted}">${escapeHtml(fill(t.moreRows, { n: more }))}</text>`);
+    if (more > 0) p.push(`<text x="72" y="${y + 24}" font-size="20" fill="${c.muted}">${escapeXml(fill(t.moreRows, { n: more }))}</text>`);
     p.push(`<line x1="48" y1="612" x2="1152" y2="612" stroke="${c.line}"/>`);
-    p.push(`<text x="48" y="648" font-size="22" fill="${c.brand}">${escapeHtml(`${t.more}：${pageUrl}`)}</text>`);
+    p.push(`<text x="48" y="648" font-size="22" fill="${c.brand}">${escapeXml(`${t.more}：${pageUrl}`)}</text>`);
     p.push(`<text x="1152" y="648" font-size="20" fill="${c.muted}" text-anchor="end">MultiStream Hub</text>`);
     p.push('</svg>');
     return p.join('');
@@ -282,7 +296,7 @@ export function renderCardSvg(subject, { lang, theme, days }, avatar, now = Date
 /** 404／503 用的訊息圖 */
 export function renderMessageSvg(theme, message) {
     const c = SVG_THEMES[theme] ?? SVG_THEMES.light;
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}"><rect width="${CARD_W}" height="${CARD_H}" rx="32" fill="${c.bg}"/><text x="600" y="350" font-size="32" fill="${c.muted}" text-anchor="middle" font-family="${SVG_FONT}">${escapeHtml(message)}</text></svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD_W}" height="${CARD_H}" viewBox="0 0 ${CARD_W} ${CARD_H}"><rect width="${CARD_W}" height="${CARD_H}" rx="32" fill="${c.bg}"/><text x="600" y="350" font-size="32" fill="${c.muted}" text-anchor="middle" font-family="${SVG_FONT}">${escapeXml(message)}</text></svg>`;
 }
 
 /** 把 resolveSchedulePerson 的 found 結果轉成 subject */

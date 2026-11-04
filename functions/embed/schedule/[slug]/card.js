@@ -41,7 +41,10 @@ export async function handleCard(context, deps = {}) {
     if (person.kind !== 'found') return svg(renderMessageSvg(opts.theme, t.notFound), 404, EMBED_CACHE_TTL_S);
     const stat = record({ request, env, kind: 'person', slug });
     if (context.waitUntil) context.waitUntil(stat);
-    const res = svg(renderCardSvg(personSubject(person, slug), opts, await avatar(person.image)), 200, EMBED_CACHE_TTL_S);
+    const dataUri = await avatar(person.image);
+    // 有頭像卻抓失敗（逾時、太大）：只短暫快取，別讓沒頭像的圖掛滿 5 分鐘
+    const ttl = person.image && !dataUri ? EMBED_ERROR_TTL_S : EMBED_CACHE_TTL_S;
+    const res = svg(renderCardSvg(personSubject(person, slug), opts, dataUri), 200, ttl);
     if (cache) {
         const put = cache.put(key, res.clone()).catch(() => {});
         if (context.waitUntil) context.waitUntil(put);

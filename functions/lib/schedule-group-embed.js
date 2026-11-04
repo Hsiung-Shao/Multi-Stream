@@ -6,8 +6,8 @@ import { EMBED_CACHE_TTL_S, EMBED_ERROR_TTL_S } from './schedule-embed.js';
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CACHE_ORIGIN = 'https://multistreaming.org/__edge-cache/schedule-group-embed/v1/';
-/** 團體嵌入最多列幾場（RPC 端也同樣上限） */
-export const GROUP_MAX_ITEMS = 50;
+/** 團體嵌入最多列幾場（RPC 端也同樣上限；超過的數量由 RPC 的 total 算成 truncated） */
+export const GROUP_MAX_ITEMS = 100;
 const DAY_MS = 86_400_000;
 const UPCOMING_GRACE_MS = 15 * 60 * 1000;
 
@@ -40,7 +40,10 @@ export function groupSubjectFromRpc(data, now = Date.now()) {
     const sortKey = (x) => Date.parse(x.start) + (x.tbd ? DAY_MS - 1 : 0);
     upcoming.sort((a, b) => sortKey(a) - sortKey(b));
     const parent = typeof data.group.parent_name === 'string' && data.group.parent_name ? data.group.parent_name : null;
+    const total = Number(data.total);
+    const truncated = Number.isFinite(total) && total > items.length ? total - items.length : 0;
     return {
+        truncated,
         id: String(data.group.id ?? ''),
         name: parent && parent !== data.group.name ? `${parent} · ${data.group.name}` : data.group.name,
         image: null,

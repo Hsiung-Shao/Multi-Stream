@@ -2,11 +2,25 @@
 // T 編號對應計畫〈週表嵌入產生器〉的測試規格表
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import i18n from '../../../src/i18n/i18n';
 import { EmbedScheduleDialog, embedUrl, embedCode, cardUrl } from '../../../src/features/schedule/EmbedScheduleDialog';
 
 const target = { kind: 'person' as const, slug: 'taione', name: '台一' };
 const ORIGIN = 'https://x.example';
+
+/** 依 URL 分流的 fetch 替身：設定檔、嵌入站數、週表圖各回各的 */
+function stubFetch(usage: unknown) {
+    const fn = vi.fn(async (input: unknown) => {
+        const u = String(input);
+        const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        if (u.includes('/api/supabase-config')) return json({ url: 'https://x.supabase.co', anonKey: 'k' });
+        if (u.includes('embed_usage')) return json(usage);
+        return new Response('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675"></svg>', { status: 200, headers: { 'Content-Type': 'image/svg+xml' } });
+    });
+    vi.stubGlobal('fetch', fn);
+    return fn;
+}
 
 describe('embedUrl／embedCode／cardUrl 純函式', () => {
     it('embedUrl：預設值不帶查詢字串', () => {
@@ -34,6 +48,16 @@ describe('embedUrl／embedCode／cardUrl 純函式', () => {
         expect(code).toContain('\n<p><a href="https://multistreaming.org/zh-TW/schedule/taione">LINKTEXT</a></p>');
     });
 
+    it('T15b 名字與連結文字含 HTML 時被逃脫，原始標籤不外漏', () => {
+        const evil = { kind: 'person' as const, slug: 'taione', name: '<img src=x onerror=alert(1)>' };
+        const code = embedCode(evil, 'en', 'light', 7, '<b>bold</b> "q"');
+        expect(code).not.toContain('<img');
+        expect(code).not.toContain('<b>');
+        expect(code).toContain('&lt;img');
+        expect(code).toContain('&lt;b&gt;');
+        expect(code).toContain('&quot;');
+    });
+
     it('embedCode：en 回連結沒有 /zh-TW；dark／days 進 iframe 網址', () => {
         const code = embedCode(target, 'en', 'dark', 3, 'T');
         expect(code).toContain('<a href="https://multistreaming.org/schedule/taione">T</a>');
@@ -56,7 +80,7 @@ describe('EmbedScheduleDialog 互動（zh-TW）', () => {
         clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
             downloadName = this.download;
         });
-        vi.stubGlobal('fetch', vi.fn(async () => new Response('<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675"></svg>', { status: 200, headers: { 'Content-Type': 'image/svg+xml' } })));
+        stubFetch([]);
         // jsdom 沒有 canvas：只替身「畫出去」與「轉成 PNG」兩個外部 I/O
         HTMLCanvasElement.prototype.getContext = vi.fn(() => ({ drawImage: vi.fn(), fillRect: vi.fn() })) as never;
         HTMLCanvasElement.prototype.toBlob = vi.fn(function (cb: (b: Blob | null) => void) { cb(new Blob(['x'], { type: 'image/png' })); }) as never;
@@ -82,7 +106,11 @@ describe('EmbedScheduleDialog 互動（zh-TW）', () => {
         vi.unstubAllGlobals();
     });
 
-    const open = () => render(<EmbedScheduleDialog open onOpenChange={() => {}} target={target} />);
+    // 每個測試用新的 QueryClient，免得上一個測試的站數快取漏進來
+    const open = () => {
+        const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+        return render(<QueryClientProvider client={client}><EmbedScheduleDialog open onOpenChange={() => {}} target={target} /></QueryClientProvider>);
+    };
 
     it('T15 三顆按鈕與淺色／深色切換都出現', () => {
         open();
@@ -147,5 +175,24 @@ describe('EmbedScheduleDialog 互動（zh-TW）', () => {
         expect(document.body.querySelector('iframe[src*="/embed/schedule/taione"]')).not.toBeNull();
         fireEvent.click(screen.getByRole('button', { name: '週表圖' }));
         expect(document.body.querySelector('img[src*="/embed/schedule/taione/card"]')).not.toBeNull();
+    });
+
+    it('T15c 開啟時查 embed_usage；有 3 站就顯示「已有 3 個網站嵌入這份週表」', async () => {
+        const fetchFn = stubFetch([{ sites: 3 }]);
+        open();
+        expect(await screen.findByText(/已有 3 個網站嵌入這份週表/)).toBeInTheDocument();
+        const urls = fetchFn.mock.calls.map((c) => String(c[0]));
+        const usage = urls.find((u) => u.includes('embed_usage?select='));
+        expect(usage, urls.join(',')).toBeTruthy();
+        expect(usage).toContain('slug=eq.taione');
+    });
+
+    it('T15c 回傳空陣列時不顯示「已有」', async () => {
+        const fetchFn = stubFetch([]);
+        open();
+        await waitFor(() => expect(fetchFn.mock.calls.some((c) => String(c[0]).includes('embed_usage'))).toBe(true));
+        // 等狀態更新落定再確認沒出現
+        await new Promise((r) => setTimeout(r, 50));
+        expect(screen.queryByText(/已有/)).toBeNull();
     });
 });

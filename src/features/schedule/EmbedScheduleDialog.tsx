@@ -4,9 +4,12 @@
 // 嵌入內容由 functions/embed/schedule/* 產生（純 HTML、無 JS、noindex）；嵌入碼一律附一行指回本站的文字連結
 // （真正的外鏈在宿主頁，不只在 iframe 裡）。target 可是個人（slug）或團體（uuid）。
 import { useEffect, useId, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Check, Code2, Copy, Download, Link2, Moon, Sun } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { ScrollArea } from '../../components/ui/scroll-area';
+import { fetchEmbedUsage } from './embedUsage';
 import { SEO_SITE_URL } from '../../seo/defaults';
 import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { toHtmlLang } from '../../i18n/i18n';
@@ -50,12 +53,16 @@ export function cardUrl(origin: string, target: EmbedTarget, lang: EmbedLang, th
     return `${origin}${embedPath(target)}/card${query(lang, theme, days)}`;
 }
 
+/** 嵌入碼會被貼到別人的網站：名字與連結文字來自資料庫（含社群投稿），一律完整逃脫，不在宿主站注入 HTML */
+export function escapeHtmlText(s: string): string {
+    return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+}
+
 /** 嵌入碼：iframe＋宿主頁上的一行文字連結（外鏈） */
 export function embedCode(target: EmbedTarget, lang: EmbedLang, theme: EmbedTheme, days: number, linkText: string): string {
     const src = embedUrl(SEO_SITE_URL, target, lang, theme, days);
     const page = SEO_SITE_URL + withLang(lang, targetPagePath(target));
-    const safeName = target.name.replace(/"/g, '&quot;');
-    return `<iframe src="${src}" title="${safeName}" width="100%" height="${EMBED_DEFAULT_HEIGHT}" style="border:0;border-radius:12px;max-width:480px" loading="lazy"></iframe>\n<p><a href="${page}">${linkText}</a></p>`;
+    return `<iframe src="${src}" title="${escapeHtmlText(target.name)}" width="100%" height="${EMBED_DEFAULT_HEIGHT}" style="border:0;border-radius:12px;max-width:480px" loading="lazy"></iframe>\n<p><a href="${page}">${escapeHtmlText(linkText)}</a></p>`;
 }
 
 export function downloadFileName(target: EmbedTarget): string {
@@ -64,9 +71,17 @@ export function downloadFileName(target: EmbedTarget): string {
 
 /** 把 SVG 卡片畫到 canvas 轉 PNG 下載（SVG 裡頭像已內嵌成 data URI，canvas 不會被污染） */
 export async function downloadCardPng(src: string, fileName: string): Promise<void> {
-    const res = await fetch(src, { signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const svg = await res.text();
+    // AbortController＋setTimeout 而不是 AbortSignal.timeout：iOS 15／舊 Safari 沒有後者，會同步丟 TypeError 變成永遠「下載失敗」
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => ctrl.abort(), 15_000);
+    let svg: string;
+    try {
+        const res = await fetch(src, { signal: ctrl.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        svg = await res.text();
+    } finally {
+        window.clearTimeout(timer);
+    }
     const blobUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
     try {
         const img = new Image();
@@ -75,6 +90,8 @@ export async function downloadCardPng(src: string, fileName: string): Promise<vo
             img.onerror = () => reject(new Error('svg decode failed'));
             img.src = blobUrl;
         });
+        // WebKit 對 SVG 內嵌 data URI 圖片，onload 後立刻 drawImage 有機率畫不出頭像：能 decode 就先等它
+        if (typeof img.decode === 'function') await img.decode().catch(() => {});
         const canvas = document.createElement('canvas');
         canvas.width = CARD_W * CARD_SCALE;
         canvas.height = CARD_H * CARD_SCALE;
@@ -189,8 +206,12 @@ function Segmented<T extends string | number>({ label, value, options, onChange,
     );
 }
 
-export function EmbedScheduleDialog({ open, onOpenChange, target, sites }: { open: boolean; onOpenChange: (o: boolean) => void; target: EmbedTarget; sites?: number }) {
+export function EmbedScheduleDialog({ open, onOpenChange, target }: { open: boolean; onOpenChange: (o: boolean) => void; target: EmbedTarget }) {
     const { t, i18n } = useTranslation('schedule');
+    // 「已有 N 個網站嵌入」只在打開對話框時才查（embed_usage 一次 REST GET），不讓每次看個人頁都多一個請求
+    const usageKey = target.kind === 'group' ? target.id : target.slug;
+    const usage = useQuery({ queryKey: ['embed-usage', target.kind, usageKey], queryFn: ({ signal }) => fetchEmbedUsage(target.kind, usageKey, { signal }), staleTime: 10 * 60_000, retry: 1, enabled: open });
+    const sites = usage.data?.sites;
     const [theme, setTheme] = useState<EmbedTheme>('light');
     const [days, setDays] = useState<EmbedDays>(7);
     const [view, setView] = useState<'web' | 'image'>('web');
@@ -208,7 +229,10 @@ export function EmbedScheduleDialog({ open, onOpenChange, target, sites }: { ope
     const analytics = { kind: target.kind, theme, days, lang };
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="sm:max-w-lg">
+                {/* 捲動容器用 ScrollArea（專案慣例）；max-h 要下在 viewport 才會捲 */}
+                <ScrollArea className="-mr-3 pr-3 [&>[data-radix-scroll-area-viewport]]:max-h-[85svh]">
+                <div className="flex flex-col gap-4">
                 <DialogHeader>
                     <DialogTitle>{t('embed.title')}</DialogTitle>
                     <DialogDescription>{t('embed.description', { name })}</DialogDescription>
@@ -255,6 +279,8 @@ export function EmbedScheduleDialog({ open, onOpenChange, target, sites }: { ope
                 </div>
                 <p className="break-all text-xs text-muted-foreground">{t('embed.imageCaption', { url: pageUrl })}</p>
                 <p className="text-xs text-muted-foreground">{t('embed.note')}</p>
+                </div>
+                </ScrollArea>
             </DialogContent>
         </Dialog>
     );

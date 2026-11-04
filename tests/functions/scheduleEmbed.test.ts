@@ -15,6 +15,8 @@ import {
     renderCardSvg,
     avatarDataUri,
     embedResponseHeaders,
+    escapeXml,
+    renderMessageSvg,
 } from '../../functions/lib/schedule-embed.js';
 // @ts-expect-error 同上
 import { handleEmbed } from '../../functions/embed/schedule/[slug].js';
@@ -469,5 +471,106 @@ describe('T3 不可索引者也有場次資料給嵌入用', () => {
         // noindex 頁的 SSR 內文仍不放場次，避免薄內容被收錄
         const html: string = renderPersonBodyHtml('zh-TW', result, 'xx');
         expect(html).not.toContain('SECRETTITLE');
+    });
+});
+
+describe('T5b XML 不允許的控制字元', () => {
+    const BAD = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/;
+    const opts = { lang: 'zh-TW', theme: 'light', days: 7 };
+
+    it('renderCardSvg：名字與標題的控制字元被去掉，一般字元保留', () => {
+        const svg: string = renderCardSvg(subject([], [yt('x\u0001y', NOW + H), yt('\u000b', NOW + 2 * H), yt('正常標題', NOW + 3 * H)], { name: 'A\u0008B' }), opts, null, NOW);
+        // 控制字元會讓 SVG 變成不合法 XML，瀏覽器整張不顯示
+        expect(svg).not.toMatch(BAD);
+        expect(svg).toContain('AB');
+        expect(svg).toContain('xy');
+        expect(svg).toContain('正常標題');
+    });
+
+    it('renderMessageSvg：訊息含控制字元時輸出不含它們', () => {
+        const svg: string = renderMessageSvg('A\u0008B x\u0001y \u000b', opts);
+        expect(svg.startsWith('<svg')).toBe(true);
+        expect(svg).not.toMatch(BAD);
+    });
+
+    it('escapeXml：先去控制字元再逃脫 < > & "', () => {
+        const out: string = escapeXml('a\u0008<b>&"c\u0001');
+        expect(out).not.toMatch(BAD);
+        expect(out).toContain('a&lt;b&gt;&amp;&quot;c');
+        expect(escapeXml('plain 正常\n')).toBe('plain 正常\n');
+    });
+});
+
+describe('T7b 卡片頁尾網址', () => {
+    const footer = (svg: string) => (svg.match(/<text[^>]*>([^<]*multistreaming\.org[^<]*)<\/text>/) ?? [])[1] ?? '';
+
+    it('pagePath 帶 # 時頁尾只留路徑，不出現錨點', () => {
+        const path = '/vtubers#directory-group-f019ffb6-dd1d-4b1c-9fd6-4a6b2a9fd70f';
+        const svg: string = renderCardSvg(subject([], [], { pagePath: path }), { lang: 'zh-TW', theme: 'light', days: 7 }, null, NOW);
+        expect(svg).toContain('multistreaming.org/zh-TW/vtubers');
+        expect(svg).not.toContain('#directory-group');
+    });
+
+    it('網址很長時頁尾以 … 結尾且不超過 70 字元', () => {
+        const svg: string = renderCardSvg(subject([], [], { pagePath: `/schedule/${'a'.repeat(40)}` }), { lang: 'zh-TW', theme: 'light', days: 7 }, null, NOW);
+        const f = footer(svg);
+        expect(f, '找不到頁尾文字').not.toBe('');
+        expect(f.endsWith('…')).toBe(true);
+        expect([...f].length).toBeLessThanOrEqual(70);
+    });
+});
+
+describe('T6b 頭像 content-length 預檢', () => {
+    it('content-length 超過 200KB 直接回 null，不讀 body', async () => {
+        const arrayBuffer = vi.fn(async () => new ArrayBuffer(8));
+        const fake = { ok: true, status: 200, headers: new Headers({ 'content-type': 'image/png', 'content-length': String(200 * 1024 + 1) }), arrayBuffer, body: null };
+        const out = await avatarDataUri('https://yt3.ggpht.com/a=s400-c', vi.fn(async () => fake));
+        expect(out).toBeNull();
+        // 先看標頭就擋；讀了 body 才發現太大，記憶體已經花掉了
+        expect(arrayBuffer).not.toHaveBeenCalled();
+    });
+});
+
+describe('T14b 團體端點：超出列數的場次', () => {
+    const ID = '3f2b8c1e-0a4d-4e6b-9c1d-2a7f5e8b9d10';
+    const mk = (i: number) => ({
+        member_name: `M${i}`, member_slug: `m${i}`, img_url: null, title: `T${i}`, platform: 'youtube', status: 'scheduled',
+        scheduled_start: iso(Date.now() + (i + 1) * 60_000), actual_start: null, time_tbd: false,
+    });
+    const items = Array.from({ length: 100 }, (_, i) => mk(i));
+    const run = async (total: number | undefined, lang: string) => {
+        const data = { group: { id: ID, name: '子午計畫', parent_name: null }, items, ...(total === undefined ? {} : { total }) };
+        const c = { request: new Request(`https://multistreaming.org/embed/schedule/group/${ID}?lang=${lang}`), env, params: { id: ID } };
+        const res = await handleGroupEmbed(c, { rpc: vi.fn(async () => ({ ok: true, data })) });
+        return res.text();
+    };
+
+    it('total 120、列出 100 → 寫「還有 20 場」（zh-TW）／「and 20 more」（en）', async () => {
+        expect(await run(120, 'zh-TW')).toContain('還有 20 場');
+        expect(await run(120, 'en')).toContain('and 20 more');
+    });
+
+    it('total 等於列數、或沒有 total → 不出現「還有」', async () => {
+        expect(await run(100, 'zh-TW')).not.toContain('還有');
+        expect(await run(100, 'en')).not.toMatch(/and \d+ more/);
+        expect(await run(undefined, 'zh-TW')).not.toContain('還有');
+    });
+});
+
+describe('T9b card 頭像抓失敗只短暫快取', () => {
+    const run = async (image: string | null) => {
+        const deps = { resolve: vi.fn(async () => found([], [], { image })), avatar: vi.fn(async () => null), record: vi.fn(), cache: null };
+        return handleCard(ctx('taione', '/card'), deps);
+    };
+
+    it('person.image 有值但 avatar 回 null → max-age=30', async () => {
+        const res = await run('https://yt3.ggpht.com/a=s400-c');
+        expect(res.status).toBe(200);
+        expect(res.headers.get('Cache-Control')).toBe('public, max-age=30');
+    });
+
+    it('person.image 本來就是 null → 照常 max-age=300', async () => {
+        const res = await run(null);
+        expect(res.headers.get('Cache-Control')).toBe('public, max-age=300');
     });
 });
