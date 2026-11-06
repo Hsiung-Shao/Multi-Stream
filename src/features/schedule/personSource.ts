@@ -18,12 +18,14 @@ export const PERSON_UPCOMING_DAYS = 7;
 const ACTIVE_LIMIT = 100;
 const RECENT_LIMIT = 200;
 
-/** 投稿表單收的個人資料（vtubers.bio／x_url／facebook_url／instagram_url；資料庫網址已正規化並以 CHECK 限定網域） */
+/** 個人資料（vtubers.bio／x_url／facebook_url／instagram_url／threads_url／discord_url；資料庫網址已正規化並以 CHECK 限定網域） */
 export interface PersonProfile {
     bio?: string;
     x?: string;
     facebook?: string;
     instagram?: string;
+    threads?: string;
+    discord?: string;
 }
 
 /** 個人頁的內部連結（schedule_person_related RPC）：同公司／同團的其他成員、同時段常開台的 VTuber */
@@ -68,6 +70,8 @@ interface VtuberRow {
     x_url?: string | null;
     facebook_url?: string | null;
     instagram_url?: string | null;
+    threads_url?: string | null;
+    discord_url?: string | null;
     vtuber_groups: { name: string; kind?: string; parent?: { name: string; kind: string } | null } | null;
 }
 
@@ -208,16 +212,19 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     if (!SCHEDULE_SLUG_RE.test(slug)) return null;
     const cfg = await resolveRestConfig(opts);
     const baseCols = 'id,name,img_url,nationality,youtube_channel_id,twitch_channel_id,slug,schedule_indexable,typical_hour';
-    const profileCols = 'bio,x_url,facebook_url,instagram_url';
+    const profileColsV1 = 'bio,x_url,facebook_url,instagram_url';
+    const profileCols = `${profileColsV1},threads_url,discord_url`;
     const bySlug = `&slug=eq.${encodeURIComponent(slug)}&limit=1`;
     const is400 = (e: unknown) => e instanceof SnapshotError && e.message.includes('HTTP 400');
     // vtubers 到 vtuber_groups 有三條關聯（group_id、former_group_id、vtuber_group_links），
     // 不指名外鍵時 PostgREST 回 300（PGRST201），所以一律寫明 group_id 那條
     const grp = 'vtuber_groups!vtubers_group_id_fkey';
     // 新欄位逐步退回：資料庫還沒套對應 migration 時 PostgREST 回 400
-    //   1. 個人資料＋團體 kind／parent  2. 不含個人資料（20261001110000 未套）  3. 只有團名（團體分類未套）
+    //   1. 個人資料（含 Threads／Discord）＋團體 kind／parent  2. 個人資料不含 Threads／Discord（20261106200000 未套）
+    //   3. 不含個人資料（20261001110000 未套）  4. 只有團名（團體分類未套）
     const attempts = [
         `${baseCols},${profileCols},${grp}(name,kind,parent:parent_id(name,kind))`,
+        `${baseCols},${profileColsV1},${grp}(name,kind,parent:parent_id(name,kind))`,
         `${baseCols},${grp}(name,kind,parent:parent_id(name,kind))`,
         `${baseCols},${grp}(name)`,
     ];
@@ -268,6 +275,8 @@ export async function fetchPerson(slug: string, opts: PersonFetchOptions = {}): 
     if (v.x_url) profile.x = v.x_url;
     if (v.facebook_url) profile.facebook = v.facebook_url;
     if (v.instagram_url) profile.instagram = v.instagram_url;
+    if (v.threads_url) profile.threads = v.threads_url;
+    if (v.discord_url) profile.discord = v.discord_url;
 
     const typicalHour = typeof v.typical_hour === 'number' && v.typical_hour >= 0 && v.typical_hour <= 23 ? v.typical_hour : undefined;
     return { id: v.id, channel, profile, indexable: v.schedule_indexable, ...(typicalHour === undefined ? {} : { typicalHour }), ...splitPersonStreams(v.id, rows, now) };

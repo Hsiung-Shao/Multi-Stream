@@ -129,6 +129,20 @@ describe('個人頁查詢', () => {
         const p = await fetchPerson('taione', { ...env, fetchFn: fetchFn as unknown as typeof fetch });
         expect(p?.channel.name).toBe('台一');
         expect(p?.profile).toEqual({});
+        // 含 Threads／Discord → 舊個人資料欄位 → 不含個人資料，共 3 次
+        expect(urls.filter((u) => u.includes('/vtubers?'))).toHaveLength(3);
+    });
+
+    it('只缺 Threads／Discord 欄位（400）→ 退回舊個人資料欄位，X 等仍帶出', async () => {
+        const urls: string[] = [];
+        const fetchFn = vi.fn(async (url: string) => {
+            const u = decodeURIComponent(url);
+            urls.push(u);
+            if (url.includes('/vtubers?') && u.includes('threads_url')) return json({ message: 'column vtubers.threads_url does not exist' }, 400);
+            return url.includes('/vtubers?') ? json([{ ...vt, x_url: 'https://x.com/taione' }]) : json([]);
+        });
+        const p = await fetchPerson('taione', { ...env, fetchFn: fetchFn as unknown as typeof fetch });
+        expect(p?.profile).toEqual({ x: 'https://x.com/taione' });
         expect(urls.filter((u) => u.includes('/vtubers?'))).toHaveLength(2);
     });
 });

@@ -68,14 +68,34 @@ function XLogo({ size = 15 }: { size?: number }) {
     );
 }
 
-/** 投稿表單收的社群連結（網址在資料庫已正規化、限定網域） */
-function socialLinks(person: SchedulePerson): { key: 'x' | 'facebook' | 'instagram'; href: string; label: string }[] {
+type SocialKey = 'x' | 'facebook' | 'instagram' | 'threads' | 'discord';
+
+/** 社群連結（網址在資料庫已正規化、限定網域）；有的才顯示 */
+function socialLinks(person: SchedulePerson): { key: SocialKey; href: string; label: string }[] {
     const p = person.profile ?? {};
-    const out: { key: 'x' | 'facebook' | 'instagram'; href: string; label: string }[] = [];
+    const out: { key: SocialKey; href: string; label: string }[] = [];
     if (p.x) out.push({ key: 'x', href: p.x, label: 'X' });
     if (p.facebook) out.push({ key: 'facebook', href: p.facebook, label: 'Facebook' });
     if (p.instagram) out.push({ key: 'instagram', href: p.instagram, label: 'Instagram' });
+    if (p.threads) out.push({ key: 'threads', href: p.threads, label: 'Threads' });
+    if (p.discord) out.push({ key: 'discord', href: p.discord, label: 'Discord' });
     return out;
+}
+
+function ThreadsLogo({ size = 15 }: { size?: number }) {
+    return (
+        <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="currentColor">
+            <path d="M17.7 11.1c-.1 0-.2-.1-.3-.1-.2-3.2-1.9-5-4.9-5-1.8 0-3.3.8-4.2 2.1l1.6 1.1c.7-1 1.7-1.2 2.6-1.2 1 0 1.8.3 2.3.9.4.4.6 1 .7 1.7-.8-.1-1.7-.2-2.6-.1-2.6.1-4.3 1.7-4.2 3.8.1 1.1.6 2 1.5 2.6.8.5 1.8.8 2.9.7 1.4-.1 2.5-.6 3.3-1.6.6-.8 1-1.8 1.1-3 .7.4 1.2.9 1.5 1.6.5 1.1.5 2.9-.9 4.3-1.2 1.2-2.7 1.8-5 1.8-2.5 0-4.4-.8-5.6-2.4-1.2-1.5-1.8-3.6-1.8-6.4s.6-4.9 1.8-6.4C7.7 4 9.6 3.2 12.1 3.2c2.5 0 4.5.8 5.8 2.4.6.8 1.1 1.8 1.4 2.9l1.9-.5c-.4-1.4-1-2.6-1.8-3.6C17.7 2.3 15.3 1.3 12.1 1.3 8.9 1.3 6.5 2.3 4.9 4.3 3.4 6.2 2.7 8.8 2.7 12s.7 5.8 2.2 7.7c1.6 2 4 3 7.2 3 2.8 0 4.8-.7 6.4-2.3 2.1-2.1 2-4.7 1.3-6.3-.5-1.2-1.4-2.1-2.6-2.7l.5-.3Zm-5.1 4.8c-1.1.1-2.3-.4-2.3-1.5 0-.8.6-1.7 2.4-1.8h.6c.6 0 1.2.1 1.8.2-.2 2.5-1.4 3-2.5 3.1Z" />
+        </svg>
+    );
+}
+
+function DiscordLogo({ size = 15 }: { size?: number }) {
+    return (
+        <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="currentColor">
+            <path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.6 1.3a18 18 0 0 0-5.6 0L8.6 3a19.5 19.5 0 0 0-4.9 1.5C.6 9 .1 13.5.3 18a19.7 19.7 0 0 0 6 3l1.3-2a12.7 12.7 0 0 1-2-1l.5-.4a14 14 0 0 0 11.8 0l.5.4c-.6.4-1.3.7-2 1l1.3 2a19.6 19.6 0 0 0 6-3c.4-5.2-.7-9.7-3.4-13.6ZM8.5 15.3c-1.2 0-2.1-1.1-2.1-2.4S7.3 10.5 8.5 10.5s2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4Zm7 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4Z" />
+        </svg>
+    );
 }
 
 function ReportPersonButton({ person }: { person: SchedulePerson }) {
@@ -278,7 +298,11 @@ function PersonHeader({ person, slug, onWatchLive, busy, favorite, onToggleFavor
                 ))}
                 {socialLinks(person).map((l) => (
                     <a key={l.key} href={l.href} target="_blank" rel="noopener noreferrer nofollow ugc" aria-label={l.label} title={l.label} className={iconBtn}>
-                        {l.key === 'x' ? <XLogo /> : l.key === 'facebook' ? <Facebook size={15} aria-hidden="true" /> : <Instagram size={15} aria-hidden="true" />}
+                        {l.key === 'x' ? <XLogo />
+                            : l.key === 'facebook' ? <Facebook size={15} aria-hidden="true" />
+                            : l.key === 'instagram' ? <Instagram size={15} aria-hidden="true" />
+                            : l.key === 'threads' ? <ThreadsLogo />
+                            : <DiscordLogo />}
                     </a>
                 ))}
             </div>
