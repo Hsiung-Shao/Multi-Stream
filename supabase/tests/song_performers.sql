@@ -662,7 +662,7 @@ END $$;
 DO $$
 DECLARE u text; failed boolean;
 BEGIN
-  FOREACH u IN ARRAY ARRAY['https://www.youtube.com/@a\..\logout', 'https://www.youtube.com/@a..b', 'https://www.youtube.com/@%2Flogout'] LOOP
+  FOREACH u IN ARRAY ARRAY['https://www.youtube.com/@a\..\logout', 'https://www.youtube.com/@a..b', 'https://www.youtube.com/@%2Flogout', 'https://www.youtube.com/@a' || chr(1)] LOOP
     failed := false;
     BEGIN
       PERFORM public.admin_save_song_video(NULL,

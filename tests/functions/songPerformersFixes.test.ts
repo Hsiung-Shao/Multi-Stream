@@ -34,6 +34,12 @@ describe('F 中日韓 handle 的百分比編碼', () => {
         expect(normalizeClipSource('x', encoded)).toEqual({ ok: true, value: { name: 'x', url: `https://www.youtube.com/@${handle}` } });
     });
 
+    it('F3 解碼後含控制字元或隱形格式字元（NUL、RLO、零寬）→ 拒絕', () => {
+        for (const url of ['https://www.youtube.com/@a%00', 'https://www.youtube.com/@a%01', 'https://www.youtube.com/@a%E2%80%AE', 'https://www.youtube.com/@a%E2%80%8B']) {
+            expect(normalizeClipSource('x', url).ok, url).toBe(false);
+        }
+    });
+
     it('F2 解碼失敗（壞的百分比序列）→ 拒絕', () => {
         expect(normalizeClipSource('x', 'https://www.youtube.com/@%E5%').ok).toBe(false);
     });

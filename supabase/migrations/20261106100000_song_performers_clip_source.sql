@@ -30,7 +30,8 @@ alter table public.song_videos
     add constraint song_videos_clip_url_check
         check (clip_channel_url is null
                or (clip_channel_url ~ '^https://(www\.|m\.)?youtube\.com/(@[^/?#[:space:]%\\]{1,100}|channel/UC[0-9A-Za-z_-]{22})$'
-                   and clip_channel_url !~ '\.\.'));
+                   and clip_channel_url !~ '\.\.'
+                   and clip_channel_url !~ '[[:cntrl:]]'));
 
 comment on column public.song_videos.clip_channel_name is '觀眾剪輯的上傳頻道名稱；null＝本人上傳（與 clip_channel_url 同有同無）。';
 comment on column public.song_videos.clip_channel_url is '觀眾剪輯的上傳頻道網址，只收 youtube.com/@handle（解碼後的原文，不含反斜線、%、..）或 /channel/UC…。';

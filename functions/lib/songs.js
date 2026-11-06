@@ -18,8 +18,8 @@ export function isUuid(id) {
 }
 
 // ---------- 剪輯來源與合唱者（與 migration 20261106100000 的 CHECK 一致） ----------
-// handle 不收反斜線、%（百分比編碼要先解碼）、連續兩個點（瀏覽器會當成上一層路徑）
-export const CLIP_URL_RE = /^https:\/\/(www\.|m\.)?youtube\.com\/(@(?!.*\.\.)[^/?#\s\\%]{1,100}|channel\/UC[0-9A-Za-z_-]{22})$/;
+// handle 不收反斜線、%（百分比編碼要先解碼）、連續兩個點（瀏覽器會當成上一層路徑）、控制與隱形格式字元（解碼後可能出現）
+export const CLIP_URL_RE = /^https:\/\/(www\.|m\.)?youtube\.com\/(@(?!.*\.\.)[^/?#\s\\%\p{Cc}\p{Cf}]{1,100}|channel\/UC[0-9A-Za-z_-]{22})$/u;
 export const CLIP_NAME_MAX = 100;
 export const PERFORMERS_MAX = 10;
 export const PERFORMER_NAME_MAX = 60;
