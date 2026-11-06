@@ -18,7 +18,8 @@ export function isUuid(id) {
 }
 
 // ---------- 剪輯來源與合唱者（與 migration 20261106100000 的 CHECK 一致） ----------
-export const CLIP_URL_RE = /^https:\/\/(www\.|m\.)?youtube\.com\/(@[^/?#\s]{1,100}|channel\/UC[0-9A-Za-z_-]{22})$/;
+// handle 不收反斜線、%（百分比編碼要先解碼）、連續兩個點（瀏覽器會當成上一層路徑）
+export const CLIP_URL_RE = /^https:\/\/(www\.|m\.)?youtube\.com\/(@(?!.*\.\.)[^/?#\s\\%]{1,100}|channel\/UC[0-9A-Za-z_-]{22})$/;
 export const CLIP_NAME_MAX = 100;
 export const PERFORMERS_MAX = 10;
 export const PERFORMER_NAME_MAX = 60;
@@ -35,7 +36,13 @@ export function normalizeClipSource(name, url) {
     if (typeof name !== 'string' || typeof url !== 'string' || blank(name) || blank(url)) return { ok: false };
     const n = name.trim();
     if (n.length > CLIP_NAME_MAX) return { ok: false };
-    const u = url.trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+    let u = url.trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+    // oEmbed 對中日韓 handle 給百分比編碼：解碼成原文再比對、儲存（壞序列直接拒絕）
+    try {
+        u = decodeURI(u);
+    } catch {
+        return { ok: false };
+    }
     if (!CLIP_URL_RE.test(u)) return { ok: false };
     return { ok: true, value: { name: n, url: u } };
 }

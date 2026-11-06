@@ -29,10 +29,11 @@ alter table public.song_videos
         check (clip_channel_name is null or char_length(btrim(clip_channel_name)) between 1 and 100),
     add constraint song_videos_clip_url_check
         check (clip_channel_url is null
-               or clip_channel_url ~ '^https://(www\.|m\.)?youtube\.com/(@[^/?#[:space:]]{1,100}|channel/UC[0-9A-Za-z_-]{22})$');
+               or (clip_channel_url ~ '^https://(www\.|m\.)?youtube\.com/(@[^/?#[:space:]%\\]{1,100}|channel/UC[0-9A-Za-z_-]{22})$'
+                   and clip_channel_url !~ '\.\.'));
 
 comment on column public.song_videos.clip_channel_name is '觀眾剪輯的上傳頻道名稱；null＝本人上傳（與 clip_channel_url 同有同無）。';
-comment on column public.song_videos.clip_channel_url is '觀眾剪輯的上傳頻道網址，只收 youtube.com/@handle 或 /channel/UC…。';
+comment on column public.song_videos.clip_channel_url is '觀眾剪輯的上傳頻道網址，只收 youtube.com/@handle（解碼後的原文，不含反斜線、%、..）或 /channel/UC…。';
 
 -- 修改紀錄：這次送出的剪輯來源（後台摘要比對 before.video 用）；null＝這次沒送（沒改）
 alter table public.song_submissions add column clip jsonb;
@@ -90,6 +91,8 @@ volatile
 security definer
 set search_path = ''
 as $$
+declare
+    v_owner uuid;
 begin
     if p_list is null or jsonb_typeof(p_list) = 'null' then
         p_list := '[]'::jsonb;
@@ -100,12 +103,21 @@ begin
     if jsonb_array_length(p_list) > 10 then
         raise exception 'too_many_performers' using errcode = 'P0001';
     end if;
+    select v.vtuber_id into v_owner
+    from public.song_segments s join public.song_videos v on v.id = s.video_ref
+    where s.id = p_segment;
+
     delete from public.song_segment_performers where segment_id = p_segment;
+    -- 不存在的 VTuber（被刪、或送來假 id）：有名字快照就當站外者，沒名字就略過；影片本人不算合唱者
     insert into public.song_segment_performers (segment_id, position, vtuber_id, name)
-    select p_segment, (t.n - 1)::smallint,
-           nullif(t.e->>'vtuber_id', '')::uuid,
-           nullif(btrim(t.e->>'name'), '')
-    from jsonb_array_elements(p_list) with ordinality as t(e, n);
+    select p_segment, (row_number() over (order by x.n) - 1)::smallint, x.vid, x.nm
+    from (
+        select t.n, vt.id as vid, nullif(btrim(t.e->>'name'), '') as nm
+        from jsonb_array_elements(p_list) with ordinality as t(e, n)
+        left join public.vtubers vt on vt.id = nullif(t.e->>'vtuber_id', '')::uuid
+    ) x
+    where (x.vid is not null or x.nm is not null)
+      and (x.vid is null or v_owner is null or x.vid <> v_owner);
 end;
 $$;
 
@@ -382,7 +394,7 @@ begin
 end;
 $$;
 
--- ───────────── 後台一鍵還原（以 20261028003911 為基礎；快照有剪輯來源／合唱者 key 才寫回） ─────────────
+-- ───────────── 後台一鍵還原（以 20261028003911 為基礎；剪輯來源與合唱者依快照寫回，舊快照缺 key＝清空） ─────────────
 create or replace function public.admin_revert_song_edit(p_submission uuid)
 returns json
 language plpgsql
@@ -416,17 +428,22 @@ begin
                                      where x.id = (e->>'id')::uuid and x.video_ref = v.id)
                         then e - 'code'
                         else e - 'code' - 'id' end
+                   -- migration 前的快照沒有 performers：當時本來就沒有合唱者，還原＝清空
+                   || case when e ? 'performers' then '{}'::jsonb else '{"performers": []}'::jsonb end
                    order by (e->>'start_seconds')::integer), '[]'::jsonb)
         into v_segs
         from jsonb_array_elements(s.before->'segments') e;
 
+        -- 剪輯來源一律依快照寫回；舊快照缺 key 時值為 null＝清除（當時本來就沒有）
         perform public._save_song_video(v.id, jsonb_build_object(
             'video_id', v.video_id,
             'title', s.before->'video'->>'title',
             'vtuber_id', s.before->'video'->>'vtuber_id',
             'streamed_at', s.before->'video'->>'streamed_at',
             'duration_seconds', s.before->'video'->>'duration_seconds',
-            'status', v.status) || public._clip_keys(s.before->'video'), v_segs);
+            'status', v.status,
+            'clip_channel_name', s.before->'video'->'clip_channel_name',
+            'clip_channel_url', s.before->'video'->'clip_channel_url'), v_segs);
     end if;
 
     update public.song_submissions

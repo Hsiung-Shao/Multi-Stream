@@ -1,5 +1,5 @@
 -- 歌回合唱成員與剪輯來源：song_videos.clip_channel_*、song_segment_performers、
--- admin_save_song_video／community_save_song_video／admin_revert_song_edit／get_song_catalog 的行為測試（SQL1～SQL10）。
+-- admin_save_song_video／community_save_song_video／admin_revert_song_edit／get_song_catalog 的行為測試（SQL1～SQL16）。
 -- 執行：docker exec -i supabase_db_multi-stream psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/song_performers.sql
 -- 整檔在一個交易內，結尾 ROLLBACK，不留下任何資料。斷言失敗一律 RAISE EXCEPTION（ON_ERROR_STOP 讓 psql 以非 0 結束）。
 -- 契約：計畫「測試規格表」SQL1～SQL10 與 scratchpad/contract-performers.md 的「DB」一節。
@@ -146,7 +146,8 @@ INSERT INTO public.vtubers (id, name, nationality, slug) VALUES
   ('00000000-0000-4000-8000-0000000000f2', 'zz合唱甲', 'TW', 'zz-performers-test-a'),
   ('00000000-0000-4000-8000-0000000000f3', 'zz合唱乙', 'TW', 'zz-performers-test-b'),
   ('00000000-0000-4000-8000-0000000000f4', 'zz合唱丙待刪', 'TW', 'zz-performers-test-c'),
-  ('00000000-0000-4000-8000-0000000000f5', 'zz合唱丁待刪', 'TW', 'zz-performers-test-d');
+  ('00000000-0000-4000-8000-0000000000f5', 'zz合唱丁待刪', 'TW', 'zz-performers-test-d'),
+  ('00000000-0000-4000-8000-0000000000f6', 'zz合唱戊待刪', 'TW', 'zz-performers-test-e');
 
 -- ───────────── SQL1 新增影片可寫入剪輯來源；沒帶 key 保留、帶 null 清除 ─────────────
 -- SQL1
@@ -580,6 +581,118 @@ BEGIN
     RAISE EXCEPTION 'SQL11 失敗：沒送剪輯來源時紀錄的 clip 應為 null，得 %', c;
   END IF;
   RAISE NOTICE 'ok SQL11 修改紀錄存下這次送出的剪輯來源';
+END $$;
+
+-- ───────────── SQL12 刪 VTuber 後，含他的舊快照仍能還原（有名字轉站外、沒名字略過） ─────────────
+-- SQL12
+DO $$
+DECLARE r0 jsonb; seg uuid; code text; rc jsonb; rows jsonb;
+BEGIN
+  r0 := pg_temp.asave(NULL,
+          pg_temp.av('zzPfVid0012', 'zz刪人還原') || jsonb_build_object('vtuber_id', '00000000-0000-4000-8000-0000000000f1',
+            'streamed_at', '2026-01-01T12:00:00Z', 'duration_seconds', 7200),
+          jsonb_build_array(pg_temp.aseg(NULL, 0, 100, 'zz己', 0) || jsonb_build_object('performers', jsonb_build_array(
+            pg_temp.pf('00000000-0000-4000-8000-0000000000f6', 'zz戊快照'), pg_temp.pf('00000000-0000-4000-8000-0000000000f2', NULL)))));
+  seg := (r0->'segments'->0->>'id')::uuid;
+  code := pg_temp.code_of(seg);
+  -- 社群把合唱者清空（快照存著 f6、f2）
+  rc := pg_temp.csave('zzPfVid0012', pg_temp.rev_of('zzPfVid0012'), pg_temp.cv('zz刪人還原'),
+          jsonb_build_array(pg_temp.cseg(code, 0, 100, 'zz己', 0) || jsonb_build_object('performers', '[]'::jsonb)));
+  DELETE FROM public.vtubers WHERE id = '00000000-0000-4000-8000-0000000000f6';
+  PERFORM public.admin_revert_song_edit((rc->>'submission_id')::uuid);
+  rows := pg_temp.perf_rows(seg);
+  IF rows IS DISTINCT FROM jsonb_build_array(
+       jsonb_build_object('p', 0, 'v', NULL, 'n', 'zz戊快照'),
+       jsonb_build_object('p', 1, 'v', '00000000-0000-4000-8000-0000000000f2', 'n', NULL)) THEN
+    RAISE EXCEPTION 'SQL12 失敗：還原後已刪的 f6 應轉站外（名字保留）、f2 保留，得 %', rows;
+  END IF;
+  RAISE NOTICE 'ok SQL12 刪 VTuber 後舊快照仍能還原';
+END $$;
+
+-- ───────────── SQL13 不存在的 vtuber_id：有名字轉站外、沒名字略過，不報錯 ─────────────
+-- SQL13
+DO $$
+DECLARE r jsonb; rows jsonb;
+BEGIN
+  r := pg_temp.asave(NULL,
+         pg_temp.av('zzPfVid0013', 'zz假人') || jsonb_build_object('vtuber_id', '00000000-0000-4000-8000-0000000000f1'),
+         jsonb_build_array(pg_temp.aseg(NULL, 0, 100, 'zz庚', 0) || jsonb_build_object('performers', jsonb_build_array(
+           pg_temp.pf('00000000-0000-4000-8000-00000000dead', NULL),
+           pg_temp.pf('00000000-0000-4000-8000-00000000beef', 'zz有名假人'),
+           pg_temp.pf('00000000-0000-4000-8000-0000000000f2', NULL)))));
+  rows := pg_temp.perf_rows((r->'segments'->0->>'id')::uuid);
+  IF rows IS DISTINCT FROM jsonb_build_array(
+       jsonb_build_object('p', 0, 'v', NULL, 'n', 'zz有名假人'),
+       jsonb_build_object('p', 1, 'v', '00000000-0000-4000-8000-0000000000f2', 'n', NULL)) THEN
+    RAISE EXCEPTION 'SQL13 失敗：不存在的 id 應略過或轉站外，得 %', rows;
+  END IF;
+  RAISE NOTICE 'ok SQL13 不存在的 vtuber_id 不報錯';
+END $$;
+
+-- ───────────── SQL14 還原沒有新欄位的舊快照（migration 前）→ 剪輯來源與合唱者清空 ─────────────
+-- SQL14
+DO $$
+DECLARE r0 jsonb; seg uuid; code text; rc jsonb;
+BEGIN
+  r0 := pg_temp.asave(NULL,
+          pg_temp.av('zzPfVid0014', 'zz舊快照') || jsonb_build_object('vtuber_id', '00000000-0000-4000-8000-0000000000f1',
+            'streamed_at', '2026-01-01T12:00:00Z', 'duration_seconds', 7200),
+          jsonb_build_array(pg_temp.aseg(NULL, 0, 100, 'zz辛', 0)));
+  seg := (r0->'segments'->0->>'id')::uuid;
+  code := pg_temp.code_of(seg);
+  rc := pg_temp.csave('zzPfVid0014', pg_temp.rev_of('zzPfVid0014'),
+          pg_temp.cv('zz舊快照') || jsonb_build_object('clip_channel_name', 'zz後加頻道', 'clip_channel_url', 'https://www.youtube.com/@zzlater'),
+          jsonb_build_array(pg_temp.cseg(code, 0, 100, 'zz辛', 0) || jsonb_build_object('performers', jsonb_build_array(pg_temp.pf('00000000-0000-4000-8000-0000000000f2', NULL)))));
+  -- 模擬 migration 前的快照：拿掉新欄位
+  UPDATE public.song_submissions
+  SET before = jsonb_set(before #- '{video,clip_channel_name}' #- '{video,clip_channel_url}', '{segments,0}', (before->'segments'->0) - 'performers')
+  WHERE id = (rc->>'submission_id')::uuid;
+  PERFORM public.admin_revert_song_edit((rc->>'submission_id')::uuid);
+  IF pg_temp.clip_of('zzPfVid0014') IS DISTINCT FROM jsonb_build_object('n', NULL, 'u', NULL) THEN
+    RAISE EXCEPTION 'SQL14 失敗：舊快照還原後剪輯來源應清空，得 %', pg_temp.clip_of('zzPfVid0014');
+  END IF;
+  IF pg_temp.perf_rows(seg) <> '[]'::jsonb THEN
+    RAISE EXCEPTION 'SQL14 失敗：舊快照還原後合唱者應清空，得 %', pg_temp.perf_rows(seg);
+  END IF;
+  RAISE NOTICE 'ok SQL14 舊快照還原會清掉新欄位';
+END $$;
+
+-- ───────────── SQL15 剪輯網址擋反斜線、..、百分比編碼；接受中文 handle ─────────────
+-- SQL15
+DO $$
+DECLARE u text; failed boolean;
+BEGIN
+  FOREACH u IN ARRAY ARRAY['https://www.youtube.com/@a\..\logout', 'https://www.youtube.com/@a..b', 'https://www.youtube.com/@%2Flogout'] LOOP
+    failed := false;
+    BEGIN
+      PERFORM public.admin_save_song_video(NULL,
+        jsonb_build_object('video_id', 'zzPfVid0015', 'title', 'zz壞網址', 'status', 'published', 'clip_channel_name', 'zz', 'clip_channel_url', u),
+        jsonb_build_array(jsonb_build_object('start_seconds', 0, 'end_seconds', 10, 'title', 'zz', 'position', 0)));
+    EXCEPTION WHEN check_violation THEN failed := true;
+    END;
+    IF NOT failed THEN RAISE EXCEPTION 'SQL15 失敗：% 應被 CHECK 擋下', u; END IF;
+  END LOOP;
+  PERFORM public.admin_save_song_video(NULL,
+    jsonb_build_object('video_id', 'zzPfVid0016', 'title', 'zz中文 handle', 'status', 'published',
+                       'clip_channel_name', 'zz', 'clip_channel_url', 'https://www.youtube.com/@剪輯小幫手頻道很長很長的名字唷唷'),
+    jsonb_build_array(jsonb_build_object('start_seconds', 0, 'end_seconds', 10, 'title', 'zz', 'position', 0)));
+  RAISE NOTICE 'ok SQL15 剪輯網址擋反斜線／..／百分比編碼、接受中文 handle';
+END $$;
+
+-- ───────────── SQL16 影片本人不會被寫成合唱者 ─────────────
+-- SQL16
+DO $$
+DECLARE r jsonb; rows jsonb;
+BEGIN
+  r := pg_temp.asave(NULL,
+         pg_temp.av('zzPfVid0017', 'zz本人') || jsonb_build_object('vtuber_id', '00000000-0000-4000-8000-0000000000f1'),
+         jsonb_build_array(pg_temp.aseg(NULL, 0, 100, 'zz壬', 0) || jsonb_build_object('performers', jsonb_build_array(
+           pg_temp.pf('00000000-0000-4000-8000-0000000000f1', NULL), pg_temp.pf('00000000-0000-4000-8000-0000000000f2', NULL)))));
+  rows := pg_temp.perf_rows((r->'segments'->0->>'id')::uuid);
+  IF rows IS DISTINCT FROM jsonb_build_array(jsonb_build_object('p', 0, 'v', '00000000-0000-4000-8000-0000000000f2', 'n', NULL)) THEN
+    RAISE EXCEPTION 'SQL16 失敗：影片本人應被略過、position 從 0 起算，得 %', rows;
+  END IF;
+  RAISE NOTICE 'ok SQL16 影片本人不會被寫成合唱者';
 END $$;
 
 \echo 'song_performers：全部通過'
