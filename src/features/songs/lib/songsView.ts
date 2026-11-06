@@ -7,7 +7,7 @@
  * - serialize 回傳以 ? 開頭的字串，列表回 ''；parse(serialize(x)) 與 x 深相等。
  * - ?list= 分享連結由 App 先快照並清掉，不在這裡處理。
  */
-export type VtuberTab = 'songs' | 'videos';
+export type VtuberTab = 'songs' | 'videos' | 'collabs';
 
 export type SongsView =
     | { kind: 'list' }
@@ -46,7 +46,10 @@ export function parseSongsView(search: string): SongsView {
         return { kind: 'playlists', playlistId: pl && pl.length <= PLAYLIST_ID_MAX ? pl : null };
     }
     const vtuber = vtuberKeyOf(params.get('vtuber'));
-    if (vtuber) return { kind: 'vtuber', vtuber, tab: params.get('tab') === 'videos' ? 'videos' : 'songs' };
+    if (vtuber) {
+        const tab = params.get('tab');
+        return { kind: 'vtuber', vtuber, tab: tab === 'videos' || tab === 'collabs' ? tab : 'songs' };
+    }
     return LIST_VIEW;
 }
 
@@ -59,7 +62,7 @@ export function serializeSongsView(view: SongsView): string {
         case 'playlists':
             return view.playlistId ? `?view=playlists&pl=${encodeURIComponent(view.playlistId)}` : '?view=playlists';
         case 'vtuber':
-            return `?vtuber=${encodeURIComponent(view.vtuber)}${view.tab === 'videos' ? '&tab=videos' : ''}`;
+            return `?vtuber=${encodeURIComponent(view.vtuber)}${view.tab === 'songs' ? '' : `&tab=${view.tab}`}`;
         case 'list':
             return '';
     }

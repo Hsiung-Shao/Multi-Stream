@@ -9,6 +9,7 @@ import { videoPlays } from '../../lib/catalogView';
 import { PAGE_PATHS } from '../../../../config/routes';
 import { urlLangOf, withLang } from '../../../../../functions/lib/locale.js';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
+import { ClipSourceLink, PerformersLine } from './Credits';
 
 /**
  * 目錄卡片：標題是按鈕，點了進單場詳細畫面（曲目表）；handler 由頁面以 useCallback 穩定傳入（memo）。
@@ -55,6 +56,7 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
                             {' · '}
                             {t('catalog.songCount', { count: video.segments.length })}
                             {totalPlays > 0 && <>{' · '}{t('catalog.totalPlays', { count: totalPlays.toLocaleString(locale) })}</>}
+                            {video.clipSource && <span className="block"><ClipSourceLink clip={video.clipSource} /></span>}
                         </p>
                         <div className="flex shrink-0 items-center gap-1">
                             <Button size="sm" className="h-8" onClick={() => onPlayAll(video)} disabled={video.segments.length === 0} aria-label={t('catalog.playAll')}>
@@ -91,6 +93,7 @@ export const VideoCard = memo(function VideoCard({ video, playlists, locale, onP
                         <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm">{seg.title}</span>
                             {seg.artist && <span className="block truncate text-[12px] text-muted-foreground">{seg.artist}</span>}
+                            <PerformersLine performers={seg.performers ?? []} className="text-[12px]" />
                         </span>
                         {/* 固定寬度欄：0 次留白，版面不因有無次數而跳動 */}
                         <span

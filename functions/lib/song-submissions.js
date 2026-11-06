@@ -8,7 +8,7 @@
 // 但不可帶 id（id 是 DB 內部主鍵，不開放給匿名使用者）。
 // 回傳 { value } 或 { error, issues? }（error 為 invalid_payload | invalid_video_id | invalid_segments | vtuber_required）。
 
-import { validateSegments, isUuid, TITLE_MAX } from './songs.js';
+import { validateSegments, isUuid, TITLE_MAX, normalizeClipSource, normalizePerformers } from './songs.js';
 
 export const SUBMISSION_SEGMENTS_MAX = 200;
 export const NOTE_MAX = 300;
@@ -39,6 +39,20 @@ function optionalText(v, max) {
  *                      note: string|null, contact: string|null } }
  *          | { error: 'invalid_payload'|'invalid_video_id'|'invalid_segments'|'vtuber_required', issues?: {index:number, code:string}[] }}
  */
+/** 前端的 {vtuberId,name} → 共用正規化 → {vtuberId,name}；undefined = 不改 */
+function parsePerformers(list) {
+    if (list === undefined) return { ok: true, value: undefined };
+    if (!Array.isArray(list)) return { ok: false };
+    const mapped = [];
+    for (const p of list) {
+        if (!p || typeof p !== 'object' || Array.isArray(p)) return { ok: false };
+        mapped.push({ vtuber_id: p.vtuberId ?? null, name: p.name ?? null });
+    }
+    const r = normalizePerformers(mapped);
+    if (!r.ok) return r;
+    return { ok: true, value: r.value.map((x) => ({ vtuberId: x.vtuber_id, name: x.name })) };
+}
+
 export function parseSubmissionBody(body) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) return bad('invalid_payload');
 
@@ -78,6 +92,16 @@ export function parseSubmissionBody(body) {
     const contact = optionalText(body.contact, CONTACT_MAX);
     if (note === undefined || contact === undefined) return bad('invalid_payload');
 
+    // 剪輯來源：undefined = 不改；null = 清除；{name,url} 經共用正規化
+    let clipSource;
+    if (body.clipSource !== undefined) {
+        if (body.clipSource !== null && (typeof body.clipSource !== 'object' || Array.isArray(body.clipSource))) return bad('invalid_payload');
+        const c = body.clipSource === null ? { ok: true, value: null } : normalizeClipSource(body.clipSource.name, body.clipSource.url);
+        if (!c.ok) return bad('invalid_payload');
+        if (body.clipSource !== null && c.value === null) return bad('invalid_payload'); // 給了物件卻是空的
+        clipSource = c.value;
+    }
+
     if (!Array.isArray(body.segments) || body.segments.length < 1 || body.segments.length > SUBMISSION_SEGMENTS_MAX) {
         return bad('invalid_payload');
     }
@@ -94,7 +118,10 @@ export function parseSubmissionBody(body) {
         // 版本備註長度由 validateSegments 檢查（note_too_long）；非字串在此擋下
         const versionNote = optionalText(s.versionNote, Number.MAX_SAFE_INTEGER);
         if (versionNote === undefined) return bad('invalid_payload');
+        const performers = parsePerformers(s.performers);
+        if (!performers.ok) return bad('invalid_payload');
         const row = { start: s.start, end: s.end, title: s.title.trim(), artist, versionNote, endEstimated: s.endEstimated === true };
+        if (performers.value !== undefined) row.performers = performers.value;
         if (typeof s.code === 'string') row.code = s.code; // 沒帶 code 就是新增片段，不憑空補
         rows.push(row);
     }
@@ -103,5 +130,7 @@ export function parseSubmissionBody(body) {
     if (issues.length > 0) return bad('invalid_segments', issues);
 
     rows.sort((a, b) => a.start - b.start);
-    return { value: { videoId: body.videoId, title, vtuberId, streamedAt, rev, durationSeconds, segments: rows, note, contact } };
+    const value = { videoId: body.videoId, title, vtuberId, streamedAt, rev, durationSeconds, segments: rows, note, contact };
+    if (clipSource !== undefined) value.clipSource = clipSource;
+    return { value };
 }

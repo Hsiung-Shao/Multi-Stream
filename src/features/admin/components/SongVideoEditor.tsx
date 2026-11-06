@@ -9,6 +9,7 @@
 // - 存檔中可隨時返回列表（不 disable），卡住時不會被困住（memory error_dialog_mutation_reset）。
 // - 版本備註（version_note）存檔時一併帶；歌名或原唱變動後 600ms 呼叫配對預覽（admin_match_songs），
 //   在每列顯示「已配對／新歌曲／新歌曲・同名」，提醒管理員存檔後會配到哪首歌。
+// - 剪輯來源（ClipSourceFields）與每首的合唱者（SegmentEditor 內）載入時帶入，存檔時原樣帶回（沒動也帶，不會抹掉）。
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
@@ -35,6 +36,7 @@ import { fetchStreamByVideoId } from '../../songs/streamLookup';
 import { PreviewPlayer, type PreviewApi } from '../../songs/components/PreviewPlayer';
 import { VtuberPicker } from '../../songs/components/VtuberPicker';
 import { SegmentEditor } from '../../songs/components/SegmentEditor';
+import { ClipSourceFields, EMPTY_CLIP, clipForSubmit, type ClipDraft } from '../../songs/components/ClipSourceFields';
 import {
     computeRowIssues, fromImported, rowSeconds, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
 } from '../../songs/components/segmentRows';
@@ -67,6 +69,7 @@ const fromRecord = (s: SongSegmentRecord): SegmentRowDraft => ({
     title: s.title,
     artist: s.original_artist ?? '',
     note: s.version_note ?? '',
+    ...(s.performers ? { performers: s.performers.map((p) => ({ vtuberId: p.vtuber_id, name: p.name })) } : {}),
 });
 
 /** ISO → <input type="datetime-local"> 的本地時間字串 */
@@ -88,6 +91,7 @@ const toSegmentInputs = (rows: SegmentRowDraft[]): SongSegmentInput[] =>
             title: r.title.trim(),
             original_artist: r.artist.trim() || null,
             version_note: r.note.trim() || null,
+            ...(r.performers ? { performers: r.performers.map((p) => ({ vtuber_id: p.vtuberId, name: p.name })) } : {}),
         };
     });
 
@@ -107,7 +111,7 @@ function matchRequest(rows: SegmentRowDraft[]): { keys: string[]; items: SongMat
 
 /** 取代時對回舊片段的 id／code（開始時間相同才算同一首） */
 function mergeWithExisting(current: SegmentRowDraft[], imported: ImportedRow[]): { rows: SegmentRowDraft[]; lostCodes: string[] } {
-    const existing = current.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note }));
+    const existing = current.map((r) => ({ id: r.id, code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note, performers: r.performers }));
     const { rows: merged, lostCodes } = mergeReplaceRows(existing, imported);
     return {
         rows: merged.map((m, i) => fromImported({ ...m, end: imported[i].end, endEstimated: imported[i].endEstimated })),
@@ -133,6 +137,7 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
     const [durationText, setDurationText] = useState('');
     const [status, setStatus] = useState<SongVideoStatus>('draft');
     const [rows, setRows] = useState<SegmentRowDraft[]>([]);
+    const [clip, setClip] = useState<ClipDraft>(EMPTY_CLIP);
     const [savedNote, setSavedNote] = useState<string | null>(null);
     const [locked, setLocked] = useState(false);
     const [lockError, setLockError] = useState<string | null>(null);
@@ -151,6 +156,9 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
         setDurationText(video.duration_seconds ? formatTimecode(video.duration_seconds) : '');
         setStatus(video.status);
         setLocked(!!video.community_locked);
+        setClip(video.clip_channel_name && video.clip_channel_url
+            ? { on: true, name: video.clip_channel_name, url: video.clip_channel_url }
+            : EMPTY_CLIP);
         setRows(segments.map(fromRecord));
     }, [id, detail.data]);
 
@@ -235,7 +243,8 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
     }, [matchReq, match.data]);
 
     const titleOk = title.trim().length >= 1 && title.trim().length <= 200;
-    const canSave = !!videoId && titleOk && !durationInvalid && rowIssues.size === 0 && !save.isPending;
+    const clipValue = clipForSubmit(clip);
+    const canSave = !!videoId && titleOk && !durationInvalid && rowIssues.size === 0 && clipValue !== undefined && !save.isPending;
 
     const clearMutationErrors = () => {
         if (save.error) save.reset();
@@ -267,6 +276,8 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
             streamed_at: streamedAt ? new Date(streamedAt).toISOString() : null,
             duration_seconds: duration,
             status,
+            clip_channel_name: clipValue?.name ?? null,
+            clip_channel_url: clipValue?.url ?? null,
         };
     };
 
@@ -358,6 +369,7 @@ export function SongVideoEditor({ id, playerEnabled, onClose, onSaved }: {
                         <Label>VTuber</Label>
                         <VtuberPicker value={vtuberId} onChange={setVtuberId} />
                     </div>
+                    <ClipSourceFields clip={clip} onChange={(next) => { setClip(next); clearMutationErrors(); }} />
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                             <Label htmlFor="song-streamed">開台時間</Label>

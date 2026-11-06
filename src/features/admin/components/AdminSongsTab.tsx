@@ -58,7 +58,7 @@ function localDayToIso(day: string, nextDay = false): string | undefined {
 const DATE_INPUT_CLASS = 'h-8 rounded-md border border-input bg-transparent dark:bg-input/30 px-2.5 text-[12px] text-foreground hover:bg-accent/40 transition-colors';
 const PAGE_BUTTON_CLASS = 'w-7 h-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-accent/40 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors';
 
-const EDIT_FIELD_LABEL: Record<string, string> = { title: '標題', vtuber_id: 'VTuber', streamed_at: '開台時間' };
+const EDIT_FIELD_LABEL: Record<string, string> = { title: '標題', vtuber_id: 'VTuber', streamed_at: '開台時間', clip_source: '剪輯來源' };
 
 /** 「新增 N 首」「修改 M 首」＋「改了標題／VTuber／開台時間」 */
 function summarizeEdit(sub: SongEditRecord): string {

@@ -5,6 +5,7 @@
  *   「播放：歌名」從這首開始接著播整份歌單（每首各取最新版本）。
  * - 歌回：既有目錄卡片的嵌入模式，只列這位的歌回。
  * - 舊格式目錄（沒有歌曲字典）沒有歌單，只顯示歌回、不輸出分頁列。
+ * - 合唱（2026-11）：這位以合唱者身分參與的片段；只當合唱者的人只有這一個分頁。
  * - 這組 Tabs 和手機版「瀏覽／正在播放」是兩組獨立的 Radix Tabs，播放器不在任何一組裡。
  */
 import { memo, useLayoutEffect, useMemo } from 'react';
@@ -22,8 +23,10 @@ import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 import { CatalogView, type CatalogStatus } from './CatalogView';
 import { CatalogPending } from './CatalogPending';
 import { formatYmd } from './dateText';
+import { PerformersLine } from './Credits';
 
 const SONG_SORTS: SongListSort[] = ['latest', 'count'];
+const EMPTY_ENTRIES: SongEntry[] = [];
 
 /** 放在分頁內容最後：內容真的掛上 DOM 時通知頁面（Radix 分頁內容比 value 晚一次 commit 才渲染，捲動還原要等它）。只在掛上時通知一次 */
 function PanelMounted({ onMount }: { onMount: () => void }) {
@@ -37,6 +40,7 @@ function PanelMounted({ onMount }: { onMount: () => void }) {
 export const VtuberView = memo(function VtuberView({
     vtuberKey, tab, summary, songIndex, status, videos, visible, onShowMore, sort, onSortChange, playlists, locale, currentCode,
     songSort, onSongSortChange, onPanelMount, onTabChange, onGoList, onPlayEntries, onQueue, onOpenSong, onPlaySong, onPlayAll, onOpenVideo,
+    collabs = EMPTY_ENTRIES, onOpenVtuber,
 }: {
     vtuberKey: string;
     tab: VtuberTab;
@@ -67,6 +71,10 @@ export const VtuberView = memo(function VtuberView({
     onPlaySong: (video: SongVideo, segment: SongSegment) => void;
     onPlayAll: (video: SongVideo) => void;
     onOpenVideo: (video: SongVideo) => void;
+    /** 這位以合唱者身分參與的片段（collabsOfVtuber）；空陣列時不顯示「合唱」分頁 */
+    collabs?: SongEntry[];
+    /** 合唱分頁裡點影片歸屬的 VTuber 或其他合唱者，進他的個人頁 */
+    onOpenVtuber?: (key: string) => void;
 }) {
     const { t } = useTranslation('songs');
     const rows = useMemo(
@@ -89,6 +97,63 @@ export const VtuberView = memo(function VtuberView({
 
     const hasSongs = songIndex !== null;
     const songCount = hasSongs ? rows.length : summary.songCount;
+    const hasCollabs = collabs.length > 0;
+    // 只當合唱者的人（沒有自己的歌回）只有合唱分頁；要求的分頁不存在時退回可用的分頁
+    const onlyCollabs = hasCollabs && summary.videoCount === 0;
+    let activeTab: VtuberTab = tab;
+    if (onlyCollabs) activeTab = 'collabs';
+    else if (tab === 'collabs' && !hasCollabs) activeTab = hasSongs ? 'songs' : 'videos';
+    else if (tab === 'songs' && !hasSongs) activeTab = 'videos';
+
+    const collabsContent = (
+        <div className="flex flex-col gap-3">
+            <div className="flex items-center">
+                <Button size="sm" className="ml-auto h-8" onClick={() => onPlayEntries(collabs)} disabled={!hasCollabs}>
+                    <Play className="size-3.5" aria-hidden="true" />
+                    {t('catalog.playAll')}
+                </Button>
+            </div>
+            <ol className="flex flex-col">
+                {collabs.map((entry) => {
+                    const { segment, video } = entry;
+                    const isCurrent = segment.code === currentCode;
+                    const owner = video.vtuber;
+                    const others = segment.performers.filter((p) => p.vtuberId !== summary.id);
+                    return (
+                        <li
+                            key={segment.code}
+                            aria-current={isCurrent ? 'true' : undefined}
+                            className={cn('flex items-center gap-1 rounded-lg border-t border-border/60 px-2 py-2 first:border-t-0', isCurrent && 'bg-muted')}
+                        >
+                            <div className="min-w-0 flex-1">
+                                <button
+                                    type="button"
+                                    onClick={() => onOpenVideo(video)}
+                                    className={cn('block max-w-full truncate rounded-sm text-left text-sm font-medium hover:text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', isCurrent && 'text-primary')}
+                                >
+                                    {segment.title}
+                                </button>
+                                <p className="truncate text-xs text-muted-foreground">
+                                    {[segment.artist, formatYmd(video.streamedAt ? Date.parse(video.streamedAt) : null)].filter(Boolean).join('・')}
+                                </p>
+                                <PerformersLine
+                                    performers={[...(owner ? [{ vtuberId: owner.id || null, name: owner.name }] : []), ...others]}
+                                    onOpenVtuber={onOpenVtuber}
+                                />
+                            </div>
+                            <Button variant="ghost" size="icon" className="size-8 shrink-0 rounded-full" onClick={() => onPlayEntries(collabs, segment.code)} aria-label={`${t('catalog.play')}：${segment.title}`} title={t('catalog.play')}>
+                                <Play className="size-3.5" aria-hidden="true" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="size-8 shrink-0 rounded-full" onClick={() => onQueue(segment)} aria-label={`${t('catalog.addToQueue')}：${segment.title}`} title={t('catalog.addToQueue')}>
+                                <ListPlus className="size-3.5" aria-hidden="true" />
+                            </Button>
+                            <AddToPlaylistMenu codes={[segment.code]} playlists={playlists} className="rounded-full" />
+                        </li>
+                    );
+                })}
+            </ol>
+        </div>
+    );
 
     const videosContent = (
         <CatalogView
@@ -185,24 +250,38 @@ export const VtuberView = memo(function VtuberView({
                 <div className="flex min-w-0 flex-col gap-2">
                     <span className="text-xs font-bold text-muted-foreground">{t('nav.vtubers')}</span>
                     <h2 id="songs-vtuber-h" tabIndex={-1} className="text-xl font-black leading-tight focus:outline-none sm:text-[32px] sm:leading-[1.25]">{summary.name}</h2>
-                    <p className="text-[13px] text-foreground/80">{t('vtuber.summary', { songs: songCount, videos: summary.videoCount })}</p>
+                    <p className="text-[13px] text-foreground/80">
+                        {t('vtuber.summary', { songs: songCount, videos: summary.videoCount })}
+                        {hasCollabs && <>・{t('vtuber.collabSummary', { count: collabs.length })}</>}
+                    </p>
                 </div>
             </header>
 
-            {hasSongs ? (
-                <Tabs value={tab} onValueChange={(v: string) => onTabChange(v === 'videos' ? 'videos' : 'songs')} className="gap-4">
+            {hasSongs || hasCollabs ? (
+                <Tabs value={activeTab} onValueChange={(v: string) => onTabChange(v === 'videos' || v === 'collabs' ? v : 'songs')} className="gap-4">
                     <TabsList aria-label={t('vtuber.tabs')} className="h-10 w-fit rounded-full p-1">
-                        <TabsTrigger value="songs" className="rounded-full px-4">{t('vtuber.tab.songs')}</TabsTrigger>
-                        <TabsTrigger value="videos" className="rounded-full px-4">{t('vtuber.tab.videos')}</TabsTrigger>
+                        {hasSongs && !onlyCollabs && <TabsTrigger value="songs" className="rounded-full px-4">{t('vtuber.tab.songs')}</TabsTrigger>}
+                        {!onlyCollabs && <TabsTrigger value="videos" className="rounded-full px-4">{t('vtuber.tab.videos')}</TabsTrigger>}
+                        {hasCollabs && <TabsTrigger value="collabs" className="rounded-full px-4">{t('vtuber.tab.collabs')}</TabsTrigger>}
                     </TabsList>
-                    <TabsContent value="songs" data-profile-panel="songs">
-                        {songsContent}
-                        <PanelMounted onMount={onPanelMount} />
-                    </TabsContent>
-                    <TabsContent value="videos" data-profile-panel="videos">
-                        {videosContent}
-                        <PanelMounted onMount={onPanelMount} />
-                    </TabsContent>
+                    {hasSongs && !onlyCollabs && (
+                        <TabsContent value="songs" data-profile-panel="songs">
+                            {songsContent}
+                            <PanelMounted onMount={onPanelMount} />
+                        </TabsContent>
+                    )}
+                    {!onlyCollabs && (
+                        <TabsContent value="videos" data-profile-panel="videos">
+                            {videosContent}
+                            <PanelMounted onMount={onPanelMount} />
+                        </TabsContent>
+                    )}
+                    {hasCollabs && (
+                        <TabsContent value="collabs" data-profile-panel="collabs">
+                            {collabsContent}
+                            <PanelMounted onMount={onPanelMount} />
+                        </TabsContent>
+                    )}
                 </Tabs>
             ) : (
                 videosContent

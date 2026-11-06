@@ -85,6 +85,36 @@ export async function fetchStreamByVideoId(videoId: string, signal?: AbortSignal
 
 export const OEMBED_TIMEOUT_MS = 15_000;
 
+export interface OEmbedInfo {
+    title: string | null;
+    /** 上傳頻道名稱（觀眾剪輯時當剪輯來源預填） */
+    authorName: string | null;
+    authorUrl: string | null;
+}
+
+/** 取影片 oEmbed（標題＋上傳者）；找不到、私人影片、逾時或 ID 不合法回 null */
+export async function fetchOEmbed(videoId: string, signal?: AbortSignal, fetchFn: typeof fetch = fetch): Promise<OEmbedInfo | null> {
+    if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return null;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), OEMBED_TIMEOUT_MS);
+    const onAbort = () => ctrl.abort();
+    signal?.addEventListener('abort', onAbort);
+    try {
+        const target = `https://www.youtube.com/watch?v=${videoId}`;
+        const res = await fetchFn(`https://www.youtube.com/oembed?url=${encodeURIComponent(target)}&format=json`, { signal: ctrl.signal, credentials: 'omit' });
+        if (!res.ok) return null;
+        const data = (await res.json().catch(() => null)) as { title?: unknown; author_name?: unknown; author_url?: unknown } | null;
+        if (!data) return null;
+        const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
+        return { title: text(data.title, 200), authorName: text(data.author_name, 100), authorUrl: text(data.author_url, 300) };
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', onAbort);
+    }
+}
+
 /** 取影片標題；找不到、私人影片或逾時回 null（呼叫端改讓使用者手填） */
 export async function fetchOEmbedTitle(videoId: string, signal?: AbortSignal, fetchFn: typeof fetch = fetch): Promise<string | null> {
     if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return null;

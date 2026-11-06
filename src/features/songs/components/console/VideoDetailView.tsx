@@ -15,6 +15,7 @@ import { formatTimecode } from '../../lib/timecode';
 import { PAGE_PATHS } from '../../../../config/routes';
 import { urlLangOf, withLang } from '../../../../../functions/lib/locale.js';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
+import { ClipSourceLink } from './Credits';
 import { TrackTable } from './TrackTable';
 import { shareSongCodes } from './shareLink';
 import { CatalogPending } from './CatalogPending';
@@ -22,7 +23,7 @@ import { CatalogPending } from './CatalogPending';
 const pillClass = 'inline-flex h-[34px] items-center gap-1.5 rounded-full border border-input px-3.5 text-[13px] text-foreground/80 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export const VideoDetailView = memo(function VideoDetailView({
-    video, loading, loadError, retrying, onRetry, currentCode, playlists, locale, songIndex, onBack, onPlayAll, onPlaySong, onQueue, onOpenSong,
+    video, loading, loadError, retrying, onRetry, currentCode, playlists, locale, songIndex, onBack, onPlayAll, onPlaySong, onQueue, onOpenSong, onOpenVtuber,
 }: {
     /** undefined＝目錄還在載入、載入失敗或找不到這場 */
     video: SongVideo | undefined;
@@ -41,6 +42,8 @@ export const VideoDetailView = memo(function VideoDetailView({
     onPlaySong: (video: SongVideo, segment: SongSegment) => void;
     onQueue: (segment: SongSegment) => void;
     onOpenSong: (songId: number, from: string | null) => void;
+    /** 點站內合唱者進他的個人頁 */
+    onOpenVtuber?: (key: string) => void;
 }) {
     const { t, i18n } = useTranslation('songs');
 
@@ -91,6 +94,7 @@ export const VideoDetailView = memo(function VideoDetailView({
                         ・<span title={t('video.spanHint', { songs: duration, span: formatTimecode(videoSpan(video.segments)) })}>{t('video.duration', { time: duration })}</span>
                         {totalPlays > 0 && <>・{t('catalog.totalPlays', { count: totalPlays.toLocaleString(locale) })}</>}
                     </p>
+                    <ClipSourceLink clip={video.clipSource} />
                 </div>
             </header>
 
@@ -140,6 +144,7 @@ export const VideoDetailView = memo(function VideoDetailView({
                 onPlaySong={onPlaySong}
                 onQueue={onQueue}
                 onOpenSong={onOpenSong}
+                onOpenVtuber={onOpenVtuber}
             />
         </article>
     );

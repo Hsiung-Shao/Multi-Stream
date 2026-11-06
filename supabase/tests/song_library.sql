@@ -685,7 +685,7 @@ BEGIN
   RAISE NOTICE 'S16b ok';
 END $$;
 
--- ───────────── S17 目錄：片段 8 欄＋尾端歌曲字典 ─────────────
+-- ───────────── S17 目錄：片段 9 欄＋尾端歌曲字典 ─────────────
 INSERT INTO public.song_segments (id, video_ref, start_seconds, end_seconds, title, original_artist, position, version_note) VALUES
   ('00000000-0000-4000-8000-00000000b01b', '00000000-0000-4000-8000-00000000a003', 0, 100, 'zzS17草稿歌', NULL, 0, NULL);
 INSERT INTO public.song_segments (id, video_ref, start_seconds, end_seconds, title, original_artist, position, version_note) VALUES
@@ -709,13 +709,13 @@ BEGIN
     RAISE EXCEPTION 'S17 失敗：只能有一個字典元素';
   END IF;
 
-  -- 片段 8 欄：[code, start, end, title, artist, plays, song_id, version_note]
+  -- 片段 9 欄：[code, start, end, title, artist, plays, song_id, version_note, performers]（20261106100000 起）
   SELECT e INTO vrow FROM jsonb_array_elements(cat) e WHERE e->>'v' = 'zzTestVid01';
   IF vrow IS NULL THEN RAISE EXCEPTION 'S17 失敗：已發布的測試歌回不在目錄'; END IF;
   SELECT s INTO srow FROM jsonb_array_elements(vrow->'s') s WHERE s->>0 = k_code;
   IF srow IS NULL THEN RAISE EXCEPTION 'S17 失敗：片段 % 不在目錄', k_code; END IF;
-  IF jsonb_array_length(srow) <> 8 THEN
-    RAISE EXCEPTION 'S17 失敗：片段應有 8 欄，得 %（%）', jsonb_array_length(srow), srow;
+  IF jsonb_array_length(srow) <> 9 OR srow->8 <> '[]'::jsonb THEN
+    RAISE EXCEPTION 'S17 失敗：片段應有 9 欄且第 9 欄為 []，得 %（%）', jsonb_array_length(srow), srow;
   END IF;
   IF (srow->>6)::bigint IS DISTINCT FROM k_song THEN
     RAISE EXCEPTION 'S17 失敗：第 7 欄應為 song_id=%，得 %', k_song, srow->6;

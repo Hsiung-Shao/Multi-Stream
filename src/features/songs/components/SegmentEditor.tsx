@@ -9,6 +9,7 @@
 // - 文字一律 i18n（songs:editor.*）：投稿頁是公開頁，後台也共用同一份。
 // - protectExisting（社群投稿頁）：帶 code 的既有片段不能刪除（刪除鈕停用並說明），只能改時間或歌名；新增的列仍可刪。
 // - 備註欄：上限 30 字，datalist 提供常用值（仍可自由輸入）；matchInfo（只有後台會給）在歌名下顯示配對結果。
+// - 合唱者：歌名欄下方（PerformersEditor）；多於一列時可「套用到全部片段」。
 
 import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +27,7 @@ import {
     emptyRow, fromImported, prepareImport, type ImportedRow, type RowIssueCode, type SegmentRowDraft,
 } from './segmentRows';
 import type { PreviewApi } from './PreviewPlayer';
+import { PerformersEditor } from './PerformersEditor';
 
 export type RowDiff = 'new' | 'changed';
 
@@ -129,6 +131,10 @@ export function SegmentEditor({
 
     const updateRow = (key: string, patch: Partial<SegmentRowDraft>) => {
         onRowsChange((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch, ...('end' in patch ? { endEstimated: false } : {}) } : r)));
+        onEdit?.();
+    };
+    const applyPerformersToAll = (performers: NonNullable<SegmentRowDraft['performers']>) => {
+        onRowsChange((rs) => rs.map((r) => ({ ...r, performers: performers.map((p) => ({ ...p })) })));
         onEdit?.();
     };
     const removeRow = (key: string) => {
@@ -309,6 +315,14 @@ export function SegmentEditor({
                                                         {matchLabel(match)}
                                                     </p>
                                                 )}
+                                                <div className="mt-1">
+                                                    <PerformersEditor
+                                                        n={n}
+                                                        performers={r.performers ?? []}
+                                                        onChange={(next) => updateRow(r.key, { performers: next })}
+                                                        onApplyAll={rows.length > 1 ? () => applyPerformersToAll(r.performers ?? []) : undefined}
+                                                    />
+                                                </div>
                                             </td>
                                             <td className="px-2 py-1.5">
                                                 <Input value={r.artist} onChange={(e) => updateRow(r.key, { artist: e.target.value })} maxLength={200} className="h-8" aria-label={t('editor.aria.artist', { n })} />

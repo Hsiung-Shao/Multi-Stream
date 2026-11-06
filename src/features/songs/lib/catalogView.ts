@@ -59,8 +59,10 @@ export interface VtuberSummary {
     videoCount: number;
     /** 歌曲首數（片段數加總） */
     songCount: number;
-    /** 最新一場的開台時間毫秒值；都沒有時間時 null */
+    /** 最新一場的開台時間毫秒值；都沒有時間時 null（只當合唱者的人取他參與的那幾場） */
     latestAt: number | null;
+    /** 以合唱者身分出現的片段數（不含自己歌回的片段） */
+    collabCount: number;
 }
 
 /** VTuber 識別鍵：有 id 用 id，沒有（目錄未連結 VTuber 主表）用名稱 */
@@ -76,13 +78,30 @@ export function deriveVtubers(videos: SongVideo[]): VtuberSummary[] {
         const at = streamedMs(video);
         const cur = byKey.get(key);
         if (!cur) {
-            byKey.set(key, { key, id: v.id, name: v.name, img: v.img, videoCount: 1, songCount: video.segments.length, latestAt: at });
+            byKey.set(key, { key, id: v.id, name: v.name, img: v.img, videoCount: 1, songCount: video.segments.length, latestAt: at, collabCount: 0 });
             continue;
         }
         cur.videoCount += 1;
         cur.songCount += video.segments.length;
         if (at !== null && (cur.latestAt === null || at > cur.latestAt)) cur.latestAt = at;
         if (!cur.img && v.img) cur.img = v.img;
+    }
+    // 合唱者：站內者（有 vtuberId）才列入；只當合唱者的人也建一筆，讓合唱 chip 連得到他的個人頁
+    for (const video of videos) {
+        const ownerId = video.vtuber?.id || null;
+        const at = streamedMs(video);
+        for (const seg of video.segments) {
+            for (const p of seg.performers ?? []) {
+                if (!p.vtuberId || p.vtuberId === ownerId) continue;
+                const cur = byKey.get(p.vtuberId);
+                if (!cur) {
+                    byKey.set(p.vtuberId, { key: p.vtuberId, id: p.vtuberId, name: p.name, img: null, videoCount: 0, songCount: 0, latestAt: at, collabCount: 1 });
+                    continue;
+                }
+                cur.collabCount += 1;
+                if (cur.videoCount === 0 && at !== null && (cur.latestAt === null || at > cur.latestAt)) cur.latestAt = at;
+            }
+        }
     }
     return [...byKey.values()].sort((a, b) => {
         if (a.latestAt !== b.latestAt) {

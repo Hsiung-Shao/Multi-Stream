@@ -13,6 +13,12 @@ import { validateSegments, type SegmentIssueCode } from '../lib/segmentValidatio
 import { estimateEnds, isSingleSongVideo } from '../lib/endEstimate';
 import type { ParsedRow } from '../lib/timelineParser';
 
+/** 合唱者草稿：站內者 vtuberId 非 null（name 可留快照），站外者只有 name */
+export interface PerformerDraft {
+    vtuberId: string | null;
+    name: string | null;
+}
+
 export interface SegmentRowDraft {
     key: string;
     /** 既有片段的 id（後台原地更新用；投稿頁不送） */
@@ -25,6 +31,8 @@ export interface SegmentRowDraft {
     /** 版本備註（選填，trim 後最多 30 字） */
     note: string;
     endEstimated?: boolean;
+    /** 合唱者；undefined＝沒動過（送出時不帶，伺服器保留原值），陣列＝整批設定 */
+    performers?: PerformerDraft[];
 }
 
 /** 列的問題代碼：segmentValidation 的代碼＋時間格式錯 */
@@ -46,6 +54,8 @@ export interface ImportedRow {
     code?: string;
     /** 版本備註（取代時對回的舊片段備註、投稿的 versionNote） */
     note?: string | null;
+    /** 取代時對回的舊片段合唱者 */
+    performers?: PerformerDraft[];
 }
 
 export function fromImported(r: ImportedRow): SegmentRowDraft {
@@ -59,6 +69,7 @@ export function fromImported(r: ImportedRow): SegmentRowDraft {
         artist: r.artist ?? '',
         note: r.note ?? '',
         endEstimated: r.endEstimated,
+        ...(r.performers ? { performers: r.performers } : {}),
     };
 }
 

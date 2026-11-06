@@ -17,6 +17,67 @@ export function isUuid(id) {
     return typeof id === 'string' && UUID_RE.test(id);
 }
 
+// ---------- 剪輯來源與合唱者（與 migration 20261106100000 的 CHECK 一致） ----------
+// handle 不收反斜線、%（百分比編碼要先解碼）、連續兩個點（瀏覽器會當成上一層路徑）、控制與隱形格式字元（解碼後可能出現）
+export const CLIP_URL_RE = /^https:\/\/(www\.|m\.)?youtube\.com\/(@(?!.*\.\.)[^/?#\s\\%\p{Cc}\p{Cf}]{1,100}|channel\/UC[0-9A-Za-z_-]{22})$/u;
+export const CLIP_NAME_MAX = 100;
+export const PERFORMERS_MAX = 10;
+export const PERFORMER_NAME_MAX = 60;
+
+const blank = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+
+/**
+ * 剪輯來源正規化：兩者皆空＝不是剪輯（value:null）；只給一個、網址不在白名單、名稱超長 → ok:false。
+ * 網址先去掉 query／hash／尾斜線再比對。
+ * @returns {{ ok: true, value: { name: string, url: string } | null } | { ok: false }}
+ */
+export function normalizeClipSource(name, url) {
+    if (blank(name) && blank(url)) return { ok: true, value: null };
+    if (typeof name !== 'string' || typeof url !== 'string' || blank(name) || blank(url)) return { ok: false };
+    const n = name.trim();
+    if (n.length > CLIP_NAME_MAX) return { ok: false };
+    let u = url.trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+    // oEmbed 對中日韓 handle 給百分比編碼：解碼成原文再比對、儲存（壞序列直接拒絕）
+    try {
+        u = decodeURI(u);
+    } catch {
+        return { ok: false };
+    }
+    if (!CLIP_URL_RE.test(u)) return { ok: false };
+    return { ok: true, value: { name: n, url: u } };
+}
+
+/**
+ * 合唱者正規化：[{ vtuber_id?, name? }] → [{ vtuber_id: string|null, name: string|null }]（≤10；站內者依 id 去重，站外者依名字去重）。
+ * @returns {{ ok: true, value: { vtuber_id: string|null, name: string|null }[] } | { ok: false }}
+ */
+export function normalizePerformers(list) {
+    if (!Array.isArray(list) || list.length > PERFORMERS_MAX) return { ok: false };
+    const out = [];
+    const ids = new Set();
+    const names = new Set();
+    for (const p of list) {
+        if (!p || typeof p !== 'object' || Array.isArray(p)) return { ok: false };
+        const rawId = p.vtuber_id ?? null;
+        const rawName = p.name ?? null;
+        if (rawId !== null && !isUuid(rawId)) return { ok: false };
+        if (rawName !== null && typeof rawName !== 'string') return { ok: false };
+        const id = rawId ? rawId.toLowerCase() : null;
+        const nm = rawName === null ? null : rawName.trim();
+        if (nm !== null && (nm.length < 1 || nm.length > PERFORMER_NAME_MAX)) return { ok: false };
+        if (id === null && nm === null) return { ok: false };
+        if (id !== null) {
+            if (ids.has(id)) continue;
+            ids.add(id);
+        } else {
+            if (names.has(nm)) continue;
+            names.add(nm);
+        }
+        out.push({ vtuber_id: id, name: nm });
+    }
+    return { ok: true, value: out };
+}
+
 const isInt = (v) => typeof v === 'number' && Number.isInteger(v);
 
 function invalid(error, issues) {
@@ -94,6 +155,14 @@ export function buildSongVideoPayload(body, opts = {}) {
         duration = body.duration_seconds;
     }
 
+    // 剪輯來源：兩個 key 都沒帶 = 保留舊值（輸出不含）；帶了就經正規化（null/空 = 清除）
+    let clip;
+    if ('clip_channel_name' in body || 'clip_channel_url' in body) {
+        const c = normalizeClipSource(body.clip_channel_name, body.clip_channel_url);
+        if (!c.ok) return invalid('invalid_payload');
+        clip = { clip_channel_name: c.value?.name ?? null, clip_channel_url: c.value?.url ?? null };
+    }
+
     if (!Array.isArray(body.segments) || body.segments.length > SEGMENTS_MAX) return invalid('invalid_payload');
 
     const rows = [];
@@ -117,7 +186,15 @@ export function buildSongVideoPayload(body, opts = {}) {
             else if (typeof s.version_note !== 'string') return invalid('invalid_payload');
             else versionNote = s.version_note.trim() || null;
         }
+        // 合唱者：沒帶 = 保留舊值（輸出不含此 key）；帶了就整批替換（[] = 清空）
+        let performers;
+        if (s.performers !== undefined) {
+            const p = normalizePerformers(s.performers);
+            if (!p.ok) return invalid('invalid_payload');
+            performers = p.value;
+        }
         rows.push({
+            performers,
             id: s.id ? s.id.toLowerCase() : undefined,
             start: s.start_seconds,
             end: hasEnd ? s.end_seconds : null,
@@ -140,6 +217,7 @@ export function buildSongVideoPayload(body, opts = {}) {
             const seg = { start_seconds: r.start, end_seconds: r.end, title: r.title, original_artist: r.artist, position };
             if (r.id) seg.id = r.id;
             if (r.versionNote !== undefined) seg.version_note = r.versionNote;
+            if (r.performers !== undefined) seg.performers = r.performers;
             return seg;
         });
 
@@ -152,6 +230,7 @@ export function buildSongVideoPayload(body, opts = {}) {
             streamed_at: streamedAt,
             duration_seconds: duration,
             status,
+            ...clip,
         },
         segments,
     };

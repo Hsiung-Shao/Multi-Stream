@@ -23,16 +23,20 @@ const MAX_BODY_BYTES = 4096;
 const LIST_LIMIT = 50;
 const NO_STORE = { 'Cache-Control': 'no-store' };
 // 刻意不選 ip_hash、source_note、submitter_contact(列表用不到);before／segments 只用來算 summary,不回給前端
-const LIST_COLUMNS = 'id,kind,video_id,title,vtuber_id,streamed_at,status,created_at,reverted_at,target_video_ref,before,segments';
+const LIST_COLUMNS = 'id,kind,video_id,title,vtuber_id,streamed_at,status,created_at,reverted_at,target_video_ref,before,segments,clip';
 
 const SEGMENT_FIELDS = ['start_seconds', 'end_seconds', 'title', 'original_artist', 'version_note'];
-const segmentChanged = (prev, next) => SEGMENT_FIELDS.some((k) => (prev[k] ?? null) !== (next[k] ?? null));
+// 合唱者：依順序比「站內者的 id／站外者的名字」（站內者的名字快照不算）；送出的片段沒帶 performers＝沒改
+const performerKey = (list) => JSON.stringify((list || []).map((p) => (p.vtuber_id ? `v:${p.vtuber_id}` : `n:${p.name ?? ''}`)));
+const segmentChanged = (prev, next) =>
+    SEGMENT_FIELDS.some((k) => (prev[k] ?? null) !== (next[k] ?? null))
+    || (Array.isArray(next.performers) && performerKey(prev.performers) !== performerKey(next.performers));
 
 /**
  * 以 code 對 before 的片段算變更摘要:
- *   沒 code 或找不到 → added;start、end、title、original_artist、version_note 任一不同 → changed。
+ *   沒 code 或找不到 → added;start、end、title、original_artist、version_note、合唱者任一不同 → changed。
  *   新歌回(before 為 null)全部算 added。
- * fields:影片欄位有變的名稱(title、vtuber_id、streamed_at),片段有新增或變動時另加 'segments'。
+ * fields:影片欄位有變的名稱(title、vtuber_id、streamed_at、clip_source),片段有新增或變動時另加 'segments'。
  */
 function summarize(row) {
     const segs = Array.isArray(row.segments) ? row.segments : [];
@@ -55,6 +59,9 @@ function summarize(row) {
     // Date.parse 本身只到毫秒：.679176 與 .679 是同一瞬間，不算改了開台時間
     const ts = (t) => (t ? Date.parse(t) : null);
     if (ts(bv.streamed_at) !== ts(row.streamed_at)) fields.push('streamed_at');
+    // 剪輯來源：這次有送（clip 非 null）且與修改前不同
+    if (row.clip && ((row.clip.clip_channel_name ?? null) !== (bv.clip_channel_name ?? null)
+        || (row.clip.clip_channel_url ?? null) !== (bv.clip_channel_url ?? null))) fields.push('clip_source');
     if (added > 0 || changed > 0) fields.push('segments');
     return { added, changed, fields };
 }

@@ -131,3 +131,21 @@ export function versionsOfSong(index: SongIndex, songId: number, fromKey: string
 export function flattenVersions(groups: SongVersionGroup[]): SongEntry[] {
     return groups.flatMap((g) => g.versions);
 }
+
+/**
+ * 這位 VTuber 以合唱者身分參與的片段（不含自己歌回的片段）：影片開台時間新到舊（null 最後），同影片依 start。
+ * 純函式，不修改 videos。
+ */
+export function collabsOfVtuber(videos: SongVideo[], vtuberId: string): SongEntry[] {
+    const out: { entry: SongEntry; at: number | null; order: number }[] = [];
+    videos.forEach((video, order) => {
+        if (video.vtuber?.id === vtuberId) return;
+        const at = timeOf(video.streamedAt);
+        for (const segment of video.segments) {
+            if ((segment.performers ?? []).some((p) => p.vtuberId === vtuberId)) out.push({ entry: { segment, video }, at, order });
+        }
+    });
+    return out
+        .sort((a, b) => compareDesc(a.at, b.at) || a.order - b.order || a.entry.segment.start - b.entry.segment.start)
+        .map((x) => x.entry);
+}

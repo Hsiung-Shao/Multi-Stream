@@ -5,6 +5,7 @@
  * - 404（影片不存在或未發布）回 null，呼叫端當新歌回；其他失敗丟 Error，讓呼叫端擋住送出而不是誤當新歌回。
  * - 15 秒逾時，並與呼叫端的取消訊號連動（memory error_client_fetch_needs_timeout）。
  * - 逐欄防呆：格式不對的片段丟棄，rev 不是字串（理論上不會發生）就視為壞資料。
+ * - 2026-11：影片帶 clipSource（觀眾剪輯來源），片段帶 performers；修正時預填，送出才不會把既有資料清掉。
  */
 export const TIMELINE_URL = '/api/songs/timeline';
 export const TIMELINE_TIMEOUT_MS = 15_000;
@@ -16,6 +17,7 @@ export interface TimelineSegment {
     title: string;
     artist: string | null;
     note: string | null;
+    performers: { vtuberId: string | null; name: string }[];
 }
 
 export interface SongTimeline {
@@ -26,6 +28,7 @@ export interface SongTimeline {
     durationSeconds: number | null;
     rev: string;
     locked: boolean;
+    clipSource: { name: string; url: string } | null;
     segments: TimelineSegment[];
 }
 
@@ -39,7 +42,23 @@ function toSegment(raw: unknown): TimelineSegment | null {
     const { code, start, end, title } = raw;
     if (typeof code !== 'string' || !CODE_RE.test(code) || !isSec(start) || !isSec(end) || end <= start) return null;
     if (typeof title !== 'string' || !title.trim()) return null;
-    return { code, start, end, title, artist: strOrNull(raw.artist), note: strOrNull(raw.note) };
+    return { code, start, end, title, artist: strOrNull(raw.artist), note: strOrNull(raw.note), performers: toPerformers(raw.performers) };
+}
+
+function toPerformers(raw: unknown): TimelineSegment['performers'] {
+    if (!Array.isArray(raw)) return [];
+    const out: TimelineSegment['performers'] = [];
+    for (const p of raw) {
+        if (!isObj(p) || typeof p.name !== 'string' || !p.name.trim()) continue;
+        if (p.vtuberId !== null && p.vtuberId !== undefined && typeof p.vtuberId !== 'string') continue;
+        out.push({ vtuberId: typeof p.vtuberId === 'string' && p.vtuberId ? p.vtuberId : null, name: p.name.trim() });
+    }
+    return out;
+}
+
+function toClip(raw: unknown): SongTimeline['clipSource'] {
+    if (!isObj(raw) || typeof raw.name !== 'string' || !raw.name.trim() || typeof raw.url !== 'string' || !raw.url.startsWith('https://')) return null;
+    return { name: raw.name.trim(), url: raw.url };
 }
 
 /** 回應 data → SongTimeline；格式不對回 null */
@@ -54,6 +73,7 @@ export function parseSongTimeline(raw: unknown): SongTimeline | null {
         durationSeconds: isSec(raw.durationSeconds) && raw.durationSeconds > 0 ? raw.durationSeconds : null,
         rev: raw.rev,
         locked: raw.locked === true,
+        clipSource: toClip(raw.clipSource),
         segments: Array.isArray(raw.segments) ? raw.segments.map(toSegment).filter((s): s is TimelineSegment => s !== null) : [],
     };
 }
