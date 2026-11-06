@@ -544,6 +544,52 @@ describe('GET /api/admin/song-submissions（社群修改紀錄）', () => {
         expect(Array.isArray(row.summary.fields)).toBe(true);
     });
 
+    const listWith = async (row: Record<string, unknown>) => {
+        sb = (_m, path) => (path.startsWith('song_submissions') ? new Response(JSON.stringify([logRow({ vtuber_id: REF, ...row })])) : new Response('[]'));
+        return (await (await adminList()).json()).submissions[0];
+    };
+    const VT_X = '11111111-1111-4111-8111-111111111111';
+
+    it('R1 只改合唱者也算 changed 1，fields 含 segments', async () => {
+        const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A')]);
+        (before.segments[0] as Record<string, unknown>).performers = [];
+        const row = await listWith({ before, segments: [{ ...segRow('aaaaaaaa', 0, 100, 'A'), performers: [{ vtuber_id: VT_X, name: null }] }] });
+        expect(row.summary.changed).toBe(1);
+        expect(row.summary.fields).toContain('segments');
+    });
+
+    it('R2 合唱者沒變（站內者名字快照不同）不算變更；沒送 performers 也不算', async () => {
+        const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A'), segRow('bbbbbbbb', 100, 200, 'B')]);
+        (before.segments[0] as Record<string, unknown>).performers = [{ vtuber_id: VT_X, name: '舊名' }, { vtuber_id: null, name: '站外' }];
+        const row = await listWith({
+            before,
+            segments: [
+                { ...segRow('aaaaaaaa', 0, 100, 'A'), performers: [{ vtuber_id: VT_X, name: null }, { vtuber_id: null, name: '站外' }] },
+                segRow('bbbbbbbb', 100, 200, 'B'),
+            ],
+        });
+        expect(row.summary.changed).toBe(0);
+        expect(row.summary.fields).toEqual([]);
+    });
+
+    it('R3 送出的剪輯來源與修改前不同 → fields 含 clip_source；沒送（clip 為 null）不含', async () => {
+        const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A')]);
+        (before.video as Record<string, unknown>).clip_channel_name = null;
+        (before.video as Record<string, unknown>).clip_channel_url = null;
+        const segs = [segRow('aaaaaaaa', 0, 100, 'A')];
+        const changedRow = await listWith({ before, segments: segs, clip: { clip_channel_name: '廣告頻道', clip_channel_url: 'https://www.youtube.com/@ad' } });
+        expect(changedRow.summary.fields).toContain('clip_source');
+        const sameRow = await listWith({ before, segments: segs, clip: { clip_channel_name: null, clip_channel_url: null } });
+        expect(sameRow.summary.fields).not.toContain('clip_source');
+        const notSent = await listWith({ before, segments: segs, clip: null });
+        expect(notSent.summary.fields).not.toContain('clip_source');
+    });
+
+    it('R4 列表查詢有選 clip 欄位（才算得出剪輯來源變更）', async () => {
+        await adminList();
+        expect(decodeURIComponent(sbCalls()[0].url)).toMatch(/select=[^&]*\bclip\b/);
+    });
+
     it('F5 只改歌名（時間沒動）也算 changed 1，fields 含 segments', async () => {
         const before = beforeSnap([segRow('aaaaaaaa', 0, 100, 'A'), segRow('bbbbbbbb', 100, 200, 'B')]);
         sb = (_m, path) =>

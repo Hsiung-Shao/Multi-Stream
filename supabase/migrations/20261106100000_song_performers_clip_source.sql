@@ -13,6 +13,7 @@
 --   drop trigger if exists vtubers_clear_song_performers on public.vtubers;
 --   drop function if exists public._vtubers_clear_song_performers();
 --   drop table if exists public.song_segment_performers;
+--   alter table public.song_submissions drop column if exists clip;
 --   alter table public.song_videos drop constraint if exists song_videos_clip_pair_check,
 --       drop constraint if exists song_videos_clip_url_check, drop constraint if exists song_videos_clip_name_check,
 --       drop column if exists clip_channel_name, drop column if exists clip_channel_url;
@@ -32,6 +33,13 @@ alter table public.song_videos
 
 comment on column public.song_videos.clip_channel_name is '觀眾剪輯的上傳頻道名稱；null＝本人上傳（與 clip_channel_url 同有同無）。';
 comment on column public.song_videos.clip_channel_url is '觀眾剪輯的上傳頻道網址，只收 youtube.com/@handle 或 /channel/UC…。';
+
+-- 修改紀錄：這次送出的剪輯來源（後台摘要比對 before.video 用）；null＝這次沒送（沒改）
+alter table public.song_submissions add column clip jsonb;
+comment on column public.song_submissions.clip is
+  '社群這次送出的剪輯來源 {clip_channel_name, clip_channel_url}；null＝沒送（保留原值）。';
+comment on column public.song_submissions.before is
+  '社群修正前的快照 {video:{title,vtuber_id,streamed_at,duration_seconds,clip_channel_name,clip_channel_url}, segments:[{id,code,…,performers}]}；新歌回為 null。';
 
 -- ───────────── 合唱成員 ─────────────
 create table public.song_segment_performers (
@@ -362,11 +370,12 @@ begin
 
     insert into public.song_submissions (
         kind, video_id, target_video_ref, title, vtuber_id, streamed_at, segments,
-        source_note, submitter_contact, ip_hash, status, before, result_video_ref)
+        source_note, submitter_contact, ip_hash, status, before, result_video_ref, clip)
     values (
         v_kind, p_video_id, case when v_kind = 'revision' then v_ref end, p_video->>'title',
         v_vtuber, (p_video->>'streamed_at')::timestamptz, p_segments,
-        p_meta->>'source_note', p_meta->>'submitter_contact', p_meta->>'ip_hash', 'applied', v_before, v_ref)
+        p_meta->>'source_note', p_meta->>'submitter_contact', p_meta->>'ip_hash', 'applied', v_before, v_ref,
+        nullif(public._clip_keys(p_video), '{}'::jsonb))
     returning id into v_sub;
 
     return json_build_object('kind', v_kind, 'video_ref', v_ref, 'rev', v_rev, 'submission_id', v_sub);

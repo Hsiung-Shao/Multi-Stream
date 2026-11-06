@@ -551,5 +551,36 @@ BEGIN
   RAISE NOTICE 'ok SQL10 刪除 VTuber 不連帶刪合唱列（有 name 的保留、無 name 的清除）';
 END $$;
 
+-- ───────────── SQL11 修改紀錄存下這次送出的剪輯來源（後台摘要才比得出變更） ─────────────
+-- SQL11
+DO $$
+DECLARE r0 jsonb; seg uuid; code text; rc jsonb; c jsonb;
+BEGIN
+  r0 := pg_temp.asave(NULL,
+          pg_temp.av('zzPfVid0011', 'zz紀錄剪輯') || jsonb_build_object(
+            'vtuber_id', '00000000-0000-4000-8000-0000000000f1', 'streamed_at', '2026-01-01T12:00:00Z', 'duration_seconds', 7200),
+          jsonb_build_array(pg_temp.aseg(NULL, 0, 100, 'zz丙', 0)));
+  seg := (r0->'segments'->0->>'id')::uuid;
+  code := pg_temp.code_of(seg);
+
+  -- 有送剪輯來源 → 紀錄的 clip 等於送出的值
+  rc := pg_temp.csave('zzPfVid0011', pg_temp.rev_of('zzPfVid0011'),
+          pg_temp.cv('zz紀錄剪輯') || jsonb_build_object('clip_channel_name', 'zz廣告頻道', 'clip_channel_url', 'https://www.youtube.com/@zzad'),
+          jsonb_build_array(pg_temp.cseg(code, 0, 100, 'zz丙', 0)));
+  SELECT clip INTO c FROM public.song_submissions WHERE id = (rc->>'submission_id')::uuid;
+  IF c IS DISTINCT FROM jsonb_build_object('clip_channel_name', 'zz廣告頻道', 'clip_channel_url', 'https://www.youtube.com/@zzad') THEN
+    RAISE EXCEPTION 'SQL11 失敗：紀錄的 clip 應為送出的剪輯來源，得 %', c;
+  END IF;
+
+  -- 沒送剪輯來源 key → 紀錄的 clip 為 null（代表沒改）
+  rc := pg_temp.csave('zzPfVid0011', pg_temp.rev_of('zzPfVid0011'), pg_temp.cv('zz紀錄剪輯'),
+          jsonb_build_array(pg_temp.cseg(code, 0, 100, 'zz丙', 0)));
+  SELECT clip INTO c FROM public.song_submissions WHERE id = (rc->>'submission_id')::uuid;
+  IF c IS NOT NULL THEN
+    RAISE EXCEPTION 'SQL11 失敗：沒送剪輯來源時紀錄的 clip 應為 null，得 %', c;
+  END IF;
+  RAISE NOTICE 'ok SQL11 修改紀錄存下這次送出的剪輯來源';
+END $$;
+
 \echo 'song_performers：全部通過'
 ROLLBACK;
