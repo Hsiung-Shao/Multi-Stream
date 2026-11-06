@@ -27,7 +27,8 @@ import { mergePrefill } from '../../features/songs/lib/streamPrefill';
 import { formatTimecode, parseTimecode } from '../../features/songs/lib/timecode';
 import { mergeReplaceRows } from '../../features/songs/lib/timelineMerge';
 import { fetchSongTimeline, type SongTimeline } from '../../features/songs/timelineApi';
-import { fetchOEmbedTitle, fetchStreamByVideoId } from '../../features/songs/streamLookup';
+import { fetchOEmbed, fetchStreamByVideoId } from '../../features/songs/streamLookup';
+import { ClipSourceFields, EMPTY_CLIP, clipForSubmit, type ClipDraft } from '../../features/songs/components/ClipSourceFields';
 import { PreviewPlayer, type PreviewApi } from '../../features/songs/components/PreviewPlayer';
 import { VtuberPicker } from '../../features/songs/components/VtuberPicker';
 import { SegmentEditor } from '../../features/songs/components/SegmentEditor';
@@ -57,7 +58,7 @@ function toLocalInput(iso: string | null): string {
  * 沒有 code 的列（使用者新增的）照一般取代處理，不保留。
  */
 function replaceKeepingExisting(current: SegmentRowDraft[], imported: ImportedRow[]): { rows: SegmentRowDraft[]; kept: number } {
-    const existing = current.map((r) => ({ code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note }));
+    const existing = current.map((r) => ({ code: r.code, start: parseTimecode(r.start) ?? -1, note: r.note, performers: r.performers }));
     const { rows: merged, lostCodes } = mergeReplaceRows(existing, imported);
     const replaced = merged.map((m, i) => fromImported({ ...m, end: imported[i].end, endEstimated: imported[i].endEstimated }));
     const lost = new Set(lostCodes);
@@ -75,6 +76,8 @@ export function SongsSubmitPage() {
     const [vtuberId, setVtuberId] = useState<string | null>(null);
     const [streamedAt, setStreamedAt] = useState('');
     const [rows, setRows] = useState<SegmentRowDraft[]>([]);
+    // 剪輯來源：值與勾選分開存（取消勾選再勾回來，手改的值仍在）；oEmbed 的上傳者只補空欄位
+    const [clip, setClip] = useState<ClipDraft>(EMPTY_CLIP);
     const [note, setNote] = useState('');
     const [contact, setContact] = useState('');
     const [duration, setDuration] = useState<number | null>(null);
@@ -161,6 +164,7 @@ export function SongsSubmitPage() {
         autoRef.current = {};
         prefilledRef.current = null;
         setKeptCount(0);
+        setClip(EMPTY_CLIP);
     };
 
     useEffect(() => {
@@ -169,8 +173,19 @@ export function SongsSubmitPage() {
         setDuration(null);
         if (!videoId) return;
         const ctrl = new AbortController();
-        fetchOEmbedTitle(videoId, ctrl.signal)
-            .then((found) => { if (!ctrl.signal.aborted && found) fillEmpty({ title: found, vtuberId: null, streamedAt: null }); })
+        fetchOEmbed(videoId, ctrl.signal)
+            .then((found) => {
+                if (ctrl.signal.aborted || !found) return;
+                if (found.title) fillEmpty({ title: found.title, vtuberId: null, streamedAt: null });
+                // 上傳者 → 剪輯來源預填（只補空欄位；勾不勾由使用者決定）
+                if (found.authorName || found.authorUrl) {
+                    setClip((c) => ({
+                        ...c,
+                        name: c.name.trim() ? c.name : (found.authorName ?? ''),
+                        url: c.url.trim() ? c.url : (found.authorUrl ?? ''),
+                    }));
+                }
+            })
             .catch(() => { /* 手填即可 */ });
         fetchStreamByVideoId(videoId, ctrl.signal)
             .then((found) => { if (!ctrl.signal.aborted && found) fillEmpty(found); })
@@ -203,8 +218,10 @@ export function SongsSubmitPage() {
             title: s.title,
             artist: s.artist ?? '',
             note: s.note ?? '',
+            performers: s.performers.map((p) => ({ vtuberId: p.vtuberId, name: p.vtuberId ? null : p.name })),
         }));
         autoRef.current.rows = prefill;
+        if (existing.clipSource) setClip({ on: true, name: existing.clipSource.name, url: existing.clipSource.url });
         setRows((cur) => (cur.length > 0 ? cur : prefill));
         // 只在時間軸資料變動時預填；fillEmpty 只讀 ref 與 setter
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -217,7 +234,8 @@ export function SongsSubmitPage() {
     const needVtuber = !!videoId && !!tl && !timelineFailed && !existing && !vtuberId;
     // 修正時不能把原本有的 VTuber 清空（後端也會沿用原值），清掉了就要求改選別人
     const vtuberCleared = !!existing?.vtuber?.id && !vtuberId;
-    const canSubmit = !!videoId && !timelineLoading && !timelineFailed && !locked && !needVtuber && !vtuberCleared
+    const clipValue = clipForSubmit(clip);
+    const canSubmit = !!videoId && !timelineLoading && !timelineFailed && !locked && !needVtuber && !vtuberCleared && clipValue !== undefined
         && titleOk && rows.length > 0 && issues.size === 0 && note.length <= NOTE_MAX && contact.length <= CONTACT_MAX;
 
     const handleSubmit = async () => {
@@ -242,8 +260,10 @@ export function SongsSubmitPage() {
                         ...(r.code ? { code: r.code } : {}),
                         start, end: end ?? start, title: r.title.trim(), artist: r.artist.trim() || null,
                         versionNote: r.note.trim() || null, endEstimated: !!r.endEstimated,
+                        ...(r.performers ? { performers: r.performers.map((x) => ({ vtuberId: x.vtuberId, name: x.name })) } : {}),
                     };
                 }),
+                clipSource: clipValue ?? null,
                 note: note.trim() || null,
                 contact: contact.trim() || null,
                 turnstileToken: token,
@@ -358,6 +378,7 @@ export function SongsSubmitPage() {
                                     {needVtuber && <p className="text-[12px] text-destructive">{t('submit.vtuberRequired')}</p>}
                                     {vtuberCleared && <p className="text-[12px] text-destructive">{t('submit.vtuberCannotClear')}</p>}
                                 </div>
+                                {videoId && <ClipSourceFields clip={clip} onChange={setClip} />}
                                 <div className="space-y-1.5">
                                     <Label htmlFor="songs-submit-streamed">{t('submit.streamedAt')}</Label>
                                     <Input id="songs-submit-streamed" type="datetime-local" value={streamedAt} onChange={(e) => setStreamedAt(e.target.value)} />

@@ -32,7 +32,7 @@ describe('parseSongCatalog', () => {
             streamedAt: '2026-10-01T12:00:00Z',
             vtuber: { id: 'vt-1', name: '測試 VTuber', img: 'https://example.com/a.png' },
         });
-        expect(videos[0].segments[0]).toEqual({ code: 'abcd1234', videoId: 'aaaaaaaaaaa', start: 10, end: 200, title: '第一首', artist: '原唱 A', plays: 0, songId: null, versionNote: null });
+        expect(videos[0].segments[0]).toEqual({ code: 'abcd1234', videoId: 'aaaaaaaaaaa', start: 10, end: 200, title: '第一首', artist: '原唱 A', plays: 0, songId: null, versionNote: null, performers: [] });
         expect(videos[1].vtuber).toBeNull();
         expect(videos[1].segments[0].artist).toBeNull();
     });
@@ -139,7 +139,7 @@ const note = (value: unknown) => firstSeg(ROW8(['note0001', 0, 60, '歌', null, 
 describe('parseSongCatalog 8 欄（L1）', () => {
     it('第 7、8 欄帶入 songId 與 versionNote', () => {
         expect(firstSeg(ROW8(['seg80001', 10, 200, '想你時風起', '原唱 A', 3, 12, '練歌版']))).toEqual({
-            code: 'seg80001', videoId: 'eeeeeeeeeee', start: 10, end: 200, title: '想你時風起', artist: '原唱 A', plays: 3, songId: 12, versionNote: '練歌版',
+            code: 'seg80001', videoId: 'eeeeeeeeeee', start: 10, end: 200, title: '想你時風起', artist: '原唱 A', plays: 3, songId: 12, versionNote: '練歌版', performers: [],
         });
     });
 

@@ -8,13 +8,14 @@
  *   沒有 id／code 的舊列（尚未存檔）不影響 lostCodes。
  * - 保留 incoming 的其他欄位與順序。
  * - 版本備註：incoming 沒有備註（缺欄、null、空白）時沿用配到的舊列備註；有就用新的。
+ * - 合唱者：配到的舊列有 performers 就原樣沿用（時間軸文字不含合唱資訊）。
  */
 import type { ParsedRow } from './timelineParser';
 
-export type MergedRow = ParsedRow & { id?: string; code?: string; note?: string | null };
+export type MergedRow = ParsedRow & { id?: string; code?: string; note?: string | null; performers?: { vtuberId: string | null; name: string | null }[] };
 
 export function mergeReplaceRows(
-    existing: { id?: string; code?: string; start: number; note?: string | null }[],
+    existing: { id?: string; code?: string; start: number; note?: string | null; performers?: { vtuberId: string | null; name: string | null }[] }[],
     incoming: (ParsedRow & { note?: string | null })[],
 ): { rows: MergedRow[]; lostCodes: string[] } {
     const matched = new Set<number>();
@@ -25,7 +26,13 @@ export function mergeReplaceRows(
         matched.add(i);
         const old = existing[i];
         const keepNote = !row.note?.trim() && !!old.note;
-        return { ...row, ...(old.id !== undefined ? { id: old.id } : {}), ...(old.code !== undefined ? { code: old.code } : {}), ...(keepNote ? { note: old.note } : {}) };
+        return {
+            ...row,
+            ...(old.id !== undefined ? { id: old.id } : {}),
+            ...(old.code !== undefined ? { code: old.code } : {}),
+            ...(keepNote ? { note: old.note } : {}),
+            ...(old.performers ? { performers: old.performers } : {}),
+        };
     });
 
     const lostCodes: string[] = [];

@@ -101,9 +101,10 @@ describe('GET /api/songs/timeline', () => {
                 durationSeconds: 5400,
                 rev: REV,
                 locked: false,
+                clipSource: null,
                 segments: [
-                    { code: 'aaaaaaaa', start: 0, end: 100, title: '第一首', artist: '原唱', note: null },
-                    { code: 'bbbbbbbb', start: 200, end: 300, title: '第二首', artist: null, note: '現場版' },
+                    { code: 'aaaaaaaa', start: 0, end: 100, title: '第一首', artist: '原唱', note: null, performers: [] },
+                    { code: 'bbbbbbbb', start: 200, end: 300, title: '第二首', artist: null, note: '現場版', performers: [] },
                 ],
             },
         });

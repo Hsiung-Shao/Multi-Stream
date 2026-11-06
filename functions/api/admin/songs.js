@@ -96,8 +96,19 @@ async function saveVideo(env, request, id, built, failMessage) {
 async function fetchSegments(env, videoRef) {
     return select(
         env,
-        `song_segments?video_ref=eq.${encodeURIComponent(videoRef)}&select=${SEGMENT_COLUMNS}&order=start_seconds.asc`,
+        `song_segments?video_ref=eq.${encodeURIComponent(videoRef)}`
+            + `&select=${SEGMENT_COLUMNS},song_segment_performers(position,vtuber_id,name,vtubers(name))&order=start_seconds.asc`,
     );
+}
+
+/** 內嵌的合唱者列 → performers [{vtuber_id, name}]（依 position；站內者名字取 vtubers.name 即時值） */
+function withPerformers(seg) {
+    const { song_segment_performers: rows, ...rest } = seg;
+    const performers = (rows || [])
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map((p) => ({ vtuber_id: p.vtuber_id ?? null, name: p.vtubers?.name ?? p.name ?? null }));
+    return { ...rest, performers };
 }
 
 // ---------- GET ----------
@@ -123,7 +134,7 @@ export async function onRequestGet(context) {
             await logFail(env, 'fetch segments failed', sres);
             return jsonResponse({ ok: false, error: 'fetch_failed' }, 500, request);
         }
-        return jsonResponse({ ok: true, video: vres.data[0], segments: sres.data || [] }, 200, request, NO_STORE);
+        return jsonResponse({ ok: true, video: vres.data[0], segments: (sres.data || []).map(withPerformers) }, 200, request, NO_STORE);
     }
 
     const q = parseListQuery(url);

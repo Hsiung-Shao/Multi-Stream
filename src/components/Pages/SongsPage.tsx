@@ -37,7 +37,7 @@ import { deriveVtubers, filterByVtuber, filterCatalog, sortCatalog, type Catalog
 import {
     LIST_VIEW, isBrowseView, parseSongsView, sameSongsView, serializeSongsView, type SongsView, type VtuberTab,
 } from '../../features/songs/lib/songsView';
-import type { SongListSort } from '../../features/songs/lib/songIndex';
+import { collabsOfVtuber, type SongListSort } from '../../features/songs/lib/songIndex';
 import { PAGE_PATHS, pageToPath } from '../../config/routes';
 import { urlLangOf } from '../../../functions/lib/locale.js';
 import { ConsoleShell } from '../../features/songs/components/console/ConsoleShell';
@@ -328,6 +328,11 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
         [catalog, profileKey, sort],
     );
     const profileSummary = profileKey === null ? undefined : vtubers.find((v) => v.key === profileKey);
+    // 合唱：只有站內 VTuber（key＝id）才會被標成合唱者
+    const profileCollabs = useMemo(
+        () => (catalog && profileKey && !profileKey.startsWith('name:') ? collabsOfVtuber(catalog.videos, profileKey) : []),
+        [catalog, profileKey],
+    );
     const detailVideo = useMemo(
         () => (view.kind === 'video' ? catalog?.videos.find((v) => v.videoId === view.videoId) : undefined),
         [catalog, view],
@@ -482,6 +487,7 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 onPlaySong={handlePlaySong}
                 onQueue={handleQueue}
                 onOpenSong={handleOpenSong}
+                onOpenVtuber={handleSelectVtuber}
             />
         );
     } else if (view.kind === 'vtuber') {
@@ -511,6 +517,8 @@ export function SongsPage({ shareCodes = null, onShareConsumed }: SongsPageProps
                 onPlaySong={handlePlaySong}
                 onPlayAll={handlePlayAll}
                 onOpenVideo={handleOpenVideo}
+                collabs={profileCollabs}
+                onOpenVtuber={handleSelectVtuber}
             />
         );
     } else if (view.kind === 'song') {

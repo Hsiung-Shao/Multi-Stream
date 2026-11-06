@@ -1,7 +1,8 @@
 // GET /api/songs/timeline?v=<11 碼 videoId> — 社群編輯器載入單場歌回的最新時間軸（只回已發布）
 //
 // 回應：{ ok: true, data: { videoId, title, vtuber: {id,name,img}|null, streamedAt, durationSeconds, rev, locked,
-//                           segments: [{ code, start, end, title, artist, note }] } }
+//                           clipSource: {name,url}|null,
+//                           segments: [{ code, start, end, title, artist, note, performers: [{vtuberId|null, name}] }] } }
 // rev 是影片的 updated_at 原字串，編輯器送出時原樣帶回，DB 以它偵測「載入後被別人改過」（stale_edit）。
 // 不做任何快取（記憶體、edge 都不做）：快取會讓編輯器拿到舊 rev，造成一次必失敗的送出。
 // DB 失敗回 500 fetch_failed，不回錯誤文字；草稿與不存在一律 404，不洩漏草稿內容。
@@ -14,8 +15,10 @@ import { VIDEO_ID_RE } from '../../lib/song-submissions.js';
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const COLUMNS = [
     'id', 'video_id', 'title', 'streamed_at', 'duration_seconds', 'status', 'community_locked', 'updated_at',
+    'clip_channel_name', 'clip_channel_url',
     'vtubers(id,name,img_url)',
-    'song_segments(code,start_seconds,end_seconds,title,original_artist,version_note)',
+    'song_segments(code,start_seconds,end_seconds,title,original_artist,version_note,'
+        + 'song_segment_performers(position,vtuber_id,name,vtubers(name)))',
 ].join(',');
 
 export async function onRequestGet(context) {
@@ -44,6 +47,12 @@ export async function onRequestGet(context) {
             title: s.title,
             artist: s.original_artist ?? null,
             note: s.version_note ?? null,
+            // 站內者名字取 vtubers.name 即時值；依 position
+            performers: (s.song_segment_performers || [])
+                .slice()
+                .sort((a, b) => a.position - b.position)
+                .map((p) => ({ vtuberId: p.vtuber_id ?? null, name: p.vtubers?.name ?? p.name ?? '' }))
+                .filter((p) => p.name),
         }));
 
     return reply({
@@ -56,6 +65,7 @@ export async function onRequestGet(context) {
             durationSeconds: v.duration_seconds ?? null,
             rev: v.updated_at,
             locked: v.community_locked === true,
+            clipSource: v.clip_channel_name && v.clip_channel_url ? { name: v.clip_channel_name, url: v.clip_channel_url } : null,
             segments,
         },
     }, 200);

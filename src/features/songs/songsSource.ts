@@ -1,7 +1,9 @@
 /**
  * 歌曲目錄來源：GET /api/songs/catalog（edge 快取 10 分鐘）→ 前端型別。
  *
- * - 回應是 RPC get_song_catalog 的短 key 結構：[{ v, t, d, vt:{i,n,img}|null, k:'single'|'stream'（缺欄＝stream）, s:[[code,start,end,title,artist|null,plays,song_id,version_note|null]] }, { songs:[[id,title,artist|null]] }]。
+ * - 回應是 RPC get_song_catalog 的短 key 結構：[{ v, t, d, vt:{i,n,img}|null, k:'single'|'stream'（缺欄＝stream）, cs?:{n,u},
+ *   s:[[code,start,end,title,artist|null,plays,song_id,version_note|null,performers]] }, { songs:[[id,title,artist|null]] }]。
+ *   performers（第 9 欄）＝[[vtuber_id|null,name]]，缺欄＝[]；cs 是觀眾剪輯的來源頻道，沒有＝本人上傳。
  *   plays（v1.1 第 6 欄）缺欄或不是非負數一律當 0；song_id、version_note（v1.3 第 7、8 欄）缺欄或不合法一律當 null，6／7 欄舊快取格式也能讀。
  *   陣列尾端多一個歌曲字典元素 `{ songs }`；沒有它（舊後端）時 SongCatalog.songs 為 null，前端只顯示歌回分頁。
  * - 轉換時逐筆防呆：格式不對的影片或片段直接丟棄，不讓一筆壞資料拖垮整個目錄。
@@ -31,6 +33,20 @@ export interface SongSegment {
     songId: number | null;
     /** 版本備註（如「清唱」），trim 後 1–30 字才採用，否則 null */
     versionNote: string | null;
+    /** 其他合唱者（不含影片歸屬的 VTuber）；站內者 vtuberId 非 null。舊格式為 [] */
+    performers: SongPerformer[];
+}
+
+export interface SongPerformer {
+    /** 站內 VTuber 的 id；站外的人為 null */
+    vtuberId: string | null;
+    name: string;
+}
+
+/** 觀眾剪輯的上傳頻道 */
+export interface SongClipSource {
+    name: string;
+    url: string;
 }
 
 /** 歌曲字典項（歌曲本體） */
@@ -49,6 +65,8 @@ export interface SongVideo {
     kind: SongVideoKind;
     streamedAt: string | null;
     vtuber: SongVtuber | null;
+    /** 觀眾剪輯的來源頻道；本人上傳為 null */
+    clipSource: SongClipSource | null;
     segments: SongSegment[];
 }
 
@@ -88,7 +106,7 @@ function toVtuber(raw: unknown): SongVtuber | null {
 
 function toSegment(raw: unknown, videoId: string, dict: Map<number, SongInfo> | null): SongSegment | null {
     if (!Array.isArray(raw)) return null;
-    const [code, start, end, title, artist, plays, songId, versionNote] = raw as unknown[];
+    const [code, start, end, title, artist, plays, songId, versionNote, performers] = raw as unknown[];
     if (typeof code !== 'string' || !CODE_RE.test(code)) return null;
     if (!isSec(start) || !isSec(end) || end <= start) return null;
     if (typeof title !== 'string' || !title.trim()) return null;
@@ -103,7 +121,30 @@ function toSegment(raw: unknown, videoId: string, dict: Map<number, SongInfo> | 
         // 沒有字典就無從對照，一律 null；有字典時 id 不在字典內也當 null
         songId: dict && isSongId(songId) && dict.has(songId) ? songId : null,
         versionNote: toVersionNote(versionNote),
+        performers: toPerformers(performers),
     };
+}
+
+/** 第 9 欄 [[vtuber_id|null, name]]；缺欄或不是陣列 → []；壞項只丟該項 */
+function toPerformers(raw: unknown): SongPerformer[] {
+    if (!Array.isArray(raw)) return [];
+    const out: SongPerformer[] = [];
+    for (const item of raw) {
+        if (!Array.isArray(item)) continue;
+        const [id, name] = item as unknown[];
+        if (typeof name !== 'string' || !name.trim()) continue;
+        if (id !== null && (typeof id !== 'string' || !id)) continue;
+        out.push({ vtuberId: id, name: name.trim() });
+    }
+    return out;
+}
+
+/** 影片的 cs {n,u}；u 必須是 https 網址，否則當作沒有 */
+function toClipSource(raw: unknown): SongClipSource | null {
+    if (!isObj(raw)) return null;
+    const { n, u } = raw;
+    if (typeof n !== 'string' || !n.trim() || typeof u !== 'string' || !u.startsWith('https://')) return null;
+    return { name: n.trim(), url: u };
 }
 
 function toVersionNote(raw: unknown): string | null {
@@ -153,6 +194,7 @@ export function parseSongCatalog(raw: unknown): SongVideo[] {
             kind: item.k === 'single' ? 'single' : 'stream',
             streamedAt: typeof item.d === 'string' && item.d ? item.d : null,
             vtuber: toVtuber(item.vt),
+            clipSource: toClipSource(item.cs),
             segments,
         });
     }

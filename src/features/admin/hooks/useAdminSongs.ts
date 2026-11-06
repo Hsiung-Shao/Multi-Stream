@@ -23,6 +23,9 @@ export interface SongVideoRecord {
     status: SongVideoStatus;
     /** 是否鎖定社群編輯；舊後端沒有這個欄位 */
     community_locked?: boolean;
+    /** 觀眾剪輯的來源頻道（null＝本人上傳）；舊後端沒有這兩個欄位 */
+    clip_channel_name?: string | null;
+    clip_channel_url?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -44,6 +47,8 @@ export interface SongSegmentRecord {
     /** 所屬歌曲（songs.id）；舊後端沒有這個欄位 */
     song_id?: number;
     position: number;
+    /** 其他合唱者（站內者 vtuber_id 非 null）；舊後端沒有這個欄位 */
+    performers?: { vtuber_id: string | null; name: string | null }[];
 }
 
 export interface SongSegmentInput {
@@ -54,6 +59,8 @@ export interface SongSegmentInput {
     original_artist: string | null;
     /** 版本備註（trim 後，空白為 null） */
     version_note: string | null;
+    /** 合唱者；沒帶＝保留伺服器原值 */
+    performers?: { vtuber_id: string | null; name: string | null }[];
 }
 
 export interface SongVideoWriteInput {
@@ -63,6 +70,9 @@ export interface SongVideoWriteInput {
     streamed_at: string | null;
     duration_seconds: number | null;
     status: SongVideoStatus;
+    /** 觀眾剪輯來源；兩者同為 null＝本人上傳 */
+    clip_channel_name: string | null;
+    clip_channel_url: string | null;
     segments: SongSegmentInput[];
 }
 

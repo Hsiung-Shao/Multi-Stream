@@ -1,6 +1,7 @@
 /**
  * 單場曲目表：# ｜歌名＋原唱｜開始｜長度｜操作。目前播放那首的 <tr> 帶 aria-current="true" 並以薄荷色標示。
  * 逐首按鈕名稱帶歌名（「播放：歌名」），全頁名稱剛好是「播放」的按鈕只有底部播放列那一顆。
+ * 2026-11：原唱下方列合唱者（站內者可點進個人頁）。
  * v1.3：歌名旁顯示版本備註；這首歌全站版本數 ≥2 時，原唱下方有「N 個版本」可進單曲頁（from＝這場的 VTuber）。
  */
 import { memo } from 'react';
@@ -15,8 +16,9 @@ import type { Playlist } from '../../store/usePlaylistStore';
 import { formatTimecode } from '../../lib/timecode';
 import { AddToPlaylistMenu } from './AddToPlaylistMenu';
 import { VersionNoteTag } from './VersionNoteTag';
+import { PerformersLine } from './Credits';
 
-export const TrackTable = memo(function TrackTable({ video, currentCode, playlists, songIndex, onPlaySong, onQueue, onOpenSong }: {
+export const TrackTable = memo(function TrackTable({ video, currentCode, playlists, songIndex, onPlaySong, onQueue, onOpenSong, onOpenVtuber }: {
     video: SongVideo;
     currentCode: string | null;
     playlists: Playlist[];
@@ -25,6 +27,8 @@ export const TrackTable = memo(function TrackTable({ video, currentCode, playlis
     onPlaySong: (video: SongVideo, segment: SongSegment) => void;
     onQueue: (segment: SongSegment) => void;
     onOpenSong: (songId: number, from: string | null) => void;
+    /** 點站內合唱者進他的個人頁（key＝vtuberId）；沒給時合唱者只顯示文字 */
+    onOpenVtuber?: (key: string) => void;
 }) {
     const { t } = useTranslation('songs');
     const from = video.vtuber ? vtuberKey(video.vtuber) : null;
@@ -65,6 +69,7 @@ export const TrackTable = memo(function TrackTable({ video, currentCode, playlis
                                     {seg.versionNote && <VersionNoteTag note={seg.versionNote} />}
                                 </span>
                                 {seg.artist && <span className="block truncate text-xs text-muted-foreground">{seg.artist}</span>}
+                                <PerformersLine performers={seg.performers ?? []} onOpenVtuber={onOpenVtuber} />
                                 {songId !== null && versionCount >= 2 && (
                                     <button
                                         type="button"

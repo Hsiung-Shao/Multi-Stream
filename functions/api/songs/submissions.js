@@ -72,13 +72,18 @@ export async function onRequestPost(context) {
         original_artist: s.artist,
         version_note: s.versionNote,
         position,
+        // 合唱者：沒帶 = 保留 DB 原值（不送 key）
+        ...(s.performers !== undefined ? { performers: s.performers.map((p) => ({ vtuber_id: p.vtuberId, name: p.name })) } : {}),
     }));
+    // 剪輯來源：沒帶 = 保留；null = 清除
+    const clip = v.clipSource === undefined ? {}
+        : { clip_channel_name: v.clipSource?.name ?? null, clip_channel_url: v.clipSource?.url ?? null };
 
     const res = await rpc(env, 'community_save_song_video', {
         p_video_id: v.videoId,
         // 新歌回不帶 rev：RPC 新增路徑本來就不看它，壞值也不會在扣完配額後才讓轉型失敗
         p_rev: isNew ? null : v.rev,
-        p_video: { title: v.title, vtuber_id: v.vtuberId, streamed_at: v.streamedAt, duration_seconds: v.durationSeconds },
+        p_video: { title: v.title, vtuber_id: v.vtuberId, streamed_at: v.streamedAt, duration_seconds: v.durationSeconds, ...clip },
         p_segments: segments,
         p_meta: { source_note: v.note, submitter_contact: v.contact, ip_hash: g.ipHash },
     });

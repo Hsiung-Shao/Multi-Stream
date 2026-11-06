@@ -21,7 +21,13 @@ export interface SongSubmissionInput {
     /** 播放器取得的影片長度（整數秒，1～86400）；取不到 null */
     durationSeconds: number | null;
     /** code：既有片段的分享碼（原地更新用）；新增的片段不帶 */
-    segments: { code?: string; start: number; end: number; title: string; artist: string | null; versionNote: string | null; endEstimated: boolean }[];
+    segments: {
+        code?: string; start: number; end: number; title: string; artist: string | null; versionNote: string | null; endEstimated: boolean;
+        /** 沒帶＝保留伺服器原值 */
+        performers?: { vtuberId: string | null; name: string | null }[];
+    }[];
+    /** 觀眾剪輯來源：null＝本人上傳（清除） */
+    clipSource?: { name: string; url: string } | null;
     note: string | null;
     contact: string | null;
     turnstileToken: string | null;
