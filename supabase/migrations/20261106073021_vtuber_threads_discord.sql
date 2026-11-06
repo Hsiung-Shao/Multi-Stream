@@ -7,7 +7,7 @@
 --   alter table public.vtubers drop constraint if exists vtubers_threads_url_format,
 --       drop constraint if exists vtubers_discord_url_format,
 --       drop column if exists threads_url, drop column if exists discord_url;
---   delete from supabase_migrations.schema_migrations where version = '20261106200000';
+--   delete from supabase_migrations.schema_migrations where version = '20261106073021';
 
 alter table public.vtubers
     add column if not exists threads_url text,

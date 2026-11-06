@@ -17,7 +17,7 @@
 --   alter table public.song_videos drop constraint if exists song_videos_clip_pair_check,
 --       drop constraint if exists song_videos_clip_url_check, drop constraint if exists song_videos_clip_name_check,
 --       drop column if exists clip_channel_name, drop column if exists clip_channel_url;
---   delete from supabase_migrations.schema_migrations where version = '20261106100000';
+--   delete from supabase_migrations.schema_migrations where version = '20261106073006';
 
 -- ───────────── 剪輯來源 ─────────────
 alter table public.song_videos

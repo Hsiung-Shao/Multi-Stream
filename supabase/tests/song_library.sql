@@ -709,7 +709,7 @@ BEGIN
     RAISE EXCEPTION 'S17 失敗：只能有一個字典元素';
   END IF;
 
-  -- 片段 9 欄：[code, start, end, title, artist, plays, song_id, version_note, performers]（20261106100000 起）
+  -- 片段 9 欄：[code, start, end, title, artist, plays, song_id, version_note, performers]（20261106073006 起）
   SELECT e INTO vrow FROM jsonb_array_elements(cat) e WHERE e->>'v' = 'zzTestVid01';
   IF vrow IS NULL THEN RAISE EXCEPTION 'S17 失敗：已發布的測試歌回不在目錄'; END IF;
   SELECT s INTO srow FROM jsonb_array_elements(vrow->'s') s WHERE s->>0 = k_code;
