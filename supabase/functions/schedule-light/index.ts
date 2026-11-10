@@ -7,7 +7,7 @@
 // 4. vtubers.last_live_at、youtube_live_status 共享表（這輪 RSS 掃到的頻道）
 // 合併與 snapshot 不在這支做（出口流量），由 schedule-live／heavy 負責，新週表最慢 20 分鐘出現
 //
-// CPU（2026-10-02 本地 edge runtime 實測）：固定成本（名冊、Twitch、合併、snapshot）＋RSS 500 約 1 秒；
+// CPU（2026-10-02 本地 edge runtime 實測）：固定成本（名冊、Twitch；2026-11-10 起不含合併、snapshot）＋RSS 500 約 1 秒；
 // 同一次再加 live-og 100 頁會撞 2 秒 hard limit（546），所以拆開。
 //
 // 本地測試：POST http://127.0.0.1:57321/functions/v1/schedule-light（header 同 heavy）

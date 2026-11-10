@@ -13,7 +13,7 @@
 //   4. 回源失敗後 30 秒內不再回源（源站故障時不讓每個請求都去撞）
 //   回源逾時 4 秒，必須小於前端等代理的 6 秒（SNAPSHOT_PROXY_TIMEOUT_MS），否則前端會先放棄
 // 同源請求，不帶 CORS 標頭（也避免 Vary: Origin 拆散快取）。
-// snapshot 每 10 分鐘左右重產一次（schedule-light／live），60 秒新鮮度足夠。
+// snapshot 每 20 分鐘左右重產一次（schedule-live／heavy），60 秒新鮮度足夠。
 
 export const SNAPSHOT_FRESH_MS = 60_000;
 /** 手上那份最多舊到多久還拿來回（同時背景更新）；超過就同步回源，失敗回 502 */
