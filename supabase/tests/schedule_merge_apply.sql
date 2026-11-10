@@ -1,5 +1,5 @@
 -- schedule_merge_apply（一次 RPC 在資料庫端算合併、寫入、過期）的行為與權限測試。
--- 規則以 supabase/functions/_shared/merge.ts 為準。
+-- 規則來源：migration 20261110080000_schedule_merge_apply.sql（merge.ts 已刪除）。
 -- 執行：docker exec -i supabase_db_multi-stream psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/schedule_merge_apply.sql
 -- 整檔在一個交易內，結尾 ROLLBACK。斷言失敗一律 RAISE EXCEPTION；斷言只看自己的 zz 測資列。
 
@@ -108,6 +108,9 @@ BEGIN
   IF (r->>'changed')::int < 1 THEN
     RAISE EXCEPTION 'M10 失敗：dry run 的 changed 應 >= 1，實得 %', r->>'changed';
   END IF;
+  IF (r->>'changed')::int <> json_array_length(r->'changes') OR (r->>'expired')::int <> json_array_length(r->'expire') THEN
+    RAISE EXCEPTION 'M10 失敗：dry run 的 changed／expired 應等於 changes／expire 長度，實得 %', r::text;
+  END IF;
   IF EXISTS (SELECT 1 FROM public.streams WHERE id = 'd0000000-0000-4000-8000-000000001001' AND merged_with IS NOT NULL) THEN
     RAISE EXCEPTION 'M10 失敗：dry run 不該寫入 merged_with';
   END IF;
@@ -168,9 +171,15 @@ BEGIN
   IF (SELECT merged_with FROM public.streams WHERE id = 'd0000000-0000-4000-8000-000000000901') IS NOT NULL THEN
     RAISE EXCEPTION 'M9 失敗：常駐框的 merged_with 不該被動';
   END IF;
-  -- 回傳形狀
-  IF r->'changes' IS NULL OR r->'expire' IS NULL OR (r->>'changed')::int <> json_array_length(r->'changes') THEN
-    RAISE EXCEPTION '回傳形狀失敗：changed 應等於 changes 長度，實得 %', r;
+  -- 回傳形狀：正式執行只回 changed／expired，不帶 changes／expire 陣列（dry run 才帶）
+  IF (r::jsonb) ? 'changes' OR (r::jsonb) ? 'expire' THEN
+    RAISE EXCEPTION '回傳形狀失敗：正式執行不該含 changes／expire，實得 %', r::text;
+  END IF;
+  IF (SELECT array_agg(k ORDER BY k) FROM json_object_keys(r) k) IS DISTINCT FROM ARRAY['changed', 'expired'] THEN
+    RAISE EXCEPTION '回傳形狀失敗：正式執行應只有 changed／expired 兩個鍵，實得 %', r::text;
+  END IF;
+  IF json_typeof(r->'changed') <> 'number' OR json_typeof(r->'expired') <> 'number' THEN
+    RAISE EXCEPTION '回傳形狀失敗：changed／expired 應為數字，實得 %', r::text;
   END IF;
 END $$;
 
@@ -302,13 +311,16 @@ BEGIN
   IF (SELECT merged_with FROM public.streams WHERE id = pg_temp.zz_id(20, 1)) IS DISTINCT FROM pg_temp.zz_id(19, 1) THEN
     RAISE EXCEPTION 'D7 失敗：dry run 不該寫入';
   END IF;
-  RAISE NOTICE '通過：D7 dry run 的 changes 只含與現況不同的列（含解除合併）';
+  IF EXISTS (SELECT 1 FROM json_array_elements(r->'changes') c
+              WHERE c->>'id' IN (pg_temp.zz_id(17, 1)::text, pg_temp.zz_id(18, 4)::text, pg_temp.zz_id(18, 5)::text)) THEN
+    RAISE EXCEPTION 'D5／D6 失敗：已結束的列與常駐框不該出現在 changes';
+  END IF;
+  RAISE NOTICE '通過：D7 dry run 的 changes 只含與現況不同的列（含解除合併）；D5／D6 已結束列與常駐框不在 changes';
 END $$;
 
 CREATE TEMP TABLE zz_apply_result2 AS SELECT public.schedule_merge_apply('2026-09-01', '2026-09-01') AS r;
 
 DO $$
-DECLARE r json := (SELECT r FROM zz_apply_result2);
 BEGIN
   PERFORM pg_temp.zz_chk('D1 YouTube 待機室與 Twitch 週表 ±30 分鐘內 → Twitch 併入 YouTube', 11, 2, 1);
   PERFORM pg_temp.zz_chk('D1 YouTube 待機室為主場次不被併', 11, 1, NULL);
@@ -326,10 +338,6 @@ BEGIN
   PERFORM pg_temp.zz_chk('D6 已結束的 YT 列不被其他列併入、自己不寫入', 18, 5, NULL);
   PERFORM pg_temp.zz_chk('D7 已正確的列維持', 19, 2, 1);
   PERFORM pg_temp.zz_chk('D7 解除合併（不同人的 merged_with 清成 null）', 20, 1, NULL);
-  IF EXISTS (SELECT 1 FROM json_array_elements(r->'changes') c
-              WHERE c->>'id' IN (pg_temp.zz_id(17, 1)::text, pg_temp.zz_id(18, 4)::text, pg_temp.zz_id(18, 5)::text)) THEN
-    RAISE EXCEPTION 'D5／D6 失敗：已結束的列與常駐框不該出現在 changes';
-  END IF;
 
   PERFORM pg_temp.zz_chk('C1 同平台待機室 30 分鐘內 → 社群場次併入待機室', 21, 2, 1);
   PERFORM pg_temp.zz_chk('C1 待機室不被反向併入社群場次', 21, 1, NULL);

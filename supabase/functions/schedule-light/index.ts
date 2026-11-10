@@ -55,7 +55,9 @@ Deno.serve((req) => {
     });
 
     // 3. Twitch 直播中（全部 Twitch 頻道；名冊只讀 user id，直播中的才取回頻道與實況主 id）
-    const twitchIds = (await db.rpc<string[]>('schedule_twitch_ids', {})) ?? [];
+    const twitchIds = await db.rpc<string[]>('schedule_twitch_ids', {});
+    // 回 null 不能當「沒有頻道」（與 loadRosterSlice 一致）
+    if (twitchIds == null) throw new Error('schedule_twitch_ids 回傳空值');
     const twitchResult = await syncTwitchLive(db, twitch, twitchIds, stats, now);
     // 合併與 snapshot 只在 schedule-live（每 20 分）與 heavy 做：light 每 10 分重讀一次是出口流量最大宗（2026-11-10 超量 402）
     // 歷史紀錄連 VOD：補 ended 場次的 vod_id／vod_status（附加功能，失敗不擋後面）

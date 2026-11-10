@@ -150,7 +150,11 @@ begin
         v_expired := json_array_length(v_expire);
     end if;
 
-    return json_build_object('changed', v_changed, 'expired', v_expired, 'changes', v_changes, 'expire', v_expire);
+    -- 列清單只在 dry-run 回傳（上線前對照用）；正式執行只回筆數，省出口流量
+    if p_dry_run then
+        return json_build_object('changed', v_changed, 'expired', v_expired, 'changes', v_changes, 'expire', v_expire);
+    end if;
+    return json_build_object('changed', v_changed, 'expired', v_expired);
 end;
 $$;
 

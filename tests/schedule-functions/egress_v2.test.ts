@@ -170,7 +170,7 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
     roster: (body: Record<string, unknown>) => unknown,
     changed = false,
     // Twitch 名冊 id（schedule_twitch_ids）、helix 回報直播中的 user_id、schedule_twitch_resolve 的回傳
-    twitch: { ids?: string[]; liveUserIds?: string[]; resolved?: unknown[] } = {},
+    twitch: { ids?: string[] | null; liveUserIds?: string[]; resolved?: unknown[] | null; staleLive?: unknown[] } = {},
   ) {
     const { fn, calls } = fakeFetch((url, method, body) => {
       if (url.includes('oauth2/token')) return new Response(JSON.stringify({ access_token: 't', expires_in: 3600 }), { status: 200 });
@@ -181,8 +181,8 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
         );
       if (url.includes('api.twitch.tv')) return new Response(JSON.stringify({ data: [] }), { status: 200 });
       if (method === 'POST' && url.includes('/rpc/schedule_roster_v2')) return json(roster(body as Record<string, unknown>));
-      if (method === 'POST' && url.includes('/rpc/schedule_twitch_ids')) return json(twitch.ids ?? []);
-      if (method === 'POST' && url.includes('/rpc/schedule_twitch_resolve')) return json(twitch.resolved ?? []);
+      if (method === 'POST' && url.includes('/rpc/schedule_twitch_ids')) return json(twitch.ids === undefined ? [] : twitch.ids);
+      if (method === 'POST' && url.includes('/rpc/schedule_twitch_resolve')) return json(twitch.resolved === undefined ? [] : twitch.resolved);
       if (method === 'POST' && url.includes('/rpc/schedule_snapshot_check')) return json({ changed, fingerprint: 'fp' });
       if (method === 'POST' && url.includes('/rpc/schedule_merge_check')) return json({ changed, fingerprint: 'fp' });
       if (method === 'POST' && url.includes('/rpc/')) return json(null);
@@ -191,6 +191,7 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
         const s = shards[job] ?? { cursor_position: 0, shard_size: 100 };
         return json([{ job_name: job, cursor_position: s.cursor_position, shard_size: s.shard_size, total_items: 0, last_run_at: null, last_run_stats: s.last_run_stats ?? null }]);
       }
+      if (method === 'GET' && url.includes('source=eq.twitch_live&status=eq.live')) return json(twitch.staleLive ?? []);
       if (method === 'GET') return json([]);
       return empty(200);
     });
@@ -250,6 +251,34 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
       { p_platform: 'twitch', p_tier: null, p_channel_ids: null, p_offset: 500, p_limit: 250 },
       { p_platform: 'twitch', p_tier: null, p_channel_ids: null, p_offset: null, p_limit: null },
     ]);
+  });
+
+  const emptyRoster = (b: Record<string, unknown>) =>
+    b.p_platform === 'youtube' ? { total: 0, start: 0, cols: YT_COLS, rows: [] } : { total: 0, start: 0, cols: ['id', 'vtuber_id', 'external_id'], rows: [] };
+
+  it('schedule-light：Twitch resolve 回 null → 這輪丟錯、不把直播中場次標 ended', async () => {
+    // 資料庫裡有一場 twitch_live 直播中；helix 回 222 直播中，但 resolve 回 null（RPC 異常）→ 不能當成「沒有頻道」而把它標 ended
+    const calls = stubFetch({}, emptyRoster, false, {
+      ids: ['111', '222'],
+      liveUserIds: ['222'],
+      resolved: null,
+      staleLive: [{ id: 's-live', external_id: 'stream-222' }],
+    });
+    const res = await call('schedule-light');
+    const stats = (await res.json()) as { errors: string[] };
+    expect(res.status, 'resolve 回 null 應整輪失敗').not.toBe(200);
+    expect(stats.errors.length).toBeGreaterThan(0);
+    const ended = calls.filter((c) => c.method === 'PATCH' && c.url.includes('/rest/v1/streams') && (c.body as { status?: string } | null)?.status === 'ended');
+    expect(ended).toEqual([]);
+  });
+
+  it('schedule-light：schedule_twitch_ids 回 null → 這輪丟錯', async () => {
+    const calls = stubFetch({}, emptyRoster, false, { ids: null, staleLive: [{ id: 's-live', external_id: 'stream-222' }] });
+    const res = await call('schedule-light');
+    const stats = (await res.json()) as { errors: string[] };
+    expect(res.status, 'ids 回 null 應整輪失敗').not.toBe(200);
+    expect(stats.errors.length).toBeGreaterThan(0);
+    expect(calls.filter((c) => c.method === 'PATCH' && (c.body as { status?: string } | null)?.status === 'ended')).toEqual([]);
   });
 
   it('light 整輪不合併、不重組 snapshot（即使檢查 RPC 回 changed:true）', async () => {

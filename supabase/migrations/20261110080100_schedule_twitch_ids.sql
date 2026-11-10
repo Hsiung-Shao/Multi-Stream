@@ -12,7 +12,9 @@ set search_path = ''
 as $$
     select coalesce(array_agg(c.external_id order by c.id), '{}')
     from public.vtuber_channels c
-    where c.platform = 'twitch';
+    join public.vtubers v on v.id = c.vtuber_id
+    -- 與 schedule_roster_v2 的名冊條件相同（active、有 external_id、非畢業）
+    where c.platform = 'twitch' and c.status = 'active' and c.external_id is not null and v.activity <> 'graduate';
 $$;
 
 create or replace function public.schedule_twitch_resolve(p_external_ids text[])
@@ -24,7 +26,9 @@ set search_path = ''
 as $$
     select c.id, c.vtuber_id, c.external_id
     from public.vtuber_channels c
-    where c.platform = 'twitch' and c.external_id = any(p_external_ids);
+    join public.vtubers v on v.id = c.vtuber_id
+    where c.platform = 'twitch' and c.status = 'active' and v.activity <> 'graduate'
+      and c.external_id = any(p_external_ids);
 $$;
 
 revoke all on function public.schedule_twitch_ids() from public, anon, authenticated;

@@ -600,9 +600,13 @@ export async function syncTwitchLive(
   stats.twitch_streams_calls = twitch.calls.streams;
   // 只對直播中的 user id 取回頻道與實況主 id（出口流量：不再每輪讀全部 Twitch 名冊）
   const liveUserIds = [...live].filter(([, s]) => s.streamId).map(([id]) => id);
-  const resolved = liveUserIds.length
-    ? (await db.rpc<{ id: string; vtuber_id: string; external_id: string }[]>('schedule_twitch_resolve', { p_external_ids: liveUserIds })) ?? []
-    : [];
+  let resolved: { id: string; vtuber_id: string; external_id: string }[] = [];
+  if (liveUserIds.length) {
+    const res = await db.rpc<typeof resolved>('schedule_twitch_resolve', { p_external_ids: liveUserIds });
+    // 回 null 不能當「沒人直播」：後面會把所有 twitch_live 標成 ended
+    if (res == null) throw new Error('schedule_twitch_resolve 回傳空值');
+    resolved = res;
+  }
   const byUserId = new Map(resolved.map((r) => [r.external_id, { channelId: r.id, vtuberId: r.vtuber_id }]));
   const nowIso = new Date(now).toISOString();
 
