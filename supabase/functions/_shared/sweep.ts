@@ -794,7 +794,7 @@ export async function softStep(stats: RunStats, label: string, fn: () => Promise
 }
 
 /**
- * 雙平台合併：規則與讀取範圍在資料庫端 schedule_merge_apply（migration 20261110080000）一次算完並寫入，只回傳筆數；
+ * 雙平台合併：規則與讀取範圍在資料庫端 schedule_merge_apply（migration 20261110064418）一次算完並寫入，只回傳筆數；
  * 原本每輪經 REST 讀回全部 scheduled／live 場次（約 470KB）在這裡算，是出口流量大宗。
  *
  * 出口流量：先問資料庫輸入列的指紋（schedule_merge_check），與上次「沒有要改的列」時相同就整支跳過；

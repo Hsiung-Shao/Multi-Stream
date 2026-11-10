@@ -1,4 +1,4 @@
--- schedule_twitch_ids／schedule_twitch_resolve（migration 20261110080100）的名冊過濾與權限測試。
+-- schedule_twitch_ids／schedule_twitch_resolve（migration 20261110064423）的名冊過濾與權限測試。
 -- 要與原名冊 schedule_roster_v2 一致：頻道 status='active'、external_id 不為 null、實況主 activity <> 'graduate'。
 -- 執行：docker exec -i supabase_db_multi-stream psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/schedule_twitch_ids.sql
 -- 整檔在一個交易內，結尾 ROLLBACK。斷言失敗一律 RAISE EXCEPTION。

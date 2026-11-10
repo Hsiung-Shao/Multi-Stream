@@ -78,7 +78,7 @@ export function resolveCollabs(
   return new Map([...out].map(([id, set]) => [id, [...set].sort()]));
 }
 
-/** 合併進主場次的另一平台場次（雙平台同一場，規則見 migration 20261110080000 schedule_merge_apply） */
+/** 合併進主場次的另一平台場次（雙平台同一場，規則見 migration 20261110064418 schedule_merge_apply） */
 export interface SnapshotAlso {
   platform: 'youtube' | 'twitch';
   external_id: string;

@@ -1,5 +1,5 @@
 -- schedule_merge_apply（一次 RPC 在資料庫端算合併、寫入、過期）的行為與權限測試。
--- 規則來源：migration 20261110080000_schedule_merge_apply.sql（merge.ts 已刪除）。
+-- 規則來源：migration 20261110064418_schedule_merge_apply.sql（merge.ts 已刪除）。
 -- 執行：docker exec -i supabase_db_multi-stream psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/schedule_merge_apply.sql
 -- 整檔在一個交易內，結尾 ROLLBACK。斷言失敗一律 RAISE EXCEPTION；斷言只看自己的 zz 測資列。
 
