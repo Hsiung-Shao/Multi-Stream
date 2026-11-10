@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { computeMerges, mergeChanges, MERGE_WINDOW_MS, type MergeInput } from '../../supabase/functions/_shared/merge.ts';
 import { TwitchClient, toScheduleSegment } from '../../supabase/functions/_shared/twitch.ts';
 import { scheduleRowsFor } from '../../supabase/functions/_shared/sweep.ts';
 import { buildSnapshot, resolveGroups, type SnapshotSourceRow } from '../../supabase/functions/_shared/snapshot.ts';
@@ -7,95 +6,6 @@ import type { RosterChannel } from '../../supabase/functions/_shared/types.ts';
 
 const T0 = Date.parse('2026-09-29T12:00:00Z');
 const iso = (ms: number) => new Date(ms).toISOString();
-
-function row(id: string, partial: Partial<MergeInput>): MergeInput {
-  return {
-    id,
-    vtuber_id: 'v1',
-    platform: 'youtube',
-    source: 'yt_waiting_room',
-    status: 'scheduled',
-    scheduled_start: iso(T0),
-    actual_start: null,
-    is_schedule_frame: false,
-    merged_with: null,
-    ...partial,
-  };
-}
-
-describe('雙平台合併', () => {
-  it('YouTube 待機室與 Twitch 週表 ±30 分鐘內 → Twitch 併入 YouTube', () => {
-    const m = computeMerges([
-      row('yt', {}),
-      row('tw', { platform: 'twitch', source: 'twitch_schedule', scheduled_start: iso(T0 + 20 * 60_000) }),
-    ]);
-    expect(m.get('yt')).toBeNull();
-    expect(m.get('tw')).toBe('yt');
-  });
-
-  it('超過 30 分鐘、不同人、同平台同來源都不合併', () => {
-    const m = computeMerges([
-      row('yt', {}),
-      row('far', { platform: 'twitch', source: 'twitch_schedule', scheduled_start: iso(T0 + MERGE_WINDOW_MS + 1) }),
-      row('other', { vtuber_id: 'v2', platform: 'twitch', source: 'twitch_schedule' }),
-      row('yt2', { scheduled_start: iso(T0 - 5 * 60_000) }), // 與 far 相差 35 分鐘以上
-    ]);
-    expect([...m.values()].every((v) => v === null)).toBe(true);
-  });
-
-  it('Twitch 週表遇到同一人的 Twitch 直播 → 預告併入直播；直播再併入同時的 YouTube', () => {
-    const m = computeMerges([
-      row('live', { platform: 'twitch', source: 'twitch_live', status: 'live', scheduled_start: null, actual_start: iso(T0 + 3 * 60_000) }),
-      row('sched', { platform: 'twitch', source: 'twitch_schedule', scheduled_start: iso(T0) }),
-    ]);
-    expect(m.get('sched')).toBe('live');
-    const withYt = computeMerges([
-      row('yt', { status: 'live', actual_start: iso(T0) }),
-      row('live', { platform: 'twitch', source: 'twitch_live', status: 'live', scheduled_start: null, actual_start: iso(T0 + 60_000) }),
-    ]);
-    expect(withYt.get('live')).toBe('yt');
-  });
-
-  it('直播中優先於排定中：Twitch 已開台、YouTube 待機室還沒開 → 待機室併入 Twitch 直播（直播不會被藏起來）', () => {
-    const m = computeMerges([
-      row('yt', { scheduled_start: iso(T0) }),
-      row('live', { platform: 'twitch', source: 'twitch_live', status: 'live', scheduled_start: null, actual_start: iso(T0 + 5 * 60_000) }),
-    ]);
-    expect(m.get('live')).toBeNull();
-    expect(m.get('yt')).toBe('live');
-  });
-
-  it('直播剛結束：預告仍併在已結束的直播底下（不會變回幽靈卡），已結束的列本身不寫入', () => {
-    const m = computeMerges([
-      row('ended', { platform: 'twitch', source: 'twitch_live', status: 'ended', scheduled_start: null, actual_start: iso(T0 + 5 * 60_000) }),
-      row('sched', { platform: 'twitch', source: 'twitch_schedule', scheduled_start: iso(T0) }),
-    ]);
-    expect(m.get('sched')).toBe('ended');
-    expect(m.has('ended')).toBe(false);
-  });
-
-  it('次要場次挑時間最近的主場次；常駐框、已結束不參與', () => {
-    const m = computeMerges([
-      row('yt-a', { scheduled_start: iso(T0) }),
-      row('yt-b', { scheduled_start: iso(T0 + 50 * 60_000) }),
-      row('tw', { platform: 'twitch', source: 'twitch_schedule', scheduled_start: iso(T0 + 40 * 60_000) }),
-      row('frame', { is_schedule_frame: true }),
-      row('ended', { status: 'ended' }),
-    ]);
-    expect(m.get('tw')).toBe('yt-b');
-    expect(m.has('frame')).toBe(false);
-    expect(m.has('ended')).toBe(false);
-  });
-
-  it('mergeChanges 只回傳和現況不同的列（含解除合併）', () => {
-    const changes = mergeChanges([
-      row('yt', {}),
-      row('tw', { platform: 'twitch', source: 'twitch_schedule', merged_with: 'yt' }), // 已正確
-      row('old', { platform: 'twitch', source: 'twitch_schedule', vtuber_id: 'v9', merged_with: 'gone' }), // 要解除
-    ]);
-    expect(changes).toEqual([{ id: 'old', merged_with: null }]);
-  });
-});
 
 describe('Twitch 週表', () => {
   const ch: RosterChannel = { channelId: 'c1', vtuberId: 'v1', platform: 'twitch', externalId: '123', displayName: null, tier: null, rssFailStreak: 0 };

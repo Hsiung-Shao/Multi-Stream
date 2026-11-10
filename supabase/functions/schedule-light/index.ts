@@ -3,7 +3,7 @@
 //
 // 1. T1 頻道分片走 RSS 找新影片（游標存 cron_shard_state.schedule_light_rss）；整批限流時停手、不懲罰頻道
 // 2. RSS 新發現的影片送 videos.list 分類（有呼叫上限，超過的下一輪再查）
-// 3. Twitch /helix/streams（100 個 user_id／次）：直播中寫 twitch_live，消失的標 ended
+// 3. Twitch /helix/streams（100 個 user_id／次；名冊只讀 user id）：直播中寫 twitch_live，消失的標 ended
 // 4. vtubers.last_live_at、youtube_live_status 共享表（這輪 RSS 掃到的頻道）
 // 合併與 snapshot 不在這支做（出口流量），由 schedule-live／heavy 負責，新週表最慢 20 分鐘出現
 //
@@ -54,9 +54,9 @@ Deno.serve((req) => {
       await classifyNewVideos(db, yt, sweep.candidates, stats, now);
     });
 
-    // 3. Twitch 直播中（全部 Twitch 頻道；名冊只帶 id、vtuber_id、external_id）
-    const twitchChannels = (await loadRosterSlice(db, { platform: 'twitch' })).channels;
-    const twitchResult = await syncTwitchLive(db, twitch, twitchChannels, stats, now);
+    // 3. Twitch 直播中（全部 Twitch 頻道；名冊只讀 user id，直播中的才取回頻道與實況主 id）
+    const twitchIds = (await db.rpc<string[]>('schedule_twitch_ids', {})) ?? [];
+    const twitchResult = await syncTwitchLive(db, twitch, twitchIds, stats, now);
     // 合併與 snapshot 只在 schedule-live（每 20 分）與 heavy 做：light 每 10 分重讀一次是出口流量最大宗（2026-11-10 超量 402）
     // 歷史紀錄連 VOD：補 ended 場次的 vod_id／vod_status（附加功能，失敗不擋後面）
     await softStep(stats, 'vod', () => runVodStep(db, twitch, stats, now, fetch, deadline.at));

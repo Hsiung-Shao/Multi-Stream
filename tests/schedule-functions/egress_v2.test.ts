@@ -165,11 +165,24 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
   }
 
   /** shards：job → cursor_position／shard_size／last_run_stats；roster：依 p_platform 與 p_offset 回應 */
-  function stubFetch(shards: Record<string, { cursor_position: number; shard_size: number; last_run_stats?: unknown }>, roster: (body: Record<string, unknown>) => unknown, changed = false) {
+  function stubFetch(
+    shards: Record<string, { cursor_position: number; shard_size: number; last_run_stats?: unknown }>,
+    roster: (body: Record<string, unknown>) => unknown,
+    changed = false,
+    // Twitch 名冊 id（schedule_twitch_ids）、helix 回報直播中的 user_id、schedule_twitch_resolve 的回傳
+    twitch: { ids?: string[]; liveUserIds?: string[]; resolved?: unknown[] } = {},
+  ) {
     const { fn, calls } = fakeFetch((url, method, body) => {
       if (url.includes('oauth2/token')) return new Response(JSON.stringify({ access_token: 't', expires_in: 3600 }), { status: 200 });
+      if (url.includes('api.twitch.tv/helix/streams'))
+        return new Response(
+          JSON.stringify({ data: (twitch.liveUserIds ?? []).map((u) => ({ id: `stream-${u}`, user_id: u, user_login: `login${u}`, title: 't', game_name: 'g', viewer_count: 1, started_at: iso(NOW - 600_000), thumbnail_url: '' })) }),
+          { status: 200 },
+        );
       if (url.includes('api.twitch.tv')) return new Response(JSON.stringify({ data: [] }), { status: 200 });
       if (method === 'POST' && url.includes('/rpc/schedule_roster_v2')) return json(roster(body as Record<string, unknown>));
+      if (method === 'POST' && url.includes('/rpc/schedule_twitch_ids')) return json(twitch.ids ?? []);
+      if (method === 'POST' && url.includes('/rpc/schedule_twitch_resolve')) return json(twitch.resolved ?? []);
       if (method === 'POST' && url.includes('/rpc/schedule_snapshot_check')) return json({ changed, fingerprint: 'fp' });
       if (method === 'POST' && url.includes('/rpc/schedule_merge_check')) return json({ changed, fingerprint: 'fp' });
       if (method === 'POST' && url.includes('/rpc/')) return json(null);
@@ -188,7 +201,7 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
   const call = async (fn: 'schedule-light' | 'schedule-heavy') =>
     (await handlerFor(fn))(new Request(`http://localhost/functions/v1/${fn}`, { method: 'POST', headers: { Authorization: 'Bearer svc' } }));
 
-  it('schedule-light：T1 只取游標這一片（p_tier=1、p_offset／p_limit），Twitch 取全部；不讀全名冊', async () => {
+  it('schedule-light：T1 只取游標這一片（p_tier=1、p_offset／p_limit）；Twitch 不走名冊 RPC', async () => {
     const calls = stubFetch({ schedule_light_rss: { cursor_position: 700, shard_size: 500 } }, (b) =>
       b.p_platform === 'youtube' ? { total: 1538, start: 700, cols: YT_COLS, rows: [] } : { total: 0, start: 0, cols: ['id', 'vtuber_id', 'external_id'], rows: [] },
     );
@@ -198,7 +211,6 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
     expect(stats.channels_total).toBe(1538);
     expect(rosterCalls(calls).map((c) => c.body)).toEqual([
       { p_platform: 'youtube', p_tier: 1, p_channel_ids: null, p_offset: 700, p_limit: 500 },
-      { p_platform: 'twitch', p_tier: null, p_channel_ids: null, p_offset: null, p_limit: null },
     ]);
     // 游標：這片 0 個頻道 → advance 0，存回 700 % 1538
     const save = calls.find((c) => c.method === 'PATCH' && c.url.includes('cron_shard_state?job_name=eq.schedule_light_rss'));
@@ -252,18 +264,59 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
     expect(hit.map((c) => c.url), 'light 不該碰合併／snapshot').toEqual([]);
     expect(stats.errors).toEqual([]);
   });
+
+  it('schedule-light：T4 只讀 Twitch id、只 resolve 直播中的那位，不走 p_platform=twitch 名冊', async () => {
+    const calls = stubFetch(
+      {},
+      (b) => (b.p_platform === 'youtube' ? { total: 0, start: 0, cols: YT_COLS, rows: [] } : { total: 0, start: 0, cols: ['id', 'vtuber_id', 'external_id'], rows: [] }),
+      false,
+      { ids: ['111', '222', '333'], liveUserIds: ['222'], resolved: [{ id: 'chan-222', vtuber_id: 'v-222', external_id: '222' }] },
+    );
+    const res = await call('schedule-light');
+    const stats = (await res.json()) as { errors: string[] };
+    expect(stats.errors).toEqual([]);
+    expect(calls.filter((c) => isRpc(c, 'schedule_twitch_ids'))).toHaveLength(1);
+    // helix 一次查全部名冊 id
+    const helix = calls.filter((c) => c.url.includes('api.twitch.tv/helix/streams'));
+    expect(helix).toHaveLength(1);
+    for (const id of ['111', '222', '333']) expect(helix[0].url).toContain(`user_id=${id}`);
+    // 只對直播中的 resolve
+    expect(calls.filter((c) => isRpc(c, 'schedule_twitch_resolve')).map((c) => c.body)).toEqual([{ p_external_ids: ['222'] }]);
+    expect(rosterCalls(calls).filter((c) => (c.body as { p_platform?: string }).p_platform === 'twitch')).toEqual([]);
+    // resolve 回來的頻道被寫成直播場次
+    const upsert = calls.find((c) => c.method === 'POST' && c.url.includes('/rest/v1/streams'));
+    expect(upsert?.body).toMatchObject([{ vtuber_id: 'v-222', channel_id: 'chan-222', external_id: 'stream-222', source: 'twitch_live' }]);
+  });
 });
 
-describe('合併讀場次排除常駐框', () => {
-  it('applyMerges 讀 scheduled／live 場次時帶 is_schedule_frame=eq.false', async () => {
-    const { db, calls } = fakeDb((url, method) => {
-      if (method === 'POST' && url.includes('/rpc/schedule_merge_check')) return json({ changed: true, fingerprint: 'fp' });
-      if (method === 'GET') return json([]);
-      return empty(200);
-    });
+describe('合併改由資料庫端一次算完', () => {
+  const mergeRoutes = (apply: unknown) => (url: string, method: string): Response => {
+    if (method === 'POST' && url.includes('/rpc/schedule_merge_check')) return json({ changed: true, fingerprint: 'fp' });
+    if (method === 'POST' && url.includes('/rpc/schedule_merge_apply')) return json(apply);
+    return empty(200);
+  };
+
+  it('T3 applyMerges 只發一個 schedule_merge_apply、不讀 streams，筆數記進 stats', async () => {
+    const { db, calls } = fakeDb(mergeRoutes({ changed: 3, expired: 1, changes: [], expire: [] }));
+    const stats = emptyStats('live', NOW);
+    await applyMerges(db, stats, NOW);
+    const check = calls.find((c) => isRpc(c, 'schedule_merge_check'))!;
+    const applies = calls.filter((c) => isRpc(c, 'schedule_merge_apply'));
+    expect(applies).toHaveLength(1);
+    const body = applies[0].body as { p_ended_since: string; p_since: string };
+    expect(body.p_ended_since).toBe((check.body as { p_ended_since: string }).p_ended_since);
+    // 昨天（台北）00:00 ＝ 2026-10-07T16:00Z（NOW 是台北 10/9 20:00）
+    expect(body.p_since).toBe('2026-10-07T16:00:00.000Z');
+    expect(calls.filter((c) => c.url.includes('/rest/v1/streams'))).toEqual([]);
+    expect(stats.merges_changed).toBe(3);
+    expect(stats.streams_expired).toBe(1);
+    expect(calls.some((c) => isRpc(c, 'schedule_merge_mark'))).toBe(false);
+  });
+
+  it('T3b 套用結果 changed／expired 皆 0 才呼叫 schedule_merge_mark', async () => {
+    const { db, calls } = fakeDb(mergeRoutes({ changed: 0, expired: 0, changes: [], expire: [] }));
     await applyMerges(db, emptyStats('live', NOW), NOW);
-    const active = calls.filter((c) => c.method === 'GET' && c.url.includes('status=in.(scheduled,live)'));
-    expect(active.length).toBeGreaterThan(0);
-    for (const c of active) expect(c.url).toContain('is_schedule_frame=eq.false');
+    expect(calls.filter((c) => isRpc(c, 'schedule_merge_mark')).map((c) => c.body)).toEqual([{ p_fingerprint: 'fp' }]);
+    expect(calls.filter((c) => c.url.includes('/rest/v1/streams'))).toEqual([]);
   });
 });

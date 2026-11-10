@@ -24,7 +24,6 @@ import {
 } from './rules.ts';
 import type { YouTubeClient, YouTubeVideo } from './youtube.ts';
 import { HelixError, type TwitchClient, type TwitchSchedule } from './twitch.ts';
-import { mergePlan, type MergeInput } from './merge.ts';
 import type { RosterChannel, RunStats, StreamRecord, StreamRow } from './types.ts';
 
 export interface Deadline {
@@ -591,15 +590,20 @@ export async function refreshPending(
 export async function syncTwitchLive(
   db: Db,
   twitch: TwitchClient,
-  twitchChannels: RosterChannel[],
+  userIds: readonly string[],
   stats: RunStats,
   now: number,
 ): Promise<{ liveVtuberIds: Set<string> }> {
   const liveVtuberIds = new Set<string>();
-  if (twitchChannels.length === 0) return { liveVtuberIds };
-  const byUserId = new Map(twitchChannels.map((c) => [c.externalId, c]));
-  const live = await twitch.fetchLiveStreams([...byUserId.keys()]);
+  if (userIds.length === 0) return { liveVtuberIds };
+  const live = await twitch.fetchLiveStreams([...userIds]);
   stats.twitch_streams_calls = twitch.calls.streams;
+  // 只對直播中的 user id 取回頻道與實況主 id（出口流量：不再每輪讀全部 Twitch 名冊）
+  const liveUserIds = [...live].filter(([, s]) => s.streamId).map(([id]) => id);
+  const resolved = liveUserIds.length
+    ? (await db.rpc<{ id: string; vtuber_id: string; external_id: string }[]>('schedule_twitch_resolve', { p_external_ids: liveUserIds })) ?? []
+    : [];
+  const byUserId = new Map(resolved.map((r) => [r.external_id, { channelId: r.id, vtuberId: r.vtuber_id }]));
   const nowIso = new Date(now).toISOString();
 
   const rows: StreamRow[] = [];
@@ -786,12 +790,11 @@ export async function softStep(stats: RunStats, label: string, fn: () => Promise
 }
 
 /**
- * 雙平台合併（見 merge.ts）：讀所有 scheduled／live 場次，加上最近 EXPIRE_AFTER_HOURS 內結束的場次（只當主場次），
- * 只寫 merged_with 有變的列；時間未定場次併入的主場次已結束時直接過期（mergePlan.expire）。
+ * 雙平台合併：規則與讀取範圍在資料庫端 schedule_merge_apply（migration 20261110080000）一次算完並寫入，只回傳筆數；
+ * 原本每輪經 REST 讀回全部 scheduled／live 場次（約 470KB）在這裡算，是出口流量大宗。
  *
- * 出口流量：先問資料庫這些輸入列的指紋（schedule_merge_check）。mergeChanges 是輸入的純函式，指紋與上次
- * 「算完沒有要改的列」時相同 → 結果一定還是沒有要改的列，整個讀取跳過。算完沒有要改的列才記指紋（schedule_merge_mark）；
- * 這輪有改寫 merged_with 的，下一輪會重讀一次確認穩定後再記。
+ * 出口流量：先問資料庫輸入列的指紋（schedule_merge_check），與上次「沒有要改的列」時相同就整支跳過；
+ * 算完沒有要改、也沒有要過期的列才記指紋（schedule_merge_mark），有改寫的下一輪重算確認穩定後再記。
  */
 export async function applyMerges(db: Db, stats: RunStats, now: number): Promise<void> {
   const endedSinceIso = new Date(now - EXPIRE_AFTER_HOURS * 3_600_000).toISOString();
@@ -800,45 +803,14 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
     stats.merges_skipped = true;
     return;
   }
-  const cols = 'select=id,vtuber_id,platform,source,status,scheduled_start,actual_start,is_schedule_frame,merged_with,time_tbd,announced_at,created_at,external_id';
-  const endedSince = encodeURIComponent(endedSinceIso);
-  // 昨天（台北）起已過期的社群週表／投稿具體時間列：只用來建「同來源同日已有具體時間」的集合（expired 不會當主場次）。
-  // 同一篇的 08:00 列 11:00 就過期，不讀的話同篇的時間未定列晚上會被併掉。從昨天 00:00 起讀：
-  // 跨午夜到 expireOverdue 把昨天的時間未定列過期之前，它們仍是 scheduled，同日的具體時間列也要在集合裡
+  // 昨天（台北）00:00 起已過期的社群週表／投稿具體時間列也要讀（同來源同日已有具體時間 → 時間未定列不合併）
   const sinceIso = new Date(Math.floor((now + 8 * 3_600_000) / 86_400_000) * 86_400_000 - 8 * 3_600_000 - 86_400_000).toISOString();
-  const rows = [
-    // 常駐框 computeMerges 本來就跳過，不讀（占 scheduled 約四成）
-    ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)&is_schedule_frame=eq.false`)),
-    ...(await db.selectAll<MergeInput>('streams', `${cols}&status=eq.ended&actual_end=gte.${endedSince}`)),
-    ...(await db.selectAll<MergeInput>(
-      'streams',
-      `${cols}&status=eq.expired&source=in.(community_post,user_submission)&time_tbd=eq.false&scheduled_start=gte.${encodeURIComponent(sinceIso)}`,
-    )),
-  ];
-  const { changes, expire } = mergePlan(rows);
-  const byTarget = new Map<string, string[]>();
-  for (const c of changes) {
-    const key = c.merged_with ?? '';
-    const list = byTarget.get(key) ?? [];
-    list.push(c.id);
-    byTarget.set(key, list);
-  }
-  for (const [target, ids] of byTarget) {
-    for (let i = 0; i < ids.length; i += 100) {
-      await db.update('streams', `id=${inList(ids.slice(i, i + 100))}`, { merged_with: target || null });
-    }
-  }
-  stats.merges_changed += changes.length;
-  // 時間未定場次併入的主場次已結束 → 過期（見 mergePlan）；過期會讓它離開 scheduled，指紋跟著變，下一輪重讀確認穩定
-  const nowIso = new Date(now).toISOString();
-  for (let i = 0; i < expire.length; i += 100) {
-    stats.streams_expired += await db.update(
-      'streams',
-      `id=${inList(expire.slice(i, i + 100))}&status=eq.scheduled`,
-      { status: 'expired', fetched_at: nowIso },
-    );
-  }
-  if (changes.length === 0 && expire.length === 0 && check?.fingerprint) await db.rpc('schedule_merge_mark', { p_fingerprint: check.fingerprint });
+  const res = await db.rpc<{ changed?: number; expired?: number }>('schedule_merge_apply', { p_ended_since: endedSinceIso, p_since: sinceIso });
+  const changed = res?.changed ?? 0;
+  const expired = res?.expired ?? 0;
+  stats.merges_changed += changed;
+  stats.streams_expired += expired;
+  if (changed === 0 && expired === 0 && check?.fingerprint) await db.rpc('schedule_merge_mark', { p_fingerprint: check.fingerprint });
 }
 
 /** vtubers.last_live_at：這輪偵測到直播中的實況主 */

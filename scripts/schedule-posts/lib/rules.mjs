@@ -190,7 +190,7 @@ export function buildStreamRows(c, items, { twitchChannelId, fetchedAt }) {
       viewer_count: null,
       is_schedule_frame: false,
       time_tbd: e.timeTbd === true,
-      // 發文時間：時間未定列只由這之後才開始的場次兌現（merge.ts；讀圖一天兩輪，寫入時間會晚於發文）
+      // 發文時間：時間未定列只由這之後才開始的場次兌現（schedule_merge_apply；讀圖一天兩輪，寫入時間會晚於發文）
       announced_at: new Date(c.postDate).toISOString(),
       merged_with: null,
       fetched_at: fetchedAt,
