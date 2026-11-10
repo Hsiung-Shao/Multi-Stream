@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Db, rowsFromColumnar } from '../../supabase/functions/_shared/db.ts';
 import { loadRoster, loadRosterSlice } from '../../supabase/functions/_shared/roster.ts';
-import { loadCurrentByChannelRpc, touchLastLiveAt } from '../../supabase/functions/_shared/sweep.ts';
+import { applyMerges, loadCurrentByChannelRpc, touchLastLiveAt } from '../../supabase/functions/_shared/sweep.ts';
 import { publishSnapshot } from '../../supabase/functions/_shared/snapshot.ts';
 import { emptyStats } from '../../supabase/functions/_shared/types.ts';
 
@@ -165,13 +165,13 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
   }
 
   /** shards：job → cursor_position／shard_size／last_run_stats；roster：依 p_platform 與 p_offset 回應 */
-  function stubFetch(shards: Record<string, { cursor_position: number; shard_size: number; last_run_stats?: unknown }>, roster: (body: Record<string, unknown>) => unknown) {
+  function stubFetch(shards: Record<string, { cursor_position: number; shard_size: number; last_run_stats?: unknown }>, roster: (body: Record<string, unknown>) => unknown, changed = false) {
     const { fn, calls } = fakeFetch((url, method, body) => {
       if (url.includes('oauth2/token')) return new Response(JSON.stringify({ access_token: 't', expires_in: 3600 }), { status: 200 });
       if (url.includes('api.twitch.tv')) return new Response(JSON.stringify({ data: [] }), { status: 200 });
       if (method === 'POST' && url.includes('/rpc/schedule_roster_v2')) return json(roster(body as Record<string, unknown>));
-      if (method === 'POST' && url.includes('/rpc/schedule_snapshot_check')) return json({ changed: false, fingerprint: 'fp' });
-      if (method === 'POST' && url.includes('/rpc/schedule_merge_check')) return json({ changed: false, fingerprint: 'fp' });
+      if (method === 'POST' && url.includes('/rpc/schedule_snapshot_check')) return json({ changed, fingerprint: 'fp' });
+      if (method === 'POST' && url.includes('/rpc/schedule_merge_check')) return json({ changed, fingerprint: 'fp' });
       if (method === 'POST' && url.includes('/rpc/')) return json(null);
       if (method === 'GET' && url.includes('/rest/v1/cron_shard_state?')) {
         const job = /job_name=eq\.([a-z_]+)/.exec(url)?.[1] ?? '';
@@ -238,5 +238,32 @@ describe('排程名冊只取需要的頻道（整支 handler）', () => {
       { p_platform: 'twitch', p_tier: null, p_channel_ids: null, p_offset: 500, p_limit: 250 },
       { p_platform: 'twitch', p_tier: null, p_channel_ids: null, p_offset: null, p_limit: null },
     ]);
+  });
+
+  it('light 整輪不合併、不重組 snapshot（即使檢查 RPC 回 changed:true）', async () => {
+    const calls = stubFetch(
+      {},
+      (b) => (b.p_platform === 'youtube' ? { total: 0, start: 0, cols: YT_COLS, rows: [] } : { total: 0, start: 0, cols: ['id', 'vtuber_id', 'external_id'], rows: [] }),
+      true,
+    );
+    const res = await call('schedule-light');
+    const stats = (await res.json()) as { errors: string[] };
+    const hit = calls.filter((c) => /\/rpc\/schedule_(merge_check|snapshot_check|snapshot_source)$/.test(c.url) || c.url.includes('/storage/v1/object/'));
+    expect(hit.map((c) => c.url), 'light 不該碰合併／snapshot').toEqual([]);
+    expect(stats.errors).toEqual([]);
+  });
+});
+
+describe('合併讀場次排除常駐框', () => {
+  it('applyMerges 讀 scheduled／live 場次時帶 is_schedule_frame=eq.false', async () => {
+    const { db, calls } = fakeDb((url, method) => {
+      if (method === 'POST' && url.includes('/rpc/schedule_merge_check')) return json({ changed: true, fingerprint: 'fp' });
+      if (method === 'GET') return json([]);
+      return empty(200);
+    });
+    await applyMerges(db, emptyStats('live', NOW), NOW);
+    const active = calls.filter((c) => c.method === 'GET' && c.url.includes('status=in.(scheduled,live)'));
+    expect(active.length).toBeGreaterThan(0);
+    for (const c of active) expect(c.url).toContain('is_schedule_frame=eq.false');
   });
 });

@@ -4,8 +4,8 @@
 // 1. T1 頻道分片走 RSS 找新影片（游標存 cron_shard_state.schedule_light_rss）；整批限流時停手、不懲罰頻道
 // 2. RSS 新發現的影片送 videos.list 分類（有呼叫上限，超過的下一輪再查）
 // 3. Twitch /helix/streams（100 個 user_id／次）：直播中寫 twitch_live，消失的標 ended
-// 4. 雙平台合併、vtubers.last_live_at、youtube_live_status 共享表（這輪 RSS 掃到的頻道）
-// 5. 發布 snapshot
+// 4. vtubers.last_live_at、youtube_live_status 共享表（這輪 RSS 掃到的頻道）
+// 合併與 snapshot 不在這支做（出口流量），由 schedule-live／heavy 負責，新週表最慢 20 分鐘出現
 //
 // CPU（2026-10-02 本地 edge runtime 實測）：固定成本（名冊、Twitch、合併、snapshot）＋RSS 500 約 1 秒；
 // 同一次再加 live-og 100 頁會撞 2 秒 hard limit（546），所以拆開。
@@ -15,14 +15,12 @@
 
 import { loadRosterSlice } from '../_shared/roster.ts';
 import { writeLiveStatus } from '../_shared/live_status.ts';
-import { publishSnapshot } from '../_shared/snapshot.ts';
-import { applyMerges, classifyNewVideos, exhausted, loadCurrentByChannelRpc, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
+import { classifyNewVideos, exhausted, loadCurrentByChannelRpc, rssSweep, softStep, syncTwitchLive, touchLastLiveAt, writeChannelStates } from '../_shared/sweep.ts';
 import { runVodStep } from '../_shared/vod.ts';
 import { loadShard, runJob } from '../_shared/run.ts';
 import { emptyStats } from '../_shared/types.ts';
 
 const JOB = 'schedule_light_rss';
-const HEAVY_JOB = 'schedule_heavy_rss';
 const DEFAULT_BUDGET_MS = 60_000;
 /** RSS 並行：25 會讓 YouTube 很快開始限流（2026-09-30 實測），降到 8 */
 const DEFAULT_CONCURRENCY = 8;
@@ -59,8 +57,7 @@ Deno.serve((req) => {
     // 3. Twitch 直播中（全部 Twitch 頻道；名冊只帶 id、vtuber_id、external_id）
     const twitchChannels = (await loadRosterSlice(db, { platform: 'twitch' })).channels;
     const twitchResult = await syncTwitchLive(db, twitch, twitchChannels, stats, now);
-    // 合併是附加功能：失敗只記錯誤，不能擋住後面的共享表與 snapshot
-    await softStep(stats, 'merge', () => applyMerges(db, stats, now));
+    // 合併與 snapshot 只在 schedule-live（每 20 分）與 heavy 做：light 每 10 分重讀一次是出口流量最大宗（2026-11-10 超量 402）
     // 歷史紀錄連 VOD：補 ended 場次的 vod_id／vod_status（附加功能，失敗不擋後面）
     await softStep(stats, 'vod', () => runVodStep(db, twitch, stats, now, fetch, deadline.at));
 
@@ -68,12 +65,6 @@ Deno.serve((req) => {
     await touchLastLiveAt(db, twitchResult.liveVtuberIds, stats, now);
     const byChannel = await loadCurrentByChannelRpc(db, sweep.processed.map((c) => c.channelId));
     stats.live_status_rows = await writeLiveStatus(db, sweep.processed, byChannel, now);
-
-    // 5. snapshot（heavy_refreshed_at 取 Heavy 最後成功時間）
-    const heavy = await loadShard(db, HEAVY_JOB);
-    stats.snapshot_bytes = await publishSnapshot(db, now, heavy.last_run_at);
-    // 0＝指紋沒變、這輪沒有重組上傳（schedule_snapshot_check），記在 stats.snapshot_skipped
-    stats.snapshot_skipped = stats.snapshot_bytes === 0;
 
     return { cursor_position: nextCursor, total_items: tier1Total };
   }, stats);

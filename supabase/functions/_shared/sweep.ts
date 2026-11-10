@@ -807,7 +807,8 @@ export async function applyMerges(db: Db, stats: RunStats, now: number): Promise
   // 跨午夜到 expireOverdue 把昨天的時間未定列過期之前，它們仍是 scheduled，同日的具體時間列也要在集合裡
   const sinceIso = new Date(Math.floor((now + 8 * 3_600_000) / 86_400_000) * 86_400_000 - 8 * 3_600_000 - 86_400_000).toISOString();
   const rows = [
-    ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)`)),
+    // 常駐框 computeMerges 本來就跳過，不讀（占 scheduled 約四成）
+    ...(await db.selectAll<MergeInput>('streams', `${cols}&status=in.(scheduled,live)&is_schedule_frame=eq.false`)),
     ...(await db.selectAll<MergeInput>('streams', `${cols}&status=eq.ended&actual_end=gte.${endedSince}`)),
     ...(await db.selectAll<MergeInput>(
       'streams',
