@@ -17,8 +17,9 @@ export function CatalogPending({ isError, retrying, onRetry }: { isError: boolea
             </div>
         );
     }
+    // 至少一個視窗高：載入後的清單遠超一屏，下方說明／頁尾一開始就在畫面外，換成清單時不算位移（CLS）
     return (
-        <p role="status" className="flex min-h-[160px] items-center justify-center gap-2 rounded-xl bg-popover text-sm text-muted-foreground">
+        <p role="status" className="flex min-h-svh items-start justify-center gap-2 rounded-xl bg-popover pt-16 text-sm text-muted-foreground">
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             {t('catalog.loading')}
         </p>
