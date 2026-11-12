@@ -17,7 +17,7 @@ import { PassThrough } from 'node:stream';
 import { renderToPipeableStream } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App, { preloadPageChunks } from './App';
-import i18n from './i18n/i18n';
+import i18n, { ensureLanguageLoaded } from './i18n/i18n';
 import { useUIStore } from './store/useUIStore';
 import { PAGE_PATHS, pathToPage } from './config/routes';
 
@@ -59,6 +59,7 @@ async function renderNow(route: string, lang: PrerenderLang): Promise<string> {
     const injected = { page, theme: PRERENDER_THEME };
     Object.assign(useUIStore.getInitialState(), injected);
     useUIStore.setState(injected);
+    await ensureLanguageLoaded(lang);
     await i18n.changeLanguage(lang);
     // 與 client（main.tsx）對稱：chunk 先預載，App 的 ChunkSuspense 就不會輸出 Suspense 邊界，
     // 產物裡沒有 <!--$--> 標記，client hydrate 時也沒有可被同步更新打斷的 dehydrated 邊界。

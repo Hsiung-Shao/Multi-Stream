@@ -1,9 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StreamChat } from '../../src/components/StreamChat';
+import i18n from '../../src/i18n/i18n';
 
-// i18n 未初始化時 t() 會回傳 key 本身，因此以 key 當作查找依據
-const POPOUT_LABEL = 'chat.popout';
+// tests/setup.ts 已載好翻譯：取當下語言的實際字串查找
+const POPOUT_LABEL = i18n.t('common:chat.popout');
 
 describe('StreamChat', () => {
     let openSpy: ReturnType<typeof vi.spyOn>;

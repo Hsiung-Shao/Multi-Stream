@@ -3,103 +3,9 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { splitLangPath } from '../../functions/lib/locale.js';
 
-// Import namespaced translations for zh-TW as default/fallback
-import zhTWCommon from './locales/zh-TW/common';
-import zhTWNavbar from './locales/zh-TW/navbar';
-import zhTWControlPanel from './locales/zh-TW/controlPanel';
-import zhTWWelcome from './locales/zh-TW/welcome';
-import zhTWAbout from './locales/zh-TW/about';
-import zhTWTutorial from './locales/zh-TW/tutorial';
-import zhTWVersionHistory from './locales/zh-TW/versionHistory';
-import zhTWFavorites from './locales/zh-TW/favorites';
-import zhTWFeedback from './locales/zh-TW/feedback';
-import zhTWPrivacy from './locales/zh-TW/privacy';
-import zhTWTags from './locales/zh-TW/tags';
-import zhTWYoutubeRisk from './locales/zh-TW/youtubeRisk';
-import zhTWStream from './locales/zh-TW/stream';
-import zhTWFAQ from './locales/zh-TW/faq';
-import zhTWAnnouncements from './locales/zh-TW/announcements';
-import zhTWSeo from './locales/zh-TW/seo';
-import zhTWSupport from './locales/zh-TW/support';
-import zhTWCompare from './locales/zh-TW/compare';
-import zhTWSchedule from './locales/zh-TW/schedule';
-import zhTWStatus from './locales/zh-TW/status';
-import zhTWSongs from './locales/zh-TW/songs';
-
-// 其餘語言（zh-CN / ja / ko）改為 lazy load（見檔案下方 lazyLoaders / ensureLanguageLoaded），
-// 只有 zh-TW（預設/主要語言）與 en（fallback + 國際 + 多數偵測情境）會打包進首屏 entry。
-import enCommon from './locales/en/common';
-import enNavbar from './locales/en/navbar';
-import enControlPanel from './locales/en/controlPanel';
-import enWelcome from './locales/en/welcome';
-import enAbout from './locales/en/about';
-import enTutorial from './locales/en/tutorial';
-import enVersionHistory from './locales/en/versionHistory';
-import enFavorites from './locales/en/favorites';
-import enFeedback from './locales/en/feedback';
-import enPrivacy from './locales/en/privacy';
-import enTags from './locales/en/tags';
-import enYoutubeRisk from './locales/en/youtubeRisk';
-import enStream from './locales/en/stream';
-import enFAQ from './locales/en/faq';
-import enAnnouncements from './locales/en/announcements';
-import enSeo from './locales/en/seo';
-import enSupport from './locales/en/support';
-import enCompare from './locales/en/compare';
-import enSchedule from './locales/en/schedule';
-import enStatus from './locales/en/status';
-import enSongs from './locales/en/songs';
-
+// 翻譯一律依當前語言動態載入（見下方 lazyLoaders / ensureLanguageLoaded），不進首屏 entry：
+// 原本 zh-TW＋en 全部 namespace 靜態打包，佔 entry 393KB，拖慢手機 LCP。型別由 src/i18next.d.ts 以 import type 取 zh-TW。
 export const defaultNS = 'common';
-
-export const resources = {
-    'zh-TW': {
-        common: zhTWCommon,
-        navbar: zhTWNavbar,
-        controlPanel: zhTWControlPanel,
-        welcome: zhTWWelcome,
-        about: zhTWAbout,
-        tutorial: zhTWTutorial,
-        versionHistory: zhTWVersionHistory,
-        favorites: zhTWFavorites,
-        feedback: zhTWFeedback,
-        privacy: zhTWPrivacy,
-        tags: zhTWTags,
-        youtubeRisk: zhTWYoutubeRisk,
-        stream: zhTWStream,
-        faq: zhTWFAQ,
-        announcements: zhTWAnnouncements,
-        seo: zhTWSeo,
-        support: zhTWSupport,
-        compare: zhTWCompare,
-        schedule: zhTWSchedule,
-        status: zhTWStatus,
-        songs: zhTWSongs,
-    },
-    en: {
-        common: enCommon,
-        navbar: enNavbar,
-        controlPanel: enControlPanel,
-        welcome: enWelcome,
-        about: enAbout,
-        tutorial: enTutorial,
-        versionHistory: enVersionHistory,
-        favorites: enFavorites,
-        feedback: enFeedback,
-        privacy: enPrivacy,
-        tags: enTags,
-        youtubeRisk: enYoutubeRisk,
-        stream: enStream,
-        faq: enFAQ,
-        announcements: enAnnouncements,
-        seo: enSeo,
-        support: enSupport,
-        compare: enCompare,
-        schedule: enSchedule,
-        status: enStatus,
-        songs: enSongs,
-    },
-} as const;
 
 // 網址語言優先：/zh-TW/... 一律繁中（functions/lib/locale.js 的 splitLangPath），沒有前綴才看 localStorage／navigator。
 // 網址命中只決定「這一頁」的語言，不改使用者的長期偏好：i18next 的 caches 會在 init 時把偵測結果寫進 i18nextLng，
@@ -127,7 +33,7 @@ i18n
     .use(detector)
     .use(initReactI18next)
     .init({
-        resources,
+        resources: {}, // 由 ensureLanguageLoaded 補上
         defaultNS,
         keySeparator: false, // Disable key separator to support flat keys with dots
         nsSeparator: ':',
@@ -145,7 +51,7 @@ i18n
         },
     });
 
-// init 為同步流程（zh-TW/en 已打包）：網址命中時還原偏好（見上方說明）
+// init 為同步流程（語言偵測不需資源）：網址命中時還原偏好（見上方說明）
 if (urlLangHit && typeof window !== 'undefined') {
     try {
         if (storedLngBeforeInit) window.localStorage.setItem('i18nextLng', storedLngBeforeInit);
@@ -156,9 +62,11 @@ if (urlLangHit && typeof window !== 'undefined') {
 }
 
 // ===== 其餘語言的 lazy load =====
-// zh-TW / en 已打包進首屏 entry；zh-CN / ja / ko 在需要時才動態載入，避免拖累 landing 首屏體積。
-type LocaleBundle = Record<string, Record<string, string>>;
+// 每個語言一個動態 chunk；main.tsx 首次 render 前 await，entry-server 預渲染前 await。
+type LocaleBundle = Record<string, object>; // namespace → 資源（可巢狀，如 welcome）
 const lazyLoaders: Record<string, () => Promise<{ default: LocaleBundle }>> = {
+    'zh-TW': () => import('./locales/zh-TW'),
+    en: () => import('./locales/en'),
     'zh-CN': () => import('./locales/zh-CN'),
     ja: () => import('./locales/ja'),
     ko: () => import('./locales/ko'),
@@ -176,13 +84,8 @@ const resolveLazyKey = (lng?: string): string | null => {
     return null;
 };
 
-/**
- * 確保指定語言的翻譯資源已載入（zh-TW / en 一律視為已載入）。
- * 在 main.tsx 首次 render 前 await，可避免 lazy 語言使用者看到 fallback 閃爍。
- */
-export const ensureLanguageLoaded = (lng?: string): Promise<void> => {
-    const key = resolveLazyKey(lng);
-    if (!key || loadedLazyLangs.has(key)) return Promise.resolve();
+const loadBundle = (key: string): Promise<void> => {
+    if (loadedLazyLangs.has(key)) return Promise.resolve();
     if (lazyPromises.has(key)) return lazyPromises.get(key)!;
     const p = lazyLoaders[key]()
         .then((mod) => {
@@ -198,12 +101,26 @@ export const ensureLanguageLoaded = (lng?: string): Promise<void> => {
     return p;
 };
 
+/**
+ * 確保指定語言的翻譯資源已載入；不支援的語言（如 zh-HK）載 en（fallbackLng）。
+ * en 是缺 key 時的備援：zh-CN / ja / ko 一起等；zh-TW 的 key 齊全，en 只在背景補載，首屏只下載一種語言。
+ */
+export const ensureLanguageLoaded = (lng?: string): Promise<void> => {
+    const key = resolveLazyKey(lng) ?? 'en';
+    if (key === 'zh-TW') {
+        void loadBundle('en');
+        return loadBundle(key);
+    }
+    return Promise.all([loadBundle(key), loadBundle('en')]).then(() => undefined);
+};
+
 // 執行期切換語言時，補載資源後再重新觸發 render（首次切到該語言才需要）
 i18n.on('languageChanged', (lng) => {
-    const key = resolveLazyKey(lng);
-    if (!key || loadedLazyLangs.has(key)) return;
+    const key = resolveLazyKey(lng) ?? 'en';
+    if (loadedLazyLangs.has(key)) return;
     ensureLanguageLoaded(lng).then(() => {
-        if (i18n.language === lng) i18n.changeLanguage(lng);
+        // 載入失敗時 loadedLazyLangs 仍沒有 key：不重觸發，否則 languageChanged 會無限循環
+        if (i18n.language === lng && loadedLazyLangs.has(key)) i18n.changeLanguage(lng);
     });
 });
 
@@ -222,7 +139,7 @@ const syncHtmlLang = (lng?: string) => {
         document.documentElement.lang = toHtmlLang(lng ?? i18n.language);
     }
 };
-syncHtmlLang(i18n.language); // init 為同步流程（zh-TW/en 已打包），此時 language 已解析完成
+syncHtmlLang(i18n.language); // init 為同步流程，此時 language 已解析完成
 i18n.on('languageChanged', syncHtmlLang);
 
 export default i18n;

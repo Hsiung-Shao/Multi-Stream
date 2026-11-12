@@ -52,3 +52,8 @@ globalThis.ResizeObserver ??= class {
 (window as any).streamData = {};
 (window as any).players = {};
 (window as any).CONFIG = {};
+
+// 翻譯改為依語言動態載入（src/i18n/i18n.ts）：先載好兩種語言，既有測試照舊可同步取字串。
+// 放最後用動態 import：i18n 模組初始化會讀 localStorage，要等上面的 mock 就位。
+const { ensureLanguageLoaded } = await import('../src/i18n/i18n');
+await Promise.all([ensureLanguageLoaded('zh-TW'), ensureLanguageLoaded('en')]);
