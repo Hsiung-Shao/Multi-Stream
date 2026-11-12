@@ -91,4 +91,33 @@ describe('i18n 語言包懶載入', () => {
         ]);
         expect(result).toBe('resolved');
     });
+
+    it('T7 選單切到未載入語言時，語言切換當下翻譯已就緒', async () => {
+        const { default: i18n, ensureLanguageLoaded } = await freshI18n();
+        await ensureLanguageLoaded('en');
+        await i18n.changeLanguage('en');
+        const seen: Array<{ lng: string; ready: boolean }> = [];
+        i18n.on('languageChanged', (lng: string) => {
+            seen.push({ lng, ready: i18n.hasResourceBundle('zh-TW', 'common') });
+        });
+        const { switchLanguage } = await import('../../src/i18n/switchLanguage');
+        switchLanguage('zh-TW');
+        await vi.waitFor(() => expect(i18n.language).toBe('zh-TW'));
+        const first = seen.find((e) => e.lng === 'zh-TW');
+        expect(first?.ready).toBe(true);
+    });
+
+    it('T8 語言包載入失敗後再呼叫會重試', async () => {
+        let calls = 0;
+        vi.doMock('../../src/i18n/locales/ja/index', async (importOriginal) => {
+            calls += 1;
+            if (calls === 1) throw new Error('chunk 載入失敗');
+            return importOriginal();
+        });
+        const { default: i18n, ensureLanguageLoaded } = await freshI18n();
+        await ensureLanguageLoaded('ja').catch(() => {});
+        expect(i18n.hasResourceBundle('ja', 'common')).toBe(false);
+        await ensureLanguageLoaded('ja').catch(() => {});
+        expect(i18n.hasResourceBundle('ja', 'common')).toBe(true);
+    });
 });

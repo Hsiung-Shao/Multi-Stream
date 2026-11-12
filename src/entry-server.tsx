@@ -60,6 +60,9 @@ async function renderNow(route: string, lang: PrerenderLang): Promise<string> {
     Object.assign(useUIStore.getInitialState(), injected);
     useUIStore.setState(injected);
     await ensureLanguageLoaded(lang);
+    if (!i18n.hasResourceBundle(lang, 'common')) {
+        throw new Error(`entry-server: ${lang} 翻譯載入失敗`); // 不產出整頁 key 的半成品
+    }
     await i18n.changeLanguage(lang);
     // 與 client（main.tsx）對稱：chunk 先預載，App 的 ChunkSuspense 就不會輸出 Suspense 邊界，
     // 產物裡沒有 <!--$--> 標記，client hydrate 時也沒有可被同步更新打斷的 dehydrated 邊界。

@@ -95,7 +95,8 @@ const loadBundle = (key: string): Promise<void> => {
             loadedLazyLangs.add(key);
         })
         .catch(() => {
-            // 載入失敗時維持 fallback 語言，不中斷應用
+            // 載入失敗時維持 fallback 語言，不中斷應用；不快取失敗，下次呼叫重試（同 lazyWithPreload）
+            lazyPromises.delete(key);
         });
     lazyPromises.set(key, p);
     return p;

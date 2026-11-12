@@ -80,9 +80,9 @@ const canHydrate = (root: HTMLElement): boolean => {
   return baked === toHtmlLang(i18n.language) && bakedTheme === useUIStore.getState().theme;
 };
 
-// 偵測到的語言若為 lazy（zh-CN/ja/ko），先載入其資源再 render，避免 fallback 閃爍；
-// eager 語言（zh-TW/en，含 Lighthouse 偵測到的 en）會立即 resolve，不增加首屏延遲。
-ensureLanguageLoaded(i18n.language).finally(() => {
+// 翻譯一律依語言動態載入（見 i18n.ts），先載好再 render，否則畫面是 key；
+// 第二次呼叫：已載入時立即 resolve，第一次失敗（如部署切版瞬間 404）則重試一次。
+ensureLanguageLoaded(i18n.language).then(() => ensureLanguageLoaded(i18n.language)).finally(() => {
   const root = document.getElementById("root")!;
   const app = (
     <QueryClientProvider client={queryClient}>

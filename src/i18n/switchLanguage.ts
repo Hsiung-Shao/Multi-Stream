@@ -1,5 +1,5 @@
 import type React from 'react';
-import i18n from './i18n';
+import i18n, { ensureLanguageLoaded } from './i18n';
 
 /**
  * 使用者在語言選單「明確選擇」語言：切換介面並寫入長期偏好。
@@ -8,7 +8,8 @@ import i18n from './i18n';
  * 才能把 zh-TW 存成偏好。語言相同時 changeLanguage 是 no-op，重複呼叫無副作用。
  */
 export function switchLanguage(lang: string): void {
-    void i18n.changeLanguage(lang);
+    // 先載好翻譯再切：以 i18n.language 為依賴的 memo（如教學頁文章）在切換當下就算完，資源晚到不會重算
+    void ensureLanguageLoaded(lang).then(() => i18n.changeLanguage(lang));
     try {
         window.localStorage.setItem('i18nextLng', lang);
     } catch {
