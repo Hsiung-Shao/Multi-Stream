@@ -103,12 +103,16 @@ const loadBundle = (key: string): Promise<void> => {
 
 /**
  * 確保指定語言的翻譯資源已載入；不支援的語言（如 zh-HK）載 en（fallbackLng）。
- * en 是缺 key 時的備援：zh-CN / ja / ko 一起等；zh-TW 的 key 齊全，en 只在背景補載，首屏只下載一種語言。
+ * en 是缺 key 時的備援：zh-CN / ja / ko 一起等；zh-TW 的 key 齊全，en 等頁面 load 後才補（不跟首屏圖片搶頻寬）。
  */
 export const ensureLanguageLoaded = (lng?: string): Promise<void> => {
     const key = resolveLazyKey(lng) ?? 'en';
     if (key === 'zh-TW') {
-        void loadBundle('en');
+        if (typeof window !== 'undefined') {
+            const later = () => setTimeout(() => void loadBundle('en'), 0);
+            if (document.readyState === 'complete') later();
+            else window.addEventListener('load', later, { once: true });
+        }
         return loadBundle(key);
     }
     return Promise.all([loadBundle(key), loadBundle('en')]).then(() => undefined);
