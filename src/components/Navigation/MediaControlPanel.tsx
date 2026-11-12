@@ -248,10 +248,12 @@ export const MediaControlPanel = ({ isExpanded, onMouseLeave, variant = 'popover
                                     applyMasterMute(!checked);
                                 }}
                                 className="data-[state=checked]:bg-cyan-500"
+                                aria-label={t('controlPanel:masterVolume') || '總音量'}
                             />
                         </div>
                     </div>
                     <Slider
+                        thumbLabel={t('controlPanel:masterVolume') || '總音量'}
                         value={[masterVolume]}
                         min={0}
                         max={100}

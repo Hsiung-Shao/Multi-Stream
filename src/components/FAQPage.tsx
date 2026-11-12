@@ -137,7 +137,7 @@ export function FAQPage() {
                 .faq-a { margin: 0; padding: 0 20px 20px; font-size: 14.5px; line-height: 1.75; color: var(--muted-foreground); }
                 .faq-mark { background: oklch(0.63 0.23 304 / 0.35); color: var(--foreground); border-radius: 3px; padding: 0 2px; }
                 .faq-tip { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: oklch(0.63 0.23 304 / 0.1); border-left: 2px solid var(--primary); font-size: 13.5px; }
-                .faq-tip b { color: var(--primary); display: block; margin-bottom: 2px; }
+                .faq-tip b { color: var(--primary-text); display: block; margin-bottom: 2px; }
                 .faq-empty { text-align: center; padding: 60px 0 20px; }
                 .faq-empty-icon { width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); color: var(--muted-foreground); }
                 .faq-empty h3 { font-size: 18px; font-weight: 700; margin: 0 0 6px; color: var(--foreground); }

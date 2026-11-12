@@ -25,6 +25,8 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.13 0.028 261.692);
   --primary: oklch(0.56 0.25 302);
+  /* 文字用主色：深色模式的 --primary 當字色對比不到 4.5，另給較亮的一版 */
+  --primary-text: oklch(0.56 0.25 302);
   --primary-foreground: oklch(0.98 0.01 308);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -62,6 +64,7 @@
   /* L 由 0.63 調暗為 0.57：白字按鈕(bg-primary + primary-foreground)達 WCAG AA 4.5:1
      （原 3.67:1 不足）。仍清楚是品牌紫，且 text-primary 多用於圖示(門檻 3:1)不受影響。 */
   --primary: oklch(0.57 0.23 304);
+  --primary-text: oklch(0.70 0.17 304);
   --primary-foreground: oklch(0.98 0.01 308);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -137,6 +140,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-text: var(--primary-text);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);

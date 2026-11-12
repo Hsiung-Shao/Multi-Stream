@@ -9,7 +9,7 @@ export function Eyebrow({ children, color }: { children: ReactNode; color?: stri
     return (
         <span
             className="text-xs font-semibold uppercase tracking-[0.08em]"
-            style={{ color: color ?? 'var(--primary)' }}
+            style={{ color: color ?? 'var(--primary-text)' }}
         >
             {children}
         </span>
@@ -17,7 +17,7 @@ export function Eyebrow({ children, color }: { children: ReactNode; color?: stri
 }
 
 /** long-form 頁 section header(eyebrow + title + 可選 sub),對齊 design 的 AbHeader。
- *  樣式為 index.css 的 .ds-head*;eyebrow 色用 color 參數(預設主色紫)。 */
+ *  樣式為 index.css 的 .ds-head*;eyebrow 色用 color 參數(預設 --primary-text)。 */
 export function SectionHead({ eyebrow, title, sub, color }: {
     eyebrow: string;
     title: string;

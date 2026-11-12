@@ -47,7 +47,7 @@ export function SupportPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={() => logEvent('SupportPage', 'click_support', 'patreon')}
-                                className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-semibold text-white bg-[#ff424d] hover:bg-[#e63b45] transition-colors"
+                                className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-semibold text-white bg-[#d6303b] hover:bg-[#c8232f] transition-colors"
                             >
                                 <HeartHandshake size={15} /> {tx('support:patreon.cta')} <ExternalLink size={13} />
                             </a>
@@ -91,11 +91,11 @@ export function SupportPage() {
                                 target="_blank"
                                 rel="sponsored noopener noreferrer"
                                 onClick={() => logEvent('SupportPage', 'click_affiliate', 'exitlag')}
-                                className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+                                className="inline-flex items-center gap-2 h-10 px-5 rounded-lg text-sm font-semibold text-white bg-orange-700 hover:bg-orange-800 transition-colors"
                             >
                                 <Zap size={15} /> {tx('support:affiliate.cta')} <ExternalLink size={13} />
                             </a>
-                            <p className="text-[11px] text-muted-foreground/70 mt-3 leading-relaxed">
+                            <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
                                 {tx('support:affiliate.disclosure')}
                             </p>
                         </div>

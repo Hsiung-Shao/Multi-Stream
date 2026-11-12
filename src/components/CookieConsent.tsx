@@ -72,9 +72,9 @@ export function CookieConsent({ onConsentChange }: CookieConsentProps) {
                             <Cookie className="w-5 h-5 md:w-6 md:h-6 text-purple-400" />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-white text-sm md:text-base">
+                            <h2 className="font-semibold text-white text-sm md:text-base">
                                 {t('cookie.title', 'Cookie 使用同意')}
-                            </h3>
+                            </h2>
                         </div>
                     </div>
 

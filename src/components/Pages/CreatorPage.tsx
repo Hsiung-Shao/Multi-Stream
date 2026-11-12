@@ -64,7 +64,7 @@ export function CreatorPage() {
                 .cr-social.primary { background: var(--primary); color: #fff; }
                 .cr-social.ghost { background: oklch(0.21 0.034 264.665 / 0.5); border: 1px solid rgba(255,255,255,0.1); }
                 .cr-social.coffee { background: linear-gradient(90deg, #ec4899 0%, #9333ea 100%); color: #fff; }
-                .cr-social.patreon { background: #ff424d; color: #fff; }
+                .cr-social.patreon { background: #d6303b; color: #fff; }
                 @media (max-width: 560px) { .cr-name { font-size: 28px; } .cr-avatar { width: 72px; height: 72px; font-size: 30px; } }
             ` }} />
 

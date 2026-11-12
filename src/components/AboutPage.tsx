@@ -130,7 +130,7 @@ export function AboutPage() {
         .ab-social.primary { background: var(--primary); color: #fff; box-shadow: 0 12px 28px -12px oklch(0.63 0.23 304 / 0.7); }
         .ab-social.ghost { background: oklch(0.21 0.034 264.665 / 0.5); color: var(--foreground); border: 1px solid rgba(255,255,255,0.1); }
         .ab-social.coffee { background: linear-gradient(90deg, #ec4899 0%, #9333ea 100%); color: #fff; }
-        .ab-social.patreon { background: #ff424d; color: #fff; }
+        .ab-social.patreon { background: #d6303b; color: #fff; }
 
         .ab-contact { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
         .ab-link-row { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 16px; text-decoration: none; background: oklch(0.21 0.034 264.665 / 0.45); border: 1px solid rgba(255,255,255,0.07); transition: background .2s ease, border-color .2s ease; cursor: pointer; font-family: var(--font-sans); text-align: left; color: inherit; width: 100%; }
@@ -249,7 +249,7 @@ export function AboutPage() {
                   <span className="ab-tech-num">{String(i + 1).padStart(2, '0')}</span>
                   <IconChip icon={Icon} hue={tItem.hue} size={40} />
                   <div className="ab-tech-body">
-                    <h4 className="ab-tech-title">{tItem.title}</h4>
+                    <h3 className="ab-tech-title">{tItem.title}</h3>
                     <p className="ab-tech-desc">{tItem.desc}</p>
                   </div>
                 </div>
@@ -352,7 +352,7 @@ export function AboutPage() {
             >
               <IconChip icon={Mail} hue="#60a5fa" size={46} />
               <div className="ab-link-body">
-                <h4 className="ab-link-title">{tx('about:feedbackForm')}</h4>
+                <h3 className="ab-link-title">{tx('about:feedbackForm')}</h3>
                 <p className="ab-link-desc">{tx('about:feedbackFormDesc')}</p>
               </div>
               <ArrowUpRight size={18} className="text-muted-foreground shrink-0" />
@@ -366,7 +366,7 @@ export function AboutPage() {
             >
               <IconChip icon={MessageCircle} hue="#c084fc" size={46} />
               <div className="ab-link-body">
-                <h4 className="ab-link-title">{tx('about:discordCommunity')}</h4>
+                <h3 className="ab-link-title">{tx('about:discordCommunity')}</h3>
                 <p className="ab-link-desc">{tx('about:discordCommunityDesc')}</p>
               </div>
               <ArrowUpRight size={18} className="text-muted-foreground shrink-0" />

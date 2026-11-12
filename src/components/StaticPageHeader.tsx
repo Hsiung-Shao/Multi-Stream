@@ -31,6 +31,7 @@ export function StaticPageHeader({ title, analyticsCategory = 'StaticPageHeader'
             {/* 左:返回首頁 */}
             <RouteLink
                 to="home"
+                aria-label={t('header.backHome')}
                 className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/[0.06] transition-colors shrink-0"
             >
                 <Home size={15} />

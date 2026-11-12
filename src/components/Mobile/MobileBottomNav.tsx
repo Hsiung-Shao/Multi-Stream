@@ -83,7 +83,7 @@ export function MobileBottomNav({ activeTab, onTabChange, onAddStream, isLandsca
                             className={cn(
                                 'flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative',
                                 isActive
-                                    ? 'text-primary'
+                                    ? 'text-primary-text'
                                     : 'text-muted-foreground active:text-foreground'
                             )}
                         >
@@ -106,6 +106,7 @@ export function MobileBottomNav({ activeTab, onTabChange, onAddStream, isLandsca
                 {/* Floating Add Button */}
                 <button
                     onClick={onAddStream}
+                    aria-label={t('mobile.nav.add', '新增')}
                     className="absolute -top-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-primary shadow-lg shadow-primary/30 flex items-center justify-center text-white active:scale-95 transition-transform"
                 >
                     <Plus className="w-6 h-6" />

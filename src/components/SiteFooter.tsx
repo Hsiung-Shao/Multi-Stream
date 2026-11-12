@@ -74,7 +74,7 @@ export function SiteFooter({ children, className, analyticsCategory = 'SiteFoote
                     {groups.map((g) => (
                         <div key={g.id} className="min-w-0">
                             {/* 用 <p> 不用 <h2>：頁尾分組標題不該進頁面的標題大綱（影響 SEO 的 H2 結構） */}
-                            <p id={`footer-group-${g.id}`} className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 sm:text-xs">
+                            <p id={`footer-group-${g.id}`} className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:text-xs">
                                 {g.title}
                             </p>
                             <ul aria-labelledby={`footer-group-${g.id}`} className="flex flex-col gap-2">

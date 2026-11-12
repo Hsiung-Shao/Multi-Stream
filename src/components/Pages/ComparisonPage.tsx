@@ -56,7 +56,7 @@ export function ComparisonPage() {
                 .cmp-h1 { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; margin: 12px auto 0; max-width: 820px; }
                 .cmp-sub { font-size: 17px; color: var(--muted-foreground); line-height: 1.7; max-width: 720px; margin: 18px auto 0; }
                 .cmp-guide { margin: 18px 0 0; font-size: 15px; color: var(--muted-foreground); }
-                .cmp-guide a { color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+                .cmp-guide a { color: var(--primary-text); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
                 .cmp-asof { font-size: 12.5px; color: var(--muted-foreground); opacity: 0.8; margin: 14px auto 0; max-width: 720px; }
                 .cmp-section { margin-top: 52px; }
                 .cmp-h2 { font-size: 22px; font-weight: 700; margin: 0 0 16px; }

@@ -315,7 +315,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
 
           <div className="flex items-center gap-2">
             <Select value={locale} onValueChange={switchLanguage}>
-              <SelectTrigger className="min-w-[140px] bg-card border-border text-foreground">
+              <SelectTrigger aria-label={tx('common:header.language')} className="min-w-[140px] bg-card border-border text-foreground">
                 <Globe className="size-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -331,6 +331,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
             <Button
               variant="ghost"
               size="icon"
+              aria-label={tx('common:header.toggleTheme')}
               onClick={() => {
                 onThemeToggle();
                 logEvent('PrivacyPage', 'toggle_theme', theme === 'dark' ? 'light' : 'dark');
@@ -376,7 +377,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
             <div className="pv-highlight-chip"><Lock size={24} /></div>
             <div className="flex-1">
               <div className="pv-highlight-eyebrow">{tx('privacy:localFirstEyebrow')}</div>
-              <h3 className="pv-highlight-title">{tx('privacy:localFirstTitle')}</h3>
+              <h2 className="pv-highlight-title">{tx('privacy:localFirstTitle')}</h2>
               <p className="pv-highlight-desc">
                 {tx('privacy:localFirstDesc')}
               </p>

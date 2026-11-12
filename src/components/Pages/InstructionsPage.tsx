@@ -1004,7 +1004,7 @@ export function InstructionsPage() {
 
                 .tut-mast { margin-bottom: 36px; }
                 .tut-eyebrow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-                .tut-eyebrow { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--primary); }
+                .tut-eyebrow { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--primary-text); }
                 .tut-eyebrow-line { height: 1px; flex: 1; background: linear-gradient(90deg, var(--primary), transparent); }
                 .tut-mast-title { font-size: 46px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 14px; line-height: 1.08; color: var(--foreground); }
                 .tut-mast-sub { font-size: 18px; color: var(--muted-foreground); margin: 0; max-width: 620px; line-height: 1.6; }
@@ -1033,10 +1033,10 @@ export function InstructionsPage() {
                 .tut-meta-read { display: inline-flex; align-items: center; gap: 4px; }
 
                 .tut-featured { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: center; padding: 24px; border-radius: 20px; cursor: pointer; background: var(--card); border: 1px solid var(--border); box-shadow: 0 24px 60px -24px rgba(0,0,0,0.45); }
-                .tut-featured-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+                .tut-featured-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--primary-text); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
                 .tut-featured-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.15; color: var(--foreground); }
                 .tut-featured-excerpt { font-size: 15.5px; color: var(--muted-foreground); margin: 0 0 18px; line-height: 1.65; }
-                .tut-read-more { margin-top: 20px; display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-weight: 600; font-size: 15px; }
+                .tut-read-more { margin-top: 20px; display: inline-flex; align-items: center; gap: 6px; color: var(--primary-text); font-weight: 600; font-size: 15px; }
 
                 .tut-grid-mag { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 24px; }
                 .tut-card { display: flex; flex-direction: column; cursor: pointer; border-radius: 16px; overflow: hidden; background: var(--card); border: 1px solid var(--border); transition: transform 0.15s, border-color 0.15s; }
