@@ -4,6 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 首次繪製前就套主題（同 useAppliedTheme：預設 dark、songs/admin 強制 dark）：
+       否則先畫淺色、JS 載入後才切深色，整頁顏色轉場會吃掉主執行緒（TBT）也會閃一下 -->
+  <script>try{var t='dark';if(!/^\/(zh-TW\/)?(songs|admin)(\/|$)/.test(location.pathname)){t=JSON.parse(localStorage.getItem('userSettings')||'{}').theme||'dark';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.classList.add(t==='light'?'light':'dark')}catch(e){document.documentElement.classList.add('dark')}</script>
 
   <!-- Content Security Policy (CSP) -->
   <!-- CSP 以 HTTP header 設定於 _headers（目前 /* 為 Report-Only 觀察期；/*.html 為強制版，僅命中 /index.html 直連）。 -->
