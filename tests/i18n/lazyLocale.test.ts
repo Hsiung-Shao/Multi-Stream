@@ -24,6 +24,8 @@ describe('i18n 語言包懶載入', () => {
         vi.doUnmock('../../src/i18n/locales/ja/index');
     });
     afterEach(() => {
+        try { localStorage.removeItem('i18nextLng'); } catch { /* 無 localStorage 時略過 */ }
+        vi.doUnmock('../../src/i18n/locales/ko/index');
         vi.doUnmock('i18next');
         vi.doUnmock('../../src/i18n/locales/en/index');
         vi.doUnmock('../../src/i18n/locales/ja/index');
@@ -119,5 +121,36 @@ describe('i18n 語言包懶載入', () => {
         expect(i18n.hasResourceBundle('ja', 'common')).toBe(false);
         await ensureLanguageLoaded('ja').catch(() => {});
         expect(i18n.hasResourceBundle('ja', 'common')).toBe(true);
+    });
+
+    it('T9 連續選兩種語言時以最後選的為準', async () => {
+        let release!: () => void;
+        const gate = new Promise<void>((r) => { release = r; });
+        vi.doMock('../../src/i18n/locales/ja/index', async (importOriginal) => {
+            await gate;
+            return importOriginal();
+        });
+        const { default: i18n, ensureLanguageLoaded } = await freshI18n();
+        await ensureLanguageLoaded('en');
+        await i18n.changeLanguage('en');
+        const { switchLanguage } = await import('../../src/i18n/switchLanguage');
+        switchLanguage('ja');
+        switchLanguage('en');
+        release();
+        await vi.waitFor(() => expect(i18n.hasResourceBundle('ja', 'common')).toBe(true));
+        await new Promise((r) => setTimeout(r, 50)); // 讓 ja 載入完成後的後續動作跑完
+        expect(i18n.language).toBe('en');
+    });
+
+    it('T10 切換時翻譯載入失敗就維持原語言', async () => {
+        vi.doMock('../../src/i18n/locales/ko/index', () => { throw new Error('chunk 載入失敗'); });
+        const { default: i18n, ensureLanguageLoaded } = await freshI18n();
+        await ensureLanguageLoaded('en');
+        await i18n.changeLanguage('en');
+        const { switchLanguage } = await import('../../src/i18n/switchLanguage');
+        switchLanguage('ko');
+        await new Promise((r) => setTimeout(r, 100)); // 等載入流程結束
+        expect(i18n.language).toBe('en');
+        expect(i18n.t(KEY, { ns: 'common' })).toBe(EN_COMMON_CANCEL);
     });
 });

@@ -7,9 +7,15 @@ import i18n, { ensureLanguageLoaded } from './i18n';
  * 此時他再點「繁體中文」，Radix Select 因為值相同不會觸發 onValueChange，得靠 SelectItem 的 onPointerUp 也呼叫這裡，
  * 才能把 zh-TW 存成偏好。語言相同時 changeLanguage 是 no-op，重複呼叫無副作用。
  */
+let pendingLang: string | null = null;
+
 export function switchLanguage(lang: string): void {
-    // 先載好翻譯再切：以 i18n.language 為依賴的 memo（如教學頁文章）在切換當下就算完，資源晚到不會重算
-    void ensureLanguageLoaded(lang).then(() => i18n.changeLanguage(lang));
+    // 先載好翻譯再切：以 i18n.language 為依賴的 memo（如教學頁文章）在切換當下就算完，資源晚到不會重算。
+    // 連點兩種語言只切最後選的；載入失敗就維持原語言（切過去只會顯示 key）。
+    pendingLang = lang;
+    void ensureLanguageLoaded(lang).then(() => {
+        if (pendingLang === lang && i18n.hasResourceBundle(lang, 'common')) void i18n.changeLanguage(lang);
+    });
     try {
         window.localStorage.setItem('i18nextLng', lang);
     } catch {
