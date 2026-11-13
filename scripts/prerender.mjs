@@ -59,8 +59,10 @@ export function applyHead(shell, route, lang, theme, appHtml) {
     const pageUrl = ORIGIN + withLang(lang, route);
     const ogType = entry.type === 'article' ? 'article' : 'website';
 
-    let out = shell;
-    // data-prerender-*：src/main.tsx 的 hydrate 閘門用它判斷「這份 HTML 烘的語言/主題與使用者相同」
+    // 不 modulepreload 主程式：src/main.tsx 等 FCP 後才載入，FCP 前下載完的 script 會被 Lighthouse 算進 LCP。
+    // 空殼 index.html（/canvas 等）畫面全靠 JS，保留 modulepreload。
+    let out = shell.replace(/[ \t]*<link rel="modulepreload"[^>]*>\r?\n?/g, '');
+    // data-prerender-*：src/boot.tsx 的 hydrate 閘門用它判斷「這份 HTML 烘的語言/主題與使用者相同」
     out = replaceOnce(
         out,
         /<html lang="[^"]*">/,

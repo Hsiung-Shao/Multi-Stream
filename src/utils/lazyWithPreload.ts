@@ -12,7 +12,7 @@ export type PreloadableComponent<T extends ComponentType<any>> = ((props: Compon
 /**
  * React.lazy 的替身，多一個 preload()。
  *
- * 為什麼需要：hydrate 預渲染 HTML（main.tsx）時，若頁面元件仍是 lazy，第一輪 hydration 會 suspend、
+ * 為什麼需要：hydrate 預渲染 HTML（boot.tsx）時，若頁面元件仍是 lazy，第一輪 hydration 會 suspend、
  * 留下 dehydrated 的 Suspense 邊界；緊接著 zustand 的 client snapshot ≠ server snapshot 觸發同步更新，
  * React 會放棄 hydrate 那個邊界改走 client render（Minified React error #421）→ 閃 Loading。
  * 只要在 hydrateRoot 之前 await preload()，render 時就走已解析的元件，整棵樹一輪 hydrate 完。

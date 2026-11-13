@@ -62,7 +62,7 @@ if (urlLangHit && typeof window !== 'undefined') {
 }
 
 // ===== 其餘語言的 lazy load =====
-// 每個語言一個動態 chunk；main.tsx 首次 render 前 await，entry-server 預渲染前 await。
+// 每個語言一個動態 chunk；boot.tsx 首次 render 前 await，entry-server 預渲染前 await。
 type LocaleBundle = Record<string, object>; // namespace → 資源（可巢狀，如 welcome）
 const lazyLoaders: Record<string, () => Promise<{ default: LocaleBundle }>> = {
     'zh-TW': () => import('./locales/zh-TW'),

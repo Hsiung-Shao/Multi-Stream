@@ -118,6 +118,13 @@ describe('prerender.mjs applyHead', () => {
         // 繁中首頁住在 /zh-TW：canonical 指向自己的語言版
         expect(out).toContain('<link rel="canonical" href="https://multistreaming.org/zh-TW"');
     });
+
+    it('拿掉主程式的 modulepreload、保留入口 script（主程式等 FCP 後才下載）', () => {
+        const built = shell.replace('</head>', '  <link rel="modulepreload" crossorigin href="/assets/boot-x.js">\n  <link rel="modulepreload" crossorigin href="/assets/vendor-react-x.js">\n</head>');
+        const out = applyHead(built, '/', 'en', 'dark', '<main><h1>X</h1></main>');
+        expect(out).not.toContain('modulepreload');
+        expect(out).toContain('<script type="module"');
+    });
 });
 
 describe('[[path]].js 取殼邏輯（文字層鎖）', () => {

@@ -47,6 +47,38 @@ function seoHtmlPlugin(): Plugin {
 }
 
 /**
+ * main.tsx 改成動態 import boot.tsx 後，Vite 不會再替主程式產生 modulepreload；這裡補回空殼 index.html 的
+ * modulepreload（/canvas 等沒預渲染的頁畫面全靠 JS，要盡早下載）。預渲染頁由 scripts/prerender.mjs 拿掉（原因見 main.tsx）。
+ */
+function preloadBootPlugin(): Plugin {
+  return {
+    name: 'preload-boot-chunk',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, ctx) {
+        const chunks = Object.values(ctx.bundle ?? {}).filter((c) => c.type === 'chunk');
+        const boot = chunks.find((c) => c.moduleIds.some((id) => id.replace(/\\/g, '/').endsWith('/src/boot.tsx')));
+        if (!boot) throw new Error('[preload-boot-chunk] 找不到 src/boot.tsx 的 chunk');
+        const files = new Set<string>();
+        const visit = (fileName: string) => {
+          const chunk = chunks.find((c) => c.fileName === fileName);
+          if (files.has(fileName) || chunk?.isEntry) return; // entry 本身已是 <script type="module">
+          files.add(fileName);
+          chunk?.imports.forEach(visit);
+        };
+        visit(boot.fileName);
+        return [...files].map((f) => ({
+          tag: 'link',
+          attrs: { rel: 'modulepreload', crossorigin: true, href: `/${f}` },
+          injectTo: 'head' as const,
+        }));
+      },
+    },
+  };
+}
+
+/**
  * 教學內容的 git 最後修改日（供 TechArticle.dateModified）。與 scripts/generate-sitemap.js 的
  * /instructions lastmod 同一組來源檔、同一退回策略（無 git 歷史/失敗 → build 日），兩邊自洽。
  */
@@ -70,7 +102,7 @@ export default defineConfig(({ isSsrBuild }) => ({
     '__APP_VERSION__': JSON.stringify(process.env.npm_package_version ?? pkg.version),
     '__GUIDES_DATE_MODIFIED__': JSON.stringify(guidesDateModified()),
   },
-  plugins: [seoHtmlPlugin(), react(), tailwindcss()],
+  plugins: [seoHtmlPlugin(), preloadBootPlugin(), react(), tailwindcss()],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     alias: {

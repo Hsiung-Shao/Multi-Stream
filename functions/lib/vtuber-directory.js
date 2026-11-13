@@ -1,6 +1,6 @@
 // 名錄頁 /vtubers 的 edge 端：一支 RPC（schedule_directory）拿頂層團體＋全部可索引成員，edge 快取 1 小時，
 // 內文放進 #root 給不跑 JS 的爬蟲（1600 多個真實 <a href="/schedule/<slug>">，個人頁彼此才不是孤島）。
-// React 掛載時會整個換掉（src/main.tsx 的 canHydrate：shell 沒有 data-prerender-lang）。
+// React 掛載時會整個換掉（src/boot.tsx 的 canHydrate：shell 沒有 data-prerender-lang）。
 // 文案與 src/i18n/locales/{zh-TW,en}/schedule.ts 的 directory.* 同步（tests/functions/vtuberDirectoryEdge.test.ts 鎖）。
 import { withLang } from './locale.js';
 import { anonRpc, escapeHtml } from './schedule-person.js';

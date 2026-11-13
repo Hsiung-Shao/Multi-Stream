@@ -44,7 +44,7 @@ const FavoritesManagerMain = lazy(() => import('./features/favorites/components/
 // const FavoritesManager = lazy(() => import('./components/FavoritesManager').then(module => ({ 'default': module.FavoritesManager })));
 const FeedbackModal = lazy(() => import('./features/feedback/FeedbackModal').then(module => ({ 'default': module.FeedbackModal })));
 // 頁面元件用 lazyWithPreload（行為 = React.lazy，多 preload()）：hydrate 預渲染 HTML 前
-// main.tsx 會先 preloadPageChunks()，首輪 hydration 才不會留下 dehydrated 的 Suspense 邊界（見該檔說明）
+// boot.tsx 會先 preloadPageChunks()，首輪 hydration 才不會留下 dehydrated 的 Suspense 邊界（見該檔說明）
 const AboutPage = lazyWithPreload(() => import('./components/AboutPage').then(module => ({ 'default': module.AboutPage })));
 const PrivacyPage = lazyWithPreload(() => import('./components/PrivacyPage').then(module => ({ 'default': module.PrivacyPage })));
 const CreatorPage = lazyWithPreload(() => import('./components/Pages/CreatorPage').then(module => ({ 'default': module.CreatorPage })));

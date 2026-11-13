@@ -2,13 +2,13 @@
  * SSG 預渲染的 server entry。
  *
  * 只給 scripts/prerender.mjs 在 Node 裡呼叫（`vite build --ssr src/entry-server.tsx`），
- * 不會進 client bundle。刻意不 import main.tsx：那裡的模組頂層直接碰 window/document。
+ * 不會進 client bundle。刻意不 import boot.tsx：那裡的模組頂層直接碰 window/document。
  *
  * 與 client 首次 render 的三個差異都在這裡「注入」而不是靠 typeof 守衛：
  *   1. useUIStore.page 初值來自 window.location → 這裡依 route 用 pathToPage 設定
  *   2. i18n LanguageDetector 在 Node 落空退回 en → 這裡明確 changeLanguage
  *   3. theme 從 localStorage 覆寫 → 這裡固定烘站方預設 PRERENDER_THEME；
- *      client（main.tsx）只有在 store theme 與此相同時才 hydrate，否則走 createRoot
+ *      client（boot.tsx）只有在 store theme 與此相同時才 hydrate，否則走 createRoot
  *
  * 路由清單直接從 PAGE_PATHS 推導（減去 CSR-only 的 /canvas、/admin），不手抄第二份。
  */
@@ -24,7 +24,7 @@ import { PAGE_PATHS, pathToPage } from './config/routes';
 export const PRERENDER_LANGS = ['zh-TW', 'en'] as const;
 export type PrerenderLang = (typeof PRERENDER_LANGS)[number];
 
-/** 預渲染一律以站方預設主題烘（useUIStore 的 theme 初值）；main.tsx 的 hydrate 閘門會比對 */
+/** 預渲染一律以站方預設主題烘（useUIStore 的 theme 初值）；boot.tsx 的 hydrate 閘門會比對 */
 export const PRERENDER_THEME = 'dark' as const;
 
 // /vtubers 的內文由 edge 注入（functions/lib/vtuber-directory.js），和個人頁同模式，不預渲染
@@ -64,7 +64,7 @@ async function renderNow(route: string, lang: PrerenderLang): Promise<string> {
         throw new Error(`entry-server: ${lang} 翻譯載入失敗`); // 不產出整頁 key 的半成品
     }
     await i18n.changeLanguage(lang);
-    // 與 client（main.tsx）對稱：chunk 先預載，App 的 ChunkSuspense 就不會輸出 Suspense 邊界，
+    // 與 client（boot.tsx）對稱：chunk 先預載，App 的 ChunkSuspense 就不會輸出 Suspense 邊界，
     // 產物裡沒有 <!--$--> 標記，client hydrate 時也沒有可被同步更新打斷的 dehydrated 邊界。
     if (!(await preloadPageChunks(page))) {
         throw new Error(`entry-server: ${route} 的 chunk 預載失敗`);

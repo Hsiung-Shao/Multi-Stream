@@ -5,7 +5,7 @@
  * 開著的 IndexedDB 連線也會讓 deleteDatabase 卡在 blocked。所以清除的分頁先廣播,
  * 其他分頁收到就封住 Storage 寫入並重新載入。
  *
- * 獨立成零依賴小模組:main.tsx 啟動時就要掛監聽,不能為此把 backup / idb 拉進首屏 bundle。
+ * 獨立成零依賴小模組:boot.tsx 啟動時就要掛監聽,不能為此把 backup / idb 拉進首屏 bundle。
  */
 const CHANNEL_NAME = 'multistream-clear-all-data';
 
@@ -31,7 +31,7 @@ export function listenForClearAllData(): void {
             window.location.reload();
         };
     } catch {
-        /* main.tsx 頂層呼叫:建構失敗(如 opaque origin)不能讓整個 App 起不來 */
+        /* boot.tsx 頂層呼叫:建構失敗(如 opaque origin)不能讓整個 App 起不來 */
     }
 }
 

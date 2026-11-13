@@ -270,7 +270,7 @@ function streamSection(heading, items) {
 
 /**
  * 個人頁的 body 內文（放進 <div id="root">，讓不跑 JS 的爬蟲與第一波索引看得到這一頁獨有的內容）。
- * 前端掛載時 #root 會被 replaceChildren() 清掉再 createRoot（src/main.tsx 的 canHydrate：shell 沒有 data-prerender-lang），
+ * 前端掛載時 #root 會被 replaceChildren() 清掉再 createRoot（src/boot.tsx 的 canHydrate：shell 沒有 data-prerender-lang），
  * 所以這段不必和 React 輸出一致；外層 min-h-svh 讓 React 接手前後頁尾位置不跳。
  * 所有資料庫字串都經 escapeHtml。
  */
