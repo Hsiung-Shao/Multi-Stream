@@ -195,7 +195,8 @@ export function LandingPage() {
                                     height={900}
                                     loading="eager"
                                     decoding="async"
-                                    {...({ fetchpriority: 'high' } as Record<string, string>)}
+                                    // elementtiming：src/main.tsx 等這張圖畫出來才啟動主程式（它是手機 LCP 元素，常比 FCP 晚）
+                                    {...({ fetchpriority: 'high', elementtiming: 'lcp-hero' } as Record<string, string>)}
                                     className="w-full h-auto rounded-lg border border-white/5"
                                 />
                             </div>

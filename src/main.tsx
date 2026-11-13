@@ -22,13 +22,23 @@ const readUser = () => {
   }
 };
 const user = readUser();
-if (user && willHydratePrerender(document.documentElement.dataset, user) && PerformanceObserver.supportedEntryTypes?.includes("paint")) {
-  new PerformanceObserver((list, observer) => {
-    if (!list.getEntriesByName("first-contentful-paint").length) return;
-    observer.disconnect();
-    boot();
-  }).observe({ type: "paint", buffered: true });
+const entryTypes = PerformanceObserver.supportedEntryTypes ?? [];
+if (user && willHydratePrerender(document.documentElement.dataset, user) && entryTypes.includes("paint")) {
   setTimeout(boot, 3000); // 保底：背景分頁不繪製、或 FCP 遲遲不來
+  // 除了 FCP，也等視窗內標了 elementtiming 的圖（首頁大圖＝LCP 元素）畫出來：LCP 常比 FCP 晚幾十毫秒，期間下載完的 script 一樣會被計入
+  const pending = new Set(["first-contentful-paint"]);
+  if (entryTypes.includes("element")) {
+    document.querySelectorAll("img[elementtiming]").forEach((img) => {
+      if (img.getBoundingClientRect().top < innerHeight) pending.add(img.getAttribute("elementtiming")!); // 視窗外的圖不會畫，等了只會落到保底
+    });
+  }
+  const done = (key: string) => {
+    if (pending.delete(key) && !pending.size) boot();
+  };
+  new PerformanceObserver((list) => list.getEntries().forEach((e) => done(e.name))).observe({ type: "paint", buffered: true });
+  if (pending.size > 1) {
+    new PerformanceObserver((list) => list.getEntries().forEach((e) => done((e as PerformanceEntry & { identifier: string }).identifier))).observe({ type: "element", buffered: true });
+  }
 } else {
   boot();
 }
