@@ -44,10 +44,10 @@ describe('PrivacyPage 歌回播放計次告知（zh-TW）', () => {
         expect(text).toMatch(/2 小時|兩小時/);
     });
 
-    it('B2 最新更新日期是 2026 年 10 月 28 日', () => {
-        expect((zhTW as Record<string, string>)['lastUpdatedValue']).toBe('2026 年 10 月 28 日');
+    it('B2 最新更新日期是 2026 年 11 月 19 日', () => {
+        expect((zhTW as Record<string, string>)['lastUpdatedValue']).toBe('2026 年 11 月 19 日');
         render(<PrivacyPage theme="light" onThemeToggle={() => {}} />);
-        expect(screen.getByText(/2026 年 10 月 28 日/)).toBeInTheDocument();
+        expect(screen.getByText(/2026 年 11 月 19 日/)).toBeInTheDocument();
     });
 });
 

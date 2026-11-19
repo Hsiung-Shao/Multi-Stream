@@ -10,9 +10,32 @@
  * - CLS 與 INP 在頁面切到背景（visibilitychange hidden）時才定案回報；GA4 gtag 在該時機用 sendBeacon 送出
  */
 import { onCLS, onINP, onLCP } from 'web-vitals/attribution';
-import { sendWebVital } from './analytics';
+import { isInternalEnvironment, sendWebVital } from './analytics';
 
 let started = false;
+
+/**
+ * 匿名回報（2026-11-19）：GA4 只收得到同意 Cookie 的訪客，解釋不了 CrUX 的實測數字。
+ * 不良的 CLS／INP 另外送到自家 /api/vitals（functions/api/vitals.js）：不設 Cookie、不帶識別碼，
+ * 所以不看同意狀態（隱私權政策 2.5 節第 9 項有告知）。良好的不送，省流量。
+ */
+function sendAnonymousVital(name: 'CLS' | 'INP', value: number, rating: string, target: string, landingPath: string): void {
+    if (rating === 'good' || isInternalEnvironment() || typeof navigator.sendBeacon !== 'function') return;
+    const body = {
+        name, value, rating,
+        target: target.slice(0, 100),
+        landing_path: landingPath.slice(0, 120),
+        page_path: window.location.pathname.slice(0, 120),
+        device: window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'desktop',
+        vw: window.innerWidth,
+        vh: window.innerHeight,
+    };
+    try {
+        navigator.sendBeacon('/api/vitals', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+    } catch {
+        // 送不出去就算了：這只是診斷資料
+    }
+}
 
 /**
  * 這份文件的進站路徑（CrUX 歸屬整段工作階段的網址）。取自導覽記錄而不是當下的 location：
@@ -33,16 +56,18 @@ export function startWebVitalsReporting(): void {
     started = true;
     const landingPath = landingPathOf();
 
-    onCLS(m => sendWebVital({
-        name: 'CLS', value: m.value, rating: m.rating, landingPath,
-        debugTarget: m.attribution.largestShiftTarget ?? '',
-    }));
+    onCLS(m => {
+        const debugTarget = m.attribution.largestShiftTarget ?? '';
+        sendWebVital({ name: 'CLS', value: m.value, rating: m.rating, landingPath, debugTarget });
+        sendAnonymousVital('CLS', m.value, m.rating, debugTarget, landingPath);
+    });
     onLCP(m => sendWebVital({
         name: 'LCP', value: m.value, rating: m.rating, landingPath,
         debugTarget: m.attribution.target ?? '',
     }));
-    onINP(m => sendWebVital({
-        name: 'INP', value: m.value, rating: m.rating, landingPath,
-        debugTarget: m.attribution.interactionTarget ?? '',
-    }));
+    onINP(m => {
+        const debugTarget = m.attribution.interactionTarget ?? '';
+        sendWebVital({ name: 'INP', value: m.value, rating: m.rating, landingPath, debugTarget });
+        sendAnonymousVital('INP', m.value, m.rating, debugTarget, landingPath);
+    });
 }

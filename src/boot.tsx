@@ -1,4 +1,5 @@
 import { createRoot, hydrateRoot } from "react-dom/client";
+import { captureEdgeBody } from './features/schedule/edgeBody';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App, { preloadPageChunks } from "./App.tsx";
 import { apiLoader } from "./utils/apiLoader.ts";
@@ -105,6 +106,8 @@ ensureLanguageLoaded(i18n.language).then(() => ensureLanguageLoaded(i18n.languag
       }
     });
   } else {
+    // 個人週表頁的 edge 內文先留一份，載入中／查詢失敗時由 SchedulePersonPage 沿用（features/schedule/edgeBody.ts）
+    captureEdgeBody(root, window.location.pathname);
     root.replaceChildren();
     createRoot(root).render(app);
   }

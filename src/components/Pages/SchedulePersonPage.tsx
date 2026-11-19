@@ -39,6 +39,7 @@ import { serializeSongShare } from '../../features/songs/lib/songShareLink';
 import { formatTimecode } from '../../features/songs/lib/timecode';
 import { EmbedScheduleDialog } from '../../features/schedule/EmbedScheduleDialog';
 import { EMBED_BANNER_DISMISSED_KEY } from '../../features/schedule/embedUsage';
+import { edgeBodyFor } from '../../features/schedule/edgeBody';
 
 const RECENT_PREVIEW = 10;
 
@@ -638,6 +639,8 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
     const { t } = useTranslation('schedule');
     const query = usePersonSchedule(slug);
     const person = query.data;
+    // edge 放進 #root 的內文（boot.tsx 清空前留的）：載入中與查詢失敗時沿用，算繪的任何時刻都有這一頁的內容
+    const edgeHtml = person ? null : edgeBodyFor(window.location.pathname);
     // 相關推薦另外查：主內容先畫，兩個區塊等它到了再出現；只有可索引的頁面才查（內鏈是給爬蟲與讀者的，空頁不需要）
     const relatedQuery = useQuery({
         queryKey: ['schedule-person-related', slug],
@@ -652,7 +655,8 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
             <StaticPageHeader title={t('title')} analyticsCategory="SchedulePersonPage" />
 
             <main className="mx-auto max-w-[1080px] px-4 pb-36 sm:px-6">
-                <nav aria-label="Breadcrumb" className="pt-5 text-[13px] text-muted-foreground">
+                {/* edge 內文自己帶麵包屑：沿用它的期間不重複畫 */}
+                <nav aria-label="Breadcrumb" hidden={!!edgeHtml} className="pt-5 text-[13px] text-muted-foreground">
                     <ol className="flex flex-wrap items-center gap-1.5">
                         <li><RouteLink to="home" className="hover:text-foreground">MultiStream Hub</RouteLink></li>
                         <li aria-hidden="true" className="inline-flex opacity-50"><ChevronRight size={13} /></li>
@@ -691,6 +695,8 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                         </RouteLink>
                     </div>
                 ) : query.isError ? (
+                    <>
+                    {edgeHtml && <div data-edge-body dangerouslySetInnerHTML={{ __html: edgeHtml }} />}
                     <div role="alert" className="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
                         <AlertTriangle className="text-amber-500" aria-hidden="true" />
                         <p className="font-semibold">{t('state.error')}</p>
@@ -699,6 +705,9 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                             {t('state.retry')}
                         </Button>
                     </div>
+                    </>
+                ) : edgeHtml ? (
+                    <div data-edge-body dangerouslySetInnerHTML={{ __html: edgeHtml }} />
                 ) : (
                     <LoadingState label={t('state.loading')} />
                 )}
