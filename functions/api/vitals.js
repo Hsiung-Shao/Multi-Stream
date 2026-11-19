@@ -12,7 +12,11 @@ import { logError } from '../lib/logger.js';
 
 const MAX_BODY_BYTES = 2 * 1024;
 
-const isPath = (s) => typeof s === 'string' && s.startsWith('/') && s.length <= 120;
+// Postgres text 存不了 NUL、JSON 也送不了單獨的 surrogate：放行會變成每筆都寫入失敗
+const storable = (s) => typeof s === 'string' && !/[\u0000\ud800-\udfff]/.test(s);
+const isPath = (s) => storable(s) && s.startsWith('/') && s.length <= 120;
+// 寫入失敗的紀錄每個 isolate 只記一次：migration 沒套時每筆回報都會失敗，不能每筆都寫一列 system_logs
+let insertFailureLogged = false;
 const isSize = (n) => Number.isFinite(n) && n >= 0 && n <= 20000;
 
 /** 合法回傳要寫入的列，不合法回 null */
@@ -22,7 +26,7 @@ function toRow(b) {
     if (typeof b.value !== 'number' || !Number.isFinite(b.value) || b.value < 0) return null;
     if (b.rating !== 'needs-improvement' && b.rating !== 'poor') return null;
     if (b.device !== 'mobile' && b.device !== 'desktop') return null;
-    if (typeof b.target !== 'string' || b.target.length > 100) return null;
+    if (!storable(b.target) || b.target.length > 100) return null;
     if (!isPath(b.landing_path) || !isPath(b.page_path) || !isSize(b.vw) || !isSize(b.vh)) return null;
     return {
         metric: b.name, value: b.value, rating: b.rating, target: b.target,
@@ -42,7 +46,8 @@ export async function onRequestPost(context) {
 
     // sendBeacon 不看回應也不重試：寫入失敗（例如 migration 還沒套）照樣回 204，但要留紀錄，否則資料默默是空的
     const res = await insert(env, 'web_vitals_reports', row);
-    if (!res.ok) {
+    if (!res.ok && !insertFailureLogged) {
+        insertFailureLogged = true;
         const p = logError(env, 'vitals', 'web_vitals_reports insert failed', { metadata: { status: res.status, error: res.error?.slice(0, 300) } });
         if (context.waitUntil) context.waitUntil(p);
         else p.catch(() => {});

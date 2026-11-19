@@ -36,6 +36,13 @@ describe('edgeBody', () => {
         expect(edgeBodyFor('/schedule/abc')).toBe('<p>舊內文</p>');
     });
 
+    it('外層是 <div><main> 時只留 main 裡面', () => {
+        const root = document.createElement('div');
+        root.innerHTML = '<div class="min-h-svh"><main class="p"><h1>名字</h1></main></div>';
+        captureEdgeBody(root, '/schedule/abc');
+        expect(edgeBodyFor('/schedule/abc')).toBe('<h1>名字</h1>');
+    });
+
     it('resetEdgeBody 清空', () => {
         captureEdgeBody(rootWith('<p>x</p>'), '/schedule/abc');
         resetEdgeBody();

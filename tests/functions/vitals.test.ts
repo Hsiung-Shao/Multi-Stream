@@ -88,6 +88,30 @@ describe('POST /api/vitals', () => {
         expect(writes()).toHaveLength(0);
     });
 
+    it.each([
+        ['target 含 NUL', { target: `a${String.fromCharCode(0)}b` }],
+        ['page_path 含 NUL', { page_path: `/x${String.fromCharCode(0)}` }],
+        ['target 含單獨的 surrogate', { target: `a${String.fromCharCode(0xd800)}` }],
+    ])('資料庫存不了的字元直接拒絕：%s', async (_n, patch) => {
+        // 這類字串 Postgres 會拒絕；放行的話每筆都會變成一次失敗寫入＋一列錯誤紀錄
+        const res = await onRequestPost({ request: req({ ...VALID, ...patch }), env: ENV() });
+        expect(res.status).toBe(400);
+        expect(calls).toHaveLength(0);
+    });
+
+    it('寫入連續失敗時，錯誤紀錄只記一次', async () => {
+        vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
+            calls.push({ method: 'POST', url: String(input), body: null, headers: new Headers() });
+            return new Response('{"message":"relation does not exist"}', { status: 404 });
+        }));
+        for (let i = 0; i < 3; i++) {
+            const res = await onRequestPost({ request: req(VALID), env: ENV() });
+            expect(res.status).toBe(204);
+        }
+        expect(calls.filter((c) => c.url.includes('system_logs')).length).toBeLessThanOrEqual(1);
+        expect(writes()).toHaveLength(3);
+    });
+
     it('端點擋跨站來源', async () => {
         const res = await onRequestPost({
             request: req(VALID, { 'Sec-Fetch-Site': 'cross-site', Origin: 'https://evil.example' }),
