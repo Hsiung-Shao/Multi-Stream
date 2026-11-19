@@ -3,7 +3,7 @@
 // GA4 的 web_vitals 只收得到同意 Cookie 的訪客；這裡收全體訪客「不良」的 CLS／INP 是哪個元素、哪一頁。
 // 只存指標與頁面資訊：完全不碰 IP、UA 或任何識別碼。
 // 不做每 IP 限流：KV 免費方案每日只有 1,000 次寫入，每筆回報計數一次會拖垮其他靠 KV 的限流；
-// 灌爆的防線是資料表的每小時總量上限（migration 20261119090000 的 trigger，超過就靜默丟棄）。
+// 灌爆的防線是資料表的每小時總量上限（migration 20261119074940 的 trigger，超過就靜默丟棄）。
 // 表：web_vitals_reports（RLS 開、無 policy，只有 service_role 能寫）。
 
 import { jsonResponse, readJsonBody, isRequestFromAllowedSite } from '../lib/cors.js';
