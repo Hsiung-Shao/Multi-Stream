@@ -89,6 +89,16 @@ describe('SchedulePersonPage edge 內文', () => {
         expect(document.querySelector('[data-edge-body]')).toBeNull();
     });
 
+    it('站內換頁時網址還沒更新，也不顯示上一位的內文', () => {
+        // 實際順序：setPage → 先算繪新頁 → useRouter 的 effect 才 pushState，所以算繪當下網址仍是上一位
+        window.history.pushState({}, '', '/schedule/someone-else');
+        capture('/schedule/someone-else');
+        h.fetchPerson.mockReturnValue(new Promise(() => {}));
+        renderPage();
+        expect(screen.queryByText(EDGE_NAME)).toBeNull();
+        expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+    });
+
     it('資料到了換成正式介面', async () => {
         capture(PATH);
         h.fetchPerson.mockResolvedValue(person);

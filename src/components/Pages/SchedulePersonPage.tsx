@@ -27,7 +27,7 @@ import { isPastScheduled } from '../../features/schedule/filters';
 import { largerAvatar } from '../../features/schedule/streamLinks';
 import { schedulePersonPage, schedulePersonPath } from '../../config/schedulePerson';
 import { PAGE_PATHS } from '../../config/routes';
-import { urlLangOf, withLang } from '../../../functions/lib/locale.js';
+import { splitLangPath, urlLangOf, withLang } from '../../../functions/lib/locale.js';
 import { breadcrumb, graph, webPage } from '../../seo/jsonld';
 import { SEO_SITE_URL } from '../../seo/defaults';
 import { toHtmlLang } from '../../i18n/i18n';
@@ -640,7 +640,10 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
     const query = usePersonSchedule(slug);
     const person = query.data;
     // edge 放進 #root 的內文（boot.tsx 清空前留的）：載入中與查詢失敗時沿用，算繪的任何時刻都有這一頁的內容
-    const edgeHtml = person ? null : edgeBodyFor(window.location.pathname);
+    // 只在還沒有結果（undefined）時用；查無此人（null）走找不到畫面。
+    // 網址的 slug 要等於這一頁的 slug：站內換頁時先算繪新頁、useRouter 才 pushState，那一刻網址還是上一位
+    const path = window.location.pathname;
+    const edgeHtml = person === undefined && splitLangPath(path).path === schedulePersonPath(slug) ? edgeBodyFor(path) : null;
     // 相關推薦另外查：主內容先畫，兩個區塊等它到了再出現；只有可索引的頁面才查（內鏈是給爬蟲與讀者的，空頁不需要）
     const relatedQuery = useQuery({
         queryKey: ['schedule-person-related', slug],
@@ -696,7 +699,6 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                     </div>
                 ) : query.isError ? (
                     <>
-                    {edgeHtml && <div data-edge-body dangerouslySetInnerHTML={{ __html: edgeHtml }} />}
                     <div role="alert" className="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
                         <AlertTriangle className="text-amber-500" aria-hidden="true" />
                         <p className="font-semibold">{t('state.error')}</p>
@@ -705,6 +707,8 @@ export function SchedulePersonPage({ slug }: { slug: string }) {
                             {t('state.retry')}
                         </Button>
                     </div>
+                    {/* 錯誤訊息與重試放前面，edge 內文接在後面 */}
+                    {edgeHtml && <div data-edge-body dangerouslySetInnerHTML={{ __html: edgeHtml }} />}
                     </>
                 ) : edgeHtml ? (
                     <div data-edge-body dangerouslySetInnerHTML={{ __html: edgeHtml }} />

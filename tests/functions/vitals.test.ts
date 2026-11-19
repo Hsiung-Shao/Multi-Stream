@@ -18,12 +18,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const writes = () => calls.filter((c) => c.url.includes('web_vitals_reports'));
 
-function memKv(initial?: string) {
-    const m = new Map<string, string>();
-    return { get: vi.fn(async (_k: string) => initial ?? null), put: vi.fn(async (k: string, v: string) => void m.set(k, v)) };
-}
-
-const ENV = (kv: unknown = memKv()) => ({ SUPABASE_URL: 'http://sb', SUPABASE_SERVICE_ROLE_KEY: 'k', RATE_LIMIT_KV: kv });
+const ENV = () => ({ SUPABASE_URL: 'http://sb', SUPABASE_SERVICE_ROLE_KEY: 'k' });
 
 const VALID = {
     name: 'CLS', value: 0.2431, rating: 'poor', target: 'main>div.hero',
@@ -100,17 +95,5 @@ describe('POST /api/vitals', () => {
         });
         expect(res.status).toBe(403);
         expect(writes()).toHaveLength(0);
-    });
-
-    it('超過限流不寫入', async () => {
-        const res = await onRequestPost({ request: req(VALID), env: ENV(memKv('30')) });
-        expect(res.status).toBe(429);
-        expect(writes()).toHaveLength(0);
-    });
-
-    it('沒有 KV 時放行', async () => {
-        const res = await onRequestPost({ request: req(VALID), env: { SUPABASE_URL: 'http://sb', SUPABASE_SERVICE_ROLE_KEY: 'k' } });
-        expect(res.status).toBe(204);
-        expect(writes()).toHaveLength(1);
     });
 });

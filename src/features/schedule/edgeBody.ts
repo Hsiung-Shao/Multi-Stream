@@ -10,7 +10,8 @@ let saved: { pathname: string; html: string } | null = null;
 /** 只記個人頁（可帶 /zh-TW 前綴）且 #root 有內容時；其他情況不動先前記的 */
 export function captureEdgeBody(root: HTMLElement, pathname: string): void {
     if (!root.hasChildNodes() || !PERSON_PATH_RE.test(splitLangPath(pathname).path)) return;
-    saved = { pathname, html: root.innerHTML };
+    // edge 內文外層是 <div class="min-h-svh"><main>…：只留 main 裡面，放進頁面自己的 <main> 才不會巢狀、也不會把後面的內容推出一屏
+    saved = { pathname, html: (root.querySelector(':scope > div > main') ?? root).innerHTML };
 }
 
 /** 路徑完全相同才回傳：站內換到別人的頁不能沿用上一位的內文 */
