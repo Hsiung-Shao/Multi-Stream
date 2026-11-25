@@ -2,12 +2,19 @@
  * 收藏雲端同步：登入時完整同步一次；之後本機變動 3 秒去抖只推差異（以快照當雲端現況，不拉雲端）；
  * 回到視窗且距上次完整同步超過 5 分鐘再拉一次（看別台裝置的改動）。顧及 Supabase 出口流量，不做即時訂閱。
  */
+import { create } from 'zustand';
 import { safeJSONParse } from '../../../utils/security/index';
 import { useAuthStore } from '../../auth/authStore';
 import { mergeSync, type SyncData } from './merge';
 import { fetchAll, applyChanges } from './remote';
 
 export const SNAPSHOT_PREFIX = 'ms_cloud_sync:';
+/** 本機收藏目前屬於哪個帳號（最後一次同步成功的帳號；登出後保留，換帳號登入時用來判斷要不要先問） */
+const OWNER_KEY = 'ms_cloud_sync_owner';
+
+/** 同步狀態：設定頁顯示用；needs_choice＝本機收藏屬於另一個帳號，等使用者選併入或改用雲端 */
+export const useSyncStatus = create<{ state: 'idle' | 'syncing' | 'ok' | 'error' | 'needs_choice' }>(() => ({ state: 'idle' }));
+const setStatus = (state: ReturnType<typeof useSyncStatus.getState>['state']) => useSyncStatus.setState({ state });
 /** 收藏、分類、標籤的 repository 寫入後發這個事件（見 *Repository.saveList） */
 export const LOCAL_SAVED_EVENT = 'ms-favorites-saved';
 
@@ -51,29 +58,55 @@ export function syncNow(): Promise<boolean> {
     running ??= (async () => {
         const uid = userId();
         if (!uid) return false;
+        const snapshot = readSnapshot(uid);
+        const owner = localStorage.getItem(OWNER_KEY);
+        const local = readLocal();
+        if (!snapshot && owner && owner !== uid && (local.favorites.length > 0 || local.categories.length > 0)) {
+            // 本機收藏是另一個帳號留下的：不自動併進這個帳號，等使用者選（resolveAccountSwitch）
+            setStatus('needs_choice');
+            return false;
+        }
+        setStatus('syncing');
         const remote = await fetchAll(uid);
-        if (!remote || userId() !== uid) return false;
+        if (!remote || userId() !== uid) { setStatus('error'); return false; }
         lastPull = Date.now();
-        const result = mergeSync(readLocal(), remote, readSnapshot(uid));
+        const result = mergeSync(readLocal(), remote, snapshot);
         writeLocal(result.local);
         // 空差異時 applyChanges 不會發任何請求
         const ok = await applyChanges(uid, result.upsert, result.remove);
-        if (ok) saveSnapshot(uid, result.local);
+        if (ok) { saveSnapshot(uid, result.local); localStorage.setItem(OWNER_KEY, uid); }
+        setStatus(ok ? 'ok' : 'error');
         return ok;
     })().finally(() => { running = null; });
     return running;
 }
 
+/**
+ * 換帳號時本機收藏的處理：merge＝併進目前帳號；cloud＝本機先備份（backup_ 開頭，改版號不會清），再改用雲端的收藏
+ */
+export async function resolveAccountSwitch(mode: 'merge' | 'cloud'): Promise<boolean> {
+    const uid = userId();
+    if (!uid) return false;
+    if (mode === 'cloud') {
+        try { localStorage.setItem(`backup_cloud_switch_${Date.now()}`, JSON.stringify(readLocal())); } catch { return false; }
+        localStorage.setItem(KEYS.favorites, '[]');
+        localStorage.setItem(KEYS.categories, '[]');
+    }
+    localStorage.setItem(OWNER_KEY, uid);
+    return syncNow();
+}
+
 /** 只推本機改動：以快照當雲端現況合併，不拉雲端 */
 async function pushLocal(): Promise<boolean> {
     const uid = userId();
-    if (!uid) return false;
+    if (!uid || useSyncStatus.getState().state === 'needs_choice') return false;
     const snapshot = readSnapshot(uid);
     if (!snapshot) return syncNow(); // 還沒完整同步過：走完整流程
     const result = mergeSync(readLocal(), snapshot, snapshot);
     if (isEmpty(result)) return true;
     const ok = await applyChanges(uid, result.upsert, result.remove);
     if (ok) saveSnapshot(uid, result.local);
+    setStatus(ok ? 'ok' : 'error');
     return ok;
 }
 
@@ -94,6 +127,7 @@ export function startCloudSync(): () => void {
     if (prev === 'authed') void syncNow();
     const unsub = useAuthStore.subscribe(s => {
         if (s.status === 'authed' && prev !== 'authed') void syncNow();
+        if (s.status === 'anon') setStatus('idle');
         prev = s.status;
     });
     const onSaved = () => notifyLocalChange();

@@ -7,6 +7,26 @@ import {
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
 import { useAuthStore, signIn, signOut, deleteAccount, type AuthProvider } from './authStore';
+import { useSyncStatus, resolveAccountSwitch } from '../favorites/cloudSync/syncEngine';
+
+/** 收藏同步狀態；本機收藏屬於另一個帳號時讓使用者選併入或改用雲端 */
+function SyncStatus() {
+    const { t } = useTranslation('common');
+    const state = useSyncStatus(s => s.state);
+    if (state === 'needs_choice') {
+        return (
+            <div role="alert" className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                <p className="text-sm text-foreground">{t('auth.sync_other_account')}</p>
+                <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" onClick={() => { void resolveAccountSwitch('merge'); }}>{t('auth.sync_merge_here')}</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => { void resolveAccountSwitch('cloud'); }}>{t('auth.sync_use_cloud')}</Button>
+                </div>
+            </div>
+        );
+    }
+    if (state === 'idle') return null;
+    return <p className={state === 'error' ? 'text-sm text-red-500' : 'text-xs text-muted-foreground'}>{t(`auth.sync_${state}`)}</p>;
+}
 
 const PROVIDERS: { id: AuthProvider; label: string; color: string }[] = [
     { id: 'twitch', label: 'Twitch', color: '#9146FF' },
@@ -60,6 +80,7 @@ export function AccountSection() {
                     <p className="truncate text-xs text-muted-foreground">{t('auth.signed_in_via', { providers: user.providers.join('、') })}</p>
                 </div>
             </div>
+            <SyncStatus />
             <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => { void signOut(); }}>{t('auth.sign_out')}</Button>
                 <Button type="button" variant="ghost" className="text-red-500 hover:text-red-400" onClick={() => { setDeleteFailed(false); setConfirmOpen(true); }}>

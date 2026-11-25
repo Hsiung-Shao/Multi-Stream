@@ -57,7 +57,42 @@ function merge3<T extends { id: string }>(
 // 取雲端版本時，保留本機的開台狀態等非同步欄位
 const keepLocalExtras = <T extends object>(r: T, l: T | undefined): T => (l ? { ...l, ...r } : r);
 
-export function mergeSync(local: SyncData, remote: SyncData, snapshot: SyncData | null): MergeResult {
+/** 同一個頻道的身分（各裝置的收藏 id 是隨機產生的，只能靠頻道判斷是不是同一筆） */
+const identity = (f: FavoriteStream) => `${f.platform}:${(f.channelId || f.videoId || f.url || '').toLowerCase()}`;
+
+/**
+ * 本機「快照之後才新增」的項目，若雲端已有同名分類／同一個頻道（id 不同），改用雲端那筆的 id：
+ * 否則分類會撞雲端 UNIQUE(user_id, name) 讓整批同步失敗，收藏則會變成兩筆重複。
+ */
+function adoptRemoteIds(local: SyncData, remote: SyncData, snapshot: SyncData | null): SyncData {
+    const known = (xs: { id: string }[] | undefined) => new Set((xs ?? []).map(x => x.id));
+    const remoteCatIds = known(remote.categories), snapCatIds = known(snapshot?.categories);
+    const remoteCatByName = new Map(remote.categories.map(c => [c.name, c.id]));
+    const catMap = new Map<string, string>();
+    const categories = local.categories.filter(c => {
+        if (remoteCatIds.has(c.id) || snapCatIds.has(c.id)) return true;
+        const target = remoteCatByName.get(c.name);
+        if (target === undefined) return true;
+        catMap.set(c.id, target);
+        return false;
+    });
+    const remoteFavIds = known(remote.favorites), snapFavIds = known(snapshot?.favorites);
+    const remoteByIdentity = new Map(remote.favorites.map(f => [identity(f), f]));
+    const seen = new Set<string>();
+    const favorites: FavoriteStream[] = [];
+    for (const f0 of local.favorites) {
+        const f = f0.categoryId && catMap.has(f0.categoryId) ? { ...f0, categoryId: catMap.get(f0.categoryId)! } : f0;
+        const twin = !remoteFavIds.has(f.id) && !snapFavIds.has(f.id) ? remoteByIdentity.get(identity(f)) : undefined;
+        const next = twin ? { ...f, id: twin.id } : f;
+        if (seen.has(next.id)) continue;
+        seen.add(next.id);
+        favorites.push(next);
+    }
+    return { favorites, categories, tags: local.tags };
+}
+
+export function mergeSync(local0: SyncData, remote: SyncData, snapshot: SyncData | null): MergeResult {
+    const local = adoptRemoteIds(local0, remote, snapshot);
     const cats = merge3(local.categories, remote.categories, snapshot?.categories ?? null, catKey, keepLocalExtras);
     const tags = merge3(local.tags, remote.tags, snapshot?.tags ?? null, tagKey, keepLocalExtras);
     const favs = merge3(local.favorites, remote.favorites, snapshot?.favorites ?? null, favKey, keepLocalExtras);

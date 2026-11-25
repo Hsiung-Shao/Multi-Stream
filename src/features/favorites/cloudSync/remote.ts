@@ -33,7 +33,7 @@ export async function fetchAll(userId: string): Promise<SyncData | null> {
     }
 }
 
-/** 先寫分類與標籤（收藏會參照它們），再寫收藏；刪除反過來先刪收藏 */
+/** 先刪除，再寫分類與標籤（收藏會參照它們），最後寫收藏 */
 export async function applyChanges(
     userId: string,
     upsert: SyncData,
@@ -56,12 +56,13 @@ export async function applyChanges(
         return true;
     };
     try {
-        return await up('user_favorite_categories', upsert.categories.map(c => catToRow(c, userId)))
-            && await up('user_favorite_tags', upsert.tags.map(t => tagToRow(t, userId)))
-            && await up('user_favorites', upsert.favorites.map(f => favToRow(f, userId)))
-            && await del('user_favorites', remove.favorites)
+        // 先刪再寫：刪掉分類又建同名的，寫入時才不會撞 UNIQUE(user_id, name)
+        return await del('user_favorites', remove.favorites)
             && await del('user_favorite_categories', remove.categories)
-            && await del('user_favorite_tags', remove.tags);
+            && await del('user_favorite_tags', remove.tags)
+            && await up('user_favorite_categories', upsert.categories.map(c => catToRow(c, userId)))
+            && await up('user_favorite_tags', upsert.tags.map(t => tagToRow(t, userId)))
+            && await up('user_favorites', upsert.favorites.map(f => favToRow(f, userId)));
     } catch {
         return false;
     }
