@@ -58,16 +58,18 @@ export function syncNow(): Promise<boolean> {
     running ??= (async () => {
         const uid = userId();
         if (!uid) return false;
-        const snapshot = readSnapshot(uid);
         const owner = localStorage.getItem(OWNER_KEY);
         const local = readLocal();
-        // 不論這個帳號以前有沒有在這台同步過（有快照），只要本機現在屬於別的帳號就先問；
-        // 拿舊快照硬合併，會把「快照有、本機（別人的資料）沒有」的全部當成本機刪除，刪光雲端
-        if (owner && owner !== uid && (local.favorites.length > 0 || local.categories.length > 0)) {
-            // 本機收藏是另一個帳號留下的：不自動併進這個帳號，等使用者選（resolveAccountSwitch）
-            setStatus('needs_choice');
-            return false;
+        if (owner && owner !== uid) {
+            // 本機現在屬於別的帳號：這個帳號的舊快照描述的是別份本機資料，拿來合併會把雲端當成被本機刪光，一律丟掉
+            localStorage.removeItem(SNAPSHOT_PREFIX + uid);
+            // 本機有東西就先問（併入或改用雲端）；本機是空的沒什麼好問，直接聯集
+            if (local.favorites.length > 0 || local.categories.length > 0) {
+                setStatus('needs_choice');
+                return false;
+            }
         }
+        const snapshot = readSnapshot(uid);
         setStatus('syncing');
         const remote = await fetchAll(uid);
         if (!remote || userId() !== uid) { setStatus('error'); return false; }

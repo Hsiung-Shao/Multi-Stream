@@ -149,4 +149,15 @@ describe('換帳號：本機收藏屬於另一個帳號時先問', () => {
         const [, upsert] = applyChanges.mock.calls[0] as unknown as [string, SyncData];
         expect(upsert.tags.map(t => t.id)).not.toContain('tagA');
     });
+
+    it('本機是空的但屬於別的帳號時，不問也不拿舊快照刪雲端，直接聯集', async () => {
+        const { engine, applyChanges } = await setup();
+        localStorage.setItem('favoriteStreams', '[]');
+        localStorage.setItem('ms_cloud_sync:userB', JSON.stringify(data({ favorites: [fav('cloudB')] })));
+        expect(await engine.syncNow()).toBe(true);
+        const [, , remove] = applyChanges.mock.calls[0] as unknown as [string, SyncData, { favorites: string[] }];
+        expect(remove.favorites).toEqual([]);
+        expect((JSON.parse(localStorage.getItem('favoriteStreams')!) as FavoriteStream[]).map(f => f.id)).toEqual(['cloudB']);
+        expect(localStorage.getItem('ms_cloud_sync_owner')).toBe('userB');
+    });
 });
