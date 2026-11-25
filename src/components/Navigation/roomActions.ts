@@ -18,9 +18,9 @@ export function applyFocusAudio(itemId: string): void {
 
 const contentOf = (items: readonly CanvasItem[], itemId: string | undefined) => items.find(it => it.i === itemId)?.contentId;
 
-/** 聊天室收成一個並跟著 itemId；聊天室數量變了（收掉多的）就重排，否則只換頻道 */
-function withRoomChat(items: CanvasItem[], itemId: string | undefined, chatCols: number): CanvasItem[] {
-    const next = roomChatItems(items, contentOf(items, itemId));
+/** 聊天室收成一個；followId 有值時頻道換成那個視窗的串流。數量變了（收掉多的）就重排 */
+function withRoomChat(items: CanvasItem[], followId: string | undefined, chatCols: number): CanvasItem[] {
+    const next = roomChatItems(items, contentOf(items, followId));
     return next.length === items.length ? next : relayoutItems(next, getCanvasAspect(), [], chatCols);
 }
 
@@ -29,37 +29,47 @@ function commit(prev: CanvasItem[], next: CanvasItem[]): void {
     if (JSON.stringify(next) !== JSON.stringify(prev)) useStreamStore.setState({ canvasItems: next });
 }
 
-/** 把某個視窗設為焦點：舞台模式放上舞台；平分模式與主畫面互換位置。聊天室跟過去，聲音視設定跟著走 */
+/** 聊天室跟到某個視窗的串流（焦點換人時用） */
+export function followRoomChat(itemId: string): void {
+    const { canvasItems, chatColumnWidth } = useStreamStore.getState();
+    commit(canvasItems, withRoomChat(canvasItems, itemId, chatColumnWidth));
+}
+
+/** 把某個視窗設為焦點：舞台模式放上舞台（排不下舞台時與主畫面換位）；平分模式與主畫面互換位置。聊天室跟過去，聲音視設定跟著走 */
 export function focusRoomItem(itemId: string): void {
     const { roomMode, audioFollowsFocus } = useUIStore.getState();
     const store = useStreamStore.getState();
-    if (roomMode === 'stage') {
-        const base = roomChatItems(store.canvasItems, contentOf(store.canvasItems, itemId));
-        commit(store.canvasItems, stageLayout(base, itemId, store.chatColumnWidth) ?? withRoomChat(store.canvasItems, itemId, store.chatColumnWidth));
+    const staged = roomMode === 'stage'
+        ? stageLayout(roomChatItems(store.canvasItems, contentOf(store.canvasItems, itemId)), itemId, store.chatColumnWidth)
+        : null;
+    if (staged) {
+        commit(store.canvasItems, staged);
     } else {
         store.setMainCanvasItem(itemId);
-        const { canvasItems, chatColumnWidth } = useStreamStore.getState();
-        commit(canvasItems, withRoomChat(canvasItems, itemId, chatColumnWidth));
+        followRoomChat(itemId);
     }
     if (audioFollowsFocus) applyFocusAudio(itemId);
 }
 
 const mainItemId = (items: CanvasItem[]) => selectMainStreamItemId(items) ?? items.find(it => it.type === 'stream')?.i;
+// 版面類觸發只收掉多的聊天室；只有真的要收時才順便跟上主畫面，否則保留使用者自己選的頻道
+const followIfMerging = (items: CanvasItem[], mainId: string) => (items.filter(it => it.type === 'chat').length > 1 ? mainId : undefined);
 
-/** 依目前主畫面重排成舞台（新增／關閉視窗後用），聊天室收成一個跟著主畫面；排不成舞台時只整理聊天室 */
+/** 依目前主畫面重排成舞台（新增／關閉視窗後用）並把聊天室收成一個；排不成舞台時只整理聊天室 */
 export function applyRoomStage(): void {
     const { canvasItems, chatColumnWidth } = useStreamStore.getState();
     const mainId = mainItemId(canvasItems);
     if (!mainId) return;
-    const base = roomChatItems(canvasItems, contentOf(canvasItems, mainId));
-    commit(canvasItems, stageLayout(base, mainId, chatColumnWidth) ?? withRoomChat(canvasItems, mainId, chatColumnWidth));
+    const follow = followIfMerging(canvasItems, mainId);
+    const base = roomChatItems(canvasItems, contentOf(canvasItems, follow));
+    commit(canvasItems, stageLayout(base, mainId, chatColumnWidth) ?? withRoomChat(canvasItems, follow, chatColumnWidth));
 }
 
-/** 平分模式：只把聊天室收成一個跟著主畫面 */
+/** 平分模式：只把聊天室收成一個 */
 export function applyRoomChat(): void {
     const { canvasItems, chatColumnWidth } = useStreamStore.getState();
     const mainId = mainItemId(canvasItems);
-    if (mainId) commit(canvasItems, withRoomChat(canvasItems, mainId, chatColumnWidth));
+    if (mainId) commit(canvasItems, withRoomChat(canvasItems, followIfMerging(canvasItems, mainId), chatColumnWidth));
 }
 
 /** 依目前模式整理版面（切到房間模式、版面變動後用） */
@@ -86,4 +96,11 @@ export function focusRoomIndex(index: number): void {
     const id = streamContentIdsByPosition(canvasItems)[index];
     const item = canvasItems.find(it => it.type === 'stream' && it.contentId === id);
     if (item) focusRoomItem(item.i);
+}
+
+/** 移除舞台上那一路（房間模式沒有視窗工具列，從「更多」選單進來） */
+export function removeStageItem(): void {
+    const { canvasItems, removeCanvasItem } = useStreamStore.getState();
+    const id = selectMainStreamItemId(canvasItems);
+    if (id) removeCanvasItem(id);
 }

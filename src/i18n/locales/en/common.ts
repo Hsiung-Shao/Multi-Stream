@@ -79,6 +79,7 @@ const common = {
   'room.prompt_dismiss': 'No thanks',
   'room.wing_to_stage': 'Put {{name}} on stage',
   'room.to_stage': 'Put on stage',
+  'room.remove_stage': 'Remove the stream on stage',
   'canvas.tour_drag_title': 'Drag the toolbar to move',
   'canvas.tour_drag_body': 'Hover a stream to show this toolbar, then hold the ⠿ handle and drag to move the window.',
   'canvas.tour_swap_title': 'Drop on another stream to swap',

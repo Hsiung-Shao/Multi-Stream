@@ -136,6 +136,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                 isChatWindow && windowId !== undefined ? (
                     <div className="relative z-10 flex h-9 shrink-0 items-center gap-1 border-b border-white/10 bg-black/80 px-1">
                         <RoomChatTabs chatItemId={windowId} activeStreamId={stream.id} />
+                        <ChatLayoutMenu />
                         <ChatPopoutButton platform={stream.platform} channelId={stream.channelId} videoId={stream.videoId} />
                     </div>
                 ) : null
@@ -282,15 +283,27 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
             )}
             {/* 候場：iframe 裡的滑鼠事件網頁收不到，蓋一層遮罩才能「點了放上舞台」；舞台本身不蓋，保留播放器操作 */}
             {isRoom && roomStage && !isChatWindow && !isMain && windowId !== undefined && (
-                <button
-                    type="button"
-                    onClick={() => focusRoomItem(windowId)}
-                    aria-label={t('room.wing_to_stage', { name: title })}
-                    className="absolute inset-0 z-[55] flex flex-col items-center justify-center gap-1 bg-black/75 text-white opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-400"
-                >
-                    <span className="text-base font-semibold">{title}</span>
-                    <span className="rounded-full bg-purple-600 px-3 py-1 text-xs font-medium">{t('room.to_stage')}</span>
-                </button>
+                <div className="group/wing absolute inset-0 z-[55]">
+                    <button
+                        type="button"
+                        onClick={() => focusRoomItem(windowId)}
+                        aria-label={t('room.wing_to_stage', { name: title })}
+                        className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/75 text-white opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-400 group-hover/wing:opacity-100"
+                    >
+                        <span className="text-base font-semibold">{title}</span>
+                        <span className="rounded-full bg-purple-600 px-3 py-1 text-xs font-medium">{t('room.to_stage')}</span>
+                    </button>
+                    {/* 房間模式沒有視窗工具列，候場的移除入口放這裡；舞台那路從指令列「更多」移除 */}
+                    <button
+                        type="button"
+                        onClick={handleRemove}
+                        aria-label={`${t('canvas.toolbar_remove')} ${title}`}
+                        title={t('canvas.toolbar_remove')}
+                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white/80 opacity-0 transition-opacity hover:bg-red-500/30 hover:text-red-200 focus-visible:opacity-100 group-hover/wing:opacity-100"
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
             )}
         </div>
     );

@@ -243,6 +243,19 @@ describe('CanvasStreamContent 房間模式', () => {
         expect(selectMainStreamItemId(useStreamStore.getState().canvasItems)).toBe('w2');
     });
 
+    it('候場遮罩旁有移除鈕，點了移除該視窗而不是上舞台', () => {
+        const onRemove = vi.fn();
+        render(<CanvasStreamContent stream={mk(2, 'Bravo')} windowType="stream" renderProps={{ ...renderProps, onRemove }} windowId="w2" />);
+        fireEvent.click(screen.getByRole('button', { name: '移除 Bravo' }));
+        expect(onRemove).toHaveBeenCalledTimes(1);
+        expect(selectMainStreamItemId(useStreamStore.getState().canvasItems)).toBe('w1');
+    });
+
+    it('房間模式的聊天室標頭保留寬度與收合選單', () => {
+        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="chat" renderProps={renderProps} windowId="c1" />);
+        expect(screen.getByTitle('聊天室寬度與收合')).not.toBeNull();
+    });
+
     it('舞台模式的主畫面不加遮罩', () => {
         render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="stream" renderProps={renderProps} windowId="w1" />);
         expect(stageBtn('Alpha')).toBeNull();

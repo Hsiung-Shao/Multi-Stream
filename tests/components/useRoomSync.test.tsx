@@ -47,6 +47,19 @@ describe('useRoomSync', () => {
         expect(chats.map(c => [c.i, c.contentId, c.layout.h])).toEqual([['c2', 1, 24]]);
     });
 
+    it('手動切聊天室頻道後調聊天室寬度不會被拉回舞台那路', () => {
+        renderHook(() => useRoomSync());
+        act(() => { useStreamStore.getState().updateCanvasItem('c1', { contentId: 2 }); });
+        act(() => { useStreamStore.getState().setChatColumnWidth(6); });
+        expect(useStreamStore.getState().canvasItems.find(it => it.i === 'c1')!.contentId).toBe(2);
+    });
+
+    it('主畫面經由其他操作換人時聊天室也跟過去', () => {
+        renderHook(() => useRoomSync());
+        act(() => { useStreamStore.getState().setMainCanvasItem('w2'); });
+        expect(useStreamStore.getState().canvasItems.find(it => it.i === 'c1')!.contentId).toBe(2);
+    });
+
     it('主畫面換人後才讓聲音跟著焦點', () => {
         renderHook(() => useRoomSync());
         act(() => { focusRoomItem('w2'); });

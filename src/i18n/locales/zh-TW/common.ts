@@ -78,6 +78,7 @@ const common = {
   'room.prompt_dismiss': '不用了',
   'room.wing_to_stage': '把 {{name}} 放上舞台',
   'room.to_stage': '放上舞台',
+  'room.remove_stage': '移除舞台上的直播',
   'canvas.tour_drag_title': '拖曳工具列移動視窗',
   'canvas.tour_drag_body': '滑鼠移到畫面上，上方會出現這條工具列；按住左側的 ⠿ 拖曳即可移動視窗。',
   'canvas.tour_swap_title': '拖到另一個畫面上就會交換',

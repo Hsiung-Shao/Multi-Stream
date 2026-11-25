@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
 import { mainStreamItemIdOf, chatsCollapsed } from '../../utils/canvasItemOps';
-import { applyRoomLayout, applyFocusAudio } from './roomActions';
+import { applyRoomLayout, applyFocusAudio, followRoomChat } from './roomActions';
 
 export function useRoomSync(): void {
     const roomMode = useUIStore(s => s.roomMode);
@@ -37,6 +37,8 @@ export function useRoomSync(): void {
         const p = prev.current;
         const changed = mainId !== p.mainId || (audioFollowsFocus && !p.audioFollowsFocus) || (!masterMuted && p.masterMuted);
         prev.current = { mainId, audioFollowsFocus, masterMuted };
+        // 主畫面不論怎麼換人（關掉舞台那路、換位），聊天室都跟過去
+        if (mainId && mainId !== p.mainId) followRoomChat(mainId);
         if (changed && audioFollowsFocus && mainId) applyFocusAudio(mainId);
     }, [mainId, audioFollowsFocus, masterMuted]);
 }

@@ -79,6 +79,7 @@ const common = {
   'room.prompt_dismiss': '괜찮아요',
   'room.wing_to_stage': '{{name}} 무대에 올리기',
   'room.to_stage': '무대에 올리기',
+  'room.remove_stage': '무대의 방송 제거',
   'canvas.tour_drag_title': '도구 모음을 드래그해 이동',
   'canvas.tour_drag_body': '화면에 마우스를 올리면 도구 모음이 나타납니다. 왼쪽의 ⠿ 를 누른 채 드래그하면 창을 옮길 수 있습니다.',
   'canvas.tour_swap_title': '다른 화면에 놓으면 교체',

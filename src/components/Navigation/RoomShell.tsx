@@ -7,7 +7,7 @@ import { useIslandQuickActions } from '../../hooks/useIslandQuickActions';
 import { IslandFavoritesMenu } from './IslandFavoritesMenu';
 import { RoomPalette, type RoomCommand } from './RoomPalette';
 import { useRoomHotkeys } from './useRoomHotkeys';
-import { focusRoomIndex, toggleRoomMode } from './roomActions';
+import { focusRoomIndex, toggleRoomMode, removeStageItem } from './roomActions';
 import { useRoomSync } from './roomSync';
 import { cn } from '../ui/utils';
 import {
@@ -167,8 +167,8 @@ export const RoomShell = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-[#0f1119] border-white/10 text-white z-[60] min-w-[220px]">
                         <DropdownMenuItem onSelect={handleShareCanvas}>{t('common.share_canvas')}</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={removeStageItem}>{t('room.remove_stage')}</DropdownMenuItem>
                         <DropdownMenuItem onSelect={toggleFullscreen}>{isFullscreen ? t('common.exit_fullscreen') : t('common.fullscreen')}</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => useStreamStore.getState().addCanvasItem('chat', null)}>{t('common.add_chat_window')}</DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/10" />
                         <DropdownMenuItem onSelect={() => useUIStore.getState().openModal('favorites', 'global_settings')}>{t('common.settings')}</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => useUIStore.getState().setHotkeyHelpOpen(true)}>{t('canvas.help_button')}</DropdownMenuItem>

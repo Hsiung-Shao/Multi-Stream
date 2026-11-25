@@ -1,3 +1,4 @@
+import { selectMainStreamItemId } from '../../src/utils/canvasItemOps';
 // focusRoomItem：房間模式下把某個視窗設為焦點（舞台重排／平分互換）＋聲音跟著焦點
 import { describe, it, expect, beforeEach } from 'vitest';
 import { focusRoomItem } from '../../src/components/Navigation/roomActions';
@@ -157,5 +158,15 @@ describe('focusRoomItem：聊天室跟著舞台', () => {
         const items = useStreamStore.getState().canvasItems;
         expect(items.find(it => it.type === 'chat')!.contentId).toBe(2);
         expect(items.filter(it => it.type === 'stream').map(it => it.i).sort()).toEqual(['w1', 'w2', 'w3']);
+    });
+});
+
+describe('focusRoomItem：舞台排不下時', () => {
+    it('6 路時點候場改用換位讓它成為主畫面', () => {
+        useUIStore.setState({ roomMode: 'stage', audioFollowsFocus: false });
+        const items: CanvasItem[] = [S('w1', 1, L(0, 0, 12, 12)), ...[2, 3, 4, 5, 6].map((n, k) => S(`w${n}`, n, L(12 + (k % 2) * 6, Math.floor(k / 2) * 8, 6, 8)))];
+        useStreamStore.setState({ canvasItems: items, streams: [1, 2, 3, 4, 5, 6].map(n => stream(n)) });
+        focusRoomItem('w6');
+        expect(selectMainStreamItemId(useStreamStore.getState().canvasItems)).toBe('w6');
     });
 });
