@@ -177,6 +177,7 @@ export const RoomShell = () => {
                         </DropdownMenuSub>
                         <DropdownMenuItem onSelect={toggleFullscreen}>{isFullscreen ? t('common.exit_fullscreen') : t('common.fullscreen')}</DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/10" />
+                        <DropdownMenuItem onSelect={() => useUIStore.getState().openModal('favorites', 'global_settings')}>{t('auth.account_and_sign_in')}</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => useUIStore.getState().openModal('favorites', 'global_settings')}>{t('common.settings')}</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => useUIStore.getState().setHotkeyHelpOpen(true)}>{t('canvas.help_button')}</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => useUIStore.getState().setPage('home')}>{t('common.home')}</DropdownMenuItem>

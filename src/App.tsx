@@ -32,6 +32,7 @@ import { useStreamHeartbeat } from './hooks/useStreamHeartbeat';
 import { RestoreSessionPrompt } from './components/Dialogs/RestoreSessionPrompt';
 import type { StreamData } from './utils/streamUtils';
 import type { CanvasItem } from './types/canvas';
+import { initAuth } from './features/auth/authStore';
 // 手機殼層只在手機的畫布／收藏等分頁用到：lazy 載入，桌機與所有預渲染頁都不下載
 const MobileApp = lazy(() => import('./components/Mobile/MobileApp').then(module => ({ 'default': module.MobileApp })));
 
@@ -194,6 +195,9 @@ export default function App() {
         useStreamStore.getState().clearCanvasItems();
       }
     }
+
+    // 登入狀態：沒登入過的訪客不載 Supabase（App 對手機也會先跑這裡，MobileApp 不用另外初始化）
+    void initAuth();
 
     // Check for Twitch OAuth redirect
     if (window.location.hash && window.location.hash.includes('access_token')) {

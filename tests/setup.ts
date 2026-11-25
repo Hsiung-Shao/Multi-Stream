@@ -18,6 +18,11 @@ const localStorageMock = (function () {
         clear: vi.fn(() => {
             store = {};
         }),
+        // 真瀏覽器有的列舉介面（hasStoredSession 靠它找 sb-*-auth-token）
+        get length() {
+            return Object.keys(store).length;
+        },
+        key: vi.fn((i: number) => Object.keys(store)[i] ?? null),
     };
 })();
 

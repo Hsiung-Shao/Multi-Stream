@@ -27,7 +27,8 @@ export const getSupabase = (): Promise<SupabaseClient | null> => {
                 }
 
                 const { createClient } = await import('@supabase/supabase-js');
-                supabaseInstance = createClient(config.url, config.anonKey);
+                // PKCE：OAuth 回呼帶 ?code=，不佔用網址 hash（hash 的 access_token 已被 Twitch 追隨匯入使用）
+                supabaseInstance = createClient(config.url, config.anonKey, { auth: { flowType: 'pkce' } });
                 return supabaseInstance;
             })
             .catch(err => {

@@ -26,6 +26,7 @@ import { ScrollArea } from '../../../components/ui/scroll-area';
 import { cn } from '../../../components/ui/utils';
 import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare, Trash2 } from 'lucide-react';
 import { logEvent, track } from '../../../utils/analytics';
+import { AccountSection } from '../../auth/AccountSection';
 import { applyRoomLayout } from '../../../components/Navigation/roomActions';
 
 import { GITHUB_REPO_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
@@ -238,6 +239,11 @@ export function SettingsSection() {
         <ScrollArea className="flex-1 h-full">
             <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full py-4 px-2 pr-4">
             <h2 className="text-xl font-bold text-foreground px-1">{t('favorites:settings')}</h2>
+
+            {/* 帳號：登入後收藏跨裝置同步、合併聊天室可用 Twitch 帳號發言 */}
+            <FMCard title={t('common:auth.account')}>
+                <AccountSection />
+            </FMCard>
 
             {/* 外觀 */}
             <FMCard title={t('favorites:appearance')}>

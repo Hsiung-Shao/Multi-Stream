@@ -139,6 +139,7 @@ export function PrivacyPage({ theme, onThemeToggle }: PrivacyPageProps) {
               tx('privacy:section2_5.item5'), tx('privacy:section2_5.item6'),
               tx('privacy:section2_5.item7'), tx('privacy:section2_5.item8'),
               tx('privacy:section2_5.item9'),
+              tx('privacy:section2_5.item10'), tx('privacy:section2_5.item11'), tx('privacy:section2_5.item12'),
             ]}
           />
         </>
