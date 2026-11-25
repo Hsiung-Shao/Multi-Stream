@@ -28,6 +28,7 @@ export class TwitchChatClient {
     private stopped = true;
     private connected = false;
     private creds: { login: string; token: string } | null = null;
+    private credsRejected = false;
     private readonly createSocket: (url: string) => SocketLike;
     private readonly maxPerChannel: number;
 
@@ -73,6 +74,7 @@ export class TwitchChatClient {
     setCredentials(creds: { login: string; token: string } | null): void {
         const same = creds?.login === this.creds?.login && creds?.token === this.creds?.token;
         this.creds = creds && /^[a-z0-9_]{1,25}$/.test(creds.login) ? creds : null;
+        if (this.creds) this.credsRejected = false;
         // 已連線就重連換身分（新 socket 握手時用新的 PASS／NICK）
         if (!same && this.socket && !this.stopped) {
             const old = this.socket;
@@ -99,6 +101,11 @@ export class TwitchChatClient {
         }];
         this.emit();
         return true;
+    }
+
+    /** Twitch 拒絕了這組權杖（已改回匿名），呼叫端要重新取權杖或請使用者重新授權 */
+    authFailed(): boolean {
+        return this.credsRejected;
     }
 
     canSend(): boolean {
@@ -161,6 +168,26 @@ export class TwitchChatClient {
                 this.connected = true;
                 this.emit();
                 return;
+            case 'NOTICE': {
+                const text = m.params[m.params.length - 1] ?? '';
+                if (/login authentication failed|improperly formatted auth/i.test(text)) {
+                    // 權杖失效或被撤銷：放棄這組、回到匿名唯讀（Twitch 會接著斷線，重連時就是匿名），避免用壞權杖無限重連
+                    this.creds = null;
+                    this.credsRejected = true;
+                    this.emit();
+                    return;
+                }
+                const ch = m.params[0]?.replace(/^#/, '').toLowerCase();
+                if (ch && this.channels.has(ch) && m.tags['msg-id']?.startsWith('msg_')) {
+                    // 訊息被頻道規則擋下（僅限追隨者、重複訊息…）：拿掉剛補上的自己那則，改顯示提示
+                    let mine = -1;
+                    for (let i = this.messages.length - 1; i >= 0; i--) if (this.messages[i].channel === ch && this.messages[i].id.startsWith('self-')) { mine = i; break; }
+                    const kept = mine >= 0 ? this.messages.filter((_, i) => i !== mine) : this.messages;
+                    this.messages = [...kept, { id: `sys-${Date.now()}-${Math.random()}`, channel: ch, user: '', displayName: '', text, emotes: [], ts: Date.now(), action: false, system: true }];
+                    this.emit();
+                }
+                return;
+            }
             case 'RECONNECT':
                 this.socket?.close();
                 return;

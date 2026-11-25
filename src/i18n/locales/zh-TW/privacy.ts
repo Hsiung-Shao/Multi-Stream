@@ -120,6 +120,7 @@ const privacy = {
   'section2_5.item10': '登入（Twitch／Google／Discord）時：登入服務提供的帳號 ID、顯示名稱、頭像網址與 Email 由 Supabase 保存，用來辨識您的帳號；可在「設定 → 帳號」隨時刪除帳號，相關資料一併刪除。',
   'section2_5.item11': '登入後的收藏同步：您的收藏、分類與標籤會存到雲端資料庫，只有您本人能讀寫；登出只停止同步，刪除帳號時雲端資料一併刪除。',
   'section2_5.item12': '使用合併聊天室時：您的瀏覽器會直接連到 Twitch 聊天伺服器讀取訊息，並向 7TV、BetterTTV、FrankerFaceZ 取得表情圖片，這些服務會看到您的 IP 位址；本站不保存聊天內容。',
+  'section2_5.item13': '用 Twitch 登入並在合併聊天室發言時：Twitch 授權的續期權杖會加密後存在本站資料庫，只用來代您送出聊天訊息；登出只停止這台裝置使用，刪除帳號時一併刪除，您也可以隨時在 Twitch 的「設定 → 連線」撤銷授權。',
   'section3.item6': '查詢頻道資訊與開台狀態時，您的瀏覽器會直接連線 YouTube Data API 與 Twitch API，送出頻道或影片 ID；這些請求同樣適用 Google 與 Twitch 的隱私政策',
 };
 

@@ -15,10 +15,11 @@ import { cn } from '../../components/ui/utils';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { useUIStore } from '../../store/useUIStore';
 import { useAuthStore, getAccessToken } from '../auth/authStore';
-import { getChatCredentials, resetChatCredentials } from './chatToken';
+import { fetchChatCredentials, resetChatCredentials, onChatCredentialsChanged } from './chatToken';
 
-/** 發言權杖 50 分鐘重取一次（Twitch 要求每小時驗一次權杖；伺服器每次都換新） */
+/** 發言權杖 50 分鐘重取一次（Twitch 要求每小時驗一次權杖；伺服器每次都換新）；暫時失敗 1 分鐘後重試 */
 const CRED_REFRESH_MS = 50 * 60_000;
+const CRED_RETRY_MS = 60_000;
 
 /** 用 Twitch 帳號登入時取發言權杖並交給連線；登出或換成非 Twitch 帳號時回到匿名唯讀 */
 function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing' | 'ready' {
@@ -27,16 +28,25 @@ function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing'
     useEffect(() => {
         if (!twitchUser) { c.setCredentials(null); resetChatCredentials(); setState('none'); return; }
         let on = true;
+        let timer: ReturnType<typeof setTimeout> | undefined;
         const load = async () => {
+            clearTimeout(timer);
             setState(s => (s === 'ready' ? s : 'pending'));
-            const creds = await getChatCredentials(await getAccessToken());
+            const r = await fetchChatCredentials(await getAccessToken());
             if (!on) return;
-            c.setCredentials(creds);
-            setState(creds ? 'ready' : 'missing');
+            if (r.kind === 'ok') { c.setCredentials(r.creds); setState('ready'); }
+            else if (r.kind === 'missing') { c.setCredentials(null); setState('missing'); }
+            // 暫時失敗：保留現有權杖（若有），稍後再試
+            else setState(s => (s === 'ready' ? s : 'missing'));
+            timer = setTimeout(load, r.kind === 'error' ? CRED_RETRY_MS : CRED_REFRESH_MS);
         };
         void load();
-        const timer = setInterval(load, CRED_REFRESH_MS);
-        return () => { on = false; clearInterval(timer); };
+        // 權杖交付完成（登入回來時）或 IRC 拒絕權杖時重新整理狀態
+        const offCreds = onChatCredentialsChanged(() => { void load(); });
+        const offClient = c.subscribe(() => {
+            if (c.authFailed()) { resetChatCredentials(); setState('missing'); }
+        });
+        return () => { on = false; clearTimeout(timer); offCreds(); offClient(); };
     }, [c, twitchUser]);
     return state;
 }
@@ -118,6 +128,7 @@ function batched(c: TwitchChatClient) {
 export const ChatLine = memo(function ChatLine({ message, emotes, showChannel }: { message: ChatMessage; emotes: ReadonlyMap<string, string>; showChannel?: boolean }) {
     const parts = useMemo(() => messageParts(message.text, message.emotes, emotes), [message, emotes]);
     return (
+        message.system ? <div role="status" className="px-3 py-0.5 text-[12px] text-amber-300/90">⚠ {message.text}</div> :
         <div className={cn('break-words px-3 py-0.5 text-[13px] leading-relaxed text-white/90', message.action && 'italic')}>
             {showChannel && <span className="mr-1.5 rounded bg-white/10 px-1 text-[10px] text-white/60">{message.channel}</span>}
             <span className="font-semibold" style={{ color: readableColor(message.color) ?? '#a78bfa' }}>{message.displayName}</span>

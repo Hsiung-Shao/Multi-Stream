@@ -42,6 +42,10 @@ function apply(session: Session | null) {
     useAuthStore.setState({ status: user ? 'authed' : 'anon', user });
 }
 
+const captureChatToken = (session: Session | null) => {
+    if (session?.provider_refresh_token) void import('../chat/chatToken').then(m => m.captureTwitchChatToken(session));
+};
+
 const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T | null> =>
     Promise.race([p, new Promise<null>(r => setTimeout(() => r(null), ms))]);
 
@@ -54,10 +58,8 @@ function loadClient(): Promise<SupabaseClient | null> {
         sb.auth.onAuthStateChange((event, session) => {
             setTimeout(() => {
                 apply(session);
-                // 用 Twitch 登入回來：續期權杖只會出現這一次，交給伺服器保管（合併聊天室發言用）
-                if (event === 'SIGNED_IN' && session?.provider_refresh_token) {
-                    void import('../chat/chatToken').then(m => m.captureTwitchChatToken(session));
-                }
+                // 用 Twitch 登入回來：續期權杖只出現在這次 session，交給伺服器保管（合併聊天室發言用；同一個只交一次）
+                if (event === 'SIGNED_IN') captureChatToken(session);
             }, 0);
         });
         return sb;
@@ -74,7 +76,7 @@ export async function initAuth(): Promise<void> {
     const sb = await loadClient();
     if (!sb) { useAuthStore.setState({ status: 'anon', user: null }); return; }
     const res = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS);
-    if (res) apply(res.data.session);
+    if (res) { apply(res.data.session); captureChatToken(res.data.session); }
     // 逾時：回呼可能已經設好狀態，只有還沒定的才當未登入（之後 onAuthStateChange 會再更新）
     else if (useAuthStore.getState().status === 'unknown') useAuthStore.setState({ status: 'anon', user: null });
     // 登入回呼的 ?code= 用過就從網址拿掉（reload 不會重送、分享出去也不帶）
@@ -102,9 +104,8 @@ export async function signIn(provider: AuthProvider): Promise<void> {
 
 export async function signOut(): Promise<void> {
     const sb = await loadClient();
-    // 伺服器保管的發言權杖一起刪（要在登出前，還拿得到登入 token）
-    const token = await getAccessToken();
-    if (token) await import('../chat/chatToken').then(m => m.forgetChatCredentials(token)).catch(() => {});
+    // 伺服器保管的發言權杖不刪：登出只登出這台，其他裝置照樣能發言（刪帳號時資料庫連帶刪除）
+    void import('../chat/chatToken').then(m => m.resetChatCredentials()).catch(() => {});
     // 只登出這台；預設 global 會連其他裝置（與同瀏覽器的管理後台）一起登出
     await sb?.auth.signOut({ scope: 'local' });
     useAuthStore.setState({ status: 'anon', user: null });

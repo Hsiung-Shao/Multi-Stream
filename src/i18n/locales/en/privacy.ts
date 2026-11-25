@@ -120,6 +120,7 @@ const privacy = {
   'section2_5.item10': 'When you sign in (Twitch, Google or Discord): the account ID, display name, avatar URL and email provided by the sign-in service are stored by Supabase to identify your account. You can delete your account at any time under Settings → Account, which also deletes the related data.',
   'section2_5.item11': 'Favorites sync after signing in: your favorites, categories and tags are stored in a cloud database that only you can read or write. Signing out only stops syncing; deleting your account also deletes the cloud data.',
   'section2_5.item12': 'When you use the merged chat: your browser connects directly to the Twitch chat server to read messages and loads emote images from 7TV, BetterTTV and FrankerFaceZ, so these services can see your IP address. We do not store chat content.',
+  'section2_5.item13': 'When you sign in with Twitch and chat from the merged chat: the Twitch refresh token is stored encrypted in our database and used only to send chat messages on your behalf. Signing out only stops this device; deleting your account deletes it, and you can revoke access anytime in Twitch Settings → Connections.',
   'section3.item6': 'When looking up channel details and live status, your browser connects directly to the YouTube Data API and the Twitch API and sends channel or video IDs; Google\'s and Twitch\'s privacy policies apply to these requests as well',
 };
 

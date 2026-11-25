@@ -120,6 +120,7 @@ const privacy = {
   'section2_5.item10': '登录（Twitch／Google／Discord）时：登录服务提供的账号 ID、显示名称、头像网址与 Email 由 Supabase 保存，用于识别您的账号；可在“设置 → 账号”随时删除账号，相关数据一并删除。',
   'section2_5.item11': '登录后的收藏同步：您的收藏、分类与标签会存到云端数据库，只有您本人能读写；退出登录只停止同步，删除账号时云端数据一并删除。',
   'section2_5.item12': '使用合并聊天室时：您的浏览器会直接连接 Twitch 聊天服务器读取消息，并向 7TV、BetterTTV、FrankerFaceZ 获取表情图片，这些服务会看到您的 IP 地址；本站不保存聊天内容。',
+  'section2_5.item13': '用 Twitch 登录并在合并聊天室发言时：Twitch 授权的续期令牌会加密后存在本站数据库，只用来代您发送聊天消息；退出登录只停止这台设备使用，删除账号时一并删除，您也可以随时在 Twitch 的“设置 → 连接”撤销授权。',
   'section3.item6': '查询频道信息与开播状态时，您的浏览器会直接连接 YouTube Data API 与 Twitch API，发送频道或视频 ID；这些请求同样适用 Google 与 Twitch 的隐私政策',
 };
 

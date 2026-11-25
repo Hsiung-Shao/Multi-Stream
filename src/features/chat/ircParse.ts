@@ -25,6 +25,8 @@ export interface ChatMessage {
     roomId?: string;
     ts: number;
     action: boolean;
+    /** 本站產生的系統提示（例如訊息被頻道規則擋下） */
+    system?: boolean;
 }
 
 const unescapeTag = (v: string) =>
