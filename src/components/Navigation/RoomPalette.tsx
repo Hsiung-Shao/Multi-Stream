@@ -25,7 +25,9 @@ export function RoomPalette({ open, onOpenChange, commands }: RoomPaletteProps) 
     const onError = useCallback((message: string) => {
         import('sonner').then(m => m.toast.error(message)).catch(() => { /* 模組載入失敗就不提示 */ });
     }, []);
-    const s = useStreamSearch({ onError, onAdded: close });
+    // respondToGlobalFocus：全域 Ctrl K 會設「聚焦搜尋框」旗標，房間模式由這裡消化；
+    // 不消化的話切回舊外殼時島上的搜尋框會搶焦點（本元件常駐掛載，與監聽順序無關）
+    const s = useStreamSearch({ onError, onAdded: close, respondToGlobalFocus: true });
 
     useEffect(() => {
         if (!open) s.clear();

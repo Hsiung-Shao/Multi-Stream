@@ -222,7 +222,7 @@ export function SettingsSection() {
     const changeIslandStyle = (next: IslandStyle) => {
         if (next !== islandStyle) track.canvasShellSwitch(islandStyle, next, 'settings');
         setIslandStyle(next);
-        if (next === 'room' && useUIStore.getState().roomMode === 'stage') applyRoomStage();
+        if (next !== islandStyle && next === 'room' && useUIStore.getState().roomMode === 'stage') applyRoomStage();
     };
     const islandSizeOptions = [
         { id: 'sm' as const, label: t('favorites:island_size_sm') },

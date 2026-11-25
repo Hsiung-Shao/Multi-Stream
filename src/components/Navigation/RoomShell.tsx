@@ -72,7 +72,8 @@ export const RoomShell = () => {
         // 閒置時順便收起指令列：滑鼠移進直播 iframe 時外層不一定收得到 mouseleave，靠這裡保底
         const goIdle = () => {
             setIdle(true);
-            if (!navRef.current?.matches(':hover, :focus-within')) setHover(false);
+            // 只留鍵盤焦點（:focus-visible）；滑鼠點開面板後 Radix 把焦點還給按鈕，不算
+            if (!navRef.current?.matches(':hover') && !navRef.current?.querySelector(':focus-visible')) setHover(false);
         };
         let timer = window.setTimeout(goIdle, IDLE_MS);
         const wake = () => {
@@ -93,11 +94,7 @@ export const RoomShell = () => {
 
     // 面板開著時也要能用 Ctrl K 關掉（G 與數字鍵在輸入框裡本來就不觸發）
     useRoomHotkeys({
-        onTogglePalette: () => {
-            // 全域快捷鍵同時設了「聚焦搜尋框」旗標，房間模式沒人消化它，不清掉的話切回舊外殼時搜尋框會搶焦點
-            useUIStore.getState().setSearchFocused(false);
-            setPaletteOpen(o => !o);
-        },
+        onTogglePalette: () => setPaletteOpen(o => !o),
         onToggleMode: toggleRoomMode,
         onFocusIndex: focusRoomIndex,
     });

@@ -10,7 +10,10 @@ export function useRoomSync(): void {
     const audioFollowsFocus = useUIStore(s => s.audioFollowsFocus);
     // 只數有內容的串流：保留空視窗模式下關掉舞台那路，空槽不算，才會改由有內容的那路上舞台
     const liveCount = useStreamStore(s => s.canvasItems.reduce((n, it) => n + (it.type === 'stream' && it.contentId != null ? 1 : 0), 0));
+    // 視窗總數（含空槽與聊天室）：新增／關閉聊天室或空槽時，其他動作會把版面排成平分，要排回舞台
+    const windowCount = useStreamStore(s => s.canvasItems.length);
     const chatWidth = useStreamStore(s => s.chatColumnWidth);
+    const masterMuted = useUIStore(s => s.masterMuted);
     const collapsed = useStreamStore(s => chatsCollapsed(s.canvasItems));
     const mainId = useStreamStore(s => mainStreamItemIdOf(s.canvasItems));
 
@@ -20,13 +23,15 @@ export function useRoomSync(): void {
     useEffect(() => {
         if (!mounted.current) { mounted.current = true; return; }
         if (roomMode === 'stage') applyRoomStage();
-    }, [roomMode, liveCount, chatWidth, collapsed]);
+    }, [roomMode, liveCount, windowCount, chatWidth, collapsed]);
 
-    // 主畫面換人、或剛打開「聲音跟著焦點」時才調整聲音；掛載時不動使用者的靜音
-    const prev = useRef({ mainId, audioFollowsFocus });
+    // 主畫面換人、剛打開「聲音跟著焦點」、或剛解除全體靜音時才調整聲音；掛載時不動使用者的靜音。
+    // 解除全體靜音那次：setAllMuted(false) 會還原成靜音前的狀態，焦點若在期間換過人要補上
+    const prev = useRef({ mainId, audioFollowsFocus, masterMuted });
     useEffect(() => {
-        const changed = mainId !== prev.current.mainId || (audioFollowsFocus && !prev.current.audioFollowsFocus);
-        prev.current = { mainId, audioFollowsFocus };
+        const p = prev.current;
+        const changed = mainId !== p.mainId || (audioFollowsFocus && !p.audioFollowsFocus) || (!masterMuted && p.masterMuted);
+        prev.current = { mainId, audioFollowsFocus, masterMuted };
         if (changed && audioFollowsFocus && mainId) applyFocusAudio(mainId);
-    }, [mainId, audioFollowsFocus]);
+    }, [mainId, audioFollowsFocus, masterMuted]);
 }

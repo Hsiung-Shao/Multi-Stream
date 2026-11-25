@@ -67,4 +67,20 @@ describe('useRoomSync', () => {
         });
         expect(layoutOf('w2')).toEqual(L(0, 0, 14, 24));
     });
+
+    it('全體靜音期間換了焦點，解除全體靜音後聲音跟上新焦點', () => {
+        renderHook(() => useRoomSync());
+        act(() => { useUIStore.setState({ masterMuted: true }); });
+        act(() => { focusRoomItem('w2'); });
+        act(() => { useUIStore.setState({ masterMuted: false }); });
+        expect(mutedOf(2)).toBe(false);
+        expect(mutedOf(1)).toBe(true);
+    });
+
+    it('舞台模式下新增聊天室後仍排回舞台', () => {
+        renderHook(() => useRoomSync());
+        act(() => { useStreamStore.getState().addCanvasItem('chat', null); });
+        expect(layoutOf('w1')).toEqual(L(0, 0, 14, 24));
+        expect(layoutOf('w2')).toEqual(L(14, 0, 6, 24));
+    });
 });
