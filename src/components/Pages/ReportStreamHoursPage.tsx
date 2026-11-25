@@ -81,8 +81,8 @@ export function deriveReport(r: typeof data) {
         },
         corporate: corp,
         independent: indie,
-        /** 期間內天數最少的星期（索引 0＝週一）；熱度圖那一列會偏淺 */
-        shortDow: days.indexOf(Math.min(...days)),
+        /** 期間內天數較少的星期（索引 0＝週一）；熱度圖那幾列會偏淺。整週期間為空陣列 */
+        shortDows: days.flatMap((n, i) => (n < Math.max(...days) ? [i] : [])),
     };
 }
 
@@ -128,7 +128,7 @@ export function ReportStreamHoursPage() {
     const { t } = useTranslation(['reports', 'common', 'tutorial']);
     const tx = t as unknown as TFn;
     const report = deriveReport(data);
-    const vars = { ...report.vars, shortDow: tx(`reports:dow.${report.shortDow + 1}`) };
+    const vars = { ...report.vars, shortDow: report.shortDows.map((i) => tx(`reports:dowLong.${i + 1}`)).join(tx('reports:listSep')) };
     const r = (key: string) => tx(`reports:${key}`, vars);
     const heatMax = Math.max(...data.byDowHour.flat());
     const twitchTotal = data.twitchWithCategory;
@@ -269,7 +269,7 @@ export function ReportStreamHoursPage() {
                             </tbody>
                         </table>
                         <p>{r('week.p2')}</p>
-                        <p className="rpt-note">{r('week.note')}</p>
+                        <p className="rpt-note">{r(report.shortDows.length ? 'week.note' : 'week.noteEven')}</p>
                     </section>
 
                     <section className="rpt-section" aria-labelledby="rpt-duration-h">
