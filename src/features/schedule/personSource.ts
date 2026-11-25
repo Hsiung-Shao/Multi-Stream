@@ -39,7 +39,7 @@ export interface SchedulePerson {
     id: string;
     channel: ScheduleChannel;
     profile: PersonProfile;
-    /** 頁面有內容（直播中、未來 7 天排程、近 90 天結束的場次）：可索引（sitemap／robots 同一個欄位；規則見 refresh_schedule_indexable） */
+    /** 頁面有內容（直播中、未來 7 天排程、近 90 天結束的場次）：決定內文列不列場次、查不查相關實況主（個人頁一律 noindex，此欄位已與 robots／sitemap 無關；規則見 refresh_schedule_indexable） */
     indexable: boolean;
     /** 近 90 天最常開台的台北小時（0–23）；沒有場次時無 */
     typicalHour?: number;

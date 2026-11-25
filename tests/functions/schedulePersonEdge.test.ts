@@ -21,7 +21,6 @@ import {
 } from '../../functions/lib/schedule-person.js';
 import { PERSON_RECENT_DAYS, PERSON_UPCOMING_DAYS } from '../../src/features/schedule/personSource';
 import { UPCOMING_GRACE_MS } from '../../src/features/schedule/filters';
-// @ts-expect-error 同上
 import { SCHEDULE_SLUG_RE } from '../../src/config/schedulePerson';
 import { largerAvatar } from '../../src/features/schedule/streamLinks';
 import zhTWSchedule from '../../src/i18n/locales/zh-TW/schedule';

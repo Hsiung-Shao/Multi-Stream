@@ -1,5 +1,5 @@
 // 語言前綴網址（/zh-TW/...）的 edge／預渲染／sitemap 端：locale.js 純函式、catch-all 的 200／301／hreflang、
-// 預渲染 canonical、靜態與個人頁 sitemap。L 編號對應計畫的測試規格表（前端部分在 tests/i18n/langRouting.test.tsx）。
+// 預渲染 canonical、靜態 sitemap（個人頁已不進 sitemap）。L 編號對應計畫的測試規格表（前端部分在 tests/i18n/langRouting.test.tsx）。
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -11,7 +11,6 @@ import { onRequest } from '../../functions/[[path]].js';
 // @ts-expect-error scripts 目錄的 ESM JS 無型別宣告
 import { applyHead } from '../../scripts/prerender.mjs';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-// @ts-expect-error 同上
 import { renderPersonBodyHtml } from '../../functions/lib/schedule-person.js';
 
 // locale.js 還不存在時用動態載入，讓只依賴它的 it 各自失敗，不拖垮整檔

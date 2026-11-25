@@ -316,7 +316,7 @@ export function renderPersonBodyHtml(lang, person, slug) {
  *   - { kind: 'redirect', location }：大小寫或百分比編碼和正規網址不同 → 301（canonical 只有一個）
  *   - { kind: 'notfound' }：slug 不合規則或查無此人 → 真 404
  *   - { kind: 'found', name, image, indexable, youtube, twitch, streams }（streams 見 personStreamsFromRow；嵌入資料異常為 null；不可索引者也有，但個人頁內文不列）
- *   - { kind: 'error' }：查詢失敗或逾時 → 呼叫端照常回 SPA 殼（不能因暫時性錯誤回 404 或 noindex）
+ *   - { kind: 'error' }：查詢失敗或逾時 → 呼叫端照常回 SPA 殼（不能因暫時性錯誤回 404；個人頁本來就一律 noindex）
  * found／notfound 會放進 edge 快取（cache 為 caches.default；測試或沒有 Cache API 時傳 null）。
  */
 export async function resolveSchedulePerson(env, rawPath, queryFn = anonSelect, cache = globalThis.caches?.default ?? null, relatedFn = anonRpc) {
