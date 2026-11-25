@@ -51,7 +51,15 @@ function loadClient(): Promise<SupabaseClient | null> {
     initPromise ??= getSupabase().then(sb => {
         if (!sb) return null;
         // 回呼內不能同步呼叫任何 auth 方法（會與 Supabase 內部的鎖互等而卡死），推遲到下一輪
-        sb.auth.onAuthStateChange((_event, session) => { setTimeout(() => apply(session), 0); });
+        sb.auth.onAuthStateChange((event, session) => {
+            setTimeout(() => {
+                apply(session);
+                // 用 Twitch 登入回來：續期權杖只會出現這一次，交給伺服器保管（合併聊天室發言用）
+                if (event === 'SIGNED_IN' && session?.provider_refresh_token) {
+                    void import('../chat/chatToken').then(m => m.captureTwitchChatToken(session));
+                }
+            }, 0);
+        });
         return sb;
     });
     return initPromise;
@@ -94,6 +102,9 @@ export async function signIn(provider: AuthProvider): Promise<void> {
 
 export async function signOut(): Promise<void> {
     const sb = await loadClient();
+    // 伺服器保管的發言權杖一起刪（要在登出前，還拿得到登入 token）
+    const token = await getAccessToken();
+    if (token) await import('../chat/chatToken').then(m => m.forgetChatCredentials(token)).catch(() => {});
     // 只登出這台；預設 global 會連其他裝置（與同瀏覽器的管理後台）一起登出
     await sb?.auth.signOut({ scope: 'local' });
     useAuthStore.setState({ status: 'anon', user: null });

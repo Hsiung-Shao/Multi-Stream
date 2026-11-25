@@ -13,6 +13,82 @@ import { loadChannelEmotes, loadGlobalEmotes } from './thirdPartyEmotes';
 import type { ChatMessage } from './ircParse';
 import { cn } from '../../components/ui/utils';
 import { ScrollArea } from '../../components/ui/scroll-area';
+import { useUIStore } from '../../store/useUIStore';
+import { useAuthStore, getAccessToken } from '../auth/authStore';
+import { getChatCredentials, resetChatCredentials } from './chatToken';
+
+/** 發言權杖 50 分鐘重取一次（Twitch 要求每小時驗一次權杖；伺服器每次都換新） */
+const CRED_REFRESH_MS = 50 * 60_000;
+
+/** 用 Twitch 帳號登入時取發言權杖並交給連線；登出或換成非 Twitch 帳號時回到匿名唯讀 */
+function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing' | 'ready' {
+    const twitchUser = useAuthStore(s => (s.status === 'authed' && s.user?.providers.includes('twitch') ? s.user.id : null));
+    const [state, setState] = useState<'none' | 'pending' | 'missing' | 'ready'>('none');
+    useEffect(() => {
+        if (!twitchUser) { c.setCredentials(null); resetChatCredentials(); setState('none'); return; }
+        let on = true;
+        const load = async () => {
+            setState(s => (s === 'ready' ? s : 'pending'));
+            const creds = await getChatCredentials(await getAccessToken());
+            if (!on) return;
+            c.setCredentials(creds);
+            setState(creds ? 'ready' : 'missing');
+        };
+        void load();
+        const timer = setInterval(load, CRED_REFRESH_MS);
+        return () => { on = false; clearInterval(timer); };
+    }, [c, twitchUser]);
+    return state;
+}
+
+/** 輸入框：選頻道＋送出；沒有發言權限時顯示登入入口 */
+function ChatComposer({ c, logins, cred }: { c: TwitchChatClient; logins: string[]; cred: ReturnType<typeof useChatCredentials> }) {
+    const { t } = useTranslation('common');
+    const [target, setTarget] = useState(logins[0] ?? '');
+    const [text, setText] = useState('');
+    const channel = logins.includes(target) ? target : logins[0] ?? '';
+    if (logins.length === 0) return null;
+    if (cred !== 'ready') {
+        return (
+            <div className="border-t border-white/10 px-3 py-2 text-xs text-white/60">
+                {cred === 'pending' ? t('chat.send_connecting') : (
+                    <button type="button" className="underline hover:text-white" onClick={() => useUIStore.getState().openModal('favorites', 'global_settings')}>
+                        {t(cred === 'missing' ? 'chat.send_relogin' : 'chat.send_sign_in')}
+                    </button>
+                )}
+            </div>
+        );
+    }
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (c.send(channel, text)) setText('');
+    };
+    return (
+        <form onSubmit={submit} className="flex items-center gap-1.5 border-t border-white/10 p-2">
+            {logins.length > 1 && (
+                <select
+                    aria-label={t('chat.send_target')}
+                    value={channel}
+                    onChange={e => setTarget(e.target.value)}
+                    className="h-8 max-w-[7.5rem] shrink-0 rounded-md border border-white/15 bg-white/10 px-1.5 text-xs text-white"
+                >
+                    {logins.map(l => <option key={l} value={l} className="bg-slate-900">{l}</option>)}
+                </select>
+            )}
+            <input
+                aria-label={t('chat.send_placeholder', { channel })}
+                placeholder={t('chat.send_placeholder', { channel })}
+                value={text}
+                maxLength={500}
+                onChange={e => setText(e.target.value)}
+                className="h-8 min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-2 text-sm text-white placeholder:text-white/40"
+            />
+            <button type="submit" disabled={!text.trim()} className="h-8 shrink-0 rounded-md bg-purple-600 px-3 text-xs font-medium text-white disabled:opacity-40">
+                {t('chat.send')}
+            </button>
+        </form>
+    );
+}
 
 // 整個頁面共用一條連線：有人在看才連、沒人看就斷
 let client: TwitchChatClient | null = null;
@@ -96,6 +172,7 @@ export function MergedChat() {
     }, [logins, globalEmotes, channelEmotes]);
 
     const connected = useSyncExternalStore(subscribe, () => c.isConnected());
+    const cred = useChatCredentials(c);
 
     // 停在底部時新訊息自動捲到底；使用者往上捲就暫停，按「回到最新」才恢復
     const root = useRef<HTMLDivElement>(null);
@@ -155,6 +232,7 @@ export function MergedChat() {
                     </button>
                 )}
             </div>
+            <ChatComposer c={c} logins={logins} cred={cred} />
         </div>
     );
 }
