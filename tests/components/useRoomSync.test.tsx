@@ -60,6 +60,16 @@ describe('useRoomSync', () => {
         expect(useStreamStore.getState().canvasItems.find(it => it.i === 'c1')!.contentId).toBe(2);
     });
 
+    it('舞台換到 YouTube 時聊天離開合併，換回 Twitch 時回到合併', () => {
+        useStreamStore.setState({ streams: [stream(1, false), { ...stream(2, false), platform: 'youtube', videoId: 'v2' }] });
+        useUIStore.setState({ roomChatMerged: true });
+        renderHook(() => useRoomSync());
+        act(() => { focusRoomItem('w2'); });
+        expect(useUIStore.getState().roomChatMerged).toBe(false);
+        act(() => { focusRoomItem('w1'); });
+        expect(useUIStore.getState().roomChatMerged).toBe(true);
+    });
+
     it('主畫面換人後才讓聲音跟著焦點', () => {
         renderHook(() => useRoomSync());
         act(() => { focusRoomItem('w2'); });

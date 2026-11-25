@@ -56,6 +56,9 @@ interface UIState {
     /** 房間模式：換舞台時只留舞台那一路有聲音 */
     audioFollowsFocus: boolean;
     setAudioFollowsFocus: (v: boolean) => void;
+    /** 房間模式聊天欄顯示合併 Twitch 聊天室(否則顯示聊天室 item 那一路的原生聊天室);跟著舞台平台切換,不保存 */
+    roomChatMerged: boolean;
+    setRoomChatMerged: (v: boolean) => void;
     /** 已看過「試試新版畫布」提醒(按過切換或不用了) */
     roomPromptSeen: boolean;
     setRoomPromptSeen: (v: boolean) => void;
@@ -206,6 +209,8 @@ export const useUIStore = create<UIState>((set, get) => ({
         set({ audioFollowsFocus: v });
         persistUserSetting('audioFollowsFocus', v);
     },
+    roomChatMerged: true,
+    setRoomChatMerged: (v) => set({ roomChatMerged: v }),
     roomPromptSeen: false,
     setRoomPromptSeen: (v) => {
         set({ roomPromptSeen: v });

@@ -20,6 +20,7 @@ import { ChatStreamSelect } from '../Canvas/ChatStreamSelect';
 import { ChatLayoutMenu } from '../Canvas/ChatLayoutMenu';
 import { RoomChatTabs } from '../Navigation/RoomChatTabs';
 import { focusRoomItem } from '../Navigation/roomActions';
+import { MergedChat } from '../../features/chat/MergedChat';
 
 interface CanvasStreamContentProps {
     stream: StreamData;
@@ -52,6 +53,10 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     // 房間模式：播放器自己的介面（標題、控制列）蓋不得，我們的工具列與拖曳提示全部拿掉
     const isRoom = useUIStore(s => s.islandStyle === 'room');
     const roomStage = useUIStore(s => s.roomMode === 'stage');
+    // 房間模式聊天欄選「合併」且畫布上有 Twitch 時，顯示合併聊天室取代原生 iframe
+    const roomChatMerged = useUIStore(s => s.roomChatMerged);
+    const hasTwitch = useStreamStore(s => s.streams.some(st => st.platform === 'twitch' && s.canvasItems.some(it => it.type === 'stream' && it.contentId === st.id)));
+    const showMergedChat = isRoom && isChatWindow && roomChatMerged && hasTwitch;
     // 衍生值以 canvasItems 身分快取（見 canvasItemOps），多個視窗訂閱也只算一次
     const isMain = useStreamStore(s => windowId !== undefined && mainStreamItemIdOf(s.canvasItems) === windowId);
     const sharedChatContentId = useStreamStore(s => sharedChatContentIdOf(s.canvasItems));
@@ -251,7 +256,9 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                 className={cn("w-full overflow-hidden", isChatWindow ? "flex-1 min-h-0" : "h-full")}
                 style={{ pointerEvents: isDragging || isResizing ? 'none' : 'auto' }}
             >
-                {isChatWindow ? (
+                {showMergedChat ? (
+                    <MergedChat />
+                ) : isChatWindow ? (
                     <StreamChat
                         key={`chat-${reloadKey}`}
                         platform={stream.platform}

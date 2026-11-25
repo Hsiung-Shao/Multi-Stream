@@ -38,7 +38,14 @@ export function useRoomSync(): void {
         const changed = mainId !== p.mainId || (audioFollowsFocus && !p.audioFollowsFocus) || (!masterMuted && p.masterMuted);
         prev.current = { mainId, audioFollowsFocus, masterMuted };
         // 主畫面不論怎麼換人（關掉舞台那路、換位），聊天室都跟過去
-        if (mainId && mainId !== p.mainId) followRoomChat(mainId);
+        if (mainId && mainId !== p.mainId) {
+            followRoomChat(mainId);
+            // 舞台是 Twitch 看合併聊天室，是 YouTube 看它自己的聊天室
+            const { canvasItems, streams } = useStreamStore.getState();
+            const contentId = canvasItems.find(it => it.i === mainId)?.contentId;
+            const platform = streams.find(s => s.id === contentId)?.platform;
+            if (platform) useUIStore.getState().setRoomChatMerged(platform === 'twitch');
+        }
         if (changed && audioFollowsFocus && mainId) applyFocusAudio(mainId);
     }, [mainId, audioFollowsFocus, masterMuted]);
 }
