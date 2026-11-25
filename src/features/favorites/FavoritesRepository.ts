@@ -13,6 +13,8 @@ export class FavoritesRepository {
     saveList(list: FavoriteStream[]): void {
         if (typeof localStorage === 'undefined') return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        // 雲端同步聽這個事件推送改動（cloudSync/syncEngine.ts）
+        window.dispatchEvent(new Event('ms-favorites-saved'));
         // Note: Backup logic is separate, usually triggered by Service
     }
 

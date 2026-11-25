@@ -84,7 +84,8 @@ export const checkAppVersion = () => {
             if (!key) continue;
 
             // If key is NOT in whitelist AND does NOT start with 'backup_', mark for removal
-            if (!WHITELIST.includes(key) && !key.startsWith('backup_')) {
+            // sb-*：Supabase 登入（清掉＝每次發版都被登出）；ms_cloud_sync:*：收藏同步快照（清掉會讓下次同步當成第一次）
+            if (!WHITELIST.includes(key) && !key.startsWith('backup_') && !key.startsWith('sb-') && !key.startsWith('ms_cloud_sync:')) {
                 itemsToRemove.push(key);
             }
         }

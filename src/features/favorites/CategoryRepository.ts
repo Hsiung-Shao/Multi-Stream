@@ -13,6 +13,8 @@ export class CategoryRepository {
     saveList(list: FavoriteCategory[]): void {
         if (typeof localStorage === 'undefined') return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        // 雲端同步聽這個事件推送改動（cloudSync/syncEngine.ts）
+        window.dispatchEvent(new Event('ms-favorites-saved'));
     }
 
     add(name: string): { success: boolean; message: string; category?: FavoriteCategory } {
