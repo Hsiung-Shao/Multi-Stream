@@ -1,4 +1,4 @@
-// 個人週表頁 /schedule/<slug> 的 edge 端解析（catch-all functions/[[path]].js 與 sitemap-schedule.xml.js 共用）。
+// 個人週表頁 /schedule/<slug> 的 edge 端解析（catch-all functions/[[path]].js 與嵌入小工具共用）。
 //
 // 與 src/config/schedulePerson.ts 同一套規則（slug 字元集＝資料庫 CHECK vtubers_slug_format），
 // 文案與 src/i18n/locales/{zh-TW,en}/schedule.ts 的 person.seo.* 同步；tests/functions/schedulePersonEdge.test.ts 鎖住兩邊。

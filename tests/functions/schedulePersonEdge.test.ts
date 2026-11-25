@@ -22,7 +22,6 @@ import {
 import { PERSON_RECENT_DAYS, PERSON_UPCOMING_DAYS } from '../../src/features/schedule/personSource';
 import { UPCOMING_GRACE_MS } from '../../src/features/schedule/filters';
 // @ts-expect-error 同上
-import { buildScheduleSitemap } from '../../functions/sitemap-schedule.xml.js';
 import { SCHEDULE_SLUG_RE } from '../../src/config/schedulePerson';
 import { largerAvatar } from '../../src/features/schedule/streamLinks';
 import zhTWSchedule from '../../src/i18n/locales/zh-TW/schedule';
@@ -305,26 +304,10 @@ describe('catch-all 接線（既有）', () => {
     it('個人頁查詢只在白名單沒命中時才做（已知路由不多打資料庫）', () => {
         expect(src).toMatch(/const person = entry \? \{ kind: 'none' \} : await resolveSchedulePerson\(env, rawPath\);/);
     });
-    it('robots.txt 同時列出靜態與個人頁 sitemap', () => {
+    it('robots.txt 只列靜態 sitemap（個人頁已全數 noindex）', () => {
         const robots = readFileSync(resolve(__dirname, '../../robots.txt'), 'utf8');
         expect(robots).toContain('Sitemap: https://multistreaming.org/sitemap.xml');
-        expect(robots).toContain('Sitemap: https://multistreaming.org/sitemap-schedule.xml');
-    });
-});
-
-describe('buildScheduleSitemap', () => {
-    it('列出合規 slug，lastmod 取日期；不合規的略過', () => {
-        const xml = buildScheduleSitemap([
-            { slug: 'taione', last_live_at: '2026-09-28T12:00:00Z' },
-            { slug: 'nolive', last_live_at: null },
-            { slug: 'Bad<slug>', last_live_at: null },
-        ]);
-        // 每人兩筆（英文、/zh-TW），lastmod 跟著每一筆；hreflang 由 langUrls.test.ts L14 鎖
-        expect(xml).toContain('<url><loc>https://multistreaming.org/schedule/taione</loc><lastmod>2026-09-28</lastmod>');
-        expect(xml).toContain('<url><loc>https://multistreaming.org/zh-TW/schedule/taione</loc><lastmod>2026-09-28</lastmod>');
-        expect(xml).toContain('<url><loc>https://multistreaming.org/schedule/nolive</loc><xhtml:link');
-        expect(xml).not.toContain('Bad');
-        expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+        expect(robots).not.toContain('sitemap-schedule');
     });
 });
 

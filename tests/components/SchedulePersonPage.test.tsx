@@ -70,14 +70,14 @@ describe('SchedulePersonPage', () => {
         vi.useRealTimers();
     });
 
-    it('頭部：名字、團體與地區、頻道連結；title 帶名字、可索引', async () => {
+    it('頭部：名字、團體與地區、頻道連結；title 帶名字、一律 noindex', async () => {
         renderPage();
         expect(await screen.findByRole('heading', { level: 1, name: '台一' })).toBeInTheDocument();
         expect(screen.getByText('子午計畫 · 台灣')).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /YouTube 頻道/ })).toHaveAttribute('href', 'https://www.youtube.com/channel/UC0000000000000000000001');
         expect(screen.getByRole('link', { name: /Twitch 頻道/ })).toHaveAttribute('href', 'https://www.twitch.tv/taione');
         expect(document.title).toBe('台一 開台時間與直播週表 - MultiStream Hub');
-        expect(robots()).toMatch(/^index/);
+        expect(robots()).toMatch(/^noindex/);
         expect(h.fetchPerson).toHaveBeenCalledWith('taione');
     });
 

@@ -11,7 +11,6 @@ import { onRequest } from '../../functions/[[path]].js';
 // @ts-expect-error scripts 目錄的 ESM JS 無型別宣告
 import { applyHead } from '../../scripts/prerender.mjs';
 // @ts-expect-error functions 目錄的 ESM JS 無型別宣告
-import { buildScheduleSitemap } from '../../functions/sitemap-schedule.xml.js';
 // @ts-expect-error 同上
 import { renderPersonBodyHtml } from '../../functions/lib/schedule-person.js';
 
@@ -174,7 +173,7 @@ describe('catch-all：語言前綴網址', () => {
         expect(r.res.headers.get('Location')).toBe(`${SITE}/zh-TW/about`);
     });
 
-    it('L10 /zh-TW/schedule/<slug> 查到：中文標題、自指 canonical、hreflang 兩語加 x-default', async () => {
+    it('L10 /zh-TW/schedule/<slug> 查到：中文標題、一律 noindex、不給 canonical 與 hreflang', async () => {
         const row = {
             name: '台一', img_url: null, schedule_indexable: true, youtube_channel_id: null, twitch_channel_id: null,
             active: [], recent: [], recent_count: [{ count: 0 }],
@@ -184,12 +183,9 @@ describe('catch-all：語言前綴網址', () => {
         expect(r.res.status).toBe(200);
         expect(r.lang).toBe('zh-TW');
         expect(r.title).toContain('開台時間與直播週表');
-        expect(r.canonical).toBe(`${SITE}/zh-TW/schedule/taione`);
-        expect(r.alternates).toEqual({
-            en: `${SITE}/schedule/taione`,
-            'zh-TW': `${SITE}/zh-TW/schedule/taione`,
-            'x-default': `${SITE}/schedule/taione`,
-        });
+        expect(r.text).toContain('content="noindex, follow"');
+        expect(r.canonical).toBeNull();
+        expect(r.alternateCount).toBe(0);
     });
 
     it('L10b 個人頁內文麵包屑：zh-TW 三個 href 帶前綴，en 維持原樣', () => {
@@ -278,21 +274,6 @@ describe('sitemap', () => {
             }
         }
         expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
-    });
-
-    it('L14 個人頁 sitemap：一個 slug 兩筆 url、根元素宣告 xhtml、x-default 指英文', () => {
-        const out = buildScheduleSitemap([{ slug: 'abc', last_live_at: '2026-10-01T00:00:00Z' }]);
-        expect(out).toMatch(/<urlset[^>]*xmlns:xhtml="http:\/\/www\.w3\.org\/1999\/xhtml"/);
-        const entries = parseUrls(out);
-        expect(entries.map((e) => e.loc).sort()).toEqual([`${SITE}/schedule/abc`, `${SITE}/zh-TW/schedule/abc`].sort());
-        for (const e of entries) {
-            expect(e.linkCount, e.loc).toBe(3);
-            expect(e.links, e.loc).toEqual({
-                en: `${SITE}/schedule/abc`,
-                'zh-TW': `${SITE}/zh-TW/schedule/abc`,
-                'x-default': `${SITE}/schedule/abc`,
-            });
-        }
     });
 });
 

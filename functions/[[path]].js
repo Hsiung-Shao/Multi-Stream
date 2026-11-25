@@ -77,8 +77,9 @@ export async function onRequest(context) {
     const pageUrl = ORIGIN + withLang(lang, rawPath);
 
     // 個人週表頁 /schedule/<slug>：slug 是資料庫任意值，不在 ROUTE_META 白名單裡，查一次資料庫決定
-    // 200（注入該實況主的 title/description/og:image，不活躍 → noindex）、301（大小寫）或真 404。
-    // 查詢失敗時照常回 SPA 殼＋週表通用 meta：暫時性錯誤不能讓頁面被當成 404 或 noindex。
+    // 200（注入該實況主的 title/description/og:image）、301（大小寫）或真 404。
+    // 個人頁一律 noindex（2026-11-25：模板頁佔送審網址 98.6%、AdSense 低價值內容；決策見 Obsidian D7 推翻）。
+    // 查詢失敗時照常回 SPA 殼＋週表通用 meta：暫時性錯誤不能讓頁面被當成 404。
     const person = entry ? { kind: 'none' } : await resolveSchedulePerson(env, rawPath);
     if (person.kind === 'redirect') {
         return Response.redirect(url.origin + withLang(lang, person.location) + url.search, 301);
@@ -90,12 +91,12 @@ export async function onRequest(context) {
     if (person.kind === 'found') {
         meta = schedulePersonMeta(lang, person.name, person.indexable ? person.streams : null);
         status = 200;
-        noindex = !person.indexable;
+        noindex = true;
         image = person.image;
     } else if (person.kind === 'error') {
         meta = ROUTE_META['/schedule'][lang];
         status = 200;
-        noindex = false;
+        noindex = true;
     } else {
         meta = entry ? entry[lang] : NOT_FOUND_META[lang];
         status = entry ? 200 : 404;

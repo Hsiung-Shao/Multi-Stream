@@ -1,8 +1,8 @@
 // 個人週表頁 /schedule/<slug> 的路由。
 //
 // 與教學文章（instructions:<slug>，slug 是寫死的有限清單）不同，這裡的 slug 是資料庫裡的任意值（約 2,900 位），
-// 所以**不**展開進 PAGE_PATHS：pathToPage／pageToPath 另外做前綴解析；edge（functions/[[path]].js）與
-// 動態 sitemap（functions/sitemap-schedule.xml.js）各自處理，不影響 seoEdge／prerender／sitemap 的一比一測試。
+// 所以**不**展開進 PAGE_PATHS：pathToPage／pageToPath 另外做前綴解析；edge（functions/[[path]].js）另外處理，
+// 不影響 seoEdge／prerender／sitemap 的一比一測試。個人頁一律 noindex、不進 sitemap（2026-11-25）。
 // slug 規則與資料庫 CHECK（vtubers_slug_format）一致。
 
 export const SCHEDULE_PERSON_PREFIX = 'schedule:';

@@ -210,7 +210,7 @@ function PersonSeo({ person, slug }: { person: SchedulePerson; slug: string }) {
             description={description}
             path={path}
             image={person.channel.avatar ? largerAvatar(person.channel.avatar) : undefined}
-            noindex={!person.indexable}
+            noindex // 個人頁一律不收錄（與 edge functions/[[path]].js 一致）
             jsonLd={graph(
                 webPage({ type: 'ProfilePage', path, name: title, description, inLanguage, extra: { mainEntity: { '@id': `${entityUrl}#person` } } }),
                 {
