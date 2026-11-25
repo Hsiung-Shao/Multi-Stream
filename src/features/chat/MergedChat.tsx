@@ -97,17 +97,18 @@ export function MergedChat() {
 
     const connected = useSyncExternalStore(subscribe, () => c.isConnected());
 
-    // 停在底部時新訊息自動捲到底；使用者往上捲就暫停：畫面不再往後長（不然最上面的列會持續被擠掉），按「回到最新」才恢復
+    // 停在底部時新訊息自動捲到底；使用者往上捲就暫停，按「回到最新」才恢復
     const root = useRef<HTMLDivElement>(null);
     const viewport = () => root.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]') ?? null;
     const [pinned, setPinned] = useState(true);
-    // 凍結時只記住截止的那則：篩選、移除直播照常生效，只是不再往後長
-    const cutoff = useRef<string | null>(null);
-    if (pinned) cutoff.current = messages.at(-1)?.id ?? null;
+    // 凍結時固定整批訊息（client 會從最舊的開始丟，只記 id 的話畫面會從上面被吃掉）；
+    // 篩選與移除直播在顯示時才套，所以照常生效。代價：凍結期間被管理員刪除的訊息，恢復時才消失
+    const frozen = useRef(messages);
+    if (pinned) frozen.current = messages;
     const shown = useMemo(() => {
-        const end = pinned || !cutoff.current ? -1 : messages.findIndex(m => m.id === cutoff.current);
-        return (end >= 0 ? messages.slice(0, end + 1) : messages).filter(m => !hidden.has(m.channel)).slice(-MAX_RENDERED);
-    }, [messages, hidden, pinned]);
+        const on = new Set(logins);
+        return (pinned ? messages : frozen.current).filter(m => on.has(m.channel) && !hidden.has(m.channel)).slice(-MAX_RENDERED);
+    }, [messages, hidden, pinned, logins]);
     useLayoutEffect(() => {
         const el = viewport();
         if (el && pinned) el.scrollTop = el.scrollHeight;
