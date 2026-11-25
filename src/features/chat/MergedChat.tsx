@@ -17,10 +17,10 @@ import { ScrollArea } from '../../components/ui/scroll-area';
 // 整個頁面共用一條連線：有人在看才連、沒人看就斷
 let client: TwitchChatClient | null = null;
 let users = 0;
-function acquire(): TwitchChatClient {
-    client ??= new TwitchChatClient();
-    if (users++ === 0) client.connect();
-    return client;
+const getClient = () => (client ??= new TwitchChatClient());
+// 計數只在 effect 裡增減：render 可能被丟棄重跑，放在 render 會多算而永遠不斷線
+function acquire() {
+    if (users++ === 0) getClient().connect();
 }
 function release() {
     if (--users === 0) client?.disconnect();
@@ -66,8 +66,8 @@ function useTwitchLogins(): string[] {
 export function MergedChat() {
     const { t } = useTranslation('common');
     const logins = useTwitchLogins();
-    const [c] = useState(acquire);
-    useEffect(() => release, []);
+    const c = getClient();
+    useEffect(() => { acquire(); return release; }, []);
     useEffect(() => { c.setChannels(logins); }, [c, logins]);
 
     const subscribe = useMemo(() => batched(c), [c]);
@@ -79,26 +79,33 @@ export function MergedChat() {
     const [channelEmotes, setChannelEmotes] = useState<Record<string, Record<string, string>>>({});
     useEffect(() => { let on = true; loadGlobalEmotes().then(m => on && setGlobalEmotes(m)); return () => { on = false; }; }, []);
     const roomIds = useSyncExternalStore(subscribe, () => logins.map(l => c.getRoomId(l) ?? '').join(','));
+    // 每個 room-id 只發一次請求（ROOMSTATE 陸續抵達時不重抓前面的頻道）
+    const requested = useRef(new Set<string>());
     useEffect(() => {
-        let on = true;
-        logins.forEach((login, i) => {
-            const id = roomIds.split(',')[i];
-            if (id && !channelEmotes[login]) loadChannelEmotes(id).then(m => on && setChannelEmotes(prev => ({ ...prev, [login]: m })));
+        roomIds.split(',').forEach((id, i) => {
+            const login = logins[i];
+            if (!id || !login || requested.current.has(id)) return;
+            requested.current.add(id);
+            loadChannelEmotes(id).then(m => setChannelEmotes(prev => ({ ...prev, [login]: m })));
         });
-        return () => { on = false; };
-    }, [roomIds]); // eslint-disable-line react-hooks/exhaustive-deps -- 只在拿到新的 room-id 時抓，已抓過的頻道不重抓
+    }, [roomIds, logins]);
     const emoteMaps = useMemo(() => {
         const out = new Map<string, ReadonlyMap<string, string>>();
         for (const login of logins) out.set(login, new Map(Object.entries({ ...globalEmotes, ...channelEmotes[login] })));
         return out;
     }, [logins, globalEmotes, channelEmotes]);
 
-    const shown = useMemo(() => messages.filter(m => !hidden.has(m.channel)).slice(-MAX_RENDERED), [messages, hidden]);
+    const connected = useSyncExternalStore(subscribe, () => c.isConnected());
 
-    // 停在底部時新訊息自動捲到底；使用者往上捲就暫停，顯示「回到最新」
+    // 停在底部時新訊息自動捲到底；使用者往上捲就暫停：畫面凍結在當下那批（不然最上面的列會持續被擠掉），
+    // 按「回到最新」才恢復。凍結期間被管理員刪除的訊息，恢復時才一起消失
     const root = useRef<HTMLDivElement>(null);
     const viewport = () => root.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]') ?? null;
     const [pinned, setPinned] = useState(true);
+    const live = useMemo(() => messages.filter(m => !hidden.has(m.channel)).slice(-MAX_RENDERED), [messages, hidden]);
+    const frozen = useRef(live);
+    if (pinned) frozen.current = live;
+    const shown = pinned ? live : frozen.current;
     useLayoutEffect(() => {
         const el = viewport();
         if (el && pinned) el.scrollTop = el.scrollHeight;
@@ -132,7 +139,7 @@ export function MergedChat() {
                 {/* Radix viewport 內層預設 display:table，長訊息會撐寬不換行，改回 block */}
                 <ScrollArea ref={root} role="log" aria-live="off" aria-label={t('chat.log_label')} className="h-full py-1 [&>[data-radix-scroll-area-viewport]>div]:!block">
                     {logins.length === 0 && <p className="px-3 py-6 text-center text-xs text-white/50">{t('chat.no_twitch')}</p>}
-                    {logins.length > 0 && shown.length === 0 && <p className="px-3 py-6 text-center text-xs text-white/50">{t('chat.waiting')}</p>}
+                    {logins.length > 0 && shown.length === 0 && <p className="px-3 py-6 text-center text-xs text-white/50">{t(connected ? 'chat.no_messages' : 'chat.waiting')}</p>}
                     {shown.map(m => <ChatLine key={m.id} message={m} emotes={emoteMaps.get(m.channel) ?? EMPTY} showChannel={logins.length > 1} />)}
                 </ScrollArea>
                 {!pinned && (

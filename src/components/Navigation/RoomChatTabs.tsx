@@ -16,7 +16,8 @@ export const RoomChatTabs = memo(function RoomChatTabs({ chatItemId, activeStrea
     const merged = useUIStore(s => s.roomChatMerged);
     const setMerged = useUIStore(s => s.setRoomChatMerged);
     const hasTwitch = platforms.includes('twitch');
-    const showMerged = hasTwitch && merged;
+    // 聊天室指向的是 Twitch 時一律算合併（例如看著的 YouTube 被移除、聊天室被改指到某路 Twitch）
+    const showMerged = hasTwitch && (merged || platforms[ids.indexOf(activeStreamId)] === 'twitch');
     return (
         <div role="group" aria-label={t('canvas.shared_chat_tabs')} className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">
             {hasTwitch && (

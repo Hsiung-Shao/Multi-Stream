@@ -83,6 +83,7 @@ const common = {
   'chat.log_label': 'Merged chat messages',
   'chat.no_twitch': 'No Twitch streams on the canvas',
   'chat.waiting': 'Connecting to chat…',
+  'chat.no_messages': 'No messages yet',
   'chat.jump_latest': 'Jump to latest',
   'room.chat_merged': 'Merged',
   'room.remove_stream': 'Remove stream',

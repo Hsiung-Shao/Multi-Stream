@@ -83,6 +83,7 @@ const common = {
   'chat.log_label': '合并聊天消息',
   'chat.no_twitch': '画布上没有 Twitch 直播',
   'chat.waiting': '正在连接聊天室…',
+  'chat.no_messages': '还没有人说话',
   'chat.jump_latest': '回到最新',
   'room.chat_merged': '合并',
   'room.remove_stream': '移除直播',

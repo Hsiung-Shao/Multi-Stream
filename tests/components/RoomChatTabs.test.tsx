@@ -44,4 +44,10 @@ describe('RoomChatTabs', () => {
         fireEvent.click(screen.getByRole('button', { name: /合併/ }));
         expect(useUIStore.getState().roomChatMerged).toBe(true);
     });
+
+    it('聊天室指向的是 Twitch 時一律視為合併（YouTube 被移除後不會落在單一路原生聊天室）', () => {
+        useUIStore.setState({ roomChatMerged: false });
+        render(<RoomChatTabs chatItemId="chat" activeStreamId={3} />);
+        expect(screen.getByRole('button', { name: /合併/ })).toHaveAttribute('aria-pressed', 'true');
+    });
 });

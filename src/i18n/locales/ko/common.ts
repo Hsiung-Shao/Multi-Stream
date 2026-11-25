@@ -83,6 +83,7 @@ const common = {
   'chat.log_label': '통합 채팅 메시지',
   'chat.no_twitch': '캔버스에 Twitch 방송이 없습니다',
   'chat.waiting': '채팅에 연결 중…',
+  'chat.no_messages': '아직 메시지가 없습니다',
   'chat.jump_latest': '최신으로',
   'room.chat_merged': '통합',
   'room.remove_stream': '방송 제거',

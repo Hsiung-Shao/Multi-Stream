@@ -254,3 +254,14 @@ describe('C9 斷線退避重連', () => {
         expect(sockets).toHaveLength(1);
     });
 });
+
+describe('連線狀態（review 第 1 輪）', () => {
+    it('收到 001 才算連上，斷線後回到未連上', () => {
+        const { client, sock } = connected();
+        expect(client.isConnected()).toBe(false);
+        sock.recv(':tmi.twitch.tv 001 justinfan123 :Welcome, GLHF!');
+        expect(client.isConnected()).toBe(true);
+        sock.drop();
+        expect(client.isConnected()).toBe(false);
+    });
+});

@@ -26,6 +26,7 @@ export class TwitchChatClient {
     private backoff = 1000;
     private retryTimer: ReturnType<typeof setTimeout> | null = null;
     private stopped = true;
+    private connected = false;
     private readonly createSocket: (url: string) => SocketLike;
     private readonly maxPerChannel: number;
 
@@ -45,6 +46,7 @@ export class TwitchChatClient {
         this.retryTimer = null;
         const s = this.socket;
         this.socket = null;
+        this.connected = false;
         if (s) { s.onclose = null; s.close(); }
     }
 
@@ -59,6 +61,11 @@ export class TwitchChatClient {
         }
         this.channels = next;
         this.emit();
+    }
+
+    /** 收到 001 歡迎訊息後才算連上；斷線即回到 false */
+    isConnected(): boolean {
+        return this.connected;
     }
 
     getMessages(): ChatMessage[] {
@@ -92,6 +99,7 @@ export class TwitchChatClient {
         s.onclose = () => {
             if (this.socket !== s) return;
             this.socket = null;
+            if (this.connected) { this.connected = false; this.emit(); }
             if (this.stopped) return;
             const wait = this.backoff;
             this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF_MS);
@@ -108,6 +116,8 @@ export class TwitchChatClient {
                 return;
             case '001':
                 this.backoff = 1000;
+                this.connected = true;
+                this.emit();
                 return;
             case 'RECONNECT':
                 this.socket?.close();

@@ -83,6 +83,7 @@ const common = {
   'chat.log_label': 'まとめチャットのメッセージ',
   'chat.no_twitch': 'キャンバスに Twitch 配信がありません',
   'chat.waiting': 'チャットに接続中…',
+  'chat.no_messages': 'まだメッセージはありません',
   'chat.jump_latest': '最新へ',
   'room.chat_merged': 'まとめ',
   'room.remove_stream': '配信を削除',

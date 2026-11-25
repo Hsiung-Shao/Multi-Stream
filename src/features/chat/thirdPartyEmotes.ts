@@ -12,6 +12,8 @@ async function getJson(url: string): Promise<unknown> {
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
         const res = await fetch(url, { signal: ctrl.signal, credentials: 'omit' });
+        // 404＝這個頻道沒在該家註冊，是正常的「沒有表情」，不算失敗
+        if (res.status === 404) return {};
         return res.ok ? await res.json() : null;
     } catch {
         return null;
@@ -51,14 +53,15 @@ function fromFfz(sets: unknown, out: EmoteMap) {
     }
 }
 
-async function load(key: string, build: (out: EmoteMap) => Promise<void>): Promise<EmoteMap> {
+/** build 回傳 false＝有一家沒抓到：結果照用，但不快取，下次再試 */
+async function load(key: string, build: (out: EmoteMap) => Promise<boolean>): Promise<EmoteMap> {
     try {
         const hit = sessionStorage.getItem(CACHE_PREFIX + key);
         if (hit) return JSON.parse(hit) as EmoteMap;
     } catch { /* 無痕或停用儲存：直接重抓 */ }
     const out: EmoteMap = {};
-    await build(out);
-    try { sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(out)); } catch { /* 滿了就不快取 */ }
+    const complete = await build(out);
+    if (complete) try { sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(out)); } catch { /* 滿了就不快取 */ }
     return out;
 }
 
@@ -71,6 +74,7 @@ export const loadGlobalEmotes = () => load('global', async out => {
     fromFfz((ffz as { sets?: unknown })?.sets, out);
     fromBttv(bttv, out);
     from7tv((seven as { emotes?: unknown })?.emotes, out);
+    return seven !== null && bttv !== null && ffz !== null;
 });
 
 export const loadChannelEmotes = (roomId: string) => {
@@ -86,5 +90,6 @@ export const loadChannelEmotes = (roomId: string) => {
         fromBttv(b?.channelEmotes, out);
         fromBttv(b?.sharedEmotes, out);
         from7tv((seven as { emote_set?: { emotes?: unknown } })?.emote_set?.emotes, out);
+        return seven !== null && bttv !== null && ffz !== null;
     });
 };

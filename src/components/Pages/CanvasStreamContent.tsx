@@ -56,7 +56,7 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     // 房間模式聊天欄選「合併」且畫布上有 Twitch 時，顯示合併聊天室取代原生 iframe
     const roomChatMerged = useUIStore(s => s.roomChatMerged);
     const hasTwitch = useStreamStore(s => s.streams.some(st => st.platform === 'twitch' && s.canvasItems.some(it => it.type === 'stream' && it.contentId === st.id)));
-    const showMergedChat = isRoom && isChatWindow && roomChatMerged && hasTwitch;
+    const showMergedChat = isRoom && isChatWindow && (roomChatMerged || stream.platform === 'twitch') && hasTwitch;
     // 衍生值以 canvasItems 身分快取（見 canvasItemOps），多個視窗訂閱也只算一次
     const isMain = useStreamStore(s => windowId !== undefined && mainStreamItemIdOf(s.canvasItems) === windowId);
     const sharedChatContentId = useStreamStore(s => sharedChatContentIdOf(s.canvasItems));
