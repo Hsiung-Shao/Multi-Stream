@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { track } from '../../utils/analytics';
-import { applyRoomStage } from '../Navigation/roomActions';
+import { applyRoomLayout } from '../Navigation/roomActions';
 import { CANVAS_TOUR_DONE_KEY } from './CanvasTour';
 
 const tourDone = () => {
@@ -33,7 +33,7 @@ export const RoomPrompt = () => {
         track.roomPrompt('accept');
         ui.setIslandStyle('room');
         ui.setRoomPromptSeen(true);
-        if (ui.roomMode === 'stage') applyRoomStage();
+        applyRoomLayout();
     };
     const dismiss = () => {
         track.roomPrompt('dismiss');

@@ -1,7 +1,8 @@
 /** 房間模式的畫布動作（讀寫 store）；排版與靜音規則在 utils/roomStage 的純函式 */
 import { useStreamStore } from '../../store/useStreamStore';
 import { useUIStore } from '../../store/useUIStore';
-import { stageLayout, focusMuteUpdates } from '../../utils/roomStage';
+import { stageLayout, focusMuteUpdates, roomChatItems } from '../../utils/roomStage';
+import type { CanvasItem } from '../../types/canvas';
 import { relayoutItems, selectMainStreamItemId, streamContentIdsByPosition } from '../../utils/canvasItemOps';
 import { getCanvasAspect } from '../../utils/layoutPresets';
 
@@ -15,29 +16,55 @@ export function applyFocusAudio(itemId: string): void {
     for (const u of focusMuteUpdates(streams, streamId)) updateStream(u.id, { isMuted: u.isMuted });
 }
 
-/** 把某個視窗設為焦點：舞台模式放上舞台；平分模式與主畫面互換位置。聲音視設定跟著走 */
+const contentOf = (items: readonly CanvasItem[], itemId: string | undefined) => items.find(it => it.i === itemId)?.contentId;
+
+/** 聊天室收成一個並跟著 itemId；聊天室數量變了（收掉多的）就重排，否則只換頻道 */
+function withRoomChat(items: CanvasItem[], itemId: string | undefined, chatCols: number): CanvasItem[] {
+    const next = roomChatItems(items, contentOf(items, itemId));
+    return next.length === items.length ? next : relayoutItems(next, getCanvasAspect(), [], chatCols);
+}
+
+/** 寫回 store；內容沒變就不寫（canvasItems 換新陣列＝整張畫布重繪加一次 localStorage 寫入） */
+function commit(prev: CanvasItem[], next: CanvasItem[]): void {
+    if (JSON.stringify(next) !== JSON.stringify(prev)) useStreamStore.setState({ canvasItems: next });
+}
+
+/** 把某個視窗設為焦點：舞台模式放上舞台；平分模式與主畫面互換位置。聊天室跟過去，聲音視設定跟著走 */
 export function focusRoomItem(itemId: string): void {
     const { roomMode, audioFollowsFocus } = useUIStore.getState();
     const store = useStreamStore.getState();
     if (roomMode === 'stage') {
-        const next = stageLayout(store.canvasItems, itemId, store.chatColumnWidth);
-        if (next) useStreamStore.setState({ canvasItems: next });
+        const base = roomChatItems(store.canvasItems, contentOf(store.canvasItems, itemId));
+        commit(store.canvasItems, stageLayout(base, itemId, store.chatColumnWidth) ?? withRoomChat(store.canvasItems, itemId, store.chatColumnWidth));
     } else {
         store.setMainCanvasItem(itemId);
+        const { canvasItems, chatColumnWidth } = useStreamStore.getState();
+        commit(canvasItems, withRoomChat(canvasItems, itemId, chatColumnWidth));
     }
     if (audioFollowsFocus) applyFocusAudio(itemId);
 }
 
-/** 依目前主畫面重排成舞台（新增／關閉視窗後用）；排不成時不動 */
+const mainItemId = (items: CanvasItem[]) => selectMainStreamItemId(items) ?? items.find(it => it.type === 'stream')?.i;
+
+/** 依目前主畫面重排成舞台（新增／關閉視窗後用），聊天室收成一個跟著主畫面；排不成舞台時只整理聊天室 */
 export function applyRoomStage(): void {
     const { canvasItems, chatColumnWidth } = useStreamStore.getState();
-    const mainId = selectMainStreamItemId(canvasItems) ?? canvasItems.find(it => it.type === 'stream')?.i;
+    const mainId = mainItemId(canvasItems);
     if (!mainId) return;
-    const next = stageLayout(canvasItems, mainId, chatColumnWidth);
-    // 版面數值沒變就不寫：canvasItems 換新陣列＝整張畫布重繪加一次 localStorage 寫入
-    if (next && JSON.stringify(next.map(it => it.layout)) !== JSON.stringify(canvasItems.map(it => it.layout))) {
-        useStreamStore.setState({ canvasItems: next });
-    }
+    const base = roomChatItems(canvasItems, contentOf(canvasItems, mainId));
+    commit(canvasItems, stageLayout(base, mainId, chatColumnWidth) ?? withRoomChat(canvasItems, mainId, chatColumnWidth));
+}
+
+/** 平分模式：只把聊天室收成一個跟著主畫面 */
+export function applyRoomChat(): void {
+    const { canvasItems, chatColumnWidth } = useStreamStore.getState();
+    const mainId = mainItemId(canvasItems);
+    if (mainId) commit(canvasItems, withRoomChat(canvasItems, mainId, chatColumnWidth));
+}
+
+/** 依目前模式整理版面（切到房間模式、版面變動後用） */
+export function applyRoomLayout(): void {
+    if (useUIStore.getState().roomMode === 'stage') applyRoomStage(); else applyRoomChat();
 }
 
 /** 舞台 ⇄ 平分 */

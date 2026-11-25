@@ -1,6 +1,6 @@
 /**
  * 房間模式的舞台排版與「聲音跟著焦點」（純函式）。
- * 只改 layout，不改 i／contentId／sharedChat：i 一改播放器就會重建（見 canvasItemOps 檔頭）。
+ * 串流 item 只改 layout，不改 i／contentId：i 一改播放器就會重建（見 canvasItemOps 檔頭）。
  */
 import type { CanvasItem } from '../types/canvas';
 import { isCollapsedChat } from './canvasItemOps';
@@ -39,6 +39,17 @@ export function stageLayout(items: readonly CanvasItem[], focusItemId: string, c
     openChats.forEach((it, k) => layoutOf.set(it.i, { x: area, w: c, ...rowBand(k, openChats.length) }));
 
     return items.map(it => (layoutOf.has(it.i) ? { ...it, layout: layoutOf.get(it.i)! } : it));
+}
+
+/**
+ * 房間模式只留一個聊天室並跟著焦點：保留第一個聊天室的 i（換頻道只重載聊天室 iframe），
+ * 其餘聊天室刪掉；串流 item 一律原樣。沒有聊天室時不新增（使用者自己關掉的）。
+ */
+export function roomChatItems(items: readonly CanvasItem[], focusContentId: number | null | undefined): CanvasItem[] {
+    const first = items.find(it => it.type === 'chat');
+    if (!first) return [...items];
+    const chat: CanvasItem = { ...first, sharedChat: true, contentId: focusContentId ?? first.contentId };
+    return items.filter(it => it.type !== 'chat' || it === first).map(it => (it === first ? chat : it));
 }
 
 /** 焦點那路開聲音、其他靜音；只回傳需要改的那幾路。焦點不在清單時不改任何路 */

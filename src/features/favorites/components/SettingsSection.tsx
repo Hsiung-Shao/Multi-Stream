@@ -26,7 +26,7 @@ import { ScrollArea } from '../../../components/ui/scroll-area';
 import { cn } from '../../../components/ui/utils';
 import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare, Trash2 } from 'lucide-react';
 import { logEvent, track } from '../../../utils/analytics';
-import { applyRoomStage } from '../../../components/Navigation/roomActions';
+import { applyRoomLayout } from '../../../components/Navigation/roomActions';
 
 import { GITHUB_REPO_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
 
@@ -222,7 +222,7 @@ export function SettingsSection() {
     const changeIslandStyle = (next: IslandStyle) => {
         if (next !== islandStyle) track.canvasShellSwitch(islandStyle, next, 'settings');
         setIslandStyle(next);
-        if (next !== islandStyle && next === 'room' && useUIStore.getState().roomMode === 'stage') applyRoomStage();
+        if (next !== islandStyle && next === 'room') applyRoomLayout();
     };
     const islandSizeOptions = [
         { id: 'sm' as const, label: t('favorites:island_size_sm') },

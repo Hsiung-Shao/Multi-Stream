@@ -137,3 +137,25 @@ describe('focusRoomItem', () => {
         });
     });
 });
+
+describe('focusRoomItem：聊天室跟著舞台', () => {
+    beforeEach(() => {
+        localStorage.clear();
+        useUIStore.setState({ roomMode: 'stage', audioFollowsFocus: true });
+        useStreamStore.setState({
+            streams: [stream(1, false), stream(2, true), stream(3, true)],
+            chatColumnWidth: 6,
+            canvasItems: [
+                S('w1', 1, L(0, 0, 8, 12)), S('w2', 2, L(8, 0, 8, 12)), S('w3', 3, L(0, 12, 8, 12)),
+                { i: 'c1', type: 'chat', contentId: 1, layout: L(16, 0, 8, 24), sharedChat: true },
+            ],
+        });
+    });
+
+    it('換舞台時聊天室跟過去，串流 item 的 i 集合不變', () => {
+        focusRoomItem('w2');
+        const items = useStreamStore.getState().canvasItems;
+        expect(items.find(it => it.type === 'chat')!.contentId).toBe(2);
+        expect(items.filter(it => it.type === 'stream').map(it => it.i).sort()).toEqual(['w1', 'w2', 'w3']);
+    });
+});

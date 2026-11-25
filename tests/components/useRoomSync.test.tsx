@@ -36,6 +36,17 @@ describe('useRoomSync', () => {
         expect(mutedOf(2)).toBe(false);
     });
 
+    it('掛載時有多個聊天室就收成一個、跟著舞台', () => {
+        useStreamStore.setState({ canvasItems: [
+            S('w1', 1, L(0, 0, 14, 24)), S('w2', 2, L(14, 0, 6, 24)),
+            { i: 'c2', type: 'chat', contentId: 2, layout: L(20, 0, 4, 12) },
+            { i: 'c1', type: 'chat', contentId: 1, layout: L(20, 12, 4, 12) },
+        ] });
+        renderHook(() => useRoomSync());
+        const chats = useStreamStore.getState().canvasItems.filter(it => it.type === 'chat');
+        expect(chats.map(c => [c.i, c.contentId, c.layout.h])).toEqual([['c2', 1, 24]]);
+    });
+
     it('主畫面換人後才讓聲音跟著焦點', () => {
         renderHook(() => useRoomSync());
         act(() => { focusRoomItem('w2'); });

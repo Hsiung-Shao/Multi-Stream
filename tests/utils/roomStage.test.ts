@@ -1,6 +1,6 @@
 // 房間模式舞台版面：一台大、其餘疊在右側候場欄；畫布格線 24 欄 × 24 列
 import { describe, it, expect } from 'vitest';
-import { stageLayout, focusMuteUpdates } from '../../src/utils/roomStage';
+import { stageLayout, focusMuteUpdates, roomChatItems } from '../../src/utils/roomStage';
 import type { CanvasItem } from '../../src/types/canvas';
 
 const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
@@ -177,5 +177,39 @@ describe('focusMuteUpdates', () => {
 
     it('焦點 id 不在清單時回傳空陣列（不誤把所有路靜音）', () => {
         expect(focusMuteUpdates([{ id: 1, isMuted: false }, { id: 2, isMuted: false }], 99)).toEqual([]);
+    });
+});
+
+describe('roomChatItems：聊天室收斂成一個並跟著焦點', () => {
+    it('多個聊天室收斂成一個跟著焦點（i 取第一個、contentId 為焦點、sharedChat）', () => {
+        const items = [
+            S('a', 1), S('b', 2), S('c', 3),
+            C('ca', 1, L(0, 6, 4, 6)), C('cb', 2, L(4, 6, 4, 6)), C('cc', 3, L(8, 6, 4, 6)),
+        ];
+        const out = roomChatItems(items, 2);
+        const chats = out.filter(it => it.type === 'chat');
+        expect(chats).toHaveLength(1);
+        expect(chats[0].i).toBe('ca');
+        expect(chats[0].contentId).toBe(2);
+        expect(chats[0].sharedChat).toBe(true);
+        const streams = out.filter(it => it.type === 'stream');
+        expect(streams.map(it => it.i)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('單一聊天室只換頻道不換 i', () => {
+        const out = roomChatItems([S('a', 1), S('b', 2), C('c1', 1, L(18, 0, 6, 24), true)], 2);
+        const chat = out.find(it => it.type === 'chat')!;
+        expect(chat.i).toBe('c1');
+        expect(chat.contentId).toBe(2);
+    });
+
+    it('沒有聊天室時不新增', () => {
+        const items = [S('a', 1), S('b', 2)];
+        expect(roomChatItems(items, 1)).toEqual(items);
+    });
+
+    it('收合的聊天室維持收合（寬度仍為 0）', () => {
+        const out = roomChatItems([S('a', 1), S('b', 2), C('c1', 1, L(24, 0, 0, 24), true)], 2);
+        expect(out.find(it => it.type === 'chat')!.layout.w).toBe(0);
     });
 });

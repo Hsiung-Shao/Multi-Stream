@@ -18,6 +18,8 @@ import { useStreamStore } from '../../store/useStreamStore';
 import { mainStreamItemIdOf, sharedChatContentIdOf } from '../../utils/canvasItemOps';
 import { ChatStreamSelect } from '../Canvas/ChatStreamSelect';
 import { ChatLayoutMenu } from '../Canvas/ChatLayoutMenu';
+import { RoomChatTabs } from '../Navigation/RoomChatTabs';
+import { focusRoomItem } from '../Navigation/roomActions';
 
 interface CanvasStreamContentProps {
     stream: StreamData;
@@ -47,6 +49,9 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
     // 以下 selector 都回傳原始值：只有結果改變時才重繪，拖曳、音量變動都不會牽動
     const isTheater = useUIStore(s => windowId !== undefined && s.theaterWindowId === windowId);
     const hintsLearned = useUIStore(s => s.canvasHintsLearned);
+    // 房間模式：播放器自己的介面（標題、控制列）蓋不得，我們的工具列與拖曳提示全部拿掉
+    const isRoom = useUIStore(s => s.islandStyle === 'room');
+    const roomStage = useUIStore(s => s.roomMode === 'stage');
     // 衍生值以 canvasItems 身分快取（見 canvasItemOps），多個視窗訂閱也只算一次
     const isMain = useStreamStore(s => windowId !== undefined && mainStreamItemIdOf(s.canvasItems) === windowId);
     const sharedChatContentId = useStreamStore(s => sharedChatContentIdOf(s.canvasItems));
@@ -126,109 +131,119 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
             id={isChatWindow ? undefined : `stream-container-${stream.id}`}
             className={cn("w-full h-full relative bg-slate-900 group", isChatWindow && "flex flex-col")}
         >
-            {/* Stream windows keep floating controls; chat windows reserve space so Twitch UI is never covered. */}
-            <div
-                data-window-toolbar={windowType}
-                className={cn(
-                    "flex items-center gap-1 p-1 pl-3 pr-1",
-                    "bg-black/80 backdrop-blur-md rounded-full",
-                    "border border-white/10 shadow-lg",
-                    "transition-opacity select-none",
-                    isChatWindow
-                        ? "relative z-10 m-1 mb-0 h-8 shrink-0 opacity-100 rounded-md"
-                        : "absolute top-2 left-1/2 -translate-x-1/2 z-[60] opacity-0 group-hover:opacity-100",
-                    isDragging && "opacity-100 bg-purple-900/80 cursor-grabbing"
-                )}
-                {...dragHandlers}
-            >
-                {/* Drag Handle with Title (Grid Size REMOVED) */}
-                <div className={cn("cursor-grab flex items-center text-white/70 hover:text-white mr-1 gap-2", isChatWindow && "mr-0")}>
-                    <GripHorizontal size={14} className="shrink-0" />
-                    {isChatWindow && windowId !== undefined ? null : (
-                        <span className="text-[10px] font-medium max-w-[100px] truncate">
-                            {title}
-                        </span>
+            {isRoom ? (
+                // 房間模式的聊天室：一排頻道標籤取代工具列；另開聊天室是第三方 cookie 被擋時的逃生口
+                isChatWindow && windowId !== undefined ? (
+                    <div className="relative z-10 flex h-9 shrink-0 items-center gap-1 border-b border-white/10 bg-black/80 px-1">
+                        <RoomChatTabs chatItemId={windowId} activeStreamId={stream.id} />
+                        <ChatPopoutButton platform={stream.platform} channelId={stream.channelId} videoId={stream.videoId} />
+                    </div>
+                ) : null
+            ) : (
+                // Stream windows keep floating controls; chat windows reserve space so Twitch UI is never covered.
+                <div
+                    data-window-toolbar={windowType}
+                    className={cn(
+                        "flex items-center gap-1 p-1 pl-3 pr-1",
+                        "bg-black/80 backdrop-blur-md rounded-full",
+                        "border border-white/10 shadow-lg",
+                        "transition-opacity select-none",
+                        isChatWindow
+                            ? "relative z-10 m-1 mb-0 h-8 shrink-0 opacity-100 rounded-md"
+                            : "absolute top-2 left-1/2 -translate-x-1/2 z-[60] opacity-0 group-hover:opacity-100",
+                        isDragging && "opacity-100 bg-purple-900/80 cursor-grabbing"
                     )}
-                    {shownInSharedChat && (
-                        <span className="shrink-0 text-sky-300" title={t('canvas.toolbar_in_chat')} aria-label={t('canvas.toolbar_in_chat')} role="img">
-                            <MessageSquare size={11} />
-                        </span>
+                    {...dragHandlers}
+                >
+                    {/* Drag Handle with Title (Grid Size REMOVED) */}
+                    <div className={cn("cursor-grab flex items-center text-white/70 hover:text-white mr-1 gap-2", isChatWindow && "mr-0")}>
+                        <GripHorizontal size={14} className="shrink-0" />
+                        {isChatWindow && windowId !== undefined ? null : (
+                            <span className="text-[10px] font-medium max-w-[100px] truncate">
+                                {title}
+                            </span>
+                        )}
+                        {shownInSharedChat && (
+                            <span className="shrink-0 text-sky-300" title={t('canvas.toolbar_in_chat')} aria-label={t('canvas.toolbar_in_chat')} role="img">
+                                <MessageSquare size={11} />
+                            </span>
+                        )}
+                    </div>
+
+                    {/* 聊天室：標題換成下拉選單，切換聊天室顯示哪一路 */}
+                    {isChatWindow && windowId !== undefined && (
+                        <ChatStreamSelect chatItemId={windowId} activeStreamId={stream.id} />
                     )}
-                </div>
 
-                {/* 聊天室：標題換成下拉選單，切換聊天室顯示哪一路 */}
-                {isChatWindow && windowId !== undefined && (
-                    <ChatStreamSelect chatItemId={windowId} activeStreamId={stream.id} />
-                )}
+                    <Divider />
 
-                <Divider />
+                    {/* 聊天室欄寬（窄／標準／寬，也可以直接拖聊天室左緣）與收合。作用在畫面上所有聊天室 */}
+                    {isChatWindow && <ChatLayoutMenu />}
 
-                {/* 聊天室欄寬（窄／標準／寬，也可以直接拖聊天室左緣）與收合。作用在畫面上所有聊天室 */}
-                {isChatWindow && <ChatLayoutMenu />}
+                    {/* 另開原生聊天室：第三方 cookie 被封鎖時 iframe 內無法發言的逃生口 */}
+                    {isChatWindow && (
+                        <ChatPopoutButton
+                            platform={stream.platform}
+                            channelId={stream.channelId}
+                            videoId={stream.videoId}
+                        />
+                    )}
 
-                {/* 另開原生聊天室：第三方 cookie 被封鎖時 iframe 內無法發言的逃生口 */}
-                {isChatWindow && (
-                    <ChatPopoutButton
-                        platform={stream.platform}
-                        channelId={stream.channelId}
-                        videoId={stream.videoId}
-                    />
-                )}
-
-                {/* 放大（劇院模式）與設為主畫面：原本只有快捷鍵 T 與拖曳換位，畫面上沒有入口 */}
-                {!isChatWindow && windowId !== undefined && (
-                    <>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
-                            onPointerDown={stopPointerDown}
-                            onClick={handleTheater}
-                            title={isTheater ? t('canvas.toolbar_exit_theater') : t('canvas.toolbar_theater')}
-                            aria-pressed={isTheater}
-                            data-tour="theater"
-                        >
-                            {isTheater ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                        </Button>
-                        {!isMain && !isTheater && (
+                    {/* 放大（劇院模式）與設為主畫面：原本只有快捷鍵 T 與拖曳換位，畫面上沒有入口 */}
+                    {!isChatWindow && windowId !== undefined && (
+                        <>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-amber-300 nodrag"
+                                className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
                                 onPointerDown={stopPointerDown}
-                                onClick={handleSetMain}
-                                title={t('canvas.toolbar_set_main')}
+                                onClick={handleTheater}
+                                title={isTheater ? t('canvas.toolbar_exit_theater') : t('canvas.toolbar_theater')}
+                                aria-pressed={isTheater}
+                                data-tour="theater"
                             >
-                                <Star size={12} />
+                                {isTheater ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                             </Button>
-                        )}
-                    </>
-                )}
+                            {!isMain && !isTheater && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-amber-300 nodrag"
+                                    onPointerDown={stopPointerDown}
+                                    onClick={handleSetMain}
+                                    title={t('canvas.toolbar_set_main')}
+                                >
+                                    <Star size={12} />
+                                </Button>
+                            )}
+                        </>
+                    )}
 
-                {/* Reload Button */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
-                    onClick={handleReload}
-                    title={t('canvas.toolbar_reload')}
-                    data-tour="reload"
-                >
-                    <RefreshCw size={12} />
-                </Button>
+                    {/* Reload Button */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded-full hover:bg-white/20 text-white/70 hover:text-white nodrag"
+                        onClick={handleReload}
+                        title={t('canvas.toolbar_reload')}
+                        data-tour="reload"
+                    >
+                        <RefreshCw size={12} />
+                    </Button>
 
-                {/* Remove Button */}
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 rounded-full hover:bg-red-500/20 text-white/70 hover:text-red-400 nodrag"
-                    onClick={handleRemove}
-                    title={t('canvas.toolbar_remove')}
-                    data-tour="remove"
-                >
-                    <X size={12} />
-                </Button>
-            </div>
+                    {/* Remove Button */}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 rounded-full hover:bg-red-500/20 text-white/70 hover:text-red-400 nodrag"
+                        onClick={handleRemove}
+                        title={t('canvas.toolbar_remove')}
+                        data-tour="remove"
+                    >
+                        <X size={12} />
+                    </Button>
+                </div>
+            )}
 
             {/* Stream Content - fills entire area */}
             <div
@@ -257,13 +272,25 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
 
             {/* hover 操作說明：放在工具列正下方（底部是播放器控制列）。拖曳／縮放過幾次後收起。
                 排在內容之後 append，出現或消失都不會搬動播放器節點 */}
-            {!isChatWindow && !hintsLearned && !isTheater && (
+            {!isChatWindow && !isRoom && !hintsLearned && !isTheater && (
                 <div
                     data-hover-hint
                     className="absolute top-11 left-1/2 -translate-x-1/2 z-[59] max-w-[92%] truncate rounded-full border border-white/10 bg-black/75 px-2.5 py-0.5 text-[10px] text-white/80 pointer-events-none select-none opacity-0 transition-opacity group-hover:opacity-100"
                 >
                     {t('canvas.hover_hint')}
                 </div>
+            )}
+            {/* 候場：iframe 裡的滑鼠事件網頁收不到，蓋一層遮罩才能「點了放上舞台」；舞台本身不蓋，保留播放器操作 */}
+            {isRoom && roomStage && !isChatWindow && !isMain && windowId !== undefined && (
+                <button
+                    type="button"
+                    onClick={() => focusRoomItem(windowId)}
+                    aria-label={t('room.wing_to_stage', { name: title })}
+                    className="absolute inset-0 z-[55] flex flex-col items-center justify-center gap-1 bg-black/75 text-white opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-400"
+                >
+                    <span className="text-base font-semibold">{title}</span>
+                    <span className="rounded-full bg-purple-600 px-3 py-1 text-xs font-medium">{t('room.to_stage')}</span>
+                </button>
             )}
         </div>
     );

@@ -13,7 +13,7 @@ import { useStreamStore } from '../../store/useStreamStore';
 import { streamContentIdsByPosition } from '../../utils/canvasItemOps';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
-const PLATFORM_DOT: Record<string, string> = {
+export const PLATFORM_DOT: Record<string, string> = {
     twitch: '#9146FF',
     youtube: '#FF0000',
 };
@@ -28,8 +28,8 @@ interface ChatStreamSelectProps {
 // 選單在拖曳把手（工具列）裡：不擋 pointerdown 的話，打開選單時會順手拖動整個視窗
 const stopPointerDown = (e: React.PointerEvent) => e.stopPropagation();
 
-export const ChatStreamSelect = memo(function ChatStreamSelect({ chatItemId, activeStreamId }: ChatStreamSelectProps) {
-    const { t } = useTranslation('common');
+/** 聊天室可切換的串流（id、標籤、平台）與切換動作；下拉選單與房間模式的頻道標籤共用 */
+export function useChatStreamOptions(chatItemId: string, activeStreamId: number) {
     const onCanvas = useStreamStore(useShallow(s => streamContentIdsByPosition(s.canvasItems)));
     const ids = onCanvas.includes(activeStreamId) ? onCanvas : [activeStreamId, ...onCanvas];
     // 只取選單需要的欄位，音量／靜音等變動不會讓選單重繪
@@ -43,6 +43,13 @@ export const ChatStreamSelect = memo(function ChatStreamSelect({ chatItemId, act
         const id = Number(value);
         if (id !== activeStreamId) useStreamStore.getState().updateCanvasItem(chatItemId, { contentId: id });
     }, [chatItemId, activeStreamId]);
+
+    return { ids, labels, platforms, select };
+}
+
+export const ChatStreamSelect = memo(function ChatStreamSelect({ chatItemId, activeStreamId }: ChatStreamSelectProps) {
+    const { t } = useTranslation('common');
+    const { ids, labels, platforms, select } = useChatStreamOptions(chatItemId, activeStreamId);
 
     return (
         <Select value={String(activeStreamId)} onValueChange={select}>

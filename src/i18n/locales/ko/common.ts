@@ -77,6 +77,8 @@ const common = {
   'room.prompt_desc': '평소에는 화면 전체를 방송에 쓰고, 조작할 때는 마우스를 맨 위로 옮기거나 Ctrl K를 누르세요. 설정에서 언제든 되돌릴 수 있습니다.',
   'room.prompt_accept': '새 버전으로 전환',
   'room.prompt_dismiss': '괜찮아요',
+  'room.wing_to_stage': '{{name}} 무대에 올리기',
+  'room.to_stage': '무대에 올리기',
   'canvas.tour_drag_title': '도구 모음을 드래그해 이동',
   'canvas.tour_drag_body': '화면에 마우스를 올리면 도구 모음이 나타납니다. 왼쪽의 ⠿ 를 누른 채 드래그하면 창을 옮길 수 있습니다.',
   'canvas.tour_swap_title': '다른 화면에 놓으면 교체',

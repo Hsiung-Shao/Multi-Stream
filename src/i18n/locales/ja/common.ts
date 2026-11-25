@@ -77,6 +77,8 @@ const common = {
   'room.prompt_desc': '普段は画面すべてを配信に使い、操作したいときは画面上端にマウスを移すか Ctrl K を押します。設定からいつでも元に戻せます。',
   'room.prompt_accept': '新しい表示に切り替える',
   'room.prompt_dismiss': '今はしない',
+  'room.wing_to_stage': '{{name}} をステージに出す',
+  'room.to_stage': 'ステージに出す',
   'canvas.tour_drag_title': 'ツールバーをドラッグして移動',
   'canvas.tour_drag_body': '画面にマウスを乗せるとツールバーが表示されます。左の ⠿ を押したままドラッグするとウィンドウを移動できます。',
   'canvas.tour_swap_title': '他の画面に重ねると入れ替え',

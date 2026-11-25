@@ -77,6 +77,8 @@ const common = {
   'room.prompt_desc': 'Streams get the whole screen. Move the mouse to the top edge or press Ctrl K when you need controls. You can switch back in Settings anytime.',
   'room.prompt_accept': 'Switch to new',
   'room.prompt_dismiss': 'No thanks',
+  'room.wing_to_stage': 'Put {{name}} on stage',
+  'room.to_stage': 'Put on stage',
   'canvas.tour_drag_title': 'Drag the toolbar to move',
   'canvas.tour_drag_body': 'Hover a stream to show this toolbar, then hold the ⠿ handle and drag to move the window.',
   'canvas.tour_swap_title': 'Drop on another stream to swap',

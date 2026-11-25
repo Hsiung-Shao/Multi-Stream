@@ -76,6 +76,8 @@ const common = {
   'room.prompt_desc': '平常畫面全部給直播，要用時把滑鼠移到最上方或按 Ctrl K。隨時可以在設定換回來。',
   'room.prompt_accept': '切換到新版',
   'room.prompt_dismiss': '不用了',
+  'room.wing_to_stage': '把 {{name}} 放上舞台',
+  'room.to_stage': '放上舞台',
   'canvas.tour_drag_title': '拖曳工具列移動視窗',
   'canvas.tour_drag_body': '滑鼠移到畫面上，上方會出現這條工具列；按住左側的 ⠿ 拖曳即可移動視窗。',
   'canvas.tour_swap_title': '拖到另一個畫面上就會交換',

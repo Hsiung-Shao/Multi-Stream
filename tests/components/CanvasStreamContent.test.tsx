@@ -1,8 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../src/i18n/i18n';
 import { useStreamStore } from '../../src/store/useStreamStore';
 import { useUIStore } from '../../src/store/useUIStore';
+import { selectMainStreamItemId } from '../../src/utils/canvasItemOps';
 import { CanvasStreamContent } from '../../src/components/Pages/CanvasStreamContent';
 import type { WindowRenderProps } from '../../src/components/Canvas';
 import type { StreamData } from '../../src/utils/streamUtils';
@@ -212,5 +213,55 @@ describe('CanvasStreamContent 工具列：聊天室寬度與收合', () => {
         render(<ChatCollapsedTab />);
         fireEvent.click(screen.getByRole('button', { name: '展開聊天室' }));
         expect(useStreamStore.getState().canvasItems.find(i => i.i === 'chat')!.layout).toEqual(L(18, 0, 6, 24));
+    });
+});
+
+// 房間模式外殼：不顯示工具列／拖曳提示、候場視窗有「放上舞台」遮罩
+describe('CanvasStreamContent 房間模式', () => {
+    const L = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+    const mk = (id: number, name: string): StreamData => ({ ...stream, id, channelId: name, displayName: name });
+    const stageBtn = (name: string) => screen.queryByRole('button', { name: `把 ${name} 放上舞台` });
+
+    beforeEach(async () => {
+        await i18n.changeLanguage('zh-TW');
+        useUIStore.setState({ theaterWindowId: null, islandStyle: 'room', roomMode: 'stage' });
+        useStreamStore.setState({
+            streams: [mk(1, 'Alpha'), mk(2, 'Bravo'), mk(3, 'Charlie')],
+            canvasItems: [
+                { i: 'w1', type: 'stream', contentId: 1, layout: L(0, 0, 18, 24) },
+                { i: 'w2', type: 'stream', contentId: 2, layout: L(18, 0, 6, 12) },
+                { i: 'w3', type: 'stream', contentId: 3, layout: L(18, 12, 6, 12) },
+            ],
+        });
+    });
+
+    afterEach(() => useUIStore.setState({ islandStyle: 'original', roomMode: 'stage' }));
+
+    it('候場顯示放上舞台遮罩，點了該視窗成為主畫面', () => {
+        render(<CanvasStreamContent stream={mk(2, 'Bravo')} windowType="stream" renderProps={renderProps} windowId="w2" />);
+        fireEvent.click(screen.getByRole('button', { name: '把 Bravo 放上舞台' }));
+        expect(selectMainStreamItemId(useStreamStore.getState().canvasItems)).toBe('w2');
+    });
+
+    it('舞台模式的主畫面不加遮罩', () => {
+        render(<CanvasStreamContent stream={mk(1, 'Alpha')} windowType="stream" renderProps={renderProps} windowId="w1" />);
+        expect(stageBtn('Alpha')).toBeNull();
+    });
+
+    it('平分模式的非主畫面不加遮罩', () => {
+        useUIStore.setState({ roomMode: 'grid' });
+        render(<CanvasStreamContent stream={mk(2, 'Bravo')} windowType="stream" renderProps={renderProps} windowId="w2" />);
+        expect(stageBtn('Bravo')).toBeNull();
+    });
+
+    it('房間模式不顯示視窗工具列與拖曳提示，原始外殼則有工具列', () => {
+        const { container, unmount } = render(<CanvasStreamContent stream={mk(2, 'Bravo')} windowType="stream" renderProps={renderProps} windowId="w2" />);
+        expect(container.querySelector('[data-window-toolbar]')).toBeNull();
+        expect(container.querySelector('[data-hover-hint]')).toBeNull();
+        unmount();
+
+        useUIStore.setState({ islandStyle: 'original' });
+        const r2 = render(<CanvasStreamContent stream={mk(2, 'Bravo')} windowType="stream" renderProps={renderProps} windowId="w2" />);
+        expect(r2.container.querySelector('[data-window-toolbar]')).not.toBeNull();
     });
 });
