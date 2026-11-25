@@ -61,7 +61,9 @@ export function syncNow(): Promise<boolean> {
         const snapshot = readSnapshot(uid);
         const owner = localStorage.getItem(OWNER_KEY);
         const local = readLocal();
-        if (!snapshot && owner && owner !== uid && (local.favorites.length > 0 || local.categories.length > 0)) {
+        // 不論這個帳號以前有沒有在這台同步過（有快照），只要本機現在屬於別的帳號就先問；
+        // 拿舊快照硬合併，會把「快照有、本機（別人的資料）沒有」的全部當成本機刪除，刪光雲端
+        if (owner && owner !== uid && (local.favorites.length > 0 || local.categories.length > 0)) {
             // 本機收藏是另一個帳號留下的：不自動併進這個帳號，等使用者選（resolveAccountSwitch）
             setStatus('needs_choice');
             return false;
@@ -91,7 +93,10 @@ export async function resolveAccountSwitch(mode: 'merge' | 'cloud'): Promise<boo
         try { localStorage.setItem(`backup_cloud_switch_${Date.now()}`, JSON.stringify(readLocal())); } catch { return false; }
         localStorage.setItem(KEYS.favorites, '[]');
         localStorage.setItem(KEYS.categories, '[]');
+        localStorage.setItem(KEYS.tags, '[]');
     }
+    // 舊快照描述的是別份本機資料，留著會被當成本機刪除：丟掉，走第一次同步的聯集
+    localStorage.removeItem(SNAPSHOT_PREFIX + uid);
     localStorage.setItem(OWNER_KEY, uid);
     return syncNow();
 }

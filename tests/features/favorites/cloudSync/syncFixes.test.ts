@@ -35,6 +35,20 @@ describe('合併：避免撞雲端唯一限制與重複', () => {
     });
 });
 
+describe('合併：刪掉分類又建同名（review 第 3 輪）', () => {
+    it('雲端同名分類是本機剛刪掉的那個時不沿用它的 id，新分類與歸類保留', () => {
+        const r = mergeSync(
+            data({ categories: [cat('n', 'X')], favorites: [fav('f', { categoryId: 'n' })] }),
+            data({ categories: [cat('o', 'X')], favorites: [fav('f')] }),
+            data({ categories: [cat('o', 'X')], favorites: [fav('f')] }),
+        );
+        expect(r.local.categories.map(c => c.id)).toEqual(['n']);
+        expect(r.local.favorites[0].categoryId).toBe('n');
+        expect(r.remove.categories).toEqual(['o']);
+        expect(r.upsert.categories.map(c => c.id)).toEqual(['n']);
+    });
+});
+
 describe('欄位轉換：時間格式與雲端限制', () => {
     it('雲端回傳 +00:00 的時間統一成本機的 Z 格式，比對才會相等', () => {
         const f = rowToFav({ ...favToRow(fav('a'), 'u'), added_at: '2026-01-01T00:00:00+00:00' });
@@ -112,5 +126,27 @@ describe('換帳號：本機收藏屬於另一個帳號時先問', () => {
         expect((JSON.parse(localStorage.getItem('favoriteStreams')!) as FavoriteStream[]).map(f => f.id).sort()).toEqual(['cloudB', 'fromA']);
         expect(applyChanges).toHaveBeenCalled();
         expect(localStorage.getItem('ms_cloud_sync_owner')).toBe('userB');
+    });
+
+    it('這台曾同步過的帳號再登入、但本機現在屬於別的帳號時也要先問（不可拿舊快照把雲端刪光）', async () => {
+        const { engine, applyChanges } = await setup();
+        localStorage.setItem('ms_cloud_sync:userB', JSON.stringify(data({ favorites: [fav('cloudB')] })));
+        expect(await engine.syncNow()).toBe(false);
+        expect(engine.useSyncStatus.getState().state).toBe('needs_choice');
+        expect(applyChanges).not.toHaveBeenCalled();
+        expect(await engine.resolveAccountSwitch('merge')).toBe(true);
+        const [, , remove] = applyChanges.mock.calls[0] as unknown as [string, SyncData, { favorites: string[] }];
+        expect(remove.favorites).toEqual([]);
+    });
+
+    it('選「改用雲端」時前一個帳號的自訂標籤也一起換掉', async () => {
+        const { engine, applyChanges } = await setup();
+        localStorage.setItem('preference_tags', JSON.stringify([{ id: 'tagA', name: 'A 的標籤', color: '#fff', order: 0 }]));
+        await engine.syncNow();
+        await engine.resolveAccountSwitch('cloud');
+        const tags = JSON.parse(localStorage.getItem('preference_tags')!) as { id: string }[];
+        expect(tags.map(t => t.id)).not.toContain('tagA');
+        const [, upsert] = applyChanges.mock.calls[0] as unknown as [string, SyncData];
+        expect(upsert.tags.map(t => t.id)).not.toContain('tagA');
     });
 });

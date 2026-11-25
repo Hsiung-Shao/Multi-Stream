@@ -67,7 +67,9 @@ const identity = (f: FavoriteStream) => `${f.platform}:${(f.channelId || f.video
 function adoptRemoteIds(local: SyncData, remote: SyncData, snapshot: SyncData | null): SyncData {
     const known = (xs: { id: string }[] | undefined) => new Set((xs ?? []).map(x => x.id));
     const remoteCatIds = known(remote.categories), snapCatIds = known(snapshot?.categories);
-    const remoteCatByName = new Map(remote.categories.map(c => [c.name, c.id]));
+    // 本機已刪掉的雲端分類（在快照、本機沒有）不能拿來沿用：那是「刪掉又建同名」，要保留新的
+    const localCatIds = known(local.categories);
+    const remoteCatByName = new Map(remote.categories.filter(c => !(snapCatIds.has(c.id) && !localCatIds.has(c.id))).map(c => [c.name, c.id]));
     const catMap = new Map<string, string>();
     const categories = local.categories.filter(c => {
         if (remoteCatIds.has(c.id) || snapCatIds.has(c.id)) return true;
