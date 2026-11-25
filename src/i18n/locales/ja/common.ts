@@ -79,7 +79,7 @@ const common = {
   'room.prompt_dismiss': '今はしない',
   'room.wing_to_stage': '{{name}} をステージに出す',
   'room.to_stage': 'ステージに出す',
-  'room.remove_stage': 'ステージの配信を削除',
+  'room.remove_stream': '配信を削除',
   'canvas.tour_drag_title': 'ツールバーをドラッグして移動',
   'canvas.tour_drag_body': '画面にマウスを乗せるとツールバーが表示されます。左の ⠿ を押したままドラッグするとウィンドウを移動できます。',
   'canvas.tour_swap_title': '他の画面に重ねると入れ替え',

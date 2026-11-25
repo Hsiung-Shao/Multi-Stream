@@ -7,11 +7,13 @@ import { useIslandQuickActions } from '../../hooks/useIslandQuickActions';
 import { IslandFavoritesMenu } from './IslandFavoritesMenu';
 import { RoomPalette, type RoomCommand } from './RoomPalette';
 import { useRoomHotkeys } from './useRoomHotkeys';
-import { focusRoomIndex, toggleRoomMode, removeStageItem } from './roomActions';
+import { focusRoomIndex, toggleRoomMode, removeRoomItem } from './roomActions';
+import { streamContentIdsByPosition } from '../../utils/canvasItemOps';
 import { useRoomSync } from './roomSync';
 import { cn } from '../ui/utils';
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+    DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
 } from '../ui/dropdown-menu';
 import {
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -167,7 +169,12 @@ export const RoomShell = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-[#0f1119] border-white/10 text-white z-[60] min-w-[220px]">
                         <DropdownMenuItem onSelect={handleShareCanvas}>{t('common.share_canvas')}</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={removeStageItem}>{t('room.remove_stage')}</DropdownMenuItem>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>{t('room.remove_stream')}</DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="bg-[#0f1119] border-white/10 text-white z-[61]">
+                                <RemoveStreamItems />
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
                         <DropdownMenuItem onSelect={toggleFullscreen}>{isFullscreen ? t('common.exit_fullscreen') : t('common.fullscreen')}</DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/10" />
                         <DropdownMenuItem onSelect={() => useUIStore.getState().openModal('favorites', 'global_settings')}>{t('common.settings')}</DropdownMenuItem>
@@ -198,3 +205,21 @@ export const RoomShell = () => {
         </>
     );
 };
+
+/** 「移除直播」子選單：依畫面位置列出每一路（子選單打開時才掛載、才讀 store） */
+function RemoveStreamItems() {
+    const { canvasItems, streams } = useStreamStore.getState();
+    return (
+        <>
+            {streamContentIdsByPosition(canvasItems).map(id => {
+                const item = canvasItems.find(it => it.type === 'stream' && it.contentId === id);
+                const st = streams.find(x => x.id === id);
+                return item ? (
+                    <DropdownMenuItem key={item.i} onSelect={() => removeRoomItem(item.i)}>
+                        {st?.displayName || st?.channelId || st?.videoId || String(id)}
+                    </DropdownMenuItem>
+                ) : null;
+            })}
+        </>
+    );
+}

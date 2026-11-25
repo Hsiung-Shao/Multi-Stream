@@ -1,7 +1,7 @@
 import { selectMainStreamItemId } from '../../src/utils/canvasItemOps';
 // focusRoomItem：房間模式下把某個視窗設為焦點（舞台重排／平分互換）＋聲音跟著焦點
 import { describe, it, expect, beforeEach } from 'vitest';
-import { focusRoomItem } from '../../src/components/Navigation/roomActions';
+import { focusRoomItem, removeRoomItem } from '../../src/components/Navigation/roomActions';
 import { useStreamStore } from '../../src/store/useStreamStore';
 import { useUIStore } from '../../src/store/useUIStore';
 import type { CanvasItem } from '../../src/types/canvas';
@@ -168,5 +168,19 @@ describe('focusRoomItem：舞台排不下時', () => {
         useStreamStore.setState({ canvasItems: items, streams: [1, 2, 3, 4, 5, 6].map(n => stream(n)) });
         focusRoomItem('w6');
         expect(selectMainStreamItemId(useStreamStore.getState().canvasItems)).toBe('w6');
+    });
+});
+
+describe('removeRoomItem：房間模式移除一路後補位', () => {
+    it('平分模式移除左上那路，剩下的重新排滿不留洞', () => {
+        useUIStore.setState({ roomMode: 'grid', audioFollowsFocus: false });
+        useStreamStore.setState({
+            canvasItems: [S('w1', 1, L(0, 0, 12, 12)), S('w2', 2, L(12, 0, 12, 12)), S('w3', 3, L(0, 12, 12, 12)), S('w4', 4, L(12, 12, 12, 12))],
+            streams: [1, 2, 3, 4].map(n => stream(n)),
+        });
+        removeRoomItem('w1');
+        const items = useStreamStore.getState().canvasItems;
+        expect(items.map(it => it.i).sort()).toEqual(['w2', 'w3', 'w4']);
+        expect(items.some(it => it.layout.x === 0 && it.layout.y === 0)).toBe(true);
     });
 });

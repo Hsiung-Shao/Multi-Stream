@@ -98,9 +98,11 @@ export function focusRoomIndex(index: number): void {
     if (item) focusRoomItem(item.i);
 }
 
-/** 移除舞台上那一路（房間模式沒有視窗工具列，從「更多」選單進來） */
-export function removeStageItem(): void {
-    const { canvasItems, removeCanvasItem } = useStreamStore.getState();
-    const id = selectMainStreamItemId(canvasItems);
-    if (id) removeCanvasItem(id);
+/** 移除一路（房間模式沒有視窗工具列，從「更多」選單進來）；舞台排得下就排回舞台，否則重新排滿不留洞 */
+export function removeRoomItem(itemId: string): void {
+    useStreamStore.getState().removeCanvasItem(itemId);
+    const { canvasItems, chatColumnWidth } = useStreamStore.getState();
+    const mainId = mainItemId(canvasItems);
+    const staged = useUIStore.getState().roomMode === 'stage' && mainId ? stageLayout(canvasItems, mainId, chatColumnWidth) : null;
+    commit(canvasItems, staged ?? relayoutItems(canvasItems, getCanvasAspect(), [], chatColumnWidth));
 }
