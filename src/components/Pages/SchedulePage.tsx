@@ -156,6 +156,11 @@ export function SchedulePage() {
                             {t('directory.title')}
                         </RouteLink>
                     </p>
+                    <p className="mt-2">
+                        <RouteLink to="reportStreamHours" className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+                            {t('about.report')}
+                        </RouteLink>
+                    </p>
                 </section>
 
                 <SiteFooter analyticsCategory="SchedulePage" />

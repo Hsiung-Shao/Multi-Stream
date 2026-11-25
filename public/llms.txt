@@ -62,6 +62,11 @@ control, a unified chat panel for multiple channels at once, and a local
   next 7 days, just ended); tick several streamers to open them together on
   the canvas.
 
+- [Report: when do Taiwanese VTubers stream?](https://multistreaming.org/reports/taiwan-vtuber-streaming-hours):
+  original data report on 33,000+ Taiwanese VTuber live streams (Oct–Nov 2026):
+  start hours, weekday vs weekend, stream length, corporate vs independent,
+  top Twitch categories, with method and limitations.
+
 - [Compare](https://multistreaming.org/compare): honest feature comparison of
   MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am (platforms,
   stream limits, layouts, multi-chat, share links, mobile, price).

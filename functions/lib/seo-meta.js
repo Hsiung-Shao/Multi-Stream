@@ -162,6 +162,11 @@ export const ROUTE_META = {
         'zh-TW': { title: 'MultiTwitch 替代方案比較：4 款多直播同時觀看工具', description: 'MultiStream Hub、MultiTwitch、TwitchTheater、Multistre.am 四款多直播工具比較：支援平台、同時路數、佈局、多聊天室、分享連結、手機版與價格。' },
         en: { title: 'MultiTwitch Alternatives: 4 Multi-Stream Viewers Compared', description: 'MultiStream Hub vs MultiTwitch vs TwitchTheater vs Multistre.am: platforms, stream limits, layouts, multi-chat, share links, mobile support and price, side by side.' },
     },
+    '/reports/taiwan-vtuber-streaming-hours': {
+        type: 'article',
+        'zh-TW': { title: '台灣 VTuber 幾點開台？3.3 萬場直播時段統計（2026 年 10–11 月）', description: '3.3 萬場台灣 VTuber 直播的開台時段統計：幾點最多人開台、平日與週末差異、一場播多久、企業勢與個人勢比較，以及 Twitch 熱門分類。' },
+        en: { title: 'When Do Taiwanese VTubers Stream? 33,000+ Streams Analyzed (Oct–Nov 2026)', description: 'Start times of 33,000+ Taiwanese VTuber live streams: the busiest hours, weekday vs weekend, stream length, corporate vs independent VTubers and top Twitch categories.' },
+    },
     '/schedule': {
         'zh-TW': { title: '實況主開台週表：誰正在直播、接下來 7 天誰會開台 - MultiStream Hub', description: '整理 YouTube 待機室與 Twitch 直播中頻道的實況主開台週表，看誰正在開台、未來 7 天的開台時間，勾選幾位一鍵同時觀看。' },
         en: { title: 'Streamer Schedule: Who Is Live and Who Streams Next - MultiStream Hub', description: 'YouTube waiting rooms and live Twitch channels in one streamer schedule: see who is live now and the next 7 days, then watch several together in one click.' },

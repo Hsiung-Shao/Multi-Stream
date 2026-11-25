@@ -38,6 +38,7 @@ const SEO_NS_ROUTES: Record<string, string> = {
     '/status': 'status',
     '/songs': 'songs',
     '/songs/submit': 'songsSubmit',
+    '/reports/taiwan-vtuber-streaming-hours': 'reportStreamHours',
     ...Object.fromEntries(GUIDE_SLUGS.map((s) => [guidePath(s), `instructions.${s}`])),
 };
 
@@ -71,12 +72,12 @@ describe('edge seo-meta ↔ i18n locale 同步', () => {
         expect(Object.keys(routeMeta).sort()).toEqual(expected);
     });
 
-    it('教學文章路由全部標 type: article，且只有它們是 article', () => {
+    it('教學文章與資料報告標 type: article，且只有它們是 article', () => {
         const articleRoutes = Object.entries(routeMeta)
             .filter(([, v]) => v.type === 'article')
             .map(([k]) => k)
             .sort();
-        expect(articleRoutes).toEqual(GUIDE_SLUGS.map(guidePath).sort());
+        expect(articleRoutes).toEqual([...GUIDE_SLUGS.map(guidePath), '/reports/taiwan-vtuber-streaming-hours'].sort());
     });
 
     it('/admin 標記 noindex；404 meta 兩語言齊備', () => {

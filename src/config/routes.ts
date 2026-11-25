@@ -40,6 +40,8 @@ export const PAGE_PATHS: Record<RoutePage, string> = {
     songs: '/songs',
     // 投稿歌回時間軸（精確比對，與 /songs 不衝突）
     songsSubmit: '/songs/submit',
+    // 資料報告（第二篇出現再開 /reports 索引頁）
+    reportStreamHours: '/reports/taiwan-vtuber-streaming-hours',
     ...GUIDE_PATHS,
 };
 

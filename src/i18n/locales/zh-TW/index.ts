@@ -20,8 +20,9 @@ import compare from './compare';
 import schedule from './schedule';
 import status from './status';
 import songs from './songs';
+import reports from './reports';
 
 export default {
   common, navbar, controlPanel, welcome, about, tutorial, versionHistory,
-  favorites, feedback, privacy, tags, youtubeRisk, stream, faq, announcements, seo, support, compare, schedule, status, songs,
+  favorites, feedback, privacy, tags, youtubeRisk, stream, faq, announcements, seo, support, compare, schedule, status, songs, reports,
 };

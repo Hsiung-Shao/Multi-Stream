@@ -8,7 +8,7 @@ import { splitLangPath, urlLangOf } from '../functions/lib/locale.js';
 import { GUIDE_META, GUIDE_SLUGS, guidePath, guideSlugOf, isGuidePage } from './config/guides';
 import { isSchedulePersonPage, schedulePersonSlugOf } from './config/schedulePerson';
 import { SEO_SITE_URL } from './seo/defaults';
-import { graph, breadcrumb, webPage, techArticle, pageUrl, ORG_ID, PERSON_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
+import { graph, breadcrumb, webPage, techArticle, pageUrl, ORG_ID, PERSON_ID, SITE_ID, GUIDES_DATE_MODIFIED, type WebPageType } from './seo/jsonld';
 import { GITHUB_URL, X_URL, PATREON_URL, COFFEE_URL } from './config/links';
 import { toHtmlLang } from './i18n/i18n';
 import { useStreamStore } from './store/useStreamStore';
@@ -58,6 +58,8 @@ const SongsPage = lazyWithPreload(() => import('./components/Pages/SongsPage').t
 const SongsSubmitPage = lazyWithPreload(() => import('./components/Pages/SongsSubmitPage').then(module => ({ 'default': module.SongsSubmitPage })));
 // FAQ 題數常數是純值，與 lazy 元件分開 import 不會拖進 chunk
 import { COMPARE_FAQ_COUNT } from './components/Pages/comparisonMeta';
+import { REPORT_STREAM_HOURS_META } from './components/Pages/reportStreamHoursMeta';
+const ReportStreamHoursPage = lazyWithPreload(() => import('./components/Pages/ReportStreamHoursPage').then(module => ({ 'default': module.ReportStreamHoursPage })));
 const CanvasPage = lazyWithPreload(() => import('./components/Pages/NewCanvasPage').then(module => ({ 'default': module.NewCanvasPage })));
 const InstructionsPage = lazyWithPreload(() => import('./components/Pages/InstructionsPage').then(module => ({ 'default': module.InstructionsPage })));
 const FAQPage = lazyWithPreload(() => import('./components/FAQPage').then(module => ({ 'default': module.FAQPage })));
@@ -72,6 +74,7 @@ const PAGE_CHUNKS: Partial<Record<PageType, { preload: () => Promise<void> }>> =
   privacy: PrivacyPage,
   creator: CreatorPage,
   compare: ComparisonPage,
+  reportStreamHours: ReportStreamHoursPage,
   schedule: SchedulePage,
   scheduleSubmit: ScheduleSubmitPage,
   status: StatusPage,
@@ -380,6 +383,44 @@ export default function App() {
             </ChunkSuspense>
           </>
         );
+      case 'reportStreamHours': {
+        // 資料報告：Article（作者＝開發者本人）＋ Breadcrumb；FAQ 答案含快照數字內插，不放 FAQPage（App 不載 JSON）
+        const path = PAGE_PATHS.reportStreamHours;
+        const title = tx('seo:reportStreamHours.title');
+        const description = tx('seo:reportStreamHours.description');
+        const image = `${SEO_SITE_URL}${REPORT_STREAM_HOURS_META.image}`;
+        return (
+          <>
+            <SEO
+              title={title}
+              description={description}
+              path={path}
+              type="article"
+              image={image}
+              jsonLd={graph(
+                {
+                  '@type': 'Article',
+                  '@id': `${pageUrl(path)}#article`,
+                  headline: title,
+                  description,
+                  image,
+                  inLanguage,
+                  mainEntityOfPage: { '@id': pageUrl(path) },
+                  author: { '@id': PERSON_ID },
+                  publisher: { '@id': ORG_ID },
+                  datePublished: REPORT_STREAM_HOURS_META.datePublished,
+                  dateModified: REPORT_STREAM_HOURS_META.dateModified,
+                  isPartOf: { '@id': SITE_ID },
+                },
+                breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: title, path }]),
+              )}
+            />
+            <ChunkSuspense chunk={ReportStreamHoursPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>
+              <ReportStreamHoursPage />
+            </ChunkSuspense>
+          </>
+        );
+      }
       case 'schedule':
         return (
           <>

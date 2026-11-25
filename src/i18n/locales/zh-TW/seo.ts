@@ -46,6 +46,8 @@ export default {
     'creator.description': '認識 MultiStream Hub 的獨立開發者 Hsiung-Shao：為什麼做這個免費的多直播觀看工具，以及如何聯絡與支持。',
     'compare.title': 'MultiTwitch 替代方案比較：4 款多直播同時觀看工具',
     'compare.description': 'MultiStream Hub、MultiTwitch、TwitchTheater、Multistre.am 四款多直播工具比較：支援平台、同時路數、佈局、多聊天室、分享連結、手機版與價格。',
+    'reportStreamHours.title': '台灣 VTuber 幾點開台？3.3 萬場直播時段統計（2026 年 10–11 月）',
+    'reportStreamHours.description': '3.3 萬場台灣 VTuber 直播的開台時段統計：幾點最多人開台、平日與週末差異、一場播多久、企業勢與個人勢比較，以及 Twitch 熱門分類。',
     'schedule.title': '實況主開台週表：誰正在直播、接下來 7 天誰會開台 - MultiStream Hub',
     'schedule.description': '整理 YouTube 待機室與 Twitch 直播中頻道的實況主開台週表，看誰正在開台、未來 7 天的開台時間，勾選幾位一鍵同時觀看。',
     'scheduleSubmit.title': '新增 VTuber 到開台週表 - MultiStream Hub',
