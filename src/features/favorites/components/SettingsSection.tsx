@@ -1,7 +1,7 @@
 import { useState, type ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { switchLanguage, languageItemHandlers } from '../../../i18n/switchLanguage';
-import { useUIStore } from '../../../store/useUIStore';
+import { useUIStore, type IslandStyle } from '../../../store/useUIStore';
 import { Label } from '../../../components/ui/label';
 import {
     Select,
@@ -25,7 +25,7 @@ import {
 import { ScrollArea } from '../../../components/ui/scroll-area';
 import { cn } from '../../../components/ui/utils';
 import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare, Trash2 } from 'lucide-react';
-import { logEvent } from '../../../utils/analytics';
+import { logEvent, track } from '../../../utils/analytics';
 
 import { GITHUB_REPO_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
 
@@ -216,7 +216,12 @@ export function SettingsSection() {
     const islandStyleOptions = [
         { id: 'original' as const, label: t('favorites:island_style_original') },
         { id: 'edgeDock' as const, label: t('favorites:island_style_edge_dock') },
+        { id: 'room' as const, label: t('favorites:island_style_room') },
     ];
+    const changeIslandStyle = (next: IslandStyle) => {
+        if (next !== islandStyle) track.canvasShellSwitch(islandStyle, next, 'settings');
+        setIslandStyle(next);
+    };
     const islandSizeOptions = [
         { id: 'sm' as const, label: t('favorites:island_size_sm') },
         { id: 'md' as const, label: t('favorites:island_size_md') },
@@ -239,7 +244,7 @@ export function SettingsSection() {
                 </SettingRow>
 
                 <SettingRow label={t('favorites:island_style')} desc={t('favorites:island_style_desc')}>
-                    <SegmentedControl value={islandStyle} options={islandStyleOptions} onChange={setIslandStyle} />
+                    <SegmentedControl value={islandStyle} options={islandStyleOptions} onChange={changeIslandStyle} />
                 </SettingRow>
 
                 {islandStyle === 'edgeDock' && (

@@ -273,6 +273,14 @@ export const track = {
     /** 匯入 JSON 設定 */
     importJson: () => sendEvent('import_json'),
 
+    /** 換畫布外殼（source：prompt／settings） */
+    canvasShellSwitch: (from: string, to: string, source: 'prompt' | 'settings') =>
+        sendEvent('canvas_shell_switch', { from, to, source }),
+
+    /** 「試試新版畫布」提醒（action：shown／accept／dismiss） */
+    roomPrompt: (action: 'shown' | 'accept' | 'dismiss') =>
+        sendEvent('room_prompt', { action }),
+
     /** 全體靜音切換 */
     toggleMuteAll: (isMuted: boolean) =>
         sendEvent('toggle_mute_all', { is_muted: isMuted }),

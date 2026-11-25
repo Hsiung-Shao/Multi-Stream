@@ -44,7 +44,7 @@ type StepId =
     | 'welcome' | 'windows_intro' | 'start' | 'windows_ready' | 'paste' | 'platform' | 'favorites' | 'island_search'
     | 'drag' | 'swap' | 'resize' | 'theater' | 'controls' | 'chat' | 'empty'
     | 'island' | 'search' | 'add' | 'layout' | 'media' | 'collect' | 'more' | 'help'
-    | 'dock' | 'summary';
+    | 'dock' | 'room' | 'summary';
 
 /** 一般型態動態島的介紹步驟；邊緣停靠型只有一步（dock） */
 const ISLAND_STEPS: StepId[] = ['island', 'search', 'platform', 'add', 'layout', 'media', 'collect', 'more', 'help'];
@@ -101,6 +101,7 @@ function stepTargets(step: StepId, win: HTMLElement | null, searchScope: string)
         case 'more': return [islandBtn('screen'), islandBtn('clear'), islandBtn('home'), islandBtn('settings')];
         case 'help': return [islandBtn('help')];
         case 'dock': return [qs('[data-tour="island-dock"]')];
+        case 'room': return [qs('[data-tour="island"]')];
         default: return [];
     }
 }
@@ -231,9 +232,11 @@ export function CanvasTour() {
 
     const steps = useMemo<StepId[]>(() => {
         if (mode === 'intro') {
-            const list: StepId[] = islandStyle === 'edgeDock'
-                ? ['welcome', 'paste', 'search', 'platform', 'start']
-                : ['welcome', 'paste', 'search', 'platform', 'island_search'];
+            const list: StepId[] = islandStyle === 'room'
+                ? ['welcome', 'paste', 'search', 'platform', 'room']
+                : islandStyle === 'edgeDock'
+                    ? ['welcome', 'paste', 'search', 'platform', 'start']
+                    : ['welcome', 'paste', 'search', 'platform', 'island_search'];
             if (hasFavorites) list.push('favorites');
             return list;
         }
@@ -243,7 +246,8 @@ export function CanvasTour() {
         if (hasChat) list.push('chat');
         if (hasEmpty) list.push('empty');
         // 第二段不再重複第一段教過的搜尋框與平台切換
-        const island = islandStyle === 'edgeDock' ? ['dock'] as StepId[] : ISLAND_STEPS;
+        // 房間模式與邊緣停靠型都只有一步（指令列／停靠標籤）
+        const island = islandStyle === 'room' ? ['room'] as StepId[] : islandStyle === 'edgeDock' ? ['dock'] as StepId[] : ISLAND_STEPS;
         list.push(...(mode === 'windows' ? island.filter(s => !TAUGHT_IN_INTRO.includes(s)) : island));
         list.push('summary');
         return list;

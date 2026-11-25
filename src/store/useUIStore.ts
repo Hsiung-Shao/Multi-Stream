@@ -14,6 +14,8 @@ interface ModalState {
 // 'instructions:<slug>' 為教學文章頁（見 src/config/guides.ts），slug 內嵌在 page 字串
 export type PageType = 'home' | 'about' | 'creator' | 'compare' | 'schedule' | 'scheduleSubmit' | 'vtubers' | 'status' | 'songs' | 'songsSubmit' | 'settings' | 'canvas' | 'instructions' | 'privacy' | 'faq' | 'support' | 'admin' | 'not-found' | GuidePage | SchedulePersonPage;
 
+export type IslandStyle = 'original' | 'edgeDock' | 'room';
+
 interface UIState {
     theme: 'light' | 'dark' | 'system';
     page: PageType;
@@ -45,9 +47,18 @@ interface UIState {
     // Window functionality
     closeWindowMode: 'remove' | 'empty';
     setCloseWindowMode: (mode: 'remove' | 'empty') => void;
-    // 動態島樣式(桌面限定):original = 現行下緣浮現型態;edgeDock = 邊緣停靠型態
-    islandStyle: 'original' | 'edgeDock';
-    setIslandStyle: (style: 'original' | 'edgeDock') => void;
+    // 畫布外殼(桌面限定):original = 現行下緣浮現型態;edgeDock = 邊緣停靠型態;room = 房間模式(閒置零介面＋頂部指令列)
+    islandStyle: IslandStyle;
+    setIslandStyle: (style: IslandStyle) => void;
+    /** 房間模式：舞台(一台大、其餘在右側候場欄)或平分畫面 */
+    roomMode: 'stage' | 'grid';
+    setRoomMode: (mode: 'stage' | 'grid') => void;
+    /** 房間模式：換舞台時只留舞台那一路有聲音 */
+    audioFollowsFocus: boolean;
+    setAudioFollowsFocus: (v: boolean) => void;
+    /** 已看過「試試新版畫布」提醒(按過切換或不用了) */
+    roomPromptSeen: boolean;
+    setRoomPromptSeen: (v: boolean) => void;
     islandEdgeSide: 'left' | 'right';
     setIslandEdgeSide: (side: 'left' | 'right') => void;
     islandEdgeSize: 'sm' | 'md' | 'lg';
@@ -185,6 +196,21 @@ export const useUIStore = create<UIState>((set, get) => ({
         set({ islandStyle: style });
         persistUserSetting('islandStyle', style);
     },
+    roomMode: 'stage',
+    setRoomMode: (mode) => {
+        set({ roomMode: mode });
+        persistUserSetting('roomMode', mode);
+    },
+    audioFollowsFocus: true,
+    setAudioFollowsFocus: (v) => {
+        set({ audioFollowsFocus: v });
+        persistUserSetting('audioFollowsFocus', v);
+    },
+    roomPromptSeen: false,
+    setRoomPromptSeen: (v) => {
+        set({ roomPromptSeen: v });
+        persistUserSetting('roomPromptSeen', v);
+    },
     islandEdgeSide: 'left',
     setIslandEdgeSide: (side) => {
         set({ islandEdgeSide: side });
@@ -251,6 +277,15 @@ try {
         }
         if (settings.islandStyle) {
             useUIStore.setState({ islandStyle: settings.islandStyle });
+        }
+        if (settings.roomMode === 'stage' || settings.roomMode === 'grid') {
+            useUIStore.setState({ roomMode: settings.roomMode });
+        }
+        if (settings.audioFollowsFocus !== undefined) {
+            useUIStore.setState({ audioFollowsFocus: settings.audioFollowsFocus });
+        }
+        if (settings.roomPromptSeen === true) {
+            useUIStore.setState({ roomPromptSeen: true });
         }
         if (settings.islandEdgeSide) {
             useUIStore.setState({ islandEdgeSide: settings.islandEdgeSide });

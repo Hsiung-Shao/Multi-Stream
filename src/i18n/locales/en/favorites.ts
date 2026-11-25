@@ -12,6 +12,7 @@ export default {
   island_style_desc: 'Desktop only, not available on mobile.',
   island_style_original: 'Original',
   island_style_edge_dock: 'Edge Dock',
+  island_style_room: 'Room',
   island_size: 'Tab Size',
   island_size_sm: 'Small',
   island_size_md: 'Medium',

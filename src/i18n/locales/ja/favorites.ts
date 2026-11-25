@@ -12,6 +12,7 @@ export default {
   island_style_desc: 'デスクトップ版限定、モバイル版にはこの設定はありません。',
   island_style_original: '従来型',
   island_style_edge_dock: 'エッジドック',
+  island_style_room: 'ルーム',
   island_size: 'つまみのサイズ',
   island_size_sm: '小',
   island_size_md: '中',

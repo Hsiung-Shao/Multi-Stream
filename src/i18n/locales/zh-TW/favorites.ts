@@ -12,6 +12,7 @@ export default {
   island_style_desc: '僅桌面版適用,手機版無此設定。',
   island_style_original: '原本',
   island_style_edge_dock: '邊緣停靠',
+  island_style_room: '房間模式',
   island_size: '凸起大小',
   island_size_sm: '小',
   island_size_md: '中',

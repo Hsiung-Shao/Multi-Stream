@@ -6,6 +6,8 @@
 import { useEffect, useCallback, useMemo } from 'react';
 import { DynamicIsland } from '../Navigation/DynamicIsland';
 import { DynamicIslandEdgeDock } from '../Navigation/DynamicIslandEdgeDock';
+import { RoomShell } from '../Navigation/RoomShell';
+import { RoomPrompt } from '../Canvas/RoomPrompt';
 import { SimpleCanvas, CanvasWindow, WindowRenderProps } from '../Canvas';
 import { limitsOf } from '../Canvas/SimpleCanvas';
 import { CanvasTour } from '../Canvas/CanvasTour';
@@ -155,8 +157,11 @@ export const NewCanvasPage = () => {
 
             {/* UI Layer (Dynamic Island) */}
             <div className="pointer-events-none absolute inset-0 z-50">
-                {islandStyle === 'edgeDock' ? <DynamicIslandEdgeDock /> : <DynamicIsland />}
+                {islandStyle === 'room' ? <RoomShell /> : islandStyle === 'edgeDock' ? <DynamicIslandEdgeDock /> : <DynamicIsland />}
             </div>
+
+            {/* 舊外殼的使用者第一次進畫布：提示可以換成房間模式（看過一次就不再出現） */}
+            <RoomPrompt />
 
             {/* 首次導覽（portal 到 body）。只有桌機畫布會渲染本頁，手機走 MobileApp 不需要 */}
             <CanvasTour />

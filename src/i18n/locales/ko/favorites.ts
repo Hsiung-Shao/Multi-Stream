@@ -12,6 +12,7 @@ export default {
   island_style_desc: '데스크톱 전용, 모바일에서는 제공되지 않습니다.',
   island_style_original: '기본형',
   island_style_edge_dock: '가장자리 도킹',
+  island_style_room: '룸',
   island_size: '탭 크기',
   island_size_sm: '작게',
   island_size_md: '중간',
