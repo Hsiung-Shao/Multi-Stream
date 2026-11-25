@@ -1,19 +1,19 @@
 // 資料報告（/reports/taiwan-vtuber-streaming-hours）文案。數字一律由 src/data/reports 快照內插；
-// 換季重跑快照後，要重讀「定性描述」（例如企業勢偏早、週六高峰較晚）是否仍成立。
+// 換季重跑快照後，要重讀「定性描述」（例如企業勢下午較多、週六高峰較晚）是否仍成立。
 export default {
     'title': '資料報告',
     'footer': '台灣 VTuber 開台時段報告',
     'hero.eyebrow': '資料報告',
     'hero.title': '台灣 VTuber 幾點開台？{{total}} 場直播的時段統計',
-    'hero.subtitle': '我們把 {{from}} 到 {{to}} 之間，{{vtubers}} 位台灣 VTuber 在 YouTube 與 Twitch 的每一場直播，依台北時間整理成時段、星期與時長分布。',
+    'hero.subtitle': '我們把 {{from}} 到 {{to}} 之間收錄到的 {{vtubers}} 位台灣 VTuber、在 YouTube 與 Twitch 的直播，依台北時間整理成時段、星期與時長分布。',
     'byline': '撰文與資料整理：',
     'asOf': '資料快照 {{generated}}。之後每季更新一次。',
 
     'summary.title': '重點摘要',
     'summary.1': '晚上 19 點到 23 點開台的場次佔 {{prime}}；單一小時最多的是 {{peak}}，佔全部的 {{peakShare}}。',
-    'summary.2': '週末下午明顯比平日熱鬧：以每天平均計，週末 13–17 點的開台場次是平日的 {{weekendRatio}} 倍。',
+    'summary.2': '週末白天明顯比平日熱鬧：以每天平均計，週末 12:00–18:59 開播的場次是平日的 {{weekendRatio}} 倍。',
     'summary.3': '一場直播的中位數是 {{medAll}} 小時；{{mid}} 的直播落在 2 到 6 小時之間。',
-    'summary.4': '企業勢和個人勢的晚間高峰差不多，但企業勢比較常在上午開台、比較少在凌晨開台。',
+    'summary.4': '企業勢把較多直播排在下午（12–18 點開播佔 {{corpAfternoon}}，個人勢 {{indieAfternoon}}），晚上 19–23 點的比例則較低（{{corpPrime}} 對 {{indiePrime}}）。',
 
     'method.title': '資料怎麼來的',
     'method.p1': 'MultiStream Hub 的開台週表會持續追蹤站內收錄的實況主：YouTube 讀取頻道的待機室與直播狀態，Twitch 定時查詢誰正在直播，開播與結束時間都記在資料庫裡。',
@@ -22,7 +22,7 @@ export default {
 
     'hours.title': '一天之中，幾點最多人開台？',
     'hours.p1': '開台集中在晚上。19 點開始快速增加，{{peak}} 達到最高，之後逐小時下降；凌晨最冷清的是 {{quiet}}，只有最高峰的幾十分之一。',
-    'hours.p2': '中午到傍晚（12–18 點）也有一段穩定的開台量，多半是週末與上午、下午時段的固定班表。',
+    'hours.p2': '中午到傍晚（12:00–18:59 開播）也有一段穩定的開台量；以每天平均計，週末這段時間的場次是平日的 {{weekendRatio}} 倍。',
     'hours.caption': '每個開播小時的場次（台北時間）',
     'col.hour': '開播時間',
     'col.streams': '場次',
@@ -30,9 +30,9 @@ export default {
 
     'week.title': '平日和週末差在哪裡？',
     'week.p1': '下表每一格是「星期幾、幾點開播」的場次，顏色越深代表越多。平日幾乎所有顏色都集中在晚上；到了週六、週日，下午時段明顯變深。',
-    'week.p2': '週六的單小時高峰落在 {{satPeak}}，平日則是 {{weekdayPeak}}。隔天不用上班上課，晚上的直播也跟著往後挪。',
+    'week.p2': '週六的單小時高峰落在 {{satPeak}}，平日則是 {{weekdayPeak}}，可能和隔天不用上班上課有關；不過週五的高峰仍在 {{friPeak}}，所以這只是推測。',
     'week.caption': '星期 × 開播小時的場次（台北時間）',
-    'week.note': '期間內各星期的天數不完全相同（週二少一天），比較平日與週末時已換算成每天平均。',
+    'week.note': '熱度圖是原始場次；期間內{{shortDow}}少一天，那一列會略淺。文中比較平日與週末的數字已換算成每天平均。',
     'dow.1': '週一',
     'dow.2': '週二',
     'dow.3': '週三',
@@ -42,7 +42,7 @@ export default {
     'dow.7': '週日',
 
     'duration.title': '一場直播播多久？',
-    'duration.p1': '全部場次的中位數是 {{medAll}} 小時（Twitch {{medTw}} 小時、YouTube {{medYt}} 小時）。{{mid}} 的直播落在 2 到 6 小時，超過 8 小時的長時間直播也有 {{long}}，多半是耐久台、遊戲馬拉松或作業台。',
+    'duration.p1': '全部場次的中位數是 {{medAll}} 小時（Twitch {{medTw}} 小時、YouTube {{medYt}} 小時）。{{mid}} 的直播落在 2 到 6 小時；8 小時以上的有 {{long}}，其中可能包含 24 小時常駐台，或結束時間偵測延遲造成的高估，解讀時要保守。',
     'duration.caption': '直播時長分布',
     'col.length': '時長',
     'duration.bin.0': '不到 1 小時',
@@ -54,8 +54,8 @@ export default {
     'duration.bin.6': '8 小時以上',
 
     'segment.title': '企業勢和個人勢的開台習慣',
-    'segment.p1': '「企業勢」指目前隸屬公司或團體的 VTuber，其餘歸為個人勢。兩邊晚上 19–23 點的比例相近，企業勢的高峰在 {{corpPeak}}，個人勢在 {{indiePeak}}。',
-    'segment.p2': '比較明顯的差異在白天和深夜：企業勢在上午（6–11 點）開台的比例較高，凌晨（0–5 點）開台的比例較低；個人勢的一場直播也稍微長一點。',
+    'segment.p1': '「企業勢」指隸屬經紀公司的 VTuber（含合作藝人），和開台週表「所屬」篩選是同一個定義；其餘歸為個人勢。',
+    'segment.p2': '比較明顯的差異在下午與晚上：企業勢在 12–18 點開播的比例較高，19–23 點較低；凌晨的比例與時長中位數則相差不大。企業勢只有 {{corpV}} 位，少數人的固定班表就可能影響比例，請當作趨勢參考。',
     'segment.caption': '企業勢與個人勢比較',
     'col.metric': '項目',
     'col.corporate': '企業勢',
@@ -65,30 +65,30 @@ export default {
     'segment.row.median': '時長中位數',
     'segment.row.peak': '單小時高峰',
     'segment.row.prime': '19–23 點開台比例',
-    'segment.row.morning': '6–11 點開台比例',
+    'segment.row.afternoon': '12–18 點開台比例',
     'segment.row.night': '0–5 點開台比例',
     'hours.unit': '{{h}} 小時',
 
     'twitch.title': '台灣 VTuber 在 Twitch 上播什麼？',
-    'twitch.p1': 'Twitch 會標示直播分類（YouTube 沒有可比較的欄位，所以這段只看 Twitch）。「Just Chatting」（聊天）以 {{jc}} 遙遙領先，接著是 VALORANT、英雄聯盟等競技遊戲，以及繪圖（Art）與歌唱（Music）。',
+    'twitch.p1': 'Twitch 會標示直播分類（YouTube 沒有可比較的欄位，所以這段只看 Twitch）。「Just Chatting」（聊天）以 {{jc}} 遙遙領先，接著是 VALORANT、英雄聯盟、Apex 英雄等競技遊戲，以及繪圖（Art）。',
     'twitch.caption': 'Twitch 前 10 個直播分類（共 {{n}} 場有分類）',
     'col.category': '分類',
 
     'meaning.title': '這些數字對你有什麼用？',
     'meaning.viewers': '對觀眾來說：晚上 20–22 點是撞台最嚴重的時段，你追的幾位很可能同時開台。與其在分頁之間切來切去，可以把他們放進同一個畫面一起看，再用個別音量決定要聽誰。',
-    'meaning.streamers': '對實況主來說：最熱門的時段也是競爭最激烈的時段。週末下午與平日上午開台的人少很多，如果你的觀眾作息允許，這些時段比較容易被看見；這是從開台量推論，我們沒有觀看人數資料可以證明。',
+    'meaning.streamers': '對實況主來說：最熱門的時段也是競爭最激烈的時段。平日白天（尤其上午）開台的人少很多，如果你的觀眾作息允許，這些時段比較容易被看見；這是從開台量推論，我們沒有觀看人數資料可以證明，白天的觀眾也可能同樣比較少。',
 
     'limits.title': '這份資料的限制',
     'limits.1': '只涵蓋 MultiStream Hub 有收錄的頻道，不是全台灣的 VTuber。',
     'limits.2': 'YouTube 主要靠待機室偵測，沒有預先開待機室的突發直播可能漏掉，所以實際的場次會比這裡多一些。',
-    'limits.3': '開播與結束時間是定時查詢得到的，每場時長可能有約 20 分鐘的誤差。',
+    'limits.3': '開播與結束時間是定時查詢得到的，每場時長通常有約 20 分鐘誤差；少數場次若結束時間偵測延遲，時長會被高估。',
     'limits.4': '沒有觀看人數，所以這份報告只談「什麼時候開台」，不談「什麼時候最多人看」。',
 
     'faq.title': '常見問題',
     'faq.q1': '台灣 VTuber 最常在幾點開台？',
     'faq.a1': '依 {{from}} 到 {{to}} 的 {{total}} 場直播，最常見的開播時間是台北時間 {{peak}}；19 到 23 點合計佔 {{prime}}。',
     'faq.q2': '週末和平日的開台時間一樣嗎？',
-    'faq.a2': '不一樣。週末下午的開台量（以每天平均計）是平日的 {{weekendRatio}} 倍，週六晚上的高峰也比平日晚。',
+    'faq.a2': '不一樣。週末白天（12:00–18:59 開播）的場次以每天平均計是平日的 {{weekendRatio}} 倍，週六晚上的高峰也比平日晚。',
     'faq.q3': '這份資料多久更新一次？',
     'faq.a3': '每季重新整理一次，頁面上的期間與快照日期會一起更新。',
 

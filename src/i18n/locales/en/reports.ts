@@ -1,19 +1,19 @@
 // Data report (/reports/taiwan-vtuber-streaming-hours) copy. Every number is interpolated from the snapshot in src/data/reports;
-// after the quarterly re-run, re-check the qualitative claims (corporate VTubers start earlier, Saturday peaks later, …).
+// after the quarterly re-run, re-check the qualitative claims (corporate VTubers favour afternoons, Saturday peaks later, …).
 export default {
     'title': 'Data report',
     'footer': 'Taiwanese VTuber streaming hours report',
     'hero.eyebrow': 'Data report',
     'hero.title': 'When do Taiwanese VTubers stream? Start times across {{total}} live streams',
-    'hero.subtitle': 'We took every YouTube and Twitch live stream by {{vtubers}} Taiwanese VTubers between {{from}} and {{to}} and broke them down by start hour, day of the week and length, in Taipei time.',
+    'hero.subtitle': 'We took the YouTube and Twitch live streams we recorded from {{vtubers}} Taiwanese VTubers between {{from}} and {{to}} and broke them down by start hour, day of the week and length, in Taipei time.',
     'byline': 'Research and writing by ',
     'asOf': 'Data snapshot: {{generated}}. Updated every quarter.',
 
     'summary.title': 'Key findings',
     'summary.1': '{{prime}} of streams start between 7 pm and 11 pm. The busiest single hour is {{peak}}, with {{peakShare}} of all streams.',
-    'summary.2': 'Weekend afternoons are far busier than weekdays: per day, {{weekendRatio}}× as many streams start between 1 pm and 6 pm on weekends.',
+    'summary.2': 'Weekend daytime is far busier than weekdays: per day, {{weekendRatio}}× as many streams start between 12:00 and 18:59 on weekends.',
     'summary.3': 'The median stream lasts {{medAll}} hours, and {{mid}} of streams run between 2 and 6 hours.',
-    'summary.4': 'Corporate and independent VTubers share the same evening peak, but corporate talents stream more often in the morning and less often after midnight.',
+    'summary.4': 'Corporate VTubers schedule more streams in the afternoon ({{corpAfternoon}} start between noon and 7 pm, vs {{indieAfternoon}} for independents) and fewer between 7 pm and midnight ({{corpPrime}} vs {{indiePrime}}).',
 
     'method.title': 'Where the data comes from',
     'method.p1': 'The MultiStream Hub stream schedule keeps track of every streamer we list: on YouTube it reads each channel’s waiting rooms and live status, on Twitch it regularly checks who is live, and it records when each stream starts and ends.',
@@ -22,7 +22,7 @@ export default {
 
     'hours.title': 'What time of day do most streams start?',
     'hours.p1': 'Streams cluster in the evening. Numbers climb quickly from 7 pm, top out at {{peak}} and then fall hour by hour. The quietest hour is {{quiet}}, with only a few percent of the peak.',
-    'hours.p2': 'Midday to early evening (noon to 6 pm) still carries a steady volume, mostly weekend streams and fixed daytime schedules.',
+    'hours.p2': 'Midday to early evening (streams starting 12:00–18:59) still carries a steady volume; per day, weekends see {{weekendRatio}}× as many streams in this window as weekdays.',
     'hours.caption': 'Streams by start hour (Taipei time)',
     'col.hour': 'Start time',
     'col.streams': 'Streams',
@@ -30,9 +30,9 @@ export default {
 
     'week.title': 'How do weekdays and weekends differ?',
     'week.p1': 'Each cell below is the number of streams that started on that day at that hour; darker means more. On weekdays almost all of the colour sits in the evening. On Saturday and Sunday the afternoon fills in.',
-    'week.p2': 'The busiest hour on Saturday is {{satPeak}}, versus {{weekdayPeak}} on weekdays: with no work or school the next day, evening streams start later.',
+    'week.p2': 'The busiest hour on Saturday is {{satPeak}}, versus {{weekdayPeak}} on weekdays. Having no work or school the next day may be part of it, but Friday still peaks at {{friPeak}}, so treat that as a guess.',
     'week.caption': 'Streams by day of the week and start hour (Taipei time)',
-    'week.note': 'The period does not contain the same number of each weekday (one fewer Tuesday), so weekday and weekend comparisons use per-day averages.',
+    'week.note': 'The heat map shows raw counts; the period has one fewer {{shortDow}}, so that row is slightly lighter. Weekday vs weekend figures in the text use per-day averages.',
     'dow.1': 'Mon',
     'dow.2': 'Tue',
     'dow.3': 'Wed',
@@ -42,7 +42,7 @@ export default {
     'dow.7': 'Sun',
 
     'duration.title': 'How long is a stream?',
-    'duration.p1': 'The median stream lasts {{medAll}} hours ({{medTw}} on Twitch, {{medYt}} on YouTube). {{mid}} run between 2 and 6 hours, and {{long}} go past 8 hours, mostly endurance streams, gaming marathons and work-along streams.',
+    'duration.p1': 'The median stream lasts {{medAll}} hours ({{medTw}} on Twitch, {{medYt}} on YouTube). {{mid}} run between 2 and 6 hours; {{long}} last 8 hours or more, which may include 24/7 channels or streams whose end was detected late, so read that figure with caution.',
     'duration.caption': 'Stream length distribution',
     'col.length': 'Length',
     'duration.bin.0': 'Under 1 hour',
@@ -54,8 +54,8 @@ export default {
     'duration.bin.6': '8 hours or more',
 
     'segment.title': 'Corporate vs independent VTubers',
-    'segment.p1': '“Corporate” means VTubers currently signed to an agency or group; everyone else counts as independent. Both groups start a similar share of streams between 7 pm and 11 pm. The corporate peak is {{corpPeak}}, the independent peak is {{indiePeak}}.',
-    'segment.p2': 'The clearer differences are in the morning and late at night: corporate talents start a larger share of streams between 6 am and noon and a smaller share between midnight and 6 am, and independent streams run slightly longer.',
+    'segment.p1': '“Corporate” means VTubers signed to an agency (including collaborating talents), the same definition as the Agency filter on the stream schedule; everyone else counts as independent.',
+    'segment.p2': 'The clearer differences are in the afternoon and evening: corporate talents start a larger share of streams between noon and 7 pm and a smaller share between 7 pm and midnight, while late-night shares and median length are close. There are only {{corpV}} corporate VTubers, so a few fixed schedules can move these shares; treat them as a trend.',
     'segment.caption': 'Corporate and independent VTubers compared',
     'col.metric': 'Metric',
     'col.corporate': 'Corporate',
@@ -65,30 +65,30 @@ export default {
     'segment.row.median': 'Median length',
     'segment.row.peak': 'Busiest hour',
     'segment.row.prime': 'Started 7–11 pm',
-    'segment.row.morning': 'Started 6 am–noon',
+    'segment.row.afternoon': 'Started noon–7 pm',
     'segment.row.night': 'Started midnight–6 am',
     'hours.unit': '{{h}} h',
 
     'twitch.title': 'What do Taiwanese VTubers stream on Twitch?',
-    'twitch.p1': 'Twitch labels each stream with a category (YouTube has no comparable field, so this section is Twitch only). Just Chatting leads by a wide margin at {{jc}}, followed by competitive games such as VALORANT and League of Legends, plus Art and Music.',
+    'twitch.p1': 'Twitch labels each stream with a category (YouTube has no comparable field, so this section is Twitch only). Just Chatting leads by a wide margin at {{jc}}, followed by competitive games such as VALORANT, League of Legends and Apex Legends, plus Art.',
     'twitch.caption': 'Top 10 Twitch categories ({{n}} streams with a category)',
     'col.category': 'Category',
 
     'meaning.title': 'What this means for you',
     'meaning.viewers': 'For viewers: 8 pm to 10 pm is when streams clash the most, and the streamers you follow are likely to be live at the same time. Instead of flipping between tabs, put them on one screen and use per-stream volume to choose who you hear.',
-    'meaning.streamers': 'For streamers: the busiest hours are also the most crowded. Far fewer streams start on weekend afternoons or weekday mornings, so if your audience is around then, those slots may be easier to stand out in. This is inferred from stream counts; we have no viewer numbers to prove it.',
+    'meaning.streamers': 'For streamers: the busiest hours are also the most crowded. Far fewer streams start on weekday daytimes, especially mornings, so if your audience is around then, those slots may be easier to stand out in. This is inferred from stream counts alone; we have no viewer numbers, and daytime audiences may be smaller too.',
 
     'limits.title': 'Limitations',
     'limits.1': 'It only covers channels listed on MultiStream Hub, not every VTuber in Taiwan.',
     'limits.2': 'YouTube streams are mainly detected through waiting rooms, so surprise streams without one may be missed and the real number of streams is somewhat higher.',
-    'limits.3': 'Start and end times come from periodic checks, so each stream’s length can be off by about 20 minutes.',
+    'limits.3': 'Start and end times come from periodic checks, so a stream’s length is usually off by about 20 minutes; when an end is detected late, the length is overstated.',
     'limits.4': 'There are no viewer counts, so this report is about when people stream, not when the most people watch.',
 
     'faq.title': 'FAQ',
     'faq.q1': 'What time do Taiwanese VTubers usually go live?',
     'faq.a1': 'Across {{total}} streams between {{from}} and {{to}}, the most common start time is {{peak}} Taipei time, and {{prime}} of streams start between 7 pm and 11 pm.',
     'faq.q2': 'Do weekend and weekday schedules differ?',
-    'faq.a2': 'Yes. Per day, {{weekendRatio}}× as many streams start on weekend afternoons as on weekday afternoons, and the Saturday evening peak is later than on weekdays.',
+    'faq.a2': 'Yes. Per day, {{weekendRatio}}× as many streams start between 12:00 and 18:59 on weekends as on weekdays, and the Saturday evening peak is later than on weekdays.',
     'faq.q3': 'How often is this data updated?',
     'faq.a3': 'Every quarter. The period and snapshot date on this page are updated together.',
 

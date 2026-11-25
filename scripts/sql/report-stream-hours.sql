@@ -1,17 +1,24 @@
 -- 資料報告〈台灣 VTuber 幾點開台〉快照（唯讀）。
 -- 用法：對正式庫執行，回傳單一 JSON 欄 → 原樣存成 src/data/reports/stream-hours-<YYYY-MM>.json。
 -- 口徑：已結束、未被合併、非週表框；台灣籍（vtubers.nationality='TW'）；依台北時間；期間 [from, to)。
--- 企業勢＝目前 vtubers.group_id 有值（不追溯期間內轉籍）。
+-- 企業勢＝與週表篩選同一規則（src/features/schedule/filters.ts matchesAgency）：所屬團體 kind='agency'，
+-- 或目前有效的合作藝人連結到 agency；以快照當下的所屬判定，不追溯期間內轉籍。
 with params as (
   select timestamptz '2026-10-01 00:00+08' as d_from, timestamptz '2026-11-25 00:00+08' as d_to
 ), s as (
   select s.platform,
          (s.actual_start at time zone 'Asia/Taipei') as t,
          extract(epoch from s.actual_end - s.actual_start) / 3600.0 as h,
-         s.category, s.vtuber_id, v.group_id is not null as corp
+         s.category, s.vtuber_id,
+         coalesce(g.kind = 'agency', false) or exists (
+           select 1 from vtuber_group_links l join vtuber_groups lg on lg.id = l.group_id
+           where l.vtuber_id = v.id and l.role = 'collaborator' and lg.kind = 'agency'
+             and (l.since is null or l.since <= now()) and (l.until is null or l.until > now())
+         ) as corp
   from streams s
-  join vtubers v on v.id = s.vtuber_id, params p
-  where s.merged_with is null and coalesce(s.is_schedule_frame, false) = false
+  join vtubers v on v.id = s.vtuber_id
+  left join vtuber_groups g on g.id = v.group_id, params p
+  where s.status = 'ended' and s.merged_with is null and coalesce(s.is_schedule_frame, false) = false
     and s.actual_start is not null and s.actual_end is not null and s.actual_end > s.actual_start
     and v.nationality = 'TW'
     and s.actual_start >= p.d_from and s.actual_start < p.d_to

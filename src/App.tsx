@@ -412,7 +412,7 @@ export default function App() {
                   dateModified: REPORT_STREAM_HOURS_META.dateModified,
                   isPartOf: { '@id': SITE_ID },
                 },
-                breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: title, path }]),
+                breadcrumb([{ name: 'MultiStream Hub', path: '/' }, { name: tx('reports:title'), path }]),
               )}
             />
             <ChunkSuspense chunk={ReportStreamHoursPage} fallback={<div className="min-h-screen flex items-center justify-center">{t('common.loading')}</div>}>

@@ -1,6 +1,6 @@
 // 資料報告：台灣 VTuber 幾點開台（/reports/taiwan-vtuber-streaming-hours）。
 // 數字全部來自 src/data/reports 的快照（scripts/sql/report-stream-hours.sql 對正式庫跑一次存檔），頁面不連資料庫。
-// 圖表＝帶長條／色塊的 <table>：預渲染直接出圖、螢幕閱讀器可讀、不多載圖表套件。SEO（Article + FAQ + Breadcrumb）由 App.tsx 處理。
+// 圖表＝帶長條／色塊的 <table>：預渲染直接出圖、螢幕閱讀器可讀、不多載圖表套件。SEO（Article + Breadcrumb）由 App.tsx 處理。
 
 import { useTranslation } from 'react-i18next';
 import { BarChart3, ArrowRight, ChevronRight } from 'lucide-react';
@@ -35,7 +35,7 @@ function daysPerDow(from: string, to: string): number[] {
 export function deriveReport(r: typeof data) {
     const total = r.totalStreams;
     const days = daysPerDow(r.period.from, r.period.to);
-    const perDay = (rows: number[]) => sum(rows.map((i) => range(r.byDowHour[i], 13, 18))) / sum(rows.map((i) => days[i]));
+    const perDay = (rows: number[]) => sum(rows.map((i) => range(r.byDowHour[i], 12, 19))) / sum(rows.map((i) => days[i]));
     const weekdayRows = [0, 1, 2, 3, 4];
     const weekdayHours = r.byHour.map((_, h) => sum(weekdayRows.map((i) => r.byDowHour[i][h])));
     const seg = (s: typeof r.segments.corporate) => ({
@@ -44,9 +44,11 @@ export function deriveReport(r: typeof data) {
         median: s.medianHours,
         peak: hh(argmax(s.byHour)),
         prime: pct(range(s.byHour, 19, 24), s.streams),
-        morning: pct(range(s.byHour, 6, 12), s.streams),
+        afternoon: pct(range(s.byHour, 12, 19), s.streams),
         night: pct(range(s.byHour, 0, 6), s.streams),
     });
+    const corp = seg(r.segments.corporate);
+    const indie = seg(r.segments.independent);
     return {
         vars: {
             total: total.toLocaleString('en-US'),
@@ -62,23 +64,29 @@ export function deriveReport(r: typeof data) {
             quiet: hh(r.byHour.indexOf(Math.min(...r.byHour))),
             weekendRatio: (perDay([5, 6]) / perDay(weekdayRows)).toFixed(1),
             satPeak: hh(argmax(r.byDowHour[5])),
+            friPeak: hh(argmax(r.byDowHour[4])),
             weekdayPeak: hh(argmax(weekdayHours)),
             medAll: r.medianHours.all,
             medTw: r.medianHours.twitch,
             medYt: r.medianHours.youtube,
             mid: pct(range(r.durationBins, 2, 5), total),
             long: pct(r.durationBins[6], total),
-            corpPeak: hh(argmax(r.segments.corporate.byHour)),
-            indiePeak: hh(argmax(r.segments.independent.byHour)),
+            corpV: corp.vtubers,
+            corpPrime: corp.prime,
+            indiePrime: indie.prime,
+            corpAfternoon: corp.afternoon,
+            indieAfternoon: indie.afternoon,
             jc: pct(r.twitchTopCategories[0].streams, r.twitchWithCategory),
             n: r.twitchWithCategory.toLocaleString('en-US'),
         },
-        corporate: seg(r.segments.corporate),
-        independent: seg(r.segments.independent),
+        corporate: corp,
+        independent: indie,
+        /** 期間內天數最少的星期（索引 0＝週一）；熱度圖那一列會偏淺 */
+        shortDow: days.indexOf(Math.min(...days)),
     };
 }
 
-const SEGMENT_ROWS = ['vtubers', 'streams', 'median', 'peak', 'prime', 'morning', 'night'] as const;
+const SEGMENT_ROWS = ['vtubers', 'streams', 'median', 'peak', 'afternoon', 'prime', 'night'] as const;
 
 function BarTable({ caption, labelHead, rows, total }: {
     caption: string;
@@ -120,7 +128,8 @@ export function ReportStreamHoursPage() {
     const { t } = useTranslation(['reports', 'common', 'tutorial']);
     const tx = t as unknown as TFn;
     const report = deriveReport(data);
-    const r = (key: string) => tx(`reports:${key}`, report.vars);
+    const vars = { ...report.vars, shortDow: tx(`reports:dow.${report.shortDow + 1}`) };
+    const r = (key: string) => tx(`reports:${key}`, vars);
     const heatMax = Math.max(...data.byDowHour.flat());
     const twitchTotal = data.twitchWithCategory;
 
