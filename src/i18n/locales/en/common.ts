@@ -90,6 +90,7 @@ const common = {
   'auth.delete_confirm_title': 'Delete your account?',
   'auth.delete_confirm_desc': 'Your cloud favorites, categories, tags and chat authorization will be permanently deleted. Favorites on this device are kept.',
   'auth.cancel': 'Cancel',
+  'auth.sign_in_failed': 'Sign-in is temporarily unavailable. Please try again later.',
   'chat.filter_label': 'Filter chat channels',
   'chat.log_label': 'Merged chat messages',
   'chat.no_twitch': 'No Twitch streams on the canvas',

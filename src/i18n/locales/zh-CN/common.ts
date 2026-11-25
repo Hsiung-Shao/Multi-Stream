@@ -90,6 +90,7 @@ const common = {
   'auth.delete_confirm_title': '确定要删除账号？',
   'auth.delete_confirm_desc': '云端上的收藏、分类、标签与聊天授权会永久删除，无法恢复。这台设备上的收藏会保留。',
   'auth.cancel': '取消',
+  'auth.sign_in_failed': '登录服务暂时无法使用，请稍后再试。',
   'chat.filter_label': '聊天频道筛选',
   'chat.log_label': '合并聊天消息',
   'chat.no_twitch': '画布上没有 Twitch 直播',

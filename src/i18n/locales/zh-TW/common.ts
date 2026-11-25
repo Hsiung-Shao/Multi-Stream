@@ -89,6 +89,7 @@ const common = {
   'auth.delete_confirm_title': '確定要刪除帳號？',
   'auth.delete_confirm_desc': '雲端上的收藏、分類、標籤與聊天授權會永久刪除，無法復原。這台裝置上的收藏會保留。',
   'auth.cancel': '取消',
+  'auth.sign_in_failed': '登入服務暫時無法使用，請稍後再試。',
   'chat.filter_label': '聊天頻道篩選',
   'chat.log_label': '合併聊天訊息',
   'chat.no_twitch': '畫布上沒有 Twitch 直播',

@@ -90,6 +90,7 @@ const common = {
   'auth.delete_confirm_title': 'アカウントを削除しますか？',
   'auth.delete_confirm_desc': 'クラウド上のお気に入り・カテゴリ・タグ・チャット認可は完全に削除され、元に戻せません。この端末のお気に入りは残ります。',
   'auth.cancel': 'キャンセル',
+  'auth.sign_in_failed': 'ログインサービスが一時的に利用できません。しばらくしてからお試しください。',
   'chat.filter_label': 'チャットのチャンネル絞り込み',
   'chat.log_label': 'まとめチャットのメッセージ',
   'chat.no_twitch': 'キャンバスに Twitch 配信がありません',

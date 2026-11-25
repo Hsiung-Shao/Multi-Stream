@@ -17,14 +17,16 @@ const PROVIDERS: { id: AuthProvider; label: string; color: string }[] = [
 export function LoginButtons() {
     const { t } = useTranslation('common');
     const [busy, setBusy] = useState<AuthProvider | null>(null);
+    const [failed, setFailed] = useState(false);
     return (
         <div className="flex flex-wrap gap-2">
+            {failed && <p role="alert" className="w-full text-sm text-red-500">{t('auth.sign_in_failed')}</p>}
             {PROVIDERS.map(p => (
                 <Button
                     key={p.id}
                     type="button"
                     disabled={busy !== null}
-                    onClick={() => { setBusy(p.id); signIn(p.id).catch(() => setBusy(null)); }}
+                    onClick={() => { setBusy(p.id); signIn(p.id).catch(() => { setBusy(null); setFailed(true); }); }}
                     className="text-white"
                     style={{ background: p.color }}
                 >

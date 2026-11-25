@@ -90,6 +90,7 @@ const common = {
   'auth.delete_confirm_title': '계정을 삭제할까요?',
   'auth.delete_confirm_desc': '클라우드의 즐겨찾기, 분류, 태그, 채팅 권한이 영구 삭제되며 되돌릴 수 없습니다. 이 기기의 즐겨찾기는 유지됩니다.',
   'auth.cancel': '취소',
+  'auth.sign_in_failed': '로그인 서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도하세요.',
   'chat.filter_label': '채팅 채널 필터',
   'chat.log_label': '통합 채팅 메시지',
   'chat.no_twitch': '캔버스에 Twitch 방송이 없습니다',

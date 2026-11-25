@@ -66,8 +66,9 @@ export async function initAuth(): Promise<void> {
     const sb = await loadClient();
     if (!sb) { useAuthStore.setState({ status: 'anon', user: null }); return; }
     const res = await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS);
-    // 逾時時維持 unknown 以外的明確狀態：沒拿到就當未登入，之後 onAuthStateChange 會再更新
-    apply(res?.data.session ?? null);
+    if (res) apply(res.data.session);
+    // 逾時：回呼可能已經設好狀態，只有還沒定的才當未登入（之後 onAuthStateChange 會再更新）
+    else if (useAuthStore.getState().status === 'unknown') useAuthStore.setState({ status: 'anon', user: null });
     // 登入回呼的 ?code= 用過就從網址拿掉（reload 不會重送、分享出去也不帶）
     try {
         const url = new URL(window.location.href);
@@ -80,7 +81,7 @@ export async function initAuth(): Promise<void> {
 
 export async function signIn(provider: AuthProvider): Promise<void> {
     const sb = await loadClient();
-    if (!sb) return;
+    if (!sb) throw new Error('auth_unavailable');
     await sb.auth.signInWithOAuth({
         provider,
         options: {
@@ -93,7 +94,8 @@ export async function signIn(provider: AuthProvider): Promise<void> {
 
 export async function signOut(): Promise<void> {
     const sb = await loadClient();
-    await sb?.auth.signOut();
+    // 只登出這台；預設 global 會連其他裝置（與同瀏覽器的管理後台）一起登出
+    await sb?.auth.signOut({ scope: 'local' });
     useAuthStore.setState({ status: 'anon', user: null });
 }
 

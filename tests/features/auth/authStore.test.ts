@@ -141,3 +141,38 @@ describe('session 轉 AuthUser', () => {
         });
     });
 });
+
+describe('review 第 1 輪', () => {
+    it('取 session 逾時時不把已經由回呼設成已登入的狀態蓋回未登入', async () => {
+        vi.useFakeTimers();
+        try {
+            window.localStorage.setItem(STORED_KEY, '{}');
+            const client = makeClient(null);
+            client.auth.getSession.mockImplementation(() => new Promise(() => {})); // 永遠不回
+            getSupabase.mockResolvedValue(client);
+            const { initAuth, useAuthStore } = await loadStore();
+            const done = initAuth();
+            await vi.advanceTimersByTimeAsync(0);
+            client.auth.onAuthStateChange.mock.calls[0][0]('INITIAL_SESSION', makeSession());
+            await vi.advanceTimersByTimeAsync(2500);
+            await done;
+            expect(useAuthStore.getState().status).toBe('authed');
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('登出只登出這台裝置', async () => {
+        const client = makeClient(null);
+        getSupabase.mockResolvedValue(client);
+        const { signOut } = await loadStore();
+        await signOut();
+        expect(client.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    });
+
+    it('Supabase 載入失敗時登入回報失敗（讓按鈕能恢復）', async () => {
+        getSupabase.mockResolvedValue(null);
+        const { signIn } = await loadStore();
+        await expect(signIn('twitch')).rejects.toThrow();
+    });
+});
