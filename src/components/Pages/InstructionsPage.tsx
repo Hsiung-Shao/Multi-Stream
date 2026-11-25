@@ -904,7 +904,12 @@ export function InstructionsPage() {
                         { type: 'link', text: tx('twitchGuide.example.share'), label: tx('twitchGuide.example.shareLink'), to: guidePage('share') },
                     ],
                 },
-                { id: 'pov', heading: tx('twitchGuide.pov'), blocks: [{ type: 'p', text: tx('twitchGuide.pov.desc') }] },
+                {
+                    id: 'pov', heading: tx('twitchGuide.pov'), blocks: [
+                        { type: 'p', text: tx('twitchGuide.pov.desc') },
+                        { type: 'link', text: tx('twitchGuide.pov.yt'), label: tx('twitchGuide.pov.ytLink'), to: guidePage('watch-multiple-youtube-streams') },
+                    ],
+                },
                 {
                     id: 'multitwitch', heading: tx('twitchGuide.multitwitch'), blocks: [
                         { type: 'p', text: tx('twitchGuide.multitwitch.desc') },

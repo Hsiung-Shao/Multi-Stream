@@ -18,8 +18,8 @@ export const GUIDE_SLUGS = [
     'shortcuts',
     'schedule',
     'watch-multiple-twitch-streams',
-    'embed-schedule',
     'watch-multiple-youtube-streams',
+    'embed-schedule',
 ] as const;
 
 export type GuideSlug = typeof GUIDE_SLUGS[number];
