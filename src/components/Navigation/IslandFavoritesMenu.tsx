@@ -195,6 +195,7 @@ export const IslandFavoritesMenu = ({
         toast.success(t('favorites:added_count', { count: addedCount }));
         setSelectedStreams([]);
         setIsOpen(false);
+        onOpenChange?.(false);
     };
 
     const handleLoadCategory = async (catId: string) => {
@@ -214,6 +215,7 @@ export const IslandFavoritesMenu = ({
         const addedCount = await loadFavoritesToCanvas(catStreams);
         toast.success(t('favorites:added_count', { count: addedCount }));
         setIsOpen(false);
+        onOpenChange?.(false);
     };
 
     return (

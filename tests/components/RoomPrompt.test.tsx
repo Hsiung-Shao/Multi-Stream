@@ -14,7 +14,9 @@ describe('RoomPrompt', () => {
     beforeEach(async () => {
         await i18n.changeLanguage('zh-TW');
         localStorage.clear();
-        useUIStore.setState({ islandStyle: 'original', roomPromptSeen: false });
+        // 提醒只在畫布導覽看完後出現（review 第 1 輪）
+        localStorage.setItem('canvas_tour_done', '1');
+        useUIStore.setState({ islandStyle: 'original', roomPromptSeen: false, isCanvasTourOpen: false });
         vi.spyOn(track, 'canvasShellSwitch').mockImplementation(() => {});
     });
     afterEach(() => {
@@ -74,6 +76,19 @@ describe('RoomPrompt', () => {
 
     it('已經看過時不顯示', async () => {
         useUIStore.setState({ islandStyle: 'original', roomPromptSeen: true });
+        render(<RoomPrompt />);
+        await new Promise(r => setTimeout(r, 50));
+        expect(screen.queryByText(TITLE)).not.toBeInTheDocument();
+    });
+
+    it('畫布導覽還沒看完或正開著時不顯示', async () => {
+        localStorage.removeItem('canvas_tour_done');
+        const { unmount } = render(<RoomPrompt />);
+        await new Promise(r => setTimeout(r, 50));
+        expect(screen.queryByText(TITLE)).not.toBeInTheDocument();
+        unmount();
+        localStorage.setItem('canvas_tour_done', '1');
+        useUIStore.setState({ isCanvasTourOpen: true });
         render(<RoomPrompt />);
         await new Promise(r => setTimeout(r, 50));
         expect(screen.queryByText(TITLE)).not.toBeInTheDocument();

@@ -7,6 +7,8 @@ import { getCanvasAspect } from '../../utils/layoutPresets';
 
 /** 依 item 的串流套「聲音跟著焦點」（呼叫端決定開關） */
 export function applyFocusAudio(itemId: string): void {
+    // 全體靜音中不動：解除焦點靜音會讓它出聲，且之後 setAllMuted(false) 的還原值會錯亂
+    if (useUIStore.getState().masterMuted) return;
     const { canvasItems, streams, updateStream } = useStreamStore.getState();
     const streamId = canvasItems.find(it => it.i === itemId)?.contentId;
     if (streamId == null) return;

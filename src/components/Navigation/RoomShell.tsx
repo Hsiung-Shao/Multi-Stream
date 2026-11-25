@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState, forwardRef } from 'react';
+import { useEffect, useRef, useState, forwardRef } from 'react';
 import { Plus, Columns2, RectangleHorizontal, Volume2, Star, MoreHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useIslandQuickActions } from '../../hooks/useIslandQuickActions';
-import { mainStreamItemIdOf } from '../../utils/canvasItemOps';
 import { IslandFavoritesMenu } from './IslandFavoritesMenu';
 import { RoomPalette, type RoomCommand } from './RoomPalette';
 import { useRoomHotkeys } from './useRoomHotkeys';
-import { focusRoomIndex, toggleRoomMode, applyRoomStage, applyFocusAudio } from './roomActions';
+import { focusRoomIndex, toggleRoomMode } from './roomActions';
+import { useRoomSync } from './roomSync';
 import { cn } from '../ui/utils';
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -53,8 +53,6 @@ export const RoomShell = () => {
     const audioFollowsFocus = useUIStore(s => s.audioFollowsFocus);
     const hotkeyHelpOpen = useUIStore(s => s.isHotkeyHelpOpen);
     const tourOpen = useUIStore(s => s.isCanvasTourOpen);
-    const streamCount = useStreamStore(s => s.canvasItems.reduce((n, it) => n + (it.type === 'stream' ? 1 : 0), 0));
-    const mainId = useStreamStore(s => mainStreamItemIdOf(s.canvasItems));
     const { isFullscreen, toggleFullscreen, handleShareCanvas } = useIslandQuickActions();
 
     const [hover, setHover] = useState(false);
@@ -74,7 +72,7 @@ export const RoomShell = () => {
         // 閒置時順便收起指令列：滑鼠移進直播 iframe 時外層不一定收得到 mouseleave，靠這裡保底
         const goIdle = () => {
             setIdle(true);
-            if (!navRef.current?.matches(':hover')) setHover(false);
+            if (!navRef.current?.matches(':hover, :focus-within')) setHover(false);
         };
         let timer = window.setTimeout(goIdle, IDLE_MS);
         const wake = () => {
@@ -91,21 +89,18 @@ export const RoomShell = () => {
         };
     }, []);
 
-    // 舞台模式下路數變了（新增、關閉、換台）就重排成舞台；排不成（太多路）時版面維持原狀
-    useEffect(() => {
-        if (roomMode === 'stage') applyRoomStage();
-    }, [roomMode, streamCount]);
+    useRoomSync();
 
-    // 主畫面換人（候場點選、視窗工具列的 ★、快捷鍵 1–9）時，聲音跟著走
-    useEffect(() => {
-        if (audioFollowsFocus && mainId) applyFocusAudio(mainId);
-    }, [audioFollowsFocus, mainId]);
-
+    // 面板開著時也要能用 Ctrl K 關掉（G 與數字鍵在輸入框裡本來就不觸發）
     useRoomHotkeys({
-        onTogglePalette: () => setPaletteOpen(o => !o),
+        onTogglePalette: () => {
+            // 全域快捷鍵同時設了「聚焦搜尋框」旗標，房間模式沒人消化它，不清掉的話切回舊外殼時搜尋框會搶焦點
+            useUIStore.getState().setSearchFocused(false);
+            setPaletteOpen(o => !o);
+        },
         onToggleMode: toggleRoomMode,
         onFocusIndex: focusRoomIndex,
-    }, !paletteOpen);
+    });
 
     const show = () => { window.clearTimeout(hideTimer.current); setHover(true); };
     const hideSoon = () => {
@@ -116,15 +111,14 @@ export const RoomShell = () => {
     const toggleAudio = () => useUIStore.getState().setAudioFollowsFocus(!audioFollowsFocus);
     const modeLabel = roomMode === 'stage' ? t('room.mode_grid') : t('room.mode_stage');
 
-    const commands: RoomCommand[] = useMemo(() => [
+    const commands: RoomCommand[] = [
         { id: 'mode', label: modeLabel, hint: 'G', run: toggleRoomMode },
         { id: 'audio', label: t('room.audio_follow'), run: toggleAudio },
         { id: 'share', label: t('common.share_canvas'), run: handleShareCanvas },
         { id: 'fullscreen', label: isFullscreen ? t('common.exit_fullscreen') : t('common.fullscreen'), run: toggleFullscreen },
         { id: 'help', label: t('canvas.help_button'), hint: '?', run: () => useUIStore.getState().setHotkeyHelpOpen(true) },
         { id: 'settings', label: t('common.settings'), run: () => useUIStore.getState().openModal('favorites', 'global_settings') },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    ], [modeLabel, isFullscreen, audioFollowsFocus, t]);
+    ];
 
     return (
         <>

@@ -2,6 +2,12 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { track } from '../../utils/analytics';
+import { applyRoomStage } from '../Navigation/roomActions';
+import { CANVAS_TOUR_DONE_KEY } from './CanvasTour';
+
+const tourDone = () => {
+    try { return localStorage.getItem(CANVAS_TOUR_DONE_KEY) === '1'; } catch { return true; }
+};
 
 /**
  * 舊外殼的使用者進畫布時，提示可以換成房間模式。按任一鍵後不再出現（設定裡仍可切換）。
@@ -11,7 +17,9 @@ export const RoomPrompt = () => {
     const { t } = useTranslation('common');
     const islandStyle = useUIStore(s => s.islandStyle);
     const seen = useUIStore(s => s.roomPromptSeen);
-    const visible = islandStyle !== 'room' && !seen;
+    // 導覽開著或還沒看完時先不出現：會被導覽遮罩蓋住，曝光數也會灌水
+    const tourOpen = useUIStore(s => s.isCanvasTourOpen);
+    const visible = islandStyle !== 'room' && !seen && !tourOpen && tourDone();
 
     useEffect(() => {
         if (visible) track.roomPrompt('shown');
@@ -25,6 +33,7 @@ export const RoomPrompt = () => {
         track.roomPrompt('accept');
         ui.setIslandStyle('room');
         ui.setRoomPromptSeen(true);
+        if (ui.roomMode === 'stage') applyRoomStage();
     };
     const dismiss = () => {
         track.roomPrompt('dismiss');
