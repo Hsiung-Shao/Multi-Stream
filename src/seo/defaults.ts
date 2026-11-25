@@ -12,10 +12,10 @@
 export const SEO_SITE_URL = 'https://multistreaming.org';
 
 /** 首頁與未指定 title 頁面的預設標題（≤ 60 字元，避免 SERP 截斷） */
-export const SEO_DEFAULT_TITLE = 'MultiStream Hub｜免費 Twitch & YouTube 多直播同時觀看工具';
+export const SEO_DEFAULT_TITLE = 'MultiStream Hub｜免費 Twitch、YouTube 多視窗直播同時觀看工具';
 
 export const SEO_DEFAULT_DESCRIPTION =
-  'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。';
+  'MultiStream Hub 是完全免費的多視窗直播觀看工具：Twitch 多開、YouTube 多開都可以，最多 16 個直播同時看。提供多種布局、聊天室整合、獨立音量與收藏功能，無需註冊即可使用。';
 
 export const SEO_DEFAULT_IMAGE = `${SEO_SITE_URL}/og-image.png`;
 

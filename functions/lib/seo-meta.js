@@ -10,14 +10,14 @@ export const WEBAPP_JSONLD_ROUTES = ['/', '/canvas'];
 export const ROUTE_META = {
     '/': {
         'zh-TW': {
-            title: 'MultiStream Hub｜免費 Twitch & YouTube 多直播同時觀看工具',
+            title: 'MultiStream Hub｜免費 Twitch、YouTube 多視窗直播同時觀看工具',
             description:
-                'MultiStream Hub 是一個完全免費的多平台直播串流觀看工具，支援同時觀看多個 Twitch 和 YouTube 直播。提供多種布局模式、聊天室整合、音量控制和收藏功能，無需註冊即可使用。',
+                'MultiStream Hub 是完全免費的多視窗直播觀看工具：Twitch 多開、YouTube 多開都可以，最多 16 個直播同時看。提供多種布局、聊天室整合、獨立音量與收藏功能，無需註冊即可使用。',
         },
         en: {
             title: 'Free Multistream Viewer: Watch Multiple Twitch & YouTube Streams | MultiStream Hub',
             description:
-                'Free multistream viewer: watch up to 16 Twitch and YouTube live streams at once on one screen, with multi-chat, per-stream volume and shareable layouts. No sign-up.',
+                'Free multistream viewer & Twitch multiview: watch up to 16 Twitch and YouTube live streams at once with multi-chat, per-stream volume and shareable layouts. No sign-up.',
         },
     },
     '/canvas': {
@@ -141,8 +141,13 @@ export const ROUTE_META = {
     },
     '/instructions/watch-multiple-twitch-streams': {
         type: 'article',
-        'zh-TW': { title: '如何同時觀看多個 Twitch 直播（免費 MultiTwitch 替代方案） - MultiStream Hub', description: '免費把多個 Twitch 直播並排同時觀看：輸入頻道名、選佈局、聊天室一起看，再把整組直播分享成一條連結。' },
-        en: { title: 'How to Watch Multiple Twitch Streams at Once (Free MultiTwitch Alternative) - MultiStream Hub', description: 'Watch several Twitch streams side by side for free: paste channel names, pick a layout, keep chat on screen, and share the whole line-up as one link.' },
+        'zh-TW': { title: 'Twitch 多開教學：同時觀看多個直播與多視角（免費 MultiTwitch 替代方案） - MultiStream Hub', description: '免費 Twitch 多開、多視窗：把多個直播或選手視角並排同時觀看，輸入頻道名、選佈局、聊天室一起看，再把整組分享成一條連結。' },
+        en: { title: 'Twitch Multiview: Watch Multiple Streams & POVs at Once (Free MultiTwitch Alternative) - MultiStream Hub', description: 'Free Twitch multiview: watch several Twitch streams or player POVs side by side, keep chat on screen, and share the whole line-up as one link.' },
+    },
+    '/instructions/watch-multiple-youtube-streams': {
+        type: 'article',
+        'zh-TW': { title: 'YouTube 多開教學：同時觀看多個 YouTube 直播（免費） - MultiStream Hub', description: '免費同時觀看多個 YouTube 直播：貼上直播網址、和 Twitch 混看、每路獨立音量，並了解 YouTube 嵌入的限制與連結失效規則。' },
+        en: { title: 'How to Watch Multiple YouTube Live Streams at Once (Free) - MultiStream Hub', description: 'Watch several YouTube live streams side by side for free: paste stream links, mix in Twitch, give each its own volume, and know the YouTube embed limits.' },
     },
     '/instructions/embed-schedule': {
         type: 'article',

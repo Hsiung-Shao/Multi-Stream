@@ -19,6 +19,7 @@ export const GUIDE_SLUGS = [
     'schedule',
     'watch-multiple-twitch-streams',
     'embed-schedule',
+    'watch-multiple-youtube-streams',
 ] as const;
 
 export type GuideSlug = typeof GUIDE_SLUGS[number];
@@ -62,4 +63,6 @@ export const GUIDE_META: Record<GuideSlug, { category: 'basics' | 'advanced'; da
     'watch-multiple-twitch-streams': { category: 'basics', datePublished: '2026-10-02', image: '/docs/tutorial/island-search-bar.webp' },
     // 2026-11-05 新增（嵌入小工具教學）。image 先借用既有截圖，待補拍後換掉
     'embed-schedule': { category: 'advanced', datePublished: '2026-11-04', image: '/docs/tutorial/island-search-bar.webp' },
+    // 2026-11-25 新增（GSC：youtube multistream 系列字沒有專屬頁）
+    'watch-multiple-youtube-streams': { category: 'basics', datePublished: '2026-11-25', image: '/docs/tutorial/island-search-bar.webp' },
 };

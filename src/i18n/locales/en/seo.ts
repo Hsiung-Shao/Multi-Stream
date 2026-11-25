@@ -3,7 +3,7 @@
 export default {
     'home.title': 'Free Multistream Viewer: Watch Multiple Twitch & YouTube Streams | MultiStream Hub',
     'home.description':
-        'Free multistream viewer: watch up to 16 Twitch and YouTube live streams at once on one screen, with multi-chat, per-stream volume and shareable layouts. No sign-up.',
+        'Free multistream viewer & Twitch multiview: watch up to 16 Twitch and YouTube live streams at once with multi-chat, per-stream volume and shareable layouts. No sign-up.',
     'canvas.title': 'Start Watching - MultiStream Hub | Multistream Viewer',
     'canvas.description':
         'Start using MultiStream Hub now. Build a custom multi-window layout and watch Twitch and YouTube live streams side by side.',
@@ -39,8 +39,10 @@ export default {
     'instructions.shortcuts.description': 'Every MultiStream Hub shortcut: Ctrl + / for the cheat sheet, Ctrl + K to search, Ctrl + M to mute all, Alt + number to switch layouts, plus R / M / Delete / F / T on whichever window you hover — including theater mode.',
     'instructions.schedule.title': 'Stream Schedule Guide: Live Status, Data Sources and Limits - MultiStream Hub',
     'instructions.schedule.description': 'How to use the streamer schedule: open several streams in one click, read card statuses and YouTube/Twitch merging, see how often data updates, and learn which streams will not appear.',
-    'instructions.watch-multiple-twitch-streams.title': 'How to Watch Multiple Twitch Streams at Once (Free MultiTwitch Alternative) - MultiStream Hub',
-    'instructions.watch-multiple-twitch-streams.description': 'Watch several Twitch streams side by side for free: paste channel names, pick a layout, keep chat on screen, and share the whole line-up as one link.',
+    'instructions.watch-multiple-twitch-streams.title': 'Twitch Multiview: Watch Multiple Streams & POVs at Once (Free MultiTwitch Alternative) - MultiStream Hub',
+    'instructions.watch-multiple-twitch-streams.description': 'Free Twitch multiview: watch several Twitch streams or player POVs side by side, keep chat on screen, and share the whole line-up as one link.',
+    'instructions.watch-multiple-youtube-streams.title': 'How to Watch Multiple YouTube Live Streams at Once (Free) - MultiStream Hub',
+    'instructions.watch-multiple-youtube-streams.description': 'Watch several YouTube live streams side by side for free: paste stream links, mix in Twitch, give each its own volume, and know the YouTube embed limits.',
     'instructions.embed-schedule.title': 'Embed a VTuber Stream Schedule on Your Site: Linktree, Notion, Blogs - MultiStream Hub',
     'instructions.embed-schedule.description': 'Embed an auto-updating VTuber stream schedule in Notion, a blog or your own site, and post a downloadable schedule image where embeds are not allowed, like Linktree and Threads.',
     'creator.title': 'Hsiung-Shao, Creator of MultiStream Hub',

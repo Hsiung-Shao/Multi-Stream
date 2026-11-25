@@ -904,6 +904,7 @@ export function InstructionsPage() {
                         { type: 'link', text: tx('twitchGuide.example.share'), label: tx('twitchGuide.example.shareLink'), to: guidePage('share') },
                     ],
                 },
+                { id: 'pov', heading: tx('twitchGuide.pov'), blocks: [{ type: 'p', text: tx('twitchGuide.pov.desc') }] },
                 {
                     id: 'multitwitch', heading: tx('twitchGuide.multitwitch'), blocks: [
                         { type: 'p', text: tx('twitchGuide.multitwitch.desc') },
@@ -913,6 +914,40 @@ export function InstructionsPage() {
                 {
                     id: 'faq', heading: tx('twitchGuide.faq'), blocks: ([1, 2, 3, 4] as const).map((n): Block => (
                         { type: 'callout', title: tx(`twitchGuide.faq.q${n}`), text: tx(`twitchGuide.faq.a${n}`) }
+                    )),
+                },
+            ],
+        },
+        {
+            slug: 'watch-multiple-youtube-streams',
+            title: tx('ytGuide.title'),
+            excerpt: tx('ytGuide.excerpt'),
+            category: 'basics',
+            catLabel: tx('tabs.basics'),
+            readLabel: readLabel(4),
+            accent: '#ff0033', accent2: '#b91c1c', icon: Tv,
+            sections: [
+                { id: 'why', heading: tx('ytGuide.why'), blocks: [{ type: 'p', text: tx('ytGuide.why.desc') }] },
+                {
+                    id: 'steps', heading: tx('ytGuide.steps'), blocks: [
+                        { type: 'steps', items: [tx('ytGuide.steps.1'), tx('ytGuide.steps.2'), tx('ytGuide.steps.3')] },
+                        img('island-search-bar.webp', 1403, 994, tx('img.islandSearchBar.alt'), tx('img.islandSearchBar.cap')),
+                    ],
+                },
+                {
+                    id: 'limits', heading: tx('ytGuide.limits'), blocks: ([1, 2, 3, 4] as const).map((n): Block => (
+                        { type: 'callout', title: tx(`ytGuide.limits.t${n}`), text: tx(`ytGuide.limits.d${n}`) }
+                    )),
+                },
+                {
+                    id: 'mix', heading: tx('ytGuide.mix'), blocks: [
+                        { type: 'p', text: tx('ytGuide.mix.desc') },
+                        { type: 'link', text: tx('ytGuide.mix.more'), label: tx('ytGuide.mix.moreLink'), to: guidePage('watch-multiple-twitch-streams') },
+                    ],
+                },
+                {
+                    id: 'faq', heading: tx('ytGuide.faq'), blocks: ([1, 2, 3, 4] as const).map((n): Block => (
+                        { type: 'callout', title: tx(`ytGuide.faq.q${n}`), text: tx(`ytGuide.faq.a${n}`) }
                     )),
                 },
             ],
