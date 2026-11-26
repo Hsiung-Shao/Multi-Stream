@@ -54,8 +54,11 @@ export class TokenProvider implements TokenProviderContract {
     public async refreshToken(): Promise<string> {
         const win = (typeof window !== 'undefined' ? window : {}) as any;
         if (win.__MS_DEBUG_TWITCH__) console.debug('[TokenProvider] Refreshing token...');
+        // 伺服器端是全站共用的權杖：告訴它哪一張失效了，它才會換新的
+        let stale = this.cachedToken;
+        try { stale = stale || localStorage.getItem('twitchAccessToken'); } catch { }
         this.clearToken();
-        return await this.fetchNewToken();
+        return await this.fetchFromPages(stale);
     }
 
     public clearToken(): void {
@@ -76,11 +79,10 @@ export class TokenProvider implements TokenProviderContract {
         return await this.fetchFromPages();
     }
 
-    private async fetchFromPages(): Promise<string> {
-        const res = await fetch('/api/twitch-token', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-        });
+    private async fetchFromPages(staleToken?: string | null): Promise<string> {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (staleToken) headers['X-Stale-Token'] = staleToken;
+        const res = await fetch('/api/twitch-token', { method: 'GET', headers, cache: 'no-store' });
 
         if (!res.ok) {
             throw new Error(`Pages Error: ${res.status}`);

@@ -1,14 +1,151 @@
 -- 資安稽核 2026-11-27 D 組 #14：匿名修改歌回不能抹掉管理員的拆開／合併
 --
 -- 問題：社群修改片段標題 → trigger 依鍵重配 song_id → 舊歌沒片段時在 commit 被 GC，
---       拆開的歌（沒有鍵）與合併的別名鍵（cascade）一起消失；一鍵還原也只能依鍵重配，救不回來。
--- 修正（三支函式整支重建，其餘邏輯與 20261027014344／20261106073006 相同）：
---   1. _song_segments_gc：鍵數 ≠ 1 的歌（管理員整理過）不刪
---   2. community_save_song_video：修改前快照多記每個片段的 song_id
---   3. admin_revert_song_edit：還原後照快照把 song_id 寫回（trigger 遇到明確指定的 song_id 會照用）
+--       拆開的歌與合併的別名鍵（cascade）一起消失；一鍵還原也只能依鍵重配，救不回來。
+-- 修正：
+--   1. songs.curated：管理員拆開出的歌、合併目標、改名過的歌標記為 true（三支 admin 函式各加一處）
+--      既有資料回填：鍵數 ≠ 1，或建立後被更新過（只有改名／合併會更新 songs 列）
+--   2. _song_segments_gc：curated 的歌不刪
+--   3. community_save_song_video：修改前快照多記每個片段的 song_id
+--   4. admin_revert_song_edit：只對「這筆修改改了比對鍵」的片段，照快照把 song_id 寫回
+--   函式整支重建，其餘邏輯與 20261027014344／20261027014449／20261106073006 相同。
 --
--- 回滾：重新執行 20261027014344 的 _song_segments_gc 與 20261106073006 的另外兩支函式定義
---       （舊快照沒有 song_id 時第 3 點本來就會略過，回滾不影響既有資料）
+-- 回滾：重新執行上述三個 migration 裡這六支函式的定義，再 alter table public.songs drop column curated;
+
+alter table public.songs add column if not exists curated boolean not null default false;
+
+update public.songs so
+set curated = true
+where (select count(*) from public.song_keys k where k.song_id = so.id) <> 1
+   or so.updated_at > so.created_at + interval '1 second';
+
+create or replace function public.admin_merge_songs(p_source bigint, p_target bigint,
+                                                    p_allow_artist_mismatch boolean default false)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+    v_src public.songs;
+    v_tgt public.songs;
+    v_moved uuid[];
+    v_keys integer;
+begin
+    if p_source is not distinct from p_target then
+        raise exception 'same_song' using errcode = 'P0001';
+    end if;
+
+    -- 依 id 順序上鎖，兩個方向相反的合併同時進來也不會互鎖
+    perform 1 from public.songs where id in (p_source, p_target) order by id for update;
+    select * into v_src from public.songs where id = p_source;
+    select * into v_tgt from public.songs where id = p_target;
+    if v_src.id is null or v_tgt.id is null then
+        raise exception 'song_not_found' using errcode = 'P0002';
+    end if;
+
+    -- 只有兩邊原唱都有填、而且正規化後不同才算不一致；一邊空白（未填）直接併入目標
+    if not coalesce(p_allow_artist_mismatch, false)
+       and nullif(btrim(v_src.original_artist), '') is not null
+       and nullif(btrim(v_tgt.original_artist), '') is not null
+       and public.song_norm_text(v_src.original_artist) <> public.song_norm_text(v_tgt.original_artist) then
+        raise exception 'artist_mismatch' using errcode = 'P0001';
+    end if;
+
+    update public.song_keys set song_id = p_target where song_id = p_source;
+    get diagnostics v_keys = row_count;
+
+    -- song_id 被明確改掉，配對 trigger 會照用、不重配
+    with moved as (
+        update public.song_segments set song_id = p_target where song_id = p_source returning id
+    )
+    select coalesce(array_agg(id), '{}'::uuid[]) into v_moved from moved;
+
+    delete from public.songs where id = p_source;
+    update public.songs set curated = true where id = p_target;
+
+    return jsonb_build_object(
+        'song', public._song_brief(p_target),
+        'source_id', p_source,
+        'moved_segment_ids', to_jsonb(v_moved),
+        'moved_keys', v_keys);
+end;
+$$;
+
+create or replace function public.admin_split_segment(p_segment_id uuid)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+    v_seg public.song_segments;
+    v_new bigint;
+begin
+    select * into v_seg from public.song_segments where id = p_segment_id for update;
+    if v_seg.id is null then
+        raise exception 'segment_not_found' using errcode = 'P0002';
+    end if;
+
+    perform 1 from public.songs where id = v_seg.song_id for update;
+    if (select count(*) from public.song_segments where song_id = v_seg.song_id) <= 1 then
+        raise exception 'already_single' using errcode = 'P0001';
+    end if;
+
+    insert into public.songs (title, original_artist, curated) values (v_seg.title, v_seg.original_artist, true)
+    returning id into v_new;
+    update public.song_segments set song_id = v_new where id = p_segment_id;
+
+    return jsonb_build_object(
+        'song', public._song_brief(v_new),
+        'from_song', public._song_brief(v_seg.song_id),
+        'segment_id', p_segment_id);
+end;
+$$;
+
+create or replace function public.admin_rename_song(p_song_id bigint, p_title text, p_artist text)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+    v_title text := btrim(p_title);
+    v_artist text := nullif(btrim(p_artist), '');
+    v_tk text;
+    v_ak text;
+    v_owner bigint;
+    v_added boolean := false;
+begin
+    perform 1 from public.songs where id = p_song_id for update;
+    if not found then
+        raise exception 'song_not_found' using errcode = 'P0002';
+    end if;
+    if v_title is null or v_title = '' then
+        raise exception 'invalid_title' using errcode = 'P0001';
+    end if;
+
+    v_tk := public.song_norm_text(v_title);
+    v_ak := coalesce(public.song_norm_text(v_artist), '');
+    perform pg_advisory_xact_lock(hashtextextended('song_key:' || v_tk || chr(31) || v_ak, 0));
+
+    select song_id into v_owner from public.song_keys where title_key = v_tk and artist_key = v_ak;
+    if v_owner is not null and v_owner <> p_song_id then
+        raise exception 'key_taken' using errcode = 'P0001';
+    end if;
+
+    update public.songs set title = v_title, original_artist = v_artist, curated = true where id = p_song_id;
+    if v_owner is null then
+        insert into public.song_keys (title_key, artist_key, song_id) values (v_tk, v_ak, p_song_id);
+        v_added := true;
+    end if;
+
+    return jsonb_build_object('song', public._song_brief(p_song_id), 'key_added', v_added);
+end;
+$$;
 
 create or replace function public._song_segments_gc()
 returns trigger
@@ -20,11 +157,11 @@ begin
     if old.song_id is not null then
         perform 1 from public.songs s where s.id = old.song_id for update;
         if found then
-            -- 管理員整理過的歌不刪：拆開的沒有鍵（0 個）、合併的有別名（≥2 個）；一般歌恰好 1 個鍵
+            -- 管理員整理過（拆開、合併目標、改名）的歌不刪，一鍵還原才找得回來
             delete from public.songs s
             where s.id = old.song_id
-              and not exists (select 1 from public.song_segments g where g.song_id = old.song_id)
-              and (select count(*) from public.song_keys k where k.song_id = old.song_id) = 1;
+              and not s.curated
+              and not exists (select 1 from public.song_segments g where g.song_id = old.song_id);
         end if;
     end if;
     return null;
@@ -207,7 +344,8 @@ begin
             'clip_channel_name', s.before->'video'->'clip_channel_name',
             'clip_channel_url', s.before->'video'->'clip_channel_url'), v_segs);
 
-        -- 片段改回原標題時 trigger 會依鍵重配，管理員的拆開／合併就丟了：照快照把歸屬寫回（歌還在才寫）
+        -- 這筆修改改了比對鍵的片段，trigger 會依鍵重配、丟掉管理員的拆開／合併：照快照把歸屬寫回。
+        -- 只寫回「這筆修改確實改了鍵」的片段（之後管理員才做的拆開不被蓋掉），且歌還在才寫。
         update public.song_segments x
         set song_id = (e->>'song_id')::bigint
         from jsonb_array_elements(s.before->'segments') e
@@ -215,7 +353,13 @@ begin
           and x.id = (e->>'id')::uuid
           and x.video_ref = v.id
           and x.song_id is distinct from (e->>'song_id')::bigint
-          and exists (select 1 from public.songs so where so.id = (e->>'song_id')::bigint);
+          and exists (select 1 from public.songs so where so.id = (e->>'song_id')::bigint)
+          and exists (
+              select 1 from jsonb_array_elements(s.segments) n
+              where n->>'code' = e->>'code'
+                and (public.song_norm_text(n->>'title') is distinct from public.song_norm_text(e->>'title')
+                     or coalesce(public.song_norm_text(n->>'original_artist'), '')
+                        is distinct from coalesce(public.song_norm_text(e->>'original_artist'), '')));
     end if;
 
     update public.song_submissions

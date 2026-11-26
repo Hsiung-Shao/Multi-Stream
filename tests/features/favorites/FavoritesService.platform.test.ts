@@ -15,7 +15,6 @@ vi.mock('../../../src/utils/youtubeApi', () => ({
 }));
 vi.mock('../../../src/features/youtube/YouTubeChannelRepository', () => ({
     getCachedChannel: vi.fn().mockResolvedValue(null),
-    cacheChannelIfAbsent: vi.fn().mockResolvedValue(undefined),
 }));
 
 let list: any[] = [];

@@ -1,22 +1,24 @@
 // Cloudflare Pages Function：給前端 Twitch app access token（client secret 只留在伺服器）
 //
-// 環境變數：TWITCH_CLIENT_ID、TWITCH_CLIENT_SECRET（Secrets）；RATE_LIMIT_KV（權杖快取＋限流）
+// 環境變數：TWITCH_CLIENT_ID、TWITCH_CLIENT_SECRET（Secrets）
 //
 // 2026-11-27 資安稽核 C 組：
-//   - 權杖共用 lib/twitch-token.js 的 KV 快取，不再每次請求都向 Twitch 換一張新的
-//     （Twitch app 權杖的呼叫額度以 app 為單位，全站共用一張不會讓額度變少）
-//   - 只接受本站頁面發出的請求＋每 IP 每小時 30 次；錯誤不回傳上游細節
-// 這張 app 權杖只能讀公開資料，交給瀏覽器沒有實質損害；要給「能寫入／代表使用者」的權杖時必須改成伺服器代打。
+//   - 只接受本站頁面發出的請求；錯誤不回傳上游細節
+//   - 給瀏覽器的權杖放 Cache API（edge，不吃 KV 每日 1,000 次寫入額度），同一機房 1 小時內共用一張，
+//     不再每次請求都向 Twitch 換新的（Twitch app 權杖的呼叫額度以 app 為單位，共用不會讓額度變少）
+//   - 與排程用的權杖（lib/twitch-token.js 的 KV 快取）分開：瀏覽器拿到的權杖可被任何人撤銷，不能拖累排程
+//   - 前端遇到 401 會帶 X-Stale-Token 重取；它等於快取裡那張就換一張新的
+//     shortcut: 有人反覆撤銷＋重取時每輪都會換新權杖；真的發生再加每機房冷卻時間
+// 這張 app 權杖只能讀公開資料；要給「能寫入／代表使用者」的權杖時必須改成伺服器代打。
+// Cache API 只在自訂網域生效，*.pages.dev 上是 no-op（等同每次都換新，與改版前相同）。
 
 import { jsonResponse, handleOptions, isRequestFromAllowedSite } from '../lib/cors.js';
-import { getTwitchAppToken } from '../lib/twitch-token.js';
-import { checkQuotas, getVisitorIp, ipKey, quotaWindow } from '../lib/rate-limit.js';
+import { fetchNewToken } from '../lib/twitch-token.js';
 
-const HOURLY_LIMIT_PER_IP = 30;
-// KV 快取的權杖在剩約 1 小時前就會換新，所以拿到的權杖至少還能用 1 小時
-const CLIENT_EXPIRES_IN = 3600;
+const CLIENT_TOKEN_TTL_SECONDS = 3600;
+const CACHE_KEY = 'https://cache.internal/api/twitch-token/client-app-token';
 
-async function handleTokenRequest({ request, env }) {
+async function handleTokenRequest({ request, env, waitUntil }) {
   if (!isRequestFromAllowedSite(request)) {
     return jsonResponse({ error: 'forbidden' }, 403, request);
   }
@@ -24,25 +26,38 @@ async function handleTokenRequest({ request, env }) {
     return jsonResponse({ error: 'unavailable' }, 503, request);
   }
 
-  const ip = getVisitorIp(request);
-  if (ip) {
-    const quota = await checkQuotas(env.RATE_LIMIT_KV, [
-      { key: `twitch-token:${ipKey(ip)}:${quotaWindow().hour}`, limit: HOURLY_LIMIT_PER_IP, ttl: 3700 },
-    ]);
-    if (!quota.ok) return jsonResponse({ error: 'rate_limited' }, 429, request);
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  const stale = request.headers.get('X-Stale-Token');
+  let accessToken = null;
+  if (cache) {
+    const hit = await cache.match(CACHE_KEY);
+    const cached = hit ? (await hit.json().catch(() => null))?.access_token : null;
+    if (cached && cached !== stale) accessToken = cached;
   }
 
-  try {
-    const accessToken = await getTwitchAppToken(env);
-    return jsonResponse(
-      { access_token: accessToken, expires_in: CLIENT_EXPIRES_IN, token_type: 'bearer' },
-      200,
-      request,
-      { 'Cache-Control': 'private, max-age=3000' },
-    );
-  } catch {
-    return jsonResponse({ error: 'upstream_failed' }, 502, request);
+  if (!accessToken) {
+    try {
+      accessToken = (await fetchNewToken(env))?.access_token;
+    } catch {
+      accessToken = null;
+    }
+    if (!accessToken) return jsonResponse({ error: 'upstream_failed' }, 502, request);
+    if (cache) {
+      const stored = new Response(JSON.stringify({ access_token: accessToken }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${CLIENT_TOKEN_TTL_SECONDS}` },
+      });
+      const put = cache.put(CACHE_KEY, stored);
+      if (waitUntil) waitUntil(put); else await put;
+    }
   }
+
+  // 權杖本身約 60 天有效；只讓前端用 1 小時，之後回來拿（可能已換新）
+  return jsonResponse(
+    { access_token: accessToken, expires_in: CLIENT_TOKEN_TTL_SECONDS, token_type: 'bearer' },
+    200,
+    request,
+    { 'Cache-Control': 'no-store' },
+  );
 }
 
 export const onRequestGet = (context) => handleTokenRequest(context);

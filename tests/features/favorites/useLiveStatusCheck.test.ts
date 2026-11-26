@@ -31,7 +31,6 @@ vi.mock('../../../src/features/twitch/TwitchService', () => ({
     twitchService: { checkMultipleChannelsLiveStatus: vi.fn(async () => ({})) },
 }));
 vi.mock('../../../src/features/youtube/YouTubeChannelRepository', () => ({
-    cacheChannelIfAbsent: vi.fn(async () => {}),
 }));
 
 import { useLiveStatusCheck, MAX_ENDPOINT_CALLS_PER_ROUND, MAX_ENDPOINT_CALLS_FORCE, FORCE_COOLDOWN_MS, __setLiveCheckSleepForTests } from '../../../src/features/favorites/useLiveStatusCheck';

@@ -15,6 +15,8 @@ const CHANNEL_ID_RE = /^UC[a-zA-Z0-9_-]{22}$/;
 const CACHE_TTL_SECONDS = 86400;
 const HOURLY_LIMIT_PER_IP = 60;
 const YOUTUBE_TIMEOUT_MS = 8000;
+// 金鑰有 HTTP referrer 限制；正式環境沒設 YOUTUBE_API_REFERER 時用正式網域
+const DEFAULT_REFERER = 'https://multistreaming.org/';
 
 function json(data, status, request, extra = {}) {
     return new Response(JSON.stringify(data), {
@@ -32,10 +34,14 @@ async function queryYoutube(env, kind, id) {
     const part = 'snippet';
     const url = `https://www.googleapis.com/youtube/v3/${kind}?part=${part}&id=${id}&key=${encodeURIComponent(env.YOUTUBE_API_KEY)}`;
     const res = await fetch(url, {
-        headers: env.YOUTUBE_API_REFERER ? { Referer: env.YOUTUBE_API_REFERER } : {},
+        headers: { Referer: env.YOUTUBE_API_REFERER || DEFAULT_REFERER },
         signal: AbortSignal.timeout(YOUTUBE_TIMEOUT_MS),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+        // 配額用完、金鑰被擋都是上游錯誤，不能當成「查無此影片」
+        console.warn('[youtube lookup] upstream status', res.status);
+        throw new Error(`youtube ${res.status}`);
+    }
     const data = await res.json();
     return data?.items?.[0] ?? null;
 }

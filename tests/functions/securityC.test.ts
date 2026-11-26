@@ -79,16 +79,30 @@ describe('twitch-token 端點', () => {
         expect(tokenCalls()).toBe(1);
     });
 
-    it('C1c 同 IP 每小時第 31 次回 429（前 30 次不擋）', async () => {
+    it('C1c 連續 31 次請求都不寫 KV（不吃每日寫入額度、不動排程用的權杖）', async () => {
         const env = mkEnv();
-        const statuses: number[] = [];
+        const put = vi.spyOn(env.RATE_LIMIT_KV, 'put');
         for (let i = 0; i < 31; i++) {
             const res = await twitchTokenGet({ request: mkReq({ ...SAME_ORIGIN, 'CF-Connecting-IP': '203.0.113.7' }), env, waitUntil });
             await flush();
-            statuses.push(res.status);
+            expect(res.status).toBe(200);
         }
-        expect(statuses.slice(0, 30)).not.toContain(429);
-        expect(statuses[30]).toBe(429);
+        expect(put).not.toHaveBeenCalled();
+    });
+
+    it('C1e 帶上已失效的權杖時換一張新的，帶舊的別張則沿用快取', async () => {
+        let n = 0;
+        fetchMock.mockImplementation(async () => new Response(JSON.stringify({ access_token: `at-${++n}`, expires_in: 5000000 }), { status: 200 }));
+        const env = mkEnv();
+        const first = await (await twitchTokenGet({ request: mkReq(SAME_ORIGIN), env, waitUntil })).json();
+        await flush();
+        const notStale = await (await twitchTokenGet({ request: mkReq({ ...SAME_ORIGIN, 'X-Stale-Token': 'at-old' }), env, waitUntil })).json();
+        await flush();
+        expect(notStale.access_token).toBe(first.access_token);
+        const renewed = await (await twitchTokenGet({ request: mkReq({ ...SAME_ORIGIN, 'X-Stale-Token': first.access_token }), env, waitUntil })).json();
+        await flush();
+        expect(renewed.access_token).not.toBe(first.access_token);
+        expect(tokenCalls()).toBe(2);
     });
 
     it('C1d Twitch 回 500 時不外洩上游狀態碼與環境變數名稱', async () => {
@@ -177,6 +191,12 @@ describe('youtube lookup 端點', () => {
         const writes = sbCalls.filter((c) => c.url.includes('/rest/v1/youtube_channels') && c.method !== 'GET');
         expect(writes.length).toBeGreaterThan(0);
         expect(writes.some((w) => w.body.includes(CHANNEL) && w.body.includes('伺服器頻道名'))).toBe(true);
+    });
+
+    it('C2f YouTube 回 403（配額用完／金鑰被擋）時回 502，不當成查無影片', async () => {
+        fetchMock.mockImplementation(async () => new Response('{"error":{"code":403}}', { status: 403 }));
+        const res = await call(`videoId=${VIDEO}`);
+        expect(res.status).toBe(502);
     });
 
     it('C2e youtube-config 端點檔案已刪除（金鑰不再公開）', () => {

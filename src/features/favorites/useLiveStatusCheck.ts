@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { favoritesService } from './FavoritesService';
 import { twitchService } from '../twitch/TwitchService';
 import { youtubeApi } from '../../utils/youtubeApi';
-import { cacheChannelIfAbsent } from '../youtube/YouTubeChannelRepository';
 import { FavoriteStream } from './types';
 import { shouldCheckChannel, recordChannelCheck, recordChannelFailure, readCheckMap, lastAttemptAt } from './liveCheckThrottle';
 import { fetchLiveStatuses, isLiveStatusFresh, toLiveStatusResult, autoFreshMaxAge, LIVE_STATUS_FRESH_FORCE_MS, type LiveStatusRow } from './liveStatusRepository';
@@ -245,12 +244,6 @@ async function runYouTubeRound(force: boolean): Promise<YouTubeRoundStats> {
                 const sharedAt = fromShared && sharedRow ? Date.parse(sharedRow.checked_at) : NaN;
                 recordChannelCheck(channelId, !!status.isLive, Number.isFinite(sharedAt) ? Math.min(sharedAt, Date.now()) : Date.now());
 
-                // 順手蒐集到離線頻道資料庫:寫官方頻道名、查 DB 去重、不更動使用者收藏資料。
-                // fire-and-forget,失敗不影響直播狀態檢查。只在真的打了端點時做——
-                // 讀共享表時每輪都做會讓每個頻道多一次 Supabase 查詢。
-                if (!fromShared && status.channelTitle) {
-                    cacheChannelIfAbsent(channelId, status.channelTitle).catch(() => {});
-                }
 
                 // liveUrl 也要比：同一頻道換了一場直播（新 videoId）時要更新連結
                 const newLiveUrl = status.finalUrl || null;

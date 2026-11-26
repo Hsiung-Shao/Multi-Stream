@@ -10,7 +10,7 @@ const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const KV_KEY = 'twitch_app_token';
 const TTL_BUFFER_SEC = 3600; // 提前 1h 過期，避免邊界用到剛失效的 token
 
-async function fetchNewToken(env) {
+export async function fetchNewToken(env) {
     const params = new URLSearchParams({
         client_id: env.TWITCH_CLIENT_ID,
         client_secret: env.TWITCH_CLIENT_SECRET,

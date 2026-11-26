@@ -4,7 +4,7 @@ import { FavoriteStream, FavoriteUpdateEventDetail } from './types';
 import { backupService } from '../backup/index';
 import { DEFAULT_TAG_TWITCH_ID, DEFAULT_TAG_YOUTUBE_ID } from './constants';
 import { youtubeApi } from '../../utils/youtubeApi';
-import { cacheChannelIfAbsent, getCachedChannel } from '../youtube/YouTubeChannelRepository';
+import { getCachedChannel } from '../youtube/YouTubeChannelRepository';
 
 export class FavoritesService {
     private favRepo: FavoritesRepository;
@@ -284,11 +284,6 @@ export class FavoritesService {
 
         this.favRepo.add(newItem);
         this.emitChangeEvent('add', uniqueId, newItem);
-
-        // 順手蒐集到離線頻道資料庫(僅 YouTube 且已取得官方頻道名;查 DB 去重、fire-and-forget)
-        if (platform === 'youtube' && officialTitle) {
-            cacheChannelIfAbsent(channelId, officialTitle).catch(() => {});
-        }
 
         return { success: true, message: 'addedToFavorites', item: newItem };
     }
