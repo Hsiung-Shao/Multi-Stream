@@ -212,10 +212,13 @@ export function validateResponseAgainstAnnouncement(announcement, input) {
         const qById = new Map(questions.map((q) => [q?.id, q]).filter(([id]) => typeof id === 'string'));
         if (qById.size === 0) return { ok: false, error: 'announcement_misconfigured' };
 
+        const seenQuestions = new Set();
         for (const c of choices) {
             if (!c || typeof c !== 'object') return { ok: false, error: 'invalid_choice' };
             const q = qById.get(c.question_id);
             if (!q) return { ok: false, error: 'invalid_question_id' };
+            if (seenQuestions.has(c.question_id)) return { ok: false, error: 'duplicate_question' };
+            seenQuestions.add(c.question_id);
             const qType = q.type;
             if (qType === 'single' || qType === 'multi') {
                 const ids = Array.isArray(c.option_ids) ? c.option_ids : [];

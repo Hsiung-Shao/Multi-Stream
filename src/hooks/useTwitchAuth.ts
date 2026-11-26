@@ -53,7 +53,7 @@ export function useTwitchAuth(): TwitchAuth {
             const storedState = sessionStorage.getItem(STATE_KEY);
 
             // Verify state to prevent CSRF
-            if (state !== storedState) {
+            if (!storedState || state !== storedState) {
                 console.error('Twitch Auth State Mismatch');
                 setIsProcessing(false);
                 return;

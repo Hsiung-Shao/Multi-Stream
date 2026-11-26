@@ -14,6 +14,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { commentSafe } from './build-agency-rosters.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const KIND_PRIORITY = { agency: 0, personal: 1, circle: 2, unverified: 3 };
@@ -208,7 +209,7 @@ export function buildSql(plan, sourceGroups, header) {
         const guard = list[0]?.kind === 'unverified'
             ? ` and (v.group_id is null or v.group_id in (select id from public.vtuber_groups where kind = 'unverified'))`
             : '';
-        out.push(`-- ${name}（${list.length}）`);
+        out.push(`-- ${commentSafe(name)}（${list.length}）`);
         out.push(`update public.vtubers v set group_id = g.id from public.vtuber_groups g where g.name = ${q(name)} and (${conds.join(' or ')}) and v.group_id is distinct from g.id${guard};`);
     }
     out.push('');
@@ -225,7 +226,7 @@ export function buildSql(plan, sourceGroups, header) {
         const g = sourceGroups.find((x) => x.name === f.group);
         const m = g && twMembers(g).find((x) => x.name === f.youtubeName);
         if (!m?.YouTube?.id) continue;
-        out.push(`-- ${f.youtubeName}：${f.reason}`);
+        out.push(`-- ${commentSafe(f.youtubeName)}：${commentSafe(f.reason)}`);
         out.push(`update public.vtubers set activity = ${q(f.activity)} where youtube_channel_id = ${q(m.YouTube.id)} and activity is distinct from ${q(f.activity)};`);
     }
     out.push('');

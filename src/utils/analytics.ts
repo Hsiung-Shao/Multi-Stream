@@ -222,7 +222,7 @@ const sendEvent = (eventName: string, params?: Record<string, unknown>): void =>
  */
 export const logPageView = (): void => {
     sendEvent('page_view', {
-        page_location: window.location.href,
+        page_location: window.location.origin + window.location.pathname + window.location.search, // 不送 hash：舊 Twitch 回呼的 access_token 在 hash 裡
         page_path: window.location.pathname + window.location.search,
         page_title: document.title,
     });

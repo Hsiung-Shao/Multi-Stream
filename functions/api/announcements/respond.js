@@ -18,7 +18,7 @@
 
 import { jsonResponse, handleOptions, readJsonBody } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
-import { getVisitorIp, isIpBanned } from '../../lib/rate-limit.js';
+import { getVisitorIp, ipKey, isIpBanned } from '../../lib/rate-limit.js';
 import { insert } from '../../lib/supabase-server.js';
 import { logError } from '../../lib/logger.js';
 import {
@@ -119,7 +119,7 @@ export async function onRequestPost(context) {
     if (env.RATE_LIMIT_KV) {
         const [ipCheck, devCheck] = await Promise.all([
             ip
-                ? checkAndIncrementRespondRateLimit(env.RATE_LIMIT_KV, `ip:${ip}`)
+                ? checkAndIncrementRespondRateLimit(env.RATE_LIMIT_KV, `ip:${ipKey(ip)}`)
                 : Promise.resolve({ allowed: true }),
             deviceIdToUse
                 ? checkAndIncrementRespondRateLimit(env.RATE_LIMIT_KV, `dev:${deviceIdToUse}`)

@@ -5,7 +5,7 @@
 
 import { jsonResponse, handleOptions } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
-import { getVisitorIp, isIpBanned } from '../../lib/rate-limit.js';
+import { getVisitorIp, ipKey, isIpBanned } from '../../lib/rate-limit.js';
 import { insert } from '../../lib/supabase-server.js';
 import { logError } from '../../lib/logger.js';
 
@@ -44,7 +44,7 @@ function isMissingPublicNoticeColumn(errorText) {
 async function checkFeedbackRateLimit(kv, ip) {
     if (!ip || !kv) return true; // 沒 IP 或沒 KV 不擋（fail-open，因為 feedback 不是高風險）
     const hour = new Date().toISOString().slice(0, 13).replace(/[-T]/g, '');
-    const key = `feedback:hour:${ip}:${hour}`;
+    const key = `feedback:hour:${ipKey(ip)}:${hour}`;
     const raw = await kv.get(key);
     const count = parseInt(raw || '0', 10);
     if (count >= 5) return false;

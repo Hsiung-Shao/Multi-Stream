@@ -230,7 +230,7 @@ export function buildRosterSql(plan, header, opts = {}) {
             m.youtube_channel_id ? `(v.youtube_channel_id is null and not exists (select 1 from public.vtubers x where x.youtube_channel_id = ${q(m.youtube_channel_id)} and x.id <> v.id))` : null,
         ].filter(Boolean);
         const scope = left ? '' : ` and (v.group_id is null or v.group_id in ${tree})`;
-        out.push(`-- ${m.name}`);
+        out.push(`-- ${commentSafe(m.name)}`);
         out.push(left
             ? `update public.vtubers v set ${sets.join(', ')} where ${cond} and ${topId(agency)} is not null and (${changed.join(' or ')});`
             : `update public.vtubers v set ${sets.join(', ')} from public.vtuber_groups g where g.name = ${q(target)} and g.id in ${tree} and ${cond}${scope} and (${changed.join(' or ')});`);
@@ -251,7 +251,7 @@ export function buildRosterSql(plan, header, opts = {}) {
         const groupCols = left ? `null, ${topId(agency)}` : 'g.id, null';
         const vals = `select ${q(m.name)}, ${q(nationality ?? 'TW')}, ${q(act)}, ${qn(exactDate(m, m.debut_date))}::date, ${qn(exactDate(m, m.graduation_date))}::date, ${qn(m.youtube_channel_id)}, ${qn(m.twitch_login)}, ${qn(m._avatar)}, ${groupCols}, ${q(contributedBy)} from public.vtuber_groups g where g.name = ${q(target)} and g.id in ${treeSql(agency)}`;
         const guard = `and not exists (select 1 from public.vtubers x where ${matchCond(m, 'x')} or x.name = ${q(m.name)})`;
-        out.push(`-- ${m.name}（${target}）`);
+        out.push(`-- ${commentSafe(m.name)}（${commentSafe(target)}）`);
         out.push(`insert into public.vtubers ${cols} ${vals} ${guard};`);
     }
     out.push('');

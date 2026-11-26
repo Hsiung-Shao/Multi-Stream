@@ -23,12 +23,14 @@ import {
 } from '../hooks/useAdminSubmissions';
 import { AdminTokenInline, useAdminTokenPresent } from './AdminTokenInline';
 import { ScheduleContributionCard } from './ScheduleContributionCard';
+import { isHttpUrl } from '../../contribute/urlValidation';
 
 const NATIONALITIES = ['TW', 'HK', 'MY', 'JP', 'KR', 'OTHER'];
 const YT_AVATAR = /^https:\/\/yt3\.(ggpht|googleusercontent)\.com\//;
 const STATUS_LABEL: Record<string, string> = { pending: '待審', approved: '已核准', rejected: '已駁回', all: '全部' };
 
-function Ext({ href, children }: { href: string; children: React.ReactNode }) {
+export function Ext({ href, children }: { href: string; children: React.ReactNode }) {
+    if (!isHttpUrl(href)) return <span className="break-all text-[13px]">{children}</span>;
     return (
         <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 break-all text-[13px] text-sky-600 hover:underline dark:text-sky-400">
             {children}
