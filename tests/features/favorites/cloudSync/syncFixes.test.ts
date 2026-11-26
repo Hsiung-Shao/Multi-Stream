@@ -160,4 +160,13 @@ describe('換帳號：本機收藏屬於另一個帳號時先問', () => {
         expect((JSON.parse(localStorage.getItem('favoriteStreams')!) as FavoriteStream[]).map(f => f.id)).toEqual(['cloudB']);
         expect(localStorage.getItem('ms_cloud_sync_owner')).toBe('userB');
     });
+
+    it('改用雲端後立刻更新 IndexedDB 備份，下次載入不會把前一帳號的收藏併回來', async () => {
+        const { engine } = await setup();
+        const { backupService } = await import('../../../../src/features/backup/index');
+        const backup = vi.spyOn(backupService, 'backup').mockResolvedValue(true);
+        await engine.syncNow();
+        await engine.resolveAccountSwitch('cloud');
+        expect(backup).toHaveBeenCalled();
+    });
 });

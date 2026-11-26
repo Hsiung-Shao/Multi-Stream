@@ -7,6 +7,7 @@ import { safeJSONParse } from '../../../utils/security/index';
 import { useAuthStore } from '../../auth/authStore';
 import { mergeSync, type SyncData } from './merge';
 import { fetchAll, applyChanges } from './remote';
+import { backupService } from '../../backup/index';
 
 export const SNAPSHOT_PREFIX = 'ms_cloud_sync:';
 /** 本機收藏目前屬於哪個帳號（最後一次同步成功的帳號；登出後保留，換帳號登入時用來判斷要不要先問） */
@@ -32,6 +33,8 @@ function writeLocal(d: SyncData) {
     localStorage.setItem(KEYS.favorites, JSON.stringify(d.favorites));
     localStorage.setItem(KEYS.categories, JSON.stringify(d.categories));
     localStorage.setItem(KEYS.tags, JSON.stringify(d.tags));
+    // IndexedDB 自動備份要立刻跟上：否則啟動時的備份合併會把舊資料（例如換帳號前的收藏）併回本機、再同步進雲端
+    void backupService.backup();
     // 跟備份還原同一組事件，讓收藏、分類、標籤的畫面重讀
     window.dispatchEvent(new CustomEvent('favoritesUpdated', { detail: { action: 'restore' } }));
     window.dispatchEvent(new CustomEvent('categoriesUpdated'));
