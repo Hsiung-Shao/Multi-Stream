@@ -227,3 +227,13 @@ export class TwitchChatClient {
         }
     }
 }
+
+/** 包一個訂閱回呼：authFailed 由 false 變 true 的那一刻才呼叫 onFail 一次（訊息通知每則都會來，不能每則都處理） */
+export function onAuthFailTransition(isFailed: () => boolean, onFail: () => void): () => void {
+    let prev = false;
+    return () => {
+        const now = isFailed();
+        if (now && !prev) onFail();
+        prev = now;
+    };
+}

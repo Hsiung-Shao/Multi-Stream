@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useStreamStore } from '../../store/useStreamStore';
 import { streamContentIdsByPosition } from '../../utils/canvasItemOps';
-import { TwitchChatClient } from './TwitchChatClient';
+import { TwitchChatClient, onAuthFailTransition } from './TwitchChatClient';
 import { messageParts, readableColor } from './messageParts';
 import { loadChannelEmotes, loadGlobalEmotes } from './thirdPartyEmotes';
 import type { ChatMessage } from './ircParse';
@@ -43,9 +43,11 @@ function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing'
         void load();
         // 權杖交付完成（登入回來時）或 IRC 拒絕權杖時重新整理狀態
         const offCreds = onChatCredentialsChanged(() => { void load(); });
-        const offClient = c.subscribe(() => {
-            if (c.authFailed()) { resetChatCredentials(); setState('missing'); }
-        });
+        // Twitch 拒絕權杖（過期或被撤銷）：只在剛發生時清快取並立刻重取一次；伺服器回 404 才真的需要重新登入
+        const offClient = c.subscribe(onAuthFailTransition(() => c.authFailed(), () => {
+            resetChatCredentials();
+            void load();
+        }));
         return () => { on = false; clearTimeout(timer); offCreds(); offClient(); };
     }, [c, twitchUser]);
     return state;

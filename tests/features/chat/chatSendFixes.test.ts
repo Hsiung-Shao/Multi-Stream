@@ -149,3 +149,19 @@ describe('chatToken：權杖交付與重取', () => {
         expect(await m.getChatCredentials('jwtB', 'userB')).toBeNull();
     });
 });
+
+describe('onAuthFailTransition：IRC 拒絕權杖只處理一次', () => {
+    it('authFailed 持續為真時，後續每則訊息不再重複觸發', async () => {
+        const { onAuthFailTransition } = await import('../../../src/features/chat/TwitchChatClient');
+        let failed = false;
+        const fire = vi.fn();
+        const handler = onAuthFailTransition(() => failed, fire);
+        handler();
+        failed = true;
+        handler(); handler(); handler();
+        expect(fire).toHaveBeenCalledTimes(1);
+        failed = false; handler();
+        failed = true; handler();
+        expect(fire).toHaveBeenCalledTimes(2);
+    });
+});
