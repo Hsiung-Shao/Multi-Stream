@@ -23,6 +23,9 @@ const KEYS = { favorites: 'favoriteStreams', categories: 'favoriteCategories', t
 const DEBOUNCE_MS = 3000;
 const PULL_INTERVAL_MS = 5 * 60_000;
 
+/** IndexedDB 自動備份立刻跟上本機：否則啟動時的備份合併會把舊資料（換帳號前的收藏、剛刪掉的收藏）併回本機、再同步進雲端 */
+const backupNow = () => backupService.backup().catch(() => false);
+
 const readLocal = (): SyncData => ({
     favorites: safeJSONParse(localStorage.getItem(KEYS.favorites), []),
     categories: safeJSONParse(localStorage.getItem(KEYS.categories), []),
@@ -33,8 +36,7 @@ function writeLocal(d: SyncData) {
     localStorage.setItem(KEYS.favorites, JSON.stringify(d.favorites));
     localStorage.setItem(KEYS.categories, JSON.stringify(d.categories));
     localStorage.setItem(KEYS.tags, JSON.stringify(d.tags));
-    // IndexedDB 自動備份要立刻跟上：否則啟動時的備份合併會把舊資料（例如換帳號前的收藏）併回本機、再同步進雲端
-    void backupService.backup();
+    void backupNow();
     // 跟備份還原同一組事件，讓收藏、分類、標籤的畫面重讀
     window.dispatchEvent(new CustomEvent('favoritesUpdated', { detail: { action: 'restore' } }));
     window.dispatchEvent(new CustomEvent('categoriesUpdated'));
@@ -99,6 +101,8 @@ export async function resolveAccountSwitch(mode: 'merge' | 'cloud'): Promise<boo
         localStorage.setItem(KEYS.favorites, '[]');
         localStorage.setItem(KEYS.categories, '[]');
         localStorage.setItem(KEYS.tags, '[]');
+        // 接著的同步可能失敗：先讓備份也換成清空後的本機，否則下次載入會把前一帳號的收藏併回來
+        await backupNow();
     }
     // 舊快照描述的是別份本機資料，留著會被當成本機刪除：丟掉，走第一次同步的聯集
     localStorage.removeItem(SNAPSHOT_PREFIX + uid);
@@ -115,7 +119,7 @@ async function pushLocal(): Promise<boolean> {
     const result = mergeSync(readLocal(), snapshot, snapshot);
     if (isEmpty(result)) return true;
     const ok = await applyChanges(uid, result.upsert, result.remove);
-    if (ok) saveSnapshot(uid, result.local);
+    if (ok) { saveSnapshot(uid, result.local); void backupNow(); }
     setStatus(ok ? 'ok' : 'error');
     return ok;
 }

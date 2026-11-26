@@ -169,4 +169,26 @@ describe('換帳號：本機收藏屬於另一個帳號時先問', () => {
         await engine.resolveAccountSwitch('cloud');
         expect(backup).toHaveBeenCalled();
     });
+
+    it('改用雲端時就算接著的同步失敗，備份也已換成清空後的本機', async () => {
+        const { engine } = await setup();
+        const { backupService } = await import('../../../../src/features/backup/index');
+        const remote = await import('../../../../src/features/favorites/cloudSync/remote');
+        const backup = vi.spyOn(backupService, 'backup').mockImplementation(async () => {
+            expect(JSON.parse(localStorage.getItem('favoriteStreams')!)).toEqual([]);
+            return true;
+        });
+        await engine.syncNow();
+        vi.mocked(remote.fetchAll).mockResolvedValueOnce(null);
+        expect(await engine.resolveAccountSwitch('cloud')).toBe(false);
+        expect(backup).toHaveBeenCalled();
+    });
+
+    it('備份失敗時不產生未處理的錯誤', async () => {
+        const { engine } = await setup();
+        const { backupService } = await import('../../../../src/features/backup/index');
+        vi.spyOn(backupService, 'backup').mockRejectedValue(new Error('idb'));
+        localStorage.removeItem('ms_cloud_sync_owner');
+        await expect(engine.syncNow()).resolves.toBe(true);
+    });
 });
