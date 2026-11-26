@@ -15,6 +15,11 @@ describe('ContributionsTab 的 Ext 外部連結', () => {
         expect(bad.container.textContent).toContain('壞連結文字');
         bad.unmount();
 
+        // 沒有 scheme:// 的字串會被當成「帳密@主機」補 https:// 而誤判合法，原字串照輸出就會執行 JS
+        const sneaky = render(<Ext href="javascript:alert(1)+'@b.com'">偽裝連結</Ext>);
+        expect(sneaky.container.querySelector('a')).toBeNull();
+        sneaky.unmount();
+
         const good = render(<Ext href="https://example.com/a">好連結</Ext>);
         expect(good.container.querySelector('a[href="https://example.com/a"]')).not.toBeNull();
     });

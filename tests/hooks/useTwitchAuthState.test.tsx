@@ -16,6 +16,7 @@ describe('useTwitchAuth state 驗證', () => {
         window.history.replaceState(null, '', '/#access_token=evil&token_type=bearer');
         renderHook(() => useTwitchAuth());
         expect(sessionStorage.getItem(TOKEN_KEY)).not.toBe('evil');
+        expect(window.location.hash).not.toContain('access_token'); // 拒收的權杖要從網址清掉，免得 GA4 事件帶出去
     });
 
     it('B6 state 相符的正常回呼會寫入權杖', () => {

@@ -55,6 +55,8 @@ export function useTwitchAuth(): TwitchAuth {
             // Verify state to prevent CSRF
             if (!storedState || state !== storedState) {
                 console.error('Twitch Auth State Mismatch');
+                // 拒收的權杖也要從網址清掉，免得之後的 GA4 事件把整個網址（含 hash）送出去
+                window.history.replaceState(null, '', window.location.pathname + window.location.search);
                 setIsProcessing(false);
                 return;
             }
@@ -94,7 +96,7 @@ export function useTwitchAuth(): TwitchAuth {
 
         const redirectUri = window.location.origin + '/';
         const scope = 'user:read:follows';
-        const state = Math.random().toString(36).substring(7);
+        const state = crypto.randomUUID();
 
         sessionStorage.setItem(STATE_KEY, state);
         sessionStorage.setItem(IMPORT_PENDING_KEY, 'true');

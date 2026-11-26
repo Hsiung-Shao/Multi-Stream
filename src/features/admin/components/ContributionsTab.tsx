@@ -30,7 +30,8 @@ const YT_AVATAR = /^https:\/\/yt3\.(ggpht|googleusercontent)\.com\//;
 const STATUS_LABEL: Record<string, string> = { pending: '待審', approved: '已核准', rejected: '已駁回', all: '全部' };
 
 export function Ext({ href, children }: { href: string; children: React.ReactNode }) {
-    if (!isHttpUrl(href)) return <span className="break-all text-[13px]">{children}</span>;
+    // isHttpUrl 會替沒有 scheme 的字串補 https://，所以原字串本身也要以 http(s):// 開頭
+    if (!/^https?:\/\//i.test(href) || !isHttpUrl(href)) return <span className="break-all text-[13px]">{children}</span>;
     return (
         <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex items-center gap-1 break-all text-[13px] text-sky-600 hover:underline dark:text-sky-400">
             {children}
