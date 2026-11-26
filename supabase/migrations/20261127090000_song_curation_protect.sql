@@ -352,7 +352,7 @@ begin
             'clip_channel_url', s.before->'video'->'clip_channel_url'), v_segs);
 
         -- 比對鍵被改過的片段，trigger 會依鍵重配、丟掉管理員的拆開／合併：照快照把歸屬寫回。
-        -- 只寫回「還原前的鍵與快照不同」的片段（鍵沒變、之後管理員才拆開的不被蓋掉），且歌還在才寫。
+        -- 只寫回「還原前的鍵與快照不同，或一併還原的修改改過它的鍵」的片段（鍵從沒被改過、之後管理員才拆開的不被蓋掉），且歌還在才寫。
         update public.song_segments x
         set song_id = (e->>'song_id')::bigint
         from jsonb_array_elements(s.before->'segments') e
