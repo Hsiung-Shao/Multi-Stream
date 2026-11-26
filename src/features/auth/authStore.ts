@@ -92,6 +92,8 @@ export async function initAuth(): Promise<void> {
 export async function signIn(provider: AuthProvider): Promise<void> {
     const sb = await loadClient();
     if (!sb) throw new Error('auth_unavailable');
+    // 回來時要知道這次用哪個平台登入，才決定要不要把續期權杖交給聊天發言（見 chat/chatToken.ts）
+    try { sessionStorage.setItem('ms_oauth_provider', provider); } catch { /* 無痕模式：只是不能發言 */ }
     await sb.auth.signInWithOAuth({
         provider,
         options: {

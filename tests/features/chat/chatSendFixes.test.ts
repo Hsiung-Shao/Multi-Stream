@@ -61,8 +61,26 @@ describe('TwitchChatClient：發言失敗的處理', () => {
 });
 
 describe('chatToken：權杖交付與重取', () => {
-    beforeEach(() => { vi.resetModules(); });
-    afterEach(() => { vi.unstubAllGlobals(); });
+    // 這次是用 Twitch 登入（signIn 跳轉前記下的）
+    beforeEach(() => { vi.resetModules(); sessionStorage.setItem('ms_oauth_provider', 'twitch'); });
+    afterEach(() => { vi.unstubAllGlobals(); sessionStorage.clear(); });
+
+    it('這次不是用 Twitch 登入（例如 Discord）時不交出續期權杖', async () => {
+        sessionStorage.setItem('ms_oauth_provider', 'discord');
+        const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const m = await import('../../../src/features/chat/chatToken');
+        await m.captureTwitchChatToken(session('twitch') as never);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('交付成功後清掉登入方式記號，重新整理頁面不會再送一次', async () => {
+        const fetchMock = vi.fn(async () => new Response(JSON.stringify({ access_token: 'a', expires_in: 3600, login: 'me' }), { status: 200 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const m = await import('../../../src/features/chat/chatToken');
+        await m.captureTwitchChatToken(session('twitch') as never);
+        expect(sessionStorage.getItem('ms_oauth_provider')).toBeNull();
+    });
 
     const session = (provider: string, refresh = 'r1') => ({
         access_token: 'jwt', provider_refresh_token: refresh,

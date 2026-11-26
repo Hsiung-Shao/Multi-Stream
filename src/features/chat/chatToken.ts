@@ -8,6 +8,10 @@ export interface ChatCredentials { login: string; token: string }
 export type CredResult = { kind: 'ok'; creds: ChatCredentials } | { kind: 'missing' } | { kind: 'error' };
 
 const REFRESH_BEFORE_MS = 10 * 60_000;
+/** signIn 跳轉前記下這次用哪個平台登入（session 裡的 provider_refresh_token 屬於「這次」的平台） */
+export const OAUTH_PROVIDER_KEY = 'ms_oauth_provider';
+const readProvider = () => { try { return sessionStorage.getItem(OAUTH_PROVIDER_KEY); } catch { return null; } };
+const clearProvider = () => { try { sessionStorage.removeItem(OAUTH_PROVIDER_KEY); } catch { /* 無痕模式 */ } };
 const TIMEOUT_MS = 15_000;
 
 let cached: { creds: ChatCredentials; expiresAt: number } | null = null;
@@ -50,15 +54,17 @@ async function toResult(res: Response | null): Promise<CredResult> {
 
 /**
  * 用 Twitch 登入回來：把只出現在這次 session 的 refresh token 交給伺服器保管。
- * 不看 app_metadata.provider（那是「第一次註冊用的方式」，先用 Google 註冊的人永遠是 google）；
- * 不是 Twitch 的權杖伺服器會驗出來拒收。
+ * 只在「這次是用 Twitch 登入」時交（不看 app_metadata.provider：那是第一次註冊用的方式）；
+ * 用 Discord／Google 登入時 session 裡是那家的權杖，不能送出去。
  */
 export function captureTwitchChatToken(session: Session | null): Promise<void> {
     const refresh = session?.provider_refresh_token;
-    if (!session || !refresh || refresh === capturedRefresh) return capturing ?? Promise.resolve();
+    if (!session || !refresh || refresh === capturedRefresh || readProvider() !== 'twitch') return capturing ?? Promise.resolve();
     capturedRefresh = refresh;
     capturing = (async () => {
         const r = await toResult(await call('POST', session.access_token, { refresh_token: refresh }));
+        // 交過就不再送（重新整理頁面時 session 仍帶著同一個權杖）；失敗保留記號，下次載入再試
+        if (r.kind !== 'error') clearProvider();
         if (r.kind === 'ok') for (const fn of listeners) fn();
     })().finally(() => { capturing = null; });
     return capturing;
