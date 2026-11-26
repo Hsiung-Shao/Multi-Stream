@@ -1,91 +1,50 @@
-// Cloudflare Pages Function: Twitch OAuth Token 端點
-// 此函數用於安全地處理 Twitch OAuth token 請求，避免在前端暴露 Client Secret
+// Cloudflare Pages Function：給前端 Twitch app access token（client secret 只留在伺服器）
 //
-// 環境變數設定（在 Cloudflare Pages 的 Variables & Secrets 中設定）：
-// - TWITCH_CLIENT_ID: Twitch API Client ID
-// - TWITCH_CLIENT_SECRET: Twitch API Client Secret（敏感資訊，使用 Secrets）
+// 環境變數：TWITCH_CLIENT_ID、TWITCH_CLIENT_SECRET（Secrets）；RATE_LIMIT_KV（權杖快取＋限流）
 //
-// CORS：改用 lib/cors.js 的 origin 白名單（multistreaming.org + localhost + preview），
-//       不再對所有來源開放（避免任意站台跨域鑄造 app token）。前端同源呼叫不受影響。
+// 2026-11-27 資安稽核 C 組：
+//   - 權杖共用 lib/twitch-token.js 的 KV 快取，不再每次請求都向 Twitch 換一張新的
+//     （Twitch app 權杖的呼叫額度以 app 為單位，全站共用一張不會讓額度變少）
+//   - 只接受本站頁面發出的請求＋每 IP 每小時 30 次；錯誤不回傳上游細節
+// 這張 app 權杖只能讀公開資料，交給瀏覽器沒有實質損害；要給「能寫入／代表使用者」的權杖時必須改成伺服器代打。
 
-import { jsonResponse, handleOptions } from '../lib/cors.js';
+import { jsonResponse, handleOptions, isRequestFromAllowedSite } from '../lib/cors.js';
+import { getTwitchAppToken } from '../lib/twitch-token.js';
+import { checkQuotas, getVisitorIp, ipKey, quotaWindow } from '../lib/rate-limit.js';
 
-// 支援新舊兩種 API 格式：新格式 onRequestGet(context)、舊格式 onRequestGet(request, env)
-function normalize(contextOrRequest, env) {
-  if (contextOrRequest && contextOrRequest.request) {
-    return { request: contextOrRequest.request, env: contextOrRequest.env };
+const HOURLY_LIMIT_PER_IP = 30;
+// KV 快取的權杖在剩約 1 小時前就會換新，所以拿到的權杖至少還能用 1 小時
+const CLIENT_EXPIRES_IN = 3600;
+
+async function handleTokenRequest({ request, env }) {
+  if (!isRequestFromAllowedSite(request)) {
+    return jsonResponse({ error: 'forbidden' }, 403, request);
   }
-  return { request: contextOrRequest, env };
-}
+  if (!env?.TWITCH_CLIENT_ID || !env?.TWITCH_CLIENT_SECRET) {
+    return jsonResponse({ error: 'unavailable' }, 503, request);
+  }
 
-export async function onRequestGet(contextOrRequest, env) {
-  const n = normalize(contextOrRequest, env);
-  return handleTokenRequest(n.request, n.env);
-}
+  const ip = getVisitorIp(request);
+  if (ip) {
+    const quota = await checkQuotas(env.RATE_LIMIT_KV, [
+      { key: `twitch-token:${ipKey(ip)}:${quotaWindow().hour}`, limit: HOURLY_LIMIT_PER_IP, ttl: 3700 },
+    ]);
+    if (!quota.ok) return jsonResponse({ error: 'rate_limited' }, 429, request);
+  }
 
-export async function onRequestPost(contextOrRequest, env) {
-  const n = normalize(contextOrRequest, env);
-  return handleTokenRequest(n.request, n.env);
-}
-
-async function handleTokenRequest(request, env) {
   try {
-    if (!env) {
-      return jsonResponse({ error: '配置錯誤', message: '環境變數未配置' }, 500, request);
-    }
-
-    const clientId = env.TWITCH_CLIENT_ID;
-    const clientSecret = env.TWITCH_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-      return jsonResponse({ error: '配置錯誤', message: '缺少必要的環境變數' }, 500, request);
-    }
-
-    // 使用 Client Credentials Grant Flow 取得 Token
-    const params = new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      grant_type: 'client_credentials',
-    });
-
-    const response = await fetch('https://id.twitch.tv/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString(),
-    });
-
-    if (!response.ok) {
-      return jsonResponse(
-        { error: '取得 Token 失敗', message: `Twitch API 回應：${response.status} ${response.statusText}` },
-        response.status,
-        request,
-      );
-    }
-
-    const data = await response.json();
-
-    if (!data.access_token) {
-      return jsonResponse({ error: '無效的回應', message: 'Twitch API 回應中沒有 access_token' }, 500, request);
-    }
-
-    // Token 通常有效期 1 小時，建議客戶端快取（略小於 1 小時）
+    const accessToken = await getTwitchAppToken(env);
     return jsonResponse(
-      {
-        access_token: data.access_token,
-        expires_in: data.expires_in || 3600,
-        token_type: data.token_type || 'bearer',
-      },
+      { access_token: accessToken, expires_in: CLIENT_EXPIRES_IN, token_type: 'bearer' },
       200,
       request,
       { 'Cache-Control': 'private, max-age=3000' },
     );
-  } catch (error) {
-    return jsonResponse({ error: '伺服器錯誤', message: error.message || '處理請求時發生未知錯誤' }, 500, request);
+  } catch {
+    return jsonResponse({ error: 'upstream_failed' }, 502, request);
   }
 }
 
-// 處理 OPTIONS 請求（CORS 預檢請求）
-export async function onRequestOptions(contextOrRequest, env) {
-  const n = normalize(contextOrRequest, env);
-  return handleOptions(n.request);
-}
+export const onRequestGet = (context) => handleTokenRequest(context);
+export const onRequestPost = (context) => handleTokenRequest(context);
+export const onRequestOptions = (context) => handleOptions(context.request);

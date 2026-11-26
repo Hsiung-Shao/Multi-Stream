@@ -63,9 +63,14 @@ export async function onRequestPost(context) {
         return jsonResponse({ success: false, error: 'Body too large' }, 413, request);
     }
 
+    // Content-Length 可省略（chunked），實際大小要讀完再量一次
+    const text = await request.text();
+    if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) {
+        return jsonResponse({ success: false, error: 'Body too large' }, 413, request);
+    }
     let body;
     try {
-        body = await request.json();
+        body = JSON.parse(text);
     } catch {
         return jsonResponse({ success: false, error: '無效的 JSON' }, 400, request);
     }
@@ -97,7 +102,9 @@ export async function onRequestPost(context) {
         feedback_type: body.feedbackType,
         content: trimStr(body.content, 5000),
         source: trimStr(body.source, 50) || null,
-        usage_time: Array.isArray(body.usageTime) && body.usageTime.length ? body.usageTime.slice(0, 4) : null,
+        usage_time: Array.isArray(body.usageTime) && body.usageTime.length
+            ? body.usageTime.slice(0, 4).filter((t) => typeof t === 'string').map((t) => t.trim().slice(0, 50))
+            : null,
         usage_duration: trimStr(body.usageDuration, 50) || null,
         rating: typeof body.rating === 'number' ? Math.max(1, Math.min(5, Math.round(body.rating))) : null,
         nps_score: typeof body.npsScore === 'number' ? Math.max(0, Math.min(10, Math.round(body.npsScore))) : null,

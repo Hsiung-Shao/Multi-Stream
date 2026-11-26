@@ -3,67 +3,20 @@ import i18n from '../i18n/i18n';
 // Helper for YouTube API calls
 // Extracted from settings.js to support TDD migration
 
-let youtubeConfigApiKeyPromise: Promise<string | null> | null = null;
-
 // live-og 端點只接受帶這個標頭的請求：讓修正前就開著、沒重新整理的舊分頁停止打端點（2026-10-05，見端點檔頭）。
 // 用戶端節流邏輯有不相容的修正時版本號加一，並同步 functions/api/youtube-channel-live-og.js
 export const LIVE_OG_CLIENT_HEADER = 'X-MS-Live-Client';
 export const LIVE_OG_CLIENT_VERSION = '2';
 
 export const youtubeApi = {
-    // 從 Cloudflare Pages Function 取得 API Key（異步）
-    async getApiKeyFromPagesFunction(): Promise<string | null> {
-        if (youtubeConfigApiKeyPromise) {
-            return youtubeConfigApiKeyPromise;
+    // 2026-11-27：YouTube Data API 改由伺服器代查（/api/youtube/lookup），金鑰不再交給瀏覽器
+    async lookup(query: string): Promise<Record<string, string> | null> {
+        const response = await fetch(`/api/youtube/lookup?${query}`, { headers: { Accept: 'application/json' } });
+        if (response.status === 404) return null;
+        if (!response.ok) {
+            throw new Error(`YouTube 查詢失敗: ${response.status}`);
         }
-
-        youtubeConfigApiKeyPromise = (async () => {
-            try {
-                const apiUrl = '/api/youtube-config';
-
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-
-                    if (data.apiKey) {
-                        return data.apiKey;
-                    }
-                }
-            } catch (error) {
-                // 獲取 API Key 時發生錯誤
-                console.error('Error fetching YouTube API Key:', error);
-                throw new Error(i18n.t('stream:apikey_error'));
-            }
-            return null;
-        })();
-
-        return youtubeConfigApiKeyPromise;
-    },
-
-    // 獲取 YouTube API Key（優先從 Cloudflare Pages Function，然後從 config.js）
-    async getApiKey(): Promise<string | null> {
-        // 優先從 Cloudflare Pages Function 獲取
-        try {
-            const apiKeyFromFunction = await this.getApiKeyFromPagesFunction();
-            if (apiKeyFromFunction) {
-                return apiKeyFromFunction;
-            }
-        } catch (e) {
-            console.warn("Failed to get API key from function", e);
-        }
-
-        // 回退到 config.js (保路供本地測試使用)
-        if (typeof window !== 'undefined' && (window as any).CONFIG && (window as any).CONFIG.YOUTUBE_API_KEY) {
-            return (window as any).CONFIG.YOUTUBE_API_KEY;
-        }
-
-        return null;
+        return response.json();
     },
 
     // 從 videoID 透過 YouTube Data API 獲取頻道真實 ID
@@ -74,78 +27,26 @@ export const youtubeApi = {
 
     // 獲取影片詳細資訊
     async getVideoInfo(videoId: string): Promise<{ title: string; channelId: string; channelTitle: string }> {
-        const apiKey = await this.getApiKey();
-        if (!apiKey) {
-            throw new Error('YouTube API Key 未配置');
-        }
-
         if (!videoId || typeof videoId !== 'string') {
             throw new Error(i18n.t('stream:youtube_video_id_invalid', { videoId: 'unknown' }));
         }
-
-        try {
-            const url = `https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(videoId)}&part=snippet&key=${encodeURIComponent(apiKey)}`;
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`YouTube API 請求失敗: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (!data.items || data.items.length === 0) {
-                throw new Error(i18n.t('stream:video_not_found'));
-            }
-
-            const snippet = data.items[0].snippet;
-            if (!snippet) {
-                throw new Error(i18n.t('stream:fetch_video_error'));
-            }
-
-            return {
-                title: snippet.title,
-                channelId: snippet.channelId,
-                channelTitle: snippet.channelTitle
-            };
-        } catch (error) {
-            throw error;
+        const data = await this.lookup(`videoId=${encodeURIComponent(videoId)}`);
+        if (!data) {
+            throw new Error(i18n.t('stream:video_not_found'));
         }
+        return { title: data.title, channelId: data.channelId, channelTitle: data.channelTitle };
     },
 
     // 從 channelID 透過 YouTube Data API 獲取頻道標題
     async getChannelTitleFromChannelId(channelId: string): Promise<string> {
-        const apiKey = await this.getApiKey();
-        if (!apiKey) {
-            throw new Error('YouTube API Key 未配置');
-        }
-
         if (!channelId || typeof channelId !== 'string') {
             throw new Error(i18n.t('stream:channel_id_invalid'));
         }
-
-        try {
-            const url = `https://www.googleapis.com/youtube/v3/channels?id=${encodeURIComponent(channelId)}&part=snippet&key=${encodeURIComponent(apiKey)}`;
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`YouTube API 請求失敗: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (!data.items || data.items.length === 0) {
-                throw new Error(i18n.t('stream:channel_not_found'));
-            }
-
-            const title = data.items[0].snippet?.title;
-            if (!title) {
-                throw new Error(i18n.t('stream:fetch_channel_error'));
-            }
-
-            return title;
-        } catch (error) {
-            throw error;
+        const data = await this.lookup(`channelId=${encodeURIComponent(channelId)}`);
+        if (!data?.channelTitle) {
+            throw new Error(i18n.t('stream:channel_not_found'));
         }
+        return data.channelTitle;
     },
 
     // 透過後端抓取端點(零 YouTube Data API quota)把 @handle / 自訂網址名稱解析成

@@ -1,17 +1,70 @@
 // Cloudflare Pages Function: YouTube 頻道頁面代理端點
 // 用於代理 YouTube 頻道頁面請求，解決 CORS 問題，用於提取 channel ID
 
-export async function onRequestGet(contextOrRequest, env) {
-  let request, envObj;
-  if (contextOrRequest && contextOrRequest.request) {
-    request = contextOrRequest.request;
-    envObj = contextOrRequest.env;
-  } else {
-    request = contextOrRequest;
-    envObj = env;
+import { getCorsHeaders, isRequestFromAllowedSite } from '../lib/cors.js';
+import { checkQuotas, getVisitorIp, ipKey, quotaWindow } from '../lib/rate-limit.js';
+import { writeChannelCacheBackground } from '../lib/youtube-channel-cache.js';
+
+// 2026-11-27 資安稽核 C 組：比照 youtube-channel-live-og 補上降載控制（整頁抓 YouTube 單次 CPU 接近免費方案上限）
+//   - 只接受本站頁面發出的請求（header 可偽造，真正防線是 WAF）
+//   - Cache API 以小寫 handle 為鍵（YouTube handle 不分大小寫，避免換大小寫或加參數繞過快取）
+//   - 未命中快取時每 IP 每小時 30 次；抓 YouTube 逾時 8 秒
+//   - 解析到的頻道名由伺服器寫進 youtube_channels
+const CACHE_TTL_SECONDS = 86400;
+const NOT_FOUND_CACHE_TTL_SECONDS = 3600;
+const HOURLY_LIMIT_PER_IP = 30;
+const YOUTUBE_TIMEOUT_MS = 8000;
+
+function toClientResponse(response, request, cacheStatus) {
+  const out = new Response(response.body, response);
+  out.headers.set('Cache-Control', 'no-store');
+  out.headers.delete('Access-Control-Allow-Origin');
+  for (const [key, value] of Object.entries(getCorsHeaders(request, { methods: 'GET, OPTIONS' }))) {
+    out.headers.set(key, value);
   }
-  
-  return handleChannelPageRequest(request, envObj);
+  if (cacheStatus) out.headers.set('X-Edge-Cache', cacheStatus);
+  return out;
+}
+
+export async function onRequestGet(context) {
+  const { request, env } = context;
+  if (!isRequestFromAllowedSite(request)) {
+    return toClientResponse(new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { 'Content-Type': 'application/json' } }), request);
+  }
+
+  const url = new URL(request.url);
+  const handle = (url.searchParams.get('username') || url.searchParams.get('handle') || '').replace(/^@/, '').trim().toLowerCase();
+  // 格式不合交給原邏輯回 400，不進快取
+  if (!handle || handle.length > 100) return toClientResponse(await handleChannelPageRequest(request, env), request);
+
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  const cacheKey = new Request(`${url.origin}/api/youtube-channel-page?handle=${encodeURIComponent(handle)}`);
+  if (cache) {
+    const hit = await cache.match(cacheKey);
+    if (hit) return toClientResponse(hit, request, 'HIT');
+  }
+
+  const ip = getVisitorIp(request);
+  if (ip) {
+    const quota = await checkQuotas(env?.RATE_LIMIT_KV, [
+      { key: `yt-channel-page:${ipKey(ip)}:${quotaWindow().hour}`, limit: HOURLY_LIMIT_PER_IP, ttl: 3700 },
+    ]);
+    if (!quota.ok) {
+      return toClientResponse(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { 'Content-Type': 'application/json' } }), request);
+    }
+  }
+
+  const response = await handleChannelPageRequest(request, env);
+  if (response.status === 200) {
+    const data = await response.clone().json().catch(() => null);
+    context.waitUntil?.(writeChannelCacheBackground(env, data?.channelId, data?.channelTitle));
+  }
+  if (cache && (response.status === 200 || response.status === 404)) {
+    const stored = new Response(response.clone().body, response);
+    stored.headers.set('Cache-Control', `public, max-age=${response.status === 200 ? CACHE_TTL_SECONDS : NOT_FOUND_CACHE_TTL_SECONDS}`);
+    context.waitUntil?.(cache.put(cacheKey, stored));
+  }
+  return toClientResponse(response, request, 'MISS');
 }
 
 async function handleChannelPageRequest(request, env) {
@@ -55,6 +108,7 @@ async function handleChannelPageRequest(request, env) {
     // 從 YouTube 獲取頻道頁面 HTML
     const response = await fetch(channelUrl, {
       method: 'GET',
+      signal: AbortSignal.timeout(YOUTUBE_TIMEOUT_MS),
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -317,15 +371,7 @@ async function handleChannelPageRequest(request, env) {
 }
 
 // 處理 OPTIONS 請求（CORS 預檢請求）
-export async function onRequestOptions(contextOrRequest, env) {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400' // 24 小時
-    }
-  });
+export function onRequestOptions(context) {
+  return new Response(null, { status: 204, headers: getCorsHeaders(context.request, { methods: 'GET, OPTIONS' }) });
 }
 

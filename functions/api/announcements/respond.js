@@ -18,7 +18,7 @@
 
 import { jsonResponse, handleOptions, readJsonBody } from '../../lib/cors.js';
 import { getUserIdFromRequest } from '../../lib/auth-helper.js';
-import { getVisitorIp, ipKey, isIpBanned } from '../../lib/rate-limit.js';
+import { checkQuotas, getVisitorIp, ipKey, isIpBanned, quotaWindow } from '../../lib/rate-limit.js';
 import { insert } from '../../lib/supabase-server.js';
 import { logError } from '../../lib/logger.js';
 import {
@@ -31,6 +31,7 @@ import {
 } from '../../lib/announcements.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
+const ANON_RESPONSES_PER_IP_PER_DAY = 5;
 
 export async function onRequestPost(context) {
     const { request, env } = context;
@@ -126,6 +127,17 @@ export async function onRequestPost(context) {
                 : Promise.resolve({ allowed: true }),
         ]);
         if (!ipCheck.allowed || !devCheck.allowed) {
+            return jsonResponse({ ok: false, error: 'rate_limited' }, 429, request);
+        }
+    }
+
+    // 匿名去重只靠自填的 device_id，換一個就是新的一票：同一 IP（IPv6 取 /64）對同一則公告每天最多 5 筆
+    // shortcut: 同一網路出口後的第 6 位匿名者當天會被擋；要放寬就改成 Turnstile
+    if (!isAuthed && ip) {
+        const annQuota = await checkQuotas(env.RATE_LIMIT_KV, [
+            { key: `ann:${announcement_id}:ip:${ipKey(ip)}:${quotaWindow().day}`, limit: ANON_RESPONSES_PER_IP_PER_DAY, ttl: 90000 },
+        ]);
+        if (!annQuota.ok) {
             return jsonResponse({ ok: false, error: 'rate_limited' }, 429, request);
         }
     }

@@ -120,8 +120,13 @@ export async function readJsonBody(request, maxBytes) {
     if (contentLength > maxBytes) {
         return { ok: false, response: jsonResponse({ ok: false, error: 'body_too_large' }, 413, request) };
     }
+    // Content-Length 可省略（chunked），實際大小要讀完再量一次
+    const text = await request.text();
+    if (new TextEncoder().encode(text).length > maxBytes) {
+        return { ok: false, response: jsonResponse({ ok: false, error: 'body_too_large' }, 413, request) };
+    }
     try {
-        const body = await request.json();
+        const body = JSON.parse(text);
         return { ok: true, body };
     } catch {
         return { ok: false, response: jsonResponse({ ok: false, error: 'invalid_json' }, 400, request) };

@@ -124,6 +124,14 @@ export function nameMatches(vtuberName, xName, xDescription = '', { xHandle = ''
   return sharesCjkRun(a, b);
 }
 
+/** 強比對（可自動寫入）：X 帳號等於 YouTube handle（去掉 _ - . 後至少 4 字），或正規化後的名稱完全相同 */
+export function strongMatch(vtuberName, xName, { xHandle = '', ytHandle = '' } = {}) {
+  const h = normalizeHandle(xHandle);
+  if (h.length >= 4 && h === normalizeHandle(ytHandle)) return true;
+  const a = normalizeName(vtuberName);
+  return !!a && a === normalizeName(xName);
+}
+
 /** 名稱裡太常見、不能拿來認人的英數段 */
 const GENERIC_TOKENS = new Set(['vtuber', 'vtubers', 'channel', 'official', 'gaming', 'games', 'live', 'stream', 'studio', 'project', 'music']);
 
@@ -145,8 +153,12 @@ export function nameTokens(name) {
  */
 export function decideHandle(vtuberName, handles, checked, ytHandle = '') {
   if (!handles.length) return { action: 'none', reason: 'no_x_link' };
-  const hit = checked.find((c) => c.profile?.ok && nameMatches(vtuberName, c.profile.user.name, c.profile.user.description, { xHandle: c.profile.user.screen_name, ytHandle }));
-  if (hit) return { action: 'write', handle: hit.handle, reason: handles.length > 1 ? 'matched_of_many' : 'ok' };
+  const ok = checked.filter((c) => c.profile?.ok);
+  // 自動寫入只收強比對：弱比對看的都是 X 帳號自己能改的顯示名稱／簡介，關於頁上的繪師、合作帳號也可能對上（資安稽核 2026-11-27）
+  const strong = ok.find((c) => strongMatch(vtuberName, c.profile.user.name, { xHandle: c.profile.user.screen_name, ytHandle }));
+  if (strong) return { action: 'write', handle: strong.handle, reason: handles.length > 1 ? 'matched_of_many' : 'ok' };
+  const weak = ok.find((c) => nameMatches(vtuberName, c.profile.user.name, c.profile.user.description, { xHandle: c.profile.user.screen_name, ytHandle }));
+  if (weak) return { action: 'review', handle: weak.handle, reason: 'weak_match', xName: weak.profile.user.name };
   const first = checked[0];
   if (!first?.profile?.ok) return { action: 'review', handle: handles[0], reason: `profile_${first?.profile?.reason ?? 'unknown'}` };
   return { action: 'review', handle: handles[0], reason: 'name_mismatch', xName: first.profile.user.name };
