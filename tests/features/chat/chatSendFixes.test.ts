@@ -113,7 +113,7 @@ describe('chatToken：權杖交付與重取', () => {
         vi.stubGlobal('fetch', fetchMock);
         const m = await import('../../../src/features/chat/chatToken');
         const capture = m.captureTwitchChatToken(session('twitch') as never);
-        const get = m.getChatCredentials('jwt');
+        const get = m.getChatCredentials('jwt', 'u');
         resolvePost(new Response(JSON.stringify({ access_token: 'a', expires_in: 3600, login: 'me' }), { status: 200 }));
         await capture;
         expect((await get)?.login).toBe('me');
@@ -122,8 +122,30 @@ describe('chatToken：權杖交付與重取', () => {
     it('暫時性錯誤（502）不算沒授權，回報 error 讓呼叫端保留現有權杖', async () => {
         vi.stubGlobal('fetch', vi.fn(async () => new Response('x', { status: 502 })));
         const m = await import('../../../src/features/chat/chatToken');
-        expect(await m.fetchChatCredentials('jwt')).toEqual({ kind: 'error' });
+        expect(await m.fetchChatCredentials('jwt', 'u')).toEqual({ kind: 'error' });
         vi.stubGlobal('fetch', vi.fn(async () => new Response('x', { status: 404 })));
-        expect(await m.fetchChatCredentials('jwt')).toEqual({ kind: 'missing' });
+        expect(await m.fetchChatCredentials('jwt', 'u')).toEqual({ kind: 'missing' });
+    });
+
+    it('權杖快取綁定登入帳號：換成另一個帳號（不同登入 token）時不沿用前一位的權杖', async () => {
+        const fetchMock = vi.fn(async (_u: string, init?: RequestInit) => new Response(JSON.stringify({
+            access_token: (init?.headers as Record<string, string>).Authorization === 'Bearer jwtA' ? 'tokA' : 'tokB', expires_in: 3600, login: 'me',
+        }), { status: 200 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const m = await import('../../../src/features/chat/chatToken');
+        expect((await m.getChatCredentials('jwtA', 'userA'))?.token).toBe('tokA');
+        expect((await m.getChatCredentials('jwtB', 'userB'))?.token).toBe('tokB');
+    });
+
+    it('登出後才回來的權杖回應不寫進快取', async () => {
+        let resolve!: (r: Response) => void;
+        vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(r => { resolve = r; })));
+        const m = await import('../../../src/features/chat/chatToken');
+        const pending = m.getChatCredentials('jwtA', 'userA');
+        m.resetChatCredentials();
+        resolve(new Response(JSON.stringify({ access_token: 'tokA', expires_in: 3600, login: 'me' }), { status: 200 }));
+        await pending;
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 404 })));
+        expect(await m.getChatCredentials('jwtB', 'userB')).toBeNull();
     });
 });

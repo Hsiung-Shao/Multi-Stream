@@ -14,7 +14,10 @@ const readProvider = () => { try { return sessionStorage.getItem(OAUTH_PROVIDER_
 const clearProvider = () => { try { sessionStorage.removeItem(OAUTH_PROVIDER_KEY); } catch { /* 無痕模式 */ } };
 const TIMEOUT_MS = 15_000;
 
-let cached: { creds: ChatCredentials; expiresAt: number } | null = null;
+/** 快取綁定登入帳號：換帳號時不能把前一位的 Twitch 權杖交給下一位 */
+let cached: { userId: string; creds: ChatCredentials; expiresAt: number } | null = null;
+/** 每次重設加一：重設前發出、重設後才回來的回應不寫進快取（登出途中的在途請求） */
+let generation = 0;
 /** 正在把續期權杖交給伺服器：這段期間查權杖要等它，否則會先拿到 404 誤判成沒授權 */
 let capturing: Promise<void> | null = null;
 /** 已交過的續期權杖：切回分頁 Supabase 會再發登入事件，同一個不重送 */
@@ -41,14 +44,15 @@ async function call(method: 'GET' | 'POST', accessToken: string, body?: unknown)
 }
 
 /** 404／403＝這個帳號沒有發言授權；其他失敗是暫時的（呼叫端保留現有權杖、稍後再試） */
-async function toResult(res: Response | null): Promise<CredResult> {
+async function toResult(res: Response | null, userId: string, gen: number): Promise<CredResult> {
+    if (gen !== generation) return { kind: 'error' };
     if (!res) return { kind: 'error' };
     if (res.status === 404 || res.status === 403) { cached = null; return { kind: 'missing' }; }
     if (!res.ok) return { kind: 'error' };
     const d = await res.json().catch(() => null) as { access_token?: string; expires_in?: number; login?: string } | null;
-    if (!d?.access_token || !d.login) return { kind: 'error' };
+    if (!d?.access_token || !d.login || gen !== generation) return { kind: 'error' };
     const ttl = Math.max(60_000, Math.min((d.expires_in ?? 3600) * 1000, 60 * 60_000) - REFRESH_BEFORE_MS);
-    cached = { creds: { login: d.login, token: d.access_token }, expiresAt: Date.now() + ttl };
+    cached = { userId, creds: { login: d.login, token: d.access_token }, expiresAt: Date.now() + ttl };
     return { kind: 'ok', creds: cached.creds };
 }
 
@@ -62,7 +66,8 @@ export function captureTwitchChatToken(session: Session | null): Promise<void> {
     if (!session || !refresh || refresh === capturedRefresh || readProvider() !== 'twitch') return capturing ?? Promise.resolve();
     capturedRefresh = refresh;
     capturing = (async () => {
-        const r = await toResult(await call('POST', session.access_token, { refresh_token: refresh }));
+        const gen = generation;
+        const r = await toResult(await call('POST', session.access_token, { refresh_token: refresh }), session.user.id, gen);
         // 交過就不再送（重新整理頁面時 session 仍帶著同一個權杖）；失敗保留記號，下次載入再試
         if (r.kind !== 'error') clearProvider();
         if (r.kind === 'ok') for (const fn of listeners) fn();
@@ -71,21 +76,23 @@ export function captureTwitchChatToken(session: Session | null): Promise<void> {
 }
 
 /** 向伺服器取權杖（會先等進行中的交付），回報 ok／missing／error */
-export async function fetchChatCredentials(accessToken: string | null): Promise<CredResult> {
+export async function fetchChatCredentials(accessToken: string | null, userId: string): Promise<CredResult> {
     if (capturing) await capturing;
-    if (cached && Date.now() < cached.expiresAt) return { kind: 'ok', creds: cached.creds };
+    if (cached && cached.userId === userId && Date.now() < cached.expiresAt) return { kind: 'ok', creds: cached.creds };
     if (!accessToken) return { kind: 'missing' };
-    return toResult(await call('GET', accessToken));
+    const gen = generation;
+    return toResult(await call('GET', accessToken), userId, gen);
 }
 
 /** 只要權杖本身（沒有就 null） */
-export async function getChatCredentials(accessToken: string | null): Promise<ChatCredentials | null> {
-    const r = await fetchChatCredentials(accessToken);
+export async function getChatCredentials(accessToken: string | null, userId: string): Promise<ChatCredentials | null> {
+    const r = await fetchChatCredentials(accessToken, userId);
     return r.kind === 'ok' ? r.creds : null;
 }
 
 /** 換帳號或登出時清掉記憶體（伺服器保管的不刪：登出只登出這台，其他裝置照樣能發言；刪帳號時資料庫會連帶刪除） */
 export function resetChatCredentials(): void {
+    generation++;
     cached = null;
     capturedRefresh = null;
 }

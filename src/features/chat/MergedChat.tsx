@@ -32,7 +32,7 @@ function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing'
         const load = async () => {
             clearTimeout(timer);
             setState(s => (s === 'ready' ? s : 'pending'));
-            const r = await fetchChatCredentials(await getAccessToken());
+            const r = await fetchChatCredentials(await getAccessToken(), twitchUser);
             if (!on) return;
             if (r.kind === 'ok') { c.setCredentials(r.creds); setState('ready'); }
             else if (r.kind === 'missing') { c.setCredentials(null); setState('missing'); }
