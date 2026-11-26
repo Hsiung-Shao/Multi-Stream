@@ -40,7 +40,10 @@ beforeEach(() => {
     pending = [];
     stubCache();
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+});
 
 // ───────────── C1：twitch-token ─────────────
 describe('twitch-token 端點', () => {
@@ -90,7 +93,7 @@ describe('twitch-token 端點', () => {
         expect(put).not.toHaveBeenCalled();
     });
 
-    it('C1e 帶上已失效的權杖時換一張新的，帶舊的別張則沿用快取', async () => {
+    it('C1e 換發超過 60 秒後帶上已失效的權杖會換新，帶舊的別張則沿用快取', async () => {
         let n = 0;
         fetchMock.mockImplementation(async () => new Response(JSON.stringify({ access_token: `at-${++n}`, expires_in: 5000000 }), { status: 200 }));
         const env = mkEnv();
@@ -99,10 +102,26 @@ describe('twitch-token 端點', () => {
         const notStale = await (await twitchTokenGet({ request: mkReq({ ...SAME_ORIGIN, 'X-Stale-Token': 'at-old' }), env, waitUntil })).json();
         await flush();
         expect(notStale.access_token).toBe(first.access_token);
+        // 換發冷卻 60 秒（見 C1f）：過了冷卻時間才會換新
+        const realNow = Date.now();
+        vi.spyOn(Date, 'now').mockReturnValue(realNow + 61_000);
         const renewed = await (await twitchTokenGet({ request: mkReq({ ...SAME_ORIGIN, 'X-Stale-Token': first.access_token }), env, waitUntil })).json();
         await flush();
         expect(renewed.access_token).not.toBe(first.access_token);
         expect(tokenCalls()).toBe(2);
+    });
+
+    it('C1f 剛換發不到 60 秒時，即使帶上目前的權杖也不再換新', async () => {
+        let n = 0;
+        fetchMock.mockImplementation(async () => new Response(JSON.stringify({ access_token: `at-${++n}`, expires_in: 5000000 }), { status: 200 }));
+        const env = mkEnv();
+        let current = (await (await twitchTokenGet({ request: mkReq(SAME_ORIGIN), env, waitUntil })).json()).access_token;
+        await flush();
+        for (let i = 0; i < 5; i++) {
+            current = (await (await twitchTokenGet({ request: mkReq({ ...SAME_ORIGIN, 'X-Stale-Token': current }), env, waitUntil })).json()).access_token;
+            await flush();
+        }
+        expect(tokenCalls()).toBe(1);
     });
 
     it('C1d Twitch 回 500 時不外洩上游狀態碼與環境變數名稱', async () => {

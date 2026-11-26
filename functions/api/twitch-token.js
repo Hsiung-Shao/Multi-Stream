@@ -7,18 +7,20 @@
 //   - 給瀏覽器的權杖放 Cache API（edge，不吃 KV 每日 1,000 次寫入額度），同一機房 1 小時內共用一張，
 //     不再每次請求都向 Twitch 換新的（Twitch app 權杖的呼叫額度以 app 為單位，共用不會讓額度變少）
 //   - 與排程用的權杖（lib/twitch-token.js 的 KV 快取）分開：瀏覽器拿到的權杖可被任何人撤銷，不能拖累排程
-//   - 前端遇到 401 會帶 X-Stale-Token 重取；它等於快取裡那張就換一張新的
-//     shortcut: 有人反覆撤銷＋重取時每輪都會換新權杖；真的發生再加每機房冷卻時間
+//   - 前端遇到 401 會帶 X-Stale-Token 重取；它等於快取裡那張、且換發已超過 60 秒才換新的
+//     （冷卻時間：任何人都能帶上目前的權杖，不能讓它變成「每次請求換一張」）
 // 這張 app 權杖只能讀公開資料；要給「能寫入／代表使用者」的權杖時必須改成伺服器代打。
-// Cache API 只在自訂網域生效，*.pages.dev 上是 no-op（等同每次都換新，與改版前相同）。
+// Cache API 只在自訂網域生效，*.pages.dev 上是 no-op（每次請求都換新，只影響預覽站）。
 
 import { jsonResponse, handleOptions, isRequestFromAllowedSite } from '../lib/cors.js';
 import { fetchNewToken } from '../lib/twitch-token.js';
 
 const CLIENT_TOKEN_TTL_SECONDS = 3600;
+const REMINT_COOLDOWN_MS = 60 * 1000;
 const CACHE_KEY = 'https://cache.internal/api/twitch-token/client-app-token';
 
-async function handleTokenRequest({ request, env, waitUntil }) {
+async function handleTokenRequest(context) {
+  const { request, env } = context;
   if (!isRequestFromAllowedSite(request)) {
     return jsonResponse({ error: 'forbidden' }, 403, request);
   }
@@ -31,8 +33,9 @@ async function handleTokenRequest({ request, env, waitUntil }) {
   let accessToken = null;
   if (cache) {
     const hit = await cache.match(CACHE_KEY);
-    const cached = hit ? (await hit.json().catch(() => null))?.access_token : null;
-    if (cached && cached !== stale) accessToken = cached;
+    const cached = hit ? await hit.json().catch(() => null) : null;
+    const coolingDown = Date.now() - (cached?.minted_at ?? 0) < REMINT_COOLDOWN_MS;
+    if (cached?.access_token && (cached.access_token !== stale || coolingDown)) accessToken = cached.access_token;
   }
 
   if (!accessToken) {
@@ -43,11 +46,11 @@ async function handleTokenRequest({ request, env, waitUntil }) {
     }
     if (!accessToken) return jsonResponse({ error: 'upstream_failed' }, 502, request);
     if (cache) {
-      const stored = new Response(JSON.stringify({ access_token: accessToken }), {
+      const stored = new Response(JSON.stringify({ access_token: accessToken, minted_at: Date.now() }), {
         headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${CLIENT_TOKEN_TTL_SECONDS}` },
       });
       const put = cache.put(CACHE_KEY, stored);
-      if (waitUntil) waitUntil(put); else await put;
+      if (context.waitUntil) context.waitUntil(put); else await put;
     }
   }
 

@@ -14,6 +14,8 @@
 --   D4c  old_song_deleted=t         一般歌（1 個鍵、無片段）照常被刪
 --   D4d  split_then_renamed_restored=t  拆開後管理員改名（恰好 1 個鍵）仍受保護，還原回拆出的歌
 --   D4e  later_split_kept=t         還原不會蓋掉送出修改之後才做的拆開
+--   D4f  revert_earliest_of_two_restored=t  兩筆修改只有第二筆改了鍵，還原第一筆時仍寫回拆出的歌
+--   D4g  renamed_and_back_restored=t  改名再改回（鍵看起來沒變）後還原第一筆，仍寫回拆出的歌
 -- 修正前（現況）：D4a=f、D4b1=f、D4b2=f、D4c=t
 begin;
 set constraints all immediate;
@@ -149,5 +151,73 @@ select public.admin_revert_song_edit(:'sub_e'::uuid) is not null as reverted_e \
 select 'D4e' as t,
   coalesce((select song_id from public.song_segments where code = (select v from d4 where k = 'e_seg2'))
            = (select v::bigint from d4 where k = 'e_s2'), false) as later_split_kept;
+
+-- ───────────── D4f：拆開 → 社群修改 1（不動第二片段）→ 社群修改 2（改第二片段名）→ 還原修改 1 ─────────────
+insert into public.song_videos (video_id, title, status) values ('D4fffffffff', 'D4f 測試歌回', 'published');
+insert into public.song_segments (video_ref, start_seconds, end_seconds, title, original_artist, position)
+select id, 0, 100, 'D4測試己歌', null, 0 from public.song_videos where video_id = 'D4fffffffff';
+insert into public.song_segments (video_ref, start_seconds, end_seconds, title, original_artist, position)
+select id, 200, 300, 'D4測試己歌', null, 1 from public.song_videos where video_id = 'D4fffffffff';
+insert into d4 select 'f_seg2', code from public.song_segments where start_seconds = 200 and video_ref = (select id from public.song_videos where video_id = 'D4fffffffff');
+select public.admin_split_segment((select id from public.song_segments where code = (select v from d4 where k = 'f_seg2'))) is not null as split_f \gset
+insert into d4 select 'f_s2', song_id::text from public.song_segments where code = (select v from d4 where k = 'f_seg2');
+select (public.community_save_song_video(
+  'D4fffffffff',
+  (select updated_at from public.song_videos where video_id = 'D4fffffffff'),
+  '{"title":"D4f 測試歌回"}'::jsonb,
+  (select jsonb_agg(jsonb_build_object(
+      'code', s.code, 'start_seconds', s.start_seconds, 'end_seconds', s.end_seconds,
+      'title', case when s.start_seconds = 0 then 'D4改名後己歌一' else s.title end,
+      'original_artist', s.original_artist, 'position', s.position) order by s.start_seconds)
+     from public.song_segments s where s.video_ref = (select id from public.song_videos where video_id = 'D4fffffffff')),
+  '{"ip_hash":"d4d4d4d4d4d4d4d4d4d4"}'::jsonb))->>'submission_id' as sub_f1 \gset
+select (public.community_save_song_video(
+  'D4fffffffff',
+  (select updated_at from public.song_videos where video_id = 'D4fffffffff'),
+  '{"title":"D4f 測試歌回"}'::jsonb,
+  (select jsonb_agg(jsonb_build_object(
+      'code', s.code, 'start_seconds', s.start_seconds, 'end_seconds', s.end_seconds,
+      'title', case when s.start_seconds = 200 then 'D4改名後己歌二' else s.title end,
+      'original_artist', s.original_artist, 'position', s.position) order by s.start_seconds)
+     from public.song_segments s where s.video_ref = (select id from public.song_videos where video_id = 'D4fffffffff')),
+  '{"ip_hash":"d4d4d4d4d4d4d4d4d4d4"}'::jsonb))->>'submission_id' as sub_f2 \gset
+select public.admin_revert_song_edit(:'sub_f1'::uuid) is not null as reverted_f \gset
+select 'D4f' as t,
+  coalesce((select song_id from public.song_segments where code = (select v from d4 where k = 'f_seg2'))
+           = (select v::bigint from d4 where k = 'f_s2'), false) as revert_earliest_of_two_restored;
+
+-- ───────────── D4g：拆開 → 社群修改 1（第二片段改名）→ 社群修改 2（改回原名）→ 還原修改 1 ─────────────
+insert into public.song_videos (video_id, title, status) values ('D4ggggggggg', 'D4g 測試歌回', 'published');
+insert into public.song_segments (video_ref, start_seconds, end_seconds, title, original_artist, position)
+select id, 0, 100, 'D4測試庚歌', null, 0 from public.song_videos where video_id = 'D4ggggggggg';
+insert into public.song_segments (video_ref, start_seconds, end_seconds, title, original_artist, position)
+select id, 200, 300, 'D4測試庚歌', null, 1 from public.song_videos where video_id = 'D4ggggggggg';
+insert into d4 select 'g_seg2', code from public.song_segments where start_seconds = 200 and video_ref = (select id from public.song_videos where video_id = 'D4ggggggggg');
+select public.admin_split_segment((select id from public.song_segments where code = (select v from d4 where k = 'g_seg2'))) is not null as split_g \gset
+insert into d4 select 'g_s2', song_id::text from public.song_segments where code = (select v from d4 where k = 'g_seg2');
+select (public.community_save_song_video(
+  'D4ggggggggg',
+  (select updated_at from public.song_videos where video_id = 'D4ggggggggg'),
+  '{"title":"D4g 測試歌回"}'::jsonb,
+  (select jsonb_agg(jsonb_build_object(
+      'code', s.code, 'start_seconds', s.start_seconds, 'end_seconds', s.end_seconds,
+      'title', case when s.start_seconds = 200 then 'D4改名後庚歌' else s.title end,
+      'original_artist', s.original_artist, 'position', s.position) order by s.start_seconds)
+     from public.song_segments s where s.video_ref = (select id from public.song_videos where video_id = 'D4ggggggggg')),
+  '{"ip_hash":"d4d4d4d4d4d4d4d4d4d4"}'::jsonb))->>'submission_id' as sub_g1 \gset
+select (public.community_save_song_video(
+  'D4ggggggggg',
+  (select updated_at from public.song_videos where video_id = 'D4ggggggggg'),
+  '{"title":"D4g 測試歌回"}'::jsonb,
+  (select jsonb_agg(jsonb_build_object(
+      'code', s.code, 'start_seconds', s.start_seconds, 'end_seconds', s.end_seconds,
+      'title', 'D4測試庚歌',
+      'original_artist', s.original_artist, 'position', s.position) order by s.start_seconds)
+     from public.song_segments s where s.video_ref = (select id from public.song_videos where video_id = 'D4ggggggggg')),
+  '{"ip_hash":"d4d4d4d4d4d4d4d4d4d4"}'::jsonb))->>'submission_id' as sub_g2 \gset
+select public.admin_revert_song_edit(:'sub_g1'::uuid) is not null as reverted_g \gset
+select 'D4g' as t,
+  coalesce((select song_id from public.song_segments where code = (select v from d4 where k = 'g_seg2'))
+           = (select v::bigint from d4 where k = 'g_s2'), false) as renamed_and_back_restored;
 
 rollback;

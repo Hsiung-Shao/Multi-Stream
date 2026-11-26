@@ -7,7 +7,7 @@
 --      既有資料回填：鍵數 ≠ 1，或建立後被更新過（只有改名／合併會更新 songs 列）
 --   2. _song_segments_gc：curated 的歌不刪
 --   3. community_save_song_video：修改前快照多記每個片段的 song_id
---   4. admin_revert_song_edit：只對「這筆修改改了比對鍵」的片段，照快照把 song_id 寫回
+--   4. admin_revert_song_edit：只對「還原前的比對鍵與快照不同，或一併還原的修改改過鍵」的片段，照快照把 song_id 寫回
 --   函式整支重建，其餘邏輯與 20261027014344／20261027014449／20261106073006 相同。
 --
 -- 回滾：重新執行上述三個 migration 裡這六支函式的定義，再 alter table public.songs drop column curated;
@@ -306,6 +306,7 @@ declare
     v public.song_videos;
     v_segs jsonb;
     v_count integer;
+    v_cur_keys jsonb;
 begin
     select * into s from public.song_submissions where id = p_submission for update;
     if not found then
@@ -333,6 +334,12 @@ begin
         into v_segs
         from jsonb_array_elements(s.before->'segments') e;
 
+        -- 還原前各片段目前的比對鍵（鍵可能是這筆或之後的修改改掉的）
+        select coalesce(jsonb_object_agg(x.id::text, jsonb_build_array(
+                   public.song_norm_text(x.title), coalesce(public.song_norm_text(x.original_artist), ''))), '{}'::jsonb)
+        into v_cur_keys
+        from public.song_segments x where x.video_ref = v.id;
+
         -- 剪輯來源一律依快照寫回；舊快照缺 key 時值為 null＝清除（當時本來就沒有）
         perform public._save_song_video(v.id, jsonb_build_object(
             'video_id', v.video_id,
@@ -344,8 +351,8 @@ begin
             'clip_channel_name', s.before->'video'->'clip_channel_name',
             'clip_channel_url', s.before->'video'->'clip_channel_url'), v_segs);
 
-        -- 這筆修改改了比對鍵的片段，trigger 會依鍵重配、丟掉管理員的拆開／合併：照快照把歸屬寫回。
-        -- 只寫回「這筆修改確實改了鍵」的片段（之後管理員才做的拆開不被蓋掉），且歌還在才寫。
+        -- 比對鍵被改過的片段，trigger 會依鍵重配、丟掉管理員的拆開／合併：照快照把歸屬寫回。
+        -- 只寫回「還原前的鍵與快照不同」的片段（鍵沒變、之後管理員才拆開的不被蓋掉），且歌還在才寫。
         update public.song_segments x
         set song_id = (e->>'song_id')::bigint
         from jsonb_array_elements(s.before->'segments') e
@@ -354,12 +361,21 @@ begin
           and x.video_ref = v.id
           and x.song_id is distinct from (e->>'song_id')::bigint
           and exists (select 1 from public.songs so where so.id = (e->>'song_id')::bigint)
-          and exists (
-              select 1 from jsonb_array_elements(s.segments) n
-              where n->>'code' = e->>'code'
-                and (public.song_norm_text(n->>'title') is distinct from public.song_norm_text(e->>'title')
-                     or coalesce(public.song_norm_text(n->>'original_artist'), '')
-                        is distinct from coalesce(public.song_norm_text(e->>'original_artist'), '')));
+          and (
+              -- 還原前的鍵與快照不同（這筆或之後的修改改掉的）
+              v_cur_keys -> (e->>'id') is distinct from jsonb_build_array(
+                  public.song_norm_text(e->>'title'), coalesce(public.song_norm_text(e->>'original_artist'), ''))
+              -- 或這次一併還原的任一筆修改改過它的鍵（改名再改回時，鍵看起來沒變，但歸屬已被重配）
+              or exists (
+                  select 1
+                  from public.song_submissions r,
+                       jsonb_array_elements(r.segments) n,
+                       jsonb_array_elements(r.before->'segments') b
+                  where r.status = 'applied' and r.result_video_ref = v.id and r.created_at >= s.created_at
+                    and n->>'code' = e->>'code' and b->>'code' = e->>'code'
+                    and (public.song_norm_text(n->>'title') is distinct from public.song_norm_text(b->>'title')
+                         or coalesce(public.song_norm_text(n->>'original_artist'), '')
+                            is distinct from coalesce(public.song_norm_text(b->>'original_artist'), ''))));
     end if;
 
     update public.song_submissions
