@@ -50,9 +50,12 @@ interface UIState {
     // 畫布外殼(桌面限定):original = 現行下緣浮現型態;edgeDock = 邊緣停靠型態;room = 房間模式(閒置零介面＋頂部指令列)
     islandStyle: IslandStyle;
     setIslandStyle: (style: IslandStyle) => void;
-    /** 房間模式：舞台(一台大、其餘在右側候場欄)或平分畫面 */
+    /** 房間模式：舞台(一台鋪滿、其餘以候場小窗浮在右緣)或平分畫面 */
     roomMode: 'stage' | 'grid';
     setRoomMode: (mode: 'stage' | 'grid') => void;
+    /** 房間模式：滑鼠閒置（RoomShell 判定），候場小窗與每格資訊淡出；不保存 */
+    roomIdle: boolean;
+    setRoomIdle: (v: boolean) => void;
     /** 房間模式：換舞台時只留舞台那一路有聲音 */
     audioFollowsFocus: boolean;
     setAudioFollowsFocus: (v: boolean) => void;
@@ -204,6 +207,8 @@ export const useUIStore = create<UIState>((set, get) => ({
         set({ roomMode: mode });
         persistUserSetting('roomMode', mode);
     },
+    roomIdle: false,
+    setRoomIdle: (v) => set({ roomIdle: v }),
     audioFollowsFocus: true,
     setAudioFollowsFocus: (v) => {
         set({ audioFollowsFocus: v });

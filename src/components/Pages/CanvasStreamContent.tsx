@@ -4,7 +4,7 @@
  */
 
 import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { GripHorizontal, X, RefreshCw, Maximize2, Minimize2, Star, MessageSquare } from 'lucide-react';
+import { GripHorizontal, X, RefreshCw, Maximize2, Minimize2, Star, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { WindowRenderProps } from '../Canvas';
 import { StreamIframe } from '../Canvas/WindowParts/StreamIframe';
@@ -19,7 +19,7 @@ import { mainStreamItemIdOf, sharedChatContentIdOf } from '../../utils/canvasIte
 import { ChatStreamSelect } from '../Canvas/ChatStreamSelect';
 import { ChatLayoutMenu } from '../Canvas/ChatLayoutMenu';
 import { RoomChatTabs } from '../Navigation/RoomChatTabs';
-import { focusRoomItem } from '../Navigation/roomActions';
+import { focusRoomItem, toggleRoomMode } from '../Navigation/roomActions';
 import { MergedChat } from '../../features/chat/MergedChat';
 
 interface CanvasStreamContentProps {
@@ -111,6 +111,30 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
         e.stopPropagation();
         onRemove();
     }, [onRemove]);
+
+    // 房間模式懸浮工具：靜音、設為焦點、放上舞台（舞台那路則切回平分）
+    const handleToggleMute = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        const store = useStreamStore.getState();
+        const cur = store.streams.find(st => st.id === stream.id);
+        store.updateStream(stream.id, { isMuted: !(cur?.isMuted ?? false) });
+    }, [stream.id]);
+    const handleRoomFocus = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (windowId !== undefined) focusRoomItem(windowId);
+    }, [windowId]);
+    const handleRoomPrimary = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (windowId === undefined) return;
+        const ui = useUIStore.getState();
+        if (ui.roomMode === 'stage') {
+            // 舞台那路：回到平分；候場那路：放上舞台
+            if (isMain) toggleRoomMode(); else focusRoomItem(windowId);
+        } else {
+            focusRoomItem(windowId);
+            toggleRoomMode();
+        }
+    }, [windowId, isMain]);
 
     // Master Volume Control
     const masterVolume = useUIStore(s => s.masterVolume);
@@ -288,30 +312,93 @@ export const CanvasStreamContent = memo(function CanvasStreamContent({
                     {t('canvas.hover_hint')}
                 </div>
             )}
-            {/* 候場：iframe 裡的滑鼠事件網頁收不到，蓋一層遮罩才能「點了放上舞台」；舞台本身不蓋，保留播放器操作 */}
-            {isRoom && roomStage && !isChatWindow && !isMain && windowId !== undefined && (
-                <div className="group/wing absolute inset-0 z-[55]">
-                    <button
-                        type="button"
-                        onClick={() => focusRoomItem(windowId)}
-                        aria-label={t('room.wing_to_stage', { name: title })}
-                        className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/75 text-white opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-400 group-hover/wing:opacity-100"
-                    >
-                        <span className="text-base font-semibold">{title}</span>
-                        <span className="rounded-full bg-purple-600 px-3 py-1 text-xs font-medium">{t('room.to_stage')}</span>
-                    </button>
-                    {/* 房間模式沒有視窗工具列，候場的移除入口放這裡；舞台那路從指令列「更多」移除 */}
-                    <button
-                        type="button"
-                        onClick={handleRemove}
-                        aria-label={`${t('canvas.toolbar_remove')} ${title}`}
-                        title={t('canvas.toolbar_remove')}
-                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white/80 opacity-0 transition-opacity hover:bg-red-500/30 hover:text-red-200 focus-visible:opacity-100 group-hover/wing:opacity-100"
-                    >
-                        <X size={14} />
-                    </button>
-                </div>
+            {/* 房間模式每格的懸浮工具（照 2026-11 原型）：滑上去才出現在左上角。
+                不再蓋整格的遮罩：遮罩會擋住 Twitch「點一下開始播放」，候場那路就播不出來。
+                iframe 裡的滑鼠事件網頁收不到，但父層的 CSS :hover 判斷得到，所以滑鼠在播放器上時工具照樣出現 */}
+            {isRoom && !isChatWindow && windowId !== undefined && (
+                <RoomTileTools
+                    title={title}
+                    muted={effectiveMuted}
+                    isStage={roomStage}
+                    isMain={isMain}
+                    dragHandlers={dragHandlers}
+                    onToggleMute={handleToggleMute}
+                    onPrimary={handleRoomPrimary}
+                    onFocus={handleRoomFocus}
+                    onRemove={handleRemove}
+                />
             )}
         </div>
+    );
+});
+
+interface RoomTileToolsProps {
+    title: string;
+    muted: boolean;
+    isStage: boolean;
+    isMain: boolean;
+    dragHandlers: WindowRenderProps['dragHandlers'];
+    onToggleMute: (e: React.MouseEvent) => void;
+    onPrimary: (e: React.MouseEvent) => void;
+    onFocus: (e: React.MouseEvent) => void;
+    onRemove: (e: React.MouseEvent) => void;
+}
+
+const toolBtn = 'h-[30px] inline-flex items-center gap-1 rounded-lg border border-white/15 bg-[#0f1119]/90 px-2 text-xs text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300';
+
+/** 房間模式每格左上的懸浮工具＋左下名稱（名稱不擋點擊，閒置時淡出） */
+const RoomTileTools = memo(function RoomTileTools({ title, muted, isStage, isMain, dragHandlers, onToggleMute, onPrimary, onFocus, onRemove }: RoomTileToolsProps) {
+    const { t } = useTranslation('common');
+    const idle = useUIStore(s => s.roomIdle);
+    return (
+        <>
+            <div
+                data-room-tools
+                className="absolute left-2 top-2 z-[56] flex max-w-[calc(100%-16px)] flex-wrap gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+            >
+                {!isStage && (
+                    <button type="button" data-room-tool="drag" className={cn(toolBtn, 'cursor-grab')} aria-label={t('room.tool_drag', { name: title })} title={t('room.tool_drag', { name: title })} {...dragHandlers}>
+                        <GripHorizontal size={14} />
+                    </button>
+                )}
+                {!isStage && (
+                    <button type="button" data-room-tool="focus" className={toolBtn} onPointerDown={stopPointerDown} onClick={onFocus}>
+                        {t('room.tool_focus')}
+                    </button>
+                )}
+                <button type="button" data-room-tool="mute" className={toolBtn} onPointerDown={stopPointerDown} onClick={onToggleMute} aria-pressed={muted}>
+                    {muted ? <VolumeX size={14} /> : <Volume2 size={14} />} {muted ? t('room.tool_unmute') : t('room.tool_mute')}
+                </button>
+                <button
+                    type="button"
+                    data-room-tool="stage"
+                    className={toolBtn}
+                    onPointerDown={stopPointerDown}
+                    onClick={onPrimary}
+                    aria-label={isStage && isMain ? t('room.mode_grid') : t('room.wing_to_stage', { name: title })}
+                >
+                    {isStage && isMain ? t('room.mode_grid') : t('room.to_stage')}
+                </button>
+                <button
+                    type="button"
+                    data-room-tool="close"
+                    className={cn(toolBtn, 'text-red-300 hover:bg-red-500/20')}
+                    onPointerDown={stopPointerDown}
+                    onClick={onRemove}
+                    aria-label={`${t('canvas.toolbar_remove')} ${title}`}
+                >
+                    <X size={14} /> {t('room.tool_close')}
+                </button>
+            </div>
+            <div
+                className={cn(
+                    'pointer-events-none absolute bottom-2 left-2 z-[56] flex max-w-[calc(100%-16px)] items-center gap-2 rounded-lg bg-[#05060a]/70 px-2 py-1 text-xs transition-opacity duration-300',
+                    idle ? 'opacity-0' : 'opacity-100',
+                )}
+            >
+                <b className="truncate text-white">{title}</b>
+                <span className={muted ? 'text-white/40' : 'text-emerald-400'}>{muted ? t('room.tool_muted') : t('room.tool_audio_on')}</span>
+            </div>
+        </>
     );
 });

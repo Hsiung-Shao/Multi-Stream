@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState, forwardRef } from 'react';
-import { Plus, Columns2, RectangleHorizontal, Volume2, Star, MoreHorizontal } from 'lucide-react';
+import { Plus, Columns2, RectangleHorizontal, Volume2, Star, MoreHorizontal, SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/useUIStore';
 import { useStreamStore } from '../../store/useStreamStore';
 import { useIslandQuickActions } from '../../hooks/useIslandQuickActions';
 import { IslandFavoritesMenu } from './IslandFavoritesMenu';
+import { MediaControlPanel } from './MediaControlPanel';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { isCollapsedChat } from '../../utils/canvasItemOps';
 import { RoomPalette, type RoomCommand } from './RoomPalette';
 import { useRoomHotkeys } from './useRoomHotkeys';
 import { focusRoomIndex, toggleRoomMode, removeRoomItem } from './roomActions';
@@ -46,8 +49,8 @@ const BarButton = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLB
 BarButton.displayName = 'BarButton';
 
 /**
- * 房間模式外殼：閒置時畫面上只剩頂部一條小把手；滑到最上方、點把手或按 Ctrl K 才出現指令列。
- * 不放在底部：底部是聊天室輸入框，原本的島就是在那裡誤觸。
+ * 房間模式外殼：閒置時畫面上只剩底部一條小把手；滑到最下方、點把手或按 Ctrl K 才出現指令列。
+ * 2026-11-27 使用者要求從頂部改到底部；水平置中在串流區（扣掉右側聊天欄），不蓋到聊天室輸入框。
  */
 export const RoomShell = () => {
     const { t } = useTranslation(['common', 'favorites']);
@@ -63,31 +66,41 @@ export const RoomShell = () => {
     const [favOpen, setFavOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
     const [clearOpen, setClearOpen] = useState(false);
+    const [mediaOpen, setMediaOpen] = useState(false);
+    // 聊天欄寬（格數，0＝沒有或收合）：指令列置中在串流區，不蓋到聊天室輸入框
+    const chatCols = useStreamStore(s => (s.canvasItems.some(it => it.type === 'chat' && !isCollapsedChat(it)) ? s.chatColumnWidth : 0));
+    const barCenter = `${((24 - chatCols) / 24) * 50}%`;
     const hideTimer = useRef<number | undefined>(undefined);
     const navRef = useRef<HTMLElement>(null);
 
     // 任何彈出 UI 開著時指令列都不收（同原本動態島的 pinned 慣例）
-    const pinned = paletteOpen || favOpen || moreOpen || clearOpen || hotkeyHelpOpen || tourOpen;
+    const pinned = paletteOpen || favOpen || moreOpen || clearOpen || mediaOpen || hotkeyHelpOpen || tourOpen;
     const barVisible = hover || pinned;
 
     useEffect(() => {
         // 閒置時順便收起指令列：滑鼠移進直播 iframe 時外層不一定收得到 mouseleave，靠這裡保底
         const goIdle = () => {
             setIdle(true);
+            useUIStore.getState().setRoomIdle(true);
             // 只留鍵盤焦點（:focus-visible）；滑鼠點開面板後 Radix 把焦點還給按鈕，不算
             if (!navRef.current?.matches(':hover') && !navRef.current?.querySelector(':focus-visible')) setHover(false);
         };
         let timer = window.setTimeout(goIdle, IDLE_MS);
         const wake = () => {
             setIdle(false);
+            if (useUIStore.getState().roomIdle) useUIStore.getState().setRoomIdle(false);
             window.clearTimeout(timer);
             timer = window.setTimeout(goIdle, IDLE_MS);
         };
         window.addEventListener('mousemove', wake);
+        // 滑鼠移進播放器 iframe 時網頁收不到 mousemove，但進入那一刻 iframe 元素會收到 mouseover
+        window.addEventListener('mouseover', wake);
         window.addEventListener('keydown', wake);
         return () => {
             window.clearTimeout(timer);
+            useUIStore.getState().setRoomIdle(false);
             window.removeEventListener('mousemove', wake);
+            window.removeEventListener('mouseover', wake);
             window.removeEventListener('keydown', wake);
         };
     }, []);
@@ -121,8 +134,8 @@ export const RoomShell = () => {
 
     return (
         <>
-            {/* 頂端感應帶：滑到最上方就叫出指令列 */}
-            <div className="pointer-events-auto fixed top-0 inset-x-0 h-3.5 z-50" onMouseEnter={show} onMouseLeave={hideSoon} />
+            {/* 底部感應帶：滑到最下方（串流區）就叫出指令列；不延伸到聊天欄，避免蓋住聊天室輸入框 */}
+            <div className="pointer-events-auto fixed bottom-0 left-0 h-3.5 z-50" style={{ right: `${(chatCols / 24) * 100}%` }} onMouseEnter={show} onMouseLeave={hideSoon} />
 
             <button
                 type="button"
@@ -132,7 +145,8 @@ export const RoomShell = () => {
                 onMouseEnter={show}
                 onMouseLeave={hideSoon}
                 onClick={show}
-                className="pointer-events-auto fixed top-0 left-1/2 -translate-x-1/2 z-50 w-[120px] h-5 flex justify-center pt-[5px] outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
+                style={{ left: barCenter }}
+                className="pointer-events-auto fixed bottom-0 -translate-x-1/2 z-50 w-[120px] h-5 flex items-end justify-center pb-[5px] outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
             >
                 <span className={cn('w-14 h-[5px] rounded-full bg-[#6b7090] transition-opacity', idle && !barVisible && 'opacity-30')} />
             </button>
@@ -140,14 +154,16 @@ export const RoomShell = () => {
             <nav
                 ref={navRef}
                 data-tour="island"
+                data-bar-position="bottom"
                 aria-label={t('room.open_bar')}
                 onMouseEnter={show}
                 onMouseLeave={hideSoon}
                 onFocus={show}
                 onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) hideSoon(); }}
+                style={{ left: barCenter }}
                 className={cn(
-                    'pointer-events-auto fixed top-2.5 left-1/2 z-50 flex items-center gap-0.5 p-1 rounded-[14px] border border-white/10 bg-[#0f1119]/95 shadow-[0_14px_40px_rgba(0,0,0,0.6)] transition-transform duration-200 max-w-[calc(100%-24px)] overflow-x-auto',
-                    barVisible ? '-translate-x-1/2 translate-y-0' : '-translate-x-1/2 -translate-y-[140%]',
+                    'pointer-events-auto fixed bottom-2.5 z-50 flex items-center gap-0.5 p-1 rounded-[14px] border border-white/10 bg-[#0f1119]/95 shadow-[0_-14px_40px_rgba(0,0,0,0.6)] transition-transform duration-200 max-w-[calc(100%-24px)] overflow-x-auto',
+                    barVisible ? '-translate-x-1/2 translate-y-0' : '-translate-x-1/2 translate-y-[140%]',
                 )}
             >
                 <BarButton primary onClick={() => setPaletteOpen(true)}>
@@ -160,6 +176,14 @@ export const RoomShell = () => {
                 <BarButton pressed={audioFollowsFocus} onClick={toggleAudio}>
                     <Volume2 size={16} /> {t('room.audio_follow')}
                 </BarButton>
+                <Popover open={mediaOpen} onOpenChange={setMediaOpen}>
+                    <PopoverTrigger asChild>
+                        <BarButton aria-label={t('room.media')} pressed={mediaOpen}><SlidersHorizontal size={16} /> {t('room.media')}</BarButton>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="center" sideOffset={10} className="z-[60] w-[340px] max-h-[70vh] overflow-y-auto border-white/10 bg-[#0f1119] p-0 text-white">
+                        <MediaControlPanel variant="inline" isExpanded />
+                    </PopoverContent>
+                </Popover>
                 <IslandFavoritesMenu onOpenChange={setFavOpen}>
                     <BarButton><Star size={16} /> {t('room.favorites')}</BarButton>
                 </IslandFavoritesMenu>
@@ -167,7 +191,7 @@ export const RoomShell = () => {
                     <DropdownMenuTrigger asChild>
                         <BarButton><MoreHorizontal size={16} /> {t('room.more')}</BarButton>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#0f1119] border-white/10 text-white z-[60] min-w-[220px]">
+                    <DropdownMenuContent side="top" align="end" className="bg-[#0f1119] border-white/10 text-white z-[60] min-w-[220px]">
                         <DropdownMenuItem onSelect={handleShareCanvas}>{t('common.share_canvas')}</DropdownMenuItem>
                         <DropdownMenuSub>
                             <DropdownMenuSubTrigger>{t('room.remove_stream')}</DropdownMenuSubTrigger>

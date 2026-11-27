@@ -89,7 +89,7 @@ describe('useRoomSync', () => {
     it('舞台模式下聊天室調寬後重新排成舞台', () => {
         renderHook(() => useRoomSync());
         act(() => { useStreamStore.getState().setChatColumnWidth(6); });
-        expect(layoutOf('w1')).toEqual(L(0, 0, 12, 24));
+        expect(layoutOf('w1')).toEqual(L(0, 0, 18, 24));  // 舞台佔滿串流區（2026-11-27 照原型）
         expect(layoutOf('w2')).toEqual(L(12, 0, 6, 24));
         expect(layoutOf('c1')).toEqual(L(18, 0, 6, 24));
     });
@@ -99,7 +99,7 @@ describe('useRoomSync', () => {
         act(() => {
             useStreamStore.setState({ canvasItems: [S('w1', null, L(0, 0, 14, 24)), S('w2', 2, L(14, 0, 6, 24)), stageItems()[2]] });
         });
-        expect(layoutOf('w2')).toEqual(L(0, 0, 14, 24));
+        expect(layoutOf('w2')).toEqual(L(0, 0, 20, 24));  // 舞台佔滿串流區（2026-11-27 照原型）
     });
 
     it('全體靜音期間換了焦點，解除全體靜音後聲音跟上新焦點', () => {
@@ -114,7 +114,7 @@ describe('useRoomSync', () => {
     it('舞台模式下新增聊天室後仍排回舞台', () => {
         renderHook(() => useRoomSync());
         act(() => { useStreamStore.getState().addCanvasItem('chat', null); });
-        expect(layoutOf('w1')).toEqual(L(0, 0, 14, 24));
+        expect(layoutOf('w1')).toEqual(L(0, 0, 20, 24));  // 舞台佔滿串流區（2026-11-27 照原型）
         expect(layoutOf('w2')).toEqual(L(14, 0, 6, 24));
     });
 });

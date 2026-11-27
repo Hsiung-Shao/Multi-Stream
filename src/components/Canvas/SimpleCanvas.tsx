@@ -24,6 +24,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { resizeLimitsOf, MIN_CHAT_COLS, MAX_CHAT_COLS } from './sizeLimits';
 import { chatColumnResizeKeepsLayout } from '../../utils/canvasItemOps';
 import type { CanvasItem } from '../../types/canvas';
+import { wingRects } from '../../utils/roomStage';
 
 // 尺寸限制與縮放預覽共用同一份（見 sizeLimits.ts）；NewCanvasPage 從這裡取用
 export { limitsOf } from './sizeLimits';
@@ -45,6 +46,28 @@ const toLayoutItems = (windows: CanvasWindow[]) => windows.map(w => ({
  * 視窗的疊放層級由 z-index（拖曳/縮放 z-50、劇院模式 z-[100]）決定，不依賴 DOM 順序，所以可以固定。
  * 依 id 排序後，新增只插入新節點、刪除只移除節點，既有 iframe 永遠不會被搬動。
  */
+/** 候場最多幾路浮在舞台上；再多時 stageLayout 已退回平分，這裡也不浮 */
+const MAX_OVERLAY_WINGS = 4;
+
+/**
+ * 房間舞台模式的候場浮窗像素位置（id → 位置）。舞台＝面積最大的串流（同 selectMainStreamItemId），
+ * 其他串流依格線位置排序後浮在舞台右緣（照原型）。沒有候場或超過上限時回 null。
+ */
+export function roomOverlayRects(windows: readonly CanvasWindow[], cellWidth: number, cellHeight: number): Map<string, PixelPosition> | null {
+    const streams = windows.filter(w => w.type === 'stream');
+    let main: CanvasWindow | null = null;
+    for (const w of streams) {
+        if (!main || w.gridW * w.gridH > main.gridW * main.gridH
+            || (w.gridW * w.gridH === main.gridW * main.gridH && (w.gridY - main.gridY || w.gridX - main.gridX) < 0)) main = w;
+    }
+    const wings = streams.filter(w => w !== main).sort((a, b) => a.gridY - b.gridY || a.gridX - b.gridX);
+    if (!main || wings.length === 0 || wings.length > MAX_OVERLAY_WINGS) return null;
+    const rects = wingRects(wings.length, {
+        x: main.gridX * cellWidth, y: main.gridY * cellHeight, width: main.gridW * cellWidth, height: main.gridH * cellHeight,
+    });
+    return new Map(wings.map((w, k) => [w.id, rects[k]]));
+}
+
 export const stableRenderOrder = (windows: CanvasWindow[]): CanvasWindow[] =>
     [...windows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
@@ -171,6 +194,24 @@ export const SimpleCanvas = memo(function SimpleCanvas({
 
     // 渲染順序固定依 id（元素身分不變，DraggableWindow 的 memo 不受影響）
     const renderOrder = useMemo(() => stableRenderOrder(windows), [windows]);
+
+    // 房間舞台模式：候場浮在舞台右緣、閒置淡出；舞台模式不能縮放（排版由 stageLayout 決定）
+    const isRoomStage = useUIStore(s => s.islandStyle === 'room' && s.roomMode === 'stage');
+    const roomIdle = useUIStore(s => s.roomIdle);
+    // 位置值相同時沿用上一次的物件：傳給 DraggableWindow 的 prop 要穩定身分（見檔頭效能約束）
+    const prevOverlayRef = useRef<Map<string, PixelPosition> | null>(null);
+    const overlayRects = useMemo(() => {
+        const next = isRoomStage ? roomOverlayRects(windows, gridConfig.cellWidth, gridConfig.cellHeight) : null;
+        const prev = prevOverlayRef.current;
+        if (next && prev) {
+            for (const [id, r] of next) {
+                const p = prev.get(id);
+                if (p && p.x === r.x && p.y === r.y && p.width === r.width && p.height === r.height) next.set(id, p);
+            }
+        }
+        prevOverlayRef.current = next;
+        return next;
+    }, [isRoomStage, windows, gridConfig.cellWidth, gridConfig.cellHeight]);
 
     // Convert windows to pixel positions for collision detection
     const windowPositions = useMemo(() => {
@@ -403,6 +444,9 @@ export const SimpleCanvas = memo(function SimpleCanvas({
                         onHoverChange={handleHoverChange}
                         onDragStateChange={handleDragStateChange}
                         isSwapCandidate={draggingType !== null && draggingWindowId !== w.id && w.type === draggingType}
+                        overlayRect={overlayRects?.get(w.id) ?? null}
+                        overlayHidden={roomIdle && !!overlayRects?.has(w.id)}
+                        resizable={!isRoomStage}
                     />
                 ))}
             </div>

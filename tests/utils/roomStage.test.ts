@@ -31,15 +31,16 @@ describe('stageLayout：串流區', () => {
         expect(layoutOf(out, 'c')).toEqual(L(16, 0, 8, 24));
     });
 
-    it('兩路串流加聊天室時，焦點寬 A−6、另一路佔滿候場欄', () => {
+    // 2026-11-27 起舞台佔滿串流區（照原型），候場在畫面上改用 wingRects 浮在右緣；格線位置仍疊在右緣保留排序
+    it('兩路串流加聊天室時，焦點佔滿串流區 A、另一路的格線位置在右緣候場欄', () => {
         const out = stageLayout([S('a', 1), S('b', 2), C('c', 1)], 'b', 6);
-        expect(layoutOf(out, 'b')).toEqual(L(0, 0, 12, 24));
+        expect(layoutOf(out, 'b')).toEqual(L(0, 0, 18, 24));
         expect(layoutOf(out, 'a')).toEqual(L(12, 0, 6, 24));
     });
 
     it('兩路串流且沒有聊天室時，候場欄貼在右緣（x=18）', () => {
         const out = stageLayout([S('a', 1), S('b', 2)], 'a', 6);
-        expect(layoutOf(out, 'a')).toEqual(L(0, 0, 18, 24));
+        expect(layoutOf(out, 'a')).toEqual(L(0, 0, 24, 24));
         expect(layoutOf(out, 'b')).toEqual(L(18, 0, 6, 24));
     });
 
@@ -77,7 +78,7 @@ describe('stageLayout：串流區', () => {
         const out = stageLayout([S('a', 1), S('empty', null)], 'a', 6);
         expect(layoutOf(out, 'empty')).toEqual(L(18, 0, 6, 24));
         const out2 = stageLayout([S('a', 1), S('empty', null)], 'empty', 6);
-        expect(layoutOf(out2, 'empty')).toEqual(L(0, 0, 18, 24));
+        expect(layoutOf(out2, 'empty')).toEqual(L(0, 0, 24, 24));
     });
 });
 
@@ -92,7 +93,7 @@ describe('stageLayout：聊天室', () => {
         const out = stageLayout(items, 'a', 6);
         expect(layoutOf(out, 'c1')).toEqual(L(18, 0, 6, 12));
         expect(layoutOf(out, 'c2')).toEqual(L(18, 12, 6, 12));
-        expect(layoutOf(out, 'a')).toEqual(L(0, 0, 12, 24));
+        expect(layoutOf(out, 'a')).toEqual(L(0, 0, 18, 24));
     });
 
     it('聊天室全部收合時有效寬為 0：焦點鋪滿 24、收合聊天室維持 x:24 w:0', () => {
@@ -103,7 +104,7 @@ describe('stageLayout：聊天室', () => {
 
     it('聊天室收合時候場欄貼在 x=18（A=24）而不是留空聊天室欄', () => {
         const out = stageLayout([S('a', 1), S('b', 2), C('c', 1, L(24, 0, 0, 24))], 'a', 6);
-        expect(layoutOf(out, 'a')).toEqual(L(0, 0, 18, 24));
+        expect(layoutOf(out, 'a')).toEqual(L(0, 0, 24, 24));
         expect(layoutOf(out, 'b')).toEqual(L(18, 0, 6, 24));
     });
 

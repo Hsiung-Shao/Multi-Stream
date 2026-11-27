@@ -261,10 +261,12 @@ describe('CanvasStreamContent 房間模式', () => {
         expect(stageBtn('Alpha')).toBeNull();
     });
 
-    it('平分模式的非主畫面不加遮罩', () => {
+    // 2026-11-27 起每格都有懸浮工具（含「放上舞台」），但不能有蓋滿整格、會擋住播放器點擊的遮罩
+    it('平分模式的非主畫面不加蓋滿整格的遮罩', () => {
         useUIStore.setState({ roomMode: 'grid' });
-        render(<CanvasStreamContent stream={mk(2, 'Bravo')} windowType="stream" renderProps={renderProps} windowId="w2" />);
-        expect(stageBtn('Bravo')).toBeNull();
+        const { container } = render(<CanvasStreamContent stream={mk(2, 'Bravo')} windowType="stream" renderProps={renderProps} windowId="w2" />);
+        const fullCover = [...container.querySelectorAll('button')].filter(b => b.className.includes('inset-0'));
+        expect(fullCover).toHaveLength(0);
     });
 
     it('房間模式不顯示視窗工具列與拖曳提示，原始外殼則有工具列', () => {

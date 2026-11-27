@@ -85,6 +85,12 @@ interface DraggableWindowProps {
     onDragStateChange?: (id: string, dragging: boolean) => void;
     /** 有其他視窗正在拖曳、而本視窗是可交換的落點：顯示「可放在這裡交換」 */
     isSwapCandidate?: boolean;
+    /** 房間舞台模式的候場浮窗：有值時改用這組像素位置（不看格線）、疊在舞台之上、不能縮放。上層必須給穩定身分 */
+    overlayRect?: PixelPosition | null;
+    /** 候場浮窗閒置淡出：只變透明（不移位、仍可被滑鼠碰到，碰到即叫醒） */
+    overlayHidden?: boolean;
+    /** false 時不畫縮放把手（房間舞台模式） */
+    resizable?: boolean;
 }
 
 export const DraggableWindow = memo(function DraggableWindow({
@@ -103,6 +109,9 @@ export const DraggableWindow = memo(function DraggableWindow({
     onHoverChange,
     onDragStateChange,
     isSwapCandidate,
+    overlayRect = null,
+    overlayHidden = false,
+    resizable = true,
 }: DraggableWindowProps) {
     const { cellWidth, cellHeight } = gridConfig;
 
@@ -283,6 +292,7 @@ export const DraggableWindow = memo(function DraggableWindow({
             <div
                 ref={nodeRef}
                 data-canvas-window-id={window.id}
+                data-room-wing={overlayRect ? '' : undefined}
                 className={cn(
                     "absolute rounded-lg overflow-hidden border border-white/10 bg-slate-900/95",
                     // hover 外框微亮：提示這是可以拖、可以縮放的視窗
@@ -290,7 +300,8 @@ export const DraggableWindow = memo(function DraggableWindow({
                     isDragging && "shadow-2xl border-purple-500/50 z-50 opacity-90",
                     isResizing && "border-blue-500/50 z-50",
                     isSwapTarget && "ring-2 ring-green-500 ring-offset-2 ring-offset-slate-950",
-                    isTheaterMode && "z-[100] border-purple-500 shadow-2xl"
+                    isTheaterMode && "z-[100] border-purple-500 shadow-2xl",
+                    overlayRect && "z-30 rounded-[10px] shadow-[0_10px_30px_rgba(0,0,0,0.55)] hover:border-violet-400"
                 )}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
@@ -302,6 +313,16 @@ export const DraggableWindow = memo(function DraggableWindow({
                     height: '100vh',
                     transform: 'none',
                     zIndex: 100,
+                } : overlayRect ? {
+                    // 淡出時不移位（原型會往右滑 30px）：一移開滑鼠底下就換了元素，觸發 mouseover 叫醒又滑回來，會來回閃
+                    transform: `translate(${overlayRect.x}px, ${overlayRect.y}px)`,
+                    width: overlayRect.width,
+                    height: overlayRect.height,
+                    // 淡出時仍可被滑鼠碰到：舞台是播放器 iframe，滑鼠在上面移動網頁收不到，
+                    // 只能靠「碰到候場（mouseover）」叫醒；若設 pointer-events:none 就永遠叫不回來
+                    opacity: overlayHidden ? 0 : 1,
+                    contain: 'layout style paint',
+                    transition: 'opacity 0.3s ease, transform 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out',
                 } : {
                     transform: `translate(${pixelPos.x}px, ${pixelPos.y}px)`,
                     width: pixelPos.width,
@@ -322,6 +343,7 @@ export const DraggableWindow = memo(function DraggableWindow({
                 {/* 拖曳換位的落點提示。放在內容之後 append，不會搬動含 iframe 的內容節點 */}
                 {(isSwapCandidate || isSwapTarget) && !isDragging && <SwapHint active={!!isSwapTarget} />}
 
+                {resizable && !overlayRect && (<>
                 {/* Four Corner Resize Handles */}
                 {/* NW - Top Left */}
                 <div
@@ -364,6 +386,7 @@ export const DraggableWindow = memo(function DraggableWindow({
                 <div className={cn(edgeHandleClass, "bottom-0 left-4 right-4 h-1 cursor-s-resize")} {...cornerHandlers.s} data-edge="s" />
                 <div className={cn(edgeHandleClass, "left-0 top-4 bottom-4 w-1 cursor-w-resize")} {...cornerHandlers.w} data-edge="w" />
                 <div className={cn(edgeHandleClass, "right-0 top-4 bottom-4 w-1 cursor-e-resize")} {...cornerHandlers.e} data-edge="e" />
+                </>)}
 
                 {/* Size indicator during resize —— 文字由 useResize 直接寫，不走 state */}
                 {isResizing && (

@@ -219,7 +219,9 @@ export function StreamIframe({
             channel: streamData.channelId,
             parent: getTwitchParents(),
             autoplay: true,
-            muted: isMuted,
+            // 一律先靜音建立：非靜音的自動播放常被瀏覽器擋下，Twitch 會停在「點一下開始播放」。
+            // READY 後再依最新設定開聲音（瀏覽器若仍不准開聲音，至少畫面照常播放）
+            muted: true,
         };
 
         // Note: Twitch.Player constructor takes the ID or Element

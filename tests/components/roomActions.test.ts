@@ -42,16 +42,16 @@ describe('focusRoomItem', () => {
                 ],
             });
             focusRoomItem('w2');
-            expect(layoutOf('w2')).toEqual(L(0, 0, 12, 24));
+            expect(layoutOf('w2')).toEqual(L(0, 0, 18, 24)); // 舞台佔滿串流區（2026-11-27 照原型）
             expect(layoutOf('w1')).toEqual(L(12, 0, 6, 12));
             expect(layoutOf('w3')).toEqual(L(12, 12, 6, 12));
             expect(layoutOf('c1')).toEqual(L(18, 0, 6, 24));
         });
 
-        it('沒有聊天室時，焦點寬 18、候場欄在 x=18', () => {
+        it('沒有聊天室時，焦點佔滿 24、候場格線位置在 x=18', () => {
             useStreamStore.setState({ canvasItems: [S('w1', 1, L(0, 0, 12, 24)), S('w2', 2, L(12, 0, 12, 24))] });
             focusRoomItem('w2');
-            expect(layoutOf('w2')).toEqual(L(0, 0, 18, 24));
+            expect(layoutOf('w2')).toEqual(L(0, 0, 24, 24));
             expect(layoutOf('w1')).toEqual(L(18, 0, 6, 24));
         });
 
