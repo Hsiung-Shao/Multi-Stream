@@ -100,12 +100,13 @@ describe('U14 綁定帶正確的 provider 與 scopes', () => {
 });
 
 describe('review 第 1 輪：我的投稿狀態對應', () => {
-    it('spam／duplicate 顯示未採用、archived 顯示已結案、edit 類型顯示 VTuber', async () => {
+    it('spam／duplicate／wontfix 顯示未採用、archived 顯示已結案、edit 類型顯示 VTuber', async () => {
         client.rows = [
             { kind: 'report', id: 'r1', created_at: '2026-11-01T00:00:00Z', status: 'spam', title: '回報甲' },
             { kind: 'report', id: 'r2', created_at: '2026-11-02T00:00:00Z', status: 'duplicate', title: '回報乙' },
             { kind: 'feedback', id: 'f1', created_at: '2026-11-03T00:00:00Z', status: 'archived', title: '意見丙' },
             { kind: 'edit', id: 'c1', created_at: '2026-11-04T00:00:00Z', status: 'pending', title: '修改丁' },
+            { kind: 'report', id: 'r3', created_at: '2026-11-05T00:00:00Z', status: 'wontfix', title: '回報戊' },
         ];
         setUser(['twitch']);
         render(<AccountSection />);
@@ -114,5 +115,6 @@ describe('review 第 1 輪：我的投稿狀態對應', () => {
         expect((await row('回報乙')).textContent).toContain('未採用');
         expect((await row('意見丙')).textContent).toContain('已結案');
         expect((await row('修改丁')).textContent).toContain('VTuber');
+        expect((await row('回報戊')).textContent).toContain('未採用');
     });
 });

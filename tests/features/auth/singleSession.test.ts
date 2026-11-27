@@ -263,13 +263,40 @@ describe('review 第 1 輪：綁定與解除', () => {
         getSupabase.mockResolvedValue(client);
         window.localStorage.setItem(STORED_KEY, '{}');
         window.sessionStorage.setItem('ms_oauth_link', '1');
-        window.history.replaceState(null, '', '/zh-TW?error=server_error&error_code=identity_already_exists&error_description=Identity+is+already+linked');
+        window.history.replaceState(null, '', '/zh-TW?error=server_error&error_code=identity_already_exists&error_description=Identity+is+already+linked#error=server_error&error_code=identity_already_exists');
         const { initAuth, useAuthStore } = await loadStore();
 
         await initAuth();
 
         expect(useAuthStore.getState().linkError).toBe('identity_already_exists');
         expect(window.location.search).toBe('');
+        expect(window.location.hash).toBe('');
         expect(window.sessionStorage.getItem('ms_oauth_link')).toBeNull();
+    });
+
+    it('刪 Twitch 發言權杖失敗時不解除綁定（避免解除後還能用那個 Twitch 發言）', async () => {
+        const client = makeClient(withToken());
+        getSupabase.mockResolvedValue(client);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 502 })));
+        const { unlinkProvider, useAuthStore } = await loadStore();
+        useAuthStore.setState({ status: 'authed', user: { id: 'u1', displayName: 'Jane', providers: ['twitch', 'discord'] } });
+
+        await expect(unlinkProvider('twitch')).rejects.toThrow();
+
+        expect(client.auth.unlinkIdentity).not.toHaveBeenCalled();
+        vi.unstubAllGlobals();
+    });
+
+    it('解除綁定時清掉上次的綁定錯誤', async () => {
+        const client = makeClient(withToken());
+        getSupabase.mockResolvedValue(client);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
+        const { unlinkProvider, useAuthStore } = await loadStore();
+        useAuthStore.setState({ status: 'authed', linkError: 'identity_already_exists', user: { id: 'u1', displayName: 'Jane', providers: ['twitch', 'discord'] } });
+
+        await unlinkProvider('discord');
+
+        expect(useAuthStore.getState().linkError).toBeNull();
+        vi.unstubAllGlobals();
     });
 });

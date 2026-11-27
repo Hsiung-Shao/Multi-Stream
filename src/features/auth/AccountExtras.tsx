@@ -63,7 +63,7 @@ const STATUS_KEY = { pending: 'auth.sub_status_pending', done: 'auth.sub_status_
 const STATUS_GROUP: Record<string, keyof typeof STATUS_KEY> = {
     pending: 'pending', open: 'pending', read: 'pending', unread: 'pending', processing: 'pending',
     approved: 'done', applied: 'done', fixed: 'done', processed: 'done', resolved: 'done',
-    rejected: 'declined', reverted: 'declined', spam: 'declined', duplicate: 'declined',
+    rejected: 'declined', reverted: 'declined', spam: 'declined', duplicate: 'declined', wontfix: 'declined',
     archived: 'closed',
 };
 

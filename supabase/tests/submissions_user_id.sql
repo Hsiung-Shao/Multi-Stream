@@ -14,7 +14,7 @@ INSERT INTO auth.users (id, aud, role, email) VALUES
 
 -- ========== U6：刪帳號後投稿保留但不再關聯 ==========
 INSERT INTO public.vtuber_contributions (id, action, payload, status, user_id, submitted_by)
-VALUES ('00000000-0000-0000-0000-00000000d001', 'add', '{}', 'pending', '00000000-0000-0000-0000-0000000000c3', 'user:c3');
+VALUES ('00000000-0000-0000-0000-00000000d001', 'add', '{}', 'pending', '00000000-0000-0000-0000-0000000000c3', 'user');
 INSERT INTO public.vtuber_reports (id, kind, user_id)
 VALUES ('00000000-0000-0000-0000-00000000d002', 'missing_vtuber', '00000000-0000-0000-0000-0000000000c3');
 INSERT INTO public.song_submissions (id, kind, video_id, title, segments, ip_hash, user_id)
@@ -52,8 +52,8 @@ END $$;
 -- ========== U7：我的投稿只看得到自己的 ==========
 -- A（c1）：四張表各 1 筆（最新）＋ 55 筆舊意見；B（c2）：四張表各 1 筆
 INSERT INTO public.vtuber_contributions (id, action, payload, status, user_id, submitted_by, submitter_contact, ip_hash, reviewer_notes, created_at)
-VALUES ('00000000-0000-0000-0000-00000000a001', 'add', '{}', 'pending', '00000000-0000-0000-0000-0000000000c1', 'user:c1', 'secret-contact-a', 'iphash-a', 'secret-note-a', now() - interval '1 minute'),
-       ('00000000-0000-0000-0000-00000000b001', 'add', '{}', 'pending', '00000000-0000-0000-0000-0000000000c2', 'user:c2', 'secret-contact-b', 'iphash-b', 'secret-note-b', now() - interval '1 minute');
+VALUES ('00000000-0000-0000-0000-00000000a001', 'add', '{}', 'pending', '00000000-0000-0000-0000-0000000000c1', 'user', 'secret-contact-a', 'iphash-a', 'secret-note-a', now() - interval '1 minute'),
+       ('00000000-0000-0000-0000-00000000b001', 'add', '{}', 'pending', '00000000-0000-0000-0000-0000000000c2', 'user', 'secret-contact-b', 'iphash-b', 'secret-note-b', now() - interval '1 minute');
 INSERT INTO public.vtuber_reports (id, kind, user_id, contact, ip_hash, admin_notes, created_at)
 VALUES ('00000000-0000-0000-0000-00000000a002', 'missing_vtuber', '00000000-0000-0000-0000-0000000000c1', 'secret-contact-a', 'iphash-a', 'secret-note-a', now() - interval '2 minutes'),
        ('00000000-0000-0000-0000-00000000b002', 'missing_vtuber', '00000000-0000-0000-0000-0000000000c2', 'secret-contact-b', 'iphash-b', 'secret-note-b', now() - interval '2 minutes');

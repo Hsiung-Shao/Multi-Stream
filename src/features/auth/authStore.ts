@@ -138,9 +138,11 @@ export async function initAuth(): Promise<void> {
         // 綁定失敗（最常見：這個登入方式已屬於另一個帳號）SDK 只會保留原 session、不回報，從網址讀出來給帳號區顯示
         if (errorCode && takeFlag(LINK_KEY)) useAuthStore.setState({ linkError: errorCode });
         const params = ['code', 'error', 'error_code', 'error_description'].filter(k => url.searchParams.has(k));
-        if (params.length) {
+        // GoTrue 失敗時錯誤同時放在 query 與 # 後面；# 後面只有錯誤參數時整段拿掉
+        const hashError = /(^#|&)error(_code|_description)?=/.test(url.hash);
+        if (params.length || hashError) {
             params.forEach(k => url.searchParams.delete(k));
-            window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+            window.history.replaceState(window.history.state, '', url.pathname + url.search + (hashError ? '' : url.hash));
         }
     } catch { /* 網址操作失敗不影響登入 */ }
 }
@@ -187,6 +189,7 @@ export async function linkProvider(provider: AuthProvider): Promise<void> {
 
 /** 解除綁定；只剩一種登入方式時由呼叫端擋（UI 停用按鈕），這裡再擋一次 */
 export async function unlinkProvider(provider: AuthProvider): Promise<void> {
+    useAuthStore.setState({ linkError: null });
     const sb = await loadClient();
     if (!sb) throw new Error('auth_unavailable');
     const { data, error } = await sb.auth.getUserIdentities();
@@ -194,17 +197,22 @@ export async function unlinkProvider(provider: AuthProvider): Promise<void> {
     const list = data?.identities ?? [];
     const target = list.find(i => i.provider === provider);
     if (!target || list.length < 2) throw new Error('cannot_unlink');
-    const res = await sb.auth.unlinkIdentity(target);
-    if (res.error) throw res.error;
-    // 解除 Twitch：伺服器保管的發言權杖一起刪，不然還能用那個 Twitch 身分發言
+    // 解除 Twitch：先刪伺服器保管的發言權杖，刪成功才解除（反過來的話刪失敗會留下還能發言的權杖）
     if (provider === 'twitch') {
         const token = await getAccessToken();
+        if (!token) throw new Error('no_token');
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 15_000);
-        await fetch('/api/twitch/chat-token', { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: ctrl.signal })
-            .catch(() => {}).finally(() => clearTimeout(timer));
+        try {
+            const r = await fetch('/api/twitch/chat-token', { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal });
+            if (!r.ok) throw new Error('chat_token_delete_failed');
+        } finally {
+            clearTimeout(timer);
+        }
         void import('../chat/chatToken').then(m => m.resetChatCredentials()).catch(() => {});
     }
+    const res = await sb.auth.unlinkIdentity(target);
+    if (res.error) throw res.error;
     // 拿新的 session 更新登入方式清單；失敗（網路）時保留原狀態，不誤顯示成已登出
     const s = await sb.auth.refreshSession();
     if (!s.error && s.data.session) apply(s.data.session);
