@@ -102,3 +102,51 @@ export const loadChannelEmoteGroups = (roomId: string) => {
 
 export const loadGlobalEmotes = () => loadGlobalEmoteGroups().then(flatten);
 export const loadChannelEmotes = (roomId: string) => loadChannelEmoteGroups(roomId).then(flatten);
+
+const personalCache = new Map<string, Promise<EmoteMap>>();
+
+/** 你的 7TV 個人貼圖（7TV 訂閱者在任何頻道都能用）：users/twitch 找 flags 含 PERSONAL(4) 的組，再取該組。
+ *  個人組隨時會換，只快取在記憶體（重新整理就重查）；沒抓到不快取 */
+export function loadPersonal7tv(twitchUserId: string): Promise<EmoteMap> {
+    if (!/^\d+$/.test(twitchUserId)) return Promise.resolve({});
+    let hit = personalCache.get(twitchUserId);
+    if (!hit) {
+        hit = (async () => {
+            const u = await getJson(`https://7tv.io/v3/users/twitch/${twitchUserId}`) as { user?: { emote_sets?: { id?: unknown; flags?: unknown }[] } } | null;
+            if (u === null) { personalCache.delete(twitchUserId); return {}; }
+            const set = u.user?.emote_sets?.find(x => typeof x?.flags === 'number' && (x.flags & 4) !== 0 && typeof x.id === 'string' && /^[A-Za-z0-9]+$/.test(x.id));
+            if (!set) return {};
+            const body = await getJson(`https://7tv.io/v3/emote-sets/${set.id as string}`) as { emotes?: unknown } | null;
+            if (body === null) { personalCache.delete(twitchUserId); return {}; }
+            const out: EmoteMap = {};
+            from7tv(body.emotes, out);
+            return out;
+        })();
+        personalCache.set(twitchUserId, hit);
+    }
+    return hit;
+}
+
+// 跨頻道只收不像一般文字的名稱：長度 ≥ 3、含英文字母、不是全小寫英文（避免 lol、kekw、6677、666 被換成圖）
+const crossChannelOk = (name: string) => name.length >= 3 && /[A-Za-z]/.test(name) && !/^[a-z]+$/.test(name);
+
+/** 每個頻道的訊息比對表：其他頻道（最低）＜全域＜該頻道；同一來源內 7TV 蓋 BTTV 蓋 FFZ */
+export function buildEmoteMaps(logins: string[], global: EmoteGroups, channels: Record<string, EmoteGroups>): Map<string, ReadonlyMap<string, string>> {
+    const cross: EmoteMap = {};
+    for (const login of logins) {
+        const ch = channels[login];
+        if (!ch) continue;
+        for (const [name, url] of Object.entries(flatten(ch))) if (crossChannelOk(name) && !(name in cross)) cross[name] = url;
+    }
+    const out = new Map<string, ReadonlyMap<string, string>>();
+    for (const login of logins) {
+        const own = channels[login] ? flatten(channels[login]) : {};
+        out.set(login, new Map(Object.entries({ ...cross, ...flatten(global), ...own })));
+    }
+    return out;
+}
+
+/** 自己的訊息再加上 7TV 個人貼圖 */
+export function selfEmoteMap(base: ReadonlyMap<string, string>, personal: Record<string, string>): ReadonlyMap<string, string> {
+    return new Map([...base, ...Object.entries(personal)]);
+}
