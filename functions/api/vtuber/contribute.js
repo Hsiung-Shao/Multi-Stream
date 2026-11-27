@@ -70,8 +70,10 @@ export async function onRequestPost(context) {
         status: 'pending',
         payload,
         youtube_channel_id: ch.channelId,
-        submitted_by: g.userId ? `user:${g.userId}` : `anon:${g.ipHash.slice(0, 16)}`,
-        user_id: g.userId,
+        // 帳號存在 user_id（刪帳號時設 null）；這裡只標來源，不放 uuid，刪帳號後才不留關聯
+        submitted_by: g.userId ? 'user' : `anon:${g.ipHash.slice(0, 16)}`,
+        // 只有登入者才帶這個鍵：程式先上線、migration 還沒套時，匿名投稿不受影響
+        ...(g.userId ? { user_id: g.userId } : {}),
         submitter_contact: v.contact,
         source_urls: v.sourceUrls,
         source_note: v.note,

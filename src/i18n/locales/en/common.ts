@@ -125,6 +125,8 @@ const common = {
   'auth.sub_status_pending': 'In review',
   'auth.sub_status_done': 'Accepted',
   'auth.sub_status_declined': 'Not accepted',
+  'auth.sub_status_closed': 'Closed',
+  'auth.link_taken': 'This sign-in method already belongs to another account. Sign in with it and delete that account first, or link a different method.',
   'chat.filter_label': 'Filter chat channels',
   'chat.log_label': 'Merged chat messages',
   'chat.no_twitch': 'No Twitch streams on the canvas',

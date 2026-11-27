@@ -116,8 +116,8 @@ export async function onRequestPost(context) {
         // 表單已告知「內容會公開在 /status」才標 true；舊版或快取的頁面不會送這個欄位 → 永遠不公開
         // （欄位由 migration 20261008062610 新增；還沒套時下方會去掉這個欄位重送）
         public_notice: body.publicNotice === true,
-        // 欄位由 migration 20261128120000 新增：上線前要先套 migration，否則 PostgREST 會因不認得欄位而拒絕
-        user_id: userId || null,
+        // 欄位由 migration 20261128120000 新增；只有登入者才帶，migration 未套時匿名回饋不受影響
+        ...(userId ? { user_id: userId } : {}),
     };
 
     let result = await insert(env, 'feedbacks', row);

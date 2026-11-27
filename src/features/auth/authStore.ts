@@ -10,8 +10,8 @@ import { hasStoredSession } from '../../lib/hasStoredSession';
 export interface AuthUser { id: string; email?: string; displayName: string; avatarUrl?: string; providers: string[] }
 export type AuthProvider = 'twitch' | 'google' | 'discord';
 
-// kicked：被其他裝置的新登入踢掉（帳號區顯示提示，下次登入時清掉）
-export const useAuthStore = create<{ status: 'unknown' | 'anon' | 'authed'; user: AuthUser | null; kicked?: boolean }>(() => ({ status: 'unknown', user: null }));
+// kicked：被其他裝置的新登入踢掉（帳號區顯示提示，下次登入時清掉）；linkError：綁定登入方式失敗的錯誤碼（OAuth 回來時從網址讀）
+export const useAuthStore = create<{ status: 'unknown' | 'anon' | 'authed'; user: AuthUser | null; kicked?: boolean; linkError?: string | null }>(() => ({ status: 'unknown', user: null }));
 
 const SESSION_TIMEOUT_MS = 2000;
 // 登入與綁定 Twitch 都要的權限：聊天讀寫（合併聊天室發言）＋ user:read:emotes（貼圖選單列出自己的訂閱貼圖）
@@ -131,11 +131,15 @@ export async function initAuth(): Promise<void> {
     if (res) { apply(res.data.session); captureChatToken(res.data.session); }
     // 逾時：回呼可能已經設好狀態，只有還沒定的才當未登入（之後 onAuthStateChange 會再更新）
     else if (useAuthStore.getState().status === 'unknown') useAuthStore.setState({ status: 'anon', user: null });
-    // 登入回呼的 ?code= 用過就從網址拿掉（reload 不會重送、分享出去也不帶）
+    // 登入回呼的 ?code=（與失敗時的 error 參數）用過就從網址拿掉（reload 不會重送、分享出去也不帶）
     try {
         const url = new URL(window.location.href);
-        if (url.searchParams.has('code')) {
-            url.searchParams.delete('code');
+        const errorCode = url.searchParams.get('error_code') ?? url.searchParams.get('error');
+        // 綁定失敗（最常見：這個登入方式已屬於另一個帳號）SDK 只會保留原 session、不回報，從網址讀出來給帳號區顯示
+        if (errorCode && takeFlag(LINK_KEY)) useAuthStore.setState({ linkError: errorCode });
+        const params = ['code', 'error', 'error_code', 'error_description'].filter(k => url.searchParams.has(k));
+        if (params.length) {
+            params.forEach(k => url.searchParams.delete(k));
             window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
         }
     } catch { /* 網址操作失敗不影響登入 */ }
@@ -163,6 +167,7 @@ export async function signIn(provider: AuthProvider): Promise<void> {
 
 /** 把另一種登入方式綁到目前帳號（同一個人用不同平台登入時才不會變成兩個帳號）；Supabase 後台要開 Manual linking */
 export async function linkProvider(provider: AuthProvider): Promise<void> {
+    useAuthStore.setState({ linkError: null });
     const sb = await loadClient();
     if (!sb) throw new Error('auth_unavailable');
     try {
@@ -191,8 +196,18 @@ export async function unlinkProvider(provider: AuthProvider): Promise<void> {
     if (!target || list.length < 2) throw new Error('cannot_unlink');
     const res = await sb.auth.unlinkIdentity(target);
     if (res.error) throw res.error;
+    // 解除 Twitch：伺服器保管的發言權杖一起刪，不然還能用那個 Twitch 身分發言
+    if (provider === 'twitch') {
+        const token = await getAccessToken();
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 15_000);
+        await fetch('/api/twitch/chat-token', { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: ctrl.signal })
+            .catch(() => {}).finally(() => clearTimeout(timer));
+        void import('../chat/chatToken').then(m => m.resetChatCredentials()).catch(() => {});
+    }
+    // 拿新的 session 更新登入方式清單；失敗（網路）時保留原狀態，不誤顯示成已登出
     const s = await sb.auth.refreshSession();
-    apply(s.data.session);
+    if (!s.error && s.data.session) apply(s.data.session);
 }
 
 /**
@@ -204,9 +219,11 @@ export async function checkSessionAlive(): Promise<void> {
     const sb = await loadClient();
     if (!sb) return;
     const res = await withTimeout(sb.auth.getUser(), 5000);
-    const err = res?.error as { status?: number; code?: string } | null | undefined;
+    const err = res?.error as { name?: string; status?: number; code?: string } | null | undefined;
     if (!err) return;
-    if (err.status === 401 || err.status === 403 || err.code === 'session_not_found') {
+    // SDK 收到 session_not_found 會轉成 AuthSessionMissingError（status 400、沒有 code），要另外認；
+    // 用名稱比對，不從 SDK 靜態匯入（SDK 只能經 getSupabase 動態載入）
+    if (err.name === 'AuthSessionMissingError' || err.status === 401 || err.status === 403 || err.code === 'session_not_found') {
         await signOut();
         useAuthStore.setState({ kicked: true });
     }

@@ -18,6 +18,8 @@ export function LinkedProviders({ providers }: { providers: string[] }) {
     const { t } = useTranslation('common');
     const [busy, setBusy] = useState(false);
     const [failed, setFailed] = useState(false);
+    // 綁定要跳轉到平台，失敗是在跳回來時從網址讀到（authStore.initAuth）
+    const linkError = useAuthStore(s => s.linkError);
     const run = (fn: () => Promise<void>) => {
         setBusy(true);
         setFailed(false);
@@ -42,7 +44,9 @@ export function LinkedProviders({ providers }: { providers: string[] }) {
                     );
                 })}
             </ul>
-            {failed && <p role="alert" className="text-sm text-red-500">{t('auth.link_failed')}</p>}
+            {(failed || linkError) && (
+                <p role="alert" className="text-sm text-red-500">{t(linkError === 'identity_already_exists' ? 'auth.link_taken' : 'auth.link_failed')}</p>
+            )}
         </div>
     );
 }
@@ -50,15 +54,17 @@ export function LinkedProviders({ providers }: { providers: string[] }) {
 interface Submission { kind: string; id: string; created_at: string; status: string; title: string }
 
 const KIND_KEY = {
-    schedule: 'auth.sub_kind_schedule', add: 'auth.sub_kind_vtuber', update: 'auth.sub_kind_vtuber',
+    schedule: 'auth.sub_kind_schedule', add: 'auth.sub_kind_vtuber', edit: 'auth.sub_kind_vtuber', delete: 'auth.sub_kind_vtuber',
     report: 'auth.sub_kind_report', song: 'auth.sub_kind_song', feedback: 'auth.sub_kind_feedback',
 } as const;
-const STATUS_KEY = { pending: 'auth.sub_status_pending', done: 'auth.sub_status_done', declined: 'auth.sub_status_declined' } as const;
+const STATUS_KEY = { pending: 'auth.sub_status_pending', done: 'auth.sub_status_done', declined: 'auth.sub_status_declined', closed: 'auth.sub_status_closed' } as const;
 // 四張表的狀態值不同，統一成三類
-const STATUS_GROUP: Record<string, 'pending' | 'done' | 'declined'> = {
-    pending: 'pending', new: 'pending', open: 'pending', read: 'pending',
+// 值取自四張表的 CHECK（vtuber_contributions、vtuber_reports、song_submissions、feedbacks）；沒列到的當處理中
+const STATUS_GROUP: Record<string, keyof typeof STATUS_KEY> = {
+    pending: 'pending', open: 'pending', read: 'pending', unread: 'pending', processing: 'pending',
     approved: 'done', applied: 'done', fixed: 'done', processed: 'done', resolved: 'done',
-    rejected: 'declined', reverted: 'declined', dismissed: 'declined', wontfix: 'declined',
+    rejected: 'declined', reverted: 'declined', spam: 'declined', duplicate: 'declined',
+    archived: 'closed',
 };
 
 /** 我的投稿：登入時查一次最近 50 筆（RPC my_submissions，只回自己的） */

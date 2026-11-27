@@ -125,6 +125,8 @@ const common = {
   'auth.sub_status_pending': '검토 중',
   'auth.sub_status_done': '반영됨',
   'auth.sub_status_declined': '반영 안 됨',
+  'auth.sub_status_closed': '종료됨',
+  'auth.link_taken': '이 로그인 방식은 이미 다른 계정에 연결되어 있습니다. 먼저 그 방식으로 로그인해 해당 계정을 삭제하거나 다른 방식을 연결해 주세요.',
   'chat.filter_label': '채팅 채널 필터',
   'chat.log_label': '통합 채팅 메시지',
   'chat.no_twitch': '캔버스에 Twitch 방송이 없습니다',

@@ -2,6 +2,7 @@
 //   新登入踢掉其他裝置、被踢的裝置切回頁面時登出並提示、綁定第二個平台不觸發踢人
 // 只 mock 外部 I/O：getSupabase 回傳的假 client；每則測試重載模組以重置 store
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { AuthSessionMissingError } from '@supabase/auth-js';
 
 const { getSupabase } = vi.hoisted(() => ({ getSupabase: vi.fn() }));
 vi.mock('../../../src/lib/supabase', () => ({ getSupabase }));
@@ -25,6 +26,9 @@ function makeClient(initial: Session = null) {
         signInWithOAuth: vi.fn(async (_args: unknown) => ({ data: {}, error: null })),
         linkIdentity: vi.fn(async (_args: unknown) => ({ data: {}, error: null })),
         signOut: vi.fn(async (_args?: unknown) => ({ error: null })),
+        getUserIdentities: vi.fn(async () => ({ data: { identities: [{ provider: 'twitch', identity_id: 'i1' }, { provider: 'discord', identity_id: 'i2' }] }, error: null })),
+        unlinkIdentity: vi.fn(async (_i: unknown) => ({ data: {}, error: null })),
+        refreshSession: vi.fn(async (): Promise<{ data: { session: unknown }; error: unknown }> => ({ data: { session: initial }, error: null })),
         onAuthStateChange: vi.fn((_cb: AuthCb) => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     };
     return { auth };
@@ -147,9 +151,9 @@ describe('U11 被踢的裝置切回頁面時登出並提示', () => {
         expect(useAuthStore.getState()).toMatchObject({ status: 'anon', user: null, kicked: true });
     });
 
-    it('getUser 錯誤碼為 session_not_found（沒有 HTTP 狀態）也視為被踢', async () => {
+    it('SDK 把 session_not_found 轉成 AuthSessionMissingError（status 400）也視為被踢', async () => {
         const client = makeClient(makeSession());
-        client.auth.getUser.mockResolvedValue({ data: { user: null }, error: { code: 'session_not_found', message: 'Session not found' } });
+        client.auth.getUser.mockResolvedValue({ data: { user: null }, error: new AuthSessionMissingError() });
         const { checkSessionAlive, useAuthStore } = await authed(client);
 
         await checkSessionAlive();
@@ -220,4 +224,52 @@ describe('U12 綁定不觸發踢人', () => {
         expect(othersCalls(client)).toHaveLength(0);
     });
 
+});
+
+describe('review 第 1 輪：綁定與解除', () => {
+    const withToken = () => ({ ...makeSession(), access_token: 'tok' });
+
+    it('解除 Twitch 時刪除伺服器保管的發言權杖', async () => {
+        const client = makeClient(withToken());
+        getSupabase.mockResolvedValue(client);
+        const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+        vi.stubGlobal('fetch', fetchMock);
+        const { unlinkProvider, useAuthStore } = await loadStore();
+        useAuthStore.setState({ status: 'authed', user: { id: 'u1', displayName: 'Jane', providers: ['twitch', 'discord'] } });
+
+        await unlinkProvider('twitch');
+
+        const del = fetchMock.mock.calls.find(([u, init]) => String(u) === '/api/twitch/chat-token' && (init as RequestInit)?.method === 'DELETE');
+        expect(del).toBeTruthy();
+        vi.unstubAllGlobals();
+    });
+
+    it('解除後重新整理 session 失敗時不誤判成已登出', async () => {
+        const client = makeClient(withToken());
+        client.auth.refreshSession.mockResolvedValue({ data: { session: null }, error: new Error('network') });
+        getSupabase.mockResolvedValue(client);
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
+        const { unlinkProvider, useAuthStore } = await loadStore();
+        useAuthStore.setState({ status: 'authed', user: { id: 'u1', displayName: 'Jane', providers: ['twitch', 'discord'] } });
+
+        await unlinkProvider('discord');
+
+        expect(useAuthStore.getState().status).toBe('authed');
+        vi.unstubAllGlobals();
+    });
+
+    it('綁定失敗從網址帶回錯誤碼：記下錯誤、清掉網址參數與旗標', async () => {
+        const client = makeClient(withToken());
+        getSupabase.mockResolvedValue(client);
+        window.localStorage.setItem(STORED_KEY, '{}');
+        window.sessionStorage.setItem('ms_oauth_link', '1');
+        window.history.replaceState(null, '', '/zh-TW?error=server_error&error_code=identity_already_exists&error_description=Identity+is+already+linked');
+        const { initAuth, useAuthStore } = await loadStore();
+
+        await initAuth();
+
+        expect(useAuthStore.getState().linkError).toBe('identity_already_exists');
+        expect(window.location.search).toBe('');
+        expect(window.sessionStorage.getItem('ms_oauth_link')).toBeNull();
+    });
 });

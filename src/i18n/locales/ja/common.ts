@@ -125,6 +125,8 @@ const common = {
   'auth.sub_status_pending': '確認中',
   'auth.sub_status_done': '採用',
   'auth.sub_status_declined': '不採用',
+  'auth.sub_status_closed': '終了',
+  'auth.link_taken': 'このログイン方法はすでに別のアカウントに使われています。先にそれでログインしてそのアカウントを削除するか、別の方法を連携してください。',
   'chat.filter_label': 'チャットのチャンネル絞り込み',
   'chat.log_label': 'まとめチャットのメッセージ',
   'chat.no_twitch': 'キャンバスに Twitch 配信がありません',

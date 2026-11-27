@@ -124,6 +124,8 @@ const common = {
   'auth.sub_status_pending': '處理中',
   'auth.sub_status_done': '已採用',
   'auth.sub_status_declined': '未採用',
+  'auth.sub_status_closed': '已結案',
+  'auth.link_taken': '這個登入方式已經屬於另一個帳號。請先用它登入並刪除那個帳號，或改綁其他登入方式。',
   'chat.filter_label': '聊天頻道篩選',
   'chat.log_label': '合併聊天訊息',
   'chat.no_twitch': '畫布上沒有 Twitch 直播',

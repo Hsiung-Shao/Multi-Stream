@@ -51,7 +51,8 @@ export async function onRequestPost(context) {
         contact: v.contact,
         page_url: v.pageUrl,
         ip_hash: g.ipHash,
-        user_id: g.userId,
+        // 只有登入者才帶（migration 未套時匿名回報不受影響）
+        ...(g.userId ? { user_id: g.userId } : {}),
     });
     if (!res.ok) {
         await logError(env, 'report', 'insert failed', { metadata: { status: res.status, error: res.error?.slice(0, 300) } });

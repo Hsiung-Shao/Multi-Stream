@@ -14,7 +14,8 @@ import { getUserIdFromRequest } from './auth-helper.js';
  * @param {Object} context - Pages Function context
  * @param {{ disabledFlag: string, maxBytes: number, validate: (body) => ({value}|{error}),
  *           quotas: (ipHash: string, w: {hour: string, day: string}) => { personal: {key,limit,ttl}[], global: {key,limit,ttl}[] } }} cfg
- * 已登入（Bearer 權杖驗證通過）時回傳 userId，個人配額改用帳號（u:<userId>）計算，換 IP 也繞不過；權杖無效就當匿名，不擋人。
+ * 已登入（Bearer 權杖驗證通過）時回傳 userId；個人配額 IP 一律計，登入者再加一層帳號（u:<userId>）配額，
+ * 換 IP 或同 IP 換帳號都不能疊加額度。權杖無效就當匿名，不擋人。
  * @returns {Promise<{ ok: true, value: object, body: object, ip: string, ipHash: string, userId: string|null } | { ok: false, response: Response }>}
  */
 export async function guardSubmission(context, cfg) {
@@ -36,10 +37,13 @@ export async function guardSubmission(context, cfg) {
     if (checked.error) return fail(400, checked.error);
 
     const ipHash = await hashIp(env, ip);
+    const w = quotaWindow();
+    const quotas = cfg.quotas(ipHash, w);
+    if (!(await checkQuotas(env.RATE_LIMIT_KV, quotas.personal)).ok) return fail(429, 'rate_limited');
+    // IP 配額過了才驗權杖：被擋的請求不多打一次 Supabase Auth
     const { userId, verified } = await getUserIdFromRequest(request, env);
     const who = verified && userId ? userId : null;
-    const quotas = cfg.quotas(who ? `u:${who}` : ipHash, quotaWindow());
-    if (!(await checkQuotas(env.RATE_LIMIT_KV, quotas.personal)).ok) return fail(429, 'rate_limited');
+    if (who && !(await checkQuotas(env.RATE_LIMIT_KV, cfg.quotas(`u:${who}`, w).personal)).ok) return fail(429, 'rate_limited');
 
     const ts = await verifyTurnstile(env, body?.turnstileToken, ip);
     if (!ts.ok) return fail(ts.status, ts.error);

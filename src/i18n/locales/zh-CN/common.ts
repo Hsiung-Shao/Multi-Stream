@@ -125,6 +125,8 @@ const common = {
   'auth.sub_status_pending': '处理中',
   'auth.sub_status_done': '已采用',
   'auth.sub_status_declined': '未采用',
+  'auth.sub_status_closed': '已结案',
+  'auth.link_taken': '这个登录方式已经属于另一个账号。请先用它登录并删除那个账号，或改绑其他登录方式。',
   'chat.filter_label': '聊天频道筛选',
   'chat.log_label': '合并聊天消息',
   'chat.no_twitch': '画布上没有 Twitch 直播',

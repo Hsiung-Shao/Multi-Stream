@@ -74,12 +74,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-const post = (path: string, b: unknown, token: string | null = null) =>
+const post = (path: string, b: unknown, token: string | null = null, ip = IP) =>
     new Request(`https://multistreaming.org${path}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'CF-Connecting-IP': IP,
+            'CF-Connecting-IP': ip,
             Origin: 'https://multistreaming.org',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
@@ -109,38 +109,38 @@ const reportBody = () => ({ kind: 'vtuber_info', vtuberId: VID, reasons: ['name'
 const feedbackBody = () => ({ feedbackType: 'bug', content: '切換版型後聲音不見' });
 
 describe('U1 登入者投稿記到帳號', () => {
-    it('登入者投 VTuber：寫入列 user_id 為該帳號、submitted_by 為 user:<id>', async () => {
+    it('登入者投 VTuber：寫入列 user_id 為該帳號、submitted_by 為 user（不放 uuid，刪帳號後不留關聯）', async () => {
         const res = await contributePost({ request: post('/api/vtuber/contribute', contribution, TOKEN), env: ENV() });
         expect(res.status).toBe(201);
         const row = writeOf('vtuber_contributions');
         expect(row.user_id).toBe(UID);
-        expect(row.submitted_by).toBe(`user:${UID}`);
+        expect(row.submitted_by).toBe('user');
     });
 
-    it('登入者投週表：寫入列 user_id 為該帳號、submitted_by 為 user:<id>', async () => {
+    it('登入者投週表：寫入列 user_id 為該帳號、submitted_by 為 user（不放 uuid，刪帳號後不留關聯）', async () => {
         const res = await entriesPost({ request: post('/api/schedule/entries', scheduleBody(), TOKEN), env: ENV() });
         expect(res.status).toBe(201);
         const row = writeOf('vtuber_contributions');
         expect(row.user_id).toBe(UID);
-        expect(row.submitted_by).toBe(`user:${UID}`);
+        expect(row.submitted_by).toBe('user');
     });
 });
 
 describe('U2 匿名投稿照舊', () => {
-    it('不帶權杖投 VTuber：user_id 為 null、submitted_by 以 anon: 開頭，且沒打 auth 驗證', async () => {
+    it('不帶權杖投 VTuber：寫入列沒有 user_id 欄位、submitted_by 以 anon: 開頭，且沒打 auth 驗證', async () => {
         const res = await contributePost({ request: post('/api/vtuber/contribute', contribution), env: ENV() });
         expect(res.status).toBe(201);
         const row = writeOf('vtuber_contributions');
-        expect(row).toHaveProperty('user_id', null);
+        expect(row).not.toHaveProperty('user_id');
         expect(row.submitted_by).toMatch(/^anon:[0-9a-f]{16}$/);
         expect(calls.some((c) => c.url.includes('/auth/v1/user'))).toBe(false);
     });
 
-    it('不帶權杖投週表：user_id 為 null、submitted_by 以 anon: 開頭', async () => {
+    it('不帶權杖投週表：寫入列沒有 user_id 欄位、submitted_by 以 anon: 開頭', async () => {
         const res = await entriesPost({ request: post('/api/schedule/entries', scheduleBody()), env: ENV() });
         expect(res.status).toBe(201);
         const row = writeOf('vtuber_contributions');
-        expect(row).toHaveProperty('user_id', null);
+        expect(row).not.toHaveProperty('user_id');
         expect(row.submitted_by).toMatch(/^anon:[0-9a-f]{16}$/);
     });
 });
@@ -151,7 +151,7 @@ describe('U3 權杖無效當匿名', () => {
         const res = await contributePost({ request: post('/api/vtuber/contribute', contribution, TOKEN), env: ENV() });
         expect(res.status).toBe(201);
         const row = writeOf('vtuber_contributions');
-        expect(row).toHaveProperty('user_id', null);
+        expect(row).not.toHaveProperty('user_id');
         expect(row.submitted_by).toMatch(/^anon:/);
     });
 
@@ -159,32 +159,35 @@ describe('U3 權杖無效當匿名', () => {
         userLookup = () => new Response('{}', { status: 401 });
         const res = await entriesPost({ request: post('/api/schedule/entries', scheduleBody(), TOKEN), env: ENV() });
         expect(res.status).toBe(201);
-        expect(writeOf('vtuber_contributions')).toHaveProperty('user_id', null);
+        expect(writeOf('vtuber_contributions')).not.toHaveProperty('user_id');
     });
 });
 
 describe('U4 登入者用帳號限流', () => {
-    it('個人配額的 KV key 含 u:<帳號> 且不含 ipHash，全站配額照舊', async () => {
+    it('登入者 IP 配額與帳號配額都計，全站配額照舊', async () => {
         const env = ENV();
         const ipHash = await hashIp(env, IP);
         const res = await contributePost({ request: post('/api/vtuber/contribute', contribution, TOKEN), env });
         expect(res.status).toBe(201);
         const keys = [...env.RATE_LIMIT_KV._m.keys()];
         const personal = keys.filter((k) => k.startsWith('contrib:h:') || k.startsWith('contrib:d:'));
-        expect(personal.length).toBeGreaterThan(0);
-        for (const k of personal) {
-            expect(k).toContain(`u:${UID}`);
-            expect(k).not.toContain(ipHash);
-        }
+        expect(personal.some((k) => k.includes(ipHash))).toBe(true);
+        expect(personal.some((k) => k.includes(`u:${UID}`))).toBe(true);
         expect(keys.some((k) => k.startsWith('contrib:g:'))).toBe(true);
     });
 
-    it('同一帳號超過個人上限回 429，同 IP 的另一個帳號不受影響', async () => {
+    it('同 IP 換帳號不能疊加額度：IP 配額用完後另一個帳號也回 429', async () => {
         const env = ENV();
         const run = (token: string) => contributePost({ request: post('/api/vtuber/contribute', contribution, token), env });
         for (let i = 0; i < 3; i++) expect((await run(TOKEN)).status).toBe(201);
-        expect((await run(TOKEN)).status).toBe(429);
-        expect((await run('ddd.eee.fff')).status).toBe(201);
+        expect((await run('ddd.eee.fff')).status).toBe(429);
+    });
+
+    it('同一帳號換 IP 也不能疊加額度：帳號配額用完後回 429', async () => {
+        const env = ENV();
+        const run = (ip: string) => contributePost({ request: post('/api/vtuber/contribute', contribution, TOKEN, ip), env });
+        for (let i = 0; i < 3; i++) expect((await run(`198.51.100.${i + 1}`)).status).toBe(201);
+        expect((await run('198.51.100.9')).status).toBe(429);
     });
 
     it('匿名仍以 ipHash 限流（key 含 ipHash、不含 u:）', async () => {
@@ -209,7 +212,7 @@ describe('U5 回報、意見、歌單都帶帳號', () => {
         calls = [];
         const anon = await reportPost({ request: post('/api/report', reportBody()), env: ENV() });
         expect(anon.status).toBe(201);
-        expect(writeOf('vtuber_reports')).toHaveProperty('user_id', null);
+        expect(writeOf('vtuber_reports')).not.toHaveProperty('user_id');
     });
 
     it('登入者送意見：feedbacks 寫入列 user_id 為該帳號；匿名為 null', async () => {
@@ -220,7 +223,7 @@ describe('U5 回報、意見、歌單都帶帳號', () => {
         calls = [];
         const anon = await feedbackPost({ request: post('/api/feedback/submit', feedbackBody()), env: ENV() });
         expect(anon.status).toBe(200);
-        expect(writeOf('feedbacks')).toHaveProperty('user_id', null);
+        expect(writeOf('feedbacks')).not.toHaveProperty('user_id');
     });
 
     it('登入者投歌單：RPC 的 p_meta 帶 user_id；匿名為 null', async () => {
