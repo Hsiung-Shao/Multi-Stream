@@ -14,7 +14,7 @@ import { loadFollowerEmotes, loadTwitchEmotes, loadTwitchOwners, resetTwitchEmot
 import { buildPickerSections } from './emoteSections';
 import { completeEmote, insertEmote, type CompletionState } from './emoteComplete';
 import { EmotePicker } from './EmotePicker';
-import { getInputCaret, getInputSelection, renderInput, replaceRange, serializeInput, setInputCaret } from './emoteInput';
+import { getInputCaret, getInputSelection, isRendered, renderInput, replaceRange, serializeInput, setInputCaret } from './emoteInput';
 import type { ChatMessage } from './ircParse';
 import { cn } from '../../components/ui/utils';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -105,10 +105,18 @@ export function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient;
     const caret = useRef(0);
     const pendingCaret = useRef<number | null>(null);
     const composing = useRef(false);
+    // 復原紀錄自己記：貼圖變成圖片時會重畫，瀏覽器原生的復原紀錄會指向已移除的節點，游標跳到開頭
+    const history = useRef<{ undo: { text: string; caret: number }[]; redo: { text: string; caret: number }[] }>({ undo: [], redo: [] });
+    const remember = () => {
+        const h = history.current;
+        h.undo.push({ text, caret: Math.min(caret.current, text.length) });
+        if (h.undo.length > 100) h.undo.shift();
+        h.redo = [];
+    };
     const redraw = (value: string, at: number | null) => {
         const el = box.current;
         if (!el) return;
-        renderInput(el, value, urlByName);
+        if (!isRendered(el, value, urlByName)) renderInput(el, value, urlByName);
         if (at !== null && el.ownerDocument.activeElement === el) setInputCaret(el, at);
     };
     useLayoutEffect(() => {
@@ -120,15 +128,47 @@ export function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient;
         redraw(text, at);
     }, [text, urlByName, cred]);
     useEffect(() => {
-        const track = () => { const at = box.current && getInputCaret(box.current); if (at != null) caret.current = at; };
+        // 只在輸入框有焦點時記：焦點在選單時重畫會讓選取跳回開頭，不能拿來覆蓋記住的位置
+        const track = () => {
+            const el = box.current;
+            if (!el || document.activeElement !== el) return;
+            const at = getInputCaret(el);
+            if (at !== null) caret.current = at;
+        };
         document.addEventListener('selectionchange', track);
         return () => document.removeEventListener('selectionchange', track);
     }, []);
+    const step = (undo: boolean) => {
+        const h = history.current;
+        const [from, to] = undo ? [h.undo, h.redo] : [h.redo, h.undo];
+        const snap = from.pop();
+        if (!snap) return;
+        to.push({ text, caret: Math.min(caret.current, text.length) });
+        completion.current = null;
+        caret.current = snap.caret;
+        pendingCaret.current = snap.caret;
+        setText(snap.text);
+    };
+    const stepRef = useRef(step);
+    stepRef.current = step;
+    useEffect(() => {
+        const el = box.current;
+        if (!el) return;
+        // 選單的「復原／重做」只會送 beforeinput（快捷鍵在 onKeyDown 處理）：攔下來用自己的紀錄
+        const onHistory = (e: InputEvent) => {
+            if (e.inputType !== 'historyUndo' && e.inputType !== 'historyRedo') return;
+            e.preventDefault();
+            stepRef.current(e.inputType === 'historyUndo');
+        };
+        el.addEventListener('beforeinput', onHistory);
+        return () => el.removeEventListener('beforeinput', onHistory);
+    }, [cred]);
     const apply = (r: { text: string; caret: number }) => {
         if (r.text.length > 500) return;
-        caret.current = r.caret;
         // 文字沒變（只剩一個候選時連按 Tab）不會觸發重畫：直接放游標
-        if (r.text === text) { redraw(text, r.caret); return; }
+        if (r.text === text) { caret.current = r.caret; redraw(text, r.caret); return; }
+        remember();
+        caret.current = r.caret;
         pendingCaret.current = r.caret;
         setText(r.text);
     };
@@ -146,7 +186,15 @@ export function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient;
     }
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (c.send(channel, text, twitchIds)) { setText(''); caret.current = 0; completion.current = null; }
+        // 選字還沒結束就按送出（手機常見）：text 還沒包含選字中的字，以畫面為準
+        const value = box.current ? serializeInput(box.current) : text;
+        if (!value.trim() || !c.send(channel, value, twitchIds)) return;
+        composing.current = false;
+        history.current = { undo: [], redo: [] };
+        caret.current = 0;
+        completion.current = null;
+        setText('');
+        redraw('', 0);
     };
     const onInput = () => {
         const el = box.current;
@@ -156,15 +204,25 @@ export function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient;
         const at = getInputCaret(el) ?? next.length;
         // 超過字數就退回原文（可編輯區沒有 maxLength）
         if (next.length > 500) { redraw(text, Math.min(caret.current, text.length)); return; }
+        if (next === text) { caret.current = at; redraw(text, at); return; }
+        remember();
         caret.current = at;
-        if (next === text) { redraw(text, at); return; }
         pendingCaret.current = at;
         setText(next);
     };
     const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.nativeEvent.isComposing || composing.current) return;
+        // Safari 選字確認的 Enter 在 compositionend 之後才到，只能從 keyCode 229 認出來
+        if (e.nativeEvent.isComposing || composing.current || e.keyCode === 229) return;
+        // 復原／重做快捷鍵自己處理：瀏覽器自己的紀錄是空的時候不會送 beforeinput
+        const mod = e.ctrlKey || e.metaKey;
+        const k = e.key.toLowerCase();
+        if (mod && !e.altKey && (k === 'z' || k === 'y')) {
+            e.preventDefault();
+            step(k === 'z' && !e.shiftKey);
+            return;
+        }
         // 單行輸入：Enter 送出，不換行
-        if (e.key === 'Enter') { e.preventDefault(); if (text.trim()) submit(e); return; }
+        if (e.key === 'Enter') { e.preventDefault(); submit(e); return; }
         if (e.key !== 'Tab' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) { completion.current = null; return; }
         const r = completeEmote(text, getInputCaret(e.currentTarget) ?? text.length, names, completion.current);
         // 沒有候選（或補完後會超過字數上限）就不攔，Tab 照常移動焦點
@@ -183,7 +241,9 @@ export function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient;
         e.preventDefault();
         const [start, end] = getInputSelection(e.currentTarget) ?? [text.length, text.length];
         completion.current = null;
-        apply(replaceRange(text, start, end, e.clipboardData.getData('text/plain')));
+        // 超過字數就截到剩下的字數（和原本 <input maxLength> 一樣）
+        const clip = e.clipboardData.getData('text/plain').replace(/\r\n|\r|\n/g, ' ').slice(0, Math.max(0, 500 - text.length + end - start));
+        apply(replaceRange(text, start, end, clip));
     };
     return (
         <form onSubmit={submit} className="flex items-end gap-1.5 border-t border-white/10 p-2">

@@ -17,6 +17,17 @@ export function inputParts(text: string, urlByName: ReadonlyMap<string, string>)
     return out;
 }
 
+/** 畫面已經是這段文字畫出來的樣子：一般打字（沒新增貼圖）就不重畫，保留瀏覽器的復原紀錄 */
+export function isRendered(el: HTMLElement, text: string, urlByName: ReadonlyMap<string, string>): boolean {
+    const parts = inputParts(text, urlByName);
+    const kids = el.childNodes;
+    return kids.length === parts.length && parts.every((p, i) => {
+        const n = kids[i];
+        return p.type === 'text' ? n.nodeType === Node.TEXT_NODE && n.nodeValue === p.text
+            : n instanceof HTMLImageElement && n.alt === p.name && n.getAttribute('src') === p.url;
+    });
+}
+
 export function renderInput(el: HTMLElement, text: string, urlByName: ReadonlyMap<string, string>): void {
     const doc = el.ownerDocument;
     el.replaceChildren(...inputParts(text, urlByName).map(p => {
