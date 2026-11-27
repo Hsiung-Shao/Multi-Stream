@@ -138,7 +138,7 @@ export async function initAuth(): Promise<void> {
         // 綁定失敗（最常見：這個登入方式已屬於另一個帳號）SDK 只會保留原 session、不回報，從網址讀出來給帳號區顯示
         if (errorCode && takeFlag(LINK_KEY)) useAuthStore.setState({ linkError: errorCode });
         const params = ['code', 'error', 'error_code', 'error_description'].filter(k => url.searchParams.has(k));
-        // GoTrue 失敗時錯誤同時放在 query 與 # 後面；# 後面只有錯誤參數時整段拿掉
+        // GoTrue 失敗時錯誤同時放在 query 與 # 後面；# 後面含錯誤參數就整段拿掉（PKCE 流程 # 後面不會有其他要用的東西）
         const hashError = /(^#|&)error(_code|_description)?=/.test(url.hash);
         if (params.length || hashError) {
             params.forEach(k => url.searchParams.delete(k));
