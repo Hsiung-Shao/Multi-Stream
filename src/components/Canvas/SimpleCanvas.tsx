@@ -62,6 +62,10 @@ export function roomOverlayRects(windows: readonly CanvasWindow[], cellWidth: nu
     }
     const wings = streams.filter(w => w !== main).sort((a, b) => a.gridY - b.gridY || a.gridX - b.gridX);
     if (!main || wings.length === 0 || wings.length > MAX_OVERLAY_WINGS) return null;
+    // 只有版面真的是舞台形狀（stageLayout 的結果：舞台從左上佔滿整個串流區）才浮；
+    // Alt+數字、套用自訂版面等把版面換成別的形狀時照格線畫，不然候場會疊到別格、留下空白
+    const area = Math.min(GRID_COLS, ...windows.filter(w => w.type === 'chat' && w.gridW > 0).map(w => w.gridX));
+    if (main.gridX !== 0 || main.gridY !== 0 || main.gridH !== GRID_ROWS || main.gridW !== area) return null;
     const rects = wingRects(wings.length, {
         x: main.gridX * cellWidth, y: main.gridY * cellHeight, width: main.gridW * cellWidth, height: main.gridH * cellHeight,
     });

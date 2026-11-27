@@ -93,6 +93,12 @@ interface DraggableWindowProps {
     resizable?: boolean;
 }
 
+const noop = () => {};
+/** 不能拖的視窗（房間舞台模式、候場浮窗）給內容元件的拖曳 handler：一次關掉所有內容元件的拖曳入口（含空槽的拖曳膠囊） */
+export const NO_DRAG_HANDLERS: WindowRenderProps['dragHandlers'] = {
+    onPointerDown: noop, onPointerMove: noop, onPointerUp: noop, onPointerCancel: noop, onLostPointerCapture: noop,
+};
+
 export const DraggableWindow = memo(function DraggableWindow({
     window,
     gridConfig,
@@ -233,14 +239,15 @@ export const DraggableWindow = memo(function DraggableWindow({
     }, [onHoverChange]);
 
     // Render props for children —— 必須 memo（見檔頭效能約束 2）
+    const draggable = resizable && !overlayRect;
     const renderProps: WindowRenderProps = useMemo(() => ({
-        dragHandlers,
+        dragHandlers: draggable ? dragHandlers : NO_DRAG_HANDLERS,
         isDragging,
         isResizing,
         gridW: window.gridW,
         gridH: window.gridH,
         onRemove: handleRemove
-    }), [dragHandlers, isDragging, isResizing, window.gridW, window.gridH, handleRemove]);
+    }), [draggable, dragHandlers, isDragging, isResizing, window.gridW, window.gridH, handleRemove]);
 
     const renderedChildren = renderContent(window, renderProps);
 

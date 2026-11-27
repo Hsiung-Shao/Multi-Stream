@@ -354,7 +354,11 @@ const RoomTileTools = memo(function RoomTileTools({ title, muted, isStage, isMai
         <>
             <div
                 data-room-tools
-                className="absolute left-2 top-2 z-[56] flex max-w-[calc(100%-16px)] flex-wrap gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+                className={cn(
+                    'absolute left-2 top-2 z-[56] flex max-w-[calc(100%-16px)] flex-wrap gap-1 opacity-0 transition-opacity [&:has(:focus-visible)]:opacity-100',
+                    // 閒置時連 hover 也不顯示：舞台鋪滿，滑鼠幾乎總停在舞台上，靠 hover 會讓工具一直蓋在播放器上
+                    !idle && 'group-hover:opacity-100',
+                )}
             >
                 {!isStage && (
                     <button type="button" data-room-tool="drag" className={cn(toolBtn, 'cursor-grab')} aria-label={t('room.tool_drag', { name: title })} title={t('room.tool_drag', { name: title })} {...dragHandlers}>

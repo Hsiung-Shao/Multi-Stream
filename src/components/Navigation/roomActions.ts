@@ -77,6 +77,16 @@ export function applyRoomLayout(): void {
     if (useUIStore.getState().roomMode === 'stage') applyRoomStage(); else applyRoomChat();
 }
 
+/**
+ * 離開房間模式前呼叫：舞台模式的格線版面是「舞台佔滿、候場疊在右緣」（畫面靠浮窗呈現），
+ * 其他外殼照格線畫會重疊，所以先重排成不重疊的平分；平分模式不動。
+ */
+export function leaveRoomLayout(): void {
+    if (useUIStore.getState().roomMode !== 'stage') return;
+    const { canvasItems, chatColumnWidth } = useStreamStore.getState();
+    useStreamStore.setState({ canvasItems: relayoutItems(canvasItems, getCanvasAspect(), [], chatColumnWidth) });
+}
+
 /** 舞台 ⇄ 平分 */
 export function toggleRoomMode(): void {
     const ui = useUIStore.getState();

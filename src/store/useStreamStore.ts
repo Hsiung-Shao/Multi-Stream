@@ -187,6 +187,12 @@ const buildTemplateCanvasItems = (
  * 目前畫布轉成自訂版面的 slot。聊天室收合時先以偏好寬度展開再存：
  * 自訂版面存的是「版面長相」，套用時聊天室應該看得到，也避免存出寬 0 的 slot。
  */
+/** 存版面用：房間舞台模式的格線版面是重疊的（候場浮在舞台上），先排成不重疊的平分，存下來才能在任何外殼套用 */
+function savableItems(items: CanvasItem[], chatCols: number): CanvasItem[] {
+    const ui = useUIStore.getState();
+    return ui.islandStyle === 'room' && ui.roomMode === 'stage' ? relayoutItems(items, getCanvasAspect(), [], chatCols) : items;
+}
+
 const slotsOf = (items: CanvasItem[], chatCols: number): LayoutSlot[] =>
     (chatsCollapsed(items) ? expandChats(items, getCanvasAspect(), chatCols) : items).map(item => ({
         x: item.layout.x,
@@ -990,10 +996,10 @@ export const useStreamStore = create<StreamStoreState>()(
                     type: 'user',
                     // 聊天室收合時先以偏好寬度展開再存（與自訂版面的 slotsOf 一致）：套用 preset 是原樣還原，
                     // 存成寬 0 的聊天室會讓套用後聊天室看不到
-                    items: (chatsCollapsed(state.canvasItems)
-                        ? expandChats(state.canvasItems, getCanvasAspect(), state.chatColumnWidth)
-                        : state.canvasItems
-                    ).map(item => ({ ...item, layout: { ...item.layout } }))
+                    items: (() => {
+                        const base = savableItems(state.canvasItems, state.chatColumnWidth);
+                        return chatsCollapsed(base) ? expandChats(base, getCanvasAspect(), state.chatColumnWidth) : base;
+                    })().map(item => ({ ...item, layout: { ...item.layout } }))
                 };
                 return { presets: [...state.presets, newPreset] };
             }),
@@ -1073,7 +1079,7 @@ export const useStreamStore = create<StreamStoreState>()(
 
             saveCustomLayout: async (name: string) => {
                 const state = get();
-                const slots = slotsOf(state.canvasItems, state.chatColumnWidth);
+                const slots = slotsOf(savableItems(state.canvasItems, state.chatColumnWidth), state.chatColumnWidth);
 
                 const newLayout: CustomLayout = {
                     id: uuidv4(),

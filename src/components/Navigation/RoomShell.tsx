@@ -23,6 +23,14 @@ import {
     AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '../ui/alert-dialog';
 
+/**
+ * 使用者正在看或操作候場：滑鼠停在候場上（在 iframe 裡移動網頁收不到，不能靠計時判斷），
+ * 或鍵盤焦點在候場的工具上。這時不算閒置，免得候場在游標底下消失、焦點落到看不見的按鈕
+ */
+export function roomEngaged(doc: Document = document): boolean {
+    return !!doc.querySelector('[data-room-wing]:hover') || !!doc.querySelector('[data-room-wing] :focus-visible');
+}
+
 /** 滑鼠停多久介面淡出 */
 const IDLE_MS = 2500;
 /** 滑鼠離開指令列後多久收起（避免移過縫隙就消失） */
@@ -81,7 +89,7 @@ export const RoomShell = () => {
         // 閒置時順便收起指令列：滑鼠移進直播 iframe 時外層不一定收得到 mouseleave，靠這裡保底
         const goIdle = () => {
             setIdle(true);
-            useUIStore.getState().setRoomIdle(true);
+            if (!roomEngaged()) useUIStore.getState().setRoomIdle(true);
             // 只留鍵盤焦點（:focus-visible）；滑鼠點開面板後 Radix 把焦點還給按鈕，不算
             if (!navRef.current?.matches(':hover') && !navRef.current?.querySelector(':focus-visible')) setHover(false);
         };

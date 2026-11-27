@@ -27,7 +27,7 @@ import { cn } from '../../../components/ui/utils';
 import { Sun, Moon, Monitor, Github, Coffee, HeartHandshake, MessageSquare, Trash2 } from 'lucide-react';
 import { logEvent, track } from '../../../utils/analytics';
 import { AccountSection } from '../../auth/AccountSection';
-import { applyRoomLayout } from '../../../components/Navigation/roomActions';
+import { applyRoomLayout, leaveRoomLayout } from '../../../components/Navigation/roomActions';
 
 import { GITHUB_REPO_URL, DISCORD_URL, X_URL, COFFEE_URL, PATREON_URL } from '../../../config/links';
 
@@ -222,6 +222,7 @@ export function SettingsSection() {
     ];
     const changeIslandStyle = (next: IslandStyle) => {
         if (next !== islandStyle) track.canvasShellSwitch(islandStyle, next, 'settings');
+        if (islandStyle === 'room' && next !== 'room') leaveRoomLayout();
         setIslandStyle(next);
         if (next !== islandStyle && next === 'room') applyRoomLayout();
     };
