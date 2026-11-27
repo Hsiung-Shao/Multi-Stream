@@ -87,10 +87,13 @@ export function EmotePicker({ sections, needsReauth, onPick }: {
         return out;
     }, [shown, t]);
 
+    // onPick 每次父層重畫都是新函式（聊天室每 100ms 重畫）：放 ref，讓 pick 身分固定、清單 memo 不失效
+    const onPickRef = useRef(onPick);
+    onPickRef.current = onPick;
     const pick = useCallback((e: PickerEmote) => {
-        onPick(e.name);
+        onPickRef.current(e.name);
         setRecent(pushRecentEmote(e));
-    }, [onPick]);
+    }, []);
 
     const jump = (id: string) => list.current?.querySelector(`[data-section-id="${CSS.escape(id)}"]`)?.scrollIntoView?.({ block: 'start' });
 

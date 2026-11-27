@@ -1,5 +1,5 @@
 /** 貼圖選單的段落：依「目前頻道 → 個人 → 訂閱（依頻道）→ 其他頻道 → 全域」排列 */
-import type { EmoteGroups } from './thirdPartyEmotes';
+import { ownValue, type EmoteGroups } from './thirdPartyEmotes';
 import type { TwitchEmote, TwitchOwner } from './twitchEmotes';
 
 export interface PickerEmote { name: string; url: string }
@@ -26,9 +26,9 @@ const isTwitchGlobal = (e: TwitchEmote) => e.type === 'globals' || e.type === 's
 /** 一個頻道的段落：追隨者＋三家第三方；prefix＝ch（目前送出頻道）或 other（只在該頻道顯示成圖） */
 function channelSections(prefix: 'ch' | 'other', login: string, input: SectionInput, t: T): EmoteSection[] {
     const note = prefix === 'other' ? t('chat.emote_only_in', { channel: login }) : undefined;
-    const g = input.channelGroups[login];
+    const g = ownValue(input.channelGroups, login);
     const out: EmoteSection[] = [
-        { id: `${prefix}:${login}:follower`, title: t('chat.emote_sec_channel', { channel: login, source: t('chat.emote_follower') }), emotes: fromTwitch(input.follower[login] ?? []) },
+        { id: `${prefix}:${login}:follower`, title: t('chat.emote_sec_channel', { channel: login, source: t('chat.emote_follower') }), emotes: fromTwitch(ownValue(input.follower, login) ?? []) },
         ...SOURCES.map(([key, label]) => ({ id: `${prefix}:${login}:${key}`, title: t('chat.emote_sec_channel', { channel: login, source: label }), emotes: g ? fromMap(g[key]) : [] })),
     ];
     return out.map(s => (note ? { ...s, note } : s));
@@ -43,10 +43,10 @@ export function buildPickerSections(input: SectionInput, t: T): EmoteSection[] {
         // 追隨者貼圖只在該頻道能用，改由各頻道的 follower 段列出
         else if (e.type !== 'follower') byOwner.set(e.ownerId, [...(byOwner.get(e.ownerId) ?? []), e]);
     }
-    const ownerName = (id: string) => input.owners[id]?.displayName ?? id;
+    const ownerName = (id: string) => ownValue(input.owners, id)?.displayName ?? id;
     const subs: EmoteSection[] = [...byOwner.keys()]
         .sort((a, b) => ownerName(a).localeCompare(ownerName(b)))
-        .map(id => ({ id: `sub:${id}`, title: ownerName(id), avatar: input.owners[id]?.avatar, emotes: fromTwitch(byOwner.get(id)!) }));
+        .map(id => ({ id: `sub:${id}`, title: ownerName(id), avatar: ownValue(input.owners, id)?.avatar, emotes: fromTwitch(byOwner.get(id)!) }));
     const sections: EmoteSection[] = [
         ...(input.channel ? channelSections('ch', input.channel, input, t) : []),
         { id: 'personal', title: t('chat.emote_sec_personal'), emotes: fromMap(input.personal) },

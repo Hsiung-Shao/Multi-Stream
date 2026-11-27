@@ -9,7 +9,7 @@ import { useStreamStore } from '../../store/useStreamStore';
 import { streamContentIdsByPosition } from '../../utils/canvasItemOps';
 import { TwitchChatClient, onAuthFailTransition } from './TwitchChatClient';
 import { messageParts, readableColor } from './messageParts';
-import { buildEmoteMaps, loadChannelEmoteGroups, loadGlobalEmoteGroups, loadPersonal7tv, selfEmoteMap, type EmoteGroups } from './thirdPartyEmotes';
+import { buildEmoteMaps, loadChannelEmoteGroups, loadGlobalEmoteGroups, loadPersonal7tv, ownValue, selfEmoteMap, type EmoteGroups } from './thirdPartyEmotes';
 import { loadFollowerEmotes, loadTwitchEmotes, loadTwitchOwners, resetTwitchEmotes, type TwitchEmote, type TwitchEmoteSet, type TwitchOwner } from './twitchEmotes';
 import { buildPickerSections } from './emoteSections';
 import { completeEmote, insertEmote, type CompletionState } from './emoteComplete';
@@ -93,7 +93,7 @@ function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient; logins
     // Tab 補完與選單同一份：你能用的所有貼圖
     const names = useMemo(() => [...new Set(sections.flatMap(s => s.emotes.map(e => e.name)))], [sections]);
     // 送出時標出 Twitch 貼圖位置：訂閱／全域＋這個頻道的追隨者貼圖
-    const twitchIds = useMemo(() => ({ ...twitchEmotes?.byName, ...Object.fromEntries((emotes.follower[channel] ?? []).map(e => [e.name, e.id])) }), [twitchEmotes, emotes.follower, channel]);
+    const twitchIds = useMemo(() => ({ ...twitchEmotes?.byName, ...Object.fromEntries((ownValue(emotes.follower, channel) ?? []).map(e => [e.name, e.id])) }), [twitchEmotes, emotes.follower, channel]);
     // 受控 input 換值後游標會跑到最後：改完文字再把游標放回去
     const caretAfter = useRef<number | null>(null);
     useLayoutEffect(() => {
@@ -282,7 +282,7 @@ export function MergedChat() {
                 const list = await loadFollowerEmotes(creds, ids[i]);
                 if (!on) return;
                 const login = logins[i];
-                setFollower(prev => (prev[login] === list ? prev : { ...prev, [login]: list }));
+                setFollower(prev => (ownValue(prev, login) === list ? prev : { ...prev, [login]: list }));
             }
         })();
         return () => { on = false; };

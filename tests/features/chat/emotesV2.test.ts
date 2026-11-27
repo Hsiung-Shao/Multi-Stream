@@ -201,7 +201,8 @@ describe('F5 跨頻道比對過濾一般字', () => {
         });
         const a = maps.get('a')!;
         expect(a.get('monkaS')).toBe('https://b/monka');
-        expect(a.get('LUL')).toBe('https://b/LUL');
+        // review 第 1 輪：全大寫（LUL）也像一般縮寫，跨頻道不收
+        expect(a.has('LUL')).toBe(false);
         expect(a.has('lol')).toBe(false);
         expect(a.has('OK')).toBe(false);
         expect(a.has('kekw')).toBe(false);
@@ -211,6 +212,26 @@ describe('F5 跨頻道比對過濾一般字', () => {
         expect(b.get('lol')).toBe('https://b/lol');
         expect(b.get('OK')).toBe('https://b/ok');
         expect(b.get('Same')).toBe('https://b/same');
+    });
+
+    it('review：首字大寫單字與全大寫縮寫（Sure、LOL）不跨頻道，大小寫混寫（catJAM、PogU）才跨', async () => {
+        const { buildEmoteMaps } = await import('../../../src/features/chat/thirdPartyEmotes');
+        const maps = buildEmoteMaps(['a', 'b'], groups(), { a: groups(), b: groups({ '7tv': { Sure: 'https://b/s', LOL: 'https://b/l', catJAM: 'https://b/c', PogU: 'https://b/p', toString: 'https://b/t' } }) });
+        const a = maps.get('a')!;
+        expect(a.has('Sure')).toBe(false);
+        expect(a.has('LOL')).toBe(false);
+        expect(a.get('catJAM')).toBe('https://b/c');
+        expect(a.get('PogU')).toBe('https://b/p');
+        expect(a.get('toString')).toBe('https://b/t');
+    });
+
+    it('review：頻道 login 是 constructor／__proto__ 時不會丟錯', async () => {
+        const { buildEmoteMaps } = await import('../../../src/features/chat/thirdPartyEmotes');
+        const { buildPickerSections } = await import('../../../src/features/chat/emoteSections');
+        const logins = ['constructor', '__proto__'];
+        expect(() => buildEmoteMaps(logins, groups(), {})).not.toThrow();
+        const t = (k: string) => k;
+        expect(() => buildPickerSections({ channel: 'constructor', logins, twitch: [], owners: {}, follower: {}, channelGroups: {}, global: groups(), personal: {} }, t)).not.toThrow();
     });
 
     it('純數字名稱（6677、666）不做跨頻道比對，本頻道照常', async () => {

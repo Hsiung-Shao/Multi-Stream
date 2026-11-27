@@ -127,20 +127,25 @@ export function loadPersonal7tv(twitchUserId: string): Promise<EmoteMap> {
     return hit;
 }
 
-// 跨頻道只收不像一般文字的名稱：長度 ≥ 3、含英文字母、不是全小寫英文（避免 lol、kekw、6677、666 被換成圖）
-const crossChannelOk = (name: string) => name.length >= 3 && /[A-Za-z]/.test(name) && !/^[a-z]+$/.test(name);
+// 跨頻道只收一看就是貼圖的名稱：大小寫混寫（catJAM、PogU、monkaS）；一般字 lol、Sure、LOL、6677 都不收
+const crossChannelOk = (name: string) => name.length >= 3 && /[a-z][A-Z]|[A-Z]{2,}[a-z]/.test(name);
+
+/** 用外部字串（頻道 login、貼圖名稱）查物件：只取自己的屬性，login 叫 constructor／__proto__ 也不會拿到原型上的東西 */
+export const ownValue = <T>(obj: Record<string, T>, key: string): T | undefined =>
+    Object.prototype.hasOwnProperty.call(obj, key) ? obj[key] : undefined;
 
 /** 每個頻道的訊息比對表：其他頻道（最低）＜全域＜該頻道；同一來源內 7TV 蓋 BTTV 蓋 FFZ */
 export function buildEmoteMaps(logins: string[], global: EmoteGroups, channels: Record<string, EmoteGroups>): Map<string, ReadonlyMap<string, string>> {
     const cross: EmoteMap = {};
     for (const login of logins) {
-        const ch = channels[login];
+        const ch = ownValue(channels, login);
         if (!ch) continue;
-        for (const [name, url] of Object.entries(flatten(ch))) if (crossChannelOk(name) && !(name in cross)) cross[name] = url;
+        for (const [name, url] of Object.entries(flatten(ch))) if (crossChannelOk(name) && ownValue(cross, name) === undefined) cross[name] = url;
     }
     const out = new Map<string, ReadonlyMap<string, string>>();
     for (const login of logins) {
-        const own = channels[login] ? flatten(channels[login]) : {};
+        const ch = ownValue(channels, login);
+        const own = ch ? flatten(ch) : {};
         out.set(login, new Map(Object.entries({ ...cross, ...flatten(global), ...own })));
     }
     return out;
