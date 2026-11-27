@@ -14,6 +14,7 @@ import { loadFollowerEmotes, loadTwitchEmotes, loadTwitchOwners, resetTwitchEmot
 import { buildPickerSections } from './emoteSections';
 import { completeEmote, insertEmote, type CompletionState } from './emoteComplete';
 import { EmotePicker } from './EmotePicker';
+import { getInputCaret, getInputSelection, renderInput, replaceRange, serializeInput, setInputCaret } from './emoteInput';
 import type { ChatMessage } from './ircParse';
 import { cn } from '../../components/ui/utils';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -78,12 +79,12 @@ interface EmoteData {
     personal: Record<string, string>;
 }
 
-function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient; logins: string[]; cred: CredState; emotes: EmoteData }) {
+export function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient; logins: string[]; cred: CredState; emotes: EmoteData }) {
     const { t } = useTranslation('common');
     const [target, setTarget] = useState(logins[0] ?? '');
     const [text, setText] = useState('');
     const channel = logins.includes(target) ? target : logins[0] ?? '';
-    const input = useRef<HTMLInputElement>(null);
+    const box = useRef<HTMLDivElement>(null);
     const completion = useRef<CompletionState | null>(null);
     const twitchEmotes = emotes.twitch;
     const sections = useMemo(() => buildPickerSections({
@@ -94,18 +95,41 @@ function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient; logins
     const names = useMemo(() => [...new Set(sections.flatMap(s => s.emotes.map(e => e.name)))], [sections]);
     // 送出時標出 Twitch 貼圖位置：訂閱／全域＋這個頻道的追隨者貼圖
     const twitchIds = useMemo(() => ({ ...twitchEmotes?.byName, ...Object.fromEntries((ownValue(emotes.follower, channel) ?? []).map(e => [e.name, e.id])) }), [twitchEmotes, emotes.follower, channel]);
-    // 受控 input 換值後游標會跑到最後：改完文字再把游標放回去
-    const caretAfter = useRef<number | null>(null);
+    // 輸入框畫成圖用的表：選單裡的貼圖（同名取第一個，也就是目前頻道優先）
+    const urlByName = useMemo(() => {
+        const m = new Map<string, string>();
+        for (const s of sections) for (const e of s.emotes) if (!m.has(e.name)) m.set(e.name, e.url);
+        return m;
+    }, [sections]);
+    // 純文字 text 是唯一來源；編輯區每次依它重畫。caret＝最後所在位置（焦點移到貼圖選單後仍記得）
+    const caret = useRef(0);
+    const pendingCaret = useRef<number | null>(null);
+    const composing = useRef(false);
+    const redraw = (value: string, at: number | null) => {
+        const el = box.current;
+        if (!el) return;
+        renderInput(el, value, urlByName);
+        if (at !== null && el.ownerDocument.activeElement === el) setInputCaret(el, at);
+    };
     useLayoutEffect(() => {
-        if (caretAfter.current === null || !input.current) return;
-        input.current.setSelectionRange(caretAfter.current, caretAfter.current);
-        caretAfter.current = null;
-    }, [text]);
+        // 打中文選字中不重畫，免得打斷輸入法
+        if (composing.current) return;
+        const el = box.current;
+        const at = pendingCaret.current ?? (el ? getInputCaret(el) : null);
+        pendingCaret.current = null;
+        redraw(text, at);
+    }, [text, urlByName, cred]);
+    useEffect(() => {
+        const track = () => { const at = box.current && getInputCaret(box.current); if (at != null) caret.current = at; };
+        document.addEventListener('selectionchange', track);
+        return () => document.removeEventListener('selectionchange', track);
+    }, []);
     const apply = (r: { text: string; caret: number }) => {
         if (r.text.length > 500) return;
-        // 文字沒變（只剩一個候選時連按 Tab）React 不會重繪，layout effect 不跑：直接放游標
-        if (r.text === text) { input.current?.setSelectionRange(r.caret, r.caret); return; }
-        caretAfter.current = r.caret;
+        caret.current = r.caret;
+        // 文字沒變（只剩一個候選時連按 Tab）不會觸發重畫：直接放游標
+        if (r.text === text) { redraw(text, r.caret); return; }
+        pendingCaret.current = r.caret;
         setText(r.text);
     };
     if (logins.length === 0) return null;
@@ -122,12 +146,27 @@ function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient; logins
     }
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (c.send(channel, text, twitchIds)) { setText(''); completion.current = null; }
+        if (c.send(channel, text, twitchIds)) { setText(''); caret.current = 0; completion.current = null; }
     };
-    const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const onInput = () => {
+        const el = box.current;
+        if (!el || composing.current) return;
+        completion.current = null;
+        const next = serializeInput(el);
+        const at = getInputCaret(el) ?? next.length;
+        // 超過字數就退回原文（可編輯區沒有 maxLength）
+        if (next.length > 500) { redraw(text, Math.min(caret.current, text.length)); return; }
+        caret.current = at;
+        if (next === text) { redraw(text, at); return; }
+        pendingCaret.current = at;
+        setText(next);
+    };
+    const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.nativeEvent.isComposing || composing.current) return;
+        // 單行輸入：Enter 送出，不換行
+        if (e.key === 'Enter') { e.preventDefault(); if (text.trim()) submit(e); return; }
         if (e.key !== 'Tab' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) { completion.current = null; return; }
-        const el = e.currentTarget;
-        const r = completeEmote(el.value, el.selectionStart ?? el.value.length, names, completion.current);
+        const r = completeEmote(text, getInputCaret(e.currentTarget) ?? text.length, names, completion.current);
         // 沒有候選（或補完後會超過字數上限）就不攔，Tab 照常移動焦點
         if (!r || r.text.length > 500) return;
         e.preventDefault();
@@ -137,10 +176,17 @@ function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient; logins
     const pick = (name: string) => {
         completion.current = null;
         // 不把焦點搶回輸入框：選單保持開著，可以連續選
-        apply(insertEmote(text, input.current?.selectionStart ?? text.length, name));
+        apply(insertEmote(text, Math.min(caret.current, text.length), name));
+    };
+    // 只收純文字：擋掉貼上的 HTML、拖進來的圖片
+    const onPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        const [start, end] = getInputSelection(e.currentTarget) ?? [text.length, text.length];
+        completion.current = null;
+        apply(replaceRange(text, start, end, e.clipboardData.getData('text/plain')));
     };
     return (
-        <form onSubmit={submit} className="flex items-center gap-1.5 border-t border-white/10 p-2">
+        <form onSubmit={submit} className="flex items-end gap-1.5 border-t border-white/10 p-2">
             {logins.length > 1 && (
                 <select
                     aria-label={t('chat.send_target')}
@@ -151,15 +197,21 @@ function ChatComposer({ c, logins, cred, emotes }: { c: TwitchChatClient; logins
                     {logins.map(l => <option key={l} value={l} className="bg-slate-900">{l}</option>)}
                 </select>
             )}
-            <input
+            <div
+                ref={box}
+                role="textbox"
                 aria-label={t('chat.send_placeholder', { channel })}
-                placeholder={t('chat.send_placeholder', { channel })}
-                ref={input}
-                value={text}
-                maxLength={500}
-                onChange={e => { completion.current = null; caretAfter.current = null; setText(e.target.value); }}
+                data-placeholder={t('chat.send_placeholder', { channel })}
+                contentEditable
+                suppressContentEditableWarning
+                spellCheck={false}
+                onInput={onInput}
                 onKeyDown={onKeyDown}
-                className="h-8 min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-2 text-sm text-white placeholder:text-white/40"
+                onPaste={onPaste}
+                onDrop={e => e.preventDefault()}
+                onCompositionStart={() => { composing.current = true; }}
+                onCompositionEnd={() => { composing.current = false; onInput(); }}
+                className="max-h-24 min-h-8 min-w-0 flex-1 cursor-text overflow-y-auto whitespace-pre-wrap break-all rounded-md border border-white/15 bg-white/5 px-2 py-1 text-sm leading-6 text-white outline-none focus-visible:border-white/40 empty:before:pointer-events-none empty:before:text-white/40 empty:before:content-[attr(data-placeholder)]"
             />
             <EmotePicker sections={sections} needsReauth={twitchEmotes?.needsReauth} onPick={pick} />
             <button type="submit" disabled={!text.trim()} className="h-8 shrink-0 rounded-md bg-purple-600 px-3 text-xs font-medium text-white disabled:opacity-40">

@@ -3,7 +3,7 @@ const privacy = {
   'effectiveDate': '生效日期：',
   'effectiveDateValue': '2025 年 12 月 2 日',
   'lastUpdated': '最新更新：',
-  'lastUpdatedValue': '2026 年 11 月 19 日',
+  'lastUpdatedValue': '2026 年 11 月 28 日',
   'intro': 'MultiStream Hub（以下简称「本网站」）由 Hsiung-Shao 独立开发与运营。我们非常重视您的隐私权。本网站不需要注册账号，您的收藏、设置与布局都只保存在您的浏览器本地；只有第 2.5 节列出的少量资料会发送到本站服务器。',
   'section1.title': '1. 我们不收集的个人资料',
   'section1.item1': '本网站不要求注册，不会主动收集电子邮件、姓名、电话等可直接识别您身份的资料（您在反馈或投稿时自愿填写的联系方式，以及第 2.5 节所列的技术信息除外）',
@@ -74,7 +74,7 @@ const privacy = {
   'section8.content': '重大变更将于本页面顶部更新日期并以显眼方式通知。',
   'section9.title': '9. 联系我们',
   'section9.content': '如有任何隐私疑问，请寄信至：',
-  'footerNote': '此政策最后更新于 2026 年 10 月 8 日',
+  'footerNote': '此政策最后更新于 2026 年 11 月 28 日',
   'home': '首页',
   'about': '关于我们',
   'terms': '服务条款',
@@ -120,7 +120,7 @@ const privacy = {
   'section2_5.item10': '登录（Twitch／Google／Discord）时：登录服务提供的账号 ID、显示名称、头像网址与 Email 由 Supabase 保存，用于识别您的账号；可在“设置 → 账号”随时删除账号，相关数据一并删除。',
   'section2_5.item11': '登录后的收藏同步：您的收藏、分类与标签会存到云端数据库，只有您本人能读写；退出登录只停止同步，删除账号时云端数据一并删除。',
   'section2_5.item12': '使用合并聊天室时：您的浏览器会直接连接 Twitch 聊天服务器读取消息，并向 7TV、BetterTTV、FrankerFaceZ 获取表情图片，这些服务会看到您的 IP 地址；本站不保存聊天内容。',
-  'section2_5.item13': '用 Twitch 登录并在合并聊天室发言时：Twitch 授权的续期令牌会加密后存在本站数据库，只用来代您发送聊天消息；退出登录只停止这台设备使用，删除账号时一并删除，您也可以随时在 Twitch 的“设置 → 连接”撤销授权。',
+  'section2_5.item13': '用 Twitch 登录并在合并聊天室发言时：Twitch 授权的续期令牌会加密后存在本站数据库，只用来代您发送聊天消息；退出登录只停止这台设备使用，删除账号时一并删除，您也可以随时在 Twitch 的“设置 → 连接”撤销授权。另外，登录后会用您的 Twitch 用户 ID 向 7TV 查询您的个人表情，7TV 因此可能把您的 IP 地址和 Twitch 账号对应起来；本站不保存这项查询。',
   'section3.item6': '查询频道信息与开播状态时，您的浏览器会直接连接 YouTube Data API 与 Twitch API，发送频道或视频 ID；这些请求同样适用 Google 与 Twitch 的隐私政策',
 };
 

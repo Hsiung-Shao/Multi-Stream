@@ -3,7 +3,7 @@ const privacy = {
   'effectiveDate': 'Effective Date:',
   'effectiveDateValue': 'December 2, 2025',
   'lastUpdated': 'Last Updated:',
-  'lastUpdatedValue': 'November 19, 2026',
+  'lastUpdatedValue': 'November 28, 2026',
   'intro': 'MultiStream Hub (hereinafter referred to as "this website") is independently developed and operated by Hsiung-Shao. We take your privacy very seriously. This website does not require an account: your favorites, settings and layouts are stored only in your own browser. Only the limited data listed in Section 2.5 is sent to our servers.',
   'section1.title': '1. Personal Data We Do Not Collect',
   'section1.item1': 'No registration is required, and we do not actively collect email addresses, names, phone numbers or other data that directly identifies you (except contact details you choose to provide in a report or submission, and the technical details listed in Section 2.5)',
@@ -74,7 +74,7 @@ const privacy = {
   'section8.content': 'Major changes will be notified prominently at the top of this page with updated dates.',
   'section9.title': '9. Contact Us',
   'section9.content': 'If you have any privacy questions, please email:',
-  'footerNote': 'This policy was last updated on October 8, 2026',
+  'footerNote': 'This policy was last updated on November 28, 2026',
   'home': 'Home',
   'about': 'About Us',
   'terms': 'Terms of Service',
@@ -120,7 +120,7 @@ const privacy = {
   'section2_5.item10': 'When you sign in (Twitch, Google or Discord): the account ID, display name, avatar URL and email provided by the sign-in service are stored by Supabase to identify your account. You can delete your account at any time under Settings → Account, which also deletes the related data.',
   'section2_5.item11': 'Favorites sync after signing in: your favorites, categories and tags are stored in a cloud database that only you can read or write. Signing out only stops syncing; deleting your account also deletes the cloud data.',
   'section2_5.item12': 'When you use the merged chat: your browser connects directly to the Twitch chat server to read messages and loads emote images from 7TV, BetterTTV and FrankerFaceZ, so these services can see your IP address. We do not store chat content.',
-  'section2_5.item13': 'When you sign in with Twitch and chat from the merged chat: the Twitch refresh token is stored encrypted in our database and used only to send chat messages on your behalf. Signing out only stops this device; deleting your account deletes it, and you can revoke access anytime in Twitch Settings → Connections.',
+  'section2_5.item13': 'When you sign in with Twitch and chat from the merged chat: the Twitch refresh token is stored encrypted in our database and used only to send chat messages on your behalf. Signing out only stops this device; deleting your account deletes it, and you can revoke access anytime in Twitch Settings → Connections. After you sign in, your Twitch user ID is also sent to 7TV to look up your personal emotes, so 7TV may link your IP address to your Twitch account. We do not store this lookup.',
   'section3.item6': 'When looking up channel details and live status, your browser connects directly to the YouTube Data API and the Twitch API and sends channel or video IDs; Google\'s and Twitch\'s privacy policies apply to these requests as well',
 };
 

@@ -3,7 +3,7 @@ const privacy = {
   'effectiveDate': '生效日期：',
   'effectiveDateValue': '2025 年 12 月 2 日',
   'lastUpdated': '最新更新：',
-  'lastUpdatedValue': '2026 年 11 月 19 日',
+  'lastUpdatedValue': '2026 年 11 月 28 日',
   'intro': 'MultiStream Hub（以下簡稱「本網站」）由 Hsiung-Shao 獨立開發與營運。我們非常重視您的隱私權。本網站不需要註冊帳號，您的收藏、設定與版面都只儲存在您的瀏覽器本地；只有第 2.5 節列出的少數資料會傳送到本站伺服器。',
   'section1.title': '1. 我們不收集的個人資料',
   'section1.item1': '本網站不要求註冊，不會主動收集電子郵件、姓名、電話等可直接識別您身份的資料（您在回報或投稿時自願填寫的聯絡方式，以及第 2.5 節所列的技術資訊除外）',
@@ -74,7 +74,7 @@ const privacy = {
   'section8.content': '重大變更將於本頁面頂部更新日期並以顯眼方式通知。',
   'section9.title': '9. 聯絡我們',
   'section9.content': '如有任何隱私疑問，請寄信至：',
-  'footerNote': '此政策最後更新於 2026 年 10 月 8 日',
+  'footerNote': '此政策最後更新於 2026 年 11 月 28 日',
   'home': '首頁',
   'about': '關於我們',
   'terms': '服務條款',
@@ -120,7 +120,7 @@ const privacy = {
   'section2_5.item10': '登入（Twitch／Google／Discord）時：登入服務提供的帳號 ID、顯示名稱、頭像網址與 Email 由 Supabase 保存，用來辨識您的帳號；可在「設定 → 帳號」隨時刪除帳號，相關資料一併刪除。',
   'section2_5.item11': '登入後的收藏同步：您的收藏、分類與標籤會存到雲端資料庫，只有您本人能讀寫；登出只停止同步，刪除帳號時雲端資料一併刪除。',
   'section2_5.item12': '使用合併聊天室時：您的瀏覽器會直接連到 Twitch 聊天伺服器讀取訊息，並向 7TV、BetterTTV、FrankerFaceZ 取得表情圖片，這些服務會看到您的 IP 位址；本站不保存聊天內容。',
-  'section2_5.item13': '用 Twitch 登入並在合併聊天室發言時：Twitch 授權的續期權杖會加密後存在本站資料庫，只用來代您送出聊天訊息；登出只停止這台裝置使用，刪除帳號時一併刪除，您也可以隨時在 Twitch 的「設定 → 連線」撤銷授權。',
+  'section2_5.item13': '用 Twitch 登入並在合併聊天室發言時：Twitch 授權的續期權杖會加密後存在本站資料庫，只用來代您送出聊天訊息；登出只停止這台裝置使用，刪除帳號時一併刪除，您也可以隨時在 Twitch 的「設定 → 連線」撤銷授權。另外，登入後會用您的 Twitch 使用者 ID 向 7TV 查詢您的個人貼圖，7TV 因此可能把您的 IP 位址和 Twitch 帳號對應起來；本站不保存這項查詢。',
   'section3.item6': '查詢頻道資訊與開台狀態時，您的瀏覽器會直接連線 YouTube Data API 與 Twitch API，送出頻道或影片 ID；這些請求同樣適用 Google 與 Twitch 的隱私政策',
 };
 
