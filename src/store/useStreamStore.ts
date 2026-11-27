@@ -183,18 +183,19 @@ const buildTemplateCanvasItems = (
     });
 };
 
-/**
- * 目前畫布轉成自訂版面的 slot。聊天室收合時先以偏好寬度展開再存：
- * 自訂版面存的是「版面長相」，套用時聊天室應該看得到，也避免存出寬 0 的 slot。
- */
 /** 存版面用：房間舞台模式的格線版面是重疊的（候場浮在舞台上），先排成不重疊的平分，存下來才能在任何外殼套用 */
 function savableItems(items: CanvasItem[], chatCols: number): CanvasItem[] {
     const ui = useUIStore.getState();
     return ui.islandStyle === 'room' && ui.roomMode === 'stage' ? relayoutItems(items, getCanvasAspect(), [], chatCols) : items;
 }
 
-const slotsOf = (items: CanvasItem[], chatCols: number): LayoutSlot[] =>
-    (chatsCollapsed(items) ? expandChats(items, getCanvasAspect(), chatCols) : items).map(item => ({
+/**
+ * 目前畫布轉成自訂版面的 slot（所有存自訂版面的入口都經過這裡，先過 savableItems）。聊天室收合時先以偏好寬度展開再存：
+ * 自訂版面存的是「版面長相」，套用時聊天室應該看得到，也避免存出寬 0 的 slot。
+ */
+const slotsOf = (current: CanvasItem[], chatCols: number): LayoutSlot[] => {
+    const items = savableItems(current, chatCols);
+    return (chatsCollapsed(items) ? expandChats(items, getCanvasAspect(), chatCols) : items).map(item => ({
         x: item.layout.x,
         y: item.layout.y,
         w: item.layout.w,
@@ -202,6 +203,7 @@ const slotsOf = (items: CanvasItem[], chatCols: number): LayoutSlot[] =>
         type: item.type,
         ...(item.sharedChat ? { sharedChat: true } : {}),
     }));
+};
 
 export const useStreamStore = create<StreamStoreState>()(
     persist(
@@ -1079,7 +1081,7 @@ export const useStreamStore = create<StreamStoreState>()(
 
             saveCustomLayout: async (name: string) => {
                 const state = get();
-                const slots = slotsOf(savableItems(state.canvasItems, state.chatColumnWidth), state.chatColumnWidth);
+                const slots = slotsOf(state.canvasItems, state.chatColumnWidth);
 
                 const newLayout: CustomLayout = {
                     id: uuidv4(),

@@ -89,7 +89,9 @@ export const RoomShell = () => {
         // 閒置時順便收起指令列：滑鼠移進直播 iframe 時外層不一定收得到 mouseleave，靠這裡保底
         const goIdle = () => {
             setIdle(true);
-            if (!roomEngaged()) useUIStore.getState().setRoomIdle(true);
+            // 正在看候場：這次不淡出，但要重新計時——游標若直接移出瀏覽器視窗，不會再有任何事件叫醒計時器
+            if (roomEngaged()) { timer = window.setTimeout(goIdle, IDLE_MS); return; }
+            useUIStore.getState().setRoomIdle(true);
             // 只留鍵盤焦點（:focus-visible）；滑鼠點開面板後 Radix 把焦點還給按鈕，不算
             if (!navRef.current?.matches(':hover') && !navRef.current?.querySelector(':focus-visible')) setHover(false);
         };

@@ -1,6 +1,6 @@
 // 房間舞台模式 review 第 1 輪：只有舞台形狀才浮候場、離開房間模式與存版面不留重疊、舞台模式所有拖曳入口都關掉
-import { beforeEach, describe, expect, it } from 'vitest';
-import { render } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, act } from '@testing-library/react';
 import { roomOverlayRects } from '../../src/components/Canvas/SimpleCanvas';
 import { DraggableWindow, NO_DRAG_HANDLERS, type CanvasWindow, type WindowRenderProps } from '../../src/components/Canvas/DraggableWindow';
 import { calculateGridConfig } from '../../src/components/Canvas/gridConfig';
@@ -49,6 +49,14 @@ describe('離開房間模式與存版面不留重疊', () => {
         useStreamStore.setState({ canvasItems: grid });
         leaveRoomLayout();
         expect(useStreamStore.getState().canvasItems).toBe(grid);
+    });
+
+    it('舞台模式下「以目前版面更新自訂版面」（第三個存檔入口），存下的格子不重疊', async () => {
+        useStreamStore.setState({ customLayouts: [{ id: 'L1', name: '舊的', slots: [], createdAt: 0 }] as never });
+        await useStreamStore.getState().updateCustomLayoutFromCurrent('L1');
+        const slots = useStreamStore.getState().customLayouts.find(l => l.id === 'L1')!.slots as { x: number; y: number; w: number; h: number }[];
+        expect(slots.length).toBeGreaterThan(0);
+        expect(overlaps(slots.map((sl, k) => item(String(k), 'stream', k, sl.x, sl.y, sl.w, sl.h)))).toBe(false);
     });
 
     it('舞台模式下存目前版面（另一個存檔入口），存下的格子不重疊', () => {
@@ -123,5 +131,26 @@ describe('閒置判定與懸浮工具', () => {
         expect(tools.className).not.toContain('group-hover:opacity-100');
         expect(tools.className).not.toContain('focus-within:opacity-100');
         useUIStore.setState({ roomIdle: false, islandStyle: 'original' });
+    });
+});
+
+describe('閒置計時器', () => {
+    it('因游標停在候場而跳過一次後會重新計時，游標離開後照樣進入閒置', async () => {
+        vi.useFakeTimers();
+        const { RoomShell } = await import('../../src/components/Navigation/RoomShell');
+        useUIStore.setState({ islandStyle: 'room', roomIdle: false });
+        let engaged = true;
+        const real = document.querySelector.bind(document);
+        const spy = vi.spyOn(document, 'querySelector').mockImplementation(((sel: string) =>
+            sel.startsWith('[data-room-wing]') ? (engaged ? document.body : null) : real(sel)) as typeof document.querySelector);
+        const { unmount } = render(<RoomShell />);
+        act(() => { vi.advanceTimersByTime(2600); });
+        expect(useUIStore.getState().roomIdle).toBe(false);
+        engaged = false; // 游標直接移出瀏覽器視窗：不會有任何 mousemove／mouseover
+        act(() => { vi.advanceTimersByTime(2600); });
+        expect(useUIStore.getState().roomIdle).toBe(true);
+        unmount();
+        spy.mockRestore();
+        vi.useRealTimers();
     });
 });
