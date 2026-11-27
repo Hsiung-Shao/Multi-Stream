@@ -116,8 +116,8 @@ export async function onRequestPost(context) {
         // 表單已告知「內容會公開在 /status」才標 true；舊版或快取的頁面不會送這個欄位 → 永遠不公開
         // （欄位由 migration 20261008062610 新增；還沒套時下方會去掉這個欄位重送）
         public_notice: body.publicNotice === true,
-        // 若 feedbacks 表有 user_id 欄位則 service_role 可以直接寫；沒有就被忽略（PostgREST 會 400）
-        // 為相容，先不傳；如要記錄 userId，未來在 schema 確認後加
+        // 欄位由 migration 20261128120000 新增：上線前要先套 migration，否則 PostgREST 會因不認得欄位而拒絕
+        user_id: userId || null,
     };
 
     let result = await insert(env, 'feedbacks', row);

@@ -19,6 +19,7 @@ import { AnnouncementsProvider } from '../features/announcements/AnnouncementsPr
 import { FeedbackFAB } from './Navigation/FeedbackFAB';
 import { BraveDetectDialog } from './Dialogs/BraveDetectDialog';
 import { startWebVitalsReporting } from '../utils/webVitals';
+import { KickedToast } from '../features/auth/AccountExtras';
 
 export default function DeferredGlobals() {
     // 真實使用者 Web Vitals 歸因（CLS/LCP/INP → GA4 web_vitals 事件，未同意 Cookie 不送）；
@@ -34,6 +35,7 @@ export default function DeferredGlobals() {
             <PerformanceOverlay />
             <GlobalLiveStatusChecker />
             <Toaster />
+            <KickedToast />
             <CookieConsent />
             <AnnouncementsProvider />
             <BraveDetectDialog />

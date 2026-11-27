@@ -8,12 +8,14 @@ import { isRequestFromAllowedSite, jsonResponse, readJsonBody } from './cors.js'
 import { getVisitorIp, isIpBanned, hashIp, checkQuotas, quotaWindow } from './rate-limit.js';
 import { verifyTurnstile } from './turnstile.js';
 import { select } from './supabase-server.js';
+import { getUserIdFromRequest } from './auth-helper.js';
 
 /**
  * @param {Object} context - Pages Function context
  * @param {{ disabledFlag: string, maxBytes: number, validate: (body) => ({value}|{error}),
  *           quotas: (ipHash: string, w: {hour: string, day: string}) => { personal: {key,limit,ttl}[], global: {key,limit,ttl}[] } }} cfg
- * @returns {Promise<{ ok: true, value: object, body: object, ip: string, ipHash: string } | { ok: false, response: Response }>}
+ * 已登入（Bearer 權杖驗證通過）時回傳 userId，個人配額改用帳號（u:<userId>）計算，換 IP 也繞不過；權杖無效就當匿名，不擋人。
+ * @returns {Promise<{ ok: true, value: object, body: object, ip: string, ipHash: string, userId: string|null } | { ok: false, response: Response }>}
  */
 export async function guardSubmission(context, cfg) {
     const { request, env } = context;
@@ -34,7 +36,9 @@ export async function guardSubmission(context, cfg) {
     if (checked.error) return fail(400, checked.error);
 
     const ipHash = await hashIp(env, ip);
-    const quotas = cfg.quotas(ipHash, quotaWindow());
+    const { userId, verified } = await getUserIdFromRequest(request, env);
+    const who = verified && userId ? userId : null;
+    const quotas = cfg.quotas(who ? `u:${who}` : ipHash, quotaWindow());
     if (!(await checkQuotas(env.RATE_LIMIT_KV, quotas.personal)).ok) return fail(429, 'rate_limited');
 
     const ts = await verifyTurnstile(env, body?.turnstileToken, ip);
@@ -42,7 +46,7 @@ export async function guardSubmission(context, cfg) {
 
     if (!(await checkQuotas(env.RATE_LIMIT_KV, quotas.global)).ok) return fail(429, 'rate_limited');
 
-    return { ok: true, value: checked.value, body, ip, ipHash };
+    return { ok: true, value: checked.value, body, ip, ipHash, userId: who };
 }
 
 /** PostgREST 錯誤文字 → 函式丟出的 message（approve_vtuber_contribution 用 exception message 當錯誤碼） */

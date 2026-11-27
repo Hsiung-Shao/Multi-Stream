@@ -10,9 +10,14 @@ import { hasStoredSession } from '../../lib/hasStoredSession';
 export interface AuthUser { id: string; email?: string; displayName: string; avatarUrl?: string; providers: string[] }
 export type AuthProvider = 'twitch' | 'google' | 'discord';
 
-export const useAuthStore = create<{ status: 'unknown' | 'anon' | 'authed'; user: AuthUser | null }>(() => ({ status: 'unknown', user: null }));
+// kicked：被其他裝置的新登入踢掉（帳號區顯示提示，下次登入時清掉）
+export const useAuthStore = create<{ status: 'unknown' | 'anon' | 'authed'; user: AuthUser | null; kicked?: boolean }>(() => ({ status: 'unknown', user: null }));
 
 const SESSION_TIMEOUT_MS = 2000;
+// 登入與綁定 Twitch 都要的權限：聊天讀寫（合併聊天室發言）＋ user:read:emotes（貼圖選單列出自己的訂閱貼圖）
+const TWITCH_SCOPES = 'chat:read chat:edit user:read:emotes';
+// 切回頁面最多每分鐘查一次 session，避免頻繁切分頁時一直打 Supabase
+const ALIVE_CHECK_MS = 60_000;
 
 const isOAuthCallback = () => {
     try {
@@ -42,6 +47,36 @@ function apply(session: Session | null) {
     useAuthStore.setState({ status: user ? 'authed' : 'anon', user });
 }
 
+// 一次性旗標：signIn 跳轉前寫入、回來後消耗。SDK 在還原 session、切回分頁時也會發 SIGNED_IN，只有帶旗標的才是真正的新登入
+const FRESH_KEY = 'ms_oauth_fresh';
+const LINK_KEY = 'ms_oauth_link';
+const takeFlag = (key: string) => {
+    try {
+        const v = sessionStorage.getItem(key);
+        if (v) sessionStorage.removeItem(key);
+        return !!v;
+    } catch {
+        return false;
+    }
+};
+
+/** 新登入後：踢掉其他裝置（後登入的踢掉先登入的），並把這台裝置之前的匿名問卷答案歸到帳號 */
+function afterFreshSignIn(sb: SupabaseClient, session: Session | null) {
+    void sb.auth.signOut({ scope: 'others' }).catch(() => {});
+    let deviceId: string | null = null;
+    try { deviceId = localStorage.getItem('announcement:device_id'); } catch { /* 無痕模式 */ }
+    const token = session?.access_token;
+    if (!deviceId || !token) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15_000);
+    void fetch('/api/announcements/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ device_id: deviceId }),
+        signal: ctrl.signal,
+    }).catch(() => {}).finally(() => clearTimeout(timer));
+}
+
 const captureChatToken = (session: Session | null) => {
     if (session?.provider_refresh_token) void import('../chat/chatToken').then(m => m.captureTwitchChatToken(session));
 };
@@ -58,8 +93,12 @@ function loadClient(): Promise<SupabaseClient | null> {
         sb.auth.onAuthStateChange((event, session) => {
             setTimeout(() => {
                 apply(session);
-                // 用 Twitch 登入回來：續期權杖只出現在這次 session，交給伺服器保管（合併聊天室發言用；同一個只交一次）
-                if (event === 'SIGNED_IN') captureChatToken(session);
+                if (event !== 'SIGNED_IN') return;
+                // 用 Twitch 登入或綁定回來：續期權杖只出現在這次 session，交給伺服器保管（合併聊天室發言用；同一個只交一次）
+                captureChatToken(session);
+                // 綁定登入方式回來也是 SIGNED_IN，但不是新登入，不能踢其他裝置
+                const linked = takeFlag(LINK_KEY);
+                if (takeFlag(FRESH_KEY) && !linked) afterFreshSignIn(sb, session);
             }, 0);
         });
         return sb;
@@ -67,8 +106,21 @@ function loadClient(): Promise<SupabaseClient | null> {
     return initPromise;
 }
 
+let lastAliveCheck = 0;
+let aliveListening = false;
+function watchSessionAlive() {
+    if (aliveListening || typeof document === 'undefined') return;
+    aliveListening = true;
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || Date.now() - lastAliveCheck < ALIVE_CHECK_MS) return;
+        lastAliveCheck = Date.now();
+        void checkSessionAlive().catch(() => {});
+    });
+}
+
 export async function initAuth(): Promise<void> {
     if (useAuthStore.getState().status !== 'unknown' && initPromise) return;
+    watchSessionAlive();
     if (!hasStoredSession() && !isOAuthCallback()) {
         useAuthStore.setState({ status: 'anon', user: null });
         return;
@@ -93,15 +145,71 @@ export async function signIn(provider: AuthProvider): Promise<void> {
     const sb = await loadClient();
     if (!sb) throw new Error('auth_unavailable');
     // 回來時要知道這次用哪個平台登入，才決定要不要把續期權杖交給聊天發言（見 chat/chatToken.ts）
-    try { sessionStorage.setItem('ms_oauth_provider', provider); } catch { /* 無痕模式：只是不能發言 */ }
+    try {
+        sessionStorage.setItem('ms_oauth_provider', provider);
+        sessionStorage.setItem(FRESH_KEY, '1');
+        sessionStorage.removeItem(LINK_KEY);
+    } catch { /* 無痕模式：只是不能發言、不會踢其他裝置 */ }
+    useAuthStore.setState({ kicked: false });
     await sb.auth.signInWithOAuth({
         provider,
         options: {
             redirectTo: window.location.href.split('#')[0],
             // Twitch 多要聊天讀寫權限（合併聊天室發言）與 user:read:emotes（貼圖選單列出自己的訂閱貼圖）
-            ...(provider === 'twitch' ? { scopes: 'chat:read chat:edit user:read:emotes' } : {}),
+            ...(provider === 'twitch' ? { scopes: TWITCH_SCOPES } : {}),
         },
     });
+}
+
+/** 把另一種登入方式綁到目前帳號（同一個人用不同平台登入時才不會變成兩個帳號）；Supabase 後台要開 Manual linking */
+export async function linkProvider(provider: AuthProvider): Promise<void> {
+    const sb = await loadClient();
+    if (!sb) throw new Error('auth_unavailable');
+    try {
+        sessionStorage.setItem('ms_oauth_provider', provider);
+        sessionStorage.setItem(LINK_KEY, '1');
+        sessionStorage.removeItem(FRESH_KEY);
+    } catch { /* 無痕模式 */ }
+    const { error } = await sb.auth.linkIdentity({
+        provider,
+        options: {
+            redirectTo: window.location.href.split('#')[0],
+            ...(provider === 'twitch' ? { scopes: TWITCH_SCOPES } : {}),
+        },
+    });
+    if (error) throw error;
+}
+
+/** 解除綁定；只剩一種登入方式時由呼叫端擋（UI 停用按鈕），這裡再擋一次 */
+export async function unlinkProvider(provider: AuthProvider): Promise<void> {
+    const sb = await loadClient();
+    if (!sb) throw new Error('auth_unavailable');
+    const { data, error } = await sb.auth.getUserIdentities();
+    if (error) throw error;
+    const list = data?.identities ?? [];
+    const target = list.find(i => i.provider === provider);
+    if (!target || list.length < 2) throw new Error('cannot_unlink');
+    const res = await sb.auth.unlinkIdentity(target);
+    if (res.error) throw res.error;
+    const s = await sb.auth.refreshSession();
+    apply(s.data.session);
+}
+
+/**
+ * 被其他裝置的新登入踢掉時，存取權杖仍可能有效到過期（最長 1 小時）；切回頁面時問一次伺服器。
+ * session 已不存在（401／403／session_not_found）→ 本機登出並標記 kicked；網路錯誤不動。
+ */
+export async function checkSessionAlive(): Promise<void> {
+    if (useAuthStore.getState().status !== 'authed') return;
+    const sb = await loadClient();
+    if (!sb) return;
+    const res = await withTimeout(sb.auth.getUser(), 5000);
+    const err = res?.error as { status?: number; code?: string } | null | undefined;
+    if (!err) return;
+    if (err.status === 401 || err.status === 403 || err.code === 'session_not_found') {
+        await signOut();
+        useAuthStore.setState({ kicked: true });
+    }
 }
 
 export async function signOut(): Promise<void> {
@@ -118,6 +226,12 @@ export async function getAccessToken(): Promise<string | null> {
     const sb = await loadClient();
     const res = sb ? await withTimeout(sb.auth.getSession(), SESSION_TIMEOUT_MS) : null;
     return res?.data.session?.access_token ?? null;
+}
+
+/** 投稿類請求用：已登入就帶 Bearer，讓伺服器把投稿記到帳號；未登入回空物件（不載 Supabase） */
+export async function authHeaders(): Promise<Record<string, string>> {
+    const token = await getAccessToken().catch(() => null);
+    return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 /** 刪除自己的帳號（伺服器端驗證 token 後刪除），成功後登出 */

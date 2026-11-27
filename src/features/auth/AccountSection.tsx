@@ -8,6 +8,7 @@ import {
 } from '../../components/ui/alert-dialog';
 import { useAuthStore, signIn, signOut, deleteAccount, type AuthProvider } from './authStore';
 import { useSyncStatus, resolveAccountSwitch } from '../favorites/cloudSync/syncEngine';
+import { LinkedProviders, MySubmissions } from './AccountExtras';
 
 /** 收藏同步狀態；本機收藏屬於另一個帳號時讓使用者選併入或改用雲端 */
 function SyncStatus() {
@@ -59,13 +60,14 @@ export function LoginButtons() {
 
 export function AccountSection() {
     const { t } = useTranslation('common');
-    const { status, user } = useAuthStore();
+    const { status, user, kicked } = useAuthStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [deleteFailed, setDeleteFailed] = useState(false);
 
     if (status !== 'authed' || !user) {
         return (
             <div className="space-y-3">
+                {kicked && <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-foreground">{t('auth.kicked')}</p>}
                 <p className="text-sm text-muted-foreground">{t('auth.sign_in_desc')}</p>
                 <LoginButtons />
             </div>
@@ -81,6 +83,9 @@ export function AccountSection() {
                 </div>
             </div>
             <SyncStatus />
+            {/* email 是 Supabase 自動綁定的身分、站上沒有 Email 登入，不算可用的登入方式 */}
+            <LinkedProviders providers={user.providers.filter(p => p !== 'email')} />
+            <MySubmissions />
             <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={() => { void signOut(); }}>{t('auth.sign_out')}</Button>
                 <Button type="button" variant="ghost" className="text-red-500 hover:text-red-400" onClick={() => { setDeleteFailed(false); setConfirmOpen(true); }}>

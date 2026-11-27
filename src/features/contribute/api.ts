@@ -1,5 +1,6 @@
 // 投稿 VTuber 與資料回報的前端 API（後端：functions/api/vtuber/*、functions/api/report.js）。
 // 一律帶逾時（memory error_client_fetch_needs_timeout）；錯誤轉成 SubmitError（code 對應 i18n contribute.error.*）。
+import { authHeaders } from '../auth/authStore';
 
 const TIMEOUT_MS = 15_000;
 
@@ -15,6 +16,8 @@ export class SubmitError extends Error {
 }
 
 async function requestJson<T>(path: string, init: RequestInit = {}, signal?: AbortSignal): Promise<T> {
+    // 已登入就帶權杖：投稿記到帳號、改用帳號限流
+    const auth = init.method === 'POST' ? await authHeaders() : {};
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     const onAbort = () => controller.abort();
@@ -24,7 +27,7 @@ async function requestJson<T>(path: string, init: RequestInit = {}, signal?: Abo
         res = await fetch(path, {
             ...init,
             signal: controller.signal,
-            headers: { ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...(init.headers || {}) },
+            headers: { ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...auth, ...(init.headers || {}) },
         });
     } catch (e) {
         if (signal?.aborted) throw e;

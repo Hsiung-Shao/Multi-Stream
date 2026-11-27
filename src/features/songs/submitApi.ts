@@ -8,6 +8,7 @@
  *   400 cannot_delete（少了既有片段）／unknown_segment／vtuber_required／invalid_*；
  *   403 video_locked（已鎖定）；429 rate_limited。
  */
+import { authHeaders } from '../auth/authStore';
 export const SONG_SUBMIT_URL = '/api/songs/submissions';
 export const SONG_SUBMIT_TIMEOUT_MS = 15_000;
 
@@ -55,7 +56,7 @@ export async function submitSongTimeline(
         res = await fetchFn(SONG_SUBMIT_URL, {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
             body: JSON.stringify(input),
             signal: ctrl.signal,
         });

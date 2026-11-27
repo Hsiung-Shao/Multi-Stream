@@ -17,6 +17,7 @@ import { AnnouncementsProvider } from '../../features/announcements/Announcement
 import { useMediaQuery } from '../../hooks/use-media-query';
 import { useIslandQuickActions } from '../../hooks/useIslandQuickActions';
 import { Share2 } from 'lucide-react';
+import { KickedToast } from '../../features/auth/AccountExtras';
 
 const FavoritesManagerMain = lazy(() => import('../../features/favorites/components/FavoritesManagerMain').then(m => ({ default: m.FavoritesManagerMain })));
 const FeedbackModal = lazy(() => import('../../features/feedback/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
@@ -126,6 +127,7 @@ export function MobileApp() {
 
             <GlobalLiveStatusChecker />
             <Toaster />
+            <KickedToast />
             <CookieConsent />
             <AnnouncementsProvider />
         </div>

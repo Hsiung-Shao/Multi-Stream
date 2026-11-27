@@ -85,7 +85,7 @@ export async function onRequestPost(context) {
         p_rev: isNew ? null : v.rev,
         p_video: { title: v.title, vtuber_id: v.vtuberId, streamed_at: v.streamedAt, duration_seconds: v.durationSeconds, ...clip },
         p_segments: segments,
-        p_meta: { source_note: v.note, submitter_contact: v.contact, ip_hash: g.ipHash },
+        p_meta: { source_note: v.note, submitter_contact: v.contact, ip_hash: g.ipHash, user_id: g.userId },
     });
     if (!res.ok) {
         const message = postgrestErrorMessage(res.error);
