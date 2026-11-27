@@ -9,7 +9,10 @@ import { useStreamStore } from '../../store/useStreamStore';
 import { streamContentIdsByPosition } from '../../utils/canvasItemOps';
 import { TwitchChatClient, onAuthFailTransition } from './TwitchChatClient';
 import { messageParts, readableColor } from './messageParts';
-import { loadChannelEmotes, loadGlobalEmotes } from './thirdPartyEmotes';
+import { loadChannelEmoteGroups, loadGlobalEmoteGroups, type EmoteGroups } from './thirdPartyEmotes';
+import { loadTwitchEmotes, twitchEmoteUrl, type TwitchEmoteSet } from './twitchEmotes';
+import { completeEmote, insertEmote, type CompletionState } from './emoteComplete';
+import { EmotePicker } from './EmotePicker';
 import type { ChatMessage } from './ircParse';
 import { cn } from '../../components/ui/utils';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -22,11 +25,14 @@ const CRED_REFRESH_MS = 50 * 60_000;
 const CRED_RETRY_MS = 60_000;
 
 /** 用 Twitch 帳號登入時取發言權杖並交給連線；登出或換成非 Twitch 帳號時回到匿名唯讀 */
-function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing' | 'ready' {
+type CredState = 'none' | 'pending' | 'missing' | 'ready';
+function useChatCredentials(c: TwitchChatClient): [CredState, TwitchEmoteSet | null] {
     const twitchUser = useAuthStore(s => (s.status === 'authed' && s.user?.providers.includes('twitch') ? s.user.id : null));
-    const [state, setState] = useState<'none' | 'pending' | 'missing' | 'ready'>('none');
+    const [state, setState] = useState<CredState>('none');
+    // 發言權杖拿得到「自己能用的」Twitch 貼圖（含訂閱貼圖）
+    const [twitchEmotes, setTwitchEmotes] = useState<TwitchEmoteSet | null>(null);
     useEffect(() => {
-        if (!twitchUser) { c.setCredentials(null); resetChatCredentials(); setState('none'); return; }
+        if (!twitchUser) { c.setCredentials(null); resetChatCredentials(); setState('none'); setTwitchEmotes(null); return; }
         let on = true;
         let timer: ReturnType<typeof setTimeout> | undefined;
         const load = async () => {
@@ -34,8 +40,11 @@ function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing'
             setState(s => (s === 'ready' ? s : 'pending'));
             const r = await fetchChatCredentials(await getAccessToken(), twitchUser);
             if (!on) return;
-            if (r.kind === 'ok') { c.setCredentials(r.creds); setState('ready'); }
-            else if (r.kind === 'missing') { c.setCredentials(null); setState('missing'); }
+            if (r.kind === 'ok') {
+                c.setCredentials(r.creds);
+                setState('ready');
+                void loadTwitchEmotes(r.creds).then(set => { if (on) setTwitchEmotes(set); });
+            } else if (r.kind === 'missing') { c.setCredentials(null); setState('missing'); setTwitchEmotes(null); }
             // 暫時失敗：保留現有權杖（若有），稍後再試
             else setState(s => (s === 'ready' ? s : 'missing'));
             timer = setTimeout(load, r.kind === 'error' ? CRED_RETRY_MS : CRED_REFRESH_MS);
@@ -50,15 +59,34 @@ function useChatCredentials(c: TwitchChatClient): 'none' | 'pending' | 'missing'
         }));
         return () => { on = false; clearTimeout(timer); offCreds(); offClient(); };
     }, [c, twitchUser]);
-    return state;
+    return [state, twitchEmotes];
 }
 
 /** 輸入框：選頻道＋送出；沒有發言權限時顯示登入入口 */
-function ChatComposer({ c, logins, cred }: { c: TwitchChatClient; logins: string[]; cred: ReturnType<typeof useChatCredentials> }) {
+function ChatComposer({ c, logins, cred, twitchEmotes, emoteGroups }: {
+    c: TwitchChatClient; logins: string[]; cred: CredState; twitchEmotes: TwitchEmoteSet | null; emoteGroups: ReadonlyMap<string, EmoteGroups>;
+}) {
     const { t } = useTranslation('common');
     const [target, setTarget] = useState(logins[0] ?? '');
     const [text, setText] = useState('');
     const channel = logins.includes(target) ? target : logins[0] ?? '';
+    const input = useRef<HTMLInputElement>(null);
+    const completion = useRef<CompletionState | null>(null);
+    const twitchUrls = useMemo(() => Object.fromEntries(Object.entries(twitchEmotes?.byName ?? {}).map(([n, id]) => [n, twitchEmoteUrl(id)])), [twitchEmotes]);
+    const groups = emoteGroups.get(channel) ?? NO_GROUPS;
+    const names = useMemo(() => [...new Set([twitchUrls, groups['7tv'], groups.bttv, groups.ffz].flatMap(Object.keys))], [twitchUrls, groups]);
+    // 受控 input 換值後游標會跑到最後：改完文字再把游標放回去
+    const caretAfter = useRef<number | null>(null);
+    useLayoutEffect(() => {
+        if (caretAfter.current === null || !input.current) return;
+        input.current.setSelectionRange(caretAfter.current, caretAfter.current);
+        caretAfter.current = null;
+    }, [text]);
+    const apply = (r: { text: string; caret: number }) => {
+        if (r.text.length > 500) return;
+        caretAfter.current = r.caret;
+        setText(r.text);
+    };
     if (logins.length === 0) return null;
     if (cred !== 'ready') {
         return (
@@ -73,7 +101,22 @@ function ChatComposer({ c, logins, cred }: { c: TwitchChatClient; logins: string
     }
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (c.send(channel, text)) setText('');
+        if (c.send(channel, text, twitchEmotes?.byName)) { setText(''); completion.current = null; }
+    };
+    const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key !== 'Tab' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) { completion.current = null; return; }
+        const el = e.currentTarget;
+        const r = completeEmote(el.value, el.selectionStart ?? el.value.length, names, completion.current);
+        // 沒有候選就不攔，Tab 照常移動焦點
+        if (!r) return;
+        e.preventDefault();
+        completion.current = r.state;
+        apply(r);
+    };
+    const pick = (name: string) => {
+        completion.current = null;
+        apply(insertEmote(text, input.current?.selectionStart ?? text.length, name));
+        input.current?.focus();
     };
     return (
         <form onSubmit={submit} className="flex items-center gap-1.5 border-t border-white/10 p-2">
@@ -90,11 +133,14 @@ function ChatComposer({ c, logins, cred }: { c: TwitchChatClient; logins: string
             <input
                 aria-label={t('chat.send_placeholder', { channel })}
                 placeholder={t('chat.send_placeholder', { channel })}
+                ref={input}
                 value={text}
                 maxLength={500}
-                onChange={e => setText(e.target.value)}
+                onChange={e => { completion.current = null; setText(e.target.value); }}
+                onKeyDown={onKeyDown}
                 className="h-8 min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-2 text-sm text-white placeholder:text-white/40"
             />
+            <EmotePicker twitch={twitchUrls} groups={groups} needsReauth={twitchEmotes?.needsReauth} onPick={pick} />
             <button type="submit" disabled={!text.trim()} className="h-8 shrink-0 rounded-md bg-purple-600 px-3 text-xs font-medium text-white disabled:opacity-40">
                 {t('chat.send')}
             </button>
@@ -115,6 +161,7 @@ function release() {
 }
 
 const EMPTY = new Map<string, string>();
+const NO_GROUPS: EmoteGroups = { '7tv': {}, bttv: {}, ffz: {} };
 /** 畫面只畫最新這麼多則；熱門頻道一秒幾十則，全畫會卡 */
 const MAX_RENDERED = 200;
 
@@ -164,9 +211,9 @@ export function MergedChat() {
     const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
 
     // 表情：全域一份＋每個頻道各一份（只套在該頻道的訊息）
-    const [globalEmotes, setGlobalEmotes] = useState<Record<string, string>>({});
-    const [channelEmotes, setChannelEmotes] = useState<Record<string, Record<string, string>>>({});
-    useEffect(() => { let on = true; loadGlobalEmotes().then(m => on && setGlobalEmotes(m)); return () => { on = false; }; }, []);
+    const [globalEmotes, setGlobalEmotes] = useState<EmoteGroups>(NO_GROUPS);
+    const [channelEmotes, setChannelEmotes] = useState<Record<string, EmoteGroups>>({});
+    useEffect(() => { let on = true; loadGlobalEmoteGroups().then(m => on && setGlobalEmotes(m)); return () => { on = false; }; }, []);
     const roomIds = useSyncExternalStore(subscribe, () => logins.map(l => c.getRoomId(l) ?? '').join(','));
     // 每個 room-id 只發一次請求（ROOMSTATE 陸續抵達時不重抓前面的頻道）
     const requested = useRef(new Set<string>());
@@ -175,17 +222,24 @@ export function MergedChat() {
             const login = logins[i];
             if (!id || !login || requested.current.has(id)) return;
             requested.current.add(id);
-            loadChannelEmotes(id).then(m => setChannelEmotes(prev => ({ ...prev, [login]: m })));
+            loadChannelEmoteGroups(id).then(m => setChannelEmotes(prev => ({ ...prev, [login]: m })));
         });
     }, [roomIds, logins]);
-    const emoteMaps = useMemo(() => {
-        const out = new Map<string, ReadonlyMap<string, string>>();
-        for (const login of logins) out.set(login, new Map(Object.entries({ ...globalEmotes, ...channelEmotes[login] })));
-        return out;
+    // 每個頻道可用的＝全域＋該頻道：分組給選單；平坦給訊息顯示（頻道蓋全域，各自內 7TV 蓋 BTTV 蓋 FFZ，同改版前）
+    const { channelGroups, emoteMaps } = useMemo(() => {
+        const flat = (g: EmoteGroups) => ({ ...g.ffz, ...g.bttv, ...g['7tv'] });
+        const groupsOut = new Map<string, EmoteGroups>();
+        const mapsOut = new Map<string, ReadonlyMap<string, string>>();
+        for (const login of logins) {
+            const ch = channelEmotes[login] ?? NO_GROUPS;
+            groupsOut.set(login, { '7tv': { ...globalEmotes['7tv'], ...ch['7tv'] }, bttv: { ...globalEmotes.bttv, ...ch.bttv }, ffz: { ...globalEmotes.ffz, ...ch.ffz } });
+            mapsOut.set(login, new Map(Object.entries({ ...flat(globalEmotes), ...flat(ch) })));
+        }
+        return { channelGroups: groupsOut, emoteMaps: mapsOut };
     }, [logins, globalEmotes, channelEmotes]);
 
     const connected = useSyncExternalStore(subscribe, () => c.isConnected());
-    const cred = useChatCredentials(c);
+    const [cred, twitchEmotes] = useChatCredentials(c);
 
     // 停在底部時新訊息自動捲到底；使用者往上捲就暫停，按「回到最新」才恢復
     const root = useRef<HTMLDivElement>(null);
@@ -245,7 +299,7 @@ export function MergedChat() {
                     </button>
                 )}
             </div>
-            <ChatComposer c={c} logins={logins} cred={cred} />
+            <ChatComposer c={c} logins={logins} cred={cred} twitchEmotes={twitchEmotes} emoteGroups={channelGroups} />
         </div>
     );
 }

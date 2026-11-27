@@ -98,8 +98,8 @@ export async function signIn(provider: AuthProvider): Promise<void> {
         provider,
         options: {
             redirectTo: window.location.href.split('#')[0],
-            // Twitch 多要聊天讀寫權限：合併聊天室直接發言用
-            ...(provider === 'twitch' ? { scopes: 'chat:read chat:edit' } : {}),
+            // Twitch 多要聊天讀寫權限（合併聊天室發言）與 user:read:emotes（貼圖選單列出自己的訂閱貼圖）
+            ...(provider === 'twitch' ? { scopes: 'chat:read chat:edit user:read:emotes' } : {}),
         },
     });
 }

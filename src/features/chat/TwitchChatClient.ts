@@ -2,7 +2,7 @@
  * Twitch 聊天連線：一條 WebSocket 同時收多個頻道。
  * 預設匿名唯讀（justinfan）；之後有發言權杖時改帶 PASS／NICK。
  */
-import { parseIrc, toChatMessage, type ChatMessage } from './ircParse';
+import { parseIrc, toChatMessage, type ChatMessage, type TwitchEmoteRange } from './ircParse';
 
 export interface SocketLike {
     send(data: string): void;
@@ -87,7 +87,7 @@ export class TwitchChatClient {
     }
 
     /** 送出聊天訊息；回傳是否送出（未登入、未連線、頻道不在畫面上、空白或超過 500 字都不送） */
-    send(channel: string, text: string): boolean {
+    send(channel: string, text: string, twitchEmotes?: Record<string, string>): boolean {
         const ch = channel.toLowerCase();
         // 去掉換行：IRC 以 CRLF 分隔指令，留著就能夾帶第二條指令
         const body = text.replace(/[\r\n]+/g, ' ').trim();
@@ -97,7 +97,7 @@ export class TwitchChatClient {
         // Twitch 不會把自己的訊息回送給同一條連線，自己補一則顯示
         this.messages = [...this.messages, {
             id: `self-${Date.now()}-${Math.random()}`, channel: ch, user: this.creds.login, displayName: this.creds.login,
-            text: body, emotes: [], roomId: this.roomIds.get(ch), ts: Date.now(), action: false,
+            text: body, emotes: twitchEmotes ? selfEmotes(body, twitchEmotes) : [], roomId: this.roomIds.get(ch), ts: Date.now(), action: false,
         }];
         this.emit();
         return true;
@@ -236,4 +236,17 @@ export function onAuthFailTransition(isFailed: () => boolean, onFail: () => void
         if (now && !prev) onFail();
         prev = now;
     };
+}
+
+/** 自己送出的訊息 Twitch 不回送：依名稱整詞比對標出貼圖位置（code point，end 含），格式同 IRC 的 emotes 標籤 */
+function selfEmotes(text: string, byName: Record<string, string>): TwitchEmoteRange[] {
+    const out: TwitchEmoteRange[] = [];
+    let pos = 0;
+    for (const word of text.split(' ')) {
+        const len = Array.from(word).length;
+        const id = Object.prototype.hasOwnProperty.call(byName, word) ? byName[word] : undefined;
+        if (id) out.push({ id, start: pos, end: pos + len - 1 });
+        pos += len + 1;
+    }
+    return out;
 }

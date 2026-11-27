@@ -99,7 +99,7 @@ describe('signIn', () => {
         await signIn('twitch');
         expect(client.auth.signInWithOAuth).toHaveBeenLastCalledWith({
             provider: 'twitch',
-            options: { redirectTo: expectedRedirect, scopes: 'chat:read chat:edit' },
+            options: { redirectTo: expectedRedirect, scopes: 'chat:read chat:edit user:read:emotes' },
         });
 
         await signIn('google');

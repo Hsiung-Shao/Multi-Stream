@@ -3,7 +3,8 @@
  * 失敗一律靜默（表情只是加分，抓不到就顯示文字）；結果快取在 sessionStorage。
  */
 const TIMEOUT_MS = 8000;
-const CACHE_PREFIX = 'ms_chat_emotes:';
+// v2：快取改存分組格式，換前綴避免讀到舊的平坦格式
+const CACHE_PREFIX = 'ms_chat_emotes:v2:';
 
 type EmoteMap = Record<string, string>;
 
@@ -53,43 +54,51 @@ function fromFfz(sets: unknown, out: EmoteMap) {
     }
 }
 
+export type EmoteGroups = { '7tv': EmoteMap; bttv: EmoteMap; ffz: EmoteMap };
+const emptyGroups = (): EmoteGroups => ({ '7tv': {}, bttv: {}, ffz: {} });
+/** 訊息顯示用的平坦對照：同名時 7TV 蓋 BTTV 蓋 FFZ */
+const flatten = (g: EmoteGroups): EmoteMap => ({ ...g.ffz, ...g.bttv, ...g['7tv'] });
+
 /** build 回傳 false＝有一家沒抓到：結果照用，但不快取，下次再試 */
-async function load(key: string, build: (out: EmoteMap) => Promise<boolean>): Promise<EmoteMap> {
+async function load(key: string, build: (out: EmoteGroups) => Promise<boolean>): Promise<EmoteGroups> {
     try {
         const hit = sessionStorage.getItem(CACHE_PREFIX + key);
-        if (hit) return JSON.parse(hit) as EmoteMap;
+        if (hit) return JSON.parse(hit) as EmoteGroups;
     } catch { /* 無痕或停用儲存：直接重抓 */ }
-    const out: EmoteMap = {};
+    const out = emptyGroups();
     const complete = await build(out);
     if (complete) try { sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(out)); } catch { /* 滿了就不快取 */ }
     return out;
 }
 
-export const loadGlobalEmotes = () => load('global', async out => {
+export const loadGlobalEmoteGroups = () => load('global', async out => {
     const [seven, bttv, ffz] = await Promise.all([
         getJson('https://7tv.io/v3/emote-sets/global'),
         getJson('https://api.betterttv.net/3/cached/emotes/global'),
         getJson('https://api.frankerfacez.com/v1/set/global'),
     ]);
-    fromFfz((ffz as { sets?: unknown })?.sets, out);
-    fromBttv(bttv, out);
-    from7tv((seven as { emotes?: unknown })?.emotes, out);
+    fromFfz((ffz as { sets?: unknown })?.sets, out.ffz);
+    fromBttv(bttv, out.bttv);
+    from7tv((seven as { emotes?: unknown })?.emotes, out['7tv']);
     return seven !== null && bttv !== null && ffz !== null;
 });
 
-export const loadChannelEmotes = (roomId: string) => {
-    if (!/^\d+$/.test(roomId)) return Promise.resolve({} as EmoteMap);
+export const loadChannelEmoteGroups = (roomId: string) => {
+    if (!/^\d+$/.test(roomId)) return Promise.resolve(emptyGroups());
     return load(`room:${roomId}`, async out => {
         const [seven, bttv, ffz] = await Promise.all([
             getJson(`https://7tv.io/v3/users/twitch/${roomId}`),
             getJson(`https://api.betterttv.net/3/cached/users/twitch/${roomId}`),
             getJson(`https://api.frankerfacez.com/v1/room/id/${roomId}`),
         ]);
-        fromFfz((ffz as { sets?: unknown })?.sets, out);
+        fromFfz((ffz as { sets?: unknown })?.sets, out.ffz);
         const b = bttv as { channelEmotes?: unknown; sharedEmotes?: unknown } | null;
-        fromBttv(b?.channelEmotes, out);
-        fromBttv(b?.sharedEmotes, out);
-        from7tv((seven as { emote_set?: { emotes?: unknown } })?.emote_set?.emotes, out);
+        fromBttv(b?.channelEmotes, out.bttv);
+        fromBttv(b?.sharedEmotes, out.bttv);
+        from7tv((seven as { emote_set?: { emotes?: unknown } })?.emote_set?.emotes, out['7tv']);
         return seven !== null && bttv !== null && ffz !== null;
     });
 };
+
+export const loadGlobalEmotes = () => loadGlobalEmoteGroups().then(flatten);
+export const loadChannelEmotes = (roomId: string) => loadChannelEmoteGroups(roomId).then(flatten);
