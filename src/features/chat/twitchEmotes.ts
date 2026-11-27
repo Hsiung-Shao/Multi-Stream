@@ -8,7 +8,7 @@ const TIMEOUT_MS = 8000;
 const MAX_PAGES = 10;
 const HELIX = 'https://api.twitch.tv/helix/chat/emotes';
 
-export const twitchEmoteUrl = (id: string) => `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/1.0`;
+export { twitchEmoteUrl } from './messageParts';
 
 async function get(url: string, headers: Record<string, string>): Promise<{ status: number; body: unknown }> {
     try {
@@ -27,27 +27,31 @@ function collect(data: unknown, out: Record<string, string>) {
     }
 }
 
-async function fetchSet(token: string): Promise<TwitchEmoteSet> {
+/** complete＝每個請求都成功；不完整（網路錯誤、5xx、429）的結果照用但不快取 */
+async function fetchSet(token: string): Promise<{ set: TwitchEmoteSet; complete: boolean }> {
     const v = await get('https://id.twitch.tv/oauth2/validate', { Authorization: `OAuth ${token}` });
     const info = v.body as { client_id?: string; user_id?: string; scopes?: string[] } | null;
-    if (!info?.client_id || !info.user_id) return { byName: {}, needsReauth: false };
+    if (!info?.client_id || !info.user_id) return { set: { byName: {}, needsReauth: false }, complete: false };
     const headers = { Authorization: `Bearer ${token}`, 'Client-Id': info.client_id };
     const byName: Record<string, string> = {};
     if (info.scopes?.includes('user:read:emotes')) {
         let cursor: string | undefined;
+        let complete = true;
         let denied = false;
         for (let page = 0; page < MAX_PAGES; page++) {
             const r = await get(`${HELIX}/user?user_id=${encodeURIComponent(info.user_id)}${cursor ? `&after=${encodeURIComponent(cursor)}` : ''}`, headers);
             if (r.status === 401 || r.status === 403) { denied = true; break; }
+            if (r.status !== 200) { complete = false; break; }
             const b = r.body as { data?: unknown; pagination?: { cursor?: string } } | null;
             collect(b?.data, byName);
             cursor = b?.pagination?.cursor;
             if (!cursor) break;
         }
-        if (!denied) return { byName, needsReauth: false };
+        if (!denied) return { set: { byName, needsReauth: false }, complete };
     }
-    collect(((await get(`${HELIX}/global`, headers)).body as { data?: unknown } | null)?.data, byName);
-    return { byName, needsReauth: true };
+    const g = await get(`${HELIX}/global`, headers);
+    collect((g.body as { data?: unknown } | null)?.data, byName);
+    return { set: { byName, needsReauth: true }, complete: g.status === 200 };
 }
 
 let cache: { token: string; set: Promise<TwitchEmoteSet> } | null = null;
@@ -55,14 +59,17 @@ let cache: { token: string; set: Promise<TwitchEmoteSet> } | null = null;
 /** 同一個權杖只查一次；權杖換了（續期或換帳號）就重查 */
 export function loadTwitchEmotes(creds: { login: string; token: string }): Promise<TwitchEmoteSet> {
     if (cache?.token !== creds.token) {
-        const entry = { token: creds.token, set: fetchSet(creds.token) };
+        const entry: { token: string; set: Promise<TwitchEmoteSet> } = { token: creds.token, set: fetchSet(creds.token).then(r => {
+            // 不完整的不快取（先清再交出結果，呼叫端拿到時下一次一定重查）
+            if (!r.complete && cache === entry) cache = null;
+            return r.set;
+        }) };
         cache = entry;
-        // 什麼都沒拿到（網路錯誤）不快取，下次再試
-        void entry.set.then(s => { if (!Object.keys(s.byName).length && cache === entry) cache = null; });
     }
     return cache.set;
 }
 
+/** 登出或換帳號時清掉（快取裡有權杖） */
 export function resetTwitchEmotes(): void {
     cache = null;
 }

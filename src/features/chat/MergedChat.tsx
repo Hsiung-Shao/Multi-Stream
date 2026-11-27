@@ -10,7 +10,7 @@ import { streamContentIdsByPosition } from '../../utils/canvasItemOps';
 import { TwitchChatClient, onAuthFailTransition } from './TwitchChatClient';
 import { messageParts, readableColor } from './messageParts';
 import { loadChannelEmoteGroups, loadGlobalEmoteGroups, type EmoteGroups } from './thirdPartyEmotes';
-import { loadTwitchEmotes, twitchEmoteUrl, type TwitchEmoteSet } from './twitchEmotes';
+import { loadTwitchEmotes, resetTwitchEmotes, twitchEmoteUrl, type TwitchEmoteSet } from './twitchEmotes';
 import { completeEmote, insertEmote, type CompletionState } from './emoteComplete';
 import { EmotePicker } from './EmotePicker';
 import type { ChatMessage } from './ircParse';
@@ -32,7 +32,7 @@ function useChatCredentials(c: TwitchChatClient): [CredState, TwitchEmoteSet | n
     // 發言權杖拿得到「自己能用的」Twitch 貼圖（含訂閱貼圖）
     const [twitchEmotes, setTwitchEmotes] = useState<TwitchEmoteSet | null>(null);
     useEffect(() => {
-        if (!twitchUser) { c.setCredentials(null); resetChatCredentials(); setState('none'); setTwitchEmotes(null); return; }
+        if (!twitchUser) { c.setCredentials(null); resetChatCredentials(); setState('none'); setTwitchEmotes(null); resetTwitchEmotes(); return; }
         let on = true;
         let timer: ReturnType<typeof setTimeout> | undefined;
         const load = async () => {
@@ -43,7 +43,8 @@ function useChatCredentials(c: TwitchChatClient): [CredState, TwitchEmoteSet | n
             if (r.kind === 'ok') {
                 c.setCredentials(r.creds);
                 setState('ready');
-                void loadTwitchEmotes(r.creds).then(set => { if (on) setTwitchEmotes(set); });
+                // 續期時暫時查不到（空的）就保留舊的，不要讓貼圖消失到下一輪
+                void loadTwitchEmotes(r.creds).then(set => { if (on && Object.keys(set.byName).length) setTwitchEmotes(set); });
             } else if (r.kind === 'missing') { c.setCredentials(null); setState('missing'); setTwitchEmotes(null); }
             // 暫時失敗：保留現有權杖（若有），稍後再試
             else setState(s => (s === 'ready' ? s : 'missing'));
@@ -84,6 +85,8 @@ function ChatComposer({ c, logins, cred, twitchEmotes, emoteGroups }: {
     }, [text]);
     const apply = (r: { text: string; caret: number }) => {
         if (r.text.length > 500) return;
+        // 文字沒變（只剩一個候選時連按 Tab）React 不會重繪，layout effect 不跑：直接放游標
+        if (r.text === text) { input.current?.setSelectionRange(r.caret, r.caret); return; }
         caretAfter.current = r.caret;
         setText(r.text);
     };
@@ -107,8 +110,8 @@ function ChatComposer({ c, logins, cred, twitchEmotes, emoteGroups }: {
         if (e.key !== 'Tab' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) { completion.current = null; return; }
         const el = e.currentTarget;
         const r = completeEmote(el.value, el.selectionStart ?? el.value.length, names, completion.current);
-        // 沒有候選就不攔，Tab 照常移動焦點
-        if (!r) return;
+        // 沒有候選（或補完後會超過字數上限）就不攔，Tab 照常移動焦點
+        if (!r || r.text.length > 500) return;
         e.preventDefault();
         completion.current = r.state;
         apply(r);
@@ -136,7 +139,7 @@ function ChatComposer({ c, logins, cred, twitchEmotes, emoteGroups }: {
                 ref={input}
                 value={text}
                 maxLength={500}
-                onChange={e => { completion.current = null; setText(e.target.value); }}
+                onChange={e => { completion.current = null; caretAfter.current = null; setText(e.target.value); }}
                 onKeyDown={onKeyDown}
                 className="h-8 min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-2 text-sm text-white placeholder:text-white/40"
             />

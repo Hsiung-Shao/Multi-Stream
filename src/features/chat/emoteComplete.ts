@@ -4,7 +4,9 @@ export interface CompletionState { start: number; candidates: string[]; index: n
 /** 游標前最後一個詞當開頭補完；帶上一次的 state 就換下一個候選。沒有候選回 null（呼叫端不攔 Tab） */
 export function completeEmote(text: string, caret: number, names: string[], prev?: CompletionState | null): { text: string; caret: number; state: CompletionState } | null {
     let state: CompletionState;
-    if (prev && prev.candidates.length) {
+    // 游標還停在上一次補完的結尾才算連按；被滑鼠移走就重新開始
+    const last = prev?.candidates[prev.index];
+    if (prev && last !== undefined && text.slice(prev.start, caret) === last + ' ') {
         state = { ...prev, index: (prev.index + 1) % prev.candidates.length };
     } else {
         const start = text.lastIndexOf(' ', caret - 1) + 1;

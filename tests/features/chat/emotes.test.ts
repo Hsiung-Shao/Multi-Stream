@@ -206,3 +206,33 @@ describe('E6 自己送出的 Twitch 貼圖顯示成圖', () => {
         expect(last(client).emotes).toEqual([{ id: '25', start: 11, end: 15 }]);
     });
 });
+
+describe('review 第 1 輪', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('游標被移走後再按 Tab，不沿用舊的補完狀態（不重複文字）', async () => {
+        const { completeEmote } = await import('../../../src/features/chat/emoteComplete');
+        const names = ['Kappa', 'KappaClaus'];
+        const a = completeEmote('aa Kap', 6, names)!;
+        expect(a.text).toBe('aa Kappa ');
+        // 使用者用滑鼠把游標點到開頭的「aa」後面再按 Tab：沒有候選，應回 null 而不是拿舊狀態拼字串
+        expect(completeEmote(a.text, 2, names, a.state)).toBeNull();
+    });
+
+    it('第 2 頁暫時失敗（503）時不快取不完整的結果，下次會重查', async () => {
+        vi.resetModules();
+        let fail = true;
+        const fetchMock = vi.fn(async (url: string) => {
+            if (url === 'https://id.twitch.tv/oauth2/validate') return json({ client_id: 'cid', login: 'me', user_id: '42', scopes: ['user:read:emotes'] });
+            if (url.includes('after=CUR1')) return fail ? new Response('x', { status: 503 }) : json({ data: [{ id: '3', name: 'LUL' }], pagination: {} });
+            return json({ data: [{ id: '25', name: 'Kappa' }], pagination: { cursor: 'CUR1' } });
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        const { loadTwitchEmotes } = await import('../../../src/features/chat/twitchEmotes');
+        const first = await loadTwitchEmotes({ login: 'me', token: 't' });
+        expect(first.byName).toEqual({ Kappa: '25' });
+        fail = false;
+        const second = await loadTwitchEmotes({ login: 'me', token: 't' });
+        expect(second.byName).toEqual({ Kappa: '25', LUL: '3' });
+    });
+});
